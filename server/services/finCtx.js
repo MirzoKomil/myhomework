@@ -76,32 +76,102 @@ function resolve(token, values) {
     if (/^-?\d+(\.\d+)?$/.test(t)) return Number(t);
     return SKIP;
 }
-function record(client, text, values) {
-    const sql = String(text || '');
-    let m = /^\s*INSERT\s+INTO\s+(\w+)\s*(?:\(([^)]*)\))?\s*([\s\S]*)$/i.exec(sql);
+const keyOf = t => SEALED_TABLES[t] || 'id';
+// INSERT ... VALUES(...) ni ustun → qiymat xaritasiga aylantiradi (bitta qatorli ko'rinish); aks holda null.
+function parseInsert(sql, values) {
+    const m = /^\s*INSERT\s+INTO\s+(\w+)\s*(?:\(([^)]*)\))?\s*([\s\S]*)$/i.exec(sql);
+    if (!m || !TRACKED.has(m[1])) return null;
+    const rest = m[3].trim();
+    const vm = /^VALUES\s*\(([\s\S]*?)\)\s*(ON\s+CONFLICT[\s\S]*?)?(?:\s+RETURNING[\s\S]*)?$/i.exec(rest);
+    const cols = m[2] ? m[2].split(',').map(c => c.trim()) : [];
+    const out = { table: m[1], cols, row: null, conflict: null };
+    if (vm && cols.length) {
+        const vals = splitTop(vm[1]);
+        if (vals.length === cols.length && !/\)\s*,\s*\(/.test(vm[1].replace(/'(?:[^']|'')*'/g, "''"))) {
+            out.row = {}; out.tokens = {};
+            cols.forEach((c, i) => { const v = resolve(vals[i], values); out.tokens[c] = vals[i]; if (v !== SKIP) out.row[c] = v; });
+        }
+        const cm = vm[2] && /^ON\s+CONFLICT\s*\(([^)]*)\)\s*DO\s+UPDATE\s+SET\s+([\s\S]*?)(?:\s+WHERE\s+[\s\S]*)?$/i.exec(vm[2].trim());
+        if (cm) out.conflict = { cols: cm[1].split(',').map(c => c.trim()), set: splitTop(cm[2]).map(a => a.split('=')[0].trim()) };
+        else if (vm[2] && /DO\s+UPDATE/i.test(vm[2])) out.conflict = { cols: null, set: null };
+    }
+    return out;
+}
+// UPDATE/DELETE: jadval, taxallus, SET ustunlari (va qiymatlari), WHERE.
+function parseChange(sql, values) {
+    let m = /^\s*UPDATE\s+(\w+)(?:\s+(?:AS\s+)?(?!SET\b)(\w+))?\s+SET\s+([\s\S]*?)(?:\s+WHERE\s+([\s\S]*?))?(?:\s+RETURNING\s+[\s\S]*)?$/i.exec(sql);
     if (m && TRACKED.has(m[1])) {
-        const vm = /^VALUES\s*\(([\s\S]*)\)\s*(?:ON\s+CONFLICT[\s\S]*?)?(?:RETURNING[\s\S]*)?$/i.exec(m[3].trim());
-        const cols = m[2] ? m[2].split(',').map(c => c.trim()) : [], vals = vm ? splitTop(vm[1]) : [];
-        if (vm && cols.length && cols.length === vals.length && !/\)\s*,\s*\(/.test(vm[1].replace(/'(?:[^']|'')*'/g, "''"))) {
-            const row = {}; cols.forEach((c, i) => { const v = resolve(vals[i], values); if (v !== SKIP) row[c] = v; });
-            client.__finIntents.push({ table: m[1], op: 'I', row });
-        } else client.__finIntents.push({ table: m[1], op: 'I', any: true });
-        if (/ON\s+CONFLICT[\s\S]*DO\s+UPDATE/i.test(sql)) client.__finIntents.push({ table: m[1], op: 'U', any: true });
+        const set = {}; const cols = [];
+        for (const a of splitTop(m[3])) { const i = a.indexOf('='); const c = a.slice(0, i).trim(); cols.push(c); const v = resolve(a.slice(i + 1), values); if (v !== SKIP) set[c] = v; }
+        return { op: 'U', table: m[1], alias: m[2] || null, where: m[4] || null, cols, set };
+    }
+    m = /^\s*DELETE\s+FROM\s+(\w+)(?:\s+(?:AS\s+)?(?!WHERE\b)(\w+))?(?:\s+WHERE\s+([\s\S]*?))?(?:\s+RETURNING\s+[\s\S]*)?$/i.exec(sql);
+    if (m && TRACKED.has(m[1])) return { op: 'D', table: m[1], alias: m[2] || null, where: m[3] || null, cols: [], set: {} };
+    return null;
+}
+// WHERE dagi $n larni qayta raqamlab, o'zgarishdan OLDIN qaysi qatorlar tegishini (va ularning holatini) o'qiydi.
+async function probe(client, orig, table, alias, where, values) {
+    const nums = []; const w = (where || 'TRUE').replace(/\$(\d+)/g, (_, n) => { const i = nums.indexOf(n); if (i >= 0) return '$' + (i + 1); nums.push(n); return '$' + nums.length; });
+    const params = nums.map(n => values?.[Number(n) - 1]);
+    const ref = alias || table;
+    await orig.call(client, 'SAVEPOINT fin_probe');
+    try {
+        const r = await orig.call(client, `SELECT ${ref}.${keyOf(table)}::text AS k, pg_catalog.to_jsonb(${ref}) AS r FROM ${table} ${alias || ''} WHERE ${w}`, params);
+        await orig.call(client, 'RELEASE SAVEPOINT fin_probe');
+        return r.rows;
+    } catch (e) { await orig.call(client, 'ROLLBACK TO SAVEPOINT fin_probe'); return null; }
+}
+function intentState(client) {
+    if (!client.__finState) client.__finState = { inserts: new Map(), changes: new Map(), deletes: new Set(), broken: null };
+    return client.__finState;
+}
+async function capture(client, orig, sql, values) {
+    const st = intentState(client);
+    const ins = parseInsert(sql, values);
+    if (ins) {
+        if (!ins.row) { if (!/^\s*INSERT\s+INTO\s+\w+\s*(\([^)]*\))?\s*SELECT\b/i.test(sql) || SEALED_TABLES[ins.table]) st.broken = st.broken || `${ins.table}: tahlil qilinmagan INSERT`; return; }
+        const k = ins.row[keyOf(ins.table)];
+        if (ins.conflict) {
+            // Upsert: ziddiyat ustunlari bo'yicha mavjud qator (yangilanadigan) oldindan o'qiladi.
+            if (!ins.conflict.cols || ins.conflict.cols.some(c => !(c in ins.row))) { st.broken = st.broken || `${ins.table}: upsert kaliti aniqlanmadi`; return; }
+            const where = ins.conflict.cols.map((c, i) => `${c} = $${i + 1}`).join(' AND ');
+            const rows = await probe(client, orig, ins.table, null, where, ins.conflict.cols.map(c => ins.row[c]));
+            if (rows === null) { st.broken = st.broken || `${ins.table}: upsert tekshiruvi bajarilmadi`; return; }
+            for (const r of rows) addChange(st, ins.table, r.k, r.r, ins.conflict.set, Object.fromEntries(ins.conflict.set.filter(c => c in ins.row).map(c => [c, ins.row[c]])));
+            if (rows.length) return; // qo'shilmaydi, yangilanadi
+        }
+        const list = st.inserts.get(ins.table) || []; list.push({ key: k == null ? null : String(k), row: ins.row }); st.inserts.set(ins.table, list);
         return;
     }
-    if ((m = /^\s*UPDATE\s+(\w+)\b/i.exec(sql)) && TRACKED.has(m[1])) { client.__finIntents.push({ table: m[1], op: 'U', any: true }); return; }
-    if ((m = /^\s*DELETE\s+FROM\s+(\w+)\b/i.exec(sql)) && TRACKED.has(m[1])) client.__finIntents.push({ table: m[1], op: 'D', any: true });
+    const ch = parseChange(sql, values);
+    if (!ch) { if (/^\s*(INSERT|UPDATE|DELETE)\b/i.test(sql)) { const t = /^\s*(?:INSERT\s+INTO|UPDATE|DELETE\s+FROM)\s+(\w+)/i.exec(sql)?.[1]; if (t && TRACKED.has(t)) st.broken = st.broken || `${t}: tahlil qilinmagan o‘zgartirish`; } return; }
+    const rows = await probe(client, orig, ch.table, ch.alias, ch.where, values);
+    if (rows === null) { st.broken = st.broken || `${ch.table}: o‘zgartirish tekshiruvi bajarilmadi`; return; }
+    for (const r of rows) {
+        if (ch.op === 'D') st.deletes.add(ch.table + '|' + r.k);
+        else addChange(st, ch.table, r.k, r.r, ch.cols, ch.set);
+    }
+}
+function addChange(st, table, key, before, cols, set) {
+    const id = table + '|' + key, cur = st.changes.get(id);
+    if (!cur) st.changes.set(id, { before, allowed: new Set([...cols, 'updated_at']), set: { ...set } });
+    else { cols.forEach(c => cur.allowed.add(c)); Object.assign(cur.set, set); for (const c of cols) if (!(c in set)) delete cur.set[c]; }
 }
 // Tranzaksiya boshida ulanishga bog'lanadi, oxirida (finally) albatta yechiladi (ulanish havzaga qaytadi).
 function track(client, { skipVerify = false } = {}) {
     if (client.__finTracked) return () => {};
     const orig = client.query;
-    client.__finTracked = true; client.__finIntents = []; client.__finSkipIntents = skipVerify;
+    client.__finTracked = true; client.__finSkipIntents = skipVerify; delete client.__finState; intentState(client);
     client.query = function (text, values) {
-        try { record(client, typeof text === 'object' && text ? text.text : text, typeof text === 'object' && text ? text.values : values); } catch { client.__finIntents.push({ table: '*', op: '*', any: true, broken: true }); }
-        return orig.apply(this, arguments);
+        const sql = String(typeof text === 'object' && text ? text.text : text || ''), vals = typeof text === 'object' && text ? text.values : values;
+        if (typeof arguments[arguments.length - 1] === 'function' || !/^\s*(INSERT|UPDATE|DELETE)\b/i.test(sql)) return orig.apply(this, arguments);
+        const args = arguments;
+        return (async () => {
+            try { await capture(client, orig, sql, vals); } catch (e) { intentState(client).broken = intentState(client).broken || ('tahlil xatosi: ' + e.message); }
+            return orig.apply(client, args);
+        })();
     };
-    return () => { client.query = orig; delete client.__finTracked; delete client.__finIntents; delete client.__finSkipIntents; };
+    return () => { client.query = orig; delete client.__finTracked; delete client.__finState; delete client.__finSkipIntents; };
 }
 const canon = v => {
     if (v === undefined || v === null) return null;
@@ -121,31 +191,48 @@ function sameValue(intended, stored) {
     if (a === b) return true;
     if (a == null || b == null) return a === b || (a === '' && b == null) || (b === '' && a == null);
     if (/^-?\d+(\.\d+)?$/.test(a) && /^-?\d+(\.\d+)?$/.test(b)) return Number(a) === Number(b);
-    // Sana ustuni: '2026-10-20' va '2026-10-20T00:00:00' ko'rinishlari.
     if (/^\d{4}-\d{2}-\d{2}/.test(a) && /^\d{4}-\d{2}-\d{2}/.test(b)) return a.slice(0, 10) === b.slice(0, 10) && (a.length <= 10 || b.length <= 10 || Date.parse(a) === Date.parse(b));
     return false;
 }
 async function verifyIntents(db, xid) {
-    if (db.__finSkipIntents || !db.__finIntents) return;
-    const intents = db.__finIntents;
-    if (intents.some(i => i.broken)) return; // tahlil qila olmagan so'rov — xavfsiz tomonga emas, lekin yozuvni to'xtatmaymiz
+    if (db.__finSkipIntents || !db.__finState) return;
+    const st = db.__finState;
+    const fail = (t, k, why) => { throw Object.assign(new Error(`FIN_TAMPER: ${t}/${k}: ${why} — bazada ilovadan tashqari o‘zgartirish (trigger) bor, yozuv bekor qilindi`), { status: 409 }); };
     const seals = (await db.query('SELECT table_name, row_id, op FROM fin_row_seals WHERE xid=$1 ORDER BY seq', [xid])).rows;
-    const fail = (sl, why) => { throw Object.assign(new Error(`FIN_TAMPER: ${sl.table_name}/${sl.row_id}: ${why} — bazada ilovadan tashqari o‘zgartirish (trigger) bor, yozuv bekor qilindi`), { status: 409 }); };
+    if (st.broken && seals.length) fail('*', '', 'ilova o‘z yozuvini tekshira olmadi (' + st.broken + ')');
+    const insertedKeys = t => new Set((st.inserts.get(t) || []).map(i => i.key).filter(k => k != null));
+    const studentKeys = new Set([...insertedKeys('students'), ...[...st.changes.keys(), ...st.deletes].filter(k => k.startsWith('students|')).map(k => k.slice(9))]);
+    const read = async (t, k) => (await db.query(`SELECT pg_catalog.to_jsonb(t) AS r FROM ${t} t WHERE ${keyOf(t)}::text = $1`, [String(k)])).rows[0]?.r;
+    const used = new Set();
     for (const sl of seals) {
-        const der = DERIVED[sl.table_name];
-        if (der && intents.some(i => i.table === der[0] && (der[1] === '*' || i.op === der[1]))) continue;
-        const key = SEALED_TABLES[sl.table_name];
-        const same = intents.filter(i => i.table === sl.table_name && i.op === sl.op);
-        if (!same.length) fail(sl, 'ilova bu jadvalga yozmagan');
-        if (sl.op !== 'I') continue;
-        // Kalit ilova tomonidan berilgan bo'lsa — kalit bo'yicha; ketma-ket raqam (BIGSERIAL) bo'lsa — tartib bo'yicha, har niyat bir marta.
-        let keyed = same.find(i => !i.used && i.row && i.row[key] != null && String(i.row[key]) === String(sl.row_id));
-        if (!keyed) keyed = same.find(i => !i.used && i.row && i.row[key] == null);
-        if (!keyed) { if (same.some(i => i.any)) continue; fail(sl, 'ilova bunday qator qo‘shmagan'); }
-        keyed.used = true;
-        const stored = (await db.query(`SELECT pg_catalog.to_jsonb(t) AS r FROM ${sl.table_name} t WHERE ${key}::text = $1`, [String(sl.row_id)])).rows[0]?.r;
-        if (!stored) continue; // shu tranzaksiyada keyin o'chirilgan (masalan, qayta ochish)
-        for (const [col, v] of Object.entries(keyed.row)) if (Object.prototype.hasOwnProperty.call(stored, col) && !sameValue(v, stored[col])) fail(sl, `“${col}” ustuni ilova yozganidan farq qiladi`);
+        const t = sl.table_name, k = String(sl.row_id);
+        if (t === 'fin_student_log') {
+            const r = await read(t, k);
+            if (r && studentKeys.has(String(r.student_id))) continue;
+            if (r && (st.inserts.get('fin_student_log') || []).some(i => String(i.row.student_id) === String(r.student_id))) continue;
+            fail(t, k, 'ilova yozmagan o‘quvchi holati');
+        }
+        if (t === 'fin_contract_values') { if (insertedKeys('payment_records').has(k) || insertedKeys('fin_contract_values').has(k)) continue; fail(t, k, 'ilova qo‘shmagan tushum qiymati'); }
+        if (t === 'fin_salary_roles') { if (insertedKeys('salary_transactions').has(k) || insertedKeys('fin_salary_roles').has(k)) continue; fail(t, k, 'ilova qo‘shmagan maosh lavozimi'); }
+        if (sl.op === 'D') { if (st.deletes.has(t + '|' + k)) continue; fail(t, k, 'ilova o‘chirmagan qator o‘chirilgan'); }
+        const ch = st.changes.get(t + '|' + k);
+        if (sl.op === 'U') {
+            if (!ch) fail(t, k, 'ilova o‘zgartirmagan qator o‘zgargan');
+            const now = await read(t, k); if (!now) continue;
+            for (const col of Object.keys(now)) {
+                if (!ch.allowed.has(col) && ch.before && !sameValue(ch.before[col], now[col])) fail(t, k, `“${col}” ustuni ilova o‘zgartirmagan holda o‘zgargan`);
+                if (col in ch.set && !sameValue(ch.set[col], now[col])) fail(t, k, `“${col}” ustuni ilova yozganidan farq qiladi`);
+            }
+            continue;
+        }
+        // INSERT: kalit bo'yicha, ketma-ket raqamli jadvalda tartib bo'yicha.
+        const list = st.inserts.get(t) || [];
+        let it = list.find(i => !used.has(i) && i.key === k) || list.find(i => !used.has(i) && i.key == null);
+        if (!it) fail(t, k, 'ilova bunday qator qo‘shmagan');
+        used.add(it);
+        const now = await read(t, k); if (!now) continue;
+        const later = ch ? ch.allowed : new Set();
+        for (const [col, v] of Object.entries(it.row)) if (!later.has(col) && Object.prototype.hasOwnProperty.call(now, col) && !sameValue(v, now[col])) fail(t, k, `“${col}” ustuni ilova yozganidan farq qiladi`);
     }
 }
 // Faqat ilova kodi chaqiradi (COMMIT dan oldin). Kechiktirilgan triggerlar (o'quvchi o'chirilishi) avval ishga tushiriladi.
@@ -156,6 +243,13 @@ async function signTx(db) {
     const xid = (await db.query('SELECT pg_current_xact_id_if_assigned()::text AS x')).rows[0].x;
     if (!xid) return;
     await verifyIntents(db, xid);
+    // Diskdagi oldingi zanjir boshi bazada bo'lishi shart: oxirgi yozuvlar o'chirilgan bo'lsa, ogohlantirish ko'tariladi va bosh oldinga surilmaydi.
+    const prev = readHead();
+    if (prev) {
+        const ok = (!prev.sealSeq || (await db.query('SELECT row_hash FROM fin_row_seals WHERE seq=$1', [prev.sealSeq])).rows[0]?.row_hash === prev.sealHash)
+            && (!prev.auditId || (await db.query('SELECT hash FROM fin_audit WHERE id=$1', [prev.auditId])).rows[0]?.hash === prev.auditHash);
+        if (!ok) { raiseAlarm({ table: 'fin_row_seals', rowId: String(prev.sealSeq), reason: `server diskidagi zanjir boshi (${prev.sealSeq}-muhr) bazada yo‘q — oxirgi yozuvlar o‘chirilgan` }); db.__finNoAdvance = true; }
+    }
     await signXid(db, xid);
     const h = (await db.query(`SELECT (SELECT seq FROM fin_row_seals ORDER BY seq DESC LIMIT 1) AS seq, (SELECT row_hash FROM fin_row_seals ORDER BY seq DESC LIMIT 1) AS hash,
         (SELECT id FROM fin_audit WHERE hash IS NOT NULL ORDER BY id DESC LIMIT 1) AS aid, (SELECT hash FROM fin_audit WHERE hash IS NOT NULL ORDER BY id DESC LIMIT 1) AS ahash`)).rows[0];
@@ -163,8 +257,8 @@ async function signTx(db) {
 }
 // COMMIT muvaffaqiyatli bo'lgach: zanjir boshi server diskiga (faqat oldinga) yoziladi.
 function commitHead(db) {
-    const h = db.__finHead; delete db.__finHead;
-    if (!h) return;
+    const h = db.__finHead, stop = db.__finNoAdvance; delete db.__finHead; delete db.__finNoAdvance;
+    if (!h || stop) return;
     try {
         const cur = readJson(headFile());
         if (!cur || h.sealSeq > cur.sealSeq || h.auditId > cur.auditId) writeJson(headFile(), { sealSeq: Math.max(h.sealSeq, cur?.sealSeq || 0), sealHash: h.sealSeq >= (cur?.sealSeq || 0) ? h.sealHash : cur.sealHash,

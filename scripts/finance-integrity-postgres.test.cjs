@@ -418,7 +418,78 @@ test('round 8: dropout from a controlled date, zero-cash termination, attributio
             const o = await finance.overview(pool, admin, { start: '2026-09-01', end: '2026-09-30', scope: 'all', basis: 'accrual' });
             assert.equal(o.balance.balanced, true, String(o.balance.imbalance));
             const bill = await finance.createPayable(pool, admin, { requestKey: 'r12-bill-0000000001', kind: 'bill', entity: 'common', counterparty: 'Ijara', categoryCode: 'RENT', amount: 500000, issueDate: '2026-10-10' });
+            // Kech kelgan hisob-faktura (sentyabr ijarasi oktyabrda): xizmat davrida hisoblangan majburiyat, balans teng.
+            await finance.createPayable(pool, admin, { requestKey: 'r13-latebill-0000001', kind: 'bill', entity: 'common', counterparty: 'Ijara', categoryCode: 'RENT', amount: 3000000, issueDate: '2026-10-20',
+                serviceStart: '2026-09-01', serviceEnd: '2026-09-30', documentUrl: (await finance.storeEvidence(pool, admin, pdf())).url });
+            for (const end of ['2026-09-30', '2026-10-15', '2026-10-31']) {
+                const b = (await finance.overview(pool, admin, { start: '2026-09-01', end, scope: 'all', basis: 'accrual' })).balance;
+                assert.equal(b.balanced, true, end + ' ' + b.imbalance);
+            }
             await assert.rejects(finance.createTransaction(pool, admin, { requestKey: 'r12-billpay-00000001', entity: 'common', type: 'expense', categoryCode: 'RENT', accountId: 'acc-bank', amount: 500000, date: '2026-10-05', payableId: bill.id, counterparty: 'Ijara' }), e => e.status === 400);
+        });
+        // Ilova tranzaksiya o'ramining o'zi (maosh bo'limi kabi): kuzatish + belgi + imzo.
+        const appTx = async (prefix, fn) => {
+            const fc = require('../server/services/finCtx'), db = await pool.connect(), untrack = fc.track(db);
+            try { await db.query('BEGIN'); await db.query("SELECT set_config('fin.ctx', $1, true)", [fc.token(prefix)]); await fn(db); await fc.signTx(db); await db.query('COMMIT'); fc.commitHead(db); }
+            catch (e) { await db.query('ROLLBACK'); throw e; } finally { untrack(); db.release(); }
+        };
+        const accrue = (db, id, emp, amount) => db.query(`INSERT INTO salary_transactions(id,employee_id,language,period_start,period_end,amount,status)
+            VALUES($1,$2,$3,$4,$5,$6,'unpaid') ON CONFLICT(employee_id,period_start,period_end) DO UPDATE SET amount=EXCLUDED.amount WHERE salary_transactions.status='unpaid'`, [id, emp, 'russian', '2026-10-01', '2026-10-31', amount]);
+        await t.test('round 13: payroll-style upsert and mark-paid pass; a hidden trigger changing another accrual in the same transaction is refused', async () => {
+            await fresh(pool);
+            plainSql("CREATE UNIQUE INDEX sal_period ON salary_transactions(employee_id,period_start,period_end); INSERT INTO hr_employees(id,name,role,lang,login,status) VALUES('t2','Ustoz 2','rus-oqituvchi','russian','t2','active')");
+            await appTx('payroll', async db => { await accrue(db, 'oct1', 't1', 2000000); await accrue(db, 'oct2', 't2', 2000000); });
+            await appTx('payroll', async db => { await accrue(db, 'oct1x', 't1', 2100000); });
+            await appTx('payroll', async db => { await db.query("UPDATE salary_transactions SET status='paid',paid_at=NOW() WHERE id=$1", ['oct1']); });
+            assert.equal((await finance.verifySeals(pool)).ok, true);
+            assert.equal((await pool.query("SELECT amount FROM salary_transactions WHERE id='oct1'")).rows[0].amount, '2100000');
+            plainSql(`CREATE TABLE side_log(x TEXT); CREATE FUNCTION bump() RETURNS trigger AS $$ BEGIN UPDATE salary_transactions SET amount=amount*5 WHERE id='oct2'; RETURN NEW; END $$ LANGUAGE plpgsql;
+                CREATE TRIGGER zz_bump AFTER INSERT ON side_log FOR EACH ROW EXECUTE FUNCTION bump();`);
+            await assert.rejects(appTx('payroll', async db => { await db.query("INSERT INTO side_log VALUES('x')"); await db.query("UPDATE salary_transactions SET status='paid',paid_at=NOW() WHERE id=$1", ['oct1']); }), /FIN_TAMPER/);
+            assert.equal((await pool.query("SELECT amount FROM salary_transactions WHERE id='oct2'")).rows[0].amount, '2000000');
+            const v = await finance.verifySeals(pool); assert.equal(v.ok, false); assert.match(v.reason, /kutilmagan trigger/);
+        });
+        await t.test('round 13: a hidden trigger marking a different student inactive during a CRM save is refused', async () => {
+            await fresh(pool);
+            plainSql(`INSERT INTO students VALUES('s2','Vali','+998907770000','russian','g',NULL,30,'{"debtAmount":0}');
+                CREATE TABLE side_log(x TEXT); CREATE FUNCTION drop1() RETURNS trigger AS $$ BEGIN UPDATE students SET extra_data=extra_data || '{"status":"inactive"}'::jsonb WHERE id='s1'; RETURN NEW; END $$ LANGUAGE plpgsql;
+                CREATE TRIGGER zz_drop AFTER INSERT ON side_log FOR EACH ROW EXECUTE FUNCTION drop1();`);
+            await assert.rejects(appTx('crm', async db => { await db.query("INSERT INTO side_log VALUES('x')"); await db.query("UPDATE students SET extra_data=extra_data || '{\"frozen\":true}'::jsonb WHERE id=$1", ['s2']); }), /FIN_TAMPER/);
+        });
+        await t.test('round 13: a changed column default is caught by the signed fingerprint', async () => {
+            await fresh(pool);
+            plainSql("ALTER TABLE fin_transactions ALTER COLUMN salary_id SET DEFAULT 'sal1'");
+            const v = await finance.verifySeals(pool); assert.equal(v.ok, false); assert.match(v.reason, /o‘zgartirilgan/);
+        });
+        await t.test('round 13: after the newest transaction is deleted, a later legitimate write does not paper over it', async () => {
+            await fresh(pool);
+            await finance.createTransaction(pool, admin, { requestKey: 'r13-trunc-000000001', entity: 'common', type: 'expense', categoryCode: 'ADMIN', accountId: 'acc-card', amount: 30000, date: '2026-10-20', counterparty: 'Ofis' });
+            plainSql(`SET session_replication_role = replica;
+                DELETE FROM fin_row_seals WHERE xid IN (SELECT xid FROM fin_audit WHERE (after_data->>'amount')::int=30000);
+                DELETE FROM fin_tx_signatures WHERE xid IN (SELECT xid FROM fin_audit WHERE (after_data->>'amount')::int=30000);
+                DELETE FROM fin_checkpoints WHERE id = (SELECT MAX(id) FROM fin_checkpoints);
+                DELETE FROM fin_transactions WHERE request_key='r13-trunc-000000001';
+                DELETE FROM fin_audit WHERE (after_data->>'amount')::int=30000;`);
+            // Yangi jarayon: keshlar bo'sh, faqat diskdagi zanjir boshi qoladi.
+            for (const k of Object.keys(require.cache)) if (/server[\\/]services[\\/]finance\.js$/.test(k)) delete require.cache[k];
+            const f2 = require('../server/services/finance');
+            await f2.createTransaction(pool, admin, { requestKey: 'r13-after-000000001', entity: 'common', type: 'expense', categoryCode: 'ADMIN', accountId: 'acc-card', amount: 40000, date: '2026-10-21', counterparty: 'Ofis' }).catch(() => {});
+            const v = await f2.verifySeals(pool);
+            assert.equal(v.ok, false, 'kesish yashirilmadi');
+        });
+        await t.test('round 13: a session temp table cannot shadow the period guard', async () => {
+            await fresh(pool);
+            await finance.lockMonth(pool, admin, { month: '2026-09', override: true, note: 'Test: sentyabr yopildi (temp jadval)' });
+            const db = await pool.connect();
+            try {
+                await db.query('CREATE TEMP TABLE fin_period_locks(month TEXT, locked_at TIMESTAMPTZ)');
+                const fc = require('../server/services/finCtx'), untrack = fc.track(db);
+                try {
+                    await db.query('BEGIN'); await db.query("SELECT set_config('fin.ctx', $1, true), set_config('search_path', 'public, pg_temp', true)", [fc.token('fin')]);
+                    await assert.rejects(db.query(`INSERT INTO fin_transactions(id,entity,txn_date,type,category_code,account_id,amount,counterparty,actor_id,actor_name) VALUES('tmp1','common','2026-09-15','expense','ADMIN','acc-card',1000,'x','admin','Admin')`), /yopilgan/);
+                    await db.query('ROLLBACK');
+                } finally { untrack(); }
+            } finally { await db.query('DROP TABLE IF EXISTS pg_temp.fin_period_locks').catch(() => {}); db.release(); }
         });
         await t.test('segment cash flow: english + russian + common equals consolidated, line by line', async () => {
             await fresh(pool);

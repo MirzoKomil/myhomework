@@ -852,7 +852,9 @@
         }
         for (const pos of positions.values()) { if (pos > 0) accrued += pos; else prepaid -= pos; }
         for (const p of data.payables || []) {
-            if (p.kind === 'loan' || !scopeMatch(p.entity, scope) || p.issueDate > asOf || payableVoidedAt(p, asOf) || (p.voided && !p.voidDate)) continue;
+            if (p.kind === 'loan' || !scopeMatch(p.entity, scope) || payableVoidedAt(p, asOf) || (p.voided && !p.voidDate)) continue;
+            // Hisob-faktura kelmasdan ko'rsatilgan xizmat (kech kelgan ijara/kommunal hisobi): hisoblangan majburiyat (IAS 37 accrual).
+            if (p.issueDate > asOf) { accrued += payableRecognized(p, asOf); continue; }
             prepaid += p.amount - payableRecognized(p, asOf);
         }
         // Aylanmadan soliq: hisoblangan − to'langan.

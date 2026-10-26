@@ -37,7 +37,7 @@ BEGIN
     RAISE EXCEPTION 'FIN_PERIOD_CLOSED: % sanasi yopilgan davrga (% gacha) tushadi', NEW.${column}, closed USING ERRCODE = 'P0001';
   END IF;
   RETURN NEW;
-END $$ LANGUAGE plpgsql SET search_path = public;
+END $$ LANGUAGE plpgsql SET search_path = public, pg_temp;
 DROP TRIGGER IF EXISTS fin_guard_${table} ON ${table};
 CREATE TRIGGER fin_guard_${table} BEFORE INSERT ON ${table} FOR EACH ROW EXECUTE FUNCTION fin_guard_${table}();`;
 }
@@ -138,6 +138,7 @@ CREATE INDEX IF NOT EXISTS fin_row_seals_xid ON fin_row_seals(xid);
 CREATE INDEX IF NOT EXISTS fin_audit_xid ON fin_audit(xid);
 -- Moliya funksiyalari matnining (ilova kaliti bilan imzolangan) izi: bazada funksiya yashirincha almashtirilsa aniqlanadi.
 CREATE TABLE IF NOT EXISTS fin_schema_fingerprints (id BIGSERIAL PRIMARY KEY, fn_hash TEXT NOT NULL, mac TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
+ALTER TABLE fin_schema_fingerprints ADD COLUMN IF NOT EXISTS code_hash TEXT;
 CREATE TABLE IF NOT EXISTS fin_checkpoints (id BIGSERIAL PRIMARY KEY, seal_seq BIGINT NOT NULL, seal_hash TEXT NOT NULL, audit_id BIGINT NOT NULL, audit_hash TEXT NOT NULL,
  prev_mac TEXT NOT NULL, mac TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
 CREATE TABLE IF NOT EXISTS fin_tx_signatures (xid TEXT PRIMARY KEY, seals INTEGER NOT NULL, audits INTEGER NOT NULL, mac TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
@@ -184,7 +185,7 @@ CREATE TABLE IF NOT EXISTS fin_contract_values (
 );
 
 CREATE OR REPLACE FUNCTION fin_reject_change() RETURNS trigger AS $$
-BEGIN RAISE EXCEPTION 'FIN_IMMUTABLE: % jadvalidagi moliyaviy yozuvni o''zgartirib yoki o''chirib bo''lmaydi', TG_TABLE_NAME USING ERRCODE = 'P0001'; END $$ LANGUAGE plpgsql SET search_path = public;
+BEGIN RAISE EXCEPTION 'FIN_IMMUTABLE: % jadvalidagi moliyaviy yozuvni o''zgartirib yoki o''chirib bo''lmaydi', TG_TABLE_NAME USING ERRCODE = 'P0001'; END $$ LANGUAGE plpgsql SET search_path = public, pg_temp;
 CREATE OR REPLACE FUNCTION fin_payables_guard() RETURNS trigger AS $$
 BEGIN
   IF TG_OP = 'DELETE' OR OLD.voided_at IS NOT NULL OR NEW.voided_at IS NULL
@@ -193,7 +194,7 @@ BEGIN
     RAISE EXCEPTION 'FIN_IMMUTABLE: hisob-faktura faqat bir marta bekor qilinishi mumkin' USING ERRCODE = 'P0001';
   END IF;
   RETURN NEW;
-END $$ LANGUAGE plpgsql SET search_path = public;
+END $$ LANGUAGE plpgsql SET search_path = public, pg_temp;
 DROP TRIGGER IF EXISTS fin_payables_guard ON fin_payables;
 CREATE TRIGGER fin_payables_guard BEFORE UPDATE OR DELETE ON fin_payables FOR EACH ROW EXECUTE FUNCTION fin_payables_guard();
 CREATE OR REPLACE FUNCTION fin_payment_records_guard() RETURNS trigger AS $$
@@ -205,7 +206,7 @@ BEGIN
     RAISE EXCEPTION 'FIN_IMMUTABLE: tushum yozuvini o''zgartirib bo''lmaydi — moliya bo''limida tuzating' USING ERRCODE = 'P0001';
   END IF;
   RETURN NEW;
-END $$ LANGUAGE plpgsql SET search_path = public;
+END $$ LANGUAGE plpgsql SET search_path = public, pg_temp;
 DROP TRIGGER IF EXISTS fin_payment_records_guard ON payment_records;
 CREATE TRIGGER fin_payment_records_guard BEFORE UPDATE OR DELETE ON payment_records FOR EACH ROW EXECUTE FUNCTION fin_payment_records_guard();
 -- Tushum yozilgan paytdagi hisob raqam saqlanadi: keyinchalik sozlama o'zgarsa ham tarix ko'chmaydi.
@@ -217,7 +218,7 @@ BEGIN
     IF NEW.account_id IS NULL THEN NEW.account_id := 'acc-suspense'; END IF;
   END IF;
   RETURN NEW;
-END $$ LANGUAGE plpgsql SET search_path = public;
+END $$ LANGUAGE plpgsql SET search_path = public, pg_temp;
 DROP TRIGGER IF EXISTS fin_receipt_account ON payment_records;
 CREATE TRIGGER fin_receipt_account BEFORE INSERT ON payment_records FOR EACH ROW EXECUTE FUNCTION fin_receipt_account();
 ${lockGuardSql('payment_records', 'paid_date')}
@@ -231,7 +232,7 @@ ${lockGuardSql('fin_contract_events', 'event_date')}
 -- NULL standart qiymat bilan qo'shilishi shart). Vaqt zonasiga bog'liq va keyin bog'lanadigan (student_id) maydonlar kirmaydi.
 CREATE OR REPLACE FUNCTION fin_row_text(t TEXT, j JSONB) RETURNS TEXT AS $$
   SELECT jsonb_strip_nulls(j - 'created_at' - 'paid_at' - 'updated_at' - 'locked_at' - 'voided_at' - 'captured_at' - 'confirmed_at')::text
-$$ LANGUAGE sql IMMUTABLE SET search_path = public;
+$$ LANGUAGE sql IMMUTABLE SET search_path = public, pg_temp;
 -- TG_ARGV[0] — kalit ustun nomi.
 CREATE OR REPLACE FUNCTION fin_seal_row() RETURNS trigger AS $$
 DECLARE prev TEXT; body TEXT; rid TEXT; op CHAR(1); bh TEXT; cx TEXT;
@@ -247,7 +248,7 @@ BEGIN
   INSERT INTO fin_row_seals(table_name,row_id,op,body_hash,prev_hash,row_hash,ctx)
     VALUES (TG_TABLE_NAME, rid, op, bh, prev, pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(prev || '|' || TG_TABLE_NAME || '|' || rid || '|' || op || '|' || bh || '|' || COALESCE(cx, ''), 'UTF8')), 'hex'), cx);
   RETURN COALESCE(NEW, OLD);
-END $$ LANGUAGE plpgsql SET search_path = public;
+END $$ LANGUAGE plpgsql SET search_path = public, pg_temp;
 ${Object.entries(SEALED_TABLES).map(([t, k]) => `DO $do$ BEGIN IF to_regclass('${t}') IS NOT NULL THEN
   DROP TRIGGER IF EXISTS fin_seal_${t} ON ${t};
   CREATE TRIGGER fin_seal_${t} AFTER INSERT OR UPDATE OR DELETE ON ${t} FOR EACH ROW EXECUTE FUNCTION fin_seal_row('${k}');
@@ -259,7 +260,7 @@ BEGIN
   INSERT INTO fin_contract_values(record_id, lead_id, value, source)
     VALUES (NEW.id, NEW.lead_id, CASE WHEN v ~ '^[0-9]{1,15}$' THEN v::BIGINT ELSE NULL END, 'insert') ON CONFLICT DO NOTHING;
   RETURN NEW;
-END $$ LANGUAGE plpgsql SET search_path = public;
+END $$ LANGUAGE plpgsql SET search_path = public, pg_temp;
 DROP TRIGGER IF EXISTS fin_capture_contract_value ON payment_records;
 CREATE TRIGGER fin_capture_contract_value AFTER INSERT ON payment_records FOR EACH ROW EXECUTE FUNCTION fin_capture_contract_value();
 -- Yopilgan oyning nusxasi o'zgarmaydi va o'chirilmaydi (faqat oy qayta ochilgandan keyin).
@@ -269,7 +270,7 @@ BEGIN
     RAISE EXCEPTION 'FIN_IMMUTABLE: yopilgan oyning muzlatilgan nusxasini o''zgartirib bo''lmaydi' USING ERRCODE = 'P0001';
   END IF;
   RETURN OLD;
-END $$ LANGUAGE plpgsql SET search_path = public;
+END $$ LANGUAGE plpgsql SET search_path = public, pg_temp;
 DROP TRIGGER IF EXISTS fin_snapshot_guard ON fin_period_snapshots;
 CREATE TRIGGER fin_snapshot_guard BEFORE UPDATE OR DELETE ON fin_period_snapshots FOR EACH ROW EXECUTE FUNCTION fin_snapshot_guard();
 -- Hisob raqam: harakat bo'lgan hisobning turi, egasi va boshlang'ich qoldig'i o'zgarmaydi; o'chirilmaydi.
@@ -289,7 +290,7 @@ BEGIN
     END IF;
   END IF;
   RETURN NEW;
-END $$ LANGUAGE plpgsql SET search_path = public;
+END $$ LANGUAGE plpgsql SET search_path = public, pg_temp;
 DROP TRIGGER IF EXISTS fin_accounts_guard ON fin_accounts;
 CREATE TRIGGER fin_accounts_guard BEFORE UPDATE OR DELETE ON fin_accounts FOR EACH ROW EXECUTE FUNCTION fin_accounts_guard();
 -- Maosh hisoblari ham yopilgan davrga yozilmaydi (hisoblash usulidagi xarajat shu jadvaldan olinadi).
@@ -309,7 +310,7 @@ BEGIN
     RAISE EXCEPTION 'FIN_PERIOD_CLOSED: yopilgan davrdagi maosh summasini o''zgartirib bo''lmaydi' USING ERRCODE = 'P0001';
   END IF;
   RETURN COALESCE(NEW, OLD);
-END $$ LANGUAGE plpgsql SET search_path = public;
+END $$ LANGUAGE plpgsql SET search_path = public, pg_temp;
 DO $$ BEGIN
   IF to_regclass('salary_transactions') IS NOT NULL THEN
     DROP TRIGGER IF EXISTS fin_guard_salary ON salary_transactions;
@@ -325,13 +326,13 @@ BEGIN
     RAISE EXCEPTION 'FIN_IMMUTABLE: yopilgan oy qulfini faqat moliya bo''limida rahbar ochadi' USING ERRCODE = 'P0001';
   END IF;
   RETURN OLD;
-END $$ LANGUAGE plpgsql SET search_path = public;
+END $$ LANGUAGE plpgsql SET search_path = public, pg_temp;
 DROP TRIGGER IF EXISTS fin_lock_guard ON fin_period_locks;
 CREATE TRIGGER fin_lock_guard BEFORE UPDATE OR DELETE ON fin_period_locks FOR EACH ROW EXECUTE FUNCTION fin_lock_guard();
 CREATE OR REPLACE FUNCTION fin_student_state(x JSONB) RETURNS JSONB AS $$
   SELECT jsonb_build_object('frozen', COALESCE((x->>'frozen')::boolean, false), 'frozenAt', x->>'frozenAt', 'status', x->>'status',
     'inactiveAt', COALESCE(x->>'inactiveAt', x->>'leftAt'), 'debtAmount', x->>'debtAmount', 'paymentDueDate', x->>'paymentDueDate')
-$$ LANGUAGE sql IMMUTABLE SET search_path = public;
+$$ LANGUAGE sql IMMUTABLE SET search_path = public, pg_temp;
 CREATE OR REPLACE FUNCTION fin_log_student() RETURNS trigger AS $$
 BEGIN
   -- CRM o'quvchilar jadvalini to'liq qayta yozadi (DELETE + INSERT): faqat oxirgi yozilgan holatdan farq qilsa jurnalga yoziladi.
@@ -340,7 +341,7 @@ BEGIN
     INSERT INTO fin_student_log(student_id, state, app_user) VALUES (NEW.id, fin_student_state(COALESCE(NEW.extra_data,'{}'::jsonb)), NULLIF(current_setting('app.user_id', true), ''));
   END IF;
   RETURN NEW;
-END $$ LANGUAGE plpgsql SET search_path = public;
+END $$ LANGUAGE plpgsql SET search_path = public, pg_temp;
 -- O'quvchi o'chirilsa (CRM ro'yxatni to'liq qayta yozadi: DELETE + INSERT) — tranzaksiya oxirida haqiqatan yo'q bo'lsa,
 -- jurnalga sanasi bilan "o'chirildi" yozuvi qo'shiladi: shu sanadan xizmat to'xtaydi (tushum to'xtaydi).
 CREATE OR REPLACE FUNCTION fin_log_student_delete() RETURNS trigger AS $$
@@ -353,7 +354,7 @@ BEGIN
     || jsonb_build_object('deleted', true, 'name', OLD.name, 'leadId', OLD.extra_data->'leadRef'->>'id', 'subject', OLD.subject, 'staffDemo', COALESCE((OLD.extra_data->>'isStaffDemo')::boolean, false)),
     NULLIF(current_setting('app.user_id', true), ''));
   RETURN NULL;
-END $$ LANGUAGE plpgsql SET search_path = public;
+END $$ LANGUAGE plpgsql SET search_path = public, pg_temp;
 DO $do$ BEGIN IF to_regclass('students') IS NOT NULL THEN
   DROP TRIGGER IF EXISTS fin_log_student ON students;
   CREATE TRIGGER fin_log_student AFTER INSERT OR UPDATE ON students FOR EACH ROW EXECUTE FUNCTION fin_log_student();
@@ -364,7 +365,7 @@ CREATE OR REPLACE FUNCTION fin_capture_salary_role() RETURNS trigger AS $$
 BEGIN
   INSERT INTO fin_salary_roles(salary_id, role, source) VALUES (NEW.id, (SELECT role FROM hr_employees WHERE id = NEW.employee_id), 'insert') ON CONFLICT DO NOTHING;
   RETURN NEW;
-END $$ LANGUAGE plpgsql SET search_path = public;
+END $$ LANGUAGE plpgsql SET search_path = public, pg_temp;
 DO $do$ BEGIN IF to_regclass('salary_transactions') IS NOT NULL THEN
   DROP TRIGGER IF EXISTS fin_capture_salary_role ON salary_transactions;
   CREATE TRIGGER fin_capture_salary_role AFTER INSERT ON salary_transactions FOR EACH ROW EXECUTE FUNCTION fin_capture_salary_role();
@@ -376,7 +377,7 @@ BEGIN
   NEW.recorded_at := NOW(); NEW.db_user := current_user; NEW.ctx := NULLIF(current_setting('fin.ctx', true), '');
   NEW.backfill := COALESCE(NEW.backfill, false) AND COALESCE(NEW.ctx, '') LIKE 'init:%' AND NOT EXISTS (SELECT 1 FROM fin_migrations WHERE id = 'student-log-v1');
   RETURN NEW;
-END $$ LANGUAGE plpgsql SET search_path = public;
+END $$ LANGUAGE plpgsql SET search_path = public, pg_temp;
 DROP TRIGGER IF EXISTS fin_student_log_stamp ON fin_student_log;
 CREATE TRIGGER fin_student_log_stamp BEFORE INSERT ON fin_student_log FOR EACH ROW EXECUTE FUNCTION fin_student_log_stamp();
 ${immutableSql('fin_contract_events')}
@@ -406,7 +407,20 @@ async function initSchema(pool) {
         const untrack = finCtx.track(db, { skipVerify: true });
         try {
             await db.query('BEGIN');
-            await db.query("SELECT set_config('fin.ctx', $1, true), set_config('search_path', 'public', true)", [finCtx.token('init')]);
+            await db.query("SELECT set_config('fin.ctx', $1, true), set_config('search_path', 'public, pg_temp', true)", [finCtx.token('init')]);
+            // Ishga tushishdan oldin: kod o'zgarmagan bo'lsa, baza tuzilmasi oxirgi imzolangan izga teng bo'lishi shart
+            // (aks holda kimdir server o'chiq paytda funksiya/trigger/DEFAULT o'zgartirgan — qayta yaratishdan oldin qayd etiladi).
+            // Kod versiyasi: moliya, tushum va maosh modullari manbasi — yangi versiya o'rnatilganda tuzilma o'zgarishi kutiladi.
+            const codeHash = createHash('sha256').update(['finance.js', 'finCtx.js', 'inflow.js', 'payroll.js', 'paymentCash.js'].map(f => { try { return fs.readFileSync(path.join(__dirname, f), 'utf8'); } catch { return ''; } }).join('\n')).digest('hex');
+            if ((await db.query("SELECT to_regclass('fin_schema_fingerprints') AS t")).rows[0].t) {
+                await db.query('SAVEPOINT fin_boot');
+                try {
+                    const last = (await db.query('SELECT fn_hash, mac, code_hash FROM fin_schema_fingerprints ORDER BY id DESC LIMIT 1')).rows[0];
+                    if (last && last.code_hash === codeHash && finCtx.validSchemaMac(last.fn_hash + '|' + codeHash, last.mac) && last.fn_hash !== await functionHash(db))
+                        finCtx.raiseAlarm({ table: 'pg_proc', rowId: '', reason: 'server qayta ishga tushishidan oldin baza tuzilmasi (funksiya, trigger, standart qiymat yoki cheklov) ilovadan tashqarida o‘zgartirilgan' });
+                    await db.query('RELEASE SAVEPOINT fin_boot');
+                } catch { await db.query('ROLLBACK TO SAVEPOINT fin_boot'); }
+            }
             await db.query(SCHEMA);
             for (const [i, a] of F.DEFAULT_ACCOUNTS.entries()) {
                 await db.query(`INSERT INTO fin_accounts(id,entity,name,kind,methods,sort) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(id) DO NOTHING`, [a.id, a.entity, a.name, a.kind, a.methods, i]);
@@ -436,8 +450,8 @@ async function initSchema(pool) {
             await backfillSeals(db);
             // Kod yaratgan funksiyalar shu yerda (CREATE OR REPLACE dan keyin) aynan koddagidek — izi imzolanadi.
             const fh = await functionHash(db);
-            const lastFp = (await db.query('SELECT fn_hash FROM fin_schema_fingerprints ORDER BY id DESC LIMIT 1')).rows[0];
-            if (lastFp?.fn_hash !== fh) await db.query('INSERT INTO fin_schema_fingerprints(fn_hash,mac) VALUES($1,$2)', [fh, finCtx.schemaMac(fh)]);
+            const lastFp = (await db.query('SELECT fn_hash, code_hash FROM fin_schema_fingerprints ORDER BY id DESC LIMIT 1')).rows[0];
+            if (lastFp?.fn_hash !== fh || lastFp?.code_hash !== codeHash) await db.query('INSERT INTO fin_schema_fingerprints(fn_hash,mac,code_hash) VALUES($1,$2,$3)', [fh, finCtx.schemaMac(fh + '|' + codeHash), codeHash]);
             await finCtx.signTx(db);
             await db.query('COMMIT'); finCtx.commitHead(db);
         } catch (e) { await db.query('ROLLBACK').catch(() => {}); throw e; }
@@ -454,7 +468,7 @@ async function transaction(pool, fn) {
         await db.query("SELECT pg_advisory_xact_lock(hashtext('fin-write'))");
         // Tranzaksiya belgisi: muhrlar va audit yozuvi shu belgi bilan bog'lanadi (ilovadan tashqari o'zgarish aniqlanadi).
         // Ichki funksiyalar (sha256, convert_to ...) faqat tizim katalogidan: bir xil nomli soxta funksiya bilan "soya" qilib bo'lmaydi.
-        await db.query("SELECT set_config('fin.ctx', $1, true), set_config('search_path', 'public', true)", [finCtx.token('fin')]);
+        await db.query("SELECT set_config('fin.ctx', $1, true), set_config('search_path', 'public, pg_temp', true)", [finCtx.token('fin')]);
         const result = await fn(db);
         await writeCheckpoint(db);
         await finCtx.signTx(db);
@@ -467,7 +481,7 @@ async function transaction(pool, fn) {
 }
 async function read(pool, fn) {
     const db = await pool.connect();
-    try { await db.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY'); await db.query("SELECT set_config('search_path', 'public', true)"); const r = await fn(db); await db.query('COMMIT'); return r; }
+    try { await db.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY'); await db.query("SELECT set_config('search_path', 'public, pg_temp', true)"); const r = await fn(db); await db.query('COMMIT'); return r; }
     catch (e) { await db.query('ROLLBACK'); throw e; } finally { db.release(); }
 }
 async function access(db, actor, { director = false } = {}) {
@@ -694,13 +708,22 @@ async function functionHash(db) {
         WHERE n.nspname = current_schema() AND p.proname LIKE 'fin\\_%' AND p.prokind = 'f' ORDER BY 1`)).rows;
     // Triggerlar to'liq ta'rifi (vaqti, hodisalari, argumentlari, funksiyaning sxemasi bilan) ham izga kiradi.
     const trg = (await db.query(`SELECT c.relname AS t, tg.tgname AS name, pg_get_triggerdef(tg.oid) AS def FROM pg_trigger tg JOIN pg_class c ON c.oid=tg.tgrelid
-        JOIN pg_namespace n ON n.oid=c.relnamespace WHERE NOT tg.tgisinternal AND n.nspname = current_schema() ORDER BY 1, 2`)).rows.filter(r => MONITORED(r.t));
-    return createHash('sha256').update(rows.map(r => r.sig + '\n' + r.def).join('\n--\n') + '\n==\n' + trg.map(r => r.def).join('\n')).digest('hex');
+        JOIN pg_namespace n ON n.oid=c.relnamespace WHERE NOT tg.tgisinternal AND n.nspname = current_schema() ORDER BY 1, 2`)).rows;
+    // Moliya jadvallari ustunlari (turi, standart qiymati, NOT NULL) va cheklovlari: DEFAULT almashtirilsa ham aniqlanadi.
+    const cols = (await db.query(`SELECT c.relname AS t, a.attname AS col, pg_catalog.format_type(a.atttypid, a.atttypmod) AS typ, a.attnotnull AS nn, pg_get_expr(d.adbin, d.adrelid) AS def
+        FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid JOIN pg_namespace n ON n.oid=c.relnamespace LEFT JOIN pg_attrdef d ON d.adrelid=a.attrelid AND d.adnum=a.attnum
+        WHERE n.nspname = current_schema() AND c.relkind='r' AND a.attnum > 0 AND NOT a.attisdropped ORDER BY 1, a.attnum`)).rows.filter(r => MONITORED(r.t) && r.t !== 'students');
+    const cons = (await db.query(`SELECT c.relname AS t, k.conname AS name, pg_get_constraintdef(k.oid) AS def FROM pg_constraint k JOIN pg_class c ON c.oid=k.conrelid
+        JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname = current_schema() ORDER BY 1, 2`)).rows.filter(r => MONITORED(r.t) && r.t !== 'students');
+    return createHash('sha256').update(rows.map(r => r.sig + '\n' + r.def).join('\n--\n') + '\n==\n' + trg.map(r => r.t + ':' + r.def).join('\n')
+        + '\n==\n' + cols.map(r => [r.t, r.col, r.typ, r.nn, r.def].join('|')).join('\n') + '\n==\n' + cons.map(r => r.t + ':' + r.name + ':' + r.def).join('\n')).digest('hex');
 }
 async function schemaIntegrity(db) {
-    const trig = (await db.query(`SELECT c.relname AS t, tg.tgname AS name, p.proname AS fn, tg.tgenabled AS en, (p.pronamespace = c.relnamespace) AS same_ns FROM pg_trigger tg JOIN pg_class c ON c.oid=tg.tgrelid
-        JOIN pg_proc p ON p.oid=tg.tgfoid JOIN pg_namespace n ON n.oid=c.relnamespace WHERE NOT tg.tgisinternal AND n.nspname = current_schema()`)).rows.filter(r => MONITORED(r.t));
+    // Butun bazadagi barcha triggerlar (har qanday jadval, har qanday sxema): ilova faqat koddagi triggerlarni ishlatadi.
+    const trig = (await db.query(`SELECT c.relname AS t, tg.tgname AS name, p.proname AS fn, tg.tgenabled AS en, (p.pronamespace = c.relnamespace) AS same_ns, (n.nspname = current_schema()) AS own FROM pg_trigger tg JOIN pg_class c ON c.oid=tg.tgrelid
+        JOIN pg_proc p ON p.oid=tg.tgfoid JOIN pg_namespace n ON n.oid=c.relnamespace WHERE NOT tg.tgisinternal AND n.nspname NOT IN ('pg_catalog','information_schema') AND n.nspname NOT LIKE 'pg_toast%'`)).rows;
     for (const r of trig) {
+        if (!r.own) return { ok: false, table: r.t, rowId: r.name, reason: `boshqa sxemadagi jadvalda kutilmagan trigger “${r.name}”` };
         if (!r.same_ns) return { ok: false, table: r.t, rowId: r.name, reason: `“${r.name}” triggeri boshqa sxemadagi funksiyani chaqiradi — almashtirilgan` };
         if (!EXPECTED_TRIGGERS.has(`${r.t}|${r.name}|${r.fn}`)) return { ok: false, table: r.t, rowId: r.name, reason: `kutilmagan trigger “${r.name}” (${r.fn}) — bazaga ilovadan tashqari qo‘shilgan` };
         if (r.en !== 'O' && r.en !== 'A') return { ok: false, table: r.t, rowId: r.name, reason: `“${r.name}” triggeri o‘chirilgan` };
@@ -713,8 +736,8 @@ async function schemaIntegrity(db) {
     if (pol) return { ok: false, table: pol.t, rowId: pol.polname, reason: 'moliya jadvalida qator siyosati (POLICY) bor' };
     const evt = (await db.query('SELECT evtname FROM pg_event_trigger')).rows[0];
     if (evt) return { ok: false, table: 'pg_event_trigger', rowId: evt.evtname, reason: 'bazada hodisa triggeri (EVENT TRIGGER) bor' };
-    const fp = (await db.query('SELECT fn_hash, mac FROM fin_schema_fingerprints ORDER BY id DESC LIMIT 1')).rows[0];
-    if (!fp || !finCtx.validSchemaMac(fp.fn_hash, fp.mac)) return { ok: false, table: 'fin_schema_fingerprints', rowId: '', reason: 'moliya funksiyalari izi imzosiz' };
+    const fp = (await db.query('SELECT fn_hash, mac, code_hash FROM fin_schema_fingerprints ORDER BY id DESC LIMIT 1')).rows[0];
+    if (!fp || !finCtx.validSchemaMac(fp.fn_hash + '|' + (fp.code_hash || ''), fp.mac)) return { ok: false, table: 'fin_schema_fingerprints', rowId: '', reason: 'moliya funksiyalari izi imzosiz' };
     if (fp.fn_hash !== await functionHash(db)) return { ok: false, table: 'pg_proc', rowId: '', reason: 'moliya funksiyalari yoki triggerlari bazada o‘zgartirilgan (imzolangan izga mos emas)' };
     return { ok: true };
 }
@@ -748,7 +771,7 @@ async function integrity(pool, { full = false } = {}) {
     const own = typeof pool.connect === 'function' && !pool.release;
     const db = own ? await pool.connect() : pool;
     try {
-        await db.query(`SELECT set_config('search_path', 'public', ${own ? 'false' : 'true'})`).catch(() => {});
+        await db.query(`SELECT set_config('search_path', 'public, pg_temp', ${own ? 'false' : 'true'})`).catch(() => {});
         let r = await integrityInner(db, { full });
         if (r.ok) r = await diskHeadIntegrity(db, r);
         // Ogohlantirish "qotiriladi": bir marta aniqlangan buzilish keyingi o'qishda yashil bo'lib ketmaydi — rahbar ko'rib chiqib yopadi.
