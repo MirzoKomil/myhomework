@@ -5953,7 +5953,7 @@ function renderProfileCompletionWidget(user) {
                 <div class="ring-chart">
                     <svg width="100" height="100" viewBox="0 0 100 100">
                         <circle cx="50" cy="50" r="38" fill="none" stroke="#F0F2F8" stroke-width="10"/>
-                        <circle cx="50" cy="50" r="38" fill="none" stroke="#7B61FF" stroke-width="10"
+                        <circle cx="50" cy="50" r="38" fill="none" stroke="#0065D6" stroke-width="10"
                             stroke-dasharray="${circumference}" stroke-dashoffset="${offset}" stroke-linecap="round"/>
                     </svg>
                     <div class="ring-value">${total}%</div>
@@ -12876,7 +12876,7 @@ const CASH_FLOW_PURPOSES = {
 const CASH_FLOW_PAYMENT_METHODS = ['Naqd pul', 'Bank hisob raqami', 'Karta', 'Uzum Nasiya', 'Paylater', 'Aniqlanmagan'];
 const CASH_FLOW_SALARY_PURPOSE = 'Oylik (xodim maoshi)';
 const CASH_FLOW_REFUND_PURPOSE = 'Pul qaytarish (Refund)';
-const CF_DONUT_COLORS = ['#7B61FF', '#4F8CFF', '#34D399', '#FBBF24', '#F472B6', '#F87171', '#94A3B8', '#22D3EE'];
+const CF_DONUT_COLORS = ['#0065D6', '#7DB2F2', '#34D399', '#FBBF24', '#F472B6', '#F87171', '#94A3B8', '#22D3EE'];
 
 let _cfNetPeriod = 'kunlik';
 
@@ -15537,7 +15537,7 @@ function buildLeadDemographicsStats(leads) {
                 <h2 style="font-size:18px;margin:0 0 5px">Lidlar demografiyasi va o'qish maqsadi</h2>
                 <p style="margin:0;color:var(--text-muted);font-size:14px">Mavjud lidlar anketasidagi jins, yosh, hudud va o'qish sababi bo'yicha statistika</p>
             </div>
-            <div style="padding:8px 11px;border-radius:10px;background:#F5F3FF;color:#6D28D9;font-size:13px;font-weight:700">${selectedTotal} ta lid tanlandi</div>
+            <div style="padding:8px 11px;border-radius:10px;background:#EAF3FF;color:#0057B8;font-size:13px;font-weight:700">${selectedTotal} ta lid tanlandi</div>
         </div>
         <div style="display:flex;gap:12px;align-items:end;flex-wrap:wrap;padding:14px;border-radius:14px;background:var(--bg-secondary,#f8fafc);margin-bottom:18px">
             ${selectHtml('funnelDemographicGender', 'Jinsi', 'gender', 'Barcha jinslar')}
@@ -15758,7 +15758,7 @@ function buildReachedFunnel(leads) {
         const prev = i ? counts[i - 1] : n;
         const step = i && prev ? Math.round(n / prev * 1000) / 10 : 100;
         return `<li class="sfx-row"><span class="sfx-name">${escapeHtml(labels[i])}</span>
-            <span class="sfx-track" aria-hidden="true"><span style="width:${counts[0] ? Math.max(n ? 2 : 0, Math.round(n / counts[0] * 100)) : 0}%;background:#6A4DF4"></span></span>
+            <span class="sfx-track" aria-hidden="true"><span style="width:${counts[0] ? Math.max(n ? 2 : 0, Math.round(n / counts[0] * 100)) : 0}%;background:#0065D6"></span></span>
             <span class="sfx-val"><b>${n}</b>${i ? ` · ${String(step).replace('.', ',')}% oldingidan` : ''}</span></li>`;
     }).join('');
     return `

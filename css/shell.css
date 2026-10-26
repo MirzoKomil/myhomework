@@ -188,7 +188,7 @@ html.rd .lead-card {
 
 html.rd .lead-card:hover {
     transform: none;
-    border-color: #C9BEFB;
+    border-color: #BEDAFB;
     box-shadow: 0 2px 8px rgba(16, 24, 40, .08);
 }
 
@@ -233,7 +233,7 @@ html.rd .lead-col-pick {
 }
 
 html.rd[data-theme="dark"] .lead-card:hover {
-    border-color: #4B4384;
+    border-color: #436184;
 }
 
 /* ---------- Shell: kompyuter (901px+) ---------- */
@@ -1788,7 +1788,7 @@ html.rd .rd-thx-rank-n {
     display: grid;
     place-items: center;
     border-radius: 50%;
-    background: #F0ECFF;
+    background: #ECF5FF;
     color: var(--purple);
     font-size: 11px;
     font-weight: 800;

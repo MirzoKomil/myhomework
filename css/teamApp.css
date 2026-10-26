@@ -435,7 +435,7 @@ html.rd .mhx-stats--row b {
         min-height: 52px;
         padding: 0 20px 0 16px;
         border-radius: 999px;
-        box-shadow: 0 8px 24px rgba(74, 47, 214, .35);
+        box-shadow: 0 8px 24px rgba(0, 87, 184, .35);
     }
 
     html.rd .mhx-head {
@@ -699,7 +699,7 @@ html.rd .sp-pace-i small.is-ok { color: #0F7A55; font-weight: 600; }
 html.rd .sp-pace-i small.is-bad { color: #C62828; font-weight: 600; }
 
 html.rd .sp-pace-i--hero {
-    background: linear-gradient(110deg, #4B2FD6, #7B5CFF);
+    background: linear-gradient(110deg, #0057B8, #0065D6);
 }
 
 html.rd .sp-pace-i--hero span,
@@ -803,7 +803,7 @@ html.rd .sp-empty-s {
 
     html.rd .mot-hero {
         min-height: 0;
-        background-image: linear-gradient(110deg, #4B2FD6, #7B5CFF) !important;
+        background-image: linear-gradient(110deg, #0057B8, #0065D6) !important;
     }
 
     html.rd .mot-hero::before {
@@ -1273,7 +1273,7 @@ html.rd .notif-badge {
         min-height: 52px;
         padding: 0 20px;
         border-radius: 999px;
-        box-shadow: 0 8px 24px rgba(74, 47, 214, .35);
+        box-shadow: 0 8px 24px rgba(0, 87, 184, .35);
     }
 
     html.rd .sales-header-layout:has(> #addLeadBtn:not([hidden])) > .sales-header-lang {
@@ -2432,7 +2432,7 @@ html.rd .lead-contact-filter-toggle {
 /* Reyting banneri: rasm chap chetidan banner rangiga silliq o'tadi (chok yo'q) */
 @media (min-width: 901px) {
     html.rd .mot-hero {
-        background: linear-gradient(100deg, #4B2FD6 0%, #4B2FD6 55%, #5A36E6 100%) !important;
+        background: linear-gradient(100deg, #0057B8 0%, #0057B8 55%, #0065D6 100%) !important;
     }
 
     html.rd .mot-hero::before {
@@ -3875,7 +3875,7 @@ html.rd .team-ill {
 html.rd[data-theme="dark"] .team-ill {
     padding: 10px;
     border-radius: 50%;
-    background: #EDE9FF;
+    background: #E9F3FF;
     box-sizing: border-box;
 }
 

@@ -1,0 +1,144 @@
+/* ==========================================================================
+   Kobalt komponentlar qatlami (2026-10)
+   Dizayn kanvasidagi "A · Kobalt" maketlari asosida: tugmalar, maydonlar,
+   KPI kartalar, jadvallar, tablar, modallar, belgilar. Hammasi `html.rd`
+   ostida va eng oxirida yuklanadi — faqat ko'rinish, mantiqqa tegmaydi.
+   ========================================================================== */
+
+html.rd {
+    --kb-primary: #0065D6;
+    --kb-primary-hover: #0057B8;
+    --kb-ring: rgba(0, 101, 214, .18);
+    --kb-input-border: #CBD5E1;
+    --kb-track: #E2E8F0;
+    --kb-ok-fg: #05603A; --kb-ok-bg: #DCFAE6;
+    --kb-warn-fg: #93370D; --kb-warn-bg: #FEF0C7;
+    --kb-bad-fg: #B42318; --kb-bad-bg: #FEF3F2;
+    --kb-info-fg: #0057B8; --kb-info-bg: #EAF3FF;
+}
+html.rd[data-theme="dark"] {
+    --kb-primary: #3B8BEE;
+    --kb-primary-hover: #5B9EF0;
+    --kb-ring: rgba(59, 139, 238, .28);
+    --kb-input-border: #33415C;
+    --kb-track: #24304A;
+    --kb-ok-fg: #86EFAC; --kb-ok-bg: rgba(22, 163, 74, .18);
+    --kb-warn-fg: #FEDF89; --kb-warn-bg: rgba(247, 144, 9, .18);
+    --kb-bad-fg: #FECDCA; --kb-bad-bg: rgba(240, 68, 56, .2);
+    --kb-info-fg: #9DC4F5; --kb-info-bg: rgba(59, 139, 238, .18);
+}
+
+html.rd body { color: var(--text); }
+
+/* ---------- Sarlavhalar ---------- */
+html.rd .page-title-bar h1,
+html.rd .ahx-head h1 {
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+/* ---------- Tugmalar ---------- */
+html.rd .btn-primary-sm,
+html.rd .btn-primary {
+    background: var(--kb-primary);
+    color: #fff;
+    border: 0;
+    border-radius: 12px;
+    font-weight: 700;
+    box-shadow: none;
+    transition: background-color .15s;
+}
+html.rd .btn-primary-sm { min-height: 40px; padding: 0 16px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+html.rd .btn-primary-sm:hover,
+html.rd .btn-primary:hover { background: var(--kb-primary-hover); box-shadow: none; }
+html.rd .btn-secondary-sm {
+    border: 1.5px solid var(--kb-primary);
+    color: var(--kb-primary);
+    background: var(--surface);
+    border-radius: 12px;
+    font-weight: 700;
+}
+html.rd .btn-secondary-sm:hover { background: var(--kb-info-bg); }
+html.rd .btn-ghost { border: 1px solid var(--kb-input-border); border-radius: 12px; color: var(--text); }
+html.rd .btn-ghost:hover { background: var(--rd-hover); }
+html.rd .btn-danger-sm { border-radius: 10px; background: var(--kb-bad-bg); color: var(--kb-bad-fg); font-weight: 700; }
+
+html.rd :is(button, a, [role="button"], input, select, textarea, summary):focus-visible {
+    outline: 3px solid var(--kb-ring);
+    outline-offset: 2px;
+}
+
+/* ---------- Kiritish maydonlari ---------- */
+html.rd .form-control,
+html.rd .form-select,
+html.rd .form-group input,
+html.rd .form-control-sm {
+    background: var(--surface);
+    border: 1px solid var(--kb-input-border);
+    border-radius: 12px;
+    color: var(--text);
+}
+html.rd .form-control,
+html.rd .form-select,
+html.rd .form-group input { padding: 12px 14px; }
+html.rd .form-control:focus,
+html.rd .form-select:focus,
+html.rd .form-group input:focus,
+html.rd .form-control-sm:focus {
+    border-color: var(--kb-primary);
+    box-shadow: 0 0 0 3px var(--kb-ring);
+    background: var(--surface);
+}
+html.rd :is(.form-control, .form-control-sm, .form-group input)::placeholder { color: #64748B; }
+html.rd input[type="checkbox"], html.rd input[type="radio"] { accent-color: var(--kb-primary); }
+
+/* ---------- KPI kartalar ---------- */
+html.rd .ahx-kpi { border-radius: 20px; padding: 20px; gap: 8px; }
+html.rd .ahx-kpi-l { font-size: 13px; font-weight: 600; color: var(--text-muted); }
+html.rd .ahx-kpi-v { font-size: 30px; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+html.rd .ahx-kpi-v small { font-weight: 600; }
+html.rd .stat-card { border: 1px solid var(--border); box-shadow: none; border-radius: 20px; }
+html.rd .stat-icon { border-radius: 14px; }
+html.rd .card { border-radius: 20px; }
+
+/* ---------- Belgilar (pill / badge) ---------- */
+html.rd .ahx-pill { font-weight: 700; }
+html.rd .ahx-pill--ok { color: var(--kb-ok-fg); background: var(--kb-ok-bg); }
+html.rd .ahx-pill--warn { color: var(--kb-warn-fg); background: var(--kb-warn-bg); }
+html.rd .ahx-pill--danger { color: var(--kb-bad-fg); background: var(--kb-bad-bg); }
+
+/* ---------- Tablar ---------- */
+html.rd .section-nav-item { font-weight: 600; border-bottom-width: 2px; }
+html.rd .section-nav-item.active { font-weight: 700; color: var(--kb-info-fg); border-bottom-color: var(--kb-primary); }
+html.rd .subject-tab.active { background: var(--kb-info-bg); border-color: var(--kb-primary); color: var(--kb-info-fg); font-weight: 700; }
+
+/* ---------- Jadvallar ---------- */
+html.rd table th {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+    letter-spacing: 0;
+    text-transform: none;
+}
+html.rd table td { font-variant-numeric: tabular-nums; }
+html.rd table tbody tr:hover > td { background: var(--rd-hover); }
+
+/* ---------- Modallar ---------- */
+html.rd .modal-overlay { background: rgba(11, 18, 32, .5); backdrop-filter: blur(3px); }
+html.rd .modal { border-radius: 24px; box-shadow: 0 24px 64px rgba(11, 18, 32, .24); }
+html.rd .modal-header { padding: 20px 24px; }
+html.rd .modal-header h3 { font-size: 18px; font-weight: 800; letter-spacing: -0.01em; }
+html.rd .modal-close { width: 40px; height: 40px; border-radius: 12px; background: var(--rd-hover); }
+html.rd .modal-close:hover { background: var(--rd-col); color: var(--text); }
+@media (max-width: 640px) {
+    html.rd .modal { border-radius: 24px 24px 0 0; }
+}
+
+/* ---------- Lid kartasi: telefon qo'ng'iroq tugmasi brend rangida ---------- */
+@media (max-width: 900px) {
+    html.rd .lead-card-call { background: var(--kb-primary); }
+}
+
+/* ---------- Progress chiziqlari ---------- */
+html.rd .mhx-bar, html.rd .mot-bar { background: var(--kb-track); }
