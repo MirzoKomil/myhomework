@@ -1,0 +1,295 @@
+{
+ "n": 15,
+ "topic_uz": "Ravish: Как? Где? Когда́? Ско́лько?",
+ "scene": "In a cozy cafe, a man Anton and a woman Nigora talk about their friend Bobur; a thought bubble shows Bobur working quickly in a shop.",
+ "dialogs": [
+  {
+   "id": "L15-d1",
+   "title_ru": "Как он рабо́тает?",
+   "title_uz": "U qanday ishlaydi?",
+   "intro_uz": "Birinchi dialog. Anton Nigoradan yangi hamkasblar haqida so'rayapti. Ular qanday ishlaydi? Tinglang.",
+   "speakers": [
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Анто́н",
+     "ru": "Нигора́, как рабо́тает Бобу́р?",
+     "uz": "Nigora, Bobur qanday ishlaydi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Он рабо́тает хорошо́ и бы́стро.",
+     "uz": "U yaxshi va tez ishlaydi."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А как он говори́т по-ру́сски?",
+     "uz": "Ruscha qanday gapiradi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Ме́дленно, но поня́тно.",
+     "uz": "Sekin, lekin tushunarli."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А Дильно́за? Как она́ пи́шет?",
+     "uz": "Dilnoza-chi? U qanday yozadi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Она́ пи́шет о́чень краси́во!",
+     "uz": "U juda chiroyli yozadi!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Bobur qanday ishlaydi?",
+     "opts": [
+      "sekin",
+      "yaxshi va tez",
+      "yomon"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Bobur ruscha qanday gapiradi?",
+     "opts": [
+      "sekin, lekin tushunarli",
+      "tez",
+      "juda yomon"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Dilnoza qanday yozadi?",
+     "opts": [
+      "tez",
+      "sekin",
+      "juda chiroyli"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "хорошо́ и бы́стро",
+     "alts": [
+      "отли́чно",
+      "ме́дленно, но хорошо́",
+      "о́чень бы́стро"
+     ]
+    },
+    {
+     "base": "краси́во",
+     "alts": [
+      "бы́стро",
+      "хорошо́",
+      "ме́дленно"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Nigora o'rniga gapiring: do'stingiz qanday ishlashi va gapirishini ayting."
+  },
+  {
+   "id": "L15-d2",
+   "title_ru": "Где? Здесь и́ли там?",
+   "title_uz": "Qayerda? Bu yerdami yoki u yerdami?",
+   "intro_uz": "Ikkinchi dialog. Timur telefonini topolmayapti. Dilnoza yordam beradi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Тиму́р",
+     "gender": "m"
+    },
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Тиму́р",
+     "ru": "Дильно́за, где мой телефо́н?",
+     "uz": "Dilnoza, telefonim qayerda?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Там, сле́ва. На столе́.",
+     "uz": "U yerda, chap tomonda. Stol ustida."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Сле́ва? Не ви́жу.",
+     "uz": "Chapdami? Ko'rmayapman."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Тогда́ спра́ва. Вот он!",
+     "uz": "Unda o'ng tomonda. Mana u!"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Спаси́бо! А ты сего́дня до́ма?",
+     "uz": "Rahmat! Bugun uydamisan?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Сего́дня до́ма, а за́втра нет.",
+     "uz": "Bugun uydaman, ertaga esa yo'q."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Dilnoza avval qayerni ko'rsatdi?",
+     "opts": [
+      "o'ngni",
+      "chapni",
+      "stulni"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Telefon oxiri qayerda chiqdi?",
+     "opts": [
+      "chapda",
+      "sumkada",
+      "o'ngda"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Dilnoza qachon uyda?",
+     "opts": [
+      "bugun",
+      "ertaga",
+      "hech qachon"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "сле́ва",
+     "alts": [
+      "спра́ва",
+      "здесь",
+      "там"
+     ]
+    },
+    {
+     "base": "сего́дня",
+     "alts": [
+      "за́втра",
+      "у́тром",
+      "ве́чером"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Dilnoza o'rniga gapiring: xonadagi narsalar qayerda — «здесь, там, сле́ва, спра́ва» bilan ayting."
+  },
+  {
+   "id": "L15-d3",
+   "title_ru": "Мно́го и́ли ма́ло?",
+   "title_uz": "Ko'pmi yoki ozmi?",
+   "intro_uz": "Uchinchi dialog. Nigora eri Abdulazizdan so'rayapti: bugun ko'p ishlayapsanmi? Tinglang.",
+   "speakers": [
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    },
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Нигора́",
+     "ru": "Ты сего́дня мно́го рабо́таешь?",
+     "uz": "Bugun ko'p ishlayapsanmi?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Да, сего́дня мно́го. А за́втра ма́ло.",
+     "uz": "Ha, bugun ko'p. Ertaga esa oz."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Ты всегда́ по́здно до́ма!",
+     "uz": "Doim uyga kech kelasan!"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Не всегда́. Иногда́ ра́но.",
+     "uz": "Doim emas. Ba'zan erta."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "А за́втра?",
+     "uz": "Ertaga-chi?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "За́втра я до́ма ра́но. Мы гуля́ем вме́сте!",
+     "uz": "Ertaga uyda erta bo'laman. Birga sayr qilamiz!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Abdulaziz bugun qancha ishlaydi?",
+     "opts": [
+      "ko'p",
+      "oz",
+      "umuman ishlamaydi"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Nigora nimadan norozi?",
+     "opts": [
+      "Abdulaziz tez gapiradi",
+      "Abdulaziz ko'p uxlaydi",
+      "Abdulaziz doim uyga kech keladi"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Ertaga ular nima qiladi?",
+     "opts": [
+      "ishlaydi",
+      "birga sayr qiladi",
+      "mehmonga boradi"
+     ],
+     "a": 1
+    }
+   ],
+   "swap": [
+    {
+     "base": "мно́го",
+     "alts": [
+      "ма́ло",
+      "бы́стро",
+      "до́лго"
+     ]
+    },
+    {
+     "base": "ра́но",
+     "alts": [
+      "по́здно",
+      "ве́чером",
+      "днём"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Abdulaziz o'rniga gapiring: bugun va ertaga qancha ishlashingizni, qachon uyda bo'lishingizni ayting."
+  }
+ ]
+}

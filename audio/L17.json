@@ -1,0 +1,295 @@
+{
+ "n": 17,
+ "topic_uz": "Sifat: Како́й? Кака́я? Како́е? Каки́е?",
+ "scene": "In a phone shop, a man Abdulaziz looks at two smartphones on the counter while a smiling female shop assistant shows him a new one.",
+ "dialogs": [
+  {
+   "id": "L17-d1",
+   "title_ru": "В магази́не",
+   "title_uz": "Do'konda",
+   "intro_uz": "Birinchi dialog. Abdulaziz telefon do'konida. Qaysi telefon yaxshi? Tinglang.",
+   "speakers": [
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    },
+    {
+     "name": "Продаве́ц",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Абдулази́з",
+     "ru": "Здра́вствуйте! Како́й э́то телефо́н?",
+     "uz": "Assalomu alaykum! Bu qanaqa telefon?"
+    },
+    {
+     "who": "Продаве́ц",
+     "ru": "Э́то но́вый телефо́н. О́чень хоро́ший.",
+     "uz": "Bu yangi telefon. Juda yaxshi."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "А он дорого́й?",
+     "uz": "Qimmatmi?"
+    },
+    {
+     "who": "Продаве́ц",
+     "ru": "Да, дорого́й. А вот дешёвый телефо́н.",
+     "uz": "Ha, qimmat. Mana bu esa arzon telefon."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Он то́же но́вый?",
+     "uz": "U ham yangimi?"
+    },
+    {
+     "who": "Продаве́ц",
+     "ru": "Нет, ста́рый, но хоро́ший.",
+     "uz": "Yo'q, eski, lekin yaxshi."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Birinchi telefon qanaqa?",
+     "opts": [
+      "eski va arzon",
+      "yangi va qimmat",
+      "kichkina"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Ikkinchi telefon qanaqa?",
+     "opts": [
+      "arzon, eski, lekin yaxshi",
+      "yangi",
+      "juda qimmat"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Abdulaziz qayerda?",
+     "opts": [
+      "bankda",
+      "bozorda",
+      "telefon do'konida"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "но́вый телефо́н",
+     "alts": [
+      "но́вая су́мка",
+      "но́вое пла́тье",
+      "но́вые часы́"
+     ]
+    },
+    {
+     "base": "дорого́й",
+     "alts": [
+      "дешёвый",
+      "хоро́ший",
+      "краси́вый"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Abdulaziz o'rniga gapiring: do'konda telefon qanaqa ekanini so'rang — «Како́й…? Он дорого́й?»"
+  },
+  {
+   "id": "L17-d2",
+   "title_ru": "Како́й он?",
+   "title_uz": "U qanday odam?",
+   "intro_uz": "Ikkinchi dialog. Abdulazizning ishida yangi hamkasb bor. Nigora so'rayapti: u qanday odam? Tinglang.",
+   "speakers": [
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    },
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Нигора́",
+     "ru": "Како́й он, твой но́вый колле́га?",
+     "uz": "Yangi hamkasbing qanaqa odam?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Он молодо́й и о́чень у́мный.",
+     "uz": "U yosh va juda aqlli."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "А он до́брый?",
+     "uz": "Mehribonmi?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Да, до́брый. И высо́кий!",
+     "uz": "Ha, mehribon. Yana bo'yi baland!"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "А кака́я у него́ маши́на?",
+     "uz": "Uning mashinasi qanaqa?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "У него́ кра́сная маши́на. Краси́вая!",
+     "uz": "Uning qizil mashinasi bor. Chiroyli!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Yangi hamkasb qanaqa?",
+     "opts": [
+      "yosh va aqlli",
+      "keksa",
+      "past bo'yli"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Hamkasb mehribonmi?",
+     "opts": [
+      "yo'q",
+      "bilmaydi",
+      "ha"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Uning mashinasi qanaqa?",
+     "opts": [
+      "oq, eski",
+      "qizil, chiroyli",
+      "qora, qimmat"
+     ],
+     "a": 1
+    }
+   ],
+   "swap": [
+    {
+     "base": "молодо́й и у́мный",
+     "alts": [
+      "высо́кий и до́брый",
+      "интере́сный и у́мный",
+      "молодо́й и краси́вый"
+     ]
+    },
+    {
+     "base": "кра́сная маши́на",
+     "alts": [
+      "бе́лая маши́на",
+      "чёрная маши́на",
+      "но́вая маши́на"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Abdulaziz o'rniga gapiring: do'stingizni tasvirlang — qanaqa odam, qanaqa mashinasi bor."
+  },
+  {
+   "id": "L17-d3",
+   "title_ru": "Како́й э́то го́род?",
+   "title_uz": "Bu qanaqa shahar?",
+   "intro_uz": "Uchinchi dialog. Anton Dilnozadan Andijon haqida so'rayapti. Andijon qanaqa shahar? Tinglang.",
+   "speakers": [
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    },
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Анто́н",
+     "ru": "Дильно́за, Андижа́н — како́й э́то го́род?",
+     "uz": "Dilnoza, Andijon — qanaqa shahar?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Небольшо́й, но краси́вый го́род.",
+     "uz": "Kichikroq, lekin chiroyli shahar."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А кака́я там пого́да?",
+     "uz": "U yerda ob-havo qanaqa?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Пого́да хоро́шая. И фру́кты о́чень вку́сные!",
+     "uz": "Ob-havo yaxshi. Mevalar esa juda mazali!"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А каки́е там зда́ния?",
+     "uz": "U yerda binolar qanaqa?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Есть ста́рые и но́вые зда́ния.",
+     "uz": "Eski binolar ham, yangilari ham bor."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Andijon qanaqa shahar?",
+     "opts": [
+      "juda katta",
+      "kichikroq, lekin chiroyli",
+      "eski va xunuk"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Andijonda nima juda mazali?",
+     "opts": [
+      "mevalar",
+      "non",
+      "choy"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "U yerda qanday binolar bor?",
+     "opts": [
+      "faqat yangi",
+      "faqat eski",
+      "eski ham, yangi ham"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "краси́вый го́род",
+     "alts": [
+      "большо́й го́род",
+      "ста́рый го́род",
+      "интере́сный го́род"
+     ]
+    },
+    {
+     "base": "хоро́шая пого́да",
+     "alts": [
+      "плоха́я пого́да",
+      "тёплая пого́да",
+      "краси́вая пого́да"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Dilnoza o'rniga gapiring: o'z shahringizni tasvirlang — qanaqa shahar, qanaqa ob-havo."
+  }
+ ]
+}
