@@ -63,7 +63,7 @@
     const ACCOUNT_KINDS = { cash: 'Naqd', card: 'Karta', bank: 'Bank', wallet: 'Elektron hamyon', clearing: 'Kliring (olinadigan)', suspense: 'Tekshiruvdagi' };
     const EQUIVALENT_KINDS = new Set(['cash', 'card', 'bank', 'wallet']);
     const DEFAULT_SETTINGS = {
-        courseMonths: { english: 3, russian: 3 }, suspiciousMin: 10000, salaryDueDays: 10, usefulLifeMonths: 36, approvalLimit: 5000000, turnoverTaxRate: 0,
+        courseMonths: { english: 3, russian: 3 }, suspiciousMin: 10000, salaryDueDays: 10, usefulLifeMonths: 36, approvalLimit: 5000000, dailyLimit: 15000000, turnoverTaxRate: 0,
         eclRates: { not_due: 0, d1_30: 5, d31_60: 20, d61_90: 50, d90: 100, no_date: 25 }
     };
 
@@ -276,7 +276,11 @@
                     //  b) oldingi kurs to'liq to'langan va to'lov kursning oxirgi uchdan birida keldi — erta uzaytirish.
                     //     Yangi kurs xizmati oldingisi tugagan kundan boshlanadi (oldindan to'lov — majburiyat).
                     // Kech to'langan qarz (to'liq to'lanmagan kurs) eski shartnomaga yoziladi, yangi kurs ochmaydi.
-                    const paidUp = current && liveSum >= current.threshold;
+                    // Kurs to'liq to'langanmi: CRM har bir tushumda qolgan qarzni yozadi (debtAfter) — u bo'lsa, shunga ishoniladi;
+                    // bo'lmasa, kurs narxi (birinchi kurs — lid narxi, keyingisi — oldingisi narxi) bilan solishtiriladi.
+                    const lastLive = current ? current.receipts.filter(x => !x.voidDate).at(-1) : null;
+                    const debtKnown = lastLive && lastLive.debtAfter != null && lastLive.debtAfter !== '';
+                    const paidUp = current && (debtKnown ? Number(lastLive.debtAfter) <= 0 : liveSum >= current.threshold);
                     const early = paidUp && current.threshold > 0 && r.date <= current.end
                         && r.date >= addDays(current.end, -Math.floor((dayDiff(current.start, current.end) + 1) / 3));
                     if (!current || (r.date > current.end && paidUp) || early) {
@@ -346,6 +350,13 @@
     }
     // Hisobotdagi "tushum" qatori: asosiy narx bo'yicha tushum yoki (tugatishda) undan katta qolgan pul.
     function grossRevenue(c, asOf) { return Math.max(revenueBase(c, asOf), earned(c, asOf)); }
+    // Tugatilgan shartnomada o'tilgan, lekin to'lanmagan qism — qaytarish emas, kredit zarari (undirib bo'lmaydi).
+    function terminationShortfall(c, asOf) {
+        if (!c.terminatedAt || asOf < c.terminatedAt) return 0;
+        // Faqat hech qachon to'lanmagan qism kredit zarari; qaytarilgan pul hisobiga voz kechilgan qism — qaytarish (narx kamayishi).
+        const paidEver = contractCash(c, asOf) + refundsTo(c, asOf);
+        return Math.max(0, Math.min(revenueBase(c, asOf) - earned(c, asOf), revenueBase(c, asOf) - paidEver));
+    }
     function contractPosition(c, asOf) { return earned(c, asOf) - contractCash(c, asOf); }
 
     // ---------- Asosiy vositalar va amortizatsiya ----------
@@ -411,7 +422,8 @@
     }
     // Aylanmadan soliq hisoblash usulida tushumdan hisoblanadi (stavka sozlamada, kuchga kirgan sanasi bilan).
     function taxEnabled(data) { return (data.settingsHistory || [{ data: data.settings || {} }]).some(h => Number(h.data?.turnoverTaxRate) > 0) || Number(data.settings?.turnoverTaxRate) > 0; }
-    function taxSettles(data, day) { return Number(settingsAt(data, day).turnoverTaxRate) > 0; }
+    // To'lov hisoblangan soliqni yopadi — to'lov kunidagi stavka 0 bo'lsa ham, avval soliq hisoblangan bo'lsa.
+    function taxSettles(data, day) { return taxEnabled(data) && (Number(settingsAt(data, day).turnoverTaxRate) > 0 || turnoverTaxAccrued(data, 'all', day) > 0); }
     function turnoverTaxAccrued(data, scope, asOf) {
         if (!taxEnabled(data)) return 0;
         const cache = memo(TX, data, () => new Map()), k = scope + '|' + asOf;
@@ -419,7 +431,9 @@
         const from = firstDate(data);
         // Stavka o'zgarmagan oylar bitta segment: yaxlitlash har segmentda bir marta (oyma-oy yig'ilib ketmaydi).
         let total = 0, segRate = null, segStart = null;
-        const revTo = d => { let r = 0; for (const c of contracts(data)) if (scopeMatch(c.entity, scope)) r += earned(c, d); return r; };
+        // Soliq bazasi: kurs tushumi (IFRS 15) + boshqa daromadlar.
+        const other = movements(data).filter(m => m.category === 'REV_OTHER' && scopeMatch(m.entity, scope));
+        const revTo = d => { let r = sum(other.filter(m => m.date <= d), m => m.sign * m.amount); for (const c of contracts(data)) if (scopeMatch(c.entity, scope)) r += earned(c, d); return r; };
         const close = endDay => { if (segRate) total += Math.round((revTo(endDay) - revTo(addDays(segStart, -1))) * segRate / 100); };
         if (from <= asOf) {
             for (const m of monthsBetween(from, asOf)) {
@@ -491,7 +505,7 @@
             // Kassa usuli: Uzum orqali sotuv pul kelganda tushum bo'ladi. Kliringga yozilgan tushum hali pul emas;
             // Uzum o'tkazgan summa + ushlab qolgan komissiya = tushum, komissiya alohida xarajat.
             if (clearing(m.account)) {
-                if (m.source === 'receipt') continue;
+                if (m.source === 'receipt' || m.category === 'REFUND') continue; // Uzum orqali bekor qilingan sotuv — pul kelmagan
                 if (m.category === 'TRANSFER' && m.transferLeg === 'out') { addTo(b, 'revenue', -m.sign * m.amount); continue; }
                 if (m.category === 'BANK_FEES') addTo(b, 'revenue', -m.sign * m.amount);
             }
@@ -506,8 +520,9 @@
         for (const c of contracts(data)) {
             if (!scopeMatch(c.entity, scope)) continue;
             const base = grossRevenue(c, end) - grossRevenue(c, before);
-            const term = (grossRevenue(c, end) - earned(c, end)) - (grossRevenue(c, before) - earned(c, before));
-            addTo(b, 'revenue', base); addTo(b, 'refunds', term);
+            const loss = terminationShortfall(c, end) - terminationShortfall(c, before);
+            const term = (grossRevenue(c, end) - earned(c, end)) - (grossRevenue(c, before) - earned(c, before)) - loss;
+            addTo(b, 'revenue', base); addTo(b, 'refunds', term); addTo(b, 'credit_losses', loss);
         }
         for (const m of movements(data)) {
             if (m.source !== 'transaction' || !scopeMatch(m.entity, scope)) continue;
@@ -671,6 +686,7 @@
     function payableVoidedAt(p, asOf) { return !!p.voided && (!p.voidDate || p.voidDate <= asOf); }
     function payablesSummary(data, asOf, scope = 'all') {
         const s0 = settingsOf(data), rows = [], tx = data.transactions || [];
+        let overpaid = 0;
         const paidOf = id => sum(tx.filter(t => t.payableId === id && t.type !== 'loan_in' && t.date <= asOf), t => (t.reversesId ? -1 : 1) * t.amount);
         for (const p of data.payables || []) {
             // Bekor qilingan qarz / hisob-faktura faqat bekor qilingan sanadan boshlab majburiyat emas.
@@ -683,6 +699,7 @@
         for (const s of data.salaries || []) {
             if (s.amount <= 0 || !scopeMatch(s.entity, scope) || s.accrualDate > asOf) continue;
             const cashOut = sum(tx.filter(t => t.salaryId === s.id && t.date <= asOf), t => (t.reversesId ? -1 : 1) * t.amount);
+            if (cashOut > s.amount) overpaid += cashOut - s.amount; // ortiqcha to'langan maosh — xodimdan olinadigan summa
             const outstanding = Math.max(0, s.amount - cashOut);
             if (!outstanding) continue;
             const due = addDays(s.accrualDate, Number(s0.salaryDueDays) || 0);
@@ -693,7 +710,7 @@
         rows.sort((a, b) => (a.dueDate || '').localeCompare(b.dueDate || '') || b.outstanding - a.outstanding);
         const byKind = k => sum(rows.filter(r => r.kind === k), r => r.outstanding);
         return { asOf, total: sum(rows, r => r.outstanding), salaries: byKind('salary'), bills: byKind('bill'), loans: byKind('loan'), other: byKind('other'),
-            unreconciledSalaries: sum(rows.filter(r => r.unreconciled), r => r.outstanding), overdue: sum(rows.filter(r => r.overdueDays > 0), r => r.outstanding), rows };
+            salaryOverpaid: overpaid, unreconciledSalaries: sum(rows.filter(r => r.unreconciled), r => r.outstanding), overdue: sum(rows.filter(r => r.overdueDays > 0), r => r.outstanding), rows };
     }
 
     // ---------- Balans (konsolidatsiya) ----------
@@ -730,7 +747,7 @@
         // Aylanmadan soliq: hisoblangan − to'langan.
         const taxPaid = sum(movements(data).filter(m => m.category === 'TAX_TURNOVER' && m.date <= asOf && scopeMatch(m.entity, scope) && taxSettles(data, m.date)), m => -m.sign * m.amount);
         const taxPayable = turnoverTaxAccrued(data, scope, asOf) - taxPaid;
-        const totalAssets = cs.equivalents + cs.suspense + cs.clearing + contractAssets - ecl + ppeCost - ppeDep - ppeImpairment + prepaid + Math.max(0, -taxPayable);
+        const totalAssets = cs.equivalents + cs.suspense + cs.clearing + contractAssets - ecl + ppeCost - ppeDep - ppeImpairment + prepaid + Math.max(0, -taxPayable) + ap.salaryOverpaid;
         const totalLiabilities = contractLiabilities + ap.total + accrued + Math.max(0, taxPayable);
         const netAssets = totalAssets - totalLiabilities;
         // Kapital harakati: boshlang'ich qoldiq + ta'sischi mablag'i − olingan mablag' + jamg'arilgan foyda.
@@ -749,7 +766,7 @@
         // Pul mablag'lari ta'rifi pul oqimi hisoboti bilan bir xil: naqd + karta + bank + aniqlanmagan (suspense alohida ko'rsatiladi).
         return { asOf, scope, accounts, cashTotal: cs.equivalents + cs.suspense, cashEquivalents: cs.equivalents, suspense: cs.suspense, uzumReceivable: cs.clearing, cash: cs.cash,
             contractAssets, ecl, contractAssetsNet: contractAssets - ecl, ppeCost, ppeDepreciation: ppeDep, ppeImpairment, ppeNet: ppeCost - ppeDep - ppeImpairment,
-            prepaidExpenses: prepaid, accruedExpenses: accrued, taxPayable: Math.max(0, taxPayable), taxPrepaid: Math.max(0, -taxPayable),
+            prepaidExpenses: prepaid, accruedExpenses: accrued, salaryAdvances: ap.salaryOverpaid, taxPayable: Math.max(0, taxPayable), taxPrepaid: Math.max(0, -taxPayable),
             totalAssets, contractLiabilities, payables: { salaries: ap.salaries, bills: ap.bills, other: ap.other, unreconciledSalaries: ap.unreconciledSalaries }, loans: ap.loans,
             totalLiabilities, netAssets, equity: { opening: openingEquity, contributions, drawings, retained, preOpening, total: equityRollForward },
             balanced: equityRollForward === netAssets, imbalance: netAssets - equityRollForward,
@@ -844,7 +861,8 @@
     // ---------- Tashqi ro'yxat bilan solishtirish ----------
     const CYR = { а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ё: 'yo', ж: 'j', з: 'z', и: 'i', й: 'y', к: 'k', л: 'l', м: 'm', н: 'n', о: 'o', п: 'p', р: 'r', с: 's', т: 't', у: 'u', ф: 'f', х: 'x', ц: 's', ч: 'ch', ш: 'sh', щ: 'sh', ъ: '', ы: 'i', ь: '', э: 'e', ю: 'yu', я: 'ya', қ: 'q', ғ: 'g', ў: 'o', ҳ: 'h' };
     function nameTokens(value) {
-        const latin = String(value || '').toLowerCase().replace(/[а-яёқғўҳ]/g, ch => CYR[ch] ?? ch).replace(/[ʻ‘’'`ʼ]/g, '').replace(/h/g, 'x').replace(/w/g, 'v');
+        const latin = String(value || '').toLowerCase().replace(/[а-яёқғўҳ]/g, ch => CYR[ch] ?? ch).replace(/[ʻ‘’'`ʼ]/g, '')
+            .replace(/shch/g, 'sh').replace(/kh/g, 'h').replace(/ts/g, 's').replace(/h/g, 'x').replace(/w/g, 'v');
         // Jinsni bildiruvchi qo'shimchalar (-a, -ova, -eva) olib tashlanmaydi: "Aziza Karimova" ≠ "Aziz Karimov".
         // Faqat hurmat qo'shimchalari (-xon, -jon) olinadi: "Gulhayoxon" = "Gulhayo".
         // Kirill/lotin imlo farqlari bir xil ko'rinishga keltiriladi: Алиев = Aliyev (ye→e), Ёқубов = Yoqubov.

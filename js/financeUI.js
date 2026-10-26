@@ -162,7 +162,8 @@
     // ---------- Umumiy ko'rinish ----------
     function qualityAlerts(o) {
         const q = o.quality, items = [];
-        if (o.seals && !o.seals.ok) items.push(['danger', `${o.seals.unsealed} ta moliyaviy qator muhrsiz — baza triggerlari chetlab o‘tilgan. “Solishtirish va audit”da to‘liq tekshiring`, 'solishtirish']);
+        if (o.seals?.unsealed) items.push(['danger', `${o.seals.unsealed} ta moliyaviy qator muhrsiz — baza triggerlari chetlab o‘tilgan. “Solishtirish va audit”da to‘liq tekshiring`, 'solishtirish']);
+        if (o.seals?.badSnapshots?.length) items.push(['danger', `Yopilgan oy nusxasi bazada o‘zgartirilgan (${o.seals.badSnapshots.join(', ')}) — u ishlatilmayapti, hisobot joriy ma’lumotdan tuzildi. Oy yopish bloklangan`, 'solishtirish']);
         if (!o.auditChain.ok) items.push(['danger', `Audit jurnali zanjiri ${o.auditChain.brokenAt}-yozuvda uzilgan — jurnal bazada to‘g‘ridan-to‘g‘ri o‘zgartirilgan`, 'solishtirish']);
         if (!o.balance.balanced) items.push(['danger', `Balans tenglamasi ${money(o.balance.imbalance)} ga mos kelmayapti`, 'hisobotlar', 'balance']);
         if (!o.cashflow.reconciled) items.push(['danger', `Pul oqimi hisob qoldiqlari bilan ${money(o.cashflow.difference)} farq qiladi`, 'hisobotlar', 'cashflow']);
@@ -457,6 +458,7 @@
             ${b.ppeCost ? r('Asosiy vositalar (boshlang‘ich qiymat)', b.ppeCost, '', true) + r('(−) Jamg‘arilgan amortizatsiya', -b.ppeDepreciation, '', true) + (b.ppeImpairment ? r('(−) Qadrsizlanish', -b.ppeImpairment, '', true) : '') : ''}
             ${b.prepaidExpenses ? r('Oldindan to‘langan xarajatlar (kelgusi davrlar uchun)', b.prepaidExpenses, '', true) : ''}
             ${b.taxPrepaid ? r('Oldindan to‘langan aylanma soliq', b.taxPrepaid, '', true) : ''}
+            ${b.salaryAdvances ? r('Xodimlarga ortiqcha to‘langan maosh (olinadigan)', b.salaryAdvances, '', true) : ''}
             ${r('Aktivlar jami', b.totalAssets, 'fin-pnl-total')}
             <tr class="fin-pnl-section"><td colspan="2">Majburiyatlar</td></tr>
             ${r('O‘quvchilardan oldindan olingan to‘lov (kelgusi darslar uchun)', b.contractLiabilities, '', true)}
@@ -743,7 +745,7 @@
                     <form data-fin-settings class="fin-form">
                         <div class="fin-form-row">${field('Ingliz tili kursi (oy)', `<input type="number" min="1" max="24" class="form-control" name="english" value="${s.courseMonths.english}" ${lock}>`)}${field('Rus tili kursi (oy)', `<input type="number" min="1" max="24" class="form-control" name="russian" value="${s.courseMonths.russian}" ${lock}>`)}</div>
                         <div class="fin-form-row">${field('Maosh to‘lash muddati (kun)', `<input type="number" min="0" max="60" class="form-control" name="salaryDueDays" value="${s.salaryDueDays}" ${lock}>`)}${field('Uskunaning foydalanish muddati (oy)', `<input type="number" min="1" max="240" class="form-control" name="usefulLifeMonths" value="${s.usefulLifeMonths}" ${lock}>`)}</div>
-                        <div class="fin-form-row">${field('Rahbar tasdig‘i kerak bo‘lgan summa (so‘m)', `<input type="number" min="0" class="form-control" name="approvalLimit" value="${s.approvalLimit}" ${lock}>`, 'Bundan katta har qanday chiqim, qarz, o‘tkazma va storno — faqat rahbar. Qaytarish, tushumni bekor qilish/qo‘shish va ta’sischiga to‘lov uchun bu xodimning bir kunlik jami chegarasi ham')}${field('Shubhali summa chegarasi (so‘m)', `<input type="number" min="0" class="form-control" name="suspiciousMin" value="${s.suspiciousMin}" ${lock}>`)}</div>
+                        <div class="fin-form-row">${field('Rahbar tasdig‘i kerak bo‘lgan summa (so‘m)', `<input type="number" min="0" class="form-control" name="approvalLimit" value="${s.approvalLimit}" ${lock}>`, 'Bundan katta har qanday chiqim, qarz, o‘tkazma va storno — faqat rahbar. Qaytarish, tushumni bekor qilish/qo‘shish va ta’sischiga to‘lov uchun bu xodimning bir kunlik jami chegarasi ham')}${field('Xodimning kunlik chiqim chegarasi (so‘m)', `<input type="number" min="0" class="form-control" name="dailyLimit" value="${s.dailyLimit ?? s.approvalLimit * 3}" ${lock}>`, 'Rahbar bo‘lmagan xodimning bir kundagi barcha chiqimlari jami (xarajat, qaytarish, maosh, storno)')}</div><div class="fin-form-row">${field('Shubhali summa chegarasi (so‘m)', `<input type="number" min="0" class="form-control" name="suspiciousMin" value="${s.suspiciousMin}" ${lock}>`)}</div>
                         <div class="fin-form-row">${field('Aylanmadan soliq stavkasi, %', `<input type="number" min="0" max="30" step="0.01" class="form-control" name="turnoverTaxRate" value="${s.turnoverTaxRate || 0}" ${lock}>`, 'Hisoblash usulida soliq tushumdan hisoblanadi va to‘languncha majburiyat bo‘ladi. 0 — soliq faqat to‘langanda xarajat')}</div>
                         <fieldset class="fin-methods"><legend>Kutilayotgan kredit zarari (ECL) stavkalari, %</legend>${F.AGING.map(([k, l]) => `<label>${l} <input type="number" min="0" max="100" class="form-control fin-narrow" name="ecl_${k}" value="${s.eclRates[k]}" ${lock}></label>`).join('')}</fieldset>
                         ${dir ? '<button type="submit" class="btn-primary-sm">Saqlash</button>' : ''}
@@ -767,7 +769,7 @@
             const f = new FormData(e.target), n = k => Number(f.get(k));
             try {
                 await api('/settings', { revision: o.settingsRevision, data: { courseMonths: { english: n('english'), russian: n('russian') }, suspiciousMin: n('suspiciousMin'), salaryDueDays: n('salaryDueDays'),
-                    usefulLifeMonths: n('usefulLifeMonths'), approvalLimit: n('approvalLimit'), turnoverTaxRate: n('turnoverTaxRate'), eclRates: Object.fromEntries(F.AGING.map(([k]) => [k, n('ecl_' + k)])) } }, 'PUT');
+                    usefulLifeMonths: n('usefulLifeMonths'), approvalLimit: n('approvalLimit'), dailyLimit: n('dailyLimit'), turnoverTaxRate: n('turnoverTaxRate'), eclRates: Object.fromEntries(F.AGING.map(([k]) => [k, n('ecl_' + k)])) } }, 'PUT');
                 invalidate(); toast('Sozlamalar saqlandi'); render('moliya-sozlamalar');
             } catch (err) { toast(err.message); }
         });

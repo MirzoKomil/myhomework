@@ -8,6 +8,7 @@ const inflow = require('../server/services/inflow');
 const cash = require('../server/services/paymentCash');
 const finance = require('../server/services/finance');
 const F = require('../js/financeEngine');
+const { execFileSync } = require('node:child_process');
 const url = process.env.PAYROLL_TEST_DATABASE_URL;
 if (url && (new URL(url).hostname !== '127.0.0.1' || !/^\/payroll_test_[a-z0-9]+$/.test(new URL(url).pathname))) throw Error('Only disposable test DB allowed');
 
@@ -24,6 +25,8 @@ test('real PostgreSQL finance integration', { skip: !url }, async t => {
     };
     const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
     const body = name => name.endsWith('.png') ? Buffer.concat([PNG, Buffer.from('evidence ' + name + seq++)]) : Buffer.from('%PDF-1.4\nevidence ' + name + seq++);
+    // Superuser sifatida alohida sessiyada "yashirin" o'zgartirish (triggerlarni o'chirib) — buzilishni aniqlash testlari uchun.
+    const superSql = (table, sql) => execFileSync('psql', [url, '-v', 'ON_ERROR_STOP=1', '-qAt', '-c', `ALTER TABLE ${table} DISABLE TRIGGER USER; ${sql}; ALTER TABLE ${table} ENABLE TRIGGER USER;`], { encoding: 'utf8' });
     const evidence = async (name = 'audit.pdf') => (await finance.storeEvidence(pool, accountant, { originalname: name, mimetype: name.endsWith('.png') ? 'image/png' : 'application/pdf', buffer: body(name) })).url;
     try {
         // Har ishga tushirishda toza baza: testni bir xil bazada qayta-qayta ishlatish mumkin.
@@ -325,6 +328,16 @@ test('real PostgreSQL finance integration', { skip: !url }, async t => {
             const lockAudit = (await pool.query("SELECT after_data FROM fin_audit WHERE action='period-lock' ORDER BY id DESC LIMIT 1")).rows[0].after_data;
             const row = (await pool.query("SELECT sha256 FROM fin_period_snapshots WHERE month='2026-09'")).rows[0];
             assert.equal(lockAudit.snapshotSha256['2026-09'], row.sha256);
+            // Nusxani bazada yashirincha o'zgartirish: hisobotda ishlatilmaydi, ogohlantiriladi, oy yopish bloklanadi
+            const original = (await pool.query("SELECT data::text AS d FROM fin_period_snapshots WHERE month='2026-09'")).rows[0].d;
+            superSql('fin_period_snapshots', `UPDATE fin_period_snapshots SET data=jsonb_set(data,'{pnl,all,accrual,revenue}','123456789') WHERE month='2026-09'`);
+            const tampered = await finance.overview(pool, admin, { start: '2026-09-01', end: '2026-09-30', scope: 'all', basis: 'accrual' });
+            assert.notEqual(tampered.pnl.revenue, 123456789);
+            assert.equal(tampered.pnl.usedSnapshot, false);
+            assert.deepEqual(tampered.seals.badSnapshots, ['2026-09']);
+            await rejects(finance.lockMonth(pool, admin, { month: '2026-10', override: true, note: 'Buzilgan nusxa bilan yopishga urinish' }), null, /yaxlitligi|tugagan/);
+            superSql('fin_period_snapshots', `UPDATE fin_period_snapshots SET data='${original.replace(/'/g, "''")}'::jsonb WHERE month='2026-09'`);
+            assert.deepEqual((await finance.overview(pool, admin, {})).seals.badSnapshots, []);
             assert.equal(oct.balance.balanced, true, String(oct.balance.imbalance));
             await rejects(finance.lockMonth(pool, accountant, { month: '2026-09', locked: false, note: 'Tuzatish kerak' }), 403);
             await finance.lockMonth(pool, admin, { month: '2026-09', locked: false, note: 'Auditor so‘rovi bilan' });
@@ -353,11 +366,59 @@ test('real PostgreSQL finance integration', { skip: !url }, async t => {
             assert.equal(bad.chain.ok, false);
         });
 
+        await t.test('round 4: batch resend must match, split expenses hit the daily limit, salary/clearing controls', async () => {
+            const k = key(), ev = await evidence();
+            await finance.batchCorrections(pool, acc3, { requestKey: k, entity: 'russian', reason: 'Bitta tuzatish', evidenceUrl: ev, operations: [{ kind: 'add', date: '2026-10-09', amount: 100000, method: 'bank', leadId: 'l9' }] });
+            await rejects(finance.batchCorrections(pool, acc3, { requestKey: k, entity: 'russian', reason: 'Bitta tuzatish', evidenceUrl: ev, operations: [{ kind: 'add', date: '2026-10-09', amount: 100000, method: 'bank', leadId: 'l9' }, { kind: 'void', recordId: 'r2' }] }), 409, /boshqa tuzatishlar/);
+            const same = await finance.batchCorrections(pool, acc3, { requestKey: k, entity: 'russian', reason: 'Bitta tuzatish', evidenceUrl: ev, operations: [{ kind: 'add', date: '2026-10-09', amount: 100000, method: 'bank', leadId: 'l9' }] });
+            assert.equal(same.results[0].duplicate, true);
+            // Bo'lib kiritilgan katta xarajat: kunlik chiqim chegarasi (standart 3 × limit)
+            const accN = { id: 'accN' };
+            await pool.query("INSERT INTO users VALUES('accN','Buxgalter N','accN','accountant','') ON CONFLICT DO NOTHING");
+            await finance.createTransaction(pool, admin, { requestKey: key(), entity: 'common', type: 'capital', categoryCode: 'OWNER_IN', accountId: 'acc-bank', amount: 50000000, date: '2026-10-09', counterparty: 'Ta’sischi' });
+            const ex = { entity: 'common', type: 'expense', categoryCode: 'ADMIN', accountId: 'acc-bank', date: '2026-10-09', counterparty: 'Bir xil yetkazuvchi', amount: 4900000 };
+            for (let i = 0; i < 3; i++) await finance.createTransaction(pool, accN, { ...ex, requestKey: key(), receiptUrl: await evidence() });
+            await rejects(finance.createTransaction(pool, accN, { ...ex, requestKey: key(), receiptUrl: await evidence() }), 403, /kunlik/);
+            // Bitta hujjat bilan ikkinchi xarajat — rad
+            const doc = await evidence();
+            await finance.createTransaction(pool, admin, { ...ex, amount: 1000000, requestKey: key(), receiptUrl: doc });
+            await rejects(finance.createTransaction(pool, admin, { ...ex, amount: 1000000, requestKey: key(), receiptUrl: doc }), 409, /hujjat/);
+            // Qaytarish Uzum kliring hisobidan emas
+            await rejects(finance.createTransaction(pool, admin, { requestKey: key(), entity: 'russian', type: 'refund', categoryCode: 'REFUND', accountId: 'acc-uzum', amount: 1000, date: '2026-10-09', counterparty: 'U', paymentRecordId: 'ru', terminates: false, receiptUrl: await evidence() }), 400, /Uzum/);
+            // Katta maosh to'lovi — rahbar; qoldiqdan katta — rad
+            await pool.query("INSERT INTO salary_transactions VALUES('salBig','t1','russian','2026-10-01','2026-10-15',60000000,'paid',NOW(),NULL)");
+            await rejects(finance.recordSalaryPayment(pool, accountant, 'salBig', { accountId: 'acc-cash', date: '2026-10-16' }), 403, /rahbar/);
+        });
+
+        await t.test('row seals cover opening balances, contract values, settings, locks and snapshots', async () => {
+            assert.equal((await finance.verifySeals(pool)).ok, true);
+            // Har bir jadvalda: yashirin o'zgartirish aniqlanadi, asl qiymat qaytarilgach zanjir yana butun.
+            const tamper = async (table, bad, restore) => {
+                superSql(table, bad);
+                const v = await finance.verifySeals(pool); assert.equal(v.ok, false, table); assert.equal(v.table, table);
+                superSql(table, restore);
+                assert.equal((await finance.verifySeals(pool)).ok, true, table + ' restored');
+            };
+            await tamper('fin_accounts', "UPDATE fin_accounts SET opening_balance=opening_balance+7000000 WHERE id='acc-cash'", "UPDATE fin_accounts SET opening_balance=opening_balance-7000000 WHERE id='acc-cash'");
+            const cv = (await pool.query("SELECT value FROM fin_contract_values WHERE record_id='r1'")).rows[0].value;
+            await tamper('fin_contract_values', "UPDATE fin_contract_values SET value=99000000 WHERE record_id='r1'", `UPDATE fin_contract_values SET value=${cv} WHERE record_id='r1'`);
+            const sh = (await pool.query('SELECT id,data::text AS d FROM fin_settings_history ORDER BY id LIMIT 1')).rows[0];
+            await tamper('fin_settings_history', `UPDATE fin_settings_history SET data=jsonb_set(data,'{courseMonths,russian}','1') WHERE id=${sh.id}`, `UPDATE fin_settings_history SET data='${sh.d.replace(/'/g, "''")}'::jsonb WHERE id=${sh.id}`);
+            await tamper('salary_transactions', "UPDATE salary_transactions SET amount=1 WHERE id='sal1'", "UPDATE salary_transactions SET amount=900000 WHERE id='sal1'");
+            // Qulfni yashirincha o'chirish (davrni "ochish") ham aniqlanadi
+            await finance.lockMonth(pool, admin, { month: '2026-08', override: true, note: 'Test: avgust yopildi, keyin yashirin o‘chirish' }).catch(() => {});
+            if ((await pool.query("SELECT 1 FROM fin_period_locks WHERE month='2026-08'")).rows.length) {
+                const lk = (await pool.query("SELECT * FROM fin_period_locks WHERE month='2026-08'")).rows[0];
+                superSql('fin_period_locks', "DELETE FROM fin_period_locks WHERE month='2026-08'");
+                const v = await finance.verifySeals(pool); assert.equal(v.ok, false); assert.equal(v.table, 'fin_period_locks');
+                superSql('fin_period_locks', `INSERT INTO fin_period_locks(month,locked_by,locked_by_name,note,locked_at) VALUES('2026-08','${lk.locked_by}','${lk.locked_by_name}','${lk.note.replace(/'/g, "''")}',NOW())`);
+                assert.equal((await finance.verifySeals(pool)).ok, true);
+            }
+        });
+
         await t.test('row seals detect edits and unsealed inserts made with triggers disabled', async () => {
             assert.equal((await finance.verifySeals(pool)).ok, true);
-            await pool.query('ALTER TABLE fin_transactions DISABLE TRIGGER USER');
-            await pool.query("UPDATE fin_transactions SET amount=amount+1 WHERE id=(SELECT id FROM fin_transactions ORDER BY created_at LIMIT 1)");
-            await pool.query('ALTER TABLE fin_transactions ENABLE TRIGGER USER');
+            superSql('fin_transactions', "UPDATE fin_transactions SET amount=amount+1 WHERE id=(SELECT id FROM fin_transactions ORDER BY created_at LIMIT 1)");
             const v = await finance.verifySeals(pool);
             assert.equal(v.ok, false); assert.equal(v.table, 'fin_transactions');
             await rejects(finance.lockMonth(pool, admin, { month: '2026-09', override: true, note: 'Yaxlitlik buzilgan holda yopishga urinish' }), 409, /yaxlitligi/);

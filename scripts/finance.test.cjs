@@ -489,3 +489,55 @@ test('R3: impairment lowers book value and later depreciation; a sale books the 
     for (const day of ['2026-03-31', '2026-04-01', '2026-06-30', '2026-07-01', '2026-12-31']) assert.equal(F.balanceSheet(d, day).balanced, true, day);
     assert.equal(F.balanceSheet(d, '2026-07-01').ppeNet, 0);
 });
+
+// ---------- Auditor regressiyalari (4-bosqich) ----------
+test('R4: a cheaper renewal (CRM shows the course fully paid) does not swallow the next course', () => {
+    const d = data({ accounts: ACC26, receipts: [
+        rc('a', '2026-01-01', 3000000, { leadId: 'L', contractValue: 3000000, debtAfter: 0 }),
+        rc('b', '2026-04-01', 2400000, { leadId: 'L', contractValue: 3000000, debtAfter: 0 }),
+        rc('c', '2026-07-01', 2400000, { leadId: 'L', contractValue: 3000000, debtAfter: 0 })] });
+    const cs = F.contracts(d);
+    assert.equal(cs.length, 3);
+    assert.deepEqual(cs.map(c => c.value), [3000000, 2400000, 2400000]);
+    assert.equal(F.profitAndLoss(d, { start: '2026-07-01', end: '2026-09-30', basis: 'accrual' }).net_revenue, 2400000);
+    assert.equal(F.balanceSheet(d, '2026-06-30').contractAssets, 0);
+    // CRM qarz qolganini ko'rsatsa — kech to'lov eski kursga yoziladi
+    const late = data({ accounts: ACC26, receipts: [rc('a', '2026-01-01', 1000000, { leadId: 'L', debtAfter: 2000000 }), rc('b', '2026-04-05', 2000000, { leadId: 'L', debtAfter: 0 })] });
+    assert.equal(F.contracts(late).length, 1);
+});
+
+test('R4: turnover tax paid after the rate drops to 0% settles the accrued liability (no double count)', () => {
+    const d = data({ accounts: ACC26, receipts: [rc('a', '2026-01-01', 12000000, { leadId: 'A', contractValue: 12000000 })],
+        transactions: [tx('t', '2026-04-10', 'expense', 'TAX_TURNOVER', 480000, { entity: 'common' })],
+        settingsHistory: [{ from: '1900-01-01', data: { courseMonths: { english: 3, russian: 3 }, turnoverTaxRate: 4 } }, { from: '2026-04-01', data: { courseMonths: { english: 3, russian: 3 }, turnoverTaxRate: 0 } }] });
+    const y = F.profitAndLoss(d, { start: '2026-01-01', end: '2026-12-31', basis: 'accrual' });
+    assert.equal(y.turnover_tax, 480000);
+    assert.equal(F.balanceSheet(d, '2026-12-31').taxPayable, 0);
+    assert.equal(F.balanceSheet(d, '2026-12-31').balanced, true);
+});
+
+test('R4: cash basis ignores Uzum-side cancellations (no cash ever arrived); terminated unpaid service is a credit loss', () => {
+    const d = data({ accounts: ACC26, receipts: [rc('u', '2026-03-05', 3000000, { method: 'uzum', entity: 'english', leadId: 'U' })],
+        transactions: [tx('r', '2026-03-10', 'refund', 'REFUND', 1000000, { entity: 'english', accountId: 'acc-uzum', paymentRecordId: 'u', terminates: false }),
+            tx('s', '2026-04-10', 'transfer', 'TRANSFER', 1900000, { entity: 'english', accountId: 'acc-uzum', toAccountId: 'acc-bank' }),
+            tx('f', '2026-04-10', 'expense', 'BANK_FEES', 100000, { entity: 'english', accountId: 'acc-uzum' })] });
+    assert.equal(F.profitAndLoss(d, { start: '2026-03-01', end: '2026-04-30', scope: 'english' }).net_revenue, 2000000);
+    const t = data({ accounts: ACC26, receipts: [rc('a', '2026-01-01', 500000, { leadId: 'A', contractValue: 3000000 })],
+        transactions: [tx('r', '2026-02-28', 'refund', 'REFUND', 100000, { paymentRecordId: 'a', terminates: true })] });
+    const p = F.profitAndLoss(t, { start: '2026-01-01', end: '2026-03-31', basis: 'accrual' });
+    assert.ok(p.credit_losses > 0);
+    assert.equal(F.balanceSheet(t, '2026-03-31').balanced, true);
+});
+
+test('R4: an overpaid salary is an advance (asset), not silently dropped', () => {
+    const d = data({ accounts: ACC26, salaries: [{ id: 'S', entity: 'russian', employeeName: 'U', amount: 1000000, status: 'paid', periodStart: '2026-03-01', periodEnd: '2026-03-31', accrualDate: '2026-03-31', categoryCode: 'PAY_ADMIN' }],
+        transactions: [tx('p', '2026-04-05', 'expense', 'PAY_ADMIN', 1500000, { salaryId: 'S' })] });
+    const b = F.balanceSheet(d, '2026-04-30');
+    assert.equal(b.salaryAdvances, 500000); assert.equal(b.balanced, true);
+});
+
+test('R4: Ц/Щ/kh spellings match across scripts', () => {
+    assert.equal(F.nameMatch('Цой Виктор', 'Tsoy Viktor'), 'strong');
+    assert.equal(F.nameMatch('Евгений Щербаков', 'Yevgeniy Shcherbakov'), 'strong');
+    assert.equal(F.nameMatch('Рахимов Илёс', 'Rakhimov Ilyos'), 'strong');
+});
