@@ -18,7 +18,7 @@
         marked: ['Davomat vaqtida', 'ok'], marked_late: ['Davomat kech belgilandi', 'warn'], marked_early: ['Davomat darsdan oldin', 'warn'],
         not_marked: ['Davomat belgilanmagan', 'bad'],
     };
-    const FACE = { none: ['Namuna yo‘q', 'idle'], pending: ['Tasdiq kutmoqda', 'warn'], approved: ['Tasdiqlangan', 'ok'], rejected: ['Rad etilgan', 'bad'] };
+    const FACE = { none: ['Namuna yo‘q', 'idle'], pending: ['Tasdiq kutmoqda', 'warn'], approved: ['Tasdiqlangan', 'ok'], rejected: ['Rad etilgan', 'bad'], reset: ['Qayta olinishi kerak', 'warn'] };
     const MANAGE = new Set(['admin', 'boshliq', 'hr']);
 
     const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -174,7 +174,7 @@
         const data = await refreshMe();
         if (!overlay) return;
         if (!data?.tracked) { body.innerHTML = '<p>Sizga davomat belgilash yoqilmagan. Savollar bo‘lsa HR’ga murojaat qiling.</p>'; return; }
-        if (data.face === 'none' || data.face === 'rejected') return enrollView(body, data);
+        if (['none', 'rejected', 'reset'].includes(data.face)) return enrollView(body, data);
         if (data.face === 'pending') {
             body.innerHTML = `${todaySummary(data.today)}<div class="satt-note">Yuz namunangiz HR’ga yuborilgan. Tasdiqlangach shu yerda “Keldim” tugmasi chiqadi.</div>`;
             return;
@@ -201,11 +201,12 @@
         body.innerHTML = '<div class="satt-loading"><span class="satt-spinner"></span>Tayyorlanmoqda…</div>';
         const st = session();
         try {
-            const ch = await api('/me/challenge', {});
-            st.alive();
             body.innerHTML = cameraStage('Yuzingizni ramka ichiga joylang');
             const geo = locate();
             st.cam = await startCamera(body);
+            st.alive();
+            // Topshiriq kamera ochilgandan keyin olinadi — ruxsat so'rash vaqti uning muddatiga kirmaydi.
+            const ch = await api('/me/challenge', {});
             st.alive();
             await countdown(body, 3, 'Kameraga to‘g‘ri qarang');
             st.alive();
@@ -221,7 +222,18 @@
             const location = await geo;
             st.alive();
             body.innerHTML = '<div class="satt-loading"><span class="satt-spinner"></span>Yuz tekshirilmoqda — bu 10–20 soniya olishi mumkin</div>';
-            const res = await api('/me/check', { kind, challenge: ch.id, frame: front, turned, location: location.error ? null : location });
+            const payload = { kind, challenge: ch.id, frame: front, turned, location: location.error ? null : location };
+            let res;
+            // Navbat band bo'lsa (503) — xuddi shu rasmlar bilan bir necha soniyadan keyin avtomatik qayta yuboriladi.
+            for (let tryNo = 0; ; tryNo++) {
+                try { res = await api('/me/check', payload); break; }
+                catch (e) {
+                    if (e.status !== 503 || tryNo >= 4) throw e;
+                    body.innerHTML = '<div class="satt-loading"><span class="satt-spinner"></span>Hozir navbat band — bir necha soniyada qayta tekshiriladi…</div>';
+                    await wait(5000 + tryNo * 3000);
+                    st.alive();
+                }
+            }
             if (!overlay) return;
             if (res.ok) {
                 const t = res.today || {};
@@ -255,7 +267,9 @@
         const self = !target;
         body.innerHTML = `${self ? todaySummary(data?.today) : ''}
             <div class="satt-note">${self
-                ? (data?.face === 'rejected' ? 'Avvalgi namunangiz rad etildi. Yorug‘ joyda, ko‘zoynaksiz va bosh kiyimsiz qayta yuboring.' : 'Davomatni boshlash uchun avval yuz namunangizni yuboring. HR tasdiqlagach har kuni shu namuna bilan tekshiriladi.')
+                ? (data?.face === 'rejected' ? 'Avvalgi namunangiz rad etildi. Yorug‘ joyda, ko‘zoynaksiz va bosh kiyimsiz qayta yuboring.'
+                    : data?.face === 'reset' ? 'HR yuz namunangizni yangilashni so‘radi. Yangi namuna yuboring — tasdiqlangach davomat yana ishlaydi.'
+                    : 'Davomatni boshlash uchun avval yuz namunangizni yuboring. HR tasdiqlagach har kuni shu namuna bilan tekshiriladi.')
                 : `<b>${esc(target.name)}</b> uchun yuz namunasi olinadi. Xodim kameraga to‘g‘ri qarab tursin.`}</div>
             <ul class="satt-steps"><li>Yorug‘ joyda turing, yuz to‘liq ko‘rinsin</li><li>Kameraga to‘g‘ri qarang — 2 ta rasm olinadi</li></ul>
             <button type="button" class="satt-cta">Rasmga olish</button>`;

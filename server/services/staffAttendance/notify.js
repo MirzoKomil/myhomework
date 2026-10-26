@@ -7,6 +7,7 @@
 const t = require('./time');
 
 const RECIPIENT_ROLES = ['admin', 'boshliq', 'rop'];
+const MANAGERS = ['admin', 'boshliq']; // HR bo'limiga havola beruvchi xabarlar — ROP u yerga kira olmaydi
 const esc = v => String(v ?? '').replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c])).slice(0, 120);
 
 async function recipients(db) {
@@ -16,9 +17,9 @@ async function recipients(db) {
         WHERE l.account_kind='user' AND NOT l.paused AND u.role=ANY($1::text[])`, [RECIPIENT_ROLES])).rows;
 }
 
-async function send(db, key, text, settings) {
+async function send(db, key, text, settings, roles = RECIPIENT_ROLES) {
     if (settings && settings.notifyTelegram === false) return 0;
-    const list = await recipients(db);
+    const list = (await recipients(db)).filter(r => roles.includes(r.role));
     if (!list.length) return 0;
     const store = require('../domworkBot/store');
     let sent = 0;
@@ -50,9 +51,12 @@ const earlyLeave = (db, { employeeId, name, date, status, settings }) => send(db
     `🚪 <b>${esc(name)}</b> ishdan erta ketdi\nKetdi: ${status.outClock} (ish ${status.end} da tugaydi)\nErta: <b>${status.earlyMinutes} daqiqa</b>`, settings);
 
 const mismatch = (db, { employeeId, name, date, at, settings }) => send(db, `att:mismatch:${employeeId}:${date}`,
-    `❗ <b>${esc(name)}</b> akkauntidan belgilashda yuz mos kelmadi (${t.tashkentClock(at)}).\nRasmni CRM → HR → Davomat bo‘limida ko‘ring.`, settings);
+    `❗ <b>${esc(name)}</b> akkauntidan belgilashda yuz mos kelmadi (${t.tashkentClock(at)}).\nRasmni CRM → HR → Davomat bo‘limida ko‘ring.`, settings, MANAGERS);
+
+const replay = (db, { employeeId, name, date, at, settings }) => send(db, `att:replay:${employeeId}:${date}`,
+    `⚠️ <b>${esc(name)}</b> belgilashda avvalgi rasmga juda o‘xshash rasm yubordi (${t.tashkentClock(at)}). Odatda bu qayta yuborilgan rasm bo‘ladi.\nCRM → HR → Davomat bo‘limida tekshiring.`, settings, MANAGERS);
 
 const facePending = (db, { employeeId, name }) => send(db, `att:face:${employeeId}:${t.tashkentDate()}`,
-    `🙂 <b>${esc(name)}</b> yuz namunasini yubordi. CRM → HR → Davomat bo‘limida tasdiqlang.`);
+    `🙂 <b>${esc(name)}</b> yuz namunasini yubordi. CRM → HR → Davomat bo‘limida tasdiqlang.`, null, MANAGERS);
 
-module.exports = { late, absent, earlyLeave, mismatch, facePending, recipients, RECIPIENT_ROLES };
+module.exports = { late, absent, earlyLeave, mismatch, replay, facePending, recipients, RECIPIENT_ROLES };

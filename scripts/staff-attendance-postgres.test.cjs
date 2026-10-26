@@ -20,6 +20,9 @@ if (url) {
 // Haqiqiy model alohida (face.js) sinalgan.
 function frame(person, yaw = 0, faces = 1, jitter = 0) {
   const rgb = new Uint8Array(360 * 480 * 3);
+  // Har bir kadr — o'ziga xos "sahna" (jitter bo'yicha takrorlanadigan tasodifiy naqsh), bir xil jitter = bir xil rasm.
+  let seed = (person * 131 + jitter * 7919 + 1) >>> 0;
+  for (let i = 12; i < rgb.length; i += 3) { seed = (seed * 1664525 + 1013904223) >>> 0; rgb[i] = rgb[i + 1] = rgb[i + 2] = seed >>> 24; }
   rgb.set([person, Math.round(yaw * 100) + 100, faces, jitter]);
   return 'data:image/png;base64,' + png.encodePng({ width: 360, height: 480, rgb }).toString('base64');
 }
@@ -125,7 +128,7 @@ test('real PostgreSQL staff attendance', { skip: !url }, async t => {
       assert.ok(farRow.distance_m > 2000);
       const wrong = await attempt('ali', { person: 70, clock: '09:11' });
       assert.deepEqual([wrong.ok, wrong.reason], [false, 'mismatch']);
-      assert.deepEqual((await outbox()).map(r => r.target_id), ['111', '222'], 'faqat direktor va ROP');
+      assert.deepEqual((await outbox()).map(r => r.target_id), ['111'], 'yuz mos emas — faqat direktorga (ROP HR bo‘limiga kira olmaydi)');
       assert.equal((await attempt('ali', { turnOk: false, clock: '09:12' })).reason, 'liveness');
       assert.equal((await attempt('ali', { wrongWay: true, clock: '09:13' })).reason, 'wrong_direction');
       const ok = await attempt('ali', { clock: '09:17', sameFrame: 24 });
@@ -235,10 +238,18 @@ test('real PostgreSQL staff attendance', { skip: !url }, async t => {
       assert.ok(r.purged >= 3);
       await pool.query("UPDATE hr_employees SET status='inactive' WHERE id='e-vali'");
       await service.tick(pool, new Date());
-      assert.equal((await pool.query("SELECT COUNT(*)::int n FROM staff_att_photos WHERE employee_id='e-vali'")).rows[0].n, 0);
+      assert.equal((await pool.query("SELECT COUNT(*)::int n FROM staff_att_photos WHERE employee_id='e-vali' AND purpose='enroll'")).rows[0].n, 0);
       await service.deleteFace(pool, user('hr'), 'e-ali');
       const m = await service.monthly(pool, user('boss'), '2026-10', at('2026-10-31', '20:00'));
-      assert.equal(m.rows.find(x => x.employeeId === 'e-ali').days.find(x => x.date === '2026-10-26').status, 'late');
+      const days = m.rows.find(x => x.employeeId === 'e-ali').days;
+      assert.equal(days.find(x => x.date === '2026-10-26').status, 'late', 'o‘tgan kun o‘zgarmaydi');
+      const nov = await service.monthly(pool, user('boss'), '2026-11', at('2026-11-05', '20:00'));
+      assert.equal(nov.rows.find(x => x.employeeId === 'e-ali').days.find(x => x.date === '2026-11-02').status, 'not_ready', 'namuna o‘chirilgach "kelmadi" emas');
+      assert.equal((await service.me(pool, user('ali'))).face, 'reset');
+      // Biometrik belgilar muddati o'tgach o'chiriladi.
+      await pool.query("UPDATE staff_att_events SET occurred_at=occurred_at-INTERVAL '200 days'");
+      await service.tick(pool, new Date());
+      assert.equal((await pool.query('SELECT COUNT(*)::int n FROM staff_att_events WHERE descriptor IS NOT NULL OR frame_hash IS NOT NULL')).rows[0].n, 0);
     });
   } finally {
     await pool.end();

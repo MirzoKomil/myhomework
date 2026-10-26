@@ -127,37 +127,47 @@ function failAll(err) {
 }
 function getWorker() {
     if (worker) return worker;
-    worker = new Worker(__filename, { workerData: { staffFaceWorker: true } });
-    worker.on('message', ({ id, result, error }) => {
+    const w = new Worker(__filename, { workerData: { staffFaceWorker: true } });
+    worker = w;
+    w.on('message', ({ id, result, error }) => {
         const p = pending.get(id);
         if (!p) return;
         pending.delete(id); clearTimeout(p.timer);
         if (error) p.reject(new Error(error)); else p.resolve(result);
     });
-    const reset = err => { worker = null; failAll(err); };
-    worker.on('error', err => reset(err));
-    worker.on('exit', code => { if (worker) reset(new Error('Yuz tekshiruvi oqimi to‘xtadi (' + code + ')')); });
-    worker.unref();
-    return worker;
+    // Faqat shu worker hali joriy bo'lsa — eski (to'xtatilgan) worker yangisining so'rovlariga tegmaydi.
+    const reset = err => { if (worker === w) { worker = null; failAll(err); } };
+    w.on('error', err => reset(err));
+    w.on('exit', code => reset(new Error('Yuz tekshiruvi oqimi to‘xtadi (' + code + ')')));
+    w.unref();
+    return w;
+}
+function stopWorker() {
+    if (!worker) return;
+    const w = worker; worker = null;
+    failAll(new Error('Yuz tekshiruvi qayta ishga tushirildi'));
+    w.terminate().catch(() => {});
 }
 function touchIdle() {
     clearTimeout(idleTimer);
-    idleTimer = setTimeout(() => {
-        if (!pending.size && worker) { const w = worker; worker = null; w.terminate().catch(() => {}); }
-    }, WORKER_IDLE_MS);
+    idleTimer = setTimeout(() => { if (!pending.size) stopWorker(); }, WORKER_IDLE_MS);
     idleTimer.unref?.();
 }
+
+const QUEUE_CAP = 16;
+// Navbatda joy borligini oldindan tekshirish (bitta belgilash = 2 ta tahlil).
+function hasCapacity(slots = 1) { return process.env.STAFF_FACE_INLINE === '1' || pending.size + slots <= QUEUE_CAP; }
 
 // PNG buffer → { faces, descriptor?, yaw, score, box }. STAFF_FACE_INLINE=1 — worker'siz (testlar uchun).
 function analyze(pngBuffer, opts = {}) {
     if (process.env.STAFF_FACE_INLINE === '1') return analyzeLocal(pngBuffer, opts);
-    if (pending.size >= 8) return Promise.reject(Object.assign(new Error('Hozir tekshiruv navbati band. Bir daqiqadan keyin qayta urinib ko‘ring'), { status: 503 }));
+    if (pending.size >= QUEUE_CAP) return Promise.reject(Object.assign(new Error('Hozir tekshiruv navbati band. Bir daqiqadan keyin qayta urinib ko‘ring'), { status: 503 }));
     return new Promise((resolve, reject) => {
         const id = ++seq;
         const timer = setTimeout(() => {
             pending.delete(id);
             reject(new Error('Yuz tekshiruvi juda uzoq davom etdi'));
-            if (worker) { const w = worker; worker = null; w.terminate().catch(() => {}); }
+            stopWorker();
         }, WORKER_TIMEOUT_MS);
         pending.set(id, { resolve, reject, timer });
         const buf = Buffer.from(pngBuffer);
@@ -187,4 +197,4 @@ function bestDistance(descriptor, references) {
     return best;
 }
 
-module.exports = { analyze, analyzeLocal, distance, bestDistance, yawOf, loadFaceApi, MATCH_THRESHOLD };
+module.exports = { analyze, analyzeLocal, hasCapacity, distance, bestDistance, yawOf, loadFaceApi, MATCH_THRESHOLD };

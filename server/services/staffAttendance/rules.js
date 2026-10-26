@@ -16,7 +16,9 @@ const DEFAULT_SETTINGS = Object.freeze({
 
 function normalizeIps(raw) {
     const list = Array.isArray(raw) ? raw : String(raw || '').split(/[\s,;]+/);
-    const ok = v => /^(\d{1,3})(\.\d{1,3}){3}(\/([0-9]|[12]\d|3[0-2]))?$/.test(v) && v.split('/')[0].split('.').every(n => Number(n) <= 255);
+    const v4 = v => /^(\d{1,3})(\.\d{1,3}){3}(\/([0-9]|[12]\d|3[0-2]))?$/.test(v) && v.split('/')[0].split('.').every(n => Number(n) <= 255);
+    const v6 = v => /^[0-9a-f:]+$/i.test(v) && v.includes(':') && v.length <= 39 && (v.match(/::/g) || []).length <= 1;
+    const ok = v => v4(v) || v6(v);
     return [...new Set(list.map(v => String(v).trim()).filter(Boolean))].filter(ok).slice(0, 20);
 }
 
@@ -98,7 +100,7 @@ const REASONS = {
     no_location: 'Lokatsiya olinmadi. Telefon sozlamalarida joylashuvga ruxsat bering.',
     low_accuracy: 'GPS aniqligi past. Derazaga yaqinroq turib qayta urinib ko‘ring.',
     low_accuracy_phone: 'Joylashuv aniq emas. Kompyuterda GPS bo‘lmaydi — davomatni telefoningizdan belgilang.',
-    replay: 'Bu rasm avval yuborilgan. Kamerani qayta ochib, yangidan urinib ko‘ring.',
+    replay: 'Bu rasm avval yuborilgan rasmga juda o‘xshaydi. Biroz qimirlab, yangidan urinib ko‘ring.',
     wrong_direction: 'Boshingizni ko‘rsatilgan tomonga buring.',
     outside: 'Siz ofis hududidan tashqaridasiz.',
     no_face: 'Rasmda yuz topilmadi. Yuzingiz ramka ichida va yorug‘ joyda bo‘lsin.',

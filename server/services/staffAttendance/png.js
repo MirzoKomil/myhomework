@@ -15,7 +15,7 @@ function paeth(a, b, c) {
 }
 
 // Natija: { width, height, rgb: Uint8Array (width*height*3) }
-function decodePng(buf) {
+function decodePng(buf, expect = null) {
     if (!Buffer.isBuffer(buf) || buf.length < 33 || !buf.subarray(0, 8).equals(SIG)) {
         throw new Error('PNG emas');
     }
@@ -35,6 +35,8 @@ function decodePng(buf) {
         off += 12 + len;
     }
     if (!width || !height || width > MAX_SIDE || height > MAX_SIDE) throw new Error('PNG o\'lchami noto\'g\'ri');
+    // Kutilgan o'lcham sarlavhadanoq tekshiriladi — katta rasm ochilmasdan rad etiladi.
+    if (expect && (width !== expect.width || height !== expect.height)) throw Object.assign(new Error('PNG o\'lchami noto\'g\'ri'), { size: true });
     if (bitDepth !== 8 || interlace !== 0) throw new Error('PNG formati qo\'llab-quvvatlanmaydi');
     const channels = { 0: 1, 2: 3, 4: 2, 6: 4 }[colorType];
     if (!channels) throw new Error('PNG rang turi qo\'llab-quvvatlanmaydi');
@@ -106,10 +108,32 @@ function halve({ width, height, rgb }) {
     return { width: w, height: h, rgb: out };
 }
 
+// Rasm markazining (yuz joyi) 17x16 kulrang "farq xeshi" — 256 bit. Bir xil rasm qayta yuborilsa
+// (shovqin, yorug'lik o'zgarishi bilan ham) xesh deyarli o'zgarmaydi.
+function dhash({ width, height, rgb }) {
+    const x0 = Math.floor(width * 0.2), x1 = Math.floor(width * 0.8), y0 = Math.floor(height * 0.15), y1 = Math.floor(height * 0.75);
+    const W = 17, H = 16, cells = new Float64Array(W * H);
+    for (let gy = 0; gy < H; gy++) for (let gx = 0; gx < W; gx++) {
+        const sx = x0 + Math.floor((x1 - x0) * gx / W), ex = x0 + Math.floor((x1 - x0) * (gx + 1) / W);
+        const sy = y0 + Math.floor((y1 - y0) * gy / H), ey = y0 + Math.floor((y1 - y0) * (gy + 1) / H);
+        let sum = 0, n = 0;
+        for (let y = sy; y < ey; y++) for (let x = sx; x < ex; x++) { const i = (y * width + x) * 3; sum += rgb[i] * 0.299 + rgb[i + 1] * 0.587 + rgb[i + 2] * 0.114; n++; }
+        cells[gy * W + gx] = n ? sum / n : 0;
+    }
+    let bits = '';
+    for (let gy = 0; gy < H; gy++) for (let gx = 0; gx < W - 1; gx++) bits += cells[gy * W + gx] > cells[gy * W + gx + 1] ? '1' : '0';
+    return bits;
+}
+function hamming(a, b) {
+    if (!a || !b || a.length !== b.length) return Infinity;
+    let d = 0; for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) d++;
+    return d;
+}
+
 function dataUrlToBuffer(dataUrl) {
     const m = /^data:image\/png;base64,([A-Za-z0-9+/=]+)$/.exec(String(dataUrl || ''));
     if (!m) throw new Error('Rasm PNG data-URL ko\'rinishida bo\'lishi kerak');
     return Buffer.from(m[1], 'base64');
 }
 
-module.exports = { decodePng, encodePng, halve, dataUrlToBuffer };
+module.exports = { decodePng, encodePng, halve, dhash, hamming, dataUrlToBuffer };
