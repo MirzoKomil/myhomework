@@ -7,7 +7,7 @@
     font-family: inherit; font-weight: 700; font-size: 13px; line-height: 1; cursor: pointer; white-space: nowrap; font-variant-numeric: tabular-nums;
 }
 .satt-header-btn svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
-.satt-header-btn[data-state="todo"] { background: var(--purple); color: #fff; box-shadow: 0 6px 18px rgba(123, 97, 255, .28); }
+.satt-header-btn[data-state="todo"] { background: var(--purple); color: #fff; box-shadow: 0 6px 18px rgba(0, 101, 214, .28); }
 .satt-header-btn[data-state="in"] { border-color: var(--success); color: #047857; }
 .satt-header-btn[data-state="done"] { border-color: var(--border); color: var(--text-muted); }
 .satt-header-btn:focus-visible { outline: 3px solid var(--purple-light); outline-offset: 2px; }
@@ -66,7 +66,7 @@
     position: absolute; left: 0; right: 0; bottom: 14px; text-align: center; color: #fff;
     font-family: inherit; font-weight: 800; font-size: 46px; line-height: 1; font-variant-numeric: tabular-nums; text-shadow: 0 2px 12px rgba(0, 0, 0, .5);
 }
-.satt-stage:has(.satt-count:not(:empty)) .satt-oval { stroke: #A996FF; stroke-dasharray: none; }
+.satt-stage:has(.satt-count:not(:empty)) .satt-oval { stroke: #5B9EF0; stroke-dasharray: none; }
 .satt-tick { animation: satt-tick 1s ease-out; }
 @keyframes satt-tick { from { transform: scale(1.35); opacity: .3; } 25% { transform: scale(1); opacity: 1; } }
 .satt-turn { position: absolute; top: 42%; color: #fff; font-size: 54px; line-height: 1; pointer-events: none; text-shadow: 0 2px 10px rgba(0, 0, 0, .5); animation: satt-nudge 1s ease-in-out infinite; }

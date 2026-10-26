@@ -93,7 +93,7 @@
 .fin-table td small { display: block; color: var(--text-muted); font-size: 11.5px; }
 .fin-table .num { text-align: right; white-space: nowrap; }
 .fin-table tbody tr:last-child td { border-bottom: 0; }
-.fin-table tbody tr:hover td { background: var(--rd-hover, rgba(123, 97, 255, .03)); }
+.fin-table tbody tr:hover td { background: var(--rd-hover, rgba(0, 101, 214, .03)); }
 .fin-reversal td { color: var(--text-muted); font-style: italic; }
 .fin-reversed td { color: var(--text-muted); text-decoration: line-through; text-decoration-color: rgba(220, 38, 38, .5); }
 .fin-reversed td .fin-badge, .fin-reversed td button { text-decoration: none; }
@@ -116,14 +116,14 @@
 .fin-filters .form-control { min-height: 34px; width: auto; max-width: 220px; }
 
 .fin-chart { width: 100%; height: auto; max-height: 260px; display: block; }
-.fin-bar-in { fill: #7B61FF; } .fin-bar-out { fill: #F9A8A8; }
+.fin-bar-in { fill: #0065D6; } .fin-bar-out { fill: #F9A8A8; }
 .fin-zero { stroke: var(--border); stroke-width: 1; }
 .fin-line { fill: none; stroke: #059669; stroke-width: 2.5; stroke-linejoin: round; }
 .fin-dot { fill: #059669; }
 .fin-axis { font-size: 11px; fill: var(--text-muted); }
 .fin-legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--text-muted); margin-top: 6px; }
 .fin-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
-.fin-legend i.fin-bar-in { background: #7B61FF; } .fin-legend i.fin-bar-out { background: #F9A8A8; }
+.fin-legend i.fin-bar-in { background: #0065D6; } .fin-legend i.fin-bar-out { background: #F9A8A8; }
 .fin-line-key { background: #059669; height: 3px !important; width: 14px !important; border-radius: 2px !important; }
 
 .fin-bars { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }

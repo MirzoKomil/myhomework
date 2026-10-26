@@ -6,35 +6,47 @@
    ========================================================================== */
 
 html.rd {
-    --purple: #6A4DF4;
-    --purple-dark: #5A3EE0;
-    --purple-light: #EEEAFE;
-    --purple-gradient: linear-gradient(135deg, #6A4DF4 0%, #6A4DF4 100%);
-    --primary: #6A4DF4;
-    --rd-primary-strong: #4630C2;
-    --bg: #F4F5F9;
-    --text-muted: #5B6076;
-    --text-light: #767C92;
-    --border: #E6E8EF;
-    --rd-col: #EDEFF5;
-    --rd-hover: #F4F5F9;
-    --radius-sm: 10px;
-    --radius: 16px;
-    --radius-lg: 16px;
-    --shadow: 0 1px 2px rgba(16, 24, 40, .04);
-    --shadow-card: 0 1px 3px rgba(16, 24, 40, .08);
+    /* Kobalt (2026-10): logotipdagi koʻk — asosiy rang */
+    --purple: #0065D6;
+    --purple-dark: #0057B8;
+    --purple-light: #EAF3FF;
+    --purple-gradient: linear-gradient(150deg, #0173EF 0%, #0057B8 100%);
+    --primary: #0065D6;
+    --rd-primary-strong: #0057B8;
+    --bg: #F5F7FB;
+    --text: #0B1220;
+    --text-muted: #4B5563;
+    --text-light: #64748B;
+    --border: #E6EAF2;
+    --rd-col: #EEF2F8;
+    --rd-hover: #F2F5FA;
+    --success: #16A34A;
+    --success-bg: #DCFAE6;
+    --danger: #D92D20;
+    --danger-bg: #FEF3F2;
+    --warning: #B45309;
+    --warning-bg: #FEF0C7;
+    --radius-sm: 12px;
+    --radius: 20px;
+    --radius-lg: 24px;
+    --shadow: 0 1px 2px rgba(11, 18, 32, .04);
+    --shadow-card: 0 1px 3px rgba(11, 18, 32, .08);
 }
 
 html.rd[data-theme="dark"] {
-    --purple-light: #2A2550;
-    --rd-primary-strong: #C3B6FF;
-    --bg: #12141F;
-    --surface: #1C1F2E;
-    --text-muted: #A9AFC4;
-    --text-light: #7E85A0;
-    --border: #2D3148;
-    --rd-col: #181B28;
-    --rd-hover: #23273A;
+    --purple: #3B8BEE;
+    --purple-dark: #5B9EF0;
+    --purple-light: #13284A;
+    --primary: #3B8BEE;
+    --rd-primary-strong: #9DC4F5;
+    --bg: #0B1220;
+    --surface: #131C2E;
+    --text: #E8EEF8;
+    --text-muted: #A9B4C8;
+    --text-light: #7E8AA3;
+    --border: #24304A;
+    --rd-col: #0F1726;
+    --rd-hover: #1A2438;
     --shadow: none;
     --shadow-card: none;
 }
@@ -176,7 +188,7 @@ html.rd .lead-card {
 
 html.rd .lead-card:hover {
     transform: none;
-    border-color: #C9BEFB;
+    border-color: #BEDAFB;
     box-shadow: 0 2px 8px rgba(16, 24, 40, .08);
 }
 
@@ -221,7 +233,7 @@ html.rd .lead-col-pick {
 }
 
 html.rd[data-theme="dark"] .lead-card:hover {
-    border-color: #4B4384;
+    border-color: #436184;
 }
 
 /* ---------- Shell: kompyuter (901px+) ---------- */
@@ -304,7 +316,7 @@ html.rd .search-box input {
 
 html.rd .search-box input:focus {
     border-color: var(--purple);
-    box-shadow: 0 0 0 3px rgba(106, 77, 244, .12);
+    box-shadow: 0 0 0 3px rgba(0, 101, 214, .16);
 }
 
 html.rd .icon-btn {
@@ -1776,7 +1788,7 @@ html.rd .rd-thx-rank-n {
     display: grid;
     place-items: center;
     border-radius: 50%;
-    background: #F0ECFF;
+    background: #ECF5FF;
     color: var(--purple);
     font-size: 11px;
     font-weight: 800;

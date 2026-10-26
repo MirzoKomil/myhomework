@@ -4,7 +4,7 @@
    bo'limlarga ta'sir qilmaydi. Ranglar umumiy CSS o'zgaruvchilaridan.
    ========================================================================== */
 :root {
-    --lh-live: #6A4DF4; --lh-live-bg: #EEEAFE;
+    --lh-live: #0065D6; --lh-live-bg: #EAF3FE;
     --lh-video: #0E7490; --lh-video-bg: #DDF4F8;
     --lh-ok: #15803D; --lh-ok-bg: #DCFCE7;
     --lh-mid: #B45309; --lh-mid-bg: #FEF3C7;
@@ -12,7 +12,7 @@
     --lh-muted: #5B6076;
 }
 [data-theme="dark"] {
-    --lh-live: #B9A8FF; --lh-live-bg: #2A2550;
+    --lh-live: #A8D1FF; --lh-live-bg: #253950;
     --lh-video: #67D4E6; --lh-video-bg: #12343B;
     --lh-ok: #6EE7A0; --lh-ok-bg: #133524;
     --lh-mid: #FCD34D; --lh-mid-bg: #3A2F12;
@@ -42,7 +42,7 @@ html.rd #tpTextbook.lh-host.sales-panel.active { background: transparent; border
 .lh-btn:disabled { opacity: .45; cursor: default; }
 .lh-btn:focus-visible, .lh-view:focus-visible, .lh-tab:focus-visible, .lh-item:focus-visible, .lh-chip:focus-visible, .lh-cell:focus-visible, .lh-table tr:focus-visible { outline: 2px solid var(--purple); outline-offset: 2px; }
 .lh-primary { background: var(--purple); border-color: var(--purple); color: #fff; }
-.lh-primary:hover:not(:disabled) { background: var(--purple-dark, #5A3EE0); color: #fff; }
+.lh-primary:hover:not(:disabled) { background: var(--purple-dark, #0057B8); color: #fff; }
 .lh-danger:hover:not(:disabled) { border-color: var(--danger, #E5484D); color: var(--danger, #E5484D); }
 .lh-input { width: 100%; min-height: 38px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--text); font: inherit; font-size: 14px; }
 .lh-input:focus { outline: none; border-color: var(--purple); box-shadow: 0 0 0 3px var(--purple-light); }
@@ -297,15 +297,15 @@ body.lp-open { overflow: hidden; }
 .lp-timer { font-variant-numeric: tabular-nums; padding: 6px 10px; border-radius: 8px; background: #22263A; cursor: pointer; font-weight: 700; }
 .lp-timer.is-paused { color: #FCD34D; }
 .lp-ic, .lp-tool { min-width: 38px; min-height: 38px; border-radius: 9px; border: 1px solid #343852; background: #22263A; color: #fff; font: inherit; font-size: 16px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0 8px; }
-.lp-ic:hover, .lp-tool:hover { border-color: #8E7BFF; }
-.lp-tool.is-on { background: #6A4DF4; border-color: #6A4DF4; }
+.lp-ic:hover, .lp-tool:hover { border-color: #3B8BEE; }
+.lp-tool.is-on { background: #0065D6; border-color: #0065D6; }
 .lp-wide { font-size: 13px; font-weight: 600; }
-.lp-ic:focus-visible, .lp-tool:focus-visible, .lp-color:focus-visible { outline: 2px solid #C3B6FF; outline-offset: 2px; }
+.lp-ic:focus-visible, .lp-tool:focus-visible, .lp-color:focus-visible { outline: 2px solid #B6D8FF; outline-offset: 2px; }
 .lp-sep { width: 1px; height: 24px; background: #343852; margin: 0 4px; }
 .lp-count { min-width: 64px; text-align: center; font-variant-numeric: tabular-nums; font-size: 14px; }
 .lp-colors { display: inline-flex; gap: 4px; }
 .lp-color { width: 24px; height: 24px; border-radius: 50%; border: 2px solid #343852; cursor: pointer; padding: 0; }
-.lp-color.is-on { border-color: #fff; box-shadow: 0 0 0 2px #6A4DF4; }
+.lp-color.is-on { border-color: #fff; box-shadow: 0 0 0 2px #0065D6; }
 .lp-stage { position: relative; flex: 1; min-height: 0; display: grid; place-items: center; overflow: hidden; }
 .lp-stage.is-laser { cursor: none; }
 .lp-slide { position: relative; display: flex; align-items: center; justify-content: center; max-width: calc(100% - 24px); max-height: calc(100% - 24px); }
@@ -319,7 +319,7 @@ body.lp-open { overflow: hidden; }
 .lp-wicon { font-size: 72px; }
 .lp-word { font-size: clamp(36px, 6vw, 84px); font-weight: 800; line-height: 1.1; }
 .lp-tr { font-size: clamp(18px, 2.4vw, 30px); color: #5B6076; }
-.lp-trans { font-size: clamp(22px, 3vw, 40px); color: #6A4DF4; font-weight: 700; }
+.lp-trans { font-size: clamp(22px, 3vw, 40px); color: #0065D6; font-weight: 700; }
 .lp-ex { font-size: clamp(16px, 2vw, 26px); color: #374151; font-style: italic; }
 .lp-caption { position: absolute; left: 0; right: 0; bottom: 0; padding: 8px 12px; background: rgba(0,0,0,.55); color: #fff; font-size: 14px; }
 .lp-ink { position: absolute; touch-action: none; }

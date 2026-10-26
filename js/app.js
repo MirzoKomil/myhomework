@@ -5953,7 +5953,7 @@ function renderProfileCompletionWidget(user) {
                 <div class="ring-chart">
                     <svg width="100" height="100" viewBox="0 0 100 100">
                         <circle cx="50" cy="50" r="38" fill="none" stroke="#F0F2F8" stroke-width="10"/>
-                        <circle cx="50" cy="50" r="38" fill="none" stroke="#7B61FF" stroke-width="10"
+                        <circle cx="50" cy="50" r="38" fill="none" stroke="#0065D6" stroke-width="10"
                             stroke-dasharray="${circumference}" stroke-dashoffset="${offset}" stroke-linecap="round"/>
                     </svg>
                     <div class="ring-value">${total}%</div>
@@ -8486,7 +8486,7 @@ function formatDashboardSessionDuration(user) {
 
 // Sotuv menejeri bosh sahifasi: "Sovgʻaga yoʻl" va "Bugungi obed".
 // Hisob Reyting bilan bir xil: getManagerSalesForPeriod + getMergedBonus.
-function renderManagerGoalBlock(managerId, lang) {
+function renderManagerGoalBlock(managerId, lang, opts = {}) {
     if (!managerId || typeof getManagerSalesForPeriod !== 'function') return '';
     const month = getManagerSalesForPeriod(managerId, 'oylik');
     const today = getManagerSalesForPeriod(managerId, 'kunlik');
@@ -8519,7 +8519,7 @@ function renderManagerGoalBlock(managerId, lang) {
         <b style="font-size:20px">${mln(today)}</b>
         ${got ? `<span class="mot-chip mot-chip--ok">✓ ${escapeHtml(got.label || '')}</span>` : ''}
         <span class="mot-prize-note">${nextDaily ? `“${escapeHtml(nextDaily.label || '')}” uchun yana ${mln(nextDaily.threshold - today)}` : 'Eng yuqori obed olindi 🎉'}</span></div></section>`;
-    return `<div class="mot-home">${goal}${obed}</div>`;
+    return `<div class="mot-home${opts.noGoal ? ' mot-home--solo' : ''}">${opts.noGoal ? '' : goal}${obed}</div>`;
 }
 
 // ROP bosh sahifasi: koʻrib chiqilmagan SLA eskalatsiyalari va jamoa rejasi.
@@ -8822,6 +8822,47 @@ function computeAdminHome({ students, leads, now = new Date() }) {
     };
 }
 
+// ===== Kobalt: bosh sahifa qahramon kartalari (barcha rollar uchun umumiy) =====
+const _kbxMln = n => String(Math.round((Number(n) || 0) / 1e5) / 10).replace('.', ',');
+function kbxPlanCard(o) {
+    const art = o.art ? `<div class="kbx-gift"><img src="${o.art.img}" alt="" width="92" height="82" loading="lazy">
+        <div><span>${escapeHtml(o.art.label)}</span><b>${escapeHtml(o.art.value)}</b>${o.art.small ? `<small>${escapeHtml(o.art.small)}</small>` : ''}</div></div>` : '';
+    const bar = o.bar ? `<div class="kbx-bar${o.bar.ok ? ' is-ok' : ''}" role="img" aria-label="${escapeHtml(o.bar.label || `${o.bar.pct}%`)}"><i style="width:${Math.max(0, Math.min(100, o.bar.pct))}%"></i>${o.bar.due != null ? `<b style="left:${Math.min(100, o.bar.due)}%"></b>` : ''}</div>` : '';
+    const foot = o.foot ? `<div class="kbx-bar-foot"><span>${o.foot[0]}</span><span>${o.foot[1] || ''}</span></div>` : '';
+    const tiles = (o.tiles || []).map(t => `<div${t.attrs ? ' ' + t.attrs : ''}><span>${escapeHtml(t.l)}</span><b${t.cls ? ` class="${t.cls}"` : ''}>${t.v}</b>${t.small ? `<small>${t.small}</small>` : ''}</div>`).join('');
+    return `<section class="card kbx-plan" aria-labelledby="${o.id}">
+        <div class="kbx-plan-top"><div class="kbx-plan-main">
+            <div class="kbx-plan-h"><h2 id="${o.id}">${escapeHtml(o.title)}</h2>${o.pill ? `<span class="kbx-pill kbx-pill--${o.pill.cls}">${escapeHtml(o.pill.text)}</span>` : ''}</div>
+            <div class="kbx-plan-num"><b>${o.big}</b>${o.of ? `<span>${escapeHtml(o.of)}</span>` : ''}</div>
+            ${o.sub ? `<span class="kbx-sub">${o.sub}</span>` : ''}
+        </div>${art}</div>${bar}${foot}
+        ${tiles ? `<div class="kbx-tiles">${tiles}</div>` : ''}</section>`;
+}
+function kbxDarkCard(o) {
+    const btn = (b, cls) => !b ? '' : b.href
+        ? `<a class="${cls}" href="${escapeHtml(b.href)}"${b.attrs ? ' ' + b.attrs : ''}>${b.label}</a>`
+        : `<button type="button" class="${cls}"${b.attrs ? ' ' + b.attrs : ''}>${b.label}</button>`;
+    return `<section class="kbx-next" aria-labelledby="${o.id}">
+        <span class="kbx-eyebrow">${escapeHtml(o.eyebrow)}</span>
+        <h2 id="${o.id}">${escapeHtml(o.title)}</h2>
+        ${o.sub ? `<span class="kbx-dsub">${escapeHtml(o.sub)}</span>` : ''}
+        ${(o.chips || []).length ? `<div class="kbx-dchips">${o.chips.map(c => `<span class="kbx-dchip${c.cls ? ' is-' + c.cls : ''}">${escapeHtml(c.t)}</span>`).join('')}</div>` : ''}
+        ${o.note ? `<p class="kbx-note">${escapeHtml(o.note)}</p>` : ''}
+        ${o.primary || o.secondary ? `<div class="kbx-next-actions">${btn(o.primary, 'kbx-call')}${btn(o.secondary, 'kbx-ghost')}</div>` : ''}</section>`;
+}
+function kbxPace(sales, target, now) {
+    const days = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const daysLeft = Math.max(1, days - now.getDate() + 1);
+    const due = target > 0 ? Math.round(target * now.getDate() / days) : 0;
+    const forecast = now.getDate() ? Math.round(sales / now.getDate() * days) : sales;
+    return {
+        days, daysLeft, due, forecast, gap: sales - due,
+        pct: target > 0 ? Math.round(sales / target * 100) : null,
+        duePct: target > 0 ? Math.min(100, Math.round(due / target * 100)) : null,
+        perDay: target > sales ? Math.ceil((target - sales) / daysLeft) : 0
+    };
+}
+
 function renderAdminHome(user, students, leads, now = new Date()) {
     const d = computeAdminHome({ students, leads, now });
     const date = `${UZ_WEEKDAYS[now.getDay()]}, ${now.getDate()}-${UZ_MONTHS_GEN[now.getMonth()]} ${now.getFullYear()}`;
@@ -8847,12 +8888,34 @@ function renderAdminHome(user, students, leads, now = new Date()) {
 
     return `<div class="ahx" id="adminHome">
         <div class="ahx-head"><h1>Bosh sahifa</h1><p>${escapeHtml(date)} · Ingliz va rus tili</p></div>
-        <div class="ahx-kpis">
-            ${kpi('Faol oʻquvchilar', d.active.toLocaleString('uz-UZ'), d.newThisMonth ? `+${d.newThisMonth}` : '', 'ahx-pill--ok', d.newThisMonth ? 'bu oy qoʻshildi' : 'bu oy yangi oʻquvchi yoʻq')}
-            ${kpi(`Tushum · ${monthName}`, escapeHtml(adminHomeMoneyShort(d.revenue)), planPct != null ? `${planPct}%` : '', 'ahx-pill--info', planPct != null ? `oylik rejadan (${escapeHtml(adminHomeMoneyShort(d.target))})` : 'oylik reja kiritilmagan')}
-            ${kpi('Yangi lidlar · bugun', d.leadsToday, diff ? (diff > 0 ? `+${diff}` : `−${Math.abs(diff)}`) : '0', diff >= 0 ? 'ahx-pill--ok' : 'ahx-pill--warn', 'kechagiga nisbatan')}
-            ${kpi('Qarzdorlar', d.debtors, d.overdueCount ? escapeHtml(adminHomeMoneyShort(d.overdueSum)) : '', 'ahx-pill--danger', d.overdueCount ? `${d.overdueCount} tasi muddati oʻtgan` : 'muddati oʻtgani yoʻq')}
-        </div>
+        ${(() => {
+            const pc = kbxPace(d.revenue, d.target, now);
+            const plan = kbxPlanCard({
+                id: 'kbxAdmPlan', title: `Tushum · ${monthName}`,
+                pill: d.target > 0 ? (pc.gap >= 0 ? { cls: 'ok', text: `Rejadan ${_kbxMln(pc.gap)} mln oldinda` } : { cls: 'warn', text: `${_kbxMln(-pc.gap)} mln ortda` }) : null,
+                big: `${_kbxMln(d.revenue)} mln`, of: d.target > 0 ? `/ ${_kbxMln(d.target)} mln soʻm` : 'soʻm · oylik reja kiritilmagan',
+                sub: d.target > 0 ? `${pc.daysLeft} kun qoldi · bugungacha ${_kbxMln(pc.due)} mln boʻlishi kerak edi · ${d.dealsMonth} ta toʻlov` : `${d.dealsMonth} ta toʻlov yopildi`,
+                bar: d.target > 0 ? { pct: pc.pct, due: pc.duePct, ok: pc.gap >= 0, label: `${pc.pct}% bajarildi, bugungacha ${pc.duePct}% kerak` } : null,
+                foot: d.target > 0 ? [`<strong>${pc.pct}%</strong> bajarildi`, `Shu tempda <strong>${_kbxMln(pc.forecast)} mln</strong>${pc.forecast < d.target ? ` — rejaga <strong>${_kbxMln(d.target - pc.forecast)} mln</strong> yetmaydi` : ''}`] : null,
+                tiles: [
+                    { l: 'Faol oʻquvchilar', v: d.active.toLocaleString('uz-UZ'), small: d.newThisMonth ? `bu oy +${d.newThisMonth}` : 'bu oy yangi yoʻq' },
+                    { l: 'Yangi lidlar · bugun', v: String(d.leadsToday), small: `kecha ${d.leadsYesterday}` },
+                    { l: 'Qarzdorlar', v: String(d.debtors), cls: d.overdueCount ? 'is-bad' : '', small: d.overdueCount ? `${d.overdueCount} tasi muddati oʻtgan` : 'muddati oʻtgani yoʻq' }
+                ],
+                art: { img: 'images/kobalt-admin.webp', label: 'Prognoz', value: `${_kbxMln(pc.forecast)} mln`, small: 'oy oxirida' }
+            });
+            const nowLesson = d.lessons.find(l => l.state === 'now') || d.lessons.find(l => l.state === 'wait');
+            const dark = d.overdueCount
+                ? kbxDarkCard({ id: 'kbxAdmAct', eyebrow: 'MUDDATI OʻTGAN TOʻLOVLAR', title: adminHomeMoneyShort(d.overdueSum), sub: `${d.overdueCount} oʻquvchi · kelishilgan sana oʻtgan`,
+                    chips: [d.unanswered ? { t: `${d.unanswered} javobsiz lid`, cls: 'red' } : null, d.unassigned ? { t: `${d.unassigned} lid menejersiz` } : null].filter(Boolean),
+                    note: 'Qarzdorlar roʻyxatida har biriga eslatma yuborish mumkin.',
+                    primary: { label: 'Qarzdorlar', attrs: 'data-ahx-go="debtors"' }, secondary: { label: 'Lidlar', attrs: 'data-ahx-go="leads"' } })
+                : kbxDarkCard({ id: 'kbxAdmAct', eyebrow: nowLesson ? (nowLesson.state === 'now' ? 'HOZIR DARSDA' : `KEYINGI DARS · ${nowLesson.time}`) : 'BUGUNGI DARSLAR', title: nowLesson ? (nowLesson.group || nowLesson.names[0] || 'Dars') : 'Darslar tugadi',
+                    sub: nowLesson ? `${teacherName(nowLesson.teacherId)} · ${nowLesson.dur} daq` : `${d.lessons.length} ta dars boʻldi`,
+                    chips: [d.unanswered ? { t: `${d.unanswered} javobsiz lid`, cls: 'red' } : null].filter(Boolean),
+                    primary: { label: 'Dars jadvali', attrs: 'data-ahx-go="timetable"' }, secondary: { label: 'Lidlar', attrs: 'data-ahx-go="leads"' } });
+            return `<div class="kbx-top">${plan}${dark}</div>`;
+        })()}
         <div class="ahx-grid">
             <section class="card ahx-card"><div class="ahx-card-h"><h3>Lidlar bosqichlar boʻyicha <small>· hozir</small></h3><button type="button" class="ahx-link" data-ahx-go="leads">Lidlarga oʻtish</button></div>
                 <ul class="ahx-funnel">${d.funnel.map(f => `<li><span>${escapeHtml(f.label)}</span><i aria-hidden="true"><em style="width:${f.count ? Math.max(3, f.count / maxFunnel * 100) : 0}%"></em></i><b>${f.count}</b></li>`).join('')}</ul>
@@ -8912,11 +8975,87 @@ function computeManagerHome({ user, managerId, leads, students, now = new Date()
     const upcoming = withDebt.filter(s => { const d = dueOf(s); return d && d >= todayStart && d < weekAhead; })
         .sort((a, b) => dueOf(a) - dueOf(b));
     const funnel = FUNNEL_STAGES.filter(s => s.id !== 'tolov-yopildi').map(s => ({ ...s, count: own.filter(l => st(l) === s.id).length }));
+    // Kobalt: qoʻngʻiroq navbati — avval SLA (24 soat) oʻtgan yangi lidlar,
+    // keyin muddati oʻtgan va bugungi eslatmalar, boʻlmasa eng eski yangi lid.
+    const DAY = 86400000;
+    const fresh = own.filter(l => st(l) === 'yangi-lidlar')
+        .map(l => ({ lead: l, t: Date.parse(l.managerAssignedAt || l.createdAt || l.date || '') }))
+        .filter(x => Number.isFinite(x.t)).sort((a, b) => a.t - b.t);
+    const slaLate = fresh.filter(x => now.getTime() - x.t >= DAY);
+    const leadTasks = tasks.filter(t => t.kind === 'lead');
+    let next = null;
+    if (slaLate[0]) next = { lead: slaLate[0].lead, reason: 'sla', ms: now.getTime() - slaLate[0].t - DAY };
+    else if (leadTasks[0]) next = { lead: leadTasks[0].lead, reason: leadTasks[0].late ? 'late' : 'today', at: leadTasks[0].at };
+    else if (fresh[0]) next = { lead: fresh[0].lead, reason: 'new', ms: DAY - (now.getTime() - fresh[0].t) };
+    const queue = [...slaLate.map(x => x.lead), ...leadTasks.map(t => t.lead)].filter((l, i, a) => a.findIndex(x => x.id === l.id) === i);
+    const queueCount = queue.length || fresh.length;
     return {
-        lang, sales, target, dueByToday, deals, place, conv, teamConv, quality,
+        lang, sales, target, dueByToday, deals, place, conv, teamConv, quality, daysInMonth,
+        next, queue, queueCount, slaLateCount: slaLate.length,
         tasks, upcoming, funnel, openLeads: funnel.reduce((a, f) => a + f.count, 0),
         active: myStudents.length, installments: withDebt.length, overdue
     };
+}
+
+// Kobalt bosh sahifa: chapda oylik reja (bonus rasmi bilan), oʻngda keyingi qoʻngʻiroq.
+function renderKobaltTop(d, managerId, now = new Date()) {
+    const mln = n => String(Math.round((Number(n) || 0) / 1e5) / 10).replace('.', ',');
+    const daysLeft = Math.max(1, d.daysInMonth - now.getDate() + 1);
+    const pct = d.target > 0 ? Math.round(d.sales / d.target * 100) : null;
+    const duePct = d.target > 0 ? Math.min(100, Math.round(d.dueByToday / d.target * 100)) : 0;
+    const gap = d.sales - d.dueByToday;
+    const forecast = now.getDate() ? Math.round(d.sales / now.getDate() * d.daysInMonth) : d.sales;
+    const perDay = d.target > d.sales ? Math.ceil((d.target - d.sales) / daysLeft) : 0;
+    const month = UZ_MONTHS_GEN[now.getMonth()];
+    let nextGift = null;
+    try {
+        const month$ = getManagerSalesForPeriod(managerId, 'oylik');
+        nextGift = MONTHLY_BONUSES.map(getMergedBonus).filter(b => Number(b.threshold) > 0)
+            .sort((a, b) => a.threshold - b.threshold).find(b => month$ < b.threshold) || null;
+    } catch (e) { nextGift = null; }
+    const gift = `<div class="kbx-gift"><img src="images/kobalt-money.webp" alt="" width="92" height="82">
+        <div><span>${nextGift ? 'Keyingi sovgʻa' : 'Oylik sovgʻalar'}</span><b>${escapeHtml(nextGift ? (nextGift.label || '') : 'Hammasi olindi')}</b><small>${nextGift ? `yana ${mln(nextGift.threshold - d.sales)} mln` : 'Barakalla!'}</small></div></div>`;
+    const plan = d.target > 0 ? `<section class="card kbx-plan" aria-labelledby="kbxPlanH">
+        <div class="kbx-plan-top"><div class="kbx-plan-main">
+            <div class="kbx-plan-h"><h2 id="kbxPlanH">${escapeHtml(month.charAt(0).toUpperCase() + month.slice(1))} rejasi</h2>
+                <span class="kbx-pill ${gap >= 0 ? 'kbx-pill--ok' : 'kbx-pill--warn'}">${gap >= 0 ? `Rejadan ${mln(gap)} mln oldinda` : `${mln(-gap)} mln ortda`}</span></div>
+            <div class="kbx-plan-num"><b>${mln(d.sales)} mln</b><span>/ ${mln(d.target)} mln soʻm</span></div>
+            <span class="kbx-sub">${daysLeft} kun qoldi · bugungacha ${mln(d.dueByToday)} mln boʻlishi kerak edi · ${d.deals} ta bitim</span>
+        </div>${gift}</div>
+        <div class="kbx-bar${gap >= 0 ? ' is-ok' : ''}" role="img" aria-label="${pct}% bajarildi, bugungacha ${duePct}% kerak"><i style="width:${Math.min(100, pct)}%"></i><b style="left:${duePct}%"></b></div>
+        <div class="kbx-bar-foot"><span><strong>${pct}%</strong> bajarildi</span><span>Shu tempda <strong>${mln(forecast)} mln</strong>${forecast < d.target ? ` — rejaga <strong>${mln(d.target - forecast)} mln</strong> yetmaydi` : ''}</span></div>
+        <div class="kbx-tiles">
+            <div><span>Kunlik kerak</span><b>${perDay ? `${mln(perDay)} mln` : 'Bajarildi'}</b></div>
+            <div><span>Konversiya</span><b>${d.conv == null ? '—' : `${d.conv.toFixed(1).replace('.', ',')}%`}</b></div>
+            <div><span>Maoshim · taxminiy</span><b id="mhxSalary">…</b><small id="mhxSalaryNote">oy yopilganda aniqlanadi</small></div>
+        </div></section>`
+        : `<section class="card kbx-plan"><div class="kbx-plan-top"><div class="kbx-plan-main"><div class="kbx-plan-h"><h2>Oylik reja</h2></div><span class="kbx-sub">ROP individual reja kiritmagan. ${d.deals} ta bitim · ${d.place ? `${d.place}-oʻrin` : ''}</span></div>${gift}</div><div class="kbx-tiles"><div><span>Maoshim · taxminiy</span><b id="mhxSalary">…</b><small id="mhxSalaryNote">oy yopilganda aniqlanadi</small></div></div></section>`;
+    const dur = ms => { const m = Math.max(1, Math.round(ms / 60000)); return m < 60 ? `${m} daq` : m < 1440 ? `${Math.floor(m / 60)} soat` : `${Math.floor(m / 1440)} kun`; };
+    let next;
+    if (d.next) {
+        const l = d.next.lead;
+        const tel = String(l.phone || '').replace(/[^\d+]/g, '');
+        const stage = (LEAD_COLUMNS.find(c => c.id === normalizeLeadStatus(l.status)) || {}).label || '';
+        const note = Array.isArray(l.comments) ? [...l.comments].reverse().find(c => c && c.text) : null;
+        const chip = d.next.reason === 'sla' ? `<span class="kbx-dchip is-red">SLA ${dur(d.next.ms)} oʻtdi</span>`
+            : d.next.reason === 'late' ? `<span class="kbx-dchip is-amber">${escapeHtml(formatLeadFollowUpWhen(d.next.at, now.getTime()))}</span>`
+            : d.next.reason === 'new' ? `<span class="kbx-dchip">SLA ${dur(d.next.ms)} qoldi</span>`
+            : `<span class="kbx-dchip">${escapeHtml(formatLeadFollowUpWhen(d.next.at, now.getTime()))}</span>`;
+        next = `<section class="kbx-next" aria-labelledby="kbxNextH">
+            <span class="kbx-eyebrow">KEYINGI QOʻNGʻIROQ${d.queueCount > 1 ? ` · 1 / ${d.queueCount}` : ''}</span>
+            <h2 id="kbxNextH">${escapeHtml(l.name || 'Lid')}</h2>
+            <span class="kbx-dsub">${escapeHtml([l.phone, stage].filter(Boolean).join(' · '))}</span>
+            <div class="kbx-dchips">${chip}${l.source ? `<span class="kbx-dchip">${escapeHtml(l.source)}</span>` : ''}</div>
+            ${note ? `<p class="kbx-note">Oxirgi izoh: «${escapeHtml(String(note.text).slice(0, 120))}»</p>` : ''}
+            ${(() => { const rest = (d.queue || []).filter(x => x.id !== l.id).slice(0, 3); return rest.length ? `<p class="kbx-note kbx-queue">Keyin: ${rest.map(x => escapeHtml(shortPersonName(x.name || 'Lid'))).join(' · ')}${d.queueCount > rest.length + 1 ? ` va yana ${d.queueCount - rest.length - 1} ta` : ''}</p>` : ''; })()}
+            <div class="kbx-next-actions">
+                ${tel ? `<a class="kbx-call" href="tel:${escapeHtml(tel)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>Qoʻngʻiroq</a>` : ''}
+                <button type="button" class="kbx-ghost" data-mhx-lead="${escapeHtml(l._lang)}|${escapeHtml(l.id)}">Lidni ochish</button>
+            </div></section>`;
+    } else {
+        next = `<section class="kbx-next kbx-next--empty"><span class="kbx-eyebrow">NAVBAT BOʻSH</span><h2>Bugungi qoʻngʻiroqlar tugadi</h2><p class="kbx-note">Yangi lid biriktirilishi bilan shu yerda chiqadi.</p></section>`;
+    }
+    return `<div class="kbx-top">${plan}${next}</div>`;
 }
 
 function renderManagerHome(user, managerId, leads, students, now = new Date()) {
@@ -8954,14 +9093,8 @@ function renderManagerHome(user, managerId, leads, students, now = new Date()) {
     return `<div class="ahx mhx" id="managerHome">
         <div class="ahx-head mhx-head"><div><h1>${greet}, ${escapeHtml(_firstName(user?.name || ''))}</h1><p>${escapeHtml(date)} · ${d.lang === 'russian' ? 'Rus' : 'Ingliz'} tili yoʻnalishi</p></div>
 </div>
-        ${renderManagerGoalBlock(managerId, d.lang)}
-        <div class="ahx-kpis mhx-kpis">
-            <div class="ahx-kpi mhx-kpi--plan"><span class="ahx-kpi-l">Oylik rejam</span><b class="ahx-kpi-v">${mln(d.sales)}<small> / ${d.target ? mln(d.target) + ' mln soʻm' : 'reja yoʻq'}</small></b>
-                ${pct != null ? `<span class="mhx-bar"><i style="width:${Math.min(100, pct)}%"></i></span><div class="ahx-kpi-n"><span>${pct}% · bugungacha ${mln(d.dueByToday)} mln kerak edi</span><span class="ahx-pill ${ahead >= 0 ? 'ahx-pill--ok' : 'ahx-pill--warn'}">${ahead >= 0 ? '+' : '−'}${mln(Math.abs(ahead))} mln</span></div>` : '<div class="ahx-kpi-n"><span>ROP individual reja kiritmagan</span></div>'}</div>
-            <div class="ahx-kpi"><span class="ahx-kpi-l">Bitimlar · ${escapeHtml(UZ_MONTHS_GEN[now.getMonth()])}</span><b class="ahx-kpi-v">${d.deals}</b><div class="ahx-kpi-n"><span>${[d.place ? `${d.place}-oʻrin` : '', `${d.quality} sifatli liddan`].filter(Boolean).join(' · ')}</span></div></div>
-            <div class="ahx-kpi"><span class="ahx-kpi-l">Konversiya</span><b class="ahx-kpi-v">${pctTxt(d.conv)}</b><div class="ahx-kpi-n"><span>jamoa ${pctTxt(d.teamConv)}</span></div></div>
-            <div class="ahx-kpi"><span class="ahx-kpi-l">Maoshim · taxminiy</span><b class="ahx-kpi-v" id="mhxSalary">…</b><div class="ahx-kpi-n"><span id="mhxSalaryNote">oy yopilganda aniqlanadi</span></div></div>
-        </div>
+        ${renderKobaltTop(d, managerId, now)}
+        ${renderManagerGoalBlock(managerId, d.lang, { noGoal: true })}
         <div class="ahx-grid mhx-grid">
             <div class="mhx-side">
             <section class="card ahx-card"><div class="ahx-card-h"><h3>Bugun qilish kerak${d.tasks.length ? ` <small>· ${d.tasks.length}</small>` : ''}</h3>${d.tasks.some(t => t.late) ? `<span class="ahx-pill ahx-pill--danger">${d.tasks.filter(t => t.late).length} tasi kechikkan</span>` : ''}</div>
@@ -9105,16 +9238,32 @@ function renderRopHome(user, students, leads, now = new Date()) {
     }).join('');
     const tone = p => p == null ? '' : p >= 90 ? '' : p >= 60 ? ' is-mid' : ' is-low';
     return `<div class="ahx rpx" id="ropHome">
-        <div class="ahx-head mhx-head"><div><h1>${greet}, ${escapeHtml(_firstName(user?.name || ''))}</h1><p>${escapeHtml(`${UZ_WEEKDAYS[now.getDay()]}, ${now.getDate()}-${UZ_MONTHS_GEN[now.getMonth()]}`)} · ${d.lang === 'russian' ? 'Rus' : 'Ingliz'} tili · ${d.managers.length} menejer</p></div>
-            <button type="button" class="mhx-btn" data-rpx-go="sales-plan">Individual rejalar</button></div>
-        <div class="ahx-kpis">
-            <div class="ahx-kpi"><span class="ahx-kpi-l">Jamoa rejasi · ${escapeHtml(UZ_MONTHS_GEN[now.getMonth()])}</span><b class="ahx-kpi-v">${teamPct != null ? `${teamPct}%` : '—'}</b>
-                ${teamPct != null ? `<span class="mhx-bar"><i style="width:${Math.min(100, teamPct)}%"></i></span>` : ''}
-                <div class="ahx-kpi-n"><span>${mln(d.teamSales)} / ${d.teamTarget ? mln(d.teamTarget) : 'reja yoʻq'} · prognoz ${mln(d.forecast)}${d.teamTarget ? ` (${Math.round(d.forecast / d.teamTarget * 100)}%)` : ''}</span></div></div>
-            <div class="ahx-kpi"><span class="ahx-kpi-l">SLA eskalatsiyalari</span><b class="ahx-kpi-v${d.open.length ? ' is-bad' : ''}">${d.open.length} ta</b><div class="ahx-kpi-n"><span>${d.lateCount ? `${d.lateCount} tasi 24 soatdan oshgan` : 'kechikkani yoʻq'}</span></div></div>
-            <div class="ahx-kpi"><span class="ahx-kpi-l">Taqsimlanmagan lidlar</span><b class="ahx-kpi-v${d.unassigned ? ' is-warn' : ''}">${d.unassigned}</b><div class="ahx-kpi-n"><span>${d.newCount} yangi liddan · menejerga biriktiring</span></div></div>
-            <div class="ahx-kpi"><span class="ahx-kpi-l">Qarzdorlar</span><b class="ahx-kpi-v">${d.overdueCount}${d.overdueCount ? ` · ${mln(d.overdueSum)}` : ''}</b><div class="ahx-kpi-n"><span>kelishilgan sana oʻtgan</span></div></div>
-        </div>
+        <div class="ahx-head mhx-head"><div><h1>${greet}, ${escapeHtml(_firstName(user?.name || ''))}</h1><p>${escapeHtml(`${UZ_WEEKDAYS[now.getDay()]}, ${now.getDate()}-${UZ_MONTHS_GEN[now.getMonth()]}`)} · ${d.lang === 'russian' ? 'Rus' : 'Ingliz'} tili · ${d.managers.length} menejer</p></div></div>
+        ${(() => {
+            const pc = kbxPace(d.teamSales, d.teamTarget, now);
+            const plan = kbxPlanCard({
+                id: 'kbxRopPlan', title: `Jamoa rejasi · ${UZ_MONTHS_GEN[now.getMonth()]}`,
+                pill: d.teamTarget > 0 ? (pc.gap >= 0 ? { cls: 'ok', text: `Rejadan ${_kbxMln(pc.gap)} mln oldinda` } : { cls: 'warn', text: `${_kbxMln(-pc.gap)} mln ortda` }) : null,
+                big: `${_kbxMln(d.teamSales)} mln`, of: d.teamTarget > 0 ? `/ ${_kbxMln(d.teamTarget)} mln soʻm` : 'soʻm · reja kiritilmagan',
+                sub: `${pc.daysLeft} kun qoldi${d.teamTarget > 0 ? ` · bugungacha ${_kbxMln(pc.due)} mln boʻlishi kerak edi` : ''} · ${d.managers.length} menejer`,
+                bar: d.teamTarget > 0 ? { pct: pc.pct, due: pc.duePct, ok: pc.gap >= 0, label: `${pc.pct}% bajarildi, bugungacha ${pc.duePct}% kerak` } : null,
+                foot: d.teamTarget > 0 ? [`<strong>${pc.pct}%</strong> bajarildi`, `Shu tempda <strong>${_kbxMln(pc.forecast)} mln</strong>${pc.forecast < d.teamTarget ? ` — rejaga <strong>${_kbxMln(d.teamTarget - pc.forecast)} mln</strong> yetmaydi` : ''}`] : null,
+                tiles: [
+                    { l: 'Kunlik kerak', v: pc.perDay ? `${_kbxMln(pc.perDay)} mln` : (d.teamTarget > 0 ? 'Bajarildi' : '—') },
+                    { l: 'Qarzdorlar', v: String(d.overdueCount), cls: d.overdueCount ? 'is-bad' : '', small: d.overdueCount ? mln(d.overdueSum) : 'muddati oʻtgani yoʻq' },
+                    { l: 'Yangi lidlar', v: String(d.newCount), small: 'hozir “Yangi” bosqichida' }
+                ],
+                art: { img: 'images/kobalt-money.webp', label: 'Prognoz', value: `${_kbxMln(pc.forecast)} mln`, small: d.teamTarget > 0 ? `rejaning ${Math.round(pc.forecast / d.teamTarget * 100)}%` : 'oy oxirida' }
+            });
+            const dark = d.unassigned
+                ? kbxDarkCard({ id: 'kbxRopAct', eyebrow: 'TAQSIMLANMAGAN LIDLAR', title: `${d.unassigned} ta lid`, sub: 'Menejerga biriktiring — SLA soati shundan boshlanadi',
+                    chips: [d.open.length ? { t: `${d.open.length} ta SLA eskalatsiya`, cls: d.lateCount ? 'red' : 'amber' } : { t: 'Eskalatsiya yoʻq' }],
+                    primary: { label: 'Taqsimlash', attrs: 'data-rpx-go="leads"' }, secondary: { label: 'Rejalar', attrs: 'data-rpx-go="sales-plan"' } })
+                : kbxDarkCard({ id: 'kbxRopAct', eyebrow: 'SLA ESKALATSIYALARI', title: d.open.length ? `${d.open.length} ta ochiq` : 'Hammasi joyida',
+                    sub: d.open.length ? (d.lateCount ? `${d.lateCount} tasi 24 soatdan oshgan — adminga ketdi` : '24 soatda koʻrilmasa adminga ketadi') : 'Barcha lidlar menejerlarga biriktirilgan',
+                    primary: { label: 'Lidlar', attrs: 'data-rpx-go="leads"' }, secondary: { label: 'Rejalar', attrs: 'data-rpx-go="sales-plan"' } });
+            return `<div class="kbx-top">${plan}${dark}</div>`;
+        })()}
         <div class="ahx-grid">
             <section class="card ahx-card"><div class="ahx-card-h"><div><h3>Eskalatsiyalar${d.open.length ? ` <small>· ${d.open.length}</small>` : ''}</h3><span class="mhx-sub">${d.lateCount ? `<b class="rpx-late">${d.lateCount} tasi adminga ketdi</b> · ` : ''}24 soatda koʻrilmasa — adminga xabar ketadi</span></div></div>
                 ${d.open.length ? `<ul class="rpx-escs">${esc}</ul>${d.open.length > 6 ? `<button type="button" class="ahx-link" data-rpx-go="leads">Yana ${d.open.length - 6} ta — Lidlarda →</button>` : ''}` : '<div class="mhx-empty"><span class="mhx-empty-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></span><div><strong>Ochiq eskalatsiya yoʻq</strong><span class="mhx-sub">Barcha menejerlar oʻz vaqtida ishlayapti</span></div></div>'}
@@ -9196,7 +9345,13 @@ function teacherHomeStats(user, now = new Date()) {
     const kpi = (teacher, store, list) => { try { return teacher && list.length ? calculateKpiSalary(teacher, month, store, list) : null; } catch (e) { return null; } };
     const mainKpi = own && own.type !== 'yordamchi' ? kpi(own, att, students) : null;
     const asKpi = own ? kpi({ ...own, type: 'yordamchi' }, asAtt, helped) : null;
+    const todayList = today.map(s => {
+        const start = toMin(s.lessonTime), dur = Number(s.lessonDuration) || 15;
+        return { name: s.name || "Oʻquvchi", group: s.group || '', time: s.lessonTime, start, dur, marked: present(s.id, day),
+            state: start == null ? 'wait' : nowMin >= start + dur ? 'done' : nowMin >= start ? 'now' : 'wait' };
+    }).sort((a, b) => (a.start ?? 9999) - (b.start ?? 9999));
     return {
+        todayList,
         todayCount: today.length, unmarked, students: students.length, helped: helped.length, came,
         attExpected, attPct, attMissed,
         rating: ratings.length ? ratings.reduce((a, b) => a + b, 0) / ratings.length : null, ratingN: ratings.length,
@@ -9243,12 +9398,34 @@ function renderTeacherHome(user, now = new Date()) {
     return `<div class="ahx thx" id="teacherHome">
         <div class="rd-thx-rolebanner">Rol kabineti: faqat oʻz oʻquvchilaringiz koʻrinadi — boshqa ustozlarning telefon, toʻlov va qarz maʻlumotlari bu yerda koʻrsatilmaydi.</div>
         <div class="ahx-head mhx-head"><div><h1>${greet}, ${escapeHtml(_firstName(user.name || ''))}</h1><p>${escapeHtml(`${UZ_WEEKDAYS[now.getDay()]}, ${now.getDate()}-${UZ_MONTHS_GEN[now.getMonth()]}`)} · ${s.students} oʻquvchi${s.helped ? ` · yordamchi sifatida ${s.helped}` : ''}</p></div></div>
-        <div class="ahx-kpis">
-            <div class="ahx-kpi"><span class="ahx-kpi-l">Bugun</span><b class="ahx-kpi-v">${s.todayCount} dars</b><div class="ahx-kpi-n">${s.unmarked ? `<span class="ahx-pill ahx-pill--warn">${s.unmarked} tasi belgilanmagan</span>` : '<span>belgilanmagan dars yoʻq</span>'}</div></div>
-            <div class="ahx-kpi"><span class="ahx-kpi-l">Davomat · ${escapeHtml(UZ_MONTHS_GEN[now.getMonth()])}</span>${attLine}</div>
-            <div class="ahx-kpi" data-thx-rating-kpi><span class="ahx-kpi-l">Reyting</span><b class="ahx-kpi-v">…</b><div class="ahx-kpi-n"><span>yuklanmoqda</span></div></div>
-            <div class="ahx-kpi"><span class="ahx-kpi-l">Hisoblangan maosh · taxminiy</span><b class="ahx-kpi-v">${s.hasSalary ? escapeHtml(formatMoney(s.salary)) : '—'}</b><div class="ahx-kpi-n"><span>${s.hasSalary ? (s.asSalary ? `asosiy ${escapeHtml(formatMoney(s.mainSalary))} + yordamchi ${escapeHtml(formatMoney(s.asSalary))}` : 'tasdiqlangan davomat boʻyicha') : 'KPI sozlanmagan'}</span></div></div>
-        </div>
+        ${(() => {
+            const month = UZ_MONTHS_GEN[now.getMonth()];
+            const plan = kbxPlanCard({
+                id: 'kbxThPlan', title: `Hisoblangan maosh · ${month}`,
+                pill: s.attPct != null ? (s.attPct >= 90 ? { cls: 'ok', text: `Davomat ${s.attPct}%` } : { cls: 'warn', text: `Davomat ${s.attPct}%` }) : null,
+                big: s.hasSalary ? `${_kbxMln(s.salary)} mln` : '—', of: s.hasSalary ? 'soʻm · taxminiy' : 'KPI sozlanmagan',
+                sub: s.hasSalary ? (s.asSalary ? `asosiy ${escapeHtml(formatMoney(s.mainSalary))} + yordamchi ${escapeHtml(formatMoney(s.asSalary))}` : 'tasdiqlangan davomat boʻyicha hisoblanadi') : 'Administrator KPI sozlamasini kiritganda chiqadi',
+                bar: s.attPct != null ? { pct: s.attPct, due: null, ok: s.attPct >= 90, label: `Davomat ${s.attPct}%` } : null,
+                foot: s.attPct != null ? [`<strong>${s.came}</strong> keldi · <strong>${s.attMissed}</strong> kelmadi`, `kutilgan ${s.attExpected} dars`] : null,
+                tiles: [
+                    { l: 'Bugun', v: `${s.todayCount} dars`, small: s.unmarked ? `<span class="kbx-bad">${s.unmarked} tasi belgilanmagan</span>` : 'hammasi belgilangan' },
+                    { l: 'Reyting', v: '…', attrs: 'data-thx-rating-kpi' },
+                    { l: 'Oʻquvchilar', v: String(s.students), small: s.helped ? `yordamchi: ${s.helped}` : '' }
+                ],
+                art: { img: 'images/kobalt-teacher.webp', label: 'Shu oy', value: `${s.came} ta dars`, small: 'oʻtildi' }
+            });
+            const nx = s.todayList.find(l => l.state === 'now') || s.todayList.find(l => l.state === 'wait');
+            const dark = nx
+                ? kbxDarkCard({ id: 'kbxThAct', eyebrow: nx.state === 'now' ? `HOZIR DARSDA · ${Math.max(1, nx.start + nx.dur - (now.getHours() * 60 + now.getMinutes()))} DAQ QOLDI` : `KEYINGI DARS · ${nx.time}`,
+                    title: nx.group || nx.name, sub: `${nx.time} · ${nx.dur} daq${nx.group ? ` · ${s.todayList.filter(l => l.group === nx.group && l.time === nx.time).length} oʻquvchi` : ''}`,
+                    chips: [s.unmarked ? { t: `${s.unmarked} ta dars belgilanmagan`, cls: 'red' } : null, { t: `bugun ${s.todayCount} dars` }].filter(Boolean),
+                    primary: { label: 'Davomat', attrs: 'data-thx-go="teachers-section"' }, secondary: { label: 'Jadval', attrs: 'data-thx-go="timetable"' } })
+                : kbxDarkCard({ id: 'kbxThAct', eyebrow: 'BUGUNGI DARSLAR', title: s.todayCount ? 'Darslar tugadi' : 'Bugun dars yoʻq',
+                    sub: s.unmarked ? `${s.unmarked} ta dars davomati belgilanmagan` : 'Davomat toʻliq belgilangan',
+                    chips: s.unmarked ? [{ t: 'Belgilash kerak', cls: 'red' }] : [],
+                    primary: { label: 'Davomat', attrs: 'data-thx-go="teachers-section"' }, secondary: { label: 'Jadval', attrs: 'data-thx-go="timetable"' } });
+            return `<div class="kbx-top">${plan}${dark}</div>`;
+        })()}
         <div class="thx-grid"><div class="thx-main">${renderTeacherTodayBlock(user)}</div>
         <aside class="thx-side">
             <section class="card ahx-card rd-thx-rank-card" data-thx-rating-card><div class="ahx-card-h"><h3>Ustozlar reytingi</h3></div><p class="dashboard-empty">Yuklanmoqda…</p></section>
@@ -9292,6 +9469,7 @@ function renderDashboardOverview(args) {
         container.innerHTML = renderTeacherHome(currentUser);
         container.querySelectorAll('[data-teacher-open-att]').forEach(btn => btn.addEventListener('click', () => switchTab('teachers-section')));
         container.querySelector('[data-thx-guides]')?.addEventListener('click', () => switchTab('guides'));
+        container.querySelectorAll('[data-thx-go]').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.thxGo)));
         container.querySelectorAll('[data-thx-guide]').forEach(btn => btn.addEventListener('click', () => { switchTab('guides'); setTimeout(() => { try { openMyGuideArticle(btn.dataset.thxGuide); } catch (e) { /* ro'yxat ochiq qoladi */ } }, 50); }));
         bindTeacherHomeToday(container, currentUser);
         _loadTeacherHomeRating(container);
@@ -12811,7 +12989,7 @@ const CASH_FLOW_PURPOSES = {
 const CASH_FLOW_PAYMENT_METHODS = ['Naqd pul', 'Bank hisob raqami', 'Karta', 'Uzum Nasiya', 'Paylater', 'Aniqlanmagan'];
 const CASH_FLOW_SALARY_PURPOSE = 'Oylik (xodim maoshi)';
 const CASH_FLOW_REFUND_PURPOSE = 'Pul qaytarish (Refund)';
-const CF_DONUT_COLORS = ['#7B61FF', '#4F8CFF', '#34D399', '#FBBF24', '#F472B6', '#F87171', '#94A3B8', '#22D3EE'];
+const CF_DONUT_COLORS = ['#0065D6', '#7DB2F2', '#34D399', '#FBBF24', '#F472B6', '#F87171', '#94A3B8', '#22D3EE'];
 
 let _cfNetPeriod = 'kunlik';
 
@@ -15009,7 +15187,7 @@ const FUNNEL_STAGES = [
 
 // Voronka ustunlari uchun bitta brend rangi: bosqich oldinga siljigan sari to'qlashadi,
 // faqat "To'lov yopildi" yashil. (Kanban ustunlari o'z ranglarida qoladi.)
-const FUNNEL_RAMP = ['#C9BEFF', '#B3A4FB', '#9C88F7', '#8A72F5', '#7A5FF2', '#6A4DF4', '#5A3EE0'];
+const FUNNEL_RAMP = ['#9DC4F5', '#7DB2F2', '#5B9EF0', '#3B8BEE', '#1F7AE8', '#0065D6', '#0050AA'];
 function funnelRampColor(id) {
     if (id === 'tolov-yopildi') return '#0F9D6B';
     const i = FUNNEL_STAGES.findIndex(s => s.id === id);
@@ -15472,7 +15650,7 @@ function buildLeadDemographicsStats(leads) {
                 <h2 style="font-size:18px;margin:0 0 5px">Lidlar demografiyasi va o'qish maqsadi</h2>
                 <p style="margin:0;color:var(--text-muted);font-size:14px">Mavjud lidlar anketasidagi jins, yosh, hudud va o'qish sababi bo'yicha statistika</p>
             </div>
-            <div style="padding:8px 11px;border-radius:10px;background:#F5F3FF;color:#6D28D9;font-size:13px;font-weight:700">${selectedTotal} ta lid tanlandi</div>
+            <div style="padding:8px 11px;border-radius:10px;background:#EAF3FF;color:#0057B8;font-size:13px;font-weight:700">${selectedTotal} ta lid tanlandi</div>
         </div>
         <div style="display:flex;gap:12px;align-items:end;flex-wrap:wrap;padding:14px;border-radius:14px;background:var(--bg-secondary,#f8fafc);margin-bottom:18px">
             ${selectHtml('funnelDemographicGender', 'Jinsi', 'gender', 'Barcha jinslar')}
@@ -15693,7 +15871,7 @@ function buildReachedFunnel(leads) {
         const prev = i ? counts[i - 1] : n;
         const step = i && prev ? Math.round(n / prev * 1000) / 10 : 100;
         return `<li class="sfx-row"><span class="sfx-name">${escapeHtml(labels[i])}</span>
-            <span class="sfx-track" aria-hidden="true"><span style="width:${counts[0] ? Math.max(n ? 2 : 0, Math.round(n / counts[0] * 100)) : 0}%;background:#6A4DF4"></span></span>
+            <span class="sfx-track" aria-hidden="true"><span style="width:${counts[0] ? Math.max(n ? 2 : 0, Math.round(n / counts[0] * 100)) : 0}%;background:#0065D6"></span></span>
             <span class="sfx-val"><b>${n}</b>${i ? ` · ${String(step).replace('.', ',')}% oldingidan` : ''}</span></li>`;
     }).join('');
     return `
