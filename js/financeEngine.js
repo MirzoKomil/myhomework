@@ -44,6 +44,7 @@
         { code: 'INTEREST', name: 'Qarz bo‘yicha foizlar', type: 'expense', cf: 'financing', cfLine: 'interest', pnl: 'finance_cost' },
         { code: 'TAX_INCOME', name: 'Foyda solig‘i', type: 'expense', cf: 'operating', cfLine: 'taxes', pnl: 'income_tax' },
         { code: 'CAPEX', name: 'Uskuna va aktivlar (kapital xarajat)', type: 'expense', cf: 'investing', cfLine: 'capex', pnl: null },
+        { code: 'ASSET_SALE', name: 'Asosiy vositani sotishdan tushum', type: 'income', cf: 'investing', cfLine: 'asset_sale', pnl: null },
         { code: 'OWNER_IN', name: 'Ta’sischi kiritgan mablag‘', type: 'capital', cf: 'financing', cfLine: 'owner_in', pnl: null },
         { code: 'OWNER_OUT', name: 'Ta’sischi olgan mablag‘ (dividend, shaxsiy)', type: 'drawing', cf: 'financing', cfLine: 'owner_out', pnl: null },
         { code: 'LOAN_IN', name: 'Olingan qarz', type: 'loan_in', cf: 'financing', cfLine: 'loan_in', pnl: null },
@@ -62,7 +63,7 @@
     const ACCOUNT_KINDS = { cash: 'Naqd', card: 'Karta', bank: 'Bank', wallet: 'Elektron hamyon', clearing: 'Kliring (olinadigan)', suspense: 'Tekshiruvdagi' };
     const EQUIVALENT_KINDS = new Set(['cash', 'card', 'bank', 'wallet']);
     const DEFAULT_SETTINGS = {
-        courseMonths: { english: 3, russian: 3 }, suspiciousMin: 10000, salaryDueDays: 10, usefulLifeMonths: 36, approvalLimit: 5000000,
+        courseMonths: { english: 3, russian: 3 }, suspiciousMin: 10000, salaryDueDays: 10, usefulLifeMonths: 36, approvalLimit: 5000000, turnoverTaxRate: 0,
         eclRates: { not_due: 0, d1_30: 5, d31_60: 20, d61_90: 50, d90: 100, no_date: 25 }
     };
 
@@ -114,7 +115,7 @@
         return normalizeSettings(pick.data);
     }
     function memo(cache, data, fn) { if (cache.has(data)) return cache.get(data); const v = fn(); cache.set(data, v); return v; }
-    const MV = new WeakMap(), CT = new WeakMap(), AS = new WeakMap(), FIRST = new WeakMap();
+    const MV = new WeakMap(), CT = new WeakMap(), AS = new WeakMap(), FIRST = new WeakMap(), FA = new WeakMap(), TX = new WeakMap();
 
     // ---------- Pul harakatlari ----------
     // Har bir harakat: { id, source, entity, date, account, sign (+1/−1), amount (musbat), category, ... }
@@ -145,7 +146,8 @@
             const cat = categoryOf(t), flip = t.reversesId ? -1 : 1;
             const base = { source: 'transaction', transactionId: t.id, entity: t.entity, date: t.date, category: cat.code, type: t.type, amount: t.amount,
                 counterparty: t.counterparty || '', description: t.description || '', isReversal: !!t.reversesId, reversesId: t.reversesId || null,
-                paymentRecordId: t.paymentRecordId || null, payableId: t.payableId || null, salaryId: t.salaryId || null, legacy: !!t.legacy, usefulLifeMonths: t.usefulLifeMonths || null };
+                paymentRecordId: t.paymentRecordId || null, payableId: t.payableId || null, salaryId: t.salaryId || null, legacy: !!t.legacy, usefulLifeMonths: t.usefulLifeMonths || null,
+                serviceStart: date(t.serviceStart) || null, serviceEnd: date(t.serviceEnd) || null, assetId: t.assetId || null };
             if (t.type === 'transfer') {
                 out.push({ ...base, id: 't:' + t.id + ':out', account: t.accountId, sign: -flip, transferLeg: 'out', otherAccount: t.toAccountId });
                 out.push({ ...base, id: 't:' + t.id + ':in', account: t.toAccountId, sign: flip, transferLeg: 'in', otherAccount: t.accountId });
@@ -219,7 +221,7 @@
     const CF_LINES = {
         operating: [['receipts', 'O‘quvchilardan olingan to‘lovlar'], ['other_in', 'Boshqa operatsion tushumlar'], ['refunds', 'Mijozlarga qaytarilgan to‘lovlar'],
             ['employees', 'Xodimlarga to‘langan maosh va bonuslar'], ['suppliers', 'Yetkazib beruvchilar va xizmatlar uchun to‘lovlar'], ['taxes', 'To‘langan soliqlar']],
-        investing: [['capex', 'Uskuna va aktivlar sotib olish']],
+        investing: [['capex', 'Uskuna va aktivlar sotib olish'], ['asset_sale', 'Asosiy vositalarni sotishdan tushum']],
         financing: [['owner_in', 'Ta’sischi kiritgan mablag‘'], ['loan_in', 'Olingan qarzlar'], ['loan_out', 'Qaytarilgan qarzlar (asosiy qarz)'], ['interest', 'To‘langan foizlar'], ['owner_out', 'Ta’sischiga to‘langan mablag‘']]
     };
     function isCashAccount(data, id) { const a = accountMap(data).get(id); return !!a && a.kind !== 'clearing'; }
@@ -269,12 +271,22 @@
                 let current = null, n = 0;
                 for (const r of list) {
                     const liveSum = sum(current ? current.receipts.filter(x => !x.voidDate) : []);
-                    // Yangi o'qish davri: oldingi davr tugagan VA uning qiymati to'liq to'langan bo'lsa.
-                    // Kech to'langan qarz (davr tugagach) eski shartnomaga yoziladi, yangi kurs ochmaydi.
-                    if (!current || (r.date > current.end && liveSum >= current.threshold)) {
-                        const months = Math.max(1, Number(settingsAt(data, r.date).courseMonths[r.entity]) || 3);
-                        current = { key: g + '#' + (++n), group: g, index: n, entity: r.entity, name: r.name, leadId: r.leadId, studentId: r.studentId, start: r.date, months,
-                            end: addDays(addMonths(r.date, months), -1), receipts: [], refunds: [], threshold: n === 1 ? leadValue : 0 };
+                    // Yangi o'qish davri (keyingi kurs):
+                    //  a) oldingi davr tugagan va uning qiymati to'liq to'langan bo'lsa; yoki
+                    //  b) oldingi kurs to'liq to'langan va to'lov kursning oxirgi uchdan birida keldi — erta uzaytirish.
+                    //     Yangi kurs xizmati oldingisi tugagan kundan boshlanadi (oldindan to'lov — majburiyat).
+                    // Kech to'langan qarz (to'liq to'lanmagan kurs) eski shartnomaga yoziladi, yangi kurs ochmaydi.
+                    const paidUp = current && liveSum >= current.threshold;
+                    const early = paidUp && current.threshold > 0 && r.date <= current.end
+                        && r.date >= addDays(current.end, -Math.floor((dayDiff(current.start, current.end) + 1) / 3));
+                    if (!current || (r.date > current.end && paidUp) || early) {
+                        const start = early ? addDays(current.end, 1) : r.date;
+                        const months = Math.max(1, Number(settingsAt(data, start).courseMonths[r.entity]) || 3);
+                        const prevValue = current ? Math.max(current.threshold, liveSum) : 0;
+                        current = { key: g + '#' + (++n), group: g, index: n, entity: r.entity, name: r.name, leadId: r.leadId, studentId: r.studentId, start, months,
+                            end: addDays(addMonths(start, months), -1), receipts: [], refunds: [], earlyRenewal: !!early,
+                            // Birinchi kurs narxi — lid kartasidan (birinchi tushumda muzlatilgan); keyingi kurs — oldingisi narxida deb olinadi.
+                            threshold: n === 1 ? (Number(r.contractValue) || leadValue) : prevValue };
                         out.push(current);
                     }
                     current.receipts.push(r);
@@ -339,21 +351,85 @@
     // ---------- Asosiy vositalar va amortizatsiya ----------
     // Storno qilingan xarid — aktivni chiqarish (IAS 16.67): amortizatsiya shu kungacha, keyin tannarx va
     // jamg'arilgan amortizatsiya balansdan chiqadi, qaytgan pul − qoldiq qiymat = chiqarish natijasi.
+    // Aktiv hodisalari: sotish / hisobdan chiqarish (IAS 16.67-72) va qadrsizlanish (IAS 36). Storno — xarid bekor
+    // qilingan (pul to'liq qaytgan) holat: chiqarish tushumi = tannarx.
     function fixedAssets(data) {
-        const mv = movements(data).filter(m => m.category === 'CAPEX');
-        const disposals = new Map(mv.filter(m => m.isReversal).map(m => [m.reversesId, m.date]));
-        return mv.filter(m => !m.isReversal).map(m => {
-            const life = Number(m.usefulLifeMonths) || settingsAt(data, m.date).usefulLifeMonths;
-            return { id: m.id, transactionId: m.transactionId, date: m.date, entity: m.entity, cost: -m.sign * m.amount, life,
-                end: addDays(addMonths(m.date, life), -1), disposedAt: disposals.get(m.transactionId) || null, description: m.counterparty || m.description };
+        return memo(FA, data, () => {
+            const mv = movements(data).filter(m => m.category === 'CAPEX');
+            const reversals = new Map(mv.filter(m => m.isReversal).map(m => [m.reversesId, m.date]));
+            const events = data.assetEvents || [];
+            return mv.filter(m => !m.isReversal).map(m => {
+                const life = Number(m.usefulLifeMonths) || settingsAt(data, m.date).usefulLifeMonths;
+                const cost = -m.sign * m.amount;
+                const disposal = events.find(e => e.assetId === m.transactionId && e.kind === 'disposal');
+                const impairment = events.find(e => e.assetId === m.transactionId && e.kind === 'impairment') || null;
+                const stornoAt = reversals.get(m.transactionId) || null;
+                const disposedAt = [stornoAt, disposal?.date].filter(Boolean).sort()[0] || null;
+                return { id: m.id, transactionId: m.transactionId, date: m.date, entity: m.entity, cost, life, end: addDays(addMonths(m.date, life), -1),
+                    disposedAt, disposalKind: disposedAt ? (disposedAt === stornoAt ? 'storno' : disposal.amount > 0 ? 'sale' : 'writeoff') : null,
+                    proceeds: disposedAt ? (disposedAt === stornoAt ? cost : disposal.amount) : 0,
+                    impairment: impairment && (!disposedAt || impairment.date < disposedAt) ? { date: impairment.date, amount: impairment.amount } : null,
+                    description: m.counterparty || m.description };
+            });
         });
+    }
+    function linearDep(asset, from, base, asOf) {
+        if (asOf < from) return 0;
+        const total = dayDiff(from, asset.end) + 1;
+        if (total <= 0) return 0;
+        return Math.trunc(base * Math.min(total, dayDiff(from, asOf) + 1) / total);
     }
     function depreciationAt(asset, asOf) {
         if (asOf < asset.date) return 0;
         const stop = asset.disposedAt && asOf >= asset.disposedAt ? addDays(asset.disposedAt, -1) : asOf;
         if (stop < asset.date) return 0;
-        const total = dayDiff(asset.date, asset.end) + 1, done = Math.min(total, dayDiff(asset.date, stop) + 1);
-        return Math.trunc(asset.cost * done / total);
+        const imp = asset.impairment;
+        if (!imp || stop < imp.date) return linearDep(asset, asset.date, asset.cost, stop);
+        // Qadrsizlanishdan keyin qolgan qiymat qolgan muddatga teng taqsimlanadi.
+        const before = linearDep(asset, asset.date, asset.cost, addDays(imp.date, -1));
+        return before + linearDep(asset, imp.date, Math.max(0, asset.cost - before - imp.amount), stop);
+    }
+    function impairmentAt(asset, asOf) { return asset.impairment && asset.impairment.date <= asOf ? asset.impairment.amount : 0; }
+    function netBookValue(asset, asOf) { return asset.cost - depreciationAt(asset, asOf) - impairmentAt(asset, asOf); }
+    // Xizmat davri bo'yicha taqsimlash (oldindan to'langan ijara, yillik obuna va h.k.).
+    function spreadFraction(start, end, asOf) {
+        if (asOf < start) return 0;
+        if (asOf >= end) return 1;
+        return (dayDiff(start, asOf) + 1) / (dayDiff(start, end) + 1);
+    }
+    function pnlValue(m) { const line = (CATEGORY[m.category] || {}).pnl; return INCOME_LINES.has(line) ? m.sign * m.amount : -m.sign * m.amount; }
+    // Davrli xarajat: original — xizmat davri bo'yicha; storno — o'z sanasidan boshlab (o'tgan oylar o'zgarmaydi).
+    function servicedRecognized(m, asOf) {
+        const v = pnlValue(m);
+        if (m.isReversal && asOf < m.date) return 0;
+        return Math.round(v * spreadFraction(m.serviceStart, m.serviceEnd, asOf));
+    }
+    function payableRecognized(p, asOf) {
+        if (p.kind === 'loan' || (p.voided && !p.voidDate) || payableVoidedAt(p, asOf)) return 0;
+        if (date(p.serviceStart) && date(p.serviceEnd)) return Math.round(p.amount * spreadFraction(p.serviceStart, p.serviceEnd, asOf));
+        return asOf >= p.issueDate ? p.amount : 0;
+    }
+    // Aylanmadan soliq hisoblash usulida tushumdan hisoblanadi (stavka sozlamada, kuchga kirgan sanasi bilan).
+    function taxEnabled(data) { return (data.settingsHistory || [{ data: data.settings || {} }]).some(h => Number(h.data?.turnoverTaxRate) > 0) || Number(data.settings?.turnoverTaxRate) > 0; }
+    function taxSettles(data, day) { return Number(settingsAt(data, day).turnoverTaxRate) > 0; }
+    function turnoverTaxAccrued(data, scope, asOf) {
+        if (!taxEnabled(data)) return 0;
+        const cache = memo(TX, data, () => new Map()), k = scope + '|' + asOf;
+        if (cache.has(k)) return cache.get(k);
+        const from = firstDate(data);
+        // Stavka o'zgarmagan oylar bitta segment: yaxlitlash har segmentda bir marta (oyma-oy yig'ilib ketmaydi).
+        let total = 0, segRate = null, segStart = null;
+        const revTo = d => { let r = 0; for (const c of contracts(data)) if (scopeMatch(c.entity, scope)) r += earned(c, d); return r; };
+        const close = endDay => { if (segRate) total += Math.round((revTo(endDay) - revTo(addDays(segStart, -1))) * segRate / 100); };
+        if (from <= asOf) {
+            for (const m of monthsBetween(from, asOf)) {
+                const rate = Number(settingsAt(data, m + '-01').turnoverTaxRate) || 0;
+                if (rate !== segRate) { close(addDays(m + '-01', -1)); segRate = rate; segStart = m + '-01' < from ? from : m + '-01'; }
+            }
+            close(asOf);
+        }
+        cache.set(k, total);
+        return total;
     }
     function assetOnBooks(asset, asOf) { return asset.date <= asOf && !(asset.disposedAt && asset.disposedAt <= asOf); }
 
@@ -374,7 +450,9 @@
             if (pos <= 0) continue;
             const r = byKey.get('l:' + c.leadId) || byKey.get('s:' + c.studentId);
             // O'qishni tashlagan o'quvchining to'lanmagan qismi to'liq zaxiralanadi.
-            const rate = c.inactive ? 100 : Number(rates[agingBucket(r?.dueDate, asOf)]) || 0;
+            // Tashlab ketish sanasi ma'lum bo'lsa — o'sha sanadan; noma'lum bo'lsa — kurs tugagach (undan oldingi oylar o'zgarmaydi).
+            const droppedOut = c.inactive && asOf >= (c.inactiveAt || c.end);
+            const rate = droppedOut ? 100 : Number(rates[agingBucket(r?.dueDate, asOf)]) || 0;
             total += Math.floor(pos * rate / 100);
         }
         return total;
@@ -388,18 +466,18 @@
         ['payroll_tax', 'Ish haqi soliqlari'], ['rent', 'Ijara va kommunal'], ['software', 'Dasturlar va servislar'], ['admin', 'Ofis va ma’muriy xarajatlar'],
         ['payment_fees', 'To‘lov tizimi va Uzum komissiyalari'], ['turnover_tax', 'Aylanmadan soliq / QQS'], ['credit_losses', 'Kutilayotgan kredit zarari (ECL)'],
         ['allocated_common', 'Umumiy xarajatlar ulushi (taqsimlangan)'],
-        ['opex', 'Operatsion xarajatlar jami', 'subtotal'], ['ebitda', 'EBITDA', 'total'], ['depreciation', 'Amortizatsiya'], ['ebit', 'Operatsion foyda (EBIT)', 'total'],
+        ['opex', 'Operatsion xarajatlar jami', 'subtotal'], ['ebitda', 'EBITDA', 'total'], ['depreciation', 'Amortizatsiya'], ['asset_result', 'Asosiy vositalar: chiqarish natijasi va qadrsizlanish'], ['ebit', 'Operatsion foyda (EBIT)', 'total'],
         ['other_income', 'Boshqa daromad'], ['finance_cost', 'Foiz xarajatlari'], ['other_expense', 'Boshqa xarajatlar'], ['prior_adjustments', 'O‘tgan (yopilgan) davrlar tuzatishi'],
         ['profit_before_tax', 'Soliqqacha foyda', 'total'], ['income_tax', 'Foyda solig‘i'], ['net_profit', 'Sof foyda', 'total']
     ];
     const OPEX_KEYS = ['sales_payroll', 'marketing', 'admin_payroll', 'payroll_tax', 'rent', 'software', 'admin', 'payment_fees', 'turnover_tax', 'credit_losses', 'allocated_common'];
-    const INCOME_LINES = new Set(['revenue', 'other_income', 'prior_adjustments']);
+    const INCOME_LINES = new Set(['revenue', 'other_income', 'prior_adjustments', 'asset_result']);
     function pnlFromBuckets(b) {
         const v = k => b[k] || 0;
         const net_revenue = v('revenue') - v('refunds');
         const gross_profit = net_revenue - v('cost_of_services');
         const opex = sum(OPEX_KEYS.map(k => v(k)), x => x);
-        const ebitda = gross_profit - opex, ebit = ebitda - v('depreciation');
+        const ebitda = gross_profit - opex, ebit = ebitda - v('depreciation') + v('asset_result');
         const profit_before_tax = ebit + v('other_income') - v('finance_cost') - v('other_expense') + v('prior_adjustments');
         const net_profit = profit_before_tax - v('income_tax');
         return { ...b, net_revenue, gross_profit, opex, ebitda, ebit, profit_before_tax, net_profit,
@@ -407,9 +485,16 @@
     }
     function addTo(b, line, value) { if (line && value) b[line] = (b[line] || 0) + value; }
     function cashBuckets(data, start, end, scope) {
-        const b = {};
+        const b = {}, clearing = id => accountMap(data).get(id)?.kind === 'clearing';
         for (const m of movements(data)) {
             if (!inRange(m.date, start, end) || !scopeMatch(m.entity, scope)) continue;
+            // Kassa usuli: Uzum orqali sotuv pul kelganda tushum bo'ladi. Kliringga yozilgan tushum hali pul emas;
+            // Uzum o'tkazgan summa + ushlab qolgan komissiya = tushum, komissiya alohida xarajat.
+            if (clearing(m.account)) {
+                if (m.source === 'receipt') continue;
+                if (m.category === 'TRANSFER' && m.transferLeg === 'out') { addTo(b, 'revenue', -m.sign * m.amount); continue; }
+                if (m.category === 'BANK_FEES') addTo(b, 'revenue', -m.sign * m.amount);
+            }
             const line = (CATEGORY[m.category] || {}).pnl;
             if (!line) continue;
             addTo(b, line, INCOME_LINES.has(line) ? m.sign * m.amount : -m.sign * m.amount);
@@ -425,24 +510,32 @@
             addTo(b, 'revenue', base); addTo(b, 'refunds', term);
         }
         for (const m of movements(data)) {
-            if (m.source !== 'transaction' || !inRange(m.date, start, end) || !scopeMatch(m.entity, scope)) continue;
+            if (m.source !== 'transaction' || !scopeMatch(m.entity, scope)) continue;
             if (m.salaryId || m.payableId || m.category === 'CAPEX') continue; // hisoblangan sanada / aktiv sifatida alohida
             if (m.category === 'REFUND' && m.paymentRecordId) continue;     // shartnoma orqali hisoblangan
             const line = (CATEGORY[m.category] || {}).pnl;
             if (!line) continue;
-            addTo(b, line, INCOME_LINES.has(line) ? m.sign * m.amount : -m.sign * m.amount);
+            if (m.category === 'TAX_TURNOVER' && taxSettles(data, m.date)) continue; // hisoblangan soliqni to'lash — majburiyatni yopadi
+            if (m.serviceStart && m.serviceEnd) { addTo(b, line, servicedRecognized(m, end) - servicedRecognized(m, before)); continue; }
+            if (!inRange(m.date, start, end)) continue;
+            addTo(b, line, pnlValue(m));
         }
+        addTo(b, 'turnover_tax', turnoverTaxAccrued(data, scope, end) - turnoverTaxAccrued(data, scope, before));
         for (const s of data.salaries || []) {
             if (s.amount > 0 && scopeMatch(s.entity, scope) && inRange(s.accrualDate, start, end)) addTo(b, (CATEGORY[s.categoryCode] || CATEGORY.PAY_ADMIN).pnl, s.amount);
         }
         for (const p of data.payables || []) {
-            if (p.kind !== 'loan' && !p.voided && scopeMatch(p.entity, scope) && inRange(p.issueDate, start, end)) addTo(b, (CATEGORY[p.categoryCode] || CATEGORY.OTHER_EXP).pnl, p.amount);
+            if (p.kind === 'loan' || !scopeMatch(p.entity, scope)) continue;
+            const line = (CATEGORY[p.categoryCode] || CATEGORY.OTHER_EXP).pnl;
+            // Hisob-faktura hujjat sanasida (yoki xizmat davri bo'yicha) xarajat; bekor qilinsa — bekor qilingan sanada teskari.
+            addTo(b, line, payableRecognized(p, end) - payableRecognized(p, before));
         }
         for (const a of fixedAssets(data)) {
             if (!scopeMatch(a.entity, scope)) continue;
             addTo(b, 'depreciation', depreciationAt(a, end) - depreciationAt(a, before));
-            // Storno (xarid bekor qilindi): to'liq tannarx qaytdi, qoldiq qiymat chiqarildi — farq chiqarish natijasi.
-            if (a.disposedAt && inRange(a.disposedAt, start, end)) addTo(b, 'other_income', depreciationAt(a, a.disposedAt));
+            if (a.impairment && inRange(a.impairment.date, start, end)) addTo(b, 'asset_result', -a.impairment.amount);
+            // Chiqarish natijasi = tushum − qoldiq qiymat (storno: tushum = tannarx).
+            if (a.disposedAt && inRange(a.disposedAt, start, end)) addTo(b, 'asset_result', a.proceeds - netBookValue(a, addDays(a.disposedAt, -1)));
         }
         addTo(b, 'credit_losses', eclAt(data, end, scope) - eclAt(data, before, scope));
         return b;
@@ -575,11 +668,13 @@
     }
 
     // ---------- Kreditorlik (korxona qarzlari) ----------
+    function payableVoidedAt(p, asOf) { return !!p.voided && (!p.voidDate || p.voidDate <= asOf); }
     function payablesSummary(data, asOf, scope = 'all') {
         const s0 = settingsOf(data), rows = [], tx = data.transactions || [];
         const paidOf = id => sum(tx.filter(t => t.payableId === id && t.type !== 'loan_in' && t.date <= asOf), t => (t.reversesId ? -1 : 1) * t.amount);
         for (const p of data.payables || []) {
-            if (p.voided || !scopeMatch(p.entity, scope) || p.issueDate > asOf) continue;
+            // Bekor qilingan qarz / hisob-faktura faqat bekor qilingan sanadan boshlab majburiyat emas.
+            if (payableVoidedAt(p, asOf) || !scopeMatch(p.entity, scope) || p.issueDate > asOf) continue;
             const paid = paidOf(p.id), outstanding = Math.max(0, p.amount - paid);
             if (!outstanding) continue;
             rows.push({ id: p.id, kind: p.kind, entity: p.entity, counterparty: p.counterparty, description: p.description, categoryCode: p.categoryCode,
@@ -617,10 +712,26 @@
         }
         const ecl = eclAt(data, asOf, scope);
         const assets = fixedAssets(data).filter(a => scopeMatch(a.entity, scope) && assetOnBooks(a, asOf));
-        const ppeCost = sum(assets, a => a.cost), ppeDep = sum(assets, a => depreciationAt(a, asOf));
+        const ppeCost = sum(assets, a => a.cost), ppeDep = sum(assets, a => depreciationAt(a, asOf)), ppeImpairment = sum(assets, a => impairmentAt(a, asOf));
         const ap = payablesSummary(data, asOf, scope);
-        const totalAssets = cs.equivalents + cs.suspense + cs.clearing + contractAssets - ecl + ppeCost - ppeDep;
-        const totalLiabilities = contractLiabilities + ap.total;
+        // Oldindan to'langan va hisoblangan (to'lanmagan) xarajatlar — xizmat davri bo'yicha taqsimlangan operatsiyalardan.
+        let prepaid = 0, accrued = 0;
+        const positions = new Map(); // operatsiya va uning stornosi bitta guruhda netto qilinadi
+        for (const m of movements(data)) {
+            if (m.source !== 'transaction' || !m.serviceStart || !m.serviceEnd || !scopeMatch(m.entity, scope) || m.payableId || m.salaryId) continue;
+            const g = m.reversesId || m.transactionId;
+            positions.set(g, (positions.get(g) || 0) + servicedRecognized(m, asOf) - (asOf >= m.date ? pnlValue(m) : 0));
+        }
+        for (const pos of positions.values()) { if (pos > 0) accrued += pos; else prepaid -= pos; }
+        for (const p of data.payables || []) {
+            if (p.kind === 'loan' || !scopeMatch(p.entity, scope) || p.issueDate > asOf || payableVoidedAt(p, asOf) || (p.voided && !p.voidDate)) continue;
+            prepaid += p.amount - payableRecognized(p, asOf);
+        }
+        // Aylanmadan soliq: hisoblangan − to'langan.
+        const taxPaid = sum(movements(data).filter(m => m.category === 'TAX_TURNOVER' && m.date <= asOf && scopeMatch(m.entity, scope) && taxSettles(data, m.date)), m => -m.sign * m.amount);
+        const taxPayable = turnoverTaxAccrued(data, scope, asOf) - taxPaid;
+        const totalAssets = cs.equivalents + cs.suspense + cs.clearing + contractAssets - ecl + ppeCost - ppeDep - ppeImpairment + prepaid + Math.max(0, -taxPayable);
+        const totalLiabilities = contractLiabilities + ap.total + accrued + Math.max(0, taxPayable);
         const netAssets = totalAssets - totalLiabilities;
         // Kapital harakati: boshlang'ich qoldiq + ta'sischi mablag'i − olingan mablag' + jamg'arilgan foyda.
         const mv = movements(data).filter(x => x.date <= asOf && scopeMatch(x.entity, scope));
@@ -628,13 +739,17 @@
             + sum((data.accounts || []).filter(a => (scope === 'all' || a.entity === scope) && !date(a.openingDate)), a => Number(a.openingBalance) || 0);
         const contributions = sum(mv.filter(x => x.category === 'OWNER_IN'), x => x.sign * x.amount);
         const drawings = -sum(mv.filter(x => x.category === 'OWNER_OUT'), x => x.sign * x.amount);
-        const retained = pnlFromBuckets(rawBuckets(data, firstDate(data) < asOf ? firstDate(data) : asOf, asOf, scope, 'accrual')).net_profit;
+        // Maktab bo'yicha jamg'arilgan foyda oyma-oy (har oy o'z taqsimot ulushi bilan) — maktab foyda-zarar hisobotiga mos.
+        const from = firstDate(data) < asOf ? firstDate(data) : asOf;
+        const retained = scope === 'all' ? pnlFromBuckets(rawBuckets(data, from, asOf, scope, 'accrual')).net_profit
+            : sum(monthsBetween(from, asOf).map(m => { const s0 = m + '-01' < from ? from : m + '-01', e0 = monthEnd(m) > asOf ? asOf : monthEnd(m); return pnlFromBuckets(rawBuckets(data, s0, e0, scope, 'accrual')).net_profit; }), x => x);
         // Hisob ochilish sanasidan oldingi pul harakatlari boshlang'ich qoldiq ichida deb qabul qilinadi.
         const preOpening = sum(mv.filter(x => x.date < openingDateOf(data, x.account)), x => x.sign * x.amount);
         const equityRollForward = openingEquity + contributions - drawings + retained - preOpening;
         // Pul mablag'lari ta'rifi pul oqimi hisoboti bilan bir xil: naqd + karta + bank + aniqlanmagan (suspense alohida ko'rsatiladi).
         return { asOf, scope, accounts, cashTotal: cs.equivalents + cs.suspense, cashEquivalents: cs.equivalents, suspense: cs.suspense, uzumReceivable: cs.clearing, cash: cs.cash,
-            contractAssets, ecl, contractAssetsNet: contractAssets - ecl, ppeCost, ppeDepreciation: ppeDep, ppeNet: ppeCost - ppeDep,
+            contractAssets, ecl, contractAssetsNet: contractAssets - ecl, ppeCost, ppeDepreciation: ppeDep, ppeImpairment, ppeNet: ppeCost - ppeDep - ppeImpairment,
+            prepaidExpenses: prepaid, accruedExpenses: accrued, taxPayable: Math.max(0, taxPayable), taxPrepaid: Math.max(0, -taxPayable),
             totalAssets, contractLiabilities, payables: { salaries: ap.salaries, bills: ap.bills, other: ap.other, unreconciledSalaries: ap.unreconciledSalaries }, loans: ap.loans,
             totalLiabilities, netAssets, equity: { opening: openingEquity, contributions, drawings, retained, preOpening, total: equityRollForward },
             balanced: equityRollForward === netAssets, imbalance: netAssets - equityRollForward,
@@ -732,7 +847,8 @@
         const latin = String(value || '').toLowerCase().replace(/[а-яёқғўҳ]/g, ch => CYR[ch] ?? ch).replace(/[ʻ‘’'`ʼ]/g, '').replace(/h/g, 'x').replace(/w/g, 'v');
         // Jinsni bildiruvchi qo'shimchalar (-a, -ova, -eva) olib tashlanmaydi: "Aziza Karimova" ≠ "Aziz Karimov".
         // Faqat hurmat qo'shimchalari (-xon, -jon) olinadi: "Gulhayoxon" = "Gulhayo".
-        return [...new Set(latin.replace(/yo/g, 'o').replace(/yu/g, 'u').replace(/ya/g, 'a').split(/[^a-z]+/).filter(t => t.length >= 3).map(t => t.replace(/(xon|jon)$/, '') || t))];
+        // Kirill/lotin imlo farqlari bir xil ko'rinishga keltiriladi: Алиев = Aliyev (ye→e), Ёқубов = Yoqubov.
+        return [...new Set(latin.replace(/yo/g, 'o').replace(/yu/g, 'u').replace(/ya/g, 'a').replace(/ye/g, 'e').replace(/iy(?=[aeiou])/g, 'i').split(/[^a-z]+/).filter(t => t.length >= 3).map(t => t.replace(/(xon|jon)$/, '') || t))];
     }
     function editDistance1(x, y) {
         if (Math.abs(x.length - y.length) > 1) return false;
@@ -789,6 +905,8 @@
                 if (same[i].amount + same[j].amount === e.amount) found = [same[i], same[j]];
                 for (let k = j + 1; k < same.length && !found; k++) if (same[i].amount + same[j].amount + same[k].amount === e.amount) found = [same[i], same[j], same[k]];
             }
+            // Bo'laklar bitta odamniki bo'lishi kerak: telefonlari bor bo'lsa — bir xil.
+            if (found && new Set(found.map(r => r.phone9).filter(Boolean)).size > 1) found = null;
             if (found) candidates.push({ e, rs: found, r: found[0], status: 'split', score: 1500 - Math.max(...found.map(r => Math.abs(dayDiff(e.date, r.date)))) * 3, phone: !!e.phone, nm: 'strong', dd: 0 });
         }
         candidates.sort((a, b) => b.score - a.score || a.dd - b.dd);
@@ -797,7 +915,9 @@
             const rs = c.rs || [c.r];
             if (usedE.has(c.e.idx) || rs.some(r => usedR.has(r.id))) continue;
             usedE.add(c.e.idx); rs.forEach(r => usedR.add(r.id));
-            results.push({ status: c.status, external: c.e, ledger: c.r, ledgers: rs, difference: sum(rs) - c.e.amount, phoneMismatch: !c.phone && !!(c.e.phone && c.r.phone9), nameOnly: !c.phone, nameMatch: c.nm });
+            const phoneMismatch = !c.phone && !!(c.e.phone && rs.some(r => r.phone9 && r.phone9 !== c.e.phone));
+            // Ism bir xil, telefon boshqa — bu boshqa odam bo'lishi mumkin: "mos" bo'lsa ham qo'lda tekshirishga chiqariladi.
+            results.push({ status: c.status, external: c.e, ledger: c.r, ledgers: rs, difference: sum(rs) - c.e.amount, phoneMismatch, nameOnly: !c.phone, nameMatch: c.nm, review: phoneMismatch });
         }
         for (const e of ext) if (!usedE.has(e.idx)) results.push({ status: 'missing_in_crm', external: e, ledger: null, ledgers: [], difference: -e.amount });
         for (const r of pool) if (!usedR.has(r.id) && inRange(r.date, from, to)) results.push({ status: 'extra_in_crm', external: null, ledger: r, ledgers: [r], difference: r.amount });
@@ -806,6 +926,7 @@
         const totalExternal = sum(ext), totalLedger = sum(pool.filter(r => inRange(r.date, from, to)));
         const count = s => results.filter(r => r.status === s).length;
         return { start: from, end: to, totalExternal, totalLedger, difference: totalLedger - totalExternal, results,
+            review: results.filter(r => r.review).length,
             counts: { match: count('match'), split: count('split'), date_diff: count('date_diff'), amount_diff: count('amount_diff'), missing_in_crm: count('missing_in_crm'), extra_in_crm: count('extra_in_crm') } };
     }
 
@@ -836,7 +957,7 @@
         money, date, today, addDays, addMonths, dayDiff, monthOf, monthEnd, monthsBetween, inRange, phone9, pct, settingsOf,
         accountForMethod, movements, accountBalances, cashSummary, cashbook, cashFlowStatement, profitAndLoss, monthlyPnl,
         contracts, contractCash, earned, revenueBase, contractPosition, fixedAssets, depreciationAt, eclAt, agingBucket,
-        receivablesAging, payablesSummary, balanceSheet, balanceSheetRaw, kpis, snapshotMonth,
+        receivablesAging, payablesSummary, balanceSheet, balanceSheetRaw, kpis, snapshotMonth, netBookValue, impairmentAt, settingsAt, turnoverTaxAccrued,
         suspiciousReasons, dataQuality, reconcile, parseStatementText, nameSimilar, nameMatch
     };
 });

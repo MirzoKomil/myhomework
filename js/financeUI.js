@@ -162,6 +162,7 @@
     // ---------- Umumiy ko'rinish ----------
     function qualityAlerts(o) {
         const q = o.quality, items = [];
+        if (o.seals && !o.seals.ok) items.push(['danger', `${o.seals.unsealed} ta moliyaviy qator muhrsiz — baza triggerlari chetlab o‘tilgan. “Solishtirish va audit”da to‘liq tekshiring`, 'solishtirish']);
         if (!o.auditChain.ok) items.push(['danger', `Audit jurnali zanjiri ${o.auditChain.brokenAt}-yozuvda uzilgan — jurnal bazada to‘g‘ridan-to‘g‘ri o‘zgartirilgan`, 'solishtirish']);
         if (!o.balance.balanced) items.push(['danger', `Balans tenglamasi ${money(o.balance.imbalance)} ga mos kelmayapti`, 'hisobotlar', 'balance']);
         if (!o.cashflow.reconciled) items.push(['danger', `Pul oqimi hisob qoldiqlari bilan ${money(o.cashflow.difference)} farq qiladi`, 'hisobotlar', 'cashflow']);
@@ -208,7 +209,7 @@
                 ${stat('Erkin pul mablag‘i', money(scope() === 'all' ? b.cashEquivalents : k.freeCash), cashNote, '', 'Naqd, karta va bank hisoblari. Uzum’dan olinadigan va “Aniqlanmagan” summalar bunga kirmaydi')}
                 ${stat('Sof tushum', money(p.net_revenue), `qaytarishlar: ${money(p.refunds || 0)} · ${state.basis === 'cash' ? 'kassa usuli' : 'hisoblash usuli'}`, '', 'Kurs to‘lovlari minus qaytarilgan to‘lovlar')}
                 ${stat('Yalpi foyda', money(p.gross_profit), 'marja ' + pctText(p.margins.gross), p.gross_profit < 0 ? 'danger' : '')}
-                ${stat(scope() === 'all' ? 'Sof foyda' : 'Sof foyda (umumiy xarajat ulushi bilan)', money(p.net_profit), 'marja ' + pctText(p.margins.net), p.net_profit < 0 ? 'danger' : 'success', p.allocation ? `Umumiy xarajatlarning ${p.allocation.share}% i (sof tushum ulushi bo‘yicha) shu maktabga yuklangan` : '')}
+                ${stat(scope() === 'all' ? 'Sof foyda' : 'Sof foyda (umumiy xarajat ulushi bilan)', money(p.net_profit), 'marja ' + pctText(p.margins.net), p.net_profit < 0 ? 'danger' : 'success', p.allocation ? `Umumiy moddalarning ${pctText(p.allocation.share)} i (har oy yalpi kurs tushumi ulushi bo‘yicha) shu maktabga yuklangan` : '')}
                 ${stat('O‘quvchilar to‘lashi kerak', money(o.receivables.total), `muddati o‘tgan: ${money(o.receivables.overdue)} · bugungi holat`, o.receivables.overdue ? 'warning' : '', 'O‘quvchi kartalaridagi joriy qarz (to‘lov jadvali). Balansga faqat o‘tilgan darslar uchun to‘lanmagan qism kiradi')}
                 ${stat('Korxona qarzlari', money(o.payables.total), `maosh: ${money(o.payables.salaries)} · qarz: ${money(o.payables.loans)}`, o.payables.overdue ? 'warning' : '')}
                 ${stat('Yangi o‘quvchilar', `${k.newClients} ta`, `kursni uzaytirgan: ${k.renewals} ta`, '', 'Davrda birinchi shartnomasi boshlangan o‘quvchilar va keyingi shartnomaga o‘tganlar')}
@@ -314,7 +315,7 @@
                             const v = (isIn(r) ? 1 : -1) * signed(r), reversed = reversedIds.has(r.id) || r.reversed;
                             return `<tr class="${r.reversesId ? 'fin-reversal' : reversed ? 'fin-reversed' : ''}">
                                 <td>${dateText(r.date)}</td>
-                                <td><b>${esc(F.TYPES[r.type])}</b><small>${esc(catName(r.categoryCode))}${r.usefulLifeMonths ? ` · ${r.usefulLifeMonths} oyda amortizatsiya` : ''}</small>${r.legacy ? '<span class="fin-badge fin-badge--warning" title="Eski Cash Flow bo‘limidan ko‘chirilgan — tekshiring">eski</span>' : ''}${r.reversesId ? '<span class="fin-badge fin-badge--muted">storno</span>' : ''}${reversed ? '<span class="fin-badge fin-badge--muted">bekor qilingan</span>' : ''}${r.salaryId ? '<span class="fin-badge fin-badge--muted">maosh</span>' : ''}${r.nonSalary ? '<span class="fin-badge fin-badge--muted">maosh tizimidan tashqari</span>' : ''}${r.type === 'refund' && !r.reversesId ? (r.terminates ? '<span class="fin-badge fin-badge--warning">shartnoma tugatildi</span>' : '<span class="fin-badge fin-badge--muted">kurs davom etadi</span>') : ''}</td>
+                                <td><b>${esc(F.TYPES[r.type])}</b><small>${esc(catName(r.categoryCode))}${r.usefulLifeMonths ? ` · ${r.usefulLifeMonths} oyda amortizatsiya` : ''}${r.serviceStart ? ` · xizmat ${dateText(r.serviceStart)}—${dateText(r.serviceEnd)}` : ''}</small>${r.legacy ? '<span class="fin-badge fin-badge--warning" title="Eski Cash Flow bo‘limidan ko‘chirilgan — tekshiring">eski</span>' : ''}${r.reversesId ? '<span class="fin-badge fin-badge--muted">storno</span>' : ''}${reversed ? '<span class="fin-badge fin-badge--muted">bekor qilingan</span>' : ''}${r.salaryId ? '<span class="fin-badge fin-badge--muted">maosh</span>' : ''}${r.nonSalary ? '<span class="fin-badge fin-badge--muted">maosh tizimidan tashqari</span>' : ''}${r.type === 'refund' && !r.reversesId ? (r.terminates ? '<span class="fin-badge fin-badge--warning">shartnoma tugatildi</span>' : '<span class="fin-badge fin-badge--muted">kurs davom etadi</span>') : ''}</td>
                                 <td>${esc(r.counterparty)}<small>${esc(r.description)}</small>${r.receiptUrl ? `<a href="${esc(r.receiptUrl)}" class="fin-link">hujjat</a>` : ''}</td>
                                 <td>${esc(accountName(r.accountId))}${r.toAccountId ? ' → ' + esc(accountName(r.toAccountId)) : ''}</td>
                                 <td>${esc(F.ENTITIES[r.entity])}</td>
@@ -328,6 +329,7 @@
                     <p class="fin-note">Maoshlar “Maoshlar” bo‘limida hisoblanib, to‘langanda shu yerda paydo bo‘ladi.</p>
                 </section>
             </div>
+            ${assetRegister(state.overview)}
             <p class="fin-note">1 000 000 so‘mdan katta xarajat, har qanday qaytarish va ta’sischiga to‘lov uchun hujjat majburiy. Xato kiritilgan operatsiya o‘chirilmaydi — “Storno” teskari yozuv qo‘shadi va ikkalasi ham jurnalda qoladi.</p>
         </div>`;
         bindToolbar(root, () => render('operatsiyalar'));
@@ -337,6 +339,40 @@
         const search = root.querySelector('[data-fin-tx-search]');
         search?.addEventListener('input', () => { clearTimeout(search._t); search._t = setTimeout(async () => { f.search = search.value; await render('operatsiyalar'); const s = panelRoot('operatsiyalar').querySelector('[data-fin-tx-search]'); s?.focus(); s?.setSelectionRange(s.value.length, s.value.length); }, 300); });
         root.querySelectorAll('[data-fin-reverse]').forEach(b => b.addEventListener('click', () => openReverseModal(b.dataset.finReverse)));
+        root.querySelectorAll('[data-fin-dispose]').forEach(b => b.addEventListener('click', () => openAssetModal(b.dataset.finDispose, 'dispose')));
+        root.querySelectorAll('[data-fin-impair]').forEach(b => b.addEventListener('click', () => openAssetModal(b.dataset.finImpair, 'impair')));
+    }
+    // Asosiy vositalar reestri (IAS 16): tannarx, amortizatsiya, qadrsizlanish, qoldiq qiymat, chiqarish.
+    function assetRegister(o) {
+        const list = o.assets || [];
+        if (!list.length) return '';
+        const kind = { sale: 'sotilgan', writeoff: 'hisobdan chiqarilgan', storno: 'xarid bekor qilingan' };
+        return `<section class="fin-card" aria-labelledby="finAssetsH"><header><h3 id="finAssetsH">Asosiy vositalar reestri</h3><span class="fin-muted">${dateText(o.period.end)} holatiga</span></header>
+            ${table(['Aktiv', 'Xarid sanasi', { label: 'Tannarx', num: true }, 'Muddat', { label: 'Amortizatsiya', num: true }, { label: 'Qadrsizlanish', num: true }, { label: 'Qoldiq qiymat', num: true }, 'Holat', ''],
+                list.map(a => `<tr><td>${esc(a.description || '—')}<small>${esc(F.ENTITIES[a.entity])}</small></td><td>${dateText(a.date)}</td><td class="num">${num(a.cost)}</td><td>${a.life} oy</td>
+                    <td class="num">${num(a.depreciation)}</td><td class="num">${a.impairmentLoss ? num(a.impairmentLoss) : '—'}</td><td class="num"><b>${num(a.nbv)}</b></td>
+                    <td>${a.disposedAt ? `<span class="fin-badge fin-badge--muted">${kind[a.disposalKind]} · ${dateText(a.disposedAt)}</span>${a.disposalKind === 'sale' ? `<small>tushum ${num(a.proceeds)}</small>` : ''}` : '<span class="fin-badge fin-badge--ok">foydalanishda</span>'}</td>
+                    <td>${!a.disposedAt && isDirector() ? `<button type="button" class="fin-link" data-fin-dispose="${esc(a.transactionId)}">Sotish / chiqarish</button>${a.impairment ? '' : `<button type="button" class="fin-link" data-fin-impair="${esc(a.transactionId)}">Qadrsizlanish</button>`}` : ''}</td></tr>`), { label: 'Asosiy vositalar reestri' })}
+            <p class="fin-note">Amortizatsiya foydalanish muddati davomida teng. Sotilganda yoki hisobdan chiqarilganda natija (tushum − qoldiq qiymat) foyda-zararda “Asosiy vositalar: chiqarish natijasi va qadrsizlanish” qatorida. Bu amallarni faqat rahbar bajaradi.</p></section>`;
+    }
+    function openAssetModal(id, mode) {
+        const a = (state.overview.assets || []).find(x => x.transactionId === id);
+        const accounts = state.overview.accountsList.filter(x => x.active !== false && F.EQUIVALENT_KINDS.has(x.kind));
+        const dispose = mode === 'dispose';
+        openModal(dispose ? 'Asosiy vositani sotish yoki hisobdan chiqarish' : 'Asosiy vosita qadrsizlanishi', `<div class="fin-form"><p><b>${esc(a.description || '')}</b> · tannarx ${money(a.cost)} · qoldiq qiymat ${money(a.nbv)}</p>
+            ${field('Sana', `<input type="date" lang="en-GB" class="form-control" name="date" value="${F.today()}" max="${F.today()}">`)}
+            ${dispose ? `<div class="fin-form-row">${field('Sotish summasi (so‘m)', moneyInput('proceeds'), '0 yoki bo‘sh — hisobdan chiqarish (yaroqsiz, yo‘qolgan)')}${field('Qaysi hisobga tushdi', `<select class="form-control" name="accountId">${accounts.map(x => `<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('')}</select>`)}</div>
+                ${field('Xaridor', '<input type="text" class="form-control" name="counterparty" maxlength="200">')}` : field('Qadrsizlanish summasi (so‘m)', moneyInput('amount'), 'Mustaqil baholash yoki shikastlanish dalolatnomasi asosida; qoldiq qiymatdan oshmaydi')}
+            ${field('Sabab', '<textarea class="form-control" name="reason" rows="2" maxlength="500"></textarea>')}
+            ${field(dispose ? 'Hujjat (sotishda majburiy)' : 'Baholash hujjati (majburiy)', '<input type="file" class="form-control" name="evidence" accept=".pdf,.png,.jpg,.jpeg,.webp">')}
+            <p class="fin-error" data-fin-error role="alert"></p></div>`, footerButtons('Saqlash'));
+        wireMoney(document.getElementById('modalBody'));
+        submitModal(async b => {
+            const v = n => b.querySelector(`[name="${n}"]`)?.value || '';
+            const evidenceUrl = await upload(b.querySelector('[name="evidence"]'));
+            if (dispose) await api('/assets/' + encodeURIComponent(id) + '/dispose', { date: v('date'), proceeds: v('proceeds').replace(/\D/g, ''), accountId: v('accountId'), counterparty: v('counterparty'), reason: v('reason'), evidenceUrl });
+            else await api('/assets/' + encodeURIComponent(id) + '/impair', { date: v('date'), amount: v('amount').replace(/\D/g, ''), reason: v('reason'), evidenceUrl });
+        });
     }
 
     // ---------- Qarzlar ----------
@@ -418,13 +454,17 @@
             ${r('Uzum Nasiya’dan olinadigan summa', b.uzumReceivable, '', true)}
             ${r('O‘tilgan darslar uchun to‘lanmagan summa (shartnoma aktivi)', b.contractAssets, '', true)}
             ${b.ecl ? r('(−) Kutilayotgan kredit zarari zaxirasi (ECL)', -b.ecl, '', true) : ''}
-            ${b.ppeCost ? r('Asosiy vositalar (boshlang‘ich qiymat)', b.ppeCost, '', true) + r('(−) Jamg‘arilgan amortizatsiya', -b.ppeDepreciation, '', true) : ''}
+            ${b.ppeCost ? r('Asosiy vositalar (boshlang‘ich qiymat)', b.ppeCost, '', true) + r('(−) Jamg‘arilgan amortizatsiya', -b.ppeDepreciation, '', true) + (b.ppeImpairment ? r('(−) Qadrsizlanish', -b.ppeImpairment, '', true) : '') : ''}
+            ${b.prepaidExpenses ? r('Oldindan to‘langan xarajatlar (kelgusi davrlar uchun)', b.prepaidExpenses, '', true) : ''}
+            ${b.taxPrepaid ? r('Oldindan to‘langan aylanma soliq', b.taxPrepaid, '', true) : ''}
             ${r('Aktivlar jami', b.totalAssets, 'fin-pnl-total')}
             <tr class="fin-pnl-section"><td colspan="2">Majburiyatlar</td></tr>
             ${r('O‘quvchilardan oldindan olingan to‘lov (kelgusi darslar uchun)', b.contractLiabilities, '', true)}
             ${r('Hisoblangan, to‘lanmagan maosh', b.payables.salaries, '', true)}
             ${r('Yetkazib beruvchilarga qarz (hisob-fakturalar)', b.payables.bills + b.payables.other, '', true)}
             ${r('Olingan qarzlar', b.loans, '', true)}
+            ${b.accruedExpenses ? r('Hisoblangan, hali to‘lanmagan xarajatlar', b.accruedExpenses, '', true) : ''}
+            ${b.taxPayable ? r('To‘lanishi kerak bo‘lgan aylanma soliq', b.taxPayable, '', true) : ''}
             ${r('Majburiyatlar jami', b.totalLiabilities, 'fin-pnl-total')}
             ${r('Sof aktivlar', b.netAssets, 'fin-pnl-total fin-pnl-grand')}
             <tr class="fin-pnl-section"><td colspan="2">Kapital harakati (tekshiruv)</td></tr>
@@ -538,7 +578,7 @@
                 <button type="button" class="btn-primary-sm" data-fin-recon-run>Solishtirish</button></div></section>`;
         }
         const res = r.result, filter = r.filter || 'problems';
-        const ids = res.results.map((_, i) => i).filter(i => { const s = res.results[i].status; return filter === 'all' || (filter === 'problems' ? !['match', 'split'].includes(s) : s === filter); });
+        const ids = res.results.map((_, i) => i).filter(i => { const x = res.results[i], s = x.status; return filter === 'all' || (filter === 'problems' ? (!['match', 'split'].includes(s) || x.review) : s === filter); });
         const picked = [...r.picked].map(i => ({ i, p: proposal(r, i) })).filter(x => x.p);
         const ok = res.counts.match + res.counts.split;
         return `<section class="fin-card" aria-labelledby="finR3"><header><h3 id="finR3">3. Natija: ${ok} mos, ${res.results.length - ok} farq</h3><span class="fin-muted">${dateText(res.start)} — ${dateText(res.end)}</span></header>
@@ -553,7 +593,7 @@
                             : x.nameOnly && ['amount_diff', 'date_diff'].includes(x.status) ? '<span class="fin-badge fin-badge--warning">faqat ism mos — qo‘lda tekshiring</span>'
                                 : x.status === 'amount_diff' && !p ? '<small>Bir nechta yozuv — qo‘lda tekshiring</small>' : p ? `<small>${esc(p.text)}</small>` : '';
                     return `<tr><td>${p && !done ? `<input type="checkbox" data-fin-recon-pick="${id}" ${r.picked.has(id) ? 'checked' : ''} aria-label="Tuzatish uchun tanlash">` : ''}</td>
-                        <td><span class="fin-badge fin-badge--${STATUS[x.status][1]}">${STATUS[x.status][0]}</span>${x.phoneMismatch ? '<small>telefon boshqacha — to‘liq ism va summa bo‘yicha</small>' : ''}</td>
+                        <td><span class="fin-badge fin-badge--${STATUS[x.status][1]}">${STATUS[x.status][0]}</span>${x.review ? '<span class="fin-badge fin-badge--warning">telefon boshqa — boshqa odam bo‘lishi mumkin, tekshiring</span>' : ''}</td>
                         <td>${e ? `${dateText(e.date)} · <b>${num(e.amount)}</b><small>${esc(e.name)} ${esc(e.phone || '')}</small>` : '—'}</td>
                         <td>${x.ledgers?.length ? x.ledgers.map(l => `<div>${dateText(l.date)} · <b>${num(l.amount)}</b><small>${esc(l.name)} ${esc(l.phone || '')}${l.managerName ? ' · ' + esc(l.managerName) : ''}</small></div>`).join('') : '—'}</td>
                         <td class="num ${x.difference < 0 ? 'neg' : x.difference > 0 ? 'pos' : ''}">${x.difference ? acc(x.difference) : '0'}</td><td>${action}</td></tr>`;
@@ -576,7 +616,7 @@
     }
     async function renderAudit(root) {
         const o = state.overview, q = o.quality;
-        if (!state.auditRows) { try { const a = await api('/audit?limit=300' + (state.auditFilter ? '&action=' + encodeURIComponent(state.auditFilter) : '')); state.auditRows = a.rows; state.auditChain = a.chain; } catch { state.auditRows = []; } }
+        if (!state.auditRows) { try { const a = await api('/audit?limit=300' + (state.auditFilter ? '&action=' + encodeURIComponent(state.auditFilter) : '')); state.auditRows = a.rows; state.auditChain = a.chain; state.auditSeals = a.seals; } catch { state.auditRows = []; } }
         const entity = scope() === 'all' ? 'russian' : scope();
         root.innerHTML = `<div class="fin-wrap">${toolbar()}
             <section class="fin-card" aria-labelledby="finR1"><header><h3 id="finR1">Tashqi ro‘yxat bilan solishtirish</h3><span class="fin-muted">Audit fayli, bank ko‘chirmasi yoki moliyachi jadvali — ${esc(F.ENTITIES[entity])}</span></header>
@@ -600,6 +640,7 @@
                         <li><span>To‘lov usuli noma’lum</span><strong class="${q.unknownMethod ? 'neg' : ''}">${q.unknownMethod}</strong></li>
                         <li><span>Eski ko‘chirilgan, tekshiruv kerak</span><strong>${q.legacyReview}</strong></li>
                         <li><span>Bekor qilingan</span><strong>${q.voided}</strong></li>
+                        <li><span>Moliyaviy qatorlar muhri</span><strong class="${state.auditSeals?.ok === false ? 'neg' : 'pos'}">${state.auditSeals ? (state.auditSeals.ok ? 'butun · ' + state.auditSeals.count + ' qator' : esc(state.auditSeals.table + ': ' + state.auditSeals.reason)) : '—'}</strong></li>
                         <li><span>Audit jurnali zanjiri</span><strong class="${state.auditChain?.ok === false ? 'neg' : 'pos'}">${state.auditChain?.ok === false ? 'uzilgan (' + state.auditChain.brokenAt + ')' : 'butun · ' + (state.auditChain?.count || 0) + ' yozuv'}</strong></li>
                     </ul></section>
             </div>
@@ -702,7 +743,8 @@
                     <form data-fin-settings class="fin-form">
                         <div class="fin-form-row">${field('Ingliz tili kursi (oy)', `<input type="number" min="1" max="24" class="form-control" name="english" value="${s.courseMonths.english}" ${lock}>`)}${field('Rus tili kursi (oy)', `<input type="number" min="1" max="24" class="form-control" name="russian" value="${s.courseMonths.russian}" ${lock}>`)}</div>
                         <div class="fin-form-row">${field('Maosh to‘lash muddati (kun)', `<input type="number" min="0" max="60" class="form-control" name="salaryDueDays" value="${s.salaryDueDays}" ${lock}>`)}${field('Uskunaning foydalanish muddati (oy)', `<input type="number" min="1" max="240" class="form-control" name="usefulLifeMonths" value="${s.usefulLifeMonths}" ${lock}>`)}</div>
-                        <div class="fin-form-row">${field('Rahbar tasdig‘i kerak bo‘lgan summa (so‘m)', `<input type="number" min="0" class="form-control" name="approvalLimit" value="${s.approvalLimit}" ${lock}>`, 'Bundan katta qaytarish va tushumni bekor qilishni faqat rahbar qiladi')}${field('Shubhali summa chegarasi (so‘m)', `<input type="number" min="0" class="form-control" name="suspiciousMin" value="${s.suspiciousMin}" ${lock}>`)}</div>
+                        <div class="fin-form-row">${field('Rahbar tasdig‘i kerak bo‘lgan summa (so‘m)', `<input type="number" min="0" class="form-control" name="approvalLimit" value="${s.approvalLimit}" ${lock}>`, 'Bundan katta har qanday chiqim, qarz, o‘tkazma va storno — faqat rahbar. Qaytarish, tushumni bekor qilish/qo‘shish va ta’sischiga to‘lov uchun bu xodimning bir kunlik jami chegarasi ham')}${field('Shubhali summa chegarasi (so‘m)', `<input type="number" min="0" class="form-control" name="suspiciousMin" value="${s.suspiciousMin}" ${lock}>`)}</div>
+                        <div class="fin-form-row">${field('Aylanmadan soliq stavkasi, %', `<input type="number" min="0" max="30" step="0.01" class="form-control" name="turnoverTaxRate" value="${s.turnoverTaxRate || 0}" ${lock}>`, 'Hisoblash usulida soliq tushumdan hisoblanadi va to‘languncha majburiyat bo‘ladi. 0 — soliq faqat to‘langanda xarajat')}</div>
                         <fieldset class="fin-methods"><legend>Kutilayotgan kredit zarari (ECL) stavkalari, %</legend>${F.AGING.map(([k, l]) => `<label>${l} <input type="number" min="0" max="100" class="form-control fin-narrow" name="ecl_${k}" value="${s.eclRates[k]}" ${lock}></label>`).join('')}</fieldset>
                         ${dir ? '<button type="submit" class="btn-primary-sm">Saqlash</button>' : ''}
                     </form>
@@ -725,7 +767,7 @@
             const f = new FormData(e.target), n = k => Number(f.get(k));
             try {
                 await api('/settings', { revision: o.settingsRevision, data: { courseMonths: { english: n('english'), russian: n('russian') }, suspiciousMin: n('suspiciousMin'), salaryDueDays: n('salaryDueDays'),
-                    usefulLifeMonths: n('usefulLifeMonths'), approvalLimit: n('approvalLimit'), eclRates: Object.fromEntries(F.AGING.map(([k]) => [k, n('ecl_' + k)])) } }, 'PUT');
+                    usefulLifeMonths: n('usefulLifeMonths'), approvalLimit: n('approvalLimit'), turnoverTaxRate: n('turnoverTaxRate'), eclRates: Object.fromEntries(F.AGING.map(([k]) => [k, n('ecl_' + k)])) } }, 'PUT');
                 invalidate(); toast('Sozlamalar saqlandi'); render('moliya-sozlamalar');
             } catch (err) { toast(err.message); }
         });
@@ -773,10 +815,12 @@
                 <label><input type="radio" name="terminates" value="true"> O‘quvchi o‘qishni to‘xtatdi — shartnoma tugatiladi (qolgan pul tushum bo‘ladi)</label></fieldset>` : ''}
             ${type === 'refund' ? field('Qaysi tushum qaytarilmoqda (majburiy)', `<input type="search" class="form-control" placeholder="Ism yoki telefon bo‘yicha qidirish" data-fin-receipt-search aria-label="Tushumni qidirish"><select class="form-control" name="paymentRecordId" size="6" aria-label="Tushum">${receipts.map(r => `<option value="${esc(r.id)}" data-search="${esc(((r.name || '') + ' ' + String(r.phone || '').replace(/\D/g, '')).toLowerCase())}">${dateText(r.paidDate)} · ${esc(r.name)} · ${num(r.amount)}</option>`).join('')}</select>`, 'Qaytarish tanlangan tushum summasidan oshmaydi; o‘quvchi shartnomasi shu kundan tugatiladi') : ''}
             ${type === 'loan_repay' ? field('Qaysi qarz', `<select class="form-control" name="payableId">${loans.map(p => `<option value="${esc(p.id)}" ${p.id === preset.payableId ? 'selected' : ''}>${esc(p.counterparty)} · qoldiq ${num(p.outstanding)}</option>`).join('')}</select>`, 'Foiz alohida “Qarz bo‘yicha foizlar” xarajati sifatida kiritiladi') : ''}
-            ${type === 'transfer' ? field('Kimga tegishli', `<select class="form-control" name="entity">${Object.entries(F.ENTITIES).map(([k, l]) => `<option value="${k}" ${k === ent ? 'selected' : ''}>${l}</option>`).join('')}</select>`, 'Uzum to‘lovi bo‘lsa — qaysi maktab o‘quvchilari uchun tushgan bo‘lsa o‘sha maktab (maktab hisobotidagi pul oqimi to‘g‘ri chiqadi)') : ''}
-            ${!['refund', 'transfer'].includes(type) ? field('Yo‘nalish', `<select class="form-control" name="entity">${Object.entries(F.ENTITIES).map(([k, l]) => `<option value="${k}" ${k === ent ? 'selected' : ''}>${l}</option>`).join('')}</select>`, 'Ikkala maktabga tegishli xarajat (ijara, CRM) — “Umumiy”; hisobotda sof tushum ulushiga ko‘ra taqsimlanadi') : ''}
+            ${type === 'transfer' ? field('Kimga tegishli', `<select class="form-control" name="entity">${preset.settlement ? '<option value="">— maktabni tanlang —</option>' : ''}${Object.entries(F.ENTITIES).filter(([k]) => !preset.settlement || k !== 'common').map(([k, l]) => `<option value="${k}" ${!preset.settlement && k === ent ? 'selected' : ''}>${l}</option>`).join('')}</select>`, 'Uzum to‘lovi — qaysi maktab o‘quvchilari uchun tushgan bo‘lsa o‘sha maktab (majburiy). Ikkala maktab uchun bo‘lsa — ikkita alohida yozuv') : ''}
+            ${!['refund', 'transfer'].includes(type) ? field('Yo‘nalish', `<select class="form-control" name="entity">${Object.entries(F.ENTITIES).map(([k, l]) => `<option value="${k}" ${k === ent ? 'selected' : ''}>${l}</option>`).join('')}</select>`, 'Ikkala maktabga tegishli xarajat (ijara, CRM) — “Umumiy”; hisobotda har oy yalpi kurs tushumi ulushiga ko‘ra taqsimlanadi') : ''}
             ${type !== 'transfer' ? field('Toifa', `<select class="form-control" name="categoryCode">${cats.map(c => `<option value="${c.code}" ${c.code === preset.categoryCode ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select>`) : '<input type="hidden" name="categoryCode" value="TRANSFER">'}
             <div data-fin-payroll-flag hidden><label class="fin-switch"><input type="checkbox" name="nonSalary"><span>Maosh tizimidan tashqari bir martalik to‘lov (bonus, ustama)</span></label><small class="fin-muted">Oylik maoshlar “Maoshlar” bo‘limida hisoblanadi va to‘langanda avtomatik yoziladi — ikki marta kiritmang.</small></div>
+            ${type === 'expense' ? `<details class="fin-details" data-fin-service><summary>Bir necha oy uchun oldindan to‘lov (ijara, yillik obuna)?</summary>
+                <div class="fin-form-row">${field('Xizmat davri boshlanishi', '<input type="date" lang="en-GB" class="form-control" name="serviceStart">')}${field('Xizmat davri tugashi', '<input type="date" lang="en-GB" class="form-control" name="serviceEnd">', 'Hisoblash usulida xarajat shu davrga teng taqsimlanadi; to‘lanib, hali foydalanilmagan qismi balansda “oldindan to‘langan xarajat”')}</div></details>` : ''}
             <div data-fin-capex hidden>${field('Foydalanish muddati (oy)', `<input type="number" min="1" max="240" class="form-control" name="usefulLifeMonths" value="${o.settings.usefulLifeMonths}">`, 'Shu muddat davomida teng amortizatsiya qilinadi')}</div>
             <div class="fin-form-row">${field(type === 'transfer' ? 'Qaysi hisobdan' : isIn ? 'Qaysi hisobga tushdi' : 'Qaysi hisobdan to‘landi', `<select class="form-control" name="accountId">${fromAccounts.map(a => `<option value="${esc(a.id)}" ${a.id === (preset.accountId || 'acc-card') ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}</select>`)}
                 ${type === 'transfer' ? field('Qaysi hisobga', `<select class="form-control" name="toAccountId">${accounts.map(a => `<option value="${esc(a.id)}" ${a.id === (preset.toAccountId || 'acc-cash') ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}</select>`) : ''}</div>
@@ -801,13 +845,14 @@
         submitModal(async b => {
             const v = n => b.querySelector(`[name="${n}"]`)?.value || '';
             if (type === 'refund' && !v('paymentRecordId')) throw new Error('Qaytarilayotgan tushumni tanlang');
+            if (type === 'transfer' && !v('entity')) throw new Error('Uzum to‘lovi qaysi maktab o‘quvchilari uchun ekanini tanlang');
             const term = b.querySelector('[name="terminates"]:checked')?.value;
             if (type === 'refund' && !term) throw new Error('Qaytarish turini tanlang: kurs davom etadimi yoki shartnoma tugatiladimi');
             const receiptUrl = await upload(b.querySelector('[name="receipt"]'));
             await api('/transactions', { requestKey: key, type, date: v('date'), amount: v('amount').replace(/\D/g, ''), entity: v('entity') || ent, categoryCode: v('categoryCode'),
                 accountId: v('accountId'), toAccountId: v('toAccountId'), counterparty: v('counterparty'), description: v('description'), receiptUrl, feeAmount: v('feeAmount').replace(/\D/g, ''),
                 paymentRecordId: v('paymentRecordId'), payableId: v('payableId') || preset.payableId || '', dueDate: v('dueDate'), nonSalary: !!b.querySelector('[name="nonSalary"]')?.checked,
-                usefulLifeMonths: v('usefulLifeMonths'), terminates: type === 'refund' ? term === 'true' : undefined });
+                usefulLifeMonths: v('usefulLifeMonths'), terminates: type === 'refund' ? term === 'true' : undefined, serviceStart: v('serviceStart'), serviceEnd: v('serviceEnd') });
         });
     }
     function openPayableModal() {
@@ -818,6 +863,7 @@
             ${field('Yo‘nalish', `<select class="form-control" name="entity">${Object.entries(F.ENTITIES).map(([k, l]) => `<option value="${k}" ${k === ent ? 'selected' : ''}>${l}</option>`).join('')}</select>`)}</div>
             ${field('Toifa', `<select class="form-control" name="categoryCode">${F.CATEGORIES.filter(c => c.type === 'expense' && !c.payroll && c.code !== 'CAPEX').map(c => `<option value="${c.code}">${esc(c.name)}</option>`).join('')}</select>`)}
             <div class="fin-form-row">${field('Hujjat sanasi', `<input type="date" lang="en-GB" class="form-control" name="issueDate" value="${F.today()}" max="${F.today()}">`)}${field('To‘lov muddati', '<input type="date" lang="en-GB" class="form-control" name="dueDate">')}</div>
+            <div class="fin-form-row">${field('Xizmat davri boshlanishi (ixtiyoriy)', '<input type="date" lang="en-GB" class="form-control" name="serviceStart">')}${field('Xizmat davri tugashi', '<input type="date" lang="en-GB" class="form-control" name="serviceEnd">', 'Bir necha oylik xizmat bo‘lsa — xarajat shu davrga taqsimlanadi')}</div>
             ${field('Izoh', '<textarea class="form-control" name="description" rows="2"></textarea>')}
             ${field('Hujjat (hisob-faktura, shartnoma)', '<input type="file" class="form-control" name="document" accept=".pdf,.png,.jpg,.jpeg,.webp">')}
             <p class="fin-error" data-fin-error role="alert"></p></div>`, footerButtons('Saqlash'));
@@ -826,7 +872,7 @@
         submitModal(async b => {
             const v = n => b.querySelector(`[name="${n}"]`)?.value || '';
             await api('/payables', { requestKey: key, kind: 'bill', counterparty: v('counterparty'), amount: v('amount').replace(/\D/g, ''), entity: v('entity'), categoryCode: v('categoryCode'),
-                issueDate: v('issueDate'), dueDate: v('dueDate'), description: v('description'), documentUrl: await upload(b.querySelector('[name="document"]')) });
+                issueDate: v('issueDate'), dueDate: v('dueDate'), description: v('description'), serviceStart: v('serviceStart'), serviceEnd: v('serviceEnd'), documentUrl: await upload(b.querySelector('[name="document"]')) });
         });
     }
     function openReverseModal(id) {

@@ -23,6 +23,7 @@ const DIRECTOR_ROLES = ['admin', 'boshliq'];
 const EVIDENCE_RE = /^\/api\/finance\/evidence\/([0-9a-f-]{36})$/;
 const toKey = v => v instanceof Date ? `${v.getFullYear()}-${String(v.getMonth() + 1).padStart(2, '0')}-${String(v.getDate()).padStart(2, '0')}` : String(v).slice(0, 10);
 const text = (v, max = 500) => String(v ?? '').trim().slice(0, max);
+const fmt = n => (Number(n) < 0 ? '-' : '') + String(Math.abs(Math.round(Number(n) || 0))).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 
 function lockGuardSql(table, column) {
     return `
@@ -101,6 +102,25 @@ CREATE TABLE IF NOT EXISTS fin_evidence (
 CREATE TABLE IF NOT EXISTS fin_migrations (id TEXT PRIMARY KEY, completed_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
 ALTER TABLE payment_records ADD COLUMN IF NOT EXISTS account_id TEXT;
 ALTER TABLE fin_transactions ADD COLUMN IF NOT EXISTS terminates BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE fin_payables ADD COLUMN IF NOT EXISTS void_date DATE;
+ALTER TABLE fin_transactions ADD COLUMN IF NOT EXISTS service_start DATE;
+ALTER TABLE fin_transactions ADD COLUMN IF NOT EXISTS service_end DATE;
+ALTER TABLE fin_transactions ADD COLUMN IF NOT EXISTS asset_id TEXT;
+ALTER TABLE fin_payables ADD COLUMN IF NOT EXISTS service_start DATE;
+ALTER TABLE fin_payables ADD COLUMN IF NOT EXISTS service_end DATE;
+-- Asosiy vosita hodisalari: sotish / hisobdan chiqarish (amount = tushum, 0 bo'lishi mumkin) va qadrsizlanish (amount = zarar).
+CREATE TABLE IF NOT EXISTS fin_asset_events (
+ id TEXT PRIMARY KEY, asset_id TEXT NOT NULL REFERENCES fin_transactions(id), kind TEXT NOT NULL CHECK(kind IN ('disposal','impairment')),
+ event_date DATE NOT NULL, amount BIGINT NOT NULL CHECK(amount>=0), transaction_id TEXT REFERENCES fin_transactions(id), reason TEXT NOT NULL,
+ evidence_url TEXT NOT NULL DEFAULT '', actor_id TEXT NOT NULL, actor_name TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+ UNIQUE(asset_id, kind)
+);
+-- Muhr zanjiri: tushum, operatsiya, bekor qilish, tekshiruv va aktiv hodisalarining har bir qatori kiritilganda xeshlanadi.
+-- Trigger o'chirilib qator o'zgartirilsa yoki muhrsiz qator qo'shilsa, tekshiruvda aniqlanadi.
+CREATE TABLE IF NOT EXISTS fin_seals (
+ seq BIGSERIAL PRIMARY KEY, table_name TEXT NOT NULL, row_id TEXT NOT NULL, prev_hash TEXT NOT NULL, row_hash TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+ UNIQUE(table_name, row_id)
+);
 ALTER TABLE fin_period_snapshots ADD COLUMN IF NOT EXISTS sha256 TEXT;
 -- Sozlamalar tarixi: har bir o'zgarish kuchga kirgan sanasi bilan (o'zgarmas).
 CREATE TABLE IF NOT EXISTS fin_settings_history (
@@ -117,7 +137,8 @@ BEGIN RAISE EXCEPTION 'FIN_IMMUTABLE: % jadvalidagi moliyaviy yozuvni o''zgartir
 CREATE OR REPLACE FUNCTION fin_payables_guard() RETURNS trigger AS $$
 BEGIN
   IF TG_OP = 'DELETE' OR OLD.voided_at IS NOT NULL OR NEW.voided_at IS NULL
-     OR (to_jsonb(NEW) - 'voided_at' - 'void_reason' - 'voided_by') <> (to_jsonb(OLD) - 'voided_at' - 'void_reason' - 'voided_by') THEN
+     OR NEW.void_date IS NULL
+     OR (to_jsonb(NEW) - 'voided_at' - 'void_reason' - 'voided_by' - 'void_date') <> (to_jsonb(OLD) - 'voided_at' - 'void_reason' - 'voided_by' - 'void_date') THEN
     RAISE EXCEPTION 'FIN_IMMUTABLE: hisob-faktura faqat bir marta bekor qilinishi mumkin' USING ERRCODE = 'P0001';
   END IF;
   RETURN NEW;
@@ -153,6 +174,38 @@ ${lockGuardSql('fin_transactions', 'txn_date')}
 ${lockGuardSql('fin_payables', 'issue_date')}
 ${lockGuardSql('payment_record_voids', 'void_date')}
 ${lockGuardSql('fin_account_checks', 'check_date')}
+${lockGuardSql('fin_asset_events', 'event_date')}
+-- Muhr matni: NULL maydonlar olib tashlanadi (keyin qo'shiladigan bo'sh ustun eski muhrlarni buzmaydi; yangi ustunlar
+-- NULL standart qiymat bilan qo'shilishi shart). Vaqt zonasiga bog'liq va keyin bog'lanadigan (student_id) maydonlar kirmaydi.
+CREATE OR REPLACE FUNCTION fin_row_text(t TEXT, j JSONB) RETURNS TEXT AS $$
+  SELECT jsonb_strip_nulls(j - 'created_at' - 'paid_at' - 'student_id' - 'updated_at')::text
+$$ LANGUAGE sql IMMUTABLE;
+CREATE OR REPLACE FUNCTION fin_seal() RETURNS trigger AS $$
+DECLARE prev TEXT; body TEXT;
+BEGIN
+  PERFORM pg_advisory_xact_lock(hashtext('fin-seal'));
+  SELECT row_hash INTO prev FROM fin_seals ORDER BY seq DESC LIMIT 1;
+  prev := COALESCE(prev, '');
+  body := fin_row_text(TG_TABLE_NAME, to_jsonb(NEW));
+  INSERT INTO fin_seals(table_name,row_id,prev_hash,row_hash)
+    VALUES (TG_TABLE_NAME, (to_jsonb(NEW)->>'id'), prev, encode(sha256(convert_to(prev || '|' || TG_TABLE_NAME || '|' || body, 'UTF8')), 'hex'));
+  RETURN NEW;
+END $$ LANGUAGE plpgsql;
+${['payment_records', 'fin_transactions', 'fin_account_checks', 'fin_asset_events'].map(t => `DROP TRIGGER IF EXISTS fin_seal_${t} ON ${t};
+CREATE TRIGGER fin_seal_${t} AFTER INSERT ON ${t} FOR EACH ROW EXECUTE FUNCTION fin_seal();`).join('\n')}
+CREATE OR REPLACE FUNCTION fin_seal_void() RETURNS trigger AS $$
+DECLARE prev TEXT; body TEXT;
+BEGIN
+  PERFORM pg_advisory_xact_lock(hashtext('fin-seal'));
+  SELECT row_hash INTO prev FROM fin_seals ORDER BY seq DESC LIMIT 1;
+  prev := COALESCE(prev, '');
+  body := fin_row_text(TG_TABLE_NAME, to_jsonb(NEW));
+  INSERT INTO fin_seals(table_name,row_id,prev_hash,row_hash)
+    VALUES (TG_TABLE_NAME, NEW.record_id, prev, encode(sha256(convert_to(prev || '|' || TG_TABLE_NAME || '|' || body, 'UTF8')), 'hex'));
+  RETURN NEW;
+END $$ LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS fin_seal_payment_record_voids ON payment_record_voids;
+CREATE TRIGGER fin_seal_payment_record_voids AFTER INSERT ON payment_record_voids FOR EACH ROW EXECUTE FUNCTION fin_seal_void();
 CREATE OR REPLACE FUNCTION fin_capture_contract_value() RETURNS trigger AS $$
 DECLARE v TEXT;
 BEGIN
@@ -217,9 +270,11 @@ DO $$ BEGIN
     CREATE TRIGGER fin_guard_salary BEFORE INSERT OR UPDATE OR DELETE ON salary_transactions FOR EACH ROW EXECUTE FUNCTION fin_guard_salary();
   END IF;
 END $$;
-${['fin_transactions', 'payment_record_voids', 'fin_account_checks', 'fin_audit', 'fin_evidence', 'fin_period_snapshots', 'fin_settings_history', 'fin_contract_values', 'fin_payables', 'fin_period_locks']
+${['fin_transactions', 'payment_record_voids', 'fin_account_checks', 'fin_audit', 'fin_evidence', 'fin_period_snapshots', 'fin_settings_history', 'fin_contract_values', 'fin_payables', 'fin_period_locks', 'fin_asset_events', 'fin_seals']
     .map(t => `DROP TRIGGER IF EXISTS fin_no_truncate_${t} ON ${t};\nCREATE TRIGGER fin_no_truncate_${t} BEFORE TRUNCATE ON ${t} FOR EACH STATEMENT EXECUTE FUNCTION fin_reject_change();`).join('\n')}
 ${immutableSql('fin_settings_history')}
+${immutableSql('fin_asset_events')}
+${immutableSql('fin_seals')}
 ${immutableSql('fin_contract_values')}
 ${immutableSql('fin_transactions')}
 ${immutableSql('payment_record_voids')}
@@ -254,6 +309,7 @@ async function initSchema(pool) {
                 await db.query("INSERT INTO fin_settings_history(effective_from,data,actor_id,actor_name) VALUES('1900-01-01',$1,'system','Boshlang‘ich sozlama')", [JSON.stringify(cur)]);
             }
             await migrateLegacyCash(db);
+            await backfillSeals(db);
         } finally { await db.query("SELECT pg_advisory_unlock(hashtext('fin-init'))"); }
     } finally { if (db !== pool) db.release(); }
 }
@@ -300,6 +356,49 @@ async function auditHead(db) {
     return r ? { id: Number(r.id), hash: r.hash } : { id: 0, hash: '' };
 }
 const verified = { id: 0, hash: '', count: 0 };
+// ---------- Muhr zanjiri (moliyaviy qatorlar) ----------
+const SEALED = { payment_records: 'id', fin_transactions: 'id', fin_account_checks: 'id', fin_asset_events: 'id', payment_record_voids: 'record_id' };
+const sealHash = (prev, table, body) => createHash('sha256').update(prev + '|' + table + '|' + body, 'utf8').digest('hex');
+async function rowTexts(db, table) {
+    const key = SEALED[table];
+    return new Map((await db.query(`SELECT ${key}::text AS id, fin_row_text($1, to_jsonb(t)) AS body FROM ${table} t`, [table])).rows.map(r => [r.id, r.body]));
+}
+// Muhr qo'yilmagan eski qatorlar bir marta (yaratilish tartibida) muhrlanadi.
+async function backfillSeals(db) {
+    if ((await db.query("SELECT 1 FROM fin_migrations WHERE id='seals-v1'")).rows.length) return;
+    let prev = (await db.query('SELECT row_hash FROM fin_seals ORDER BY seq DESC LIMIT 1')).rows[0]?.row_hash || '';
+    for (const table of Object.keys(SEALED)) {
+        const key = SEALED[table];
+        const rows = (await db.query(`SELECT ${key}::text AS id, fin_row_text($1, to_jsonb(t)) AS body FROM ${table} t
+            WHERE NOT EXISTS (SELECT 1 FROM fin_seals s WHERE s.table_name=$1 AND s.row_id=t.${key}::text) ORDER BY t.created_at, t.${key}`, [table])).rows;
+        for (const r of rows) {
+            const h = sealHash(prev, table, r.body);
+            await db.query('INSERT INTO fin_seals(table_name,row_id,prev_hash,row_hash) VALUES($1,$2,$3,$4)', [table, r.id, prev, h]);
+            prev = h;
+        }
+    }
+    await db.query("INSERT INTO fin_migrations(id) VALUES('seals-v1') ON CONFLICT DO NOTHING");
+}
+async function quickSeals(db) {
+    let unsealed = 0;
+    for (const [t, key] of Object.entries(SEALED)) unsealed += Number((await db.query(`SELECT COUNT(*) AS n FROM ${t} x WHERE NOT EXISTS (SELECT 1 FROM fin_seals s WHERE s.table_name=$1 AND s.row_id=x.${key}::text)`, [t])).rows[0].n);
+    return { ok: unsealed === 0, unsealed };
+}
+async function verifySeals(db) {
+    const texts = {};
+    for (const t of Object.keys(SEALED)) texts[t] = await rowTexts(db, t);
+    const seals = (await db.query('SELECT seq,table_name,row_id,prev_hash,row_hash FROM fin_seals ORDER BY seq')).rows;
+    let prev = '';
+    const seen = new Set();
+    for (const s of seals) {
+        const body = texts[s.table_name]?.get(s.row_id);
+        if (s.prev_hash !== prev || body == null || sealHash(prev, s.table_name, body) !== s.row_hash)
+            return { ok: false, brokenAt: Number(s.seq), table: s.table_name, rowId: s.row_id, reason: body == null ? 'qator o‘chirilgan' : 'qator o‘zgartirilgan', count: seen.size };
+        prev = s.row_hash; seen.add(s.table_name + ':' + s.row_id);
+    }
+    for (const [t, m] of Object.entries(texts)) for (const id of m.keys()) if (!seen.has(t + ':' + id)) return { ok: false, table: t, rowId: id, reason: 'muhrsiz qator (trigger chetlab o‘tilgan)', count: seen.size };
+    return { ok: true, count: seen.size, head: prev };
+}
 // full=false: oldin tekshirilgan qism (o'zgarmasligi trigger bilan himoyalangan) qayta hisoblanmaydi, faqat yangi yozuvlar.
 async function verifyAuditChain(db, { full = true } = {}) {
     let prev = '', count = 0, from = 0;
@@ -307,11 +406,12 @@ async function verifyAuditChain(db, { full = true } = {}) {
         const anchor = (await db.query('SELECT hash FROM fin_audit WHERE id=$1', [verified.id])).rows[0];
         if (anchor && anchor.hash === verified.hash) { prev = verified.hash; count = verified.count; from = verified.id; }
     }
-    const rows = (await db.query('SELECT id,action,entity_id,actor_id,actor_name,before_data,after_data,created_at,prev_hash,hash FROM fin_audit WHERE hash IS NOT NULL AND id>$1 ORDER BY id', [from])).rows;
+    const rows = (await db.query('SELECT id,action,entity_id,actor_id,actor_name,before_data,after_data,created_at,prev_hash,hash FROM fin_audit WHERE id>$1 ORDER BY id', [from])).rows;
     for (const r of rows) {
         const row = { action: r.action, entityId: r.entity_id, actorId: r.actor_id, actorName: r.actor_name, before: canonical(r.before_data), after: canonical(r.after_data), createdAt: new Date(r.created_at).toISOString() };
         // JSONB kalitlar tartibini o'zgartiradi, shuning uchun xesh tartiblangan kanonik shakldan hisoblanadi.
-        if ((r.prev_hash || '') !== prev || auditHash(prev, sortKeys(row)) !== r.hash) { verified.id = 0; return { ok: false, brokenAt: Number(r.id), count }; }
+        // Xeshsiz yozuv ham zanjir uzilishi hisoblanadi.
+        if (!r.hash || (r.prev_hash || '') !== prev || auditHash(prev, sortKeys(row)) !== r.hash) { verified.id = 0; return { ok: false, brokenAt: Number(r.id), count }; }
         prev = r.hash; count++;
         verified.id = Number(r.id); verified.hash = r.hash; verified.count = count;
     }
@@ -356,6 +456,39 @@ async function accountRow(db, id, label = 'Hisob raqam') {
     return row;
 }
 async function settingsRow(db) { const r = (await db.query("SELECT data,revision FROM fin_settings WHERE id='main'")).rows[0]; return { data: F.settingsOf({ settings: r?.data || {} }), revision: r?.revision || 1 }; }
+// ---------- Vazifalar ajratilishi (rahbar tasdig'i) ----------
+// Xavfli amallar (qaytarish, tushumni bekor qilish/qo'shish, ta'sischiga to'lov) bo'yicha limit har bir amalga,
+// bitta so'rov jamiga, bitta o'quvchiga va xodimning bir kunlik jamiga qo'llanadi — bo'lib chetlab o'tib bo'lmaydi.
+async function dailyControlled(db, userId) {
+    return Number((await db.query(`SELECT COALESCE(SUM((after_data->>'controlledAmount')::BIGINT),0) AS n FROM fin_audit
+        WHERE actor_id=$1 AND after_data ? 'controlledAmount' AND (created_at AT TIME ZONE 'Asia/Tashkent')::date = (NOW() AT TIME ZONE 'Asia/Tashkent')::date`, [userId])).rows[0].n);
+}
+async function requireApproval(db, user, settings, amount, what) {
+    if (user.director) return;
+    const limit = Number(settings.approvalLimit) || 0;
+    if (amount > limit) throw error(403, `${what}: ${fmt(amount)} so‘m — ${fmt(limit)} so‘mdan katta, faqat rahbar tomonidan`);
+    const today = await dailyControlled(db, user.id);
+    if (today + amount > limit) throw error(403, `${what}: bugungi jami (${fmt(today + amount)} so‘m) ${fmt(limit)} so‘mlik kunlik chegaradan oshadi — rahbar tasdig‘i kerak`);
+}
+// Pul hisobi (naqd, karta, bank) manfiyga tushmasligi kerak: chiqim sanasida ham, bugun ham.
+async function assertNoOverdraft(db, user, accountId, day, amount) {
+    const acc = (await db.query('SELECT kind,name FROM fin_accounts WHERE id=$1', [accountId])).rows[0];
+    if (!acc || !F.EQUIVALENT_KINDS.has(acc.kind) || user.director) return;
+    const data = await load(db);
+    const at = d => F.accountBalances(data, d).find(a => a.id === accountId)?.balance || 0;
+    const low = Math.min(at(day), at(F.today()));
+    if (low - amount < 0) throw error(403, `${acc.name} qoldig‘i manfiyga tushadi (${fmt(low - amount)} so‘m). Boshlang‘ich qoldiq yoki kiritilmagan tushumni tekshiring; zarurat bo‘lsa rahbar kiritadi`);
+}
+function sameRequest(prior, fields) {
+    for (const [k, v] of Object.entries(fields)) if (String(prior[k] ?? '') !== String(v ?? '')) throw error(409, 'Bu so‘rov identifikatori boshqa ma’lumot bilan ishlatilgan. Sahifani yangilab qayta kiriting');
+}
+function servicePeriod(body) {
+    if (!body.serviceStart && !body.serviceEnd) return [null, null];
+    const a = F.date(body.serviceStart), b = F.date(body.serviceEnd);
+    if (!a || !b || b < a) throw error(400, 'Xizmat davri noto‘g‘ri (boshlanish va tugash sanasi)');
+    if (F.dayDiff(a, b) > 1830) throw error(400, 'Xizmat davri 5 yildan oshmasin');
+    return [a, b];
+}
 async function sumPaid(db, where, params) {
     return Number((await db.query(`SELECT COALESCE(SUM(CASE WHEN reverses_id IS NULL THEN amount ELSE -amount END),0) AS n FROM fin_transactions WHERE ${where}`, params)).rows[0].n);
 }
@@ -383,12 +516,17 @@ async function load(db) {
         id: t.id, entity: t.entity, date: t.d, type: t.type, categoryCode: t.category_code, accountId: t.account_id, toAccountId: t.to_account_id,
         amount: Number(t.amount), counterparty: t.counterparty, description: t.description, receiptUrl: t.receipt_url, payableId: t.payable_id,
         paymentRecordId: t.payment_record_id, salaryId: t.salary_id, reversesId: t.reverses_id, reversalReason: t.reversal_reason, legacy: t.legacy,
-        usefulLifeMonths: t.useful_life_months, nonSalary: t.non_salary, terminates: t.terminates, actorName: t.actor_name, createdAt: t.created_at }));
+        usefulLifeMonths: t.useful_life_months, nonSalary: t.non_salary, terminates: t.terminates,
+        serviceStart: t.service_start ? toKey(t.service_start) : '', serviceEnd: t.service_end ? toKey(t.service_end) : '', assetId: t.asset_id || null, actorName: t.actor_name, createdAt: t.created_at }));
     const reversed = new Set(transactions.filter(t => t.reversesId).map(t => t.reversesId));
     for (const t of transactions) t.reversed = reversed.has(t.id);
-    const payables = (await db.query(`SELECT *,TO_CHAR(issue_date,'YYYY-MM-DD') AS i,TO_CHAR(due_date,'YYYY-MM-DD') AS d FROM fin_payables ORDER BY issue_date`)).rows.map(p => ({
+    const payables = (await db.query(`SELECT *,TO_CHAR(issue_date,'YYYY-MM-DD') AS i,TO_CHAR(due_date,'YYYY-MM-DD') AS d,
+        TO_CHAR(COALESCE(void_date,(voided_at AT TIME ZONE 'Asia/Tashkent')::date),'YYYY-MM-DD') AS vd FROM fin_payables ORDER BY issue_date`)).rows.map(p => ({
         id: p.id, entity: p.entity, kind: p.kind, counterparty: p.counterparty, description: p.description, categoryCode: p.category_code,
-        amount: Number(p.amount), issueDate: p.i, dueDate: p.d || '', documentUrl: p.document_url, voided: !!p.voided_at, voidReason: p.void_reason || '' }));
+        amount: Number(p.amount), issueDate: p.i, dueDate: p.d || '', documentUrl: p.document_url, voided: !!p.voided_at, voidDate: p.vd || '', voidReason: p.void_reason || '',
+        serviceStart: p.service_start ? toKey(p.service_start) : '', serviceEnd: p.service_end ? toKey(p.service_end) : '' }));
+    const assetEvents = (await db.query("SELECT id,asset_id,kind,TO_CHAR(event_date,'YYYY-MM-DD') AS d,amount,reason,actor_name FROM fin_asset_events ORDER BY event_date")).rows
+        .map(e => ({ id: e.id, assetId: e.asset_id, kind: e.kind, date: e.d, amount: Number(e.amount), reason: e.reason, actorName: e.actor_name }));
     const salaryRows = (await db.query(`SELECT s.id,s.employee_id,s.language,s.amount,s.status,TO_CHAR(s.period_start,'YYYY-MM-DD') AS ps,TO_CHAR(s.period_end,'YYYY-MM-DD') AS pe,
         s.paid_at,he.name,he.role FROM salary_transactions s LEFT JOIN hr_employees he ON he.id=s.employee_id ORDER BY s.period_end`).catch(() => ({ rows: [] }))).rows;
     const salaries = salaryRows.map(s => ({ id: s.id, entity: s.language, employeeId: s.employee_id, employeeName: s.name || s.employee_id, role: s.role || '',
@@ -412,7 +550,7 @@ async function load(db) {
     const locks = (await db.query("SELECT month,locked_by_name,note,locked_at FROM fin_period_locks ORDER BY month")).rows;
     const snapshots = Object.fromEntries((await db.query('SELECT month,data FROM fin_period_snapshots')).rows.map(r => [r.month, r.data]));
     const settingsHistory = (await db.query("SELECT TO_CHAR(effective_from,'YYYY-MM-DD') AS f,data FROM fin_settings_history ORDER BY effective_from,id")).rows.map(r => ({ from: r.f, data: r.data }));
-    return { accounts, receipts, transactions, payables, salaries, receivables, studentStatus, settingsHistory, accountChecks, settings: s.data, settingsRevision: s.revision, locks,
+    return { accounts, receipts, transactions, payables, salaries, receivables, studentStatus, settingsHistory, assetEvents, accountChecks, settings: s.data, settingsRevision: s.revision, locks,
         closedThrough: locks.map(l => l.month).sort().at(-1) || '', snapshots };
 }
 function period(q) {
@@ -448,7 +586,9 @@ async function overview(pool, actor, q) {
             quality: { ...quality, suspicious: quality.suspicious.filter(scoped), paidSalaryWithoutCash: paidSalaryWithoutCash.filter(scoped), voidedList: data.receipts.filter(r => r.voidDate && scoped(r)) },
             settings: data.settings, settingsRevision: data.settingsRevision, locks: data.locks, closedThrough: data.closedThrough, firstDate,
             closeCandidate: { month: nextMonth, issues: F.monthEnd(nextMonth) < F.today() ? closeReadiness(data, nextMonth) : null },
-            auditChain: await verifyAuditChain(db, { full: false }), accountsList: data.accounts, categories: F.CATEGORIES
+            assets: F.fixedAssets(data).filter(a => p.scope === 'all' || a.entity === p.scope || a.entity === 'common').map(a => ({ ...a, depreciation: F.depreciationAt(a, p.end), impairmentLoss: F.impairmentAt(a, p.end),
+                nbv: a.disposedAt && a.disposedAt <= p.end ? 0 : F.netBookValue(a, p.end) })),
+            auditChain: await verifyAuditChain(db, { full: false }), seals: await quickSeals(db), accountsList: data.accounts, categories: F.CATEGORIES
         };
     });
 }
@@ -475,7 +615,7 @@ async function auditLog(pool, actor, q) {
         const params = [limit], where = [];
         if (q.action) { params.push(String(q.action)); where.push(`action=$${params.length}`); }
         const rows = (await db.query(`SELECT id,action,entity_id,actor_name,before_data,after_data,created_at FROM fin_audit ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY id DESC LIMIT $1`, params)).rows;
-        return { rows, chain: await verifyAuditChain(db) };
+        return { rows, chain: await verifyAuditChain(db), seals: await verifySeals(db) };
     });
 }
 async function people(pool, actor, q) {
@@ -484,7 +624,7 @@ async function people(pool, actor, q) {
         const lang = entity(q.entity, false), term = text(q.q, 80);
         if (term.length < 2) return { rows: [] };
         const digits = term.replace(/\D/g, '');
-        const like = '%' + term.toLowerCase() + '%', phoneLike = digits.length >= 4 ? '%' + digits.slice(-9) + '%' : '__none__';
+        const like = '%' + term.toLowerCase().replace(/[\\%_]/g, ch => '\\' + ch) + '%', phoneLike = digits.length >= 4 ? '%' + digits.slice(-9) + '%' : '__none__';
         const students = (await db.query(`SELECT id,name,phone,extra_data->'leadRef'->>'id' AS lead_id FROM students WHERE subject=$1 AND (LOWER(name) LIKE $2 OR REGEXP_REPLACE(COALESCE(phone,''),'[^0-9]','','g') LIKE $3) LIMIT 15`, [lang, like, phoneLike])).rows;
         const leads = (await db.query(`SELECT id,name,phone,manager_id,status FROM leads WHERE language=$1 AND deleted_at IS NULL AND (LOWER(name) LIKE $2 OR REGEXP_REPLACE(COALESCE(phone,''),'[^0-9]','','g') LIKE $3) LIMIT 15`, [lang, like, phoneLike])).rows;
         return { rows: [...students.map(s => ({ kind: 'student', studentId: s.id, leadId: s.lead_id || null, name: s.name, phone: s.phone })),
@@ -536,10 +676,14 @@ async function createTransaction(pool, actor, body) {
     const key = requestKey(body.requestKey);
     return transaction(pool, async db => {
         const user = await access(db, actor);
-        const prior = (await db.query('SELECT id FROM fin_transactions WHERE request_key=$1', [key])).rows[0];
-        if (prior) return { id: prior.id, duplicate: true };
+        const prior = (await db.query("SELECT id,type,amount,category_code,account_id,TO_CHAR(txn_date,'YYYY-MM-DD') AS d FROM fin_transactions WHERE request_key=$1", [key])).rows[0];
+        if (prior) {
+            sameRequest(prior, { type: body.type, amount: F.money(body.amount), category_code: body.categoryCode, account_id: body.accountId, d: F.date(body.date) });
+            return { id: prior.id, duplicate: true };
+        }
         const settings = (await settingsRow(db)).data;
         const type = body.type;
+        if (body.categoryCode === 'ASSET_SALE') throw error(400, 'Asosiy vositani sotish “Asosiy vositalar” reestri orqali kiritiladi');
         if (!Object.hasOwn(F.TYPES, type)) throw error(400, 'Operatsiya turini tanlang');
         const cat = F.CATEGORY[body.categoryCode];
         if (!cat || cat.type !== type || body.categoryCode === 'TAX') throw error(400, 'Bu operatsiya turi uchun toifa noto‘g‘ri');
@@ -554,6 +698,10 @@ async function createTransaction(pool, actor, body) {
         if (type !== 'transfer' && !counterparty) throw error(400, 'Kimga / kimdan ekanini yozing');
         const needEvidence = ['refund', 'drawing'].includes(type) || (type === 'expense' && amount >= 1000000);
         const receiptUrl = await requireEvidence(db, body.receiptUrl, { required: needEvidence, label: 'Chek yoki hujjat' });
+        // Qaytarish va ta'sischiga to'lov hujjati bir marta ishlatiladi (bitta chek bilan ikki marta pul chiqarib bo'lmaydi).
+        if (['refund', 'drawing'].includes(type) && (await db.query(`SELECT 1 FROM fin_transactions t WHERE receipt_url=$1 AND type IN ('refund','drawing') AND reverses_id IS NULL
+            AND NOT EXISTS (SELECT 1 FROM fin_transactions r WHERE r.reverses_id=t.id)`, [receiptUrl])).rows.length) throw error(409, 'Bu hujjat boshqa qaytarish yoki to‘lov uchun ishlatilgan. Har bir pul chiqimi uchun alohida hujjat yuklang');
+        const [serviceStart, serviceEnd] = type === 'expense' ? servicePeriod(body) : [null, null];
         let payableId = null, paymentRecordId = null, nonSalary = false;
         if (cat.payroll) {
             // Maosh "Maoshlar" bo'limida hisoblanadi; bu yerda qo'lda kiritish faqat ataylab belgilansa (ikki marta hisoblanmasligi uchun).
@@ -566,8 +714,9 @@ async function createTransaction(pool, actor, body) {
             if (!rec || rec.voided) throw error(400, 'Qaytariladigan tushum topilmadi');
             const refunded = await sumPaid(db, `payment_record_id=$1 AND type='refund'`, [rec.id]);
             if (refunded + amount > Number(rec.amount)) throw error(409, 'Qaytarish summasi tushumdan oshib ketdi');
-            // Limit tushum bo'yicha jami qaytarishga qo'llanadi: kichik bo'laklarga bo'lib chetlab o'tib bo'lmaydi.
-            if (refunded + amount > settings.approvalLimit && !user.director) throw error(403, `Bu tushum bo‘yicha jami qaytarish ${settings.approvalLimit} so‘mdan oshadi — faqat rahbar tomonidan`);
+            // Limit o'quvchi (shartnoma) bo'yicha jami qaytarishga ham qo'llanadi: bir nechta tushumga bo'lib chetlab o'tib bo'lmaydi.
+            const studentRefunded = await sumPaid(db, `type='refund' AND payment_record_id IN (SELECT id FROM payment_records WHERE (lead_id IS NOT NULL AND lead_id=$1) OR (student_id IS NOT NULL AND student_id=$2))`, [rec.lead_id, rec.student_id]);
+            if (studentRefunded + amount > settings.approvalLimit && !user.director) throw error(403, `Bu o‘quvchi bo‘yicha jami qaytarish ${fmt(studentRefunded + amount)} so‘m — ${fmt(settings.approvalLimit)} so‘mdan oshadi, faqat rahbar tomonidan`);
             if (typeof body.terminates !== 'boolean') throw error(400, 'Shartnoma tugatiladimi (o‘quvchi o‘qishni to‘xtatdimi) yoki faqat ortiqcha to‘lov qaytarilyaptimi — belgilang');
             paymentRecordId = rec.id; ent = rec.language;
         }
@@ -583,6 +732,13 @@ async function createTransaction(pool, actor, body) {
         let usefulLife = null;
         if (cat.code === 'CAPEX') { usefulLife = Number(body.usefulLifeMonths || settings.usefulLifeMonths); if (!Number.isInteger(usefulLife) || usefulLife < 1 || usefulLife > 240) throw error(400, 'Foydalanish muddati 1–240 oy'); }
         const fee = type === 'transfer' && body.feeAmount ? amountOf(body.feeAmount) : 0;
+        // Uzum (kliring) hisob-kitobi qaysi maktab o'quvchilari uchun ekanini ko'rsatishi shart.
+        if (type === 'transfer' && account.kind === 'clearing' && !['english', 'russian'].includes(ent)) throw error(400, 'Uzum to‘lovi qaysi maktab (ingliz / rus) o‘quvchilari uchun ekanini tanlang');
+        // Vazifalar ajratilishi: katta chiqimlar, qarz olish va ta'sischiga to'lov — rahbar; xavfli amallar — kunlik jami ham.
+        if (['refund', 'drawing'].includes(type)) await requireApproval(db, user, settings, amount, type === 'refund' ? 'Qaytarish' : 'Ta’sischiga to‘lov');
+        else if (['expense', 'loan_repay', 'loan_in', 'transfer', 'income', 'capital'].includes(type) && amount + fee > settings.approvalLimit && !user.director)
+            throw error(403, `${F.TYPES[type]}: ${fmt(amount + fee)} so‘m — ${fmt(settings.approvalLimit)} so‘mdan katta, faqat rahbar tomonidan`);
+        if (!['income', 'capital', 'loan_in'].includes(type)) await assertNoOverdraft(db, user, account.id, day, amount + fee);
         const id = randomUUID();
         if (type === 'loan_in') {
             payableId = randomUUID();
@@ -590,15 +746,16 @@ async function createTransaction(pool, actor, body) {
                 VALUES($1,$2,'loan',$3,$4,'LOAN_REPAY',$5,$6,$7,$8,$9,$10)`, [payableId, ent, counterparty, description, amount, day, F.date(body.dueDate) || null, receiptUrl, user.id, user.name]);
         }
         await db.query(`INSERT INTO fin_transactions(id,request_key,entity,txn_date,type,category_code,account_id,to_account_id,amount,counterparty,description,receipt_url,
-            payable_id,payment_record_id,useful_life_months,non_salary,terminates,actor_id,actor_name) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)`,
+            payable_id,payment_record_id,useful_life_months,non_salary,terminates,service_start,service_end,actor_id,actor_name) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)`,
             [id, key, ent, day, type, cat.code, account.id, toAccount?.id || null, amount, counterparty, description, receiptUrl, payableId, paymentRecordId, usefulLife, nonSalary,
-                type === 'refund' && body.terminates === true, user.id, user.name]);
+                type === 'refund' && body.terminates === true, serviceStart, serviceEnd, user.id, user.name]);
         if (fee) {
             // Uzum / to'lov tizimi hisob-kitobi: bankka sof summa tushadi, komissiya kliring hisobidan xarajat bo'ladi.
             await db.query(`INSERT INTO fin_transactions(id,request_key,entity,txn_date,type,category_code,account_id,amount,counterparty,description,receipt_url,actor_id,actor_name)
                 VALUES($1,$2,$3,$4,'expense','BANK_FEES',$5,$6,$7,$8,$9,$10,$11)`, [randomUUID(), key.slice(0, 70) + '-fee', ent, day, account.id, fee, account.name, 'Komissiya' + (description ? ': ' + description : ''), receiptUrl, user.id, user.name]);
         }
-        await audit(db, user, 'transaction-create', id, null, { type, category: cat.code, entity: ent, date: day, amount, fee, terminates: type === 'refund' ? body.terminates === true : undefined, account: account.id, toAccount: toAccount?.id || null, payableId, paymentRecordId, counterparty, description, receiptUrl });
+        await audit(db, user, 'transaction-create', id, null, { type, category: cat.code, entity: ent, date: day, amount, fee, terminates: type === 'refund' ? body.terminates === true : undefined,
+            controlledAmount: ['refund', 'drawing'].includes(type) && !user.director ? amount : undefined, serviceStart, serviceEnd, account: account.id, toAccount: toAccount?.id || null, payableId, paymentRecordId, counterparty, description, receiptUrl });
         return { id, duplicate: false };
     });
 }
@@ -616,16 +773,30 @@ async function reverseTransaction(pool, actor, id, body) {
         await assertOpen(db, day, 'Storno sanasi');
         const settings = (await settingsRow(db)).data;
         if (Number(t.amount) > settings.approvalLimit && !user.director) throw error(403, `${settings.approvalLimit} so‘mdan katta operatsiyani storno qilish faqat rahbar tomonidan`);
+        if (t.category_code === 'ASSET_SALE') throw error(400, 'Asosiy vositani sotish storno qilinmaydi — kerak bo‘lsa rahbar bilan alohida tuzatish yozing');
+        if (t.category_code === 'CAPEX' && (await db.query('SELECT 1 FROM fin_asset_events WHERE asset_id=$1', [t.id])).rows.length) throw error(409, 'Bu aktiv bo‘yicha sotish/qadrsizlanish yozilgan — xaridni storno qilib bo‘lmaydi');
         if (t.type === 'loan_in') {
             if (await sumPaid(db, `payable_id=$1 AND type='loan_repay'`, [t.payable_id]) > 0) throw error(409, 'Bu qarz bo‘yicha qaytarish bor. Avval qaytarishlarni bekor qiling');
-            await db.query('UPDATE fin_payables SET voided_at=NOW(),void_reason=$2,voided_by=$3 WHERE id=$1', [t.payable_id, 'Olingan qarz bekor qilindi: ' + reason, user.id]);
+            await db.query('UPDATE fin_payables SET voided_at=NOW(),void_reason=$2,voided_by=$3,void_date=$4 WHERE id=$1', [t.payable_id, 'Olingan qarz bekor qilindi: ' + reason, user.id, day]);
         }
         const rid = randomUUID();
         await db.query(`INSERT INTO fin_transactions(id,entity,txn_date,type,category_code,account_id,to_account_id,amount,counterparty,description,receipt_url,payable_id,
-            payment_record_id,salary_id,reverses_id,reversal_reason,useful_life_months,non_salary,terminates,actor_id,actor_name) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)`,
+            payment_record_id,salary_id,reverses_id,reversal_reason,useful_life_months,non_salary,terminates,service_start,service_end,asset_id,actor_id,actor_name)
+            VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)`,
             [rid, t.entity, day, t.type, t.category_code, t.account_id, t.to_account_id, t.amount, t.counterparty, 'STORNO: ' + reason, t.receipt_url,
-                t.type === 'loan_in' ? null : t.payable_id, t.payment_record_id, t.salary_id, t.id, reason, t.useful_life_months, t.non_salary, t.terminates, user.id, user.name]);
-        await audit(db, user, 'transaction-reverse', t.id, { amount: Number(t.amount), date: t.d, type: t.type }, { reversalId: rid, date: day, reason });
+                t.type === 'loan_in' ? null : t.payable_id, t.payment_record_id, t.salary_id, t.id, reason, t.useful_life_months, t.non_salary, t.terminates,
+                t.service_start ? toKey(t.service_start) : null, t.service_end ? toKey(t.service_end) : null, t.asset_id, user.id, user.name]);
+        // O'tkazma bilan birga yozilgan komissiya ham storno qilinadi.
+        let feeReversal = null;
+        if (t.type === 'transfer' && t.request_key) {
+            const fee = (await db.query(`SELECT * FROM fin_transactions f WHERE request_key=$1 AND NOT EXISTS (SELECT 1 FROM fin_transactions r WHERE r.reverses_id=f.id)`, [t.request_key.slice(0, 70) + '-fee'])).rows[0];
+            if (fee) {
+                feeReversal = randomUUID();
+                await db.query(`INSERT INTO fin_transactions(id,entity,txn_date,type,category_code,account_id,amount,counterparty,description,receipt_url,reverses_id,reversal_reason,actor_id,actor_name)
+                    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`, [feeReversal, fee.entity, day, fee.type, fee.category_code, fee.account_id, fee.amount, fee.counterparty, 'STORNO: ' + reason, fee.receipt_url, fee.id, reason, user.id, user.name]);
+            }
+        }
+        await audit(db, user, 'transaction-reverse', t.id, { amount: Number(t.amount), date: t.d, type: t.type }, { reversalId: rid, feeReversalId: feeReversal, date: day, reason });
         return { id: rid };
     });
 }
@@ -633,9 +804,10 @@ async function createPayable(pool, actor, body) {
     const key = requestKey(body.requestKey);
     return transaction(pool, async db => {
         const user = await access(db, actor);
-        const prior = (await db.query('SELECT id FROM fin_payables WHERE request_key=$1', [key])).rows[0];
-        if (prior) return { id: prior.id, duplicate: true };
+        const prior = (await db.query("SELECT id,amount,counterparty,TO_CHAR(issue_date,'YYYY-MM-DD') AS i FROM fin_payables WHERE request_key=$1", [key])).rows[0];
+        if (prior) { sameRequest(prior, { amount: F.money(body.amount), counterparty: text(body.counterparty, 200), i: F.date(body.issueDate) }); return { id: prior.id, duplicate: true }; }
         const kind = ['bill', 'other'].includes(body.kind) ? body.kind : 'bill';
+        const [serviceStart, serviceEnd] = servicePeriod(body);
         const cat = F.CATEGORY[body.categoryCode];
         if (!cat || cat.type !== 'expense' || cat.payroll || cat.code === 'CAPEX' || body.categoryCode === 'TAX') throw error(400, 'Xarajat toifasini tanlang (maosh va kapital xarajat bu yerda kiritilmaydi)');
         const counterparty = text(body.counterparty, 200);
@@ -647,9 +819,9 @@ async function createPayable(pool, actor, body) {
         if (due && due < issue) throw error(400, 'To‘lov muddati hujjat sanasidan oldin bo‘lmaydi');
         const id = randomUUID(), amount = amountOf(body.amount), ent = entity(body.entity);
         const documentUrl = await requireEvidence(db, body.documentUrl, { label: 'Hujjat' });
-        await db.query(`INSERT INTO fin_payables(id,request_key,entity,kind,counterparty,description,category_code,amount,issue_date,due_date,document_url,actor_id,actor_name)
-            VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`, [id, key, ent, kind, counterparty, text(body.description, 1000), cat.code, amount, issue, due, documentUrl, user.id, user.name]);
-        await audit(db, user, 'payable-create', id, null, { kind, entity: ent, counterparty, category: cat.code, amount, issue, due, documentUrl });
+        await db.query(`INSERT INTO fin_payables(id,request_key,entity,kind,counterparty,description,category_code,amount,issue_date,due_date,document_url,service_start,service_end,actor_id,actor_name)
+            VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`, [id, key, ent, kind, counterparty, text(body.description, 1000), cat.code, amount, issue, due, documentUrl, serviceStart, serviceEnd, user.id, user.name]);
+        await audit(db, user, 'payable-create', id, null, { kind, entity: ent, counterparty, category: cat.code, amount, issue, due, documentUrl, serviceStart, serviceEnd });
         return { id, duplicate: false };
     });
 }
@@ -660,10 +832,13 @@ async function voidPayable(pool, actor, id, body) {
         if (!p || p.voided_at) throw error(404, 'Yozuv topilmadi');
         if (p.kind === 'loan') throw error(400, 'Qarzni bekor qilish uchun olingan qarz operatsiyasini storno qiling');
         const reason = text(body.reason, 500); if (reason.length < 5) throw error(400, 'Sababini yozing');
-        await assertOpen(db, p.i, 'Hujjat sanasi');
         if (await sumPaid(db, `payable_id=$1 AND type<>'loan_in'`, [id]) > 0) throw error(409, 'Bu hujjat bo‘yicha to‘lov qilingan. Avval to‘lovni storno qiling');
-        await db.query('UPDATE fin_payables SET voided_at=NOW(),void_reason=$2,voided_by=$3 WHERE id=$1', [id, reason, user.id]);
-        await audit(db, user, 'payable-void', id, { amount: Number(p.amount) }, { reason });
+        // Bekor qilish sanasi: ochiq davrda; hujjat sanasi yopiq bo'lsa — bugun (yopilgan oy o'zgarmaydi).
+        const voidDate = dateOf(F.date(body.date) || (await isClosed(db, p.i) ? F.today() : p.i), 'Bekor qilish sanasi');
+        if (voidDate < p.i) throw error(400, 'Bekor qilish sanasi hujjat sanasidan oldin bo‘lmaydi');
+        await assertOpen(db, voidDate, 'Bekor qilish sanasi');
+        await db.query('UPDATE fin_payables SET voided_at=NOW(),void_reason=$2,voided_by=$3,void_date=$4 WHERE id=$1', [id, reason, user.id, voidDate]);
+        await audit(db, user, 'payable-void', id, { amount: Number(p.amount) }, { reason, voidDate });
         return { ok: true };
     });
 }
@@ -723,8 +898,8 @@ async function adjustStudentBalance(db, rec, delta) {
 }
 async function insertCorrection(db, user, key, op, { reason, evidenceUrl, lang }) {
     const sourceKey = 'correction:' + key;
-    const prior = (await db.query('SELECT id FROM payment_records WHERE source_key=$1', [sourceKey])).rows[0];
-    if (prior) return { id: prior.id, duplicate: true };
+    const prior = (await db.query("SELECT id,amount,TO_CHAR(paid_date,'YYYY-MM-DD') AS d FROM payment_records WHERE source_key=$1", [sourceKey])).rows[0];
+    if (prior) { sameRequest(prior, { amount: F.money(op.amount), d: F.date(op.date) }); return { id: prior.id, duplicate: true }; }
     const day = dateOf(op.date, 'To‘lov sanasi');
     await assertOpen(db, day, 'To‘lov sanasi');
     const amount = amountOf(op.amount);
@@ -773,6 +948,13 @@ async function batchCorrections(pool, actor, body) {
         const settings = (await settingsRow(db)).data;
         const lang = entity(body.entity, false);
         const evidenceUrl = await requireEvidence(db, body.evidenceUrl, { required: true });
+        // To'plam jami: bekor qilinadigan va qo'shiladigan summalar yig'indisi limit va kunlik chegaraga qo'llanadi.
+        const voidIds = ops.flatMap(op => op.kind === 'void' ? [String(op.recordId)] : op.kind === 'replace' ? [String(op.replacesId)] : []);
+        const voidTotal = voidIds.length ? Number((await db.query('SELECT COALESCE(SUM(amount),0) AS n FROM payment_records WHERE id = ANY($1)', [voidIds])).rows[0].n) : 0;
+        const addTotal = ops.reduce((n, op) => n + (op.kind === 'add' || op.kind === 'replace' ? F.money(op.amount) || 0 : 0), 0);
+        const batchTotal = voidTotal + addTotal;
+        const resubmitted = (await db.query("SELECT 1 FROM fin_audit WHERE action='receipt-batch' AND entity_id=$1", [key])).rows.length > 0;
+        if (!resubmitted) await requireApproval(db, user, settings, batchTotal, 'Tuzatishlar to‘plami (bekor qilinadigan + qo‘shiladigan jami)');
         const results = [];
         for (const [i, op] of ops.entries()) {
             try {
@@ -791,7 +973,7 @@ async function batchCorrections(pool, actor, body) {
                 } else throw error(400, 'Noma’lum tuzatish turi');
             } catch (e) { e.message = `${i + 1}-tuzatish: ${e.message}`; throw e; }
         }
-        await audit(db, user, 'receipt-batch', key, null, { count: ops.length, reason, evidenceUrl });
+        if (!resubmitted) await audit(db, user, 'receipt-batch', key, null, { count: ops.length, reason, evidenceUrl, total: batchTotal, controlledAmount: user.director ? undefined : batchTotal });
         return { results };
     });
 }
@@ -804,8 +986,11 @@ async function voidReceipts(pool, actor, body) {
         const user = await access(db, actor);
         const settings = (await settingsRow(db)).data;
         const evidenceUrl = await requireEvidence(db, body.evidenceUrl, { required: true });
+        const total = Number((await db.query('SELECT COALESCE(SUM(amount),0) AS n FROM payment_records WHERE id = ANY($1)', [ids])).rows[0].n);
+        await requireApproval(db, user, settings, total, `${ids.length} ta tushumni bekor qilish (jami)`);
         const out = [];
         for (const id of ids) out.push(await voidReceipt(db, user, settings, id, { reason, evidenceUrl, date: body.date }));
+        await audit(db, user, 'receipt-void-batch', ids.join(',').slice(0, 200), null, { count: ids.length, controlledAmount: user.director ? undefined : total, reason });
         return { voided: out };
     });
 }
@@ -872,8 +1057,8 @@ async function addAccountCheck(pool, actor, accountId, body) {
     return transaction(pool, async db => {
         const user = await access(db, actor);
         if (body.requestKey) {
-            const prior = (await db.query('SELECT id FROM fin_account_checks WHERE request_key=$1', [requestKey(body.requestKey)])).rows[0];
-            if (prior) return { ok: true, duplicate: true };
+            const prior = (await db.query("SELECT id,account_id,actual_balance,TO_CHAR(check_date,'YYYY-MM-DD') AS d FROM fin_account_checks WHERE request_key=$1", [requestKey(body.requestKey)])).rows[0];
+            if (prior) { sameRequest(prior, { account_id: accountId, actual_balance: Number(body.actualBalance), d: F.date(body.date) }); return { ok: true, duplicate: true }; }
         }
         await accountRow(db, accountId);
         const day = dateOf(body.date, 'Tekshiruv sanasi');
@@ -888,11 +1073,13 @@ async function addAccountCheck(pool, actor, accountId, body) {
 }
 // Oy yopishdan oldingi majburiy nazorat: har bir pul hisobi oy oxirida (oxirgi 3 kun) haqiqiy qoldiq bilan
 // solishtirilgan va farqi nol bo'lishi kerak. Aks holda rahbar sababini yozib, ongli ravishda yopadi.
-const fmt = n => String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 function closeReadiness(data, month) {
     const end = F.monthEnd(month), issues = [], mv = F.movements(data);
+    const balances = new Map(F.accountBalances(data, end).map(a => [a.id, a.balance]));
     for (const a of data.accounts) {
-        if (!a.active || !F.EQUIVALENT_KINDS.has(a.kind)) continue;
+        // Pul hisoblari va Uzum kliring hisobi (Uzum ko'chirmasi bilan) tekshiriladi; faolsiz, lekin qoldig'i bor hisob ham.
+        if (!F.EQUIVALENT_KINDS.has(a.kind) && a.kind !== 'clearing') continue;
+        if (!a.active && !balances.get(a.id)) continue;
         const used = mv.some(m => m.account === a.id && m.date <= end) || (a.openingBalance && (!a.openingDate || a.openingDate <= end));
         if (!used) continue;
         const checks = (data.accountChecks || []).filter(c => c.accountId === a.id && c.date >= F.addDays(end, -3) && c.date <= end);
@@ -932,6 +1119,9 @@ async function lockMonth(pool, actor, body) {
         if (F.monthEnd(month) >= F.today()) throw error(400, 'Faqat tugagan oyni yopish mumkin');
         if (through && month <= through) return { ok: true, alreadyLocked: true, closedThrough: through };
         const data = await load(db);
+        // Oy yopilishidan oldin barcha moliyaviy qatorlar muhri va audit zanjiri to'liq tekshiriladi.
+        const seals = await verifySeals(db), chain = await verifyAuditChain(db);
+        if (!seals.ok || !chain.ok) throw error(409, `Ma’lumot yaxlitligi buzilgan (${!seals.ok ? `${seals.table}: ${seals.reason}` : `audit jurnali #${chain.brokenAt}`}) — oyni yopib bo‘lmaydi`);
         const issues = closeReadiness(data, month);
         const note = text(body.note, 1000);
         if (issues.length && !(body.override === true && note.length >= 10))
@@ -956,6 +1146,60 @@ async function lockMonth(pool, actor, body) {
         return { ok: true, closedThrough: month, snapshotMonths: months };
     });
 }
+// ---------- Asosiy vositalar: sotish, hisobdan chiqarish, qadrsizlanish (rahbar) ----------
+async function assetRow(db, id) {
+    const t = (await db.query("SELECT *,TO_CHAR(txn_date,'YYYY-MM-DD') AS d FROM fin_transactions WHERE id=$1 AND category_code='CAPEX' AND reverses_id IS NULL", [id])).rows[0];
+    if (!t) throw error(404, 'Asosiy vosita topilmadi');
+    if ((await db.query('SELECT 1 FROM fin_transactions WHERE reverses_id=$1', [id])).rows.length) throw error(409, 'Bu xarid storno qilingan');
+    if ((await db.query("SELECT 1 FROM fin_asset_events WHERE asset_id=$1 AND kind='disposal'", [id])).rows.length) throw error(409, 'Bu aktiv allaqachon chiqarilgan');
+    return t;
+}
+async function disposeAsset(pool, actor, id, body) {
+    return transaction(pool, async db => {
+        const user = await access(db, actor, { director: true });
+        const t = await assetRow(db, id);
+        const day = dateOf(body.date, 'Chiqarish sanasi');
+        if (day <= t.d) throw error(400, 'Chiqarish sanasi xarid sanasidan keyin bo‘lishi kerak');
+        await assertOpen(db, day, 'Chiqarish sanasi');
+        const reason = text(body.reason, 500); if (reason.length < 5) throw error(400, 'Sababini yozing');
+        const proceeds = body.proceeds ? amountOf(body.proceeds) : 0;
+        const evidenceUrl = await requireEvidence(db, body.evidenceUrl, { required: proceeds > 0, label: 'Sotish hujjati' });
+        let txnId = null;
+        if (proceeds) {
+            const account = await accountRow(db, body.accountId);
+            txnId = randomUUID();
+            await db.query(`INSERT INTO fin_transactions(id,entity,txn_date,type,category_code,account_id,amount,counterparty,description,receipt_url,asset_id,actor_id,actor_name)
+                VALUES($1,$2,$3,'income','ASSET_SALE',$4,$5,$6,$7,$8,$9,$10,$11)`, [txnId, t.entity, day, account.id, proceeds, text(body.counterparty, 200) || 'Xaridor', 'Sotildi: ' + (t.counterparty || t.description), evidenceUrl, t.id, user.id, user.name]);
+        }
+        const eid = randomUUID();
+        await db.query('INSERT INTO fin_asset_events(id,asset_id,kind,event_date,amount,transaction_id,reason,evidence_url,actor_id,actor_name) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)',
+            [eid, t.id, 'disposal', day, proceeds, txnId, reason, evidenceUrl, user.id, user.name]);
+        await audit(db, user, 'asset-dispose', t.id, { cost: Number(t.amount), date: t.d }, { date: day, proceeds, reason, transactionId: txnId });
+        return { id: eid, transactionId: txnId };
+    });
+}
+async function impairAsset(pool, actor, id, body) {
+    return transaction(pool, async db => {
+        const user = await access(db, actor, { director: true });
+        const t = await assetRow(db, id);
+        if ((await db.query("SELECT 1 FROM fin_asset_events WHERE asset_id=$1 AND kind='impairment'", [id])).rows.length) throw error(409, 'Bu aktiv bo‘yicha qadrsizlanish allaqachon yozilgan');
+        const day = dateOf(body.date, 'Sana');
+        if (day <= t.d) throw error(400, 'Sana xarid sanasidan keyin bo‘lishi kerak');
+        await assertOpen(db, day, 'Sana');
+        const reason = text(body.reason, 500); if (reason.length < 10) throw error(400, 'Qadrsizlanish sababini batafsil yozing (kamida 10 belgi)');
+        const amount = amountOf(body.amount);
+        const data = await load(db);
+        const asset = F.fixedAssets(data).find(a => a.transactionId === t.id);
+        const nbv = F.netBookValue(asset, F.addDays(day, -1));
+        if (amount > nbv) throw error(400, `Qadrsizlanish qoldiq qiymatdan (${fmt(nbv)} so‘m) oshmasin`);
+        const evidenceUrl = await requireEvidence(db, body.evidenceUrl, { required: true, label: 'Baholash hujjati' });
+        const eid = randomUUID();
+        await db.query('INSERT INTO fin_asset_events(id,asset_id,kind,event_date,amount,reason,evidence_url,actor_id,actor_name) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)',
+            [eid, t.id, 'impairment', day, amount, reason, evidenceUrl, user.id, user.name]);
+        await audit(db, user, 'asset-impair', t.id, { nbv }, { date: day, amount, reason });
+        return { id: eid };
+    });
+}
 async function saveSettings(pool, actor, body) {
     return transaction(pool, async db => {
         const user = await access(db, actor, { director: true });
@@ -968,7 +1212,8 @@ async function saveSettings(pool, actor, body) {
         const data = { ...row.data,
             courseMonths: { english: int(d.courseMonths?.english ?? cur.courseMonths.english, 1, 24, 'Kurs davomiyligi'), russian: int(d.courseMonths?.russian ?? cur.courseMonths.russian, 1, 24, 'Kurs davomiyligi') },
             suspiciousMin: int(d.suspiciousMin ?? cur.suspiciousMin, 0, 1000000, 'Shubhali summa'), salaryDueDays: int(d.salaryDueDays ?? cur.salaryDueDays, 0, 60, 'Maosh to‘lash muddati'),
-            usefulLifeMonths: int(d.usefulLifeMonths ?? cur.usefulLifeMonths, 1, 240, 'Foydalanish muddati'), approvalLimit: int(d.approvalLimit ?? cur.approvalLimit, 0, 1e12, 'Tasdiqlash chegarasi'), eclRates: rates };
+            usefulLifeMonths: int(d.usefulLifeMonths ?? cur.usefulLifeMonths, 1, 240, 'Foydalanish muddati'), approvalLimit: int(d.approvalLimit ?? cur.approvalLimit, 0, 1e12, 'Tasdiqlash chegarasi'), eclRates: rates,
+            turnoverTaxRate: (() => { const v = Number(d.turnoverTaxRate ?? cur.turnoverTaxRate ?? 0); if (!(v >= 0 && v <= 30) || Math.round(v * 100) !== v * 100) throw error(400, 'Aylanma soliq stavkasi 0–30% (ko‘pi bilan 2 kasr)'); return v; })() };
         // Taxmin o'zgarishi faqat bugundan kuchga kiradi (IAS 8): tarixiy hisoblar eski sozlama bilan qoladi.
         const from = F.today();
         await db.query("UPDATE fin_settings SET data=$1,revision=revision+1,updated_at=NOW() WHERE id='main'", [JSON.stringify(data)]);
@@ -1008,4 +1253,4 @@ async function migrateLegacyCash(db) {
 
 module.exports = { SCHEMA, initSchema, load, overview, cashbook, listTransactions, auditLog, people, storeEvidence, readEvidence, createTransaction, reverseTransaction,
     createPayable, voidPayable, recordSalaryPayment, voidReceipts, manualReceipt, batchCorrections, reconcile, saveAccount, addAccountCheck, closeStatus, lockMonth,
-    saveSettings, assertOpen, verifyAuditChain, closeReadiness };
+    saveSettings, assertOpen, verifyAuditChain, verifySeals, closeReadiness, disposeAsset, impairAsset };

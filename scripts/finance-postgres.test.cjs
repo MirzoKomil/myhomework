@@ -16,7 +16,7 @@ test('real PostgreSQL finance integration', { skip: !url }, async t => {
     fs.mkdirSync(path.join(process.env.DATA_DIR, 'uploads'));
     fs.writeFileSync(path.join(process.env.DATA_DIR, 'uploads', 'late.pdf'), 'x');
     const pool = new Pool({ connectionString: url });
-    const admin = { id: 'admin' }, accountant = { id: 'acc' }, manager = { id: 'manager' };
+    const admin = { id: 'admin' }, accountant = { id: 'acc' }, manager = { id: 'manager' }, acc2 = { id: 'acc2' }, acc3 = { id: 'acc3' };
     let seq = 0;
     const key = () => 'test-request-key-' + String(++seq).padStart(6, '0');
     const rejects = async (promise, status, re) => {
@@ -37,7 +37,7 @@ test('real PostgreSQL finance integration', { skip: !url }, async t => {
         CREATE TABLE payments(id TEXT PRIMARY KEY,student_id TEXT,paid INTEGER,debt INTEGER,date TEXT);
         CREATE TABLE json_data(key TEXT PRIMARY KEY,data JSONB);
         CREATE TABLE salary_transactions(id TEXT PRIMARY KEY,employee_id TEXT,language TEXT,period_start DATE,period_end DATE,amount BIGINT,status TEXT,paid_at TIMESTAMPTZ,cash_expense_id TEXT);
-        INSERT INTO users VALUES('admin','Admin','admin','admin',''),('acc','Buxgalter','acc','accountant',''),('manager','Sales','sales','sales_manager','');
+        INSERT INTO users VALUES('admin','Admin','admin','admin',''),('acc','Buxgalter','acc','accountant',''),('acc2','Buxgalter 2','acc2','accountant',''),('acc3','Buxgalter 3','acc3','accountant',''),('manager','Sales','sales','sales_manager','');
         INSERT INTO hr_employees(id,name,role,lang,login,status) VALUES('m','Sales','sotuv-menejeri','russian','sales','active'),('t1','Ustoz','rus-oqituvchi','russian','t1','active');
         INSERT INTO user_sales_manager_links VALUES('manager','m');
         INSERT INTO json_data VALUES('cashFlow','[{"id":"cf1","type":"chiqim","category":"operatsion","purpose":"Target byudjeti","amount":300000,"date":"2026-09-05","paymentMethod":"Karta","person":"Meta"},{"id":"cf2","type":"chiqim","category":"operatsion","purpose":"CEO shaxsiy xarajati","amount":100000,"date":"2026-09-06","paymentMethod":"Naqd pul"}]');
@@ -201,10 +201,71 @@ test('real PostgreSQL finance integration', { skip: !url }, async t => {
             await rejects(finance.reverseTransaction(pool, accountant, big.id, { reason: 'Xato kiritilgan' }), 403);
             await finance.reverseTransaction(pool, admin, big.id, { reason: 'Xato kiritilgan' });
             // Qaytarish limiti tushum bo'yicha jami: bo'laklab chetlab o'tib bo'lmaydi
-            await insertReceipt('big3', '2026-10-09', 9000000, { name: 'Uch Bo‘lak' });
+            await insertReceipt('big3', '2026-10-09', 9000000, { name: 'Uch Bo‘lak', method: 'bank' });
+            await insertReceipt('big4', '2026-10-09', 9000000, { name: 'Uch Bo‘lak', method: 'bank', lead: 'l-big3' });
             const rf = { entity: 'russian', type: 'refund', categoryCode: 'REFUND', accountId: 'acc-bank', date: '2026-10-09', counterparty: 'Uch', paymentRecordId: 'big3', terminates: false };
-            await finance.createTransaction(pool, accountant, { ...rf, requestKey: key(), amount: 4000000, receiptUrl: await evidence() });
-            await rejects(finance.createTransaction(pool, accountant, { ...rf, requestKey: key(), amount: 4000000, receiptUrl: await evidence() }), 403, /jami/);
+            await finance.createTransaction(pool, acc2, { ...rf, requestKey: key(), amount: 4000000, receiptUrl: await evidence() });
+            await rejects(finance.createTransaction(pool, acc2, { ...rf, requestKey: key(), amount: 4000000, receiptUrl: await evidence() }), 403, /jami/);
+            // Shu o'quvchining boshqa tushumi orqali ham chetlab o'tib bo'lmaydi
+            await rejects(finance.createTransaction(pool, acc3, { ...rf, paymentRecordId: 'big4', requestKey: key(), amount: 2000000, receiptUrl: await evidence() }), 403, /o.quvchi/);
+            // Kunlik jami: boshqa o'quvchiga kichik qaytarish ham bugungi chegarani oshirsa — rahbar
+            await rejects(finance.createTransaction(pool, acc2, { ...rf, paymentRecordId: 'r2', requestKey: key(), amount: 1500000, receiptUrl: await evidence() }), 403, /kunlik/);
+            // To'plam jami: 3 × 2 mln qo'shish (har biri limitdan kichik) — rahbar
+            await rejects(finance.batchCorrections(pool, acc3, { requestKey: key(), entity: 'russian', reason: 'Uchta tushum qo‘shish', evidenceUrl: await evidence(),
+                operations: [1, 2, 3].map(() => ({ kind: 'add', date: '2026-10-09', amount: 2000000, method: 'bank', leadId: 'l9' })) }), 403, /jami/);
+            // Katta chiqim, qarz olish, o'tkazma — rahbar; qoldiq manfiyga tushmaydi
+            const ex = { entity: 'common', type: 'expense', categoryCode: 'RENT', accountId: 'acc-cash', date: '2026-10-09', counterparty: 'Ijara' };
+            await rejects(finance.createTransaction(pool, acc3, { ...ex, requestKey: key(), amount: 6000000, receiptUrl: await evidence() }), 403, /rahbar/);
+            await rejects(finance.createTransaction(pool, acc3, { ...ex, requestKey: key(), amount: 4900000, receiptUrl: await evidence() }), 403, /manfiy/);
+            // Hujjat qayta ishlatilmaydi; so'rov identifikatori boshqa ma'lumot bilan — rad
+            const once = await evidence();
+            await finance.createTransaction(pool, admin, { ...rf, paymentRecordId: 'r2', requestKey: key(), amount: 100000, receiptUrl: once });
+            await rejects(finance.createTransaction(pool, admin, { ...rf, paymentRecordId: 'r2', requestKey: key(), amount: 100000, receiptUrl: once }), 409, /hujjat/);
+            const k2 = key(), small = { ...ex, accountId: 'acc-bank', amount: 100000, requestKey: k2 };
+            await finance.createTransaction(pool, admin, small);
+            await rejects(finance.createTransaction(pool, admin, { ...small, amount: 900000 }), 409, /identifikatori/);
+            // Uzum to'lovi maktabsiz kiritilmaydi
+            await rejects(finance.createTransaction(pool, admin, { requestKey: key(), entity: 'common', type: 'transfer', categoryCode: 'TRANSFER', accountId: 'acc-uzum', toAccountId: 'acc-bank', amount: 1000, date: '2026-10-09' }), 400, /maktab/);
+        });
+
+        await t.test('a reversed loan keeps the liability until the reversal date; a voided bill reverses on its void date', async () => {
+            const loan = await finance.createTransaction(pool, admin, { requestKey: key(), entity: 'common', type: 'loan_in', categoryCode: 'LOAN_IN', accountId: 'acc-bank', amount: 2000000, date: '2026-10-11', counterparty: 'Do‘st' });
+            await finance.reverseTransaction(pool, admin, loan.id, { reason: 'Qarz qaytarib berildi', date: '2026-10-13' });
+            for (const day of ['2026-10-11', '2026-10-12', '2026-10-13', '2026-10-20']) {
+                const o = await finance.overview(pool, admin, { start: '2026-10-01', end: day, scope: 'all' });
+                assert.equal(o.balance.balanced, true, day + ' ' + o.balance.imbalance);
+            }
+            const bill = await finance.createPayable(pool, accountant, { requestKey: key(), kind: 'bill', entity: 'common', counterparty: 'Reklama', categoryCode: 'MKT_OTHER', amount: 300000, issueDate: '2026-10-02' });
+            await finance.voidPayable(pool, accountant, bill.id, { reason: 'Xizmat ko‘rsatilmadi', date: '2026-10-15' });
+            const early = await finance.overview(pool, admin, { start: '2026-10-01', end: '2026-10-14', scope: 'all', basis: 'accrual' });
+            assert.equal(early.payables.rows.some(r => r.id === bill.id), true);
+            const late = await finance.overview(pool, admin, { start: '2026-10-15', end: '2026-10-20', scope: 'all', basis: 'accrual' });
+            assert.equal(late.balance.balanced, true);
+        });
+
+        await t.test('fixed assets: sale with gain/loss, write-off and impairment (director); prepaid rent spreads over its period', async () => {
+            const cap = await finance.createTransaction(pool, admin, { requestKey: key(), entity: 'common', type: 'expense', categoryCode: 'CAPEX', accountId: 'acc-bank', amount: 3600000, date: '2026-10-01', counterparty: 'Proyektor', usefulLifeMonths: 36, receiptUrl: await evidence() });
+            await rejects(finance.impairAsset(pool, accountant, cap.id, { date: '2026-10-10', amount: 100000, reason: 'Shikastlandi, baholandi' }), 403);
+            await finance.impairAsset(pool, admin, cap.id, { date: '2026-10-10', amount: 500000, reason: 'Shikastlandi, mustaqil baholash', evidenceUrl: await evidence() });
+            await finance.disposeAsset(pool, admin, cap.id, { date: '2026-10-20', proceeds: 2000000, accountId: 'acc-bank', reason: 'Sotildi', evidenceUrl: await evidence() });
+            await rejects(finance.disposeAsset(pool, admin, cap.id, { date: '2026-10-21', reason: 'Yana sotish' }), 409);
+            await rejects(finance.reverseTransaction(pool, admin, cap.id, { reason: 'Xaridni bekor qilish' }), 409);
+            const o = await finance.overview(pool, admin, { start: '2026-10-01', end: '2026-10-25', scope: 'all', basis: 'accrual' });
+            const a = o.assets.find(x => x.transactionId === cap.id);
+            assert.equal(a.nbv, 0); assert.equal(a.disposalKind, 'sale');
+            assert.ok(o.pnl.asset_result < 0); // qadrsizlanish + sotishdagi zarar
+            assert.equal(o.balance.ppeNet, 0);
+            assert.equal(o.cashflow.investing.find(l => l.key === 'asset_sale').amount, 2000000);
+            assert.equal(o.balance.balanced, true, String(o.balance.imbalance));
+            const rentBefore = (await finance.overview(pool, admin, { start: '2026-10-01', end: '2026-10-31', scope: 'all', basis: 'accrual' })).pnl.rent || 0;
+            const rent = await finance.createTransaction(pool, admin, { requestKey: key(), entity: 'common', type: 'expense', categoryCode: 'RENT', accountId: 'acc-bank', amount: 1200000, date: '2026-10-01', counterparty: 'Ijara (yillik)', serviceStart: '2026-10-01', serviceEnd: '2027-09-30', receiptUrl: await evidence() });
+            const oct = await finance.overview(pool, admin, { start: '2026-10-01', end: '2026-10-31', scope: 'all', basis: 'accrual' });
+            assert.equal(oct.pnl.rent - rentBefore, Math.round(1200000 * 31 / 365)); // faqat oktyabr ulushi
+            assert.ok(oct.balance.prepaidExpenses > 1000000);
+            assert.equal(oct.balance.balanced, true, String(oct.balance.imbalance));
+            await finance.reverseTransaction(pool, admin, rent.id, { reason: 'Shartnoma bekor qilindi', date: '2026-10-20' });
+            const after = await finance.overview(pool, admin, { start: '2026-10-01', end: '2026-10-31', scope: 'all', basis: 'accrual' });
+            assert.equal(after.balance.prepaidExpenses, 0); assert.equal(after.balance.balanced, true);
         });
 
         await t.test('contract value is frozen in finance at the first receipt; lead edits do not rewrite history', async () => {
@@ -290,6 +351,16 @@ test('real PostgreSQL finance integration', { skip: !url }, async t => {
             await pool.query('ALTER TABLE fin_audit ENABLE TRIGGER fin_immutable_fin_audit');
             const bad = await finance.auditLog(pool, accountant, { limit: 5 });
             assert.equal(bad.chain.ok, false);
+        });
+
+        await t.test('row seals detect edits and unsealed inserts made with triggers disabled', async () => {
+            assert.equal((await finance.verifySeals(pool)).ok, true);
+            await pool.query('ALTER TABLE fin_transactions DISABLE TRIGGER USER');
+            await pool.query("UPDATE fin_transactions SET amount=amount+1 WHERE id=(SELECT id FROM fin_transactions ORDER BY created_at LIMIT 1)");
+            await pool.query('ALTER TABLE fin_transactions ENABLE TRIGGER USER');
+            const v = await finance.verifySeals(pool);
+            assert.equal(v.ok, false); assert.equal(v.table, 'fin_transactions');
+            await rejects(finance.lockMonth(pool, admin, { month: '2026-09', override: true, note: 'Yaxlitlik buzilgan holda yopishga urinish' }), 409, /yaxlitligi/);
         });
     } finally {
         await pool.end();

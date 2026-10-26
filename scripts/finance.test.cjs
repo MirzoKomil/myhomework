@@ -329,7 +329,7 @@ test('C2: storno of an equipment purchase disposes the asset — no negative PP&
     const h2 = F.profitAndLoss(d, { start: '2026-07-01', end: '2026-12-31', basis: 'accrual' });
     assert.equal(h2.depreciation || 0, 0);
     const year = F.profitAndLoss(d, { start: '2026-01-01', end: '2026-12-31', basis: 'accrual' });
-    assert.equal(year.depreciation, year.other_income); // amortizatsiya chiqarish natijasi bilan yopiladi: sof 0
+    assert.equal(year.depreciation, year.asset_result); // amortizatsiya chiqarish natijasi bilan yopiladi: sof 0
     assert.equal(year.net_profit, 0);
 });
 
@@ -414,4 +414,78 @@ test('reconcile: gender endings are not stripped — Aziza Karimova is not Aziz 
         [{ id: 'x', date: '2026-09-10', name: 'Aziza Karimova', amount: 1800000 }, { id: 'y', date: '2026-09-11', name: 'Aziz Karimov', amount: 1800000 }]);
     const m = r.results.find(x => x.external);
     assert.equal(m.ledger.id, 'y');
+});
+
+// ---------- Auditor regressiyalari (3-bosqich) ----------
+const ACC26 = ACC.map(a => ({ ...a, openingDate: '2026-01-01' }));
+test('R3-C1: a reversed loan keeps its liability until the reversal date — balance sheet balances every day', () => {
+    const d = data({ accounts: ACC26, transactions: [tx('L', '2026-02-01', 'loan_in', 'LOAN_IN', 10000000, { entity: 'common', accountId: 'acc-bank', payableId: 'P' }),
+        tx('LR', '2026-04-10', 'loan_in', 'LOAN_IN', 10000000, { entity: 'common', accountId: 'acc-bank', payableId: 'P', reversesId: 'L' })],
+        payables: [{ id: 'P', kind: 'loan', entity: 'common', amount: 10000000, issueDate: '2026-02-01', voided: true, voidDate: '2026-04-10', categoryCode: 'LOAN_REPAY' }] });
+    for (const day of ['2026-02-01', '2026-03-31', '2026-04-09', '2026-04-10', '2026-06-30']) assert.equal(F.balanceSheet(d, day).balanced, true, day);
+    assert.equal(F.balanceSheet(d, '2026-03-31').loans, 10000000);
+    assert.equal(F.balanceSheet(d, '2026-04-10').loans, 0);
+});
+
+test('R3-C2: paying for the next course early opens a new contract that starts after the current one', () => {
+    const d = data({ accounts: ACC26, receipts: [rc('a', '2026-01-01', 1000000, { leadId: 'L', contractValue: 1000000 }), rc('b', '2026-03-25', 1000000, { leadId: 'L', contractValue: 1000000 })] });
+    const cs = F.contracts(d);
+    assert.equal(cs.length, 2);
+    assert.equal(cs[1].start, '2026-04-01'); assert.equal(cs[1].earlyRenewal, true);
+    const q1 = F.profitAndLoss(d, { start: '2026-01-01', end: '2026-03-31', basis: 'accrual' });
+    const q2 = F.profitAndLoss(d, { start: '2026-04-01', end: '2026-06-30', basis: 'accrual' });
+    assert.equal(q1.net_revenue, 1000000); assert.equal(q2.net_revenue, 1000000);
+    assert.equal(F.balanceSheet(d, '2026-03-31').contractLiabilities, 1000000);
+    // To'liq to'lanmagan kursga oxirida kelgan to'lov — qarzni yopish, yangi kurs emas
+    const debt = data({ accounts: ACC26, receipts: [rc('a', '2026-01-01', 500000, { leadId: 'L', contractValue: 1000000 }), rc('b', '2026-03-25', 500000, { leadId: 'L', contractValue: 1000000 })] });
+    assert.equal(F.contracts(debt).length, 1);
+});
+
+test('R3-M4: cash-basis revenue counts Uzum sales only when Uzum pays (net + commission), matching cash receipts', () => {
+    const d = data({ accounts: ACC26, receipts: [rc('u', '2026-03-05', 2000000, { method: 'uzum', entity: 'english', leadId: 'U' })],
+        transactions: [tx('s', '2026-04-10', 'transfer', 'TRANSFER', 1800000, { entity: 'english', accountId: 'acc-uzum', toAccountId: 'acc-bank' }),
+            tx('f', '2026-04-10', 'expense', 'BANK_FEES', 200000, { entity: 'english', accountId: 'acc-uzum' })] });
+    assert.equal(F.profitAndLoss(d, { start: '2026-03-01', end: '2026-03-31', scope: 'english' }).revenue || 0, 0);
+    const apr = F.profitAndLoss(d, { start: '2026-04-01', end: '2026-04-30', scope: 'english' });
+    assert.equal(apr.revenue, 2000000); assert.equal(apr.payment_fees, 200000);
+    assert.equal(F.cashFlowStatement(d, { start: '2026-04-01', end: '2026-04-30', scope: 'english' }).operating.find(l => l.key === 'receipts').amount, 1800000);
+});
+
+test('R3: dropout impairment starts at the dropout date (or course end if unknown), not retroactively', () => {
+    const base = { accounts: ACC26, receipts: [rc('a', '2026-01-01', 900000, { leadId: 'A', studentId: 'S', contractValue: 3000000 })],
+        settings: { ...settings, eclRates: { not_due: 0, d1_30: 0, d31_60: 0, d61_90: 0, d90: 0, no_date: 0 } } };
+    const dated = data({ ...base, studentStatus: [{ studentId: 'S', inactive: true, inactiveAt: '2026-02-15' }] });
+    assert.equal(F.eclAt(dated, '2026-01-31'), 0);
+    const undated = data({ ...base, studentStatus: [{ studentId: 'S', inactive: true }] });
+    assert.equal(F.eclAt(undated, '2026-02-28'), 0);
+    assert.ok(F.eclAt(undated, '2026-03-31') > 0);
+});
+
+test('R3: reconcile matches Cyrillic and Latin spellings; namesakes with different phones go to manual review', () => {
+    assert.equal(F.nameMatch('Шохрух Алиев', 'Shohruh Aliyev'), 'strong');
+    const r = F.reconcile([{ date: '2026-09-10', name: 'Ali Valiyev', phone: '901112233', amount: 500000 }], [{ id: 'x', date: '2026-09-10', name: 'Ali Valiyev', phone: '+998935556677', amount: 500000 }]);
+    assert.equal(r.results[0].status, 'match'); assert.equal(r.results[0].review, true); assert.equal(r.review, 1);
+});
+
+test('R3: turnover tax is accrued on revenue at the effective rate and settled by payments', () => {
+    const d = data({ accounts: ACC26, receipts: [rc('a', '2026-03-01', 1000000, { leadId: 'A', contractValue: 1000000 })],
+        transactions: [tx('t', '2026-04-15', 'expense', 'TAX_TURNOVER', 40000, { entity: 'common' })],
+        settingsHistory: [{ from: '1900-01-01', data: { courseMonths: { english: 3, russian: 3 } } }, { from: '2026-03-01', data: { courseMonths: { english: 3, russian: 3 }, turnoverTaxRate: 4 } }] });
+    const q = F.profitAndLoss(d, { start: '2026-03-01', end: '2026-05-31', basis: 'accrual' });
+    assert.equal(q.turnover_tax, 40000);
+    assert.equal(F.balanceSheet(d, '2026-05-31').taxPayable, 0);
+    assert.equal(F.balanceSheet(d, '2026-05-31').balanced, true);
+});
+
+test('R3: impairment lowers book value and later depreciation; a sale books the gain or loss', () => {
+    const d = data({ accounts: ACC.map(a => ({ ...a, openingDate: '2026-01-01', openingBalance: 9000000 })),
+        transactions: [tx('cap', '2026-01-01', 'expense', 'CAPEX', 3650000, { entity: 'common', accountId: 'acc-bank', usefulLifeMonths: 12 }),
+            tx('sale', '2026-07-01', 'income', 'ASSET_SALE', 1000000, { entity: 'common', accountId: 'acc-bank', assetId: 'cap' })],
+        assetEvents: [{ assetId: 'cap', kind: 'impairment', date: '2026-04-01', amount: 500000 }, { assetId: 'cap', kind: 'disposal', date: '2026-07-01', amount: 1000000 }] });
+    const a = F.fixedAssets(d)[0];
+    const nbvBefore = F.netBookValue(a, '2026-06-30');
+    const y = F.profitAndLoss(d, { start: '2026-01-01', end: '2026-12-31', basis: 'accrual' });
+    assert.equal(y.asset_result, -500000 + (1000000 - nbvBefore));
+    for (const day of ['2026-03-31', '2026-04-01', '2026-06-30', '2026-07-01', '2026-12-31']) assert.equal(F.balanceSheet(d, day).balanced, true, day);
+    assert.equal(F.balanceSheet(d, '2026-07-01').ppeNet, 0);
 });

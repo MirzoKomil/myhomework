@@ -58,6 +58,8 @@ async function seed() {
     await tx({ type: 'expense', categoryCode: 'SOFTWARE', amount: 650000, date: '2026-10-02', entity: 'common', counterparty: 'Railway, Eskiz SMS' });
     await tx({ type: 'refund', categoryCode: 'REFUND', amount: 300000, date: '2026-10-09', paymentRecordId: 'p40', counterparty: 'Qaytarish', description: 'Kurs boshlanmasdan voz kechdi', receiptUrl: proof, terminates: true });
     await tx({ type: 'capital', categoryCode: 'OWNER_IN', amount: 5000000, date: '2026-09-01', entity: 'common', accountId: 'acc-bank', counterparty: 'Ta’sischi' });
+    await tx({ type: 'expense', categoryCode: 'CAPEX', amount: 7200000, date: '2026-08-20', entity: 'common', accountId: 'acc-bank', counterparty: 'Noutbuk va proyektor', usefulLifeMonths: 36, receiptUrl: proof });
+    await tx({ type: 'expense', categoryCode: 'SOFTWARE', amount: 2400000, date: '2026-09-01', entity: 'common', accountId: 'acc-bank', counterparty: 'CRM yillik obuna', serviceStart: '2026-09-01', serviceEnd: '2027-08-31', receiptUrl: proof });
     await finance.recordSalaryPayment(pool, actor, 'sal-sep-t1', { accountId: 'acc-card', date: '2026-10-03' });
     await finance.createPayable(pool, actor, { requestKey: 'preview-payable-0001', kind: 'bill', entity: 'russian', counterparty: 'Bloger reklama', categoryCode: 'MKT_OTHER', amount: 1500000, issueDate: '2026-10-10', dueDate: '2026-10-20' });
     await finance.addAccountCheck(pool, actor, 'acc-card', { date: '2026-10-20', actualBalance: 21000000, note: 'Bank ilovasi' });
@@ -83,6 +85,8 @@ const routes = [
     ['POST', /^\/api\/finance\/reconcile$/, (q, b) => finance.reconcile(pool, actor, b)],
     ['POST', /^\/api\/finance\/accounts$/, (q, b) => finance.saveAccount(pool, actor, b)],
     ['POST', /^\/api\/finance\/accounts\/([^/]+)\/checks$/, (q, b, m) => finance.addAccountCheck(pool, actor, m[1], b)],
+    ['POST', /^\/api\/finance\/assets\/([^/]+)\/dispose$/, (q, b, m) => finance.disposeAsset(pool, actor, m[1], b)],
+    ['POST', /^\/api\/finance\/assets\/([^/]+)\/impair$/, (q, b, m) => finance.impairAsset(pool, actor, m[1], b)],
     ['POST', /^\/api\/finance\/periods$/, (q, b) => finance.lockMonth(pool, actor, b)],
     ['PUT', /^\/api\/finance\/settings$/, (q, b) => finance.saveSettings(pool, actor, b)],
     ['GET', /^\/api\/inflow\/cash-reconciliation/, () => ({ manual: [], decisions: [], pending: [] })],
