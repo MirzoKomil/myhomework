@@ -1,0 +1,295 @@
+{
+ "n": 13,
+ "topic_uz": "Sonlar va soat: «Ско́лько вре́мени?», «Во ско́лько?»",
+ "scene": "At a cinema ticket counter, a young man Bobur talks to a female cashier; a big wall clock shows five o'clock.",
+ "dialogs": [
+  {
+   "id": "L13-d1",
+   "title_ru": "В кинотеа́тре",
+   "title_uz": "Kinoteatrda",
+   "intro_uz": "Birinchi dialog. Bobur kinoteatrda. Film soat nechada boshlanadi? Tinglang.",
+   "speakers": [
+    {
+     "name": "Бобу́р",
+     "gender": "m"
+    },
+    {
+     "name": "Касси́р",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Бобу́р",
+     "ru": "Здра́вствуйте! Во ско́лько начина́ется фильм?",
+     "uz": "Assalomu alaykum! Film soat nechada boshlanadi?"
+    },
+    {
+     "who": "Касси́р",
+     "ru": "В семь часо́в.",
+     "uz": "Soat yettida."
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "А ско́лько сейча́с вре́мени?",
+     "uz": "Hozir soat necha?"
+    },
+    {
+     "who": "Касси́р",
+     "ru": "Сейча́с ро́вно пять часо́в.",
+     "uz": "Hozir roppa-rosa soat besh."
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "А в де́вять часо́в есть фильм?",
+     "uz": "Soat to'qqizda film bormi?"
+    },
+    {
+     "who": "Касси́р",
+     "ru": "Да, есть. В де́вять и в оди́ннадцать.",
+     "uz": "Ha, bor. To'qqizda va o'n birda."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Film soat nechada boshlanadi?",
+     "opts": [
+      "beshda",
+      "yettida",
+      "to'qqizda"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Hozir soat necha?",
+     "opts": [
+      "roppa-rosa besh",
+      "yetti",
+      "to'qqiz"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Kechqurun yana qachon film bor?",
+     "opts": [
+      "olti va sakkizda",
+      "o'n va o'n ikkida",
+      "to'qqiz va o'n birda"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "в семь часо́в",
+     "alts": [
+      "в шесть часо́в",
+      "в во́семь часо́в",
+      "в три часа́"
+     ]
+    },
+    {
+     "base": "пять часо́в",
+     "alts": [
+      "четы́ре часа́",
+      "шесть часо́в",
+      "два часа́"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Bobur o'rniga gapiring: film soat nechada boshlanishini va hozir soat necha ekanini so'rang."
+  },
+  {
+   "id": "L13-d2",
+   "title_ru": "У́тром до́ма",
+   "title_uz": "Ertalab uyda",
+   "intro_uz": "Ikkinchi dialog. Ertalab. Sardor hali uyda. Dars soat nechada boshlanadi? Tinglang.",
+   "speakers": [
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    },
+    {
+     "name": "Сардо́р",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Нигора́",
+     "ru": "Сардо́р, ты спишь? Сейча́с семь часо́в!",
+     "uz": "Sardor, uxlayapsanmi? Hozir soat yetti!"
+    },
+    {
+     "who": "Сардо́р",
+     "ru": "Ма́ма, во ско́лько начина́ется уро́к?",
+     "uz": "Oyi, dars soat nechada boshlanadi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Уро́к начина́ется в во́семь часо́в.",
+     "uz": "Dars soat sakkizda boshlanadi."
+    },
+    {
+     "who": "Сардо́р",
+     "ru": "А сейча́с кото́рый час?",
+     "uz": "Hozir soat necha?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Сейча́с семь часо́в два́дцать мину́т.",
+     "uz": "Hozir yettidan yigirma daqiqa o'tdi."
+    },
+    {
+     "who": "Сардо́р",
+     "ru": "Ой, я спешу́!",
+     "uz": "Voy, shoshyapman!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Dars soat nechada boshlanadi?",
+     "opts": [
+      "yettida",
+      "to'qqizda",
+      "sakkizda"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Oyisi «Hozir soat necha?» savoliga nima dedi?",
+     "opts": [
+      "7:20",
+      "8:00",
+      "7:00"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Sardor oxirida nima dedi?",
+     "opts": [
+      "uxlayman",
+      "shoshyapman",
+      "dars yo'q"
+     ],
+     "a": 1
+    }
+   ],
+   "swap": [
+    {
+     "base": "в во́семь часо́в",
+     "alts": [
+      "в де́вять часо́в",
+      "в во́семь три́дцать",
+      "в два часа́"
+     ]
+    },
+    {
+     "base": "семь часо́в два́дцать мину́т",
+     "alts": [
+      "семь часо́в де́сять мину́т",
+      "семь часо́в со́рок мину́т",
+      "во́семь часо́в"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Sardor o'rniga gapiring: soat nechaligini va dars qachon boshlanishini so'rang."
+  },
+  {
+   "id": "L13-d3",
+   "title_ru": "Во ско́лько встреча́емся?",
+   "title_uz": "Soat nechada uchrashamiz?",
+   "intro_uz": "Uchinchi dialog. Anton va Dilnoza kechqurun uchrashmoqchi. Soat nechada? Tinglang.",
+   "speakers": [
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    },
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Анто́н",
+     "ru": "Дильно́за, во ско́лько мы встреча́емся?",
+     "uz": "Dilnoza, soat nechada uchrashamiz?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "В шесть часо́в. Хорошо́?",
+     "uz": "Soat oltida. Bo'ladimi?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "В шесть я на рабо́те. Я рабо́таю до шести́.",
+     "uz": "Oltida men ishda bo'laman. Oltigacha ishlayman."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Тогда́ в семь?",
+     "uz": "Unda yettida-chi?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Да, в семь часо́в — хорошо́.",
+     "uz": "Ha, soat yetti — yaxshi."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Отли́чно! Мы у́жинаем в кафе́.",
+     "uz": "Zo'r! Kafeda kechki ovqat qilamiz."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Dilnoza avval qaysi vaqtni aytdi?",
+     "opts": [
+      "oltini",
+      "yettini",
+      "beshni"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Anton nega oltida kela olmaydi?",
+     "opts": [
+      "uxlaydi",
+      "ishda bo'ladi",
+      "darsda bo'ladi"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Ular soat nechada uchrashadi?",
+     "opts": [
+      "oltida",
+      "sakkizda",
+      "yettida"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "в шесть часо́в",
+     "alts": [
+      "в пять часо́в",
+      "в четы́ре часа́",
+      "в час"
+     ]
+    },
+    {
+     "base": "в семь",
+     "alts": [
+      "в во́семь",
+      "в де́вять",
+      "в де́сять"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Dilnoza o'rniga gapiring: do'stingiz bilan uchrashuv vaqtini kelishib oling."
+  }
+ ]
+}

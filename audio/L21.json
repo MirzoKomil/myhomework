@@ -1,0 +1,300 @@
+{
+ "n": 21,
+ "topic_uz": "Vinitelniy padej: Что? Кого́? (кни́гу, ма́му) va Куда́? (в банк, на рабо́ту)",
+ "scene": "In a small neighborhood shop, a woman Nigora buys bread, milk and a pie from a male shopkeeper behind the counter.",
+ "dialogs": [
+  {
+   "id": "L21-d1",
+   "title_ru": "В магази́не",
+   "title_uz": "Do'konda",
+   "intro_uz": "Birinchi dialog. Nigora do'konda. U nimalarni oladi? Tinglang.",
+   "speakers": [
+    {
+     "name": "Продаве́ц",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Продаве́ц",
+     "ru": "Здра́вствуйте! Что вы берёте?",
+     "uz": "Assalomu alaykum! Nima olasiz?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Я беру́ хлеб и молоко́.",
+     "uz": "Non va sut olaman."
+    },
+    {
+     "who": "Продаве́ц",
+     "ru": "Что ещё? Мо́жет, пиро́г?",
+     "uz": "Yana nima? Balki pirog?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Да, пиро́г и во́ду, пожа́луйста.",
+     "uz": "Ha, pirog va suv, iltimos."
+    },
+    {
+     "who": "Продаве́ц",
+     "ru": "Вот, пожа́луйста. А газе́ту берёте?",
+     "uz": "Mana, marhamat. Gazeta olasizmi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Нет, спаси́бо. Я беру́ журна́л.",
+     "uz": "Yo'q, rahmat. Jurnal olaman."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Nigora avval nima oldi?",
+     "opts": [
+      "non va sut",
+      "choy va shakar",
+      "go'sht"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Nigora yana nima oldi?",
+     "opts": [
+      "somsa va choy",
+      "pirog va suv",
+      "olma"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Nigora gazeta oldimi?",
+     "opts": [
+      "ha",
+      "ikkita oldi",
+      "yo'q, jurnal oldi"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "во́ду",
+     "alts": [
+      "ко́лу",
+      "ры́бу",
+      "самсу́"
+     ]
+    },
+    {
+     "base": "журна́л",
+     "alts": [
+      "газе́ту",
+      "кни́гу",
+      "ру́чку"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Nigora o'rniga gapiring: do'konda «Я беру́…» bilan 3–4 narsa so'rang."
+  },
+  {
+   "id": "L21-d2",
+   "title_ru": "Куда́ ты идёшь?",
+   "title_uz": "Qayerga ketyapsan?",
+   "intro_uz": "Ikkinchi dialog. Bobur va Dilnoza ko'chada uchrashib qolishdi. Ular qayerga ketyapti? Tinglang.",
+   "speakers": [
+    {
+     "name": "Бобу́р",
+     "gender": "m"
+    },
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Бобу́р",
+     "ru": "Приве́т, Дильно́за! Куда́ ты идёшь?",
+     "uz": "Salom, Dilnoza! Qayerga ketyapsan?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Я иду́ в шко́лу. А ты?",
+     "uz": "Maktabga ketyapman. Sen-chi?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "А я иду́ на рабо́ту.",
+     "uz": "Men esa ishga ketyapman."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "А ве́чером? Мы идём в кино́?",
+     "uz": "Kechqurun-chi? Kinoga boramizmi?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Нет, ве́чером я иду́ в банк, а пото́м домо́й.",
+     "uz": "Yo'q, kechqurun bankka boraman, keyin uyga."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Тогда́ в суббо́ту?",
+     "uz": "Unda shanba kuni-chi?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Хорошо́, в суббо́ту идём в кино́!",
+     "uz": "Mayli, shanba kuni kinoga boramiz!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Dilnoza qayerga ketyapti?",
+     "opts": [
+      "ishga",
+      "bankka",
+      "maktabga"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Bobur kechqurun qayerga boradi?",
+     "opts": [
+      "bankka, keyin uyga",
+      "kinoga",
+      "do'konga"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Ular qachon kinoga boradi?",
+     "opts": [
+      "bugun",
+      "shanba kuni",
+      "ertaga"
+     ],
+     "a": 1
+    }
+   ],
+   "swap": [
+    {
+     "base": "в шко́лу",
+     "alts": [
+      "в университе́т",
+      "в апте́ку",
+      "в библиоте́ку"
+     ]
+    },
+    {
+     "base": "на рабо́ту",
+     "alts": [
+      "на ры́нок",
+      "на уро́к",
+      "на стадио́н"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Dilnoza o'rniga gapiring: bugun qayerga ketayotganingizni va kechqurun qayerga borishingizni ayting."
+  },
+  {
+   "id": "L21-d3",
+   "title_ru": "В кафе́",
+   "title_uz": "Kafeda",
+   "intro_uz": "Uchinchi dialog. Nigora kafeda erini kutyapti. U nima buyurtma qiladi? Tinglang.",
+   "speakers": [
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    },
+    {
+     "name": "Официа́нт",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Нигора́",
+     "ru": "Здра́вствуйте! Я жду му́жа. Мо́жно меню́?",
+     "uz": "Assalomu alaykum! Erimni kutyapman. Menyu bersangiz?"
+    },
+    {
+     "who": "Официа́нт",
+     "ru": "Коне́чно. Вот, пожа́луйста.",
+     "uz": "Albatta. Mana, marhamat."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Спаси́бо. Я беру́ плов и самсу́.",
+     "uz": "Rahmat. Palov va somsa olaman."
+    },
+    {
+     "who": "Официа́нт",
+     "ru": "Хорошо́. А пить? Чай и́ли во́ду?",
+     "uz": "Yaxshi. Ichimlik-chi? Choymi yoki suv?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Во́ду, пожа́луйста. А пото́м чай.",
+     "uz": "Suv, iltimos. Keyin esa choy."
+    },
+    {
+     "who": "Официа́нт",
+     "ru": "Отли́чно. А вот и ваш муж идёт!",
+     "uz": "Zo'r. Mana, eringiz ham kelyapti!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Nigora kimni kutyapti?",
+     "opts": [
+      "dugonasini",
+      "erini",
+      "o'g'lini"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Nigora qanday ovqat oldi?",
+     "opts": [
+      "sho'rva va non",
+      "lag'mon",
+      "palov va somsa"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Nigora avval nima ichadi?",
+     "opts": [
+      "suv",
+      "choy",
+      "qahva"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "жду му́жа",
+     "alts": [
+      "жду подру́гу",
+      "жду бра́та",
+      "жду ма́му"
+     ]
+    },
+    {
+     "base": "плов и самсу́",
+     "alts": [
+      "суп и сала́т",
+      "пиро́г и ко́фе",
+      "ры́бу и хлеб"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Nigora o'rniga gapiring: kafeda kimni kutayotganingizni ayting va ovqat buyurtma qiling."
+  }
+ ]
+}

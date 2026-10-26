@@ -1,0 +1,300 @@
+{
+ "n": 20,
+ "topic_uz": "«Что ты де́лал вчера́?» — kechagi kun haqida suhbat",
+ "scene": "Two friends, a woman Nigora and a man Bobur, chat on a park bench; in a thought bubble Bobur sits in a cinema watching a film.",
+ "dialogs": [
+  {
+   "id": "L20-d1",
+   "title_ru": "Вчера́",
+   "title_uz": "Kecha",
+   "intro_uz": "Birinchi dialog. Nigora va Bobur kechagi kun haqida gaplashyapti. Kim qayerda bo'ldi? Tinglang.",
+   "speakers": [
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    },
+    {
+     "name": "Бобу́р",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Нигора́",
+     "ru": "Бобу́р, что ты де́лал вчера́?",
+     "uz": "Bobur, kecha nima qilding?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "У́тром рабо́тал, а пото́м был в кинотеа́тре.",
+     "uz": "Ertalab ishladim, keyin kinoteatrda bo'ldim."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Како́й фильм ты смотре́л?",
+     "uz": "Qanaqa film ko'rding?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Но́вый фильм. О́чень интере́сный!",
+     "uz": "Yangi film. Juda qiziq!"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "А вчера́ прие́хала моя́ ма́ма.",
+     "uz": "Kecha esa oyim keldilar."
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Здо́рово! Вы отдыха́ли вме́сте?",
+     "uz": "Zo'r! Birga dam oldinglarmi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Да, мы гуля́ли в па́рке и пи́ли чай.",
+     "uz": "Ha, parkda sayr qildik va choy ichdik."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Bobur ertalab nima qildi?",
+     "opts": [
+      "ishladi",
+      "uxladi",
+      "sayr qildi"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Bobur qanday film ko'rdi?",
+     "opts": [
+      "eski, zerikarli",
+      "yangi, qiziq",
+      "multfilm"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Kecha Nigoraning oldiga kim keldi?",
+     "opts": [
+      "Anton",
+      "dugonasi",
+      "oyisi"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "был в кинотеа́тре",
+     "alts": [
+      "был в па́рке",
+      "был в теа́тре",
+      "был до́ма"
+     ]
+    },
+    {
+     "base": "гуля́ли в па́рке",
+     "alts": [
+      "пи́ли чай до́ма",
+      "смотре́ли фильм",
+      "гото́вили плов"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Bobur o'rniga gapiring: kecha ertalab va kechqurun nima qilganingizni ayting."
+  },
+  {
+   "id": "L20-d2",
+   "title_ru": "Ва́жная встре́ча",
+   "title_uz": "Muhim uchrashuv",
+   "intro_uz": "Ikkinchi dialog. Anton Dilnozadan so'rayapti: ertalab qayerda edingiz? Tinglang.",
+   "speakers": [
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    },
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Анто́н",
+     "ru": "Дильно́за, где вы бы́ли у́тром?",
+     "uz": "Dilnoza, ertalab qayerda edingiz?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Я была́ в аэропорту́. Прие́хал наш колле́га.",
+     "uz": "Aeroportda edim. Hamkasbimiz keldi."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Он прие́хал из Москвы́?",
+     "uz": "U Moskvadan keldimi?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Да. Пото́м мы бы́ли в о́фисе.",
+     "uz": "Ha. Keyin ofisda bo'ldik."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Была́ ва́жная встре́ча?",
+     "uz": "Muhim uchrashuv bo'ldimi?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Да, о́чень ва́жная. Всё бы́ло хорошо́!",
+     "uz": "Ha, juda muhim. Hammasi yaxshi o'tdi!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Dilnoza ertalab qayerda edi?",
+     "opts": [
+      "ofisda",
+      "aeroportda",
+      "uyda"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Hamkasb qayerdan keldi?",
+     "opts": [
+      "Toshkentdan",
+      "Andijondan",
+      "Moskvadan"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Uchrashuv qanday o'tdi?",
+     "opts": [
+      "yaxshi",
+      "yomon",
+      "bo'lmadi"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "в аэропорту́",
+     "alts": [
+      "на вокза́ле",
+      "в ба́нке",
+      "в о́фисе"
+     ]
+    },
+    {
+     "base": "из Москвы́",
+     "alts": [
+      "из Ташке́нта",
+      "из Самарка́нда",
+      "из Каза́ни"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Dilnoza o'rniga gapiring: bugun ertalab qayerda bo'lganingizni va nima qilganingizni ayting."
+  },
+  {
+   "id": "L20-d3",
+   "title_ru": "Ты вы́учил слова́?",
+   "title_uz": "So'zlarni yodladingmi?",
+   "intro_uz": "Uchinchi dialog. Darsda ustoz Timurdan uy vazifasini so'rayapti. Tinglang.",
+   "speakers": [
+    {
+     "name": "Учи́тельница",
+     "gender": "f"
+    },
+    {
+     "name": "Тиму́р",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Учи́тельница",
+     "ru": "Тиму́р, ты вы́учил слова́?",
+     "uz": "Timur, so'zlarni yodladingmi?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Да, вы́учил. Я учи́л весь ве́чер.",
+     "uz": "Ha, yodladim. Kechqurun bo'yi o'qidim."
+    },
+    {
+     "who": "Учи́тельница",
+     "ru": "Молоде́ц! А Дильно́за вы́учила?",
+     "uz": "Barakalla! Dilnoza yodladimi?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Нет. Она́ по́здно пришла́ домо́й.",
+     "uz": "Yo'q. U uyga kech keldi."
+    },
+    {
+     "who": "Учи́тельница",
+     "ru": "Почему́? Где она́ была́?",
+     "uz": "Nega? U qayerda edi?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Она́ была́ на конце́рте.",
+     "uz": "U konsertda edi."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Timur so'zlarni yodladimi?",
+     "opts": [
+      "ha",
+      "yo'q",
+      "yarmini"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Dilnoza uyga qachon keldi?",
+     "opts": [
+      "erta",
+      "kunduzi",
+      "kech"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Dilnoza qayerda edi?",
+     "opts": [
+      "kinoteatrda",
+      "konsertda",
+      "ishda"
+     ],
+     "a": 1
+    }
+   ],
+   "swap": [
+    {
+     "base": "вы́учил слова́",
+     "alts": [
+      "вы́учил текст",
+      "прочита́л кни́гу",
+      "написа́л дикта́нт"
+     ]
+    },
+    {
+     "base": "на конце́рте",
+     "alts": [
+      "в теа́тре",
+      "в гостя́х",
+      "на рабо́те"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Timur o'rniga gapiring: kecha uy vazifasini qilganingiz yoki qilmaganingiz va nima uchun — ayting."
+  }
+ ]
+}
