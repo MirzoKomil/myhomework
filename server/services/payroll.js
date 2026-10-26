@@ -112,7 +112,7 @@ async function sources(db, p) {
     const json = (await db.query("SELECT key,data FROM json_data WHERE key=ANY($1::text[])", [['salesPlan', 'bonusHistory', 'bonusData', 'cashFlow']])).rows;
     const blob = Object.fromEntries(json.map(r => [r.key, r.data]));
     return { academicPolicy: 'dual-role-v1', teacherAttendancePolicy: 'all-days-v1', paymentRecords, hrEmployees: employees.map(r => ({ id: r.id, name: r.name, role: r.role, lang: r.lang, avatar: r.avatar, dualRole: r.dual_role === true,
-        status: r.status, startDate: r.start_date, joinDate: r.join_date, kpiTemplateId: r.kpi_template_id })),
+        status: r.status, startDate: r.start_date, joinDate: r.join_date, endDate: r.end_date || '', kpiTemplateId: r.kpi_template_id })),
         teachers: teachers.map(r => ({ id: r.id, schedulePattern: r.schedule_pattern, lessonDuration: r.lesson_duration })),
         students: students.map(r => ({ ...(r.extra_data || {}), id: r.id, name: r.name, subject: r.subject,
             teacherId: r.teacher_id, assistantTeacherId: r.assistant_teacher_id, lessonDuration: r.lesson_duration })),

@@ -181,6 +181,9 @@ app.use(express.json({
     verify: (req, res, buffer) => { req.rawBody = buffer; },
 }));
 
+// Har bir so'rov uchun kontekst (arxivga "kim o'chirdi" shu yerdan yoziladi).
+app.use(require('./services/archiveContext').middleware);
+
 // ── API routes ────────────────────────────────────────────────────────────────
 
 app.get('/api/health', (req, res) => {
@@ -217,6 +220,8 @@ app.use('/api/academic', require('./routes/academicHub')({ pool: crmDb.pool,
 app.use('/api/domwork/groups', domworkGroupsRouter(require('./db').pool, require('./middleware/auth').authRequired));
 app.use('/api/domwork/marketing', require('./routes/domworkMarketing')({pool:crmDb.pool,authRequired:require('./middleware/auth').authRequired}));
 app.use('/api/target-ads', require('./routes/targetAds'));
+app.use('/api/archive', require('./routes/archive'));
+app.use('/api/staff-lifecycle', require('./routes/staffLifecycle'));
 app.use('/api/domwork/student-telegram', require('./routes/studentTelegram')({pool:crmDb.pool,runtime:domworkBot,
     authRequired:require('./middleware/auth').authRequired}));
 app.use('/api/domwork/bot', domworkBotRouter({ pool: crmDb.pool, runtime: domworkBot,

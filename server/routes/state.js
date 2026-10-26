@@ -891,6 +891,7 @@ async function crmStateIdentity(req, res, next) {
     try {
         const current = await findUserById(req.user.id);
         if (!current) return res.status(401).json({ error: 'Akkaunt topilmadi' });
+        if (current.disabled_at) return res.status(401).json({ error: 'Akkaunt bloklangan' });
         req.user = { ...req.user, role: current.role, name: current.name, email: current.email };
         next();
     } catch (err) { res.status(503).json({ error: 'Akkaunt ruxsatini tekshirib bo‘lmadi' }); }
@@ -925,6 +926,7 @@ async function getStateForUser(user) {
         // kartochkalarning o'zi esa faqat shu menejerga tegishli bo'ladi.
         state.salesLeadStats = [...(state.leads?.english || []), ...(state.leads?.russian || [])].map(lead => ({
             managerId: lead.managerId || '',
+            saleManagerId: lead.saleManagerId || null,
             status: lead.status || '',
             source: lead.source || 'Organik',
             date: lead.date || '',

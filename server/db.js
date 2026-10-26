@@ -20,6 +20,8 @@ const inflow = require('./services/inflow');
 const paymentHistory = require('./services/paymentHistory');
 const paymentCash = require('./services/paymentCash');
 const teacherDuties = require('./services/teacherDuties');
+const archive = require('./services/archive');
+const staffLifecycle = require('./services/staffLifecycle');
 
 // 142-ish qayta ish 8: ilova yopiq bo'lsa ham (haqiqiy OS/brauzer darajasidagi)
 // bildirishnoma yetkazish uchun Web Push VAPID kalitlari — .env orqali
@@ -333,6 +335,9 @@ async function initSchema() {
     await pool.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ`).catch(() => {});
     await pool.query(`ALTER TABLE leads ADD COLUMN IF NOT EXISTS deleted_by TEXT DEFAULT ''`).catch(() => {});
     await pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS extra_data JSONB DEFAULT '{}'`).catch(() => {});
+    // Arxiv va xodim hayot sikli (ishdan bo'shatish) jadvallari/ustunlari.
+    await archive.init(pool);
+    await staffLifecycle.init(pool);
 
     // Mavjud sotuv-menejeri loginlarini bir marta barqaror manager ID bilan
     // bog'laymiz. Keyingi profil nomi o'zgarishi authorization'ga ta'sir
@@ -777,6 +782,16 @@ function rowToLead(r) {
     } catch {}
     return {
         ...extra,
+        // Sotuvni kim qilgani: server muhrlagan `saleManagerId`; eski yozuvda —
+        // bosqichlar tarixida sotuv bosqichiga birinchi kirgan menejer; u ham
+        // bo'lmasa hozirgi menejer. Sotuv bosqichida bo'lmagan lidda — null.
+        saleManagerId: (() => {
+            const sale = new Set(['tolov-jarayonida', 'tolov-yopildi']);
+            if (!sale.has(r.status)) return null;
+            if (extra.saleManagerId) return String(extra.saleManagerId);
+            const first = (Array.isArray(extra.stageHistory) ? extra.stageHistory : []).find(e => e && sale.has(e.to) && e.managerId);
+            return first ? String(first.managerId) : (r.manager_id || null);
+        })(),
         id: r.id, name: r.name, phone: r.phone || '', phone2: r.phone2 || '',
         email: r.email || '', managerId: r.manager_id || '',
         source: r.source || 'Organik', date: r.date || '',
@@ -839,10 +854,9 @@ async function getBookRoadmap() {
     return rows.map(rowToBookRoadmap);
 }
 
-async function saveBookRoadmap(client, items) {
+async function saveBookRoadmap(client, items, removedIds = []) {
     if (!isUsableList(items, 'saveBookRoadmap')) return;
-    await guardBulkDelete(client, 'book_roadmap', 'Kitob yetkazish', items);
-    await client.query('DELETE FROM book_roadmap');
+    await replaceSnapshotRows(client, 'book_roadmap', 'Kitob yetkazish', items, removedIds);
     for (const r of items) {
         await client.query(
             `INSERT INTO book_roadmap (id, name, student_id, phone, region, manager_id, kind, status, date, lang, lead_ref, comments, address, dispatched_at, delivered_at)
@@ -882,7 +896,8 @@ async function getHrEmployeesData() {
         pinfl: r.pinfl || '', address: r.address || '',
         lang: r.lang || 'english',
         trialGroupLink: r.trial_group_link || '',
-        kpiTemplateId: r.kpi_template_id || '', dualRole: r.dual_role === true
+        kpiTemplateId: r.kpi_template_id || '', dualRole: r.dual_role === true,
+        endDate: r.end_date || '', offboardedAt: r.offboarded_at || null, offboardReason: r.offboard_reason || ''
     }));
 }
 
@@ -1102,6 +1117,8 @@ async function getMobileContentData(studentId, { crmMode = false, previewLang } 
 
 async function saveMobileContentData(client, data) {
     sanitizeMobileContent(data);
+    const previous = (await client.query('SELECT data FROM mobile_content WHERE singleton = 1 FOR UPDATE')).rows[0]?.data;
+    await archive.archiveMobileDiff(client, previous, data);
     await client.query(
         `INSERT INTO mobile_content (singleton, data) VALUES (1, $1)
          ON CONFLICT (singleton) DO UPDATE SET data = EXCLUDED.data`,
@@ -1200,10 +1217,39 @@ async function guardBulkDelete(client, table, label, incoming) {
     }
 }
 
-async function saveTeachers(client, teachers) {
+// Snapshot jadvallarini (o'quvchilar, xodimlar, ustozlar, kitob yetkazish)
+// saqlash: faqat kelgan qatorlar yangilanadi va faqat brauzer ANIQ o'chirgan
+// (removedIds) qatorlar o'chiriladi. Ro'yxatda yo'q, lekin o'chirilmagan
+// qatorlar — boshqa oynada qo'shilgan yoki arxivdan tiklangan — tegilmaydi,
+// shuning uchun eski tab ularni hech qachon o'chirib yubormaydi. O'chgan har
+// bir qator shu tranzaksiyaning o'zida arxivga tushadi.
+async function replaceSnapshotRows(client, table, label, incoming, removedIds) {
+    const incomingIds = [...new Set((incoming || []).map(i => i && i.id).filter(Boolean).map(String))];
+    const keep = new Set(incomingIds);
+    const wanted = [...new Set((Array.isArray(removedIds) ? removedIds : []).map(String))].filter(id => !keep.has(id));
+    const { rows: present } = wanted.length
+        ? await client.query(`SELECT id FROM ${table} WHERE id = ANY($1)`, [wanted]) : { rows: [] };
+    const removed = present.map(r => String(r.id));
+    if (removed.length > MAX_BULK_DELETIONS_PER_PATCH) {
+        const err = new Error(
+            `Xavfsizlik to'sig'i: bitta so'rovda "${label}" bo'limidan ${removed.length} ta yozuv ` +
+            `o'chib ketishi mumkin edi — amal rad etildi. Sahifani yangilab, qaytadan urinib ko'ring.`
+        );
+        err.code = 'BULK_DELETE_BLOCKED';
+        throw err;
+    }
+    if (removed.length) {
+        const { rows } = await client.query(`SELECT * FROM ${table} WHERE id = ANY($1)`, [removed]);
+        for (const row of rows) await archive.archiveRow(client, table, row);
+    }
+    const replace = [...incomingIds, ...removed];
+    if (replace.length) await client.query(`DELETE FROM ${table} WHERE id = ANY($1)`, [replace]);
+    return removed;
+}
+
+async function saveTeachers(client, teachers, removedIds = []) {
     if (!isUsableList(teachers, 'saveTeachers')) return;
-    await guardBulkDelete(client, 'teachers', 'Ustozlar', teachers);
-    await client.query('DELETE FROM teachers');
+    await replaceSnapshotRows(client, 'teachers', 'Ustozlar', teachers, removedIds);
     for (const t of teachers) {
         await client.query(
             'INSERT INTO teachers (id, name, type, subject, phone, schedule_pattern, lesson_duration) VALUES ($1,$2,$3,$4,$5,$6,$7)',
@@ -1225,8 +1271,7 @@ async function saveStudents(client, students, removedStudentIds = []) {
     // a sales manager's lead transaction. Explicit CRM deletions remain possible.
     students = [...students, ...existingRows.map(rowToStudent).filter(s =>
         s.autoProvisionedFromLead && !ids.has(s.id) && !removed.has(s.id))];
-    await guardBulkDelete(client, 'students', "O'quvchilar", students);
-    await client.query('DELETE FROM students');
+    await replaceSnapshotRows(client, 'students', "O'quvchilar", students, [...removed]);
     for (const s of students) {
         await teacherDuties.validateAssignment(client, s, existingById.get(s.id));
         const { id, name, phone, group, subject, teacherId, assistantTeacherId,
@@ -1483,6 +1528,9 @@ async function upsertLeadWithClient(client, lead, language, options = {}) {
         });
     }
 
+    // Sotuv egasi — faqat server muhrlaydi (lid boshqaga berilsa ham o'zgarmaydi).
+    if (typeof staffLifecycle !== 'undefined') Object.assign(merged, staffLifecycle.nextSaleCredit(before, merged));
+
     // Telegram/CSV kabi tarixiy manbadan tiklangan lidlar eski sanasi bilan
     // import qilinadi. Avvalgi menejer va etap noma'lum paytda ularga SLA
     // yuborilmaydi (`recoveryPending=true`). Foydalanuvchi menejer biriktirsa
@@ -1544,6 +1592,25 @@ async function upsertLeadWithClient(client, lead, language, options = {}) {
             { before, after: saved }
         );
     }
+    return saved;
+}
+
+// Arxivdan (eski brauzer arxividan) butunlay o'chib ketgan lidni aynan
+// o'chirilgan paytdagi holatida qaytarish. Bosqich anketalari tekshirilmaydi —
+// bu yangi harakat emas, tarixiy yozuvni joyiga qo'yish. Audit'ga yoziladi.
+async function insertRestoredLead(client, lead, language, actor = {}) {
+    const p = leadDbPayload(lead, language, null);
+    if (!p.id || !p.name.trim()) throw Object.assign(new Error('Lid nusxasi to‘liq emas'), { status: 400 });
+    const { rows } = await client.query(
+        `INSERT INTO leads (id, name, phone, phone2, email, manager_id, source, language, date, external_id, status, lead_type,
+             comments, attachments, extra_data, created_at, updated_at, deleted_at, deleted_by)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,NOW(),NULL,'')
+         ON CONFLICT (id) DO NOTHING RETURNING *`,
+        [p.id, p.name, p.phone, p.phone2, p.email, p.managerId, p.source, p.language, p.date, p.externalId, p.status, p.leadType,
+         JSON.stringify(p.comments), JSON.stringify(p.attachments), JSON.stringify(p.extra), p.createdAt]);
+    if (!rows[0]) throw Object.assign(new Error('Bu ID bilan lid allaqachon bor'), { status: 409, code: 'ALREADY_EXISTS' });
+    const saved = rowToLead(rows[0]);
+    await appendLeadAudit(client, p.id, 'restored', actor, { before: null, after: saved, source: 'legacy-archive' });
     return saved;
 }
 
@@ -1633,10 +1700,10 @@ async function restoreLead(id, actor = {}) {
     return restored;
 }
 
-async function saveHrEmployeesData(client, employees, actor = {}) {
+async function saveHrEmployeesData(client, employees, actor = {}, removedIds = [], changedStatusIds = null) {
     if (!isUsableList(employees, 'saveHrEmployeesData')) return;
-    await guardBulkDelete(client, 'hr_employees', 'Xodimlar', employees);
-    const oldEmployees = (await client.query('SELECT id,role,start_date,join_date,kpi_template_id,dual_role,login,card_number,passport_series,pinfl,address,birth_date FROM hr_employees')).rows;
+    await staffLifecycle.assertDeletable(client, employees, removedIds);
+    const oldEmployees = (await client.query('SELECT id,role,status,start_date,join_date,kpi_template_id,dual_role,login,card_number,passport_series,pinfl,address,birth_date,end_date,offboarded_at,offboarded_by,offboard_reason FROM hr_employees')).rows;
     // Toʻliq HR huquqi boʻlmagan rol (masalan ROP) maxfiy maydonlarni koʻrmaydi —
     // saqlaganda ular boʻsh qiymat bilan ustidan yozilib ketmasin.
     employees = require('./services/stateScope').preserveHrPrivateFields(employees, oldEmployees, actor);
@@ -1651,25 +1718,34 @@ async function saveHrEmployeesData(client, employees, actor = {}) {
         const after = { role: e.role, startDate: e.startDate || e.joinDate || '', kpiTemplateId: e.kpiTemplateId || '', dualRole: e.dualRole === true };
         if (JSON.stringify(before) !== JSON.stringify(after)) await payroll.audit(client, actor, 'employee-kpi', e.id, before, after);
     }
-    await client.query('DELETE FROM hr_employees');
+    await replaceSnapshotRows(client, 'hr_employees', 'Xodimlar', employees, removedIds);
     for (const e of (employees || [])) {
+        // Ishdan bo'shatish maydonlari faqat serverda boshqariladi: eski tab
+        // yuborgan "active" holati bo'shatilgan xodimni qayta ochib yubormaydi.
+        const oldRow = oldEmployees.find(r => r.id === e.id);
+        e.status = staffLifecycle.resolveStatus(e, oldRow, actor, changedStatusIds);
+        const life = staffLifecycle.preserveLifecycle(e, oldRow);
+        e.status = life.status;
         await client.query(
             `INSERT INTO hr_employees
                 (id, name, first_name, last_name, role, login, phone, email,
                  department, status, join_date, gender, birth_date, start_date,
-                 card_number, passport_series, pinfl, address, lang, trial_group_link, kpi_template_id, dual_role)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)`,
+                 card_number, passport_series, pinfl, address, lang, trial_group_link, kpi_template_id, dual_role,
+                 end_date, offboarded_at, offboarded_by, offboard_reason)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26)`,
             [e.id, e.name, e.firstName || '', e.lastName || '',
              e.role || 'employee', e.login || '', e.phone || '', e.email || '',
-             e.department || '', e.status || 'active', e.joinDate || '',
+             e.department || '', life.status, e.joinDate || '',
              e.gender || '', e.birthDate || '', e.startDate || '',
              e.cardNumber || '', e.passportSeries || '', e.pinfl || '', e.address || '',
-             e.lang || 'english', e.trialGroupLink || '', e.kpiTemplateId || '', e.dualRole === true]
+             e.lang || 'english', e.trialGroupLink || '', e.kpiTemplateId || '', e.dualRole === true,
+             life.endDate, life.offboardedAt, life.offboardedBy, life.offboardReason]
         );
         if (!oldEmployees.some(old => old.id === e.id) && require('../js/teacherRoles').language(e) === 'russian' && e.status !== 'inactive') {
             await require('./services/domworkBot/events').capture(client, 'employee', e.id, {}, 'employee:' + e.id);
         }
     }
+    await staffLifecycle.syncAccountsWithStatus(client, oldEmployees, employees, actor);
 }
 
 async function getJsonData(key) {
@@ -3818,6 +3894,10 @@ async function gradeDemoCreativeSubmission(lessonId, { scorePercent, feedback } 
 }
 
 async function saveJsonData(client, key, data) {
+    if (archive.JSON_TYPES[key] && Array.isArray(data)) {
+        const previous = (await client.query('SELECT data FROM json_data WHERE key = $1 FOR UPDATE', [key])).rows[0]?.data;
+        await archive.archiveJsonDiff(client, key, previous, data);
+    }
     await client.query(
         `INSERT INTO json_data (key, data) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET data = EXCLUDED.data`,
         [key, JSON.stringify(data)]
@@ -3879,21 +3959,27 @@ async function patchState(partial, actor = {}) {
             const previous = (await client.query('SELECT data FROM json_data WHERE key=$1', [key])).rows[0]?.data;
             if (JSON.stringify(previous) !== JSON.stringify(partial[key])) await payroll.audit(client, actor, key, key, previous, partial[key]);
         }
-        if (partial.teachers)           await saveTeachers(client, partial.teachers);
-        if (partial.students)           await saveStudents(client, partial.students, partial.removedStudentIds);
+        const removedIds = partial.removedIds && typeof partial.removedIds === 'object' ? partial.removedIds : {};
+        if (partial.teachers)           await saveTeachers(client, partial.teachers, removedIds.teachers);
+        if (partial.students)           await saveStudents(client, partial.students, [...(partial.removedStudentIds || []), ...(removedIds.students || [])]);
         if (partial.salesManagers)      await saveSalesManagers(client, partial.salesManagers);
         if (partial.timetable)          await saveTimetable(client, partial.timetable);
         if (partial.mainAttendance)     await saveAttendanceTable(client, 'main_attendance', partial.mainAttendance);
         if (partial.assistantAttendance) await saveAttendanceTable(client, 'assistant_attendance', partial.assistantAttendance);
         if (partial.leads)              await saveLeads(client, partial.leads);
-        if (partial.hrEmployees)        await saveHrEmployeesData(client, partial.hrEmployees, actor);
-        if (partial.bookRoadmap)        await saveBookRoadmap(client, partial.bookRoadmap);
+        if (partial.hrEmployees)        await saveHrEmployeesData(client, partial.hrEmployees, actor, removedIds.hrEmployees, partial.changedStatusIds?.hrEmployees || null);
+        if (partial.bookRoadmap)        await saveBookRoadmap(client, partial.bookRoadmap, removedIds.bookRoadmap);
         if (partial.mobileContent)      await saveMobileContentData(client, partial.mobileContent);
         if (partial.scripts !== undefined)     await saveJsonData(client, 'scripts', partial.scripts);
         if (partial.bonusHistory !== undefined) await saveJsonData(client, 'bonusHistory', partial.bonusHistory);
         if (partial.bonusData !== undefined)   await saveJsonData(client, 'bonusData', partial.bonusData);
         if (partial.salesPlan !== undefined)   await saveJsonData(client, 'salesPlan', partial.salesPlan);
-        if (partial.cashFlow !== undefined)    await paymentCash.saveCash(client, partial.cashFlow);
+        if (partial.cashFlow !== undefined) {
+            const previousCash = (await client.query("SELECT data FROM json_data WHERE key='cashFlow' FOR UPDATE")).rows[0]?.data || [];
+            await paymentCash.saveCash(client, partial.cashFlow);
+            const nextCash = (await client.query("SELECT data FROM json_data WHERE key='cashFlow'")).rows[0]?.data || [];
+            await archive.archiveJsonDiff(client, 'cashFlow', previousCash, nextCash);
+        }
         if (partial.orgChart !== undefined)    await saveJsonData(client, 'orgChart', partial.orgChart);
         if (partial.manualMetrics !== undefined) await saveJsonData(client, 'manualMetrics', partial.manualMetrics);
         if (partial.liveGrades !== undefined)    await saveJsonData(client, 'liveGrades', partial.liveGrades);
@@ -4219,7 +4305,7 @@ async function findUserById(id) {
 async function listUsersByRoles(roles = []) {
     const allowed = Array.isArray(roles) ? roles.filter(Boolean) : [];
     if (!allowed.length) return [];
-    return q('SELECT id, name, email, role, phone, bio, location, avatar, created_at FROM users WHERE role = ANY($1::text[]) ORDER BY name', [allowed]);
+    return q('SELECT id, name, email, role, phone, bio, location, avatar, created_at FROM users WHERE role = ANY($1::text[]) AND disabled_at IS NULL ORDER BY name', [allowed]);
 }
 
 async function createUser({ name, email, passwordHash, role }) {
@@ -4367,7 +4453,9 @@ async function createSession({ userId, jti, userAgent, ip }) {
 
 async function findSessionByJti(jti) {
     if (!jti) return null;
-    return q1('SELECT * FROM sessions WHERE jti = $1', [jti]);
+    // Bloklangan (ishdan bo'shatilgan) akkauntning sessiyasi yaroqsiz.
+    return q1(`SELECT s.* FROM sessions s LEFT JOIN users u ON u.id = s.user_id
+               WHERE s.jti = $1 AND u.disabled_at IS NULL`, [jti]);
 }
 
 async function getSessionById(id) {
@@ -4581,7 +4669,7 @@ setInterval(_checkAndSendTrialSmsReminders, TRIAL_SMS_CHECK_INTERVAL_MS);
 module.exports = {
     pool, DATA_DIR,
     getFullState, getTeacherScopedState, getLeads, getDeletedLeads, getLeadById, getSalesManagerIdForUser, setSalesManagerUserLink,
-    insertLead, upsertLead, softDeleteLead, restoreLead, patchState, recordTeacherAttendance,
+    insertLead, upsertLead, upsertLeadWithClient, insertRestoredLead, softDeleteLead, restoreLead, patchState, recordTeacherAttendance,
     getTeacherTrialLessons, saveTeacherTrialLesson,
     botTrialAction: (client,actor,leadId,payload) => trialLessons.updateTrialLesson(client,actor,leadId,payload,rowToLead,appendLeadAudit),
     findUserByEmail, findUserById, listUsersByRoles, createUser, createHrUserAccount, updateUser, resetHrUserAccount, publicUser,

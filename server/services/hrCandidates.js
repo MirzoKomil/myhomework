@@ -196,8 +196,21 @@ async function updateCandidate(id, fields) {
 }
 
 async function deleteCandidate(id) {
-    const { rowCount } = await pool.query('DELETE FROM hr_candidates WHERE id = $1', [id]);
-    return rowCount > 0;
+    // Nomzod arxivga (media fayllari bilan) tushadi, keyin o'chiriladi —
+    // ikkalasi bitta tranzaksiyada.
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        await require('./archive').archiveCandidate(client, id);
+        const { rowCount } = await client.query('DELETE FROM hr_candidates WHERE id = $1', [id]);
+        await client.query('COMMIT');
+        return rowCount > 0;
+    } catch (e) {
+        await client.query('ROLLBACK').catch(() => {});
+        throw e;
+    } finally {
+        client.release();
+    }
 }
 
 async function addMedia(candidateId, kind, buffer, mime, fileName) {
