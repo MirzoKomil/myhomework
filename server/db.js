@@ -88,7 +88,7 @@ async function tx(fn, actor = null) {
     try {
         await client.query('BEGIN');
         // Moliya jurnali uchun: o'zgarish qaysi ilova tranzaksiyasidan va kim tomonidan (o'quvchi holati jurnali shu belgilarni yozadi).
-        await client.query("SELECT set_config('fin.ctx', $1, true), set_config('app.user_id', $2, true)", ['crm:' + require('crypto').randomUUID(), String(actor?.id || '')]);
+        await client.query("SELECT set_config('fin.ctx', $1, true), set_config('app.user_id', $2, true)", [require('./services/finCtx').token('crm'), String(actor?.id || '')]);
         // Natija qaytariladi: Yuzma-yuz (battle) funksiyalari `return tx(...)`
         // qiladi — ilgari undefined qaytib, haqiqiy juftlash umuman ishlamas edi.
         const result = await fn(client);

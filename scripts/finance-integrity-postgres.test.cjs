@@ -18,7 +18,7 @@ if (url && (new URL(url).hostname !== '127.0.0.1' || !/^\/payroll_test_[a-z0-9]+
 const plainSql = sql => execFileSync('psql', [url, '-v', 'ON_ERROR_STOP=1', '-qAt', '-c', sql], { encoding: 'utf8' });
 // Superuser triggerlarni o'chirib yashirin o'zgartirish.
 const superSql = (table, sql) => plainSql(`ALTER TABLE ${table} DISABLE TRIGGER USER; ${sql}; ALTER TABLE ${table} ENABLE TRIGGER USER;`);
-const appSql = (app, sql) => plainSql(`BEGIN; SELECT set_config('fin.ctx', '${app}:test-' || md5(random()::text), true); ${sql}; COMMIT;`);
+const appSql = (app, sql) => plainSql(`BEGIN; SELECT set_config('fin.ctx', '${require('../server/services/finCtx').token(app)}', true); ${sql}; COMMIT;`);
 
 async function fresh(pool) {
     process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'finance-int-'));
@@ -98,7 +98,7 @@ test('round 8: dropout from a controlled date, zero-cash termination, attributio
         await t.test('CRM bulk rewrite deletes a student: dated exit record, revenue stops, not treated as tampering', async () => {
             await fresh(pool);
             // CRM saqlashi: hammasi o'chiriladi va qolganlar qayta yoziladi (s1 ro'yxatda yo'q), crm: belgisi va foydalanuvchi bilan.
-            plainSql(`BEGIN; SELECT set_config('fin.ctx','crm:test-del',true), set_config('app.user_id','rop1',true);
+            plainSql(`BEGIN; SELECT set_config('fin.ctx','${require('../server/services/finCtx').token('crm')}',true), set_config('app.user_id','rop1',true);
                 INSERT INTO students VALUES('s2','Vali','+998907770000','english','g',NULL,30,'{"debtAmount":0}');
                 DELETE FROM students; INSERT INTO students VALUES('s2','Vali','+998907770000','english','g',NULL,30,'{"debtAmount":0}'); COMMIT;`);
             const rows = (await pool.query("SELECT student_id,state,app_user,ctx FROM fin_student_log ORDER BY id")).rows;
@@ -120,7 +120,7 @@ test('round 8: dropout from a controlled date, zero-cash termination, attributio
         });
         await t.test('zero-cash termination: director only, evidence, releases the liability to revenue, single use', async () => {
             await fresh(pool);
-            plainSql(`BEGIN; SELECT set_config('fin.ctx','crm:test-del',true); DELETE FROM students WHERE id='s1'; COMMIT;`);
+            plainSql(`BEGIN; SELECT set_config('fin.ctx','${require('../server/services/finCtx').token('crm')}',true); DELETE FROM students WHERE id='s1'; COMMIT;`);
             const before = (await finance.overview(pool, admin, {})).dropouts[0];
             const body = async () => ({ paymentRecordId: 'r1', date: F.today(), reason: 'O‘quvchi ketdi, shartnoma 5.2-band: qaytarilmaydi', evidenceUrl: (await finance.storeEvidence(pool, admin, pdf())).url });
             await assert.rejects(finance.forfeitContract(pool, acc, await body()), e => e.status === 403);
@@ -139,7 +139,7 @@ test('round 8: dropout from a controlled date, zero-cash termination, attributio
         });
         await t.test('back-dated freeze from the CRM starts on the record date and is reported', async () => {
             await fresh(pool);
-            plainSql(`BEGIN; SELECT set_config('fin.ctx','crm:test-fr',true); UPDATE students SET extra_data=extra_data || '{"frozen":true,"frozenAt":"2026-09-12"}'::jsonb WHERE id='s1'; COMMIT;`);
+            plainSql(`BEGIN; SELECT set_config('fin.ctx','${require('../server/services/finCtx').token('crm')}',true); UPDATE students SET extra_data=extra_data || '{"frozen":true,"frozenAt":"2026-09-12"}'::jsonb WHERE id='s1'; COMMIT;`);
             const data = await finance.load(pool);
             assert.equal(data.studentFreezes[0].from, F.today());
             assert.deepEqual(data.backdatedStatus.map(b => [b.studentId, b.claimed]), [['s1', '2026-09-12']]);
@@ -174,6 +174,87 @@ test('round 8: dropout from a controlled date, zero-cash termination, attributio
             await assert.rejects(exp(acc2, 2200000, { receiptUrl: (await finance.storeEvidence(pool, acc2, pdf())).url }), e => e.status === 403 && /barcha xodimlar/.test(e.message));
             const o = await finance.overview(pool, admin, {});
             assert.equal(o.quality.outflowsWithoutProof, 1); assert.equal(o.quality.outflowsWithoutProofAmount, 400000);
+        });
+        const crmSql = (sql, user = 'rop1') => plainSql(`BEGIN; SELECT set_config('fin.ctx','${require('../server/services/finCtx').token('crm')}',true), set_config('app.user_id','${user}',true); ${sql}; COMMIT;`);
+        const contractOf = (data, id) => F.contracts(data).find(x => x.receipts.some(r => r.id === id));
+        await t.test('round 9: student marked inactive in the CRM stops revenue on the record date and is listed as a dropout', async () => {
+            await fresh(pool);
+            crmSql(`UPDATE students SET extra_data=extra_data || '{"status":"inactive"}'::jsonb WHERE id='s1'`);
+            const data = await finance.load(pool);
+            const st = data.studentStatus.find(x => x.studentId === 's1');
+            assert.equal(st.inactiveAt, F.today());
+            const c = contractOf(data, 'r1');
+            assert.equal(F.earned(c, F.addDays(F.today(), 30)), F.earned(c, F.today()));
+            const o = await finance.overview(pool, admin, {});
+            assert.equal(o.dropouts.length, 1);
+        });
+        await t.test('round 9: forged crm: context (no signature) with a back-dated, backfill-flagged log row is caught; stamp columns are forced', async () => {
+            await fresh(pool);
+            plainSql(`BEGIN; SELECT set_config('fin.ctx','crm:00000000-0000-0000-0000-000000000000.0123456789abcdef0123456789abcdef',true);
+                INSERT INTO fin_student_log(student_id,state,backfill,recorded_at) VALUES('s1','{"frozen":true,"frozenAt":"2026-09-11","status":null,"inactiveAt":null,"debtAmount":"0","paymentDueDate":null}',TRUE,'2026-09-11');
+                INSERT INTO fin_student_log(student_id,state) SELECT 's1', fin_student_state(extra_data) FROM students WHERE id='s1'; COMMIT;`);
+            const row = (await pool.query("SELECT backfill, TO_CHAR(recorded_at AT TIME ZONE 'Asia/Tashkent','YYYY-MM-DD') AS d FROM fin_student_log WHERE state->>'frozenAt'='2026-09-11'")).rows[0];
+            assert.equal(row.backfill, false); assert.equal(row.d, F.today());
+            const v = await finance.verifySeals(pool);
+            assert.equal(v.ok, false); assert.match(v.reason, /imzosiz/);
+        });
+        await t.test('round 9: forfeit only for a recorded dropout, not before the exit date, not back-dated before this month', async () => {
+            await fresh(pool);
+            const ev = async () => (await finance.storeEvidence(pool, admin, pdf())).url;
+            const reason = 'Shartnoma 5.2-band: ketganda qaytarilmaydi';
+            await assert.rejects(finance.forfeitContract(pool, admin, { paymentRecordId: 'r1', date: F.today(), reason, evidenceUrl: await ev() }), e => e.status === 409 && /faol/.test(e.message));
+            crmSql(`UPDATE students SET extra_data=extra_data || '{"status":"inactive"}'::jsonb WHERE id='s1'`);
+            await assert.rejects(finance.forfeitContract(pool, admin, { paymentRecordId: 'r1', date: '2026-09-10', reason, evidenceUrl: await ev() }), e => e.status === 400);
+            await finance.forfeitContract(pool, admin, { paymentRecordId: 'r1', date: F.today(), reason, evidenceUrl: await ev() });
+            const o = await finance.overview(pool, admin, { start: F.monthOf(F.today()) + '-01', end: F.today(), scope: 'all', basis: 'accrual' });
+            assert.ok(o.pnl.breakage > 0, 'pulsiz tugatish alohida qatorda');
+            assert.equal(o.balance.balanced, true);
+        });
+        await t.test('round 9: deleting a student does not taint the same lead re-enrolled as a new student', async () => {
+            await fresh(pool);
+            crmSql(`UPDATE students SET extra_data=extra_data || '{"leadRef":{"id":"l1"}}'::jsonb WHERE id='s1'`);
+            crmSql(`DELETE FROM students WHERE id='s1'; INSERT INTO students VALUES('s9','Ali','+998901112233','russian','g',NULL,30,'{"debtAmount":0,"leadRef":{"id":"l1"}}')`);
+            appSql('inflow', `INSERT INTO payment_records(id,source_key,lead_id,student_id,language,manager_id,paid_date,amount,method,receipt_url,form,debt_snapshot,snapshot,legacy_review,actor_id)
+                VALUES('r9','k9','l1','s9','russian','m',CURRENT_DATE,1200000,'card','','full',0,'{"name":"Ali"}',FALSE,'system')`);
+            const data = await finance.load(pool);
+            const c9 = contractOf(data, 'r9');
+            assert.equal(c9.inactive, false); assert.equal(c9.inactiveAt, null);
+        });
+        await t.test('round 9: a genuine duplicate can be confirmed by another person and stops blocking the close', async () => {
+            await fresh(pool);
+            appSql('inflow', `INSERT INTO payment_records(id,source_key,lead_id,student_id,language,manager_id,paid_date,amount,method,receipt_url,form,debt_snapshot,snapshot,legacy_review,actor_id)
+                VALUES('r2','k2','l1','s1','russian','m','2026-09-11',1000000,'card','','partial',0,'{"name":"Ali"}',TRUE,'acc')`);
+            await assert.rejects(finance.confirmNotDuplicate(pool, acc, 'r2', { reason: 'Ikki teng bo‘lib to‘lash, shartnoma bo‘yicha' }), e => e.status === 403);
+            await finance.confirmNotDuplicate(pool, acc2, 'r2', { reason: 'Ikki teng bo‘lib to‘lash, shartnoma bo‘yicha' });
+            const data = await finance.load(pool);
+            assert.equal(F.duplicateReceipts(data.receipts).length, 0);
+            assert.ok(!finance.closeReadiness(data, '2026-09').some(i => /Takroriy/.test(i)));
+            assert.equal((await finance.verifySeals(pool)).ok, true);
+        });
+        await t.test('round 9: director-approved late exit date reaches into a closed month as a prior-period adjustment', async () => {
+            await fresh(pool);
+            await finance.lockMonth(pool, admin, { month: '2026-09', override: true, note: 'Test: sentyabr yopildi (holat tuzatish)' });
+            const sepBefore = (await finance.overview(pool, admin, { start: '2026-09-01', end: '2026-09-30', scope: 'all', basis: 'accrual' })).pnl.revenue;
+            crmSql(`UPDATE students SET extra_data=extra_data || '{"status":"inactive"}'::jsonb WHERE id='s1'`);
+            const ev = (await finance.storeEvidence(pool, admin, pdf())).url;
+            await assert.rejects(finance.correctStudentStatus(pool, acc, { studentId: 's1', kind: 'inactive', from: '2026-09-20', reason: 'Davomat: 20-sentyabrdan kelmagan', evidenceUrl: ev }), e => e.status === 403);
+            await finance.correctStudentStatus(pool, admin, { studentId: 's1', kind: 'inactive', from: '2026-09-20', reason: 'Davomat: 20-sentyabrdan kelmagan', evidenceUrl: ev });
+            const data = await finance.load(pool);
+            assert.equal(contractOf(data, 'r1').inactiveAt, '2026-09-20');
+            const sep = await finance.overview(pool, admin, { start: '2026-09-01', end: '2026-09-30', scope: 'all', basis: 'accrual' });
+            assert.equal(sep.pnl.revenue, sepBefore, 'yopilgan oy nusxasi o‘zgarmaydi');
+            const oct = await finance.overview(pool, admin, { start: '2026-10-01', end: '2026-10-31', scope: 'all', basis: 'accrual' });
+            assert.ok(oct.pnl.prior_adjustments < 0, 'farq oktyabrda o‘tgan davr tuzatishi');
+            assert.equal(oct.balance.balanced, true);
+            assert.equal((await finance.verifySeals(pool)).ok, true);
+        });
+        await t.test('round 9: a student deleted and later restored by a stale save is reported', async () => {
+            await fresh(pool);
+            crmSql(`DELETE FROM students WHERE id='s1'`);
+            crmSql(`INSERT INTO students VALUES('s1','Ali','+998901112233','russian','g',NULL,30,'{"debtAmount":0}')`);
+            const o = await finance.overview(pool, admin, {});
+            assert.equal(o.restoredStudents.length, 1);
+            assert.equal((await finance.verifySeals(pool)).ok, true);
         });
         await t.test('segment cash flow: english + russian + common equals consolidated, line by line', async () => {
             await fresh(pool);

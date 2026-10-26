@@ -75,7 +75,7 @@ async function transaction(pool, fn) {
             await db.query('BEGIN ISOLATION LEVEL REPEATABLE READ');
             // One lock for accrual/confirmation/payment/settings prevents overlapping pay runs and races.
             await db.query("SELECT pg_advisory_xact_lock(hashtext('myhomework-payroll-v1'))");
-            await db.query("SELECT set_config('fin.ctx', $1, true)", ['payroll:' + randomUUID()]);
+            await db.query("SELECT set_config('fin.ctx', $1, true)", [require('./finCtx').token('payroll')]);
             const result = await fn(db);
             await db.query('COMMIT'); return result;
         } catch (e) {

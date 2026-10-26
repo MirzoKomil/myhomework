@@ -388,17 +388,19 @@
                     if ((active.size || full) && !c.terminatedAt) c.terminatedAt = f.date;
                     if (!active.size && !full) c.terminatedAt = null;
                 }
+                c.forfeitedAt = (refunds.find(f => f.forfeit && c.terminatedAt && f.date === c.terminatedAt) || {}).date || null;
                 const st = status.get('s:' + c.studentId) || status.get('l:' + c.leadId) || null;
                 // Yopilgan oyga orqaga sanalangan holat (muzlatish/tashlash) yopilgan davrni o'zgartirmaydi — birinchi ochiq kundan kuchga kiradi.
                 const openFrom = data.closedThrough ? addDays(monthEnd(data.closedThrough), 1) : null;
                 const clamp = d => (d && openFrom && d < openFrom && (!st?.recordedAt || st.recordedAt >= openFrom) ? openFrom : d);
-                const ia = clamp(st?.inactiveAt || null);
+                // Rahbar tasdiqlagan tuzatish yopilgan oyga ham tushadi: oy nusxasi o'zgarmaydi, farq ochiq oyda o'tgan davr tuzatishi bo'ladi (IAS 8).
+                const ia = st?.approvedExit ? (st.inactiveAt || null) : clamp(st?.inactiveAt || null);
                 c.inactive = !!st?.inactive; c.deleted = !!st?.deleted;
                 c.inactiveAt = ia && ia >= c.start ? ia : null;
                 // Muzlatish oraliqlari (holat jurnalidan): bu kunlarda xizmat yo'q — tushum to'xtaydi, kurs shuncha kunga uzayadi.
                 const ivs = freezes.get('s:' + c.studentId) || freezes.get('l:' + c.leadId) || (st?.frozenAt ? [{ from: st.frozenAt, to: null, recordedAt: st.recordedAt }] : []);
                 c.freezes = ivs.map(f => {
-                    const from = f.from && openFrom && f.from < openFrom && (!f.recordedAt || f.recordedAt >= openFrom) ? openFrom : f.from;
+                    const from = !f.approved && f.from && openFrom && f.from < openFrom && (!f.recordedAt || f.recordedAt >= openFrom) ? openFrom : f.from;
                     return { from: from < c.start ? c.start : from, to: f.to || null };
                 }).filter(f => f.from && (!f.to || f.to > f.from) && (!f.to || f.to > c.start));
                 const open = c.freezes.find(f => !f.to);
@@ -572,7 +574,7 @@
 
     // ---------- Foyda va zarar (P&L) ----------
     const PNL_LINES = [
-        ['revenue', 'Kurs to‘lovlaridan tushum'], ['refunds', 'Qaytarishlar va tugatilgan shartnomalar'], ['net_revenue', 'Sof tushum', 'total'],
+        ['revenue', 'Kurs to‘lovlaridan tushum'], ['breakage', 'Ketgan o‘quvchilar qoldirgan to‘lov (pulsiz tugatish, IFRS 15 B46)'], ['refunds', 'Qaytarishlar va tugatilgan shartnomalar'], ['net_revenue', 'Sof tushum', 'total'],
         ['cost_of_services', 'Xizmat tannarxi (o‘qituvchilar, kontent)'], ['gross_profit', 'Yalpi foyda', 'total'],
         ['sales_payroll', 'Sotuv bo‘limi maoshi va bonuslari'], ['marketing', 'Marketing va reklama'], ['admin_payroll', 'Ma’muriy xodimlar maoshi'],
         ['payroll_tax', 'Ish haqi soliqlari'], ['rent', 'Ijara va kommunal'], ['software', 'Dasturlar va servislar'], ['admin', 'Ofis va ma’muriy xarajatlar'],
@@ -583,10 +585,10 @@
         ['profit_before_tax', 'Soliqqacha foyda', 'total'], ['income_tax', 'Foyda solig‘i'], ['net_profit', 'Sof foyda', 'total']
     ];
     const OPEX_KEYS = ['sales_payroll', 'marketing', 'admin_payroll', 'payroll_tax', 'rent', 'software', 'admin', 'payment_fees', 'turnover_tax', 'credit_losses', 'allocated_common'];
-    const INCOME_LINES = new Set(['revenue', 'other_income', 'prior_adjustments', 'asset_result']);
+    const INCOME_LINES = new Set(['revenue', 'breakage', 'other_income', 'prior_adjustments', 'asset_result']);
     function pnlFromBuckets(b) {
         const v = k => b[k] || 0;
-        const net_revenue = v('revenue') - v('refunds');
+        const net_revenue = v('revenue') + v('breakage') - v('refunds');
         const gross_profit = net_revenue - v('cost_of_services');
         const opex = sum(OPEX_KEYS.map(k => v(k)), x => x);
         const ebitda = gross_profit - opex, ebit = ebitda - v('depreciation') + v('asset_result');
@@ -621,7 +623,10 @@
             const base = grossRevenue(c, end) - grossRevenue(c, before);
             const loss = terminationShortfall(c, end) - terminationShortfall(c, before);
             const term = (grossRevenue(c, end) - earned(c, end)) - (grossRevenue(c, before) - earned(c, before)) - loss;
-            addTo(b, 'revenue', base); addTo(b, 'refunds', term); addTo(b, 'credit_losses', loss);
+            // Pulsiz tugatishda xizmat ko'rsatilmagan qismning tushumga o'tishi alohida qator (investor uchun oshkor).
+            const brk = d => c.forfeitedAt && d >= c.forfeitedAt ? Math.max(0, grossRevenue(c, d) - revenueBase(c, d)) : 0;
+            const breakage = brk(end) - brk(before);
+            addTo(b, 'revenue', base - breakage); addTo(b, 'breakage', breakage); addTo(b, 'refunds', term); addTo(b, 'credit_losses', loss);
         }
         for (const m of movements(data)) {
             if (m.source !== 'transaction' || !scopeMatch(m.entity, scope)) continue;
@@ -762,7 +767,7 @@
         return monthsBetween(start, end).map(month => {
             const s = month + '-01' < start ? start : month + '-01', e = monthEnd(month) > end ? end : monthEnd(month);
             const p = profitAndLoss(data, { start: s, end: e, scope, basis });
-            return { month, start: s, end: e, revenue: p.revenue || 0, refunds: p.refunds || 0, net_revenue: p.net_revenue, cost_of_services: p.cost_of_services || 0,
+            return { month, start: s, end: e, revenue: (p.revenue || 0) + (p.breakage || 0), refunds: p.refunds || 0, net_revenue: p.net_revenue, cost_of_services: p.cost_of_services || 0,
                 gross_profit: p.gross_profit, opex: p.opex, ebitda: p.ebitda, net_profit: p.net_profit, closed: !!(data.closedThrough && month <= data.closedThrough) };
         });
     }
@@ -932,13 +937,14 @@
     function duplicateReceipts(receipts, days = 3) {
         const live = (receipts || []).filter(r => !r.voidDate && date(r.date)).sort((a, b) => a.date.localeCompare(b.date));
         const out = [], seen = new Set();
-        const key = r => r.leadId ? 'l:' + r.leadId : r.studentId ? 's:' + r.studentId : phone9(r.phone) ? 'p:' + phone9(r.phone) : null;
+        // Faqat lid / o'quvchi bo'yicha (telefon emas: aka-ukalar bitta ota-ona telefonidan to'laydi). Tekshirib tasdiqlangani chiqarilmaydi.
+        const key = r => r.leadId ? 'l:' + r.leadId : r.studentId ? 's:' + r.studentId : null;
         for (let i = 0; i < live.length; i++) for (let j = i + 1; j < live.length && dayDiff(live[i].date, live[j].date) <= days; j++) {
             const a = live[i], b = live[j];
-            if (a.amount === b.amount && key(a) && key(a) === key(b) && !seen.has(b.id)) { seen.add(b.id); out.push({ first: a, second: b, reason: 'Bir xil summa ' + days + ' kun ichida' }); }
+            if (a.amount === b.amount && key(a) && key(a) === key(b) && !seen.has(b.id) && !b.notDuplicate) { seen.add(b.id); out.push({ first: a, second: b, reason: 'Bir xil summa ' + days + ' kun ichida' }); }
         }
         const byProof = new Map();
-        for (const r of live) if (r.receiptUrl) { if (byProof.has(r.receiptUrl) && !seen.has(r.id)) { seen.add(r.id); out.push({ first: byProof.get(r.receiptUrl), second: r, reason: 'Bitta chek ikki tushumda' }); } else byProof.set(r.receiptUrl, r); }
+        for (const r of live) if (r.receiptUrl) { if (byProof.has(r.receiptUrl) && !seen.has(r.id) && !r.notDuplicate) { seen.add(r.id); out.push({ first: byProof.get(r.receiptUrl), second: r, reason: 'Bitta chek ikki tushumda' }); } else byProof.set(r.receiptUrl, r); }
         return out;
     }
     // ---------- Ma'lumot sifati va shubhali yozuvlar ----------
@@ -973,7 +979,7 @@
         const suspicious = live.map(r => ({ ...r, reasons: suspiciousReasons(r, settings) })).filter(r => r.reasons.length);
         // Hujjatsiz pul chiqimlari (storno qilinmagan): soni va summasi — investor uchun hujjatlashtirilganlik ulushi.
         const reversed = new Set(transactions.filter(t => t.reversesId).map(t => t.reversesId));
-        const outflows = transactions.filter(t => ['expense', 'refund', 'drawing', 'loan_repay'].includes(t.type) && !t.reversesId && !reversed.has(t.id) && !t.salaryId);
+        const outflows = transactions.filter(t => ['expense', 'refund', 'drawing', 'loan_repay'].includes(t.type) && !t.reversesId && !reversed.has(t.id));
         const noProof = outflows.filter(t => !t.receiptUrl);
         return { duplicates: duplicateReceipts(receipts, settings?.duplicateDays || 3), outflowsTotal: sum(outflows, t => t.amount), outflowsWithoutProof: noProof.length,
             outflowsWithoutProofAmount: sum(noProof, t => t.amount), outflowsWithoutProofList: noProof.slice(-200),

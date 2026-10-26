@@ -49,12 +49,12 @@ async function seed() {
         inserts.push(`INSERT INTO payment_records(id,source_key,lead_id,language,manager_id,paid_date,amount,method,receipt_url,form,debt_snapshot,snapshot,legacy_review,actor_id)
             VALUES(${q('p' + i)},${q('preview:' + i)},${q('lead-' + phone)},'russian',${q(manager)},${q(date)},${Number(amount)},${q(method)},'',${q(form)},0,${q(JSON.stringify({ name, phone: '+998' + phone, managerName: manager === 'm1' ? 'Hamidaxon Boymirzayeva' : manager === 'm2' ? 'Kamola Shahobiddinova' : '' }))},${method === 'unknown'},'system');`);
     }
-    execFileSync('psql', [url, '-v', 'ON_ERROR_STOP=1', '-qAt', '-c', `BEGIN; SELECT set_config('fin.ctx', 'inflow:preview-seed', true); ${inserts.join('\n')} COMMIT;`]);
+    execFileSync('psql', [url, '-v', 'ON_ERROR_STOP=1', '-qAt', '-c', `BEGIN; SELECT set_config('fin.ctx', '${require('../server/services/finCtx').token('inflow')}', true); ${inserts.join('\n')} COMMIT;`]);
     const students = [['s1', 'Mamatov Kamoliddin', '332800826', 1900000, '2026-10-08'], ['s2', 'Sultonova Xafiza', '883139309', 1600000, '2026-10-15'], ['s3', 'Bobojonova Xosila', '902443056', 1500000, '2026-10-23'],
         ['s4', 'Raximov Abdumo‘min', '977039102', 1600000, '2026-08-17'], ['s5', 'Qosimjonov Sherzod', '978161313', 1400000, '2026-11-19'], ['s6', 'Akramov Ibrohim', '932200141', 900000, '2026-10-31']];
     // O'quvchilar CRM nomidan (crm: belgisi, foydalanuvchi bilan) — holat jurnaliga kim yozgani tushadi.
     const sq = v => "'" + String(v).replace(/'/g, "''") + "'";
-    const crm = sql => execFileSync('psql', [url, '-v', 'ON_ERROR_STOP=1', '-qAt', '-c', `BEGIN; SELECT set_config('fin.ctx', 'crm:preview-' || md5(random()::text), true), set_config('app.user_id', 'admin', true); ${sql} COMMIT;`]);
+    const crm = sql => execFileSync('psql', [url, '-v', 'ON_ERROR_STOP=1', '-qAt', '-c', `BEGIN; SELECT set_config('fin.ctx', '${require('../server/services/finCtx').token('crm')}', true), set_config('app.user_id', 'admin', true); ${sql} COMMIT;`]);
     crm(students.map(([id, name, phone, debt, due]) => `INSERT INTO students VALUES(${sq(id)},${sq(name)},${sq('+998' + phone)},'russian','g',NULL,30,${sq(JSON.stringify({ debtAmount: debt, paymentDueDate: due }))});`).join('\n'));
     // Demo: bitta o'quvchi to'lab, keyin CRM'dan o'chirilgan — "ketgan o'quvchida qolgan majburiyat" ro'yxatida ko'rinadi.
     const [, gName, gPhone] = csv[0].split(',');
@@ -75,9 +75,9 @@ async function seed() {
     await tx({ type: 'capital', categoryCode: 'OWNER_IN', amount: 5000000, date: '2026-09-01', entity: 'common', accountId: 'acc-bank', counterparty: 'Ta’sischi' });
     await tx({ type: 'expense', categoryCode: 'CAPEX', amount: 7200000, date: '2026-08-20', entity: 'common', accountId: 'acc-bank', counterparty: 'Noutbuk va proyektor', usefulLifeMonths: 36, receiptUrl: await newProof() });
     await tx({ type: 'expense', categoryCode: 'SOFTWARE', amount: 2400000, date: '2026-09-01', entity: 'common', accountId: 'acc-bank', counterparty: 'CRM yillik obuna', serviceStart: '2026-09-01', serviceEnd: '2027-08-31', receiptUrl: await newProof() });
-    await finance.recordSalaryPayment(pool, actor, 'sal-sep-t1', { accountId: 'acc-card', date: '2026-10-03' });
+    await finance.recordSalaryPayment(pool, actor, 'sal-sep-t1', { accountId: 'acc-card', date: '2026-10-03', receiptUrl: await newProof() });
     await finance.createPayable(pool, actor, { requestKey: 'preview-payable-0001', kind: 'bill', entity: 'russian', counterparty: 'Bloger reklama', categoryCode: 'MKT_OTHER', amount: 1500000, issueDate: '2026-10-10', dueDate: '2026-10-20', documentUrl: await newProof() });
-    await finance.addAccountCheck(pool, actor, 'acc-card', { date: '2026-10-20', actualBalance: 21000000, note: 'Bank ilovasi' });
+    await finance.addAccountCheck(pool, actor, 'acc-card', { date: '2026-10-20', actualBalance: 21000000, note: 'Bank ilovasi', evidenceUrl: await newProof() });
 }
 
 const types = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.json': 'application/json', '.woff2': 'font/woff2' };

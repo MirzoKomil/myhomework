@@ -175,6 +175,8 @@
         if (unchecked.length) items.push(['warning', `${unchecked.length} ta hisob qoldig‘i haqiqiy bank/karta/kassa qoldig‘i bilan hali solishtirilmagan`, 'kassa']);
         if (o.balance.suspense) items.push(['warning', `${money(o.balance.suspense)} to‘lov usuli aniqlanmagan tushum “Aniqlanmagan” hisobida turibdi — qaysi hisobga tushganini aniqlash kerak`, 'kassa']);
         if (o.balance.uzumReceivable) items.push(['warning', `Uzum Nasiya’dan ${money(o.balance.uzumReceivable)} hali olinmagan — bu pul emas, olinadigan summa`, 'kassa']);
+        if (o.sealKeyConfigured === false) items.push(['danger', 'Serverda FIN_SEAL_KEY (yoki JWT_SECRET) o‘rnatilmagan — ilova belgilari ochiq kalit bilan imzolanmoqda, soxtalashtirishdan himoya yo‘q', 'sozlamalar']);
+        if (o.restoredStudents?.length) items.push(['warning', `${o.restoredStudents.length} ta o‘quvchi CRM’dan o‘chirilib qayta tiklangan yoki qayta yaratilgan — tekshiring`, 'solishtirish']);
         if (q.duplicates?.length) items.push(['warning', `${q.duplicates.length} ta tushum takroriy bo‘lishi mumkin (bir xil summa yoki bitta chek)`, 'solishtirish']);
         if (o.dropouts?.length) items.push(['warning', `${o.dropouts.length} ta ketgan o‘quvchida ${money(o.dropouts.reduce((n, d) => n + d.liability, 0))} majburiyat qolgan — qaytaring yoki pulsiz tugating`, 'solishtirish']);
         if (o.cashflowSegments && !o.cashflowSegments.reconciled) items.push(['danger', 'Segmentlar bo‘yicha pul oqimi konsolidatsiyaga teng emas', 'hisobotlar', 'cashflow']);
@@ -391,6 +393,21 @@
             const v = n => b.querySelector(`[name="${n}"]`)?.value || '';
             const evidenceUrl = await upload(b.querySelector('[name="evidence"]'));
             await api('/contracts/forfeit', { paymentRecordId: recordId, date: v('date'), reason: v('reason'), evidenceUrl });
+        });
+    }
+
+    function openCorrectionModal(studentId, name, kind, from) {
+        const freeze = kind === 'freeze';
+        openModal(freeze ? 'O‘tgan muzlatish oralig‘ini tasdiqlash' : 'O‘quvchi ketgan sanani tuzatish', `<div class="fin-form"><p><b>${esc(name)}</b> — ${freeze ? 'bu kunlarda dars bo‘lmagan, tushum tan olinmaydi' : 'shu kundan xizmat ko‘rsatilmagan, tushum to‘xtaydi'}.</p>
+            <div class="fin-form-row">${field(freeze ? 'Boshlanish' : 'Haqiqiy ketgan sana', `<input type="date" lang="en-GB" class="form-control" name="from" value="${esc(from)}" max="${F.today()}">`)}${freeze ? field('Tugash (qaytgan kun)', `<input type="date" lang="en-GB" class="form-control" name="to" max="${F.today()}">`) : ''}</div>
+            ${field('Sabab', '<textarea class="form-control" name="reason" rows="2" maxlength="500" placeholder="Masalan: davomat jurnali bo‘yicha 20-sentyabrdan darsga kelmagan"></textarea>')}
+            ${field('Davomat jurnali yoki ariza (majburiy)', '<input type="file" class="form-control" name="evidence" accept=".pdf,.png,.jpg,.jpeg,.webp">')}
+            <p class="fin-note">Yopilgan oyga tushsa — o‘sha oy o‘zgarmaydi, farq birinchi ochiq oyda o‘tgan davr tuzatishi bo‘ladi.</p>
+            <p class="fin-error" data-fin-error role="alert"></p></div>`, footerButtons('Tasdiqlash'));
+        submitModal(async b => {
+            const v = n => b.querySelector(`[name="${n}"]`)?.value || '';
+            const evidenceUrl = await upload(b.querySelector('[name="evidence"]'));
+            await api('/students/status-correction', { studentId, kind, from: v('from'), to: v('to'), reason: v('reason'), evidenceUrl });
         });
     }
 
@@ -639,7 +656,7 @@
     const AUDIT_LABELS = { 'transaction-create': 'Operatsiya kiritildi', 'transaction-reverse': 'Storno', 'payable-create': 'Hisob-faktura', 'payable-void': 'Hisob-faktura bekor qilindi',
         'salary-cash-out': 'Maosh kassadan to‘landi', 'receipt-void': 'Tushum bekor qilindi', 'receipt-manual': 'Tushum hujjat asosida kiritildi', 'receipt-batch': 'Tuzatishlar to‘plami',
         'account-create': 'Hisob ochildi', 'account-update': 'Hisob o‘zgartirildi', 'account-check': 'Qoldiq tekshiruvi', 'period-lock': 'Oy yopildi', 'period-unlock': 'Oy qayta ochildi',
-        'settings-update': 'Sozlamalar', 'evidence-upload': 'Hujjat yuklandi', 'contract-forfeit': 'Shartnoma pulsiz tugatildi', 'asset-dispose': 'Aktiv chiqarildi', 'asset-impair': 'Aktiv qadrsizlandi' };
+        'settings-update': 'Sozlamalar', 'evidence-upload': 'Hujjat yuklandi', 'contract-forfeit': 'Shartnoma pulsiz tugatildi', 'receipt-not-duplicate': 'Tushum takror emas deb tasdiqlandi', 'student-status-correction': 'O‘quvchi holati hujjat bilan tuzatildi', 'asset-dispose': 'Aktiv chiqarildi', 'asset-impair': 'Aktiv qadrsizlandi' };
     function auditSummary(a) {
         const d = a.after_data || {};
         return [d.amount != null ? num(d.amount) + ' so‘m' : '', d.date || d.voidDate || '', d.reason || d.note || '', d.name || d.counterparty || '', d.type ? F.TYPES[d.type] || d.type : '', d.closedThrough ? 'gacha: ' + d.closedThrough : '', d.count ? d.count + ' ta' : ''].filter(Boolean).join(' · ');
@@ -676,14 +693,18 @@
                     </ul></section>
             </div>
             ${q.duplicates?.length ? `<section class="fin-card" aria-labelledby="finDupH"><header><h3 id="finDupH">Takroriy bo‘lishi mumkin bo‘lgan tushumlar</h3><span class="fin-muted">bir xil o‘quvchi va summa ${esc(String(o.settings?.duplicateDays ?? 3))} kun ichida yoki bitta chek</span></header>
-                ${table(['', 'Birinchi', 'Takroriy', 'Ism', { label: 'Summa', num: true }, 'Sabab'], q.duplicates.map(d => `<tr><td><input type="checkbox" data-fin-susp="${esc(d.second.id)}" aria-label="Tanlash: ${esc(d.second.name)}"></td><td>${dateText(d.first.date)}</td><td>${dateText(d.second.date)}</td><td>${esc(d.second.name)}<small>${esc(d.second.phone || '')}</small></td><td class="num">${num(d.second.amount)}</td><td><span class="fin-badge fin-badge--warning">${esc(d.reason)}</span></td></tr>`), { label: 'Takroriy tushumlar' })}
-                <div class="fin-actions"><button type="button" class="btn-primary-sm" data-fin-void-susp disabled>Tanlanganlarni bekor qilish</button><span class="fin-muted">Haqiqatan ikki marta to‘langan bo‘lsa — bekor qilmang (oy yopishda izoh bilan tasdiqlanadi).</span></div></section>` : ''}
+                ${table(['', 'Birinchi', 'Takroriy', 'Ism', { label: 'Summa', num: true }, 'Sabab', ''], q.duplicates.map(d => `<tr><td><input type="checkbox" data-fin-susp="${esc(d.second.id)}" aria-label="Tanlash: ${esc(d.second.name)}"></td><td>${dateText(d.first.date)}</td><td>${dateText(d.second.date)}</td><td>${esc(d.second.name)}<small>${esc(d.second.phone || '')}</small></td><td class="num">${num(d.second.amount)}</td><td><span class="fin-badge fin-badge--warning">${esc(d.reason)}</span></td><td><button type="button" class="fin-link" data-fin-notdup="${esc(d.second.id)}">Takror emas</button></td></tr>`), { label: 'Takroriy tushumlar' })}
+                <div class="fin-actions"><button type="button" class="btn-primary-sm" data-fin-void-susp disabled>Tanlanganlarni bekor qilish</button><span class="fin-muted">Haqiqiy to‘lov bo‘lsa — bekor qilmang, “Takror emas” deb sababi bilan tasdiqlang (kiritgan xodimdan boshqa kishi).</span></div></section>` : ''}
             ${o.dropouts?.length ? `<section class="fin-card" aria-labelledby="finDropH"><header><h3 id="finDropH">Ketgan o‘quvchilarda qolgan majburiyat</h3><span class="fin-muted">xizmat to‘xtagan, pul hali qaytarilmagan</span></header>
                 ${table(['O‘quvchi', 'Yo‘nalish', 'Ketgan sana', { label: 'Qolgan majburiyat', num: true }, ''], o.dropouts.map(d => `<tr><td>${esc(d.name)}${d.deleted ? ' <span class="fin-badge fin-badge--muted">CRM’dan o‘chirilgan</span>' : ''}</td><td>${esc(F.ENTITIES[d.entity])}</td><td>${dateText(d.inactiveAt)}</td><td class="num">${num(d.liability)}</td>
-                    <td>${isDirector() && d.paymentRecordId ? `<button type="button" class="fin-link" data-fin-forfeit="${esc(d.paymentRecordId)}" data-fin-name="${esc(d.name)}" data-fin-amount="${d.liability}">Pulsiz tugatish</button>` : ''}</td></tr>`), { label: 'Ketgan o‘quvchilar majburiyati' })}
+                    <td>${isDirector() ? `<button type="button" class="fin-link" data-fin-correct="${esc(d.studentId)}" data-fin-name="${esc(d.name)}" data-fin-kind="inactive">Ketgan sanani tuzatish</button>` : ''}${isDirector() && d.paymentRecordId ? `<button type="button" class="fin-link" data-fin-forfeit="${esc(d.paymentRecordId)}" data-fin-name="${esc(d.name)}" data-fin-amount="${d.liability}">Pulsiz tugatish</button>` : ''}</td></tr>`), { label: 'Ketgan o‘quvchilar majburiyati' })}
                 <p class="fin-note">Pul qaytarilsa — “Qaytarish” (tugatish belgisi bilan). Qaytarilmasa (shartnoma sharti yoki o‘quvchi talab qilmadi) — rahbar ariza/bayonnoma bilan pulsiz tugatadi: qolgan majburiyat shu kuni tushumga o‘tadi (IFRS 15 B46).</p></section>` : ''}
             ${o.backdatedStatus?.length ? `<section class="fin-card" aria-labelledby="finBdH"><header><h3 id="finBdH">Orqaga sanalangan holatlar</h3><span class="fin-muted">CRM’da kiritilgan sana jurnal sanasidan oldin — jurnal sanasi qo‘llandi</span></header>
-                ${table(['O‘quvchi', 'Maydon', 'CRM sanasi', 'Qo‘llangan sana'], o.backdatedStatus.map(b => `<tr><td>${esc(b.studentId)}</td><td>${b.field === 'frozenAt' ? 'muzlatish' : 'tashlab ketish'}</td><td>${dateText(b.claimed)}</td><td>${dateText(b.recorded)}</td></tr>`), { label: 'Orqaga sanalangan holatlar' })}</section>` : ''}
+                ${table(['O‘quvchi', 'Maydon', 'CRM sanasi', 'Qo‘llangan sana', ''], o.backdatedStatus.map(b => `<tr><td>${esc(b.studentId)}</td><td>${b.field === 'frozenAt' ? 'muzlatish' : 'tashlab ketish'}${b.future ? ' <span class="fin-badge fin-badge--muted">kelajak sanasi</span>' : ''}</td><td>${dateText(b.claimed)}</td><td>${dateText(b.recorded)}</td>
+                    <td>${isDirector() && !b.future ? `<button type="button" class="fin-link" data-fin-correct="${esc(b.studentId)}" data-fin-name="${esc(b.studentId)}" data-fin-kind="${b.field === 'frozenAt' ? 'freeze' : 'inactive'}" data-fin-from="${esc(b.claimed)}">Hujjat bilan tasdiqlash</button>` : ''}</td></tr>`), { label: 'Orqaga sanalangan holatlar' })}
+                <p class="fin-note">Haqiqatan oldinroq bo‘lgan bo‘lsa — rahbar davomat jurnali yoki ariza bilan tasdiqlaydi. Yopilgan oyga tushsa, o‘sha oy hisoboti o‘zgarmaydi: farq birinchi ochiq oyda “O‘tgan davrlar tuzatishi” qatorida chiqadi (IAS 8).</p></section>` : ''}
+            ${o.restoredStudents?.length ? `<section class="fin-card" aria-labelledby="finRsH"><header><h3 id="finRsH">O‘chirilib qayta tiklangan o‘quvchilar</h3><span class="fin-muted">eski brauzer oynasidan saqlash yoki yozuvni qayta yaratish</span></header>
+                ${table(['O‘quvchi', 'O‘chirilgan', 'Tiklangan', 'Turi'], o.restoredStudents.map(r => `<tr><td>${esc(r.studentId)}</td><td>${dateText(r.deletedOn)}</td><td>${dateText(r.restoredOn)}</td><td>${r.recreated ? 'shu lid bo‘yicha yangi yozuv (chiqish hisoblanmadi)' : 'xuddi shu yozuv qaytgan'}</td></tr>`), { label: 'Qayta tiklangan o‘quvchilar' })}</section>` : ''}
             ${o.contractDebtMismatches?.length ? `<section class="fin-card" aria-labelledby="finCdH"><header><h3 id="finCdH">Shartnoma aktivi va CRM qarzi mos emas</h3></header>
                 ${table(['O‘quvchi', 'Yo‘nalish', { label: 'Shartnoma aktivi', num: true }, { label: 'CRM qarzi', num: true }, { label: 'Farq', num: true }], o.contractDebtMismatches.map(r => `<tr><td>${esc(r.name)}</td><td>${esc(F.ENTITIES[r.entity])}</td><td class="num">${num(r.contractAsset)}</td><td class="num">${num(r.crmDebt)}</td><td class="num neg">${num(r.difference)}</td></tr>`))}</section>` : ''}
             <section class="fin-card" aria-labelledby="finStH"><header><h3 id="finStH">O‘quvchi holati o‘zgarishlari (moliyaga ta’sir qiladigan)</h3><span class="fin-muted">muzlatish, tashlash, qarz, to‘lov sanasi — baza avtomatik yozadi</span></header>
@@ -759,6 +780,8 @@
             openReasonModal(`${ids.length} ta tushumni bekor qilish`, 'Bekor qilish', async (reason, evidenceUrl) => { await api('/receipts/void', { recordIds: ids, reason, evidenceUrl }); }, { evidence: true, evidenceRequired: true, placeholder: 'Masalan: test yozuvi, takroriy kiritilgan, haqiqiy to‘lov emas' });
         }));
         root.querySelectorAll('[data-fin-salary]').forEach(b => b.addEventListener('click', () => openSalaryModal(b.dataset.finSalary)));
+        root.querySelectorAll('[data-fin-notdup]').forEach(b => b.addEventListener('click', () => openReasonModal('Takror emasligini tasdiqlash', 'Tasdiqlash', async reason => { await api('/receipts/' + encodeURIComponent(b.dataset.finNotdup) + '/not-duplicate', { reason }); }, { placeholder: 'Masalan: kurs narxi ikki teng qismda to‘langan (shartnoma bo‘yicha)' })));
+        root.querySelectorAll('[data-fin-correct]').forEach(b => b.addEventListener('click', () => openCorrectionModal(b.dataset.finCorrect, b.dataset.finName, b.dataset.finKind, b.dataset.finFrom || '')));
         root.querySelectorAll('[data-fin-forfeit]').forEach(b => b.addEventListener('click', () => openForfeitModal(b.dataset.finForfeit, b.dataset.finName, Number(b.dataset.finAmount))));
         root.querySelector('[data-fin-audit-filter]')?.addEventListener('change', e => { state.auditFilter = e.target.value; state.auditRows = null; render('solishtirish'); });
         root.querySelector('[data-fin-audit-export]')?.addEventListener('click', () => {
@@ -959,22 +982,26 @@
         openModal('Maoshni kassadan chiqim qilish', `<div class="fin-form"><p><b>${esc(s.employeeName)}</b> · ${dateText(s.periodStart)} — ${dateText(s.periodEnd)} · <b>${money(s.amount)}</b></p>
             ${field('To‘langan sana', `<input type="date" lang="en-GB" class="form-control" name="date" value="${s.paidAt || F.today()}" max="${F.today()}">`)}
             ${field('Qaysi hisobdan', `<select class="form-control" name="accountId">${accounts.map(a => `<option value="${esc(a.id)}">${esc(a.name)}</option>`).join('')}</select>`)}
+            ${field('Imzolangan to‘lov qaydnomasi yoki bank o‘tkazmasi', '<input type="file" class="form-control" name="evidence" accept=".pdf,.png,.jpg,.jpeg,.webp">', `${money(state.overview.settings?.evidenceMin ?? 1000000)} va undan katta to‘lovda majburiy`)}
             <p class="fin-error" data-fin-error role="alert"></p></div>`, footerButtons('Saqlash'));
-        submitModal(async b => { await api('/salaries/' + encodeURIComponent(id) + '/cash-out', { date: b.querySelector('[name="date"]').value, accountId: b.querySelector('[name="accountId"]').value }); });
+        submitModal(async b => { const receiptUrl = await upload(b.querySelector('[name="evidence"]')); await api('/salaries/' + encodeURIComponent(id) + '/cash-out', { date: b.querySelector('[name="date"]').value, accountId: b.querySelector('[name="accountId"]').value, receiptUrl }); });
     }
     function openCheckModal(accountId) {
         const a = state.overview.accounts.find(x => x.id === accountId);
-        openModal('Haqiqiy qoldiqni kiritish', `<div class="fin-form"><p><b>${esc(a.name)}</b> — kitobdagi qoldiq: <b>${money(a.balance)}</b> (${dateText(state.overview.period.end)})</p>
+        // "Ko'r" sanash: kitobdagi qoldiq oldindan ko'rsatilmaydi (sanovchi raqamga moslashtirmasligi uchun) — natija saqlangandan keyin solishtiriladi.
+        openModal('Haqiqiy qoldiqni kiritish', `<div class="fin-form"><p><b>${esc(a.name)}</b> — kassani sanang yoki bank / Uzum ko‘chirmasidagi qoldiqni kiriting. Kitobdagi qoldiq bilan solishtirish saqlangandan keyin ko‘rinadi.</p>
             <div class="fin-form-row">${field('Sana', `<input type="date" lang="en-GB" class="form-control" name="date" value="${F.today()}" max="${F.today()}">`)}
             ${field('Haqiqiy qoldiq (so‘m)', '<input type="text" class="form-control" name="actual" inputmode="decimal" autocomplete="off">', 'Bank ilovasi, terminal yoki kassadagi aniq summa. Manfiy bo‘lsa “-” bilan')}</div>
             ${field('Izoh', '<input type="text" class="form-control" name="note" maxlength="500">')}
+            ${field(a.kind === 'cash' ? 'Kassa sanash dalolatnomasi' : 'Bank / Uzum ko‘chirmasi', '<input type="file" class="form-control" name="evidence" accept=".pdf,.png,.jpg,.jpeg,.webp">', 'Oy yopishda hujjatsiz qoldiq ogohlantirish beradi')}
             <p class="fin-note">Farq chiqsa — kiritilmagan xarajat, tushum yoki xato bor. Sababini topib operatsiya kiriting; qoldiqni “to‘g‘rilash” uchun soxta yozuv qilinmaydi.</p>
             <p class="fin-error" data-fin-error role="alert"></p></div>`, footerButtons('Saqlash'));
         const key = reqKey();
         submitModal(async b => {
             const raw = b.querySelector('[name="actual"]').value.trim(), neg = raw.startsWith('-'), digits = raw.replace(/\D/g, '');
             if (!digits) throw new Error('Haqiqiy qoldiqni kiriting');
-            await api('/accounts/' + encodeURIComponent(accountId) + '/checks', { requestKey: key, date: b.querySelector('[name="date"]').value, actualBalance: (neg ? -1 : 1) * Number(digits), note: b.querySelector('[name="note"]').value });
+            const evidenceUrl = await upload(b.querySelector('[name="evidence"]'));
+            await api('/accounts/' + encodeURIComponent(accountId) + '/checks', { requestKey: key, date: b.querySelector('[name="date"]').value, actualBalance: (neg ? -1 : 1) * Number(digits), note: b.querySelector('[name="note"]').value, evidenceUrl });
         });
     }
     function openAccountModal(a) {
