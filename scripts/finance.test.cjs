@@ -581,3 +581,44 @@ test('R5: a freeze back-dated into a closed month takes effect from the first op
     assert.equal(c.frozenAt, '2026-09-01');
     assert.equal(F.profitAndLoss(closed, { start: '2026-09-01', end: '2026-09-30', basis: 'accrual' }).prior_adjustments || 0, 0);
 });
+
+// ---------- Auditor regressiyalari (6-bosqich) ----------
+test('R6: freeze then unfreeze pauses revenue for the frozen days and extends the course', () => {
+    const d = data({ accounts: ACC26, receipts: [rc('a', '2026-01-01', 3000000, { leadId: 'L', studentId: 'S', contractValue: 3000000 })],
+        studentFreezes: [{ studentId: 'S', from: '2026-01-31', to: '2026-03-01' }] });
+    const feb = F.profitAndLoss(d, { start: '2026-02-01', end: '2026-02-28', basis: 'accrual' });
+    assert.equal(feb.net_revenue, 0);
+    const c = F.contracts(d)[0];
+    assert.ok(F.earned(c, '2026-03-31') < 3000000);
+    assert.equal(F.earned(c, '2026-04-30'), 3000000);
+});
+
+test('R6: a service period on CAPEX is ignored (asset accounting only) — books stay balanced', () => {
+    const d = data({ accounts: ACC.map(a => ({ ...a, openingDate: '2026-01-01', openingBalance: 20000000 })),
+        transactions: [tx('cap', '2026-10-02', 'expense', 'CAPEX', 12000000, { entity: 'common', accountId: 'acc-bank', usefulLifeMonths: 36, serviceStart: '2026-10-02', serviceEnd: '2027-10-01' })] });
+    const b = F.balanceSheet(d, '2026-12-31');
+    assert.equal(b.prepaidExpenses, 0); assert.equal(b.balanced, true);
+    assert.equal(F.serviceAllowed(F.CATEGORY.CAPEX), false); assert.equal(F.serviceAllowed(F.CATEGORY.RENT), true);
+});
+
+test('R6: an inflated CRM debt cannot raise the course price above the captured contract value; it is flagged', () => {
+    const d = data({ accounts: ACC26, receipts: [rc('a', '2026-01-01', 1000000, { leadId: 'L', studentId: 'S', contractValue: 3000000 })], studentDebts: [{ studentId: 'S', debt: 50000000 }] });
+    assert.equal(F.contracts(d)[0].value, 3000000);
+    const flags = F.contractDebtMismatches(d, '2026-06-30');
+    assert.equal(flags.some(f => f.kind === 'debt_over_price' && f.difference === 48000000), true);
+});
+
+test('R6: an unpaid balance is overdue from the course end for ECL even if the CRM due date is later', () => {
+    const d = data({ accounts: ACC26, receipts: [rc('a', '2026-01-01', 1000000, { leadId: 'L', studentId: 'S', contractValue: 3000000 })],
+        receivables: [{ studentId: 'S', entity: 'russian', debt: 2000000, dueDate: '2026-12-31' }] });
+    assert.ok(F.eclAt(d, '2026-05-15') > 0);
+});
+
+test('R6: split payment is found even when a namesake with another phone has the exact amount; У/Ў spellings match', () => {
+    const r = F.reconcile([{ date: '2026-09-10', name: 'Ali Valiyev', phone: '902222222', amount: 1000000 }],
+        [{ id: 'a', date: '2026-09-10', name: 'Ali Valiyev', phone: '902222222', amount: 600000 }, { id: 'b', date: '2026-09-10', name: 'Ali Valiyev', phone: '902222222', amount: 400000 },
+            { id: 'c', date: '2026-09-10', name: 'Ali Valiyev', phone: '901111111', amount: 1000000 }]);
+    const m = r.results.find(x => x.external);
+    assert.equal(m.status, 'split');
+    assert.equal(F.nameMatch('Уктам Рахимов', 'Oʻktam Rahimov'), 'strong');
+});

@@ -42,9 +42,13 @@ CREATE TABLE IF NOT EXISTS fin_period_locks (
 );
 `;
 async function initSchema(db) { await db.query(SCHEMA); }
+// Moliya muhrlari o'zgarishni qaysi ilova tranzaksiyasi qilganini bilishi uchun belgi (mavjud bo'lsa saqlanadi).
+async function markContext(db) {
+    await db.query("SELECT set_config('fin.ctx', COALESCE(NULLIF(current_setting('fin.ctx', true), ''), $1), true)", ['inflow:' + randomUUID()]);
+}
 async function transaction(pool, fn) {
     const db = await pool.connect();
-    try { await db.query('BEGIN'); const result = await fn(db); await db.query('COMMIT'); return result; }
+    try { await db.query('BEGIN'); await markContext(db); const result = await fn(db); await db.query('COMMIT'); return result; }
     catch (e) { await db.query('ROLLBACK'); throw e; } finally { db.release(); }
 }
 async function access(db, actor, write = false, subject = null) {
@@ -65,6 +69,7 @@ function student(row) {
 }
 function safeStudent(s) { const { password, passwordHash, ...out } = s; return { ...out, hasPassword: !!passwordHash }; }
 async function insert(db, event, context, actor, legacy = false) {
+    await markContext(db);
     // Concurrent receipts must not miss a crossed milestone. No locking/writing of legacy imports.
     if (!legacy && context.language === 'russian') await db.query("SELECT pg_advisory_xact_lock(hashtext('domwork-new-receipts'))");
     const existing = (await db.query('SELECT * FROM payment_records WHERE source_key=$1', [event.sourceKey])).rows[0];
@@ -116,7 +121,7 @@ async function syncLead(db, lead, platformAccess, actor, legacy = false, priorLe
     if (!legacy && !['tolov-jarayonida', 'tolov-yopildi'].includes(lead.status)) return;
     const s = platformAccess?.student, inferred = ledger.leadEvents(lead);
     if (!legacy && actor.id && !actor.name) actor = { ...actor, name: (await db.query('SELECT name FROM users WHERE id=$1', [actor.id])).rows[0]?.name || actor.email };
-    if (s) await db.query('UPDATE payment_records SET student_id=$2 WHERE lead_id=$1 AND student_id IS NULL', [lead.id, s.id]);
+    if (s) { await markContext(db); await db.query('UPDATE payment_records SET student_id=$2 WHERE lead_id=$1 AND student_id IS NULL', [lead.id, s.id]); }
     const ctx = await context(db, lead, s);
     if (!legacy && paymentIdentity(lead) !== paymentIdentity(priorLead) && lead.status === 'tolov-yopildi'
         && ledger.money(lead.paymentClosedSurvey?.actualAmount) === 0 && ledger.money(lead.paymentSurvey?.totalAmount) > 0

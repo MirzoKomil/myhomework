@@ -137,6 +137,8 @@
         }
         return out;
     }
+    // Xizmat davri bo'yicha taqsimlash faqat operatsion xarajatlarga (ijara, obuna, reklama...) — aktiv, soliq, maosh, foizga emas.
+    function serviceAllowed(cat) { return !!cat && !!cat.pnl && !cat.payroll && !['CAPEX', 'TAX_TURNOVER', 'TAX_INCOME', 'INTEREST', 'REFUND', 'BANK_FEES'].includes(cat.code) && cat.type === 'expense'; }
     function categoryOf(t) {
         return CATEGORY[t.categoryCode] || CATEGORY[{ income: 'REV_OTHER', refund: 'REFUND', capital: 'OWNER_IN', drawing: 'OWNER_OUT', loan_in: 'LOAN_IN', loan_repay: 'LOAN_REPAY', transfer: 'TRANSFER' }[t.type]] || CATEGORY.OTHER_EXP;
     }
@@ -147,7 +149,7 @@
             const base = { source: 'transaction', transactionId: t.id, entity: t.entity, date: t.date, category: cat.code, type: t.type, amount: t.amount,
                 counterparty: t.counterparty || '', description: t.description || '', isReversal: !!t.reversesId, reversesId: t.reversesId || null,
                 paymentRecordId: t.paymentRecordId || null, payableId: t.payableId || null, salaryId: t.salaryId || null, legacy: !!t.legacy, usefulLifeMonths: t.usefulLifeMonths || null,
-                serviceStart: date(t.serviceStart) || null, serviceEnd: date(t.serviceEnd) || null, assetId: t.assetId || null };
+                serviceStart: serviceAllowed(cat) ? date(t.serviceStart) || null : null, serviceEnd: serviceAllowed(cat) ? date(t.serviceEnd) || null : null, assetId: t.assetId || null };
             if (t.type === 'transfer') {
                 out.push({ ...base, id: 't:' + t.id + ':out', account: t.accountId, sign: -flip, transferLeg: 'out', otherAccount: t.toAccountId });
                 out.push({ ...base, id: 't:' + t.id + ':in', account: t.toAccountId, sign: flip, transferLeg: 'in', otherAccount: t.accountId });
@@ -262,7 +264,11 @@
                 refundsByReceipt.get(t.paymentRecordId).push({ id: t.reversesId || t.id, date: t.date, amount: (t.reversesId ? -1 : 1) * t.amount, terminates: !!t.terminates, reversal: !!t.reversesId });
             }
             // O'quvchi holati: muzlatilgan sanadan keyin tushum tan olinmaydi; tashlab ketgan bo'lsa — to'xtatiladi yoki zarar zaxirasi.
-            const status = new Map();
+            const status = new Map(), freezes = new Map();
+            for (const f of data.studentFreezes || []) for (const k of [f.studentId && 's:' + f.studentId, f.leadId && 'l:' + f.leadId].filter(Boolean)) {
+                if (!freezes.has(k)) freezes.set(k, []);
+                freezes.get(k).push(f);
+            }
             for (const s of data.studentStatus || []) { if (s.studentId) status.set('s:' + s.studentId, s); if (s.leadId) status.set('l:' + s.leadId, s); }
             const out = [];
             for (const [g, list] of groups) {
@@ -310,7 +316,12 @@
                 const current = latest.get(c.group) === c ? (debts.get('s:' + c.studentId) ?? debts.get('l:' + c.leadId)) : undefined;
                 const crmDebt = current != null ? Number(current) : last && last.debtAfter != null && last.debtAfter !== '' ? Number(last.debtAfter) : null;
                 c.priceSource = crmDebt != null ? 'crm' : c.index === 1 && c.threshold ? 'lead' : 'cash';
-                c.value = !live.length ? 0 : crmDebt != null ? sum(live) + Math.max(0, crmDebt) : Math.max(c.index === 1 ? c.threshold : 0, sum(live));
+                // CRM qarzi shartnomada muzlatilgan narxdan oshirib kiritilsa — narx o'sha qiymatda cheklanadi (tekshiruvga chiqariladi).
+                const captured = Number(live[0]?.contractValue) || 0;
+                const debtPart = crmDebt != null ? Math.max(0, crmDebt) : null;
+                const capped = debtPart != null && captured > 0 ? Math.min(debtPart, Math.max(0, captured - sum(live))) : debtPart;
+                c.debtInflation = debtPart != null && capped != null && debtPart > capped ? debtPart - capped : 0;
+                c.value = !live.length ? 0 : debtPart != null ? sum(live) + capped : Math.max(c.index === 1 ? c.threshold : 0, sum(live));
                 c.firstReceipt = live[0] || null;
                 c.startLive = live[0]?.date || null;
                 // Qisman qaytarish (ortiqcha to'lov, chegirma) — shartnoma narxini kamaytiradi, kurs davom etadi.
@@ -328,10 +339,17 @@
                 // Yopilgan oyga orqaga sanalangan holat (muzlatish/tashlash) yopilgan davrni o'zgartirmaydi — birinchi ochiq kundan kuchga kiradi.
                 const openFrom = data.closedThrough ? addDays(monthEnd(data.closedThrough), 1) : null;
                 const clamp = d => (d && openFrom && d < openFrom && (!st?.recordedAt || st.recordedAt >= openFrom) ? openFrom : d);
-                const fz = clamp(st?.frozenAt || null), ia = clamp(st?.inactiveAt || null);
-                c.frozenAt = fz && fz >= c.start ? fz : null;
+                const ia = clamp(st?.inactiveAt || null);
                 c.inactive = !!st?.inactive;
                 c.inactiveAt = ia && ia >= c.start ? ia : null;
+                // Muzlatish oraliqlari (holat jurnalidan): bu kunlarda xizmat yo'q — tushum to'xtaydi, kurs shuncha kunga uzayadi.
+                const ivs = freezes.get('s:' + c.studentId) || freezes.get('l:' + c.leadId) || (st?.frozenAt ? [{ from: st.frozenAt, to: null, recordedAt: st.recordedAt }] : []);
+                c.freezes = ivs.map(f => {
+                    const from = f.from && openFrom && f.from < openFrom && (!f.recordedAt || f.recordedAt >= openFrom) ? openFrom : f.from;
+                    return { from: from < c.start ? c.start : from, to: f.to || null };
+                }).filter(f => f.from && (!f.to || f.to > f.from) && (!f.to || f.to > c.start));
+                const open = c.freezes.find(f => !f.to);
+                c.frozenAt = open ? open.from : null;
             }
             return out;
         });
@@ -341,13 +359,23 @@
             - sum(c.refunds.filter(f => f.date <= asOf));
     }
     function contractLive(c, asOf) { return c.receipts.some(r => r.date <= asOf && !(r.voidDate && r.voidDate <= asOf)); }
+    // Kursning boshidan asOf gacha xizmat ko'rsatilgan kunlar (muzlatilgan kunlarsiz).
+    function activeDays(c, asOf) {
+        if (asOf < c.start) return 0;
+        let days = dayDiff(c.start, asOf) + 1;
+        for (const f of c.freezes || []) {
+            const a = f.from, b = f.to ? addDays(f.to, -1) : asOf, e = b < asOf ? b : asOf;
+            if (e >= a) days -= dayDiff(a, e) + 1;
+        }
+        return Math.max(0, days);
+    }
     function straightLine(c, asOf, value = c.value) {
         if (value <= 0 || !c.start || asOf < c.start) return 0;
-        const total = dayDiff(c.start, c.end) + 1, done = Math.min(total, dayDiff(c.start, asOf) + 1);
+        const total = dayDiff(c.start, c.end) + 1, done = Math.min(total, activeDays(c, asOf));
         return Math.floor(value * done / total);
     }
-    // Xizmat ko'rsatish to'xtagan sana: shartnoma tugatilgan, o'quvchi muzlatilgan yoki o'qishni tashlagan.
-    function stopDate(c) { return [c.terminatedAt, c.frozenAt, c.inactiveAt].filter(Boolean).sort()[0] || null; }
+    // Xizmat ko'rsatish to'xtagan sana: shartnoma tugatilgan yoki o'quvchi o'qishni tashlagan (muzlatish — alohida, oraliq bilan).
+    function stopDate(c) { return [c.terminatedAt, c.inactiveAt].filter(Boolean).sort()[0] || null; }
     function serviceDate(c, asOf) { const s = stopDate(c); return s && asOf >= s ? s : asOf; }
     function refundsTo(c, asOf) { return sum(c.refunds.filter(f => f.date <= asOf), f => f.amount); }
     // Tushum (qaytarishdan oldingi asosiy narx bo'yicha).
@@ -432,7 +460,7 @@
     }
     function payableRecognized(p, asOf) {
         if (p.kind === 'loan' || (p.voided && !p.voidDate) || payableVoidedAt(p, asOf)) return 0;
-        if (date(p.serviceStart) && date(p.serviceEnd)) return Math.round(p.amount * spreadFraction(p.serviceStart, p.serviceEnd, asOf));
+        if (date(p.serviceStart) && date(p.serviceEnd) && serviceAllowed(CATEGORY[p.categoryCode])) return Math.round(p.amount * spreadFraction(p.serviceStart, p.serviceEnd, asOf));
         return asOf >= p.issueDate ? p.amount : 0;
     }
     // Aylanmadan soliq hisoblash usulida tushumdan hisoblanadi (stavka sozlamada, kuchga kirgan sanasi bilan).
@@ -481,7 +509,9 @@
             // O'qishni tashlagan o'quvchining to'lanmagan qismi to'liq zaxiralanadi.
             // Tashlab ketish sanasi ma'lum bo'lsa — o'sha sanadan; noma'lum bo'lsa — kurs tugagach (undan oldingi oylar o'zgarmaydi).
             const droppedOut = c.inactive && asOf >= (c.inactiveAt || c.end);
-            const rate = droppedOut ? 100 : Number(rates[agingBucket(r?.dueDate, asOf)]) || 0;
+            // Kurs tugagach to'lanmagan qism muddati o'tgan hisoblanadi (CRM'dagi to'lov sanasi kechroq bo'lsa ham).
+            const due = date(r?.dueDate) && r.dueDate < c.end ? r.dueDate : c.end;
+            const rate = droppedOut ? 100 : Number(rates[agingBucket(due, asOf)]) || 0;
             total += Math.floor(pos * rate / 100);
         }
         return total;
@@ -827,8 +857,10 @@
         const out = [];
         for (const { c, pos } of byGroup.values()) {
             const debt = debts.get('s:' + c.studentId) ?? debts.get('l:' + c.leadId);
-            if (debt != null && pos > Number(debt)) out.push({ name: c.name, entity: c.entity, contractAsset: pos, crmDebt: Number(debt), difference: pos - Number(debt) });
+            if (debt != null && pos > Number(debt)) out.push({ name: c.name, entity: c.entity, contractAsset: pos, crmDebt: Number(debt), difference: pos - Number(debt), kind: 'asset_over_debt' });
         }
+        // CRM qarzi shartnoma narxidan oshirib yozilgan (narx cheklandi) — sotuv menejeri qarzni ko'paytirgan bo'lishi mumkin.
+        for (const c of contracts(data)) if (c.debtInflation > 0) out.push({ name: c.name, entity: c.entity, contractAsset: contractPosition(c, asOf), crmDebt: c.debtInflation, difference: c.debtInflation, kind: 'debt_over_price' });
         return out;
     }
     // ---------- Ma'lumot sifati va shubhali yozuvlar ----------
@@ -909,6 +941,8 @@
     // Bir harfli imlo farqi faqat uzun so'zlarda va jins farqi bo'lmasa (oxirida "a" qo'shilishi emas) mos deb olinadi.
     function tokenEq(x, y) {
         if (x === y) return true;
+        // O'zbekcha "ў" ruscha yozuvda "у" bo'lib ketadi: Уктам = O'ktam.
+        if (x.length >= 4 && x.replace(/u/g, 'o') === y.replace(/u/g, 'o')) return true;
         if (x.length < 6 || y.length < 6) return false;
         if (x === y + 'a' || y === x + 'a') return false;
         return editDistance1(x, y);
@@ -944,7 +978,8 @@
         // Bitta to'lov CRM'da bo'lib-bo'lib kiritilgan bo'lishi mumkin (600k + 400k = 1 mln): aniq yig'indi
         // summa farqidan ustun, lekin aniq bitta mos yozuvdan past.
         for (const e of ext) {
-            const same = pool.filter(r => Math.abs(dayDiff(e.date, r.date)) <= tolerance && ((e.phone && r.phone9 === e.phone) || nameMatch(e.name, r.name) === 'strong'));
+            const same = pool.filter(r => Math.abs(dayDiff(e.date, r.date)) <= tolerance && ((e.phone && r.phone9 === e.phone) || nameMatch(e.name, r.name) === 'strong')
+                && !(e.phone && r.phone9 && r.phone9 !== e.phone));
             if (same.some(r => r.amount === e.amount)) continue;
             let found = null;
             for (let i = 0; i < same.length && !found; i++) for (let j = i + 1; j < same.length && !found; j++) {
@@ -1003,7 +1038,7 @@
         money, date, today, addDays, addMonths, dayDiff, monthOf, monthEnd, monthsBetween, inRange, phone9, pct, settingsOf,
         accountForMethod, movements, accountBalances, cashSummary, cashbook, cashFlowStatement, profitAndLoss, monthlyPnl,
         contracts, contractCash, earned, revenueBase, contractPosition, fixedAssets, depreciationAt, eclAt, agingBucket,
-        receivablesAging, payablesSummary, balanceSheet, balanceSheetRaw, kpis, snapshotMonth, netBookValue, contractDebtMismatches, impairmentAt, settingsAt, turnoverTaxAccrued,
+        serviceAllowed, receivablesAging, payablesSummary, balanceSheet, balanceSheetRaw, kpis, snapshotMonth, netBookValue, contractDebtMismatches, impairmentAt, settingsAt, turnoverTaxAccrued,
         suspiciousReasons, dataQuality, reconcile, parseStatementText, nameSimilar, nameMatch
     };
 });

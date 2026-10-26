@@ -30,6 +30,10 @@ async function seed() {
     INSERT INTO users VALUES('admin','Abdulloh','admin','admin','') ON CONFLICT DO NOTHING;
     INSERT INTO hr_employees(id,name,role,lang,login,status) VALUES('m1','Hamidaxon Boymirzayeva','sotuv-menejeri','russian','m1','active'),('m2','Kamola Shahobiddinova','sotuv-menejeri','russian','m2','active'),
       ('t1','Hoshimova Gulhayoxon','rus-oqituvchi','russian','t1','active'),('t2','Azimova Mohinur','rus-oqituvchi','russian','t2','active') ON CONFLICT DO NOTHING;`);
+    // Maosh hisoblari Maoshlar bo'limida yaratiladi (bu yerda demo uchun moliya ishga tushishidan oldin).
+    if ((await pool.query("SELECT COUNT(*) AS n FROM salary_transactions")).rows[0].n === '0')
+        await pool.query(`INSERT INTO salary_transactions VALUES('sal-sep-t1','t1','russian','2026-09-01','2026-09-30',3200000,'paid',NOW(),NULL),('sal-sep-m1','m1','russian','2026-09-01','2026-09-30',2600000,'paid',NOW(),NULL),
+        ('sal-oct-t1','t1','russian','2026-10-01','2026-10-15',1700000,'unpaid',NULL,NULL)`);
     await inflow.initSchema(pool); await cash.initSchema(pool); await finance.initSchema(pool);
     if ((await pool.query('SELECT COUNT(*) AS n FROM payment_records')).rows[0].n !== '0') return;
     await finance.saveAccount(pool, actor, { id: 'acc-card', name: 'Karta (P2P / terminal)', kind: 'card', entity: 'common', methods: ['card', 'payme', 'click', 'paylater'], openingBalance: 2000000, openingDate: '2026-08-01' });
@@ -45,8 +49,6 @@ async function seed() {
     const students = [['s1', 'Mamatov Kamoliddin', '332800826', 1900000, '2026-10-08'], ['s2', 'Sultonova Xafiza', '883139309', 1600000, '2026-10-15'], ['s3', 'Bobojonova Xosila', '902443056', 1500000, '2026-10-23'],
         ['s4', 'Raximov Abdumo‘min', '977039102', 1600000, '2026-08-17'], ['s5', 'Qosimjonov Sherzod', '978161313', 1400000, '2026-11-19'], ['s6', 'Akramov Ibrohim', '932200141', 900000, '2026-10-31']];
     for (const [id, name, phone, debt, due] of students) await pool.query(`INSERT INTO students VALUES($1,$2,$3,'russian','g',NULL,30,$4)`, [id, name, '+998' + phone, JSON.stringify({ debtAmount: debt, paymentDueDate: due })]);
-    await pool.query(`INSERT INTO salary_transactions VALUES('sal-sep-t1','t1','russian','2026-09-01','2026-09-30',3200000,'paid',NOW(),NULL),('sal-sep-m1','m1','russian','2026-09-01','2026-09-30',2600000,'paid',NOW(),NULL),
-        ('sal-oct-t1','t1','russian','2026-10-01','2026-10-15',1700000,'unpaid',NULL,NULL)`);
     // Demo hujjat moliyaning yopiq omboriga yuklanadi (PNG imzosi bilan 1x1 rasm).
     const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
     let pn = 0;

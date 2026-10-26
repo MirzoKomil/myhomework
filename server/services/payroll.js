@@ -75,6 +75,7 @@ async function transaction(pool, fn) {
             await db.query('BEGIN ISOLATION LEVEL REPEATABLE READ');
             // One lock for accrual/confirmation/payment/settings prevents overlapping pay runs and races.
             await db.query("SELECT pg_advisory_xact_lock(hashtext('myhomework-payroll-v1'))");
+            await db.query("SELECT set_config('fin.ctx', $1, true)", ['payroll:' + randomUUID()]);
             const result = await fn(db);
             await db.query('COMMIT'); return result;
         } catch (e) {
@@ -357,7 +358,8 @@ async function markPaid(pool, actor, id) {
         if (!row) throw error(404, 'Maosh hisobi topilmadi');
         if (row.status === 'paid') return { ok: true, alreadyPaid: true };
         // Hisoblagan xodim o'zi "to'landi" deb tasdiqlay olmaydi (ikki kishi nazorati), rahbar bundan mustasno.
-        const accruedBy = (await db.query("SELECT actor_id FROM salary_audit WHERE action='accrue' AND entity_id=$1 ORDER BY id DESC LIMIT 1", [id])).rows[0]?.actor_id;
+        // Bu hisobni qachondir hisoblagan har qanday xodim (faqat oxirgisi emas) uni tasdiqlay olmaydi.
+        const accruedBy = (await db.query("SELECT 1 FROM salary_audit WHERE action='accrue' AND entity_id=$1 AND actor_id=$2 LIMIT 1", [id, user.id])).rows.length ? user.id : null;
         if (!user.director && accruedBy && accruedBy === user.id) throw error(403, 'Maoshni hisoblagan xodim uni o‘zi tasdiqlay olmaydi — boshqa moliya xodimi yoki rahbar tasdiqlaydi');
         if (Number(row.amount) < 0) throw error(400, 'Manfiy hisobni to‘langan deb belgilab bo‘lmaydi');
         const p = engine.period(row.start_key, row.end_key);

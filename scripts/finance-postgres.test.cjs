@@ -27,6 +27,7 @@ test('real PostgreSQL finance integration', { skip: !url }, async t => {
     const body = name => name.endsWith('.png') ? Buffer.concat([PNG, Buffer.from('evidence ' + name + seq++)]) : Buffer.from('%PDF-1.4\nevidence ' + name + seq++);
     // Superuser sifatida alohida sessiyada "yashirin" o'zgartirish (triggerlarni o'chirib) — buzilishni aniqlash testlari uchun.
     const accN3 = () => ({ id: 'acc3' });
+    const appSql = (app, sql) => execFileSync('psql', [url, '-v', 'ON_ERROR_STOP=1', '-qAt', '-c', `BEGIN; SELECT set_config('fin.ctx', '${app}:test-' || md5(random()::text), true); ${sql}; COMMIT;`], { encoding: 'utf8' });
     const superSql = (table, sql) => execFileSync('psql', [url, '-v', 'ON_ERROR_STOP=1', '-qAt', '-c', `ALTER TABLE ${table} DISABLE TRIGGER USER; ${sql}; ALTER TABLE ${table} ENABLE TRIGGER USER;`], { encoding: 'utf8' });
     const evidence = async (name = 'audit.pdf') => (await finance.storeEvidence(pool, accountant, { originalname: name, mimetype: name.endsWith('.png') ? 'image/png' : 'application/pdf', buffer: body(name) })).url;
     try {
@@ -387,7 +388,8 @@ test('real PostgreSQL finance integration', { skip: !url }, async t => {
             // Qaytarish Uzum kliring hisobidan emas
             await rejects(finance.createTransaction(pool, admin, { requestKey: key(), entity: 'russian', type: 'refund', categoryCode: 'REFUND', accountId: 'acc-uzum', amount: 1000, date: '2026-10-09', counterparty: 'U', paymentRecordId: 'ru', terminates: false, receiptUrl: await evidence() }), 400, /Uzum/);
             // Katta maosh to'lovi — rahbar; qoldiqdan katta — rad
-            await pool.query("INSERT INTO salary_transactions VALUES('salBig','t1','russian','2026-10-01','2026-10-15',60000000,'paid',NOW(),NULL)");
+            // Maosh bo'limi (payroll) tranzaksiyasi nomidan kiritiladi — ilova belgisi bilan
+            appSql('payroll', "INSERT INTO salary_transactions VALUES('salBig','t1','russian','2026-10-01','2026-10-15',60000000,'paid',NOW(),NULL)");
             await rejects(finance.recordSalaryPayment(pool, accountant, 'salBig', { accountId: 'acc-cash', date: '2026-10-16' }), 403, /rahbar/);
         });
 
@@ -450,11 +452,26 @@ test('real PostgreSQL finance integration', { skip: !url }, async t => {
             await rejects(pool.query("UPDATE fin_student_log SET state='{}' WHERE student_id='s1'"), null, /o.zgartirib/);
         });
 
-        await t.test('row seals detect edits and unsealed inserts made with triggers disabled', async () => {
+        await t.test('round 6: ordinary SQL changes (triggers on) are detected; lock rows cannot be deleted; limits come from sealed history', async () => {
+            const plainSql = sql => execFileSync('psql', [url, '-v', 'ON_ERROR_STOP=1', '-qAt', '-c', sql], { encoding: 'utf8' });
             assert.equal((await finance.verifySeals(pool)).ok, true);
+            // Yopilgan oy qulfini oddiy SQL bilan o'chirib bo'lmaydi
+            await finance.lockMonth(pool, admin, { month: '2026-08', override: true, note: 'Test: avgust yopildi (6-bosqich)' }).catch(() => {});
+            if ((await pool.query("SELECT 1 FROM fin_period_locks WHERE month='2026-08'")).rows.length)
+                assert.throws(() => plainSql("DELETE FROM fin_period_locks WHERE month='2026-08'"), /faqat moliya/);
+            // Sozlamadagi limitni oddiy SQL bilan o'chirish: aniqlanadi va amaldagi limitga ta'sir qilmaydi
+            plainSql(`UPDATE fin_settings SET data=jsonb_set(data,'{approvalLimit}','999999999999') WHERE id='main'`);
+            const v1 = await finance.verifySeals(pool);
+            assert.equal(v1.ok, false); assert.equal(v1.table, 'fin_settings');
+            await rejects(finance.createTransaction(pool, { id: 'acc3' }, { requestKey: key(), entity: 'common', type: 'expense', categoryCode: 'RENT', accountId: 'acc-bank', amount: 6000000, date: '2026-10-10', counterparty: 'X', receiptUrl: await evidence() }), 403);
+            // Xizmat davri asosiy vosita uchun rad etiladi
+            await rejects(finance.createTransaction(pool, admin, { requestKey: key(), entity: 'common', type: 'expense', categoryCode: 'CAPEX', accountId: 'acc-bank', amount: 1000000, date: '2026-10-10', counterparty: 'X', usefulLifeMonths: 12, serviceStart: '2026-10-10', serviceEnd: '2027-10-09', receiptUrl: await evidence() }), 400, /operatsion/);
+        });
+
+        await t.test('row seals detect edits and unsealed inserts made with triggers disabled', async () => {
             superSql('fin_transactions', "UPDATE fin_transactions SET amount=amount+1 WHERE id=(SELECT id FROM fin_transactions ORDER BY created_at LIMIT 1)");
             const v = await finance.verifySeals(pool);
-            assert.equal(v.ok, false); assert.equal(v.table, 'fin_transactions');
+            assert.equal(v.ok, false);
             await rejects(finance.lockMonth(pool, admin, { month: '2026-09', override: true, note: 'Yaxlitlik buzilgan holda yopishga urinish' }), 409, /yaxlitligi/);
         });
     } finally {

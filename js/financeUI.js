@@ -844,7 +844,12 @@
         const root = document.querySelector('[data-fin-txn]');
         wireMoney(root);
         const catSel = root.querySelector('select[name="categoryCode"]');
-        const syncCat = () => { const c = F.CATEGORY[catSel?.value]; root.querySelector('[data-fin-payroll-flag]').hidden = !c?.payroll; root.querySelector('[data-fin-capex]').hidden = c?.code !== 'CAPEX'; };
+        const syncCat = () => {
+            const c = F.CATEGORY[catSel?.value], svc = root.querySelector('[data-fin-service]');
+            root.querySelector('[data-fin-payroll-flag]').hidden = !c?.payroll; root.querySelector('[data-fin-capex]').hidden = c?.code !== 'CAPEX';
+            // Xizmat davri faqat operatsion xarajatlar uchun (asosiy vosita, soliq, maosh, foiz — yo'q).
+            if (svc) { svc.hidden = !F.serviceAllowed(c); if (svc.hidden) svc.querySelectorAll('input').forEach(i => { i.value = ''; }); }
+        };
         catSel?.addEventListener('change', syncCat); syncCat();
         root.querySelector('[name="type"]').addEventListener('change', e => { closeModal(); openTxnModal({ ...preset, type: e.target.value, settlement: false }); });
         root.querySelector('[name="refundEntity"]')?.addEventListener('change', e => { closeModal(); openTxnModal({ ...preset, type, entity: e.target.value }); });
