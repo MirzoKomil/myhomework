@@ -149,7 +149,8 @@
             const gross = amount(closed.actualAmount ?? closed.totalAmount);
             const linkedRefunds = refundEvents.filter(t => (t.leadId || t.leadRef?.id) === l.id);
             const net = linkedRefunds.length ? gross : (l.refunded || l.paymentStatus === 'refunded' ? 0 : Math.max(0, gross - amount(l.refundAmount)));
-            add(l.managerId, net); turnover += net;
+            // Sotuv uni qilgan menejerga (lid keyin boshqaga berilgan bo'lsa ham).
+            add(l.saleManagerId || l.managerId, net); turnover += net;
         }
         for (const t of refundEvents) {
             if (!inPeriod(t.date, p)) continue;
@@ -160,7 +161,7 @@
             if (!transactionLang) { warnings.push('Qaytarilgan pul tili/menejeri aniqlanmagan: ' + t.id); continue; }
             if (transactionLang !== lang) continue;
             turnover -= amount(t.amount);
-            const manager = t.managerId || linked?.managerId;
+            const manager = t.managerId || linked?.saleManagerId || linked?.managerId;
             if (manager) add(manager, -amount(t.amount));
             else warnings.push('Qaytarilgan pul menejerga bog‘lanmagan: ' + t.id);
         }

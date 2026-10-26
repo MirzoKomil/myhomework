@@ -180,7 +180,12 @@ test('stale CRM snapshots keep newly provisioned accounts; explicit deletion wor
   const { saveStudents } = loadFunctions('server/db.js', ['saveStudents'], {
     STUDENT_PROVISION_LOCK, rowToStudent: fromRow, isUsableList: Array.isArray, teacherDuties: require('../server/services/teacherDuties'),
     require: name => { if(name==='./services/domworkBot/events') return require('../server/services/domworkBot/events'); throw Error(name); },
-    guardBulkDelete: async () => {}, BCRYPT_HASH_RE: /^\$2[aby]\$\d{2}\$/, bcrypt
+    guardBulkDelete: async () => {}, BCRYPT_HASH_RE: /^\$2[aby]\$\d{2}\$/, bcrypt,
+    // Faqat kelgan va aniq o'chirilgan qatorlar almashtiriladi (arxiv bu testning mavzusi emas).
+    replaceSnapshotRows: async (client, table, label, incoming, removed) => {
+      const ids = new Set([...incoming.map(i => i.id), ...(removed || [])]);
+      client.rows = client.rows.filter(r => !ids.has(r.id));
+    }
   });
   await saveStudents(db, []);
   assert.equal(db.rows.length, 1);
@@ -287,11 +292,14 @@ test('CRM deletion sends explicit IDs, while an ordinary edit does not claim del
   const payloads = [];
   const context = loadFunctions('js/storage.js', ['setItem'], {
     CACHE_KEY_MAP: { students: 'students' }, STORAGE_KEYS: { students: 'students', leads: 'leads' },
+    SNAPSHOT_TABLE_KEYS: new Set(['students', 'hrEmployees', 'teachers', 'bookRoadmap']),
     _cache: { students: [{ id: 'one' }, { id: 'two' }] }, _apiReady: true,
     apiPatchState: async payload => { payloads.push(payload); }, console
   });
   await context.setItem('students', [{ id: 'one', name: 'Edited' }, { id: 'two' }]);
   assert.equal(payloads[0].removedStudentIds.length, 0);
+  assert.equal(payloads[0].removedIds.students.length, 0);
   await context.setItem('students', [{ id: 'two' }]);
   assert.deepEqual(Array.from(payloads[1].removedStudentIds), ['one']);
+  assert.deepEqual(Array.from(payloads[1].removedIds.students), ['one']);
 });

@@ -124,7 +124,7 @@ async function report(db, date, now = new Date()) {
     const nowDate = t.tashkentDate(now);
     const weekday = t.weekday(date);
     const teachers = (await db.query(`SELECT he.id,he.name,he.role,tc.schedule_pattern FROM hr_employees he LEFT JOIN teachers tc ON tc.id=he.id
-        WHERE COALESCE(he.status,'active')<>'inactive' ORDER BY he.name`)).rows.filter(r => MAIN_ROLES.has(r.role));
+        WHERE NOT ${await require('./index').goneSql(db)} ORDER BY he.name`)).rows.filter(r => MAIN_ROLES.has(r.role));
     if (!teachers.length) return { date, rows: [] };
     const students = (await db.query(`SELECT id,name,teacher_id,lesson_day_of_week,lesson_time,lesson_duration,extra_data
         FROM students WHERE teacher_id=ANY($1::text[]) AND COALESCE(lesson_time,'')<>''`, [teachers.map(x => x.id)])).rows

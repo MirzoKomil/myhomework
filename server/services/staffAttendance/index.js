@@ -101,6 +101,17 @@ async function initSchema(pool) {
     }
 }
 
+// Ishdan ketgan xodim: status 'inactive' yoki Arxiv/ishdan bo'shatish (offboarded_at) belgilangan.
+let offboardColumn = null;
+async function goneSql(db, alias = 'he') {
+    if (offboardColumn === null) {
+        offboardColumn = !!(await db.query(`SELECT 1 FROM information_schema.columns WHERE table_schema='public'
+            AND table_name='hr_employees' AND column_name='offboarded_at'`)).rows[0];
+    }
+    const a = alias ? alias + '.' : '';
+    return `(COALESCE(${a}status,'active')='inactive'${offboardColumn ? ` OR ${a}offboarded_at IS NOT NULL` : ''})`;
+}
+
 async function tableExists(db, name) {
     return !!(await db.query('SELECT to_regclass($1) AS t', ['public.' + name])).rows[0]?.t;
 }
@@ -132,7 +143,7 @@ async function actor(db, user) {
     }
     if (!employees.length && String(row.email || '').trim()) {
         employees = (await db.query(`SELECT id,name,role FROM hr_employees WHERE COALESCE(TRIM(login),'')<>''
-            AND LOWER(TRIM(login))=LOWER(TRIM($1)) AND COALESCE(status,'active')<>'inactive'`, [row.email])).rows;
+            AND LOWER(TRIM(login))=LOWER(TRIM($1)) AND NOT ${await goneSql(db, '')}`, [row.email])).rows;
     }
     const emp = employees.length === 1 ? employees[0] : null;
     return { ...row, employee_id: emp?.id || null, employee_name: emp?.name || null, employee_role: emp?.role || null,
@@ -506,7 +517,7 @@ async function employees(db, user) {
     const a = await actor(db, user); requireView(a);
     const rows = (await db.query(`SELECT he.id,he.name,he.role,he.lang,he.status,he.login,s.tracked,s.days,f.state AS face_state,f.photo_id AS face_photo,f.updated_at AS face_updated
         FROM hr_employees he LEFT JOIN staff_att_schedules s ON s.employee_id=he.id LEFT JOIN staff_att_faces f ON f.employee_id=he.id
-        WHERE COALESCE(he.status,'active')<>'inactive' ORDER BY he.name`)).rows;
+        WHERE NOT ${await goneSql(db)} ORDER BY he.name`)).rows;
     return rows.map(r => ({ id: r.id, name: r.name, role: r.role, lang: r.lang, hasLogin: !!String(r.login || '').trim(),
         isTeacher: TEACHER_HR_ROLES.has(r.role), tracked: r.tracked === true, days: r.days || {},
         face: r.face_state || 'none', facePhotoId: r.face_photo || null, faceUpdatedAt: r.face_updated || null }));
@@ -571,7 +582,7 @@ async function deleteFace(pool, user, employeeId) {
 
 async function trackedList(db) {
     return (await db.query(`SELECT he.id,he.name,he.role FROM staff_att_schedules s JOIN hr_employees he ON he.id=s.employee_id
-        WHERE s.tracked AND COALESCE(he.status,'active')<>'inactive' ORDER BY he.name`)).rows;
+        WHERE s.tracked AND NOT ${await goneSql(db)} ORDER BY he.name`)).rows;
 }
 
 async function daily(db, user, date, now = new Date()) {
@@ -676,14 +687,15 @@ async function tick(db, now = new Date()) {
     await db.query(`UPDATE staff_att_events SET descriptor=NULL,frame_hash=NULL WHERE descriptor IS NOT NULL
         AND occurred_at < NOW() - ($1::int * INTERVAL '1 day')`, [settings.photoRetentionDays]);
     // Ishdan ketgan (nofaol) xodimning yuz namunasi o'chiriladi; belgilash rasmlari (dalil) odatiy muddatda eskiradi.
-    await db.query(`DELETE FROM staff_att_photos p USING hr_employees he WHERE he.id=p.employee_id AND he.status='inactive' AND p.purpose='enroll'`);
+    const gone = await goneSql(db);
+    await db.query(`DELETE FROM staff_att_photos p USING hr_employees he WHERE he.id=p.employee_id AND ${gone} AND p.purpose='enroll'`);
     await db.query(`UPDATE staff_att_faces f SET descriptors='[]',state='reset',photo_id=NULL,reset_at=NOW() FROM hr_employees he
-        WHERE he.id=f.employee_id AND he.status='inactive' AND f.descriptors<>'[]'::jsonb`);
+        WHERE he.id=f.employee_id AND ${gone} AND f.descriptors<>'[]'::jsonb`);
     await db.query(`UPDATE staff_att_events e SET descriptor=NULL,frame_hash=NULL FROM hr_employees he
-        WHERE he.id=e.employee_id AND he.status='inactive' AND e.descriptor IS NOT NULL`);
+        WHERE he.id=e.employee_id AND ${gone} AND e.descriptor IS NOT NULL`);
     return { absent, purged };
 }
 
 module.exports = { initSchema, actor, getSettings, saveSettings, me, challenge, submitOwnFace, check, employees, saveSchedule,
-    enrollFor, reviewFace, deleteFace, daily, monthly, setOverride, photo, tick, computeDay, lessonReport, transaction, ipAllowed,
+    enrollFor, reviewFace, deleteFace, daily, monthly, setOverride, photo, tick, computeDay, lessonReport, transaction, ipAllowed, goneSql,
     MAX_ATTEMPTS_PER_DAY, TEACHER_HR_ROLES, FRAME_W, FRAME_H };

@@ -10,7 +10,8 @@ const app = fs.readFileSync(path.join(__dirname, '..', 'js', 'app.js'), 'utf8');
 const block = (start, end) => { const a = app.indexOf(start); return app.slice(a, app.indexOf(end, a) + end.length); };
 
 function ctx() {
-    const c = vm.createContext({ Date, Intl, Math, Number, String, Array, Object, Map, Set });
+    const c = vm.createContext({ Date, Intl, Math, Number, String, Array, Object, Map, Set,
+        staffStatus: require('../js/staffStatus'), STORAGE_KEYS: { hrEmployees: 'hrEmployees' }, getItem: (k, f) => f });
     vm.runInContext([block('const LEAD_COLUMNS = [', '];'), 'const LEAD_STATUS_IDS = new Set(LEAD_COLUMNS.map(c => c.id));',
         block('const SALES_MAIN_PATH', ';'),
         ...['normalizeLeadStatus', 'leadTashkentDayKey', 'leadCreatedMs', 'salesPathIndex', 'leadReachedStage', 'medianOf',
