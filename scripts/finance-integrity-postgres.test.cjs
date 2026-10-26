@@ -328,11 +328,16 @@ test('round 8: dropout from a controlled date, zero-cash termination, attributio
             plainSql(`CREATE FUNCTION evil() RETURNS trigger AS $$ BEGIN INSERT INTO fin_transactions(id,entity,txn_date,type,category_code,account_id,amount,counterparty,actor_id,actor_name)
                 VALUES('evil-' || NEW.id,'common','2026-10-20','expense','ADMIN','acc-card',7777777,'Ghost LLC','admin','Admin'); RETURN NEW; END $$ LANGUAGE plpgsql;
                 CREATE TRIGGER zz_audit_hook AFTER INSERT ON fin_audit FOR EACH ROW EXECUTE FUNCTION evil();`);
-            await finance.createTransaction(pool, admin, { requestKey: 'r11-evil-0000000001', entity: 'common', type: 'expense', categoryCode: 'ADMIN', accountId: 'acc-card', amount: 10000, date: '2026-10-20', counterparty: 'Ofis' });
+            // Ilova o'zi yozmagan qatorni ko'radi va tranzaksiyani imzolamasdan bekor qiladi; tekshiruv ham triggerni ko'rsatadi.
+            await assert.rejects(finance.createTransaction(pool, admin, { requestKey: 'r11-evil-0000000001', entity: 'common', type: 'expense', categoryCode: 'ADMIN', accountId: 'acc-card', amount: 10000, date: '2026-10-20', counterparty: 'Ofis' }), /FIN_TAMPER/);
+            assert.equal((await pool.query("SELECT COUNT(*)::int AS n FROM fin_transactions WHERE id LIKE 'evil-%'")).rows[0].n, 0);
             let v = await finance.verifySeals(pool);
-            assert.equal(v.ok, false); assert.match(v.reason, /kutilmagan trigger|auditida/);
+            assert.equal(v.ok, false); assert.match(v.reason, /kutilmagan trigger/);
             plainSql('DROP TRIGGER zz_audit_hook ON fin_audit; DROP FUNCTION evil();');
-            v = await finance.verifySeals(pool); assert.equal(v.ok, false, 'soxta qator auditda yo‘q'); assert.match(v.reason, /auditida/);
+            v = await finance.verifySeals(pool); assert.equal(v.ok, false, 'ogohlantirish qotirilgan'); assert.equal(v.latched, true);
+            await assert.rejects(finance.acknowledgeIntegrityAlarm(pool, acc, { note: 'Buxgalter yopa olmaydi, faqat rahbar' }), e => e.status === 403);
+            await finance.acknowledgeIntegrityAlarm(pool, admin, { note: 'Trigger olib tashlandi, server paroli almashtirildi' });
+            v = await finance.verifySeals(pool); assert.equal(v.ok, true, v.reason);
             await fresh(pool);
             plainSql(`CREATE OR REPLACE FUNCTION fin_reject_change() RETURNS trigger AS $$ BEGIN RETURN COALESCE(NEW, OLD); END $$ LANGUAGE plpgsql;`);
             v = await finance.verifySeals(pool); assert.equal(v.ok, false); assert.match(v.reason, /funksiya/);
@@ -355,6 +360,65 @@ test('round 8: dropout from a controlled date, zero-cash termination, attributio
             const v = await finance.verifySeals(pool);
             assert.equal(v.ok, false); assert.match(v.reason, /yo‘qolgan|o‘chirilgan/);
             assert.equal((await finance.verifyCertificate(pool, admin, cert)).ok, false);
+        });
+        await t.test('round 12: a trigger on an unmonitored table (payment_audit) adding a ghost receipt makes the app refuse to commit', async () => {
+            await fresh(pool);
+            plainSql(`CREATE FUNCTION ghost() RETURNS trigger AS $$ BEGIN INSERT INTO payment_records(id,source_key,language,paid_date,amount,method,form,snapshot,actor_id)
+                VALUES('ghost-' || NEW.record_id,'ghost-' || NEW.record_id,'russian','2026-10-20',5000000,'card','full','{}','system'); RETURN NEW; END $$ LANGUAGE plpgsql;
+                CREATE TRIGGER zz_ghost AFTER INSERT ON payment_audit FOR EACH ROW EXECUTE FUNCTION ghost();`);
+            await assert.rejects(finance.manualReceipt(pool, admin, { requestKey: 'r12-ghost-000000001', entity: 'russian', date: '2026-10-20', amount: 300000, method: 'cash', studentId: 's1',
+                reason: 'Hujjat asosida kiritildi', evidenceUrl: (await finance.storeEvidence(pool, admin, pdf())).url }), /FIN_TAMPER/);
+            assert.equal((await pool.query("SELECT COUNT(*)::int AS n FROM payment_records WHERE id LIKE 'ghost-%'")).rows[0].n, 0);
+        });
+        await t.test('round 12: an expected trigger name pointing to a same-named function in another schema is detected and its value change is refused', async () => {
+            await fresh(pool);
+            plainSql(`CREATE SCHEMA evil; CREATE FUNCTION evil.fin_guard_fin_transactions() RETURNS trigger AS $$ BEGIN NEW.amount := NEW.amount * 10; RETURN NEW; END $$ LANGUAGE plpgsql;
+                DROP TRIGGER fin_guard_fin_transactions ON fin_transactions;
+                CREATE TRIGGER fin_guard_fin_transactions BEFORE INSERT ON fin_transactions FOR EACH ROW EXECUTE FUNCTION evil.fin_guard_fin_transactions();`);
+            let v = await finance.verifySeals(pool);
+            assert.equal(v.ok, false); assert.match(v.reason, /boshqa sxema|o‘zgartirilgan/);
+            await assert.rejects(finance.createTransaction(pool, admin, { requestKey: 'r12-schema-00000001', entity: 'common', type: 'expense', categoryCode: 'ADMIN', accountId: 'acc-card', amount: 50000, date: '2026-10-20', counterparty: 'Ofis' }), /FIN_TAMPER.*amount/);
+            plainSql('DROP SCHEMA evil CASCADE');
+        });
+        await t.test('round 12: a re-created guard trigger with different events is detected by the signed trigger fingerprint', async () => {
+            await fresh(pool);
+            plainSql(`DROP TRIGGER fin_immutable_fin_transactions ON fin_transactions;
+                CREATE TRIGGER fin_immutable_fin_transactions BEFORE DELETE ON fin_transactions FOR EACH ROW EXECUTE FUNCTION fin_reject_change();`);
+            const v = await finance.verifySeals(pool);
+            assert.equal(v.ok, false); assert.match(v.reason, /trigger/);
+        });
+        await t.test('round 12: search_path shadowing of built-ins cannot hide an edit made with triggers disabled', async () => {
+            await fresh(pool);
+            plainSql(`CREATE SCHEMA shadow; CREATE FUNCTION shadow.convert_to(text, name) RETURNS bytea AS $$ SELECT pg_catalog.convert_to(replace($1, '"amount": 1,', '"amount": 100000,'), $2) $$ LANGUAGE sql;
+                ALTER DATABASE ${new URL(url).pathname.slice(1)} SET search_path = shadow, public;`);
+            superSql('fin_transactions', "UPDATE fin_transactions SET amount=1 WHERE request_key='int-test-key-0000001'");
+            const v = await finance.verifySeals(pool);
+            plainSql(`ALTER DATABASE ${new URL(url).pathname.slice(1)} RESET search_path; DROP SCHEMA shadow CASCADE;`);
+            assert.equal(v.ok, false);
+        });
+        await t.test('round 12: deleting the newest entries together with the newest checkpoint is caught by the server-disk head; the alarm stays red', async () => {
+            await fresh(pool);
+            await finance.createTransaction(pool, admin, { requestKey: 'r12-trunc-000000001', entity: 'common', type: 'expense', categoryCode: 'ADMIN', accountId: 'acc-card', amount: 20000, date: '2026-10-20', counterparty: 'Ofis' });
+            // Yangi jarayon (kesh yo'q) holatini sinash uchun: faqat diskdagi zanjir boshi qoladi.
+            plainSql(`SET session_replication_role = replica;
+                DELETE FROM fin_transactions WHERE request_key='r12-trunc-000000001';
+                DELETE FROM fin_row_seals WHERE row_id IN (SELECT entity_id FROM fin_audit WHERE action='transaction-create' AND after_data->>'counterparty'='Ofis' AND (after_data->>'amount')::int=20000);
+                DELETE FROM fin_tx_signatures WHERE xid IN (SELECT xid FROM fin_audit WHERE (after_data->>'amount')::int=20000);
+                DELETE FROM fin_checkpoints WHERE id = (SELECT MAX(id) FROM fin_checkpoints);
+                DELETE FROM fin_audit WHERE (after_data->>'amount')::int=20000;`);
+            const v1 = await finance.verifySeals(pool), v2 = await finance.verifySeals(pool);
+            assert.equal(v1.ok, false); assert.equal(v2.ok, false, 'ikkinchi o‘qishda ham qizil');
+            assert.equal((await finance.overview(pool, admin, {})).seals.ok, false);
+        });
+        await t.test('round 12: expense service period before the books start keeps the balance sheet balanced; a bill cannot be paid before its issue date', async () => {
+            await fresh(pool);
+            await finance.saveAccount(pool, admin, { id: 'acc-bank', name: 'Bank', kind: 'bank', entity: 'common', methods: ['bank'], openingBalance: 10000000, openingDate: '2026-09-01' });
+            await finance.createTransaction(pool, admin, { requestKey: 'r12-rent-0000000001', entity: 'common', type: 'expense', categoryCode: 'RENT', accountId: 'acc-bank', amount: 3100000, date: '2026-09-05',
+                counterparty: 'Ijara', serviceStart: '2026-08-01', serviceEnd: '2026-08-31', receiptUrl: (await finance.storeEvidence(pool, admin, pdf())).url });
+            const o = await finance.overview(pool, admin, { start: '2026-09-01', end: '2026-09-30', scope: 'all', basis: 'accrual' });
+            assert.equal(o.balance.balanced, true, String(o.balance.imbalance));
+            const bill = await finance.createPayable(pool, admin, { requestKey: 'r12-bill-0000000001', kind: 'bill', entity: 'common', counterparty: 'Ijara', categoryCode: 'RENT', amount: 500000, issueDate: '2026-10-10' });
+            await assert.rejects(finance.createTransaction(pool, admin, { requestKey: 'r12-billpay-00000001', entity: 'common', type: 'expense', categoryCode: 'RENT', accountId: 'acc-bank', amount: 500000, date: '2026-10-05', payableId: bill.id, counterparty: 'Ijara' }), e => e.status === 400);
         });
         await t.test('segment cash flow: english + russian + common equals consolidated, line by line', async () => {
             await fresh(pool);

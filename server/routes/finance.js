@@ -35,6 +35,7 @@ router.post('/accounts/:id/checks', handle(req => service.addAccountCheck(pool, 
 router.post('/assets/:id/dispose', handle(req => service.disposeAsset(pool, req.user, req.params.id, req.body || {})));
 router.post('/assets/:id/impair', handle(req => service.impairAsset(pool, req.user, req.params.id, req.body || {})));
 router.get('/integrity/certificate', handle(req => service.integrityCertificate(pool, req.user)));
+router.post('/integrity/acknowledge', handle(req => service.acknowledgeIntegrityAlarm(pool, req.user, req.body || {})));
 router.post('/integrity/verify', handle(req => service.verifyCertificate(pool, req.user, req.body || {})));
 router.post('/contracts/forfeit', handle(req => service.forfeitContract(pool, req.user, req.body || {})));
 router.post('/receipts/:id/not-duplicate', handle(req => service.confirmNotDuplicate(pool, req.user, req.params.id, req.body || {})));

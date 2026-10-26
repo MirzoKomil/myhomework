@@ -167,7 +167,9 @@
     function openingDateOf(data, accountId) { return date(accountMap(data).get(accountId)?.openingDate) || '0000-00-00'; }
     function firstDate(data) {
         return memo(FIRST, data, () => {
-            const dates = [...movements(data).map(m => m.date), ...(data.salaries || []).map(s => s.accrualDate), ...(data.payables || []).map(p => p.issueDate), ...(data.accounts || []).map(a => a.openingDate)].filter(date).sort();
+            const dates = [...movements(data).map(m => m.date), ...(data.salaries || []).map(s => s.accrualDate), ...(data.payables || []).map(p => p.issueDate), ...(data.payables || []).map(p => p.serviceStart),
+                // Xizmat davri hisob ochilishidan oldin boshlangan xarajat ham taqsimlanmagan foydaga kirishi uchun.
+                ...movements(data).map(m => m.serviceStart), ...(data.accounts || []).map(a => a.openingDate)].filter(date).sort();
             return dates[0] || today();
         });
     }

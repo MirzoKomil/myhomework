@@ -112,6 +112,7 @@ const routes = [
     ['POST', /^\/api\/finance\/receipts\/([^/]+)\/not-duplicate$/, (q, b, m) => finance.confirmNotDuplicate(pool, actor, m[1], b)],
     ['POST', /^\/api\/finance\/students\/status-correction$/, (q, b) => finance.correctStudentStatus(pool, actor, b)],
     ['GET', /^\/api\/finance\/integrity\/certificate/, () => finance.integrityCertificate(pool, actor)],
+    ['POST', /^\/api\/finance\/integrity\/acknowledge$/, (q, b) => finance.acknowledgeIntegrityAlarm(pool, actor, b)],
     ['POST', /^\/api\/finance\/integrity\/verify$/, (q, b) => finance.verifyCertificate(pool, actor, b)],
     ['PUT', /^\/api\/finance\/settings$/, (q, b) => finance.saveSettings(pool, actor, b)],
     ['GET', /^\/api\/inflow\/cash-reconciliation/, () => ({ manual: [], decisions: [], pending: [] })],

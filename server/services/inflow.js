@@ -49,8 +49,9 @@ async function markContext(db) {
 }
 async function transaction(pool, fn) {
     const db = await pool.connect();
-    try { await db.query('BEGIN'); await markContext(db); const result = await fn(db); await require('./finCtx').signTx(db); await db.query('COMMIT'); return result; }
-    catch (e) { await db.query('ROLLBACK'); throw e; } finally { db.release(); }
+    const untrack = require('./finCtx').track(db);
+    try { await db.query('BEGIN'); await markContext(db); const result = await fn(db); await require('./finCtx').signTx(db); await db.query('COMMIT'); require('./finCtx').commitHead(db); return result; }
+    catch (e) { await db.query('ROLLBACK'); throw e; } finally { untrack(); db.release(); }
 }
 async function access(db, actor, write = false, subject = null) {
     // Never trust a role, language, credited manager or identity sent in the request/JWT alone.

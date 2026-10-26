@@ -37,7 +37,7 @@ BEGIN
     RAISE EXCEPTION 'FIN_PERIOD_CLOSED: % sanasi yopilgan davrga (% gacha) tushadi', NEW.${column}, closed USING ERRCODE = 'P0001';
   END IF;
   RETURN NEW;
-END $$ LANGUAGE plpgsql;
+END $$ LANGUAGE plpgsql SET search_path = public;
 DROP TRIGGER IF EXISTS fin_guard_${table} ON ${table};
 CREATE TRIGGER fin_guard_${table} BEFORE INSERT ON ${table} FOR EACH ROW EXECUTE FUNCTION fin_guard_${table}();`;
 }
@@ -47,8 +47,7 @@ DROP TRIGGER IF EXISTS fin_immutable_${table} ON ${table};
 CREATE TRIGGER fin_immutable_${table} BEFORE UPDATE OR DELETE ON ${table} FOR EACH ROW EXECUTE FUNCTION fin_reject_change();`;
 }
 // Muhr bilan himoyalangan jadvallar va ularning kalit ustuni.
-const SEALED_TABLES = { payment_records: 'id', fin_transactions: 'id', payment_record_voids: 'record_id', fin_account_checks: 'id', fin_asset_events: 'id',
-    fin_accounts: 'id', fin_payables: 'id', fin_contract_values: 'record_id', fin_settings_history: 'id', fin_period_locks: 'month', fin_period_snapshots: 'month', salary_transactions: 'id', fin_student_log: 'id', fin_settings: 'id', fin_contract_events: 'id', fin_salary_roles: 'salary_id', fin_receipt_reviews: 'record_id', fin_student_corrections: 'id' };
+const SEALED_TABLES = finCtx.SEALED_TABLES;
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS fin_accounts (
  id TEXT PRIMARY KEY, entity TEXT NOT NULL CHECK(entity IN ('english','russian','common')), name TEXT NOT NULL,
@@ -185,28 +184,28 @@ CREATE TABLE IF NOT EXISTS fin_contract_values (
 );
 
 CREATE OR REPLACE FUNCTION fin_reject_change() RETURNS trigger AS $$
-BEGIN RAISE EXCEPTION 'FIN_IMMUTABLE: % jadvalidagi moliyaviy yozuvni o''zgartirib yoki o''chirib bo''lmaydi', TG_TABLE_NAME USING ERRCODE = 'P0001'; END $$ LANGUAGE plpgsql;
+BEGIN RAISE EXCEPTION 'FIN_IMMUTABLE: % jadvalidagi moliyaviy yozuvni o''zgartirib yoki o''chirib bo''lmaydi', TG_TABLE_NAME USING ERRCODE = 'P0001'; END $$ LANGUAGE plpgsql SET search_path = public;
 CREATE OR REPLACE FUNCTION fin_payables_guard() RETURNS trigger AS $$
 BEGIN
   IF TG_OP = 'DELETE' OR OLD.voided_at IS NOT NULL OR NEW.voided_at IS NULL
      OR NEW.void_date IS NULL
-     OR (to_jsonb(NEW) - 'voided_at' - 'void_reason' - 'voided_by' - 'void_date') <> (to_jsonb(OLD) - 'voided_at' - 'void_reason' - 'voided_by' - 'void_date') THEN
+     OR (pg_catalog.to_jsonb(NEW) - 'voided_at' - 'void_reason' - 'voided_by' - 'void_date') <> (pg_catalog.to_jsonb(OLD) - 'voided_at' - 'void_reason' - 'voided_by' - 'void_date') THEN
     RAISE EXCEPTION 'FIN_IMMUTABLE: hisob-faktura faqat bir marta bekor qilinishi mumkin' USING ERRCODE = 'P0001';
   END IF;
   RETURN NEW;
-END $$ LANGUAGE plpgsql;
+END $$ LANGUAGE plpgsql SET search_path = public;
 DROP TRIGGER IF EXISTS fin_payables_guard ON fin_payables;
 CREATE TRIGGER fin_payables_guard BEFORE UPDATE OR DELETE ON fin_payables FOR EACH ROW EXECUTE FUNCTION fin_payables_guard();
 CREATE OR REPLACE FUNCTION fin_payment_records_guard() RETURNS trigger AS $$
 BEGIN
   IF TG_OP = 'DELETE' THEN RAISE EXCEPTION 'FIN_IMMUTABLE: tushum yozuvini o''chirib bo''lmaydi' USING ERRCODE = 'P0001'; END IF;
-  IF (to_jsonb(NEW) - 'student_id' - 'account_id') <> (to_jsonb(OLD) - 'student_id' - 'account_id')
+  IF (pg_catalog.to_jsonb(NEW) - 'student_id' - 'account_id') <> (pg_catalog.to_jsonb(OLD) - 'student_id' - 'account_id')
      OR (OLD.student_id IS NOT NULL AND NEW.student_id IS DISTINCT FROM OLD.student_id)
      OR (OLD.account_id IS NOT NULL AND NEW.account_id IS DISTINCT FROM OLD.account_id) THEN
     RAISE EXCEPTION 'FIN_IMMUTABLE: tushum yozuvini o''zgartirib bo''lmaydi — moliya bo''limida tuzating' USING ERRCODE = 'P0001';
   END IF;
   RETURN NEW;
-END $$ LANGUAGE plpgsql;
+END $$ LANGUAGE plpgsql SET search_path = public;
 DROP TRIGGER IF EXISTS fin_payment_records_guard ON payment_records;
 CREATE TRIGGER fin_payment_records_guard BEFORE UPDATE OR DELETE ON payment_records FOR EACH ROW EXECUTE FUNCTION fin_payment_records_guard();
 -- Tushum yozilgan paytdagi hisob raqam saqlanadi: keyinchalik sozlama o'zgarsa ham tarix ko'chmaydi.
@@ -218,7 +217,7 @@ BEGIN
     IF NEW.account_id IS NULL THEN NEW.account_id := 'acc-suspense'; END IF;
   END IF;
   RETURN NEW;
-END $$ LANGUAGE plpgsql;
+END $$ LANGUAGE plpgsql SET search_path = public;
 DROP TRIGGER IF EXISTS fin_receipt_account ON payment_records;
 CREATE TRIGGER fin_receipt_account BEFORE INSERT ON payment_records FOR EACH ROW EXECUTE FUNCTION fin_receipt_account();
 ${lockGuardSql('payment_records', 'paid_date')}
@@ -232,23 +231,23 @@ ${lockGuardSql('fin_contract_events', 'event_date')}
 -- NULL standart qiymat bilan qo'shilishi shart). Vaqt zonasiga bog'liq va keyin bog'lanadigan (student_id) maydonlar kirmaydi.
 CREATE OR REPLACE FUNCTION fin_row_text(t TEXT, j JSONB) RETURNS TEXT AS $$
   SELECT jsonb_strip_nulls(j - 'created_at' - 'paid_at' - 'updated_at' - 'locked_at' - 'voided_at' - 'captured_at' - 'confirmed_at')::text
-$$ LANGUAGE sql IMMUTABLE;
+$$ LANGUAGE sql IMMUTABLE SET search_path = public;
 -- TG_ARGV[0] — kalit ustun nomi.
 CREATE OR REPLACE FUNCTION fin_seal_row() RETURNS trigger AS $$
 DECLARE prev TEXT; body TEXT; rid TEXT; op CHAR(1); bh TEXT; cx TEXT;
 BEGIN
-  IF TG_OP = 'UPDATE' AND fin_row_text(TG_TABLE_NAME, to_jsonb(NEW)) = fin_row_text(TG_TABLE_NAME, to_jsonb(OLD)) THEN RETURN NEW; END IF;
+  IF TG_OP = 'UPDATE' AND fin_row_text(TG_TABLE_NAME, pg_catalog.to_jsonb(NEW)) = fin_row_text(TG_TABLE_NAME, pg_catalog.to_jsonb(OLD)) THEN RETURN NEW; END IF;
   PERFORM pg_advisory_xact_lock(hashtext('fin-seal'));
   SELECT row_hash INTO prev FROM fin_row_seals ORDER BY seq DESC LIMIT 1;
   prev := COALESCE(prev, '');
   op := LEFT(TG_OP, 1);
-  IF TG_OP = 'DELETE' THEN rid := to_jsonb(OLD)->>TG_ARGV[0]; bh := 'deleted';
-  ELSE rid := to_jsonb(NEW)->>TG_ARGV[0]; bh := encode(sha256(convert_to(fin_row_text(TG_TABLE_NAME, to_jsonb(NEW)), 'UTF8')), 'hex'); END IF;
+  IF TG_OP = 'DELETE' THEN rid := pg_catalog.to_jsonb(OLD)->>TG_ARGV[0]; bh := 'deleted';
+  ELSE rid := pg_catalog.to_jsonb(NEW)->>TG_ARGV[0]; bh := pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(fin_row_text(TG_TABLE_NAME, pg_catalog.to_jsonb(NEW)), 'UTF8')), 'hex'); END IF;
   cx := NULLIF(current_setting('fin.ctx', true), '');
   INSERT INTO fin_row_seals(table_name,row_id,op,body_hash,prev_hash,row_hash,ctx)
-    VALUES (TG_TABLE_NAME, rid, op, bh, prev, encode(sha256(convert_to(prev || '|' || TG_TABLE_NAME || '|' || rid || '|' || op || '|' || bh || '|' || COALESCE(cx, ''), 'UTF8')), 'hex'), cx);
+    VALUES (TG_TABLE_NAME, rid, op, bh, prev, pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(prev || '|' || TG_TABLE_NAME || '|' || rid || '|' || op || '|' || bh || '|' || COALESCE(cx, ''), 'UTF8')), 'hex'), cx);
   RETURN COALESCE(NEW, OLD);
-END $$ LANGUAGE plpgsql;
+END $$ LANGUAGE plpgsql SET search_path = public;
 ${Object.entries(SEALED_TABLES).map(([t, k]) => `DO $do$ BEGIN IF to_regclass('${t}') IS NOT NULL THEN
   DROP TRIGGER IF EXISTS fin_seal_${t} ON ${t};
   CREATE TRIGGER fin_seal_${t} AFTER INSERT OR UPDATE OR DELETE ON ${t} FOR EACH ROW EXECUTE FUNCTION fin_seal_row('${k}');
@@ -260,7 +259,7 @@ BEGIN
   INSERT INTO fin_contract_values(record_id, lead_id, value, source)
     VALUES (NEW.id, NEW.lead_id, CASE WHEN v ~ '^[0-9]{1,15}$' THEN v::BIGINT ELSE NULL END, 'insert') ON CONFLICT DO NOTHING;
   RETURN NEW;
-END $$ LANGUAGE plpgsql;
+END $$ LANGUAGE plpgsql SET search_path = public;
 DROP TRIGGER IF EXISTS fin_capture_contract_value ON payment_records;
 CREATE TRIGGER fin_capture_contract_value AFTER INSERT ON payment_records FOR EACH ROW EXECUTE FUNCTION fin_capture_contract_value();
 -- Yopilgan oyning nusxasi o'zgarmaydi va o'chirilmaydi (faqat oy qayta ochilgandan keyin).
@@ -270,7 +269,7 @@ BEGIN
     RAISE EXCEPTION 'FIN_IMMUTABLE: yopilgan oyning muzlatilgan nusxasini o''zgartirib bo''lmaydi' USING ERRCODE = 'P0001';
   END IF;
   RETURN OLD;
-END $$ LANGUAGE plpgsql;
+END $$ LANGUAGE plpgsql SET search_path = public;
 DROP TRIGGER IF EXISTS fin_snapshot_guard ON fin_period_snapshots;
 CREATE TRIGGER fin_snapshot_guard BEFORE UPDATE OR DELETE ON fin_period_snapshots FOR EACH ROW EXECUTE FUNCTION fin_snapshot_guard();
 -- Hisob raqam: harakat bo'lgan hisobning turi, egasi va boshlang'ich qoldig'i o'zgarmaydi; o'chirilmaydi.
@@ -290,7 +289,7 @@ BEGIN
     END IF;
   END IF;
   RETURN NEW;
-END $$ LANGUAGE plpgsql;
+END $$ LANGUAGE plpgsql SET search_path = public;
 DROP TRIGGER IF EXISTS fin_accounts_guard ON fin_accounts;
 CREATE TRIGGER fin_accounts_guard BEFORE UPDATE OR DELETE ON fin_accounts FOR EACH ROW EXECUTE FUNCTION fin_accounts_guard();
 -- Maosh hisoblari ham yopilgan davrga yozilmaydi (hisoblash usulidagi xarajat shu jadvaldan olinadi).
@@ -310,7 +309,7 @@ BEGIN
     RAISE EXCEPTION 'FIN_PERIOD_CLOSED: yopilgan davrdagi maosh summasini o''zgartirib bo''lmaydi' USING ERRCODE = 'P0001';
   END IF;
   RETURN COALESCE(NEW, OLD);
-END $$ LANGUAGE plpgsql;
+END $$ LANGUAGE plpgsql SET search_path = public;
 DO $$ BEGIN
   IF to_regclass('salary_transactions') IS NOT NULL THEN
     DROP TRIGGER IF EXISTS fin_guard_salary ON salary_transactions;
@@ -326,13 +325,13 @@ BEGIN
     RAISE EXCEPTION 'FIN_IMMUTABLE: yopilgan oy qulfini faqat moliya bo''limida rahbar ochadi' USING ERRCODE = 'P0001';
   END IF;
   RETURN OLD;
-END $$ LANGUAGE plpgsql;
+END $$ LANGUAGE plpgsql SET search_path = public;
 DROP TRIGGER IF EXISTS fin_lock_guard ON fin_period_locks;
 CREATE TRIGGER fin_lock_guard BEFORE UPDATE OR DELETE ON fin_period_locks FOR EACH ROW EXECUTE FUNCTION fin_lock_guard();
 CREATE OR REPLACE FUNCTION fin_student_state(x JSONB) RETURNS JSONB AS $$
   SELECT jsonb_build_object('frozen', COALESCE((x->>'frozen')::boolean, false), 'frozenAt', x->>'frozenAt', 'status', x->>'status',
     'inactiveAt', COALESCE(x->>'inactiveAt', x->>'leftAt'), 'debtAmount', x->>'debtAmount', 'paymentDueDate', x->>'paymentDueDate')
-$$ LANGUAGE sql IMMUTABLE;
+$$ LANGUAGE sql IMMUTABLE SET search_path = public;
 CREATE OR REPLACE FUNCTION fin_log_student() RETURNS trigger AS $$
 BEGIN
   -- CRM o'quvchilar jadvalini to'liq qayta yozadi (DELETE + INSERT): faqat oxirgi yozilgan holatdan farq qilsa jurnalga yoziladi.
@@ -341,7 +340,7 @@ BEGIN
     INSERT INTO fin_student_log(student_id, state, app_user) VALUES (NEW.id, fin_student_state(COALESCE(NEW.extra_data,'{}'::jsonb)), NULLIF(current_setting('app.user_id', true), ''));
   END IF;
   RETURN NEW;
-END $$ LANGUAGE plpgsql;
+END $$ LANGUAGE plpgsql SET search_path = public;
 -- O'quvchi o'chirilsa (CRM ro'yxatni to'liq qayta yozadi: DELETE + INSERT) — tranzaksiya oxirida haqiqatan yo'q bo'lsa,
 -- jurnalga sanasi bilan "o'chirildi" yozuvi qo'shiladi: shu sanadan xizmat to'xtaydi (tushum to'xtaydi).
 CREATE OR REPLACE FUNCTION fin_log_student_delete() RETURNS trigger AS $$
@@ -354,7 +353,7 @@ BEGIN
     || jsonb_build_object('deleted', true, 'name', OLD.name, 'leadId', OLD.extra_data->'leadRef'->>'id', 'subject', OLD.subject, 'staffDemo', COALESCE((OLD.extra_data->>'isStaffDemo')::boolean, false)),
     NULLIF(current_setting('app.user_id', true), ''));
   RETURN NULL;
-END $$ LANGUAGE plpgsql;
+END $$ LANGUAGE plpgsql SET search_path = public;
 DO $do$ BEGIN IF to_regclass('students') IS NOT NULL THEN
   DROP TRIGGER IF EXISTS fin_log_student ON students;
   CREATE TRIGGER fin_log_student AFTER INSERT OR UPDATE ON students FOR EACH ROW EXECUTE FUNCTION fin_log_student();
@@ -365,7 +364,7 @@ CREATE OR REPLACE FUNCTION fin_capture_salary_role() RETURNS trigger AS $$
 BEGIN
   INSERT INTO fin_salary_roles(salary_id, role, source) VALUES (NEW.id, (SELECT role FROM hr_employees WHERE id = NEW.employee_id), 'insert') ON CONFLICT DO NOTHING;
   RETURN NEW;
-END $$ LANGUAGE plpgsql;
+END $$ LANGUAGE plpgsql SET search_path = public;
 DO $do$ BEGIN IF to_regclass('salary_transactions') IS NOT NULL THEN
   DROP TRIGGER IF EXISTS fin_capture_salary_role ON salary_transactions;
   CREATE TRIGGER fin_capture_salary_role AFTER INSERT ON salary_transactions FOR EACH ROW EXECUTE FUNCTION fin_capture_salary_role();
@@ -377,7 +376,7 @@ BEGIN
   NEW.recorded_at := NOW(); NEW.db_user := current_user; NEW.ctx := NULLIF(current_setting('fin.ctx', true), '');
   NEW.backfill := COALESCE(NEW.backfill, false) AND COALESCE(NEW.ctx, '') LIKE 'init:%' AND NOT EXISTS (SELECT 1 FROM fin_migrations WHERE id = 'student-log-v1');
   RETURN NEW;
-END $$ LANGUAGE plpgsql;
+END $$ LANGUAGE plpgsql SET search_path = public;
 DROP TRIGGER IF EXISTS fin_student_log_stamp ON fin_student_log;
 CREATE TRIGGER fin_student_log_stamp BEFORE INSERT ON fin_student_log FOR EACH ROW EXECUTE FUNCTION fin_student_log_stamp();
 ${immutableSql('fin_contract_events')}
@@ -403,9 +402,11 @@ async function initSchema(pool) {
     const db = typeof pool.connect === 'function' && !pool.release ? await pool.connect() : pool;
     try {
         await db.query("SELECT pg_advisory_lock(hashtext('fin-init'))");
+        // Ishga tushirish: bir martalik ko'chirish va to'ldirish (INSERT ... SELECT) — niyat solishtirilmaydi, faqat imzolanadi.
+        const untrack = finCtx.track(db, { skipVerify: true });
         try {
             await db.query('BEGIN');
-            await db.query("SELECT set_config('fin.ctx', $1, true)", [finCtx.token('init')]);
+            await db.query("SELECT set_config('fin.ctx', $1, true), set_config('search_path', 'public', true)", [finCtx.token('init')]);
             await db.query(SCHEMA);
             for (const [i, a] of F.DEFAULT_ACCOUNTS.entries()) {
                 await db.query(`INSERT INTO fin_accounts(id,entity,name,kind,methods,sort) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(id) DO NOTHING`, [a.id, a.entity, a.name, a.kind, a.methods, i]);
@@ -438,33 +439,35 @@ async function initSchema(pool) {
             const lastFp = (await db.query('SELECT fn_hash FROM fin_schema_fingerprints ORDER BY id DESC LIMIT 1')).rows[0];
             if (lastFp?.fn_hash !== fh) await db.query('INSERT INTO fin_schema_fingerprints(fn_hash,mac) VALUES($1,$2)', [fh, finCtx.schemaMac(fh)]);
             await finCtx.signTx(db);
-            await db.query('COMMIT');
+            await db.query('COMMIT'); finCtx.commitHead(db);
         } catch (e) { await db.query('ROLLBACK').catch(() => {}); throw e; }
-        finally { await db.query("SELECT pg_advisory_unlock(hashtext('fin-init'))"); }
+        finally { untrack(); await db.query("SELECT pg_advisory_unlock(hashtext('fin-init'))"); }
     } finally { if (db !== pool) db.release(); }
 }
 
 async function transaction(pool, fn) {
     const db = await pool.connect();
+    const untrack = finCtx.track(db);
     try {
         await db.query('BEGIN');
         // Barcha moliyaviy yozuvlar ketma-ket: qoldiq, oy yopish va limit tekshiruvlari poyga holatiga tushmaydi.
         await db.query("SELECT pg_advisory_xact_lock(hashtext('fin-write'))");
         // Tranzaksiya belgisi: muhrlar va audit yozuvi shu belgi bilan bog'lanadi (ilovadan tashqari o'zgarish aniqlanadi).
-        await db.query("SELECT set_config('fin.ctx', $1, true)", [finCtx.token('fin')]);
+        // Ichki funksiyalar (sha256, convert_to ...) faqat tizim katalogidan: bir xil nomli soxta funksiya bilan "soya" qilib bo'lmaydi.
+        await db.query("SELECT set_config('fin.ctx', $1, true), set_config('search_path', 'public', true)", [finCtx.token('fin')]);
         const result = await fn(db);
         await writeCheckpoint(db);
         await finCtx.signTx(db);
-        await db.query('COMMIT'); return result;
+        await db.query('COMMIT'); finCtx.commitHead(db); return result;
     } catch (e) {
         await db.query('ROLLBACK');
         if (/FIN_PERIOD_CLOSED|FIN_IMMUTABLE/.test(e.message || '')) throw error(409, e.message.replace(/^.*?(FIN_PERIOD_CLOSED|FIN_IMMUTABLE):\s*/, ''));
         throw e;
-    } finally { db.release(); }
+    } finally { untrack(); db.release(); }
 }
 async function read(pool, fn) {
     const db = await pool.connect();
-    try { await db.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY'); const r = await fn(db); await db.query('COMMIT'); return r; }
+    try { await db.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY'); await db.query("SELECT set_config('search_path', 'public', true)"); const r = await fn(db); await db.query('COMMIT'); return r; }
     catch (e) { await db.query('ROLLBACK'); throw e; } finally { db.release(); }
 }
 async function access(db, actor, { director = false } = {}) {
@@ -500,7 +503,7 @@ async function sealedTables(db) {
     return out;
 }
 async function rowHashes(db, table, key) {
-    return new Map((await db.query(`SELECT ${key}::text AS id, fin_row_text($1, to_jsonb(t)) AS body FROM ${table} t`, [table])).rows.map(r => [r.id, sha(r.body)]));
+    return new Map((await db.query(`SELECT ${key}::text AS id, fin_row_text($1, pg_catalog.to_jsonb(t)) AS body FROM ${table} t`, [table])).rows.map(r => [r.id, sha(r.body)]));
 }
 // Muhr qo'yilmagan mavjud qatorlar bir marta muhrlanadi (birinchi ishga tushirishda).
 async function backfillSeals(db) {
@@ -509,7 +512,7 @@ async function backfillSeals(db) {
     const tables = await sealedTables(db);
     let prev = (await db.query('SELECT row_hash FROM fin_row_seals ORDER BY seq DESC LIMIT 1')).rows[0]?.row_hash || '';
     for (const [table, key] of Object.entries(tables)) {
-        const rows = (await db.query(`SELECT ${key}::text AS id, fin_row_text($1, to_jsonb(t)) AS body FROM ${table} t
+        const rows = (await db.query(`SELECT ${key}::text AS id, fin_row_text($1, pg_catalog.to_jsonb(t)) AS body FROM ${table} t
             WHERE NOT EXISTS (SELECT 1 FROM fin_row_seals s WHERE s.table_name=$1 AND s.row_id=t.${key}::text) ORDER BY t.${key}`, [table])).rows;
         for (const r of rows) {
             const bctx = finCtx.token('backfill'), bh = sha(r.body), h = sealHash(prev, table, r.id, 'I', bh, bctx);
@@ -524,7 +527,7 @@ async function rowIntegrity(db, tables) {
     for (const [t, key] of Object.entries(tables)) {
         const bad = (await db.query(`SELECT x.${key}::text AS id, l.op, l.body_hash IS NULL AS unsealed FROM ${t} x
             LEFT JOIN LATERAL (SELECT op, body_hash FROM fin_row_seals s WHERE s.table_name=$1 AND s.row_id=x.${key}::text ORDER BY seq DESC LIMIT 1) l ON TRUE
-            WHERE l.body_hash IS NULL OR l.op='D' OR l.body_hash <> encode(sha256(convert_to(fin_row_text($1, to_jsonb(x)),'UTF8')),'hex') LIMIT 1`, [t])).rows[0];
+            WHERE l.body_hash IS NULL OR l.op='D' OR l.body_hash <> pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(fin_row_text($1, pg_catalog.to_jsonb(x)),'UTF8')),'hex') LIMIT 1`, [t])).rows[0];
         if (bad) return { ok: false, table: t, rowId: bad.id, reason: bad.unsealed ? 'muhrsiz qator (trigger chetlab o‘tilgan)' : bad.op === 'D' ? 'o‘chirilgan qator qayta paydo bo‘lgan' : 'qator yashirincha o‘zgartirilgan' };
         const gone = (await db.query(`SELECT l.row_id FROM (SELECT DISTINCT ON (row_id) row_id, op FROM fin_row_seals WHERE table_name=$1 ORDER BY row_id, seq DESC) l
             WHERE l.op<>'D' AND NOT EXISTS (SELECT 1 FROM ${t} x WHERE x.${key}::text=l.row_id) LIMIT 1`, [t])).rows[0];
@@ -534,7 +537,7 @@ async function rowIntegrity(db, tables) {
 }
 // Yopilgan oy nusxasining xeshi o'z qatorida ham, o'sha oyni yopgan qulf qatorida ham (muhrlangan) bo'lishi va mos kelishi shart.
 async function snapshotIntegrity(db) {
-    const rows = (await db.query(`SELECT s.month, s.sha256, encode(sha256(convert_to(s.data::text,'UTF8')),'hex') AS actual,
+    const rows = (await db.query(`SELECT s.month, s.sha256, pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(s.data::text,'UTF8')),'hex') AS actual,
         (SELECT l.snapshot_hashes->>s.month FROM fin_period_locks l WHERE l.snapshot_hashes ? s.month ORDER BY l.month DESC LIMIT 1) AS anchored FROM fin_period_snapshots s`)).rows;
     return rows.filter(r => r.sha256 !== r.actual || (r.anchored != null && r.anchored !== r.actual) || r.anchored == null).map(r => r.month);
 }
@@ -689,12 +692,16 @@ const EXPECTED_TRIGGERS = (() => {
 async function functionHash(db) {
     const rows = (await db.query(`SELECT p.oid::regprocedure::text AS sig, pg_get_functiondef(p.oid) AS def FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
         WHERE n.nspname = current_schema() AND p.proname LIKE 'fin\\_%' AND p.prokind = 'f' ORDER BY 1`)).rows;
-    return createHash('sha256').update(rows.map(r => r.sig + '\n' + r.def).join('\n--\n')).digest('hex');
+    // Triggerlar to'liq ta'rifi (vaqti, hodisalari, argumentlari, funksiyaning sxemasi bilan) ham izga kiradi.
+    const trg = (await db.query(`SELECT c.relname AS t, tg.tgname AS name, pg_get_triggerdef(tg.oid) AS def FROM pg_trigger tg JOIN pg_class c ON c.oid=tg.tgrelid
+        JOIN pg_namespace n ON n.oid=c.relnamespace WHERE NOT tg.tgisinternal AND n.nspname = current_schema() ORDER BY 1, 2`)).rows.filter(r => MONITORED(r.t));
+    return createHash('sha256').update(rows.map(r => r.sig + '\n' + r.def).join('\n--\n') + '\n==\n' + trg.map(r => r.def).join('\n')).digest('hex');
 }
 async function schemaIntegrity(db) {
-    const trig = (await db.query(`SELECT c.relname AS t, tg.tgname AS name, p.proname AS fn, tg.tgenabled AS en FROM pg_trigger tg JOIN pg_class c ON c.oid=tg.tgrelid
+    const trig = (await db.query(`SELECT c.relname AS t, tg.tgname AS name, p.proname AS fn, tg.tgenabled AS en, (p.pronamespace = c.relnamespace) AS same_ns FROM pg_trigger tg JOIN pg_class c ON c.oid=tg.tgrelid
         JOIN pg_proc p ON p.oid=tg.tgfoid JOIN pg_namespace n ON n.oid=c.relnamespace WHERE NOT tg.tgisinternal AND n.nspname = current_schema()`)).rows.filter(r => MONITORED(r.t));
     for (const r of trig) {
+        if (!r.same_ns) return { ok: false, table: r.t, rowId: r.name, reason: `“${r.name}” triggeri boshqa sxemadagi funksiyani chaqiradi — almashtirilgan` };
         if (!EXPECTED_TRIGGERS.has(`${r.t}|${r.name}|${r.fn}`)) return { ok: false, table: r.t, rowId: r.name, reason: `kutilmagan trigger “${r.name}” (${r.fn}) — bazaga ilovadan tashqari qo‘shilgan` };
         if (r.en !== 'O' && r.en !== 'A') return { ok: false, table: r.t, rowId: r.name, reason: `“${r.name}” triggeri o‘chirilgan` };
     }
@@ -708,7 +715,7 @@ async function schemaIntegrity(db) {
     if (evt) return { ok: false, table: 'pg_event_trigger', rowId: evt.evtname, reason: 'bazada hodisa triggeri (EVENT TRIGGER) bor' };
     const fp = (await db.query('SELECT fn_hash, mac FROM fin_schema_fingerprints ORDER BY id DESC LIMIT 1')).rows[0];
     if (!fp || !finCtx.validSchemaMac(fp.fn_hash, fp.mac)) return { ok: false, table: 'fin_schema_fingerprints', rowId: '', reason: 'moliya funksiyalari izi imzosiz' };
-    if (fp.fn_hash !== await functionHash(db)) return { ok: false, table: 'pg_proc', rowId: '', reason: 'moliya funksiyalari bazada o‘zgartirilgan (izga mos emas)' };
+    if (fp.fn_hash !== await functionHash(db)) return { ok: false, table: 'pg_proc', rowId: '', reason: 'moliya funksiyalari yoki triggerlari bazada o‘zgartirilgan (imzolangan izga mos emas)' };
     return { ok: true };
 }
 // O'quvchining moliyaga ta'sir qiluvchi joriy holati jurnaldagi oxirgi yozuvga teng bo'lishi shart: jurnal soxta
@@ -736,7 +743,44 @@ async function lockIntegrity(db) {
     }
     return { ok: true };
 }
-async function integrity(db, { full = false } = {}) {
+async function integrity(pool, { full = false } = {}) {
+    // Tekshiruv o'z ulanishida, qat'iy search_path bilan: bazaga qo'yilgan boshqa sxemadagi bir xil nomli funksiya ishlatilmaydi.
+    const own = typeof pool.connect === 'function' && !pool.release;
+    const db = own ? await pool.connect() : pool;
+    try {
+        await db.query(`SELECT set_config('search_path', 'public', ${own ? 'false' : 'true'})`).catch(() => {});
+        let r = await integrityInner(db, { full });
+        if (r.ok) r = await diskHeadIntegrity(db, r);
+        // Ogohlantirish "qotiriladi": bir marta aniqlangan buzilish keyingi o'qishda yashil bo'lib ketmaydi — rahbar ko'rib chiqib yopadi.
+        if (!r.ok && !r.latched) finCtx.raiseAlarm(r);
+        const alarm = finCtx.readAlarm();
+        if (r.ok && alarm) r = { ...r, ok: false, latched: true, table: alarm.table, rowId: alarm.rowId, alarmAt: alarm.at,
+            reason: `Avval aniqlangan buzilish (${alarm.at.slice(0, 16).replace('T', ' ')}): ${alarm.reason}. Rahbar ko‘rib chiqib yopmaguncha ogohlantirish turadi` };
+        return r;
+    } finally { if (own) { await db.query('RESET search_path').catch(() => {}); db.release(); } }
+}
+// Server diskidagi zanjir boshi (har bir imzolangan tranzaksiyadan keyin yangilanadi) bazada bo'lishi shart — aks holda oxirgi yozuvlar kesilgan.
+async function diskHeadIntegrity(db, r) {
+    const h = finCtx.readHead();
+    if (!h) return r;
+    if (h.sealSeq && (await db.query('SELECT row_hash FROM fin_row_seals WHERE seq=$1', [h.sealSeq])).rows[0]?.row_hash !== h.sealHash)
+        return { ...r, ok: false, table: 'fin_row_seals', rowId: String(h.sealSeq), reason: `server diskidagi zanjir boshi (${h.sealSeq}-muhr, ${String(h.at || '').slice(0, 10)}) bazada yo‘q — oxirgi yozuvlar o‘chirilgan` };
+    if (h.auditId && (await db.query('SELECT hash FROM fin_audit WHERE id=$1', [h.auditId])).rows[0]?.hash !== h.auditHash)
+        return { ...r, ok: false, table: 'fin_audit', rowId: String(h.auditId), reason: 'server diskidagi audit boshi bazada yo‘q — oxirgi audit yozuvlari o‘chirilgan' };
+    return r;
+}
+// Rahbar buzilishni ko'rib chiqib (sababi va nima qilingani bilan) ogohlantirishni yopadi; tarix server diskida qoladi.
+async function acknowledgeIntegrityAlarm(pool, actor, body) {
+    return transaction(pool, async db => {
+        const user = await access(db, actor, { director: true });
+        const note = text(body.note, 1000); if (note.length < 10) throw error(400, 'Nima aniqlangani va nima qilinganini yozing (kamida 10 belgi)');
+        const a = finCtx.readAlarm(); if (!a) throw error(409, 'Ochiq ogohlantirish yo‘q');
+        await audit(db, user, 'integrity-alarm-ack', a.table || 'integrity', a, { note });
+        finCtx.clearAlarm(note, user.name || user.id);
+        return { ok: true };
+    });
+}
+async function integrityInner(db, { full = false } = {}) {
     const tables = await sealedTables(db);
     const chain = await chainIntegrity(db, full);
     if (!chain.ok) return { ...chain, badSnapshots: [] };
@@ -998,8 +1042,8 @@ async function load(db) {
     const s = await settingsRow(db);
     const locks = (await db.query("SELECT month,locked_by_name,note,locked_at FROM fin_period_locks ORDER BY month")).rows;
     // Xeshi mos kelmagan (bazada o'zgartirilgan) nusxa ishlatilmaydi — hisobot joriy ma'lumotdan tuziladi va ogohlantiriladi.
-    const snapRows = (await db.query(`SELECT s.month, s.data, (s.sha256 IS NOT DISTINCT FROM encode(sha256(convert_to(s.data::text,'UTF8')),'hex')
-        AND EXISTS (SELECT 1 FROM fin_period_locks l WHERE l.snapshot_hashes->>s.month = encode(sha256(convert_to(s.data::text,'UTF8')),'hex'))) AS intact FROM fin_period_snapshots s`)).rows;
+    const snapRows = (await db.query(`SELECT s.month, s.data, (s.sha256 IS NOT DISTINCT FROM pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(s.data::text,'UTF8')),'hex')
+        AND EXISTS (SELECT 1 FROM fin_period_locks l WHERE l.snapshot_hashes->>s.month = pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(s.data::text,'UTF8')),'hex'))) AS intact FROM fin_period_snapshots s`)).rows;
     const snapshots = Object.fromEntries(snapRows.filter(r => r.intact).map(r => [r.month, r.data]));
     const snapshotIssues = snapRows.filter(r => !r.intact).map(r => r.month);
     const settingsHistory = (await db.query("SELECT TO_CHAR(effective_from,'YYYY-MM-DD') AS f,data FROM fin_settings_history ORDER BY effective_from,id")).rows.map(r => ({ from: r.f, data: r.data }));
@@ -1202,6 +1246,8 @@ async function createTransaction(pool, actor, body) {
             if (type === 'expense' && p.category_code !== cat.code) throw error(400, 'Toifa hisob-faktura toifasiga mos emas');
             const paid = await sumPaid(db, `payable_id=$1 AND type<>'loan_in'`, [p.id]);
             if (paid + amount > Number(p.amount)) throw error(409, `To‘lov qoldiqdan oshib ketdi (qoldiq: ${Number(p.amount) - paid})`);
+            // Hisob-faktura sanasidan oldin to'lov — bu oldindan to'lov (bo'nak): avval hisob-fakturani shu sana bilan kiriting.
+            if (type !== 'loan_in' && day < toKey(p.issue_date)) throw error(400, `To‘lov sanasi hisob-faktura sanasidan (${toKey(p.issue_date)}) oldin bo‘lmaydi — oldindan to‘lov bo‘lsa, hisob-fakturani to‘lov sanasi bilan kiriting`);
             payableId = p.id; ent = p.entity;
         }
         let usefulLife = null;
@@ -1675,7 +1721,7 @@ async function lockMonth(pool, actor, body) {
             const body = JSON.stringify(snap);
             await db.query('DELETE FROM fin_period_snapshots WHERE month=$1', [m]); // ochiq oyning eskirgan nusxasi (agar bo'lsa)
             // Xesh bazadagi kanonik JSONB matnidan olinadi va har o'qishda tekshiriladi.
-            hashes[m] = (await db.query(`INSERT INTO fin_period_snapshots(month,data,sha256) VALUES($1,$2::jsonb,encode(sha256(convert_to($2::jsonb::text,'UTF8')),'hex')) RETURNING sha256`, [m, body])).rows[0].sha256;
+            hashes[m] = (await db.query(`INSERT INTO fin_period_snapshots(month,data,sha256) VALUES($1,$2::jsonb,pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to($2::jsonb::text,'UTF8')),'hex')) RETURNING sha256`, [m, body])).rows[0].sha256;
             state = { ...state, closedThrough: m, snapshots: { ...state.snapshots, [m]: JSON.parse(body) } };
         }
         await db.query('INSERT INTO fin_period_locks(month,locked_by,locked_by_name,note,snapshot_hashes) VALUES($1,$2,$3,$4,$5)', [month, user.id, user.name, issues.length ? 'OGOHLANTIRISH BILAN: ' + note : note, JSON.stringify(hashes)]);
@@ -1866,4 +1912,4 @@ async function migrateLegacyCash(db) {
 
 module.exports = { SCHEMA, initSchema, load, overview, cashbook, listTransactions, auditLog, people, storeEvidence, readEvidence, createTransaction, reverseTransaction,
     createPayable, voidPayable, recordSalaryPayment, voidReceipts, manualReceipt, batchCorrections, reconcile, saveAccount, addAccountCheck, closeStatus, lockMonth,
-    saveSettings, assertOpen, verifyAuditChain, verifySeals, closeReadiness, disposeAsset, impairAsset, forfeitContract, confirmNotDuplicate, correctStudentStatus, integrityCertificate, verifyCertificate };
+    saveSettings, assertOpen, verifyAuditChain, verifySeals, closeReadiness, disposeAsset, impairAsset, forfeitContract, confirmNotDuplicate, correctStudentStatus, integrityCertificate, verifyCertificate, acknowledgeIntegrityAlarm };

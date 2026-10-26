@@ -71,6 +71,7 @@ async function audit(db, actor, action, entity, before, after) {
 async function transaction(pool, fn) {
     for (let attempt = 0; attempt < 3; attempt++) {
         const db = await pool.connect();
+        const untrack = require('./finCtx').track(db);
         try {
             await db.query('BEGIN ISOLATION LEVEL REPEATABLE READ');
             // One lock for accrual/confirmation/payment/settings prevents overlapping pay runs and races.
@@ -78,11 +79,11 @@ async function transaction(pool, fn) {
             await db.query("SELECT set_config('fin.ctx', $1, true)", [require('./finCtx').token('payroll')]);
             const result = await fn(db);
             await require('./finCtx').signTx(db);
-            await db.query('COMMIT'); return result;
+            await db.query('COMMIT'); require('./finCtx').commitHead(db); return result;
         } catch (e) {
             await db.query('ROLLBACK');
             if (!['40001', '40P01'].includes(e.code) || attempt === 2) throw e;
-        } finally { db.release(); }
+        } finally { untrack(); db.release(); }
     }
 }
 async function access(db, actor, mode = 'finance') {

@@ -157,12 +157,17 @@
             if (b.dataset.finReport) state.report = b.dataset.finReport;
             if (typeof switchFinanceSection === 'function') switchFinanceSection(b.dataset.finGo);
         }));
+        root.querySelectorAll('[data-fin-alarm-ack]').forEach(b => b.addEventListener('click', e => {
+            e.stopPropagation();
+            openReasonModal('Yaxlitlik ogohlantirishini yopish', 'Yopish', async note => { await api('/integrity/acknowledge', { note }); },
+                { placeholder: 'Nima aniqlandi, sababi va nima qilindi (masalan: server paroli almashtirildi, bazaga kirish huquqi olindi)', note: 'Ogohlantirish tarixi server diskida va audit jurnalida qoladi.' });
+        }));
     }
 
     // ---------- Umumiy ko'rinish ----------
     function qualityAlerts(o) {
         const q = o.quality, items = [];
-        if (o.seals && !o.seals.ok && !o.seals.badSnapshots?.length) items.push(['danger', `Ma’lumot yaxlitligi buzilgan: ${esc(o.seals.table || '')} — ${esc(o.seals.reason || '')}. Bazada yashirin o‘zgartirish bo‘lgan, oy yopish bloklangan`, 'solishtirish']);
+        if (o.seals && !o.seals.ok && !o.seals.badSnapshots?.length) items.push(['danger', `Ma’lumot yaxlitligi buzilgan: ${esc(o.seals.table || '')} — ${esc(o.seals.reason || '')}. Bazada yashirin o‘zgartirish bo‘lgan, oy yopish bloklangan${o.seals.latched && isDirector() ? ' <button type="button" class="fin-link" data-fin-alarm-ack>Ko‘rib chiqdim — yopish</button>' : ''}`, 'solishtirish']);
         if (o.contractDebtMismatches?.length) items.push(['warning', `${o.contractDebtMismatches.length} ta o‘quvchida shartnoma aktivi CRM’dagi qarzdan katta — tekshirish kerak`, 'solishtirish']);
         if (o.seals?.badSnapshots?.length) items.push(['danger', `Yopilgan oy nusxasi bazada o‘zgartirilgan (${o.seals.badSnapshots.join(', ')}) — u ishlatilmayapti, hisobot joriy ma’lumotdan tuzildi. Oy yopish bloklangan`, 'solishtirish']);
         if (!o.auditChain.ok) items.push(['danger', `Audit jurnali zanjiri ${o.auditChain.brokenAt}-yozuvda uzilgan — jurnal bazada to‘g‘ridan-to‘g‘ri o‘zgartirilgan`, 'solishtirish']);

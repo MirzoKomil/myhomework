@@ -85,6 +85,7 @@ async function q1(text, params = []) {
 
 async function tx(fn, actor = null) {
     const client = await pool.connect();
+    const untrack = require('./services/finCtx').track(client);
     try {
         await client.query('BEGIN');
         // Moliya jurnali uchun: o'zgarish qaysi ilova tranzaksiyasidan va kim tomonidan (o'quvchi holati jurnali shu belgilarni yozadi).
@@ -94,11 +95,13 @@ async function tx(fn, actor = null) {
         const result = await fn(client);
         await require('./services/finCtx').signTx(client);
         await client.query('COMMIT');
+        require('./services/finCtx').commitHead(client);
         return result;
     } catch (e) {
         await client.query('ROLLBACK');
         throw e;
     } finally {
+        untrack();
         client.release();
     }
 }

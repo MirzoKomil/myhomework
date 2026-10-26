@@ -27,6 +27,8 @@ test('real PostgreSQL finance integration', { skip: !url }, async t => {
     const body = name => name.endsWith('.png') ? Buffer.concat([PNG, Buffer.from('evidence ' + name + seq++)]) : Buffer.from('%PDF-1.4\nevidence ' + name + seq++);
     // Superuser sifatida alohida sessiyada "yashirin" o'zgartirish (triggerlarni o'chirib) — buzilishni aniqlash testlari uchun.
     const accN3 = () => ({ id: 'acc3' });
+    // Ataylab qilingan buzilish tiklangach: qotirilgan ogohlantirishni rahbar yopadi (haqiqiy jarayondagidek).
+    const ack = () => finance.acknowledgeIntegrityAlarm(pool, admin, { note: 'Test: ataylab qilingan buzilish tiklandi va tekshirildi' }).catch(() => {});
     // Ilova nomidan (imzolangan belgi bilan) alohida psql sessiyasida; tranzaksiya ilova kaliti bilan imzolanadi (ilova COMMIT oldidan qiladigan ish).
     const appSql = async (app, sql) => {
         const out = execFileSync('psql', [url, '-v', 'ON_ERROR_STOP=1', '-qAt', '-c', `BEGIN; SELECT set_config('fin.ctx', '${require('../server/services/finCtx').token(app)}', true); ${sql}; SET CONSTRAINTS ALL IMMEDIATE; SELECT 'XID:' || pg_current_xact_id(); COMMIT;`], { encoding: 'utf8' });
@@ -347,6 +349,7 @@ test('real PostgreSQL finance integration', { skip: !url }, async t => {
             assert.deepEqual(tampered.seals.badSnapshots, ['2026-09']);
             await rejects(finance.lockMonth(pool, admin, { month: '2026-10', override: true, note: 'Buzilgan nusxa bilan yopishga urinish' }), null, /yaxlitligi|tugagan/);
             superSql('fin_period_snapshots', `UPDATE fin_period_snapshots SET data='${original.replace(/'/g, "''")}'::jsonb WHERE month='2026-09'`);
+            await ack();
             assert.deepEqual((await finance.overview(pool, admin, {})).seals.badSnapshots, []);
             assert.equal(oct.balance.balanced, true, String(oct.balance.imbalance));
             await rejects(finance.lockMonth(pool, accountant, { month: '2026-09', locked: false, note: 'Tuzatish kerak' }), 403);
@@ -408,6 +411,8 @@ test('real PostgreSQL finance integration', { skip: !url }, async t => {
                 superSql(table, bad);
                 const v = await finance.verifySeals(pool); assert.equal(v.ok, false, table); assert.equal(v.table, table);
                 superSql(table, restore);
+                assert.equal((await finance.verifySeals(pool)).ok, false, table + ': ogohlantirish qotirilgan');
+                await ack();
                 assert.equal((await finance.verifySeals(pool)).ok, true, table + ' restored');
             };
             await tamper('fin_accounts', "UPDATE fin_accounts SET opening_balance=opening_balance+7000000 WHERE id='acc-cash'", "UPDATE fin_accounts SET opening_balance=opening_balance-7000000 WHERE id='acc-cash'");
@@ -423,6 +428,7 @@ test('real PostgreSQL finance integration', { skip: !url }, async t => {
                 superSql('fin_period_locks', "DELETE FROM fin_period_locks WHERE month='2026-08'");
                 const v = await finance.verifySeals(pool); assert.equal(v.ok, false); assert.equal(v.table, 'fin_period_locks');
                 superSql('fin_period_locks', `INSERT INTO fin_period_locks(month,locked_by,locked_by_name,note,locked_at) VALUES('2026-08','${lk.locked_by}','${lk.locked_by_name}','${lk.note.replace(/'/g, "''")}',NOW())`);
+                await ack();
                 assert.equal((await finance.verifySeals(pool)).ok, true);
             }
         });
@@ -437,11 +443,13 @@ test('real PostgreSQL finance integration', { skip: !url }, async t => {
             const o = await finance.overview(pool, admin, {});
             assert.equal(o.seals.ok, false); assert.equal(o.seals.table, 'fin_payables');
             superSql('fin_payables', `UPDATE fin_payables SET void_date=NULL, voided_at=NULL WHERE id='${bill.id}'`);
+            await ack();
             assert.equal((await finance.overview(pool, admin, {})).seals.ok, true);
             // student_id ham muhrlangan
             superSql('payment_records', "UPDATE payment_records SET student_id='hacked' WHERE id='r2'");
             assert.equal((await finance.overview(pool, admin, {})).seals.ok, false);
             superSql('payment_records', "UPDATE payment_records SET student_id=NULL WHERE id='r2'");
+            await ack();
             assert.equal((await finance.overview(pool, admin, {})).seals.ok, true);
             // Kliring hisobiga o'tkazma yo'q, Uzum qarzidan ortiq hisob-kitob yo'q
             await rejects(finance.createTransaction(pool, admin, { requestKey: key(), entity: 'russian', type: 'transfer', categoryCode: 'TRANSFER', accountId: 'acc-bank', toAccountId: 'acc-uzum', amount: 5000000, date: '2026-10-10' }), 400, /kliring/);
