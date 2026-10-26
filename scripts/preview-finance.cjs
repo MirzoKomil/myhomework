@@ -39,13 +39,17 @@ async function seed() {
     await finance.saveAccount(pool, actor, { id: 'acc-card', name: 'Karta (P2P / terminal)', kind: 'card', entity: 'common', methods: ['card', 'payme', 'click', 'paylater'], openingBalance: 2000000, openingDate: '2026-08-01' });
     const csv = fs.readFileSync(path.join(__dirname, 'fixtures/finance-preview.csv'), 'utf8').trim().split('\n').slice(1);
     let i = 0;
+    // Demo tushumlar CRM (inflow) nomidan: ilova belgisi bilan yoziladi.
+    const { execFileSync } = require('node:child_process');
+    const inserts = [];
     for (const line of csv) {
         const [date, name, phone, amount, method, form, manager] = line.split(',');
         i++;
-        await pool.query(`INSERT INTO payment_records(id,source_key,lead_id,language,manager_id,paid_date,amount,method,receipt_url,form,debt_snapshot,snapshot,legacy_review,actor_id)
-            VALUES($1,$2,$3,'russian',$4,$5,$6,$7,'',$8,0,$9,$10,'system')`, ['p' + i, 'preview:' + i, 'lead-' + phone, manager, date, Number(amount), method, form,
-            JSON.stringify({ name, phone: '+998' + phone, managerName: manager === 'm1' ? 'Hamidaxon Boymirzayeva' : manager === 'm2' ? 'Kamola Shahobiddinova' : '' }), method === 'unknown']);
+        const q = v => "'" + String(v).replace(/'/g, "''") + "'";
+        inserts.push(`INSERT INTO payment_records(id,source_key,lead_id,language,manager_id,paid_date,amount,method,receipt_url,form,debt_snapshot,snapshot,legacy_review,actor_id)
+            VALUES(${q('p' + i)},${q('preview:' + i)},${q('lead-' + phone)},'russian',${q(manager)},${q(date)},${Number(amount)},${q(method)},'',${q(form)},0,${q(JSON.stringify({ name, phone: '+998' + phone, managerName: manager === 'm1' ? 'Hamidaxon Boymirzayeva' : manager === 'm2' ? 'Kamola Shahobiddinova' : '' }))},${method === 'unknown'},'system');`);
     }
+    execFileSync('psql', [url, '-v', 'ON_ERROR_STOP=1', '-qAt', '-c', `BEGIN; SELECT set_config('fin.ctx', 'inflow:preview-seed', true); ${inserts.join('\n')} COMMIT;`]);
     const students = [['s1', 'Mamatov Kamoliddin', '332800826', 1900000, '2026-10-08'], ['s2', 'Sultonova Xafiza', '883139309', 1600000, '2026-10-15'], ['s3', 'Bobojonova Xosila', '902443056', 1500000, '2026-10-23'],
         ['s4', 'Raximov Abdumo‘min', '977039102', 1600000, '2026-08-17'], ['s5', 'Qosimjonov Sherzod', '978161313', 1400000, '2026-11-19'], ['s6', 'Akramov Ibrohim', '932200141', 900000, '2026-10-31']];
     for (const [id, name, phone, debt, due] of students) await pool.query(`INSERT INTO students VALUES($1,$2,$3,'russian','g',NULL,30,$4)`, [id, name, '+998' + phone, JSON.stringify({ debtAmount: debt, paymentDueDate: due })]);

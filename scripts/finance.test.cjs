@@ -622,3 +622,61 @@ test('R6: split payment is found even when a namesake with another phone has the
     assert.equal(m.status, 'split');
     assert.equal(F.nameMatch('Уктам Рахимов', 'Oʻktam Rahimov'), 'strong');
 });
+
+// ---------- Auditor regressiyalari (7-bosqich) ----------
+test('R7: cash basis reverses revenue when Uzum claws money back after a cancelled sale', () => {
+    const d = data({ accounts: ACC26, receipts: [rc('u', '2026-08-05', 3000000, { method: 'uzum', entity: 'english', leadId: 'U', voidDate: '2026-09-10' })],
+        transactions: [tx('s', '2026-08-20', 'transfer', 'TRANSFER', 2700000, { entity: 'english', accountId: 'acc-uzum', toAccountId: 'acc-bank' }),
+            tx('f', '2026-08-20', 'expense', 'BANK_FEES', 300000, { entity: 'english', accountId: 'acc-uzum' }),
+            tx('c', '2026-09-12', 'transfer', 'TRANSFER', 2700000, { entity: 'english', accountId: 'acc-bank', toAccountId: 'acc-uzum' }),
+            tx('fr', '2026-09-12', 'expense', 'BANK_FEES', 300000, { entity: 'english', accountId: 'acc-uzum', reversesId: 'f' })] });
+    const p = F.profitAndLoss(d, { start: '2026-08-01', end: '2026-09-30', scope: 'english' });
+    assert.equal(p.net_profit, 0);
+    assert.equal(F.cashFlowStatement(d, { start: '2026-08-01', end: '2026-09-30', scope: 'english' }).net.operating, 0);
+});
+
+test('R7: a voided misdated receipt does not set the course start', () => {
+    const d = data({ accounts: ACC.map(a => ({ ...a, openingDate: '2026-07-01' })), receipts: [
+        rc('bad', '2026-08-01', 3000000, { leadId: 'L', contractValue: 3000000, voidDate: '2026-09-01' }),
+        rc('good', '2026-09-01', 3000000, { leadId: 'L', contractValue: 3000000 })] });
+    const live = F.contracts(d).find(c => c.receipts.some(r => r.id === 'good'));
+    assert.equal(live.start, '2026-09-01');
+    assert.equal(F.profitAndLoss(d, { start: '2026-08-01', end: '2026-08-31', basis: 'accrual' }).net_revenue, 0);
+    assert.equal(F.balanceSheet(d, '2026-08-15').balanced, true);
+});
+
+test('R7: a report starting mid-way through a closed month does not double count a late change', () => {
+    const base = data({ accounts: ACC.map(a => ({ ...a, openingDate: '2026-07-01' })), receipts: [rc('a', '2026-08-05', 1000000, { leadId: 'A', contractValue: 1000000 })] });
+    const aug = F.snapshotMonth(base, '2026-08');
+    const late = { ...base, closedThrough: '2026-08', snapshots: { '2026-08': aug },
+        salaries: [{ id: 'S', entity: 'russian', employeeName: 'U', amount: 200000, status: 'unpaid', periodStart: '2026-08-01', periodEnd: '2026-08-25', accrualDate: '2026-08-25', categoryCode: 'PAY_ADMIN' }] };
+    const full = F.profitAndLoss(late, { start: '2026-08-01', end: '2026-09-30', basis: 'accrual' });
+    const part = F.profitAndLoss(late, { start: '2026-08-15', end: '2026-09-30', basis: 'accrual' });
+    assert.equal(part.admin_payroll, 200000); // joriy ma'lumotdan bir marta
+    assert.equal(part.prior_adjustments || 0, 0);
+    assert.equal(full.prior_adjustments, -200000);
+});
+
+test('R7: without a captured contract price, the CRM debt is not added to the price and is flagged', () => {
+    const d = data({ accounts: ACC26, receipts: [rc('a', '2026-09-01', 1000000, { leadId: null, studentId: 'S', contractValue: 0 })], studentDebts: [{ studentId: 'S', debt: 50000000 }] });
+    assert.equal(F.contracts(d)[0].value, 1000000);
+    assert.equal(F.contractDebtMismatches(d, '2026-09-30').some(f => f.kind === 'no_contract_price'), true);
+});
+
+test('R7: a renewal paid after the original end but inside the freeze-extended course starts after the extended end', () => {
+    const d = data({ accounts: ACC26, receipts: [rc('a', '2026-01-01', 3000000, { leadId: 'L', studentId: 'S', contractValue: 3000000, debtAfter: 0 }),
+        rc('b', '2026-04-05', 3000000, { leadId: 'L', studentId: 'S', contractValue: 3000000, debtAfter: 0 })],
+        studentFreezes: [{ studentId: 'S', from: '2026-02-01', to: '2026-03-01' }] });
+    const [c1, c2] = F.contracts(d);
+    assert.equal(c1.serviceEnd, '2026-04-28');
+    assert.equal(c2.start, '2026-04-29');
+});
+
+test('R7: non-admin cannot move an employee into the finance department or change a finance login', () => {
+    const { preserveHrPrivateFields } = require('../server/services/stateScope');
+    const old = [{ id: 'e1', login: 'rec', department: 'reception' }, { id: 'e2', login: 'fin', department: 'moliya' }];
+    assert.throws(() => preserveHrPrivateFields([{ id: 'e1', login: 'rec', department: 'moliya' }, { id: 'e2', login: 'fin', department: 'moliya' }], old, { role: 'rop' }), /admin/);
+    assert.throws(() => preserveHrPrivateFields([{ id: 'e1', login: 'rec', department: 'reception' }, { id: 'e2', login: 'hacker', department: 'moliya' }], old, { role: 'rop' }), /admin/);
+    assert.throws(() => preserveHrPrivateFields([{ id: 'e3', login: 'x', department: 'finance' }], old, { role: 'rop' }), /admin/);
+    assert.doesNotThrow(() => preserveHrPrivateFields([{ id: 'e1', login: 'rec', department: 'moliya' }], old, { role: 'admin' }));
+});

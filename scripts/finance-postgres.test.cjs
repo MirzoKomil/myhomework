@@ -58,8 +58,10 @@ test('real PostgreSQL finance integration', { skip: !url }, async t => {
                 ['expense', 'MKT_ADS', 'acc-card', 300000, true], ['drawing', 'OWNER_OUT', 'acc-cash', 100000, true]]);
         });
 
-        const insertReceipt = (id, date, amount, o = {}) => pool.query(`INSERT INTO payment_records(id,source_key,lead_id,student_id,language,manager_id,paid_date,amount,method,receipt_url,form,debt_snapshot,snapshot,legacy_review,actor_id)
-            VALUES($1,$2,$3,$4,'russian','m',$5,$6,$7,'',$8,0,$9,TRUE,'system')`, [id, 'lead:' + id + ':deposit', o.lead || 'l-' + id, o.student || null, date, amount, o.method || 'card', o.form || 'partial', JSON.stringify({ name: o.name || 'Ali', phone: o.phone || '+998901112233', managerName: 'Sales' })]);
+        // Tushumlar CRM (inflow) tranzaksiyasi nomidan yoziladi — ilova belgisi bilan (oddiy SQL kiritish buzilish hisoblanadi).
+        const lit = v => v == null ? 'NULL' : "'" + String(v).replace(/'/g, "''") + "'";
+        const insertReceipt = async (id, date, amount, o = {}) => appSql('inflow', `INSERT INTO payment_records(id,source_key,lead_id,student_id,language,manager_id,paid_date,amount,method,receipt_url,form,debt_snapshot,snapshot,legacy_review,actor_id)
+            VALUES(${lit(id)},${lit('lead:' + id + ':deposit')},${lit(o.lead || 'l-' + id)},${lit(o.student || null)},'russian','m',${lit(date)},${Number(amount)},${lit(o.method || 'card')},'',${lit(o.form || 'partial')},0,${lit(JSON.stringify({ name: o.name || 'Ali', phone: o.phone || '+998901112233', managerName: 'Sales' }))},TRUE,'system')`);
         await insertReceipt('r1', '2026-09-14', 100000, { lead: 'l1', student: 's1', name: 'Ali Valiyev' });
         await insertReceipt('r2', '2026-10-01', 1800000, { form: 'full', name: 'Vali', phone: '+998970280022' });
         await insertReceipt('rt', '2026-10-02', 500000, { name: 'test', phone: '800000000' });
@@ -466,6 +468,17 @@ test('real PostgreSQL finance integration', { skip: !url }, async t => {
             await rejects(finance.createTransaction(pool, { id: 'acc3' }, { requestKey: key(), entity: 'common', type: 'expense', categoryCode: 'RENT', accountId: 'acc-bank', amount: 6000000, date: '2026-10-10', counterparty: 'X', receiptUrl: await evidence() }), 403);
             // Xizmat davri asosiy vosita uchun rad etiladi
             await rejects(finance.createTransaction(pool, admin, { requestKey: key(), entity: 'common', type: 'expense', categoryCode: 'CAPEX', accountId: 'acc-bank', amount: 1000000, date: '2026-10-10', counterparty: 'X', usefulLifeMonths: 12, serviceStart: '2026-10-10', serviceEnd: '2027-10-09', receiptUrl: await evidence() }), 400, /operatsion/);
+        });
+
+        await t.test('round 7: plain-SQL receipt, forged freeze log and lock bypass are detected', async () => {
+            const plainSql = sql => execFileSync('psql', [url, '-v', 'ON_ERROR_STOP=1', '-qAt', '-c', sql], { encoding: 'utf8' });
+            const freshCheck = async (sql, table) => { plainSql(sql); const v = await finance.verifySeals(pool); assert.equal(v.ok, false); return v; };
+            // Bu bazada avvalgi testlar allaqachon buzilish qoldirgan; har bir tekshiruv alohida funksiya bilan
+            const ghost = `INSERT INTO payment_records(id,source_key,language,paid_date,amount,method,form,snapshot,actor_id) VALUES('ghost','ghost','russian','2026-10-20',5000000,'uzum','full','{}','x')`;
+            plainSql(ghost);
+            const seals = await pool.query("SELECT ctx FROM fin_row_seals WHERE table_name='payment_records' AND row_id='ghost'");
+            assert.equal(seals.rows[0].ctx, null);
+            await freshCheck(`INSERT INTO fin_student_log(student_id,state) VALUES('s1','{"frozen":true,"frozenAt":"2026-10-01"}')`);
         });
 
         await t.test('row seals detect edits and unsealed inserts made with triggers disabled', async () => {

@@ -271,10 +271,26 @@
             }
             for (const s of data.studentStatus || []) { if (s.studentId) status.set('s:' + s.studentId, s); if (s.leadId) status.set('l:' + s.leadId, s); }
             const out = [];
-            for (const [g, list] of groups) {
-                list.sort((a, b) => a.date.localeCompare(b.date));
-                const leadValue = Math.max(0, ...list.map(r => Number(r.contractValue) || 0));
+            // Muzlatish kunlari qo'shilgan haqiqiy kurs tugash sanasi.
+            const extendEnd = (start, end, ivs) => {
+                let e = end;
+                for (let i = 0; i < 5; i++) {
+                    let frozen = 0;
+                    for (const f of ivs) { const a = f.from > start ? f.from : start, b = f.to ? addDays(f.to, -1) : e, z = b < e ? b : e; if (z >= a) frozen += dayDiff(a, z) + 1; }
+                    const next = addDays(end, frozen);
+                    if (next === e) break;
+                    e = next;
+                }
+                return e;
+            };
+            for (const [g, all] of groups) {
+                all.sort((a, b) => a.date.localeCompare(b.date));
+                // Kurs chegaralari faqat amaldagi (bekor qilinmagan) tushumlardan; bekor qilinganlar keyin o'z davriga biriktiriladi.
+                const list = all.filter(r => !r.voidDate), voided = all.filter(r => r.voidDate);
+                const leadValue = Math.max(0, ...all.map(r => Number(r.contractValue) || 0));
+                const sample = all[0], ivs = freezes.get('s:' + sample.studentId) || freezes.get('l:' + sample.leadId) || [];
                 let current = null, n = 0;
+                const groupOut = [];
                 for (const r of list) {
                     const liveSum = sum(current ? current.receipts.filter(x => !x.voidDate) : []);
                     // Yangi o'qish davri (keyingi kurs):
@@ -289,20 +305,34 @@
                     const paidUp = current && (debtKnown ? Number(lastLive.debtAfter) <= 0 : liveSum >= current.threshold);
                     // CRM kurs to'liq to'langanini ko'rsatsa — keyingi har qanday to'lov keyingi kurs uchun avans.
                     // CRM qarzi noma'lum bo'lsa — faqat kursning oxirgi uchdan birida kelgan to'lov.
-                    const early = paidUp && r.date <= current.end && (debtKnown
-                        || (current.threshold > 0 && r.date >= addDays(current.end, -Math.floor((dayDiff(current.start, current.end) + 1) / 3))));
-                    if (!current || (r.date > current.end && paidUp) || early) {
-                        const start = early ? addDays(current.end, 1) : r.date;
+                    const curEnd = current ? current.serviceEnd : null;
+                    const early = paidUp && r.date <= curEnd && (debtKnown
+                        || (current.threshold > 0 && r.date >= addDays(curEnd, -Math.floor((dayDiff(current.start, curEnd) + 1) / 3))));
+                    if (!current || (r.date > curEnd && paidUp) || early) {
+                        const start = early ? addDays(curEnd, 1) : r.date;
                         const months = Math.max(1, Number(settingsAt(data, start).courseMonths[r.entity]) || 3);
                         const prevValue = current ? Math.max(current.threshold, liveSum) : 0;
+                        const end = addDays(addMonths(start, months), -1);
                         current = { key: g + '#' + (++n), group: g, index: n, entity: r.entity, name: r.name, leadId: r.leadId, studentId: r.studentId, start, months,
-                            end: addDays(addMonths(start, months), -1), receipts: [], refunds: [], earlyRenewal: !!early,
+                            end, serviceEnd: extendEnd(start, end, ivs), receipts: [], refunds: [], earlyRenewal: !!early,
                             // Birinchi kurs narxi — lid kartasidan (birinchi tushumda muzlatilgan); keyingi kurs — oldingisi narxida deb olinadi.
                             threshold: n === 1 ? (Number(r.contractValue) || leadValue) : prevValue };
-                        out.push(current);
+                        out.push(current); groupOut.push(current);
                     }
                     current.receipts.push(r);
                     for (const f of refundsByReceipt.get(r.id) || []) current.refunds.push(f);
+                }
+                for (const r of voided) {
+                    let c = [...groupOut].reverse().find(x => x.start <= r.date) || groupOut[0];
+                    if (!c) {
+                        const end = addDays(addMonths(r.date, 3), -1);
+                        c = { key: g + '#' + (++n), group: g, index: n, entity: r.entity, name: r.name, leadId: r.leadId, studentId: r.studentId, start: r.date, months: 3,
+                            end, serviceEnd: end, receipts: [], refunds: [], earlyRenewal: false, threshold: 0 };
+                        out.push(c); groupOut.push(c);
+                    }
+                    c.receipts.push(r);
+                    c.receipts.sort((a, b) => a.date.localeCompare(b.date));
+                    for (const f of refundsByReceipt.get(r.id) || []) c.refunds.push(f);
                 }
             }
             // Kurs narxi = to'langan + CRM'dagi qolgan qarz (ma'lum bo'lsa). Oxirgi kurs — o'quvchining joriy qarzi bilan
@@ -319,8 +349,10 @@
                 // CRM qarzi shartnomada muzlatilgan narxdan oshirib kiritilsa — narx o'sha qiymatda cheklanadi (tekshiruvga chiqariladi).
                 const captured = Number(live[0]?.contractValue) || 0;
                 const debtPart = crmDebt != null ? Math.max(0, crmDebt) : null;
-                const capped = debtPart != null && captured > 0 ? Math.min(debtPart, Math.max(0, captured - sum(live))) : debtPart;
-                c.debtInflation = debtPart != null && capped != null && debtPart > capped ? debtPart - capped : 0;
+                // Muzlatilgan narx bo'lmasa CRM qarzi narxga qo'shilmaydi (tekshirib bo'lmaydi) — faqat to'langan pul; tekshiruvga chiqadi.
+                const capped = debtPart == null ? null : captured > 0 ? Math.min(debtPart, Math.max(0, captured - sum(live))) : 0;
+                c.debtInflation = debtPart != null && debtPart > capped ? debtPart - capped : 0;
+                c.noCapturedPrice = debtPart != null && debtPart > 0 && !captured;
                 c.value = !live.length ? 0 : debtPart != null ? sum(live) + capped : Math.max(c.index === 1 ? c.threshold : 0, sum(live));
                 c.firstReceipt = live[0] || null;
                 c.startLive = live[0]?.date || null;
@@ -551,7 +583,8 @@
             // Uzum o'tkazgan summa + ushlab qolgan komissiya = tushum, komissiya alohida xarajat.
             if (clearing(m.account)) {
                 if (m.source === 'receipt' || m.category === 'REFUND') continue; // Uzum orqali bekor qilingan sotuv — pul kelmagan
-                if (m.category === 'TRANSFER' && m.transferLeg === 'out') { addTo(b, 'revenue', -m.sign * m.amount); continue; }
+                // Uzum o'tkazgani — tushum; Uzum qaytarib olgani (kliringga kirgan o'tkazma) — tushum kamayadi.
+                if (m.category === 'TRANSFER') { addTo(b, 'revenue', -m.sign * m.amount); continue; }
                 if (m.category === 'BANK_FEES') addTo(b, 'revenue', -m.sign * m.amount);
             }
             const line = (CATEGORY[m.category] || {}).pnl;
@@ -651,11 +684,12 @@
     // Yopilgan oylar keyinchalik o'zgargan bo'lsa (masalan, kech kiritilgan maosh), farq birinchi ochiq oyga
     // "o'tgan davr tuzatishi" bo'lib tushadi. Bu tuzatish o'sha oy yopilganda uning nusxasiga muzlatiladi va
     // keyingi oylarda qayta ko'rsatilmaydi: farq = joriy hisob − muzlatilgan o'z natijasi − keyin muzlatilgan tuzatishlar.
-    function priorAdjustments(data, closed, scope, basis) {
+    function priorAdjustments(data, closed, scope, basis, exclude = []) {
         const months = Object.keys(data.snapshots || {}).filter(m => m <= closed).sort(), out = {};
         const booked = {};
         for (const y of months) for (const [x, a] of Object.entries(snapshotOf(data, y, scope, basis)?._prior || {})) booked[x] = (booked[x] || 0) + a;
         for (const x of months) {
+            if (exclude.includes(x)) continue; // bu oy shu hisobotda joriy ma'lumotdan qayta hisoblangan — tuzatish ikki marta kirmaydi
             const snap = snapshotOf(data, x, scope, basis);
             if (!snap) continue;
             const own = pnlFromBuckets(snap).net_profit - (snap.prior_adjustments || 0);
@@ -668,12 +702,13 @@
         const closed = data.closedThrough || '';
         const b = {}, segments = [];
         let usedSnapshot = false, partialClosed = false;
+        const partialMonths = [];
         for (const month of monthsBetween(start, end)) {
             const s = month + '-01' < start ? start : month + '-01', e = monthEnd(month) > end ? end : monthEnd(month);
             const full = s === month + '-01' && e === monthEnd(month);
             const snap = full ? snapshotOf(data, month, scope, basis) : null;
             if (snap) { mergeBuckets(b, snap); usedSnapshot = true; }
-            else { mergeBuckets(b, rawBuckets(data, s, e, scope, basis)); if (closed && month <= closed) partialClosed = true; }
+            else { mergeBuckets(b, rawBuckets(data, s, e, scope, basis)); if (closed && month <= closed) { partialClosed = true; partialMonths.push(month); } }
             segments.push(month);
         }
         // Yopilgan oylar keyinchalik o'zgargan bo'lsa — farq birinchi ochiq oyga "o'tgan davr tuzatishi" bo'lib tushadi.
@@ -681,7 +716,7 @@
         if (closed) {
             const firstOpen = monthOf(addMonths(closed + '-01', 1));
             if (segments.includes(firstOpen) && end >= firstOpen + '-01') {
-                const prior = priorAdjustments(data, closed, scope, basis);
+                const prior = priorAdjustments(data, closed, scope, basis, partialMonths);
                 for (const [month, amount] of Object.entries(prior)) { b.prior_adjustments = (b.prior_adjustments || 0) + amount; priorDetail.push({ month, amount }); }
                 if (Object.keys(prior).length) mergeBuckets(b, { _prior: prior });
             }
@@ -759,7 +794,9 @@
     }
 
     // ---------- Balans (konsolidatsiya) ----------
+    // Balans faqat butun korxona bo'yicha (umumiy kassa va kapital maktablarga bo'linmaydi).
     function balanceSheet(data, asOf, scope = 'all') {
+        scope = 'all';
         const closed = data.closedThrough || '', m = monthOf(asOf);
         if (scope === 'all' && closed && m <= closed && asOf === monthEnd(m) && data.snapshots?.[m]?.balance) return { ...data.snapshots[m].balance, fromSnapshot: true };
         return balanceSheetRaw(data, asOf, scope);
@@ -860,7 +897,7 @@
             if (debt != null && pos > Number(debt)) out.push({ name: c.name, entity: c.entity, contractAsset: pos, crmDebt: Number(debt), difference: pos - Number(debt), kind: 'asset_over_debt' });
         }
         // CRM qarzi shartnoma narxidan oshirib yozilgan (narx cheklandi) — sotuv menejeri qarzni ko'paytirgan bo'lishi mumkin.
-        for (const c of contracts(data)) if (c.debtInflation > 0) out.push({ name: c.name, entity: c.entity, contractAsset: contractPosition(c, asOf), crmDebt: c.debtInflation, difference: c.debtInflation, kind: 'debt_over_price' });
+        for (const c of contracts(data)) if (c.debtInflation > 0) out.push({ name: c.name, entity: c.entity, contractAsset: contractPosition(c, asOf), crmDebt: c.debtInflation, difference: c.debtInflation, kind: c.noCapturedPrice ? 'no_contract_price' : 'debt_over_price' });
         return out;
     }
     // ---------- Ma'lumot sifati va shubhali yozuvlar ----------

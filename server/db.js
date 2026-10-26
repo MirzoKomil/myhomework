@@ -1638,7 +1638,7 @@ async function restoreLead(id, actor = {}) {
 async function saveHrEmployeesData(client, employees, actor = {}) {
     if (!isUsableList(employees, 'saveHrEmployeesData')) return;
     await guardBulkDelete(client, 'hr_employees', 'Xodimlar', employees);
-    const oldEmployees = (await client.query('SELECT id,role,start_date,join_date,kpi_template_id,dual_role,login,card_number,passport_series,pinfl,address,birth_date FROM hr_employees')).rows;
+    const oldEmployees = (await client.query('SELECT id,role,start_date,join_date,kpi_template_id,dual_role,login,department,card_number,passport_series,pinfl,address,birth_date FROM hr_employees')).rows;
     // Toʻliq HR huquqi boʻlmagan rol (masalan ROP) maxfiy maydonlarni koʻrmaydi —
     // saqlaganda ular boʻsh qiymat bilan ustidan yozilib ketmasin.
     employees = require('./services/stateScope').preserveHrPrivateFields(employees, oldEmployees, actor);

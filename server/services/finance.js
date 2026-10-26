@@ -297,7 +297,9 @@ CREATE OR REPLACE FUNCTION fin_student_state(x JSONB) RETURNS JSONB AS $$
 $$ LANGUAGE sql IMMUTABLE;
 CREATE OR REPLACE FUNCTION fin_log_student() RETURNS trigger AS $$
 BEGIN
-  IF TG_OP = 'INSERT' OR fin_student_state(COALESCE(NEW.extra_data,'{}'::jsonb)) IS DISTINCT FROM fin_student_state(COALESCE(OLD.extra_data,'{}'::jsonb)) THEN
+  -- CRM o'quvchilar jadvalini to'liq qayta yozadi (DELETE + INSERT): faqat oxirgi yozilgan holatdan farq qilsa jurnalga yoziladi.
+  IF fin_student_state(COALESCE(NEW.extra_data,'{}'::jsonb)) IS DISTINCT FROM
+     (SELECT state FROM fin_student_log WHERE student_id = NEW.id ORDER BY id DESC LIMIT 1) THEN
     INSERT INTO fin_student_log(student_id, state, app_user) VALUES (NEW.id, fin_student_state(COALESCE(NEW.extra_data,'{}'::jsonb)), NULLIF(current_setting('app.user_id', true), ''));
   END IF;
   RETURN NEW;
@@ -462,7 +464,7 @@ async function chainIntegrity(db, full) {
 }
 // Har bir o'zgarish (va boshqaruv jadvallariga kiritish) ilova tranzaksiyasidan bo'lishi va moliya o'zgarishlari
 // audit jurnalidagi yozuv bilan bog'lanishi shart. Oddiy SQL bilan (triggerlar yoqilgan holda ham) qilingan o'zgarish shu yerda ushlanadi.
-const CONTROL_INSERT = ['fin_transactions', 'fin_payables', 'fin_accounts', 'fin_account_checks', 'fin_asset_events', 'fin_period_locks', 'fin_period_snapshots',
+const CONTROL_INSERT = ['payment_records', 'fin_transactions', 'fin_payables', 'fin_accounts', 'fin_account_checks', 'fin_asset_events', 'fin_period_locks', 'fin_period_snapshots',
     'fin_settings', 'fin_settings_history', 'payment_record_voids', 'salary_transactions'];
 const CTX_TABLES = { payroll: ['salary_transactions'], inflow: ['payment_records', 'fin_contract_values', 'fin_student_log'] };
 async function ctxIntegrity(db) {
@@ -478,12 +480,37 @@ async function ctxIntegrity(db) {
     return { ok: false, table: bad.table_name, rowId: bad.row_id, brokenAt: Number(bad.seq),
         reason: bad.ctx ? 'o‘zgarish audit jurnalida yo‘q' : `ilovadan tashqari (to‘g‘ridan-to‘g‘ri SQL) ${bad.op === 'D' ? 'o‘chirish' : bad.op === 'U' ? 'o‘zgartirish' : 'kiritish'}` };
 }
+// O'quvchining moliyaga ta'sir qiluvchi joriy holati jurnaldagi oxirgi yozuvga teng bo'lishi shart: jurnal soxta
+// yozuv bilan to'ldirilsa yoki holat triggerni chetlab o'zgartirilsa — farq chiqadi.
+async function studentStateIntegrity(db) {
+    if (!(await db.query("SELECT to_regclass('students') AS t")).rows[0].t) return { ok: true };
+    const bad = (await db.query(`SELECT s.id FROM students s
+        LEFT JOIN LATERAL (SELECT state FROM fin_student_log l WHERE l.student_id=s.id ORDER BY id DESC LIMIT 1) l ON TRUE
+        WHERE l.state IS DISTINCT FROM fin_student_state(COALESCE(s.extra_data,'{}'::jsonb)) LIMIT 1`)).rows[0];
+    if (bad) return { ok: false, table: 'fin_student_log', rowId: bad.id, reason: 'o‘quvchi holati jurnaldagi oxirgi yozuvga mos emas (jurnal yoki holat ilovadan tashqari o‘zgargan)' };
+    const orphan = (await db.query(`SELECT l.student_id FROM fin_student_log l WHERE NOT EXISTS (SELECT 1 FROM students s WHERE s.id=l.student_id) LIMIT 1`)).rows[0];
+    if (orphan) return { ok: false, table: 'fin_student_log', rowId: orphan.student_id, reason: 'jurnalda mavjud bo‘lmagan o‘quvchi' };
+    return { ok: true };
+}
+// Qulf qo'yilgandan keyin yaratilgan, lekin yopiq davr sanasidagi yozuv — qulf vaqtincha olib tashlangan bo'lishi mumkin.
+async function lockIntegrity(db) {
+    const checks = [['fin_transactions', 'txn_date'], ['payment_records', 'paid_date'], ['payment_record_voids', 'void_date'], ['fin_payables', 'issue_date'],
+        ['fin_account_checks', 'check_date'], ['fin_asset_events', 'event_date']];
+    for (const [t, col] of checks) {
+        const bad = (await db.query(`SELECT x.${t === 'payment_record_voids' ? 'record_id' : 'id'}::text AS id FROM ${t} x JOIN fin_period_locks l ON TO_CHAR(x.${col},'YYYY-MM') <= l.month
+            WHERE x.created_at > l.locked_at LIMIT 1`)).rows[0];
+        if (bad) return { ok: false, table: t, rowId: bad.id, reason: 'yopilgan davrga qulfdan keyin yozilgan yozuv (qulf chetlab o‘tilgan)' };
+    }
+    return { ok: true };
+}
 async function integrity(db, { full = false } = {}) {
     const tables = await sealedTables(db);
     const chain = await chainIntegrity(db, full);
     if (!chain.ok) return { ...chain, badSnapshots: [] };
-    const ctx = await ctxIntegrity(db);
-    if (!ctx.ok) return { ...ctx, badSnapshots: [], head: chain.head, count: chain.count };
+    for (const check of [ctxIntegrity, studentStateIntegrity, lockIntegrity]) {
+        const r = await check(db);
+        if (!r.ok) return { ...r, badSnapshots: [], head: chain.head, count: chain.count };
+    }
     const rows = await rowIntegrity(db, tables);
     const badSnapshots = await snapshotIntegrity(db);
     if (!rows.ok) return { ...rows, badSnapshots, head: chain.head, count: chain.count };
@@ -858,6 +885,10 @@ async function createTransaction(pool, actor, body) {
             // Limit o'quvchi (shartnoma) bo'yicha jami qaytarishga ham qo'llanadi: bir nechta tushumga bo'lib chetlab o'tib bo'lmaydi.
             const studentRefunded = await sumPaid(db, `type='refund' AND payment_record_id IN (SELECT id FROM payment_records WHERE (lead_id IS NOT NULL AND lead_id=$1) OR (student_id IS NOT NULL AND student_id=$2))`, [rec.lead_id, rec.student_id]);
             if (studentRefunded + amount > settings.approvalLimit && !user.director) throw error(403, `Bu o‘quvchi bo‘yicha jami qaytarish ${fmt(studentRefunded + amount)} so‘m — ${fmt(settings.approvalLimit)} so‘mdan oshadi, faqat rahbar tomonidan`);
+            // Qaytarish o'quvchining joriy kursi tushumiga bog'lanadi (tugagan eski kursga emas).
+            const cdata = await load(db), cs = F.contracts(cdata), mine = cs.find(c => c.receipts.some(x => x.id === rec.id));
+            if (mine && cs.some(c => c.group === mine.group && c.index > mine.index) && day > mine.end)
+                throw error(400, 'Bu tushum tugagan oldingi kursga tegishli — qaytarishni joriy kurs tushumiga bog‘lang');
             if (!F.EQUIVALENT_KINDS.has(account.kind)) throw error(400, 'Qaytarish naqd, karta yoki bank hisobidan to‘lanadi (Uzum orqali bekor qilingan sotuv Uzum hisob-kitobida kamayadi)');
             if (typeof body.terminates !== 'boolean') throw error(400, 'Shartnoma tugatiladimi (o‘quvchi o‘qishni to‘xtatdimi) yoki faqat ortiqcha to‘lov qaytarilyaptimi — belgilang');
             paymentRecordId = rec.id; ent = rec.language;
