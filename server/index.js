@@ -226,6 +226,9 @@ app.use('/api/domwork/student-telegram', require('./routes/studentTelegram')({po
     authRequired:require('./middleware/auth').authRequired}));
 app.use('/api/domwork/bot', domworkBotRouter({ pool: crmDb.pool, runtime: domworkBot,
     authRequired: require('./middleware/auth').authRequired }));
+// Xodimlar davomati (Face ID + lokatsiya) va ustozlar dars nazorati
+app.use('/api/staff-attendance', require('./routes/staffAttendance')({ pool: crmDb.pool,
+    authRequired: require('./middleware/auth').authRequired }));
 
 // ── Static files ──────────────────────────────────────────────────────────────
 
@@ -337,6 +340,14 @@ init().then(async () => {
     // Bot is opt-in. Missing credentials/Redis never starts polling or changes Telegram webhooks.
     await require('./services/domworkBot/store').initSchema(crmDb.pool).catch(err =>
         console.error('[domwork-bot] Jadval yaratilmadi:', err.code || err.name));
+    // Xodimlar davomati: jadvallar + har 5 daqiqalik tekshiruv ("kelmadi" xabari, eski rasmlarni tozalash).
+    // Xato bo'lsa ham server ko'tariladi — boshqa bo'limlar shu sabab to'xtamasligi kerak.
+    const staffAttendance = require('./services/staffAttendance');
+    await staffAttendance.initSchema(crmDb.pool).then(() => {
+        const run = () => staffAttendance.tick(crmDb.pool).catch(err => console.error('[staff-attendance] tekshiruv xatosi:', err.message));
+        setInterval(run, 5 * 60 * 1000).unref();
+        setTimeout(run, 60 * 1000).unref();
+    }).catch(err => console.error('[staff-attendance] Jadval yaratilmadi:', err.code || err.message));
     void domworkBot.start();
     app.listen(PORT, '0.0.0.0', () => {
         console.log(`Myhomework.uz server: port ${PORT}`);

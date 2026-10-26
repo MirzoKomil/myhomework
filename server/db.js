@@ -4146,6 +4146,16 @@ async function recordTeacherAttendance({ actor, teacherId, studentId, date, pres
         };
         await require('./services/domworkBot/events').attendance(client,{studentId:safeStudentId,date,duty:'main',teacherId:safeTeacherId,present});
     });
+    // Ustoz dars nazorati: davomat qachon belgilangani (faqat ustozning o'zi belgilaganda).
+    // Tranzaksiyadan keyin — bu yozuv xato bersa ham davomatning o'zi saqlanib qoladi.
+    if (result && present !== null && present !== undefined && !isStaffWithFullAccess) {
+        try {
+            await require('./services/staffAttendance/lessons').recordMark(pool, { teacherId: safeTeacherId, studentId: safeStudentId,
+                date: String(date), duty: result.attendanceType === 'assistant' ? 'assistant' : 'main' });
+        } catch (err) {
+            console.error('[staff-attendance] dars belgisi yozilmadi:', err.message);
+        }
+    }
     return result;
 }
 
