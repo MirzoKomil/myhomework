@@ -5521,3 +5521,13 @@ html.rd .mot-home--solo { grid-template-columns: 1fr; }
 html.rd .kbx-queue { font-size: 13px; color: #9DC4F5; }
 html.rd .mot-home--solo .mot-obed { padding: 14px 20px; }
 html.rd[data-theme="dark"] .kbx-next { background: linear-gradient(160deg, #0B2A55 0%, #0E1A30 100%); border: 1px solid #24304A; }
+html.rd .kbx-tiles b.is-bad, html.rd .kbx-bad { color: var(--kb-bad-fg, #B42318); }
+html.rd .kbx-tiles [data-thx-rating-kpi] .ahx-kpi-l { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+html.rd .kbx-tiles [data-thx-rating-kpi] .ahx-kpi-v { font-size: 20px; font-weight: 800; letter-spacing: 0; }
+html.rd .kbx-tiles [data-thx-rating-kpi] .ahx-kpi-n { font-size: 12px; color: var(--text-muted); }
+html.rd .kbx-gift img { max-height: 90px; object-fit: contain; }
+html.rd button.kbx-call { border: 0; font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
+@media (max-width: 640px) {
+    html.rd .kbx-tiles [data-thx-rating-kpi] .ahx-kpi-n { display: none; }
+    html.rd .kbx-tiles [data-thx-rating-kpi] .ahx-kpi-v { font-size: 15px; }
+}
