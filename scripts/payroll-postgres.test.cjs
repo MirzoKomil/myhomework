@@ -23,7 +23,7 @@ test('real PostgreSQL payroll integration', { skip: !url }, async t => {
       CREATE TABLE main_attendance(att_key TEXT,student_id TEXT,day INTEGER,present INTEGER,PRIMARY KEY(att_key,student_id,day));
       CREATE TABLE assistant_attendance(LIKE main_attendance INCLUDING ALL);
       CREATE TABLE json_data(key TEXT PRIMARY KEY,data JSONB);
-      INSERT INTO users VALUES('admin','Admin','admin','admin',''),('manager','Manager','sales','sales_manager',''),('teacher','Teacher','teacher','teacher','');`);
+      INSERT INTO users VALUES('admin','Admin','admin','admin',''),('acc','Buxgalter','acc','accountant',''),('manager','Manager','sales','sales_manager',''),('teacher','Teacher','teacher','teacher','');`);
     await service.initSchema(pool);
     const reset = async () => {
       await pool.query(`TRUNCATE salary_adjustment_applications,salary_adjustments,salary_transactions,salary_audit,salary_plan_confirmations,
@@ -96,6 +96,7 @@ test('real PostgreSQL payroll integration', { skip: !url }, async t => {
     await t.test('current rate edits do not retroactively reprice historical paid sales', async () => {
       await reset(); await sale('old', 20000000, '2026-10-10'); await pay(oct);
       const settings = engine.defaults(); settings.sales.commission = 10;
+      await assert.rejects(service.saveSettings(pool, { id: 'acc' }, 'english', settings, 1), { status: 403 });
       await service.saveSettings(pool, actor, 'english', settings, 1);
       assert.equal((await service.preview(pool, actor, nov)).corrections.length, 0);
       await sale('old', 30000000, '2026-10-10'); assert.equal((await service.preview(pool, actor, nov)).corrections[0].amount, 500000);
