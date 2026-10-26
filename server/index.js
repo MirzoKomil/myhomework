@@ -215,6 +215,8 @@ app.use('/api/hr', hrRoutes);
 app.use('/api/trial-lessons', trialLessonsRoutes);
 app.use('/api/payroll', payrollRoutes);
 app.use('/api/inflow', inflowRoutes);
+app.use('/api/academic', require('./routes/academicHub')({ pool: crmDb.pool,
+    authRequired: require('./middleware/auth').authRequired, studentAuthOptional: require('./middleware/auth').studentAuthOptional }));
 app.use('/api/domwork/groups', domworkGroupsRouter(require('./db').pool, require('./middleware/auth').authRequired));
 app.use('/api/domwork/marketing', require('./routes/domworkMarketing')({pool:crmDb.pool,authRequired:require('./middleware/auth').authRequired}));
 app.use('/api/target-ads', require('./routes/targetAds'));
@@ -328,6 +330,8 @@ init().then(async () => {
     // bo'limlar HR bo'limi tufayli to'xtab qolmasligi kerak.
     await initHrSchema().catch(err =>
         console.error('[hr] Jadval yaratilmadi:', err.message));
+    await require('./services/academicHub').initSchema(crmDb.pool).catch(err =>
+        console.error('[academic] Jadval yaratilmadi:', err.code || err.name));
     await domworkGroups.initSchema(require('./db').pool).catch(err =>
         console.error('[domwork-groups] Jadval yaratilmadi:', err.code || err.name));
     // Bot is opt-in. Missing credentials/Redis never starts polling or changes Telegram webhooks.

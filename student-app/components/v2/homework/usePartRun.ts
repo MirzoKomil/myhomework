@@ -14,6 +14,7 @@ import { resetPraiseRun, speak, stopVoice } from '@/services/voicePraise';
 import { R } from '@/constants/v2/routes';
 import type { HomeworkPart } from '@/data/lessonContent';
 import { reportActivity } from '@/services/activitySync';
+import { reportPartResult } from '@/services/learningTracker';
 import { addCoins } from '@/services/coinsStore';
 import { getLessonProgress, loadLessonProgress, markHomeworkPartDone } from '@/services/lessonProgressStore';
 import { addLightning } from '@/services/lightningStore';
@@ -117,6 +118,16 @@ export function usePartRun(lessonId: string, part: HomeworkPart, total: number, 
       router.replace(R.homework(lessonId) as Href);
       return;
     }
+    // Ustoz kabineti: har urinish natijasi va xato qilingan savollar (o'tmagan bo'lsa ham).
+    // Xato savol ↔ o'quvchi javobi: xatolar ro'yxati noto'g'ri javoblar tartibida
+    // yoziladi, shuning uchun results[i] === false bo'lgan indekslar bilan juftlanadi.
+    const sc = score.current;
+    const wrongAt = (sc.results ?? []).map((ok, i) => (ok ? -1 : i)).filter((i) => i >= 0);
+    const paired = wrongAt.length === sc.mistakes.length;
+    reportPartResult({
+      lessonId, partId: part.id, kind: part.kind, title: part.title ?? '', correct: finalCorrect, total,
+      mistakes: sc.mistakes.map((question, k) => ({ question, yourAnswer: paired ? (sc.picks?.[wrongAt[k]] ?? '') : '' })),
+    });
     if (accuracy < PASS_THRESHOLD) {
       playSfx('lose');
       speak('retry', 1000);
