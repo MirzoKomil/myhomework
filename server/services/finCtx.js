@@ -349,4 +349,6 @@ const validSchemaMac = (h, mac) => { const a = Buffer.from(schemaMac(h)), b = Bu
 const checkpointMac = c => createHmac('sha256', KEY).update(['fin-checkpoint', c.sealSeq, c.sealHash, c.auditId, c.auditHash, c.prev, c.issuedAt || ''].join('|')).digest('hex');
 // Kalit sozlanmagan (ochiq dev kaliti) bo'lsa imzo himoya bermaydi — moliya bo'limida ogohlantiriladi.
 const keyConfigured = () => KEY !== DEV_KEY;
-module.exports = { stageAck, rebaseline, setStructureCheck, SEALED_TABLES, track, commitHead, readHead, readAlarm, raiseAlarm, clearAlarm, verifyIntents, token, valid, keyConfigured, signTx, signXid, txMac, schemaMac, validSchemaMac, checkpointMac };
+// Kalitning ochiq izi (kalitni oshkor qilmaydi): deploylar orasida kalit o'zgargan-o'zgarmaganini logdan ko'rish uchun.
+const keyId = () => createHmac('sha256', KEY).update('fin-kid').digest('hex').slice(0, 16);
+module.exports = { keyId, stageAck, rebaseline, setStructureCheck, SEALED_TABLES, track, commitHead, readHead, readAlarm, raiseAlarm, clearAlarm, verifyIntents, token, valid, keyConfigured, signTx, signXid, txMac, schemaMac, validSchemaMac, checkpointMac };
