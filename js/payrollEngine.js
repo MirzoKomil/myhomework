@@ -99,6 +99,14 @@
         return Array.from({ length: last }, (_, i) => i + 1).filter(day => weekdays.includes(new Date(Date.UTC(y, m, day)).getUTCDay()));
     }
     const CONTACT_CAP = 13;
+    // O'quvchining dars kunlari (Du·Ch·Ju yoki Se·Pa·Sh); jadvali bo'lmasa ustoz shabloni.
+    function studentLessonDays(month, student, pattern) {
+        const d = Number(student?.lessonDayOfWeek);
+        const p = [1, 3, 5].includes(d) ? 'mwf' : [2, 4, 6].includes(d) ? 'tts' : pattern;
+        if (d === 7) { const [y, m] = month.split('-').map(Number), last = new Date(Date.UTC(y, m, 0)).getUTCDate();
+            return Array.from({ length: last }, (_, i) => i + 1).filter(day => new Date(Date.UTC(y, m - 1, day)).getUTCDay() === 0); }
+        return expectedDays(month, p);
+    }
     function teacherPay(employee, source, p, settings, dutyRole = role(employee)) {
         const assistant = dutyRole === 'assistant';
         const teacher = source.teachers.find(t => t.id === employee.id) || employee;
@@ -126,16 +134,33 @@
             const entries = attendance[`${block.key}_${employee.id}`]?.[s.id] || {};
             const hire = date(employee.startDate || employee.joinDate);
             const studentStart = date(s.startDate || s.joinDate);
-            const days = Object.entries(entries).filter(([day, present]) => {
+            // 'approved-v1' (makeupPolicyFrom oyidan): asosiy ustozga faqat o'quvchining dars kunidagi "Keldi"
+            // va admin tasdiqlagan qoplash darslari hisoblanadi (alohida kun — o'sha kun, qo'shaloq — +1 dars).
+            const byMakeups = !assistant && source.makeupPolicy === 'approved-v1' && block.key >= String(source.makeupPolicyFrom || '');
+            const inRange = d => d && inPeriod(d, p) && d >= block.start && d <= block.end && (!hire || d >= hire) && (!studentStart || d >= studentStart);
+            const studentDays = byMakeups ? new Set(studentLessonDays(block.key, s, pattern)) : null;
+            const presentDays = Object.entries(entries).filter(([day, present]) => {
                 const d = date(block.key + '-' + String(day).padStart(2, '0'));
-                return (present === 1 || present === true) && d && inPeriod(d, p) && d >= block.start && d <= block.end
-                    && (!hire || d >= hire) && (!studentStart || d >= studentStart)
-                    && (assistant || source.teacherAttendancePolicy === 'all-days-v1' || expected.includes(Number(day)));
-            }).length;
+                return (present === 1 || present === true) && inRange(d)
+                    && (byMakeups ? studentDays.has(Number(day)) : (assistant || source.teacherAttendancePolicy === 'all-days-v1' || expected.includes(Number(day))));
+            }).map(([day]) => Number(day));
+            let makeupCount = 0;
+            if (byMakeups) {
+                const seen = new Set(presentDays);
+                for (const m of source.makeups || []) {
+                    if (m.status !== 'approved' || m.teacherId !== employee.id || m.studentId !== s.id || String(m.heldDate || '').slice(0, 7) !== block.key) continue;
+                    if (!inRange(date(m.heldDate))) continue;
+                    const day = Number(String(m.heldDate).slice(8, 10));
+                    if (m.kind === 'double') makeupCount++;
+                    else if (!seen.has(day)) { seen.add(day); makeupCount++; }
+                }
+            }
+            const days = presentDays.length + makeupCount;
             const count = Math.min(days, expectedCount);
             const earned = byContacts ? money(Math.round((tariff || 0) / CONTACT_CAP) * count) : money((tariff || 0) * count / expectedCount);
             total += earned; lessons += count;
-            breakdown.push({ studentId: s.id, name: s.name, month: block.key, lessons: count, expected: expectedCount, tariff: tariff || 0, earned, ...(byContacts ? { unit: 'contact' } : {}) });
+            breakdown.push({ studentId: s.id, name: s.name, month: block.key, lessons: count, expected: expectedCount, tariff: tariff || 0, earned,
+                ...(byContacts ? { unit: 'contact' } : {}), ...(makeupCount ? { makeups: makeupCount } : {}) });
         }
         return { total, lessons, studentCount: students.length, breakdown };
     }
@@ -264,5 +289,5 @@
             total: rows.reduce((sum, r) => sum + r.total, 0) };
     }
     return { ROLES, defaults, validateSettings, date, period, inPeriod, months, fixedPay, role, language,
-        expectedDays, teacherPay, salesFacts, salesPlan, withAdjustments, calculate };
+        expectedDays, studentLessonDays, teacherPay, salesFacts, salesPlan, withAdjustments, calculate };
 }));

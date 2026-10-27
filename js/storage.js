@@ -479,13 +479,28 @@ function calculateKpiSalary(teacher, monthVal, attendanceStore, students) {
     const hireDate = payrollEngine.date(employee.startDate || employee.joinDate);
     let total = 0;
     let totalLessons = 0;
+    // Moliya bilan bir xil (payrollEngine 'approved-v1'): 2026-11 dan asosiy ustozga faqat o'quvchining dars kunidagi
+    // "Keldi" + admin tasdiqlagan qoplash. Tasdiqlangan qoplashlar /api/school/makeups dan keshlanadi.
+    const byMakeups = !isAssistant && monthVal >= '2026-11' && typeof payrollEngine.studentLessonDays === 'function';
+    const approved = byMakeups ? (globalThis.__schoolMakeups || []).filter(m => m.status === 'approved' && m.teacher_id === teacher.id && String(m.held_date || '').slice(0, 7) === monthVal) : [];
     const perStudent = studentList.map(s => {
         const studentStart = payrollEngine.date(s.startDate || s.joinDate);
-        const rawLessons = Object.entries(attBlock[s.id] || {}).filter(([day, present]) => {
+        const lessonSet = byMakeups ? new Set(payrollEngine.studentLessonDays(monthVal, s, pattern)) : null;
+        const okDate = date => date && (!hireDate || date >= hireDate) && (!studentStart || date >= studentStart);
+        const presentDays = Object.entries(attBlock[s.id] || {}).filter(([day, present]) => {
             const date = payrollEngine.date(monthVal + '-' + String(day).padStart(2, '0'));
-            return (present === 1 || present === true) && date && (!hireDate || date >= hireDate)
-                && (!studentStart || date >= studentStart);
-        }).length;
+            return (present === 1 || present === true) && okDate(date) && (!lessonSet || lessonSet.has(Number(day)));
+        }).map(([day]) => Number(day));
+        let extra = 0;
+        if (byMakeups) {
+            const seen = new Set(presentDays);
+            for (const m of approved.filter(m => m.student_id === s.id)) {
+                const day = Number(String(m.held_date).slice(8, 10));
+                if (!okDate(payrollEngine.date(String(m.held_date).slice(0, 10)))) continue;
+                if (m.kind === 'double') extra++; else if (!seen.has(day)) { seen.add(day); extra++; }
+            }
+        }
+        const rawLessons = presentDays.length + extra;
         const lessons = Math.min(rawLessons, expectedPerStudent);
         const studentBase = getMonthlyBaseSalary(s.lessonDuration || duration, teacher);
         const earned = Math.round(studentBase / expectedPerStudent * lessons);

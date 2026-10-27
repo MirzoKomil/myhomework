@@ -3,6 +3,8 @@ const engine = require('../../js/payrollEngine');
 const assist = require('./school/assist');
 // Yordamchi maoshi shu oydan boshlab aloqalar (Abdulloh: oktyabr eski davomat bo'yicha yopiladi) (13 × tarif/13) bo'yicha; oldingi oylar eski yordamchi davomati bo'yicha.
 const ASSIST_CONTACTS_FROM = process.env.ASSIST_CONTACTS_FROM || '2026-11';
+// Qoplash darsi (Abdulloh, 28-okt): shu oydan asosiy ustozga faqat dars kunidagi "Keldi" + admin tasdiqlagan qoplash hisoblanadi.
+const MAKEUP_POLICY_FROM = process.env.MAKEUP_POLICY_FROM || '2026-11';
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS salary_kpi_settings (
@@ -130,14 +132,20 @@ async function sources(db, p) {
             assistantContacts[k] ||= {}; assistantContacts[k][st.studentId] ||= {}; assistantContacts[k][st.studentId][Number(i.day.slice(8))] = 1;
         }
     }
+    const makeups = (await db.query("SELECT to_regclass('public.school_makeups')::text AS t")).rows[0]?.t
+        ? (await db.query(`SELECT id, student_id, teacher_id, kind, status, TO_CHAR(held_date,'YYYY-MM-DD') AS held_date FROM school_makeups
+            WHERE status='approved' AND held_date IS NOT NULL AND TO_CHAR(held_date,'YYYY-MM')=ANY($1::text[])`, [monthKeys])).rows
+            .map(r => ({ id: r.id, studentId: r.student_id, teacherId: r.teacher_id, kind: r.kind, status: r.status, heldDate: r.held_date })) : [];
     const json = (await db.query("SELECT key,data FROM json_data WHERE key=ANY($1::text[])", [['salesPlan', 'bonusHistory', 'bonusData', 'cashFlow']])).rows;
     const blob = Object.fromEntries(json.map(r => [r.key, r.data]));
     return { academicPolicy: 'dual-role-v1', teacherAttendancePolicy: 'all-days-v1', paymentRecords,
-        assistantPolicy: 'contacts-v1', assistantContactsFrom: ASSIST_CONTACTS_FROM, assistantContacts, hrEmployees: employees.map(r => ({ id: r.id, name: r.name, role: r.role, lang: r.lang, avatar: r.avatar, dualRole: r.dual_role === true,
+        assistantPolicy: 'contacts-v1', assistantContactsFrom: ASSIST_CONTACTS_FROM, assistantContacts,
+        makeupPolicy: 'approved-v1', makeupPolicyFrom: MAKEUP_POLICY_FROM, makeups, hrEmployees: employees.map(r => ({ id: r.id, name: r.name, role: r.role, lang: r.lang, avatar: r.avatar, dualRole: r.dual_role === true,
         status: r.status, startDate: r.start_date, joinDate: r.join_date, endDate: r.end_date || '', kpiTemplateId: r.kpi_template_id })),
         teachers: teachers.map(r => ({ id: r.id, schedulePattern: r.schedule_pattern, lessonDuration: r.lesson_duration })),
         students: students.map(r => ({ ...(r.extra_data || {}), id: r.id, name: r.name, subject: r.subject,
-            teacherId: r.teacher_id, assistantTeacherId: r.assistant_teacher_id, lessonDuration: r.lesson_duration })),
+            teacherId: r.teacher_id, assistantTeacherId: r.assistant_teacher_id, lessonDuration: r.lesson_duration,
+            lessonDayOfWeek: r.lesson_day_of_week ?? null })),
         leads: { english: leads.filter(r => r.language !== 'russian').map(mapLead), russian: leads.filter(r => r.language === 'russian').map(mapLead) },
         mainAttendance: await attendance('main_attendance'), assistantAttendance: await attendance('assistant_attendance'),
         salesPlan: blob.salesPlan || {}, bonusHistory: Array.isArray(blob.bonusHistory) ? blob.bonusHistory : [],
@@ -158,9 +166,10 @@ function createBasis(source, config, confirmation, row, rows) {
         || (source.academicPolicy === 'dual-role-v1' && (s.assistantTeacherId === row.employeeId || contacted.has(s.id)))
         : row.role === 'assistant' ? s.assistantTeacherId === row.employeeId || contacted.has(s.id) : false)
         .map(s => ({ id: s.id, name: s.name, subject: s.subject, teacherId: s.teacherId, assistantTeacherId: s.assistantTeacherId,
-            lessonDuration: s.lessonDuration, startDate: s.startDate, joinDate: s.joinDate }));
+            lessonDuration: s.lessonDuration, lessonDayOfWeek: s.lessonDayOfWeek ?? null, startDate: s.startDate, joinDate: s.joinDate }));
     return { version: 2, academicPolicy: source.academicPolicy, teacherAttendancePolicy: source.teacherAttendancePolicy,
         assistantPolicy: source.assistantPolicy, assistantContactsFrom: source.assistantContactsFrom,
+        makeupPolicy: source.makeupPolicy, makeupPolicyFrom: source.makeupPolicyFrom,
         paymentPolicy: Array.isArray(source.paymentRecords) ? 'receipts-v1' : 'closed-deals-v1', settings: config.data, revision: config.revision, confirmation,
         hrEmployees: source.hrEmployees.filter(e => ids.includes(e.id)).map(({ avatar, ...e }) => e),
         teachers: source.teachers.filter(t => t.id === row.employeeId), students,
@@ -204,6 +213,7 @@ async function correctionProposals(db, p, lang) {
         // Employment contracts, tariffs and assignments are historical, not today's replacements.
         const history = { ...current, academicPolicy: basis.academicPolicy, teacherAttendancePolicy: basis.teacherAttendancePolicy,
             assistantPolicy: basis.assistantPolicy, assistantContactsFrom: basis.assistantContactsFrom,
+            makeupPolicy: basis.makeupPolicy, makeupPolicyFrom: basis.makeupPolicyFrom,
             hrEmployees: basis.hrEmployees, teachers: basis.teachers || [],
             students: basis.students || [], salesPlan: basis.salesPlan || {}, bonusData: basis.bonusData || {} };
         if (basis.paymentPolicy !== 'receipts-v1') delete history.paymentRecords;

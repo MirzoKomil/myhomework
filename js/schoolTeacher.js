@@ -147,6 +147,7 @@
             api('/makeups').catch(() => ({ makeups: [] }))
         ]);
         if (!container.isConnected) return;
+        globalThis.__schoolMakeups = makeups.makeups || [];
         const reviewing = (makeups.makeups || []).filter(m => m.status === 'review').length;
 
         // Maosh: asosiy (KPI) + yordamchi (aloqalar × 3 846).
