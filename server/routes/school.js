@@ -46,10 +46,38 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         ? (await pool.query('SELECT manager_id FROM user_sales_manager_links WHERE user_id=$1', [req.user.id])).rows[0]?.manager_id || null : null;
     const teacherOf = req => require('../services/teacherDuties').teacherForActor(pool, req.user);
 
+    // ── Til (ingliz / rus) ──────────────────────────────────────────────────
+    // Jadval til bo'yicha ajratiladi: ingliz ustozi rus lidiga (va aksincha) sinov qo'yilmaydi.
+    const LANGS = new Set(['english', 'russian']);
+    // Lavozim asosiy (bazada rus ustozlarining lang ustuni 'english' bo'lib qolgan), keyin lang ustuni.
+    const langOf = e => !e ? null : e.lang === 'both' ? 'both' : e.role === 'rus-oqituvchi' ? 'russian' : e.role === 'ingliz-oqituvchi' ? 'english' : e.lang === 'russian' ? 'russian' : 'english';
+    const fits = (teacherLang, lang) => !lang || teacherLang === 'both' || teacherLang === lang;
+    async function teacherLangs() {
+        const rows = (await pool.query(`SELECT id, role, lang FROM hr_employees WHERE role IN ('oqituvchi','ingliz-oqituvchi','rus-oqituvchi','yordamchi')`)).rows;
+        return new Map(rows.map(r => [r.id, langOf(r)]));
+    }
+    // Sotuv menejeri faqat o'z tilini ko'radi (lidlari bo'yicha); admin/ROP ?lang= bilan tanlaydi.
+    async function reqLang(req) {
+        if (req.user.role === 'sales_manager') {
+            const mid = await managerId(req);
+            const rows = mid ? (await pool.query(`SELECT COALESCE(language,'english') AS l, COUNT(*)::int AS n FROM leads WHERE manager_id=$1 AND deleted_at IS NULL GROUP BY 1`, [mid])).rows : [];
+            const ls = rows.map(r => (r.l === 'russian' ? 'russian' : 'english'));
+            if (ls.length === 1) return ls[0];
+        }
+        return LANGS.has(req.query.lang) ? req.query.lang : null;
+    }
+    async function checkLeadTeacherLang(c, leadLanguage, teacherId) {
+        const t = (await c.query('SELECT role, lang FROM hr_employees WHERE id=$1', [teacherId])).rows[0];
+        const leadLang = leadLanguage === 'russian' ? 'russian' : 'english';
+        if (t && !fits(langOf(t), leadLang)) throw T.fail(400, `Lid ${leadLang === 'russian' ? 'rus' : 'ingliz'} tili bo'yicha — bu ustoz ${langOf(t) === 'russian' ? 'rus' : 'ingliz'} tili ustozi. Mos ustozni tanlang`);
+    }
+
     // ── Jadval ───────────────────────────────────────────────────────────────
-    async function views(req, from, to, teacherIds) {
+    async function views(req, from, to, teacherIds, lang = null) {
         const ctx = await S.loadContext(pool, { teacherIds, from, to });
-        const ids = teacherIds || [...new Set([...ctx.hours.map(h => h.teacher_id), ...ctx.students.map(s => s.teacherId).filter(Boolean)])];
+        let ids = teacherIds || [...new Set([...ctx.hours.map(h => h.teacher_id), ...ctx.students.map(s => s.teacherId).filter(Boolean)])];
+        // Xodimlar ro'yxatida yo'q (o'chirilgan/test) ustoz qatori nomsiz chiqmasin.
+        if (lang) { const tl = await teacherLangs(); ids = ids.filter(id => tl.has(id) && fits(tl.get(id), lang)); }
         const out = [];
         for (const d of T.dateRange(from, to, 31)) for (const id of ids) out.push(S.dayView(ctx, id, d));
         return out;
@@ -60,11 +88,12 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
             const me = await teacherOf(req);
             return { views: await views(req, from, to, [me.id]), scope: 'own' };
         }
-        if (FULL.has(role)) return { views: await views(req, from, to, teacherId ? [teacherId] : null), scope: 'full' };
+        const lang = await reqLang(req);
+        if (FULL.has(role)) return { views: await views(req, from, to, teacherId ? [teacherId] : null, lang), scope: 'full', lang };
         if (SALES.has(role)) {
-            const v = await views(req, from, to, teacherId ? [teacherId] : null);
+            const v = await views(req, from, to, teacherId ? [teacherId] : null, lang);
             const mid = await managerId(req);
-            return { views: v.map(x => S.redactForSales(x, req.user, mid)), scope: 'sales' };
+            return { views: v.map(x => S.redactForSales(x, req.user, mid)), scope: 'sales', lang };
         }
         throw T.fail(403, 'Jadvalga ruxsat yo\'q');
     }
@@ -80,7 +109,8 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
             const att = await pool.query(`SELECT student_id, present FROM main_attendance WHERE att_key LIKE $1 AND day=$2`, [from.slice(0, 7) + '\\_%', Number(from.slice(8))]);
             summary = S.daySummary(r.views, new Map(att.rows.map(a => [a.student_id, !!a.present])), from === T.nowLocal().date ? T.nowLocal().min : null);
         }
-        return { from, to, scope: r.scope, teachers: r.scope === 'own' ? undefined : teachers, views: r.views, summary };
+        const tl = r.lang ? teachers.filter(t => fits(langOf(t), r.lang)) : teachers;
+        return { from, to, scope: r.scope, lang: r.lang || null, teachers: r.scope === 'own' ? undefined : tl, views: r.views, summary };
     }));
     // "Kim bo'sh?" — sotuv/ROP uchun: sinovga ochiq bo'sh oraliqlar, 30 daqiqa qadam bilan.
     router.get('/schedule/free', handle(async req => {
@@ -88,7 +118,7 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         const from = T.assertDate(req.query.from), to = T.assertDate(req.query.to || from);
         const duration = Math.min(120, Math.max(15, Number(req.query.duration) || 30));
         const purpose = req.query.purpose === 'lesson' ? 'lesson' : 'trial';
-        const vs = await views(req, from, to, req.query.teacherId ? [req.query.teacherId] : null);
+        const vs = await views(req, from, to, req.query.teacherId ? [req.query.teacherId] : null, await reqLang(req));
         const step = 30, list = [];
         for (const v of vs) {
             const src = purpose === 'trial' ? v.trialFree : v.free;
@@ -102,8 +132,9 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         if (kind === 'trial') {
             need(req, new Set([...SALES, ...FULL]));
             // Lid mavjud va (sotuv menejeri uchun) o'ziniki bo'lishi shart; sotuv faqat ushlab turadi.
-            const lead = (await c.query('SELECT manager_id FROM leads WHERE id=$1 AND deleted_at IS NULL', [String(req.body?.leadId || '')])).rows[0];
+            const lead = (await c.query('SELECT manager_id, language FROM leads WHERE id=$1 AND deleted_at IS NULL', [String(req.body?.leadId || '')])).rows[0];
             if (!lead) throw T.fail(404, 'Lid topilmadi');
+            await checkLeadTeacherLang(c, lead.language, String(req.body?.teacherId || ''));
             if (req.user.role === 'sales_manager' && String(lead.manager_id || '') !== String(await managerId(req) || '-')) throw T.fail(403, 'Faqat o\'z lidingiz uchun');
             if (SALES.has(req.user.role)) req.body.hold = true;
         }
@@ -133,6 +164,7 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         if (!row) throw T.fail(404, 'Lid topilmadi');
         const mid = await managerId(req);
         if (req.user.role === 'sales_manager' && String(row.manager_id || '') !== String(mid || '')) throw T.fail(403, 'Faqat o\'z lidingizni sinovga yozasiz');
+        await checkLeadTeacherLang(pool, row.language, holds[0].teacher_id);
         const extra = typeof row.extra_data === 'object' && row.extra_data ? row.extra_data : JSON.parse(row.extra_data || '{}');
         const first = holds[0], date = S.dateStr(first.date), min = Number(first.start_min);
         const at = new Date(Date.parse(date + 'T00:00:00Z') + (min - T.TZ_OFFSET_MIN) * 60000).toISOString();
@@ -275,7 +307,11 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
     router.post('/students/:id/freeze', handle(req => write(req, c => O.freeze(c, req.user, req.params.id, req.body || {}).then(r => ({ status: r })))));
     router.post('/students/:id/stop', handle(req => write(req, c => O.stop(c, req.user, req.params.id, req.body || {}).then(r => ({ status: r })))));
     router.post('/students/:id/restore', handle(req => write(req, c => O.restore(c, req.user, req.params.id, req.body || {}))));
-    router.post('/students/:id/teacher', handle(req => write(req, c => O.changeTeacher(c, req.user, req.params.id, req.body || {}))));
+    router.post('/students/:id/teacher', handle(req => write(req, async c => {
+        const st = (await c.query('SELECT subject FROM students WHERE id=$1', [req.params.id])).rows[0];
+        if (st && req.body?.teacherId) await checkLeadTeacherLang(c, st.subject, String(req.body.teacherId)).catch(e => { throw T.fail(400, e.message.replace('Lid ', 'O\'quvchi ')); });
+        return O.changeTeacher(c, req.user, req.params.id, req.body || {});
+    })));
     router.get('/students/:id/history', handle(async req => {
         const row = (await pool.query('SELECT * FROM students WHERE id=$1', [req.params.id])).rows[0];
         const scope = row && await canSee(req, row);

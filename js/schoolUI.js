@@ -63,7 +63,7 @@
     }
     function teachersForSubject(subject = 'english') {
         return staffList().filter(e => ['oqituvchi', 'ingliz-oqituvchi', 'rus-oqituvchi'].includes(e.role) && (e.status || 'active') !== 'inactive'
-            && (!e.lang || e.lang === subject || e.lang === 'both' || e.role === 'oqituvchi'));
+            && (e.lang === 'both' || (e.role === 'rus-oqituvchi' ? 'russian' : e.role === 'ingliz-oqituvchi' ? 'english' : e.lang === 'russian' ? 'russian' : 'english') === subject));
     }
     function assistants() { return staffList().filter(e => e.role === 'yordamchi' && (e.status || 'active') !== 'inactive'); }
     function tgPill(group) {

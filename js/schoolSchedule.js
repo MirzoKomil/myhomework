@@ -7,7 +7,11 @@
     const H0 = 8 * 60, H1 = 21 * 60;
     const KIND = { lesson: 'Dars', trial: 'Sinov', makeup: 'Qoplash', reserved: 'Muzlatilgan · sinovga ochiq', close: 'Yopiq', leave: 'Ta\'til', makeup_only: 'Faqat qoplash' };
     const STATUS = { hold: 'ushlab turilgan', pending: 'ustoz tasdig\'ida', confirmed: 'tasdiqlangan', done: 'o\'tkazildi', no_show: 'kelmadi' };
-    const state = { date: null, view: null, teacherId: null, duration: 30 };
+    const state = { date: null, view: null, teacherId: null, duration: 30, lang: null };
+    // Ingliz va rus tili jadvali alohida: admin/ROP tanlaydi, sotuv menejeri faqat o'z tilini ko'radi (server ham cheklaydi).
+    const ownLang = () => (typeof getUserOwnLang === 'function' && getUserOwnLang()) || 'english';
+    const canPickLang = () => ['admin', 'boshliq', 'rop'].includes(role());
+    const L = () => `&lang=${state.lang}`;
     const role = () => getCurrentUser()?.role || '';
     const isFull = () => ['admin', 'boshliq'].includes(role());
     const isSales = () => ['sales_manager', 'rop'].includes(role());
@@ -55,13 +59,17 @@
         if (!root) return;
         await U().loadStaffAvatars();
         state.date ||= U().today();
+        state.lang ||= ownLang();
+        if (!canPickLang()) state.lang = ownLang();
         const r = role();
         state.view ||= r === 'teacher' ? 'mine' : isSales() && r !== 'rop' ? 'free' : r === 'rop' ? 'free' : 'day';
         const tabs = isFull() ? [['day', 'Kun'], ['week', 'Ustoz haftasi'], ['requests', 'Ustozlar so\'rovlari'], ['makeups', 'Qoplash']]
             : r === 'rop' ? [['free', 'Kim bo\'sh?'], ['day', 'Kun']] : r === 'teacher' ? [['mine', 'Mening haftam'], ['trials', 'Sinovlar va so\'rovlar']] : [['free', 'Kim bo\'sh?']];
         root.innerHTML = `<div class="sc-head"><div><h1>Dars jadvali</h1><p class="sc-sub">${r === 'teacher' ? 'Darslaringiz, sinovlar va qoplash · vaqtni so\'rov orqali o\'zgartirasiz' : isSales() ? 'Sinovga ochiq bo\'sh vaqtlar · boshqa o\'quvchilar ismi ko\'rinmaydi' : 'Bitta manba — hamma rolda bir xil · Asia/Tashkent'}</p></div>
-            <div class="sc-seg" role="tablist">${tabs.map(([k, l]) => `<button type="button" role="tab" data-v="${k}" aria-pressed="${k === state.view}">${l}</button>`).join('')}</div></div><div data-body></div>`;
+            <div class="sc-row sc-wrap">${canPickLang() ? `<div class="sc-seg" role="group" aria-label="Yo'nalish"><button type="button" data-lang="english" aria-pressed="${state.lang === 'english'}">Ingliz tili</button><button type="button" data-lang="russian" aria-pressed="${state.lang === 'russian'}">Rus tili</button></div>` : r === 'teacher' ? '' : `<span class="sc-pill sc-pill--info">${state.lang === 'russian' ? 'Rus tili' : 'Ingliz tili'}</span>`}
+            <div class="sc-seg" role="tablist">${tabs.map(([k, l]) => `<button type="button" role="tab" data-v="${k}" aria-pressed="${k === state.view}">${l}</button>`).join('')}</div></div></div><div data-body></div>`;
         root.querySelectorAll('[data-v]').forEach(b => b.onclick = () => { state.view = b.dataset.v; render(root); });
+        root.querySelectorAll('[data-lang]').forEach(b => b.onclick = () => { if (state.lang === b.dataset.lang) return; state.lang = b.dataset.lang; state.teacherId = null; render(root); });
         const body = root.querySelector('[data-body]');
         const fn = { day: dayView, week: weekView, requests: requestsView, makeups: makeupsView, free: freeView, mine: mineView, trials: teacherTrialsView }[state.view];
         try { await fn(body, () => render(root)); } catch (e) { body.innerHTML = `<div class="sc-err">${U().esc(e.message)}</div>`; }
@@ -76,7 +84,7 @@
     // Admin/ROP: bir kun, barcha ustozlar.
     async function dayView(body, reload) {
         const { api, esc, fmtDate } = U();
-        const d = await api(`/schedule?from=${state.date}&to=${state.date}`);
+        const d = await api(`/schedule?from=${state.date}&to=${state.date}${L()}`);
         const tmap = new Map((d.teachers || []).map(t => [t.id, t]));
         const views = d.views.filter(v => v.work.length || v.items.length).sort((a, b) => (tmap.get(a.teacherId)?.name || '').localeCompare(tmap.get(b.teacherId)?.name || ''));
         const s = d.summary;
@@ -92,10 +100,10 @@
     // Admin: bitta ustozning haftasi + vaqtni boshqarish.
     async function weekView(body, reload) {
         const { api, esc, fmtDate, weekStart, addDays, DAY } = U();
-        const teachers = U().teachersForSubject('english').concat(U().teachersForSubject('russian')).filter((t, i, a) => a.findIndex(x => x.id === t.id) === i);
-        state.teacherId ||= teachers[0]?.id;
+        const teachers = U().teachersForSubject(state.lang);
+        if (!teachers.some(t => t.id === state.teacherId)) state.teacherId = teachers[0]?.id;
         const from = weekStart(state.date), to = addDays(from, 6);
-        const d = state.teacherId ? await api(`/schedule?from=${from}&to=${to}&teacherId=${encodeURIComponent(state.teacherId)}`) : { views: [] };
+        const d = state.teacherId ? await api(`/schedule?from=${from}&to=${to}&teacherId=${encodeURIComponent(state.teacherId)}${L()}`) : { views: [] };
         const lessons = d.views.reduce((n, v) => n + v.items.filter(i => i.kind === 'lesson').length, 0);
         const makeups = d.views.reduce((n, v) => n + v.items.filter(i => i.kind === 'makeup').length, 0);
         body.innerHTML = `<div class="sc-row sc-wrap">${dateNav(`${fmtDate(from, false)} – ${fmtDate(to, false)}`)}<span class="sc-grow"></span>
@@ -181,7 +189,7 @@
     // ── Sotuv / ROP: "Kim bo'sh?" ────────────────────────────────────────────
     async function freeView(body, reload) {
         const { api, esc, fmtDate } = U();
-        const d = await api(`/schedule?from=${state.date}&to=${state.date}`);
+        const d = await api(`/schedule?from=${state.date}&to=${state.date}${L()}`);
         const tmap = new Map((d.teachers || []).map(t => [t.id, t]));
         const views = d.views.filter(v => v.work.length).sort((a, b) => (tmap.get(a.teacherId)?.name || '').localeCompare(tmap.get(b.teacherId)?.name || ''));
         const mine = views.flatMap(v => v.items.filter(i => i.mine).map(i => ({ ...i, teacherId: v.teacherId, date: v.date })));
@@ -201,7 +209,7 @@
     }
     function myLeads() {
         const all = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
-        const list = [...(all.english || []), ...(all.russian || [])];
+        const list = state.lang === 'russian' ? (all.russian || []) : (all.english || []);
         return list.filter(l => !['lost', 'yoqotilgan', 'tolov-qildi', 'oquvchi'].includes(l.status)).slice(0, 300);
     }
     function bookDrawer(slot, done) {
@@ -239,7 +247,7 @@
     async function mineView(body, reload) {
         const { api, esc, fmtDate, weekStart, addDays, DAY } = U();
         const from = weekStart(state.date), to = addDays(from, 6);
-        const d = await api(`/schedule?from=${from}&to=${to}`);
+        const d = await api(`/schedule?from=${from}&to=${to}${L()}`);
         const n = k => d.views.reduce((a, v) => a + v.items.filter(i => i.kind === k).length, 0);
         body.innerHTML = `<div class="sc-row sc-wrap">${dateNav(`${fmtDate(from, false)} – ${fmtDate(to, false)}`)}<span class="sc-grow"></span>
             <button type="button" class="sc-btn" data-req>Vaqtimni o'zgartirish</button><button type="button" class="sc-btn sc-btn--pri" data-mk>+ Qoplash darsi</button></div>
@@ -281,7 +289,7 @@
             if (box.querySelector('[name=kind]:checked').value === 'double') { el.innerHTML = '<p class="sc-mt">Keyingi darsda 2 × dars davomiyligi o\'tiladi — davomatda "Keldi · 2 dars" belgilanadi</p>'; return; }
             const st = U().studentById(box.querySelector('[name=st]').value); const date = box.querySelector('[name=date]').value;
             try {
-                const d = await U().api(`/schedule?from=${date}&to=${date}`);
+                const d = await U().api(`/schedule?from=${date}&to=${date}${L()}`);
                 const v = d.views[0]; const dur = st?.lessonDuration || 30; const t = [];
                 for (const f of v?.makeupFree || []) for (let m = Math.ceil(f.start / 15) * 15; m + dur <= f.end; m += 15) t.push(m);
                 el.innerHTML = t.length ? t.map(m => `<button type="button" class="sc-slot" data-m="${m}" aria-pressed="false">${hm(m)}</button>`).join('') : '<p class="sc-mt">Bu kunda bo\'sh vaqt yo\'q</p>';
@@ -303,7 +311,7 @@
     }
     async function teacherTrialsView(body, reload) {
         const { api, esc, fmtDate, hm, today, addDays } = U();
-        const d = await api(`/schedule?from=${today()}&to=${addDays(today(), 13)}`);
+        const d = await api(`/schedule?from=${today()}&to=${addDays(today(), 13)}${L()}`);
         const items = d.views.flatMap(v => v.items.filter(i => i.kind === 'trial' || i.kind === 'makeup').map(i => ({ ...i, date: v.date })));
         const reqs = (await api('/requests')).requests;
         const mk = (await api('/makeups')).makeups.filter(m => m.status === 'planned');
