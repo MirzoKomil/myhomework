@@ -25,7 +25,8 @@
         const todayItems = s => (by.get(s.id)?.items || []).filter(i => i.day === td);
         const weekCount = s => (by.get(s.id)?.items || []).filter(i => i.day >= ws && i.status === 'counted').length;
         const st = rep.state || {};
-        const closed = !isNow;
+        // O'tgan oy — yopilgan (faqat ko'rish); kelgusi oy — hali boshlanmagan.
+        const closed = month < today().slice(0, 7), future = month > today().slice(0, 7);
         const steps = [['Oy yopildi', closed, '1-sana 00:00 · avtomatik'],
             ['Dastlabki tasdiq', !!st.prelim_at, st.prelim_at ? new Date(st.prelim_at).toLocaleDateString('uz-UZ', { timeZone: 'Asia/Tashkent' }) : 'kutilmoqda'],
             ['E\'tiroz muddati', !!st.final_at, st.objection_until ? String(st.objection_until).slice(0, 10) + ' gacha' : '—'],
@@ -33,8 +34,10 @@
         const gone = s => s.status === 'inactive';
         // Chiqib ketgan o'quvchi faqat shu oyda aloqasi bo'lsa ko'rinadi (o'qigan davri hisoblanadi).
         const rows = mine.filter(s => closed || gone(s) ? by.has(s.id) : true).sort((a, b) => gone(a) - gone(b) || advice(b) - advice(a) || a.name.localeCompare(b.name));
-        root.innerHTML = `<div class="sc-head"><div><h1>Aloqalar</h1><p class="sc-sub">Har o'quvchi bilan haftasiga 3 ta aloqa · kamida 5 daqiqa · faqat shu kuni belgilanadi</p></div>
-            <div class="sc-row"><input type="month" value="${month}" max="${today().slice(0, 7)}" data-month aria-label="Oy"></div></div>
+        const embedded = root.dataset.embedded === '1';
+        root.innerHTML = `${embedded ? '<p class="sc-mt">Har o\'quvchi bilan haftasiga 3 ta aloqa · kamida 5 daqiqa · faqat shu kuni belgilanadi</p>' : `<div class="sc-head"><div><h1>Aloqalar</h1><p class="sc-sub">Har o'quvchi bilan haftasiga 3 ta aloqa · kamida 5 daqiqa · faqat shu kuni belgilanadi</p></div>
+            <div class="sc-row"><input type="month" value="${month}" max="${today().slice(0, 7)}" data-month aria-label="Oy"></div></div>`}
+          ${future ? `<div class="sc-note">${esc(month)} hali boshlanmagan — aloqalar shu oyda belgilanadi.</div>` : ''}
           ${closed ? `<div class="sc-note"><b>${esc(month)} yopilgan — faqat ko'rish uchun.</b> Aloqani qo'shish yoki o'zgartirish mumkin emas. Xato bo'lsa, e'tiroz muddatigacha Moliyaga murojaat qiling.</div>` : ''}
           <div class="sc-kpis"><div class="sc-kpi"><small>${closed ? 'Oy maoshi · yakuniy' : 'Hisoblangan maosh'}</small><b>${formatMoney(rep.amount)}</b><span>${rep.counted} aloqa × ${formatMoney(rep.rate)}</span></div>
             <div class="sc-kpi"><small>Javob bermadi</small><b>${rep.noAnswer}</b><span>hisoblanmaydi</span></div><div class="sc-kpi"><small>Limitdan ortiq</small><b>${rep.overCap}</b><span>13 tadan ortig'i</span></div>
@@ -45,10 +48,10 @@
             return `<tr><td><span class="sc-row">${studentAvatar(s, 30)}<span><b>${esc(s.name)}</b>${!closed && advice(s) ? '<small class="sc-mt"> · tavsiya</small>' : ''}</span></span></td><td>${esc(teacherName(s.teacherId, true))}</td><td>${tgPill(gmap.get(s.id))}</td>
               ${closed ? '' : `<td>${frozen ? '<span class="sc-pill sc-pill--info">muzlatilgan</span>' : t.length ? t.map(i => `<span class="sc-pill ${ST[i.status][1]}">${CH[i.channel] || ''} ${i.minutes ? i.minutes + ' daq' : ''} · ${ST[i.status][0]}</span>`).join(' ') : '—'}</td><td>${weekCount(s)} / 3</td>`}
               <td class="r"><b>${r.counted}</b> / 13${r.noAnswer ? `<small class="sc-mt"> · ${r.noAnswer} javob bermadi</small>` : ''}</td>
-              <td>${closed || frozen || gone(s) ? (gone(s) ? '<span class="sc-pill sc-pill--bad">chiqib ketgan</span>' : '') : `<button type="button" class="sc-btn sc-btn--sm${t.length ? '' : ' sc-btn--pri'}" data-mark="${esc(s.id)}">${t.length ? 'Yana' : 'Belgilash'}</button>`}</td></tr>`; }).join('') || `<tr><td colspan="7" class="sc-mt">${closed ? 'Bu oyda aloqa yo\'q' : 'Sizga yordamchi sifatida o\'quvchi biriktirilmagan'}</td></tr>`}
+              <td>${closed || future || frozen || gone(s) ? (gone(s) ? '<span class="sc-pill sc-pill--bad">chiqib ketgan</span>' : '') : `<button type="button" class="sc-btn sc-btn--sm${t.length ? '' : ' sc-btn--pri'}" data-mark="${esc(s.id)}">${t.length ? 'Yana' : 'Belgilash'}</button>`}</td></tr>`; }).join('') || `<tr><td colspan="7" class="sc-mt">${closed ? 'Bu oyda aloqa yo\'q' : 'Sizga yordamchi sifatida o\'quvchi biriktirilmagan'}</td></tr>`}
           </tbody><tfoot><tr><td colspan="${closed ? 3 : 5}">Jami</td><td class="r">${rep.counted}</td><td class="r">${formatMoney(rep.amount)}</td></tr></tfoot></table></section>
-          ${closed ? '' : '<p class="sc-mt">O\'tgan kunni belgilamay qoldingizmi? <button type="button" class="sc-link" data-late>Admin orqali so\'rov yuborish</button></p>'}`;
-        root.querySelector('[data-month]').onchange = e => { root.dataset.month = e.target.value; renderContacts(root); };
+          ${closed || future ? '' : '<p class="sc-mt">O\'tgan kunni belgilamay qoldingizmi? <button type="button" class="sc-link" data-late>Admin orqali so\'rov yuborish</button></p>'}`;
+        if (root.querySelector('[data-month]')) root.querySelector('[data-month]').onchange = e => { root.dataset.month = e.target.value; renderContacts(root); };
         root.querySelectorAll('[data-mark]').forEach(b => b.onclick = () => markDrawer(mine.find(s => s.id === b.dataset.mark), () => renderContacts(root)));
         root.querySelector('[data-late]')?.addEventListener('click', () => lateDrawer(mine, () => renderContacts(root)));
     }
@@ -149,9 +152,11 @@
         // Maosh: asosiy (KPI) + yordamchi (aloqalar × 3 846).
         const sal = container.querySelector('[data-thx-sal]'), sub = container.querySelector('[data-thx-salsub]');
         if (sal) {
-            const main = Number(sal.dataset.main) || 0, extra = rep?.amount || 0;
+            // Oktyabrgacha (ASSIST_CONTACTS_FROM) yordamchi qismi eski davomatdan — bosh sahifa o'zi hisoblagan.
+            const old = sal.dataset.oldAssist != null ? Number(sal.dataset.oldAssist) || 0 : null;
+            const main = Number(sal.dataset.main) || 0, extra = old != null ? old : rep?.amount || 0;
             sal.textContent = num(main + extra);
-            if (sub) sub.innerHTML = `${helped.length ? `asosiy ${num(main)} + yordamchi ${rep ? num(extra) : '—'} · ` : ''}${reviewing ? `<b>+${reviewing} qoplash tekshiruvda</b> (admin tasdiqlasa qo'shiladi) · ` : ''}oy yopilganda Moliya tasdiqlaydi`;
+            if (sub) sub.innerHTML = `${helped.length ? `asosiy ${num(main)} + yordamchi ${old != null || rep ? num(extra) : '—'}${old != null ? ' (davomat bo\'yicha)' : ''} · ` : ''}${reviewing ? `<b>+${reviewing} qoplash tekshiruvda</b> (admin tasdiqlasa qo'shiladi) · ` : ''}oy yopilganda Moliya tasdiqlaydi`;
         }
 
         // Bugungi sinov darslari — bugungi ro'yxatga qo'shiladi.
@@ -207,6 +212,7 @@
             as.hidden = false;
             as.innerHTML = `<div class="ahx-card-h"><h3>Yordamchi ustozlik</h3><button type="button" class="ahx-link" data-go-contacts>Aloqalar →</button></div>
                 <p class="sc-mt">oyiga 13 tagacha · haftasiga 3 ta</p>
+                ${td.slice(0, 7) < '2026-11' ? '<div class="sc-note">Oktyabr maoshi hali eski yordamchi davomati bo\'yicha — uni "Akademik bo\'lim → Davomat"da belgilang. Aloqalar 1-noyabrdan maoshga o\'tadi.</div>' : ''}
                 ${helped.map(s => { const r = by.get(s.id) || { counted: 0, items: [] }; const wk = (r.items || []).filter(i => i.day >= ws && i.status === 'counted').length;
                     return `<div class="thx-as-row"><div><b>${esc(s.name)}</b><small>tavsiya ${adv(s).map(d => DAY[d - 1]).join('·')}${s.lessonTime ? ' ' + esc(s.lessonTime) : ''} · asosiy ustoz ${esc(u.teacherName(s.teacherId, true))}${s.frozen ? ' · muzlatilgan' : ''}</small>
                       <i class="thx-as-bar"><i style="width:${Math.min(100, r.counted / 13 * 100)}%"></i></i></div><span><em><b>${r.counted}</b> / 13</em><small>bu hafta ${wk}/3</small></span></div>`; }).join('')}

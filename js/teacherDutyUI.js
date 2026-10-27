@@ -22,6 +22,19 @@
         if (!main.dataset.dualRoleBound) { main.addEventListener('change', sync); main.dataset.dualRoleBound = '1'; }
         assistant.addEventListener('change', sync); sync();
     }
+    // Qoplash darslari (school_makeups) — kalendarda "Q" / "×2" belgisi va "Tekshiruvda" soni uchun.
+    let mk = { month: '', list: [], loading: false };
+    function loadMakeups(month) {
+        if (mk.loading || mk.month === month || !window.schoolUI) return;
+        mk.loading = true;
+        window.schoolUI.api('/makeups').then(r => { mk = { month, list: r.makeups || [], loading: false }; render(); })
+            .catch(() => { mk = { month, list: [], loading: false }; });
+    }
+    const dkey = v => (v ? String(v).slice(0, 10) : '');
+    const ASSIST_FROM = '2026-11';
+    const DAYS = ['Du', 'Se', 'Ch', 'Pa', 'Ju', 'Sh', 'Ya'];
+    const MONTHS = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentyabr', 'Oktyabr', 'Noyabr', 'Dekabr'];
+    const toMin = t => { const m = /^(\d{1,2}):(\d{2})/.exec(String(t || '')); return m ? Number(m[1]) * 60 + Number(m[2]) : null; };
     function render() {
         const root = document.getElementById('mainAttendanceContainer');
         if (!root) return;
@@ -41,58 +54,130 @@
             const control = document.getElementById(controlId); if (control) { control.hidden = true; control.classList.add('teacher-duty-hidden'); }
         }
         document.getElementById('mainAttSummary').innerHTML = '';
-        document.getElementById('mainAttTitle').textContent = 'Mening davomatim';
+        document.getElementById('mainAttTitle').textContent = 'Davomat';
         if (!id || !employee) { root.innerHTML = '<p role="alert">Ustoz akkaunti HR profiliga biriktirilmagan. Administratorga murojaat qiling.</p>'; return; }
         const month = monthInput.value;
         if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) return;
+        loadMakeups(month);
         const field = selected === 'assistant' ? 'assistantTeacherId' : 'teacherId';
         const students = all.filter(s => s[field] === id && !s.frozen && s.status !== 'inactive');
+        const mainStudents = all.filter(s => s.teacherId === id && !s.frozen && s.status !== 'inactive');
+        const helpedStudents = all.filter(s => s.assistantTeacherId === id && !s.frozen && s.status !== 'inactive');
         const store = getItem(selected === 'assistant' ? STORAGE_KEYS.assistantAttendance : STORAGE_KEYS.mainAttendance, {});
         const attendance = store[`${month}_${id}`] || {};
         const ownTeacher = resolveTeacherWithVirtual(id) || {};
         const calendar = teacherAttendanceCalendar;
-        // Ro'yxat yig'ilgan holda ochiladi; tepada "Bugungi darslar" — bir bosishda belgilash.
         if (!students.some(s => s.id === expanded)) expanded = '';
-        const nowT = new Date();
-        const thisMonth = `${nowT.getFullYear()}-${String(nowT.getMonth() + 1).padStart(2, '0')}`;
-        const todayDow = nowT.getDay() || 7;
-        const todayList = month === thisMonth ? students.filter(s => calendar.weekdays(s, ownTeacher, selected).includes(todayDow))
-            .sort((a, b) => String(a.lessonTime || '').localeCompare(String(b.lessonTime || ''))) : [];
-        const expectedFor = s => calendar.cells(month, calendar.weekdays(s, ownTeacher, selected))
-            .filter(c => c && c.scheduled && (month < thisMonth || (month === thisMonth && c.day <= nowT.getDate()))).length;
-        const dutyTabs = (isMain ? 1 : 0) + ((!isMain || hasAssistant) ? 1 : 0);
+        const nowT = new Date(Date.now() + 5 * 3600000); // Asia/Tashkent
+        const today = nowT.toISOString().slice(0, 10), thisMonth = today.slice(0, 7), todayDay = Number(today.slice(8));
+        const nowMin = nowT.getUTCHours() * 60 + nowT.getUTCMinutes();
+        const todayDow = nowT.getUTCDay() || 7;
+        const past = c => month < thisMonth || (month === thisMonth && c.day <= todayDay);
+        const expectedFor = s => calendar.cells(month, calendar.weekdays(s, ownTeacher, selected)).filter(c => c && c.scheduled && past(c)).length;
+        const planFor = s => calendar.cells(month, calendar.weekdays(s, ownTeacher, selected)).filter(c => c && c.scheduled).length;
         const teachers = getItem(STORAGE_KEYS.teachers, []);
-        const todayHtml = todayList.length ? `<section class="teacher-duty-today" aria-label="Bugungi darslar"><h4>Bugungi darslar <small>· ${todayList.length}</small></h4>
-            <ul>${todayList.map(s => {
-                const st = calendar.status((attendance[s.id] || {})[nowT.getDate()]);
-                return `<li><span><strong>${esc(s.name)}</strong><small>${esc(s.lessonTime || '')}</small></span>
-                    ${st === 'present' ? '<span class="teacher-duty-done">✓ Qatnashdi</span>' : st === 'absent' ? '<span class="teacher-duty-miss">Kelmadi</span>'
-                    : `<button type="button" class="btn-primary-sm" data-duty-today="${esc(s.id)}">Belgilash</button>`}</li>`;
-            }).join('')}</ul></section>` : '';
-        root.innerHTML = `${todayHtml}<div class="teacher-duty-tabs${dutyTabs < 2 ? ' is-single' : ''}" role="tablist" aria-label="Ustozlik davomati">
-            ${isMain ? `<button role="tab" data-duty="main" aria-selected="${selected === 'main'}">Asosiy ustozlik davomati</button>` : ''}
-            ${(!isMain || hasAssistant) ? `<button role="tab" data-duty="assistant" aria-selected="${selected === 'assistant'}">Yordamchi ustozlik davomati</button>` : ''}
-        </div><div class="teacher-duty-help"><p>Istalgan kunni bosib davomat qo‘ying. Belgilangan kunni qayta bosib o‘zgartiring yoki olib tashlang.</p>
-        <div class="teacher-duty-legend"><span><i class="duty-planned"></i>Rejadagi kun</span><span><i class="duty-present">✓</i>Qatnashdi</span>${selected === 'assistant' ? '<span><i class="duty-absent">−</i>Kelmadi</span>' : ''}</div></div>
+        const U = window.schoolUI;
+        const avatar = s => (U ? U.studentAvatar(s, 32) : '');
+        const sched = s => `${U ? U.pattern(s.lessonDayOfWeek) : ''}${s.lessonTime ? ' ' + esc(s.lessonTime) : ''}${s.lessonDuration ? ' · ' + Number(s.lessonDuration) + ' daq' : ''}`;
+        const myMk = mk.month === month ? mk.list.filter(m => m.teacher_id === id && ['planned', 'review', 'approved'].includes(m.status)) : [];
+        const mkOn = (sid, date) => myMk.find(m => m.student_id === sid && dkey(m.held_date) === date);
+        const mkFor = sid => myMk.filter(m => m.student_id === sid && dkey(m.held_date).slice(0, 7) === month);
+        const coveredMissed = sid => new Set(myMk.filter(m => m.student_id === sid).map(m => dkey(m.missed_date)));
+
+        // Bugun (asosiy ustozlik): dars bo'ldimi — Keldi / Kelmadi.
+        let todayHtml = '';
+        if (selected === 'main' && month === thisMonth) {
+            const list = students.filter(s => calendar.weekdays(s, ownTeacher, 'main').includes(todayDow))
+                .sort((a, b) => (toMin(a.lessonTime) ?? 9999) - (toMin(b.lessonTime) ?? 9999));
+            const contacts = helpedStudents.filter(s => s.lessonDayOfWeek != null && ([1, 3, 5].includes(Number(s.lessonDayOfWeek)) ? [2, 4, 6] : [1, 3, 5]).includes(todayDow)).length;
+            const next = list.find(s => (toMin(s.lessonTime) ?? -1) > nowMin);
+            const unmarked = list.filter(s => { const st = toMin(s.lessonTime); return calendar.status((attendance[s.id] || {})[todayDay]) === 'empty' && st != null && nowMin >= st + (Number(s.lessonDuration) || 15); }).length;
+            if (list.length) todayHtml = `<section class="teacher-duty-today" aria-label="Bugungi darslar"><h4>Bugun · ${list.length} dars${contacts ? ` + ${contacts} aloqa` : ''}
+                <small>${next ? ` · Keyingi: ${esc(next.lessonTime)} · ${(d => d >= 60 ? Math.floor(d / 60) + ' soat ' + (d % 60 ? d % 60 + ' daqiqa' : '') : d + ' daqiqa')(toMin(next.lessonTime) - nowMin)}dan keyin` : ''}${unmarked ? ` · <b class="duty-bad">${unmarked} tasi belgilanmagan</b>` : ''}</small></h4>
+                <ul>${list.map(s => {
+                    const st = calendar.status((attendance[s.id] || {})[todayDay]);
+                    const start = toMin(s.lessonTime), started = start == null || nowMin >= start;
+                    const ended = start != null && nowMin >= start + (Number(s.lessonDuration) || 15);
+                    const action = st === 'present' ? `<span class="teacher-duty-done">✓ Keldi</span><button type="button" class="btn-ghost" data-duty-today="${esc(s.id)}">O‘zgartirish</button>`
+                        : st === 'absent' ? `<span class="teacher-duty-miss">Kelmadi</span><button type="button" class="btn-ghost" data-duty-today="${esc(s.id)}">O‘zgartirish</button>`
+                        : started ? `${ended ? '<span class="duty-bad">Dars bo‘ldimi?</span>' : '<span>Hozir</span>'}<button type="button" class="btn-primary-sm" data-duty-quick="1" data-sid="${esc(s.id)}">Keldi</button><button type="button" class="btn-ghost" data-duty-quick="0" data-sid="${esc(s.id)}">Kelmadi</button>`
+                        : '<span class="teacher-duty-wait">Kutilmoqda</span>';
+                    return `<li class="${st === 'empty' && ended ? 'is-unmarked' : ''}"><b class="duty-time">${esc(s.lessonTime || '')}</b>${avatar(s)}<span><strong>${esc(s.name)}</strong><small>${sched(s)}</small></span><span class="duty-acts">${action}</span></li>`;
+                }).join('')}</ul></section>`;
+        }
+
+        // Oy ko'rsatkichlari (asosiy ustozlik).
+        let kpiHtml = '';
+        if (selected === 'main') {
+            const counted = mainStudents.reduce((n, s) => n + Math.min(Object.values(attendance[s.id] || {}).filter(v => calendar.status(v) === 'present').length, planFor(s)), 0);
+            const plan = mainStudents.reduce((n, s) => n + planFor(s), 0);
+            const expected = mainStudents.reduce((n, s) => n + expectedFor(s), 0);
+            const pct = expected ? Math.min(100, Math.round(counted / expected * 100)) : null;
+            let pay = null; try { pay = mainStudents.length ? calculateKpiSalary(ownTeacher, month, getItem(STORAGE_KEYS.mainAttendance, {}), mainStudents)?.total : null; } catch (e) { pay = null; }
+            const review = myMk.filter(m => m.status === 'review').length;
+            const [y, m] = month.split('-').map(Number);
+            kpiHtml = `<div class="duty-kpis"><div><small>${MONTHS[m - 1]}</small><b>${month === thisMonth ? todayDay + ' kun o‘tdi' : month < thisMonth ? 'yopilgan oy' : 'kelgusi oy'}</b></div>
+                <div><small>Hisobga o‘tdi</small><b>${counted} / ${plan}</b></div>
+                <div><small>Davomat</small><b>${pct == null ? '—' : pct + '%'}</b></div>
+                ${pay != null ? `<div><small>Maosh · asosiy ustozlik</small><b>${esc(formatMoney(pay))}</b></div>` : ''}
+                <div><small>Tekshiruvda</small><b>${review} qoplash</b></div></div>
+                <p class="duty-note">Belgilangan davomat bo‘yicha hisoblanadi. Oy yopilganda Moliya tasdiqlaydi.</p>`;
+        }
+
+        const oldAssist = selected === 'assistant' && month < ASSIST_FROM;
+        const tabs = `<div class="teacher-duty-tabs${!(isMain && hasAssistant) ? ' is-single' : ''}" role="tablist" aria-label="Ustozlik davomati">
+            ${isMain ? `<button role="tab" data-duty="main" aria-selected="${selected === 'main'}">Asosiy ustozlik <small>${mainStudents.length}</small></button>` : ''}
+            ${(!isMain || hasAssistant) ? `<button role="tab" data-duty="assistant" aria-selected="${selected === 'assistant'}">Yordamchi ustozlik <small>${helpedStudents.length}</small></button>` : ''}</div>`;
+
+        // Yordamchi ustozlik noyabrdan aloqalar bo'yicha — "Aloqalar" sahifasining o'zi shu yerda ochiladi.
+        if (selected === 'assistant' && !oldAssist) {
+            root.innerHTML = `${tabs}<div data-duty-contacts></div>`;
+            const box = root.querySelector('[data-duty-contacts]'); box.dataset.month = month; box.dataset.embedded = '1';
+            window.schoolTeacher?.renderContacts(box);
+            root.querySelectorAll('[data-duty]').forEach(button => { button.onclick = () => { if (!busy) { selected = button.dataset.duty; lastError = ''; render(); } }; });
+            return;
+        }
+
+        const legend = selected === 'main'
+            ? '<span><i class="duty-present">✓</i>Keldi</span><span><i class="duty-absent">−</i>Kelmadi</span><span><i class="duty-planned"></i>Rejadagi kun</span><span><i class="duty-off"></i>Dars kuni emas</span><span><i class="duty-mk">Q</i>Qoplash darsi</span><span><i class="duty-mk is-review">Q</i>Tekshiruvda</span><span><i class="duty-mk">×2</i>Qo‘shaloq dars</span>'
+            : '<span><i class="duty-planned"></i>Rejadagi kun</span><span><i class="duty-present">✓</i>Qatnashdi</span><span><i class="duty-absent">−</i>Kelmadi</span>';
+        root.innerHTML = `${todayHtml}${kpiHtml}${tabs}<div class="teacher-duty-help"><p>${oldAssist ? 'Oktyabr maoshi eski yordamchi davomati bo‘yicha. Aloqalar 1-noyabrdan hisoblanadi.' : 'Dars kunini bosib davomat qo‘ying. Qayta bossangiz — o‘zgartirasiz yoki olib tashlaysiz.'}</p>
+        <div class="teacher-duty-legend">${legend}</div></div>
         <div class="teacher-duty-students" role="tabpanel">${students.map((s, index) => {
             const entries = attendance[s.id] || {}, panelId = `teacherDutyCalendar${index}`;
-            const count = Object.values(entries).filter(v => calendar.status(v) === 'present').length;
+            const cells = calendar.cells(month, calendar.weekdays(s, ownTeacher, selected));
+            const present = Object.values(entries).filter(v => calendar.status(v) === 'present').length;
+            const absentDays = cells.filter(c => c && calendar.status(entries[c.day]) === 'absent').map(c => c.date);
+            const sm = mkFor(s.id), covered = coveredMissed(s.id);
+            const doubles = sm.filter(m => m.kind === 'double' && m.status !== 'planned').length;
+            const reviewN = sm.filter(m => m.status === 'review').length;
+            const openMissed = absentDays.filter(d => !covered.has(d));
+            const plan = planFor(s), counted = Math.min(present + doubles, plan);
             return `<article class="teacher-duty-card">
             <button type="button" class="teacher-duty-student" data-duty-expand="${esc(s.id)}" aria-expanded="${expanded === s.id}" aria-controls="${panelId}">
-                <span><strong>${esc(s.name)}</strong><small>${esc(formatPhoneDisplay(s.phone))}</small></span>
-                <span class="teacher-duty-count"><b>${count}</b>/${expectedFor(s)} dars <span aria-hidden="true">${expanded === s.id ? '⌃' : '⌄'}</span></span>
+                <span class="duty-who">${avatar(s)}<span><strong>${esc(s.name)}</strong><small>${selected === 'main' ? sched(s) : 'asosiy ustoz: ' + esc(teachers.find(t => t.id === s.teacherId)?.name || '—')}</small></span></span>
+                <span class="teacher-duty-count"><b>${selected === 'main' ? counted : present}</b>/${selected === 'main' ? plan : expectedFor(s)} dars${reviewN ? ` <em class="duty-plus">+${reviewN}</em>` : ''} <span aria-hidden="true">${expanded === s.id ? '⌃' : '⌄'}</span></span>
             </button><div id="${panelId}" class="teacher-duty-calendar" ${expanded !== s.id ? 'hidden' : ''}>
-            ${selected === 'assistant' ? `<p class="teacher-duty-primary">Asosiy ustoz: ${esc(teachers.find(t => t.id === s.teacherId)?.name || '—')}</p>` : ''}
-            <div class="teacher-duty-weekdays" aria-hidden="true">${['Du', 'Se', 'Ch', 'Pa', 'Ju', 'Sh', 'Ya'].map(day => `<span>${day}</span>`).join('')}</div>
-            <div class="teacher-duty-days">${calendar.cells(month, calendar.weekdays(s, ownTeacher, selected)).map(cell => {
+            <div class="teacher-duty-weekdays" aria-hidden="true">${DAYS.map(day => `<span>${day}</span>`).join('')}</div>
+            <div class="teacher-duty-days">${cells.map(cell => {
                 if (!cell) return '<span aria-hidden="true"></span>';
                 const state = calendar.status(entries[cell.day]);
-                const label = state === 'present' ? 'Qatnashdi' : state === 'absent' ? 'Kelmadi' : 'Belgilanmagan';
-                return `<button type="button" class="teacher-duty-day${cell.scheduled ? ' duty-scheduled' : ''}" data-duty-student="${esc(s.id)}" data-duty-day="${cell.day}" data-status="${state}" aria-label="${cell.date}: ${label}${cell.scheduled ? ', rejadagi kun' : ''}" aria-pressed="${state === 'present'}"><time datetime="${cell.date}">${cell.day}</time><span aria-hidden="true">${state === 'present' ? '✓' : state === 'absent' ? '−' : ''}</span></button>`;
-            }).join('')}</div></div></article>`;
-        }).join('') || '<p class="teacher-duty-empty">Bu rolda faol o‘quvchilar biriktirilmagan.</p>'}</div><p data-duty-error role="alert">${esc(lastError)}</p>`;
+                const m = selected === 'main' ? mkOn(s.id, cell.date) : null;
+                const mark = state === 'present' ? (m?.kind === 'double' ? '×2' : '✓') : state === 'absent' ? '−' : m ? 'Q' : '';
+                const label = state === 'present' ? 'Keldi' : state === 'absent' ? 'Kelmadi' : m ? 'Qoplash darsi' : 'Belgilanmagan';
+                const late = state === 'absent' && covered.has(cell.date);
+                return `<button type="button" class="teacher-duty-day${cell.scheduled ? ' duty-scheduled' : ' duty-offday'}${m ? ' duty-has-mk' + (m.status === 'review' ? ' is-review' : '') : ''}${late ? ' is-covered' : ''}" data-duty-student="${esc(s.id)}" data-duty-day="${cell.day}" data-status="${state}" aria-label="${cell.date}: ${label}${cell.scheduled ? ', rejadagi kun' : ', dars kuni emas'}${m?.status === 'review' ? ', tekshiruvda' : ''}${late ? ', keyin qoplandi' : ''}" aria-pressed="${state === 'present'}"><time datetime="${cell.date}">${cell.day}</time><span aria-hidden="true">${mark}</span></button>`;
+            }).join('')}</div>
+            ${selected === 'main' ? `<div class="duty-stats"><span><b>${counted}</b> / ${plan} hisobga o‘tdi · ${present} keldi${doubles ? ` + ${doubles} qoplash` : ''}${reviewN ? ` · +${reviewN} tekshiruvda` : ''}</span>
+              <span>Kelmadi <b>${absentDays.length}</b>${absentDays.length - openMissed.length ? ` · ${absentDays.length - openMissed.length} qoplandi` : ''}</span>
+              ${openMissed.length && month === thisMonth ? `<span class="duty-bad">Qoplash mumkin <b>${openMissed.length}</b> · ${openMissed.map(d => Number(d.slice(8))).join(', ')}-sana</span>` : ''}</div>` : ''}
+            </div></article>`;
+        }).join('') || '<p class="teacher-duty-empty">Bu rolda faol o‘quvchilar biriktirilmagan.</p>'}</div>
+        ${selected === 'main' ? '<p class="duty-note"><b>Qoldirilgan darsni qoplash.</b> O‘quvchi kelmagan darsni shu oy ichida o‘tib bersangiz, maoshingizga hisoblanadi: "Dars jadvali"da qoplash darsini rejalashtiring. Oyiga rejadagi darslardan ortiq hisoblanmaydi.</p>' : ''}
+        <p data-duty-error role="alert">${esc(lastError)}</p>`;
         root.querySelectorAll('[data-duty-today]').forEach(button => { button.onclick = () => {
-            root.querySelector(`[data-duty-student="${CSS.escape(button.dataset.dutyToday)}"][data-duty-day="${nowT.getDate()}"]`)?.click();
+            if (!expanded || expanded !== button.dataset.dutyToday) { expanded = button.dataset.dutyToday; render(); }
+            document.getElementById('mainAttendanceContainer').querySelector(`[data-duty-student="${CSS.escape(button.dataset.dutyToday)}"][data-duty-day="${todayDay}"]`)?.click();
         }; });
         root.querySelectorAll('[data-duty]').forEach(button => { button.onclick = () => { if (!busy) { selected = button.dataset.duty; lastError = ''; render(); } }; });
         root.querySelectorAll('[data-duty-expand]').forEach(button => { button.onclick = () => {
@@ -106,34 +191,38 @@
                 b.querySelector('[aria-hidden]').textContent = active ? '⌃' : '⌄';
             });
         }; });
+        const save = async (student, date, present, grade, role = selected) => {
+            if (busy) return;
+            busy = true; lastError = ''; monthInput.disabled = true;
+            root.querySelectorAll('button').forEach(b => { b.disabled = true; });
+            try { await saveTeacherAttendanceChange({ teacherId: id, studentId: student.id, date, present, attendanceType: role, grade }); }
+            catch (err) { lastError = err.message; }
+            finally { busy = false; monthInput.disabled = false; }
+            render();
+        };
+        const grade = (student, date) => {
+            const previous = getItem(STORAGE_KEYS.liveGrades, {})[student.id]?.find(g => g.date === date && g.teacherId === id);
+            _openLiveGradeModal(student.name, date, _getSpeakingLessonOptions(teacherRoles.language(employee)),
+                g => save(student, date, true, g), () => {}, previous);
+        };
+        root.querySelectorAll('[data-duty-quick]').forEach(button => { button.onclick = () => {
+            const student = students.find(s => s.id === button.dataset.sid); if (!student) return;
+            if (button.dataset.dutyQuick === '1') grade(student, today); else save(student, today, false);
+        }; });
         root.querySelectorAll('[data-duty-student]').forEach(button => { button.onclick = () => {
             if (busy) return;
             const role = selected, student = students.find(s => s.id === button.dataset.dutyStudent);
             const date = `${month}-${String(button.dataset.dutyDay).padStart(2, '0')}`;
-            const save = async (present, grade) => {
-                if (busy) return;
-                busy = true; lastError = ''; monthInput.disabled = true;
-                root.querySelectorAll('button').forEach(b => { b.disabled = true; });
-                try { await saveTeacherAttendanceChange({ teacherId: id, studentId: student.id, date, present, attendanceType: role, grade }); }
-                catch (err) { lastError = err.message; }
-                finally { busy = false; monthInput.disabled = false; }
-                render();
-            };
-            const edit = () => {
-                const previous = getItem(STORAGE_KEYS.liveGrades, {})[student.id]?.find(g => g.date === date && g.teacherId === id);
-                _openLiveGradeModal(student.name, date, _getSpeakingLessonOptions(teacherRoles.language(employee)),
-                    grade => save(true, grade), () => {}, previous);
-            };
-            if (role === 'main' && button.dataset.status === 'empty') { edit(); return; }
-            openModal(`${student.name} — ${date}`, `<p>Shu kundagi davomatni tanlang.</p>`,
-                `<div class="teacher-duty-actions"><button type="button" class="btn-primary-sm" id="dutyPresent">${role === 'main' && button.dataset.status === 'present' ? 'Baholarni o‘zgartirish' : 'Qatnashdi'}</button>
-                ${role === 'assistant' ? '<button type="button" class="btn-ghost" id="dutyAbsent">Kelmadi</button>' : ''}
-                ${button.dataset.status !== 'empty' ? '<button type="button" class="btn-ghost teacher-duty-remove" id="dutyRemove">Belgini olib tashlash</button>' : ''}
+            const status = button.dataset.status;
+            openModal(`${student.name} — ${date}`, `<p>${button.classList.contains('duty-offday') && role === 'main' ? 'Bu kun dars kuni emas. ' : ''}Shu kundagi davomatni tanlang.</p>`,
+                `<div class="teacher-duty-actions"><button type="button" class="btn-primary-sm" id="dutyPresent">${role === 'main' && status === 'present' ? 'Baholarni o‘zgartirish' : role === 'main' ? 'Keldi' : 'Qatnashdi'}</button>
+                <button type="button" class="btn-ghost" id="dutyAbsent">Kelmadi</button>
+                ${status !== 'empty' ? '<button type="button" class="btn-ghost teacher-duty-remove" id="dutyRemove">Belgini olib tashlash</button>' : ''}
                 <button type="button" class="btn-ghost" id="dutyCancel">Bekor qilish</button></div>`);
-            document.getElementById('dutyPresent').onclick = () => { closeModal(); if (role === 'main') edit(); else save(true); };
-            const absent = document.getElementById('dutyAbsent'), remove = document.getElementById('dutyRemove');
-            if (absent) absent.onclick = () => { closeModal(); save(false); };
-            if (remove) remove.onclick = () => { closeModal(); save(null); };
+            document.getElementById('dutyPresent').onclick = () => { closeModal(); if (role === 'main') grade(student, date); else save(student, date, true); };
+            document.getElementById('dutyAbsent').onclick = () => { closeModal(); save(student, date, false); };
+            const remove = document.getElementById('dutyRemove');
+            if (remove) remove.onclick = () => { closeModal(); save(student, date, null); };
             document.getElementById('dutyCancel').onclick = closeModal;
         }; });
         if (busy) root.querySelectorAll('button').forEach(button => { button.disabled = true; });

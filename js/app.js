@@ -8822,6 +8822,8 @@ function computeAdminHome({ students, leads, now = new Date() }) {
 
 // ===== Kobalt: bosh sahifa qahramon kartalari (barcha rollar uchun umumiy) =====
 const _kbxMln = n => String(Math.round((Number(n) || 0) / 1e5) / 10).replace('.', ',');
+// Server bilan bir xil (server/services/payroll.js): yordamchi maoshi shu oydan aloqalar bo'yicha.
+const ASSIST_CONTACTS_FROM = '2026-11';
 const _kbxNum = n => String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 function kbxPlanCard(o) {
     const art = o.art ? `<div class="kbx-gift"><img src="${o.art.img}" alt="" width="92" height="82" loading="lazy">
@@ -9342,6 +9344,8 @@ function teacherHomeStats(user, now = new Date()) {
     const own = typeof resolveTeacherWithVirtual === 'function' ? resolveTeacherWithVirtual(user.linkedTeacherId) : null;
     const kpi = (teacher, store, list) => { try { return teacher && list.length ? calculateKpiSalary(teacher, month, store, list) : null; } catch (e) { return null; } };
     const mainKpi = own && own.type !== 'yordamchi' ? kpi(own, att, students) : null;
+    // Yordamchi maoshi ASSIST_CONTACTS_FROM oyidan aloqalar bo'yicha (homeExtras qo'shadi); undan oldin — eski yordamchi davomati.
+    const oldAssist = month < ASSIST_CONTACTS_FROM && own && helped.length ? kpi({ ...own, type: 'yordamchi' }, getItem(STORAGE_KEYS.assistantAttendance, {}), helped) : null;
     const todayList = today.map(s => {
         const start = toMin(s.lessonTime), dur = Number(s.lessonDuration) || 15;
         return { name: s.name || "Oʻquvchi", group: s.group || '', time: s.lessonTime, start, dur, marked: present(s.id, day),
@@ -9353,7 +9357,8 @@ function teacherHomeStats(user, now = new Date()) {
         attExpected, attPct, attMissed,
         rating: ratings.length ? ratings.reduce((a, b) => a + b, 0) / ratings.length : null, ratingN: ratings.length,
         // Yordamchi qismi keyin schoolTeacher.homeExtras orqali aloqalar hisobidan qo'shiladi.
-        salary: mainKpi?.total || 0, mainSalary: mainKpi?.total || 0, hasSalary: !!(mainKpi || helped.length)
+        salary: (mainKpi?.total || 0) + (oldAssist?.total || 0), mainSalary: mainKpi?.total || 0, oldAssistSalary: oldAssist ? oldAssist.total || 0 : null,
+        hasSalary: !!(mainKpi || helped.length)
     };
 }
 
@@ -9401,7 +9406,7 @@ function renderTeacherHome(user, now = new Date()) {
             const plan = kbxPlanCard({
                 id: 'kbxThPlan', title: `Hisoblangan maosh · ${month}`,
                 pill: s.attPct != null ? (s.attPct >= 90 ? { cls: 'ok', text: `Davomat ${s.attPct}%` } : { cls: 'warn', text: `Davomat ${s.attPct}%` }) : null,
-                big: s.hasSalary ? `<bdi data-thx-sal data-main="${Math.round(s.mainSalary)}">${_kbxNum(s.salary)}</bdi>` : '—', of: s.hasSalary ? 'soʻm · hozirgacha' : 'KPI sozlanmagan',
+                big: s.hasSalary ? `<bdi data-thx-sal data-main="${Math.round(s.mainSalary)}"${s.oldAssistSalary != null ? ` data-old-assist="${Math.round(s.oldAssistSalary)}"` : ''}>${_kbxNum(s.salary)}</bdi>` : '—', of: s.hasSalary ? 'soʻm · hozirgacha' : 'KPI sozlanmagan',
                 sub: s.hasSalary ? `<span data-thx-salsub>${s.helped ? `asosiy ${_kbxNum(s.mainSalary)} + yordamchi …` : 'belgilangan davomat boʻyicha'} · oy yopilganda Moliya tasdiqlaydi</span>` : 'Administrator KPI sozlamasini kiritganda chiqadi',
                 bar: s.attPct != null ? { pct: s.attPct, due: null, ok: s.attPct >= 90, label: `Davomat ${s.attPct}%` } : null,
                 foot: s.attPct != null ? [`<strong>${s.came}</strong> keldi · <strong>${s.attMissed}</strong> kelmadi`, `kutilgan ${s.attExpected} dars`] : null,
@@ -11769,7 +11774,7 @@ function renderTeachersSection() {
     if (teachersLangActionsEl) teachersLangActionsEl.style.display = restrictedToCabinet ? 'none' : '';
 
     const sec = restrictedToCabinet
-        ? (restrictedAllowed.has(_tabContext.teachersSection) ? _tabContext.teachersSection : 'cabinet')
+        ? (restrictedAllowed.has(_tabContext.teachersSection) ? _tabContext.teachersSection : cu?.role === 'teacher' ? 'attendance' : 'cabinet')
         : (_tabContext.teachersSection || 'attendance');
     switchTeachersSection(sec);
 }
