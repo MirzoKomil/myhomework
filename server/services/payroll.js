@@ -1,8 +1,8 @@
 const { randomUUID, createHash } = require('crypto');
 const engine = require('../../js/payrollEngine');
 const assist = require('./school/assist');
-// Yordamchi maoshi shu oydan boshlab aloqalar (13 × tarif/13) bo'yicha; oldingi oylar eski yordamchi davomati bo'yicha.
-const ASSIST_CONTACTS_FROM = process.env.ASSIST_CONTACTS_FROM || '2026-10';
+// Yordamchi maoshi shu oydan boshlab aloqalar (Abdulloh: oktyabr eski davomat bo'yicha yopiladi) (13 × tarif/13) bo'yicha; oldingi oylar eski yordamchi davomati bo'yicha.
+const ASSIST_CONTACTS_FROM = process.env.ASSIST_CONTACTS_FROM || '2026-11';
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS salary_kpi_settings (
