@@ -23,6 +23,10 @@ const finance = require('./services/finance');
 const teacherDuties = require('./services/teacherDuties');
 const archive = require('./services/archive');
 const staffLifecycle = require('./services/staffLifecycle');
+// Yagona dars jadvali / o'quvchi amallari (server/services/school) — jadvallari tayyor bo'lsagina ishlaydi.
+const schoolSchema = require('./services/school/schema');
+const schoolSchedule = require('./services/school/schedule');
+const schoolStudentOps = require('./services/school/studentOps');
 
 // 142-ish qayta ish 8: ilova yopiq bo'lsa ham (haqiqiy OS/brauzer darajasidagi)
 // bildirishnoma yetkazish uchun Web Push VAPID kalitlari — .env orqali
@@ -1312,6 +1316,9 @@ async function saveStudents(client, students, removedStudentIds = []) {
             }
             if (Number(financial.debtAmount) === 0) extra.paymentDueDate = '';
         }
+        // Akademik amallar (tahrir, muzlatish, ustoz almashtirish ...) serverda
+        // schoolRev'ni oshiradi: undan eski CRM nusxasi ularni qaytarib yubormaydi.
+        if (typeof schoolStudentOps !== 'undefined') schoolStudentOps.protectSchoolFields(s, extra, existingById.get(id));
         await client.query(
             `INSERT INTO students (id, name, phone, group_name, subject, teacher_id, assistant_teacher_id, lesson_day_of_week, lesson_time, lesson_duration, extra_data)
              VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
@@ -1520,6 +1527,12 @@ async function upsertLeadWithClient(client, lead, language, options = {}) {
         || Object.prototype.hasOwnProperty.call(lead, 'trialRequest')
         || Object.prototype.hasOwnProperty.call(lead, 'trialHistory')) {
         Object.assign(merged, trialWorkflow.syncSchedule(before, merged, randomUUID, new Date().toISOString()));
+        // Yagona dars jadvali: yangi sinov vaqti band emasligini server tekshiradi
+        // (boshqa menejerning sinovi, ustoz darsi, yopilgan vaqt).
+        if (typeof schoolSchema !== 'undefined' && schoolSchema.state.ready
+            && merged.status === 'sinov-darsida' && merged.trialRequest?.id && merged.trialRequest.id !== before?.trialRequest?.id) {
+            await schoolSchedule.checkLeadTrial(client, merged, { actorId: options.actor?.id || null });
+        }
     }
 
     // Biriktirilgan vaqtni server ham boshqaradi: API/import orqali menejer
@@ -1651,6 +1664,10 @@ async function upsertLead(lead, language, actor = {}) {
         const options = { actor };
         saved = await upsertLeadWithClient(client, lead, language, options);
         platformAccess = await provisionLeadStudent(client, saved);
+        // Sotuv kiritgan Telegram guruh havolasi va nomi — yagona guruhlar ro'yxatiga.
+        if (typeof schoolSchema !== 'undefined' && schoolSchema.state.ready && platformAccess?.student?.id) {
+            await schoolStudentOps.ensureProvisionGroup(client, { id: platformAccess.student.id, ...platformAccess.student }, actor);
+        }
         await inflow.syncLead(client, saved, platformAccess, actor, false, options.priorLead);
         await require('./services/domworkBot/events').afterLead(client,options.priorLead,saved);
     }, actor);
@@ -2496,8 +2513,14 @@ async function getDemoStudentProfile(studentId) {
         }
     }
 
+    // Ustoz avatari (3D personaj yoki o'z rasmi) — ilovada harf o'rniga ko'rsatiladi.
+    const avatarRows = teacherIds.length ? await q(`SELECT he.id, u.avatar FROM hr_employees he
+        JOIN users u ON LOWER(TRIM(u.email)) = LOWER(TRIM(he.login)) WHERE he.id = ANY($1)`, [teacherIds]).catch(() => []) : [];
+    const avatarOf = tid => avatarRows.find(r => r.id === tid)?.avatar || '';
     return {
         mainTeacherName: mainTeacher?.name || '',
+        mainTeacherAvatar: avatarOf(student.teacherId),
+        assistantTeacherAvatar: avatarOf(student.assistantTeacherId),
         mainTeacherPhone: mainTeacher?.phone || '',
         assistantTeacherName: assistantTeacher?.name || '',
         assistantTeacherPhone: assistantTeacher?.phone || '',
@@ -2655,7 +2678,11 @@ async function getDemoStudentSchedule(studentId) {
     const row = await q1('SELECT * FROM students WHERE id = $1', [demoStudentId]);
     if (!row) return empty;
     const student = rowToStudent(row);
-    const telegramGroupLink = await require('./services/domworkGroups').studentInvite(pool,demoStudentId,row.subject,student.telegramGroupLink || '');
+    // Yagona guruhlar ro'yxati (admin/ROP tahrirlaydi) birinchi manba; bo'lmasa eski yo'l.
+    const schoolGroup = (typeof schoolSchema !== 'undefined' && schoolSchema.state.ready)
+        ? await q1('SELECT tg_link, name FROM school_student_groups WHERE student_id = $1 AND NOT archived', [demoStudentId]) : null;
+    const telegramGroupLink = schoolGroup?.tg_link || await require('./services/domworkGroups').studentInvite(pool,demoStudentId,row.subject,student.telegramGroupLink || '');
+    const telegramGroupName = schoolGroup?.name || '';
 
     // 123-ish: "Jadval va davomat" ekrani o'quvchining haqiqiy o'qish
     // boshlagan kuni va o'zining asosiy ustozining haftalik dars kunlari
@@ -2670,14 +2697,14 @@ async function getDemoStudentSchedule(studentId) {
 
     if (student.lessonDayOfWeek == null || !student.lessonTime) {
         return {
-            telegramGroupLink, topic: '', startsAt: null,
+            telegramGroupLink, telegramGroupName, topic: '', startsAt: null,
             courseStartDate, schedulePattern, lessonDayOfWeek: null, lessonTime: ''
         };
     }
     const startsAt = computeNextWeeklyOccurrence(student.lessonDayOfWeek, student.lessonTime, student.lessonDuration);
     const topic = student.group ? `Speaking Club: ${student.group}` : 'Speaking Club';
     return {
-        telegramGroupLink, topic, startsAt,
+        telegramGroupLink, telegramGroupName, topic, startsAt,
         courseStartDate, schedulePattern,
         lessonDayOfWeek: student.lessonDayOfWeek, lessonTime: student.lessonTime
     };
@@ -4066,7 +4093,7 @@ async function recordTeacherAttendance({ actor, teacherId, studentId, date, pres
         if (selectedType === 'main' && teacher.type === 'yordamchi') throw new Error('Yordamchi ustoz asosiy davomatni o‘zgartira olmaydi');
         const assignmentColumn = selectedType === 'assistant' ? 'assistant_teacher_id' : 'teacher_id';
         const studentResult = await client.query(
-            `SELECT id, subject FROM students WHERE id = $1 AND ${assignmentColumn} = $2 FOR UPDATE`,
+            `SELECT id, subject, extra_data FROM students WHERE id = $1 AND ${assignmentColumn} = $2 FOR UPDATE`,
             [safeStudentId, safeTeacherId]
         );
         const student = studentResult.rows[0];
@@ -4087,24 +4114,30 @@ async function recordTeacherAttendance({ actor, teacherId, studentId, date, pres
         const attendanceKey = `${match[1]}-${match[2]}_${safeTeacherId}`;
 
         if (present) {
-            if (!grade || typeof grade !== 'object' || !grade.lessonId || !grade.scores) {
-                throw new Error("Qatnashuv uchun jonli dars va barcha baholar talab qilinadi");
-            }
-            const criteria = ['attendance', 'activity', 'speaking', 'understanding', 'discipline'];
-            for (const key of criteria) {
-                const score = Number(grade.scores[key]);
-                if (!Number.isInteger(score) || score < 1 || score > 5) {
-                    throw new Error("Barcha baholar 1 dan 5 gacha bo'lishi shart");
-                }
-            }
-
+            // Baho qo'yilmaydi (2026-10-27 qarori). Faqat qaysi jonli dars o'tilgani
+            // saqlanadi — ilovada jonli darsni ochish shunga bog'liq. Ustoz darsni
+            // tanlamasa, o'quvchi hali o'tmagan birinchi jonli dars olinadi.
             const contentResult = await client.query('SELECT data FROM mobile_content WHERE singleton = 1');
             const mobileContent = contentResult.rows[0]?.data || {};
-            const course = (mobileContent.courses || []).find(c => c.id === (mobileContent.lessons || []).find(l => l.id === grade.lessonId)?.courseId);
-            const courseLessons = course ? (mobileContent.lessons || []).filter(l => l.courseId === course.id) : [];
-            const lessonIndex = courseLessons.findIndex(l => l.id === grade.lessonId);
-            if (!course || lessonIndex < 0 || lessonIndex % 2 === 0 || (course.lang || 'english') !== (student.subject || 'english')) {
-                throw new Error("Tanlangan jonli dars o'quvchi faniga tegishli emas");
+            const pick = require('./services/liveLessonPick');
+            let studentExtra = student.extra_data || {};
+            if (typeof studentExtra === 'string') { try { studentExtra = JSON.parse(studentExtra); } catch (_) { studentExtra = {}; } }
+            const studentInfo = { subject: student.subject || 'english', platformCourseId: studentExtra.platformCourseId || '' };
+
+            const gradesResult = await client.query("SELECT data FROM json_data WHERE key = 'liveGrades' FOR UPDATE");
+            const allGrades = gradesResult.rows[0]?.data && typeof gradesResult.rows[0].data === 'object'
+                ? gradesResult.rows[0].data
+                : {};
+            const requestedId = grade && typeof grade === 'object' && grade.lessonId ? String(grade.lessonId) : '';
+            let lesson = null;
+            if (requestedId) {
+                lesson = pick.isLiveLessonOf(mobileContent, studentInfo, requestedId);
+                if (!lesson) throw new Error("Tanlangan jonli dars o'quvchi faniga tegishli emas");
+            } else {
+                const takenIds = (allGrades[safeStudentId] || [])
+                    .filter(item => item && item.lessonId && item.date !== String(date))
+                    .map(item => item.lessonId);
+                lesson = pick.pickNextLiveLesson(mobileContent, studentInfo, takenIds);
             }
 
             await client.query(
@@ -4114,14 +4147,9 @@ async function recordTeacherAttendance({ actor, teacherId, studentId, date, pres
                 [attendanceKey, safeStudentId, day]
             );
 
-            const gradesResult = await client.query("SELECT data FROM json_data WHERE key = 'liveGrades' FOR UPDATE");
-            const allGrades = gradesResult.rows[0]?.data && typeof gradesResult.rows[0].data === 'object'
-                ? gradesResult.rows[0].data
-                : {};
             const entry = {
                 date: String(date), teacherId: safeTeacherId,
-                lessonId: String(grade.lessonId), lessonName: String(grade.lessonName || ''),
-                scores: Object.fromEntries(criteria.map(key => [key, Number(grade.scores[key])]))
+                lessonId: lesson ? lesson.id : '', lessonName: lesson ? lesson.name : ''
             };
             allGrades[safeStudentId] = (allGrades[safeStudentId] || []).filter(item => item.date !== date
                 || (item.teacherId && item.teacherId !== safeTeacherId));
@@ -4682,7 +4710,7 @@ const TRIAL_SMS_CHECK_INTERVAL_MS = 60 * 1000;
 setInterval(_checkAndSendTrialSmsReminders, TRIAL_SMS_CHECK_INTERVAL_MS);
 
 module.exports = {
-    pool, DATA_DIR,
+    pool, DATA_DIR, tx,
     getFullState, getTeacherScopedState, getLeads, getDeletedLeads, getLeadById, getSalesManagerIdForUser, setSalesManagerUserLink,
     insertLead, upsertLead, upsertLeadWithClient, insertRestoredLead, softDeleteLead, restoreLead, patchState, recordTeacherAttendance,
     getTeacherTrialLessons, saveTeacherTrialLesson,

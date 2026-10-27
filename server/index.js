@@ -219,6 +219,8 @@ app.use('/api/inflow', inflowRoutes);
 app.use('/api/finance', financeRoutes);
 app.use('/api/academic', require('./routes/academicHub')({ pool: crmDb.pool,
     authRequired: require('./middleware/auth').authRequired, studentAuthOptional: require('./middleware/auth').studentAuthOptional }));
+// Yagona dars jadvali, o'quvchi holati/tahriri, sotuv so'rovlari, Telegram guruh, yordamchi aloqalari.
+app.use('/api/school', require('./routes/school')({ db: crmDb, authRequired: require('./middleware/auth').authRequired, findUserById: crmDb.findUserById }));
 app.use('/api/domwork/groups', domworkGroupsRouter(require('./db').pool, require('./middleware/auth').authRequired));
 app.use('/api/domwork/marketing', require('./routes/domworkMarketing')({pool:crmDb.pool,authRequired:require('./middleware/auth').authRequired}));
 app.use('/api/target-ads', require('./routes/targetAds'));
@@ -342,6 +344,14 @@ init().then(async () => {
     // Bot is opt-in. Missing credentials/Redis never starts polling or changes Telegram webhooks.
     await require('./services/domworkBot/store').initSchema(crmDb.pool).catch(err =>
         console.error('[domwork-bot] Jadval yaratilmadi:', err.code || err.name));
+    // Akademik bo'lim: qo'shimcha jadvallar + soatlik holat yangilash (muzlatish boshlanishi/tugashi,
+    // rejalashtirilgan ustoz almashinuvi, muddati o'tgan sinov ushlab turishlari).
+    await require('./services/school/schema').initSchema(crmDb.pool).then(() => {
+        const run = () => crmDb.tx(c => require('./services/school/studentOps').applyDue(c), { id: 'system' })
+            .catch(err => console.error('[school] holat yangilash xatosi:', err.code || err.message));
+        setInterval(run, 60 * 60 * 1000).unref();
+        setTimeout(run, 90 * 1000).unref();
+    }).catch(err => console.error('[school] Jadval yaratilmadi:', err.code || err.message));
     // Xodimlar davomati: jadvallar + har 5 daqiqalik tekshiruv ("kelmadi" xabari, eski rasmlarni tozalash).
     // Xato bo'lsa ham server ko'tariladi — boshqa bo'limlar shu sabab to'xtamasligi kerak.
     const staffAttendance = require('./services/staffAttendance');

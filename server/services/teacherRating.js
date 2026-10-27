@@ -1,5 +1,6 @@
 // Ustozlar reytingi (Ustoz Bosh sahifasidagi "Ustozlar reytingi" kartochkasi
-// uchun). Dizayn footnote'idagi formula: "Ball = davomat 60% + mezonlar 40%".
+// va admin Akademik → Reyting uchun yagona hisob). Formula (2026-10-27):
+// "Ball = davomat 60% + o'quvchilar o'zlashtirishi 40%". Baho/mezonlar endi yo'q.
 //
 // MUHIM (maxfiylik): teacherDuties.stateForTeacher() boshqa ustozlarning xom
 // davomat/baho ma'lumotini ustozning o'z kabinet state'idan butunlay
@@ -56,12 +57,11 @@ function daysElapsedThisMonthFor(student, now) {
 
 // state: getFullState() natijasi. ownType: 'asosiy' | 'yordamchi' - faqat
 // o'zi bilan bir xil turdagi ustozlar orasida solishtiriladi.
-function computeTeacherRating(state, ownType, now = tashkentNow()) {
+function computeTeacherRating(state, ownType, now = tashkentNow(), learning = {}) {
     const monthSuffix = monthKeySuffix(now);
     const typeOf = (t) => (t.type === 'yordamchi' ? 'yordamchi' : 'asosiy');
     const teachers = (state.teachers || []).filter(t => typeOf(t) === ownType);
     const students = state.students || [];
-    const liveGrades = state.liveGrades || {};
     const attStore = ownType === 'yordamchi' ? (state.assistantAttendance || {}) : (state.mainAttendance || {});
 
     const rows = teachers.map((t) => {
@@ -76,26 +76,37 @@ function computeTeacherRating(state, ownType, now = tashkentNow()) {
 
         const davomatPct = expected > 0 ? Math.min(100, (completed / expected) * 100) : 0;
 
-        let mezonSum = 0, mezonCount = 0;
-        Object.values(liveGrades).forEach((entries) => {
-            (entries || []).forEach((g) => {
-                if (g.teacherId !== t.id || !g.date || String(g.date).slice(0, 7) !== monthSuffix) return;
-                Object.values(g.scores || {}).forEach((v) => {
-                    const n = Number(v);
-                    if (Number.isFinite(n)) { mezonSum += n; mezonCount++; }
-                });
-            });
-        });
-        const mezonPct = mezonCount > 0 ? (mezonSum / mezonCount / 5) * 100 : 0;
-        const score = expected > 0 ? davomatPct * 0.6 + mezonPct * 0.4 : null;
-        return { id: t.id, name: t.name, score, davomatPct: Math.round(davomatPct), completed, expected };
+        // O'zlashtirish: ustozning o'quvchilari ilovada uy vazifasini birinchi
+        // urinishda o'rtacha necha foizga bajargani (student_part_results.first_percent).
+        // Ilova ma'lumoti yo'q o'quvchilar hisobga olinmaydi; birortasida ham
+        // bo'lmasa — ball faqat davomatdan (ustoz jazolanmaydi).
+        const learnVals = ownStudents.map(s => learning[s.id]).filter(v => Number.isFinite(v));
+        const learnPct = learnVals.length ? learnVals.reduce((a, b) => a + b, 0) / learnVals.length : null;
+        const score = expected > 0
+            ? (learnPct === null ? davomatPct : davomatPct * 0.6 + learnPct * 0.4)
+            : null;
+        return { id: t.id, name: t.name, score, davomatPct: Math.round(davomatPct), completed, expected,
+            learnPct: learnPct === null ? null : Math.round(learnPct), learnStudents: learnVals.length, students: ownStudents.length };
     }).filter(r => r.score !== null);
 
     rows.sort((a, b) => b.score - a.score);
     return rows.map((r, i) => ({
         id: r.id, name: r.name, score: Math.round(r.score), rank: i + 1, total: rows.length,
-        davomatPct: r.davomatPct, completed: r.completed, expected: r.expected
+        davomatPct: r.davomatPct, completed: r.completed, expected: r.expected,
+        learnPct: r.learnPct, learnStudents: r.learnStudents, students: r.students
     }));
 }
 
-module.exports = { computeTeacherRating, expandLessonPatternDays, daysElapsedThisMonthFor, monthKeySuffix };
+// Shu oy ichida yangilangan uy vazifasi natijalari bo'yicha har o'quvchining
+// birinchi urinishdagi o'rtacha foizi: { [studentId]: number }.
+async function loadLearningByStudent(pool, now = tashkentNow()) {
+    const from = `${monthKeySuffix(now)}-01`;
+    const { rows } = await pool.query(
+        `SELECT student_id, AVG(first_percent)::float AS pct
+         FROM student_part_results
+         WHERE total > 0 AND updated_at >= $1::date
+         GROUP BY student_id`, [from]);
+    return Object.fromEntries(rows.map(r => [String(r.student_id), Number(r.pct)]).filter(([, v]) => Number.isFinite(v)));
+}
+
+module.exports = { computeTeacherRating, loadLearningByStudent, expandLessonPatternDays, daysElapsedThisMonthFor, monthKeySuffix };

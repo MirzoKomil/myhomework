@@ -7,7 +7,7 @@ const router = express.Router();
 const { getTeacherScopedState, findUserById, pool } = require('../db');
 const { scopeState } = require('../services/stateScope');
 const teacherDuties = require('../services/teacherDuties');
-const { computeTeacherRating } = require('../services/teacherRating');
+const { computeTeacherRating, loadLearningByStudent } = require('../services/teacherRating');
 
 // Public endpoint — student app uchun, auth talab qilmaydi
 router.get('/mobile-content', studentAuthOptional, async (req, res) => {
@@ -1047,14 +1047,31 @@ router.post('/teacher-attendance', authRequired, crmStateIdentity, async (req, r
 // va mijozga FAQAT yakuniy (ism, ball, o'rin) ro'yxati qaytariladi.
 router.get('/teacher-rating', authRequired, async (req, res) => {
     try {
-        if (req.user?.role !== 'teacher') {
-            return res.status(403).json({ error: 'Faqat ustoz kabineti uchun' });
+        // Yagona reyting: ustoz o'z turidagi ro'yxatni ko'radi, admin/ROP/boshliq
+        // ikkala turni (?type=asosiy|yordamchi) ko'ra oladi.
+        const role = req.user?.role;
+        const isLead = ['admin', 'rop', 'boshliq'].includes(role);
+        if (role !== 'teacher' && !isLead) {
+            return res.status(403).json({ error: 'Reyting faqat ustoz va rahbarlar uchun' });
         }
-        const own = await teacherDuties.teacherForActor(pool, req.user);
+        let ownType, selfId = null;
+        if (role === 'teacher') {
+            const own = await teacherDuties.teacherForActor(pool, req.user);
+            ownType = own.role === 'yordamchi' ? 'yordamchi' : 'asosiy';
+            selfId = own.id;
+        } else {
+            ownType = req.query.type === 'yordamchi' ? 'yordamchi' : 'asosiy';
+        }
         const state = await getFullState();
-        const ownType = own.role === 'yordamchi' ? 'yordamchi' : 'asosiy';
-        const rows = computeTeacherRating(state, ownType);
-        res.json({ month: new Date().toISOString().slice(0, 7), ownType, selfId: own.id, rows });
+        let learning = {};
+        try {
+            learning = await loadLearningByStudent(pool);
+        } catch (err) {
+            console.error('teacher-rating: o\'zlashtirish yuklanmadi', err.message);
+        }
+        const rows = computeTeacherRating(state, ownType, undefined, learning);
+        res.json({ month: new Date().toISOString().slice(0, 7), ownType, selfId, rows,
+            formula: { attendance: 0.6, learning: 0.4 } });
     } catch (err) {
         console.error('GET /api/state/teacher-rating', err);
         res.status(err.status || 500).json({ error: err.status ? err.message : 'Reytingni yuklashda xatolik' });

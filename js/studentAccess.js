@@ -62,6 +62,7 @@
             lessonTime: onboarding.lessonTime || existing?.lessonTime || '',
             lessonDuration: Number(ps.tariff) || onboarding.lessonDuration || existing?.lessonDuration || 15,
             telegramGroupLink: onboarding.telegramGroupLink || existing?.telegramGroupLink || '',
+            telegramGroupName: onboarding.telegramGroupName || existing?.telegramGroupName || '',
             leadRef: existing?.leadRef || { lang: subject, id: lead.id },
             serialCode: existing?.serialCode || lead.serialCode,
             startDate: existing?.startDate || today,

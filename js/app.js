@@ -224,7 +224,7 @@ const ROLE_TABS = {
     // ko'chirildi. renderTeachersSection() ustoz/ROP uchun sub-navigatsiyani
     // faqat shu ikki bo'limga (Davomat, O'quvchini tekshirish) cheklaydi,
     // avvalgi tor ruxsat saqlanib qoladi.
-    teacher:       ['dashboard', 'students', 'timetable', 'teachers-section', 'trial-lessons', 'guides', 'student-app'],
+    teacher:       ['dashboard', 'students', 'timetable', 'teachers-section', 'school-contacts', 'trial-lessons', 'guides', 'student-app'],
     employee:      ['student-app', 'guides'],
     hr:            ['dashboard', 'hr', 'guides']
 };
@@ -267,7 +267,7 @@ function applyRoleBasedAccess(user) {
             // shu sabab butunlay yashirilmaydi, faqat renderTeachersSection()
             // ROP uchun sub-navigatsiyani o'sha bitta bo'limga cheklaydi
             // (Davomat/Sinov darsi/Reyting/Darslik/Elektron doska hamon yopiq).
-            hiddenForRop = new Set(['finance', 'hr', 'analitika']);
+            hiddenForRop = new Set(['finance', 'hr', 'analitika', 'school-assist', 'school-contacts']);
             hiddenForRop.forEach(tab => {
                 const el = sidebar.querySelector(`.menu-item[data-tab="${tab}"]`);
                 if (el) el.style.display = 'none';
@@ -277,9 +277,8 @@ function applyRoleBasedAccess(user) {
             // uchun (u haqiqiy nishon lavozim bo'lgani va HR Bo'limi undan
             // yashiringani sabab) — admin/boshliq esa uni HR Bo'limi >
             // Yo'riqnomalar orqali yozadi, alohida punktga muhtoj emas.
-            hiddenForRop = new Set(['guides']);
-            const el = sidebar.querySelector('.menu-item[data-tab="guides"]');
-            if (el) el.style.display = 'none';
+            hiddenForRop = new Set(['guides', 'school-contacts']);
+            hiddenForRop.forEach(tab => { const el = sidebar.querySelector(`.menu-item[data-tab="${tab}"]`); if (el) el.style.display = 'none'; });
         }
         // 17-ish: sahifa obnovleniya (refresh) qilinganda foydalanuvchi
         // oldin qaysi bo'limda bo'lgan bo'lsa, o'sha bo'limdan davom etsin —
@@ -291,6 +290,9 @@ function applyRoleBasedAccess(user) {
         return;
     }
 
+    // "Faol emas" (muzlatilgan / chiqib ketgan / boshqa ustozga o'tgan) — ustoz va sotuv menejeri uchun alohida ro'yxat.
+    const inactiveBtn = document.getElementById('btnSchoolInactive');
+    if (inactiveBtn) inactiveBtn.hidden = !['teacher', 'sales_manager'].includes(role);
     const financeEmployee = role === 'employee' && getItem(STORAGE_KEYS.hrEmployees, []).some(e =>
         String(e.login || '').trim().toLowerCase() === String(user.email || '').trim().toLowerCase()
         && ['moliya', 'finance'].includes(String(e.department || '').toLowerCase()));
@@ -690,6 +692,10 @@ async function bootApp() {
             currentUser.linkedTeacherLang = detectedTeacherLang;
             setCurrentUser(currentUser);
         }
+        // "Aloqalar" — faqat yordamchi ustoz (o'quvchisi bor bo'lsa) uchun.
+        const isAssistant = linked?.role === 'yordamchi' || getItem(STORAGE_KEYS.students, []).some(s => s.assistantTeacherId && s.assistantTeacherId === currentUser.linkedTeacherId);
+        const contactsMenu = document.querySelector('.menu-item[data-tab="school-contacts"]');
+        if (contactsMenu && !isAssistant) contactsMenu.remove();
     }
 
     setUiLang(getUiLang());
@@ -1229,6 +1235,10 @@ function renderTab(tab) {
         case 'hr': renderHr(); break;
         case 'finance': renderFinance(); break;
         case 'guides': renderMyGuides(); break;
+        case 'school-approvals': window.schoolUI?.renderApprovals(document.getElementById('schoolApprovalsRoot')); break;
+        case 'school-groups': window.schoolUI?.renderGroups(document.getElementById('schoolGroupsRoot')); break;
+        case 'school-assist': window.schoolUI?.renderAssistAdmin(document.getElementById('schoolAssistRoot')); break;
+        case 'school-contacts': window.schoolTeacher?.renderContacts(document.getElementById('schoolContactsRoot')); break;
     }
     if (typeof renderNotificationPanel === 'function') renderNotificationPanel();
 }
@@ -6088,6 +6098,13 @@ function renderProfileEditSection(user) {
         </div>`;
     })() : '';
 
+    setTimeout(() => {
+        const el = document.getElementById('schoolAvatarPicker');
+        if (el && window.schoolTeacher) window.schoolTeacher.renderAvatarPicker(el, { current: user.avatar || '', onSaved: avatar => {
+            const cu = getCurrentUser(); if (cu) { setCurrentUser({ ...cu, avatar }); if (typeof initUserUI === 'function') initUserUI(getCurrentUser()); }
+            const prev = document.getElementById('profileAvatarPreview'); if (prev) prev.innerHTML = `<img alt="" src="${escapeHtml(avatar)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+        } });
+    }, 0);
     return `
         <div class="profile-header-bar">
             <h1>${_isAdminProfileEdit ? 'Profilni tahrirlash' : 'Mening profilim'}</h1>
@@ -6106,6 +6123,11 @@ function renderProfileEditSection(user) {
                             <p>Kamida 400×400 px tavsiya etiladi. JPG, PNG yoki WebP formatlari qabul qilinadi.</p>
                         </div>` : ''}
                     </div>
+                </div>
+                <div class="profile-card">
+                    <h3 style="margin:0 0 4px">Personaj tanlash</h3>
+                    <p class="text-muted" style="margin:0 0 12px">72 ta 3D personajdan birini tanlang — CRM, xodimlar chati va oʻquvchi ilovasida koʻrinadi</p>
+                    <div id="schoolAvatarPicker"></div>
                 </div>
                 <div class="profile-card">
                     ${profileCardHeader('Shaxsiy ma\'lumotlar', 'personal')}
@@ -7750,6 +7772,14 @@ function wireTimetableCells() {
 }
 
 function renderTimetable() {
+    // Yagona dars jadvali (server: /api/school) — eski brauzer ichidagi jadval o'rniga.
+    const schoolRoot = document.getElementById('schoolTimetableRoot');
+    if (schoolRoot && window.schoolSchedule) {
+        document.querySelectorAll('#tab-timetable > :not(#schoolTimetableRoot)').forEach(el => { el.hidden = true; });
+        schoolRoot.hidden = false;
+        window.schoolSchedule.render(schoolRoot);
+        return;
+    }
     initTimetableControls();
     const filters = getTimetableFilters();
     _ttFilters = filters;
@@ -11173,23 +11203,31 @@ function renderSdpHeader(studentId) {
             `<button type="button" class="sdp-action-btn sdp-action-btn--pay" id="sdpBtnPay">+ To'lov qabul qilish</button>`);
         document.getElementById('sdpBtnPay').onclick = () => inflowUI.openPayment(studentId);
     }
-    document.getElementById('sdpBtnTeacher').onclick = () => openSdpTransferTeacher(s);
-    document.getElementById('sdpBtnSchedule').onclick = () => openSdpChangeSchedule(s);
-    document.getElementById('sdpBtnFreeze').onclick = () => {
-        const allStudents = getItem(STORAGE_KEYS.students, []);
-        const idx = allStudents.findIndex(st => st.id === studentId);
-        if (idx !== -1) {
-            allStudents[idx].frozen = !allStudents[idx].frozen;
-            allStudents[idx].frozenAt = allStudents[idx].frozen ? Date.now() : null;
-            setItem(STORAGE_KEYS.students, allStudents);
-            renderSdpHeader(studentId);
-            const nowFrozen = allStudents[idx].frozen;
-            showMiniToast(nowFrozen ? "O'quvchi muzlatildi" : "Muzlatish bekor qilindi");
-            if (nowFrozen) switchStudentsSection('muzlatilgan');
-            else switchStudentsSection('faol');
-        }
-    };
+    // O'quvchi holati va tahriri endi serverda (sabab + tarix bilan): /api/school.
+    const _sdpCanAct = ['admin', 'boshliq', 'rop'].includes(_sdpRole);
+    const _sdpCanEdit = _sdpCanAct || _sdpRole === 'sales_manager';
+    document.getElementById('sdpBtnTeacher').onclick = () => window.schoolUI.openStudent(studentId, 'holat');
+    document.getElementById('sdpBtnSchedule').onclick = () => window.schoolUI.openStudent(studentId, 'tahrir');
+    document.getElementById('sdpBtnFreeze').onclick = () => window.schoolUI.openStudent(studentId, 'holat');
+    document.getElementById('sdpBtnFreeze').innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22V2M4.93 4.93l14.14 14.14M2 12h20M4.93 19.07l14.14-14.14"/></svg> Holatni o\'zgartirish';
+    ['sdpBtnTeacher', 'sdpBtnFreeze'].forEach(id => { const b = document.getElementById(id); if (b && !_sdpCanAct) b.style.display = 'none'; });
+    if (!_sdpCanEdit) document.getElementById('sdpBtnSchedule').style.display = 'none';
+    if (_sdpCanEdit) {
+        document.getElementById('sdpHeaderActions').insertAdjacentHTML('afterbegin',
+            `<button type="button" class="sdp-action-btn" id="sdpBtnEdit">✎ Tahrirlash</button><button type="button" class="sdp-action-btn" id="sdpBtnHistory">O'zgarishlar tarixi</button>`);
+        document.getElementById('sdpBtnEdit').onclick = () => window.schoolUI.openStudent(studentId, 'tahrir');
+        document.getElementById('sdpBtnHistory').onclick = () => window.schoolUI.openStudent(studentId, 'tarix');
+    }
 }
+
+// Server amalidan keyin ochiq o'quvchi paneli va ro'yxatlar yangilanadi.
+window.addEventListener('school:changed', () => {
+    try {
+        const panel = document.getElementById('studentDetailPanel');
+        if (_sdpCurrentId && panel?.classList.contains('sdp-open')) { renderSdpHeader(_sdpCurrentId); renderSdpTab(_sdpCurrentTab || 'profile', _sdpCurrentId); }
+        if (document.getElementById('tab-students')?.classList.contains('active')) renderStudents();
+    } catch (e) { console.warn('[school] yangilashda xato', e); }
+});
 
 function renderSdpTab(tab, studentId) {
     const body = document.getElementById('sdpBody');
@@ -18942,6 +18980,12 @@ function wireTeacherSchedulePicker(modalBody, options = {}) {
         modalBody.dataset.onboardScheduleTime = existing.lessonTime;
         modalBody.dataset.onboardSchedulePattern = [2, 4, 6].includes(Number(existing.lessonDayOfWeek)) ? 'tts' : 'mwf';
     }
+    // Guruh nomi: avvalgi qiymat yoki tizim taklifi (keyingi bo'sh "Cnn | onlayn ingliz tili").
+    const nameInput = modalBody.querySelector('#onboardTelegramGroupName');
+    if (nameInput && !nameInput.value) {
+        if (existing?.telegramGroupName) nameInput.value = existing.telegramGroupName;
+        else apiFetch('/api/school/groups/next-name').then(r => { if (!nameInput.value) nameInput.value = r.name; }).catch(() => {});
+    }
     if (existing?.telegramGroupLink) {
         const linkInput = modalBody.querySelector('#onboardTelegramGroupLink');
         if (linkInput) linkInput.value = existing.telegramGroupLink;
@@ -19012,6 +19056,9 @@ function collectTeacherScheduleData(modalBody) {
 
     const telegramGroupLink = modalBody.querySelector('#onboardTelegramGroupLink')?.value?.trim() || '';
     if (!telegramGroupLink) return { error: 'Telegram guruh havolasini kiriting', target: '#onboardTelegramGroupLink' };
+    if (!/^https:\/\/t\.me\/(\+[A-Za-z0-9_-]{8,64}|joinchat\/[A-Za-z0-9_-]{8,64}|[A-Za-z0-9_]{5,32})$/.test(telegramGroupLink)) return { error: 'Havola https://t.me/... ko\'rinishida bo\'lsin', target: '#onboardTelegramGroupLink' };
+    const telegramGroupName = (modalBody.querySelector('#onboardTelegramGroupName')?.value || '').trim();
+    if (telegramGroupName.length < 2) return { error: 'Telegram guruh nomini kiriting', target: '#onboardTelegramGroupName' };
 
     return {
         data: {
@@ -19022,7 +19069,8 @@ function collectTeacherScheduleData(modalBody) {
             lessonTime,
             lessonScheduleLabel: `${lessonDayLabel}, ${lessonTime}`,
             lessonDuration,
-            telegramGroupLink
+            telegramGroupLink,
+            telegramGroupName
         }
     };
 }
@@ -19054,6 +19102,11 @@ function renderTeacherScheduleSection(asosiyTeachers) {
             <label for="onboardTelegramGroupLink">Telegram guruh havolasi <span style="color:var(--danger)">*</span></label>
             <input type="text" id="onboardTelegramGroupLink" class="form-control" placeholder="https://t.me/+...">
             <p class="lead-survey-hint">O'quvchi uchun ochilgan maxsus Telegram guruh havolasi — o'quvchiga aylantirish uchun majburiy.</p>
+        </div>
+        <div class="lead-survey-field">
+            <label for="onboardTelegramGroupName">Telegram guruh nomi <span style="color:var(--danger)">*</span></label>
+            <input type="text" id="onboardTelegramGroupName" class="form-control" placeholder="C40 | onlayn ingliz tili" maxlength="80">
+            <p class="lead-survey-hint">Telegram'dagi nom bilan bir xil yozing · tizim keyingi bo'sh raqamni taklif qiladi, takrorlanmasligi tekshiriladi. Guruhga o'quvchi, ustoz, yordamchi, ROP va sizni qo'shing.</p>
         </div>
     </section>`;
 }
@@ -19239,6 +19292,9 @@ function collectPaymentOnboardingData(modalBody) {
 
     const telegramGroupLink = getVal('onboardTelegramGroupLink');
     if (!telegramGroupLink) return { error: 'Telegram guruh havolasini kiriting', target: '#onboardTelegramGroupLink' };
+    if (!/^https:\/\/t\.me\/(\+[A-Za-z0-9_-]{8,64}|joinchat\/[A-Za-z0-9_-]{8,64}|[A-Za-z0-9_]{5,32})$/.test(telegramGroupLink)) return { error: 'Havola https://t.me/... ko\'rinishida bo\'lsin', target: '#onboardTelegramGroupLink' };
+    const telegramGroupName = (modalBody.querySelector('#onboardTelegramGroupName')?.value || '').trim();
+    if (telegramGroupName.length < 2) return { error: 'Telegram guruh nomini kiriting', target: '#onboardTelegramGroupName' };
 
     const firstLessonDate = getVal('onboardFirstLessonDate');
     if (!firstLessonDate) return { error: 'Ilk dars boshlash sanasini belgilang', target: '#onboardFirstLessonDate' };
@@ -19284,6 +19340,7 @@ function collectPaymentOnboardingData(modalBody) {
             lessonTime,
             lessonScheduleLabel: `${lessonDayLabel}, ${lessonTime}`,
             telegramGroupLink,
+            telegramGroupName,
             firstLessonDate
         }
     };

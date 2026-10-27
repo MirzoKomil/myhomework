@@ -34,7 +34,7 @@ test('monthKeySuffix: att_key prefiksiga mos YYYY-MM', () => {
     assert.equal(monthKeySuffix(new Date(Date.UTC(2026, 0, 3))), '2026-01');
 });
 
-test('computeTeacherRating: ball = davomat 60% + mezonlar 40%, faqat bir xil turdagi ustozlar orasida, xom ma\'lumot qaytmaydi', () => {
+test("computeTeacherRating: ball = davomat 60% + o'zlashtirish 40%, faqat bir xil turdagi ustozlar orasida, xom ma'lumot qaytmaydi", () => {
     const now = new Date(Date.UTC(2026, 9, 20));
     const state = {
         teachers: [
@@ -44,8 +44,8 @@ test('computeTeacherRating: ball = davomat 60% + mezonlar 40%, faqat bir xil tur
             { id: 'y1', name: 'Yordamchi U', type: 'yordamchi' },
         ],
         students: [
-            { id: 's1', teacherId: 't1', lessonDayOfWeek: 1, lessonTime: '10:00' }, // Dush/Chor/Juma -> 8 kun (2..19) 20-gacha
-            { id: 's2', teacherId: 't2', lessonDayOfWeek: 2, lessonTime: '10:00' }, // Sesh/Pay/Shan -> 9 kun (1..20) 20-gacha
+            { id: 's1', teacherId: 't1', lessonDayOfWeek: 1, lessonTime: '10:00' }, // 8 kun
+            { id: 's2', teacherId: 't2', lessonDayOfWeek: 2, lessonTime: '10:00' }, // 9 kun
             { id: 's3', assistantTeacherId: 'y1', lessonDayOfWeek: 1, lessonTime: '11:00' },
         ],
         mainAttendance: {
@@ -53,54 +53,45 @@ test('computeTeacherRating: ball = davomat 60% + mezonlar 40%, faqat bir xil tur
             '2026-10_t2': { s2: { 1: 1, 3: 1, 6: 1 } }, // 3/9 = 33%
         },
         assistantAttendance: { '2026-10_y1': { s3: { 1: 1 } } },
-        liveGrades: {
-            s1: [{ teacherId: 't1', date: '2026-10-19', scores: { attendance: 5, activity: 5, speaking: 5, understanding: 5, discipline: 5 } }], // 100%
-            s2: [{ teacherId: 't2', date: '2026-10-04', scores: { attendance: 3, activity: 3, speaking: 3, understanding: 3, discipline: 3 } }], // 60%
-        },
+        // Eski baholar endi reytingga ta'sir qilmaydi
+        liveGrades: { s2: [{ teacherId: 't2', date: '2026-10-04', scores: { attendance: 5 } }] },
     };
-    const rows = computeTeacherRating(state, 'asosiy', now);
-    assert.equal(rows.length, 2); // t3 - kutilgan 0, reytingda yo'q
+    const rows = computeTeacherRating(state, 'asosiy', now, { s1: 80, s2: 60 });
+    assert.equal(rows.length, 2);
     assert.equal(rows[0].id, 't1');
-    assert.equal(rows[0].rank, 1);
-    assert.equal(rows[0].score, 100); // 100*0.6 + 100*0.4
+    assert.equal(rows[0].score, Math.round(100 * 0.6 + 80 * 0.4));
+    assert.equal(rows[0].learnPct, 80);
     assert.equal(rows[1].id, 't2');
-    assert.equal(rows[1].rank, 2);
-    assert.equal(rows[1].score, Math.round(33 * 0.6 + 60 * 0.4));
+    assert.equal(rows[1].score, Math.round((300 / 9) * 0.6 + 60 * 0.4));
     assert.equal(rows[0].total, 2);
-    // Boshqa turdagi (yordamchi) ustozlar bu ro'yxatga kirmaydi
     assert.ok(!rows.some(r => r.id === 'y1'));
-    // Javobda faqat yakuniy (ism, ball, o'rin) - xom davomat/baho qatorlari yo'q
     const json = JSON.stringify(rows);
     assert.ok(!json.includes('scores'));
     assert.ok(!json.includes('mainAttendance'));
 });
 
-test('computeTeacherRating: bir xil turdagi (yordamchi) ustozlar orasida alohida hisoblanadi', () => {
+test("computeTeacherRating: ilova ma'lumoti bo'lmasa ball faqat davomatdan (ustoz jazolanmaydi); yordamchilar alohida", () => {
     const now = new Date(Date.UTC(2026, 9, 20));
     const state = {
         teachers: [{ id: 'y1', name: 'Yordamchi Bir', type: 'yordamchi' }],
         students: [{ id: 's1', assistantTeacherId: 'y1', lessonDayOfWeek: 1, lessonTime: '10:00' }],
         mainAttendance: {},
         assistantAttendance: { '2026-10_y1': { s1: { 1: 1, 3: 1 } } },
-        liveGrades: {},
     };
     const rows = computeTeacherRating(state, 'yordamchi', now);
     assert.equal(rows.length, 1);
-    assert.equal(rows[0].id, 'y1');
-    // Mezon yo'q -> mezonPct=0, faqat davomat*0.6 qo'shiladi
-    assert.equal(rows[0].score, Math.round(rows[0].davomatPct * 0.6));
+    assert.equal(rows[0].learnPct, null);
+    assert.equal(rows[0].score, rows[0].davomatPct);
 });
 
-// Yangi /api/state/teacher-rating endpoint faqat ustoz roli uchun ochiq va
-// getFullState()'dan foydalanadi (boshqa ustozlarning xom state'iga bog'liq
-// emas) - routes/state.js'da to'g'ri ulanganini manba kodidan tekshiradi.
-test('server/routes/state.js: /teacher-rating faqat ustoz uchun, getFullState orqali hisoblaydi, faqat yakuniy roʻyxat qaytaradi', () => {
+test('server/routes/state.js: /teacher-rating ustoz va rahbarlar uchun, getFullState va ilova natijalari orqali hisoblaydi', () => {
     assert.match(stateRoutes, /router\.get\('\/teacher-rating', authRequired, async \(req, res\) => \{/);
-    const fn = stateRoutes.slice(stateRoutes.indexOf("router.get('/teacher-rating'"), stateRoutes.indexOf("router.get('/teacher-rating'") + 900);
-    assert.match(fn, /req\.user\?\.role !== 'teacher'/);
+    const fn = stateRoutes.slice(stateRoutes.indexOf("router.get('/teacher-rating'"), stateRoutes.indexOf("router.get('/teacher-rating'") + 1800);
+    assert.match(fn, /\['admin', 'rop', 'boshliq'\]\.includes\(role\)/);
     assert.match(fn, /teacherDuties\.teacherForActor\(pool, req\.user\)/);
     assert.match(fn, /await getFullState\(\)/);
-    assert.match(fn, /computeTeacherRating\(state, ownType\)/);
+    assert.match(fn, /loadLearningByStudent\(pool\)/);
+    assert.match(fn, /computeTeacherRating\(state, ownType, undefined, learning\)/);
 });
 
 // Ustoz Bosh sahifasida reyting kartochkasi serverdan alohida (/api/state/

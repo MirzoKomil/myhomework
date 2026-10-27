@@ -16,6 +16,7 @@
     <link rel="stylesheet" href="css/lessonHub.css?v=20261026h">
     <link rel="stylesheet" href="css/staffAttendance.css?v=20261026k2">
     <link rel="stylesheet" href="css/kobalt.css?v=20261026k3">
+    <link rel="stylesheet" href="css/school.css?v=20261028a">
 </head>
 
 <body>
@@ -77,6 +78,24 @@
                         <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" />
                     </svg>
                     <span class="label">Akademik boʻlim</span>
+                </a>
+
+                <a href="#" class="menu-item" data-tab="school-approvals">
+                    <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+                    <span class="label">Tasdiqlar</span>
+                </a>
+                <a href="#" class="menu-item" data-tab="school-groups">
+                    <svg viewBox="0 0 24 24"><path d="M21.5 4.3 2.9 11.5l4.8 1.5 1.8 5.6 3.2-2.7 4.7 3.5 3.1-14.6z"/></svg>
+                    <span class="label">Telegram guruhlar</span>
+                </a>
+                <a href="#" class="menu-item" data-tab="school-assist">
+                    <svg viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3.1 19.5 19.5 0 01-6-6A19.8 19.8 0 012.1 4.2 2 2 0 014.1 2h3a2 2 0 012 1.7c.1 1 .4 1.9.7 2.8a2 2 0 01-.5 2.1L8 9.9a16 16 0 006 6l1.3-1.3a2 2 0 012.1-.5c.9.3 1.8.6 2.8.7a2 2 0 011.7 2z"/></svg>
+                    <span class="label">Yordamchi aloqalari</span>
+                </a>
+
+                <a href="#" class="menu-item" data-tab="school-contacts">
+                    <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><path d="M8 9h8M8 13h5"/></svg>
+                    <span class="label">Aloqalar</span>
                 </a>
 
                 <a href="#" class="menu-item" data-tab="trial-lessons" id="menuItemTrialLessons" style="display:none">
@@ -253,6 +272,8 @@
 
                     <!-- Timetable -->
                     <section id="tab-timetable" class="tab-content">
+                        <!-- Yagona dars jadvali: js/schoolSchedule.js shu yerga chizadi -->
+                        <div class="sc-root" id="schoolTimetableRoot" hidden></div>
                         <div class="page-title-bar"
                             style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;">
                             <div>
@@ -377,6 +398,10 @@
                     </section>
 
                     <!-- O'qituvchilar bo'limi -->
+                    <section id="tab-school-approvals" class="tab-content"><div class="sc-root" id="schoolApprovalsRoot"></div></section>
+                    <section id="tab-school-groups" class="tab-content"><div class="sc-root" id="schoolGroupsRoot"></div></section>
+                    <section id="tab-school-assist" class="tab-content"><div class="sc-root" id="schoolAssistRoot"></div></section>
+                    <section id="tab-school-contacts" class="tab-content"><div class="sc-root" id="schoolContactsRoot"></div></section>
                     <section id="tab-trial-lessons" class="tab-content">
                         <div id="teacherTrialLessonsContent" aria-live="polite"></div>
                     </section>
@@ -501,6 +526,7 @@
                                     <button type="button" class="section-nav-item" data-students-section="tark-etgan">Tark etganlar</button>
                                     <button type="button" class="section-nav-item" data-students-section="tamomlaganlar">Tamomlaganlar</button>
                                     <button type="button" class="section-nav-item" data-students-section="qarzdorlar">Qarzdorlar</button>
+                                    <button type="button" class="section-nav-item" id="btnSchoolInactive" hidden onclick="window.schoolTeacher?.openInactive()">Faol emas</button>
                                 </nav>
                                 <div class="sales-header-lang">
                                     <div class="leads-lang-tabs" id="studentsSubjectTabs" style="margin:0">
@@ -1580,7 +1606,10 @@
     <script src="js/archiveCenter.js?v=20261026arx1"></script>
     <script src="js/staffOffboardingUI.js?v=20261026arx1"></script>
     <script src="js/staffAttendanceUI.js?v=20261026a"></script>
-    <script src="js/app.js?v=20261026k4"></script>
+    <script src="js/schoolUI.js?v=20261028a"></script>
+    <script src="js/schoolSchedule.js?v=20261028a"></script>
+    <script src="js/schoolTeacher.js?v=20261028a"></script>
+    <script src="js/app.js?v=20261028a"></script>
     <script src="js/teamApp.js?v=20261026r7"></script>
     <script src="js/teamIcons.js?v=20261026r7"></script>
 </body>
