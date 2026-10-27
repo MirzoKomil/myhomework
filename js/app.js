@@ -8611,58 +8611,50 @@ function renderRopDashboardBlock(user) {
 // Ustoz bosh sahifasi: bugungi darslar (oʻz oʻquvchilari, vaqt boʻyicha) va
 // shu oydagi davomat. Telefon/toʻlov koʻrsatilmaydi. Davomat state'da faqat
 // "keldi" belgisi bilan keladi, shuning uchun qolganlari "belgilanmagan".
+// Yordamchi aloqasi uchun tavsiya kunlari: o'quvchining dars kunlariga teskari (Du·Ch·Ju ↔ Se·Pa·Sh).
+function _assistAdviceDays(dow) {
+    return expandLessonPatternDays(dow).includes(1) ? [2, 4, 6] : [1, 3, 5];
+}
+function _thxTeacherShort(teacherId) {
+    const t = typeof resolveTeacherWithVirtual === 'function' ? resolveTeacherWithVirtual(teacherId) : null;
+    const parts = String(t?.name || '').trim().split(/\s+/);
+    return parts[0] ? parts[0] + (parts[1] ? ' ' + parts[1][0] + '.' : '') : '—';
+}
+
 function renderTeacherTodayBlock(user) {
     if (user?.role !== 'teacher' || !user.linkedTeacherId) return '';
     const ids = getTeacherAssignmentIds(user.linkedTeacherId);
     if (!ids.size) return '';
-    const teacherId = user.linkedTeacherId;
     const now = new Date();
     const dow = now.getDay() || 7;
     const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     const day = now.getDate();
     const nowMin = now.getHours() * 60 + now.getMinutes();
-    const all = getItem(STORAGE_KEYS.students, []).filter(s => !s.frozen && !s.isStaffDemo);
+    const all = getItem(STORAGE_KEYS.students, []).filter(s => !s.frozen && !s.isStaffDemo && s.status !== 'inactive');
     const students = all.filter(s => ids.has(String(s.teacherId || '')));
     const helped = all.filter(s => ids.has(String(s.assistantTeacherId || '')));
     const att = getItem(STORAGE_KEYS.mainAttendance, {});
-    const asAtt = getItem(STORAGE_KEYS.assistantAttendance, {});
-    const marks = (store, sid) => [...ids].reduce((acc, tid) => Object.assign(acc, store[`${month}_${tid}`]?.[sid] || {}), {});
     const present = (sid, d) => [...ids].some(tid => att[`${month}_${tid}`]?.[sid]?.[d] === 1);
-    const asPresent = (sid, d) => [...ids].some(tid => asAtt[`${month}_${tid}`]?.[sid]?.[d] === 1);
     const toMin = t => { const [h, m] = String(t || '').split(':').map(Number); return Number.isFinite(h) ? h * 60 + (m || 0) : null; };
     const today = students
         .filter(s => s.lessonDayOfWeek != null && s.lessonTime && expandLessonPatternDays(s.lessonDayOfWeek).includes(dow))
         .map(s => ({ ...s, _duty: 'main' }))
-        .concat(helped.filter(s => s.lessonDayOfWeek != null && s.lessonTime && expandLessonPatternDays(s.lessonDayOfWeek).includes(dow)).map(s => ({ ...s, _duty: 'assistant' })))
+        // Yordamchi aloqasi: o'quvchining dars kunlariga teskari kunlarda tavsiya qilinadi (Du·Ch·Ju ↔ Se·Pa·Sh).
+        .concat(helped.filter(s => s.lessonDayOfWeek != null && s.lessonTime && _assistAdviceDays(s.lessonDayOfWeek).includes(dow)).map(s => ({ ...s, _duty: 'assistant' })))
         .sort((a, b) => (toMin(a.lessonTime) ?? 9999) - (toMin(b.lessonTime) ?? 9999));
-    const countPresent = obj => Object.values(obj).filter(v => v === 1 || v === true).length;
-    const monthCame = students.reduce((sum, s) => sum + countPresent(marks(att, s.id)), 0);
     // Ustoz Bosh sahifasidagi "Bugungi darslar" ro'yxatidagi har bir qatorga
     // mos amal tugmasini tanlaydi: dars hali boshlanmagan bo'lsa amal yo'q,
     // ketayotgan/tugagan-u belgilanmagan bo'lsa Keldi/Kelmadi juftligi,
     // allaqachon belgilangan bo'lsa Mezonlarni ko'rish/tahrirlash tugmasi.
     const rowAction = state => state === 'ok' ? 'grade' : (state === 'now' || state === 'warn') ? 'mark' : 'none';
     const dateForDay = d => `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-    const scheduleDayLabel = dow => {
-        const pattern = expandLessonPatternDays(dow);
-        if (pattern.join(',') === '1,3,5') return 'Dush/Chor/Juma';
-        if (pattern.join(',') === '2,4,6') return 'Sesh/Pay/Shan';
-        return UZ_WEEKDAYS[Number(dow) % 7] || '';
-    };
-    const ownTeacher = typeof resolveTeacherWithVirtual === 'function' ? resolveTeacherWithVirtual(user.linkedTeacherId) : null;
-    const kpi = (teacher, store, list) => {
-        try { return teacher && list.length ? calculateKpiSalary(teacher, month, store, list) : null; } catch (e) { return null; }
-    };
-    const mainKpi = ownTeacher && ownTeacher.type !== 'yordamchi' ? kpi(ownTeacher, att, students) : null;
-    const asKpi = ownTeacher ? kpi({ ...ownTeacher, type: 'yordamchi' }, asAtt, helped) : null;
-    const salary = (mainKpi?.total || 0) + (asKpi?.total || 0);
 
     const rows = today.map(s => {
         const isAssistant = s._duty === 'assistant';
         const start = toMin(s.lessonTime);
         const dur = Number(s.lessonDuration) || 15;
-        const done = isAssistant ? asPresent(s.id, day) : present(s.id, day);
-        const state = done ? ['ok', '✓ Keldi · belgilangan']
+        const done = !isAssistant && present(s.id, day);
+        const state = isAssistant ? ['wait', 'tavsiya'] : done ? ['ok', '✓ Keldi · belgilangan']
             : start != null && nowMin >= start + dur ? ['warn', 'Dars tugadi · davomat belgilanmagan']
             : start != null && nowMin >= start ? ['now', 'Hozir']
             : ['wait', 'Kutilmoqda'];
@@ -8671,51 +8663,31 @@ function renderTeacherTodayBlock(user) {
         if (action === 'mark' && !isAssistant) {
             actionsHtml = `<button type="button" class="tch-row-btn tch-row-btn--ok" data-thx-mark="1" data-thx-student="${escapeHtml(s.id)}" data-thx-date="${dateForDay(day)}">Keldi</button>
                 <button type="button" class="tch-row-btn tch-row-btn--no" data-thx-mark="0" data-thx-student="${escapeHtml(s.id)}" data-thx-date="${dateForDay(day)}">Kelmadi</button>`;
-        } else if (action === 'mark' && isAssistant) {
-            actionsHtml = `<button type="button" class="tch-row-btn tch-row-btn--ok" data-thx-as-mark="1" data-thx-student="${escapeHtml(s.id)}" data-thx-date="${dateForDay(day)}">Keldi</button>
-                <button type="button" class="tch-row-btn tch-row-btn--no" data-thx-as-mark="0" data-thx-student="${escapeHtml(s.id)}" data-thx-date="${dateForDay(day)}">Kelmadi</button>`;
+        } else if (isAssistant) {
+            actionsHtml = `<button type="button" class="tch-row-btn tch-row-btn--ok" data-thx-contact="${escapeHtml(s.id)}">Aloqani belgilash</button>`;
         } else if (action === 'grade' && !isAssistant) {
             actionsHtml = `<button type="button" class="tch-row-btn" data-thx-grade="${escapeHtml(s.id)}" data-thx-date="${dateForDay(day)}">Mezonlar</button>`;
         }
         return `<li class="tch-row tch-row--${state[0]}">
             <b class="tch-time">${escapeHtml(s.lessonTime)}</b>
             <div style="display:flex;flex-direction:column;gap:2px;min-width:0;flex:1"><strong>${escapeHtml(s.name || '')}</strong>
-            <span class="mot-prize-note">${dur} daqiqa${isAssistant ? ' · yordamchi' : ''} · ${state[1]}</span></div>
+            <span class="mot-prize-note">${isAssistant ? `yordamchi aloqasi · asosiy ustoz ${escapeHtml(_thxTeacherShort(s.teacherId))}` : `${dur} daqiqa`} · ${state[1]}</span></div>
             ${actionsHtml ? `<div class="tch-row-actions">${actionsHtml}</div>` : ''}
         </li>`;
     }).join('');
     const unmarked = today.filter(s => {
         const st = toMin(s.lessonTime);
-        const done = s._duty === 'assistant' ? asPresent(s.id, day) : present(s.id, day);
+        if (s._duty === 'assistant') return false;
+        const done = present(s.id, day);
         return !done && st != null && nowMin >= st + (Number(s.lessonDuration) || 15);
     }).length;
-    const limit = asKpi?.expected || 0;
-    const helpRows = helped.map(s => {
-        const n = countPresent(marks(asAtt, s.id));
-        const pct = limit ? Math.min(100, Math.round(n / limit * 100)) : 0;
-        const schedule = s.lessonDayOfWeek != null && s.lessonTime
-            ? `${scheduleDayLabel(s.lessonDayOfWeek)} · ${escapeHtml(s.lessonTime)}` : 'Jadval belgilanmagan';
-        return `<div class="dashboard-rank-row rd-thx-help-row"><div class="dashboard-rank-info"><b>${escapeHtml(s.name || '')}</b><span class="mot-prize-note">${schedule}</span><div class="dashboard-rank-track"><i style="width:${Math.max(4, pct)}%"></i></div></div><strong>${n}${limit ? ` / ${limit}` : ''} mashgʻulot</strong></div>`;
-    }).join('');
-    const perLessonAmount = asKpi?.perLesson || 0;
-    const mainPanel = (students.length || helped.length) ? `<section class="card dashboard-panel"><div class="dashboard-panel-head"><h3>Bugungi darslar</h3><span>${today.length} ta dars${unmarked ? ` · ${unmarked} tasi belgilanmagan` : ''}</span></div>
-            ${today.length ? `<ul class="tch-list rd-thx-list">${rows}</ul>` : '<p class="dashboard-empty">Bugun dars yoʻq</p>'}
+    const nContacts = today.filter(s => s._duty === 'assistant').length;
+    const mainPanel = (students.length || helped.length) ? `<section class="card dashboard-panel"><div class="dashboard-panel-head"><h3>Bugungi darslar</h3><span data-thx-today-count>${today.length - nContacts} dars${nContacts ? ` + ${nContacts} aloqa` : ''}${unmarked ? ` · ${unmarked} tasi belgilanmagan` : ''}</span></div>
+            ${today.length ? `<ul class="tch-list rd-thx-list" data-thx-today>${rows}</ul>` : '<ul class="tch-list rd-thx-list" data-thx-today></ul><p class="dashboard-empty" data-thx-today-empty>Bugun dars yoʻq</p>'}
             <button type="button" class="btn-primary-sm" data-teacher-open-att>Oylik davomatni ochish</button>
         </section>` : '';
-    const helpPanel = helped.length ? `<section class="card dashboard-panel rd-thx-help"><div class="dashboard-panel-head"><h3>Yordamchi ustozlik</h3><span>${helped.length} oʻquvchi${limit ? ` · oyiga ${limit} tagacha` : ''}</span></div>
-            ${helpRows}
-            <p class="mot-prize-note">Faqat Qatnashdi/Kelmadi belgilanadi, baho asosiy ustozda.${perLessonAmount ? ` · ${fmtMoney(Math.round(perLessonAmount))} × qatnashgan ÷ ${limit}` : ''}</p>
-        </section>` : '';
-    const monthPanel = `<section class="card dashboard-panel"><div class="dashboard-panel-head"><h3>Shu oy</h3><span>${escapeHtml(month)}</span></div>
-            <div class="dashboard-target-stats">
-                ${students.length ? `<div><small>Mening oʻquvchilarim</small><b>${students.length}</b></div><div><small>Kelgan darslar (belgilangan)</small><b>${monthCame}</b></div>` : ''}
-                ${helped.length ? `<div><small>Yordamchi mashgʻulotlar</small><b>${asKpi?.completed ?? 0}</b></div>` : ''}
-                ${(mainKpi || asKpi) ? `<div><small>Hisoblangan maosh (taxminiy)</small><b>${fmtMoney(salary)}</b></div>` : ''}
-            </div>
-            ${(mainKpi || asKpi) ? '<p class="mot-prize-note">Belgilangan davomat boʻyicha · oy yopilganda Moliya tasdiqlaydi.</p>' : ''}
-        </section>`;
-    const panels = [mainPanel, helpPanel, monthPanel].filter(Boolean);
-    return `<div class="dashboard-grid-2" id="dashboardTeacherToday">${panels.join('')}</div>`;
+    // "Bajarish kerak" va "Yordamchi ustozlik" bloklari serverdan (/api/school) keyin to'ldiriladi — schoolTeacher.homeExtras.
+    return `<div id="dashboardTeacherToday"><div data-thx-todo></div>${mainPanel}</div>`;
 }
 
 // "Bugungi darslar" ro'yxatidagi inline Keldi/Kelmadi/Mezonlar tugmalarini
@@ -8747,14 +8719,10 @@ function bindTeacherHomeToday(container, user) {
             }
         });
     });
-    container.querySelectorAll('[data-thx-as-mark]').forEach(btn => {
+    container.querySelectorAll('[data-thx-contact]').forEach(btn => {
         btn.addEventListener('click', () => {
-            const sid = btn.dataset.thxStudent;
-            const dateStr = btn.dataset.thxDate;
-            const present = btn.dataset.thxAsMark === '1';
-            btn.closest('.tch-row-actions')?.querySelectorAll('button').forEach(b => b.disabled = true);
-            saveTeacherAttendanceChange({ teacherId, studentId: sid, date: dateStr, present })
-                .then(refresh).catch(err => showSaveError(err.message));
+            const student = getItem(STORAGE_KEYS.students, []).find(s => s.id === btn.dataset.thxContact);
+            if (student && window.schoolTeacher?.markDrawer) window.schoolTeacher.markDrawer(student, refresh);
         });
     });
     container.querySelectorAll('[data-thx-grade]').forEach(btn => {
@@ -8854,6 +8822,7 @@ function computeAdminHome({ students, leads, now = new Date() }) {
 
 // ===== Kobalt: bosh sahifa qahramon kartalari (barcha rollar uchun umumiy) =====
 const _kbxMln = n => String(Math.round((Number(n) || 0) / 1e5) / 10).replace('.', ',');
+const _kbxNum = n => String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 function kbxPlanCard(o) {
     const art = o.art ? `<div class="kbx-gift"><img src="${o.art.img}" alt="" width="92" height="82" loading="lazy">
         <div><span>${escapeHtml(o.art.label)}</span><b>${escapeHtml(o.art.value)}</b>${o.art.small ? `<small>${escapeHtml(o.art.small)}</small>` : ''}</div></div>` : '';
@@ -9354,11 +9323,10 @@ function teacherHomeStats(user, now = new Date()) {
     const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     const day = now.getDate();
     const nowMin = now.getHours() * 60 + now.getMinutes();
-    const all = getItem(STORAGE_KEYS.students, []).filter(s => !s.frozen && !s.isStaffDemo);
+    const all = getItem(STORAGE_KEYS.students, []).filter(s => !s.frozen && !s.isStaffDemo && s.status !== 'inactive');
     const students = all.filter(s => ids.has(String(s.teacherId || '')));
     const helped = all.filter(s => ids.has(String(s.assistantTeacherId || '')));
     const att = getItem(STORAGE_KEYS.mainAttendance, {});
-    const asAtt = getItem(STORAGE_KEYS.assistantAttendance, {});
     const present = (sid, d) => [...ids].some(tid => att[`${month}_${tid}`]?.[sid]?.[d] === 1);
     const toMin = t => { const [h, m] = String(t || '').split(':').map(Number); return Number.isFinite(h) ? h * 60 + (m || 0) : null; };
     const today = students.filter(s => s.lessonDayOfWeek != null && s.lessonTime && expandLessonPatternDays(s.lessonDayOfWeek).includes(dow));
@@ -9374,7 +9342,6 @@ function teacherHomeStats(user, now = new Date()) {
     const own = typeof resolveTeacherWithVirtual === 'function' ? resolveTeacherWithVirtual(user.linkedTeacherId) : null;
     const kpi = (teacher, store, list) => { try { return teacher && list.length ? calculateKpiSalary(teacher, month, store, list) : null; } catch (e) { return null; } };
     const mainKpi = own && own.type !== 'yordamchi' ? kpi(own, att, students) : null;
-    const asKpi = own ? kpi({ ...own, type: 'yordamchi' }, asAtt, helped) : null;
     const todayList = today.map(s => {
         const start = toMin(s.lessonTime), dur = Number(s.lessonDuration) || 15;
         return { name: s.name || "Oʻquvchi", group: s.group || '', time: s.lessonTime, start, dur, marked: present(s.id, day),
@@ -9385,7 +9352,8 @@ function teacherHomeStats(user, now = new Date()) {
         todayCount: today.length, unmarked, students: students.length, helped: helped.length, came,
         attExpected, attPct, attMissed,
         rating: ratings.length ? ratings.reduce((a, b) => a + b, 0) / ratings.length : null, ratingN: ratings.length,
-        salary: (mainKpi?.total || 0) + (asKpi?.total || 0), mainSalary: mainKpi?.total || 0, asSalary: asKpi?.total || 0, hasSalary: !!(mainKpi || asKpi)
+        // Yordamchi qismi keyin schoolTeacher.homeExtras orqali aloqalar hisobidan qo'shiladi.
+        salary: mainKpi?.total || 0, mainSalary: mainKpi?.total || 0, hasSalary: !!(mainKpi || helped.length)
     };
 }
 
@@ -9433,8 +9401,8 @@ function renderTeacherHome(user, now = new Date()) {
             const plan = kbxPlanCard({
                 id: 'kbxThPlan', title: `Hisoblangan maosh · ${month}`,
                 pill: s.attPct != null ? (s.attPct >= 90 ? { cls: 'ok', text: `Davomat ${s.attPct}%` } : { cls: 'warn', text: `Davomat ${s.attPct}%` }) : null,
-                big: s.hasSalary ? `${_kbxMln(s.salary)} mln` : '—', of: s.hasSalary ? 'soʻm · taxminiy' : 'KPI sozlanmagan',
-                sub: s.hasSalary ? (s.asSalary ? `asosiy ${escapeHtml(formatMoney(s.mainSalary))} + yordamchi ${escapeHtml(formatMoney(s.asSalary))}` : 'tasdiqlangan davomat boʻyicha hisoblanadi') : 'Administrator KPI sozlamasini kiritganda chiqadi',
+                big: s.hasSalary ? `<bdi data-thx-sal data-main="${Math.round(s.mainSalary)}">${_kbxNum(s.salary)}</bdi>` : '—', of: s.hasSalary ? 'soʻm · hozirgacha' : 'KPI sozlanmagan',
+                sub: s.hasSalary ? `<span data-thx-salsub>${s.helped ? `asosiy ${_kbxNum(s.mainSalary)} + yordamchi …` : 'belgilangan davomat boʻyicha'} · oy yopilganda Moliya tasdiqlaydi</span>` : 'Administrator KPI sozlamasini kiritganda chiqadi',
                 bar: s.attPct != null ? { pct: s.attPct, due: null, ok: s.attPct >= 90, label: `Davomat ${s.attPct}%` } : null,
                 foot: s.attPct != null ? [`<strong>${s.came}</strong> keldi · <strong>${s.attMissed}</strong> kelmadi`, `kutilgan ${s.attExpected} dars`] : null,
                 tiles: [
@@ -9458,6 +9426,7 @@ function renderTeacherHome(user, now = new Date()) {
         })()}
         <div class="thx-grid"><div class="thx-main">${renderTeacherTodayBlock(user)}</div>
         <aside class="thx-side">
+            <section class="card ahx-card thx-assist" data-thx-assist hidden></section>
             <section class="card ahx-card rd-thx-rank-card" data-thx-rating-card><div class="ahx-card-h"><h3>Ustozlar reytingi</h3></div><p class="dashboard-empty">Yuklanmoqda…</p></section>
             <section class="card ahx-card thx-guides"><div class="ahx-card-h"><h3>Yoʻriqnomalar</h3><button type="button" class="ahx-link" data-thx-guides>Barchasi →</button></div>
             ${(() => {
@@ -9503,6 +9472,7 @@ function renderDashboardOverview(args) {
         container.querySelectorAll('[data-thx-guide]').forEach(btn => btn.addEventListener('click', () => { switchTab('guides'); setTimeout(() => { try { openMyGuideArticle(btn.dataset.thxGuide); } catch (e) { /* ro'yxat ochiq qoladi */ } }, 50); }));
         bindTeacherHomeToday(container, currentUser);
         _loadTeacherHomeRating(container);
+        window.schoolTeacher?.homeExtras?.(container, currentUser);
         return;
     }
     if (currentUser?.role === 'rop') {

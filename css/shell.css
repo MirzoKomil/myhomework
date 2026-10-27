@@ -1678,13 +1678,14 @@ html.rd .thx-grid {
 }
 
 html.rd .thx-main #dashboardTeacherToday {
-    grid-template-columns: minmax(0, 1fr);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
     margin: 0;
 }
 
-/* "Shu oy" paneli yuqoridagi ko'rsatkichlarda bor — takrorlanmaydi */
-html.rd .thx-main #dashboardTeacherToday > section:last-child:not(:first-child) {
-    display: none;
+html.rd .thx-main #dashboardTeacherToday > .card {
+    margin: 0;
 }
 
 @media (max-width: 1100px) {

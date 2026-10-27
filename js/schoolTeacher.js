@@ -127,5 +127,93 @@
         draw();
     }
 
-    window.schoolTeacher = { renderContacts, contactsBlock, openInactive, renderAvatarPicker };
+    // ── Ustoz bosh sahifasi: "Bajarish kerak", bugungi sinovlar, yordamchi ustozlik (aloqalar) ──
+    // renderTeacherHome sinxron chiziladi; bu yerda serverdan kelgan qismlar keyin qo'shiladi.
+    // Ustozga to'lov/tarif summalari ko'rsatilmaydi — faqat o'z maoshi.
+    const num = n => String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    async function homeExtras(container, user) {
+        const u = U(); if (!u || !container) return;
+        const { api, esc, today, wd, weekStart, DAY } = u;
+        const tid = user?.linkedTeacherId; if (!tid) return;
+        const td = today();
+        const all = getItem(STORAGE_KEYS.students, []).filter(s => !s.isStaffDemo && s.status !== 'inactive');
+        const helped = all.filter(s => String(s.assistantTeacherId || '') === String(tid));
+        const [rep, trials, makeups] = await Promise.all([
+            helped.length ? api(`/assist/month?month=${td.slice(0, 7)}`).catch(() => null) : null,
+            (typeof apiFetchTeacherTrialLessons === 'function' ? apiFetchTeacherTrialLessons() : Promise.resolve({ lessons: [] })).catch(() => ({ lessons: [] })),
+            api('/makeups').catch(() => ({ makeups: [] }))
+        ]);
+        if (!container.isConnected) return;
+        const reviewing = (makeups.makeups || []).filter(m => m.status === 'review').length;
+
+        // Maosh: asosiy (KPI) + yordamchi (aloqalar × 3 846).
+        const sal = container.querySelector('[data-thx-sal]'), sub = container.querySelector('[data-thx-salsub]');
+        if (sal) {
+            const main = Number(sal.dataset.main) || 0, extra = rep?.amount || 0;
+            sal.textContent = num(main + extra);
+            if (sub) sub.innerHTML = `${helped.length ? `asosiy ${num(main)} + yordamchi ${rep ? num(extra) : '—'} · ` : ''}${reviewing ? `<b>+${reviewing} qoplash tekshiruvda</b> (admin tasdiqlasa qo'shiladi) · ` : ''}oy yopilganda Moliya tasdiqlaydi`;
+        }
+
+        // Bugungi sinov darslari — bugungi ro'yxatga qo'shiladi.
+        const lessons = (trials.lessons || []).filter(l => l.trialRequest);
+        const at = l => new Date(l.trialRequest.scheduledAt);
+        const localDate = d => new Date(d.getTime() + 5 * 3600000).toISOString().slice(0, 10);
+        const hhmm = d => new Date(d.getTime() + 5 * 3600000).toISOString().slice(11, 16);
+        const list = container.querySelector('[data-thx-today]');
+        const todayTrials = lessons.filter(l => Number.isFinite(at(l).getTime()) && localDate(at(l)) === td && ['pending', 'accepted'].includes(l.trialRequest.state));
+        if (list && todayTrials.length) {
+            const rows = [...list.children];
+            for (const l of todayTrials) {
+                const t = hhmm(at(l)), past = at(l).getTime() < Date.now();
+                const li = document.createElement('li');
+                li.className = `tch-row tch-row--${past ? 'warn' : 'wait'}`;
+                li.innerHTML = `<b class="tch-time">${esc(t)}</b><div style="display:flex;flex-direction:column;gap:2px;min-width:0;flex:1"><strong>${esc(l.name || 'Lid')}</strong>
+                    <span class="mot-prize-note">sinov darsi · ${l.trialRequest.state === 'pending' ? 'tasdiqlanmagan' : past ? 'natija kutilmoqda' : 'tasdiqlangan'}</span></div>
+                    <div class="tch-row-actions"><button type="button" class="tch-row-btn" data-thx-trials>${l.trialRequest.state === 'pending' ? 'Tasdiqlash' : past ? 'Natijani yozish' : 'Ochish'}</button></div>`;
+                const before = rows.find(r => (r.querySelector('.tch-time')?.textContent || '99') > t);
+                list.insertBefore(li, before || null);
+            }
+            container.querySelector('[data-thx-today-empty]')?.remove();
+            const cnt = container.querySelector('[data-thx-today-count]');
+            if (cnt) cnt.insertAdjacentText('beforeend', ` · +${todayTrials.length} sinov`);
+        }
+
+        // Bajarish kerak — har biri maosh yoki o'quvchi natijasiga ta'sir qiladi.
+        const todo = [];
+        container.querySelectorAll('.tch-row--warn [data-thx-mark="1"]').forEach(b => {
+            const row = b.closest('.tch-row');
+            todo.push({ t: `${row.querySelector('strong')?.textContent || ''} · ${row.querySelector('.tch-time')?.textContent || ''} darsi belgilanmagan`, s: 'Belgilanmagan dars maoshga o\'tmaydi', btn: 'Belgilash', go: 'teachers-section' });
+        });
+        for (const l of lessons) {
+            const d = at(l); if (!Number.isFinite(d.getTime())) continue;
+            const when = `${localDate(d) === td ? 'bugun' : u.fmtDate(localDate(d), false)} ${hhmm(d)}`;
+            if (l.trialRequest.state === 'pending') todo.push({ t: `${l.name || 'Lid'} · ${when} sinov darsi`, s: 'Tasdiqlamaguningizcha lidga vaqt yuborilmaydi', btn: 'Tasdiqlash', go: 'trial-lessons' });
+            else if (l.trialRequest.state === 'accepted' && d.getTime() < Date.now()) todo.push({ t: `${l.name || 'Lid'} · sinov darsi natijasi`, s: `${when} o'tdi · natija sotuv menejeriga boradi`, btn: 'Natijani yozish', go: 'trial-lessons' });
+        }
+        const box = container.querySelector('[data-thx-todo]');
+        if (box) {
+            box.innerHTML = todo.length ? `<section class="card dashboard-panel thx-todo"><div class="dashboard-panel-head"><h3>Bajarish kerak · ${todo.length}</h3><span>Har biri maoshingiz yoki o'quvchi natijasiga ta'sir qiladi</span></div>
+                <ul>${todo.map((x, i) => `<li><div><b>${esc(x.t)}</b><small>${esc(x.s)}</small></div><button type="button" class="sc-btn sc-btn--sm${i ? '' : ' sc-btn--pri'}" data-go="${x.go}">${esc(x.btn)}</button></li>`).join('')}</ul></section>` : '';
+            box.querySelectorAll('[data-go]').forEach(b => b.onclick = () => switchTab(b.dataset.go));
+        }
+        container.querySelectorAll('[data-thx-trials]').forEach(b => b.onclick = () => switchTab('trial-lessons'));
+
+        // Yordamchi ustozlik — aloqalar soni (oyiga 13 tagacha).
+        const as = container.querySelector('[data-thx-assist]');
+        if (as && helped.length && rep) {
+            const by = new Map((rep.students || []).map(s => [s.studentId, s]));
+            const ws = weekStart(td);
+            const adv = s => ([1, 3, 5].includes(Number(s.lessonDayOfWeek)) ? [2, 4, 6] : [1, 3, 5]);
+            as.hidden = false;
+            as.innerHTML = `<div class="ahx-card-h"><h3>Yordamchi ustozlik</h3><button type="button" class="ahx-link" data-go-contacts>Aloqalar →</button></div>
+                <p class="sc-mt">oyiga 13 tagacha · haftasiga 3 ta</p>
+                ${helped.map(s => { const r = by.get(s.id) || { counted: 0, items: [] }; const wk = (r.items || []).filter(i => i.day >= ws && i.status === 'counted').length;
+                    return `<div class="thx-as-row"><div><b>${esc(s.name)}</b><small>tavsiya ${adv(s).map(d => DAY[d - 1]).join('·')}${s.lessonTime ? ' ' + esc(s.lessonTime) : ''} · asosiy ustoz ${esc(u.teacherName(s.teacherId, true))}${s.frozen ? ' · muzlatilgan' : ''}</small>
+                      <i class="thx-as-bar"><i style="width:${Math.min(100, r.counted / 13 * 100)}%"></i></i></div><span><em><b>${r.counted}</b> / 13</em><small>bu hafta ${wk}/3</small></span></div>`; }).join('')}
+                <p class="mot-prize-note">Har bir aloqa ${num(rep.rate || 3846)} so'm · kamida 5 daqiqa · usul va daqiqa kiritiladi.</p>`;
+            as.querySelector('[data-go-contacts]').onclick = () => switchTab('school-contacts');
+        }
+    }
+
+    window.schoolTeacher = { renderContacts, contactsBlock, openInactive, renderAvatarPicker, markDrawer, homeExtras };
 })();
