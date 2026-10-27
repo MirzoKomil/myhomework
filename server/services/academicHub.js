@@ -163,7 +163,7 @@ async function accessibleStudents(pool, access, lang) {
 
 // Sotuv menejeri uchun (o'zi sotgan o'quvchilar, /api/school/sold-students): faqat ilovadagi dars va bayroqlar.
 // Ruxsatni chaqiruvchi tekshiradi; bu yerda faqat berilgan id'lar bo'yicha hisob.
-async function progressForIds(pool, ids) {
+async function progressForIds(pool, ids, { perLesson = false } = {}) {
     if (!ids.length) return {};
     const { rows } = await pool.query(`SELECT s.id, s.name, s.group_name, s.subject, s.teacher_id, s.assistant_teacher_id, s.lesson_duration,
         s.lesson_day_of_week, s.lesson_time, COALESCE(s.extra_data,'{}'::jsonb) AS extra FROM students s WHERE s.id = ANY($1::text[])`, [ids]);
@@ -176,7 +176,9 @@ async function progressForIds(pool, ids) {
     const partsBy = groupBy(parts), timeBy = groupBy(timeRows);
     return Object.fromEntries(students.map(st => {
         const x = summarizeStudent(st, mc, progress[st.id] || {}, partsBy[st.id] || [], timeBy[st.id] || [], totals[st.id], lastSeen[st.id]);
-        return [st.id, { reached: x.reached, firstTryAvg: x.firstTryAvg, daysIdle: x.daysIdle, flags: x.flags }];
+        const base = { reached: x.reached, firstTryAvg: x.firstTryAvg, daysIdle: x.daysIdle, flags: x.flags };
+        return [st.id, perLesson ? { ...base, completed: x.completed, avgPercent: x.avgPercent, homeworkAvg: x.homeworkAvg, avgAttempts: x.avgAttempts, mistakes: x.mistakes,
+            expected: x.expected, time: x.time, activeDays7: x.activeDays7, lastActive: x.lastActive, perLesson: (x.perLesson || []).map(l => ({ no: l.no, percent: l.percent, started: l.started })) } : base];
     }));
 }
 

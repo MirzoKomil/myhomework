@@ -130,6 +130,9 @@
         box.querySelector('.sc-dh .sc-mt')?.remove();
         box.querySelector('.sc-dh > div').insertAdjacentHTML('beforeend', `<p class="sc-mt sc-row">${statusPill(card)} ${tgPill(card.group)}</p>`);
         const tabs = [['umumiy', 'Umumiy']];
+        const money = card.scope === 'full' || card.scope === 'sales';
+        if (card.scope !== 'past') tabs.push(['davomat', 'Davomat va aloqalar'], ['oz', 'O\'zlashtirish']);
+        if (money) tabs.push(['tolov', 'To\'lovlar'], ['sotuv', 'Sotuv tarixi']);
         if (canEdit) tabs.push(['tahrir', 'Tahrirlash']);
         if (canAct) tabs.push(['holat', 'Holatni o\'zgartirish']);
         if (card.history) tabs.push(['tarix', 'O\'zgarishlar tarixi']);
@@ -143,6 +146,10 @@
             else if (k === 'tahrir') editForm(box, body, card);
             else if (k === 'holat') statusForm(box, body, card);
             else if (k === 'tarix') body.innerHTML = historyList(card);
+            else if (k === 'davomat') attendanceTab(body, card);
+            else if (k === 'oz') progressTab(body, card);
+            else if (k === 'tolov') paymentsTab(body, card);
+            else if (k === 'sotuv') salesTab(body, card);
         };
         db.querySelectorAll('.sc-tab').forEach(b => b.onclick = () => show(b.dataset.tab));
         show(tabs.some(t => t[0] === tab) ? tab : 'umumiy');
@@ -169,6 +176,69 @@
           ${(c.requests || []).filter(r => r.status === 'pending').map(r => `<div class="sc-note sc-note--warn">So'rov №${esc(r.number)} (${esc(REQ_KIND[r.kind])}) — admin yoki ROP tasdig'ini kutmoqda</div>`).join('')}`;
     }
     const REQ_KIND = { tariff: 'tarif', teacher: 'ustoz', payment: 'to\'lov' };
+
+    // ── Davomat va aloqalar: oy kalendari (asosiy ustoz) + yordamchi aloqalari ──
+    async function attendanceTab(body, c, month = today().slice(0, 7)) {
+        body.innerHTML = '<div class="sc-skel"></div>';
+        let r; try { r = await api(`/students/${encodeURIComponent(c.id)}/attendance?month=${month}`); } catch (e) { body.innerHTML = `<div class="sc-err">${esc(e.message)}</div>`; return; }
+        const [y, m] = month.split('-').map(Number), last = new Date(Date.UTC(y, m, 0)).getUTCDate();
+        const lead = (new Date(Date.UTC(y, m - 1, 1)).getUTCDay() + 6) % 7;
+        const lessonSet = new Set(r.lessonDays), td = today();
+        const mkOn = d => r.makeups.find(x => x.held === d && x.status !== 'rejected');
+        const cells = Array(lead).fill('<span></span>').concat(Array.from({ length: last }, (_, i) => {
+            const day = i + 1, date = `${month}-${String(day).padStart(2, '0')}`, e = r.entries[day], mk = mkOn(date);
+            const cls = e ? (e.present ? 'p' : 'a') : mk ? 'q' : lessonSet.has(date) ? (date < td ? 'u' : 'l') : 'o';
+            return `<span class="sca-d sca-${cls}${mk?.status === 'review' ? ' is-review' : ''}" title="${esc(date)}">${day}<i>${e ? (e.present ? (mk?.kind === 'double' ? '×2' : '✓') : '−') : mk ? (mk.kind === 'double' ? '×2' : 'Q') : ''}</i></span>`;
+        }));
+        const vals = Object.values(r.entries);
+        const passed = r.lessonDays.filter(d => d <= td).length;
+        body.innerHTML = `<div class="sc-row sc-wrap"><input type="month" value="${month}" max="${td.slice(0, 7)}" data-m aria-label="Oy"><span class="sc-mt">${vals.filter(v => v.present).length} keldi · ${vals.filter(v => !v.present).length} kelmadi · ${r.makeups.filter(x => x.status === 'approved').length} qoplandi${r.makeups.some(x => x.status === 'review') ? ` · ${r.makeups.filter(x => x.status === 'review').length} tekshiruvda` : ''} · reja ${r.lessonDays.length} (o'tgan ${passed})</span></div>
+          <section class="sc-card sc-pad sc-mtop"><h3>Asosiy ustoz davomati · ${esc(teacherName(c.teacherId))}</h3><div class="sca-cal">${DAY.map(d => `<b>${d}</b>`).join('')}${cells.join('')}</div>
+            <p class="sc-mt sca-leg"><span class="sca-d sca-p">✓</span> keldi <span class="sca-d sca-a">−</span> kelmadi <span class="sca-d sca-l"></span> dars kuni <span class="sca-d sca-u"></span> belgilanmagan <span class="sca-d sca-q">Q</span> qoplash</p></section>
+          ${c.assistantId ? '<section class="sc-card sc-pad sc-mtop" data-contacts><div class="sc-skel" style="height:60px"></div></section>' : ''}`;
+        body.querySelector('[data-m]').onchange = e => attendanceTab(body, c, e.target.value);
+        const cb = body.querySelector('[data-contacts]'); if (cb && window.schoolTeacher) window.schoolTeacher.contactsBlock(c.id, cb);
+    }
+    // ── O'zlashtirish: ilovadagi natija (faqat o'qish) ──
+    async function progressTab(body, c) {
+        body.innerHTML = '<div class="sc-skel"></div>';
+        let p; try { p = (await api(`/students/${encodeURIComponent(c.id)}/progress`)).progress; } catch (e) { body.innerHTML = `<div class="sc-err">${esc(e.message)}</div>`; return; }
+        if (!p) { body.innerHTML = '<p class="sc-mt">Ilova ma\'lumoti hali yo\'q</p>'; return; }
+        const min = sec => Math.round((sec || 0) / 60);
+        body.innerHTML = `${(p.flags || []).length ? `<div class="sc-row sc-wrap">${p.flags.map(f => `<span class="sc-pill sc-pill--warn">${esc(f.label || f)}</span>`).join('')}</div>` : '<div class="sc-note">Rejada — e\'tibor talab qiladigan holat yo\'q</div>'}
+          <div class="sc-kpis sc-mtop"><div class="sc-kpi"><small>Erishgan dars</small><b>${p.reached} / 72</b><span>${p.expected ? p.expected + '-dars bo\'lishi kerak' : ''}</span></div>
+            <div class="sc-kpi"><small>1-urinish</small><b>${p.firstTryAvg != null ? p.firstTryAvg + '%' : '—'}</b><span>uy vazifasi, o'rtacha</span></div>
+            <div class="sc-kpi"><small>Faol vaqt · 7 kun</small><b>${min(p.time?.week)} daq</b><span>${p.activeDays7 || 0} kun faol</span></div>
+            <div class="sc-kpi"><small>Oxirgi faollik</small><b class="sc-small">${p.lastActive ? esc(fmtDate(String(p.lastActive).slice(0, 10))) : '—'}</b><span>${p.daysIdle != null ? p.daysIdle + ' kun oldin' : ''}</span></div></div>
+          <section class="sc-card sc-pad sc-mtop"><h3>Kurs yo'li · 72 dars</h3><div class="scp-path">${(p.perLesson || []).map(l => `<span class="scp-l${l.no % 2 === 0 ? ' is-live' : ''}${l.no % 12 === 0 ? ' is-exam' : ''}" style="--p:${Math.min(100, l.percent || 0)}" title="${l.no}-dars · ${l.percent || 0}%">${l.no}</span>`).join('')}</div>
+            <p class="sc-mt">Juft raqamli darslar — jonli; har 12-dars — imtihon. Rang — uy vazifasi bajarilishi.</p></section>
+          <p class="sc-mt">Faqat ko'rish uchun · ma'lumot o'quvchi ilovasidan.</p>`;
+    }
+    // ── To'lovlar (admin, ROP, sotuv) ──
+    async function paymentsTab(body, c) {
+        body.innerHTML = '<div class="sc-skel"></div>';
+        let r; try { r = await api(`/students/${encodeURIComponent(c.id)}/payments`); } catch (e) { body.innerHTML = `<div class="sc-err">${esc(e.message)}</div>`; return; }
+        const M = { card: 'Karta', uzum: 'Uzum', paylater: 'Bo\'lib to\'lash', bank: 'Bank', payme: 'Payme', click: 'Click', cash: 'Naqd', unknown: '—' };
+        const live = r.payments.filter(x => !x.voided), total = live.reduce((n, x) => n + x.amount, 0);
+        body.innerHTML = `<div class="sc-kpis"><div class="sc-kpi"><small>Tarif</small><b class="sc-small">${esc(r.tariff || '—')}</b><span>${r.monthlyPrice ? esc(formatMoney(r.monthlyPrice)) + '/oy' : ''}</span></div>
+            <div class="sc-kpi"><small>Jami to'langan</small><b>${esc(formatMoney(total))}</b><span>${live.length} to'lov</span></div>
+            <div class="sc-kpi${Number(r.debtAmount) > 0 ? ' sc-kpi--bad' : ''}"><small>Qarz</small><b>${r.debtAmount != null ? esc(formatMoney(r.debtAmount)) : '—'}</b></div>
+            <div class="sc-kpi"><small>Keyingi to'lov</small><b class="sc-small">${r.paymentDueDate ? esc(fmtDate(String(r.paymentDueDate).slice(0, 10), false)) : '—'}</b></div></div>
+          <section class="sc-card sc-mtop"><table class="sc-table"><thead><tr><th>Sana</th><th class="r">Summa</th><th>Usul</th><th>Menejer</th><th></th></tr></thead><tbody>
+            ${r.payments.map(x => `<tr${x.voided ? ' class="sc-mt"' : ''}><td>${esc(fmtDate(x.date, false))}</td><td class="r">${x.voided ? '<s>' : '<b>'}${esc(formatMoney(x.amount))}${x.voided ? '</s>' : '</b>'}</td><td>${esc(M[x.method] || x.method)}${x.form === 'partial' ? ' · qisman' : ''}</td><td>${esc(x.manager || '—')}</td><td>${x.voided ? '<span class="sc-pill sc-pill--mute">bekor qilingan</span>' : ''}</td></tr>`).join('') || '<tr><td colspan="5" class="sc-mt">To\'lov yozuvi topilmadi</td></tr>'}
+          </tbody></table></section><p class="sc-mt">To'lovni o'zgartirish — Moliya bo'limida (tasdiq va dalil bilan).</p>`;
+    }
+    // ── Sotuv tarixi (admin, ROP, sotuv) ──
+    async function salesTab(body, c) {
+        body.innerHTML = '<div class="sc-skel"></div>';
+        let r; try { r = await api(`/students/${encodeURIComponent(c.id)}/sales`); } catch (e) { body.innerHTML = `<div class="sc-err">${esc(e.message)}</div>`; return; }
+        const L = r.lead;
+        if (!L) { body.innerHTML = '<p class="sc-mt">Bu o\'quvchi lidga bog\'lanmagan (eski yoki qo\'lda qo\'shilgan yozuv)</p>'; return; }
+        const d = v => v ? esc(fmtDate(String(v).slice(0, 10), false)) : '—';
+        body.innerHTML = `<dl class="sc-kv"><dt>Manba</dt><dd>${esc(L.source || '—')}</dd><dt>Menejer</dt><dd>${esc(L.saleManager || L.manager || '—')}</dd>
+            <dt>Lid kelgan</dt><dd>${d(L.createdAt)}</dd><dt>Sinov darsi</dt><dd>${d(L.trialLessonAt)}</dd><dt>To'lov yopildi</dt><dd>${d(L.closedDate)}</dd></dl>
+          <section class="sc-card sc-pad sc-mtop"><h3>Lid izohlari va bosqichlar</h3><ul class="sc-hist">${L.comments.map(x => `<li><b>${d(x.at)}</b> · ${esc(x.author || '')}<br><span class="sc-pre">${esc(x.text)}</span></li>`).join('') || '<li class="sc-mt">Izoh yo\'q</li>'}</ul></section>`;
+    }
 
     function editForm(box, body, c) {
         const sales = role() === 'sales_manager';
