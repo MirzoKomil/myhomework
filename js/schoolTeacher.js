@@ -403,5 +403,49 @@
         container.querySelectorAll('[data-go-contacts]').forEach(b => b.onclick = () => { switchTab('school-contacts'); setTimeout(() => { const r = document.getElementById('schoolContactsRoot') || document.querySelector('#tab-school-contacts .sc-root'); if (r && b.dataset.goContacts !== month) { r.dataset.month = b.dataset.goContacts; renderContacts(r); } }, 60); });
     }
 
-    window.schoolTeacher = { renderContacts, contactsBlock, openInactive, renderAvatarPicker, markDrawer, homeExtras, renderMyStudents, assistantHome };
+    // ── Sotuv menejeri: "O'quvchilar" (SotuvOquvchilar) — o'zi sotganlar, ustoz davomati va yordamchi aloqalari ──
+    let soldState = { tab: 'all', sel: '' };
+    async function renderSoldStudents(root) {
+        const { api, esc, fmtDate, pattern, studentAvatar } = U();
+        if (!root.dataset.loaded) root.innerHTML = '<div class="sc-skel"></div>';
+        const r = await api('/sold-students');
+        root.dataset.loaded = '1';
+        const MON = ['yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun', 'iyul', 'avgust', 'sentyabr', 'oktyabr', 'noyabr', 'dekabr'];
+        const mName = MON[Number(r.month.slice(5)) - 1];
+        const short = n => { const p = String(n || '').trim().split(/\s+/); return p[0] ? p[0] + (p[1] ? ' ' + p[1][0] + '.' : '') : '—'; };
+        const local = new Map(getItem(STORAGE_KEYS.students, []).map(s => [s.id, s]));
+        const attention = x => x.lessons.absent >= 3 || (x.contacts && x.contacts.noAnswer >= 2) || (x.app?.flags || []).some(f => f === 'idle' || f === 'struggling');
+        const status = x => x.state === 'frozen' ? ['Muzlatilgan', 'sc-pill--info'] : x.lessons.absent >= 3 ? ['Ko\'p kelmayapti', 'sc-pill--bad']
+            : (x.app?.flags || []).includes('struggling') ? ['Qiynalyapti', 'sc-pill--warn'] : (x.app?.flags || []).includes('idle') ? ['Ilovaga kirmayapti', 'sc-pill--warn']
+            : attention(x) ? ['E\'tibor kerak', 'sc-pill--warn'] : ['Yaxshi', 'sc-pill--ok'];
+        const list = r.students.filter(x => soldState.tab === 'all' || attention(x));
+        if (!list.some(x => x.id === soldState.sel)) soldState.sel = (list.find(attention) || list[0])?.id || '';
+        const sel = r.students.find(x => x.id === soldState.sel);
+        const lastTxt = l => !l ? '—' : `${fmtDate(l.day)} · ${l.status === 'counted' ? '✓' : l.status === 'no_answer' ? '✕ javob bermadi' : 'hisoblanmadi'}`;
+        const detail = !sel ? '<p class="sc-mt">O\'quvchini tanlang</p>' : `
+            <h3>${esc(sel.name)} · asosiy darslar</h3><p class="sc-mt">${esc(short(sel.teacherName))} · ${esc(pattern(sel.schedule.day))} ${esc(sel.schedule.time || '')}</p>
+            <div class="ms-kpis"><div><small>Keldi</small><b>${sel.lessons.present}</b></div><div><small>Kelmadi</small><b class="${sel.lessons.absent >= 3 ? 'duty-bad' : ''}">${sel.lessons.absent}</b></div><div><small>Qoplandi</small><b>${sel.lessons.covered}</b></div></div>
+            <p class="sc-mt">Keyingi dars: <b>${sel.lessons.next ? esc(fmtDate(sel.lessons.next.date)) + ' · ' + esc(sel.lessons.next.time || '') : '—'}</b></p>
+            ${sel.contacts ? `<h3 style="margin-top:14px">${esc(sel.name)} · yordamchi aloqalari</h3><p class="sc-mt">${esc(short(sel.assistantName))}</p>
+            <div class="ms-kpis"><div><small>${esc(mName[0].toUpperCase() + mName.slice(1))}</small><b>${sel.contacts.counted} / 13</b></div><div><small>Bu hafta</small><b>${sel.contacts.week} / 3</b></div><div><small>Oxirgi</small><b class="ms-small">${esc(lastTxt(sel.contacts.last))}</b></div></div>` : '<p class="sc-mt">Yordamchi ustoz biriktirilmagan</p>'}
+            ${attention(sel) ? `<div class="sc-note">${sel.lessons.absent >= 3 ? `${esc(mName[0].toUpperCase() + mName.slice(1))}da ${sel.lessons.absent} dars qoldirgan. ` : ''}${sel.contacts?.noAnswer >= 2 ? 'Yordamchi qo\'ng\'irog\'iga javob bermayapti. ' : ''}${(sel.app?.flags || []).includes('idle') ? `Ilovaga ${sel.app.daysIdle ?? ''} kundan beri kirmagan. ` : ''}Ota-onasi bilan gaplashish tavsiya etiladi.</div>` : ''}
+            <button type="button" class="sc-btn sc-btn--pri" data-open-card>O'quvchi kartasini ochish</button>
+            <p class="sc-mt">Faqat o'qish uchun · davomatni ustoz, aloqani yordamchi belgilaydi.</p>`;
+        root.innerHTML = `<div class="sc-head"><div><h1>O'quvchilar</h1><p class="sc-sub">Siz sotgan o'quvchilar · asosiy ustoz davomati va yordamchi aloqalari · ${esc(mName)} · boshqa menejerlar o'quvchilari ko'rinmaydi</p></div>
+            <div class="sc-seg" role="group"><button type="button" data-tab="all" aria-pressed="${soldState.tab === 'all'}">Hammasi ${r.students.length}</button><button type="button" data-tab="att" aria-pressed="${soldState.tab === 'att'}">E'tibor kerak ${r.students.filter(attention).length}</button><button type="button" data-inactive aria-pressed="false">Faol emas</button></div></div>
+          <div class="ms-grid"><section class="sc-card"><table class="sc-table ms-table"><thead><tr><th>O'quvchi</th><th>Asosiy ustoz</th><th>Darslar · o'tgan / reja</th><th>Kelmadi</th><th>Yordamchi</th><th>Aloqalar · oy</th><th>Bu hafta</th><th>Ilovada</th><th>Holat</th></tr></thead><tbody>
+            ${list.map(x => { const st = status(x), ls = local.get(x.id) || { id: x.id };
+              return `<tr class="ms-row${soldState.sel === x.id ? ' is-sel' : ''}" data-ms="${esc(x.id)}" tabindex="0"><td><span class="sc-row">${studentAvatar(ls, 30)}<span><b>${esc(x.name)}</b><small class="sc-mt">${esc(pattern(x.schedule.day))} ${esc(x.schedule.time || '')}</small></span></span></td>
+                <td>${esc(short(x.teacherName))}</td><td><b>${x.lessons.counted}</b><small> / ${x.lessons.plan}</small></td><td>${x.lessons.absent >= 3 ? `<b class="duty-bad">${x.lessons.absent}</b>` : x.lessons.absent}</td>
+                <td>${x.contacts ? esc(short(x.assistantName)) : '—'}</td><td>${x.contacts ? `<b>${x.contacts.counted}</b><small> / 13</small>` : '—'}</td><td>${x.contacts ? `${x.contacts.week} / 3` : '—'}</td>
+                <td>${x.app ? `<b>${x.app.reached}</b><small> / 72</small>` : '—'}</td><td><span class="sc-pill ${st[1]}">${esc(st[0])}</span></td></tr>`; }).join('') || `<tr><td colspan="9" class="sc-mt">${soldState.tab === 'att' ? 'E\'tibor kerak o\'quvchi yo\'q' : 'Siz sotgan faol o\'quvchi yo\'q'}</td></tr>`}
+          </tbody></table></section><aside class="sc-card sc-pad ms-detail">${detail}</aside></div>
+          <p class="sc-mt">Ismni bosing → o'quvchi kartasi (Davomat va aloqalar, O'zlashtirish faqat o'qish uchun)</p>`;
+        root.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { soldState.tab = b.dataset.tab; renderSoldStudents(root); });
+        root.querySelector('[data-inactive]').onclick = () => openInactive();
+        root.querySelectorAll('[data-ms]').forEach(tr => { tr.onclick = () => { soldState.sel = tr.dataset.ms; renderSoldStudents(root); }; tr.onkeydown = e => { if (e.key === 'Enter') tr.click(); }; });
+        root.querySelector('[data-open-card]')?.addEventListener('click', () => U().openStudent(sel.id));
+    }
+
+    window.schoolTeacher = { renderContacts, contactsBlock, openInactive, renderAvatarPicker, markDrawer, homeExtras, renderMyStudents, assistantHome, renderSoldStudents };
 })();

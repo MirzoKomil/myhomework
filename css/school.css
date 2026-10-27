@@ -267,3 +267,5 @@ html.rd .teacher-duty-today .duty-acts { display: flex; align-items: center; gap
 .ya-who { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
 .ya-row .sc-pill { flex: none; }
 @media (max-width: 600px) { .ya-row .sc-pill { display: none; } }
+.ms-kpis .ms-small { font-size: 12.5px; font-weight: 600; }
+.ms-detail h3 { margin: 0; }

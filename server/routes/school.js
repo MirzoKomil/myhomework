@@ -332,6 +332,53 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         return { history: await O.history(pool, req.params.id) };
     }));
     // Faol bo'lmagan (muzlatilgan, chiqib ketgan, boshqa ustozga o'tgan) — o'z davri bilan.
+    // Sotuv menejeri: o'zi sotgan faol o'quvchilar — asosiy ustoz davomati va yordamchi aloqalari (faqat o'qish).
+    // Summalar yo'q. Davomat moliya qoidasida: dars kunidagi "Keldi" + tasdiqlangan qoplash.
+    router.get('/sold-students', handle(async req => {
+        need(req, new Set(['sales_manager', ...MANAGE]));
+        const td = T.nowLocal().date, month = td.slice(0, 7), { from, to } = T.monthBounds(month);
+        const mid = req.user.role === 'sales_manager' ? await managerId(req) : (req.query.managerId || null);
+        if (!mid) return { month, students: [] };
+        const rows = (await pool.query('SELECT * FROM students')).rows.map(r => ({ row: r, st: S.studentRow(r) }))
+            .filter(x => O.soldBy(x.st, mid) && !x.st.legacyInactive && !x.st.isStaffDemo);
+        const ids = rows.map(x => x.row.id);
+        if (!ids.length) return { month, students: [] };
+        const names = new Map((await pool.query(`SELECT id, name FROM hr_employees`)).rows.map(r => [r.id, r.name]));
+        const att = (await pool.query(`SELECT att_key, student_id, day, present FROM main_attendance WHERE student_id = ANY($1::text[]) AND att_key LIKE $2`, [ids, month + '\\_%'])).rows;
+        const mks = (await pool.query(`SELECT student_id, kind, status, TO_CHAR(held_date,'YYYY-MM-DD') AS held, TO_CHAR(missed_date,'YYYY-MM-DD') AS missed FROM school_makeups
+            WHERE student_id = ANY($1::text[]) AND status IN ('planned','review','approved') AND TO_CHAR(missed_date,'YYYY-MM')=$2`, [ids, month])).rows;
+        const contacts = (await pool.query(`SELECT * FROM school_assist_contacts WHERE student_id = ANY($1::text[]) AND day BETWEEN $2 AND $3`, [ids, from, to])).rows;
+        const statuses = (await pool.query('SELECT * FROM school_student_status WHERE student_id = ANY($1::text[]) AND cancelled_at IS NULL', [ids])).rows;
+        let progress = {}; try { progress = await require('../services/academicHub').progressForIds(pool, ids); } catch { progress = {}; }
+        const ws = T.weekStart(td);
+        const out = [];
+        for (const { row, st } of rows) {
+            const state = !statuses.some(x => x.student_id === row.id) && st.legacyFrozen ? 'frozen' : S.statusOn(statuses.filter(x => x.student_id === row.id), td);
+            if (state === 'left') continue;
+            const days = T.patternDays(st.day || 1);
+            const lessonDays = T.dateRange(from, to, 31).filter(d => days.includes(T.weekday(d)));
+            const mine = att.filter(a => a.student_id === row.id && a.att_key.endsWith('_' + (st.teacherId || '')));
+            const dayOf = n => `${month}-${String(n).padStart(2, '0')}`;
+            const present = new Set(mine.filter(a => Number(a.present) === 1).map(a => dayOf(a.day)).filter(d => lessonDays.includes(d)));
+            const absent = mine.filter(a => Number(a.present) === 0).map(a => dayOf(a.day));
+            let counted = present.size;
+            for (const m of mks.filter(m => m.student_id === row.id && m.status === 'approved')) { if (m.kind === 'double') counted++; else if (m.held && !present.has(m.held)) { present.add(m.held); counted++; } }
+            const coveredN = mks.filter(m => m.student_id === row.id && ['review', 'approved', 'planned'].includes(m.status)).length;
+            const passedPlan = lessonDays.filter(d => d <= td).length;
+            const nextDay = lessonDays.find(d => d > td || (d === td && (T.toMin(st.time) ?? 0) > T.nowLocal().min)) || null;
+            const cr = A.countMonth(contacts.filter(c => c.student_id === row.id && c.assistant_id === (row.assistant_teacher_id || '')).map(c => ({ ...c, day: S.dateStr(c.day) })));
+            const ci = cr.students[0]?.items || [];
+            const last = ci[ci.length - 1] || null;
+            const p = progress[row.id] || null;
+            out.push({ id: row.id, name: row.name, state, schedule: { day: st.day, time: st.time, duration: st.duration },
+                teacherId: row.teacher_id || '', teacherName: names.get(row.teacher_id) || '', assistantId: row.assistant_teacher_id || '', assistantName: names.get(row.assistant_teacher_id) || '',
+                lessons: { counted: Math.min(counted, lessonDays.length), plan: lessonDays.length, passedPlan, present: mine.filter(a => Number(a.present) === 1).length, absent: absent.length, covered: coveredN, next: nextDay ? { date: nextDay, time: st.time } : null },
+                contacts: row.assistant_teacher_id ? { counted: cr.counted, week: ci.filter(i => i.day >= ws && i.status === 'counted').length, noAnswer: cr.noAnswer, last: last ? { day: last.day, status: last.status, channel: last.channel } : null } : null,
+                app: p ? { reached: p.reached, firstTryAvg: p.firstTryAvg, daysIdle: p.daysIdle, flags: (p.flags || []).map(f => f.key) } : null });
+        }
+        out.sort((a, b) => a.name.localeCompare(b.name));
+        return { month, students: out };
+    }));
     router.get('/inactive', handle(async req => {
         const today = T.nowLocal().date;
         const rows = (await pool.query('SELECT * FROM students')).rows;
