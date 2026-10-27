@@ -4,7 +4,16 @@
 (function () {
     'use strict';
     const U = () => window.schoolUI;
-    const H0 = 8 * 60, H1 = 21 * 60;
+    // Ko'rinadigan oraliq: odatda 08–21, lekin kechki/erta darslar bo'lsa kengayadi (22:00 dagi dars chetga qisilmasin).
+    let H0 = 8 * 60, H1 = 21 * 60;
+    function fitRange(views) {
+        let lo = 8 * 60, hi = 21 * 60;
+        for (const v of views) for (const x of [...(v.items || []), ...(v.work || [])]) {
+            if (Number.isFinite(x.start)) lo = Math.min(lo, Math.floor(x.start / 60) * 60);
+            if (Number.isFinite(x.end)) hi = Math.max(hi, Math.ceil(x.end / 60) * 60);
+        }
+        H0 = Math.max(0, lo); H1 = Math.min(24 * 60, hi);
+    }
     const KIND = { lesson: 'Dars', trial: 'Sinov', makeup: 'Qoplash', reserved: 'Muzlatilgan · sinovga ochiq', close: 'Yopiq', leave: 'Ta\'til', makeup_only: 'Faqat qoplash' };
     const STATUS = { hold: 'ushlab turilgan', pending: 'ustoz tasdig\'ida', confirmed: 'tasdiqlangan', done: 'o\'tkazildi', no_show: 'kelmadi' };
     const state = { date: null, view: null, teacherId: null, duration: 30, lang: null };
@@ -39,6 +48,7 @@
         return `<div class="ss-track">${work}${free}${items}</div>`;
     }
     function timeline(rows, opts) {
+        fitRange(rows.map(r => r.view));
         const { esc } = U();
         const now = U().nowMin();
         const showNow = rows.some(r => r.view.date === U().today()) && now >= H0 && now <= H1;
