@@ -254,3 +254,40 @@ html.rd .teacher-duty-today .duty-acts { display: flex; align-items: center; gap
 @media (max-width: 700px) { .ms-table th:nth-child(2), .ms-table td:nth-child(2), .ms-table th:nth-child(6), .ms-table td:nth-child(6) { display: none; } .sc-root .sc-head input[type=search] { width: 100%; } }
 .ms-detail > .sc-row > span { display: flex; flex-direction: column; }
 .ms-grid > .sc-card { overflow-x: auto; }
+
+/* Yordamchi bosh sahifasi */
+.ya-prev .ya-big { font-size: 22px; }
+.ya-steps { list-style: none; display: flex; flex-wrap: wrap; gap: 6px 16px; padding: 0; margin: 8px 0; font-size: 13px; color: var(--text-muted, #6B7280); }
+.ya-steps li.ok { color: #0F7A55; font-weight: 700; }
+.ya-rules { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.ya-list { list-style: none; margin: 0; padding: 0; }
+.ya-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--border, #E6EAF2); }
+.ya-row:first-child { border-top: 0; }
+.ya-time { width: 46px; font-size: 14px; flex: none; }
+.ya-who { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.ya-row .sc-pill { flex: none; }
+@media (max-width: 600px) { .ya-row .sc-pill { display: none; } }
+.ms-kpis .ms-small { font-size: 12.5px; font-weight: 600; }
+.ms-detail h3 { margin: 0; }
+
+/* O'quvchi kartasi: Davomat va aloqalar, O'zlashtirish */
+.sc-tabs { overflow-x: auto; scrollbar-width: thin; }
+.sca-cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; max-width: 460px; }
+.sca-cal > b { font-size: 11px; color: var(--text-muted, #6B7280); text-align: center; }
+.sca-d { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; min-height: 40px; border-radius: 8px; border: 1px solid var(--border, #E6EAF2); font-size: 13px; font-weight: 600; }
+.sca-d i { font-style: normal; font-size: 11px; min-height: 12px; }
+.sca-p { background: #DDF8E8; color: #17623D; border-color: #17623D; }
+.sca-a { background: #FDE7E7; color: #982C2C; border-color: #982C2C; }
+.sca-l { background: #E9F3FE; border-color: #0065D6; }
+.sca-u { background: #FFF6E5; border-color: #B54708; border-style: dashed; }
+.sca-q { background: #F4EBFF; color: #6941C6; border-color: #6941C6; }
+.sca-d.is-review { border-style: dashed; }
+.sca-o { opacity: .6; }
+.sca-leg { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.sca-leg .sca-d { min-height: 20px; width: 22px; font-size: 11px; }
+.scp-path { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 4px; }
+.scp-l { position: relative; height: 28px; border-radius: 6px; font-size: 11px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border, #E6EAF2);
+  background: linear-gradient(to top, #C7F0D8 calc(var(--p) * 1%), transparent 0); }
+.scp-l.is-live { border-color: #0065D6; }
+.scp-l.is-exam { font-weight: 800; outline: 2px solid #B54708; outline-offset: -2px; }
+.sc-pre { white-space: pre-wrap; }

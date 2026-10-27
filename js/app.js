@@ -983,6 +983,12 @@ function switchStudentsSection(section) {
     if (langTabs) langTabs.style.display = section === 'faol' ? '' : 'none';
     const addBtn = document.getElementById('addStudentBtn');
     if (addBtn) addBtn.style.display = section === 'faol' ? '' : 'none';
+    // Sotuv menejerining yangi "Faol o'quvchilar" sahifasi boshqa bo'limlarda yashiriladi.
+    const soldRoot = document.getElementById('schoolMyStudents');
+    if (soldRoot && getCurrentUser()?.role === 'sales_manager' && section !== 'faol') {
+        soldRoot.hidden = true;
+        [...(document.getElementById('tab-students')?.children || [])].forEach(el => { if (el !== soldRoot) el.hidden = false; });
+    }
     if (section === 'faol') renderStudents();
     if (section === 'muzlatilgan') renderFrozenStudents();
     if (section === 'qarzdorlar') renderDebtors();
@@ -9342,8 +9348,16 @@ async function _loadTeacherHomeRating(container) {
     }
 }
 
+// Faqat yordamchi ustoz (asosiy o'quvchisi yo'q): YordamchiBosh — schoolTeacher.assistantHome to'ldiradi.
+function _isPureAssistant(user) {
+    const employee = getItem(STORAGE_KEYS.hrEmployees, []).find(e => e.id === user?.linkedTeacherId);
+    const hasMain = getItem(STORAGE_KEYS.students, []).some(s => s.teacherId === user?.linkedTeacherId && !s.isStaffDemo);
+    return !hasMain && (employee?.role === 'yordamchi' || (typeof teacherRoles !== 'undefined' && employee && !teacherRoles.isMain(employee)));
+}
+
 function renderTeacherHome(user, now = new Date()) {
     if (user?.role !== 'teacher' || !user.linkedTeacherId) return '';
+    if (_isPureAssistant(user) && window.schoolTeacher?.assistantHome) return '<div class="ahx thx" id="teacherHome" data-assist-home><div class="sc-skel"></div></div>';
     const s = teacherHomeStats(user, now);
     const hour = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Tashkent', hour: '2-digit', hour12: false }).format(now));
     const greet = hour < 11 ? 'Xayrli tong' : hour < 18 ? 'Xayrli kun' : 'Xayrli kech';
@@ -9423,6 +9437,8 @@ function renderDashboardOverview(args) {
     }
     if (currentUser?.role === 'teacher' && currentUser.linkedTeacherId) {
         container.innerHTML = renderTeacherHome(currentUser);
+        const assistRoot = container.querySelector('[data-assist-home]');
+        if (assistRoot) { window.schoolTeacher.assistantHome(assistRoot, currentUser).catch(e => { assistRoot.innerHTML = `<div class="sc-err">${escapeHtml(e.message || 'Yuklanmadi')}</div>`; }); return; }
         container.querySelectorAll('[data-teacher-open-att]').forEach(btn => btn.addEventListener('click', () => switchTab('teachers-section')));
         container.querySelector('[data-thx-guides]')?.addEventListener('click', () => switchTab('guides'));
         container.querySelectorAll('[data-thx-go]').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.thxGo)));
@@ -10581,12 +10597,23 @@ function renderStudents() {
 
     // Ustoz: yangi "O'quvchilar" sahifasi (UstozOquvchiList) — js/schoolTeacher.js renderMyStudents.
     const tabStudents = document.getElementById('tab-students');
-    if (isTeacherRole && tabStudents && window.schoolTeacher?.renderMyStudents) {
+    // Sotuv menejeri: SotuvOquvchilar — faqat "Faol o'quvchilar" bo'limi almashtiriladi (Qarzdorlar va boshqalar qoladi).
+    const soldMode = isSalesManager && tabStudents && window.schoolTeacher?.renderSoldStudents && (_tabContext.studentsSection || 'faol') === 'faol';
+    if ((isTeacherRole && tabStudents && window.schoolTeacher?.renderMyStudents) || soldMode) {
         let root = document.getElementById('schoolMyStudents');
         if (!root) { root = document.createElement('div'); root.id = 'schoolMyStudents'; root.className = 'sc-root'; tabStudents.prepend(root); }
-        [...tabStudents.children].forEach(el => { if (el !== root) el.hidden = true; });
-        window.schoolTeacher.renderMyStudents(root).catch(err => { root.innerHTML = `<div class="sc-err">${escapeHtml(err.message || 'Yuklanmadi')}</div>`; });
+        root.hidden = false;
+        [...tabStudents.children].forEach(el => { if (el !== root && !(soldMode && el.classList.contains('sales-pinned'))) el.hidden = true; });
+        if (soldMode) tabStudents.querySelectorAll('.sales-pinned .sales-header-lang, .sales-pinned #studentsFiltersBar').forEach(el => { el.hidden = true; });
+        (soldMode ? window.schoolTeacher.renderSoldStudents(root) : window.schoolTeacher.renderMyStudents(root))
+            .catch(err => { root.innerHTML = `<div class="sc-err">${escapeHtml(err.message || 'Yuklanmadi')}</div>`; });
         return;
+    }
+    // Boshqa bo'limga o'tganda yangi sahifa yashiriladi, eski qismlar qaytadi.
+    if (isSalesManager && tabStudents) {
+        document.getElementById('schoolMyStudents')?.setAttribute('hidden', '');
+        [...tabStudents.children].forEach(el => { if (el.id !== 'schoolMyStudents') el.hidden = false; });
+        tabStudents.querySelectorAll('.sales-pinned .sales-header-lang, .sales-pinned #studentsFiltersBar').forEach(el => { el.hidden = false; });
     }
 
     // Nav tugmalarini bir marta bind qilish

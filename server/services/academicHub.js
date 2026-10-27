@@ -161,6 +161,27 @@ async function accessibleStudents(pool, access, lang) {
     })).filter(s => !s.staffDemo && !['inactive', 'archived', 'deleted', 'left'].includes(s.status));
 }
 
+// Sotuv menejeri uchun (o'zi sotgan o'quvchilar, /api/school/sold-students): faqat ilovadagi dars va bayroqlar.
+// Ruxsatni chaqiruvchi tekshiradi; bu yerda faqat berilgan id'lar bo'yicha hisob.
+async function progressForIds(pool, ids, { perLesson = false } = {}) {
+    if (!ids.length) return {};
+    const { rows } = await pool.query(`SELECT s.id, s.name, s.group_name, s.subject, s.teacher_id, s.assistant_teacher_id, s.lesson_duration,
+        s.lesson_day_of_week, s.lesson_time, COALESCE(s.extra_data,'{}'::jsonb) AS extra FROM students s WHERE s.id = ANY($1::text[])`, [ids]);
+    const students = rows.map(r => ({ id: r.id, name: r.name, group: r.group_name || '', subject: r.subject || 'english',
+        teacherId: r.teacher_id || '', assistantTeacherId: r.assistant_teacher_id || '', lessonDuration: Number(r.lesson_duration) || null,
+        lessonDayOfWeek: r.lesson_day_of_week == null ? null : Number(r.lesson_day_of_week), lessonTime: r.lesson_time || '',
+        startDate: r.extra?.startDate || r.extra?.joinDate || '', frozen: r.extra?.frozen === true, platformCourseId: r.extra?.platformCourseId || '' }));
+    const [mc, progress, parts, timeRows, totals, lastSeen] = await Promise.all([
+        loadMobileContent(pool), loadProgress(pool, ids), loadParts(pool, ids), loadTime(pool, ids, 30), loadTotals(pool, ids), loadLastSeen(pool, ids)]);
+    const partsBy = groupBy(parts), timeBy = groupBy(timeRows);
+    return Object.fromEntries(students.map(st => {
+        const x = summarizeStudent(st, mc, progress[st.id] || {}, partsBy[st.id] || [], timeBy[st.id] || [], totals[st.id], lastSeen[st.id]);
+        const base = { reached: x.reached, firstTryAvg: x.firstTryAvg, daysIdle: x.daysIdle, flags: x.flags };
+        return [st.id, perLesson ? { ...base, completed: x.completed, avgPercent: x.avgPercent, homeworkAvg: x.homeworkAvg, avgAttempts: x.avgAttempts, mistakes: x.mistakes,
+            expected: x.expected, time: x.time, activeDays7: x.activeDays7, lastActive: x.lastActive, perLesson: (x.perLesson || []).map(l => ({ no: l.no, percent: l.percent, started: l.started })) } : base];
+    }));
+}
+
 async function assertStudentAccess(pool, access, studentId) {
     const { rows } = await pool.query("SELECT id, COALESCE(subject,'english') AS subject FROM students WHERE id=$1", [studentId]);
     if (!rows[0]) throw error(404, "O'quvchi topilmadi");
@@ -1150,7 +1171,7 @@ async function recordTracking(pool, studentId, body = {}, now = new Date()) {
 module.exports = {
     TOTAL_LESSONS, LESSON_KINDS, COURSE_KINDS, PASS_PERCENT,
     initSchema, resolveAccess, getHub, getLesson, saveMaterial, archiveMaterial, listMaterials,
-    studentsOverview, studentDetail, recordTracking,
+    studentsOverview, studentDetail, recordTracking, progressForIds,
     // test uchun
     buildTeacherPlan, konspektRules, allocateMinutes, expectedLiveLessons, lessonPercent, cleanPageMap, cleanMaterial, expectedLesson, summarizeStudent, mergeMistakes, tzDay,
     _resetCache: () => { ruSourceCache = null; contentCache = { at: 0, mc: null }; trackState.clear(); oralCache = undefined; },
