@@ -4066,7 +4066,7 @@ async function recordTeacherAttendance({ actor, teacherId, studentId, date, pres
         if (selectedType === 'main' && teacher.type === 'yordamchi') throw new Error('Yordamchi ustoz asosiy davomatni o‘zgartira olmaydi');
         const assignmentColumn = selectedType === 'assistant' ? 'assistant_teacher_id' : 'teacher_id';
         const studentResult = await client.query(
-            `SELECT id, subject FROM students WHERE id = $1 AND ${assignmentColumn} = $2 FOR UPDATE`,
+            `SELECT id, subject, extra_data FROM students WHERE id = $1 AND ${assignmentColumn} = $2 FOR UPDATE`,
             [safeStudentId, safeTeacherId]
         );
         const student = studentResult.rows[0];
@@ -4087,24 +4087,30 @@ async function recordTeacherAttendance({ actor, teacherId, studentId, date, pres
         const attendanceKey = `${match[1]}-${match[2]}_${safeTeacherId}`;
 
         if (present) {
-            if (!grade || typeof grade !== 'object' || !grade.lessonId || !grade.scores) {
-                throw new Error("Qatnashuv uchun jonli dars va barcha baholar talab qilinadi");
-            }
-            const criteria = ['attendance', 'activity', 'speaking', 'understanding', 'discipline'];
-            for (const key of criteria) {
-                const score = Number(grade.scores[key]);
-                if (!Number.isInteger(score) || score < 1 || score > 5) {
-                    throw new Error("Barcha baholar 1 dan 5 gacha bo'lishi shart");
-                }
-            }
-
+            // Baho qo'yilmaydi (2026-10-27 qarori). Faqat qaysi jonli dars o'tilgani
+            // saqlanadi — ilovada jonli darsni ochish shunga bog'liq. Ustoz darsni
+            // tanlamasa, o'quvchi hali o'tmagan birinchi jonli dars olinadi.
             const contentResult = await client.query('SELECT data FROM mobile_content WHERE singleton = 1');
             const mobileContent = contentResult.rows[0]?.data || {};
-            const course = (mobileContent.courses || []).find(c => c.id === (mobileContent.lessons || []).find(l => l.id === grade.lessonId)?.courseId);
-            const courseLessons = course ? (mobileContent.lessons || []).filter(l => l.courseId === course.id) : [];
-            const lessonIndex = courseLessons.findIndex(l => l.id === grade.lessonId);
-            if (!course || lessonIndex < 0 || lessonIndex % 2 === 0 || (course.lang || 'english') !== (student.subject || 'english')) {
-                throw new Error("Tanlangan jonli dars o'quvchi faniga tegishli emas");
+            const pick = require('./services/liveLessonPick');
+            let studentExtra = student.extra_data || {};
+            if (typeof studentExtra === 'string') { try { studentExtra = JSON.parse(studentExtra); } catch (_) { studentExtra = {}; } }
+            const studentInfo = { subject: student.subject || 'english', platformCourseId: studentExtra.platformCourseId || '' };
+
+            const gradesResult = await client.query("SELECT data FROM json_data WHERE key = 'liveGrades' FOR UPDATE");
+            const allGrades = gradesResult.rows[0]?.data && typeof gradesResult.rows[0].data === 'object'
+                ? gradesResult.rows[0].data
+                : {};
+            const requestedId = grade && typeof grade === 'object' && grade.lessonId ? String(grade.lessonId) : '';
+            let lesson = null;
+            if (requestedId) {
+                lesson = pick.isLiveLessonOf(mobileContent, studentInfo, requestedId);
+                if (!lesson) throw new Error("Tanlangan jonli dars o'quvchi faniga tegishli emas");
+            } else {
+                const takenIds = (allGrades[safeStudentId] || [])
+                    .filter(item => item && item.lessonId && item.date !== String(date))
+                    .map(item => item.lessonId);
+                lesson = pick.pickNextLiveLesson(mobileContent, studentInfo, takenIds);
             }
 
             await client.query(
@@ -4114,14 +4120,9 @@ async function recordTeacherAttendance({ actor, teacherId, studentId, date, pres
                 [attendanceKey, safeStudentId, day]
             );
 
-            const gradesResult = await client.query("SELECT data FROM json_data WHERE key = 'liveGrades' FOR UPDATE");
-            const allGrades = gradesResult.rows[0]?.data && typeof gradesResult.rows[0].data === 'object'
-                ? gradesResult.rows[0].data
-                : {};
             const entry = {
                 date: String(date), teacherId: safeTeacherId,
-                lessonId: String(grade.lessonId), lessonName: String(grade.lessonName || ''),
-                scores: Object.fromEntries(criteria.map(key => [key, Number(grade.scores[key])]))
+                lessonId: lesson ? lesson.id : '', lessonName: lesson ? lesson.name : ''
             };
             allGrades[safeStudentId] = (allGrades[safeStudentId] || []).filter(item => item.date !== date
                 || (item.teacherId && item.teacherId !== safeTeacherId));
