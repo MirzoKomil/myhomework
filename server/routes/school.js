@@ -236,6 +236,19 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         if (!rows.length) throw T.fail(409, 'Qoplash topilmadi yoki allaqachon belgilangan');
         return { makeup: rows[0] };
     })));
+    // O'tib bo'lingan qoplash darsi (dars kuni bo'lmagan kunda) — darhol tekshiruvga; admin tasdiqlasa maoshga o'tadi.
+    router.post('/makeups/separate', handle(req => write(req, async c => {
+        const me = await teacherOf(req);
+        const st = (await c.query('SELECT teacher_id FROM students WHERE id=$1', [req.body?.studentId])).rows[0];
+        if (!st || st.teacher_id !== me.id) throw T.fail(403, 'Bu o\'quvchi sizniki emas');
+        const missed = T.assertDate(req.body.missedDate), held = T.assertDate(req.body.heldDate);
+        if (missed.slice(0, 7) !== held.slice(0, 7)) throw T.fail(400, 'Qoplash shu oy ichida bo\'ladi');
+        if (held > T.nowLocal().date) throw T.fail(400, 'Qoplash darsi hali o\'tmagan');
+        const { rows } = await c.query(`INSERT INTO school_makeups (id,student_id,teacher_id,missed_date,held_date,kind,status,created_by)
+            VALUES ($1,$2,$3,$4,$5,'separate','review',$6) RETURNING *`, [randomUUID(), req.body.studentId, me.id, missed, held, req.user.id])
+            .catch(e => { if (e.code === '23505') throw T.fail(409, 'Bu dars uchun qoplash allaqachon bor'); throw e; });
+        return { makeup: rows[0] };
+    })));
     router.post('/makeups/double', handle(req => write(req, async c => {
         const me = await teacherOf(req);
         const st = (await c.query('SELECT teacher_id, lesson_duration FROM students WHERE id=$1', [req.body?.studentId])).rows[0];

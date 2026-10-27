@@ -27,7 +27,7 @@
     function loadMakeups(month) {
         if (mk.loading || mk.month === month || !window.schoolUI) return;
         mk.loading = true;
-        window.schoolUI.api('/makeups').then(r => { mk = { month, list: r.makeups || [], loading: false }; render(); })
+        window.schoolUI.api('/makeups').then(r => { mk = { month, list: r.makeups || [], loading: false }; globalThis.__schoolMakeups = mk.list; render(); })
             .catch(() => { mk = { month, list: [], loading: false }; });
     }
     const dkey = v => (v ? String(v).slice(0, 10) : '');
@@ -83,6 +83,19 @@
         const mkOn = (sid, date) => myMk.find(m => m.student_id === sid && dkey(m.held_date) === date);
         const mkFor = sid => myMk.filter(m => m.student_id === sid && dkey(m.held_date).slice(0, 7) === month);
         const coveredMissed = sid => new Set(myMk.filter(m => m.student_id === sid).map(m => dkey(m.missed_date)));
+        // Hisobga o'tgan darslar — moliya bilan bir xil: 2026-11 dan dars kunidagi "Keldi" + tasdiqlangan qoplash.
+        const countedFor = s => {
+            const entries = attendance[s.id] || {};
+            const cells = calendar.cells(month, calendar.weekdays(s, ownTeacher, 'main')).filter(Boolean);
+            const strict = month >= '2026-11';
+            const days = new Set(cells.filter(c => (!strict || c.scheduled) && calendar.status(entries[c.day]) === 'present').map(c => c.day));
+            let n = days.size;
+            if (strict) for (const m of mkFor(s.id).filter(m => m.status === 'approved')) {
+                const d = Number(dkey(m.held_date).slice(8));
+                if (m.kind === 'double') n++; else if (!days.has(d)) { days.add(d); n++; }
+            }
+            return Math.min(n, planFor(s));
+        };
 
         // Bugun (asosiy ustozlik): dars bo'ldimi — Keldi / Kelmadi.
         let todayHtml = '';
@@ -109,11 +122,12 @@
         // Oy ko'rsatkichlari (asosiy ustozlik).
         let kpiHtml = '';
         if (selected === 'main') {
-            const counted = mainStudents.reduce((n, s) => n + Math.min(Object.values(attendance[s.id] || {}).filter(v => calendar.status(v) === 'present').length, planFor(s)), 0);
             const plan = mainStudents.reduce((n, s) => n + planFor(s), 0);
             const expected = mainStudents.reduce((n, s) => n + expectedFor(s), 0);
             const pct = expected ? Math.min(100, Math.round(counted / expected * 100)) : null;
-            let pay = null; try { pay = mainStudents.length ? calculateKpiSalary(ownTeacher, month, getItem(STORAGE_KEYS.mainAttendance, {}), mainStudents)?.total : null; } catch (e) { pay = null; }
+            let kpi = null; try { kpi = mainStudents.length ? calculateKpiSalary(ownTeacher, month, getItem(STORAGE_KEYS.mainAttendance, {}), mainStudents) : null; } catch (e) { kpi = null; }
+            const pay = kpi ? kpi.total : null;
+            const counted = mainStudents.reduce((n, s) => n + countedFor(s), 0);
             const review = myMk.filter(m => m.status === 'review').length;
             const [y, m] = month.split('-').map(Number);
             kpiHtml = `<div class="duty-kpis"><div><small>${MONTHS[m - 1]}</small><b>${month === thisMonth ? todayDay + ' kun o‘tdi' : month < thisMonth ? 'yopilgan oy' : 'kelgusi oy'}</b></div>
@@ -149,10 +163,10 @@
             const present = Object.values(entries).filter(v => calendar.status(v) === 'present').length;
             const absentDays = cells.filter(c => c && calendar.status(entries[c.day]) === 'absent').map(c => c.date);
             const sm = mkFor(s.id), covered = coveredMissed(s.id);
-            const doubles = sm.filter(m => m.kind === 'double' && m.status !== 'planned').length;
+            const doubles = sm.filter(m => m.kind === 'double' && m.status === 'approved').length;
             const reviewN = sm.filter(m => m.status === 'review').length;
             const openMissed = absentDays.filter(d => !covered.has(d));
-            const plan = planFor(s), counted = Math.min(present + doubles, plan);
+            const plan = planFor(s), counted = countedFor(s);
             return `<article class="teacher-duty-card">
             <button type="button" class="teacher-duty-student" data-duty-expand="${esc(s.id)}" aria-expanded="${expanded === s.id}" aria-controls="${panelId}">
                 <span class="duty-who">${avatar(s)}<span><strong>${esc(s.name)}</strong><small>${selected === 'main' ? sched(s) : 'asosiy ustoz: ' + esc(teachers.find(t => t.id === s.teacherId)?.name || '—')}</small></span></span>
@@ -163,7 +177,7 @@
                 if (!cell) return '<span aria-hidden="true"></span>';
                 const state = calendar.status(entries[cell.day]);
                 const m = selected === 'main' ? mkOn(s.id, cell.date) : null;
-                const mark = state === 'present' ? (m?.kind === 'double' ? '×2' : '✓') : state === 'absent' ? '−' : m ? 'Q' : '';
+                const mark = state === 'present' ? (m?.kind === 'double' ? '×2' : '✓') : state === 'absent' ? '−' : m ? (m.kind === 'double' ? '×2' : 'Q') : '';
                 const label = state === 'present' ? 'Keldi' : state === 'absent' ? 'Kelmadi' : m ? 'Qoplash darsi' : 'Belgilanmagan';
                 const late = state === 'absent' && covered.has(cell.date);
                 return `<button type="button" class="teacher-duty-day${cell.scheduled ? ' duty-scheduled' : ' duty-offday'}${m ? ' duty-has-mk' + (m.status === 'review' ? ' is-review' : '') : ''}${late ? ' is-covered' : ''}" data-duty-student="${esc(s.id)}" data-duty-day="${cell.day}" data-status="${state}" aria-label="${cell.date}: ${label}${cell.scheduled ? ', rejadagi kun' : ', dars kuni emas'}${m?.status === 'review' ? ', tekshiruvda' : ''}${late ? ', keyin qoplandi' : ''}" aria-pressed="${state === 'present'}"><time datetime="${cell.date}">${cell.day}</time><span aria-hidden="true">${mark}</span></button>`;
@@ -173,7 +187,7 @@
               ${openMissed.length && month === thisMonth ? `<span class="duty-bad">Qoplash mumkin <b>${openMissed.length}</b> · ${openMissed.map(d => Number(d.slice(8))).join(', ')}-sana</span>` : ''}</div>` : ''}
             </div></article>`;
         }).join('') || '<p class="teacher-duty-empty">Bu rolda faol o‘quvchilar biriktirilmagan.</p>'}</div>
-        ${selected === 'main' ? '<p class="duty-note"><b>Qoldirilgan darsni qoplash.</b> O‘quvchi kelmagan darsni shu oy ichida o‘tib bersangiz, maoshingizga hisoblanadi: "Dars jadvali"da qoplash darsini rejalashtiring. Oyiga rejadagi darslardan ortiq hisoblanmaydi.</p>' : ''}
+        ${selected === 'main' ? '<p class="duty-note"><b>Qoldirilgan darsni qoplash.</b> O‘quvchi kelmagan darsni shu oy ichida o‘tib bersangiz, admin tasdiqlagach maoshingizga hisoblanadi: dars kuni bo‘lmagan kunni bosib "Qoplash darsi o‘tildi"ni tanlang yoki keyingi darsda "Keldi · 2 dars"ni bosing. "Dars jadvali"da oldindan rejalashtirsa ham bo‘ladi. Oyiga rejadagi darslardan ortiq hisoblanmaydi.</p>' : ''}
         <p data-duty-error role="alert">${esc(lastError)}</p>`;
         root.querySelectorAll('[data-duty-today]').forEach(button => { button.onclick = () => {
             if (!expanded || expanded !== button.dataset.dutyToday) { expanded = button.dataset.dutyToday; render(); }
@@ -209,21 +223,51 @@
             const student = students.find(s => s.id === button.dataset.sid); if (!student) return;
             if (button.dataset.dutyQuick === '1') grade(student, today); else save(student, today, false);
         }; });
+        // Qoplash (2026-11 dan maoshga faqat admin tasdig'i bilan): dars kuni bo'lmagan kunda — "Qoplash darsi",
+        // dars kunida — "Keldi · 2 dars" (qo'shaloq). Qaysi qoldirilgan dars qoplanayotgani tanlanadi.
+        const openMissedFor = sid => {
+            const entries = attendance[sid] || {}, covered = coveredMissed(sid);
+            return Object.entries(entries).filter(([, v]) => calendar.status(v) === 'absent')
+                .map(([d]) => `${month}-${String(d).padStart(2, '0')}`).filter(d => !covered.has(d)).sort();
+        };
+        const makeup = async (kind, student, date, missedDate) => {
+            if (busy) return;
+            busy = true; lastError = '';
+            try { await window.schoolUI.post(`/makeups/${kind}`, { studentId: student.id, missedDate, heldDate: date }); mk.month = ''; window.schoolUI.toast('Qoplash tekshiruvga yuborildi'); }
+            catch (err) { lastError = err.message; }
+            finally { busy = false; }
+            render();
+        };
         root.querySelectorAll('[data-duty-student]').forEach(button => { button.onclick = () => {
             if (busy) return;
             const role = selected, student = students.find(s => s.id === button.dataset.dutyStudent);
             const date = `${month}-${String(button.dataset.dutyDay).padStart(2, '0')}`;
-            const status = button.dataset.status;
-            openModal(`${student.name} — ${date}`, `<p>${button.classList.contains('duty-offday') && role === 'main' ? 'Bu kun dars kuni emas. ' : ''}Shu kundagi davomatni tanlang.</p>`,
-                `<div class="teacher-duty-actions"><button type="button" class="btn-primary-sm" id="dutyPresent">${role === 'main' && status === 'present' ? 'Baholarni o‘zgartirish' : role === 'main' ? 'Keldi' : 'Qatnashdi'}</button>
-                <button type="button" class="btn-ghost" id="dutyAbsent">Kelmadi</button>
+            const status = button.dataset.status, offday = button.classList.contains('duty-offday');
+            const missed = role === 'main' && month >= '2026-11' && date <= today && !button.classList.contains('duty-has-mk') ? openMissedFor(student.id).filter(d => d !== date) : [];
+            const pick = missed.length ? `<label class="duty-pick">Qaysi qoldirilgan darsni qoplaysiz? <select id="dutyMissed">${missed.map(d => `<option value="${d}">${Number(d.slice(8))}-sana</option>`).join('')}</select></label>` : '';
+            const mkButtons = !missed.length ? '' : offday
+                ? '<button type="button" class="btn-primary-sm" id="dutyMkSep">Qoplash darsi o‘tildi</button>'
+                : '<button type="button" class="btn-ghost" id="dutyMkDouble">Keldi · 2 dars</button>';
+            const note = role === 'main' && offday && month >= '2026-11'
+                ? 'Bu kun dars kuni emas. Maoshga faqat qoplash darsi sifatida, admin tasdig‘idan keyin o‘tadi.'
+                : role === 'main' && offday ? 'Bu kun dars kuni emas.' : '';
+            openModal(`${student.name} — ${date}`, `<p>${note ? note + ' ' : ''}Shu kundagi davomatni tanlang.</p>${pick}`,
+                `<div class="teacher-duty-actions">${role === 'main' && offday && month >= '2026-11' ? '' : `<button type="button" class="btn-primary-sm" id="dutyPresent">${role === 'main' && status === 'present' ? 'Baholarni o‘zgartirish' : role === 'main' ? 'Keldi' : 'Qatnashdi'}</button>`}
+                ${mkButtons}
+                ${role === 'main' && offday && month >= '2026-11' ? '' : '<button type="button" class="btn-ghost" id="dutyAbsent">Kelmadi</button>'}
                 ${status !== 'empty' ? '<button type="button" class="btn-ghost teacher-duty-remove" id="dutyRemove">Belgini olib tashlash</button>' : ''}
                 <button type="button" class="btn-ghost" id="dutyCancel">Bekor qilish</button></div>`);
-            document.getElementById('dutyPresent').onclick = () => { closeModal(); if (role === 'main') grade(student, date); else save(student, date, true); };
-            document.getElementById('dutyAbsent').onclick = () => { closeModal(); save(student, date, false); };
-            const remove = document.getElementById('dutyRemove');
-            if (remove) remove.onclick = () => { closeModal(); save(student, date, null); };
-            document.getElementById('dutyCancel').onclick = closeModal;
+            const on = (id, fn) => { const el = document.getElementById(id); if (el) el.onclick = fn; };
+            const chosen = () => document.getElementById('dutyMissed')?.value;
+            on('dutyPresent', () => { closeModal(); if (role === 'main') grade(student, date); else save(student, date, true); });
+            on('dutyAbsent', () => { closeModal(); save(student, date, false); });
+            on('dutyRemove', () => { closeModal(); save(student, date, null); });
+            on('dutyMkSep', () => { const m = chosen(); closeModal(); makeup('separate', student, date, m); });
+            on('dutyMkDouble', () => { const m = chosen(); closeModal();
+                const previous = getItem(STORAGE_KEYS.liveGrades, {})[student.id]?.find(g => g.date === date && g.teacherId === id);
+                _openLiveGradeModal(student.name, date, _getSpeakingLessonOptions(teacherRoles.language(employee)),
+                    async g => { await save(student, date, true, g); if (!lastError) makeup('double', student, date, m); }, () => {}, previous); });
+            on('dutyCancel', closeModal);
         }; });
         if (busy) root.querySelectorAll('button').forEach(button => { button.disabled = true; });
     }

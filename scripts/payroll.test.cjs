@@ -141,6 +141,23 @@ test('assistant uses 50000 (not main teacher rate), independent day marks with m
     assistantAttendance: { '2026-10_a': { s: Object.fromEntries(Array.from({ length: 31 }, (_, i) => [i + 1, true])) } } });
   const row = calculate(s).rows[0]; assert.equal(row.total, 50000); assert.equal(row.lessons, engine.expectedDays('2026-10').length);
 });
+test('makeups approved-v1: only lesson-day marks plus admin-approved makeups count, from the start month', () => {
+  // Nov 2026: Se·Pa·Sh o'quvchi (2026-11-03 Se, 05 Pa, 07 Sh ...). 04 (Ch) — dars kuni emas.
+  const s = source({ hrEmployees: [employee('t', 'ingliz-oqituvchi')], teachers: [{ id: 't', schedulePattern: 'mwf' }],
+    teacherAttendancePolicy: 'all-days-v1', makeupPolicy: 'approved-v1', makeupPolicyFrom: '2026-11',
+    students: [{ id: 's', subject: 'english', teacherId: 't', lessonDuration: 30, lessonDayOfWeek: 2 }],
+    mainAttendance: { '2026-11_t': { s: { 3: 1, 4: 1, 5: 1, 6: 1 } } },
+    makeups: [{ studentId: 's', teacherId: 't', kind: 'separate', status: 'approved', heldDate: '2026-11-06' },
+      { studentId: 's', teacherId: 't', kind: 'double', status: 'approved', heldDate: '2026-11-05' },
+      { studentId: 's', teacherId: 't', kind: 'separate', status: 'review', heldDate: '2026-11-04' }] });
+  const nov = engine.period('2026-11-01', '2026-11-30');
+  const row = calculate(s, engine.defaults(), nov).rows[0];
+  assert.equal(row.lessons, 2 + 1 + 1, '3 va 5 (dars kuni) + 6 (tasdiqlangan qoplash) + qo\'shaloq; 4 (tekshiruvda) hisoblanmaydi');
+  const legacy = calculate({ ...s, makeupPolicy: undefined }, engine.defaults(), nov).rows[0];
+  assert.equal(legacy.lessons, 4, 'eski siyosat: istalgan kun');
+  const before = calculate({ ...s, makeupPolicyFrom: '2026-12' }, engine.defaults(), nov).rows[0];
+  assert.equal(before.lessons, 4);
+});
 test('assistant contacts-v1: 3846 per counted contact (cap 13), old attendance ignored from the start month, left student counted', () => {
   const days = n => Object.fromEntries(Array.from({ length: n }, (_, i) => [i + 1, 1]));
   const s = source({ hrEmployees: [employee('a', 'yordamchi')], teachers: [{ id: 'a' }],
