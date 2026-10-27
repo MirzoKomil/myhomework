@@ -698,6 +698,7 @@ async function bootApp() {
         if (contactsMenu && !isAssistant) contactsMenu.remove();
     }
 
+    applyLangPickerPolicy(currentUser);
     setUiLang(getUiLang());
     initUserUI(currentUser);
     syncHrLoginRoles(currentUser);
@@ -10573,6 +10574,44 @@ function getStudentsSelectedSubject() {
 }
 
 // Foydalanuvchining o'z yo'nalishi (ROP/menejer/ustoz) — til tanlovi shundan boshlanadi.
+// Til almashtirgich (Ingliz tili / Rus tili) faqat ikkala tilni ham boshqaradiganlarga
+// ko'rinadi: admin va rahbar. Bitta tilga biriktirilgan xodim (ustoz, yordamchi,
+// sotuv menejeri, ROP) o'z tilida ishlaydi — almashtirgich yashiriladi va
+// tanlov uning tiliga qo'yiladi. Keyin chiziladigan bo'limlar uchun kuzatuvchi bor.
+function applyLangPickerPolicy(user = getCurrentUser()) {
+    const own = getUserOwnLang(user);
+    const canPick = ['admin', 'boshliq'].includes(user?.role) || !own;
+    document.body.classList.toggle('lang-fixed', !canPick);
+    if (canPick) return;
+    const langOf = btn => {
+        for (const [k, v] of Object.entries(btn.dataset || {})) if (/lang$|^subject$/i.test(k) && (v === 'english' || v === 'russian')) return v;
+        const src = btn.querySelector('img.subject-flag')?.getAttribute('src') || '';
+        return /\/ru\./.test(src) ? 'russian' : /\/gb\./.test(src) ? 'english' : null;
+    };
+    const sweep = () => {
+        document.querySelectorAll('img.subject-flag').forEach(img => {
+            const group = img.closest('button')?.parentElement;
+            if (!group || group.dataset.langFixed) return;
+            const btns = [...group.querySelectorAll(':scope > button')];
+            if (btns.length < 2 || !btns.every(b => langOf(b))) return;
+            group.dataset.langFixed = '1';
+            group.style.setProperty('display', 'none', 'important');
+            const mine = btns.find(b => langOf(b) === own);
+            const active = btns.find(b => b.classList.contains('active'));
+            if (mine && active !== mine) mine.click();
+        });
+    };
+    sweep();
+    if (!applyLangPickerPolicy._obs) {
+        let queued = false;
+        applyLangPickerPolicy._obs = new MutationObserver(() => {
+            if (queued) return; queued = true;
+            requestAnimationFrame(() => { queued = false; sweep(); });
+        });
+        applyLangPickerPolicy._obs.observe(document.body, { childList: true, subtree: true });
+    }
+}
+
 function getUserOwnLang(user = getCurrentUser()) {
     const v = user?.linkedRopLang || user?.linkedManagerLang || user?.linkedTeacherLang || user?.subject || user?.language;
     return v === 'russian' || v === 'english' ? v : null;
