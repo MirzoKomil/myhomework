@@ -34,6 +34,12 @@ test('holat: muzlatish oralig\'i, chiqib ketish, qayta tiklash', () => {
     assert.equal(S.statusOn(rows, '2026-12-05'), 'left');
     assert.equal(S.statusOn(rows, '2026-12-10'), 'active');
     assert.equal(S.statusOn([{ ...rows[0], cancelled_at: 'x' }], '2026-11-05'), 'active', 'bekor qilingan yozuv hisoblanmaydi');
+    // pg DATE ustunlari Date bo'lib keladi: Ch 14-okt chiqdi, Du 19-okt qaytdi (hafta kuni nomi bo'yicha emas, sana bo'yicha).
+    const d = s => new Date(s + 'T00:00:00');
+    const real = [{ status: 'restored', from_date: d('2026-10-19'), created_at: new Date('2026-10-18T10:00:00Z') },
+        { status: 'left', from_date: d('2026-10-14'), created_at: new Date('2026-10-13T10:00:00Z') }];
+    assert.equal(S.statusOn(real, '2026-10-20'), 'active');
+    assert.equal(S.statusOn(real, '2026-10-15'), 'left');
 });
 
 function ctx(extra = {}) {
@@ -69,6 +75,7 @@ test('ustoz almashtirish sanadan kuchga kiradi', () => {
     const c = ctx({ history: [
         { student_id: 'malika', teacher_id: 'dilnoza', from_date: '2000-01-01', to_date: '2026-10-31' },
         { student_id: 'malika', teacher_id: 'shahnoza', from_date: '2026-11-03', to_date: null }] });
+    c.students.find(s => s.id === 'malika').pendingTeacher = { teacherId: 'shahnoza', from: '2026-11-03' };
     assert.ok(S.dayView(c, 'dilnoza', '2026-10-31').items.some(i => i.studentId === 'malika'));
     assert.ok(!S.dayView(c, 'dilnoza', '2026-11-03').items.some(i => i.studentId === 'malika'));
     assert.ok(S.dayView(c, 'shahnoza', '2026-11-03').items.some(i => i.studentId === 'malika'));
@@ -102,4 +109,16 @@ test('aloqa hisob qoidalari', () => {
     assert.ok(m.overCap > 0);
     assert.equal(r.amount, 13 * 3846);
     assert.equal(A.RATE * 163, 626898);
+});
+
+test('eski CRM orqali ustoz almashtirilsa, ochiq tarix davri ustun emas', () => {
+    const c = ctx({ history: [{ student_id: 'jasur', teacher_id: 'dilnoza', from_date: '2026-10-01', to_date: null }] });
+    c.students.find(s => s.id === 'jasur').teacherId = 'kamola';
+    assert.ok(S.dayView(c, 'kamola', '2026-11-02').items.some(i => i.studentId === 'jasur'));
+    assert.ok(!S.dayView(c, 'dilnoza', '2026-11-02').items.some(i => i.studentId === 'jasur'));
+});
+test('eski CRM da muzlatilgan o\'quvchi joyi faqat sinovga ochiq', () => {
+    const c = ctx(); c.students.find(s => s.id === 'madina').legacyFrozen = true;
+    const v = S.dayView(c, 'dilnoza', '2026-11-03');
+    assert.equal(v.items.find(i => i.studentId === 'madina').kind, 'reserved');
 });

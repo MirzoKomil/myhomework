@@ -55,11 +55,11 @@ async function assistantForActor(db, actor) {
 async function monthState(db, month) {
     return (await db.query('SELECT * FROM school_assist_months WHERE month=$1', [month])).rows[0] || null;
 }
-async function isLocked(db, month, now = new Date()) {
+// Yordamchi uchun o'tgan oy 1-sana 00:00 da qulflanadi (faqat bugun belgilanadi). Admin tuzatishi
+// va kechikib belgilash so'rovi e'tiroz davrida ham ishlaydi — yakuniy tasdiqdan (final_at) keyin yopiladi.
+async function isLocked(db, month) {
     const st = await monthState(db, month);
-    if (st?.locked_at) return true;
-    // 1-sana 00:00 dan keyin o'tgan oy avtomatik qulf.
-    return T.nowLocal(now).date.slice(0, 7) > month;
+    return !!st?.final_at;
 }
 
 // Yordamchi belgilaydi — faqat bugungi kun uchun.
@@ -101,11 +101,11 @@ async function adminCorrect(db, actor, body, now = new Date()) {
     if (body.removeId) {
         const c = (await db.query('SELECT * FROM school_assist_contacts WHERE id=$1 FOR UPDATE', [body.removeId])).rows[0];
         if (!c) throw fail(404, 'Yozuv topilmadi');
-        if (await isLocked(db, S.dateStr(c.day).slice(0, 7), now)) throw fail(409, 'Oy yopilgan — o\'zgartirib bo\'lmaydi');
+        if (await isLocked(db, S.dateStr(c.day).slice(0, 7))) throw fail(409, 'Oy yakuniy tasdiqlangan — o\'zgartirib bo\'lmaydi');
         return (await db.query('UPDATE school_assist_contacts SET removed_at=NOW(), removed_by=$2, correction_reason=$3 WHERE id=$1 RETURNING *', [c.id, actor.id, reason])).rows[0];
     }
     const day = T.assertDate(body.day);
-    if (await isLocked(db, day.slice(0, 7), now)) throw fail(409, 'Oy yopilgan — o\'zgartirib bo\'lmaydi');
+    if (await isLocked(db, day.slice(0, 7))) throw fail(409, 'Oy yakuniy tasdiqlangan — o\'zgartirib bo\'lmaydi');
     if (day > T.nowLocal(now).date) throw fail(400, 'Kelajak sanaga yozib bo\'lmaydi');
     const st = (await db.query('SELECT assistant_teacher_id FROM students WHERE id=$1', [body.studentId])).rows[0];
     if (!st?.assistant_teacher_id) throw fail(400, 'O\'quvchida yordamchi yo\'q');

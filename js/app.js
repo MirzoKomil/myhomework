@@ -19056,7 +19056,7 @@ function collectTeacherScheduleData(modalBody) {
 
     const telegramGroupLink = modalBody.querySelector('#onboardTelegramGroupLink')?.value?.trim() || '';
     if (!telegramGroupLink) return { error: 'Telegram guruh havolasini kiriting', target: '#onboardTelegramGroupLink' };
-    if (!/^https:\/\/t\.me\/\S{5,}$/.test(telegramGroupLink)) return { error: 'Havola https://t.me/... ko\'rinishida bo\'lsin', target: '#onboardTelegramGroupLink' };
+    if (!/^https:\/\/t\.me\/(\+[A-Za-z0-9_-]{8,64}|joinchat\/[A-Za-z0-9_-]{8,64}|[A-Za-z0-9_]{5,32})$/.test(telegramGroupLink)) return { error: 'Havola https://t.me/... ko\'rinishida bo\'lsin', target: '#onboardTelegramGroupLink' };
     const telegramGroupName = (modalBody.querySelector('#onboardTelegramGroupName')?.value || '').trim();
     if (telegramGroupName.length < 2) return { error: 'Telegram guruh nomini kiriting', target: '#onboardTelegramGroupName' };
 
@@ -19292,7 +19292,7 @@ function collectPaymentOnboardingData(modalBody) {
 
     const telegramGroupLink = getVal('onboardTelegramGroupLink');
     if (!telegramGroupLink) return { error: 'Telegram guruh havolasini kiriting', target: '#onboardTelegramGroupLink' };
-    if (!/^https:\/\/t\.me\/\S{5,}$/.test(telegramGroupLink)) return { error: 'Havola https://t.me/... ko\'rinishida bo\'lsin', target: '#onboardTelegramGroupLink' };
+    if (!/^https:\/\/t\.me\/(\+[A-Za-z0-9_-]{8,64}|joinchat\/[A-Za-z0-9_-]{8,64}|[A-Za-z0-9_]{5,32})$/.test(telegramGroupLink)) return { error: 'Havola https://t.me/... ko\'rinishida bo\'lsin', target: '#onboardTelegramGroupLink' };
     const telegramGroupName = (modalBody.querySelector('#onboardTelegramGroupName')?.value || '').trim();
     if (telegramGroupName.length < 2) return { error: 'Telegram guruh nomini kiriting', target: '#onboardTelegramGroupName' };
 

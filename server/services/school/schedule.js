@@ -23,7 +23,7 @@ function studentRow(r) {
         assistantId: r.assistant_teacher_id || null, day: r.lesson_day_of_week, time: r.lesson_time || '',
         duration: Number(r.lesson_duration) || 15, legacyInactive: extra.status === 'inactive' || extra.isStaffDemo === true,
         managerId: extra.managerId || null, leadRefId: extra.leadRef?.id || null, avatarUrl: extra.avatarUrl || '',
-        startDate: extra.startDate || extra.courseStart || null,
+        startDate: extra.startDate || extra.courseStart || null, legacyFrozen: extra.frozen === true,
         pendingSchedule: extra.pendingScheduleChange || null, pendingTeacher: extra.pendingTeacherChange || null };
 }
 
@@ -31,8 +31,10 @@ function studentRow(r) {
 // Yozuvlar vaqt bo'yicha qo'llanadi; bekor qilinganlar hisobga olinmaydi.
 function statusOn(statusRows, date) {
     let state = 'active';
+    // pg DATE ustunlari Date bo'lib keladi — sana satri va vaqt bo'yicha saralanadi.
+    const ts = v => (v instanceof Date ? v.getTime() : Date.parse(v) || 0);
     const rows = [...statusRows].filter(r => !r.cancelled_at)
-        .sort((a, b) => String(a.from_date).localeCompare(String(b.from_date)) || String(a.created_at).localeCompare(String(b.created_at)));
+        .sort((a, b) => dateStr(a.from_date).localeCompare(dateStr(b.from_date)) || ts(a.created_at) - ts(b.created_at));
     for (const r of rows) {
         const from = dateStr(r.from_date), to = r.to_date ? dateStr(r.to_date) : null;
         if (from > date) continue;
@@ -75,10 +77,15 @@ function parseLead(r) {
 }
 
 // Ustoz almashtirilgan bo'lsa — sana bo'yicha qaysi ustoz.
+// Yopilgan davr (to_date bor) — o'sha ustoz. Ochiq davr faqat rejalashtirilgan (hali kuchga kirmagan)
+// almashinuv uchun ishlatiladi; aks holda students.teacher_id manba (eski CRM orqali almashtirilsa ham).
 function teacherOn(student, history, date) {
     const rows = history.filter(h => h.student_id === student.id && dateStr(h.from_date) <= date && (!h.to_date || date <= dateStr(h.to_date)))
         .sort((a, b) => dateStr(b.from_date).localeCompare(dateStr(a.from_date)));
-    return rows[0]?.teacher_id || student.teacherId;
+    const r = rows[0];
+    if (!r) return student.teacherId;
+    if (r.to_date) return r.teacher_id;
+    return student.pendingTeacher && student.pendingTeacher.teacherId === r.teacher_id ? r.teacher_id : student.teacherId;
 }
 
 async function loadContext(db, { teacherIds = null, from, to, now = new Date() }) {
@@ -127,7 +134,9 @@ function dayView(ctx, teacherId, date) {
         if (!T.patternDays(day).includes(wd)) continue;
         if (teacherOn(s, ctx.history, date) !== teacherId) continue;
         if (s.startDate && date < s.startDate) continue;
-        const state = statusOn(ctx.statusBy.get(s.id) || [], date);
+        const srows = ctx.statusBy.get(s.id) || [];
+        // Eski CRM'da muzlatilgan (holat yozuvisiz) o'quvchi — joyi saqlanadi, faqat sinovga ochiq.
+        const state = !srows.length && s.legacyFrozen ? 'frozen' : statusOn(srows, date);
         if (state === 'left') continue;
         const start = T.toMin(time); if (start == null) continue;
         items.push({ start, end: start + duration, kind: state === 'frozen' ? 'reserved' : 'lesson', studentId: s.id, studentName: s.name });

@@ -123,10 +123,11 @@ test('yagona jadval va o\'quvchi amallari — haqiqiy PostgreSQL', { skip: !url 
             await tx(c => A.adminCorrect(c, admin, { studentId: 'malika', day: '2026-10-26', channel: 'phone', minutes: 6, reason: 'Kechikib belgilash so\'rovi' }, on));
             const rep = await A.monthReport(pool, 'sanjar', '2026-10');
             assert.equal(rep.counted, 2); assert.equal(rep.noAnswer, 1); assert.equal(rep.amount, 7692);
-            await assert.rejects(tx(c => A.adminCorrect(c, admin, { studentId: 'malika', day: '2026-10-20', channel: 'phone', minutes: 6, reason: 'kech qoldi' }, new Date('2026-11-02T07:00:00Z'))), /Oy yopilgan/);
             await tx(c => A.advanceMonth(c, admin, '2026-10', 'prelim', new Date('2026-11-02T07:00:00Z')));
+            await tx(c => A.adminCorrect(c, admin, { studentId: 'malika', day: '2026-10-20', channel: 'phone', minutes: 6, reason: 'e\'tiroz davrida tuzatish' }, new Date('2026-11-03T07:00:00Z')));
             await assert.rejects(tx(c => A.advanceMonth(c, admin, '2026-10', 'final', new Date('2026-11-03T07:00:00Z'))), /E'tiroz/);
             await tx(c => A.advanceMonth(c, admin, '2026-10', 'final', new Date('2026-11-05T07:00:00Z')));
+            await assert.rejects(tx(c => A.adminCorrect(c, admin, { studentId: 'malika', day: '2026-10-21', channel: 'phone', minutes: 6, reason: 'kech qoldi' }, new Date('2026-11-06T07:00:00Z'))), /yakuniy/);
         });
     } finally { await pool.end(); }
 });

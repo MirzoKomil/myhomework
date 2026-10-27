@@ -77,7 +77,7 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
             WHERE he.role IN ('oqituvchi','ingliz-oqituvchi','rus-oqituvchi') AND COALESCE(he.status,'active') <> 'inactive' ORDER BY he.name`)).rows;
         let summary = null;
         if (r.scope === 'full' && from === to) {
-            const att = await pool.query(`SELECT student_id, present FROM main_attendance WHERE att_key=$1 AND day=$2`, [from.slice(0, 7), Number(from.slice(8))]).catch(() => ({ rows: [] }));
+            const att = await pool.query(`SELECT student_id, present FROM main_attendance WHERE att_key LIKE $1 AND day=$2`, [from.slice(0, 7) + '\\_%', Number(from.slice(8))]);
             summary = S.daySummary(r.views, new Map(att.rows.map(a => [a.student_id, !!a.present])), from === T.nowLocal().date ? T.nowLocal().min : null);
         }
         return { from, to, scope: r.scope, teachers: r.scope === 'own' ? undefined : teachers, views: r.views, summary };
@@ -99,7 +99,14 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
     }));
     router.post('/bookings', handle(req => write(req, async c => {
         const kind = req.body?.kind;
-        if (kind === 'trial') need(req, new Set([...SALES, ...FULL]));
+        if (kind === 'trial') {
+            need(req, new Set([...SALES, ...FULL]));
+            // Lid mavjud va (sotuv menejeri uchun) o'ziniki bo'lishi shart; sotuv faqat ushlab turadi.
+            const lead = (await c.query('SELECT manager_id FROM leads WHERE id=$1 AND deleted_at IS NULL', [String(req.body?.leadId || '')])).rows[0];
+            if (!lead) throw T.fail(404, 'Lid topilmadi');
+            if (req.user.role === 'sales_manager' && String(lead.manager_id || '') !== String(await managerId(req) || '-')) throw T.fail(403, 'Faqat o\'z lidingiz uchun');
+            if (SALES.has(req.user.role)) req.body.hold = true;
+        }
         else if (kind === 'makeup') { if (req.user.role === 'teacher') { const me = await teacherOf(req); if (req.body.teacherId !== me.id) throw T.fail(403, 'Faqat o\'z jadvalingizga'); } else need(req, FULL); }
         else need(req, FULL);
         if (kind === 'makeup') {
@@ -131,7 +138,8 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         const at = new Date(Date.parse(date + 'T00:00:00Z') + (min - T.TZ_OFFSET_MIN) * 60000).toISOString();
         const teacher = (await pool.query('SELECT name FROM hr_employees WHERE id=$1', [first.teacher_id])).rows[0];
         const lead = { id: row.id, updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : undefined, status: 'sinov-darsida',
-            paymentOnboarding: { ...(extra.paymentOnboarding || {}), teacherId: first.teacher_id, lessonDayOfWeek: T.weekday(date), lessonTime: T.fromMin(min), trialDaysCount: holds.length, isTrial: true },
+            paymentOnboarding: { ...(extra.paymentOnboarding || {}), teacherId: first.teacher_id, lessonDayOfWeek: T.weekday(date), lessonTime: T.fromMin(min),
+                lessonDuration: Number(first.end_min) - Number(first.start_min), trialDaysCount: holds.length, isTrial: true },
             trialLessonAt: at, trialScheduleRevision: randomUUID(),
             comments: [...(Array.isArray(row.comments) ? row.comments : JSON.parse(row.comments || '[]')), { id: randomUUID(), type: 'trial-lesson', author: req.user.name || '', authorId: req.user.id,
                 createdAt: new Date().toISOString(), text: `Sinov darsi belgilandi ("Kim bo'sh?"):\n• O'qituvchi: ${teacher?.name || '—'}\n• Kuni: ${date.split('-').reverse().join('.')}, ${T.fromMin(min)}\n• Davomiyligi: ${holds.length} kun` }] };
@@ -144,8 +152,8 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         if (req.user.role === 'teacher') { teacherId = (await teacherOf(req)).id; if (action === 'cancel') throw T.fail(403, 'Bekor qilishni admin qiladi'); }
         else if (SALES.has(req.user.role)) {
             if (action !== 'cancel') throw T.fail(403, 'Natijani ustoz yozadi');
-            const b = (await c.query('SELECT created_by FROM school_bookings WHERE id=$1', [req.params.id])).rows[0];
-            if (!b || (b.created_by !== req.user.id && req.user.role !== 'rop')) throw T.fail(403, 'Faqat o\'zingiz band qilganini bekor qilasiz');
+            const b = (await c.query('SELECT created_by, kind FROM school_bookings WHERE id=$1', [req.params.id])).rows[0];
+            if (!b || b.kind !== 'trial' || (b.created_by !== req.user.id && req.user.role !== 'rop')) throw T.fail(403, 'Faqat o\'zingiz band qilgan sinovni bekor qilasiz');
         } else need(req, FULL);
         return { booking: await S.transition(c, req.params.id, action, { teacherId }) };
     })));
@@ -281,13 +289,13 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         const statuses = (await pool.query('SELECT * FROM school_student_status WHERE cancelled_at IS NULL')).rows;
         const hist = (await pool.query('SELECT * FROM school_teacher_history')).rows;
         const by = new Map(); for (const s of statuses) { if (!by.has(s.student_id)) by.set(s.student_id, []); by.get(s.student_id).push(s); }
-        let me = null, mid = null;
-        if (req.user.role === 'teacher') me = (await teacherOf(req)).id; else if (req.user.role === 'sales_manager') mid = await managerId(req); else need(req, MANAGE);
+        let me = null, mid = null; const isSales = req.user.role === 'sales_manager';
+        if (req.user.role === 'teacher') me = (await teacherOf(req)).id; else if (isSales) mid = await managerId(req); else need(req, MANAGE);
         const out = [];
         for (const r of rows) {
             const st = S.studentRow(r), state = S.statusOn(by.get(r.id) || [], today);
             const myPast = me ? hist.filter(h => h.student_id === r.id && h.teacher_id === me && h.to_date && S.dateStr(h.to_date) < today) : [];
-            const mine = me ? (r.teacher_id === me || r.assistant_teacher_id === me || myPast.length) : mid ? O.soldBy(st, mid) : true;
+            const mine = me ? (r.teacher_id === me || r.assistant_teacher_id === me || myPast.length) : isSales ? O.soldBy(st, mid) : true;
             if (!mine) continue;
             const moved = me && myPast.length && r.teacher_id !== me && r.assistant_teacher_id !== me;
             if (state === 'active' && !moved) continue;
@@ -344,7 +352,7 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
     router.post('/assist/late-requests', handle(req => write(req, async c => {
         const me = await teacherOf(req);
         const day = T.assertDate(req.body?.day);
-        if (await A.isLocked(c, day.slice(0, 7))) throw T.fail(409, 'Oy yopilgan');
+        if (await A.isLocked(c, day.slice(0, 7))) throw T.fail(409, 'Oy yakuniy tasdiqlangan — o\'zgartirib bo\'lmaydi');
         const reason = String(req.body?.reason || '').trim(); if (reason.length < 5) throw T.fail(400, 'Sababni yozing');
         const { rows } = await c.query(`INSERT INTO school_requests (id,teacher_id,requester_id,requester_name,type,payload,reason) VALUES ($1,$2,$3,$4,'assist_late',$5,$6) RETURNING *`,
             [randomUUID(), me.id, req.user.id, me.name, JSON.stringify({ studentId: req.body.studentId, day, channel: req.body.channel, minutes: req.body.minutes, at: req.body.at }), reason]);
@@ -390,12 +398,16 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         const v = String(req.body?.avatar || '');
         if (v && !PRESET_RE.test(v) && !/^\/uploads\/[A-Za-z0-9._-]{1,120}$/.test(v)) throw T.fail(400, 'Avatar noto\'g\'ri');
         if (PRESET_RE.test(v)) {
+            await c.query("SELECT pg_advisory_xact_lock(hashtext('school:avatars'))");
             const taken = await c.query('SELECT 1 FROM users WHERE avatar=$1 AND id<>$2', [v, req.user.id]);
             if (taken.rows.length) throw T.fail(409, 'Bu personajni boshqa xodim tanlagan');
         }
         await c.query('UPDATE users SET avatar=$2 WHERE id=$1', [req.user.id, v]);
         return { avatar: v };
     })));
+    // Xodim avatarlari (HR id → avatar) — CRM ro'yxatlarida 3D personaj yoki o'z rasmi.
+    router.get('/staff-avatars', handle(async () => ({ avatars: Object.fromEntries((await pool.query(`SELECT he.id, u.avatar FROM hr_employees he
+        JOIN users u ON LOWER(TRIM(u.email)) = LOWER(TRIM(he.login)) WHERE COALESCE(u.avatar,'') <> ''`)).rows.map(r => [r.id, r.avatar])) })));
     router.get('/avatars/taken', handle(async req => ({ taken: (await pool.query("SELECT avatar FROM users WHERE avatar LIKE '/images/staff-avatars/%' AND id<>$1", [req.user.id])).rows.map(r => r.avatar) })));
     return router;
 };

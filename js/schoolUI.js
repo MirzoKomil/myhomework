@@ -194,6 +194,11 @@
             ${field('Guruh nomi', `<input name="groupName" value="${esc(c.group?.name || '')}" placeholder="C40 | onlayn ingliz tili">`)}
             ${field('Havola', `<input name="groupLink" value="${esc(c.group?.tg_link || '')}" placeholder="https://t.me/+…">`)}</div>` : `<p class="sc-mt">${tgPill(c.group)} · nom va havolani admin yoki ROP o'zgartiradi</p>`}</div>
           <div class="sc-sec">${field('Sabab (majburiy)', '<textarea name="reason" rows="2" required placeholder="Masalan: telefon raqamida 2 raqam almashgan"></textarea>', 'O\'zgarishlar tarixiga yoziladi')}</div>`;
+        body.dataset.schedTouched = '0';
+        // Jadval faqat foydalanuvchi shu maydonlarga tegsa o'zgargan hisoblanadi (eski qiymat select'da bo'lmasa ham).
+        body.querySelectorAll('[name=lessonDay],[name=lessonTime],[name=lessonDuration]').forEach(i => i.addEventListener('change', () => { body.dataset.schedTouched = '1'; }));
+        const durSel = body.querySelector('[name=lessonDuration]');
+        if (durSel && ![...durSel.options].some(o => Number(o.value) === Number(dur))) durSel.insertAdjacentHTML('afterbegin', `<option value="${dur}" selected>${dur} daq</option>`);
         box.insertAdjacentHTML('beforeend', `<footer class="sc-df"><span class="sc-mt">O'zgarish ilova, ustoz, sotuv va moliyada birdek yangilanadi</span><div class="sc-row"><button type="button" class="sc-btn" data-close>Bekor</button><button type="button" class="sc-btn sc-btn--pri" data-save>Saqlash</button></div></footer>`);
         box.querySelector('[data-save]').onclick = async e => {
             const v = n => body.querySelector(`[name="${n}"]`)?.value?.trim() ?? '';
@@ -205,8 +210,8 @@
             if (v('newPassword')) changes.newPassword = v('newPassword');
             if (v('tariff') !== (c.tariff || '')) changes.tariff = v('tariff');
             if (v('monthlyPrice') !== String(c.monthlyPrice ?? '') && v('monthlyPrice') !== '') changes.monthlyPrice = Number(v('monthlyPrice').replace(/\D/g, ''));
-            const sameDay = pattern(v('lessonDay')) === c.schedule?.days;
-            if (!sameDay || v('lessonTime') !== (c.schedule?.time || '') || Number(v('lessonDuration')) !== Number(c.schedule?.duration)) {
+            const touched = body.dataset.schedTouched === '1';
+            if (touched && (pattern(v('lessonDay')) !== c.schedule?.days || v('lessonTime') !== (c.schedule?.time || '') || Number(v('lessonDuration')) !== Number(c.schedule?.duration))) {
                 Object.assign(changes, { lessonDay: Number(v('lessonDay')), lessonTime: v('lessonTime'), lessonDuration: Number(v('lessonDuration')), effectiveFrom: v('effectiveFrom') });
             }
             const groupChanged = isManager() && (v('groupName') !== (c.group?.name || '') || v('groupLink') !== (c.group?.tg_link || ''));

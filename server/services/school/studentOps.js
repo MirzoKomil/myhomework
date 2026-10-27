@@ -204,7 +204,8 @@ async function freeze(db, actor, studentId, body, now = new Date()) {
     const rows = await statusRows(db, studentId);
     if (currentStatus(rows, from) !== 'active') throw fail(409, 'O\'quvchi bu sanada faol emas');
     const st = extraOf(row);
-    const courseStart = st.startDate || null;
+    const restart = rows.filter(r => r.status === 'restored' && r.payload?.continueFrom === 'restart').pop();
+    const courseStart = restart ? S.dateStr(restart.from_date) : (st.startDate ? String(st.startDate).slice(0, 10) : null);
     if (courseFreezes(rows, courseStart).length) throw fail(409, 'Kurs davomida faqat bir marta muzlatish mumkin');
     const reason = reasonText(body.reason, 3);
     const { rows: ins } = await db.query(`INSERT INTO school_student_status (id,student_id,status,from_date,to_date,reason_code,reason,payload,actor_id,actor_name,actor_role)
@@ -251,9 +252,21 @@ async function restore(db, actor, studentId, body, now = new Date()) {
     const row = await lockStudent(db, studentId);
     const rows = await statusRows(db, studentId);
     const state = currentStatus(rows, T.addDays(from, -1));
-    if (state === 'active') throw fail(409, 'O\'quvchi faol — qayta tiklash kerak emas');
     const reason = reasonText(body.reason, 3);
     const st = extraOf(row);
+    // Hali boshlanmagan muzlatishni bekor qilish (to'lov sanasi siljishi qaytariladi).
+    const future = rows.find(r => r.status === 'frozen' && S.dateStr(r.from_date) > T.nowLocal(now).date);
+    if (state === 'active' && future) {
+        await db.query('UPDATE school_student_status SET cancelled_at=NOW(), cancelled_by=$2 WHERE id=$1', [future.id, actor.id]);
+        const extra = st.extra; const days = Number(future.payload?.days || 0);
+        if (days && extra.paymentDueDate) extra.paymentDueDate = T.addDays(String(extra.paymentDueDate).slice(0, 10), -days);
+        extra.freezeShiftDays = Math.max(0, Number(extra.freezeShiftDays || 0) - days);
+        await writeExtra(db, studentId, extra);
+        await audit(db, studentId, 'freeze-cancelled', { from: S.dateStr(future.from_date), to: S.dateStr(future.to_date) }, reason, actor);
+        await syncLegacy(db, studentId, now);
+        return { ok: true, cancelledFreeze: true };
+    }
+    if (state === 'active') throw fail(409, 'O\'quvchi faol — qayta tiklash kerak emas');
     if (state === 'frozen') {
         const fr = rows.filter(r => r.status === 'frozen').pop();
         const used = T.daysBetween(S.dateStr(fr.from_date), from);
@@ -359,6 +372,7 @@ function cleanGroup(link, name) {
     if (n.length < 2 || n.length > 80) throw fail(400, 'Guruh nomini yozing');
     return { link: l, name: n };
 }
+async function lockGroupNames(db) { await db.query("SELECT pg_advisory_xact_lock(hashtext('school:group-names'))"); }
 async function nextGroupName(db) {
     const { rows } = await db.query(`SELECT name FROM school_student_groups`);
     let max = 0;
@@ -373,6 +387,7 @@ async function setGroup(db, actor, studentId, body, { managerId = null } = {}) {
         if (actor.role !== 'sales_manager' || existing || !soldBy(extraOf(row), managerId)) throw fail(403, 'Guruhni admin yoki ROP o\'zgartiradi');
     }
     const g = cleanGroup(body.link, body.name);
+    await lockGroupNames(db);
     if (!APPROVER_ROLES.has(actor.role) && !g.link) throw fail(400, 'Guruh havolasini kiriting');
     const dup = await db.query('SELECT student_id FROM school_student_groups WHERE LOWER(name)=LOWER($1) AND student_id<>$2', [g.name, studentId]);
     if (dup.rows.length) throw fail(409, 'Bu nom boshqa guruhda ishlatilgan');
@@ -404,6 +419,7 @@ async function ensureProvisionGroup(db, student, actor = { id: 'system' }) {
     if (!student?.id) return null;
     const link = String(student.telegramGroupLink || '').trim();
     if (!link || !GROUP_RE.test(link)) return null;
+    await lockGroupNames(db);
     const existing = (await db.query('SELECT 1 FROM school_student_groups WHERE student_id=$1', [student.id])).rows[0];
     if (existing) return null;
     let name = String(student.telegramGroupName || '').trim().replace(/\s+/g, ' ');
