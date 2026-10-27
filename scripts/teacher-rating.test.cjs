@@ -112,8 +112,8 @@ test('js/app.js: "Bugungi darslar"da Keldi/Kelmadi va Mezonlar tugmalari mavjud 
     assert.match(app, /function bindTeacherHomeToday\(container, user\) \{/);
     const fn = app.slice(app.indexOf('function bindTeacherHomeToday('), app.length);
     assert.match(fn, /data-thx-mark/);
-    assert.match(fn, /data-thx-as-mark/);
+    assert.match(fn, /data-thx-contact/, 'yordamchi aloqasi schoolTeacher.markDrawer orqali');
     assert.match(fn, /data-thx-grade/);
     assert.match(fn, /saveTeacherAttendanceChange\(\{ teacherId, studentId: sid, date: dateStr, present: true, grade \}\)/);
-    assert.match(fn, /saveTeacherAttendanceChange\(\{ teacherId, studentId: sid, date: dateStr, present \}\)/);
+    assert.match(fn, /saveTeacherAttendanceChange\(\{ teacherId, studentId: sid, date: dateStr, present: false \}\)/);
 });

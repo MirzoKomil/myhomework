@@ -125,39 +125,37 @@ test('teacher home: today lessons by time with attendance state, no phones', () 
     });
     vm.runInContext(functionSource('js/app.js', 'renderTeacherTodayBlock') + '\nthis.t = renderTeacherTodayBlock;', c);
     const html = c.t({ role: 'teacher', linkedTeacherId: 't1' });
-    assert.match(html, /3 ta dars · 1 tasi belgilanmagan/);
+    assert.match(html, /3 dars · 1 tasi belgilanmagan/);
     assert.ok(html.indexOf('Shohruh') < html.indexOf('Doniyor') && html.indexOf('Doniyor') < html.indexOf('Kamila'), 'sorted by time');
     assert.match(html, /✓ Keldi/);
     assert.match(html, /Dars tugadi · davomat belgilanmagan/);
     assert.match(html, /Kutilmoqda/);
     assert.ok(!html.includes('Boshqa') && !html.includes('Juma') && !html.includes('+99890'));
-    assert.match(html, /<b>3<\/b>/, 'kelgan darslar 3');
-    assert.match(html, /Hisoblangan maosh \(taxminiy\)<\/small><b>278571 so'm/);
-    assert.ok(!html.includes('Yordamchi ustozlik'));
+    assert.match(html, /data-thx-todo/, '"Bajarish kerak" bloki serverdan keyin to\'ldiriladi');
+    assert.ok(!html.includes('Yordamchi ustozlik') && !html.includes('aloqa'));
     assert.equal(c.t({ role: 'rop' }), '');
 });
 
-test('assistant home: own assisted students, monthly count vs limit, estimate', () => {
-    const c = ctx('2026-10-20T16:50:00+05:00');
+test('assistant home: contacts suggested on the opposite days, no old attendance buttons', () => {
+    const c = ctx('2026-10-20T16:50:00+05:00'); // seshanba
     Object.assign(c, {
         STORAGE_KEYS: { students: 'students', mainAttendance: 'att', assistantAttendance: 'asatt' },
         getTeacherAssignmentIds: () => new Set(['y1']),
-        expandLessonPatternDays: d => [+d],
-        resolveTeacherWithVirtual: () => ({ id: 'y1', type: 'yordamchi', subject: 'english' }),
-        calculateKpiSalary: (t, m, store, list) => ({ total: 34_615, completed: 9, expected: 13 }),
-        fmtMoney: n => n + " so'm",
+        expandLessonPatternDays: d => ([1, 3, 5].includes(+d) ? [1, 3, 5] : [2, 4, 6].includes(+d) ? [2, 4, 6] : [+d]),
+        resolveTeacherWithVirtual: id => ({ id, name: id === 'z' ? 'Kamola Mirzayeva' : 'Yordamchi', type: 'yordamchi', subject: 'english' }),
         getItem: k => k === 'students' ? [
-            { id: 'a', name: 'Abbos', teacherId: 'z', assistantTeacherId: 'y1' },
-            { id: 'b', name: 'Ilyos', teacherId: 'z', assistantTeacherId: 'y1' },
-            { id: 'c', name: 'Boshqa', teacherId: 'z', assistantTeacherId: 'y9' },
-        ] : k === 'asatt' ? { '2026-10_y1': { a: { 5: 1, 9: 0, 14: 1, 19: 1 }, b: { 7: 1, 19: 1 } } } : {},
+            { id: 'a', name: 'Abbos', teacherId: 'z', assistantTeacherId: 'y1', lessonDayOfWeek: 1, lessonTime: '19:00' },
+            { id: 'b', name: 'Ilyos', teacherId: 'z', assistantTeacherId: 'y1', lessonDayOfWeek: 2, lessonTime: '18:00' },
+            { id: 'c', name: 'Boshqa', teacherId: 'z', assistantTeacherId: 'y9', lessonDayOfWeek: 1, lessonTime: '10:00' },
+            { id: 'd', name: 'Ketgan', teacherId: 'z', assistantTeacherId: 'y1', lessonDayOfWeek: 1, lessonTime: '11:00', status: 'inactive' },
+        ] : {},
     });
-    vm.runInContext(functionSource('js/app.js', 'renderTeacherTodayBlock') + '\nthis.t = renderTeacherTodayBlock;', c);
+    vm.runInContext(['_assistAdviceDays', '_thxTeacherShort', 'renderTeacherTodayBlock'].map(n => functionSource('js/app.js', n)).join('\n') + '\nthis.t = renderTeacherTodayBlock;', c);
     const html = c.t({ role: 'teacher', linkedTeacherId: 'y1' });
-    assert.match(html, /Yordamchi ustozlik/);
-    assert.match(html, /oyiga 13 tagacha/);
-    assert.match(html, /Abbos[\s\S]*3 \/ 13 mashgʻulot/);
-    assert.match(html, /Ilyos[\s\S]*2 \/ 13 mashgʻulot/);
-    assert.ok(!html.includes('Boshqa') && !html.includes('Bugungi darslarim'));
-    assert.match(html, /34615 so'm/);
+    assert.match(html, /Abbos[\s\S]*yordamchi aloqasi · asosiy ustoz Kamola M\./, 'Du·Ch·Ju o\'quvchisi — seshanba aloqa tavsiya');
+    assert.ok(!html.includes('Ilyos'), 'Se·Pa·Sh o\'quvchisi seshanba kuni tavsiya qilinmaydi');
+    assert.ok(!html.includes('Boshqa') && !html.includes('Ketgan'));
+    assert.match(html, /data-thx-contact="a"/);
+    assert.ok(!html.includes('data-thx-as-mark') && !html.includes('mashgʻulot'));
+    assert.match(html, /0 dars \+ 1 aloqa/);
 });
