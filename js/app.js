@@ -6153,29 +6153,75 @@ function renderProfileEditSection(user) {
         </div>`;
 }
 
+// Sozlamalar → Parol (UstozSozParol): talablar ro'yxati, kuch ko'rsatkichi, boshqa qurilmalardan chiqarish.
+// Xodim paroli kamida 12 belgi, harf va raqam (server ham tekshiradi: services/authSecurity).
+function _pwdMin() { return getCurrentUser()?.role === 'student' ? 6 : 12; }
+function _pwdChecks(next, current) {
+    const min = _pwdMin();
+    return [
+        { ok: next.length >= min, t: `Kamida ${min} belgi` },
+        { ok: /[A-Za-zА-Яа-яЁё]/.test(next) && /\d/.test(next), t: 'Harf va raqam' },
+        { ok: !!next && next !== current, t: 'Eski paroldan farqli' },
+        { ok: /[A-ZА-ЯЁ]/.test(next), t: 'Katta harf (tavsiya)', soft: true }
+    ];
+}
 function renderProfileSecuritySection() {
+    const checks = _pwdChecks('', '');
     return `
         <div class="profile-header-bar">
             <h1>Parolni o'zgartirish</h1>
-            <p>Hisobingiz xavfsizligi uchun vaqti-vaqti bilan parolni yangilang</p>
+            <p id="profilePwdChanged">Hisobingiz xavfsizligi uchun vaqti-vaqti bilan parolni yangilang</p>
         </div>
-        <div class="profile-cards" style="max-width:520px">
+        <div class="profile-cards pwd-grid" style="max-width:820px">
             <div class="profile-card">
                 <div class="form-group">
-                    <label>Joriy parol</label>
+                    <label for="profileCurrentPwd">Joriy parol</label>
                     <input type="password" id="profileCurrentPwd" class="form-control" autocomplete="current-password">
                 </div>
                 <div class="form-group">
-                    <label>Yangi parol</label>
-                    <input type="password" id="profileNewPwd" class="form-control" autocomplete="new-password">
+                    <label for="profileNewPwd">Yangi parol <button type="button" class="pwd-show" data-pwd-show aria-pressed="false">ko'rsatish</button></label>
+                    <input type="password" id="profileNewPwd" class="form-control" autocomplete="new-password" aria-describedby="profilePwdRules">
                 </div>
                 <div class="form-group">
-                    <label>Yangi parolni tasdiqlang</label>
+                    <label for="profileConfirmPwd">Yangi parolni takrorlang <span class="pwd-match" id="profilePwdMatch"></span></label>
                     <input type="password" id="profileConfirmPwd" class="form-control" autocomplete="new-password">
                 </div>
-                <button type="button" class="btn-primary-sm" id="profileChangePwdBtn">Parolni yangilash</button>
+                <label class="pwd-others"><input type="checkbox" id="profilePwdOthers" checked> Boshqa qurilmalardan chiqarish</label>
+                <button type="button" class="btn-primary-sm" id="profileChangePwdBtn">Parolni saqlash</button>
+                <p class="pwd-err" id="profilePwdErr" role="alert"></p>
+            </div>
+            <div class="profile-card">
+                <h4 style="margin:0 0 8px">Talablar</h4>
+                <ul class="pwd-rules" id="profilePwdRules">${checks.map(c => `<li class="${c.soft ? 'soft' : ''}">${escapeHtml(c.t)}</li>`).join('')}</ul>
+                <div class="pwd-meter" aria-hidden="true"><i id="profilePwdMeter"></i></div><p class="pwd-strength" id="profilePwdStrength"></p>
+                <h4 style="margin:16px 0 6px">Parolni unutdingizmi?</h4>
+                <p class="text-muted" style="font-size:13px;margin:0">Admin vaqtinchalik parol beradi — birinchi kirishda uni o'zgartiring.</p>
             </div>
         </div>`;
+}
+function bindProfilePasswordUi() {
+    const cur = document.getElementById('profileCurrentPwd'), nw = document.getElementById('profileNewPwd'), cf = document.getElementById('profileConfirmPwd');
+    if (!nw) return;
+    const update = () => {
+        const checks = _pwdChecks(nw.value, cur.value);
+        document.querySelectorAll('#profilePwdRules li').forEach((li, i) => li.classList.toggle('ok', checks[i].ok));
+        const score = checks.filter(c => c.ok).length + (nw.value.length >= 16 ? 1 : 0);
+        const meter = document.getElementById('profilePwdMeter');
+        if (meter) { meter.style.width = `${Math.min(100, score * 20)}%`; meter.dataset.level = score >= 4 ? 'ok' : score >= 3 ? 'mid' : 'low'; }
+        const st = document.getElementById('profilePwdStrength');
+        if (st) st.textContent = !nw.value ? '' : score >= 4 ? 'Kuchli' : score >= 3 ? 'O\'rtacha' : 'Zaif';
+        const m = document.getElementById('profilePwdMatch');
+        if (m) { m.textContent = !cf.value ? '' : cf.value === nw.value ? 'mos' : 'mos emas'; m.className = 'pwd-match ' + (cf.value === nw.value ? 'ok' : 'bad'); }
+    };
+    [cur, nw, cf].forEach(el => el.addEventListener('input', update));
+    document.querySelector('[data-pwd-show]')?.addEventListener('click', e => {
+        const show = nw.type === 'password'; nw.type = cf.type = show ? 'text' : 'password';
+        e.target.textContent = show ? 'yashirish' : 'ko\'rsatish'; e.target.setAttribute('aria-pressed', String(show));
+    });
+    apiLoginHistory().then(r => {
+        const el = document.getElementById('profilePwdChanged');
+        if (el && r.passwordChangedAt) el.textContent = `Oxirgi o'zgartirish: ${new Date(r.passwordChangedAt).toLocaleDateString('uz-UZ', { timeZone: 'Asia/Tashkent' })}`;
+    }).catch(() => {});
 }
 
 // 121-ish: appdan "Qo'llab-quvvatlash" bo'limiga yozilgan xabarlarga admin
@@ -6356,9 +6402,28 @@ async function loadAndRenderSessions() {
                 }
             });
         }
+        renderLoginHistory(wrap);
     } catch (err) {
         wrap.innerHTML = `<div class="profile-cards" style="max-width:600px"><div class="profile-card" style="padding:24px;color:var(--danger)">${escapeHtml(err.message)}</div></div>`;
     }
+}
+
+// Kirishlar tarixi · 30 kun (UstozSozSessiya): muvaffaqiyatli va noto'g'ri parol urinishlari.
+async function renderLoginHistory(wrap) {
+    let r; try { r = await apiLoginHistory(); } catch { return; }
+    const ev = r.events || [];
+    const fails = ev.filter(e => !e.ok);
+    const groups = [];
+    for (const e of ev) { const last = groups[groups.length - 1];
+        if (last && !e.ok && !last.ok && last.ip === e.ip && Math.abs(new Date(last.at) - new Date(e.at)) < 3600e3) last.n++; else groups.push({ ...e, n: 1 }); }
+    const fmt = v => new Date(v).toLocaleString('uz-UZ', { timeZone: 'Asia/Tashkent', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    const recentFail = fails.find(e => Date.now() - new Date(e.at) < 7 * 864e5);
+    wrap.insertAdjacentHTML('beforeend', `
+        ${recentFail ? `<div class="profile-card login-warn" style="max-width:600px;margin-top:12px">${escapeHtml(fmt(recentFail.at))} — ${escapeHtml(recentFail.ip || 'noma\'lum joy')}dan noto'g'ri parol. Siz bo'lmasangiz parolni o'zgartiring. ${r.failLimit} xatodan keyin kirish ${r.lockMinutes} daqiqaga bloklanadi.
+            <button type="button" class="btn-ghost" data-go-pwd>Parolni o'zgartirish</button></div>` : ''}
+        <div class="profile-card" style="max-width:600px;margin-top:12px"><h4 style="margin:0 0 8px">Kirishlar tarixi · 30 kun</h4>
+        ${groups.length ? `<table class="login-hist"><thead><tr><th>Vaqt</th><th>Qurilma</th><th>IP</th><th>Natija</th></tr></thead><tbody>${groups.map(g => `<tr${g.ok ? '' : ' class="bad"'}><td>${escapeHtml(fmt(g.at))}</td><td>${escapeHtml(parseSessionDevice(g.userAgent).label)}</td><td>${escapeHtml(g.ip || '—')}</td><td>${g.ok ? 'Kirdi' : `Noto'g'ri parol${g.n > 1 ? ' × ' + g.n : ''}`}</td></tr>`).join('')}</tbody></table>` : '<p class="text-muted" style="margin:0">Hozircha yozuv yo\'q — tarix shu yangilanishdan keyin yig\'iladi.</p>'}</div>`);
+    wrap.querySelector('[data-go-pwd]')?.addEventListener('click', () => { _profileSection = 'security'; renderProfileBody(); });
 }
 
 function bindProfileEvents() {
@@ -6575,30 +6640,26 @@ async function handleProfileAvatarUpload(e) {
 }
 
 async function handleProfilePasswordChange() {
-    const current = document.getElementById('profileCurrentPwd')?.value;
-    const next = document.getElementById('profileNewPwd')?.value;
-    const confirm = document.getElementById('profileConfirmPwd')?.value;
-    if (!current || !next) {
-        alert('Barcha maydonlarni to\'ldiring');
-        return;
-    }
-    if (next !== confirm) {
-        alert('Yangi parollar mos kelmadi');
-        return;
-    }
-    if (next.length < 6) {
-        alert('Parol kamida 6 ta belgidan iborat bo\'lishi kerak');
-        return;
-    }
+    const current = document.getElementById('profileCurrentPwd')?.value || '';
+    const next = document.getElementById('profileNewPwd')?.value || '';
+    const confirm = document.getElementById('profileConfirmPwd')?.value || '';
+    const err = document.getElementById('profilePwdErr');
+    const fail = m => { if (err) err.textContent = m; else alert(m); };
+    if (!current || !next) return fail('Barcha maydonlarni to\'ldiring');
+    if (next !== confirm) return fail('Yangi parollar mos kelmadi');
+    const bad = _pwdChecks(next, current).find(c => !c.ok && !c.soft);
+    if (bad) return fail(`Talab bajarilmagan: ${bad.t}`);
+    const btn = document.getElementById('profileChangePwdBtn');
+    if (btn) btn.disabled = true;
     try {
-        await apiChangePassword(current, next);
-        alert('Parol muvaffaqiyatli yangilandi');
-        document.getElementById('profileCurrentPwd').value = '';
-        document.getElementById('profileNewPwd').value = '';
-        document.getElementById('profileConfirmPwd').value = '';
-    } catch (err) {
-        alert(err.message);
-    }
+        await apiChangePassword(current, next, !!document.getElementById('profilePwdOthers')?.checked);
+        if (err) err.textContent = '';
+        showNotification('Muvaffaqiyatli', 'Parol yangilandi', 'success');
+        ['profileCurrentPwd', 'profileNewPwd', 'profileConfirmPwd'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+        bindProfilePasswordUi();
+    } catch (e) {
+        fail(e.message);
+    } finally { if (btn) btn.disabled = false; }
 }
 
 // 126-ish: avval alohida "Sozlamalar" sahifasida (Arxiv/Bildirishnomalar/
@@ -6646,6 +6707,7 @@ function renderProfileBody() {
     body.innerHTML = html;
     bindProfileEvents();
     if (_profileSection === 'sessions') loadAndRenderSessions();
+    if (_profileSection === 'security') bindProfilePasswordUi();
     if (_profileSection === 'support') {
         const demoStudentId = getItem(STORAGE_KEYS.demoStudentId, '');
         const container = document.getElementById('adminSupportChat');
@@ -11949,89 +12011,40 @@ function renderTpTrial() {
 }
 
 // --- Reyting ---
-function renderTpRating() {
+// Ustozlar reytingi (Reyting dizayni): server hisoblaydi — davomat 60% + o'quvchilar o'zlashtirishi 40%
+// (uy vazifasi, 1-urinish). Asosiy va yordamchi ustozlar alohida. Til yo'nalishi bo'yicha filtr.
+let _tpRatingType = 'asosiy';
+async function renderTpRating() {
     const container = document.getElementById('tpRating');
     if (!container) return;
-    const hrRole = _teachersLang === 'russian' ? 'rus-oqituvchi' : 'ingliz-oqituvchi';
-    const teachers = getAllTeachersForSection().filter(t => t.role === hrRole);
-    const students = getItem(STORAGE_KEYS.students, []);
-    const mainAtt = getItem(STORAGE_KEYS.mainAttendance, {});
-    const now = new Date();
-    const monthVal = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-
-    // O'quvchilar CRM'da davomat tasdiqlanganda ustozga bergan "Siz ustozni
-    // baholang" bahosi (overall mezoni) — bu ustozning reytingiga ham
-    // ta'sir qiladi (davomat % bilan birga qo'shilgan ball sifatida).
-    const liveGrades = getItem(STORAGE_KEYS.liveGrades, {});
-    const teacherRatingAvg = (teacherId) => {
-        const overalls = [];
-        Object.values(liveGrades).forEach(entries => {
-            (entries || []).forEach(e => {
-                if (e.teacherId === teacherId && e.studentRatingOfTeacher && typeof e.studentRatingOfTeacher.overall === 'number') {
-                    overalls.push(e.studentRatingOfTeacher.overall);
-                }
-            });
-        });
-        return overalls.length ? overalls.reduce((a, b) => a + b, 0) / overalls.length : null;
-    };
-
-    const stats = teachers.map(t => {
-        const myStudents = students.filter(s => s.teacherId === t.id);
-        const attKey = `${monthVal}_${t.id}`;
-        const block = mainAtt[attKey] || {};
-        let totalPresent = 0, totalRecorded = 0;
-        myStudents.forEach(s => {
-            const sa = block[s.id] || {};
-            Object.values(sa).forEach(v => { totalRecorded++; if (v) totalPresent++; });
-        });
-        const attRate = totalRecorded > 0 ? Math.round((totalPresent / totalRecorded) * 100) : 0;
-        const avgGrade = myStudents.filter(s=>s.grade).reduce((sum,s,_,arr)=>sum+parseFloat(s.grade||0)/arr.length, 0);
-        const studentRating = teacherRatingAvg(t.id);
-        const score = studentRating !== null ? attRate * 0.5 + (studentRating / 5 * 100) * 0.5 : attRate;
-        return { t, myStudents, attRate, avgGrade: avgGrade.toFixed(1), studentRating, score };
-    }).sort((a, b) => b.score - a.score);
-
-    const rows = stats.map((s, i) => {
-        const subjectLabel = s.t.role === 'rus-oqituvchi' ? '🇷🇺 Rus tili' : '🇬🇧 Ingliz tili';
-        const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}.`;
-        return `<tr>
-            <td style="font-size:18px;width:40px">${medal}</td>
-            <td>
-                <div style="display:flex;align-items:center;gap:8px">
-                    <div class="student-avatar-mini">${escapeHtml((s.t.name||'').split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase())}</div>
-                    <span style="font-weight:600">${escapeHtml(s.t.name||'—')}</span>
-                </div>
-            </td>
-            <td>${subjectLabel}</td>
-            <td style="text-align:center">${s.myStudents.length}</td>
-            <td style="text-align:center">
-                <div style="display:flex;align-items:center;gap:8px">
-                    <div style="flex:1;background:var(--border);border-radius:99px;height:6px">
-                        <div style="width:${s.attRate}%;height:100%;border-radius:99px;background:${s.attRate>=80?'#22c55e':s.attRate>=60?'#f59e0b':'#ef4444'}"></div>
-                    </div>
-                    <span style="font-size:12px;font-weight:600;min-width:36px">${s.attRate}%</span>
-                </div>
-            </td>
-            <td style="text-align:center">${parseFloat(s.avgGrade) > 0 ? s.avgGrade : '—'}</td>
-            <td style="text-align:center">${s.studentRating !== null ? `⭐ ${s.studentRating.toFixed(1)}` : '—'}</td>
-        </tr>`;
-    }).join('') || `<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted)">O'qituvchilar yo'q</td></tr>`;
-
-    container.innerHTML = `
-    <div style="padding:20px">
-        <div class="page-title-bar" style="margin-bottom:16px"><h2>Oʻqituvchilar reytingi — ${(() => { const [y, m] = String(monthVal).split('-').map(Number); return m ? `${['Yanvar','Fevral','Mart','Aprel','May','Iyun','Iyul','Avgust','Sentabr','Oktabr','Noyabr','Dekabr'][m - 1]} ${y}` : monthVal; })()}</h2></div>
-        <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Reyting davomat % va o'quvchilarning "Siz ustozni baholang" bahosi (o'rtachasi) asosida hisoblanadi.</div>
-        <div class="card">
-            <div class="table-responsive">
-                <table class="table">
-                    <thead><tr>
-                        <th>#</th><th>Ustoz</th><th>Til</th><th>O'quvchilar</th><th>Davomat %</th><th>O'rt. baho</th><th>O'quvchilar bahosi</th>
-                    </tr></thead>
-                    <tbody>${rows}</tbody>
-                </table>
-            </div>
-        </div>
-    </div>`;
+    const lang = _teachersLang === 'russian' ? 'russian' : 'english';
+    const hr = getItem(STORAGE_KEYS.hrEmployees, []);
+    const langOf = id => { const e = hr.find(x => x.id === id); if (!e) return null; return e.role === 'rus-oqituvchi' ? 'russian' : e.role === 'ingliz-oqituvchi' ? 'english' : (e.lang === 'russian' ? 'russian' : 'english'); };
+    const MON = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentyabr', 'Oktyabr', 'Noyabr', 'Dekabr'];
+    container.innerHTML = '<div style="padding:20px"><p class="text-muted">Reyting yuklanmoqda…</p></div>';
+    let data;
+    try { data = await apiFetchTeacherRating(_tpRatingType); }
+    catch (err) { container.innerHTML = `<div style="padding:20px"><p class="text-muted">${escapeHtml(err.message)}</p></div>`; return; }
+    const rows = (data.rows || []).filter(r => { const l = langOf(r.id); return !l || l === lang; }).map((r, i) => ({ ...r, rank: i + 1 }));
+    const [y, m] = String(data.month || '').split('-').map(Number);
+    const monthLabel = m ? `${MON[m - 1]} ${y}` : '';
+    const av = id => { const e = hr.find(x => x.id === id) || { id }; return window.schoolUI?.staffAvatar ? window.schoolUI.staffAvatar(e, 40) : ''; };
+    const pct = v => v == null ? '—' : `${v}%`;
+    const top = rows.slice(0, 3).map(r => `<div class="rt-top"><span class="rt-rank">${r.rank}</span>${av(r.id)}<div><b>${escapeHtml(r.name)}</b><small>${_tpRatingType === 'yordamchi' ? 'Yordamchi' : 'Asosiy'} · ${r.students} o'quvchi</small></div>
+        <strong>${r.score}<small> ball</small></strong><dl><dt>Davomat</dt><dd>${pct(r.davomatPct)}</dd><dt>O'zlashtirish</dt><dd>${pct(r.learnPct)}</dd></dl></div>`).join('');
+    container.innerHTML = `<div style="padding:20px" class="rt-page">
+        <div class="rt-head"><h2>Ustozlar reytingi</h2>
+          <div class="sc-seg" role="group" aria-label="Ustoz turi"><button type="button" data-rt-type="asosiy" aria-pressed="${_tpRatingType === 'asosiy'}">Asosiy ustozlar</button><button type="button" data-rt-type="yordamchi" aria-pressed="${_tpRatingType === 'yordamchi'}">Yordamchi ustozlar</button></div>
+          <span class="text-muted">${escapeHtml(monthLabel)}</span></div>
+        <div class="rt-formula"><span><b>Davomat</b> % × 60%</span><i>+</i><span><b>O'quvchilar o'zlashtirishi</b> — uy vazifasi, 1-urinish % × 40%</span><i>=</i><span><b>Ball</b> / 100</span></div>
+        <p class="text-muted" style="font-size:12.5px">Davomat — rejadagi darslardan nechtasi o'tildi. O'zlashtirish — o'quvchilar ilovada uy vazifasini birinchi urinishda necha foizga bajargani (ilova ma'lumoti; ma'lumoti yo'q o'quvchi hisobga kirmaydi). Asosiy va yordamchi ustozlar alohida solishtiriladi.</p>
+        ${rows.length ? `<div class="rt-tops">${top}</div>` : ''}
+        <div class="card"><div class="table-responsive"><table class="table"><thead><tr><th>#</th><th>Ustoz</th><th>O'quvchilar</th><th>Davomat · 60%</th><th>O'zlashtirish · 40%</th><th>Ball</th></tr></thead><tbody>
+          ${rows.map(r => `<tr><td>${r.rank}</td><td><div style="display:flex;align-items:center;gap:10px">${av(r.id)}<div><b>${escapeHtml(r.name)}</b><div class="text-muted" style="font-size:12px">${r.completed} / ${r.expected} dars</div></div></div></td>
+            <td>${r.students}</td><td><div class="rt-bar"><i style="width:${r.davomatPct || 0}%"></i></div> ${pct(r.davomatPct)}</td>
+            <td>${pct(r.learnPct)}${r.learnPct != null ? `<div class="text-muted" style="font-size:11.5px">${r.learnStudents} o'quvchi ma'lumoti</div>` : ''}</td><td><b>${r.score}</b></td></tr>`).join('') || `<tr><td colspan="6" class="text-muted" style="text-align:center;padding:28px">Bu oy hali reyting uchun ma'lumot yo'q</td></tr>`}
+        </tbody></table></div></div></div>`;
+    container.querySelectorAll('[data-rt-type]').forEach(b => b.addEventListener('click', () => { _tpRatingType = b.dataset.rtType; renderTpRating(); }));
 }
 
 // --- Darslik ---

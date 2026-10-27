@@ -10,6 +10,9 @@ const {
     getHrEmployeeById, getHrEmployeeByLogin, setHrEmployeeLogin
 } = require('../db');
 const { signToken, authRequired } = require('../middleware/auth');
+const security = require('../services/authSecurity');
+const dbPool = () => require('../db').pool;
+const clientIp = req => (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket?.remoteAddress || '';
 
 const router = express.Router();
 
@@ -150,15 +153,20 @@ router.post('/login', async (req, res) => {
         const { email, password } = req.body || {};
         if (!email?.trim() || !password)
             return res.status(400).json({ error: 'Login va parol kiriting' });
-        const user = await findUserByEmail(email.trim());
-        if (!user || !bcrypt.compareSync(password, user.password_hash))
+        const login = email.trim(), userAgent = req.headers['user-agent'] || '', ip = clientIp(req);
+        // 5 marta noto'g'ri parol (shu login + shu IP, 15 daqiqa) → 15 daqiqa kutish. Xavfsizlik jurnali ishlamasa kirish to'xtamaydi.
+        if (await security.isLocked(dbPool(), login, ip).catch(() => false))
+            return res.status(429).json({ error: `Ko'p marta noto'g'ri parol kiritildi. ${security.LOCK_MINUTES} daqiqadan keyin qayta urinib ko'ring.` });
+        const user = await findUserByEmail(login);
+        if (!user || !bcrypt.compareSync(password, user.password_hash)) {
+            await security.record(dbPool(), { userId: user?.id || null, login, ok: false, reason: 'wrong_password', ip, userAgent }).catch(() => {});
             return res.status(401).json({ error: 'Login yoki parol noto\'g\'ri' });
+        }
         if (user.disabled_at)
             return res.status(403).json({ error: 'Bu akkaunt bloklangan (xodim ishdan bo‘shatilgan). Rahbariyatga murojaat qiling.' });
         const { token, jti } = signToken(user);
-        const userAgent = req.headers['user-agent'] || '';
-        const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket?.remoteAddress || '';
         await createSession({ userId: user.id, jti, userAgent, ip });
+        await security.record(dbPool(), { userId: user.id, login, ok: true, ip, userAgent }).catch(() => {});
         res.json({ token, user: publicUser(user) });
     } catch (err) {
         console.error('POST /login', err);
@@ -287,20 +295,32 @@ router.patch('/me', authRequired, async (req, res) => {
 
 router.post('/change-password', authRequired, async (req, res) => {
     try {
-        const { currentPassword, newPassword } = req.body || {};
+        const { currentPassword, newPassword, logoutOthers } = req.body || {};
         if (!currentPassword || !newPassword)
             return res.status(400).json({ error: 'Joriy va yangi parol kiriting' });
-        if (newPassword.length < 6)
-            return res.status(400).json({ error: 'Yangi parol kamida 6 ta belgidan iborat bo\'lishi kerak' });
         const user = await findUserById(req.user.id);
         if (!user || !bcrypt.compareSync(currentPassword, user.password_hash))
             return res.status(401).json({ error: 'Joriy parol noto\'g\'ri' });
+        const problem = security.checkNewPassword(user, String(currentPassword), String(newPassword));
+        if (problem) return res.status(400).json({ error: problem });
         await updateUser(user.id, { passwordHash: bcrypt.hashSync(newPassword, 10) });
+        await security.markPasswordChanged(dbPool(), user.id).catch(() => {});
+        if (logoutOthers && req.user.jti) await deleteOtherSessions(user.id, req.user.jti);
         res.json({ ok: true });
     } catch (err) { res.status(500).json({ error: 'Server xatoligi' }); }
 });
 
 // ── Sessiyalar ────────────────────────────────────────────────────────────────
+
+// Kirishlar tarixi (30 kun) va parol oxirgi o'zgartirilgan vaqt — Sozlamalar → Sessiyalar / Parol.
+router.get('/login-history', authRequired, async (req, res) => {
+    try {
+        const user = await findUserById(req.user.id);
+        if (!user) return res.status(404).json({ error: 'Foydalanuvchi topilmadi' });
+        const [events, changedAt] = await Promise.all([security.history(dbPool(), user), security.passwordChangedAt(dbPool(), user.id)]);
+        res.json({ events, passwordChangedAt: changedAt, failLimit: security.FAIL_LIMIT, lockMinutes: security.LOCK_MINUTES, minLength: user.role === 'student' ? 6 : security.STAFF_MIN });
+    } catch (err) { console.error('GET /login-history', err); res.status(500).json({ error: 'Server xatoligi' }); }
+});
 
 router.get('/sessions', authRequired, async (req, res) => {
     try {

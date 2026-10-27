@@ -72,7 +72,8 @@ function computeTeacherRating(state, ownType, now = tashkentNow(), learning = {}
         const attKey = `${monthSuffix}_${t.id}`;
         const presentDays = attStore[attKey] || {};
         let completed = 0;
-        Object.values(presentDays).forEach((daysObj) => { completed += Object.keys(daysObj || {}).length; });
+        // Faqat "Keldi" (1/true) — "Kelmadi" (0) belgilari ham shu obyektda saqlanadi, ular hisoblanmaydi.
+        Object.values(presentDays).forEach((daysObj) => { completed += Object.values(daysObj || {}).filter(v => v === 1 || v === true).length; });
 
         const davomatPct = expected > 0 ? Math.min(100, (completed / expected) * 100) : 0;
 
