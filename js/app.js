@@ -9342,8 +9342,16 @@ async function _loadTeacherHomeRating(container) {
     }
 }
 
+// Faqat yordamchi ustoz (asosiy o'quvchisi yo'q): YordamchiBosh — schoolTeacher.assistantHome to'ldiradi.
+function _isPureAssistant(user) {
+    const employee = getItem(STORAGE_KEYS.hrEmployees, []).find(e => e.id === user?.linkedTeacherId);
+    const hasMain = getItem(STORAGE_KEYS.students, []).some(s => s.teacherId === user?.linkedTeacherId && !s.isStaffDemo);
+    return !hasMain && (employee?.role === 'yordamchi' || (typeof teacherRoles !== 'undefined' && employee && !teacherRoles.isMain(employee)));
+}
+
 function renderTeacherHome(user, now = new Date()) {
     if (user?.role !== 'teacher' || !user.linkedTeacherId) return '';
+    if (_isPureAssistant(user) && window.schoolTeacher?.assistantHome) return '<div class="ahx thx" id="teacherHome" data-assist-home><div class="sc-skel"></div></div>';
     const s = teacherHomeStats(user, now);
     const hour = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Tashkent', hour: '2-digit', hour12: false }).format(now));
     const greet = hour < 11 ? 'Xayrli tong' : hour < 18 ? 'Xayrli kun' : 'Xayrli kech';
@@ -9423,6 +9431,8 @@ function renderDashboardOverview(args) {
     }
     if (currentUser?.role === 'teacher' && currentUser.linkedTeacherId) {
         container.innerHTML = renderTeacherHome(currentUser);
+        const assistRoot = container.querySelector('[data-assist-home]');
+        if (assistRoot) { window.schoolTeacher.assistantHome(assistRoot, currentUser).catch(e => { assistRoot.innerHTML = `<div class="sc-err">${escapeHtml(e.message || 'Yuklanmadi')}</div>`; }); return; }
         container.querySelectorAll('[data-teacher-open-att]').forEach(btn => btn.addEventListener('click', () => switchTab('teachers-section')));
         container.querySelector('[data-thx-guides]')?.addEventListener('click', () => switchTab('guides'));
         container.querySelectorAll('[data-thx-go]').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.thxGo)));

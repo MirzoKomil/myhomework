@@ -254,3 +254,16 @@ html.rd .teacher-duty-today .duty-acts { display: flex; align-items: center; gap
 @media (max-width: 700px) { .ms-table th:nth-child(2), .ms-table td:nth-child(2), .ms-table th:nth-child(6), .ms-table td:nth-child(6) { display: none; } .sc-root .sc-head input[type=search] { width: 100%; } }
 .ms-detail > .sc-row > span { display: flex; flex-direction: column; }
 .ms-grid > .sc-card { overflow-x: auto; }
+
+/* Yordamchi bosh sahifasi */
+.ya-prev .ya-big { font-size: 22px; }
+.ya-steps { list-style: none; display: flex; flex-wrap: wrap; gap: 6px 16px; padding: 0; margin: 8px 0; font-size: 13px; color: var(--text-muted, #6B7280); }
+.ya-steps li.ok { color: #0F7A55; font-weight: 700; }
+.ya-rules { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.ya-list { list-style: none; margin: 0; padding: 0; }
+.ya-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--border, #E6EAF2); }
+.ya-row:first-child { border-top: 0; }
+.ya-time { width: 46px; font-size: 14px; flex: none; }
+.ya-who { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.ya-row .sc-pill { flex: none; }
+@media (max-width: 600px) { .ya-row .sc-pill { display: none; } }
