@@ -22,6 +22,8 @@ test('yagona jadval va o\'quvchi amallari — haqiqiy PostgreSQL', { skip: !url 
           CREATE TABLE hr_employees(id TEXT PRIMARY KEY,name TEXT,login TEXT,role TEXT,status TEXT,lang TEXT,dual_role BOOLEAN DEFAULT FALSE);
           CREATE TABLE students(id TEXT PRIMARY KEY,name TEXT NOT NULL,phone TEXT DEFAULT '',group_name TEXT DEFAULT '',subject TEXT DEFAULT 'english',
             teacher_id TEXT,assistant_teacher_id TEXT,lesson_day_of_week INTEGER,lesson_time TEXT DEFAULT '',lesson_duration INTEGER DEFAULT 15,extra_data JSONB DEFAULT '{}');
+          CREATE TABLE leads(id TEXT PRIMARY KEY,name TEXT,manager_id TEXT,status TEXT,language TEXT,extra_data JSONB DEFAULT '{}',deleted_at TIMESTAMPTZ);
+          INSERT INTO leads VALUES ('lead-trial','Sardor','m-nodira','sinov-darsida','english','{"paymentSurvey":{"tariff":"30"},"paymentOnboarding":{"teacherId":"dilnoza","lessonDayOfWeek":4},"trialRequest":{"id":"t1","teacherId":"dilnoza","scheduledAt":"2026-10-29T10:00:00.000Z","daysCount":1,"state":"accepted"}}');
           INSERT INTO users VALUES ('u-sanjar','Sanjar','sanjar@x.uz','teacher');
           INSERT INTO hr_employees VALUES ('dilnoza','Dilnoza','dilnoza@x.uz','ingliz-oqituvchi','active','english'),
             ('kamola','Kamola','kamola@x.uz','ingliz-oqituvchi','active','english'),('sanjar','Sanjar','sanjar@x.uz','yordamchi','active','english');
@@ -40,6 +42,7 @@ test('yagona jadval va o\'quvchi amallari — haqiqiy PostgreSQL', { skip: !url 
             assert.match(r.find(x => x.status === 'rejected').reason.message, /ushlab turibdi|band/);
             await assert.rejects(tx(c => S.book(c, sales, { ...input, time: '10:00', leadId: 'lead-3' }, now)), /band/);
             await assert.rejects(tx(c => S.book(c, sales, { ...input, time: '21:00', leadId: 'lead-4' }, now)), /ochiq emas/);
+            await assert.rejects(tx(c => S.book(c, sales, { ...input, time: '15:00', leadId: 'lead-5' }, now)), /band/, 'sotuvdagi lid sinovi ham band qiladi');
             const later = new Date(now.getTime() + 11 * 60000);
             await tx(c => S.book(c, sales2, { ...input, leadId: 'lead-2' }, later)); // ushlab turish tugadi
         });

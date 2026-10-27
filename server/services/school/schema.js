@@ -101,5 +101,7 @@ CREATE TABLE IF NOT EXISTS school_assist_months (
  objection_until DATE, final_at TIMESTAMPTZ, paid_at TIMESTAMPTZ
 );
 `;
-async function initSchema(db) { await db.query(SCHEMA); }
-module.exports = { initSchema, SCHEMA };
+// Jadvallar yaratilgach true — db.js dagi ilgaklar (sinov to'qnashuvi, guruh) faqat shunda ishlaydi.
+const state = { ready: false };
+async function initSchema(db) { await db.query(SCHEMA); state.ready = true; }
+module.exports = { initSchema, SCHEMA, state };

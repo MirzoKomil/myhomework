@@ -63,7 +63,8 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         if (FULL.has(role)) return { views: await views(req, from, to, teacherId ? [teacherId] : null), scope: 'full' };
         if (SALES.has(role)) {
             const v = await views(req, from, to, teacherId ? [teacherId] : null);
-            return { views: v.map(x => S.redactForSales(x, req.user)), scope: 'sales' };
+            const mid = await managerId(req);
+            return { views: v.map(x => S.redactForSales(x, req.user, mid)), scope: 'sales' };
         }
         throw T.fail(403, 'Jadvalga ruxsat yo\'q');
     }
@@ -115,6 +116,28 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         return { bookings: await S.book(c, req.user, req.body) };
     })));
     router.post('/bookings/group/:group/confirm', handle(req => write(req, c => S.confirmHold(c, req.user, req.params.group).then(b => ({ bookings: b })))));
+    // "Kim bo'sh?" → ushlab turilgan vaqtni lidga biriktirish: lid "Sinov darsida" bosqichiga o'tadi
+    // (CRM lid oynasidagi bilan bir xil yo'l — lid tarixi, SLA, ustoz tasdig'i). Ushlab turish bekor bo'ladi.
+    router.post('/bookings/group/:group/attach-lead', handle(async req => {
+        need(req, new Set([...SALES, ...FULL]));
+        const holds = (await pool.query(`SELECT * FROM school_bookings WHERE group_id=$1 AND status='hold' AND hold_until >= NOW() AND created_by=$2 ORDER BY date`, [req.params.group, req.user.id])).rows;
+        if (!holds.length) throw T.fail(409, 'Ushlab turish muddati tugagan — vaqtni qaytadan tanlang');
+        const row = (await pool.query('SELECT * FROM leads WHERE id=$1 AND deleted_at IS NULL', [String(req.body?.leadId || '')])).rows[0];
+        if (!row) throw T.fail(404, 'Lid topilmadi');
+        const mid = await managerId(req);
+        if (req.user.role === 'sales_manager' && String(row.manager_id || '') !== String(mid || '')) throw T.fail(403, 'Faqat o\'z lidingizni sinovga yozasiz');
+        const extra = typeof row.extra_data === 'object' && row.extra_data ? row.extra_data : JSON.parse(row.extra_data || '{}');
+        const first = holds[0], date = S.dateStr(first.date), min = Number(first.start_min);
+        const at = new Date(Date.parse(date + 'T00:00:00Z') + (min - T.TZ_OFFSET_MIN) * 60000).toISOString();
+        const teacher = (await pool.query('SELECT name FROM hr_employees WHERE id=$1', [first.teacher_id])).rows[0];
+        const lead = { id: row.id, updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : undefined, status: 'sinov-darsida',
+            paymentOnboarding: { ...(extra.paymentOnboarding || {}), teacherId: first.teacher_id, lessonDayOfWeek: T.weekday(date), lessonTime: T.fromMin(min), trialDaysCount: holds.length, isTrial: true },
+            trialLessonAt: at, trialScheduleRevision: randomUUID(),
+            comments: [...(Array.isArray(row.comments) ? row.comments : JSON.parse(row.comments || '[]')), { id: randomUUID(), type: 'trial-lesson', author: req.user.name || '', authorId: req.user.id,
+                createdAt: new Date().toISOString(), text: `Sinov darsi belgilandi ("Kim bo'sh?"):\n• O'qituvchi: ${teacher?.name || '—'}\n• Kuni: ${date.split('-').reverse().join('.')}, ${T.fromMin(min)}\n• Davomiyligi: ${holds.length} kun` }] };
+        const saved = await db.upsertLead(lead, row.language, req.user);
+        return { lead: { id: saved.lead.id, status: saved.lead.status } };
+    }));
     router.post('/bookings/:id/:action', handle(req => write(req, async c => {
         const action = req.params.action;
         let teacherId = null;

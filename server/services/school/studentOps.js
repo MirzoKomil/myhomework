@@ -398,9 +398,26 @@ async function autoNameGroups(db, actor) {
     return n;
 }
 
+// Lid o'quvchiga aylanganda (sotuv kiritgan havola va nom) — guruh yozuvi bir marta yaratiladi.
+// Nom band bo'lsa yoki kiritilmagan bo'lsa — keyingi bo'sh nom, "avtomatik" belgisi bilan (admin/ROP tekshiradi).
+async function ensureProvisionGroup(db, student, actor = { id: 'system' }) {
+    if (!student?.id) return null;
+    const link = String(student.telegramGroupLink || '').trim();
+    if (!link || !GROUP_RE.test(link)) return null;
+    const existing = (await db.query('SELECT 1 FROM school_student_groups WHERE student_id=$1', [student.id])).rows[0];
+    if (existing) return null;
+    let name = String(student.telegramGroupName || '').trim().replace(/\s+/g, ' ');
+    let source = 'manual';
+    const dup = name ? (await db.query('SELECT 1 FROM school_student_groups WHERE LOWER(name)=LOWER($1)', [name])).rows[0] : true;
+    if (!name || name.length < 2 || dup) { name = await nextGroupName(db); source = 'auto'; }
+    const { rows } = await db.query(`INSERT INTO school_student_groups (student_id,tg_link,name,name_source,updated_by) VALUES ($1,$2,$3,$4,$5)
+        ON CONFLICT (student_id) DO NOTHING RETURNING *`, [student.id, link, name.slice(0, 80), source, actor.id || 'system']);
+    return rows[0] || null;
+}
+
 async function history(db, studentId) {
     return (await db.query('SELECT * FROM school_student_audit WHERE student_id=$1 ORDER BY created_at DESC, id DESC LIMIT 200', [studentId])).rows;
 }
 
 module.exports = { ADMIN_ROLES, APPROVER_ROLES, FREEZE_MAX_DAYS, soldBy, applyEdit, edit, createRequest, decideRequest, freeze, stop, restore,
-    changeTeacher, syncLegacy, protectSchoolFields, bumpRev, applyDue, setGroup, nextGroupName, autoNameGroups, cleanGroup, history, statusRows, audit };
+    changeTeacher, syncLegacy, protectSchoolFields, bumpRev, applyDue, setGroup, nextGroupName, autoNameGroups, ensureProvisionGroup, cleanGroup, history, statusRows, audit };

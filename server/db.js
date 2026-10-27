@@ -23,6 +23,10 @@ const finance = require('./services/finance');
 const teacherDuties = require('./services/teacherDuties');
 const archive = require('./services/archive');
 const staffLifecycle = require('./services/staffLifecycle');
+// Yagona dars jadvali / o'quvchi amallari (server/services/school) — jadvallari tayyor bo'lsagina ishlaydi.
+const schoolSchema = require('./services/school/schema');
+const schoolSchedule = require('./services/school/schedule');
+const schoolStudentOps = require('./services/school/studentOps');
 
 // 142-ish qayta ish 8: ilova yopiq bo'lsa ham (haqiqiy OS/brauzer darajasidagi)
 // bildirishnoma yetkazish uchun Web Push VAPID kalitlari — .env orqali
@@ -1314,7 +1318,7 @@ async function saveStudents(client, students, removedStudentIds = []) {
         }
         // Akademik amallar (tahrir, muzlatish, ustoz almashtirish ...) serverda
         // schoolRev'ni oshiradi: undan eski CRM nusxasi ularni qaytarib yubormaydi.
-        require('./services/school/studentOps').protectSchoolFields(s, extra, existingById.get(id));
+        if (typeof schoolStudentOps !== 'undefined') schoolStudentOps.protectSchoolFields(s, extra, existingById.get(id));
         await client.query(
             `INSERT INTO students (id, name, phone, group_name, subject, teacher_id, assistant_teacher_id, lesson_day_of_week, lesson_time, lesson_duration, extra_data)
              VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
@@ -1523,6 +1527,12 @@ async function upsertLeadWithClient(client, lead, language, options = {}) {
         || Object.prototype.hasOwnProperty.call(lead, 'trialRequest')
         || Object.prototype.hasOwnProperty.call(lead, 'trialHistory')) {
         Object.assign(merged, trialWorkflow.syncSchedule(before, merged, randomUUID, new Date().toISOString()));
+        // Yagona dars jadvali: yangi sinov vaqti band emasligini server tekshiradi
+        // (boshqa menejerning sinovi, ustoz darsi, yopilgan vaqt).
+        if (typeof schoolSchema !== 'undefined' && schoolSchema.state.ready
+            && merged.status === 'sinov-darsida' && merged.trialRequest?.id && merged.trialRequest.id !== before?.trialRequest?.id) {
+            await schoolSchedule.checkLeadTrial(client, merged, { actorId: options.actor?.id || null });
+        }
     }
 
     // Biriktirilgan vaqtni server ham boshqaradi: API/import orqali menejer
@@ -1654,6 +1664,10 @@ async function upsertLead(lead, language, actor = {}) {
         const options = { actor };
         saved = await upsertLeadWithClient(client, lead, language, options);
         platformAccess = await provisionLeadStudent(client, saved);
+        // Sotuv kiritgan Telegram guruh havolasi va nomi — yagona guruhlar ro'yxatiga.
+        if (typeof schoolSchema !== 'undefined' && schoolSchema.state.ready && platformAccess?.student?.id) {
+            await schoolStudentOps.ensureProvisionGroup(client, { id: platformAccess.student.id, ...platformAccess.student }, actor);
+        }
         await inflow.syncLead(client, saved, platformAccess, actor, false, options.priorLead);
         await require('./services/domworkBot/events').afterLead(client,options.priorLead,saved);
     }, actor);

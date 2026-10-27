@@ -47,6 +47,33 @@ function dateStr(v) {
     if (v instanceof Date) return new Date(v.getTime() - v.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
     return String(v).slice(0, 10);
 }
+// Sotuvdagi sinov darslari (leads, status='sinov-darsida') ham jadvalni band qiladi —
+// alohida nusxa saqlanmaydi: natija yozilsa, rad etilsa yoki lid boshqa bosqichga
+// o'tsa, vaqt o'zi bo'shaydi. Sana va vaqt Asia/Tashkent bo'yicha.
+function leadTrialSlots(lead) {
+    const tr = lead.trialRequest;
+    const ob = lead.paymentOnboarding || {};
+    const teacherId = String(tr?.teacherId || ob.teacherId || '');
+    const at = tr?.scheduledAt || lead.trialLessonAt;
+    if (!teacherId || !at || (tr && !['pending', 'accepted'].includes(tr.state || 'pending'))) return [];
+    const ms = Date.parse(at); if (!Number.isFinite(ms)) return [];
+    const local = T.nowLocal(new Date(ms));
+    const duration = parseInt(lead.paymentSurvey?.tariff, 10) || Number(ob.lessonDuration) || 30;
+    const count = Math.max(1, Math.min(3, Number(tr?.daysCount || ob.trialDaysCount) || 1));
+    const days = T.patternDays(ob.lessonDayOfWeek || T.weekday(local.date));
+    const out = []; let d = local.date, guard = 0;
+    while (out.length < count && guard++ < 21) {
+        if (out.length === 0 || days.includes(T.weekday(d))) out.push(d);
+        d = T.addDays(d, 1);
+    }
+    return out.map(date => ({ teacherId, date, start: local.min, end: local.min + duration,
+        status: tr?.state === 'accepted' ? 'confirmed' : 'pending', leadId: lead.id, managerId: String(lead.managerId || '') }));
+}
+function parseLead(r) {
+    const extra = parseExtra(r.extra_data);
+    return { ...extra, id: r.id, status: r.status, managerId: r.manager_id || '' };
+}
+
 // Ustoz almashtirilgan bo'lsa — sana bo'yicha qaysi ustoz.
 function teacherOn(student, history, date) {
     const rows = history.filter(h => h.student_id === student.id && dateStr(h.from_date) <= date && (!h.to_date || date <= dateStr(h.to_date)))
@@ -56,7 +83,7 @@ function teacherOn(student, history, date) {
 
 async function loadContext(db, { teacherIds = null, from, to, now = new Date() }) {
     const tFilter = teacherIds ? teacherIds.map(String) : null;
-    const [students, statuses, history, hours, overrides, bookings] = await Promise.all([
+    const [students, statuses, history, hours, overrides, bookings, leads] = await Promise.all([
         db.query('SELECT id,name,subject,teacher_id,assistant_teacher_id,lesson_day_of_week,lesson_time,lesson_duration,extra_data FROM students'),
         db.query('SELECT * FROM school_student_status WHERE cancelled_at IS NULL'),
         db.query('SELECT * FROM school_teacher_history'),
@@ -65,13 +92,16 @@ async function loadContext(db, { teacherIds = null, from, to, now = new Date() }
             + (tFilter ? ' AND teacher_id = ANY($3)' : ''), tFilter ? [from, to, tFilter] : [from, to]),
         db.query(`SELECT * FROM school_bookings WHERE date BETWEEN $1 AND $2 AND status = ANY($3)
             AND NOT (status='hold' AND hold_until < $4)` + (tFilter ? ' AND teacher_id = ANY($5)' : ''),
-            tFilter ? [from, to, ACTIVE_BOOKING, now, tFilter] : [from, to, ACTIVE_BOOKING, now])
+            tFilter ? [from, to, ACTIVE_BOOKING, now, tFilter] : [from, to, ACTIVE_BOOKING, now]),
+        db.query("SELECT id, status, manager_id, extra_data FROM leads WHERE status = 'sinov-darsida' AND deleted_at IS NULL")
     ]);
+    const leadTrials = leads.rows.map(parseLead).flatMap(leadTrialSlots).filter(x => x.date >= from && x.date <= to && (!tFilter || tFilter.includes(x.teacherId)));
     const st = students.rows.map(studentRow).filter(s => !s.legacyInactive);
     const statusBy = new Map();
     for (const r of statuses.rows) { if (!statusBy.has(r.student_id)) statusBy.set(r.student_id, []); statusBy.get(r.student_id).push(r); }
     return { students: st, statusBy, history: history.rows, hours: hours.rows, overrides: overrides.rows,
-        bookings: bookings.rows.map(b => ({ ...b, date: dateStr(b.date) })), from, to };
+        bookings: bookings.rows.map(b => ({ ...b, date: dateStr(b.date) })), leadTrials, from, to,
+        teachersWithHours: new Set(hours.rows.map(h => h.teacher_id)), excludeLeads: new Set() };
 }
 
 // Bir ustozning bir kuni: ish vaqti, band joylar va bo'sh joylar.
@@ -80,6 +110,9 @@ function dayView(ctx, teacherId, date) {
     const ov = ctx.overrides.filter(o => o.teacher_id === teacherId && (dateStr(o.date) === date || (o.date == null && Number(o.weekday) === wd)));
     let work = ctx.hours.filter(h => h.teacher_id === teacherId && Number(h.weekday) === wd)
         .map(h => ({ start: Number(h.start_min), end: Number(h.end_min), trialOpen: h.trial_open !== false }));
+    // Ish vaqti hali kiritilmagan ustoz: cheklov yo'q (faqat to'qnashuv tekshiriladi), admin "Ish vaqti"ni kiritgach aniqlashadi.
+    const noHours = ctx.teachersWithHours && !ctx.teachersWithHours.has(teacherId);
+    if (noHours) work = [{ start: 7 * 60, end: 22 * 60, trialOpen: true, assumed: true }];
     for (const o of ov.filter(o => o.kind === 'open')) work.push({ start: o.start_min, end: o.end_min, trialOpen: true, opened: true });
     const closed = ov.filter(o => o.kind === 'close' || o.kind === 'leave').map(o => ({ start: o.start_min, end: o.end_min, kind: o.kind, reason: o.reason, overrideId: o.id }));
     const makeupOnly = ov.filter(o => o.kind === 'makeup_only').map(o => ({ start: o.start_min, end: o.end_min, kind: 'makeup_only', overrideId: o.id }));
@@ -103,6 +136,9 @@ function dayView(ctx, teacherId, date) {
         items.push({ start: Number(b.start_min), end: Number(b.end_min), kind: b.kind === 'once' ? 'lesson' : b.kind, bookingId: b.id,
             status: b.status, studentId: b.student_id || null, leadId: b.lead_id || null, holdUntil: b.hold_until || null, createdBy: b.created_by });
     }
+    for (const l of (ctx.leadTrials || []).filter(l => l.teacherId === teacherId && l.date === date && !ctx.excludeLeads?.has(l.leadId))) {
+        items.push({ start: l.start, end: l.end, kind: 'trial', status: l.status, leadId: l.leadId, managerId: l.managerId, fromLead: true });
+    }
     for (const c of closed) items.push(c);
     items.sort((a, b) => a.start - b.start);
     // Sinovga ochiq bo'sh joy: ish vaqti − (dars, sinov, qoplash, yopilgan, faqat-qoplash).
@@ -111,7 +147,7 @@ function dayView(ctx, teacherId, date) {
     const free = T.subtract(T.merge(work.map(w => ({ start: w.start, end: w.end }))), [...items, ...makeupOnly]);
     const trialFree = T.subtract(work.filter(w => w.trialOpen).map(w => ({ start: w.start, end: w.end })), [...hard, ...makeupOnly]);
     const makeupFree = T.subtract(work.map(w => ({ start: w.start, end: w.end })), hard.filter(i => i.kind !== 'makeup_only'));
-    return { teacherId, date, weekday: wd, work: T.merge(work), items, free, trialFree, makeupFree, makeupOnly };
+    return { teacherId, date, weekday: wd, work: T.merge(work), items, free, trialFree, makeupFree, makeupOnly, noHours: !!noHours };
 }
 
 function fits(freeList, start, end) { return freeList.some(f => f.start <= start && end <= f.end); }
@@ -278,12 +314,29 @@ function daySummary(views, attendance = new Map(), nowMin = null) {
 
 // Sotuv / ROP uchun maxfiylik: boshqa o'quvchi va lid ismlari ko'rinmaydi,
 // boshqa menejer ushlab turgan vaqt "ushlab turilgan" bo'lib ko'rinadi.
-function redactForSales(view, actor) {
-    return { ...view, items: view.items.map(i => ({ start: i.start, end: i.end,
-        kind: i.kind === 'reserved' ? 'lesson' : i.kind, status: i.status,
-        mine: i.createdBy === actor.id, bookingId: i.createdBy === actor.id ? i.bookingId : undefined,
-        leadId: i.createdBy === actor.id ? i.leadId : undefined, holdUntil: i.holdUntil || undefined })) };
+function redactForSales(view, actor, managerId = null) {
+    return { ...view, items: view.items.map(i => {
+        const mine = i.createdBy === actor.id || (!!managerId && i.managerId === String(managerId)) || (actor.role === 'rop' && i.kind === 'trial');
+        return { start: i.start, end: i.end, kind: i.kind === 'reserved' ? 'lesson' : i.kind, status: i.status, mine,
+            bookingId: mine ? i.bookingId : undefined, leadId: mine ? i.leadId : undefined, fromLead: i.fromLead || undefined, holdUntil: i.holdUntil || undefined };
+    }) };
+}
+
+// Lid sinovga yozilayotganda (CRM lid oynasi yoki "Kim bo'sh?") — server shu yerda
+// to'qnashuvni tekshiradi. Menejerning shu lid uchun ushlab turgani o'ziga xalaqit bermaydi.
+async function checkLeadTrial(db, lead, { actorId = null, now = new Date() } = {}) {
+    const slots = leadTrialSlots(lead);
+    if (!slots.length) return [];
+    const teacherId = slots[0].teacherId;
+    await lockTeacher(db, teacherId);
+    const ctx = await loadContext(db, { teacherIds: [teacherId], from: slots[0].date, to: slots[slots.length - 1].date, now });
+    ctx.excludeLeads.add(lead.id);
+    ctx.bookings = ctx.bookings.filter(b => !(b.kind === 'trial' && b.status === 'hold' && (b.lead_id === lead.id || (actorId && b.created_by === actorId))));
+    for (const sl of slots) checkSlot(dayView(ctx, teacherId, sl.date), 'trial', sl.start, sl.end);
+    // Shu lid uchun ushlab turilgan vaqt endi kerak emas.
+    await db.query(`UPDATE school_bookings SET status='cancelled', updated_at=NOW() WHERE lead_id=$1 AND kind='trial' AND status='hold'`, [lead.id]);
+    return slots;
 }
 
 module.exports = { HOLD_MINUTES, studentRow, statusOn, teacherOn, dateStr, loadContext, dayView, checkSlot, fits, book, confirmHold,
-    transition, releaseLead, checkWeekly, addOverride, removeOverride, setHours, daySummary, redactForSales, lockTeacher };
+    transition, releaseLead, checkWeekly, addOverride, removeOverride, setHours, daySummary, redactForSales, lockTeacher, leadTrialSlots, checkLeadTrial };

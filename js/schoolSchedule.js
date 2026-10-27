@@ -187,13 +187,17 @@
         const mine = views.flatMap(v => v.items.filter(i => i.mine).map(i => ({ ...i, teacherId: v.teacherId, date: v.date })));
         body.innerHTML = `<div class="sc-row sc-wrap">${dateNav(fmtDate(state.date))}<span class="sc-grow"></span>
             <label class="sc-row">Davomiylik <select data-dur>${[15, 30, 45, 60].map(n => `<option value="${n}"${n === state.duration ? ' selected' : ''}>${n} daq</option>`).join('')}</select></label></div>
-          ${mine.length ? `<section class="sc-card"><header class="sc-ch"><h2>Mening sinovlarim · ${esc(fmtDate(state.date, false))}</h2></header>${mine.map(i => `<div class="sc-it"><span class="sc-grow"><b>${U().hm(i.start)} · ${esc(tmap.get(i.teacherId)?.name || '')}</b><small>${STATUS[i.status] || i.status}${i.status === 'hold' && i.holdUntil ? ' · ' + esc(new Date(i.holdUntil).toLocaleTimeString('uz-UZ', { timeZone: 'Asia/Tashkent', hour: '2-digit', minute: '2-digit' })) + ' gacha' : ''}</small></span>${['hold', 'pending', 'confirmed'].includes(i.status) ? `<button type="button" class="sc-btn sc-btn--sm" data-cancel="${esc(i.bookingId)}">Bekor qilish</button>` : ''}</div>`).join('')}</section>` : ''}
+          ${mine.length ? `<section class="sc-card"><header class="sc-ch"><h2>Mening sinovlarim · ${esc(fmtDate(state.date, false))}</h2></header>${mine.map(i => `<div class="sc-it"><span class="sc-grow"><b>${U().hm(i.start)} · ${esc(tmap.get(i.teacherId)?.name || '')}${i.leadId ? ' · ' + esc(leadName(i.leadId)) : ''}</b><small>${STATUS[i.status] || i.status}${i.status === 'hold' && i.holdUntil ? ' · ' + esc(new Date(i.holdUntil).toLocaleTimeString('uz-UZ', { timeZone: 'Asia/Tashkent', hour: '2-digit', minute: '2-digit' })) + ' gacha' : ''}</small></span>${i.bookingId && ['hold', 'pending', 'confirmed'].includes(i.status) ? `<button type="button" class="sc-btn sc-btn--sm" data-cancel="${esc(i.bookingId)}">Bekor qilish</button>` : ''}</div>`).join('')}</section>` : ''}
           <section class="sc-card sc-pad">${views.length ? timeline(views.map(v => ({ label: `${U().staffAvatar(tmap.get(v.teacherId), 28)}<span><b>${esc(tmap.get(v.teacherId)?.name || '')}</b><small>${v.trialFree.reduce((n, f) => n + Math.max(0, f.end - f.start), 0) >= state.duration ? 'bo\'sh vaqt bor' : 'bo\'sh yo\'q'}</small></span>`, view: v })), { sales: true })
             : '<p class="sc-mt">Bu kunda sinovga ochiq vaqt yo\'q</p>'}<p class="sc-mt">Yashil oraliqni bosing — vaqt 10 daqiqa siz uchun ushlab turiladi, shu vaqt ichida lidni tanlab tasdiqlang.</p></section>`;
         bindNav(body, 1, reload);
         body.querySelector('[data-dur]').onchange = e => { state.duration = Number(e.target.value); reload(); };
         body.querySelectorAll('[data-free]').forEach(el => el.onclick = () => { const [tid, date, s, e] = el.dataset.free.split('|'); bookDrawer({ teacherId: tid, teacherName: tmap.get(tid)?.name, date, start: Number(s), end: Number(e) }, reload); });
         body.querySelectorAll('[data-cancel]').forEach(b => b.onclick = async () => { try { await U().post(`/bookings/${b.dataset.cancel}/cancel`); U().toast('Bekor qilindi'); reload(); } catch (e) { U().toast(e.message, 4000); } });
+    }
+    function leadName(id) {
+        const all = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
+        return [...(all.english || []), ...(all.russian || [])].find(l => l.id === id)?.name || 'lid';
     }
     function myLeads() {
         const all = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
@@ -208,8 +212,9 @@
             ${field('Vaqt', `<select name="time">${times.map(t => `<option value="${hm(t)}">${hm(t)} – ${hm(t + state.duration)}</option>`).join('')}</select>`)}
             ${field('Lid', `<select name="lead">${leads.map(l => `<option value="${esc(l.id)}">${esc(l.name)}${l.phone ? ' · ' + esc(String(l.phone).slice(-4)) : ''}</option>`).join('')}</select>`, 'Faqat sizning lidlaringiz')}
             ${field('Necha kun', '<select name="days"><option value="1">1 kun</option><option value="2">2 kun</option><option value="3">3 kun</option></select>', 'Ko\'p kunlik sinov ustozning shu hafta kunlari bo\'yicha')}
-            <div class="sc-note">"Ushlab turish" bosilsa vaqt 10 daqiqa sizniki — boshqa menejerlarga "ushlab turilgan" bo'lib ko'rinadi. Tasdiqlagach ustozga boradi.</div>`,
-            foot: '<button type="button" class="sc-btn" data-close>Bekor</button><button type="button" class="sc-btn sc-btn--pri" data-save>Ushlab turish va tasdiqlash</button>' });
+            <div class="sc-note">Vaqt avval 10 daqiqa siz uchun ushlab turiladi (boshqa menejerlarga "ushlab turilgan" bo'lib ko'rinadi), keyin lid "Sinov darsida" bosqichiga o'tadi va ustoz tasdig'iga boradi.</div>`,
+            foot: '<button type="button" class="sc-btn" data-close>Bekor</button><button type="button" class="sc-btn sc-btn--pri" data-save>Sinovga yozish</button>' });
+        let held = null;
         box.querySelector('[data-save]').onclick = async e => {
             const v = n => box.querySelector(`[name=${n}]`).value;
             if (!v('lead')) return U().errBox(box, 'Lidni tanlang');
@@ -218,10 +223,15 @@
             let d = slot.date; while (dates.length < n) { d = U().addDays(d, 1); if (days.includes(U().wd(d))) dates.push(d); }
             U().busy(e.target, true);
             try {
-                const r = await U().post('/bookings', { kind: 'trial', teacherId: slot.teacherId, dates, time: v('time'), duration: state.duration, leadId: v('lead') });
-                await U().post(`/bookings/group/${r.bookings[0].group_id}/confirm`);
-                U().toast('Sinov band qilindi · ustoz tasdig\'iga yuborildi'); U().closeDrawer(); done();
-            } catch (err) { U().busy(e.target, false); U().errBox(box, err.message); }
+                const r = held || await U().post('/bookings', { kind: 'trial', teacherId: slot.teacherId, dates, time: v('time'), duration: state.duration, leadId: v('lead') });
+                held = r;
+                await U().post(`/bookings/group/${r.bookings[0].group_id}/attach-lead`, { leadId: v('lead') });
+                await U().refreshCache();
+                U().toast('Sinov belgilandi · lid "Sinov darsida" · ustoz tasdig\'iga yuborildi'); U().closeDrawer(); done();
+            } catch (err) {
+                U().busy(e.target, false);
+                U().errBox(box, held ? `${err.message} — vaqt siz uchun 10 daqiqa ushlab turiladi. Lid oynasida so'rovnomani to'ldirib, qayta bosing.` : err.message);
+            }
         };
     }
 
@@ -298,11 +308,13 @@
         const reqs = (await api('/requests')).requests;
         const mk = (await api('/makeups')).makeups.filter(m => m.status === 'planned');
         body.innerHTML = `<section class="sc-card"><header class="sc-ch"><h2>Sinov va qoplash · 2 hafta</h2></header>${items.map(i => `<div class="sc-it"><span class="sc-grow"><b>${esc(fmtDate(i.date))} · ${hm(i.start)}</b><small>${i.kind === 'trial' ? 'Sinov' : 'Qoplash'} · ${STATUS[i.status] || i.status}</small></span>
-            ${i.kind === 'trial' && i.status === 'pending' ? `<button type="button" class="sc-btn sc-btn--sm" data-a="reject" data-id="${esc(i.bookingId)}">Rad etish</button><button type="button" class="sc-btn sc-btn--pri sc-btn--sm" data-a="accept" data-id="${esc(i.bookingId)}">Tasdiqlash</button>` : ''}
-            ${i.kind === 'trial' && i.status === 'confirmed' && (i.date < today() || (i.date === today() && i.end <= U().nowMin())) ? `<button type="button" class="sc-btn sc-btn--sm" data-a="no_show" data-id="${esc(i.bookingId)}">Lid kelmadi</button><button type="button" class="sc-btn sc-btn--pri sc-btn--sm" data-a="done" data-id="${esc(i.bookingId)}">O'tkazildi</button>` : ''}
+            ${i.fromLead ? '<button type="button" class="sc-btn sc-btn--sm" data-trials>Sinov darslari bo\'limida</button>' : ''}
+            ${!i.fromLead && i.kind === 'trial' && i.status === 'pending' ? `<button type="button" class="sc-btn sc-btn--sm" data-a="reject" data-id="${esc(i.bookingId)}">Rad etish</button><button type="button" class="sc-btn sc-btn--pri sc-btn--sm" data-a="accept" data-id="${esc(i.bookingId)}">Tasdiqlash</button>` : ''}
+            ${!i.fromLead && i.kind === 'trial' && i.status === 'confirmed' && (i.date < today() || (i.date === today() && i.end <= U().nowMin())) ? `<button type="button" class="sc-btn sc-btn--sm" data-a="no_show" data-id="${esc(i.bookingId)}">Lid kelmadi</button><button type="button" class="sc-btn sc-btn--pri sc-btn--sm" data-a="done" data-id="${esc(i.bookingId)}">O'tkazildi</button>` : ''}
             ${i.kind === 'makeup' ? (() => { const m = mk.find(x => x.booking_id === i.bookingId); return m && (i.date < today() || (i.date === today() && i.end <= U().nowMin())) ? `<button type="button" class="sc-btn sc-btn--pri sc-btn--sm" data-held="${esc(m.id)}">O'tildi</button>` : ''; })() : ''}</div>`).join('') || '<p class="sc-mt sc-pad">Yo\'q</p>'}</section>
           <section class="sc-card"><header class="sc-ch"><h2>Mening so'rovlarim</h2></header>${reqs.map(r => `<div class="sc-it"><span class="sc-grow"><b>${esc(r.type)}</b><small>${esc(r.reason)}</small></span><span class="sc-pill ${r.status === 'approved' ? 'sc-pill--ok' : r.status === 'rejected' ? 'sc-pill--bad' : 'sc-pill--warn'}">${r.status === 'approved' ? 'Tasdiqlandi' : r.status === 'rejected' ? 'Rad etildi' : 'Kutilmoqda'}</span></div>`).join('') || '<p class="sc-mt sc-pad">So\'rov yo\'q</p>'}</section>`;
         body.querySelectorAll('[data-a]').forEach(b => b.onclick = async () => { try { await U().post(`/bookings/${b.dataset.id}/${b.dataset.a}`); U().toast('Saqlandi'); reload(); } catch (e) { U().toast(e.message, 4000); } });
+        body.querySelectorAll('[data-trials]').forEach(b => b.onclick = () => typeof switchTab === 'function' && switchTab('trial-lessons'));
         body.querySelectorAll('[data-held]').forEach(b => b.onclick = async () => { try { await U().post(`/makeups/${b.dataset.held}/held`); U().toast('Tekshiruvga yuborildi'); reload(); } catch (e) { U().toast(e.message, 4000); } });
     }
 

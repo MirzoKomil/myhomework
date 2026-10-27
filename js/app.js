@@ -18980,6 +18980,12 @@ function wireTeacherSchedulePicker(modalBody, options = {}) {
         modalBody.dataset.onboardScheduleTime = existing.lessonTime;
         modalBody.dataset.onboardSchedulePattern = [2, 4, 6].includes(Number(existing.lessonDayOfWeek)) ? 'tts' : 'mwf';
     }
+    // Guruh nomi: avvalgi qiymat yoki tizim taklifi (keyingi bo'sh "Cnn | onlayn ingliz tili").
+    const nameInput = modalBody.querySelector('#onboardTelegramGroupName');
+    if (nameInput && !nameInput.value) {
+        if (existing?.telegramGroupName) nameInput.value = existing.telegramGroupName;
+        else apiFetch('/api/school/groups/next-name').then(r => { if (!nameInput.value) nameInput.value = r.name; }).catch(() => {});
+    }
     if (existing?.telegramGroupLink) {
         const linkInput = modalBody.querySelector('#onboardTelegramGroupLink');
         if (linkInput) linkInput.value = existing.telegramGroupLink;
@@ -19050,6 +19056,9 @@ function collectTeacherScheduleData(modalBody) {
 
     const telegramGroupLink = modalBody.querySelector('#onboardTelegramGroupLink')?.value?.trim() || '';
     if (!telegramGroupLink) return { error: 'Telegram guruh havolasini kiriting', target: '#onboardTelegramGroupLink' };
+    if (!/^https:\/\/t\.me\/\S{5,}$/.test(telegramGroupLink)) return { error: 'Havola https://t.me/... ko\'rinishida bo\'lsin', target: '#onboardTelegramGroupLink' };
+    const telegramGroupName = (modalBody.querySelector('#onboardTelegramGroupName')?.value || '').trim();
+    if (telegramGroupName.length < 2) return { error: 'Telegram guruh nomini kiriting', target: '#onboardTelegramGroupName' };
 
     return {
         data: {
@@ -19060,7 +19069,8 @@ function collectTeacherScheduleData(modalBody) {
             lessonTime,
             lessonScheduleLabel: `${lessonDayLabel}, ${lessonTime}`,
             lessonDuration,
-            telegramGroupLink
+            telegramGroupLink,
+            telegramGroupName
         }
     };
 }
@@ -19092,6 +19102,11 @@ function renderTeacherScheduleSection(asosiyTeachers) {
             <label for="onboardTelegramGroupLink">Telegram guruh havolasi <span style="color:var(--danger)">*</span></label>
             <input type="text" id="onboardTelegramGroupLink" class="form-control" placeholder="https://t.me/+...">
             <p class="lead-survey-hint">O'quvchi uchun ochilgan maxsus Telegram guruh havolasi — o'quvchiga aylantirish uchun majburiy.</p>
+        </div>
+        <div class="lead-survey-field">
+            <label for="onboardTelegramGroupName">Telegram guruh nomi <span style="color:var(--danger)">*</span></label>
+            <input type="text" id="onboardTelegramGroupName" class="form-control" placeholder="C40 | onlayn ingliz tili" maxlength="80">
+            <p class="lead-survey-hint">Telegram'dagi nom bilan bir xil yozing · tizim keyingi bo'sh raqamni taklif qiladi, takrorlanmasligi tekshiriladi. Guruhga o'quvchi, ustoz, yordamchi, ROP va sizni qo'shing.</p>
         </div>
     </section>`;
 }
@@ -19277,6 +19292,9 @@ function collectPaymentOnboardingData(modalBody) {
 
     const telegramGroupLink = getVal('onboardTelegramGroupLink');
     if (!telegramGroupLink) return { error: 'Telegram guruh havolasini kiriting', target: '#onboardTelegramGroupLink' };
+    if (!/^https:\/\/t\.me\/\S{5,}$/.test(telegramGroupLink)) return { error: 'Havola https://t.me/... ko\'rinishida bo\'lsin', target: '#onboardTelegramGroupLink' };
+    const telegramGroupName = (modalBody.querySelector('#onboardTelegramGroupName')?.value || '').trim();
+    if (telegramGroupName.length < 2) return { error: 'Telegram guruh nomini kiriting', target: '#onboardTelegramGroupName' };
 
     const firstLessonDate = getVal('onboardFirstLessonDate');
     if (!firstLessonDate) return { error: 'Ilk dars boshlash sanasini belgilang', target: '#onboardFirstLessonDate' };
@@ -19322,6 +19340,7 @@ function collectPaymentOnboardingData(modalBody) {
             lessonTime,
             lessonScheduleLabel: `${lessonDayLabel}, ${lessonTime}`,
             telegramGroupLink,
+            telegramGroupName,
             firstLessonDate
         }
     };
