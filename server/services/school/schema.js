@@ -1,0 +1,105 @@
+'use strict';
+// Akademik bo'lim va yagona dars jadvali uchun qo'shimcha (additive) jadvallar.
+// Mavjud students/leads/hr_employees jadvallariga hech narsa yozmaydi —
+// faqat o'z jadvallarini yaratadi. Qayta ishga tushirilsa o'zgarmaydi.
+const SCHEMA = `
+CREATE TABLE IF NOT EXISTS school_teacher_hours (
+ teacher_id TEXT NOT NULL, weekday SMALLINT NOT NULL CHECK (weekday BETWEEN 1 AND 7),
+ start_min SMALLINT NOT NULL CHECK (start_min BETWEEN 0 AND 1440), end_min SMALLINT NOT NULL CHECK (end_min BETWEEN 0 AND 1440),
+ trial_open BOOLEAN NOT NULL DEFAULT TRUE, updated_by TEXT NOT NULL DEFAULT '', updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+ PRIMARY KEY (teacher_id, weekday, start_min), CHECK (end_min > start_min)
+);
+CREATE TABLE IF NOT EXISTS school_overrides (
+ id TEXT PRIMARY KEY, teacher_id TEXT NOT NULL,
+ date DATE, weekday SMALLINT CHECK (weekday BETWEEN 1 AND 7),
+ start_min SMALLINT NOT NULL, end_min SMALLINT NOT NULL,
+ kind TEXT NOT NULL CHECK (kind IN ('open','close','makeup_only','leave')),
+ reason TEXT NOT NULL DEFAULT '', created_by TEXT NOT NULL, created_by_name TEXT NOT NULL DEFAULT '',
+ created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), removed_at TIMESTAMPTZ, removed_by TEXT,
+ CHECK (end_min > start_min), CHECK ((date IS NULL) <> (weekday IS NULL))
+);
+CREATE INDEX IF NOT EXISTS school_overrides_teacher ON school_overrides(teacher_id) WHERE removed_at IS NULL;
+CREATE TABLE IF NOT EXISTS school_bookings (
+ id TEXT PRIMARY KEY, teacher_id TEXT NOT NULL,
+ kind TEXT NOT NULL CHECK (kind IN ('trial','makeup','once')),
+ student_id TEXT, lead_id TEXT, date DATE NOT NULL,
+ start_min SMALLINT NOT NULL, end_min SMALLINT NOT NULL,
+ status TEXT NOT NULL CHECK (status IN ('hold','pending','confirmed','done','no_show','cancelled','rejected')),
+ hold_until TIMESTAMPTZ, group_id TEXT, note TEXT NOT NULL DEFAULT '',
+ created_by TEXT NOT NULL, created_by_name TEXT NOT NULL DEFAULT '', created_by_role TEXT NOT NULL DEFAULT '',
+ created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+ CHECK (end_min > start_min)
+);
+CREATE INDEX IF NOT EXISTS school_bookings_teacher_date ON school_bookings(teacher_id, date);
+CREATE INDEX IF NOT EXISTS school_bookings_lead ON school_bookings(lead_id) WHERE lead_id IS NOT NULL;
+CREATE TABLE IF NOT EXISTS school_makeups (
+ id TEXT PRIMARY KEY, student_id TEXT NOT NULL, teacher_id TEXT NOT NULL,
+ missed_date DATE NOT NULL, held_date DATE, kind TEXT NOT NULL CHECK (kind IN ('separate','double')),
+ booking_id TEXT, status TEXT NOT NULL CHECK (status IN ('planned','review','approved','rejected','cancelled')),
+ created_by TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+ decided_by TEXT, decided_by_name TEXT, decided_at TIMESTAMPTZ, decision_note TEXT NOT NULL DEFAULT ''
+);
+CREATE UNIQUE INDEX IF NOT EXISTS school_makeups_once ON school_makeups(student_id, missed_date) WHERE status IN ('planned','review','approved');
+CREATE TABLE IF NOT EXISTS school_requests (
+ id TEXT PRIMARY KEY, teacher_id TEXT NOT NULL, requester_id TEXT NOT NULL, requester_name TEXT NOT NULL DEFAULT '',
+ type TEXT NOT NULL CHECK (type IN ('leave','close','open','assist_late')),
+ payload JSONB NOT NULL DEFAULT '{}', reason TEXT NOT NULL DEFAULT '',
+ status TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new','approved','rejected')),
+ decided_by TEXT, decided_by_name TEXT, decided_at TIMESTAMPTZ, decision_note TEXT NOT NULL DEFAULT '',
+ created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS school_student_status (
+ id TEXT PRIMARY KEY, student_id TEXT NOT NULL,
+ status TEXT NOT NULL CHECK (status IN ('frozen','left','restored')),
+ from_date DATE NOT NULL, to_date DATE, reason_code TEXT NOT NULL DEFAULT '', reason TEXT NOT NULL,
+ payload JSONB NOT NULL DEFAULT '{}',
+ actor_id TEXT NOT NULL, actor_name TEXT NOT NULL DEFAULT '', actor_role TEXT NOT NULL DEFAULT '',
+ created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), cancelled_at TIMESTAMPTZ, cancelled_by TEXT
+);
+CREATE INDEX IF NOT EXISTS school_student_status_student ON school_student_status(student_id, from_date);
+CREATE TABLE IF NOT EXISTS school_teacher_history (
+ id TEXT PRIMARY KEY, student_id TEXT NOT NULL, teacher_id TEXT NOT NULL,
+ from_date DATE NOT NULL, to_date DATE, reason TEXT NOT NULL DEFAULT '',
+ actor_id TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS school_teacher_history_student ON school_teacher_history(student_id, from_date);
+CREATE TABLE IF NOT EXISTS school_student_audit (
+ id BIGSERIAL PRIMARY KEY, student_id TEXT NOT NULL, action TEXT NOT NULL,
+ changes JSONB NOT NULL DEFAULT '{}', reason TEXT NOT NULL DEFAULT '',
+ actor_id TEXT NOT NULL, actor_name TEXT NOT NULL DEFAULT '', actor_role TEXT NOT NULL DEFAULT '',
+ request_id TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS school_student_audit_student ON school_student_audit(student_id, created_at DESC);
+CREATE TABLE IF NOT EXISTS school_edit_requests (
+ id TEXT PRIMARY KEY, number SERIAL, student_id TEXT NOT NULL,
+ kind TEXT NOT NULL CHECK (kind IN ('tariff','teacher','payment')),
+ changes JSONB NOT NULL, reason TEXT NOT NULL,
+ requested_by TEXT NOT NULL, requester_name TEXT NOT NULL DEFAULT '',
+ status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected','returned')),
+ decided_by TEXT, decided_by_name TEXT, decided_by_role TEXT, decided_at TIMESTAMPTZ, decision_note TEXT NOT NULL DEFAULT '',
+ created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS school_edit_requests_status ON school_edit_requests(status, created_at DESC);
+CREATE TABLE IF NOT EXISTS school_student_groups (
+ student_id TEXT PRIMARY KEY, tg_link TEXT NOT NULL DEFAULT '', name TEXT NOT NULL,
+ name_source TEXT NOT NULL DEFAULT 'manual' CHECK (name_source IN ('auto','manual')),
+ archived BOOLEAN NOT NULL DEFAULT FALSE,
+ updated_by TEXT NOT NULL, updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS school_student_groups_name ON school_student_groups(LOWER(name));
+CREATE TABLE IF NOT EXISTS school_assist_contacts (
+ id TEXT PRIMARY KEY, student_id TEXT NOT NULL, assistant_id TEXT NOT NULL,
+ day DATE NOT NULL, at_min SMALLINT, channel TEXT NOT NULL,
+ minutes SMALLINT NOT NULL DEFAULT 0, note TEXT NOT NULL DEFAULT '',
+ outcome TEXT NOT NULL CHECK (outcome IN ('contacted','no_answer')),
+ created_by TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+ removed_at TIMESTAMPTZ, removed_by TEXT, correction_reason TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS school_assist_contacts_month ON school_assist_contacts(assistant_id, day) WHERE removed_at IS NULL;
+CREATE TABLE IF NOT EXISTS school_assist_months (
+ month TEXT PRIMARY KEY, locked_at TIMESTAMPTZ, prelim_by TEXT, prelim_at TIMESTAMPTZ,
+ objection_until DATE, final_at TIMESTAMPTZ, paid_at TIMESTAMPTZ
+);
+`;
+async function initSchema(db) { await db.query(SCHEMA); }
+module.exports = { initSchema, SCHEMA };

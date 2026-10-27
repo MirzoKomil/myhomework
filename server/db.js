@@ -1312,6 +1312,9 @@ async function saveStudents(client, students, removedStudentIds = []) {
             }
             if (Number(financial.debtAmount) === 0) extra.paymentDueDate = '';
         }
+        // Akademik amallar (tahrir, muzlatish, ustoz almashtirish ...) serverda
+        // schoolRev'ni oshiradi: undan eski CRM nusxasi ularni qaytarib yubormaydi.
+        require('./services/school/studentOps').protectSchoolFields(s, extra, existingById.get(id));
         await client.query(
             `INSERT INTO students (id, name, phone, group_name, subject, teacher_id, assistant_teacher_id, lesson_day_of_week, lesson_time, lesson_duration, extra_data)
              VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
@@ -4683,7 +4686,7 @@ const TRIAL_SMS_CHECK_INTERVAL_MS = 60 * 1000;
 setInterval(_checkAndSendTrialSmsReminders, TRIAL_SMS_CHECK_INTERVAL_MS);
 
 module.exports = {
-    pool, DATA_DIR,
+    pool, DATA_DIR, tx,
     getFullState, getTeacherScopedState, getLeads, getDeletedLeads, getLeadById, getSalesManagerIdForUser, setSalesManagerUserLink,
     insertLead, upsertLead, upsertLeadWithClient, insertRestoredLead, softDeleteLead, restoreLead, patchState, recordTeacherAttendance,
     getTeacherTrialLessons, saveTeacherTrialLesson,
