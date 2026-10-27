@@ -40,7 +40,7 @@ async function bumpRev(db, id) {
 }
 // db.saveStudents chaqiradi: CRM nusxasi eski bo'lsa (schoolRev kichik), server boshqaradigan maydonlar saqlanib qoladi.
 const SCHOOL_EXTRA = ['frozen', 'frozenAt', 'status', 'inactiveAt', 'paymentDueDate', 'pendingTeacherChange', 'passwordHash', 'mustChangePassword',
-    'login', 'parentPhone', 'tariff', 'monthlyPrice', 'freezeShiftDays', 'progressArchivedAt', 'schoolRev'];
+    'login', 'parentPhone', 'tariff', 'monthlyPrice', 'freezeShiftDays', 'progressArchivedAt', 'pendingScheduleChange', 'schoolRev'];
 function protectSchoolFields(incoming, extra, existing) {
     if (!existing) return;
     const have = Number(existing.schoolRev || 0), sent = Number(incoming.schoolRev || 0);
@@ -114,7 +114,12 @@ async function applyEdit(db, actor, studentId, changes, reason, { requestId = nu
         if (!T.patternDays(day).length || T.toMin(time) == null || !(dur >= 15 && dur <= 120)) throw fail(400, 'Dars kuni, vaqti yoki davomiyligi noto\'g\'ri');
         if (st.teacherId) await S.checkWeekly(db, { teacherId: st.teacherId, day, time, duration: dur, fromDate: changes.effectiveFrom, excludeStudentId: studentId, now });
         diff.schedule = [`${T.patternLabel(st.day)} ${st.time} · ${st.duration} daq`, `${T.patternLabel(day)} ${time} · ${dur} daq`];
-        cols.lesson_day_of_week = day; cols.lesson_time = time; cols.lesson_duration = dur;
+        const from = changes.effectiveFrom && T.isDate(changes.effectiveFrom) ? changes.effectiveFrom : T.nowLocal(now).date;
+        if (from > T.nowLocal(now).date) {
+            // Kelajak sanadan: shu kungacha eski jadval, keyin yangisi (applyDue yozadi).
+            extra.pendingScheduleChange = { day, time, duration: dur, from };
+            diff.schedule[1] += ` · ${from} dan`;
+        } else { cols.lesson_day_of_week = day; cols.lesson_time = time; cols.lesson_duration = dur; delete extra.pendingScheduleChange; }
     }
     if (!Object.keys(diff).length) return { changed: false };
     const sets = Object.keys(cols).map((k, i) => `${k}=$${i + 2}`);
@@ -134,7 +139,8 @@ async function edit(db, actor, studentId, body, { managerId = null, now = new Da
     const row = await lockStudent(db, studentId);
     if (!soldBy(extraOf(row), managerId)) throw fail(403, 'Faqat o\'zingiz sotgan o\'quvchini tahrirlaysiz');
     const direct = Object.fromEntries(Object.entries(changes).filter(([k]) => DIRECT_FIELDS.includes(k)));
-    const tariff = Object.fromEntries(Object.entries(changes).filter(([k]) => TARIFF_FIELDS.includes(k) || SCHEDULE_FIELDS.includes(k)));
+    const tariff = Object.fromEntries(Object.entries(changes).filter(([k]) => TARIFF_FIELDS.includes(k) || SCHEDULE_FIELDS.includes(k) || k === 'effectiveFrom'));
+    if (Object.keys(tariff).length === 1 && tariff.effectiveFrom) delete tariff.effectiveFrom;
     const out = { applied: null, request: null };
     if (Object.keys(direct).length) out.applied = await applyEdit(db, actor, studentId, direct, reason, { now });
     if (Object.keys(tariff).length) out.request = await createRequest(db, actor, studentId, 'tariff', tariff, reason);
@@ -324,16 +330,21 @@ async function syncLegacy(db, studentId, now = new Date()) {
     else if (extra.frozen) { extra.frozen = false; extra.frozenAt = null; }
     if (state === 'left') { if (extra.status !== 'inactive') { extra.status = 'inactive'; extra.inactiveAt = S.dateStr(rows.filter(r => r.status === 'left').pop().from_date); } }
     else if (extra.status === 'inactive' && rows.some(r => r.status === 'restored')) { extra.status = 'active'; delete extra.inactiveAt; }
+    const ps = extra.pendingScheduleChange;
+    if (ps && ps.from <= today) {
+        await db.query('UPDATE students SET lesson_day_of_week=$2, lesson_time=$3, lesson_duration=$4 WHERE id=$1', [studentId, ps.day, ps.time, ps.duration]);
+        delete extra.pendingScheduleChange;
+    }
     const pend = extra.pendingTeacherChange;
     if (pend && pend.from <= today) {
         await db.query('UPDATE students SET teacher_id=$2, lesson_day_of_week=$3, lesson_time=$4 WHERE id=$1', [studentId, pend.teacherId, pend.day, pend.time]);
         delete extra.pendingTeacherChange;
     }
-    if (JSON.stringify(extra) !== before || (pend && pend.from <= today)) await writeExtra(db, studentId, extra);
+    if (JSON.stringify(extra) !== before) await writeExtra(db, studentId, extra);
 }
 async function applyDue(db, now = new Date()) {
     const ids = (await db.query(`SELECT DISTINCT student_id FROM school_student_status WHERE cancelled_at IS NULL
-        UNION SELECT id FROM students WHERE extra_data ? 'pendingTeacherChange'`)).rows.map(r => r.student_id);
+        UNION SELECT id FROM students WHERE extra_data ? 'pendingTeacherChange' OR extra_data ? 'pendingScheduleChange'`)).rows.map(r => r.student_id);
     for (const id of ids) await syncLegacy(db, id, now);
     await db.query(`UPDATE school_bookings SET status='cancelled', updated_at=NOW() WHERE status='hold' AND hold_until < $1`, [now]);
     return ids.length;
@@ -368,7 +379,7 @@ async function setGroup(db, actor, studentId, body, { managerId = null } = {}) {
     const { rows } = await db.query(`INSERT INTO school_student_groups (student_id,tg_link,name,name_source,updated_by) VALUES ($1,$2,$3,$4,$5)
         ON CONFLICT (student_id) DO UPDATE SET tg_link=EXCLUDED.tg_link, name=EXCLUDED.name, name_source=EXCLUDED.name_source, updated_by=EXCLUDED.updated_by, updated_at=NOW()
         RETURNING *`, [studentId, g.link, g.name, body.auto ? 'auto' : 'manual', actor.id]);
-    await audit(db, studentId, 'group', { before: existing ? { link: existing.tg_link, name: existing.name } : null, after: g }, body.reason || 'Telegram guruh', actor);
+    await audit(db, studentId, 'group', { before: existing ? { link: existing.tg_link, name: existing.name } : null, after: g }, String(body.reason || ''), actor);
     return rows[0];
 }
 // Eski guruhlarga avtomatik nom (havolasi bo'lganlarga, nomi yo'qlarga).

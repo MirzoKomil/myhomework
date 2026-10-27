@@ -267,7 +267,7 @@ function applyRoleBasedAccess(user) {
             // shu sabab butunlay yashirilmaydi, faqat renderTeachersSection()
             // ROP uchun sub-navigatsiyani o'sha bitta bo'limga cheklaydi
             // (Davomat/Sinov darsi/Reyting/Darslik/Elektron doska hamon yopiq).
-            hiddenForRop = new Set(['finance', 'hr', 'analitika']);
+            hiddenForRop = new Set(['finance', 'hr', 'analitika', 'school-assist']);
             hiddenForRop.forEach(tab => {
                 const el = sidebar.querySelector(`.menu-item[data-tab="${tab}"]`);
                 if (el) el.style.display = 'none';
@@ -1229,6 +1229,9 @@ function renderTab(tab) {
         case 'hr': renderHr(); break;
         case 'finance': renderFinance(); break;
         case 'guides': renderMyGuides(); break;
+        case 'school-approvals': window.schoolUI?.renderApprovals(document.getElementById('schoolApprovalsRoot')); break;
+        case 'school-groups': window.schoolUI?.renderGroups(document.getElementById('schoolGroupsRoot')); break;
+        case 'school-assist': window.schoolUI?.renderAssistAdmin(document.getElementById('schoolAssistRoot')); break;
     }
     if (typeof renderNotificationPanel === 'function') renderNotificationPanel();
 }
@@ -7750,6 +7753,14 @@ function wireTimetableCells() {
 }
 
 function renderTimetable() {
+    // Yagona dars jadvali (server: /api/school) — eski brauzer ichidagi jadval o'rniga.
+    const schoolRoot = document.getElementById('schoolTimetableRoot');
+    if (schoolRoot && window.schoolSchedule) {
+        document.querySelectorAll('#tab-timetable > :not(#schoolTimetableRoot)').forEach(el => { el.hidden = true; });
+        schoolRoot.hidden = false;
+        window.schoolSchedule.render(schoolRoot);
+        return;
+    }
     initTimetableControls();
     const filters = getTimetableFilters();
     _ttFilters = filters;
@@ -11173,23 +11184,31 @@ function renderSdpHeader(studentId) {
             `<button type="button" class="sdp-action-btn sdp-action-btn--pay" id="sdpBtnPay">+ To'lov qabul qilish</button>`);
         document.getElementById('sdpBtnPay').onclick = () => inflowUI.openPayment(studentId);
     }
-    document.getElementById('sdpBtnTeacher').onclick = () => openSdpTransferTeacher(s);
-    document.getElementById('sdpBtnSchedule').onclick = () => openSdpChangeSchedule(s);
-    document.getElementById('sdpBtnFreeze').onclick = () => {
-        const allStudents = getItem(STORAGE_KEYS.students, []);
-        const idx = allStudents.findIndex(st => st.id === studentId);
-        if (idx !== -1) {
-            allStudents[idx].frozen = !allStudents[idx].frozen;
-            allStudents[idx].frozenAt = allStudents[idx].frozen ? Date.now() : null;
-            setItem(STORAGE_KEYS.students, allStudents);
-            renderSdpHeader(studentId);
-            const nowFrozen = allStudents[idx].frozen;
-            showMiniToast(nowFrozen ? "O'quvchi muzlatildi" : "Muzlatish bekor qilindi");
-            if (nowFrozen) switchStudentsSection('muzlatilgan');
-            else switchStudentsSection('faol');
-        }
-    };
+    // O'quvchi holati va tahriri endi serverda (sabab + tarix bilan): /api/school.
+    const _sdpCanAct = ['admin', 'boshliq', 'rop'].includes(_sdpRole);
+    const _sdpCanEdit = _sdpCanAct || _sdpRole === 'sales_manager';
+    document.getElementById('sdpBtnTeacher').onclick = () => window.schoolUI.openStudent(studentId, 'holat');
+    document.getElementById('sdpBtnSchedule').onclick = () => window.schoolUI.openStudent(studentId, 'tahrir');
+    document.getElementById('sdpBtnFreeze').onclick = () => window.schoolUI.openStudent(studentId, 'holat');
+    document.getElementById('sdpBtnFreeze').innerHTML = '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22V2M4.93 4.93l14.14 14.14M2 12h20M4.93 19.07l14.14-14.14"/></svg> Holatni o\'zgartirish';
+    ['sdpBtnTeacher', 'sdpBtnFreeze'].forEach(id => { const b = document.getElementById(id); if (b && !_sdpCanAct) b.style.display = 'none'; });
+    if (!_sdpCanEdit) document.getElementById('sdpBtnSchedule').style.display = 'none';
+    if (_sdpCanEdit) {
+        document.getElementById('sdpHeaderActions').insertAdjacentHTML('afterbegin',
+            `<button type="button" class="sdp-action-btn" id="sdpBtnEdit">✎ Tahrirlash</button><button type="button" class="sdp-action-btn" id="sdpBtnHistory">O'zgarishlar tarixi</button>`);
+        document.getElementById('sdpBtnEdit').onclick = () => window.schoolUI.openStudent(studentId, 'tahrir');
+        document.getElementById('sdpBtnHistory').onclick = () => window.schoolUI.openStudent(studentId, 'tarix');
+    }
 }
+
+// Server amalidan keyin ochiq o'quvchi paneli va ro'yxatlar yangilanadi.
+window.addEventListener('school:changed', () => {
+    try {
+        const panel = document.getElementById('studentDetailPanel');
+        if (_sdpCurrentId && panel?.classList.contains('sdp-open')) { renderSdpHeader(_sdpCurrentId); renderSdpTab(_sdpCurrentTab || 'profile', _sdpCurrentId); }
+        if (document.getElementById('tab-students')?.classList.contains('active')) renderStudents();
+    } catch (e) { console.warn('[school] yangilashda xato', e); }
+});
 
 function renderSdpTab(tab, studentId) {
     const body = document.getElementById('sdpBody');

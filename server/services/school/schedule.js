@@ -23,7 +23,8 @@ function studentRow(r) {
         assistantId: r.assistant_teacher_id || null, day: r.lesson_day_of_week, time: r.lesson_time || '',
         duration: Number(r.lesson_duration) || 15, legacyInactive: extra.status === 'inactive' || extra.isStaffDemo === true,
         managerId: extra.managerId || null, leadRefId: extra.leadRef?.id || null, avatarUrl: extra.avatarUrl || '',
-        startDate: extra.startDate || extra.courseStart || null };
+        startDate: extra.startDate || extra.courseStart || null,
+        pendingSchedule: extra.pendingScheduleChange || null, pendingTeacher: extra.pendingTeacherChange || null };
 }
 
 // O'quvchining sana bo'yicha holati: 'active' | 'frozen' | 'left'.
@@ -84,14 +85,19 @@ function dayView(ctx, teacherId, date) {
     const makeupOnly = ov.filter(o => o.kind === 'makeup_only').map(o => ({ start: o.start_min, end: o.end_min, kind: 'makeup_only', overrideId: o.id }));
     const items = [];
     for (const s of ctx.students) {
-        if (s.time === '' || s.day == null) continue;
-        if (!T.patternDays(s.day).includes(wd)) continue;
+        // Rejalashtirilgan o'zgarish (sanadan boshlab yangi kun/vaqt) — shu sanadan hisobga olinadi.
+        let day = s.day, time = s.time, duration = s.duration;
+        const ps = s.pendingSchedule, pt = s.pendingTeacher;
+        if (pt && pt.from <= date) { day = pt.day ?? day; time = pt.time ?? time; }
+        if (ps && ps.from <= date) { day = ps.day; time = ps.time; duration = ps.duration; }
+        if (time === '' || day == null) continue;
+        if (!T.patternDays(day).includes(wd)) continue;
         if (teacherOn(s, ctx.history, date) !== teacherId) continue;
         if (s.startDate && date < s.startDate) continue;
         const state = statusOn(ctx.statusBy.get(s.id) || [], date);
         if (state === 'left') continue;
-        const start = T.toMin(s.time); if (start == null) continue;
-        items.push({ start, end: start + s.duration, kind: state === 'frozen' ? 'reserved' : 'lesson', studentId: s.id, studentName: s.name });
+        const start = T.toMin(time); if (start == null) continue;
+        items.push({ start, end: start + duration, kind: state === 'frozen' ? 'reserved' : 'lesson', studentId: s.id, studentName: s.name });
     }
     for (const b of ctx.bookings.filter(b => b.teacher_id === teacherId && b.date === date)) {
         items.push({ start: Number(b.start_min), end: Number(b.end_min), kind: b.kind === 'once' ? 'lesson' : b.kind, bookingId: b.id,

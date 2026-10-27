@@ -71,8 +71,9 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         const from = T.assertDate(req.query.from || T.nowLocal().date);
         const to = T.assertDate(req.query.to || from);
         const r = await scopedViews(req, from, to, req.query.teacherId || null);
-        const teachers = (await pool.query(`SELECT id, name, role, lang, status FROM hr_employees
-            WHERE role IN ('oqituvchi','ingliz-oqituvchi','rus-oqituvchi') AND COALESCE(status,'active') <> 'inactive' ORDER BY name`)).rows;
+        const teachers = (await pool.query(`SELECT he.id, he.name, he.role, he.lang, he.status, COALESCE(u.avatar,'') AS avatar FROM hr_employees he
+            LEFT JOIN users u ON LOWER(TRIM(u.email)) = LOWER(TRIM(he.login))
+            WHERE he.role IN ('oqituvchi','ingliz-oqituvchi','rus-oqituvchi') AND COALESCE(he.status,'active') <> 'inactive' ORDER BY he.name`)).rows;
         let summary = null;
         if (r.scope === 'full' && from === to) {
             const att = await pool.query(`SELECT student_id, present FROM main_attendance WHERE att_key=$1 AND day=$2`, [from.slice(0, 7), Number(from.slice(8))]).catch(() => ({ rows: [] }));
@@ -370,6 +371,9 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         await c.query('UPDATE users SET avatar=$2 WHERE id=$1', [req.user.id, v]);
         return { avatar: v };
     })));
+    // Xodim avatarlari (HR id → avatar) — CRM ro'yxatlarida 3D personaj yoki o'z rasmi.
+    router.get('/staff-avatars', handle(async () => ({ avatars: Object.fromEntries((await pool.query(`SELECT he.id, u.avatar FROM hr_employees he
+        JOIN users u ON LOWER(TRIM(u.email)) = LOWER(TRIM(he.login)) WHERE COALESCE(u.avatar,'') <> ''`)).rows.map(r => [r.id, r.avatar])) })));
     router.get('/avatars/taken', handle(async () => ({ taken: (await pool.query("SELECT avatar FROM users WHERE avatar LIKE 'preset:%'")).rows.map(r => r.avatar) })));
     return router;
 };
