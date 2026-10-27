@@ -141,6 +141,20 @@ test('assistant uses 50000 (not main teacher rate), independent day marks with m
     assistantAttendance: { '2026-10_a': { s: Object.fromEntries(Array.from({ length: 31 }, (_, i) => [i + 1, true])) } } });
   const row = calculate(s).rows[0]; assert.equal(row.total, 50000); assert.equal(row.lessons, engine.expectedDays('2026-10').length);
 });
+test('assistant contacts-v1: 3846 per counted contact (cap 13), old attendance ignored from the start month, left student counted', () => {
+  const days = n => Object.fromEntries(Array.from({ length: n }, (_, i) => [i + 1, 1]));
+  const s = source({ hrEmployees: [employee('a', 'yordamchi')], teachers: [{ id: 'a' }],
+    students: [{ id: 's', subject: 'english', assistantTeacherId: 'a' }, { id: 'gone', subject: 'english', assistantTeacherId: 'other', status: 'inactive' }],
+    assistantPolicy: 'contacts-v1', assistantContactsFrom: '2026-10',
+    assistantAttendance: { '2026-10_a': { s: days(31) } },
+    assistantContacts: { '2026-10_a': { s: days(15), gone: days(4) } } });
+  const row = calculate(s).rows[0];
+  assert.equal(row.lessons, 13 + 4); assert.equal(row.total, 17 * 3846);
+  assert.ok(row.breakdown.every(b => b.unit === 'contact'));
+  // Boshlanish oyidan oldingi oylar va siyosatsiz (eski to'langan) hisoblar eski davomat bo'yicha.
+  const before = calculate({ ...s, assistantContactsFrom: '2026-11' }).rows[0]; assert.equal(before.total, 50000);
+  const legacy = calculate({ ...s, assistantPolicy: undefined }).rows[0]; assert.equal(legacy.total, 50000);
+});
 test('absences, strings, invalid day marks, prehire and wrong teacher/student-language marks earn nothing', () => {
   const s = source({ hrEmployees: [employee('t', 'ingliz-oqituvchi', { startDate: '2026-10-12' })],
     students: [{ id: 's', subject: 'english', teacherId: 't', lessonDuration: 15 }, { id: 'ru', subject: 'russian', teacherId: 't' }],

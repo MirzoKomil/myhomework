@@ -98,20 +98,29 @@
         const weekdays = pattern === 'tts' ? [2, 4, 6] : [1, 3, 5];
         return Array.from({ length: last }, (_, i) => i + 1).filter(day => weekdays.includes(new Date(Date.UTC(y, m, day)).getUTCDay()));
     }
+    const CONTACT_CAP = 13;
     function teacherPay(employee, source, p, settings, dutyRole = role(employee)) {
         const assistant = dutyRole === 'assistant';
         const teacher = source.teachers.find(t => t.id === employee.id) || employee;
         const pattern = teacher.schedulePattern || 'mwf';
-        const attendance = assistant ? source.assistantAttendance : source.mainAttendance;
-        const students = source.students.filter(s => (assistant ? s.assistantTeacherId : s.teacherId) === employee.id && language(s) === language(employee)
+        // Yordamchi maoshi 'contacts-v1' siyosatida aloqalardan hisoblanadi (oyiga 13 tagacha, har biri tarif/13),
+        // assistantContactsFrom oyidan boshlab; undan oldingi oylar va eski to'langan hisoblar eski davomat bo'yicha.
+        const contactsPolicy = assistant && source.assistantPolicy === 'contacts-v1';
+        const usesContacts = key => contactsPolicy && key >= String(source.assistantContactsFrom || '');
+        const contacts = source.assistantContacts || {};
+        const hasContacts = sid => Object.keys(contacts).some(k => k.endsWith('_' + employee.id) && usesContacts(k.slice(0, 7)) && contacts[k][sid]);
+        const students = source.students.filter(s => language(s) === language(employee)
+            && ((assistant ? s.assistantTeacherId : s.teacherId) === employee.id || (contactsPolicy && hasContacts(s.id)))
             && !(assistant && role(employee) === 'teacher' && s.teacherId === employee.id));
         let total = 0, lessons = 0;
         const breakdown = [];
         for (const s of students) for (const block of months(p)) {
             const expected = expectedDays(block.key, pattern);
             const monthDays = new Date(Date.UTC(Number(block.key.slice(0, 4)), Number(block.key.slice(5, 7)), 0)).getUTCDate();
-            const calendarCount = assistant ? Math.round(monthDays * 3 / 7) : expected.length;
-            const limit = assistant ? settings.assistant.maxLessons : settings.teacher.maxLessons;
+            const byContacts = usesContacts(block.key);
+            const attendance = byContacts ? contacts : assistant ? source.assistantAttendance : source.mainAttendance;
+            const calendarCount = byContacts ? CONTACT_CAP : assistant ? Math.round(monthDays * 3 / 7) : expected.length;
+            const limit = byContacts ? 0 : assistant ? settings.assistant.maxLessons : settings.teacher.maxLessons;
             const expectedCount = limit > 0 ? Math.min(calendarCount, limit) : calendarCount;
             const tariff = assistant ? settings.assistant.rate : settings.teacher.rates[s.lessonDuration || teacher.lessonDuration || 15];
             const entries = attendance[`${block.key}_${employee.id}`]?.[s.id] || {};
@@ -123,9 +132,10 @@
                     && (!hire || d >= hire) && (!studentStart || d >= studentStart)
                     && (assistant || source.teacherAttendancePolicy === 'all-days-v1' || expected.includes(Number(day)));
             }).length;
-            const count = Math.min(days, expectedCount), earned = money((tariff || 0) * count / expectedCount);
+            const count = Math.min(days, expectedCount);
+            const earned = byContacts ? money(Math.round((tariff || 0) / CONTACT_CAP) * count) : money((tariff || 0) * count / expectedCount);
             total += earned; lessons += count;
-            breakdown.push({ studentId: s.id, name: s.name, month: block.key, lessons: count, expected: expectedCount, tariff: tariff || 0, earned });
+            breakdown.push({ studentId: s.id, name: s.name, month: block.key, lessons: count, expected: expectedCount, tariff: tariff || 0, earned, ...(byContacts ? { unit: 'contact' } : {}) });
         }
         return { total, lessons, studentCount: students.length, breakdown };
     }

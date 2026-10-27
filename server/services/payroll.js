@@ -1,5 +1,8 @@
 const { randomUUID, createHash } = require('crypto');
 const engine = require('../../js/payrollEngine');
+const assist = require('./school/assist');
+// Yordamchi maoshi shu oydan boshlab aloqalar (13 × tarif/13) bo'yicha; oldingi oylar eski yordamchi davomati bo'yicha.
+const ASSIST_CONTACTS_FROM = process.env.ASSIST_CONTACTS_FROM || '2026-10';
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS salary_kpi_settings (
@@ -115,9 +118,22 @@ async function sources(db, p) {
         for (const r of rows) { out[r.att_key] ||= {}; out[r.att_key][r.student_id] ||= {}; out[r.att_key][r.student_id][r.day] = 1; }
         return out;
     };
+    // Yordamchi aloqalari (school_assist_contacts): oy bo'yicha hisoblangan aloqa kunlari, davomat bilan bir xil shaklda.
+    const assistantContacts = {};
+    if ((await db.query("SELECT to_regclass('public.school_assist_contacts')::text AS t")).rows[0]?.t) {
+        const rows = (await db.query(`SELECT id,student_id,assistant_id,TO_CHAR(day,'YYYY-MM-DD') AS day,channel,minutes,outcome,created_at,removed_at
+            FROM school_assist_contacts WHERE removed_at IS NULL AND TO_CHAR(day,'YYYY-MM')=ANY($1::text[])`, [monthKeys])).rows;
+        const groups = new Map();
+        for (const r of rows) { const k = r.day.slice(0, 7) + '_' + r.assistant_id; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(r); }
+        for (const [k, list] of groups) for (const st of assist.countMonth(list).students) for (const i of st.items) {
+            if (i.status !== 'counted') continue;
+            assistantContacts[k] ||= {}; assistantContacts[k][st.studentId] ||= {}; assistantContacts[k][st.studentId][Number(i.day.slice(8))] = 1;
+        }
+    }
     const json = (await db.query("SELECT key,data FROM json_data WHERE key=ANY($1::text[])", [['salesPlan', 'bonusHistory', 'bonusData', 'cashFlow']])).rows;
     const blob = Object.fromEntries(json.map(r => [r.key, r.data]));
-    return { academicPolicy: 'dual-role-v1', teacherAttendancePolicy: 'all-days-v1', paymentRecords, hrEmployees: employees.map(r => ({ id: r.id, name: r.name, role: r.role, lang: r.lang, avatar: r.avatar, dualRole: r.dual_role === true,
+    return { academicPolicy: 'dual-role-v1', teacherAttendancePolicy: 'all-days-v1', paymentRecords,
+        assistantPolicy: 'contacts-v1', assistantContactsFrom: ASSIST_CONTACTS_FROM, assistantContacts, hrEmployees: employees.map(r => ({ id: r.id, name: r.name, role: r.role, lang: r.lang, avatar: r.avatar, dualRole: r.dual_role === true,
         status: r.status, startDate: r.start_date, joinDate: r.join_date, endDate: r.end_date || '', kpiTemplateId: r.kpi_template_id })),
         teachers: teachers.map(r => ({ id: r.id, schedulePattern: r.schedule_pattern, lessonDuration: r.lesson_duration })),
         students: students.map(r => ({ ...(r.extra_data || {}), id: r.id, name: r.name, subject: r.subject,
@@ -137,11 +153,14 @@ function hash(value) { return createHash('sha256').update(stableJson(value)).dig
 function createBasis(source, config, confirmation, row, rows) {
     const ids = row.role === 'rop' ? source.hrEmployees.filter(e => engine.role(e) === 'sales' && engine.language(e) === engine.language(source.hrEmployees.find(e => e.id === row.employeeId) || {})).map(e => e.id) : [];
     ids.push(row.employeeId);
+    const contacted = new Set(Object.entries(source.assistantContacts || {}).filter(([k]) => k.endsWith('_' + row.employeeId)).flatMap(([, v]) => Object.keys(v)));
     const students = source.students.filter(s => row.role === 'teacher' ? s.teacherId === row.employeeId
-        || (source.academicPolicy === 'dual-role-v1' && s.assistantTeacherId === row.employeeId) : row.role === 'assistant' ? s.assistantTeacherId === row.employeeId : false)
+        || (source.academicPolicy === 'dual-role-v1' && (s.assistantTeacherId === row.employeeId || contacted.has(s.id)))
+        : row.role === 'assistant' ? s.assistantTeacherId === row.employeeId || contacted.has(s.id) : false)
         .map(s => ({ id: s.id, name: s.name, subject: s.subject, teacherId: s.teacherId, assistantTeacherId: s.assistantTeacherId,
             lessonDuration: s.lessonDuration, startDate: s.startDate, joinDate: s.joinDate }));
     return { version: 2, academicPolicy: source.academicPolicy, teacherAttendancePolicy: source.teacherAttendancePolicy,
+        assistantPolicy: source.assistantPolicy, assistantContactsFrom: source.assistantContactsFrom,
         paymentPolicy: Array.isArray(source.paymentRecords) ? 'receipts-v1' : 'closed-deals-v1', settings: config.data, revision: config.revision, confirmation,
         hrEmployees: source.hrEmployees.filter(e => ids.includes(e.id)).map(({ avatar, ...e }) => e),
         teachers: source.teachers.filter(t => t.id === row.employeeId), students,
@@ -184,6 +203,7 @@ async function correctionProposals(db, p, lang) {
         const current = cache.get(key);
         // Employment contracts, tariffs and assignments are historical, not today's replacements.
         const history = { ...current, academicPolicy: basis.academicPolicy, teacherAttendancePolicy: basis.teacherAttendancePolicy,
+            assistantPolicy: basis.assistantPolicy, assistantContactsFrom: basis.assistantContactsFrom,
             hrEmployees: basis.hrEmployees, teachers: basis.teachers || [],
             students: basis.students || [], salesPlan: basis.salesPlan || {}, bonusData: basis.bonusData || {} };
         if (basis.paymentPolicy !== 'receipts-v1') delete history.paymentRecords;
