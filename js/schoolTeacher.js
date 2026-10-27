@@ -213,7 +213,6 @@
             as.hidden = false;
             as.innerHTML = `<div class="ahx-card-h"><h3>Yordamchi ustozlik</h3><button type="button" class="ahx-link" data-go-contacts>Aloqalar →</button></div>
                 <p class="sc-mt">oyiga 13 tagacha · haftasiga 3 ta</p>
-                ${td.slice(0, 7) < '2026-11' ? '<div class="sc-note">Oktyabr maoshi hali eski yordamchi davomati bo\'yicha — uni "Akademik bo\'lim → Davomat"da belgilang. Aloqalar 1-noyabrdan maoshga o\'tadi.</div>' : ''}
                 ${helped.map(s => { const r = by.get(s.id) || { counted: 0, items: [] }; const wk = (r.items || []).filter(i => i.day >= ws && i.status === 'counted').length;
                     return `<div class="thx-as-row"><div><b>${esc(s.name)}</b><small>tavsiya ${adv(s).map(d => DAY[d - 1]).join('·')}${s.lessonTime ? ' ' + esc(s.lessonTime) : ''} · asosiy ustoz ${esc(u.teacherName(s.teacherId, true))}${s.frozen ? ' · muzlatilgan' : ''}</small>
                       <i class="thx-as-bar"><i style="width:${Math.min(100, r.counted / 13 * 100)}%"></i></i></div><span><em><b>${r.counted}</b> / 13</em><small>bu hafta ${wk}/3</small></span></div>`; }).join('')}

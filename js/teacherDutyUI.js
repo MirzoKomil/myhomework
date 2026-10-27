@@ -31,7 +31,7 @@
             .catch(() => { mk = { month, list: [], loading: false }; });
     }
     const dkey = v => (v ? String(v).slice(0, 10) : '');
-    const ASSIST_FROM = '2026-11';
+    const ASSIST_FROM = '2026-10';
     const DAYS = ['Du', 'Se', 'Ch', 'Pa', 'Ju', 'Sh', 'Ya'];
     const MONTHS = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentyabr', 'Oktyabr', 'Noyabr', 'Dekabr'];
     const toMin = t => { const m = /^(\d{1,2}):(\d{2})/.exec(String(t || '')); return m ? Number(m[1]) * 60 + Number(m[2]) : null; };
@@ -83,11 +83,11 @@
         const mkOn = (sid, date) => myMk.find(m => m.student_id === sid && dkey(m.held_date) === date);
         const mkFor = sid => myMk.filter(m => m.student_id === sid && dkey(m.held_date).slice(0, 7) === month);
         const coveredMissed = sid => new Set(myMk.filter(m => m.student_id === sid).map(m => dkey(m.missed_date)));
-        // Hisobga o'tgan darslar — moliya bilan bir xil: 2026-11 dan dars kunidagi "Keldi" + tasdiqlangan qoplash.
+        // Hisobga o'tgan darslar — moliya bilan bir xil: 2026-10 dan dars kunidagi "Keldi" + tasdiqlangan qoplash.
         const countedFor = s => {
             const entries = attendance[s.id] || {};
             const cells = calendar.cells(month, calendar.weekdays(s, ownTeacher, 'main')).filter(Boolean);
-            const strict = month >= '2026-11';
+            const strict = month >= '2026-10';
             const days = new Set(cells.filter(c => (!strict || c.scheduled) && calendar.status(entries[c.day]) === 'present').map(c => c.day));
             let n = days.size;
             if (strict) for (const m of mkFor(s.id).filter(m => m.status === 'approved')) {
@@ -155,7 +155,7 @@
         const legend = selected === 'main'
             ? '<span><i class="duty-present">✓</i>Keldi</span><span><i class="duty-absent">−</i>Kelmadi</span><span><i class="duty-planned"></i>Rejadagi kun</span><span><i class="duty-off"></i>Dars kuni emas</span><span><i class="duty-mk">Q</i>Qoplash darsi</span><span><i class="duty-mk is-review">Q</i>Tekshiruvda</span><span><i class="duty-mk">×2</i>Qo‘shaloq dars</span>'
             : '<span><i class="duty-planned"></i>Rejadagi kun</span><span><i class="duty-present">✓</i>Qatnashdi</span><span><i class="duty-absent">−</i>Kelmadi</span>';
-        root.innerHTML = `${todayHtml}${kpiHtml}${tabs}<div class="teacher-duty-help"><p>${oldAssist ? 'Oktyabr maoshi eski yordamchi davomati bo‘yicha. Aloqalar 1-noyabrdan hisoblanadi.' : 'Dars kunini bosib davomat qo‘ying. Qayta bossangiz — o‘zgartirasiz yoki olib tashlaysiz.'}</p>
+        root.innerHTML = `${todayHtml}${kpiHtml}${tabs}<div class="teacher-duty-help"><p>${oldAssist ? 'Bu oy maoshi eski yordamchi davomati bo‘yicha.' : 'Dars kunini bosib davomat qo‘ying. Qayta bossangiz — o‘zgartirasiz yoki olib tashlaysiz.'}</p>
         <div class="teacher-duty-legend">${legend}</div></div>
         <div class="teacher-duty-students" role="tabpanel">${students.map((s, index) => {
             const entries = attendance[s.id] || {}, panelId = `teacherDutyCalendar${index}`;
@@ -223,7 +223,7 @@
             const student = students.find(s => s.id === button.dataset.sid); if (!student) return;
             if (button.dataset.dutyQuick === '1') grade(student, today); else save(student, today, false);
         }; });
-        // Qoplash (2026-11 dan maoshga faqat admin tasdig'i bilan): dars kuni bo'lmagan kunda — "Qoplash darsi",
+        // Qoplash (2026-10 dan maoshga faqat admin tasdig'i bilan): dars kuni bo'lmagan kunda — "Qoplash darsi",
         // dars kunida — "Keldi · 2 dars" (qo'shaloq). Qaysi qoldirilgan dars qoplanayotgani tanlanadi.
         const openMissedFor = sid => {
             const entries = attendance[sid] || {}, covered = coveredMissed(sid);
@@ -243,18 +243,18 @@
             const role = selected, student = students.find(s => s.id === button.dataset.dutyStudent);
             const date = `${month}-${String(button.dataset.dutyDay).padStart(2, '0')}`;
             const status = button.dataset.status, offday = button.classList.contains('duty-offday');
-            const missed = role === 'main' && month >= '2026-11' && date <= today && !button.classList.contains('duty-has-mk') ? openMissedFor(student.id).filter(d => d !== date) : [];
+            const missed = role === 'main' && month >= '2026-10' && date <= today && !button.classList.contains('duty-has-mk') ? openMissedFor(student.id).filter(d => d !== date) : [];
             const pick = missed.length ? `<label class="duty-pick">Qaysi qoldirilgan darsni qoplaysiz? <select id="dutyMissed">${missed.map(d => `<option value="${d}">${Number(d.slice(8))}-sana</option>`).join('')}</select></label>` : '';
             const mkButtons = !missed.length ? '' : offday
                 ? '<button type="button" class="btn-primary-sm" id="dutyMkSep">Qoplash darsi o‘tildi</button>'
                 : '<button type="button" class="btn-ghost" id="dutyMkDouble">Keldi · 2 dars</button>';
-            const note = role === 'main' && offday && month >= '2026-11'
+            const note = role === 'main' && offday && month >= '2026-10'
                 ? 'Bu kun dars kuni emas. Maoshga faqat qoplash darsi sifatida, admin tasdig‘idan keyin o‘tadi.'
                 : role === 'main' && offday ? 'Bu kun dars kuni emas.' : '';
             openModal(`${student.name} — ${date}`, `<p>${note ? note + ' ' : ''}Shu kundagi davomatni tanlang.</p>${pick}`,
-                `<div class="teacher-duty-actions">${role === 'main' && offday && month >= '2026-11' ? '' : `<button type="button" class="btn-primary-sm" id="dutyPresent">${role === 'main' && status === 'present' ? 'Baholarni o‘zgartirish' : role === 'main' ? 'Keldi' : 'Qatnashdi'}</button>`}
+                `<div class="teacher-duty-actions">${role === 'main' && offday && month >= '2026-10' ? '' : `<button type="button" class="btn-primary-sm" id="dutyPresent">${role === 'main' && status === 'present' ? 'Baholarni o‘zgartirish' : role === 'main' ? 'Keldi' : 'Qatnashdi'}</button>`}
                 ${mkButtons}
-                ${role === 'main' && offday && month >= '2026-11' ? '' : '<button type="button" class="btn-ghost" id="dutyAbsent">Kelmadi</button>'}
+                ${role === 'main' && offday && month >= '2026-10' ? '' : '<button type="button" class="btn-ghost" id="dutyAbsent">Kelmadi</button>'}
                 ${status !== 'empty' ? '<button type="button" class="btn-ghost teacher-duty-remove" id="dutyRemove">Belgini olib tashlash</button>' : ''}
                 <button type="button" class="btn-ghost" id="dutyCancel">Bekor qilish</button></div>`);
             const on = (id, fn) => { const el = document.getElementById(id); if (el) el.onclick = fn; };
