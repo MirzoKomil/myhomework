@@ -111,7 +111,8 @@
                     const st = calendar.status((attendance[s.id] || {})[todayDay]);
                     const start = toMin(s.lessonTime), started = start == null || nowMin >= start;
                     const ended = start != null && nowMin >= start + (Number(s.lessonDuration) || 15);
-                    const action = st === 'present' ? `<span class="teacher-duty-done">✓ Keldi</span><button type="button" class="btn-ghost" data-duty-today="${esc(s.id)}">O‘zgartirish</button>`
+                    const live = st === 'present' ? (getItem(STORAGE_KEYS.liveGrades, {})[s.id] || []).find(g => g && g.date === today && g.teacherId === id) : null;
+                    const action = st === 'present' ? `<span class="teacher-duty-done">✓ Keldi${live?.lessonName ? ` · ${esc(live.lessonName)}` : ''}</span><button type="button" class="btn-ghost" data-duty-today="${esc(s.id)}">O‘zgartirish</button>`
                         : st === 'absent' ? `<span class="teacher-duty-miss">Kelmadi</span><button type="button" class="btn-ghost" data-duty-today="${esc(s.id)}">O‘zgartirish</button>`
                         : started ? `${ended ? '<span class="duty-bad">Dars bo‘ldimi?</span>' : '<span>Hozir</span>'}<button type="button" class="btn-primary-sm" data-duty-quick="1" data-sid="${esc(s.id)}">Keldi</button><button type="button" class="btn-ghost" data-duty-quick="0" data-sid="${esc(s.id)}">Kelmadi</button>`
                         : '<span class="teacher-duty-wait">Kutilmoqda</span>';
@@ -252,7 +253,7 @@
                 ? 'Bu kun dars kuni emas. Maoshga faqat qoplash darsi sifatida, admin tasdig‘idan keyin o‘tadi.'
                 : role === 'main' && offday ? 'Bu kun dars kuni emas.' : '';
             openModal(`${student.name} — ${date}`, `<p>${note ? note + ' ' : ''}Shu kundagi davomatni tanlang.</p>${pick}`,
-                `<div class="teacher-duty-actions">${role === 'main' && offday && month >= '2026-10' ? '' : `<button type="button" class="btn-primary-sm" id="dutyPresent">${role === 'main' && status === 'present' ? 'Baholarni o‘zgartirish' : role === 'main' ? 'Keldi' : 'Qatnashdi'}</button>`}
+                `<div class="teacher-duty-actions">${role === 'main' && offday && month >= '2026-10' ? '' : `<button type="button" class="btn-primary-sm" id="dutyPresent">${role === 'main' ? 'Keldi' : 'Qatnashdi'}</button>`}
                 ${mkButtons}
                 ${role === 'main' && offday && month >= '2026-10' ? '' : '<button type="button" class="btn-ghost" id="dutyAbsent">Kelmadi</button>'}
                 ${status !== 'empty' ? '<button type="button" class="btn-ghost teacher-duty-remove" id="dutyRemove">Belgini olib tashlash</button>' : ''}

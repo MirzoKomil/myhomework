@@ -102,7 +102,7 @@ test('js/app.js: Ustoz Bosh sahifasi reyting kartochkasini apiFetchTeacherRating
     assert.match(app, /async function _loadTeacherHomeRating\(container\) \{/);
     const fn = app.slice(app.indexOf('async function _loadTeacherHomeRating('), app.indexOf('function renderTeacherHome('));
     assert.match(fn, /await apiFetchTeacherRating\(\);/);
-    assert.match(fn, /Ball = davomat 60% \+ mezonlar 40%/);
+    assert.match(fn, /Ball = davomat 60% \+ o'quvchilar o'zlashtirishi \(uy vazifasi, 1-urinish\) 40%/);
     assert.match(app, /data-thx-rating-kpi/);
     assert.match(app, /data-thx-rating-card/);
     assert.match(app, /_loadTeacherHomeRating\(container\);/);
@@ -113,7 +113,8 @@ test('js/app.js: "Bugungi darslar"da Keldi/Kelmadi va Mezonlar tugmalari mavjud 
     const fn = app.slice(app.indexOf('function bindTeacherHomeToday('), app.length);
     assert.match(fn, /data-thx-mark/);
     assert.match(fn, /data-thx-contact/, 'yordamchi aloqasi schoolTeacher.markDrawer orqali');
-    assert.match(fn, /data-thx-grade/);
+    assert.doesNotMatch(app, /data-thx-grade="/, 'Mezonlar tugmasi yo\'q — o\'quvchiga baho qo\'yilmaydi');
+    assert.match(app, /function _openLiveGradeModal\(studentName, dateStr, lessonOptions, onSave\) \{\s*onSave\(null\);/);
     assert.match(fn, /saveTeacherAttendanceChange\(\{ teacherId, studentId: sid, date: dateStr, present: true, grade \}\)/);
     assert.match(fn, /saveTeacherAttendanceChange\(\{ teacherId, studentId: sid, date: dateStr, present: false \}\)/);
 });

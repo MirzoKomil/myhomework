@@ -8059,57 +8059,11 @@ const LIVE_GRADE_CRITERIA = [
 // O'quvchini darsga "qatnashdi" deb belgilashdan oldin ustozdan majburiy
 // ravishda: (1) bugun qaysi dars o'tilgani va (2) 5 ta mezon bo'yicha baho
 // so'raladi — bekor qilinsa, davomat belgisi ham qo'yilmaydi.
-function _openLiveGradeModal(studentName, dateStr, lessonOptions, onSave, onCancel, initialGrade) {
-    const lessonOptionsHtml = lessonOptions.map(o => `<option value="${escapeHtml(o.id)}">${escapeHtml(o.label)}</option>`).join('');
-    const critHtml = LIVE_GRADE_CRITERIA.map(c => `
-        <div class="form-group">
-            <label>${escapeHtml(c.label)} <span style="color:var(--danger)">*</span></label>
-            <select id="lg_${c.key}" class="form-control">
-                <option value="">Tanlang</option>
-                <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
-            </select>
-        </div>`).join('');
-
-    openModal(`${studentName} — davomat tasdiqlash (${dateStr})`,
-        `<div class="form-group">
-            <label>Bugun qaysi dars o'tildi? <span style="color:var(--danger)">*</span></label>
-            <select id="lgLesson" class="form-control"><option value="">Tanlang</option>${lessonOptionsHtml}</select>
-        </div>
-        ${critHtml}`,
-        `<button type="button" class="btn-ghost" id="lgCancelBtn">Bekor qilish</button><button type="button" class="btn-primary-sm" id="lgSaveBtn">Tasdiqlash</button>`,
-        { wide: true }
-    );
-
-    if (initialGrade) {
-        document.getElementById('lgLesson').value = initialGrade.lessonId || '';
-        LIVE_GRADE_CRITERIA.forEach(c => { document.getElementById(`lg_${c.key}`).value = initialGrade.scores?.[c.key] || ''; });
-    }
-    const overlay = document.getElementById('modalOverlay');
-    let settled = false;
-    const onClosed = () => {
-        overlay.removeEventListener('crm:modal-closed', onClosed);
-        if (!settled) { settled = true; onCancel(); }
-    };
-    overlay.addEventListener('crm:modal-closed', onClosed);
-    document.getElementById('lgCancelBtn').addEventListener('click', () => {
-        closeModal();
-    });
-    document.getElementById('lgSaveBtn').addEventListener('click', () => {
-        const lessonSel = document.getElementById('lgLesson');
-        const lessonId = lessonSel.value;
-        const lessonName = lessonId ? lessonSel.selectedOptions[0].textContent : '';
-        const scores = {};
-        let ok = !!lessonId;
-        LIVE_GRADE_CRITERIA.forEach(c => {
-            const v = document.getElementById(`lg_${c.key}`).value;
-            if (!v) ok = false;
-            scores[c.key] = Number(v) || 0;
-        });
-        if (!ok) { alert("Barcha maydonlarni to'ldiring — dars va barcha 5 ta mezon majburiy."); return; }
-        settled = true;
-        closeModal();
-        onSave({ lessonId, lessonName, scores });
-    });
+// 2026-10-28 (Abdulloh): o'quvchiga baho (5 mezon) qo'yilmaydi — "Keldi" bir bosishda saqlanadi.
+// Jonli darsni server o'zi aniqlaydi (o'quvchi hali o'tmagan birinchi jonli dars, server/services/liveLessonPick).
+// Chaqiruvchilar o'zgarmasligi uchun imzo saqlangan.
+function _openLiveGradeModal(studentName, dateStr, lessonOptions, onSave) {
+    onSave(null);
 }
 
 // ─── O'quvchi ↔ ustoz/admin muloqoti (121-ish) ───────────────────────────────
@@ -8665,8 +8619,6 @@ function renderTeacherTodayBlock(user) {
                 <button type="button" class="tch-row-btn tch-row-btn--no" data-thx-mark="0" data-thx-student="${escapeHtml(s.id)}" data-thx-date="${dateForDay(day)}">Kelmadi</button>`;
         } else if (isAssistant) {
             actionsHtml = `<button type="button" class="tch-row-btn tch-row-btn--ok" data-thx-contact="${escapeHtml(s.id)}">Aloqani belgilash</button>`;
-        } else if (action === 'grade' && !isAssistant) {
-            actionsHtml = `<button type="button" class="tch-row-btn" data-thx-grade="${escapeHtml(s.id)}" data-thx-date="${dateForDay(day)}">Mezonlar</button>`;
         }
         return `<li class="tch-row tch-row--${state[0]}">
             <b class="tch-time">${escapeHtml(s.lessonTime)}</b>
@@ -9382,7 +9334,7 @@ async function _loadTeacherHomeRating(container) {
             const listRows = (rows || []).map(r => `<div class="rd-thx-rank-row${r.id === selfId ? ' rd-thx-rank-row--self' : ''}"><span class="rd-thx-rank-n">${r.rank}</span><span class="rd-thx-rank-name">${escapeHtml(r.name)}${r.id === selfId ? ' (siz)' : ''}</span><strong>${r.score} ball</strong></div>`).join('');
             cardEl.innerHTML = `<div class="ahx-card-h"><h3>Ustozlar reytingi</h3></div>
                 ${listRows || '<p class="dashboard-empty">Hali maʻlumot yoʻq</p>'}
-                <p class="mot-prize-note">Ball = davomat 60% + mezonlar 40%</p>`;
+                <p class="mot-prize-note">Ball = davomat 60% + o'quvchilar o'zlashtirishi (uy vazifasi, 1-urinish) 40%</p>`;
         }
     } catch (err) {
         if (kpiEl) kpiEl.innerHTML = `<span class="ahx-kpi-l">Reyting</span><b class="ahx-kpi-v">—</b><div class="ahx-kpi-n"><span>yuklanmadi</span></div>`;
