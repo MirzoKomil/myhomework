@@ -1,10 +1,10 @@
 const { randomUUID, createHash } = require('crypto');
 const engine = require('../../js/payrollEngine');
 const assist = require('./school/assist');
-// Yordamchi maoshi shu oydan boshlab aloqalar (Abdulloh: oktyabr eski davomat bo'yicha yopiladi) (13 × tarif/13) bo'yicha; oldingi oylar eski yordamchi davomati bo'yicha.
-const ASSIST_CONTACTS_FROM = process.env.ASSIST_CONTACTS_FROM || '2026-11';
+// Yordamchi maoshi shu oydan boshlab aloqalar (Abdulloh, 28-okt: oktyabrdan boshlab) (13 × tarif/13) bo'yicha; oldingi oylar eski yordamchi davomati bo'yicha.
+const ASSIST_CONTACTS_FROM = process.env.ASSIST_CONTACTS_FROM || '2026-10';
 // Qoplash darsi (Abdulloh, 28-okt): shu oydan asosiy ustozga faqat dars kunidagi "Keldi" + admin tasdiqlagan qoplash hisoblanadi.
-const MAKEUP_POLICY_FROM = process.env.MAKEUP_POLICY_FROM || '2026-11';
+const MAKEUP_POLICY_FROM = process.env.MAKEUP_POLICY_FROM || '2026-10';
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS salary_kpi_settings (
