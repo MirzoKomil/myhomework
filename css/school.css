@@ -231,3 +231,26 @@ html.rd .teacher-duty-today .duty-acts { display: flex; align-items: center; gap
 .teacher-duty-day.duty-has-mk:not([data-status="present"]):not([data-status="absent"]) { background: #F4EBFF; color: #6941C6; border-color: #6941C6; }
 .teacher-duty-day.duty-has-mk.is-review { border-style: dashed; }
 .teacher-duty-day.is-covered { box-shadow: inset 0 -3px 0 #6941C6; }
+
+/* Ustoz · O'quvchilar (UstozOquvchiList) */
+.ms-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
+.ms-detail { position: sticky; top: 12px; display: flex; flex-direction: column; gap: 6px; }
+.ms-table tr.ms-row { cursor: pointer; }
+.ms-table tr.ms-row:hover td { background: var(--bg-secondary, #F5F7FB); }
+.ms-table tr.ms-row.is-sel td { background: #EEF4FF; }
+.ms-table tr.ms-sec td { font-size: 11.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--text-muted, #6B7280); background: var(--bg-secondary, #F5F7FB); }
+.ms-table td small { color: var(--text-muted, #6B7280); }
+.ms-table td > .sc-row > span { display: flex; flex-direction: column; }
+.ms-name { font-size: 17px; }
+.ms-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.ms-kpis > div { border: 1px solid var(--border, #E6EAF2); border-radius: 12px; padding: 8px 10px; display: flex; flex-direction: column; }
+.ms-kpis small { color: var(--text-muted, #6B7280); font-size: 11.5px; }
+.ms-dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; margin: 8px 0; font-size: 13px; }
+.ms-dl dt { color: var(--text-muted, #6B7280); }
+.ms-dl dd { margin: 0; }
+.ms-acts { display: flex; flex-direction: column; gap: 8px; }
+.sc-root .sc-head input[type=search] { width: 260px; }
+@media (max-width: 1100px) { .ms-grid { grid-template-columns: minmax(0, 1fr); } .ms-detail { position: static; } }
+@media (max-width: 700px) { .ms-table th:nth-child(2), .ms-table td:nth-child(2), .ms-table th:nth-child(6), .ms-table td:nth-child(6) { display: none; } .sc-root .sc-head input[type=search] { width: 100%; } }
+.ms-detail > .sc-row > span { display: flex; flex-direction: column; }
+.ms-grid > .sc-card { overflow-x: auto; }

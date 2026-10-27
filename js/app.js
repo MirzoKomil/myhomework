@@ -10627,6 +10627,16 @@ function renderStudents() {
     const isSalesManager = currentUser?.role === 'sales_manager';
     const isTeacherRole = currentUser?.role === 'teacher';
 
+    // Ustoz: yangi "O'quvchilar" sahifasi (UstozOquvchiList) — js/schoolTeacher.js renderMyStudents.
+    const tabStudents = document.getElementById('tab-students');
+    if (isTeacherRole && tabStudents && window.schoolTeacher?.renderMyStudents) {
+        let root = document.getElementById('schoolMyStudents');
+        if (!root) { root = document.createElement('div'); root.id = 'schoolMyStudents'; root.className = 'sc-root'; tabStudents.prepend(root); }
+        [...tabStudents.children].forEach(el => { if (el !== root) el.hidden = true; });
+        window.schoolTeacher.renderMyStudents(root).catch(err => { root.innerHTML = `<div class="sc-err">${escapeHtml(err.message || 'Yuklanmadi')}</div>`; });
+        return;
+    }
+
     // Nav tugmalarini bir marta bind qilish
     const nav = document.getElementById('studentsSectionNav');
     if (nav && !nav.dataset.bound) {
