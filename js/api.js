@@ -107,8 +107,8 @@ async function apiSaveTeacherAttendance(payload) {
 // Ustoz Bosh sahifasidagi "Ustozlar reytingi" kartochkasi uchun - faqat
 // yakuniy (ism, ball, o'rin) ro'yxatini qaytaradi, boshqa ustozlarning
 // xom ma'lumoti bu javobda umuman bo'lmaydi.
-async function apiFetchTeacherRating() {
-    return apiFetch('/api/state/teacher-rating');
+async function apiFetchTeacherRating(type) {
+    return apiFetch('/api/state/teacher-rating' + (type ? `?type=${encodeURIComponent(type)}` : ''));
 }
 
 async function apiFetchLeads() {
@@ -185,11 +185,15 @@ async function apiUpdateProfile(payload) {
     return data.user;
 }
 
-async function apiChangePassword(currentPassword, newPassword) {
+async function apiChangePassword(currentPassword, newPassword, logoutOthers = false) {
     return apiFetch('/api/auth/change-password', {
         method: 'POST',
-        body: JSON.stringify({ currentPassword, newPassword })
+        body: JSON.stringify({ currentPassword, newPassword, logoutOthers })
     });
+}
+
+async function apiLoginHistory() {
+    return apiFetch('/api/auth/login-history');
 }
 
 async function apiCreateHrUser(data) {
