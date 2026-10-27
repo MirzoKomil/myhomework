@@ -1,0 +1,71 @@
+name: Domwork Teacher APK
+
+on:
+  push:
+    branches: [main]
+    paths: ['android/**', '.github/workflows/teacher-apk.yml']
+  pull_request:
+    paths: ['android/**', '.github/workflows/teacher-apk.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Imzo kalitini tiklash
+        env:
+          KS_B64: ${{ secrets.DWT_KEYSTORE_B64 }}
+        run: |
+          if [ -z "$KS_B64" ]; then
+            if [ "${{ github.event_name }}" = "pull_request" ]; then echo "PR: imzosiz tekshiruv yig'ilishi"; exit 0; fi
+            echo "::error::DWT_KEYSTORE_B64 va DWT_KEYSTORE_PASSWORD secret'lari qo'shilmagan (Settings → Secrets and variables → Actions)."
+            exit 1
+          fi
+          echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/dwt.jks"
+          echo "DWT_SIGNED=1" >> "$GITHUB_ENV"
+
+      - name: APK yig'ish
+        env:
+          DWT_KS_PATH: ${{ runner.temp }}/dwt.jks
+          DWT_KEYSTORE_PASSWORD: ${{ secrets.DWT_KEYSTORE_PASSWORD }}
+          DWT_KEY_PASSWORD: ${{ secrets.DWT_KEYSTORE_PASSWORD }}
+          DWT_KEY_ALIAS: domworkteacher
+          DWT_VERSION_CODE: ${{ github.run_number }}
+          DWT_VERSION_NAME: 1.0.${{ github.run_number }}
+        run: |
+          if [ "$DWT_SIGNED" = "1" ]; then export DWT_KEYSTORE="$DWT_KS_PATH"; fi
+          gradle -p android assembleRelease --no-daemon
+          cp android/app/build/outputs/apk/release/app-release*.apk DomworkTeacher.apk
+          ls -la DomworkTeacher.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DomworkTeacher-1.0.${{ github.run_number }}
+          path: DomworkTeacher.apk
+
+      - name: Release
+        if: github.event_name != 'pull_request' && env.DWT_SIGNED == '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="teacher-v1.0.${{ github.run_number }}"
+          gh release create "$TAG" DomworkTeacher.apk \
+            --title "Domwork Teacher 1.0.${{ github.run_number }}" \
+            --notes "Android ilova (ustoz va yordamchi ustoz). Telefonga DomworkTeacher.apk ni yuklab o'rnating. Keyingi versiyalar shu ilova ustidan o'rnatiladi." \
+            --latest

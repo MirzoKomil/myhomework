@@ -271,6 +271,13 @@ app.get(['/student', '/student/*'], (req, res, next) => {
     });
 });
 
+// Domwork Teacher — ustoz/yordamchi telefon ilovasi (Android qobig'i shu sahifani ochadi).
+app.get(['/teacher', '/teacher/'], (req, res) => {
+    if (req.path === '/teacher') return res.redirect(301, '/teacher/');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.sendFile(path.join(ROOT, 'teacher', 'index.html'));
+});
+
 // Kitobdagi audio dialog QR-kodlari: /audio/L05-1 → /audio/L05_d1.mp3
 app.get(/^\/audio\/L\d{1,2}-[1-3]\/?$/i, require('./routes/bookAudio').bookAudioHandler(ROOT));
 
