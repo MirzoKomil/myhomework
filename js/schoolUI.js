@@ -38,8 +38,6 @@
         return `<img class="sc-av" src="${esc(url)}" width="${size}" height="${size}" alt="" loading="lazy" onerror="this.src='images/student-avatars/tulki.webp'">`;
     }
     function staffAvatarUrl(avatar) {
-        const m = /^preset:st-([fm]\d\d)$/.exec(avatar || '');
-        if (m) return `images/staff-avatars/${m[1]}.webp`;
         if (avatar && /^(\/|https:|data:image\/)/.test(avatar)) return avatar;
         return '';
     }
@@ -141,7 +139,7 @@
         const show = k => {
             db.querySelectorAll('.sc-tab').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === k)));
             box.querySelector('.sc-df')?.remove();
-            if (k === 'umumiy') body.innerHTML = cardSummary(card);
+            if (k === 'umumiy') { body.innerHTML = cardSummary(card); const cb = body.querySelector('[data-contacts]'); if (cb && window.schoolTeacher) window.schoolTeacher.contactsBlock(card.id, cb); }
             else if (k === 'tahrir') editForm(box, body, card);
             else if (k === 'holat') statusForm(box, body, card);
             else if (k === 'tarix') body.innerHTML = historyList(card);
@@ -167,6 +165,7 @@
             </dl></section>` : ''}
             <section class="sc-card"><h3>Ustozlar tarixi</h3>${teachers.length ? `<ul class="sc-hist">${teachers.map(t => `<li${!t.to ? ' class="now"' : ''}>${esc(teacherName(t.teacherId))} · ${esc(fmtDate(t.from, false))} → ${t.to ? esc(fmtDate(t.to, false)) : ''}</li>`).join('')}</ul>` : '<p class="sc-mt">Almashtirilmagan</p>'}</section>
           </div>
+          ${c.assistantId && c.scope !== 'assistant' && c.scope !== 'past' ? '<section class="sc-card sc-pad sc-mtop" data-contacts><div class="sc-skel" style="height:60px"></div></section>' : ''}
           ${(c.requests || []).filter(r => r.status === 'pending').map(r => `<div class="sc-note sc-note--warn">So'rov №${esc(r.number)} (${esc(REQ_KIND[r.kind])}) — admin yoki ROP tasdig'ini kutmoqda</div>`).join('')}`;
     }
     const REQ_KIND = { tariff: 'tarif', teacher: 'ustoz', payment: 'to\'lov' };

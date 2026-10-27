@@ -224,7 +224,7 @@ const ROLE_TABS = {
     // ko'chirildi. renderTeachersSection() ustoz/ROP uchun sub-navigatsiyani
     // faqat shu ikki bo'limga (Davomat, O'quvchini tekshirish) cheklaydi,
     // avvalgi tor ruxsat saqlanib qoladi.
-    teacher:       ['dashboard', 'students', 'timetable', 'teachers-section', 'trial-lessons', 'guides', 'student-app'],
+    teacher:       ['dashboard', 'students', 'timetable', 'teachers-section', 'school-contacts', 'trial-lessons', 'guides', 'student-app'],
     employee:      ['student-app', 'guides'],
     hr:            ['dashboard', 'hr', 'guides']
 };
@@ -267,7 +267,7 @@ function applyRoleBasedAccess(user) {
             // shu sabab butunlay yashirilmaydi, faqat renderTeachersSection()
             // ROP uchun sub-navigatsiyani o'sha bitta bo'limga cheklaydi
             // (Davomat/Sinov darsi/Reyting/Darslik/Elektron doska hamon yopiq).
-            hiddenForRop = new Set(['finance', 'hr', 'analitika', 'school-assist']);
+            hiddenForRop = new Set(['finance', 'hr', 'analitika', 'school-assist', 'school-contacts']);
             hiddenForRop.forEach(tab => {
                 const el = sidebar.querySelector(`.menu-item[data-tab="${tab}"]`);
                 if (el) el.style.display = 'none';
@@ -277,9 +277,8 @@ function applyRoleBasedAccess(user) {
             // uchun (u haqiqiy nishon lavozim bo'lgani va HR Bo'limi undan
             // yashiringani sabab) — admin/boshliq esa uni HR Bo'limi >
             // Yo'riqnomalar orqali yozadi, alohida punktga muhtoj emas.
-            hiddenForRop = new Set(['guides']);
-            const el = sidebar.querySelector('.menu-item[data-tab="guides"]');
-            if (el) el.style.display = 'none';
+            hiddenForRop = new Set(['guides', 'school-contacts']);
+            hiddenForRop.forEach(tab => { const el = sidebar.querySelector(`.menu-item[data-tab="${tab}"]`); if (el) el.style.display = 'none'; });
         }
         // 17-ish: sahifa obnovleniya (refresh) qilinganda foydalanuvchi
         // oldin qaysi bo'limda bo'lgan bo'lsa, o'sha bo'limdan davom etsin —
@@ -291,6 +290,9 @@ function applyRoleBasedAccess(user) {
         return;
     }
 
+    // "Faol emas" (muzlatilgan / chiqib ketgan / boshqa ustozga o'tgan) — ustoz va sotuv menejeri uchun alohida ro'yxat.
+    const inactiveBtn = document.getElementById('btnSchoolInactive');
+    if (inactiveBtn) inactiveBtn.hidden = !['teacher', 'sales_manager'].includes(role);
     const financeEmployee = role === 'employee' && getItem(STORAGE_KEYS.hrEmployees, []).some(e =>
         String(e.login || '').trim().toLowerCase() === String(user.email || '').trim().toLowerCase()
         && ['moliya', 'finance'].includes(String(e.department || '').toLowerCase()));
@@ -690,6 +692,10 @@ async function bootApp() {
             currentUser.linkedTeacherLang = detectedTeacherLang;
             setCurrentUser(currentUser);
         }
+        // "Aloqalar" — faqat yordamchi ustoz (o'quvchisi bor bo'lsa) uchun.
+        const isAssistant = linked?.role === 'yordamchi' || getItem(STORAGE_KEYS.students, []).some(s => s.assistantTeacherId && s.assistantTeacherId === currentUser.linkedTeacherId);
+        const contactsMenu = document.querySelector('.menu-item[data-tab="school-contacts"]');
+        if (contactsMenu && !isAssistant) contactsMenu.remove();
     }
 
     setUiLang(getUiLang());
@@ -1232,6 +1238,7 @@ function renderTab(tab) {
         case 'school-approvals': window.schoolUI?.renderApprovals(document.getElementById('schoolApprovalsRoot')); break;
         case 'school-groups': window.schoolUI?.renderGroups(document.getElementById('schoolGroupsRoot')); break;
         case 'school-assist': window.schoolUI?.renderAssistAdmin(document.getElementById('schoolAssistRoot')); break;
+        case 'school-contacts': window.schoolTeacher?.renderContacts(document.getElementById('schoolContactsRoot')); break;
     }
     if (typeof renderNotificationPanel === 'function') renderNotificationPanel();
 }
@@ -6091,6 +6098,13 @@ function renderProfileEditSection(user) {
         </div>`;
     })() : '';
 
+    setTimeout(() => {
+        const el = document.getElementById('schoolAvatarPicker');
+        if (el && window.schoolTeacher) window.schoolTeacher.renderAvatarPicker(el, { current: user.avatar || '', onSaved: avatar => {
+            const cu = getCurrentUser(); if (cu) { setCurrentUser({ ...cu, avatar }); if (typeof initUserUI === 'function') initUserUI(getCurrentUser()); }
+            const prev = document.getElementById('profileAvatarPreview'); if (prev) prev.innerHTML = `<img alt="" src="${escapeHtml(avatar)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+        } });
+    }, 0);
     return `
         <div class="profile-header-bar">
             <h1>${_isAdminProfileEdit ? 'Profilni tahrirlash' : 'Mening profilim'}</h1>
@@ -6109,6 +6123,11 @@ function renderProfileEditSection(user) {
                             <p>Kamida 400×400 px tavsiya etiladi. JPG, PNG yoki WebP formatlari qabul qilinadi.</p>
                         </div>` : ''}
                     </div>
+                </div>
+                <div class="profile-card">
+                    <h3 style="margin:0 0 4px">Personaj tanlash</h3>
+                    <p class="text-muted" style="margin:0 0 12px">72 ta 3D personajdan birini tanlang — CRM, xodimlar chati va oʻquvchi ilovasida koʻrinadi</p>
+                    <div id="schoolAvatarPicker"></div>
                 </div>
                 <div class="profile-card">
                     ${profileCardHeader('Shaxsiy ma\'lumotlar', 'personal')}

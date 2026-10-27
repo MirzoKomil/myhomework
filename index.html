@@ -93,6 +93,11 @@
                     <span class="label">Yordamchi aloqalari</span>
                 </a>
 
+                <a href="#" class="menu-item" data-tab="school-contacts">
+                    <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><path d="M8 9h8M8 13h5"/></svg>
+                    <span class="label">Aloqalar</span>
+                </a>
+
                 <a href="#" class="menu-item" data-tab="trial-lessons" id="menuItemTrialLessons" style="display:none">
                     <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
                     <span class="label">Sinov darslari</span>
@@ -396,6 +401,7 @@
                     <section id="tab-school-approvals" class="tab-content"><div class="sc-root" id="schoolApprovalsRoot"></div></section>
                     <section id="tab-school-groups" class="tab-content"><div class="sc-root" id="schoolGroupsRoot"></div></section>
                     <section id="tab-school-assist" class="tab-content"><div class="sc-root" id="schoolAssistRoot"></div></section>
+                    <section id="tab-school-contacts" class="tab-content"><div class="sc-root" id="schoolContactsRoot"></div></section>
                     <section id="tab-trial-lessons" class="tab-content">
                         <div id="teacherTrialLessonsContent" aria-live="polite"></div>
                     </section>
@@ -520,6 +526,7 @@
                                     <button type="button" class="section-nav-item" data-students-section="tark-etgan">Tark etganlar</button>
                                     <button type="button" class="section-nav-item" data-students-section="tamomlaganlar">Tamomlaganlar</button>
                                     <button type="button" class="section-nav-item" data-students-section="qarzdorlar">Qarzdorlar</button>
+                                    <button type="button" class="section-nav-item" id="btnSchoolInactive" hidden onclick="window.schoolTeacher?.openInactive()">Faol emas</button>
                                 </nav>
                                 <div class="sales-header-lang">
                                     <div class="leads-lang-tabs" id="studentsSubjectTabs" style="margin:0">
@@ -1601,6 +1608,7 @@
     <script src="js/staffAttendanceUI.js?v=20261026a"></script>
     <script src="js/schoolUI.js?v=20261028a"></script>
     <script src="js/schoolSchedule.js?v=20261028a"></script>
+    <script src="js/schoolTeacher.js?v=20261028a"></script>
     <script src="js/app.js?v=20261028a"></script>
     <script src="js/teamApp.js?v=20261026r7"></script>
     <script src="js/teamIcons.js?v=20261026r7"></script>

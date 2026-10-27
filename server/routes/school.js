@@ -360,20 +360,19 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
             ['staff:' + u.id, String(req.body?.reason || 'vaqtinchalik parol'), req.user.id, req.user.name || '', req.user.role]);
         return { ok: true };
     }); }));
-    const AVATAR_RE = /^(preset:(st-[fm](0[1-9]|[1-2]\d|3[0-6]))|\/uploads\/[A-Za-z0-9._-]{1,120})$/;
+    // Xodim avatari: 72 ta 3D personajdan biri (/images/staff-avatars/f01..m36.webp) yoki o'z rasmi (/uploads/...).
+    // Personaj ikki xodimda bir xil bo'lmaydi. Qiymat oddiy rasm manzili — eski ekranlar ham shu rasmni ko'radi.
+    const PRESET_RE = /^\/images\/staff-avatars\/[fm](0[1-9]|[12]\d|3[0-6])\.webp$/;
     router.put('/me/avatar', handle(req => write(req, async c => {
         const v = String(req.body?.avatar || '');
-        if (v && !AVATAR_RE.test(v)) throw T.fail(400, 'Avatar noto\'g\'ri');
-        if (v.startsWith('preset:')) {
+        if (v && !PRESET_RE.test(v) && !/^\/uploads\/[A-Za-z0-9._-]{1,120}$/.test(v)) throw T.fail(400, 'Avatar noto\'g\'ri');
+        if (PRESET_RE.test(v)) {
             const taken = await c.query('SELECT 1 FROM users WHERE avatar=$1 AND id<>$2', [v, req.user.id]);
             if (taken.rows.length) throw T.fail(409, 'Bu personajni boshqa xodim tanlagan');
         }
         await c.query('UPDATE users SET avatar=$2 WHERE id=$1', [req.user.id, v]);
         return { avatar: v };
     })));
-    // Xodim avatarlari (HR id → avatar) — CRM ro'yxatlarida 3D personaj yoki o'z rasmi.
-    router.get('/staff-avatars', handle(async () => ({ avatars: Object.fromEntries((await pool.query(`SELECT he.id, u.avatar FROM hr_employees he
-        JOIN users u ON LOWER(TRIM(u.email)) = LOWER(TRIM(he.login)) WHERE COALESCE(u.avatar,'') <> ''`)).rows.map(r => [r.id, r.avatar])) })));
-    router.get('/avatars/taken', handle(async () => ({ taken: (await pool.query("SELECT avatar FROM users WHERE avatar LIKE 'preset:%'")).rows.map(r => r.avatar) })));
+    router.get('/avatars/taken', handle(async req => ({ taken: (await pool.query("SELECT avatar FROM users WHERE avatar LIKE '/images/staff-avatars/%' AND id<>$1", [req.user.id])).rows.map(r => r.avatar) })));
     return router;
 };
