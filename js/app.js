@@ -7843,7 +7843,7 @@ function renderTimetable() {
     // Yagona dars jadvali (server: /api/school) — eski brauzer ichidagi jadval o'rniga.
     const schoolRoot = document.getElementById('schoolTimetableRoot');
     if (schoolRoot && window.schoolSchedule) {
-        document.querySelectorAll('#tab-timetable > :not(#schoolTimetableRoot)').forEach(el => { el.hidden = true; });
+        document.querySelectorAll('#tab-timetable > :not(#schoolTimetableRoot)').forEach(el => { el.hidden = true; el.style.setProperty('display', 'none', 'important'); });
         schoolRoot.hidden = false;
         window.schoolSchedule.render(schoolRoot);
         return;

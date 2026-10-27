@@ -34,7 +34,9 @@
 
     // ── Avatarlar: o'quvchi — ilovadagi rasm yoki standart tulki; xodim — 3D personaj ──
     function studentAvatar(s, size = 32) {
-        const url = s?.avatarUrl && /^(\/|https:)/.test(s.avatarUrl) ? s.avatarUrl : `/images/student-avatars/${STUDENT_AVATARS[0]}.webp`;
+        // Personaj tanlamagan o'quvchilar hammasi tulki bo'lib qolmasin: ID bo'yicha doimiy personaj.
+        const pick = id => { let h = 0; for (const ch of String(id || '')) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return STUDENT_AVATARS[h % STUDENT_AVATARS.length]; };
+        const url = s?.avatarUrl && /^(\/|https:)/.test(s.avatarUrl) ? s.avatarUrl : `/images/student-avatars/${pick(s?.id || s?.name)}.webp`;
         return `<img class="sc-av" src="${esc(url)}" width="${size}" height="${size}" alt="" loading="lazy" onerror="this.onerror=null;this.src='/images/student-avatars/tulki.webp'">`;
     }
     function staffAvatarUrl(avatar) {
