@@ -8823,7 +8823,7 @@ function computeAdminHome({ students, leads, now = new Date() }) {
 // ===== Kobalt: bosh sahifa qahramon kartalari (barcha rollar uchun umumiy) =====
 const _kbxMln = n => String(Math.round((Number(n) || 0) / 1e5) / 10).replace('.', ',');
 // Server bilan bir xil (server/services/payroll.js): yordamchi maoshi shu oydan aloqalar bo'yicha.
-const ASSIST_CONTACTS_FROM = '2026-11';
+const ASSIST_CONTACTS_FROM = '2026-10';
 const _kbxNum = n => String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 function kbxPlanCard(o) {
     const art = o.art ? `<div class="kbx-gift"><img src="${o.art.img}" alt="" width="92" height="82" loading="lazy">

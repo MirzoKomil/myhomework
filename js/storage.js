@@ -479,9 +479,9 @@ function calculateKpiSalary(teacher, monthVal, attendanceStore, students) {
     const hireDate = payrollEngine.date(employee.startDate || employee.joinDate);
     let total = 0;
     let totalLessons = 0;
-    // Moliya bilan bir xil (payrollEngine 'approved-v1'): 2026-11 dan asosiy ustozga faqat o'quvchining dars kunidagi
+    // Moliya bilan bir xil (payrollEngine 'approved-v1'): 2026-10 dan asosiy ustozga faqat o'quvchining dars kunidagi
     // "Keldi" + admin tasdiqlagan qoplash. Tasdiqlangan qoplashlar /api/school/makeups dan keshlanadi.
-    const byMakeups = !isAssistant && monthVal >= '2026-11' && typeof payrollEngine.studentLessonDays === 'function';
+    const byMakeups = !isAssistant && monthVal >= '2026-10' && typeof payrollEngine.studentLessonDays === 'function';
     const approved = byMakeups ? (globalThis.__schoolMakeups || []).filter(m => m.status === 'approved' && m.teacher_id === teacher.id && String(m.held_date || '').slice(0, 7) === monthVal) : [];
     const perStudent = studentList.map(s => {
         const studentStart = payrollEngine.date(s.startDate || s.joinDate);
