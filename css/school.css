@@ -206,3 +206,28 @@ button.sc-it { cursor: pointer; } button.sc-it.sel { background: var(--kb-info-b
 .thx-as-bar { display: block; height: 6px; border-radius: 6px; background: var(--bg-secondary, #F1F4F9); overflow: hidden; margin-top: 4px; }
 .thx-as-bar > i { display: block; height: 100%; background: var(--primary, #2F5BEA); border-radius: 6px; }
 .thx-as-row > span em { font-style: normal; }
+
+/* Ustoz · Davomat (UstozDavomat dizayni) */
+html.rd .teacher-duty-today li { justify-content: flex-start; }
+html.rd .teacher-duty-today li > span:not(.duty-acts) { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+html.rd .teacher-duty-today li.is-unmarked { background: #FFF6F5; margin: 0 -16px; padding: 8px 16px; }
+html.rd .teacher-duty-today .duty-time { width: 48px; font-size: 14px; }
+html.rd .teacher-duty-today .duty-acts { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; font-size: 13px; }
+.duty-bad { color: #B42318; font-weight: 700; }
+.teacher-duty-wait { color: var(--text-muted, #6B7280); font-size: 13px; }
+.duty-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 0 0 6px; }
+.duty-kpis > div { border: 1px solid var(--border, #E6EAF2); border-radius: 14px; padding: 10px 14px; background: var(--surface, #fff); display: flex; flex-direction: column; gap: 2px; }
+.duty-kpis small { color: var(--text-muted, #6B7280); font-size: 12px; }
+.duty-kpis b { font-size: 18px; }
+.duty-note { color: var(--text-muted, #6B7280); font-size: 12.5px; margin: 4px 0 14px; }
+.duty-who { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.duty-who > span { display: flex; flex-direction: column; min-width: 0; }
+.duty-plus { font-style: normal; color: #B54708; font-weight: 700; font-size: 12px; }
+.duty-stats { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 10px; font-size: 13px; }
+.teacher-duty-legend .duty-off { background: transparent; border: 1px dashed var(--border, #D0D5DD); }
+.teacher-duty-legend .duty-mk { background: #F4EBFF; color: #6941C6; font-size: 11px; font-weight: 800; }
+.teacher-duty-legend .duty-mk.is-review { background: #FFFAEB; color: #B54708; outline: 1px dashed #B54708; }
+.teacher-duty-day.duty-offday { opacity: .75; }
+.teacher-duty-day.duty-has-mk:not([data-status="present"]):not([data-status="absent"]) { background: #F4EBFF; color: #6941C6; border-color: #6941C6; }
+.teacher-duty-day.duty-has-mk.is-review { border-style: dashed; }
+.teacher-duty-day.is-covered { box-shadow: inset 0 -3px 0 #6941C6; }
