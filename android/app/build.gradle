@@ -1,0 +1,44 @@
+plugins {
+    id 'com.android.application'
+}
+
+def ks = System.getenv('DWT_KEYSTORE')
+
+android {
+    namespace 'uz.domwork.teacher'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'uz.domwork.teacher'
+        minSdk 23
+        targetSdk 34
+        versionCode Integer.parseInt(System.getenv('DWT_VERSION_CODE') ?: '1')
+        versionName System.getenv('DWT_VERSION_NAME') ?: '1.0'
+        buildConfigField 'String', 'APP_URL', '"https://myhomework.uz/teacher/"'
+    }
+
+    buildFeatures { buildConfig true }
+
+    signingConfigs {
+        release {
+            if (ks) {
+                storeFile file(ks)
+                storePassword System.getenv('DWT_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('DWT_KEY_ALIAS')
+                keyPassword System.getenv('DWT_KEY_PASSWORD')
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            if (ks) signingConfig signingConfigs.release
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
