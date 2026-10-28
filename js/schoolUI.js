@@ -398,7 +398,7 @@
             else if (k === 'oz') progressTab(body, c);
             else if (k === 'tolov') paymentsTab(body, c);
             else if (k === 'sotuv') salesTab(body, c);
-            else if (k === 'tarix') body.innerHTML = `<section class="sc-card sc-pad">${historyList(c)}</section>`;
+            else if (k === 'tarix') historyTab(body, c);
         };
         el.querySelectorAll('.scc-tab').forEach(b => b.onclick = () => show(b.dataset.tab));
         show(tabs.some(t => t[0] === tab) ? tab : 'umumiy');
@@ -415,7 +415,7 @@
         const reopen = () => openStudent(c.id, _page?.tab || 'umumiy');
         if (k === 'edit') return openCardForm(c.id, 'tahrir', reopen);
         if (k === 'status') return openCardForm(c.id, 'holat', reopen);
-        if (k === 'pay') return inflowUI.openPayment(c.id);
+        if (k === 'pay') return payAndRefresh(c);
         if (k === 'req') return studentRequestDrawer(c);
         if (k === 'makeup') {
             if (window.schoolSchedule?.makeupDrawer) return window.schoolSchedule.makeupDrawer(() => { if (_page) delete _page.data['att:' + today().slice(0, 7)]; reopen(); }, { studentId: c.id });
@@ -622,30 +622,155 @@
         if ((d.student.flags || []).some(f => f.key === 'struggling')) peerAvg(c).then(p => { const x = body.querySelector('[data-ins]'); if (x && p != null) x.innerHTML = acad.insight(d, { who, next: adv, peer: p }); });
     }
 
-    // ── To'lovlar (admin, ROP, sotuv) ──
+    // ── To'lovlar (admin, ROP, sotuv) — AdminOquvchiTolov ──
+    // Pul faqat to'liq (admin/ROP/boshliq) va o'z o'quvchisini ko'radigan sotuv uchun; server ham 403 qaytaradi.
+    const PAY_M = { card: 'Karta', uzum: 'Uzum', paylater: 'Bo\'lib to\'lash', bank: 'Bank', payme: 'Payme', click: 'Click', cash: 'Naqd', unknown: '—' };
+    const MON_UP = MONTHS.map(m => m[0].toUpperCase() + m.slice(1));
+    const addMonths = (d, n) => { const [y, m, dd] = d.split('-').map(Number); const x = new Date(Date.UTC(y, m - 1 + n, 1)); const last = new Date(Date.UTC(x.getUTCFullYear(), x.getUTCMonth() + 1, 0)).getUTCDate(); x.setUTCDate(Math.min(dd, last)); return x.toISOString().slice(0, 10); };
+    // To'lov qabul qilingach karta yangilanadi (inflowUI oynasi yopilganini kutamiz).
+    function payAndRefresh(c) {
+        inflowUI.openPayment(c.id);
+        let n = 0;
+        const t = setInterval(() => {
+            if (++n > 1200 || !_page || _page.id !== c.id) return clearInterval(t);
+            if (document.getElementById('inflowSave')) return;
+            clearInterval(t);
+            if (n < 3) return; // oyna ochilmadi (xato) — yangilash shart emas
+            delete _page.data.pay; openStudent(c.id, _page.tab || 'tolov');
+        }, 500);
+    }
+    // Kurs oylari: boshlanishdan 36-jonli dargacha bo'lgan kalendar oylari; to'lovlar ketma-ket oylarni yopadi.
+    function payPlan(c, r) {
+        const price = Number(r.monthlyPrice) || 0, start = String(r.startDate || c.startDate || '').slice(0, 10), end = courseEnd(c);
+        if (!price || !start) return null;
+        const months = [];
+        for (let d = start.slice(0, 7) + '-01'; d.slice(0, 7) <= (end || start).slice(0, 7) && months.length < 24; d = addMonths(d, 1)) months.push(d.slice(0, 7));
+        const live = r.payments.filter(x => !x.voided).slice().sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.id).localeCompare(String(b.id)));
+        let cum = 0; const cover = new Map();
+        for (const p of live) {
+            const a = Math.floor(cum / price + 1e-9); cum += p.amount; const b = Math.ceil(cum / price - 1e-9) - 1;
+            const names = []; for (let i = a; i <= Math.max(a, b); i++) names.push(MON_UP[Number(addMonths(months[0] + '-01', i).slice(5, 7)) - 1]);
+            cover.set(p.id, names.join(' · ') + (cum % price && cum < price * months.length ? ' (qisman)' : ''));
+        }
+        const paid = Math.min(months.length, Math.floor(cum / price + 1e-9));
+        const plan = [];
+        let due = r.paymentDueDate ? String(r.paymentDueDate).slice(0, 10) : '';
+        for (let i = paid; i < months.length; i++) { plan.push({ month: months[i], due, amount: price }); due = due ? addMonths(due, 1) : ''; }
+        return { months, paid, cover, plan, start, end };
+    }
     async function paymentsTab(body, c) {
         body.innerHTML = '<div class="sc-skel"></div>';
-        let r; try { r = await api(`/students/${encodeURIComponent(c.id)}/payments`); } catch (e) { body.innerHTML = `<div class="sc-err">${esc(e.message)}</div>`; return; }
-        const M = { card: 'Karta', uzum: 'Uzum', paylater: 'Bo\'lib to\'lash', bank: 'Bank', payme: 'Payme', click: 'Click', cash: 'Naqd', unknown: '—' };
+        let r; try { r = await getPay(c); } catch (e) { body.innerHTML = `<div class="sc-err">${esc(e.message)}</div>`; return; }
         const live = r.payments.filter(x => !x.voided), total = live.reduce((n, x) => n + x.amount, 0);
-        body.innerHTML = `<div class="sc-kpis"><div class="sc-kpi"><small>Tarif</small><b class="sc-small">${esc(r.tariff || '—')}</b><span>${r.monthlyPrice ? esc(formatMoney(r.monthlyPrice)) + '/oy' : ''}</span></div>
-            <div class="sc-kpi"><small>Jami to'langan</small><b>${esc(formatMoney(total))}</b><span>${live.length} to'lov</span></div>
-            <div class="sc-kpi${Number(r.debtAmount) > 0 ? ' sc-kpi--bad' : ''}"><small>Qarz</small><b>${r.debtAmount != null ? esc(formatMoney(r.debtAmount)) : '—'}</b></div>
-            <div class="sc-kpi"><small>Keyingi to'lov</small><b class="sc-small">${r.paymentDueDate ? esc(fmtDate(String(r.paymentDueDate).slice(0, 10), false)) : '—'}</b></div></div>
-          <section class="sc-card sc-mtop"><table class="sc-table"><thead><tr><th>Sana</th><th class="r">Summa</th><th>Usul</th><th>Menejer</th><th></th></tr></thead><tbody>
-            ${r.payments.map(x => `<tr${x.voided ? ' class="sc-mt"' : ''}><td>${esc(fmtDate(x.date, false))}</td><td class="r">${x.voided ? '<s>' : '<b>'}${esc(formatMoney(x.amount))}${x.voided ? '</s>' : '</b>'}</td><td>${esc(M[x.method] || x.method)}${x.form === 'partial' ? ' · qisman' : ''}</td><td>${esc(x.manager || '—')}</td><td>${x.voided ? '<span class="sc-pill sc-pill--mute">bekor qilingan</span>' : ''}</td></tr>`).join('') || '<tr><td colspan="5" class="sc-mt">To\'lov yozuvi topilmadi</td></tr>'}
-          </tbody></table></section><p class="sc-mt">To'lovni o'zgartirish — Moliya bo'limida (tasdiq va dalil bilan).</p>`;
+        const plan = payPlan(c, r), debt = Number(r.debtAmount) || 0, td = today();
+        const due = r.paymentDueDate ? String(r.paymentDueDate).slice(0, 10) : '';
+        const canPay = typeof inflowUI !== 'undefined' && typeof inflowUI?.openPayment === 'function';
+        const ct = r.contract;
+        const kpis = [
+            ['Tarif', r.monthlyPrice ? num(r.monthlyPrice) : esc(r.tariff || '—'), [c.schedule?.duration && `${esc(c.schedule.duration)} daq`, r.monthlyPrice && 'oyiga'].filter(Boolean).join(' · ') || esc(r.tariff || '')],
+            ['Shartnoma', plan ? `${plan.months.length} oy` : ct?.number ? '№' + esc(ct.number) : '—', [plan && `${ddmm(plan.start)}${plan.end ? ' → ' + ddmm(plan.end) : ''}`, ct?.number && plan && '№' + esc(ct.number), ct?.total ? 'kurs ' + num(ct.total) : plan && 'oylik to\'lov'].filter(Boolean).join(' · ')],
+            ['To\'langan', num(total), plan ? `${plan.paid} / ${plan.months.length} oy` : `${live.length} ta to'lov`],
+            ['Qarz', r.debtAmount != null ? num(debt) : '—', due ? `keyingi: ${esc(dShort(due))}${plan?.plan[0] ? ' · ' + num(plan.plan[0].amount) : ''}` : '', debt > 0 ? 'bad' : '']];
+        const who = x => x.actor ? `${esc(shortName(x.actor))}${ROLE_UZ[x.actorRole] ? ` (${esc(ROLE_UZ[x.actorRole])})` : ''}` : x.manager ? `${esc(String(x.manager).split(' ')[0])} (sotuv)` : '—';
+        const rows = r.payments.map(x => `<tr${x.voided ? ' class="is-void"' : ''}><td>${esc(dShort(x.date))}</td><td>${x.voided ? '—' : esc(plan?.cover.get(x.id) || '—')}</td>
+            <td class="r">${x.voided ? `<s>${num(x.amount)}</s>` : `<b>${num(x.amount)}</b>`}</td><td>${esc(PAY_M[x.method] || x.method)}</td><td>${who(x)}</td>
+            <td>${x.voided ? `<span class="sc-pill sc-pill--mute" title="${esc(x.voidReason)}">Bekor qilingan</span>` : `<span class="sc-pill sc-pill--ok">To'langan</span>${x.form === 'partial' ? ' <small class="sc-mt">qisman</small>' : ''}`}</td>
+            <td class="kp-act">${x.receipt ? `<a class="sc-btn sc-btn--sm" href="${esc(x.receipt)}" target="_blank" rel="noopener">Chek</a>` : ''}</td></tr>`);
+        (plan?.plan || []).forEach((p, i) => {
+            const left = p.due ? Math.round((Date.parse(p.due) - Date.parse(td)) / 864e5) : null;
+            const pill = i > 0 || left == null ? '<span class="sc-pill sc-pill--mute">Rejada</span>' : left < 0 ? `<span class="sc-pill sc-pill--bad">${-left} kun o'tdi</span>` : `<span class="sc-pill sc-pill--warn">${left ? left + ' kun qoldi' : 'bugun'}</span>`;
+            rows.push(`<tr class="is-plan"><td>${p.due ? esc(dShort(p.due)) : '—'}</td><td>${esc(MON_UP[Number(p.month.slice(5)) - 1])}</td><td class="r">${num(p.amount)}</td><td>—</td><td>—</td><td>${pill}</td><td></td></tr>`);
+        });
+        body.innerHTML = `<div class="kp-kpis">${kpis.map(([l, v, s, cls]) => `<div class="kp-kpi${cls ? ' is-' + cls : ''}"><small>${l}</small><b>${v}</b>${s ? `<span>${s}</span>` : ''}</div>`).join('')}</div>
+          <section class="sc-card"><header class="sc-ch"><h2>To'lovlar tarixi</h2>${canPay ? '<button type="button" class="sc-btn sc-btn--pri" data-pay>+ To\'lov qabul qilish</button>' : ''}</header>
+            <div class="scc-tw"><table class="kp-t"><thead><tr><th scope="col">Sana</th><th scope="col">Qaysi oy uchun</th><th scope="col" class="r">Summa</th><th scope="col">Usul</th><th scope="col">Qabul qildi</th><th scope="col">Holat</th><th scope="col" aria-label="Chek"></th></tr></thead>
+            <tbody>${rows.join('') || '<tr><td colspan="7" class="sc-mt">To\'lov yozuvi topilmadi</td></tr>'}</tbody></table></div>
+            <p class="kp-foot">To'lovni tahrirlash yoki bekor qilish faqat sabab bilan — Moliya bo'limida · o'chirilmaydi, tarixda qoladi · Moliya bo'limi va Qarzdorlar ro'yxati shu yozuvlardan yangilanadi.${plan ? ' "Qaysi oy uchun" — oylik narx bo\'yicha hisoblangan.' : ''}</p></section>`;
+        body.querySelector('[data-pay]')?.addEventListener('click', () => payAndRefresh(c));
     }
     // ── Sotuv tarixi (admin, ROP, sotuv) ──
     async function salesTab(body, c) {
         body.innerHTML = '<div class="sc-skel"></div>';
-        let r; try { r = await api(`/students/${encodeURIComponent(c.id)}/sales`); } catch (e) { body.innerHTML = `<div class="sc-err">${esc(e.message)}</div>`; return; }
+        let r; try { r = await getSales(c); } catch (e) { body.innerHTML = `<div class="sc-err">${esc(e.message)}</div>`; return; }
         const L = r.lead;
-        if (!L) { body.innerHTML = '<p class="sc-mt">Bu o\'quvchi lidga bog\'lanmagan (eski yoki qo\'lda qo\'shilgan yozuv)</p>'; return; }
-        const d = v => v ? esc(fmtDate(String(v).slice(0, 10), false)) : '—';
-        body.innerHTML = `<dl class="sc-kv"><dt>Manba</dt><dd>${esc(L.source || '—')}</dd><dt>Menejer</dt><dd>${esc(L.saleManager || L.manager || '—')}</dd>
-            <dt>Lid kelgan</dt><dd>${d(L.createdAt)}</dd><dt>Sinov darsi</dt><dd>${d(L.trialLessonAt)}</dd><dt>To'lov yopildi</dt><dd>${d(L.closedDate)}</dd></dl>
-          <section class="sc-card sc-pad sc-mtop"><h3>Lid izohlari va bosqichlar</h3><ul class="sc-hist">${L.comments.map(x => `<li><b>${d(x.at)}</b> · ${esc(x.author || '')}<br><span class="sc-pre">${esc(x.text)}</span></li>`).join('') || '<li class="sc-mt">Izoh yo\'q</li>'}</ul></section>`;
+        if (!L) { body.innerHTML = '<section class="sc-card sc-pad"><p class="sc-mt">Bu o\'quvchi lidga bog\'lanmagan (eski yoki qo\'lda qo\'shilgan yozuv)</p></section>'; return; }
+        const d = v => v ? esc(dShort(String(v).slice(0, 10))) : '—';
+        const ev = [[L.createdAt, `${esc(L.source || 'Lid')} lid${L.manager ? ' · menejer ' + esc(shortName(L.manager)) : ''}`],
+            [L.trialLessonAt, `sinov darsi · ${esc(shortName(teacherName(c.teacherId)))}`], [L.closedDate, `to'lov yopildi${L.saleManager ? ' · ' + esc(shortName(L.saleManager)) : ''}`],
+            [c.startDate, 'o\'quvchiga aylandi · ilova login berildi']].filter(x => x[0]);
+        body.innerHTML = `<div class="scc-g2k"><section class="sc-card"><header class="sc-ch"><h2>Lid izohlari va bosqichlar</h2><span class="sc-mt">${L.comments.length} ta yozuv</span></header>
+            <ul class="kp-cm">${L.comments.map(x => `<li><div><b>${d(x.at)}</b><span class="sc-mt">${esc(x.author || '')}</span></div><p>${esc(x.text)}</p></li>`).join('') || '<li class="sc-mt">Izoh yo\'q</li>'}</ul></section>
+          <div class="scc-col"><section class="sc-card"><header class="sc-ch"><h2>Sotuv</h2></header><dl class="scc-dl"><dt>Manba</dt><dd>${esc(L.source || '—')}</dd><dt>Menejer</dt><dd>${esc(L.saleManager || L.manager || '—')}</dd>
+              <dt>Lid kelgan</dt><dd>${d(L.createdAt)}</dd><dt>Sinov darsi</dt><dd>${d(L.trialLessonAt)}</dd><dt>To'lov yopildi</dt><dd>${d(L.closedDate)}</dd></dl></section>
+            <section class="sc-card"><header class="sc-ch"><h2>Yo'l</h2></header><ul class="scc-tl">${ev.map(([x, t]) => `<li><b>${d(x)}</b> · ${t}</li>`).join('')}</ul></section></div></div>`;
+    }
+    // ── O'zgarishlar tarixi — AdminOquvchiTarix: kim, qachon, nima edi, qayerga tarqaldi ──
+    const ROLE_UZ = { admin: 'admin', boshliq: 'boshliq', rop: 'ROP', sales_manager: 'sotuv', teacher: 'ustoz', system: 'tizim' };
+    const SPREAD = { name: 'CRM · ilova · ustoz ro\'yxati', phone: 'CRM · ilova login', parentPhone: 'CRM', login: 'Ilova login', password: 'Ilova · keyingi kirishda almashtiriladi',
+        tariff: 'Moliya · qarzdorlar', monthlyPrice: 'Moliya · qarzdorlar', schedule: 'Ustoz jadvali · yordamchi tavsiya jadvali',
+        freeze: 'Ustoz jadvali · yordamchi aloqalari · to\'lov sanasi', 'unfreeze-early': 'Ustoz jadvali · yordamchi aloqalari', 'freeze-cancelled': 'Ustoz jadvali',
+        stop: 'Jadvaldan chiqdi · sotuv "Faol emas" · guruh arxivi', restore: 'Ustoz jadvali · yordamchi · guruh qaytdi', 'teacher-change': 'Ustoz kabineti · jadval · guruh',
+        group: 'CRM · student app · ustoz kabineti', 'request-tariff': 'Admin va ROP tasdig\'iga', 'request-teacher': 'Admin va ROP tasdig\'iga', 'request-payment': 'Admin va ROP tasdig\'iga',
+        'request-approved': 'Menejerga xabar', 'request-rejected': 'Menejerga xabar', 'request-returned': 'Menejerga xabar' };
+    function historyRows(c) {
+        // So'rov yozuvlarida o'zgarish matni reqSummary orqali (o'quvchining hozirgi qiymati bilan).
+        const out = [];
+        for (const h of c.history || []) {
+            const ch = h.changes || {}, base = { at: h.created_at, who: `${shortName(h.actor_name)}${ROLE_UZ[h.actor_role] ? ' · ' + ROLE_UZ[h.actor_role] : ''}`, reason: h.reason || '' };
+            const lbl = ACTION_LABEL[h.action] || h.action;
+            if (h.action === 'edit') {
+                const ks = Object.keys(ch).filter(k => Array.isArray(ch[k]));
+                for (const k of ks) { const [a, b] = ch[k], m = k === 'monthlyPrice'; out.push({ ...base, field: FIELD_LABEL[k] || k, from: m ? num(a) : a, to: m ? num(b) : b, spread: SPREAD[k] }); }
+                if (!ks.length) out.push({ ...base, field: lbl, to: '', spread: '' });
+                continue;
+            }
+            const x = { ...base, field: lbl, spread: SPREAD[h.action] || '' };
+            if (h.action === 'group') Object.assign(x, { field: 'Telegram guruh', from: ch.before ? ch.before.name || '' : null, to: `${ch.before ? '' : 'yaratildi: '}${ch.after?.name || ''}${ch.after?.link ? ' · ' + String(ch.after.link).replace(/^https:\/\//, '') : ''}` });
+            else if (h.action === 'teacher-change') Object.assign(x, { field: 'Asosiy ustoz', from: teacherName(ch.from), to: `${teacherName(ch.to)} · ${dShort(ch.date)}${ch.schedule ? ', ' + ch.schedule : ''}` });
+            else if (h.action === 'freeze') Object.assign(x, { field: 'Holat', from: 'Faol', to: `Muzlatilgan · ${dShort(ch.from)} → ${dShort(ch.to)} · ${ch.days} kun` });
+            else if (h.action === 'unfreeze-early') Object.assign(x, { field: 'Holat', from: 'Muzlatilgan', to: `Faol · ${dShort(ch.from)} dan` });
+            else if (h.action === 'freeze-cancelled') Object.assign(x, { field: 'Muzlatish', from: `${dShort(ch.from)} → ${dShort(ch.to)}`, to: 'bekor qilindi' });
+            else if (h.action === 'stop') Object.assign(x, { field: 'Holat', from: 'Faol', to: `Chiqib ketgan · oxirgi dars ${dShort(ch.lastLesson)}` });
+            else if (h.action === 'restore') Object.assign(x, { field: 'Holat', from: 'Faol emas', to: `Faol · ${dShort(ch.from)}${ch.schedule ? ', ' + ch.schedule : ''}` });
+            else if (h.action.startsWith('request-')) Object.assign(x, { field: lbl, to: ch.kind ? (REQ_KIND[ch.kind] || ch.kind) + ' o\'zgarishi' : reqSummary({ changes: ch, student_id: c.id, kind: h.action.slice(8) }, true) });
+            out.push(x);
+        }
+        return out;
+    }
+    const tshort = iso => { const d = new Date(iso); if (Number.isNaN(d.getTime())) return '—'; const l = new Date(d.getTime() + 5 * 3600000).toISOString(); return `${dShort(l.slice(0, 10))} ${l.slice(11, 16)}`; };
+    // onlyNew — tarix uchun: faqat so'ralgan qiymat (o'quvchining hozirgi qiymati keyin o'zgargan bo'lishi mumkin).
+    function reqSummary(r, onlyNew = false) {
+        const ch = r.changes || {}, s = studentById(r.student_id) || {}, parts = [], was = v => (onlyNew ? '' : `${v} → `);
+        if (r.kind === 'teacher') parts.push(`asosiy ustoz: ${was(teacherName(s.teacherId))}${teacherName(ch.teacherId)}${ch.from ? ' · ' + dShort(ch.from) + ' dan' : ''}`);
+        if ('tariff' in ch) parts.push(`tarif: ${was(s.tariff || '—')}${ch.tariff}`);
+        if ('monthlyPrice' in ch) parts.push(`narx: ${was(s.monthlyPrice ? num(s.monthlyPrice) : '—')}${num(ch.monthlyPrice)}`);
+        if ('lessonTime' in ch || 'lessonDuration' in ch) parts.push(`jadval: ${pattern(ch.lessonDay ?? s.lessonDayOfWeek)} ${ch.lessonTime || s.lessonTime || ''} · ${ch.lessonDuration || s.lessonDuration || ''} daq`);
+        if (ch.effectiveFrom && r.kind !== 'teacher') parts.push(dShort(ch.effectiveFrom) + ' dan');
+        return parts.join(' · ');
+    }
+    function historyTab(body, c) {
+        const pend = (c.requests || []).filter(r => r.status === 'pending');
+        const rows = historyRows(c);
+        body.innerHTML = `${pend.map(r => `<section class="kp-pend" data-req="${esc(r.id)}"><div class="sc-grow"><b>Kutilmoqda · admin tasdig'i</b>
+              <span>${esc(tshort(r.created_at))} · ${esc(shortName(r.requester_name))} · sotuv · ${esc(reqSummary(r))}${r.reason ? ` · sabab: "${esc(r.reason)}"` : ''}</span>
+              <div class="kp-rej" hidden><textarea rows="2" maxlength="300" placeholder="Rad etish sababi (majburiy) — menejerga boradi" aria-label="Rad etish sababi"></textarea><button type="button" class="sc-btn sc-btn--dg" data-rej-ok>Rad etish</button></div></div>
+            ${isManager() ? '<div class="kp-pend-a"><button type="button" class="sc-btn" data-rej>Rad etish</button><button type="button" class="sc-btn sc-btn--pri" data-ok>Tasdiqlash</button></div>' : '<span class="sc-pill sc-pill--warn">admin yoki ROP ko\'radi</span>'}</section>`).join('')}
+          <section class="sc-card"><header class="sc-ch"><h2>O'zgarishlar tarixi</h2><span class="sc-mt">har bir tahrir — kim, qachon, nima edi, qayerga tarqaldi</span></header>
+            ${rows.length ? `<div class="scc-tw"><table class="kp-t kp-h"><thead><tr><th scope="col">Vaqt</th><th scope="col">Kim</th><th scope="col">Maydon</th><th scope="col">O'zgarish</th><th scope="col">Tarqaldi</th></tr></thead><tbody>
+              ${rows.map(x => `<tr><td>${esc(tshort(x.at))}</td><td>${esc(x.who)}</td><td><b>${esc(x.field)}</b></td>
+                <td><span class="kp-diff">${x.from != null && x.from !== '' ? `${esc(x.from)} → ` : x.from === '' ? '— → ' : ''}${esc(x.to ?? '')}</span>${x.reason ? `<small>${esc(x.reason)}</small>` : ''}</td>
+                <td>${x.spread ? `<span class="sc-pill sc-pill--ok">✓ ${esc(x.spread)}</span>` : ''}</td></tr>`).join('')}</tbody></table></div>` : '<p class="sc-mt scc-pad">Hali o\'zgarish yo\'q</p>'}</section>`;
+        body.querySelectorAll('[data-req]').forEach(box => {
+            const id = box.dataset.req, rej = box.querySelector('.kp-rej');
+            const decide = async (btn, decision, note = '') => {
+                busy(btn, true);
+                try { await post(`/edit-requests/${encodeURIComponent(id)}/decide`, { decision, note }); toast(decision === 'approve' ? 'Tasdiqlandi' : 'Rad etildi'); await refreshCache(); openStudent(c.id, 'tarix'); }
+                catch (e) { busy(btn, false); toast(e.message, 4000); }
+            };
+            box.querySelector('[data-ok]')?.addEventListener('click', e => decide(e.currentTarget, 'approve'));
+            box.querySelector('[data-rej]')?.addEventListener('click', () => { rej.hidden = false; rej.querySelector('textarea').focus(); });
+            box.querySelector('[data-rej-ok]')?.addEventListener('click', e => { const t = rej.querySelector('textarea').value.trim(); if (t.length < 3) { rej.querySelector('textarea').focus(); return toast('Sababni yozing'); } decide(e.currentTarget, 'reject', t); });
+        });
     }
 
     function editForm(box, body, c) {
