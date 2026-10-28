@@ -3,12 +3,12 @@
 //  • kirishlar tarixi (muvaffaqiyatli va noto'g'ri parol) — 30 kun ko'rinadi;
 //  • bir login + IP dan 15 daqiqada 5 marta noto'g'ri parol → 15 daqiqa blok
 //    (faqat shu IP uchun — boshqa odam egasini butunlay bloklab qo'ya olmaydi);
-//  • xodim paroli kamida 12 belgi, harf va raqam, eskisidan farqli; o'zgartirilgan vaqt saqlanadi.
+//  • xodim paroli kamida 8 belgi, harf va raqam, eskisidan farqli; o'zgartirilgan vaqt saqlanadi.
 const { randomUUID } = require('node:crypto');
 
 const FAIL_LIMIT = 5;
 const LOCK_MINUTES = 15;
-const STAFF_MIN = 12;
+const STAFF_MIN = 8;
 
 let ready = null;
 function ensure(pool) {
