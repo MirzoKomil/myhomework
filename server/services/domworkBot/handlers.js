@@ -268,8 +268,8 @@ function createHandler({ crm }) {
             if (action === 'work') {
                 // CRM'dagi xodimlar davomati (Face ID + lokatsiya) — faqat o'zining tasdiqlangan belgilari, so'nggi 14 kun.
                 const present = (await db.query("SELECT to_regclass('staff_att_events') AS t")).rows[0]?.t;
-                const rows = present ? (await db.query(`SELECT kind,occurred_at FROM staff_att_events WHERE employee_id=$1 AND ok
-                    AND occurred_at>NOW()-INTERVAL '14 days' ORDER BY occurred_at DESC LIMIT 40`, [identity.employeeId || ''])).rows : [];
+                const rows = present ? (await db.query(`SELECT kind,occurred_at FROM staff_att_events WHERE employee_id=$1 AND user_id=$2 AND ok
+                    AND occurred_at>NOW()-INTERVAL '14 days' ORDER BY occurred_at DESC LIMIT 40`, [identity.employeeId || '', identity.id])).rows : [];
                 return await reply(rows.length ? 'So‘nggi 14 kun (Face ID):\n' + rows.map(r => `${r.kind === 'in' ? '🟢 Keldi' : '🔴 Ketdi'}: ${new Date(r.occurred_at).toLocaleString('uz-UZ',{timeZone:'Asia/Tashkent'})}`).join('\n')
                     : 'So‘nggi 14 kunda Face ID belgisi yo‘q. Belgilash: CRM → Davomat.');
             }

@@ -42,12 +42,6 @@ async function run(db,now=new Date()) {
     if(!lock.locked) return;
     const settings=(await store.settings(db)).data, clock=localClock(now);
     await require('./recognition').run(db,settings,clock,now,once);
-    // Xodim bildirishnomalari (CRM paneli) → Telegram, har 2 daqiqada; xatosi boshqa vazifalarni buzmaydi.
-    await once(db,'staff-push:'+Math.floor(now.getTime()/120000),async()=>{
-        await db.query('SAVEPOINT staff_notify_push');
-        try { await require('../staffNotify').telegramPush(db,now); await db.query('RELEASE SAVEPOINT staff_notify_push'); }
-        catch(error) { await db.query('ROLLBACK TO SAVEPOINT staff_notify_push'); console.error('[domwork-bot] staff push failed:', error.code || error.name); }
-    });
     // Isitish alohida savepoint ichida: xatosi eslatma va hisobotlarni orqaga qaytarmasin.
     await db.query('SAVEPOINT funnel_drip');
     try { await require('./funnel').drip(db,now); await db.query('RELEASE SAVEPOINT funnel_drip'); }

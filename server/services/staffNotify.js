@@ -90,9 +90,9 @@ const CATALOG = {
     ],
     other: [['Boshqa', [['guide_new', 'Yangi yo\'riqnoma', '', [0, 1], true]]]]
 };
-// Telegram yuborish xodim uchun "jonli" bo'lsa (bot sozlamasi yoqilgan + xodim @Domworkuz_bot'ga ulangan + to'xtatmagan),
-// panel faqat "Brauzer" tanloviga qaraydi. Aks holda Telegram tanlangan xabar ham panelda ko'rinadi — xodim xabarni yo'qotmasin.
-function shownInPanel(p, live) { return !p || p.web !== false || (!live && p.tg !== false); }
+// Panel o'zgarmaydi: Telegram tanlangan xabar ham panelda qoladi. Telegram — qo'shimcha kanal; bot ishlamasa yoki
+// yetkazilmasa ham xodim xabarni yo'qotmaydi.
+function shownInPanel(p) { return !p || p.web !== false || p.tg !== false; }
 async function telegramLive(db, userId) {
     if (process.env.DOMWORK_BOT_ENABLED !== 'true') return false;
     try {
@@ -387,9 +387,8 @@ async function collect(db, actor, now) {
 }
 async function feed(db, actor, now = new Date()) {
     const { me, row, prefs, ev, errors } = await collect(db, actor, now);
-    const live = await telegramLive(db, me.user.id);
     const seen = new Set();
-    const list = ev.filter(e => shownInPanel(prefs[e.type], live) && !seen.has(e.id) && seen.add(e.id));
+    const list = ev.filter(e => shownInPanel(prefs[e.type]) && !seen.has(e.id) && seen.add(e.id));
     const ids = list.map(e => e.id);
     const reads = ids.length ? new Set((await db.query('SELECT event_id FROM staff_notify_reads WHERE user_id=$1 AND event_id = ANY($2::text[])', [me.user.id, ids])).rows.map(r => r.event_id)) : new Set();
     const before = row.read_before ? new Date(row.read_before).getTime() : 0;
@@ -416,51 +415,70 @@ async function markRead(db, actor, body = {}) {
 // Har xodim uchun shu panel voqealari hisoblanadi; "Telegram" tanlangan va hali yuborilmaganlari botga ketadi.
 // Birinchi marta (yoki yoqilganda) mavjud voqealar "yuborilgan" deb belgilanadi — eski xabarlar to'planib kelmaydi.
 const TG_SCHEMA = `CREATE TABLE IF NOT EXISTS staff_notify_tg_sent (user_id TEXT NOT NULL, event_id TEXT NOT NULL, sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), PRIMARY KEY(user_id,event_id));
-CREATE TABLE IF NOT EXISTS staff_notify_tg_state (user_id TEXT PRIMARY KEY, telegram_id TEXT NOT NULL, baseline_at TIMESTAMPTZ NOT NULL DEFAULT NOW());`;
+CREATE TABLE IF NOT EXISTS staff_notify_tg_state (user_id TEXT PRIMARY KEY, telegram_id TEXT NOT NULL, baseline_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
+ALTER TABLE staff_notify_tg_state ADD COLUMN IF NOT EXISTS last_push_at TIMESTAMPTZ;`;
 function quietNow(quiet, now) {
-    const q = quiet || QUIET_DEFAULT, toMin = v => { const [h, m] = String(v).split(':').map(Number); return h * 60 + m; };
+    const q = quiet || QUIET_DEFAULT;
+    if (q.off) return false; // xodim tinch soatlarni o'chirgan
+    const toMin = v => { const [h, m] = String(v).split(':').map(Number); return h * 60 + m; };
     const t = new Date(now.getTime() + 5 * 3600000), c = t.getUTCHours() * 60 + t.getUTCMinutes(), a = toMin(q.from), b = toMin(q.to);
     return a <= b ? c >= a && c < b : c >= a || c < b;
 }
-async function telegramPush(db, now = new Date()) {
-    const settings = (await db.query('SELECT data FROM domwork_bot_settings WHERE singleton=1')).rows[0]?.data || {};
-    if (settings.staffNotifyEnabled !== true || !(await db.query("SELECT to_regclass('staff_notify_prefs') AS t")).rows[0]?.t) return 0;
-    await db.query(TG_SCHEMA);
-    await db.query("DELETE FROM staff_notify_tg_sent WHERE sent_at<NOW()-INTERVAL '60 days'");
+// Bitta xodim — o'z qisqa tranzaksiyasida. Uzilish bo'lsa (to'xtatish, o'chirish, bot ishlamagan, qayta ulash —
+// oxirgi yuborishdan 10 daqiqadan ko'p), mavjud xabarlar qayta "boshlang'ich" deb belgilanadi va ommaviy yuborilmaydi.
+async function pushUser(db, link, now) {
     const store = require('./domworkBot/store');
-    let sent = 0;
-    for (const link of (await db.query("SELECT telegram_id,account_id FROM domwork_bot_links WHERE account_kind='user' AND NOT paused")).rows) {
-        await db.query('SAVEPOINT staff_push');
-        try {
-            const identity = await store.identity(db, link.telegram_id);
-            if (!identity || identity.kind !== 'user') { await db.query('RELEASE SAVEPOINT staff_push'); continue; }
-            const { row, prefs, ev } = await collect(db, { id: link.account_id }, now);
-            const state = (await db.query('SELECT telegram_id FROM staff_notify_tg_state WHERE user_id=$1', [link.account_id])).rows[0];
-            const ids = [...new Set(ev.map(e => e.id))];
-            if (!state || state.telegram_id !== link.telegram_id) {
-                // Yangi ulanish: mavjud voqealar yuborilmaydi, faqat bundan keyingilari.
-                await db.query(`INSERT INTO staff_notify_tg_state(user_id,telegram_id) VALUES($1,$2) ON CONFLICT(user_id) DO UPDATE SET telegram_id=EXCLUDED.telegram_id,baseline_at=NOW()`, [link.account_id, link.telegram_id]);
-                if (ids.length) await db.query('INSERT INTO staff_notify_tg_sent(user_id,event_id) SELECT $1,unnest($2::text[]) ON CONFLICT DO NOTHING', [link.account_id, ids]);
-                await db.query('RELEASE SAVEPOINT staff_push'); continue;
-            }
-            const done = ids.length ? new Set((await db.query('SELECT event_id FROM staff_notify_tg_sent WHERE user_id=$1 AND event_id=ANY($2::text[])', [link.account_id, ids])).rows.map(r => r.event_id)) : new Set();
-            const quiet = quietNow(row.prefs?.quiet, now), seen = new Set();
-            for (const e of ev) {
-                if (seen.has(e.id) || done.has(e.id)) continue; seen.add(e.id);
-                if (!prefs[e.type]?.tg) { await db.query('INSERT INTO staff_notify_tg_sent(user_id,event_id) VALUES($1,$2) ON CONFLICT DO NOTHING', [link.account_id, e.id]); continue; }
-                if (quiet && !URGENT.has(e.type)) continue; // tinch soat tugagach yuboriladi (voqea hali dolzarb bo'lsa)
-                await store.enqueue(db, { key: `staff:${link.account_id}:${e.id}`.slice(0, 200), targetId: link.telegram_id, role: identity.role, account: identity,
-                    payload: { chat_id: link.telegram_id, text: `🔔 ${String(e.title || '').slice(0, 300)}${e.sub ? '\n' + String(e.sub).slice(0, 600) : ''}`,
-                        reply_markup: { inline_keyboard: [[{ text: 'CRMda ochish', url: 'https://myhomework.uz/' }]] }, _automation: true,
-                        ...(quiet ? { disable_notification: true } : {}) } }); // tinch soatda shoshilinch xabar ovozsiz
-                await db.query('INSERT INTO staff_notify_tg_sent(user_id,event_id) VALUES($1,$2) ON CONFLICT DO NOTHING', [link.account_id, e.id]);
-                sent++;
-            }
-            await db.query('RELEASE SAVEPOINT staff_push');
-        } catch (error) {
-            await db.query('ROLLBACK TO SAVEPOINT staff_push');
-            console.error('[staff-notify] telegram push failed:', error.code || error.name);
-        }
+    const identity = await store.identity(db, link.telegram_id);
+    if (!identity || identity.kind !== 'user' || identity.id !== link.account_id) return 0;
+    const { row, prefs, ev, errors } = await collect(db, { id: link.account_id }, now);
+    const state = (await db.query('SELECT telegram_id,last_push_at FROM staff_notify_tg_state WHERE user_id=$1 FOR UPDATE', [link.account_id])).rows[0];
+    const ids = [...new Set(ev.map(e => e.id))];
+    const gap = !state || state.telegram_id !== link.telegram_id || !state.last_push_at || now - new Date(state.last_push_at) > 10 * 60000;
+    if (gap) {
+        if (errors.length) return 0; // to'liq bo'lmagan ro'yxat bilan boshlang'ich belgilanmaydi
+        await db.query(`INSERT INTO staff_notify_tg_state(user_id,telegram_id,last_push_at) VALUES($1,$2,$3)
+            ON CONFLICT(user_id) DO UPDATE SET telegram_id=EXCLUDED.telegram_id,baseline_at=NOW(),last_push_at=EXCLUDED.last_push_at`, [link.account_id, link.telegram_id, now]);
+        if (ids.length) await db.query('INSERT INTO staff_notify_tg_sent(user_id,event_id) SELECT $1,unnest($2::text[]) ON CONFLICT DO NOTHING', [link.account_id, ids]);
+        return 0;
+    }
+    await db.query('UPDATE staff_notify_tg_state SET last_push_at=$2 WHERE user_id=$1', [link.account_id, now]);
+    const done = ids.length ? new Set((await db.query('SELECT event_id FROM staff_notify_tg_sent WHERE user_id=$1 AND event_id=ANY($2::text[])', [link.account_id, ids])).rows.map(r => r.event_id)) : new Set();
+    const quiet = quietNow(row.prefs?.quiet, now), seen = new Set(), skip = [], out = [];
+    for (const e of ev) {
+        if (seen.has(e.id) || done.has(e.id)) continue; seen.add(e.id);
+        if (!prefs[e.type]?.tg) { skip.push(e.id); continue; }
+        if (quiet && !URGENT.has(e.type)) continue; // tinch soat tugagach (hali dolzarb bo'lsa)
+        out.push(e);
+    }
+    if (skip.length) await db.query('INSERT INTO staff_notify_tg_sent(user_id,event_id) SELECT $1,unnest($2::text[]) ON CONFLICT DO NOTHING', [link.account_id, skip]);
+    if (!out.length) return 0;
+    const line = e => `${String(e.title || '').slice(0, 200)}${e.sub ? ' — ' + String(e.sub).slice(0, 200) : ''}`;
+    // Bir nechta bo'lsa — bitta jamlangan xabar (masalan tinch soatdan keyin).
+    const text = out.length === 1 ? `🔔 ${String(out[0].title || '').slice(0, 300)}${out[0].sub ? '\n' + String(out[0].sub).slice(0, 600) : ''}`
+        : `🔔 ${out.length} ta yangi xabar:\n` + out.slice(0, 12).map(e => '• ' + line(e)).join('\n') + (out.length > 12 ? `\n… va yana ${out.length - 12} ta — CRM panelida` : '');
+    const key = out.length === 1 ? `staff:${link.account_id}:${out[0].id}` : `staff:${link.account_id}:digest:${now.getTime()}`;
+    await store.enqueue(db, { key: key.slice(0, 200), targetId: link.telegram_id, role: identity.role, account: identity,
+        payload: { chat_id: link.telegram_id, text: text.slice(0, 3800), reply_markup: { inline_keyboard: [[{ text: 'CRMda ochish', url: 'https://myhomework.uz/' }]] },
+            _automation: true, ...(quiet ? { disable_notification: true } : {}) } }); // tinch soatda shoshilinch xabar ovozsiz
+    await db.query('INSERT INTO staff_notify_tg_sent(user_id,event_id) SELECT $1,unnest($2::text[]) ON CONFLICT DO NOTHING', [link.account_id, out.map(e => e.id)]);
+    return out.length;
+}
+// Bot runtime'i alohida taymer bilan chaqiradi (har 2 daqiqa) — bot xabarlarini yetkazish to'xtab qolmaydi.
+async function telegramPush(pool, now = new Date(), { budgetMs = 20000 } = {}) {
+    const queue = require('./domworkBot/queue');
+    const ready = await queue.transaction(pool, async db => {
+        const settings = (await db.query('SELECT data FROM domwork_bot_settings WHERE singleton=1')).rows[0]?.data || {};
+        if (settings.staffNotifyEnabled !== true || !(await db.query("SELECT to_regclass('staff_notify_prefs') AS t")).rows[0]?.t) return null;
+        await db.query(TG_SCHEMA);
+        await db.query("DELETE FROM staff_notify_tg_sent WHERE sent_at<NOW()-INTERVAL '60 days'");
+        return (await db.query("SELECT telegram_id,account_id FROM domwork_bot_links WHERE account_kind='user' AND NOT paused ORDER BY account_id")).rows;
+    });
+    if (!ready) return 0;
+    const started = Date.now(); let sent = 0;
+    for (const link of ready) {
+        if (Date.now() - started > budgetMs) break; // qolganlari keyingi safar
+        try { sent += await queue.transaction(pool, db => pushUser(db, link, now)); }
+        catch (error) { console.error('[staff-notify] telegram push failed:', error.code || error.name); }
     }
     return sent;
 }
