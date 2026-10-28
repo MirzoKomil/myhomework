@@ -23636,7 +23636,7 @@ function renderHrEmployeeCard(emp) {
         <div class="employee-avatar-placeholder" ${emp.avatar ? `data-emp-avatar="${escapeHtml(emp.id)}"` : ''}>
             ${emp.avatar
                 ? `<img class="employee-avatar-img" alt="${escapeHtml(emp.name)}">`
-                : `<span>${escapeHtml(initials)}</span>`}
+                : (_hrPresetAvatar(emp.id) ? `<img class="employee-avatar-img" src="${escapeHtml(_hrPresetAvatar(emp.id))}" alt="">` : `<span>${escapeHtml(initials)}</span>`)}
         </div>
         <div class="employee-name">${escapeHtml(emp.name)}</div>
         <div class="employee-role">${escapeHtml(roleLabel)}</div>
@@ -23680,7 +23680,11 @@ let _hrSelectedEmpId = null;
 // Ishdan ketganlar sukut bo'yicha yashiriladi (ro'yxat toza qoladi), bitta
 // tugma bilan ko'rsatiladi — qayta ishga olish yoki tarixni ko'rish uchun.
 let _hrShowFormer = false;
+// Xodimning profil avatari (3D personaj yoki o'z rasmi, /api/school/staff-avatars) — HR ro'yxati va kartasida.
+let _hrAvatarsLoaded = false;
+function _hrPresetAvatar(id) { return window.schoolUI?.staffAvatarOf ? window.schoolUI.staffAvatarOf(id) : ''; }
 function renderHrEmployees() {
+    if (!_hrAvatarsLoaded && window.schoolUI?.loadStaffAvatars) { _hrAvatarsLoaded = true; Promise.resolve(window.schoolUI.loadStaffAvatars()).then(() => renderHrEmployees()).catch(() => {}); }
     const employees = seedHrEmployees();
     migrateHrCredentials();
     const formerCount = employees.filter(e => e.offboardedAt).length;
@@ -23712,7 +23716,7 @@ function renderHrEmployees() {
             <div class="hrx-table-wrap"><table class="hrx-table">
                 <thead><tr><th scope="col">Xodim</th><th scope="col">Lavozim · boʻlim · til</th><th scope="col">Boshlagan</th><th scope="col">Holat</th></tr></thead>
                 <tbody>${filtered.map(e => `<tr class="${e.id === _hrSelectedEmpId ? 'is-selected' : ''}${e.offboardedAt ? ' is-former' : ''}" data-hrx-row="${escapeHtml(e.id)}" tabindex="0" aria-selected="${e.id === _hrSelectedEmpId}">
-                    <td><div class="hrx-who"><span class="hrx-ava">${escapeHtml(getUserInitials(e.name))}</span><div><strong>${escapeHtml(e.name)}</strong><span>${escapeHtml(formatPhoneDisplay(e.phone) || '—')}</span>${e.email ? `<span>${escapeHtml(e.email)}</span>` : ''}</div></div></td>
+                    <td><div class="hrx-who"><span class="hrx-ava">${_hrPresetAvatar(e.id) ? `<img src="${escapeHtml(_hrPresetAvatar(e.id))}" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover">` : escapeHtml(getUserInitials(e.name))}</span><div><strong>${escapeHtml(e.name)}</strong><span>${escapeHtml(formatPhoneDisplay(e.phone) || '—')}</span>${e.email ? `<span>${escapeHtml(e.email)}</span>` : ''}</div></div></td>
                     <td><strong class="hrx-role">${escapeHtml(HR_ROLE_MAP[e.role] || e.role || '—')}</strong><div class="hrx-sub">${escapeHtml(e.department || '—')} ${langChip(e)}</div></td>
                     <td>${fmtJoin(e.joinDate)}</td>
                     <td><span class="hrx-status${staffStatus.isActive(e) ? '' : ' is-off'}">${e.offboardedAt ? `Ishdan ketgan${e.endDate ? ' · ' + e.endDate.split('-').reverse().join('.') : ''}` : (staffStatus.isActive(e) ? 'Faol' : 'Faol emas')}</span></td>
