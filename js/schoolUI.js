@@ -398,7 +398,7 @@
               <div class="scc-hname"><h1>${esc(c.name)}</h1>${sc === 'assistant' ? '<button type="button" class="scc-call" data-act="call"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>Qo\'ng\'iroq</button>' : ''}</div>
               <div class="scc-pills">${sc === 'past' ? '' : tgPill(c.group)} ${statusPill(c)} <span class="sc-pill sc-pill--info">${c.subject === 'russian' ? 'Rus tili' : 'Ingliz tili'}</span><span data-flag></span><span class="scc-meta" data-meta>${meta}</span></div>
             </div></div>
-            ${acts.length ? `<div class="scc-acts">${acts.map(([k, l, p]) => `<button type="button" class="sc-btn${p ? ' sc-btn--pri' : ''}" data-act="${k}"${k === 'write' ? ` title="${esc(mainTeacherTg(c) ? `Telegram: @${mainTeacherTg(c)}` : writeHint(c))}"` : ''}>${esc(l)}</button>`).join('')}</div>` : ''}
+            ${acts.length ? `<div class="scc-acts">${acts.map(([k, l, p]) => `<button type="button" class="sc-btn${p ? ' sc-btn--pri' : ''}" data-act="${k}"${k === 'write' ? ` title="${esc(writeTitle(c))}"` : ''}>${esc(k === 'write' ? writeLabel(c) : l)}</button>`).join('')}</div>` : ''}
             <div class="scc-tabs"><div role="tablist" aria-label="Karta bo'limlari">${tabs.map(([k, l]) => `<button type="button" role="tab" class="scc-tab" data-tab="${k}" aria-selected="${k === tab}">${l}</button>`).join('')}</div>${lock ? `<span class="scc-lock">${LOCK}${esc(lock)}</span>` : ''}</div>
           </section>
           <div class="scc-body" data-body></div>`;
@@ -448,9 +448,13 @@
         const raw = String(c.mainTeacher?.telegram || '').trim().replace(/^https?:\/\/(www\.)?t(elegram)?\.me\//i, '').replace(/^@/, '').split(/[/?#\s]/)[0];
         return /^[A-Za-z][A-Za-z0-9_]{3,31}$/.test(raw) ? raw : '';
     }
+    const groupLink = c => { const l = String(c.group?.tg_link || c.group?.link || '').trim(); return /^https?:\/\//i.test(l) && !c.group?.archived ? l : ''; };
+    // Tugma matni: username bo'lsa "Asosiy ustozga yozish", bo'lmasa guruh orqali — aniq yoziladi.
+    const writeLabel = c => (!mainTeacherTg(c) && groupLink(c) ? 'Asosiy ustozga yozish · o\'quvchi guruhida' : 'Asosiy ustozga yozish');
+    const writeTitle = c => (mainTeacherTg(c) ? `Telegram: @${mainTeacherTg(c)}` : groupLink(c) ? "Asosiy ustozning Telegram username'i kiritilmagan — o'quvchining Telegram guruhi ochiladi (asosiy ustoz ham shu guruhda)" : writeHint(c));
     function writeHint(c) {
         const nm = c.mainTeacher?.name || teacherName(c.teacherId) || 'Asosiy ustoz';
-        return `${nm} profilida Telegram username kiritilmagan — o'quvchining Telegram guruhida yozing yoki admin orqali bog'laning`;
+        return `${nm} profilida Telegram username kiritilmagan, o'quvchining Telegram guruhi ham yo'q — admin orqali bog'laning`;
     }
     function cardAction(k, c, btn) {
         const reopen = () => openStudent(c.id, _page?.tab || 'umumiy');
@@ -477,6 +481,9 @@
             const t = staffList().find(x => x.id === c.teacherId);
             const digits = String(t?.phone || '').replace(/\D/g, '');
             if (c.scope !== 'assistant' && digits.length >= 9) return window.open(`https://t.me/+${digits.length === 9 ? '998' + digits : digits}`, '_blank', 'noopener');
+            // Ustozning username'i yo'q — o'quvchining Telegram guruhi (asosiy ustoz ham shu guruhda).
+            const grp = groupLink(c);
+            if (grp) { toast(`${c.mainTeacher?.name || teacherName(c.teacherId) || 'Asosiy ustoz'} Telegram username kiritmagan — o'quvchi guruhida yozing`, 3500); return window.open(grp, '_blank', 'noopener'); }
             return toast(writeHint(c), 4500);
         }
         if (k === 'mat') {
