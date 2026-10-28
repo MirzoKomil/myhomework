@@ -364,6 +364,13 @@ init().then(async () => {
     }).catch(err => console.error('[school] Jadval yaratilmadi:', err.code || err.message));
     await require('./services/staffSettings').initSchema(crmDb.pool).catch(err =>
         console.error('[staff] Jadval yaratilmadi:', err.code || err.message));
+    // Avatarsiz xodimlarga jinsiga mos 3D personaj (yangi qo'shilganlarga ham — har 10 daqiqada).
+    {
+        const run = () => require('./services/staffAvatars').assignMissing(crmDb.pool)
+            .catch(err => console.error('[avatars] avtomatik avatar xatosi:', err.code || err.message));
+        setTimeout(run, 30 * 1000).unref();
+        setInterval(run, 10 * 60 * 1000).unref();
+    }
     // Xodimlar davomati: jadvallar + har 5 daqiqalik tekshiruv ("kelmadi" xabari, eski rasmlarni tozalash).
     // Xato bo'lsa ham server ko'tariladi — boshqa bo'limlar shu sabab to'xtamasligi kerak.
     const staffAttendance = require('./services/staffAttendance');
