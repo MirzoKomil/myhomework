@@ -138,6 +138,35 @@ function notifLocalCat(n) {
 const NOTIF_CAT_LABELS = { davomat: 'Davomat', sinov: 'Sinov', aloqa: 'Aloqa', sorov: "So'rov", maosh: 'Maosh', tasdiq: 'Tasdiq', jadval: 'Jadval', tolov: "To'lov", lid: 'Lidlar', boshqa: 'Boshqa' };
 let _notifCat = 'all';
 
+// Ustoz va yordamchi paneli (UstozBildirishnoma): filtrlar doim Hammasi · Davomat · Sinov · Maosh
+// (yordamchi aloqalari bo'lsa + Aloqa); So'rov/Boshqa voqealari faqat "Hammasi"da. Qator: rangli belgi,
+// sarlavha, izoh, o'ngda vaqt; guruh sarlavhalari va nuqtalar yo'q; panel ochilganda sahifa xiralashadi.
+const NOTIF_STAFF_CATS = ['davomat', 'sinov', 'maosh'];
+function notifStaffUi() {
+    const u = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+    return u?.role === 'teacher';
+}
+const NOTIF_MON3 = ['yan', 'fev', 'mar', 'apr', 'may', 'iyun', 'iyul', 'avg', 'sen', 'okt', 'noy', 'dek'];
+function notifShortTime(ts) {
+    const key = notifTashkentDay(new Date(ts));
+    if (key === notifTashkentDay()) return new Date(ts).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tashkent' });
+    if (key === notifTashkentDay(new Date(Date.now() - 86400000))) return 'kecha';
+    const [, m, d] = key.split('-');
+    return `${Number(d)}-${NOTIF_MON3[Number(m) - 1]}`;
+}
+// Belgi va rang (dizayn: ✓ ko'k, ! sariq, ↓ qizil, S binafsha, i ko'k, Q yashil-moviy).
+function notifGlyph(n) {
+    const t = n.etype || '', ok = n.tone === 'ok';
+    const by = {
+        trial_confirm: ['S', 'v'], trial_result: ['!', 'w'], attendance_unmarked: ['!', 'w'], lesson_soon: ['i', 'b'],
+        makeup_decision: ['Q', ok ? 't' : 'r'], request_decision: ok ? ['✓', 'b'] : ['✕', 'r'], assist_corrected: ok ? ['✓', 'b'] : ['✕', 'r'],
+        guide_new: ['i', 'b'], salary_ready: ['M', 't'], month_close: ['M', 'w'], student_absent: ['↓', 'r'],
+        assist_advice: ['A', 'b'], assist_no_answer: ['↻', 'w']
+    };
+    if (by[t]) return by[t];
+    return { ok: ['✓', 't'], bad: ['!', 'r'], warn: ['!', 'w'] }[n.tone] || (n.type === 'danger' ? ['!', 'r'] : n.type === 'warning' ? ['!', 'w'] : ['i', 'b']);
+}
+
 function getUnreadCount() {
     return getNotifications().filter(n => !n.read).length;
 }
@@ -171,11 +200,13 @@ function renderNotificationPanel() {
 
     const count = document.getElementById('notifNewCount');
     if (count) { count.textContent = `${unread} yangi`; count.hidden = !unread; }
-    const cats = [...new Set(list.map(n => n.cat).filter(Boolean))];
+    const staffUi = notifStaffUi();
+    let cats = [...new Set(list.map(n => n.cat).filter(Boolean))];
+    if (staffUi) cats = [...NOTIF_STAFF_CATS, ...(cats.includes('aloqa') ? ['aloqa'] : [])];
     if (_notifCat !== 'all' && !cats.includes(_notifCat)) _notifCat = 'all';
     const tabs = document.getElementById('notifCats');
     if (tabs) {
-        tabs.hidden = cats.length < 2;
+        tabs.hidden = !staffUi && cats.length < 2;
         tabs.innerHTML = [['all', 'Hammasi'], ...cats.map(c => [c, NOTIF_CAT_LABELS[c] || c])]
             .map(([k, l]) => `<button type="button" role="tab" data-notif-cat="${notifEsc(k)}" aria-selected="${_notifCat === k}">${notifEsc(l)}</button>`).join('');
         tabs.querySelectorAll('[data-notif-cat]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); _notifCat = b.dataset.notifCat; renderNotificationPanel(); }));
@@ -203,7 +234,16 @@ function renderNotifListInto(targetId, list) {
     }
 
     let lastGroup = null;
-    body.innerHTML = list.map(n => {
+    if (targetId === 'notifList' && notifStaffUi()) {
+        body.innerHTML = list.map(n => {
+            const [g, c] = notifGlyph(n);
+            return `<button type="button" class="notif-item sz-ni${n.read ? ' read' : ' new'}" data-notif-id="${notifEsc(n.id)}" data-notif-tab="${notifEsc(n.tab || '')}">
+            <span class="sz-nic sz-nic--${c}" aria-hidden="true">${notifEsc(g)}</span>
+            <span class="sz-ntx"><b>${notifEsc(n.title)}</b>${n.message ? `<small>${notifEsc(n.message)}</small>` : ''}</span>
+            <time datetime="${notifEsc(new Date(n.time).toISOString())}">${notifEsc(notifShortTime(n.time))}</time>${n.read ? '' : '<span class="sz-sr">yangi</span>'}
+        </button>`;
+        }).join('');
+    } else body.innerHTML = list.map(n => {
         const group = n.read ? "O'qilgan" : notifDayLabel(n.time);
         const head = group !== lastGroup ? `<div class="notif-group">${notifEsc(group)}</div>` : '';
         lastGroup = group;
@@ -270,6 +310,10 @@ function formatNotifTime(ts) {
 function openNotificationPanel() {
     const panel = document.getElementById('notifPanel');
     if (panel) {
+        // Fon xiralashishi (UstozBildirishnoma) — faqat ustoz/yordamchida ko'rinadi (css/sozlamalar.css); bosilsa yopiladi.
+        let ov = document.getElementById('notifOverlay');
+        if (!ov) { ov = document.createElement('div'); ov.id = 'notifOverlay'; ov.className = 'notif-ov'; ov.setAttribute('aria-hidden', 'true'); panel.before(ov); }
+        ov.classList.add('open');
         panel.classList.add('open');
         renderNotificationPanel();
         window.staffNotify?.refresh();
@@ -279,6 +323,7 @@ function openNotificationPanel() {
 function closeNotificationPanel() {
     const panel = document.getElementById('notifPanel');
     if (panel) panel.classList.remove('open');
+    document.getElementById('notifOverlay')?.classList.remove('open');
 }
 
 function toggleNotificationPanel() {
@@ -300,6 +345,10 @@ function initNotifications() {
     if (markAll) markAll.addEventListener('click', e => {
         e.stopPropagation();
         markAllNotificationsRead();
+    });
+
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && document.getElementById('notifPanel')?.classList.contains('open')) { closeNotificationPanel(); btn?.focus(); }
     });
 
     const settingsMarkAll = document.getElementById('settingsNotifMarkAll');

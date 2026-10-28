@@ -58,13 +58,15 @@
     const head = () => '<div class="profile-header-bar ss-head"><h1>Sozlamalar</h1><p>Xavfsizlik · qurilmalar va kirishlar</p></div>';
 
     async function render(body) {
+        // Javob kelguncha boshqa bo'limga o'tilgan bo'lsa chizilmaydi (js/staffSettings.js render tokeni).
+        const tok = body.dataset.ssTok, ok = () => body.isConnected && body.classList.contains('ss-body') && body.dataset.ssTok === tok;
         body.innerHTML = head() + '<div class="ss-col"><div class="ss-card ss-pad ss-muted">Yuklanmoqda…</div></div>';
         let sessions = [], hist = null, err = null;
         await Promise.all([
             apiGetSessions().then(r => { sessions = r.sessions || []; }).catch(e => { err = e; }),
             (typeof apiLoginHistory === 'function' ? apiLoginHistory() : Promise.resolve(null)).then(r => { hist = r; }).catch(() => { hist = null; })
         ]);
-        if (!body.isConnected) return;
+        if (!ok()) return;
         if (err) { body.innerHTML = head() + `<div class="ss-col"><div class="ss-card ss-pad ss-err" role="alert">${esc(err.message || 'Xatolik')}</div></div>`; return; }
         draw(body, sessions, hist);
     }
@@ -78,7 +80,7 @@
             const sub = [ip, s.isCurrent ? 'hozir faol' : when(s.lastSeen || s.createdAt)].filter(Boolean).join(' · ');
             return `<li class="tgs-ses" data-session-id="${esc(s.id)}"><span class="tgs-ic${d.icon === 'tg' ? ' tg' : d.icon === 'app' ? ' app' : ''}">${ICON[d.icon]}</span>
               <span class="tgs-sx"><b>${esc(label(d))}${s.isCurrent ? ' <i class="tgs-me">shu qurilma</i>' : ''}</b><small title="${esc(s.createdAt ? 'Kirgan: ' + dm(s.createdAt) : '')}">${esc(sub)}</small></span>
-              ${s.isCurrent ? '' : `<button type="button" class="ss-btn" data-end="${esc(s.id)}" aria-label="${esc(label(d))} sessiyasini chiqarish">Chiqarish</button>`}</li>`;
+              ${s.isCurrent ? '' : `<button type="button" class="ss-btn ss-btn--sm" data-end="${esc(s.id)}" aria-label="${esc(label(d))} sessiyasini chiqarish">Chiqarish</button>`}</li>`;
         }).join('');
         const H = hist || {}, ev = H.events || [];
         // Bir IP dan 1 soat ichidagi ketma-ket noto'g'ri urinishlar bitta qatorga yig'iladi (× N).
@@ -87,18 +89,17 @@
             if (last && !e.ok && !last.ok && last.ip === e.ip && Math.abs(new Date(last.at) - new Date(e.at)) < 3600e3) last.n++; else groups.push({ ...e, n: 1 }); }
         const recentFail = groups.find(g => !g.ok && Date.now() - new Date(g.at) < 7 * 864e5);
         const warn = recentFail ? `<div class="tgs-warn" role="alert"><p><b>${esc(dm(recentFail.at))} — ${recentFail.n} marta noto'g'ri parol${recentFail.ip ? ` (${esc(maskIp(recentFail.ip))})` : ''}.</b> Siz bo'lmasangiz parolni o'zgartiring.${H.failLimit ? ` ${H.failLimit} xatodan keyin kirish ${H.lockMinutes} daqiqaga bloklanadi.` : ''}</p>
-            <button type="button" class="ss-btn" data-go-pwd>Parolni o'zgartirish</button></div>` : '';
+            <button type="button" class="ss-btn ss-btn--sm" data-go-pwd>Parolni o'zgartirish</button></div>` : '';
         const histRows = groups.map(g => { const d = device(g.userAgent);
             return `<tr><td>${esc(dm(g.at))}</td><td>${esc(shortLabel(d))}</td><td class="tgs-ip">${esc(maskIp(g.ip) || '—')}</td><td>${g.ok ? '<i class="ss-pill ok">Kirdi</i>' : `<i class="ss-pill bad">Noto'g'ri parol${g.n > 1 ? ' × ' + g.n : ''}</i>`}</td></tr>`; }).join('');
         const admin = ['admin', 'boshliq'].includes(me().role);
         body.innerHTML = head() + `<div class="ss-col">
-          <section class="ss-card" aria-labelledby="tgsSH"><header class="ss-ch"><h3 id="tgsSH">Faol sessiyalar · ${list.length}</h3>${others ? '<button type="button" class="ss-btn" data-end-all>Boshqa hammasidan chiqish</button>' : ''}</header>
+          <section class="ss-card" aria-labelledby="tgsSH"><header class="ss-ch"><h3 id="tgsSH">Faol sessiyalar · ${list.length}</h3>${others ? '<button type="button" class="ss-btn ss-btn--sm" data-end-all>Boshqa hammasidan chiqish</button>' : ''}</header>
             ${list.length ? `<ul class="tgs-sl">${rows}</ul>` : '<p class="ss-pad ss-mt">Faol sessiya topilmadi</p>'}</section>
           ${warn}
           <section class="ss-card" aria-labelledby="tgsHH"><header class="ss-ch"><h3 id="tgsHH">Kirishlar tarixi · 30 kun</h3></header>
-            ${hist == null ? '<p class="ss-pad ss-mt">Tarixni yuklab bo\'lmadi</p>' : groups.length ? `<div class="ss-tw"><table class="ss-tbl tgs-ht"><thead><tr><th scope="col">Vaqt</th><th scope="col">Qurilma</th><th scope="col">IP</th><th scope="col">Natija</th></tr></thead><tbody>${histRows}</tbody></table></div>`
-                : '<p class="ss-pad ss-mt">Hozircha yozuv yo\'q — tarix shu yangilanishdan keyin yig\'iladi.</p>'}
-            <p class="ss-cf ss-mt">Joy (shahar) ko'rsatilmaydi: IP manzil tashqi xizmatga yuborilmaydi. IP qisqartirilgan holda chiqadi.</p></section>
+            ${hist == null ? '<p class="ss-pad ss-mt">Tarixni yuklab bo\'lmadi</p>' : groups.length ? `<div class="ss-tw"><table class="ss-tbl tgs-ht"><thead><tr><th scope="col">Vaqt</th><th scope="col">Qurilma</th><th scope="col" title="Shahar ko'rsatilmaydi: IP manzil tashqi xizmatga yuborilmaydi. IP qisqartirilgan holda chiqadi.">IP</th><th scope="col">Natija</th></tr></thead><tbody>${histRows}</tbody></table></div>`
+                : '<p class="ss-pad ss-mt">Hozircha yozuv yo\'q — tarix shu yangilanishdan keyin yig\'iladi.</p>'}</section>
           ${admin ? `<section class="ss-card" aria-labelledby="tgsAH"><header class="ss-ch"><h3 id="tgsAH">Xodimni tizimdan chiqarish</h3><span class="ss-badge">faqat admin</span></header>
             <p class="ss-pad ss-mt" style="margin:0">Xodim ishdan ketsa yoki qurilmasi yo'qolsa: HR bo'limi → xodim → "Ishdan bo'shatish" — login bloklanadi va barcha sessiyalari tugaydi. Har bir majburiy chiqarish tarixga yoziladi.</p></section>` : ''}
         </div>`;
