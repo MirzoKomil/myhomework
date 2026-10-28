@@ -156,6 +156,8 @@ function setItem(key, value) {
         // Lidlar generic /api/state snapshoti orqali yuborilmaydi. Har bir
         // lid apiSaveLead/apiDeleteLead bilan row-level saqlanadi.
         if (key === STORAGE_KEYS.leads) return;
+        // Ustoz umumiy snapshotni yoza olmaydi (server 403) — davomat va boshqalar alohida endpointlar orqali.
+        if (typeof getCurrentUser === 'function' && getCurrentUser()?.role === 'teacher') return;
         if (_apiReady) {
             // Qaytarilgan promise — bir xil kalit (masalan "teachers") uchun
             // ketma-ket bir necha joyda saqlash chaqirilsa (initStorage
@@ -245,10 +247,17 @@ async function initStorage() {
         // Ketma-ket await qilinadi — bir nechtasi bir vaqtda "teachers" (yoki
         // boshqa) kalitiga PATCH yuborsa, tarmoqda poyga bo'lib, birining
         // natijasi ikkinchisinikini bosib qo'yishining oldi olinadi.
-        await migrateTeachers();
-        await migrateStudents();
-        await migrateSalesManagersHREmployees();
-        await cleanOrphanTeachers();
+        // Eski ma'lumotni tozalash/migratsiya faqat to'liq huquqli rollarda. Boshqa rollar
+        // serverdan o'z doirasidagi (qisqartirilgan) snapshotni oladi: ustozda HR ro'yxatida
+        // faqat o'zi bor, cleanOrphanTeachers boshqa ustozlarni keshdan o'chirib yuborardi
+        // ("asosiy ustoz —") va PATCH 403 bilan rad etilardi.
+        const role = typeof getCurrentUser === 'function' ? getCurrentUser()?.role : null;
+        if (['admin', 'boshliq'].includes(role)) {
+            await migrateTeachers();
+            await migrateStudents();
+            await migrateSalesManagersHREmployees();
+            await cleanOrphanTeachers();
+        }
     } catch (err) {
         console.error('API ulanmadi:', err.message);
         _apiReady = false;
