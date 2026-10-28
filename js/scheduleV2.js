@@ -200,6 +200,8 @@
     }
     const dayLabel = d => `${d === U().today() ? 'Bugun · ' : ''}${U().DAY[U().wd(d) - 1]}, ${dm(d)}`;
     const weekLabel = from => `${dm(from)} – ${dm(U().addDays(from, 6))}`;
+    // Sarlavhadagi hafta nomi: faqat joriy haftada "Bu hafta", boshqasida — qo'shni hafta nomi yoki sana oralig'i.
+    const weekTitle = from => { const cur = U().weekStart(U().today()); return from === cur ? 'Bu hafta' : from === U().addDays(cur, -7) ? 'O\'tgan hafta' : from === U().addDays(cur, 7) ? 'Keyingi hafta' : weekLabel(from); };
 
     // ── Kirish ───────────────────────────────────────────────────────────────
     function owns(view) { return V2_VIEWS.includes(view) && role() !== 'sales_manager'; }
@@ -532,7 +534,7 @@
         const trials = d.views.flatMap(v => v.items.filter(i => i.kind === 'trial').map(i => ({ ...i, date: v.date })));
         const myReqs = (reqs.requests || []).filter(r => ['close', 'open', 'leave'].includes(r.type)).slice(0, 3);
         body.innerHTML = `<div class="sv-lay">
-            <section class="sc-card sv-wcard"><header class="sv-bh"><h2>${mode === 'tday' ? esc(dayLabel(st.date)) : 'Bu hafta'} · ${n('lesson')} dars · ${n('makeup')} qoplash · ${n('trial')} sinov${asst.length ? ` · ${asst.length} yordamchi aloqasi (jadvalni band qilmaydi)` : ''}</h2>
+            <section class="sc-card sv-wcard"><header class="sv-bh"><h2>${mode === 'tday' ? esc(dayLabel(st.date)) : esc(weekTitle(from))} · ${n('lesson')} dars · ${n('makeup')} qoplash · ${n('trial')} sinov${asst.length ? ` · ${asst.length} yordamchi aloqasi (jadvalni band qilmaydi)` : ''}</h2>
               <p class="sc-mt sv-hint">Bo'sh joyni bosing → qoplash darsi · darsni bosing → o'quvchi kartasi</p></header>
               ${vgrid(cols, range, { cls: mode === 'tday' ? 'is-day' : '' })}${legend(LEGEND_T, { rules: true })}</section>
             <div class="sv-side">
@@ -681,7 +683,7 @@
         const range = fit([], [...bottoms, { start: 9 * 60, end: 22 * 60 }]); // dizayn: 09:00–22:00
         const advice = items.filter(i => i.kind === 'advice').length, done = items.filter(i => i.kind === 'contact' && i.outcome !== 'no_answer').length;
         const hasUn = shown.some(i => i.kind === 'contact' && i.outcome !== 'no_answer' && i.status !== 'counted');
-        body.innerHTML = `<section class="sc-card sv-wcard"><header class="sv-bh"><h2>Bu hafta · ${advice + items.filter(i => i.kind === 'contact').length} tavsiya · ${done} bajarildi</h2><span class="sc-grow"></span><span class="sc-mt">Blokni bosing → aloqani belgilash</span></header>
+        body.innerHTML = `<section class="sc-card sv-wcard"><header class="sv-bh"><h2>${esc(weekTitle(from))} · ${advice + items.filter(i => i.kind === 'contact').length} tavsiya · ${done} bajarildi</h2><span class="sc-grow"></span><span class="sc-mt">Blokni bosing → aloqani belgilash</span></header>
             ${items.length ? vgrid(cols, range, { stack: true }) : '<p class="sc-mt sv-pp">Sizga yordamchi sifatida faol o\'quvchi biriktirilmagan.</p>'}
             ${legend([['k-ok', 'Bajarildi (usul · daqiqa)'], ['k-no', 'Javob bermadi'], ...(hasUn ? [['k-un', 'Hisoblanmadi (qoida)']] : []), ['k-wait', 'Tavsiya']], { rules: true })}</section>`;
         body.querySelector('[data-rules]')?.addEventListener('click', rulesDrawer);

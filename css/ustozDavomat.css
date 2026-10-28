@@ -240,3 +240,9 @@ html.rd #teacherHome .thx-todo li .thx-ti { width: 40px; height: 40px; border-ra
 html.rd #teacherHome .thx-todo li b { font-size: 16px; font-weight: 700; }
 html.rd #teacherHome .thx-todo li .sc-btn { min-height: 40px; }
 html.rd #teacherHome .thx-main .dashboard-panel > [data-teacher-open-att] { margin: 0 20px 16px; }
+
+/* Davomat kalendari · kun oynasi (schoolUI.openDialog, Oynalar uslubi) */
+.oqm-dlg .udv-dlg-st { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.oqm-dlg .udv-dlg-st .oqm-pill { margin-left: 0; }
+.oqm-dlg .udv-dlg-st .oqm-link { margin-left: auto; }
+.oqm-dlg .oqm-df:has(#dutyCancel) { flex-wrap: wrap; }

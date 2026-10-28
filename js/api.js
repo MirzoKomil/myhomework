@@ -16,7 +16,31 @@ function clearSession() {
     localStorage.removeItem('mh_currentUser');
 }
 
+// Bir xil GET so'rovlarni birlashtirish: bitta sahifa yuklanishida bir nechta blok (Bosh sahifa: davomat, maosh,
+// reyting, bildirishnomalar…) bir xil manzilni bir vaqtda so'raydi. Bir xil foydalanuvchi + manzil uchun
+// jarayondagi so'rov va 2 soniya ichidagi javob qayta ishlatiladi. Har chaqiruvchi javobning o'z nusxasini oladi
+// (biri o'zgartirsa, boshqasiga ta'sir qilmaydi). Har qanday yozish (POST/PUT/PATCH/DELETE) kesh'ni tozalaydi —
+// yozishdan keyingi o'qish doim yangi. Xato javoblar saqlanmaydi.
+const API_SHARE_MS = 2000;
+const _apiShared = new Map();
+const _apiClone = d => { try { return typeof structuredClone === 'function' ? structuredClone(d) : JSON.parse(JSON.stringify(d)); } catch { return d; } };
 async function apiFetch(path, options = {}) {
+    const method = String(options.method || 'GET').toUpperCase();
+    if (method !== 'GET' || options.body != null || options.fresh) {
+        if (method !== 'GET') _apiShared.clear();
+        try { return await _apiFetchRaw(path, options); } finally { if (method !== 'GET') _apiShared.clear(); }
+    }
+    const key = `${getToken() || ''} ${path}`;
+    const hit = _apiShared.get(key);
+    if (hit && (hit.pending || Date.now() - hit.at < API_SHARE_MS)) return hit.p.then(_apiClone);
+    const entry = { pending: true, at: Date.now() };
+    entry.p = _apiFetchRaw(path, options).then(d => { entry.pending = false; entry.at = Date.now(); return d; },
+        e => { if (_apiShared.get(key) === entry) _apiShared.delete(key); throw e; });
+    _apiShared.set(key, entry);
+    if (_apiShared.size > 200) _apiShared.delete(_apiShared.keys().next().value);
+    return entry.p.then(_apiClone);
+}
+async function _apiFetchRaw(path, options = {}) {
     const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
     const token = getToken();
     if (token) headers.Authorization = `Bearer ${token}`;

@@ -207,7 +207,8 @@ function renderNotificationPanel() {
     const staffUi = notifStaffUi();
     let cats = [...new Set(list.map(n => n.cat).filter(Boolean))];
     // Asosiy ustozda (yordamchi sifatidagi o'quvchilari bo'lsa ham) 4 ta filtr (dizayn); "Aloqa" — faqat HR lavozimi yordamchi bo'lganlarda.
-    if (staffUi) cats = [...NOTIF_STAFF_CATS, ...(cats.includes('aloqa') && notifIsAssistantHr() ? ['aloqa'] : [])];
+    // Yordamchi ustozda sinov darslari yo'q — "Sinov" filtri faqat shunday hodisa kelgandagina chiqadi.
+    if (staffUi) { const asst = notifIsAssistantHr(); cats = [...NOTIF_STAFF_CATS.filter(c => c !== 'sinov' || !asst || cats.includes('sinov')), ...(cats.includes('aloqa') && asst ? ['aloqa'] : [])]; }
     if (_notifCat !== 'all' && !cats.includes(_notifCat)) _notifCat = 'all';
     const tabs = document.getElementById('notifCats');
     if (tabs) {
@@ -268,7 +269,12 @@ function renderNotifListInto(targetId, list) {
         item.addEventListener('click', () => {
             const notif = list.find(x => x.id === item.dataset.notifId);
             markNotificationRead(item.dataset.notifId);
-            const tab = item.dataset.notifTab;
+            let tab = item.dataset.notifTab;
+            // Eski yashirin "Aloqalar" sahifasi o'rniga — dizayndagi joy: Akademik bo'lim → Davomat.
+            if (tab === 'school-contacts') {
+                if (window.schoolTeacher?.goDavomat) { window.schoolTeacher.goDavomat(); closeNotificationPanel(); return; }
+                tab = 'teachers-section';
+            }
             if (notif?.guideId && window.staffGuides && typeof switchTab === 'function') {
                 switchTab('guides'); window.setTimeout(() => window.staffGuides.open(notif.guideId), 0); closeNotificationPanel(); return;
             }

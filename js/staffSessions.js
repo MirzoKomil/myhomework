@@ -97,7 +97,7 @@
             ${list.length ? `<ul class="tgs-sl">${rows}</ul>` : '<p class="ss-pad ss-mt">Faol sessiya topilmadi</p>'}</section>
           ${warn}
           <section class="ss-card" aria-labelledby="tgsHH"><header class="ss-ch"><h3 id="tgsHH">Kirishlar tarixi · 30 kun</h3></header>
-            ${hist == null ? '<p class="ss-pad ss-mt">Tarixni yuklab bo\'lmadi</p>' : groups.length ? `<div class="ss-tw"><table class="ss-tbl tgs-ht"><thead><tr><th scope="col">Vaqt</th><th scope="col">Qurilma</th><th scope="col" title="Shahar ko'rsatilmaydi: IP manzil tashqi xizmatga yuborilmaydi. IP qisqartirilgan holda chiqadi.">IP</th><th scope="col">Natija</th></tr></thead><tbody>${histRows}</tbody></table></div>`
+            ${hist == null ? '<p class="ss-pad ss-mt">Tarixni yuklab bo\'lmadi</p>' : groups.length ? `<div class="ss-tw"><table class="ss-tbl tgs-ht"><thead><tr><th scope="col">Vaqt</th><th scope="col">Qurilma</th><th scope="col" title="Shahar ko'rsatilmaydi: IP manzil tashqi xizmatga yuborilmaydi. IP qisqartirilgan holda chiqadi.">IP manzil</th><th scope="col">Natija</th></tr></thead><tbody>${histRows}</tbody></table></div>`
                 : '<p class="ss-pad ss-mt">Hozircha yozuv yo\'q — tarix shu yangilanishdan keyin yig\'iladi.</p>'}</section>
           ${admin ? `<section class="ss-card" aria-labelledby="tgsAH"><header class="ss-ch"><h3 id="tgsAH">Xodimni tizimdan chiqarish</h3><span class="ss-badge">faqat admin</span></header>
             <p class="ss-pad ss-mt" style="margin:0">Xodim ishdan ketsa yoki qurilmasi yo'qolsa: HR bo'limi → xodim → "Ishdan bo'shatish" — login bloklanadi va barcha sessiyalari tugaydi. Har bir majburiy chiqarish tarixga yoziladi.</p></section>` : ''}

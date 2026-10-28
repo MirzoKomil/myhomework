@@ -267,10 +267,10 @@
         const total = a ? m.total + assistAmt : c.total != null ? Number(c.total) : m.total;
         const miss = d.missed;
         const banner = miss && miss.open ? `<div class="ss-banner" role="note">${ICON.sync}<p><b>${miss.open} ta qoldirilgan dars hali qoplanmagan${miss.planned ? ` (${miss.planned} tasi rejada)` : ''}.</b> Oy tugashiga ${miss.daysLeft} kun. ${esc(miss.students.slice(0, 3).map(s => `${s.name} ${s.count} ta`).join(', '))}${miss.students.length > 3 ? `, yana ${miss.students.length - 3} ta` : ''}.</p><button type="button" class="ss-btn" data-go-makeup>Qoplash qo'yish</button></div>` : '';
-        const rowsMain = m.groups.map(g => `<tr><td>${g.duration} daqiqalik</td><td>${esc(g.students.join(', '))}</td><td class="n">${g.expected}</td><td class="n">${g.counted}${g.review ? ` <i class="ss-pill teal">+${g.review} tekshiruvda</i>` : ''}</td><td class="n ss-mt">—</td></tr>`).join('')
+        const rowsMain = m.groups.map(g => `<tr><td>${g.duration} daqiqalik</td><td class="ss-names">${esc(g.students.join(', '))}</td><td class="n">${g.expected}</td><td class="n">${g.counted}${g.review ? ` <i class="ss-pill teal">+${g.review} tekshiruvda</i>` : ''}</td><td class="n ss-mt">—</td></tr>`).join('')
             || '<tr><td colspan="5" class="ss-mt">Bu oy asosiy o\'quvchi yo\'q</td></tr>';
         const assistRows = a ? `<tr class="sec"><td colspan="5">Yordamchi ustozlik${a.pastOnly ? ' · o\'tgan aloqalar' : ''} · ${num(a.rate)} so'm × aloqa</td></tr>
-            <tr><td>Yordamchi</td><td>${esc(a.students.map(s => s.name.split(' ')[0]).join(', ') || '—')}</td><td class="n">${a.cap} gacha</td><td class="n">${a.counted}</td><td class="n">${num(assistAmt)}</td></tr>` : '';
+            <tr><td>Yordamchi</td><td class="ss-names">${esc(a.students.map(s => s.name.split(' ')[0]).join(', ') || '—')}</td><td class="n">${a.cap} gacha</td><td class="n">${a.counted}</td><td class="n">${num(assistAmt)}</td></tr>` : '';
         body.innerHTML = head('Profil, maosh va xavfsizlik') + `<div class="ss-col">
           <div class="ss-kpis">
             <div class="ss-kpi dark"><span>${monName(d.month)} · hozirgacha</span><b>${num(total)} so'm</b><small>${a ? `asosiy ${num(m.total)} + yordamchi ${num(assistAmt)}` : `${m.counted} dars hisobga o'tdi`}</small></div>
@@ -278,7 +278,7 @@
             ${lastPaid(d)}</div>
           ${banner}
           <section class="ss-card" aria-labelledby="ssTbH"><header class="ss-ch"><h3 id="ssTbH">${monName(d.month)} hisobi · o'quvchilar bo'yicha</h3><span class="ss-mt">Belgilangan davomat bo'yicha · oy yopilganda Moliya tasdiqlaydi</span></header>
-            <div class="ss-tw"><table class="ss-tbl"><thead><tr><th scope="col">Dars turi</th><th scope="col">O'quvchilar</th><th scope="col" class="n">Rejada</th><th scope="col" class="n">Hisobga o'tdi</th><th scope="col" class="n">Summa</th></tr></thead>
+            <div class="ss-tw"><table class="ss-tbl ss-tbl--pay"><thead><tr><th scope="col">Dars turi</th><th scope="col">O'quvchilar</th><th scope="col" class="n">Rejada</th><th scope="col" class="n">Hisobga o'tdi</th><th scope="col" class="n">Summa</th></tr></thead>
             <tbody><tr class="sec"><td colspan="5">Asosiy ustozlik</td></tr>${rowsMain}
               <tr class="tot"><td colspan="3">Asosiy ustozlik jami</td><td class="n">${m.counted}</td><td class="n">${num(m.total)}</td></tr>${assistRows}</tbody>
             <tfoot><tr><td colspan="4">Jami · ${m.counted} tasdiqlangan dars${a ? ` + ${a.counted} yordamchi aloqa` : ''}${d.reviewMakeups ? ` · +${d.reviewMakeups} qoplash tekshiruvda` : ''}</td><td class="n">${num(total)}</td></tr></tfoot></table></div>
@@ -314,9 +314,12 @@
         if (old) old.replaceWith(el); else body.querySelector('.ss-kpis')?.after(el);
         bindMakeupBtn(body, rows[0]?.student.id);
     }
-    function stuAvatar(id) {
-        try { const s = getItem(STORAGE_KEYS.students, []).find(x => x.id === id); if (s?.avatarUrl) return `<img src="${esc(String(s.avatarUrl).replace(/^\//, ''))}" alt="">`; } catch { /* yo'q */ }
-        return '';
+    // O'quvchi avatari — boshqa sahifalardagi kabi 3D personaj (schoolUI.studentAvatar: ilovadagi rasm yoki ID bo'yicha doimiy personaj).
+    function stuAvatar(id, name) {
+        let s = null;
+        try { s = getItem(STORAGE_KEYS.students, []).find(x => x.id === id) || null; } catch { /* yo'q */ }
+        const U = window.schoolUI;
+        return U?.studentAvatar ? U.studentAvatar(s || { id, name }, 30) : '';
     }
     function drawAssistSalary(body, d) {
         const a = d.assist;
@@ -324,7 +327,7 @@
             const near = s.counted >= a.cap - 1;
             const st = s.counted >= a.cap ? `<i class="ss-pill warn">limit to'ldi · ${a.cap + 1}-chi hisoblanmaydi</i>` : near ? `<i class="ss-pill warn">${a.cap} ga yaqin · ${a.cap + 1}-chi hisoblanmaydi</i>`
                 : `<span class="ss-mt">${s.adviceLeft ? `yana ${s.adviceLeft} tavsiya` : 'bu oy tavsiya qolmadi'}</span>`;
-            return `<tr><th scope="row"><span class="ss-stu"><span class="ss-sav">${stuAvatar(s.studentId) || initials(s.name)}</span><span><b>${esc(s.name)}</b><small>asosiy: ${esc(s.mainTeacher || '—')}</small></span></span></th>
+            return `<tr><th scope="row"><span class="ss-stu"><span class="ss-sav">${stuAvatar(s.studentId, s.name) || initials(s.name)}</span><span><b>${esc(s.name)}</b><small>asosiy: ${esc(s.mainTeacher || '—')}</small></span></span></th>
               <td class="n"><b>${s.counted}</b> / ${a.cap}</td><td class="n">${num(s.amount)}</td><td>${st}</td></tr>`;
         }).join('') || '<tr><td colspan="4" class="ss-mt">Sizga hali o\'quvchi biriktirilmagan</td></tr>';
         body.innerHTML = head('Mening maoshim · aloqalar bo\'yicha') + `<div class="ss-col">
@@ -352,7 +355,7 @@
         const d = NP.data, q = d.quiet || { from: '22:00', to: '08:00' }, tg = d.channels.telegram;
         const hasSoon = d.groups.some(g => g.items.some(i => !i.live));
         const groups = d.groups.map(g => `<tr class="sec"><th colspan="3" scope="rowgroup">${esc(g.title)}</th></tr>` + g.items.map(i => { const p = d.prefs[i.key] || {};
-            return `<tr><th scope="row"><b>${esc(i.label)}</b>${i.sub || !i.live ? `<small>${esc(i.sub)}${!i.live ? `${i.sub ? ' · ' : ''}<em class="ss-soon">tez orada</em>` : ''}${i.locked ? ' · o\'chirib bo\'lmaydi' : ''}</small>` : ''}</th>
+            return `<tr><th scope="row"><b>${esc(i.label)}</b>${i.sub || !i.live ? `<small>${esc(i.sub)}${!i.live ? `${i.sub ? ' · ' : ''}<em class="ss-soon" title="Hozircha bu hodisa yuborilmaydi — tanlovingiz saqlanadi va manba ulanganda qo'llanadi">tez orada</em>` : ''}${i.locked ? ' · o\'chirib bo\'lmaydi' : ''}</small>` : ''}</th>
               <td>${tog(i.key, 'tg', p.tg, i.locked, i.label + ' — Telegram')}</td><td>${tog(i.key, 'web', p.web, i.locked, i.label + ' — Brauzer')}</td></tr>`; }).join('')).join('');
         const note = { teacher: 'Shoshilinch xabarlar (sinov tasdig\'i) tinch soatlarda ham keladi.', assistant: 'Tinch soatlarda faqat admin tuzatishi haqidagi xabar keladi.', sales: 'Ushlab turish tugashi haqidagi xabar o\'chirib bo\'lmaydi.',
             rop: 'Menejer so\'rovlari admin bilan birga keladi — kim birinchi hal qilsa, ikkinchisida yopiladi.', admin: 'Tinch soatlarda tasdiqlash so\'rovlari ovozsiz keladi.' }[d.kind] || '';
@@ -367,7 +370,7 @@
             </div></section>
           <section class="ss-card" aria-labelledby="ssNH"><header class="ss-ch"><h3 id="ssNH">Nimalar haqida xabar beriladi</h3><button type="button" class="ss-btn ss-btn--sm" data-reset>Standartga qaytarish</button></header>
             <div class="ss-tw"><table class="ss-tbl ss-tbl--np"><thead><tr><th scope="col">Hodisa</th><th scope="col">Telegram</th><th scope="col">Brauzer</th></tr></thead><tbody>${groups}</tbody></table></div>
-            <p class="ss-note ss-mt">O'zgarish darhol saqlanadi. ${esc(note)} Telegram bot hali ulanmagan — Telegram tanlovi va tinch soatlar saqlanadi, bot ulanganda qo'llanadi.${hasSoon ? ' "Tez orada" — xabar manbasi keyingi yangilanishda ulanadi.' : ''}</p></section></div>`;
+            <p class="ss-note ss-mt">O'zgarish darhol saqlanadi. ${esc(note)} Telegram bot hali ulanmagan — Telegram tanlovi va tinch soatlar saqlanadi, bot ulanganda qo'llanadi.${hasSoon ? ' "Tez orada" — xabar manbasi keyingi yangilanishda ulanadi; kalit ishlaydi, tanlovingiz hozirdan saqlanadi.' : ''}</p></section></div>`;
         body.querySelectorAll('[data-pref]').forEach(inp => inp.addEventListener('change', async () => {
             const k = inp.dataset.pref, ch = inp.dataset.ch;
             try { NP.data = await api('/notify/prefs', { method: 'PUT', body: { types: { [k]: { [ch]: inp.checked } } } }); window.staffNotify?.refresh(); }

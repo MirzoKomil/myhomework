@@ -338,30 +338,39 @@
             const date = `${month}-${String(button.dataset.dutyDay).padStart(2, '0')}`;
             const status = button.dataset.status, offday = button.classList.contains('duty-offday');
             const missed = role === 'main' && month >= '2026-10' && date <= today && !button.classList.contains('duty-has-mk') ? openMissedFor(student.id).filter(d => d !== date) : [];
-            const pick = missed.length ? `<label class="duty-pick">Qaysi qoldirilgan darsni qoplaysiz? <select id="dutyMissed">${missed.map(d => `<option value="${d}">${Number(d.slice(8))}-sana</option>`).join('')}</select></label>` : '';
+            // Kun oynasi — dizayndagi oyna uslubi (Oynalar · .dlg → schoolUI.openDialog / .oqm-*), sarlavhada o'zbekcha sana.
+            const UI = window.schoolUI;
+            const dayOf = d => (UI?.DAY_FULL && UI.wd ? UI.DAY_FULL[UI.wd(d) - 1] : '');
+            const dLabel = d => `${Number(d.slice(8))}-${MON3[Number(d.slice(5, 7)) - 1]}`, title = `${dLabel(date)}${dayOf(date) ? ', ' + dayOf(date) : ''}`;
+            const STATE = { present: ['Keldi', 'is-ok'], absent: ['Kelmadi', 'is-no'], empty: ['Belgilanmagan', 'is-mute'] }[status] || ['Belgilanmagan', 'is-mute'];
+            const pick = missed.length ? `<div class="oqm-fl">Qaysi qoldirilgan dars o'rniga?</div>${missed.map((d, i) => `<label class="oqm-opt"><input type="radio" name="dutyMissed" value="${d}"${i === 0 ? ' checked' : ''}><span class="oqm-radio" aria-hidden="true"></span><span class="oqm-tx"><span class="oqm-nm">${dLabel(d)}${dayOf(d) ? ', ' + esc(dayOf(d)) : ''}</span><span class="oqm-mt">kelmagan · hali qoplanmagan</span></span><span class="oqm-pill is-teal">Qoplash mumkin</span></label>`).join('')}` : '';
             const mkButtons = !missed.length ? '' : offday
-                ? '<button type="button" class="btn-primary-sm" id="dutyMkSep">Qoplash darsi o‘tildi</button>'
-                : '<button type="button" class="btn-ghost" id="dutyMkDouble">Keldi · 2 dars</button>';
+                ? '<button type="button" class="oqm-btn is-pri" id="dutyMkSep">Qoplash darsi o‘tildi</button>'
+                : '<button type="button" class="oqm-btn" id="dutyMkDouble">Keldi · 2 dars</button>';
             const note = role === 'main' && offday && month >= '2026-10'
                 ? 'Bu kun dars kuni emas. Maoshga faqat qoplash darsi sifatida, admin tasdig‘idan keyin o‘tadi.'
                 : role === 'main' && offday ? 'Bu kun dars kuni emas.' : '';
-            openModal(`${student.name} — ${date}`, `<p>${note ? note + ' ' : ''}Shu kundagi davomatni tanlang.</p>${pick}`,
-                `<div class="teacher-duty-actions">${role === 'main' && offday && month >= '2026-10' ? '' : `<button type="button" class="btn-primary-sm" id="dutyPresent">${role === 'main' ? 'Keldi' : 'Qatnashdi'}</button>`}
+            const noMark = role === 'main' && offday && month >= '2026-10';
+            const body = `<div class="oqm-box udv-dlg-st">Hozirgi holat: <span class="oqm-pill ${STATE[1]}">${STATE[0]}</span>${status !== 'empty' ? '<button type="button" class="oqm-link" id="dutyRemove">Belgini olib tashlash</button>' : ''}</div>${pick}<div class="oqm-rule">${note ? esc(note) + ' ' : ''}${noMark && !missed.length ? 'Bu oyda qoplanmagan dars yo‘q.' : 'Shu kundagi davomatni tanlang.'}</div>`;
+            const foot = `<button type="button" class="oqm-btn" id="dutyCancel" data-close>Bekor</button>
+                ${noMark ? '' : '<button type="button" class="oqm-btn" id="dutyAbsent">Kelmadi</button>'}
                 ${mkButtons}
-                ${role === 'main' && offday && month >= '2026-10' ? '' : '<button type="button" class="btn-ghost" id="dutyAbsent">Kelmadi</button>'}
-                ${status !== 'empty' ? '<button type="button" class="btn-ghost teacher-duty-remove" id="dutyRemove">Belgini olib tashlash</button>' : ''}
-                <button type="button" class="btn-ghost" id="dutyCancel">Bekor qilish</button></div>`);
-            const on = (id, fn) => { const el = document.getElementById(id); if (el) el.onclick = fn; };
-            const chosen = () => document.getElementById('dutyMissed')?.value;
-            on('dutyPresent', () => { closeModal(); if (role === 'main') grade(student, date); else save(student, date, true, undefined, role); });
-            on('dutyAbsent', () => { closeModal(); save(student, date, false, undefined, role); });
-            on('dutyRemove', () => { closeModal(); save(student, date, null, undefined, role); });
-            on('dutyMkSep', () => { const m = chosen(); closeModal(); makeup('separate', student, date, m); });
-            on('dutyMkDouble', () => { const m = chosen(); closeModal();
+                ${noMark ? '' : `<button type="button" class="oqm-btn is-pri" id="dutyPresent">${role === 'main' ? 'Keldi' : 'Qatnashdi'}</button>`}`;
+            const close = () => (UI?.closeDrawer ? UI.closeDrawer() : closeModal());
+            const dlg = UI?.openDialog ? UI.openDialog({ title, sub: `${esc(student.name)} · ${sched(student)}`, body, foot }) : null;
+            if (!dlg) openModal(`${student.name} — ${title}`, body, `<div class="teacher-duty-actions">${foot}</div>`);
+            const scope = dlg || document;
+            const on = (id, fn) => { const el = scope.querySelector('#' + id); if (el) el.onclick = fn; };
+            const chosen = () => scope.querySelector('input[name="dutyMissed"]:checked')?.value;
+            on('dutyPresent', () => { close(); if (role === 'main') grade(student, date); else save(student, date, true, undefined, role); });
+            on('dutyAbsent', () => { close(); save(student, date, false, undefined, role); });
+            on('dutyRemove', () => { close(); save(student, date, null, undefined, role); });
+            on('dutyMkSep', () => { const m = chosen(); close(); makeup('separate', student, date, m); });
+            on('dutyMkDouble', () => { const m = chosen(); close();
                 const previous = getItem(STORAGE_KEYS.liveGrades, {})[student.id]?.find(g => g.date === date && g.teacherId === id);
                 _openLiveGradeModal(student.name, date, _getSpeakingLessonOptions(teacherRoles.language(employee)),
                     async g => { await save(student, date, true, g, 'main'); if (!lastError) makeup('double', student, date, m); }, () => {}, previous); });
-            on('dutyCancel', closeModal);
+            on('dutyCancel', close);
         }; });
         root.querySelector('[data-duty-more]')?.addEventListener('click', () => { showAll = true; render(); });
         if (busy) root.querySelectorAll('button').forEach(button => { button.disabled = true; });
@@ -439,5 +448,16 @@
         }
         return out;
     }
-    window.teacherDutyUI = { employeeField, bindEmployee, bindAssignment, render, monthTotals, mergeAbsences };
+    // Boshqa sahifadan (O'quvchini tekshirish → "Davomat kalendari") aniq o'quvchining kalendarini ochish.
+    function focus(studentId) {
+        selected = 'main'; expanded = String(studentId || ''); showAll = true; autoOpened = true; lastError = '';
+        const mi = document.getElementById('mainAttMonth');
+        if (mi && !busy) mi.value = getMonthKey(new Date());
+    }
+    function revealFocused() {
+        if (!expanded) return;
+        const b = document.querySelector(`#mainAttendanceContainer [data-duty-expand="${CSS.escape(expanded)}"]`);
+        b?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    }
+    window.teacherDutyUI = { employeeField, bindEmployee, bindAssignment, render, monthTotals, mergeAbsences, focus, revealFocused };
 }());

@@ -149,7 +149,13 @@
         el.innerHTML = `${head}<div class="okx-body"><div class="sc-skel"></div></div>`;
         const bind = () => {
             el.querySelectorAll('[data-card]').forEach(b => b.onclick = () => u.openStudent(s.id, 'oz'));
-            el.querySelector('[data-cal]')?.addEventListener('click', () => (typeof switchTeachersSection === 'function' ? switchTeachersSection('attendance') : null));
+            el.querySelector('[data-cal]')?.addEventListener('click', () => {
+                // Tanlangan o'quvchining kalendari ochilsin (birinchi o'quvchiniki emas).
+                window.teacherDutyUI?.focus?.(s.id);
+                if (typeof switchTeachersSection === 'function') switchTeachersSection('attendance');
+                window.teacherDutyUI?.render?.();
+                setTimeout(() => window.teacherDutyUI?.revealFocused?.(), 60);
+            });
         };
         bind();
         let r, a = null;

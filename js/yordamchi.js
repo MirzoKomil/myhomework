@@ -235,20 +235,27 @@
             <td class="r"><b>${r.counted || 0}</b> / ${rep.cap || CAP}</td><td class="r">${num(r.amount ?? (r.counted || 0) * RATE)}</td><td><div class="yd-izoh">${izoh(r, s)}</div></td></tr>`; }).join('') || `<tr><td colspan="4" class="sc-mt">Bu oyda aloqa yo'q</td></tr>`}
           </tbody><tfoot><tr><td>Jami · ${rows.length} o'quvchi</td><td class="r">${total}</td><td class="r">${num(amount)}</td><td></td></tr></tfoot></table></div></section>`;
     }
-    function paySteps(month, rep) {
+    // Vaqt belgisi Toshkent vaqtida, boshqa sahifalardagi dG() bilan bir xil: "2-noyabr 11:20".
+    function dT(iso) {
+        if (!iso) return '';
+        const t = new Date(new Date(iso).getTime() + 5 * 3600000).toISOString();
+        return `${dG(t.slice(0, 10))} ${t.slice(11, 16)}`;
+    }
+    // card4 — xodimning o'z kartasi oxirgi 4 raqami (/api/staff/salary, faqat o'ziniki).
+    function paySteps(month, rep, card4 = '') {
         const st = rep.state || {}, nx = U().addDays(month + '-01', 32).slice(0, 7);
-        const t = iso => (iso ? new Date(iso).toLocaleString('uz-UZ', { timeZone: 'Asia/Tashkent', day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' }) : '');
+        const card = card4 ? ` · karta •••• ${card4}` : '';
         const steps = [['Oy yopildi', true, `1-${MON[Number(nx.slice(5)) - 1]} 00:00 · avtomatik`],
-            ['Hisob tayyor', true, `${rep.counted} hisoblangan aloqa`],
-            ['Dastlabki tasdiq', !!st.prelim_at, st.prelim_at ? t(st.prelim_at) + ' · Moliya' : 'kutilmoqda'],
+            ['Hisob tayyor', true, st.locked_at ? `${dT(st.locked_at)} · ${rep.counted} aloqa` : `${rep.counted} hisoblangan aloqa`],
+            ['Dastlabki tasdiq', !!st.prelim_at, st.prelim_at ? dT(st.prelim_at) + ' · Moliya' : 'kutilmoqda'],
             ['E\'tiroz muddati', !!st.final_at, st.objection_until ? `${dG(String(st.objection_until).slice(0, 10))} gacha · keyin yakuniy` : '4-sanagacha · keyin yakuniy'],
-            ['To\'lov', !!st.paid_at, st.paid_at ? t(st.paid_at) + ' · to\'landi' : `5-${MON[Number(nx.slice(5)) - 1]}`]];
+            ['To\'lov', !!st.paid_at, st.paid_at ? `${dT(st.paid_at)} · to'landi${card}` : `5-${MON[Number(nx.slice(5)) - 1]}${card}`]];
         const cur = steps.findIndex(s => !s[1]);
         return { steps, cur, last: steps.filter(s => s[1]).pop()?.[0] || 'Oy yopildi' };
     }
-    function stepsHtml(month, rep, prev2) {
+    function stepsHtml(month, rep, prev2, card4 = '') {
         const { esc } = U();
-        const p = paySteps(month, rep);
+        const p = paySteps(month, rep, card4);
         return `<section class="sc-card yd-pay"><header class="sc-ch"><h2>To'lov holati</h2><span class="sc-pill sc-pill--info">${esc(p.last)}</span></header>
           <ol class="yd-steps">${p.steps.map(([n, ok, sub], i) => `<li class="${ok ? 'ok' : i === p.cur ? 'cur' : ''}"><i>${ok ? '✓' : i + 1}</i><span><b>${esc(n)}</b><small>${esc(sub)}</small></span></li>`).join('')}</ol>
           ${prev2 && prev2.counted ? `<p class="sc-mt yd-pad">${esc(cap1(mName(prev2.month)))}: ${esc(money(prev2.amount))} · ${prev2.counted} aloqa${prev2.state?.paid_at ? ' · to\'langan' : ''}</p>` : ''}</section>`;
@@ -621,6 +628,14 @@
         if (sel && !isMainSel) fillProgress(sel);
     }
 
+    // Aloqalar dizaynda alohida sahifa emas: Akademik bo'lim → Davomat (yopilgan oy uchun — o'sha oy tanlangan holda).
+    function goDavomat(month) {
+        const mi = document.getElementById('mainAttMonth');
+        if (mi && /^\d{4}-\d{2}$/.test(String(month || ''))) mi.value = month;
+        else if (mi) mi.value = U().today().slice(0, 7);
+        if (typeof switchTab === 'function') switchTab('teachers-section', { teachersSection: 'attendance' });
+    }
+
     // ── Yordamchi bosh sahifasi (YordamchiBosh + YordamchiOyYopildi) ─────────
     let homeMode = null; // 'closed' | 'now' — foydalanuvchi tanlovi (sessiya ichida)
     async function assistantHome(container, user) {
@@ -677,11 +692,12 @@
             container.querySelectorAll('[data-card]').forEach(b => b.onclick = () => u.openStudent(b.dataset.card));
             container.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => { homeMode = b.dataset.mode; refresh(); });
             container.querySelectorAll('[data-go-plan]').forEach(b => b.onclick = () => switchTab('timetable'));
-            container.querySelectorAll('[data-go-contacts]').forEach(b => b.onclick = () => { switchTab('school-contacts'); setTimeout(() => { const r = document.getElementById('schoolContactsRoot'); if (r && b.dataset.goContacts !== month) { r.dataset.month = b.dataset.goContacts; renderContacts(r); } }, 60); });
+            container.querySelectorAll('[data-go-contacts]').forEach(b => b.onclick = () => goDavomat(b.dataset.goContacts));
         };
 
         if (mode === 'closed') {
-            const [ch, prev2] = await Promise.all([api(`/assist/changes?month=${prevMonth}`).then(r => r.changes).catch(() => []), api(`/assist/month?month=${prev2Month}`).catch(() => null)]);
+            const [ch, prev2, card4] = await Promise.all([api(`/assist/changes?month=${prevMonth}`).then(r => r.changes).catch(() => []), api(`/assist/month?month=${prev2Month}`).catch(() => null),
+                apiFetch('/api/staff/salary').then(r => r?.card4 || '').catch(() => '')]);
             if (!container.isConnected) return;
             const leftIds = new Set(ch.filter(c => c.kind === 'left').map(c => c.studentId));
             const pr = prev.students || [];
@@ -712,7 +728,7 @@
                   <div class="kbx-tiles"><div><span>Hisoblanmadi</span><b>${prev.noAnswer}</b><small>javob bermadi</small></div>
                     <div><span>Limitdan ortiq</span><b>${prev.overCap}</b><small>13 tadan ortig'i hisobga kirmaydi</small></div>
                     <div><span>Admin tuzatishi</span><b>${prev.corrections ? '+' + prev.corrections : 0}</b><small>${cors.length ? esc(cors.slice(0, 2).map(c => `${first(find(c.sid)?.name || '')} · ${DAY[wd(c.day) - 1]} ${dS(c.day)}`).join(', ')) : 'yo\'q'}</small></div></div></section>
-                ${stepsHtml(prevMonth, prev, prev2)}</div>
+                ${stepsHtml(prevMonth, prev, prev2, card4)}</div>
               ${closedTable(prevMonth, prev, ch)}
               <section class="sc-card yd-nov"><header class="sc-ch"><h2>${esc(cap1(mName(month)))} boshlandi</h2><button type="button" class="ahx-link" data-mode="now">Bugungi aloqalar →</button></header>
                 <div class="yd-nov-b"><div class="yd-nov-k"><small>${esc(cap1(mName(month)))} · hozirgacha</small><b>${counted} aloqa</b><span class="sc-mt">bugun ${advN} tavsiya · ${doneN} bajarildi · ${list.length} o'quvchi</span></div>
@@ -766,5 +782,5 @@
         bind();
     }
 
-    window.schoolTeacher = Object.assign(base, { renderContacts, markDrawer, renderMyStudents, assistantHome, financeDrawer, callStudent, lateDrawer });
+    window.schoolTeacher = Object.assign(base, { renderContacts, markDrawer, renderMyStudents, assistantHome, financeDrawer, callStudent, lateDrawer, goDavomat });
 })();
