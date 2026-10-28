@@ -6792,6 +6792,14 @@ async function renderProfile() {
         telegramNavBtn.style.display = isAdmin ? '' : 'none';
         if (!isAdmin && _profileSection === 'telegram-groups') _profileSection = 'edit';
     }
+    // Arxivga faqat to'liq ruxsatli rollar yoza oladi (server boshqalarga rad etadi) —
+    // ustoz, yordamchi, sotuv va boshqalarga ko'rsatilmaydi.
+    const archiveNavBtn = document.querySelector('[data-profile-section="archive"]');
+    if (archiveNavBtn) {
+        const canArchive = FULL_ACCESS_ROLES.has(_profileUser?.role);
+        archiveNavBtn.style.display = canArchive ? '' : 'none';
+        if (!canArchive && _profileSection === 'archive') _profileSection = 'edit';
+    }
     switchProfileSection(_profileSection);
 }
 
