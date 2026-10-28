@@ -66,6 +66,7 @@ router.post('/create-user', authRequired, async (req, res) => {
                 salesManagerId,
                 actor: req.user
             });
+            require('../services/staffAvatars').assignMissing(require('../db').pool).catch(() => {});
             return res.status(201).json({ ok: true, user: publicUser(user) });
         }
         if (operation === 'reset') {

@@ -1184,7 +1184,7 @@
         api, post, esc, today, addDays, wd, weekStart, fmtDate, hm, toMin, pattern, DAY, DAY_FULL,
         studentAvatar, staffAvatar, staffAvatarUrl, tgPill, teacherName, studentById, teachersForSubject,
         openDrawer, closeDrawer, errBox, busy, field, impact, toast, refreshCache, nowMin,
-        openStudent, closeStudent, renderApprovals, renderGroups, renderAssistAdmin, loadStaffAvatars, acad, dShort, whenTxt, shortName, num,
+        openStudent, closeStudent, renderApprovals, renderGroups, renderAssistAdmin, loadStaffAvatars, staffAvatarOf: id => staffAvatarUrl(_avatars[id]), acad, dShort, whenTxt, shortName, num,
         bulkDrawer, correctionDrawer, CHN, CST
     });
 })();
