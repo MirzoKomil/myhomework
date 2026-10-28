@@ -26,7 +26,7 @@ import {
   type TelegramLinkStatus,
 } from '@/services/telegramLinkApi';
 
-const STEPS = ['Botni ochish', 'Start tugmasini bosing', 'Telefon raqamingizni yuboring — ilova avtomatik ulanadi'];
+const STEPS = ['Botni ochish', 'Start tugmasini bosing', 'Ilovaga qaytib, ismingizni tasdiqlang'];
 
 export function BotConnectPopup(props: { visible: boolean; onClose: () => void }) {
   // Kompyuterda — markazdagi karta (D_BotConnect), telefonda — pastki oyna.

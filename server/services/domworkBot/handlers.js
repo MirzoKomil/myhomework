@@ -91,6 +91,12 @@ function createHandler({ crm }) {
                     payload:{chat_id:sender,text:'Endi student appdagi “Telegram botga ulash” oynasiga qayting. “Holatni tekshirish”ni bosib, o‘z Telegram hisobingizni tasdiqlang.'}});
                 return;
             }
+            if(message._staffLinkHash || require('./staffLink').startHash(message.text)){
+                await require('./staffLink').claim(db,message);
+                await store.enqueue(db,{key:`u:${update.update_id}:staff-link`,targetId:sender,
+                    payload:{chat_id:sender,text:'Endi CRMga qayting: “Telegram botni ulash” oynasida ismingiz chiqadi — “Ha, bu mening Telegramim” tugmasini bosing.'}});
+                return;
+            }
             if (message.contact) {
                 identity = await store.linkContact(db, message);
                 await discovery.contactLinked(db,identity);
@@ -101,7 +107,7 @@ function createHandler({ crm }) {
                 if (identity) await db.query('UPDATE domwork_bot_links SET paused=true WHERE telegram_id=$1', [sender]);
                 return await reply('Avtomatik xabarlar to‘xtatildi. Davom ettirish uchun /start bosing.', { reply_markup: { remove_keyboard: true } });
             }
-            if (!identity) return await reply('CRM akkauntingizni aniqlash uchun o‘zingizning telefon raqamingizni yuboring.',
+            if (!identity) return await reply('CRM akkauntingizni aniqlash uchun o‘zingizning telefon raqamingizni yuboring.\n\nTelegramdagi raqamingiz CRMdagidan boshqa bo‘lsa: o‘quvchilar — Domwork ilovasi → Profil → “Telegram botni ulash”; xodimlar — CRM → Sozlamalar → Bildirishnomalar → Telegram bot → “Ulash”.',
                 { reply_markup: { keyboard: [[{ text: '📱 Telefon raqamni yuborish', request_contact: true }]], resize_keyboard: true, one_time_keyboard: true } });
             if (command === '/start' || command === '/menu') {
                 await db.query('UPDATE domwork_bot_links SET paused=false WHERE telegram_id=$1', [sender]);

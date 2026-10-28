@@ -18,6 +18,7 @@ async function request<T>(path: string, body?: object): Promise<T> {
   return data as T;
 }
 export const telegramLinkStatus = () => request<TelegramLinkStatus>('');
-export const createTelegramLink = () => request<{ request: TelegramLinkRequest; url: string }>('', {});
+export type TelegramLinkCreated = { request: TelegramLinkRequest; url: string; qr?: { size: number; path: string } };
+export const createTelegramLink = () => request<TelegramLinkCreated>('', {});
 export const confirmTelegramLink = (r: TelegramLinkRequest) => request<{ ok: boolean }>('/confirm', { requestId: r.id, telegramId: r.telegram?.id });
 export const cancelTelegramLink = (r: TelegramLinkRequest) => request<{ ok: boolean }>('/cancel', { requestId: r.id });
