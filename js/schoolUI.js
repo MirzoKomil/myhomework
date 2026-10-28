@@ -263,7 +263,7 @@
             ${field('Qachondan', `<input name="effectiveFrom" type="date" value="${today()}">`, 'Server bo\'sh vaqtni qayta tekshiradi')}
           </div></div>
           <div class="sc-sec"><h3>Telegram guruh</h3>${isManager() ? `<div class="sc-g2">
-            ${field('Guruh nomi', `<input name="groupName" value="${esc(c.group?.name || '')}" placeholder="C40 | onlayn ingliz tili">`)}
+            ${field('Guruh nomi', `<input name="groupName" value="${esc(c.group?.name || '')}" placeholder="C40 | onlayn ${c.subject === 'russian' ? 'rus' : 'ingliz'} tili">`)}
             ${field('Havola', `<input name="groupLink" value="${esc(c.group?.tg_link || '')}" placeholder="https://t.me/+…">`)}</div>` : `<p class="sc-mt">${tgPill(c.group)} · nom va havolani admin yoki ROP o'zgartiradi</p>`}</div>
           <div class="sc-sec">${field('Sabab (majburiy)', '<textarea name="reason" rows="2" required placeholder="Masalan: telefon raqamida 2 raqam almashgan"></textarea>', 'O\'zgarishlar tarixiga yoziladi')}</div>`;
         body.dataset.schedTouched = '0';

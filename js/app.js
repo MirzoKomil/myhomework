@@ -19121,7 +19121,7 @@ function renderTeacherScheduleSection(asosiyTeachers) {
         </div>
         <div class="lead-survey-field">
             <label for="onboardTelegramGroupName">Telegram guruh nomi <span style="color:var(--danger)">*</span></label>
-            <input type="text" id="onboardTelegramGroupName" class="form-control" placeholder="C40 | onlayn ingliz tili" maxlength="80">
+            <input type="text" id="onboardTelegramGroupName" class="form-control" placeholder="C40 | onlayn ${typeof getUserOwnLang === 'function' && getUserOwnLang() === 'russian' ? 'rus' : 'ingliz'} tili" maxlength="80">
             <p class="lead-survey-hint">Telegram'dagi nom bilan bir xil yozing · tizim keyingi bo'sh raqamni taklif qiladi, takrorlanmasligi tekshiriladi. Guruhga o'quvchi, ustoz, yordamchi, ROP va sizni qo'shing.</p>
         </div>
     </section>`;
