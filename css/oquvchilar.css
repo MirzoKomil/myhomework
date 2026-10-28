@@ -8,6 +8,9 @@
 #tab-students > [hidden] { display: none !important; }
 body[data-role="teacher"] #tab-students > .sales-pinned,
 body[data-role="teacher"] #tab-students > .students-panel { display: none !important; }
+/* #tab-students.active — overflow:hidden (styles.css); yangi sahifa (#schoolMyStudents — ustoz, yordamchi,
+   sotuv menejeri) o'zi aylanadi, aks holda uzun ro'yxat pastda kesilib, tepaga/pastga surilmasdi. */
+#tab-students > #schoolMyStudents { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
 
 .oq, .oqm-back {
   --o-card: #FFFFFF; --o-bd: #E6EAF2; --o-bd2: #EEF1F6; --o-tx: #0B1220; --o-mt: #4B5563; --o-mt2: #374151; --o-soft: #F5F7FB; --o-seg: #EEF1F6;
