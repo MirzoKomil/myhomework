@@ -100,6 +100,13 @@ CREATE TABLE IF NOT EXISTS school_assist_months (
  month TEXT PRIMARY KEY, locked_at TIMESTAMPTZ, prelim_by TEXT, prelim_at TIMESTAMPTZ,
  objection_until DATE, final_at TIMESTAMPTZ, paid_at TIMESTAMPTZ
 );
+-- Ustozning o'quvchi bo'yicha so'rovi ("Adminga so'rov" — muzlatish, ustoz, jadval): 'student' turi.
+DO $$ BEGIN
+ IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='school_requests_type_check' AND pg_get_constraintdef(oid) LIKE '%student%') THEN
+  ALTER TABLE school_requests DROP CONSTRAINT IF EXISTS school_requests_type_check;
+  ALTER TABLE school_requests ADD CONSTRAINT school_requests_type_check CHECK (type IN ('leave','close','open','assist_late','student'));
+ END IF;
+END $$;
 `;
 // Jadvallar yaratilgach true — db.js dagi ilgaklar (sinov to'qnashuvi, guruh) faqat shunda ishlaydi.
 const state = { ready: false };

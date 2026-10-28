@@ -166,9 +166,10 @@
     async function requestsView(body, reload) {
         const { api, esc, fmtDate } = U();
         const list = (await api('/requests')).requests.filter(r => r.type !== 'assist_late');
-        const T = { leave: 'ta\'til', close: 'vaqtni yopish', open: 'qo\'shimcha ochish' };
-        body.innerHTML = `<section class="sc-card">${list.map(r => `<div class="sc-it"><span class="sc-grow"><b>${esc(r.requester_name)} · ${T[r.type] || r.type}</b>
-            <small>${r.payload?.date ? esc(fmtDate(r.payload.date)) : r.payload?.weekday ? 'har ' + esc(U().DAY_FULL[r.payload.weekday - 1]) : ''} ${esc(r.payload?.from || '')}${r.payload?.to ? '–' + esc(r.payload.to) : ''} · "${esc(r.reason)}"</small></span>
+        const T = { leave: 'ta\'til', close: 'vaqtni yopish', open: 'qo\'shimcha ochish', student: 'o\'quvchi bo\'yicha' };
+        const TOPIC = { freeze: 'muzlatish', teacher: 'ustozni almashtirish', schedule: 'jadvalni o\'zgartirish', other: 'boshqa' };
+        body.innerHTML = `<section class="sc-card">${list.map(r => `<div class="sc-it"><span class="sc-grow"><b>${esc(r.requester_name)} · ${r.type === 'student' ? esc(TOPIC[r.payload?.topic] || 'o\'quvchi bo\'yicha') : T[r.type] || r.type}</b>
+            <small>${r.type === 'student' ? `${r.payload?.studentId ? `<button type="button" class="sc-link" data-st="${esc(r.payload.studentId)}">${esc(r.payload.studentName || '')}</button>` : ''}` : `${r.payload?.date ? esc(fmtDate(r.payload.date)) : r.payload?.weekday ? 'har ' + esc(U().DAY_FULL[r.payload.weekday - 1]) : ''} ${esc(r.payload?.from || '')}${r.payload?.to ? '–' + esc(r.payload.to) : ''}`} · "${esc(r.reason)}"</small></span>
             ${r.status === 'new' ? `<button type="button" class="sc-btn sc-btn--sm" data-no="${esc(r.id)}">Rad etish</button><button type="button" class="sc-btn sc-btn--pri sc-btn--sm" data-yes="${esc(r.id)}">Tasdiqlash</button>` : `<span class="sc-pill ${r.status === 'approved' ? 'sc-pill--ok' : 'sc-pill--bad'}">${r.status === 'approved' ? 'Tasdiqlandi' : 'Rad etildi'}</span>`}</div>`).join('') || '<p class="sc-mt sc-pad">So\'rov yo\'q</p>'}</section>`;
         const decide = async (id, decision) => {
             const note = decision === 'approve' ? '' : prompt('Rad etish sababi:') || '';
@@ -177,6 +178,7 @@
         };
         body.querySelectorAll('[data-yes]').forEach(b => b.onclick = () => decide(b.dataset.yes, 'approve'));
         body.querySelectorAll('[data-no]').forEach(b => b.onclick = () => decide(b.dataset.no, 'reject'));
+        body.querySelectorAll('[data-st]').forEach(b => b.onclick = () => U().openStudent(b.dataset.st));
     }
     async function makeupsView(body, reload) {
         const { api, esc, fmtDate } = U();
@@ -282,12 +284,14 @@
             catch (err) { U().busy(e.target, false); U().errBox(box, err.message); }
         };
     }
-    async function makeupDrawer(done) {
+    // opts.studentId — o'quvchi kartasidan ochilganda shu o'quvchi oldindan tanlanadi.
+    async function makeupDrawer(done, opts = {}) {
         const { openDrawer, field, today, esc, hm, fmtDate } = U();
         const me = getCurrentUser();
         const mine = getItem(STORAGE_KEYS.students, []).filter(s => !s.frozen && s.status !== 'inactive');
+        if (opts.studentId && !mine.some(s => s.id === opts.studentId)) { const st = U().studentById(opts.studentId); if (st) mine.unshift(st); }
         const box = openDrawer({ title: 'Qoplash darsi', sub: 'Qoldirilgan darsni shu oy ichida o\'tib berish', body: `
-            ${field('O\'quvchi', `<select name="st">${mine.map(s => `<option value="${esc(s.id)}">${esc(s.name)}</option>`).join('')}</select>`)}
+            ${field('O\'quvchi', `<select name="st">${mine.map(s => `<option value="${esc(s.id)}"${s.id === opts.studentId ? ' selected' : ''}>${esc(s.name)}</option>`).join('')}</select>`)}
             <div class="sc-chips"><label class="sc-chip"><input type="radio" name="kind" value="separate" checked><span>Alohida kunda</span></label><label class="sc-chip"><input type="radio" name="kind" value="double"><span>Qo'shaloq dars (keyingi darsda)</span></label></div>
             <div class="sc-g2 sc-mtop">${field('Qoldirilgan dars sanasi', `<input type="date" name="missed" max="${today()}">`)}${field('Qoplash sanasi', `<input type="date" name="date" value="${today()}" min="${today()}">`)}</div>
             <div data-times class="sc-slots"></div>
@@ -336,5 +340,5 @@
         body.querySelectorAll('[data-held]').forEach(b => b.onclick = async () => { try { await U().post(`/makeups/${b.dataset.held}/held`); U().toast('Tekshiruvga yuborildi'); reload(); } catch (e) { U().toast(e.message, 4000); } });
     }
 
-    window.schoolSchedule = { render, state };
+    window.schoolSchedule = { render, state, makeupDrawer };
 })();
