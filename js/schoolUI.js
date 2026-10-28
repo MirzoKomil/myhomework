@@ -545,7 +545,7 @@
             <div class="sc-row"><select data-aid>${list.map(a => `<option value="${esc(a.id)}"${a.id === aid ? ' selected' : ''}>${esc(a.name)}</option>`).join('')}</select><input type="month" value="${month}" data-month></div></div>
           ${reqs.length ? `<section class="sc-card"><header class="sc-ch"><h2>Kechikib belgilash so'rovlari · ${reqs.length}</h2></header>${reqs.map(r => `<div class="sc-it"><span class="sc-grow"><b>${esc(r.requester_name)} · ${esc(studentById(r.payload?.studentId)?.name || '')}</b><small>${esc(fmtDate(r.payload?.day))} · ${esc(r.payload?.channel || '')} ${esc(r.payload?.minutes || '')} daq — ${esc(r.reason)}</small></span><button type="button" class="sc-btn sc-btn--pri sc-btn--sm" data-late="${esc(r.id)}">Qo'shish</button></div>`).join('')}</section>` : ''}
           ${rep ? `<div class="sc-kpis"><div class="sc-kpi"><small>Hisoblangan</small><b>${rep.counted}</b><span>${formatMoney(rep.amount)}</span></div><div class="sc-kpi"><small>Javob bermadi</small><b>${rep.noAnswer}</b></div><div class="sc-kpi"><small>Limitdan ortiq</small><b>${rep.overCap}</b></div><div class="sc-kpi"><small>Holat</small><b class="sc-small">${esc(step)}</b></div></div>
-          <section class="sc-card"><header class="sc-ch"><h2>O'quvchilar bo'yicha</h2>${isFull() && locked ? `<div class="sc-row">${!st.prelim_at ? '<button type="button" class="sc-btn sc-btn--pri sc-btn--sm" data-step="prelim">Dastlabki tasdiq</button>' : !st.final_at ? '<button type="button" class="sc-btn sc-btn--pri sc-btn--sm" data-step="final">Yakuniy tasdiq</button>' : !st.paid_at ? '<button type="button" class="sc-btn sc-btn--pri sc-btn--sm" data-step="paid">To\'landi</button>' : ''}</div>` : isFull() ? '<button type="button" class="sc-btn sc-btn--sm" data-add>+ Aloqani tuzatish</button>' : ''}</header>
+          <section class="sc-card"><header class="sc-ch"><h2>O'quvchilar bo'yicha</h2>${isFull() && locked ? `<div class="sc-row">${!st.prelim_at ? '<button type="button" class="sc-btn sc-btn--pri sc-btn--sm" data-step="prelim">Dastlabki tasdiq</button>' : !st.final_at ? '<button type="button" class="sc-btn sc-btn--pri sc-btn--sm" data-step="final">Yakuniy tasdiq</button>' : !st.paid_at ? '<button type="button" class="sc-btn sc-btn--pri sc-btn--sm" data-step="paid">To\'landi</button>' : ''}</div>` : isFull() ? '<div class="sc-row"><button type="button" class="sc-btn sc-btn--sm" data-bulk>O\'tgan kunlarni kiritish</button><button type="button" class="sc-btn sc-btn--sm" data-add>+ Aloqani tuzatish</button></div>' : ''}</header>
           <table class="sc-table"><thead><tr><th>O'quvchi</th><th class="r">Hisoblangan</th><th class="r">Summa</th><th>Izoh</th></tr></thead><tbody>${rep.students.map(s => `<tr><td>${studentAvatar(studentById(s.studentId), 26)} ${esc(studentById(s.studentId)?.name || s.studentId)}</td><td class="r"><b>${s.counted}</b> / 13</td><td class="r">${formatMoney(s.amount)}</td><td class="sc-mt">${[s.noAnswer && `${s.noAnswer} javob bermadi`, s.overCap && `${s.overCap} ta limitdan ortiq`, s.short && `${s.short} ta 5 daqiqadan qisqa`].filter(Boolean).join(' · ') || '—'}</td></tr>`).join('')}</tbody>
           <tfoot><tr><td>Jami</td><td class="r">${rep.counted}</td><td class="r">${formatMoney(rep.amount)}</td><td></td></tr></tfoot></table></section>` : '<p class="sc-mt">Yordamchi ustoz yo\'q</p>'}`;
         root.querySelector('[data-aid]').onchange = e => { root.dataset.aid = e.target.value; renderAssistAdmin(root); };
@@ -553,6 +553,61 @@
         root.querySelectorAll('[data-step]').forEach(b => b.onclick = async () => { busy(b, true); try { await post(`/assist/months/${month}/${b.dataset.step}`); toast('Saqlandi'); renderAssistAdmin(root); } catch (e) { busy(b, false); toast(e.message, 4000); } });
         root.querySelectorAll('[data-late]').forEach(b => b.onclick = () => correctionDrawer(reqs.find(r => r.id === b.dataset.late), () => renderAssistAdmin(root)));
         root.querySelector('[data-add]')?.addEventListener('click', () => correctionDrawer({ teacher_id: aid, payload: {} }, () => renderAssistAdmin(root)));
+        root.querySelector('[data-bulk]')?.addEventListener('click', () => bulkDrawer(aid, month, rep, () => renderAssistAdmin(root)));
+    }
+    // O'tgan kunlardagi aloqalarni bir martada kiritish (oktyabr: belgilash tizimi 27-oktgacha bo'lmagan).
+    // Har o'quvchi uchun kun tanlanadi; tavsiya kunlari ajratib ko'rsatiladi; mavjud yozuvli kunlar yopiq.
+    function bulkDrawer(aid, month, rep, done) {
+        const [y, m] = month.split('-').map(Number);
+        const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
+        const tday = today();
+        const days = Array.from({ length: last }, (_, i) => `${month}-${String(i + 1).padStart(2, '0')}`).filter(d => d < tday);
+        const advice = dow => { const d = Number(dow); return [1, 3, 5].includes(d) ? [2, 4, 6] : [2, 4, 6].includes(d) ? [1, 3, 5] : [1, 2, 3, 4, 5, 6].filter(x => x !== d); };
+        const mine = students().filter(s => s.assistantTeacherId === aid && s.status !== 'inactive').sort((a, b) => String(a.name).localeCompare(String(b.name)));
+        const repBy = new Map((rep?.students || []).map(s => [s.studentId, s]));
+        const sel = new Map(mine.map(s => [s.id, new Set()]));
+        const row = s => {
+            const r = repBy.get(s.id) || { counted: 0, items: [] };
+            const taken = new Set((r.items || []).map(i => i.day));
+            const adv = advice(s.lessonDayOfWeek);
+            const chips = days.map(d => {
+                const w = new Date(`${d}T00:00:00Z`).getUTCDay() || 7;
+                if (w === 7) return '';
+                const isAdv = adv.includes(w), on = sel.get(s.id).has(d), has = taken.has(d);
+                return `<button type="button" class="sc-bk${isAdv ? ' is-adv' : ''}${on ? ' is-on' : ''}" data-s="${esc(s.id)}" data-d="${d}"${has ? ' disabled title="Yozuv bor"' : ''}>${Number(d.slice(8))}<i>${DAY[w - 1]}</i></button>`;
+            }).join('');
+            const n = r.counted + sel.get(s.id).size;
+            return `<div class="sc-bkrow" data-row="${esc(s.id)}"><div class="sc-bkh"><b>${esc(s.name)}</b><small>darslari ${esc(pattern(s.lessonDayOfWeek))} · tavsiya ${adv.map(x => DAY[x - 1]).join('·')} · hozir ${r.counted}/13</small>
+                <span class="sc-bkn${n > 13 ? ' is-over' : ''}">${n}/13</span><button type="button" class="sc-btn sc-btn--sm" data-fill="${esc(s.id)}">Tavsiya kunlari</button></div><div class="sc-bkd">${chips}</div></div>`;
+        };
+        const box = openDrawer({ wide: true, title: `O'tgan kunlarni kiritish · ${month}`, sub: `${esc(teacherName(aid))} · har bir belgilangan kun = 1 aloqa · bir kunda bittadan, oyiga 13 tagacha hisoblanadi`, body: `
+            <div class="sc-g2">${field('Usul (hammasi uchun)', `<select name="ch">${Object.entries({ phone: 'Telefon', zoom: 'Zoom', meet: 'Google Meet', tg_video: 'Telegram video', tg_group: 'Telegram guruh videodars', tg_text: 'Telegram yozishma' }).map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select>`)}
+            ${field('Davomiylik, daqiqa', '<input name="min" inputmode="numeric" value="10">')}</div>
+            ${field('Sabab (tarixga yoziladi)', `<textarea name="reason" rows="2">${esc(`${month}: aloqa belgilash tizimi 27-oktyabrgacha bo'lmagan — yordamchi ustoz ma'lumoti asosida kiritildi`)}</textarea>`)}
+            <p class="sc-mt">Ko'k — tavsiya kunlari (asosiy darslar oralig'i). Kulrang — o'sha kunga yozuv bor. "Tavsiya kunlari" tugmasi 13 tagacha tavsiya kunini belgilaydi.</p>
+            <div class="sc-bklist">${mine.map(row).join('') || '<p class="sc-mt">O\'quvchi yo\'q</p>'}</div>`,
+            foot: '<span class="sc-mt" data-total></span><button type="button" class="sc-btn" data-close>Bekor</button><button type="button" class="sc-btn sc-btn--pri" data-save>Saqlash</button>' });
+        const total = () => { const n = [...sel.values()].reduce((a, s) => a + s.size, 0); box.querySelector('[data-total]').textContent = n ? `${n} ta aloqa tanlandi` : ''; };
+        const rerow = id => { const s = mine.find(x => x.id === id); const el = box.querySelector(`[data-row="${CSS.escape(id)}"]`); if (s && el) el.outerHTML = row(s); bindRows(); total(); };
+        const bindRows = () => {
+            box.querySelectorAll('[data-d]').forEach(b => b.onclick = () => { const set = sel.get(b.dataset.s); set.has(b.dataset.d) ? set.delete(b.dataset.d) : set.add(b.dataset.d); rerow(b.dataset.s); });
+            box.querySelectorAll('[data-fill]').forEach(b => b.onclick = () => {
+                const s = mine.find(x => x.id === b.dataset.fill), r = repBy.get(s.id) || { counted: 0, items: [] };
+                const taken = new Set((r.items || []).map(i => i.day)), adv = advice(s.lessonDayOfWeek), set = sel.get(s.id);
+                for (const d of days) { if (r.counted + set.size >= 13) break; const w = new Date(`${d}T00:00:00Z`).getUTCDay() || 7; if (adv.includes(w) && !taken.has(d)) set.add(d); }
+                rerow(s.id);
+            });
+        };
+        bindRows();
+        box.querySelector('[data-save]').onclick = async e => {
+            const items = [...sel.entries()].flatMap(([studentId, set]) => [...set].map(day => ({ studentId, day })));
+            if (!items.length) return errBox(box, 'Kamida bitta kun tanlang');
+            busy(e.target, true);
+            try {
+                const r = await post('/assist/corrections/bulk', { assistantId: aid, items, channel: val(box, 'ch'), minutes: Number(val(box, 'min')), reason: val(box, 'reason') });
+                toast(`${r.added} ta aloqa qo'shildi${r.skipped ? ` · ${r.skipped} tasi oldin bor edi` : ''}`, 4000); closeDrawer(); done();
+            } catch (err) { busy(e.target, false); errBox(box, err.message); }
+        };
     }
     function correctionDrawer(req, done) {
         const p = req.payload || {};
