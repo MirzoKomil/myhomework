@@ -9367,7 +9367,18 @@ function teacherHomeStats(user, now = new Date()) {
     const toMin = t => { const [h, m] = String(t || '').split(':').map(Number); return Number.isFinite(h) ? h * 60 + (m || 0) : null; };
     const today = students.filter(s => s.lessonDayOfWeek != null && s.lessonTime && expandLessonPatternDays(s.lessonDayOfWeek).includes(dow));
     const unmarked = today.filter(s => { const st = toMin(s.lessonTime); return !present(s.id, day) && st != null && nowMin >= st + (Number(s.lessonDuration) || 15); }).length;
-    const came = students.reduce((sum, s) => sum + [...ids].reduce((a, tid) => a + Object.values(att[`${month}_${tid}`]?.[s.id] || {}).filter(v => v === 1 || v === true).length, 0), 0);
+    // Davomat sahifasi va reyting bilan bir xil (2026-10 dan): faqat o'quvchining o'z dars kunlaridagi
+    // (bugungacha) "Keldi" sanaladi, har o'quvchida kutilgandan oshmaydi — eski avtomatik belgilar sanalmaydi.
+    const strict = month >= '2026-10';
+    const cameFor = s => {
+        const days = new Set();
+        [...ids].forEach(tid => Object.entries(att[`${month}_${tid}`]?.[s.id] || {}).forEach(([d, v]) => { if (v === 1 || v === true) days.add(Number(d)); }));
+        if (!strict) return days.size;
+        const pattern = s.lessonDayOfWeek == null ? [] : expandLessonPatternDays(s.lessonDayOfWeek);
+        const n = [...days].filter(d => d >= 1 && d <= day && pattern.includes(new Date(now.getFullYear(), now.getMonth(), d).getDay() || 7)).length;
+        return Math.min(n, _teacherHomeExpectedToDate(s, now));
+    };
+    const came = students.reduce((sum, s) => sum + cameFor(s), 0);
     const attExpected = students.reduce((sum, s) => sum + _teacherHomeExpectedToDate(s, now), 0);
     const attPct = attExpected > 0 ? Math.min(100, Math.round(came / attExpected * 100)) : null;
     const attMissed = Math.max(0, attExpected - came);
@@ -9453,7 +9464,7 @@ function renderTeacherHome(user, now = new Date()) {
                 bar: s.attPct != null ? { pct: s.attPct, due: null, ok: s.attPct >= 90, label: `Davomat ${s.attPct}%` } : null,
                 foot: s.attPct != null ? [`<strong>${s.came}</strong> keldi · <strong>${s.attMissed}</strong> kelmadi`, `kutilgan ${s.attExpected} dars`] : null,
                 tiles: [
-                    { l: 'Bugun', v: `${s.todayCount} dars`, small: s.unmarked ? `<span class="kbx-bad">${s.unmarked} tasi belgilanmagan</span>` : 'hammasi belgilangan' },
+                    { l: 'Bugun', v: `${s.todayCount} dars`, small: s.unmarked ? `<span class="kbx-bad">${s.unmarked} tasi belgilanmagan</span>` : (() => { const w = (s.todayList || []).filter(x => x.state !== 'done').length; return w ? `${w} tasi kutilmoqda` : s.todayCount ? 'hammasi belgilangan' : 'dars yoʻq'; })() },
                     { l: 'Reyting', v: '…', attrs: 'data-thx-rating-kpi' },
                     { l: 'Oʻquvchilar', v: String(s.students), small: s.helped ? `yordamchi: ${s.helped}` : '' }
                 ],
