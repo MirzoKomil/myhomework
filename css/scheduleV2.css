@@ -39,6 +39,15 @@ html.rd[data-theme="dark"] {
 .sv-ht { min-width: 0; }
 .sv-big { min-height: 44px; padding: 0 18px; }
 .sv-back { font-size: 13px; }
+/* AdminJadvalUstoz: "← Barcha ustozlar" sarlavha ustida (h1 margin-top 6px) */
+.sv-head--bk .sv-back { display: inline-block; font-weight: 700; padding: 0; min-height: 0; }
+.sv-head--bk h1 { margin-top: 6px; }
+/* "Tanlangan vaqt": soatlar sarlavhada tahrirlanadi, ko'rinishi dizayndagi "14:00 – 16:00" */
+.sv-tr { display: flex; align-items: center; gap: 4px; }
+.sv-tr input { font: inherit; font-size: 17px; font-weight: 800; color: var(--text, #0B1220); border: 1px solid transparent; border-radius: 8px; background: transparent; padding: 0 2px; width: 64px; min-height: 30px; text-align: center; }
+.sv-tr input:hover, .sv-tr input:focus { border-color: var(--kb-input-border); background: var(--surface, #fff); }
+.sv-inp { font: inherit; font-size: 14px; color: var(--text, #0B1220); border: 1px solid var(--kb-input-border); border-radius: 12px; background: var(--surface, #fff); min-height: 46px; padding: 0 14px; box-sizing: border-box; width: 100%; }
+.sv-inp:focus { outline: 3px solid var(--kb-ring); outline-offset: 0; }
 .sv-ctl { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .sv-seg button { min-height: 36px; }
 .sv-mon { display: inline-flex; align-items: center; gap: 2px; border: 1px solid var(--kb-input-border); border-radius: 12px; background: var(--surface, #fff); padding: 3px; }

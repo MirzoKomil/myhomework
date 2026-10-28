@@ -162,6 +162,16 @@ button.sc-it { cursor: pointer; } button.sc-it.sel { background: var(--kb-info-b
 .ss-lg.ss-b--reserved::before { border: 1px dashed var(--kb-primary); } .ss-lg.ss-free::before { background: var(--kb-ok-bg); } .ss-lg.ss-b--close::before { background: #CBD5E1; }
 .ss-hr { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 6px 0; border-bottom: 1px solid var(--border, #EEF1F6); }
 .ss-hr input:not([type]) { width: 72px; min-height: 36px; border-radius: 10px; border: 1px solid var(--kb-input-border); padding: 0 8px; background: var(--surface); color: var(--text); }
+/* Ish vaqti shabloni: kun → bir nechta oraliq */
+.ss-hday { align-items: flex-start; }
+.ss-hday > .sc-chip { min-width: 118px; }
+.ss-hday.is-off .ss-ivs { opacity: .5; }
+.ss-ivs { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0; }
+.ss-iv { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ss-iv input { width: 104px; min-height: 36px; border-radius: 10px; border: 1px solid var(--kb-input-border); padding: 0 8px; background: var(--surface); color: var(--text); font: inherit; }
+.ss-ivs [data-add] { align-self: flex-start; font-size: 13px; }
+.ss-conf ul { margin: 6px 0 0; padding-left: 18px; }
+.ss-conf li { margin: 2px 0; }
 @media (max-width: 760px) {
   .sc-g2, .sc-lay2, .sc-dec { grid-template-columns: 1fr; }
   .ss-tl { --ss-lab: 120px; }

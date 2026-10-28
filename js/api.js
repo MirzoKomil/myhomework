@@ -40,6 +40,7 @@ async function apiFetch(path, options = {}) {
     if (!res.ok) {
         const err = new Error(data.error || `HTTP ${res.status}`);
         err.status = res.status;
+        err.data = data; // masalan: bo'sh vaqt o'zgarishi band darslarga tegsa — conflicts ro'yxati
         throw err;
     }
     return data;

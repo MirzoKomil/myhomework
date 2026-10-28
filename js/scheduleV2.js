@@ -174,13 +174,13 @@
     // ── Sahifa sarlavhasi va boshqaruvlar ───────────────────────────────────────
     // inline — ustoz/yordamchi (UstozJadval, YordamchiJadval): boshqaruvlar sarlavha qatorining o'ngida,
     // "Qoidalar" tugmasi yo'q (havola legenda qatorida). Admin/ROP — boshqaruvlar sarlavha ostida (AdminJadval).
-    function header(root, { title, sub, tabs = [], right = '', nav = '', lang = false, extra = '', inline = false }) {
+    function header(root, { title, sub, tabs = [], right = '', nav = '', lang = false, extra = '', inline = false, back = false }) {
         const st = SS().state;
         const { esc } = U();
         const ctl = `${tabs.length ? `<div class="sc-seg sv-seg" role="tablist">${tabs.map(([k, l]) => `<button type="button" role="tab" data-v="${k}" aria-pressed="${k === st.view}">${esc(l)}</button>`).join('')}</div>` : ''}
             ${nav}${lang ? `<div class="sc-seg sv-seg" role="group" aria-label="Yo'nalish"><button type="button" data-lang="english" aria-pressed="${st.lang === 'english'}">Ingliz</button><button type="button" data-lang="russian" aria-pressed="${st.lang === 'russian'}">Rus</button></div>` : ''}${extra}`;
         root.innerHTML = inline
-            ? `<div class="sv-head sv-head--in"><div class="sv-ht"><h1>${title}</h1><p class="sc-sub">${sub}</p></div><div class="sv-hr2">${ctl}${right}</div></div>
+            ? `<div class="sv-head sv-head--in${back ? ' sv-head--bk' : ''}"><div class="sv-ht">${back ? '<button type="button" class="sc-link sv-back" data-back>← Barcha ustozlar</button>' : ''}<h1>${title}</h1><p class="sc-sub">${sub}</p></div><div class="sv-hr2">${ctl}${right}</div></div>
           <div data-body class="sv-body"><div class="sc-skel"></div></div>`
             : `<div class="sv-head"><div class="sv-ht"><h1>${title}</h1><p class="sc-sub">${sub}</p></div>${right}</div>
           <div class="sv-ctl">${ctl}
@@ -361,18 +361,19 @@
         if (!teachers.some(t => t.id === st.teacherId)) st.teacherId = teachers[0]?.id || null;
         const from = weekStart(st.date), to = addDays(from, 6);
         const t = teachers.find(x => x.id === st.teacherId);
-        const body = header(root, { title: t ? `${U().esc(t.name)} · haftalik jadval` : 'Hafta · bitta ustoz',
-            sub: `${langName(st.lang)} · vaqt Toshkent bo'yicha${isRop() ? ' · vaqtni ochish/yopish faqat adminda' : ''}`,
-            tabs: mgrTabs(), lang: SS().canPickLang(),
-            nav: `${teachers.length ? `<label class="sv-tsel">${t ? staffAvatar(t, 26) : ''}<select data-tid aria-label="Ustoz">${teachers.map(x => `<option value="${esc(x.id)}"${x.id === st.teacherId ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label>` : ''}${navBox(weekLabel(from), 'Hafta')}`,
-            right: '<button type="button" class="sc-link sv-back" data-back>← Barcha ustozlar</button>' });
+        // AdminJadvalUstoz: "← Barcha ustozlar" sarlavha ustida, o'ngda Kun/Hafta · ustoz · hafta (til — "Kun · ustozlar"da tanlanadi).
+        const body = header(root, { title: t ? `${U().esc(t.name)} · haftalik jadval` : 'Hafta · bitta ustoz', inline: true, back: true,
+            sub: `<span data-wsub>${langName(st.lang)} · vaqt Toshkent bo'yicha${isRop() ? ' · vaqtni ochish/yopish faqat adminda' : ''}</span>`,
+            tabs: [['day', 'Kun · ustozlar'], ['week', 'Hafta · bitta ustoz']],
+            nav: `${teachers.length ? `<label class="sv-tsel">${t ? staffAvatar(t, 26) : ''}<select data-tid aria-label="Ustoz">${teachers.map(x => `<option value="${esc(x.id)}"${x.id === st.teacherId ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label>` : ''}${navBox(weekLabel(from), 'Hafta')}` });
         bindNav(root, 7, reload);
         root.querySelector('[data-back]').onclick = () => { st.view = 'day'; SS().render(root); };
         root.querySelector('[data-tid]')?.addEventListener('change', e => { st.teacherId = e.target.value; reload(); });
         if (!st.teacherId) { body.innerHTML = '<p class="sc-mt">Bu yo\'nalishda ustoz yo\'q</p>'; return; }
         const tid = st.teacherId;
-        const [d, hrs, plan] = await Promise.all([api(`/schedule?from=${from}&to=${to}&teacherId=${encodeURIComponent(tid)}&lang=${st.lang}`),
-            api(`/teachers/${encodeURIComponent(tid)}/hours`).catch(() => ({ hours: [] })), api(`/assist/plan?from=${from}&to=${to}&assistantId=${encodeURIComponent(tid)}&lang=${st.lang}`).catch(() => null)]);
+        const [d, hrs, plan, chg] = await Promise.all([api(`/schedule?from=${from}&to=${to}&teacherId=${encodeURIComponent(tid)}&lang=${st.lang}`),
+            api(`/teachers/${encodeURIComponent(tid)}/hours`).catch(() => ({ hours: [] })), api(`/assist/plan?from=${from}&to=${to}&assistantId=${encodeURIComponent(tid)}&lang=${st.lang}`).catch(() => null),
+            api(`/teachers/${encodeURIComponent(tid)}/changes`).catch(() => ({ changes: [] }))]);
         const views = d.views;
         const asst = plan?.items || [];
         const days = weekDays(from, views);
@@ -392,9 +393,34 @@
         // Ish vaqti shabloni (bir xil soatlar guruhlanadi).
         const grp = new Map(); for (const h of hrs.hours || []) { const k = `${hm(h.start_min)} – ${hm(h.end_min)}${h.trial_open === false ? ' · sinovga yopiq' : ''}`; if (!grp.has(k)) grp.set(k, []); grp.get(k).push(Number(h.weekday)); }
         const offDays = [1, 2, 3, 4, 5, 6, 7].filter(w => !(hrs.hours || []).some(h => Number(h.weekday) === w));
-        const hist = views.flatMap(v => [...v.items.filter(i => i.overrideId).map(i => ({ ...i, date: v.date, what: i.kind === 'leave' ? 'ish vaqtidan chiqardi (ta\'til)' : 'sinovdan yopdi' })),
-            ...(v.opens || []).map(o => ({ ...o, date: v.date, what: 'qo\'shimcha ochdi' })), ...(v.makeupOnly || []).map(o => ({ ...o, date: v.date, what: 'faqat qoplash uchun qoldirdi' }))]);
-        const histU = [...new Map(hist.map(h => [h.overrideId + (h.weekly ? '' : h.date), h])).values()].sort((a, b) => a.date.localeCompare(b.date) || a.start - b.start);
+        // Sarlavha izohi (dizayn): "Asosiy ustoz · Ingliz tili · 8 o'quvchi + 2 yordamchi · ish vaqti Du–Sh (o'quvchilari Du·Ch·Ju va Se·Pa·Sh)".
+        const mine = (typeof getItem === 'function' ? getItem(STORAGE_KEYS.students, []) || [] : []).filter(x => x.teacherId === tid && !x.isStaffDemo && x.status !== 'inactive');
+        const asIds = new Set(mine.map(x => x.assistantTeacherId).filter(Boolean));
+        const wdays = [...new Set((hrs.hours || []).map(h => Number(h.weekday)))].sort((a, b) => a - b);
+        const contig = wdays.length > 2 && wdays.every((w, k) => !k || w === wdays[k - 1] + 1);
+        const pats = [...new Set(mine.map(x => Number(x.lessonDayOfWeek ?? x.schedule?.day)).filter(n => n === 1 || n === 2))].sort().map(n => (n === 1 ? 'Du·Ch·Ju' : 'Se·Pa·Sh'));
+        const subEl = root.querySelector('[data-wsub]');
+        if (subEl) subEl.textContent = [t?.role === 'yordamchi' ? 'Yordamchi ustoz' : 'Asosiy ustoz', langName(st.lang), `${mine.length} o'quvchi${asIds.size ? ` + ${asIds.size} yordamchi` : ''}`,
+            wdays.length ? `ish vaqti ${contig ? `${DAY[wdays[0] - 1]}–${DAY[wdays[wdays.length - 1] - 1]}` : wdays.map(w => DAY[w - 1]).join('·')}${pats.length ? ` (o'quvchilari ${pats.join(' va ')})` : ''}` : 'ish vaqti kiritilmagan',
+            ...(isRop() ? ['vaqtni ochish/yopish faqat adminda'] : [])].join(' · ');
+        // "O'zgarishlar tarixi" — server (ochish/yopish, shablon, sinov band qilish, qoplash), kim · qachon · sabab.
+        const ROLE_L = { admin: 'admin', boshliq: 'boshliq', rop: 'ROP', sales_manager: 'sotuv', teacher: 'ustoz' };
+        const OV_ADD = { open: 'sinov uchun ochdi', close: 'sinovdan yopdi', leave: 'ish vaqtidan chiqardi', makeup_only: 'faqat qoplash uchun qoldirdi' };
+        const OV_DEL = { open: 'ochishni bekor qildi', close: 'qayta ochdi (sinovga)', leave: 'ish vaqtiga qaytardi', makeup_only: 'qayta ochdi (sinovga)' };
+        const TR_ST = { pending: 'ustoz tasdig\'i kutilmoqda', accepted: 'tasdiqlandi', rejected: 'ustoz rad etdi', attended: 'o\'tkazildi', absent: 'lid kelmadi' };
+        const ago = iso => { const x = new Date(new Date(iso).getTime() + 5 * 3600000), dd = x.toISOString().slice(0, 10), tm = x.toISOString().slice(11, 16);
+            return `${dd === today() ? 'bugun' : dd === addDays(today(), -1) ? 'kecha' : dm(dd)} ${tm}`; };
+        const whenTxt = e => e.date ? `${DAY[U().wd(e.date) - 1]} ${dm(e.date)}` : e.weekday ? `har ${DAY_FULL[e.weekday - 1].toLowerCase()}` : '';
+        const tpl = list => { const g = new Map(); for (const h of list || []) { const k = `${hm(h.start_min)}–${hm(h.end_min)}`; if (!g.has(k)) g.set(k, []); g.get(k).push(DAY[h.weekday - 1]); } return [...g.entries()].map(([k, ds]) => `${ds.join('·')} ${k}`).join(', ') || 'bo\'sh'; };
+        const histLi = e => {
+            const who = `<b>${esc(first(e.by) || 'Tizim')}</b>${ROLE_L[e.role] ? ` (${ROLE_L[e.role]})` : ''}`;
+            if (e.type === 'override') return `<li>${who} · ${whenTxt(e)} ${hm(e.start)}–${hm(e.end)} ${(e.action === 'remove' ? OV_DEL : OV_ADD)[e.kind] || e.kind}<small>${ago(e.at)}${e.reason ? ` · "${esc(e.reason)}"` : ''} · ${e.date ? 'faqat shu sana' : 'har hafta'}</small></li>`;
+            if (e.type === 'hours') return `<li>${who} · ish vaqti shablonini o'zgartirdi<small>${ago(e.at)} · ${esc(tpl(e.after))}</small></li>`;
+            if (e.type === 'trial') return `<li>${who} · ${whenTxt(e)} ${hm(e.start)} ${esc(first(e.name) || 'lid')} sinovini band qildi<small>${ago(e.at)} · ${TR_ST[e.state] || esc(e.state || '')}</small></li>`;
+            if (e.type === 'booking') return `<li>${who} · ${whenTxt(e)} ${hm(e.start)} ${esc(first(e.name) || 'o\'quvchi')} ${e.kind === 'makeup' ? 'qoplash darsini qo\'ydi' : 'bir martalik dars qo\'ydi'}<small>${ago(e.at)}${e.status === 'cancelled' ? ' · bekor qilingan' : ''}</small></li>`;
+            return '';
+        };
+        const histHtml = (chg.changes || []).slice(0, 6).map(histLi).join(''); // dizayndagidek oxirgi 6 ta
         const cols = days.map(date => {
             const v = vBy.get(date) || { date, items: [], work: [], free: [], trialFree: [], opens: [], makeupOnly: [] };
             return { date, label: DAY[U().wd(date) - 1], blocks: teacherBlocks(v, range, { clickFree: isFull(), clickOv: isFull(), assist: asst.filter(a => a.date === date) }) };
@@ -412,7 +438,7 @@
               <section class="sc-card"><header class="sv-bh"><h2>Ish vaqti shabloni</h2><span class="sc-grow"></span>${isFull() ? '<button type="button" class="sc-btn sc-btn--sm" data-hours>Tahrirlash</button>' : ''}</header>
                 <dl class="sv-dl3">${[...grp.entries()].map(([k, ws]) => `<dt>${ws.sort().map(w => DAY[w - 1]).join(' · ')}</dt><dd>${esc(k)}</dd>`).join('') || '<dt>—</dt><dd>Ish vaqti kiritilmagan</dd>'}
                   ${offDays.length && (hrs.hours || []).length ? `<dt>${offDays.map(w => DAY_FULL[w - 1]).join(', ')}</dt><dd>dam olish</dd>` : ''}<dt>Sinov uchun</dt><dd>ish vaqtidagi barcha bo'sh joy, istisnolar bilan</dd></dl></section>
-              <section class="sc-card"><header class="sv-bh"><h2>O'zgarishlar tarixi</h2></header><ul class="sv-hist">${histU.map(h => `<li><b>${esc(h.by || 'admin')}</b> · ${h.weekly ? 'har ' + DAY_FULL[U().wd(h.date) - 1].toLowerCase() : `${DAY[U().wd(h.date) - 1]} ${dm(h.date)}`} ${hm(h.start)}–${hm(h.end)} ${h.what}<small>${h.reason ? `"${esc(h.reason)}"` : ''}${h.weekly ? ' · har hafta' : ' · faqat shu sana'}</small></li>`).join('') || '<li class="sc-mt">Bu haftada ochish/yopish yo\'q</li>'}</ul></section>
+              <section class="sc-card"><header class="sv-bh"><h2>O'zgarishlar tarixi</h2></header><ul class="sv-hist">${histHtml || '<li class="sc-mt">Oxirgi 30 kunda o\'zgarish yo\'q</li>'}</ul></section>
             </div></div>`;
         const panel = body.querySelector('[data-panel]');
         const idle = () => {
@@ -426,38 +452,56 @@
         body.querySelectorAll('[data-tr]').forEach(b => b.onclick = () => typeof switchTab === 'function' && switchTab('trial-lessons'));
         if (!isFull()) return;
         const select = el => { body.querySelectorAll('.sv-b.selx').forEach(x => x.classList.remove('selx')); el.classList.add('selx'); };
-        const slotPanel = (date, s, e, mode, ovid, ovKind) => {
+        // Ochish / yopish yozuvlari (shu haftadagi): bosilganda joriy holat, sabab, kim · qachon.
+        const ovAll = new Map();
+        for (const v of views) {
+            for (const i of v.items.filter(x => x.overrideId)) ovAll.set(i.overrideId, { ...i, kind: i.kind });
+            for (const o of v.opens || []) ovAll.set(o.overrideId, { ...o, kind: 'open' });
+            for (const o of v.makeupOnly || []) ovAll.set(o.overrideId, { ...o, kind: 'makeup_only' });
+        }
+        const CUR = { close: 'sinovga yopiq', leave: 'ish vaqtidan chiqarilgan', open: 'admin ochgan', makeup_only: 'faqat qoplash' };
+        // "Tanlangan vaqt" (AdminJadvalUstoz): Nima qilamiz? · Qachonga? · Sabab · Qayta ochish / O'zgarishni saqlash.
+        // Vaqt oralig'i sarlavhadagi soatlarda tahrirlanadi (bo'sh blok uzun bo'lsa, kerakli qismini tanlash uchun).
+        const slotPanel = (date, s, e, mode, ovid) => {
             const wdN = U().wd(date);
-            const existing = ovid ? histU.find(h => h.overrideId === ovid) : null;
-            const OPTS = mode === 'off' ? [['open', 'Qo\'shimcha ochish', 'Shablondan tashqari — sotuv shu vaqtga sinov qo\'ya oladi']]
+            const ex = ovid ? ovAll.get(ovid) : null;
+            const isOpen = mode === 'off' || ex?.kind === 'open';
+            const OPTS = isOpen ? [['open', 'Qo\'shimcha ochish', 'Shablondan tashqari — sotuv shu vaqtga sinov qo\'ya oladi']]
                 : [['close', 'Sinovga yopish', 'Ustoz ishlaydi, lekin sotuv bu vaqtni band qila olmaydi'], ['leave', 'Ish vaqtidan chiqarish', 'Ustoz bu vaqtda ishlamaydi (ta\'til, kasal, shaxsiy)'], ['makeup_only', 'Faqat qoplash uchun', 'Ustoz qoldirilgan darslarni shu yerga qo\'yadi']];
-            const cur = existing ? { close: 'sinovga yopiq', leave: 'ish vaqtidan chiqarilgan', open: 'admin ochgan', makeup_only: 'faqat qoplash' }[ovKind || (mode === 'open' ? 'open' : mode === 'mo' ? 'makeup_only' : 'close')] : mode === 'off' ? 'ish vaqti emas' : mode === 'trial' ? 'sinovga ochiq' : 'ochiq (sinovga yopiq)';
+            const selK = ex?.kind || OPTS[0][0];
+            const a0 = ex ? ex.start : s, b0 = ex ? ex.end : e;
+            const cur = ex ? [CUR[ex.kind], ex.reason, [first(ex.by), ex.at && (() => { const x = new Date(new Date(ex.at).getTime() + 5 * 3600000), dd = x.toISOString().slice(0, 10); return `${dd === today() ? 'bugun' : dm(dd)} ${x.toISOString().slice(11, 16)}`; })()].filter(Boolean).join(', ')].filter(Boolean).join(' · ')
+                : mode === 'off' ? 'ish vaqti emas' : mode === 'trial' ? 'sinovga ochiq' : 'ochiq (sinovga yopiq)';
+            let rep = ex?.weekly ? 'weekly' : 'once', confirm = false;
             panel.innerHTML = `<header class="sv-bh"><h2>Tanlangan vaqt</h2><span class="sc-grow"></span><span class="sc-pill sc-pill--mute">${DAY_FULL[wdN - 1]} · ${dm(date)}</span></header>
-              <div class="sv-ed"><div class="sv-slot"><b>${hm(s)} – ${hm(e)}</b><small>joriy holat: ${esc(cur)}${existing ? ` · ${esc(existing.reason || '')} · ${esc(existing.by || '')}` : ''}</small></div>
-              ${existing ? `<p class="sc-mt">Bu ${existing.weekly ? 'har haftalik' : 'bir martalik'} yozuv. "Qayta ochish" uni bekor qiladi — vaqt shablondagidek bo'ladi.</p>`
-                : `<div class="sv-fl"><span>Nima qilamiz?</span>${OPTS.map(([k, l, h], n) => `<label class="sv-rb"><input type="radio" name="ovk" value="${k}"${n === 0 ? ' checked' : ''}><i></i><span><b>${l}</b><small>${h}</small></span></label>`).join('')}</div>
-                <div class="sv-g2"><label class="sc-fd"><span>Boshlanish</span><input name="from" value="${hm(s)}"></label><label class="sc-fd"><span>Tugash</span><input name="to" value="${hm(e)}"></label></div>
-                <div class="sv-fl"><span>Qachonga?</span><div class="sc-seg sv-full" role="group"><button type="button" data-rep="once" aria-pressed="true">Faqat ${dm(date)}</button><button type="button" data-rep="weekly" aria-pressed="false">Har ${DAY_FULL[wdN - 1].toLowerCase()}</button></div></div>
-                <label class="sc-fd"><span>Sabab (ustoz va sotuv ko'radi)</span><input name="reason" placeholder="Masalan: metodik seminar"></label>`}
-              <div class="sv-btns"><button type="button" class="sc-btn" data-cancel>${existing ? 'Yopish' : 'Bekor'}</button>${existing ? '<button type="button" class="sc-btn sc-btn--pri" data-del>Qayta ochish</button>' : '<button type="button" class="sc-btn sc-btn--pri" data-save>O\'zgarishni saqlash</button>'}</div></div>`;
-            let rep = 'once';
-            panel.querySelectorAll('[data-rep]').forEach(b => b.onclick = () => { rep = b.dataset.rep; panel.querySelectorAll('[data-rep]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); });
-            panel.querySelector('[data-cancel]').onclick = () => { body.querySelectorAll('.sv-b.selx').forEach(x => x.classList.remove('selx')); idle(); };
-            panel.querySelector('[data-del]')?.addEventListener('click', async e => {
-                U().busy(e.target, true);
-                try { await U().api('/overrides/' + encodeURIComponent(ovid), { method: 'DELETE' }); U().toast('Qayta ochildi'); reload(); } catch (err) { U().busy(e.target, false); U().errBox(panel, err.message); }
+              <div class="sv-ed"><div class="sv-slot"><b class="sv-tr"><input inputmode="numeric" maxlength="5" pattern="[0-2][0-9]:[0-5][0-9]" placeholder="00:00" name="from" value="${hm(a0)}" aria-label="Boshlanish"> – <input inputmode="numeric" maxlength="5" pattern="[0-2][0-9]:[0-5][0-9]" placeholder="00:00" name="to" value="${hm(b0)}" aria-label="Tugash"></b><small>joriy holat: ${esc(cur)}${ex?.weekly ? ' · har hafta' : ''}</small></div>
+              <div class="sv-fl"><span>Nima qilamiz?</span>${OPTS.map(([k, l, h]) => `<label class="sv-rb"><input type="radio" name="ovk" value="${k}"${k === selK ? ' checked' : ''}><i></i><span><b>${l}</b><small>${h}</small></span></label>`).join('')}</div>
+              <div class="sv-fl"><span>Qachonga?</span><div class="sc-seg sv-full" role="group" aria-label="Davr"><button type="button" data-rep="once" aria-pressed="${rep === 'once'}">Faqat ${dm(date)}</button><button type="button" data-rep="weekly" aria-pressed="${rep === 'weekly'}">Har ${DAY_FULL[wdN - 1].toLowerCase()}</button></div></div>
+              <label class="sv-fl"><span>Sabab (ustoz va sotuv ko'radi)</span><input class="sv-inp" name="reason" value="${esc(ex?.reason || '')}" placeholder="Masalan: metodik seminar"></label>
+              <div class="sv-btns">${ex ? `<button type="button" class="sc-btn" data-del>${ex.kind === 'open' ? 'Ochishni bekor qilish' : 'Qayta ochish'}</button>` : '<button type="button" class="sc-btn" data-cancel>Bekor</button>'}<button type="button" class="sc-btn sc-btn--pri" data-save>O'zgarishni saqlash</button></div></div>`;
+            const ed = panel.querySelector('.sv-ed'), saveB = panel.querySelector('[data-save]');
+            const reset = () => { if (!confirm) return; confirm = false; ed.querySelector('[data-conf]')?.remove(); saveB.textContent = 'O\'zgarishni saqlash'; saveB.dataset.label = saveB.textContent; };
+            ed.addEventListener('input', reset); ed.addEventListener('change', reset);
+            panel.querySelectorAll('[data-rep]').forEach(b => b.onclick = () => { rep = b.dataset.rep; reset(); panel.querySelectorAll('[data-rep]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); });
+            panel.querySelector('[data-cancel]')?.addEventListener('click', () => { body.querySelectorAll('.sv-b.selx').forEach(x => x.classList.remove('selx')); idle(); });
+            panel.querySelector('[data-del]')?.addEventListener('click', async ev => {
+                U().busy(ev.target, true);
+                try { await U().api('/overrides/' + encodeURIComponent(ovid), { method: 'DELETE' }); U().toast(ex.kind === 'open' ? 'Ochish bekor qilindi' : 'Qayta ochildi — vaqt shablondagidek'); reload(); } catch (err) { U().busy(ev.target, false); U().errBox(ed, err.message); }
             });
-            panel.querySelector('[data-save]')?.addEventListener('click', async e => {
+            saveB.addEventListener('click', async ev => {
                 const v = n => panel.querySelector(`[name=${n}]`).value;
-                U().busy(e.target, true);
-                try { await U().post('/overrides', { teacherId: tid, kind: panel.querySelector('[name=ovk]:checked').value, repeat: rep, date, weekday: wdN, from: v('from'), to: v('to'), reason: v('reason') }); U().toast('Saqlandi'); reload(); }
-                catch (err) { U().busy(e.target, false); U().errBox(panel, err.message); }
+                const payload = { teacherId: tid, kind: panel.querySelector('[name=ovk]:checked').value, repeat: rep, date, weekday: wdN, from: v('from'), to: v('to'), reason: v('reason'), confirm };
+                U().busy(ev.target, true);
+                try {
+                    if (ex) await U().api('/overrides/' + encodeURIComponent(ovid), { method: 'PUT', body: payload }); else await U().post('/overrides', payload);
+                    U().toast('Saqlandi'); reload();
+                } catch (err) { U().busy(ev.target, false); if (SS()._.showConflicts(ed, err, ev.target)) confirm = true; else U().errBox(ed, err.message); }
             });
             panel.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
         };
-        body.querySelectorAll('.sv-dl [data-free]').forEach(b => b.onclick = () => { const [s, e, kind] = b.dataset.free.split('|'); select(b); slotPanel(b.closest('[data-date]').dataset.date, Number(s), Number(e), kind, b.dataset.ovid, kind === 'open' ? 'open' : kind === 'mo' ? 'makeup_only' : null); });
+        body.querySelectorAll('.sv-dl [data-free]').forEach(b => b.onclick = () => { const [s, e, kind] = b.dataset.free.split('|'); select(b); slotPanel(b.closest('[data-date]').dataset.date, Number(s), Number(e), kind, b.dataset.ovid); });
         body.querySelectorAll('.sv-dl [data-off]').forEach(b => b.onclick = () => { const [s, e] = b.dataset.off.split('|').map(Number); select(b); slotPanel(b.closest('[data-date]').dataset.date, Math.max(s, 7 * 60), Math.min(e, Math.max(s, 7 * 60) + 60), 'off'); });
-        body.querySelectorAll('.sv-dl [data-ovk]').forEach(b => b.onclick = () => { const it = items.find(i => i.overrideId === b.dataset.ovid); select(b); slotPanel(b.closest('[data-date]').dataset.date, it?.start ?? 0, it?.end ?? 0, 'close', b.dataset.ovid, b.dataset.ovk); });
+        body.querySelectorAll('.sv-dl [data-ovk]').forEach(b => b.onclick = () => { const it = items.find(i => i.overrideId === b.dataset.ovid); select(b); slotPanel(b.closest('[data-date]').dataset.date, it?.start ?? 0, it?.end ?? 0, 'close', b.dataset.ovid); });
     }
 
     // ═══ Ustoz: Kun / Hafta / Oy ═══════════════════════════════════════════════
