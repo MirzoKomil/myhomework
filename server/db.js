@@ -1678,6 +1678,10 @@ async function getTeacherTrialLessons(actor) {
     return trialLessons.listTrialLessons(pool, actor, rowToLead);
 }
 
+async function getTeacherTrialHistory(actor, days) {
+    return trialLessons.listTrialHistory(pool, actor, rowToLead, days);
+}
+
 async function saveTeacherTrialLesson(actor, leadId, payload) {
     let saved;
     await tx(async client => {
@@ -4713,7 +4717,7 @@ module.exports = {
     pool, DATA_DIR, tx,
     getFullState, getTeacherScopedState, getLeads, getDeletedLeads, getLeadById, getSalesManagerIdForUser, setSalesManagerUserLink,
     insertLead, upsertLead, upsertLeadWithClient, insertRestoredLead, softDeleteLead, restoreLead, patchState, recordTeacherAttendance,
-    getTeacherTrialLessons, saveTeacherTrialLesson,
+    getTeacherTrialLessons, getTeacherTrialHistory, saveTeacherTrialLesson,
     botTrialAction: (client,actor,leadId,payload) => trialLessons.updateTrialLesson(client,actor,leadId,payload,rowToLead,appendLeadAudit),
     findUserByEmail, findUserById, listUsersByRoles, createUser, createHrUserAccount, updateUser, resetHrUserAccount, publicUser,
     getHrEmployeesData, getHrEmployeeById, getHrEmployeeByLogin, setHrEmployeeLogin, getMobileContentData, findStudentByLogin, findDemoStudentByEmployeeId, getStudentPublicId, getDemoStudentGrades, submitDemoStudentTeacherRating,

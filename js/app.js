@@ -250,8 +250,9 @@ function applyRoleBasedAccess(user) {
             el.style.display = '';
         });
         // The teacher inbox has an ownership-scoped API, not general CRM access.
+        // ROP uchun shu punkt — "Sinov darslari · nazorat" (RopSinov, faqat o'z tili).
         const trialMenu = document.getElementById('menuItemTrialLessons');
-        if (trialMenu) trialMenu.style.display = 'none';
+        if (trialMenu) trialMenu.style.display = role === 'rop' ? '' : 'none';
         // 16-ish / 1-ish: ROP uchun Akademik bo'lim, Moliya, HR Bo'limi va
         // Analitika yashiriladi. ("Moliya" avval alohida
         // getElementById('menuGroupMoliya') orqali yashirilardi, lekin
@@ -11860,6 +11861,17 @@ function renderTeacherTrialRows(lessons) {
 
 async function renderTeacherTrialLessons(refresh = false) {
     const container = document.getElementById('teacherTrialLessonsContent');
+    // Yangi dizayn (js/trialUI.js): ustoz — UstozSinov, ROP — RopSinov (sinov nazorati).
+    if (container && window.trialUI) {
+        const role = getCurrentUser()?.role;
+        if (role === 'rop') { window.trialUI.renderRop(container); return; }
+        if (role !== 'teacher') return;
+        await window.trialUI.renderTeacher(container, { refresh });
+        if (!_teacherTrialPollTimer && document.getElementById('tab-trial-lessons')?.classList.contains('active')) {
+            _teacherTrialPollTimer = setInterval(() => renderTeacherTrialLessons(true), 30000);
+        }
+        return;
+    }
     if (!container || getCurrentUser()?.role !== 'teacher' || _teacherTrialSaving) return;
     const generation = ++_teacherTrialLoadGeneration;
     if (!refresh) container.innerHTML = '<p class="text-muted">Sinov darslari yuklanmoqda…</p>';
@@ -11940,6 +11952,8 @@ function openTeacherTrialOutcome(id) {
 function renderTpTrial() {
     const container = document.getElementById('tpTrial');
     if (!container) return;
+    // Yangi dizayn (Sinov): KPI, holat filtrlari, "Ustoz biriktirish" — js/trialUI.js.
+    if (window.trialUI) { window.trialUI.renderAdmin(container, { lang: _teachersLang }); return; }
     const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
     const allLeads = [...(leads.english||[]).map(l=>({...l,_lang:'english'})), ...(leads.russian||[]).map(l=>({...l,_lang:'russian'}))];
     const trialLeads = allLeads.filter(l => l.status === 'sinov-darsida' && l._lang === _teachersLang);
