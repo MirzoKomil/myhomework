@@ -8883,6 +8883,7 @@ function kbxDarkCard(o) {
         ${o.sub ? `<span class="kbx-dsub">${escapeHtml(o.sub)}</span>` : ''}
         ${(o.chips || []).length ? `<div class="kbx-dchips">${o.chips.map(c => `<span class="kbx-dchip${c.cls ? ' is-' + c.cls : ''}">${escapeHtml(c.t)}</span>`).join('')}</div>` : ''}
         ${o.note ? `<p class="kbx-note">${escapeHtml(o.note)}</p>` : ''}
+        ${o.html || ''}
         ${o.primary || o.secondary ? `<div class="kbx-next-actions">${btn(o.primary, 'kbx-call')}${btn(o.secondary, 'kbx-ghost')}</div>` : ''}</section>`;
 }
 function kbxPace(sales, target, now) {
@@ -9393,7 +9394,7 @@ function teacherHomeStats(user, now = new Date()) {
     const oldAssist = month < ASSIST_CONTACTS_FROM && own && helped.length ? kpi({ ...own, type: 'yordamchi' }, getItem(STORAGE_KEYS.assistantAttendance, {}), helped) : null;
     const todayList = today.map(s => {
         const start = toMin(s.lessonTime), dur = Number(s.lessonDuration) || 15;
-        return { name: s.name || "Oʻquvchi", group: s.group || '', time: s.lessonTime, start, dur, marked: present(s.id, day),
+        return { id: s.id, name: s.name || "Oʻquvchi", group: s.group || '', time: s.lessonTime, start, dur, marked: present(s.id, day),
             state: start == null ? 'wait' : nowMin >= start + dur ? 'done' : nowMin >= start ? 'now' : 'wait' };
     }).sort((a, b) => (a.start ?? 9999) - (b.start ?? 9999));
     return {
@@ -9471,11 +9472,16 @@ function renderTeacherHome(user, now = new Date()) {
                 art: { img: 'images/kobalt-teacher.webp', label: 'Shu oy', value: `${s.came} ta dars`, small: 'oʻtildi' }
             });
             const nx = s.todayList.find(l => l.state === 'now') || s.todayList.find(l => l.state === 'wait');
+            // "Keyingi dars": dars mazmuni (js/lessonStart.js to'ldiradi) va "Darsni boshlash".
+            const nowM = now.getHours() * 60 + now.getMinutes();
+            const doneN = s.todayList.filter(l => l.state === 'done' || l.marked).length;
             const dark = nx
-                ? kbxDarkCard({ id: 'kbxThAct', eyebrow: nx.state === 'now' ? `HOZIR DARSDA · ${Math.max(1, nx.start + nx.dur - (now.getHours() * 60 + now.getMinutes()))} DAQ QOLDI` : `KEYINGI DARS · ${nx.time}`,
+                ? kbxDarkCard({ id: 'kbxThAct', eyebrow: nx.state === 'now' ? `HOZIR DARSDA · ${Math.max(1, nx.start + nx.dur - nowM)} DAQ QOLDI` : `KEYINGI DARS · ${nx.time}${nx.start != null && nx.start - nowM <= 180 ? ` · ${Math.max(1, nx.start - nowM)} DAQIQADAN KEYIN` : ''}`,
                     title: nx.group || nx.name, sub: `${nx.time} · ${nx.dur} daq${nx.group ? ` · ${s.todayList.filter(l => l.group === nx.group && l.time === nx.time).length} oʻquvchi` : ''}`,
-                    chips: [s.unmarked ? { t: `${s.unmarked} ta dars belgilanmagan`, cls: 'red' } : null, { t: `bugun ${s.todayCount} dars` }].filter(Boolean),
-                    primary: { label: 'Davomat', attrs: 'data-thx-go="teachers-section"' }, secondary: { label: 'Jadval', attrs: 'data-thx-go="timetable"' } })
+                    chips: s.unmarked ? [{ t: `${s.unmarked} ta dars belgilanmagan`, cls: 'red' }] : [],
+                    html: `<div class="kbx-dchips" data-thx-lesson hidden></div><div class="kbx-dbar"><span>Bugun</span><span class="kbx-dtrk"><i style="width:${s.todayList.length ? Math.round(doneN / s.todayList.length * 100) : 0}%"></i></span><span>${doneN} / ${s.todayList.length} dars oʻtdi</span></div>`,
+                    primary: window.LessonStart ? { label: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M7 4l13 8-13 8z"/></svg> Darsni boshlash', attrs: `data-thx-start="${escapeHtml(nx.id)}" data-name="${escapeHtml(nx.name)}" data-dur="${nx.dur}"` } : { label: 'Davomat', attrs: 'data-thx-go="teachers-section"' },
+                    secondary: { label: 'Jadval', attrs: 'data-thx-go="timetable"' } })
                 : kbxDarkCard({ id: 'kbxThAct', eyebrow: 'BUGUNGI DARSLAR', title: s.todayCount ? 'Darslar tugadi' : 'Bugun dars yoʻq',
                     sub: s.unmarked ? `${s.unmarked} ta dars davomati belgilanmagan` : 'Davomat toʻliq belgilangan',
                     chips: s.unmarked ? [{ t: 'Belgilash kerak', cls: 'red' }] : [],
@@ -9531,6 +9537,7 @@ function renderDashboardOverview(args) {
         container.querySelectorAll('[data-thx-go]').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.thxGo)));
         container.querySelectorAll('[data-thx-guide]').forEach(btn => btn.addEventListener('click', () => { switchTab('guides'); setTimeout(() => { try { openMyGuideArticle(btn.dataset.thxGuide); } catch (e) { /* ro'yxat ochiq qoladi */ } }, 50); }));
         bindTeacherHomeToday(container, currentUser);
+        window.LessonStart?.decorateHome?.(container, currentUser);
         _loadTeacherHomeRating(container);
         window.schoolTeacher?.homeExtras?.(container, currentUser);
         return;
@@ -11824,6 +11831,7 @@ function renderTeachersSection() {
 }
 
 function switchTeachersSection(section) {
+    if (section !== 'whiteboard') window.Whiteboard?.flush?.();
     _tabContext.teachersSection = section;
     document.querySelectorAll('[data-teachers-section]').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.teachersSection === section);
@@ -12254,6 +12262,8 @@ function renderTpTextbookSection(secId, { readOnly = false } = {}) {
 function renderTpWhiteboard() {
     const container = document.getElementById('tpWhiteboard');
     if (!container) return;
+    // Darsga bog'langan doskalar, shablonlar, avtosaqlash — js/whiteboard.js.
+    if (window.Whiteboard) { window.Whiteboard.mount(container, { lang: _teachersLang }); return; }
 
     container.innerHTML = `
     <div style="padding:20px">

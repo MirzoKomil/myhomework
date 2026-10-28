@@ -19,25 +19,44 @@
     const safeUrl = u => (/^(https:\/\/|\/(?!\/))/i.test(String(u || '').trim()) ? String(u).trim() : '');
     const isLocalFile = u => /^\/uploads\//.test(String(u || ''));
 
+    // Ustoz/yordamchi: 72 dars · Kitoblar · Qo'shimcha materiallar (o'quvchilar
+    // holati — "O'quvchini tekshirish" bo'limida va dars sahifasidagi progress
+    // qatorida). Admin/boshliq/ROP: + O'quvchilar progressi.
     const VIEWS = [
         { id: 'lessons', label: '72 dars' },
-        { id: 'students', label: "O'quvchilar progressi" },
-        { id: 'book', label: 'Kitob (PDF)' },
-        { id: 'guide', label: "Teacher's book" },
+        { id: 'students', label: "O'quvchilar progressi", staff: true },
+        { id: 'books', label: 'Kitoblar' },
         { id: 'extra', label: "Qo'shimcha materiallar" },
     ];
+    const OLD_VIEW = { book: 'books', guide: 'books' };
     const TABS = [
-        { id: 'plan', label: 'Dars rejasi' },
-        { id: 'live', label: 'Jonli dars slaydlari', kind: 'live_slides' },
-        { id: 'video', label: 'Videodars', kind: 'video_slides' },
-        { id: 'grammar', label: 'Grammatika', kind: 'grammar_slides' },
+        { id: 'plan', label: 'Reja' },
+        { id: 'slides', label: 'Slaydlar' },
+        { id: 'video', label: 'Videodars' },
+        { id: 'grammar', label: 'Grammatika' },
         { id: 'words', label: "So'zlar" },
-        { id: 'dialogs', label: 'Audio dialoglar' },
-        { id: 'homework', label: 'Uy vazifasi' },
-        { id: 'class', label: "O'quvchilar" },
+        { id: 'dialogs', label: 'Audio' },
+        { id: 'homework', label: 'Vazifa' },
     ];
+    const OLD_TAB = { live: 'slides' };
+    const ICO = {
+        book: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 016.5 17H20V3H6.5A2.5 2.5 0 004 5.5z"/></svg>',
+        tbook: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>',
+        assist: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0114 0M19 8v6M16 11h6"/></svg>',
+        print: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V2h12v7"/><rect x="6" y="14" width="12" height="8"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/></svg>',
+        screen: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>',
+        play: '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M7 4l13 8-13 8z"/></svg>',
+        warn: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg>',
+        search: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>',
+        upload: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 21h14"/></svg>',
+        check: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>',
+        prev: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>',
+        next: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>',
+        plus: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
+    };
+    // Ustoz kitobi orasida yordamchi qo'llanmasi (ommaviy yuklashda "YORDAMCHI" sarlavhali PDF).
+    const isAssistGuide = m => /yordamchi|assistant/i.test(`${m.title} ${m.fileName || ''}`);
     const KIND_ICON = { live_slides: '🎥', video_slides: '▶️', grammar_slides: '📐', lesson_plan: '🗒', teacher_guide: '🧑‍🏫', extra: '📎', book: '📖', teacher_book: '📘', methodology: '🧭' };
-    const DOT_KINDS = [['live_slides', 'Jonli dars slaydlari'], ['video_slides', 'Videodars slaydlari'], ['grammar_slides', 'Grammatika slaydlari'], ['teacher_guide', "Ustoz qo'llanmasi"]];
     const HW_KIND = { matching: 'Moslashtirish', fillBlank: "Bo'sh joy", multipleChoice: 'Test', sentenceBuild: 'Gap tuzish', reading: "O'qish va tarjima", creative: 'Ijodiy', record: 'Ovoz yozish', roleplay: 'Rolli o\'yin' };
     const SECTION_LABEL = RULES.SECTIONS || {};
 
@@ -45,7 +64,11 @@
         el: null, ctx: null, lang: 'english', view: 'lessons', hub: {}, lessonCache: {}, selected: {},
         tab: 'plan', search: '', filter: 'all', students: {}, studentDetail: {}, openStudent: null,
         studentSort: 'attention', duration: null, bookState: {}, reader: null, group: '', nearOnly: true, loadedAt: {},
+        bookKind: 'book', extraFilter: 'all', extraPage: 0, today: null,
     };
+    const isStaffView = () => S.hub[S.lang]?.role && S.hub[S.lang].role !== 'teacher';
+    const isAssistant = () => !isStaffView() && !!window.LessonStart?.isPureAssistant?.();
+    const views = () => VIEWS.filter(v => !v.staff || isStaffView());
     const fresh = key => S.loadedAt[key] && Date.now() - S.loadedAt[key] < CACHE_MS;
     const stamp = key => { S.loadedAt[key] = Date.now(); };
     function refreshAll() {
@@ -56,8 +79,9 @@
     function loadPrefs() {
         try {
             const p = JSON.parse(localStorage.getItem('mh_lesson_hub') || '{}');
-            if (p.view) S.view = p.view;
-            if (p.tab) S.tab = p.tab;
+            if (p.view) S.view = OLD_VIEW[p.view] || p.view;
+            if (p.tab) S.tab = OLD_TAB[p.tab] || p.tab;
+            if (p.bookKind) S.bookKind = p.bookKind;
             if (p.selected) S.selected = p.selected;
             if (p.duration) S.duration = p.duration;
             if (typeof p.group === 'string') S.group = p.group;
@@ -65,7 +89,7 @@
         } catch { /* maxfiy rejim */ }
     }
     function savePrefs() {
-        try { localStorage.setItem('mh_lesson_hub', JSON.stringify({ view: S.view, tab: S.tab, selected: S.selected, duration: S.duration, group: S.group, nearOnly: S.nearOnly })); } catch { /* */ }
+        try { localStorage.setItem('mh_lesson_hub', JSON.stringify({ view: S.view, tab: S.tab, selected: S.selected, duration: S.duration, group: S.group, nearOnly: S.nearOnly, bookKind: S.bookKind })); } catch { /* */ }
     }
 
     // ── Kirish nuqtasi ──────────────────────────────────────────────────────
@@ -104,18 +128,24 @@
         const el = S.el;
         if (!el) return;
         const hub = S.hub[S.lang];
+        if (hub && !views().some(v => v.id === S.view)) S.view = 'lessons';
+        const meta = !hub ? 'Yuklanmoqda…' : isStaffView() ? `72 dars · ${hub.studentCount} o'quvchi`
+            : isAssistant() ? `Siz yordam beradigan o'quvchilar: ${hub.studentCount}` : `Sizning o'quvchilaringiz: ${hub.studentCount}`;
         el.innerHTML = `
         <div class="lh">
+            <div class="lh-banner-slot" data-lh-banner hidden></div>
             <div class="lh-top">
                 <div class="lh-views" role="tablist" aria-label="Darslik bo'limlari">
-                    ${VIEWS.map(v => `<button type="button" role="tab" tabindex="${S.view === v.id ? 0 : -1}" class="lh-view${S.view === v.id ? ' is-on' : ''}" aria-selected="${S.view === v.id}" data-view="${v.id}">${esc(v.label)}</button>`).join('')}
+                    ${(hub ? views() : VIEWS.filter(v => !v.staff)).map(v => `<button type="button" role="tab" tabindex="${S.view === v.id ? 0 : -1}" class="lh-view${S.view === v.id ? ' is-on' : ''}" aria-selected="${S.view === v.id}" data-view="${v.id}">${esc(v.label)}</button>`).join('')}
                 </div>
-                <div class="lh-meta">${hub ? `${esc(LANG_LABEL[hub.lang])} · ${esc(hub.course?.name || 'kurs')} · 72 dars · ${hub.studentCount} o'quvchi` : 'Yuklanmoqda…'}
-                    ${hub?.canEdit && window.LessonImport ? '<button type="button" class="lh-btn" data-lh-import>📥 Ommaviy yuklash</button>' : ''}
+                <div class="lh-meta"><span>${esc(meta)}</span>
+                    ${hub?.canEdit && window.LessonImport ? `<button type="button" class="lh-btn" data-lh-import>${ICO.upload} Ommaviy yuklash</button>` : ''}
                     <button type="button" class="lh-btn lh-icon" data-lh-refresh title="Ma'lumotlarni yangilash" aria-label="Ma'lumotlarni yangilash">⟳</button></div>
             </div>
             <div class="lh-main" id="lhMain">${hub ? '' : skeleton()}</div>
+            <div id="lhStudent"></div>
         </div>`;
+        if (hub) drawBanner(el.querySelector('[data-lh-banner]'));
         el.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => {
             S.view = b.dataset.view; savePrefs(); render();
         }));
@@ -130,9 +160,40 @@
         const main = el.querySelector('#lhMain');
         if (S.view === 'lessons') renderLessonsView(main);
         else if (S.view === 'students') renderStudentsView(main);
-        else if (S.view === 'book') renderBookView(main);
-        else if (S.view === 'guide') renderGuideView(main);
+        else if (S.view === 'books') renderBooksView(main);
         else renderExtraView(main);
+    }
+
+    // ── "Bugun · Darsni boshlash" banneri (faqat ustoz va yordamchi) ────────
+    async function drawBanner(slot) {
+        const LS = window.LessonStart;
+        if (!slot || !LS || isStaffView()) return;
+        let t;
+        try { t = await LS.loadToday(); } catch { return; }
+        S.today = t;
+        if (!t?.next || !slot.isConnected) return;
+        const n = t.next;
+        const name = n.studentName || n.studentId;
+        let facts = null;
+        if (n.lessonNo) { try { facts = LS.lessonFacts(await LS.loadLesson(n.lessonNo, n.lang || S.lang)); } catch { /* */ } }
+        if (!slot.isConnected) return;
+        const when = `BUGUN · ${LS.hm(n.start)}`;
+        if (t.assistant) {
+            const desc = [facts?.topic || (facts && facts.name !== `${facts.no}-dars` ? facts.name : ''), facts?.teacherBook, n.lessonNo ? `${n.lessonNo}-dars xatolari` : ''].filter(Boolean).join(' · ');
+            slot.innerHTML = `<div class="lh-banner"><span class="lh-bn-when">${esc(when)}</span>
+                <b class="lh-bn-t">${esc(name)} · aloqa${n.lessonNo ? ` · ${n.lessonNo}-dars mavzusi` : ''}</b>
+                ${desc ? `<span class="lh-bn-d">${esc(desc)}</span>` : ''}
+                <button type="button" class="lh-bn-btn" data-bn-student>O'quvchi natijasi</button></div>`;
+            slot.querySelector('[data-bn-student]').onclick = () => openStudent(n.studentId);
+        } else {
+            const desc = `Slaydlar, doska va ${facts?.teacherBook ? facts.teacherBook.replace('Ustoz kitobi', 'ustoz kitobi') : 'dars rejasi'} bitta oynada`;
+            slot.innerHTML = `<div class="lh-banner"><span class="lh-bn-when">${esc(when)}</span>
+                <b class="lh-bn-t">${esc(name)}${n.lessonNo ? ` · ${n.lessonNo}-dars · ${n.lessonNo % 2 === 0 ? 'jonli' : 'video'}` : ''}</b>
+                <span class="lh-bn-d">${esc(desc)}</span>
+                <button type="button" class="lh-bn-btn" data-bn-start>${ICO.play} Darsni boshlash</button></div>`;
+            slot.querySelector('[data-bn-start]').onclick = () => LS.start({ studentId: n.studentId, studentName: name, lessonNo: n.lessonNo, lessonId: n.lessonId, lang: n.lang || S.lang, duration: n.end - n.start });
+        }
+        slot.hidden = false;
     }
 
     // Yorliqlar: ←/→, Home/End bilan o'tish (WAI-ARIA tabs).
@@ -157,13 +218,16 @@
     // ── 72 dars ─────────────────────────────────────────────────────────────
     function renderLessonsView(main) {
         const hub = S.hub[S.lang];
+        const staff = isStaffView();
+        const gaps = hub.syllabus.filter(l => !lessonReady(l)).length;
+        const chips = [['all', 'Hammasi'], ['live', 'Jonli'], ['video', 'Video'], staff ? ['missing', `Kamchilik bor · ${gaps}`] : ['missing', 'Slaydsiz']];
         main.innerHTML = `
         <div class="lh-split">
             <aside class="lh-list" aria-label="72 dars ro'yxati">
                 <div class="lh-list-tools">
-                    <input type="search" class="lh-input" placeholder="Dars, mavzu yoki raqam…" value="${esc(S.search)}" aria-label="Darslarni qidirish">
+                    <label class="lh-search">${ICO.search}<input type="search" class="lh-input" placeholder="Dars, mavzu yoki raqam" value="${esc(S.search)}" aria-label="Darslarni qidirish"></label>
                     <div class="lh-chips" role="group" aria-label="Dars turi">
-                        ${[['all', 'Hammasi'], ['live', 'Jonli'], ['video', 'Video'], ['missing', 'Slaydsiz']].map(([k, l]) => `<button type="button" class="lh-chip${S.filter === k ? ' is-on' : ''}" data-filter="${k}">${l}</button>`).join('')}
+                        ${chips.map(([k, l]) => `<button type="button" class="lh-chip${S.filter === k ? ' is-on' : ''}" data-filter="${k}" aria-pressed="${S.filter === k}">${esc(l)}</button>`).join('')}
                     </div>
                 </div>
                 <div class="lh-items"></div>
@@ -176,22 +240,30 @@
         main.querySelector('.lh-input').addEventListener('input', e => { S.search = e.target.value; drawList(); });
         main.querySelectorAll('[data-filter]').forEach(b => b.addEventListener('click', () => {
             S.filter = b.dataset.filter;
-            main.querySelectorAll('[data-filter]').forEach(x => x.classList.toggle('is-on', x === b));
+            main.querySelectorAll('[data-filter]').forEach(x => { x.classList.toggle('is-on', x === b); x.setAttribute('aria-pressed', String(x === b)); });
             drawList();
         }));
         openLesson(S.selected[S.lang] || 1, { scroll: true });
     }
 
+    // Dars tayyor: ilovada bor, slaydlar (jonli — PDF, video — PDF yoki ilova slaydlari) va uy vazifasi bor.
+    const hasSlides = l => (l.type === 'live' ? l.materials.includes('live_slides') : (l.materials.includes('video_slides') || l.counts.slides > 0));
+    function lessonGaps(l) {
+        const g = [];
+        if (!l.exists) g.push("ilovada yo'q");
+        if (!hasSlides(l)) g.push('slayd yo\'q');
+        if (!l.counts.homework) g.push("vazifa yo'q");
+        return g;
+    }
+    const lessonReady = l => !lessonGaps(l).length;
+
     function lessonListHtml(hub) {
         const q = plain(S.search).trim().toLowerCase();
+        const staff = isStaffView();
         const rows = hub.syllabus.filter(l => {
             if (S.filter === 'live' && l.type !== 'live') return false;
             if (S.filter === 'video' && l.type !== 'video') return false;
-            if (S.filter === 'missing') {
-                const hasSlides = l.type === 'live' ? l.materials.includes('live_slides')
-                    : (l.materials.includes('video_slides') || l.counts.slides > 0);
-                if (hasSlides) return false;
-            }
+            if (S.filter === 'missing' && (staff ? lessonReady(l) : hasSlides(l))) return false;
             if (!q) return true;
             return String(l.no) === q || plain(`${l.name} ${l.topic} ${l.cando}`).toLowerCase().includes(q);
         });
@@ -203,19 +275,17 @@
                 html += `<div class="lh-month">${month}-oy · ${(month - 1) * 24 + 1}–${month * 24}-darslar</div>`;
             }
             const sel = S.selected[S.lang] === l.no;
-            const dots = DOT_KINDS.map(([k, label]) => {
-                const has = l.materials.includes(k) || (k === 'video_slides' && l.counts.slides > 0);
-                return `<i class="lh-dot${has ? ' is-on' : ''}" title="${esc(label)}: ${has ? 'bor' : "yo'q"}"></i>`;
-            }).join('');
+            const gaps = staff ? lessonGaps(l) : [];
+            const nm = plain(l.name), extra = nm && nm !== `${l.no}-dars` ? nm : plain(l.topic || '');
             html += `<button type="button" class="lh-item${sel ? ' is-on' : ''}" data-no="${l.no}" aria-current="${sel}">
-                <span class="lh-num ${l.type}">${l.no}</span>
+                <span class="lh-num">${l.no}</span>
                 <span class="lh-item-body">
-                    <span class="lh-item-name">${esc(plain(l.name))}</span>
-                    <span class="lh-item-meta"><span class="lh-type ${l.type}">${l.type === 'live' ? 'Jonli' : 'Video'}</span>${l.topic ? `<span>${esc(plain(l.topic))}</span>` : ''}</span>
+                    <span class="lh-item-name">${l.no}-dars</span>
+                    <span class="lh-item-meta"><span class="lh-type ${l.type}">${l.type === 'live' ? 'Jonli' : 'Video'}</span>${extra ? `<span>${esc(extra)}</span>` : ''}</span>
                 </span>
                 <span class="lh-item-side">
-                    <span class="lh-dots" aria-hidden="true">${dots}</span>
-                    ${l.studentsHere ? `<span class="lh-here" title="Shu darsda turgan o'quvchilar">👥 ${l.studentsHere}</span>` : ''}
+                    ${staff ? `<span class="lh-ready ${gaps.length ? 'is-gap' : 'is-ok'}" title="${esc(gaps.join(', ') || 'Slaydlar, so\'zlar va vazifa bor')}">${gaps.length ? 'Kamchilik' : 'Tayyor'}</span>` : ''}
+                    ${l.studentsHere ? `<span class="lh-here" title="Shu darsda turgan o'quvchilar">${l.studentsHere} o'q.</span>` : ''}
                 </span>
             </button>`;
         }
@@ -252,87 +322,113 @@
     function renderLesson(box, data) {
         const L = data.lesson;
         const book = data.book;
+        const staff = isStaffView();
+        const appSlides = L.slides.length;
         const tabCount = {
-            live: lessonMaterials(data, 'live_slides').length,
-            video: lessonMaterials(data, 'video_slides').length + (L.slides.length ? 1 : 0) + (L.videoUrl ? 1 : 0),
+            slides: lessonMaterials(data, 'live_slides').length + lessonMaterials(data, 'video_slides').length + appSlides,
+            video: L.videoUrl ? 1 : 0,
             grammar: lessonMaterials(data, 'grammar_slides').length + (L.konspekt ? 1 : 0),
             words: L.vocabulary.length, dialogs: L.audioDialogs.length + (L.dialog ? 1 : 0) + (L.text ? 1 : 0),
-            homework: L.homework.length, class: data.classStats.students.length,
+            homework: L.homework.length,
         };
-        if (!TABS.some(t => t.id === S.tab)) S.tab = 'plan';
+        if (S.tab !== 'class' && !TABS.some(t => t.id === S.tab)) S.tab = 'plan';
+        // Shu dars bo'yicha o'quvchilar: tugatgan / jarayonda.
+        const cls = data.classStats.students.filter(r => !r.frozen);
+        const done = cls.filter(r => r.percent >= 100 || r.reached > L.no).length;
+        const inWork = cls.filter(r => r.reached === L.no && r.percent < 100).length;
+        const progSub = !cls.length ? '' : done === cls.length ? "hammasi o'tgan · ko'rish" : inWork ? `${inWork} tasi jarayonda · ko'rish` : `${cls.length - done} tasi hali yetib kelmagan · ko'rish`;
+        const who = staff ? "o'quvchi" : "o'quvchingiz";
+        const tb = (data.guides || []).find(g => g.kind === 'teacher_book' && !isAssistGuide(g));
+        const ab = (data.guides || []).find(g => g.kind === 'teacher_book' && isAssistGuide(g));
+        const other = (data.guides || []).filter(g => g !== tb && g !== ab);
+        const resCard = (attrs, icon, label, sub, off) => `<button type="button" class="lh-res${off ? ' is-off' : ''}" ${attrs}${off ? ' aria-disabled="true"' : ''}><span class="lh-res-ic">${icon}</span><span><b>${esc(label)}</b><small>${esc(sub)}</small></span></button>`;
+        const live = L.type === 'live';
+        const canStart = live && !staff && !isAssistant();
+        const nm = plain(L.name);
         box.innerHTML = `
         <header class="lh-head">
             <div class="lh-head-row">
-                <div>
-                    <div class="lh-kicker"><span class="lh-type ${L.type}">${L.type === 'live' ? 'Jonli dars' : 'Videodars'}</span> ${L.no}-dars · ${L.month}-oy${L.active ? '' : ' · <span class="lh-warn">ilovada yopiq</span>'}</div>
-                    <h2 class="lh-title">${esc(plain(L.name))}</h2>
-                    ${L.titleRu ? `<div class="lh-sub">${esc(L.titleRu)}</div>` : ''}
-                </div>
+                <h2 class="lh-title" id="lhLessonTitle">${L.no}-dars</h2>
+                <span class="lh-type lh-type--lg ${L.type}">${live ? 'Jonli dars · ustoz bilan' : 'Videodars · mustaqil'}</span>
+                <span class="lh-kicker">${L.month}-oy${book ? ` · ${esc(bookShort(book))}` : ''}${L.active ? '' : ' · <span class="lh-warn">ilovada yopiq</span>'}</span>
                 <div class="lh-nav">
-                    <button type="button" class="lh-btn" data-go="-1" ${L.no <= 1 ? 'disabled' : ''} aria-label="Oldingi dars">‹</button>
-                    <button type="button" class="lh-btn" data-go="1" ${L.no >= 72 ? 'disabled' : ''} aria-label="Keyingi dars">›</button>
+                    <button type="button" class="lh-btn lh-sq" data-go="-1" ${L.no <= 1 ? 'disabled' : ''} aria-label="Oldingi dars">${ICO.prev}</button>
+                    <button type="button" class="lh-btn lh-sq" data-go="1" ${L.no >= 72 ? 'disabled' : ''} aria-label="Keyingi dars">${ICO.next}</button>
                 </div>
             </div>
+            ${nm && nm !== `${L.no}-dars` ? `<div class="lh-sub">${esc(nm)}${L.titleRu ? ` · ${esc(L.titleRu)}` : ''}</div>` : ''}
+            <div class="lh-acts">
+                ${canStart ? `<button type="button" class="lh-btn lh-primary lh-lg" data-act="present">${ICO.play} Darsni boshlash</button><span class="lh-pill-info">Slaydlar, doska va dars rejasi bitta oynada</span>`
+                    : live ? `<button type="button" class="lh-btn lh-primary lh-lg" data-act="present">${ICO.screen} Slaydlarni ko'rsatish</button><span class="lh-pill-info">${isAssistant() ? "Faqat ko'rish va ko'rsatish" : 'Jonli dars — ustoz bilan'}</span>`
+                    : `<button type="button" class="lh-btn lh-primary lh-lg" data-act="present">${ICO.screen} O'quvchi ko'rinishida ochish</button><span class="lh-pill-info">Video dars — ustoz ishtirokisiz</span>`}
+                ${cls.length ? `<button type="button" class="lh-prog" data-act="class" aria-pressed="${S.tab === 'class'}"><span><b>${done} / ${cls.length} ${who} tugatdi</b><small>${esc(progSub)}</small></span>
+                    <span class="lh-prog-trk"><i style="width:${Math.round(done / cls.length * 100)}%"></i></span>${ICO.next}</button>` : ''}
+            </div>
             ${L.cando ? `<p class="lh-goal"><b>Dars maqsadi:</b> ${esc(L.cando)}</p>` : ''}
-            <div class="lh-actions">
-                <button type="button" class="lh-btn lh-primary" data-act="present">▶ Darsni boshlash</button>
-                <button type="button" class="lh-btn" data-act="board">✏️ Doska</button>
-                ${book ? `<button type="button" class="lh-btn" data-act="book">📖 Kitobda ochish${book.page ? ` · ${book.page}-bet` : ''}</button>` : ''}
-                ${(data.guides || []).map(g => `<button type="button" class="lh-btn" data-guide="${esc(g.id)}">🧑‍🏫 ${esc(g.title)} · ${g.page}-bet</button>`).join('')}
-                <button type="button" class="lh-btn" data-act="print">🖨 Rejani chop etish</button>
-                ${L.type === 'live' && typeof S.ctx.onAttendance === 'function' ? '<button type="button" class="lh-btn" data-act="attendance">✓ Davomat</button>' : ''}
+            <div class="lh-rlab">Shu dars sahifalari</div>
+            <div class="lh-ress">
+                ${resCard('data-act="book"', ICO.book, 'Kitob', book ? (book.page ? `${book.page}-bet` : 'sahifa belgilanmagan') : 'yuklanmagan', !book)}
+                ${resCard(tb ? `data-guide="${esc(tb.id)}"` : '', ICO.tbook, 'Ustoz kitobi', tb ? `${tb.page}-bet` : 'yuklanmagan', !tb)}
+                ${resCard(ab ? `data-guide="${esc(ab.id)}"` : '', ICO.assist, "Yordamchi qo'llanma", ab ? `${ab.page}-bet` : 'yuklanmagan', !ab)}
+                ${resCard('data-act="print"', ICO.print, 'Rejani chop etish', 'PDF, A4', false)}
+                ${other.map(g => resCard(`data-guide="${esc(g.id)}"`, ICO.tbook, g.title, `${g.page}-bet`, false)).join('')}
             </div>
         </header>
         <div class="lh-tabs" role="tablist" aria-label="Dars bo'limlari">
             ${TABS.map(t => `<button type="button" role="tab" id="lhTab-${t.id}" aria-controls="lhPanel" tabindex="${S.tab === t.id ? 0 : -1}" class="lh-tab${S.tab === t.id ? ' is-on' : ''}" aria-selected="${S.tab === t.id}" data-tab="${t.id}">${esc(t.label)}${tabCount[t.id] ? ` <span class="lh-count">${tabCount[t.id]}</span>` : ''}</button>`).join('')}
         </div>
-        <div class="lh-panel" role="tabpanel" id="lhPanel" aria-labelledby="lhTab-${S.tab}"></div>`;
-        box.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => {
-            S.tab = b.dataset.tab; savePrefs();
-            box.querySelectorAll('[data-tab]').forEach(x => { x.classList.toggle('is-on', x === b); x.setAttribute('aria-selected', x === b); x.tabIndex = x === b ? 0 : -1; });
-            box.querySelector('.lh-panel').setAttribute('aria-labelledby', b.id);
+        <div class="lh-panel" role="tabpanel" id="lhPanel" aria-labelledby="lhTab-${S.tab === 'class' ? 'plan' : S.tab}"></div>`;
+        const selectTab = id => {
+            S.tab = id; savePrefs();
+            box.querySelectorAll('[data-tab]').forEach(x => { const on = x.dataset.tab === id; x.classList.toggle('is-on', on); x.setAttribute('aria-selected', on); x.tabIndex = on ? 0 : -1; });
+            box.querySelector('[data-act="class"]')?.setAttribute('aria-pressed', String(id === 'class'));
+            if (id !== 'class') box.querySelector('.lh-panel').setAttribute('aria-labelledby', 'lhTab-' + id);
             renderTab(box.querySelector('.lh-panel'), data);
-        }));
+        };
+        box.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => selectTab(b.dataset.tab)));
+        box.querySelector('[data-act="class"]')?.addEventListener('click', () => selectTab(S.tab === 'class' ? 'plan' : 'class'));
         box.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => openLesson(L.no + Number(b.dataset.go), { scroll: true })));
         box.querySelector('[data-act="present"]').addEventListener('click', () => present(data));
-        box.querySelector('[data-act="board"]').addEventListener('click', () => present(data, { blank: true }));
         box.querySelector('[data-act="print"]').addEventListener('click', () => printPlan(data));
-        box.querySelector('[data-act="attendance"]')?.addEventListener('click', () => S.ctx.onAttendance());
-        box.querySelectorAll('[data-guide]').forEach(b => b.addEventListener('click', () => openGuide(data, b.dataset.guide)));
+        box.querySelectorAll('.lh-ress [data-guide]').forEach(b => b.addEventListener('click', () => openGuide(data, b.dataset.guide)));
         bindTablistKeys(box.querySelector('.lh-tabs'));
         box.querySelector('[data-act="book"]')?.addEventListener('click', () => {
+            if (!book) return;
             S.bookState[S.lang] = { id: book.id, page: book.page || 1 };
-            S.view = 'book'; savePrefs(); render();
+            S.bookKind = 'book';
+            S.view = 'books'; savePrefs(); render();
         });
         renderTab(box.querySelector('.lh-panel'), data);
     }
+    const bookShort = b => { const m = String(b.title || '').match(/(\d+)\s*-?\s*(qism|kitob|part)/i); return m ? `${m[1]}-kitob` : 'kitob'; };
 
     function renderTab(panel, data) {
         const L = data.lesson;
         const t = S.tab;
         if (t === 'plan') return renderPlan(panel, data);
-        if (t === 'live') {
-            panel.innerHTML = materialSection(data, 'live_slides', 'Jonli dars slaydlari',
-                L.type === 'live' ? "Darsda ko'rsatiladigan slaydlar. PDF formatda yuklang — prezentatsiya rejimida ustiga chizish mumkin." : "Bu videodars. Jonli dars slaydlari odatda keyingi (jonli) darsda bo'ladi.");
-        } else if (t === 'video') {
+        if (t === 'slides') {
             panel.innerHTML = `
-                ${safeUrl(L.videoUrl) ? `<div class="lh-card"><div class="lh-card-h"><b>Videodars</b><a class="lh-btn" href="${esc(safeUrl(L.videoUrl))}" target="_blank" rel="noopener">Ochish</a></div>${videoEmbed(safeUrl(L.videoUrl))}</div>` : ''}
-                ${L.slides.length ? `<div class="lh-card"><div class="lh-card-h"><b>Ilovadagi slaydlar</b> <span class="lh-muted">${L.slides.length} ta · o'quvchi ilovada ko'radi</span>
-                    <button type="button" class="lh-btn" data-present-src="app-slides">▶ Ko'rsatish</button></div>
+                ${L.slides.length ? `<div class="lh-card"><div class="lh-card-h"><b>Ilovadagi slaydlar</b> <span class="lh-muted">${L.slides.length} ta · o'quvchi ilovada ko'radi</span><span class="lh-gap"></span>
+                    <button type="button" class="lh-btn" data-present-src="app-slides">${ICO.play} Ko'rsatish</button></div>
                     <div class="lh-thumbs">${L.slides.map((s, i) => s.imageUrl ? `<button type="button" class="lh-thumb" data-slide="${i}" title="${esc(s.title)}"><img loading="lazy" src="${esc(safeUrl(s.imageUrl))}" alt="${esc(s.title || `${i + 1}-slayd`)}"><span>${i + 1}</span></button>`
                         : `<div class="lh-thumb is-text"><b>${esc(s.title)}</b><span>${esc(String(s.body).slice(0, 120))}</span></div>`).join('')}</div></div>` : ''}
-                ${materialSection(data, 'video_slides', 'Videodars slaydlari (fayllar)', "Video darsning PDF slaydlari — o'quvchi videoni ko'rmagan bo'lsa jonli darsda tez o'tib ketish uchun.")}
-                ${!L.videoUrl && !L.slides.length ? `<div class="lh-note">Bu dars uchun ilovada video yo'q — o'quvchi konspekt va slaydlar orqali o'rganadi.</div>` : ''}`;
+                ${materialSection(data, 'live_slides', 'Jonli dars slaydlari',
+                    L.type === 'live' ? "Darsda ko'rsatiladigan slaydlar. PDF formatda yuklang — prezentatsiya rejimida ustiga chizish mumkin." : "Bu videodars. Jonli dars slaydlari odatda keyingi (jonli) darsda bo'ladi.")}
+                ${materialSection(data, 'video_slides', 'Videodars slaydlari (fayllar)', "Video darsning PDF slaydlari — o'quvchi videoni ko'rmagan bo'lsa jonli darsda tez o'tib ketish uchun.")}`;
             panel.querySelector('[data-present-src="app-slides"]')?.addEventListener('click', () => present(data, { prefer: 'app-slides' }));
             panel.querySelectorAll('[data-slide]').forEach(b => b.addEventListener('click', () => present(data, { prefer: 'app-slides', page: Number(b.dataset.slide) + 1 })));
+        } else if (t === 'video') {
+            panel.innerHTML = safeUrl(L.videoUrl)
+                ? `<div class="lh-card"><div class="lh-card-h"><b>Videodars</b><span class="lh-gap"></span><a class="lh-btn" href="${esc(safeUrl(L.videoUrl))}" target="_blank" rel="noopener">Yangi oynada</a></div>${videoEmbed(safeUrl(L.videoUrl))}</div>`
+                : `<div class="lh-note">Bu dars uchun ilovada video yo'q${L.slides.length ? " — o'quvchi konspekt va slaydlar orqali o'rganadi (\"Slaydlar\" yorlig'i)" : ''}.</div>`;
         } else if (t === 'grammar') {
             panel.innerHTML = `
                 ${L.konspekt ? `<div class="lh-card"><div class="lh-card-h"><b>Konspekt (grammatika)</b><span class="lh-muted">o'quvchi ilovada ko'radigan matn</span></div><div class="lh-konspekt">${konspektHtml(L.konspekt)}</div></div>` : '<div class="lh-note">Bu darsda konspekt kiritilmagan.</div>'}
                 ${materialSection(data, 'grammar_slides', "Qo'shimcha grammatika slaydlari", 'Qoidani tushuntirish uchun alohida slaydlar (PDF).')}`;
         } else if (t === 'words') {
             panel.innerHTML = L.vocabulary.length ? `
-                <div class="lh-card"><div class="lh-card-h"><b>Yangi so'zlar</b> <span class="lh-muted">${L.vocabulary.length} ta</span>
-                    <button type="button" class="lh-btn" data-present-src="words">▶ Kartochkalarda ko'rsatish</button></div>
+                <div class="lh-card"><div class="lh-card-h"><b>Yangi so'zlar</b> <span class="lh-muted">${L.vocabulary.length} ta</span><span class="lh-gap"></span>
+                    <button type="button" class="lh-btn" data-present-src="words">${ICO.play} Kartochkalarda ko'rsatish</button></div>
                 <div class="lh-words">${L.vocabulary.map(w => `
                     <div class="lh-word">
                         ${safeUrl(w.imageUrl) ? `<img loading="lazy" src="${esc(safeUrl(w.imageUrl))}" alt="">` : `<div class="lh-word-ic">${esc(w.icon || '🔤')}</div>`}
@@ -342,14 +438,14 @@
             panel.querySelector('[data-present-src="words"]')?.addEventListener('click', () => present(data, { prefer: 'words' }));
         } else if (t === 'dialogs') {
             const blocks = L.audioDialogs.map(d => `
-                <div class="lh-card"><div class="lh-card-h"><b>🎧 ${esc(d.title)}</b>${d.bookPart ? `<span class="lh-muted">Kitob ${d.bookPart}-qism${d.trackNo ? `, ${d.trackNo}-trek` : ''}</span>` : ''}</div>
+                <div class="lh-card"><div class="lh-card-h"><b>${esc(d.title)}</b>${d.bookPart ? `<span class="lh-muted">Kitob ${d.bookPart}-qism${d.trackNo ? `, ${d.trackNo}-trek` : ''}</span>` : ''}</div>
                 ${safeUrl(d.audioUrl) ? `<audio controls preload="none" src="${esc(safeUrl(d.audioUrl))}"></audio>` : ''}
                 ${linesTable(d.lines)}</div>`);
-            if (L.dialog) blocks.push(`<div class="lh-card"><div class="lh-card-h"><b>💬 Kitobdagi dialog${L.dialog.title ? `: ${esc(L.dialog.title)}` : ''}</b></div>${linesTable(L.dialog.lines)}</div>`);
-            if (L.text) blocks.push(`<div class="lh-card"><div class="lh-card-h"><b>📄 O'qish matni${L.text.title ? `: ${esc(L.text.title)}` : ''}</b></div>
+            if (L.dialog) blocks.push(`<div class="lh-card"><div class="lh-card-h"><b>Kitobdagi dialog${L.dialog.title ? `: ${esc(L.dialog.title)}` : ''}</b></div>${linesTable(L.dialog.lines)}</div>`);
+            if (L.text) blocks.push(`<div class="lh-card"><div class="lh-card-h"><b>O'qish matni${L.text.title ? `: ${esc(L.text.title)}` : ''}</b></div>
                 <div class="lh-two"><div class="lh-ru">${esc(L.text.ru)}</div><div class="lh-muted">${esc(L.text.uz)}</div></div>
                 ${L.text.questions.length ? `<ol class="lh-qa">${L.text.questions.map(q => `<li>${esc(q.q)} <span class="lh-ans">→ ${esc((q.opts || [])[q.a] ?? '')}</span></li>`).join('')}</ol>` : ''}</div>`);
-            if (L.speaking.length) blocks.push(`<div class="lh-card"><div class="lh-card-h"><b>🗣 Gapirish iboralari</b></div>${linesTable(L.speaking.map(s => ({ ru: s.ru, uz: s.uz })))}</div>`);
+            if (L.speaking.length) blocks.push(`<div class="lh-card"><div class="lh-card-h"><b>Gapirish iboralari</b></div>${linesTable(L.speaking.map(s => ({ ru: s.ru, uz: s.uz })))}</div>`);
             panel.innerHTML = blocks.join('') || '<div class="lh-note">Bu darsda audio dialog yoki matn yo\'q.</div>';
         } else if (t === 'homework') {
             renderHomework(panel, data);
@@ -421,23 +517,37 @@
         try { checks = JSON.parse(localStorage.getItem(checklistKey(L)) || '{}'); } catch { /* */ }
         const missing = data.classStats.prevHomeworkMissing || [];
         const files = [...lessonMaterials(data, 'lesson_plan'), ...lessonMaterials(data, 'teacher_guide')];
+        const live = plan.mode === 'live';
+        // Videodars: o'quvchi ilovada nima qiladi — sonlar bilan.
+        const studentItems = () => {
+            const it = [];
+            if (L.slides.length || L.konspekt) it.push(['Slaydlar va konspekt', L.slides.length ? `${L.slides.length} ta` : '']);
+            if (L.videoUrl) it.push(['Videodars', '1 ta']);
+            if (L.vocabulary.length) it.push(["Yangi so'zlar: ro'yxat + mashq", `${L.vocabulary.length} ta`]);
+            if (L.text) it.push([`O'qish: ${L.text.title || 'matn'}`, L.text.questions.length ? `${L.text.questions.length} savol` : '']);
+            for (const h of L.homework) it.push([h.title || HW_KIND[h.kind] || h.kind, `${h.questions} savol`]);
+            return it;
+        };
+        const graded = L.homework.some(h => h.teacherGraded);
+        const WHO = { student: ["O'QUVCHI", 'Ilovada', 'dars kunigacha'], before: ['USTOZ', 'Dars kuni', '10–15 daqiqa'], after: ['USTOZ', 'Keyingi jonli dars', '3–5 daqiqa'] };
+        const videoBlock = b => {
+            const w = WHO[b.key] || ['', b.when || '', ''];
+            const body = b.key === 'student'
+                ? `<div class="lh-its">${studentItems().map(([t, n]) => `<div class="lh-it"><span>${esc(t)}</span>${n ? `<b>${esc(n)}</b>` : ''}</div>`).join('')}
+                    ${L.homework.length ? `<div class="lh-it is-info">${graded ? 'Ijodiy vazifani ustoz baholaydi, qolgani avtomatik' : 'Hammasi avtomatik tekshiriladi'}</div>` : ''}</div>`
+                : `<ul class="lh-chk">${b.items.map(i => `<li>${ICO.check}<span>${esc(plain(i))}</span></li>`).join('')}</ul>`;
+            return `<li class="lh-blk"><div class="lh-who"><span class="lh-wl">${esc(w[0])}</span><b>${esc(w[1])}</b><small>${esc(w[2])}</small></div>
+                <div class="lh-blk-b"><h3>${esc(b.title)}</h3>${body}${b.tip ? `<p class="lh-tip">${esc(b.tip)}</p>` : ''}</div></li>`;
+        };
+        const liveBlock = (b, i) => `<li class="lh-blk"><div class="lh-who"><span class="lh-wl">${i + 1}-QISM</span><b>${b.minutes} daqiqa</b><small>${mmss(b.from)}–${mmss(b.to)}</small></div>
+            <div class="lh-blk-b"><h3>${esc(b.title)}</h3>${blockList(b.items)}${b.tip ? `<p class="lh-tip">${esc(b.tip)}</p>` : ''}</div></li>`;
         panel.innerHTML = `
-        ${plan.mode === 'live' && missing.length ? `<div class="lh-alert" role="status"><b>Darsdan oldin:</b> shu darsga kelayotgan, lekin oldingi darsni ${RULES.UNLOCK_PERCENT}% dan kam bajarganlar (${missing.length}): ${missing.map(s => esc(s.name)).join(', ')}</div>` : ''}
-        <div class="lh-card">
-            <div class="lh-card-h"><b>${plan.mode === 'live' ? 'Jonli dars rejasi' : "Videodars — ustoz uchun yo'riqnoma"}</b>
-                ${plan.mode === 'live' ? `<label class="lh-dur">Dars davomiyligi <select>${durations.map(d => `<option value="${d}"${d === duration ? ' selected' : ''}>${d} daqiqa</option>`).join('')}</select></label>` : ''}
-            </div>
-            <p class="lh-muted lh-summary">${esc(plan.summary)}${plan.mode === 'live' && isShort(duration) ? ' · Qisqa (individual) dars shabloni.' : plan.mode === 'live' && isMedium(duration) ? " · O'rta (30 daqiqalik) dars shabloni: dialog va qoida birlashtirilgan." : ''}</p>
-            <ol class="lh-timeline">${blocks.map(b => `
-                <li class="lh-block">
-                    <div class="lh-block-time">${plan.mode === 'live' ? `<b>${b.minutes} daq</b><span>${mmss(b.from)}–${mmss(b.to)}</span>` : `<b class="lh-when">${esc(b.when || '')}</b>`}</div>
-                    <div class="lh-block-body">
-                        <div class="lh-block-title">${esc(b.title)}</div>
-                        ${blockList(b.items)}
-                        ${b.tip ? `<div class="lh-tip">💡 ${esc(b.tip)}</div>` : ''}
-                    </div>
-                </li>`).join('')}</ol>
-        </div>
+        ${live
+            ? (missing.length ? `<div class="lh-alert" role="status">${ICO.warn}<div><b>Darsdan oldin:</b> shu darsga kelayotgan, lekin oldingi darsni ${RULES.UNLOCK_PERCENT}% dan kam bajarganlar (${missing.length}): ${missing.map(s => esc(s.name)).join(', ')}</div></div>` : '')
+            : `<div class="lh-alert" role="note">${ICO.warn}<div><b>Darsdan oldin:</b> videodars o'quvchi ilovasida mustaqil o'rganiladi. Ustozning ishi — darsdan oldin tayyorlash, kuzatish va keyingi jonli darsda mustahkamlash.</div></div>`}
+        ${live ? `<div class="lh-plan-h"><p class="lh-muted lh-summary">${esc(plan.summary)}${isShort(duration) ? ' · Qisqa (individual) dars shabloni.' : isMedium(duration) ? " · O'rta (30 daqiqalik) dars shabloni: dialog va qoida birlashtirilgan." : ''}</p>
+            <label class="lh-dur">Dars davomiyligi <select>${durations.map(d => `<option value="${d}"${d === duration ? ' selected' : ''}>${d} daqiqa</option>`).join('')}</select></label></div>` : ''}
+        <ol class="lh-blks">${live ? blocks.map(liveBlock).join('') : blocks.map(videoBlock).join('')}</ol>
         ${plan.anticipated?.length ? `<div class="lh-two-cards">
             <div class="lh-card"><div class="lh-card-h"><b>Kutiladigan qiyinchiliklar</b></div><ul class="lh-rules">${plan.anticipated.map(a => `<li>${esc(a)}</li>`).join('')}</ul></div>
             <div class="lh-card"><div class="lh-card-h"><b>Turli darajadagi o'quvchilar</b></div><ul class="lh-rules">${(plan.differentiation || []).map(a => `<li>${esc(a)}</li>`).join('')}</ul></div>
@@ -446,16 +556,11 @@
             <ol class="lh-qa">${L.review.map(r => `<li>${esc(r.q)}${r.a ? ` <span class="lh-ans">→ ${esc(r.a)}</span>` : ''}</li>`).join('')}</ol></div>` : ''}
         <div class="lh-card"><div class="lh-card-h"><b>Tayyorgarlik ro'yxati</b><span class="lh-muted">belgilar shu qurilmada saqlanadi</span></div>
             <ul class="lh-check">${plan.checklist.map((c, i) => `<li><label><input type="checkbox" data-check="${i}"${checks[i] ? ' checked' : ''}> ${esc(c)}</label></li>`).join('')}</ul></div>
-        ${(data.guides || []).length ? `<div class="lh-card"><div class="lh-card-h"><b>Ustoz kitobidan — shu dars</b><span class="lh-muted">ssenariy, slaydlar bo'yicha tushuntirish, tipik xatolar</span></div>
-            <div class="lh-files">${data.guides.map(g => `<div class="lh-file"><span class="lh-file-ic" aria-hidden="true">${g.kind === 'teacher_book' ? '📘' : '🧭'}</span>
-                <span class="lh-file-body"><b>${esc(g.title)}</b><span class="lh-muted">${g.page}-betdan</span></span>
-                <button type="button" class="lh-btn" data-guide="${esc(g.id)}">▶ Ochish</button></div>`).join('')}</div></div>` : ''}
         ${materialSection(data, 'lesson_plan', "Dars rejasi fayllari", "Metodist tayyorlagan rasmiy reja (PDF/Word) — bo'lsa, yuqoridagi avtomatik rejadan ustun turadi.", files.filter(f => f.kind === 'lesson_plan'))}
         ${materialSection(data, 'teacher_guide', "Ustoz qo'llanmasi (shu dars)", "Teacher's book'ning shu darsga tegishli sahifalari.", files.filter(f => f.kind === 'teacher_guide'))}`;
         panel.querySelector('.lh-dur select')?.addEventListener('change', e => {
             S.duration = Number(e.target.value); savePrefs(); renderPlan(panel, data); bindMaterialActions(panel, data);
         });
-        panel.querySelectorAll('[data-guide]').forEach(b => b.addEventListener('click', () => openGuide(data, b.dataset.guide)));
         panel.querySelectorAll('[data-check]').forEach(cb => cb.addEventListener('change', () => {
             checks[cb.dataset.check] = cb.checked;
             try { localStorage.setItem(checklistKey(L), JSON.stringify(checks)); } catch { /* */ }
@@ -532,7 +637,7 @@
         panel.querySelector('[data-group]')?.addEventListener('change', e => { S.group = e.target.value; savePrefs(); renderClass(panel, data); });
         panel.querySelector('[data-near]').addEventListener('change', e => { S.nearOnly = e.target.checked; savePrefs(); renderClass(panel, data); });
         panel.querySelectorAll('[data-student]').forEach(tr => {
-            const open = () => { S.view = 'students'; S.openStudent = tr.dataset.student; savePrefs(); render(); };
+            const open = () => openStudent(tr.dataset.student);
             tr.addEventListener('click', open);
             tr.addEventListener('keydown', e => { if (e.key === 'Enter') open(); });
         });
@@ -720,13 +825,15 @@
     }
 
     // ── Prezentatsiya manbalari ─────────────────────────────────────────────
-    function present(data, opts = {}) {
+    // Darslik va "Darsni boshlash" (js/lessonStart.js) uchun umumiy ro'yxat.
+    function buildSources(data) {
         const L = data.lesson;
+        const mats = kind => (data.materials || []).filter(m => m.kind === kind);
         const pdf = m => ({ type: 'pdf', url: m.url, title: `${m.kindLabel}: ${m.title}`, id: m.id });
         const sources = [];
-        const live = lessonMaterials(data, 'live_slides').filter(canPresent).map(pdf);
-        const vids = lessonMaterials(data, 'video_slides').filter(canPresent).map(pdf);
-        const gram = lessonMaterials(data, 'grammar_slides').filter(canPresent).map(pdf);
+        const live = mats('live_slides').filter(canPresent).map(pdf);
+        const vids = mats('video_slides').filter(canPresent).map(pdf);
+        const gram = mats('grammar_slides').filter(canPresent).map(pdf);
         const imgs = L.slides.filter(s => safeUrl(s.imageUrl));
         const appSlides = imgs.length
             ? { type: 'images', title: `Ilovadagi slaydlar (${imgs.length})`, key: 'app-slides', items: imgs.map(s => ({ url: safeUrl(s.imageUrl), caption: s.title })) } : null;
@@ -734,16 +841,34 @@
         const video = safeUrl(L.videoUrl) ? { type: 'video', url: safeUrl(L.videoUrl), title: 'Videodars' } : null;
         if (L.type === 'live') sources.push(...live, words, ...gram, ...vids, appSlides, video);
         else sources.push(...vids, appSlides, video, words, ...gram, ...live);
-        if (data.book && isLocalFile(data.book.url)) sources.push({ type: 'pdf', url: data.book.url, title: `Kitob: ${data.book.title}`, key: 'book' });
+        if (data.book && isLocalFile(data.book.url)) sources.push({ type: 'pdf', url: data.book.url, title: `Kitob: ${data.book.title}`, key: 'book', page: data.book.page || 1 });
+        for (const g of data.guides || []) if (isLocalFile(g.url)) sources.push({ type: 'pdf', url: g.url, title: `${g.title} · ${g.page}-bet`, key: 'guide', id: g.id, page: g.page });
         const list = sources.filter(Boolean);
-        list.push({ type: 'blank', title: "Bo'sh doska", key: 'blank' });
+        list.push({ type: 'blank', title: "Toza doska", key: 'blank' });
+        return list;
+    }
+
+    function present(data, opts = {}) {
+        const L = data.lesson;
+        const list = buildSources(data);
         let start = 0, startPage = opts.page || 1;
         if (opts.blank) start = list.length - 1;
         else if (opts.fileId) start = Math.max(0, list.findIndex(s => s.id === opts.fileId));
         else if (opts.prefer) start = Math.max(0, list.findIndex(s => s.key === opts.prefer));
-        else if (list[0]?.key === 'book' && data.book.page) startPage = data.book.page;
-        if (list[start]?.key === 'book' && !opts.page && data.book.page) startPage = data.book.page;
-        LessonPresenter.open({ title: `${L.no}-dars · ${plain(L.name)}`, sources: list, start, startPage });
+        if (list[start]?.key === 'book' && !opts.page && data.book?.page) startPage = data.book.page;
+        // Jonli dars (asosiy ustoz): reja paneli va "Darsni tugatish → Keldi".
+        const main = L.type === 'live' && !isStaffView() && !isAssistant() && window.LessonStart;
+        let finish = null, subtitle = '';
+        const duration = S.duration || S.hub[S.lang]?.defaultDuration || 60;
+        if (main) {
+            const next = S.today?.next && S.today.next.lessonNo === L.no ? S.today.next : null;
+            subtitle = [next?.studentName, `${duration} daq`, data.book ? `${bookShort(data.book)}${data.book.page ? ` ${data.book.page}-bet` : ''}` : ''].filter(Boolean).join(' · ');
+            finish = { label: 'Darsni tugatish', onFinish: ctx => window.LessonStart._finish({ ...ctx, studentId: next?.studentId || '', studentName: next?.studentName || '', lessonNo: L.no, lessonId: next?.lessonId || '' }) };
+        }
+        LessonPresenter.open({
+            title: `${L.no}-dars · ${L.type === 'live' ? 'Jonli dars' : 'Videodars'}`, subtitle: subtitle || plain(L.name),
+            sources: list, start, startPage, lesson: data, duration, finish,
+        });
     }
 
     // ── O'quvchilar progressi ───────────────────────────────────────────────
@@ -790,8 +915,7 @@
                 <td>${s.activeDays7}/7</td><td>${esc(ago(s.lastActive))}</td>
                 <td>${s.flags.length ? s.flags.map(f => `<span class="lh-flag ${f.key}">${esc(f.label)}</span>`).join('') : '<span class="lh-flag ok">Yaxshi</span>'}</td></tr>`).join('')}</tbody></table>`
                 : `<div class="lh-empty-sm">${S.hub[S.lang]?.role === 'teacher' ? "Sizga hali o'quvchi biriktirilmagan" : "Bu yo'nalishda o'quvchi yo'q"}</div>`}
-        </div>
-        <div id="lhStudent"></div>`;
+        </div>`;
         const tbody = main.querySelector('tbody');
         main.querySelector('input[type="search"]').addEventListener('input', e => {
             const q = e.target.value.toLowerCase();
@@ -937,53 +1061,80 @@
         </svg><div class="lh-muted">Jami 30 kunda: ${dur(total)}</div>`;
     }
 
-    // ── Kitob ───────────────────────────────────────────────────────────────
-    function renderBookView(main) {
+    // ── Kitoblar: o'quvchi kitobi, ustoz kitobi, yordamchi qo'llanmasi ──────
+    const BOOK_KINDS = [
+        { id: 'book', label: "O'quvchi kitobi", add: 'book', pick: m => m.kind === 'book' },
+        { id: 'teacher', label: 'Ustoz kitobi', add: 'teacher_book', pick: m => (m.kind === 'teacher_book' && !isAssistGuide(m)) || m.kind === 'methodology' },
+        { id: 'assist', label: 'Yordamchi', add: 'teacher_book', pick: m => m.kind === 'teacher_book' && isAssistGuide(m) },
+    ];
+    function bookRange(m) {
+        if (m.kind === 'book' || m.meta.lessonFrom) return `${m.meta.lessonFrom || 1}–${m.meta.lessonTo || 72}-darslar`;
+        const nos = Object.keys(m.meta.pageMap || {}).map(Number).filter(Boolean);
+        return nos.length ? `${Math.min(...nos)}–${Math.max(...nos)}-darslar` : (m.kind === 'methodology' ? 'metodika' : 'butun kurs');
+    }
+    const bookChipName = (m, i) => { const n = String(m.title).match(/(\d+)\s*-?\s*(qism|kitob|part)/i); return n ? `${n[1]}-kitob` : m.kind === 'book' ? `${i + 1}-kitob` : m.title; };
+
+    function renderBooksView(main) {
         const hub = S.hub[S.lang];
-        const books = hub.courseMaterials.filter(m => m.kind === 'book').sort((a, b) => (a.meta.lessonFrom || 0) - (b.meta.lessonFrom || 0));
+        const kind = BOOK_KINDS.find(k => k.id === S.bookKind) || BOOK_KINDS[0];
+        const files = hub.courseMaterials.filter(kind.pick).sort((a, b) => (a.meta.lessonFrom || 0) - (b.meta.lessonFrom || 0) || String(a.title).localeCompare(b.title));
         const st = S.bookState[S.lang] || {};
-        const current = books.find(b => b.id === st.id) || books[0];
+        const current = files.find(b => b.id === st.id) || files[0];
+        const pm = current?.meta?.pageMap || {};
+        const map = Object.entries(pm).map(([no, p]) => ({ no: Number(no), page: Number(p) })).sort((a, b) => a.no - b.no);
         main.innerHTML = `
         <div class="lh-book">
             <aside class="lh-card lh-book-list">
-                <div class="lh-card-h"><b>Darslik kitoblari</b>${hub.canEdit ? `<span class="lh-gap"></span><button type="button" class="lh-btn" data-add="book" data-mode="file">＋ Kitob</button>` : ''}</div>
-                ${books.length ? books.map(b => `<div class="lh-file${current && b.id === current.id ? ' is-on' : ''}">
-                    <button type="button" class="lh-file-body lh-linkish" data-book="${esc(b.id)}"><b>📖 ${esc(b.title)}</b><span class="lh-muted">${b.meta.lessonFrom || 1}–${b.meta.lessonTo || 72}-darslar${Object.keys(b.meta.pageMap || {}).length ? ' · sahifalar belgilangan' : ''}</span></button>
-                    ${hub.canEdit ? `<button type="button" class="lh-btn" data-edit="${esc(b.id)}" aria-label="Tahrirlash: ${esc(b.title)}">✎</button><button type="button" class="lh-btn lh-danger" data-del="${esc(b.id)}" aria-label="O'chirish: ${esc(b.title)}">🗑</button>` : ''}
-                </div>`).join('') : `<div class="lh-muted">Kitob PDF hali yuklanmagan.${hub.canEdit ? " «＋ Kitob» orqali 1, 2, 3-qismlarni yuklang va har biri qaysi darslarni qamrashini belgilang." : ''}</div>`}
-                ${current ? `<label class="lh-jump">Darsga o'tish <select aria-label="Darsga o'tish"><option value="">—</option>${hub.syllabus.filter(l => l.no >= (current.meta.lessonFrom || 1) && l.no <= (current.meta.lessonTo || 72)).map(l => `<option value="${l.no}"${current.meta.pageMap?.[l.no] ? '' : ' disabled'}>${l.no}-dars${current.meta.pageMap?.[l.no] ? ` · ${current.meta.pageMap[l.no]}-bet` : ''}</option>`).join('')}</select></label>
-                    ${isLocalFile(current.url) ? '<button type="button" class="lh-btn lh-primary" data-book-present>▶ Prezentatsiyada ochish</button>' : ''}
-                    ${hub.canEdit && !Object.keys(current.meta.pageMap || {}).length ? '<div class="lh-muted">Darslar sahifasini belgilash uchun ✎ tugmasini bosing ("1:5, 2:9").</div>' : ''}` : ''}
+                <div class="lh-seg" role="tablist" aria-label="Kitob turi">${BOOK_KINDS.map(k => `<button type="button" role="tab" aria-selected="${k.id === kind.id}" data-bkind="${k.id}">${esc(k.label)}</button>`).join('')}</div>
+                <div class="lh-bchips">
+                    ${files.map((b, i) => `<button type="button" class="lh-bchip${current && b.id === current.id ? ' is-on' : ''}" data-book="${esc(b.id)}" aria-pressed="${!!current && b.id === current.id}" title="${esc(b.title)}"><b>${esc(bookChipName(b, i))}</b><small>${esc(bookRange(b))}</small></button>`).join('')}
+                    ${hub.canEdit ? `<button type="button" class="lh-bchip is-add" data-add="${kind.add}" data-mode="file" title="${esc(kind.label)} qo'shish">${ICO.plus}<small>qo'shish</small></button>` : ''}
+                </div>
+                ${!files.length ? `<div class="lh-empty-sm">${esc(kind.label)} hali yuklanmagan.${hub.canEdit ? ' "Ommaviy yuklash" yoki "qo\'shish" orqali PDF yuklang — sahifalar avtomatik topiladi.' : ' Admin yuklaganda shu yerda chiqadi.'}</div>` : ''}
+                ${current && hub.canEdit ? `<div class="lh-bedit"><span class="lh-muted">${esc(current.title)}</span><span class="lh-gap"></span><button type="button" class="lh-btn lh-sq" data-edit="${esc(current.id)}" aria-label="Tahrirlash: ${esc(current.title)}">✎</button><button type="button" class="lh-btn lh-sq lh-danger" data-del="${esc(current.id)}" aria-label="O'chirish: ${esc(current.title)}">🗑</button></div>` : ''}
+                ${current ? `<div class="lh-rlab">Dars → sahifa</div>
+                    ${map.length ? `<div class="lh-pmap">${map.map(r => `<button type="button" class="lh-pm" data-pm="${r.page}" data-pmno="${r.no}"><span class="lh-pm-n">${r.no}</span><b>${r.no}-dars</b><small>${r.page}-bet</small></button>`).join('')}</div>
+                        <p class="lh-muted lh-pfoot">Sahifalar ommaviy yuklashda PDF ichidan avtomatik topilgan</p>`
+                        : `<p class="lh-muted lh-pfoot">Darslar sahifasi belgilanmagan.${hub.canEdit ? ' ✎ tugmasi orqali kiriting ("1:5, 2:9").' : ''}</p>`}` : ''}
             </aside>
             <section class="lh-card lh-book-view" id="lhBookView">${current ? '' : '<div class="lh-empty-sm">Kitob tanlanmagan</div>'}</section>
-        </div>`;
+        </div>
+        ${kind.id === 'teacher' ? '<div id="lhGuideMore"></div>' : ''}`;
         bindMaterialActions(main, null);
-        main.querySelectorAll('[data-book]').forEach(b => b.addEventListener('click', () => { S.bookState[S.lang] = { id: b.dataset.book, page: 1 }; renderBookView(main); }));
+        main.querySelectorAll('[data-bkind]').forEach(b => b.addEventListener('click', () => { S.bookKind = b.dataset.bkind; savePrefs(); renderBooksView(main); }));
+        main.querySelectorAll('[data-book]').forEach(b => b.addEventListener('click', () => { S.bookState[S.lang] = { id: b.dataset.book, page: 1 }; renderBooksView(main); }));
+        if (kind.id === 'teacher') renderGuideView(main.querySelector('#lhGuideMore'));
         if (!current) return;
+        const view = main.querySelector('#lhBookView');
         if (!isLocalFile(current.url)) {
-            main.querySelector('#lhBookView').innerHTML = `<div class="lh-empty-sm">Bu kitob tashqi havola — saytda ochib bo'lmaydi. ${safeUrl(current.url) ? `<a class="lh-btn" href="${esc(safeUrl(current.url))}" target="_blank" rel="noopener">Yangi oynada ochish</a>` : ''}</div>`;
+            view.innerHTML = `<div class="lh-empty-sm">Bu fayl tashqi havola — saytda ochib bo'lmaydi. ${safeUrl(current.url) ? `<a class="lh-btn" href="${esc(safeUrl(current.url))}" target="_blank" rel="noopener">Yangi oynada ochish</a>` : ''}</div>`;
             return;
         }
-        const page = st.id === current.id ? (st.page || 1) : 1;
-        LessonPresenter.mountPdfReader(main.querySelector('#lhBookView'), {
-            url: current.url, page,
-            onPage: p => { S.bookState[S.lang] = { id: current.id, page: p }; },
+        const lessonAt = p => { let hit = null; for (const r of map) if (r.page <= p) hit = r; return hit; };
+        const titleFor = p => {
+            const r = lessonAt(p), idx = r ? map.indexOf(r) : -1;
+            const to = idx >= 0 && map[idx + 1] ? map[idx + 1].page - 1 : null;
+            return `<b>${esc(bookChipName(current, files.indexOf(current)))}${r ? ` · ${r.no}-dars` : ''}</b>${r ? `<span class="lh-pill-info">${r.page}${to && to > r.page ? `–${to}` : ''}-betlar</span>` : ''}`;
+        };
+        const page = st.id === current.id ? (st.page || 1) : (map[0]?.page || 1);
+        LessonPresenter.mountPdfReader(view, {
+            url: current.url, page, spread: true, title: titleFor(page),
+            onPage: p => {
+                S.bookState[S.lang] = { id: current.id, page: p };
+                const t = view.querySelector('.lp-rttl'); if (t) t.innerHTML = titleFor(p);
+                const r = lessonAt(p);
+                main.querySelectorAll('[data-pmno]').forEach(x => x.classList.toggle('is-on', !!r && Number(x.dataset.pmno) === r.no));
+            },
         }).then(reader => {
             S.reader = reader;
-            main.querySelector('.lh-jump select')?.addEventListener('change', e => {
-                const p = current.meta.pageMap?.[e.target.value];
-                if (p && reader) reader.goTo(p);
-            });
+            main.querySelectorAll('[data-pm]').forEach(b => b.addEventListener('click', () => reader?.goTo(Number(b.dataset.pm))));
         });
-        main.querySelector('[data-book-present]')?.addEventListener('click', () => LessonPresenter.open({
-            title: current.title, sources: [{ type: 'pdf', url: current.url, title: current.title }],
-            startPage: S.bookState[S.lang]?.page || 1,
-        }));
     }
 
-    // ── Teacher's book ──────────────────────────────────────────────────────
+    // ── Ustoz kitobi: kurs qoidalari, og'zaki imtihonlar, 72 darslik reja ──
     function renderGuideView(main) {
-        const hub = S.hub[S.lang];
+        if (!main) return;        const hub = S.hub[S.lang];
+
         const R = { ...RULES, ...(hub.rules ? { PASS_PERCENT: hub.rules.passPercent, UNLOCK_PERCENT: hub.rules.unlockPercent, LIVE_AUTO_UNLOCK: hub.rules.liveAutoUnlock, EXAM_INTERVAL: hub.rules.examInterval, EXAM_PASS_PERCENT: hub.rules.examPassPercent } : {}) };
         const files = hub.courseMaterials.filter(m => m.kind === 'teacher_book' || m.kind === 'methodology');
         const fake = { materials: files, lesson: null };
@@ -1011,7 +1162,6 @@
                         <li>Haftada bir marta: <b>O'quvchilar progressi</b>dagi "e'tibor kerak" ro'yxati.</li>
                     </ol></div>
             </div>
-            ${materialSection(fake, 'teacher_book', "Teacher's book (to'liq qo'llanma)", "Kurs bo'yicha ustoz kitobi — PDF (300 MB gacha).", files.filter(f => f.kind === 'teacher_book'))}
             ${materialSection(fake, 'methodology', 'Metodika va standartlar', 'Baholash mezonlari, dars kuzatuv varaqasi va boshqa hujjatlar.', files.filter(f => f.kind === 'methodology'))}
             ${oralKeys.length ? `<div class="lh-card"><div class="lh-card-h"><b>Og'zaki imtihonlar (ustoz uchun)</b><span class="lh-muted">ilova testi bilan birga o'tkaziladi</span></div>
                 ${oral.grading_uz ? `<div class="lh-note lh-pre">${esc(oral.grading_uz)}</div>` : ''}
@@ -1058,12 +1208,129 @@
         return `<details class="lh-hw"><summary><b>${esc(title)}</b><span class="lh-muted">${esc(x.covers || '')}</span></summary><div class="lh-oral">${sp}${w}${l}</div></details>`;
     }
 
-    // ── Eski "Qo'shimcha materiallar" (mobileContent.documents) ─────────────
-    function renderExtraView(main) {
-        main.innerHTML = '<div class="lh-legacy tp-textbook-legacy"></div>';
-        if (typeof S.ctx.renderLegacy === 'function') S.ctx.renderLegacy(main.firstElementChild);
-        else main.firstElementChild.innerHTML = '<div class="lh-muted">Mavjud emas</div>';
+    // ── Qo'shimcha materiallar (academic_materials, kind = extra) ───────────
+    const EXTRA_PAGE = 8;
+    function extraType(m) {
+        const u = String(m.url || ''), mime = String(m.mime || '');
+        if (/\.pdf(\?|$)/i.test(u) || mime === 'application/pdf') return { id: 'pdf', label: 'PDF', badge: 'PDF' };
+        if (/\.(mp3|m4a|wav|ogg|aac)(\?|$)/i.test(u) || mime.startsWith('audio/')) return { id: 'audio', label: 'Audio', badge: 'MP3' };
+        if (!isLocalFile(u)) return { id: 'link', label: 'Havola', badge: 'URL' };
+        if (/\.(mp4|webm|mov)(\?|$)/i.test(u) || mime.startsWith('video/')) return { id: 'other', label: 'Video', badge: 'MP4' };
+        return { id: 'other', label: 'Fayl', badge: (u.split('.').pop() || 'FAYL').slice(0, 4).toUpperCase() };
+    }
+    const shortDate = d => { const m = String(d || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? `${Number(m[3])}-${UZ_MONTHS[Number(m[2]) - 1].slice(0, 3)}` : '—'; };
+    const hostOf = u => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return ''; } };
+
+    async function renderExtraView(main) {
+        const hub = S.hub[S.lang];
+        main.innerHTML = skeleton();
+        let all;
+        try { all = (await api(`/api/academic/materials?lang=${S.lang}`)).materials || []; }
+        catch (e) { main.innerHTML = `<div class="lh-error"><b>Yuklab bo'lmadi</b><span>${esc(e.message)}</span></div>`; return; }
+        if (S.view !== 'extra') return;
+        const list = all.filter(m => m.kind === 'extra').sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
+        const cnt = id => list.filter(m => extraType(m).id === id).length;
+        const filters = [['all', 'Hammasi', list.length], ['pdf', 'PDF', cnt('pdf')], ['audio', 'Audio', cnt('audio')], ['link', 'Havola', cnt('link')]];
+        if (cnt('other')) filters.push(['other', 'Boshqa', cnt('other')]);
+        if (!filters.some(f => f[0] === S.extraFilter)) S.extraFilter = 'all';
+        const shown = list.filter(m => S.extraFilter === 'all' || extraType(m).id === S.extraFilter);
+        const pages = Math.max(1, Math.ceil(shown.length / EXTRA_PAGE));
+        S.extraPage = Math.min(S.extraPage, pages - 1);
+        const from = S.extraPage * EXTRA_PAGE, rows = shown.slice(from, from + EXTRA_PAGE);
+        main.innerHTML = `
+        <section class="lh-card lh-xm">
+            <header class="lh-xm-h"><h3>Qo'shimcha materiallar</h3><span class="lh-gap"></span>
+                <div class="lh-seg" role="group" aria-label="Turi">${filters.map(([k, l, n]) => `<button type="button" data-xf="${k}" aria-pressed="${S.extraFilter === k}">${esc(l)} ${n}</button>`).join('')}</div>
+                ${hub.canEdit ? `<button type="button" class="lh-btn lh-primary" data-xadd>${ICO.plus} Material qo'shish</button>` : ''}</header>
+            ${rows.length ? `<div class="lh-table-wrap"><table class="lh-table lh-xt"><thead><tr><th>Material</th><th>Turi</th><th>Qaysi darsga</th><th>Izoh</th><th>Yangilangan</th><th><span class="lh-sr">Amal</span></th></tr></thead><tbody>
+                ${rows.map(m => { const t = extraType(m); const size = m.fileSize ? `${m.fileSize >= 1048576 ? (m.fileSize / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(m.fileSize / 1024)) + ' KB'}` : '';
+                    return `<tr><td><span class="lh-xn"><span class="lh-xb is-${t.id}">${esc(t.badge)}</span><span><b>${esc(m.title)}</b><small>${esc(t.id === 'link' ? hostOf(m.url) : size || m.fileName || '')}</small></span></span></td>
+                    <td>${esc(t.label)}</td><td>${m.lessonNo ? `${m.lessonNo}-dars` : 'Barcha darslar'}</td><td class="lh-muted">${esc(m.note || '—')}</td><td>${esc(shortDate(m.updatedAt))}</td>
+                    <td class="lh-xa">${hub.canEdit ? `<button type="button" class="lh-btn" data-edit="${esc(m.id)}">Tahrirlash</button><button type="button" class="lh-btn lh-sq lh-danger" data-del="${esc(m.id)}" aria-label="O'chirish: ${esc(m.title)}">🗑</button>`
+                        : safeUrl(m.url) ? (canPresent(m) ? `<button type="button" class="lh-btn" data-present-file="${esc(m.id)}">Ochish</button>` : `<a class="lh-btn" href="${esc(safeUrl(m.url))}" target="_blank" rel="noopener">Ochish</a>`) : ''}</td></tr>`; }).join('')}
+            </tbody></table></div>` : `<div class="lh-empty-sm">${list.length ? "Bu turda material yo'q" : `Hali qo'shimcha material yo'q.${hub.canEdit ? " «Material qo'shish» orqali fayl yoki havola qo'shing." : ''}`}</div>`}
+            <footer class="lh-xm-f">${shown.length ? `<span>${from + 1}–${from + rows.length} / ${shown.length}</span>` : ''}
+                ${S.extraPage > 0 ? '<button type="button" class="lh-linkbtn" data-xp="-1">← oldingi</button>' : ''}${S.extraPage < pages - 1 ? '<button type="button" class="lh-linkbtn" data-xp="1">keyingi sahifa →</button>' : ''}
+                <span class="lh-muted">· Kitoblar, ustoz kitobi va dars slaydlari "Ommaviy yuklash" orqali qo'shiladi — bu yerda faqat qo'shimcha materiallar.</span></footer>
+        </section>
+        <details class="lh-card lh-legacy-box"${S.legacyOpen ? ' open' : ''}><summary><b>Eski bo'lim: ilova hujjatlari</b><span class="lh-muted">kurs rejasi, sinov darsi, platforma va jonli dars materiallari</span></summary><div class="lh-legacy tp-textbook-legacy"></div></details>`;
+        const fake = { materials: list, lesson: null };
+        bindMaterialActions(main, fake);
+        main.querySelectorAll('[data-xf]').forEach(b => b.addEventListener('click', () => { S.extraFilter = b.dataset.xf; S.extraPage = 0; renderExtraView(main); }));
+        main.querySelectorAll('[data-xp]').forEach(b => b.addEventListener('click', () => { S.extraPage += Number(b.dataset.xp); renderExtraView(main); }));
+        main.querySelector('[data-xadd]')?.addEventListener('click', () => openExtraForm(() => renderExtraView(main)));
+        const legacy = main.querySelector('.lh-legacy-box');
+        const drawLegacy = () => {
+            const host = legacy.querySelector('.lh-legacy');
+            if (host.dataset.drawn) return;
+            host.dataset.drawn = '1';
+            if (typeof S.ctx.renderLegacy === 'function') S.ctx.renderLegacy(host);
+            else host.innerHTML = '<div class="lh-muted">Mavjud emas</div>';
+        };
+        legacy.addEventListener('toggle', () => { S.legacyOpen = legacy.open; if (legacy.open) drawLegacy(); });
+        if (legacy.open) drawLegacy();
     }
 
-    window.LessonHub = { mount, _state: S };
+    // Yangi qo'shimcha material: dars (yoki barcha darslar), fayl yoki havola.
+    function openExtraForm(done) {
+        const wrap = document.createElement('div');
+        wrap.className = 'lh-modal';
+        wrap.innerHTML = `<form class="lh-dialog" role="dialog" aria-modal="true" aria-labelledby="lhXTitle">
+            <h3 id="lhXTitle">Qo'shimcha material</h3>
+            <label>Nomi<input name="title" required maxlength="200" class="lh-input" placeholder="Masalan: To be — qo'shimcha mashqlar"></label>
+            <label>Qaysi darsga<select name="lesson" class="lh-input"><option value="">Barcha darslar</option>${Array.from({ length: 72 }, (_, i) => `<option value="${i + 1}">${i + 1}-dars</option>`).join('')}</select></label>
+            <div class="lh-seg" role="radiogroup" aria-label="Manba"><button type="button" data-xm="file" aria-pressed="true">Fayl</button><button type="button" data-xm="link" aria-pressed="false">Havola</button></div>
+            <label data-xfile>Fayl (PDF, audio, rasm — 50 MB gacha)<input name="file" type="file" accept=".pdf,.mp3,.m4a,.wav,.png,.jpg,.jpeg,.webp,.doc,.docx,.ppt,.pptx,.mp4"></label>
+            <label data-xlink hidden>Havola (https://…)<input name="url" type="url" class="lh-input" placeholder="https://"></label>
+            <label>Izoh <span class="lh-muted">(ixtiyoriy)</span><input name="note" maxlength="300" class="lh-input" placeholder="Masalan: Jonli darsdan oldin"></label>
+            <div class="lh-dialog-actions"><button type="button" class="lh-btn" data-cancel>Bekor qilish</button><button type="submit" class="lh-btn lh-primary">Saqlash</button></div>
+            <div class="lh-progress" role="status" hidden>Yuklanmoqda…</div>
+        </form>`;
+        document.body.appendChild(wrap);
+        const form = wrap.querySelector('form');
+        const closeForm = trapModal(wrap);
+        let mode = 'file';
+        wrap.addEventListener('click', e => { if (e.target === wrap) closeForm(); });
+        wrap.querySelector('[data-cancel]').onclick = closeForm;
+        wrap.querySelectorAll('[data-xm]').forEach(b => b.onclick = () => {
+            mode = b.dataset.xm;
+            wrap.querySelectorAll('[data-xm]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+            wrap.querySelector('[data-xfile]').hidden = mode !== 'file';
+            wrap.querySelector('[data-xlink]').hidden = mode !== 'link';
+        });
+        form.querySelector('input[name="title"]').focus();
+        form.addEventListener('submit', async e => {
+            e.preventDefault();
+            const fd = new FormData(form);
+            const btn = form.querySelector('[type="submit"]');
+            btn.disabled = true;
+            form.querySelector('.lh-progress').hidden = false;
+            try {
+                const lessonNo = fd.get('lesson') ? Number(fd.get('lesson')) : null;
+                const body = { language: S.lang, lessonNo, kind: 'extra', title: String(fd.get('title') || '').trim(), note: String(fd.get('note') || '') };
+                if (mode === 'link') {
+                    body.url = String(fd.get('url') || '').trim();
+                    if (!body.url) throw new Error('Havolani kiriting');
+                } else {
+                    const file = fd.get('file');
+                    if (!file || !file.size) throw new Error('Fayl tanlang');
+                    if (file.size > 50 * 1048576) throw new Error('Fayl 50 MB dan katta');
+                    const up = await apiUploadFile(file);
+                    Object.assign(body, { url: up.url, fileName: up.fileName || file.name, fileSize: up.fileSize || file.size, mime: up.mimeType || file.type });
+                }
+                await api('/api/academic/materials', { method: 'POST', body: JSON.stringify(body) });
+                closeForm();
+                invalidate(lessonNo);
+                toast('Saqlandi');
+                done?.();
+            } catch (err) {
+                btn.disabled = false;
+                form.querySelector('.lh-progress').hidden = true;
+                toast(err.message);
+            }
+        });
+    }
+
+    window.LessonHub = { mount, buildSources, _state: S };
+
 })();
