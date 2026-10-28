@@ -25,7 +25,8 @@
     const patternDays = d => ([1, 3, 5].includes(Number(d)) ? [1, 3, 5] : [2, 4, 6].includes(Number(d)) ? [2, 4, 6] : Number(d) >= 1 && Number(d) <= 7 ? [Number(d)] : []);
     // assist.js / time.js adviceDays bilan bir xil.
     const advDays = s => { const p = patternDays(s.lessonDayOfWeek); return p.join() === '1,3,5' ? [2, 4, 6] : p.join() === '2,4,6' ? [1, 3, 5] : [1, 2, 3, 4, 5, 6].filter(d => !p.includes(d)); };
-    const RATE = 3846, CAP = 13;
+    // Zaxira: haqiqiy narx serverdan (rep.rate — Moliya → KPI sozlamalari, yordamchi tarifi ÷ 13; 29-okt: 40 000 → 3 077).
+    const RATE = 3077, CAP = 13;
     // Usullar dizayndagidek guruhlangan (Ovozli / Video / Yozma).
     const CHG = [['Ovozli', [['phone', '☎ Telefon qo\'ng\'iroq']]],
         ['Video', [['zoom', 'Zoom'], ['meet', 'Google Meet'], ['tg_video', 'Telegram video qo\'ng\'iroq'], ['tg_group', 'Telegram guruhda videodars']]],
@@ -225,33 +226,40 @@
             const rule = (r.short || 0) + (r.sameDay || 0) + (r.extraText || 0);
             if (rule) out.push(`<span class="sc-mt">${rule} ta qoida bo'yicha hisoblanmadi</span>`);
             const l = left.get(s.id);
-            if (l) out.push(`<span class="sc-pill sc-pill--mute">${esc(dS(U().addDays(l.from, -1)))} chiqib ketgan · o'qigan davri hisoblanadi</span>`);
+            if (l) out.push(`<span class="sc-pill sc-pill--mute">${esc(dS(l.from))} chiqib ketgan · o'qigan davri hisoblanadi</span>`);
             return out.join(' ') || '—';
         };
-        const total = rows.reduce((n, x) => n + (x.r.counted || 0), 0), amount = rows.reduce((n, x) => n + (x.r.amount || (x.r.counted || 0) * RATE), 0);
+        const total = rows.reduce((n, x) => n + (x.r.counted || 0), 0), amount = rows.reduce((n, x) => n + (x.r.amount || (x.r.counted || 0) * (rep.rate || RATE)), 0);
         return `<section class="sc-card yd-closed"><header class="sc-ch"><h2>${esc(cap1(mName(month)))} · o'quvchilar bo'yicha yakun</h2><span class="sc-mt">yopilgan hisob · o'zgarmaydi</span></header>
           <div class="yd-tw"><table class="sc-table"><thead><tr><th>O'quvchi</th><th class="r">Hisoblangan</th><th class="r">Summa, so'm</th><th>Izoh</th></tr></thead><tbody>
           ${rows.map(({ r, s }) => { const l = left.get(s.id); return `<tr class="${l ? 'yd-gone' : ''}"><td><span class="sc-row">${studentAvatar(s, 28)}<span class="yd-who"><b>${esc(s.name)}</b><small class="sc-mt">asosiy: ${esc(teacherName(s.teacherId, true))}${l ? ` · 1–${esc(dS(U().addDays(l.from, -1)))}` : ''}</small></span></span></td>
-            <td class="r"><b>${r.counted || 0}</b> / ${rep.cap || CAP}</td><td class="r">${num(r.amount ?? (r.counted || 0) * RATE)}</td><td><div class="yd-izoh">${izoh(r, s)}</div></td></tr>`; }).join('') || `<tr><td colspan="4" class="sc-mt">Bu oyda aloqa yo'q</td></tr>`}
+            <td class="r"><b>${r.counted || 0}</b> / ${rep.cap || CAP}</td><td class="r">${num(r.amount ?? (r.counted || 0) * (rep.rate || RATE))}</td><td><div class="yd-izoh">${izoh(r, s)}</div></td></tr>`; }).join('') || `<tr><td colspan="4" class="sc-mt">Bu oyda aloqa yo'q</td></tr>`}
           </tbody><tfoot><tr><td>Jami · ${rows.length} o'quvchi</td><td class="r">${total}</td><td class="r">${num(amount)}</td><td></td></tr></tfoot></table></div></section>`;
     }
-    function paySteps(month, rep) {
+    // Vaqt belgisi Toshkent vaqtida, boshqa sahifalardagi dG() bilan bir xil: "2-noyabr 11:20".
+    function dT(iso) {
+        if (!iso) return '';
+        const t = new Date(new Date(iso).getTime() + 5 * 3600000).toISOString();
+        return `${dG(t.slice(0, 10))} ${t.slice(11, 16)}`;
+    }
+    // card4 — xodimning o'z kartasi oxirgi 4 raqami (/api/staff/salary, faqat o'ziniki).
+    function paySteps(month, rep, card4 = '') {
         const st = rep.state || {}, nx = U().addDays(month + '-01', 32).slice(0, 7);
-        const t = iso => (iso ? new Date(iso).toLocaleString('uz-UZ', { timeZone: 'Asia/Tashkent', day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit' }) : '');
+        const card = card4 ? ` · karta •••• ${card4}` : '';
         const steps = [['Oy yopildi', true, `1-${MON[Number(nx.slice(5)) - 1]} 00:00 · avtomatik`],
-            ['Hisob tayyor', true, `${rep.counted} hisoblangan aloqa`],
-            ['Dastlabki tasdiq', !!st.prelim_at, st.prelim_at ? t(st.prelim_at) + ' · Moliya' : 'kutilmoqda'],
+            ['Hisob tayyor', true, st.locked_at ? `${dT(st.locked_at)} · ${rep.counted} aloqa` : `${rep.counted} hisoblangan aloqa`],
+            ['Dastlabki tasdiq', !!st.prelim_at, st.prelim_at ? dT(st.prelim_at) + ' · Moliya' : 'kutilmoqda'],
             ['E\'tiroz muddati', !!st.final_at, st.objection_until ? `${dG(String(st.objection_until).slice(0, 10))} gacha · keyin yakuniy` : '4-sanagacha · keyin yakuniy'],
-            ['To\'lov', !!st.paid_at, st.paid_at ? t(st.paid_at) + ' · to\'landi' : `5-${MON[Number(nx.slice(5)) - 1]}`]];
+            ['To\'lov', !!st.paid_at, st.paid_at ? `${dT(st.paid_at)} · to'landi${card}` : `5-${MON[Number(nx.slice(5)) - 1]}${card}`]];
         const cur = steps.findIndex(s => !s[1]);
         return { steps, cur, last: steps.filter(s => s[1]).pop()?.[0] || 'Oy yopildi' };
     }
-    function stepsHtml(month, rep, prev2) {
+    function stepsHtml(month, rep, prev2, card4 = '') {
         const { esc } = U();
-        const p = paySteps(month, rep);
+        const p = paySteps(month, rep, card4);
         return `<section class="sc-card yd-pay"><header class="sc-ch"><h2>To'lov holati</h2><span class="sc-pill sc-pill--info">${esc(p.last)}</span></header>
           <ol class="yd-steps">${p.steps.map(([n, ok, sub], i) => `<li class="${ok ? 'ok' : i === p.cur ? 'cur' : ''}"><i>${ok ? '✓' : i + 1}</i><span><b>${esc(n)}</b><small>${esc(sub)}</small></span></li>`).join('')}</ol>
-          ${prev2 && prev2.counted ? `<p class="sc-mt yd-pad">${esc(cap1(mName(prev2.month)))}: ${esc(money(prev2.amount))} · ${prev2.counted} aloqa${prev2.state?.paid_at ? ' · to\'langan' : ''}</p>` : ''}</section>`;
+          ${prev2 && prev2.amount ? `<p class="sc-mt yd-pad">${esc(cap1(mName(prev2.month)))}: ${esc(money(prev2.amount))}${prev2.counted ? ` · ${prev2.counted} aloqa` : ''}${prev2.state?.paid_at ? ' · to\'langan' : ''}</p>` : ''}</section>`;
     }
 
     // ── Davomat · aloqalar (YordamchiDavomat) ───────────────────────────────
@@ -275,7 +283,8 @@
         } catch (e) { root.innerHTML = `<div class="sc-err">${esc(e.message)}</div>`; return; }
         const tid = me().linkedTeacherId;
         const mine = students().filter(s => s.assistantTeacherId === tid && !s.isStaffDemo);
-        const active = mine.filter(s => s.status !== 'inactive');
+        // Faol — js/attendanceRules.js (muzlatilgan "Hammasi"/oy rejasiga kirmaydi; O'quvchilar sahifasi bilan bir xil).
+        const active = mine.filter(s => AttendanceRules.isActiveStudent(s));
         const by = new Map((rep.students || []).map(s => [s.studentId, s]));
         const embedded = root.dataset.embedded === '1';
         const head = embedded ? '' : `<div class="sc-head"><div><h1>Aloqalar</h1><p class="sc-sub">Yordamchi ustoz · har o'quvchi bilan haftasiga 3 ta aloqa, kamida 5 daqiqa · faqat shu kuni belgilanadi</p></div>
@@ -345,7 +354,7 @@
                 const cls = xs.some(i => i.status === 'counted') ? 'ok' : xs.some(i => i.outcome !== 'no_answer') ? 'un' : xs.length ? 'na' : date < td ? 'miss' : '';
                 return `<i class="${cls}${date === td ? ' td' : ''}${days.includes(d) ? '' : ' ex'}" title="${esc(DAY_FULL[d - 1])} ${esc(dS(date))}${cls === 'ok' ? ' · bajarildi' : cls === 'na' ? ' · javob bermadi' : cls === 'un' ? ' · hisoblanmadi' : cls === 'miss' ? ' · o\'tib ketdi' : ' · rejada'}">${DAY[d - 1]}</i>`; }).join('')}</span>`;
         };
-        const rows = mine.filter(s => s.status !== 'inactive' || by.has(s.id))
+        const rows = mine.filter(s => AttendanceRules.isActiveStudent(s) || (by.get(s.id)?.items || []).length)
             .sort((a, b) => (a.status === 'inactive') - (b.status === 'inactive') || String(a.lessonDayOfWeek % 2).localeCompare(String(b.lessonDayOfWeek % 2)) || (toMin(a.lessonTime) ?? 0) - (toMin(b.lessonTime) ?? 0));
         const retryRows = rows.filter(s => s.status !== 'inactive' && retry(s));
         if (conState.filter === 'retry' && !retryRows.length) conState.filter = 'all';
@@ -373,7 +382,7 @@
                 <td>${esc(pattern(s.lessonDayOfWeek))}</td><td>${esc(advDays(s).map(d => DAY[d - 1]).join('·'))}${s.lessonTime ? ' · ' + esc(s.lessonTime) : ''}</td>
                 <td>${gone ? '<span class="sc-pill sc-pill--bad">chiqib ketgan</span>' : weekChips(s)}</td><td class="r"><b>${weekCounted(s)}</b> / 3</td>
                 <td class="r">${r.counted} / ${CAP}</td></tr>`; }).join('') || `<tr><td colspan="6" class="sc-mt">${conState.filter === 'retry' ? 'Qayta urinish kerak o\'quvchi yo\'q' : 'Sizga yordamchi sifatida o\'quvchi biriktirilmagan'}</td></tr>`}
-            </tbody><tfoot><tr><td colspan="4">Jami · ${shown.length} o'quvchi</td><td class="r">${shown.reduce((n, s) => n + weekCounted(s), 0)} / ${shown.filter(s => s.status !== 'inactive' && !s.frozen).length * 3}</td><td class="r">${shown.reduce((n, s) => n + (by.get(s.id)?.counted || 0), 0)} / ${shown.filter(s => s.status !== 'inactive').length * CAP}</td></tr></tfoot></table></div>
+            </tbody><tfoot><tr><td colspan="4">Jami · ${shown.length} o'quvchi</td><td class="r">${shown.reduce((n, s) => n + weekCounted(s), 0)} / ${shown.filter(s => AttendanceRules.isActiveStudent(s)).length * 3}</td><td class="r">${shown.reduce((n, s) => n + (by.get(s.id)?.counted || 0), 0)} / ${shown.filter(s => AttendanceRules.isActiveStudent(s)).length * CAP}</td></tr></tfoot></table></div>
             <div class="yd-legend"><span><i class="ok"></i>bajarildi</span><span><i class="na"></i>javob bermadi</span>${shown.some(s => wItems(s).some(i => i.outcome !== 'no_answer' && i.status !== 'counted')) ? '<span><i class="un"></i>hisoblanmadi (qoida)</span>' : ''}<span><i></i>rejada</span></div></section>`;
         bindMonth();
         const find = id => mine.find(s => s.id === id);
@@ -430,7 +439,7 @@
         await U().loadStaffAvatars();
         const tid = me().linkedTeacherId;
         const td = today(), month = td.slice(0, 7), ws = weekStart(td);
-        const all = students().filter(s => !s.isStaffDemo && !s.frozen && s.status !== 'inactive');
+        const all = students().filter(s => AttendanceRules.isActiveStudent(s));
         const mine = all.filter(s => s.teacherId === tid), helped = all.filter(s => s.assistantTeacherId === tid && s.teacherId !== tid);
         const emp = (typeof getItem === 'function' ? getItem(STORAGE_KEYS.hrEmployees, []) : []).find(e => e.id === tid);
         const pure = !mine.length && (helped.length > 0 || emp?.role === 'yordamchi');
@@ -621,6 +630,14 @@
         if (sel && !isMainSel) fillProgress(sel);
     }
 
+    // Aloqalar dizaynda alohida sahifa emas: Akademik bo'lim → Davomat (yopilgan oy uchun — o'sha oy tanlangan holda).
+    function goDavomat(month) {
+        const mi = document.getElementById('mainAttMonth');
+        if (mi && /^\d{4}-\d{2}$/.test(String(month || ''))) mi.value = month;
+        else if (mi) mi.value = U().today().slice(0, 7);
+        if (typeof switchTab === 'function') switchTab('teachers-section', { teachersSection: 'attendance' });
+    }
+
     // ── Yordamchi bosh sahifasi (YordamchiBosh + YordamchiOyYopildi) ─────────
     let homeMode = null; // 'closed' | 'now' — foydalanuvchi tanlovi (sessiya ichida)
     async function assistantHome(container, user) {
@@ -630,7 +647,8 @@
         const tid = user.linkedTeacherId, td = today(), month = td.slice(0, 7), wdNow = wd(td), ws = weekStart(td);
         const prevMonth = addDays(month + '-01', -1).slice(0, 7), prev2Month = addDays(prevMonth + '-01', -1).slice(0, 7);
         const allMine = students().filter(s => !s.isStaffDemo && s.assistantTeacherId === tid);
-        const list = allMine.filter(s => s.status !== 'inactive');
+        // Faol o'quvchilar — js/attendanceRules.js (muzlatilgan va chiqib ketgan kirmaydi; O'quvchilar sahifasi bilan bir xil).
+        const list = allMine.filter(s => AttendanceRules.isActiveStudent(s));
         const lang = (typeof getUserOwnLang === 'function' && getUserOwnLang()) || 'english';
         const early = Number(td.slice(8)) <= 6;
         const [rep, prev, gm, acad, reqs, chNow] = await Promise.all([
@@ -655,12 +673,16 @@
         const noAns = s => todayOf(s).length && !done(s);
         const counted = rep?.counted || 0, amount = rep?.amount || 0;
         const possible = list.length * cap;
+        // "Oy oxirigacha ko'pi bilan" — server hisobi (assist.possibleLeft; Sozlamalar → Mening maoshim bilan bitta manba).
+        const maxLeft = rep?.possible != null ? rep.possible : null;
+        const leftOf = s => rep?.left?.[s.id]?.adviceLeft || 0;
         const mains = new Set(list.map(s => s.teacherId).filter(Boolean)).size;
         const next = advised.find(s => !done(s) && tmin(s) >= nowMin) || advised.find(s => !done(s));
         const myReqs = reqs.filter(r => r.teacher_id === tid);
         const pendLate = new Set(myReqs.filter(r => r.type === 'assist_late' && r.status === 'new').map(r => r.payload?.studentId));
         const retry = list.map(s => [s, retryOf(items(s), ws, pendLate.has(s.id))]).filter(([, r]) => r);
-        const nearCap = list.map(s => [s, by.get(s.id)?.counted || 0]).filter(([, n]) => n >= cap - 2).sort((a, b) => b[1] - a[1]);
+        // Limitga yaqinlar: qolgan tavsiyalar bilan 13 dan oshib ketadiganlar (yoki limit to'lganlar) — Mening maoshim bilan bir qoida.
+        const nearCap = list.map(s => [s, by.get(s.id)?.counted || 0]).filter(([s, n]) => n >= cap || n + leftOf(s) > cap).sort((a, b) => b[1] - a[1]);
         const hour = Number(new Date(Date.now() + 5 * 3600000).getUTCHours());
         const greet = hour < 11 ? 'Xayrli tong' : hour < 18 ? 'Xayrli kun' : 'Xayrli kech';
         const pst = prev?.state || {};
@@ -677,11 +699,16 @@
             container.querySelectorAll('[data-card]').forEach(b => b.onclick = () => u.openStudent(b.dataset.card));
             container.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => { homeMode = b.dataset.mode; refresh(); });
             container.querySelectorAll('[data-go-plan]').forEach(b => b.onclick = () => switchTab('timetable'));
-            container.querySelectorAll('[data-go-contacts]').forEach(b => b.onclick = () => { switchTab('school-contacts'); setTimeout(() => { const r = document.getElementById('schoolContactsRoot'); if (r && b.dataset.goContacts !== month) { r.dataset.month = b.dataset.goContacts; renderContacts(r); } }, 60); });
+            container.querySelectorAll('[data-go-contacts]').forEach(b => b.onclick = () => goDavomat(b.dataset.goContacts));
         };
 
         if (mode === 'closed') {
-            const [ch, prev2] = await Promise.all([api(`/assist/changes?month=${prevMonth}`).then(r => r.changes).catch(() => []), api(`/assist/month?month=${prev2Month}`).catch(() => null)]);
+            // O'tgan oydan oldingi oy ("Sentyabr: … · to'langan") — maosh tarixidan (Sozlamalar → Mening maoshim bilan bitta manba); karta oxirgi 4 raqami ham shu javobdan.
+            const [ch, sal] = await Promise.all([api(`/assist/changes?month=${prevMonth}`).then(r => r.changes).catch(() => []),
+                apiFetch('/api/staff/salary', { timeout: 30000 }).catch(() => null)]);
+            const h2 = (sal?.history || []).find(x => x.month === prev2Month);
+            const prev2 = h2 ? { month: prev2Month, amount: h2.amount, counted: h2.lessons, state: { paid_at: h2.status === 'paid' ? h2.paidAt || true : null } } : null;
+            const card4 = sal?.card4 || '';
             if (!container.isConnected) return;
             const leftIds = new Set(ch.filter(c => c.kind === 'left').map(c => c.studentId));
             const pr = prev.students || [];
@@ -712,7 +739,7 @@
                   <div class="kbx-tiles"><div><span>Hisoblanmadi</span><b>${prev.noAnswer}</b><small>javob bermadi</small></div>
                     <div><span>Limitdan ortiq</span><b>${prev.overCap}</b><small>13 tadan ortig'i hisobga kirmaydi</small></div>
                     <div><span>Admin tuzatishi</span><b>${prev.corrections ? '+' + prev.corrections : 0}</b><small>${cors.length ? esc(cors.slice(0, 2).map(c => `${first(find(c.sid)?.name || '')} · ${DAY[wd(c.day) - 1]} ${dS(c.day)}`).join(', ')) : 'yo\'q'}</small></div></div></section>
-                ${stepsHtml(prevMonth, prev, prev2)}</div>
+                ${stepsHtml(prevMonth, prev, prev2, card4)}</div>
               ${closedTable(prevMonth, prev, ch)}
               <section class="sc-card yd-nov"><header class="sc-ch"><h2>${esc(cap1(mName(month)))} boshlandi</h2><button type="button" class="ahx-link" data-mode="now">Bugungi aloqalar →</button></header>
                 <div class="yd-nov-b"><div class="yd-nov-k"><small>${esc(cap1(mName(month)))} · hozirgacha</small><b>${counted} aloqa</b><span class="sc-mt">bugun ${advN} tavsiya · ${doneN} bajarildi · ${list.length} o'quvchi</span></div>
@@ -753,18 +780,18 @@
               <div class="kbx-plan-num"><b>${esc(num(amount))}</b><span>so'm · hozirgacha</span></div>
               <span class="kbx-sub">${counted} hisoblangan aloqa × ${esc(money(rate))} · har o'quvchi bilan oyiga ${cap} tagacha</span></div></div>
               <div class="kbx-bar is-ok" role="img" aria-label="${counted} / ${possible}"><i style="width:${possible ? Math.min(100, counted / possible * 100) : 0}%"></i></div>
-              <div class="kbx-bar-foot"><span><strong>${counted}</strong> / ${possible} mumkin bo'lgan aloqa</span><span>oy oxirigacha ko'pi bilan ${esc(num(possible * rate))}</span></div>
+              <div class="kbx-bar-foot"><span><strong>${counted}</strong> / ${possible} mumkin bo'lgan aloqa</span><span>${maxLeft != null ? `oy oxirigacha ko'pi bilan ${esc(num(maxLeft * rate))}` : ''}</span></div>
               <div class="kbx-tiles"><div><span>Bugun</span><b>${doneN} / ${advised.length} aloqa</b><small>${advised.filter(noAns).length ? advised.filter(noAns).length + ' javob bermadi · ' : ''}${advised.filter(s => !done(s) && !noAns(s)).length} qoldi</small></div>
                 <div><span>Bu hafta</span><b>${list.reduce((n, s) => n + weekOf(s), 0)} / ${list.filter(s => !s.frozen).length * 3}</b><small>tavsiya jadvali bo'yicha</small></div>
                 <div><span>Qayta urinish</span><b>${retry.length}</b><small class="${retry.length ? 'yd-bad' : ''}">${retry.length ? esc(retry.map(([s, r]) => retryNote(s, r, td)).join(' · ')) : 'yo\'q'}</small></div></div></section>${nx}</div>
           <div class="thx-grid"><div class="thx-main"><section class="card dashboard-panel"><div class="dashboard-panel-head"><h3>Bugungi tavsiya · ${advised.length} o'quvchi</h3><button type="button" class="ahx-link" data-go-plan>Tavsiya jadvali →</button></div>
               ${advised.length ? `<ul class="ya-list">${advised.map(rowHtml).join('')}</ul>` : `<p class="dashboard-empty">Bugun (${esc(DAY[wdNow - 1])}) tavsiya qilingan aloqa yo'q</p>`}</section></div>
             <aside class="thx-side">${nearCap.length ? `<section class="card ahx-card ya-sc"><div class="ahx-card-h"><h3>${cap} ta limitga yaqinlar</h3></div>
-                <ul class="ya-lim">${nearCap.map(([s, n]) => `<li><div><b>${esc(s.name)}</b><small>${n >= cap ? 'limit to\'ldi — keyingisi hisoblanmaydi' : `oyda yana ${cap - n} tavsiya → ${cap + 1}-chisi hisoblanmaydi`}</small></div><span class="sc-pill sc-pill--warn">${n}/${cap}</span></li>`).join('')}</ul>
+                <ul class="ya-lim">${nearCap.map(([s, n]) => `<li><div><b>${esc(s.name)}</b><small>${n >= cap ? 'limit to\'ldi — keyingisi hisoblanmaydi' : `oyda yana ${leftOf(s)} tavsiya → ${cap + 1}-chisi hisoblanmaydi`}</small></div><span class="sc-pill sc-pill--warn">${n}/${cap}</span></li>`).join('')}</ul>
                 <p class="ya-fx">Limitdan ortiq aloqa qilish mumkin, lekin maoshga qo'shilmaydi.</p></section>` : ''}
               <section class="card ahx-card ya-sc"><div class="ahx-card-h"><h3>Qoidalar</h3></div><ul class="ya-rules"><li>Ovozli yoki video — kamida 5 daqiqa</li><li>Telegram yozishma — haftasiga 1 tagacha</li><li>"Javob bermadi" yoziladi, lekin hisoblanmaydi</li><li>Bir kunda ikki aloqa — bitta</li><li>Shu kuni belgilanadi, keyin faqat admin</li></ul></section></aside></div>`;
         bind();
     }
 
-    window.schoolTeacher = Object.assign(base, { renderContacts, markDrawer, renderMyStudents, assistantHome, financeDrawer, callStudent, lateDrawer });
+    window.schoolTeacher = Object.assign(base, { renderContacts, markDrawer, renderMyStudents, assistantHome, financeDrawer, callStudent, lateDrawer, goDavomat });
 })();

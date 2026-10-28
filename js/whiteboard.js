@@ -94,8 +94,8 @@
                 for (const it of items) {
                     const l = nl[it.studentId];
                     if (!l) continue;
-                    const byApp = l.reached ? Math.min(72, l.reached % 2 === 0 ? l.reached : l.reached + 1) : null;
-                    it.lessonNo = l.nextLive?.no && !(byApp && l.nextLive.no < byApp - 2) ? l.nextLive.no : byApp;
+                    // Yagona qoida — server (liveLessonPick: tarix + ilovadagi o'rin); bu yerda qayta hisoblanmaydi.
+                    it.lessonNo = l.nextLive?.no || null;
                 }
             }
         } catch { items = []; }
@@ -124,7 +124,7 @@
                 out.push({ key: b ? b.id : `v:${it.studentId}`, board: b || null, virtual: !b, studentId: it.studentId, studentName: it.studentName,
                     lessonNo: no, lessonDate: d, start: it.start, assist,
                     name: `${firstName(it.studentName)} · ${assist ? 'aloqa' : no ? `${no}-dars` : 'dars'}`,
-                    sub: `bugun ${hm(it.start)} · ${assist && it.done ? 'bajarildi' : b && b.itemCount ? (boardTopic(b) || 'saqlangan') : "hali bo'sh"}` });
+                    sub: `bugun ${hm(it.start)} · ${assist && it.done ? 'bajarildi' : assist && it.noAnswer ? 'javob bermadi' : b && b.itemCount ? (boardTopic(b) || 'saqlangan') : "hali bo'sh"}` });
             }
         }
         for (const b of boards) {

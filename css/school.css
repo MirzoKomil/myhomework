@@ -317,10 +317,6 @@ html.rd .teacher-duty-today .duty-acts { display: flex; align-items: center; gap
 .pwd-meter i { display: block; height: 100%; width: 0; background: #B42318; transition: width .2s; }
 .pwd-meter i[data-level="mid"] { background: #B54708; } .pwd-meter i[data-level="ok"] { background: #0F7A55; }
 .pwd-strength { font-size: 12.5px; margin: 4px 0 0; color: var(--text-muted, #6B7280); }
-.login-hist { width: 100%; border-collapse: collapse; font-size: 13px; }
-.login-hist th { text-align: left; color: var(--text-muted, #6B7280); font-weight: 600; padding: 6px 4px; border-bottom: 1px solid var(--border, #E6EAF2); }
-.login-hist td { padding: 7px 4px; border-bottom: 1px solid var(--border, #E6EAF2); }
-.login-hist tr.bad td { color: #B42318; }
 .login-warn { background: #FFF6F5; border: 1px solid #F3C1BB; color: #7A271A; font-size: 13.5px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
 
 /* Ustozlar reytingi */

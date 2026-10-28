@@ -83,7 +83,7 @@
             let pay = '';
             if (who && ctx === 'assistant' && rep) {
                 pay = `<div class="okx-k"><small>Mashg'ulotlar · shu oy</small><b>${rep.counted} <em>/ ${list.length * (rep.cap || 13)}</em></b></div>
-                  <div class="okx-k okx-pay"><small>Taxminiy maosh</small><b>${esc(u.num(rep.amount))} <em>so'm</em></b><span>${esc(u.num(rep.rate || 3846))} so'm × ${rep.counted} aloqa · ${list.length} o'quvchi</span></div>`;
+                  <div class="okx-k okx-pay"><small>Taxminiy maosh</small><b>${esc(u.num(rep.amount))} <em>so'm</em></b><span>${esc(u.num(rep.rate || 3077))} so'm × ${rep.counted} aloqa · ${list.length} o'quvchi</span></div>`;
             } else if (who && typeof calculateKpiSalary === 'function') {
                 try {
                     const t = (typeof resolveTeacherWithVirtual === 'function' && resolveTeacherWithVirtual(who.id)) || null;
@@ -149,7 +149,13 @@
         el.innerHTML = `${head}<div class="okx-body"><div class="sc-skel"></div></div>`;
         const bind = () => {
             el.querySelectorAll('[data-card]').forEach(b => b.onclick = () => u.openStudent(s.id, 'oz'));
-            el.querySelector('[data-cal]')?.addEventListener('click', () => (typeof switchTeachersSection === 'function' ? switchTeachersSection('attendance') : null));
+            el.querySelector('[data-cal]')?.addEventListener('click', () => {
+                // Tanlangan o'quvchining kalendari ochilsin (birinchi o'quvchiniki emas).
+                window.teacherDutyUI?.focus?.(s.id);
+                if (typeof switchTeachersSection === 'function') switchTeachersSection('attendance');
+                window.teacherDutyUI?.render?.();
+                setTimeout(() => window.teacherDutyUI?.revealFocused?.(), 60);
+            });
         };
         bind();
         let r, a = null;

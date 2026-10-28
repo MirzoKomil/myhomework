@@ -73,7 +73,9 @@ function saveLastTab(tab, ctx) {
 function loadLastTab() {
     try {
         const raw = localStorage.getItem(LAST_TAB_STORAGE_KEY);
-        return raw ? JSON.parse(raw) : null;
+        const last = raw ? JSON.parse(raw) : null;
+        // Olib tashlangan sahifa (masalan eski "Aloqalar" — school-contacts) saqlangan bo'lsa, tiklanmaydi.
+        return last && last.tab && document.getElementById('tab-' + last.tab) ? last : null;
     } catch { return null; }
 }
 
@@ -85,8 +87,6 @@ function persistCurrentTab() {
 }
 
 const ROLE_LABELS = { admin: 'Administrator', teacher: 'Ustoz' };
-
-const PROFILE_NOTIF_KEY = 'mh_profile_notif_prefs';
 
 function getUserInitials(name) {
     return (name || '').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?';
@@ -224,8 +224,8 @@ const ROLE_TABS = {
     // ko'chirildi. renderTeachersSection() ustoz/ROP uchun sub-navigatsiyani
     // faqat shu ikki bo'limga (Davomat, O'quvchini tekshirish) cheklaydi,
     // avvalgi tor ruxsat saqlanib qoladi.
-    // UstozBosh / YordamchiBosh sidebar: "Aloqalar" va "Mobil ilova" yo'q. Aloqalar — Akademik bo'lim → Davomat →
-    // "Yordamchi ustozlik" tabida (switchTab('school-contacts') havolalari ishlayveradi); ilova ko'rinishi — Darslik → "O'quvchi ko'rinishida ochish".
+    // UstozBosh / YordamchiBosh sidebar: "Aloqalar" va "Mobil ilova" yo'q. Yordamchi aloqalari — Akademik bo'lim → Davomat
+    // (yopilgan oy — o'sha oy tanlangan holda; havolalar schoolTeacher.goDavomat orqali); ilova ko'rinishi — Darslik → "O'quvchi ko'rinishida ochish".
     teacher:       ['dashboard', 'students', 'timetable', 'teachers-section', 'trial-lessons', 'guides'],
     employee:      ['student-app', 'guides'],
     hr:            ['dashboard', 'hr', 'guides']
@@ -270,7 +270,7 @@ function applyRoleBasedAccess(user) {
             // shu sabab butunlay yashirilmaydi, faqat renderTeachersSection()
             // ROP uchun sub-navigatsiyani o'sha bitta bo'limga cheklaydi
             // (Davomat/Sinov darsi/Reyting/Darslik/Elektron doska hamon yopiq).
-            hiddenForRop = new Set(['finance', 'hr', 'analitika', 'school-assist', 'school-contacts']);
+            hiddenForRop = new Set(['finance', 'hr', 'analitika', 'school-assist']);
             hiddenForRop.forEach(tab => {
                 const el = sidebar.querySelector(`.menu-item[data-tab="${tab}"]`);
                 if (el) el.style.display = 'none';
@@ -280,7 +280,7 @@ function applyRoleBasedAccess(user) {
             // uchun (u haqiqiy nishon lavozim bo'lgani va HR Bo'limi undan
             // yashiringani sabab) — admin/boshliq esa uni HR Bo'limi >
             // Yo'riqnomalar orqali yozadi, alohida punktga muhtoj emas.
-            hiddenForRop = new Set(['guides', 'school-contacts']);
+            hiddenForRop = new Set(['guides']);
             hiddenForRop.forEach(tab => { const el = sidebar.querySelector(`.menu-item[data-tab="${tab}"]`); if (el) el.style.display = 'none'; });
         }
         // 17-ish: sahifa obnovleniya (refresh) qilinganda foydalanuvchi
@@ -697,11 +697,6 @@ async function bootApp() {
             currentUser.linkedTeacherLang = detectedTeacherLang;
             setCurrentUser(currentUser);
         }
-        // "Aloqalar" — faqat yordamchi ustoz (o'quvchisi bor bo'lsa) uchun.
-        // 29-okt: asosiy ustoz yordamchi bo'la olmaydi — faqat HR lavozimi 'yordamchi'.
-        const isAssistant = linked?.role === 'yordamchi';
-        const contactsMenu = document.querySelector('.menu-item[data-tab="school-contacts"]');
-        if (contactsMenu && !isAssistant) contactsMenu.remove();
     }
 
     applyLangPickerPolicy(currentUser);
@@ -1264,7 +1259,6 @@ function renderTab(tab) {
         case 'school-approvals': window.schoolUI?.renderApprovals(document.getElementById('schoolApprovalsRoot')); break;
         case 'school-groups': window.schoolUI?.renderGroups(document.getElementById('schoolGroupsRoot')); break;
         case 'school-assist': (window.adminNazorat ? window.adminNazorat.renderAssist : window.schoolUI?.renderAssistAdmin)?.(document.getElementById('schoolAssistRoot')); break;
-        case 'school-contacts': window.schoolTeacher?.renderContacts(document.getElementById('schoolContactsRoot')); break;
     }
     if (typeof renderNotificationPanel === 'function') renderNotificationPanel();
 }
@@ -5626,19 +5620,6 @@ function renderMobileDocsTab(container, content, tab, meta) {
 }
 
 // --- Profile ---
-function getProfileNotifPrefs() {
-    try {
-        const raw = localStorage.getItem(PROFILE_NOTIF_KEY);
-        return raw ? JSON.parse(raw) : { email: true, leads: true, payments: true, homework: false };
-    } catch {
-        return { email: true, leads: true, payments: true, homework: false };
-    }
-}
-
-function saveProfileNotifPrefs(prefs) {
-    localStorage.setItem(PROFILE_NOTIF_KEY, JSON.stringify(prefs));
-}
-
 function calcProfileCompletion(user) {
     const checks = [
         { key: 'account', label: 'Akkaunt yaratildi', weight: 10, done: true },
@@ -5677,299 +5658,6 @@ function getUiLang() {
 function setUiLang(lang) {
     localStorage.setItem(LANG_KEY, lang);
     document.documentElement.lang = lang === 'ru' ? 'ru' : lang === 'en' ? 'en' : 'uz';
-}
-
-// "Mening maoshim" — server hisoblagan haqiqiy ma'lumot (/api/payroll/me).
-// Ilgari bu sahifa HR yozuvidagi mavjud bo'lmagan "salary" maydonini o'qirdi
-// va doim 0 / "—" ko'rsatardi.
-function summarizeMySalary(data, now = new Date()) {
-    const months = ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'Iyn', 'Iyl', 'Avg', 'Sen', 'Okt', 'Noy', 'Des'];
-    const history = Array.isArray(data?.history) ? data.history : [];
-    const byMonth = new Map();
-    history.forEach(h => {
-        const key = String(h.start || '').slice(0, 7);
-        if (!key) return;
-        const prev = byMonth.get(key) || { amount: 0, paid: true, paidAt: null };
-        byMonth.set(key, { amount: prev.amount + Number(h.amount || 0), paid: prev.paid && h.status === 'paid', paidAt: h.paidAt || prev.paidAt });
-    });
-    const curKey = data?.period?.start ? data.period.start.slice(0, 7) : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    const currentTotal = data?.current ? Number(data.current.total || 0) : null;
-    const last6 = Array.from({ length: 6 }, (_, i) => {
-        const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1);
-        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-        const rec = byMonth.get(key);
-        const amount = rec ? rec.amount : (key === curKey && currentTotal !== null ? currentTotal : 0);
-        const status = rec ? (rec.paid ? 'paid' : 'pending') : (key === curKey ? 'estimate' : 'none');
-        return { key, label: months[d.getMonth()], amount, status };
-    });
-    const paidTotal = history.filter(h => h.status === 'paid').reduce((a, h) => a + Number(h.amount || 0), 0);
-    return { last6, paidTotal, currentTotal };
-}
-
-async function hydrateMySalary() {
-    const curEl = document.getElementById('salCurrentValue');
-    if (!curEl) return;
-    const fmt = n => Number(n || 0).toLocaleString('uz-UZ') + ' soʻm';
-    let data;
-    try { data = await apiFetch('/api/payroll/me'); }
-    catch (e) { curEl.textContent = '—'; const note = document.getElementById('salNote'); if (note) note.textContent = 'Maosh maʼlumotini yuklab boʻlmadi: ' + e.message; return; }
-    if (!document.getElementById('salCurrentValue')) return;
-    const note = document.getElementById('salNote');
-    if (!data?.linked) {
-        curEl.textContent = '—';
-        if (note) note.textContent = 'Hisobingiz HR roʻyxatidagi xodim yozuviga ulanmagan (login = email). Administratorga murojaat qiling.';
-        return;
-    }
-    const sum = summarizeMySalary(data);
-    curEl.textContent = sum.currentTotal === null ? '—' : fmt(sum.currentTotal);
-    const paidEl = document.getElementById('salPaidValue');
-    if (paidEl) paidEl.textContent = fmt(sum.paidTotal);
-    const balEl = document.getElementById('salBalanceValue');
-    if (balEl) balEl.textContent = fmt(sum.paidTotal);
-    const balSub = document.getElementById('salBalanceSub');
-    if (balSub) balSub.textContent = sum.currentTotal === null ? '' : `Shu oy taxminiy: ${fmt(sum.currentTotal)}`;
-    const c = data.current || {};
-    if (note) {
-        const parts = [];
-        if (c.lessons !== undefined) parts.push(`${c.studentCount || 0} oʻquvchi · ${c.lessons || 0} dars`);
-        if (c.turnover !== undefined) parts.push(`aylanma ${fmt(c.turnover)}`);
-        if (c.fixed) parts.push(`fiksa ${fmt(c.fixed)}`);
-        if (c.commission) parts.push(`ulush ${fmt(c.commission)}`);
-        if (c.bonus) parts.push(`bonus ${fmt(c.bonus)}`);
-        note.textContent = (parts.length ? parts.join(' · ') + '. ' : '') + 'Joriy oy taxminiy: davomat va tushumlar boʻyicha hisoblanadi; yakuniy summa Moliya tasdiqlagach chiqadi.';
-    }
-    const max = Math.max(1, ...sum.last6.map(m => m.amount));
-    const bars = document.getElementById('salChartBars');
-    if (bars) bars.innerHTML = sum.last6.map((m, i) => `<div class="sal-chart-bar-wrap" title="${m.label}: ${fmt(m.amount)}">
-            <div class="sal-chart-bar${i === 5 ? ' sal-chart-bar--current' : ''}" style="height:${Math.round(m.amount / max * 100) || 4}%"></div>
-            <span class="sal-chart-label">${m.label}</span></div>`).join('');
-    const list = document.getElementById('salHistoryList');
-    const label = st => st === 'paid' ? 'Berilgan' : st === 'pending' ? 'Hisoblangan, hali berilmagan' : st === 'estimate' ? 'Joriy oy · taxminiy' : 'Maʼlumot yoʻq';
-    if (list) list.innerHTML = sum.last6.slice().reverse().map(m => `
-        <div class="sal-history-row">
-            <div class="sal-history-dot sal-history-dot--${m.status === 'paid' ? 'paid' : 'pending'}"></div>
-            <div class="sal-history-info">
-                <span class="sal-history-month">${m.label} ${m.key.slice(0, 4)}</span>
-                <span class="sal-history-status">${label(m.status)}</span>
-            </div>
-            <span class="sal-history-amount">${m.amount ? fmt(m.amount) : '—'}</span>
-        </div>`).join('');
-}
-
-function renderProfileSalarySection(user) {
-    const emps = getHrEmployees() || [];
-    const emp = emps.find(e => e.login === user.email || e.phone === user.phone) || {};
-
-    // Karta raqami formatlash
-    const rawCard = (emp.cardNumber || '').replace(/\s/g, '');
-    const maskedCard = rawCard.length >= 4
-        ? '**** **** **** ' + rawCard.slice(-4)
-        : '•••• •••• •••• ••••';
-    const displayCard = rawCard.length >= 4
-        ? (rawCard.match(/.{1,4}/g)?.join(' ') || rawCard)
-        : null;
-
-    // Ismning bosh harflari avatar uchun
-    const initials = user.name.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
-    const cardName = (emp.firstName && emp.lastName)
-        ? `${emp.firstName} ${emp.lastName}`.toUpperCase()
-        : user.name.toUpperCase();
-
-    // Salary ma'lumotlari (HR dan)
-    const salary = emp.salary || null;
-    const salaryAmount = salary?.current || 0;
-    const fmtUZS = n => n.toLocaleString('uz-UZ') + ' so\'m';
-
-    // Oxirgi 6 oy tarixi
-    const now = new Date();
-    const history = salary?.history || [];
-    const months = ['Yan','Fev','Mar','Apr','May','Iyn','Iyl','Avg','Sen','Okt','Noy','Des'];
-    const last6 = Array.from({ length: 6 }, (_, i) => {
-        const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1);
-        const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-        const record = history.find(h => h.month === key);
-        return { label: months[d.getMonth()], key, amount: record?.amount || 0, status: record?.status || 'pending', paidAt: record?.paidAt || null };
-    });
-    const maxAmount = Math.max(...last6.map(m => m.amount), salaryAmount, 1);
-
-    const chartBars = last6.map((m, i) => {
-        const h = Math.round((m.amount / maxAmount) * 100);
-        const isLast = i === 5;
-        return `<div class="sal-chart-bar-wrap" title="${m.label}: ${fmtUZS(m.amount)}">
-            <div class="sal-chart-bar${isLast ? ' sal-chart-bar--current' : ''}" style="height:${h || 4}%"></div>
-            <span class="sal-chart-label">${m.label}</span>
-        </div>`;
-    }).join('');
-
-    const historyRows = last6.slice().reverse().map(m => `
-        <div class="sal-history-row">
-            <div class="sal-history-dot sal-history-dot--${m.status}"></div>
-            <div class="sal-history-info">
-                <span class="sal-history-month">${m.label} ${m.key?.slice(0,4) || ''}</span>
-                <span class="sal-history-status">${m.status === 'paid' ? 'To\'langan' : m.status === 'pending' ? 'Kutilmoqda' : 'Bekor'}</span>
-            </div>
-            <span class="sal-history-amount">${m.amount ? fmtUZS(m.amount) : '—'}</span>
-        </div>`).join('');
-
-    return `
-    <div class="sal-page">
-        <div class="sal-header">
-            <div>
-                <h1 class="sal-header-title">Mening maoshim</h1>
-                <p class="sal-header-sub">Xush kelibsiz, ${escapeHtml(user.name.split(' ')[0])} 👋</p>
-            </div>
-        </div>
-
-        <div class="sal-grid">
-
-            <!-- Chap ustun: statistika -->
-            <div class="sal-col sal-col--left">
-
-                <div class="sal-stats-row">
-                    <div class="sal-stat-card sal-stat-card--earn">
-                        <div class="sal-stat-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
-                        </div>
-                        <div>
-                            <div class="sal-stat-label" id="salCurrentLabel">Shu oy (taxminiy)</div>
-                            <div class="sal-stat-value" id="salCurrentValue">Yuklanmoqda…</div>
-                        </div>
-                    </div>
-                    <div class="sal-stat-card sal-stat-card--total">
-                        <div class="sal-stat-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
-                        </div>
-                        <div>
-                            <div class="sal-stat-label">Oxirgi 12 oyda berilgan</div>
-                            <div class="sal-stat-value" id="salPaidValue">—</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="sal-chart-card">
-                    <div class="sal-chart-header">
-                        <h3>Maosh statistikasi</h3>
-                        <span class="sal-chart-period">Oxirgi 6 oy</span>
-                    </div>
-                    <div class="sal-chart" id="salChartBars">
-                        ${chartBars}
-                    </div>
-                    <p class="sal-note" id="salNote"></p>
-                </div>
-
-                <div class="sal-history-card">
-                    <div class="sal-chart-header">
-                        <h3>To'lov tarixi</h3>
-                    </div>
-                    <div class="sal-history-list" id="salHistoryList">
-                        ${historyRows || '<p class="text-muted" style="padding:16px;text-align:center;font-size:13px">To\'lov tarixi yo\'q</p>'}
-                    </div>
-                </div>
-
-            </div>
-
-            <!-- O'rta ustun: karta -->
-            <div class="sal-col sal-col--mid">
-
-                <div class="sal-section-title">Mening kartam</div>
-
-                <div class="sal-card-3d">
-                    <div class="sal-card-inner">
-                        <!-- Old yuz -->
-                        <div class="sal-card-face sal-card-front">
-                            <div class="sal-card-top-row">
-                                <div class="sal-card-chip">
-                                    <div class="sal-chip-lines"></div>
-                                </div>
-                                <svg class="sal-card-wave" viewBox="0 0 40 30" fill="none">
-                                    <path d="M5 15 Q10 5 15 15 Q20 25 25 15 Q30 5 35 15" stroke="rgba(255,255,255,0.5)" stroke-width="2" fill="none"/>
-                                </svg>
-                            </div>
-                            <div class="sal-card-number">${displayCard ? escapeHtml(displayCard) : '•••• •••• •••• ••••'}</div>
-                            <div class="sal-card-bottom-row">
-                                <div>
-                                    <div class="sal-card-field-label">Karta egasi</div>
-                                    <div class="sal-card-field-val">${escapeHtml(cardName.slice(0,22))}</div>
-                                </div>
-                                <div>
-                                    <div class="sal-card-field-label">Muddati</div>
-                                    <div class="sal-card-field-val">••/••</div>
-                                </div>
-                                <svg class="sal-card-logo" viewBox="0 0 50 30" fill="none">
-                                    <circle cx="18" cy="15" r="13" fill="rgba(255,255,255,0.25)"/>
-                                    <circle cx="32" cy="15" r="13" fill="rgba(255,255,255,0.15)"/>
-                                </svg>
-                            </div>
-                            <div class="sal-card-shimmer"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Karta ma'lumotlari -->
-                <div class="sal-card-info-card">
-                    <div class="sal-card-info-header">
-                        <h3>Karta ma'lumotlari</h3>
-                        ${emp.cardNumber ? '' : `<span class="sal-card-info-warn">To'ldirilmagan</span>`}
-                    </div>
-                    <div class="sal-card-info-grid">
-                        <div class="sal-card-info-item">
-                            <label>Karta raqami</label>
-                            <span>${emp.cardNumber ? escapeHtml(maskedCard) : '<span class="text-muted">Kiritilmagan</span>'}</span>
-                        </div>
-                        <div class="sal-card-info-item">
-                            <label>Karta egasi</label>
-                            <span>${escapeHtml(cardName)}</span>
-                        </div>
-                        <div class="sal-card-info-item">
-                            <label>Passport seriyasi</label>
-                            <span>${emp.passportSeries ? escapeHtml(emp.passportSeries) : '<span class="text-muted">Kiritilmagan</span>'}</span>
-                        </div>
-                        <div class="sal-card-info-item">
-                            <label>JSHSHIR (PINFL)</label>
-                            <span>${emp.pinfl ? escapeHtml(emp.pinfl) : '<span class="text-muted">Kiritilmagan</span>'}</span>
-                        </div>
-                    </div>
-                    ${!emp.cardNumber ? `<button type="button" class="btn-primary-sm" style="margin-top:12px;width:100%" data-profile-section-go="edit">Ma'lumotlarni to'ldirish</button>` : ''}
-                </div>
-
-            </div>
-
-            <!-- O'ng ustun: profil + umumiy -->
-            <div class="sal-col sal-col--right">
-
-                <div class="sal-profile-card">
-                    <div class="sal-profile-avatar" id="salProfileAvatar">
-                        ${user.avatar
-                            ? `<img id="salProfileAvatarImg" alt="${escapeHtml(user.name)}">`
-                            : `<span>${escapeHtml(initials)}</span>`}
-                    </div>
-                    <div class="sal-profile-info">
-                        <div class="sal-profile-name">${escapeHtml(user.name)}</div>
-                        <div class="sal-profile-role">${ROLE_LABELS[user.role] || user.role}</div>
-                    </div>
-                    <svg class="sal-profile-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-                </div>
-
-                <div class="sal-balance-card">
-                    <div class="sal-balance-label">Oxirgi 12 oyda berilgan</div>
-                    <div class="sal-balance-amount" id="salBalanceValue">—</div>
-                    <div class="sal-balance-sub" id="salBalanceSub"></div>
-                </div>
-
-                <div class="sal-notice-card">
-                    <div class="sal-notice-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                    </div>
-                    <div>
-                        <div class="sal-notice-title">Maosh ma'lumotlari</div>
-                        <div class="sal-notice-text">Maosh Moliya bo'limidagi hisobdan olinadi: joriy oy — davomat va tushumlar bo'yicha taxminiy, o'tgan oylar — tasdiqlangan summa. Savollar bo'lsa Moliya yoki HR bilan bog'laning.</div>
-                    </div>
-                </div>
-
-            </div>
-
-        </div>
-    </div>`;
 }
 
 function renderProfileCompletionWidget(user) {
@@ -6185,40 +5873,6 @@ function _pwdChecks(next, current) {
         { ok: /[A-ZА-ЯЁ]/.test(next), t: 'Katta harf (tavsiya)', soft: true }
     ];
 }
-function renderProfileSecuritySection() {
-    const checks = _pwdChecks('', '');
-    return `
-        <div class="profile-header-bar">
-            <h1>Parolni o'zgartirish</h1>
-            <p id="profilePwdChanged">Hisobingiz xavfsizligi uchun vaqti-vaqti bilan parolni yangilang</p>
-        </div>
-        <div class="profile-cards pwd-grid" style="max-width:820px">
-            <div class="profile-card">
-                <div class="form-group">
-                    <label for="profileCurrentPwd">Joriy parol</label>
-                    <input type="password" id="profileCurrentPwd" class="form-control" autocomplete="current-password">
-                </div>
-                <div class="form-group">
-                    <label for="profileNewPwd">Yangi parol <button type="button" class="pwd-show" data-pwd-show aria-pressed="false">ko'rsatish</button></label>
-                    <input type="password" id="profileNewPwd" class="form-control" autocomplete="new-password" aria-describedby="profilePwdRules">
-                </div>
-                <div class="form-group">
-                    <label for="profileConfirmPwd">Yangi parolni takrorlang <span class="pwd-match" id="profilePwdMatch"></span></label>
-                    <input type="password" id="profileConfirmPwd" class="form-control" autocomplete="new-password">
-                </div>
-                <label class="pwd-others"><input type="checkbox" id="profilePwdOthers" checked> Boshqa qurilmalardan chiqarish</label>
-                <button type="button" class="btn-primary-sm" id="profileChangePwdBtn">Parolni saqlash</button>
-                <p class="pwd-err" id="profilePwdErr" role="alert"></p>
-            </div>
-            <div class="profile-card">
-                <h4 style="margin:0 0 8px">Talablar</h4>
-                <ul class="pwd-rules" id="profilePwdRules">${checks.map(c => `<li class="${c.soft ? 'soft' : ''}">${escapeHtml(c.t)}</li>`).join('')}</ul>
-                <div class="pwd-meter" aria-hidden="true"><i id="profilePwdMeter"></i></div><p class="pwd-strength" id="profilePwdStrength"></p>
-                <h4 style="margin:16px 0 6px">Parolni unutdingizmi?</h4>
-                <p class="text-muted" style="font-size:13px;margin:0">Admin vaqtinchalik parol beradi — birinchi kirishda uni o'zgartiring.</p>
-            </div>
-        </div>`;
-}
 function bindProfilePasswordUi() {
     const cur = document.getElementById('profileCurrentPwd'), nw = document.getElementById('profileNewPwd'), cf = document.getElementById('profileConfirmPwd');
     if (!nw) return;
@@ -6282,168 +5936,6 @@ function renderProfileActivitySection() {
         <div class="profile-cards" style="max-width:640px">
             <div class="profile-card" id="adminActivityPanel"></div>
         </div>`;
-}
-
-function renderProfileNotificationsSection() {
-    const prefs = getProfileNotifPrefs();
-    const rows = [
-        { key: 'email', title: 'Email bildirishnomalar', desc: 'Muhim yangiliklar email orqali yuboriladi' },
-        { key: 'leads', title: 'Yangi lidlar', desc: 'Yangi organik lid kelganda xabar berish' },
-        { key: 'payments', title: "To'lovlar", desc: "To'lov va qarzdorlik haqida ogohlantirish" },
-        { key: 'homework', title: 'Uy vazifalari', desc: "O'quvchilar uy vazifasi topshirganda" }
-    ];
-    const rowsHtml = rows.map(r => `
-        <div class="profile-toggle-row">
-            <div class="profile-toggle-info">
-                <h4>${r.title}</h4>
-                <p>${r.desc}</p>
-            </div>
-            <label class="profile-toggle">
-                <input type="checkbox" data-notif-pref="${r.key}" ${prefs[r.key] ? 'checked' : ''}>
-                <span class="profile-toggle-slider"></span>
-            </label>
-        </div>`).join('');
-    return `
-        <div class="profile-header-bar">
-            <h1>Bildirishnomalar</h1>
-            <p>Qaysi hodisalar haqida xabar olishni tanlang</p>
-        </div>
-        <div class="profile-cards" style="max-width:560px">
-            <div class="profile-card">${rowsHtml}</div>
-        </div>`;
-}
-
-function parseSessionDevice(ua) {
-    if (!ua) return { label: 'Noma\'lum qurilma', icon: '💻' };
-    const s = ua.toLowerCase();
-    const isMobile = /iphone|android.*mobile|mobile/i.test(ua);
-    const isTablet = /ipad|android(?!.*mobile)/i.test(ua);
-    let os = 'Noma\'lum OS';
-    if (/windows/i.test(ua)) os = 'Windows';
-    else if (/iphone/i.test(ua)) os = 'iPhone';
-    else if (/ipad/i.test(ua)) os = 'iPad';
-    else if (/mac os x|macos/i.test(ua)) os = 'macOS';
-    else if (/android/i.test(ua)) os = 'Android';
-    else if (/linux/i.test(ua)) os = 'Linux';
-    let browser = 'Brauzer';
-    if (/edg\//i.test(ua)) browser = 'Edge';
-    else if (/opr\//i.test(ua)) browser = 'Opera';
-    else if (/chrome/i.test(ua)) browser = 'Chrome';
-    else if (/firefox/i.test(ua)) browser = 'Firefox';
-    else if (/safari/i.test(ua)) browser = 'Safari';
-    const icon = isMobile || isTablet ? '📱' : '💻';
-    return { label: `${browser} — ${os}`, icon };
-}
-
-function renderProfileSessionsSection() {
-    return `
-        <div class="profile-header-bar">
-            <h1>Faol sessiyalar</h1>
-            <p>Hisobingizga ulangan qurilmalar</p>
-        </div>
-        <div id="sessionsListWrap">
-            <div class="profile-cards" style="max-width:600px">
-                <div class="profile-card" style="text-align:center;padding:24px;color:#888">Yuklanmoqda...</div>
-            </div>
-        </div>`;
-}
-
-async function loadAndRenderSessions() {
-    const wrap = document.getElementById('sessionsListWrap');
-    if (!wrap) return;
-    try {
-        const { sessions } = await apiGetSessions();
-        if (!sessions.length) {
-            wrap.innerHTML = '<div class="profile-cards" style="max-width:600px"><div class="profile-card" style="padding:24px;color:#888">Faol sessiyalar topilmadi</div></div>';
-            return;
-        }
-        const othersCount = sessions.filter(s => !s.isCurrent).length;
-        wrap.innerHTML = `
-            <div class="profile-cards" style="max-width:600px">
-                ${sessions.map(s => {
-                    const dev = parseSessionDevice(s.userAgent);
-                    const lastSeen = s.lastSeen ? new Date(s.lastSeen).toLocaleString('uz-UZ') : '—';
-                    const created = s.createdAt ? new Date(s.createdAt).toLocaleString('uz-UZ') : '—';
-                    return `
-                    <div class="profile-card profile-session-card" data-session-id="${escapeHtml(s.id)}">
-                        <div class="profile-session-item">
-                            <div class="profile-session-icon">${dev.icon}</div>
-                            <div class="profile-session-info">
-                                <strong>${escapeHtml(dev.label)}</strong>
-                                <span>Kirdi: ${created}</span>
-                                <span>Oxirgi faollik: ${lastSeen}</span>
-                                ${s.ip ? `<span>IP: ${escapeHtml(s.ip)}</span>` : ''}
-                            </div>
-                            ${s.isCurrent
-                                ? '<span class="profile-session-badge">Joriy</span>'
-                                : `<button type="button" class="btn-danger-sm session-terminate-btn" data-session-id="${escapeHtml(s.id)}">Tugatish</button>`
-                            }
-                        </div>
-                    </div>`;
-                }).join('')}
-                ${othersCount > 1 ? `
-                <div style="margin-top:8px">
-                    <button type="button" class="btn-danger-sm" id="terminateAllOthersBtn">Boshqa barcha sessiyalarni tugatish (${othersCount} ta)</button>
-                </div>` : ''}
-            </div>`;
-
-        wrap.querySelectorAll('.session-terminate-btn').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                btn.disabled = true;
-                btn.textContent = '...';
-                try {
-                    await apiDeleteSession(btn.dataset.sessionId);
-                    btn.closest('.profile-session-card').remove();
-                    showNotification('Muvaffaqiyatli', 'Sessiya tugatildi', 'success');
-                    const remaining = wrap.querySelectorAll('.session-terminate-btn').length;
-                    if (remaining <= 1) {
-                        const allBtn = document.getElementById('terminateAllOthersBtn');
-                        if (allBtn) allBtn.remove();
-                    }
-                } catch (err) {
-                    showNotification('Xatolik', err.message, 'error');
-                    btn.disabled = false;
-                    btn.textContent = 'Tugatish';
-                }
-            });
-        });
-
-        const allBtn = document.getElementById('terminateAllOthersBtn');
-        if (allBtn) {
-            allBtn.addEventListener('click', async () => {
-                allBtn.disabled = true;
-                try {
-                    await apiDeleteOtherSessions();
-                    showNotification('Muvaffaqiyatli', 'Boshqa sessiyalar tugatildi', 'success');
-                    await loadAndRenderSessions();
-                } catch (err) {
-                    showNotification('Xatolik', err.message, 'error');
-                    allBtn.disabled = false;
-                }
-            });
-        }
-        renderLoginHistory(wrap);
-    } catch (err) {
-        wrap.innerHTML = `<div class="profile-cards" style="max-width:600px"><div class="profile-card" style="padding:24px;color:var(--danger)">${escapeHtml(err.message)}</div></div>`;
-    }
-}
-
-// Kirishlar tarixi · 30 kun (UstozSozSessiya): muvaffaqiyatli va noto'g'ri parol urinishlari.
-async function renderLoginHistory(wrap) {
-    let r; try { r = await apiLoginHistory(); } catch { return; }
-    const ev = r.events || [];
-    const fails = ev.filter(e => !e.ok);
-    const groups = [];
-    for (const e of ev) { const last = groups[groups.length - 1];
-        if (last && !e.ok && !last.ok && last.ip === e.ip && Math.abs(new Date(last.at) - new Date(e.at)) < 3600e3) last.n++; else groups.push({ ...e, n: 1 }); }
-    const fmt = v => new Date(v).toLocaleString('uz-UZ', { timeZone: 'Asia/Tashkent', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-    const recentFail = fails.find(e => Date.now() - new Date(e.at) < 7 * 864e5);
-    wrap.insertAdjacentHTML('beforeend', `
-        ${recentFail ? `<div class="profile-card login-warn" style="max-width:600px;margin-top:12px">${escapeHtml(fmt(recentFail.at))} — ${escapeHtml(recentFail.ip || 'noma\'lum joy')}dan noto'g'ri parol. Siz bo'lmasangiz parolni o'zgartiring. ${r.failLimit} xatodan keyin kirish ${r.lockMinutes} daqiqaga bloklanadi.
-            <button type="button" class="btn-ghost" data-go-pwd>Parolni o'zgartirish</button></div>` : ''}
-        <div class="profile-card" style="max-width:600px;margin-top:12px"><h4 style="margin:0 0 8px">Kirishlar tarixi · 30 kun</h4>
-        ${groups.length ? `<table class="login-hist"><thead><tr><th>Vaqt</th><th>Qurilma</th><th>IP</th><th>Natija</th></tr></thead><tbody>${groups.map(g => `<tr${g.ok ? '' : ' class="bad"'}><td>${escapeHtml(fmt(g.at))}</td><td>${escapeHtml(parseSessionDevice(g.userAgent).label)}</td><td>${escapeHtml(g.ip || '—')}</td><td>${g.ok ? 'Kirdi' : `Noto'g'ri parol${g.n > 1 ? ' × ' + g.n : ''}`}</td></tr>`).join('')}</tbody></table>` : '<p class="text-muted" style="margin:0">Hozircha yozuv yo\'q — tarix shu yangilanishdan keyin yig\'iladi.</p>'}</div>`);
-    wrap.querySelector('[data-go-pwd]')?.addEventListener('click', () => { _profileSection = 'security'; renderProfileBody(); });
 }
 
 function bindProfileEvents() {
@@ -6512,14 +6004,6 @@ function bindProfileEvents() {
             }
         });
     }
-
-    body.querySelectorAll('[data-notif-pref]').forEach(input => {
-        input.addEventListener('change', () => {
-            const prefs = getProfileNotifPrefs();
-            prefs[input.dataset.notifPref] = input.checked;
-            saveProfileNotifPrefs(prefs);
-        });
-    });
 
     const pwdBtn = document.getElementById('profileChangePwdBtn');
     if (pwdBtn) {
@@ -6720,10 +6204,7 @@ function renderProfileBody() {
     let html = '';
     switch (_profileSection) {
         case 'edit': html = renderProfileEditSection(user); break;
-        case 'salary': html = renderProfileSalarySection(user); setTimeout(hydrateMySalary, 0); break;
-        case 'security': html = renderProfileSecuritySection(); break;
-        case 'notifications': html = renderProfileNotificationsSection(); break;
-        case 'sessions': html = renderProfileSessionsSection(); break;
+        // edit / salary / security / notifications / sessions — js/staffSettings.js va js/staffSessions.js (yuqorida).
         case 'support': html = renderProfileSupportSection(); break;
         case 'peer-chats': html = renderProfilePeerChatsSection(); break;
         case 'activity': html = renderProfileActivitySection(); break;
@@ -6731,7 +6212,6 @@ function renderProfileBody() {
     }
     body.innerHTML = html;
     bindProfileEvents();
-    if (_profileSection === 'sessions') loadAndRenderSessions();
     if (_profileSection === 'security') bindProfilePasswordUi();
     if (_profileSection === 'support') {
         const demoStudentId = getItem(STORAGE_KEYS.demoStudentId, '');
@@ -8686,7 +8166,7 @@ function renderTeacherTodayBlock(user, { todoSlot = true } = {}) {
     const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     const day = now.getDate();
     const nowMin = now.getHours() * 60 + now.getMinutes();
-    const all = getItem(STORAGE_KEYS.students, []).filter(s => !s.frozen && !s.isStaffDemo && s.status !== 'inactive');
+    const all = getItem(STORAGE_KEYS.students, []).filter(s => AttendanceRules.isActiveStudent(s));
     const students = all.filter(s => ids.has(String(s.teacherId || '')));
     const helped = all.filter(s => ids.has(String(s.assistantTeacherId || '')));
     const att = getItem(STORAGE_KEYS.mainAttendance, {});
@@ -9338,7 +8818,7 @@ function teacherHomeStats(user, now = new Date()) {
     const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     const day = now.getDate();
     const nowMin = now.getHours() * 60 + now.getMinutes();
-    const all = getItem(STORAGE_KEYS.students, []).filter(s => !s.frozen && !s.isStaffDemo && s.status !== 'inactive');
+    const all = getItem(STORAGE_KEYS.students, []).filter(s => AttendanceRules.isActiveStudent(s));
     const students = all.filter(s => ids.has(String(s.teacherId || '')));
     const helped = all.filter(s => ids.has(String(s.assistantTeacherId || '')));
     const att = getItem(STORAGE_KEYS.mainAttendance, {});
@@ -9365,11 +8845,8 @@ function teacherHomeStats(user, now = new Date()) {
     Object.values(getItem(STORAGE_KEYS.liveGrades, {})).forEach(list => (list || []).forEach(g => {
         if (ids.has(String(g.teacherId || '')) && typeof g.studentRatingOfTeacher?.overall === 'number') ratings.push(g.studentRatingOfTeacher.overall);
     }));
-    const own = typeof resolveTeacherWithVirtual === 'function' ? resolveTeacherWithVirtual(user.linkedTeacherId) : null;
-    const kpi = (teacher, store, list) => { try { return teacher && list.length ? calculateKpiSalary(teacher, month, store, list) : null; } catch (e) { return null; } };
-    const mainKpi = own && own.type !== 'yordamchi' ? kpi(own, att, students) : null;
-    // Yordamchi maoshi ASSIST_CONTACTS_FROM oyidan aloqalar bo'yicha (homeExtras qo'shadi); undan oldin — eski yordamchi davomati.
-    const oldAssist = month < ASSIST_CONTACTS_FROM && own && helped.length ? kpi({ ...own, type: 'yordamchi' }, getItem(STORAGE_KEYS.assistantAttendance, {}), helped) : null;
+    // Maosh brauzerda hisoblanmaydi: summa server payroll'idan (/api/payroll/me) — Davomat va "Mening maoshim" bilan
+    // bitta manba (schoolTeacher.homeExtras to'ldiradi). Bu yerda faqat karta ko'rsatiladimi — shu aniqlanadi.
     const todayList = today.map(s => {
         const start = toMin(s.lessonTime), dur = Number(s.lessonDuration) || 15;
         return { id: s.id, name: s.name || "Oʻquvchi", group: s.group || '', time: s.lessonTime, start, dur, marked: present(s.id, day),
@@ -9381,8 +8858,7 @@ function teacherHomeStats(user, now = new Date()) {
         attExpected, attPct, attMissed,
         rating: ratings.length ? ratings.reduce((a, b) => a + b, 0) / ratings.length : null, ratingN: ratings.length,
         // Yordamchi qismi keyin schoolTeacher.homeExtras orqali aloqalar hisobidan qo'shiladi.
-        salary: (mainKpi?.total || 0) + (oldAssist?.total || 0), mainSalary: mainKpi?.total || 0, oldAssistSalary: oldAssist ? oldAssist.total || 0 : null,
-        hasSalary: !!(mainKpi || helped.length)
+        hasSalary: !!(students.length || helped.length)
     };
 }
 
@@ -9441,8 +8917,8 @@ function renderTeacherHome(user, now = new Date()) {
             const plan = kbxPlanCard({
                 id: 'kbxThPlan', title: `Hisoblangan maosh · ${month}`,
                 pill: s.attPct != null ? (s.attPct >= 90 ? { cls: 'ok', text: `Davomat ${s.attPct}%` } : { cls: 'warn', text: `Davomat ${s.attPct}%` }) : null,
-                big: s.hasSalary ? `<bdi data-thx-sal data-main="${Math.round(s.mainSalary)}"${s.oldAssistSalary != null ? ` data-old-assist="${Math.round(s.oldAssistSalary)}"` : ''}>${_kbxNum(s.salary)}</bdi>` : '—', of: s.hasSalary ? 'soʻm · hozirgacha' : 'KPI sozlanmagan',
-                sub: s.hasSalary ? `<span data-thx-salsub>${s.helped ? `asosiy ${_kbxNum(s.mainSalary)} + yordamchi …` : 'belgilangan davomat boʻyicha'} · oy yopilganda Moliya tasdiqlaydi</span>` : 'Administrator KPI sozlamasini kiritganda chiqadi',
+                big: s.hasSalary ? '<bdi data-thx-sal>…</bdi>' : '—', of: s.hasSalary ? 'soʻm · hozirgacha' : 'KPI sozlanmagan',
+                sub: s.hasSalary ? '<span data-thx-salsub>belgilangan davomat boʻyicha · oy yopilganda Moliya tasdiqlaydi</span>' : 'Administrator KPI sozlamasini kiritganda chiqadi',
                 bar: s.attPct != null ? { pct: s.attPct, due: null, ok: s.attPct >= 90, label: `Davomat ${s.attPct}%` } : null,
                 foot: s.attPct != null ? [`<strong>${s.came}</strong> keldi · <strong>${s.attMissed}</strong> kelmadi`, `kutilgan ${s.attExpected} dars`] : null,
                 tiles: [

@@ -8,6 +8,8 @@
 // buzmaslik uchun reyting FAQAT serverda (getFullState() orqali) hisoblanadi
 // va mijozga yuboriladigan javobda xom davomat/baho qatorlari emas, faqat
 // yakuniy hisoblangan (ism, ball, o'rin) ro'yxati bo'ladi.
+const R = require('../../js/attendanceRules');
+
 function expandLessonPatternDays(day) {
     const d = Number(day);
     if ([1, 3, 5].includes(d)) return [1, 3, 5];
@@ -33,8 +35,7 @@ function monthKeySuffix(now) {
 // "kelgan" ni ayirib hisoblanadi.
 function daysElapsedThisMonthFor(student, now) {
     if (student.lessonDayOfWeek == null || !student.lessonTime) return 0;
-    if (student.frozen) return 0;
-    if (student.status && ['tark-etdi', "to'xtatilgan", 'bekor'].includes(String(student.status))) return 0;
+    if (!R.isActiveStudent(student)) return 0;
     const patternDays = expandLessonPatternDays(student.lessonDayOfWeek);
     const year = now.getUTCFullYear(), month = now.getUTCMonth();
     const todayDate = now.getUTCDate();
@@ -64,34 +65,41 @@ function computeTeacherRating(state, ownType, now = tashkentNow(), learning = {}
     const typeOf = (t) => (t.type === 'yordamchi' ? 'yordamchi' : 'asosiy');
     const teachers = (state.teachers || []).filter(t => typeOf(t) === ownType);
     const startedBy = s => { const d = String(s.startDate || s.joinDate || '').slice(0, 7); return !/^\d{4}-\d{2}$/.test(d) || d <= monthSuffix; };
-    const students = (state.students || []).filter(s => !opts.pastMonth || startedBy(s));
+    // Faqat faol o'quvchilar (js/attendanceRules.js — muzlatilgan, to'xtatilgan/tugatgan, demo kirmaydi).
+    const students = (state.students || []).filter(s => R.isActiveStudent(s) && (!opts.pastMonth || startedBy(s)));
     const attStore = ownType === 'yordamchi' ? (state.assistantAttendance || {}) : (state.mainAttendance || {});
+    const todayKey = now.toISOString().slice(0, 10);
 
     const rows = teachers.map((t) => {
         const ownStudents = students.filter(s => (ownType === 'yordamchi' ? s.assistantTeacherId : s.teacherId) === t.id);
         const attKey = `${monthSuffix}_${t.id}`;
         const presentDays = attStore[attKey] || {};
-        // Davomat sahifasi va moliya bilan bir xil (2026-10 dan): faqat o'quvchining o'z dars
-        // kunlaridagi (va bugungacha) "Keldi" sanaladi; har o'quvchida kutilgandan oshmaydi.
-        // Avval har qanday "Keldi" sanalardi — eski avtomatik belgilar (boshqa kunlarga) foizni oshirib yuborardi.
-        const strict = monthSuffix >= '2026-10';
-        const year = now.getUTCFullYear(), month = now.getUTCMonth(), today = now.getUTCDate();
         let expected = 0, completed = 0;
-        ownStudents.forEach((s) => {
-            const exp = daysElapsedThisMonthFor(s, now);
-            expected += exp;
-            // Faqat "Keldi" (1/true) — "Kelmadi" (0) belgilari ham shu obyektda saqlanadi, ular hisoblanmaydi.
-            const marks = Object.entries(presentDays[s.id] || {}).filter(([, v]) => v === 1 || v === true);
-            if (!strict) { completed += marks.length; return; }
-            const pattern = s.lessonDayOfWeek == null ? [] : expandLessonPatternDays(s.lessonDayOfWeek);
-            const n = marks.filter(([d]) => {
-                const day = Number(d);
-                if (!(day >= 1 && day <= today)) return false;
-                const dow = new Date(Date.UTC(year, month, day)).getUTCDay();
-                return pattern.includes(dow === 0 ? 7 : dow);
-            }).length;
-            completed += Math.min(n, exp);
-        });
+        if (ownType !== 'yordamchi') {
+            // Asosiy ustoz: UstozDavomat "Oktyabr" kartasi bilan AYNAN bitta formula (js/attendanceRules.js monthTotals):
+            // dars kunidagi "Keldi" + tasdiqlangan qoplash, har o'quvchida oy rejasidan oshmaydi.
+            const T = R.monthTotals({ id: t.id, month: monthSuffix, students: ownStudents, mainAtt: presentDays,
+                makeups: opts.makeups || [], teacher: t, todayKey });
+            expected = T.expected; completed = T.counted;
+        } else {
+            // Yordamchi (eski davomat bo'yicha) — avvalgidek; reyting UI'da yordamchilarga ko'rsatilmaydi.
+            const strict = monthSuffix >= '2026-10';
+            const year = now.getUTCFullYear(), month = now.getUTCMonth(), today = now.getUTCDate();
+            ownStudents.forEach((s) => {
+                const exp = daysElapsedThisMonthFor(s, now);
+                expected += exp;
+                const marks = Object.entries(presentDays[s.id] || {}).filter(([, v]) => v === 1 || v === true);
+                if (!strict) { completed += marks.length; return; }
+                const pattern = s.lessonDayOfWeek == null ? [] : expandLessonPatternDays(s.lessonDayOfWeek);
+                const n = marks.filter(([d]) => {
+                    const day = Number(d);
+                    if (!(day >= 1 && day <= today)) return false;
+                    const dow = new Date(Date.UTC(year, month, day)).getUTCDay();
+                    return pattern.includes(dow === 0 ? 7 : dow);
+                }).length;
+                completed += Math.min(n, exp);
+            });
+        }
 
         const davomatPct = expected > 0 ? Math.min(100, (completed / expected) * 100) : 0;
 
@@ -167,18 +175,18 @@ function firstDataMonth(state, ownType) {
 // Admin Reyting sahifasi va ustoz Bosh sahifasi uchun yagona javob.
 // month: 'YYYY-MM' (ixtiyoriy, joriy oydan keyingisi bo'lmaydi). loadLearning(now, opts) -> { studentId: pct }.
 // Javobda faqat yakuniy (ism, ball, foizlar, o'rin) — xom davomat yo'q.
-async function ratingResponse({ state, ownType, month, loadLearning, now = tashkentNow() }) {
+async function ratingResponse({ state, ownType, month, loadLearning, makeups = [], now = tashkentNow() }) {
     const cur = monthKeySuffix(now);
     const key = month && MONTH_RE.test(month) && month < cur && month >= RATING_START ? month : cur;
     const isPast = key !== cur;
     const at = isPast ? monthEnd(key) : now;
     const learn = async (when, opts) => { try { return await loadLearning(when, opts); } catch (e) { console.error('teacher-rating: o\'zlashtirish yuklanmadi', e.message); return {}; } };
-    let current = computeTeacherRating(state, ownType, at, await learn(at, isPast ? { untilMonthEnd: true } : undefined), isPast ? { pastMonth: true } : {});
+    let current = computeTeacherRating(state, ownType, at, await learn(at, isPast ? { untilMonthEnd: true } : undefined), isPast ? { pastMonth: true, makeups } : { makeups });
     // O'tgan oy tanlanganda: hech kimda "Keldi" bo'lmasa — o'sha oy ma'lumoti yo'q (bo'sh ro'yxat).
     if (isPast && !current.some(r => r.completed > 0)) current = [];
     const prevNow = prevMonthEnd(at);
     let prevRows = [];
-    if (monthKeySuffix(prevNow) >= RATING_START) try { prevRows = computeTeacherRating(state, ownType, prevNow, await learn(prevNow, { untilMonthEnd: true }), { pastMonth: true }); }
+    if (monthKeySuffix(prevNow) >= RATING_START) try { prevRows = computeTeacherRating(state, ownType, prevNow, await learn(prevNow, { untilMonthEnd: true }), { pastMonth: true, makeups }); }
     catch (err) { console.error('teacher-rating: o\'tgan oy hisoblanmadi', err.message); }
     return { month: key, currentMonth: cur, prevMonth: monthKeySuffix(prevNow), firstMonth: firstDataMonth(state, ownType),
         ownType, rows: attachPrevious(current, prevRows), formula: { attendance: 0.6, learning: 0.4 } };

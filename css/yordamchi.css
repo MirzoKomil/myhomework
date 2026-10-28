@@ -158,3 +158,8 @@ html.rd[data-theme="dark"] .yd-pc.lo { color: #FDA29B; } html.rd[data-theme="dar
 .ms-detail .ms-acts .sc-btn { width: 100%; }
 .sc-root .sc-head > input[type=search] { width: min(290px, 100%); min-height: 44px; border-radius: 12px; border: 1px solid var(--kb-input-border); padding: 0 14px; font: inherit; background: var(--surface); color: var(--text); box-sizing: border-box; }
 @media (max-width: 700px) { .sc-root .sc-head > input[type=search] { width: 100%; } }
+
+/* YordamchiBosh · 390px: plitkadagi qiymat ("7 / 9 aloqa") kesilmasin — o'raladi */
+@media (max-width: 600px) {
+    html.rd .yd-hh ~ .kbx-top .kbx-tiles b { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.2; overflow-wrap: anywhere; }
+}

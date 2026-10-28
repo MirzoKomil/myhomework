@@ -318,7 +318,7 @@
         const st = card.status;
         if (st === 'frozen') { const f = card.statuses.filter(s => s.status === 'frozen').pop(); return `<span class="sc-pill sc-pill--info">Muzlatilgan${f?.to ? ' · ' + esc(fmtDate(f.to, false)) + ' gacha' : ''}</span>`; }
         if (st === 'left' && card.finished) { const l = card.statuses.filter(s => s.status === 'left').pop(); return `<span class="sc-pill sc-pill--ok">Kursni tugatgan${l ? ' · ' + esc(fmtDate(addDays(l.from, -1), false)) : ''}</span>`; }
-        if (st === 'left') { const l = card.statuses.filter(s => s.status === 'left').pop(); return `<span class="sc-pill sc-pill--bad">Chiqib ketgan${l ? ' · ' + esc(fmtDate(addDays(l.from, -1), false)) : ''}</span>`; }
+        if (st === 'left') { const l = card.statuses.filter(s => s.status === 'left').pop(); return `<span class="sc-pill sc-pill--bad">Chiqib ketgan${l ? ' · ' + esc(fmtDate(l.from, false)) : ''}</span>`; }
         const fr = card.statuses.find(s => s.status === 'frozen' && s.from > today());
         return `<span class="sc-pill sc-pill--ok">Faol</span>${fr ? ` <span class="sc-pill sc-pill--info">Muzlatiladi: ${esc(fmtDate(fr.from, false))}–${esc(fmtDate(fr.to, false))}</span>` : ''}`;
     }
@@ -1115,7 +1115,7 @@
         const st = rep?.state || {};
         const locked = month < today().slice(0, 7);
         const step = !locked ? 'Oy davom etmoqda' : !st.prelim_at ? 'Qulflangan · dastlabki tasdiq kutilmoqda' : !st.final_at ? `Dastlabki tasdiq · e'tiroz ${st.objection_until ? fmtDate(String(st.objection_until).slice(0, 10), false) + ' gacha' : ''}` : !st.paid_at ? 'Yakuniy tasdiq · to\'lov kutilmoqda' : 'To\'langan';
-        root.innerHTML = `<div class="sc-head"><div><h1>Yordamchi aloqalari</h1><p class="sc-sub">Har o'quvchi bilan oyiga 13 tagacha × 3 846 so'm · kamida 5 daqiqa · "javob bermadi" hisoblanmaydi</p></div>
+        root.innerHTML = `<div class="sc-head"><div><h1>Yordamchi aloqalari</h1><p class="sc-sub">Har o'quvchi bilan oyiga 13 tagacha × 3 077 so'm (40 000 so'm) · kamida 5 daqiqa · "javob bermadi" hisoblanmaydi</p></div>
             <div class="sc-row"><select data-aid>${list.map(a => `<option value="${esc(a.id)}"${a.id === aid ? ' selected' : ''}>${esc(a.name)}</option>`).join('')}</select><input type="month" value="${month}" data-month></div></div>
           ${reqs.length ? `<section class="sc-card"><header class="sc-ch"><h2>Kechikib belgilash so'rovlari · ${reqs.length}</h2></header>${reqs.map(r => `<div class="sc-it"><span class="sc-grow"><b>${esc(r.requester_name)} · ${esc(studentById(r.payload?.studentId)?.name || '')}</b><small>${esc(fmtDate(r.payload?.day))} · ${esc(r.payload?.channel || '')} ${esc(r.payload?.minutes || '')} daq — ${esc(r.reason)}</small></span><button type="button" class="sc-btn sc-btn--pri sc-btn--sm" data-late="${esc(r.id)}">Qo'shish</button></div>`).join('')}</section>` : ''}
           ${rep ? `<div class="sc-kpis"><div class="sc-kpi"><small>Hisoblangan</small><b>${rep.counted}</b><span>${formatMoney(rep.amount)}</span></div><div class="sc-kpi"><small>Javob bermadi</small><b>${rep.noAnswer}</b></div><div class="sc-kpi"><small>Limitdan ortiq</small><b>${rep.overCap}</b></div><div class="sc-kpi"><small>Holat</small><b class="sc-small">${esc(step)}</b></div></div>

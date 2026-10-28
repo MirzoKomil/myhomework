@@ -97,7 +97,7 @@
             return r;
         };
         const pill = s => s.state === 'frozen' ? `<span class="sc-pill sc-pill--info">Muzlatilgan · ${esc(dShort(s.from))}${s.to ? ' → ' + esc(dShort(s.to)) : ''}</span>`
-            : s.state === 'left' ? `<span class="sc-pill sc-pill--bad">Chiqib ketgan${s.from ? ' · ' + esc(dShort(lastDay(s))) : ''}</span>`
+            : s.state === 'left' ? `<span class="sc-pill sc-pill--bad">Chiqib ketgan${s.from ? ' · ' + esc(dShort(s.from)) : ''}</span>`
             : s.state === 'finished' ? `<span class="sc-pill sc-pill--ok">Kursni tugatgan${s.from ? ' · ' + esc(dShort(lastDay(s))) : ''}</span>`
             : `<span class="sc-pill sc-pill--mute">${esc(shortName(s.teacherName))}ga o'tdi · ${esc(dShort(s.from))}</span>`;
         // Sotuv/admin: eslatma va qo'ng'iroq tugmalari (serverda ham tekshiriladi — faqat o'zi sotgan o'quvchi).

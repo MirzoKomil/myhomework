@@ -200,6 +200,8 @@
     }
     const dayLabel = d => `${d === U().today() ? 'Bugun · ' : ''}${U().DAY[U().wd(d) - 1]}, ${dm(d)}`;
     const weekLabel = from => `${dm(from)} – ${dm(U().addDays(from, 6))}`;
+    // Sarlavhadagi hafta nomi: faqat joriy haftada "Bu hafta", boshqasida — qo'shni hafta nomi yoki sana oralig'i.
+    const weekTitle = from => { const cur = U().weekStart(U().today()); return from === cur ? 'Bu hafta' : from === U().addDays(cur, -7) ? 'O\'tgan hafta' : from === U().addDays(cur, 7) ? 'Keyingi hafta' : weekLabel(from); };
 
     // ── Kirish ───────────────────────────────────────────────────────────────
     function owns(view) { return V2_VIEWS.includes(view) && role() !== 'sales_manager'; }
@@ -532,7 +534,7 @@
         const trials = d.views.flatMap(v => v.items.filter(i => i.kind === 'trial').map(i => ({ ...i, date: v.date })));
         const myReqs = (reqs.requests || []).filter(r => ['close', 'open', 'leave'].includes(r.type)).slice(0, 3);
         body.innerHTML = `<div class="sv-lay">
-            <section class="sc-card sv-wcard"><header class="sv-bh"><h2>${mode === 'tday' ? esc(dayLabel(st.date)) : 'Bu hafta'} · ${n('lesson')} dars · ${n('makeup')} qoplash · ${n('trial')} sinov${asst.length ? ` · ${asst.length} yordamchi aloqasi (jadvalni band qilmaydi)` : ''}</h2>
+            <section class="sc-card sv-wcard"><header class="sv-bh"><h2>${mode === 'tday' ? esc(dayLabel(st.date)) : esc(weekTitle(from))} · ${n('lesson')} dars · ${n('makeup')} qoplash · ${n('trial')} sinov${asst.length ? ` · ${asst.length} yordamchi aloqasi (jadvalni band qilmaydi)` : ''}</h2>
               <p class="sc-mt sv-hint">Bo'sh joyni bosing → qoplash darsi · darsni bosing → o'quvchi kartasi</p></header>
               ${vgrid(cols, range, { cls: mode === 'tday' ? 'is-day' : '' })}${legend(LEGEND_T, { rules: true })}</section>
             <div class="sv-side">
@@ -584,7 +586,7 @@
                 const dur = Number(stu?.lessonDuration) || 30;
                 const fits = e - s >= dur;
                 const t0 = fits ? snap(s, e, dur, clickMin) : s;
-                const ms = missed.filter(m => m.studentId === sid && m.date.slice(0, 7) === date.slice(0, 7) && m.date <= today());
+                const ms = missed.filter(m => m.studentId === sid && m.date.slice(0, 7) === date.slice(0, 7) && m.date <= today() && m.date <= date); // qoplash qoldirilgan darsdan keyin
                 const firstOpen = ms.find(m => !m.makeup);
                 const ld = Number(stu.lessonDayOfWeek), lessonDay = ([1, 3, 5].includes(ld) ? [1, 3, 5] : [2, 4, 6].includes(ld) ? [2, 4, 6] : [ld]).includes(U().wd(date));
                 mkPanel.innerHTML = `<header class="sv-bh"><h2>Qoplash darsini rejalashtirish</h2></header><div class="sv-ed">
@@ -593,7 +595,8 @@
                   <div class="sv-fl"><span>Qaysi qoldirilgan dars o'rniga?</span>${ms.length ? ms.map(m => `<label class="sv-rb${m.makeup ? ' is-off' : ''}"${m.makeup ? ' aria-disabled="true"' : ''}><input type="radio" name="miss" value="${m.date}"${m === firstOpen ? ' checked' : ''}${m.makeup ? ' disabled' : ''}><i></i><span><b>${dm(m.date)}, ${DAY_FULL[U().wd(m.date) - 1]}</b><small>${m.makeup ? `allaqachon ${m.makeup.status === 'approved' ? 'qoplangan' : m.makeup.status === 'review' ? 'qoplangan · tekshiruvda' : 'rejalashtirilgan'}${m.makeup.heldDate ? ' · ' + dm(m.makeup.heldDate) : ''}` : 'kelmagan · hali qoplanmagan'}</small></span></label>`).join('')
                     : '<p class="sc-mt">Bu oyda bu o\'quvchida "Kelmadi" deb belgilangan dars yo\'q — qoplash faqat haqiqiy kelmagan dars uchun.</p>'}</div>
                   <div class="sc-note">O'quvchiga ilovada eslatma boradi. Vaqt band bo'ladi: sotuv bu yerga sinov qo'ya olmaydi. Dars o'tgach "Keldi" desangiz, admin tasdiqlaydi va dars maoshingizga qo'shiladi.</div>
-                  <div class="sv-btns"><button type="button" class="sc-btn" data-cancel>Bekor</button><button type="button" class="sc-btn sc-btn--pri" data-save${fits && firstOpen ? '' : ' disabled'}>Rejaga qo'yish</button></div></div>`;
+                  ${lessonDay ? `<p class="sc-err" role="alert">${esc(first(stu?.name))}ning dars kuni — qoplash darsi faqat dars kuni bo'lmagan kunga qo'yiladi. Dars kunida Davomatda "Keldi · 2 dars" ni tanlang.</p>` : ''}
+                  <div class="sv-btns"><button type="button" class="sc-btn" data-cancel>Bekor</button><button type="button" class="sc-btn sc-btn--pri" data-save${fits && firstOpen && !lessonDay ? '' : ' disabled'}>Rejaga qo'yish</button></div></div>`;
                 if (fits) pickBox(dl, t0, t0 + dur, `${first(stu?.name)} · qoplash`); else pickBox(null);
                 mkPanel.querySelector('[name=st]').onchange = ev => draw(ev.target.value);
                 mkPanel.querySelector('[data-cancel]').onclick = () => { pickBox(null); mkIdle(); };
@@ -601,7 +604,7 @@
                     const missedDate = mkPanel.querySelector('[name=miss]:checked')?.value;
                     if (!missedDate) return U().errBox(mkPanel, 'Qaysi dars o\'rniga ekanini tanlang');
                     U().busy(ev.target, true);
-                    try { await U().post('/bookings', { kind: 'makeup', teacherId: stu.teacherId, studentId: stu.id, date, time: hm(t0), duration: dur, missedDate }); st.makeupFor = null; U().toast('Qoplash rejaga qo\'yildi'); reload(); }
+                    try { await U().post('/makeups/plan', { kind: 'makeup', teacherId: stu.teacherId, studentId: stu.id, date, time: hm(t0), duration: dur, missedDate }); st.makeupFor = null; U().toast('Qoplash rejaga qo\'yildi'); reload(); }
                     catch (err) { U().busy(ev.target, false); U().errBox(mkPanel, err.message); }
                 };
             };
@@ -681,7 +684,7 @@
         const range = fit([], [...bottoms, { start: 9 * 60, end: 22 * 60 }]); // dizayn: 09:00–22:00
         const advice = items.filter(i => i.kind === 'advice').length, done = items.filter(i => i.kind === 'contact' && i.outcome !== 'no_answer').length;
         const hasUn = shown.some(i => i.kind === 'contact' && i.outcome !== 'no_answer' && i.status !== 'counted');
-        body.innerHTML = `<section class="sc-card sv-wcard"><header class="sv-bh"><h2>Bu hafta · ${advice + items.filter(i => i.kind === 'contact').length} tavsiya · ${done} bajarildi</h2><span class="sc-grow"></span><span class="sc-mt">Blokni bosing → aloqani belgilash</span></header>
+        body.innerHTML = `<section class="sc-card sv-wcard"><header class="sv-bh"><h2>${esc(weekTitle(from))} · ${advice + items.filter(i => i.kind === 'contact').length} tavsiya · ${done} bajarildi</h2><span class="sc-grow"></span><span class="sc-mt">Blokni bosing → aloqani belgilash</span></header>
             ${items.length ? vgrid(cols, range, { stack: true }) : '<p class="sc-mt sv-pp">Sizga yordamchi sifatida faol o\'quvchi biriktirilmagan.</p>'}
             ${legend([['k-ok', 'Bajarildi (usul · daqiqa)'], ['k-no', 'Javob bermadi'], ...(hasUn ? [['k-un', 'Hisoblanmadi (qoida)']] : []), ['k-wait', 'Tavsiya']], { rules: true })}</section>`;
         body.querySelector('[data-rules]')?.addEventListener('click', rulesDrawer);

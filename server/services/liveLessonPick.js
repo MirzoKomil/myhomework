@@ -20,14 +20,39 @@ function liveLessonsOf(lessons) {
     return lessons.filter((_, i) => i % 2 !== 0);
 }
 
-// takenIds — o'quvchining shu kungacha belgilangan jonli darslari (boshqa sanalar).
-function pickNextLiveLesson(mc, student, takenIds = []) {
+// Ilovadagi o'rin bo'yicha jonli dars raqami: o'quvchi ilovada N-darsgacha yetgan bo'lsa — N (juft) yoki N+1.
+// (72 dars: toq — videodars, juft — jonli dars; student-app/data/lessonContent.ts lessonLockState.)
+function liveNoByApp(reachedNo, total) {
+    const r = Number(reachedNo) || 0;
+    if (r <= 0 || total < 2) return null;
+    return Math.min(total - (total % 2), r % 2 === 0 ? r : r + 1);
+}
+// YAGONA qoida (Davomat "Jonli dars avtomatik belgilanadi: N-dars", "Darsni boshlash/tugatish", Bosh sahifa,
+// Elektron doska va "Keldi" saqlanganda — hammasi shu): o'quvchi hali o'tmagan birinchi jonli dars;
+// lekin davomat tarixi to'liq bo'lmasa (masalan belgilash tizimi 27-oktyabrdan boshlangan) va o'quvchi ilovada
+// ancha oldinda bo'lsa (bitta jonli darsdan ko'p — 2 dars), ilovadagi o'rni bo'yicha jonli dars olinadi.
+// takenIds — o'quvchining shu kungacha belgilangan jonli darslari (boshqa sanalar). reachedNo — ilovada yetgan dars raqami.
+function pickNextLiveLesson(mc, student, takenIds = [], reachedNo = 0) {
     const { lessons } = courseLessonsFor(mc, student);
     const live = liveLessonsOf(lessons);
     if (!live.length) return null;
     const taken = new Set(takenIds.map(String));
-    const next = live.find(l => !taken.has(String(l.id))) || live[live.length - 1];
-    return { id: String(next.id), name: String(next.title || next.name || '') };
+    let next = live.find(l => !taken.has(String(l.id))) || live[live.length - 1];
+    const byApp = liveNoByApp(reachedNo, lessons.length);
+    if (byApp && lessons.indexOf(next) + 1 < byApp - 2 && lessons[byApp - 1]) next = lessons[byApp - 1];
+    return { id: String(next.id), name: String(next.title || next.name || ''), no: lessons.indexOf(next) + 1 };
+}
+// O'quvchining ilovada yetgan dars raqami (student_lesson_progress; academicHub.reachedLesson bilan bir xil qoida).
+function reachedNoFrom(mc, student, progress) {
+    const { lessons } = courseLessonsFor(mc, student);
+    const idx = new Map(lessons.map((l, i) => [String(l.id), i + 1]));
+    let max = 0;
+    for (const [id, p] of Object.entries(progress || {})) {
+        if (!idx.has(String(id)) || !p) continue;
+        const any = p.videoWatch || p.slidesWatch || p.vocabList || p.vocabPractice || Object.values(p.homeworkParts || {}).some(Boolean);
+        if (any) max = Math.max(max, idx.get(String(id)));
+    }
+    return max;
 }
 
 // Ustoz qo'lda tanlagan dars shu o'quvchining kursidagi jonli dars ekanini tekshiradi.
@@ -37,4 +62,4 @@ function isLiveLessonOf(mc, student, lessonId) {
     return i >= 0 && i % 2 !== 0 ? { id: String(lessons[i].id), name: String(lessons[i].title || lessons[i].name || '') } : null;
 }
 
-module.exports = { pickNextLiveLesson, isLiveLessonOf, liveLessonsOf, courseLessonsFor };
+module.exports = { pickNextLiveLesson, isLiveLessonOf, liveLessonsOf, courseLessonsFor, liveNoByApp, reachedNoFrom };

@@ -1065,8 +1065,15 @@ router.get('/teacher-rating', authRequired, async (req, res) => {
         const state = await getFullState();
         // ?month=YYYY-MM — o'tgan oy reytingi (admin Reyting sahifasidagi oy almashtirgich). Joriy oydan keyingi oy bo'lmaydi.
         // O'tgan oy (▲/▼) solishtiruvi: o'sha oyda "Keldi" belgisi bo'lmagan ustozda "—" (ma'lumot yo'q).
-        const data = await ratingResponse({ state, ownType, month: String(req.query.month || ''),
+        // Tasdiqlangan qoplashlar ham davomatga kiradi (UstozDavomat bilan bir xil — js/attendanceRules.js monthTotals).
+        const makeups = ownType === 'asosiy' && (await pool.query("SELECT to_regclass('public.school_makeups')::text AS t")).rows[0]?.t
+            ? (await pool.query(`SELECT student_id, teacher_id, kind, status, TO_CHAR(held_date,'YYYY-MM-DD') AS held_date FROM school_makeups
+                WHERE status='approved' AND held_date IS NOT NULL`)).rows : [];
+        const data = await ratingResponse({ state, ownType, month: String(req.query.month || ''), makeups,
             loadLearning: (now, opts) => loadLearningByStudent(pool, now, opts) });
+        // Ustozga boshqa ustozlarning davomat sonlari (completed/expected/students) berilmaydi — faqat ism, ball, o'rin.
+        if (role === 'teacher') data.rows = (data.rows || []).map(r => r.id === selfId ? r
+            : { id: r.id, name: r.name, score: r.score, rank: r.rank, total: r.total, prevRank: r.prevRank, prevScore: r.prevScore });
         res.json({ ...data, selfId });
     } catch (err) {
         console.error('GET /api/state/teacher-rating', err);
