@@ -1673,12 +1673,12 @@
             <div class="field"><label class="lbl" for="p0">Joriy parol</label><input id="p0" type="password" autocomplete="current-password"></div>
             <div class="field"><label class="lbl" for="p1">Yangi parol</label><input id="p1" type="password" autocomplete="new-password"></div>
             <div class="field"><label class="lbl" for="p2">Yangi parolni takrorlang</label><input id="p2" type="password" autocomplete="new-password"></div>
-            <div class="note" id="pr">Kamida 12 belgi, harf va raqam, eski paroldan farqli.</div>
+            <div class="note" id="pr">Kamida 8 belgi, harf va raqam, eski paroldan farqli.</div>
             <label class="li" style="border: 0; padding: 0"><span class="small" style="flex: 1; font-weight: 700">Boshqa qurilmalardan chiqarish</span><input type="checkbox" id="lo" checked style="width: 22px; height: 22px; accent-color: #0065D6"></label>
             <button type="button" class="btn pri w" data-save>Parolni saqlash</button>`,
         (el, close) => {
             const v = id => el.querySelector(id).value;
-            const check = () => { const p = v('#p1'); const ok = p.length >= 12 && /[A-Za-z]/.test(p) && /\d/.test(p); el.querySelector('#pr').className = 'note' + (p && !ok ? ' w' : ''); return ok; };
+            const check = () => { const p = v('#p1'); const ok = p.length >= 8 && /[A-Za-z]/.test(p) && /\d/.test(p); el.querySelector('#pr').className = 'note' + (p && !ok ? ' w' : ''); return ok; };
             el.querySelector('#p1').oninput = check;
             el.querySelector('[data-save]').onclick = async () => {
                 if (!check()) return toast('Parol talablarga mos emas');

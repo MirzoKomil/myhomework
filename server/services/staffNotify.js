@@ -33,11 +33,11 @@ const CATALOG = {
         ['Aloqa', [
             ['assist_advice', 'Tavsiya vaqtidan 15 daqiqa oldin', 'bugungi tavsiya', [1, 1], true],
             ['assist_unmarked_day', 'Kun oxirida belgilanmagan aloqa', '20:00 da · shu kuni belgilanmasa hisoblanmaydi', [1, 1], true],
-            ['assist_no_answer', 'Javob bermagan o\'quvchi', 'ertasi kuni qayta urinish eslatmasi', [1, 1], true],
-            ['assist_week_low', 'Haftada 3 tadan kam', 'Juma 18:00 da · kimlar qolgani bilan', [1, 1], true]]],
+            ['assist_no_answer', 'Javob bermagan o\'quvchi', 'ertasi kuni qayta urinish eslatmasi', [1, 0], true],
+            ['assist_week_low', 'Haftada 3 tadan kam', 'Juma 18:00 da · kimlar qolgani bilan', [1, 0], true]]],
         ['O\'quvchilar', [
-            ['student_absent', 'Asosiy darsga kelmadi', 'o\'quvchingiz · dars tugagach', [1, 1], true],
-            ['assist_near_cap', 'Limitga yaqin · 12/13', 'oyda 13 tadan ortig\'i hisoblanmaydi', [0, 1], true],
+            ['student_absent', 'Asosiy darsga kelmadi', 'o\'quvchingiz · dars tugagach', [1, 0], true],
+            ['assist_near_cap', 'Limitga yaqin · 12/13', 'oyda 13 tadan ortig\'i hisoblanmaydi', [1, 0], true],
             ['student_assigned', 'Yangi o\'quvchi biriktirildi', 'admin biriktirganda', [1, 1], false]]],
         ['Boshqa', [
             ['assist_corrected', 'Admin aloqani tuzatdi', 'sabab bilan', [1, 1], true],
@@ -90,6 +90,11 @@ const CATALOG = {
     ],
     other: [['Boshqa', [['guide_new', 'Yangi yo\'riqnoma', '', [0, 1], true]]]]
 };
+// Telegram orqali yuborish hali ulanmagan. Ungacha Telegram tanlangan xabar ham panelda ko'rinadi —
+// aks holda (masalan, standart "Telegram ✓ · Brauzer ✗" turlarda) xodim xabarni umuman olmay qoladi.
+// Bot ulanganda true qilinadi va panel faqat "Brauzer" tanloviga qaraydi.
+const TELEGRAM_LIVE = false;
+function shownInPanel(p) { return !p || p.web !== false || (!TELEGRAM_LIVE && p.tg !== false); }
 function catalogFor(me) {
     const kinds = me.kind === 'teacher' && me.assistantDuty ? ['teacher', 'assistant'] : [me.kind in CATALOG ? me.kind : 'other'];
     const seen = new Set(), groups = [];
@@ -122,7 +127,7 @@ async function getPrefs(db, actor) {
     const saved = row.prefs || {};
     const tg = (await db.query('SELECT telegram FROM staff_profile_extra WHERE user_id=$1', [me.user.id])).rows[0]?.telegram || '';
     return { kind: me.kind, groups, prefs: effectivePrefs(groups, saved.types || {}), quiet: saved.quiet || QUIET_DEFAULT,
-        channels: { telegram: { username: tg, connected: false, note: 'Telegram orqali yuborish hali ulanmagan — tanlovingiz saqlanadi' }, browser: { connected: true } } };
+        channels: { telegram: { username: tg, connected: false, note: TELEGRAM_LIVE ? '' : 'Telegram orqali yuborish hali ulanmagan — tanlovingiz saqlanadi, ungacha bu xabarlar qo\'ng\'iroqcha panelida chiqadi' }, browser: { connected: true } } };
 }
 async function savePrefs(db, actor, body = {}) {
     const me = await ST.identify(db, actor);
@@ -360,7 +365,7 @@ async function feed(db, actor, now = new Date()) {
     if (me.kind === 'admin' || me.kind === 'rop') await run('manager', managerEvents);
     await run('guides', guideEvents);
     const seen = new Set();
-    const list = ev.filter(e => prefs[e.type]?.web !== false && !seen.has(e.id) && seen.add(e.id));
+    const list = ev.filter(e => shownInPanel(prefs[e.type]) && !seen.has(e.id) && seen.add(e.id));
     const ids = list.map(e => e.id);
     const reads = ids.length ? new Set((await db.query('SELECT event_id FROM staff_notify_reads WHERE user_id=$1 AND event_id = ANY($2::text[])', [me.user.id, ids])).rows.map(r => r.event_id)) : new Set();
     const before = row.read_before ? new Date(row.read_before).getTime() : 0;

@@ -807,7 +807,7 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
     // ── Xodim: vaqtinchalik parol (parol hech kimga ko'rinmaydi) va avatar ───
     router.post('/staff/:userId/temp-password', handle(req => { need(req, FULL); return write(req, async c => {
         const pass = String(req.body?.password || '');
-        if (pass.length < 12) throw T.fail(400, 'Vaqtinchalik parol kamida 12 belgi');
+        if (pass.length < 8) throw T.fail(400, 'Vaqtinchalik parol kamida 8 belgi');
         const u = (await c.query('SELECT id, role FROM users WHERE id=$1 FOR UPDATE', [req.params.userId])).rows[0];
         if (!u) throw T.fail(404, 'Xodim topilmadi');
         await c.query('UPDATE users SET password_hash=$2 WHERE id=$1', [u.id, bcrypt.hashSync(pass, 10)]);
