@@ -1,0 +1,413 @@
+// Sozlamalar (UstozProfil, *SozProfil, UstozMaosh, YordamchiSozMaosh, *SozBildirish), bildirishnomalar
+// paneli uchun server voqealari (UstozBildirishnoma) va Yo'riqnomalar (UstozYoriqnoma).
+// Server: /api/staff/* (server/routes/staffSettings.js). Har xodim faqat o'z ma'lumotini oladi.
+// js/app.js faqat bu modulni chaqiradi (renderProfileBody, renderMyGuides, openGuideArticle).
+(function () {
+    'use strict';
+    const esc = v => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    const num = n => String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    const MON = ['yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun', 'iyul', 'avgust', 'sentyabr', 'oktyabr', 'noyabr', 'dekabr'];
+    const MON3 = ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'Iyun', 'Iyul', 'Avg', 'Sen', 'Okt', 'Noy', 'Dek'];
+    const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+    const monName = ym => cap(MON[Number(String(ym).slice(5, 7)) - 1] || '');
+    const dmy = d => { const [y, m, day] = String(d).slice(0, 10).split('-'); return `${Number(day)}-${MON[Number(m) - 1]}${y ? ' ' + y : ''}`; };
+    const dShort = d => { const [, m, day] = String(d).slice(0, 10).split('-'); return `${Number(day)}-${MON[Number(m) - 1].slice(0, 3)}`; };
+    const tzDate = v => new Date(new Date(v).getTime() + 5 * 3600000).toISOString().slice(0, 10);
+    const api = (path, opts = {}) => apiFetch('/api/staff' + path, { ...opts, ...(opts.body && typeof opts.body !== 'string' ? { body: JSON.stringify(opts.body) } : {}) });
+    const toast = (m, ms) => (typeof showMiniToast === 'function' ? showMiniToast(m, ms) : console.log(m));
+    const me = () => (typeof getCurrentUser === 'function' ? getCurrentUser() : null) || {};
+    const isAdmin = u => ['admin', 'boshliq'].includes(u?.role);
+    const ICON = {
+        lock: '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>',
+        sync: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M21 12a9 9 0 01-15.5 6.2M3 12A9 9 0 0118.5 5.8"/><path d="M21 4v5h-5M3 20v-5h5"/></svg>',
+        doc: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>',
+        check: '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>'
+    };
+    const head = (sub) => `<div class="profile-header-bar ss-head"><h1>Sozlamalar</h1><p>${esc(sub)}</p></div>`;
+    const errBox = (e) => `<div class="ss-card ss-pad ss-err" role="alert">${esc(e?.message || e || 'Xatolik')}</div>`;
+
+    // ── Profil ───────────────────────────────────────────────────────────────
+    const VIS = {
+        teacher: ['O\'quvchi ilovasida: ism, rasm, Telegram (dars havolasi uchun). Telefon raqamingiz o\'quvchiga ko\'rinmaydi.', 'Admin, ROP va hamkasblar: ism, rasm, telefon, Telegram.'],
+        assistant: ['O\'quvchi ilovasida: ism, rasm va Telegram (aloqa uchun). Telefon raqamingiz o\'quvchiga ko\'rinmaydi.', 'Admin, ROP va hamkasblar: ism, rasm, telefon, Telegram.'],
+        sales: ['O\'quvchi ilovasida ko\'rinmaysiz. O\'z sotgan o\'quvchilaringizning Telegram guruhida a\'zosiz — ism, rasm ko\'rinadi, telefon raqamingiz yo\'q.', 'Xodimlar (CRM, chat): ism, rasm, lavozim, telefon, Telegram.'],
+        rop: ['O\'quvchi ilovasida ko\'rinmaysiz. Har bir o\'quvchi Telegram guruhida a\'zosiz — u yerda ism va rasmingiz ko\'rinadi.', 'Xodimlar (CRM, chat): ism, rasm, lavozim, telefon, Telegram.'],
+        admin: ['O\'quvchi ilovasida ko\'rinmaysiz. Siz o\'quvchilarning Telegram guruhlariga a\'zo emassiz — kerak bo\'lsa Guruhlar sahifasidan qo\'shilasiz.', 'Xodimlar (CRM, chat): ism, rasm, lavozim, telefon, Telegram.'],
+        other: ['O\'quvchi ilovasida ko\'rinmaysiz.', 'Xodimlar (CRM, chat): ism, rasm, lavozim, telefon, Telegram.']
+    };
+    const WORK_NOTE = { teacher: 'O\'zgartirish kerak bo\'lsa — Dars jadvali → Vaqtimni o\'zgartirish orqali so\'rov yuboring.', assistant: 'O\'quvchi biriktirish yoki olib tashlashni admin qiladi.' };
+    const P = { tab: 'preset', set: null, showAll: false, data: null, taken: [] };
+
+    async function renderProfile(body) {
+        body.innerHTML = head('Profil · ism, login va lavozimni admin o\'zgartiradi') + '<div class="ss-col"><div class="ss-card ss-pad ss-muted">Yuklanmoqda…</div></div>';
+        try {
+            const [d, tk] = await Promise.all([api('/profile'), apiFetch('/api/school/avatars/taken').catch(() => ({ taken: [] }))]);
+            P.data = d; P.taken = tk.taken || [];
+            if (!P.set) P.set = /\/m\d\d\.webp$/.test(d.user.avatar) ? 'm' : /\/f\d\d\.webp$/.test(d.user.avatar) ? 'f' : (/^(m|male|erkak)/i.test(d.gender) ? 'm' : 'f');
+            if (!body.isConnected) return;
+            drawProfile(body);
+        } catch (e) { body.innerHTML = head('Profil') + errBox(e); }
+    }
+    function avatarImg(src, cls = '') { return src ? `<img class="${cls}" src="${esc(String(src).replace(/^\//, ''))}" alt="">` : ''; }
+    function initials(n) { return esc(String(n || '').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase()); }
+    function drawProfile(body) {
+        const d = P.data, u = d.user, x = d.extra, kind = d.kind, office = ['admin', 'rop', 'sales'].includes(kind);
+        const items = Array.from({ length: 36 }, (_, i) => `/images/staff-avatars/${P.set}${String(i + 1).padStart(2, '0')}.webp`);
+        const shown = P.showAll ? items : items.slice(0, 12);
+        const grid = shown.map(src => { const tk = P.taken.includes(src), on = src === u.avatar;
+            return `<button type="button" class="ss-av${on ? ' on' : ''}${tk ? ' tk' : ''}" data-av="${esc(src)}" ${tk ? 'disabled aria-disabled="true" title="Band — boshqa xodim tanlagan"' : `aria-pressed="${on}" title="Tanlash"`}><img src="${esc(src.slice(1))}" alt="" loading="lazy">${tk ? '<i>band</i>' : ''}</button>`; }).join('');
+        const tabs = [['own', 'O\'z rasmim'], ['preset', 'Personaj tanlash'], ['auto', 'Avtomatik']];
+        const lockF = (label, val, note, id) => `<label class="ss-f"><span>${esc(label)} ${ICON.lock}</span><input id="${id}" value="${esc(val)}" disabled aria-describedby="${id}N"><small id="${id}N">${esc(note)}</small></label>`;
+        const nameField = d.canEditName
+            ? `<label class="ss-f"><span>Ism familiya</span><input id="ssName" value="${esc(u.name)}" maxlength="80" autocomplete="name"><small>boshqa admin bilan kelishib o'zgartiring</small></label>`
+            : lockF('Ism familiya', u.name, 'admin o\'zgartiradi', 'ssName');
+        const fourth = office
+            ? `<label class="ss-f"><span>Ichki raqam</span><input id="ssExt" value="${esc(x.ext)}" inputmode="numeric" maxlength="6" placeholder="masalan 214"><small>ofis IP-telefoni</small></label>`
+            : `<label class="ss-f"><span>Qisqacha o'zim haqimda</span><input id="ssBio" value="${esc(u.bio)}" maxlength="300" placeholder="masalan: IELTS 7.5 · 4 yillik tajriba"></label>`;
+        const workBadge = office ? 'HR va admin belgilaydi' : 'admin belgilaydi';
+        const vis = VIS[kind] || VIS.other;
+        body.innerHTML = head(kind === 'admin' ? 'Profil · Administrator' : 'Profil · ism, login va lavozimni admin o\'zgartiradi') + `<div class="ss-col">
+          <section class="ss-card" aria-labelledby="ssAvH">
+            <header class="ss-ch"><h3 id="ssAvH">Avatar</h3><span class="ss-mt">${kind === 'teacher' || kind === 'assistant' ? 'CRM, student app va xodimlar chatida bir xil ko\'rinadi' : 'CRM va xodimlar chatida bir xil ko\'rinadi'}</span></header>
+            <div class="ss-pad">
+              <div class="ss-avbar"><div class="ss-seg" role="tablist" aria-label="Avatar turi">${tabs.map(([k, l]) => `<button type="button" role="tab" data-avtab="${k}" aria-selected="${P.tab === k}">${l}</button>`).join('')}</div>
+                ${P.tab !== 'own' ? `<div class="ss-seg" role="group" aria-label="To'plam"><button type="button" data-set="f" aria-pressed="${P.set === 'f'}">Ayollar · 36</button><button type="button" data-set="m" aria-pressed="${P.set === 'm'}">Erkaklar · 36</button></div>` : ''}</div>
+              ${P.tab === 'preset' ? `<div class="ss-avg">${grid}${P.showAll ? '' : '<button type="button" class="ss-av ss-more" data-more aria-label="Yana 24 ta personajni ko\'rsatish">+24</button>'}</div>`
+                : P.tab === 'auto' ? `<div class="ss-auto"><p>Tizim ${P.set === 'm' ? 'erkaklar' : 'ayollar'} to'plamidan band bo'lmagan birinchi personajni beradi.</p><button type="button" class="ss-btn" data-auto>Avtomatik tanlash</button></div>`
+                : `<div class="ss-auto"><div class="ss-avbig sm">${u.avatar ? avatarImg(u.avatar) : initials(u.name)}</div><div><button type="button" class="ss-btn" data-upload>Rasm yuklash</button><input type="file" id="ssAvFile" accept="image/jpeg,image/png,image/webp" hidden>${u.avatar && !/staff-avatars/.test(u.avatar) ? ' <button type="button" class="ss-btn ss-btn--ghost" data-avrm>Rasmni olib tashlash</button>' : ''}</div></div>`}
+            </div>
+            <footer class="ss-cf"><span class="ss-mt">"band" — boshqa xodim tanlagan, bir xil personaj ikki kishida bo'lmaydi · O'z rasmingiz: JPG/PNG, yuz aniq ko'rinsin · tanlov darhol saqlanadi</span>${P.tab !== 'own' ? '<button type="button" class="ss-btn" data-upload-go>Rasm yuklash</button>' : ''}</footer>
+          </section>
+          <section class="ss-card" aria-labelledby="ssPiH">
+            <header class="ss-ch"><h3 id="ssPiH">Shaxsiy ma'lumotlar</h3><div class="ss-acts"><button type="button" class="ss-btn" data-cancel>Bekor</button><button type="button" class="ss-btn ss-btn--pri" data-save>Saqlash</button></div></header>
+            <div class="ss-pad ss-pi">
+              <div class="ss-pi-av"><div class="ss-avbig">${u.avatar ? avatarImg(u.avatar) : initials(u.name)}</div><span class="ss-mt">joriy avatar</span></div>
+              <div class="ss-fg">
+                ${nameField}
+                <label class="ss-f"><span>Telefon</span><input id="ssPhone" type="tel" value="${esc(u.phone)}" placeholder="+998 90 123 45 67" autocomplete="tel"></label>
+                ${lockF('Email (login)', u.email, kind === 'admin' ? 'login o\'zgarmaydi' : 'login — admin o\'zgartiradi', 'ssEmail')}
+                <label class="ss-f"><span>Telegram</span><div class="ss-inp-pill"><input id="ssTg" value="${esc(x.telegram)}" placeholder="@username" autocomplete="off">${x.telegram ? '<i class="ss-pill ok">kiritilgan</i>' : ''}</div></label>
+                <label class="ss-f"><span>Tug'ilgan kun</span><input id="ssBday" type="date" value="${esc(/^\d{4}-/.test(x.birthday) ? x.birthday : '')}"></label>
+                ${fourth}
+              </div>
+              <p class="ss-msg" id="ssMsg" role="status"></p>
+            </div>
+          </section>
+          <section class="ss-card" aria-labelledby="ssWH">
+            <header class="ss-ch"><h3 id="ssWH">Ish ma'lumotlari</h3><span class="ss-badge">${workBadge}</span></header>
+            <div class="ss-pad"><dl class="ss-dl">${d.work.map(r => `<dt>${esc(r.label)}</dt><dd>${esc(/^\d{4}-\d{2}-\d{2}$/.test(r.value) ? dmy(r.value) : r.value)}</dd>`).join('') || '<dt>Lavozim</dt><dd>—</dd>'}</dl>
+            ${WORK_NOTE[kind] ? `<p class="ss-mt ss-mtop">${esc(WORK_NOTE[kind])}</p>` : ''}</div>
+          </section>
+          <section class="ss-card" aria-labelledby="ssVH">
+            <header class="ss-ch"><h3 id="ssVH">Boshqalarga nima ko'rinadi</h3></header>
+            <div class="ss-pad ss-mt ss-vis"><p>${esc(vis[0])}</p><p>${esc(vis[1])}</p></div>
+          </section></div>`;
+        bindProfile(body);
+    }
+    function applyAvatar(avatar) {
+        P.data.user.avatar = avatar;
+        const cu = me(); if (cu && typeof setCurrentUser === 'function') { setCurrentUser({ ...cu, avatar }); if (typeof syncHeaderAvatar === 'function') syncHeaderAvatar(getCurrentUser()); if (typeof initUserUI === 'function') initUserUI(getCurrentUser()); }
+    }
+    async function choosePreset(body, src) {
+        try { const r = await apiFetch('/api/school/me/avatar', { method: 'PUT', body: JSON.stringify({ avatar: src }) }); applyAvatar(r.avatar); toast('Avatar saqlandi'); }
+        catch (e) { toast(e.message, 4000); if (e.status === 409) P.taken.push(src); }
+        drawProfile(body);
+    }
+    function bindProfile(body) {
+        body.querySelectorAll('[data-avtab]').forEach(b => b.onclick = () => { P.tab = b.dataset.avtab; drawProfile(body); });
+        body.querySelectorAll('[data-set]').forEach(b => b.onclick = () => { P.set = b.dataset.set; drawProfile(body); });
+        body.querySelector('[data-more]')?.addEventListener('click', () => { P.showAll = true; drawProfile(body); });
+        body.querySelectorAll('.ss-av[data-av]:not(.tk)').forEach(b => b.onclick = () => choosePreset(body, b.dataset.av));
+        body.querySelector('[data-auto]')?.addEventListener('click', () => {
+            const free = Array.from({ length: 36 }, (_, i) => `/images/staff-avatars/${P.set}${String(i + 1).padStart(2, '0')}.webp`).find(s => !P.taken.includes(s) && s !== P.data.user.avatar);
+            if (!free) return toast('Bu to\'plamda bo\'sh personaj qolmagan', 3000);
+            choosePreset(body, free);
+        });
+        const file = body.querySelector('#ssAvFile');
+        body.querySelector('[data-upload-go]')?.addEventListener('click', () => { P.tab = 'own'; drawProfile(body); body.querySelector('#ssAvFile')?.click(); });
+        body.querySelector('[data-upload]')?.addEventListener('click', () => file?.click());
+        file?.addEventListener('change', async () => {
+            const f = file.files?.[0]; file.value = ''; if (!f) return;
+            if (f.size > 20 * 1024 * 1024) return toast('Rasm hajmi 20 MB dan oshmasin', 3000);
+            try {
+                const dataUrl = typeof compressAvatarImage === 'function' ? await compressAvatarImage(f) : null;
+                if (!dataUrl) throw new Error('Rasmni o\'qib bo\'lmadi');
+                const r = await apiUploadAvatar(dataUrl);
+                applyAvatar(r?.user?.avatar || dataUrl); toast('Profil rasmi yangilandi'); drawProfile(body);
+            } catch (e) { toast(e.message || 'Rasm yuklanmadi', 4000); }
+        });
+        body.querySelector('[data-avrm]')?.addEventListener('click', async () => {
+            try { await apiUpdateProfile({ avatar: '' }); applyAvatar(''); drawProfile(body); } catch (e) { toast(e.message, 4000); }
+        });
+        body.querySelector('[data-cancel]')?.addEventListener('click', () => drawProfile(body));
+        body.querySelector('[data-save]')?.addEventListener('click', async e => {
+            const btn = e.currentTarget, msg = body.querySelector('#ssMsg');
+            const v = id => body.querySelector('#' + id)?.value;
+            const payload = { phone: v('ssPhone'), telegram: v('ssTg'), birthday: v('ssBday') };
+            if (P.data.canEditName) payload.name = v('ssName');
+            if (body.querySelector('#ssExt')) payload.ext = v('ssExt');
+            if (body.querySelector('#ssBio')) payload.bio = v('ssBio');
+            btn.disabled = true; msg.textContent = ''; msg.className = 'ss-msg';
+            try {
+                const d = await api('/profile', { method: 'PUT', body: payload });
+                P.data = d;
+                const cu = me(); if (cu && typeof setCurrentUser === 'function') setCurrentUser({ ...cu, name: d.user.name, phone: d.user.phone, bio: d.user.bio });
+                drawProfile(body); toast('Saqlandi');
+            } catch (err) { msg.textContent = err.message; msg.className = 'ss-msg bad'; btn.disabled = false; }
+        });
+    }
+
+    // ── Mening maoshim ───────────────────────────────────────────────────────
+    function stagesHtml(month, today, kind, prevState) {
+        // Oy 1-sanada yopiladi → tekshiruv (e'tiroz 4-sanagacha) → 5-sanada to'lov. Ustoz va yordamchi uchun bir xil.
+        const next = (() => { const [y, m] = month.split('-').map(Number); const d = new Date(Date.UTC(y, m, 1)); return d.toISOString().slice(0, 7); })();
+        const prevMonth = (() => { const [y, m] = today.split('-').map(Number); return new Date(Date.UTC(y, m - 2, 1)).toISOString().slice(0, 7); })();
+        const day = Number(today.slice(8, 10));
+        // Joriy oy uchun bosqichlar; agar bugun 1–5 bo'lsa — o'tgan oy hali to'lanmagan bo'lishi mumkin.
+        const target = day <= 5 ? prevMonth : month, payMonth = day <= 5 ? today.slice(0, 7) : next;
+        const st = day <= 5 && prevState ? prevState : null;
+        const steps = kind === 'assistant'
+            ? [['Oy yopiladi', `1-${MON[Number(payMonth.slice(5)) - 1].slice(0, 3)} 00:00`], ['Dastlabki hisob', 'Moliya'], ['E\'tiroz', `4-${MON[Number(payMonth.slice(5)) - 1].slice(0, 3)}gacha`], ['Yakuniy', 'tasdiqlanadi'], ['To\'lov', `5-${MON[Number(payMonth.slice(5)) - 1].slice(0, 3)}`]]
+            : [['Oy yopiladi', `1-${MON[Number(payMonth.slice(5)) - 1].slice(0, 3)}`], ['Tekshiruv', `1–4-${MON[Number(payMonth.slice(5)) - 1].slice(0, 3)}`], ['To\'lov', `5-${MON[Number(payMonth.slice(5)) - 1].slice(0, 3)}`]];
+        let cur;
+        if (day > 5) cur = 0; // joriy oy davom etmoqda — hali yopilmagan
+        else if (kind === 'assistant') cur = st?.paidAt ? 5 : st?.finalAt ? 4 : st?.prelimAt ? (day <= 4 ? 2 : 3) : 1;
+        else cur = day >= 5 ? 2 : 1;
+        return `<section class="ss-card ss-pad ss-stages" aria-label="To'lov bosqichlari"><div class="ss-st-h"><b>${monName(target)} maoshi · to'lov bosqichlari</b><span class="ss-mt">${day > 5 ? `oy davom etmoqda · ${MON[Number(payMonth.slice(5)) - 1]} 5-sanada beriladi` : 'oy yopildi'}</span></div>
+          <ol class="ss-steps">${steps.map(([t, s], i) => `<li class="${i < cur ? 'done' : i === cur && day <= 5 ? 'now' : ''}"><i>${i < cur ? ICON.check : i + 1}</i><b>${esc(t)}</b><span>${esc(s)}</span></li>`).join('')}</ol></section>`;
+    }
+    function lastPaid(d) {
+        const prev = (d.history || []).filter(h => h.month < d.month).sort((a, b) => b.month.localeCompare(a.month))[0];
+        if (!prev) return `<div class="ss-kpi"><span>O'tgan oy</span><b>—</b><small>hali hisob yo'q</small></div>`;
+        return `<div class="ss-kpi"><span>${monName(prev.month)} · ${prev.status === 'paid' ? 'berilgan' : 'hisoblangan'}</span><b>${num(prev.amount)} so'm</b><small>${prev.status === 'paid' && prev.paidAt ? dShort(tzDate(prev.paidAt)) : 'hali berilmagan'}${d.card4 ? ` · karta •••• ${esc(d.card4)}` : ''}</small></div>`;
+    }
+    function chartAndHistory(d, override = null) {
+        const cur = override != null ? override : d.current ? Number(d.current.total) || 0 : null;
+        const by = new Map(); for (const h of d.history || []) by.set(h.month, h);
+        const months = Array.from({ length: 6 }, (_, i) => { const [y, m] = d.month.split('-').map(Number); return new Date(Date.UTC(y, m - 6 + i, 1)).toISOString().slice(0, 7); });
+        const rows = months.map(k => k === d.month ? { k, amount: cur ?? by.get(k)?.amount ?? 0, st: 'cur' } : { k, amount: by.get(k)?.amount || 0, st: by.get(k)?.status || 'none' });
+        const max = Math.max(1, ...rows.map(r => r.amount));
+        const fmtM = n => (n / 1e6).toFixed(2);
+        return `<div class="ss-two"><section class="ss-card" aria-labelledby="ssChH"><header class="ss-ch"><h3 id="ssChH">Oxirgi 6 oy · mln so'm</h3></header>
+            <div class="ss-pad ss-chart">${rows.map(r => `<div class="ss-bar${r.st === 'cur' ? ' cur' : ''}" title="${monName(r.k)}: ${num(r.amount)} so'm"><em>${r.amount ? fmtM(r.amount) : '—'}</em><i style="height:${Math.max(3, Math.round(r.amount / max * 100))}%"></i><span>${MON3[Number(r.k.slice(5)) - 1]}</span></div>`).join('')}</div></section>
+          <section class="ss-card" aria-labelledby="ssHiH"><header class="ss-ch"><h3 id="ssHiH">To'lov tarixi</h3></header>
+            <ul class="ss-hist">${rows.slice().reverse().map(r => `<li><i class="ss-dot ${r.st === 'paid' ? 'ok' : r.st === 'cur' ? 'warn' : r.st === 'unpaid' ? 'info' : ''}"></i><span>${monName(r.k)} · ${r.st === 'paid' ? 'berilgan' : r.st === 'cur' ? 'hozirgacha' : r.st === 'unpaid' ? 'hisoblangan' : 'ma\'lumot yo\'q'}</span><b>${r.amount ? num(r.amount) : '—'}</b></li>`).join('')}</ul></section></div>`;
+    }
+    async function renderSalary(body) {
+        body.innerHTML = head('Mening maoshim') + '<div class="ss-col"><div class="ss-card ss-pad ss-muted">Yuklanmoqda…</div></div>';
+        let d;
+        try { d = await api('/salary'); } catch (e) { body.innerHTML = head('Mening maoshim') + errBox(e); return; }
+        if (!body.isConnected) return;
+        if (!d.linked) { body.innerHTML = head('Mening maoshim') + `<div class="ss-card ss-pad">Hisobingiz HR ro'yxatidagi xodim yozuviga ulanmagan (login = email). Administratorga murojaat qiling.</div>`; return; }
+        if (d.kind === 'assistant' && d.assist) return drawAssistSalary(body, d);
+        if (d.kind === 'teacher') return drawTeacherSalary(body, d);
+        // Sotuv / ROP / boshqalar — umumiy ko'rinish.
+        const c = d.current || {};
+        body.innerHTML = head('Mening maoshim') + `<div class="ss-col"><div class="ss-kpis">
+            <div class="ss-kpi dark"><span>${monName(d.month)} · hozirgacha</span><b>${c.total != null ? num(c.total) + ' so\'m' : '—'}</b><small>${[c.fixed ? 'fiksa ' + num(c.fixed) : '', c.commission ? 'ulush ' + num(c.commission) : '', c.bonus ? 'bonus ' + num(c.bonus) : ''].filter(Boolean).join(' + ') || 'taxminiy'}</small></div>
+            ${c.turnover != null ? `<div class="ss-kpi"><span>Aylanma</span><b>${num(c.turnover)} so'm</b><small>shu oy</small></div>` : ''}${lastPaid(d)}</div>
+            ${stagesHtml(d.month, d.today, 'teacher', null)}${chartAndHistory(d)}</div>`;
+    }
+    function drawTeacherSalary(body, d) {
+        const c = d.current || {}, m = d.main || { groups: [], total: 0, counted: 0 }, a = d.assist;
+        // Jami va yordamchi qismi — Moliya hisobidan (payroll); u bo'lmasa aloqalar hisobidan.
+        const assistAmt = a ? (c.assistantTotal != null && (c.assistantTotal || !a.amount) ? Number(c.assistantTotal) : a.amount) : 0;
+        const total = a ? m.total + assistAmt : c.total != null ? Number(c.total) : m.total;
+        const miss = d.missed;
+        const banner = miss && miss.open ? `<div class="ss-banner" role="note">${ICON.sync}<p><b>${miss.open} ta qoldirilgan dars hali qoplanmagan${miss.planned ? ` (${miss.planned} tasi rejada)` : ''}.</b> Oy tugashiga ${miss.daysLeft} kun. ${esc(miss.students.slice(0, 3).map(s => `${s.name} ${s.count} ta`).join(', '))}${miss.students.length > 3 ? `, yana ${miss.students.length - 3} ta` : ''}.</p><button type="button" class="ss-btn" data-go-makeup>Qoplash qo'yish</button></div>` : '';
+        const rowsMain = m.groups.map(g => `<tr><td>${g.duration} daqiqalik</td><td>${esc(g.students.join(', '))}</td><td class="n">${g.expected}</td><td class="n">${g.counted}${g.review ? ` <i class="ss-pill teal">+${g.review} tekshiruvda</i>` : ''}</td><td class="n ss-mt">—</td></tr>`).join('')
+            || '<tr><td colspan="5" class="ss-mt">Bu oy asosiy o\'quvchi yo\'q</td></tr>';
+        const assistRows = a ? `<tr class="sec"><td colspan="5">Yordamchi ustozlik · ${num(a.rate)} so'm × aloqa</td></tr>
+            <tr><td>Yordamchi</td><td>${esc(a.students.map(s => s.name.split(' ')[0]).join(', ') || '—')}</td><td class="n">${a.cap} gacha</td><td class="n">${a.counted}</td><td class="n">${num(assistAmt)}</td></tr>` : '';
+        body.innerHTML = head('Profil, maosh va xavfsizlik') + `<div class="ss-col">
+          <div class="ss-kpis">
+            <div class="ss-kpi dark"><span>${monName(d.month)} · hozirgacha</span><b>${num(total)} so'm</b><small>${a ? `asosiy ${num(m.total)} + yordamchi ${num(assistAmt)}` : `${m.counted} dars hisobga o'tdi`}</small></div>
+            <div class="ss-kpi"><span>Tekshiruvda</span><b class="teal">${d.reviewMakeups} qoplash</b><small>admin tasdiqlasa maoshga qo'shiladi</small></div>
+            ${lastPaid(d)}</div>
+          ${banner}
+          ${stagesHtml(d.month, d.today, 'teacher', null)}
+          <section class="ss-card" aria-labelledby="ssTbH"><header class="ss-ch"><h3 id="ssTbH">${monName(d.month)} hisobi · o'quvchilar bo'yicha</h3><span class="ss-mt">Belgilangan davomat bo'yicha · oy yopilganda Moliya tasdiqlaydi</span></header>
+            <div class="ss-tw"><table class="ss-tbl"><thead><tr><th scope="col">Dars turi</th><th scope="col">O'quvchilar</th><th scope="col" class="n">Rejada</th><th scope="col" class="n">Hisobga o'tdi</th><th scope="col" class="n">Summa</th></tr></thead>
+            <tbody><tr class="sec"><td colspan="5">Asosiy ustozlik</td></tr>${rowsMain}
+              <tr class="tot"><td colspan="3">Asosiy ustozlik jami</td><td class="n">${m.counted}</td><td class="n">${num(m.total)}</td></tr>${assistRows}</tbody>
+            <tfoot><tr><td colspan="4">Jami · ${m.counted} tasdiqlangan dars${a ? ` + ${a.counted} yordamchi aloqa` : ''}${d.reviewMakeups ? ` · +${d.reviewMakeups} qoplash tekshiruvda` : ''}</td><td class="n">${num(total)}</td></tr></tfoot></table></div>
+            <p class="ss-cf ss-mt">Dars turlari bo'yicha va har o'quvchi bo'yicha summa ko'rsatilmaydi — o'quvchi to'lovi ma'lumoti ustozga yopiq.</p></section>
+          ${chartAndHistory(d, total)}</div>`;
+        body.querySelector('[data-go-makeup]')?.addEventListener('click', () => typeof switchTab === 'function' && switchTab('timetable'));
+    }
+    function stuAvatar(id) {
+        try { const s = getItem(STORAGE_KEYS.students, []).find(x => x.id === id); if (s?.avatarUrl) return `<img src="${esc(String(s.avatarUrl).replace(/^\//, ''))}" alt="">`; } catch { /* yo'q */ }
+        return '';
+    }
+    function drawAssistSalary(body, d) {
+        const a = d.assist;
+        const rows = a.students.map(s => {
+            const near = s.counted >= a.cap - 1;
+            const st = s.counted >= a.cap ? `<i class="ss-pill warn">limit to'ldi · ${a.cap + 1}-chi hisoblanmaydi</i>` : near ? `<i class="ss-pill warn">${a.cap} ga yaqin · ${a.cap + 1}-chi hisoblanmaydi</i>`
+                : `<span class="ss-mt">${s.adviceLeft ? `yana ${s.adviceLeft} tavsiya` : 'bu oy tavsiya qolmadi'}</span>`;
+            return `<tr><th scope="row"><span class="ss-stu"><span class="ss-sav">${stuAvatar(s.studentId) || initials(s.name)}</span><span><b>${esc(s.name)}</b><small>asosiy: ${esc(s.mainTeacher || '—')}</small></span></span></th>
+              <td class="n"><b>${s.counted}</b> / ${a.cap}</td><td class="n">${num(s.amount)}</td><td>${st}</td></tr>`;
+        }).join('') || '<tr><td colspan="4" class="ss-mt">Sizga hali o\'quvchi biriktirilmagan</td></tr>';
+        body.innerHTML = head('Mening maoshim · aloqalar bo\'yicha') + `<div class="ss-col">
+          <div class="ss-kpis">
+            <div class="ss-kpi"><span>${monName(d.month)} · hozirgacha</span><b>${num(a.amount)} so'm</b><small>${a.counted} aloqa × ${num(a.rate)}</small></div>
+            <div class="ss-kpi"><span>Oy oxirigacha ko'pi bilan</span><b>${num(a.possible * a.rate)} so'm</b><small>${a.possible} aloqa · ${a.daysLeft} kun qoldi</small></div>
+            ${lastPaid(d)}</div>
+          ${stagesHtml(d.month, d.today, 'assistant', a.prevState)}
+          <section class="ss-card" aria-labelledby="ssAsH"><header class="ss-ch"><h3 id="ssAsH">${monName(d.month)} · o'quvchilar bo'yicha</h3><span class="ss-mt">har o'quvchi bilan oyiga ${a.cap} tagacha · kamida 5 daqiqa</span></header>
+            <div class="ss-tw"><table class="ss-tbl ss-tbl--as"><thead><tr><th scope="col">O'quvchi</th><th scope="col" class="n">Hisoblangan aloqa</th><th scope="col" class="n">Summa</th><th scope="col">Holat</th></tr></thead>
+            <tbody>${rows}</tbody><tfoot><tr><td>Jami · ${a.students.length} o'quvchi</td><td class="n">${a.counted} / ${a.students.length * a.cap}</td><td class="n">${num(a.amount)}</td><td></td></tr></tfoot></table></div>
+            <p class="ss-cf ss-mt">Hisoblanmaydi: "javob bermadi", 5 daqiqadan qisqa, bir kundagi ikkinchi aloqa, haftadagi ikkinchi yozishma. Oy yopilganda Moliya tasdiqlaydi.</p></section>
+          ${chartAndHistory(d, a.amount)}</div>`;
+    }
+
+    // ── Bildirishnoma sozlamalari ────────────────────────────────────────────
+    const NP = { data: null, editQuiet: false };
+    async function renderNotifSettings(body) {
+        body.innerHTML = head('Bildirishnomalar · qaysi hodisa, qaysi kanal') + '<div class="ss-col"><div class="ss-card ss-pad ss-muted">Yuklanmoqda…</div></div>';
+        try { NP.data = await api('/notify/prefs'); } catch (e) { body.innerHTML = head('Bildirishnomalar') + errBox(e); return; }
+        if (body.isConnected) drawNotif(body);
+    }
+    const tog = (key, ch, on, locked, label) => `<label class="ss-tog"><input type="checkbox" data-pref="${esc(key)}" data-ch="${ch}" ${on ? 'checked' : ''} ${locked ? 'disabled' : ''} aria-label="${esc(label)}"><i></i></label>`;
+    function browserName() { const ua = navigator.userAgent; return /Edg\//.test(ua) ? 'Edge' : /OPR\//.test(ua) ? 'Opera' : /Chrome\//.test(ua) ? 'Chrome' : /Firefox\//.test(ua) ? 'Firefox' : /Safari\//.test(ua) ? 'Safari' : 'Brauzer'; }
+    function drawNotif(body) {
+        const d = NP.data, q = d.quiet || { from: '22:00', to: '08:00' }, tg = d.channels.telegram;
+        const groups = d.groups.map(g => `<tr class="sec"><th colspan="3" scope="rowgroup">${esc(g.title)}</th></tr>` + g.items.map(i => { const p = d.prefs[i.key] || {};
+            return `<tr><th scope="row"><b>${esc(i.label)}</b>${i.sub || !i.live ? `<small>${esc(i.sub)}${!i.live ? `${i.sub ? ' · ' : ''}<em class="ss-soon">tez orada</em>` : ''}${i.locked ? ' · o\'chirib bo\'lmaydi' : ''}</small>` : ''}</th>
+              <td>${tog(i.key, 'tg', p.tg, i.locked, i.label + ' — Telegram')}</td><td>${tog(i.key, 'web', p.web, i.locked, i.label + ' — Brauzer')}</td></tr>`; }).join('')).join('');
+        const note = { teacher: 'Shoshilinch xabarlar (sinov tasdig\'i) tinch soatlarda ham keladi.', assistant: 'Tinch soatlarda faqat admin tuzatishi haqidagi xabar keladi.', sales: 'Ushlab turish tugashi haqidagi xabar o\'chirib bo\'lmaydi.',
+            rop: 'Menejer so\'rovlari admin bilan birga keladi — kim birinchi hal qilsa, ikkinchisida yopiladi.', admin: 'Tinch soatlarda tasdiqlash so\'rovlari ovozsiz keladi.' }[d.kind] || '';
+        body.innerHTML = head('Bildirishnomalar · qaysi hodisa, qaysi kanal') + `<div class="ss-col">
+          <section class="ss-card" aria-labelledby="ssKH"><header class="ss-ch"><h3 id="ssKH">Kanallar</h3></header>
+            <div class="ss-pad ss-chans">
+              <div class="ss-chan"><b>Telegram bot</b><span>${tg.username ? esc(tg.username) + ' · ' : ''}${tg.username ? 'profilda kiritilgan' : 'Telegram profilda kiritilmagan'}</span><i class="ss-pill warn">hali ulanmagan</i><small>${esc(tg.note)}</small></div>
+              <div class="ss-chan"><b>Brauzer</b><span>${browserName()} · CRM paneli (qo'ng'iroqcha)</span><i class="ss-pill ok">${ICON.check} Faol</i></div>
+              <div class="ss-chan"><b>Tinch soatlar</b>${NP.editQuiet ? `<div class="ss-qt"><input type="time" id="ssQf" value="${esc(q.from)}" aria-label="Boshlanishi"> – <input type="time" id="ssQt" value="${esc(q.to)}" aria-label="Tugashi"></div>
+                <div class="ss-acts"><button type="button" class="ss-btn" data-q-cancel>Bekor</button><button type="button" class="ss-btn ss-btn--pri" data-q-save>Saqlash</button></div>`
+                : `<span>${esc(q.from)} – ${esc(q.to)} · faqat shoshilinch</span><button type="button" class="ss-btn" data-q-edit>O'zgartirish</button>`}<small>Telegram ulanganda qo'llanadi</small></div>
+            </div></section>
+          <section class="ss-card" aria-labelledby="ssNH"><header class="ss-ch"><h3 id="ssNH">Nimalar haqida xabar beriladi</h3><button type="button" class="ss-btn" data-reset>Standartga qaytarish</button></header>
+            <div class="ss-tw"><table class="ss-tbl ss-tbl--np"><thead><tr><th scope="col">Hodisa</th><th scope="col">Telegram</th><th scope="col">Brauzer</th></tr></thead><tbody>${groups}</tbody></table></div>
+            <p class="ss-cf ss-mt">O'zgarish darhol saqlanadi. ${esc(note)} "Tez orada" — sozlama saqlanadi, xabar manbasi keyingi yangilanishda ulanadi.</p></section></div>`;
+        body.querySelectorAll('[data-pref]').forEach(inp => inp.addEventListener('change', async () => {
+            const k = inp.dataset.pref, ch = inp.dataset.ch;
+            try { NP.data = await api('/notify/prefs', { method: 'PUT', body: { types: { [k]: { [ch]: inp.checked } } } }); window.staffNotify?.refresh(); }
+            catch (e) { inp.checked = !inp.checked; toast(e.message, 4000); }
+        }));
+        body.querySelector('[data-reset]')?.addEventListener('click', async () => {
+            try { NP.data = await api('/notify/prefs', { method: 'PUT', body: { reset: true } }); drawNotif(body); toast('Standart sozlamalar tiklandi'); window.staffNotify?.refresh(); } catch (e) { toast(e.message, 4000); }
+        });
+        body.querySelector('[data-q-edit]')?.addEventListener('click', () => { NP.editQuiet = true; drawNotif(body); });
+        body.querySelector('[data-q-cancel]')?.addEventListener('click', () => { NP.editQuiet = false; drawNotif(body); });
+        body.querySelector('[data-q-save]')?.addEventListener('click', async () => {
+            try { NP.data = await api('/notify/prefs', { method: 'PUT', body: { quiet: { from: body.querySelector('#ssQf').value, to: body.querySelector('#ssQt').value } } }); NP.editQuiet = false; drawNotif(body); }
+            catch (e) { toast(e.message, 4000); }
+        });
+    }
+
+    // ── Yo'riqnomalar ────────────────────────────────────────────────────────
+    const G = { q: '', sel: null, acks: null };
+    function guideList() {
+        const cu = me();
+        const tags = typeof resolveGuideAudienceTags === 'function' ? resolveGuideAudienceTags(cu) : [];
+        return (getItem(STORAGE_KEYS.guides, []) || []).filter(g => (g.targetRoles || []).some(t => tags.includes(t)))
+            .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+    }
+    const readMin = g => Math.max(1, Math.round(String(g.content || '').replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length / 180));
+    function guidesRoot() {
+        const sec = document.getElementById('tab-guides'); if (!sec) return null;
+        let root = document.getElementById('sgGuides');
+        if (!root) { root = document.createElement('div'); root.id = 'sgGuides'; root.className = 'sg-root'; sec.appendChild(root); }
+        ['myGuidesListView', 'myGuideArticleView'].forEach(id => { const el = document.getElementById(id); if (el) { el.hidden = true; el.style.display = 'none'; } });
+        return root;
+    }
+    async function renderGuides(openId) {
+        const root = guidesRoot(); if (!root) return;
+        if (openId) G.sel = openId;
+        if (!G.acks) { G.acks = new Map(); api('/guides/acks/mine').then(r => { G.acks = new Map((r.acks || []).map(a => [a.guideId, a.ackedAt])); drawGuides(root); }).catch(() => {}); }
+        drawGuides(root);
+    }
+    function drawGuides(root) {
+        const all = guideList(), q = G.q.toLowerCase();
+        const list = all.filter(g => !q || `${g.title} ${g.subtitle} ${String(g.content || '').replace(/<[^>]+>/g, ' ')}`.toLowerCase().includes(q));
+        if (!G.sel || !all.some(g => g.id === G.sel)) G.sel = (all.find(g => !G.acks?.has(g.id)) || all[0])?.id || null;
+        const g = all.find(x => x.id === G.sel);
+        const content = g ? (typeof renderScriptContentHtml === 'function' ? renderScriptContentHtml(g.content) : esc(g.content)) : '';
+        const acked = g && G.acks?.get(g.id);
+        root.innerHTML = `<div class="sg-head"><h1>Yo'riqnomalar</h1><p>Lavozimingizga tegishli qoidalar · yangilari tepada</p></div>
+          ${all.length ? `<div class="sg-grid"><aside class="ss-card sg-list" aria-label="Yo'riqnomalar ro'yxati"><div class="sg-search"><label for="sgQ" class="sg-sr">Qidirish</label><input id="sgQ" type="search" placeholder="Qidirish…" value="${esc(G.q)}"></div>
+            <ul>${list.map(x => { const done = G.acks?.has(x.id); return `<li><button type="button" class="sg-it${x.id === G.sel ? ' on' : ''}" data-g="${esc(x.id)}" aria-current="${x.id === G.sel}"><span class="sg-ic">${ICON.doc}</span><span class="sg-tx"><b>${esc(x.title || 'Nomsiz')}</b><small>${[x.subtitle, x.createdAt ? dShort(tzDate(x.createdAt)) : '', done ? 'o\'qilgan' : readMin(x) + ' daq o\'qish'].filter(Boolean).map(esc).join(' · ')}</small></span>${done ? '' : '<i class="sg-new">Yangi</i>'}</button></li>`; }).join('') || '<li class="ss-mt sg-empty">Topilmadi</li>'}</ul></aside>
+            <article class="ss-card sg-art" aria-labelledby="sgT">${g ? `<div class="sg-body"><h2 id="sgT">${esc(g.sticker ? g.sticker + ' ' : '')}${esc(g.title || '')}</h2><p class="sg-meta">${[g.subtitle, g.createdAt ? dmy(tzDate(g.createdAt)) : ''].filter(Boolean).map(esc).join(' · ')}</p>
+              <div class="sg-content script-article-content">${content}</div></div>
+              <footer class="sg-foot"><span class="ss-mt">${acked ? `Tanishib chiqdingiz · ${esc(dmy(tzDate(acked)))}` : 'O\'qib chiqqaningizni tasdiqlang — admin ko\'radi'}</span>${acked ? `<i class="ss-pill ok">${ICON.check} Tanishib chiqdim</i>` : '<button type="button" class="ss-btn ss-btn--pri" data-ack>Tanishib chiqdim</button>'}</footer>` : ''}</article></div>`
+            : (typeof teamEmptyState === 'function' ? teamEmptyState('Hozircha yoʻriqnoma yoʻq', 'Sizga tegishli yoʻriqnoma kiritilganda shu yerda chiqadi.', 'board') : '<div class="ss-card ss-pad">Hozircha yoʻriqnoma yoʻq</div>')}`;
+        root.querySelectorAll('[data-g]').forEach(b => b.onclick = () => { G.sel = b.dataset.g; drawGuides(root); if (innerWidth < 900) root.querySelector('.sg-art')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+        const inp = root.querySelector('#sgQ');
+        if (inp) inp.oninput = () => { G.q = inp.value; const pos = inp.selectionStart; drawGuides(root); const again = root.querySelector('#sgQ'); again.focus(); again.setSelectionRange(pos, pos); };
+        root.querySelector('[data-ack]')?.addEventListener('click', async e => {
+            e.currentTarget.disabled = true;
+            try { const r = await api(`/guides/${encodeURIComponent(G.sel)}/ack`, { method: 'POST' }); G.acks.set(r.guideId, r.ackedAt); drawGuides(root); toast('Rahmat — admin ko\'radi'); window.staffNotify?.refresh(); }
+            catch (err) { toast(err.message, 4000); e.currentTarget.disabled = false; }
+        });
+    }
+    // Admin / HR: maqola ostida kim tanishgani.
+    async function adminAcks(guideId, el) {
+        if (!el) return;
+        const box = document.createElement('section'); box.className = 'sg-acks'; box.innerHTML = '<h4>Tanishib chiqqanlar</h4><p class="ss-mt">Yuklanmoqda…</p>'; el.appendChild(box);
+        try {
+            const r = await api('/guides/acks?guideId=' + encodeURIComponent(guideId));
+            const ROLE = { teacher: 'ustoz', sales_manager: 'sotuv', rop: 'ROP', hr: 'HR', admin: 'admin', employee: 'xodim' };
+            box.innerHTML = `<h4>Tanishib chiqqanlar · ${r.acks.length}</h4>${r.acks.length ? `<ul>${r.acks.map(a => `<li><b>${esc(a.name)}</b><span>${esc(ROLE[a.role] || a.role)} · ${esc(new Date(a.ackedAt).toLocaleString('uz-UZ', { timeZone: 'Asia/Tashkent', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }))}</span></li>`).join('')}</ul>` : '<p class="ss-mt">Hali hech kim "Tanishib chiqdim"ni bosmagan.</p>'}`;
+        } catch (e) { box.innerHTML = `<h4>Tanishib chiqqanlar</h4><p class="ss-mt">${esc(e.message)}</p>`; }
+    }
+
+    // ── Bildirishnomalar paneli: server voqealari ────────────────────────────
+    const NF = { events: [], cats: [], at: 0, busy: null, timer: null };
+    const TONE_TYPE = { bad: 'danger', warn: 'warning', ok: 'success', info: 'info', mute: 'info' };
+    const staffNotify = {
+        items() { return NF.events.map(e => ({ id: 's:' + e.id, type: TONE_TYPE[e.tone] || 'info', tone: e.tone, title: e.title, message: e.sub, time: Date.parse(e.at), tab: e.go?.tab || '', section: e.go?.section, guideId: e.go?.guideId, cat: e.cat, serverRead: !!e.read, server: true })); },
+        cats() { return NF.cats; },
+        async refresh() {
+            if (NF.busy) return NF.busy;
+            if (!me()?.role || me().role === 'student') return;
+            NF.busy = api('/notify/feed').then(r => { NF.events = r.events || []; NF.cats = r.cats || []; NF.at = Date.now(); })
+                .catch(() => { /* panel mahalliy bildirishnomalar bilan ishlayveradi */ })
+                .finally(() => { NF.busy = null; if (typeof renderNotificationPanel === 'function') renderNotificationPanel(); });
+            return NF.busy;
+        },
+        markRead(ids) {
+            const raw = ids.filter(i => String(i).startsWith('s:')).map(i => String(i).slice(2));
+            if (!raw.length) return;
+            for (const e of NF.events) if (raw.includes(e.id)) e.read = true;
+            api('/notify/read', { method: 'POST', body: { ids: raw } }).catch(() => {});
+        },
+        markAll() {
+            const ids = NF.events.filter(e => !e.read).map(e => e.id);
+            NF.events.forEach(e => { e.read = true; });
+            api('/notify/read', { method: 'POST', body: { all: true, ids } }).catch(() => {});
+        },
+        start() {
+            if (NF.timer) return;
+            staffNotify.refresh();
+            NF.timer = setInterval(() => { if (!document.hidden) staffNotify.refresh(); }, 120000);
+        }
+    };
+
+    // ── app.js bilan bog'lanish ──────────────────────────────────────────────
+    const SECTIONS = { edit: renderProfile, salary: renderSalary, notifications: renderNotifSettings };
+    function render(section, body) {
+        body.classList.add('ss-body');
+        return SECTIONS[section](body);
+    }
+    // Admin/boshliq nav'ida "Mening maoshim" yo'q (dizayn); bildirishnomalar ro'yxati — qo'ng'iroqcha paneli.
+    function adjustNav(user, section) {
+        const sal = document.querySelector('[data-profile-section="salary"]');
+        if (sal) sal.style.display = isAdmin(user) ? 'none' : '';
+        return isAdmin(user) && section === 'salary' ? 'edit' : section;
+    }
+    window.staffSettings = { handles: s => !!SECTIONS[s], render, adjustNav };
+    window.staffGuides = { render: renderGuides, open: id => renderGuides(id), adminAcks };
+    window.staffNotify = staffNotify;
+    const boot = () => { if (document.getElementById('notifToggle') && typeof apiFetch === 'function' && localStorage.getItem('mh_token')) staffNotify.start(); };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else setTimeout(boot, 0);
+})();

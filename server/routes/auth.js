@@ -269,6 +269,12 @@ router.patch('/me', authRequired, async (req, res) => {
         const user = await findUserById(req.user.id);
         if (!user) return res.status(404).json({ error: 'Foydalanuvchi topilmadi' });
         const fields = {};
+        // Ism va login (email) ni xodim o'zi o'zgartirmaydi — admin o'zgartiradi (login = HR bog'lanishi).
+        const selfManaged = ['admin', 'boshliq'].includes(user.role);
+        if (!selfManaged && ((name !== undefined && String(name).trim() !== user.name)
+            || (email !== undefined && String(email).trim().toLowerCase() !== String(user.email).trim().toLowerCase()))) {
+            return res.status(403).json({ error: 'Ism va loginni admin o\'zgartiradi' });
+        }
         if (name !== undefined) {
             if (!String(name).trim()) return res.status(400).json({ error: 'Ism bo\'sh bo\'lmasligi kerak' });
             fields.name = String(name).trim();

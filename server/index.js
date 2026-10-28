@@ -233,6 +233,9 @@ app.use('/api/domwork/bot', domworkBotRouter({ pool: crmDb.pool, runtime: domwor
 // Xodimlar davomati (Face ID + lokatsiya) va ustozlar dars nazorati
 app.use('/api/staff-attendance', require('./routes/staffAttendance')({ pool: crmDb.pool,
     authRequired: require('./middleware/auth').authRequired }));
+// Xodim sozlamalari: profil qo'shimchalari, maosh tafsiloti, bildirishnomalar, yo'riqnoma bilan tanishish.
+app.use('/api/staff', require('./routes/staffSettings')({ pool: crmDb.pool,
+    authRequired: require('./middleware/auth').authRequired, findUserById: crmDb.findUserById }));
 
 // ── Static files ──────────────────────────────────────────────────────────────
 
@@ -359,6 +362,8 @@ init().then(async () => {
         setInterval(run, 60 * 60 * 1000).unref();
         setTimeout(run, 90 * 1000).unref();
     }).catch(err => console.error('[school] Jadval yaratilmadi:', err.code || err.message));
+    await require('./services/staffSettings').initSchema(crmDb.pool).catch(err =>
+        console.error('[staff] Jadval yaratilmadi:', err.code || err.message));
     // Xodimlar davomati: jadvallar + har 5 daqiqalik tekshiruv ("kelmadi" xabari, eski rasmlarni tozalash).
     // Xato bo'lsa ham server ko'tariladi — boshqa bo'limlar shu sabab to'xtamasligi kerak.
     const staffAttendance = require('./services/staffAttendance');
