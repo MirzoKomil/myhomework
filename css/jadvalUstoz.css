@@ -1,0 +1,27 @@
+/* UstozJadval / YordamchiJadval dizayni 1:1 (js/scheduleV2.js: header inline, adviceView stack, legend havolasi).
+   Qiymatlar UstozJadval.dc.html va YordamchiJadval.dc.html dan (.row space-between, .mon, .wb, .lg). */
+.sv-head--in { align-items: flex-end; }
+.sv-head--in .sc-sub { margin: 4px 0 0; font-size: 14px; font-weight: 500; }
+.sv-head--in h1 { font-size: 28px; }
+.sv-hr2 { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+.sv-hr2 .sv-mon { gap: 4px; padding: 3px; min-height: 52px; box-sizing: border-box; }
+.sv-hr2 .sv-mon button { width: 36px; height: 36px; }
+.sv-hr2 .sv-mon span { min-width: 126px; box-sizing: border-box; }
+.sv-hr2 .sv-seg { padding: 4px; gap: 0; }
+.sv-hr2 .sv-seg button { min-height: 38px; padding: 0 14px; font: 600 13px 'Plus Jakarta Sans', system-ui, sans-serif; }
+.sv-head--in + .sv-body { margin-top: 4px; }
+.sv-head--in + .sv-body .sv-wcard > .sv-bh { padding: 16px 20px; }
+.sv-head--in + .sv-body .sv-dh { height: 45px; }
+.sv-head--in + .sv-body .sv-bh .sc-mt { font-size: 12px; font-weight: 500; }
+.sv-head--in + .sv-body .sv-lg { gap: 8px 18px; color: var(--text-secondary, #4B5563); }
+/* Yordamchi tavsiya bloklari (.wb): 30px, to'liq kenglik */
+.sv-b.sv-sb { display: block; padding: 0 8px; line-height: 28px; font-size: 12px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; left: 4px; right: 4px; width: auto; }
+/* Legenda oxiridagi "Jadval qoidalari →" */
+.sv-lg .sv-rlink { margin-left: auto; font-size: 12px; font-weight: 700; }
+/* Yon panel sarlavhasi: "Shu haftadagi sinovlar · Sinov darslari →" bir qatorda */
+.sv-side .sv-bh { flex-wrap: nowrap; }
+.sv-side .sv-bh h2 { white-space: nowrap; }
+.sv-side .sv-bh .sc-link { white-space: nowrap; font-size: 13px; font-weight: 700; }
+@media (max-width: 900px) { .sv-head--in { align-items: flex-start; } .sv-hr2 { justify-content: flex-start; } }
+@media (max-width: 640px) { .sv-lg .sv-rlink { margin-left: 0; } .sv-side .sv-bh { flex-wrap: wrap; } }
+.sv-ed .sv-oldl { font-size: 12.5px; font-weight: 600; text-align: left; }

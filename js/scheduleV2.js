@@ -86,15 +86,27 @@
     }
 
     // ── Vertikal hafta / kun to'ri ───────────────────────────────────────────
-    function vgrid(cols, [H0, H1], { cls = '' } = {}) {
+    // Yordamchi tavsiya jadvali (YordamchiJadval): bloklar dizayndagidek to'liq kenglikda, balandligi 30px (--hh 80px da);
+    // bir vaqtga to'g'ri kelganlari yonma-yon tor ustunga bo'linmaydi — biri ostiga ikkinchisi tushadi.
+    const STACK_H = 22.5, STACK_STEP = 25.5; // daqiqa birligida: 30px blok + 4px oraliq (--hh = 80px)
+    function stackTops(blocks) {
+        let prev = -Infinity;
+        for (const b of [...blocks].sort((a, c) => a.start - c.start)) { b.top = Math.max(b.start, prev + STACK_STEP); prev = b.top; }
+        return blocks;
+    }
+    function vgrid(cols, [H0, H1], { cls = '', stack = false } = {}) {
         const { esc } = U();
         const H = (H1 - H0) / 60;
         const y = m => `calc(var(--hh) * ${((m - H0) / 60).toFixed(4)})`;
         const td = U().today(), now = U().nowMin();
         let axis = ''; for (let h = H0 / 60; h < H1 / 60; h++) axis += `<span style="top:${y(h * 60)}">${String(h).padStart(2, '0')}:00</span>`;
         const col = c => {
-            lanes(c.blocks);
+            if (stack) stackTops(c.blocks); else lanes(c.blocks);
             const bl = c.blocks.map(b => {
+                if (stack) {
+                    const tag = b.click ? 'button type="button"' : 'div';
+                    return `<${tag} class="sv-b sv-sb ${b.cls}" style="top:${y(b.top)};height:calc(var(--hh) * ${(STACK_H / 60).toFixed(4)})"${b.attrs || ''} title="${esc(b.title || b.t || '')}">${esc(b.t || '')}</${tag.split(' ')[0]}>`;
+                }
                 const s = Math.max(H0, b.start), e = Math.min(H1, b.end); if (e <= s) return '';
                 const L = b.lanes > 1 ? `left:calc(4px + (100% - 8px) * ${(b.lane / b.lanes).toFixed(4)});width:calc((100% - 8px) / ${b.lanes} - 2px);right:auto;` : '';
                 const xs = e - s <= 20 ? ' xs' : '';
@@ -156,20 +168,27 @@
         return views.some(v => v.date === sun && (v.items.length || (v.work.length && !v.noHours))) ? days : days.slice(0, 6);
     };
     const LEGEND_T = [['k-rsv', 'Muzlatilgan o\'quvchi vaqti · saqlangan, faqat sinov'], ['k-asw', 'Yordamchi aloqasi · band qilmaydi'], ['k-ok', 'Keldi'], ['k-no', 'Kelmadi'], ['k-un', 'Belgilanmagan'], ['k-wait', 'Rejada'], ['k-mk', 'Qoplash'], ['k-tr', 'Sinov darsi'], ['k-free', 'Bo\'sh (sotuv sinov qo\'ya oladi)'], ['k-freex', 'Admin ochgan'], ['k-cls', 'Sinovga yopiq'], ['k-off', 'Ish vaqti emas']];
-    const legend = list => `<div class="sv-lg">${list.map(([c, t]) => `<span><i class="sv-sq ${c}"></i>${t}</span>`).join('')}</div>`;
+    // rules — "Jadval qoidalari" havolasi (ustoz/yordamchi: dizaynda sarlavha qatorida tugma yo'q).
+    const legend = (list, { rules = false } = {}) => `<div class="sv-lg">${list.map(([c, t]) => `<span><i class="sv-sq ${c}"></i>${t}</span>`).join('')}${rules ? '<button type="button" class="sc-link sv-rlink" data-rules>Jadval qoidalari →</button>' : ''}</div>`;
 
     // ── Sahifa sarlavhasi va boshqaruvlar ───────────────────────────────────────
-    function header(root, { title, sub, tabs = [], right = '', nav = '', lang = false, extra = '' }) {
+    // inline — ustoz/yordamchi (UstozJadval, YordamchiJadval): boshqaruvlar sarlavha qatorining o'ngida,
+    // "Qoidalar" tugmasi yo'q (havola legenda qatorida). Admin/ROP — boshqaruvlar sarlavha ostida (AdminJadval).
+    function header(root, { title, sub, tabs = [], right = '', nav = '', lang = false, extra = '', inline = false }) {
         const st = SS().state;
         const { esc } = U();
-        root.innerHTML = `<div class="sv-head"><div class="sv-ht"><h1>${title}</h1><p class="sc-sub">${sub}</p></div>${right}</div>
-          <div class="sv-ctl">${tabs.length ? `<div class="sc-seg sv-seg" role="tablist">${tabs.map(([k, l]) => `<button type="button" role="tab" data-v="${k}" aria-pressed="${k === st.view}">${esc(l)}</button>`).join('')}</div>` : ''}
-            ${nav}${lang ? `<div class="sc-seg sv-seg" role="group" aria-label="Yo'nalish"><button type="button" data-lang="english" aria-pressed="${st.lang === 'english'}">Ingliz</button><button type="button" data-lang="russian" aria-pressed="${st.lang === 'russian'}">Rus</button></div>` : ''}${extra}
+        const ctl = `${tabs.length ? `<div class="sc-seg sv-seg" role="tablist">${tabs.map(([k, l]) => `<button type="button" role="tab" data-v="${k}" aria-pressed="${k === st.view}">${esc(l)}</button>`).join('')}</div>` : ''}
+            ${nav}${lang ? `<div class="sc-seg sv-seg" role="group" aria-label="Yo'nalish"><button type="button" data-lang="english" aria-pressed="${st.lang === 'english'}">Ingliz</button><button type="button" data-lang="russian" aria-pressed="${st.lang === 'russian'}">Rus</button></div>` : ''}${extra}`;
+        root.innerHTML = inline
+            ? `<div class="sv-head sv-head--in"><div class="sv-ht"><h1>${title}</h1><p class="sc-sub">${sub}</p></div><div class="sv-hr2">${ctl}${right}</div></div>
+          <div data-body class="sv-body"><div class="sc-skel"></div></div>`
+            : `<div class="sv-head"><div class="sv-ht"><h1>${title}</h1><p class="sc-sub">${sub}</p></div>${right}</div>
+          <div class="sv-ctl">${ctl}
             <span class="sc-grow"></span><button type="button" class="sc-btn sc-btn--sm sv-rules" data-rules>Qoidalar</button></div>
           <div data-body class="sv-body"><div class="sc-skel"></div></div>`;
         root.querySelectorAll('[data-v]').forEach(b => b.onclick = () => { st.view = b.dataset.v; SS().render(root); });
         root.querySelectorAll('[data-lang]').forEach(b => b.onclick = () => { if (st.lang === b.dataset.lang) return; st.lang = b.dataset.lang; st.teacherId = null; SS().render(root); });
-        root.querySelector('[data-rules]').onclick = rulesDrawer;
+        root.querySelector('.sv-ctl [data-rules]')?.addEventListener('click', rulesDrawer);
         return root.querySelector('[data-body]');
     }
     function navBox(label, aria = 'Sana') {
@@ -449,7 +468,7 @@
         const to = mode === 'tday' ? st.date : mode === 'tmonth' ? (() => { const x = new Date(from + 'T00:00:00Z'); x.setUTCMonth(x.getUTCMonth() + 1); x.setUTCDate(0); return x.toISOString().slice(0, 10); })() : addDays(from, 6);
         const navLabel = mode === 'tday' ? dayLabel(st.date) : mode === 'tmonth' ? `${['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentyabr', 'Oktyabr', 'Noyabr', 'Dekabr'][Number(from.slice(5, 7)) - 1]} ${from.slice(0, 4)}` : weekLabel(from);
         const body = header(root, { title: 'Dars jadvali', sub: '<span data-hrs>vaqt Toshkent bo\'yicha</span>',
-            tabs: [['tday', 'Kun'], ['mine', 'Hafta'], ['tmonth', 'Oy']], nav: navBox(navLabel, mode === 'tmonth' ? 'Oy' : mode === 'tday' ? 'Kun' : 'Hafta') });
+            tabs: [['tday', 'Kun'], ['mine', 'Hafta'], ['tmonth', 'Oy']], nav: navBox(navLabel, mode === 'tmonth' ? 'Oy' : mode === 'tday' ? 'Kun' : 'Hafta'), inline: true });
         const navBtns = root.querySelectorAll('[data-d]');
         if (mode === 'tmonth') navBtns.forEach(b => b.onclick = () => { const x = new Date(from + 'T00:00:00Z'); x.setUTCMonth(x.getUTCMonth() + Number(b.dataset.d)); st.date = x.toISOString().slice(0, 10); reload(); });
         else bindNav(root, mode === 'tday' ? 1 : 7, reload);
@@ -463,7 +482,7 @@
         if (mode === 'tmonth') return monthView(body, d, from, to, reload);
         const days = mode === 'tday' ? [st.date] : weekDays(from, d.views);
         const vBy = new Map(d.views.map(v => [v.date, v]));
-        const range = fit(d.views, asst);
+        const range = fit(d.views, [...asst, { start: 9 * 60, end: 22 * 60 }]); // dizayn: 09:00–22:00
         const cols = days.map(date => ({ date, label: DAY[U().wd(date) - 1], blocks: teacherBlocks(vBy.get(date) || { date, items: [], work: [] }, range, { clickFree: true, assist: asst.filter(a => a.date === date) }) }));
         const n = k => d.views.reduce((a, v) => a + v.items.filter(i => i.kind === k).length, 0);
         const trials = d.views.flatMap(v => v.items.filter(i => i.kind === 'trial').map(i => ({ ...i, date: v.date })));
@@ -471,7 +490,7 @@
         body.innerHTML = `<div class="sv-lay">
             <section class="sc-card sv-wcard"><header class="sv-bh"><h2>${mode === 'tday' ? esc(dayLabel(st.date)) : 'Bu hafta'} · ${n('lesson')} dars · ${n('makeup')} qoplash · ${n('trial')} sinov${asst.length ? ` · ${asst.length} yordamchi aloqasi (jadvalni band qilmaydi)` : ''}</h2>
               <p class="sc-mt sv-hint">Bo'sh joyni bosing → qoplash darsi · darsni bosing → o'quvchi kartasi</p></header>
-              ${vgrid(cols, range, { cls: mode === 'tday' ? 'is-day' : '' })}${legend(LEGEND_T)}</section>
+              ${vgrid(cols, range, { cls: mode === 'tday' ? 'is-day' : '' })}${legend(LEGEND_T, { rules: true })}</section>
             <div class="sv-side">
               <section class="sc-card" data-mk></section>
               <section class="sc-card"><header class="sv-bh"><h2>${mode === 'tday' ? 'Shu kungi' : 'Shu haftadagi'} sinovlar</h2><span class="sc-grow"></span><button type="button" class="sc-link" data-trials>Sinov darslari →</button></header>
@@ -483,7 +502,7 @@
                 <p class="sv-txt">Ish vaqtini admin boshqaradi. Shaxsiy sabab bilan biror vaqtni yopish yoki qo'shimcha ochish uchun so'rov yuboring.</p>
                 <button type="button" class="sc-btn sv-wide" data-req="close">Vaqtni yopish so'rovi</button><button type="button" class="sc-btn sv-wide" data-req="open">Qo'shimcha ochish</button>
                 ${myReqs.map(r => `<div class="sv-req"><span class="sc-pill ${r.status === 'approved' ? 'sc-pill--ok' : r.status === 'rejected' ? 'sc-pill--bad' : 'sc-pill--warn'}">${r.status === 'approved' ? 'Tasdiqlandi' : r.status === 'rejected' ? 'Rad etildi' : 'Kutilmoqda'}</span><small>${r.payload?.date ? `${DAY[U().wd(r.payload.date) - 1]} ${dm(r.payload.date)}` : r.payload?.weekday ? 'har ' + DAY_FULL[r.payload.weekday - 1].toLowerCase() : ''} ${esc(r.payload?.from || '')}${r.payload?.to ? '–' + esc(r.payload.to) : ''} · ${{ close: 'yopish', open: 'ochish', leave: 'ta\'til' }[r.type]}</small></div>`).join('')}
-                <button type="button" class="sc-link" data-old>Sinovlar, qoplashlar va so'rovlar ro'yxati →</button></div></section>
+                <button type="button" class="sc-link sv-oldl" data-old>Sinovlar, qoplashlar va so'rovlar ro'yxati →</button></div></section>
             </div></div>`;
         const mkPanel = body.querySelector('[data-mk]');
         const myStudents = () => (getItem(STORAGE_KEYS.students, []) || []).filter(s => s.teacherId === tid && !s.isStaffDemo && !s.frozen && s.status !== 'inactive');
@@ -564,6 +583,7 @@
         body.querySelector('[data-trials]').onclick = () => typeof switchTab === 'function' && switchTab('trial-lessons');
         body.querySelectorAll('[data-req]').forEach(b => b.onclick = () => SS()._.teacherRequestDrawer(reload, b.dataset.req));
         body.querySelector('[data-old]').onclick = () => { st.view = 'trials'; SS().render(root); };
+        body.querySelector('[data-rules]')?.addEventListener('click', rulesDrawer);
         body.querySelectorAll('[data-a]').forEach(b => b.onclick = async () => { try { await U().post(`/bookings/${b.dataset.id}/${b.dataset.a}`); U().toast('Saqlandi'); reload(); } catch (e) { U().toast(e.message, 4000); } });
     }
     function monthView(body, d, from, to, reload) {
@@ -585,7 +605,8 @@
         const cs = (l, v, s) => `<div class="sv-cs"><small>${l}</small><b>${v}</b><span>${s}</span></div>`;
         body.innerHTML = `<section class="sc-card"><div class="sv-cal"><div class="sv-cg">${DAY.map(x => `<span class="h">${x}</span>`).join('')}${cells.join('')}</div>
             <div class="sv-csum">${cs('Darslar', total, `${plan} rejada`)}${cs('Keldi', ok, 'davomatda belgilangan')}${cs('Kelmadi', no, 'qoplash mumkin')}${cs('Belgilanmagan', un, 'Akademik → Davomat')}${cs('Qoplash', mkN, 'shu oy')}</div></div>
-            ${legend([['k-ok', 'Hammasi keldi'], ['k-no', 'Kelmagan bor'], ['k-un', 'Belgilanmagan'], ['k-mk', 'Qoplash'], ['k-wait', 'Rejada'], ['k-off', 'Dars yo\'q']])}</section>`;
+            ${legend([['k-ok', 'Hammasi keldi'], ['k-no', 'Kelmagan bor'], ['k-un', 'Belgilanmagan'], ['k-mk', 'Qoplash'], ['k-wait', 'Rejada'], ['k-off', 'Dars yo\'q']], { rules: true })}</section>`;
+        body.querySelector('[data-rules]')?.addEventListener('click', rulesDrawer);
         body.querySelectorAll('[data-day]').forEach(b => b.onclick = () => { st.date = b.dataset.day; st.view = 'tday'; SS().render(body.parentElement); });
     }
 
@@ -593,28 +614,33 @@
     async function adviceView(root, reload) {
         const st = SS().state, { api, esc, hm, addDays, weekStart, today, DAY } = U();
         const from = weekStart(st.date), to = addDays(from, 6);
-        const body = header(root, { title: 'Dars jadvali', sub: 'Tavsiya jadvali · tizim har o\'quvchiga haftasiga 3 vaqt taklif qiladi (asosiy darslar oralig\'i + o\'quvchining dars vaqti) · majburiy emas', nav: navBox(weekLabel(from), 'Hafta') });
+        const body = header(root, { title: 'Dars jadvali', sub: 'Tavsiya jadvali · tizim har o\'quvchiga haftasiga 3 vaqt taklif qiladi (asosiy darslar oralig\'i + qulay vaqt) · majburiy emas', nav: navBox(weekLabel(from), 'Hafta'), inline: true });
         bindNav(root, 7, reload);
         const plan = await api(`/assist/plan?from=${from}&to=${to}`);
         const items = plan.items || [];
         const days = weekDays(from, [{ date: to, items: items.filter(i => i.date === to), work: [] }]);
-        const range = fit([], items.map(i => ({ start: i.start, end: i.start + 30 })));
         const td = today();
-        const cols = days.map(date => ({ date, label: DAY[U().wd(date) - 1], blocks: items.filter(i => i.date === date).map(i => {
+        // Dizaynda o'tib ketgan (bajarilmagan) tavsiyalar ko'rsatilmaydi — faqat bajarilgan aloqalar va oldindagi tavsiyalar.
+        const shown = items.filter(i => i.kind === 'contact' || !i.past);
+        const cols = days.map(date => ({ date, label: DAY[U().wd(date) - 1], blocks: shown.filter(i => i.date === date).map(i => {
             const done = i.kind === 'contact';
             const na = done && i.outcome === 'no_answer';
             const warn = done && !na && i.status !== 'counted';
             const t = `${first(i.studentName)} ${done ? (na ? '✕' : `${CH_IC[i.channel] || ''} ${i.minutes ? i.minutes + '′' : ''}`) : hm(i.start)}`;
-            return { start: i.start, end: i.start + 30, cls: done ? (na ? 'k-no' : warn ? 'k-un' : 'k-ok') : i.past ? 'k-miss' : 'k-wait', t,
-                s: warn ? { short: '5 daqiqadan qisqa', same_day: 'shu kuni 2-chi', extra_text: 'haftadagi 2-yozishma', over_cap: '13 dan ortiq' }[i.status] || '' : (!done && i.past ? 'o\'tib ketdi' : ''),
-                title: `${hm(i.start)} · ${i.studentName} · ${done ? (na ? 'javob bermadi' : `${CH[i.channel] || ''} ${i.minutes} daq`) : 'tavsiya'}`,
+            const why = warn ? { short: '5 daqiqadan qisqa', same_day: 'shu kuni 2-chi', extra_text: 'haftadagi 2-yozishma', over_cap: '13 dan ortiq' }[i.status] || 'hisoblanmadi' : '';
+            return { start: i.start, end: i.start + 30, cls: done ? (na ? 'k-no' : warn ? 'k-un' : 'k-ok') : 'k-wait', t,
+                title: `${hm(i.start)} · ${i.studentName} · ${done ? (na ? 'javob bermadi' : `${CH[i.channel] || ''} ${i.minutes} daq${why ? ' · ' + why : ''}`) : 'tavsiya'}`,
                 click: true, attrs: ` data-sid="${esc(i.studentId)}" data-k="${i.kind}"` };
         }) }));
+        // Ko'rinadigan soatlar: ustma-ust tushgan bloklar pastga surilgani hisobga olinadi.
+        const bottoms = cols.flatMap(c => stackTops(c.blocks).map(b => ({ start: b.start, end: b.top + STACK_H })));
+        const range = fit([], [...bottoms, { start: 9 * 60, end: 22 * 60 }]); // dizayn: 09:00–22:00
         const advice = items.filter(i => i.kind === 'advice').length, done = items.filter(i => i.kind === 'contact' && i.outcome !== 'no_answer').length;
-        body.innerHTML = `<section class="sc-card sv-wcard"><header class="sv-bh"><h2>Bu hafta · ${advice + items.filter(i => i.kind === 'contact').length} tavsiya · ${done} bajarildi</h2><span class="sc-grow"></span><span class="sc-mt">Bugungi blokni bosing → aloqani belgilash</span></header>
-            ${items.length ? vgrid(cols, range) : '<p class="sc-mt sv-pp">Sizga yordamchi sifatida faol o\'quvchi biriktirilmagan.</p>'}
-            ${legend([['k-ok', 'Bajarildi (usul · daqiqa)'], ['k-no', 'Javob bermadi'], ['k-un', 'Hisoblanmadi (qoida)'], ['k-wait', 'Tavsiya'], ['k-miss', 'O\'tib ketgan tavsiya']])}</section>
-          <div class="sc-note">Hisoblanadi: kamida 5 daqiqa · bir o'quvchi bilan kuniga 1 ta · Telegram yozishma haftasiga 1 ta · oyiga 13 tagacha. Aloqa faqat shu kuni belgilanadi — o'tgan kun uchun "Aloqalar" bo'limidan admin orqali so'rov yuboring. Tavsiya jadvalni band qilmaydi.</div>`;
+        const hasUn = shown.some(i => i.kind === 'contact' && i.outcome !== 'no_answer' && i.status !== 'counted');
+        body.innerHTML = `<section class="sc-card sv-wcard"><header class="sv-bh"><h2>Bu hafta · ${advice + items.filter(i => i.kind === 'contact').length} tavsiya · ${done} bajarildi</h2><span class="sc-grow"></span><span class="sc-mt">Blokni bosing → aloqani belgilash</span></header>
+            ${items.length ? vgrid(cols, range, { stack: true }) : '<p class="sc-mt sv-pp">Sizga yordamchi sifatida faol o\'quvchi biriktirilmagan.</p>'}
+            ${legend([['k-ok', 'Bajarildi (usul · daqiqa)'], ['k-no', 'Javob bermadi'], ...(hasUn ? [['k-un', 'Hisoblanmadi (qoida)']] : []), ['k-wait', 'Tavsiya']], { rules: true })}</section>`;
+        body.querySelector('[data-rules]')?.addEventListener('click', rulesDrawer);
         body.querySelectorAll('[data-sid]').forEach(b => b.onclick = () => {
             const date = b.closest('[data-date]').dataset.date;
             const s = (getItem(STORAGE_KEYS.students, []) || []).find(x => x.id === b.dataset.sid);
@@ -624,25 +650,8 @@
     }
 
     // ═══ Qoidalar (JadvalQoidalar) ═════════════════════════════════════════════
-    function rulesDrawer() {
-        const rows = [['Barcha ustozlar jadvali', '✓', '✓', 'faqat bo\'sh/band', '—', '—'], ['O\'quvchi ismlari jadvalda', '✓', '✓', '"band"', 'o\'ziniki', 'o\'ziniki'],
-            ['Bugungi holat (o\'tildi / qoldirildi)', '✓', '✓', '—', 'o\'ziniki', 'o\'ziniki'], ['Sinov darsini band qilish', '✓', '✓', '✓ ochiq vaqtga', '—', '—'],
-            ['Ustoz biriktirish (bo\'sh vaqt yo\'q bo\'lsa)', '✓', '✓', 'so\'rov', '—', '—'], ['Ish vaqti shabloni', '✓', '—', '—', 'so\'rov', 'so\'rov'],
-            ['Sanaga ochish / yopish', '✓', '—', '—', 'so\'rov', 'so\'rov'], ['Qoplash darsi qo\'yish', '✓', '—', '—', '✓ (tekshiruvda)', '— (qoplanmaydi)'],
-            ['Sinov tasdig\'i va natijasi', 'ko\'radi', 'ko\'radi', 'ko\'radi', '✓', '—'], ['To\'lov ma\'lumotlari', '✓', '✓', '✓', 'hech qachon', 'hech qachon']];
-        const states = [['k-off', 'Ish vaqti emas', 'shablon yoki admin yopgan'], ['k-free', 'Sinovga ochiq', 'ish vaqti, bo\'sh; sotuv band qila oladi'], ['k-freex', 'Admin ochgan', 'shablondan tashqari, bitta sana yoki har hafta'],
-            ['k-cls', 'Sinovga yopiq', 'tanaffus, seminar, "faqat qoplash uchun"'], ['k-hold', 'Ushlab turilgan', 'menejer tanlayapti, 10 daqiqa'], ['k-tr', 'Sinov', 'tasdiq kutilmoqda → tasdiqlandi → natija'],
-            ['k-wait', 'Dars', 'o\'quvchi jadvali; keldi / kelmadi / belgilanmagan'], ['k-mk', 'Qoplash', 'qoldirilgan dars o\'rniga, admin tasdiqlaydi'], ['k-asw', 'Yordamchi aloqasi', 'tavsiya · jadvalni band qilmaydi']];
-        U().openDrawer({ title: 'Yagona dars jadvali — qoidalar', sub: 'Bitta manba (server). Har rol o\'z vakolatidagini ko\'radi va qiladi. Hamma vaqtlar Asia/Tashkent bo\'yicha.', wide: true, body: `
-            <div class="sc-sec"><h3>Kim nima ko'radi va qiladi</h3><div class="sv-tw"><table class="sc-table sv-rt"><thead><tr><th></th><th>Admin</th><th>ROP</th><th>Sotuv menejeri</th><th>Ustoz</th><th>Yordamchi</th></tr></thead>
-              <tbody>${rows.map(r => `<tr>${r.map((c, k) => k ? `<td>${c}</td>` : `<th scope="row">${c}</th>`).join('')}</tr>`).join('')}</tbody></table></div></div>
-            <div class="sc-sec"><h3>Vaqt holatlari</h3><ul class="sv-states">${states.map(([c, t, s]) => `<li><i class="sv-sq ${c}"></i><b>${t}</b> — ${s}</li>`).join('')}</ul></div>
-            <div class="sc-sec"><h3>Vaqt avtomatik bo'shaydi, qachonki…</h3><ul class="sv-ul"><li>Sinov natijasi yozildi (o'tkazildi / lid kelmadi) — ko'p kunlik sinovning qolgan kunlari ham.</li><li>Ustoz sinovni rad etdi yoki menejer bekor qildi.</li>
-              <li>Lid "yo'qotildi" yoki o'quvchiga aylandi — lid band qilgan vaqt o'chadi, o'quvchi darsi qoladi.</li><li>O'quvchi chiqib ketdi yoki kursi tugadi — vaqt ochiladi. Muzlatilganda vaqt saqlanadi va faqat sinovlarga beriladi.</li><li>Ushlab turish 10 daqiqada saqlanmadi.</li></ul></div>
-            <div class="sc-sec"><h3>To'qnashuvdan himoya</h3><ul class="sv-ul"><li>Band qilish serverda tekshiriladi: bir ustozda ustma-ust tushadigan ikki faol yozuv bo'lmaydi.</li><li>Tanlangan vaqt 10 daqiqa ushlab turiladi; boshqa menejerga "ushlab turilgan" bo'lib ko'rinadi.</li><li>2–3 kunlik sinovda hamma kunlar tekshiriladi, birortasi band bo'lsa — boshqa vaqt.</li></ul></div>
-            <div class="sc-sec"><h3>Yordamchi aloqalari</h3><ul class="sv-ul"><li>Hisob: kamida 5 daqiqa · kuniga 1 ta · Telegram yozishma haftasiga 1 ta · oyiga 13 tagacha · faqat shu kuni kiritiladi, keyin admin tuzatadi.</li><li>Tavsiya: asosiy dars kunlari oralig'i (Se·Pa·Sh → Du·Ch·Ju) va o'quvchining dars vaqti · jadvalni band qilmaydi, darslar soniga kirmaydi.</li></ul></div>`,
-            foot: '<span class="sc-grow"></span><button type="button" class="sc-btn sc-btn--pri" data-close>Tushunarli</button>' });
-    }
+    // Dizaynda to'liq sahifa (2 ustunli kartalar) — js/jadvalQoidalar.js.
+    function rulesDrawer() { window.jadvalQoidalar?.open(); }
 
     window.scheduleV2 = { render, owns, defaultView, isAssistant, rulesDrawer, _t: { merge, subtract, intersect, lanes, fit, look } };
 })();

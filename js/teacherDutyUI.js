@@ -66,6 +66,32 @@
             .then(r => { nx = { key, lessons: r.lessons || {}, loading: false }; render(); })
             .catch(() => { nx = { key, lessons: {}, loading: false }; });
     }
+    // Oy hisobi — bitta manba (UstozDavomat "Oktyabr" kartasi va UstozBosh maosh kartasi formulasi).
+    // 2026-10 dan: dars kunidagi "Keldi" + tasdiqlangan qoplash, har o'quvchida oy rejasidan oshmaydi.
+    function monthTotals({ id, month, students, mainAtt, makeups, teacher, todayKey }) {
+        const calendar = teacherAttendanceCalendar, strict = month >= '2026-10';
+        const thisMonth = todayKey.slice(0, 7), todayDay = Number(todayKey.slice(8));
+        const past = c => month < thisMonth || (month === thisMonth && c.day <= todayDay);
+        const my = (makeups || []).filter(m => m.teacher_id === id && ['planned', 'review', 'approved'].includes(m.status));
+        const t = { plan: 0, expected: 0, came: 0, absent: 0, unmarked: 0, approved: 0, review: 0, counted: 0 };
+        for (const s of students) {
+            const cells = calendar.cells(month, calendar.weekdays(s, teacher, 'main')).filter(c => c && c.scheduled);
+            const entries = mainAtt[s.id] || {}, plan = cells.length, gone = cells.filter(past);
+            const days = new Set(cells.filter(c => calendar.status(entries[c.day]) === 'present').map(c => c.day));
+            if (!strict) Object.entries(entries).forEach(([d, v]) => { if (calendar.status(v) === 'present') days.add(Number(d)); });
+            const came = gone.filter(c => days.has(c.day)).length, absent = gone.filter(c => calendar.status(entries[c.day]) === 'absent').length;
+            let n = days.size, appr = 0;
+            const mine = my.filter(m => m.student_id === s.id && dkey(m.held_date).slice(0, 7) === month);
+            if (strict) for (const m of mine.filter(m => m.status === 'approved')) {
+                const d = Number(dkey(m.held_date).slice(8));
+                if (m.kind === 'double') { n++; appr++; } else if (!days.has(d)) { days.add(d); n++; appr++; }
+            }
+            t.plan += plan; t.expected += gone.length; t.came += came; t.absent += absent; t.unmarked += Math.max(0, gone.length - came - absent);
+            t.approved += appr; t.review += mine.filter(m => m.status === 'review').length; t.counted += Math.min(n, plan);
+        }
+        t.pct = t.expected ? Math.min(100, Math.round(t.counted / t.expected * 100)) : null;
+        return t;
+    }
     let showAll = false, autoOpened = false;
     const MON3 = ['yan', 'fev', 'mar', 'apr', 'may', 'iyn', 'iyl', 'avg', 'sen', 'okt', 'noy', 'dek'];
     const dkey = v => (v ? String(v).slice(0, 10) : '');
@@ -92,6 +118,7 @@
         const isMain = teacherRoles.isMain(employee), all = getItem(STORAGE_KEYS.students, []);
         const hasAssistant = all.some(s => s.assistantTeacherId === id);
         if (!isMain || (!hasAssistant && selected === 'assistant')) selected = isMain ? 'main' : 'assistant';
+        if (asstOnly !== !isMain) { asstOnly = !isMain; if (typeof updateRdPageHead === 'function') updateRdPageHead(); }
         const monthInput = document.getElementById('mainAttMonth');
         if (!monthInput.value) monthInput.value = getMonthKey(new Date());
         monthInput.setAttribute('aria-label', 'Davomat oyi');
@@ -137,18 +164,7 @@
         const mkFor = sid => myMk.filter(m => m.student_id === sid && dkey(m.held_date).slice(0, 7) === month);
         const coveredMissed = sid => new Set(myMk.filter(m => m.student_id === sid).map(m => dkey(m.missed_date)));
         // Hisobga o'tgan darslar — moliya bilan bir xil: 2026-10 dan dars kunidagi "Keldi" + tasdiqlangan qoplash.
-        const countedFor = s => {
-            const entries = mainAtt[s.id] || {};
-            const cells = calendar.cells(month, calendar.weekdays(s, ownTeacher, 'main')).filter(Boolean);
-            const strict = month >= '2026-10';
-            const days = new Set(cells.filter(c => (!strict || c.scheduled) && calendar.status(entries[c.day]) === 'present').map(c => c.day));
-            let n = days.size;
-            if (strict) for (const m of mkFor(s.id).filter(m => m.status === 'approved')) {
-                const d = Number(dkey(m.held_date).slice(8));
-                if (m.kind === 'double') n++; else if (!days.has(d)) { days.add(d); n++; }
-            }
-            return Math.min(n, planFor(s));
-        };
+        const countedFor = s => monthTotals({ id, month, students: [s], mainAtt, makeups: mk.month === month ? mk.list : [], teacher: ownTeacher, todayKey: today }).counted;
         // Qoplanmagan (kelmagan, qoplash yo'q) darslar — kalendar oynasi va bugungi "Keldi · 2 dars" uchun.
         const openMissedFor = sid => {
             const entries = mainAtt[sid] || {}, covered = coveredMissed(sid);
@@ -228,10 +244,8 @@
         // ── Oy hisobi (asosiy ustozlik) ──
         let sumHtml = '';
         if (isMain) {
-            const plan = mainStudents.reduce((n, s) => n + planFor(s), 0);
-            const expected = mainStudents.reduce((n, s) => n + expectedFor(s, 'main'), 0);
-            const counted = mainStudents.reduce((n, s) => n + countedFor(s), 0);
-            const pct = expected ? Math.min(100, Math.round(counted / expected * 100)) : null;
+            const T = monthTotals({ id, month, students: mainStudents, mainAtt, makeups: mk.month === month ? mk.list : [], teacher: ownTeacher, todayKey: today });
+            const { plan, counted, pct } = T;
             let kpi = null; try { kpi = mainStudents.length ? calculateKpiSalary(ownTeacher, month, getItem(STORAGE_KEYS.mainAttendance, {}), mainStudents) : null; } catch (e) { kpi = null; }
             const pay = kpi ? kpi.total : null;
             const review = myMk.filter(m => m.status === 'review').length;
@@ -256,7 +270,9 @@
         if (selected === 'assistant' && !oldAssist) {
             root.innerHTML = isMain
                 ? `<div class="udv">${top}<section class="udv-card udv-my" aria-labelledby="udvMyTitle">${myHead}<div class="udv-contacts" data-duty-contacts></div></section></div>`
-                : `<div class="udv udv--asst"><div class="udv-bar">${monthPicker}</div><div data-duty-contacts></div></div>`;
+                // YordamchiDavomat dizaynida oy tanlagich yo'q (yopilgan oylar — Bosh sahifadagi oy almashtirgichda);
+                // faqat boshqa oy ochiq qolgan bo'lsa, joriy oyga qaytish uchun ko'rinadi.
+                : `<div class="udv udv--asst">${month !== thisMonth ? `<div class="udv-bar">${monthPicker}</div>` : ''}<div data-duty-contacts></div></div>`;
             const box = root.querySelector('[data-duty-contacts]'); box.dataset.month = month; box.dataset.embedded = '1';
             window.schoolTeacher?.renderContacts(box);
             bindSeg(); bindMonth(); bindToday();
@@ -417,5 +433,19 @@
             }; });
         }
     }
-    window.teacherDutyUI = { employeeField, bindEmployee, bindAssignment, render };
+    // Yordamchi ustoz (asosiy o'quvchisi yo'q) Davomati — sarlavha izohi dizayndagidek (YordamchiDavomat).
+    let asstOnly = false;
+    window.rdPageSub = (tab, section) => (tab === 'teachers-section' && section === 'Davomat' && asstOnly
+        ? 'Yordamchi ustoz · Davomat · har o‘quvchi bilan haftasiga 3 ta aloqa, kamida 5 daqiqa' : null);
+    // UstozBosh (js/ustozHome.js) uchun: "Kelmadi" ro'yxatini davomat blokiga qo'shish va oy hisobi.
+    function mergeAbsences(block, list, teacherId) {
+        const out = { ...block };
+        for (const a of list || []) {
+            if (a.teacherId !== teacherId) continue;
+            const day = Number(String(a.day).slice(8, 10)), cur = { ...(out[a.studentId] || {}) };
+            if (cur[day] !== 1 && cur[day] !== true) { cur[day] = 0; out[a.studentId] = cur; }
+        }
+        return out;
+    }
+    window.teacherDutyUI = { employeeField, bindEmployee, bindAssignment, render, monthTotals, mergeAbsences };
 }());
