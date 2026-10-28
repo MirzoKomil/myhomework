@@ -376,14 +376,23 @@ router.post('/avatar-for/:userLogin', authRequired, async (req, res) => {
     try {
         if (req.user.role !== 'admin')
             return res.status(403).json({ error: 'Faqat admin boshqa foydalanuvchiga rasm o\'rnatishi mumkin' });
-        const { dataUrl } = req.body || {};
+        const { dataUrl, preset } = req.body || {};
+        const login = decodeURIComponent(req.params.userLogin);
+        const target = await findUserByEmail(login);
+        if (!target) return res.status(404).json({ error: 'Foydalanuvchi topilmadi' });
+        // Admin xodimga 3D personaj qo'yishi (masalan jinsi noto'g'ri kiritilgan bo'lsa): bitta personaj — bitta xodim.
+        if (preset !== undefined) {
+            if (!/^\/images\/staff-avatars\/[fm](0[1-9]|[12]\d|3[0-6])\.webp$/.test(String(preset)))
+                return res.status(400).json({ error: 'Personaj noto\'g\'ri' });
+            const taken = await dbPool().query('SELECT 1 FROM users WHERE avatar=$1 AND id<>$2', [preset, target.id]);
+            if (taken.rows.length) return res.status(409).json({ error: 'Bu personaj boshqa xodimda' });
+            await updateUser(target.id, { avatar: String(preset) });
+            return res.json({ ok: true, url: preset });
+        }
         if (!dataUrl || !dataUrl.startsWith('data:image/'))
             return res.status(400).json({ error: 'Yaroqsiz rasm formati' });
         if (dataUrl.length > 2 * 1024 * 1024)
             return res.status(413).json({ error: 'Rasm hajmi katta. Kichikroq rasm tanlang.' });
-        const login = decodeURIComponent(req.params.userLogin);
-        const target = await findUserByEmail(login);
-        if (!target) return res.status(404).json({ error: 'Foydalanuvchi topilmadi' });
         await updateUser(target.id, { avatar: dataUrl });
         res.json({ ok: true, url: dataUrl });
     } catch (err) {
