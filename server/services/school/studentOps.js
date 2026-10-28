@@ -373,11 +373,12 @@ function cleanGroup(link, name) {
     return { link: l, name: n };
 }
 async function lockGroupNames(db) { await db.query("SELECT pg_advisory_xact_lock(hashtext('school:group-names'))"); }
-async function nextGroupName(db) {
+// Raqamlash umumiy (C01, C02 …), oxiri o'quvchi/xodim tiliga qarab: "onlayn rus tili" yoki "onlayn ingliz tili".
+async function nextGroupName(db, lang = 'english') {
     const { rows } = await db.query(`SELECT name FROM school_student_groups`);
     let max = 0;
     for (const r of rows) { const m = /^C(\d+)\b/i.exec(r.name); if (m) max = Math.max(max, Number(m[1])); }
-    return `C${String(max + 1).padStart(2, '0')} | onlayn ingliz tili`;
+    return `C${String(max + 1).padStart(2, '0')} | onlayn ${lang === 'russian' ? 'rus' : 'ingliz'} tili`;
 }
 async function setGroup(db, actor, studentId, body, { managerId = null } = {}) {
     const row = await lockStudent(db, studentId);
@@ -399,7 +400,7 @@ async function setGroup(db, actor, studentId, body, { managerId = null } = {}) {
 }
 // Eski guruhlarga avtomatik nom (havolasi bo'lganlarga, nomi yo'qlarga).
 async function autoNameGroups(db, actor) {
-    const { rows } = await db.query(`SELECT s.id, s.extra_data FROM students s LEFT JOIN school_student_groups g ON g.student_id=s.id
+    const { rows } = await db.query(`SELECT s.id, s.subject, s.extra_data FROM students s LEFT JOIN school_student_groups g ON g.student_id=s.id
         WHERE g.student_id IS NULL ORDER BY s.id`);
     let n = 0;
     for (const r of rows) {
@@ -407,7 +408,7 @@ async function autoNameGroups(db, actor) {
         const link = ex.telegramGroupLink || ex.telegramGroup || '';
         if (!link || !GROUP_RE.test(String(link).trim())) continue;
         await db.query(`INSERT INTO school_student_groups (student_id,tg_link,name,name_source,updated_by) VALUES ($1,$2,$3,'auto',$4)`,
-            [r.id, String(link).trim(), await nextGroupName(db), actor.id]);
+            [r.id, String(link).trim(), await nextGroupName(db, r.subject), actor.id]);
         n++;
     }
     return n;
@@ -425,7 +426,7 @@ async function ensureProvisionGroup(db, student, actor = { id: 'system' }) {
     let name = String(student.telegramGroupName || '').trim().replace(/\s+/g, ' ');
     let source = 'manual';
     const dup = name ? (await db.query('SELECT 1 FROM school_student_groups WHERE LOWER(name)=LOWER($1)', [name])).rows[0] : true;
-    if (!name || name.length < 2 || dup) { name = await nextGroupName(db); source = 'auto'; }
+    if (!name || name.length < 2 || dup) { name = await nextGroupName(db, student.subject); source = 'auto'; }
     const { rows } = await db.query(`INSERT INTO school_student_groups (student_id,tg_link,name,name_source,updated_by) VALUES ($1,$2,$3,$4,$5)
         ON CONFLICT (student_id) DO NOTHING RETURNING *`, [student.id, link, name.slice(0, 80), source, actor.id || 'system']);
     return rows[0] || null;

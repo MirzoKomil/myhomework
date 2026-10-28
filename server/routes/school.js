@@ -66,6 +66,14 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         }
         return LANGS.has(req.query.lang) ? req.query.lang : null;
     }
+    // Guruh nomi tili: ?lang= → sotuv menejeri lidlari → xodimning HR'dagi tili.
+    async function groupLang(req) {
+        const l = await reqLang(req);
+        if (l) return l;
+        const e = (await pool.query(`SELECT he.role, he.lang FROM users u JOIN hr_employees he ON LOWER(TRIM(he.login))=LOWER(TRIM(u.email)) WHERE u.id=$1 LIMIT 1`, [req.user.id])).rows[0];
+        const own = langOf(e);
+        return own === 'russian' ? 'russian' : 'english';
+    }
     async function checkLeadTeacherLang(c, leadLanguage, teacherId) {
         const t = (await c.query('SELECT role, lang FROM hr_employees WHERE id=$1', [teacherId])).rows[0];
         const leadLang = leadLanguage === 'russian' ? 'russian' : 'english';
@@ -475,13 +483,13 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
     router.get('/groups', handle(async req => {
         need(req, MANAGE);
         return { groups: (await pool.query(`SELECT g.*, s.name AS student_name, s.teacher_id, s.assistant_teacher_id FROM school_student_groups g
-            JOIN students s ON s.id=g.student_id ORDER BY g.name`)).rows, nextName: await O.nextGroupName(pool) };
+            JOIN students s ON s.id=g.student_id ORDER BY g.name`)).rows, nextName: await O.nextGroupName(pool, await groupLang(req)) };
     }));
     router.put('/students/:id/group', handle(async req => {
         const mid = await managerId(req);
         return write(req, c => O.setGroup(c, req.user, req.params.id, req.body || {}, { managerId: mid }).then(g => ({ group: g })));
     }));
-    router.get('/groups/next-name', handle(async req => { need(req, new Set([...MANAGE, 'sales_manager'])); return { name: await O.nextGroupName(pool) }; }));
+    router.get('/groups/next-name', handle(async req => { need(req, new Set([...MANAGE, 'sales_manager'])); return { name: await O.nextGroupName(pool, await groupLang(req)) }; }));
     router.post('/groups/auto-name', handle(req => { need(req, FULL); return write(req, c => O.autoNameGroups(c, req.user).then(n => ({ named: n }))); }));
     // Ustoz/yordamchi/sotuv: o'z o'quvchilari guruh nomi va havolasi (bosilsa Telegram ochiladi).
     router.get('/my-groups', handle(async req => {

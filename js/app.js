@@ -18996,11 +18996,11 @@ function wireTeacherSchedulePicker(modalBody, options = {}) {
         modalBody.dataset.onboardScheduleTime = existing.lessonTime;
         modalBody.dataset.onboardSchedulePattern = [2, 4, 6].includes(Number(existing.lessonDayOfWeek)) ? 'tts' : 'mwf';
     }
-    // Guruh nomi: avvalgi qiymat yoki tizim taklifi (keyingi bo'sh "Cnn | onlayn ingliz tili").
+    // Guruh nomi: avvalgi qiymat yoki tizim taklifi (keyingi bo'sh "Cnn | onlayn rus/ingliz tili").
     const nameInput = modalBody.querySelector('#onboardTelegramGroupName');
     if (nameInput && !nameInput.value) {
         if (existing?.telegramGroupName) nameInput.value = existing.telegramGroupName;
-        else apiFetch('/api/school/groups/next-name').then(r => { if (!nameInput.value) nameInput.value = r.name; }).catch(() => {});
+        else apiFetch('/api/school/groups/next-name' + (typeof getUserOwnLang === 'function' && getUserOwnLang() ? `?lang=${getUserOwnLang()}` : '')).then(r => { if (!nameInput.value) nameInput.value = r.name; }).catch(() => {});
     }
     if (existing?.telegramGroupLink) {
         const linkInput = modalBody.querySelector('#onboardTelegramGroupLink');
