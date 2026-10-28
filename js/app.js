@@ -224,7 +224,9 @@ const ROLE_TABS = {
     // ko'chirildi. renderTeachersSection() ustoz/ROP uchun sub-navigatsiyani
     // faqat shu ikki bo'limga (Davomat, O'quvchini tekshirish) cheklaydi,
     // avvalgi tor ruxsat saqlanib qoladi.
-    teacher:       ['dashboard', 'students', 'timetable', 'teachers-section', 'school-contacts', 'trial-lessons', 'guides', 'student-app'],
+    // UstozBosh / YordamchiBosh sidebar: "Aloqalar" va "Mobil ilova" yo'q. Aloqalar — Akademik bo'lim → Davomat →
+    // "Yordamchi ustozlik" tabida (switchTab('school-contacts') havolalari ishlayveradi); ilova ko'rinishi — Darslik → "O'quvchi ko'rinishida ochish".
+    teacher:       ['dashboard', 'students', 'timetable', 'teachers-section', 'trial-lessons', 'guides'],
     employee:      ['student-app', 'guides'],
     hr:            ['dashboard', 'hr', 'guides']
 };
@@ -310,6 +312,8 @@ function applyRoleBasedAccess(user) {
     sidebar.querySelectorAll('.menu-item').forEach(el => {
         if (allowedSet.has(el.dataset.tab)) el.style.display = '';
     });
+    // YordamchiBosh: sof yordamchida (asosiy o'quvchisi yo'q) "Sinov darslari" yo'q; sinov kelsa son belgisi bilan qaytadi (js/staffNavBadges.js).
+    if (role === 'teacher') window.staffNavBadges?.applyRole(user);
 
     // Ruxsat etilgan .menu-sub-item va ularning guruhlarini ko'rsat
     sidebar.querySelectorAll('.menu-sub-item').forEach(el => {

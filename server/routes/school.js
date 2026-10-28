@@ -420,9 +420,10 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         const teachers = (await pool.query('SELECT teacher_id, from_date, to_date FROM school_teacher_history WHERE student_id=$1 ORDER BY from_date', [row.id])).rows;
         const card = { id: row.id, name: row.name, subject: row.subject, avatarUrl: extra.avatarUrl || '', teacherId: row.teacher_id, assistantId: row.assistant_teacher_id,
             schedule: { day: row.lesson_day_of_week, days: T.patternLabel(row.lesson_day_of_week), time: row.lesson_time, duration: row.lesson_duration },
-            status: S.statusOn(statuses, today), statuses: statuses.map(s => ({ status: s.status, from: S.dateStr(s.from_date), to: S.dateStr(s.to_date), reason: s.reason })),
+            status: S.statusOn(statuses, today), statuses: statuses.map(s => ({ status: s.status, from: S.dateStr(s.from_date), to: S.dateStr(s.to_date), reason: s.reason, ...(O.isFinishedRow(s) ? { finished: true } : {}) })),
             group, teachers: teachers.map(t => ({ teacherId: t.teacher_id, from: S.dateStr(t.from_date), to: S.dateStr(t.to_date) })),
             pendingTeacherChange: extra.pendingTeacherChange || null, startDate: extra.startDate || null, serialCode: extra.serialCode || '', scope };
+        card.finished = card.status === 'left' && O.isFinishedRow(statuses.filter(s => s.status === 'left').pop());
         if (scope === 'full' || scope === 'sales') {
             Object.assign(card, { phone: row.phone, parentPhone: extra.parentPhone || '', login: extra.login || '', tariff: extra.tariff || '', monthlyPrice: extra.monthlyPrice || null,
                 paymentDueDate: extra.paymentDueDate || null, debtAmount: extra.debtAmount ?? null, managerId: extra.managerId || null, schoolRev: extra.schoolRev || 0 });
@@ -513,6 +514,8 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
     }));
     router.post('/students/:id/freeze', handle(req => write(req, c => O.freeze(c, req.user, req.params.id, req.body || {}).then(r => ({ status: r })))));
     router.post('/students/:id/stop', handle(req => write(req, c => O.stop(c, req.user, req.params.id, req.body || {}).then(r => ({ status: r })))));
+    // "Kursni tugatdi" (admin/ROP): 'left' + reason_code='finished' — /inactive da "Tugatgan".
+    router.post('/students/:id/finish', handle(req => write(req, c => O.finish(c, req.user, req.params.id, req.body || {}).then(r => ({ status: r, finished: true })))));
     router.post('/students/:id/restore', handle(req => write(req, c => O.restore(c, req.user, req.params.id, req.body || {}))));
     router.post('/students/:id/teacher', handle(req => write(req, async c => {
         const st = (await c.query('SELECT subject FROM students WHERE id=$1', [req.params.id])).rows[0];
@@ -576,8 +579,8 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
     router.get('/inactive', handle(async req => {
         const today = T.nowLocal().date;
         const rows = (await pool.query('SELECT * FROM students')).rows;
-        const statuses = (await pool.query('SELECT * FROM school_student_status WHERE cancelled_at IS NULL')).rows;
-        const hist = (await pool.query('SELECT * FROM school_teacher_history')).rows;
+        const statuses = (await pool.query('SELECT * FROM school_student_status WHERE cancelled_at IS NULL ORDER BY from_date, created_at')).rows;
+        const hist = (await pool.query('SELECT * FROM school_teacher_history ORDER BY from_date, created_at')).rows;
         const by = new Map(); for (const s of statuses) { if (!by.has(s.student_id)) by.set(s.student_id, []); by.get(s.student_id).push(s); }
         let me = null, mid = null; const isSales = req.user.role === 'sales_manager';
         if (req.user.role === 'teacher') me = (await teacherOf(req)).id; else if (isSales) mid = await managerId(req); else need(req, MANAGE);
@@ -595,9 +598,13 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
                 if (ch) changed.push({ id: r.id, from: ch.teacher_id, to: r.teacher_id, date: S.dateStr(T.addDays(S.dateStr(ch.to_date), 1)), reason: ch.reason || '' });
                 continue;
             }
-            const last = (by.get(r.id) || []).slice(-1)[0];
+            const sr = by.get(r.id) || [];
+            const last = sr.slice(-1)[0];
             const mv = moved && state === 'active', past = myPast.slice(-1)[0];
-            out.push({ id: r.id, name: r.name, avatarUrl: st.avatarUrl, state: mv ? 'moved' : state,
+            // Kursni tugatgan: oxirgi 'left' yozuvi reason_code='finished' (admin "Kursni tugatdi" bilan qo'ygan).
+            const finished = state === 'left' && O.isFinishedRow(sr.filter(x => x.status === 'left').pop());
+            const shown = mv ? 'moved' : finished ? 'finished' : state;
+            out.push({ id: r.id, name: r.name, avatarUrl: st.avatarUrl, state: shown, status: shown, finished,
                 from: mv ? S.dateStr(past.to_date) : last ? S.dateStr(last.from_date) : past ? S.dateStr(past.to_date) : null,
                 to: !mv && last?.to_date ? S.dateStr(last.to_date) : null, reason: mv ? past.reason || '' : last?.reason || '',
                 role: me ? (r.teacher_id === me || (moved && myPast.length) ? 'main' : 'assistant') : null,
@@ -632,9 +639,51 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
                 return x;
             };
             for (const s of out) Object.assign(s, detail(s.id));
+            // Kursni tugatgan: kurs davri (boshlanish → oxirgi dars).
+            for (const s of out) if (s.finished) s.course = { from: s.withMe?.from || s.startDate || null, to: s.from ? T.addDays(s.from, -1) : null };
+            // Sotuv / admin: muzlatishda to'lov sanasi qancha surilgani, eslatma va qayta jalb qo'ng'irog'i.
+            if (!me) {
+                const F = require('../services/school/followups');
+                const fol = await F.forStudents(pool, out.map(s => s.id));
+                for (const s of out) {
+                    const f = fol.get(s.id);
+                    if (s.state === 'frozen') {
+                        const fr = (by.get(s.id) || []).filter(x => x.status === 'frozen').pop();
+                        const days = Number(fr?.payload?.days || 0);
+                        if (days && s.paymentDueDate) s.paymentShift = { from: T.addDays(String(s.paymentDueDate).slice(0, 10), -days), to: String(s.paymentDueDate).slice(0, 10), days };
+                        s.reminder = f?.reminder || null;
+                    }
+                    if (s.state === 'left') { s.winback = F.winbackPlan(f, s.from); s.lastCall = f?.lastCall || null; s.calls = f?.calls || 0; }
+                }
+            }
             for (const c of changed) Object.assign(c, detail(c.id), { name: rowBy.get(c.id).name, avatarUrl: S.studentRow(rowBy.get(c.id)).avatarUrl, fromName: names.get(c.from) || '' });
         }
         return { students: out, changed };
+    }));
+
+    // ── Faol emas o'quvchi: "Qaytish oldidan eslatma" va "Qayta jalb · Qo'ng'iroq qildim" ──
+    // Sotuv menejeri — faqat o'zi sotgan o'quvchi; admin/boshliq/ROP — hammasi; ustoz/yordamchi — yo'q.
+    const F = require('../services/school/followups');
+    async function followupStudent(req, id) {
+        const row = (await pool.query('SELECT * FROM students WHERE id=$1', [id])).rows[0];
+        if (!row) throw T.fail(404, 'O\'quvchi topilmadi');
+        if (MANAGE.has(req.user.role)) return row;
+        if (req.user.role === 'sales_manager' && O.soldBy(S.studentRow(row), await managerId(req))) return row;
+        throw T.fail(403, 'Bu o\'quvchiga ruxsat yo\'q');
+    }
+    router.post('/students/:id/followups', handle(async req => {
+        await followupStudent(req, req.params.id);
+        return { followup: await F.create(pool, req.user, req.params.id, req.body || {}) };
+    }));
+    router.post('/students/:id/calls', handle(async req => {
+        await followupStudent(req, req.params.id);
+        return { call: await F.logCall(pool, req.user, req.params.id, req.body || {}) };
+    }));
+    router.delete('/followups/:id', handle(async req => {
+        const f = await F.row(pool, req.params.id);
+        if (!f) throw T.fail(404, 'Eslatma topilmadi');
+        await followupStudent(req, f.student_id);
+        return { followup: await F.cancel(pool, req.user, req.params.id, { manage: MANAGE.has(req.user.role) }) };
     }));
 
     // ── Sotuv so'rovlari ─────────────────────────────────────────────────────
