@@ -845,6 +845,28 @@ async function loadStudentJson(pool, key, studentId) {
 async function studentDetail(pool, actor, studentId) {
     const access = await resolveAccess(pool, actor);
     const { student } = await assertStudentAccess(pool, access, String(studentId || ''));
+    return buildStudentDetail(pool, student);
+}
+
+// O'quvchi kartasi (/api/school/students/:id/progress) uchun: ruxsatni chaqiruvchi
+// (school.js canSee) tekshiradi. Ilova natijalari — faqat o'qish; baho va faoliyat lentasi yo'q.
+async function studentDetailById(pool, studentId) {
+    const { rows } = await pool.query(`SELECT s.id, s.name, s.group_name, s.subject, s.teacher_id, s.assistant_teacher_id, s.lesson_duration,
+        s.lesson_day_of_week, s.lesson_time, COALESCE(s.extra_data,'{}'::jsonb) AS extra FROM students s WHERE s.id=$1`, [String(studentId || '')]);
+    const r = rows[0];
+    if (!r) throw error(404, "O'quvchi topilmadi");
+    const student = { id: r.id, name: r.name, group: r.group_name || '', subject: r.subject || 'english',
+        teacherId: r.teacher_id || '', assistantTeacherId: r.assistant_teacher_id || '', lessonDuration: Number(r.lesson_duration) || null,
+        lessonDayOfWeek: r.lesson_day_of_week == null ? null : Number(r.lesson_day_of_week), lessonTime: r.lesson_time || '',
+        startDate: r.extra?.startDate || r.extra?.joinDate || '', frozen: r.extra?.frozen === true, platformCourseId: r.extra?.platformCourseId || '', role: null };
+    const d = await buildStudentDetail(pool, student);
+    delete d.activity; delete d.grades;
+    if (!Array.isArray(d.exams) || d.exams.some(e => !e.examId)) d.exams = (d.exams || []).filter(e => e.examId);
+    d.lessons = d.lessons.map(({ grades, ...l }) => l);
+    return d;
+}
+
+async function buildStudentDetail(pool, student) {
     const ids = [student.id];
     const [mc, progress, parts, timeRows, totals, lastSeen, activity, grades, attendance, lessonTime] = await Promise.all([
         loadMobileContent(pool), loadProgress(pool, ids), loadParts(pool, ids),
@@ -1171,7 +1193,7 @@ async function recordTracking(pool, studentId, body = {}, now = new Date()) {
 module.exports = {
     TOTAL_LESSONS, LESSON_KINDS, COURSE_KINDS, PASS_PERCENT,
     initSchema, resolveAccess, getHub, getLesson, saveMaterial, archiveMaterial, listMaterials,
-    studentsOverview, studentDetail, recordTracking, progressForIds,
+    studentsOverview, studentDetail, studentDetailById, recordTracking, progressForIds,
     // test uchun
     buildTeacherPlan, konspektRules, allocateMinutes, expectedLiveLessons, lessonPercent, cleanPageMap, cleanMaterial, expectedLesson, summarizeStudent, mergeMistakes, tzDay,
     _resetCache: () => { ruSourceCache = null; contentCache = { at: 0, mc: null }; trackState.clear(); oralCache = undefined; },

@@ -41,7 +41,7 @@ function countMonth(contacts) {
         else if (status === 'short') s.short++;
         else if (status === 'same_day') s.sameDay++;
         else s.extraText++;
-        s.items.push({ id: c.id, day, channel: c.channel, minutes: c.minutes, outcome: c.outcome, status });
+        s.items.push({ id: c.id, day, channel: c.channel, minutes: c.minutes, outcome: c.outcome, status, note: c.note || '' });
     }
     const students = [...byStudent.values()].map(({ days, textWeeks, ...rest }) => ({ ...rest, amount: rest.counted * RATE }));
     const counted = students.reduce((n, s) => n + s.counted, 0);

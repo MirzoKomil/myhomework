@@ -863,6 +863,7 @@ function updateSidebarActiveState(tab, ctx) {
 }
 
 function switchTab(tab, ctx = {}) {
+    window.schoolUI?.closeStudent?.();
     if (tab !== 'trial-lessons' && _teacherTrialPollTimer) {
         clearInterval(_teacherTrialPollTimer);
         _teacherTrialPollTimer = null;
@@ -10365,131 +10366,20 @@ document.getElementById('addAsstTeacher').addEventListener('click', () => {
     };
 });
 
-// --- Ustozlarga kabinet ---
+// --- Akademik bo'lim → "O'quvchini tekshirish" ---
+// Eski Yozishma / Faoliyat / Ijodiy ko'rinishi olib tashlandi (QABUL QILINGAN QARORLAR):
+// endi e'tibor ro'yxati (js/schoolCheck.js) — ustoz o'z o'quvchilarini, admin/ROP
+// ustoz yoki yordamchini tanlab ko'radi; ism → yagona o'quvchi kartasi.
 function renderTeacherCabinet() {
-    const currentUser = getCurrentUser();
-    const teachers = getItem(STORAGE_KEYS.teachers, []);
-    const sel = document.getElementById('cabinetTeacher');
-    if (!sel) return;
-
-    const selWrap = sel.closest('.form-group') || sel.parentElement;
-
-    if (currentUser?.role === 'teacher') {
-        // O'qituvchi faqat o'zini ko'radi
-        const tid = currentUser.linkedTeacherId;
-        if (selWrap) selWrap.style.display = 'none';
-        if (tid) {
-            renderTeacherCabinetContent(tid);
-        } else {
-            document.getElementById('teacherCabinetContent').innerHTML =
-                '<p class="text-muted" style="padding:24px">Siz hali ustoz sifatida tizimga biriktirilmadingiz. Admin bilan bog\'laning.</p>';
-        }
+    const root = document.getElementById('studentCheckRoot');
+    if (!root) return;
+    const cu = getCurrentUser();
+    if (cu?.role === 'teacher' && !cu.linkedTeacherId) {
+        root.innerHTML = '<p class="text-muted" style="padding:24px">Siz hali ustoz sifatida tizimga biriktirilmadingiz. Admin bilan bog\'laning.</p>';
         return;
     }
-
-    // Admin / boshqa rollar: barcha ustozlar
-    if (selWrap) selWrap.style.display = '';
-    sel.innerHTML = teachers.map(t => `<option value="${escapeHtml(t.id)}">${escapeHtml(t.name)}</option>`).join('');
-    sel.onchange = () => renderTeacherCabinetContent(sel.value);
-    if (teachers.length) renderTeacherCabinetContent(sel.value || teachers[0].id);
-}
-
-function renderTeacherCabinetContent(teacherId) {
-    const teacher = getItem(STORAGE_KEYS.teachers, []).find(t => t.id === teacherId);
-    const students = getItem(STORAGE_KEYS.students, []).filter(s => s.teacherId === teacherId || s.assistantTeacherId === teacherId);
-    const timetable = getItem(STORAGE_KEYS.timetable, {});
-    const today = new Date().toISOString().split('T')[0];
-    const todayProbniy = Object.entries(timetable).filter(([k, v]) => k.startsWith(today) && v.teacherId === teacherId);
-    const monthVal = getMonthKey(new Date());
-    const isAsosiy = teacher?.type === 'asosiy';
-    const attStore = isAsosiy ? getItem(STORAGE_KEYS.mainAttendance, {}) : getItem(STORAGE_KEYS.assistantAttendance, {});
-    const kpi = teacher ? calculateKpiSalary(teacher, monthVal, attStore) : null;
-
-    const initials = n => String(n || '').trim().split(/\s+/).map(w => w[0] || '').slice(0, 2).join('').toUpperCase();
-    // Yuqorida: ixcham ko'rsatkichlar. Keyin: chapda o'quvchilar ro'yxati, o'ngda tanlangan
-    // o'quvchi bilan ishlash (Yozishma / Faoliyat / Ijodiy vazifalar) — bitta ekranda.
-    let html = `<div class="tcx">
-        <div class="ahx-kpis tcx-kpis">
-            <div class="ahx-kpi"><span class="ahx-kpi-l">Oʻquvchilar</span><b class="ahx-kpi-v">${students.length}</b><div class="ahx-kpi-n"><span>${escapeHtml(teacher?.name || '')} · ${isAsosiy ? 'asosiy' : 'yordamchi'}</span></div></div>
-            ${kpi ? `<div class="ahx-kpi"><span class="ahx-kpi-l">Darslar · shu oy</span><b class="ahx-kpi-v">${kpi.completed}<small> / ${kpi.expected * (kpi.studentCount || 1)}</small></b><span class="mhx-bar"><i style="width:${Math.min(100, kpi.kpiPercent || 0)}%"></i></span></div>
-            <div class="ahx-kpi"><span class="ahx-kpi-l">Shu oy maoshi · taxminiy</span><b class="ahx-kpi-v">${escapeHtml(formatMoney(kpi.total))}</b><div class="ahx-kpi-n"><span>davomat asosida</span></div></div>` : ''}
-        </div>`;
-
-    if (todayProbniy.length) {
-        const allStudents = getItem(STORAGE_KEYS.students, []);
-        html += `<section class="card ahx-card"><div class="ahx-card-h"><h3>Bugungi sinov darslari <small>· ${todayProbniy.length}</small></h3></div><ul class="tcx-trials">
-            ${todayProbniy.map(([key, entry]) => `<li><b>${escapeHtml(key.split('_')[1] || '')}</b><span>${escapeHtml(allStudents.find(st => st.id === entry.studentId)?.name || '—')}</span>
-                <span class="ahx-pill ${entry.completed ? 'ahx-pill--ok' : 'ahx-pill--muted'}">${entry.completed ? 'Oʻtdi' : 'Kutilmoqda'}</span></li>`).join('')}</ul></section>`;
-    }
-
-    if (!students.length) {
-        html += `<div class="card team-empty-state"><img class="team-ill" src="images/empty/students.webp" alt="" width="120" height="120" loading="lazy">
-            <strong>Hozircha oʻquvchi biriktirilmagan</strong><span>Oʻquvchi biriktirilgach, u bilan yozishma, ilovadagi faoliyati va ijodiy vazifalari shu yerda chiqadi.</span></div></div>`;
-        document.getElementById('teacherCabinetContent').innerHTML = html;
-        return;
-    }
-    const selectedId = (_teacherCabinetSelectedStudent && students.some(st => st.id === _teacherCabinetSelectedStudent))
-        ? _teacherCabinetSelectedStudent : students[0].id;
-    _teacherCabinetSelectedStudent = selectedId;
-    html += `<div class="tcx-work">
-        <aside class="card tcx-list" aria-label="Oʻquvchilar"><div class="tcx-list-h">Oʻquvchilar <small>${students.length}</small></div>
-            <ul>${students.map(st => `<li><button type="button" class="tcx-st${st.id === selectedId ? ' active' : ''}" data-tcx-student="${escapeHtml(st.id)}" aria-pressed="${st.id === selectedId}">
-                <span class="tcx-ava">${escapeHtml(initials(st.name))}</span><span class="tcx-st-name">${escapeHtml(st.name || '')}${st.assistantTeacherId === teacherId && st.teacherId !== teacherId ? '<small>yordamchi sifatida</small>' : ''}</span></button></li>`).join('')}</ul>
-        </aside>
-        <section class="card tcx-detail" id="teacherStudentDetailPanels"></section>
-    </div></div>`;
-
-    document.getElementById('teacherCabinetContent').innerHTML = html;
-    const root = document.getElementById('teacherCabinetContent');
-    root.querySelectorAll('[data-tcx-student]').forEach(btn => btn.addEventListener('click', () => {
-        _teacherCabinetSelectedStudent = btn.dataset.tcxStudent;
-        root.querySelectorAll('[data-tcx-student]').forEach(b => { const on = b === btn; b.classList.toggle('active', on); b.setAttribute('aria-pressed', String(on)); });
-        renderTeacherStudentDetailPanels(teacherId, btn.dataset.tcxStudent);
-        document.getElementById('teacherStudentDetailPanels')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }));
-    renderTeacherStudentDetailPanels(teacherId, selectedId);
-}
-
-let _tcxPane = 'chat';
-let _teacherCabinetSelectedStudent = null;
-function renderTeacherStudentDetailPanels(teacherId, studentId) {
-    const wrap = document.getElementById('teacherStudentDetailPanels');
-    if (!wrap) return;
-    const student = getItem(STORAGE_KEYS.students, []).find(s => s.id === studentId);
-    if (!student) { wrap.innerHTML = ''; return; }
-    const teacher = getItem(STORAGE_KEYS.teachers, []).find(t => t.id === teacherId);
-
-    const chatSlots = [];
-    if (student.teacherId === teacherId) chatSlots.push({ threadId: 'main-teacher', label: 'Asosiy ustoz' });
-    if (student.assistantTeacherId === teacherId) chatSlots.push({ threadId: 'assistant-teacher', label: 'Yordamchi ustoz' });
-
-    if (!chatSlots.length && _tcxPane === 'chat') _tcxPane = 'activity';
-    const panes = [...(chatSlots.length ? [['chat', 'Yozishma']] : []), ['activity', 'Faoliyat'], ['creative', 'Ijodiy vazifalar']];
-    let html = `<div class="tcx-detail-h"><div><h3>${escapeHtml(student.name)}</h3><span class="mhx-sub">${escapeHtml(formatPhoneDisplay(student.phone) || '')}</span></div>
-        <div class="tcx-seg" role="tablist">${panes.map(([id, label]) => `<button type="button" role="tab" data-tcx-pane="${id}" aria-selected="${_tcxPane === id}" class="${_tcxPane === id ? 'active' : ''}">${label}</button>`).join('')}</div></div>`;
-    html += `<div class="tcx-pane" data-pane="chat"${_tcxPane === 'chat' ? '' : ' hidden'}>${chatSlots.map(slot => `${chatSlots.length > 1 ? `<h4 class="tcx-sub">${slot.label}</h4>` : ''}<div id="teacherChat_${slot.threadId}"></div>`).join('')}</div>
-        <div class="tcx-pane" data-pane="activity"${_tcxPane === 'activity' ? '' : ' hidden'}><div id="teacherActivityPanel"></div></div>
-        <div class="tcx-pane" data-pane="creative"${_tcxPane === 'creative' ? '' : ' hidden'}><div id="teacherCreativePanel"></div></div>`;
-    wrap.innerHTML = html;
-    wrap.querySelectorAll('[data-tcx-pane]').forEach(btn => btn.addEventListener('click', () => {
-        _tcxPane = btn.dataset.tcxPane;
-        wrap.querySelectorAll('[data-tcx-pane]').forEach(b => { const on = b === btn; b.classList.toggle('active', on); b.setAttribute('aria-selected', String(on)); });
-        wrap.querySelectorAll('.tcx-pane').forEach(p => { p.hidden = p.dataset.pane !== _tcxPane; });
-    }));
-
-    chatSlots.forEach(slot => {
-        renderCrmChatThread(document.getElementById(`teacherChat_${slot.threadId}`), {
-            studentId,
-            threadId: slot.threadId,
-            senderRole: 'teacher',
-            senderId: teacherId,
-            senderName: teacher?.name || '',
-            title: `${student.name} — ${slot.label}`,
-        });
-    });
-
-    renderCrmActivityPanel(document.getElementById('teacherActivityPanel'), studentId);
-    renderCrmCreativeSubmissionsPanel(document.getElementById('teacherCreativePanel'), studentId);
+    if (!window.schoolCheck) { root.innerHTML = '<p class="text-muted" style="padding:24px">Sahifa yuklanmadi — sahifani yangilang.</p>'; return; }
+    window.schoolCheck.render(root, { lang: _teachersLang === 'russian' ? 'russian' : 'english' });
 }
 
 // --- Maosh hisob-kitobi ---

@@ -209,9 +209,16 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
     router.post('/requests', handle(req => write(req, async c => {
         const me = await teacherOf(req);
         const type = req.body?.type;
-        if (!['leave', 'close', 'open'].includes(type)) throw T.fail(400, 'So\'rov turi noto\'g\'ri');
+        if (!['leave', 'close', 'open', 'student'].includes(type)) throw T.fail(400, 'So\'rov turi noto\'g\'ri');
         const reason = String(req.body.reason || '').trim(); if (reason.length < 3) throw T.fail(400, 'Sababni yozing');
-        const p = { date: req.body.date, weekday: req.body.weekday, repeat: req.body.repeat, from: req.body.from, to: req.body.to };
+        let p = { date: req.body.date, weekday: req.body.weekday, repeat: req.body.repeat, from: req.body.from, to: req.body.to };
+        // O'quvchi bo'yicha so'rov (muzlatish, ustoz yoki jadval) — faqat o'z o'quvchisi; admin qo'lda hal qiladi.
+        if (type === 'student') {
+            const st = (await c.query('SELECT id, name, teacher_id, assistant_teacher_id FROM students WHERE id=$1', [String(req.body.studentId || '')])).rows[0];
+            if (!st || (st.teacher_id !== me.id && st.assistant_teacher_id !== me.id)) throw T.fail(403, 'Bu o\'quvchi sizga biriktirilmagan');
+            const TOPICS = ['freeze', 'teacher', 'schedule', 'other'];
+            p = { studentId: st.id, studentName: st.name, topic: TOPICS.includes(req.body.topic) ? req.body.topic : 'other' };
+        }
         if (p.date) T.assertDate(p.date);
         const { rows } = await c.query(`INSERT INTO school_requests (id,teacher_id,requester_id,requester_name,type,payload,reason) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
             [randomUUID(), me.id, req.user.id, me.name, type, JSON.stringify(p), reason.slice(0, 300)]);
@@ -228,7 +235,7 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         const approve = req.body?.decision === 'approve';
         if (!approve && String(req.body?.note || '').trim().length < 3) throw T.fail(400, 'Rad etish sababini yozing');
         let override = null;
-        if (approve && r.type !== 'assist_late') {
+        if (approve && r.type !== 'assist_late' && r.type !== 'student') {
             const p = r.payload || {};
             override = await S.addOverride(c, req.user, { teacherId: r.teacher_id, kind: r.type, date: p.date, weekday: p.weekday, repeat: p.repeat,
                 from: p.from || '00:00', to: p.to || '24:00', reason: r.reason });
@@ -310,7 +317,7 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
             schedule: { day: row.lesson_day_of_week, days: T.patternLabel(row.lesson_day_of_week), time: row.lesson_time, duration: row.lesson_duration },
             status: S.statusOn(statuses, today), statuses: statuses.map(s => ({ status: s.status, from: S.dateStr(s.from_date), to: S.dateStr(s.to_date), reason: s.reason })),
             group, teachers: teachers.map(t => ({ teacherId: t.teacher_id, from: S.dateStr(t.from_date), to: S.dateStr(t.to_date) })),
-            pendingTeacherChange: extra.pendingTeacherChange || null, startDate: extra.startDate || null, scope };
+            pendingTeacherChange: extra.pendingTeacherChange || null, startDate: extra.startDate || null, serialCode: extra.serialCode || '', scope };
         if (scope === 'full' || scope === 'sales') {
             Object.assign(card, { phone: row.phone, parentPhone: extra.parentPhone || '', login: extra.login || '', tariff: extra.tariff || '', monthlyPrice: extra.monthlyPrice || null,
                 paymentDueDate: extra.paymentDueDate || null, debtAmount: extra.debtAmount ?? null, managerId: extra.managerId || null, schoolRev: extra.schoolRev || 0 });
@@ -342,15 +349,22 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         const lessonDays = T.dateRange(from, to, 31).filter(d => days.includes(T.weekday(d)));
         const entries = {};
         for (const a of att) entries[Number(a.day)] = { present: Number(a.present) === 1, teacherId: a.att_key.slice(8) };
-        return { month, lessonDays, entries, makeups: mks };
+        // Oydan oldin o'tilgan jonli darslar soni — kunlik ro'yxatda dars raqami (2 × n) uchun.
+        const before = (await pool.query(`SELECT COUNT(DISTINCT (LEFT(att_key, 7), day))::int AS n FROM main_attendance
+            WHERE student_id=$1 AND LEFT(att_key, 7) < $2 AND present = 1`, [row.id, month])).rows[0]?.n || 0;
+        const mkBefore = (await pool.query(`SELECT COUNT(*)::int AS n FROM school_makeups WHERE student_id=$1 AND status='approved' AND TO_CHAR(held_date,'YYYY-MM') < $2`, [row.id, month])).rows[0]?.n || 0;
+        return { month, lessonDays, entries, makeups: mks, presentBefore: Number(before) + Number(mkBefore) };
     }));
     router.get('/students/:id/progress', handle(async req => {
         const { row, scope } = await cardRow(req);
         if (scope === 'past') throw T.fail(403, 'Faqat o\'z davringiz');
-        let p = null;
-        try { p = (await require('../services/academicHub').progressForIds(pool, [row.id], { perLesson: true }))[row.id] || null; }
+        let p = null, detail = null;
+        const hub = require('../services/academicHub');
+        try { p = (await hub.progressForIds(pool, [row.id], { perLesson: true }))[row.id] || null; }
         catch (e) { if (e.code !== '42P01') throw e; } // ilova jadvallari hali yo'q (yangi baza)
-        return { progress: p };
+        // Darslar bo'yicha natija, xatolar, 14 kunlik faollik, imtihonlar (faqat o'qish).
+        if (p) { try { detail = await hub.studentDetailById(pool, row.id); } catch (e) { if (e.code !== '42P01') throw e; } }
+        return { progress: p, detail };
     }));
     router.get('/students/:id/payments', handle(async req => {
         const { row, scope, extra } = await cardRow(req);
