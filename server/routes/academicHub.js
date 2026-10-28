@@ -5,6 +5,7 @@
 // uy vazifasi natijalari (faqat o'quvchi tokeni bilan).
 const express = require('express');
 const hub = require('../services/academicHub');
+const boards = require('../services/academicBoards');
 
 module.exports = function createAcademicRouter({ pool, authRequired, studentAuthOptional }) {
     const router = express.Router();
@@ -32,5 +33,16 @@ module.exports = function createAcademicRouter({ pool, authRequired, studentAuth
     router.post('/materials', handle(async req => ({ material: await hub.saveMaterial(pool, req.user, null, req.body) })));
     router.put('/materials/:id', handle(async req => ({ material: await hub.saveMaterial(pool, req.user, req.params.id, req.body) })));
     router.delete('/materials/:id', handle(req => hub.archiveMaterial(pool, req.user, req.params.id)));
+    // "Darsni boshlash": o'quvchining navbatdagi jonli darsi (ruxsat etilgan o'quvchilar).
+    router.get('/next-lessons', handle(req => hub.nextLessons(pool, req.user, req.query.ids)));
+    // Elektron doska: ustoz — o'z doskalari, admin/boshliq/ROP — faqat ko'rish.
+    router.get('/boards', handle(req => boards.listBoards(pool, req.user, { lang: req.query.lang, teacherId: req.query.teacherId })));
+    router.get('/boards/:id', handle(req => boards.getBoard(pool, req.user, req.params.id)));
+    router.post('/boards', handle(req => boards.createBoard(pool, req.user, req.body || {})));
+    router.put('/boards/:id', handle(req => boards.updateBoard(pool, req.user, req.params.id, req.body || {})));
+    router.delete('/boards/:id', handle(req => boards.archiveBoard(pool, req.user, req.params.id)));
+    // "Darsni boshlash" → "Darsni tugatish" davomiyligi (Qoplashlar dalili).
+    router.post('/sessions', handle(req => boards.recordSession(pool, req.user, req.body || {})));
+    router.get('/sessions', handle(req => boards.listSessions(pool, req.user, { month: req.query.month, teacherId: req.query.teacherId })));
     return router;
 };

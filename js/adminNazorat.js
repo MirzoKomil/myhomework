@@ -475,7 +475,7 @@
         M.month = opts.month || M.month || today().slice(0, 7);
         root.innerHTML = '<div class="sc-skel"></div>';
         let list;
-        try { await U().loadStaffAvatars(); list = await loadMakeups(M.month, opts.lang || '', true); await loadAbsences(M.month).catch(() => []); }
+        try { await U().loadStaffAvatars(); list = await loadMakeups(M.month, opts.lang || '', true); await loadAbsences(M.month).catch(() => []); await loadSessions(M.month); }
         catch (e) { root.innerHTML = `<div class="sc-err">${esc(e.message)}</div>`; return; }
         if (opts.lang) list = list.filter(m => (studentById(m.student_id)?.subject || 'english') === opts.lang);
         const ctx = buildCtx(M.month, mkCache.list, abCache.key === M.month ? abCache.list : []);
@@ -536,7 +536,17 @@
         if (m.start_min != null) return `${hm(Number(m.start_min))} · ${(Number(m.end_min) - Number(m.start_min)) || dur} daq`;
         return `${dur} daq`;
     }
-    // Dalil: ilovada "Darsni boshlash" vaqti hali yozilmaydi — davomat belgisi va jonli dars nomi ko'rsatiladi.
+    // "Darsni boshlash" → "Darsni tugatish" davomiyligi (/api/academic/sessions) — bo'lsa dalilga qo'shiladi.
+    const sessCache = { key: '', map: new Map() };
+    async function loadSessions(month) {
+        try {
+            const r = await apiFetch(`/api/academic/sessions?month=${month}`);
+            const map = new Map();
+            for (const s of r.sessions || []) { const k = `${s.teacherId}|${s.studentId}|${s.date}`; map.set(k, (map.get(k) || 0) + (Number(s.minutes) || 0)); }
+            sessCache.key = month; sessCache.map = map;
+        } catch { sessCache.key = ''; sessCache.map = new Map(); }
+    }
+    // Dalil: "Darsni boshlash" vaqti (bo'lsa), davomat belgisi va jonli dars nomi.
     function evidence(m) {
         if (m.status === 'cancelled') return ['bad', 'bekor qilingan'];
         const hd = dkey(m.held_date);
@@ -544,6 +554,8 @@
         const g = (getC('liveGrades', {})[m.student_id] || []).find(x => x && x.date === hd && (!x.teacherId || x.teacherId === m.teacher_id));
         const v = ((getC('mainAttendance', {})[`${hd.slice(0, 7)}_${m.teacher_id}`] || {})[m.student_id] || {})[Number(hd.slice(8))];
         const tone = m.status === 'rejected' ? 'bad' : 'ok';
+        const mins = sessCache.map.get(`${m.teacher_id}|${m.student_id}|${hd}`);
+        if (mins != null) return [tone, `Darsni boshlash: ${mins} daq${g?.lessonName ? ` · ${g.lessonName}` : v === 1 || v === true ? ' · "Keldi"' : ''}`];
         if (g?.lessonName) return [tone, `Davomatda "Keldi" · ${g.lessonName}`];
         if (v === 1 || v === true) return [tone, 'Davomatda "Keldi"'];
         return [m.status === 'rejected' ? 'bad' : 'warn', m.kind === 'double' ? 'Ustoz belgisi: "Keldi · 2 dars"' : 'Ustoz belgisi: "Qoplash darsi o\'tildi"'];

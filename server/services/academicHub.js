@@ -37,6 +37,8 @@ const COURSE_KINDS = {
     book: 'Darslik kitobi (PDF)',
     teacher_book: "Teacher's book",
     methodology: 'Metodika',
+    // Qo'shimcha material darsga bog'lanmasa — "Barcha darslar".
+    extra: "Qo'shimcha material",
 };
 
 const SCHEMA = `
@@ -106,6 +108,8 @@ const error = (status, message) => Object.assign(new Error(message), { status })
 
 async function initSchema(pool) {
     await pool.query(SCHEMA);
+    // Elektron doskalar va "Darsni boshlash" sessiyalari (alohida modul, faqat qo'shiladi).
+    await require('./academicBoards').initSchema(pool);
 }
 
 // ─── Sana: hamma hisob Toshkent vaqtida ─────────────────────────────────────
@@ -1190,9 +1194,38 @@ async function recordTracking(pool, studentId, body = {}, now = new Date()) {
     return { ok: true, time: values.length, parts: savedParts, exams: savedExams, skipped, skippedSeconds: Math.max(0, Math.round(skippedSeconds)) };
 }
 
+// ─── "Darsni boshlash": o'quvchining navbatdagi jonli darsi ─────────────────
+// Davomatdagi "Keldi" bilan bir xil qoida (liveLessonPick): o'quvchi hali
+// o'tmagan birinchi jonli dars; bugungi belgi hisobga olinmaydi (qayta ochsa
+// ham shu dars). Faqat ruxsat etilgan o'quvchilar (ustoz — o'zinikilar).
+async function nextLessons(pool, actor, ids) {
+    const access = await resolveAccess(pool, actor);
+    const wanted = new Set((Array.isArray(ids) ? ids : String(ids || '').split(',')).map(s => String(s).trim()).filter(Boolean).slice(0, 60));
+    if (!wanted.size) return { lessons: {} };
+    const langs = access.lang ? [access.lang] : ['english', 'russian'];
+    const students = (await Promise.all(langs.map(l => accessibleStudents(pool, access, l)))).flat().filter(s => wanted.has(s.id));
+    if (!students.length) return { lessons: {} };
+    const pick = require('./liveLessonPick');
+    const [mc, progress, gradesRow] = await Promise.all([loadMobileContent(pool), loadProgress(pool, students.map(s => s.id)),
+        pool.query("SELECT data FROM json_data WHERE key = 'liveGrades'").then(r => r.rows[0]?.data || {}).catch(() => ({}))]);
+    const today = tzDay();
+    const out = {};
+    for (const s of students) {
+        const lessons = studentCourseLessons(mc, s);
+        const idToNo = idToNoMap(lessons);
+        const taken = (gradesRow[s.id] || []).filter(g => g && g.lessonId && g.date !== today).map(g => g.lessonId);
+        const next = pick.pickNextLiveLesson(mc, { subject: s.subject, platformCourseId: s.platformCourseId }, taken);
+        const nextNo = next ? idToNo[next.id] || null : null;
+        out[s.id] = { lang: s.subject === 'russian' ? 'russian' : 'english', role: s.role,
+            reached: reachedLesson(progress[s.id] || {}, idToNo) || 0,
+            nextLive: nextNo ? { no: nextNo, id: next.id, name: stripStress(next.name) } : null };
+    }
+    return { lessons: out };
+}
+
 module.exports = {
     TOTAL_LESSONS, LESSON_KINDS, COURSE_KINDS, PASS_PERCENT,
-    initSchema, resolveAccess, getHub, getLesson, saveMaterial, archiveMaterial, listMaterials,
+    initSchema, resolveAccess, getHub, getLesson, saveMaterial, archiveMaterial, listMaterials, nextLessons, accessibleStudents,
     studentsOverview, studentDetail, studentDetailById, recordTracking, progressForIds,
     // test uchun
     buildTeacherPlan, konspektRules, allocateMinutes, expectedLiveLessons, lessonPercent, cleanPageMap, cleanMaterial, expectedLesson, summarizeStudent, mergeMistakes, tzDay,
