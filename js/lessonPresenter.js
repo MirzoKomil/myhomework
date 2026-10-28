@@ -68,7 +68,7 @@
     }
 
     // ── Prezentatsiya ───────────────────────────────────────────────────────
-    function open({ sources, start = 0, startPage = 1, title = '', subtitle = '', lesson = null, duration = 0, finish = null }) {
+    function open({ sources, start = 0, startPage = 1, title = '', subtitle = '', lesson = null, duration = 0, finish = null, presence = null }) {
         const list = (sources || []).filter(Boolean);
         if (!list.find(s => s.type === 'blank')) list.push({ type: 'blank', title: "Toza doska", key: 'blank' });
         close();
@@ -89,6 +89,7 @@
         <header class="lp-top">
             <button type="button" class="lp-back" data-act="close" title="Yopish (Esc)">${I.back}<span>Darslik</span></button>
             <div class="lp-ttl"><b title="${esc(title)}">${esc(title)}</b>${subtitle ? `<span>${esc(subtitle)}</span>` : ''}</div>
+            ${presence?.studentId ? '<span class="lp-pres" role="status" hidden></span>' : ''}
             <button type="button" class="lp-timer" title="Dars vaqti (bosib to'xtatish)"><b>00:00</b>${duration ? `<span>/ ${String(duration).padStart(2, '0')}:00</span>` : ''}</button>
             <span class="lp-flex"></span>
             <div class="lp-seg" role="group" aria-label="Ko'rinish">
@@ -500,8 +501,34 @@
         document.addEventListener('keydown', onKey);
         window.addEventListener('resize', onResize);
         document.addEventListener('fullscreenchange', onResize);
+        // O'quvchi holati (DarsBoshlash dizayni, "● Malika onlayn"): ilovadagi so'nggi faollik — sessiya, o'qish vaqti
+        // yoki vazifa natijasi (/api/academic/students/:id/presence). 3 daqiqadan yangi bo'lsa — yashil "ilovada".
+        // Video aloqa (Meet/Zoom) holatini tizim bilmaydi — shuning uchun u ko'rsatilmaydi.
+        let presTimer = null;
+        const presEl = root.querySelector('.lp-pres');
+        if (presEl) {
+            const first = String(presence.name || '').trim().split(/\s+/)[0] || "O'quvchi";
+            const show = r => {
+                const at = r?.lastActive ? new Date(r.lastActive) : null;
+                const min = at ? Math.max(0, Math.round((Date.now() - at) / 60000)) : null;
+                let txt, on = false;
+                if (min === null) txt = `${first} ilovaga hali kirmagan`;
+                else if (min <= 3) { txt = `● ${first} ilovada`; on = true; }
+                else if (min < 60) txt = `${first} ilovada edi · ${min} daq oldin`;
+                else if (min < 24 * 60) txt = `${first} ilovada edi · ${Math.round(min / 60)} soat oldin`;
+                else txt = `${first} ilovada edi · ${Math.round(min / 1440)} kun oldin`;
+                presEl.textContent = txt;
+                presEl.title = at ? `Ilovadagi so'nggi faollik: ${at.toLocaleString('uz-UZ', { timeZone: 'Asia/Tashkent', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : "O'quvchi ilovasida faollik yo'q";
+                presEl.classList.toggle('is-on', on);
+                presEl.hidden = false;
+            };
+            const load = () => apiFetch(`/api/academic/students/${encodeURIComponent(presence.studentId)}/presence`).then(show).catch(() => { presEl.hidden = true; });
+            load();
+            presTimer = setInterval(load, 60000);
+        }
         root._cleanup = () => {
             clearInterval(timer);
+            clearInterval(presTimer);
             document.removeEventListener('keydown', onKey);
             window.removeEventListener('resize', onResize);
             document.removeEventListener('fullscreenchange', onResize);
@@ -529,14 +556,15 @@
             <div class="lp-rbar">
                 ${title ? `<div class="lp-rttl">${title}</div>` : ''}
                 <span class="lp-flex"></span>
-                <button type="button" class="lh-btn lh-sq" data-r="prev" aria-label="Oldingi sahifa">‹</button>
+                <button type="button" class="lh-btn lh-sq" data-r="prev" aria-label="Oldingi sahifa"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
                 <label class="lp-rpage"><input type="number" min="1" value="${page}" aria-label="Sahifa"> / <span class="lp-rtotal">…</span></label>
-                <button type="button" class="lh-btn lh-sq" data-r="next" aria-label="Keyingi sahifa">›</button>
+                <button type="button" class="lh-btn lh-sq" data-r="next" aria-label="Keyingi sahifa"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></button>
                 <span class="lp-sep"></span>
                 <button type="button" class="lh-btn lh-sq" data-r="out" aria-label="Kichraytirish">−</button>
                 <span class="lp-zoom">100%</span>
                 <button type="button" class="lh-btn lh-sq" data-r="in" aria-label="Kattalashtirish">+</button>
-                <button type="button" class="lh-btn" data-r="full">⛶ To'liq ekran</button>
+                <span class="lp-sep"></span>
+                <button type="button" class="lh-btn" data-r="full"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>To'liq ekran</button>
             </div>
             <div class="lp-rview"><div class="lp-rmsg">Kitob yuklanmoqda…</div></div>
         </div>`;

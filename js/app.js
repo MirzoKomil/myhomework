@@ -935,8 +935,12 @@ function updateRdPageHead(tab = _rdCurrentTab) {
     const own = document.body.classList.contains('lang-fixed') && typeof getUserOwnLang === 'function' ? getUserOwnLang() : null;
     const langLabel = own ? (own === 'russian' ? 'Rus tili' : 'Ingliz tili') : lang ? lang.textContent.trim() : '';
     const parts = [active && !active.hidden ? active.textContent.trim() : '', langLabel ? langLabel + ' yoʻnalishi' : ''].filter(Boolean);
+    // Bo'lim o'z izohini bersa (Darslik ichki bo'limi, yordamchi ustoz) — js/lessonHub.js, js/whiteboard.js.
+    const sec = active && !active.hidden ? active.dataset.teachersSection : '';
+    let custom = null;
+    try { custom = sec && window.rdPageSubs?.[sec]?.({ langLabel }); } catch { custom = null; }
     head.querySelector('h1').textContent = title;
-    head.querySelector('p').textContent = parts.join(' · ');
+    head.querySelector('p').textContent = custom || parts.join(' · ');
 }
 document.addEventListener('click', e => {
     if (e.target.closest?.('.sales-pinned .section-nav-item, .sales-pinned .subject-tab')) requestAnimationFrame(() => updateRdPageHead());
@@ -11823,7 +11827,7 @@ function renderTeachersSection() {
     // 9-vazifa: ustoz (ROP emas — bu so'rov faqat ustoz kabineti haqida)
     // endi o'zining kursiga tegishli materiallarni (Darslik) va Elektron
     // doskani ham ko'ra oladi — faqat ko'rish huquqi bilan (material
-    // qo'shish/o'chirish tugmalari renderTpTextbookSection'da readOnly
+    // qo'shish/o'chirish tugmalari (js/lessonHub.js) canEdit
     // rejimda umuman render qilinmaydi, serverda ham mobileContent'ni
     // ustoz allaqachon PATCH qila olmaydi, server/routes/state.js).
     if (cu?.role === 'teacher') {
@@ -12045,240 +12049,29 @@ function renderTpTrial() {
 // --- Reyting ---
 // Ustozlar reytingi (Reyting dizayni): server hisoblaydi — davomat 60% + o'quvchilar o'zlashtirishi 40%
 // (uy vazifasi, 1-urinish). Asosiy va yordamchi ustozlar alohida. Til yo'nalishi bo'yicha filtr.
-let _tpRatingType = 'asosiy';
 async function renderTpRating() {
     const container = document.getElementById('tpRating');
     if (!container) return;
-    const lang = _teachersLang === 'russian' ? 'russian' : 'english';
-    const hr = getItem(STORAGE_KEYS.hrEmployees, []);
-    const langOf = id => { const e = hr.find(x => x.id === id); if (!e) return null; return e.role === 'rus-oqituvchi' ? 'russian' : e.role === 'ingliz-oqituvchi' ? 'english' : (e.lang === 'russian' ? 'russian' : 'english'); };
-    const MON = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentyabr', 'Oktyabr', 'Noyabr', 'Dekabr'];
-    container.innerHTML = '<div style="padding:20px"><p class="text-muted">Reyting yuklanmoqda…</p></div>';
-    let data;
-    try { data = await apiFetchTeacherRating(_tpRatingType); }
-    catch (err) { container.innerHTML = `<div style="padding:20px"><p class="text-muted">${escapeHtml(err.message)}</p></div>`; return; }
-    const rows = (data.rows || []).filter(r => { const l = langOf(r.id); return !l || l === lang; }).map((r, i) => ({ ...r, rank: i + 1 }));
-    // O'tgan oydagi o'rin shu til yo'nalishi ichida (▲/▼ uchun; server prevScore beradi).
-    const prevOrder = rows.filter(r => r.prevScore != null).sort((a, b) => b.prevScore - a.prevScore || (a.prevRank ?? 999) - (b.prevRank ?? 999));
-    rows.forEach(r => { r.prevRank = r.prevScore != null ? prevOrder.indexOf(r) + 1 : null; });
-    const dl = r => (window.UstozHome?.delta ? window.UstozHome.delta(r) : '');
-    const sc = v => (window.UstozHome?.f1 ? window.UstozHome.f1(v) : v);
-    const [y, m] = String(data.month || '').split('-').map(Number);
-    const monthLabel = m ? `${MON[m - 1]} ${y}` : '';
-    const av = id => { const e = hr.find(x => x.id === id) || { id }; return window.schoolUI?.staffAvatar ? window.schoolUI.staffAvatar(e, 40) : ''; };
-    const pct = v => v == null ? '—' : `${v}%`;
-    const top = rows.slice(0, 3).map(r => `<div class="rt-top"><span class="rt-rank">${r.rank}</span>${av(r.id)}<div><b>${escapeHtml(r.name)}</b><small>${_tpRatingType === 'yordamchi' ? 'Yordamchi' : 'Asosiy'} · ${r.students} o'quvchi</small></div>
-        <strong>${sc(r.score)}<small> ball</small> ${dl(r)}</strong><dl><dt>Davomat</dt><dd>${pct(r.davomatPct)}</dd><dt>O'zlashtirish</dt><dd>${pct(r.learnPct)}</dd></dl></div>`).join('');
-    container.innerHTML = `<div style="padding:20px" class="rt-page">
-        <div class="rt-head"><h2>Ustozlar reytingi</h2>
-          <div class="sc-seg" role="group" aria-label="Ustoz turi"><button type="button" data-rt-type="asosiy" aria-pressed="${_tpRatingType === 'asosiy'}">Asosiy ustozlar</button><button type="button" data-rt-type="yordamchi" aria-pressed="${_tpRatingType === 'yordamchi'}">Yordamchi ustozlar</button></div>
-          <span class="text-muted">${escapeHtml(monthLabel)}</span></div>
-        <div class="rt-formula"><span><b>Davomat</b> % × 60%</span><i>+</i><span><b>O'quvchilar o'zlashtirishi</b> — uy vazifasi, 1-urinish % × 40%</span><i>=</i><span><b>Ball</b> / 100</span></div>
-        <p class="text-muted" style="font-size:12.5px">Davomat — rejadagi darslardan nechtasi o'tildi. O'zlashtirish — o'quvchilar ilovada uy vazifasini birinchi urinishda necha foizga bajargani (ilova ma'lumoti; ma'lumoti yo'q o'quvchi hisobga kirmaydi). Asosiy va yordamchi ustozlar alohida solishtiriladi.</p>
-        ${rows.length ? `<div class="rt-tops">${top}</div>` : ''}
-        <div class="card"><div class="table-responsive"><table class="table"><thead><tr><th>#</th><th>Ustoz</th><th>O'quvchilar</th><th>Davomat · 60%</th><th>O'zlashtirish · 40%</th><th>Ball</th><th title="O'tgan oyga nisbatan ball o'zgarishi">O'tgan oyga</th></tr></thead><tbody>
-          ${rows.map(r => `<tr><td>${r.rank}</td><td><div style="display:flex;align-items:center;gap:10px">${av(r.id)}<div><b>${escapeHtml(r.name)}</b><div class="text-muted" style="font-size:12px">${r.completed} / ${r.expected} dars</div></div></div></td>
-            <td>${r.students}</td><td><div class="rt-bar"><i style="width:${r.davomatPct || 0}%"></i></div> ${pct(r.davomatPct)}</td>
-            <td>${pct(r.learnPct)}${r.learnPct != null ? `<div class="text-muted" style="font-size:11.5px">${r.learnStudents} o'quvchi ma'lumoti</div>` : ''}</td><td><b>${sc(r.score)}</b></td><td>${dl(r)}${r.prevRank != null ? `<div class="text-muted" style="font-size:11.5px">o'tgan oy ${r.prevRank}-o'rin</div>` : ''}</td></tr>`).join('') || `<tr><td colspan="7" class="text-muted" style="text-align:center;padding:28px">Bu oy hali reyting uchun ma'lumot yo'q</td></tr>`}
-        </tbody></table></div></div></div>`;
-    container.querySelectorAll('[data-rt-type]').forEach(b => b.addEventListener('click', () => { _tpRatingType = b.dataset.rtType; renderTpRating(); }));
+    // Reyting dizayni (1:1): oy almashtirgichi, top-3, "Barcha ustozlar" + Excel — js/reytingUI.js.
+    if (window.ReytingUI) window.ReytingUI.render(container, { lang: _teachersLang === 'russian' ? 'russian' : 'english' });
 }
 
 // --- Darslik ---
-// Darslik sub-tab ro'yxati
-const TB_SECTIONS = [
-    { id: 'kurs-rejasi',   label: 'Kurs rejasi',                 icon: '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>' },
-    { id: 'sinov-darsi',   label: 'Sinov darsi materiallari',    icon: '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg>' },
-    { id: 'platforma',     label: 'Platformadagi dars materiallari', icon: '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/></svg>' },
-    { id: 'jonli-dars',    label: 'Jonli dars materiallari',     icon: '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="M16 10l6-3v10l-6-3z"/></svg>' },
-    { id: 'qoshimcha',     label: "Qoʻshimcha materiallar",      icon: '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.4 11.1l-9.2 9.2a6 6 0 01-8.5-8.5l9.2-9.2a4 4 0 015.7 5.7l-9.2 9.2a2 2 0 01-2.8-2.8l8.5-8.5"/></svg>' },
-];
-
-let _tpTextbookSection = 'kurs-rejasi';
-
-function renderTpTextbook(target) {
-    const container = target || document.getElementById('tpTextbook');
-    if (!container) return;
-    // Darslik markazi (js/lessonHub.js): 72 dars, slaydlar, Teacher's book,
-    // o'quvchilar progressi. Eski bo'limlar uning "Qo'shimcha materiallar"
-    // yorlig'ida shu funksiyaning o'zi orqali (target bilan) chiziladi.
-    if (!target && window.LessonHub) {
-        window.LessonHub.mount(container, { lang: _teachersLang, renderLegacy: el => renderTpTextbook(el), onAttendance: () => switchTeachersSection('attendance') });
-        return;
-    }
-    // 9-vazifa: ustoz uchun Darslik faqat KO'RISH rejimida — material
-    // qo'shish/o'chirish tugmalari umuman render qilinmaydi, va materiallar
-    // ustozning o'z kursiga (_teachersLang, renderTeachersSection'da uning
-    // linkedTeacherLang'iga majburan tenglashtiriladi) cheklanadi.
-    const isTeacher = getCurrentUser()?.role === 'teacher';
-
-    const tabButtons = TB_SECTIONS.map(s =>
-        `<button type="button" class="tp-tb-tab${_tpTextbookSection === s.id ? ' active' : ''}" data-tb-sec="${s.id}">
-            <span class="tp-tb-tab-icon">${s.icon}</span>
-            <span>${s.label}</span>
-        </button>`
-    ).join('');
-
-    container.innerHTML = `
-    <div class="tp-tb-sidebar">
-        <div class="tp-tb-sidebar-title">Bo'limlar</div>
-        ${tabButtons}
-    </div>
-    <div class="tp-tb-body" id="tpTbBody"></div>`;
-
-    container.querySelectorAll('[data-tb-sec]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            _tpTextbookSection = btn.dataset.tbSec;
-            container.querySelectorAll('[data-tb-sec]').forEach(b => b.classList.toggle('active', b.dataset.tbSec === _tpTextbookSection));
-            renderTpTextbookSection(_tpTextbookSection, { readOnly: isTeacher });
-        });
-    });
-
-    renderTpTextbookSection(_tpTextbookSection, { readOnly: isTeacher });
+// Darslik markazi (js/lessonHub.js): 72 dars, kitoblar, o'quvchilar progressi, qo'shimcha materiallar.
+// Eski "ilova hujjatlari" bo'limlari (mobile_content.documents, tbSection bilan) endi alohida blok emas —
+// "Qo'shimcha materiallar" jadvalida o'qish uchun qatorlar bo'lib chiqadi (o'chirish: Mobil ilova bo'limida).
+const TB_LEGACY_LABELS = { 'kurs-rejasi': 'Kurs rejasi', 'sinov-darsi': 'Sinov darsi materiallari', platforma: 'Platformadagi dars materiallari', 'jonli-dars': 'Jonli dars materiallari', qoshimcha: "Qoʻshimcha materiallar" };
+function tpLegacyTextbookDocs(lang) {
+    return (getMobileContent().documents || [])
+        .filter(d => d.tbSection && d.fileUrl && (!d.lang || d.lang === lang))
+        .map(d => ({ id: 'legacy:' + d.id, legacy: true, kind: 'extra', title: d.title || 'Material', url: d.fileUrl, fileSize: Number(d.fileSize) || 0,
+            updatedAt: d.createdAt || '', note: [TB_LEGACY_LABELS[d.tbSection] || '', d.description || ''].filter(Boolean).join(' · '), lessonNo: null, mime: '' }));
 }
 
-function renderTpTextbookSection(secId, { readOnly = false } = {}) {
-    const body = document.getElementById('tpTbBody');
-    if (!body) return;
-    const sec = TB_SECTIONS.find(s => s.id === secId) || TB_SECTIONS[0];
-    const mc = getMobileContent();
-    // 9-vazifa: readOnly (ustoz) holatda materiallar uning o'z kursiga
-    // (_teachersLang) cheklanadi — lekin hali "lang" tegi qo'yilmagan eski
-    // materiallar HAR IKKALA til uchun ham ko'rsatiladi, aks holda mavjud
-    // materiallar birortasiga ham til belgilanmagani uchun ustozlarga
-    // butunlay ko'rinmay qolar edi.
-    const docs = (mc.documents || []).filter(d =>
-        d.tbSection === secId && (!readOnly || !d.lang || d.lang === _teachersLang)
-    );
-
-    const cards = docs.length ? docs.map(d => {
-        const sizeLabel = d.fileSize > 0 ? (d.fileSize > 1048576 ? (d.fileSize/1048576).toFixed(1)+' MB' : (d.fileSize/1024).toFixed(0)+' KB') : '';
-        const isYt = ytVideoId(d.fileUrl);
-        const thumb = isYt ? `<img src="https://img.youtube.com/vi/${isYt}/mqdefault.jpg" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:8px">` : `<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:28px">${sec.icon}</div>`;
-        // 9-vazifa: readOnly (ustoz) rejimida PDF fayllar oddiy yangi tab
-        // o'rniga sahifama-sahifa ko'rish + ustida chizish modalida ochiladi.
-        const isPdf = /\.pdf($|\?)/i.test(d.fileUrl || '');
-        const openLink = (readOnly && isPdf)
-            ? `<a href="#" data-tp-open-pdf="${escapeHtml(d.id)}" class="mac-content-link">Ochish (sahifama-sahifa) →</a>`
-            : `<a href="${escapeHtml(d.fileUrl)}" target="_blank" rel="noopener" class="mac-content-link">Ochish / Yuklab olish →</a>`;
-        return `<div class="mac-content-card">
-            <div class="mac-content-thumb">${thumb}</div>
-            <div class="mac-content-info">
-                <div class="mac-content-title">${escapeHtml(d.title)}</div>
-                <div class="mac-content-meta">${sizeLabel ? sizeLabel + ' · ' : ''}${escapeHtml(d.createdAt||'')}</div>
-                ${d.description ? `<div class="mac-content-desc">${escapeHtml(d.description)}</div>` : ''}
-                ${openLink}
-            </div>
-            ${readOnly ? '' : `<div class="mac-content-actions">
-                <button type="button" class="btn-danger-sm" data-tp-del-doc="${escapeHtml(d.id)}">O'chirish</button>
-            </div>`}
-        </div>`;
-    }).join('') : `<div class="team-empty-state team-empty-state--flat"><img class="team-ill" src="images/empty/board.webp" alt="" width="120" height="120" loading="lazy"><strong>${sec.label}: hozircha material yoʻq</strong><span>${readOnly ? 'Akademik boʻlim material qoʻshganda shu yerda chiqadi.' : 'Yuqoridagi tugmalar orqali fayl yoki havola qoʻshing.'}</span></div>`;
-
-    body.innerHTML = `
-    <div style="padding:20px;overflow-y:auto;flex:1">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-            <h2 style="font-size:16px;font-weight:700">${sec.icon} ${sec.label} <span style="font-size:13px;font-weight:400;color:var(--text-muted)">(${docs.length} ta)</span></h2>
-            ${readOnly ? '' : `<div style="display:flex;gap:8px">
-                <button type="button" class="btn-secondary-sm" id="tpTbAddLink">+ Havola / YouTube</button>
-                <button type="button" class="btn-primary-sm" id="tpTbAddFile">📁 Fayl yuklash</button>
-            </div>`}
-        </div>
-        <div class="mac-content-list">${cards}</div>
-    </div>`;
-
-    // 9-vazifa: PDF'ni sahifama-sahifa ko'rish + ustida chizish (faqat readOnly/ustoz)
-    body.querySelectorAll('[data-tp-open-pdf]').forEach(link => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-            const doc = docs.find(d => d.id === link.dataset.tpOpenPdf);
-            if (doc) openPdfSlideViewer(doc.title, doc.fileUrl);
-        });
-    });
-
-    if (readOnly) return;
-
-    // Fayl yuklash
-    body.querySelector('#tpTbAddFile')?.addEventListener('click', () => {
-        openModal(`${sec.icon} ${sec.label} — fayl yuklash`,
-            `<div class="form-group"><label>Sarlavha <span style="color:var(--danger)">*</span></label><input id="tpTbTitle" class="form-control" placeholder="Material nomi"></div>
-             <div class="form-group"><label>Fayl <span style="color:var(--danger)">*</span></label><input type="file" id="tpTbFile" class="form-control" accept=".pdf,.doc,.docx,.ppt,.pptx,.epub,.mp4,.mp3,.zip"><small style="color:var(--text-muted)">Maksimal 50 MB</small></div>
-             <div class="form-group"><label>Tavsif</label><textarea id="tpTbDesc" class="form-control" rows="2" placeholder="Qisqacha izoh..."></textarea></div>`,
-            `<button type="button" class="btn-ghost" id="cancelTbFile">Bekor qilish</button>
-             <button type="button" class="btn-primary-sm" id="saveTbFile">Yuklash</button>`,
-            { wide: false }
-        );
-        document.getElementById('cancelTbFile').onclick = () => closeModal();
-        document.getElementById('saveTbFile').onclick = async () => {
-            const title = document.getElementById('tpTbTitle').value.trim();
-            const file = document.getElementById('tpTbFile').files?.[0];
-            if (!title) { alert('Sarlavha kiritilishi shart'); return; }
-            if (!file) { alert('Fayl tanlanishi shart'); return; }
-            const btn = document.getElementById('saveTbFile');
-            btn.disabled = true; btn.textContent = 'Yuklanmoqda...';
-            try {
-                const res = await apiUploadFile(file);
-                const mc2 = getMobileContent();
-                mc2.documents = mc2.documents || [];
-                mc2.documents.push({
-                    id: 'd' + Date.now(), title,
-                    fileUrl: res.url, fileName: res.fileName, fileSize: res.fileSize,
-                    type: 'textbook', tbSection: secId,
-                    // 9-vazifa: ustoz kabinetida o'z tiliga cheklash uchun.
-                    lang: _teachersLang,
-                    description: document.getElementById('tpTbDesc').value.trim(),
-                    createdAt: new Date().toISOString().slice(0, 10)
-                });
-                saveMobileContent(mc2);
-                closeModal(); renderTpTextbookSection(secId); showMiniToast('Material yuklandi');
-            } catch(e) { alert('Xatolik: ' + e.message); btn.disabled = false; btn.textContent = 'Yuklash'; }
-        };
-    });
-
-    // Havola / YouTube qo'shish
-    body.querySelector('#tpTbAddLink')?.addEventListener('click', () => {
-        openModal(`${sec.icon} ${sec.label} — havola qo'shish`,
-            `<div class="form-group"><label>Sarlavha <span style="color:var(--danger)">*</span></label><input id="tpTbLTitle" class="form-control" placeholder="Material nomi"></div>
-             <div class="form-group"><label>URL yoki YouTube havolasi <span style="color:var(--danger)">*</span></label><input id="tpTbLUrl" class="form-control" placeholder="https://youtu.be/... yoki https://drive.google.com/..."></div>
-             <div class="form-group"><label>Tavsif</label><textarea id="tpTbLDesc" class="form-control" rows="2" placeholder="Qisqacha izoh..."></textarea></div>`,
-            `<button type="button" class="btn-ghost" id="cancelTbLink">Bekor qilish</button>
-             <button type="button" class="btn-primary-sm" id="saveTbLink">Qo'shish</button>`,
-            { wide: false }
-        );
-        document.getElementById('cancelTbLink').onclick = () => closeModal();
-        document.getElementById('saveTbLink').onclick = () => {
-            const title = document.getElementById('tpTbLTitle').value.trim();
-            const url = document.getElementById('tpTbLUrl').value.trim();
-            if (!title) { alert('Sarlavha kiritilishi shart'); return; }
-            if (!url) { alert('Havola kiritilishi shart'); return; }
-            const mc2 = getMobileContent();
-            mc2.documents = mc2.documents || [];
-            mc2.documents.push({
-                id: 'd' + Date.now(), title,
-                fileUrl: url, fileName: title, fileSize: 0,
-                type: 'textbook', tbSection: secId,
-                lang: _teachersLang,
-                description: document.getElementById('tpTbLDesc').value.trim(),
-                createdAt: new Date().toISOString().slice(0, 10)
-            });
-            saveMobileContent(mc2);
-            closeModal(); renderTpTextbookSection(secId); showMiniToast("Havola qo'shildi");
-        };
-    });
-
-    // O'chirish
-    body.querySelectorAll('[data-tp-del-doc]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            if (!confirm("Materialni o'chirasizmi?")) return;
-            const id = btn.dataset.tpDelDoc;
-            const mc2 = getMobileContent();
-            const doc = mc2.documents.find(d => d.id === id);
-            mc2.documents = mc2.documents.filter(d => d.id !== id);
-            saveMobileContent(mc2);
-            if (doc?.fileUrl?.startsWith('/uploads/')) apiDeleteUpload(doc.fileUrl.split('/uploads/')[1]).catch(() => {});
-            renderTpTextbookSection(secId); showMiniToast("O'chirildi");
-        });
-    });
+function renderTpTextbook() {
+    const container = document.getElementById('tpTextbook');
+    if (!container || !window.LessonHub) return;
+    window.LessonHub.mount(container, { lang: _teachersLang, legacyDocs: lang => tpLegacyTextbookDocs(lang), onAttendance: () => switchTeachersSection('attendance') });
 }
 
 // --- Elektron doska ---
@@ -12328,8 +12121,7 @@ function renderTpWhiteboard() {
 
 // 9-vazifa: avval faqat standalone "Elektron doska" tabi uchun qattiq
 // ID'larga (#wbCanvas va h.k.) bog'langan edi — endi parametrlashtirilgan,
-// shu bilan PDF sahifasi ustida chizish (openPdfSlideViewer) uchun ham
-// qayta ishlatiladi. `toolbarEl` orqali asboblar shu konteyner ichida
+// (PDF ustida chizish endi js/lessonPresenter.js da). `toolbarEl` orqali asboblar shu konteyner ichida
 // qidiriladi (global emas) — ikkala instansiya bir vaqtda DOMda bo'lsa ham
 // bir-biriga xalaqit bermaydi.
 // `onReset` berilsa "Tozalash" oq fon o'rniga shuni chaqiradi (PDF holida —
@@ -12443,103 +12235,6 @@ function initWhiteboardCanvas({ canvas, toolbarEl, colorInput, sizeSelect, undoB
         link.href = canvas.toDataURL('image/png');
         link.click();
     });
-}
-
-// 9-vazifa: ustoz kabinetidagi Darslikda PDF materialni sahifama-sahifa
-// ko'rish + har bir sahifa ustida chizish/o'chirish/belgilash uchun modal.
-// pdf.js allaqachon `_pdfFileToSlideImages` (js/app.js:~1868) orqali
-// vendor qilingan — bu yerda esa fayl serverga qayta yuklanmaydi, mavjud
-// URL to'g'ridan-to'g'ri pdf.js'ga beriladi, faqat KO'RISH uchun.
-function _pdfWbStageHtml() {
-    return `
-        <div id="pdfWbToolbar" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center">
-            <button type="button" class="wb-tool-btn active" data-wb-tool="pen" title="Qalam">✏️</button>
-            <button type="button" class="wb-tool-btn" data-wb-tool="eraser" title="O'chirish">🧹</button>
-            <button type="button" class="wb-tool-btn" data-wb-tool="line" title="Chiziq">📏</button>
-            <button type="button" class="wb-tool-btn" data-wb-tool="rect" title="To'rtburchak">⬜</button>
-            <button type="button" class="wb-tool-btn" data-wb-tool="circle" title="Doira">⭕</button>
-            <div style="width:1px;height:28px;background:var(--border)"></div>
-            <input type="color" id="pdfWbColor" value="#dc2626" title="Rang" style="width:32px;height:32px;border:none;cursor:pointer;border-radius:4px">
-            <select id="pdfWbSize" title="Qalinlik" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px">
-                <option value="2">Ingichka</option>
-                <option value="4" selected>O'rta</option>
-                <option value="8">Qalin</option>
-                <option value="14">Juda qalin</option>
-            </select>
-            <div style="width:1px;height:28px;background:var(--border)"></div>
-            <button type="button" class="btn-secondary-sm" id="pdfWbUndo">↩ Orqaga</button>
-            <button type="button" class="btn-secondary-sm" id="pdfWbClear">🗑 Tozalash</button>
-            <button type="button" class="btn-primary-sm" id="pdfWbSave">💾 Saqlash (PNG)</button>
-        </div>
-        <div style="position:relative;max-width:100%;overflow:auto;text-align:center">
-            <canvas id="pdfWbCanvas" style="border:1px solid var(--border);border-radius:10px;cursor:crosshair;max-width:100%;touch-action:none"></canvas>
-        </div>`;
-}
-
-async function openPdfSlideViewer(title, fileUrl) {
-    openModal(title, `
-        <div style="display:flex;flex-direction:column;align-items:center;gap:10px">
-            <div id="pdfWbStage" style="display:flex;flex-direction:column;align-items:center;gap:10px;width:100%">
-                <div style="padding:40px;color:var(--text-muted)">Yuklanmoqda...</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:12px">
-                <button type="button" class="btn-secondary-sm" id="pdfWbPrev">← Oldingi</button>
-                <span id="pdfWbPageIndicator" style="font-size:13px;color:var(--text-muted);min-width:60px;text-align:center">— / —</span>
-                <button type="button" class="btn-secondary-sm" id="pdfWbNext">Keyingi →</button>
-            </div>
-        </div>`,
-        `<button type="button" class="btn-ghost" id="pdfWbClose">Yopish</button>`,
-        { wide: true }
-    );
-    document.getElementById('pdfWbClose').onclick = () => closeModal();
-
-    const stage = document.getElementById('pdfWbStage');
-    const pageIndicatorEl = document.getElementById('pdfWbPageIndicator');
-
-    let pdfDoc = null, currentPage = 1, totalPages = 1;
-
-    // 9-vazifa (tuzatish): har safar sahifa almashganda toolbar+canvas
-    // butunlay QAYTA yaratiladi (innerHTML orqali) — aks holda bir xil
-    // tugma/canvas elementlariga initWhiteboardCanvas() qayta-qayta
-    // event listener qo'shib borardi (chizish bir necha marta takrorlanib
-    // ketardi) va eski sahifaning undo-tarixi keyingi sahifaga aralashib
-    // qolardi.
-    async function loadPage(n) {
-        currentPage = n;
-        stage.innerHTML = _pdfWbStageHtml();
-        const canvas = document.getElementById('pdfWbCanvas');
-        const page = await pdfDoc.getPage(currentPage);
-        const viewport = page.getViewport({ scale: 1.5 });
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        const ctx = canvas.getContext('2d');
-        await page.render({ canvasContext: ctx, viewport }).promise;
-        pageIndicatorEl.textContent = `${currentPage} / ${totalPages}`;
-        initWhiteboardCanvas({
-            canvas,
-            toolbarEl: document.getElementById('pdfWbToolbar'),
-            colorInput: document.getElementById('pdfWbColor'),
-            sizeSelect: document.getElementById('pdfWbSize'),
-            undoBtn: document.getElementById('pdfWbUndo'),
-            clearBtn: document.getElementById('pdfWbClear'),
-            saveBtn: document.getElementById('pdfWbSave'),
-            paintInitial: false,
-            autoSize: false,
-            onReset: () => { loadPage(currentPage); }
-        });
-    }
-
-    document.getElementById('pdfWbPrev').onclick = () => { if (currentPage > 1) loadPage(currentPage - 1); };
-    document.getElementById('pdfWbNext').onclick = () => { if (currentPage < totalPages) loadPage(currentPage + 1); };
-
-    try {
-        await _ensurePdfJsLoaded();
-        pdfDoc = await window.pdfjsLib.getDocument(fileUrl).promise;
-        totalPages = pdfDoc.numPages;
-        await loadPage(1);
-    } catch (e) {
-        stage.innerHTML = `<div style="padding:40px;color:var(--danger)">PDF yuklab bo'lmadi: ${escapeHtml(e.message)}</div>`;
-    }
 }
 
 function fillStudentTeacherOptions(subject, suffix) {

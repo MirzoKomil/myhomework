@@ -25,6 +25,7 @@ module.exports = function createAcademicRouter({ pool, authRequired, studentAuth
     router.get('/lessons/:no', handle(req => hub.getLesson(pool, req.user, { lang: req.query.lang, no: req.params.no, courseId: req.query.courseId })));
     router.get('/students', handle(req => hub.studentsOverview(pool, req.user, { lang: req.query.lang })));
     router.get('/students/:id', handle(req => hub.studentDetail(pool, req.user, req.params.id)));
+    router.get('/students/:id/presence', handle(req => hub.studentPresence(pool, req.user, req.params.id)));
     router.get('/materials', handle(async req => {
         const access = await hub.resolveAccess(pool, req.user);
         const lang = access.lang || (req.query.lang === 'russian' ? 'russian' : 'english');
