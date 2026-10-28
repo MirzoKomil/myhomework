@@ -331,7 +331,7 @@
                 : na ? '<span class="sc-pill sc-pill--bad">✕ Javob bermadi</span>' : '';
             const btn = ok ? '' : na ? `<button type="button" class="sc-btn sc-btn--sm" data-mark="${esc(s.id)}">Qayta urinish</button>`
                 : `<button type="button" class="sc-btn sc-btn--sm${s.id === nextId ? ' sc-btn--pri' : ''}" data-mark="${esc(s.id)}">Belgilash</button>`;
-            return `<li class="yd-tr${ok ? ' is-ok' : na ? ' is-na' : ''}" data-sid="${esc(s.id)}"><b class="yd-time">${esc(isAdv(s) ? s.lessonTime || '—' : U().hm(c[0]?.at ?? 0))}</b>${studentAvatar(s, 32)}
+            return `<li class="yd-tr${ok ? ' is-ok' : na ? ' is-na' : ''}" data-sid="${esc(s.id)}"><b class="yd-time">${esc(isAdv(s) ? s.lessonTime || '—' : U().hm(c[0]?.at ?? 0))}</b>${studentAvatar(s, 36)}
               <span class="yd-who"><button type="button" class="sc-link yd-nm" data-card="${esc(s.id)}">${esc(s.name)}</button><small class="sc-mt">${sub}</small></span>
               <span class="yd-tr-r">${callIcon(s.id)}${pill}${btn}</span></li>`;
         };
@@ -369,12 +369,12 @@
               <div class="sc-seg" role="group" aria-label="Filtr"><button type="button" data-f="all" aria-pressed="${conState.filter === 'all'}">Hammasi ${rows.length}</button><button type="button" data-f="retry" aria-pressed="${conState.filter === 'retry'}"${retryRows.length ? '' : ' disabled'}>Qayta urinish kerak ${retryRows.length}</button></div></header>
             <div class="yd-tw"><table class="sc-table yd-wt"><thead><tr><th>O'quvchi</th><th>Asosiy darslari</th><th>Tavsiya</th><th>Hafta</th><th class="r">Bajarildi</th><th class="r">${esc(mLbl)}</th></tr></thead><tbody>
             ${shown.map(s => { const r = by.get(s.id) || { counted: 0, noAnswer: 0 }, gone = s.status === 'inactive', rt = retry(s);
-              return `<tr class="${gone ? 'yd-gone' : ''}"><td><span class="sc-row">${studentAvatar(s, 30)}<span class="yd-who"><button type="button" class="sc-link yd-nm" data-card="${esc(s.id)}">${esc(s.name)}</button><small class="sc-mt">asosiy: ${esc(teacherName(s.teacherId, true))}${rt ? ` · <span class="yd-bad">${rt.req ? 'so\'rov adminda' : 'qayta urinish'}</span>` : ''}</small></span>${tgIcon(gm.get(s.id))}${gone || s.frozen ? '' : callIcon(s.id)}</span></td>
+              return `<tr class="${gone ? 'yd-gone' : ''}"><td><span class="sc-row">${studentAvatar(s, 34)}<span class="yd-who"><button type="button" class="sc-link yd-nm" data-card="${esc(s.id)}">${esc(s.name)}</button><small class="sc-mt">asosiy: ${esc(teacherName(s.teacherId, true))}${rt && rt.req ? ' · <span class="yd-bad">so\'rov adminda</span>' : ''}</small></span>${tgIcon(gm.get(s.id))}${gone || s.frozen ? '' : callIcon(s.id)}</span></td>
                 <td>${esc(pattern(s.lessonDayOfWeek))}</td><td>${esc(advDays(s).map(d => DAY[d - 1]).join('·'))}${s.lessonTime ? ' · ' + esc(s.lessonTime) : ''}</td>
                 <td>${gone ? '<span class="sc-pill sc-pill--bad">chiqib ketgan</span>' : weekChips(s)}</td><td class="r"><b>${weekCounted(s)}</b> / 3</td>
-                <td class="r"><b>${r.counted}</b> / ${CAP}${r.noAnswer ? `<small class="sc-mt"> · ${r.noAnswer} j.b.</small>` : ''}</td></tr>`; }).join('') || `<tr><td colspan="6" class="sc-mt">${conState.filter === 'retry' ? 'Qayta urinish kerak o\'quvchi yo\'q' : 'Sizga yordamchi sifatida o\'quvchi biriktirilmagan'}</td></tr>`}
+                <td class="r">${r.counted} / ${CAP}</td></tr>`; }).join('') || `<tr><td colspan="6" class="sc-mt">${conState.filter === 'retry' ? 'Qayta urinish kerak o\'quvchi yo\'q' : 'Sizga yordamchi sifatida o\'quvchi biriktirilmagan'}</td></tr>`}
             </tbody><tfoot><tr><td colspan="4">Jami · ${shown.length} o'quvchi</td><td class="r">${shown.reduce((n, s) => n + weekCounted(s), 0)} / ${shown.filter(s => s.status !== 'inactive' && !s.frozen).length * 3}</td><td class="r">${shown.reduce((n, s) => n + (by.get(s.id)?.counted || 0), 0)} / ${shown.filter(s => s.status !== 'inactive').length * CAP}</td></tr></tfoot></table></div>
-            <div class="yd-legend"><span><i class="ok"></i>bajarildi</span><span><i class="na"></i>javob bermadi</span><span><i class="un"></i>hisoblanmadi (qoida)</span><span><i></i>rejada</span></div></section>`;
+            <div class="yd-legend"><span><i class="ok"></i>bajarildi</span><span><i class="na"></i>javob bermadi</span>${shown.some(s => wItems(s).some(i => i.outcome !== 'no_answer' && i.status !== 'counted')) ? '<span><i class="un"></i>hisoblanmadi (qoida)</span>' : ''}<span><i></i>rejada</span></div></section>`;
         bindMonth();
         const find = id => mine.find(s => s.id === id);
         // "Aloqani belgilash" — dizayndagidek sahifa ichida (Bugun ostida); ochilganda keyingi tavsiya qilingan o'quvchi.

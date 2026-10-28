@@ -33,3 +33,12 @@ html.rd[data-theme="dark"] .jq-code { background: #05080F; border: 1px solid var
   .jq-card { padding: 16px; }
   .jq-mx { min-width: 560px; }
 }
+/* Yopish tugmasi oqimdan tashqarida — sarlavha va kartalar dizayndagi joyida qoladi */
+.jq-doc { position: relative; }
+.jq-top { display: block; padding-right: 140px; }
+.jq-x { position: absolute; top: 40px; right: 56px; }
+.jq .jq-mx th, .jq .jq-mx td { font-family: inherit; }
+.jq .jq-mx tbody th { font-size: 13px; font-weight: 600; color: var(--text, #0B1220); }
+.jq .jq-mx thead th { font-size: 12px; font-weight: 700; color: var(--text-secondary, #4B5563); }
+@media (max-width: 1100px) { .jq-x { top: 24px; right: 24px; } }
+@media (max-width: 640px) { .jq-top { padding-right: 0; padding-top: 52px; } .jq-x { top: 16px; right: 16px; } }

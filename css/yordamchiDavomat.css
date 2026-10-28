@@ -2,7 +2,8 @@
    Qiymatlar YordamchiDavomat.dc.html dan: .top, .ls, .tm, .sum, .rul, .frm, .fl3, .grp3, .ch3, .inp2, .ta, .yt, .dt, .lg.
    Ranglar kobalt tokenlaridan — dark mode avtomatik. */
 .udv--asst { display: flex; flex-direction: column; gap: 20px; }
-.yd-top { grid-template-columns: minmax(0, 1fr) 340px; gap: 20px; margin-bottom: 20px; }
+.yd-top { grid-template-columns: minmax(0, 1fr) 320px; gap: 20px; margin-bottom: 20px; }
+.yd-top .sc-pill, .ydm-card .sc-ch .sc-pill { padding: 4px 10px; font-size: 12px; font-weight: 700; }
 
 /* Bugun ro'yxati (.ls / .tm) */
 .yd-today .sc-ch { padding: 16px 20px; }
@@ -13,17 +14,25 @@
 .yd-today .yd-tr.is-ok .yd-time, .yd-today .yd-tr.is-na .yd-time { background: var(--kb-ok-bg); color: var(--kb-ok-fg); }
 .yd-today .yd-who { min-width: 180px; }
 .yd-today .yd-nm { font-size: 14px; font-weight: 700; }
+.yd-today .yd-who .yd-nm { display: block; line-height: 20px; }
+.yd-today .yd-who small { line-height: 15px; }
+.yd-today .yd-tr-r { gap: 16px; }
+.yd-today .yd-tr-r .yd-ic--call { margin-left: 6px; }
+.yd-today .sc-ch .sc-row { gap: 10px; }
 .yd-today .yd-who small { font-size: 12px; margin-top: 2px; font-weight: 500; }
 .yd-today .yd-ic { border-radius: 9px; }
 .yd-today .sc-btn--sm { min-height: 36px; padding: 0 12px; border-radius: 12px; font-weight: 700; font-size: 13px; }
-.yd-today .yd-foot { padding: 12px 20px 16px; border-top: 1px solid var(--border, #EEF1F6); }
+.yd-today .yd-foot { padding: 12px 20px 16px; margin: 0; border-top: 1px solid var(--border, #EEF1F6); font-size: 12px; font-weight: 500; }
+.yd-today .yd-tr .sc-btn--sm.sc-btn--pri { min-height: 38px; }
 
 /* Bu hafta (.sum) */
-.yd-side { padding: 20px; gap: 14px; }
+.yd-side { padding: 18px 20px; gap: 14px; }
+.yd-side .yd-sh .sc-mt { font-size: 12px; font-weight: 500; }
 .yd-side .yd-sh h2 { font-size: 16px; }
 .yd-side .yd-sk { font-size: 13px; font-weight: 600; }
-.yd-side .yd-sk b { font-size: 20px; font-weight: 800; }
-.yd-side .yd-bar { margin-top: -6px; background: var(--kb-track, #E2E8F0); }
+.yd-side .yd-sk b { font-size: 15px; font-weight: 800; }
+.yd-side .yd-bar { margin-top: -6px; height: 8px; background: var(--kb-track, #E2E8F0); }
+.yd-side .yd-bar > i { background: #0E9384; }
 .yd-side .yd-rules { margin: 0; padding: 12px 14px 12px 30px; gap: 0; font-size: 12px; line-height: 1.7; color: var(--text-secondary, #374151); }
 .yd-side .ydm-late { margin: -4px 0 0; font-size: 12px; }
 
@@ -44,26 +53,34 @@
 .ydm-frm .yd-min input { width: 72px !important; min-height: 44px; border-radius: 12px; font-weight: 800; font-size: 15px; }
 .ydm-frm .yd-mb { min-height: 40px; min-width: 0; padding: 0 14px; border-radius: 10px; font-weight: 600; }
 .ydm-frm .yd-mb[aria-pressed="true"] { background: var(--kb-primary); border-color: var(--kb-primary); color: #fff; }
-.ydm-frm .yd-min .sc-mt { font-size: 12px; }
-.ydm-frm .yd-hint { font-size: 12px; }
-.ydm-frm textarea { min-height: 52px; border-radius: 12px; padding: 10px 12px; font-size: 14px; }
+.ydm-frm .yd-min .sc-mt { font-size: 12px; font-weight: 500; }
+.ydm-frm .yd-hint { font-size: 13px; font-weight: 700; color: var(--text-secondary, #374151); }
+.ydm-frm textarea { min-height: 66px; border-radius: 12px; padding: 10px 12px; font-size: 14px; }
 .ydm-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
 .ydm-fl, .ydm-fr { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.ydm-foot .sc-btn { min-height: 44px; font-weight: 700; }
-.ydm-foot .yd-foothint { max-width: none; text-align: left; font-size: 12px; }
+.ydm-foot .sc-btn { min-height: 44px; padding: 0 16px; font-size: 14px; font-weight: 700; border-radius: 12px; }
+.ydm-foot .yd-foothint { max-width: none; text-align: left; font-size: 12px; font-weight: 500; }
 
 /* Bu hafta · o'quvchilar bo'yicha (.yt / .dt) */
 .yd-week .yd-wt { font-size: 14px; }
+.yd-week .yd-wt td { padding: 10px 16px; }
+html.rd .yd-week .yd-wt th, .yd-week .yd-wt th { font-weight: 700; }
+.yd-week .yd-nm { font-size: 14px; font-weight: 700; }
+.yd-week .yd-wt td > .sc-row { gap: 10px; }
+.yd-week .sc-seg button { min-height: 38px; padding: 0 14px; font: 600 13px 'Plus Jakarta Sans', system-ui, sans-serif; }
 .yd-week .yd-wt th, .yd-week .yd-wt td { text-align: left; white-space: nowrap; }
 .yd-week .yd-wt td.r, .yd-week .yd-wt th.r { text-align: left; }
 .yd-week .yd-wt tfoot td { background: var(--bg-secondary, #F9FAFC); }
 .yd-week .yd-ic { border-radius: 9px; margin-left: 6px; }
 .yd-week .yd-ic--tg { background: #E6F4FD; color: #0B6AA2; }
-.yd-week .yd-wk i { width: 30px; height: 26px; border-radius: 8px; border-color: var(--kb-input-border, #CBD5E1); background: var(--surface, #fff); }
+.yd-week .yd-wk { display: flex; gap: 6px; }
+.yd-week .yd-wk i.td { box-shadow: none; }
+.yd-week .yd-wk i { width: 32px; height: 28px; box-sizing: border-box; border-radius: 8px; border-color: var(--kb-input-border, #CBD5E1); background: var(--surface, #fff); }
 .yd-week .yd-wk i.ok { background: var(--kb-ok-bg); border: 1px solid #75E0A7; }
 .yd-week .yd-wk i.na { background: var(--kb-bad-bg); border: 1px solid #FDA29B; }
 .yd-week .yd-wk i.un { background: var(--kb-warn-bg); border: 1px solid #F79009; }
-.yd-week .yd-legend { gap: 14px; padding: 12px 20px; font-weight: 600; color: var(--text-secondary, #374151); }
+.yd-week .yd-legend { gap: 18px; padding: 12px 20px; font-size: 12px; font-weight: 600; color: var(--text-secondary, #4B5563); border-top: 1px solid var(--border, #EEF1F6); }
+.yd-week .sc-seg { gap: 0; }
 html.rd[data-theme="dark"] .yd-week .yd-ic--tg { background: var(--kb-info-bg); color: var(--kb-info-fg); }
 
 @media (max-width: 1100px) { .yd-top { grid-template-columns: minmax(0, 1fr); } }
@@ -110,3 +127,14 @@ html.rd [data-assist-home] .thx-main > .dashboard-panel { padding: 0; border-rad
 html.rd [data-assist-home] .thx-main > .dashboard-panel > .dashboard-panel-head { padding: 16px 20px; margin: 0; border-bottom: 1px solid var(--border, #EEF1F6); }
 html.rd [data-assist-home] .thx-main > .dashboard-panel > .dashboard-panel-head h3 { font-size: 16px; font-weight: 800; }
 html.rd [data-assist-home] .dashboard-panel-head .ahx-link { font-size: 13px; font-weight: 700; }
+.yd-week .yd-legend i { width: 14px; height: 14px; box-sizing: border-box; border: 1px solid #CBD5E1; background: var(--surface, #fff); }
+.yd-week .yd-legend i.ok { background: var(--kb-ok-bg); border-color: #75E0A7; }
+.yd-week .yd-legend i.na { background: var(--kb-bad-bg); border-color: #FDA29B; }
+.yd-week .yd-legend i.un { background: var(--kb-warn-bg); border-color: #F79009; }
+.ydm-frm .yd-min input { border: 1px solid var(--kb-input-border, #CBD5E1); padding: 0 12px; text-align: left; box-shadow: none; }
+.ydm-frm .yd-min input:focus { border-color: var(--kb-primary, #0065D6); outline: none; }
+.ydm-frm .yd-min input::placeholder, .ydm-frm textarea::placeholder { color: #9AA3B2; }
+.ydm-frm textarea { border: 1px solid var(--kb-input-border, #CBD5E1); resize: vertical; }
+/* Dark mode: bu sahifalarda ishlatilgan --text-secondary/--bg-secondary shell'da aniqlanmagan — shu bloklar ichida beramiz */
+html.rd[data-theme="dark"] :is(#mainAttendanceContainer, #teacherHome, .jq, .sv-body, .sv-head, .sc-drawer) { --text-secondary: #A9B4C8; --bg-secondary: #0F1726; }
+.ydm-frm .yd-min input, .ydm-frm textarea { background: var(--surface, #fff); color: var(--text, #0B1220); }

@@ -200,21 +200,31 @@
 
         // Bajarish kerak — har biri maosh yoki o'quvchi natijasiga ta'sir qiladi.
         const todo = [];
-        home.querySelectorAll('.tch-row--warn[data-thx-duty="main"]').forEach(row => {
-            todo.push({ ic: 'warn', t: `${row.querySelector('strong')?.textContent || ''} · ${row.querySelector('.tch-time')?.textContent || ''} darsi belgilanmagan`, s: 'Belgilanmagan dars maoshga o\'tmaydi', btn: 'Belgilash', go: 'teachers-section' });
+        // "Keldi" desangiz ilovada ochiladigan dars — /api/academic/next-lessons (Davomat sahifasi bilan bir manba).
+        const unmarkedRows = [...home.querySelectorAll('.tch-row--warn[data-thx-duty="main"]')];
+        const nextL = unmarkedRows.length && typeof apiFetch === 'function'
+            ? await apiFetch(`/api/academic/next-lessons?ids=${encodeURIComponent(unmarkedRows.map(r => r.dataset.thxSid).join(','))}`, { timeout: 30000 }).then(r => r.lessons || {}).catch(() => ({})) : {};
+        if (!alive()) return;
+        unmarkedRows.forEach(row => {
+            const no = nextL[row.dataset.thxSid]?.nextLive?.no;
+            todo.push({ ic: 'warn', t: `${row.querySelector('strong')?.textContent || ''} · ${row.querySelector('.tch-time')?.textContent || ''} darsi belgilanmagan`, s: `Belgilanmagan dars maoshga o'tmaydi.${no ? ` "Keldi" desangiz ${no}-dars ilovada ochiladi.` : ''}`, btn: 'Belgilash', go: 'teachers-section' });
         });
-        for (const l of lessons) {
+        // Tartib: avval o'tgan (natija kerak), keyin kelgusi sinovlar — vaqt bo'yicha.
+        const tomorrow = u.addDays(td, 1);
+        for (const l of [...lessons].sort((a, b) => at(a) - at(b))) {
             const d = at(l); if (!Number.isFinite(d.getTime())) continue;
-            const when = `${localDate(d) === td ? 'bugun' : u.fmtDate(localDate(d), false)} ${hhmm(d)}`;
-            if (l.trialRequest.state === 'pending' && d.getTime() <= Date.now()) todo.push({ ic: 'user', t: `${l.name || 'Lid'} · sinov darsi natijasi`, s: `${when} o'tdi, tasdiqlanmagan · muddati o'tdi, natijani yozing`, btn: 'Natijani yozish', go: 'trial-lessons' });
+            const day = localDate(d), when = `${day === td ? 'bugun' : day === tomorrow ? 'ertaga' : u.fmtDate(day, false)} ${hhmm(d)}`;
+            const When = when.charAt(0).toUpperCase() + when.slice(1);
+            const mgr = l.managerName ? `sotuv menejeri ${l.managerName}ga` : 'sotuv menejeriga';
+            if (l.trialRequest.state === 'pending' && d.getTime() <= Date.now()) todo.push({ ic: 'user', t: `${l.name || 'Lid'} · sinov darsi natijasi`, s: `${When} o'tdi, tasdiqlanmagan · muddati o'tdi, natijani yozing`, btn: 'Natijani yozish', go: 'trial-lessons' });
             else if (l.trialRequest.state === 'pending') todo.push({ ic: 'clock', t: `${l.name || 'Lid'} · ${when} sinov darsi`, s: 'Tasdiqlamaguningizcha lidga vaqt yuborilmaydi', btn: 'Tasdiqlash', go: 'trial-lessons' });
-            else if (l.trialRequest.state === 'accepted' && d.getTime() < Date.now()) todo.push({ ic: 'user', t: `${l.name || 'Lid'} · sinov darsi natijasi`, s: `${when} o'tdi · natija sotuv menejeriga boradi`, btn: 'Natijani yozish', go: 'trial-lessons' });
+            else if (l.trialRequest.state === 'accepted' && d.getTime() < Date.now()) todo.push({ ic: 'user', t: `${l.name || 'Lid'} · sinov darsi natijasi`, s: `${When} o'tdi · natija ${mgr} boradi`, btn: 'Natijani yozish', go: 'trial-lessons' });
         }
         todo.push(...(await extraP));
         if (!alive()) return;
         const box = home.querySelector('[data-thx-todo]');
         if (box) {
-            const TI = { warn: '<path d="M12 3 2 21h20L12 3zM12 10v5M12 18h.01"/>', user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/>', clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', sync: '<path d="M4 12a8 8 0 0114-5.3L20 9M20 4v5h-5M20 12a8 8 0 01-14 5.3L4 15M4 20v-5h5"/>' };
+            const TI = { warn: '<path d="M12 3 2 21h20L12 3zM12 10v5M12 18h.01"/>', user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/>', att: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/>', clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', sync: '<path d="M4 12a8 8 0 0114-5.3L20 9M20 4v5h-5M20 12a8 8 0 01-14 5.3L4 15M4 20v-5h5"/>' };
             const ico = k => TI[k] ? `<span class="thx-ti thx-ti--${k}" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${TI[k]}</svg></span>` : '';
             box.innerHTML = todo.length ? `<section class="card dashboard-panel thx-todo"><div class="dashboard-panel-head"><h3>Bajarish kerak · ${todo.length}</h3><span>Har biri maoshingiz yoki o'quvchi natijasiga ta'sir qiladi</span></div>
                 <ul>${todo.map((x, i) => `<li>${ico(x.ic)}<div><b>${esc(x.t)}</b><small>${esc(x.s)}</small></div><button type="button" class="sc-btn sc-btn--sm" ${x.act ? `data-act="${i}"` : `data-go="${x.go}"`}>${esc(x.btn)}</button></li>`).join('')}</ul></section>` : '';

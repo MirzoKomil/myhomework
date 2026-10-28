@@ -146,7 +146,7 @@
                     } });
             }
         }
-        if (att && att.length) items.push({ ic: 'user', t: `${att.length} o'quvchiga e'tibor kerak`, s: attentionText(att), btn: "Ko'rish", act: () => openCheck(att) });
+        if (att && att.length) items.push({ ic: 'att', t: `${att.length} o'quvchiga e'tibor kerak`, s: attentionText(att), btn: "Ko'rish", act: () => openCheck(att) });
         return items;
     }
 
@@ -204,9 +204,32 @@
             const t = await LS.loadToday();
             const it = t?.items.find(i => i.studentId === sid);
             const sub = cur.querySelector('.mot-prize-note');
-            if (it?.lessonNo && sub && !sub.dataset.uhLesson) { sub.dataset.uhLesson = '1'; sub.insertAdjacentText('beforeend', ` · ${it.lessonNo}-dars, jonli`); }
+            if (it?.lessonNo && sub && !sub.dataset.uhLesson) { sub.dataset.uhLesson = '1'; sub.textContent = `${Number(cur.dataset.thxDur) || 15} daq · ${it.lessonNo}-dars, jonli`; }
         } catch { /* dars raqamisiz qoladi */ }
     }
 
-    window.UstozHome = { missed, lossSum, missedText, attention, attentionText, todoItems, ratingCard, delta, decorateToday, f1, today, dm, DAY, wd };
+    // ── Maosh kartasi: "73 keldi · 16 kelmadi · 1 belgilanmagan = o'tgan 90 · +2 qoplash → 75 hisobga o'tdi · oy rejasi 108 dars"
+    // Hisob — teacherDutyUI.monthTotals (Akademik → Davomat "Oktyabr" kartasi bilan bitta manba). Faqat o'qiydi.
+    async function decoratePlan(container, user = me()) {
+        const T = window.teacherDutyUI?.monthTotals, home = container?.querySelector('#teacherHome');
+        const foot = home?.querySelector('#kbxThPlan')?.closest('.kbx-plan')?.querySelector('.kbx-bar-foot');
+        const tid = user.linkedTeacherId; if (!T || !foot || !tid) return;
+        const td = today(), month = td.slice(0, 7);
+        const [ab, mk] = await Promise.all([school('/attendance/absences?month=' + month).catch(() => ({ absences: [] })),
+            school('/makeups').then(r => r.makeups || []).catch(() => [])]);
+        if (!foot.isConnected) return;
+        const block = (getItem(STORAGE_KEYS.mainAttendance, {}) || {})[`${month}_${tid}`] || {};
+        const own = typeof resolveTeacherWithVirtual === 'function' ? resolveTeacherWithVirtual(tid) || {} : {};
+        const t = T({ id: tid, month, students: ownMain(tid), mainAtt: window.teacherDutyUI.mergeAbsences(block, ab.absences, tid), makeups: mk, teacher: own, todayKey: td });
+        if (!t.plan) return;
+        const [l, r] = foot.children;
+        l.innerHTML = `<strong>${t.came}</strong> keldi · <strong>${t.absent}</strong> kelmadi · <strong>${t.unmarked}</strong> belgilanmagan = o'tgan ${t.expected}${t.approved ? ` · +${t.approved} qoplash` : ''} → <strong>${t.counted}</strong> hisobga o'tdi`;
+        if (r) r.textContent = `oy rejasi ${t.plan} dars`;
+        if (t.pct == null) return;
+        const card = foot.closest('.kbx-plan'), pill = card.querySelector('.kbx-plan-h .kbx-pill'), bar = card.querySelector('.kbx-bar');
+        if (pill) { pill.textContent = `Davomat ${t.pct}%`; pill.className = `kbx-pill kbx-pill--${t.pct >= 90 ? 'ok' : 'warn'}`; }
+        if (bar) { bar.querySelector('i').style.width = t.pct + '%'; bar.setAttribute('aria-label', `Davomat ${t.pct}%`); }
+    }
+
+    window.UstozHome = { decoratePlan, missed, lossSum, missedText, attention, attentionText, todoItems, ratingCard, delta, decorateToday, f1, today, dm, DAY, wd };
 })();

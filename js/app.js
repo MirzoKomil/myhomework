@@ -8747,7 +8747,7 @@ function bindTeacherHomeToday(container, user) {
 // Statistika bilan bir xil) — taxminiy yoki "chiroyli" raqam yo'q.
 const ADMIN_HOME_ROLES = new Set(['admin', 'boshliq']);
 const UZ_WEEKDAYS = ['Yakshanba', 'Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba'];
-const UZ_MONTHS_GEN = ['yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun', 'iyul', 'avgust', 'sentabr', 'oktabr', 'noyabr', 'dekabr'];
+const UZ_MONTHS_GEN = ['yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun', 'iyul', 'avgust', 'sentyabr', 'oktyabr', 'noyabr', 'dekabr'];
 
 function isAdminHomeUser(user) {
     return ADMIN_HOME_ROLES.has(user?.role);
@@ -9519,6 +9519,7 @@ function renderDashboardOverview(args) {
         bindTeacherHomeToday(container, currentUser);
         window.LessonStart?.decorateHome?.(container, currentUser);
         window.UstozHome?.decorateToday?.(container);
+        window.UstozHome?.decoratePlan?.(container, currentUser);
         _loadTeacherHomeRating(container);
         window.schoolTeacher?.homeExtras?.(container, currentUser);
         return;
