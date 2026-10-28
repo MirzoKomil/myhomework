@@ -98,7 +98,9 @@
     }
 
     // ── Faol bo'lmagan o'quvchilar (ustoz, sotuv): o'z davri, faollar bilan aralashmaydi ──
-    async function openInactive() {
+    // Sahifa ichida (root berilsa) — holat bo'yicha kartalar (js/studentArchive.js); aks holda eski oyna.
+    async function openInactive(root, opts) {
+        if (window.studentArchive) return root && root.nodeType === 1 ? window.studentArchive.render(root, opts || {}) : window.studentArchive.openDrawer();
         const { api, esc, openDrawer, fmtDate, studentAvatar } = U();
         const box = openDrawer({ title: 'Faol emas', sub: 'Muzlatilgan, chiqib ketgan va boshqa ustozga o\'tganlar · faqat siz bilan bo\'lgan davr', body: '<div class="sc-skel"></div>', wide: true });
         try {
@@ -313,7 +315,7 @@
           </tbody></table></section><aside class="sc-card sc-pad ms-detail">${detail()}</aside></div>`;
         const qi = root.querySelector('[data-q]');
         qi.oninput = () => { myState.q = qi.value; clearTimeout(qi._t); qi._t = setTimeout(() => renderMyStudents(root).then(() => { const n = root.querySelector('[data-q]'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); }), 200); };
-        root.querySelector('[data-inactive]').onclick = () => openInactive();
+        root.querySelector('[data-inactive]').onclick = () => openInactive(root, { active: mine.length + helped.length, title: mine.length ? 'Mening o\'quvchilarim' : 'O\'quvchilar', onBack: () => renderMyStudents(root) });
         root.querySelectorAll('[data-ms]').forEach(tr => { tr.onclick = () => { myState.sel = tr.dataset.ms; renderMyStudents(root); }; tr.onkeydown = e => { if (e.key === 'Enter') tr.click(); }; });
         root.querySelector('[data-open-card]')?.addEventListener('click', () => U().openStudent(sel.id));
         root.querySelector('[data-go-att]')?.addEventListener('click', () => switchTab('teachers-section'));
@@ -443,7 +445,7 @@
           </tbody></table></section><aside class="sc-card sc-pad ms-detail">${detail}</aside></div>
           <p class="sc-mt">Ismni bosing → o'quvchi kartasi (Davomat va aloqalar, O'zlashtirish faqat o'qish uchun)</p>`;
         root.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { soldState.tab = b.dataset.tab; renderSoldStudents(root); });
-        root.querySelector('[data-inactive]').onclick = () => openInactive();
+        root.querySelector('[data-inactive]').onclick = () => openInactive(root, { active: r.students.length, onBack: () => renderSoldStudents(root) });
         root.querySelectorAll('[data-ms]').forEach(tr => { tr.onclick = () => { soldState.sel = tr.dataset.ms; renderSoldStudents(root); }; tr.onkeydown = e => { if (e.key === 'Enter') tr.click(); }; });
         root.querySelector('[data-open-card]')?.addEventListener('click', () => U().openStudent(sel.id));
     }

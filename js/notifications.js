@@ -113,27 +113,44 @@ function syncNotifications() {
         fresh.push(...getLeadSlaNotificationsForCurrentUser());
     }
 
+    // Server voqealari (js/staffSettings.js → /api/staff/notify/feed): o'qilgan holati serverda saqlanadi.
+    if (window.staffNotify) fresh.push(...window.staffNotify.items());
+
     const merged = fresh.map(n => ({
         ...n,
+        cat: n.cat || notifLocalCat(n),
         time: Number(n.time) || seenAt.get(n.id) || Date.now(),
-        read: readIds.has(n.id)
+        read: n.server ? (n.serverRead || readIds.has(n.id)) : readIds.has(n.id)
     })).sort((a, b) => (a.read - b.read) || (b.time - a.time));
 
     saveNotifications(merged);
     return merged;
 }
 
+// Mahalliy (brauzerda yig'iladigan) bildirishnomalar toifasi — panel filtrlari uchun.
+function notifLocalCat(n) {
+    const id = String(n.id || '');
+    if (id.startsWith('debt-')) return 'tolov';
+    if (id.startsWith('lessons-')) return 'davomat';
+    if (id.startsWith('kpi-')) return 'maosh';
+    return 'lid';
+}
+const NOTIF_CAT_LABELS = { davomat: 'Davomat', sinov: 'Sinov', aloqa: 'Aloqa', sorov: "So'rov", maosh: 'Maosh', tasdiq: 'Tasdiq', jadval: 'Jadval', tolov: "To'lov", lid: 'Lidlar', boshqa: 'Boshqa' };
+let _notifCat = 'all';
+
 function getUnreadCount() {
     return getNotifications().filter(n => !n.read).length;
 }
 
 function markNotificationRead(id) {
+    window.staffNotify?.markRead([id]);
     const list = getNotifications().map(n => n.id === id ? { ...n, read: true } : n);
     saveNotifications(list);
     renderNotificationPanel();
 }
 
 function markAllNotificationsRead() {
+    window.staffNotify?.markAll();
     saveNotifications(getNotifications().map(n => ({ ...n, read: true })));
     renderNotificationPanel();
 }
@@ -152,7 +169,18 @@ function renderNotificationPanel() {
         badge.style.display = unread > 0 ? 'flex' : 'none';
     }
 
-    renderNotifListInto('notifList', list);
+    const count = document.getElementById('notifNewCount');
+    if (count) { count.textContent = `${unread} yangi`; count.hidden = !unread; }
+    const cats = [...new Set(list.map(n => n.cat).filter(Boolean))];
+    if (_notifCat !== 'all' && !cats.includes(_notifCat)) _notifCat = 'all';
+    const tabs = document.getElementById('notifCats');
+    if (tabs) {
+        tabs.hidden = cats.length < 2;
+        tabs.innerHTML = [['all', 'Hammasi'], ...cats.map(c => [c, NOTIF_CAT_LABELS[c] || c])]
+            .map(([k, l]) => `<button type="button" role="tab" data-notif-cat="${notifEsc(k)}" aria-selected="${_notifCat === k}">${notifEsc(l)}</button>`).join('');
+        tabs.querySelectorAll('[data-notif-cat]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); _notifCat = b.dataset.notifCat; renderNotificationPanel(); }));
+    }
+    renderNotifListInto('notifList', _notifCat === 'all' ? list : list.filter(n => n.cat === _notifCat));
     renderNotifListInto('settingsNotifList', list);
 }
 
@@ -181,7 +209,7 @@ function renderNotifListInto(targetId, list) {
         lastGroup = group;
         return `${head}
         <button type="button" class="notif-item notif-item--${notifEsc(n.type || 'info')} ${n.read ? 'read' : ''}" data-notif-id="${notifEsc(n.id)}" data-notif-tab="${notifEsc(n.tab || '')}">
-            <div class="notif-icon notif-${notifEsc(n.type)}">${notifIcon(n.type)}</div>
+            <div class="notif-icon notif-${notifEsc(n.type)}${n.tone ? ' notif-tone-' + notifEsc(n.tone) : ''}">${notifIcon(n.type)}</div>
             <div class="notif-content">
                 <strong>${notifEsc(n.title)}</strong>
                 <p>${notifEsc(n.message)}</p>
@@ -196,6 +224,13 @@ function renderNotifListInto(targetId, list) {
             const notif = list.find(x => x.id === item.dataset.notifId);
             markNotificationRead(item.dataset.notifId);
             const tab = item.dataset.notifTab;
+            if (notif?.guideId && window.staffGuides && typeof switchTab === 'function') {
+                switchTab('guides'); window.setTimeout(() => window.staffGuides.open(notif.guideId), 0); closeNotificationPanel(); return;
+            }
+            if (tab === 'profile' && notif?.section && typeof switchTab === 'function') {
+                if (typeof _profileSection !== 'undefined') _profileSection = notif.section;
+                switchTab('profile'); closeNotificationPanel(); return;
+            }
             if (tab && typeof switchTab === 'function') {
                 let ctx = {};
                 if (tab === 'sales') ctx = { salesSection: notif?.section || 'leads' };
@@ -237,6 +272,7 @@ function openNotificationPanel() {
     if (panel) {
         panel.classList.add('open');
         renderNotificationPanel();
+        window.staffNotify?.refresh();
     }
 }
 

@@ -75,6 +75,8 @@
         const r = role();
         const V2 = window.scheduleV2;
         state.view ||= V2 && r !== 'sales_manager' ? V2.defaultView() : r === 'teacher' ? 'mine' : isSales() ? 'free' : 'day';
+        // Sotuv menejeri: SotuvJadval (js/sotuvSinov.js) — KPI, ustozlar bo'yicha kun, "+ Sinov darsi qo'yish".
+        if (r === 'sales_manager' && window.sotuvSinov && state.view === 'free') return window.sotuvSinov.renderJadval(root);
         // Jadval v2 (js/scheduleV2.js): admin/ROP kun va ustoz haftasi, ustoz Kun/Hafta/Oy, yordamchi tavsiya jadvali.
         // Sotuv menejeri ("Kim bo'sh?") va qolgan ro'yxatlar shu fayldagi eski ko'rinishda qoladi.
         if (V2 && V2.owns(state.view)) return V2.render(root);
