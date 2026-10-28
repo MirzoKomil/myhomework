@@ -372,7 +372,9 @@
             if (!me()?.role || me().role === 'student') return;
             NF.busy = api('/notify/feed').then(r => { NF.events = r.events || []; NF.cats = r.cats || []; NF.at = Date.now(); })
                 .catch(() => { /* panel mahalliy bildirishnomalar bilan ishlayveradi */ })
-                .finally(() => { NF.busy = null; if (typeof renderNotificationPanel === 'function') renderNotificationPanel(); });
+                .finally(() => { NF.busy = null; if (typeof renderNotificationPanel === 'function') renderNotificationPanel();
+                    // Sidebar son belgilari (js/staffSessions.js) shu voqealardan hisoblanadi.
+                    window.dispatchEvent(new CustomEvent('staff:feed', { detail: { events: NF.events } })); });
             return NF.busy;
         },
         markRead(ids) {
@@ -405,7 +407,9 @@
         if (sal) sal.style.display = isAdmin(user) ? 'none' : '';
         return isAdmin(user) && section === 'salary' ? 'edit' : section;
     }
-    window.staffSettings = { handles: s => !!SECTIONS[s], render, adjustNav };
+    // Boshqa modul bo'lim qo'shadi (masalan js/staffSessions.js → 'sessions').
+    const register = (name, fn) => { if (typeof fn === 'function') SECTIONS[name] = fn; };
+    window.staffSettings = { handles: s => !!SECTIONS[s], render, adjustNav, register };
     window.staffGuides = { render: renderGuides, open: id => renderGuides(id), adminAcks };
     window.staffNotify = staffNotify;
     const boot = () => { if (document.getElementById('notifToggle') && typeof apiFetch === 'function' && localStorage.getItem('mh_token')) staffNotify.start(); };

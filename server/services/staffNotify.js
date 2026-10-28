@@ -53,6 +53,7 @@ const CATALOG = {
             ['edit_decision', 'Tahrir tasdiqlandi / rad etildi / qaytarildi', 'admin yoki ROP · sabab bilan', [1, 1], true]]],
         ['O\'quvchilarim', [
             ['group_link_missing', 'Telegram guruh havolasi kiritilmagan', 'konvertatsiyadan 24 soat o\'tsa', [1, 1], false],
+            ['student_followup', 'Qaytish oldidan eslatma · qayta jalb qo\'ng\'irog\'i', 'belgilangan kuni · "Faol emas" o\'quvchilar', [1, 1], true],
             ['student_status', 'O\'quvchim muzlatildi / to\'xtatildi / ustozi almashdi', 'admin yoki ROP qilganda', [1, 1], false],
             ['payment_due', 'To\'lov muddati yaqin / o\'tdi', '3 kun oldin va o\'tgan kuni', [1, 1], false],
             ['daily_plan', 'Kunlik reja', '20:00 da', [1, 0], false],
@@ -287,6 +288,14 @@ async function salesEvents(db, me, now, ev) {
             if (rej > since) ev.push({ id: `tt:${t.id}:rej`, type: 'trial_teacher_decision', cat: 'sinov', tone: 'bad', title: 'Ustoz sinovni rad etdi', sub: `${first(r.name)} · boshqa vaqt yoki ustoz tanlang`, at: iso(rej), go: { tab: 'sales' } });
             if (done > since) ev.push({ id: `tt:${t.id}:done`, type: 'trial_result_written', cat: 'sinov', tone: t.attended ? 'ok' : 'warn', title: `Sinov natijasi: ${t.attended ? 'o\'tkazildi' : 'kelmadi'}`,
                 sub: [first(r.name), t.resultNote].filter(Boolean).join(' · '), at: iso(done), go: { tab: 'sales' } });
+        }
+        // "Faol emas" o'quvchilar: eslatma va qayta jalb qo'ng'irog'i kuni keldi (js/studentArchive.js).
+        const today = T.nowLocal(now).date;
+        for (const f of await require('./school/followups').dueForManager(db, me.managerId, today)) {
+            ev.push({ id: `fu:${f.id}`, type: 'student_followup', cat: 'jadval', tone: 'warn',
+                title: f.kind === 'winback' ? 'Qayta jalb · qo\'ng\'iroq kuni' : 'Qaytish oldidan eslatma',
+                sub: `${first(f.name)} · ${f.kind === 'winback' ? 'chiqib ketgan o\'quvchiga qo\'ng\'iroq qiling' : 'muzlatishdan qaytadi — qo\'ng\'iroq qiling'}`,
+                at: iso(new Date(`${f.due}T04:00:00Z`)), go: { tab: 'students' } });
         }
     }
     const er = (await db.query(`SELECT r.*, s.name FROM school_edit_requests r LEFT JOIN students s ON s.id=r.student_id

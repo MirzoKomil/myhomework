@@ -224,12 +224,24 @@ async function freeze(db, actor, studentId, body, now = new Date()) {
     return ins[0];
 }
 
-async function stop(db, actor, studentId, body, now = new Date()) {
+// "Kursni tugatdi" — kurs oxirigacha o'qigan o'quvchi. Alohida holat ustuni qo'shilmaydi:
+// 'left' yozuvi reason_code='finished' bilan (jadval, maosh, faol sonlar — chiqib ketgandek ishlaydi),
+// /inactive va karta uni "Tugatgan" deb ko'rsatadi.
+const FINISHED = 'finished';
+const isFinishedRow = r => !!r && r.status === 'left' && r.reason_code === FINISHED;
+async function finish(db, actor, studentId, body = {}, now = new Date()) {
+    if (!APPROVER_ROLES.has(actor.role)) throw fail(403, 'Kursni tugatganini admin yoki ROP belgilaydi');
+    const note = String(body.note || '').trim().slice(0, 300);
+    return stop(db, actor, studentId, { lastLesson: body.lastLesson, reasonCode: FINISHED, reason: note ? `Kursni tugatdi: ${note}` : 'Kursni tugatdi' }, now, 'finish');
+}
+
+async function stop(db, actor, studentId, body, now = new Date(), action = 'stop') {
     if (!APPROVER_ROLES.has(actor.role)) throw fail(403, 'Kursni to\'xtatishni admin yoki ROP qiladi');
     const last = T.assertDate(body.lastLesson, 'Oxirgi dars sanasi');
     await lockStudent(db, studentId);
     const rows = await statusRows(db, studentId);
     if (currentStatus(rows, last) === 'left') throw fail(409, 'O\'quvchi allaqachon chiqib ketgan');
+    if (String(body.reasonCode || '') === FINISHED && action !== 'finish') body = { ...body, reasonCode: 'Boshqa' };
     const reason = reasonText(body.reason, 3);
     const from = T.addDays(last, 1);
     const { rows: ins } = await db.query(`INSERT INTO school_student_status (id,student_id,status,from_date,reason_code,reason,payload,actor_id,actor_name,actor_role)
@@ -239,7 +251,7 @@ async function stop(db, actor, studentId, body, now = new Date()) {
     await db.query(`UPDATE school_makeups SET status='cancelled' WHERE student_id=$1 AND status='planned'`, [studentId]);
     await db.query('UPDATE school_student_groups SET archived=TRUE, updated_by=$2, updated_at=NOW() WHERE student_id=$1', [studentId, actor.id]);
     await bumpRev(db, studentId);
-    await audit(db, studentId, 'stop', { lastLesson: last }, reason, actor);
+    await audit(db, studentId, action, { lastLesson: last }, reason, actor);
     await syncLegacy(db, studentId, now);
     return ins[0];
 }
@@ -436,5 +448,5 @@ async function history(db, studentId) {
     return (await db.query('SELECT * FROM school_student_audit WHERE student_id=$1 ORDER BY created_at DESC, id DESC LIMIT 200', [studentId])).rows;
 }
 
-module.exports = { ADMIN_ROLES, APPROVER_ROLES, FREEZE_MAX_DAYS, soldBy, applyEdit, edit, createRequest, decideRequest, freeze, stop, restore,
+module.exports = { ADMIN_ROLES, APPROVER_ROLES, FREEZE_MAX_DAYS, FINISHED, isFinishedRow, soldBy, applyEdit, edit, createRequest, decideRequest, freeze, stop, finish, restore,
     changeTeacher, syncLegacy, protectSchoolFields, bumpRev, applyDue, setGroup, nextGroupName, autoNameGroups, ensureProvisionGroup, cleanGroup, history, statusRows, audit };
