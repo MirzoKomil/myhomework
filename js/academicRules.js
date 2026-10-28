@@ -48,6 +48,8 @@
         UNLOCK_PERCENT: 50,
         LIVE_AUTO_UNLOCK: 60,
         LESSONS_PER_WEEK: 6,
+        // "Rejadan orqada": reja bo'yicha kerakli darsdan shuncha yoki ko'proq dars orqada (dizayn: "4+ dars orqada").
+        BEHIND_LESSONS: 4,
         TEACHER_GRADED: Object.freeze(['creative']),
         // Ilova bo'limlari (learningTracker.ts contextFromPath natijalari).
         SECTIONS: Object.freeze({

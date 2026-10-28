@@ -240,7 +240,7 @@
         },
         facts(d) {
             const s = d.student, ex = acad.examFact(d), f = acad.recentFirst(d);
-            const behind = s.expected && s.reached + 6 < s.expected;
+            const behind = s.expected && s.expected - (s.reached || 0) >= (window.AcademicRules?.BEHIND_LESSONS || 4);
             return `<div class="scc-facts">
               <div class="scc-fact"><small>Ilovada erishgan dars</small><b>${s.reached || 0} / 72</b><span>${s.expected ? `reja bo'yicha ${s.expected} · ${behind ? 'orqada' : 'farq me\'yorda'}` : 'ilovadagi oxirgi ochilgan dars'}</span></div>
               <div class="scc-fact"><small>Uy vazifasi · 1-urinish</small><b class="scc-pc ${acad.cls(f)}">${acad.pct(f)}</b><span>oxirgi 3 dars o'rtachasi</span></div>

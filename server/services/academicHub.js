@@ -14,7 +14,7 @@ const { sanitizeMobileContent } = require('../../js/mobileContentPolicy');
 const teacherRoles = require('../../js/teacherRoles');
 const RULES = require('../../js/academicRules');
 
-const { TOTAL_LESSONS, MONTH_SIZE, PASS_PERCENT, UNLOCK_PERCENT, LESSONS_PER_WEEK } = RULES;
+const { TOTAL_LESSONS, MONTH_SIZE, PASS_PERCENT, UNLOCK_PERCENT, LESSONS_PER_WEEK, BEHIND_LESSONS } = RULES;
 const TEACHER_GRADED = new Set(RULES.TEACHER_GRADED);
 const EDIT_ROLES = new Set(['admin', 'boshliq']);
 const VIEW_ROLES = new Set(['admin', 'boshliq', 'rop', 'teacher']);
@@ -780,7 +780,7 @@ function summarizeStudent(student, mc, progress, parts, timeRows, totals, lastSe
     else {
         if (daysIdle === null || daysIdle >= 3) flags.push({ key: 'idle', label: daysIdle === null ? "Ilovaga kirmagan" : `${daysIdle} kundan beri faol emas` });
         if ((firstTryAvg !== null && firstTryAvg < PASS_PERCENT) || (avgAttempts !== null && avgAttempts >= 2.5)) flags.push({ key: 'struggling', label: 'Uy vazifasida qiynalyapti' });
-        if (expected && reached + LESSONS_PER_WEEK < expected) flags.push({ key: 'behind', label: `Rejadan orqada (${expected}-dars bo'lishi kerak)` });
+        if (expected && expected - reached >= BEHIND_LESSONS) flags.push({ key: 'behind', label: `Rejadan orqada (${expected}-dars bo'lishi kerak)` });
     }
     return {
         id: student.id, name: student.name, group: student.group, role: student.role, frozen: student.frozen,
