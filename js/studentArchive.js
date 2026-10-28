@@ -129,6 +129,29 @@
         else body = inN || chg.length ? sec('Muzlatilgan', by('frozen')) + sec('Boshqa ustozga o\'tgan', by('moved')) + sec('Ustozi almashgan · faol, ma\'lumot uchun', chg) + sec('Chiqib ketgan', by('left')) + sec('Kursni tugatgan', by('finished'))
             : '<p class="sc-mt ar-empty">Faol bo\'lmagan o\'quvchi yo\'q</p>';
         const segBtn = (k, label) => `<button type="button" data-artab="${k}" aria-pressed="${tab === k}">${label}</button>`;
+        if (opts.page === 'teacher' || opts.page === 'assistant') {
+            // UstozOquvchiArxiv / YordamchiOquvchiArxiv — sahifa sarlavhasi bilan (css/oquvchilar.css, .oq-*).
+            const asg = opts.page === 'assistant';
+            const pillO = s => pill(s).replace('sc-pill sc-pill--', 'oq-pill is-');
+            const arc = s => `<div class="oq-arc"><div class="oq-who"><span class="oq-av" style="width:40px;height:40px">${studentAvatar(s, 40)}</span><div><button type="button" class="oq-nm" data-st="${esc(s.id)}">${esc(s.name)}</button>${pillO(s)}</div></div>
+                <dl class="oq-kv8">${rowsFor(s).map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl></div>`;
+            const sect = (title, items) => items.length ? `<div class="oq-sect2">${title}</div><div class="oq-arg">${items.map(arc).join('')}</div>` : '';
+            const byO = st => list.filter(s => s.state === st);
+            const bodyO = tab === 'finished' ? (finN ? sect('Kursni tugatgan', fin) : '<p class="oq-empty2">Kursni tugatgan o\'quvchi hali yo\'q</p>')
+                : inN ? sect('Muzlatilgan', byO('frozen')) + sect('Boshqa ustozga o\'tgan', byO('moved')) + sect('Chiqib ketgan', byO('left')) + sect('Kursni tugatgan', byO('finished'))
+                : '<p class="oq-empty2">Faol bo\'lmagan o\'quvchi yo\'q</p>';
+            const seg = (k, label, n) => `<button type="button" data-artab="${k}" aria-pressed="${tab === k}">${label} <b>${n}</b></button>`;
+            root.innerHTML = `<div class="oq"><div class="oq-head"><div><h1 class="oq-h1">${asg ? 'O\'quvchilarim' : 'O\'quvchilar'}</h1><p class="oq-sub">${asg
+                    ? `Faol bo'lmaganlar · faqat siz bilan bo'lgan davr · bugungi tavsiya, haftalik ${Number(opts.active) * 3 || 0} va maoshga qo'shilmaydi`
+                    : 'Faol bo\'lmagan o\'quvchilar · faqat siz bilan bo\'lgan davr · bugungi darslar, davomat foizi, reyting va maoshga qo\'shilmaydi'}</p></div></div>
+              <section class="oq-card is-clip" aria-labelledby="oqArT"><div class="oq-ch"><h2 class="oq-ct" id="oqArT">${esc(opts.title || 'Mening o\'quvchilarim')}</h2>
+                <div class="oq-seg" role="group" aria-label="Holat">${opts.onBack ? `<button type="button" data-back aria-pressed="false">Faol <b>${esc(String(opts.active ?? ''))}</b></button>` : ''}${seg('inactive', 'Faol emas', inN)}${showFin ? seg('finished', 'Tugatgan', finN) : ''}</div></div>
+                <div class="oq-arb">${bodyO}</div><p class="oq-arfoot">${foot}</p></section></div>`;
+            root.querySelector('[data-back]')?.addEventListener('click', () => opts.onBack());
+            root.querySelectorAll('[data-artab]').forEach(b => b.onclick = () => draw(root, { ...opts, tab: b.dataset.artab }, data));
+            root.querySelectorAll('[data-st]').forEach(b => b.onclick = () => u.openStudent(b.dataset.st));
+            return;
+        }
         root.innerHTML = `<section class="sc-card"><header class="ar-head"><h2>${esc(opts.title || 'Mening o\'quvchilarim')}</h2>
             <div class="sc-seg" role="group" aria-label="Ro'yxat">${opts.onBack ? `<button type="button" data-back aria-pressed="false">Faol${opts.active != null ? ' ' + opts.active : ''}</button>` : ''}${segBtn('inactive', `Faol emas ${inN}`)}${showFin ? segBtn('finished', `Tugatgan ${finN}`) : ''}${sales ? segBtn('changes', `O'zgarishlar ${chg.length}`) : ''}</div></header>
           <div class="ar-body">${body}<p class="ar-foot">${foot}</p></div></section>`;

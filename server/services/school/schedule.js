@@ -417,19 +417,48 @@ async function unassignedTrials(db, { from, to, lang = null }) {
     return out.sort((a, b) => a.date.localeCompare(b.date) || a.start - b.start);
 }
 // Ustozning shu oy(lar)dagi qoldirilgan darslari (kelmadi) va ularning qoplash holati — "Qoplash darsini rejalashtirish" uchun.
+// Asosiy ustoz "Kelmadi" belgilari — bitta manba (GET /attendance/absences, qoplash ro'yxati, qoplash tekshiruvi):
+// school_absences + eski yozuvlar (ustoz belgilagan, lekin "Keldi" bo'lmagan dars — staff_att_lesson_marks).
+// main_attendance faqat "Keldi"ni saqlaydi (kelmadi bo'lsa qator o'chiriladi).
+async function teacherAbsences(db, { from, to, teacherId = '' }) {
+    const month = from.slice(0, 7);
+    const own = (await db.query(`SELECT teacher_id, student_id, TO_CHAR(day,'YYYY-MM-DD') AS day, absent FROM school_absences
+        WHERE day BETWEEN $1 AND $2 AND ($3='' OR teacher_id=$3)`, [from, to, teacherId])).rows;
+    let marks = [];
+    if ((await db.query("SELECT to_regclass('public.staff_att_lesson_marks')::text AS t")).rows[0]?.t) {
+        marks = (await db.query(`SELECT m.teacher_id, m.student_id, TO_CHAR(m.lesson_date,'YYYY-MM-DD') AS day FROM staff_att_lesson_marks m
+            WHERE m.duty='main' AND m.lesson_date BETWEEN $1 AND $2 AND ($3='' OR m.teacher_id=$3)
+            AND NOT EXISTS (SELECT 1 FROM main_attendance a WHERE a.att_key = $4 || '_' || m.teacher_id AND a.student_id=m.student_id
+                AND a.day = EXTRACT(DAY FROM m.lesson_date)::int AND a.present = 1)`, [from, to, teacherId, month])).rows;
+    }
+    const key = r => `${r.teacher_id}|${r.student_id}|${r.day}`;
+    const explicit = new Map(own.map(r => [key(r), r.absent]));
+    const out = own.filter(r => r.absent).map(r => ({ teacherId: r.teacher_id, studentId: r.student_id, day: r.day }));
+    for (const m of marks) if (!explicit.has(key(m))) out.push({ teacherId: m.teacher_id, studentId: m.student_id, day: m.day });
+    return out;
+}
+
 async function missedLessons(db, teacherId, { from, to }) {
     const months = monthsOf(from, to);
-    const { rows } = await db.query(`SELECT a.student_id, LEFT(a.att_key, 7) AS month, a.day FROM main_attendance a JOIN students s ON s.id = a.student_id
+    // Eski yozuvlar (present = 0) + school_absences — faqat hozir shu ustozning o'quvchilari.
+    const { rows: legacy } = await db.query(`SELECT a.student_id, LEFT(a.att_key, 7) AS month, a.day FROM main_attendance a JOIN students s ON s.id = a.student_id
         WHERE s.teacher_id = $1 AND a.present = 0 AND LEFT(a.att_key, 7) = ANY($2::text[])`, [teacherId, months]);
+    const mine = new Set((await db.query('SELECT id FROM students WHERE teacher_id = $1', [teacherId])).rows.map(r => r.id));
+    const abs = [];
+    for (const m of months) {
+        const b = T.monthBounds(m);
+        abs.push(...(await teacherAbsences(db, { from: b.from, to: b.to, teacherId })).filter(a => mine.has(a.studentId)));
+    }
     const mk = (await db.query(`SELECT student_id, missed_date, held_date, status FROM school_makeups WHERE teacher_id = $1
         AND status IN ('planned','review','approved') AND to_char(missed_date, 'YYYY-MM') = ANY($2::text[])`, [teacherId, months])).rows;
     const by = new Map(mk.map(m => [`${m.student_id}|${dateStr(m.missed_date)}`, m]));
     const seen = new Set();
-    return rows.map(r => ({ studentId: r.student_id, date: `${r.month}-${String(r.day).padStart(2, '0')}` }))
+    return [...legacy.map(r => ({ studentId: r.student_id, date: `${r.month}-${String(r.day).padStart(2, '0')}` })),
+        ...abs.map(a => ({ studentId: a.studentId, date: a.day }))]
         .filter(x => /^\d{4}-\d{2}-\d{2}$/.test(x.date) && !seen.has(x.studentId + x.date) && seen.add(x.studentId + x.date))
         .map(x => { const m = by.get(`${x.studentId}|${x.date}`); return { ...x, makeup: m ? { status: m.status, heldDate: dateStr(m.held_date) } : null }; })
         .sort((a, b) => a.date.localeCompare(b.date));
 }
 
-module.exports = { annotateViews, unassignedTrials, missedLessons, HOLD_MINUTES, studentRow, statusOn, teacherOn, dateStr, loadContext, dayView, checkSlot, fits, book, confirmHold,
+module.exports = { annotateViews, unassignedTrials, missedLessons, teacherAbsences, HOLD_MINUTES, studentRow, statusOn, teacherOn, dateStr, loadContext, dayView, checkSlot, fits, book, confirmHold,
     transition, releaseLead, checkWeekly, addOverride, removeOverride, setHours, daySummary, redactForSales, lockTeacher, leadTrialSlots, checkLeadTrial };

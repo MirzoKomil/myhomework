@@ -1,0 +1,325 @@
+{
+ "n": 68,
+ "topic_uz": "Bank va pochtada muammoni hal qilish: Чем могу́ помо́чь?",
+ "scene": "At a bank service desk, a worried young Uzbek woman shows her blocked bank card to a calm male bank employee who is checking something on his computer.",
+ "dialogs": [
+  {
+   "id": "L68-d1",
+   "title_ru": "Моя́ ка́рта заблоки́рована",
+   "title_uz": "Kartam bloklangan",
+   "intro_uz": "Birinchi dialog. Nigoraning kartasi ishlamayapti. U bankka keldi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    },
+    {
+     "name": "Сотру́дник",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Сотру́дник",
+     "ru": "Здра́вствуйте! Чем могу́ помо́чь?",
+     "uz": "Assalomu alaykum! Qanday yordam bera olaman?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Моя́ ка́рта заблоки́рована. Я не могу́ снять де́ньги.",
+     "uz": "Kartam bloklangan. Pul yecha olmayapman."
+    },
+    {
+     "who": "Сотру́дник",
+     "ru": "Ваш па́спорт, пожа́луйста… Да, вы три ра́за ввели́ непра́вильный пин-код.",
+     "uz": "Pasportingiz, iltimos… Ha, siz uch marta noto'g'ri PIN-kod kiritgansiz."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Ой! Что мне ну́жно сде́лать?",
+     "uz": "Voy! Nima qilishim kerak?"
+    },
+    {
+     "who": "Сотру́дник",
+     "ru": "Напиши́те заявле́ние, и мы разблоки́руем ка́рту.",
+     "uz": "Ariza yozing, biz kartani blokdan chiqaramiz."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Ско́лько э́то займёт вре́мени?",
+     "uz": "Bu qancha vaqt oladi?"
+    },
+    {
+     "who": "Сотру́дник",
+     "ru": "Оди́н день. За́втра всё бу́дет гото́во.",
+     "uz": "Bir kun. Ertaga hammasi tayyor bo'ladi."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Спаси́бо за по́мощь!",
+     "uz": "Yordamingiz uchun rahmat!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Nigoraning muammosi nima?",
+     "opts": [
+      "kartasini yo'qotdi",
+      "kartasi bloklangan",
+      "pul kelmadi"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Karta nega bloklandi?",
+     "opts": [
+      "PIN-kod uch marta noto'g'ri kiritildi",
+      "muddati tugadi",
+      "bankomat yutib yubordi"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Karta qachon ishlaydi?",
+     "opts": [
+      "bir haftadan keyin",
+      "bugun",
+      "ertaga"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "снять де́ньги",
+     "alts": [
+      "оплати́ть поку́пки",
+      "перевести́ де́ньги",
+      "заплати́ть в магази́не"
+     ]
+    },
+    {
+     "base": "Оди́н день",
+     "alts": [
+      "Два дня",
+      "Три часа́",
+      "Неде́лю"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Nigora o'rniga gapiring: bankda kartangiz bilan muammoni tushuntiring va nima qilish kerakligini so'rang."
+  },
+  {
+   "id": "L68-d2",
+   "title_ru": "Банкома́т не вы́дал де́ньги",
+   "title_uz": "Bankomat pul bermadi",
+   "intro_uz": "Ikkinchi dialog. Bankomat Abdulazizga pul bermadi, lekin puli yechildi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    },
+    {
+     "name": "Сотру́дница",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Абдулази́з",
+     "ru": "Здра́вствуйте! Банкома́т не вы́дал де́ньги, но де́ньги списа́ли.",
+     "uz": "Assalomu alaykum! Bankomat pul bermadi, lekin pul yechib olindi."
+    },
+    {
+     "who": "Сотру́дница",
+     "ru": "Что случи́лось? Кака́я су́мма?",
+     "uz": "Nima bo'ldi? Qancha summa?"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Пятьсо́т ты́сяч сумо́в. Вот чек.",
+     "uz": "Besh yuz ming so'm. Mana chek."
+    },
+    {
+     "who": "Сотру́дница",
+     "ru": "Напиши́те, пожа́луйста, заявле́ние и сохрани́те квита́нцию.",
+     "uz": "Iltimos, ariza yozing va kvitansiyani saqlab qo'ying."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Когда́ мне верну́т де́ньги?",
+     "uz": "Pulimni qachon qaytarishadi?"
+    },
+    {
+     "who": "Сотру́дница",
+     "ru": "Че́рез три-пять дней.",
+     "uz": "Uch-besh kundan keyin."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "А е́сли не верну́т?",
+     "uz": "Agar qaytarishmasa-chi?"
+    },
+    {
+     "who": "Сотру́дница",
+     "ru": "Тогда́ позвони́те нам. Вот но́мер телефо́на.",
+     "uz": "Unda bizga qo'ng'iroq qiling. Mana telefon raqami."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Qancha pul yechildi?",
+     "opts": [
+      "yuz ming",
+      "besh yuz ming",
+      "bir million"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Xodim nimani saqlashni aytadi?",
+     "opts": [
+      "kvitansiyani",
+      "kartani",
+      "pasportni"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Pul qachon qaytadi?",
+     "opts": [
+      "bugun",
+      "bir oydan keyin",
+      "uch-besh kundan keyin"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "Пятьсо́т ты́сяч",
+     "alts": [
+      "Две́сти ты́сяч",
+      "Оди́н миллио́н",
+      "Три́ста ты́сяч"
+     ]
+    },
+    {
+     "base": "Банкома́т не вы́дал де́ньги",
+     "alts": [
+      "Перево́д не пришёл",
+      "Банкома́т съел ка́рту",
+      "Де́ньги не пришли́ на ка́рту"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Abdulaziz o'rniga gapiring: bankomat bilan bo'lgan muammoni tushuntiring va pul qachon qaytishini so'rang."
+  },
+  {
+   "id": "L68-d3",
+   "title_ru": "Посы́лка не пришла́",
+   "title_uz": "Posilka kelmadi",
+   "intro_uz": "Uchinchi dialog. Dilnozaning posilkasi ikki haftadan beri kelmayapti. U pochtaga keldi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    },
+    {
+     "name": "Сотру́дник",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Дильно́за",
+     "ru": "Здра́вствуйте! Моя́ посы́лка не пришла́ уже́ две неде́ли.",
+     "uz": "Assalomu alaykum! Posilkam ikki haftadan beri kelmayapti."
+    },
+    {
+     "who": "Сотру́дник",
+     "ru": "Како́й трек-но́мер?",
+     "uz": "Trek-raqami qanday?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Вот трек-но́мер. Посы́лка из Москвы́.",
+     "uz": "Mana trek-raqam. Posilka Moskvadan."
+    },
+    {
+     "who": "Сотру́дник",
+     "ru": "Мину́точку… Посы́лка сейча́с в Ташке́нте.",
+     "uz": "Bir daqiqa… Posilka hozir Toshkentda."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Когда́ она́ придёт в Андижа́н?",
+     "uz": "Andijonga qachon keladi?"
+    },
+    {
+     "who": "Сотру́дник",
+     "ru": "Че́рез два-три дня. Мы вам позвони́м.",
+     "uz": "Ikki-uch kundan keyin. Sizga qo'ng'iroq qilamiz."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "А е́сли она́ придёт повреждённая?",
+     "uz": "Agar shikastlangan holda kelsa-chi?"
+    },
+    {
+     "who": "Сотру́дник",
+     "ru": "Тогда́ напиши́те заявле́ние, и мы вернём де́ньги.",
+     "uz": "Unda ariza yozing, pulingizni qaytaramiz."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Posilka qayerdan kelyapti?",
+     "opts": [
+      "Qozondan",
+      "Moskvadan",
+      "Toshkentdan"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Posilka hozir qayerda?",
+     "opts": [
+      "Toshkentda",
+      "Andijonda",
+      "Moskvada"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Posilka Andijonga qachon keladi?",
+     "opts": [
+      "ertaga",
+      "bir haftadan keyin",
+      "ikki-uch kundan keyin"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "две неде́ли",
+     "alts": [
+      "де́сять дней",
+      "ме́сяц",
+      "три неде́ли"
+     ]
+    },
+    {
+     "base": "из Москвы́",
+     "alts": [
+      "из Каза́ни",
+      "из Кита́я",
+      "из Ту́рции"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Dilnoza o'rniga gapiring: pochtada posilkangiz kelmaganini tushuntiring va trek-raqamni ayting."
+  }
+ ]
+}

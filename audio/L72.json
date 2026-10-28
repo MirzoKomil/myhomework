@@ -1,0 +1,325 @@
+{
+ "n": 72,
+ "topic_uz": "Jonli dars: «Моя́ жизнь» taqdimoti va erkin suhbat",
+ "scene": "In a bright classroom decorated with balloons, a smiling Uzbek woman stands giving a presentation about her life while classmates and a male teacher listen and raise their hands with questions.",
+ "dialogs": [
+  {
+   "id": "L72-d1",
+   "title_ru": "Мо́жно зада́ть вопро́с?",
+   "title_uz": "Savol bersam bo'ladimi?",
+   "intro_uz": "Birinchi dialog. Nigora «Моя́ жизнь» taqdimotini tugatdi. Ustoz unga savollar beradi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    },
+    {
+     "name": "Учи́тель",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Нигора́",
+     "ru": "…В бу́дущем я хочу́ рабо́тать в Росси́и. Спаси́бо за внима́ние! Есть вопро́сы?",
+     "uz": "…Kelajakda Rossiyada ishlamoqchiman. E'tiboringiz uchun rahmat! Savollar bormi?"
+    },
+    {
+     "who": "Учи́тель",
+     "ru": "Спаси́бо, Нигора́! Мо́жно зада́ть вопро́с?",
+     "uz": "Rahmat, Nigora! Savol bersam bo'ladimi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Коне́чно, пожа́луйста.",
+     "uz": "Albatta, marhamat."
+    },
+    {
+     "who": "Учи́тель",
+     "ru": "Почему́ вы реши́ли учи́ть ру́сский язы́к?",
+     "uz": "Nega rus tilini o'rganishga qaror qildingiz?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Потому́ что ру́сский ну́жен мне для рабо́ты.",
+     "uz": "Chunki rus tili menga ish uchun kerak."
+    },
+    {
+     "who": "Учи́тель",
+     "ru": "А что бы́ло са́мым тру́дным?",
+     "uz": "Eng qiyini nima bo'ldi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Са́мым тру́дным бы́ли падежи́. Но сейча́с мне ле́гче!",
+     "uz": "Eng qiyini kelishiklar bo'ldi. Lekin hozir menga osonroq!"
+    },
+    {
+     "who": "Учи́тель",
+     "ru": "Хоро́ший отве́т! Вы говори́те о́чень хорошо́.",
+     "uz": "Yaxshi javob! Siz juda yaxshi gapiryapsiz."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Nigora kelajakda qayerda ishlamoqchi?",
+     "opts": [
+      "Rossiyada",
+      "Toshkentda",
+      "Turkiyada"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Nega Nigora rus tilini o'rganmoqda?",
+     "opts": [
+      "sayohat uchun",
+      "ish uchun",
+      "do'stlari uchun"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Nigora uchun eng qiyini nima bo'ldi?",
+     "opts": [
+      "fe'llar",
+      "talaffuz",
+      "kelishiklar"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "для рабо́ты",
+     "alts": [
+      "для учёбы",
+      "для путеше́ствий",
+      "для би́знеса"
+     ]
+    },
+    {
+     "base": "падежи́",
+     "alts": [
+      "глаго́лы движе́ния",
+      "произноше́ние",
+      "ви́ды глаго́ла"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Nigora o'rniga gapiring: nega rus tilini o'rganishga qaror qilganingizni va eng qiyini nima bo'lganini ayting."
+  },
+  {
+   "id": "L72-d2",
+   "title_ru": "Что он рассказа́л?",
+   "title_uz": "U nima gapirib berdi?",
+   "intro_uz": "Ikkinchi dialog. Dilnoza darsga kech qoldi va Boburning taqdimotini eshitmadi. Timur unga aytib beradi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    },
+    {
+     "name": "Тиму́р",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Дильно́за",
+     "ru": "Тиму́р, что рассказа́л Бобу́р? Я опозда́ла.",
+     "uz": "Timur, Bobur nimani gapirib berdi? Men kech qoldim."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Он сказа́л, что роди́лся в Андижа́не.",
+     "uz": "U Andijonda tug'ilganini aytdi."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "А где он сейча́с рабо́тает?",
+     "uz": "U hozir qayerda ishlaydi?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Он сказа́л, что рабо́тает в ба́нке. И что мечта́ет откры́ть кафе́.",
+     "uz": "Bankda ishlashini aytdi. Va kafe ochishni orzu qilishini."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Интере́сно! А учи́тель что-нибудь спроси́л?",
+     "uz": "Qiziq! Ustoz biror narsa so'radimi?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Да, он спроси́л, тру́дно ли бы́ло учи́ть ру́сский.",
+     "uz": "Ha, rus tilini o'rganish qiyinmidi, deb so'radi."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "И что Бобу́р отве́тил?",
+     "uz": "Bobur nima deb javob berdi?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Он отве́тил, что тру́дно, но о́чень интере́сно!",
+     "uz": "Qiyin, lekin juda qiziq ekanini aytdi!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Bobur qayerda tug'ilgan?",
+     "opts": [
+      "Buxoroda",
+      "Toshkentda",
+      "Andijonda"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Bobur hozir qayerda ishlaydi?",
+     "opts": [
+      "bankda",
+      "kafeda",
+      "maktabda"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Bobur rus tili haqida nima dedi?",
+     "opts": [
+      "oson",
+      "qiyin, lekin qiziq",
+      "zerikarli"
+     ],
+     "a": 1
+    }
+   ],
+   "swap": [
+    {
+     "base": "в Андижа́не",
+     "alts": [
+      "в Бухаре́",
+      "в Наманга́не",
+      "в Карши́"
+     ]
+    },
+    {
+     "base": "в ба́нке",
+     "alts": [
+      "в шко́ле",
+      "в больни́це",
+      "в магази́не"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Timur o'rniga gapiring: guruhdoshingizning taqdimotini «Он сказа́л, что…», «Она́ спроси́ла, …ли…» bilan aytib bering."
+  },
+  {
+   "id": "L72-d3",
+   "title_ru": "Что да́льше?",
+   "title_uz": "Endi nima?",
+   "intro_uz": "Uchinchi dialog. Kurs tugadi. Anton Nigorani tabriklaydi va ular nima qilish kerakligi haqida fikr almashadi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Анто́н",
+     "ru": "Нигора́, поздравля́ю с оконча́нием ку́рса!",
+     "uz": "Nigora, kursni tugatganing bilan tabriklayman!"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Спаси́бо, Анто́н! Я о́чень ра́да.",
+     "uz": "Rahmat, Anton! Juda xursandman."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Ты бу́дешь продолжа́ть учи́ть ру́сский?",
+     "uz": "Rus tilini o'rganishni davom ettirasanmi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Коне́чно! По-моему́, язы́к на́до учи́ть ка́ждый день.",
+     "uz": "Albatta! Menimcha, tilni har kuni o'rganish kerak."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Согла́сен. Я тебе́ сове́тую смотре́ть фи́льмы по-ру́сски.",
+     "uz": "Qo'shilaman. Senga ruscha film ko'rishni maslahat beraman."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Хоро́шая иде́я! А ещё я бу́ду чита́ть кни́ги.",
+     "uz": "Yaxshi fikr! Yana kitob o'qiyman."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А со мной бу́дешь говори́ть то́лько по-ру́сски!",
+     "uz": "Men bilan esa faqat ruscha gaplashasan!"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Договори́лись! Э́то са́мый лу́чший сове́т.",
+     "uz": "Kelishdik! Bu eng yaxshi maslahat."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Anton Nigorani nima bilan tabrikladi?",
+     "opts": [
+      "tug'ilgan kuni bilan",
+      "kursni tugatgani bilan",
+      "yangi ish bilan"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Nigoraning fikricha, tilni qanchalik tez-tez o'rganish kerak?",
+     "opts": [
+      "haftada bir",
+      "oyda bir",
+      "har kuni"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Anton nimani maslahat berdi?",
+     "opts": [
+      "ruscha film ko'rishni",
+      "kitob o'qishni",
+      "Moskvaga borishni"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "смотре́ть фи́льмы",
+     "alts": [
+      "слу́шать подка́сты",
+      "чита́ть но́вости",
+      "слу́шать му́зыку"
+     ]
+    },
+    {
+     "base": "с оконча́нием ку́рса",
+     "alts": [
+      "с днём рожде́ния",
+      "с но́вой рабо́той",
+      "с пра́здником"
+     ]
+    }
+   ],
+   "speak_uz": "Endi o'z fikringizni ayting: kursdan keyin rus tilini qanday davom ettirasiz? «По-моему́…», «Я бу́ду…» bilan gapiring."
+  }
+ ]
+}
