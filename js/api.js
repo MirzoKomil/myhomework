@@ -172,7 +172,15 @@ async function apiHealth() {
 
 async function apiMe() {
     const data = await apiFetch('/api/auth/me');
-    if (data.user) setSession(getToken(), data.user);
+    if (data.user) {
+        // Mijozda aniqlangan bog'lanishlar (app.js: linkedTeacherId — HR login bo'yicha) serverda yo'q;
+        // Sozlamalar (renderProfile → apiMe) ularni o'chirib yubormasin — aks holda shu sahifada
+        // "Yordamchi ustoz" yozuvi, sidebar son belgilari va qoplanmagan darslar yo'qolardi.
+        let prev = null;
+        try { prev = JSON.parse(localStorage.getItem('mh_currentUser') || 'null'); } catch { prev = null; }
+        if (prev && prev.id === data.user.id && prev.linkedTeacherId !== undefined && data.user.linkedTeacherId === undefined) data.user.linkedTeacherId = prev.linkedTeacherId;
+        setSession(getToken(), data.user);
+    }
     return data.user;
 }
 

@@ -105,9 +105,11 @@ async function workInfo(db, me) {
             rows.push(['O\'quvchilar', helped.length ? `${helped.length} ta · ${by.size} asosiy ustoz (${[...by].sort((a, b) => b[1] - a[1]).map(([n, c]) => `${shortName(n)} ${c}`).join(', ')})` : 'hali biriktirilmagan']);
             rows.push(['Ish tartibi', 'har o\'quvchi bilan haftasiga 3 aloqa · kamida 5 daqiqa · vaqti erkin']);
         } else {
-            const own = (await db.query('SELECT id, extra_data FROM students WHERE teacher_id=$1', [e.id])).rows.filter(active).length;
-            rows.push(['O\'quvchilar', `${own} ta asosiy`]);
-            if (helped.length) rows.push(['Yordamchi sifatida', `${helped.length} o'quvchi · ${helped.slice(0, 3).map(h => h.name.split(' ')[0]).join(', ')}${helped.length > 3 ? '…' : ''}`]);
+            // UstozProfil: "Yordamchi sifatida · 2 o'quvchi · Kamron Ergashev, Laziza Hamidova (asosiy ustoz Kamola M.)".
+            if (helped.length) {
+                const mains = [...new Set(helped.map(h => shortName(h.tname)).filter(Boolean))];
+                rows.push(['Yordamchi sifatida', `${helped.length} o'quvchi · ${helped.slice(0, 3).map(h => h.name).join(', ')}${helped.length > 3 ? '…' : ''}${mains.length === 1 ? ` (asosiy ustoz ${mains[0]})` : ''}`]);
+            }
             const hours = (await db.query('SELECT weekday, start_min, end_min FROM school_teacher_hours WHERE teacher_id=$1 ORDER BY weekday, start_min', [e.id]).catch(() => ({ rows: [] }))).rows;
             if (hours.length) {
                 const by = new Map();
@@ -251,7 +253,9 @@ async function salaryDetail(pool, actor, now = new Date()) {
                 .sort((a, b) => a.name.localeCompare(b.name));
             const prev = T.monthBounds(T.addDays(`${month}-01`, -1).slice(0, 7));
             const prevState = await db.query('SELECT * FROM school_assist_months WHERE month=$1', [prev.from.slice(0, 7)]).then(r => r.rows[0] || null).catch(() => null);
-            out.assist = { month, rate: rep.rate, cap: rep.cap, counted: rep.counted, amount: rep.amount, students: list,
+            // O'tgan oy KPI ("Sentyabr · berilgan · 108 aloqa") — shu hisob (monthReport) bo'yicha, faqat o'qish.
+            const prevCounted = await A.monthReport(db, me.emp.id, prev.from.slice(0, 7)).then(r => r.counted).catch(() => null);
+            out.assist = { month, rate: rep.rate, cap: rep.cap, counted: rep.counted, amount: rep.amount, students: list, prevCounted,
                 possible: list.reduce((n, s) => n + s.possible, 0), daysLeft: T.daysBetween(today, T.monthBounds(month).to),
                 prevMonth: prev.from.slice(0, 7), prevState: prevState ? { prelimAt: prevState.prelim_at, objectionUntil: S.dateStr(prevState.objection_until), finalAt: prevState.final_at, paidAt: prevState.paid_at } : null };
         }

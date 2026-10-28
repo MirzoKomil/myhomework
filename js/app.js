@@ -6669,7 +6669,9 @@ async function handleProfilePasswordChange() {
     try {
         await apiChangePassword(current, next, !!document.getElementById('profilePwdOthers')?.checked);
         if (err) err.textContent = '';
-        showNotification('Muvaffaqiyatli', 'Parol yangilandi', 'success');
+        // showNotification bu sahifada yo'q edi — muvaffaqiyatli o'zgarishdan keyin ham "xato" chiqardi.
+        if (typeof showMiniToast === 'function') showMiniToast('Parol yangilandi'); else alert('Parol yangilandi');
+        window.dispatchEvent(new CustomEvent('profile:password-changed'));
         ['profileCurrentPwd', 'profileNewPwd', 'profileConfirmPwd'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
         bindProfilePasswordUi();
     } catch (e) {

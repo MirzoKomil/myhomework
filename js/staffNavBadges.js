@@ -41,6 +41,19 @@
     window.addEventListener('staff:feed', e => { last = e.detail?.events || []; draw(last); });
     // Davomat / sinov o'zgarganda sonlar darhol yangilansin.
     let t = null;
-    window.addEventListener('school:changed', () => { clearTimeout(t); t = setTimeout(() => window.staffNotify?.refresh?.(), 800); });
-    window.staffNavBadges = { applyRole, draw };
+    const later = () => { clearTimeout(t); t = setTimeout(() => window.staffNotify?.refresh?.(), 800); };
+    window.addEventListener('school:changed', later);
+    // Ustoz/yordamchida "Sinov darslari" bandida bitta son belgisi (shu modul, .tgs-nb). js/trialUI.js o'z belgisini
+    // (.tl-navcnt) qo'yadi — u ustozda yashiriladi (css/sozlamalar.css), lekin o'zgarsa (sinov tasdiqlandi, natija yozildi)
+    // bu yerdagi son ham serverdan qayta olinadi — ikki joyda bir xil raqam.
+    function watchTrial() {
+        const el = item('trial-lessons');
+        if (!el || el.dataset.tgsWatch) return;
+        el.dataset.tgsWatch = '1';
+        new MutationObserver(muts => { if (me().role === 'teacher' && muts.some(m => [...m.addedNodes, ...m.removedNodes, m.target].some(n => n.classList?.contains('tl-navcnt') || n.parentElement?.classList?.contains('tl-navcnt')))) later(); })
+            .observe(el, { childList: true, subtree: true, characterData: true });
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', watchTrial); else watchTrial();
+    const applyRoleBase = applyRole;
+    window.staffNavBadges = { applyRole: user => { applyRoleBase(user); watchTrial(); window.ustozShell?.refreshRole?.(); }, draw };
 })();
