@@ -924,7 +924,10 @@ function updateRdPageHead(tab = _rdCurrentTab) {
     }
     const active = pinned.querySelector('.section-nav-item.active');
     const lang = pinned.querySelector('.subject-tab.active');
-    const parts = [active && !active.hidden ? active.textContent.trim() : '', lang ? lang.textContent.trim() + ' yoʻnalishi' : ''].filter(Boolean);
+    // Bitta tildagi xodimda almashtirgich yashirin — sarlavhada uning o'z tili.
+    const own = document.body.classList.contains('lang-fixed') && typeof getUserOwnLang === 'function' ? getUserOwnLang() : null;
+    const langLabel = own ? (own === 'russian' ? 'Rus tili' : 'Ingliz tili') : lang ? lang.textContent.trim() : '';
+    const parts = [active && !active.hidden ? active.textContent.trim() : '', langLabel ? langLabel + ' yoʻnalishi' : ''].filter(Boolean);
     head.querySelector('h1').textContent = title;
     head.querySelector('p').textContent = parts.join(' · ');
 }
@@ -10588,17 +10591,27 @@ function applyLangPickerPolicy(user = getCurrentUser()) {
         const src = btn.querySelector('img.subject-flag')?.getAttribute('src') || '';
         return /\/ru\./.test(src) ? 'russian' : /\/gb\./.test(src) ? 'english' : null;
     };
+    if (!document.getElementById('langFixedStyle')) {
+        const st = document.createElement('style'); st.id = 'langFixedStyle';
+        st.textContent = '[data-lang-fixed="1"]{display:none!important}';
+        document.head.appendChild(st);
+    }
     const sweep = () => {
         document.querySelectorAll('img.subject-flag').forEach(img => {
             const group = img.closest('button')?.parentElement;
-            if (!group || group.dataset.langFixed) return;
+            if (!group) return;
             const btns = [...group.querySelectorAll(':scope > button')];
             if (btns.length < 2 || !btns.every(b => langOf(b))) return;
             group.dataset.langFixed = '1';
-            group.style.setProperty('display', 'none', 'important');
+            // Bo'lim o'z almashtirgichini keyin (handler bog'langach) qayta "Ingliz tili"ga qo'yishi mumkin —
+            // har safar tekshiriladi; cheksiz siklga tushmaslik uchun guruhga 10 soniyada 3 martagacha.
             const mine = btns.find(b => langOf(b) === own);
             const active = btns.find(b => b.classList.contains('active'));
-            if (mine && active !== mine) mine.click();
+            if (!mine || active === mine) return;
+            const now = Date.now(), log = (group._langClicks || []).filter(x => now - x < 10000);
+            if (log.length >= 3) return;
+            group._langClicks = [...log, now];
+            mine.click();
         });
     };
     sweep();
@@ -14789,6 +14802,8 @@ function renderMarketing() {
         btn.style.display = visibleSections.includes(btn.dataset.marketingSection) ? '' : 'none';
     });
     const langs = window.targetMonitorUI ? window.targetMonitorUI.allowedLangs(cu) : ['english', 'russian'];
+    const ownMkt = document.body.classList.contains('lang-fixed') ? getUserOwnLang(cu) : null;
+    if (ownMkt) _marketingLang = ownMkt;
     if (!restrictedToSms && langs.length && !langs.includes(_marketingLang)) _marketingLang = langs[0];
     document.querySelectorAll('[data-marketing-lang]').forEach(b => {
         b.style.display = restrictedToSms || langs.includes(b.dataset.marketingLang) ? '' : 'none';
