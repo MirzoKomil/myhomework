@@ -64,7 +64,18 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
             const ls = rows.map(r => (r.l === 'russian' ? 'russian' : 'english'));
             if (ls.length === 1) return ls[0];
         }
+        // ROP o'z til yo'nalishini ko'radi (HR'dagi lang: english/russian; 'both' — tanlaydi).
+        if (req.user.role === 'rop') {
+            const own = await ropLang(req);
+            if (own) return own;
+        }
         return LANGS.has(req.query.lang) ? req.query.lang : null;
+    }
+    async function ropLang(req) {
+        const rows = (await pool.query(`SELECT lang FROM hr_employees WHERE LOWER(TRIM(login)) = LOWER(TRIM($1))
+            OR LOWER(TRIM(name)) = LOWER(TRIM($2)) ORDER BY (LOWER(TRIM(login)) = LOWER(TRIM($1))) DESC LIMIT 1`, [req.user.email || '', req.user.name || ''])).rows;
+        const l = rows[0]?.lang;
+        return LANGS.has(l) ? l : null;
     }
     // Guruh nomi tili: ?lang= → sotuv menejeri lidlari → xodimning HR'dagi tili.
     async function groupLang(req) {
@@ -98,6 +109,8 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         }
         const lang = await reqLang(req);
         if (FULL.has(role)) return { views: await views(req, from, to, teacherId ? [teacherId] : null, lang), scope: 'full', lang };
+        // ROP: hamma ustoz, o'quvchi ismlari va bugungi holat (o'z tilida) — "Kim bo'sh?" (mode=free) esa sotuvdagidek.
+        if (role === 'rop' && req.query.mode !== 'free') return { views: await views(req, from, to, teacherId ? [teacherId] : null, lang), scope: 'manage', lang };
         if (SALES.has(role)) {
             const v = await views(req, from, to, teacherId ? [teacherId] : null, lang);
             const mid = await managerId(req);
@@ -113,12 +126,24 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
             LEFT JOIN users u ON LOWER(TRIM(u.email)) = LOWER(TRIM(he.login))
             WHERE he.role IN ('oqituvchi','ingliz-oqituvchi','rus-oqituvchi') AND COALESCE(he.status,'active') <> 'inactive' ORDER BY he.name`)).rows;
         let summary = null;
-        if (r.scope === 'full' && from === to) {
+        if ((r.scope === 'full' || r.scope === 'manage') && from === to) {
             const att = await pool.query(`SELECT student_id, present FROM main_attendance WHERE att_key LIKE $1 AND day=$2`, [from.slice(0, 7) + '\\_%', Number(from.slice(8))]);
             summary = S.daySummary(r.views, new Map(att.rows.map(a => [a.student_id, !!a.present])), from === T.nowLocal().date ? T.nowLocal().min : null);
         }
+        // Jadval v2: darslar holati (keldi/kelmadi), qoplash, sinov lidining ismi — sotuvga yuborilmaydi.
+        let extra = {};
+        if (r.scope !== 'sales') {
+            await S.annotateViews(pool, r.views, { from, to });
+            if (r.scope === 'own') {
+                const me = await teacherOf(req);
+                extra.missed = await S.missedLessons(pool, me.id, { from, to });
+            } else {
+                extra.unassigned = await S.unassignedTrials(pool, { from, to, lang: r.lang });
+                extra.managers = (await pool.query('SELECT id, name FROM sales_managers').catch(() => ({ rows: [] }))).rows;
+            }
+        }
         const tl = r.lang ? teachers.filter(t => fits(langOf(t), r.lang)) : teachers;
-        return { from, to, scope: r.scope, lang: r.lang || null, teachers: r.scope === 'own' ? undefined : tl, views: r.views, summary };
+        return { from, to, scope: r.scope, lang: r.lang || null, teachers: r.scope === 'own' ? undefined : tl, views: r.views, summary, ...extra };
     }));
     // "Kim bo'sh?" — sotuv/ROP uchun: sinovga ochiq bo'sh oraliqlar, 30 daqiqa qadam bilan.
     router.get('/schedule/free', handle(async req => {
@@ -623,6 +648,24 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         else need(req, MANAGE);
         if (!assistantId) throw T.fail(400, 'Yordamchini tanlang');
         return A.monthReport(pool, assistantId, month);
+    }));
+    // Tavsiya jadvali va bajarilgan aloqalar (jadval v2). Saqlanmaydi — o'quvchi dars kunlaridan hisoblanadi.
+    //  • ustoz/yordamchi — faqat o'zi yordamchi bo'lgan o'quvchilar;
+    //  • admin/boshliq — hamma (yoki ?assistantId=); ROP — o'z tili bo'yicha; sotuvga yo'q.
+    router.get('/assist/plan', handle(async req => {
+        const from = T.assertDate(req.query.from || T.nowLocal().date);
+        const to = T.assertDate(req.query.to || from);
+        if (T.daysBetween(from, to) > 41) throw T.fail(400, 'Oraliq 6 haftadan oshmasin');
+        let assistantIds = null, subject = null;
+        if (req.user.role === 'teacher') assistantIds = [(await teacherOf(req)).id];
+        else {
+            need(req, MANAGE);
+            subject = await reqLang(req);
+            if (req.query.assistantId) assistantIds = [String(req.query.assistantId)];
+        }
+        const r = await A.plan(pool, { assistantIds, from, to, subject });
+        const names = r.assistantIds.length ? (await pool.query('SELECT id, name, role FROM hr_employees WHERE id = ANY($1::text[])', [r.assistantIds])).rows : [];
+        return { ...r, assistants: names.map(n => ({ id: n.id, name: n.name, role: n.role })) };
     }));
     // Asosiy ustoz, ROP, sotuv (o'z o'quvchilari) — o'quvchi bo'yicha aloqalar (faqat o'qish).
     router.get('/students/:id/contacts', handle(async req => {

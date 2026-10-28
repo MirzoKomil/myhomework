@@ -10,6 +10,71 @@
         { id: 'teacher-rescheduled', label: "Ustoz boshqa vaqtga ko'chirdi" },
         { id: 'attended-wants-other-teacher', label: "Qatnashdi, boshqa ustozni ham ko'rmoqchi" }
     ];
+    // Ustoz "Vaqt to'g'ri kelmaydi" deganda (UstozSinov dizayni). Eski REASONS ham qabul qilinadi
+    // (ustoz ilovasi va Telegram bot shulardan foydalanadi).
+    const REJECT_REASONS = [
+        { id: 'teacher-busy', label: 'Shu vaqtda bandman' },
+        { id: 'teacher-health', label: "Sog'lig'im" },
+        { id: 'teacher-other', label: 'Boshqa sabab' }
+    ];
+    const MAX_PROPOSALS = 3;
+    // Barcha rollarda bir xil nom: ustoz kabineti, admin "Sinov darsi", ROP nazorati (va keyin sotuv).
+    const PHASES = {
+        unassigned: { label: 'Ustoz biriktirilmagan', tone: 'warn' },
+        rejected: { label: 'Rad etildi', tone: 'warn' },
+        pending: { label: 'Tasdiq kutilmoqda', tone: 'mute' },
+        overdue: { label: "Muddati o'tdi · natija kerak", tone: 'bad' },
+        accepted: { label: 'Tasdiqlandi', tone: 'info' },
+        result: { label: 'Natija kutilmoqda', tone: 'warn' },
+        done: { label: "O'tkazildi", tone: 'ok' },
+        noshow: { label: 'Lid kelmadi', tone: 'bad' },
+        sold: { label: 'Sotildi', tone: 'ok' },
+        rebooked: { label: "Qayta qo'yildi", tone: 'mute' },
+        closed: { label: 'Sinovdan chiqarildi', tone: 'mute' }
+    };
+    const SOLD_STATUSES = new Set(['tolov-yopildi']);
+    // Sinov darsi holati (bitta manba). opts: { leadStatus, durationMin, now (ms), archived }.
+    // Tasdiqlanmagan va vaqti o'tib ketgan sinov "osilib" qolmaydi — "Muddati o'tdi · natija kerak".
+    function phase(request, opts = {}) {
+        const now = Number.isFinite(opts.now) ? opts.now : Date.now();
+        const status = opts.leadStatus;
+        const r = request || {};
+        if (r.state === 'completed') {
+            if (!r.attended) return 'noshow';
+            return SOLD_STATUSES.has(status) ? 'sold' : 'done';
+        }
+        if (opts.archived) return 'rebooked';
+        if (status && status !== 'sinov-darsida') return SOLD_STATUSES.has(status) ? 'sold' : 'closed';
+        if (!r.teacherId) return 'unassigned';
+        if (r.state === 'rejected') return 'rejected';
+        const start = Date.parse(r.scheduledAt);
+        const dur = Math.max(15, Number(opts.durationMin) || 30);
+        if (r.state === 'accepted') return Number.isFinite(start) && start + dur * 60000 <= now ? 'result' : 'accepted';
+        return Number.isFinite(start) && start <= now ? 'overdue' : 'pending';
+    }
+    function durationOf(lead) {
+        return Number(lead?.paymentOnboarding?.lessonDuration) || parseInt(lead?.paymentSurvey?.tariff, 10) || 30;
+    }
+    function leadPhase(lead, now) {
+        return phase(request(lead), { leadStatus: lead?.status, now, durationMin: durationOf(lead) });
+    }
+    function cleanProposals(list, now) {
+        if (list == null) return [];
+        if (!Array.isArray(list)) throw Object.assign(new Error("Taklif qilingan vaqtlar noto'g'ri"), { status: 400 });
+        const nowMs = Date.parse(now);
+        const out = [];
+        for (const v of list) {
+            const ms = Date.parse(String(v || ''));
+            if (!Number.isFinite(ms)) throw Object.assign(new Error("Taklif qilingan vaqt noto'g'ri"), { status: 400 });
+            if (ms <= nowMs) throw Object.assign(new Error("Taklif qilingan vaqt o'tib ketgan"), { status: 400 });
+            if (ms > nowMs + 30 * 86400000) throw Object.assign(new Error("Taklif 30 kun ichida bo'lishi kerak"), { status: 400 });
+            const iso = new Date(ms).toISOString();
+            if (!out.includes(iso)) out.push(iso);
+        }
+        if (out.length > MAX_PROPOSALS) throw Object.assign(new Error(`Ko'pi bilan ${MAX_PROPOSALS} ta vaqt taklif qiling`), { status: 400 });
+        return out.sort();
+    }
+    const cleanNote = (v, max) => String(v == null ? '' : v).trim().slice(0, max);
     function booking(lead) {
         const ob = lead?.paymentOnboarding || {};
         return { teacherId: String(ob.teacherId || lead?.trialLesson?.teacherId || ''),
@@ -57,20 +122,27 @@
         if (payload.action === 'reject') {
             if (current.state === 'rejected') return null;
             if (current.state !== 'pending') throw Object.assign(new Error('So‘rov allaqachon ko‘rib chiqilgan'), { status: 409 });
-            const reason = REASONS.find(r => r.id === payload.reasonId);
+            const reason = REJECT_REASONS.find(r => r.id === payload.reasonId) || REASONS.find(r => r.id === payload.reasonId);
             if (!reason) throw Object.assign(new Error('Rad etish sababini tanlang'), { status: 400 });
+            const proposals = cleanProposals(payload.proposals, now);
+            const note = cleanNote(payload.note, 500);
             return { ...current, state: 'rejected', attended: false, reasonId: reason.id,
-                reasonLabel: reason.label, rejectedAt: now, rejectedBy: actor.id };
+                reasonLabel: reason.label, rejectedAt: now, rejectedBy: actor.id,
+                ...(proposals.length ? { proposals } : {}), ...(note ? { rejectNote: note } : {}) };
         }
         if (payload.action !== 'outcome' || typeof payload.attended !== 'boolean') {
             throw Object.assign(new Error('Sinov darsi natijasini tanlang'), { status: 400 });
         }
-        if (current.state !== 'accepted') throw Object.assign(new Error('Avval sinov darsi so‘rovini tasdiqlang'), { status: 409 });
+        // Tasdiqlanmay qolgan, lekin vaqti o'tgan sinovga ham natija yoziladi (osilib qolmasin).
+        const overdue = current.state === 'pending' && Date.parse(current.scheduledAt) <= Date.parse(now);
+        if (current.state !== 'accepted' && !overdue) throw Object.assign(new Error('Avval sinov darsi so‘rovini tasdiqlang'), { status: 409 });
         const reason = REASONS.find(r => r.id === payload.reasonId);
         if (!payload.attended && !reason) throw Object.assign(new Error('Sinov darsi nima uchun o‘tilmaganini tanlang'), { status: 400 });
         const present = payload.attended || reason?.id === 'attended-wants-other-teacher';
+        const note = cleanNote(payload.note, 1000);
         return { ...current, state: 'completed', attended: present, reasonId: payload.attended ? '' : reason.id,
-            reasonLabel: payload.attended ? '' : reason.label, completedAt: now, completedBy: actor.id };
+            reasonLabel: payload.attended ? '' : reason.label, completedAt: now, completedBy: actor.id,
+            ...(overdue ? { confirmedLate: true } : {}), ...(note ? { resultNote: note } : {}) };
     }
-    return { REASONS, booking, sameBooking, request, attended, matchesFilter, syncSchedule, transition };
+    return { REASONS, REJECT_REASONS, PHASES, MAX_PROPOSALS, phase, leadPhase, durationOf, cleanProposals, booking, sameBooking, request, attended, matchesFilter, syncSchedule, transition };
 });
