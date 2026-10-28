@@ -13,7 +13,10 @@ const ALLOWED = [
     { method: 'PUT', re: /^\/api\/target-ads\/?$/ },              // o'z kunlik target ma'lumoti (servis til/sana ruxsatini tekshiradi)
     { method: 'POST', re: /^\/api\/auth\/(logout|change-password|avatar)\/?$/ },
     { method: 'PATCH', re: /^\/api\/auth\/me\/?$/ },
-    { method: 'DELETE', re: /^\/api\/auth\/sessions\/.+$/ }
+    { method: 'DELETE', re: /^\/api\/auth\/sessions\/.+$/ },
+    // O'z bildirishnomalarini o'qilgan qilish va sozlash, yo'riqnoma bilan tanishish (faqat o'ziga tegishli).
+    { method: 'POST', re: /^\/api\/staff\/(notify\/read|guides\/[^/]+\/ack)\/?$/ },
+    { method: 'PUT', re: /^\/api\/staff\/notify\/prefs\/?$/ }
 ];
 
 function readOnlyRoles({ findUserById }) {

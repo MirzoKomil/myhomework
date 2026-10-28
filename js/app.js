@@ -6697,6 +6697,9 @@ function renderProfileBody() {
     }
     body.hidden = false;
     document.querySelectorAll('.profile-system-panel').forEach(panel => panel.classList.remove('active'));
+    body.classList.remove('ss-body');
+    // Profil, Mening maoshim, Bildirishnoma sozlamalari — yangi dizayn (js/staffSettings.js, /api/staff).
+    if (window.staffSettings?.handles(_profileSection)) { window.staffSettings.render(_profileSection, body); return; }
 
     let html = '';
     switch (_profileSection) {
@@ -6801,6 +6804,7 @@ async function renderProfile() {
         archiveNavBtn.style.display = canArchive ? '' : 'none';
         if (!canArchive && _profileSection === 'archive') _profileSection = 'edit';
     }
+    if (window.staffSettings) _profileSection = window.staffSettings.adjustNav(_profileUser, _profileSection);
     switchProfileSection(_profileSection);
 }
 
@@ -25651,6 +25655,8 @@ function openGuideArticle(id) {
     }
 
     body.innerHTML = `<div class="script-article-content">${renderScriptContentHtml(g.content)}</div>`;
+    // Admin/HR: kim "Tanishib chiqdim"ni bosgani (server yozuvi).
+    window.staffGuides?.adminAcks(id, body);
 
     listView.style.display = 'none';
     articleView.classList.add('active');
@@ -25863,6 +25869,8 @@ function deleteGuide(id) {
 // --- Har bir lavozim uchun o'qish rejimi (sidebar > Yo'riqnomalar) ---
 
 function renderMyGuides() {
+    // Yangi dizayn (UstozYoriqnoma): ro'yxat + maqola + "Tanishib chiqdim" (js/staffSettings.js).
+    if (window.staffGuides) return window.staffGuides.render();
     const grid = document.getElementById('myGuidesGrid');
     if (!grid) return;
 
@@ -25876,6 +25884,7 @@ function renderMyGuides() {
 }
 
 function openMyGuideArticle(id) {
+    if (window.staffGuides) return window.staffGuides.open(id);
     const guides = getItem(STORAGE_KEYS.guides, []);
     const g = guides.find(x => x.id === id);
     if (!g) return;
