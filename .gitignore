@@ -50,3 +50,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Moliya nazorati (finCtx) server diskiga yozadigan zanjir boshi va ogohlantirishlar — repo'ga tushmasin
+/data/finance-guard/
