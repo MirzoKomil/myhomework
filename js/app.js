@@ -8666,7 +8666,7 @@ function _thxTeacherShort(teacherId) {
     return parts[0] ? parts[0] + (parts[1] ? ' ' + parts[1][0] + '.' : '') : '—';
 }
 
-function renderTeacherTodayBlock(user) {
+function renderTeacherTodayBlock(user, { todoSlot = true } = {}) {
     if (user?.role !== 'teacher' || !user.linkedTeacherId) return '';
     const ids = getTeacherAssignmentIds(user.linkedTeacherId);
     if (!ids.size) return '';
@@ -8730,7 +8730,8 @@ function renderTeacherTodayBlock(user) {
             <button type="button" class="btn-primary-sm" data-teacher-open-att>Oylik davomatni ochish</button>
         </section>` : '';
     // "Bajarish kerak" va "Yordamchi ustozlik" bloklari serverdan (/api/school) keyin to'ldiriladi — schoolTeacher.homeExtras.
-    return `<div id="dashboardTeacherToday"><div data-thx-todo></div>${mainPanel}</div>`;
+    // UstozBosh: "Bajarish kerak" butun kenglikda — renderTeacherHome uni grid ustiga alohida qo'yadi (todoSlot: false).
+    return `<div id="dashboardTeacherToday">${todoSlot ? '<div data-thx-todo></div>' : ''}${mainPanel}</div>`;
 }
 
 // "Bugungi darslar" ro'yxatidagi inline Keldi/Kelmadi/Mezonlar tugmalarini
@@ -9480,8 +9481,7 @@ function renderTeacherHome(user, now = new Date()) {
                     { l: 'Bugun', v: `${s.todayCount} dars`, small: s.unmarked ? `<span class="kbx-bad">${s.unmarked} tasi belgilanmagan</span>` : (() => { const w = (s.todayList || []).filter(x => x.state !== 'done').length; return w ? `${w} tasi kutilmoqda` : s.todayCount ? 'hammasi belgilangan' : 'dars yoʻq'; })() },
                     { l: 'Reyting', v: '…', attrs: 'data-thx-rating-kpi' },
                     { l: 'Oʻquvchilar', v: String(s.students), small: s.helped ? `yordamchi: ${s.helped}` : '' }
-                ],
-                art: { img: 'images/kobalt-teacher.webp', label: 'Shu oy', value: `${s.came} ta dars`, small: 'oʻtildi' }
+                ]
             });
             const nx = s.todayList.find(l => l.state === 'now') || s.todayList.find(l => l.state === 'wait');
             // "Keyingi dars": dars mazmuni (js/lessonStart.js to'ldiradi) va "Darsni boshlash".
@@ -9500,10 +9500,8 @@ function renderTeacherHome(user, now = new Date()) {
                     primary: { label: 'Davomat', attrs: 'data-thx-go="teachers-section"' }, secondary: { label: 'Jadval', attrs: 'data-thx-go="timetable"' } });
             return `<div class="kbx-top">${plan}${dark}</div>`;
         })()}
-        <div class="thx-grid"><div class="thx-main">${renderTeacherTodayBlock(user)}</div>
-        <aside class="thx-side">
-            <section class="card ahx-card thx-assist" data-thx-assist hidden></section>
-            <section class="card ahx-card rd-thx-rank-card" data-thx-rating-card><div class="ahx-card-h"><h3>Ustozlar reytingi</h3></div><p class="dashboard-empty">Yuklanmoqda…</p></section>
+        <div data-thx-todo></div>
+        <div class="thx-grid thx-grid--ub"><div class="thx-main">${renderTeacherTodayBlock(user, { todoSlot: false })}
             <section class="card ahx-card thx-guides"><div class="ahx-card-h"><h3>Yoʻriqnomalar</h3><button type="button" class="ahx-link" data-thx-guides>Barchasi →</button></div>
             ${(() => {
                 const tags = resolveGuideAudienceTags(user);
@@ -9511,7 +9509,10 @@ function renderTeacherHome(user, now = new Date()) {
                 return myGuides.length
                     ? `<ul class="rd-thx-guides-list">${myGuides.map(g => `<li><button type="button" class="ahx-link" data-thx-guide="${escapeHtml(g.id)}">${escapeHtml(g.title || 'Yoʻriqnoma')}</button></li>`).join('')}</ul>`
                     : '<p class="dashboard-empty">Sizga yoʻriqnoma biriktirilganda shu yerda chiqadi.</p>';
-            })()}</section>
+            })()}</section></div>
+        <aside class="thx-side">
+            <section class="card ahx-card rd-thx-rank-card" data-thx-rating-card><div class="ahx-card-h"><h3>Ustozlar reytingi</h3></div><p class="dashboard-empty">Yuklanmoqda…</p></section>
+            <section class="card ahx-card thx-assist" data-thx-assist hidden></section>
         </aside></div>
     </div>`;
 }
@@ -10526,7 +10527,9 @@ function applyLangPickerPolicy(user = getCurrentUser()) {
     applyLangPickerPolicy._langOf = langOf;
     if (!canPick && !document.getElementById('langFixedStyle')) {
         const st = document.createElement('style'); st.id = 'langFixedStyle';
-        st.textContent = '[data-lang-fixed="1"]{display:none!important}';
+        // :not(#_) — id darajasidagi aniqlik: teamApp.css (R7) dagi `html.rd .subject-tabs:not(...)` va `.leads-lang-tabs`
+        // `display:inline-flex !important` qoidasi oddiy atribut selektoridan kuchli bo'lib, almashtirgichni ko'rsatib qo'yardi.
+        st.textContent = '[data-lang-fixed="1"]:not(#_){display:none!important}';
         document.head.appendChild(st);
     }
     // Admin/rahbar ikkala tilni boshqaradi: almashtirgich ko'rinadi, oxirgi tanlangan til eslab qolinadi
