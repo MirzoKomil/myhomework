@@ -524,6 +524,23 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
     router.post('/assist/contacts', handle(req => write(req, c => A.mark(c, req.user, req.body || {}).then(x => ({ contact: x })))));
     router.delete('/assist/contacts/:id', handle(req => write(req, c => A.removeOwnToday(c, req.user, req.params.id).then(x => ({ contact: x })))));
     router.post('/assist/corrections', handle(req => write(req, c => A.adminCorrect(c, req.user, req.body || {}).then(x => ({ contact: x })))));
+    // Bir yordamchining o'tgan kunlardagi aloqalarini bir martada kiritish (masalan oktyabr: belgilash tizimi 27-oktgacha yo'q edi).
+    // Hammasi bitta tranzaksiyada; shu o'quvchi bilan shu kunda yozuv bor bo'lsa — o'tkazib yuboriladi.
+    router.post('/assist/corrections/bulk', handle(req => write(req, async c => {
+        need(req, FULL);
+        const b = req.body || {};
+        const items = Array.isArray(b.items) ? b.items.slice(0, 400) : [];
+        if (!items.length) throw T.fail(400, 'Kamida bitta kun tanlang');
+        let added = 0, skipped = 0;
+        for (const it of items) {
+            const day = T.assertDate(it.day);
+            const dup = await c.query('SELECT 1 FROM school_assist_contacts WHERE student_id=$1 AND day=$2 AND removed_at IS NULL LIMIT 1', [it.studentId, day]);
+            if (dup.rows.length) { skipped++; continue; }
+            await A.adminCorrect(c, req.user, { studentId: it.studentId, assistantId: b.assistantId, day, channel: it.channel || b.channel, minutes: it.minutes || b.minutes, reason: b.reason });
+            added++;
+        }
+        return { added, skipped };
+    })));
     router.post('/assist/late-requests', handle(req => write(req, async c => {
         const me = await teacherOf(req);
         const day = T.assertDate(req.body?.day);

@@ -507,3 +507,19 @@ html.rd[data-theme="dark"] .okx-warn { color: var(--kb-warn-fg); }
 
 /* Tungi rejim: kartadagi kulrang yorliqlar o'qilsin */
 #scCardPage .sc-pill--mute, .okx .sc-pill--mute, #scCardPage .sc-mt, .okx .sc-mt { color: var(--text-muted, #4B5563); }
+/* O'tgan kunlarni kiritish (yordamchi aloqalari) */
+.sc-bklist { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+.sc-bkrow { border: 1px solid var(--border, #E6EAF2); border-radius: 14px; padding: 10px 12px; }
+.sc-bkh { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.sc-bkh b { font-size: 14px; }
+.sc-bkh small { color: var(--text-muted, #4B5563); font-size: 12px; flex: 1; min-width: 200px; }
+.sc-bkn { font-weight: 800; font-size: 13px; padding: 2px 8px; border-radius: 999px; background: #EEF1F6; }
+.sc-bkn.is-over { background: #FEF0C7; color: #93370D; }
+.sc-bkd { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.sc-bk { width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--border, #E6EAF2); background: #fff; font: inherit; font-size: 12px; font-weight: 800; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1; cursor: pointer; color: #0B1220; }
+.sc-bk i { font-style: normal; font-size: 9.5px; font-weight: 600; color: #4B5563; }
+.sc-bk.is-adv { background: #EAF3FF; border-color: #9CC7FF; }
+.sc-bk.is-on { background: #0065D6; border-color: #0065D6; color: #fff; }
+.sc-bk.is-on i { color: #DCEBFF; }
+.sc-bk:disabled { background: #EEF1F6; color: #98A2B3; cursor: not-allowed; border-style: dashed; }
+.sc-bk:focus-visible { outline: 2px solid #0065D6; outline-offset: 2px; }
