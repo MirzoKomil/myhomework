@@ -691,9 +691,11 @@ footer{border-top:1px solid var(--line);padding-block:32px;font-size:14px;color:
 /* ===== SOZLAMALAR (saytni joylashda shu yerni to'ldiring) ===== */
 const CONFIG = {
   // 40 ta gap PDF fayli havolasi (domwork.uz'dagi hozirgi fayl manzili)
-  PDF_URL: "",  // bo'sh bo'lsa sovg'a @Domworkru_bot orqali beriladi
-  // Ariza qoldirgan odam sovg'ani olish uchun shu botga o'tadi
-  BOT_URL: "https://t.me/Domworkru_bot",
+  PDF_URL: "",
+  // Ariza qoldirgan odamga CRM shaxsiy @Domworkuz_bot havolasini qaytaradi (voronka yoqilgan bo'lsa).
+  // Bu — zaxira manzil: CRM havola bermasa (voronka o'chiq), "Rahmat" sahifasi shu yerga olib boradi.
+  // @Domworkru_bot'da sovg'a beradigan /start yo'q — shuning uchun zaxira bo'sh (admin profiliga).
+  BOT_URL: "",
   TELEGRAM_ADMIN: "https://t.me/domwork_admin"
 };
 /* ============================================================== */

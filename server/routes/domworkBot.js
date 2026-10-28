@@ -40,6 +40,7 @@ module.exports = function createRouter({ pool, runtime, authRequired }) {
     router.get('/my-telegram-link', handle(req => store.ownAdminLink(pool, req.user)));
     router.post('/my-telegram-link/unlink', handle(req => queue.transaction(pool, db => store.unlinkOwnAdmin(db, req.user, req.body))));
     router.get('/settings', handle(() => store.settings(pool)));
+    router.get('/funnel/report', handle(req => require('../services/domworkBot/funnel').report(pool, Math.min(365, Math.max(1, Number(req.query.days) || 30)))));
     router.put('/settings', handle(req => queue.transaction(pool,db => controls.saveSettings(db,req.user,req.body))));
     router.get('/bindings', handle(async () => ({groups:(await pool.query('SELECT id,type,chat_id,invite_link,active,revision,title FROM domwork_bot_groups ORDER BY type')).rows})));
     router.put('/bindings', handle(async req => {

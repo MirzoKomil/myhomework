@@ -56,11 +56,13 @@ function startHash(command){
 function redact(update){
     const text=update?.message?.text||'';
     if(!update?.message)return update;
-    const {_studentLinkHash:ignored,_staffLinkHash:ignoredStaff,...message}=update.message;
+    const {_studentLinkHash:ignored,_staffLinkHash:ignoredStaff,_leadLinkHash:ignoredLead,...message}=update.message;
     const tokenHash=startHash(text);
     if(tokenHash)return{...update,message:{...message,text:'/start student-link',_studentLinkHash:tokenHash}};
     const staffHash=require('./staffLink').startHash(text);
-    return{...update,message:staffHash?{...message,text:'/start staff-link',_staffLinkHash:staffHash}:message};
+    if(staffHash)return{...update,message:{...message,text:'/start staff-link',_staffLinkHash:staffHash}};
+    const leadHash=require('./leadLink').startHash(text);
+    return{...update,message:leadHash?{...message,text:'/start lead-link',_leadLinkHash:leadHash}:message};
 }
 async function claim(db,message){
     const telegramId=policy.telegramId(message?.from?.id),tokenHash=/^[a-f0-9]{64}$/.test(message?._studentLinkHash||'')?message._studentLinkHash:startHash(message?.text);

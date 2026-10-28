@@ -91,7 +91,9 @@ export function createHandler(source, { env = process.env, fetcher = (...args) =
           error: response.status === 429 ? 'So‘rovlar ko‘paydi. Bir ozdan keyin qayta yuboring' : 'CRM arizani tasdiqlamadi. Qayta yuborib ko‘ring'
         });
       // No CRM record, credentials or other leads are exposed to this public endpoint.
-      return reply(200, { ok: true, id: result.id, duplicate: result.duplicate === true });
+      // @Domworkuz_bot shaxsiy havolasi (faqat aniq shu shakldagi t.me havola uzatiladi).
+      const bot = typeof result.telegramUrl === 'string' && /^https:\/\/t\.me\/Domworkuz_bot\?start=ld_[A-Za-z0-9_-]{43}$/.test(result.telegramUrl) ? result.telegramUrl : '';
+      return reply(200, { ok: true, id: result.id, duplicate: result.duplicate === true, ...(bot ? { bot } : {}) });
     } catch {
       // An uncertain timeout must keep the SAME externalId for a visitor's retry.
       return reply(502, { error: 'Ulanish uzildi. Ma’lumotlaringiz saqlanib turibdi, qayta yuborib ko‘ring' });
