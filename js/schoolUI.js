@@ -318,7 +318,7 @@
         const st = card.status;
         if (st === 'frozen') { const f = card.statuses.filter(s => s.status === 'frozen').pop(); return `<span class="sc-pill sc-pill--info">Muzlatilgan${f?.to ? ' · ' + esc(fmtDate(f.to, false)) + ' gacha' : ''}</span>`; }
         if (st === 'left' && card.finished) { const l = card.statuses.filter(s => s.status === 'left').pop(); return `<span class="sc-pill sc-pill--ok">Kursni tugatgan${l ? ' · ' + esc(fmtDate(addDays(l.from, -1), false)) : ''}</span>`; }
-        if (st === 'left') { const l = card.statuses.filter(s => s.status === 'left').pop(); return `<span class="sc-pill sc-pill--bad">Chiqib ketgan${l ? ' · ' + esc(fmtDate(addDays(l.from, -1), false)) : ''}</span>`; }
+        if (st === 'left') { const l = card.statuses.filter(s => s.status === 'left').pop(); return `<span class="sc-pill sc-pill--bad">Chiqib ketgan${l ? ' · ' + esc(fmtDate(l.from, false)) : ''}</span>`; }
         const fr = card.statuses.find(s => s.status === 'frozen' && s.from > today());
         return `<span class="sc-pill sc-pill--ok">Faol</span>${fr ? ` <span class="sc-pill sc-pill--info">Muzlatiladi: ${esc(fmtDate(fr.from, false))}–${esc(fmtDate(fr.to, false))}</span>` : ''}`;
     }

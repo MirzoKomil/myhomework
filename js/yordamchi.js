@@ -225,7 +225,7 @@
             const rule = (r.short || 0) + (r.sameDay || 0) + (r.extraText || 0);
             if (rule) out.push(`<span class="sc-mt">${rule} ta qoida bo'yicha hisoblanmadi</span>`);
             const l = left.get(s.id);
-            if (l) out.push(`<span class="sc-pill sc-pill--mute">${esc(dS(U().addDays(l.from, -1)))} chiqib ketgan · o'qigan davri hisoblanadi</span>`);
+            if (l) out.push(`<span class="sc-pill sc-pill--mute">${esc(dS(l.from))} chiqib ketgan · o'qigan davri hisoblanadi</span>`);
             return out.join(' ') || '—';
         };
         const total = rows.reduce((n, x) => n + (x.r.counted || 0), 0), amount = rows.reduce((n, x) => n + (x.r.amount || (x.r.counted || 0) * RATE), 0);

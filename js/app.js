@@ -73,7 +73,9 @@ function saveLastTab(tab, ctx) {
 function loadLastTab() {
     try {
         const raw = localStorage.getItem(LAST_TAB_STORAGE_KEY);
-        return raw ? JSON.parse(raw) : null;
+        const last = raw ? JSON.parse(raw) : null;
+        // Olib tashlangan sahifa (masalan eski "Aloqalar" — school-contacts) saqlangan bo'lsa, tiklanmaydi.
+        return last && last.tab && document.getElementById('tab-' + last.tab) ? last : null;
     } catch { return null; }
 }
 
@@ -268,7 +270,7 @@ function applyRoleBasedAccess(user) {
             // shu sabab butunlay yashirilmaydi, faqat renderTeachersSection()
             // ROP uchun sub-navigatsiyani o'sha bitta bo'limga cheklaydi
             // (Davomat/Sinov darsi/Reyting/Darslik/Elektron doska hamon yopiq).
-            hiddenForRop = new Set(['finance', 'hr', 'analitika', 'school-assist', 'school-contacts']);
+            hiddenForRop = new Set(['finance', 'hr', 'analitika', 'school-assist']);
             hiddenForRop.forEach(tab => {
                 const el = sidebar.querySelector(`.menu-item[data-tab="${tab}"]`);
                 if (el) el.style.display = 'none';
@@ -278,7 +280,7 @@ function applyRoleBasedAccess(user) {
             // uchun (u haqiqiy nishon lavozim bo'lgani va HR Bo'limi undan
             // yashiringani sabab) — admin/boshliq esa uni HR Bo'limi >
             // Yo'riqnomalar orqali yozadi, alohida punktga muhtoj emas.
-            hiddenForRop = new Set(['guides', 'school-contacts']);
+            hiddenForRop = new Set(['guides']);
             hiddenForRop.forEach(tab => { const el = sidebar.querySelector(`.menu-item[data-tab="${tab}"]`); if (el) el.style.display = 'none'; });
         }
         // 17-ish: sahifa obnovleniya (refresh) qilinganda foydalanuvchi
@@ -695,11 +697,6 @@ async function bootApp() {
             currentUser.linkedTeacherLang = detectedTeacherLang;
             setCurrentUser(currentUser);
         }
-        // "Aloqalar" — faqat yordamchi ustoz (o'quvchisi bor bo'lsa) uchun.
-        // 29-okt: asosiy ustoz yordamchi bo'la olmaydi — faqat HR lavozimi 'yordamchi'.
-        const isAssistant = linked?.role === 'yordamchi';
-        const contactsMenu = document.querySelector('.menu-item[data-tab="school-contacts"]');
-        if (contactsMenu && !isAssistant) contactsMenu.remove();
     }
 
     applyLangPickerPolicy(currentUser);
@@ -1262,7 +1259,6 @@ function renderTab(tab) {
         case 'school-approvals': window.schoolUI?.renderApprovals(document.getElementById('schoolApprovalsRoot')); break;
         case 'school-groups': window.schoolUI?.renderGroups(document.getElementById('schoolGroupsRoot')); break;
         case 'school-assist': (window.adminNazorat ? window.adminNazorat.renderAssist : window.schoolUI?.renderAssistAdmin)?.(document.getElementById('schoolAssistRoot')); break;
-        case 'school-contacts': window.schoolTeacher?.renderContacts(document.getElementById('schoolContactsRoot')); break;
     }
     if (typeof renderNotificationPanel === 'function') renderNotificationPanel();
 }
