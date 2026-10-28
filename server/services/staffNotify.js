@@ -99,7 +99,10 @@ async function telegramLive(db, userId) {
         const t = (await db.query("SELECT to_regclass('domwork_bot_settings') AS s, to_regclass('domwork_bot_links') AS l")).rows[0];
         if (!t?.s || !t?.l) return false;
         const on = (await db.query('SELECT data FROM domwork_bot_settings WHERE singleton=1')).rows[0]?.data?.staffNotifyEnabled === true;
-        return on && (await db.query("SELECT 1 FROM domwork_bot_links WHERE account_kind='user' AND account_id=$1 AND NOT paused", [userId])).rows.length > 0;
+        if (!on || !(await db.query("SELECT 1 FROM domwork_bot_links WHERE account_kind='user' AND account_id=$1 AND NOT paused", [userId])).rows.length) return false;
+        // "Ulangan" faqat bot haqiqatan yuborib turgan bo'lsa (so'nggi 10 daqiqada shu xodim uchun ishlagan).
+        if (!(await db.query("SELECT to_regclass('staff_notify_tg_state') AS t")).rows[0]?.t) return false;
+        return (await db.query("SELECT 1 FROM staff_notify_tg_state WHERE user_id=$1 AND last_push_at>NOW()-INTERVAL '10 minutes'", [userId])).rows.length > 0;
     } catch { return false; }
 }
 // Tinch soatlarda ham keladigan shoshilinch turlar.
@@ -471,7 +474,9 @@ async function telegramPush(pool, now = new Date(), { budgetMs = 20000 } = {}) {
         if (settings.staffNotifyEnabled !== true || !(await db.query("SELECT to_regclass('staff_notify_prefs') AS t")).rows[0]?.t) return null;
         await db.query(TG_SCHEMA);
         await db.query("DELETE FROM staff_notify_tg_sent WHERE sent_at<NOW()-INTERVAL '60 days'");
-        return (await db.query("SELECT telegram_id,account_id FROM domwork_bot_links WHERE account_kind='user' AND NOT paused ORDER BY account_id")).rows;
+        // Eng uzoq kutganlar birinchi — vaqt chegarasida ham hech kim doim navbatdan qolib ketmaydi.
+        return (await db.query(`SELECT l.telegram_id,l.account_id FROM domwork_bot_links l LEFT JOIN staff_notify_tg_state s ON s.user_id=l.account_id
+            WHERE l.account_kind='user' AND NOT l.paused ORDER BY s.last_push_at NULLS FIRST, l.account_id`)).rows;
     });
     if (!ready) return 0;
     const started = Date.now(); let sent = 0;

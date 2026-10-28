@@ -43,7 +43,7 @@ test('CRM staff notifications reach Telegram — synthetic data',{skip:!url},asy
   await pool.query("UPDATE domwork_bot_settings SET data=data||'{\"staffNotifyEnabled\":true}'::jsonb");
   await t.test('first run only sets a baseline — existing items are not flooded',async()=>{
    assert.equal(await push(NOON),0);assert.equal((await sent()).length,0);
-   assert.equal((await N.getPrefs(pool,{id:'u-s'})).channels.telegram.connected,true);
+   await pool.query('UPDATE staff_notify_tg_state SET last_push_at=NOW()');assert.equal((await N.getPrefs(pool,{id:'u-s'})).channels.telegram.connected,true);
   });
   await t.test('a new event goes to Telegram once, with a CRM button',async()=>{
    await guide('g-new','Yangi sotuv skripti');
