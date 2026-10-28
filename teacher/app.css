@@ -125,3 +125,49 @@ button.btn,button.chip{font:inherit}
 .li.tap{cursor:pointer}
 .empty{text-align:center;padding:28px 16px;color:#4B5563;font-size:14px}
 a{color:#0057B8}
+
+/* ── v2: jadval, qoplash, sinov, sahifalar ── */
+button.li,a.li{border-left:0;border-right:0;border-bottom:0;background:none;font:inherit;color:inherit;width:100%;text-align:left;cursor:pointer;text-decoration:none}
+button.card{cursor:pointer}
+.linkb{border:0;background:none;font:inherit;font-weight:700;color:#0057B8;padding:0;cursor:pointer;min-height:40px;display:inline-flex;align-items:center}
+.small.linkb{font-size:12.5px}
+.chev{color:#98A2B3;display:inline-flex;flex:none}
+.days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.days button{display:flex;flex-direction:column;align-items:center;gap:2px;min-height:58px;justify-content:center;border-radius:14px;color:#374151;background:#FFFFFF;border:1px solid #E6EAF2;font:inherit;cursor:pointer;padding:0}
+.days button b{font-size:15px}
+.days button.on{color:#FFFFFF;background:#0065D6;border-color:#0065D6}
+.days button.off{color:#98A2B3;border-color:#EEF1F6}
+.blk{flex:1;min-width:0;border-radius:12px;background:#EEF1F6;padding:10px 12px;display:flex;align-items:center;gap:8px;border:0;font:inherit;color:inherit;text-align:left;cursor:pointer;min-height:48px}
+div.blk{cursor:default}
+.blk.free{background:#DCFAE6}
+.blk.next{background:#EAF3FF;box-shadow:inset 0 0 0 1px #7FB2F0}
+.blk.mk{background:#F4EBFF}
+.blk.bad{background:#FEE4E2}
+.blk.warn{background:#FFFAEB;box-shadow:inset 0 0 0 1px #F5B971}
+.blk.shut{background:repeating-linear-gradient(135deg,#F2F4F7 0 8px,#E4E7EC 8px 16px)}
+.blk .btn{margin-left:auto}
+.wk{font-size:11.5px;border-radius:10px;padding:6px 8px;font-weight:700;background:#EEF1F6;color:#0B1220}
+.rad{display:flex;gap:12px;align-items:center;min-height:56px;border:1px solid #E6EAF2;background:#FFFFFF;border-radius:14px;padding:8px 12px;cursor:pointer}
+.rad.on{border-color:#0065D6;background:#EAF3FF}
+.rad input{width:20px;height:20px;accent-color:#0065D6;flex:none;margin:0}
+fieldset[disabled] .rad{opacity:.6;cursor:default}
+.slots{display:flex;gap:8px;flex-wrap:wrap}
+.slots .btn{min-width:64px}
+.pick{display:flex;flex-wrap:wrap;gap:6px}
+.pick button{border:0;min-height:40px;padding:0 14px;border-radius:999px;font:inherit;font-size:12px;font-weight:800;background:#EEF1F6;color:#374151;cursor:pointer}
+.pick button.on{background:#EAF3FF;color:#0057B8;box-shadow:inset 0 0 0 1px #7FB2F0}
+.evi{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex:none}
+.newdot{width:8px;height:8px;border-radius:50%;background:#0065D6;margin-top:6px;flex:none}
+.path{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:3px}
+.path span{height:12px;border-radius:3px;background:#EEF1F6;border:1px solid #E6EAF2}
+.kpi{text-align:left}
+button.kpi{font:inherit;color:inherit}
+.article p,.article ul,.article ol{margin:0}
+.article h1,.article h2,.article h3{margin:4px 0 0;font-size:16px;font-weight:800}
+.article li{margin:2px 0}
+.field input[type=time],.field input[type=number]{appearance:none;-webkit-appearance:none}
+.btn[disabled]{opacity:.55;cursor:default}
+.offline{display:flex;align-items:center;gap:10px}
+.ell{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.field input{min-width:0;max-width:100%;box-sizing:border-box}
+.note svg,.offline svg{flex:none}
