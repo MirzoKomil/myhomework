@@ -477,12 +477,22 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         const ready = (await pool.query("SELECT to_regclass('public.payment_records')::text AS t")).rows[0]?.t;
         const voids = ready && (await pool.query("SELECT to_regclass('public.payment_record_voids')::text AS t")).rows[0]?.t;
         const leadId = extra.leadRef?.id || null;
-        const rows = ready ? (await pool.query(`SELECT r.id, r.amount, TO_CHAR(r.paid_date,'YYYY-MM-DD') AS paid_date, r.method, r.form, r.manager_id
-            ${voids ? ", EXISTS (SELECT 1 FROM payment_record_voids v WHERE v.record_id=r.id) AS voided" : ', false AS voided'}
-            FROM payment_records r WHERE r.student_id=$1 OR ($2::text IS NOT NULL AND r.lead_id=$2) ORDER BY r.paid_date DESC, r.id`, [row.id, leadId])).rows : [];
+        const rows = ready ? (await pool.query(`SELECT r.id, r.amount, TO_CHAR(r.paid_date,'YYYY-MM-DD') AS paid_date, r.method, r.form, r.manager_id, r.receipt_url, u.name AS actor_name, u.role AS actor_role
+            ${voids ? ", EXISTS (SELECT 1 FROM payment_record_voids v WHERE v.record_id=r.id) AS voided, (SELECT v.reason FROM payment_record_voids v WHERE v.record_id=r.id) AS void_reason" : ', false AS voided, NULL AS void_reason'}
+            FROM payment_records r LEFT JOIN users u ON u.id=r.actor_id WHERE r.student_id=$1 OR ($2::text IS NOT NULL AND r.lead_id=$2) ORDER BY r.paid_date DESC, r.id`, [row.id, leadId])).rows : [];
         const names = new Map((await pool.query('SELECT id, name FROM hr_employees')).rows.map(r => [r.id, r.name]));
-        return { payments: rows.map(r => ({ id: r.id, amount: Number(r.amount), date: r.paid_date, method: r.method, form: r.form, voided: !!r.voided, manager: names.get(r.manager_id) || '' })),
-            tariff: extra.tariff || '', monthlyPrice: extra.monthlyPrice || null, paymentDueDate: extra.paymentDueDate || null, debtAmount: extra.debtAmount ?? null };
+        // Shartnoma (lid so'rovnomasidan, faqat o'qish): raqam, turi, kurs summasi.
+        let contract = null;
+        if (leadId) {
+            const lx = (await pool.query('SELECT extra_data FROM leads WHERE id=$1', [leadId])).rows[0]?.extra_data;
+            const l = typeof lx === 'object' && lx ? lx : JSON.parse(lx || '{}'), ob = l.paymentOnboarding || {}, ps = l.paymentSurvey || {};
+            const total = Number(ps.totalAmount) || null;
+            if (ob.contractNumber || total) contract = { number: ob.contractNumber ? String(ob.contractNumber) : '', type: ob.contractTypeLabel || '', total, paymentType: ps.paymentTypeLabel || ps.paymentType || '' };
+        }
+        return { payments: rows.map(r => ({ id: r.id, amount: Number(r.amount), date: r.paid_date, method: r.method, form: r.form, voided: !!r.voided, voidReason: r.void_reason || '',
+                receipt: /^\/uploads\/[\w-]+\.(?:png|jpe?g|webp|pdf)$/i.test(r.receipt_url || '') || /^\/api\/finance\/evidence\/[0-9a-f-]{36}$/.test(r.receipt_url || '') ? r.receipt_url : '', manager: names.get(r.manager_id) || '', actor: r.actor_name || '', actorRole: r.actor_role || '' })),
+            tariff: extra.tariff || '', monthlyPrice: extra.monthlyPrice || null, paymentDueDate: extra.paymentDueDate || null, debtAmount: extra.debtAmount ?? null,
+            paidAmount: extra.paidAmount ?? null, startDate: extra.startDate || null, contract };
     }));
     router.get('/students/:id/sales', handle(async req => {
         const { scope, extra } = await cardRow(req);
@@ -571,20 +581,60 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         const by = new Map(); for (const s of statuses) { if (!by.has(s.student_id)) by.set(s.student_id, []); by.get(s.student_id).push(s); }
         let me = null, mid = null; const isSales = req.user.role === 'sales_manager';
         if (req.user.role === 'teacher') me = (await teacherOf(req)).id; else if (isSales) mid = await managerId(req); else need(req, MANAGE);
-        const out = [];
+        const out = [], changed = [];
+        const recent = T.addDays(today, -30);
         for (const r of rows) {
             const st = S.studentRow(r), state = S.statusOn(by.get(r.id) || [], today);
             const myPast = me ? hist.filter(h => h.student_id === r.id && h.teacher_id === me && h.to_date && S.dateStr(h.to_date) < today) : [];
             const mine = me ? (r.teacher_id === me || r.assistant_teacher_id === me || myPast.length) : isSales ? O.soldBy(st, mid) : true;
             if (!mine) continue;
             const moved = me && myPast.length && r.teacher_id !== me && r.assistant_teacher_id !== me;
-            if (state === 'active' && !moved) continue;
+            // Sotuv: ustozi yaqinda (30 kun) almashgan faol o'quvchi — ma'lumot uchun, alohida bo'lim.
+            if (state === 'active' && !moved) {
+                const ch = !me && hist.filter(h => h.student_id === r.id && h.to_date && S.dateStr(h.to_date) >= recent && S.dateStr(h.to_date) <= today).slice(-1)[0];
+                if (ch) changed.push({ id: r.id, from: ch.teacher_id, to: r.teacher_id, date: S.dateStr(T.addDays(S.dateStr(ch.to_date), 1)), reason: ch.reason || '' });
+                continue;
+            }
             const last = (by.get(r.id) || []).slice(-1)[0];
-            out.push({ id: r.id, name: r.name, avatarUrl: st.avatarUrl, state: moved && state === 'active' ? 'moved' : state,
-                from: last ? S.dateStr(last.from_date) : myPast.length ? S.dateStr(myPast.slice(-1)[0].to_date) : null,
-                to: last?.to_date ? S.dateStr(last.to_date) : null, reason: last?.reason || '' });
+            const mv = moved && state === 'active', past = myPast.slice(-1)[0];
+            out.push({ id: r.id, name: r.name, avatarUrl: st.avatarUrl, state: mv ? 'moved' : state,
+                from: mv ? S.dateStr(past.to_date) : last ? S.dateStr(last.from_date) : past ? S.dateStr(past.to_date) : null,
+                to: !mv && last?.to_date ? S.dateStr(last.to_date) : null, reason: mv ? past.reason || '' : last?.reason || '',
+                role: me ? (r.teacher_id === me || (moved && myPast.length) ? 'main' : 'assistant') : null,
+                withMe: me && myPast.length ? { from: S.dateStr(myPast[0].from_date), to: S.dateStr(myPast.slice(-1)[0].to_date) } : null });
         }
-        return { students: out };
+        // Kartalar uchun qo'shimcha (faqat o'qish): jadval, ustozlar, o'tilgan darslar, aloqalar, ilovadagi dars.
+        // Ustoz/yordamchi — faqat o'z davri; summa va to'lov yo'q (sotuv/admin — to'lov sanasi).
+        const ids = [...out.map(x => x.id), ...changed.map(x => x.id)];
+        if (ids.length) {
+            const names = new Map((await pool.query('SELECT id, name FROM hr_employees')).rows.map(r => [r.id, r.name]));
+            const rowBy = new Map(rows.map(r => [r.id, r]));
+            const att = (await pool.query(`SELECT student_id, att_key, COUNT(*)::int AS n FROM main_attendance WHERE student_id = ANY($1::text[]) AND present = 1 GROUP BY student_id, att_key`, [ids])).rows;
+            const con = (await pool.query(`SELECT student_id, assistant_id, TO_CHAR(day,'YYYY-MM') AS m, COUNT(*)::int AS n, TO_CHAR(MIN(day),'YYYY-MM-DD') AS first, TO_CHAR(MAX(day),'YYYY-MM-DD') AS last FROM school_assist_contacts
+                WHERE student_id = ANY($1::text[]) AND outcome <> 'no_answer' AND removed_at IS NULL GROUP BY student_id, assistant_id, TO_CHAR(day,'YYYY-MM')`, [ids])).rows;
+            const grp = new Map((await pool.query('SELECT student_id, name, tg_link FROM school_student_groups WHERE student_id = ANY($1::text[])', [ids])).rows.map(g => [g.student_id, g]));
+            let prog = {}; try { prog = await require('../services/academicHub').progressForIds(pool, ids); } catch { prog = {}; }
+            const money = !me;
+            const detail = id => {
+                const r = rowBy.get(id), st = S.studentRow(r), x = {};
+                x.teacherId = r.teacher_id || ''; x.teacherName = names.get(r.teacher_id) || '';
+                x.assistantId = r.assistant_teacher_id || ''; x.assistantName = names.get(r.assistant_teacher_id) || '';
+                x.schedule = { day: r.lesson_day_of_week, days: T.patternLabel(r.lesson_day_of_week || 1), time: r.lesson_time || '' };
+                x.startDate = st.startDate || null;
+                const mineAtt = att.filter(a => a.student_id === id && (!me || a.att_key.endsWith('_' + me)));
+                x.lessons = mineAtt.reduce((n, a) => n + a.n, 0);
+                const mineCon = con.filter(c => c.student_id === id && (!me || c.assistant_id === me));
+                x.contacts = { total: mineCon.reduce((n, c) => n + c.n, 0), byMonth: Object.fromEntries(mineCon.map(c => [c.m, c.n])),
+                    first: mineCon.map(c => c.first).sort()[0] || null, last: mineCon.map(c => c.last).sort().pop() || null };
+                x.reached = prog[id]?.reached ?? null;
+                if (!me || r.teacher_id === me || r.assistant_teacher_id === me) { const g = grp.get(id); x.group = g ? { name: g.name, link: g.tg_link || '' } : null; }
+                if (money) { const ex = typeof r.extra_data === 'object' && r.extra_data ? r.extra_data : JSON.parse(r.extra_data || '{}'); x.paymentDueDate = ex.paymentDueDate || null; }
+                return x;
+            };
+            for (const s of out) Object.assign(s, detail(s.id));
+            for (const c of changed) Object.assign(c, detail(c.id), { name: rowBy.get(c.id).name, avatarUrl: S.studentRow(rowBy.get(c.id)).avatarUrl, fromName: names.get(c.from) || '' });
+        }
+        return { students: out, changed };
     }));
 
     // ── Sotuv so'rovlari ─────────────────────────────────────────────────────
