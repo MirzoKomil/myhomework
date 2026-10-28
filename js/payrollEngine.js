@@ -127,18 +127,21 @@
             const monthDays = new Date(Date.UTC(Number(block.key.slice(0, 4)), Number(block.key.slice(5, 7)), 0)).getUTCDate();
             const byContacts = usesContacts(block.key);
             const attendance = byContacts ? contacts : assistant ? source.assistantAttendance : source.mainAttendance;
-            const calendarCount = byContacts ? CONTACT_CAP : assistant ? Math.round(monthDays * 3 / 7) : expected.length;
+            // 'approved-v1' (makeupPolicyFrom oyidan): asosiy ustozga faqat o'quvchining dars kunidagi "Keldi"
+            // va admin tasdiqlagan qoplash darslari hisoblanadi (alohida kun — o'sha kun, qo'shaloq — +1 dars).
+            const byMakeups = !assistant && source.makeupPolicy === 'approved-v1' && block.key >= String(source.makeupPolicyFrom || '');
+            const studentDayList = byMakeups ? studentLessonDays(block.key, s, pattern) : null;
+            // Shu siyosatda oylik reja — O'QUVCHINING o'sha oydagi jonli darslari soni (Du·Ch·Ju yoki Se·Pa·Sh, 12–14):
+            // ustozga ajratilgan tarif ÷ o'quvchining shu oydagi darslari × o'tilgan darslar (29-okt qarori).
+            const calendarCount = byContacts ? CONTACT_CAP : assistant ? Math.round(monthDays * 3 / 7) : byMakeups ? studentDayList.length : expected.length;
             const limit = byContacts ? 0 : assistant ? settings.assistant.maxLessons : settings.teacher.maxLessons;
             const expectedCount = limit > 0 ? Math.min(calendarCount, limit) : calendarCount;
             const tariff = assistant ? settings.assistant.rate : settings.teacher.rates[s.lessonDuration || teacher.lessonDuration || 15];
             const entries = attendance[`${block.key}_${employee.id}`]?.[s.id] || {};
             const hire = date(employee.startDate || employee.joinDate);
             const studentStart = date(s.startDate || s.joinDate);
-            // 'approved-v1' (makeupPolicyFrom oyidan): asosiy ustozga faqat o'quvchining dars kunidagi "Keldi"
-            // va admin tasdiqlagan qoplash darslari hisoblanadi (alohida kun — o'sha kun, qo'shaloq — +1 dars).
-            const byMakeups = !assistant && source.makeupPolicy === 'approved-v1' && block.key >= String(source.makeupPolicyFrom || '');
             const inRange = d => d && inPeriod(d, p) && d >= block.start && d <= block.end && (!hire || d >= hire) && (!studentStart || d >= studentStart);
-            const studentDays = byMakeups ? new Set(studentLessonDays(block.key, s, pattern)) : null;
+            const studentDays = byMakeups ? new Set(studentDayList) : null;
             const presentDays = Object.entries(entries).filter(([day, present]) => {
                 const d = date(block.key + '-' + String(day).padStart(2, '0'));
                 return (present === 1 || present === true) && inRange(d)

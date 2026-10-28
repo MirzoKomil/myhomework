@@ -510,12 +510,14 @@ function calculateKpiSalary(teacher, monthVal, attendanceStore, students) {
             }
         }
         const rawLessons = presentDays.length + extra;
-        const lessons = Math.min(rawLessons, expectedPerStudent);
+        // payrollEngine bilan bir xil: 2026-10 dan reja — o'quvchining o'z dars kunlari soni (12–14).
+        const planN = byMakeups ? (lessonLimit > 0 ? Math.min(lessonSet.size, lessonLimit) : lessonSet.size) : expectedPerStudent;
+        const lessons = Math.min(rawLessons, planN);
         const studentBase = getMonthlyBaseSalary(s.lessonDuration || duration, teacher);
-        const earned = Math.round(studentBase / expectedPerStudent * lessons);
+        const earned = planN > 0 ? Math.round(studentBase / planN * lessons) : 0;
         total += earned;
         totalLessons += lessons;
-        return { id: s.id, name: s.name, lessons, earned, maxEarned: studentBase };
+        return { id: s.id, name: s.name, lessons, expected: planN, earned, maxEarned: studentBase };
     });
 
     const maxPossible = perStudent.reduce((sum, s) => sum + s.maxEarned, 0);
