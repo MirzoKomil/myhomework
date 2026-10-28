@@ -90,11 +90,20 @@ const CATALOG = {
     ],
     other: [['Boshqa', [['guide_new', 'Yangi yo\'riqnoma', '', [0, 1], true]]]]
 };
-// Telegram orqali yuborish hali ulanmagan. Ungacha Telegram tanlangan xabar ham panelda ko'rinadi —
-// aks holda (masalan, standart "Telegram ✓ · Brauzer ✗" turlarda) xodim xabarni umuman olmay qoladi.
-// Bot ulanganda true qilinadi va panel faqat "Brauzer" tanloviga qaraydi.
-const TELEGRAM_LIVE = false;
-function shownInPanel(p) { return !p || p.web !== false || (!TELEGRAM_LIVE && p.tg !== false); }
+// Telegram yuborish xodim uchun "jonli" bo'lsa (bot sozlamasi yoqilgan + xodim @Domworkuz_bot'ga ulangan + to'xtatmagan),
+// panel faqat "Brauzer" tanloviga qaraydi. Aks holda Telegram tanlangan xabar ham panelda ko'rinadi — xodim xabarni yo'qotmasin.
+function shownInPanel(p, live) { return !p || p.web !== false || (!live && p.tg !== false); }
+async function telegramLive(db, userId) {
+    if (process.env.DOMWORK_BOT_ENABLED !== 'true') return false;
+    try {
+        const t = (await db.query("SELECT to_regclass('domwork_bot_settings') AS s, to_regclass('domwork_bot_links') AS l")).rows[0];
+        if (!t?.s || !t?.l) return false;
+        const on = (await db.query('SELECT data FROM domwork_bot_settings WHERE singleton=1')).rows[0]?.data?.staffNotifyEnabled === true;
+        return on && (await db.query("SELECT 1 FROM domwork_bot_links WHERE account_kind='user' AND account_id=$1 AND NOT paused", [userId])).rows.length > 0;
+    } catch { return false; }
+}
+// Tinch soatlarda ham keladigan shoshilinch turlar.
+const URGENT = new Set(['hold_expiring', 'trial_confirm', 'trial_unassigned']);
 function catalogFor(me) {
     const kinds = me.kind === 'teacher' && me.assistantDuty ? ['teacher', 'assistant'] : [me.kind in CATALOG ? me.kind : 'other'];
     const seen = new Set(), groups = [];
@@ -127,10 +136,11 @@ async function getPrefs(db, actor) {
     const saved = row.prefs || {};
     const tg = (await db.query('SELECT telegram FROM staff_profile_extra WHERE user_id=$1', [me.user.id])).rows[0]?.telegram || '';
     // @Domworkuz_bot'ga ulanganmi (CRM → Bildirishnomalar → "Ulash"). Jadval hali yaratilmagan bo'lsa — yo'q.
+    const live = await telegramLive(db, me.user.id);
     const botLinked = !!(await db.query("SELECT to_regclass('domwork_bot_links') AS t")).rows[0]?.t
         && (await db.query("SELECT 1 FROM domwork_bot_links WHERE account_kind='user' AND account_id=$1", [me.user.id])).rows.length > 0;
     return { kind: me.kind, groups, prefs: effectivePrefs(groups, saved.types || {}), quiet: saved.quiet || QUIET_DEFAULT,
-        channels: { telegram: { username: tg, botLinked, connected: false, note: TELEGRAM_LIVE ? '' : 'Telegram orqali yuborish hali ulanmagan — tanlovingiz saqlanadi, ungacha bu xabarlar qo\'ng\'iroqcha panelida chiqadi' }, browser: { connected: true } } };
+        channels: { telegram: { username: tg, botLinked, connected: live, note: live ? '' : 'Telegram orqali yuborish hali yoqilmagan — tanlovingiz saqlanadi, ungacha bu xabarlar qo\'ng\'iroqcha panelida chiqadi' }, browser: { connected: true } } };
 }
 async function savePrefs(db, actor, body = {}) {
     const me = await ST.identify(db, actor);
@@ -355,20 +365,31 @@ async function guideEvents(db, me, now, ev) {
     }
 }
 
-async function feed(db, actor, now = new Date()) {
+async function collect(db, actor, now) {
     const me = await ST.identify(db, actor);
     const groups = catalogFor(me), row = await loadPrefs(db, me.user.id);
     const prefs = effectivePrefs(groups, row.prefs?.types || {});
     const ev = [], errors = [];
-    const run = async (name, fn) => { try { await fn(db, me, now, ev); } catch (e) { errors.push(name); console.error('[staff-notify]', name, e.code || e.message); } };
+    // Tranzaksiya ichida (bot scheduler) bitta bo'lim xatosi butun tranzaksiyani buzmasin — savepoint.
+    const tx = typeof db.domworkAfterCommit === 'function';
+    const run = async (name, fn) => {
+        if (tx) await db.query('SAVEPOINT sn_' + name);
+        try { await fn(db, me, now, ev); if (tx) await db.query('RELEASE SAVEPOINT sn_' + name); }
+        catch (e) { if (tx) await db.query('ROLLBACK TO SAVEPOINT sn_' + name); errors.push(name); console.error('[staff-notify]', name, e.code || e.message); }
+    };
     if (me.kind === 'teacher' && me.emp) await run('teacher', teacherEvents);
     if (me.assistantDuty && me.emp) await run('assistant', assistantEvents);
     if ((me.kind === 'teacher' || me.kind === 'assistant') && me.emp) await run('common', teacherCommon);
     if (me.kind === 'sales') await run('sales', salesEvents);
     if (me.kind === 'admin' || me.kind === 'rop') await run('manager', managerEvents);
     await run('guides', guideEvents);
+    return { me, row, prefs, ev, errors };
+}
+async function feed(db, actor, now = new Date()) {
+    const { me, row, prefs, ev, errors } = await collect(db, actor, now);
+    const live = await telegramLive(db, me.user.id);
     const seen = new Set();
-    const list = ev.filter(e => shownInPanel(prefs[e.type]) && !seen.has(e.id) && seen.add(e.id));
+    const list = ev.filter(e => shownInPanel(prefs[e.type], live) && !seen.has(e.id) && seen.add(e.id));
     const ids = list.map(e => e.id);
     const reads = ids.length ? new Set((await db.query('SELECT event_id FROM staff_notify_reads WHERE user_id=$1 AND event_id = ANY($2::text[])', [me.user.id, ids])).rows.map(r => r.event_id)) : new Set();
     const before = row.read_before ? new Date(row.read_before).getTime() : 0;
@@ -391,4 +412,57 @@ async function markRead(db, actor, body = {}) {
     return { ok: true };
 }
 
-module.exports = { CATALOG, catalogFor, effectivePrefs, getPrefs, savePrefs, feed, markRead };
+// ── Telegramga yuborish (@Domworkuz_bot scheduler'i har 2 daqiqada chaqiradi) ──
+// Har xodim uchun shu panel voqealari hisoblanadi; "Telegram" tanlangan va hali yuborilmaganlari botga ketadi.
+// Birinchi marta (yoki yoqilganda) mavjud voqealar "yuborilgan" deb belgilanadi — eski xabarlar to'planib kelmaydi.
+const TG_SCHEMA = `CREATE TABLE IF NOT EXISTS staff_notify_tg_sent (user_id TEXT NOT NULL, event_id TEXT NOT NULL, sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), PRIMARY KEY(user_id,event_id));
+CREATE TABLE IF NOT EXISTS staff_notify_tg_state (user_id TEXT PRIMARY KEY, telegram_id TEXT NOT NULL, baseline_at TIMESTAMPTZ NOT NULL DEFAULT NOW());`;
+function quietNow(quiet, now) {
+    const q = quiet || QUIET_DEFAULT, toMin = v => { const [h, m] = String(v).split(':').map(Number); return h * 60 + m; };
+    const t = new Date(now.getTime() + 5 * 3600000), c = t.getUTCHours() * 60 + t.getUTCMinutes(), a = toMin(q.from), b = toMin(q.to);
+    return a <= b ? c >= a && c < b : c >= a || c < b;
+}
+async function telegramPush(db, now = new Date()) {
+    const settings = (await db.query('SELECT data FROM domwork_bot_settings WHERE singleton=1')).rows[0]?.data || {};
+    if (settings.staffNotifyEnabled !== true || !(await db.query("SELECT to_regclass('staff_notify_prefs') AS t")).rows[0]?.t) return 0;
+    await db.query(TG_SCHEMA);
+    await db.query("DELETE FROM staff_notify_tg_sent WHERE sent_at<NOW()-INTERVAL '60 days'");
+    const store = require('./domworkBot/store');
+    let sent = 0;
+    for (const link of (await db.query("SELECT telegram_id,account_id FROM domwork_bot_links WHERE account_kind='user' AND NOT paused")).rows) {
+        await db.query('SAVEPOINT staff_push');
+        try {
+            const identity = await store.identity(db, link.telegram_id);
+            if (!identity || identity.kind !== 'user') { await db.query('RELEASE SAVEPOINT staff_push'); continue; }
+            const { row, prefs, ev } = await collect(db, { id: link.account_id }, now);
+            const state = (await db.query('SELECT telegram_id FROM staff_notify_tg_state WHERE user_id=$1', [link.account_id])).rows[0];
+            const ids = [...new Set(ev.map(e => e.id))];
+            if (!state || state.telegram_id !== link.telegram_id) {
+                // Yangi ulanish: mavjud voqealar yuborilmaydi, faqat bundan keyingilari.
+                await db.query(`INSERT INTO staff_notify_tg_state(user_id,telegram_id) VALUES($1,$2) ON CONFLICT(user_id) DO UPDATE SET telegram_id=EXCLUDED.telegram_id,baseline_at=NOW()`, [link.account_id, link.telegram_id]);
+                if (ids.length) await db.query('INSERT INTO staff_notify_tg_sent(user_id,event_id) SELECT $1,unnest($2::text[]) ON CONFLICT DO NOTHING', [link.account_id, ids]);
+                await db.query('RELEASE SAVEPOINT staff_push'); continue;
+            }
+            const done = ids.length ? new Set((await db.query('SELECT event_id FROM staff_notify_tg_sent WHERE user_id=$1 AND event_id=ANY($2::text[])', [link.account_id, ids])).rows.map(r => r.event_id)) : new Set();
+            const quiet = quietNow(row.prefs?.quiet, now), seen = new Set();
+            for (const e of ev) {
+                if (seen.has(e.id) || done.has(e.id)) continue; seen.add(e.id);
+                if (!prefs[e.type]?.tg) { await db.query('INSERT INTO staff_notify_tg_sent(user_id,event_id) VALUES($1,$2) ON CONFLICT DO NOTHING', [link.account_id, e.id]); continue; }
+                if (quiet && !URGENT.has(e.type)) continue; // tinch soat tugagach yuboriladi (voqea hali dolzarb bo'lsa)
+                await store.enqueue(db, { key: `staff:${link.account_id}:${e.id}`.slice(0, 200), targetId: link.telegram_id, role: identity.role, account: identity,
+                    payload: { chat_id: link.telegram_id, text: `🔔 ${String(e.title || '').slice(0, 300)}${e.sub ? '\n' + String(e.sub).slice(0, 600) : ''}`,
+                        reply_markup: { inline_keyboard: [[{ text: 'CRMda ochish', url: 'https://myhomework.uz/' }]] }, _automation: true,
+                        ...(quiet ? { disable_notification: true } : {}) } }); // tinch soatda shoshilinch xabar ovozsiz
+                await db.query('INSERT INTO staff_notify_tg_sent(user_id,event_id) VALUES($1,$2) ON CONFLICT DO NOTHING', [link.account_id, e.id]);
+                sent++;
+            }
+            await db.query('RELEASE SAVEPOINT staff_push');
+        } catch (error) {
+            await db.query('ROLLBACK TO SAVEPOINT staff_push');
+            console.error('[staff-notify] telegram push failed:', error.code || error.name);
+        }
+    }
+    return sent;
+}
+
+module.exports = { CATALOG, catalogFor, effectivePrefs, getPrefs, savePrefs, feed, markRead, telegramPush, quietNow };

@@ -42,6 +42,12 @@ async function run(db,now=new Date()) {
     if(!lock.locked) return;
     const settings=(await store.settings(db)).data, clock=localClock(now);
     await require('./recognition').run(db,settings,clock,now,once);
+    // Xodim bildirishnomalari (CRM paneli) → Telegram, har 2 daqiqada; xatosi boshqa vazifalarni buzmaydi.
+    await once(db,'staff-push:'+Math.floor(now.getTime()/120000),async()=>{
+        await db.query('SAVEPOINT staff_notify_push');
+        try { await require('../staffNotify').telegramPush(db,now); await db.query('RELEASE SAVEPOINT staff_notify_push'); }
+        catch(error) { await db.query('ROLLBACK TO SAVEPOINT staff_notify_push'); console.error('[domwork-bot] staff push failed:', error.code || error.name); }
+    });
     // Isitish alohida savepoint ichida: xatosi eslatma va hisobotlarni orqaga qaytarmasin.
     await db.query('SAVEPOINT funnel_drip');
     try { await require('./funnel').drip(db,now); await db.query('RELEASE SAVEPOINT funnel_drip'); }
@@ -54,7 +60,8 @@ async function run(db,now=new Date()) {
             if(!at) continue;
             const atText=at.toISOString(), identity=await events.linked(db,'student',student.id);
             const group=await groups.forStudent(db,student.id,{delivery:true});
-            for(const minute of [30,5]) if(checkpoint(at,minute,now)) await once(db,`class:${student.id}:${atText}:${minute}`,async()=>{
+            // Ilova va FAQ'da va'da qilingandek: dars havolasi 15 daqiqa oldin.
+            for(const minute of [15]) if(checkpoint(at,minute,now)) await once(db,`class:${student.id}:${atText}:${minute}`,async()=>{
                 const message=`Darsingiz ${minute} daqiqadan keyin boshlanadi.${group?'\nGuruh: '+group.inviteLink:''}`;
                 const groupGuard=group?{_studentGroup:{studentId:student.id,groupId:group.id}}:{};
                 await events.privateMessage(db,`reminder:${student.id}:${atText}:${minute}`,identity,message,{_setting:'remindersEnabled',_expiresAt:expires(),_schedule:{studentId:student.id,at:atText},...groupGuard});

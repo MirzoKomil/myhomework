@@ -24,6 +24,14 @@ function chunks(value, max = 3500) {
     }
     parts.push(pending); return parts;
 }
+// Xabar tarqatish auditoriyasi — tugmalar (oldin inglizcha so'z yozilardi).
+const SEGMENT_LABELS = { all: '👥 Hammaga', student: '🎓 O‘quvchilar', trial: '🧪 Sinovdagilar', sales: '💼 Sotuv menejerlari', teacher: '👩‍🏫 Ustozlar',
+    assistant: '🤝 Yordamchi ustozlar', rop: '📊 ROP', marketing: '📈 Marketing', admin: '🛡 Adminlar' };
+function segmentKeyboard() {
+    const labels = Object.values(SEGMENT_LABELS), rows = [];
+    for (let i = 0; i < labels.length; i += 2) rows.push(labels.slice(i, i + 2).map(text => ({ text })));
+    return { keyboard: rows, resize_keyboard: true, one_time_keyboard: true };
+}
 function actionFor(identity, value) { return policy.menu(identity).find(([, label]) => label === value)?.[0]; }
 function createHandler({ crm }) {
     if (!crm) throw Error('CRM adapter required');
@@ -182,10 +190,10 @@ function createHandler({ crm }) {
             if (pending?.type === 'broadcast') {
                 policy.requireAction(identity,'broadcast');
                 if (pending.step === 'segment') {
-                    if (!['all','trial','student','sales','teacher','assistant','rop','marketing','admin'].includes(command))
-                        return await reply('Auditoriya: all, trial, student, sales, teacher, assistant, rop, marketing yoki admin. /cancel');
-                    await store.setSession(db,sender,{type:'broadcast',step:'content',segment:command});
-                    return await reply('Matn yoki rasm/video/voice/faylni yuboring. Keyin ko‘rib tasdiqlaysiz. /cancel');
+                    const segment=Object.entries(SEGMENT_LABELS).find(([key,label])=>label===command || key===command)?.[0];
+                    if (!segment) return await reply('Auditoriyani pastdagi tugmalardan tanlang. /cancel',{reply_markup:segmentKeyboard()});
+                    await store.setSession(db,sender,{type:'broadcast',step:'content',segment});
+                    return await reply('Matn yoki rasm/video/voice/faylni yuboring. Keyin ko‘rib tasdiqlaysiz. /cancel',{reply_markup:{remove_keyboard:true}});
                 }
                 if (pending.step === 'content') {
                     const media=message.photo?.at(-1) || message.video || message.voice || message.document;
@@ -193,11 +201,12 @@ function createHandler({ crm }) {
                     const content={method,text:media?(message.caption || ''):command,fileId:media?.file_id};
                     controls.contentInput(content);
                     await store.setSession(db,sender,{type:'broadcast',step:'time',segment:pending.segment,content});
-                    return await reply('Yuborish vaqti: now yoki YYYY-MM-DD HH:MM (Toshkent vaqti). /cancel');
+                    return await reply('Yuborish vaqti: «⚡️ Hozir» yoki YYYY-MM-DD HH:MM (Toshkent vaqti). /cancel',{reply_markup:{keyboard:[[{text:'⚡️ Hozir'}]],resize_keyboard:true,one_time_keyboard:true}});
                 }
                 if (pending.step === 'time') {
-                    if (command !== 'now' && !/^\d{4}-\d{2}-\d{2} ([01]\d|2[0-3]):[0-5]\d$/.test(command)) return await reply('now yoki YYYY-MM-DD HH:MM kiriting.');
-                    const scheduledAt=command==='now'?undefined:command.replace(' ','T')+':00+05:00';
+                    const now=['now','hozir','⚡️ hozir'].includes(command.toLowerCase());
+                    if (!now && !/^\d{4}-\d{2}-\d{2} ([01]\d|2[0-3]):[0-5]\d$/.test(command)) return await reply('«⚡️ Hozir» tugmasini bosing yoki vaqtni YYYY-MM-DD HH:MM shaklida yozing.',{reply_markup:{keyboard:[[{text:'⚡️ Hozir'}]],resize_keyboard:true,one_time_keyboard:true}});
+                    const scheduledAt=now?undefined:command.replace(' ','T')+':00+05:00';
                     const preview=await controls.draft(db,{id:identity.id},{segment:pending.segment,content:pending.content,scheduledAt});
                     const buttons=[];
                     for (const cancel of [false,true]) buttons.push({text:cancel?'Bekor qilish':'Tasdiqlash va yuborish',
@@ -217,7 +226,7 @@ function createHandler({ crm }) {
             }
             if (action === 'broadcast') {
                 await store.setSession(db,sender,{type:'broadcast',step:'segment'});
-                return await reply('Auditoriyani kiriting: all, trial, student, sales, teacher, assistant, rop, marketing yoki admin. Guruhlar uchun CRM → Telegram guruhlari → Bot boshqaruvi. /cancel');
+                return await reply('Kimga yuboramiz? Pastdagi tugmalardan tanlang. Guruhlar uchun CRM → Telegram guruhlari → Bot boshqaruvi. /cancel',{reply_markup:segmentKeyboard()});
             }
             if (action === 'trial-lessons' && identity.role === 'teacher') {
                 const rows=(await db.query("SELECT * FROM leads WHERE language='russian' AND status='sinov-darsida' AND deleted_at IS NULL ORDER BY updated_at DESC")).rows;
@@ -257,8 +266,12 @@ function createHandler({ crm }) {
                 return await reply(rows.map(r => `${money(r.amount)} — ${text(r.reason)}`).join('\n') || empty);
             }
             if (action === 'work') {
-                const rows = (await db.query('SELECT kind,occurred_at FROM domwork_bot_face_logs WHERE employee_id=$1 ORDER BY occurred_at DESC LIMIT 30', [identity.employeeId || ''])).rows;
-                return await reply(rows.map(r => `${r.kind === 'in' ? 'Keldi' : 'Ketdi'}: ${new Date(r.occurred_at).toLocaleString('uz-UZ',{timeZone:'Asia/Tashkent'})}`).join('\n') || 'Face ID manbasi hali ulanmagan. Davomat taxmin qilinmaydi.');
+                // CRM'dagi xodimlar davomati (Face ID + lokatsiya) — faqat o'zining tasdiqlangan belgilari, so'nggi 14 kun.
+                const present = (await db.query("SELECT to_regclass('staff_att_events') AS t")).rows[0]?.t;
+                const rows = present ? (await db.query(`SELECT kind,occurred_at FROM staff_att_events WHERE employee_id=$1 AND ok
+                    AND occurred_at>NOW()-INTERVAL '14 days' ORDER BY occurred_at DESC LIMIT 40`, [identity.employeeId || ''])).rows : [];
+                return await reply(rows.length ? 'So‘nggi 14 kun (Face ID):\n' + rows.map(r => `${r.kind === 'in' ? '🟢 Keldi' : '🔴 Ketdi'}: ${new Date(r.occurred_at).toLocaleString('uz-UZ',{timeZone:'Asia/Tashkent'})}`).join('\n')
+                    : 'So‘nggi 14 kunda Face ID belgisi yo‘q. Belgilash: CRM → Davomat.');
             }
             if (identity.role === 'trial' && action === 'trial-group') {
                 const lead = await crm.getLeadById(identity.id);

@@ -332,3 +332,16 @@ Verify: `node scripts/run-payroll-postgres.cjs scripts/domwork-funnel-postgres.t
 - Report adds per-message drip sends and block rate (⚠️ above 1.5%), bonus, relays, outcomes.
 
 Verify: `node scripts/run-payroll-postgres.cjs scripts/domwork-funnel-drip-postgres.test.cjs`.
+
+## Staff notifications to Telegram, cleanup (2026-10-29)
+
+- `settings.staffNotifyEnabled` (off by default): every 2 minutes the scheduler computes each linked staff member's
+  CRM notification panel (staffNotify.collect) and sends new items whose "Telegram" preference is on. The first run
+  per staff member (or after relinking) only records a baseline. Quiet hours hold non-urgent items; urgent ones
+  (hold_expiring, trial_confirm, trial_unassigned) go silently. Paused (/stop) staff get nothing. Once live for a
+  user, the panel shows only "Brauzer" items; until then Telegram-only items still show in the panel.
+- Feed sections use savepoints inside a transaction, so one failing source cannot abort the push.
+- Bot menus: "Jarimalar" removed (no data source); "Face ID" reads CRM staff attendance (last 14 days).
+- Broadcast audience and time are chosen with buttons. Lesson reminder at 15 minutes (matches app/FAQ).
+
+Verify: `node scripts/run-payroll-postgres.cjs scripts/staff-notify-telegram-postgres.test.cjs`.
