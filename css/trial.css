@@ -123,3 +123,7 @@ html.rd[data-theme="dark"] .tl-flow { background: rgba(255, 255, 255, .03); }
     .tl-inf { min-width: 0; flex-basis: calc(100% - 80px); }
     .tl-tb { width: 100%; }
 }
+
+/* Admin jadvali: uzun holat ("Muddati o'tdi · natija kerak") kesilmasin — ikki qatorga o'tadi. */
+.tl-table td:last-child .sc-pill { white-space: normal; line-height: 1.3; }
+.tl-table td:last-child { padding-right: 20px; }
