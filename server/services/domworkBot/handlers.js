@@ -7,6 +7,7 @@ const trial = require('../../../js/trialWorkflow');
 const callbacks = require('./callbacks');
 const controls = require('./controls');
 const discovery = require('./discovery');
+const funnel = require('./funnel');
 const money = value => new Intl.NumberFormat('uz-UZ').format(Number(value) || 0).replace(/[\u00a0\u202f]/g, ' ') + ' UZS';
 const text = value => String(value ?? '').slice(0, 200);
 const empty = 'Hozircha ma’lumot yo‘q.';
@@ -27,7 +28,10 @@ function actionFor(identity, value) { return policy.menu(identity).find(([, labe
 function createHandler({ crm }) {
     if (!crm) throw Error('CRM adapter required');
     return async function handle(db, update) {
-        if (update.callback_query) return callbacks.handle(db,update,crm);
+        if (update.callback_query) {
+            if (/^f:/.test(String(update.callback_query.data || ''))) return require('./funnel').callback(db,update);
+            return callbacks.handle(db,update,crm);
+        }
         if(update.chat_member) {
             const change=update.chat_member, user=change.new_chat_member?.user;
             const joined=['member','administrator','creator'].includes(change.new_chat_member?.status)
@@ -97,7 +101,20 @@ function createHandler({ crm }) {
                     payload:{chat_id:sender,text:'Endi CRMga qayting: “Telegram botni ulash” oynasida ismingiz chiqadi — “Ha, bu mening Telegramim” tugmasini bosing.'}});
                 return;
             }
+            if(message._leadLinkHash || require('./leadLink').startHash(message.text)){
+                // Landing "Rahmat" sahifasidan: lid telefon raqamisiz taniladi.
+                const claimed=await require('./leadLink').claim(db,message);
+                if(!identity && await funnel.enabled(db)) return await funnel.start(db,update,message,{lead:claimed?.lead || null});
+                if(identity) return await reply(`Assalomu alaykum, ${text(identity.name)}! Kerakli bo‘limni tanlang.`);
+            }
             if (message.contact) {
+                if(!identity && await funnel.enabled(db)) {
+                    // CRMda o'quvchi/xodim/sinov topilmasa — mehmon lid sifatida voronkada davom etadi.
+                    try { identity = await store.linkContact(db, message); }
+                    catch(error) { if(error.status===404) return await funnel.contact(db,update,message); throw error; }
+                    await discovery.contactLinked(db,identity);
+                    return await reply(`Assalomu alaykum, ${text(identity.name)}!\nDomwork shaxsiy kabinetingiz ochildi.`);
+                }
                 identity = await store.linkContact(db, message);
                 await discovery.contactLinked(db,identity);
                 return await reply(`Assalomu alaykum, ${text(identity.name)}!\nDomwork shaxsiy kabinetingiz ochildi.`);
@@ -105,8 +122,10 @@ function createHandler({ crm }) {
             const command = String(message.text || '').trim();
             if (command === '/stop') {
                 if (identity) await db.query('UPDATE domwork_bot_links SET paused=true WHERE telegram_id=$1', [sender]);
+                else await funnel.pause(db, sender);
                 return await reply('Avtomatik xabarlar to‘xtatildi. Davom ettirish uchun /start bosing.', { reply_markup: { remove_keyboard: true } });
             }
+            if (!identity && await funnel.enabled(db)) return await funnel.message(db, update);
             if (!identity) return await reply('CRM akkauntingizni aniqlash uchun o‘zingizning telefon raqamingizni yuboring.\n\nTelegramdagi raqamingiz CRMdagidan boshqa bo‘lsa: o‘quvchilar — Domwork ilovasi → Profil → “Telegram botni ulash”; xodimlar — CRM → Sozlamalar → Bildirishnomalar → Telegram bot → “Ulash”.',
                 { reply_markup: { keyboard: [[{ text: '📱 Telefon raqamni yuborish', request_contact: true }]], resize_keyboard: true, one_time_keyboard: true } });
             if (command === '/start' || command === '/menu') {
@@ -118,6 +137,8 @@ function createHandler({ crm }) {
             if (command === '/cancel') {
                 await store.setSession(db, sender, null); return await reply('Bekor qilindi.');
             }
+            if(identity.role==='admin' && /^#voronka\b/i.test(String(message.caption || message.text || '').trim()))
+                return await reply(await funnel.adminMedia(db, identity, message));
             if(message.chat_shared) {
                 policy.requireAction(identity,'bindings');
                 const pending=await store.session(db,sender);

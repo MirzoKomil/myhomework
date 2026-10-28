@@ -11,9 +11,10 @@
         if(!el || getCurrentUser()?.role!=='admin') return;
         const seq=++generation;
         el.innerHTML='<p>Bot boshqaruvi yuklanmoqda…</p>';
-        let settings,bindings,observed,status,requests,deliveries,learning;
-        try { [settings,bindings,observed,status,requests,deliveries,learning]=await Promise.all([
-            api('/settings'),api('/bindings'),api('/observed-chats'),api('/status'),api('/leave-requests'),api('/delivery-status'),apiFetch('/api/domwork/groups')]); }
+        let settings,bindings,observed,status,requests,deliveries,learning,funnel;
+        try { [settings,bindings,observed,status,requests,deliveries,learning,funnel]=await Promise.all([
+            api('/settings'),api('/bindings'),api('/observed-chats'),api('/status'),api('/leave-requests'),api('/delivery-status'),apiFetch('/api/domwork/groups'),
+            api('/funnel/report').catch(()=>null)]); }
         catch(error){if(seq===generation)el.textContent=error.message;return;}
         if(seq!==generation || getCurrentUser()?.role!=='admin')return;
         const groups=[...bindings.groups.filter(g=>g.active).map(g=>({id:g.id,name:types[g.type]+' · '+g.title})),
@@ -44,6 +45,19 @@
                 <p class="dg-note">Yangi xabarlar o‘chiq. Kun sotuvchisi sof tushumdan, kun ustozi tasdiqlangan darslar va shu davr baholaridan olinadi. Teng natijada barcha g‘oliblar ko‘rsatiladi. Bog‘lanmagan refundlar bo‘lsa sotuv g‘olibi e’lon qilinmaydi. Haftalik/oylik mukofot mezoni tanlanishi shart. Tab­riklar uchun CRM voqealari va guruh xabarlari ham yoqilgan bo‘lishi kerak. Eski voqealar qayta yuborilmaydi.</p>
                 <button class="btn-primary" type="submit">Sozlamalarni saqlash</button></form>
                 <button type="button" class="btn-secondary-sm" data-db-awards>Bugungi g‘oliblarni xabar yubormasdan ko‘rish</button><div data-db-awards-preview></div></details>
+            <details><summary>Lid voronkasi (yangi odamlar)</summary><form data-db-funnel>
+                <p class="dg-note">Yoqilganda botga kelgan yangi odam (CRMda yo‘q) sovg‘a, 1-dars va menejer bilan bog‘lanishga yo‘naltiriladi; landing "Rahmat" sahifasi shaxsiy bot havolasini beradi. So‘rovlar "Sotuv" guruhiga keladi (yuqorida biriktiring). Materiallarni botga fayl qilib yuboring, izohga: <b>#voronka sovga</b>, <b>#voronka dars1</b>, <b>#voronka menejer</b>, <b>#voronka qollanma_bank</b> … Ro‘yxat: botga <b>#voronka</b> deb yozing.</p>
+                <p>Yuklangan materiallar: ${esc(Object.keys(settings.data.funnelMedia || {}).join(', ') || 'yo‘q')}</p>
+                <div class="dg-fields"><label class="dg-checkbox"><input type="checkbox" name="funnelEnabled" ${settings.data.funnelEnabled?'checked':''}>Voronka yoqilgan</label>
+                <label>Chegirma, %<input class="form-control" type="number" min="0" max="50" name="discountPercent" value="${esc(settings.data.discountPercent ?? 15)}"></label>
+                <label>Chegirma muddati, soat<input class="form-control" type="number" min="1" max="336" name="discountHours" value="${esc(settings.data.discountHours ?? 72)}"></label>
+                <label>Menejer javob beradi, daqiqa<input class="form-control" type="number" min="5" max="240" name="salesSlaMinutes" value="${esc(settings.data.salesSlaMinutes ?? 30)}"></label>
+                <label>Sotuv ish vaqti (Toshkent)<input class="form-control" name="salesHours" placeholder="09:00-21:00" value="${esc(settings.data.salesHours || '09:00-21:00')}"></label>
+                <label>O‘quvchi fikri — O‘zbekiston (post havolasi)<input class="form-control" type="url" name="testimonialB" placeholder="https://t.me/domwork_natijalari/123" value="${esc(settings.data.funnelTestimonials?.B)}"></label>
+                <label>O‘quvchi fikri — migrant (post havolasi)<input class="form-control" type="url" name="testimonialA" placeholder="https://t.me/domwork_natijalari/124" value="${esc(settings.data.funnelTestimonials?.A)}"></label></div>
+                <label>Kompaniya ma’lumoti ("Batafsil" ichida: MCHJ, STIR)<textarea class="form-control" name="companyInfo" maxlength="300" rows="2">${esc(settings.data.companyInfo)}</textarea></label>
+                <button class="btn-primary" type="submit">Voronkani saqlash</button></form>
+                ${funnel?`<p>So‘nggi ${funnel.days} kun (odamlar): ${funnel.steps.map(s=>`${esc({start:'Start',gift:'Sovg‘a',segment:'Segment',guide:'Qo‘llanma',lesson_part:'1-dars ochdi',lesson_seen:'Ko‘rdi',quiz:'Test',cta:'Taklif',contact:'Raqam',request:'So‘rov'}[s.event])}: ${s.people}`).join(' → ')} · Savollar: ${funnel.faq} · Yozganlar: ${funnel.freeText}</p>`:''}</details>
             <details><summary>Xabar tarqatish</summary><p>Rasm, video va ovozni botning admin menyusi orqali yuborish mumkin. Bu yerda matnli xabarni tayyorlang.</p>
                 <form data-db-broadcast><label>Auditoriya<select class="form-control" name="segment">${Object.entries(roles).map(([id,label])=>`<option value="${id}">${esc(label)}</option>`).join('')}</select></label>
                     <fieldset><legend>Guruhlar — «Tanlangan guruhlar» uchun</legend>${groups.map(g=>`<label class="dg-checkbox"><input type="checkbox" name="group" value="${esc(g.id)}">${esc(g.name)}</label>`).join('') || '<p>Tekshirilgan guruh yo‘q.</p>'}</fieldset>
@@ -73,6 +87,13 @@
             const body={revision:settings.revision};for(const key of Object.keys(switches))body[key]=form.elements[key].checked;
             for(const key of [...Object.keys(texts),'promotionTime','familyTime','awardsTime','weeklyAwardCriterion','monthlyAwardCriterion','officialChannel'])body[key]=form.elements[key].value;
             const saved=await api('/settings',body,'PUT');settings=saved;notify('Sozlamalar serverga saqlandi.');
+        });};
+        el.querySelector('[data-db-funnel]').onsubmit=e=>{e.preventDefault();const f=e.currentTarget;work(async()=>{
+            const saved=await api('/settings',{revision:settings.revision,funnelEnabled:f.elements.funnelEnabled.checked,
+                discountPercent:Number(f.elements.discountPercent.value),discountHours:Number(f.elements.discountHours.value),
+                salesSlaMinutes:Number(f.elements.salesSlaMinutes.value),salesHours:f.elements.salesHours.value.trim(),companyInfo:f.elements.companyInfo.value,
+                funnelTestimonials:{A:f.elements.testimonialA.value.trim(),B:f.elements.testimonialB.value.trim()}},'PUT');
+            settings=saved;notify('Voronka sozlamalari saqlandi.');
         });};
         el.querySelector('[data-db-awards]').onclick=()=>work(async()=>{
             const value=await api('/awards/preview');el.querySelector('[data-db-awards-preview]').innerHTML=

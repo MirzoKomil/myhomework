@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS domwork_bot_penalties (
  created_by TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 `;
-async function initSchema(db) { await db.query(SCHEMA); await require('./controls').init(db); await require('./discovery').init(db); await require('./studentLink').init(db); await require('./staffLink').init(db); await require('./insights').init(db); }
+async function initSchema(db) { await db.query(SCHEMA); await require('./controls').init(db); await require('./discovery').init(db); await require('./studentLink').init(db); await require('./staffLink').init(db); await require('./leadLink').init(db); await require('./funnel').init(db); await require('./insights').init(db); }
 const USER_SQL = `SELECT u.id,u.name,u.email,u.role,u.phone,he.id AS employee_id,he.role AS employee_role,
  he.status AS employee_status,he.lang,he.dual_role,COALESCE(link.manager_id,he.id) AS manager_id
  FROM users u LEFT JOIN user_sales_manager_links link ON link.user_id=u.id
@@ -149,7 +149,11 @@ async function identity(db, telegramId) {
         current = row && student(row, link.phone);
     } else {
         // Lead -> paid student is the only automatic identity migration; no staff escalation.
-        const candidates = await phoneCandidates(db, link.phone, false);
+        // Raqamsiz lid (bot orqali "faqat Telegram") hech qachon telefon bo'yicha o'quvchiga ulanmaydi —
+        // bo'sh raqam boshqa bo'sh raqamli yozuvlarga mos kelib qolmasin.
+        const candidates = link.phone ? await phoneCandidates(db, link.phone, false)
+            : (await db.query("SELECT id,name FROM leads WHERE id=$1 AND language='russian' AND status='sinov-darsida' AND deleted_at IS NULL", [link.account_id])).rows
+                .map(r => ({ id: r.id, kind: 'lead', role: 'trial', name: r.name, phone: '', language: 'russian' }));
         const own = candidates.filter(c => c.kind === 'student' || c.id === link.account_id);
         if (!own.length) return null;
         current = policy.choose(own);
@@ -177,7 +181,7 @@ async function setSession(db, telegramId, state) {
         ON CONFLICT(telegram_id) DO UPDATE SET state=EXCLUDED.state,expires_at=EXCLUDED.expires_at`, [String(telegramId), JSON.stringify(state)]);
 }
 async function enqueue(db, { key, targetKind = 'private', targetId, role = '', method = 'sendMessage', payload, account, notBefore = new Date() }) {
-    if (!['sendMessage','sendPhoto','sendVideo','sendVoice','sendDocument','answerCallbackQuery','editMessageReplyMarkup','unbanChatMember'].includes(method)) throw policy.error(400, 'Bot usuli noto‘g‘ri');
+    if (!['sendMessage','sendPhoto','sendVideo','sendVoice','sendAudio','sendDocument','answerCallbackQuery','editMessageReplyMarkup','unbanChatMember'].includes(method)) throw policy.error(400, 'Bot usuli noto‘g‘ri');
     if (!['private','group'].includes(targetKind) || !key || key.length > 200) throw policy.error(400, 'Xabar manzili noto‘g‘ri');
     if (targetKind === 'private' && !policy.telegramId(String(targetId))) throw policy.error(400, 'Telegram foydalanuvchisi noto‘g‘ri');
     const envelope = { ...payload, ...(account ? { _account: { kind: account.kind, id: account.id } } : {}) };
