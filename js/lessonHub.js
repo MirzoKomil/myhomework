@@ -13,7 +13,7 @@
     const toast = m => (typeof showMiniToast === 'function' ? showMiniToast(m, 2600) : alert(m));
     const plain = s => String(s ?? '').replace(/́/g, '');
     const LANG_LABEL = { english: 'Ingliz tili', russian: 'Rus tili' };
-    const RULES = window.AcademicRules || { allocateMinutes: null, PASS_PERCENT: 65, UNLOCK_PERCENT: 50, LIVE_AUTO_UNLOCK: 60, EXAM_INTERVAL: 12, EXAM_PASS_PERCENT: 70, LESSONS_PER_WEEK: 6, SECTIONS: {} };
+    const RULES = window.AcademicRules || { allocateMinutes: null, PASS_PERCENT: 65, UNLOCK_PERCENT: 50, LIVE_AUTO_UNLOCK: 60, EXAM_INTERVAL: 12, EXAM_PASS_PERCENT: 70, LESSONS_PER_WEEK: 6, BEHIND_LESSONS: 4, SECTIONS: {} };
     const CACHE_MS = 3 * 60000;
     // Faqat o'z serverimizdagi yoki https havolalar href/src'ga tushadi.
     const safeUrl = u => (/^(https:\/\/|\/(?!\/))/i.test(String(u || '').trim()) ? String(u).trim() : '');
@@ -963,7 +963,7 @@
             ${kpi('Faol vaqt · 7 kun', hours >= 1 ? `${hours} <small>soat</small>` : `${Math.round(weekTotal / 60)} <small>daq</small>`, `jami ${active.length} o'quvchi · boshiga ${perTxt}`)}
             ${kpi('Faol emas · 3+ kun', idle.length, idle.length ? esc(names(idle)) : "hammasi faol", idle.length)}
             ${kpi('Qiynalyapti', strug.length, `1-urinish ${RULES.PASS_PERCENT}% dan past · faol o'quvchilar`, strug.length)}
-            ${kpi('Rejadan orqada', behind.length, `${RULES.LESSONS_PER_WEEK + 1}+ dars orqada${behind.length ? ` · ${esc(names(behind))}` : ''}`, behind.length)}
+            ${kpi('Rejadan orqada', behind.length, `${RULES.BEHIND_LESSONS || 4}+ dars orqada${behind.length ? ` · ${esc(names(behind))}` : ''}`, behind.length)}
         </div>
         <section class="lh-card lh-pcard" aria-labelledby="lhProgTitle">
             <div class="lh-pch"><h3 class="lh-pct-t" id="lhProgTitle">O'quvchilar</h3>
