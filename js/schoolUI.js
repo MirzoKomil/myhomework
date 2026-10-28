@@ -99,6 +99,24 @@
         _drawer.el.remove();
         const cb = _drawer.onClose; _drawer = null; cb?.();
     }
+    // Markazdagi oyna (Oynalar dizayni: "Qoplash darsi", "Ustoz biriktirish") — css/oquvchilar.css (.oqm-*).
+    // Drawer bilan bitta "ochiq oyna" holati: closeDrawer() buni ham yopadi.
+    const X_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+    function openDialog({ title, sub = '', body = '', foot = '', onClose = null }) {
+        closeDrawer();
+        const wrap = document.createElement('div');
+        wrap.className = 'oqm-back';
+        wrap.innerHTML = `<section class="oqm-dlg" role="dialog" aria-modal="true" aria-labelledby="oqmTitle">
+            <div class="oqm-dh"><div><h2 id="oqmTitle">${esc(title)}</h2>${sub ? `<div class="oqm-mt" data-dsub>${sub}</div>` : ''}</div><button type="button" class="oqm-x" data-close aria-label="Yopish">${X_SVG}</button></div>
+            <div class="oqm-db sc-db">${body}</div>${foot ? `<div class="oqm-df">${foot}</div>` : ''}</section>`;
+        document.body.appendChild(wrap);
+        wrap.addEventListener('click', e => { if (e.target === wrap || e.target.closest('[data-close]')) closeDrawer(); });
+        const onKey = e => { if (e.key === 'Escape') closeDrawer(); };
+        document.addEventListener('keydown', onKey);
+        _drawer = { el: wrap, onKey, onClose };
+        setTimeout(() => wrap.querySelector('input:not([disabled]),button.oqm-btn.is-pri:not([disabled])')?.focus(), 30);
+        return wrap.querySelector('.oqm-dlg');
+    }
     function busy(btn, on) { if (!btn) return; btn.disabled = on; btn.dataset.label ||= btn.textContent; btn.textContent = on ? 'Saqlanmoqda…' : btn.dataset.label; }
     function errBox(root, msg) {
         let el = root.querySelector('.sc-err');
@@ -1183,7 +1201,7 @@
     window.schoolUI = Object.assign(window.schoolUI || {}, {
         api, post, esc, today, addDays, wd, weekStart, fmtDate, hm, toMin, pattern, DAY, DAY_FULL,
         studentAvatar, staffAvatar, staffAvatarUrl, tgPill, teacherName, studentById, teachersForSubject,
-        openDrawer, closeDrawer, errBox, busy, field, impact, toast, refreshCache, nowMin,
+        openDrawer, openDialog, closeDrawer, errBox, busy, field, impact, toast, refreshCache, nowMin,
         openStudent, closeStudent, renderApprovals, renderGroups, renderAssistAdmin, loadStaffAvatars, staffAvatarOf: id => staffAvatarUrl(_avatars[id]), acad, dShort, whenTxt, shortName, num,
         bulkDrawer, correctionDrawer, CHN, CST, studentRequestDrawer
     });

@@ -232,103 +232,7 @@
         }
     }
 
-    // ── Ustoz: "O'quvchilar" (UstozOquvchiList) — o'z o'quvchilari, ilovadagi holat, davomat, Telegram ──
-    // To'lov va sotuv ma'lumotlari ustozga ko'rsatilmaydi.
-    let myState = { q: '', sel: '' };
-    async function renderMyStudents(root) {
-        const { api, esc, today, studentAvatar, tgPill, teacherName, pattern, DAY } = U();
-        await U().loadStaffAvatars();
-        const tid = me().linkedTeacherId;
-        const td = today(), month = td.slice(0, 7), dayN = Number(td.slice(8));
-        const all = getItem(STORAGE_KEYS.students, []).filter(s => !s.isStaffDemo && !s.frozen && s.status !== 'inactive');
-        const mine = all.filter(s => s.teacherId === tid), helped = all.filter(s => s.assistantTeacherId === tid && s.teacherId !== tid);
-        if (!root.dataset.loaded) root.innerHTML = '<div class="sc-skel"></div>';
-        const lang = (typeof getUserOwnLang === 'function' && getUserOwnLang()) || 'english';
-        const [acad, groups, mks, rep] = await Promise.all([
-            apiFetch(`/api/academic/students?lang=${lang}`).catch(() => ({ students: [] })),
-            api('/my-groups').catch(() => ({ groups: [] })),
-            api('/makeups').catch(() => ({ makeups: [] })),
-            helped.length ? api(`/assist/month?month=${month}`).catch(() => null) : null
-        ]);
-        root.dataset.loaded = '1';
-        const ac = new Map((acad.students || []).map(x => [x.id, x]));
-        const gmap = new Map((groups.groups || []).map(g => [g.student_id, g]));
-        const cnt = new Map((rep?.students || []).map(x => [x.studentId, x]));
-        const att = getItem(STORAGE_KEYS.mainAttendance, {})[`${month}_${tid}`] || {};
-        const cal = window.teacherAttendanceCalendar;
-        const own = (typeof resolveTeacherWithVirtual === 'function' && resolveTeacherWithVirtual(tid)) || {};
-        const myMk = (mks.makeups || []).filter(m => m.teacher_id === tid && String(m.held_date || '').slice(0, 7) === month);
-        const attOf = s => {
-            const entries = att[s.id] || {};
-            const cells = cal ? cal.cells(month, cal.weekdays(s, own, 'main')).filter(Boolean) : [];
-            const plan = cells.filter(c => c.scheduled).length;
-            const days = new Set(cells.filter(c => c.scheduled && cal.status(entries[c.day]) === 'present').map(c => c.day));
-            let n = days.size;
-            for (const m of myMk.filter(m => m.student_id === s.id && m.status === 'approved')) {
-                const d = Number(String(m.held_date).slice(8, 10));
-                if (m.kind === 'double') n++; else if (!days.has(d)) { days.add(d); n++; }
-            }
-            const absent = cells.filter(c => cal.status(entries[c.day]) === 'absent').length;
-            const covered = new Set(myMk.filter(m => m.student_id === s.id).map(m => String(m.missed_date || '').slice(0, 10)));
-            const openMissed = cells.filter(c => cal.status(entries[c.day]) === 'absent' && !covered.has(c.date)).map(c => c.day);
-            return { counted: Math.min(n, plan), plan, absent, openMissed, review: myMk.filter(m => m.student_id === s.id && m.status === 'review').length,
-                present: cells.filter(c => cal.status(entries[c.day]) === 'present').length };
-        };
-        const statusOf = (s, a, x) => {
-            const f = new Set((x?.flags || []).map(f => f.key));
-            if (a.absent >= 3) return ['Ko\'p kelmayapti', 'sc-pill--bad'];
-            if (f.has('struggling')) return ['Qiynalyapti', 'sc-pill--warn'];
-            if (f.has('idle')) return [x.flags.find(f => f.key === 'idle').label, 'sc-pill--warn'];
-            if (f.has('behind')) return ['Rejadan orqada', 'sc-pill--warn'];
-            return ['Rejada', 'sc-pill--ok'];
-        };
-        const q = myState.q.trim().toLowerCase();
-        const match = s => !q || String(s.name || '').toLowerCase().includes(q) || String(s.serialCode || s.id || '').toLowerCase().includes(q);
-        const adv = s => ([1, 3, 5].includes(Number(s.lessonDayOfWeek)) ? [2, 4, 6] : [1, 3, 5]).map(d => DAY[d - 1]).join('·');
-        const prog = x => x ? `<b>${x.reached || 0}</b><small> / 72</small>` : '<small class="sc-mt">—</small>';
-        const row = (s, kind) => {
-            const x = ac.get(s.id), a = kind === 'main' ? attOf(s) : null, c = cnt.get(s.id);
-            const st = kind === 'main' ? statusOf(s, a, x) : ['Yordamchi', 'sc-pill--info'];
-            return `<tr class="ms-row${myState.sel === s.id ? ' is-sel' : ''}" data-ms="${esc(s.id)}" tabindex="0"><td><span class="sc-row">${studentAvatar(s, 32)}<span><b>${esc(s.name)}</b><small class="sc-mt">${kind === 'main' ? (s.serialCode ? '#' + esc(s.serialCode) : '') : 'asosiy: ' + esc(teacherName(s.teacherId, true))}</small></span></span></td>
-              <td>${kind === 'main' ? `${esc(pattern(s.lessonDayOfWeek))} ${esc(s.lessonTime || '')}<small class="sc-mt"> · ${Number(s.lessonDuration) || 15} daq</small>` : `tavsiya ${adv(s)}<small class="sc-mt"> · darslari ${esc(pattern(s.lessonDayOfWeek))} ${esc(s.lessonTime || '')}</small>`}</td>
-              <td>${prog(x)}</td>
-              <td>${kind === 'main' ? `<b>${a.counted}</b><small> / ${a.plan}</small>${a.review ? ` <em class="duty-plus">+${a.review}</em>` : ''}` : `<b>${c?.counted || 0}</b><small> / 13 aloqa</small>`}</td>
-              <td><span class="sc-pill ${st[1]}">${esc(st[0])}</span></td><td>${tgPill(gmap.get(s.id))}</td></tr>`;
-        };
-        const mainRows = mine.filter(match), helpRows = helped.filter(match);
-        if (!myState.sel || ![...mine, ...helped].some(s => s.id === myState.sel)) myState.sel = (mainRows[0] || helpRows[0])?.id || '';
-        const sel = [...mine, ...helped].find(s => s.id === myState.sel);
-        const detail = () => {
-            if (!sel) return '<p class="sc-mt">O\'quvchini tanlang</p>';
-            const isMain = sel.teacherId === tid, x = ac.get(sel.id), a = isMain ? attOf(sel) : null, c = cnt.get(sel.id);
-            return `<div class="sc-row">${studentAvatar(sel, 48)}<span><b class="ms-name">${esc(sel.name)}</b><small class="sc-mt">${isMain ? 'asosiy o\'quvchingiz' : 'yordamchi sifatida'}${sel.serialCode ? ' · #' + esc(sel.serialCode) : ''}</small></span></div>
-              <div class="sc-row sc-wrap" style="margin:10px 0">${tgPill(gmap.get(sel.id))}${(x?.flags || []).map(f => `<span class="sc-pill sc-pill--warn">${esc(f.label)}</span>`).join('')}</div>
-              <div class="ms-kpis"><div><small>Ilovada</small><b>${x ? x.reached + ' / 72' : '—'}</b></div><div><small>1-urinish</small><b>${x?.firstTryAvg != null ? x.firstTryAvg + '%' : '—'}</b></div>
-                <div><small>${isMain ? 'Davomat · bu oy' : 'Aloqalar · bu oy'}</small><b>${isMain ? `${a.counted} / ${a.plan}${a.review ? ' · +' + a.review : ''}` : `${c?.counted || 0} / 13`}</b></div></div>
-              <dl class="ms-dl"><dt>Jadval</dt><dd>${esc(pattern(sel.lessonDayOfWeek))} ${esc(sel.lessonTime || '')} · ${Number(sel.lessonDuration) || 15} daq</dd>
-                ${isMain ? `<dt>Bu oy</dt><dd>${a.present} keldi · ${a.absent} kelmadi${a.review ? ` · ${a.review} qoplash tekshiruvda` : ''}</dd>
-                <dt>Yordamchi ustoz</dt><dd>${sel.assistantTeacherId ? esc(teacherName(sel.assistantTeacherId)) : '—'}</dd>` : `<dt>Asosiy ustoz</dt><dd>${esc(teacherName(sel.teacherId))}</dd><dt>Aloqa tavsiyasi</dt><dd>${adv(sel)}</dd>`}
-                ${isMain && a.openMissed.length ? `<dt>Qoplash mumkin</dt><dd class="duty-bad">${a.openMissed.length} dars · ${a.openMissed.join(', ')}-sana</dd>` : ''}</dl>
-              <div class="ms-acts"><button type="button" class="sc-btn sc-btn--pri" data-open-card>O'quvchi kartasini ochish</button>
-                ${isMain ? `<button type="button" class="sc-btn" data-go-att>${a.openMissed.length ? 'Qoplash darsi qo\'yish' : 'Davomat'}</button>` : '<button type="button" class="sc-btn" data-go-contacts>Aloqani belgilash</button>'}</div>
-              <p class="sc-mt">Ustoz almashtirish, muzlatish va to'lovlar — admin bo'limida.</p>`;
-        };
-        root.innerHTML = `<div class="sc-head"><div><h1>O'quvchilar</h1><p class="sc-sub">Sizga biriktirilgan o'quvchilar · to'lov va sotuv ma'lumotlari ustozga ko'rsatilmaydi</p></div>
-            <div class="sc-row sc-wrap"><input type="search" placeholder="Ism yoki ID bo'yicha qidirish" value="${esc(myState.q)}" data-q aria-label="Qidirish">
-            <div class="sc-seg" role="group"><button type="button" aria-pressed="true">Faol · ${mine.length}${helped.length ? ' + ' + helped.length : ''}</button><button type="button" data-inactive aria-pressed="false">Faol emas</button></div></div></div>
-          <div class="ms-grid"><section class="sc-card"><table class="sc-table ms-table"><thead><tr><th>O'quvchi</th><th>Jadval</th><th>Ilovada</th><th>Davomat · ${['yan', 'fev', 'mar', 'apr', 'may', 'iyun', 'iyul', 'avg', 'sen', 'okt', 'noy', 'dek'][Number(month.slice(5)) - 1]}</th><th>Holat</th><th>Guruh</th></tr></thead><tbody>
-            ${mine.length ? `<tr class="ms-sec"><td colspan="6">Asosiy ustozligingizda · ${mainRows.length}</td></tr>${mainRows.map(s => row(s, 'main')).join('')}` : ''}
-            ${helped.length ? `<tr class="ms-sec"><td colspan="6">Yordamchi sifatida · ${helpRows.length} · haftasiga 3 aloqa, kamida 5 daqiqa</td></tr>${helpRows.map(s => row(s, 'help')).join('')}` : ''}
-            ${!mainRows.length && !helpRows.length ? `<tr><td colspan="6" class="sc-mt">${q ? 'Hech kim topilmadi' : 'Sizga hali o\'quvchi biriktirilmagan'}</td></tr>` : ''}
-          </tbody></table></section><aside class="sc-card sc-pad ms-detail">${detail()}</aside></div>`;
-        const qi = root.querySelector('[data-q]');
-        qi.oninput = () => { myState.q = qi.value; clearTimeout(qi._t); qi._t = setTimeout(() => renderMyStudents(root).then(() => { const n = root.querySelector('[data-q]'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); }), 200); };
-        root.querySelector('[data-inactive]').onclick = () => openInactive(root, { active: mine.length + helped.length, title: mine.length ? 'Mening o\'quvchilarim' : 'O\'quvchilar', onBack: () => renderMyStudents(root) });
-        root.querySelectorAll('[data-ms]').forEach(tr => { tr.onclick = () => { myState.sel = tr.dataset.ms; renderMyStudents(root); }; tr.onkeydown = e => { if (e.key === 'Enter') tr.click(); }; });
-        root.querySelector('[data-open-card]')?.addEventListener('click', () => U().openStudent(sel.id));
-        root.querySelector('[data-go-att]')?.addEventListener('click', () => switchTab('teachers-section'));
-        root.querySelector('[data-go-contacts]')?.addEventListener('click', () => markDrawer(sel, () => renderMyStudents(root)));
-    }
+    // Ustoz/yordamchi "O'quvchilar" sahifasi (renderMyStudents) — js/yordamchi.js.
 
     // ── Yordamchi ustoz bosh sahifasi (YordamchiBosh, YordamchiOyYopildi) ──
     const CH_ICON = { phone: '☎', zoom: 'Z', meet: 'M', tg_video: '▶', tg_group: '▶', tg_text: '✉' };
@@ -458,5 +362,5 @@
         root.querySelector('[data-open-card]')?.addEventListener('click', () => U().openStudent(sel.id));
     }
 
-    window.schoolTeacher = { renderContacts, contactsBlock, openInactive, renderAvatarPicker, markDrawer, homeExtras, renderMyStudents, assistantHome, renderSoldStudents };
+    window.schoolTeacher = { renderContacts, contactsBlock, openInactive, renderAvatarPicker, markDrawer, homeExtras, assistantHome, renderSoldStudents };
 })();
