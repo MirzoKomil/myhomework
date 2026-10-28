@@ -10520,9 +10520,12 @@ function applyLangPickerPolicy(user = getCurrentUser()) {
     const sweep = () => {
         const want = target();
         const fixed = !applyLangPickerPolicy._state?.canPick;
-        document.querySelectorAll('img.subject-flag').forEach(img => {
-            const group = img.closest('button')?.parentElement;
-            if (!group) return;
+        // Til guruhlari: bayroqli tugmalar (img.subject-flag) va bayroqsiz data-lang/data-subject tugmalari
+        // (masalan Dars jadvali v2 dagi "Ingliz / Rus").
+        const groups = new Set();
+        document.querySelectorAll('img.subject-flag').forEach(img => { const g = img.closest('button')?.parentElement; if (g) groups.add(g); });
+        document.querySelectorAll('button[data-lang="english"], button[data-lang="russian"]').forEach(b => { if (b.parentElement) groups.add(b.parentElement); });
+        groups.forEach(group => {
             const btns = [...group.querySelectorAll(':scope > button')];
             if (btns.length < 2 || !btns.every(b => langOf(b))) return;
             group.dataset.langGroup = '1';
@@ -10531,7 +10534,7 @@ function applyLangPickerPolicy(user = getCurrentUser()) {
             // Bo'lim o'z almashtirgichini keyin (handler bog'langach) qayta "Ingliz tili"ga qo'yishi mumkin —
             // har safar tekshiriladi; cheksiz siklga tushmaslik uchun guruhga 10 soniyada 3 martagacha.
             const mine = btns.find(b => langOf(b) === want);
-            const active = btns.find(b => b.classList.contains('active'));
+            const active = btns.find(b => b.classList.contains('active') || b.getAttribute('aria-pressed') === 'true' || b.getAttribute('aria-selected') === 'true');
             if (!mine) return;
             if (active === mine) { if (!fixed) group._langDone = true; return; }
             const now = Date.now(), log = (group._langClicks || []).filter(x => now - x < 10000);
