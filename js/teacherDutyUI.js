@@ -125,10 +125,10 @@
         if (selected === 'main') {
             const plan = mainStudents.reduce((n, s) => n + planFor(s), 0);
             const expected = mainStudents.reduce((n, s) => n + expectedFor(s), 0);
+            const counted = mainStudents.reduce((n, s) => n + countedFor(s), 0);
             const pct = expected ? Math.min(100, Math.round(counted / expected * 100)) : null;
             let kpi = null; try { kpi = mainStudents.length ? calculateKpiSalary(ownTeacher, month, getItem(STORAGE_KEYS.mainAttendance, {}), mainStudents) : null; } catch (e) { kpi = null; }
             const pay = kpi ? kpi.total : null;
-            const counted = mainStudents.reduce((n, s) => n + countedFor(s), 0);
             const review = myMk.filter(m => m.status === 'review').length;
             const [y, m] = month.split('-').map(Number);
             kpiHtml = `<div class="duty-kpis"><div><small>${MONTHS[m - 1]}</small><b>${month === thisMonth ? todayDay + ' kun o‘tdi' : month < thisMonth ? 'yopilgan oy' : 'kelgusi oy'}</b></div>
