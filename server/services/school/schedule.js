@@ -121,8 +121,11 @@ function dayView(ctx, teacherId, date) {
     const noHours = ctx.teachersWithHours && !ctx.teachersWithHours.has(teacherId);
     if (noHours) work = [{ start: 7 * 60, end: 22 * 60, trialOpen: true, assumed: true }];
     for (const o of ov.filter(o => o.kind === 'open')) work.push({ start: o.start_min, end: o.end_min, trialOpen: true, opened: true });
-    const closed = ov.filter(o => o.kind === 'close' || o.kind === 'leave').map(o => ({ start: o.start_min, end: o.end_min, kind: o.kind, reason: o.reason, overrideId: o.id }));
-    const makeupOnly = ov.filter(o => o.kind === 'makeup_only').map(o => ({ start: o.start_min, end: o.end_min, kind: 'makeup_only', overrideId: o.id }));
+    const closed = ov.filter(o => o.kind === 'close' || o.kind === 'leave').map(o => ({ start: o.start_min, end: o.end_min, kind: o.kind, reason: o.reason, overrideId: o.id,
+        by: o.created_by_name || '', weekly: o.date == null }));
+    // Admin qo'shimcha ochgan vaqtlar (jadvalda "admin ochdi" bo'lib ko'rinadi, bosib bekor qilinadi).
+    const opens = ov.filter(o => o.kind === 'open').map(o => ({ start: o.start_min, end: o.end_min, overrideId: o.id, reason: o.reason, by: o.created_by_name || '', weekly: o.date == null }));
+    const makeupOnly = ov.filter(o => o.kind === 'makeup_only').map(o => ({ start: o.start_min, end: o.end_min, kind: 'makeup_only', overrideId: o.id, reason: o.reason, by: o.created_by_name || '', weekly: o.date == null }));
     const items = [];
     for (const s of ctx.students) {
         // Rejalashtirilgan o'zgarish (sanadan boshlab yangi kun/vaqt) — shu sanadan hisobga olinadi.
@@ -156,7 +159,7 @@ function dayView(ctx, teacherId, date) {
     const free = T.subtract(T.merge(work.map(w => ({ start: w.start, end: w.end }))), [...items, ...makeupOnly]);
     const trialFree = T.subtract(work.filter(w => w.trialOpen).map(w => ({ start: w.start, end: w.end })), [...hard, ...makeupOnly]);
     const makeupFree = T.subtract(work.map(w => ({ start: w.start, end: w.end })), hard.filter(i => i.kind !== 'makeup_only'));
-    return { teacherId, date, weekday: wd, work: T.merge(work), items, free, trialFree, makeupFree, makeupOnly, noHours: !!noHours };
+    return { teacherId, date, weekday: wd, work: T.merge(work), items, free, trialFree, makeupFree, makeupOnly, opens, noHours: !!noHours };
 }
 
 function fits(freeList, start, end) { return freeList.some(f => f.start <= start && end <= f.end); }
@@ -324,7 +327,8 @@ function daySummary(views, attendance = new Map(), nowMin = null) {
 // Sotuv / ROP uchun maxfiylik: boshqa o'quvchi va lid ismlari ko'rinmaydi,
 // boshqa menejer ushlab turgan vaqt "ushlab turilgan" bo'lib ko'rinadi.
 function redactForSales(view, actor, managerId = null) {
-    return { ...view, items: view.items.map(i => {
+    const { opens, ...rest } = view;
+    return { ...rest, makeupOnly: (view.makeupOnly || []).map(m => ({ start: m.start, end: m.end, kind: m.kind })), items: view.items.map(i => {
         const mine = i.createdBy === actor.id || (!!managerId && i.managerId === String(managerId)) || (actor.role === 'rop' && i.kind === 'trial');
         return { start: i.start, end: i.end, kind: i.kind === 'reserved' ? 'lesson' : i.kind, status: i.status, mine,
             bookingId: mine ? i.bookingId : undefined, leadId: mine ? i.leadId : undefined, fromLead: i.fromLead || undefined, holdUntil: i.holdUntil || undefined };
@@ -347,5 +351,83 @@ async function checkLeadTrial(db, lead, { actorId = null, now = new Date() } = {
     return slots;
 }
 
-module.exports = { HOLD_MINUTES, studentRow, statusOn, teacherOn, dateStr, loadContext, dayView, checkSlot, fits, book, confirmHold,
+// ── Jadval v2: darslar holati, qoplash, lid ismi (sotuvga yuborilmaydi) ────────
+const monthsOf = (from, to) => [...new Set(T.dateRange(from, to, 62).map(d => d.slice(0, 7)))];
+// Davomat (main_attendance: present 1 = keldi, 0 = kelmadi), qoplash bog'lanishi va sinov lidining ismi.
+// Faqat ustoz (o'ziniki) va admin/ROP ko'rinishi uchun chaqiriladi — redactForSales'dan oldin emas.
+async function annotateViews(db, views, { from, to }) {
+    const ids = [...new Set(views.flatMap(v => v.items.filter(i => i.studentId).map(i => i.studentId)))];
+    const bookingIds = [...new Set(views.flatMap(v => v.items.filter(i => i.kind === 'makeup' && i.bookingId).map(i => i.bookingId)))];
+    const leadIds = [...new Set(views.flatMap(v => v.items.filter(i => i.kind === 'trial' && i.leadId).map(i => i.leadId)))];
+    const months = monthsOf(from, to);
+    const [att, mk, dbl, leads] = await Promise.all([
+        ids.length ? db.query(`SELECT student_id, LEFT(att_key, 7) AS month, day, present FROM main_attendance
+            WHERE student_id = ANY($1::text[]) AND LEFT(att_key, 7) = ANY($2::text[])`, [ids, months]) : { rows: [] },
+        bookingIds.length ? db.query('SELECT booking_id, missed_date, status FROM school_makeups WHERE booking_id = ANY($1::text[])', [bookingIds]) : { rows: [] },
+        ids.length ? db.query(`SELECT student_id, held_date, missed_date, status FROM school_makeups WHERE kind='double' AND student_id = ANY($1::text[])
+            AND held_date BETWEEN $2 AND $3 AND status IN ('planned','review','approved')`, [ids, from, to]) : { rows: [] },
+        leadIds.length ? db.query('SELECT id, name, manager_id FROM leads WHERE id = ANY($1::text[])', [leadIds]) : { rows: [] }
+    ]);
+    const mark = new Map();
+    for (const a of att.rows) {
+        const key = `${a.student_id}|${a.month}-${String(a.day).padStart(2, '0')}`;
+        const p = Number(a.present) === 1 || a.present === true ? 1 : 0;
+        mark.set(key, Math.max(mark.get(key) ?? 0, p));
+    }
+    const mkBy = new Map(mk.rows.map(m => [m.booking_id, m]));
+    const dblBy = new Map(dbl.rows.map(m => [`${m.student_id}|${dateStr(m.held_date)}`, m]));
+    const leadBy = new Map(leads.rows.map(l => [l.id, l]));
+    // Qoplash / bir martalik dars (school_bookings) — o'quvchi ismi students'dan.
+    const noName = [...new Set(views.flatMap(v => v.items.filter(i => i.studentId && !i.studentName).map(i => i.studentId)))];
+    const names = noName.length ? new Map((await db.query('SELECT id, name FROM students WHERE id = ANY($1::text[])', [noName])).rows.map(r => [r.id, r.name])) : new Map();
+    for (const v of views) for (const i of v.items) {
+        if (i.studentId && !i.studentName && names.has(i.studentId)) i.studentName = names.get(i.studentId);
+        if (i.studentId && (i.kind === 'lesson' || i.kind === 'makeup')) {
+            const m = mark.get(`${i.studentId}|${v.date}`);
+            if (m != null && i.kind === 'lesson') i.att = m;
+            const d = i.kind === 'lesson' && dblBy.get(`${i.studentId}|${v.date}`);
+            if (d) { i.double = true; i.missedDate = dateStr(d.missed_date); }
+        }
+        if (i.kind === 'makeup' && i.bookingId) {
+            const m = mkBy.get(i.bookingId);
+            if (m) { i.missedDate = dateStr(m.missed_date); i.makeupStatus = m.status; }
+        }
+        if (i.kind === 'trial' && i.leadId && leadBy.has(i.leadId)) { i.leadName = leadBy.get(i.leadId).name || ''; i.managerId ||= leadBy.get(i.leadId).manager_id || ''; }
+    }
+    return views;
+}
+// Ustozga hali biriktirilmagan sinovlar (lid "Sinov darsida", vaqt bor, ustoz yo'q) — admin/ROP kun ko'rinishi.
+async function unassignedTrials(db, { from, to, lang = null }) {
+    const { rows } = await db.query("SELECT id, name, manager_id, language, extra_data FROM leads WHERE status = 'sinov-darsida' AND deleted_at IS NULL");
+    const out = [];
+    for (const r of rows) {
+        if (lang && (r.language === 'russian' ? 'russian' : 'english') !== lang) continue;
+        const l = parseLead(r);
+        const tr = l.trialRequest, ob = l.paymentOnboarding || {};
+        if (String(tr?.teacherId || ob.teacherId || '')) continue;
+        if (tr && !['pending', 'accepted'].includes(tr.state || 'pending')) continue;
+        const ms = Date.parse(tr?.scheduledAt || l.trialLessonAt || ''); if (!Number.isFinite(ms)) continue;
+        const local = T.nowLocal(new Date(ms));
+        if (local.date < from || local.date > to) continue;
+        const duration = parseInt(l.paymentSurvey?.tariff, 10) || Number(ob.lessonDuration) || 30;
+        out.push({ leadId: r.id, leadName: r.name || '', managerId: r.manager_id || '', date: local.date, start: local.min, end: local.min + duration });
+    }
+    return out.sort((a, b) => a.date.localeCompare(b.date) || a.start - b.start);
+}
+// Ustozning shu oy(lar)dagi qoldirilgan darslari (kelmadi) va ularning qoplash holati — "Qoplash darsini rejalashtirish" uchun.
+async function missedLessons(db, teacherId, { from, to }) {
+    const months = monthsOf(from, to);
+    const { rows } = await db.query(`SELECT a.student_id, LEFT(a.att_key, 7) AS month, a.day FROM main_attendance a JOIN students s ON s.id = a.student_id
+        WHERE s.teacher_id = $1 AND a.present = 0 AND LEFT(a.att_key, 7) = ANY($2::text[])`, [teacherId, months]);
+    const mk = (await db.query(`SELECT student_id, missed_date, held_date, status FROM school_makeups WHERE teacher_id = $1
+        AND status IN ('planned','review','approved') AND to_char(missed_date, 'YYYY-MM') = ANY($2::text[])`, [teacherId, months])).rows;
+    const by = new Map(mk.map(m => [`${m.student_id}|${dateStr(m.missed_date)}`, m]));
+    const seen = new Set();
+    return rows.map(r => ({ studentId: r.student_id, date: `${r.month}-${String(r.day).padStart(2, '0')}` }))
+        .filter(x => /^\d{4}-\d{2}-\d{2}$/.test(x.date) && !seen.has(x.studentId + x.date) && seen.add(x.studentId + x.date))
+        .map(x => { const m = by.get(`${x.studentId}|${x.date}`); return { ...x, makeup: m ? { status: m.status, heldDate: dateStr(m.held_date) } : null }; })
+        .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+module.exports = { annotateViews, unassignedTrials, missedLessons, HOLD_MINUTES, studentRow, statusOn, teacherOn, dateStr, loadContext, dayView, checkSlot, fits, book, confirmHold,
     transition, releaseLead, checkWeekly, addOverride, removeOverride, setHours, daySummary, redactForSales, lockTeacher, leadTrialSlots, checkLeadTrial };
