@@ -1472,24 +1472,42 @@
     // "Kalendar" tugmasi — Davomat bo'limida shu o'quvchini ochadi.
     document.addEventListener('click', e => { const b = e.target.closest?.('[data-cal]'); if (!b) return; const t = top(); if (t?.id === 'karta') { davSel = t.arg; davMonth = now().month; davDuty = 'main'; go('davomat'); } });
 
-    // ── Adminga so'rov (jadvalni o'zgartirish) ──────────────────────────────
-    // Server hozircha ustozdan faqat vaqt so'rovini (yopish/ochish/ta'til) qabul qiladi —
-    // o'quvchi jadvalini o'zgartirish so'rovi uchun endpoint yo'q, shuning uchun yuborish o'chirilgan.
+    // ── Adminga so'rov (o'quvchi bo'yicha) ──────────────────────────────────
+    // POST /api/school/requests {type:'student', studentId, topic, reason} — faqat o'z o'quvchisi;
+    // admin CRM'da ko'rib, qo'lda hal qiladi (jadval avtomatik o'zgarmaydi).
+    const SQ_TOPICS = [['schedule', 'Dars vaqti yoki kunlari', 'masalan 16:30 → 18:00 yoki Du·Ch·Ju → Se·Pa·Sh'], ['freeze', 'Muzlatish', "o'quvchi vaqtincha to'xtatmoqchi"], ['teacher', 'Ustoz almashtirish', "o'quvchi yoki ota-ona so'radi"], ['other', 'Boshqa', 'admin hal qiladi']];
+    const SQ_LBL = Object.fromEntries(SQ_TOPICS.map(t => [t[0], t[1]]));
+    let sqTopic = 'schedule', sqBusy = false;
     PAGES.sorov = {
         render(id) {
             const s = stuOf(id);
+            const mine = (S.requests || []).filter(r => r.type === 'student' && (r.payload?.studentId || (typeof r.payload === 'string' ? (() => { try { return JSON.parse(r.payload).studentId; } catch { return ''; } })() : '')) === id);
+            const pay = r => typeof r.payload === 'string' ? (() => { try { return JSON.parse(r.payload); } catch { return {}; } })() : (r.payload || {});
+            const st = r => r.status === 'approved' ? '<span class="pill ok">Hal qilindi</span>' : r.status === 'rejected' ? '<span class="pill bad">Rad etildi</span>' : '<span class="pill warn">Kutilmoqda</span>';
             return `${pageHead(h1("Adminga so'rov"), s ? `${esc(s.name)} · ${patternLabel(s.lessonDayOfWeek)} ${esc(s.lessonTime || '')}` : '')}
             <div class="body" style="padding-bottom: 24px">
-              <fieldset style="border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px" disabled><legend class="lbl" style="margin-bottom: 8px">Nima o'zgarsin?</legend>
-                <label class="rad"><input type="radio" name="sq" checked><span class="col"><b class="small">Dars vaqti</b><span class="xs muted">masalan ${esc(s?.lessonTime || '16:30')} → boshqa vaqt</span></span></label>
-                <label class="rad"><input type="radio" name="sq"><span class="col"><b class="small">Dars kunlari</b><span class="xs muted">${s ? patternLabel(s.lessonDayOfWeek) : 'Du·Ch·Ju'} → boshqa kunlar</span></span></label>
-                <label class="rad"><input type="radio" name="sq"><span class="col"><b class="small">Boshqa</b><span class="xs muted">muzlatish, ustoz almashtirish — admin hal qiladi</span></span></label>
+              <fieldset style="border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px"><legend class="lbl" style="margin-bottom: 8px">Nima kerak?</legend>
+                ${SQ_TOPICS.map(([k, l, d]) => `<label class="rad"><input type="radio" name="sq" value="${k}"${k === sqTopic ? ' checked' : ''}><span class="col"><b class="small">${l}</b><span class="xs muted">${esc(d)}</span></span></label>`).join('')}
               </fieldset>
-              <div class="note w"><b>Bu so'rov turi hali ulanmagan.</b> Server ustozdan o'quvchi jadvalini o'zgartirish so'rovini hozircha qabul qilmaydi. Adminga to'g'ridan-to'g'ri yozing — u CRM'da o'zgartiradi.</div>
-              <button type="button" class="btn pri w" disabled>Yuborish</button>
-              <span class="xs muted" style="padding: 0 4px">O'z ish vaqtingizni yopish, ochish yoki ta'til uchun Jadval → "Vaqt so'rovi"dan foydalaning.</span>
-              <button type="button" class="btn w" data-push="jadval">Jadvalga o'tish</button>
+              <div class="field"><label class="lbl" for="sqz">Izoh</label><textarea id="sqz" rows="3" maxlength="300" placeholder="qisqacha: nima va qachondan" style="width: 100%; min-width: 0; resize: vertical"></textarea></div>
+              <button type="button" class="btn pri w" data-sqsend${sqBusy ? ' disabled' : ''}>Yuborish</button>
+              <span class="xs muted" style="padding: 0 4px">Admin CRM'da ko'rib hal qiladi. O'z ish vaqtingizni yopish, ochish yoki ta'til uchun Jadval → "Vaqt so'rovi".</span>
+              ${mine.length ? `<div class="card" style="padding: 4px 14px"><div class="list">${mine.map(r => `<div class="li"><div class="col" style="flex: 1; min-width: 0"><b class="small">${esc(SQ_LBL[pay(r).topic] || "So'rov")}</b><span class="xs muted ell" style="font-weight: 600">${esc(r.reason || '')}${r.decision_note ? ' · ' + esc(r.decision_note) : ''}</span></div>${st(r)}</div>`).join('')}</div></div>` : ''}
             </div>`;
+        },
+        bind(id) {
+            root.querySelectorAll('input[name="sq"]').forEach(r => r.onchange = () => { sqTopic = r.value; });
+            const btn = root.querySelector('[data-sqsend]');
+            if (btn) btn.onclick = async () => {
+                const note = root.querySelector('#sqz').value.trim();
+                if (note.length < 3) return toast('Izohni yozing');
+                sqBusy = true; btn.disabled = true;
+                try {
+                    const r = await api('/api/school/requests', { method: 'POST', body: { type: 'student', studentId: id, topic: sqTopic, reason: note } });
+                    if (r.request) S.requests = [r.request, ...(S.requests || [])];
+                    sqBusy = false; toast("So'rov adminga yuborildi"); render();
+                } catch (err) { sqBusy = false; btn.disabled = false; toast(err.message); }
+            };
         },
     };
 
