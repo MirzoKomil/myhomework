@@ -1,0 +1,99 @@
+/* Ustoz kabineti: UstozBosh (reyting ▲/▼, "Bajarish kerak" belgilari, "Boshlash"), UstozDavomat (bugungi qatorlar),
+   "Darsni tugatasizmi?" oynasi. js/ustozHome.js, js/teacherDutyUI.js, js/lessonStart.js. */
+
+/* ── UstozBosh: Bajarish kerak — belgi ─────────────────────────────── */
+.thx-todo li .thx-ti { width: 36px; height: 36px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.thx-ti--warn { background: #FEF0C7; color: #93370D; }
+.thx-ti--user { background: #EAF3FF; color: #0057B8; }
+.thx-ti--clock { background: #EAF3FF; color: #0057B8; }
+.thx-ti--sync { background: #CCF1EE; color: #0B5F56; }
+html.rd[data-theme="dark"] .thx-ti--warn { background: #3A2A0B; color: #FEC84B; }
+html.rd[data-theme="dark"] .thx-ti--user, html.rd[data-theme="dark"] .thx-ti--clock { background: #0E2747; color: #84CAFF; }
+html.rd[data-theme="dark"] .thx-ti--sync { background: #0B302C; color: #5FE9D0; }
+
+/* ── UstozBosh: "Bugun" — joriy/keyingi dars qatori ───────────────── */
+html.rd .tch-row.tch-row--cur { background: #F2F7FF; }
+html.rd[data-theme="dark"] .tch-row.tch-row--cur { background: #0F1D33; }
+html.rd .tch-row-btn.tch-row-btn--pri { background: #0065D6; border-color: #0065D6; color: #fff; font-weight: 700; }
+html.rd .tch-row-btn.tch-row-btn--pri:hover { background: #0057B8; border-color: #0057B8; }
+
+/* ── UstozBosh: Ustozlar reytingi ──────────────────────────────────── */
+.uh-rk-h { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.uh-rk-h > span { font-size: 12px; color: var(--text-muted, #6B7280); }
+.uh-rk { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; }
+.uh-rk li { display: flex; align-items: center; gap: 12px; padding: 8px 8px; font-size: 14px; border-radius: 10px; min-width: 0; }
+.uh-rk li.me { background: #EAF3FF; }
+html.rd[data-theme="dark"] .uh-rk li.me { background: #0F2443; }
+.uh-rk .n { width: 26px; height: 26px; border-radius: 8px; background: #F5F7FB; font-size: 12px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+html.rd[data-theme="dark"] .uh-rk .n { background: #1A2740; }
+.uh-rk li.me .n { background: #0065D6; color: #fff; }
+.uh-rk .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.uh-rk .sc { font-weight: 800; font-variant-numeric: tabular-nums; }
+.uh-rk-gap { justify-content: center; color: var(--text-muted, #6B7280); padding: 0 !important; }
+.uh-dl { font-size: 12px; font-weight: 700; min-width: 44px; text-align: right; color: var(--text-muted, #6B7280); font-variant-numeric: tabular-nums; }
+.uh-dl.up { color: #05603A; }
+.uh-dl.dn { color: #B42318; }
+html.rd[data-theme="dark"] .uh-dl.up { color: #6CE9A6; }
+html.rd[data-theme="dark"] .uh-dl.dn { color: #FDA29B; }
+.uh-fx { margin: 6px 0 0; padding-top: 10px; border-top: 1px solid var(--border, #EEF1F6); font-size: 12px; line-height: 1.5; color: var(--text-muted, #4B5563); }
+.rt-top strong .uh-dl { display: block; min-width: 0; text-align: inherit; }
+
+/* ── UstozDavomat: bugungi qatorlar ───────────────────────────────── */
+html.rd .teacher-duty-today li.has-ask { flex-wrap: wrap; }
+html.rd .teacher-duty-today li.is-next { background: #F2F7FF; margin: 0 -16px; padding: 8px 16px; }
+html.rd[data-theme="dark"] .teacher-duty-today li.is-next { background: #0F1D33; }
+html.rd .teacher-duty-today .duty-ask { flex: 1 0 100%; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; padding: 10px 12px; border: 1px solid #FEDF89; background: #FFFCF0; border-radius: 12px; font-size: 13px; }
+html.rd[data-theme="dark"] .teacher-duty-today .duty-ask { background: #2A2210; border-color: #6B4F12; }
+html.rd .teacher-duty-today .duty-ask > b { margin-right: 4px; }
+html.rd .teacher-duty-today .duty-ask-note { margin-left: auto; font-size: 12px; color: var(--text-muted, #4B5563); }
+html.rd .teacher-duty-today .duty-mk-txt { color: #0B5F56; font-weight: 700; }
+html.rd[data-theme="dark"] .teacher-duty-today .duty-mk-txt { color: #5FE9D0; }
+html.rd .duty-pill { display: inline-flex; align-items: center; min-height: 24px; padding: 0 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+html.rd .duty-pill--warn { background: #FEF0C7; color: #93370D; }
+html.rd .duty-pill--now { background: #EAF3FF; color: #0057B8; }
+html.rd[data-theme="dark"] .duty-pill--warn { background: #3A2A0B; color: #FEC84B; }
+html.rd[data-theme="dark"] .duty-pill--now { background: #0E2747; color: #84CAFF; }
+html.rd .teacher-duty-today .duty-start { display: inline-flex; align-items: center; gap: 6px; }
+/* Asosiy amal (dizayn: to'ldirilgan ko'k) — "Darsni boshlash" va "Dars bo'ldimi? → Keldi". */
+html.rd .teacher-duty-today .btn-primary-sm.duty-start,
+html.rd .teacher-duty-today .duty-ask .btn-primary-sm { background: #0065D6 !important; border-color: #0065D6 !important; color: #fff !important; min-height: 40px; padding: 6px 14px; }
+html.rd .teacher-duty-today .duty-ask .btn-ghost, html.rd .teacher-duty-today [data-duty-contact] { min-height: 40px; }
+html.rd .teacher-duty-more { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 16px; border: 1px dashed var(--border, #E6EAF2); border-radius: 14px; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; min-height: 44px; }
+html.rd .teacher-duty-more:hover { border-color: #0065D6; }
+html.rd .teacher-duty-more i { width: 36px; height: 36px; border-radius: 50%; background: #EAF3FF; color: #0057B8; font-style: normal; font-weight: 800; font-size: 12px; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+html.rd[data-theme="dark"] .teacher-duty-more i { background: #0E2747; color: #84CAFF; }
+html.rd .teacher-duty-more span { display: flex; flex-direction: column; min-width: 0; }
+html.rd .teacher-duty-more small { color: var(--text-muted, #6B7280); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 600px) {
+  html.rd .teacher-duty-today .duty-ask-note { margin-left: 0; flex: 1 0 100%; }
+}
+
+/* ── "Darsni tugatasizmi?" oynasi (Oynalar) ───────────────────────── */
+.lp-dlg--fin { gap: 14px; }
+.lp-dlg-h { display: flex; align-items: flex-start; gap: 12px; }
+.lp-dlg-h > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.lp-dlg-x { margin-left: auto; width: 40px; height: 40px; border-radius: 10px; border: 0; background: #F5F7FB; color: #0B1220; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; flex: none; }
+html.rd[data-theme="dark"] .lp-dlg-x { background: #1A2740; color: #E8EEF8; }
+.lp-dlg-box { background: #F5F7FB; border-radius: 14px; padding: 12px 14px; font-size: 13px; line-height: 1.5; }
+html.rd[data-theme="dark"] .lp-dlg-box { background: #0B1220; }
+.lp-dlg-opt { display: flex; align-items: center; gap: 12px; border: 1px solid #E6EAF2; border-radius: 14px; padding: 12px 14px; cursor: pointer; }
+html.rd[data-theme="dark"] .lp-dlg-opt { border-color: #24304A; }
+.lp-dlg-opt input { width: 18px; height: 18px; accent-color: #0065D6; flex: none; margin: 0; }
+.lp-dlg-opt span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.lp-dlg-opt small { font-size: 12px; color: #64748B; }
+.lp-dlg-opt.is-off { opacity: .55; cursor: not-allowed; }
+.lp-dlg-opt:has(input:checked) { border-color: #0065D6; background: #F2F7FF; }
+html.rd[data-theme="dark"] .lp-dlg-opt:has(input:checked) { background: #0F1D33; }
+.lp-dlg-pick label { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.lp-dlg-pick select { min-height: 40px; border-radius: 10px; border: 1px solid #E6EAF2; padding: 0 10px; font: inherit; }
+.lp-dlg--fin .lp-dlg-act { align-items: center; padding-top: 12px; border-top: 1px solid #EEF1F6; }
+html.rd[data-theme="dark"] .lp-dlg--fin .lp-dlg-act { border-top-color: #24304A; }
+.lp-grow { flex: 1; }
+.lp-link { border: 0; background: none; padding: 8px 4px; min-height: 44px; font: inherit; font-size: 13px; font-weight: 600; color: #64748B; text-decoration: underline; cursor: pointer; }
+.lp-link:disabled { opacity: .6; }
+@media (max-width: 480px) {
+  .lp-dlg--fin .lp-dlg-act .lp-btn { flex: 1; }
+  .lp-grow { flex-basis: 100%; height: 0; }
+}
+/* Dark: belgilanmagan qator foni (school.css dagi och fon dark rejimda matnni yashirardi). */
+html.rd[data-theme="dark"] .teacher-duty-today li.is-unmarked { background: #2A1414; }

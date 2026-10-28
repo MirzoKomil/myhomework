@@ -8707,7 +8707,7 @@ function renderTeacherTodayBlock(user) {
         } else if (isAssistant) {
             actionsHtml = `<button type="button" class="tch-row-btn tch-row-btn--ok" data-thx-contact="${escapeHtml(s.id)}">Aloqani belgilash</button>`;
         }
-        return `<li class="tch-row tch-row--${state[0]}">
+        return `<li class="tch-row tch-row--${state[0]}" data-thx-sid="${escapeHtml(s.id)}" data-thx-st="${state[0]}" data-thx-duty="${s._duty}" data-thx-dur="${dur}">
             <b class="tch-time">${escapeHtml(s.lessonTime)}</b>
             <div style="display:flex;flex-direction:column;gap:2px;min-width:0;flex:1"><strong>${escapeHtml(s.name || '')}</strong>
             <span class="mot-prize-note">${isAssistant ? `yordamchi aloqasi · asosiy ustoz ${escapeHtml(_thxTeacherShort(s.teacherId))}` : `${dur} daqiqa`} · ${state[1]}</span></div>
@@ -9422,14 +9422,17 @@ async function _loadTeacherHomeRating(container) {
     const cardEl = container.querySelector('[data-thx-rating-card]');
     if (!kpiEl && !cardEl) return;
     try {
-        const { rows, selfId } = await apiFetchTeacherRating();
+        const data = await apiFetchTeacherRating();
+        const { rows, selfId } = data;
         const own = (rows || []).find(r => r.id === selfId);
         if (kpiEl) {
             kpiEl.innerHTML = own
-                ? `<span class="ahx-kpi-l">Reyting · ${escapeHtml(UZ_MONTHS_GEN[new Date().getMonth()])}</span><b class="ahx-kpi-v">${own.rank}-oʻrin</b><div class="ahx-kpi-n"><span>${own.total} ustoz ichida · ${own.score} ball</span></div>`
+                ? `<span class="ahx-kpi-l">Reyting · ${escapeHtml(UZ_MONTHS_GEN[new Date().getMonth()])}</span><b class="ahx-kpi-v">${own.rank}-oʻrin</b><div class="ahx-kpi-n"><span>${own.total} ustoz ichida · ${window.UstozHome ? window.UstozHome.f1(own.score) : own.score} ball</span></div>`
                 : `<span class="ahx-kpi-l">Reyting</span><b class="ahx-kpi-v">—</b><div class="ahx-kpi-n"><span>hali maʻlumot yoʻq</span></div>`;
         }
-        if (cardEl) {
+        // UstozBosh: ▲/▼ (o'tgan oyga nisbatan), "N-o'ringa X ball qoldi", formula raqamlari — js/ustozHome.js.
+        if (cardEl && window.UstozHome?.ratingCard) cardEl.innerHTML = window.UstozHome.ratingCard(data);
+        else if (cardEl) {
             const listRows = (rows || []).map(r => `<div class="rd-thx-rank-row${r.id === selfId ? ' rd-thx-rank-row--self' : ''}"><span class="rd-thx-rank-n">${r.rank}</span><span class="rd-thx-rank-name">${escapeHtml(r.name)}${r.id === selfId ? ' (siz)' : ''}</span><strong>${r.score} ball</strong></div>`).join('');
             cardEl.innerHTML = `<div class="ahx-card-h"><h3>Ustozlar reytingi</h3></div>
                 ${listRows || '<p class="dashboard-empty">Hali maʻlumot yoʻq</p>'}
@@ -9543,6 +9546,7 @@ function renderDashboardOverview(args) {
         container.querySelectorAll('[data-thx-guide]').forEach(btn => btn.addEventListener('click', () => { switchTab('guides'); setTimeout(() => { try { openMyGuideArticle(btn.dataset.thxGuide); } catch (e) { /* ro'yxat ochiq qoladi */ } }, 50); }));
         bindTeacherHomeToday(container, currentUser);
         window.LessonStart?.decorateHome?.(container, currentUser);
+        window.UstozHome?.decorateToday?.(container);
         _loadTeacherHomeRating(container);
         window.schoolTeacher?.homeExtras?.(container, currentUser);
         return;
@@ -12045,12 +12049,17 @@ async function renderTpRating() {
     try { data = await apiFetchTeacherRating(_tpRatingType); }
     catch (err) { container.innerHTML = `<div style="padding:20px"><p class="text-muted">${escapeHtml(err.message)}</p></div>`; return; }
     const rows = (data.rows || []).filter(r => { const l = langOf(r.id); return !l || l === lang; }).map((r, i) => ({ ...r, rank: i + 1 }));
+    // O'tgan oydagi o'rin shu til yo'nalishi ichida (▲/▼ uchun; server prevScore beradi).
+    const prevOrder = rows.filter(r => r.prevScore != null).sort((a, b) => b.prevScore - a.prevScore || (a.prevRank ?? 999) - (b.prevRank ?? 999));
+    rows.forEach(r => { r.prevRank = r.prevScore != null ? prevOrder.indexOf(r) + 1 : null; });
+    const dl = r => (window.UstozHome?.delta ? window.UstozHome.delta(r) : '');
+    const sc = v => (window.UstozHome?.f1 ? window.UstozHome.f1(v) : v);
     const [y, m] = String(data.month || '').split('-').map(Number);
     const monthLabel = m ? `${MON[m - 1]} ${y}` : '';
     const av = id => { const e = hr.find(x => x.id === id) || { id }; return window.schoolUI?.staffAvatar ? window.schoolUI.staffAvatar(e, 40) : ''; };
     const pct = v => v == null ? '—' : `${v}%`;
     const top = rows.slice(0, 3).map(r => `<div class="rt-top"><span class="rt-rank">${r.rank}</span>${av(r.id)}<div><b>${escapeHtml(r.name)}</b><small>${_tpRatingType === 'yordamchi' ? 'Yordamchi' : 'Asosiy'} · ${r.students} o'quvchi</small></div>
-        <strong>${r.score}<small> ball</small></strong><dl><dt>Davomat</dt><dd>${pct(r.davomatPct)}</dd><dt>O'zlashtirish</dt><dd>${pct(r.learnPct)}</dd></dl></div>`).join('');
+        <strong>${sc(r.score)}<small> ball</small> ${dl(r)}</strong><dl><dt>Davomat</dt><dd>${pct(r.davomatPct)}</dd><dt>O'zlashtirish</dt><dd>${pct(r.learnPct)}</dd></dl></div>`).join('');
     container.innerHTML = `<div style="padding:20px" class="rt-page">
         <div class="rt-head"><h2>Ustozlar reytingi</h2>
           <div class="sc-seg" role="group" aria-label="Ustoz turi"><button type="button" data-rt-type="asosiy" aria-pressed="${_tpRatingType === 'asosiy'}">Asosiy ustozlar</button><button type="button" data-rt-type="yordamchi" aria-pressed="${_tpRatingType === 'yordamchi'}">Yordamchi ustozlar</button></div>
@@ -12058,10 +12067,10 @@ async function renderTpRating() {
         <div class="rt-formula"><span><b>Davomat</b> % × 60%</span><i>+</i><span><b>O'quvchilar o'zlashtirishi</b> — uy vazifasi, 1-urinish % × 40%</span><i>=</i><span><b>Ball</b> / 100</span></div>
         <p class="text-muted" style="font-size:12.5px">Davomat — rejadagi darslardan nechtasi o'tildi. O'zlashtirish — o'quvchilar ilovada uy vazifasini birinchi urinishda necha foizga bajargani (ilova ma'lumoti; ma'lumoti yo'q o'quvchi hisobga kirmaydi). Asosiy va yordamchi ustozlar alohida solishtiriladi.</p>
         ${rows.length ? `<div class="rt-tops">${top}</div>` : ''}
-        <div class="card"><div class="table-responsive"><table class="table"><thead><tr><th>#</th><th>Ustoz</th><th>O'quvchilar</th><th>Davomat · 60%</th><th>O'zlashtirish · 40%</th><th>Ball</th></tr></thead><tbody>
+        <div class="card"><div class="table-responsive"><table class="table"><thead><tr><th>#</th><th>Ustoz</th><th>O'quvchilar</th><th>Davomat · 60%</th><th>O'zlashtirish · 40%</th><th>Ball</th><th title="O'tgan oyga nisbatan ball o'zgarishi">O'tgan oyga</th></tr></thead><tbody>
           ${rows.map(r => `<tr><td>${r.rank}</td><td><div style="display:flex;align-items:center;gap:10px">${av(r.id)}<div><b>${escapeHtml(r.name)}</b><div class="text-muted" style="font-size:12px">${r.completed} / ${r.expected} dars</div></div></div></td>
             <td>${r.students}</td><td><div class="rt-bar"><i style="width:${r.davomatPct || 0}%"></i></div> ${pct(r.davomatPct)}</td>
-            <td>${pct(r.learnPct)}${r.learnPct != null ? `<div class="text-muted" style="font-size:11.5px">${r.learnStudents} o'quvchi ma'lumoti</div>` : ''}</td><td><b>${r.score}</b></td></tr>`).join('') || `<tr><td colspan="6" class="text-muted" style="text-align:center;padding:28px">Bu oy hali reyting uchun ma'lumot yo'q</td></tr>`}
+            <td>${pct(r.learnPct)}${r.learnPct != null ? `<div class="text-muted" style="font-size:11.5px">${r.learnStudents} o'quvchi ma'lumoti</div>` : ''}</td><td><b>${sc(r.score)}</b></td><td>${dl(r)}${r.prevRank != null ? `<div class="text-muted" style="font-size:11.5px">o'tgan oy ${r.prevRank}-o'rin</div>` : ''}</td></tr>`).join('') || `<tr><td colspan="7" class="text-muted" style="text-align:center;padding:28px">Bu oy hali reyting uchun ma'lumot yo'q</td></tr>`}
         </tbody></table></div></div></div>`;
     container.querySelectorAll('[data-rt-type]').forEach(b => b.addEventListener('click', () => { _tpRatingType = b.dataset.rtType; renderTpRating(); }));
 }
