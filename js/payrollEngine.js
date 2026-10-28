@@ -60,7 +60,7 @@
         ] }, rop: { hasFixed: false, fixed: 0, minCompletion: 1, tiers: [
             { upTo: 30, rate: 2 }, { upTo: 40, rate: 3 }, { upTo: 50, rate: 4 },
             { upTo: 70, rate: 5 }, { upTo: 80, rate: 7 }, { upTo: null, rate: 8 }
-        ] }, teacher: { rates: { 15: 75000, 30: 150000, 60: 300000 }, maxLessons: 0 }, assistant: { rate: 50000, maxLessons: 0 },
+        ] }, teacher: { rates: { 15: 75000, 30: 150000, 60: 300000 }, maxLessons: 0 }, assistant: { rate: 40000, maxLessons: 0 },
         targetMonthlySalary: 0, bonusAmounts: { obed30: 30000, obed60: 60000 } };
     }
     function validateSettings(value) {

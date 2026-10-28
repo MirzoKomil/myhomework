@@ -13,7 +13,7 @@
     const MON_S = ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'Iyun', 'Iyul', 'Avg', 'Sen', 'Okt', 'Noy', 'Dek'];
     const CHANNELS = [['phone', 'Telefon'], ['zoom', 'Zoom'], ['meet', 'Google Meet'], ['tg_video', 'Telegram video'], ['tg_group', 'Guruh videodars'], ['tg_text', 'Yozishma']];
     const CH_LABEL = Object.fromEntries(CHANNELS);
-    const RATE = 3846, CAP = 13;
+    const RATE = 3077, CAP = 13; // zaxira — haqiqiy narx serverdan (rate)
     const cal = window.teacherAttendanceCalendar;
     // Sinov darsini rad etish/natija sabablari — server bilan bir xil ro'yxat (js/trialWorkflow.js).
     const REASONS = window.trialWorkflow?.REASONS || [];
@@ -1140,7 +1140,7 @@
           ${prev?.state?.locked_at && !prev.state.paid_at ? `<button type="button" class="card" data-push="yoy" data-arg="${prevM}" style="display: flex; align-items: center; gap: 12px; text-align: left; font: inherit; color: inherit; width: 100%; cursor: pointer"><span class="evi" style="background: #FEF0C7; color: #93370D">${ico(I.cal0, 20)}</span><div class="col" style="flex: 1"><b class="small">${cap1(monName(prevM))} yopildi · ${money(prev.amount)} so'm</b><span class="xs muted">${prev.state.final_at ? 'yakuniy tasdiqlandi · to\'lov kutilmoqda' : prev.state.prelim_at ? `e'tiroz ${prev.state.objection_until ? fmtDate(day10(prev.state.objection_until)) + 'gacha' : 'muddati'}` : 'moliya tasdiqlaydi'}</span></div>${chev}</button>` : ''}
           <section class="card" style="display: flex; flex-direction: column; gap: 10px" aria-label="Maosh"><div class="between"><span class="lbl">Maosh · ${monName(n.month)} · hozirgacha</span><button type="button" class="small linkb" data-push="ymaosh" style="min-height: 40px">Batafsil</button></div>
             <span class="big">${money(S.assist?.amount ?? 0)} <span style="font-size: 15px; font-weight: 700; color: #4B5563">so'm</span></span>
-            <span class="small muted">${counted} aloqa × ${money(RATE)} so'm · har o'quvchi bilan oyiga ${CAP} tagacha</span>
+            <span class="small muted">${counted} aloqa × ${money(S.assist?.rate || RATE)} so'm · har o'quvchi bilan oyiga ${CAP} tagacha</span>
             <div class="prog"><div class="bar g"><i style="width: ${max ? Math.min(100, Math.round(counted / max * 100)) : 0}%"></i></div><span class="xs muted" style="font-weight: 700">${counted} / ${max}</span></div>
             <div class="kpis"><div class="kpi"><span>Bugun</span><b>${today.length - pending.length} / ${today.length}</b><span>${pending.length} qoldi</span></div><button type="button" class="kpi" data-push="yjadval" style="text-align: left; font: inherit; color: inherit; cursor: pointer"><span>Bu hafta</span><b>${weekDone} / ${weekPlan}</b><span style="color: #0057B8; font-weight: 700">jadval →</span></button><div class="kpi"><span>Qayta urinish</span><b>${retry.length}</b><span class="ell">${retry.length ? esc(retry.map(s => first(s.name)).join(', ')) : 'yo\'q'}</span></div></div>
           </section>

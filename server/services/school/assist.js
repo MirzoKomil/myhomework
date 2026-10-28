@@ -4,7 +4,8 @@
 //  • aloqa kamida 5 daqiqa; yozishma (Telegram matn) haftasiga 1 tagacha hisoblanadi;
 //  • "javob bermadi" yoziladi, lekin hisoblanmaydi;
 //  • bir o'quvchi bilan bir kunda bittasi hisoblanadi;
-//  • har o'quvchi bilan oyiga 13 tagacha, har biri 3 846 so'm (50 000 / 13);
+//  • har o'quvchi bilan oyiga 13 tagacha, har biri = yordamchi oylik tarifi ÷ 13 (KPI sozlamasi; 29-okt: 40 000 → 3 077 so'm),
+//    o'quvchi tarifiga bog'liq emas;
 //  • muzlagan kunlarda aloqa belgilanmaydi, chegara va narx o'zgarmaydi;
 //  • oy o'rtasida chiqib ketgan o'quvchining o'qigan davridagi aloqalari ham hisoblanadi;
 //  • aloqa faqat shu kuni belgilanadi — keyin admin tuzatadi (sabab bilan);
@@ -14,13 +15,15 @@ const T = require('./time');
 const S = require('./schedule');
 const { fail } = T;
 
-const RATE = 3846;
+// Zaxira qiymat — haqiqiy narx salary_kpi_settings (Moliya → KPI sozlamalari, "Yordamchi tarifi") dan olinadi (contactRate).
+const MONTHLY_DEFAULT = 40000;
+const RATE = Math.round(MONTHLY_DEFAULT / 13);
 const MONTH_CAP = 13;
 const MIN_MINUTES = 5;
 const CHANNELS = { phone: 'Telefon', zoom: 'Zoom', meet: 'Google Meet', tg_video: 'Telegram video', tg_group: 'Telegram guruh videodars', tg_text: 'Telegram yozishma' };
 
 // Sof hisob: bir yordamchining oy aloqalari → har o'quvchi bo'yicha hisoblangan soni.
-function countMonth(contacts) {
+function countMonth(contacts, rate = RATE) {
     const byStudent = new Map();
     const rows = [...contacts].filter(c => !c.removed_at)
         .sort((a, b) => String(S.dateStr(a.day)).localeCompare(String(S.dateStr(b.day))) || String(a.created_at).localeCompare(String(b.created_at)));
@@ -43,9 +46,9 @@ function countMonth(contacts) {
         else s.extraText++;
         s.items.push({ id: c.id, day, at: c.at_min ?? null, channel: c.channel, minutes: c.minutes, outcome: c.outcome, status, note: c.note || '', corrected: !!c.correction_reason });
     }
-    const students = [...byStudent.values()].map(({ days, textWeeks, ...rest }) => ({ ...rest, amount: rest.counted * RATE }));
+    const students = [...byStudent.values()].map(({ days, textWeeks, ...rest }) => ({ ...rest, amount: rest.counted * rate }));
     const counted = students.reduce((n, s) => n + s.counted, 0);
-    return { students, counted, amount: counted * RATE, noAnswer: students.reduce((n, s) => n + s.noAnswer, 0),
+    return { students, counted, amount: counted * rate, noAnswer: students.reduce((n, s) => n + s.noAnswer, 0),
         overCap: students.reduce((n, s) => n + s.overCap, 0) };
 }
 
@@ -141,12 +144,23 @@ async function adminCorrect(db, actor, body, now = new Date()) {
     return rows[0];
 }
 
+// Bir aloqa narxi — maosh hisobi (payrollEngine contacts-v1: round(tarif / 13)) bilan bitta manba.
+async function contactRate(db, assistantId) {
+    try {
+        const engine = require('../../../js/payrollEngine');
+        const emp = (await db.query('SELECT * FROM hr_employees WHERE id=$1', [assistantId])).rows[0] || {};
+        const row = (await db.query('SELECT data FROM salary_kpi_settings WHERE language=$1', [engine.language(emp)])).rows[0];
+        const monthly = Number(row?.data?.assistant?.rate);
+        return Number.isFinite(monthly) && monthly > 0 ? Math.round(monthly / MONTH_CAP) : RATE;
+    } catch { return RATE; }
+}
 async function monthReport(db, assistantId, month) {
     const { from, to } = T.monthBounds(month);
     const contacts = (await db.query('SELECT * FROM school_assist_contacts WHERE assistant_id=$1 AND day BETWEEN $2 AND $3', [assistantId, from, to])).rows;
-    const r = countMonth(contacts);
+    const rate = await contactRate(db, assistantId);
+    const r = countMonth(contacts, rate);
     const corrections = contacts.filter(c => c.correction_reason && !c.removed_at).length;
-    return { month, assistantId, rate: RATE, cap: MONTH_CAP, ...r, corrections, state: await monthState(db, month) };
+    return { month, assistantId, rate, cap: MONTH_CAP, ...r, corrections, state: await monthState(db, month) };
 }
 
 // Oyni yopish bosqichlari (admin / moliya).
@@ -315,4 +329,4 @@ async function monthChanges(db, assistantId, month) {
     return { month, changes: out };
 }
 
-module.exports = { possibleLeft, financeRequest, monthChanges, FIN_KINDS, plan, RATE, MONTH_CAP, MIN_MINUTES, CHANNELS, countMonth, mark, removeOwnToday, adminCorrect, monthReport, advanceMonth, isLocked, adviceFor };
+module.exports = { contactRate, possibleLeft, financeRequest, monthChanges, FIN_KINDS, plan, RATE, MONTH_CAP, MIN_MINUTES, CHANNELS, countMonth, mark, removeOwnToday, adminCorrect, monthReport, advanceMonth, isLocked, adviceFor };

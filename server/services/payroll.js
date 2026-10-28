@@ -66,6 +66,27 @@ async function initSchema(db) {
     await db.query(SCHEMA);
     for (const lang of ['english', 'russian']) await db.query(`INSERT INTO salary_kpi_settings(language,data)
         VALUES($1,$2) ON CONFLICT(language) DO NOTHING`, [lang, JSON.stringify(engine.defaults())]);
+    await migrateAssistantRate40(db).catch(err => console.error('[maosh] yordamchi tarifi 40 000 ga o\'tkazilmadi:', err.message));
+}
+// 29-okt qarori: yordamchi ustoz — o'quvchi tarifidan qat'i nazar oyiga 40 000 so'm (13 aloqa), 2026-oktyabrdan.
+// Bir marta: hali eski standart 50 000 turgan til sozlamasi 40 000 ga o'tkaziladi (admin boshqa qiymat qo'ygan bo'lsa tegilmaydi).
+// Oktyabr hali hisoblanmagan (1-noyabrda yopiladi); to'langan oylar o'z basis'idagi sozlama bilan qoladi.
+const ASSIST40_KEY = 'migrate-assistant-rate-40000';
+async function migrateAssistantRate40(db) {
+    if ((await db.query('SELECT 1 FROM salary_audit WHERE action=$1 LIMIT 1', [ASSIST40_KEY])).rows.length) return;
+    {
+        // Qayta ishga tushsa: 40 000 bo'lib qolgan sozlamaga qayta tegilmaydi (faqat aynan 50 000 o'zgaradi).
+        const changed = [];
+        for (const row of (await db.query('SELECT language, data FROM salary_kpi_settings')).rows) {
+            if (Number(row.data?.assistant?.rate) !== 50000) continue;
+            const data = { ...row.data, assistant: { ...row.data.assistant, rate: 40000 } };
+            await db.query('UPDATE salary_kpi_settings SET data=$2,revision=revision+1,updated_at=NOW() WHERE language=$1', [row.language, JSON.stringify(data)]);
+            await audit(db, { id: 'system', name: 'Tizim (29-okt qarori)' }, 'settings', row.language, row.data, data);
+            changed.push(row.language);
+        }
+        await audit(db, { id: 'system', name: 'Tizim (29-okt qarori)' }, ASSIST40_KEY, 'assistant.rate', null, { from: 50000, to: 40000, languages: changed });
+        if (changed.length) console.log(`[maosh] yordamchi tarifi 50 000 → 40 000: ${changed.join(', ')}`);
+    }
 }
 async function audit(db, actor, action, entity, before, after) {
     const actorName = actor.name || (actor.id && (await db.query('SELECT name FROM users WHERE id=$1', [actor.id])).rows[0]?.name);

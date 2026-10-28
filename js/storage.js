@@ -442,7 +442,7 @@ function getFlexibleAttendanceCap(year, month) {
 
 function getMonthlyBaseSalary(duration, teacher = {}) {
     const config = getItem(STORAGE_KEYS.payrollRates, {})[teacher.subject || 'english'];
-    if (teacher.type === 'yordamchi') return config?.assistant?.rate ?? 50000;
+    if (teacher.type === 'yordamchi') return config?.assistant?.rate ?? 40000;
     const rates = config?.teacher?.rates || SALARY_RATES;
     return rates[duration] ?? rates[15];
 }

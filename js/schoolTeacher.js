@@ -187,7 +187,7 @@
                 <div class="uhb-as">${helped.map(s => { const r = by.get(s.id) || { counted: 0 };
                     return `<div class="uhb-asr"><div class="uhb-r1"><span class="uhb-nm">${esc(s.name)}</span><span><b>${r.counted}</b> / 13 aloqa</span></div><i class="uhb-bar" role="img" aria-label="${r.counted} / 13"><i style="width:${Math.min(100, r.counted / 13 * 100)}%"></i></i>
                       <small>tavsiya ${adv(s).map(d => DAY[d - 1]).join('·')}${s.lessonTime ? ' ' + esc(s.lessonTime) : ''} · asosiy ustoz ${esc(u.teacherName(s.teacherId))}${s.frozen ? ' · muzlatilgan' : ''}</small></div>`; }).join('')}
-                <small>Har bir aloqa ${num(rep.rate || 3846)} so'm · kamida 5 daqiqa · usul va daqiqa kiritiladi.</small></div>`;
+                <small>Har bir aloqa ${num(rep.rate || 3077)} so'm · kamida 5 daqiqa · usul va daqiqa kiritiladi.</small></div>`;
         }
     }
 

@@ -708,7 +708,7 @@
 
     // ── Yordamchi aloqalari (admin) ──────────────────────────────────────────
     const A = { aid: '', month: '', week: '', all: false };
-    const RATE = 3846, CAP = 13;
+    const RATE = 3077, CAP = 13; // zaxira — haqiqiy narx serverdan (rep.rate)
     // 29-okt: yordamchi — alohida lavozim. Asosiy ustoz ro'yxatda faqat shu oyda o'tgan aloqasi bo'lsa (maoshda qoladi, admin ko'radi/tuzatadi)
     // yoki unga hali yordamchi o'quvchi biriktirilgan bo'lsa ("Yordamchi kerak" ogohlantirishi) chiqadi.
     function assistantList(extra = []) {
@@ -789,7 +789,7 @@
             <div class="an-mnav"><button type="button" class="sc-btn sc-btn--sm" data-mon="-1" aria-label="Oldingi oy">‹</button><b>${monthLabel(month)}</b><button type="button" class="sc-btn sc-btn--sm" data-mon="1" aria-label="Keyingi oy"${curMonth ? ' disabled' : ''}>›</button></div></div></div>
           ${rep ? `<div class="sc-kpis an-k4">
             <div class="sc-kpi"><small>${monthName(month)}</small><b>${rep.counted} / ${myStudents.length * CAP}</b><span>hisoblangan aloqa</span></div>
-            <div class="sc-kpi"><small>Maosh</small><b>${money(rep.amount)}</b><span>${rep.counted} × ${money(RATE)} so'm</span></div>
+            <div class="sc-kpi"><small>Maosh</small><b>${money(rep.amount)}</b><span>${rep.counted} × ${money(rep.rate || RATE)} so'm</span></div>
             <div class="sc-kpi"><small>${curMonth && A.week === U().weekStart(td) ? 'Bu hafta' : 'Hafta'}</small><b>${weekCounted} / ${myStudents.length * 3}</b><span>tavsiya bo'yicha</span></div>
             <div class="sc-kpi"><small>So'rovlar</small><b>${myReqs.length}</b><span>kechikib belgilash${otherReqs ? ` · boshqalarda ${otherReqs}` : ''}</span></div></div>` : ''}
           ${legacyNote()}
@@ -881,7 +881,7 @@
             const tot = rep.counted - before.counted + after.counted;
             box.querySelector('[data-prev]').innerHTML = U().impact([
                 ['◷', `${esc(U().shortName(s.name))}: hafta ${wk(before)} → ${wk(after)} / 3 · ${monthGen(month)} ${before.counted} → ${after.counted} / ${CAP}`],
-                ['₪', `${esc(U().shortName(assistant?.name || ''))}: ${rep.counted} → ${tot} aloqa · ${money(rep.amount)} → ${money(tot * RATE)} so'm`],
+                ['₪', `${esc(U().shortName(assistant?.name || ''))}: ${rep.counted} → ${tot} aloqa · ${money(rep.amount)} → ${money(tot * (rep.rate || RATE))} so'm`],
                 ['i', st === 'counted' ? 'Yangi yozuv hisoblanadi' : `Yangi yozuv hisoblanmaydi${U().CST[st] ? ' — ' + U().CST[st] : st === 'no_answer' ? ' — javob bermadi' : ''}`],
                 ['≡', 'O\'zgarishlar tarixiga yoziladi · yordamchi o\'z ro\'yxatida ko\'radi'],
                 ['⊘', `${monthName(month)} yakuniy tasdiqlangandan keyin tuzatish faqat Moliya orqali`]
