@@ -57,11 +57,14 @@ function daysElapsedThisMonthFor(student, now) {
 
 // state: getFullState() natijasi. ownType: 'asosiy' | 'yordamchi' - faqat
 // o'zi bilan bir xil turdagi ustozlar orasida solishtiriladi.
-function computeTeacherRating(state, ownType, now = tashkentNow(), learning = {}) {
+// opts.pastMonth — o'tgan oy uchun (now = prevMonthEnd()): o'sha oydan keyin boshlagan o'quvchilar kirmaydi.
+// Joriy oy (opts berilmagan) hisobi avvalgidek.
+function computeTeacherRating(state, ownType, now = tashkentNow(), learning = {}, opts = {}) {
     const monthSuffix = monthKeySuffix(now);
     const typeOf = (t) => (t.type === 'yordamchi' ? 'yordamchi' : 'asosiy');
     const teachers = (state.teachers || []).filter(t => typeOf(t) === ownType);
-    const students = state.students || [];
+    const startedBy = s => { const d = String(s.startDate || s.joinDate || '').slice(0, 7); return !/^\d{4}-\d{2}$/.test(d) || d <= monthSuffix; };
+    const students = (state.students || []).filter(s => !opts.pastMonth || startedBy(s));
     const attStore = ownType === 'yordamchi' ? (state.assistantAttendance || {}) : (state.mainAttendance || {});
 
     const rows = teachers.map((t) => {
@@ -106,8 +109,9 @@ function computeTeacherRating(state, ownType, now = tashkentNow(), learning = {}
     }).filter(r => r.score !== null);
 
     rows.sort((a, b) => b.score - a.score);
+    // Ball bir xona aniqlikda (UstozBosh: "79.4", "2-o'ringa 0.6 ball qoldi"). Tartib xom ball bo'yicha — o'zgarmaydi.
     return rows.map((r, i) => ({
-        id: r.id, name: r.name, score: Math.round(r.score), rank: i + 1, total: rows.length,
+        id: r.id, name: r.name, score: Math.round(r.score * 10) / 10, rank: i + 1, total: rows.length,
         davomatPct: r.davomatPct, completed: r.completed, expected: r.expected,
         learnPct: r.learnPct, learnStudents: r.learnStudents, students: r.students
     }));
@@ -115,14 +119,30 @@ function computeTeacherRating(state, ownType, now = tashkentNow(), learning = {}
 
 // Shu oy ichida yangilangan uy vazifasi natijalari bo'yicha har o'quvchining
 // birinchi urinishdagi o'rtacha foizi: { [studentId]: number }.
-async function loadLearningByStudent(pool, now = tashkentNow()) {
+// untilMonthEnd=true — faqat shu oy ichidagilar (o'tgan oy reytingi uchun: keyingi oy natijalari kirmaydi).
+async function loadLearningByStudent(pool, now = tashkentNow(), { untilMonthEnd = false } = {}) {
     const from = `${monthKeySuffix(now)}-01`;
+    const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+    const params = untilMonthEnd ? [from, `${monthKeySuffix(next)}-01`] : [from];
     const { rows } = await pool.query(
         `SELECT student_id, AVG(first_percent)::float AS pct
          FROM student_part_results
-         WHERE total > 0 AND updated_at >= $1::date
-         GROUP BY student_id`, [from]);
+         WHERE total > 0 AND updated_at >= $1::date${untilMonthEnd ? ' AND updated_at < $2::date' : ''}
+         GROUP BY student_id`, params);
     return Object.fromEntries(rows.map(r => [String(r.student_id), Number(r.pct)]).filter(([, v]) => Number.isFinite(v)));
 }
 
-module.exports = { computeTeacherRating, loadLearningByStudent, expandLessonPatternDays, daysElapsedThisMonthFor, monthKeySuffix };
+// O'tgan oy uchun "now": o'tgan oyning oxirgi kuni 23:59 (tashkentNow kabi — Toshkent vaqti UTC maydonlarida).
+// Shu bilan daysElapsedThisMonthFor va "Keldi" filtri butun oyni (oy oxirigacha) sanaydi; joriy oy hisobi o'zgarmaydi.
+function prevMonthEnd(now = tashkentNow()) {
+    return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 0, 23, 59, 0));
+}
+
+// Joriy oy qatorlariga o'tgan oydagi o'rin va ball (▲/▼ uchun) — faqat o'rin/ball, xom davomat emas.
+// O'tgan oyda reytingda bo'lmagan ustozda prevRank/prevScore = null.
+function attachPrevious(rows, prevRows) {
+    const by = new Map((prevRows || []).map(r => [r.id, r]));
+    return rows.map(r => { const p = by.get(r.id); return { ...r, prevRank: p ? p.rank : null, prevScore: p ? p.score : null }; });
+}
+
+module.exports = { computeTeacherRating, loadLearningByStudent, expandLessonPatternDays, daysElapsedThisMonthFor, monthKeySuffix, prevMonthEnd, attachPrevious, tashkentNow };

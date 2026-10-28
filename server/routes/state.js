@@ -7,7 +7,7 @@ const router = express.Router();
 const { getTeacherScopedState, findUserById, pool } = require('../db');
 const { scopeState } = require('../services/stateScope');
 const teacherDuties = require('../services/teacherDuties');
-const { computeTeacherRating, loadLearningByStudent } = require('../services/teacherRating');
+const { computeTeacherRating, loadLearningByStudent, prevMonthEnd, attachPrevious, monthKeySuffix } = require('../services/teacherRating');
 
 // Public endpoint — student app uchun, auth talab qilmaydi
 router.get('/mobile-content', studentAuthOptional, async (req, res) => {
@@ -1069,8 +1069,19 @@ router.get('/teacher-rating', authRequired, async (req, res) => {
         } catch (err) {
             console.error('teacher-rating: o\'zlashtirish yuklanmadi', err.message);
         }
-        const rows = computeTeacherRating(state, ownType, undefined, learning);
-        res.json({ month: new Date().toISOString().slice(0, 7), ownType, selfId, rows,
+        const current = computeTeacherRating(state, ownType, undefined, learning);
+        // O'tgan oy (▲/▼): xuddi shu hisob, o'tgan oy oxirigacha. Xato bo'lsa ham joriy reyting qaytadi.
+        // Javobga faqat prevRank/prevScore qo'shiladi — xom davomat yo'q.
+        const prevNow = prevMonthEnd();
+        let prevRows = [];
+        try {
+            let prevLearning = {};
+            try { prevLearning = await loadLearningByStudent(pool, prevNow, { untilMonthEnd: true }); }
+            catch (err) { console.error('teacher-rating: o\'tgan oy o\'zlashtirish yuklanmadi', err.message); }
+            prevRows = computeTeacherRating(state, ownType, prevNow, prevLearning, { pastMonth: true });
+        } catch (err) { console.error('teacher-rating: o\'tgan oy hisoblanmadi', err.message); }
+        const rows = attachPrevious(current, prevRows);
+        res.json({ month: new Date().toISOString().slice(0, 7), prevMonth: monthKeySuffix(prevNow), ownType, selfId, rows,
             formula: { attendance: 0.6, learning: 0.4 } });
     } catch (err) {
         console.error('GET /api/state/teacher-rating', err);
