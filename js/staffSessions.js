@@ -12,8 +12,7 @@
     const ICON = {
         desk: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>',
         phone: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18h2"/></svg>',
-        app: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M10 7h4M10 11h4M11 18h2"/></svg>',
-        tg: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M21.5 4.3 2.9 11.5l4.8 1.5 1.8 5.6 3.2-2.7 4.7 3.5 3.1-14.6z"/></svg>'
+        app: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M10 7h4M10 11h4M11 18h2"/></svg>'
     };
 
     // ── Qurilmani user-agent'dan tanish ─────────────────────────────────────
@@ -28,7 +27,7 @@
             const v = (s.match(/DomworkTeacher\/([\w.]+)/i) || [])[1];
             return { name: 'Domwork Teacher', os: os || 'Android', short: 'Domwork Teacher', icon: 'app', mobile: true, ver: v || '' };
         }
-        if (/Telegram(-Android|Bot|-iOS)?\/|TelegramWebview|\bTelegram\b/i.test(s)) return { name: 'Telegram mini ilova', os: os || 'Noma\'lum', short: 'Telegram', icon: 'tg', mobile: true };
+        if (/Telegram(-Android|Bot|-iOS)?\/|TelegramWebview|\bTelegram\b/i.test(s)) return { name: 'Telegram mini ilova', os: os || 'Noma\'lum', short: 'Telegram', icon: 'phone', mobile: true };
         const br = /Edg(e|A|iOS)?\//.test(s) ? 'Edge' : /OPR\/|Opera/.test(s) ? 'Opera' : /YaBrowser/.test(s) ? 'Yandex' : /SamsungBrowser/.test(s) ? 'Samsung Internet'
             : /Firefox\/|FxiOS/.test(s) ? 'Firefox' : /CriOS|Chrome\//.test(s) ? 'Chrome' : /Safari\//.test(s) ? 'Safari' : '';
         if (!br && !os) return { name: 'Noma\'lum', os: '', short: 'Noma\'lum', icon: 'desk', mobile: false };
@@ -78,7 +77,7 @@
         const rows = list.map(s => {
             const d = device(s.userAgent), ip = maskIp(s.ip);
             const sub = [ip, s.isCurrent ? 'hozir faol' : when(s.lastSeen || s.createdAt)].filter(Boolean).join(' · ');
-            return `<li class="tgs-ses" data-session-id="${esc(s.id)}"><span class="tgs-ic${d.icon === 'tg' ? ' tg' : d.icon === 'app' ? ' app' : ''}">${ICON[d.icon]}</span>
+            return `<li class="tgs-ses" data-session-id="${esc(s.id)}"><span class="tgs-ic${d.icon === 'app' ? ' app' : ''}">${ICON[d.icon]}</span>
               <span class="tgs-sx"><b>${esc(label(d))}${s.isCurrent ? ' <i class="tgs-me">shu qurilma</i>' : ''}</b><small title="${esc(s.createdAt ? 'Kirgan: ' + dm(s.createdAt) : '')}">${esc(sub)}</small></span>
               ${s.isCurrent ? '' : `<button type="button" class="ss-btn ss-btn--sm" data-end="${esc(s.id)}" aria-label="${esc(label(d))} sessiyasini chiqarish">Chiqarish</button>`}</li>`;
         }).join('');
@@ -86,7 +85,7 @@
         // Bir IP dan 1 soat ichidagi ketma-ket noto'g'ri urinishlar bitta qatorga yig'iladi (× N).
         const groups = [];
         for (const e of ev) { const last = groups[groups.length - 1];
-            if (last && !e.ok && !last.ok && last.ip === e.ip && Math.abs(new Date(last.at) - new Date(e.at)) < 3600e3) last.n++; else groups.push({ ...e, n: 1 }); }
+            if (last && !e.ok && !last.ok && last.ip === e.ip && Math.abs(new Date(last.at) - new Date(e.at)) < 3600e3) { last.n++; last.at = e.at; } else groups.push({ ...e, n: 1 }); }
         const recentFail = groups.find(g => !g.ok && Date.now() - new Date(g.at) < 7 * 864e5);
         const warn = recentFail ? `<div class="tgs-warn" role="alert"><p><b>${esc(dm(recentFail.at))} — ${recentFail.n} marta noto'g'ri parol${recentFail.ip ? ` (${esc(maskIp(recentFail.ip))})` : ''}.</b> Siz bo'lmasangiz parolni o'zgartiring.${H.failLimit ? ` ${H.failLimit} xatodan keyin kirish ${H.lockMinutes} daqiqaga bloklanadi.` : ''}</p>
             <button type="button" class="ss-btn ss-btn--sm" data-go-pwd>Parolni o'zgartirish</button></div>` : '';

@@ -146,6 +146,10 @@ function notifStaffUi() {
     const u = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
     return u?.role === 'teacher';
 }
+function notifIsAssistantHr() {
+    const u = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+    try { return (getItem(STORAGE_KEYS.hrEmployees, []) || []).some(e => u?.linkedTeacherId && e.id === u.linkedTeacherId && e.role === 'yordamchi'); } catch { return false; }
+}
 const NOTIF_MON3 = ['yan', 'fev', 'mar', 'apr', 'may', 'iyun', 'iyul', 'avg', 'sen', 'okt', 'noy', 'dek'];
 function notifShortTime(ts) {
     const key = notifTashkentDay(new Date(ts));
@@ -202,7 +206,8 @@ function renderNotificationPanel() {
     if (count) { count.textContent = `${unread} yangi`; count.hidden = !unread; }
     const staffUi = notifStaffUi();
     let cats = [...new Set(list.map(n => n.cat).filter(Boolean))];
-    if (staffUi) cats = [...NOTIF_STAFF_CATS, ...(cats.includes('aloqa') ? ['aloqa'] : [])];
+    // Asosiy ustozda (yordamchi sifatidagi o'quvchilari bo'lsa ham) 4 ta filtr (dizayn); "Aloqa" — faqat HR lavozimi yordamchi bo'lganlarda.
+    if (staffUi) cats = [...NOTIF_STAFF_CATS, ...(cats.includes('aloqa') && notifIsAssistantHr() ? ['aloqa'] : [])];
     if (_notifCat !== 'all' && !cats.includes(_notifCat)) _notifCat = 'all';
     const tabs = document.getElementById('notifCats');
     if (tabs) {
@@ -315,6 +320,7 @@ function openNotificationPanel() {
         if (!ov) { ov = document.createElement('div'); ov.id = 'notifOverlay'; ov.className = 'notif-ov'; ov.setAttribute('aria-hidden', 'true'); panel.before(ov); }
         ov.classList.add('open');
         panel.classList.add('open');
+        document.getElementById('notifToggle')?.setAttribute('aria-expanded', 'true');
         renderNotificationPanel();
         window.staffNotify?.refresh();
     }
@@ -324,6 +330,7 @@ function closeNotificationPanel() {
     const panel = document.getElementById('notifPanel');
     if (panel) panel.classList.remove('open');
     document.getElementById('notifOverlay')?.classList.remove('open');
+    document.getElementById('notifToggle')?.setAttribute('aria-expanded', 'false');
 }
 
 function toggleNotificationPanel() {

@@ -253,7 +253,9 @@ async function salaryDetail(pool, actor, now = new Date()) {
                 .sort((a, b) => a.name.localeCompare(b.name));
             const prev = T.monthBounds(T.addDays(`${month}-01`, -1).slice(0, 7));
             const prevState = await db.query('SELECT * FROM school_assist_months WHERE month=$1', [prev.from.slice(0, 7)]).then(r => r.rows[0] || null).catch(() => null);
-            out.assist = { month, rate: rep.rate, cap: rep.cap, counted: rep.counted, amount: rep.amount, students: list,
+            // O'tgan oy KPI ("Sentyabr · berilgan · 108 aloqa") — shu hisob (monthReport) bo'yicha, faqat o'qish.
+            const prevCounted = await A.monthReport(db, me.emp.id, prev.from.slice(0, 7)).then(r => r.counted).catch(() => null);
+            out.assist = { month, rate: rep.rate, cap: rep.cap, counted: rep.counted, amount: rep.amount, students: list, prevCounted,
                 possible: list.reduce((n, s) => n + s.possible, 0), daysLeft: T.daysBetween(today, T.monthBounds(month).to),
                 prevMonth: prev.from.slice(0, 7), prevState: prevState ? { prelimAt: prevState.prelim_at, objectionUntil: S.dateStr(prevState.objection_until), finalAt: prevState.final_at, paidAt: prevState.paid_at } : null };
         }

@@ -55,20 +55,41 @@
             drawProfile(body);
         } catch (e) { if (ok()) body.innerHTML = head('Profil') + errBox(e); }
     }
+    // Tug'ilgan kun (dizayn: "14-may"). Server formati: YYYY-MM-DD yoki MM-DD (services/staffSettings BDAY_RE).
+    function bdayText(b) {
+        const m = String(b || '').match(/^(?:(\d{4})-)?(\d{2})-(\d{2})$/);
+        return m ? `${Number(m[3])}-${MON[Number(m[2]) - 1] || ''}` : '';
+    }
+    // "14-may", "14 may", "14.05", "14.05.1999", "1999-05-14" → server formati; bo'sh → ''; noto'g'ri → null.
+    // Yil kiritilmasa va kun-oy o'zgarmagan bo'lsa, avvalgi yil saqlanib qoladi.
+    function bdayParse(v, prev) {
+        const t = String(v || '').trim().toLowerCase();
+        if (!t) return '';
+        let y = '', mo = 0, d = 0, m;
+        if ((m = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/))) [y, mo, d] = [m[1], +m[2], +m[3]];
+        else if ((m = t.match(/^(\d{1,2})[.\/-](\d{1,2})(?:[.\/-](\d{4}))?$/))) [d, mo, y] = [+m[1], +m[2], m[3] || ''];
+        else if ((m = t.match(/^(\d{1,2})[\s-]+([a-z'ʻ‘]+)(?:[\s-]+(\d{4}))?$/))) { d = +m[1]; y = m[3] || ''; const w = m[2].replace(/['ʻ‘]/g, ''); const c = MON.map((n, i) => [n.replace(/'/g, ''), i + 1]).filter(([n]) => w.length >= 3 && (n.startsWith(w) || w.startsWith(n))); mo = c.length === 1 ? c[0][1] : 0; }
+        if (!mo || mo > 12 || !d || d > new Date(Date.UTC(2000, mo, 0)).getUTCDate()) return null;
+        const md = `${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        const pm = String(prev || '').match(/^(\d{4})-(\d{2}-\d{2})$/);
+        if (!y && pm && pm[2] === md) y = pm[1];
+        return y ? `${y}-${md}` : md;
+    }
     function avatarImg(src, cls = '') { return src ? `<img class="${cls}" src="${esc(String(src).replace(/^\//, ''))}" alt="">` : ''; }
     function initials(n) { return esc(String(n || '').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase()); }
     function drawProfile(body) {
         const d = P.data, u = d.user, x = d.extra, kind = d.kind, office = ['admin', 'rop', 'sales'].includes(kind);
         const cur = P.pending || u.avatar;
-        // Tartib (dizayn): saqlangan personaj birinchi, keyin band bo'lganlar, keyin bo'shlari (tanlash tartibni o'zgartirmaydi).
+        // Tartib (UstozProfil, YordamchiSozProfil): to'plamdagi tabiiy tartib (01…36), band bo'lganlar o'z joyida "band" yozuvi bilan.
+        // Joriy/tanlangan personaj birinchi 12 tadan keyin bo'lsa, 12-o'ringa chiqariladi — doim ko'rinib tursin.
         const all = Array.from({ length: 36 }, (_, i) => `/images/staff-avatars/${P.set}${String(i + 1).padStart(2, '0')}.webp`);
-        const rank = s => (s === u.avatar ? 0 : P.taken.includes(s) ? 1 : 2);
-        const items = all.map((s, i) => [s, i]).sort((a, b) => rank(a[0]) - rank(b[0]) || a[1] - b[1]).map(x => x[0]);
-        const shown = P.showAll ? items : items.slice(0, 12);
+        let shown = P.showAll ? all : all.slice(0, 12);
+        const keep = [cur, u.avatar].find(x => all.includes(x) && !shown.includes(x));
+        if (keep) shown = [...shown.slice(0, 11), keep];
         const grid = shown.map(src => { const tk = P.taken.includes(src) && src !== u.avatar, on = src === cur, i = all.indexOf(src);
             return `<button type="button" class="ss-av${on ? ' on' : ''}${tk ? ' tk' : ''}" data-av="${esc(src)}" ${tk ? 'disabled aria-disabled="true" title="Band — boshqa xodim tanlagan"' : `aria-pressed="${on}" title="Tanlash"`} aria-label="Personaj ${i + 1}${tk ? ' · band' : ''}"><img src="${esc(src.slice(1))}" alt="" loading="lazy"></button>`; }).join('');
         const tabs = [['own', 'O\'z rasmim'], ['preset', 'Personaj tanlash'], ['auto', 'Avtomatik']];
-        const lockF = (label, val, note, id) => `<label class="ss-f"><span>${esc(label)} ${ICON.lock}</span><input id="${id}" value="${esc(val)}" disabled aria-describedby="${id}N"><small id="${id}N">${esc(note)}</small></label>`;
+        const lockF = (label, val, note, id) => `<label class="ss-f"><span>${esc(label)} <span aria-hidden="true">🔒</span></span><input id="${id}" value="${esc(val)}" disabled aria-describedby="${id}N"><small id="${id}N">${esc(note)}</small></label>`;
         const nameField = d.canEditName
             ? `<label class="ss-f"><span>Ism familiya</span><input id="ssName" value="${esc(u.name)}" maxlength="80" autocomplete="name"><small>boshqa admin bilan kelishib o'zgartiring</small></label>`
             : lockF('Ism familiya', u.name, 'admin o\'zgartiradi', 'ssName');
@@ -99,7 +120,7 @@
                 <label class="ss-f"><span>Telefon</span><input id="ssPhone" type="tel" value="${esc(u.phone)}" placeholder="+998 90 123 45 67" autocomplete="tel"></label>
                 ${lockF('Email (login)', u.email, kind === 'admin' ? 'login o\'zgarmaydi' : 'login — admin o\'zgartiradi', 'ssEmail')}
                 <label class="ss-f"><span>Telegram</span><div class="ss-inp-pill"><input id="ssTg" value="${esc(x.telegram)}" placeholder="@username" autocomplete="off">${x.telegram ? '<i class="ss-pill ok">kiritilgan</i>' : ''}</div></label>
-                <label class="ss-f"><span>Tug'ilgan kun</span><input id="ssBday" type="date" value="${esc(/^\d{4}-/.test(x.birthday) ? x.birthday : '')}"></label>
+                <label class="ss-f"><span>Tug'ilgan kun</span><input id="ssBday" value="${esc(bdayText(x.birthday))}" placeholder="masalan 14-may" autocomplete="bday" inputmode="text"></label>
                 ${fourth}
               </div>
               <p class="ss-msg" id="ssMsg" role="status"></p>
@@ -159,7 +180,9 @@
         body.querySelector('[data-save]')?.addEventListener('click', async e => {
             const btn = e.currentTarget, msg = body.querySelector('#ssMsg');
             const v = id => body.querySelector('#' + id)?.value;
-            const payload = { phone: v('ssPhone'), telegram: v('ssTg'), birthday: v('ssBday') };
+            const bd = bdayParse(v('ssBday'), P.data.extra.birthday);
+            if (bd === null) { msg.textContent = 'Tug\'ilgan kun noto\'g\'ri — masalan 14-may yoki 14.05.1999'; msg.className = 'ss-msg bad'; return; }
+            const payload = { phone: v('ssPhone'), telegram: v('ssTg'), birthday: bd };
             if (P.data.canEditName) payload.name = v('ssName');
             if (body.querySelector('#ssExt')) payload.ext = v('ssExt');
             if (body.querySelector('#ssBio')) payload.bio = v('ssBio');
@@ -201,7 +224,7 @@
     function lastPaid(d) {
         const prev = (d.history || []).filter(h => h.month < d.month).sort((a, b) => b.month.localeCompare(a.month))[0];
         if (!prev) return `<div class="ss-kpi"><span>O'tgan oy</span><b>—</b><small>hali hisob yo'q</small></div>`;
-        return `<div class="ss-kpi"><span>${monName(prev.month)} · ${prev.status === 'paid' ? 'berilgan' : 'hisoblangan'}</span><b>${num(prev.amount)} so'm</b><small>${prev.status === 'paid' && prev.paidAt ? dShort(tzDate(prev.paidAt)) : 'hali berilmagan'}${d.card4 ? ` · karta •••• ${esc(d.card4)}` : ''}</small></div>`;
+        return `<div class="ss-kpi"><span>${monName(prev.month)} · ${prev.status === 'paid' ? 'berilgan' : 'hisoblangan'}</span><b>${num(prev.amount)} so'm</b><small>${d.assist?.prevCounted && prev.month === d.assist.prevMonth ? `${d.assist.prevCounted} aloqa · ` : ''}${prev.status === 'paid' && prev.paidAt ? dShort(tzDate(prev.paidAt)) : 'hali berilmagan'}${d.card4 ? `${d.kind === 'assistant' ? ' ' : ' · '}karta •••• ${esc(d.card4)}` : ''}</small></div>`;
     }
     function chartAndHistory(d, override = null) {
         const cur = override != null ? override : d.current ? Number(d.current.total) || 0 : null;
@@ -261,7 +284,35 @@
             <tfoot><tr><td colspan="4">Jami · ${m.counted} tasdiqlangan dars${a ? ` + ${a.counted} yordamchi aloqa` : ''}${d.reviewMakeups ? ` · +${d.reviewMakeups} qoplash tekshiruvda` : ''}</td><td class="n">${num(total)}</td></tr></tfoot></table></div>
             <p class="ss-note ss-mt">Dars turlari bo'yicha va har o'quvchi bo'yicha summa ko'rsatilmaydi — o'quvchi to'lovi ma'lumoti ustozga yopiq. ${esc(payNote(d.month))}</p></section>
           ${chartAndHistory(d, total)}</div>`;
-        body.querySelector('[data-go-makeup]')?.addEventListener('click', () => typeof switchTab === 'function' && switchTab('timetable'));
+        bindMakeupBtn(body, null);
+        // Qoplanmagan darslar — Bosh sahifadagi "Bajarish kerak" bilan bir manba (js/ustozHome.js: missed, lossSum):
+        // son, "N tasi rejada", taxminiy yo'qotish (ustozning o'z stavkasi bo'yicha) va o'quvchilar.
+        const H = window.UstozHome, ok = guard(body);
+        if (H?.missed) H.missed(me()).then(mm => { if (ok()) missedBanner(body, mm, d); }).catch(() => {});
+    }
+    function bindMakeupBtn(body, studentId) {
+        body.querySelector('[data-go-makeup]')?.addEventListener('click', () => {
+            const again = () => renderSalary(body);
+            if (window.schoolSchedule?.makeupDrawer) window.schoolSchedule.makeupDrawer(again, studentId ? { studentId } : undefined);
+            else if (typeof switchTab === 'function') switchTab('timetable');
+        });
+    }
+    function missedBanner(body, mm, d) {
+        const H = window.UstozHome, old = body.querySelector('.ss-banner');
+        const rows = mm ? [...mm.by.values()].filter(x => x.open.length).sort((a, b) => b.open.length - a.open.length) : [];
+        const open = rows.reduce((n, x) => n + x.open.length, 0), planned = mm ? [...mm.by.values()].reduce((n, x) => n + x.planned.length, 0) : 0;
+        if (!open) { old?.remove(); return; }
+        const loss = H.lossSum ? H.lossSum(me(), mm) : null;
+        const [y, mo] = mm.month.split('-').map(Number), left = new Date(Date.UTC(y, mo, 0)).getUTCDate() - Number(mm.today.slice(8));
+        const parts = rows.slice(0, 3).map((x, i) => {
+            const pl = x.planned.filter(p => p.held).map(p => `${H.dm(p.missed)} → ${H.DAY[H.wd(p.held) - 1]} ${Number(p.held.slice(8))}`);
+            return `${String(x.student.name || '').trim().split(/\s+/)[0]} ${x.open.length}${i === 0 ? ' ta' : ''}${pl.length ? ` (${pl.join(', ')} rejada)` : ''}`;
+        });
+        if (rows.length > 3) parts.push(`yana ${rows.length - 3} ta`);
+        const html = `<div class="ss-banner" role="note">${ICON.sync}<p><b>${open} ta qoldirilgan dars hali qoplanmagan${planned ? ` (${planned} tasi rejada)` : ''}${loss ? ` — ≈ ${num(loss)} so'm` : ''}.</b> ${left > 0 ? `Oy tugashiga ${left} kun.` : 'Bugun oyning oxirgi kuni.'} ${esc(parts.join(', '))}.</p><button type="button" class="ss-btn" data-go-makeup>Qoplash qo'yish</button></div>`;
+        const t = document.createElement('div'); t.innerHTML = html; const el = t.firstElementChild;
+        if (old) old.replaceWith(el); else body.querySelector('.ss-kpis')?.after(el);
+        bindMakeupBtn(body, rows[0]?.student.id);
     }
     function stuAvatar(id) {
         try { const s = getItem(STORAGE_KEYS.students, []).find(x => x.id === id); if (s?.avatarUrl) return `<img src="${esc(String(s.avatarUrl).replace(/^\//, ''))}" alt="">`; } catch { /* yo'q */ }
@@ -493,10 +544,14 @@
         [nw, cur, body.querySelector('#profileConfirmPwd')].forEach(el => el?.addEventListener('input', strength));
         body.querySelector('#profileChangePwdBtn')?.addEventListener('click', () => { if (typeof handleProfilePasswordChange === 'function') handleProfilePasswordChange(); });
         body.querySelector('#profileConfirmPwd')?.addEventListener('keydown', e => { if (e.key === 'Enter') body.querySelector('#profileChangePwdBtn')?.click(); });
-        if (typeof apiLoginHistory === 'function') apiLoginHistory().then(r => {
+        const changed = () => { if (typeof apiLoginHistory === 'function') apiLoginHistory().then(r => {
             const el = body.querySelector('#szPwdChanged'); const t = r?.passwordChangedAt ? ago(r.passwordChangedAt) : '';
             if (ok() && el && t) el.textContent = `oxirgi o'zgartirish: ${t}`;
-        }).catch(() => {});
+        }).catch(() => {}); };
+        changed();
+        // Saqlangandan keyin (js/app.js handleProfilePasswordChange): yozuv va kuch ko'rsatkichi yangilanadi.
+        const onChanged = () => { if (!ok()) { window.removeEventListener('profile:password-changed', onChanged); return; } strength(); changed(); };
+        window.addEventListener('profile:password-changed', onChanged);
     }
 
     // ── app.js bilan bog'lanish ──────────────────────────────────────────────

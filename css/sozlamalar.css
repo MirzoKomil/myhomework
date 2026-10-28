@@ -55,7 +55,7 @@ html.rd[data-theme="dark"] #profilePage.sz-on .profile-nav-danger::before { bord
 .sz-in .pwd-match.bad { background: var(--kb-bad-bg); color: var(--kb-bad-fg); }
 .sz-pw .pwd-err { margin: 0; font-size: 13px; font-weight: 600; color: var(--kb-bad-fg); }
 .sz-pw .pwd-err:empty { display: none; }
-.sz-req { align-self: start; padding: 14px 16px; border-radius: 14px; background: var(--ss-soft, #F5F7FB); font-size: 13px; color: var(--text); }
+.sz-req { padding: 14px 16px; border-radius: 14px; background: var(--ss-soft, #F5F7FB); font-size: 13px; color: var(--text); }
 .sz-req > b { font-weight: 700; }
 .sz-req .pwd-rules { display: block; margin: 8px 0 12px; padding-left: 18px; line-height: 1.8; font-size: 13px; color: var(--text-muted); list-style: disc; }
 .sz-req .pwd-rules li { display: list-item; color: var(--text-muted); }
@@ -72,7 +72,6 @@ html.rd[data-theme="dark"] #profilePage.sz-on .profile-nav-danger::before { bord
 .sz-cb { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--text); cursor: pointer; }
 .sz-cb input { appearance: none; -webkit-appearance: none; width: 18px; height: 18px; margin: 0; border-radius: 5px; border: 2px solid #CBD5E1; background: var(--surface, #fff); box-sizing: border-box; cursor: pointer; display: inline-grid; place-items: center; flex: none; }
 .sz-cb input:checked { background: var(--kb-primary, #0065D6); border-color: var(--kb-primary, #0065D6); }
-.sz-cb input:checked::after { content: ""; width: 8px; height: 4px; border: 2px solid #fff; border-top: 0; border-right: 0; transform: translateY(-1px) rotate(-45deg); }
 .sz-cb input:focus-visible { outline: 3px solid var(--kb-ring); outline-offset: 2px; }
 @media (max-width: 760px) {
     .sz-pw { grid-template-columns: minmax(0, 1fr); padding: 16px; }
@@ -134,3 +133,30 @@ html.rd[data-theme="dark"] .sz-nic--t { background: rgba(14, 147, 132, .22); col
 body[data-role="teacher"] #menuItemTrialLessons .tl-navcnt { display: none; }
 /* Son belgisi dizayndagi .nav .cnt: 11px/800, 2px 8px, sariq. */
 body[data-role="teacher"] .menu-item .tgs-nb { height: auto; min-width: 0; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; line-height: 16px; font-family: inherit; }
+
+/* ── Bildirishnoma sozlamalari (UstozSozBildirish: tr.gh — 12px/800, katta harf, #374151, 8px 20px) ── */
+.ss-body .ss-tbl.ss-tbl--np tbody tr.sec th { padding: 8px 20px; font-size: 12px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--text-secondary, #374151); background: var(--ss-soft2, #F9FAFC); }
+.ss-body .ss-tbl.ss-tbl--np td, .ss-body .ss-tbl.ss-tbl--np thead th:not(:first-child) { box-sizing: content-box; width: 110px; }
+@media (max-width: 760px) { .ss-body .ss-tbl.ss-tbl--np td, .ss-body .ss-tbl.ss-tbl--np thead th:not(:first-child) { width: 64px; padding-left: 8px; padding-right: 8px; } }
+
+/* Bildirishnoma paneli ochiq: xiralashish faqat asosiy ustunda (dizayn .npov — .col ichida, sidebar ochiq qoladi),
+   qo'ng'iroqcha tugmasi atrofida 3px halqa (aria-expanded="true"). */
+@media (min-width: 901px) { body[data-role="teacher"] .notif-ov.open { left: 248px; } }
+body[data-role="teacher"] #notifToggle[aria-expanded="true"] { box-shadow: 0 0 0 3px #B2D4FF; }
+html.rd[data-theme="dark"] body[data-role="teacher"] #notifToggle[aria-expanded="true"] { box-shadow: 0 0 0 3px rgba(59, 139, 238, .45); }
+/* Dizayn: .nt td b — blok, small — qator ichida (qator balandligi 14px shrift bo'yicha → 60px qator). */
+.ss-body .ss-tbl.ss-tbl--np tbody th small { display: inline; }
+@media (max-width: 760px) {
+    .ss-body .ss-banner { align-items: flex-start; }
+    .ss-body .ss-banner p { flex: 1 1 calc(100% - 40px); }
+    .ss-body .ss-banner .ss-btn { width: 100%; margin-left: 0; }
+}
+
+/* Tungi rejim: yoqilgan kalit ko'k bo'lib qolsin (staffSettings.css dagi dark fon qoidasi uni bosib ketardi),
+   nav bandlari va guruh sarlavhalari o'qiladigan rangda. */
+html.rd[data-theme="dark"] .ss-tog input:checked + i { background: var(--kb-primary, #3B8BEE); }
+html.rd[data-theme="dark"] #profilePage.sz-on .profile-nav-item { color: var(--text, #E5E7EB); }
+html.rd[data-theme="dark"] #profilePage.sz-on .profile-nav-item:hover { background: rgba(255, 255, 255, .06); color: var(--text, #E5E7EB); }
+html.rd[data-theme="dark"] #profilePage.sz-on .profile-nav-item.active { background: rgba(59, 139, 238, .18); color: #8FC0FF; }
+html.rd[data-theme="dark"] #profilePage.sz-on .profile-nav-danger { color: #F97066; }
+html.rd[data-theme="dark"] .ss-body .ss-tbl.ss-tbl--np tbody tr.sec th { color: #CBD5E1; background: rgba(255, 255, 255, .03); }

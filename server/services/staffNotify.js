@@ -33,11 +33,11 @@ const CATALOG = {
         ['Aloqa', [
             ['assist_advice', 'Tavsiya vaqtidan 15 daqiqa oldin', 'bugungi tavsiya', [1, 1], true],
             ['assist_unmarked_day', 'Kun oxirida belgilanmagan aloqa', '20:00 da · shu kuni belgilanmasa hisoblanmaydi', [1, 1], true],
-            ['assist_no_answer', 'Javob bermagan o\'quvchi', 'ertasi kuni qayta urinish eslatmasi', [1, 1], true],
-            ['assist_week_low', 'Haftada 3 tadan kam', 'Juma 18:00 da · kimlar qolgani bilan', [1, 1], true]]],
+            ['assist_no_answer', 'Javob bermagan o\'quvchi', 'ertasi kuni qayta urinish eslatmasi', [1, 0], true],
+            ['assist_week_low', 'Haftada 3 tadan kam', 'Juma 18:00 da · kimlar qolgani bilan', [1, 0], true]]],
         ['O\'quvchilar', [
-            ['student_absent', 'Asosiy darsga kelmadi', 'o\'quvchingiz · dars tugagach', [1, 1], true],
-            ['assist_near_cap', 'Limitga yaqin · 12/13', 'oyda 13 tadan ortig\'i hisoblanmaydi', [0, 1], true],
+            ['student_absent', 'Asosiy darsga kelmadi', 'o\'quvchingiz · dars tugagach', [1, 0], true],
+            ['assist_near_cap', 'Limitga yaqin · 12/13', 'oyda 13 tadan ortig\'i hisoblanmaydi', [1, 0], true],
             ['student_assigned', 'Yangi o\'quvchi biriktirildi', 'admin biriktirganda', [1, 1], false]]],
         ['Boshqa', [
             ['assist_corrected', 'Admin aloqani tuzatdi', 'sabab bilan', [1, 1], true],
