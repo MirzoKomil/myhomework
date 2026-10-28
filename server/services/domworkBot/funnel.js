@@ -340,6 +340,7 @@ async function callback(db, update) {
     if ((m = /^f:react:(yes|no)$/.exec(data))) {
         await event(db, tid, 'react', { a: m[1] });
         if (m[1] === 'no') { await patch(db, tid, { drip_stopped: true }); return say(c, copy.drip.reactBye); }
+        await patch(db, tid, { monthly: true }); // faqat aniq "Ha" — oylik iboralar
         return say(c, '👍');
     }
     if (data === 'f:cta') return cta(c, v);
@@ -617,17 +618,17 @@ function nextItem(v, s, now) {
     return weekly(v, sent, now);
 }
 function weekly(v, sent, now) {
-    if (now - new Date(v.created_at) > 90 * DAY) return null;
+    if (now - new Date(v.created_at) > 90 * DAY) return v.monthly ? monthly(v, sent, now) : null;
     const done = [...sent].filter(k => /^w\d+$/.test(k)).length;
     if (now - new Date(v.drip_last_at || 0) < 7 * DAY) return null;
     if (done < copy.WEEKLY.length) return { key: 'w' + done, text: copy.drip.weekly(copy.WEEKLY[done]), btn: [[copy.KEYBOARD.contact, 'f:cta']] };
-    if (!sent.has('react')) return { key: 'react', text: copy.drip.reactivate, btn: [[copy.drip.reactYes, 'f:react:yes'], [copy.drip.reactNo, 'f:react:no']] };
-    return monthly(v, sent, now);
+    if (!sent.has('react') && now - new Date(v.created_at) <= 62 * DAY) return { key: 'react', text: copy.drip.reactivate, btn: [[copy.drip.reactYes, 'f:react:yes'], [copy.drip.reactNo, 'f:react:no']] };
+    return v.monthly ? monthly(v, sent, now) : null;
 }
 function monthly(v, sent, now) {
     // Oxirgi xabar yoki menejer qarori — qaysi biri keyin bo'lsa, o'shandan 28 kun.
     const base = Math.max(new Date(v.drip_last_at || 0).getTime(), v.outcome === 'r_no' ? new Date(v.outcome_at || 0).getTime() : 0);
-    if (now - new Date(v.created_at) > 90 * DAY || now - base < 28 * DAY) return null;
+    if (now - new Date(v.created_at) > 180 * DAY || now - base < 28 * DAY) return null;
     const done = [...sent].filter(k => /^m\d+$/.test(k)).length;
     if (done >= copy.MONTHLY.length) return null;
     return { key: 'm' + done, text: copy.drip.weekly(copy.MONTHLY[done]), btn: [[copy.KEYBOARD.contact, 'f:cta']] };
@@ -645,13 +646,13 @@ async function drip(db, now = new Date()) {
     // Ko'rib chiqilgan har qator drip_checked_at oladi — navbat "tiqilib" qolmaydi.
     const started = s.dripStartedAt ? new Date(s.dripStartedAt) : now;
     const rows = (await db.query(`SELECT v.* FROM domwork_bot_visitors v WHERE NOT v.paused AND v.blocked_at IS NULL AND NOT v.holdout AND NOT v.drip_stopped
-        AND v.created_at>=$2 AND v.created_at>$1::timestamptz-INTERVAL '90 days' AND v.created_at<$1::timestamptz-INTERVAL '24 hours'
+        AND v.created_at>=$2 AND v.created_at>$1::timestamptz-INTERVAL '180 days' AND v.created_at<$1::timestamptz-INTERVAL '24 hours'
         AND (v.drip_last_at IS NULL OR v.drip_last_at<$1::timestamptz-INTERVAL '20 hours')
         AND (v.drip_checked_at IS NULL OR v.drip_checked_at<$1::timestamptz-INTERVAL '50 minutes')
         AND ((v.requested_at IS NULL AND v.outcome IS NULL) OR v.outcome LIKE 'r\\_%')
         AND (CASE WHEN v.segment IN ('russia','abroad') OR (v.segment IS NULL AND v.phone LIKE '7%') THEN $3::boolean ELSE $4::boolean END)
         AND (v.lead_id IS NULL OR EXISTS (SELECT 1 FROM leads l WHERE l.id=v.lead_id AND l.deleted_at IS NULL
-            AND (CASE WHEN v.outcome IS NULL THEN COALESCE(l.status,'') IN ('','new','yangi-lidlar') ELSE COALESCE(l.status,'') NOT IN ('sinov-darsida','tolov-yopildi') END)))
+            AND (CASE WHEN v.outcome IS NULL THEN COALESCE(l.status,'') IN ('','new','yangi-lidlar') ELSE COALESCE(l.status,'') NOT IN ('sinov-darsida','tolov-jarayonida','tolov-yopildi') END)))
         ORDER BY v.drip_checked_at NULLS FIRST LIMIT 40 FOR UPDATE OF v SKIP LOCKED`, [now, started, inWindow('A', now), inWindow('B', now)])).rows;
     let n = 0;
     for (const v of rows) {

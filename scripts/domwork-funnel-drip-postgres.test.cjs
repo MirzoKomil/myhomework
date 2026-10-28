@@ -123,7 +123,7 @@ test('isitish, menejer tugmalari, relay va kanal bonusi — synthetic data, no T
    assert.equal(plan(pre,new Date(base.getTime()+39*86400000)),null); // haftalik tanaffus
    assert.equal(plan(pre,new Date(base.getTime()+30*86400000)).key,'w0');
    assert.equal(plan([...pre,'w0','w1','w2','w3','w4','w5','w6','w7'],new Date(base.getTime()+30*86400000)).key,'react');
-   assert.equal(plan([...pre,'w0','w1','w2','w3','w4','w5','w6','w7','react'],new Date(base.getTime()+5*86400000)).key,'m0');
+   assert.equal(plan([...pre,'w0','w1','w2','w3','w4','w5','w6','w7','react'],new Date(base.getTime()+5*86400000),{monthly:true}).key,'m0');
    assert.equal(funnel.nextItem({created_at:base,drip_sent:pre,drip_last_at:base,ignored:0,lesson_parts:1,segment:'career',first_name:'A'},s,new Date(base.getTime()+91*86400000)),null);
    assert.equal(plan(pre,null,{drip_stopped:true}),null);
   });
