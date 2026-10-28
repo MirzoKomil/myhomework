@@ -184,7 +184,7 @@ async function setSession(db, telegramId, state) {
         ON CONFLICT(telegram_id) DO UPDATE SET state=EXCLUDED.state,expires_at=EXCLUDED.expires_at`, [String(telegramId), JSON.stringify(state)]);
 }
 async function enqueue(db, { key, targetKind = 'private', targetId, role = '', method = 'sendMessage', payload, account, notBefore = new Date() }) {
-    if (!['sendMessage','sendPhoto','sendVideo','sendVoice','sendAudio','sendDocument','answerCallbackQuery','editMessageReplyMarkup','unbanChatMember'].includes(method)) throw policy.error(400, 'Bot usuli noto‘g‘ri');
+    if (!['sendMessage','sendPhoto','sendVideo','sendVoice','sendAudio','sendDocument','copyMessage','answerCallbackQuery','editMessageReplyMarkup','unbanChatMember'].includes(method)) throw policy.error(400, 'Bot usuli noto‘g‘ri');
     if (!['private','group'].includes(targetKind) || !key || key.length > 200) throw policy.error(400, 'Xabar manzili noto‘g‘ri');
     if (targetKind === 'private' && !policy.telegramId(String(targetId))) throw policy.error(400, 'Telegram foydalanuvchisi noto‘g‘ri');
     const envelope = { ...payload, ...(account ? { _account: { kind: account.kind, id: account.id } } : {}) };

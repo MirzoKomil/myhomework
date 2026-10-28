@@ -30,6 +30,7 @@ function createHandler({ crm }) {
     return async function handle(db, update) {
         if (update.callback_query) {
             if (/^f:/.test(String(update.callback_query.data || ''))) return require('./funnel').callback(db,update);
+            if (/^m:/.test(String(update.callback_query.data || ''))) return require('./funnel').managerAction(db,update);
             return callbacks.handle(db,update,crm);
         }
         if(update.chat_member) {
@@ -73,6 +74,9 @@ function createHandler({ crm }) {
             await require('../staffAttendance/lessons').recordVideoChat(db, message);
             return;
         }
+        // Sotuv guruhida menejer bot xabariga reply qildi → javob lidga (voronka yoqilgan bo'lsa).
+        if (message && ['group','supergroup'].includes(message.chat?.type) && message.reply_to_message && await funnel.enabled(db)
+            && await funnel.relayFromGroup(db, update)) return;
         const callback = update.callback_query;
         const sender = policy.telegramId(message?.from?.id || callback?.from?.id);
         if (!sender) return;

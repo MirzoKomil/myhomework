@@ -23,7 +23,7 @@ async function transaction(pool, fn) {
         for(const work of postCommit) { try {await work();} catch { /* Cache failure cannot undo a committed CRM transaction. */ } }
         return result; }
     catch (error) { await db.query('ROLLBACK'); throw error; }
-    finally { delete db.domworkAfterCommit; delete db.domworkRedis; delete db.domworkCommitTasks; db.release(); }
+    finally { delete db.domworkAfterCommit; delete db.domworkRedis; delete db.domworkTelegram; delete db.domworkCommitTasks; db.release(); }
 }
 // A single session advisory lock serializes all inbound updates across replicas.
 // The claim, CRM changes, session state and response outbox commit together.

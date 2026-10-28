@@ -118,4 +118,56 @@ const text = {
     contactSaved: 'Rahmat, raqamingiz tasdiqlandi ✅'
 };
 
-module.exports = { SEGMENTS, LANDING_GOALS, FIELDS, FIELD_CHOICES, QUIZ, KEYBOARD, FAQ, FAQ_ORDER, WHEN, text };
+// ── Isitish (drip) — so'rov qoldirmaganlar; hujjatdagi jadval bo'yicha ──
+const PHRASES = {
+    meeting: ['Yig‘ilishda kerak 5 ibora 🗣', [['Можно вопрос?', 'Savol bersam bo‘ladimi?'], ['Я согласен. / Я не согласен.', 'Qo‘shilaman. / Qo‘shilmayman.'],
+        ['Давайте уточним.', 'Keling, aniqlashtiraylik.'], ['Я подготовлю отчёт.', 'Hisobot tayyorlayman.'], ['Когда дедлайн?', 'Muddat qachon?']]],
+    smena: ['Smenada kerak 5 gap 🧱', [['Где мне работать сегодня?', 'Bugun qayerda ishlayman?'], ['Сколько часов смена?', 'Smena necha soat?'],
+        ['Когда будет зарплата?', 'Maosh qachon bo‘ladi?'], ['Мне нужен выходной.', 'Menga dam olish kuni kerak.'], ['Повторите, пожалуйста, медленнее.', 'Iltimos, sekinroq takrorlang.']]]
+};
+// Haftalik "hafta iborasi" (10-kundan keyin) — har biri kundalik/ish uchun foydali.
+const WEEKLY = [
+    ['Как дела на работе?', 'Ishlaring qalay?', 'Hamkasb bilan suhbatni boshlashning eng oson yo‘li.'],
+    ['Извините, я не понял.', 'Kechirasiz, tushunmadim.', 'Uyalmang — bu gap suhbatni to‘xtatmaydi, aksincha davom ettiradi.'],
+    ['Можно по-медленнее?', 'Sekinroq gapira olasizmi?', 'Telefonda ham, yuzma-yuz ham ishlaydi.'],
+    ['Я перезвоню вам позже.', 'Sizga keyinroq qo‘ng‘iroq qilaman.', 'Ishda eng ko‘p ishlatiladigan iboralardan biri.'],
+    ['Сколько это стоит?', 'Bu qancha turadi?', 'Do‘konda, bozorda, xizmatda.'],
+    ['Мне нужна помощь.', 'Menga yordam kerak.', 'Shifokorda, idorada, ko‘chada.'],
+    ['Я живу в Ташкенте.', 'Men Toshkentda yashayman.', '«в Ташкенте» — joy ma’nosida so‘z oxiri o‘zgaradi.'],
+    ['Спасибо за помощь!', 'Yordamingiz uchun rahmat!', 'Har qanday suhbatni chiroyli yakunlaydi.']
+];
+const POLL = { speak: ['🗣 Gapirish', 'Gapirish — eng ko‘p uchraydigan to‘siq. Sababi oddiy: mashq qiladigan suhbatdosh yo‘q. Jonli individual darsda har darsda gapirasiz, ustoz xatoni darhol tuzatadi.'],
+    listen: ['👂 Tushunish', 'Tez gapirilgan nutqni tushunish — quloq mashqi. Video darslar va ilovadagi audiolar shu uchun: har kuni 10 daqiqa tinglash bir oyda sezilarli farq beradi.'],
+    grammar: ['📐 Grammatika', 'Grammatikani jadval bilan emas, gap ichida o‘rganamiz: har darsda bitta qoida va uni darhol suhbatda ishlatasiz.'],
+    words: ['📚 So‘z boyligi', 'So‘zlarni ro‘yxatdan emas, vaziyatdan o‘rganish tezroq: ilovadagi o‘yinlar va sohangizga mos iboralar shu uchun.'] };
+
+const drip = {
+    lessonNudge: name => `${name}, 1-dars atigi 5 daqiqa: ish suhbatida o‘zingizni tanishtirishni o‘rganasiz 👇`,
+    phrases: key => { const [title, list] = PHRASES[key]; return `${title}\n\n${list.map(([ru, uz], i) => `${i + 1}. ${ru}\n   ${uz}`).join('\n')}\n\nOvoz chiqarib 2 marta ayting — shunda esda qoladi.`; },
+    testimonial: url => `O‘quvchimiz natijasi 👇${url ? '\n' + url : ''}\n\nBoshqa natijalar: @domwork_natijalari`,
+    bonus: channel => `🎁 Bonus: «33 ta ish iborasi» audio.\nOlish uchun ${channel} kanaliga obuna bo‘ling, keyin «Obuna bo‘ldim»ni bosing.`,
+    bonusJoin: '📢 Kanalga o‘tish',
+    bonusCheck: '✅ Obuna bo‘ldim',
+    bonusOk: 'Rahmat! Mana bonus 🎁',
+    bonusNo: 'Hali obuna ko‘rinmayapti. Kanalga obuna bo‘lib, qayta bosing.',
+    bonusFail: 'Hozir tekshirib bo‘lmadi — birozdan keyin qayta bosing.',
+    poll: 'Rus tilida siz uchun eng qiyini qaysi?',
+    lessonHow: 'Dars qanday o‘tadi?\n\n1) Video dars — yangi mavzu, 15–20 daqiqa, istalgan vaqtda.\n2) Jonli dars — ustoz bilan yuzma-yuz (Zoom), shu mavzuni gapirib mashq qilasiz.\n3) Ilova — har kuni 20 daqiqa: so‘zlar, o‘yinlar, AI bilan suhbat.\n4) Yordamchi ustoz — vazifalaringizni kuzatib, eslatib turadi.',
+    whereB: 'Ishda rus tili kerak bo‘ladigan 3 vaziyat:\n\n1) Rusiyzabon mijoz keldi — «Чем могу помочь?» (Qanday yordam bera olaman?)\n2) Yig‘ilishda rahbar ruscha so‘radi — «Можно уточнить?» (Aniqlashtirsam bo‘ladimi?)\n3) Ish suhbati ruscha boshlandi — «Меня зовут…, я работаю…»\n\nShu vaziyatlarni ustoz bilan jonli darsda mashq qilasiz.',
+    whereA: 'Rossiyada rus tili bilan nima o‘zgaradi — 3 vaziyat:\n\n1) Brigadir bilan maosh haqida — «Когда будет зарплата?»\n2) Shifokorda — «У меня болит…» (… og‘riyapti)\n3) Hujjat topshirganda — «Меня зовут…, я из Узбекистана»\n\nSmenadan keyin ham o‘qiysiz — jonli dars vaqtini o‘zingiz tanlaysiz.',
+    discount: (percent, until) => `🎁 Eslatma: bot orqali kelganlar uchun ${percent}% chegirma — ${until}gacha.\nShartlarini menejerimiz 5–10 daqiqada tushuntiradi.`,
+    goodbye: 'Sizni ko‘p bezovta qilmaymiz 🙂 Endi haftada bir marta bitta foydali ibora yuboramiz.\nTo‘xtatish uchun — /stop',
+    weekly: ([ru, uz, note]) => `📌 Hafta iborasi\n\n${ru}\n${uz}\n\n${note}`,
+    reactivate: 'Foydali iboralarni yuborishda davom etaylikmi?',
+    reactYes: 'Ha, davom eting', reactMonth: 'Oyiga bir marta', reactNo: 'Yo‘q, rahmat',
+    reactBye: 'Tushunarli, boshqa yubormaymiz. Kerak bo‘lsa — /start bosing 👋',
+    // Menejer bilan gaplashgandan keyin (rad sababi bo'yicha)
+    priceB: 'Kurs narxini qulay qilishning ikki yo‘li bor:\n• Bo‘lib to‘lash — Uzum Nasiya va Paylater orqali, oyma-oy.\n• Bot orqali kelganlar uchun chegirma.\n\nKursga nima kiradi: shaxsiy ustoz bilan jonli darslar, 72 dars, ilova, bosma kitob, yordamchi ustoz nazorati.',
+    priceA: 'To‘lov — karta o‘tkazmasi orqali, shartnoma bilan.\n\nKursga nima kiradi: shaxsiy ustoz bilan jonli darslar, 72 dars, ilova (so‘zlar, o‘yinlar, AI suhbat), yordamchi ustoz nazorati.',
+    timePlan: 'Vaqt kam bo‘lsa — kuniga 15–20 daqiqalik reja:\n• Ertalab 5 daqiqa: ilovada so‘zlar\n• Tushlikda 5 daqiqa: video darsning bir qismi\n• Kechqurun 10 daqiqa: mashq\n\nJonli dars — haftasiga o‘zingiz tanlagan vaqtda.',
+    timeEvening: 'Jonli darslar kechqurun va dam olish kunlari ham bo‘ladi — ish jadvalingizga moslab tanlaysiz.',
+    think: 'Savollaringiz qoldimi? Menejerimiz qisqa javob beradi — hech narsaga majbur qilmaydi.',
+    noAnswer: name => `${name} sizga qo‘ng‘iroq qildi, lekin ulanmadi. Qachon qulay?`
+};
+
+module.exports = { PHRASES, WEEKLY, POLL, drip, SEGMENTS, LANDING_GOALS, FIELDS, FIELD_CHOICES, QUIZ, KEYBOARD, FAQ, FAQ_ORDER, WHEN, text };

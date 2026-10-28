@@ -42,6 +42,7 @@ async function run(db,now=new Date()) {
     if(!lock.locked) return;
     const settings=(await store.settings(db)).data, clock=localClock(now);
     await require('./recognition').run(db,settings,clock,now,once);
+    await require('./funnel').drip(db,now);
     const expires=()=>new Date(now.getTime()+3*60000).toISOString();
     if(settings.remindersEnabled) {
         const students=(await db.query("SELECT * FROM students WHERE subject='russian'")).rows.filter(policy.activeStudent);
