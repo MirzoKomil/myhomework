@@ -1,0 +1,325 @@
+{
+ "n": 67,
+ "topic_uz": "Bank va pochta: hisob ochish, posilka jo'natish",
+ "scene": "Inside a modern bank branch, a young Uzbek man hands his passport across the counter to a smiling female bank employee who gives him a form to fill in.",
+ "dialogs": [
+  {
+   "id": "L67-d1",
+   "title_ru": "Откры́ть счёт",
+   "title_uz": "Hisob ochish",
+   "intro_uz": "Birinchi dialog. Bobur bankda. U hisob ochib, karta buyurtma qilmoqchi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Бобу́р",
+     "gender": "m"
+    },
+    {
+     "name": "Сотру́дница",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Сотру́дница",
+     "ru": "Здра́вствуйте! Слу́шаю вас.",
+     "uz": "Assalomu alaykum! Eshitaman."
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Здра́вствуйте! Я хочу́ откры́ть счёт и заказа́ть ка́рту.",
+     "uz": "Assalomu alaykum! Hisob ochib, karta buyurtma qilmoqchiman."
+    },
+    {
+     "who": "Сотру́дница",
+     "ru": "Ваш па́спорт, пожа́луйста. И запо́лните э́ту анке́ту.",
+     "uz": "Pasportingizni bering, iltimos. Va bu anketani to'ldiring."
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Что ну́жно написа́ть?",
+     "uz": "Nima yozish kerak?"
+    },
+    {
+     "who": "Сотру́дница",
+     "ru": "Ваш а́дрес и но́мер телефо́на. Подпиши́те вот здесь.",
+     "uz": "Manzilingiz va telefon raqamingizni. Mana bu yerga imzo qo'ying."
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Гото́во. Когда́ бу́дет ка́рта?",
+     "uz": "Tayyor. Karta qachon bo'ladi?"
+    },
+    {
+     "who": "Сотру́дница",
+     "ru": "Че́рез неде́лю. Мы вам позвони́м.",
+     "uz": "Bir haftadan keyin. Sizga qo'ng'iroq qilamiz."
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Спаси́бо! Бу́ду ждать звонка́.",
+     "uz": "Rahmat! Qo'ng'irog'ingizni kutaman."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Bobur bankda nima qilmoqchi?",
+     "opts": [
+      "pul almashtirmoqchi",
+      "hisob ochib, karta olmoqchi",
+      "kredit olmoqchi"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Anketaga nima yozish kerak?",
+     "opts": [
+      "manzil va telefon raqami",
+      "ish joyi",
+      "maosh"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Karta qachon tayyor bo'ladi?",
+     "opts": [
+      "ertaga",
+      "bir oydan keyin",
+      "bir haftadan keyin"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "откры́ть счёт",
+     "alts": [
+      "обменя́ть де́ньги",
+      "перевести́ де́ньги",
+      "снять де́ньги"
+     ]
+    },
+    {
+     "base": "Че́рез неде́лю",
+     "alts": [
+      "Че́рез три дня",
+      "За́втра",
+      "Че́рез де́сять дней"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Bobur o'rniga gapiring: bankda hisob ochmoqchi ekaningizni ayting va karta haqida so'rang."
+  },
+  {
+   "id": "L67-d2",
+   "title_ru": "Како́й сего́дня курс?",
+   "title_uz": "Bugun kurs qanday?",
+   "intro_uz": "Ikkinchi dialog. Dilnoza bankda dollar almashtiradi va pul o'tkazadi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    },
+    {
+     "name": "Касси́р",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Дильно́за",
+     "ru": "Здра́вствуйте! Я хочу́ обменя́ть до́ллары. Како́й сего́дня курс?",
+     "uz": "Assalomu alaykum! Dollar almashtirmoqchiman. Bugun kurs qanday?"
+    },
+    {
+     "who": "Касси́р",
+     "ru": "Двена́дцать ты́сяч восемьсо́т сумо́в за до́ллар.",
+     "uz": "Bir dollar o'n ikki ming sakkiz yuz so'm."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Хорошо́. Обменя́йте, пожа́луйста, сто до́лларов.",
+     "uz": "Yaxshi. Iltimos, yuz dollar almashtiring."
+    },
+    {
+     "who": "Касси́р",
+     "ru": "Ваш па́спорт, пожа́луйста.",
+     "uz": "Pasportingizni bering, iltimos."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Вот. А мо́жно перевести́ де́ньги в Москву́?",
+     "uz": "Mana. Moskvaga pul o'tkazsa bo'ladimi?"
+    },
+    {
+     "who": "Касси́р",
+     "ru": "Да, мо́жно. Запо́лните бланк перево́да.",
+     "uz": "Ha, bo'ladi. O'tkazma blankasini to'ldiring."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Ско́лько сто́ит перево́д?",
+     "uz": "O'tkazma qancha turadi?"
+    },
+    {
+     "who": "Касси́р",
+     "ru": "Оди́н проце́нт. Де́ньги приду́т сего́дня.",
+     "uz": "Bir foiz. Pul bugun yetib boradi."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Dilnoza qancha dollar almashtiradi?",
+     "opts": [
+      "ellik",
+      "yuz",
+      "ikki yuz"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Dilnoza pulni qayerga o'tkazmoqchi?",
+     "opts": [
+      "Moskvaga",
+      "Toshkentga",
+      "Qozonga"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Pul qachon yetib boradi?",
+     "opts": [
+      "ertaga",
+      "uch kundan keyin",
+      "bugun"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "до́ллары",
+     "alts": [
+      "е́вро",
+      "рубли́",
+      "фу́нты"
+     ]
+    },
+    {
+     "base": "в Москву́",
+     "alts": [
+      "в Каза́нь",
+      "в Санкт-Петербу́рг",
+      "в Ташке́нт"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Dilnoza o'rniga gapiring: bankda pul almashtiring va kursni so'rang."
+  },
+  {
+   "id": "L67-d3",
+   "title_ru": "На по́чте",
+   "title_uz": "Pochtada",
+   "intro_uz": "Uchinchi dialog. Timur pochtaga keldi. U posilka oladi va xat jo'natadi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Тиму́р",
+     "gender": "m"
+    },
+    {
+     "name": "Сотру́дница",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Тиму́р",
+     "ru": "Здра́вствуйте! Мне пришло́ извеще́ние. Я хочу́ получи́ть посы́лку.",
+     "uz": "Assalomu alaykum! Menga xabarnoma keldi. Posilkani olmoqchiman."
+    },
+    {
+     "who": "Сотру́дница",
+     "ru": "Ваш па́спорт и извеще́ние, пожа́луйста.",
+     "uz": "Pasportingiz va xabarnomani bering, iltimos."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Вот. И да́йте, пожа́луйста, конве́рт и ма́рку.",
+     "uz": "Mana. Iltimos, konvert va marka ham bering."
+    },
+    {
+     "who": "Сотру́дница",
+     "ru": "Пожа́луйста. Подпиши́те здесь.",
+     "uz": "Marhamat. Shu yerga imzo qo'ying."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Гото́во. Ско́лько сто́ит отпра́вить письмо́ в Каза́нь?",
+     "uz": "Tayyor. Qozonga xat jo'natish qancha turadi?"
+    },
+    {
+     "who": "Сотру́дница",
+     "ru": "Пятна́дцать ты́сяч. Письмо́ идёт де́сять дней.",
+     "uz": "O'n besh ming. Xat o'n kun boradi."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Хорошо́, отпра́влю. Вот а́дрес.",
+     "uz": "Yaxshi, jo'nataman. Mana manzil."
+    },
+    {
+     "who": "Сотру́дница",
+     "ru": "Спаси́бо. Всего́ до́брого!",
+     "uz": "Rahmat. Xayr!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Timur pochtaga nima uchun keldi?",
+     "opts": [
+      "pul o'tkazish uchun",
+      "posilka olish uchun",
+      "gazeta olish uchun"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Xat qayerga jo'natiladi?",
+     "opts": [
+      "Moskvaga",
+      "Andijonga",
+      "Qozonga"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Xat necha kun boradi?",
+     "opts": [
+      "o'n kun",
+      "besh kun",
+      "ikki hafta"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "получи́ть посы́лку",
+     "alts": [
+      "отпра́вить посы́лку",
+      "купи́ть ма́рки",
+      "отпра́вить письмо́"
+     ]
+    },
+    {
+     "base": "в Каза́нь",
+     "alts": [
+      "в Москву́",
+      "в Самарка́нд",
+      "в Новосиби́рск"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Timur o'rniga gapiring: pochtada posilka jo'nating — qancha turadi va necha kun boradi, so'rang."
+  }
+ ]
+}

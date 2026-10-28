@@ -1,0 +1,315 @@
+{
+ "n": 69,
+ "topic_uz": "Hikoya qilish: снача́ла, пото́м, вдруг, наконе́ц",
+ "scene": "In a café, a young Uzbek woman excitedly tells a story with expressive hand gestures while her friend listens with wide eyes over a cup of tea.",
+ "dialogs": [
+  {
+   "id": "L69-d1",
+   "title_ru": "Ключи́",
+   "title_uz": "Kalitlar",
+   "intro_uz": "Birinchi dialog. Nigora Abdulazizga kecha bo'lgan voqeani aytib beryapti. Tinglang.",
+   "speakers": [
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    },
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Нигора́",
+     "ru": "Абдулази́з, вчера́ со мной случи́лась смешна́я исто́рия!",
+     "uz": "Abdulaziz, kecha men bilan kulgili voqea bo'ldi!"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Пра́вда? Что случи́лось?",
+     "uz": "Rostdanmi? Nima bo'ldi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Снача́ла я пошла́ в магази́н и купи́ла проду́кты.",
+     "uz": "Avval do'konga borib, oziq-ovqat sotib oldim."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "И что пото́м?",
+     "uz": "Keyin-chi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Пото́м я верну́лась домо́й, и вдруг поняла́: ключе́й нет!",
+     "uz": "Keyin uyga qaytdim va birdan tushundim: kalitlar yo'q!"
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Ой! Ты их потеря́ла?",
+     "uz": "Voy! Ularni yo'qotdingmi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Я испуга́лась. Но пото́м вспо́мнила: они́ в магази́не! Наконе́ц я их нашла́.",
+     "uz": "Qo'rqib ketdim. Lekin keyin esladim: ular do'konda! Nihoyat ularni topdim."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Nigora avval qayerga bordi?",
+     "opts": [
+      "do'konga",
+      "ishga",
+      "bozorga"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Nigora uyga qaytganda nimani tushundi?",
+     "opts": [
+      "telefoni yo'qligini",
+      "pul yo'qligini",
+      "kalitlar yo'qligini"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Kalitlar qayerda qolgan edi?",
+     "opts": [
+      "mashinada",
+      "do'konda",
+      "ishda"
+     ],
+     "a": 1
+    }
+   ],
+   "swap": [
+    {
+     "base": "ключе́й нет",
+     "alts": [
+      "телефо́на нет",
+      "кошелька́ нет",
+      "су́мки нет"
+     ]
+    },
+    {
+     "base": "в магази́н",
+     "alts": [
+      "на ры́нок",
+      "в апте́ку",
+      "в банк"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Nigora o'rniga gapiring: siz bilan bo'lgan kichik voqeani «Снача́ла… Пото́м… Вдруг… Наконе́ц…» bilan aytib bering."
+  },
+  {
+   "id": "L69-d2",
+   "title_ru": "Когда́ мне бы́ло де́сять лет",
+   "title_uz": "O'n yoshligimda",
+   "intro_uz": "Ikkinchi dialog. Bobur Dilnozaga bolaligidagi voqeani aytib beryapti. Tinglang.",
+   "speakers": [
+    {
+     "name": "Бобу́р",
+     "gender": "m"
+    },
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Бобу́р",
+     "ru": "Зна́ешь, одна́жды в де́тстве я заблуди́лся.",
+     "uz": "Bilasanmi, bir kuni bolaligimda adashib qolganman."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Пра́вда? Ско́лько тебе́ бы́ло лет?",
+     "uz": "Rostdanmi? Necha yoshda eding?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Мне бы́ло де́сять. Мы с па́пой пое́хали на база́р.",
+     "uz": "O'n yoshda edim. Dadam bilan bozorga borgan edik."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "И что случи́лось?",
+     "uz": "Nima bo'ldi?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Снача́ла я смотре́л игру́шки, а пото́м вдруг па́пы нет!",
+     "uz": "Avval o'yinchoqlarni tomosha qildim, keyin birdan dadam yo'q!"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Ой, ты, наве́рное, о́чень испуга́лся!",
+     "uz": "Voy, juda qo'rqib ketgandirsan!"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Да, я пла́кал. Пото́м одна́ же́нщина мне помогла́, и наконе́ц я нашёл па́пу.",
+     "uz": "Ha, yig'ladim. Keyin bir ayol menga yordam berdi va nihoyat dadamni topdim."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Bobur o'shanda necha yoshda edi?",
+     "opts": [
+      "sakkiz",
+      "o'n",
+      "o'n ikki"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Bobur dadasi bilan qayerga borgan edi?",
+     "opts": [
+      "parkka",
+      "do'konga",
+      "bozorga"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Boburga kim yordam berdi?",
+     "opts": [
+      "bir ayol",
+      "politsiyachi",
+      "sotuvchi"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "на база́р",
+     "alts": [
+      "в парк",
+      "в цирк",
+      "в зоопа́рк"
+     ]
+    },
+    {
+     "base": "Мне бы́ло де́сять",
+     "alts": [
+      "Мне бы́ло семь",
+      "Мне бы́ло во́семь",
+      "Мне бы́ло двена́дцать"
+     ]
+    }
+   ],
+   "speak_uz": "Endi o'zingiz gapiring: bolaligingizda bo'lgan bir voqeani «Когда́ мне бы́ло … лет…» deb boshlab aytib bering."
+  },
+  {
+   "id": "L69-d3",
+   "title_ru": "И вдруг я встре́тил дру́га!",
+   "title_uz": "Birdan do'stimni uchratdim!",
+   "intro_uz": "Uchinchi dialog. Anton Nigoraga Toshkentdagi sayohati haqida gapiryapti. Tinglang.",
+   "speakers": [
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Анто́н",
+     "ru": "Нигора́, в суббо́ту у меня́ был интере́сный день!",
+     "uz": "Nigora, shanba kuni menda qiziq kun bo'ldi!"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Расскажи́! Что ты де́лал?",
+     "uz": "Gapirib ber! Nima qilding?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Снача́ла я гуля́л по ста́рому го́роду. Шёл дождь.",
+     "uz": "Avval eski shaharda sayr qildim. Yomg'ir yog'ayotgan edi."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "А пото́м?",
+     "uz": "Keyin-chi?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Пото́м я зашёл в кафе́, и вдруг встре́тил ста́рого дру́га!",
+     "uz": "Keyin kafega kirdim va birdan eski do'stimni uchratdim!"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Не мо́жет быть! Отку́да он?",
+     "uz": "Bo'lishi mumkin emas! U qayerdan?"
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Из Москвы́. Мы не ви́делись пять лет!",
+     "uz": "Moskvadan. Besh yil ko'rishmagan edik!"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Кака́я встре́ча! Э́то как в кино́!",
+     "uz": "Qanday uchrashuv! Xuddi kinodagidek!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Anton avval nima qildi?",
+     "opts": [
+      "eski shaharda sayr qildi",
+      "kafeda o'tirdi",
+      "ishga bordi"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "O'shanda havo qanday edi?",
+     "opts": [
+      "quyoshli",
+      "qor yog'ayotgan edi",
+      "yomg'ir yog'ayotgan edi"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Anton do'stini necha yil ko'rmagan edi?",
+     "opts": [
+      "uch yil",
+      "besh yil",
+      "o'n yil"
+     ],
+     "a": 1
+    }
+   ],
+   "swap": [
+    {
+     "base": "в кафе́",
+     "alts": [
+      "в магази́н",
+      "в музе́й",
+      "в парк"
+     ]
+    },
+    {
+     "base": "ста́рого дру́га",
+     "alts": [
+      "бра́та",
+      "сосе́да",
+      "свою́ учи́тельницу"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Anton o'rniga gapiring: kutilmagan uchrashuv haqida «Я шёл по у́лице, и вдруг…» deb hikoya qiling."
+  }
+ ]
+}
