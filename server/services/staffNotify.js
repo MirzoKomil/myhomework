@@ -126,8 +126,11 @@ async function getPrefs(db, actor) {
     const groups = catalogFor(me), row = await loadPrefs(db, me.user.id);
     const saved = row.prefs || {};
     const tg = (await db.query('SELECT telegram FROM staff_profile_extra WHERE user_id=$1', [me.user.id])).rows[0]?.telegram || '';
+    // @Domworkuz_bot'ga ulanganmi (CRM → Bildirishnomalar → "Ulash"). Jadval hali yaratilmagan bo'lsa — yo'q.
+    const botLinked = !!(await db.query("SELECT to_regclass('domwork_bot_links') AS t")).rows[0]?.t
+        && (await db.query("SELECT 1 FROM domwork_bot_links WHERE account_kind='user' AND account_id=$1", [me.user.id])).rows.length > 0;
     return { kind: me.kind, groups, prefs: effectivePrefs(groups, saved.types || {}), quiet: saved.quiet || QUIET_DEFAULT,
-        channels: { telegram: { username: tg, connected: false, note: TELEGRAM_LIVE ? '' : 'Telegram orqali yuborish hali ulanmagan — tanlovingiz saqlanadi, ungacha bu xabarlar qo\'ng\'iroqcha panelida chiqadi' }, browser: { connected: true } } };
+        channels: { telegram: { username: tg, botLinked, connected: false, note: TELEGRAM_LIVE ? '' : 'Telegram orqali yuborish hali ulanmagan — tanlovingiz saqlanadi, ungacha bu xabarlar qo\'ng\'iroqcha panelida chiqadi' }, browser: { connected: true } } };
 }
 async function savePrefs(db, actor, body = {}) {
     const me = await ST.identify(db, actor);

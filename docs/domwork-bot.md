@@ -275,3 +275,21 @@ Telegram/Redis are mocked. Real role-by-role delivery acceptance still requires
 registered users, confirmed classroom assignments and explicit opt-in. Face ID
 provider docs, real course/promotional materials and business award-policy choices
 remain external inputs; this addition does not claim those are complete.
+
+## Staff Telegram linking without matching phone numbers (2026-10-29)
+
+CRM → Sozlamalar → Bildirishnomalar → Kanallar → **Telegram bot → Ulash**. Same pattern as the
+student flow: a live CRM session creates a 5-minute one-time `ul_` deep link (only its SHA-256 is
+stored; the inbox copy is redacted), the employee presses Start, returns to the CRM, checks the
+Telegram name/username and confirms. Confirmation writes `domwork_staff_telegram_proofs`; the staff
+identity then no longer depends on the CRM/HR phone matching Telegram. Phone-matched links without
+proof keep the old rule. Only eligible Russian staff and admins (same rules as contact login) may
+link; a Telegram previously linked as a lead is replaced on confirmation, any other occupied
+account is rejected. Self-service unlink is audited. API: `/api/domwork/staff-telegram`.
+
+Student and staff link creation also returns a server-rendered QR (`qr: {size,path}`) of the
+personal link, so the desktop QR no longer opens the bare bot (which fell back to phone matching).
+A student Telegram previously linked as a lead is replaced on confirmation.
+
+Verify: `node scripts/run-payroll-postgres.cjs scripts/staff-telegram-postgres.test.cjs`.
+Note: `student-app/dist` is not rebuilt here; the student-app source change ships with the next build.

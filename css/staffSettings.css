@@ -240,3 +240,13 @@ html.rd .notif-icon.notif-tone-info { background: var(--kb-info-bg); }
 }
 /* Profil sahifasi telefonda ustun bo'ladi (align-items:flex-start) — yangi bo'limlar kenglikni to'liq egallasin. */
 .profile-body.ss-body { align-self: stretch; width: 100%; max-width: 100%; }
+
+/* @Domworkuz_bot ulash paneli (Bildirishnomalar → Kanallar → Telegram bot → Ulash) */
+.ss-tgl { border-top: 1px solid var(--border, #E6EAF2); }
+.ss-tgl-in { display: flex; gap: 20px; align-items: center; }
+.ss-tgl-qr { width: 168px; height: 168px; flex: none; border-radius: 12px; box-shadow: 0 0 0 1px var(--border, #E6EAF2); background: #fff; }
+.ss-tgl-tx { min-width: 0; flex: 1; }
+.ss-tgl-steps { margin: 0; padding-left: 20px; display: grid; gap: 6px; line-height: 1.45; }
+.ss-tgl .ss-acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.ss-tgl a.ss-btn { text-decoration: none; }
+@media (max-width: 640px) { .ss-tgl-in { flex-direction: column; align-items: stretch; } .ss-tgl-qr { align-self: center; } }
