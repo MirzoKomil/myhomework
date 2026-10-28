@@ -35,6 +35,7 @@ function pickSlot(free, duration, near, used) {
 async function impact(db, r, now = new Date()) {
     const p = r.payload || {};
     const today = T.nowLocal(now);
+    if (r.type === 'assist_finance' || r.type === 'assist_late') return { type: r.type, lessons: [] };
     if (r.type === 'student') {
         const sid = String(p.studentId || '');
         const st = (await db.query('SELECT id, name, teacher_id, lesson_day_of_week, lesson_time, lesson_duration FROM students WHERE id=$1', [sid])).rows[0];

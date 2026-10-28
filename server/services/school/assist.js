@@ -216,4 +216,68 @@ async function plan(db, { assistantIds = null, from, to, subject = null, now = n
     return { from, to, assistantIds: ids, items };
 }
 
-module.exports = { plan, RATE, MONTH_CAP, MIN_MINUTES, CHANNELS, countMonth, mark, removeOwnToday, adminCorrect, monthReport, advanceMonth, isLocked, adviceFor };
+// Moliyaga murojaat (yordamchi, yopilgan oy bo'yicha): faqat o'z hisobi, yakuniy tasdiqdan oldin.
+// Hisobni o'zgartirmaydi — admin ko'rib chiqadi va kerak bo'lsa "Aloqalar"da tuzatadi (adminCorrect).
+const FIN_KINDS = { missing: 'Aloqa ro\'yxatda yo\'q', not_counted: 'Aloqa hisoblanmagan', wrong_sum: 'Summa noto\'g\'ri', other: 'Boshqa' };
+async function financeRequest(db, me, body, now = new Date()) {
+    const month = String(body.month || '');
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) throw fail(400, 'Oyni tanlang');
+    const { from, to } = T.monthBounds(month);
+    const cur = T.nowLocal(now).date.slice(0, 7);
+    if (month >= cur) throw fail(409, 'Murojaat faqat yopilgan oy bo\'yicha yuboriladi');
+    if (month < T.addDays(cur + '-01', -62).slice(0, 7)) throw fail(409, 'Bu oy uchun murojaat muddati o\'tgan');
+    const st = await monthState(db, month);
+    if (st?.final_at) throw fail(409, 'Oy yakuniy tasdiqlangan — murojaat qabul qilinmaydi');
+    const kind = FIN_KINDS[body.kind] ? body.kind : 'other';
+    const reason = String(body.reason || '').trim();
+    if (reason.length < 5) throw fail(400, 'Nima noto\'g\'ri ekanini yozing');
+    // Faqat o'z yordamchi hisobi: shu oyda aloqasi bo'lgan yoki hozir yordamchi bo'lgan xodim.
+    const mine = (await db.query(`SELECT 1 FROM school_assist_contacts WHERE assistant_id=$1 AND day BETWEEN $2 AND $3
+        UNION ALL SELECT 1 FROM students WHERE assistant_teacher_id=$1 LIMIT 1`, [me.id, from, to])).rows.length;
+    if (!mine) throw fail(403, 'Bu oy bo\'yicha sizda yordamchi hisobi yo\'q');
+    const p = { month, kind, proof: String(body.proof || '').trim().slice(0, 300) };
+    if (body.studentId) {
+        const sid = String(body.studentId);
+        const row = (await db.query('SELECT id, name, assistant_teacher_id FROM students WHERE id=$1', [sid])).rows[0];
+        const had = row && (row.assistant_teacher_id === me.id
+            || (await db.query('SELECT 1 FROM school_assist_contacts WHERE student_id=$1 AND assistant_id=$2 AND day BETWEEN $3 AND $4 LIMIT 1', [sid, me.id, from, to])).rows.length);
+        if (!had) throw fail(403, 'Bu o\'quvchi bo\'yicha sizning hisobingiz yo\'q');
+        p.studentId = row.id; p.studentName = row.name;
+    }
+    if (body.day) {
+        const day = T.assertDate(String(body.day));
+        if (day.slice(0, 7) !== month) throw fail(400, 'Kun shu oy ichida bo\'lsin');
+        p.day = day;
+    }
+    return { payload: p, reason: reason.slice(0, 500) };
+}
+
+// Oy ichidagi o'zgarishlar (o'quvchi tarixi): muzlatish, qaytish, chiqib ketish, asosiy ustoz almashishi. Faqat o'qish.
+async function monthChanges(db, assistantId, month) {
+    const { from, to } = T.monthBounds(month);
+    const studs = (await db.query('SELECT id, name, teacher_id FROM students WHERE assistant_teacher_id=$1', [assistantId])).rows;
+    if (!studs.length) return { month, changes: [] };
+    const ids = studs.map(s => s.id), by = new Map(studs.map(s => [s.id, s]));
+    const [statuses, hist] = await Promise.all([
+        db.query('SELECT * FROM school_student_status WHERE cancelled_at IS NULL AND student_id = ANY($1::text[]) ORDER BY from_date', [ids]),
+        db.query('SELECT * FROM school_teacher_history WHERE student_id = ANY($1::text[]) ORDER BY from_date', [ids])
+    ]);
+    const names = new Map((await db.query('SELECT id, name FROM hr_employees')).rows.map(r => [r.id, r.name]));
+    const out = [];
+    for (const r of statuses.rows) {
+        const f = S.dateStr(r.from_date), t = r.to_date ? S.dateStr(r.to_date) : null, s = by.get(r.student_id);
+        if (r.status === 'frozen' && f <= to && (!t || t >= from)) out.push({ kind: 'frozen', studentId: s.id, name: s.name, from: f, to: t, reason: r.reason || '' });
+        else if (r.status === 'left' && f >= from && f <= to) out.push({ kind: 'left', studentId: s.id, name: s.name, from: f, reason: r.reason || '' });
+        else if (r.status === 'restored' && f >= from && f <= to) out.push({ kind: 'restored', studentId: s.id, name: s.name, from: f });
+    }
+    const hs = new Map(); for (const h of hist.rows) { if (!hs.has(h.student_id)) hs.set(h.student_id, []); hs.get(h.student_id).push(h); }
+    for (const [sid, rows] of hs) rows.forEach((h, i) => {
+        const f = S.dateStr(h.from_date);
+        if (i > 0 && f >= from && f <= to && h.teacher_id !== rows[i - 1].teacher_id) out.push({ kind: 'teacher', studentId: sid, name: by.get(sid).name, from: f,
+            teacherId: h.teacher_id, teacherName: names.get(h.teacher_id) || '', prevTeacherName: names.get(rows[i - 1].teacher_id) || '' });
+    });
+    out.sort((a, b) => a.from.localeCompare(b.from));
+    return { month, changes: out };
+}
+
+module.exports = { financeRequest, monthChanges, FIN_KINDS, plan, RATE, MONTH_CAP, MIN_MINUTES, CHANNELS, countMonth, mark, removeOwnToday, adminCorrect, monthReport, advanceMonth, isLocked, adviceFor };

@@ -443,9 +443,9 @@
             if (typeof switchTab === 'function') switchTab('teachers-section', { teachersSection: 'textbook' });
         }
     }
-    function studentRequestDrawer(c) {
+    function studentRequestDrawer(c, topic = 'freeze') {
         const box = openDrawer({ title: 'Adminga so\'rov', sub: `${esc(c.name)} · admin ko'rib chiqadi va javob beradi`, body: `
-            <div class="sc-sec"><h3>Mavzu</h3>${chips('topic', [['freeze', 'Muzlatish'], ['teacher', 'Ustozni almashtirish'], ['schedule', 'Jadvalni o\'zgartirish'], ['other', 'Boshqa']], 'freeze')}</div>
+            <div class="sc-sec"><h3>Mavzu</h3>${chips('topic', [['freeze', 'Muzlatish'], ['teacher', 'Ustozni almashtirish'], ['schedule', 'Jadvalni o\'zgartirish'], ['other', 'Boshqa']], topic)}</div>
             <div class="sc-sec">${field('Izoh', '<textarea name="reason" rows="3" placeholder="Masalan: o\'quvchi 2 haftaga safarga ketmoqda, ota-onasi so\'radi"></textarea>', 'Kamida 3 belgi · admin "Ustozlar so\'rovlari"da ko\'radi')}</div>
             <div class="sc-note">To'lov va tarif masalalari ustozga ko'rsatilmaydi — ularni admin hal qiladi.</div>`,
             foot: '<button type="button" class="sc-btn" data-close>Bekor</button><button type="button" class="sc-btn sc-btn--pri" data-save>Yuborish</button>' });
@@ -1185,6 +1185,6 @@
         studentAvatar, staffAvatar, staffAvatarUrl, tgPill, teacherName, studentById, teachersForSubject,
         openDrawer, closeDrawer, errBox, busy, field, impact, toast, refreshCache, nowMin,
         openStudent, closeStudent, renderApprovals, renderGroups, renderAssistAdmin, loadStaffAvatars, staffAvatarOf: id => staffAvatarUrl(_avatars[id]), acad, dShort, whenTxt, shortName, num,
-        bulkDrawer, correctionDrawer, CHN, CST
+        bulkDrawer, correctionDrawer, CHN, CST, studentRequestDrawer
     });
 })();

@@ -597,7 +597,9 @@
 
     // ── Ustozlar so'rovlari ──────────────────────────────────────────────────
     const R = { tab: 'new', sel: '' };
-    const RQ_T = { leave: 'ta\'til', close: 'vaqtni yopish', open: 'qo\'shimcha ochish', student: 'o\'quvchi bo\'yicha' };
+    const RQ_T = { leave: 'ta\'til', close: 'vaqtni yopish', open: 'qo\'shimcha ochish', student: 'o\'quvchi bo\'yicha', assist_finance: 'moliyaga murojaat' };
+    // Yordamchining "Moliyaga murojaat"i (yopilgan oy bo'yicha) — js/yordamchi.js financeDrawer.
+    const FIN_K = { missing: 'aloqa ro\'yxatda yo\'q', not_counted: 'aloqa hisoblanmagan', wrong_sum: 'summa noto\'g\'ri', other: 'boshqa' };
     const TOPIC = { freeze: 'muzlatish', teacher: 'ustozni almashtirish', schedule: 'jadvalni o\'zgartirish', other: 'o\'quvchi bo\'yicha' };
     const typeLabel = r => (r.type === 'student' ? TOPIC[r.payload?.topic] || TOPIC.other : RQ_T[r.type] || r.type);
     function whenRange(p) {
@@ -609,6 +611,7 @@
     function reqSummary(r) {
         const p = r.payload || {};
         if (r.type === 'student') return `${esc(p.studentName || studentById(p.studentId)?.name || '')} · "${esc(r.reason)}"`;
+        if (r.type === 'assist_finance') return `${esc(p.month ? monthLabel(p.month) : '')} · ${esc(FIN_K[p.kind] || FIN_K.other)}${p.studentName ? ' · ' + esc(p.studentName) : ''}${p.day ? ' · ' + esc(dWF(p.day)) : ''} · "${esc(r.reason)}"`;
         const w = whenRange(p);
         return `${esc(r.type === 'leave' ? w.long : w.when)} · ${esc(w.range)} · "${esc(r.reason)}"`;
     }
@@ -660,9 +663,15 @@
               <blockquote class="sc-quote">${esc(r.reason)}</blockquote>
               <div class="sc-row sc-wrap"><button type="button" class="sc-btn" data-card>Kartani ochish</button><span class="sc-mt">${p.topic === 'freeze' ? 'Muzlatish' : p.topic === 'teacher' ? 'Ustozni almashtirish' : p.topic === 'schedule' ? 'Jadvalni o\'zgartirish' : 'Amal'} kartadagi tegishli tugma orqali bajariladi, keyin so'rovni "Bajarildi" deb yoping.</span></div>`;
         }
+        if (r.type === 'assist_finance') {
+            impactHtml = `<div class="sc-note"><b>Moliyaga murojaat · ${esc(p.month ? monthLabel(p.month) : '')}:</b> ${esc(FIN_K[p.kind] || FIN_K.other)}${p.studentName ? ` · <button type="button" class="sc-link" data-st="${esc(p.studentId)}">${esc(p.studentName)}</button>` : ''}${p.day ? ' · ' + esc(dWF(p.day)) : ''}. Hisob o'zi o'zgarmaydi — kerak bo'lsa "Yordamchi aloqalari"da sabab bilan tuzating, keyin murojaatni yoping.</div>
+              <blockquote class="sc-quote">${esc(r.reason)}</blockquote>${p.proof ? `<p class="sc-mt">Isbot: ${/^https?:\/\//.test(p.proof) ? `<a href="${esc(p.proof)}" target="_blank" rel="noopener">${esc(p.proof)}</a>` : esc(p.proof)}</p>` : ''}
+              <div class="sc-row sc-wrap"><button type="button" class="sc-btn" data-assist-open>Yordamchi aloqalarini ochish</button></div>`;
+        }
         const decisions = r.type === 'leave' || r.type === 'close'
             ? [...(sug.length ? [['approve_mk', 'Tasdiqlash + qoplashlarni taklif qilish']] : []), ['approve', 'Faqat tasdiqlash'], ['reject', 'Rad etish']]
-            : r.type === 'student' ? [['approve', 'Bajarildi · yopish'], ['reject', 'Rad etish']] : [['approve', 'Tasdiqlash'], ['reject', 'Rad etish']];
+            : r.type === 'student' ? [['approve', 'Bajarildi · yopish'], ['reject', 'Rad etish']]
+            : r.type === 'assist_finance' ? [['approve', 'Ko\'rib chiqildi · yopish'], ['reject', 'Rad etish']] : [['approve', 'Tasdiqlash'], ['reject', 'Rad etish']];
         el.innerHTML = `<header class="sc-ch"><h2>${title}</h2><span class="sc-mt">yuborildi ${esc(sentAt(r.created_at))}${r.type === 'leave' ? ' · HR davomati alohida belgilanadi' : ''}</span></header>
           <div class="sc-pad an-rbody">${impactHtml}
           ${isNew ? `<p class="an-cap">Qaror</p><div class="an-decs" role="radiogroup">${decisions.map(([k, l], i) => `<label class="an-decb"><input type="radio" name="dec" value="${k}"${i === 0 ? ' checked' : ''}><span>${l}</span></label>`).join('')}</div>
@@ -673,10 +682,12 @@
           ${isNew ? '<footer class="sc-df"><span></span><span class="sc-row"><button type="button" class="sc-btn" data-cancel>Bekor</button><button type="button" class="sc-btn sc-btn--pri" data-save>Qarorni saqlash</button></span></footer>' : ''}`;
         el.querySelectorAll('[data-st]').forEach(b => b.onclick = () => U().openStudent(b.dataset.st));
         el.querySelector('[data-card]')?.addEventListener('click', () => U().openStudent(p.studentId));
+        el.querySelector('[data-assist-open]')?.addEventListener('click', () => { A.aid = r.teacher_id; A.month = p.month || ''; A.week = ''; A.all = true; if (typeof switchTab === 'function') switchTab('school-assist'); });
         if (!isNew) return;
         const hint = el.querySelector('[data-hint]');
         const HINT = { approve_mk: 'Belgilangan qoplash vaqtlari ustozning jadvalida "rejada" bo\'lib ko\'rinadi (sotuvga yopiladi). Ustoz darsni o\'tgach tekshiruvga yuboradi, siz tasdiqlagach maoshga qo\'shiladi.',
-            approve: r.type === 'student' ? 'So\'rov yopiladi. Amalni (muzlatish, ustoz, jadval) kartada bajaring — tarixga yoziladi.' : 'Jadval darhol yangilanadi. Darslar qoplash uchun ochiq qoladi — ustoz o\'zi rejalashtiradi.',
+            approve: r.type === 'assist_finance' ? 'Murojaat yopiladi, izoh yordamchiga boradi. Hisobni o\'zgartirish kerak bo\'lsa — avval "Yordamchi aloqalari"da tuzating (sabab bilan).'
+                : r.type === 'student' ? 'So\'rov yopiladi. Amalni (muzlatish, ustoz, jadval) kartada bajaring — tarixga yoziladi.' : 'Jadval darhol yangilanadi. Darslar qoplash uchun ochiq qoladi — ustoz o\'zi rejalashtiradi.',
             reject: 'Sabab majburiy — ustoz "Sinovlar va so\'rovlar" bo\'limida ko\'radi.' };
         const sync = () => { const v = el.querySelector('[name=dec]:checked')?.value; hint.textContent = HINT[v] || ''; el.querySelectorAll('[data-sug]').forEach(c => { c.disabled = v !== 'approve_mk'; }); };
         el.querySelectorAll('[name=dec]').forEach(i => i.onchange = sync); sync();
@@ -733,12 +744,13 @@
         const lastDay = dateOf(month, monthDays(month));
         if (!A.week || A.week.slice(0, 7) > month || U().addDays(A.week, 6) < month + '-01') A.week = U().weekStart(curMonth ? td : lastDay);
         root.innerHTML = '<div class="sc-skel"></div>';
-        let rep = null, reqs = [], reps = [];
+        let rep = null, reqs = [], reps = [], finReqs = [];
         try {
             [reps, reqs] = await Promise.all([
                 Promise.all(list.map(a => U().api(`/assist/month?assistantId=${encodeURIComponent(a.id)}&month=${month}`).catch(() => null))),
-                U().api('/requests?status=new').then(r => r.requests.filter(x => x.type === 'assist_late'))
+                U().api('/requests?status=new').then(r => r.requests.filter(x => x.type === 'assist_late' || x.type === 'assist_finance'))
             ]);
+            finReqs = reqs.filter(x => x.type === 'assist_finance'); reqs = reqs.filter(x => x.type === 'assist_late');
             rep = reps[list.findIndex(a => a.id === A.aid)] || null;
         } catch (e) { root.innerHTML = `<div class="sc-err">${esc(e.message)}</div>`; return; }
         const a = list.find(x => x.id === A.aid);
@@ -770,6 +782,7 @@
             <div class="sc-kpi"><small>Maosh</small><b>${money(rep.amount)}</b><span>${rep.counted} × ${money(RATE)} so'm</span></div>
             <div class="sc-kpi"><small>${curMonth && A.week === U().weekStart(td) ? 'Bu hafta' : 'Hafta'}</small><b>${weekCounted} / ${myStudents.length * 3}</b><span>tavsiya bo'yicha</span></div>
             <div class="sc-kpi"><small>So'rovlar</small><b>${myReqs.length}</b><span>kechikib belgilash${otherReqs ? ` · boshqalarda ${otherReqs}` : ''}</span></div></div>` : ''}
+          ${finReqs.filter(r => r.teacher_id === A.aid && r.payload?.month === month).length ? `<div class="sc-note sc-note--warn"><b>Moliyaga murojaat · ${finReqs.filter(r => r.teacher_id === A.aid && r.payload?.month === month).length} ta kutilmoqda</b> — "Ustozlar so'rovlari" bo'limida ko'rib chiqing va javob bering.</div>` : ''}
           ${myReqs.length ? `<section class="sc-card"><header class="sc-ch"><h2>So'rov · kechikib belgilash</h2>${pill('warn', `${myReqs.length} kutilmoqda`)}</header>
             ${myReqs.map(r => { const s = studentById(r.payload?.studentId) || { name: '' }, pp = r.payload || {};
               return `<div class="an-lrq">${sAv(s, 36)}<span class="sc-grow"><b>${esc(s.name)} · ${dWF(pp.day)}</b><small>${esc(U().shortName(r.requester_name))}: "${esc(r.reason)}"${pp.channel ? ` — ${esc((U().CHN[pp.channel] || ['', pp.channel])[1].toLowerCase())}${pp.minutes ? ', ' + esc(pp.minutes) + ' daq' : ''}` : ''}</small></span>
