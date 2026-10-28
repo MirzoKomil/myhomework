@@ -110,10 +110,8 @@
         stamp('hub:' + data.lang);
         if (data.lang !== S.lang) S.lang = data.lang; // ustoz — o'z tiliga majburlanadi
         S.hub[S.lang] = data;
-        if (!S.selected[S.lang]) {
-            const busiest = [...data.syllabus].sort((a, b) => b.studentsHere - a.studentsHere)[0];
-            S.selected[S.lang] = busiest?.studentsHere ? busiest.no : 1;
-        }
+        // Darslik dizayni: birinchi ochilishda 1-dars tanlangan (keyin oxirgi tanlov eslab qolinadi).
+        if (!S.selected[S.lang]) S.selected[S.lang] = 1;
         if (!S.duration) S.duration = data.defaultDuration || 60;
         return data;
     }
@@ -303,7 +301,9 @@
             const on = Number(b.dataset.no) === no;
             b.classList.toggle('is-on', on);
             b.setAttribute('aria-current', on);
-            if (on && scroll) b.scrollIntoView({ block: 'center' });
+            // Faqat ro'yxat ichida aylantiriladi — sahifa (sarlavha, tablar) joyida qoladi.
+            const box = on && scroll ? b.closest('.lh-items') : null;
+            if (box) box.scrollTop += b.getBoundingClientRect().top - box.getBoundingClientRect().top - (box.clientHeight - b.offsetHeight) / 2;
         });
         const box = document.getElementById('lhLesson');
         if (!box) return;
@@ -740,6 +740,25 @@
     }
 
     const LARGE_KINDS = new Set(['book', 'teacher_book', 'methodology']);
+    // Qo'shimcha material: PDF sahifalar soni yoki audio davomiyligi (aniqlanmasa — null, faqat hajm ko'rsatiladi).
+    async function fileInfo(file) {
+        try {
+            if (/pdf/i.test(file.type) || /\.pdf$/i.test(file.name)) {
+                if (!window.pdfjsLib) return null;
+                const doc = await window.pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false }).promise;
+                const pages = doc.numPages; doc.destroy?.();
+                return pages ? { pages } : null;
+            }
+            if (/^audio\//i.test(file.type) || /\.(mp3|m4a|wav|ogg)$/i.test(file.name)) {
+                const url = URL.createObjectURL(file);
+                const sec = await new Promise(res => { const a = new Audio(); a.preload = 'metadata'; a.onloadedmetadata = () => res(a.duration); a.onerror = () => res(0); a.src = url; setTimeout(() => res(0), 5000); });
+                URL.revokeObjectURL(url);
+                return Number.isFinite(sec) && sec > 0 ? { durationSec: Math.round(sec) } : null;
+            }
+        } catch { /* ma'lumot ixtiyoriy */ }
+        return null;
+    }
+
     function openMaterialForm({ kind, mode, lessonNo, existing }) {
         const hub = S.hub[S.lang];
         const label = hub.kinds.lesson[kind] || hub.kinds.course[kind] || kind;
@@ -787,6 +806,8 @@
                     if (file.size > limit * 1048576) throw new Error(`Fayl ${limit} MB dan katta`);
                     const up = large ? await uploadLargePdf(file) : await apiUploadFile(file);
                     Object.assign(body, { url: up.url, fileName: up.fileName || file.name, fileSize: up.fileSize || file.size, mime: up.mimeType || file.type });
+                    // DarslikMaterial: "2 bet · 340 KB" / "1:42" — faylning o'zidan (PDF sahifalari, audio davomiyligi).
+                    if (!large) { const info = await fileInfo(file); if (info) body.meta = { ...(body.meta || {}), ...info }; }
                 }
                 if (editing) await api(`/api/academic/materials/${encodeURIComponent(existing.id)}`, { method: 'PUT', body: JSON.stringify(body) });
                 else await api('/api/academic/materials', { method: 'POST', body: JSON.stringify(body) });
@@ -872,7 +893,7 @@
     // ── O'quvchilar progressi ───────────────────────────────────────────────
     // O'quvchilar progressi (DarslikProgress dizayni): 6 ta KPI, "O'quvchilar" jadvali (ustoz filtri, saralash, CSV),
     // sahifalash va izoh pastda. Qator bosilsa — o'quvchining batafsil sahifasi.
-    const PROG_PAGE = 10;
+    const PROG_PAGE = 7; // DarslikProgress dizayni: sahifada 7 o'quvchi
     const SORTS = [['attention', "Avval e'tibor kerak"], ['reached', "Joriy dars bo'yicha"], ['time', 'Faol vaqt (7 kun)'], ['homework', 'Uy vazifasi natijasi'], ['name', 'Ism']];
     const FLAG_PILL = { idle: ['Faol emas', 'warn'], struggling: ['Qiynalyapti', 'warn'], behind: ['Rejadan orqada', 'bad'], frozen: ['Muzlatilgan', 'mute'] };
     const shortName = n => { const p = String(n || '').trim().split(/\s+/); return p.length > 1 ? `${p[0]} ${p[1][0]}.` : p[0] || ''; };
@@ -910,12 +931,15 @@
         if (S.teacher && !teachers.some(t => t.id === S.teacher)) S.teacher = '';
         const scoped = data.students.filter(s => !S.teacher || s.teacherId === S.teacher);
         const active = scoped.filter(s => !s.frozen);
-        const count = key => active.filter(s => s.flags.some(f => f.key === key));
+        const count = key => active.filter(s => shownFlags(s).some(f => f.key === key));
         const weekTotal = active.reduce((a, s) => a + s.time.week, 0);
         const avg = (arr, f) => (arr.length ? Math.round(arr.reduce((a, s) => a + f(s), 0) / arr.length) : 0);
         const avgReached = avg(active, s => s.reached);
         const withPlan = active.filter(s => s.expected);
         const avgPlan = avg(withPlan, s => s.expected);
+        // Qatorda "/ N reja" faqat o'quvchining rejasi ko'pchilikdan farq qilsa (masalan, keyinroq qo'shilgan yoki orqada qolgan).
+        const planCount = {}; withPlan.forEach(s => { planCount[s.expected] = (planCount[s.expected] || 0) + 1; });
+        const commonPlan = Number(Object.entries(planCount).sort((a, b) => b[1] - a[1])[0]?.[0]) || null;
         const active7 = active.filter(s => s.time.week > 0 || s.activeDays7 > 0).length;
         const hours = Math.round(weekTotal / 3600);
         const per = active.length ? weekTotal / active.length : 0;
@@ -931,7 +955,7 @@
         const kpi = (l, v, d, warn) => `<div class="lh-pk${warn ? ' is-warn' : ''}"><span class="lh-pk-l">${l}</span><span class="lh-pk-v">${v}</span><span class="lh-pk-d">${d}</span></div>`;
         const hw = s => (s.firstTryAvg === null || s.firstTryAvg === undefined ? '<span class="lh-muted">—</span>'
             : `<div class="lh-pmini" title="Eng yaxshi natija: ${s.homeworkAvg ?? '—'}%"><div class="lh-ptrk"><span class="${s.firstTryAvg < RULES.PASS_PERCENT ? 'lo' : ''}" style="width:${Math.max(0, Math.min(100, s.firstTryAvg))}%"></span></div><b class="${s.firstTryAvg < RULES.PASS_PERCENT ? 'is-lo' : ''}">${s.firstTryAvg}%</b></div>`);
-        const pills = s => { const f = s.flags.filter(x => FLAG_PILL[x.key]); return f.length ? `<div class="lh-pfl">${f.map(x => `<span class="lh-ppill is-${FLAG_PILL[x.key][1]}" title="${esc(x.label)}">${esc(x.key === 'idle' && s.daysIdle === null ? "Ilovaga kirmagan" : FLAG_PILL[x.key][0])}</span>`).join('')}</div>` : '<span class="lh-muted">—</span>'; };
+        const pills = s => { const f = shownFlags(s).filter(x => FLAG_PILL[x.key]); return f.length ? `<div class="lh-pfl">${f.map(x => `<span class="lh-ppill is-${FLAG_PILL[x.key][1]}" title="${esc(x.label)}">${esc(x.key === 'idle' && s.daysIdle === null ? "Ilovaga kirmagan" : FLAG_PILL[x.key][0])}</span>`).join('')}</div>` : '<span class="lh-muted">—</span>'; };
         main.innerHTML = `
         <div class="lh-pk6">
             ${kpi("O'quvchilar", active.length, `7 kunda ilovada faol: ${active7}${scoped.length > active.length ? ` · +${scoped.length - active.length} muzlatilgan` : ''}`)}
@@ -939,7 +963,7 @@
             ${kpi('Faol vaqt · 7 kun', hours >= 1 ? `${hours} <small>soat</small>` : `${Math.round(weekTotal / 60)} <small>daq</small>`, `jami ${active.length} o'quvchi · boshiga ${perTxt}`)}
             ${kpi('Faol emas · 3+ kun', idle.length, idle.length ? esc(names(idle)) : "hammasi faol", idle.length)}
             ${kpi('Qiynalyapti', strug.length, `1-urinish ${RULES.PASS_PERCENT}% dan past · faol o'quvchilar`, strug.length)}
-            ${kpi('Rejadan orqada', behind.length, `1 haftadan ko'p orqada${behind.length ? ` · ${esc(names(behind))}` : ''}`, behind.length)}
+            ${kpi('Rejadan orqada', behind.length, `${RULES.LESSONS_PER_WEEK + 1}+ dars orqada${behind.length ? ` · ${esc(names(behind))}` : ''}`, behind.length)}
         </div>
         <section class="lh-card lh-pcard" aria-labelledby="lhProgTitle">
             <div class="lh-pch"><h3 class="lh-pct-t" id="lhProgTitle">O'quvchilar</h3>
@@ -953,11 +977,11 @@
             ${rows.length ? `<div class="lh-pscroll"><table class="lh-ptbl"><thead><tr><th scope="col">O'quvchi</th><th scope="col">Joriy dars</th><th scope="col">Tugatgan</th><th scope="col">Uy vazifasi · 1-urinish</th><th scope="col">Xatolar</th><th scope="col">Faol vaqt · 7 kun</th><th scope="col">Oxirgi faollik</th><th scope="col">Holat</th></tr></thead>
             <tbody>${rows.map(s => `<tr data-student="${esc(s.id)}" tabindex="0">
                 <td><div class="lh-pnm">${esc(s.name)}</div><div class="lh-pmt">${esc(teacherNameOf(s.teacherId) || '—')}</div></td>
-                <td><b>${s.reached || '—'}</b>${s.expected && s.expected !== s.reached ? ` <span class="lh-pmt is-in">/ ${s.expected} reja</span>` : ''}</td>
+                <td><b>${s.reached || '—'}</b>${s.expected && s.expected !== commonPlan ? ` <span class="lh-pmt is-in">/ ${s.expected} reja</span>` : ''}</td>
                 <td>${s.completed}</td><td>${hw(s)}</td><td>${s.mistakes || '—'}</td>
                 <td>${esc(durP(s.time.week))}</td><td>${esc(lastSeen(s.lastActive))}</td><td>${pills(s)}</td></tr>`).join('')}</tbody></table></div>`
                 : `<div class="lh-empty-sm">${list.length !== scoped.length ? "Qidiruvga mos o'quvchi yo'q" : "Bu yo'nalishda o'quvchi yo'q"}</div>`}
-            <div class="lh-pfoot2">${list.length ? `<b>${from + 1}–${from + rows.length} / ${list.length}</b> · ${esc(sortLabel)}${S.studentPage > 0 ? ' · <button type="button" class="lh-linkbtn" data-pp="-1">oldingi sahifa</button>' : ''}${S.studentPage < pages - 1 ? ' · <button type="button" class="lh-linkbtn" data-pp="1">keyingi sahifa →</button>' : ''}<br>` : ''}Faol vaqt — ilova ochiq va o'quvchi ishlayotgan vaqt (2 daqiqa harakatsizlikdan keyin to'xtaydi). 1-urinish — uy vazifasining birinchi urinishdagi natijasi. Qatorni bosing — o'quvchining batafsil sahifasi ochiladi.</div>
+            <div class="lh-pfoot2">${list.length ? `<b>${from + 1}–${from + rows.length} / ${list.length}</b> · ${esc(S.studentSort === 'attention' ? "avval e'tibor kerak bo'lganlar" : sortLabel)}${S.studentPage > 0 ? ' · <button type="button" class="lh-linkbtn" data-pp="-1">oldingi sahifa</button>' : ''}${S.studentPage < pages - 1 ? ' · <button type="button" class="lh-linkbtn" data-pp="1">keyingi sahifa</button>' : ''}<br>` : ''}Faol vaqt — ilova ochiq va o'quvchi ishlayotgan vaqt (2 daqiqa harakatsizlikdan keyin to'xtaydi). 1-urinish — uy vazifasining birinchi urinishdagi natijasi. Qatorni bosing — o'quvchining batafsil sahifasi ochiladi.</div>
         </section>`;
         const tbody = main.querySelector('tbody');
         const search = main.querySelector('.lh-pinp input');
@@ -991,10 +1015,17 @@
         setTimeout(() => URL.revokeObjectURL(a.href), 2000);
     }
 
+    // Holat belgilari (DarslikProgress dizayni): faol bo'lmagan o'quvchida "Qiynalyapti" ko'rsatilmaydi —
+    // 1-urinish natijasi faqat faol o'quvchilar bo'yicha baholanadi ("Qiynalyapti · faol o'quvchilar").
+    const shownFlags = s => { const idle = s.flags.some(f => f.key === 'idle'); return s.flags.filter(f => !(idle && f.key === 'struggling')); };
+    const FLAG_RANK = { behind: 3, idle: 2, struggling: 1 };
+    const flagRank = s => shownFlags(s).reduce((m, f) => Math.max(m, FLAG_RANK[f.key] || 0), 0);
     function sortStudents(list) {
         const arr = [...list];
         const by = {
-            attention: (a, b) => (a.frozen - b.frozen) || b.flags.length - a.flags.length || (b.daysIdle ?? 999) - (a.daysIdle ?? 999),
+            // Avval e'tibor kerak: belgilar soni → og'irligi → 1-urinish natijasi (pastroq oldin) → joriy dars.
+            attention: (a, b) => (a.frozen - b.frozen) || shownFlags(b).length - shownFlags(a).length || flagRank(b) - flagRank(a)
+                || (a.firstTryAvg ?? 101) - (b.firstTryAvg ?? 101) || a.reached - b.reached,
             reached: (a, b) => b.reached - a.reached,
             time: (a, b) => b.time.week - a.time.week,
             homework: (a, b) => (a.firstTryAvg ?? 101) - (b.firstTryAvg ?? 101),
@@ -1291,7 +1322,9 @@
                 <div class="lh-seg" role="group" aria-label="Turi">${filters.map(([k, l, n]) => `<button type="button" data-xf="${k}" aria-pressed="${S.extraFilter === k}">${esc(l)} ${n}</button>`).join('')}</div>
                 ${hub.canEdit ? `<button type="button" class="lh-btn lh-primary" data-xadd>${ICO.plus} Material qo'shish</button>` : ''}</header>
             ${rows.length ? `<div class="lh-table-wrap"><table class="lh-table lh-xt"><thead><tr><th>Material</th><th>Turi</th><th>Qaysi darsga</th><th>Izoh</th><th>Yangilangan</th><th><span class="lh-sr">Amal</span></th></tr></thead><tbody>
-                ${rows.map(m => { const t = extraType(m); const size = m.fileSize ? `${m.fileSize >= 1048576 ? (m.fileSize / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(m.fileSize / 1024)) + ' KB'}` : '';
+                ${rows.map(m => { const t = extraType(m); const kb = m.fileSize ? `${m.fileSize >= 1048576 ? (m.fileSize / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(m.fileSize / 1024)) + ' KB'}` : '';
+                    const dur = Number(m.meta?.durationSec) > 0 ? `${Math.floor(m.meta.durationSec / 60)}:${String(m.meta.durationSec % 60).padStart(2, '0')}` : '';
+                    const size = t.id === 'audio' && dur ? dur : [Number(m.meta?.pages) > 0 ? `${m.meta.pages} bet` : '', kb].filter(Boolean).join(' · ');
                     return `<tr><td><span class="lh-xn"><span class="lh-xb is-${t.id}">${esc(t.badge)}</span><span><b>${esc(m.title)}</b><small>${esc(t.id === 'link' ? hostOf(m.url) : size || m.fileName || '')}</small></span></span></td>
                     <td>${esc(t.label)}</td><td>${m.lessonNo ? `${m.lessonNo}-dars` : 'Barcha darslar'}</td><td class="lh-muted">${esc(m.note || '—')}</td><td>${esc(shortDate(m.updatedAt))}</td>
                     <td class="lh-xa">${hub.canEdit && !m.legacy ? `<button type="button" class="lh-btn" data-edit="${esc(m.id)}">Tahrirlash</button>`

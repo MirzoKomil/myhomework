@@ -317,7 +317,7 @@ async function listMaterials(pool, lang, lessonNo) {
 }
 
 const SAFE_URL = /^(\/uploads\/[\w.-]+|https:\/\/[^\s<>"']+)$/i;
-const META_KEYS = ['lessonFrom', 'lessonTo', 'part', 'pageMap'];
+const META_KEYS = ['lessonFrom', 'lessonTo', 'part', 'pageMap', 'pages', 'durationSec'];
 
 function cleanMaterial(body, existing = {}) {
     const language = body.language ?? existing.language;
@@ -346,6 +346,12 @@ function cleanMaterial(body, existing = {}) {
         const v = Number(meta[key]);
         if (!Number.isInteger(v) || v < 1 || v > TOTAL_LESSONS) throw error(400, "Dars oralig'i 1–72 bo'lishi kerak");
         meta[key] = v;
+    }
+    // Qo'shimcha material: PDF sahifalar soni va audio davomiyligi (faqat butun son, ixtiyoriy).
+    for (const [key, max] of [['pages', 5000], ['durationSec', 86400]]) {
+        const v = Number(meta[key]);
+        if (meta[key] === undefined || meta[key] === null || meta[key] === '' || !Number.isInteger(v) || v < 1 || v > max) delete meta[key];
+        else meta[key] = v;
     }
     if (meta.lessonFrom && meta.lessonTo && meta.lessonFrom > meta.lessonTo) throw error(400, "Dars oralig'i noto'g'ri");
     return {

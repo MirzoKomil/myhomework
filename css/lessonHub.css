@@ -168,7 +168,7 @@ audio { width: 100%; }
 .lh-foot { padding: 0 4px; }
 
 /* Jadvallar, progress */
-.lh-table-wrap { overflow-x: auto; }
+.lh-table-wrap { overflow-x: auto; position: relative; } /* .lh-sr (absolute) jadval ichida qolsin — 390px da sahifa gorizontal aylanmasin */
 .lh-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 640px; }
 .lh-table.is-compact { min-width: 0; }
 .lh-table th { text-align: left; font-size: 12px; font-weight: 700; color: var(--lh-muted); padding: 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
@@ -370,7 +370,7 @@ html.rd[data-theme="dark"] .lh-banner { background: #050A14; border: 1px solid v
 .lh-search .lh-input { padding-left: 42px; min-height: 44px; border-radius: 12px; }
 .lh-chip { min-height: 36px; padding: 6px 11px; font-size: 13px; color: var(--text); }
 .lh-chip.is-on { background: var(--purple); border-color: var(--purple); color: #fff; }
-.lh-items { padding: 0 0 8px; }
+.lh-items { padding: 0 0 8px; max-height: 612px; } /* Darslik dizayni: ro'yxatda 10 ta dars ko'rinadi, qolgani karta ichida aylanadi */
 .lh-items .lh-month { top: 0; padding: 14px 18px 6px; margin: 0; font-size: 11px; font-weight: 800; letter-spacing: .06em; color: var(--lh-mt2); text-transform: uppercase; }
 .lh-item { padding: 10px 12px; margin: 0 8px; width: calc(100% - 16px); border-radius: 14px; gap: 12px; }
 .lh-num { flex: 0 0 34px; height: 34px; border-radius: 10px; background: var(--lh-soft); color: var(--lh-cnt-tx); font-weight: 800; font-size: 13px; }
@@ -463,7 +463,7 @@ html.rd[data-theme="dark"] .lh-alert { background: #2A2210; color: #FEDF89; }
 .lh-bchip b { font-size: 14px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lh-bchip small { font-size: 11px; color: var(--lh-mt2); font-weight: 600; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 .lh-bchip.is-on { border-color: #0065D6; background: var(--purple-light); }
-.lh-pmap { display: flex; flex-direction: column; gap: 0; max-height: 440px; overflow-y: auto; }
+.lh-pmap { display: flex; flex-direction: column; gap: 0; max-height: 368px; overflow-y: auto; } /* DarslikKitob: 8 ta qator ko'rinadi */
 .lh-pm { display: flex; align-items: center; gap: 12px; flex: none; width: calc(100% - 16px); margin: 0 8px; padding: 9px 10px; border: 0; border-radius: 12px; background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
 .lh-pm:hover { background: var(--rd-hover, rgba(0,0,0,.04)); }
 .lh-pm.is-on { background: var(--purple-light); color: var(--rd-primary-strong, var(--purple)); }
