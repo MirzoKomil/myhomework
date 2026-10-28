@@ -134,7 +134,6 @@ html.rd[data-theme="dark"] {
 .k-asn { border-color: var(--sv-no-bd) !important; }
 .k-asw { background: var(--surface, #fff); border: 1px dashed var(--sv-as-bd) !important; color: var(--sv-as-fg); }
 .k-rsv { background: repeating-linear-gradient(135deg, var(--sv-rsv-a) 0 6px, var(--sv-rsv-b) 6px 12px); border: 1px dashed var(--sv-rsv-bd) !important; color: var(--sv-rsv-fg); }
-.k-miss { background: transparent; border: 1px dashed var(--sv-cls-bd) !important; color: var(--sv-off-fg); }
 .is-past.k-free, .is-past.k-freex { opacity: .5; }
 /* Vertikal to'r (hafta / kun) */
 .sv-wkw { overflow-x: auto; }
@@ -203,13 +202,6 @@ button.sv-hb { cursor: pointer; } button.sv-hb:focus-visible { outline: 3px soli
 .sv-csum { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; flex: 1; min-width: 260px; }
 .sv-cs { border: 1px solid var(--border, #E6EAF2); border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; }
 .sv-cs small { font-size: 12px; font-weight: 700; color: var(--text-secondary); } .sv-cs b { font-size: 22px; font-weight: 800; } .sv-cs span { font-size: 12px; color: var(--text-secondary); }
-/* Qoidalar */
-.sv-tw { overflow-x: auto; }
-.sv-rt th[scope=row] { font-weight: 600; text-align: left; white-space: normal; }
-.sv-rt td { font-size: 13px; }
-.sv-states, .sv-ul { margin: 0; padding: 0 0 0 2px; list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: 13.5px; line-height: 1.5; }
-.sv-states li { display: flex; align-items: center; gap: 8px; }
-.sv-ul li { padding-left: 14px; position: relative; } .sv-ul li::before { content: "•"; position: absolute; left: 0; color: var(--kb-primary); }
 /* Moslashuv */
 @media (max-width: 1280px) { .sv-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } .sv-g3 { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 1180px) { .sv-lay { grid-template-columns: 1fr; } }

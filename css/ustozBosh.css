@@ -1,0 +1,53 @@
+/* UstozBosh dizayni 1:1 — qolgan farqlar (js/app.js renderTeacherHome/renderTeacherTodayBlock, js/schoolTeacher.js homeExtras,
+   js/ustozHome.js decorateToday). Qiymatlar UstozBosh.dc.html dan: .pill, .tl2, .clb, .lnk, .as/.asr. Dark mode — kobalt tokenlari. */
+html.rd #teacherHome .uhb-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.uhb-pill { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 4px 10px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.uhb-pill--ok { background: var(--kb-ok-bg, #DCFAE6); color: var(--kb-ok-fg, #05603A); }
+.uhb-pill--warn { background: var(--kb-warn-bg, #FEF0C7); color: var(--kb-warn-fg, #93370D); }
+.uhb-pill--info { background: var(--kb-info-bg, #EAF3FF); color: var(--kb-info-fg, #0057B8); }
+.uhb-pill--bad { background: var(--kb-bad-bg, #FEF3F2); color: var(--kb-bad-fg, #B42318); }
+.uhb-pill--mute { background: var(--kb-track, #EEF1F6); color: var(--text-secondary, #374151); }
+
+/* Maosh kartasi: "Batafsil →" sarlavha qatorining o'ngida */
+html.rd #teacherHome .kbx-plan-h .uhb-more { order: 3; margin-left: auto; font-size: 13px; font-weight: 700; }
+
+/* Bugun (.tl2): sarlavhadagi "Davomatni ochish →", qator ichi, pill / ☎ / Boshlash */
+html.rd #teacherHome .uhb-today > .dashboard-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+html.rd #teacherHome .uhb-today > .dashboard-panel-head .ahx-link { font-size: 13px; font-weight: 700; white-space: nowrap; }
+html.rd #teacherHome .uhb-inf { display: flex; flex-direction: column; min-width: 0; }
+html.rd #teacherHome .uhb-inf strong { font-size: 14px; font-weight: 700; }
+html.rd #teacherHome .uhb-inf .mot-prize-note { font-size: 12px; font-weight: 500; color: var(--text-secondary, #4B5563); margin-top: 2px; }
+html.rd #teacherHome .rd-thx-list .tch-row--bad::before { background: #F04438; }
+html.rd #teacherHome .rd-thx-list .tch-row-actions { display: flex; align-items: center; gap: 6px; }
+.uhb-clb { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 9px; border: 0; background: var(--kb-ok-bg, #DCFAE6); color: var(--kb-ok-fg, #05603A); cursor: pointer; flex: none; margin-left: 6px; }
+.uhb-clb:hover { filter: brightness(.96); }
+.uhb-clb:focus-visible, .uhb-start:focus-visible { outline: 3px solid var(--kb-ring, rgba(0,101,214,.35)); outline-offset: 2px; }
+html.rd #teacherHome .uhb-btn { min-height: 36px; padding: 0 12px; border-radius: 12px; font-weight: 700; font-size: 13px; }
+html.rd #teacherHome .uhb-start { min-height: 40px; padding: 0 16px; border-radius: 12px; font-weight: 700; font-size: 14px; }
+
+/* Yordamchi ustozlik (.as / .asr) */
+html.rd #teacherHome .thx-assist { padding: 0; overflow: hidden; }
+html.rd #teacherHome .thx-assist > .ahx-card-h { padding: 16px 20px; margin: 0; border-bottom: 1px solid var(--border, #EEF1F6); }
+html.rd #teacherHome .thx-assist > .ahx-card-h h3 { font-size: 16px; font-weight: 800; }
+html.rd #teacherHome .thx-assist > .ahx-card-h > span { font-size: 12px; color: var(--text-secondary, #4B5563); font-weight: 500; }
+.uhb-as { padding: 6px 20px 16px; display: flex; flex-direction: column; gap: 12px; }
+.uhb-asr { display: flex; flex-direction: column; gap: 6px; }
+.uhb-r1 { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; }
+.uhb-nm { font-weight: 700; }
+.uhb-bar { display: block; height: 6px; border-radius: 99px; background: var(--kb-track, #E2E8F0); overflow: hidden; }
+.uhb-bar > i { display: block; height: 100%; border-radius: inherit; background: #0E9384; }
+.uhb-as small { font-size: 12px; color: var(--text-secondary, #4B5563); font-weight: 500; line-height: 1.45; }
+html.rd #teacherHome .uhb-today > .dashboard-panel-head h3 span { font: inherit; color: inherit; }
+/* Yo'riqnomalar (.gl) */
+html.rd #teacherHome .thx-guides { padding: 0; overflow: hidden; }
+html.rd #teacherHome .thx-guides > .ahx-card-h { padding: 16px 20px; margin: 0; border-bottom: 1px solid var(--border, #EEF1F6); }
+html.rd #teacherHome .thx-guides > .ahx-card-h h3 { font-size: 16px; font-weight: 800; }
+html.rd #teacherHome .uhb-gl { margin: 0; padding: 4px 0 10px; gap: 0; }
+html.rd #teacherHome .uhb-gl button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 20px; border: 0; background: transparent; text-align: left; font-family: inherit; font-weight: 600; font-size: 14px; color: var(--text, #0B1220); cursor: pointer; }
+html.rd #teacherHome .uhb-gl button:hover { background: var(--bg-secondary, #F5F7FB); }
+html.rd #teacherHome .uhb-gl button:focus-visible { outline: 3px solid var(--kb-ring, rgba(0,101,214,.35)); outline-offset: -3px; }
+html.rd #teacherHome .uhb-gl svg { flex: none; color: var(--text-secondary, #4B5563); }
+html.rd #teacherHome .uhb-gl .uhb-pill { margin-left: auto; }
+@media (max-width: 760px) { html.rd #teacherHome .uhb-head .uhb-pill { white-space: normal; } }
+html.rd #teacherHome .uhb-head > .uhb-pill { margin-bottom: 17px; }
+html.rd #teacherHome .kbx-tiles small .kbx-bad { color: var(--kb-bad-fg, #B42318); font-weight: 700; }

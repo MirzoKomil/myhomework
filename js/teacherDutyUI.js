@@ -92,6 +92,7 @@
         const isMain = teacherRoles.isMain(employee), all = getItem(STORAGE_KEYS.students, []);
         const hasAssistant = all.some(s => s.assistantTeacherId === id);
         if (!isMain || (!hasAssistant && selected === 'assistant')) selected = isMain ? 'main' : 'assistant';
+        if (asstOnly !== !isMain) { asstOnly = !isMain; if (typeof updateRdPageHead === 'function') updateRdPageHead(); }
         const monthInput = document.getElementById('mainAttMonth');
         if (!monthInput.value) monthInput.value = getMonthKey(new Date());
         monthInput.setAttribute('aria-label', 'Davomat oyi');
@@ -256,7 +257,9 @@
         if (selected === 'assistant' && !oldAssist) {
             root.innerHTML = isMain
                 ? `<div class="udv">${top}<section class="udv-card udv-my" aria-labelledby="udvMyTitle">${myHead}<div class="udv-contacts" data-duty-contacts></div></section></div>`
-                : `<div class="udv udv--asst"><div class="udv-bar">${monthPicker}</div><div data-duty-contacts></div></div>`;
+                // YordamchiDavomat dizaynida oy tanlagich yo'q (yopilgan oylar — Bosh sahifadagi oy almashtirgichda);
+                // faqat boshqa oy ochiq qolgan bo'lsa, joriy oyga qaytish uchun ko'rinadi.
+                : `<div class="udv udv--asst">${month !== thisMonth ? `<div class="udv-bar">${monthPicker}</div>` : ''}<div data-duty-contacts></div></div>`;
             const box = root.querySelector('[data-duty-contacts]'); box.dataset.month = month; box.dataset.embedded = '1';
             window.schoolTeacher?.renderContacts(box);
             bindSeg(); bindMonth(); bindToday();
@@ -417,5 +420,9 @@
             }; });
         }
     }
+    // Yordamchi ustoz (asosiy o'quvchisi yo'q) Davomati — sarlavha izohi dizayndagidek (YordamchiDavomat).
+    let asstOnly = false;
+    window.rdPageSub = (tab, section) => (tab === 'teachers-section' && section === 'Davomat' && asstOnly
+        ? 'Yordamchi ustoz · Davomat · har o‘quvchi bilan haftasiga 3 ta aloqa, kamida 5 daqiqa' : null);
     window.teacherDutyUI = { employeeField, bindEmployee, bindAssignment, render };
 }());

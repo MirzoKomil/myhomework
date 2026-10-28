@@ -936,7 +936,9 @@ function updateRdPageHead(tab = _rdCurrentTab) {
     const langLabel = own ? (own === 'russian' ? 'Rus tili' : 'Ingliz tili') : lang ? lang.textContent.trim() : '';
     const parts = [active && !active.hidden ? active.textContent.trim() : '', langLabel ? langLabel + ' yoʻnalishi' : ''].filter(Boolean);
     head.querySelector('h1').textContent = title;
-    head.querySelector('p').textContent = parts.join(' · ');
+    // Sahifa o'z izohini bersa (masalan, yordamchi ustoz Davomati — js/teacherDutyUI.js), o'shani ko'rsatamiz.
+    const custom = typeof window.rdPageSub === 'function' ? window.rdPageSub(tab, active && !active.hidden ? active.textContent.trim() : '') : null;
+    head.querySelector('p').textContent = custom || parts.join(' · ');
 }
 document.addEventListener('click', e => {
     if (e.target.closest?.('.sales-pinned .section-nav-item, .sales-pinned .subject-tab')) requestAnimationFrame(() => updateRdPageHead());
@@ -8680,6 +8682,7 @@ function renderTeacherTodayBlock(user, { todoSlot = true } = {}) {
     const helped = all.filter(s => ids.has(String(s.assistantTeacherId || '')));
     const att = getItem(STORAGE_KEYS.mainAttendance, {});
     const present = (sid, d) => [...ids].some(tid => att[`${month}_${tid}`]?.[sid]?.[d] === 1);
+    const absent = (sid, d) => !present(sid, d) && [...ids].some(tid => att[`${month}_${tid}`]?.[sid]?.[d] === 0);
     const toMin = t => { const [h, m] = String(t || '').split(':').map(Number); return Number.isFinite(h) ? h * 60 + (m || 0) : null; };
     const today = students
         .filter(s => s.lessonDayOfWeek != null && s.lessonTime && expandLessonPatternDays(s.lessonDayOfWeek).includes(dow))
@@ -8687,98 +8690,54 @@ function renderTeacherTodayBlock(user, { todoSlot = true } = {}) {
         // Yordamchi aloqasi: o'quvchining dars kunlariga teskari kunlarda tavsiya qilinadi (Du·Ch·Ju ↔ Se·Pa·Sh).
         .concat(helped.filter(s => s.lessonDayOfWeek != null && s.lessonTime && _assistAdviceDays(s.lessonDayOfWeek).includes(dow)).map(s => ({ ...s, _duty: 'assistant' })))
         .sort((a, b) => (toMin(a.lessonTime) ?? 9999) - (toMin(b.lessonTime) ?? 9999));
-    // Ustoz Bosh sahifasidagi "Bugungi darslar" ro'yxatidagi har bir qatorga
-    // mos amal tugmasini tanlaydi: dars hali boshlanmagan bo'lsa amal yo'q,
-    // ketayotgan/tugagan-u belgilanmagan bo'lsa Keldi/Kelmadi juftligi,
-    // allaqachon belgilangan bo'lsa Mezonlarni ko'rish/tahrirlash tugmasi.
-    const rowAction = state => state === 'ok' ? 'grade' : (state === 'now' || state === 'warn') ? 'mark' : 'none';
-    const dateForDay = d => `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-
+    // UstozBosh "Bugun" (dizayndagi .tl2): vaqt · holat nuqtasi · ism · holat pill'i. Amal tugmasi faqat kerak bo'lganda:
+    // joriy/keyingi darsda "Boshlash" (js/ustozHome.js decorateToday), yordamchi aloqasida ☎ va "Aloqani belgilash".
+    // Davomat belgilash — Akademik → Davomat ("Davomatni ochish →", "Bajarish kerak → Belgilash").
+    const pill = (cls, t) => `<span class="uhb-pill uhb-pill--${cls}">${t}</span>`;
+    const phoneSvg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>';
     const rows = today.map(s => {
         const isAssistant = s._duty === 'assistant';
         const start = toMin(s.lessonTime);
         const dur = Number(s.lessonDuration) || 15;
-        const done = !isAssistant && present(s.id, day);
-        const state = isAssistant ? ['wait', 'tavsiya'] : done ? ['ok', '✓ Keldi · belgilangan']
-            : start != null && nowMin >= start + dur ? ['warn', 'Dars tugadi · davomat belgilanmagan']
-            : start != null && nowMin >= start ? ['now', 'Hozir']
-            : ['wait', 'Kutilmoqda'];
-        const action = rowAction(state[0]);
-        let actionsHtml = '';
-        if (action === 'mark' && !isAssistant) {
-            actionsHtml = `<button type="button" class="tch-row-btn tch-row-btn--ok" data-thx-mark="1" data-thx-student="${escapeHtml(s.id)}" data-thx-date="${dateForDay(day)}">Keldi</button>
-                <button type="button" class="tch-row-btn tch-row-btn--no" data-thx-mark="0" data-thx-student="${escapeHtml(s.id)}" data-thx-date="${dateForDay(day)}">Kelmadi</button>`;
-        } else if (isAssistant) {
-            actionsHtml = `<button type="button" class="tch-row-btn tch-row-btn--ok" data-thx-contact="${escapeHtml(s.id)}">Aloqani belgilash</button>`;
-        }
-        return `<li class="tch-row tch-row--${state[0]}" data-thx-sid="${escapeHtml(s.id)}" data-thx-st="${state[0]}" data-thx-duty="${s._duty}" data-thx-dur="${dur}">
+        const ended = start != null && nowMin >= start + dur;
+        const st = isAssistant ? 'wait' : present(s.id, day) ? 'ok' : absent(s.id, day) ? 'bad' : ended ? 'warn' : start != null && nowMin >= start ? 'now' : 'wait';
+        const sub = isAssistant ? `yordamchi aloqasi · tavsiya · asosiy ustoz ${escapeHtml(_thxTeacherShort(s.teacherId))}` : `${dur} daq · asosiy${st === 'warn' ? ' · dars tugagan' : ''}`;
+        const act = isAssistant
+            ? `<button type="button" class="uhb-clb" data-thx-call="${escapeHtml(s.id)}" title="Qo'ng'iroq qilish — Telegram guruh orqali" aria-label="${escapeHtml(s.name || '')}ga qo'ng'iroq qilish">${phoneSvg}</button><button type="button" class="sc-btn sc-btn--sm uhb-btn" data-thx-contact="${escapeHtml(s.id)}">Aloqani belgilash</button>`
+            : st === 'ok' ? pill('ok', 'Keldi') : st === 'bad' ? pill('bad', 'Kelmadi') : st === 'warn' ? pill('warn', 'Belgilanmagan')
+            : st === 'now' ? pill('info', 'Hozir') : pill('mute', 'Kutilmoqda');
+        return `<li class="tch-row tch-row--${st}" data-thx-sid="${escapeHtml(s.id)}" data-thx-st="${st}" data-thx-duty="${s._duty}" data-thx-dur="${dur}" data-thx-t="${escapeHtml(s.lessonTime)}">
             <b class="tch-time">${escapeHtml(s.lessonTime)}</b>
-            <div style="display:flex;flex-direction:column;gap:2px;min-width:0;flex:1"><strong>${escapeHtml(s.name || '')}</strong>
-            <span class="mot-prize-note">${isAssistant ? `yordamchi aloqasi · asosiy ustoz ${escapeHtml(_thxTeacherShort(s.teacherId))}` : `${dur} daqiqa`} · ${state[1]}</span></div>
-            ${actionsHtml ? `<div class="tch-row-actions">${actionsHtml}</div>` : ''}
+            <div class="uhb-inf"><strong>${escapeHtml(s.name || '')}</strong><span class="mot-prize-note">${sub}</span></div>
+            <div class="tch-row-actions">${act}</div>
         </li>`;
     }).join('');
-    const unmarked = today.filter(s => {
-        const st = toMin(s.lessonTime);
-        if (s._duty === 'assistant') return false;
-        const done = present(s.id, day);
-        return !done && st != null && nowMin >= st + (Number(s.lessonDuration) || 15);
-    }).length;
-    const nContacts = today.filter(s => s._duty === 'assistant').length;
-    const mainPanel = (students.length || helped.length) ? `<section class="card dashboard-panel"><div class="dashboard-panel-head"><h3>Bugungi darslar</h3><span data-thx-today-count>${today.length - nContacts} dars${nContacts ? ` + ${nContacts} aloqa` : ''}${unmarked ? ` · ${unmarked} tasi belgilanmagan` : ''}</span></div>
+    const nContacts = today.filter(s => s._duty === 'assistant').length, nLessons = today.length - nContacts;
+    // Sarlavha: "Bugun · 4 dars + 1 sinov + 1 aloqa" — sinovlar serverdan keyin qo'shiladi (schoolTeacher.homeExtras).
+    const mainPanel = (students.length || helped.length) ? `<section class="card dashboard-panel uhb-today"><div class="dashboard-panel-head"><h3>Bugun · <span data-thx-today-count data-l="${nLessons}" data-c="${nContacts}">${nLessons} dars${nContacts ? ` + ${nContacts} aloqa` : ''}</span></h3><button type="button" class="ahx-link" data-teacher-open-att>Davomatni ochish →</button></div>
             ${today.length ? `<ul class="tch-list rd-thx-list" data-thx-today>${rows}</ul>` : '<ul class="tch-list rd-thx-list" data-thx-today></ul><p class="dashboard-empty" data-thx-today-empty>Bugun dars yoʻq</p>'}
-            <button type="button" class="btn-primary-sm" data-teacher-open-att>Oylik davomatni ochish</button>
         </section>` : '';
     // "Bajarish kerak" va "Yordamchi ustozlik" bloklari serverdan (/api/school) keyin to'ldiriladi — schoolTeacher.homeExtras.
     // UstozBosh: "Bajarish kerak" butun kenglikda — renderTeacherHome uni grid ustiga alohida qo'yadi (todoSlot: false).
     return `<div id="dashboardTeacherToday">${todoSlot ? '<div data-thx-todo></div>' : ''}${mainPanel}</div>`;
 }
 
-// "Bugungi darslar" ro'yxatidagi inline Keldi/Kelmadi/Mezonlar tugmalarini
-// mavjud davomat-saqlash oqimiga ulaydi (davomat tekshirish sahifasidagi
-// checkbox bilan bir xil: Keldi bosilganda jonli dars + 5 mezon so'raladi,
-// bekor qilinsa davomat saqlanmaydi).
+// "Bugun" ro'yxatidagi yordamchi aloqasi qatori: ☎ (Telegram guruh + aloqani belgilash) va "Aloqani belgilash".
+// Davomat (Keldi/Kelmadi) Bosh sahifada belgilanmaydi — Akademik → Davomat (UstozBosh dizayni).
 function bindTeacherHomeToday(container, user) {
     if (!container || user?.role !== 'teacher' || !user.linkedTeacherId) return;
-    const teacherId = user.linkedTeacherId;
-    const ownTeacher = typeof resolveTeacherWithVirtual === 'function' ? resolveTeacherWithVirtual(teacherId) : null;
-    const subject = ownTeacher?.subject || 'english';
     const refresh = () => renderDashboardOverview(_lastDashboardOverviewArgs || {});
-
-    container.querySelectorAll('[data-thx-mark]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const sid = btn.dataset.thxStudent;
-            const dateStr = btn.dataset.thxDate;
-            const present = btn.dataset.thxMark === '1';
-            btn.closest('.tch-row-actions')?.querySelectorAll('button').forEach(b => b.disabled = true);
-            if (present) {
-                const student = getItem(STORAGE_KEYS.students, []).find(s => s.id === sid);
-                _openLiveGradeModal(student ? student.name : sid, dateStr, _getSpeakingLessonOptions(subject), (grade) => {
-                    saveTeacherAttendanceChange({ teacherId, studentId: sid, date: dateStr, present: true, grade })
-                        .then(refresh).catch(err => showSaveError(err.message));
-                }, () => { btn.closest('.tch-row-actions')?.querySelectorAll('button').forEach(b => b.disabled = false); });
-            } else {
-                saveTeacherAttendanceChange({ teacherId, studentId: sid, date: dateStr, present: false })
-                    .then(refresh).catch(err => showSaveError(err.message));
-            }
-        });
-    });
+    const find = id => getItem(STORAGE_KEYS.students, []).find(s => s.id === id);
     container.querySelectorAll('[data-thx-contact]').forEach(btn => {
         btn.addEventListener('click', () => {
-            const student = getItem(STORAGE_KEYS.students, []).find(s => s.id === btn.dataset.thxContact);
+            const student = find(btn.dataset.thxContact);
             if (student && window.schoolTeacher?.markDrawer) window.schoolTeacher.markDrawer(student, refresh);
         });
     });
-    container.querySelectorAll('[data-thx-grade]').forEach(btn => {
+    container.querySelectorAll('[data-thx-call]').forEach(btn => {
         btn.addEventListener('click', () => {
-            const sid = btn.dataset.thxGrade;
-            const dateStr = btn.dataset.thxDate;
-            const student = getItem(STORAGE_KEYS.students, []).find(s => s.id === sid);
-            const existing = (getItem(STORAGE_KEYS.liveGrades, {})[sid] || []).find(g => g.date === dateStr && g.teacherId === teacherId);
-            _openLiveGradeModal(student ? student.name : sid, dateStr, _getSpeakingLessonOptions(subject), (grade) => {
-                saveTeacherAttendanceChange({ teacherId, studentId: sid, date: dateStr, present: true, grade })
-                    .then(refresh).catch(err => showSaveError(err.message));
-            }, () => {}, existing);
+            const student = find(btn.dataset.thxCall);
+            if (student && window.schoolTeacher?.callStudent) window.schoolTeacher.callStudent(student, refresh);
         });
     });
 }
@@ -9467,7 +9426,7 @@ function renderTeacherHome(user, now = new Date()) {
         : `<b class="ahx-kpi-v">—</b><div class="ahx-kpi-n"><span>jadval sozlanmagan</span></div>`;
     return `<div class="ahx thx" id="teacherHome">
         <div class="rd-thx-rolebanner">Rol kabineti: faqat oʻz oʻquvchilaringiz koʻrinadi — boshqa ustozlarning telefon, toʻlov va qarz maʻlumotlari bu yerda koʻrsatilmaydi.</div>
-        <div class="ahx-head mhx-head"><div><h1>${greet}, ${escapeHtml(_firstName(user.name || ''))}</h1><p>${escapeHtml(`${UZ_WEEKDAYS[now.getDay()]}, ${now.getDate()}-${UZ_MONTHS_GEN[now.getMonth()]}`)} · ${s.students} oʻquvchi${s.helped ? ` · yordamchi sifatida ${s.helped}` : ''}</p></div></div>
+        <div class="ahx-head mhx-head uhb-head"><div><h1>${greet}, ${escapeHtml(_firstName(user.name || ''))}</h1><p>${escapeHtml(`${UZ_WEEKDAYS[now.getDay()]}, ${now.getDate()}-${UZ_MONTHS_GEN[now.getMonth()]}`)} · ${s.students} oʻquvchi${s.helped ? ` · yordamchi sifatida ${s.helped}` : ''}</p></div><span class="uhb-pill uhb-pill--info">Faqat oʻz oʻquvchilaringiz koʻrinadi</span></div>
         ${(() => {
             const month = UZ_MONTHS_GEN[now.getMonth()];
             const plan = kbxPlanCard({
@@ -9490,7 +9449,7 @@ function renderTeacherHome(user, now = new Date()) {
             const dark = nx
                 ? kbxDarkCard({ id: 'kbxThAct', eyebrow: nx.state === 'now' ? `HOZIR DARSDA · ${Math.max(1, nx.start + nx.dur - nowM)} DAQ QOLDI` : `KEYINGI DARS · ${nx.time}${nx.start != null && nx.start - nowM <= 180 ? ` · ${Math.max(1, nx.start - nowM)} DAQIQADAN KEYIN` : ''}`,
                     title: nx.group || nx.name, sub: `${nx.time} · ${nx.dur} daq${nx.group ? ` · ${s.todayList.filter(l => l.group === nx.group && l.time === nx.time).length} oʻquvchi` : ''}`,
-                    chips: s.unmarked ? [{ t: `${s.unmarked} ta dars belgilanmagan`, cls: 'red' }] : [],
+                    chips: [],
                     html: `<div class="kbx-dchips" data-thx-lesson hidden></div><div class="kbx-dbar"><span>Bugun</span><span class="kbx-dtrk"><i style="width:${s.todayList.length ? Math.round(doneN / s.todayList.length * 100) : 0}%"></i></span><span>${doneN} / ${s.todayList.length} dars oʻtdi</span></div>`,
                     primary: window.LessonStart ? { label: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M7 4l13 8-13 8z"/></svg> Darsni boshlash', attrs: `data-thx-start="${escapeHtml(nx.id)}" data-name="${escapeHtml(nx.name)}" data-dur="${nx.dur}"` } : { label: 'Davomat', attrs: 'data-thx-go="teachers-section"' },
                     secondary: { label: 'Jadval', attrs: 'data-thx-go="timetable"' } })
@@ -9498,7 +9457,8 @@ function renderTeacherHome(user, now = new Date()) {
                     sub: s.unmarked ? `${s.unmarked} ta dars davomati belgilanmagan` : 'Davomat toʻliq belgilangan',
                     chips: s.unmarked ? [{ t: 'Belgilash kerak', cls: 'red' }] : [],
                     primary: { label: 'Davomat', attrs: 'data-thx-go="teachers-section"' }, secondary: { label: 'Jadval', attrs: 'data-thx-go="timetable"' } });
-            return `<div class="kbx-top">${plan}${dark}</div>`;
+            // "Batafsil →" — Sozlamalar → Maosh (UstozMaosh), dizayndagidek karta sarlavhasi o'ngida.
+            return `<div class="kbx-top">${plan.replace('</h2>', '</h2><button type="button" class="ahx-link uhb-more" data-thx-salary>Batafsil →</button>')}${dark}</div>`;
         })()}
         <div data-thx-todo></div>
         <div class="thx-grid thx-grid--ub"><div class="thx-main">${renderTeacherTodayBlock(user, { todoSlot: false })}
@@ -9506,8 +9466,10 @@ function renderTeacherHome(user, now = new Date()) {
             ${(() => {
                 const tags = resolveGuideAudienceTags(user);
                 const myGuides = getItem(STORAGE_KEYS.guides, []).filter(g => (g.targetRoles || []).some(t => tags.includes(t))).slice(0, 3);
+                // UstozBosh (.gl): hujjat ikonkasi + nom; "Yangi" — siz hali "Tanishib chiqdim" demagan (Yo'riqnomalar sahifasi bilan bir manba).
+                const doc = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>';
                 return myGuides.length
-                    ? `<ul class="rd-thx-guides-list">${myGuides.map(g => `<li><button type="button" class="ahx-link" data-thx-guide="${escapeHtml(g.id)}">${escapeHtml(g.title || 'Yoʻriqnoma')}</button></li>`).join('')}</ul>`
+                    ? `<ul class="rd-thx-guides-list uhb-gl">${myGuides.map(g => `<li><button type="button" data-thx-guide="${escapeHtml(g.id)}">${doc}<span>${escapeHtml(g.title || 'Yoʻriqnoma')}</span></button></li>`).join('')}</ul>`
                     : '<p class="dashboard-empty">Sizga yoʻriqnoma biriktirilganda shu yerda chiqadi.</p>';
             })()}</section></div>
         <aside class="thx-side">
@@ -9547,8 +9509,13 @@ function renderDashboardOverview(args) {
         if (assistRoot) { window.schoolTeacher.assistantHome(assistRoot, currentUser).catch(e => { assistRoot.innerHTML = `<div class="sc-err">${escapeHtml(e.message || 'Yuklanmadi')}</div>`; }); return; }
         container.querySelectorAll('[data-teacher-open-att]').forEach(btn => btn.addEventListener('click', () => switchTab('teachers-section')));
         container.querySelector('[data-thx-guides]')?.addEventListener('click', () => switchTab('guides'));
+        container.querySelector('[data-thx-salary]')?.addEventListener('click', () => { switchTab('profile'); if (typeof switchProfileSection === 'function') switchProfileSection('salary'); });
         container.querySelectorAll('[data-thx-go]').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.thxGo)));
         container.querySelectorAll('[data-thx-guide]').forEach(btn => btn.addEventListener('click', () => { switchTab('guides'); setTimeout(() => { try { openMyGuideArticle(btn.dataset.thxGuide); } catch (e) { /* ro'yxat ochiq qoladi */ } }, 50); }));
+        if (container.querySelector('.uhb-gl')) apiFetch('/api/staff/guides/acks/mine').then(r => {
+            const acked = new Set((r.acks || []).map(a => a.guideId));
+            container.querySelectorAll('.uhb-gl [data-thx-guide]').forEach(b => { if (!acked.has(b.dataset.thxGuide) && !b.querySelector('.uhb-pill')) b.insertAdjacentHTML('beforeend', '<span class="uhb-pill uhb-pill--info">Yangi</span>'); });
+        }).catch(() => {});
         bindTeacherHomeToday(container, currentUser);
         window.LessonStart?.decorateHome?.(container, currentUser);
         window.UstozHome?.decorateToday?.(container);

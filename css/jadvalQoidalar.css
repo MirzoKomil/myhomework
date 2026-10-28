@@ -1,0 +1,35 @@
+/* JadvalQoidalar dizayni 1:1 (js/jadvalQoidalar.js). Qiymatlar JadvalQoidalar.dc.html dan:
+   .doc, .g2, .cardx, .mx, .st, .sq, .rl, .code. Dark mode — kobalt tokenlari. */
+html.jq-open, html.jq-open body { overflow: hidden; }
+.jq { position: fixed; inset: 0; z-index: 3000; overflow-y: auto; background: var(--bg-secondary, #F5F7FB); color: var(--text, #0B1220); font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
+.jq-doc { padding: 44px 56px; box-sizing: border-box; display: flex; flex-direction: column; gap: 20px; max-width: 1440px; margin: 0 auto; }
+.jq-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.jq-top h1 { margin: 0; font-size: 30px; font-weight: 800; letter-spacing: -.02em; color: var(--text, #0B1220); }
+.jq-x { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border-radius: 12px; border: 1px solid var(--kb-input-border, #CBD5E1); background: var(--surface, #fff); color: var(--text, #0B1220); font: 700 14px 'Plus Jakarta Sans', sans-serif; cursor: pointer; flex: none; }
+.jq-x:hover { background: var(--bg-secondary, #F5F7FB); }
+.jq-x:focus-visible { outline: 3px solid var(--kb-ring, rgba(0,101,214,.35)); outline-offset: 2px; }
+.jq-lead { margin: 0; color: var(--text-secondary, #4B5563); font-size: 15px; }
+.jq-g2 { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 20px; }
+.jq-card { background: var(--surface, #fff); border: 1px solid var(--border, #E6EAF2); border-radius: 20px; padding: 20px 22px; min-width: 0; }
+.jq-card h2 { margin: 0 0 12px; font-size: 17px; font-weight: 800; color: var(--text, #0B1220); }
+.jq-tw { overflow-x: auto; }
+.jq-mx { width: 100%; border-collapse: collapse; font-size: 13px; }
+.jq-mx th, .jq-mx td { padding: 8px 8px; border-bottom: 1px solid var(--border, #EEF1F6); text-align: center; }
+.jq-mx tbody th { text-align: left; font-weight: 600; color: var(--text, #0B1220); }
+.jq-mx thead th { font-size: 12px; color: var(--text-secondary, #4B5563); }
+.jq-mx td.y { color: var(--kb-ok-fg, #05603A); font-weight: 800; }
+.jq-mx td.n { color: #98A2B3; }
+.jq-mx td.p { color: var(--kb-warn-fg, #93370D); font-weight: 600; font-size: 12px; }
+.jq-st { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; font-size: 13px; }
+.jq-st li { display: flex; align-items: center; gap: 10px; }
+.jq-sq { width: 22px; height: 16px; border-radius: 5px; display: inline-block; flex: none; box-sizing: border-box; }
+.jq-rl { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; line-height: 1.5; }
+.jq-code { font: 500 13px/1.7 ui-monospace, Menlo, monospace; background: #0B1220; color: #E2E8F0; border-radius: 14px; padding: 16px 18px; white-space: pre-wrap; overflow-wrap: anywhere; }
+html.rd[data-theme="dark"] .jq-code { background: #05080F; border: 1px solid var(--border, #1F2937); }
+@media (max-width: 1100px) { .jq-g2 { grid-template-columns: minmax(0, 1fr); } .jq-doc { padding: 28px 24px; } }
+@media (max-width: 640px) {
+  .jq-doc { padding: 16px; gap: 14px; }
+  .jq-top h1 { font-size: 22px; }
+  .jq-card { padding: 16px; }
+  .jq-mx { min-width: 560px; }
+}

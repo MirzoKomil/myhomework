@@ -140,6 +140,10 @@
         const u = U(); if (!u || !container) return;
         const { api, esc, today, wd, weekStart, DAY } = u;
         const tid = user?.linkedTeacherId; if (!tid) return;
+        // Bosh sahifa qayta chizilsa (renderDashboardOverview ikki marta), eski chaqiruv yangi ro'yxatga qo'shmasin —
+        // aks holda bugungi sinov qatori ikki marta chiqadi.
+        const home = container.querySelector('#teacherHome') || container;
+        const alive = () => container.isConnected && home.isConnected;
         const td = today();
         const all = getItem(STORAGE_KEYS.students, []).filter(s => !s.isStaffDemo && s.status !== 'inactive');
         const helped = all.filter(s => String(s.assistantTeacherId || '') === String(tid));
@@ -151,12 +155,12 @@
             (typeof apiFetchTeacherTrialLessons === 'function' ? apiFetchTeacherTrialLessons() : Promise.resolve({ lessons: [] })).catch(() => ({ lessons: [] })),
             mkP
         ]);
-        if (!container.isConnected) return;
+        if (!alive()) return;
         globalThis.__schoolMakeups = makeups.makeups || [];
         const reviewing = (makeups.makeups || []).filter(m => m.status === 'review').length;
 
         // Maosh: asosiy (KPI) + yordamchi (aloqalar × 3 846).
-        const sal = container.querySelector('[data-thx-sal]'), sub = container.querySelector('[data-thx-salsub]');
+        const sal = home.querySelector('[data-thx-sal]'), sub = home.querySelector('[data-thx-salsub]');
         if (sal) {
             // Oktyabrgacha (ASSIST_CONTACTS_FROM) yordamchi qismi eski davomatdan — bosh sahifa o'zi hisoblagan.
             const old = sal.dataset.oldAssist != null ? Number(sal.dataset.oldAssist) || 0 : null;
@@ -165,34 +169,38 @@
             if (sub) sub.innerHTML = `${helped.length ? `asosiy ${num(main)} + yordamchi ${old != null || rep ? num(extra) : '—'}${old != null ? ' (davomat bo\'yicha)' : ''} · ` : ''}${reviewing ? `<b>+${reviewing} qoplash tekshiruvda</b> (admin tasdiqlasa qo'shiladi) · ` : ''}oy yopilganda Moliya tasdiqlaydi`;
         }
 
-        // Bugungi sinov darslari — bugungi ro'yxatga qo'shiladi.
+        // Bugungi sinov darslari — bugungi ro'yxatga qo'shiladi (UstozBosh: "30 daq · sinov darsi" + holat pill'i).
         const lessons = (trials.lessons || []).filter(l => l.trialRequest);
         const at = l => new Date(l.trialRequest.scheduledAt);
         const localDate = d => new Date(d.getTime() + 5 * 3600000).toISOString().slice(0, 10);
         const hhmm = d => new Date(d.getTime() + 5 * 3600000).toISOString().slice(11, 16);
-        const list = container.querySelector('[data-thx-today]');
+        const list = home.querySelector('[data-thx-today]');
         const todayTrials = lessons.filter(l => Number.isFinite(at(l).getTime()) && localDate(at(l)) === td && ['pending', 'accepted'].includes(l.trialRequest.state));
         if (list && todayTrials.length) {
             const rows = [...list.children];
             for (const l of todayTrials) {
-                const t = hhmm(at(l)), past = at(l).getTime() < Date.now();
+                const key = l.trialRequest.id || l.id;
+                if (list.querySelector(`[data-thx-trial="${CSS.escape(String(key))}"]`)) continue;
+                const t = hhmm(at(l)), past = at(l).getTime() < Date.now(), pending = l.trialRequest.state === 'pending';
+                const dur = Number(l.trialRequest.duration || l.duration) || 30;
+                const pill = past ? `<span class="uhb-pill uhb-pill--warn">${pending ? 'Muddati o\'tdi · natija kerak' : 'Natija kutilmoqda'}</span>`
+                    : pending ? '<span class="uhb-pill uhb-pill--warn">Tasdiq kutilmoqda</span>' : '<span class="uhb-pill uhb-pill--mute">Kutilmoqda</span>';
                 const li = document.createElement('li');
                 li.className = `tch-row tch-row--${past ? 'warn' : 'wait'}`;
-                li.innerHTML = `<b class="tch-time">${esc(t)}</b><div style="display:flex;flex-direction:column;gap:2px;min-width:0;flex:1"><strong>${esc(l.name || 'Lid')}</strong>
-                    <span class="mot-prize-note">sinov darsi · ${l.trialRequest.state === 'pending' ? (past ? "muddati o'tdi · natija kerak" : 'tasdiqlanmagan') : past ? 'natija kutilmoqda' : 'tasdiqlangan'}</span></div>
-                    <div class="tch-row-actions"><button type="button" class="tch-row-btn" data-thx-trials>${past ? 'Natijani yozish' : l.trialRequest.state === 'pending' ? 'Tasdiqlash' : 'Ochish'}</button></div>`;
-                const before = rows.find(r => (r.querySelector('.tch-time')?.textContent || '99') > t);
+                li.dataset.thxTrial = key; li.dataset.thxT = t;
+                li.innerHTML = `<b class="tch-time">${esc(t)}</b><div class="uhb-inf"><strong>${esc(l.name || 'Lid')}</strong><span class="mot-prize-note">${dur} daq · sinov darsi</span></div><div class="tch-row-actions">${pill}</div>`;
+                const before = rows.find(r => (r.dataset.thxT || r.querySelector('.tch-time')?.textContent || '99') > t);
                 list.insertBefore(li, before || null);
             }
-            container.querySelector('[data-thx-today-empty]')?.remove();
-            const cnt = container.querySelector('[data-thx-today-count]');
-            if (cnt) cnt.insertAdjacentText('beforeend', ` · +${todayTrials.length} sinov`);
+            home.querySelector('[data-thx-today-empty]')?.remove();
         }
+        // Sarlavha: "Bugun · N dars + N sinov + N aloqa"; plitka: "+N sinov · N belgilanmagan".
+        const cnt = home.querySelector('[data-thx-today-count]');
+        if (cnt) { const l = Number(cnt.dataset.l) || 0, c = Number(cnt.dataset.c) || 0, t = todayTrials.length; cnt.textContent = `${l} dars${t ? ` + ${t} sinov` : ''}${c ? ` + ${c} aloqa` : ''}`; }
 
         // Bajarish kerak — har biri maosh yoki o'quvchi natijasiga ta'sir qiladi.
         const todo = [];
-        container.querySelectorAll('.tch-row--warn [data-thx-mark="1"]').forEach(b => {
-            const row = b.closest('.tch-row');
+        home.querySelectorAll('.tch-row--warn[data-thx-duty="main"]').forEach(row => {
             todo.push({ ic: 'warn', t: `${row.querySelector('strong')?.textContent || ''} · ${row.querySelector('.tch-time')?.textContent || ''} darsi belgilanmagan`, s: 'Belgilanmagan dars maoshga o\'tmaydi', btn: 'Belgilash', go: 'teachers-section' });
         });
         for (const l of lessons) {
@@ -203,32 +211,46 @@
             else if (l.trialRequest.state === 'accepted' && d.getTime() < Date.now()) todo.push({ ic: 'user', t: `${l.name || 'Lid'} · sinov darsi natijasi`, s: `${when} o'tdi · natija sotuv menejeriga boradi`, btn: 'Natijani yozish', go: 'trial-lessons' });
         }
         todo.push(...(await extraP));
-        if (!container.isConnected) return;
-        const box = container.querySelector('[data-thx-todo]');
+        if (!alive()) return;
+        const box = home.querySelector('[data-thx-todo]');
         if (box) {
             const TI = { warn: '<path d="M12 3 2 21h20L12 3zM12 10v5M12 18h.01"/>', user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/>', clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', sync: '<path d="M4 12a8 8 0 0114-5.3L20 9M20 4v5h-5M20 12a8 8 0 01-14 5.3L4 15M4 20v-5h5"/>' };
             const ico = k => TI[k] ? `<span class="thx-ti thx-ti--${k}" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${TI[k]}</svg></span>` : '';
             box.innerHTML = todo.length ? `<section class="card dashboard-panel thx-todo"><div class="dashboard-panel-head"><h3>Bajarish kerak · ${todo.length}</h3><span>Har biri maoshingiz yoki o'quvchi natijasiga ta'sir qiladi</span></div>
-                <ul>${todo.map((x, i) => `<li>${ico(x.ic)}<div><b>${esc(x.t)}</b><small>${esc(x.s)}</small></div><button type="button" class="sc-btn sc-btn--sm${i ? '' : ' sc-btn--pri'}" ${x.act ? `data-act="${i}"` : `data-go="${x.go}"`}>${esc(x.btn)}</button></li>`).join('')}</ul></section>` : '';
+                <ul>${todo.map((x, i) => `<li>${ico(x.ic)}<div><b>${esc(x.t)}</b><small>${esc(x.s)}</small></div><button type="button" class="sc-btn sc-btn--sm" ${x.act ? `data-act="${i}"` : `data-go="${x.go}"`}>${esc(x.btn)}</button></li>`).join('')}</ul></section>` : '';
             box.querySelectorAll('[data-go]').forEach(b => b.onclick = () => switchTab(b.dataset.go));
             box.querySelectorAll('[data-act]').forEach(b => b.onclick = () => todo[Number(b.dataset.act)]?.act?.());
         }
-        container.querySelectorAll('[data-thx-trials]').forEach(b => b.onclick = () => switchTab('trial-lessons'));
+        // Plitka "Bugun": "N dars + N aloqa" / "+N sinov · N belgilanmagan" (dizayndagidek).
+        const tile = home.querySelector('.kbx-tiles > div:first-child');
+        if (tile && cnt) {
+            const l = Number(cnt.dataset.l) || 0, c = Number(cnt.dataset.c) || 0, un = home.querySelectorAll('.tch-row--warn[data-thx-duty="main"]').length;
+            const b = tile.querySelector('b'), sm = tile.querySelector('small');
+            if (b) b.textContent = `${l} dars${c ? ` + ${c} aloqa` : ''}`;
+            const bits = [todayTrials.length ? `+${todayTrials.length} sinov` : '', un ? `${un} belgilanmagan` : ''].filter(Boolean);
+            if (sm && bits.length) sm.innerHTML = `<span class="${un ? 'kbx-bad' : ''}">${esc(bits.join(' · '))}</span>`;
+        }
 
-        // Yordamchi ustozlik — aloqalar soni (oyiga 13 tagacha).
-        const as = container.querySelector('[data-thx-assist]');
+        const ws = weekStart(td);
+        // Bugungi yordamchi aloqasi qatorlari: "bu hafta N/3", bugun bog'langan bo'lsa — "Aloqa belgilandi".
+        if (rep) for (const row of home.querySelectorAll('[data-thx-today] > li[data-thx-duty="assistant"]')) {
+            const r = (rep.students || []).find(x => x.studentId === row.dataset.thxSid), items = r?.items || [];
+            const wk = items.filter(i => i.day >= ws && i.status === 'counted').length;
+            const note = row.querySelector('.mot-prize-note'); if (note && !note.dataset.wk) { note.dataset.wk = '1'; note.insertAdjacentText('beforeend', ` · bu hafta ${wk}/3`); }
+            if (items.some(i => i.day === td && i.outcome !== 'no_answer')) row.querySelector('.tch-row-actions').innerHTML = '<span class="uhb-pill uhb-pill--ok">Aloqa belgilandi</span>';
+        }
+
+        // Yordamchi ustozlik — aloqalar soni (oyiga 13 tagacha), UstozBosh dizayni (.asr).
+        const as = home.querySelector('[data-thx-assist]');
         if (as && helped.length && rep) {
             const by = new Map((rep.students || []).map(s => [s.studentId, s]));
-            const ws = weekStart(td);
             const adv = s => ([1, 3, 5].includes(Number(s.lessonDayOfWeek)) ? [2, 4, 6] : [1, 3, 5]);
             as.hidden = false;
-            as.innerHTML = `<div class="ahx-card-h"><h3>Yordamchi ustozlik</h3><button type="button" class="ahx-link" data-go-contacts>Aloqalar →</button></div>
-                <p class="sc-mt">oyiga 13 tagacha · haftasiga 3 ta</p>
-                ${helped.map(s => { const r = by.get(s.id) || { counted: 0, items: [] }; const wk = (r.items || []).filter(i => i.day >= ws && i.status === 'counted').length;
-                    return `<div class="thx-as-row"><div><b>${esc(s.name)}</b><small>tavsiya ${adv(s).map(d => DAY[d - 1]).join('·')}${s.lessonTime ? ' ' + esc(s.lessonTime) : ''} · asosiy ustoz ${esc(u.teacherName(s.teacherId, true))}${s.frozen ? ' · muzlatilgan' : ''}</small>
-                      <i class="thx-as-bar"><i style="width:${Math.min(100, r.counted / 13 * 100)}%"></i></i></div><span><em><b>${r.counted}</b> / 13</em><small>bu hafta ${wk}/3</small></span></div>`; }).join('')}
-                <p class="mot-prize-note">Har bir aloqa ${num(rep.rate || 3846)} so'm · kamida 5 daqiqa · usul va daqiqa kiritiladi.</p>`;
-            as.querySelector('[data-go-contacts]').onclick = () => switchTab('school-contacts');
+            as.innerHTML = `<div class="ahx-card-h"><h3>Yordamchi ustozlik</h3><span>oyiga 13 tagacha</span></div>
+                <div class="uhb-as">${helped.map(s => { const r = by.get(s.id) || { counted: 0 };
+                    return `<div class="uhb-asr"><div class="uhb-r1"><span class="uhb-nm">${esc(s.name)}</span><span><b>${r.counted}</b> / 13 aloqa</span></div><i class="uhb-bar" role="img" aria-label="${r.counted} / 13"><i style="width:${Math.min(100, r.counted / 13 * 100)}%"></i></i>
+                      <small>tavsiya ${adv(s).map(d => DAY[d - 1]).join('·')}${s.lessonTime ? ' ' + esc(s.lessonTime) : ''} · asosiy ustoz ${esc(u.teacherName(s.teacherId))}${s.frozen ? ' · muzlatilgan' : ''}</small></div>`; }).join('')}
+                <small>Har bir aloqa ${num(rep.rate || 3846)} so'm · kamida 5 daqiqa · usul va daqiqa kiritiladi.</small></div>`;
         }
     }
 

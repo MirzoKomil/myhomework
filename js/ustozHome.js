@@ -193,8 +193,9 @@
         cur.classList.add('tch-row--cur');
         let acts = cur.querySelector('.tch-row-actions');
         if (!acts) { acts = document.createElement('div'); acts.className = 'tch-row-actions'; cur.appendChild(acts); }
+        acts.querySelectorAll('.uhb-pill').forEach(p => p.remove()); // dizayn: joriy qatorda pill o'rnida Boshlash
         const b = document.createElement('button');
-        b.type = 'button'; b.className = 'tch-row-btn tch-row-btn--pri'; b.dataset.uhStart = sid; b.textContent = 'Boshlash';
+        b.type = 'button'; b.className = 'sc-btn sc-btn--pri uhb-start'; b.dataset.uhStart = sid; b.textContent = 'Boshlash';
         b.setAttribute('aria-label', `${cur.querySelector('strong')?.textContent || ''} — darsni boshlash`);
         b.onclick = () => LS.start({ studentId: sid, studentName: cur.querySelector('strong')?.textContent || '', duration: Number(cur.dataset.thxDur) || null })
             .catch(e => (typeof showMiniToast === 'function' ? showMiniToast(e.message, 3200) : null));

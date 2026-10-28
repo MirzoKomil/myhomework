@@ -51,12 +51,12 @@
     const callIcon = id => `<button type="button" class="yd-ic yd-ic--call" data-call="${U().esc(id)}" title="Qo'ng'iroq — Telegram guruh va aloqani belgilash" aria-label="Qo'ng'iroq">${PHONE_SVG}</button>`;
 
     // ☎ Qo'ng'iroq: o'quvchining Telegram guruhini ochadi (telefon raqami yashirin) va aloqani belgilash oynasini ko'rsatadi.
-    async function callStudent(s, done) {
+    async function callStudent(s, done, mark = markDrawer) {
         if (!s) return;
         const g = (await groupsMap()).get(s.id);
         if (tgLink(g)) window.open(tgLink(g), '_blank', 'noopener');
         else U().toast('Telegram guruh havolasi yo\'q — admin qo\'shadi. Aloqani belgilashingiz mumkin', 3500);
-        markDrawer(s, done);
+        mark(s, done);
     }
 
     // ── Aloqani belgilash (bitta oyna — hamma joyda) ─────────────────────────
@@ -71,12 +71,14 @@
         for (let i = 1; i <= 7; i++) { const d = addDays(td, i); if (days.includes(wd(d))) return `tavsiya: ${DAY[wd(d) - 1]} ${dS(d)}${t ? ' ' + t : ''} · bugun ham hisoblanadi`; }
         return 'bugungi istalgan vaqt hisoblanadi';
     }
+    // opts.inline — element: oyna o'rniga sahifa ichidagi karta (YordamchiDavomat dizayni); opts.onClose — "Bekor".
     function markDrawer(s, done, opts = {}) {
         if (!s) return;
         const { openDrawer, esc, today, weekStart } = U();
+        const inline = opts.inline || null;
         const chipsHtml = CHG.map(([g, list]) => `<div class="yd-chg"><span class="yd-chg-l">${g}</span><div class="yd-chg-b" role="radiogroup" aria-label="${g}">${list.map(([v, l]) => `<label class="yd-opt"><input type="radio" name="ch" value="${v}"><span>${esc(l)}</span></label>`).join('')}
             ${g === 'Yozma' ? `<small class="sc-mt" data-txt>haftasiga 1 tagacha hisoblanadi · ${esc(first(s.name))}da bu hafta …</small>` : ''}</div></div>`).join('');
-        const box = openDrawer({ title: `Aloqani belgilash · ${s.name}`, wide: true, sub: `<span class="sc-pill sc-pill--info">${esc(adviceLine(s))}</span>`, body: `
+        const drawerOpts = { title: `Aloqani belgilash · ${s.name}`, wide: true, sub: `<span class="sc-pill sc-pill--info">${esc(adviceLine(s))}</span>`, body: `
             <div class="yd-mark">
               <p class="yd-cap">Qanday bog'lanildi?</p>${chipsHtml}
               <p class="yd-cap">Davomiyligi</p>
@@ -88,7 +90,16 @@
               <div class="sc-note" data-will hidden></div>
             </div>`,
             foot: `<button type="button" class="sc-btn" data-na>✕ Javob bermadi</button><span class="sc-grow"></span><button type="button" class="sc-btn" data-close>Bekor</button>
-              <span class="sc-mt yd-foothint">usul va daqiqani tanlang · bugungi istalgan vaqt hisoblanadi</span><button type="button" class="sc-btn sc-btn--pri" data-save>Shug'ullanildi · saqlash</button>` });
+              <span class="sc-mt yd-foothint">usul va daqiqani tanlang · bugungi istalgan vaqt hisoblanadi</span><button type="button" class="sc-btn sc-btn--pri" data-save>Shug'ullanildi · saqlash</button>` };
+        let box;
+        if (inline) {
+            inline.innerHTML = `<section class="sc-card ydm-card" aria-labelledby="ydmTitle"><header class="sc-ch"><h2 id="ydmTitle">${esc(drawerOpts.title)}</h2>${drawerOpts.sub}</header>
+              <form class="sc-db ydm-frm" novalidate>${drawerOpts.body}<div class="ydm-foot"><span class="ydm-fl">${drawerOpts.foot.split('<span class="sc-grow"></span>')[0]}</span><span class="ydm-fr">${drawerOpts.foot.split('<span class="sc-grow"></span>')[1]}</span></div></form></section>`;
+            box = inline.firstElementChild;
+            box.querySelector('form').onsubmit = e => e.preventDefault();
+            box.querySelector('[data-close]').onclick = () => opts.onClose?.();
+        } else box = openDrawer(drawerOpts);
+        const close = () => { if (!inline) U().closeDrawer(); };
         const td = today(), ws = weekStart(td);
         let items = null;
         const minEl = box.querySelector('[name=min]'), will = box.querySelector('[data-will]');
@@ -119,7 +130,7 @@
         }).catch(() => { const el = box.querySelector('[data-txt]'); if (el) el.textContent = 'haftasiga 1 tagacha hisoblanadi'; });
         const send = async (btn, body) => {
             U().busy(btn, true);
-            try { await U().post('/assist/contacts', { studentId: s.id, ...body }); U().toast(body.outcome === 'no_answer' ? 'Javob bermadi — yozildi' : 'Aloqa saqlandi'); U().closeDrawer(); done?.(); }
+            try { await U().post('/assist/contacts', { studentId: s.id, ...body }); U().toast(body.outcome === 'no_answer' ? 'Javob bermadi — yozildi' : 'Aloqa saqlandi'); close(); done?.(); }
             catch (err) { U().busy(btn, false); U().errBox(box, err.message); }
         };
         box.querySelector('[data-save]').onclick = e => {
@@ -244,7 +255,8 @@
     }
 
     // ── Davomat · aloqalar (YordamchiDavomat) ───────────────────────────────
-    let conState = { filter: 'all' };
+    // mark: '' — avtomatik (keyingi tavsiya), null — yopilgan, id — tanlangan o'quvchi.
+    let conState = { filter: 'all', mark: '' };
     async function renderContacts(root) {
         if (!root) return;
         const { api, esc, today, studentAvatar, teacherName, wd, weekStart, addDays, DAY, DAY_FULL, pattern, toMin, nowMin } = U();
@@ -319,7 +331,7 @@
                 : na ? '<span class="sc-pill sc-pill--bad">✕ Javob bermadi</span>' : '';
             const btn = ok ? '' : na ? `<button type="button" class="sc-btn sc-btn--sm" data-mark="${esc(s.id)}">Qayta urinish</button>`
                 : `<button type="button" class="sc-btn sc-btn--sm${s.id === nextId ? ' sc-btn--pri' : ''}" data-mark="${esc(s.id)}">Belgilash</button>`;
-            return `<li class="yd-tr${ok ? ' is-ok' : na ? ' is-na' : ''}"><b class="yd-time">${esc(isAdv(s) ? s.lessonTime || '—' : U().hm(c[0]?.at ?? 0))}</b>${studentAvatar(s, 32)}
+            return `<li class="yd-tr${ok ? ' is-ok' : na ? ' is-na' : ''}" data-sid="${esc(s.id)}"><b class="yd-time">${esc(isAdv(s) ? s.lessonTime || '—' : U().hm(c[0]?.at ?? 0))}</b>${studentAvatar(s, 32)}
               <span class="yd-who"><button type="button" class="sc-link yd-nm" data-card="${esc(s.id)}">${esc(s.name)}</button><small class="sc-mt">${sub}</small></span>
               <span class="yd-tr-r">${callIcon(s.id)}${pill}${btn}</span></li>`;
         };
@@ -350,9 +362,9 @@
               <div class="yd-sk"><span>Aloqalar</span><b>${wkTotal} / ${wkPlan}</b></div><i class="yd-bar" role="img" aria-label="${wkTotal} / ${wkPlan}"><i style="width:${wkPlan ? Math.min(100, wkTotal / wkPlan * 100) : 0}%"></i></i>
               <div class="yd-sk"><span>${esc(mLbl)}</span><b>${rep.counted} / ${possible}</b></div>
               <div class="yd-sk"><span>Maosh · hozirgacha</span><b class="yd-money">${esc(money(rep.amount))}</b></div>
-              ${rep.noAnswer || rep.overCap ? `<p class="sc-mt">${rep.noAnswer ? rep.noAnswer + ' javob bermadi' : ''}${rep.noAnswer && rep.overCap ? ' · ' : ''}${rep.overCap ? rep.overCap + ' limitdan ortiq' : ''} — hisoblanmaydi</p>` : ''}
               <ul class="yd-rules"><li>Kamida 5 daqiqa</li><li>Haftasiga 3 marta, 1 tasigacha yozishma</li><li>Bir kunda ikki aloqa — bitta</li><li>Shu kuni belgilanadi</li><li>Oyiga 13 tagacha maoshga</li></ul>
-              <p class="sc-mt">O'tgan kunni belgilamay qoldingizmi? <button type="button" class="sc-link" data-late>Admin orqali so'rov</button></p></aside></div>
+              <p class="sc-mt ydm-late">O'tgan kunni belgilamay qoldingizmi? <button type="button" class="sc-link" data-late>Admin orqali so'rov</button></p></aside></div>
+          <div class="ydm-slot" data-mark-slot></div>
           <section class="sc-card yd-week"><header class="sc-ch"><h2>Bu hafta · o'quvchilar bo'yicha</h2>
               <div class="sc-seg" role="group" aria-label="Filtr"><button type="button" data-f="all" aria-pressed="${conState.filter === 'all'}">Hammasi ${rows.length}</button><button type="button" data-f="retry" aria-pressed="${conState.filter === 'retry'}"${retryRows.length ? '' : ' disabled'}>Qayta urinish kerak ${retryRows.length}</button></div></header>
             <div class="yd-tw"><table class="sc-table yd-wt"><thead><tr><th>O'quvchi</th><th>Asosiy darslari</th><th>Tavsiya</th><th>Hafta</th><th class="r">Bajarildi</th><th class="r">${esc(mLbl)}</th></tr></thead><tbody>
@@ -365,8 +377,20 @@
             <div class="yd-legend"><span><i class="ok"></i>bajarildi</span><span><i class="na"></i>javob bermadi</span><span><i class="un"></i>hisoblanmadi (qoida)</span><span><i></i>rejada</span></div></section>`;
         bindMonth();
         const find = id => mine.find(s => s.id === id);
-        root.querySelectorAll('[data-mark]').forEach(b => b.onclick = () => markDrawer(find(b.dataset.mark), re));
-        root.querySelectorAll('[data-call]').forEach(b => b.onclick = () => callStudent(find(b.dataset.call), re));
+        // "Aloqani belgilash" — dizayndagidek sahifa ichida (Bugun ostida); ochilganda keyingi tavsiya qilingan o'quvchi.
+        const slot = root.querySelector('[data-mark-slot]');
+        const afterSave = () => { conState.mark = ''; re(); };
+        const openMark = (s, focus) => {
+            if (!s || !slot) return;
+            conState.mark = s.id;
+            markDrawer(s, afterSave, { inline: slot, onClose: () => { conState.mark = null; slot.innerHTML = ''; root.querySelectorAll('.yd-tr.is-sel').forEach(li => li.classList.remove('is-sel')); } });
+            root.querySelectorAll('.yd-tr').forEach(li => li.classList.toggle('is-sel', li.dataset.sid === s.id));
+            if (focus) { slot.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); slot.querySelector('input[name=ch]')?.focus({ preventScroll: true }); }
+        };
+        const markId = conState.mark === null ? null : conState.mark && find(conState.mark) && !okOf(find(conState.mark)) ? conState.mark : nextId;
+        if (markId) openMark(find(markId), false);
+        root.querySelectorAll('[data-mark]').forEach(b => b.onclick = () => openMark(find(b.dataset.mark), true));
+        root.querySelectorAll('[data-call]').forEach(b => b.onclick = () => callStudent(find(b.dataset.call), afterSave, st => openMark(st, true)));
         root.querySelectorAll('[data-card]').forEach(b => b.onclick = () => U().openStudent(b.dataset.card));
         root.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { conState.filter = b.dataset.f; re(); });
         root.querySelector('[data-late]')?.addEventListener('click', () => lateDrawer(active, re));
@@ -578,7 +602,7 @@
     let homeMode = null; // 'closed' | 'now' — foydalanuvchi tanlovi (sessiya ichida)
     async function assistantHome(container, user) {
         const u = U(); if (!u || !container) return;
-        const { api, esc, today, weekStart, wd, DAY, studentAvatar, teacherName, pattern, addDays } = u;
+        const { api, esc, today, weekStart, wd, DAY, DAY_FULL, studentAvatar, teacherName, pattern, addDays } = u;
         await u.loadStaffAvatars();
         const tid = user.linkedTeacherId, td = today(), month = td.slice(0, 7), wdNow = wd(td), ws = weekStart(td);
         const prevMonth = addDays(month + '-01', -1).slice(0, 7), prev2Month = addDays(prevMonth + '-01', -1).slice(0, 7);
@@ -619,7 +643,7 @@
         const pst = prev?.state || {};
         const closedAvail = !!(prev && (prev.counted || pst.locked_at) && !pst.paid_at);
         const mode = closedAvail ? (homeMode || (pst.final_at ? 'now' : 'closed')) : 'now';
-        const headSub = `${esc(u.fmtDate(td))} · yordamchi ustoz · ${list.length} o'quvchi · ${mains} asosiy ustoz bilan`;
+        const headSub = `${esc(DAY_FULL[wd(td) - 1])}, ${esc(dG(td))} · yordamchi ustoz · ${list.length} o'quvchi · ${mains} asosiy ustoz bilan`;
         const sw = closedAvail ? `<div class="sc-seg" role="group" aria-label="Oy"><button type="button" data-mode="closed" aria-pressed="${mode === 'closed'}">${esc(cap1(mName(prevMonth)))} · yopilgan</button><button type="button" data-mode="now" aria-pressed="${mode === 'now'}">${esc(cap1(mName(month)))} · joriy</button></div>`
             : '<span class="sc-pill sc-pill--info">Har o\'quvchi bilan haftasiga 3 aloqa · kamida 5 daqiqa</span>';
         const refresh = () => assistantHome(container, user);
@@ -687,16 +711,17 @@
               <div class="kbx-next-actions"><button type="button" class="kbx-ghost yd-ncall" data-call="${esc(next.id)}">${PHONE_SVG}Qo'ng'iroq</button><button type="button" class="kbx-call" data-mark="${esc(next.id)}">Aloqani belgilash</button><button type="button" class="kbx-ghost" data-card="${esc(next.id)}">Karta</button></div></section>`; })()
             : `<section class="kbx-next"><span class="kbx-eyebrow">BUGUNGI ALOQALAR</span><h2>${advised.length ? 'Hammasi belgilandi' : 'Bugun tavsiya yo\'q'}</h2><span class="kbx-dsub">${advised.length ? `${doneN} / ${advised.length} aloqa` : 'Aloqani istalgan kuni qilish mumkin'}</span>
               <div class="kbx-next-actions"><button type="button" class="kbx-call" data-go-contacts="${month}">Aloqalar</button></div></section>`;
+        // YordamchiBosh (.tl2): ☎ + holat pill'i; alohida tugma yo'q. Bajarilmagan qatorda pill bosiladi → aloqani belgilash.
         const rowHtml = s => {
             const t = todayOf(s), okIt = t.find(i => i.status === 'counted') || [...t].reverse().find(i => i.outcome === 'contacted'), last = t[t.length - 1];
+            const markPill = (cls, txt) => `<button type="button" class="sc-pill ${cls} ya-mk" data-mark="${esc(s.id)}" title="Aloqani belgilash" aria-label="${esc(s.name)} — aloqani belgilash (${esc(txt)})">${esc(txt)}</button>`;
             const st = okIt ? `<span class="sc-pill ${okIt.status === 'counted' ? 'sc-pill--ok' : 'sc-pill--mute'}">${CHI[okIt.channel]?.[0] || ''} ${okIt.minutes ? okIt.minutes + ' daq' : ''}</span>`
-                : last ? '<span class="sc-pill sc-pill--bad">Javob bermadi</span>'
-                : tmin(s) < nowMin ? '<span class="sc-pill sc-pill--warn">Belgilanmagan</span>' : '<span class="sc-pill sc-pill--mute">Rejada</span>';
+                : last ? markPill('sc-pill--bad', 'Javob bermadi')
+                : tmin(s) < nowMin ? markPill('sc-pill--warn', 'Belgilanmagan') : markPill('sc-pill--mute', 'Rejada');
             const dot = okIt ? 'ok' : last ? 'na' : tmin(s) < nowMin ? 'late' : '';
-            const sub = [`tavsiya ${esc(s.lessonTime || '—')}`, okIt ? `bog'landi ${u.hm(okIt.at ?? 0)}` : last ? `urinildi ${u.hm(last.at ?? 0)}` : '', `asosiy ${esc(teacherName(s.teacherId, true))}`, `bu hafta ${weekOf(s)}/3`, gm.get(s.id) ? '' : 'guruh yo\'q'].filter(Boolean).join(' · ');
+            const sub = [`tavsiya ${esc(s.lessonTime || '—')}`, okIt ? `bog'landi ${u.hm(okIt.at ?? 0)}` : last ? `urinildi ${u.hm(last.at ?? 0)}` : '', `asosiy ${esc(teacherName(s.teacherId, true))}`, `bu hafta ${weekOf(s)}/3`].filter(Boolean).join(' · ');
             return `<li class="ya-row"><b class="ya-time">${esc(s.lessonTime || '—')}</b><i class="yd-dot ${dot}" aria-hidden="true"></i>${studentAvatar(s, 32)}<div class="ya-who"><strong>${esc(s.name)}</strong>
-              <span class="mot-prize-note">${sub}</span></div>${callIcon(s.id)}${st}
-              <button type="button" class="sc-btn sc-btn--sm${done(s) ? '' : ' sc-btn--pri'}" data-mark="${esc(s.id)}">${done(s) ? 'Yana' : last ? 'Qayta urinish' : 'Belgilash'}</button></li>`;
+              <span class="mot-prize-note">${sub}</span></div><span class="ya-acts">${callIcon(s.id)}${st}</span></li>`;
         };
         container.innerHTML = `<div class="ahx-head mhx-head yd-hh"><div><h1>${greet}, ${esc(first(user.name))}</h1><p>${headSub}</p></div>${sw}</div>
           ${prevBlock}
@@ -711,10 +736,10 @@
                 <div><span>Qayta urinish</span><b>${retry.length}</b><small class="${retry.length ? 'yd-bad' : ''}">${retry.length ? esc(retry.map(([s, r]) => retryNote(s, r, td)).join(' · ')) : 'yo\'q'}</small></div></div></section>${nx}</div>
           <div class="thx-grid"><div class="thx-main"><section class="card dashboard-panel"><div class="dashboard-panel-head"><h3>Bugungi tavsiya · ${advised.length} o'quvchi</h3><button type="button" class="ahx-link" data-go-plan>Tavsiya jadvali →</button></div>
               ${advised.length ? `<ul class="ya-list">${advised.map(rowHtml).join('')}</ul>` : `<p class="dashboard-empty">Bugun (${esc(DAY[wdNow - 1])}) tavsiya qilingan aloqa yo'q</p>`}</section></div>
-            <aside class="thx-side">${nearCap.length ? `<section class="card ahx-card"><div class="ahx-card-h"><h3>${cap} ta limitga yaqinlar</h3></div>
-                ${nearCap.map(([s, n]) => `<div class="thx-as-row"><div><b>${esc(s.name)}</b><small>${n >= cap ? 'limit to\'ldi — keyingisi hisoblanmaydi' : `yana ${cap - n} ta hisoblanadi → ${cap + 1}-chisi hisoblanmaydi`}</small></div><span><em class="sc-pill sc-pill--warn">${n}/${cap}</em></span></div>`).join('')}
-                <p class="mot-prize-note">Limitdan ortiq aloqa qilish mumkin, lekin maoshga qo'shilmaydi.</p></section>` : ''}
-              <section class="card ahx-card"><div class="ahx-card-h"><h3>Qoidalar</h3></div><ul class="ya-rules"><li>Ovozli yoki video — kamida 5 daqiqa</li><li>Telegram yozishma — haftasiga 1 tagacha</li><li>"Javob bermadi" yoziladi, lekin hisoblanmaydi</li><li>Bir kunda ikki aloqa — bitta</li><li>Shu kuni belgilanadi, keyin faqat admin</li></ul></section></aside></div>`;
+            <aside class="thx-side">${nearCap.length ? `<section class="card ahx-card ya-sc"><div class="ahx-card-h"><h3>${cap} ta limitga yaqinlar</h3></div>
+                <ul class="ya-lim">${nearCap.map(([s, n]) => `<li><div><b>${esc(s.name)}</b><small>${n >= cap ? 'limit to\'ldi — keyingisi hisoblanmaydi' : `oyda yana ${cap - n} tavsiya → ${cap + 1}-chisi hisoblanmaydi`}</small></div><span class="sc-pill sc-pill--warn">${n}/${cap}</span></li>`).join('')}</ul>
+                <p class="ya-fx">Limitdan ortiq aloqa qilish mumkin, lekin maoshga qo'shilmaydi.</p></section>` : ''}
+              <section class="card ahx-card ya-sc"><div class="ahx-card-h"><h3>Qoidalar</h3></div><ul class="ya-rules"><li>Ovozli yoki video — kamida 5 daqiqa</li><li>Telegram yozishma — haftasiga 1 tagacha</li><li>"Javob bermadi" yoziladi, lekin hisoblanmaydi</li><li>Bir kunda ikki aloqa — bitta</li><li>Shu kuni belgilanadi, keyin faqat admin</li></ul></section></aside></div>`;
         bind();
     }
 
