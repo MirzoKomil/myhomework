@@ -356,7 +356,10 @@ init().then(async () => {
         console.error('[domwork-bot] Jadval yaratilmadi:', err.code || err.name));
     // Akademik bo'lim: qo'shimcha jadvallar + soatlik holat yangilash (muzlatish boshlanishi/tugashi,
     // rejalashtirilgan ustoz almashinuvi, muddati o'tgan sinov ushlab turishlari).
-    await require('./services/school/schema').initSchema(crmDb.pool).then(() => {
+    await require('./services/school/schema').initSchema(crmDb.pool).then(async () => {
+        // 29-okt: yordamchi ustoz — alohida lavozim. Bir martalik ko'chirish (Mohinur A. → Ayubxon A.), qayta ishga tushsa hech narsa qilmaydi.
+        await require('./services/school/assistantSeparation').migrate(crmDb.pool)
+            .catch(err => console.error('[yordamchi-alohida] migratsiya xatosi:', err.code || err.message));
         const run = () => crmDb.tx(c => require('./services/school/studentOps').applyDue(c), { id: 'system' })
             .catch(err => console.error('[school] holat yangilash xatosi:', err.code || err.message));
         setInterval(run, 60 * 60 * 1000).unref();

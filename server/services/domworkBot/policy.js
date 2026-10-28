@@ -61,7 +61,7 @@ function choose(candidates) {
 }
 function menu(identity) {
     const rows = [...(MENUS[identity?.role] || [])];
-    if (identity?.role === 'teacher' && identity.dualRole === true) rows.push(['assistant-duty','🔄 Yordamchi ustozlik ma’lumotlarim']);
+    // 29-okt: asosiy ustoz yordamchi bo'la olmaydi — "Yordamchi ustozlik" menyusi (ikkilamchi rol) o'chirildi.
     return rows;
 }
 function requireAction(identity, action) {

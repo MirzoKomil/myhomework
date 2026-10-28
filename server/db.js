@@ -1745,6 +1745,8 @@ async function saveHrEmployeesData(client, employees, actor = {}, removedIds = [
         if (e.kpiTemplateId && e.kpiTemplateId !== matchedRole) throw Object.assign(new Error('KPI shabloni lavozimga mos emas'), { status: 400 });
         const old = oldEmployees.find(r => r.id === e.id);
         if (e.dualRole === undefined) e.dualRole = old?.dual_role === true && require('../js/teacherRoles').isMain(e);
+        // 29-okt: ikkilamchi rol yangidan yoqilmaydi (asosiy ustoz yordamchi bo'la olmaydi); eski qiymat o'zgarmasa — tegilmaydi.
+        if (e.dualRole === true && old?.dual_role !== true) throw Object.assign(new Error('Asosiy ustoz yordamchi ustoz bo‘la olmaydi — yordamchi uchun alohida xodim qo‘shing'), { status: 400 });
         const before = old ? { role: old.role, startDate: old.start_date || old.join_date, kpiTemplateId: old.kpi_template_id || '', dualRole: old.dual_role === true } : null;
         const after = { role: e.role, startDate: e.startDate || e.joinDate || '', kpiTemplateId: e.kpiTemplateId || '', dualRole: e.dualRole === true };
         if (JSON.stringify(before) !== JSON.stringify(after)) await payroll.audit(client, actor, 'employee-kpi', e.id, before, after);
@@ -4095,6 +4097,7 @@ async function recordTeacherAttendance({ actor, teacherId, studentId, date, pres
 
         const selectedType = attendanceType || (teacher.type === 'yordamchi' ? 'assistant' : 'main');
         if (selectedType === 'main' && teacher.type === 'yordamchi') throw new Error('Yordamchi ustoz asosiy davomatni o‘zgartira olmaydi');
+        if (selectedType === 'assistant' && !isStaffWithFullAccess && teacher.type !== 'yordamchi') throw new Error('Asosiy ustoz yordamchi davomatini belgilamaydi');
         const assignmentColumn = selectedType === 'assistant' ? 'assistant_teacher_id' : 'teacher_id';
         const studentResult = await client.query(
             `SELECT id, subject, extra_data FROM students WHERE id = $1 AND ${assignmentColumn} = $2 FOR UPDATE`,

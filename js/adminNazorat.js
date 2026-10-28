@@ -709,9 +709,11 @@
     // ── Yordamchi aloqalari (admin) ──────────────────────────────────────────
     const A = { aid: '', month: '', week: '', all: false };
     const RATE = 3846, CAP = 13;
-    function assistantList() {
+    // 29-okt: yordamchi — alohida lavozim. Asosiy ustoz ro'yxatda faqat shu oyda o'tgan aloqasi bo'lsa (maoshda qoladi, admin ko'radi/tuzatadi)
+    // yoki unga hali yordamchi o'quvchi biriktirilgan bo'lsa ("Yordamchi kerak" ogohlantirishi) chiqadi.
+    function assistantList(extra = []) {
         const st = getC('students', []).filter(s => s.status !== 'inactive' && !s.isStaffDemo && !s.frozen);
-        const ids = new Set([...getC('hrEmployees', []).filter(e => e.role === 'yordamchi' && (e.status || 'active') !== 'inactive').map(e => e.id), ...st.map(s => s.assistantTeacherId).filter(Boolean)]);
+        const ids = new Set([...getC('hrEmployees', []).filter(e => e.role === 'yordamchi' && (e.status || 'active') !== 'inactive').map(e => e.id), ...st.map(s => s.assistantTeacherId).filter(Boolean), ...extra]);
         return [...ids].map(id => ({ id, name: tName(id), n: st.filter(s => s.assistantTeacherId === id).length, main: staffById(id)?.role !== 'yordamchi' }))
             .filter(a => a.name !== '—').sort((a, b) => a.main - b.main || b.n - a.n || a.name.localeCompare(b.name));
     }
@@ -733,12 +735,20 @@
         }
         return by;
     }
+    function legacyNote() {
+        const L = A.legacy?.legacy;
+        if (!L?.total) return '';
+        return `<div class="sc-note sc-note--warn an-legacy"><b>Yordamchi kerak · ${L.total} o'quvchi</b> — asosiy ustozga yordamchi sifatida biriktirilgan (asosiy ustoz yordamchi bo'la olmaydi, avtomatik ko'chirilmadi):
+            ${L.teachers.map(t => `${esc(t.name)} — ${t.students.length} (${t.students.slice(0, 4).map(x => esc(x.name)).join(', ')}${t.students.length > 4 ? '…' : ''})`).join('; ')}.
+            O'quvchi tahririda yordamchi lavozimidagi xodimni tanlang.</div>`;
+    }
     async function renderAssist(root) {
         if (!root) return;
         root.classList.add('an-page');
         await U().loadStaffAvatars();
-        const list = assistantList();
         A.month ||= today().slice(0, 7);
+        A.legacy = await U().api(`/assist/legacy?month=${A.month}`).catch(() => null);
+        const list = assistantList((A.legacy?.past || []).map(p => p.id));
         if (!list.some(a => a.id === A.aid)) A.aid = list[0]?.id || '';
         const month = A.month, td = today(), curMonth = month === td.slice(0, 7);
         const lastDay = dateOf(month, monthDays(month));
@@ -771,17 +781,19 @@
             : !st.prelim_at ? '<button type="button" class="sc-btn sc-btn--pri" data-step="prelim">Dastlabki tasdiq</button>'
             : !final ? '<button type="button" class="sc-btn sc-btn--pri" data-step="final">Yakuniy tasdiq</button>'
             : !st.paid_at ? '<button type="button" class="sc-btn sc-btn--pri" data-step="paid">To\'landi</button>' : pill('ok', 'To\'langan');
-        const totals = list.map((x, i) => reps[i] ? `${esc(U().shortName(x.name))}${x.main ? ' (yordamchi)' : ''}: ${reps[i].counted} aloqa · ${money(reps[i].amount)} so'm` : '').filter(Boolean).join(' · ');
+        const totals = list.map((x, i) => reps[i] ? `${esc(U().shortName(x.name))}${x.main ? ' (asosiy ustoz · o\'tgan aloqalar)' : ''}: ${reps[i].counted} aloqa · ${money(reps[i].amount)} so'm` : '').filter(Boolean).join(' · ');
         const chn = i => i.outcome === 'no_answer' ? '✕ Javob bermadi' : `${(U().CHN[i.channel] || ['', i.channel])[0]} ${(U().CHN[i.channel] || ['', i.channel])[1]}`;
         const hisob = i => i.status === 'counted' ? pill('ok', 'hisoblandi') : `<span class="sc-pill sc-pill--mute" title="${esc(U().CST[i.status] || '')}">hisoblanmaydi${U().CST[i.status] ? ' · ' + esc(U().CST[i.status]) : ''}</span>`;
         root.innerHTML = `<div class="sc-head"><div><h1>Yordamchi aloqalari</h1><p class="sc-sub">Admin${a ? ' · ' + esc(a.name) : ''} · o'tgan kunlarni faqat admin tuzatadi (sabab bilan) · oy yopilganda Moliya tasdiqlaydi</p></div>
-            <div class="sc-row sc-wrap"><div class="sc-seg" role="tablist" aria-label="Yordamchi">${list.map(x => `<button type="button" role="tab" data-aid="${esc(x.id)}" aria-pressed="${x.id === A.aid}">${esc(U().shortName(x.name))} · ${x.n}</button>`).join('')}</div>
+            <div class="sc-row sc-wrap"><div class="sc-seg" role="tablist" aria-label="Yordamchi">${list.map(x => `<button type="button" role="tab" data-aid="${esc(x.id)}" aria-pressed="${x.id === A.aid}"${x.main ? ' title="Asosiy ustoz — faqat o\'tgan aloqalar"' : ''}>${esc(U().shortName(x.name))} · ${x.main ? 'asosiy' : x.n}</button>`).join('')}</div>
             <div class="an-mnav"><button type="button" class="sc-btn sc-btn--sm" data-mon="-1" aria-label="Oldingi oy">‹</button><b>${monthLabel(month)}</b><button type="button" class="sc-btn sc-btn--sm" data-mon="1" aria-label="Keyingi oy"${curMonth ? ' disabled' : ''}>›</button></div></div></div>
           ${rep ? `<div class="sc-kpis an-k4">
             <div class="sc-kpi"><small>${monthName(month)}</small><b>${rep.counted} / ${myStudents.length * CAP}</b><span>hisoblangan aloqa</span></div>
             <div class="sc-kpi"><small>Maosh</small><b>${money(rep.amount)}</b><span>${rep.counted} × ${money(RATE)} so'm</span></div>
             <div class="sc-kpi"><small>${curMonth && A.week === U().weekStart(td) ? 'Bu hafta' : 'Hafta'}</small><b>${weekCounted} / ${myStudents.length * 3}</b><span>tavsiya bo'yicha</span></div>
             <div class="sc-kpi"><small>So'rovlar</small><b>${myReqs.length}</b><span>kechikib belgilash${otherReqs ? ` · boshqalarda ${otherReqs}` : ''}</span></div></div>` : ''}
+          ${legacyNote()}
+          ${a?.main ? `<div class="sc-note sc-note--warn"><b>${esc(a.name)} — asosiy ustoz.</b> Asosiy ustoz endi yordamchi bo'la olmaydi: bu yerda faqat ${esc(monthName(month).toLowerCase())}dagi o'tgan aloqalari (maoshga kiradi) ko'rinadi${a.n ? ` · hali ${a.n} o'quvchi unga yordamchi sifatida biriktirilgan — yordamchi lavozimidagi xodimga o'tkazing` : ''}.</div>` : ''}
           ${finReqs.filter(r => r.teacher_id === A.aid && r.payload?.month === month).length ? `<div class="sc-note sc-note--warn"><b>Moliyaga murojaat · ${finReqs.filter(r => r.teacher_id === A.aid && r.payload?.month === month).length} ta kutilmoqda</b> — "Ustozlar so'rovlari" bo'limida ko'rib chiqing va javob bering.</div>` : ''}
           ${myReqs.length ? `<section class="sc-card"><header class="sc-ch"><h2>So'rov · kechikib belgilash</h2>${pill('warn', `${myReqs.length} kutilmoqda`)}</header>
             ${myReqs.map(r => { const s = studentById(r.payload?.studentId) || { name: '' }, pp = r.payload || {};

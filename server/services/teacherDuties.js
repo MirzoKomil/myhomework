@@ -1,5 +1,9 @@
 const roles = require('../../js/teacherRoles');
 const error = (status, message) => Object.assign(new Error(message), { status });
+const ASSISTANT_ONLY = 'Asosiy ustoz yordamchi ustoz bo‘la olmaydi — yordamchi lavozimidagi xodimni tanlang';
+// Yordamchi vazifasi (aloqalar, "yordamchi sifatida" o'quvchilar) faqat yordamchi lavozimida.
+// Asosiy ustozga eski biriktirish qolgan bo'lsa ham u ko'rinmaydi (admin "Yordamchi kerak" ro'yxatida ko'radi).
+const hasAssistantDuty = own => roles.isAssistant(own);
 async function initSchema(db) {
     await db.query('ALTER TABLE hr_employees ADD COLUMN IF NOT EXISTS dual_role BOOLEAN NOT NULL DEFAULT FALSE');
 }
@@ -29,8 +33,13 @@ async function validateAssignment(db, student, before = {}) {
         && (student.subject || 'english') === (before.subject || 'english');
     if (existingDuty && student.teacherId === before.teacherId) return;
     const { rows } = await db.query('SELECT * FROM hr_employees WHERE id=$1 FOR SHARE', [student.assistantTeacherId]);
+    // 29-okt: yordamchi faqat yordamchi lavozimidagi xodim. Eski (o'zgarmagan) biriktirish saqlashni
+    // buzmaydi — /api/state butun ro'yxatni qayta yuboradi; yangi biriktirish esa tekshiriladi.
+    if (!existingDuty && rows.length === 1 && roles.isMain(employee(rows[0]))) {
+        throw error(400, ASSISTANT_ONLY);
+    }
     if (!existingDuty && (rows.length !== 1 || !roles.eligible(employee(rows[0]), 'yordamchi', student.subject || 'english'))) {
-        throw error(400, 'Yordamchi ustoz faol, shu tilga mos va HR ro‘yxatida ruxsat berilgan bo‘lishi kerak');
+        throw error(400, 'Yordamchi ustoz faol, shu tilga mos va HR ro‘yxatida yordamchi lavozimida bo‘lishi kerak');
     }
     if (student.teacherId && rows[0]?.login) {
         const main = (await db.query('SELECT login FROM hr_employees WHERE id=$1 FOR SHARE', [student.teacherId])).rows[0];
@@ -41,7 +50,7 @@ async function validateAssignment(db, student, before = {}) {
 }
 function stateForTeacher(state, own) {
     const mainIds = new Set(state.students.filter(s => s.teacherId === own.id).map(s => s.id));
-    const assistantIds = new Set(state.students.filter(s => s.assistantTeacherId === own.id).map(s => s.id));
+    const assistantIds = new Set(hasAssistantDuty(own) ? state.students.filter(s => s.assistantTeacherId === own.id).map(s => s.id) : []);
     const assignedIds = new Set([...mainIds, ...assistantIds]);
     const safeFields = ['id','name','phone','phone2','group','subject','teacherId','assistantTeacherId',
         'lessonDayOfWeek','lessonTime','lessonDuration','startDate','joinDate','status','frozen','age','gender'];
@@ -70,7 +79,7 @@ function stateForTeacher(state, own) {
                 (slot === 'main-teacher' && mainIds.has(id)) || (slot === 'assistant-teacher' && assistantIds.has(id))))])),
         peerMessages: {}, studentActivity: {}, shopOrders: [], demoStudentId: '', guides: state.guides || [],
         teacherDuty: { teacherId: own.id, language: roles.language(own), isMain: roles.isMain(own),
-            hasAssistantStudents: assistantIds.size > 0, dualRole: own.dualRole === true } };
+            hasAssistantStudents: assistantIds.size > 0, dualRole: false } };
 }
 async function recordAssistantAttendance(db, { actor, teacherId, studentId, date, present }) {
     const month = date.slice(0, 7), key = `${month}_${teacherId}`, day = Number(date.slice(8));
@@ -91,4 +100,4 @@ async function recordAssistantAttendance(db, { actor, teacherId, studentId, date
         { present: previous.find(r => r.day === day)?.present ?? null }, { present: present === null ? null : present ? 1 : 0 });
     return { attendanceKey: key, attendanceType: 'assistant', teacherId, studentId, date, day, present, grade: null };
 }
-module.exports = { initSchema, employee, teacherForActor, validateAssignment, stateForTeacher, recordAssistantAttendance };
+module.exports = { initSchema, employee, teacherForActor, validateAssignment, stateForTeacher, recordAssistantAttendance, hasAssistantDuty, ASSISTANT_ONLY };

@@ -698,7 +698,8 @@ async function bootApp() {
             setCurrentUser(currentUser);
         }
         // "Aloqalar" — faqat yordamchi ustoz (o'quvchisi bor bo'lsa) uchun.
-        const isAssistant = linked?.role === 'yordamchi' || getItem(STORAGE_KEYS.students, []).some(s => s.assistantTeacherId && s.assistantTeacherId === currentUser.linkedTeacherId);
+        // 29-okt: asosiy ustoz yordamchi bo'la olmaydi — faqat HR lavozimi 'yordamchi'.
+        const isAssistant = linked?.role === 'yordamchi';
         const contactsMenu = document.querySelector('.menu-item[data-tab="school-contacts"]');
         if (contactsMenu && !isAssistant) contactsMenu.remove();
     }
@@ -12485,6 +12486,13 @@ function openEditStudentModal(studentId) {
     const tSel = document.getElementById('mStTeacherE');
     if (tSel && s.teacherId) tSel.value = s.teacherId;
     const aSel = document.getElementById('mStAsstTeacherE');
+    if (aSel && s.assistantTeacherId && ![...aSel.options].some(o => o.value === s.assistantTeacherId)) {
+        // Eski biriktirish (asosiy ustoz yordamchi sifatida) — ro'yxatda yo'q, lekin saqlashda jim o'chib ketmasin.
+        const o = document.createElement('option');
+        o.value = s.assistantTeacherId;
+        o.textContent = `${getItem(STORAGE_KEYS.hrEmployees, []).find(e => e.id === s.assistantTeacherId)?.name || 'Eski'} — asosiy ustoz, yordamchini almashtiring`;
+        aSel.appendChild(o);
+    }
     if (aSel && s.assistantTeacherId) aSel.value = s.assistantTeacherId;
     teacherDutyUI.bindAssignment(tSel, aSel);
     document.getElementById('mStSubjectE').addEventListener('change', e => {
@@ -23113,7 +23121,7 @@ function resolveGuideAudienceTags(user) {
     if (role === 'teacher') {
         const linked = findLinkedEmployee();
         return linked?.role === 'yordamchi' ? ['teacher_assistant']
-            : linked?.dualRole === true ? ['teacher_main', 'teacher_assistant'] : ['teacher_main'];
+            : ['teacher_main'];
     }
     if (role === 'employee') {
         const linked = findLinkedEmployee();
@@ -23738,7 +23746,7 @@ function openEditEmployeeModal(empId) {
             birthDate: document.getElementById('editEmpBirthDate').value,
             startDate: document.getElementById('editEmpStartDate').value,
             role: resolvedRole,
-            dualRole: teacherRoles.isMain({ role: resolvedRole }) && document.getElementById('employeeDualRole').checked,
+            dualRole: teacherRoles.isMain({ role: resolvedRole }) && emp.dualRole === true, // ikkilamchi rol o'chirilgan (29-okt) — eski qiymat o'zgarmaydi
             kpiTemplateId: document.getElementById('employeeKpiTemplate')?.value || '',
             phone,
             email: document.getElementById('editEmpEmail').value.trim(),
@@ -23998,7 +24006,7 @@ function openAddEmployeeModal() {
             id: 'hr' + Date.now(),
             name, firstName, lastName, gender, birthDate, startDate,
             role, phone, email, department, status, login,
-            dualRole: teacherRoles.isMain({ role }) && document.getElementById('employeeDualRole').checked,
+            dualRole: false, // asosiy ustoz yordamchi bo'la olmaydi (29-okt)
             kpiTemplateId: document.getElementById('employeeKpiTemplate')?.value || '',
             cardNumber, passportSeries, address, trialGroupLink,
             joinDate: startDate || new Date().toISOString().slice(0, 10),

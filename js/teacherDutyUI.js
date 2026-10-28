@@ -2,17 +2,9 @@
     'use strict';
     let selected = 'main', expanded = '', busy = false, lastError = '';
     const esc = value => escapeHtml(String(value ?? ''));
-    function employeeField(checked = false) {
-        return `<div class="form-group" id="employeeDualRoleWrap"><label class="teacher-dual-toggle">
-            <input type="checkbox" role="switch" id="employeeDualRole" ${checked ? 'checked' : ''}>
-            <span>Yordamchi ustoz sifatida ham ko‘rsatilsin</span></label></div>`;
-    }
-    function bindEmployee(roleId) {
-        const role = document.getElementById(roleId), wrap = document.getElementById('employeeDualRoleWrap');
-        if (!role || !wrap) return;
-        const sync = () => { wrap.hidden = !teacherRoles.isMain({ role: role.value }); };
-        role.addEventListener('change', sync); sync();
-    }
+    // 29-okt: "Yordamchi ustoz sifatida ham" (ikkilamchi rol) o'chirildi — yordamchi alohida lavozim.
+    function employeeField() { return ''; }
+    function bindEmployee() {}
     function bindAssignment(main, assistant) {
         if (!main || !assistant) return;
         const sync = () => {
@@ -327,7 +319,7 @@
         const myCard = `<section class="udv-card udv-my" aria-labelledby="udvMyTitle">${myHead}
             <div class="udv-help"><span>${oldAssist ? 'Bu oy maoshi eski yordamchi davomati bo‘yicha.' : 'Dars kunini bosib davomat qo‘ying. Qayta bossangiz — o‘zgartirasiz yoki olib tashlaysiz.'}</span><div class="udv-leg">${legend}</div></div>
             <div class="udv-list" role="region" aria-label="O'quvchilar">${rowsHtml || '<p class="udv-empty">Bu rolda faol o‘quvchilar biriktirilmagan.</p>'}${more}</div></section>`;
-        const note = selected === 'main' ? `<div class="udv-note">${SVG.undo}<div><b>Qoldirilgan darsni qoplash.</b> O‘quvchi kelmagan darsni shu oy ichida o‘tib bersangiz, maoshingizga hisoblanadi: dars kuni bo‘lmagan kunni bosib <b>"Qoplash darsi"</b> qo‘ying yoki keyingi darsda <b>"Keldi · 2 dars"</b> ni tanlang (qo‘shaloq dars). Qoplash admin tasdig‘idan keyin o‘tadi. Oyiga rejadagi darslardan ortiq hisoblanmaydi. Yordamchi ustozlikda har o‘quvchi bilan haftasiga 3 aloqa, oyiga 13 tagacha hisoblanadi.</div></div>` : '';
+        const note = selected === 'main' ? `<div class="udv-note">${SVG.undo}<div><b>Qoldirilgan darsni qoplash.</b> O‘quvchi kelmagan darsni shu oy ichida o‘tib bersangiz, maoshingizga hisoblanadi: dars kuni bo‘lmagan kunni bosib <b>"Qoplash darsi"</b> qo‘ying yoki keyingi darsda <b>"Keldi · 2 dars"</b> ni tanlang (qo‘shaloq dars). Qoplash admin tasdig‘idan keyin o‘tadi. Oyiga rejadagi darslardan ortiq hisoblanmaydi.</div></div>` : '';
         root.innerHTML = `<div class="udv">${top}${myCard}${note}<p class="udv-err" data-duty-error role="alert">${esc(lastError)}</p></div>`;
         bindSeg(); bindMonth(); bindToday();
         root.querySelectorAll('[data-duty-expand]').forEach(button => { button.onclick = () => {

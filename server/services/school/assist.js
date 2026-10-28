@@ -69,6 +69,7 @@ async function mark(db, actor, body, now = new Date()) {
     const day = body.day ? T.assertDate(body.day) : today;
     if (day !== today) throw fail(409, 'Aloqa faqat shu kuni belgilanadi — o\'tgan kun uchun admin orqali so\'rov yuboring');
     const st = (await db.query('SELECT id, assistant_teacher_id FROM students WHERE id=$1', [body.studentId])).rows[0];
+    if (!require('../teacherDuties').hasAssistantDuty(me)) throw fail(403, 'Aloqani yordamchi ustoz belgilaydi — asosiy ustoz yordamchi bo\'la olmaydi');
     if (!st || st.assistant_teacher_id !== me.id) throw fail(403, 'Bu o\'quvchi sizga biriktirilmagan');
     const statuses = await db.query('SELECT * FROM school_student_status WHERE student_id=$1 AND cancelled_at IS NULL', [body.studentId]);
     const state = S.statusOn(statuses.rows, day);

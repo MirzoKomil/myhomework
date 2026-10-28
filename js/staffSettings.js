@@ -269,7 +269,7 @@
         const banner = miss && miss.open ? `<div class="ss-banner" role="note">${ICON.sync}<p><b>${miss.open} ta qoldirilgan dars hali qoplanmagan${miss.planned ? ` (${miss.planned} tasi rejada)` : ''}.</b> Oy tugashiga ${miss.daysLeft} kun. ${esc(miss.students.slice(0, 3).map(s => `${s.name} ${s.count} ta`).join(', '))}${miss.students.length > 3 ? `, yana ${miss.students.length - 3} ta` : ''}.</p><button type="button" class="ss-btn" data-go-makeup>Qoplash qo'yish</button></div>` : '';
         const rowsMain = m.groups.map(g => `<tr><td>${g.duration} daqiqalik</td><td>${esc(g.students.join(', '))}</td><td class="n">${g.expected}</td><td class="n">${g.counted}${g.review ? ` <i class="ss-pill teal">+${g.review} tekshiruvda</i>` : ''}</td><td class="n ss-mt">—</td></tr>`).join('')
             || '<tr><td colspan="5" class="ss-mt">Bu oy asosiy o\'quvchi yo\'q</td></tr>';
-        const assistRows = a ? `<tr class="sec"><td colspan="5">Yordamchi ustozlik · ${num(a.rate)} so'm × aloqa</td></tr>
+        const assistRows = a ? `<tr class="sec"><td colspan="5">Yordamchi ustozlik${a.pastOnly ? ' · o\'tgan aloqalar' : ''} · ${num(a.rate)} so'm × aloqa</td></tr>
             <tr><td>Yordamchi</td><td>${esc(a.students.map(s => s.name.split(' ')[0]).join(', ') || '—')}</td><td class="n">${a.cap} gacha</td><td class="n">${a.counted}</td><td class="n">${num(assistAmt)}</td></tr>` : '';
         body.innerHTML = head('Profil, maosh va xavfsizlik') + `<div class="ss-col">
           <div class="ss-kpis">

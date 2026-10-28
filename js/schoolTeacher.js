@@ -151,7 +151,8 @@
         // Qoplanmagan darslar (≈ ustoz maoshidan) va "e'tibor kerak" — js/ustozHome.js, parallel yuklanadi.
         const extraP = window.UstozHome?.todoItems ? window.UstozHome.todoItems(user, mkP).catch(() => []) : Promise.resolve([]);
         const [rep, trials, makeups] = await Promise.all([
-            helped.length ? api(`/assist/month?month=${td.slice(0, 7)}`).catch(() => null) : null,
+            // Asosiy ustoz ham so'raydi: shu oyda ilgari (yordamchi bo'lgan paytda) qilgan aloqalari maoshga kiradi (29-okt).
+            api(`/assist/month?month=${td.slice(0, 7)}`).catch(() => null),
             (typeof apiFetchTeacherTrialLessons === 'function' ? apiFetchTeacherTrialLessons() : Promise.resolve({ lessons: [] })).catch(() => ({ lessons: [] })),
             mkP
         ]);
@@ -166,7 +167,7 @@
             const old = sal.dataset.oldAssist != null ? Number(sal.dataset.oldAssist) || 0 : null;
             const main = Number(sal.dataset.main) || 0, extra = old != null ? old : rep?.amount || 0;
             sal.textContent = num(main + extra);
-            if (sub) sub.innerHTML = `${helped.length ? `asosiy ${num(main)} + yordamchi ${old != null || rep ? num(extra) : '—'}${old != null ? ' (davomat bo\'yicha)' : ''} · ` : ''}${reviewing ? `<b>+${reviewing} qoplash tekshiruvda</b> (admin tasdiqlasa qo'shiladi) · ` : ''}oy yopilganda Moliya tasdiqlaydi`;
+            if (sub) sub.innerHTML = `${!helped.length && old == null && rep?.amount ? `asosiy ${num(main)} + o'tgan yordamchi aloqalari ${num(rep.amount)} · ` : ''}${helped.length ? `asosiy ${num(main)} + yordamchi ${old != null || rep ? num(extra) : '—'}${old != null ? ' (davomat bo\'yicha)' : ''} · ` : ''}${reviewing ? `<b>+${reviewing} qoplash tekshiruvda</b> (admin tasdiqlasa qo'shiladi) · ` : ''}oy yopilganda Moliya tasdiqlaydi`;
         }
 
         // Bugungi sinov darslari — bugungi ro'yxatga qo'shiladi (UstozBosh: "30 daq · sinov darsi" + holat pill'i).
