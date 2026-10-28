@@ -275,3 +275,43 @@ Telegram/Redis are mocked. Real role-by-role delivery acceptance still requires
 registered users, confirmed classroom assignments and explicit opt-in. Face ID
 provider docs, real course/promotional materials and business award-policy choices
 remain external inputs; this addition does not claim those are complete.
+
+## Staff Telegram linking without matching phone numbers (2026-10-29)
+
+CRM → Sozlamalar → Bildirishnomalar → Kanallar → **Telegram bot → Ulash**. Same pattern as the
+student flow: a live CRM session creates a 5-minute one-time `ul_` deep link (only its SHA-256 is
+stored; the inbox copy is redacted), the employee presses Start, returns to the CRM, checks the
+Telegram name/username and confirms. Confirmation writes `domwork_staff_telegram_proofs`; the staff
+identity then no longer depends on the CRM/HR phone matching Telegram. Phone-matched links without
+proof keep the old rule. Only eligible Russian staff and admins (same rules as contact login) may
+link; a Telegram previously linked as a lead is replaced on confirmation, any other occupied
+account is rejected. Self-service unlink is audited. API: `/api/domwork/staff-telegram`.
+
+Student and staff link creation also returns a server-rendered QR (`qr: {size,path}`) of the
+personal link, so the desktop QR no longer opens the bare bot (which fell back to phone matching).
+A student Telegram previously linked as a lead is replaced on confirmation.
+
+Verify: `node scripts/run-payroll-postgres.cjs scripts/staff-telegram-postgres.test.cjs`.
+Note: `student-app/dist` is not rebuilt here; the student-app source change ships with the next build.
+
+## Lead funnel for unknown visitors (2026-10-29)
+
+Spec: Claude Docs "Domwork bot — lid voronkasi" (Project doc `claude/bot_lid_voronka.md`). OFF by default
+(`settings.funnelEnabled`); while off, unknown visitors keep the old phone prompt and landing gets no link.
+
+- Landing (`POST /api/leads`, Russian) returns a one-time `ld_` deep link (`telegramUrl`, 7 days, hash only,
+  single Telegram) when the bot and funnel are enabled; the "Rahmat" page uses it instead of the fallback.
+- Unknown visitor: greeting + gift (no phone) → segment (2 min delay, cancelled if answered) → field guide →
+  1-dars (one-tap own contact required; creates/links a `Telegram bot` lead tagged "no call") → quiz with
+  honest per-question feedback → CTA (manager photo, testimonial post, 15% discount with per-visitor deadline) →
+  call/Telegram + time → CRM lead comment + "Sotuv" group message (independent of groupNotificationsEnabled).
+- Score ≥ 6 without a request → one soft "🔥" alert (message, not call). Price question → instant alert.
+- Free text → sales group. `/stop` pauses. A 403 from Telegram marks the visitor blocked.
+- Delivery: `_guest` rows go through `funnel.deliverable` (enabled, not blocked/paused, `unless` guards,
+  automation cancelled once the visitor becomes a staff/student identity).
+- Materials: admin sends a file to the bot with caption `#voronka <key>`; `#voronka` lists keys.
+- Security fix: a lead link without a phone never resolves by phone (previously an empty phone could
+  match an empty-phone student).
+- Report: `GET /api/domwork/bot/funnel/report?days=30`; CRM → Bot controls → "Lid voronkasi".
+
+Verify: `node scripts/run-payroll-postgres.cjs scripts/domwork-funnel-postgres.test.cjs`.

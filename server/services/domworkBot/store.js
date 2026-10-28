@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS domwork_bot_penalties (
  created_by TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 `;
-async function initSchema(db) { await db.query(SCHEMA); await require('./controls').init(db); await require('./discovery').init(db); await require('./studentLink').init(db); await require('./insights').init(db); }
+async function initSchema(db) { await db.query(SCHEMA); await require('./controls').init(db); await require('./discovery').init(db); await require('./studentLink').init(db); await require('./staffLink').init(db); await require('./leadLink').init(db); await require('./funnel').init(db); await require('./insights').init(db); }
 const USER_SQL = `SELECT u.id,u.name,u.email,u.role,u.phone,he.id AS employee_id,he.role AS employee_role,
  he.status AS employee_status,he.lang,he.dual_role,COALESCE(link.manager_id,he.id) AS manager_id
  FROM users u LEFT JOIN user_sales_manager_links link ON link.user_id=u.id
@@ -110,14 +110,18 @@ async function linkContact(db, message) {
     // One lock covers phone and Telegram identity races, including lead upgrades.
     await db.query("SELECT pg_advisory_xact_lock(hashtext('domwork-bot-links'))");
     const existing = (await db.query('SELECT * FROM domwork_bot_links WHERE telegram_id=$1 FOR UPDATE', [contact.telegramId])).rows[0];
-    if(existing?.account_kind==='student' && (await db.query('SELECT 1 FROM domwork_student_telegram_proofs WHERE student_id=$1 AND telegram_id=$2',[existing.account_id,contact.telegramId])).rows.length){
+    if((existing?.account_kind==='student' && (await db.query('SELECT 1 FROM domwork_student_telegram_proofs WHERE student_id=$1 AND telegram_id=$2',[existing.account_id,contact.telegramId])).rows.length)
+        || (existing?.account_kind==='user' && (await db.query('SELECT 1 FROM domwork_staff_telegram_proofs WHERE user_id=$1 AND telegram_id=$2',[existing.account_id,contact.telegramId])).rows.length)){
         const current=await identity(db,contact.telegramId);
-        if(!current)throw policy.error(403,'Faol o‘quvchi akkaunti topilmadi');
+        if(!current)throw policy.error(403,'Faol CRM akkaunti topilmadi. Administrator bilan bog‘laning');
         return current;
     }
     const selected = policy.choose(await phoneCandidates(db, contact.phone));
     if (existing && (existing.account_kind !== selected.kind || existing.account_id !== selected.id)) {
-        const upgrade = existing.account_kind === 'lead' && selected.kind === 'student' && existing.phone === contact.phone;
+        // Lid → o'quvchi/sinov: raqam bir xil bo'lsa, yoki lid ulanishida tasdiqlangan raqam yo'q bo'lsa
+        // (voronka/landing) — kontakt esa egasining o'zi yuborgan, tasdiqlangan raqam.
+        const upgrade = existing.account_kind === 'lead' && (existing.phone === contact.phone
+            || (!existing.phone && ['student','lead'].includes(selected.kind)));
         if (!upgrade) throw policy.error(409, 'Telegram akkaunti boshqa CRM profiliga bog‘langan. Administrator ajratsin');
     }
     const used = (await db.query('SELECT telegram_id FROM domwork_bot_links WHERE account_kind=$1 AND account_id=$2', [selected.kind, selected.id])).rows[0];
@@ -136,9 +140,11 @@ async function identity(db, telegramId) {
     if (link.account_kind === 'user') {
         const rows = (await db.query(USER_SQL + ' WHERE u.id=$1', [link.account_id])).rows;
         if (rows.length !== 1) return null;
-        const matches = (await db.query(USER_SQL + `
-            WHERE u.id=$1 AND (domwork_phone(u.phone)=$2 OR domwork_phone(u.email)=$2 OR domwork_phone(he.phone)=$2)`, [link.account_id, link.phone])).rows;
-        if (!matches.length) return null;
+        // CRMdan tasdiqlangan ulanish (staffLink) telefon raqamidan mustaqil; aks holda raqam hamon mos bo'lishi shart.
+        const proven = (await db.query('SELECT 1 FROM domwork_staff_telegram_proofs WHERE user_id=$1 AND telegram_id=$2', [link.account_id, link.telegram_id])).rows.length;
+        const matches = proven ? [] : link.phone ? (await db.query(USER_SQL + `
+            WHERE u.id=$1 AND (domwork_phone(u.phone)=$2 OR domwork_phone(u.email)=$2 OR domwork_phone(he.phone)=$2)`, [link.account_id, link.phone])).rows : [];
+        if (!proven && !matches.length) return null;
         current = staff(rows[0], link.phone);
     } else if (link.account_kind === 'student') {
         const row = (await db.query(`SELECT id,name,phone,subject,extra_data FROM students WHERE id=$1 AND
@@ -146,7 +152,11 @@ async function identity(db, telegramId) {
         current = row && student(row, link.phone);
     } else {
         // Lead -> paid student is the only automatic identity migration; no staff escalation.
-        const candidates = await phoneCandidates(db, link.phone, false);
+        // Raqamsiz lid (bot orqali "faqat Telegram") hech qachon telefon bo'yicha o'quvchiga ulanmaydi —
+        // bo'sh raqam boshqa bo'sh raqamli yozuvlarga mos kelib qolmasin.
+        const candidates = link.phone ? await phoneCandidates(db, link.phone, false)
+            : (await db.query("SELECT id,name FROM leads WHERE id=$1 AND language='russian' AND status='sinov-darsida' AND deleted_at IS NULL", [link.account_id])).rows
+                .map(r => ({ id: r.id, kind: 'lead', role: 'trial', name: r.name, phone: '', language: 'russian' }));
         const own = candidates.filter(c => c.kind === 'student' || c.id === link.account_id);
         if (!own.length) return null;
         current = policy.choose(own);
@@ -174,7 +184,7 @@ async function setSession(db, telegramId, state) {
         ON CONFLICT(telegram_id) DO UPDATE SET state=EXCLUDED.state,expires_at=EXCLUDED.expires_at`, [String(telegramId), JSON.stringify(state)]);
 }
 async function enqueue(db, { key, targetKind = 'private', targetId, role = '', method = 'sendMessage', payload, account, notBefore = new Date() }) {
-    if (!['sendMessage','sendPhoto','sendVideo','sendVoice','sendDocument','answerCallbackQuery','editMessageReplyMarkup','unbanChatMember'].includes(method)) throw policy.error(400, 'Bot usuli noto‘g‘ri');
+    if (!['sendMessage','sendPhoto','sendVideo','sendVoice','sendAudio','sendDocument','answerCallbackQuery','editMessageReplyMarkup','unbanChatMember'].includes(method)) throw policy.error(400, 'Bot usuli noto‘g‘ri');
     if (!['private','group'].includes(targetKind) || !key || key.length > 200) throw policy.error(400, 'Xabar manzili noto‘g‘ri');
     if (targetKind === 'private' && !policy.telegramId(String(targetId))) throw policy.error(400, 'Telegram foydalanuvchisi noto‘g‘ri');
     const envelope = { ...payload, ...(account ? { _account: { kind: account.kind, id: account.id } } : {}) };
@@ -221,4 +231,4 @@ async function unlinkOwnAdmin(db, actor, input = {}) {
     await audit(db, actor.id, 'self-telegram-unlinked', actor.id, { before, currentPhone: number });
     return { ok: true, requiresOwnContact: true };
 }
-module.exports = { SCHEMA, initSchema, staff, student, phoneCandidates, audit, linkContact, identity, session, setSession, enqueue, callback, settings, currentAdmin, ownAdminLink, unlinkOwnAdmin };
+module.exports = { SCHEMA, USER_SQL, initSchema, staff, student, phoneCandidates, audit, linkContact, identity, session, setSession, enqueue, callback, settings, currentAdmin, ownAdminLink, unlinkOwnAdmin };

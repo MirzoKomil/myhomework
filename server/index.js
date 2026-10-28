@@ -226,6 +226,8 @@ app.use('/api/domwork/marketing', require('./routes/domworkMarketing')({pool:crm
 app.use('/api/target-ads', require('./routes/targetAds'));
 app.use('/api/archive', require('./routes/archive'));
 app.use('/api/staff-lifecycle', require('./routes/staffLifecycle'));
+app.use('/api/domwork/staff-telegram', require('./routes/staffTelegram')({pool:crmDb.pool,runtime:domworkBot,
+    authRequired:require('./middleware/auth').authRequired}));
 app.use('/api/domwork/student-telegram', require('./routes/studentTelegram')({pool:crmDb.pool,runtime:domworkBot,
     authRequired:require('./middleware/auth').authRequired}));
 app.use('/api/domwork/bot', domworkBotRouter({ pool: crmDb.pool, runtime: domworkBot,

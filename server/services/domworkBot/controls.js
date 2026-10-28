@@ -54,6 +54,32 @@ function settingsInput(body, previous) {
         }
         if(out[period+'AwardsEnabled'] && !out[key])throw fail(400,'Mukofot mezonini avval tanlang');
     }
+    // Lid voronkasi sozlamalari (materiallar botda "#voronka <kalit>" orqali yuklanadi).
+    if (Object.hasOwn(body,'funnelEnabled')) { if (typeof body.funnelEnabled !== 'boolean') throw fail(400,'Sozlama boolean bo‘lsin'); out.funnelEnabled = body.funnelEnabled; }
+    for (const [key,min,max] of [['discountPercent',0,50],['discountHours',1,336],['salesSlaMinutes',5,240]]) {
+        if (Object.hasOwn(body,key)) {
+            const n = Number(body[key]);
+            if (!Number.isInteger(n) || n < min || n > max) throw fail(400,`${key}: ${min}–${max} oralig‘idagi butun son`);
+            out[key] = n;
+        }
+    }
+    if (Object.hasOwn(body,'salesHours')) {
+        if (!/^([01]\d|2[0-3]):[0-5]\d-([01]\d|2[0-3]):[0-5]\d$/.test(body.salesHours)) throw fail(400,'Ish vaqti 09:00-21:00 shaklida bo‘lsin');
+        out.salesHours = body.salesHours;
+    }
+    if (Object.hasOwn(body,'companyInfo')) {
+        if (typeof body.companyInfo !== 'string' || body.companyInfo.length > 300) throw fail(400,'Kompaniya ma’lumoti 300 belgidan oshmasin');
+        out.companyInfo = body.companyInfo.trim();
+    }
+    if (Object.hasOwn(body,'funnelTestimonials')) {
+        const t = body.funnelTestimonials || {}, value = {};
+        for (const k of ['A','B']) {
+            const url = String(t[k] || '').trim();
+            if (url && !/^https:\/\/t\.me\/[A-Za-z0-9_]{4,64}\/\d{1,9}$/.test(url)) throw fail(400,'O‘quvchi fikri — kanal posti havolasi (https://t.me/domwork_natijalari/123)');
+            if (url) value[k] = url;
+        }
+        out.funnelTestimonials = value;
+    }
     for(const key of ['courseMedia','platformMedia','resultsMedia']) {
         if(Object.hasOwn(body,key)) out[key]=body[key]?contentInput(body[key]):null;
     }

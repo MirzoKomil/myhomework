@@ -355,6 +355,49 @@
     }
     const tog = (key, ch, on, locked, label) => `<label class="ss-tog"><input type="checkbox" data-pref="${esc(key)}" data-ch="${ch}" ${on ? 'checked' : ''} ${locked ? 'disabled' : ''} aria-label="${esc(label)}"><i></i></label>`;
     function browserName() { const ua = navigator.userAgent; return /Edg\//.test(ua) ? 'Edge' : /OPR\//.test(ua) ? 'Opera' : /Chrome\//.test(ua) ? 'Chrome' : /Firefox\//.test(ua) ? 'Firefox' : /Safari\//.test(ua) ? 'Safari' : 'Brauzer'; }
+    // ── @Domworkuz_bot'ni ulash: bir martalik havola + QR, Telegramda Start, shu yerda tasdiqlash ──
+    const TGL = { open: false, st: null, link: null, timer: null, seq: 0, err: '' };
+    const tgApi = (path, body) => apiFetch('/api/domwork/staff-telegram' + path, body ? { method: 'POST', body: JSON.stringify(body) } : {});
+    function tgStop() { clearInterval(TGL.timer); TGL.timer = null; TGL.link = null; TGL.st = null; TGL.err = ''; }
+    function tgDraw(body) {
+        const box = body.querySelector('#ssTgl'); if (!box) return tgStop();
+        const req = TGL.st?.request, claimed = req && !req.expired && req.state === 'claimed' && req.telegram;
+        const expired = !TGL.link || (req && (req.expired || req.state === 'cancelled'));
+        const qr = TGL.link?.qr;
+        box.innerHTML = `<div class="ss-tgl-in">
+            ${qr && !expired ? `<svg class="ss-tgl-qr" viewBox="-2 -2 ${qr.size + 4} ${qr.size + 4}" shape-rendering="crispEdges" role="img" aria-label="@Domworkuz_bot ulash QR kodi"><rect x="-2" y="-2" width="${qr.size + 4}" height="${qr.size + 4}" fill="#fff"/><path d="${esc(qr.path)}" fill="#0B1220"/></svg>` : ''}
+            <div class="ss-tgl-tx">
+              <ol class="ss-tgl-steps"><li>Telefon kamerasi bilan QR'ni skanerlang yoki "Telegramda ochish"ni bosing</li><li>Botda <b>Start</b> tugmasini bosing</li><li>Shu yerda ismingiz chiqadi — tasdiqlang</li></ol>
+              <p class="ss-mt">${TGL.err ? esc(TGL.err) : claimed ? `Telegram: <b>${esc(req.telegram.name || 'Nomsiz')}</b>${req.telegram.username ? ' · @' + esc(req.telegram.username) : ''}. Bu sizning hisobingizmi?` : expired ? 'Havola muddati tugadi (5 daqiqa).' : 'Telegramda Start bosilishi kutilmoqda…'}</p>
+              <div class="ss-acts">${claimed
+                ? '<button type="button" class="ss-btn ss-btn--sm ss-btn--pri" data-tgl-ok>Ha, bu mening Telegramim</button><button type="button" class="ss-btn ss-btn--sm" data-tgl-new>Yo\'q, qaytadan</button>'
+                : expired ? '<button type="button" class="ss-btn ss-btn--sm ss-btn--pri" data-tgl-new>Yangi havola</button>'
+                : `<a class="ss-btn ss-btn--sm ss-btn--pri" href="${esc(TGL.link.url)}" target="_blank" rel="noopener">Telegramda ochish</a>`}</div>
+            </div></div>`;
+        box.querySelector('[data-tgl-new]')?.addEventListener('click', () => tgCreate(body));
+        box.querySelector('[data-tgl-ok]')?.addEventListener('click', async e => {
+            e.currentTarget.disabled = true;
+            try { await tgApi('/confirm', { requestId: req.id, telegramId: req.telegram.id }); tgStop(); TGL.open = false; NP.data = await api('/notify/prefs'); drawNotif(body); toast('Telegram ulandi — botda menyu ochildi'); }
+            catch (err) { TGL.err = err.message; tgDraw(body); }
+        });
+    }
+    async function tgPoll(body, seq) {
+        try { const st = await tgApi(''); if (seq !== TGL.seq) return; TGL.st = st;
+            if (st.linked) { tgStop(); TGL.open = false; NP.data = await api('/notify/prefs'); drawNotif(body); return; } }
+        catch (e) { if (seq === TGL.seq) TGL.err = e.message; }
+        if (seq === TGL.seq) tgDraw(body);
+    }
+    async function tgCreate(body) {
+        const seq = ++TGL.seq; TGL.err = '';
+        try { TGL.link = await tgApi('', {}); TGL.st = { request: TGL.link.request }; }
+        catch (e) { TGL.link = null; TGL.err = e.message; }
+        if (seq !== TGL.seq) return;
+        tgDraw(body);
+        clearInterval(TGL.timer);
+        // Faqat panel ko'rinib turganda tekshiramiz; boshqa bo'limga o'tilsa #ssTgl yo'qoladi va to'xtaydi.
+        TGL.timer = setInterval(() => { if (!document.getElementById('ssTgl')) return tgStop(); if (!document.hidden) tgPoll(body, seq); }, 3000);
+    }
+    function tgStart(body) { if (TGL.link && !TGL.err) tgDraw(body); else tgCreate(body); }
     function drawNotif(body) {
         const d = NP.data, q = d.quiet || { from: '22:00', to: '08:00' }, tg = d.channels.telegram;
         const hasSoon = d.groups.some(g => g.items.some(i => !i.live));
@@ -366,15 +409,17 @@
         body.innerHTML = head('Bildirishnomalar · qaysi hodisa, qaysi kanal') + `<div class="ss-col">
           <section class="ss-card" aria-labelledby="ssKH"><header class="ss-ch"><h3 id="ssKH">Kanallar</h3></header>
             <div class="ss-pad ss-chans">
-              <div class="ss-chan"><b>Telegram bot</b><small>${tg.username ? esc(tg.username) + ' · profilda kiritilgan' : 'Telegram profilda kiritilmagan'}</small><i class="ss-pill warn" title="${esc(tg.note)}">Hali ulanmagan</i></div>
+              <div class="ss-chan"><b>Telegram bot</b>${tg.botLinked
+                ? `<small>@Domworkuz_bot · CRM akkauntingizga ulangan</small><i class="ss-pill ok">${ICON.check} Ulangan</i><button type="button" class="ss-btn ss-btn--sm ss-btn--ghost" data-tg-unlink>Uzish</button>`
+                : `<small>@Domworkuz_bot · telefon raqami mos kelishi shart emas</small><button type="button" class="ss-btn ss-btn--sm ss-btn--pri" data-tg-link aria-expanded="${TGL.open}">${TGL.open ? 'Yopish' : 'Ulash'}</button>`}</div>
               <div class="ss-chan"><b>Brauzer</b><small>${browserName()} · shu qurilma</small><i class="ss-pill ok">${ICON.check} Faol</i></div>
               <div class="ss-chan"><b>Tinch soatlar</b>${NP.editQuiet ? `<div class="ss-qt"><input type="time" id="ssQf" value="${esc(q.from)}" aria-label="Boshlanishi"> – <input type="time" id="ssQt" value="${esc(q.to)}" aria-label="Tugashi"></div>
                 <div class="ss-acts"><button type="button" class="ss-btn ss-btn--sm" data-q-cancel>Bekor</button><button type="button" class="ss-btn ss-btn--sm ss-btn--pri" data-q-save>Saqlash</button></div>`
                 : `<small>${esc(q.from)} – ${esc(q.to)} · faqat shoshilinch</small><button type="button" class="ss-btn ss-btn--sm" data-q-edit>O'zgartirish</button>`}</div>
-            </div></section>
+            </div>${TGL.open && !tg.botLinked ? '<div class="ss-pad ss-tgl" id="ssTgl" aria-live="polite"></div>' : ''}</section>
           <section class="ss-card" aria-labelledby="ssNH"><header class="ss-ch"><h3 id="ssNH">Nimalar haqida xabar beriladi</h3><button type="button" class="ss-btn ss-btn--sm" data-reset>Standartga qaytarish</button></header>
             <div class="ss-tw"><table class="ss-tbl ss-tbl--np"><thead><tr><th scope="col">Hodisa</th><th scope="col">Telegram</th><th scope="col">Brauzer</th></tr></thead><tbody>${groups}</tbody></table></div>
-            <p class="ss-note ss-mt">O'zgarish darhol saqlanadi. ${esc(note)} Telegram bot hali ulanmagan — Telegram tanlovi va tinch soatlar saqlanadi, bot ulanganda qo'llanadi.${hasSoon ? ' "Tez orada" — xabar manbasi keyingi yangilanishda ulanadi; kalit ishlaydi, tanlovingiz hozirdan saqlanadi.' : ''}</p></section></div>`;
+            <p class="ss-note ss-mt">O'zgarish darhol saqlanadi. ${esc(note)} ${tg.botLinked ? 'Bot ulangan. Bildirishnomalarni Telegramga yuborish keyingi yangilanishda yoqiladi — tanlovlaringiz saqlanadi.' : 'Telegram tanlovi va tinch soatlar saqlanadi — botni ulang, yuborish yoqilganda qo\'llanadi.'}${hasSoon ? ' "Tez orada" — xabar manbasi keyingi yangilanishda ulanadi; kalit ishlaydi, tanlovingiz hozirdan saqlanadi.' : ''}</p></section></div>`;
         body.querySelectorAll('[data-pref]').forEach(inp => inp.addEventListener('change', async () => {
             const k = inp.dataset.pref, ch = inp.dataset.ch;
             try { NP.data = await api('/notify/prefs', { method: 'PUT', body: { types: { [k]: { [ch]: inp.checked } } } }); window.staffNotify?.refresh(); }
@@ -383,6 +428,12 @@
         body.querySelector('[data-reset]')?.addEventListener('click', async () => {
             try { NP.data = await api('/notify/prefs', { method: 'PUT', body: { reset: true } }); drawNotif(body); toast('Standart sozlamalar tiklandi'); window.staffNotify?.refresh(); } catch (e) { toast(e.message, 4000); }
         });
+        body.querySelector('[data-tg-link]')?.addEventListener('click', () => { TGL.open = !TGL.open; if (!TGL.open) tgStop(); drawNotif(body); });
+        body.querySelector('[data-tg-unlink]')?.addEventListener('click', async () => {
+            if (!confirm('Telegram botdan uzilsinmi? Qayta ulash uchun yana "Ulash" tugmasini bosasiz.')) return;
+            try { await tgApi('/unlink', {}); NP.data = await api('/notify/prefs'); drawNotif(body); toast('Telegram uzildi'); } catch (e) { toast(e.message, 4000); }
+        });
+        if (TGL.open && !tg.botLinked) tgStart(body);
         body.querySelector('[data-q-edit]')?.addEventListener('click', () => { NP.editQuiet = true; drawNotif(body); });
         body.querySelector('[data-q-cancel]')?.addEventListener('click', () => { NP.editQuiet = false; drawNotif(body); });
         body.querySelector('[data-q-save]')?.addEventListener('click', async () => {

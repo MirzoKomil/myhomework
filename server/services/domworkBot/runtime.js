@@ -86,6 +86,8 @@ function createRuntime({ pool, crm, env = process.env, redisFactory, telegramFac
                 if(mark) return false;
             }
             if (Date.now() - new Date(row.created_at).getTime() > 15 * 60000 && !row.payload._automation) return false;
+            // Lid voronkasi (mehmonlar): o'z qoidalari — funnelEnabled, bloklanmagan, shart bajarilmagan.
+            if (row.payload._guest) return require('./funnel').deliverable(db, row);
             if (row.target_kind === 'private') {
                 if (!row.role) return ['sendMessage','answerCallbackQuery'].includes(row.method) && !row.payload._automation;
                 const identity = await store.identity(db, row.target_id);
@@ -96,7 +98,7 @@ function createRuntime({ pool, crm, env = process.env, redisFactory, telegramFac
             }
             // Binding + settings are rechecked at delivery, not just when queued.
             const settings = (await store.settings(db)).data;
-            if (!settings.groupNotificationsEnabled) return false;
+            if (!settings.groupNotificationsEnabled && !(row.payload._funnel && settings.funnelEnabled === true)) return false;
             const found = (await db.query(`SELECT id,chat_id,type,teacher_id FROM domwork_learning_groups WHERE chat_id=$1 AND NOT archived AND verified_at IS NOT NULL
                 UNION ALL SELECT id,chat_id,type,NULL FROM domwork_bot_groups WHERE chat_id=$1 AND active`, [row.target_id])).rows;
             if (found.length !== 1 || (row.payload._binding && row.payload._binding!==found[0].id)
@@ -136,6 +138,9 @@ function createRuntime({ pool, crm, env = process.env, redisFactory, telegramFac
             await call(row.method, payload);
             await queue.settle(pool, row.id, 'sent');
         } catch (error) {
+            // Mehmon botni bloklagan bo'lsa — keyingi voronka xabarlari to'xtaydi.
+            if (row.payload._guest && Number(error?.response?.error_code) === 403)
+                await pool.query('UPDATE domwork_bot_visitors SET blocked_at=NOW() WHERE telegram_id=$1', [row.target_id]).catch(() => {});
             const result = queue.failure(error);
             await queue.settle(pool, row.id, result.state, result.reason, result.seconds);
         }
