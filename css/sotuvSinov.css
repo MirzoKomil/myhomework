@@ -1,0 +1,113 @@
+/* Sotuvning sinov oqimi (js/sotuvSinov.js) — SotuvSinov, SotuvHolatlar, SotuvJadval.
+   Blok ranglari Dars jadvali v2 tokenlaridan (css/scheduleV2.css: --sv-*, .k-*), yorug' va tungi rejimda. */
+body.ss-page-open .content-main > .tab-content { display: none !important; }
+.ss-page { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 0 40px; gap: 20px; }
+.ss-page .sv-back { display: inline-block; margin-bottom: 6px; font-size: 13px; }
+.ss-hpill { align-self: flex-end; white-space: normal; }
+.ss-lay { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 20px; align-items: start; }
+.ss-main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+/* Chap panel: lid va parametrlar */
+.ss-aside { min-width: 0; }
+.ss-lead { padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; }
+.ss-who { gap: 12px; align-items: center; }
+.ss-nm { font-weight: 800; font-size: 16px; }
+.ss-wish { background: var(--sv-un-row); border: 1px solid var(--sv-un-bd); border-radius: 12px; padding: 10px 12px; font-size: 13px; line-height: 1.6; color: var(--text); }
+.ss-wish select { font-weight: 700; font-size: 13px; font-family: inherit; border: 1px solid var(--kb-input-border); border-radius: 8px; background: var(--surface, #fff); color: var(--text); min-height: 30px; padding: 0 6px; }
+.ss-wish input { display: block; width: 100%; box-sizing: border-box; margin-top: 6px; font-weight: 500; font-size: 13px; font-family: inherit; border: 1px solid var(--kb-input-border); border-radius: 8px; background: var(--surface, #fff); color: var(--text); min-height: 34px; padding: 0 10px; }
+.ss-lf { display: flex; flex-direction: column; gap: 8px; }
+.ss-lf > span { font-size: 12px; font-weight: 700; color: var(--text-secondary, #4B5563); }
+.ss-lf > span.sc-mt { font-weight: 500; font-size: 12px; }
+.ss-lf select { font-weight: 600; font-size: 14px; font-family: inherit; color: var(--text); border: 1px solid var(--kb-input-border); border-radius: 12px; min-height: 44px; padding: 0 12px; background: var(--surface, #fff); width: 100%; }
+.ss-chips2 { display: flex; flex-wrap: wrap; gap: 6px; }
+.ss-ch2 { border: 1px solid var(--kb-input-border); border-radius: 10px; background: var(--surface, #fff); min-height: 40px; padding: 0 10px; font-weight: 700; font-size: 13px; font-family: inherit; color: var(--text); display: inline-flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.15; cursor: pointer; }
+.ss-ch2 small { font-size: 10px; color: var(--text-secondary, #4B5563); font-weight: 600; }
+.ss-ch2[aria-pressed="true"] { border-color: var(--kb-primary); background: var(--kb-info-bg); color: var(--kb-info-fg); }
+.ss-ch2[aria-pressed="true"] small { color: var(--kb-info-fg); }
+.ss-ch2--d { padding: 0 4px; }
+.ss-ch2--d input { border: 0; background: transparent; color: var(--text); font-weight: 600; font-size: 12px; font-family: inherit; width: 118px; min-height: 36px; }
+.ss-full { display: flex; flex-wrap: nowrap; } .ss-full button { flex: 1; padding: 0 6px; min-height: 36px; }
+.ss-ph { border-top: 1px solid var(--sv-line); padding-top: 14px; }
+.ss-alt { list-style: none; margin: 0; padding: 0 0 6px; }
+.ss-alt li { display: flex; align-items: center; gap: 10px; padding: 10px 18px; border-top: 1px solid var(--sv-grid); font-size: 13px; }
+.ss-alt li:first-child { border-top: 0; }
+.ss-alt li b { display: block; font-size: 13px; } .ss-alt li small { display: block; font-size: 12px; color: var(--text-secondary, #4B5563); }
+.ss-alt li.sc-mt { display: block; }
+/* Holatlar (SotuvHolatlar) */
+.ss-st { padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+.ss-st .sv-ph { padding: 0; }
+.ss-toast { display: flex; gap: 12px; align-items: flex-start; border-radius: 14px; padding: 12px 14px; font-size: 13px; line-height: 1.5; border: 1px solid transparent; }
+.ss-toast b { display: block; }
+.ss-ti { font-weight: 800; flex: none; width: 16px; text-align: center; }
+.ss-toast--bad { background: var(--sv-no-bg); border-color: var(--sv-no-bd); color: var(--text); } .ss-toast--bad .ss-ti, .ss-toast--bad b { color: var(--sv-no-fg); }
+.ss-toast--warn { background: var(--sv-un-row); border-color: var(--sv-un-bd); color: var(--text); } .ss-toast--warn .ss-ti, .ss-toast--warn b { color: var(--sv-un-fg); }
+.ss-toast--info { background: var(--sv-wait-bg); border-color: var(--sv-wait-bd); color: var(--text); } .ss-toast--info .ss-ti { color: var(--sv-wait-fg); }
+.ss-lab { font-size: 13px; }
+.ss-alt2 { display: flex; flex-wrap: wrap; gap: 8px; }
+.ss-ch3 { border: 1px solid var(--kb-input-border); border-radius: 10px; background: var(--surface, #fff); min-height: 40px; padding: 0 12px; font-weight: 700; font-size: 13px; font-family: inherit; color: var(--text); cursor: pointer; }
+.ss-ch3:hover { border-color: var(--kb-primary); }
+.ss-ch3[aria-pressed="true"] { border-color: var(--kb-primary); background: var(--kb-info-bg); color: var(--kb-info-fg); }
+.ss-big { min-height: 44px; font-weight: 700; }
+.ss-slots { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.ss-sl5 { border: 1.5px dashed var(--sv-free-bd); background: var(--sv-free-bg); color: var(--sv-free-fg); border-radius: 10px; min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; font-family: inherit; cursor: pointer; padding: 4px 6px; text-align: center; }
+.ss-sl5 small { font-size: 11px; font-weight: 600; }
+.ss-sl5:hover { background: var(--sv-ok-bg); }
+.ss-sl5.is-no { border: 1px solid var(--sv-line); background: var(--sv-cls-bg); color: var(--sv-off-fg); cursor: default; }
+/* "Kim bo'sh?" to'ri */
+.ss-gcard .sv-bh h2 { font-size: 16px; }
+.ss-gw { overflow-x: auto; }
+.ss-g3 { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 860px; table-layout: fixed; font-size: 11px; }
+.ss-g3 th { font-size: 11px; font-weight: 700; color: var(--text-secondary, #4B5563); padding: 8px 0; text-align: left; border-bottom: 1px solid var(--sv-line); white-space: nowrap; overflow: visible; }
+.ss-g3 th.pref, .ss-g3 th.hh.pref { background: var(--sv-un-row); }
+.ss-g3 .ss-tn { width: 168px; padding: 8px 14px; text-align: left; position: sticky; left: 0; background: var(--surface, #fff); z-index: 2; border-right: 1px solid var(--sv-line); }
+.ss-g3 th.ss-tn .ss-nm { font-size: 13px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ss-g3 .ss-op { font-size: 11px; color: var(--sv-free-fg); font-weight: 700; }
+.ss-g3 td.gc { height: 46px; padding: 2px; border-bottom: 1px solid var(--sv-grid); text-align: center; font-weight: 700; color: var(--sv-cls-fg); box-sizing: border-box; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.ss-g3 td.gc[class*="st-"], .ss-g3 td.fx { border-radius: 8px; }
+.ss-g3 td.st-b { background: var(--sv-cls-bg); background-clip: content-box; }
+.ss-g3 td.st-c { background: var(--sv-off-b); background-clip: content-box; }
+.ss-g3 td.st-o, .ss-g3 td.st-p { background: repeating-linear-gradient(135deg, var(--sv-off-a) 0 6px, var(--sv-off-b) 6px 7px); background-clip: content-box; }
+.ss-g3 td.st-p { opacity: .6; }
+.ss-g3 td.st-t { background: var(--sv-tr-bg); color: var(--sv-tr-fg); background-clip: content-box; }
+.ss-g3 td.st-h { background: var(--sv-un-row); color: var(--sv-un-fg); background-clip: content-box; outline: 1.5px dashed var(--sv-un-bd); outline-offset: -3px; font-size: 12px; }
+.ss-g3 td.st-mh, .ss-g3 td.st-sel2 { background: var(--kb-primary); background-clip: content-box; opacity: .55; }
+.ss-g3 td.fx { background: var(--sv-free-bg); background-clip: content-box; outline: 1px dashed var(--sv-free-bd); outline-offset: -3px; opacity: .55; }
+.ss-g3 td.f button { width: 100%; height: 40px; border-radius: 8px; border: 1.5px dashed var(--sv-free-bd); background: var(--sv-free-bg); color: var(--sv-free-fg); font-weight: 800; cursor: pointer; font-size: 14px; padding: 0; }
+.ss-g3 td.f button:hover { background: var(--sv-ok-bg); }
+.ss-g3 td.f button:focus-visible { outline: 3px solid var(--kb-ring); outline-offset: 1px; }
+.ss-g3 td.f button:disabled { cursor: wait; }
+.ss-g3 td.sel button { background: var(--kb-primary); border: 2px solid var(--kb-primary-hover); color: #fff; }
+.ss-sq-sel { background: var(--kb-primary); }
+.ss-sq-b { background: var(--sv-cls-bg); border: 1px solid var(--sv-cls-bd) !important; }
+/* Tanlov paneli */
+.ss-sbar { display: flex; align-items: center; gap: 16px; background: #0B1220; color: #fff; border-radius: 16px; padding: 14px 18px; flex-wrap: wrap; }
+.ss-sbar .ss-st { flex: 1; min-width: 240px; padding: 0; display: block; }
+.ss-sbar b { font-size: 16px; }
+.ss-sm { font-size: 12.5px; color: #CBD5E1; margin-top: 2px; line-height: 1.45; }
+.ss-sbar .ss-gh { background: transparent; color: #fff; border-color: rgba(255,255,255,.35); min-height: 44px; }
+.ss-sbar .ss-gh:hover { background: rgba(255,255,255,.08); }
+.ss-sbar [data-left] { font-variant-numeric: tabular-nums; font-weight: 700; color: #fff; }
+html.rd[data-theme="dark"] .ss-sbar { background: #050912; border: 1px solid var(--border, rgba(255,255,255,.1)); }
+/* Sotuv · Dars jadvali */
+.sv-kpis.ss-k4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.ss-busy { background: var(--sv-cls-bg); border-color: var(--sv-cls-bd) !important; color: var(--sv-cls-fg); font-weight: 600 !important; }
+.sv-hr.ss-rmine .sv-hl { box-shadow: inset 3px 0 0 var(--kb-primary); }
+.ss-mine { box-shadow: 0 0 0 1.5px var(--sv-tr-bd); }
+.sv-hb.k-free { cursor: pointer; }
+.ss-rule { margin: 0; font-size: 13px; line-height: 1.6; padding-top: 4px; }
+/* Lid kartasidagi sinov holati (trialWorkflow PHASES) */
+.lead-card-trial-status[data-tone="ok"] { color: var(--kb-ok-fg); }
+.lead-card-trial-status[data-tone="warn"] { color: var(--kb-warn-fg); }
+.lead-card-trial-status[data-tone="bad"] { color: var(--kb-bad-fg); }
+.lead-card-trial-status[data-tone="info"] { color: var(--kb-info-fg); }
+.lead-card-trial-status[data-tone] { font-weight: 700; }
+/* Moslashuv */
+@media (max-width: 1180px) { .ss-lay { grid-template-columns: 1fr; } .sv-kpis.ss-k4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 760px) {
+  .ss-hpill { align-self: flex-start; }
+  .ss-slots { grid-template-columns: 1fr 1fr; }
+  .ss-g3 .ss-tn { width: 120px; padding: 8px 10px; }
+  .ss-g3 { min-width: 780px; }
+  .ss-sbar { gap: 10px; } .ss-sbar .sc-btn { flex: 1; }
+  .ss-big { white-space: normal; text-align: center; }
+}
+.ss-jhint { white-space: normal; }

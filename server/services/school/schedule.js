@@ -197,6 +197,8 @@ async function book(db, actor, input, now = new Date()) {
     if (kind !== 'trial' && !input.studentId) throw fail(400, 'O\'quvchi tanlanmagan');
     await lockTeacher(db, teacherId);
     const ctx = await loadContext(db, { teacherIds: [teacherId], from: dates[0], to: dates[dates.length - 1], now });
+    // Sinov qayta qo'yilayotganda lidning hozirgi sinovi o'ziga xalaqit bermaydi (u yangi vaqt bilan almashadi).
+    if (kind === 'trial' && input.leadId) ctx.excludeLeads.add(String(input.leadId));
     for (const d of dates) checkSlot(dayView(ctx, teacherId, d), kind, start, start + duration);
     if (kind === 'trial') {
         const dup = await db.query(`SELECT 1 FROM school_bookings WHERE lead_id=$1 AND kind='trial' AND status IN ('hold','pending','confirmed')
