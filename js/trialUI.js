@@ -413,9 +413,11 @@
         const st = { time: times.find(x => x.date > today() || (x.date === today() && x.min > nowMin())) || times[0] || { date: today(), min: Math.ceil((nowMin() + 60) / 30) * 30, src: 'custom' }, teacherId: '', views: null, err: '' };
         const rejectedBy = req.state === 'rejected' ? String(req.teacherId || '') : '';
         const whenTxt = t => `${(rel(t.date) || dShort(t.date)).toLowerCase()}, ${hm(t.min)}`;
-        const drw = U().openDrawer({ title: 'Ustoz biriktirish', sub: esc(`${lead.name} · ${base ? whenTxt(base) : 'vaqt yo\'q'} · ${dur} daq · ${langLabel(lang)}`), body: '<div data-as-body><p class="sc-mt">Yuklanmoqda…</p></div>',
-            foot: '<button type="button" class="sc-btn" data-close>Bekor</button><button type="button" class="sc-btn sc-btn--pri" data-as-save disabled>Biriktirish</button>' });
+        // Markazdagi oyna (Oynalar dizayni) — js/schoolUI.js openDialog, css/oquvchilar.css (.oqm-*).
+        const drw = U().openDialog({ title: 'Ustoz biriktirish', sub: esc(`${lead.name} · ${base ? whenTxt(base) : 'vaqt yo\'q'} · ${dur} daq · ${langLabel(lang)}`), body: '<div data-as-body class="oqm-db" style="padding:0"><p class="oqm-mt">Yuklanmoqda…</p></div>',
+            foot: '<button type="button" class="oqm-btn" data-close>Bekor</button><button type="button" class="oqm-btn is-pri" data-as-save disabled>Biriktirish</button>' });
         const body = drw.querySelector('[data-as-body]'), save = drw.querySelector('[data-as-save]');
+        U().loadStaffAvatars?.().then(() => { if (st.views) draw(); });
         async function load() {
             st.views = null; draw();
             try {
@@ -436,29 +438,32 @@
         }
         function draw() {
             const past = Date.parse(isoOf(st.time.date, st.time.min)) <= Date.now();
-            const timeChips = `<div class="tl-opt tl-wrap" role="group" aria-label="Vaqt">${times.map((t, i) => `<button type="button" class="tl-ob" data-as-time="${i}" aria-pressed="${t.date === st.time.date && t.min === st.time.min}">${esc(whenTxt(t))}${t.src === 'teacher' ? ' · ustoz taklifi' : ''}</button>`).join('')}</div>`;
-            let list = '<p class="sc-mt">Ustozlar yuklanmoqda…</p>';
+            let list = '<p class="oqm-mt">Ustozlar yuklanmoqda…</p>';
             if (st.views) {
                 const rowsT = (st.teachers || []).map(t => ({ t, s: statusOf(t), rej: rejectedBy === t.id && base && st.time.date === base.date && st.time.min === base.min }))
                     // Ustoz taklif qilgan vaqt tanlansa — o'sha ustoz birinchi va oldindan tanlangan.
                     .sort((x, y) => (y.s.ok && !y.rej) - (x.s.ok && !x.rej) || (st.time.src === 'teacher') * ((y.t.id === rejectedBy) - (x.t.id === rejectedBy)) || x.t.name.localeCompare(y.t.name));
                 if (st.time.src === 'teacher' && !st.teacherId && rowsT.some(r => r.t.id === rejectedBy && r.s.ok)) st.teacherId = rejectedBy;
+                // Birinchi bo'sh ustoz oldindan tanlanadi (Oynalar dizayni); admin boshqasini tanlashi mumkin.
+                if (!st.teacherId) { const f = rowsT.find(r => r.s.ok && !r.rej); if (f) st.teacherId = f.t.id; }
                 list = st.err ? `<div class="sc-err">${esc(st.err)}</div>` : rowsT.map(({ t, s, rej }) => {
                     const v = st.views.find(x => x.teacherId === t.id);
                     const lessons = (v?.items || []).filter(i => i.kind === 'lesson').length;
-                    const open = (v?.trialFree || []).map(f => `${hm(f.start)}–${hm(f.end)}`).slice(0, 2).join(', ');
+                    // Tanlangan vaqtni o'z ichiga olgan ochiq oraliq (dizayndagidek: "17:30–19:00 sinovga ochiq").
+                    const fr = (v?.trialFree || []).find(f => f.start <= st.time.min && st.time.min + dur <= f.end);
+                    const open = fr ? `${hm(fr.start)}–${hm(fr.end)}` : (v?.trialFree || []).map(f => `${hm(f.start)}–${hm(f.end)}`).slice(0, 2).join(', ');
                     const ok = s.ok && !rej;
-                    return `<label class="tl-as${ok ? '' : ' is-off'}"><input type="radio" name="tlAsT" value="${esc(t.id)}"${ok ? '' : ' disabled'}${st.teacherId === t.id ? ' checked' : ''}>
-                        ${staffAv(t.id, 36)}<span class="tl-inf"><b>${esc(t.name)}</b><small>${ok || !s.why ? `${(rel(st.time.date) || dShort(st.time.date)).toLowerCase()} ${lessons} dars${open ? ` · ${open} sinovga ochiq` : ''}` : esc(s.why)}</small></span>
-                        ${rej ? '<span class="sc-pill sc-pill--mute">Rad etgan</span>' : ok ? `<span class="sc-pill sc-pill--ok">${hm(st.time.min)} ochiq</span>` : '<span class="sc-pill sc-pill--mute">Band</span>'}</label>`;
-                }).join('') || '<p class="sc-mt">Bu tilda faol ustoz topilmadi.</p>';
+                    return `<label class="oqm-opt${ok ? '' : ' is-off'}"><input type="radio" name="tlAsT" value="${esc(t.id)}"${ok ? '' : ' disabled'}${st.teacherId === t.id ? ' checked' : ''}><span class="oqm-radio" aria-hidden="true"></span>
+                        <span class="oqm-av">${U().staffAvatar ? U().staffAvatar({ id: t.id, avatar: t.avatar || person(t.id)?.avatar }, 36) : ''}</span><span class="oqm-tx"><span class="oqm-nm">${esc(t.name)}</span><span class="oqm-mt">${ok || !s.why ? `${(rel(st.time.date) || dShort(st.time.date)).toLowerCase()} ${lessons} dars${open ? ` · ${open} sinovga ochiq` : ''}` : esc(s.why)}</span></span>
+                        ${rej ? '<span class="oqm-pill is-mute">Rad etgan</span>' : ok ? `<span class="oqm-pill is-ok">${hm(st.time.min)} ochiq</span>` : '<span class="oqm-pill is-no">Band</span>'}</label>`;
+                }).join('') || '<p class="oqm-mt">Bu tilda faol ustoz topilmadi.</p>';
             }
-            body.innerHTML = `<p class="tl-note">Lid tanlagan vaqt: <b>${base ? esc(whenTxt(base)) : '—'}</b>. ${times.some(t => t.src === 'teacher') ? 'Rad etgan ustoz boshqa vaqtlarni ham taklif qilgan. ' : ''}Tanlangan vaqtda sinovga ochiq ustozlar tepada (umumiy jadvaldan).</p>
-                ${times.length > 1 ? `<div class="tl-ml">Vaqt</div>${timeChips}` : ''}
-                <details class="tl-custom"${st.time.src === 'custom' ? ' open' : ''}><summary>Boshqa vaqt</summary><div class="tl-row"><input type="date" data-as-date value="${st.time.date}" min="${today()}"><input type="time" data-as-tm step="1800" value="${hm(st.time.min)}"><button type="button" class="sc-btn sc-btn--sm" data-as-apply>Ko'rish</button></div></details>
-                ${past ? '<div class="sc-err">Bu vaqt o\'tib ketgan — boshqa vaqt tanlang (lid bilan kelishilgan).</div>' : ''}
-                <div class="tl-ml">${esc(whenTxt(st.time))} · ${dur} daq</div><div class="tl-aslist" role="radiogroup" aria-label="Ustoz">${list}</div>
-                <p class="sc-mt sc-mtop">Ustoz o'z kabinetida tasdiqlaydi. Tasdiqlamaguncha holat "Tasdiq kutilmoqda", vaqt boshqalarga band ko'rinadi.${(Number(lead.paymentOnboarding?.trialDaysCount) || 1) > 1 ? ` ${lead.paymentOnboarding.trialDaysCount} kunlik sinov — keyingi kunlar ham shu ustozda tekshiriladi.` : ''}</p>`;
+            body.innerHTML = `<div class="oqm-box">Lid tanlagan vaqt: <b>${base ? esc(whenTxt(base)) : '—'}</b>. ${times.some(t => t.src === 'teacher') ? 'Rad etgan ustoz boshqa vaqtlarni ham taklif qilgan. ' : ''}Bu vaqtda sinovga ochiq ustozlar tepada (umumiy jadvaldan).</div>
+                ${times.length > 1 ? `<div class="oqm-chips" role="group" aria-label="Vaqt">${times.map((t, i) => `<button type="button" class="oqm-chip" data-as-time="${i}" aria-pressed="${t.date === st.time.date && t.min === st.time.min}">${esc(whenTxt(t))}${t.src === 'teacher' ? ' · ustoz taklifi' : ''}</button>`).join('')}</div>` : ''}
+                ${past ? '<div class="oqm-err" role="alert">Bu vaqt o\'tib ketgan — boshqa vaqt tanlang (lid bilan kelishilgan).</div>' : ''}
+                ${st.time.src === 'lead' ? '' : `<div class="oqm-fl">${esc(whenTxt(st.time))} · ${dur} daq</div>`}<div class="oqm-db" style="padding:0" role="radiogroup" aria-label="Ustoz">${list}</div>
+                <details class="oqm-more"${st.time.src === 'custom' ? ' open' : ''}><summary>Boshqa vaqt</summary><div class="oqm-row"><input type="date" data-as-date value="${st.time.date}" min="${today()}" aria-label="Sana"><input type="time" data-as-tm step="1800" value="${hm(st.time.min)}" aria-label="Vaqt"><button type="button" class="oqm-btn" data-as-apply>Ko'rish</button></div></details>
+                <div class="oqm-rule">Ustoz o'z kabinetida tasdiqlaydi. Tasdiqlamaguncha holat "Tasdiq kutilmoqda", vaqt boshqalarga band ko'rinadi.${(Number(lead.paymentOnboarding?.trialDaysCount) || 1) > 1 ? ` ${lead.paymentOnboarding.trialDaysCount} kunlik sinov — keyingi kunlar ham shu ustozda tekshiriladi.` : ''}</div>`;
             save.disabled = past || !st.teacherId || !st.views || !(st.teachers || []).some(t => t.id === st.teacherId && statusOf(t).ok);
             body.querySelectorAll('[data-as-time]').forEach(b => b.onclick = () => { st.time = times[Number(b.dataset.asTime)]; st.teacherId = ''; load(); });
             body.querySelectorAll('input[name=tlAsT]').forEach(i => i.onchange = () => { st.teacherId = i.value; save.disabled = past; });

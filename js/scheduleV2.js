@@ -505,14 +505,18 @@
                 <button type="button" class="sc-link sv-oldl" data-old>Sinovlar, qoplashlar va so'rovlar ro'yxati →</button></div></section>
             </div></div>`;
         const mkPanel = body.querySelector('[data-mk]');
+        const myStudents = () => (getItem(STORAGE_KEYS.students, []) || []).filter(s => s.teacherId === tid && !s.isStaffDemo && !s.frozen && s.status !== 'inactive');
+        const missed = d.missed || [];
+        // O'quvchilar ro'yxati yoki kartasidan "Qoplash darsi qo'yish" → shu o'quvchi uchun bo'sh joy tanlanadi.
+        const forSt = st.makeupFor ? myStudents().find(x => x.id === st.makeupFor) : null;
+        if (st.makeupFor && !forSt) st.makeupFor = null;
         const mkIdle = () => {
-            mkPanel.innerHTML = `<header class="sv-bh"><h2>Qoplash darsini rejalashtirish</h2></header><div class="sv-ed"><p class="sc-mt">Jadvaldagi bo'sh joyni bosing — qoldirilgan darsni shu oy ichida o'tib berasiz. Qo'shaloq dars (keyingi darsda) uchun quyidagi tugma.</p>
-              <button type="button" class="sc-btn" data-mknew>+ Qoplash darsi</button></div>`;
-            mkPanel.querySelector('[data-mknew]').onclick = () => SS().makeupDrawer(reload);
+            mkPanel.innerHTML = `<header class="sv-bh"><h2>Qoplash darsini rejalashtirish</h2></header><div class="sv-ed">${forSt
+                ? `<p class="sc-mt"><b>${esc(forSt.name)}</b> uchun jadvaldagi bo'sh joyni bosing — qoldirilgan darsni shu oy ichida o'tib berasiz.</p><button type="button" class="sc-btn" data-mkoff>Bekor qilish</button>`
+                : '<p class="sc-mt">Jadvaldagi bo\'sh joyni bosing — qoldirilgan ("Kelmadi") darsni shu oy ichida o\'tib berasiz. Qo\'shaloq dars Davomatda "Keldi · 2 dars" bilan belgilanadi.</p>'}</div>`;
+            mkPanel.querySelector('[data-mkoff]')?.addEventListener('click', () => { st.makeupFor = null; reload(); });
         };
         mkIdle();
-        const myStudents = () => (getItem(STORAGE_KEYS.students, []) || []).filter(s => s.teacherId === tid && !s.frozen && s.status !== 'inactive');
-        const missed = d.missed || [];
         // Tanlangan vaqt jadvalda ko'k blok bo'lib ko'rinadi (dizayndagidek).
         const pickBox = (dl, a, b2, label) => {
             body.querySelectorAll('.sv-pickbox').forEach(x => x.remove());
@@ -520,50 +524,59 @@
             const y = m => `calc(var(--hh) * ${((m - range[0]) / 60).toFixed(4)})`;
             dl.insertAdjacentHTML('beforeend', `<div class="sv-b pick sv-pickbox" style="top:${y(a)};height:calc(var(--hh) * ${((b2 - a) / 60).toFixed(4)} - 3px)">${esc(label)}<small>${hm(a)}–${hm(b2)}</small></div>`);
         };
+        // Bosilgan joy atrofida dars boshlanishi (15 daqiqaga yaxlitlanadi, bo'sh oraliqdan chiqmaydi).
+        const snap = (s, e, dur, at) => { const hi = e - dur; const t = Math.max(Math.ceil(s / 15) * 15, Math.min(Math.round((at - dur / 2) / 15) * 15, Math.floor(hi / 15) * 15)); return t < s || t > hi ? s : t; };
+        // UstozJadval dizayni: bo'sh joy → shu panelda o'quvchi va qoldirilgan dars tanlanadi. Vaqt — bosilgan joydan
+        // (15 daqiqaga yaxlitlanadi). Qoldirilgan dars faqat "Kelmadi" ro'yxatidan, sana qo'lda kiritilmaydi.
         const mkSlot = (el, date, s, e, clickMin) => {
             const dl = el.closest('.sv-dl');
             const list = myStudents();
-            const open = new Set(missed.filter(m => !m.makeup && m.date.slice(0, 7) === date.slice(0, 7)).map(m => m.studentId));
-            list.sort((a, b) => open.has(b.id) - open.has(a.id) || a.name.localeCompare(b.name));
-            const sid0 = list[0]?.id;
+            if (!list.length) { mkPanel.innerHTML = '<header class="sv-bh"><h2>Qoplash darsini rejalashtirish</h2></header><p class="sc-mt sv-pp">Faol o\'quvchingiz yo\'q</p>'; return; }
+            const openOf = id => missed.filter(m => m.studentId === id && !m.makeup && m.date.slice(0, 7) === date.slice(0, 7));
+            const fitsOf = x => e - s >= (Number(x.lessonDuration) || 30);
+            list.sort((a, b) => (openOf(b.id).length > 0 && fitsOf(b)) - (openOf(a.id).length > 0 && fitsOf(a)) || (openOf(b.id).length > 0) - (openOf(a.id).length > 0) || a.name.localeCompare(b.name));
             const draw = sid => {
                 const stu = list.find(x => x.id === sid);
                 const dur = Number(stu?.lessonDuration) || 30;
-                const times = []; for (let m = Math.ceil(s / 15) * 15; m + dur <= e; m += 15) times.push(m);
-                const pick = times.reduce((p, m) => (m <= clickMin ? m : p), times[0]);
-                const ms = missed.filter(m => m.studentId === sid && m.date.slice(0, 7) === date.slice(0, 7));
+                const fits = e - s >= dur;
+                const t0 = fits ? snap(s, e, dur, clickMin) : s;
+                const ms = missed.filter(m => m.studentId === sid && m.date.slice(0, 7) === date.slice(0, 7) && m.date <= today());
                 const firstOpen = ms.find(m => !m.makeup);
+                const ld = Number(stu.lessonDayOfWeek), lessonDay = ([1, 3, 5].includes(ld) ? [1, 3, 5] : [2, 4, 6].includes(ld) ? [2, 4, 6] : [ld]).includes(U().wd(date));
                 mkPanel.innerHTML = `<header class="sv-bh"><h2>Qoplash darsini rejalashtirish</h2></header><div class="sv-ed">
-                  <div class="sv-slot"><b>${DAY_FULL[U().wd(date) - 1]}, ${dm(date)} · ${hm(s)}–${hm(e)}</b><small>bo'sh · ${times.length ? `${dur} daq sig'adi` : `${dur} daq sig'maydi`}</small></div>
-                  <label class="sc-fd"><span>O'quvchi</span><select name="st">${list.map(x => `<option value="${esc(x.id)}"${x.id === sid ? ' selected' : ''}>${esc(x.name)} · ${Number(x.lessonDuration) || 30} daq${open.has(x.id) ? ' · qoplanmagan dars bor' : ''}</option>`).join('')}</select></label>
-                  ${times.length ? `<label class="sc-fd"><span>Vaqt</span><select name="tm">${times.map(m => `<option value="${m}"${m === pick ? ' selected' : ''}>${hm(m)} – ${hm(m + dur)}</option>`).join('')}</select></label>` : ''}
-                  <div class="sv-fl"><span>Qaysi qoldirilgan dars o'rniga?</span>${ms.length ? ms.map(m => `<label class="sv-rb${m.makeup ? ' is-off' : ''}"><input type="radio" name="miss" value="${m.date}"${m === firstOpen ? ' checked' : ''}${m.makeup ? ' disabled' : ''}><i></i><span><b>${dm(m.date)}, ${DAY_FULL[U().wd(m.date) - 1]}</b><small>${m.makeup ? `allaqachon ${m.makeup.status === 'approved' ? 'qoplangan' : 'rejalashtirilgan'}${m.makeup.heldDate ? ' · ' + dm(m.makeup.heldDate) : ''}` : 'kelmagan · hali qoplanmagan'}</small></span></label>`).join('')
-                    : '<p class="sc-mt">Bu oyda "kelmadi" deb belgilangan dars topilmadi. Sanani qo\'lda kiriting:</p>'}
-                    <label class="sc-fd"><span>${ms.length ? 'Yoki boshqa sana' : 'Qoldirilgan dars sanasi'}</span><input type="date" name="missd" min="${date.slice(0, 8)}01" max="${today()}"></label></div>
-                  <div class="sc-note">O'quvchiga ilovada eslatma boradi. Vaqt band bo'ladi: sotuv bu yerga sinov qo'ya olmaydi. Dars o'tgach "O'tildi" desangiz, admin tasdiqlaydi va dars maoshingizga qo'shiladi.</div>
-                  <div class="sv-btns"><button type="button" class="sc-btn" data-cancel>Bekor</button><button type="button" class="sc-btn sc-btn--pri" data-save${times.length ? '' : ' disabled'}>Rejaga qo'yish</button></div></div>`;
-                const tmSel = mkPanel.querySelector('[name=tm]');
-                const showPick = () => tmSel ? pickBox(dl, Number(tmSel.value), Number(tmSel.value) + dur, `${first(stu?.name)} · qoplash`) : pickBox(null);
-                showPick(); tmSel?.addEventListener('change', showPick);
+                  <div class="sv-slot"><b>${DAY_FULL[U().wd(date) - 1]}, ${dm(date)} · ${fits ? `${hm(t0)}–${hm(t0 + dur)}` : `${hm(s)}–${hm(e)}`}</b><small>${lessonDay ? '' : `${esc(first(stu?.name))}ning dars kuni emas · `}bo'sh · ${fits ? `${dur} daq sig'adi` : `${dur} daq sig'maydi`}</small></div>
+                  <label class="sc-fd"><span>O'quvchi</span><select name="st">${list.map(x => `<option value="${esc(x.id)}"${x.id === sid ? ' selected' : ''}>${esc(x.name)} · ${Number(x.lessonDuration) || 30} daq</option>`).join('')}</select></label>
+                  <div class="sv-fl"><span>Qaysi qoldirilgan dars o'rniga?</span>${ms.length ? ms.map(m => `<label class="sv-rb${m.makeup ? ' is-off' : ''}"${m.makeup ? ' aria-disabled="true"' : ''}><input type="radio" name="miss" value="${m.date}"${m === firstOpen ? ' checked' : ''}${m.makeup ? ' disabled' : ''}><i></i><span><b>${dm(m.date)}, ${DAY_FULL[U().wd(m.date) - 1]}</b><small>${m.makeup ? `allaqachon ${m.makeup.status === 'approved' ? 'qoplangan' : m.makeup.status === 'review' ? 'qoplangan · tekshiruvda' : 'rejalashtirilgan'}${m.makeup.heldDate ? ' · ' + dm(m.makeup.heldDate) : ''}` : 'kelmagan · hali qoplanmagan'}</small></span></label>`).join('')
+                    : '<p class="sc-mt">Bu oyda bu o\'quvchida "Kelmadi" deb belgilangan dars yo\'q — qoplash faqat haqiqiy kelmagan dars uchun.</p>'}</div>
+                  <div class="sc-note">O'quvchiga ilovada eslatma boradi. Vaqt band bo'ladi: sotuv bu yerga sinov qo'ya olmaydi. Dars o'tgach "Keldi" desangiz, admin tasdiqlaydi va dars maoshingizga qo'shiladi.</div>
+                  <div class="sv-btns"><button type="button" class="sc-btn" data-cancel>Bekor</button><button type="button" class="sc-btn sc-btn--pri" data-save${fits && firstOpen ? '' : ' disabled'}>Rejaga qo'yish</button></div></div>`;
+                if (fits) pickBox(dl, t0, t0 + dur, `${first(stu?.name)} · qoplash`); else pickBox(null);
                 mkPanel.querySelector('[name=st]').onchange = ev => draw(ev.target.value);
                 mkPanel.querySelector('[data-cancel]').onclick = () => { pickBox(null); mkIdle(); };
                 mkPanel.querySelector('[data-save]').onclick = async ev => {
-                    const missedDate = mkPanel.querySelector('[name=missd]').value || mkPanel.querySelector('[name=miss]:checked')?.value;
+                    const missedDate = mkPanel.querySelector('[name=miss]:checked')?.value;
                     if (!missedDate) return U().errBox(mkPanel, 'Qaysi dars o\'rniga ekanini tanlang');
                     U().busy(ev.target, true);
-                    try { await U().post('/bookings', { kind: 'makeup', teacherId: stu.teacherId, studentId: stu.id, date, time: hm(Number(mkPanel.querySelector('[name=tm]').value)), duration: dur, missedDate }); U().toast('Qoplash rejalashtirildi'); reload(); }
+                    try { await U().post('/bookings', { kind: 'makeup', teacherId: stu.teacherId, studentId: stu.id, date, time: hm(t0), duration: dur, missedDate }); st.makeupFor = null; U().toast('Qoplash rejaga qo\'yildi'); reload(); }
                     catch (err) { U().busy(ev.target, false); U().errBox(mkPanel, err.message); }
                 };
             };
-            if (!list.length) { mkPanel.innerHTML = '<header class="sv-bh"><h2>Qoplash darsini rejalashtirish</h2></header><p class="sc-mt sv-pp">Faol o\'quvchingiz yo\'q</p>'; return; }
-            draw(sid0);
+            draw(list[0].id);
             mkPanel.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
         };
         body.querySelectorAll('.sv-dl [data-free]').forEach(b => b.onclick = ev => {
             const [s, e] = b.dataset.free.split('|').map(Number);
             const r = b.getBoundingClientRect();
             const clickMin = s + Math.round(((ev.clientY - r.top) / Math.max(1, r.height)) * (e - s));
-            mkSlot(b, b.closest('[data-date]').dataset.date, s, e, clickMin);
+            const date = b.closest('[data-date]').dataset.date;
+            // Oldindan tanlangan o'quvchi (ro'yxat/karta) → "Qoplash darsi" oynasi (Oynalar dizayni).
+            if (forSt) {
+                const dur = Number(forSt.lessonDuration) || 30;
+                if (e - s < dur) return U().toast(`Bu bo'sh joyga ${dur} daqiqa sig'maydi`);
+                const t0 = snap(s, e, dur, clickMin);
+                return SS().makeupDrawer(reload, { studentId: forSt.id, date, start: t0 });
+            }
+            mkSlot(b, date, s, e, clickMin);
         });
         body.querySelectorAll('[data-st]').forEach(b => b.onclick = () => U().openStudent(b.dataset.st));
         body.querySelectorAll('[data-tr]').forEach(b => b.onclick = () => typeof switchTab === 'function' && switchTab('trial-lessons'));

@@ -1,0 +1,325 @@
+{
+ "n": 71,
+ "topic_uz": "O'zlashtirma gap: Он сказа́л, что… / спроси́л, где… / …ли / попроси́л, что́бы…",
+ "scene": "In a home kitchen, an Uzbek wife holds her phone after a call and tells her husband the message, while he listens holding a shopping bag.",
+ "dialogs": [
+  {
+   "id": "L71-d1",
+   "title_ru": "Что сказа́ла ма́ма?",
+   "title_uz": "Onam nima dedi?",
+   "intro_uz": "Birinchi dialog. Nigora hozir qaynonasi bilan telefonda gaplashdi. Abdulaziz onasi nima deganini so'raydi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Абдулази́з",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Абдулази́з",
+     "ru": "Нигора́, кто звони́л? Ма́ма?",
+     "uz": "Nigora, kim qo'ng'iroq qildi? Onammi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Да. Она́ сказа́ла, что прие́дет к нам в суббо́ту.",
+     "uz": "Ha. Shanba kuni bizga kelishini aytdi."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Отли́чно! А что ещё она́ сказа́ла?",
+     "uz": "Zo'r! Yana nima dedi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Она́ спроси́ла, когда́ ты возвраща́ешься с рабо́ты.",
+     "uz": "U ishdan qachon qaytishingni so'radi."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "А почему́ она́ спроси́ла?",
+     "uz": "Nega so'radi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Она́ спроси́ла, смо́жешь ли ты встре́тить её на вокза́ле.",
+     "uz": "U seni vokzalda kutib ololasanmi, deb so'radi."
+    },
+    {
+     "who": "Абдулази́з",
+     "ru": "Коне́чно, встре́чу. Что-то ещё?",
+     "uz": "Albatta, kutib olaman. Yana nimadir bormi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Да, она́ попроси́ла, что́бы ты ей позвони́л ве́чером.",
+     "uz": "Ha, kechqurun unga qo'ng'iroq qilishingni so'radi."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Ona qachon keladi?",
+     "opts": [
+      "yakshanba kuni",
+      "ertaga",
+      "shanba kuni"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Ona Abdulazizdan nimani so'radi?",
+     "opts": [
+      "uni vokzalda kutib ola oladimi",
+      "pul bormi",
+      "ishda qanday"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Ona nima qilishni iltimos qildi?",
+     "opts": [
+      "non olishni",
+      "kechqurun qo'ng'iroq qilishni",
+      "uyga kelishni"
+     ],
+     "a": 1
+    }
+   ],
+   "swap": [
+    {
+     "base": "в суббо́ту",
+     "alts": [
+      "в воскресе́нье",
+      "за́втра",
+      "на сле́дующей неде́ле"
+     ]
+    },
+    {
+     "base": "что́бы ты ей позвони́л",
+     "alts": [
+      "что́бы ты купи́л хлеб",
+      "что́бы ты не опа́здывал",
+      "что́бы ты взял маши́ну"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Nigora o'rniga gapiring: kimdir sizga qo'ng'iroq qildi — u nima dedi, nima so'radi va nima iltimos qildi? «Он сказа́л, что…» deb boshlang."
+  },
+  {
+   "id": "L71-d2",
+   "title_ru": "Что сказа́л нача́льник?",
+   "title_uz": "Boshliq nima dedi?",
+   "intro_uz": "Ikkinchi dialog. Dilnoza ishga kech keldi. Bobur unga boshliqning gaplarini yetkazadi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    },
+    {
+     "name": "Бобу́р",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Дильно́за",
+     "ru": "Бобу́р, приве́т! Нача́льник что-нибудь говори́л?",
+     "uz": "Bobur, salom! Boshliq biror narsa dedimi?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Да. Он сказа́л, что собра́ние бу́дет в три часа́.",
+     "uz": "Ha. Majlis soat uchda bo'lishini aytdi."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Поня́тно. А он спра́шивал, где я?",
+     "uz": "Tushunarli. Men qayerdaligimni so'radimi?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Да, он спроси́л, почему́ ты опозда́ла.",
+     "uz": "Ha, nega kech qolganingni so'radi."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Ой! Что ты отве́тил?",
+     "uz": "Voy! Nima deb javob berding?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Я отве́тил, что ты была́ у врача́.",
+     "uz": "Shifokorda bo'lganingni aytdim."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Спаси́бо! А что ещё?",
+     "uz": "Rahmat! Yana nima?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Он спроси́л, гото́вы ли докуме́нты, и попроси́л, что́бы ты их принесла́.",
+     "uz": "Hujjatlar tayyormi, deb so'radi va ularni olib kelishingni iltimos qildi."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Majlis soat nechada bo'ladi?",
+     "opts": [
+      "ikkida",
+      "uchda",
+      "to'rtda"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Bobur boshliqqa nima dedi?",
+     "opts": [
+      "Dilnoza shifokorda bo'lganini",
+      "Dilnoza kasal ekanini",
+      "Dilnoza uyda ekanini"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Boshliq Dilnozadan nimani so'radi?",
+     "opts": [
+      "qo'ng'iroq qilishni",
+      "majlisga kelmaslikni",
+      "hujjatlarni olib kelishni"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "в три часа́",
+     "alts": [
+      "в два часа́",
+      "по́сле обе́да",
+      "за́втра у́тром"
+     ]
+    },
+    {
+     "base": "ты была́ у врача́",
+     "alts": [
+      "ты была́ в ба́нке",
+      "ты стоя́ла в про́бке",
+      "у тебя́ боле́ла голова́"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Bobur o'rniga gapiring: hamkasbingizga boshliq nima deganini, nima so'raganini va nima iltimos qilganini yetkazing."
+  },
+  {
+   "id": "L71-d3",
+   "title_ru": "Я слы́шал, что…",
+   "title_uz": "Eshitdimki…",
+   "intro_uz": "Uchinchi dialog. Timur va Nigora ishda gaplashyapti. Timur Anton haqida yangilik eshitdi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Тиму́р",
+     "gender": "m"
+    },
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Тиму́р",
+     "ru": "Нигора́, я слы́шал, что Анто́н перее́хал в но́вую кварти́ру.",
+     "uz": "Nigora, eshitishimcha, Anton yangi kvartiraga ko'chibdi."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Да, он мне вчера́ сказа́л, что кварти́ра о́чень больша́я.",
+     "uz": "Ha, u menga kecha kvartira juda katta ekanini aytdi."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "А ты зна́ешь, где она́?",
+     "uz": "Uning qayerdaligini bilasanmi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Он сказа́л, что она́ в це́нтре, ря́дом с метро́.",
+     "uz": "Markazda, metro yonida ekanini aytdi."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Здо́рово! А он нас приглаша́ет?",
+     "uz": "Zo'r! U bizni taklif qilyaptimi?"
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Да! Он спроси́л, свобо́ден ли ты в суббо́ту.",
+     "uz": "Ha! U shanba kuni bo'shmisan, deb so'radi."
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Свобо́ден. Переда́й ему́, что я приду́.",
+     "uz": "Bo'shman. Unga kelishimni yetkaz."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Хорошо́. Он попроси́л, что́бы мы не опа́здывали!",
+     "uz": "Yaxshi. U kech qolmasligimizni iltimos qildi!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Anton qayerga ko'chdi?",
+     "opts": [
+      "boshqa shaharga",
+      "yangi kvartiraga",
+      "Moskvaga"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Antonning kvartirasi qayerda?",
+     "opts": [
+      "markazda, metro yonida",
+      "shahar chetida",
+      "bank yonida"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Anton nimani iltimos qildi?",
+     "opts": [
+      "sovg'a olib kelishni",
+      "erta kelishni",
+      "kech qolmaslikni"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "в но́вую кварти́ру",
+     "alts": [
+      "в но́вый дом",
+      "в Ташке́нт",
+      "в друго́й го́род"
+     ]
+    },
+    {
+     "base": "в суббо́ту",
+     "alts": [
+      "в воскресе́нье",
+      "в пя́тницу ве́чером",
+      "за́втра"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Nigora o'rniga gapiring: do'stingiz haqida eshitgan yangilikni «Я слы́шал(а), что…», «Он сказа́л, что…» bilan yetkazing."
+  }
+ ]
+}
