@@ -408,12 +408,10 @@
     }
     // "Tugatgan" holati (kursni tugatganlar): server /inactive javobida state==='finished'.
     const isFinished = x => x && (x.status === 'finished' || x.state === 'finished' || x.finished === true);
+    // Kurs oxiri: boshlanishdan 90 kalendar kun (AcademicRules.COURSE_DAYS) — schoolUI.courseEnd bilan bir qoida.
     function courseEnd(s) {
         if (!s.startDate) return null;
-        const days = patternDays(s.lessonDayOfWeek); if (!days.length) return null;
-        let d = String(s.startDate).slice(0, 10), n = 0;
-        for (let i = 0; i < 220 && n < 36; i++, d = U().addDays(d, 1)) if (days.includes(U().wd(d)) && ++n === 36) return d;
-        return null;
+        return U().addDays(String(s.startDate).slice(0, 10), (window.AcademicRules?.COURSE_DAYS || 90) - 1);
     }
     // 1-urinish rangi (ro'yxat va panelda bir xil).
     const pctCls = v => (v == null ? '' : v < 65 ? 'lo' : v < 75 ? 'mid' : 'hi');

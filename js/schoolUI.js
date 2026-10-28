@@ -355,12 +355,13 @@
         return null;
     }
     const T_PATTERN = day => ([1, 3, 5].includes(Number(day)) ? [1, 3, 5] : [2, 4, 6].includes(Number(day)) ? [2, 4, 6] : [Number(day) || 1]);
-    // Kurs oxiri: 36-jonli dars sanasi (haftasiga 3 dars) — kurs boshidan jadval bo'yicha.
-    function courseEnd(c) {
-        if (!c.startDate || !c.schedule?.day) return null;
-        const days = T_PATTERN(c.schedule.day); let d = String(c.startDate).slice(0, 10), n = 0;
-        for (let i = 0; i < 200 && n < 36; i++, d = addDays(d, 1)) if (days.includes(wd(d)) && ++n === 36) return d;
-        return null;
+    // Kurs oxiri: boshlanishdan 90 kalendar kun (AcademicRules.COURSE_DAYS; 01.10 → 29.12) + muzlatilgan kunlar.
+    function courseEnd(c, { withFreeze = true } = {}) {
+        if (!c.startDate) return null;
+        const start = String(c.startDate).slice(0, 10);
+        const frozen = !withFreeze ? 0 : (c.statuses || []).filter(x => x.status === 'frozen' && x.from && x.to && String(x.to) >= String(x.from))
+            .reduce((n, x) => n + Math.round((Date.parse(String(x.to).slice(0, 10)) - Date.parse(String(x.from).slice(0, 10))) / 86400000) + 1, 0);
+        return addDays(start, (window.AcademicRules?.COURSE_DAYS || 90) - 1 + frozen);
     }
     const ddmm = d => (d ? `${d.slice(8, 10)}.${d.slice(5, 7)}` : '');
 
@@ -658,9 +659,10 @@
             delete _page.data.pay; openStudent(c.id, _page.tab || 'tolov');
         }, 500);
     }
-    // Kurs oylari: boshlanishdan 36-jonli dargacha bo'lgan kalendar oylari; to'lovlar ketma-ket oylarni yopadi.
+    // Kurs oylari: boshlanishdan kurs oxirigacha (90 kun, muzlatishsiz — muzlatish to'lov sanasini suradi, oy qo'shmaydi)
+    // bo'lgan kalendar oylari; to'lovlar ketma-ket oylarni yopadi.
     function payPlan(c, r) {
-        const price = Number(r.monthlyPrice) || 0, start = String(r.startDate || c.startDate || '').slice(0, 10), end = courseEnd(c);
+        const price = Number(r.monthlyPrice) || 0, start = String(r.startDate || c.startDate || '').slice(0, 10), end = courseEnd(c, { withFreeze: false });
         if (!price || !start) return null;
         const months = [];
         for (let d = start.slice(0, 7) + '-01'; d.slice(0, 7) <= (end || start).slice(0, 7) && months.length < 24; d = addMonths(d, 1)) months.push(d.slice(0, 7));
