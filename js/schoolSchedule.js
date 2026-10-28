@@ -19,7 +19,8 @@
     const state = { date: null, view: null, teacherId: null, duration: 30, lang: null };
     // Ingliz va rus tili jadvali alohida: admin/ROP tanlaydi, sotuv menejeri faqat o'z tilini ko'radi (server ham cheklaydi).
     const ownLang = () => (typeof getUserOwnLang === 'function' && getUserOwnLang()) || 'english';
-    const canPickLang = () => ['admin', 'boshliq', 'rop'].includes(role());
+    // Admin/boshliq ikkala tilni tanlaydi; ROP faqat bitta tilga biriktirilmagan bo'lsa (server ham cheklaydi).
+    const canPickLang = () => ['admin', 'boshliq'].includes(role()) || (role() === 'rop' && !(typeof getUserOwnLang === 'function' && getUserOwnLang()));
     const L = () => `&lang=${state.lang}`;
     const role = () => getCurrentUser()?.role || '';
     const isFull = () => ['admin', 'boshliq'].includes(role());
@@ -72,9 +73,13 @@
         state.lang ||= ownLang();
         if (!canPickLang()) state.lang = ownLang();
         const r = role();
-        state.view ||= r === 'teacher' ? 'mine' : isSales() && r !== 'rop' ? 'free' : r === 'rop' ? 'free' : 'day';
-        const tabs = isFull() ? [['day', 'Kun'], ['week', 'Ustoz haftasi'], ['requests', 'Ustozlar so\'rovlari'], ['makeups', 'Qoplash']]
-            : r === 'rop' ? [['free', 'Kim bo\'sh?'], ['day', 'Kun']] : r === 'teacher' ? [['mine', 'Mening haftam'], ['trials', 'Sinovlar va so\'rovlar']] : [['free', 'Kim bo\'sh?']];
+        const V2 = window.scheduleV2;
+        state.view ||= V2 && r !== 'sales_manager' ? V2.defaultView() : r === 'teacher' ? 'mine' : isSales() ? 'free' : 'day';
+        // Jadval v2 (js/scheduleV2.js): admin/ROP kun va ustoz haftasi, ustoz Kun/Hafta/Oy, yordamchi tavsiya jadvali.
+        // Sotuv menejeri ("Kim bo'sh?") va qolgan ro'yxatlar shu fayldagi eski ko'rinishda qoladi.
+        if (V2 && V2.owns(state.view)) return V2.render(root);
+        const tabs = isFull() ? [['day', 'Kun · ustozlar'], ['week', 'Hafta · bitta ustoz'], ['requests', 'So\'rovlar'], ['makeups', 'Qoplash']]
+            : r === 'rop' ? [['free', 'Kim bo\'sh?'], ['day', 'Kun · ustozlar'], ['week', 'Hafta · bitta ustoz']] : r === 'teacher' ? [['mine', V2 ? '← Jadval' : 'Mening haftam'], ['trials', 'Sinovlar va so\'rovlar']] : [['free', 'Kim bo\'sh?']];
         root.innerHTML = `<div class="sc-head"><div><h1>Dars jadvali</h1><p class="sc-sub">${r === 'teacher' ? 'Darslaringiz, sinovlar va qoplash · vaqtni so\'rov orqali o\'zgartirasiz' : isSales() ? 'Sinovga ochiq bo\'sh vaqtlar · boshqa o\'quvchilar ismi ko\'rinmaydi' : 'Bitta manba — hamma rolda bir xil · Asia/Tashkent'}</p></div>
             <div class="sc-row sc-wrap">${canPickLang() ? `<div class="sc-seg" role="group" aria-label="Yo'nalish"><button type="button" data-lang="english" aria-pressed="${state.lang === 'english'}">Ingliz tili</button><button type="button" data-lang="russian" aria-pressed="${state.lang === 'russian'}">Rus tili</button></div>` : r === 'teacher' ? '' : `<span class="sc-pill sc-pill--info">${state.lang === 'russian' ? 'Rus tili' : 'Ingliz tili'}</span>`}
             <div class="sc-seg" role="tablist">${tabs.map(([k, l]) => `<button type="button" role="tab" data-v="${k}" aria-pressed="${k === state.view}">${l}</button>`).join('')}</div></div></div><div data-body></div>`;
@@ -201,7 +206,8 @@
     // ── Sotuv / ROP: "Kim bo'sh?" ────────────────────────────────────────────
     async function freeView(body, reload) {
         const { api, esc, fmtDate } = U();
-        const d = await api(`/schedule?from=${state.date}&to=${state.date}${L()}`);
+        // ROP uchun ham "Kim bo'sh?" sotuvdagidek (ismlarsiz, "mening sinovim") — mode=free.
+        const d = await api(`/schedule?from=${state.date}&to=${state.date}${L()}&mode=free`);
         const tmap = new Map((d.teachers || []).map(t => [t.id, t]));
         const views = d.views.filter(v => v.work.length).sort((a, b) => (tmap.get(a.teacherId)?.name || '').localeCompare(tmap.get(b.teacherId)?.name || ''));
         const mine = views.flatMap(v => v.items.filter(i => i.mine).map(i => ({ ...i, teacherId: v.teacherId, date: v.date })));
@@ -269,10 +275,10 @@
         body.querySelector('[data-req]').onclick = () => teacherRequestDrawer(reload);
         body.querySelector('[data-mk]').onclick = () => makeupDrawer(reload);
     }
-    function teacherRequestDrawer(done) {
+    function teacherRequestDrawer(done, type = 'leave') {
         const { openDrawer, field, today, DAY_FULL } = U();
         const box = openDrawer({ title: 'Vaqtimni o\'zgartirish', sub: 'So\'rov admin tasdig\'iga boradi', body: `
-            <div class="sc-chips">${[['leave', 'Ta\'til / dam olish'], ['close', 'Vaqtni yopish'], ['open', 'Qo\'shimcha ochish']].map(([k, l], i) => `<label class="sc-chip"><input type="radio" name="type" value="${k}"${i === 0 ? ' checked' : ''}><span>${l}</span></label>`).join('')}</div>
+            <div class="sc-chips">${[['leave', 'Ta\'til / dam olish'], ['close', 'Vaqtni yopish'], ['open', 'Qo\'shimcha ochish']].map(([k, l]) => `<label class="sc-chip"><input type="radio" name="type" value="${k}"${k === type ? ' checked' : ''}><span>${l}</span></label>`).join('')}</div>
             <div class="sc-g2 sc-mtop">${field('Sana', `<input type="date" name="date" value="${today()}" min="${today()}">`)}${field('Har hafta (ixtiyoriy)', `<select name="weekday"><option value="">— faqat shu sana —</option>${DAY_FULL.map((d, i) => `<option value="${i + 1}">${d}</option>`).join('')}</select>`)}
             ${field('Boshlanish', '<input name="from" value="00:00">')}${field('Tugash', '<input name="to" value="24:00">')}</div>
             ${field('Sabab', '<textarea name="reason" rows="2"></textarea>')}`,
@@ -340,5 +346,5 @@
         body.querySelectorAll('[data-held]').forEach(b => b.onclick = async () => { try { await U().post(`/makeups/${b.dataset.held}/held`); U().toast('Tekshiruvga yuborildi'); reload(); } catch (e) { U().toast(e.message, 4000); } });
     }
 
-    window.schoolSchedule = { render, state, makeupDrawer };
+    window.schoolSchedule = { render, state, makeupDrawer, canPickLang, _: { overrideDrawer, hoursDrawer, teacherRequestDrawer } };
 })();

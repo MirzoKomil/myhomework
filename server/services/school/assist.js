@@ -157,4 +157,53 @@ function adviceFor(students, statusBy, date) {
     return students.filter(s => T.adviceDays(s.day).includes(wd) && S.statusOn(statusBy.get(s.id) || [], date) === 'active').map(s => s.id);
 }
 
-module.exports = { RATE, MONTH_CAP, MIN_MINUTES, CHANNELS, countMonth, mark, removeOwnToday, adminCorrect, monthReport, advanceMonth, isLocked, adviceFor };
+// Tavsiya jadvali (saqlanmaydi — har safar hisoblanadi): har faol o'quvchiga asosiy dars kunlari
+// oralig'ida (Se·Pa·Sh → Du·Ch·Ju) o'z dars vaqtida aloqa tavsiyasi. Belgilangan aloqa o'z vaqtida
+// ko'rinadi va shu kungi tavsiyaning o'rnini oladi. Jadvalni band qilmaydi, maosh hisobini o'zgartirmaydi.
+async function plan(db, { assistantIds = null, from, to, subject = null, now = new Date() }) {
+    const where = assistantIds ? 'assistant_teacher_id = ANY($1::text[])' : "COALESCE(assistant_teacher_id,'') <> ''";
+    const [stRows, statuses] = await Promise.all([
+        db.query(`SELECT id,name,subject,teacher_id,assistant_teacher_id,lesson_day_of_week,lesson_time,lesson_duration,extra_data FROM students WHERE ${where}`, assistantIds ? [assistantIds] : []),
+        db.query('SELECT * FROM school_student_status WHERE cancelled_at IS NULL')
+    ]);
+    const students = stRows.rows.map(S.studentRow).filter(s => !s.legacyInactive && s.assistantId && (!subject || (s.subject || 'english') === subject));
+    const ids = assistantIds ? assistantIds.map(String) : [...new Set(students.map(s => s.assistantId))];
+    const byId = new Map(students.map(s => [s.id, s]));
+    const statusBy = new Map();
+    for (const r of statuses.rows) { if (!statusBy.has(r.student_id)) statusBy.set(r.student_id, []); statusBy.get(r.student_id).push(r); }
+    // Hisob holati (hisoblandi / javob bermadi / ...) oy bo'yicha — countMonth bilan bir xil qoida.
+    const mFrom = T.monthBounds(from.slice(0, 7)).from, mTo = T.monthBounds(to.slice(0, 7)).to;
+    const contacts = ids.length ? (await db.query(`SELECT * FROM school_assist_contacts WHERE assistant_id = ANY($1::text[]) AND day BETWEEN $2 AND $3 AND removed_at IS NULL`,
+        [ids, mFrom, mTo])).rows.map(c => ({ ...c, day: S.dateStr(c.day) })) : [];
+    const statusOf = new Map();
+    for (const aid of ids) for (const m of new Set(contacts.map(c => c.day.slice(0, 7)))) {
+        const r = countMonth(contacts.filter(c => c.assistant_id === aid && c.day.slice(0, 7) === m));
+        for (const st of r.students) for (const it of st.items) statusOf.set(it.id, it.status);
+    }
+    const items = [];
+    const done = new Set();
+    for (const c of contacts.filter(c => c.day >= from && c.day <= to)) {
+        const s = byId.get(c.student_id);
+        if (!s && subject) continue;
+        const at = c.at_min != null ? Number(c.at_min) : (T.toMin(s?.time) ?? 9 * 60);
+        done.add(`${c.student_id}|${c.day}`);
+        items.push({ kind: 'contact', id: c.id, assistantId: c.assistant_id, studentId: c.student_id, studentName: s?.name || '', date: c.day, start: at,
+            end: at + Math.max(10, Number(c.minutes) || 0), channel: c.channel, minutes: Number(c.minutes) || 0, outcome: c.outcome, status: statusOf.get(c.id) || 'counted' });
+    }
+    const today = T.nowLocal(now).date;
+    for (const d of T.dateRange(from, to, 62)) {
+        const wd = T.weekday(d);
+        for (const s of students) {
+            if (s.day == null || !T.adviceDays(s.day).includes(wd) || done.has(`${s.id}|${d}`)) continue;
+            if (s.startDate && d < String(s.startDate).slice(0, 10)) continue;
+            const srows = statusBy.get(s.id) || [];
+            if ((!srows.length && s.legacyFrozen) || S.statusOn(srows, d) !== 'active') continue;
+            const start = T.toMin(s.time); if (start == null) continue;
+            items.push({ kind: 'advice', assistantId: s.assistantId, studentId: s.id, studentName: s.name, date: d, start, end: start + 15, past: d < today });
+        }
+    }
+    items.sort((a, b) => a.date.localeCompare(b.date) || a.start - b.start);
+    return { from, to, assistantIds: ids, items };
+}
+
+module.exports = { plan, RATE, MONTH_CAP, MIN_MINUTES, CHANNELS, countMonth, mark, removeOwnToday, adminCorrect, monthReport, advanceMonth, isLocked, adviceFor };
