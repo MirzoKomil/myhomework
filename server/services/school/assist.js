@@ -41,7 +41,7 @@ function countMonth(contacts) {
         else if (status === 'short') s.short++;
         else if (status === 'same_day') s.sameDay++;
         else s.extraText++;
-        s.items.push({ id: c.id, day, channel: c.channel, minutes: c.minutes, outcome: c.outcome, status, note: c.note || '' });
+        s.items.push({ id: c.id, day, at: c.at_min ?? null, channel: c.channel, minutes: c.minutes, outcome: c.outcome, status, note: c.note || '', corrected: !!c.correction_reason });
     }
     const students = [...byStudent.values()].map(({ days, textWeeks, ...rest }) => ({ ...rest, amount: rest.counted * RATE }));
     const counted = students.reduce((n, s) => n + s.counted, 0);
@@ -104,16 +104,26 @@ async function adminCorrect(db, actor, body, now = new Date()) {
         if (await isLocked(db, S.dateStr(c.day).slice(0, 7))) throw fail(409, 'Oy yakuniy tasdiqlangan — o\'zgartirib bo\'lmaydi');
         return (await db.query('UPDATE school_assist_contacts SET removed_at=NOW(), removed_by=$2, correction_reason=$3 WHERE id=$1 RETURNING *', [c.id, actor.id, reason])).rows[0];
     }
+    // Qatordan tuzatish (usul, vaqt, daqiqa yoki sana): eski yozuv o'chiriladi (tarixda qoladi), o'rniga yangisi — bitta tranzaksiyada.
+    let prev = null;
+    if (body.editId) {
+        prev = (await db.query('SELECT * FROM school_assist_contacts WHERE id=$1 AND removed_at IS NULL FOR UPDATE', [body.editId])).rows[0];
+        if (!prev) throw fail(404, 'Yozuv topilmadi yoki allaqachon tuzatilgan');
+        if (await isLocked(db, S.dateStr(prev.day).slice(0, 7))) throw fail(409, 'Oy yakuniy tasdiqlangan — o\'zgartirib bo\'lmaydi');
+        body = { ...body, studentId: prev.student_id, assistantId: prev.assistant_id, day: body.day || S.dateStr(prev.day) };
+    }
     const day = T.assertDate(body.day);
     if (await isLocked(db, day.slice(0, 7))) throw fail(409, 'Oy yakuniy tasdiqlangan — o\'zgartirib bo\'lmaydi');
     if (day > T.nowLocal(now).date) throw fail(400, 'Kelajak sanaga yozib bo\'lmaydi');
     const st = (await db.query('SELECT assistant_teacher_id FROM students WHERE id=$1', [body.studentId])).rows[0];
-    if (!st?.assistant_teacher_id) throw fail(400, 'O\'quvchida yordamchi yo\'q');
-    if (!CHANNELS[body.channel]) throw fail(400, 'Aloqa usulini tanlang');
+    if (!prev && !st?.assistant_teacher_id) throw fail(400, 'O\'quvchida yordamchi yo\'q');
+    const noAnswer = body.outcome === 'no_answer';
+    if (!noAnswer && !CHANNELS[body.channel]) throw fail(400, 'Aloqa usulini tanlang');
+    if (prev) await db.query('UPDATE school_assist_contacts SET removed_at=NOW(), removed_by=$2, correction_reason=$3 WHERE id=$1', [prev.id, actor.id, reason]);
     const { rows } = await db.query(`INSERT INTO school_assist_contacts (id,student_id,assistant_id,day,at_min,channel,minutes,note,outcome,created_by,correction_reason)
         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
-        [randomUUID(), body.studentId, body.assistantId || st.assistant_teacher_id, day, T.toMin(body.at), body.channel, Math.round(Number(body.minutes) || 0),
-            String(body.note || '').slice(0, 500), body.outcome === 'no_answer' ? 'no_answer' : 'contacted', actor.id, reason]);
+        [randomUUID(), body.studentId, body.assistantId || st?.assistant_teacher_id, day, T.toMin(body.at), noAnswer ? (CHANNELS[body.channel] ? body.channel : 'phone') : body.channel,
+            noAnswer ? 0 : Math.round(Number(body.minutes) || 0), String(body.note ?? prev?.note ?? '').slice(0, 500), noAnswer ? 'no_answer' : 'contacted', actor.id, reason]);
     if (body.requestId) await db.query(`UPDATE school_requests SET status='approved', decided_by=$2, decided_by_name=$3, decided_at=NOW() WHERE id=$1 AND status='new'`,
         [body.requestId, actor.id, actor.name || '']);
     return rows[0];

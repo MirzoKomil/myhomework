@@ -4171,6 +4171,14 @@ async function recordTeacherAttendance({ actor, teacherId, studentId, date, pres
                 await saveJsonData(client, 'liveGrades', allGrades);
             }
         }
+        // "Kelmadi" alohida saqlanadi (main_attendance faqat "Keldi"ni saqlaydi) — admin "Belgilanmagan" sonini aniq ko'radi.
+        // Maoshga ta'sir qilmaydi.
+        if (schoolSchema.state.ready) {
+            if (present) await client.query('DELETE FROM school_absences WHERE teacher_id=$1 AND student_id=$2 AND day=$3', [safeTeacherId, safeStudentId, date]);
+            else await client.query(`INSERT INTO school_absences (teacher_id, student_id, day, absent, marked_by) VALUES ($1,$2,$3,$4,$5)
+                ON CONFLICT (teacher_id, student_id, day) DO UPDATE SET absent=EXCLUDED.absent, marked_by=EXCLUDED.marked_by, marked_at=NOW()`,
+                [safeTeacherId, safeStudentId, date, present === false, String(actor?.id || '')]);
+        }
 
         result = {
             attendanceKey, attendanceType: teacher.type === 'yordamchi' ? 'assistant' : 'main',

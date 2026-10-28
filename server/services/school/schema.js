@@ -100,6 +100,13 @@ CREATE TABLE IF NOT EXISTS school_assist_months (
  month TEXT PRIMARY KEY, locked_at TIMESTAMPTZ, prelim_by TEXT, prelim_at TIMESTAMPTZ,
  objection_until DATE, final_at TIMESTAMPTZ, paid_at TIMESTAMPTZ
 );
+-- Asosiy ustoz "Kelmadi" belgisi. main_attendance faqat "Keldi"ni saqlaydi (kelmadi bo'lsa qator o'chiriladi),
+-- shuning uchun "kelmadi" va "belgilanmagan" farqi shu yerda: absent=true — kelmadi, absent=false — belgi olib tashlangan.
+-- Maosh hisobiga ta'sir qilmaydi (maosh faqat main_attendance present=1 va tasdiqlangan qoplashdan).
+CREATE TABLE IF NOT EXISTS school_absences (
+ teacher_id TEXT NOT NULL, student_id TEXT NOT NULL, day DATE NOT NULL, absent BOOLEAN NOT NULL DEFAULT TRUE,
+ marked_by TEXT NOT NULL DEFAULT '', marked_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), PRIMARY KEY (teacher_id, student_id, day)
+);
 -- Ustozning o'quvchi bo'yicha so'rovi ("Adminga so'rov" — muzlatish, ustoz, jadval): 'student' turi.
 DO $$ BEGIN
  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='school_requests_type_check' AND pg_get_constraintdef(oid) LIKE '%student%') THEN
