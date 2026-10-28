@@ -104,10 +104,19 @@
         if (after.status !== 'sinov-darsida' || !changed) {
             return { trialRequest: previous, trialHistory: Array.isArray(before?.trialHistory) ? before.trialHistory : [] };
         }
-        if (!next.teacherId || !next.scheduledAt || !Number.isFinite(new Date(next.scheduledAt).getTime())) {
+        const validAt = !!next.scheduledAt && Number.isFinite(new Date(next.scheduledAt).getTime());
+        // "Ustoz biriktirilmagan": lid istagan vaqtda hech kim bo'sh bo'lmasa, sotuv menejeri sinovni
+        // adminga yuboradi (SotuvHolatlar, 4-holat). Faqat shu saqlashda aniq belgilangan bo'lsa qabul
+        // qilinadi (trialUnassigned + yangi trialScheduleRevision); admin/ROP keyin "Ustoz biriktirish" qiladi.
+        if (!next.teacherId && validAt && after.trialUnassigned === true && after.trialScheduleRevision
+            && after.trialScheduleRevision !== before?.trialScheduleRevision) {
+            return { trialRequest: null,
+                trialHistory: [...(Array.isArray(before?.trialHistory) ? before.trialHistory : []), ...(previous ? [{ ...previous, archivedAt: now }] : [])] };
+        }
+        if (!next.teacherId || !validAt) {
             throw Object.assign(new Error('Sinov darsi uchun ustoz va vaqt tanlanishi shart'), { status: 400 });
         }
-        return { trialRequest: { ...next, id: makeId(), state: 'pending', requestedAt: now },
+        return { trialRequest: { ...next, id: makeId(), state: 'pending', requestedAt: now }, ...(after.trialUnassigned ? { trialUnassigned: false } : {}),
             trialHistory: [...(Array.isArray(before?.trialHistory) ? before.trialHistory : []), ...(previous ? [{ ...previous, archivedAt: now }] : [])] };
     }
     function transition(current, payload, actor, now) {

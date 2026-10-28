@@ -339,3 +339,22 @@ test('actual Express trial router rejects missing auth and non-teachers, and for
     assert.equal(result.code, 200); assert.equal(result.data.lesson.id, 'lead');
     assert.deepEqual(calls[1], { user: actor.id, id: 'lead', payload: { action: 'accept', requestId: 'current' } });
 });
+
+test('sales can send a trial without a teacher only explicitly ("Ustoz biriktirilmagan"); assigning a teacher later creates a pending request', () => {
+    const before = { ...fixture(), status: 'boglanildi', paymentOnboarding: {}, trialLessonAt: undefined };
+    const at = '2026-10-04T03:00:00.000Z';
+    const unassigned = { ...before, status: 'sinov-darsida', trialLessonAt: at, paymentOnboarding: { teacherId: '', trialDaysCount: 1, isTrial: true } };
+    assert.throws(() => workflow.syncSchedule(before, unassigned, () => 'id', now), e => e.status === 400);
+    assert.throws(() => workflow.syncSchedule(before, { ...unassigned, trialUnassigned: true }, () => 'id', now), e => e.status === 400);
+    const sent = { ...unassigned, trialUnassigned: true, trialScheduleRevision: 'rev-1' };
+    const r = workflow.syncSchedule(before, sent, () => 'id', now);
+    assert.equal(r.trialRequest, null);
+    const saved = { ...sent, ...r };
+    assert.equal(workflow.leadPhase(saved, Date.parse(now)), 'unassigned');
+    // Keyingi oddiy tahrir (izoh va h.k.) ustozsiz holatni buzmaydi.
+    assert.equal(workflow.syncSchedule(saved, { ...saved, name: 'edit' }, () => 'x', now).trialRequest, null);
+    const assigned = { ...saved, trialScheduleRevision: 'rev-2', paymentOnboarding: { ...saved.paymentOnboarding, teacherId: teacher.id } };
+    const r2 = workflow.syncSchedule(saved, assigned, () => 'req-2', now);
+    assert.equal(r2.trialRequest.teacherId, teacher.id); assert.equal(r2.trialRequest.state, 'pending'); assert.equal(r2.trialUnassigned, false);
+    assert.equal(workflow.leadPhase({ ...assigned, ...r2 }, Date.parse(now)), 'pending');
+});

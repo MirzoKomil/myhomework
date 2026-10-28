@@ -865,6 +865,7 @@ function updateSidebarActiveState(tab, ctx) {
 
 function switchTab(tab, ctx = {}) {
     window.schoolUI?.closeStudent?.();
+    window.sotuvSinov?.close?.({ silent: true });
     if (tab !== 'trial-lessons' && _teacherTrialPollTimer) {
         clearInterval(_teacherTrialPollTimer);
         _teacherTrialPollTimer = null;
@@ -17049,6 +17050,12 @@ const TRIAL_LESSON_OUTCOME_REASONS = trialWorkflow.REASONS;
 function openRescheduleTrialLessonModal(lang, leadId) {
     const lead = getLeadById(lang, leadId);
     if (!lead) return;
+    // Ustoz rad etgan bo'lsa natija so'ralmaydi: sinov qo'yish sahifasi rad sababi va taklif qilingan vaqtlarni ko'rsatadi.
+    if (trialWorkflow.leadPhase(lead) === 'rejected' && window.sotuvSinov?.enabled?.()) {
+        closeModal();
+        openTrialScheduleModal(lang, leadId, { isReschedule: true });
+        return;
+    }
 
     const reasonOptions = TRIAL_LESSON_OUTCOME_REASONS.map(r => `
         <label class="lead-reason-option">
@@ -17081,6 +17088,9 @@ function openTrialScheduleModal(lang, leadId, options = {}) {
     const { isReschedule = false, prevOutcome = null } = options;
     const lead = getLeadById(lang, leadId);
     if (!lead) return;
+    // SotuvSinov: yagona jadvaldan "Sinov darsi qo'yish" sahifasi (js/sotuvSinov.js). Eski oyna — zaxira.
+    if (!options.legacy && window.sotuvSinov?.enabled?.()
+        && window.sotuvSinov.open({ lang, leadId, isReschedule, prevOutcome, from: 'leads' })) return;
     // 5-ish: lang parametridan foydalanish (lead.language bilan bir xil, lekin ishonchli)
     const teachers = filterTeachersByTypeAndSubject('asosiy', lang || lead.language || 'english');
     const teacherOptions = `<option value="">— Tanlang —</option>` +
@@ -17432,7 +17442,10 @@ function leadHasTeacherSchedule(lead) {
         onboarding?.teacherId
         && onboarding.lessonDayOfWeek != null
         && onboarding.lessonTime
-        && onboarding.telegramGroupLink
+        // Telegram guruh — alohida 5-qadamda (js/convertUI.js); bu yerda talab qilinsa
+        // jadval oynasi qayta-qayta ochilardi. O'quvchi ma'lumotlari oynasi uni baribir tekshiradi.
+        // Sinov bandi (isTrial) doimiy jadval emas — jadval qadami ochiladi.
+        && (onboarding.telegramGroupLink || (window.convertUI && !onboarding.isTrial))
     );
 }
 
@@ -19043,11 +19056,14 @@ function collectTeacherScheduleData(modalBody) {
         return { error: 'Tanlangan vaqt band yoki dars davomiyligi uchun yetarli bo\'sh slot yo\'q', target: '#onboardSchedulePicker' };
     }
 
+    // Guruh maydonlari jadval oynasida bo'lmasa (yangi 5-qadam) — tekshirilmaydi va saqlanmaydi.
+    const hasGroup = !!modalBody.querySelector('#onboardTelegramGroupLink');
     const telegramGroupLink = modalBody.querySelector('#onboardTelegramGroupLink')?.value?.trim() || '';
-    if (!telegramGroupLink) return { error: 'Telegram guruh havolasini kiriting', target: '#onboardTelegramGroupLink' };
-    if (!/^https:\/\/t\.me\/(\+[A-Za-z0-9_-]{8,64}|joinchat\/[A-Za-z0-9_-]{8,64}|[A-Za-z0-9_]{5,32})$/.test(telegramGroupLink)) return { error: 'Havola https://t.me/... ko\'rinishida bo\'lsin', target: '#onboardTelegramGroupLink' };
+    if (hasGroup && !telegramGroupLink) return { error: 'Telegram guruh havolasini kiriting', target: '#onboardTelegramGroupLink' };
+    if (hasGroup && !/^https:\/\/t\.me\/(\+[A-Za-z0-9_-]{8,64}|joinchat\/[A-Za-z0-9_-]{8,64}|[A-Za-z0-9_]{5,32})$/.test(telegramGroupLink)) return { error: 'Havola https://t.me/... ko\'rinishida bo\'lsin', target: '#onboardTelegramGroupLink' };
     const telegramGroupName = (modalBody.querySelector('#onboardTelegramGroupName')?.value || '').trim();
-    if (telegramGroupName.length < 2) return { error: 'Telegram guruh nomini kiriting', target: '#onboardTelegramGroupName' };
+    if (hasGroup && telegramGroupName.length < 2) return { error: 'Telegram guruh nomini kiriting', target: '#onboardTelegramGroupName' };
+    const group = hasGroup ? { telegramGroupLink, telegramGroupName } : {};
 
     return {
         data: {
@@ -19058,13 +19074,12 @@ function collectTeacherScheduleData(modalBody) {
             lessonTime,
             lessonScheduleLabel: `${lessonDayLabel}, ${lessonTime}`,
             lessonDuration,
-            telegramGroupLink,
-            telegramGroupName
+            ...group
         }
     };
 }
 
-function renderTeacherScheduleSection(asosiyTeachers) {
+function renderTeacherScheduleSection(asosiyTeachers, options = {}) {
     return `<section class="lead-survey-section">
         <div class="lead-survey-field">
             <label for="onboardTeacherId">Asosiy ustoz</label>
@@ -19087,7 +19102,7 @@ function renderTeacherScheduleSection(asosiyTeachers) {
             <div id="onboardSchedulePicker" class="onboard-schedule-picker"></div>
             <output id="onboardScheduleSelected" class="onboard-schedule-selected" for="onboardSchedulePicker"></output>
         </div>
-        <div class="lead-survey-field">
+        ${options.telegram === false ? '' : `<div class="lead-survey-field">
             <label for="onboardTelegramGroupLink">Telegram guruh havolasi <span style="color:var(--danger)">*</span></label>
             <input type="text" id="onboardTelegramGroupLink" class="form-control" placeholder="https://t.me/+...">
             <p class="lead-survey-hint">O'quvchi uchun ochilgan maxsus Telegram guruh havolasi — o'quvchiga aylantirish uchun majburiy.</p>
@@ -19096,7 +19111,7 @@ function renderTeacherScheduleSection(asosiyTeachers) {
             <label for="onboardTelegramGroupName">Telegram guruh nomi <span style="color:var(--danger)">*</span></label>
             <input type="text" id="onboardTelegramGroupName" class="form-control" placeholder="C40 | onlayn ${typeof getUserOwnLang === 'function' && getUserOwnLang() === 'russian' ? 'rus' : 'ingliz'} tili" maxlength="80">
             <p class="lead-survey-hint">Telegram'dagi nom bilan bir xil yozing · tizim keyingi bo'sh raqamni taklif qiladi, takrorlanmasligi tekshiriladi. Guruhga o'quvchi, ustoz, yordamchi, ROP va sizni qo'shing.</p>
-        </div>
+        </div>`}
     </section>`;
 }
 
@@ -19138,12 +19153,14 @@ function openPaymentTeacherScheduleModal(lang, leadId, options = {}) {
     const subject = lang === 'russian' ? 'russian' : 'english';
     const asosiyTeachers = filterTeachersByTypeAndSubject('asosiy', subject);
 
+    // 6 qadamli konversiya (js/convertUI.js): guruh — alohida 5-qadamda.
+    const cv = window.convertUI;
     const bodyHtml = `<div class="lead-survey lead-survey--schedule">
-        ${renderTeacherScheduleSection(asosiyTeachers)}
+        ${renderTeacherScheduleSection(asosiyTeachers, { telegram: !cv })}
     </div>`;
 
     openModal(
-        `${escapeHtml(lead.name)} — Dars jadvali`,
+        cv ? `O'quvchiga aylantirish · ${lead.name || ''}` : `${escapeHtml(lead.name)} — Dars jadvali`,
         paymentStepsHtml(1) + bodyHtml,
         `<button type="button" class="btn-danger-sm" id="cancelPaymentTeacherSchedule">Bekor qilish</button>
          <button type="button" class="btn-primary-sm" id="confirmPaymentTeacherSchedule">Keyingi bosqich</button>`,
@@ -19153,6 +19170,7 @@ function openPaymentTeacherScheduleModal(lang, leadId, options = {}) {
     const modalBody = document.getElementById('modalBody');
     wireLeadModalValidationClear(modalBody);
     wireTeacherSchedulePicker(modalBody, { lead });
+    cv?.enhanceSchedule(modalBody, lead, lang);
 
     document.getElementById('cancelPaymentTeacherSchedule').onclick = () => {
         closeModal();
@@ -19357,6 +19375,11 @@ function openPaymentOnboardingModal(lang, leadId, options = {}) {
     const { chainTo = null } = options;
     const lead = getLeadById(lang, leadId);
     if (!lead) return;
+    // 5-qadam: Telegram guruh (js/convertUI.js) — guruh hali kiritilmagan bo'lsa, avval o'sha.
+    if (window.convertUI && !lead.paymentOnboarding?.telegramGroupLink && !options.groupDone) {
+        window.convertUI.openGroupStep(lang, leadId, () => openPaymentOnboardingModal(lang, leadId, { ...options, groupDone: true }));
+        return;
+    }
 
     const subject = lang === 'russian' ? 'russian' : 'english';
     const asosiyTeachers = filterTeachersByTypeAndSubject('asosiy', subject);
@@ -19439,6 +19462,7 @@ function openPaymentOnboardingModal(lang, leadId, options = {}) {
     const modalBody = document.getElementById('modalBody');
     wireLeadModalValidationClear(modalBody);
     initPaymentOnboardingForm(modalBody, { lead });
+    window.convertUI?.enhanceStep(modalBody, lead, lang, 6);
 
     document.getElementById('cancelPaymentOnboarding').onclick = () => {
         closeModal();
@@ -19568,6 +19592,7 @@ function openPaymentProcessModal(lang, leadId, options = {}) {
     const modalBody = document.getElementById('modalBody');
     wireLeadModalValidationClear(modalBody);
     initPaymentSurveyForm(modalBody);
+    window.convertUI?.enhanceStep(modalBody, lead, lang, 4);
 
     document.getElementById('cancelPaymentProcess').onclick = () => {
         closeModal();
@@ -21706,8 +21731,12 @@ function renderTrialAttendanceBadge(lead) {
 function renderLeadTrialStatus(lead) {
     if (normalizeLeadStatus(lead.status) !== 'sinov-darsida') return '';
     const request = trialWorkflow.request(lead);
-    return `<div class="lead-card-trial-status" title="${escapeHtml(request?.reasonLabel || '')}">${request?.state === 'completed'
-        ? (request.attended ? 'Qatnashdi' : 'Qatnashmadi') : 'Hali qatnashmagan'}</div>`;
+    // Holat nomi bitta manbadan (trialWorkflow.PHASES): Tasdiq kutilmoqda, Rad etildi, Ustoz biriktirilmagan ...
+    // Natija yozilgan sinov eski matnda qoladi (Qatnashdi / Qatnashmadi) — ustundagi filtr bilan bir xil.
+    const phase = request?.state === 'completed' ? { label: request.attended ? 'Qatnashdi' : 'Qatnashmadi', tone: request.attended ? 'ok' : 'bad' }
+        : trialWorkflow.PHASES[trialWorkflow.leadPhase(lead)] || { label: 'Hali qatnashmagan', tone: 'mute' };
+    const hint = [request?.reasonLabel, request?.rejectNote, request?.resultNote].filter(Boolean).join(' · ');
+    return `<div class="lead-card-trial-status" data-tone="${escapeHtml(phase.tone)}" title="${escapeHtml(hint)}">${escapeHtml(phase.label)}</div>`;
 }
 
 // Kartochkadagi "keyingi qadam": eng so'nggi bog'lanish eslatmasi (agar
