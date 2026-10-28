@@ -1,0 +1,325 @@
+{
+ "n": 70,
+ "topic_uz": "Jonli dars: «Моя́ жизнь» — taqdimotga tayyorgarlik",
+ "scene": "In a small classroom, a young Uzbek man stands holding a sheet of notes and practices a speech while a female teacher sits at a desk listening and smiling.",
+ "dialogs": [
+  {
+   "id": "L70-d1",
+   "title_ru": "Расскажи́те о себе́",
+   "title_uz": "O'zingiz haqingizda gapiring",
+   "intro_uz": "Birinchi dialog. Timur «Моя́ жизнь» taqdimotini mashq qilyapti. Ustoz unga savol beradi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Учи́тельница",
+     "gender": "f"
+    },
+    {
+     "name": "Тиму́р",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Учи́тельница",
+     "ru": "Тиму́р, начнём. Где и когда́ вы родили́сь?",
+     "uz": "Timur, boshlaymiz. Qayerda va qachon tug'ilgansiz?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Я роди́лся в Андижа́не в ты́сяча девятьсо́т девяно́сто восьмо́м году́.",
+     "uz": "Men Andijonda bir ming to'qqiz yuz to'qson sakkizinchi yilda tug'ilganman."
+    },
+    {
+     "who": "Учи́тельница",
+     "ru": "Хорошо́. А что вы люби́ли в де́тстве?",
+     "uz": "Yaxshi. Bolaligingizda nimani yaxshi ko'rardingiz?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "В де́тстве я о́чень люби́л футбо́л.",
+     "uz": "Bolaligimda futbolni juda yaxshi ko'rardim."
+    },
+    {
+     "who": "Учи́тельница",
+     "ru": "А когда́ вы око́нчили шко́лу?",
+     "uz": "Maktabni qachon bitirgansiz?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Я око́нчил шко́лу в две ты́сячи пятна́дцатом году́.",
+     "uz": "Maktabni ikki ming o'n beshinchi yilda bitirganman."
+    },
+    {
+     "who": "Учи́тельница",
+     "ru": "А пото́м?",
+     "uz": "Keyin-chi?"
+    },
+    {
+     "who": "Тиму́р",
+     "ru": "Пото́м я поступи́л в университе́т в Ташке́нте.",
+     "uz": "Keyin Toshkentdagi universitetga kirdim."
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Timur qayerda tug'ilgan?",
+     "opts": [
+      "Toshkentda",
+      "Andijonda",
+      "Samarqandda"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Timur bolaligida nimani yaxshi ko'rardi?",
+     "opts": [
+      "shaxmatni",
+      "suzishni",
+      "futbolni"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Maktabdan keyin Timur nima qildi?",
+     "opts": [
+      "universitetga kirdi",
+      "ishga kirdi",
+      "Moskvaga ketdi"
+     ],
+     "a": 0
+    }
+   ],
+   "swap": [
+    {
+     "base": "в Андижа́не",
+     "alts": [
+      "в Наманга́не",
+      "в Ферга́не",
+      "в Бухаре́"
+     ]
+    },
+    {
+     "base": "футбо́л",
+     "alts": [
+      "ша́хматы",
+      "рисова́ть",
+      "чита́ть"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Timur o'rniga gapiring: qayerda va qachon tug'ilganingizni, bolaligingizda nimani yaxshi ko'rganingizni va qayerda o'qiganingizni ayting."
+  },
+  {
+   "id": "L70-d2",
+   "title_ru": "Рабо́та и семья́",
+   "title_uz": "Ish va oila",
+   "intro_uz": "Ikkinchi dialog. Anton va Dilnoza taqdimotga birga tayyorlanyapti. Anton Dilnozaga savollar beradi. Tinglang.",
+   "speakers": [
+    {
+     "name": "Анто́н",
+     "gender": "m"
+    },
+    {
+     "name": "Дильно́за",
+     "gender": "f"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Анто́н",
+     "ru": "Дильно́за, кем ты сейча́с рабо́таешь?",
+     "uz": "Dilnoza, hozir kim bo'lib ishlaysan?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Я рабо́таю бухга́лтером в ба́нке.",
+     "uz": "Bankda buxgalter bo'lib ishlayman."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Тебе́ нра́вится твоя́ рабо́та?",
+     "uz": "Ishing senga yoqadimi?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "О́чень! Я горжу́сь свое́й рабо́той.",
+     "uz": "Juda! Ishim bilan faxrlanaman."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "А расскажи́ про свою́ семью́.",
+     "uz": "Oilang haqida gapirib ber."
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Я не за́мужем. Но у меня́ есть племя́нница, ей три го́да.",
+     "uz": "Turmushga chiqmaganman. Lekin jiyanim bor, u uch yoshda."
+    },
+    {
+     "who": "Анто́н",
+     "ru": "Здо́рово! Чем ты ещё горди́шься?",
+     "uz": "Zo'r! Yana nima bilan faxrlanasan?"
+    },
+    {
+     "who": "Дильно́за",
+     "ru": "Свое́й семьёй. И тем, что я говорю́ по-ру́сски!",
+     "uz": "Oilam bilan. Va ruscha gapira olishim bilan!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Dilnoza qayerda ishlaydi?",
+     "opts": [
+      "bankda",
+      "turistik kompaniyada",
+      "maktabda"
+     ],
+     "a": 1
+    },
+    {
+     "q_uz": "Dilnozaning qizi necha yoshda?",
+     "opts": [
+      "uch yoshda",
+      "besh yoshda",
+      "bir yoshda"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Dilnoza nima bilan faxrlanadi?",
+     "opts": [
+      "mashinasi bilan",
+      "uyi bilan",
+      "oilasi va ruscha gapirishi bilan"
+     ],
+     "a": 2
+    }
+   ],
+   "swap": [
+    {
+     "base": "ме́неджером",
+     "alts": [
+      "врачо́м",
+      "учи́тельницей",
+      "бухга́лтером"
+     ]
+    },
+    {
+     "base": "свое́й рабо́той",
+     "alts": [
+      "свое́й семьёй",
+      "свои́ми детьми́",
+      "свои́м го́родом"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Dilnoza o'rniga gapiring: hozir kim bo'lib, qayerda ishlaysiz, oilangiz haqida va nima bilan faxrlanishingizni ayting."
+  },
+  {
+   "id": "L70-d3",
+   "title_ru": "Мои́ пла́ны",
+   "title_uz": "Rejalarim",
+   "intro_uz": "Uchinchi dialog. Bobur va Nigora taqdimotning oxirgi qismini mashq qilyapti: qiziqishlar va kelajak. Tinglang.",
+   "speakers": [
+    {
+     "name": "Нигора́",
+     "gender": "f"
+    },
+    {
+     "name": "Бобу́р",
+     "gender": "m"
+    }
+   ],
+   "lines": [
+    {
+     "who": "Нигора́",
+     "ru": "Бобу́р, чем ты занима́ешься в свобо́дное вре́мя?",
+     "uz": "Bobur, bo'sh vaqtingda nima bilan shug'ullanasan?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Я занима́юсь спо́ртом и чита́ю кни́ги.",
+     "uz": "Sport bilan shug'ullanaman va kitob o'qiyman."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "А кака́я у тебя́ цель?",
+     "uz": "Maqsading nima?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Моя́ цель — откры́ть своё кафе́.",
+     "uz": "Maqsadim — o'z kafemni ochish."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "Интере́сно! А что ты хо́чешь де́лать в бу́дущем?",
+     "uz": "Qiziq! Kelajakda nima qilmoqchisan?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "В бу́дущем я хочу́ пое́хать в Москву́ на рабо́ту.",
+     "uz": "Kelajakda Moskvaga ishlashga bormoqchiman."
+    },
+    {
+     "who": "Нигора́",
+     "ru": "А е́сли бы у тебя́ бы́ло мно́го де́нег?",
+     "uz": "Agar pulingiz ko'p bo'lsa-chi?"
+    },
+    {
+     "who": "Бобу́р",
+     "ru": "Е́сли бы у меня́ бы́ли де́ньги, я бы путеше́ствовал по ми́ру!",
+     "uz": "Agar pulim bo'lganida, dunyo bo'ylab sayohat qilardim!"
+    }
+   ],
+   "questions": [
+    {
+     "q_uz": "Bobur bo'sh vaqtida nima qiladi?",
+     "opts": [
+      "sport va kitob",
+      "musiqa",
+      "kino ko'radi"
+     ],
+     "a": 0
+    },
+    {
+     "q_uz": "Boburning maqsadi nima?",
+     "opts": [
+      "mashina olish",
+      "uy qurish",
+      "o'z kafesini ochish"
+     ],
+     "a": 2
+    },
+    {
+     "q_uz": "Bobur kelajakda qayerga bormoqchi?",
+     "opts": [
+      "Toshkentga",
+      "Moskvaga",
+      "Qozonga"
+     ],
+     "a": 1
+    }
+   ],
+   "swap": [
+    {
+     "base": "откры́ть своё кафе́",
+     "alts": [
+      "откры́ть свой магази́н",
+      "постро́ить дом",
+      "вы́учить три языка́"
+     ]
+    },
+    {
+     "base": "в Москву́",
+     "alts": [
+      "в Каза́нь",
+      "в Петербу́рг",
+      "в Дуба́й"
+     ]
+    }
+   ],
+   "speak_uz": "Endi siz Bobur o'rniga gapiring: bo'sh vaqtingizda nima qilasiz, maqsadingiz nima va kelajakda nima qilmoqchisiz?"
+  }
+ ]
+}

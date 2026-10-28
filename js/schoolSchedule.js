@@ -294,44 +294,99 @@
             catch (err) { U().busy(e.target, false); U().errBox(box, err.message); }
         };
     }
-    // opts.studentId — o'quvchi kartasidan ochilganda shu o'quvchi oldindan tanlanadi.
+    // ── Qoplash darsi (Oynalar: USTOZ · DARS JADVALI → QOPLASH DARSI) — markazdagi oyna ──
+    // Qoldirilgan dars faqat "Kelmadi" deb belgilangan, hali qoplanmagan darslar ro'yxatidan tanlanadi
+    // (sana qo'lda kiritilmaydi). Ustozga faqat o'z o'quvchilari (server ham tekshiradi: POST /bookings).
+    // opts.studentId — kartadan/ro'yxatdan; opts.date + opts.start — Dars jadvalidagi bo'sh joy.
+    // Vaqt berilmasa shu oydagi eng yaqin bo'sh vaqt taklif qilinadi, boshqasini Dars jadvalidan tanlash mumkin.
+    const MON3 = ['yan', 'fev', 'mar', 'apr', 'may', 'iyun', 'iyul', 'avg', 'sen', 'okt', 'noy', 'dek'];
+    const dMon = d => `${Number(d.slice(8, 10))}-${MON3[Number(d.slice(5, 7)) - 1]}`;
     async function makeupDrawer(done, opts = {}) {
-        const { openDrawer, field, today, esc, hm, fmtDate } = U();
-        const me = getCurrentUser();
-        const mine = getItem(STORAGE_KEYS.students, []).filter(s => !s.frozen && s.status !== 'inactive');
-        if (opts.studentId && !mine.some(s => s.id === opts.studentId)) { const st = U().studentById(opts.studentId); if (st) mine.unshift(st); }
-        const box = openDrawer({ title: 'Qoplash darsi', sub: 'Qoldirilgan darsni shu oy ichida o\'tib berish', body: `
-            ${field('O\'quvchi', `<select name="st">${mine.map(s => `<option value="${esc(s.id)}"${s.id === opts.studentId ? ' selected' : ''}>${esc(s.name)}</option>`).join('')}</select>`)}
-            <div class="sc-chips"><label class="sc-chip"><input type="radio" name="kind" value="separate" checked><span>Alohida kunda</span></label><label class="sc-chip"><input type="radio" name="kind" value="double"><span>Qo'shaloq dars (keyingi darsda)</span></label></div>
-            <div class="sc-g2 sc-mtop">${field('Qoldirilgan dars sanasi', `<input type="date" name="missed" max="${today()}">`)}${field('Qoplash sanasi', `<input type="date" name="date" value="${today()}" min="${today()}">`)}</div>
-            <div data-times class="sc-slots"></div>
-            <div class="sc-note">Faqat haqiqiy kelmagan dars uchun · oyiga rejadagi darslardan ortiq hisoblanmaydi · admin tasdiqlagach maoshga qo'shiladi.</div>`,
-            foot: '<button type="button" class="sc-btn" data-close>Bekor</button><button type="button" class="sc-btn sc-btn--pri" data-save>Saqlash</button>' });
-        let pick = null;
-        const load = async () => {
-            const el = box.querySelector('[data-times]'); pick = null;
-            if (box.querySelector('[name=kind]:checked').value === 'double') { el.innerHTML = '<p class="sc-mt">Keyingi darsda 2 × dars davomiyligi o\'tiladi — davomatda "Keldi · 2 dars" belgilanadi</p>'; return; }
-            const st = U().studentById(box.querySelector('[name=st]').value); const date = box.querySelector('[name=date]').value;
-            try {
-                const d = await U().api(`/schedule?from=${date}&to=${date}${L()}`);
-                const v = d.views[0]; const dur = st?.lessonDuration || 30; const t = [];
-                for (const f of v?.makeupFree || []) for (let m = Math.ceil(f.start / 15) * 15; m + dur <= f.end; m += 15) t.push(m);
-                el.innerHTML = t.length ? t.map(m => `<button type="button" class="sc-slot" data-m="${m}" aria-pressed="false">${hm(m)}</button>`).join('') : '<p class="sc-mt">Bu kunda bo\'sh vaqt yo\'q</p>';
-                el.querySelectorAll('.sc-slot').forEach(b => b.onclick = () => { pick = Number(b.dataset.m); el.querySelectorAll('.sc-slot').forEach(x => x.setAttribute('aria-pressed', String(x === b))); });
-            } catch (e) { el.textContent = e.message; }
-        };
-        box.querySelectorAll('[name=st],[name=date],[name=kind]').forEach(i => i.onchange = load); load();
-        box.querySelector('[data-save]').onclick = async e => {
-            const v = n => box.querySelector(`[name=${n}]`).value;
-            if (!v('missed')) return U().errBox(box, 'Qoldirilgan dars sanasini tanlang');
-            U().busy(e.target, true);
-            try {
-                const st = U().studentById(v('st'));
-                if (box.querySelector('[name=kind]:checked').value === 'double') await U().post('/makeups/double', { studentId: v('st'), missedDate: v('missed'), heldDate: v('date') });
-                else { if (pick == null) throw new Error('Vaqtni tanlang'); await U().post('/bookings', { kind: 'makeup', teacherId: st.teacherId, studentId: st.id, date: v('date'), time: hm(pick), duration: st.lessonDuration || 30, missedDate: v('missed') }); }
-                U().toast('Qoplash rejalashtirildi'); U().closeDrawer(); done();
-            } catch (err) { U().busy(e.target, false); U().errBox(box, err.message); }
-        };
+        const u = U(); const { esc, today, hm, DAY_FULL, pattern, addDays, wd, nowMin } = u;
+        const me = getCurrentUser() || {};
+        const teacher = me.role === 'teacher';
+        const pool = (getItem(STORAGE_KEYS.students, []) || []).filter(s => !s.isStaffDemo && !s.frozen && s.status !== 'inactive' && s.teacherId
+            && (!teacher || s.teacherId === me.linkedTeacherId));
+        const dlg = u.openDialog({ title: 'Qoplash darsi', sub: 'Yuklanmoqda…', body: '<p class="oqm-mt">Yuklanmoqda…</p>',
+            foot: '<button type="button" class="oqm-btn" data-close>Bekor</button><button type="button" class="oqm-btn is-pri" data-save disabled>Rejaga qo\'yish</button>' });
+        const body = dlg.querySelector('.oqm-db'), save = dlg.querySelector('[data-save]');
+        const fail = msg => { body.innerHTML = `<div class="oqm-err" role="alert">${esc(msg)}</div>`; dlg.querySelector('[data-dsub]').textContent = ''; };
+        const month = (opts.date || today()).slice(0, 7);
+        const monthEnd = addDays(addDays(month + '-01', 32).slice(0, 7) + '-01', -1);
+        try {
+            // "Kelmadi" belgilari va qoplashlar — server rol bo'yicha cheklaydi (ustoz — faqat o'ziniki).
+            const sid0 = opts.studentId && pool.find(s => s.id === opts.studentId);
+            if (opts.studentId && !sid0) return fail('Bu o\'quvchi sizga biriktirilmagan — qoplash faqat o\'z o\'quvchilaringiz uchun');
+            const tq = !teacher && sid0 ? `&teacherId=${encodeURIComponent(sid0.teacherId)}` : '';
+            const [ab, mk] = await Promise.all([u.api(`/attendance/absences?month=${month}${tq}`), u.api(teacher ? '/makeups' : `/makeups?month=${month}`)]);
+            const covered = new Map((mk.makeups || []).filter(m => ['planned', 'review', 'approved'].includes(m.status)).map(m => [`${m.student_id}|${String(m.missed_date || '').slice(0, 10)}`, m]));
+            const missedOf = sid => [...new Map((ab.absences || []).filter(a => a.studentId === sid && a.day <= today()).map(a => [a.day, a])).keys()].sort()
+                .map(day => ({ day, mk: covered.get(`${sid}|${day}`) || null }));
+            const st = sid0 || pool.find(s => missedOf(s.id).some(m => !m.mk)) || null;
+            if (!st) return fail(`Bu oyda qoplanmagan dars yo'q — "Kelmadi" deb belgilangan dars bo'lsa, shu yerda chiqadi`);
+            const dur = Number(st.lessonDuration) || 30;
+            // Faqat qoplash mumkin bo'lganlar (dizayndagidek); qoplangan/rejalashtirilganlar ro'yxatda chiqmaydi.
+            const list = missedOf(st.id).filter(m => !m.mk);
+            // Vaqt: jadvaldan berilgan bo'sh joy yoki shu oydagi eng yaqin bo'sh vaqt.
+            let slot = opts.date && opts.start != null ? { date: opts.date, start: Number(opts.start), picked: true } : null;
+            const [att] = await Promise.all([
+                u.api(`/students/${encodeURIComponent(st.id)}/attendance?month=${month}`).catch(() => null),
+                slot ? null : (async () => {
+                    const from = today() > month + '-01' ? today() : month + '-01';
+                    if (from > monthEnd) return;
+                    const d = await u.api(`/schedule?from=${from}&to=${monthEnd}${teacher ? '' : `&teacherId=${encodeURIComponent(st.teacherId)}${L()}`}`);
+                    for (const v of (d.views || []).filter(x => x.teacherId === st.teacherId).sort((a, b) => a.date.localeCompare(b.date))) {
+                        const lo = v.date === today() ? nowMin() + 15 : 0;
+                        for (const f of v.makeupFree || []) {
+                            const s = Math.ceil(Math.max(f.start, lo) / 15) * 15;
+                            if (s + dur <= f.end) { slot = { date: v.date, start: s, picked: false }; return; }
+                        }
+                    }
+                })()
+            ]);
+            // Bu oy: rejada · hisobga o'tgan (+ tekshiruvda) — davomat qoidasi bilan bir xil (rejadan oshmaydi).
+            let plan = 0, counted = 0, review = 0;
+            if (att) {
+                plan = (att.lessonDays || []).length;
+                const present = new Set((att.lessonDays || []).filter(d => att.entries?.[Number(d.slice(8))]?.present).map(d => d));
+                counted = present.size;
+                for (const m of att.makeups || []) {
+                    if (m.status === 'review') review++;
+                    if (m.status !== 'approved' || String(m.held || '').slice(0, 7) !== month) continue;
+                    if (m.kind === 'double') counted++; else if (!present.has(m.held)) { present.add(m.held); counted++; }
+                }
+                counted = Math.min(counted, plan);
+            }
+            const head = slot ? `Qoplash darsi · ${dMon(slot.date)}, ${DAY_FULL[wd(slot.date) - 1]}` : 'Qoplash darsi';
+            dlg.querySelector('#oqmTitle').textContent = head;
+            dlg.querySelector('[data-dsub]').textContent = `${st.name} · ${pattern(st.lessonDayOfWeek)} ${st.lessonTime || ''} · ${dur} daq`.replace(/\s+·/g, ' ·');
+            const firstOpen = list.find(m => !m.mk);
+            const mkTxt = m => m.mk.status === 'approved' ? 'allaqachon qoplangan' : m.mk.status === 'review' ? 'qoplangan · tekshiruvda'
+                : `allaqachon rejalashtirilgan${m.mk.held_date ? ' · ' + dMon(String(m.mk.held_date).slice(0, 10)) : ''}`;
+            const opt = m => `<label class="oqm-opt${m.mk ? ' is-off' : ''}"><input type="radio" name="miss" value="${esc(m.day)}"${m === firstOpen ? ' checked' : ''}${m.mk ? ' disabled' : ''}><span class="oqm-radio" aria-hidden="true"></span>
+                <span class="oqm-tx"><span class="oqm-nm">${dMon(m.day)}, ${DAY_FULL[wd(m.day) - 1]}</span><span class="oqm-mt">${m.mk ? esc(mkTxt(m)) : 'kelmagan · hali qoplanmagan'}</span></span>${m.mk ? '' : '<span class="oqm-pill is-teal">Qoplash mumkin</span>'}</label>`;
+            const timeTxt = slot ? `Vaqt: <b>${hm(slot.start)}–${hm(slot.start + dur)}</b> (bo'sh, sotuvga yopiladi).` : `Vaqt: <b>${esc(MON3[Number(month.slice(5)) - 1])} oxirigacha bo'sh vaqt yo'q</b>.`;
+            const statTxt = att ? ` Bu oy: rejada ${plan} · hisobga o'tgan ${counted}${review ? ` (+${review} tekshiruvda)` : ''} · ko'pi bilan <b>${plan}</b> gacha.` : '';
+            const other = !opts.date ? ` <button type="button" class="oqm-link" data-other>${slot ? 'Boshqa vaqt' : 'Vaqtni'} — Dars jadvalidan tanlash</button>` : '';
+            body.innerHTML = `<div class="oqm-fl">Qaysi qoldirilgan dars o'rniga?</div>
+                ${list.length ? list.map(opt).join('') : '<div class="oqm-box">Bu oyda qoplanmagan dars yo\'q — qoplash faqat "Kelmadi" deb belgilangan dars uchun.</div>'}
+                <div class="oqm-box">${timeTxt}${statTxt}${other}</div>
+                <div class="oqm-rule">Dars o'tgach "Keldi" desangiz holati <b>"Tekshiruvda"</b> bo'ladi. Admin tasdiqlagach dars maoshga qo'shiladi; rad etilsa — qo'shilmaydi.</div>`;
+            save.disabled = !slot || !firstOpen;
+            body.querySelector('[data-other]')?.addEventListener('click', () => {
+                state.makeupFor = st.id; u.closeDrawer();
+                if (typeof switchTab === 'function') switchTab('timetable');
+            });
+            save.onclick = async () => {
+                const missedDate = body.querySelector('[name=miss]:checked')?.value;
+                if (!missedDate) return u.errBox(dlg, 'Qaysi dars o\'rniga ekanini tanlang');
+                u.busy(save, true);
+                try {
+                    await u.post('/bookings', { kind: 'makeup', teacherId: st.teacherId, studentId: st.id, date: slot.date, time: hm(slot.start), duration: dur, missedDate });
+                    state.makeupFor = null; u.toast('Qoplash rejaga qo\'yildi'); u.closeDrawer(); done?.();
+                } catch (err) { u.busy(save, false); u.errBox(dlg, err.message); }
+            };
+        } catch (e) { fail(e.message); }
     }
     async function teacherTrialsView(body, reload) {
         const { api, esc, fmtDate, hm, today, addDays } = U();

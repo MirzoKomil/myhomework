@@ -372,8 +372,9 @@
         root.querySelector('[data-late]')?.addEventListener('click', () => lateDrawer(active, re));
     }
 
-    // ── O'quvchilar: ustoz (UstozOquvchiList) va yordamchi (YordamchiOquvchilar) ──
-    let myState = { q: '', sel: '', f: 'all' };
+    // ── O'quvchilar: ustoz (UstozOquvchiList) va yordamchi (YordamchiOquvchilar) — css/oquvchilar.css (.oq-*) ──
+    // Faqat o'z o'quvchilari (state serverda kesilgan); to'lov, tarif, qarz va sotuv ma'lumoti ko'rsatilmaydi.
+    let myState = { q: '', sel: '', f: 'all', closed: false };
     let _inact = null, _inactAt = 0;
     async function inactiveList() {
         if (_inact && Date.now() - _inactAt < 60000) return _inact;
@@ -381,7 +382,7 @@
         _inact = r.students || []; _inactAt = Date.now();
         return _inact;
     }
-    // "Tugatgan" holati (kursni tugatganlar): server /inactive javobida status==='finished' yoki finished:true.
+    // "Tugatgan" holati (kursni tugatganlar): server /inactive javobida state==='finished'.
     const isFinished = x => x && (x.status === 'finished' || x.state === 'finished' || x.finished === true);
     function courseEnd(s) {
         if (!s.startDate) return null;
@@ -390,10 +391,20 @@
         for (let i = 0; i < 220 && n < 36; i++, d = U().addDays(d, 1)) if (days.includes(U().wd(d)) && ++n === 36) return d;
         return null;
     }
-    const pctCls = v => (v == null ? '' : v < 55 ? 'lo' : v < 75 ? 'mid' : 'hi');
+    // 1-urinish rangi (ro'yxat va panelda bir xil).
+    const pctCls = v => (v == null ? '' : v < 65 ? 'lo' : v < 75 ? 'mid' : 'hi');
+    const OQ_SEARCH = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>';
+    const OQ_X = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+    const OQ_TG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21.9 4.3 18.7 19.4c-.2 1-.9 1.3-1.8.8l-4.9-3.6-2.4 2.3c-.3.3-.5.5-1 .5l.3-5 9.1-8.2c.4-.4-.1-.6-.6-.2L6.2 13 1.4 11.5c-1-.3-1-1 .2-1.5L20.6 2.8c.9-.3 1.6.2 1.3 1.5z"/></svg>';
+    const OQ_PH = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>';
+    const OQ_LOCK = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>';
+    const oqAv = (s, n) => `<span class="oq-av" style="width:${n}px;height:${n}px">${U().studentAvatar(s, n)}</span>`;
+    const oqTg = g => { const esc = U().esc; return tgLink(g) ? `<a class="oq-tgb" href="${esc(tgLink(g))}" target="_blank" rel="noopener" title="${esc(g.name || 'Telegram guruh')} — Telegram guruhni ochish" aria-label="Telegram guruh: ${esc(g.name || '')}">${OQ_TG}</a>`
+        : `<span class="oq-tgb is-off" title="Telegram guruh havolasi yo'q — admin qo'shadi" aria-label="Telegram guruh havolasi yo'q">${OQ_TG}</span>`; };
+    const oqCall = s => `<button type="button" class="oq-clb" data-call="${U().esc(s.id)}" title="Qo'ng'iroq qilish — raqam yashirin, Telegram guruh orqali" aria-label="${U().esc(s.name)}ga qo'ng'iroq qilish">${OQ_PH}</button>`;
     async function renderMyStudents(root) {
         if (!root) return;
-        const { api, esc, today, studentAvatar, teacherName, pattern, DAY, addDays, weekStart, wd } = U();
+        const { api, esc, today, teacherName, pattern, DAY, addDays, weekStart, wd } = U();
         await U().loadStaffAvatars();
         const tid = me().linkedTeacherId;
         const td = today(), month = td.slice(0, 7), ws = weekStart(td);
@@ -401,14 +412,16 @@
         const mine = all.filter(s => s.teacherId === tid), helped = all.filter(s => s.assistantTeacherId === tid && s.teacherId !== tid);
         const emp = (typeof getItem === 'function' ? getItem(STORAGE_KEYS.hrEmployees, []) : []).find(e => e.id === tid);
         const pure = !mine.length && (helped.length > 0 || emp?.role === 'yordamchi');
-        if (!root.dataset.loaded) root.innerHTML = '<div class="sc-skel"></div>';
+        if (!root.dataset.loaded) root.innerHTML = '<div class="oq"><div class="oq-skel"></div></div>';
         const lang = (typeof getUserOwnLang === 'function' && getUserOwnLang()) || 'english';
-        const [acad, gm, mks, rep, inact] = await Promise.all([
+        const [acad, gm, mks, rep, inact, abs] = await Promise.all([
             apiFetch(`/api/academic/students?lang=${lang}`).catch(() => ({ students: [] })),
             groupsMap(),
             pure ? { makeups: [] } : api('/makeups').catch(() => ({ makeups: [] })),
             helped.length ? api(`/assist/month?month=${month}`).catch(() => null) : null,
-            inactiveList()
+            inactiveList(),
+            // "Kelmadi" belgilari serverda (school_absences) — main_attendance faqat "Keldi"ni saqlaydi.
+            pure ? { absences: [] } : api(`/attendance/absences?month=${month}`).catch(() => ({ absences: [] }))
         ]);
         root.dataset.loaded = '1';
         const ac = new Map((acad.students || []).map(x => [x.id, x]));
@@ -419,32 +432,48 @@
         const match = s => !q || String(s.name || '').toLowerCase().includes(q) || String(s.serialCode || s.id || '').toLowerCase().includes(q);
         const advTxt = s => advDays(s).map(d => DAY[d - 1]).join('·');
         const nextAdv = s => { const days = advDays(s); for (let i = 0; i <= 7; i++) { const d = addDays(td, i); if (days.includes(wd(d)) && (i || (U().toMin(s.lessonTime) ?? 1440) >= U().nowMin())) return `${DAY[wd(d) - 1]} ${Number(d.slice(8))}${s.lessonTime ? ', ' + s.lessonTime : ''}`; } return ''; };
-        const openArchive = state => base.openInactive(root, { active: mine.length + helped.length, title: mine.length ? 'Mening o\'quvchilarim' : 'O\'quvchilarim', state, tab: state, onBack: () => renderMyStudents(root) });
         const re = () => renderMyStudents(root);
+        const openArchive = state => base.openInactive(root, { active: pure ? helped.length : mine.length + helped.length,
+            title: pure ? 'O\'quvchilar' : 'Mening o\'quvchilarim', page: pure ? 'assistant' : 'teacher', state, tab: state, onBack: re });
+        const mL = MON_S[Number(month.slice(5)) - 1];
+        const head = (h1, sub, ph) => `<div class="oq-head"><div><h1 class="oq-h1">${h1}</h1><p class="oq-sub">${sub}</p></div>
+            <label class="oq-srch">${OQ_SEARCH}<input type="search" placeholder="${ph}" value="${esc(myState.q)}" data-q aria-label="${ph}" autocomplete="off"></label></div>`;
         const bindCommon = list => {
             const qi = root.querySelector('[data-q]');
             qi.oninput = () => { myState.q = qi.value; clearTimeout(qi._t); qi._t = setTimeout(() => renderMyStudents(root).then(() => { const n = root.querySelector('[data-q]'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); }), 200); };
-            root.querySelectorAll('[data-ms]').forEach(tr => { tr.onclick = e => { if (e.target.closest('a,button')) return; myState.sel = tr.dataset.ms; re(); }; tr.onkeydown = e => { if (e.key === 'Enter') tr.click(); }; });
+            root.querySelectorAll('[data-ms]').forEach(tr => { tr.onclick = e => { if (e.target.closest('a,button')) return; myState.sel = tr.dataset.ms; myState.closed = false; re(); }; tr.onkeydown = e => { if (e.key === 'Enter') tr.click(); }; });
             root.querySelectorAll('[data-call]').forEach(b => b.onclick = e => { e.stopPropagation(); callStudent(list.find(s => s.id === b.dataset.call), re); });
             root.querySelector('[data-inactive]')?.addEventListener('click', () => openArchive('inactive'));
             root.querySelector('[data-finished]')?.addEventListener('click', () => openArchive('finished'));
             root.querySelector('[data-open-card]')?.addEventListener('click', e => U().openStudent(e.currentTarget.dataset.openCard));
+            root.querySelector('[data-close-detail]')?.addEventListener('click', () => { myState.closed = true; re(); });
         };
-        // Tanlangan o'quvchi uchun ilova tafsiloti (xatolar, ko'p xato mavzu) — panel keyin to'ldiriladi.
-        const fillProgress = (sel, isAssist) => {
+        // Yordamchi paneli: keyingi aloqa tavsiyasi va ilovadagi oxirgi xatolar (keyin to'ldiriladi).
+        const fillProgress = sel => {
             const box = root.querySelector('[data-prog]'); if (!box || !sel) return;
             api(`/students/${encodeURIComponent(sel.id)}/progress`).then(r => {
                 if (!box.isConnected) return;
                 const d = r.detail, A = U().acad;
-                if (!d) { box.innerHTML = '<p class="sc-mt">Ilova ma\'lumoti hali yo\'q</p>'; return; }
+                if (!d) { box.innerHTML = '<p class="oq-capm">Ilova ma\'lumoti hali yo\'q</p>'; return; }
                 const tp = A.topic(d), keys = new Set((d.student.flags || []).map(f => f.key));
-                const tip = isAssist ? (tp ? `Ko'p xato: <b>${esc(tp.name)}</b>${tp.part ? ` (${esc(tp.part)})` : ''}. Shu mavzudagi gaplarni og'zaki mashq qiling.`
+                const tip = tp ? `Ko'p xato: <b>${esc(tp.name)}</b>${tp.part ? ` (${esc(tp.part)})` : ''}. Shu mavzudagi gaplarni og'zaki mashq qiling.`
                     : keys.has('idle') ? 'Ilovaga kirmayapti — sababini so\'rang va bugungi dars so\'zlarini birga takrorlang.'
-                    : `Rejada. Ilovadagi ${d.student.reached || 1}-dars so'zlarini og'zaki takrorlang.`) : '';
+                    : `Rejada. Ilovadagi ${d.student.reached || 1}-dars so'zlarini og'zaki takrorlang.`;
                 const ms = A.mistakes(d, 2);
-                box.innerHTML = `${isAssist ? `<div class="yd-tip"><b>Keyingi aloqada nima qilish kerak${nextAdv(sel) ? ' · ' + esc(nextAdv(sel)) : ''}</b><span>${tip}</span></div>` : ''}
-                  <h3 class="yd-h3">Oxirgi xatolar</h3>${ms.length ? ms.map(m => `<div class="yd-err"><small>${m.no}-dars${m.part ? ' · ' + esc(m.part) : ''} · ${m.attempts} urinish</small><b>${esc(m.q)}</b><span>O'quvchi: <em class="a">"${esc(m.your)}"</em> · To'g'risi: <em class="r">"${esc(m.right)}"</em></span></div>`).join('') : '<p class="sc-mt">Xato yo\'q</p>'}`;
+                box.innerHTML = `<div class="oq-tip3"><b>Keyingi aloqada nima qilish kerak${nextAdv(sel) ? ' · ' + esc(nextAdv(sel)) : ''}</b><span>${tip}</span></div>
+                  <p class="oq-cap">Oxirgi xatolar</p>${ms.length ? ms.map(m => `<div class="oq-err"><div class="oq-mt" style="margin:0">${m.no}-dars${m.part ? ' · ' + esc(m.part) : ''} · ${m.attempts} urinish</div><div class="q">${esc(m.q)}</div><div>O'quvchi: <span class="a">"${esc(m.your)}"</span> · To'g'risi: <span class="r">"${esc(m.right)}"</span></div></div>`).join('') : '<p class="oq-capm">Xato yo\'q</p>'}`;
             }).catch(() => { box.innerHTML = ''; });
+        };
+        // Yordamchi sifatidagi o'quvchi paneli (YordamchiOquvchilar dizayni).
+        const helpDetail = (sel, closable) => {
+            const x = ac.get(sel.id), c = cnt.get(sel.id);
+            return `<div class="oq-dh2">${oqAv(sel, 48)}<div><div class="oq-nm" id="oqDn">${esc(sel.name)}</div><div class="oq-mt">asosiy ${esc(teacherName(sel.teacherId, true))} · ${esc(pattern(sel.lessonDayOfWeek))} ${esc(sel.lessonTime || '')} · tavsiya ${esc(advTxt(sel))} ${esc(sel.lessonTime || '')}</div></div>
+                ${closable ? `<button type="button" class="oq-icb" data-close-detail aria-label="Yopish">${OQ_X}</button>` : ''}</div>
+              <div class="oq-kv"><div><small>Ilovada</small><b>${x ? x.reached + ' / 72' : '—'}</b></div><div><small>1-urinish</small><b class="oq-pc ${pctCls(x?.firstTryAvg)}">${x?.firstTryAvg != null ? x.firstTryAvg + '%' : '—'}</b></div>
+                <div><small>Aloqalar · ${esc(mL)}</small><b>${c?.counted || 0} / ${CAP}</b></div><div><small>Bu hafta</small><b>${weekOf(sel)} / 3</b></div></div>
+              <div data-prog><div class="oq-skel" style="height:96px;margin:0 20px 14px"></div></div>
+              <div class="oq-acts2"><button type="button" class="oq-clb is-big" data-call="${esc(sel.id)}">${OQ_PH} Qo'ng'iroq</button><button type="button" class="oq-btn" data-open-card="${esc(sel.id)}">To'liq kartani ochish →</button>${closable ? '<button type="button" class="oq-btn" data-go-contacts>Aloqani belgilash</button>' : ''}</div>
+              <div class="oq-hid" style="padding-top:12px">Telefon raqami yashirin — ☎ tugmasi o'quvchining Telegram guruhini ochadi va aloqani belgilaysiz. To'lov va sotuv ma'lumotlari ko'rinmaydi. Savol bo'lsa — asosiy ustozga yozing (xodimlar chati).</div>`;
         };
 
         if (pure) {
@@ -455,123 +484,119 @@
             const list = F[myState.f].filter(match);
             if (!myState.sel || !helped.some(s => s.id === myState.sel)) myState.sel = list[0]?.id || '';
             const sel = helped.find(s => s.id === myState.sel);
-            const mL = MON_S[Number(month.slice(5)) - 1];
-            const detail = () => {
-                if (!sel) return '<p class="sc-mt">O\'quvchini tanlang</p>';
-                const x = ac.get(sel.id), c = cnt.get(sel.id);
-                return `<div class="sc-row">${studentAvatar(sel, 48)}<span class="yd-who"><b class="ms-name">${esc(sel.name)}</b><small class="sc-mt">asosiy ${esc(teacherName(sel.teacherId, true))} · ${esc(pattern(sel.lessonDayOfWeek))} ${esc(sel.lessonTime || '')} · tavsiya ${esc(advTxt(sel))} ${esc(sel.lessonTime || '')}</small></span></div>
-                  <div class="yd-k4"><div><small>Ilovada</small><b>${x ? x.reached + ' / 72' : '—'}</b></div><div><small>1-urinish</small><b class="yd-pc ${pctCls(x?.firstTryAvg)}">${x?.firstTryAvg != null ? x.firstTryAvg + '%' : '—'}</b></div>
-                    <div><small>Aloqalar · ${esc(mL)}</small><b>${c?.counted || 0} / ${CAP}</b></div><div><small>Bu hafta</small><b>${weekOf(sel)} / 3</b></div></div>
-                  <div data-prog><div class="sc-skel"></div></div>
-                  <div class="yd-acts"><button type="button" class="sc-btn yd-callbtn" data-call="${esc(sel.id)}">${PHONE_SVG}Qo'ng'iroq</button><button type="button" class="sc-btn" data-open-card="${esc(sel.id)}">To'liq kartani ochish →</button></div>
-                  <p class="sc-mt">Telefon raqami yashirin — ☎ tugmasi o'quvchining Telegram guruhini ochadi va aloqani belgilaysiz. To'lov va sotuv ma'lumotlari ko'rinmaydi. Savol bo'lsa — asosiy ustozga yozing (xodimlar chati).</p>`;
-            };
-            root.innerHTML = `<div class="sc-head"><div><h1>O'quvchilarim</h1><p class="sc-sub">Siz bog'lanadigan o'quvchilar · natijalar o'quvchi ilovasidan · faqat ko'rish</p></div>
-                <input type="search" placeholder="Ism bo'yicha qidirish" value="${esc(myState.q)}" data-q aria-label="Qidirish"></div>
-              <div class="ms-grid"><section class="sc-card"><header class="sc-ch"><h2>${helped.length} o'quvchi</h2>
-                  <div class="sc-seg" role="group" aria-label="Filtr"><button type="button" data-f="all" aria-pressed="${myState.f === 'all'}">Hammasi</button><button type="button" data-f="hard" aria-pressed="${myState.f === 'hard'}">Qiynalyapti ${F.hard.length}</button><button type="button" data-f="zero" aria-pressed="${myState.f === 'zero'}">Bu hafta 0 aloqa ${F.zero.length}</button><button type="button" data-inactive aria-pressed="false">Faol emas ${notActive.length}</button></div></header>
-                <div class="yd-tw"><table class="sc-table ms-table"><thead><tr><th>O'quvchi</th><th>Aloqa tavsiyasi</th><th>Ilovada · 1-urinish</th><th class="r">Bu hafta</th><th class="r">${esc(cap1(mName(month)))}</th></tr></thead><tbody>
+            root.innerHTML = `<div class="oq">${head('O\'quvchilarim', 'Siz bog\'lanadigan o\'quvchilar · natijalar o\'quvchi ilovasidan · faqat ko\'rish', 'Ism bo\'yicha qidirish')}
+              <div class="oq-lay${sel ? '' : ' is-solo'}"><section class="oq-card is-clip" aria-labelledby="oqLt"><div class="oq-ch"><h2 class="oq-ct" id="oqLt">${helped.length} o'quvchi</h2>
+                  <div class="oq-seg" role="group" aria-label="Filtr"><button type="button" data-f="all" aria-pressed="${myState.f === 'all'}">Hammasi</button><button type="button" data-f="hard" aria-pressed="${myState.f === 'hard'}">Qiynalyapti ${F.hard.length}</button><button type="button" data-f="zero" aria-pressed="${myState.f === 'zero'}">Bu hafta 0 aloqa ${F.zero.length}</button><button type="button" data-inactive aria-pressed="false">Faol emas ${notActive.length}</button></div></div>
+                <div class="oq-tw"><table class="oq-t is-y"><thead><tr><th scope="col">O'quvchi</th><th scope="col">Aloqa tavsiyasi</th><th scope="col">Ilovada · 1-urinish</th><th scope="col">Bu hafta</th><th scope="col">${esc(cap1(mName(month)))}</th></tr></thead><tbody>
                 ${list.map(s => { const x = ac.get(s.id), c = cnt.get(s.id);
-                  return `<tr class="ms-row${myState.sel === s.id ? ' is-sel' : ''}" data-ms="${esc(s.id)}" tabindex="0"><td><span class="sc-row">${studentAvatar(s, 32)}<span class="yd-who"><b>${esc(s.name)}</b><small class="sc-mt">asosiy: ${esc(teacherName(s.teacherId, true))}</small></span>${tgIcon(gm.get(s.id))}${callIcon(s.id)}</span></td>
-                    <td>${esc(advTxt(s))}${s.lessonTime ? ' · ' + esc(s.lessonTime) : ''}<small class="sc-mt yd-blk">asosiy darslari ${esc(pattern(s.lessonDayOfWeek))}</small></td>
-                    <td>${x ? `<b>${x.reached}</b> / 72${x.firstTryAvg != null ? ` · <b class="yd-pc ${pctCls(x.firstTryAvg)}">${x.firstTryAvg}%</b>` : ''}` : '<small class="sc-mt">—</small>'}</td>
-                    <td class="r"><b>${weekOf(s)}</b> / 3</td><td class="r">${c?.counted || 0} / ${CAP}</td></tr>`; }).join('') || `<tr><td colspan="5" class="sc-mt">${q || myState.f !== 'all' ? 'Hech kim topilmadi' : 'Sizga hali o\'quvchi biriktirilmagan'}</td></tr>`}
-                </tbody></table></div><p class="sc-mt yd-foot">1-urinish — ilovadagi mashqlarni birinchi urinishda to'g'ri bajarish ulushi (baho emas).</p></section>
-                <aside class="sc-card sc-pad ms-detail">${detail()}</aside></div>`;
+                  return `<tr${myState.sel === s.id ? ' class="is-sel" aria-selected="true"' : ''} data-ms="${esc(s.id)}" tabindex="0"><td><div class="oq-who">${oqAv(s, 34)}<div><div class="oq-nm">${esc(s.name)}</div><div class="oq-mt">asosiy: ${esc(teacherName(s.teacherId, true))}</div></div>${oqTg(gm.get(s.id))}${oqCall(s)}</div></td>
+                    <td>${esc(advTxt(s))}${s.lessonTime ? ' · ' + esc(s.lessonTime) : ''}<div class="oq-mt" style="margin:2px 0 0">asosiy darslari ${esc(pattern(s.lessonDayOfWeek))}</div></td>
+                    <td>${x ? `<b>${x.reached}</b> / 72${x.firstTryAvg != null ? ` · <span class="oq-pc ${pctCls(x.firstTryAvg)}">${x.firstTryAvg}%</span>` : ''}` : '<span class="oq-mt">—</span>'}</td>
+                    <td><b>${weekOf(s)}</b> / 3</td><td>${c?.counted || 0} / ${CAP}</td></tr>`; }).join('') || `<tr><td colspan="5" class="oq-empty">${q || myState.f !== 'all' ? 'Hech kim topilmadi' : 'Sizga hali o\'quvchi biriktirilmagan'}</td></tr>`}
+                </tbody></table></div><p class="oq-foot">1-urinish — ilovadagi mashqlarni birinchi urinishda to'g'ri bajarish ulushi (baho emas).</p></section>
+                ${sel ? `<aside class="oq-card oq-dp" aria-labelledby="oqDn">${helpDetail(sel, false)}</aside>` : ''}</div></div>`;
             bindCommon(helped);
             root.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { myState.f = b.dataset.f; re(); });
-            fillProgress(sel, true);
+            fillProgress(sel);
             return;
         }
 
         // ── UstozOquvchiList ──
         const att = getItem(STORAGE_KEYS.mainAttendance, {})[`${month}_${tid}`] || {};
+        const absent = new Set((abs.absences || []).map(a => `${a.studentId}|${a.day}`));
         const cal = window.teacherAttendanceCalendar;
         const own = (typeof resolveTeacherWithVirtual === 'function' && resolveTeacherWithVirtual(tid)) || {};
-        const myMk = (mks.makeups || []).filter(m => m.teacher_id === tid && String(m.held_date || '').slice(0, 7) === month);
+        const myMk = (mks.makeups || []).filter(m => m.teacher_id === tid);
+        const day10 = v => String(v || '').slice(0, 10);
         const attOf = s => {
             const entries = att[s.id] || {};
             const cells = cal ? cal.cells(month, cal.weekdays(s, own, 'main')).filter(Boolean) : [];
             const sched = cells.filter(c => c.scheduled);
-            const days = new Set(sched.filter(c => cal.status(entries[c.day]) === 'present').map(c => c.day));
+            const isP = c => cal.status(entries[c.day]) === 'present', isA = c => !isP(c) && absent.has(`${s.id}|${c.date}`);
+            const days = new Set(sched.filter(isP).map(c => c.day));
             let n = days.size;
-            for (const m of myMk.filter(m => m.student_id === s.id && m.status === 'approved')) {
-                const d = Number(String(m.held_date).slice(8, 10));
+            const mkM = myMk.filter(m => m.student_id === s.id && day10(m.held_date).slice(0, 7) === month);
+            for (const m of mkM.filter(m => m.status === 'approved')) {
+                const d = Number(day10(m.held_date).slice(8, 10));
                 if (m.kind === 'double') n++; else if (!days.has(d)) { days.add(d); n++; }
             }
-            const mkOf = myMk.filter(m => m.student_id === s.id);
-            const covered = new Set((mks.makeups || []).filter(m => m.student_id === s.id).map(m => String(m.missed_date || '').slice(0, 10)));
-            const absentC = cells.filter(c => cal.status(entries[c.day]) === 'absent');
-            const strip = sched.map(c => { const st = cal.status(entries[c.day]); return { day: c.day, date: c.date, st: st === 'present' ? 'ok' : st === 'absent' ? (covered.has(c.date) ? 'cov' : 'bad') : c.date > td ? 'plan' : 'none' }; });
-            return { counted: Math.min(n, sched.length), plan: sched.length, absent: absentC.length, openMissed: absentC.filter(c => !covered.has(c.date)).map(c => c.day),
-                coveredN: absentC.filter(c => covered.has(c.date)).length, review: mkOf.filter(m => m.status === 'review').length, present: cells.filter(c => cal.status(entries[c.day]) === 'present').length,
-                planLeft: sched.filter(c => c.date > td).length, strip };
+            const cov = new Map(myMk.filter(m => m.student_id === s.id && ['planned', 'review', 'approved'].includes(m.status)).map(m => [day10(m.missed_date), m]));
+            const absentC = cells.filter(isA);
+            const strip = sched.map(c => ({ day: c.day, st: isP(c) ? '' : isA(c) ? (cov.has(c.date) ? 'q' : 'x') : 'f', label: isP(c) ? 'keldi' : isA(c) ? (cov.has(c.date) ? 'kelmadi, qoplangan' : 'kelmadi') : c.date > td ? 'reja' : 'belgilanmagan' }));
+            return { counted: Math.min(n, sched.length), plan: sched.length, absent: absentC.length,
+                openMissed: absentC.filter(c => !cov.has(c.date) && c.date <= td).map(c => c.day),
+                coveredN: absentC.filter(c => ['approved', 'planned'].includes(cov.get(c.date)?.status)).length,
+                reviewN: absentC.filter(c => cov.get(c.date)?.status === 'review').length,
+                review: mkM.filter(m => m.status === 'review').length, present: sched.filter(isP).length,
+                planLeft: sched.filter(c => c.date > td).length, unmarked: sched.filter(c => c.date <= td && !isP(c) && !isA(c)).length, strip };
         };
         const statusOf = (a, x) => {
             const f = new Set((x?.flags || []).map(f => f.key));
-            if (a.absent >= 3) return ['Ko\'p kelmayapti', 'sc-pill--bad'];
-            if (f.has('struggling')) return ['Qiynalyapti', 'sc-pill--warn'];
-            if (f.has('idle')) return [x.flags.find(f => f.key === 'idle').label, 'sc-pill--warn'];
-            if (f.has('behind')) return ['Rejadan orqada', 'sc-pill--warn'];
-            return ['Rejada', 'sc-pill--ok'];
+            // Qoplanmagan 3+ dars — qoplangan/rejalashtirilgan kelmaganlar hisobga olinmaydi.
+            if (a.strip.filter(c => c.st === 'x').length >= 3) return ['Ko\'p kelmayapti', 'is-warn'];
+            if (f.has('struggling')) return ['Qiynalyapti', 'is-warn'];
+            if (f.has('idle')) return [x.flags.find(f => f.key === 'idle').label, 'is-warn'];
+            if (f.has('behind')) return ['Rejadan orqada', 'is-warn'];
+            return ['Rejada', 'is-ok'];
         };
         const row = (s, kind) => {
             const x = ac.get(s.id), a = kind === 'main' ? attOf(s) : null, c = cnt.get(s.id);
-            const st = kind === 'main' ? statusOf(a, x) : ['Yordamchi', 'sc-pill--mute'];
-            return `<tr class="ms-row${myState.sel === s.id ? ' is-sel' : ''}" data-ms="${esc(s.id)}" tabindex="0"><td><span class="sc-row">${studentAvatar(s, 32)}<span class="yd-who"><b>${esc(s.name)}</b><small class="sc-mt">${kind === 'main' ? (s.serialCode ? '#' + esc(s.serialCode) : '') : 'asosiy: ' + esc(teacherName(s.teacherId, true))}</small></span>${tgIcon(gm.get(s.id))}${kind === 'main' ? '' : callIcon(s.id)}</span></td>
-              <td>${kind === 'main' ? `${esc(pattern(s.lessonDayOfWeek))} ${esc(s.lessonTime || '')}<small class="sc-mt yd-blk">${Number(s.lessonDuration) || 15} daq</small>` : `tavsiya ${esc(advTxt(s))}${s.lessonTime ? ' ' + esc(s.lessonTime) : ''}<small class="sc-mt yd-blk">darslari ${esc(pattern(s.lessonDayOfWeek))} ${esc(s.lessonTime || '')}</small>`}</td>
-              <td>${x ? `<b>${x.reached || 0}</b> / 72` : '<small class="sc-mt">—</small>'}</td>
-              <td>${kind === 'main' ? `<b>${a.counted}</b> / ${a.plan}${a.review ? ` <em class="duty-plus">+${a.review}</em>` : ''}` : `<b>${c?.counted || 0}</b> / ${CAP}`}</td>
-              <td><span class="sc-pill ${st[1]}">${esc(st[0])}</span></td></tr>`;
+            const st = kind === 'main' ? statusOf(a, x) : ['Yordamchi', 'is-mute'];
+            const on = !myState.closed && myState.sel === s.id;
+            return `<tr${on ? ' class="is-sel" aria-selected="true"' : ''} data-ms="${esc(s.id)}" tabindex="0"><td><div class="oq-who">${oqAv(s, 36)}<div><div class="oq-nm">${esc(s.name)}</div><div class="oq-mt">${kind === 'main' ? (s.serialCode ? '#' + esc(s.serialCode) : '&nbsp;') : 'asosiy: ' + esc(teacherName(s.teacherId, true))}</div></div>${oqTg(gm.get(s.id))}${kind === 'main' ? '' : oqCall(s)}</div></td>
+              <td>${kind === 'main' ? `${esc(pattern(s.lessonDayOfWeek))} ${esc(s.lessonTime || '')}<div class="oq-cb">${Number(s.lessonDuration) || 15} daq</div>` : `tavsiya ${esc(advTxt(s))}${s.lessonTime ? ' ' + esc(s.lessonTime) : ''}<div class="oq-cb">darslari ${esc(pattern(s.lessonDayOfWeek))} ${esc(s.lessonTime || '')}</div>`}</td>
+              <td>${x ? `<b>${x.reached || 0}</b> / 72` : '<span class="oq-mt">—</span>'}</td>
+              <td>${kind === 'main' ? `<b>${a.counted}</b> / ${a.plan}${a.review ? ` <span class="oq-plus">+${a.review}</span>` : ''}` : `<b>${c?.counted || 0}</b> / ${CAP}`}</td>
+              <td><span class="oq-pill ${st[1]}">${esc(st[0])}</span></td></tr>`;
         };
         const mainRows = mine.filter(match), helpRows = helped.filter(match);
         if (!myState.sel || ![...mine, ...helped].some(s => s.id === myState.sel)) myState.sel = (mainRows[0] || helpRows[0])?.id || '';
-        const sel = [...mine, ...helped].find(s => s.id === myState.sel);
-        const mL = MON[Number(month.slice(5)) - 1];
-        const detail = () => {
-            if (!sel) return '<p class="sc-mt">O\'quvchini tanlang</p>';
-            const isMain = sel.teacherId === tid, x = ac.get(sel.id), a = isMain ? attOf(sel) : null, c = cnt.get(sel.id);
+        const sel = myState.closed ? null : [...mine, ...helped].find(s => s.id === myState.sel);
+        const mainDetail = () => {
+            const x = ac.get(sel.id), a = attOf(sel);
             const subj = (sel.subject || lang) === 'russian' ? 'Rus tili' : 'Ingliz tili';
             const start = sel.startDate ? String(sel.startDate).slice(0, 10) : null, end = courseEnd(sel);
             const dayN = start && start <= td ? Math.round((Date.parse(td) - Date.parse(start)) / 86400000) + 1 : null;
             const phone = sel.phone ? (typeof formatPhoneDisplay === 'function' ? formatPhoneDisplay(sel.phone) : sel.phone) : '';
-            return `<div class="sc-row">${studentAvatar(sel, 48)}<span class="yd-who"><b class="ms-name">${esc(sel.name)}</b><small class="sc-mt">${esc(subj)} · ${isMain ? 'asosiy o\'quvchingiz' : 'yordamchi sifatida'}${sel.serialCode ? ' · #' + esc(sel.serialCode) : ''}</small></span></div>
-              <div class="yd-k4"><div><small>Ilovada</small><b>${x ? x.reached + ' / 72 dars' : '—'}</b></div><div><small>1-urinish</small><b class="yd-pc ${pctCls(x?.firstTryAvg)}">${x?.firstTryAvg != null ? x.firstTryAvg + '%' : '—'}</b></div>
-                <div><small>${isMain ? 'Davomat · ' + esc(mL) : 'Aloqalar · ' + esc(mL)}</small><b>${isMain ? `${a.counted} / ${a.plan}${a.review ? ' · +' + a.review : ''}` : `${c?.counted || 0} / ${CAP}`}</b></div>
+            const MonL = cap1(mName(month));
+            const parts = [a.coveredN && `${a.coveredN} qoplandi`, a.reviewN && `${a.reviewN} tekshiruvda`].filter(Boolean).join(', ');
+            const sumTxt = `${a.present} keldi · ${a.absent} kelmadi${parts ? ` (${parts})` : ''}${a.unmarked ? ` · ${a.unmarked} belgilanmagan` : ''} · ${a.planLeft} reja`;
+            return `<div class="oq-dh2">${oqAv(sel, 36)}<div><div class="oq-nm" id="oqDn">${esc(sel.name)}</div><div class="oq-mt">${esc(subj)} · asosiy o'quvchingiz${sel.serialCode ? ' · #' + esc(sel.serialCode) : ''}</div></div><button type="button" class="oq-icb" data-close-detail aria-label="Yopish">${OQ_X}</button></div>
+              <div class="oq-kv"><div><small>Ilovada</small><b>${x ? x.reached + ' / 72 dars' : '—'}</b></div><div><small>1-urinish</small><b>${x?.firstTryAvg != null ? x.firstTryAvg + '%' : '—'}</b></div>
+                <div><small>Davomat · ${esc(mName(month))}</small><b>${a.counted} / ${a.plan}${a.review ? ' · +' + a.review : ''}</b></div>
                 <div><small>Kurs</small><b>${dayN ? `${dayN}-kun · ${esc(ddmm(start))}${end ? ' → ' + esc(ddmm(end)) : ''}` : start ? `${esc(ddmm(start))} dan` : '—'}</b></div></div>
-              ${isMain && a.strip.length ? `<h3 class="yd-h3">${esc(cap1(mL))} davomati</h3><div class="yd-strip" role="img" aria-label="${esc(cap1(mL))} davomati">${a.strip.map(c => `<i class="${c.st}" title="${c.day}-${esc(MON_S[Number(month.slice(5)) - 1])}"></i>`).join('')}</div>
-                <p class="sc-mt">${a.present} keldi · ${a.absent} kelmadi${a.absent ? ` (${a.coveredN} qoplandi${a.review ? `, ${a.review} tekshiruvda` : ''})` : ''} · ${a.planLeft} reja</p>` : ''}
-              <dl class="ms-dl"><dt>Jadval</dt><dd>${esc(pattern(sel.lessonDayOfWeek))} ${esc(sel.lessonTime || '')} · ${Number(sel.lessonDuration) || 15} daq</dd>
+              ${a.strip.length ? `<p class="oq-cap">${esc(MonL)} davomati</p><div class="oq-cal2" style="grid-template-columns:repeat(${Math.max(a.strip.length, 1)},1fr)" role="img" aria-label="${esc(MonL)}: ${esc(sumTxt)}">${a.strip.map(c => `<span${c.st ? ` class="${c.st}"` : ''} title="${c.day}-${esc(mL)} · ${c.label}"></span>`).join('')}</div>
+                <p class="oq-capm">${esc(sumTxt)}</p>` : ''}
+              <dl class="oq-dl2"><dt>Jadval</dt><dd>${esc(pattern(sel.lessonDayOfWeek))} ${esc(sel.lessonTime || '')} · ${Number(sel.lessonDuration) || 15} daq</dd>
                 <dt>Kurs</dt><dd>${start ? `${esc(ddmmyy(start))}${end ? ' → ' + esc(ddmmyy(end)) : ''}` : '—'}</dd>
-                ${isMain ? `<dt>Yordamchi ustoz</dt><dd>${sel.assistantTeacherId ? esc(teacherName(sel.assistantTeacherId)) : '—'}</dd>` : `<dt>Asosiy ustoz</dt><dd>${esc(teacherName(sel.teacherId))}</dd><dt>Aloqa tavsiyasi</dt><dd>${esc(advTxt(sel))}</dd>`}
-                ${isMain ? `<dt>Telefon</dt><dd>${phone ? `<a href="tel:${esc(String(sel.phone).replace(/[^\d+]/g, ''))}">${esc(phone)}</a>` : '—'}</dd>` : ''}
-                ${isMain && a.openMissed.length ? `<dt>Qoplash mumkin</dt><dd class="yd-good">${a.openMissed.length} dars · ${a.openMissed.join(' va ')}-${esc(MON_S[Number(month.slice(5)) - 1])}</dd>` : ''}</dl>
-              ${isMain ? '' : '<div data-prog></div>'}
-              <div class="ms-acts"><button type="button" class="sc-btn sc-btn--pri" data-open-card="${esc(sel.id)}">O'quvchi kartasini ochish</button>
-                ${isMain ? `<button type="button" class="sc-btn" data-go-att>${a.openMissed.length ? 'Qoplash darsi qo\'yish' : 'Davomat'}</button><button type="button" class="sc-btn" data-req>Adminga so'rov: jadval o'zgarishi</button>`
-                  : `<button type="button" class="sc-btn yd-callbtn" data-call="${esc(sel.id)}">${PHONE_SVG}Qo'ng'iroq</button><button type="button" class="sc-btn" data-go-contacts>Aloqani belgilash</button>`}</div>
-              <p class="sc-mt yd-lockline">${LOCK_SVG}<span>Ustoz almashtirish, muzlatish va to'lovlar — admin bo'limida. Siz so'rov yuborasiz, admin hal qiladi.</span></p>`;
+                <dt>Yordamchi ustoz</dt><dd>${sel.assistantTeacherId ? esc(teacherName(sel.assistantTeacherId)) : '—'}</dd>
+                <dt>Telefon</dt><dd>${phone ? `<a href="tel:${esc(String(sel.phone).replace(/[^\d+]/g, ''))}">${esc(phone)}</a>` : '—'}</dd>
+                ${a.openMissed.length ? `<dt>Qoplash mumkin</dt><dd class="is-teal">${a.openMissed.length} dars · ${a.openMissed.join(' va ')}-${esc(mL)}</dd>` : ''}</dl>
+              <div class="oq-dact"><button type="button" class="oq-btn is-pri" data-open-card="${esc(sel.id)}">O'quvchi kartasini ochish</button>
+                ${a.openMissed.length ? '<button type="button" class="oq-btn" data-makeup>Qoplash darsi qo\'yish</button>' : ''}<button type="button" class="oq-btn" data-req>Adminga so'rov: jadval o'zgarishi</button></div>
+              <div class="oq-hid">${OQ_LOCK}<span>Ustoz almashtirish, muzlatish va to'lovlar — admin bo'limida. Siz so'rov yuborasiz, admin hal qiladi.</span></div>`;
         };
-        root.innerHTML = `<div class="sc-head"><div><h1>O'quvchilar</h1><p class="sc-sub">Sizga biriktirilgan o'quvchilar · to'lov va sotuv ma'lumotlari ustozga ko'rsatilmaydi</p></div>
-            <input type="search" placeholder="Ism yoki ID bo'yicha qidirish" value="${esc(myState.q)}" data-q aria-label="Qidirish"></div>
-          <div class="ms-grid"><section class="sc-card"><header class="sc-ch"><h2>Mening o'quvchilarim</h2>
-              <div class="sc-seg" role="group" aria-label="Holat"><button type="button" aria-pressed="true">Faol ${mine.length}${helped.length ? ' + ' + helped.length : ''}</button><button type="button" data-inactive aria-pressed="false">Faol emas ${notActive.length}</button><button type="button" data-finished aria-pressed="false">Tugatgan ${finished.length}</button></div></header>
-            <div class="yd-tw"><table class="sc-table ms-table"><thead><tr><th>O'quvchi</th><th>Jadval</th><th>Ilovada</th><th>Davomat · ${esc(MON_S[Number(month.slice(5)) - 1])}</th><th>Holat</th></tr></thead><tbody>
-            ${mine.length ? `<tr class="ms-sec"><td colspan="5">Asosiy ustozligingizda · ${mainRows.length}</td></tr>${mainRows.map(s => row(s, 'main')).join('')}` : ''}
-            ${helped.length ? `<tr class="ms-sec"><td colspan="5">Yordamchi sifatida · ${helpRows.length} · haftasiga 3 aloqa, kamida 5 daqiqa</td></tr>${helpRows.map(s => row(s, 'help')).join('')}` : ''}
-            ${!mainRows.length && !helpRows.length ? `<tr><td colspan="5" class="sc-mt">${q ? 'Hech kim topilmadi' : 'Sizga hali o\'quvchi biriktirilmagan'}</td></tr>` : ''}
-          </tbody></table></div></section><aside class="sc-card sc-pad ms-detail">${detail()}</aside></div>`;
+        const isMainSel = sel && sel.teacherId === tid;
+        root.innerHTML = `<div class="oq">${head('O\'quvchilar', 'Sizga biriktirilgan o\'quvchilar · to\'lov va sotuv ma\'lumotlari ustozga ko\'rsatilmaydi', 'Ism yoki ID bo\'yicha qidirish')}
+          <div class="oq-lay${sel ? '' : ' is-solo'}"><section class="oq-card is-clip" aria-labelledby="oqLt"><div class="oq-ch"><h2 class="oq-ct" id="oqLt">Mening o'quvchilarim</h2>
+              <div class="oq-seg" role="group" aria-label="Holat"><button type="button" aria-pressed="true">Faol <b>${mine.length}${helped.length ? ' + ' + helped.length : ''}</b></button><button type="button" data-inactive aria-pressed="false">Faol emas <b>${notActive.length}</b></button><button type="button" data-finished aria-pressed="false">Tugatgan <b>${finished.length}</b></button></div></div>
+            <div class="oq-tw"><table class="oq-t"><thead><tr><th scope="col">O'quvchi</th><th scope="col">Jadval</th><th scope="col">Ilovada</th><th scope="col">Davomat · ${esc(mL)}</th><th scope="col">Holat</th></tr></thead><tbody>
+            ${mine.length ? `<tr><td colspan="5" class="oq-sec">ASOSIY USTOZLIGINGIZDA · ${mainRows.length}</td></tr>${mainRows.map(s => row(s, 'main')).join('')}` : ''}
+            ${helped.length ? `<tr><td colspan="5" class="oq-sec">YORDAMCHI SIFATIDA · ${helpRows.length} · haftasiga 3 aloqa, kamida 5 daqiqa</td></tr>${helpRows.map(s => row(s, 'help')).join('')}` : ''}
+            ${!mainRows.length && !helpRows.length ? `<tr><td colspan="5" class="oq-empty">${q ? 'Hech kim topilmadi' : 'Sizga hali o\'quvchi biriktirilmagan'}</td></tr>` : ''}
+          </tbody></table></div></section>
+          ${sel ? `<aside class="oq-card oq-dp" aria-labelledby="oqDn">${isMainSel ? mainDetail() : helpDetail(sel, true)}</aside>` : ''}</div></div>`;
         bindCommon([...mine, ...helped]);
-        root.querySelector('[data-go-att]')?.addEventListener('click', () => {
-            if (window.schoolSchedule?.makeupDrawer && attOf(sel).openMissed.length) return window.schoolSchedule.makeupDrawer(re, { studentId: sel.id });
-            switchTab('teachers-section');
+        root.querySelector('[data-makeup]')?.addEventListener('click', () => {
+            if (window.schoolSchedule?.makeupDrawer) return window.schoolSchedule.makeupDrawer(re, { studentId: sel.id });
+            switchTab('timetable');
         });
         root.querySelector('[data-req]')?.addEventListener('click', () => {
             if (U().studentRequestDrawer) return U().studentRequestDrawer({ id: sel.id, name: sel.name }, 'schedule');
             U().openStudent(sel.id);
         });
         root.querySelector('[data-go-contacts]')?.addEventListener('click', () => markDrawer(sel, re));
-        if (sel && sel.teacherId !== tid) fillProgress(sel, true);
+        if (sel && !isMainSel) fillProgress(sel);
     }
 
     // ── Yordamchi bosh sahifasi (YordamchiBosh + YordamchiOyYopildi) ─────────

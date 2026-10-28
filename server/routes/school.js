@@ -185,6 +185,12 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
             if (!st || st.teacher_id !== req.body.teacherId) throw T.fail(403, 'Bu o\'quvchi shu ustozniki emas');
             const missed = T.assertDate(req.body.missedDate, 'Qoldirilgan dars sanasi');
             if (missed.slice(0, 7) !== T.assertDate(req.body.date).slice(0, 7)) throw T.fail(400, 'Qoplash shu oy ichida bo\'ladi');
+            // Ustoz faqat "Kelmadi" deb belgilangan va hali qoplanmagan darsni tanlaydi (sana qo'lda kiritilmaydi).
+            if (req.user.role === 'teacher') {
+                const open = (await S.missedLessons(c, req.body.teacherId, { from: missed, to: missed }))
+                    .some(m => m.studentId === req.body.studentId && m.date === missed && !m.makeup);
+                if (!open) throw T.fail(400, 'Bu sanada "Kelmadi" deb belgilangan, qoplanmagan dars yo\'q');
+            }
             const b = await S.book(c, req.user, req.body);
             const m = await c.query(`INSERT INTO school_makeups (id,student_id,teacher_id,missed_date,held_date,kind,booking_id,status,created_by)
                 VALUES ($1,$2,$3,$4,$5,'separate',$6,'planned',$7) RETURNING *`, [randomUUID(), req.body.studentId, req.body.teacherId, missed, req.body.date, b[0].id, req.user.id])
@@ -385,20 +391,7 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         let teacherId = req.query.teacherId ? String(req.query.teacherId) : '';
         if (req.user.role === 'teacher') teacherId = (await teacherOf(req)).id; else need(req, MANAGE);
         const { from, to } = T.monthBounds(month);
-        const own = (await pool.query(`SELECT teacher_id, student_id, TO_CHAR(day,'YYYY-MM-DD') AS day, absent FROM school_absences
-            WHERE day BETWEEN $1 AND $2 AND ($3='' OR teacher_id=$3)`, [from, to, teacherId])).rows;
-        let marks = [];
-        if ((await pool.query("SELECT to_regclass('public.staff_att_lesson_marks')::text AS t")).rows[0]?.t) {
-            marks = (await pool.query(`SELECT m.teacher_id, m.student_id, TO_CHAR(m.lesson_date,'YYYY-MM-DD') AS day FROM staff_att_lesson_marks m
-                WHERE m.duty='main' AND m.lesson_date BETWEEN $1 AND $2 AND ($3='' OR m.teacher_id=$3)
-                AND NOT EXISTS (SELECT 1 FROM main_attendance a WHERE a.att_key = $4 || '_' || m.teacher_id AND a.student_id=m.student_id
-                    AND a.day = EXTRACT(DAY FROM m.lesson_date)::int AND a.present = 1)`, [from, to, teacherId, month])).rows;
-        }
-        const key = r => `${r.teacher_id}|${r.student_id}|${r.day}`;
-        const explicit = new Map(own.map(r => [key(r), r.absent]));
-        const out = own.filter(r => r.absent).map(r => ({ teacherId: r.teacher_id, studentId: r.student_id, day: r.day }));
-        for (const m of marks) if (!explicit.has(key(m))) out.push({ teacherId: m.teacher_id, studentId: m.student_id, day: m.day });
-        return { month, absences: out };
+        return { month, absences: await S.teacherAbsences(pool, { from, to, teacherId }) };
     }));
 
     // ── O'quvchi kartasi va amallar ──────────────────────────────────────────
