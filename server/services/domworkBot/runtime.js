@@ -102,7 +102,10 @@ function createRuntime({ pool, crm, env = process.env, redisFactory, telegramFac
             const found = (await db.query(`SELECT id,chat_id,type,teacher_id FROM domwork_learning_groups WHERE chat_id=$1 AND NOT archived AND verified_at IS NOT NULL
                 UNION ALL SELECT id,chat_id,type,NULL FROM domwork_bot_groups WHERE chat_id=$1 AND active`, [row.target_id])).rows;
             if (found.length !== 1 || (row.payload._binding && row.payload._binding!==found[0].id)
-                || !['sendMessage','sendPhoto','sendVideo','sendVoice','sendDocument','unbanChatMember'].includes(row.method)) return false;
+                || !['sendMessage','sendPhoto','sendVideo','sendVoice','sendDocument','unbanChatMember','copyMessage','editMessageReplyMarkup'].includes(row.method)) return false;
+            // Voronka (Sotuv guruhi) — faqat sendMessage/copyMessage/editMessageReplyMarkup.
+            if (row.payload._funnel && !['sendMessage','copyMessage','editMessageReplyMarkup'].includes(row.method)) return false;
+            if (!row.payload._funnel && ['copyMessage','editMessageReplyMarkup'].includes(row.method)) return false;
             // Live Telegram permission check; stale verification never grants rights.
             const member = await call('getChatMember', { chat_id: row.target_id, user_id: botId });
             if(member.status!=='administrator') return false;
@@ -135,12 +138,19 @@ function createRuntime({ pool, crm, env = process.env, redisFactory, telegramFac
                 if (!document) { await queue.settle(pool, row.id, 'failed', 'document-missing'); return true; }
                 payload.document = { source: document.buffer, filename: document.filename };
             }
-            await call(row.method, payload);
+            const result = await call(row.method, payload);
             await queue.settle(pool, row.id, 'sent');
+            // Sotuv guruhidagi voronka xabari → mehmon (menejer shu xabarga reply qilsa, javob mehmonga boradi).
+            if (row.payload._relay && row.target_kind === 'group' && result?.message_id)
+                await pool.query('INSERT INTO domwork_bot_relay(chat_id,message_id,telegram_id) VALUES($1,$2,$3) ON CONFLICT DO NOTHING',
+                    [row.target_id, result.message_id, row.payload._relay]).catch(error => console.error('[domwork-bot] relay map failed:', error.code || error.name));
         } catch (error) {
             // Mehmon botni bloklagan bo'lsa — keyingi voronka xabarlari to'xtaydi.
-            if (row.payload._guest && Number(error?.response?.error_code) === 403)
+            if (row.payload._guest && Number(error?.response?.error_code) === 403) {
                 await pool.query('UPDATE domwork_bot_visitors SET blocked_at=NOW() WHERE telegram_id=$1', [row.target_id]).catch(() => {});
+                await pool.query("INSERT INTO domwork_bot_funnel_events(telegram_id,event,data) VALUES($1,'blocked',$2)",
+                    [row.target_id, JSON.stringify({ after: String(row.unique_key).startsWith('drip:') ? String(row.unique_key).split(':')[2] : '' })]).catch(() => {});
+            }
             const result = queue.failure(error);
             await queue.settle(pool, row.id, result.state, result.reason, result.seconds);
         }
@@ -150,7 +160,10 @@ function createRuntime({ pool, crm, env = process.env, redisFactory, telegramFac
         if (busy || stopped || !redis?.ready) return;
         busy = true;
         try {
-            for (let n = 0; n < 5; n++) if (!await queue.processOne(pool, async(db,update)=>{db.domworkRedis=redis;return handler(db,update);})) break;
+            // domworkTelegram — faqat o'qish uchun qisqa so'rovlar (masalan kanal obunasini tekshirish), 5 s chegara.
+            for (let n = 0; n < 5; n++) if (!await queue.processOne(pool, async(db,update)=>{db.domworkRedis=redis;
+                db.domworkTelegram=(method,payload)=>['getChatMember'].includes(method)?telegram.callApi(method,payload,{signal:AbortSignal.timeout(1500)}):Promise.reject(Error('method'));
+                return handler(db,update);})) break;
             for (let n = 0; n < 5; n++) if (!await queue.transaction(pool,events.processOne)) break;
             if(Date.now()-lastSchedule>30000) { await queue.transaction(pool,db=>scheduler.run(db)); lastSchedule=Date.now(); }
             for (let n = 0; n < 5; n++) if (!await deliverOne()) break;

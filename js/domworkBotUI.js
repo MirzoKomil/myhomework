@@ -49,6 +49,8 @@
                 <p class="dg-note">Yoqilganda botga kelgan yangi odam (CRMda yo‘q) sovg‘a, 1-dars va menejer bilan bog‘lanishga yo‘naltiriladi; landing "Rahmat" sahifasi shaxsiy bot havolasini beradi. So‘rovlar "Sotuv" guruhiga keladi (yuqorida biriktiring). Materiallarni botga fayl qilib yuboring, izohga: <b>#voronka sovga</b>, <b>#voronka dars1</b>, <b>#voronka menejer</b>, <b>#voronka qollanma_bank</b> … Ro‘yxat: botga <b>#voronka</b> deb yozing.</p>
                 <p>Yuklangan materiallar: ${esc(Object.keys(settings.data.funnelMedia || {}).join(', ') || 'yo‘q')}</p>
                 <div class="dg-fields"><label class="dg-checkbox"><input type="checkbox" name="funnelEnabled" ${settings.data.funnelEnabled?'checked':''}>Voronka yoqilgan</label>
+                <label class="dg-checkbox"><input type="checkbox" name="dripEnabled" ${settings.data.dripEnabled?'checked':''}>Isitish xabarlari (kuniga 1, 19:30–21:30)</label>
+                <label>Bonus kanali (bot kanalda admin bo‘lsin)<input class="form-control" name="bonusChannel" placeholder="@domwork" value="${esc(settings.data.bonusChannel)}"></label>
                 <label>Chegirma, %<input class="form-control" type="number" min="0" max="50" name="discountPercent" value="${esc(settings.data.discountPercent ?? 15)}"></label>
                 <label>Chegirma muddati, soat<input class="form-control" type="number" min="1" max="336" name="discountHours" value="${esc(settings.data.discountHours ?? 72)}"></label>
                 <label>Menejer javob beradi, daqiqa<input class="form-control" type="number" min="5" max="240" name="salesSlaMinutes" value="${esc(settings.data.salesSlaMinutes ?? 30)}"></label>
@@ -57,7 +59,8 @@
                 <label>O‘quvchi fikri — migrant (post havolasi)<input class="form-control" type="url" name="testimonialA" placeholder="https://t.me/domwork_natijalari/124" value="${esc(settings.data.funnelTestimonials?.A)}"></label></div>
                 <label>Kompaniya ma’lumoti ("Batafsil" ichida: MCHJ, STIR)<textarea class="form-control" name="companyInfo" maxlength="300" rows="2">${esc(settings.data.companyInfo)}</textarea></label>
                 <button class="btn-primary" type="submit">Voronkani saqlash</button></form>
-                ${funnel?`<p>So‘nggi ${funnel.days} kun (odamlar): ${funnel.steps.map(s=>`${esc({start:'Start',gift:'Sovg‘a',segment:'Segment',guide:'Qo‘llanma',lesson_part:'1-dars ochdi',lesson_seen:'Ko‘rdi',quiz:'Test',cta:'Taklif',contact:'Raqam',request:'So‘rov'}[s.event])}: ${s.people}`).join(' → ')} · Savollar: ${funnel.faq} · Yozganlar: ${funnel.freeText}</p>`:''}</details>
+                ${funnel?`<p>So‘nggi ${funnel.days} kun (odamlar): ${funnel.steps.map(s=>`${esc({start:'Start',gift:'Sovg‘a',segment:'Segment',guide:'Qo‘llanma',lesson_part:'1-dars ochdi',lesson_seen:'Ko‘rdi',quiz:'Test',cta:'Taklif',contact:'Raqam',request:'So‘rov'}[s.event])}: ${s.people}`).join(' → ')} · Savollar: ${funnel.faq} · Yozganlar: ${funnel.freeText} · Kanal bonusi: ${funnel.bonus||0} · Menejer javoblari: ${funnel.relays||0}</p>
+                ${(funnel.drips||[]).length?`<p>Isitish: ${funnel.drips.map(d=>`${esc(d.item)}: ${d.sent} ta${d.blocked?` · blok ${d.blockRate}%`:''}${d.alert?' ⚠️':''}`).join(' · ')}</p>`:''}`:''}</details>
             <details><summary>Xabar tarqatish</summary><p>Rasm, video va ovozni botning admin menyusi orqali yuborish mumkin. Bu yerda matnli xabarni tayyorlang.</p>
                 <form data-db-broadcast><label>Auditoriya<select class="form-control" name="segment">${Object.entries(roles).map(([id,label])=>`<option value="${id}">${esc(label)}</option>`).join('')}</select></label>
                     <fieldset><legend>Guruhlar — «Tanlangan guruhlar» uchun</legend>${groups.map(g=>`<label class="dg-checkbox"><input type="checkbox" name="group" value="${esc(g.id)}">${esc(g.name)}</label>`).join('') || '<p>Tekshirilgan guruh yo‘q.</p>'}</fieldset>
@@ -89,7 +92,7 @@
             const saved=await api('/settings',body,'PUT');settings=saved;notify('Sozlamalar serverga saqlandi.');
         });};
         el.querySelector('[data-db-funnel]').onsubmit=e=>{e.preventDefault();const f=e.currentTarget;work(async()=>{
-            const saved=await api('/settings',{revision:settings.revision,funnelEnabled:f.elements.funnelEnabled.checked,
+            const saved=await api('/settings',{revision:settings.revision,funnelEnabled:f.elements.funnelEnabled.checked,dripEnabled:f.elements.dripEnabled.checked,bonusChannel:f.elements.bonusChannel.value.trim(),
                 discountPercent:Number(f.elements.discountPercent.value),discountHours:Number(f.elements.discountHours.value),
                 salesSlaMinutes:Number(f.elements.salesSlaMinutes.value),salesHours:f.elements.salesHours.value.trim(),companyInfo:f.elements.companyInfo.value,
                 funnelTestimonials:{A:f.elements.testimonialA.value.trim(),B:f.elements.testimonialB.value.trim()}},'PUT');

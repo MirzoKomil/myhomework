@@ -55,7 +55,14 @@ function settingsInput(body, previous) {
         if(out[period+'AwardsEnabled'] && !out[key])throw fail(400,'Mukofot mezonini avval tanlang');
     }
     // Lid voronkasi sozlamalari (materiallar botda "#voronka <kalit>" orqali yuklanadi).
-    if (Object.hasOwn(body,'funnelEnabled')) { if (typeof body.funnelEnabled !== 'boolean') throw fail(400,'Sozlama boolean bo‘lsin'); out.funnelEnabled = body.funnelEnabled; }
+    for (const key of ['funnelEnabled','dripEnabled']) if (Object.hasOwn(body,key)) { if (typeof body[key] !== 'boolean') throw fail(400,'Sozlama boolean bo‘lsin'); out[key] = body[key]; }
+    // Isitish faqat yoqilgan paytdan keyin kelgan mehmonlarga (eski bazaga birdaniga xabar ketmasin).
+    if (out.dripEnabled && !previous.dripStartedAt) out.dripStartedAt = new Date().toISOString(); // faqat birinchi yoqilishda
+    if (Object.hasOwn(body,'bonusChannel')) {
+        const ch = String(body.bonusChannel || '').trim();
+        if (ch && !/^@[A-Za-z][A-Za-z0-9_]{4,31}$/.test(ch)) throw fail(400,'Kanal @username shaklida bo‘lsin (masalan @domwork)');
+        out.bonusChannel = ch;
+    }
     for (const [key,min,max] of [['discountPercent',0,50],['discountHours',1,336],['salesSlaMinutes',5,240]]) {
         if (Object.hasOwn(body,key)) {
             const n = Number(body[key]);

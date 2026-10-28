@@ -315,3 +315,20 @@ Spec: Claude Docs "Domwork bot — lid voronkasi" (Project doc `claude/bot_lid_v
 - Report: `GET /api/domwork/bot/funnel/report?days=30`; CRM → Bot controls → "Lid voronkasi".
 
 Verify: `node scripts/run-payroll-postgres.cjs scripts/domwork-funnel-postgres.test.cjs`.
+
+## Funnel nurture, manager actions, relay, channel bonus (2026-10-29)
+
+- Drip (`settings.dripEnabled`, off by default): one message a day in the visitor's window (Uzbekistan 19:30–20:30,
+  migrants 20:30–21:30 Tashkent), plan d1–d10 per the spec, then weekly phrases ×8 → reactivation poll → monthly,
+  stop after 90 days. 3 ignored → every 3 days, 6 → weekly; any reply resets. 10% holdout gets none. Stops on
+  request, manager outcome, /stop, block, or when the Telegram becomes a staff/student identity.
+- Post-call track after a manager marks "rejected": price / time / think sequences; "not interested" → monthly only.
+- Manager buttons on request/hot/price alerts in the Sales group (linked sales/ROP/admin only):
+  talked · no answer (lead gets one polite "when is convenient?" per day) · later · booked trial · rejected+reason.
+  Each writes a CRM lead comment.
+- Relay: a manager replies to the bot's alert in the Sales group → the lead receives it via the bot, prefixed with the
+  manager's first name; media is copied. Lead voice/photo is copied into the group. Mapping: `domwork_bot_relay`.
+- Channel bonus (`settings.bonusChannel`, bot must be a channel admin): membership checked with getChatMember.
+- Report adds per-message drip sends and block rate (⚠️ above 1.5%), bonus, relays, outcomes.
+
+Verify: `node scripts/run-payroll-postgres.cjs scripts/domwork-funnel-drip-postgres.test.cjs`.
