@@ -248,7 +248,14 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
     router.post('/requests', handle(req => write(req, async c => {
         const me = await teacherOf(req);
         const type = req.body?.type;
-        if (!['leave', 'close', 'open', 'student'].includes(type)) throw T.fail(400, 'So\'rov turi noto\'g\'ri');
+        if (!['leave', 'close', 'open', 'student', 'assist_finance'].includes(type)) throw T.fail(400, 'So\'rov turi noto\'g\'ri');
+        // Yordamchi: yopilgan oy bo'yicha Moliyaga murojaat (faqat o'z hisobi; admin/boshliq ko'radi va javob beradi).
+        if (type === 'assist_finance') {
+            const r = await A.financeRequest(c, me, req.body || {});
+            const { rows } = await c.query(`INSERT INTO school_requests (id,teacher_id,requester_id,requester_name,type,payload,reason) VALUES ($1,$2,$3,$4,'assist_finance',$5,$6) RETURNING *`,
+                [randomUUID(), me.id, req.user.id, me.name, JSON.stringify(r.payload), r.reason]);
+            return { request: rows[0] };
+        }
         const reason = String(req.body.reason || '').trim(); if (reason.length < 3) throw T.fail(400, 'Sababni yozing');
         let p = { date: req.body.date, weekday: req.body.weekday, repeat: req.body.repeat, from: req.body.from, to: req.body.to };
         // O'quvchi bo'yicha so'rov (muzlatish, ustoz yoki jadval) — faqat o'z o'quvchisi; admin qo'lda hal qiladi.
@@ -282,7 +289,7 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         if (!approve && String(req.body?.note || '').trim().length < 3) throw T.fail(400, 'Rad etish sababini yozing');
         let override = null;
         const p = r.payload || {};
-        if (approve && r.type !== 'assist_late' && r.type !== 'student') {
+        if (approve && !['assist_late', 'student', 'assist_finance'].includes(r.type)) {
             override = await S.addOverride(c, req.user, { teacherId: r.teacher_id, kind: r.type, date: p.date, weekday: p.weekday, repeat: p.repeat,
                 from: p.from || '00:00', to: p.to || '24:00', reason: r.reason });
         }
@@ -741,6 +748,17 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         const rows = (await pool.query('SELECT * FROM school_assist_contacts WHERE student_id=$1 AND day BETWEEN $2 AND $3', [row.id, from, to])).rows;
         const r = A.countMonth(rows).students[0] || { counted: 0, noAnswer: 0, items: [] };
         return { month, cap: A.MONTH_CAP, counted: r.counted, noAnswer: r.noAnswer, items: r.items };
+    }));
+    // Yordamchi o'quvchilaridagi oy ichidagi o'zgarishlar (muzlatish, qaytish, chiqib ketish, asosiy ustoz almashishi) — faqat o'qish.
+    //  • ustoz/yordamchi — faqat o'zi yordamchi bo'lgan o'quvchilar; admin/boshliq/ROP — ?assistantId= bilan.
+    router.get('/assist/changes', handle(async req => {
+        const month = req.query.month || T.nowLocal().date.slice(0, 7);
+        let assistantId = req.query.assistantId;
+        if (req.user.role === 'teacher') assistantId = (await teacherOf(req)).id;
+        else need(req, MANAGE);
+        if (!assistantId) throw T.fail(400, 'Yordamchini tanlang');
+        if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(String(month))) throw T.fail(400, 'Oy noto\'g\'ri');
+        return A.monthChanges(pool, String(assistantId), month);
     }));
     router.post('/assist/months/:month/:step', handle(req => write(req, c => A.advanceMonth(c, req.user, req.params.month, req.params.step).then(m => ({ month: m })))));
 
