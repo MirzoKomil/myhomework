@@ -66,14 +66,29 @@ function computeTeacherRating(state, ownType, now = tashkentNow(), learning = {}
 
     const rows = teachers.map((t) => {
         const ownStudents = students.filter(s => (ownType === 'yordamchi' ? s.assistantTeacherId : s.teacherId) === t.id);
-        let expected = 0;
-        ownStudents.forEach((s) => { expected += daysElapsedThisMonthFor(s, now); });
-
         const attKey = `${monthSuffix}_${t.id}`;
         const presentDays = attStore[attKey] || {};
-        let completed = 0;
-        // Faqat "Keldi" (1/true) — "Kelmadi" (0) belgilari ham shu obyektda saqlanadi, ular hisoblanmaydi.
-        Object.values(presentDays).forEach((daysObj) => { completed += Object.values(daysObj || {}).filter(v => v === 1 || v === true).length; });
+        // Davomat sahifasi va moliya bilan bir xil (2026-10 dan): faqat o'quvchining o'z dars
+        // kunlaridagi (va bugungacha) "Keldi" sanaladi; har o'quvchida kutilgandan oshmaydi.
+        // Avval har qanday "Keldi" sanalardi — eski avtomatik belgilar (boshqa kunlarga) foizni oshirib yuborardi.
+        const strict = monthSuffix >= '2026-10';
+        const year = now.getUTCFullYear(), month = now.getUTCMonth(), today = now.getUTCDate();
+        let expected = 0, completed = 0;
+        ownStudents.forEach((s) => {
+            const exp = daysElapsedThisMonthFor(s, now);
+            expected += exp;
+            // Faqat "Keldi" (1/true) — "Kelmadi" (0) belgilari ham shu obyektda saqlanadi, ular hisoblanmaydi.
+            const marks = Object.entries(presentDays[s.id] || {}).filter(([, v]) => v === 1 || v === true);
+            if (!strict) { completed += marks.length; return; }
+            const pattern = s.lessonDayOfWeek == null ? [] : expandLessonPatternDays(s.lessonDayOfWeek);
+            const n = marks.filter(([d]) => {
+                const day = Number(d);
+                if (!(day >= 1 && day <= today)) return false;
+                const dow = new Date(Date.UTC(year, month, day)).getUTCDay();
+                return pattern.includes(dow === 0 ? 7 : dow);
+            }).length;
+            completed += Math.min(n, exp);
+        });
 
         const davomatPct = expected > 0 ? Math.min(100, (completed / expected) * 100) : 0;
 
