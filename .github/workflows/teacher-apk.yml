@@ -36,9 +36,9 @@ jobs:
           KS_B64: ${{ secrets.DWT_KEYSTORE_B64 }}
         run: |
           if [ -z "$KS_B64" ]; then
-            if [ "${{ github.event_name }}" = "pull_request" ]; then echo "PR: imzosiz tekshiruv yig'ilishi"; exit 0; fi
-            echo "::error::DWT_KEYSTORE_B64 va DWT_KEYSTORE_PASSWORD secret'lari qo'shilmagan (Settings → Secrets and variables → Actions)."
-            exit 1
+            # Kalit yo'q bo'lsa ham main "qizil" bo'lmasin (Railway CI'ni kutadi) — imzosiz tekshiruv, release yo'q.
+            echo "::warning::DWT_KEYSTORE_B64 va DWT_KEYSTORE_PASSWORD secret'lari qo'shilmagan — APK imzosiz yig'iladi, release chiqmaydi."
+            exit 0
           fi
           echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/dwt.jks"
           echo "DWT_SIGNED=1" >> "$GITHUB_ENV"
