@@ -67,7 +67,9 @@ function buildRoleNotifications(user, now = new Date()) {
     if (role === 'teacher' && user.linkedTeacherId && typeof expandLessonPatternDays === 'function') {
         const ids = typeof getTeacherAssignmentIds === 'function' ? getTeacherAssignmentIds(user.linkedTeacherId) : new Set([String(user.linkedTeacherId)]);
         const dow = now.getDay() || 7;
-        const mine = students.filter(s => ids.has(String(s.teacherId || '')) && s.lessonDayOfWeek != null && s.lessonTime
+        // Faqat faol o'quvchilar (js/attendanceRules.js) — Bosh sahifadagi "Bugun · N dars" bilan bir xil.
+        const active = s => (window.AttendanceRules ? window.AttendanceRules.isActiveStudent(s) : !s.frozen && !s.isStaffDemo && s.status !== 'inactive');
+        const mine = students.filter(s => active(s) && ids.has(String(s.teacherId || '')) && s.lessonDayOfWeek != null && s.lessonTime
             && expandLessonPatternDays(s.lessonDayOfWeek).includes(dow) && !(s.startDate && String(s.startDate) > todayKey));
         if (mine.length) {
             const first = mine.map(s => s.lessonTime).sort()[0];

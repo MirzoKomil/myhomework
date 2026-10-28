@@ -148,6 +148,7 @@
         const all = getItem(STORAGE_KEYS.students, []).filter(s => !s.isStaffDemo && s.status !== 'inactive');
         const helped = all.filter(s => String(s.assistantTeacherId || '') === String(tid));
         const mkP = api('/makeups').catch(() => ({ makeups: [] }));
+        const payP = window.UstozHome?.myPay ? window.UstozHome.myPay().catch(() => null) : Promise.resolve(null);
         // Qoplanmagan darslar (≈ ustoz maoshidan) va "e'tibor kerak" — js/ustozHome.js, parallel yuklanadi.
         const extraP = window.UstozHome?.todoItems ? window.UstozHome.todoItems(user, mkP).catch(() => []) : Promise.resolve([]);
         const [rep, trials, makeups] = await Promise.all([
@@ -160,14 +161,18 @@
         globalThis.__schoolMakeups = makeups.makeups || [];
         const reviewing = (makeups.makeups || []).filter(m => m.status === 'review').length;
 
-        // Maosh: asosiy (KPI) + yordamchi (aloqalar × 3 846).
+        // Maosh — server payroll (/api/payroll/me): Davomat va "Mening maoshim" bilan bitta manba (brauzerda hisoblanmaydi).
         const sal = home.querySelector('[data-thx-sal]'), sub = home.querySelector('[data-thx-salsub]');
         if (sal) {
-            // Oktyabrgacha (ASSIST_CONTACTS_FROM) yordamchi qismi eski davomatdan — bosh sahifa o'zi hisoblagan.
-            const old = sal.dataset.oldAssist != null ? Number(sal.dataset.oldAssist) || 0 : null;
-            const main = Number(sal.dataset.main) || 0, extra = old != null ? old : rep?.amount || 0;
-            sal.textContent = num(main + extra);
-            if (sub) sub.innerHTML = `${!helped.length && old == null && rep?.amount ? `asosiy ${num(main)} + o'tgan yordamchi aloqalari ${num(rep.amount)} · ` : ''}${helped.length ? `asosiy ${num(main)} + yordamchi ${old != null || rep ? num(extra) : '—'}${old != null ? ' (davomat bo\'yicha)' : ''} · ` : ''}${reviewing ? `<b>+${reviewing} qoplash tekshiruvda</b> (admin tasdiqlasa qo'shiladi) · ` : ''}oy yopilganda Moliya tasdiqlaydi`;
+            const pay = await payP;
+            if (!alive()) return;
+            const c = pay?.linked ? pay.current : null;
+            if (!c) { sal.textContent = '—'; if (sub) sub.textContent = 'hisob yuklanmadi · oy yopilganda Moliya tasdiqlaydi'; }
+            else {
+                const main = Number(c.mainTotal ?? c.total) || 0, extra = Number(c.assistantTotal) || 0;
+                sal.textContent = num(Number(c.total) || 0);
+                if (sub) sub.innerHTML = `${extra ? `asosiy ${num(main)} + ${helped.length ? 'yordamchi' : 'o\'tgan yordamchi aloqalari'} ${num(extra)} · ` : ''}${reviewing ? `<b>+${reviewing} qoplash tekshiruvda</b> (admin tasdiqlasa qo'shiladi) · ` : ''}oy yopilganda Moliya tasdiqlaydi`;
+            }
         }
 
         // Bugungi sinov darslari — bugungi ro'yxatga qo'shiladi (UstozBosh: "30 daq · sinov darsi" + holat pill'i).

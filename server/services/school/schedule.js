@@ -506,6 +506,15 @@ async function annotateViews(db, views, { from, to }) {
         const p = Number(a.present) === 1 || a.present === true ? 1 : 0;
         mark.set(key, Math.max(mark.get(key) ?? 0, p));
     }
+    // "Kelmadi" (school_absences) — main_attendance faqat "Keldi"ni saqlaydi; "Keldi" ustun turadi.
+    if (ids.length) for (const m of months) {
+        const b = T.monthBounds(m), f = from > b.from ? from : b.from, t = to < b.to ? to : b.to;
+        if (f > t) continue;
+        for (const a of await teacherAbsences(db, { from: f, to: t, studentIds: ids })) {
+            const key = `${a.studentId}|${a.day}`;
+            if (!mark.has(key)) mark.set(key, 0);
+        }
+    }
     const mkBy = new Map(mk.rows.map(m => [m.booking_id, m]));
     const dblBy = new Map(dbl.rows.map(m => [`${m.student_id}|${dateStr(m.held_date)}`, m]));
     const leadBy = new Map(leads.rows.map(l => [l.id, l]));
@@ -550,16 +559,20 @@ async function unassignedTrials(db, { from, to, lang = null }) {
 // Asosiy ustoz "Kelmadi" belgilari — bitta manba (GET /attendance/absences, qoplash ro'yxati, qoplash tekshiruvi):
 // school_absences + eski yozuvlar (ustoz belgilagan, lekin "Keldi" bo'lmagan dars — staff_att_lesson_marks).
 // main_attendance faqat "Keldi"ni saqlaydi (kelmadi bo'lsa qator o'chiriladi).
-async function teacherAbsences(db, { from, to, teacherId = '' }) {
+// "Kelmadi" belgilari — yagona o'qish manbai (Davomat, Bosh sahifa, O'quvchi kartasi, Dars jadvali).
+// studentIds (ixtiyoriy) — faqat shu o'quvchilar. Oraliq bir oy ichida bo'lishi kerak (eski belgilar shu oy kaliti bilan).
+async function teacherAbsences(db, { from, to, teacherId = '', studentIds = null }) {
     const month = from.slice(0, 7);
+    const ids = Array.isArray(studentIds) ? studentIds.map(String) : null;
+    if (ids && !ids.length) return [];
     const own = (await db.query(`SELECT teacher_id, student_id, TO_CHAR(day,'YYYY-MM-DD') AS day, absent FROM school_absences
-        WHERE day BETWEEN $1 AND $2 AND ($3='' OR teacher_id=$3)`, [from, to, teacherId])).rows;
+        WHERE day BETWEEN $1 AND $2 AND ($3='' OR teacher_id=$3) AND ($4::text[] IS NULL OR student_id = ANY($4::text[]))`, [from, to, teacherId, ids])).rows;
     let marks = [];
     if ((await db.query("SELECT to_regclass('public.staff_att_lesson_marks')::text AS t")).rows[0]?.t) {
         marks = (await db.query(`SELECT m.teacher_id, m.student_id, TO_CHAR(m.lesson_date,'YYYY-MM-DD') AS day FROM staff_att_lesson_marks m
-            WHERE m.duty='main' AND m.lesson_date BETWEEN $1 AND $2 AND ($3='' OR m.teacher_id=$3)
+            WHERE m.duty='main' AND m.lesson_date BETWEEN $1 AND $2 AND ($3='' OR m.teacher_id=$3) AND ($5::text[] IS NULL OR m.student_id = ANY($5::text[]))
             AND NOT EXISTS (SELECT 1 FROM main_attendance a WHERE a.att_key = $4 || '_' || m.teacher_id AND a.student_id=m.student_id
-                AND a.day = EXTRACT(DAY FROM m.lesson_date)::int AND a.present = 1)`, [from, to, teacherId, month])).rows;
+                AND a.day = EXTRACT(DAY FROM m.lesson_date)::int AND a.present = 1)`, [from, to, teacherId, month, ids])).rows;
     }
     const key = r => `${r.teacher_id}|${r.student_id}|${r.day}`;
     const explicit = new Map(own.map(r => [key(r), r.absent]));

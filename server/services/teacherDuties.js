@@ -53,9 +53,13 @@ function stateForTeacher(state, own) {
     const assistantIds = new Set(hasAssistantDuty(own) ? state.students.filter(s => s.assistantTeacherId === own.id).map(s => s.id) : []);
     const assignedIds = new Set([...mainIds, ...assistantIds]);
     const safeFields = ['id','name','phone','phone2','group','subject','teacherId','assistantTeacherId',
-        'lessonDayOfWeek','lessonTime','lessonDuration','startDate','joinDate','status','frozen','age','gender'];
+        'lessonDayOfWeek','lessonTime','lessonDuration','startDate','joinDate','status','frozen','age','gender','serialCode'];
+    // Telefon faqat asosiy ustozga o'z o'quvchisi uchun (JadvalQoidalar: "Telefon raqamini ko'rish — Ustoz ✓, Yordamchi:
+    // yashirin · ☎ tugmasi"). Yordamchiga o'quvchi telefoni yuborilmaydi — qo'ng'iroq Telegram guruh orqali.
+    // serialCode (#ID) — ustoz/yordamchi ro'yxatida ko'rinadi va ID bo'yicha qidiriladi (to'lov ma'lumoti emas).
+    const PHONE_FIELDS = new Set(['phone', 'phone2']);
     const students = state.students.filter(s => assignedIds.has(s.id)).map(s =>
-        Object.fromEntries(safeFields.filter(key => s[key] !== undefined).map(key => [key, s[key]])));
+        Object.fromEntries(safeFields.filter(key => s[key] !== undefined && !(PHONE_FIELDS.has(key) && !mainIds.has(s.id))).map(key => [key, s[key]])));
     const teacherIds = new Set([own.id, ...students.map(s => s.teacherId), ...students.map(s => s.assistantTeacherId)]);
     const teachers = state.teachers.filter(t => teacherIds.has(t.id)).map(t => t.id === own.id ? t
         : { id: t.id, name: t.name, type: t.type, subject: t.subject });

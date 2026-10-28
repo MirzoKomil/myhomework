@@ -737,7 +737,7 @@
                         let r;
                         if (mode === 'dbl') r = await api('/api/school/makeups/double', { method: 'POST', body: { studentId: sid, missedDate: missed, heldDate: held } });
                         else if (past) r = await api('/api/school/makeups/separate', { method: 'POST', body: { studentId: sid, missedDate: missed, heldDate: day } });
-                        else r = await api('/api/school/bookings', { method: 'POST', body: { kind: 'makeup', teacherId: S.me.id, studentId: sid, missedDate: missed, date: day, time: hm(time), duration: dur } });
+                        else r = await api('/api/school/makeups/plan', { method: 'POST', body: { kind: 'makeup', teacherId: S.me.id, studentId: sid, missedDate: missed, date: day, time: hm(time), duration: dur } });
                         if (r.makeup) S.makeups.unshift(r.makeup);
                         drop('sched:'); close(); toast(mode === 'dbl' || past ? "Qoplash tekshiruvga yuborildi" : `Qoplash ${dayChip(day)} ${hm(time)} ga qo'yildi`); render();
                     } catch (err) { busy = false; toast(err.message); draw(); }

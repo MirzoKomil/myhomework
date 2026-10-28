@@ -49,7 +49,8 @@
                 const r = await api(`/api/school/assist/plan?from=${d}&to=${d}`);
                 items = (r.items || []).filter(i => i.date === d && i.studentId).map(i => ({
                     studentId: i.studentId, studentName: i.studentName || '', start: i.start, end: i.end || i.start + 15,
-                    kind: 'contact', done: i.kind === 'contact', date: d }));
+                    // "Javob bermadi" — bajarilmagan (qayta urinish kerak), Davomat/Bosh sahifa bilan bir xil.
+                    kind: 'contact', done: i.kind === 'contact' && i.outcome !== 'no_answer', noAnswer: i.kind === 'contact' && i.outcome === 'no_answer', date: d }));
             } else {
                 const r = await api(`/api/school/schedule?from=${d}&to=${d}`);
                 for (const v of r.views || []) for (const i of v.items || []) {
@@ -69,13 +70,10 @@
                 it.lang = l.lang;
                 it.reached = l.reached || 0;
                 if (assistant) { it.lessonNo = l.reached || null; continue; }
-                // Davomatdagi qoida (navbatdagi o'tilmagan jonli dars). Eski belgilarda dars
-                // nomi yo'q bo'lsa — o'quvchi ilovada yetib kelgan joydan.
-                let no = l.nextLive?.no || null, id = l.nextLive?.id || '';
-                const byApp = l.reached ? Math.min(72, l.reached % 2 === 0 ? l.reached : l.reached + 1) : null;
-                if (byApp && (!no || no < byApp - 2)) { no = byApp; id = ''; }
-                it.lessonNo = no;
-                it.lessonId = id;
+                // Yagona qoida — server (liveLessonPick: o'tilmagan birinchi jonli dars, tarix to'liq bo'lmasa ilovadagi o'rin).
+                // Davomat "Jonli dars avtomatik belgilanadi: N-dars" va "Keldi" saqlanganda ham aynan shu dars.
+                it.lessonNo = l.nextLive?.no || null;
+                it.lessonId = l.nextLive?.id || '';
             }
             const nm = nowMin();
             // Yordamchi aloqasi tavsiya vaqti — o'tib ketgan bo'lsa ham bugun bajarilmagani ko'rsatiladi.

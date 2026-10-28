@@ -584,7 +584,7 @@
                 const dur = Number(stu?.lessonDuration) || 30;
                 const fits = e - s >= dur;
                 const t0 = fits ? snap(s, e, dur, clickMin) : s;
-                const ms = missed.filter(m => m.studentId === sid && m.date.slice(0, 7) === date.slice(0, 7) && m.date <= today());
+                const ms = missed.filter(m => m.studentId === sid && m.date.slice(0, 7) === date.slice(0, 7) && m.date <= today() && m.date <= date); // qoplash qoldirilgan darsdan keyin
                 const firstOpen = ms.find(m => !m.makeup);
                 const ld = Number(stu.lessonDayOfWeek), lessonDay = ([1, 3, 5].includes(ld) ? [1, 3, 5] : [2, 4, 6].includes(ld) ? [2, 4, 6] : [ld]).includes(U().wd(date));
                 mkPanel.innerHTML = `<header class="sv-bh"><h2>Qoplash darsini rejalashtirish</h2></header><div class="sv-ed">
@@ -593,7 +593,8 @@
                   <div class="sv-fl"><span>Qaysi qoldirilgan dars o'rniga?</span>${ms.length ? ms.map(m => `<label class="sv-rb${m.makeup ? ' is-off' : ''}"${m.makeup ? ' aria-disabled="true"' : ''}><input type="radio" name="miss" value="${m.date}"${m === firstOpen ? ' checked' : ''}${m.makeup ? ' disabled' : ''}><i></i><span><b>${dm(m.date)}, ${DAY_FULL[U().wd(m.date) - 1]}</b><small>${m.makeup ? `allaqachon ${m.makeup.status === 'approved' ? 'qoplangan' : m.makeup.status === 'review' ? 'qoplangan · tekshiruvda' : 'rejalashtirilgan'}${m.makeup.heldDate ? ' · ' + dm(m.makeup.heldDate) : ''}` : 'kelmagan · hali qoplanmagan'}</small></span></label>`).join('')
                     : '<p class="sc-mt">Bu oyda bu o\'quvchida "Kelmadi" deb belgilangan dars yo\'q — qoplash faqat haqiqiy kelmagan dars uchun.</p>'}</div>
                   <div class="sc-note">O'quvchiga ilovada eslatma boradi. Vaqt band bo'ladi: sotuv bu yerga sinov qo'ya olmaydi. Dars o'tgach "Keldi" desangiz, admin tasdiqlaydi va dars maoshingizga qo'shiladi.</div>
-                  <div class="sv-btns"><button type="button" class="sc-btn" data-cancel>Bekor</button><button type="button" class="sc-btn sc-btn--pri" data-save${fits && firstOpen ? '' : ' disabled'}>Rejaga qo'yish</button></div></div>`;
+                  ${lessonDay ? `<p class="sc-err" role="alert">${esc(first(stu?.name))}ning dars kuni — qoplash darsi faqat dars kuni bo'lmagan kunga qo'yiladi. Dars kunida Davomatda "Keldi · 2 dars" ni tanlang.</p>` : ''}
+                  <div class="sv-btns"><button type="button" class="sc-btn" data-cancel>Bekor</button><button type="button" class="sc-btn sc-btn--pri" data-save${fits && firstOpen && !lessonDay ? '' : ' disabled'}>Rejaga qo'yish</button></div></div>`;
                 if (fits) pickBox(dl, t0, t0 + dur, `${first(stu?.name)} · qoplash`); else pickBox(null);
                 mkPanel.querySelector('[name=st]').onchange = ev => draw(ev.target.value);
                 mkPanel.querySelector('[data-cancel]').onclick = () => { pickBox(null); mkIdle(); };
@@ -601,7 +602,7 @@
                     const missedDate = mkPanel.querySelector('[name=miss]:checked')?.value;
                     if (!missedDate) return U().errBox(mkPanel, 'Qaysi dars o\'rniga ekanini tanlang');
                     U().busy(ev.target, true);
-                    try { await U().post('/bookings', { kind: 'makeup', teacherId: stu.teacherId, studentId: stu.id, date, time: hm(t0), duration: dur, missedDate }); st.makeupFor = null; U().toast('Qoplash rejaga qo\'yildi'); reload(); }
+                    try { await U().post('/makeups/plan', { kind: 'makeup', teacherId: stu.teacherId, studentId: stu.id, date, time: hm(t0), duration: dur, missedDate }); st.makeupFor = null; U().toast('Qoplash rejaga qo\'yildi'); reload(); }
                     catch (err) { U().busy(ev.target, false); U().errBox(mkPanel, err.message); }
                 };
             };

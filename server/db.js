@@ -4144,7 +4144,14 @@ async function recordTeacherAttendance({ actor, teacherId, studentId, date, pres
                 const takenIds = (allGrades[safeStudentId] || [])
                     .filter(item => item && item.lessonId && item.date !== String(date))
                     .map(item => item.lessonId);
-                lesson = pick.pickNextLiveLesson(mobileContent, studentInfo, takenIds);
+                // Ilovadagi o'rin ham hisobga olinadi — "Darsni boshlash" va Davomatdagi raqam bilan bir qoida (liveLessonPick).
+                let reachedNo = 0;
+                // (Tranzaksiya ichida: jadval bo'lmasa so'rov yuborilmaydi — xato tranzaksiyani buzmasin.)
+                if ((await client.query("SELECT to_regclass('public.student_lesson_progress')::text AS t")).rows[0]?.t) {
+                    const pr = await client.query('SELECT data FROM student_lesson_progress WHERE student_id = $1', [safeStudentId]);
+                    reachedNo = pick.reachedNoFrom(mobileContent, studentInfo, pr.rows[0]?.data || {});
+                }
+                lesson = pick.pickNextLiveLesson(mobileContent, studentInfo, takenIds, reachedNo);
             }
 
             await client.query(

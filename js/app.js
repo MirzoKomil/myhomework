@@ -8686,7 +8686,7 @@ function renderTeacherTodayBlock(user, { todoSlot = true } = {}) {
     const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     const day = now.getDate();
     const nowMin = now.getHours() * 60 + now.getMinutes();
-    const all = getItem(STORAGE_KEYS.students, []).filter(s => !s.frozen && !s.isStaffDemo && s.status !== 'inactive');
+    const all = getItem(STORAGE_KEYS.students, []).filter(s => AttendanceRules.isActiveStudent(s));
     const students = all.filter(s => ids.has(String(s.teacherId || '')));
     const helped = all.filter(s => ids.has(String(s.assistantTeacherId || '')));
     const att = getItem(STORAGE_KEYS.mainAttendance, {});
@@ -9338,7 +9338,7 @@ function teacherHomeStats(user, now = new Date()) {
     const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     const day = now.getDate();
     const nowMin = now.getHours() * 60 + now.getMinutes();
-    const all = getItem(STORAGE_KEYS.students, []).filter(s => !s.frozen && !s.isStaffDemo && s.status !== 'inactive');
+    const all = getItem(STORAGE_KEYS.students, []).filter(s => AttendanceRules.isActiveStudent(s));
     const students = all.filter(s => ids.has(String(s.teacherId || '')));
     const helped = all.filter(s => ids.has(String(s.assistantTeacherId || '')));
     const att = getItem(STORAGE_KEYS.mainAttendance, {});
@@ -9365,11 +9365,8 @@ function teacherHomeStats(user, now = new Date()) {
     Object.values(getItem(STORAGE_KEYS.liveGrades, {})).forEach(list => (list || []).forEach(g => {
         if (ids.has(String(g.teacherId || '')) && typeof g.studentRatingOfTeacher?.overall === 'number') ratings.push(g.studentRatingOfTeacher.overall);
     }));
-    const own = typeof resolveTeacherWithVirtual === 'function' ? resolveTeacherWithVirtual(user.linkedTeacherId) : null;
-    const kpi = (teacher, store, list) => { try { return teacher && list.length ? calculateKpiSalary(teacher, month, store, list) : null; } catch (e) { return null; } };
-    const mainKpi = own && own.type !== 'yordamchi' ? kpi(own, att, students) : null;
-    // Yordamchi maoshi ASSIST_CONTACTS_FROM oyidan aloqalar bo'yicha (homeExtras qo'shadi); undan oldin — eski yordamchi davomati.
-    const oldAssist = month < ASSIST_CONTACTS_FROM && own && helped.length ? kpi({ ...own, type: 'yordamchi' }, getItem(STORAGE_KEYS.assistantAttendance, {}), helped) : null;
+    // Maosh brauzerda hisoblanmaydi: summa server payroll'idan (/api/payroll/me) — Davomat va "Mening maoshim" bilan
+    // bitta manba (schoolTeacher.homeExtras to'ldiradi). Bu yerda faqat karta ko'rsatiladimi — shu aniqlanadi.
     const todayList = today.map(s => {
         const start = toMin(s.lessonTime), dur = Number(s.lessonDuration) || 15;
         return { id: s.id, name: s.name || "Oʻquvchi", group: s.group || '', time: s.lessonTime, start, dur, marked: present(s.id, day),
@@ -9381,8 +9378,7 @@ function teacherHomeStats(user, now = new Date()) {
         attExpected, attPct, attMissed,
         rating: ratings.length ? ratings.reduce((a, b) => a + b, 0) / ratings.length : null, ratingN: ratings.length,
         // Yordamchi qismi keyin schoolTeacher.homeExtras orqali aloqalar hisobidan qo'shiladi.
-        salary: (mainKpi?.total || 0) + (oldAssist?.total || 0), mainSalary: mainKpi?.total || 0, oldAssistSalary: oldAssist ? oldAssist.total || 0 : null,
-        hasSalary: !!(mainKpi || helped.length)
+        hasSalary: !!(students.length || helped.length)
     };
 }
 
@@ -9441,8 +9437,8 @@ function renderTeacherHome(user, now = new Date()) {
             const plan = kbxPlanCard({
                 id: 'kbxThPlan', title: `Hisoblangan maosh · ${month}`,
                 pill: s.attPct != null ? (s.attPct >= 90 ? { cls: 'ok', text: `Davomat ${s.attPct}%` } : { cls: 'warn', text: `Davomat ${s.attPct}%` }) : null,
-                big: s.hasSalary ? `<bdi data-thx-sal data-main="${Math.round(s.mainSalary)}"${s.oldAssistSalary != null ? ` data-old-assist="${Math.round(s.oldAssistSalary)}"` : ''}>${_kbxNum(s.salary)}</bdi>` : '—', of: s.hasSalary ? 'soʻm · hozirgacha' : 'KPI sozlanmagan',
-                sub: s.hasSalary ? `<span data-thx-salsub>${s.helped ? `asosiy ${_kbxNum(s.mainSalary)} + yordamchi …` : 'belgilangan davomat boʻyicha'} · oy yopilganda Moliya tasdiqlaydi</span>` : 'Administrator KPI sozlamasini kiritganda chiqadi',
+                big: s.hasSalary ? '<bdi data-thx-sal>…</bdi>' : '—', of: s.hasSalary ? 'soʻm · hozirgacha' : 'KPI sozlanmagan',
+                sub: s.hasSalary ? '<span data-thx-salsub>belgilangan davomat boʻyicha · oy yopilganda Moliya tasdiqlaydi</span>' : 'Administrator KPI sozlamasini kiritganda chiqadi',
                 bar: s.attPct != null ? { pct: s.attPct, due: null, ok: s.attPct >= 90, label: `Davomat ${s.attPct}%` } : null,
                 foot: s.attPct != null ? [`<strong>${s.came}</strong> keldi · <strong>${s.attMissed}</strong> kelmadi`, `kutilgan ${s.attExpected} dars`] : null,
                 tiles: [
