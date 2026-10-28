@@ -56,6 +56,8 @@ function settingsInput(body, previous) {
     }
     // Lid voronkasi sozlamalari (materiallar botda "#voronka <kalit>" orqali yuklanadi).
     for (const key of ['funnelEnabled','dripEnabled']) if (Object.hasOwn(body,key)) { if (typeof body[key] !== 'boolean') throw fail(400,'Sozlama boolean bo‘lsin'); out[key] = body[key]; }
+    // Isitish faqat yoqilgan paytdan keyin kelgan mehmonlarga (eski bazaga birdaniga xabar ketmasin).
+    if (out.dripEnabled && !previous.dripEnabled) out.dripStartedAt = new Date().toISOString();
     if (Object.hasOwn(body,'bonusChannel')) {
         const ch = String(body.bonusChannel || '').trim();
         if (ch && !/^@[A-Za-z][A-Za-z0-9_]{4,31}$/.test(ch)) throw fail(400,'Kanal @username shaklida bo‘lsin (masalan @domwork)');

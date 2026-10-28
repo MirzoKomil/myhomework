@@ -136,6 +136,12 @@ const WEEKLY = [
     ['Я живу в Ташкенте.', 'Men Toshkentda yashayman.', '«в Ташкенте» — joy ma’nosida so‘z oxiri o‘zgaradi.'],
     ['Спасибо за помощь!', 'Yordamingiz uchun rahmat!', 'Har qanday suhbatni chiroyli yakunlaydi.']
 ];
+// Oylik iboralar (haftaliklardan farqli).
+const MONTHLY = [
+    ['Давайте договоримся.', 'Keling, kelishib olaylik.', 'Ishda ham, kundalik hayotda ham kelishuvni boshlaydi.'],
+    ['Я в этом разбираюсь.', 'Men bu ishni yaxshi bilaman.', 'Ish suhbatida tajribangizni ta’kidlash uchun.'],
+    ['Можно записаться на приём?', 'Qabulga yozilsam bo‘ladimi?', 'Shifokor, idora, xizmat — hamma joyda kerak.']
+];
 const POLL = { speak: ['🗣 Gapirish', 'Gapirish — eng ko‘p uchraydigan to‘siq. Sababi oddiy: mashq qiladigan suhbatdosh yo‘q. Jonli individual darsda har darsda gapirasiz, ustoz xatoni darhol tuzatadi.'],
     listen: ['👂 Tushunish', 'Tez gapirilgan nutqni tushunish — quloq mashqi. Video darslar va ilovadagi audiolar shu uchun: har kuni 10 daqiqa tinglash bir oyda sezilarli farq beradi.'],
     grammar: ['📐 Grammatika', 'Grammatikani jadval bilan emas, gap ichida o‘rganamiz: har darsda bitta qoida va uni darhol suhbatda ishlatasiz.'],
@@ -158,8 +164,8 @@ const drip = {
     discount: (percent, until) => `🎁 Eslatma: bot orqali kelganlar uchun ${percent}% chegirma — ${until}gacha.\nShartlarini menejerimiz 5–10 daqiqada tushuntiradi.`,
     goodbye: 'Sizni ko‘p bezovta qilmaymiz 🙂 Endi haftada bir marta bitta foydali ibora yuboramiz.\nTo‘xtatish uchun — /stop',
     weekly: ([ru, uz, note]) => `📌 Hafta iborasi\n\n${ru}\n${uz}\n\n${note}`,
-    reactivate: 'Foydali iboralarni yuborishda davom etaylikmi?',
-    reactYes: 'Ha, davom eting', reactMonth: 'Oyiga bir marta', reactNo: 'Yo‘q, rahmat',
+    reactivate: 'Foydali iboralarni oyiga bir marta yuborishda davom etaylikmi?',
+    reactYes: 'Ha, oyiga bir marta', reactNo: 'Yo‘q, rahmat',
     reactBye: 'Tushunarli, boshqa yubormaymiz. Kerak bo‘lsa — /start bosing 👋',
     // Menejer bilan gaplashgandan keyin (rad sababi bo'yicha)
     priceB: 'Kurs narxini qulay qilishning ikki yo‘li bor:\n• Bo‘lib to‘lash — Uzum Nasiya va Paylater orqali, oyma-oy.\n• Bot orqali kelganlar uchun chegirma.\n\nKursga nima kiradi: shaxsiy ustoz bilan jonli darslar, 72 dars, ilova, bosma kitob, yordamchi ustoz nazorati.',
@@ -170,4 +176,4 @@ const drip = {
     noAnswer: name => `${name} sizga qo‘ng‘iroq qildi, lekin ulanmadi. Qachon qulay?`
 };
 
-module.exports = { PHRASES, WEEKLY, POLL, drip, SEGMENTS, LANDING_GOALS, FIELDS, FIELD_CHOICES, QUIZ, KEYBOARD, FAQ, FAQ_ORDER, WHEN, text };
+module.exports = { PHRASES, WEEKLY, MONTHLY, POLL, drip, SEGMENTS, LANDING_GOALS, FIELDS, FIELD_CHOICES, QUIZ, KEYBOARD, FAQ, FAQ_ORDER, WHEN, text };

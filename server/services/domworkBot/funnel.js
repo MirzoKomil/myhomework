@@ -31,7 +31,8 @@ async function init(db) {
         ADD COLUMN IF NOT EXISTS drip_last_at TIMESTAMPTZ, ADD COLUMN IF NOT EXISTS ignored INTEGER NOT NULL DEFAULT 0,
         ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ, ADD COLUMN IF NOT EXISTS outcome TEXT, ADD COLUMN IF NOT EXISTS outcome_at TIMESTAMPTZ,
         ADD COLUMN IF NOT EXISTS monthly BOOLEAN NOT NULL DEFAULT FALSE, ADD COLUMN IF NOT EXISTS drip_stopped BOOLEAN NOT NULL DEFAULT FALSE,
-        ADD COLUMN IF NOT EXISTS noans_at TIMESTAMPTZ, ADD COLUMN IF NOT EXISTS bonus_at TIMESTAMPTZ`);
+        ADD COLUMN IF NOT EXISTS noans_at TIMESTAMPTZ, ADD COLUMN IF NOT EXISTS bonus_at TIMESTAMPTZ,
+        ADD COLUMN IF NOT EXISTS drip_checked_at TIMESTAMPTZ, ADD COLUMN IF NOT EXISTS bonus_checked_at TIMESTAMPTZ`);
     // Sotuv guruhidagi bot xabari → qaysi mehmonga tegishli (menejer "reply" qilib javob yozadi).
     await db.query(`CREATE TABLE IF NOT EXISTS domwork_bot_relay (chat_id TEXT NOT NULL, message_id BIGINT NOT NULL, telegram_id TEXT NOT NULL,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), PRIMARY KEY(chat_id,message_id))`);
@@ -62,9 +63,9 @@ const sla = s => Number.isInteger(s.salesSlaMinutes) ? s.salesSlaMinutes : 30;
 
 // Har bir update uchun noyob outbox kalitlari.
 function context(db, update, tid) { let n = 0; return { db, tid, key: () => `f:${update.update_id}:${n++}` }; }
-async function send(c, method, payload, { delayMs = 0, unless = '', automation = false, key = '' } = {}) {
+async function send(c, method, payload, { delayMs = 0, unless = '', automation = false, key = '', expires = '' } = {}) {
     await store.enqueue(c.db, { key: key || c.key(), targetId: c.tid, method, notBefore: new Date(Date.now() + delayMs),
-        payload: { chat_id: c.tid, ...payload, _guest: { tid: c.tid, ...(unless ? { unless } : {}) }, ...(automation || delayMs ? { _automation: true } : {}) } });
+        payload: { chat_id: c.tid, ...payload, _guest: { tid: c.tid, ...(unless ? { unless } : {}) }, ...(automation || delayMs ? { _automation: true } : {}), ...(expires ? { _expiresAt: expires } : {}) } });
 }
 const say = (c, text, markup, opts) => send(c, 'sendMessage', { text, ...(markup ? { reply_markup: markup } : {}) }, opts);
 async function sendMedia(c, m, caption, markup, opts) {
@@ -84,7 +85,7 @@ async function upsertVisitor(db, from, { source = 'organic', leadId = null, phon
     const tid = policy.telegramId(from?.id);
     // 10% — nazorat guruhi: isitish xabarlari yuborilmaydi (isitishning haqiqiy foydasini o'lchash uchun).
     await db.query(`INSERT INTO domwork_bot_visitors(telegram_id,first_name,username,source,lead_id,phone,variant,holdout) VALUES($1,$2,$3,$4,$5,$6,$7,$8)
-        ON CONFLICT(telegram_id) DO UPDATE SET first_name=EXCLUDED.first_name,username=EXCLUDED.username,paused=false,blocked_at=NULL,
+        ON CONFLICT(telegram_id) DO UPDATE SET first_name=EXCLUDED.first_name,username=EXCLUDED.username,paused=false,blocked_at=NULL,drip_stopped=false,
         lead_id=COALESCE(domwork_bot_visitors.lead_id,EXCLUDED.lead_id),
         phone=CASE WHEN domwork_bot_visitors.phone='' THEN EXCLUDED.phone ELSE domwork_bot_visitors.phone END,
         source=CASE WHEN EXCLUDED.source<>'organic' THEN EXCLUDED.source ELSE domwork_bot_visitors.source END,updated_at=NOW()`,
@@ -336,10 +337,9 @@ async function callback(db, update) {
         await event(db, tid, 'poll', { a: m[1] });
         return say(c, copy.POLL[m[1]][1], inline([[[copy.KEYBOARD.contact, 'f:cta']]]));
     }
-    if ((m = /^f:react:(yes|month|no)$/.exec(data))) {
+    if ((m = /^f:react:(yes|no)$/.exec(data))) {
         await event(db, tid, 'react', { a: m[1] });
         if (m[1] === 'no') { await patch(db, tid, { drip_stopped: true }); return say(c, copy.drip.reactBye); }
-        await patch(db, tid, { monthly: m[1] === 'month' });
         return say(c, '👍');
     }
     if (data === 'f:cta') return cta(c, v);
@@ -420,7 +420,7 @@ async function deliverable(db, row) {
     if (!GUEST_METHODS.includes(row.method) || row.target_kind !== 'private' || g.tid !== row.target_id) return false;
     if (!(await enabled(db))) return false;
     const v = (await db.query('SELECT * FROM domwork_bot_visitors WHERE telegram_id=$1', [g.tid])).rows[0];
-    if (!v || v.blocked_at || (row.payload._automation && v.paused)) return false;
+    if (!v || v.blocked_at || ((row.payload._automation || row.payload._relayOut) && v.paused)) return false;
     if (g.unless === 'segment' && v.segment) return false;
     if (g.unless === 'field' && (v.field || v.guide_at)) return false;
     if (g.unless === 'request' && v.requested_at) return false;
@@ -476,6 +476,9 @@ async function bonus(c, v) {
     const s = await settings(c.db), channel = s.bonusChannel, m = media(s, 'bonus');
     if (!channel || !m) return say(c, copy.text.askManager, inline([[[copy.KEYBOARD.contact, 'f:cta']]]));
     if (v.bonus_at) return sendMedia(c, m, copy.drip.bonusOk);
+    // Tekshiruv bot navbatini ushlab turmasin: bir odamga 15 soniyada bir marta.
+    if (v.bonus_checked_at && Date.now() - new Date(v.bonus_checked_at) < 15000) return say(c, copy.drip.bonusFail, inline([[[copy.drip.bonusCheck, 'f:bonus']]]));
+    await patch(c.db, c.tid, { bonus_checked_at: new Date() });
     let member = null;
     try { member = await c.db.domworkTelegram?.('getChatMember', { chat_id: channel, user_id: Number(c.tid) }); } catch { member = null; }
     if (!member) return say(c, copy.drip.bonusFail, inline([[[copy.drip.bonusCheck, 'f:bonus']]]));
@@ -505,8 +508,8 @@ async function relayFromGroup(db, update) {
     }
     const tid = link.telegram_id, c = context(db, update, tid);
     const header = `👩‍💼 ${clean(staff.name).split(' ')[0] || 'Menejer'} (Domwork):`;
-    if (m.text) await say(c, `${header}\n${String(m.text).slice(0, 3500)}`);
-    else { await say(c, header); await send(c, 'copyMessage', { from_chat_id: chatId, message_id: m.message_id }); }
+    if (m.text) await send(c, 'sendMessage', { text: `${header}\n${String(m.text).slice(0, 3500)}`, _relayOut: true });
+    else { await send(c, 'sendMessage', { text: header, _relayOut: true }); await send(c, 'copyMessage', { from_chat_id: chatId, message_id: m.message_id, _relayOut: true }); }
     const v = await visitor(db, tid);
     if (v?.lead_id) await leadComment(db, v.lead_id, `🤖 ${clean(staff.name)} bot orqali yozdi: ${m.text ? String(m.text).slice(0, 300) : '[media]'}`);
     await event(db, tid, 'relay_out', { by: staff.id });
@@ -525,7 +528,10 @@ async function managerAction(db, update) {
     if (!staff || !SALES_ROLES.includes(staff.role)) return ack('Avval CRMda Telegramni ulang (Sozlamalar → Bildirishnomalar).');
     const group = await salesGroup(db), chatId = String(q.message?.chat?.id || '');
     if (!group || group.chat_id !== chatId) return ack();
-    const tid = m[1], action = m[2], v = await visitor(db, tid);
+    const tid = m[1], action = m[2];
+    // Tugma aynan shu lid haqidagi bot xabarida bo'lishi shart (soxta callback boshqa lidga ta'sir qilmasin).
+    if (!(await db.query('SELECT 1 FROM domwork_bot_relay WHERE chat_id=$1 AND message_id=$2 AND telegram_id=$3', [chatId, q.message?.message_id, tid])).rows.length) return ack('Xabar eskirgan');
+    const v = await visitor(db, tid);
     if (!v) return ack('Lid topilmadi');
     const edit = markup => store.enqueue(db, { key: `u:${update.update_id}:mk`, targetKind: 'group', targetId: chatId, method: 'editMessageReplyMarkup',
         payload: { chat_id: chatId, message_id: q.message.message_id, reply_markup: markup, _automation: true, _binding: group.id, _funnel: true } });
@@ -543,8 +549,8 @@ async function managerAction(db, update) {
         const day = new Date().toISOString().slice(0, 10);
         await store.enqueue(db, { key: `noans:${tid}:${day}`, targetId: tid,
             payload: { chat_id: tid, text: copy.drip.noAnswer(name), reply_markup: inline([[[copy.WHEN.eve, 'f:w:eve'], [copy.WHEN.morn, 'f:w:morn']], [[copy.text.ctaTelegram, 'f:tg']]]),
-                _guest: { tid } } });
-        await patch(db, tid, { noans_at: new Date(), request: { method: 'call' } });
+                _guest: { tid }, _automation: true } });
+        await patch(db, tid, { noans_at: new Date(), ...(v.request?.method ? {} : { request: { method: 'call' } }) });
     }
     await event(db, tid, 'outcome', { action, by: staff.id });
     return ack('Saqlandi');
@@ -555,7 +561,7 @@ const DAY = 86400000;
 function preItems(v, t) {
     // [kalit, kun, quruvchi]
     return [
-        ['d1', 1, () => !v.lesson_parts ? { text: copy.drip.lessonNudge(v.first_name.split(' ')[0] || 'Assalomu alaykum'), btn: [[copy.text.lessonWatch, 'f:les']], need: 'dars1' }
+        ['d1', 1, s => !v.lesson_parts && media(s, 'dars1') ? { text: copy.drip.lessonNudge(v.first_name.split(' ')[0] || 'Assalomu alaykum'), btn: [[copy.text.lessonWatch, 'f:les']] }
             : { text: copy.drip.phrases(t === 'A' ? 'smena' : 'meeting'), btn: [[copy.KEYBOARD.contact, 'f:cta']] }],
         ['d2', 2, s => ({ text: copy.drip.testimonial(s.funnelTestimonials?.[t]), btn: [[copy.KEYBOARD.contact, 'f:cta']] })],
         ['d3', 3, s => s.bonusChannel && media(s, 'bonus') && !v.bonus_at
@@ -612,31 +618,44 @@ function nextItem(v, s, now) {
 }
 function weekly(v, sent, now) {
     if (now - new Date(v.created_at) > 90 * DAY) return null;
-    if (v.monthly) return monthly(v, sent, now);
     const done = [...sent].filter(k => /^w\d+$/.test(k)).length;
     if (now - new Date(v.drip_last_at || 0) < 7 * DAY) return null;
     if (done < copy.WEEKLY.length) return { key: 'w' + done, text: copy.drip.weekly(copy.WEEKLY[done]), btn: [[copy.KEYBOARD.contact, 'f:cta']] };
-    if (!sent.has('react')) return { key: 'react', text: copy.drip.reactivate, btn: [[copy.drip.reactYes, 'f:react:yes'], [copy.drip.reactMonth, 'f:react:month'], [copy.drip.reactNo, 'f:react:no']] };
+    if (!sent.has('react')) return { key: 'react', text: copy.drip.reactivate, btn: [[copy.drip.reactYes, 'f:react:yes'], [copy.drip.reactNo, 'f:react:no']] };
     return monthly(v, sent, now);
 }
 function monthly(v, sent, now) {
-    if (now - new Date(v.created_at) > 90 * DAY || now - new Date(v.drip_last_at || 0) < 28 * DAY) return null;
+    // Oxirgi xabar yoki menejer qarori — qaysi biri keyin bo'lsa, o'shandan 28 kun.
+    const base = Math.max(new Date(v.drip_last_at || 0).getTime(), v.outcome === 'r_no' ? new Date(v.outcome_at || 0).getTime() : 0);
+    if (now - new Date(v.created_at) > 90 * DAY || now - base < 28 * DAY) return null;
     const done = [...sent].filter(k => /^m\d+$/.test(k)).length;
-    if (done >= 3) return null;
-    return { key: 'm' + done, text: copy.drip.weekly(copy.WEEKLY[done % copy.WEEKLY.length]), btn: [[copy.KEYBOARD.contact, 'f:cta']] };
+    if (done >= copy.MONTHLY.length) return null;
+    return { key: 'm' + done, text: copy.drip.weekly(copy.MONTHLY[done]), btn: [[copy.KEYBOARD.contact, 'f:cta']] };
 }
 // Yuborish oynasi (Toshkent): O'zbekiston 19:30–20:30, migrantlar 20:30–21:30 (Moskvada 18:30–19:30).
 function inWindow(t, now) { const m = clock(now); return t === 'A' ? m >= 1230 && m < 1290 : m >= 1170 && m < 1230; }
+// Oyna tugagach yetkazilmagan isitish xabari bekor bo'ladi (kechasi ketmasin).
+function windowEnd(t, now) { const m = clock(now), end = t === 'A' ? 1290 : 1230; return new Date(now.getTime() + Math.max(0, end - m) * 60000).toISOString(); }
 async function drip(db, now = new Date()) {
     const s = await settings(db);
     if (s.funnelEnabled !== true || s.dripEnabled !== true) return 0;
     const m = clock(now); if (m < 1170 || m >= 1290) return 0;
-    const rows = (await db.query(`SELECT * FROM domwork_bot_visitors WHERE NOT paused AND blocked_at IS NULL AND NOT holdout AND NOT drip_stopped
-        AND created_at<$1::timestamptz-INTERVAL '20 hours' AND (drip_last_at IS NULL OR drip_last_at<$1::timestamptz-INTERVAL '20 hours')
-        ORDER BY drip_last_at NULLS FIRST LIMIT 40 FOR UPDATE SKIP LOCKED`, [now])).rows;
+    // Faqat isitish yoqilgandan keyin kelganlar (eski baza birdaniga xabar olmaydi), 90 kundan yosh.
+    // Menejer ishlayotganlar (so'rov/qaror, rad sababidan tashqari) va lidi ishlanayotgan/sotilganlar chiqariladi.
+    // Ko'rib chiqilgan har qator drip_checked_at oladi — navbat "tiqilib" qolmaydi.
+    const started = s.dripStartedAt ? new Date(s.dripStartedAt) : now;
+    const rows = (await db.query(`SELECT v.* FROM domwork_bot_visitors v WHERE NOT v.paused AND v.blocked_at IS NULL AND NOT v.holdout AND NOT v.drip_stopped
+        AND v.created_at>=$2 AND v.created_at>$1::timestamptz-INTERVAL '90 days' AND v.created_at<$1::timestamptz-INTERVAL '24 hours'
+        AND (v.drip_last_at IS NULL OR v.drip_last_at<$1::timestamptz-INTERVAL '20 hours')
+        AND (v.drip_checked_at IS NULL OR v.drip_checked_at<$1::timestamptz-INTERVAL '50 minutes')
+        AND ((v.requested_at IS NULL AND v.outcome IS NULL) OR v.outcome LIKE 'r\\_%')
+        AND (CASE WHEN v.segment IN ('russia','abroad') OR (v.segment IS NULL AND v.phone LIKE '7%') THEN $3::boolean ELSE $4::boolean END)
+        AND (v.lead_id IS NULL OR EXISTS (SELECT 1 FROM leads l WHERE l.id=v.lead_id AND l.deleted_at IS NULL
+            AND (CASE WHEN v.outcome IS NULL THEN COALESCE(l.status,'') IN ('','new','yangi-lidlar') ELSE COALESCE(l.status,'') NOT IN ('sinov-darsida','tolov-yopildi') END)))
+        ORDER BY v.drip_checked_at NULLS FIRST LIMIT 40 FOR UPDATE OF v SKIP LOCKED`, [now, started, inWindow('A', now), inWindow('B', now)])).rows;
     let n = 0;
     for (const v of rows) {
-        if (!inWindow(track(v), now)) continue;
+        await patch(db, v.telegram_id, { drip_checked_at: now });
         const identity = await store.identity(db, v.telegram_id);
         if (identity) { await patch(db, v.telegram_id, { drip_stopped: true }); continue; } // o'quvchi/xodim bo'lib qolgan
         const item = nextItem(v, s, now);
@@ -645,7 +664,7 @@ async function drip(db, now = new Date()) {
         if (item.skip) { await patch(db, v.telegram_id, { drip_sent: sent }); continue; }
         const c = { db, tid: v.telegram_id, key: () => `drip:${v.telegram_id}:${item.key}:${n}` };
         const markup = item.btn ? inline(item.btn.map(b => [b])) : undefined;
-        const guard = { automation: true, unless: v.outcome ? '' : 'request', key: `drip:${v.telegram_id}:${item.key}` };
+        const guard = { automation: true, unless: v.outcome ? '' : 'request', key: `drip:${v.telegram_id}:${item.key}`, expires: windowEnd(track(v), now) };
         if (item.media && item.text.length <= 1000) await sendMedia(c, item.media, item.text, markup, guard);
         else await say(c, item.text, markup, guard);
         await patch(db, v.telegram_id, { drip_sent: sent, drip_last_at: now, ignored: v.ignored + 1 });

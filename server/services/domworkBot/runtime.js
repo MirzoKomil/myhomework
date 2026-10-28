@@ -143,7 +143,7 @@ function createRuntime({ pool, crm, env = process.env, redisFactory, telegramFac
             // Sotuv guruhidagi voronka xabari → mehmon (menejer shu xabarga reply qilsa, javob mehmonga boradi).
             if (row.payload._relay && row.target_kind === 'group' && result?.message_id)
                 await pool.query('INSERT INTO domwork_bot_relay(chat_id,message_id,telegram_id) VALUES($1,$2,$3) ON CONFLICT DO NOTHING',
-                    [row.target_id, result.message_id, row.payload._relay]).catch(() => {});
+                    [row.target_id, result.message_id, row.payload._relay]).catch(error => console.error('[domwork-bot] relay map failed:', error.code || error.name));
         } catch (error) {
             // Mehmon botni bloklagan bo'lsa — keyingi voronka xabarlari to'xtaydi.
             if (row.payload._guest && Number(error?.response?.error_code) === 403) {
@@ -162,7 +162,7 @@ function createRuntime({ pool, crm, env = process.env, redisFactory, telegramFac
         try {
             // domworkTelegram — faqat o'qish uchun qisqa so'rovlar (masalan kanal obunasini tekshirish), 5 s chegara.
             for (let n = 0; n < 5; n++) if (!await queue.processOne(pool, async(db,update)=>{db.domworkRedis=redis;
-                db.domworkTelegram=(method,payload)=>['getChatMember'].includes(method)?telegram.callApi(method,payload,{signal:AbortSignal.timeout(5000)}):Promise.reject(Error('method'));
+                db.domworkTelegram=(method,payload)=>['getChatMember'].includes(method)?telegram.callApi(method,payload,{signal:AbortSignal.timeout(1500)}):Promise.reject(Error('method'));
                 return handler(db,update);})) break;
             for (let n = 0; n < 5; n++) if (!await queue.transaction(pool,events.processOne)) break;
             if(Date.now()-lastSchedule>30000) { await queue.transaction(pool,db=>scheduler.run(db)); lastSchedule=Date.now(); }

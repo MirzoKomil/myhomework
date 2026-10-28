@@ -34,7 +34,7 @@ test('isitish, menejer tugmalari, relay va kanal bonusi — synthetic data, no T
     ('h-t','Ustoz','u@x','rus-oqituvchi','active','russian',false,'+998907000002');
    INSERT INTO leads(id,name,phone,source,language,status) VALUES('L1','Ali','+998901112233','Telegram bot','russian','yangi-lidlar');`);
   await groups.initSchema(pool);await store.initSchema(pool);
-  await pool.query("UPDATE domwork_bot_settings SET data=data||$1::jsonb",[JSON.stringify({funnelEnabled:true,dripEnabled:true,discountPercent:15,
+  await pool.query("UPDATE domwork_bot_settings SET data=data||$1::jsonb",[JSON.stringify({funnelEnabled:true,dripEnabled:true,dripStartedAt:'2026-01-01T00:00:00Z',discountPercent:15,
    bonusChannel:'@domwork',funnelMedia:{bonus:{method:'sendAudio',fileId:'BONUS_AUDIO_FILE'},dars1:{method:'sendVideo',fileId:'LESSON1_FILE_ID'}},
    funnelTestimonials:{B:'https://t.me/domwork_natijalari/12'}})]);
   await pool.query("INSERT INTO domwork_bot_groups(id,type,scope,chat_id,active,created_by) VALUES('g-sales','sales','','-1009876543210',true,'admin')");
@@ -60,6 +60,7 @@ test('isitish, menejer tugmalari, relay va kanal bonusi — synthetic data, no T
    assert.equal(await drip(day(3)),0); // 3 kunlik tanaffus
    await run({update_id:++uid,message:{message_id:1,from:from(601),chat:{id:601,type:'private'},text:'Rahmat'}});
    assert.equal((await v(601)).ignored,0);
+   await pool.query("UPDATE domwork_bot_visitors SET drip_checked_at=NULL WHERE telegram_id='601'");
    assert.equal(await drip(day(3)),1);assert.match((await out(601)).at(-1).payload.text,/eng qiyini/);
   });
   await t.test('migrants are messaged in their own later window; a linked student is never dripped',async()=>{
@@ -72,6 +73,7 @@ test('isitish, menejer tugmalari, relay va kanal bonusi — synthetic data, no T
   });
   await t.test('manager buttons: only linked sales staff in the sales group; "no answer" asks the lead politely once',async()=>{
    await pool.query("UPDATE domwork_bot_visitors SET lead_id='L1',requested_at=NOW() WHERE telegram_id='601'");
+   await pool.query("INSERT INTO domwork_bot_relay(chat_id,message_id,telegram_id) VALUES('-1009876543210',77,'601')");
    const press=(fromId,data)=>run({update_id:++uid,callback_query:{id:'q'+uid,from:from(fromId),data,message:{message_id:77,chat:{id:-1009876543210,type:'supergroup'}}}});
    await press(811,'m:601:na'); // ustoz — sotuv emas
    assert.equal((await v(601)).outcome,null);
@@ -89,7 +91,7 @@ test('isitish, menejer tugmalari, relay va kanal bonusi — synthetic data, no T
    assert.equal((await v(601)).outcome,'r_price');
   });
   await t.test('post-call track by reason: price → installments on day 1',async()=>{
-   await pool.query("UPDATE domwork_bot_visitors SET outcome_at=$2,drip_last_at=NULL WHERE telegram_id=$1",['601',new Date(AT-26*3600000)]);
+   await pool.query("UPDATE domwork_bot_visitors SET outcome_at=$2,drip_last_at=NULL,drip_checked_at=NULL WHERE telegram_id=$1",['601',new Date(AT-26*3600000)]);
    assert.equal(await drip(AT),1);assert.match((await out(601)).at(-1).payload.text,/Uzum Nasiya/);
   });
   await t.test('relay: a sales manager reply in the group reaches the lead with the manager name; others get a hint',async()=>{
@@ -106,9 +108,11 @@ test('isitish, menejer tugmalari, relay va kanal bonusi — synthetic data, no T
   });
   await t.test('channel bonus checks real membership via Telegram (mocked)',async()=>{
    const press=async status=>queue.transaction(pool,async db=>{db.domworkTelegram=async(method,payload)=>{assert.equal(method,'getChatMember');assert.equal(payload.chat_id,'@domwork');return {status};};
-    const c={db,tid:'604',key:(()=>{let n=0;return()=>`bonus-test:${status}:${n++}`;})()};
+    const c={db,tid:"604",key:(()=>{let n=0;const r=Math.random();return()=>`bonus-test:${status}:${r}:${n++}`;})()};
     return funnel.bonus(c,(await db.query("SELECT * FROM domwork_bot_visitors WHERE telegram_id='604'")).rows[0]);});
    await press('left');assert.match((await out(604)).at(-1).payload.text,/Hali obuna ko‘rinmayapti/);
+   await press('member');assert.match((await out(604)).at(-1).payload.text,/tekshirib bo‘lmadi/); // 15 s cheklov
+   await pool.query("UPDATE domwork_bot_visitors SET bonus_checked_at=NULL WHERE telegram_id='604'");
    await press('member');const last=(await out(604)).at(-1);assert.equal(last.payload.audio,'BONUS_AUDIO_FILE');
    assert.ok((await v(604)).bonus_at);
   });
@@ -122,6 +126,27 @@ test('isitish, menejer tugmalari, relay va kanal bonusi — synthetic data, no T
    assert.equal(plan([...pre,'w0','w1','w2','w3','w4','w5','w6','w7','react'],new Date(base.getTime()+5*86400000)).key,'m0');
    assert.equal(funnel.nextItem({created_at:base,drip_sent:pre,drip_last_at:base,ignored:0,lesson_parts:1,segment:'career',first_name:'A'},s,new Date(base.getTime()+91*86400000)),null);
    assert.equal(plan(pre,null,{drip_stopped:true}),null);
+  });
+  await t.test('review fixes: old base excluded, stuck rows do not block the queue, forged button rejected, worked leads skipped',async()=>{
+   // Isitish yoqilishidan oldin kelgan mehmon — hech qachon olmaydi.
+   await pool.query("UPDATE domwork_bot_settings SET data=data||'{\"dripStartedAt\":\"2026-11-09T14:00:00Z\"}'::jsonb");
+   await visitor(620);assert.equal((await out(620)).length,0);
+   await drip(new Date(AT.getTime()+20*86400000));assert.equal((await out(620)).length,0);
+   await pool.query("UPDATE domwork_bot_settings SET data=data||'{\"dripStartedAt\":\"2026-01-01T00:00:00Z\"}'::jsonb");
+   // 45 ta "so'rov qoldirgan" mehmon navbatni tiqmaydi.
+   for(let i=0;i<45;i++)await pool.query("INSERT INTO domwork_bot_visitors(telegram_id,first_name,created_at,requested_at) VALUES($1,'X',$2,NOW())",[String(7000+i),new Date(AT-25*3600000)]);
+   await visitor(621);
+   assert.ok(await drip(AT)>=1);assert.equal((await out(621)).length,1);
+   // Lid ishlanayotgan bo'lsa — isitish yo'q.
+   await visitor(622);await pool.query("INSERT INTO leads(id,name,source,language,status) VALUES('L2','B','x','russian','malumot-berildi')");
+   await pool.query("UPDATE domwork_bot_visitors SET lead_id='L2' WHERE telegram_id='622'");
+   await drip(AT);assert.equal((await out(622)).length,0);
+   // Boshqa xabardagi tugma orqali soxta callback — rad.
+   await pool.query("UPDATE domwork_bot_visitors SET outcome=NULL WHERE telegram_id='621'");
+   await run({update_id:++uid,callback_query:{id:'q'+uid,from:from(810),data:'m:621:na',message:{message_id:55,chat:{id:-1009876543210,type:'supergroup'}}}});
+   assert.equal((await v(621)).outcome,null);
+   // Oyna tugashi bilan yetkazilmagan isitish bekor bo'ladi.
+   assert.ok((await out(621))[0].payload._expiresAt);
   });
   await t.test('report shows drip sends and outcomes',async()=>{
    const r=await funnel.report(pool,3650);
