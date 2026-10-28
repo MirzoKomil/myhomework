@@ -1249,7 +1249,7 @@ function renderTab(tab) {
         case 'guides': renderMyGuides(); break;
         case 'school-approvals': window.schoolUI?.renderApprovals(document.getElementById('schoolApprovalsRoot')); break;
         case 'school-groups': window.schoolUI?.renderGroups(document.getElementById('schoolGroupsRoot')); break;
-        case 'school-assist': window.schoolUI?.renderAssistAdmin(document.getElementById('schoolAssistRoot')); break;
+        case 'school-assist': (window.adminNazorat ? window.adminNazorat.renderAssist : window.schoolUI?.renderAssistAdmin)?.(document.getElementById('schoolAssistRoot')); break;
         case 'school-contacts': window.schoolTeacher?.renderContacts(document.getElementById('schoolContactsRoot')); break;
     }
     if (typeof renderNotificationPanel === 'function') renderNotificationPanel();
@@ -10081,6 +10081,8 @@ function attIsToday(year, month, d) {
 
 function renderMainAttendance() {
     if (getCurrentUser()?.role === 'teacher') return teacherDutyUI.render();
+    // Admin / boshliq / ROP — yangi "Akademik → Davomat" (js/adminNazorat.js).
+    if (window.adminNazorat && ['admin', 'boshliq', 'rop'].includes(getCurrentUser()?.role)) return window.adminNazorat.renderDavomat();
     initMainAttControls();
     _populateDemoStudentSelect();
     const currentUser = getCurrentUser();

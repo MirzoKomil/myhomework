@@ -30,6 +30,24 @@
         window.schoolUI.api('/makeups').then(r => { mk = { month, list: r.makeups || [], loading: false }; globalThis.__schoolMakeups = mk.list; render(); })
             .catch(() => { mk = { month, list: [], loading: false }; });
     }
+    // "Kelmadi" belgilari (server: school_absences) — main_attendance faqat "Keldi"ni saqlaydi.
+    let ab = { month: '', list: [], loading: false };
+    function loadAbsences(month) {
+        if (ab.loading || (ab.month === month && !ab.stale) || !window.schoolUI) return;
+        ab.loading = true;
+        window.schoolUI.api('/attendance/absences?month=' + month).then(r => { ab = { month, list: r.absences || [], loading: false }; render(); })
+            .catch(() => { ab = { month, list: ab.month === month ? ab.list : [], loading: false }; });
+    }
+    function withAbsences(block, month, teacherId) {
+        if (ab.month !== month || !ab.list.length) return block;
+        const out = { ...block };
+        for (const a of ab.list) {
+            if (a.teacherId !== teacherId) continue;
+            const day = Number(String(a.day).slice(8, 10)), cur = { ...(out[a.studentId] || {}) };
+            if (cur[day] !== 1 && cur[day] !== true) { cur[day] = 0; out[a.studentId] = cur; }
+        }
+        return out;
+    }
     const dkey = v => (v ? String(v).slice(0, 10) : '');
     const ASSIST_FROM = '2026-10';
     const DAYS = ['Du', 'Se', 'Ch', 'Pa', 'Ju', 'Sh', 'Ya'];
@@ -59,12 +77,13 @@
         const month = monthInput.value;
         if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) return;
         loadMakeups(month);
+        loadAbsences(month);
         const field = selected === 'assistant' ? 'assistantTeacherId' : 'teacherId';
         const students = all.filter(s => s[field] === id && !s.frozen && s.status !== 'inactive');
         const mainStudents = all.filter(s => s.teacherId === id && !s.frozen && s.status !== 'inactive');
         const helpedStudents = all.filter(s => s.assistantTeacherId === id && !s.frozen && s.status !== 'inactive');
         const store = getItem(selected === 'assistant' ? STORAGE_KEYS.assistantAttendance : STORAGE_KEYS.mainAttendance, {});
-        const attendance = store[`${month}_${id}`] || {};
+        const attendance = selected === 'main' ? withAbsences(store[`${month}_${id}`] || {}, month, id) : (store[`${month}_${id}`] || {});
         const ownTeacher = resolveTeacherWithVirtual(id) || {};
         const calendar = teacherAttendanceCalendar;
         if (!students.some(s => s.id === expanded)) expanded = '';
@@ -212,7 +231,7 @@
             root.querySelectorAll('button').forEach(b => { b.disabled = true; });
             try { await saveTeacherAttendanceChange({ teacherId: id, studentId: student.id, date, present, attendanceType: role, grade }); }
             catch (err) { lastError = err.message; }
-            finally { busy = false; monthInput.disabled = false; }
+            finally { busy = false; monthInput.disabled = false; ab.stale = true; }
             render();
         };
         const grade = (student, date) => {

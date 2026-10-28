@@ -254,20 +254,47 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         need(req, FULL);
         return { requests: (await pool.query(`SELECT * FROM school_requests WHERE ($1='' OR status=$1) ORDER BY created_at DESC LIMIT 200`, [req.query.status || ''])).rows };
     }));
+    // So'rov ta'siri: qaysi darslarga ta'sir qiladi va har biriga taklif qilinadigan qoplash vaqti (faqat o'qish).
+    router.get('/requests/:id/impact', handle(async req => {
+        need(req, FULL);
+        const r = (await pool.query('SELECT * FROM school_requests WHERE id=$1', [req.params.id])).rows[0];
+        if (!r) throw T.fail(404, 'So\'rov topilmadi');
+        return { impact: await require('../services/school/requestImpact').impact(pool, r) };
+    }));
     router.post('/requests/:id/decide', handle(req => { need(req, FULL); return write(req, async c => {
         const r = (await c.query('SELECT * FROM school_requests WHERE id=$1 FOR UPDATE', [req.params.id])).rows[0];
         if (!r) throw T.fail(404, 'So\'rov topilmadi'); if (r.status !== 'new') throw T.fail(409, 'So\'rov allaqachon hal qilingan');
         const approve = req.body?.decision === 'approve';
         if (!approve && String(req.body?.note || '').trim().length < 3) throw T.fail(400, 'Rad etish sababini yozing');
         let override = null;
+        const p = r.payload || {};
         if (approve && r.type !== 'assist_late' && r.type !== 'student') {
-            const p = r.payload || {};
             override = await S.addOverride(c, req.user, { teacherId: r.teacher_id, kind: r.type, date: p.date, weekday: p.weekday, repeat: p.repeat,
                 from: p.from || '00:00', to: p.to || '24:00', reason: r.reason });
         }
+        // "Tasdiqlash + qoplashlarni taklif qilish": ta'til/yopilgan vaqtdagi darslar uchun qoplash rejaga qo'yiladi
+        // (jadvalda "rejada", ustoz o'tgach tekshiruvga, admin tasdiqlagach maoshga — mavjud qoplash yo'li).
+        const makeups = [];
+        const list = approve && ['leave', 'close'].includes(r.type) && Array.isArray(req.body?.makeups) ? req.body.makeups.slice(0, 40) : [];
+        if (list.length) {
+            const missed = require('../services/school/requestImpact').targetDate(p, T.nowLocal().date);
+            if (!missed) throw T.fail(400, 'So\'rov sanasi aniqlanmadi');
+            for (const m of list) {
+                const st = (await c.query('SELECT id, name, teacher_id, lesson_duration FROM students WHERE id=$1', [String(m.studentId || '')])).rows[0];
+                if (!st || st.teacher_id !== r.teacher_id) throw T.fail(400, 'O\'quvchi shu ustozniki emas');
+                const date = T.assertDate(m.date);
+                if (date.slice(0, 7) !== missed.slice(0, 7)) throw T.fail(400, `${st.name}: qoplash shu oy ichida bo'ladi`);
+                const b = await S.book(c, req.user, { kind: 'makeup', teacherId: r.teacher_id, studentId: st.id, date, time: m.time, duration: Number(m.duration) || Number(st.lesson_duration) || 30,
+                    note: `So'rov: ${r.reason}`.slice(0, 200) }).catch(e => { throw T.fail(e.status || 409, `${st.name}: ${e.message}`); });
+                const row = await c.query(`INSERT INTO school_makeups (id,student_id,teacher_id,missed_date,held_date,kind,booking_id,status,created_by)
+                    VALUES ($1,$2,$3,$4,$5,'separate',$6,'planned',$7) RETURNING *`, [randomUUID(), st.id, r.teacher_id, missed, date, b[0].id, req.user.id])
+                    .catch(e => { if (e.code === '23505') throw T.fail(409, `${st.name}: bu dars uchun qoplash allaqachon bor`); throw e; });
+                makeups.push(row.rows[0]);
+            }
+        }
         const { rows } = await c.query(`UPDATE school_requests SET status=$2, decided_by=$3, decided_by_name=$4, decided_at=NOW(), decision_note=$5 WHERE id=$1 RETURNING *`,
             [r.id, approve ? 'approved' : 'rejected', req.user.id, req.user.name || '', String(req.body?.note || '').slice(0, 300)]);
-        return { request: rows[0], override };
+        return { request: rows[0], override, makeups };
     }); }));
     // Qoplash: ustoz "Q" yoki "Keldi · 2 dars" belgilagach → tekshiruvga; admin tasdiqlaydi.
     router.post('/makeups/:id/held', handle(req => write(req, async c => {
@@ -277,33 +304,49 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         return { makeup: rows[0] };
     })));
     // O'tib bo'lingan qoplash darsi (dars kuni bo'lmagan kunda) — darhol tekshiruvga; admin tasdiqlasa maoshga o'tadi.
-    router.post('/makeups/separate', handle(req => write(req, async c => {
-        const me = await teacherOf(req);
+    // Ustoz o'z o'quvchisi uchun yuboradi → "Tekshiruvda". Admin (Akademik → Davomat) o'quvchining asosiy ustozi
+    // nomidan kiritadi — admin o'zi tasdiqlovchi bo'lgani uchun darhol "Tasdiqlandi" (kim kiritgani yoziladi).
+    async function makeupOwner(req, c) {
         const st = (await c.query('SELECT teacher_id FROM students WHERE id=$1', [req.body?.studentId])).rows[0];
-        if (!st || st.teacher_id !== me.id) throw T.fail(403, 'Bu o\'quvchi sizniki emas');
-        const missed = T.assertDate(req.body.missedDate), held = T.assertDate(req.body.heldDate);
-        if (missed.slice(0, 7) !== held.slice(0, 7)) throw T.fail(400, 'Qoplash shu oy ichida bo\'ladi');
-        if (held > T.nowLocal().date) throw T.fail(400, 'Qoplash darsi hali o\'tmagan');
-        const { rows } = await c.query(`INSERT INTO school_makeups (id,student_id,teacher_id,missed_date,held_date,kind,status,created_by)
-            VALUES ($1,$2,$3,$4,$5,'separate','review',$6) RETURNING *`, [randomUUID(), req.body.studentId, me.id, missed, held, req.user.id])
-            .catch(e => { if (e.code === '23505') throw T.fail(409, 'Bu dars uchun qoplash allaqachon bor'); throw e; });
-        return { makeup: rows[0] };
-    })));
-    router.post('/makeups/double', handle(req => write(req, async c => {
+        if (FULL.has(req.user.role)) {
+            if (!st?.teacher_id) throw T.fail(400, 'O\'quvchida asosiy ustoz yo\'q');
+            return { teacherId: st.teacher_id, admin: true };
+        }
         const me = await teacherOf(req);
-        const st = (await c.query('SELECT teacher_id, lesson_duration FROM students WHERE id=$1', [req.body?.studentId])).rows[0];
         if (!st || st.teacher_id !== me.id) throw T.fail(403, 'Bu o\'quvchi sizniki emas');
+        return { teacherId: me.id, admin: false };
+    }
+    async function insertHeldMakeup(req, c, kind) {
+        const own = await makeupOwner(req, c);
         const missed = T.assertDate(req.body.missedDate), held = T.assertDate(req.body.heldDate);
         if (missed.slice(0, 7) !== held.slice(0, 7)) throw T.fail(400, 'Qoplash shu oy ichida bo\'ladi');
-        const { rows } = await c.query(`INSERT INTO school_makeups (id,student_id,teacher_id,missed_date,held_date,kind,status,created_by)
-            VALUES ($1,$2,$3,$4,$5,'double','review',$6) RETURNING *`, [randomUUID(), req.body.studentId, me.id, missed, held, req.user.id])
+        if (kind === 'separate' && held > T.nowLocal().date) throw T.fail(400, 'Qoplash darsi hali o\'tmagan');
+        const { rows } = await c.query(`INSERT INTO school_makeups (id,student_id,teacher_id,missed_date,held_date,kind,status,created_by,decided_by,decided_by_name,decided_at,decision_note)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`, [randomUUID(), req.body.studentId, own.teacherId, missed, held, kind, own.admin ? 'approved' : 'review', req.user.id,
+            own.admin ? req.user.id : null, own.admin ? req.user.name || '' : null, own.admin ? new Date() : null, own.admin ? 'admin kiritdi (Akademik → Davomat)' : ''])
             .catch(e => { if (e.code === '23505') throw T.fail(409, 'Bu dars uchun qoplash allaqachon bor'); throw e; });
         return { makeup: rows[0] };
-    })));
+    }
+    router.post('/makeups/separate', handle(req => write(req, c => insertHeldMakeup(req, c, 'separate'))));
+    router.post('/makeups/double', handle(req => write(req, c => insertHeldMakeup(req, c, 'double'))));
+    // ?month=YYYY-MM — qoldirilgan yoki qoplangan sanasi shu oyda. Rejadagi qoplash vaqti band (booking) dan.
+    // ROP faqat o'qiydi va faqat o'z tilidagi o'quvchilar (Akademik → Davomat uchun).
     router.get('/makeups', handle(async req => {
         if (req.user.role === 'teacher') { const me = await teacherOf(req); return { makeups: (await pool.query('SELECT * FROM school_makeups WHERE teacher_id=$1 ORDER BY created_at DESC LIMIT 200', [me.id])).rows }; }
-        need(req, FULL);
-        return { makeups: (await pool.query(`SELECT * FROM school_makeups WHERE ($1='' OR status=$1) ORDER BY created_at DESC LIMIT 300`, [req.query.status || ''])).rows };
+        need(req, MANAGE);
+        const month = /^\d{4}-\d{2}$/.test(req.query.month || '') ? req.query.month : '';
+        let lang = '';
+        if (req.user.role === 'rop') {
+            const e = (await pool.query(`SELECT he.role, he.lang FROM users u JOIN hr_employees he ON LOWER(TRIM(he.login))=LOWER(TRIM(u.email)) WHERE u.id=$1 LIMIT 1`, [req.user.id])).rows[0];
+            const own = e ? langOf(e) : null;
+            lang = own === 'both' || !own ? (LANGS.has(req.query.lang) ? req.query.lang : 'english') : own;
+        }
+        return { makeups: (await pool.query(`SELECT m.*, b.start_min, b.end_min FROM school_makeups m
+            LEFT JOIN school_bookings b ON b.id=m.booking_id
+            ${lang ? 'JOIN students s ON s.id=m.student_id' : ''}
+            WHERE ($1='' OR m.status=$1) AND ($2='' OR TO_CHAR(m.missed_date,'YYYY-MM')=$2 OR TO_CHAR(m.held_date,'YYYY-MM')=$2)
+            ${lang ? "AND COALESCE(NULLIF(s.subject,''),'english')=$3" : ''}
+            ORDER BY m.created_at DESC LIMIT ${month ? 1000 : 300}`, lang ? [req.query.status || '', month, lang] : [req.query.status || '', month])).rows };
     }));
     router.post('/makeups/:id/decide', handle(req => { need(req, FULL); return write(req, async c => {
         const approve = req.body?.decision === 'approve';
@@ -313,6 +356,29 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         if (!rows.length) throw T.fail(409, 'Qoplash tekshiruvda emas');
         return { makeup: rows[0] };
     }); }));
+
+    // Asosiy ustoz "Kelmadi" belgilari (oy bo'yicha): school_absences + eski yozuvlar uchun ustoz belgilagan, lekin
+    // "Keldi" bo'lmagan dars (staff_att_lesson_marks). Ustoz — faqat o'zi; admin/ROP — hammasi. Pul ma'lumoti yo'q.
+    router.get('/attendance/absences', handle(async req => {
+        const month = /^\d{4}-\d{2}$/.test(req.query.month || '') ? req.query.month : T.nowLocal().date.slice(0, 7);
+        let teacherId = req.query.teacherId ? String(req.query.teacherId) : '';
+        if (req.user.role === 'teacher') teacherId = (await teacherOf(req)).id; else need(req, MANAGE);
+        const { from, to } = T.monthBounds(month);
+        const own = (await pool.query(`SELECT teacher_id, student_id, TO_CHAR(day,'YYYY-MM-DD') AS day, absent FROM school_absences
+            WHERE day BETWEEN $1 AND $2 AND ($3='' OR teacher_id=$3)`, [from, to, teacherId])).rows;
+        let marks = [];
+        if ((await pool.query("SELECT to_regclass('public.staff_att_lesson_marks')::text AS t")).rows[0]?.t) {
+            marks = (await pool.query(`SELECT m.teacher_id, m.student_id, TO_CHAR(m.lesson_date,'YYYY-MM-DD') AS day FROM staff_att_lesson_marks m
+                WHERE m.duty='main' AND m.lesson_date BETWEEN $1 AND $2 AND ($3='' OR m.teacher_id=$3)
+                AND NOT EXISTS (SELECT 1 FROM main_attendance a WHERE a.att_key = $4 || '_' || m.teacher_id AND a.student_id=m.student_id
+                    AND a.day = EXTRACT(DAY FROM m.lesson_date)::int AND a.present = 1)`, [from, to, teacherId, month])).rows;
+        }
+        const key = r => `${r.teacher_id}|${r.student_id}|${r.day}`;
+        const explicit = new Map(own.map(r => [key(r), r.absent]));
+        const out = own.filter(r => r.absent).map(r => ({ teacherId: r.teacher_id, studentId: r.student_id, day: r.day }));
+        for (const m of marks) if (!explicit.has(key(m))) out.push({ teacherId: m.teacher_id, studentId: m.student_id, day: m.day });
+        return { month, absences: out };
+    }));
 
     // ── O'quvchi kartasi va amallar ──────────────────────────────────────────
     async function canSee(req, row) {

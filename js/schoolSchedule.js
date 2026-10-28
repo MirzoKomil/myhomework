@@ -169,6 +169,7 @@
     }
 
     async function requestsView(body, reload) {
+        if (window.adminNazorat) return window.adminNazorat.renderRequests(body); // AdminSorovlar dizayni
         const { api, esc, fmtDate } = U();
         const list = (await api('/requests')).requests.filter(r => r.type !== 'assist_late');
         const T = { leave: 'ta\'til', close: 'vaqtni yopish', open: 'qo\'shimcha ochish', student: 'o\'quvchi bo\'yicha' };
@@ -186,6 +187,7 @@
         body.querySelectorAll('[data-st]').forEach(b => b.onclick = () => U().openStudent(b.dataset.st));
     }
     async function makeupsView(body, reload) {
+        if (window.adminNazorat) return window.adminNazorat.renderMakeups(body, { lang: state.lang }); // AdminQoplash dizayni
         const { api, esc, fmtDate } = U();
         const list = (await api('/makeups')).makeups;
         const ST = { planned: ['Rejada', 'sc-pill--info'], review: ['Tekshiruvda', 'sc-pill--warn'], approved: ['Tasdiqlandi', 'sc-pill--ok'], rejected: ['Rad etildi', 'sc-pill--bad'], cancelled: ['Bekor', 'sc-pill--mute'] };
