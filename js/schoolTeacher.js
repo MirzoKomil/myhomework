@@ -174,8 +174,8 @@
                 const li = document.createElement('li');
                 li.className = `tch-row tch-row--${past ? 'warn' : 'wait'}`;
                 li.innerHTML = `<b class="tch-time">${esc(t)}</b><div style="display:flex;flex-direction:column;gap:2px;min-width:0;flex:1"><strong>${esc(l.name || 'Lid')}</strong>
-                    <span class="mot-prize-note">sinov darsi · ${l.trialRequest.state === 'pending' ? 'tasdiqlanmagan' : past ? 'natija kutilmoqda' : 'tasdiqlangan'}</span></div>
-                    <div class="tch-row-actions"><button type="button" class="tch-row-btn" data-thx-trials>${l.trialRequest.state === 'pending' ? 'Tasdiqlash' : past ? 'Natijani yozish' : 'Ochish'}</button></div>`;
+                    <span class="mot-prize-note">sinov darsi · ${l.trialRequest.state === 'pending' ? (past ? "muddati o'tdi · natija kerak" : 'tasdiqlanmagan') : past ? 'natija kutilmoqda' : 'tasdiqlangan'}</span></div>
+                    <div class="tch-row-actions"><button type="button" class="tch-row-btn" data-thx-trials>${past ? 'Natijani yozish' : l.trialRequest.state === 'pending' ? 'Tasdiqlash' : 'Ochish'}</button></div>`;
                 const before = rows.find(r => (r.querySelector('.tch-time')?.textContent || '99') > t);
                 list.insertBefore(li, before || null);
             }
@@ -193,7 +193,8 @@
         for (const l of lessons) {
             const d = at(l); if (!Number.isFinite(d.getTime())) continue;
             const when = `${localDate(d) === td ? 'bugun' : u.fmtDate(localDate(d), false)} ${hhmm(d)}`;
-            if (l.trialRequest.state === 'pending') todo.push({ t: `${l.name || 'Lid'} · ${when} sinov darsi`, s: 'Tasdiqlamaguningizcha lidga vaqt yuborilmaydi', btn: 'Tasdiqlash', go: 'trial-lessons' });
+            if (l.trialRequest.state === 'pending' && d.getTime() <= Date.now()) todo.push({ t: `${l.name || 'Lid'} · sinov darsi natijasi`, s: `${when} o'tdi, tasdiqlanmagan · muddati o'tdi, natijani yozing`, btn: 'Natijani yozish', go: 'trial-lessons' });
+            else if (l.trialRequest.state === 'pending') todo.push({ t: `${l.name || 'Lid'} · ${when} sinov darsi`, s: 'Tasdiqlamaguningizcha lidga vaqt yuborilmaydi', btn: 'Tasdiqlash', go: 'trial-lessons' });
             else if (l.trialRequest.state === 'accepted' && d.getTime() < Date.now()) todo.push({ t: `${l.name || 'Lid'} · sinov darsi natijasi`, s: `${when} o'tdi · natija sotuv menejeriga boradi`, btn: 'Natijani yozish', go: 'trial-lessons' });
         }
         const box = container.querySelector('[data-thx-todo]');
