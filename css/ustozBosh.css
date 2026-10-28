@@ -26,10 +26,6 @@ html.rd #teacherHome .uhb-btn { min-height: 36px; padding: 0 12px; border-radius
 html.rd #teacherHome .uhb-start { min-height: 40px; padding: 0 16px; border-radius: 12px; font-weight: 700; font-size: 14px; }
 
 /* Yordamchi ustozlik (.as / .asr) */
-html.rd #teacherHome .thx-assist { padding: 0; overflow: hidden; }
-html.rd #teacherHome .thx-assist > .ahx-card-h { padding: 16px 20px; margin: 0; border-bottom: 1px solid var(--border, #EEF1F6); }
-html.rd #teacherHome .thx-assist > .ahx-card-h h3 { font-size: 16px; font-weight: 800; }
-html.rd #teacherHome .thx-assist > .ahx-card-h > span { font-size: 12px; color: var(--text-secondary, #4B5563); font-weight: 500; }
 .uhb-as { padding: 6px 20px 16px; display: flex; flex-direction: column; gap: 12px; }
 .uhb-asr { display: flex; flex-direction: column; gap: 6px; }
 .uhb-r1 { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; }

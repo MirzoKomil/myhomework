@@ -76,7 +76,11 @@
         return { cls: 'k-cls', t: i.kind, s: '', st: 'cls' };
     }
     // Ustma-ust tushgan bloklar yonma-yon (yo'lak) joylashadi.
+    // Muzlatilgan o'quvchining saqlangan vaqti (k-rsv) "faqat sinov" uchun — ustiga sinov/dars tushsa, u yo'lak olmaydi:
+    // orqa fonda to'liq kenglikda qoladi, ustidagi blok tor ustunga siqilmaydi ("Shahzo natij…" bo'lmasin).
     function lanes(blocks) {
+        const real = blocks.filter(b => !b.bg && !/\bk-rsv\b/.test(b.cls || ''));
+        for (const b of blocks) if (!b.bg && /\bk-rsv\b/.test(b.cls || '') && real.some(x => x.start < b.end && x.end > b.start)) { b.bg = true; b.under = true; }
         const fg = blocks.filter(b => !b.bg).sort((a, b) => a.start - b.start || b.end - a.end);
         let cluster = [], end = -1;
         const flush = () => { const ln = []; for (const b of cluster) { let k = ln.findIndex(e => e <= b.start); if (k < 0) { k = ln.length; ln.push(0); } ln[k] = b.end; b.lane = k; } for (const b of cluster) b.lanes = ln.length; cluster = []; };
