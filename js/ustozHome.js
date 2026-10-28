@@ -23,7 +23,9 @@
     const me = () => (typeof getCurrentUser === 'function' ? getCurrentUser() : null) || {};
 
     function ownMain(tid) {
-        return (getItem(STORAGE_KEYS.students, []) || []).filter(s => String(s.teacherId || '') === String(tid) && !s.frozen && !s.isStaffDemo && s.status !== 'inactive');
+        // Faol — js/attendanceRules.js (server missedLessons bilan bitta ta'rif).
+        const active = s => (typeof AttendanceRules !== 'undefined' && AttendanceRules.isActiveStudent ? AttendanceRules.isActiveStudent(s) : !s.frozen && !s.isStaffDemo && s.status !== 'inactive');
+        return (getItem(STORAGE_KEYS.students, []) || []).filter(s => String(s.teacherId || '') === String(tid) && active(s));
     }
     function lessonDaySet(s, month) {
         const cal = typeof teacherAttendanceCalendar !== 'undefined' ? teacherAttendanceCalendar : null;
@@ -55,9 +57,9 @@
             const marks = att[s.id] || {}, absent = new Set();
             for (const [d, v] of Object.entries(marks)) if (v === 0 || v === false) absent.add(Number(d));
             for (const a of ab.absences || []) if (a.teacherId === tid && a.studentId === s.id && String(a.day).slice(0, 7) === month) absent.add(Number(String(a.day).slice(8, 10)));
-            const days = lessonDaySet(s, month);
+            const days = lessonDaySet(s, month), start = dkey(s.startDate || s.joinDate);
             const dates = [...absent].filter(d => marks[d] !== 1 && marks[d] !== true && (!days || days.has(d)))
-                .map(d => `${month}-${String(d).padStart(2, '0')}`).filter(d => d <= td).sort();
+                .map(d => `${month}-${String(d).padStart(2, '0')}`).filter(d => d <= td && (!start || d >= start)).sort();
             const cover = new Map(mine.filter(m => m.student_id === s.id).map(m => [dkey(m.missed_date), m]));
             const open = dates.filter(d => !cover.has(d));
             const planned = dates.filter(d => cover.get(d)?.status === 'planned').map(d => ({ missed: d, held: dkey(cover.get(d).held_date) }));
@@ -77,10 +79,12 @@
         if (!kpi || !(kpi.expected > 0)) return null;
         const per = new Map((kpi.perStudent || []).map(p => [p.id, p]));
         let sum = 0;
+        // 29-okt qoidasi (payrollEngine bilan bir xil): ustoz ulushi ÷ O'QUVCHINING o'sha oydagi jonli darslari (12–14) × qoplansa o'tadigan darslar.
         for (const [sid, x] of m.by) {
             const p = per.get(sid); if (!p || !x.open.length) continue;
-            const room = Math.max(0, kpi.expected - (Number(p.lessons) || 0));
-            sum += (Number(p.maxEarned) || 0) / kpi.expected * Math.min(x.open.length, room);
+            const plan = Number(p.expected) || lessonDaySet(x.student, m.month)?.size || kpi.expected;
+            const room = Math.max(0, plan - (Number(p.lessons) || 0));
+            sum += (Number(p.maxEarned) || 0) / plan * Math.min(x.open.length, room);
         }
         return Math.round(sum / 100) * 100;
     }

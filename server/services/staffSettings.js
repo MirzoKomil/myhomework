@@ -215,11 +215,11 @@ async function salaryDetail(pool, actor, now = new Date()) {
         const mainItems = breakdown.filter(b => b.dutyRole !== 'assistant' && b.unit !== 'contact');
         if (me.kind === 'teacher') {
             const ids = mainItems.map(b => b.studentId);
-            const stRows = ids.length ? (await db.query('SELECT id, lesson_duration, extra_data FROM students WHERE id = ANY($1::text[])', [ids])).rows : [];
+            const stRows = ids.length ? (await db.query('SELECT id, teacher_id, lesson_duration, extra_data FROM students WHERE id = ANY($1::text[])', [ids])).rows : [];
             const dur = new Map(stRows.map(r => [r.id, Number(r.lesson_duration) || 15]));
-            // "Rejada" — faqat faol o'quvchilar (js/attendanceRules.js). Muzlatilgan / to'xtatilgan / tugatgan o'quvchining
-            // shu oyda hisobga o'tgan darslari maoshda qoladi (payroll o'zgarmaydi), lekin rejaga faqat o'tgani qo'shiladi.
-            const activeIds = new Set(stRows.filter(r => R.isActiveStudent(r)).map(r => r.id));
+            // "Rejada" — faqat faol va hozir shu ustozdagi o'quvchilar (js/attendanceRules.js). Muzlatilgan / to'xtatilgan / tugatgan
+            // yoki oy o'rtasida boshqa ustozga o'tgan o'quvchining shu ustoz bilan o'tgan darslari maoshda qoladi, rejaga faqat o'tgani qo'shiladi.
+            const activeIds = new Set(stRows.filter(r => R.isActiveStudent(r) && r.teacher_id === me.emp.id).map(r => r.id));
             const review = (await db.query(`SELECT student_id FROM school_makeups WHERE teacher_id=$1 AND status='review'
                 AND (to_char(held_date,'YYYY-MM')=$2 OR held_date IS NULL)`, [me.emp.id, month]).catch(() => ({ rows: [] }))).rows;
             out.reviewMakeups = review.length;
@@ -266,8 +266,27 @@ async function salaryDetail(pool, actor, now = new Date()) {
             const ph = history.find(h => h.month === prev.from.slice(0, 7));
             const prevCounted = ph ? (me.kind === 'assistant' ? ph.lessons : ph.assistantLessons) : null;
             out.assist = { pastOnly, month, rate: rep.rate, cap: rep.cap, counted: rep.counted, amount: rep.amount, students: list, prevCounted,
-                possible: list.reduce((n, s) => n + s.possible, 0), daysLeft: T.daysBetween(today, T.monthBounds(month).to),
+                possible: list.reduce((n, s) => n + s.possible, 0), possibleAmount: pl.possibleAmount, monthly: rep.monthly, daysLeft: T.daysBetween(today, T.monthBounds(month).to),
                 prevMonth: prev.from.slice(0, 7), prevState: prevState ? { prelimAt: prevState.prelim_at, objectionUntil: S.dateStr(prevState.objection_until), finalAt: prevState.final_at, paidAt: prevState.paid_at } : null };
+        }
+        // Oy chegarasi (1–5-sana): yopilgan, hali to'lanmagan o'tgan oy — Bosh/Davomat (yordamchi: /assist/month?month=o'tgan oy)
+        // bilan bir xil summa. To'langan bo'lsa — tarixdagi qator yetarli.
+        if (Number(today.slice(8, 10)) <= 5) {
+            const pm = T.addDays(`${month}-01`, -1).slice(0, 7), ph = history.find(h => h.month === pm);
+            if (!ph || ph.status !== 'paid') {
+                let closed = null;
+                if (me.kind === 'assistant') {
+                    const rep = await A.monthReport(db, me.emp.id, pm);
+                    if (rep.counted || rep.state?.locked_at) closed = { month: pm, amount: ph ? ph.amount : rep.amount, counted: rep.counted, rate: rep.rate, source: ph ? 'finance' : 'contacts',
+                        state: rep.state ? { prelimAt: rep.state.prelim_at, objectionUntil: S.dateStr(rep.state.objection_until), finalAt: rep.state.final_at, paidAt: rep.state.paid_at } : null };
+                } else if (me.kind === 'teacher') {
+                    let prow = null;
+                    try { const b = T.monthBounds(pm); prow = (await payroll.calculate(db, engine.period(b.from, b.to), lang, false)).rows.find(r => r.employeeId === me.emp.id) || null; }
+                    catch (e) { console.error('[staff/salary closed]', e.message); }
+                    if (prow) closed = { month: pm, amount: ph ? ph.amount : Number(prow.total) || 0, counted: Number(prow.lessons) || 0, source: ph ? 'finance' : 'payroll' };
+                }
+                if (closed) out.closed = closed;
+            }
         }
         await db.query('COMMIT');
         return out;

@@ -4041,8 +4041,21 @@ async function patchState(partial, actor = {}) {
 // UPSERT qiladi va ustoz faqat o'ziga biriktirilgan o'quvchini baholay oladi.
 async function getTeacherScopedState(actor) {
     const own = await teacherDuties.teacherForActor(pool, actor);
-    return teacherDuties.stateForTeacher(await getFullState(), own);
+    const scoped = teacherDuties.stateForTeacher(await getFullState(), own);
+    // Hamkasb (asosiy ustoz) Telegram'i — xodim profilidan (Sozlamalar → Profil), faqat colleagueContact berilganlar uchun.
+    const ids = (scoped.teachers || []).filter(t => t.colleagueContact).map(t => t.id);
+    if (ids.length) {
+        const rows = await pool.query(`SELECT he.id, COALESCE(x.telegram,'') AS telegram FROM hr_employees he
+            JOIN users u ON LOWER(TRIM(u.email)) = LOWER(TRIM(he.login)) LEFT JOIN staff_profile_extra x ON x.user_id = u.id
+            WHERE he.id = ANY($1::text[])`, [ids]).then(r => r.rows).catch(() => []);
+        const tg = new Map(rows.map(r => [r.id, r.telegram]));
+        for (const t of scoped.teachers) if (t.colleagueContact) t.colleagueContact.telegram = tg.get(t.id) || '';
+    }
+    return scoped;
 }
+
+// Ustoz davomati qoidalari — server/services/teacherAttendanceRules.js (testlanadi).
+const { assertTeacherAttendanceWindow } = require('./services/teacherAttendanceRules');
 
 async function recordTeacherAttendance({ actor, teacherId, studentId, date, present, grade, attendanceType }) {
     if (typeof present !== 'boolean' && present !== null) throw Object.assign(new Error('Davomat boolean yoki olib tashlash uchun null bo‘lishi kerak'), { status: 400 });
@@ -4089,27 +4102,29 @@ async function recordTeacherAttendance({ actor, teacherId, studentId, date, pres
         if (!isStaffWithFullAccess) {
             const owner = await teacherDuties.teacherForActor(client, actor);
             if (owner.id !== safeTeacherId) {
-                throw new Error("Siz faqat o'zingizga biriktirilgan ustoz davomatini belgilashingiz mumkin");
+                throw Object.assign(new Error("Siz faqat o'zingizga biriktirilgan ustoz davomatini belgilashingiz mumkin"), { status: 403 });
             }
             teacher.subject = require('../js/teacherRoles').language(owner);
             teacher.type = owner.role === 'yordamchi' ? 'yordamchi' : 'asosiy';
         }
 
         const selectedType = attendanceType || (teacher.type === 'yordamchi' ? 'assistant' : 'main');
-        if (selectedType === 'main' && teacher.type === 'yordamchi') throw new Error('Yordamchi ustoz asosiy davomatni o‘zgartira olmaydi');
-        if (selectedType === 'assistant' && !isStaffWithFullAccess && teacher.type !== 'yordamchi') throw new Error('Asosiy ustoz yordamchi davomatini belgilamaydi');
+        if (selectedType === 'main' && teacher.type === 'yordamchi') throw Object.assign(new Error('Yordamchi ustoz asosiy davomatni o‘zgartira olmaydi'), { status: 403 });
+        if (selectedType === 'assistant' && !isStaffWithFullAccess && teacher.type !== 'yordamchi') throw Object.assign(new Error('Asosiy ustoz yordamchi davomatini belgilamaydi'), { status: 403 });
         const assignmentColumn = selectedType === 'assistant' ? 'assistant_teacher_id' : 'teacher_id';
         const studentResult = await client.query(
-            `SELECT id, subject, extra_data FROM students WHERE id = $1 AND ${assignmentColumn} = $2 FOR UPDATE`,
+            `SELECT * FROM students WHERE id = $1 AND ${assignmentColumn} = $2 FOR UPDATE`,
             [safeStudentId, safeTeacherId]
         );
         const student = studentResult.rows[0];
         if (!student) {
-            throw new Error("Bu o'quvchi ushbu ustozga biriktirilmagan");
+            throw Object.assign(new Error("Bu o'quvchi ushbu ustozga biriktirilmagan"), { status: 403 });
         }
         if ((teacher.subject || 'english') !== (student.subject || 'english')) {
-            throw new Error("O'quvchi va ustoz fan yo'nalishi mos emas");
+            throw Object.assign(new Error("O'quvchi va ustoz fan yo'nalishi mos emas"), { status: 400 });
         }
+        // Ustoz o'zi yozganda (admin/ROP/boshliq tuzatishi — cheklanmaydi). Mavjud yozuvlarga tegilmaydi — faqat yangi yozish tekshiriladi.
+        if (!isStaffWithFullAccess) await assertTeacherAttendanceWindow(client, { student, teacherId: safeTeacherId, date: String(date), present, duty: selectedType });
 
         if (selectedType === 'assistant') {
             result = await teacherDuties.recordAssistantAttendance(client, { actor, teacherId: safeTeacherId,

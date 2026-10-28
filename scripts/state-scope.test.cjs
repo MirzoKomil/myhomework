@@ -98,3 +98,27 @@ test('saving HR list as ROP never wipes hidden private fields', () => {
     const adminOut = scope.preserveHrPrivateFields(incoming, old, { role: 'admin' });
     assert.equal(adminOut[0].cardNumber, '', 'admin edits are taken as is');
 });
+
+// 29-okt: ustoz/yordamchi /api/state da maosh sozlamalaridan faqat o'ziga kerakli qismni oladi.
+test('teacher state: payrollRates — asosiy ustozga ustoz tariflari, yordamchiga faqat yordamchi tarifi; hamkasb telefoni yo\'q', () => {
+    const duties = require('../server/services/teacherDuties');
+    const state = { students: [
+            { id: 's1', name: 'Madina', teacherId: 'dil', assistantTeacherId: 'san', subject: 'english', phone: '+998901234567' },
+            { id: 's2', name: 'Jasur', teacherId: 'kam', assistantTeacherId: 'other', subject: 'english' }],
+        teachers: [], hrEmployees: [
+            { id: 'dil', name: 'Dilnoza', role: 'ingliz-oqituvchi', lang: 'english', phone: '+998935550000', login: 'dil@x.uz' },
+            { id: 'kam', name: 'Kamola', role: 'ingliz-oqituvchi', lang: 'english', phone: '+998935551111' },
+            { id: 'san', name: 'Sanjar', role: 'yordamchi', lang: 'english' }],
+        mainAttendance: {}, assistantAttendance: {}, liveGrades: {},
+        payrollRates: { english: { teacher: { rates: { 15: 75000, 30: 150000, 60: 300000 } }, assistant: { rate: 40000 } }, russian: { teacher: { rates: { 15: 1 } }, assistant: { rate: 2 } } } };
+    const asst = duties.stateForTeacher(state, { id: 'san', role: 'yordamchi', lang: 'english' });
+    assert.deepEqual(asst.payrollRates, { english: { assistant: { rate: 40000 } } });
+    assert.ok(!JSON.stringify(asst).includes('300000'));
+    const dil = asst.teachers.find(t => t.id === 'dil');
+    assert.deepEqual(dil.colleagueContact, { telegram: '' });
+    assert.ok(!JSON.stringify(asst).includes('+99893555'), 'hamkasb telefoni yuborilmaydi');
+    assert.ok(!asst.teachers.some(t => t.id === 'kam'), 'boshqa o\'quvchilarning ustozi yo\'q');
+    const main = duties.stateForTeacher(state, { id: 'dil', role: 'ingliz-oqituvchi', lang: 'english' });
+    assert.deepEqual(main.payrollRates, { english: { teacher: { rates: { 15: 75000, 30: 150000, 60: 300000 } } } });
+    assert.ok(main.teachers.every(t => !t.colleagueContact));
+});

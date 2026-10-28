@@ -323,7 +323,7 @@
             const role = selected, student = students.find(s => s.id === button.dataset.dutyStudent);
             const date = `${month}-${String(button.dataset.dutyDay).padStart(2, '0')}`;
             const status = button.dataset.status, offday = button.classList.contains('duty-offday');
-            const missed = role === 'main' && month >= '2026-10' && date <= today && !button.classList.contains('duty-has-mk') ? openMissedFor(student.id).filter(d => d < date) : []; // qoplash faqat qoldirilgan darsdan keyin
+            const missed = role === 'main' && month >= '2026-10' && month >= today.slice(0, 7) && date <= today && !button.classList.contains('duty-has-mk') ? openMissedFor(student.id).filter(d => d < date) : []; // qoplash faqat qoldirilgan darsdan keyin
             // Kun oynasi — dizayndagi oyna uslubi (Oynalar · .dlg → schoolUI.openDialog / .oqm-*), sarlavhada o'zbekcha sana.
             const UI = window.schoolUI;
             const dayOf = d => (UI?.DAY_FULL && UI.wd ? UI.DAY_FULL[UI.wd(d) - 1] : '');
@@ -333,11 +333,14 @@
             const mkButtons = !missed.length ? '' : offday
                 ? '<button type="button" class="oqm-btn is-pri" id="dutyMkSep">Qoplash darsi o‘tildi</button>'
                 : '<button type="button" class="oqm-btn" id="dutyMkDouble">Keldi · 2 dars</button>';
-            const note = role === 'main' && offday && month >= '2026-10'
+            const note = closedMonth ? 'Oy yopilgan — davomatni endi admin orqali tuzatish mumkin.' : futureDay ? 'Bu kun hali kelmagan — davomat dars kuni qo‘yiladi.'
+                : role === 'main' && offday && month >= '2026-10'
                 ? 'Bu kun dars kuni emas. Maoshga faqat qoplash darsi sifatida, admin tasdig‘idan keyin o‘tadi.'
                 : role === 'main' && offday ? 'Bu kun dars kuni emas.' : '';
-            const noMark = role === 'main' && offday && month >= '2026-10';
-            const body = `<div class="oqm-box udv-dlg-st">Hozirgi holat: <span class="oqm-pill ${STATE[1]}">${STATE[0]}</span>${status !== 'empty' ? '<button type="button" class="oqm-link" id="dutyRemove">Belgini olib tashlash</button>' : ''}</div>${pick}<div class="oqm-rule">${note ? esc(note) + ' ' : ''}${noMark && !missed.length ? 'Bu oyda qoplanmagan dars yo‘q.' : 'Shu kundagi davomatni tanlang.'}</div>`;
+            // Kelajak sanaga va yopilgan (o'tgan) oyga ustoz davomat qo'ymaydi — server ham rad etadi (recordTeacherAttendance).
+            const futureDay = date > today, closedMonth = month < today.slice(0, 7);
+            const noMark = (role === 'main' && offday && month >= '2026-10') || futureDay || closedMonth;
+            const body = `<div class="oqm-box udv-dlg-st">Hozirgi holat: <span class="oqm-pill ${STATE[1]}">${STATE[0]}</span>${status !== 'empty' && !closedMonth ? '<button type="button" class="oqm-link" id="dutyRemove">Belgini olib tashlash</button>' : ''}</div>${pick}<div class="oqm-rule">${note ? esc(note) + ' ' : ''}${futureDay || closedMonth ? '' : noMark && !missed.length ? 'Bu oyda qoplanmagan dars yo‘q.' : 'Shu kundagi davomatni tanlang.'}</div>`;
             const foot = `<button type="button" class="oqm-btn" id="dutyCancel" data-close>Bekor</button>
                 ${noMark ? '' : '<button type="button" class="oqm-btn" id="dutyAbsent">Kelmadi</button>'}
                 ${mkButtons}

@@ -68,7 +68,8 @@ function buildRoleNotifications(user, now = new Date()) {
         const ids = typeof getTeacherAssignmentIds === 'function' ? getTeacherAssignmentIds(user.linkedTeacherId) : new Set([String(user.linkedTeacherId)]);
         const dow = now.getDay() || 7;
         // Faqat faol o'quvchilar (js/attendanceRules.js) — Bosh sahifadagi "Bugun · N dars" bilan bir xil.
-        const active = s => (window.AttendanceRules ? window.AttendanceRules.isActiveStudent(s) : !s.frozen && !s.isStaffDemo && s.status !== 'inactive');
+        const R = typeof AttendanceRules !== 'undefined' ? AttendanceRules : null;
+        const active = s => (R ? R.isActiveStudent(s) : !s.frozen && !s.isStaffDemo && s.status !== 'inactive');
         const mine = students.filter(s => active(s) && ids.has(String(s.teacherId || '')) && s.lessonDayOfWeek != null && s.lessonTime
             && expandLessonPatternDays(s.lessonDayOfWeek).includes(dow) && !(s.startDate && String(s.startDate) > todayKey));
         if (mine.length) {

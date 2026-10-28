@@ -107,8 +107,27 @@ test('aloqa hisob qoidalari', () => {
     assert.equal(m.counted, 13, 'oyiga 13 tagacha');
     assert.equal(m.noAnswer, 1); assert.equal(m.sameDay, 1); assert.equal(m.short, 1); assert.equal(m.extraText, 1);
     assert.ok(m.overCap > 0);
-    assert.equal(r.amount, 13 * 3846);
-    assert.equal(A.RATE * 163, 626898);
+    // 29-okt: yordamchi — oyiga 40 000 (13 aloqa); summa = round(tarif × aloqa / 13) — 13 aloqa aniq 40 000 (40 001 emas).
+    assert.equal(r.amount, 40000);
+    assert.equal(r.rate, 3077);
+    assert.equal(A.contactAmount(40000, 6), 18462);
+    assert.equal(A.contactAmount(40000, 1), 3077);
+    // Eski oylar (sentyabr va undan oldin) — 50 000 / 3 846.
+    assert.equal(A.countMonth(rows, { monthly: 50000 }).amount, 50000);
+    assert.equal(A.countMonth(rows, { monthly: 50000 }).rate, 3846);
+});
+
+test('aloqa: kurs boshlanishidan oldingi aloqa sanalmaydi va limitni band qilmaydi', () => {
+    const c = (day, s = 'kamron') => ({ id: s + day, student_id: s, day, channel: 'phone', minutes: 10, outcome: 'contacted', created_at: day });
+    const rows = ['2026-10-02', '2026-10-05', '2026-10-07', '2026-10-09', '2026-10-12'].map(d => c(d));
+    const r = A.countMonth(rows, { starts: { kamron: '2026-10-07' } });
+    const k = r.students[0];
+    assert.equal(k.counted, 3);
+    assert.equal(k.beforeStart, 2);
+    assert.deepEqual(k.items.filter(i => i.status === 'before_start').map(i => i.day), ['2026-10-02', '2026-10-05']);
+    assert.equal(r.amount, A.contactAmount(40000, 3));
+    // Boshlanish sanasi berilmasa — hammasi sanaladi.
+    assert.equal(A.countMonth(rows).counted, 5);
 });
 
 test('eski CRM orqali ustoz almashtirilsa, ochiq tarix davri ustun emas', () => {

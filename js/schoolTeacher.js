@@ -5,7 +5,7 @@
     'use strict';
     const U = () => window.schoolUI;
     const CH = { phone: 'Telefon', zoom: 'Zoom', meet: 'Google Meet', tg_video: 'Telegram video', tg_group: 'Telegram guruh videodars', tg_text: 'Telegram yozishma' };
-    const ST = { counted: ['hisoblandi', 'sc-pill--ok'], no_answer: ['javob bermadi', 'sc-pill--mute'], short: ['5 daqiqadan qisqa', 'sc-pill--warn'], same_day: ['shu kuni 2-chi', 'sc-pill--mute'], extra_text: ['haftadagi 2-yozishma', 'sc-pill--mute'], over_cap: ['13 dan ortiq', 'sc-pill--mute'] };
+    const ST = { counted: ['hisoblandi', 'sc-pill--ok'], no_answer: ['javob bermadi', 'sc-pill--mute'], short: ['5 daqiqadan qisqa', 'sc-pill--warn'], same_day: ['shu kuni 2-chi', 'sc-pill--mute'], extra_text: ['haftadagi 2-yozishma', 'sc-pill--mute'], over_cap: ['13 dan ortiq', 'sc-pill--mute'], before_start: ['kurs boshlanishidan oldin · sanalmaydi', 'sc-pill--mute'] };
 
     // ── O'quvchi oynasida: yordamchi aloqalari (asosiy ustoz, ROP, sotuv — faqat o'qish) ──
     async function contactsBlock(studentId, el) {

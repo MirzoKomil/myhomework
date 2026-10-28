@@ -138,7 +138,7 @@
     const whenTxt = iso => { const d = localDay(iso); if (!d) return '—'; const t = today(); return d === t ? 'bugun' : d === addDays(t, -1) ? 'kecha' : dShort(d); };
     const advDaysOf = day => ([1, 3, 5].includes(Number(day)) ? [2, 4, 6] : [1, 3, 5]);
     const CHN = { phone: ['☎', 'Telefon'], zoom: ['Z', 'Zoom'], meet: ['M', 'Google Meet'], tg_video: ['▶', 'Telegram video'], tg_group: ['▶', 'Telegram guruh videodars'], tg_text: ['✉', 'Telegram yozishma'] };
-    const CST = { counted: '', short: '5 daqiqadan qisqa', same_day: 'shu kuni 2-chi', extra_text: 'haftadagi 2-yozishma', over_cap: '13 dan ortiq' };
+    const CST = { counted: '', short: '5 daqiqadan qisqa', same_day: 'shu kuni 2-chi', extra_text: 'haftadagi 2-yozishma', over_cap: '13 dan ortiq', before_start: 'kurs boshlanishidan oldin · sanalmaydi' };
     const LOCK = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
 
     // ── Ilova natijalari (O'zlashtirish) — karta va "O'quvchini tekshirish" uchun umumiy ──

@@ -122,12 +122,92 @@ test('yagona jadval va o\'quvchi amallari — haqiqiy PostgreSQL', { skip: !url 
             await assert.rejects(tx(c => A.mark(c, assistant, { studentId: 'madina', channel: 'phone', minutes: 7 }, new Date('2026-11-05T07:00:00Z'))), /muzlatilgan/);
             await tx(c => A.adminCorrect(c, admin, { studentId: 'malika', day: '2026-10-26', channel: 'phone', minutes: 6, reason: 'Kechikib belgilash so\'rovi' }, on));
             const rep = await A.monthReport(pool, 'sanjar', '2026-10');
-            assert.equal(rep.counted, 2); assert.equal(rep.noAnswer, 1); assert.equal(rep.amount, 7692);
+            // 29-okt: 2026-10 dan oyiga 40 000 (13 aloqa) — har aloqa 3 077, summa round(40 000 × n / 13).
+            assert.equal(rep.counted, 2); assert.equal(rep.noAnswer, 1); assert.equal(rep.rate, 3077); assert.equal(rep.amount, 6154);
+            assert.equal(rep.policy, 'contacts-v1');
             await tx(c => A.advanceMonth(c, admin, '2026-10', 'prelim', new Date('2026-11-02T07:00:00Z')));
             await tx(c => A.adminCorrect(c, admin, { studentId: 'malika', day: '2026-10-20', channel: 'phone', minutes: 6, reason: 'e\'tiroz davrida tuzatish' }, new Date('2026-11-03T07:00:00Z')));
             await assert.rejects(tx(c => A.advanceMonth(c, admin, '2026-10', 'final', new Date('2026-11-03T07:00:00Z'))), /E'tiroz/);
             await tx(c => A.advanceMonth(c, admin, '2026-10', 'final', new Date('2026-11-05T07:00:00Z')));
             await assert.rejects(tx(c => A.adminCorrect(c, admin, { studentId: 'malika', day: '2026-10-21', channel: 'phone', minutes: 6, reason: 'kech qoldi' }, new Date('2026-11-06T07:00:00Z'))), /yakuniy/);
+        });
+
+        await t.test('yordamchi narxi oyga bog\'liq: sentyabr — eski 50 000 / 3 846; kurs boshlanishidan oldingi aloqa sanalmaydi', async () => {
+            await pool.query(`INSERT INTO students VALUES ('kamron','Kamron','', '','english','dilnoza','sanjar',1,'12:00',30,'{"startDate":"2026-10-07"}')`);
+            const on = new Date('2026-10-28T07:00:00Z');
+            for (const day of ['2026-09-21', '2026-09-23']) await tx(c => A.adminCorrect(c, admin, { studentId: 'jasur', assistantId: 'sanjar', day, channel: 'phone', minutes: 8, reason: 'sentyabr tuzatishi' }, on));
+            const sep = await A.monthReport(pool, 'sanjar', '2026-09');
+            assert.equal(sep.policy, 'legacy'); assert.equal(sep.rate, 3846); assert.equal(sep.monthly, 50000);
+            assert.equal(sep.amount, Math.round(50000 * 2 / 13));
+            // (Oktyabr oldingi bandda yakuniy tasdiqlangan — yozuvlar to'g'ridan-to'g'ri.)
+            for (const day of ['2026-10-02', '2026-10-05', '2026-10-07', '2026-10-09']) await pool.query(`INSERT INTO school_assist_contacts (id,student_id,assistant_id,day,at_min,channel,minutes,note,outcome,created_by)
+                VALUES ($1,'kamron','sanjar',$2,600,'phone',8,'','contacted','u-admin')`, ['k' + day, day]);
+            const oct = await A.monthReport(pool, 'sanjar', '2026-10');
+            const k = oct.students.find(x => x.studentId === 'kamron');
+            assert.equal(k.counted, 2); assert.equal(k.beforeStart, 2);
+            assert.deepEqual(k.items.filter(i => i.status === 'before_start').map(i => i.day), ['2026-10-02', '2026-10-05']);
+            assert.equal(k.amount, Math.round(40000 * 2 / 13));
+        });
+
+        await t.test('HTTP: qoplash tekshiruvi, takroriy so\'rov 409, yordamchiga asosiy ustoz Telegram\'i', async () => {
+            const express = require('express');
+            const RealDate = Date, fixed = new RealDate('2026-10-27T12:27:00Z').getTime(), off = fixed - RealDate.now();
+            global.Date = class extends RealDate { constructor(...a) { if (!a.length) super(RealDate.now() + off); else super(...a); } static now() { return RealDate.now() + off; } };
+            const server = await (async () => {
+                await pool.query(`CREATE TABLE IF NOT EXISTS main_attendance(att_key TEXT, student_id TEXT, day INTEGER, present INTEGER, PRIMARY KEY(att_key,student_id,day));
+                  CREATE TABLE IF NOT EXISTS staff_profile_extra(user_id TEXT PRIMARY KEY, telegram TEXT DEFAULT '', birthday TEXT DEFAULT '', ext TEXT DEFAULT '');
+                  INSERT INTO users VALUES ('u-dil','Dilnoza','dilnoza@x.uz','teacher') ON CONFLICT DO NOTHING;
+                  INSERT INTO staff_profile_extra(user_id, telegram) VALUES ('u-dil','@dilnoza_t') ON CONFLICT DO NOTHING;
+                  INSERT INTO students VALUES ('nodir','Nodir','', '','english','dilnoza','sanjar',1,'10:00',30,'{"startDate":"2026-10-01"}');
+                  INSERT INTO main_attendance VALUES ('2026-10_dilnoza','nodir',23,1);
+                  INSERT INTO school_absences (teacher_id, student_id, day, absent, marked_by) VALUES ('dilnoza','nodir','2026-10-26',true,'u-dil'),('dilnoza','nodir','2026-10-23',true,'u-dil'),('dilnoza','nodir','2026-10-24',true,'u-dil');`);
+                const app = express(); app.use(express.json());
+                const users = { 'u-dil': { id: 'u-dil', role: 'teacher', name: 'Dilnoza', email: 'dilnoza@x.uz' }, 'u-sanjar': { id: 'u-sanjar', role: 'teacher', name: 'Sanjar', email: 'sanjar@x.uz' } };
+                const router = require('../server/routes/school')({ db: { pool, tx: fn => tx(fn) }, authRequired: (req, res, next) => { req.user = { ...users[req.headers['x-user']] }; next(); },
+                    findUserById: async id => users[id] || null });
+                app.use('/api/school', router);
+                return await new Promise(r => { const s = app.listen(0, '127.0.0.1', () => r(s)); });
+            })();
+            const call = async (user, method, path, body) => {
+                const r = await fetch(`http://127.0.0.1:${server.address().port}/api/school${path}`, { method, headers: { 'content-type': 'application/json', 'x-user': user }, body: body ? JSON.stringify(body) : undefined });
+                return { status: r.status, body: await r.json() };
+            };
+            try {
+                // Qoplanmagan darslar: 23 — "Keldi" ustun; 24 (Sh) — dars kuni emas; faqat 26 qoladi.
+                const missed = await S.missedLessons(pool, 'dilnoza', { from: '2026-10-01', to: '2026-10-27' });
+                assert.deepEqual(missed.filter(m => m.studentId === 'nodir').map(m => m.date), ['2026-10-26']);
+                let r = await call('u-dil', 'POST', '/makeups/double', { studentId: 'nodir', missedDate: '2026-10-23', heldDate: '2026-10-26' });
+                assert.equal(r.status, 400); assert.match(r.body.error, /Keldi/);
+                r = await call('u-dil', 'POST', '/makeups/separate', { studentId: 'nodir', missedDate: '2026-10-26', heldDate: '2026-10-28' });
+                assert.equal(r.status, 400); assert.match(r.body.error, /o'tmagan/);
+                r = await call('u-dil', 'POST', '/makeups/double', { studentId: 'nodir', missedDate: '2026-10-26', heldDate: '2026-10-30' });
+                assert.equal(r.status, 400, 'kelajakdagi qo\'shaloq dars "o\'tkazildi" bo\'lmaydi');
+                r = await call('u-dil', 'POST', '/makeups/separate', { studentId: 'nodir', missedDate: '2026-10-20', heldDate: '2026-10-27' });
+                assert.equal(r.status, 400, '"Kelmadi" belgilanmagan kun');
+                r = await call('u-dil', 'POST', '/makeups/separate', { studentId: 'nodir', missedDate: '2026-10-26', heldDate: '2026-10-25' });
+                assert.equal(r.status, 400); assert.match(r.body.error, /keyin/);
+                r = await call('u-dil', 'POST', '/makeups/separate', { studentId: 'nodir', missedDate: '2026-10-26', heldDate: '2026-10-27' });
+                assert.equal(r.status, 200); assert.equal(r.body.makeup.status, 'review');
+                r = await call('u-sanjar', 'POST', '/makeups/separate', { studentId: 'nodir', missedDate: '2026-10-26', heldDate: '2026-10-27' });
+                assert.equal(r.status, 403, 'boshqa ustoz o\'quvchisi');
+                await pool.query(`INSERT INTO school_makeups (id,student_id,teacher_id,missed_date,held_date,kind,status,created_by) VALUES ('mk-fut','nodir','dilnoza','2026-10-21','2026-10-30','separate','planned','u-dil')`).catch(async () => {
+                    await pool.query(`INSERT INTO school_makeups (id,student_id,teacher_id,missed_date,held_date,kind,status) VALUES ('mk-fut','nodir','dilnoza','2026-10-21','2026-10-30','separate','planned')`); });
+                r = await call('u-dil', 'POST', '/makeups/mk-fut/held');
+                assert.equal(r.status, 400, 'rejadagi qoplash o\'tmasdan "o\'tkazildi" bo\'lmaydi');
+                // Admin orqali so'rov: bir o'quvchi + bir kun — bitta ochiq so'rov.
+                await pool.query("DELETE FROM school_assist_months WHERE month='2026-10'"); // oldingi bandda yakunlangan oy qulfi
+                const late = { studentId: 'nodir', day: '2026-10-20', reason: 'qo\'ng\'iroq qildim, belgilamadim', channel: 'phone', minutes: 10 };
+                const both = await Promise.all([call('u-sanjar', 'POST', '/assist/late-requests', late), call('u-sanjar', 'POST', '/assist/late-requests', late)]);
+                assert.deepEqual(both.map(x => x.status).sort(), [200, 409]);
+                assert.equal((await call('u-sanjar', 'POST', '/assist/late-requests', { ...late, day: '2026-10-21' })).status, 200);
+                // Kartada asosiy ustoz Telegram'i — faqat hozirgi yordamchiga; telefon yo'q.
+                r = await call('u-sanjar', 'GET', '/students/nodir/card');
+                assert.equal(r.status, 200); assert.equal(r.body.card.scope, 'assistant');
+                assert.deepEqual(r.body.card.mainTeacher, { id: 'dilnoza', name: 'Dilnoza', telegram: '@dilnoza_t' });
+                assert.ok(!('phone' in r.body.card));
+                r = await call('u-dil', 'GET', '/students/nodir/card');
+                assert.equal(r.body.card.scope, 'teacher'); assert.equal(r.body.card.mainTeacher, undefined);
+            } finally { global.Date = RealDate; await new Promise(r => server.close(r)); }
         });
     } finally { await pool.end(); }
 });
