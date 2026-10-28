@@ -37,7 +37,9 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         try { res.json(await fn(req)); }
         catch (err) {
             if (!err.status) console.error('[school]', req.method, req.path, err.code || err.message);
-            res.status(err.status || 500).json({ error: err.status ? err.message : 'Server xatoligi — qayta urinib ko\'ring' });
+            // Bo'sh vaqt o'zgarishi band yozuvlarga tegsa — ro'yxat (faqat admin/boshliq yo'llari qaytaradi).
+            res.status(err.status || 500).json({ error: err.status ? err.message : 'Server xatoligi — qayta urinib ko\'ring',
+                ...(err.status && err.needConfirm ? { needConfirm: true, conflicts: err.conflicts || [] } : {}) });
         }
     };
     const need = (req, set, msg = 'Bu amalga ruxsat yo\'q') => { if (!set.has(req.user.role)) throw T.fail(403, msg); };
@@ -206,7 +208,7 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
     // (CRM lid oynasidagi bilan bir xil yo'l — lid tarixi, SLA, ustoz tasdig'i). Ushlab turish bekor bo'ladi.
     router.post('/bookings/group/:group/attach-lead', handle(async req => {
         need(req, new Set([...SALES, ...FULL]));
-        const holds = (await pool.query(`SELECT * FROM school_bookings WHERE group_id=$1 AND status='hold' AND hold_until >= NOW() AND created_by=$2 ORDER BY date`, [req.params.group, req.user.id])).rows;
+        const holds = (await pool.query(`SELECT * FROM school_bookings WHERE group_id=$1 AND status='hold' AND hold_until >= $3 AND created_by=$2 ORDER BY date`, [req.params.group, req.user.id, new Date()])).rows;
         if (!holds.length) throw T.fail(409, 'Ushlab turish muddati tugagan — vaqtni qaytadan tanlang');
         const row = (await pool.query('SELECT * FROM leads WHERE id=$1 AND deleted_at IS NULL', [String(req.body?.leadId || '')])).rows[0];
         if (!row) throw T.fail(404, 'Lid topilmadi');
@@ -244,13 +246,26 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         } else need(req, FULL);
         return { booking: await S.transition(c, req.params.id, action, { teacherId }) };
     })));
+    // Bo'sh vaqtni boshqarish (JadvalQoidalar: "Ish vaqti shabloni" va "Sanaga ochish / yopish" — faqat admin;
+    // ustoz va yordamchi so'rov yuboradi, sotuv faqat bo'sh/band ko'radi). Ruxsat shu yerda tekshiriladi.
     router.post('/overrides', handle(req => { need(req, FULL); return write(req, c => S.addOverride(c, req.user, req.body || {}).then(o => ({ override: o }))); }));
+    router.put('/overrides/:id', handle(req => { need(req, FULL); return write(req, c => S.updateOverride(c, req.user, req.params.id, req.body || {}).then(o => ({ override: o }))); }));
     router.delete('/overrides/:id', handle(req => { need(req, FULL); return write(req, c => S.removeOverride(c, req.user, req.params.id).then(o => ({ override: o }))); }));
     router.get('/teachers/:id/hours', handle(async req => {
         if (req.user.role === 'teacher' && (await teacherOf(req)).id !== req.params.id) throw T.fail(403, 'Faqat o\'z ish vaqtingiz');
         return { hours: (await pool.query('SELECT * FROM school_teacher_hours WHERE teacher_id=$1 ORDER BY weekday,start_min', [req.params.id])).rows };
     }));
-    router.put('/teachers/:id/hours', handle(req => { need(req, FULL); return write(req, c => S.setHours(c, req.user, req.params.id, req.body?.slots).then(h => ({ hours: h }))); }));
+    router.put('/teachers/:id/hours', handle(req => { need(req, FULL); return write(req, c => S.setHours(c, req.user, req.params.id, req.body?.slots, { confirm: req.body?.confirm === true }).then(h => ({ hours: h }))); }));
+    // "O'zgarishlar tarixi": admin/boshliq — hamma ustoz; ROP — faqat o'z tilidagi ustoz.
+    router.get('/teachers/:id/changes', handle(async req => {
+        need(req, MANAGE);
+        const t = await S.assertTeacher(pool, req.params.id);
+        if (req.user.role === 'rop') {
+            const own = await ropLang(req), tl = (await teacherLangs()).get(t.id);
+            if (own && !fits(tl, own)) throw T.fail(403, 'Faqat o\'z tilingiz ustozlari');
+        }
+        return { changes: await S.changes(pool, t.id, { days: Math.min(90, Math.max(1, Number(req.query.days) || 30)) }) };
+    }));
 
     // Ustoz so'rovlari (ta'til, vaqt yopish/ochish) → admin.
     router.post('/requests', handle(req => write(req, async c => {
@@ -299,7 +314,7 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         const p = r.payload || {};
         if (approve && !['assist_late', 'student', 'assist_finance'].includes(r.type)) {
             override = await S.addOverride(c, req.user, { teacherId: r.teacher_id, kind: r.type, date: p.date, weekday: p.weekday, repeat: p.repeat,
-                from: p.from || '00:00', to: p.to || '24:00', reason: r.reason });
+                from: p.from || '00:00', to: p.to || '24:00', reason: r.reason, confirm: true });
         }
         // "Tasdiqlash + qoplashlarni taklif qilish": ta'til/yopilgan vaqtdagi darslar uchun qoplash rejaga qo'yiladi
         // (jadvalda "rejada", ustoz o'tgach tekshiruvga, admin tasdiqlagach maoshga — mavjud qoplash yo'li).

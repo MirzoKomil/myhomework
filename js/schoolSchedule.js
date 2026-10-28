@@ -133,40 +133,75 @@
         body.querySelector('[data-ov-new]').onclick = () => overrideDrawer(state.teacherId, reload);
         body.querySelector('[data-hours]').onclick = () => hoursDrawer(state.teacherId, reload);
     }
+    // Bo'sh vaqt o'zgarishi band yozuvlarga tegsa server 409 + conflicts qaytaradi: ro'yxat ko'rsatiladi,
+    // tugma "Baribir saqlash" bo'ladi (JadvalQoidalar: "Ish vaqti qisqartirilsa — darslar ro'yxati, tasdiqsiz saqlanmaydi").
+    const KIND_L = { lesson: 'dars', makeup: 'qoplash', trial: 'sinov' };
+    function showConflicts(host, err, btn) {
+        const list = err?.data?.conflicts;
+        if (!err?.data?.needConfirm || !Array.isArray(list)) return false;
+        const { esc, hm, fmtDate } = U();
+        host.querySelector('.sc-err')?.setAttribute('hidden', '');
+        let el = host.querySelector('[data-conf]');
+        if (!el) { el = document.createElement('div'); el.dataset.conf = ''; el.className = 'sc-note sc-note--warn ss-conf'; el.setAttribute('role', 'alert'); (host.querySelector('.sc-db') || host).prepend(el); }
+        el.innerHTML = `<b>${esc(err.message)}</b><ul>${list.slice(0, 12).map(c => `<li>${esc(fmtDate(c.date))} ${hm(c.start)}–${hm(c.end)} · ${esc(c.name || '—')} · ${KIND_L[c.kind] || c.kind}</li>`).join('')}${list.length > 12 ? `<li>yana ${list.length - 12} ta</li>` : ''}</ul>`;
+        if (btn) { btn.disabled = false; btn.textContent = 'Baribir saqlash'; btn.dataset.label = 'Baribir saqlash'; }
+        el.scrollIntoView({ block: 'nearest' });
+        return true;
+    }
     function overrideDrawer(teacherId, done) {
         const { openDrawer, field, today, esc, DAY_FULL } = U();
         const box = openDrawer({ title: 'Vaqtni ochish / yopish', sub: esc(U().teacherName(teacherId)), body: `
-            <div class="sc-sec"><h3>Tur</h3><div class="sc-chips">${[['close', 'Yopish'], ['open', 'Qo\'shimcha ochish'], ['makeup_only', 'Faqat qoplash'], ['leave', 'Ta\'til']].map(([k, l], i) => `<label class="sc-chip"><input type="radio" name="kind" value="${k}"${i === 0 ? ' checked' : ''}><span>${l}</span></label>`).join('')}</div></div>
+            <div class="sc-sec"><h3>Tur</h3><div class="sc-chips">${[['close', 'Sinovga yopish'], ['open', 'Qo\'shimcha ochish'], ['makeup_only', 'Faqat qoplash'], ['leave', 'Ish vaqtidan chiqarish']].map(([k, l], i) => `<label class="sc-chip"><input type="radio" name="kind" value="${k}"${i === 0 ? ' checked' : ''}><span>${l}</span></label>`).join('')}</div></div>
             <div class="sc-sec"><h3>Qachon</h3><div class="sc-chips"><label class="sc-chip"><input type="radio" name="rep" value="once" checked><span>Faqat shu sana</span></label><label class="sc-chip"><input type="radio" name="rep" value="weekly"><span>Har hafta</span></label></div>
               <div class="sc-g2 sc-mtop">${field('Sana', `<input type="date" name="date" value="${today()}" min="${today()}">`)}${field('Hafta kuni', `<select name="weekday" disabled>${DAY_FULL.map((d, i) => `<option value="${i + 1}">${d}</option>`).join('')}</select>`)}
-              ${field('Boshlanish', '<input name="from" value="09:00">')}${field('Tugash', '<input name="to" value="11:00">', 'Butun kun: 00:00 – 24:00')}</div></div>
-            ${field('Sabab', '<textarea name="reason" rows="2" placeholder="Masalan: shifokor"></textarea>')}
-            <div class="sc-note">Yopilgan vaqtga yangi sinov qo'yilmaydi. Shu vaqtdagi mavjud darslar "qoplash kerak" bo'lib qoladi — ularni alohida ko'chiring.</div>`,
+              ${field('Boshlanish', '<input name="from" inputmode="numeric" maxlength="5" pattern="[0-2][0-9]:[0-5][0-9]" placeholder="00:00" value="09:00">')}${field('Tugash', '<input name="to" inputmode="numeric" maxlength="5" pattern="[0-2][0-9]:[0-5][0-9]" placeholder="00:00" value="11:00">', 'Butun kun: 00:00 – 24:00')}</div></div>
+            ${field('Sabab (ustoz va sotuv ko\'radi)', '<textarea name="reason" rows="2" placeholder="Masalan: metodik seminar"></textarea>')}
+            <div class="sc-note">Yopilgan vaqtga yangi sinov qo'yilmaydi. Shu vaqtda dars yoki sinov bo'lsa — ro'yxati ko'rsatiladi, tasdiqlasangiz saqlanadi.</div>`,
             foot: '<button type="button" class="sc-btn" data-close>Bekor</button><button type="button" class="sc-btn sc-btn--pri" data-save>Saqlash</button>' });
         const rep = () => box.querySelector('[name=rep]:checked').value;
-        box.querySelectorAll('[name=rep]').forEach(r => r.onchange = () => { box.querySelector('[name=date]').disabled = rep() === 'weekly'; box.querySelector('[name=weekday]').disabled = rep() !== 'weekly'; });
+        let confirm = false;
+        const reset = () => { if (!confirm) return; confirm = false; box.querySelector('[data-conf]')?.remove(); const b = box.querySelector('[data-save]'); b.textContent = 'Saqlash'; b.dataset.label = 'Saqlash'; };
+        box.querySelectorAll('input,select,textarea').forEach(el => el.addEventListener('change', reset));
+        box.querySelectorAll('[name=rep]').forEach(r => r.onchange = () => { reset(); box.querySelector('[name=date]').disabled = rep() === 'weekly'; box.querySelector('[name=weekday]').disabled = rep() !== 'weekly'; });
         box.querySelector('[data-save]').onclick = async e => {
             const v = n => box.querySelector(`[name=${n}]`).value;
             U().busy(e.target, true);
-            try { await U().post('/overrides', { teacherId, kind: box.querySelector('[name=kind]:checked').value, repeat: rep(), date: v('date'), weekday: Number(v('weekday')), from: v('from'), to: v('to'), reason: v('reason') }); U().toast('Saqlandi'); U().closeDrawer(); done(); }
-            catch (err) { U().busy(e.target, false); U().errBox(box, err.message); }
+            try { await U().post('/overrides', { teacherId, kind: box.querySelector('[name=kind]:checked').value, repeat: rep(), date: v('date'), weekday: Number(v('weekday')), from: v('from'), to: v('to'), reason: v('reason'), confirm }); U().toast('Saqlandi'); U().closeDrawer(); done(); }
+            catch (err) { U().busy(e.target, false); if (showConflicts(box, err, e.target)) confirm = true; else U().errBox(box, err.message); }
         };
     }
+    // Ish vaqti shabloni ("Tahrirlash"): har hafta kuni uchun bir nechta oraliq, har biri sinovga ochiq / yopiq.
+    // Mavjud oraliqlar to'liq saqlanadi (avval faqat birinchisi ko'rinardi va saqlashda qolganlari o'chib ketardi).
     async function hoursDrawer(teacherId, done) {
         const { openDrawer, esc, DAY_FULL, hm } = U();
         let hours = [];
         try { hours = (await U().api(`/teachers/${encodeURIComponent(teacherId)}/hours`)).hours; } catch (e) { return U().toast(e.message); }
-        const row = d => { const h = hours.find(x => Number(x.weekday) === d); return `<div class="ss-hr"><label class="sc-chip"><input type="checkbox" name="on${d}"${h ? ' checked' : ''}><span>${DAY_FULL[d - 1]}</span></label>
-            <input name="f${d}" value="${h ? hm(h.start_min) : '10:00'}" aria-label="Boshlanish"> – <input name="t${d}" value="${h ? hm(h.end_min) : '20:00'}" aria-label="Tugash">
-            <label class="sc-chip"><input type="checkbox" name="tr${d}"${!h || h.trial_open ? ' checked' : ''}><span>sinovga ochiq</span></label></div>`; };
-        const box = openDrawer({ title: 'Ish vaqti', sub: esc(U().teacherName(teacherId)) + ' · har hafta takrorlanadi', body: `${[1, 2, 3, 4, 5, 6, 7].map(row).join('')}<div class="sc-note">Sotuv menejerlari faqat "sinovga ochiq" bo'sh vaqtlarni ko'radi.</div>`,
+        const iv = (d, h) => `<div class="ss-iv" data-iv="${d}"><input inputmode="numeric" maxlength="5" pattern="[0-2][0-9]:[0-5][0-9]" placeholder="00:00" name="f" value="${h ? hm(h.start_min) : '10:00'}" aria-label="${DAY_FULL[d - 1]}: boshlanish"> – <input inputmode="numeric" maxlength="5" pattern="[0-2][0-9]:[0-5][0-9]" placeholder="00:00" name="t" value="${h ? hm(h.end_min) : '20:00'}" aria-label="${DAY_FULL[d - 1]}: tugash">
+            <label class="sc-chip"><input type="checkbox" name="tr"${!h || h.trial_open !== false ? ' checked' : ''}><span>sinovga ochiq</span></label><button type="button" class="sc-btn sc-btn--sm" data-rm aria-label="Oraliqni o'chirish">×</button></div>`;
+        const row = d => { const hs = hours.filter(x => Number(x.weekday) === d); return `<div class="ss-hr ss-hday" data-day="${d}"><label class="sc-chip"><input type="checkbox" name="on${d}"${hs.length ? ' checked' : ''}><span>${DAY_FULL[d - 1]}</span></label>
+            <div class="ss-ivs">${(hs.length ? hs : [null]).map(h => iv(d, h)).join('')}<button type="button" class="sc-link" data-add="${d}">+ oraliq</button></div></div>`; };
+        const box = openDrawer({ title: 'Ish vaqti shabloni', sub: esc(U().teacherName(teacherId)) + ' · har hafta takrorlanadi', body: `${[1, 2, 3, 4, 5, 6, 7].map(row).join('')}
+            <div class="sc-note">Belgilanmagan kun — dam olish. Sotuv menejerlari faqat "sinovga ochiq" bo'sh vaqtlarni ko'radi. Tanaffus uchun kunni ikki oraliqqa bo'ling.</div>`,
             foot: '<button type="button" class="sc-btn" data-close>Bekor</button><button type="button" class="sc-btn sc-btn--pri" data-save>Saqlash</button>' });
+        let confirm = false;
+        const reset = () => { if (!confirm) return; confirm = false; box.querySelector('[data-conf]')?.remove(); const b = box.querySelector('[data-save]'); b.textContent = 'Saqlash'; b.dataset.label = 'Saqlash'; };
+        const sync = () => box.querySelectorAll('[data-day]').forEach(r => { const on = r.querySelector('[name^=on]').checked; r.querySelectorAll('.ss-iv input, .ss-iv button, [data-add]').forEach(x => { x.disabled = !on; }); r.classList.toggle('is-off', !on); });
+        box.addEventListener('change', reset); box.addEventListener('change', sync);
+        box.addEventListener('click', e => {
+            const add = e.target.closest('[data-add]'), rm = e.target.closest('[data-rm]');
+            if (add) { add.insertAdjacentHTML('beforebegin', iv(Number(add.dataset.add), { start_min: 17 * 60, end_min: 20 * 60, trial_open: true })); reset(); }
+            if (rm) { const list = rm.closest('.ss-ivs'); if (list.querySelectorAll('.ss-iv').length > 1) rm.closest('.ss-iv').remove(); else list.closest('[data-day]').querySelector('[name^=on]').checked = false; reset(); sync(); }
+        });
+        sync();
         box.querySelector('[data-save]').onclick = async e => {
-            const q = n => box.querySelector(`[name=${n}]`);
-            const slots = [1, 2, 3, 4, 5, 6, 7].filter(d => q('on' + d).checked).map(d => ({ weekday: d, from: q('f' + d).value, to: q('t' + d).value, trialOpen: q('tr' + d).checked }));
+            const slots = [];
+            for (const r of box.querySelectorAll('[data-day]')) {
+                if (!r.querySelector('[name^=on]').checked) continue;
+                for (const x of r.querySelectorAll('.ss-iv')) { slots.push({ weekday: Number(r.dataset.day), from: x.querySelector('[name=f]').value, to: x.querySelector('[name=t]').value, trialOpen: x.querySelector('[name=tr]').checked }); }
+            }
             U().busy(e.target, true);
-            try { await U().api(`/teachers/${encodeURIComponent(teacherId)}/hours`, { method: 'PUT', body: { slots } }); U().toast('Ish vaqti saqlandi'); U().closeDrawer(); done(); }
-            catch (err) { U().busy(e.target, false); U().errBox(box, err.message); }
+            try { await U().api(`/teachers/${encodeURIComponent(teacherId)}/hours`, { method: 'PUT', body: { slots, confirm } }); U().toast('Ish vaqti saqlandi'); U().closeDrawer(); done(); }
+            catch (err) { U().busy(e.target, false); if (showConflicts(box, err, e.target)) confirm = true; else U().errBox(box, err.message); }
         };
     }
 
@@ -405,5 +440,5 @@
         body.querySelectorAll('[data-held]').forEach(b => b.onclick = async () => { try { await U().post(`/makeups/${b.dataset.held}/held`); U().toast('Tekshiruvga yuborildi'); reload(); } catch (e) { U().toast(e.message, 4000); } });
     }
 
-    window.schoolSchedule = { render, state, makeupDrawer, canPickLang, _: { overrideDrawer, hoursDrawer, teacherRequestDrawer } };
+    window.schoolSchedule = { render, state, makeupDrawer, canPickLang, _: { overrideDrawer, hoursDrawer, teacherRequestDrawer, showConflicts } };
 })();

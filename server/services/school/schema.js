@@ -9,6 +9,12 @@ CREATE TABLE IF NOT EXISTS school_teacher_hours (
  trial_open BOOLEAN NOT NULL DEFAULT TRUE, updated_by TEXT NOT NULL DEFAULT '', updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
  PRIMARY KEY (teacher_id, weekday, start_min), CHECK (end_min > start_min)
 );
+-- Ish vaqti shablonining har o'zgarishi (kim, qachon, oldin/keyin) — "O'zgarishlar tarixi" uchun.
+CREATE TABLE IF NOT EXISTS school_hours_log (
+ id BIGSERIAL PRIMARY KEY, teacher_id TEXT NOT NULL, before JSONB NOT NULL DEFAULT '[]', after JSONB NOT NULL DEFAULT '[]',
+ actor_id TEXT NOT NULL, actor_name TEXT NOT NULL DEFAULT '', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS school_hours_log_teacher ON school_hours_log(teacher_id, created_at DESC);
 CREATE TABLE IF NOT EXISTS school_overrides (
  id TEXT PRIMARY KEY, teacher_id TEXT NOT NULL,
  date DATE, weekday SMALLINT CHECK (weekday BETWEEN 1 AND 7),
