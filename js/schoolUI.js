@@ -299,6 +299,7 @@
     function statusPill(card) {
         const st = card.status;
         if (st === 'frozen') { const f = card.statuses.filter(s => s.status === 'frozen').pop(); return `<span class="sc-pill sc-pill--info">Muzlatilgan${f?.to ? ' · ' + esc(fmtDate(f.to, false)) + ' gacha' : ''}</span>`; }
+        if (st === 'left' && card.finished) { const l = card.statuses.filter(s => s.status === 'left').pop(); return `<span class="sc-pill sc-pill--ok">Kursni tugatgan${l ? ' · ' + esc(fmtDate(addDays(l.from, -1), false)) : ''}</span>`; }
         if (st === 'left') { const l = card.statuses.filter(s => s.status === 'left').pop(); return `<span class="sc-pill sc-pill--bad">Chiqib ketgan${l ? ' · ' + esc(fmtDate(addDays(l.from, -1), false)) : ''}</span>`; }
         const fr = card.statuses.find(s => s.status === 'frozen' && s.from > today());
         return `<span class="sc-pill sc-pill--ok">Faol</span>${fr ? ` <span class="sc-pill sc-pill--info">Muzlatiladi: ${esc(fmtDate(fr.from, false))}–${esc(fmtDate(fr.to, false))}</span>` : ''}`;
@@ -709,7 +710,7 @@
     const SPREAD = { name: 'CRM · ilova · ustoz ro\'yxati', phone: 'CRM · ilova login', parentPhone: 'CRM', login: 'Ilova login', password: 'Ilova · keyingi kirishda almashtiriladi',
         tariff: 'Moliya · qarzdorlar', monthlyPrice: 'Moliya · qarzdorlar', schedule: 'Ustoz jadvali · yordamchi tavsiya jadvali',
         freeze: 'Ustoz jadvali · yordamchi aloqalari · to\'lov sanasi', 'unfreeze-early': 'Ustoz jadvali · yordamchi aloqalari', 'freeze-cancelled': 'Ustoz jadvali',
-        stop: 'Jadvaldan chiqdi · sotuv "Faol emas" · guruh arxivi', restore: 'Ustoz jadvali · yordamchi · guruh qaytdi', 'teacher-change': 'Ustoz kabineti · jadval · guruh',
+        stop: 'Jadvaldan chiqdi · sotuv "Faol emas" · guruh arxivi', finish: 'Jadvaldan chiqdi · "Tugatgan" bo\'limi · guruh arxivi', restore: 'Ustoz jadvali · yordamchi · guruh qaytdi', 'teacher-change': 'Ustoz kabineti · jadval · guruh',
         group: 'CRM · student app · ustoz kabineti', 'request-tariff': 'Admin va ROP tasdig\'iga', 'request-teacher': 'Admin va ROP tasdig\'iga', 'request-payment': 'Admin va ROP tasdig\'iga',
         'request-approved': 'Menejerga xabar', 'request-rejected': 'Menejerga xabar', 'request-returned': 'Menejerga xabar' };
     function historyRows(c) {
@@ -731,6 +732,7 @@
             else if (h.action === 'unfreeze-early') Object.assign(x, { field: 'Holat', from: 'Muzlatilgan', to: `Faol · ${dShort(ch.from)} dan` });
             else if (h.action === 'freeze-cancelled') Object.assign(x, { field: 'Muzlatish', from: `${dShort(ch.from)} → ${dShort(ch.to)}`, to: 'bekor qilindi' });
             else if (h.action === 'stop') Object.assign(x, { field: 'Holat', from: 'Faol', to: `Chiqib ketgan · oxirgi dars ${dShort(ch.lastLesson)}` });
+            else if (h.action === 'finish') Object.assign(x, { field: 'Holat', from: 'Faol', to: `Kursni tugatgan · oxirgi dars ${dShort(ch.lastLesson)}` });
             else if (h.action === 'restore') Object.assign(x, { field: 'Holat', from: 'Faol emas', to: `Faol · ${dShort(ch.from)}${ch.schedule ? ', ' + ch.schedule : ''}` });
             else if (h.action.startsWith('request-')) Object.assign(x, { field: lbl, to: ch.kind ? (REQ_KIND[ch.kind] || ch.kind) + ' o\'zgarishi' : reqSummary({ changes: ch, student_id: c.id, kind: h.action.slice(8) }, true) });
             out.push(x);
@@ -841,13 +843,14 @@
             ['freeze', 'Muzlatish', 'vaqtincha · kursda 1 marta, 30 kungacha', st !== 'active' || c.statuses.some(s => s.status === 'frozen')],
             ['teacher', 'Ustozni almashtirish', 'yangi ustoz va sana · tarix saqlanadi', st === 'left'],
             ['restore', 'Qayta tiklash', 'faqat muzlatilgan yoki chiqib ketgan o\'quvchi uchun', st === 'active'],
-            ['stop', 'Kursni to\'xtatish', 'o\'quvchi chiqib ketadi', st === 'left']
+            ['stop', 'Kursni to\'xtatish', 'o\'quvchi chiqib ketadi', st === 'left'],
+            ['finish', 'Kursni tugatdi', 'kurs oxirigacha o\'qidi · "Tugatgan" bo\'limiga o\'tadi', st === 'left']
         ];
         const first = acts.find(a => !a[3])?.[0] || 'freeze';
         body.innerHTML = `<div class="sc-sec"><h3>Amal</h3><div class="sc-alst" role="radiogroup">${acts.map(([k, l, h, off]) =>
             `<label class="sc-ai${k === 'stop' ? ' sc-ai--dg' : ''}${off ? ' is-off' : ''}"><input type="radio" name="act" value="${k}"${off ? ' disabled' : ''}${k === first ? ' checked' : ''}><span><b>${l}</b><small>${h}</small></span></label>`).join('')}</div></div><div class="sc-actbody"></div>`;
         const ab = body.querySelector('.sc-actbody');
-        const render = k => { box.querySelector('.sc-df')?.remove(); ({ freeze: freezeForm, teacher: teacherForm, restore: restoreForm, stop: stopForm })[k](box, ab, c); };
+        const render = k => { box.querySelector('.sc-df')?.remove(); ({ freeze: freezeForm, teacher: teacherForm, restore: restoreForm, stop: stopForm, finish: finishForm })[k](box, ab, c); };
         body.querySelectorAll('input[name="act"]').forEach(r => r.onchange = () => render(r.value));
         render(first);
     }
@@ -890,6 +893,26 @@
             ['▤', 'Faol o\'quvchilar, davomat va reytingdan chiqadi · qoplanmagan darslar bekor bo\'ladi']])}</div>
           <div class="sc-note sc-note--bad">Qaytarib bo'lmaydigan amal emas — "Qayta tiklash" bilan qaytariladi, vaqti band bo'lsa yangi vaqt tanlanadi.</div>`;
         footer(box, 'Kursni to\'xtatish', true, async () => { await post(`/students/${encodeURIComponent(c.id)}/stop`, { lastLesson: val(ab, 'last'), reasonCode: radio(ab, 'rcode'), reason: fullReason(ab) }); toast('Kurs to\'xtatildi'); saved(c); });
+    }
+    // "Kursni tugatdi": jadval/maosh bo'yicha "Kursni to'xtatish" bilan bir xil, lekin ustoz, yordamchi va sotuvda "Tugatgan" bo'lib ko'rinadi.
+    function finishForm(box, ab, c) {
+        ab.innerHTML = `<div class="sc-sec"><h3>Oxirgi dars</h3>${field('Oxirgi dars sanasi', `<input type="date" name="last" value="${today()}">`)}<p class="sc-mt" data-fin-prog>Ilovadagi kurs yo'li tekshirilmoqda…</p></div>
+          <div class="sc-sec"><h3>Izoh</h3><textarea name="note" rows="2" maxlength="300" placeholder="masalan: 72-dars va yakuniy imtihon topshirildi (ixtiyoriy)"></textarea></div>
+          <div class="sc-sec"><h3>Saqlansa nima bo'ladi</h3>${impact([
+            ['✓', 'Ustoz, yordamchi va sotuv menejerida "Tugatgan" bo\'limiga o\'tadi — "Chiqib ketgan" qatoriga qo\'shilmaydi'],
+            ['▦', `${esc(teacherName(c.teacherId, true))} jadvalida ${esc(c.schedule?.days || '')} ${esc(c.schedule?.time || '')} keyingi kundan bo'shaydi → sinovga ochiladi`],
+            ['◷', 'Yordamchi ro\'yxatidan chiqadi · aloqalar tarixi saqlanadi'],
+            ['✈', 'Telegram guruh arxivlanadi'],
+            ['▣', 'Ilova: o\'tgan darslar ochiq qoladi · yangi dars ochilmaydi'],
+            ['▤', 'Faol o\'quvchilar, davomat va reytingdan chiqadi · o\'tgan darslar maoshda qoladi']])}</div>
+          <div class="sc-note">Yangi kursga yozilsa — "Qayta tiklash" bilan qaytariladi.</div>`;
+        getProg(c).then(r => {
+            const p = ab.querySelector('[data-fin-prog]'); if (!p) return;
+            const reached = r?.detail?.student?.reached ?? r?.progress?.reached ?? null;
+            p.textContent = reached == null ? 'Ilova ma\'lumoti yo\'q — kurs tugaganini ustoz bilan tekshiring.' : `Ilovada ${reached} / 72 dars${reached < 72 ? ' — kurs hali oxirigacha o\'tilmagan, tekshirib ko\'ring' : ' · kurs yo\'li to\'liq'}`;
+            p.classList.toggle('sc-warn-t', reached != null && reached < 72);
+        }).catch(() => { const p = ab.querySelector('[data-fin-prog]'); if (p) p.textContent = ''; });
+        footer(box, 'Kursni tugatdi', false, async () => { await post(`/students/${encodeURIComponent(c.id)}/finish`, { lastLesson: val(ab, 'last'), note: val(ab, 'note') }); toast('Kursni tugatganlar qatoriga o\'tdi'); saved(c); });
     }
     async function freeSlotsFor(teacherId, from, duration, day) {
         const to = addDays(from, 13);
@@ -960,7 +983,7 @@
             toast('Ustoz almashtirildi'); saved(c);
         });
     }
-    const ACTION_LABEL = { edit: 'Tahrir', freeze: 'Muzlatildi', stop: 'Kurs to\'xtatildi', restore: 'Qayta tiklandi', 'unfreeze-early': 'Muzlatishdan erta qaytdi',
+    const ACTION_LABEL = { edit: 'Tahrir', freeze: 'Muzlatildi', stop: 'Kurs to\'xtatildi', finish: 'Kursni tugatdi', restore: 'Qayta tiklandi', 'unfreeze-early': 'Muzlatishdan erta qaytdi',
         'teacher-change': 'Ustoz almashtirildi', group: 'Telegram guruh', 'request-tariff': 'So\'rov: tarif', 'request-teacher': 'So\'rov: ustoz',
         'request-approved': 'So\'rov tasdiqlandi', 'request-rejected': 'So\'rov rad etildi', 'request-returned': 'So\'rov qaytarildi' };
     const FIELD_LABEL = { name: 'Ism', phone: 'Telefon', parentPhone: 'Ota-ona', login: 'Login', password: 'Parol', tariff: 'Tarif', monthlyPrice: 'Narx', schedule: 'Jadval' };
@@ -972,7 +995,7 @@
             if (h.action === 'group') diff = `<div class="sc-diff"><span>Guruh</span>${ch.before ? `<s>${esc(ch.before.name)}</s> → ` : ''}<b>${esc(ch.after?.name || '')}</b></div>`;
             if (h.action === 'teacher-change') diff = `<div class="sc-diff"><span>Ustoz</span><s>${esc(teacherName(ch.from))}</s> → <b>${esc(teacherName(ch.to))}</b> · ${esc(fmtDate(ch.date))}</div>`;
             if (h.action === 'freeze') diff = `<div class="sc-diff"><span>Muddat</span><b>${esc(fmtDate(ch.from, false))} – ${esc(fmtDate(ch.to, false))}</b> · ${esc(ch.days)} kun</div>`;
-            if (h.action === 'stop') diff = `<div class="sc-diff"><span>Oxirgi dars</span><b>${esc(fmtDate(ch.lastLesson))}</b></div>`;
+            if (h.action === 'stop' || h.action === 'finish') diff = `<div class="sc-diff"><span>Oxirgi dars</span><b>${esc(fmtDate(ch.lastLesson))}</b></div>`;
             if (h.action === 'restore') diff = `<div class="sc-diff"><span>Qaytdi</span><b>${esc(fmtDate(ch.from))} · ${esc(ch.schedule || '')}</b></div>`;
             return `<li><div class="sc-tl-h"><b>${esc(ACTION_LABEL[h.action] || h.action)}</b><span class="sc-mt">${esc(new Date(h.created_at).toLocaleString('uz-UZ', { timeZone: 'Asia/Tashkent', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }))} · ${esc(h.actor_name)}</span></div>${diff}${h.reason ? `<p class="sc-mt">${esc(h.reason)}</p>` : ''}</li>`;
         }).join('')}</ol>`;
@@ -1161,7 +1184,7 @@
         api, post, esc, today, addDays, wd, weekStart, fmtDate, hm, toMin, pattern, DAY, DAY_FULL,
         studentAvatar, staffAvatar, staffAvatarUrl, tgPill, teacherName, studentById, teachersForSubject,
         openDrawer, closeDrawer, errBox, busy, field, impact, toast, refreshCache, nowMin,
-        openStudent, closeStudent, renderApprovals, renderGroups, renderAssistAdmin, loadStaffAvatars, acad, dShort, whenTxt, shortName, num,
+        openStudent, closeStudent, renderApprovals, renderGroups, renderAssistAdmin, loadStaffAvatars, staffAvatarOf: id => staffAvatarUrl(_avatars[id]), acad, dShort, whenTxt, shortName, num,
         bulkDrawer, correctionDrawer, CHN, CST
     });
 })();

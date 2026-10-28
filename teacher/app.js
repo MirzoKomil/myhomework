@@ -1253,17 +1253,19 @@
     function renderInactive() {
         const list = S.inactive;
         if (list == null) return '<div class="note w">Faol bo\'lmagan o\'quvchilar yuklanmadi.</div>';
-        const groups = [['frozen', 'Muzlatilgan', 'info'], ['moved', "Boshqa ustozga o'tgan", 'vio'], ['left', 'Chiqib ketgan', 'mute']];
+        const groups = [['frozen', 'Muzlatilgan', 'info'], ['moved', "Boshqa ustozga o'tgan", 'vio'], ['left', 'Chiqib ketgan', 'mute'], ['finished', 'Kursni tugatganlar', 'ok']];
         const asst = isAssistantOnly();
         const html = groups.map(([k, label, tone]) => {
             const g = list.filter(x => x.state === k); if (!g.length) return '';
             return `<div class="sec">${label} · ${g.length}</div>${g.map(x => {
                 const s = stuOf(x.id), as = asst ? assistStudent(x.id) : null;
-                const pill = k === 'frozen' ? `Muzlatilgan${x.from ? ' · ' + fmtDate(x.from) : ''}${x.to ? ' → ' + fmtDate(x.to) : ''}` : k === 'moved' ? `Boshqa ustozga o'tdi${x.from ? ' · ' + fmtDate(x.from) : ''}` : `Chiqib ketgan${x.from ? ' · ' + fmtDate(x.from) : ''}`;
+                const pill = k === 'frozen' ? `Muzlatilgan${x.from ? ' · ' + fmtDate(x.from) : ''}${x.to ? ' → ' + fmtDate(x.to) : ''}` : k === 'moved' ? `Boshqa ustozga o'tdi${x.from ? ' · ' + fmtDate(x.from) : ''}`
+                    : k === 'finished' ? `Kursni tugatgan${x.course?.to ? ' · ' + fmtDate(x.course.to) : ''}` : `Chiqib ketgan${x.from ? ' · ' + fmtDate(x.from) : ''}`;
                 return `<section class="card" style="display: flex; flex-direction: column; gap: 8px"><div class="row">${avatar(x, 'av')}<div class="col" style="flex: 1; min-width: 0"><span class="nm">${esc(x.name)}</span><span class="pill ${tone}" style="align-self: flex-start; margin-top: 4px">${pill}</span></div></div>
                   ${s && s.lessonTime && k !== 'moved' ? `<div class="between small"><span class="muted">Jadval</span><b style="text-align: right">${patternLabel(s.lessonDayOfWeek)} ${esc(s.lessonTime)}</b></div>` : ''}
                   ${as && as.counted ? `<div class="between small"><span class="muted">${cap1(monName(now().month))}</span><b style="text-align: right">${as.counted} / ${CAP} aloqa · maoshda qoladi</b></div>` : ''}
-                  ${x.reason ? `<div class="between small"><span class="muted">Sabab</span><b style="text-align: right">${esc(x.reason)}</b></div>` : ''}
+                  ${k === 'finished' || k === 'left' ? `<div class="between small"><span class="muted">O'tilgan</span><b style="text-align: right">${asst ? `${x.contacts?.total || 0} aloqa` : `${x.lessons || 0} dars siz bilan`}${!asst && x.reached != null ? ` · ilovada ${x.reached} / 72` : ''}</b></div>` : ''}
+                  ${x.reason && k !== 'finished' ? `<div class="between small"><span class="muted">Sabab</span><b style="text-align: right">${esc(x.reason)}</b></div>` : ''}
                   ${k === 'frozen' && x.to ? `<div class="between small"><span class="muted">Qaytadi</span><b style="text-align: right">${fmtDate(addDays(x.to, 1))} · vaqti saqlangan</b></div>` : ''}</section>`;
             }).join('')}`;
         }).join('');
