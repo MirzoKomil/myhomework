@@ -155,30 +155,62 @@
         } catch { if (studentId) list = [{ studentId, studentName }]; }
         const uniq = [...new Map(list.map(i => [i.studentId, i])).values()];
         const mins = Math.max(1, Math.round((Date.now() - startedAt) / 60000));
+        const nameOf = i => i.studentName || getStudents().find(s => s.id === i.studentId)?.name || i.studentId;
+        const main = uniq.find(i => i.studentId === studentId) || (uniq.length === 1 ? uniq[0] : null);
+        const who = uniq.length === 1 ? nameOf(uniq[0]) : uniq.length ? `${uniq.length} o'quvchi` : (studentName || '');
+        // Qo'shaloq dars: kamida 120 daqiqa va qoplanmagan (kelmagan, qoplash yo'q) dars kerak — POST /api/school/makeups/double.
+        const DOUBLE_MIN = 120, canDouble = !!main && main.att !== 1 && mins >= DOUBLE_MIN;
         const box = document.createElement('div');
         box.className = 'lp-dlg-bg';
-        box.innerHTML = `<form class="lp-dlg" role="dialog" aria-modal="true" aria-labelledby="lpFinT">
-            <h3 id="lpFinT">Darsni tugatish</h3>
-            <p class="lp-dlg-sub">${lessonNo}-dars · ${mins} daqiqa o'tdi. Belgilangan o'quvchilarga davomatda <b>«Keldi»</b> qo'yiladi — jonli dars ilovada ochiladi.</p>
-            ${uniq.length ? `<div class="lp-dlg-list">${uniq.map((i, k) => `<label class="lp-dlg-row"><input type="checkbox" name="s" value="${esc(i.studentId)}"${i.att !== 1 && (studentId || uniq.length === 1) ? ' checked' : ''}>
-                <span><b>${esc(i.studentName || getStudents().find(s => s.id === i.studentId)?.name || i.studentId)}</b>${i.start != null ? `<small>${hm(i.start)}${i.att === 1 ? ' · allaqachon «Keldi»' : ''}</small>` : ''}</span></label>`).join('')}</div>`
-                : '<p class="lp-dlg-sub">Bugun jadvalingizda dars topilmadi — davomatni "Davomat" bo\'limida belgilang.</p>'}
-            <div class="lp-dlg-act"><button type="button" class="lp-btn" data-x>Bekor qilish</button><button type="button" class="lp-btn" data-close>Faqat yopish</button>
-                ${uniq.length ? '<button type="submit" class="lp-btn lp-btn--pri">Keldi qo\'yish va tugatish</button>' : ''}</div>
+        box.innerHTML = `<form class="lp-dlg lp-dlg--fin" role="dialog" aria-modal="true" aria-labelledby="lpFinT">
+            <div class="lp-dlg-h"><div><h3 id="lpFinT">Darsni tugatasizmi?</h3><p class="lp-dlg-sub">${esc([who, `${lessonNo}-dars`, `${mins} daqiqa o'tdi`].filter(Boolean).join(' · '))}</p></div>
+              <button type="button" class="lp-dlg-x" data-x aria-label="Yopish — darsni davom ettirish"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+            ${uniq.length ? `<div class="lp-dlg-box">Tugatganda davomat avtomatik <b>"Keldi"</b> bo'ladi va <b>${lessonNo}-dars</b> o'tilgan deb yoziladi va ilovada keyingi darslar ochiladi.</div>` : ''}
+            ${uniq.length > 1 ? `<div class="lp-dlg-list">${uniq.map(i => `<label class="lp-dlg-row"><input type="checkbox" name="s" value="${esc(i.studentId)}"${i.att !== 1 && studentId ? ' checked' : ''}>
+                <span><b>${esc(nameOf(i))}</b>${i.start != null ? `<small>${hm(i.start)}${i.att === 1 ? ' · allaqachon «Keldi»' : ''}</small>` : ''}</span></label>`).join('')}</div>`
+                : !uniq.length ? '<p class="lp-dlg-sub">Bugun jadvalingizda dars topilmadi — davomatni "Davomat" bo\'limida belgilang.</p>'
+                : uniq[0].att === 1 ? '<p class="lp-dlg-sub">Davomatda allaqachon «Keldi» turibdi — qayta yozilmaydi.</p>' : ''}
+            ${main ? `<label class="lp-dlg-opt${canDouble ? '' : ' is-off'}" data-dbl><input type="checkbox" name="double"${canDouble ? '' : ' disabled'}>
+                <span><b>Bu qo'shaloq dars edi</b><small data-dbl-note>Kamida ${DOUBLE_MIN} daqiqa kerak · hozir ${mins} daqiqa</small></span></label>
+                <div class="lp-dlg-pick" data-dbl-pick hidden></div>` : ''}
+            <div class="lp-dlg-act"><button type="button" class="lp-link" data-close title="Davomat qo'ymasdan taqdimotni yopish">Davomatsiz yopish</button><span class="lp-grow"></span>
+                <button type="button" class="lp-btn" data-x>Davom etish</button>
+                ${uniq.length ? '<button type="submit" class="lp-btn lp-btn--pri">Tugatish · Keldi</button>' : ''}</div>
             <div class="lp-dlg-msg" role="status"></div></form>`;
         root.appendChild(box);
         const form = box.querySelector('form');
-        box.querySelector('[data-x]').onclick = () => box.remove();
+        box.querySelectorAll('[data-x]').forEach(b => { b.onclick = () => box.remove(); });
         box.querySelector('[data-close]').onclick = () => { box.remove(); close(); };
-        (form.querySelector('[type=submit]') || form.querySelector('[data-close]')).focus();
+        (form.querySelector('[type=submit]') || form.querySelector('.lp-dlg-act [data-x]')).focus();
+        // Qaysi qoldirilgan dars o'rniga — qoplanmagan darslar (js/ustozHome.js, Davomat bilan bir xil qoida).
+        let openMissed = [];
+        if (canDouble) {
+            const dbl = form.querySelector('[name=double]'), note = form.querySelector('[data-dbl-note]'), pick = form.querySelector('[data-dbl-pick]');
+            dbl.disabled = true;
+            note.textContent = `${mins} daqiqa · qoplanmagan darslar tekshirilmoqda…`;
+            (window.UstozHome?.missed ? window.UstozHome.missed(user) : Promise.resolve(null)).then(m => {
+                if (!box.isConnected) return;
+                openMissed = m?.by.get(main.studentId)?.open || [];
+                if (!openMissed.length) { note.textContent = `${mins} daqiqa · bu oyda qoplanmagan darsi yo'q — qo'shaloq dars faqat qoldirilgan dars o'rniga`; form.querySelector('[data-dbl]').classList.add('is-off'); return; }
+                dbl.disabled = false;
+                const dm = window.UstozHome.dm;
+                note.textContent = `${mins} daqiqa · ${openMissed.length === 1 ? `${dm(openMissed[0])} darsi o'rniga` : `${openMissed.length} ta qoplanmagan dars`} · admin tasdiqlagach maoshga qo'shiladi`;
+                if (openMissed.length > 1) pick.innerHTML = `<label>Qaysi dars o'rniga? <select name="missed">${openMissed.map(d => `<option value="${d}">${dm(d)}</option>`).join('')}</select></label>`;
+                dbl.onchange = () => { pick.hidden = !(dbl.checked && openMissed.length > 1); };
+            }).catch(() => { note.textContent = `${mins} daqiqa · qoplanmagan darslarni yuklab bo'lmadi`; });
+        }
         form.addEventListener('submit', async e => {
             e.preventDefault();
-            const ids = [...form.querySelectorAll('input[name=s]:checked')].map(x => x.value);
+            const ids = uniq.length > 1 ? [...form.querySelectorAll('input[name=s]:checked')].map(x => x.value) : uniq.length && uniq[0].att !== 1 ? [uniq[0].studentId] : [];
+            if (!ids.length && uniq.length === 1) { toast('Davomatda allaqachon «Keldi»'); box.remove(); close(); return; }
             if (!ids.length) { form.querySelector('.lp-dlg-msg').textContent = "Kamida bitta o'quvchini belgilang"; return; }
+            const double = !!form.querySelector('[name=double]')?.checked && openMissed.length && main && ids.includes(main.studentId);
+            const missedDate = double ? (form.querySelector('[name=missed]')?.value || openMissed[0]) : '';
             form.querySelectorAll('button').forEach(b => { b.disabled = true; });
             form.querySelector('.lp-dlg-msg').textContent = 'Saqlanmoqda…';
             const date = today(), teacherId = user?.linkedTeacherId;
             const failed = [];
+            let doubleErr = '';
             for (const sid of ids) {
                 const base = { teacherId, studentId: sid, date, present: true, attendanceType: 'main' };
                 try {
@@ -188,6 +220,10 @@
                         catch (err) { if (/tegishli emas/i.test(err.message)) await saveTeacherAttendanceChange(base); else throw err; }
                     } else await saveTeacherAttendanceChange(base);
                     api('/api/academic/sessions', { method: 'POST', body: JSON.stringify({ studentId: sid, startedAt: new Date(startedAt).toISOString(), endedAt: new Date().toISOString(), lessonNo: sid === studentId ? lessonNo : null }) }).catch(() => {});
+                    if (double && sid === main.studentId) {
+                        try { await api('/api/school/makeups/double', { method: 'POST', body: JSON.stringify({ studentId: sid, missedDate, heldDate: date }) }); }
+                        catch (err) { doubleErr = err.message; }
+                    }
                 } catch (err) { failed.push(`${getStudents().find(s => s.id === sid)?.name || sid}: ${err.message}`); }
             }
             cache = { at: 0, key: '', data: null, p: null };
@@ -196,7 +232,8 @@
                 form.querySelectorAll('button').forEach(b => { b.disabled = false; });
                 return;
             }
-            toast(`Davomat: «Keldi» ✓ · ${mins} daq`);
+            if (doubleErr) toast(`«Keldi» saqlandi, qo'shaloq dars saqlanmadi: ${doubleErr}`);
+            else toast(double ? `Davomat: «Keldi · 2 dars» ✓ · qoplash tekshiruvga yuborildi` : `Davomat: «Keldi» ✓ · ${mins} daq`);
             box.remove();
             close();
             try { if (typeof renderDashboardOverview === 'function' && document.getElementById('teacherHome')) renderDashboardOverview(_lastDashboardOverviewArgs); } catch { /* */ }

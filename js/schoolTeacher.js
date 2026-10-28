@@ -143,10 +143,13 @@
         const td = today();
         const all = getItem(STORAGE_KEYS.students, []).filter(s => !s.isStaffDemo && s.status !== 'inactive');
         const helped = all.filter(s => String(s.assistantTeacherId || '') === String(tid));
+        const mkP = api('/makeups').catch(() => ({ makeups: [] }));
+        // Qoplanmagan darslar (≈ ustoz maoshidan) va "e'tibor kerak" — js/ustozHome.js, parallel yuklanadi.
+        const extraP = window.UstozHome?.todoItems ? window.UstozHome.todoItems(user, mkP).catch(() => []) : Promise.resolve([]);
         const [rep, trials, makeups] = await Promise.all([
             helped.length ? api(`/assist/month?month=${td.slice(0, 7)}`).catch(() => null) : null,
             (typeof apiFetchTeacherTrialLessons === 'function' ? apiFetchTeacherTrialLessons() : Promise.resolve({ lessons: [] })).catch(() => ({ lessons: [] })),
-            api('/makeups').catch(() => ({ makeups: [] }))
+            mkP
         ]);
         if (!container.isConnected) return;
         globalThis.__schoolMakeups = makeups.makeups || [];
@@ -190,20 +193,25 @@
         const todo = [];
         container.querySelectorAll('.tch-row--warn [data-thx-mark="1"]').forEach(b => {
             const row = b.closest('.tch-row');
-            todo.push({ t: `${row.querySelector('strong')?.textContent || ''} · ${row.querySelector('.tch-time')?.textContent || ''} darsi belgilanmagan`, s: 'Belgilanmagan dars maoshga o\'tmaydi', btn: 'Belgilash', go: 'teachers-section' });
+            todo.push({ ic: 'warn', t: `${row.querySelector('strong')?.textContent || ''} · ${row.querySelector('.tch-time')?.textContent || ''} darsi belgilanmagan`, s: 'Belgilanmagan dars maoshga o\'tmaydi', btn: 'Belgilash', go: 'teachers-section' });
         });
         for (const l of lessons) {
             const d = at(l); if (!Number.isFinite(d.getTime())) continue;
             const when = `${localDate(d) === td ? 'bugun' : u.fmtDate(localDate(d), false)} ${hhmm(d)}`;
-            if (l.trialRequest.state === 'pending' && d.getTime() <= Date.now()) todo.push({ t: `${l.name || 'Lid'} · sinov darsi natijasi`, s: `${when} o'tdi, tasdiqlanmagan · muddati o'tdi, natijani yozing`, btn: 'Natijani yozish', go: 'trial-lessons' });
-            else if (l.trialRequest.state === 'pending') todo.push({ t: `${l.name || 'Lid'} · ${when} sinov darsi`, s: 'Tasdiqlamaguningizcha lidga vaqt yuborilmaydi', btn: 'Tasdiqlash', go: 'trial-lessons' });
-            else if (l.trialRequest.state === 'accepted' && d.getTime() < Date.now()) todo.push({ t: `${l.name || 'Lid'} · sinov darsi natijasi`, s: `${when} o'tdi · natija sotuv menejeriga boradi`, btn: 'Natijani yozish', go: 'trial-lessons' });
+            if (l.trialRequest.state === 'pending' && d.getTime() <= Date.now()) todo.push({ ic: 'user', t: `${l.name || 'Lid'} · sinov darsi natijasi`, s: `${when} o'tdi, tasdiqlanmagan · muddati o'tdi, natijani yozing`, btn: 'Natijani yozish', go: 'trial-lessons' });
+            else if (l.trialRequest.state === 'pending') todo.push({ ic: 'clock', t: `${l.name || 'Lid'} · ${when} sinov darsi`, s: 'Tasdiqlamaguningizcha lidga vaqt yuborilmaydi', btn: 'Tasdiqlash', go: 'trial-lessons' });
+            else if (l.trialRequest.state === 'accepted' && d.getTime() < Date.now()) todo.push({ ic: 'user', t: `${l.name || 'Lid'} · sinov darsi natijasi`, s: `${when} o'tdi · natija sotuv menejeriga boradi`, btn: 'Natijani yozish', go: 'trial-lessons' });
         }
+        todo.push(...(await extraP));
+        if (!container.isConnected) return;
         const box = container.querySelector('[data-thx-todo]');
         if (box) {
+            const TI = { warn: '<path d="M12 3 2 21h20L12 3zM12 10v5M12 18h.01"/>', user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/>', clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', sync: '<path d="M4 12a8 8 0 0114-5.3L20 9M20 4v5h-5M20 12a8 8 0 01-14 5.3L4 15M4 20v-5h5"/>' };
+            const ico = k => TI[k] ? `<span class="thx-ti thx-ti--${k}" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${TI[k]}</svg></span>` : '';
             box.innerHTML = todo.length ? `<section class="card dashboard-panel thx-todo"><div class="dashboard-panel-head"><h3>Bajarish kerak · ${todo.length}</h3><span>Har biri maoshingiz yoki o'quvchi natijasiga ta'sir qiladi</span></div>
-                <ul>${todo.map((x, i) => `<li><div><b>${esc(x.t)}</b><small>${esc(x.s)}</small></div><button type="button" class="sc-btn sc-btn--sm${i ? '' : ' sc-btn--pri'}" data-go="${x.go}">${esc(x.btn)}</button></li>`).join('')}</ul></section>` : '';
+                <ul>${todo.map((x, i) => `<li>${ico(x.ic)}<div><b>${esc(x.t)}</b><small>${esc(x.s)}</small></div><button type="button" class="sc-btn sc-btn--sm${i ? '' : ' sc-btn--pri'}" ${x.act ? `data-act="${i}"` : `data-go="${x.go}"`}>${esc(x.btn)}</button></li>`).join('')}</ul></section>` : '';
             box.querySelectorAll('[data-go]').forEach(b => b.onclick = () => switchTab(b.dataset.go));
+            box.querySelectorAll('[data-act]').forEach(b => b.onclick = () => todo[Number(b.dataset.act)]?.act?.());
         }
         container.querySelectorAll('[data-thx-trials]').forEach(b => b.onclick = () => switchTab('trial-lessons'));
 
