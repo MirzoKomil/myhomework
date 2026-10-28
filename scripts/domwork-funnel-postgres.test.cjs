@@ -108,10 +108,30 @@ test('lead funnel for unknown Telegram visitors — synthetic data, no Telegram 
    while(await queue.processOne(pool,handler));
    assert.match((await texts(702))[0],/Dilshod! Arizangiz qabul qilindi/);
    const v=(await pool.query("SELECT * FROM domwork_bot_visitors WHERE telegram_id='702'")).rows[0];
-   assert.equal(v.lead_id,'land-1');assert.equal(v.segment,'career');assert.equal(v.phone,'998907770011');
+   assert.equal(v.lead_id,'land-1');assert.equal(v.segment,'career');
+   assert.equal(v.phone,''); // landing raqami tasdiqlanmagan — kontakt tugmasi bilan olinadi
+   assert.equal((await pool.query("SELECT phone FROM domwork_bot_links WHERE telegram_id='702'")).rows[0].phone,'');
    // Same token cannot be reused by another Telegram.
    await run(msg(703,start));
    assert.equal((await pool.query("SELECT lead_id FROM domwork_bot_visitors WHERE telegram_id='703'")).rows[0].lead_id,null);
+  });
+  await t.test('security: landing form with a STUDENT phone cannot take over the student cabinet',async()=>{
+   await pool.query("INSERT INTO leads(id,name,phone,source,language,status) VALUES('attack','Hujumchi','+998935550000','Domwork','russian','yangi-lidlar')");
+   const raw=await queue.transaction(pool,db=>leadLink.issue(db,'attack'));
+   await run(msg(799,'/start '+new URL(raw).searchParams.get('start')));
+   await run(msg(799,'/start'));
+   assert.equal(await store.identity(pool,'799'),null);
+   assert.ok(!(await texts(799)).some(x=>/Faol o‘quvchi/.test(x)));
+   assert.equal((await pool.query("SELECT COUNT(*) FROM domwork_bot_links WHERE account_kind='student'")).rows[0].count,'0');
+  });
+  await t.test('replayed buttons do not spam sales; unblocked visitor is served again',async()=>{
+   const before=(await pool.query("SELECT COUNT(*) FROM domwork_bot_outbox WHERE target_id='-1001234567890'")).rows[0].count;
+   await run(cb(701,'f:faq:price'));await run(cb(701,'f:faq:price'));await run(cb(701,'f:w:now'));
+   const after=(await pool.query("SELECT COUNT(*) FROM domwork_bot_outbox WHERE target_id='-1001234567890'")).rows[0].count;
+   assert.equal(Number(after)-Number(before),1); // faqat birinchi narx so'rovi
+   await pool.query("UPDATE domwork_bot_visitors SET blocked_at=NOW() WHERE telegram_id='701'");
+   await run(msg(701,'/start'));
+   assert.equal((await pool.query("SELECT blocked_at FROM domwork_bot_visitors WHERE telegram_id='701'")).rows[0].blocked_at,null);
   });
   await t.test('security: a phone-less lead link never resolves to a student with an empty phone',async()=>{
    await pool.query("INSERT INTO leads(id,name,phone,source,language,status) VALUES('nophone','Raqamsiz','','Telegram bot','russian','yangi-lidlar')");
@@ -123,7 +143,7 @@ test('lead funnel for unknown Telegram visitors — synthetic data, no Telegram 
    await run(msg(705,'/start'));
    await run(msg(705,'',{contact:{phone_number:'+998935550000',user_id:705}}));
    const id=await store.identity(pool,'705');assert.equal(id.kind,'student');assert.equal(id.id,'s-paid');
-   assert.equal((await pool.query("SELECT COUNT(*) FROM leads WHERE phone='+998935550000'")).rows[0].count,'0');
+   assert.equal((await pool.query("SELECT COUNT(*) FROM leads WHERE phone='+998935550000' AND source='Telegram bot'")).rows[0].count,'0');
   });
   await t.test('free text goes to sales; /stop pauses automation; block marks visitor',async()=>{
    await run(msg(701,'Darslar kechqurun bo‘ladimi?'));

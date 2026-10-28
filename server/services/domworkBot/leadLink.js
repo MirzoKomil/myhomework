@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS domwork_lead_telegram_tokens (
 CREATE INDEX IF NOT EXISTS domwork_lead_telegram_tokens_lead ON domwork_lead_telegram_tokens(lead_id);`;
 const PREFIX = 'ld_';
 const hash = raw => createHash('sha256').update(raw).digest('hex');
-async function init(db) { await db.query(SCHEMA); }
+async function init(db) { await db.query(SCHEMA); await db.query("DELETE FROM domwork_lead_telegram_tokens WHERE expires_at<NOW()-INTERVAL '1 day'"); }
 // Faqat rus tili lidlari uchun; jadval hali yo'q bo'lsa (bot o'chiq) — havola bermaydi.
 async function issue(db, leadId) {
     if (!leadId || !(await db.query("SELECT to_regclass('domwork_lead_telegram_tokens') AS t")).rows[0]?.t) return null;
@@ -43,9 +43,11 @@ async function claim(db, message) {
     if (occupied && occupied.account_kind !== 'lead') return { lead, skipped: 'already-linked' };
     const taken = (await db.query("SELECT telegram_id FROM domwork_bot_links WHERE account_kind='lead' AND account_id=$1", [lead.id])).rows[0];
     if (taken && taken.telegram_id !== telegramId) return { lead, skipped: 'lead-has-other-telegram' };
-    await db.query(`INSERT INTO domwork_bot_links(telegram_id,account_kind,account_id,phone) VALUES($1,'lead',$2,$3)
-        ON CONFLICT(telegram_id) DO UPDATE SET account_kind='lead',account_id=EXCLUDED.account_id,phone=EXCLUDED.phone,updated_at=NOW()`,
-        [telegramId, lead.id, policy.phone(lead.phone)]);
+    // Landing formasidagi raqam TASDIQLANMAGAN (istalgan raqam yozilishi mumkin) — ulanishga yozilmaydi.
+    // Aks holda store.identity lid→o'quvchi ko'chishi orqali begona o'quvchi kabinetini ochib qo'yardi.
+    await db.query(`INSERT INTO domwork_bot_links(telegram_id,account_kind,account_id,phone) VALUES($1,'lead',$2,'')
+        ON CONFLICT(telegram_id) DO UPDATE SET account_kind='lead',account_id=EXCLUDED.account_id,phone='',updated_at=NOW()`,
+        [telegramId, lead.id]);
     await db.query('UPDATE domwork_lead_telegram_tokens SET used_at=COALESCE(used_at,NOW()),telegram_id=$2 WHERE token_hash=$1', [tokenHash, telegramId]);
     await require('./store').audit(db, telegramId, 'lead-telegram-linked', lead.id, { method: 'landing' });
     return { lead };

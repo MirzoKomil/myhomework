@@ -118,7 +118,10 @@ async function linkContact(db, message) {
     }
     const selected = policy.choose(await phoneCandidates(db, contact.phone));
     if (existing && (existing.account_kind !== selected.kind || existing.account_id !== selected.id)) {
-        const upgrade = existing.account_kind === 'lead' && selected.kind === 'student' && existing.phone === contact.phone;
+        // Lid → o'quvchi/sinov: raqam bir xil bo'lsa, yoki lid ulanishida tasdiqlangan raqam yo'q bo'lsa
+        // (voronka/landing) — kontakt esa egasining o'zi yuborgan, tasdiqlangan raqam.
+        const upgrade = existing.account_kind === 'lead' && (existing.phone === contact.phone
+            || (!existing.phone && ['student','lead'].includes(selected.kind)));
         if (!upgrade) throw policy.error(409, 'Telegram akkaunti boshqa CRM profiliga bog‘langan. Administrator ajratsin');
     }
     const used = (await db.query('SELECT telegram_id FROM domwork_bot_links WHERE account_kind=$1 AND account_id=$2', [selected.kind, selected.id])).rows[0];

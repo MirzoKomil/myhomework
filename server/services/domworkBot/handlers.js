@@ -104,7 +104,7 @@ function createHandler({ crm }) {
             if(message._leadLinkHash || require('./leadLink').startHash(message.text)){
                 // Landing "Rahmat" sahifasidan: lid telefon raqamisiz taniladi.
                 const claimed=await require('./leadLink').claim(db,message);
-                if(!identity && await funnel.enabled(db)) return await funnel.start(db,update,message,{lead:claimed?.lead || null});
+                if(!identity && await funnel.enabled(db)) return await funnel.start(db,update,message,{lead:claimed && !claimed.skipped ? claimed.lead : null});
                 if(identity) return await reply(`Assalomu alaykum, ${text(identity.name)}! Kerakli bo‘limni tanlang.`);
             }
             if (message.contact) {

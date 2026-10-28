@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS domwork_bot_visitors (
  awaiting TEXT NOT NULL DEFAULT '', lesson_parts INTEGER NOT NULL DEFAULT 0, lesson_seen_at TIMESTAMPTZ,
  quiz JSONB NOT NULL DEFAULT '{}', quiz_done_at TIMESTAMPTZ, guide_at TIMESTAMPTZ, cta_at TIMESTAMPTZ,
  request JSONB, requested_at TIMESTAMPTZ, discount_until TIMESTAMPTZ, hot_at TIMESTAMPTZ,
- paused BOOLEAN NOT NULL DEFAULT FALSE, blocked_at TIMESTAMPTZ,
+ paused BOOLEAN NOT NULL DEFAULT FALSE, blocked_at TIMESTAMPTZ, price_at TIMESTAMPTZ, texted_at TIMESTAMPTZ,
  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS domwork_bot_visitors_lead ON domwork_bot_visitors(lead_id);
@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS domwork_bot_funnel_events (
  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS domwork_bot_funnel_events_at ON domwork_bot_funnel_events(created_at);`;
-async function init(db) { await db.query(SCHEMA); }
+async function init(db) { await db.query(SCHEMA); await db.query('ALTER TABLE domwork_bot_visitors ADD COLUMN IF NOT EXISTS price_at TIMESTAMPTZ, ADD COLUMN IF NOT EXISTS texted_at TIMESTAMPTZ'); }
 
 // Admin botga "#voronka <kalit>" izohi bilan fayl yuborib materialni almashtiradi.
 const MEDIA_KEYS = ['sovga', 'dars1', 'dars2', 'dars3', 'menejer', 'shartnoma', 'asoschi', 'bonus',
@@ -50,8 +50,8 @@ const sla = s => Number.isInteger(s.salesSlaMinutes) ? s.salesSlaMinutes : 30;
 
 // Har bir update uchun noyob outbox kalitlari.
 function context(db, update, tid) { let n = 0; return { db, tid, key: () => `f:${update.update_id}:${n++}` }; }
-async function send(c, method, payload, { delayMs = 0, unless = '', automation = false } = {}) {
-    await store.enqueue(c.db, { key: c.key(), targetId: c.tid, method, notBefore: new Date(Date.now() + delayMs),
+async function send(c, method, payload, { delayMs = 0, unless = '', automation = false, key = '' } = {}) {
+    await store.enqueue(c.db, { key: key || c.key(), targetId: c.tid, method, notBefore: new Date(Date.now() + delayMs),
         payload: { chat_id: c.tid, ...payload, _guest: { tid: c.tid, ...(unless ? { unless } : {}) }, ...(automation || delayMs ? { _automation: true } : {}) } });
 }
 const say = (c, text, markup, opts) => send(c, 'sendMessage', { text, ...(markup ? { reply_markup: markup } : {}) }, opts);
@@ -71,7 +71,7 @@ async function visitor(db, tid) { return (await db.query('SELECT * FROM domwork_
 async function upsertVisitor(db, from, { source = 'organic', leadId = null, phone = '' } = {}) {
     const tid = policy.telegramId(from?.id);
     await db.query(`INSERT INTO domwork_bot_visitors(telegram_id,first_name,username,source,lead_id,phone,variant) VALUES($1,$2,$3,$4,$5,$6,$7)
-        ON CONFLICT(telegram_id) DO UPDATE SET first_name=EXCLUDED.first_name,username=EXCLUDED.username,paused=false,
+        ON CONFLICT(telegram_id) DO UPDATE SET first_name=EXCLUDED.first_name,username=EXCLUDED.username,paused=false,blocked_at=NULL,
         lead_id=COALESCE(domwork_bot_visitors.lead_id,EXCLUDED.lead_id),
         phone=CASE WHEN domwork_bot_visitors.phone='' THEN EXCLUDED.phone ELSE domwork_bot_visitors.phone END,
         source=CASE WHEN EXCLUDED.source<>'organic' THEN EXCLUDED.source ELSE domwork_bot_visitors.source END,updated_at=NOW()`,
@@ -169,7 +169,8 @@ function landingGoal(comments) {
 async function start(db, update, message, { lead = null, payload = '' } = {}) {
     const from = message.from, c = context(db, update, String(from.id)), s = await settings(db);
     const source = lead ? 'landing' : /^ig_[A-Za-z0-9_-]{1,40}$/.test(payload) ? 'ig:' + payload.slice(3) : 'organic';
-    const v = await upsertVisitor(db, from, { source, leadId: lead?.id || null, phone: lead ? policy.phone(lead.phone) : '' });
+    // Landing raqami tasdiqlanmagan — mehmon raqami faqat Telegram kontakt tugmasi orqali olinadi.
+    const v = await upsertVisitor(db, from, { source, leadId: lead?.id || null });
     if (lead && !v.segment) {
         const goal = landingGoal((await db.query('SELECT comments FROM leads WHERE id=$1', [lead.id])).rows[0]?.comments);
         if (goal) { await patch(db, v.telegram_id, { segment: goal }); v.segment = goal; }
@@ -182,8 +183,9 @@ async function start(db, update, message, { lead = null, payload = '' } = {}) {
     if (gift) { await sendMedia(c, gift, copy.text.gift + '\n\n' + (hasLesson ? copy.text.giftNext : ''), next); await event(db, c.tid, 'gift'); }
     else await say(c, hasLesson ? copy.text.giftNext : copy.text.lessonMissing, next);
     // Segment savoli 2 daqiqadan keyin (shu orada tanlangan bo'lsa yuborilmaydi).
-    if (!v.segment) await askSegment(c, { delayMs: 120000, unless: 'segment' });
-    else if (!v.field) await askField(c, v, { delayMs: 120000, unless: 'field' });
+    // Qayta /start bosilsa ham bitta kechiktirilgan savol (barqaror kalit).
+    if (!v.segment) await askSegment(c, { delayMs: 120000, unless: 'segment', key: 'f:seg-ask:' + c.tid });
+    else if (!v.field) await askField(c, v, { delayMs: 120000, unless: 'field', key: 'f:fld-ask:' + c.tid });
 }
 async function lesson(c, v, part = 1) {
     const s = await settings(c.db), m = media(s, 'dars' + part);
@@ -236,11 +238,14 @@ async function finishRequest(c, v, whenKey) {
     const s = await settings(c.db), method = v.request?.method === 'telegram' ? 'telegram' : 'call';
     if (method === 'call' && !v.phone) return askContact(c, 'call');
     await ensureLead(c.db, v, { phone: v.phone, intent: 'call' });
-    const first = !v.requested_at;
+    const first = !v.requested_at, same = v.requested_at && v.request?.when === whenKey && v.request?.method === method;
     await patch(c.db, c.tid, { request: { method, when: whenKey }, requested_at: new Date() }); v.requested_at = new Date();
     const whenText = copy.WHEN[whenKey];
-    await leadComment(c.db, v.lead_id, `🤖 Bot: menejer bilan bog‘lanishni so‘radi — ${method === 'call' ? 'qo‘ng‘iroq' : 'faqat Telegram'}, ${whenText}. Ball ${v.score}.`);
-    await notifySales(c.db, 'req:' + c.tid + ':' + Date.now(), `📞 Botdan so‘rov: ${method === 'call' ? 'qo‘ng‘iroq qiling' : 'Telegramda yozing'} — ${whenText}`, v);
+    // Eski tugmani qayta bosish sotuvga takroriy xabar va izoh yubormaydi.
+    if (!same) {
+        await leadComment(c.db, v.lead_id, `🤖 Bot: menejer bilan bog‘lanishni so‘radi — ${method === 'call' ? 'qo‘ng‘iroq' : 'faqat Telegram'}, ${whenText}. Ball ${v.score}.`);
+        await notifySales(c.db, `req:${c.tid}:${method}:${whenKey}`, `📞 Botdan so‘rov: ${method === 'call' ? 'qo‘ng‘iroq qiling' : 'Telegramda yozing'} — ${whenText}`, v);
+    }
     const now = new Date(), open = inHours(s, now);
     let reply = whenKey === 'now' ? (open ? copy.text.done.nowIn(sla(s)) : copy.text.done.offHours(salesHours(s).label)) : copy.text.done.later(whenText);
     if (method === 'telegram') reply += copy.text.done.telegram;
@@ -271,6 +276,7 @@ async function callback(db, update) {
     const identity = await store.identity(db, tid);
     if (identity) { await answer(db, update, 'Menyudagi bo‘limlardan foydalaning.'); return; }
     const v = (await visitor(db, tid)) || await upsertVisitor(db, q.from);
+    if (v.blocked_at || v.paused) { await patch(db, tid, { blocked_at: null, paused: false }); v.blocked_at = null; v.paused = false; } // yozdi = bloklamagan
     const c = context(db, update, tid);
     await answer(db, update);
     let m;
@@ -321,8 +327,11 @@ async function callback(db, update) {
     if ((m = /^f:faq:([a-z]+)$/.exec(data)) && copy.FAQ[m[1]]) {
         const k = m[1]; await event(db, tid, 'faq', { k });
         if (k === 'price') {
-            await addScore(db, v, 3, 'narxni so‘radi');
-            await notifySales(db, 'price:' + tid + ':' + Date.now(), '💰 Narxni so‘radi — iloji boricha tez yozing', v);
+            if (!v.price_at) {
+                await patch(db, tid, { price_at: new Date() });
+                await addScore(db, v, 3, 'narxni so‘radi');
+                await notifySales(db, 'price:' + tid, '💰 Narxni so‘radi — iloji boricha tez yozing', v);
+            }
             return say(c, copy.FAQ.price[1] + '\n\n' + copy.text.priceDone, inline([[[copy.text.ctaCall, 'f:call']], [[copy.text.ctaTelegram, 'f:tg']]]));
         }
         return say(c, copy.FAQ[k][1], inline([[[copy.KEYBOARD.contact, 'f:cta']]]));
@@ -337,6 +346,7 @@ async function message(db, update) {
     const st = /^\/start(?:@Domworkuz_bot)?(?:\s+(\S{1,64}))?$/i.exec(text);
     const v = await visitor(db, tid);
     if (st || !v) return start(db, update, m, { payload: st?.[1] || '' });
+    if (v.blocked_at) await patch(db, tid, { blocked_at: null }); // yozdi = botni blokdan chiqargan
     const c = context(db, update, tid);
     if (text === copy.KEYBOARD.contact) return cta(c, v);
     if (text === copy.KEYBOARD.guides) return v.segment ? askField(c, v) : askSegment(c);
@@ -347,7 +357,7 @@ async function message(db, update) {
     const snippet = text ? text.slice(0, 500) : m.voice ? '[ovozli xabar]' : m.photo ? '[rasm]' : '[xabar]';
     await notifySales(db, 'msg:' + update.update_id, `✉️ Lid botga yozdi: «${snippet}»`, v);
     await event(db, tid, 'free_text');
-    await addScore(db, v, 2, 'savol yozdi');
+    if (!v.texted_at) { await patch(db, tid, { texted_at: new Date() }); await addScore(db, v, 2, 'savol yozdi'); }
     return say(c, copy.text.freeText(inHours(s, new Date()), sla(s)), replyKeyboard());
 }
 // Telefon raqami CRMdagi o'quvchi/xodimga mos kelmadi — mehmon lid sifatida davom etadi.

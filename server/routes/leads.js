@@ -88,14 +88,16 @@ router.post('/', webhookSecretRequired, async (req, res) => {
             contactTime,
             utmSource, utmCampaign, utmContent, fbclid, fbLeadId, ctwaClid, igUsername,
         });
+        // Bot havolasi faqat domwork.uz landing arizasiga (boshqa webhooklar uchun token yaratilmaydi).
+        const landing = sourceResult.value === 'Domwork' && /^domwork_[a-f0-9-]{36}$/i.test(String(externalId || ''));
         if (result.duplicate) {
             console.log(`[leads] DUBLIKAT  id=${result.id} manba=${sourceResult.value}`);
-            const telegramUrl = await require('../services/domworkBot/leadLink').issueIfEnabled(require('../db').pool, result.id);
+            const telegramUrl = landing ? await require('../services/domworkBot/leadLink').issueIfEnabled(require('../db').pool, result.id) : null;
             return res.status(200).json({ ok: true, id: result.id, duplicate: true, ...(telegramUrl ? { telegramUrl } : {}) });
         }
         console.log(`[leads] YARATILDI  id=${result.id} manba=${sourceResult.value} til=${language || '-'}`);
         // Rus tili lidiga @Domworkuz_bot shaxsiy havolasi (voronka yoqilgan bo'lsa) — landing "Rahmat" sahifasidagi tugma.
-        const telegramUrl = await require('../services/domworkBot/leadLink').issueIfEnabled(require('../db').pool, result.id);
+        const telegramUrl = landing ? await require('../services/domworkBot/leadLink').issueIfEnabled(require('../db').pool, result.id) : null;
         res.status(201).json({ ok: true, id: result.id, lead: result.lead, ...(telegramUrl ? { telegramUrl } : {}) });
         // Javobdan keyin — CAPI.uz sekin ishlasa ham landing page/webhook
         // javobi kechikmaydi (CRM'ning asosiy oqimiga bog'liq emas).
