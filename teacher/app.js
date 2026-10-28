@@ -227,7 +227,8 @@
     const tAt = l => tz(tReq(l).scheduledAt);
     function trialPhase(l) {
         const r = tReq(l), at = tAt(l), n = now();
-        if (r.state === 'pending') return 'pending';
+        // Tasdiqlanmay vaqti o'tib ketgan sinov osilib qolmasin — natija yoziladi (server ruxsat beradi).
+        if (r.state === 'pending') return at && (at.date < n.date || (at.date === n.date && at.min <= n.min)) ? 'result' : 'pending';
         if (r.state === 'accepted') return at && (at.date < n.date || (at.date === n.date && at.min + 30 <= n.min)) ? 'result' : 'upcoming';
         return 'past';
     }

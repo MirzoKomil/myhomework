@@ -1,6 +1,6 @@
 const express = require('express');
 const { authRequired } = require('../middleware/auth');
-const { getTeacherTrialLessons, saveTeacherTrialLesson } = require('../db');
+const { getTeacherTrialLessons, getTeacherTrialHistory, saveTeacherTrialLesson } = require('../db');
 const router = express.Router();
 router.use(authRequired);
 router.use((req, res, next) => {
@@ -12,6 +12,13 @@ router.get('/', async (req, res) => {
         res.set('Cache-Control', 'private, no-store');
         res.json({ lessons: await getTeacherTrialLessons(req.user) });
     } catch (err) { res.status(err.status || 500).json({ error: err.message || 'Sinov darslari yuklanmadi' }); }
+});
+// Ustozning o'z sinovlari tarixi (yakunlangan, rad etilgan, qayta qo'yilgan) — faqat o'ziga biriktirilganlari.
+router.get('/history', async (req, res) => {
+    try {
+        res.set('Cache-Control', 'private, no-store');
+        res.json({ history: await getTeacherTrialHistory(req.user, req.query.days) });
+    } catch (err) { res.status(err.status || 500).json({ error: err.message || 'Sinovlar tarixi yuklanmadi' }); }
 });
 router.post('/:id', async (req, res) => {
     try {
