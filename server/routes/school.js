@@ -141,6 +141,13 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
                 extra.unassigned = await S.unassignedTrials(pool, { from, to, lang: r.lang });
                 extra.managers = (await pool.query('SELECT id, name FROM sales_managers').catch(() => ({ rows: [] }))).rows;
             }
+        } else {
+            // Sotuv (SotuvJadval "Biriktirilmagan" qatori): ustozsiz sinovlar vaqti; lid ismi faqat o'z lidida.
+            const mid = await managerId(req);
+            extra.unassigned = (await S.unassignedTrials(pool, { from, to, lang: r.lang })).map(u => {
+                const mine = !!mid && String(u.managerId || '') === String(mid);
+                return { date: u.date, start: u.start, end: u.end, mine, ...(mine ? { leadId: u.leadId, leadName: u.leadName } : {}) };
+            });
         }
         const tl = r.lang ? teachers.filter(t => fits(langOf(t), r.lang)) : teachers;
         return { from, to, scope: r.scope, lang: r.lang || null, teachers: r.scope === 'own' ? undefined : tl, views: r.views, summary, ...extra };
@@ -202,12 +209,19 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         const first = holds[0], date = S.dateStr(first.date), min = Number(first.start_min);
         const at = new Date(Date.parse(date + 'T00:00:00Z') + (min - T.TZ_OFFSET_MIN) * 60000).toISOString();
         const teacher = (await pool.query('SELECT name FROM hr_employees WHERE id=$1', [first.teacher_id])).rows[0];
+        // Sinov qo'yish oynasi (SotuvSinov): qayta qo'yishda avvalgi natija va lid istagi izohga yoziladi.
+        const reschedule = req.body?.reschedule === true;
+        const prevOutcome = String(req.body?.prevOutcome || '').trim().slice(0, 200);
+        const wish = String(req.body?.wish || '').trim().slice(0, 300);
         const lead = { id: row.id, updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : undefined, status: 'sinov-darsida',
             paymentOnboarding: { ...(extra.paymentOnboarding || {}), teacherId: first.teacher_id, lessonDayOfWeek: T.weekday(date), lessonTime: T.fromMin(min),
                 lessonDuration: Number(first.end_min) - Number(first.start_min), trialDaysCount: holds.length, isTrial: true },
-            trialLessonAt: at, trialScheduleRevision: randomUUID(),
+            trialLessonAt: at, trialScheduleRevision: randomUUID(), ...(extra.trialUnassigned ? { trialUnassigned: false } : {}),
             comments: [...(Array.isArray(row.comments) ? row.comments : JSON.parse(row.comments || '[]')), { id: randomUUID(), type: 'trial-lesson', author: req.user.name || '', authorId: req.user.id,
-                createdAt: new Date().toISOString(), text: `Sinov darsi belgilandi ("Kim bo'sh?"):\n• O'qituvchi: ${teacher?.name || '—'}\n• Kuni: ${date.split('-').reverse().join('.')}, ${T.fromMin(min)}\n• Davomiyligi: ${holds.length} kun` }] };
+                createdAt: new Date().toISOString(), reason: prevOutcome,
+                text: [`${reschedule ? 'Qayta sinov darsi tashkil qilindi' : 'Sinov darsi belgilandi'} ("Kim bo'sh?"):`, ...(prevOutcome ? [`• Avvalgi natija: ${prevOutcome}`] : []),
+                    `• O'qituvchi: ${teacher?.name || '—'}`, `• Kuni: ${date.split('-').reverse().join('.')}, ${T.fromMin(min)}`, `• Davomiyligi: ${holds.length} kun`,
+                    ...(wish ? [`• Lid istagi: ${wish}`] : [])].join('\n') }] };
         const saved = await db.upsertLead(lead, row.language, req.user);
         return { lead: { id: saved.lead.id, status: saved.lead.status } };
     }));
