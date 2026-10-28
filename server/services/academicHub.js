@@ -146,7 +146,9 @@ async function accessibleStudents(pool, access, lang) {
     let where = "COALESCE(s.subject,'english') = $1";
     if (access.teacher) {
         params.push(access.teacher.id);
-        where += ' AND (s.teacher_id = $2 OR s.assistant_teacher_id = $2)';
+        // 29-okt: asosiy ustoz yordamchi bo'la olmaydi — "yordamchi sifatida" o'quvchilar faqat yordamchi lavozimida.
+        where += require('./teacherDuties').hasAssistantDuty(access.teacher)
+            ? ' AND (s.teacher_id = $2 OR s.assistant_teacher_id = $2)' : ' AND s.teacher_id = $2';
     }
     const { rows } = await pool.query(`SELECT s.id, s.name, s.group_name, s.subject, s.teacher_id,
         s.assistant_teacher_id, s.lesson_duration, s.lesson_day_of_week, s.lesson_time, COALESCE(s.extra_data,'{}'::jsonb) AS extra

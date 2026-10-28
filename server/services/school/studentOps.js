@@ -292,6 +292,10 @@ async function restore(db, actor, studentId, body, now = new Date()) {
         const teacherId = body.teacherId || st.teacherId;
         const day = body.lessonDay ?? st.day, time = body.lessonTime ?? st.time;
         await S.checkWeekly(db, { teacherId, day, time, duration: st.duration, fromDate: from, excludeStudentId: studentId, now });
+        // Yangi yordamchi berilsa — faqat yordamchi lavozimidagi xodim (asosiy ustoz emas).
+        if (body.assistantId) await require('../teacherDuties').validateAssignment(db,
+            { teacherId, assistantTeacherId: String(body.assistantId), subject: row.subject || 'english' },
+            { teacherId: st.teacherId, assistantTeacherId: st.assistantId, subject: row.subject || 'english' });
         await db.query(`INSERT INTO school_student_status (id,student_id,status,from_date,reason_code,reason,payload,actor_id,actor_name,actor_role)
             VALUES ($1,$2,'restored',$3,$4,$5,$6,$7,$8,$9)`, [randomUUID(), studentId, from, String(body.reasonCode || ''), reason,
             JSON.stringify({ teacherId, day, time, continueFrom: body.continueFrom || 'next' }), actor.id, actor.name || '', actor.role]);

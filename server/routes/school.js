@@ -47,6 +47,8 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
     const managerId = async req => req.user.role === 'sales_manager'
         ? (await pool.query('SELECT manager_id FROM user_sales_manager_links WHERE user_id=$1', [req.user.id])).rows[0]?.manager_id || null : null;
     const teacherOf = req => require('../services/teacherDuties').teacherForActor(pool, req.user);
+    // 29-okt: "yordamchi sifatida" ko'rinish faqat yordamchi lavozimida; asosiy ustozda eski biriktirish e'tiborga olinmaydi.
+    const assistOf = me => require('../services/teacherDuties').hasAssistantDuty(me) ? me.id : null;
 
     // ── Til (ingliz / rus) ──────────────────────────────────────────────────
     // Jadval til bo'yicha ajratiladi: ingliz ustozi rus lidiga (va aksincha) sinov qo'yilmaydi.
@@ -282,7 +284,7 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         // O'quvchi bo'yicha so'rov (muzlatish, ustoz yoki jadval) — faqat o'z o'quvchisi; admin qo'lda hal qiladi.
         if (type === 'student') {
             const st = (await c.query('SELECT id, name, teacher_id, assistant_teacher_id FROM students WHERE id=$1', [String(req.body.studentId || '')])).rows[0];
-            if (!st || (st.teacher_id !== me.id && st.assistant_teacher_id !== me.id)) throw T.fail(403, 'Bu o\'quvchi sizga biriktirilmagan');
+            if (!st || (st.teacher_id !== me.id && (!assistOf(me) || st.assistant_teacher_id !== me.id))) throw T.fail(403, 'Bu o\'quvchi sizga biriktirilmagan');
             const TOPICS = ['freeze', 'teacher', 'schedule', 'other'];
             p = { studentId: st.id, studentName: st.name, topic: TOPICS.includes(req.body.topic) ? req.body.topic : 'other' };
         }
@@ -417,7 +419,7 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         if (role === 'teacher') {
             const me = await teacherOf(req);
             if (row.teacher_id === me.id) return 'teacher';
-            if (row.assistant_teacher_id === me.id) return 'assistant';
+            if (assistOf(me) && row.assistant_teacher_id === me.id) return 'assistant';
             const past = await pool.query('SELECT 1 FROM school_teacher_history WHERE student_id=$1 AND teacher_id=$2', [row.id, me.id]);
             return past.rows.length ? 'past' : null;
         }
@@ -597,16 +599,17 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         const statuses = (await pool.query('SELECT * FROM school_student_status WHERE cancelled_at IS NULL ORDER BY from_date, created_at')).rows;
         const hist = (await pool.query('SELECT * FROM school_teacher_history ORDER BY from_date, created_at')).rows;
         const by = new Map(); for (const s of statuses) { if (!by.has(s.student_id)) by.set(s.student_id, []); by.get(s.student_id).push(s); }
-        let me = null, mid = null; const isSales = req.user.role === 'sales_manager';
-        if (req.user.role === 'teacher') me = (await teacherOf(req)).id; else if (isSales) mid = await managerId(req); else need(req, MANAGE);
+        let me = null, mid = null, meA = null; const isSales = req.user.role === 'sales_manager';
+        if (req.user.role === 'teacher') { const own = await teacherOf(req); me = own.id; meA = assistOf(own); } else if (isSales) mid = await managerId(req); else need(req, MANAGE);
         const out = [], changed = [];
         const recent = T.addDays(today, -30);
         for (const r of rows) {
             const st = S.studentRow(r), state = S.statusOn(by.get(r.id) || [], today);
             const myPast = me ? hist.filter(h => h.student_id === r.id && h.teacher_id === me && h.to_date && S.dateStr(h.to_date) < today) : [];
-            const mine = me ? (r.teacher_id === me || r.assistant_teacher_id === me || myPast.length) : isSales ? O.soldBy(st, mid) : true;
+            const asMine = !!meA && r.assistant_teacher_id === meA;
+            const mine = me ? (r.teacher_id === me || asMine || myPast.length) : isSales ? O.soldBy(st, mid) : true;
             if (!mine) continue;
-            const moved = me && myPast.length && r.teacher_id !== me && r.assistant_teacher_id !== me;
+            const moved = me && myPast.length && r.teacher_id !== me && !asMine;
             // Sotuv: ustozi yaqinda (30 kun) almashgan faol o'quvchi — ma'lumot uchun, alohida bo'lim.
             if (state === 'active' && !moved) {
                 const ch = !me && hist.filter(h => h.student_id === r.id && h.to_date && S.dateStr(h.to_date) >= recent && S.dateStr(h.to_date) <= today).slice(-1)[0];
@@ -649,7 +652,7 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
                 x.contacts = { total: mineCon.reduce((n, c) => n + c.n, 0), byMonth: Object.fromEntries(mineCon.map(c => [c.m, c.n])),
                     first: mineCon.map(c => c.first).sort()[0] || null, last: mineCon.map(c => c.last).sort().pop() || null };
                 x.reached = prog[id]?.reached ?? null;
-                if (!me || r.teacher_id === me || r.assistant_teacher_id === me) { const g = grp.get(id); x.group = g ? { name: g.name, link: g.tg_link || '' } : null; }
+                if (!me || r.teacher_id === me || (meA && r.assistant_teacher_id === meA)) { const g = grp.get(id); x.group = g ? { name: g.name, link: g.tg_link || '' } : null; }
                 if (money) { const ex = typeof r.extra_data === 'object' && r.extra_data ? r.extra_data : JSON.parse(r.extra_data || '{}'); x.paymentDueDate = ex.paymentDueDate || null; }
                 return x;
             };
@@ -730,7 +733,7 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         if (req.user.role === 'teacher') {
             const me = await teacherOf(req);
             rows = (await pool.query(`SELECT g.student_id, g.name, g.tg_link FROM school_student_groups g JOIN students s ON s.id=g.student_id
-                WHERE NOT g.archived AND (s.teacher_id=$1 OR s.assistant_teacher_id=$1)`, [me.id])).rows;
+                WHERE NOT g.archived AND (s.teacher_id=$1 OR s.assistant_teacher_id=$2::text)`, [me.id, assistOf(me)])).rows;
         } else if (req.user.role === 'sales_manager') {
             const mid = await managerId(req);
             rows = (await pool.query(`SELECT g.student_id, g.name, g.tg_link FROM school_student_groups g JOIN students s ON s.id=g.student_id
@@ -777,6 +780,18 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         if (!assistantId) throw T.fail(400, 'Yordamchini tanlang');
         return A.monthReport(pool, assistantId, month);
     }));
+    // 29-okt: asosiy ustoz yordamchi bo'la olmaydi. Admin "Yordamchi aloqalari" uchun:
+    //  • legacy — hali asosiy ustozga yordamchi sifatida biriktirilgan o'quvchilar ("yordamchi kerak" ogohlantirishi);
+    //  • past — shu oyda aloqasi bor, lekin hozir yordamchi lavozimida bo'lmagan xodimlar (o'tgan aloqalar maoshda qoladi, admin ko'radi/tuzatadi).
+    router.get('/assist/legacy', handle(async req => {
+        need(req, MANAGE);
+        const month = String(req.query.month || T.nowLocal().date.slice(0, 7));
+        const { from, to } = T.monthBounds(month);
+        const legacy = await require('../services/school/assistantSeparation').legacyAssignments(pool, req.user.role === 'rop' ? await reqLang(req) : null);
+        const past = (await pool.query(`SELECT DISTINCT he.id, he.name FROM school_assist_contacts c JOIN hr_employees he ON he.id = c.assistant_id
+            WHERE c.day BETWEEN $1 AND $2 AND c.removed_at IS NULL AND he.role <> 'yordamchi'`, [from, to])).rows;
+        return { month, legacy, past };
+    }));
     // Tavsiya jadvali va bajarilgan aloqalar (jadval v2). Saqlanmaydi — o'quvchi dars kunlaridan hisoblanadi.
     //  • ustoz/yordamchi — faqat o'zi yordamchi bo'lgan o'quvchilar;
     //  • admin/boshliq — hamma (yoki ?assistantId=); ROP — o'z tili bo'yicha; sotuvga yo'q.
@@ -785,7 +800,7 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         const to = T.assertDate(req.query.to || from);
         if (T.daysBetween(from, to) > 41) throw T.fail(400, 'Oraliq 6 haftadan oshmasin');
         let assistantIds = null, subject = null;
-        if (req.user.role === 'teacher') assistantIds = [(await teacherOf(req)).id];
+        if (req.user.role === 'teacher') { const own = await teacherOf(req); assistantIds = assistOf(own) ? [own.id] : []; }
         else {
             need(req, MANAGE);
             subject = await reqLang(req);
@@ -811,7 +826,7 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
     router.get('/assist/changes', handle(async req => {
         const month = req.query.month || T.nowLocal().date.slice(0, 7);
         let assistantId = req.query.assistantId;
-        if (req.user.role === 'teacher') assistantId = (await teacherOf(req)).id;
+        if (req.user.role === 'teacher') { const own = await teacherOf(req); if (!assistOf(own)) return { month, changes: [] }; assistantId = own.id; }
         else need(req, MANAGE);
         if (!assistantId) throw T.fail(400, 'Yordamchini tanlang');
         if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(String(month))) throw T.fail(400, 'Oy noto\'g\'ri');

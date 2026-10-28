@@ -149,7 +149,8 @@
         const id = S.me?.id;
         S.students = (state.students || []).filter(s => !s.isStaffDemo);
         S.main = S.students.filter(s => s.teacherId === id && s.status !== 'inactive');
-        S.helped = S.students.filter(s => s.assistantTeacherId === id && s.status !== 'inactive');
+        // 29-okt: yordamchi vazifasi faqat yordamchi lavozimida (asosiy ustoz yordamchi bo'la olmaydi).
+        S.helped = S.me?.role === 'yordamchi' ? S.students.filter(s => s.assistantTeacherId === id && s.status !== 'inactive') : [];
         drop('');
         const jobs = [
             api(`/api/school/schedule?from=${n.date}&to=${n.date}`).then(r => { S.schedule = r; }).catch(() => { S.schedule = null; }),
@@ -235,7 +236,7 @@
     const trialManager = l => (l.comments || []).filter(c => c.type === 'trial-lesson').slice(-1)[0]?.author || '';
     function guideTags() {
         if (S.me?.role === 'yordamchi') return ['teacher_assistant'];
-        return S.me?.dualRole || S.helped.length ? ['teacher_main', 'teacher_assistant'] : ['teacher_main'];
+        return ['teacher_main'];
     }
     function myGuides() {
         const tags = guideTags();

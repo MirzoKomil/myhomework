@@ -158,7 +158,11 @@ async function assertOwnStudent(pool, teacherId, studentId) {
     const s = rows[0];
     if (!s) throw error(404, "O'quvchi topilmadi");
     if (s.teacher_id === teacherId) return 'main';
-    if (s.assistant_teacher_id === teacherId) return 'assistant';
+    if (s.assistant_teacher_id === teacherId) {
+        // 29-okt: asosiy ustozga qolib ketgan eski yordamchi biriktirishi ruxsat bermaydi.
+        const r = (await pool.query('SELECT role FROM hr_employees WHERE id=$1', [teacherId])).rows[0];
+        if (r?.role === 'yordamchi') return 'assistant';
+    }
     throw error(403, "Bu o'quvchi sizga biriktirilmagan");
 }
 

@@ -728,7 +728,7 @@
     // ── O'zgarishlar tarixi — AdminOquvchiTarix: kim, qachon, nima edi, qayerga tarqaldi ──
     const ROLE_UZ = { admin: 'admin', boshliq: 'boshliq', rop: 'ROP', sales_manager: 'sotuv', teacher: 'ustoz', system: 'tizim' };
     const SPREAD = { name: 'CRM · ilova · ustoz ro\'yxati', phone: 'CRM · ilova login', parentPhone: 'CRM', login: 'Ilova login', password: 'Ilova · keyingi kirishda almashtiriladi',
-        tariff: 'Moliya · qarzdorlar', monthlyPrice: 'Moliya · qarzdorlar', schedule: 'Ustoz jadvali · yordamchi tavsiya jadvali',
+        tariff: 'Moliya · qarzdorlar', monthlyPrice: 'Moliya · qarzdorlar', schedule: 'Ustoz jadvali · yordamchi tavsiya jadvali', assistant: 'Yordamchi aloqalari · tavsiya jadvali (o\'tgan aloqalar avvalgi xodimda qoladi)',
         freeze: 'Ustoz jadvali · yordamchi aloqalari · to\'lov sanasi', 'unfreeze-early': 'Ustoz jadvali · yordamchi aloqalari', 'freeze-cancelled': 'Ustoz jadvali',
         stop: 'Jadvaldan chiqdi · sotuv "Faol emas" · guruh arxivi', finish: 'Jadvaldan chiqdi · "Tugatgan" bo\'limi · guruh arxivi', restore: 'Ustoz jadvali · yordamchi · guruh qaytdi', 'teacher-change': 'Ustoz kabineti · jadval · guruh',
         group: 'CRM · student app · ustoz kabineti', 'request-tariff': 'Admin va ROP tasdig\'iga', 'request-teacher': 'Admin va ROP tasdig\'iga', 'request-payment': 'Admin va ROP tasdig\'iga',
@@ -1006,7 +1006,7 @@
     const ACTION_LABEL = { edit: 'Tahrir', freeze: 'Muzlatildi', stop: 'Kurs to\'xtatildi', finish: 'Kursni tugatdi', restore: 'Qayta tiklandi', 'unfreeze-early': 'Muzlatishdan erta qaytdi',
         'teacher-change': 'Ustoz almashtirildi', group: 'Telegram guruh', 'request-tariff': 'So\'rov: tarif', 'request-teacher': 'So\'rov: ustoz',
         'request-approved': 'So\'rov tasdiqlandi', 'request-rejected': 'So\'rov rad etildi', 'request-returned': 'So\'rov qaytarildi' };
-    const FIELD_LABEL = { name: 'Ism', phone: 'Telefon', parentPhone: 'Ota-ona', login: 'Login', password: 'Parol', tariff: 'Tarif', monthlyPrice: 'Narx', schedule: 'Jadval' };
+    const FIELD_LABEL = { name: 'Ism', phone: 'Telefon', parentPhone: 'Ota-ona', login: 'Login', password: 'Parol', tariff: 'Tarif', monthlyPrice: 'Narx', schedule: 'Jadval', assistant: 'Yordamchi ustoz' };
     function historyList(c) {
         if (!c.history?.length) return '<p class="sc-mt">Hali o\'zgarish yo\'q</p>';
         return `<ol class="sc-tl">${c.history.map(h => {

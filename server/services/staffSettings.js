@@ -44,14 +44,15 @@ async function identify(db, actor) {
     else if (u.role === 'rop') kind = 'rop';
     else if (u.role === 'sales_manager') kind = 'sales';
     else if (u.role === 'teacher' && emp && TEACHER_ROLES.includes(emp.role)) kind = emp.role === 'yordamchi' ? 'assistant' : 'teacher';
+    // 29-okt: yordamchi vazifasi faqat yordamchi lavozimida — asosiy ustozga eski biriktirish qolgan bo'lsa ham hisobga olinmaydi.
     let helped = 0;
-    if (emp && (kind === 'teacher' || kind === 'assistant')) {
+    if (emp && kind === 'assistant') {
         helped = Number((await db.query(`SELECT COUNT(*)::int AS n FROM students WHERE assistant_teacher_id=$1`, [emp.id])).rows[0]?.n || 0);
     }
     let managerId = null;
     if (kind === 'sales') managerId = (await db.query('SELECT manager_id FROM user_sales_manager_links WHERE user_id=$1', [u.id]).catch(() => ({ rows: [] }))).rows[0]?.manager_id || null;
     const lang = !emp ? null : emp.role === 'rus-oqituvchi' ? 'russian' : emp.role === 'ingliz-oqituvchi' ? 'english' : (emp.lang === 'russian' || emp.lang === 'both' ? emp.lang : 'english');
-    return { user: u, emp, kind, helped, assistantDuty: kind === 'assistant' || helped > 0, mainDuty: kind === 'teacher', managerId, lang };
+    return { user: u, emp, kind, helped, assistantDuty: kind === 'assistant', mainDuty: kind === 'teacher', managerId, lang };
 }
 
 // Yo'riqnoma auditoriyasi (js/app.js resolveGuideAudienceTags bilan bir xil + yordamchi vazifasi bor ustoz).
@@ -61,7 +62,7 @@ function guideTags(me) {
     if (r === 'rop') return ['rop'];
     if (r === 'hr') return ['hr'];
     if (me.kind === 'assistant') return ['teacher_assistant'];
-    if (me.kind === 'teacher') return me.emp?.dual_role === true || me.helped > 0 ? ['teacher_main', 'teacher_assistant'] : ['teacher_main'];
+    if (me.kind === 'teacher') return ['teacher_main'];
     if (r === 'employee' && me.emp?.role === 'marketolog') return ['marketolog'];
     if (r === 'employee' && me.emp?.role === 'head-of-teachers') return ['head_of_teachers'];
     return [];
@@ -98,18 +99,13 @@ async function workInfo(db, me) {
         const role = me.kind === 'assistant' ? `Yordamchi ustoz · ${langUz}` : `Asosiy ustoz · ${langUz}`;
         rows.push(['Lavozim', role]);
         const active = r => S.studentRow(r).legacyInactive !== true;
-        const helped = (await db.query(`SELECT s.name, s.teacher_id, s.extra_data, he.name AS tname FROM students s LEFT JOIN hr_employees he ON he.id = s.teacher_id
+        const helped = me.kind !== 'assistant' ? [] : (await db.query(`SELECT s.name, s.teacher_id, s.extra_data, he.name AS tname FROM students s LEFT JOIN hr_employees he ON he.id = s.teacher_id
             WHERE s.assistant_teacher_id=$1 ORDER BY s.name`, [e.id])).rows.filter(active);
         if (me.kind === 'assistant') {
             const by = new Map(); for (const r of helped) by.set(r.tname || '—', (by.get(r.tname || '—') || 0) + 1);
             rows.push(['O\'quvchilar', helped.length ? `${helped.length} ta · ${by.size} asosiy ustoz (${[...by].sort((a, b) => b[1] - a[1]).map(([n, c]) => `${shortName(n)} ${c}`).join(', ')})` : 'hali biriktirilmagan']);
             rows.push(['Ish tartibi', 'har o\'quvchi bilan haftasiga 3 aloqa · kamida 5 daqiqa · vaqti erkin']);
         } else {
-            // UstozProfil: "Yordamchi sifatida · 2 o'quvchi · Kamron Ergashev, Laziza Hamidova (asosiy ustoz Kamola M.)".
-            if (helped.length) {
-                const mains = [...new Set(helped.map(h => shortName(h.tname)).filter(Boolean))];
-                rows.push(['Yordamchi sifatida', `${helped.length} o'quvchi · ${helped.slice(0, 3).map(h => h.name).join(', ')}${helped.length > 3 ? '…' : ''}${mains.length === 1 ? ` (asosiy ustoz ${mains[0]})` : ''}`]);
-            }
             const hours = (await db.query('SELECT weekday, start_min, end_min FROM school_teacher_hours WHERE teacher_id=$1 ORDER BY weekday, start_min', [e.id]).catch(() => ({ rows: [] }))).rows;
             if (hours.length) {
                 const by = new Map();
@@ -238,13 +234,17 @@ async function salaryDetail(pool, actor, now = new Date()) {
                 daysLeft: T.daysBetween(today, T.monthBounds(month).to) };
         }
         // Yordamchi ustozlik: aloqalar bo'yicha (assist/month bilan bir xil hisob).
-        if (me.assistantDuty) {
-            const rep = await A.monthReport(db, me.emp.id, month);
+        // Asosiy ustoz: yordamchi vazifasi yo'q, lekin shu oyda (masalan oktyabr) ilgari qilgan aloqalari bo'lsa —
+        // ular maoshga kiradi (payroll o'zgarmagan), shuning uchun faqat o'sha aloqalar ko'rsatiladi.
+        const pastRep = !me.assistantDuty && me.kind === 'teacher' ? await A.monthReport(db, me.emp.id, month) : null;
+        const pastOnly = !!pastRep && pastRep.students.some(x => x.counted || x.noAnswer);
+        if (me.assistantDuty || pastOnly) {
+            const rep = pastRep || await A.monthReport(db, me.emp.id, month);
             const counted = new Set(rep.students.filter(x => x.counted || x.noAnswer).map(x => x.studentId));
             const sts = (await db.query(`SELECT s.id, s.name, s.extra_data, he.name AS tname FROM students s LEFT JOIN hr_employees he ON he.id=s.teacher_id
-                WHERE s.assistant_teacher_id=$1 OR s.id = ANY($2::text[])`, [me.emp.id, rep.students.map(x => x.studentId)])).rows
-                .filter(s => counted.has(s.id) || S.studentRow(s).legacyInactive !== true);
-            const plan = await A.plan(db, { assistantIds: [me.emp.id], from: today, to: T.monthBounds(month).to, now }).catch(() => ({ items: [] }));
+                WHERE ($3 AND s.assistant_teacher_id=$1) OR s.id = ANY($2::text[])`, [me.emp.id, rep.students.map(x => x.studentId), !pastOnly])).rows
+                .filter(s => counted.has(s.id) || (!pastOnly && S.studentRow(s).legacyInactive !== true));
+            const plan = pastOnly ? { items: [] } : await A.plan(db, { assistantIds: [me.emp.id], from: today, to: T.monthBounds(month).to, now }).catch(() => ({ items: [] }));
             const left = new Map(); for (const i of plan.items) if (i.kind === 'advice' && !i.past) left.set(i.studentId, (left.get(i.studentId) || 0) + 1);
             const byId = new Map(rep.students.map(x => [x.studentId, x]));
             const list = sts.map(s => { const r = byId.get(s.id) || { counted: 0, noAnswer: 0, overCap: 0, amount: 0 };
@@ -255,7 +255,7 @@ async function salaryDetail(pool, actor, now = new Date()) {
             const prevState = await db.query('SELECT * FROM school_assist_months WHERE month=$1', [prev.from.slice(0, 7)]).then(r => r.rows[0] || null).catch(() => null);
             // O'tgan oy KPI ("Sentyabr · berilgan · 108 aloqa") — shu hisob (monthReport) bo'yicha, faqat o'qish.
             const prevCounted = await A.monthReport(db, me.emp.id, prev.from.slice(0, 7)).then(r => r.counted).catch(() => null);
-            out.assist = { month, rate: rep.rate, cap: rep.cap, counted: rep.counted, amount: rep.amount, students: list, prevCounted,
+            out.assist = { pastOnly, month, rate: rep.rate, cap: rep.cap, counted: rep.counted, amount: rep.amount, students: list, prevCounted,
                 possible: list.reduce((n, s) => n + s.possible, 0), daysLeft: T.daysBetween(today, T.monthBounds(month).to),
                 prevMonth: prev.from.slice(0, 7), prevState: prevState ? { prelimAt: prevState.prelim_at, objectionUntil: S.dateStr(prevState.objection_until), finalAt: prevState.final_at, paidAt: prevState.paid_at } : null };
         }
