@@ -113,6 +113,17 @@ async function adminCorrect(db, actor, body, now = new Date()) {
         if (await isLocked(db, S.dateStr(prev.day).slice(0, 7))) throw fail(409, 'Oy yakuniy tasdiqlangan — o\'zgartirib bo\'lmaydi');
         body = { ...body, studentId: prev.student_id, assistantId: prev.assistant_id, day: body.day || S.dateStr(prev.day) };
     }
+    // Yordamchining "admin orqali so'rov"i tasdiqlansa — aloqa so'rovni yuborgan yordamchiga yoziladi
+    // (o'quvchining hozirgi yordamchisi boshqa bo'lib qolgan bo'lsa ham), o'quvchi so'rovdagi bilan bir xil.
+    let lateReq = null;
+    if (body.requestId) {
+        lateReq = (await db.query("SELECT * FROM school_requests WHERE id=$1 AND type='assist_late' FOR UPDATE", [body.requestId])).rows[0] || null;
+        if (!lateReq) throw fail(404, 'So\'rov topilmadi');
+        if (lateReq.status !== 'new') throw fail(409, 'So\'rov allaqachon hal qilingan');
+        const p = lateReq.payload || {};
+        if (p.studentId && body.studentId && String(body.studentId) !== String(p.studentId)) throw fail(400, 'O\'quvchi so\'rovdagi bilan bir xil bo\'lsin');
+        body = { ...body, studentId: p.studentId || body.studentId, assistantId: lateReq.teacher_id };
+    }
     const day = T.assertDate(body.day);
     if (await isLocked(db, day.slice(0, 7))) throw fail(409, 'Oy yakuniy tasdiqlangan — o\'zgartirib bo\'lmaydi');
     if (day > T.nowLocal(now).date) throw fail(400, 'Kelajak sanaga yozib bo\'lmaydi');
@@ -217,6 +228,29 @@ async function plan(db, { assistantIds = null, from, to, subject = null, now = n
     return { from, to, assistantIds: ids, items };
 }
 
+// "Oy oxirigacha ko'pi bilan" — YordamchiBosh va Sozlamalar → Mening maoshim uchun yagona hisob:
+// har o'quvchida min(oylik chegara, hisoblangan + bugundan oy oxirigacha qolgan tavsiya kunlari).
+// O'quvchilar: hozir shu yordamchiga biriktirilgan faollar (js/attendanceRules.js) + shu oyda hisoblangan aloqasi borlar.
+// rep — monthReport() natijasi. Faqat o'qish.
+async function possibleLeft(db, assistantId, month, rep, { pastOnly = false, now = new Date() } = {}) {
+    const R = require('../../../js/attendanceRules');
+    const today = T.nowLocal(now).date, { from, to } = T.monthBounds(month);
+    const left = new Map();
+    if (!pastOnly && today <= to) {
+        const p = await plan(db, { assistantIds: [assistantId], from: today < from ? from : today, to, now }).catch(() => ({ items: [] }));
+        for (const i of p.items) if (i.kind === 'advice' && !i.past) left.set(i.studentId, (left.get(i.studentId) || 0) + 1);
+    }
+    const had = new Set(rep.students.filter(x => x.counted || x.noAnswer).map(x => x.studentId));
+    const rows = (await db.query(`SELECT id, name, teacher_id, extra_data FROM students WHERE ($3 AND assistant_teacher_id=$1) OR id = ANY($2::text[])`,
+        [assistantId, [...had], !pastOnly])).rows.filter(r => had.has(r.id) || (!pastOnly && R.isActiveStudent(r)));
+    const byId = new Map(rep.students.map(x => [x.studentId, x]));
+    const students = rows.map(r => {
+        const counted = byId.get(r.id)?.counted || 0, adviceLeft = left.get(r.id) || 0;
+        return { studentId: r.id, name: r.name, teacherId: r.teacher_id, counted, adviceLeft, possible: R.assistPossible(counted, adviceLeft, rep.cap || MONTH_CAP) };
+    });
+    return { students, possible: students.reduce((n, x) => n + x.possible, 0) };
+}
+
 // Moliyaga murojaat (yordamchi, yopilgan oy bo'yicha): faqat o'z hisobi, yakuniy tasdiqdan oldin.
 // Hisobni o'zgartirmaydi — admin ko'rib chiqadi va kerak bo'lsa "Aloqalar"da tuzatadi (adminCorrect).
 const FIN_KINDS = { missing: 'Aloqa ro\'yxatda yo\'q', not_counted: 'Aloqa hisoblanmagan', wrong_sum: 'Summa noto\'g\'ri', other: 'Boshqa' };
@@ -281,4 +315,4 @@ async function monthChanges(db, assistantId, month) {
     return { month, changes: out };
 }
 
-module.exports = { financeRequest, monthChanges, FIN_KINDS, plan, RATE, MONTH_CAP, MIN_MINUTES, CHANNELS, countMonth, mark, removeOwnToday, adminCorrect, monthReport, advanceMonth, isLocked, adviceFor };
+module.exports = { possibleLeft, financeRequest, monthChanges, FIN_KINDS, plan, RATE, MONTH_CAP, MIN_MINUTES, CHANNELS, countMonth, mark, removeOwnToday, adminCorrect, monthReport, advanceMonth, isLocked, adviceFor };

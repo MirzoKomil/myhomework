@@ -263,14 +263,17 @@
     function drawTeacherSalary(body, d) {
         const c = d.current || {}, m = d.main || { groups: [], total: 0, counted: 0 }, a = d.assist;
         // Jami va yordamchi qismi — Moliya hisobidan (payroll); u bo'lmasa aloqalar hisobidan.
-        const assistAmt = a ? (c.assistantTotal != null && (c.assistantTotal || !a.amount) ? Number(c.assistantTotal) : a.amount) : 0;
+        // Summa ham, aloqalar soni ham bitta manbadan — Moliya hisobi (payroll: assistantTotal / assistantLessons).
+        const fromPay = !!a && c.assistantTotal != null;
+        const assistAmt = a ? (fromPay ? Number(c.assistantTotal) || 0 : a.amount) : 0;
+        const assistCnt = a ? (fromPay && c.assistantLessons != null ? Number(c.assistantLessons) || 0 : a.counted) : 0;
         const total = a ? m.total + assistAmt : c.total != null ? Number(c.total) : m.total;
         const miss = d.missed;
         const banner = miss && miss.open ? `<div class="ss-banner" role="note">${ICON.sync}<p><b>${miss.open} ta qoldirilgan dars hali qoplanmagan${miss.planned ? ` (${miss.planned} tasi rejada)` : ''}.</b> Oy tugashiga ${miss.daysLeft} kun. ${esc(miss.students.slice(0, 3).map(s => `${s.name} ${s.count} ta`).join(', '))}${miss.students.length > 3 ? `, yana ${miss.students.length - 3} ta` : ''}.</p><button type="button" class="ss-btn" data-go-makeup>Qoplash qo'yish</button></div>` : '';
         const rowsMain = m.groups.map(g => `<tr><td>${g.duration} daqiqalik</td><td class="ss-names">${esc(g.students.join(', '))}</td><td class="n">${g.expected}</td><td class="n">${g.counted}${g.review ? ` <i class="ss-pill teal">+${g.review} tekshiruvda</i>` : ''}</td><td class="n ss-mt">—</td></tr>`).join('')
             || '<tr><td colspan="5" class="ss-mt">Bu oy asosiy o\'quvchi yo\'q</td></tr>';
         const assistRows = a ? `<tr class="sec"><td colspan="5">Yordamchi ustozlik${a.pastOnly ? ' · o\'tgan aloqalar' : ''} · ${num(a.rate)} so'm × aloqa</td></tr>
-            <tr><td>Yordamchi</td><td class="ss-names">${esc(a.students.map(s => s.name.split(' ')[0]).join(', ') || '—')}</td><td class="n">${a.cap} gacha</td><td class="n">${a.counted}</td><td class="n">${num(assistAmt)}</td></tr>` : '';
+            <tr><td>Yordamchi</td><td class="ss-names">${esc(a.students.map(s => s.name.split(' ')[0]).join(', ') || '—')}</td><td class="n">${a.cap} gacha</td><td class="n">${assistCnt}</td><td class="n">${num(assistAmt)}</td></tr>` : '';
         body.innerHTML = head('Profil, maosh va xavfsizlik') + `<div class="ss-col">
           <div class="ss-kpis">
             <div class="ss-kpi dark"><span>${monName(d.month)} · hozirgacha</span><b>${num(total)} so'm</b><small>${a ? `asosiy ${num(m.total)} + yordamchi ${num(assistAmt)}` : `${m.counted} dars hisobga o'tdi`}</small></div>
@@ -281,7 +284,7 @@
             <div class="ss-tw"><table class="ss-tbl ss-tbl--pay"><thead><tr><th scope="col">Dars turi</th><th scope="col">O'quvchilar</th><th scope="col" class="n">Rejada</th><th scope="col" class="n">Hisobga o'tdi</th><th scope="col" class="n">Summa</th></tr></thead>
             <tbody><tr class="sec"><td colspan="5">Asosiy ustozlik</td></tr>${rowsMain}
               <tr class="tot"><td colspan="3">Asosiy ustozlik jami</td><td class="n">${m.counted}</td><td class="n">${num(m.total)}</td></tr>${assistRows}</tbody>
-            <tfoot><tr><td colspan="4">Jami · ${m.counted} tasdiqlangan dars${a ? ` + ${a.counted} yordamchi aloqa` : ''}${d.reviewMakeups ? ` · +${d.reviewMakeups} qoplash tekshiruvda` : ''}</td><td class="n">${num(total)}</td></tr></tfoot></table></div>
+            <tfoot><tr><td colspan="4">Jami · ${m.counted} tasdiqlangan dars${a ? ` + ${assistCnt} yordamchi aloqa` : ''}${d.reviewMakeups ? ` · +${d.reviewMakeups} qoplash tekshiruvda` : ''}</td><td class="n">${num(total)}</td></tr></tfoot></table></div>
             <p class="ss-note ss-mt">Dars turlari bo'yicha va har o'quvchi bo'yicha summa ko'rsatilmaydi — o'quvchi to'lovi ma'lumoti ustozga yopiq. ${esc(payNote(d.month))}</p></section>
           ${chartAndHistory(d, total)}</div>`;
         bindMakeupBtn(body, null);
@@ -324,7 +327,8 @@
     function drawAssistSalary(body, d) {
         const a = d.assist;
         const rows = a.students.map(s => {
-            const near = s.counted >= a.cap - 1;
+            // Limitga yaqin — qolgan tavsiyalar bilan chegaradan oshadi (YordamchiBosh "13 ta limitga yaqinlar" bilan bir qoida).
+            const near = s.counted + (s.adviceLeft || 0) > a.cap;
             const st = s.counted >= a.cap ? `<i class="ss-pill warn">limit to'ldi · ${a.cap + 1}-chi hisoblanmaydi</i>` : near ? `<i class="ss-pill warn">${a.cap} ga yaqin · ${a.cap + 1}-chi hisoblanmaydi</i>`
                 : `<span class="ss-mt">${s.adviceLeft ? `yana ${s.adviceLeft} tavsiya` : 'bu oy tavsiya qolmadi'}</span>`;
             return `<tr><th scope="row"><span class="ss-stu"><span class="ss-sav">${stuAvatar(s.studentId, s.name) || initials(s.name)}</span><span><b>${esc(s.name)}</b><small>asosiy: ${esc(s.mainTeacher || '—')}</small></span></span></th>

@@ -6,6 +6,7 @@
 const T = require('./school/time');
 const S = require('./school/schedule');
 const A = require('./school/assist');
+const R = require('../../js/attendanceRules');
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS staff_profile_extra (
@@ -98,7 +99,7 @@ async function workInfo(db, me) {
     } else if (me.kind === 'teacher' || me.kind === 'assistant') {
         const role = me.kind === 'assistant' ? `Yordamchi ustoz · ${langUz}` : `Asosiy ustoz · ${langUz}`;
         rows.push(['Lavozim', role]);
-        const active = r => S.studentRow(r).legacyInactive !== true;
+        const active = r => R.isActiveStudent(r);
         const helped = me.kind !== 'assistant' ? [] : (await db.query(`SELECT s.name, s.teacher_id, s.extra_data, he.name AS tname FROM students s LEFT JOIN hr_employees he ON he.id = s.teacher_id
             WHERE s.assistant_teacher_id=$1 ORDER BY s.name`, [e.id])).rows.filter(active);
         if (me.kind === 'assistant') {
@@ -200,8 +201,12 @@ async function salaryDetail(pool, actor, now = new Date()) {
         let row = null;
         try { row = (await payroll.calculate(db, p, lang, false)).rows.find(r => r.employeeId === me.emp.id) || null; }
         catch (e) { console.error('[staff/salary]', e.message); }
-        const history = (await db.query(`SELECT TO_CHAR(period_start,'YYYY-MM-DD') AS start, amount, status, paid_at FROM salary_transactions
-            WHERE employee_id=$1 ORDER BY period_start DESC LIMIT 12`, [me.emp.id])).rows.map(r => ({ month: r.start.slice(0, 7), amount: Number(r.amount), status: r.status, paidAt: r.paid_at }));
+        // Maosh tarixi (salary_transactions) — "Sentyabr · berilgan" va YordamchiOyYopildi'dagi o'tgan oy qatori shu yerdan
+        // (bitta manba). lessons/assistantLessons — Moliya hisobidagi dars/aloqa soni (calculation snapshot).
+        const history = (await db.query(`SELECT TO_CHAR(period_start,'YYYY-MM-DD') AS start, amount, status, paid_at,
+            calculation->>'lessons' AS lessons, calculation->>'assistantLessons' AS assistant_lessons FROM salary_transactions
+            WHERE employee_id=$1 ORDER BY period_start DESC LIMIT 12`, [me.emp.id])).rows.map(r => ({ month: r.start.slice(0, 7), amount: Number(r.amount), status: r.status, paidAt: r.paid_at,
+            lessons: r.lessons == null ? null : Number(r.lessons), assistantLessons: r.assistant_lessons == null ? null : Number(r.assistant_lessons) }));
         const card = String(me.emp.card_number || '').replace(/\D/g, '');
         const out = { linked: true, kind: me.kind, month, today, card4: card.length >= 4 ? card.slice(-4) : '', history,
             current: row ? payroll.ownView(row) : null, main: null, assist: null, missed: null, reviewMakeups: 0 };
@@ -210,16 +215,22 @@ async function salaryDetail(pool, actor, now = new Date()) {
         const mainItems = breakdown.filter(b => b.dutyRole !== 'assistant' && b.unit !== 'contact');
         if (me.kind === 'teacher') {
             const ids = mainItems.map(b => b.studentId);
-            const dur = ids.length ? new Map((await db.query('SELECT id, lesson_duration FROM students WHERE id = ANY($1::text[])', [ids])).rows.map(r => [r.id, Number(r.lesson_duration) || 15])) : new Map();
+            const stRows = ids.length ? (await db.query('SELECT id, lesson_duration, extra_data FROM students WHERE id = ANY($1::text[])', [ids])).rows : [];
+            const dur = new Map(stRows.map(r => [r.id, Number(r.lesson_duration) || 15]));
+            // "Rejada" — faqat faol o'quvchilar (js/attendanceRules.js). Muzlatilgan / to'xtatilgan / tugatgan o'quvchining
+            // shu oyda hisobga o'tgan darslari maoshda qoladi (payroll o'zgarmaydi), lekin rejaga faqat o'tgani qo'shiladi.
+            const activeIds = new Set(stRows.filter(r => R.isActiveStudent(r)).map(r => r.id));
             const review = (await db.query(`SELECT student_id FROM school_makeups WHERE teacher_id=$1 AND status='review'
                 AND (to_char(held_date,'YYYY-MM')=$2 OR held_date IS NULL)`, [me.emp.id, month]).catch(() => ({ rows: [] }))).rows;
             out.reviewMakeups = review.length;
             const groups = new Map();
             for (const b of mainItems) {
+                const isActive = activeIds.has(b.studentId);
+                if (!isActive && !(Number(b.lessons) > 0)) continue;
                 const d = dur.get(b.studentId) || 15;
                 if (!groups.has(d)) groups.set(d, { duration: d, students: [], expected: 0, counted: 0, review: 0 });
                 const g = groups.get(d);
-                g.students.push(String(b.name || '').split(' ')[0]); g.expected += Number(b.expected) || 0; g.counted += Number(b.lessons) || 0;
+                g.students.push(String(b.name || '').split(' ')[0]); g.expected += isActive ? Number(b.expected) || 0 : Number(b.lessons) || 0; g.counted += Number(b.lessons) || 0;
                 g.review += review.filter(r => r.student_id === b.studentId).length;
             }
             out.main = { groups: [...groups.values()].sort((a, b) => b.duration - a.duration),
@@ -240,21 +251,20 @@ async function salaryDetail(pool, actor, now = new Date()) {
         const pastOnly = !!pastRep && pastRep.students.some(x => x.counted || x.noAnswer);
         if (me.assistantDuty || pastOnly) {
             const rep = pastRep || await A.monthReport(db, me.emp.id, month);
-            const counted = new Set(rep.students.filter(x => x.counted || x.noAnswer).map(x => x.studentId));
-            const sts = (await db.query(`SELECT s.id, s.name, s.extra_data, he.name AS tname FROM students s LEFT JOIN hr_employees he ON he.id=s.teacher_id
-                WHERE ($3 AND s.assistant_teacher_id=$1) OR s.id = ANY($2::text[])`, [me.emp.id, rep.students.map(x => x.studentId), !pastOnly])).rows
-                .filter(s => counted.has(s.id) || (!pastOnly && S.studentRow(s).legacyInactive !== true));
-            const plan = pastOnly ? { items: [] } : await A.plan(db, { assistantIds: [me.emp.id], from: today, to: T.monthBounds(month).to, now }).catch(() => ({ items: [] }));
-            const left = new Map(); for (const i of plan.items) if (i.kind === 'advice' && !i.past) left.set(i.studentId, (left.get(i.studentId) || 0) + 1);
+            // O'quvchilar ro'yxati va "oy oxirigacha ko'pi bilan" — A.possibleLeft (YordamchiBosh bilan bitta hisob).
+            const pl = await A.possibleLeft(db, me.emp.id, month, rep, { pastOnly, now });
+            const names = new Map((pl.students.length ? (await db.query('SELECT s.id, he.name AS tname FROM students s LEFT JOIN hr_employees he ON he.id=s.teacher_id WHERE s.id = ANY($1::text[])',
+                [pl.students.map(x => x.studentId)])).rows : []).map(r => [r.id, r.tname]));
             const byId = new Map(rep.students.map(x => [x.studentId, x]));
-            const list = sts.map(s => { const r = byId.get(s.id) || { counted: 0, noAnswer: 0, overCap: 0, amount: 0 };
-                return { studentId: s.id, name: s.name, mainTeacher: shortName(s.tname), counted: r.counted, noAnswer: r.noAnswer, overCap: r.overCap,
-                    amount: r.amount, possible: Math.min(rep.cap, r.counted + (left.get(s.id) || 0)), adviceLeft: left.get(s.id) || 0 }; })
+            const list = pl.students.map(p => { const r = byId.get(p.studentId) || { counted: 0, noAnswer: 0, overCap: 0, amount: 0 };
+                return { studentId: p.studentId, name: p.name, mainTeacher: shortName(names.get(p.studentId)), counted: r.counted, noAnswer: r.noAnswer, overCap: r.overCap,
+                    amount: r.amount, possible: p.possible, adviceLeft: p.adviceLeft }; })
                 .sort((a, b) => a.name.localeCompare(b.name));
             const prev = T.monthBounds(T.addDays(`${month}-01`, -1).slice(0, 7));
             const prevState = await db.query('SELECT * FROM school_assist_months WHERE month=$1', [prev.from.slice(0, 7)]).then(r => r.rows[0] || null).catch(() => null);
-            // O'tgan oy KPI ("Sentyabr · berilgan · 108 aloqa") — shu hisob (monthReport) bo'yicha, faqat o'qish.
-            const prevCounted = await A.monthReport(db, me.emp.id, prev.from.slice(0, 7)).then(r => r.counted).catch(() => null);
+            // O'tgan oy ("Sentyabr · berilgan · 108 aloqa") — maosh tarixidagi Moliya hisobi (summa bilan bitta yozuv).
+            const ph = history.find(h => h.month === prev.from.slice(0, 7));
+            const prevCounted = ph ? (me.kind === 'assistant' ? ph.lessons : ph.assistantLessons) : null;
             out.assist = { pastOnly, month, rate: rep.rate, cap: rep.cap, counted: rep.counted, amount: rep.amount, students: list, prevCounted,
                 possible: list.reduce((n, s) => n + s.possible, 0), daysLeft: T.daysBetween(today, T.monthBounds(month).to),
                 prevMonth: prev.from.slice(0, 7), prevState: prevState ? { prelimAt: prevState.prelim_at, objectionUntil: S.dateStr(prevState.objection_until), finalAt: prevState.final_at, paidAt: prevState.paid_at } : null };

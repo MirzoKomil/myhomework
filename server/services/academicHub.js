@@ -188,6 +188,13 @@ async function progressForIds(pool, ids, { perLesson = false } = {}) {
     }));
 }
 
+// Ustoz va yordamchi ro'yxatlari (Darslik "o'quvchilaringiz: N", O'quvchini tekshirish) — faqat faol o'quvchilar.
+// Admin/metodist ro'yxati o'zgarmaydi; kartaga ruxsat (assertStudentAccess) ham o'zgarmaydi.
+function activeForStaff(access, list) {
+    if (!access.teacher) return list;
+    const R = require('../../js/attendanceRules');
+    return list.filter(s => R.isActiveStudent({ frozen: s.frozen, status: s.status, staffDemo: s.staffDemo }));
+}
 async function assertStudentAccess(pool, access, studentId) {
     const { rows } = await pool.query("SELECT id, COALESCE(subject,'english') AS subject FROM students WHERE id=$1", [studentId]);
     if (!rows[0]) throw error(404, "O'quvchi topilmadi");
@@ -432,7 +439,8 @@ async function getHub(pool, actor, { lang: requested, courseId } = {}) {
         syllabus.push(meta);
     }
     // Qaysi darsda nechta o'quvchi turibdi (har o'quvchi o'z kursi bo'yicha).
-    const students = await accessibleStudents(pool, access, lang);
+    // Ustoz/yordamchi: faqat faol o'quvchilar (muzlatilgan kirmaydi — O'quvchilar "Faol" bilan bir xil, js/attendanceRules.js).
+    const students = activeForStaff(access, await accessibleStudents(pool, access, lang));
     const progress = await loadProgress(pool, students.map(s => s.id));
     const reachedBy = {};
     for (const s of students) {
@@ -799,7 +807,7 @@ const groupBy = (rows, key = 'student_id') => rows.reduce((a, r) => ((a[r[key]] 
 async function studentsOverview(pool, actor, { lang: requested } = {}) {
     const access = await resolveAccess(pool, actor);
     const lang = pickLang(access, requested);
-    const students = await accessibleStudents(pool, access, lang);
+    const students = activeForStaff(access, await accessibleStudents(pool, access, lang));
     const ids = students.map(s => s.id);
     const [mc, progress, parts, timeRows, totals, lastSeen] = await Promise.all([
         loadMobileContent(pool), loadProgress(pool, ids), loadParts(pool, ids),
@@ -1231,10 +1239,11 @@ async function nextLessons(pool, actor, ids) {
         const lessons = studentCourseLessons(mc, s);
         const idToNo = idToNoMap(lessons);
         const taken = (gradesRow[s.id] || []).filter(g => g && g.lessonId && g.date !== today).map(g => g.lessonId);
-        const next = pick.pickNextLiveLesson(mc, { subject: s.subject, platformCourseId: s.platformCourseId }, taken);
+        const reached = reachedLesson(progress[s.id] || {}, idToNo) || 0;
+        const next = pick.pickNextLiveLesson(mc, { subject: s.subject, platformCourseId: s.platformCourseId }, taken, reached);
         const nextNo = next ? idToNo[next.id] || null : null;
         out[s.id] = { lang: s.subject === 'russian' ? 'russian' : 'english', role: s.role,
-            reached: reachedLesson(progress[s.id] || {}, idToNo) || 0,
+            reached,
             nextLive: nextNo ? { no: nextNo, id: next.id, name: stripStress(next.name) } : null };
     }
     return { lessons: out };

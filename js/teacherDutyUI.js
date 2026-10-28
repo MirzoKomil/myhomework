@@ -49,6 +49,13 @@
         window.schoolUI.api('/assist/month?month=' + month).then(r => { as = { month, rep: r, loading: false }; render(); })
             .catch(() => { as = { month, rep: as.month === month ? as.rep : null, loading: false }; });
     }
+    let py = { data: null, loading: false, at: 0 };
+    function loadPay() {
+        if (py.loading || (py.data && Date.now() - py.at < 30000) || !window.UstozHome?.myPay) return;
+        py.loading = true;
+        window.UstozHome.myPay().then(d => { py = { data: d, loading: false, at: Date.now() }; render(); })
+            .catch(() => { py = { data: py.data, loading: false, at: Date.now() }; });
+    }
     let nx = { key: '', lessons: {}, loading: false };
     function loadNext(ids, day) {
         const key = `${day}|${ids.join(',')}`;
@@ -58,32 +65,9 @@
             .then(r => { nx = { key, lessons: r.lessons || {}, loading: false }; render(); })
             .catch(() => { nx = { key, lessons: {}, loading: false }; });
     }
-    // Oy hisobi — bitta manba (UstozDavomat "Oktyabr" kartasi va UstozBosh maosh kartasi formulasi).
-    // 2026-10 dan: dars kunidagi "Keldi" + tasdiqlangan qoplash, har o'quvchida oy rejasidan oshmaydi.
-    function monthTotals({ id, month, students, mainAtt, makeups, teacher, todayKey }) {
-        const calendar = teacherAttendanceCalendar, strict = month >= '2026-10';
-        const thisMonth = todayKey.slice(0, 7), todayDay = Number(todayKey.slice(8));
-        const past = c => month < thisMonth || (month === thisMonth && c.day <= todayDay);
-        const my = (makeups || []).filter(m => m.teacher_id === id && ['planned', 'review', 'approved'].includes(m.status));
-        const t = { plan: 0, expected: 0, came: 0, absent: 0, unmarked: 0, approved: 0, review: 0, counted: 0 };
-        for (const s of students) {
-            const cells = calendar.cells(month, calendar.weekdays(s, teacher, 'main')).filter(c => c && c.scheduled);
-            const entries = mainAtt[s.id] || {}, plan = cells.length, gone = cells.filter(past);
-            const days = new Set(cells.filter(c => calendar.status(entries[c.day]) === 'present').map(c => c.day));
-            if (!strict) Object.entries(entries).forEach(([d, v]) => { if (calendar.status(v) === 'present') days.add(Number(d)); });
-            const came = gone.filter(c => days.has(c.day)).length, absent = gone.filter(c => calendar.status(entries[c.day]) === 'absent').length;
-            let n = days.size, appr = 0;
-            const mine = my.filter(m => m.student_id === s.id && dkey(m.held_date).slice(0, 7) === month);
-            if (strict) for (const m of mine.filter(m => m.status === 'approved')) {
-                const d = Number(dkey(m.held_date).slice(8));
-                if (m.kind === 'double') { n++; appr++; } else if (!days.has(d)) { days.add(d); n++; appr++; }
-            }
-            t.plan += plan; t.expected += gone.length; t.came += came; t.absent += absent; t.unmarked += Math.max(0, gone.length - came - absent);
-            t.approved += appr; t.review += mine.filter(m => m.status === 'review').length; t.counted += Math.min(n, plan);
-        }
-        t.pct = t.expected ? Math.min(100, Math.round(t.counted / t.expected * 100)) : null;
-        return t;
-    }
+    // Oy hisobi — bitta manba: js/attendanceRules.js (UstozDavomat "Oktyabr" kartasi, UstozBosh maosh kartasi
+    // va server reytingi — server/services/teacherRating.js — shu funksiyani ishlatadi).
+    function monthTotals(args) { return window.AttendanceRules.monthTotals(args); }
     let showAll = false, autoOpened = false;
     const MON3 = ['yan', 'fev', 'mar', 'apr', 'may', 'iyn', 'iyl', 'avg', 'sen', 'okt', 'noy', 'dek'];
     const dkey = v => (v ? String(v).slice(0, 10) : '');
@@ -129,9 +113,10 @@
         loadMakeups(month);
         loadAbsences(month);
         const field = selected === 'assistant' ? 'assistantTeacherId' : 'teacherId';
-        const students = all.filter(s => s[field] === id && !s.frozen && s.status !== 'inactive');
-        const mainStudents = all.filter(s => s.teacherId === id && !s.frozen && s.status !== 'inactive');
-        const helpedStudents = all.filter(s => s.assistantTeacherId === id && !s.frozen && s.status !== 'inactive');
+        const isActive = s => window.AttendanceRules.isActiveStudent(s);
+        const students = all.filter(s => s[field] === id && isActive(s));
+        const mainStudents = all.filter(s => s.teacherId === id && isActive(s));
+        const helpedStudents = all.filter(s => s.assistantTeacherId === id && isActive(s));
         const mainStore = getItem(STORAGE_KEYS.mainAttendance, {});
         const mainAtt = withAbsences(mainStore[`${month}_${id}`] || {}, month, id);
         const attendance = selected === 'main' ? mainAtt : (getItem(STORAGE_KEYS.assistantAttendance, {})[`${month}_${id}`] || {});
@@ -193,7 +178,7 @@
                 const start = toMin(s.lessonTime), started = start == null || nowMin >= start;
                 const ended = start != null && nowMin >= start + (Number(s.lessonDuration) || 15);
                 const live = st === 'present' ? (getItem(STORAGE_KEYS.liveGrades, {})[s.id] || []).find(g => g && g.date === today && g.teacherId === id) : null;
-                const open = st === 'empty' && month >= '2026-10' ? openMissedFor(s.id) : [];
+                const open = st === 'empty' && month >= '2026-10' ? openMissedFor(s.id).filter(d => d < today) : [];
                 const planned = myMk.filter(m => m.student_id === s.id && m.status === 'planned' && dkey(m.missed_date).slice(0, 7) === month && dkey(m.held_date) > today);
                 const missTxt = open.length || planned.length ? ` · <span class="udv-mk-txt">${open.length ? `qoplanmagan: ${open.map(dm).join(', ')}` : ''}${open.length && planned.length ? ' · ' : ''}${planned.map(m => `${dm(dkey(m.missed_date))} → ${DAYS[(new Date(dkey(m.held_date) + 'T00:00:00Z').getUTCDay() || 7) - 1]} ${Number(dkey(m.held_date).slice(8))} rejada`).join(', ')}</span>` : '';
                 const isNext = next && next.id === s.id;
@@ -238,8 +223,9 @@
         if (isMain) {
             const T = monthTotals({ id, month, students: mainStudents, mainAtt, makeups: mk.month === month ? mk.list : [], teacher: ownTeacher, todayKey: today });
             const { plan, counted, pct } = T;
-            let kpi = null; try { kpi = mainStudents.length ? calculateKpiSalary(ownTeacher, month, getItem(STORAGE_KEYS.mainAttendance, {}), mainStudents) : null; } catch (e) { kpi = null; }
-            const pay = kpi ? kpi.total : null;
+            // Maosh — server payroll (/api/payroll/me), Bosh sahifa va "Mening maoshim" bilan bitta manba. Faqat joriy oy.
+            if (month === thisMonth) loadPay();
+            const pay = month === thisMonth && py.data?.linked && py.data.current ? Number(py.data.current.mainTotal ?? py.data.current.total) || 0 : null;
             const review = myMk.filter(m => m.status === 'review').length;
             sumHtml = `<section class="udv-card udv-sum" aria-label="${esc(MN)} hisobi">
                 <div class="udv-sr"><span class="udv-ct">${esc(MN)}</span><span class="udv-mt">${month === thisMonth ? todayDay + ' kun o‘tdi' : month < thisMonth ? 'yopilgan oy' : 'kelgusi oy'}</span></div>
@@ -337,7 +323,7 @@
             const role = selected, student = students.find(s => s.id === button.dataset.dutyStudent);
             const date = `${month}-${String(button.dataset.dutyDay).padStart(2, '0')}`;
             const status = button.dataset.status, offday = button.classList.contains('duty-offday');
-            const missed = role === 'main' && month >= '2026-10' && date <= today && !button.classList.contains('duty-has-mk') ? openMissedFor(student.id).filter(d => d !== date) : [];
+            const missed = role === 'main' && month >= '2026-10' && date <= today && !button.classList.contains('duty-has-mk') ? openMissedFor(student.id).filter(d => d < date) : []; // qoplash faqat qoldirilgan darsdan keyin
             // Kun oynasi — dizayndagi oyna uslubi (Oynalar · .dlg → schoolUI.openDialog / .oqm-*), sarlavhada o'zbekcha sana.
             const UI = window.schoolUI;
             const dayOf = d => (UI?.DAY_FULL && UI.wd ? UI.DAY_FULL[UI.wd(d) - 1] : '');
@@ -417,7 +403,7 @@
             root.querySelectorAll('[data-duty-double]').forEach(button => { button.onclick = () => {
                 if (busy) return;
                 const student = mainStudents.find(s => s.id === button.dataset.dutyDouble); if (!student) return;
-                const open = openMissedFor(student.id);
+                const open = openMissedFor(student.id).filter(d => d < today); // qoldirilgan darsdan keyin
                 // Bir nechta qoplanmagan dars — kalendar oynasida qaysi biri qoplanishini tanlaydi ("Keldi · 2 dars" tugmasi o'sha yerda).
                 if (open.length !== 1) return goDay(student.id);
                 const previous = getItem(STORAGE_KEYS.liveGrades, {})[student.id]?.find(g => g.date === today && g.teacherId === id);

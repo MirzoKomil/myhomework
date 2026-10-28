@@ -370,7 +370,9 @@
                     const from = today() > month + '-01' ? today() : month + '-01';
                     if (from > monthEnd) return;
                     const d = await u.api(`/schedule?from=${from}&to=${monthEnd}${teacher ? '' : `&teacherId=${encodeURIComponent(st.teacherId)}${L()}`}`);
-                    for (const v of (d.views || []).filter(x => x.teacherId === st.teacherId).sort((a, b) => a.date.localeCompare(b.date))) {
+                    // Qoplash faqat o'quvchining dars kuni bo'lmagan kunga (UstozYoriqnoma "Qoplash darsi qoidalari"; server ham tekshiradi).
+                    const ld = Number(st.lessonDayOfWeek), lessonWd = [1, 3, 5].includes(ld) ? [1, 3, 5] : [2, 4, 6].includes(ld) ? [2, 4, 6] : [ld];
+                    for (const v of (d.views || []).filter(x => x.teacherId === st.teacherId && !lessonWd.includes(wd(x.date))).sort((a, b) => a.date.localeCompare(b.date))) {
                         const lo = v.date === today() ? nowMin() + 15 : 0;
                         for (const f of v.makeupFree || []) {
                             const s = Math.ceil(Math.max(f.start, lo) / 15) * 15;
@@ -417,7 +419,7 @@
                 if (!missedDate) return u.errBox(dlg, 'Qaysi dars o\'rniga ekanini tanlang');
                 u.busy(save, true);
                 try {
-                    await u.post('/bookings', { kind: 'makeup', teacherId: st.teacherId, studentId: st.id, date: slot.date, time: hm(slot.start), duration: dur, missedDate });
+                    await u.post('/makeups/plan', { kind: 'makeup', teacherId: st.teacherId, studentId: st.id, date: slot.date, time: hm(slot.start), duration: dur, missedDate });
                     state.makeupFor = null; u.toast('Qoplash rejaga qo\'yildi'); u.closeDrawer(); done?.();
                 } catch (err) { u.busy(save, false); u.errBox(dlg, err.message); }
             };

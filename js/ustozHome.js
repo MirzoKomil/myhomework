@@ -231,5 +231,16 @@
         if (bar) { bar.querySelector('i').style.width = t.pct + '%'; bar.setAttribute('aria-label', `Davomat ${t.pct}%`); }
     }
 
-    window.UstozHome = { decoratePlan, missed, lossSum, missedText, attention, attentionText, todoItems, ratingCard, delta, decorateToday, f1, today, dm, DAY, wd };
+    // Ustozning o'z maoshi — server payroll (/api/payroll/me). Bosh sahifa va Davomat shu bitta javobni ko'rsatadi
+    // ("Mening maoshim" /api/staff/salary ham xuddi shu payroll.calculate qatorini oladi). Qisqa kesh — ortiqcha so'rov bo'lmasin.
+    let payCache = null;
+    function myPay(force = false) {
+        if (force || !payCache || Date.now() - payCache.t > 30000) {
+            payCache = { t: Date.now(), p: apiFetch('/api/payroll/me', { timeout: 30000 }) };
+            payCache.p.catch(() => { payCache = null; });
+        }
+        return payCache.p;
+    }
+
+    window.UstozHome = { myPay, decoratePlan, missed, lossSum, missedText, attention, attentionText, todoItems, ratingCard, delta, decorateToday, f1, today, dm, DAY, wd };
 })();
