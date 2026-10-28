@@ -244,7 +244,7 @@ async function finishRequest(c, v, whenKey) {
     // Eski tugmani qayta bosish sotuvga takroriy xabar va izoh yubormaydi.
     if (!same) {
         await leadComment(c.db, v.lead_id, `🤖 Bot: menejer bilan bog‘lanishni so‘radi — ${method === 'call' ? 'qo‘ng‘iroq' : 'faqat Telegram'}, ${whenText}. Ball ${v.score}.`);
-        await notifySales(c.db, `req:${c.tid}:${method}:${whenKey}`, `📞 Botdan so‘rov: ${method === 'call' ? 'qo‘ng‘iroq qiling' : 'Telegramda yozing'} — ${whenText}`, v);
+        await notifySales(c.db, `req:${c.tid}:${method}:${whenKey}:${new Date().toISOString().slice(0, 10)}`, `📞 Botdan so‘rov: ${method === 'call' ? 'qo‘ng‘iroq qiling' : 'Telegramda yozing'} — ${whenText}`, v);
     }
     const now = new Date(), open = inHours(s, now);
     let reply = whenKey === 'now' ? (open ? copy.text.done.nowIn(sla(s)) : copy.text.done.offHours(salesHours(s).label)) : copy.text.done.later(whenText);
@@ -276,7 +276,7 @@ async function callback(db, update) {
     const identity = await store.identity(db, tid);
     if (identity) { await answer(db, update, 'Menyudagi bo‘limlardan foydalaning.'); return; }
     const v = (await visitor(db, tid)) || await upsertVisitor(db, q.from);
-    if (v.blocked_at || v.paused) { await patch(db, tid, { blocked_at: null, paused: false }); v.blocked_at = null; v.paused = false; } // yozdi = bloklamagan
+    if (v.blocked_at) { await patch(db, tid, { blocked_at: null }); v.blocked_at = null; } // bosdi = bloklamagan (/stop esa saqlanadi)
     const c = context(db, update, tid);
     await answer(db, update);
     let m;
