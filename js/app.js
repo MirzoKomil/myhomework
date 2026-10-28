@@ -6169,8 +6169,8 @@ function renderProfileEditSection(user) {
 }
 
 // Sozlamalar → Parol (UstozSozParol): talablar ro'yxati, kuch ko'rsatkichi, boshqa qurilmalardan chiqarish.
-// Xodim paroli kamida 12 belgi, harf va raqam (server ham tekshiradi: services/authSecurity).
-function _pwdMin() { return getCurrentUser()?.role === 'student' ? 6 : 12; }
+// Xodim paroli kamida 8 belgi, harf va raqam (server ham tekshiradi: services/authSecurity).
+function _pwdMin() { return getCurrentUser()?.role === 'student' ? 6 : 8; }
 function _pwdChecks(next, current) {
     const min = _pwdMin();
     return [
