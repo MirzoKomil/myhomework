@@ -135,6 +135,7 @@
             title: `${data.lesson.no}-dars · ${data.lesson.type === 'live' ? 'Jonli dars' : 'Videodars'}`,
             subtitle: [studentName || st?.name || '', `${dur} daq`, facts.book].filter(Boolean).join(' · '),
             sources, start: 0, lesson: data, duration: dur,
+            presence: studentId ? { studentId, name: studentName || st?.name || '' } : null,
             finish: isMain ? { label: 'Darsni tugatish', onFinish: ctx => finish({ ...ctx, studentId, studentName: studentName || st?.name || '', lessonNo: data.lesson.no, lessonId, group }) } : null,
         });
     }

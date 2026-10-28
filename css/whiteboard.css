@@ -7,17 +7,20 @@ html.rd #tpWhiteboard.wb-host.sales-panel.active { background: transparent; bord
 .wb { display: flex; flex-direction: column; gap: 18px; padding: 4px 0 24px; color: var(--text); min-width: 0; }
 .wb-skel { height: 520px; border-radius: 20px; background: linear-gradient(90deg, var(--rd-col, #EEF2F8), var(--surface), var(--rd-col, #EEF2F8)); background-size: 200% 100%; animation: lhShimmer 1.2s infinite linear; }
 @media (prefers-reduced-motion: reduce) { .wb-skel { animation: none; } }
-.wb-bar { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.wb-chips { display: flex; gap: 10px; overflow-x: auto; flex: 1; min-width: 0; padding: 2px; scrollbar-width: thin; }
-.wb-chip { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-height: 48px; padding: 7px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.wb-bar { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.wb-chips { display: flex; flex-wrap: wrap; gap: 8px; flex: 1; min-width: 0; padding: 2px; } /* YordamchiDoska: chiplar qirqilmasin — keyingi qatorga o'tadi */
+.wb-chip { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-height: 49px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
 .wb-chip b { font-size: 13px; font-weight: 800; white-space: nowrap; }
 .wb-chip small { font-size: 11px; color: var(--text-muted, #4B5563); font-weight: 600; white-space: nowrap; }
 .wb-chip:hover { border-color: var(--purple); }
 .wb-chip.is-on { border-color: var(--purple); background: var(--purple-light); }
 .wb-chip.is-on b { color: var(--rd-primary-strong, var(--purple)); }
 .wb-none { align-self: center; font-size: 13px; color: var(--text-muted, #4B5563); }
-.wb-tsel { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px; min-height: 48px; padding: 0 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); font-size: 14px; font-weight: 800; }
-.wb-tsel select { border: 0; background: none; color: var(--text); font: inherit; font-weight: 800; cursor: pointer; max-width: 220px; }
+/* "Ustoz: Dilnoza Saidova ▾" — dizayndagi .btn; tanlash uchun ustida shaffof <select> */
+.wb-tsel { position: relative; flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 16px; border: 1px solid #CBD5E1; border-radius: 12px; background: var(--surface); color: var(--text); font-size: 14px; font-weight: 700; white-space: nowrap; cursor: pointer; }
+html[data-theme="dark"] .wb-tsel { border-color: var(--border); }
+.wb-tsel select { position: absolute; inset: 0; width: 100%; opacity: 0; cursor: pointer; font: inherit; }
+.wb-tsel:focus-within { outline: 2px solid var(--purple); outline-offset: 2px; }
 .wb-new { position: relative; flex: 0 0 auto; margin-left: auto; }
 .wb-newbtn { min-height: 48px; padding: 0 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--text); font: inherit; font-weight: 800; font-size: 14px; cursor: pointer; white-space: nowrap; }
 .wb-newbtn:hover { border-color: var(--purple); }
@@ -29,7 +32,7 @@ html.rd #tpWhiteboard.wb-host.sales-panel.active { background: transparent; bord
 .wb-msep { height: 1px; background: var(--border); margin: 4px 6px; }
 
 .wb-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; overflow: hidden; display: flex; flex-direction: column; }
-.wb-tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 14px 18px; border-bottom: 1px solid var(--border); }
+.wb-tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 12px 16px; border-bottom: 1px solid var(--border); }
 .wb-g { display: inline-flex; align-items: center; gap: 4px; padding: 4px; border-radius: 12px; background: var(--rd-col, #EEF2F8); }
 .wb-tb { width: 40px; height: 40px; display: grid; place-items: center; border: 0; border-radius: 10px; background: none; color: var(--text); cursor: pointer; }
 .wb-tb:hover:not(:disabled) { background: var(--surface); }
@@ -43,8 +46,9 @@ html.rd #tpWhiteboard.wb-host.sales-panel.active { background: transparent; bord
 .wb-auto { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 999px; background: var(--success-bg, #DCFAE6); color: var(--success, #16A34A); font-size: 12px; font-weight: 800; white-space: nowrap; }
 html.rd[data-theme="dark"] .wb-auto { background: #133524; color: #6EE7A0; }
 .wb-ro { font-size: 15px; color: var(--text-light, #64748B); }
-.wb-card.is-ro .wb-tools button { opacity: .45; cursor: default; }
-.wb-card.is-ro .wb-tb.is-on, .wb-card.is-ro .wb-col.is-on { background: var(--border); color: var(--text-muted); border-color: transparent; }
+/* Doska (admin) dizayni: faqat ko'rishda asboblar qatori xira va kulrang (opacity .35, grayscale) — tanlangan holatlar o'zgarmaydi */
+.wb-card.is-ro .wb-tools { opacity: .35; filter: grayscale(1); }
+.wb-card.is-ro .wb-tools button { cursor: default; }
 .wb-tools button:focus-visible, .wb-chip:focus-visible, .wb-newbtn:focus-visible, .wb-menu button:focus-visible { outline: 2px solid var(--purple); outline-offset: 2px; }
 
 .wb-stage { position: relative; background: #fff radial-gradient(#D5DCE8 1px, transparent 1.3px) 0 0 / 22px 22px; min-height: 280px; }
@@ -52,14 +56,19 @@ html.rd[data-theme="dark"] .wb-auto { background: #133524; color: #6EE7A0; }
 .wb-text { position: absolute; z-index: 2; min-width: 160px; padding: 2px 4px; border: 2px dashed #0065D6; border-radius: 6px; background: rgba(255,255,255,.92); font-family: "Plus Jakarta Sans", system-ui, sans-serif; font-weight: 700; line-height: 1.2; resize: none; outline: none; }
 .wb-empty { display: grid; place-items: center; min-height: 420px; color: #64748B; font-size: 14px; }
 .wb-err { position: absolute; left: 50%; top: 14px; transform: translateX(-50%); padding: 8px 14px; border-radius: 10px; background: #FEF3F2; color: #B42318; font-size: 13px; font-weight: 600; }
-.wb-foot { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 12px 18px; border-top: 1px solid var(--border); font-size: 13px; color: var(--text-muted, #4B5563); }
+.wb-foot { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 16px; border-top: 1px solid var(--border); font-size: 13px; font-weight: 600; color: #374151; }
+html[data-theme="dark"] .wb-foot { color: #C2CCDC; }
 .wb-foot b { color: var(--text); }
 .wb-saved { font-weight: 700; color: var(--warning, #B45309); }
+.wb-saved { margin-left: auto; font-size: 12px; color: #93370D; }
+html[data-theme="dark"] .wb-saved { color: #FDB022; } /* qatorga sig'masa — o'ngda, keyingi qatorda */
+.wb-saved.is-view { color: #4B5563; } /* admin: "Oxirgi o'zgarish: …" — kulrang (Doska dizayni) */
+html[data-theme="dark"] .wb-saved.is-view { color: #A9B4C6; }
 .wb-bad { color: var(--danger, #D92D20); }
 
 @media (max-width: 760px) {
     .wb-bar { flex-wrap: wrap; }
-    .wb-chips { order: 3; flex-basis: 100%; }
+    .wb-chips { order: 3; flex-basis: 100%; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; }
     .wb-tsel { flex: 1; }
     .wb-tools { padding: 10px; gap: 6px; }
     .wb-g { padding: 2px; }

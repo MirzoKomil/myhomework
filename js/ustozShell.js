@@ -26,7 +26,33 @@
         }
         const d = hdr?.querySelector('.ud-hdate');
         if (d) d.textContent = dateText();
+        watchRole();
     }
+    // Yuqori paneldagi lavozim: yordamchi ustoz (HR lavozimi "yordamchi") — "Yordamchi ustoz" (YordamchiSoz* dizaynlari),
+    // asosiy ustoz — "Ustoz". app.js syncHeaderAvatar #userMeta'ni qayta yozadi — kuzatuvchi shu matnni tuzatib turadi.
+    function roleLabel() {
+        const u = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+        if (u?.role !== 'teacher') return null;
+        try {
+            const hr = typeof getItem === 'function' ? getItem(STORAGE_KEYS.hrEmployees, []) : [];
+            const emp = hr.find(e => u.linkedTeacherId && e.id === u.linkedTeacherId);
+            return emp?.role === 'yordamchi' ? 'Yordamchi ustoz' : 'Ustoz';
+        } catch { return null; }
+    }
+    function refreshRole() {
+        const span = document.querySelector('#userMeta > span');
+        const t = roleLabel();
+        if (span && t && span.textContent !== t) span.textContent = t;
+    }
+    let mo = null;
+    function watchRole() {
+        const meta = document.getElementById('userMeta');
+        if (!meta || mo) { refreshRole(); return; }
+        mo = new MutationObserver(refreshRole);
+        mo.observe(meta, { childList: true, subtree: true, characterData: true });
+        refreshRole();
+    }
+    window.ustozShell = { refreshRole };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount); else mount();
     setInterval(mount, 60000);
 }());
