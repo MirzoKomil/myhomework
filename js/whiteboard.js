@@ -209,8 +209,15 @@
     function draw() {
         const el = S.el;
         if (!el) return;
-        const chips = chipList();
+        const all = chipList();
         const cur = S.cur;
+        // UstozDoska/YordamchiDoska: bitta qator — bugungi doskalar, so'nggi 2 ta boshqa doska va shablonlar;
+        // qolgan eski doskalar "Yana N" chipi orqali ochiladi (yo'qolmaydi).
+        const isToday = c => !c.template && c.lessonDate === today() && (c.virtual || c.start != null);
+        const others = all.filter(c => !c.template && !isToday(c));
+        const keepOther = new Set(others.slice(0, 2).map(c => c.key));
+        const hidden = S.chipsAll || S.viewAll ? [] : others.filter(c => !keepOther.has(c.key) && !(cur && c.key === cur.key));
+        const chips = hidden.length ? all.filter(c => !hidden.includes(c)) : all;
         const ro = !canEditCur();
         const teachers = S.viewAll ? teacherOptions() : [];
         const linkTxt = linkText(cur);
@@ -220,6 +227,7 @@
                 ${S.viewAll ? `<label class="wb-tsel"><span>Ustoz: ${esc((teachers.find(t => t.id === S.teacherId) || {}).name || '—')} ▾</span><select data-teacher aria-label="Ustoz">${teachers.map(t => `<option value="${esc(t.id)}"${t.id === S.teacherId ? ' selected' : ''}>${esc(t.name)}</option>`).join('')}</select></label>` : ''}
                 <div class="wb-chips" role="tablist" aria-label="Doskalar">
                     ${chips.map(c => `<button type="button" role="tab" class="wb-chip${cur && c.key === cur.key ? ' is-on' : ''}${c.template ? ' is-tpl' : ''}" data-chip="${esc(c.key)}" aria-selected="${!!cur && c.key === cur.key}"><b>${esc(c.name)}</b><small>${esc(c.sub)}</small></button>`).join('')}
+                    ${hidden.length ? `<button type="button" class="wb-chip wb-chip--more" data-chips-all aria-label="Yana ${hidden.length} ta eski doskani ko'rsatish"><b>Yana ${hidden.length}</b><small>eski doskalar</small></button>` : ''}
                     ${!chips.length ? `<span class="wb-none">${S.viewAll ? "Bu ustozda hali doska yo'q" : "Bugun dars yo'q — yangi doska oching"}</span>` : ''}
                 </div>
                 ${!S.viewAll ? `<div class="wb-new"><button type="button" class="wb-newbtn" data-new aria-haspopup="true" aria-expanded="${S.menu}">+ Yangi doska</button>
@@ -295,6 +303,7 @@
             S.menu = false;
             await select(chip);
         }));
+        el.querySelector('[data-chips-all]')?.addEventListener('click', () => { S.chipsAll = true; draw(); });
         el.querySelector('[data-teacher]')?.addEventListener('change', async e => { S.teacherId = e.target.value; S.cur = null; await loadTeacherToday(S.teacherId); await select(defaultChip(chipList()), { silent: true }); draw(); });
         el.querySelector('[data-new]')?.addEventListener('click', () => { S.menu = !S.menu; const m = el.querySelector('.wb-menu'); m.hidden = !S.menu; el.querySelector('[data-new]').setAttribute('aria-expanded', String(S.menu)); });
         el.querySelectorAll('[data-mk]').forEach(b => b.addEventListener('click', () => menuAction(b.dataset.mk, b.dataset.tpl)));

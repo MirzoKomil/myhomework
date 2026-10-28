@@ -51,15 +51,15 @@
         const canNext = key < cur;
         const prevName = (MON[Number(String(data.prevMonth || '').slice(5, 7)) - 1] || '').toLowerCase();
         const podium = rows.slice(0, 3).map((r, i) => `<section class="rtg-card rtg-pd${i === 0 ? ' is-first' : ''}" aria-label="${r.rank}-o'rin">
-            <div class="rtg-row rtg-sb"><div class="rtg-who">${av(r.id, r.name)}<div><div class="rtg-nm">${esc(r.name)}</div><div class="rtg-mt">${kind} · ${r.students} o'quvchi</div></div></div><span class="rtg-rk">${r.rank}</span></div>
+            <div class="rtg-row rtg-sb"><div class="rtg-who">${av(r.id, r.name)}<div><div class="rtg-nm">${esc(r.name)}</div><div class="rtg-mt">${kind}${r.students != null ? ` · ${r.students} o'quvchi` : ''}</div></div></div><span class="rtg-rk">${r.rank}</span></div>
             <div class="rtg-score">${f1(r.score)}<small>ball</small></div>
             <div class="rtg-two">
               <div><div class="rtg-ml"><span>Davomat</span><span>${pctTxt(r.davomatPct)}</span></div>${bar(r.davomatPct)}</div>
               <div><div class="rtg-ml"><span>O'zlashtirish</span><span>${pctTxt(r.learnPct)}</span></div>${bar(r.learnPct)}</div>
             </div></section>`).join('');
         const body = rows.map(r => `<tr><td class="rtg-nm">${r.rank}</td>
-            <td><div class="rtg-who">${av(r.id, r.name)}<div><div class="rtg-nm">${esc(r.name)}</div><div class="rtg-mt">${r.completed} / ${r.expected} dars</div></div></div></td>
-            <td>${r.students}</td>
+            <td><div class="rtg-who">${av(r.id, r.name)}<div><div class="rtg-nm">${esc(r.name)}</div><div class="rtg-mt">${r.completed != null && r.expected != null ? `${r.completed} / ${r.expected} dars` : '—'}</div></div></div></td>
+            <td>${r.students ?? '—'}</td>
             <td><div class="rtg-mini">${bar(r.davomatPct)}<span class="rtg-nm">${pctTxt(r.davomatPct)}</span></div></td>
             <td><div class="rtg-mini"${r.learnPct != null ? ` title="${r.learnStudents} o'quvchining ilova ma'lumoti"` : ' title="Ilova ma\'lumoti yo\'q — ball faqat davomatdan"'}>${bar(r.learnPct)}<span class="rtg-nm">${pctTxt(r.learnPct)}</span></div></td>
             <td><span class="rtg-pts">${f1(r.score)}</span>${delta(r)}</td></tr>`).join('')

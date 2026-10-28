@@ -72,13 +72,27 @@
         const payP = window.UstozHome?.myPay ? window.UstozHome.myPay().catch(() => null) : Promise.resolve(null);
         // Qoplanmagan darslar (≈ ustoz maoshidan) va "e'tibor kerak" — js/ustozHome.js, parallel yuklanadi.
         const extraP = window.UstozHome?.todoItems ? window.UstozHome.todoItems(user, mkP).catch(() => []) : Promise.resolve([]);
-        const [rep, trials, makeups] = await Promise.all([
-            // Asosiy ustoz ham so'raydi: shu oyda ilgari (yordamchi bo'lgan paytda) qilgan aloqalari maoshga kiradi (29-okt).
-            api(`/assist/month?month=${td.slice(0, 7)}`).catch(() => null),
+        // Yordamchi aloqalari (/assist/month) — faqat shu ustozga yordamchi sifatida o'quvchi biriktirilgan bo'lsa.
+        // Asosiy ustozning o'tgan aloqalari maoshga kiradi, lekin ular /api/payroll/me (maosh kartasi) dan keladi.
+        const [rep, trials, makeups, abs] = await Promise.all([
+            helped.length ? api(`/assist/month?month=${td.slice(0, 7)}`).catch(() => null) : Promise.resolve(null),
             (typeof apiFetchTeacherTrialLessons === 'function' ? apiFetchTeacherTrialLessons() : Promise.resolve({ lessons: [] })).catch(() => ({ lessons: [] })),
-            mkP
+            mkP,
+            api(`/attendance/absences?month=${td.slice(0, 7)}`).catch(() => null)
         ]);
         if (!alive()) return;
+        // "Kelmadi" (school_absences) — Davomat va Dars jadvali bilan bitta manba: bugungi qatorlar va hisoblar shundan.
+        if (abs) {
+            globalThis.__schoolAbsences = { month: td.slice(0, 7), list: abs.absences || [] };
+            const gone = new Set((abs.absences || []).filter(a => String(a.day).slice(0, 10) === td).map(a => a.studentId));
+            for (const row of home.querySelectorAll('[data-thx-today] > li[data-thx-duty="main"]')) {
+                if (!gone.has(row.dataset.thxSid) || row.dataset.thxSt === 'ok' || row.dataset.thxSt === 'bad') continue;
+                row.dataset.thxSt = 'bad'; row.className = row.className.replace(/tch-row--\w+/, 'tch-row--bad');
+                const acts = row.querySelector('.tch-row-actions');
+                if (acts) acts.innerHTML = '<span class="uhb-pill uhb-pill--bad">Kelmadi</span>';
+                const sub = row.querySelector('.mot-prize-note'); if (sub) sub.textContent = sub.textContent.replace(' · dars tugagan', '');
+            }
+        }
         globalThis.__schoolMakeups = makeups.makeups || [];
         const reviewing = (makeups.makeups || []).filter(m => m.status === 'review').length;
 
@@ -166,6 +180,7 @@
             if (b) b.textContent = `${l} dars${c ? ` + ${c} aloqa` : ''}`;
             const bits = [todayTrials.length ? `+${todayTrials.length} sinov` : '', un ? `${un} belgilanmagan` : ''].filter(Boolean);
             if (sm && bits.length) sm.innerHTML = `<span class="${un ? 'kbx-bad' : ''}">${esc(bits.join(' · '))}</span>`;
+            else if (sm && /belgilanmagan/.test(sm.textContent)) sm.textContent = 'hammasi belgilangan';
         }
 
         const ws = weekStart(td);
@@ -177,18 +192,6 @@
             if (items.some(i => i.day === td && i.outcome !== 'no_answer')) row.querySelector('.tch-row-actions').innerHTML = '<span class="uhb-pill uhb-pill--ok">Aloqa belgilandi</span>';
         }
 
-        // Yordamchi ustozlik — aloqalar soni (oyiga 13 tagacha), UstozBosh dizayni (.asr).
-        const as = home.querySelector('[data-thx-assist]');
-        if (as && helped.length && rep) {
-            const by = new Map((rep.students || []).map(s => [s.studentId, s]));
-            const adv = s => ([1, 3, 5].includes(Number(s.lessonDayOfWeek)) ? [2, 4, 6] : [1, 3, 5]);
-            as.hidden = false;
-            as.innerHTML = `<div class="ahx-card-h"><h3>Yordamchi ustozlik</h3><span>oyiga 13 tagacha</span></div>
-                <div class="uhb-as">${helped.map(s => { const r = by.get(s.id) || { counted: 0 };
-                    return `<div class="uhb-asr"><div class="uhb-r1"><span class="uhb-nm">${esc(s.name)}</span><span><b>${r.counted}</b> / 13 aloqa</span></div><i class="uhb-bar" role="img" aria-label="${r.counted} / 13"><i style="width:${Math.min(100, r.counted / 13 * 100)}%"></i></i>
-                      <small>tavsiya ${adv(s).map(d => DAY[d - 1]).join('·')}${s.lessonTime ? ' ' + esc(s.lessonTime) : ''} · asosiy ustoz ${esc(u.teacherName(s.teacherId))}${s.frozen ? ' · muzlatilgan' : ''}</small></div>`; }).join('')}
-                <small>Har bir aloqa ${num(rep.rate || 3077)} so'm · kamida 5 daqiqa · usul va daqiqa kiritiladi.</small></div>`;
-        }
     }
 
     // Ustoz/yordamchi "O'quvchilar" sahifasi (renderMyStudents) — js/yordamchi.js.

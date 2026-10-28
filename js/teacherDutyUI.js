@@ -27,7 +27,7 @@
     function loadAbsences(month) {
         if (ab.loading || (ab.month === month && !ab.stale) || !window.schoolUI) return;
         ab.loading = true;
-        window.schoolUI.api('/attendance/absences?month=' + month).then(r => { ab = { month, list: r.absences || [], loading: false }; render(); })
+        window.schoolUI.api('/attendance/absences?month=' + month).then(r => { ab = { month, list: r.absences || [], loading: false }; globalThis.__schoolAbsences = { month, list: ab.list }; render(); })
             .catch(() => { ab = { month, list: ab.month === month ? ab.list : [], loading: false }; });
     }
     function withAbsences(block, month, teacherId) {
@@ -223,6 +223,8 @@
         if (isMain) {
             const T = monthTotals({ id, month, students: mainStudents, mainAtt, makeups: mk.month === month ? mk.list : [], teacher: ownTeacher, todayKey: today });
             const { plan, counted, pct } = T;
+            // Sidebar "Akademik bo'lim" soni shu raqam bilan bir xil (js/staffNavBadges.js).
+            if (month === thisMonth && ab.month === month && mk.month === month) window.dispatchEvent(new CustomEvent('ustoz:month-unmarked', { detail: { month, n: T.unmarked } }));
             // Maosh — server payroll (/api/payroll/me), Bosh sahifa va "Mening maoshim" bilan bitta manba. Faqat joriy oy.
             if (month === thisMonth) loadPay();
             const pay = month === thisMonth && py.data?.linked && py.data.current ? Number(py.data.current.mainTotal ?? py.data.current.total) || 0 : null;
@@ -367,7 +369,7 @@
             root.querySelectorAll('button').forEach(b => { b.disabled = true; });
             return saveTeacherAttendanceChange({ teacherId: id, studentId: student.id, date, present, attendanceType: role, grade })
                 .catch(err => { lastError = err.message; })
-                .finally(() => { busy = false; monthInput.disabled = false; ab.stale = true; render(); });
+                .finally(() => { busy = false; monthInput.disabled = false; ab.stale = true; globalThis.__schoolAbsences = null; render(); });
         }
         function grade(student, date) {
             const previous = getItem(STORAGE_KEYS.liveGrades, {})[student.id]?.find(g => g.date === date && g.teacherId === id);

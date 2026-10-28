@@ -221,6 +221,8 @@
         const block = (getItem(STORAGE_KEYS.mainAttendance, {}) || {})[`${month}_${tid}`] || {};
         const own = typeof resolveTeacherWithVirtual === 'function' ? resolveTeacherWithVirtual(tid) || {} : {};
         const t = T({ id: tid, month, students: ownMain(tid), mainAtt: window.teacherDutyUI.mergeAbsences(block, ab.absences, tid), makeups: mk, teacher: own, todayKey: td });
+        // Sidebar "Akademik bo'lim" soni — shu "N belgilanmagan" bilan bitta raqam (js/staffNavBadges.js).
+        window.dispatchEvent(new CustomEvent('ustoz:month-unmarked', { detail: { month, n: t.unmarked } }));
         if (!t.plan) return;
         const [l, r] = foot.children;
         l.innerHTML = `<strong>${t.came}</strong> keldi · <strong>${t.absent}</strong> kelmadi · <strong>${t.unmarked}</strong> belgilanmagan = o'tgan ${t.expected}${t.approved ? ` · +${t.approved} qoplash` : ''} → <strong>${t.counted}</strong> hisobga o'tdi`;

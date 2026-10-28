@@ -580,7 +580,11 @@
               <td>${kind === 'main' ? `<b>${a.counted}</b> / ${a.plan}${a.review ? ` <span class="oq-plus">+${a.review}</span>` : ''}` : `<b>${c?.counted || 0}</b> / ${CAP}`}</td>
               <td><span class="oq-pill ${st[1]}">${esc(st[0])}</span></td></tr>`;
         };
-        const mainRows = mine.filter(match), helpRows = helped.filter(match);
+        // UstozOquvchiList: avval e'tibor kerak bo'lganlar (Holat ≠ "Rejada"), keyin qolganlari — har guruhda dars vaqti bo'yicha.
+        const tOf = s => { const m = /^(\d{1,2}):(\d{2})/.exec(String(s.lessonTime || '')); return m ? Number(m[1]) * 60 + Number(m[2]) : 9999; };
+        const needs = new Map(mine.map(s => [s.id, statusOf(attOf(s), ac.get(s.id))[1] !== 'is-ok']));
+        const mainRows = mine.filter(match).sort((a, b) => (needs.get(b.id) - needs.get(a.id)) || tOf(a) - tOf(b) || String(a.name).localeCompare(String(b.name))),
+            helpRows = helped.filter(match);
         if (!myState.sel || ![...mine, ...helped].some(s => s.id === myState.sel)) myState.sel = (mainRows[0] || helpRows[0])?.id || '';
         const sel = myState.closed ? null : [...mine, ...helped].find(s => s.id === myState.sel);
         const mainDetail = () => {
@@ -602,9 +606,9 @@
                 <dt>Kurs</dt><dd>${start ? `${esc(ddmmyy(start))}${end ? ' → ' + esc(ddmmyy(end)) : ''}` : '—'}</dd>
                 <dt>Yordamchi ustoz</dt><dd>${sel.assistantTeacherId ? esc(teacherName(sel.assistantTeacherId)) : '—'}</dd>
                 <dt>Telefon</dt><dd>${phone ? `<a href="tel:${esc(String(sel.phone).replace(/[^\d+]/g, ''))}">${esc(phone)}</a>` : '—'}</dd>
-                ${a.openMissed.length ? `<dt>Qoplash mumkin</dt><dd class="is-teal">${a.openMissed.length} dars · ${a.openMissed.join(' va ')}-${esc(mL)}</dd>` : ''}</dl>
+                <dt>Qoplash mumkin</dt><dd${a.openMissed.length ? ' class="is-teal"' : ''}>${a.openMissed.length ? `${a.openMissed.length} dars · ${a.openMissed.join(' va ')}-${esc(mL)}` : 'qoplanmagan dars yo\'q'}</dd></dl>
               <div class="oq-dact"><button type="button" class="oq-btn is-pri" data-open-card="${esc(sel.id)}">O'quvchi kartasini ochish</button>
-                ${a.openMissed.length ? '<button type="button" class="oq-btn" data-makeup>Qoplash darsi qo\'yish</button>' : ''}<button type="button" class="oq-btn" data-req>Adminga so'rov: jadval o'zgarishi</button></div>
+                ${sel.status !== 'inactive' && !sel.frozen ? '<button type="button" class="oq-btn" data-makeup>Qoplash darsi qo\'yish</button>' : ''}<button type="button" class="oq-btn" data-req>Adminga so'rov: jadval o'zgarishi</button></div>
               <div class="oq-hid">${OQ_LOCK}<span>Ustoz almashtirish, muzlatish va to'lovlar — admin bo'limida. Siz so'rov yuborasiz, admin hal qiladi.</span></div>`;
         };
         const isMainSel = sel && sel.teacherId === tid;
