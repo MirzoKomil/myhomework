@@ -502,7 +502,7 @@ async function getLesson(pool, actor, { lang: requested, no, courseId } = {}) {
     };
     lesson.plan = buildTeacherPlan(lesson, {
         lang, prevReview: prevSrc.review || [], prevVocab: (prevSrc.vocab || []).slice(0, 6).map(v => v.ru),
-        prevName: prevMeta?.name || '',
+        prevName: prevMeta?.name || '', staff: access.role !== 'teacher',
     });
     const all = await listMaterials(pool, lang);
     const materials = all.filter(m => m.lessonNo === n);
@@ -606,16 +606,13 @@ function buildTeacherPlan(lesson, ctx = {}) {
                         words.length ? `${words.length} ta yangi so'z: ro'yxat + mashq` : '',
                         ...autoParts.map(h => `${h.title || h.kind} — ${h.questions} ta savol (avtomatik tekshiriladi)`)].filter(Boolean),
                     tip: `Har qism ${PASS_PERCENT}% dan yuqori bajarilsa o'tadi. Keyingi jonli dars bu dars kamida ${UNLOCK_PERCENT}% bajarilganda yoki davomat belgilanganda ochiladi.` },
-                { key: 'before', when: 'Ustoz · dars kuni', title: 'Kuzatish va eslatma',
-                    items: [`"O'quvchilar" yorlig'ida ${UNLOCK_PERCENT}% ga yetmaganlarni ko'ring va eslatma yozing`,
-                        "Eng ko'p xato qilingan savollarni yozib oling — jonli darsda 3–5 daqiqa ajrating",
-                        ...gradedParts.map(h => `${h.title || 'Ijodiy vazifa'}ni baholang`)],
-                    tip: "Faol bo'lmagan o'quvchiga shaxsiy xabar umumiy guruh xabaridan samaraliroq." },
-                { key: 'after', when: 'Keyingi jonli darsda', title: 'Mustahkamlash',
-                    items: [...short(words, 5).map(w => `So'rang: ${w}`), ...(rules.length ? [`Qoidani 1 savol bilan tekshiring: ${rules[0]}`] : [])],
-                    tip: "Video ko'rmaganlar uchun prezentatsiyada ilovadagi slaydlarni 2–3 daqiqada tez o'tib chiqing." },
+                // Darslik dizayni: ustoz bloki bitta — "Kuzatish va mustahkamlash" (dars kuni, 10–15 daqiqa).
+                { key: 'before', when: 'Ustoz · dars kuni', title: 'Kuzatish va mustahkamlash',
+                    items: [ctx.staff ? `Shu darsni ${UNLOCK_PERCENT}% ga yetkazmaganlarni o'quvchilar progressidan belgilab oling`
+                        : `Shu darsni ${UNLOCK_PERCENT}% ga yetkazmaganlarni "O'quvchini tekshirish" bo'limida ko'ring`,
+                        "Eng ko'p xato qilingan savollarni keyingi jonli darsda 3–5 daqiqa takrorlang",
+                        ...gradedParts.map(h => `${h.title || 'Ijodiy vazifa'}ni baholang`)] },
             ],
-            checklist: ['Videodars/slaydlar ilovada ochilishini tekshirish', `${UNLOCK_PERCENT}% ga yetmaganlarga eslatma`, "Xatolar ro'yxatini keyingi jonli darsga olib o'tish"],
         };
     }
     const review = ctx.prevReview?.length ? ctx.prevReview.map(r => r.q) : short(ctx.prevVocab || [], 6);
@@ -672,7 +669,6 @@ function buildTeacherPlan(lesson, ctx = {}) {
         ],
         anticipated,
         differentiation: DIFFERENTIATION[ctx.lang === 'russian' ? 'russian' : 'english'],
-        checklist: ['Slaydlar va doskani oldindan ochib qo\'yish', 'Audio dialogni tekshirish (ovoz)', "Oldingi darsni bajarmaganlar ro'yxatini ko'rish", 'Darsdan keyin davomatni belgilash'],
     };
 }
 
@@ -782,6 +778,8 @@ function summarizeStudent(student, mc, progress, parts, timeRows, totals, lastSe
     }
     return {
         id: student.id, name: student.name, group: student.group, role: student.role, frozen: student.frozen,
+        // O'quvchilar progressi: ism ostida asosiy ustoz nomi va "Barcha ustozlar" filtri (faqat id; nom — mijozdagi xodimlar ro'yxatidan).
+        teacherId: student.teacherId || '',
         reached, completed, avgPercent, homeworkAvg, firstTryAvg, avgAttempts, mistakes, expected,
         time: { today: sumDays(1), week: sumDays(7), month: sumDays(30), total: totals?.total || 0, since: totals?.since || null },
         activeDays7, lastActive: iso(lastActive), daysIdle, flags, perLesson,
@@ -844,6 +842,17 @@ async function loadAttendance(pool, studentId) {
 async function loadStudentJson(pool, key, studentId) {
     const { rows } = await pool.query('SELECT data -> $2 AS v FROM json_data WHERE key=$1', [key, studentId]);
     return Array.isArray(rows[0]?.v) ? rows[0].v : [];
+}
+
+// "Darsni boshlash" sarlavhasidagi o'quvchi holati: ilovadagi so'nggi faollik (sessiya, o'qish vaqti, vazifa natijasi).
+// Ruxsat — studentDetail bilan bir xil (ustoz faqat o'z/yordamchi o'quvchisi). Faqat bitta vaqt qaytadi.
+async function studentPresence(pool, actor, studentId) {
+    const access = await resolveAccess(pool, actor);
+    const { student } = await assertStudentAccess(pool, access, String(studentId || ''));
+    const ids = [student.id];
+    const [totals, lastSeen, parts] = await Promise.all([loadTotals(pool, ids), loadLastSeen(pool, ids),
+        pool.query('SELECT MAX(updated_at) AS at FROM student_part_results WHERE student_id=$1', [student.id]).then(r => r.rows[0]?.at || null)]);
+    return { studentId: student.id, lastActive: iso(maxDate(lastSeen[student.id], totals[student.id]?.lastAt, parts)), now: new Date().toISOString() };
 }
 
 async function studentDetail(pool, actor, studentId) {
@@ -1226,7 +1235,7 @@ async function nextLessons(pool, actor, ids) {
 module.exports = {
     TOTAL_LESSONS, LESSON_KINDS, COURSE_KINDS, PASS_PERCENT,
     initSchema, resolveAccess, getHub, getLesson, saveMaterial, archiveMaterial, listMaterials, nextLessons, accessibleStudents,
-    studentsOverview, studentDetail, studentDetailById, recordTracking, progressForIds,
+    studentsOverview, studentDetail, studentDetailById, studentPresence, recordTracking, progressForIds,
     // test uchun
     buildTeacherPlan, konspektRules, allocateMinutes, expectedLiveLessons, lessonPercent, cleanPageMap, cleanMaterial, expectedLesson, summarizeStudent, mergeMistakes, tzDay,
     _resetCache: () => { ruSourceCache = null; contentCache = { at: 0, mc: null }; trackState.clear(); oralCache = undefined; },

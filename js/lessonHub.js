@@ -52,6 +52,7 @@
         check: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>',
         prev: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>',
         next: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>',
+        download: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>',
         plus: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
     };
     // Ustoz kitobi orasida yordamchi qo'llanmasi (ommaviy yuklashda "YORDAMCHI" sarlavhali PDF).
@@ -139,8 +140,7 @@
                     ${(hub ? views() : VIEWS.filter(v => !v.staff)).map(v => `<button type="button" role="tab" tabindex="${S.view === v.id ? 0 : -1}" class="lh-view${S.view === v.id ? ' is-on' : ''}" aria-selected="${S.view === v.id}" data-view="${v.id}">${esc(v.label)}</button>`).join('')}
                 </div>
                 <div class="lh-meta"><span>${esc(meta)}</span>
-                    ${hub?.canEdit && window.LessonImport ? `<button type="button" class="lh-btn" data-lh-import>${ICO.upload} Ommaviy yuklash</button>` : ''}
-                    <button type="button" class="lh-btn lh-icon" data-lh-refresh title="Ma'lumotlarni yangilash" aria-label="Ma'lumotlarni yangilash">⟳</button></div>
+                    ${hub?.canEdit && window.LessonImport ? `<button type="button" class="lh-btn" data-lh-import>${ICO.upload} Ommaviy yuklash</button>` : ''}</div>
             </div>
             <div class="lh-main" id="lhMain">${hub ? '' : skeleton()}</div>
             <div id="lhStudent"></div>
@@ -149,8 +149,8 @@
         el.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => {
             S.view = b.dataset.view; savePrefs(); render();
         }));
+        if (typeof updateRdPageHead === 'function') updateRdPageHead();
         bindTablistKeys(el.querySelector('.lh-views'));
-        el.querySelector('[data-lh-refresh]')?.addEventListener('click', refreshAll);
         el.querySelector('[data-lh-import]')?.addEventListener('click', async () => {
             let existing = [];
             try { existing = (await api(`/api/academic/materials?lang=${S.lang}`)).materials || []; } catch { /* takrorni tekshirmasdan davom */ }
@@ -341,7 +341,7 @@
         const tb = (data.guides || []).find(g => g.kind === 'teacher_book' && !isAssistGuide(g));
         const ab = (data.guides || []).find(g => g.kind === 'teacher_book' && isAssistGuide(g));
         const other = (data.guides || []).filter(g => g !== tb && g !== ab);
-        const resCard = (attrs, icon, label, sub, off) => `<button type="button" class="lh-res${off ? ' is-off' : ''}" ${attrs}${off ? ' aria-disabled="true"' : ''}><span class="lh-res-ic">${icon}</span><span><b>${esc(label)}</b><small>${esc(sub)}</small></span></button>`;
+        const resCard = (attrs, icon, label, sub, off) => `<button type="button" class="lh-res${off ? ' is-off' : ''}" ${attrs}${off ? ' aria-disabled="true"' : ''}><span class="lh-res-ic">${icon}</span><span><span class="lh-rtl">${esc(label)}</span><br><span class="lh-rtp">${esc(sub)}</span></span></button>`;
         const live = L.type === 'live';
         const canStart = live && !staff && !isAssistant();
         const nm = plain(L.name);
@@ -372,6 +372,7 @@
                 ${resCard(ab ? `data-guide="${esc(ab.id)}"` : '', ICO.assist, "Yordamchi qo'llanma", ab ? `${ab.page}-bet` : 'yuklanmagan', !ab)}
                 ${resCard('data-act="print"', ICO.print, 'Rejani chop etish', 'PDF, A4', false)}
                 ${other.map(g => resCard(`data-guide="${esc(g.id)}"`, ICO.tbook, g.title, `${g.page}-bet`, false)).join('')}
+                ${[...lessonMaterials(data, 'lesson_plan'), ...lessonMaterials(data, 'teacher_guide')].filter(m => safeUrl(m.url)).map(m => resCard(`data-file="${esc(m.id)}"`, ICO.tbook, m.title, m.kind === 'lesson_plan' ? 'Dars rejasi' : "Ustoz qo'llanmasi", false)).join('')}
             </div>
         </header>
         <div class="lh-tabs" role="tablist" aria-label="Dars bo'limlari">
@@ -391,6 +392,12 @@
         box.querySelector('[data-act="present"]').addEventListener('click', () => present(data));
         box.querySelector('[data-act="print"]').addEventListener('click', () => printPlan(data));
         box.querySelectorAll('.lh-ress [data-guide]').forEach(b => b.addEventListener('click', () => openGuide(data, b.dataset.guide)));
+        box.querySelectorAll('.lh-ress [data-file]').forEach(b => b.addEventListener('click', () => {
+            const m = data.materials.find(x => x.id === b.dataset.file);
+            if (!m) return;
+            if (canPresent(m)) LessonPresenter.open({ title: `${data.lesson.no}-dars · ${m.title}`, sources: [{ type: 'pdf', url: m.url, title: m.title }] });
+            else window.open(safeUrl(m.url), '_blank', 'noopener');
+        }));
         bindTablistKeys(box.querySelector('.lh-tabs'));
         box.querySelector('[data-act="book"]')?.addEventListener('click', () => {
             if (!book) return;
@@ -414,7 +421,9 @@
                         : `<div class="lh-thumb is-text"><b>${esc(s.title)}</b><span>${esc(String(s.body).slice(0, 120))}</span></div>`).join('')}</div></div>` : ''}
                 ${materialSection(data, 'live_slides', 'Jonli dars slaydlari',
                     L.type === 'live' ? "Darsda ko'rsatiladigan slaydlar. PDF formatda yuklang — prezentatsiya rejimida ustiga chizish mumkin." : "Bu videodars. Jonli dars slaydlari odatda keyingi (jonli) darsda bo'ladi.")}
-                ${materialSection(data, 'video_slides', 'Videodars slaydlari (fayllar)', "Video darsning PDF slaydlari — o'quvchi videoni ko'rmagan bo'lsa jonli darsda tez o'tib ketish uchun.")}`;
+                ${materialSection(data, 'video_slides', 'Videodars slaydlari (fayllar)', "Video darsning PDF slaydlari — o'quvchi videoni ko'rmagan bo'lsa jonli darsda tez o'tib ketish uchun.")}
+                ${S.hub[S.lang]?.canEdit ? `${materialSection(data, 'lesson_plan', 'Dars rejasi fayllari', "Metodist tayyorlagan rasmiy reja (PDF/Word). Ustozga \"Shu dars sahifalari\" qatorida ko'rinadi.")}
+                ${materialSection(data, 'teacher_guide', "Ustoz qo'llanmasi (shu dars)", "Ustozga \"Shu dars sahifalari\" qatorida ko'rinadi.")}` : ''}`;
             panel.querySelector('[data-present-src="app-slides"]')?.addEventListener('click', () => present(data, { prefer: 'app-slides' }));
             panel.querySelectorAll('[data-slide]').forEach(b => b.addEventListener('click', () => present(data, { prefer: 'app-slides', page: Number(b.dataset.slide) + 1 })));
         } else if (t === 'video') {
@@ -497,8 +506,6 @@
     }
     const mmss = m => `${String(Math.floor(m)).padStart(2, '0')}:00`;
 
-    function checklistKey(L) { return `mh_lh_check:${S.lang}:${L.no}`; }
-
     const isShort = d => d <= 20;
     const isMedium = d => d > 20 && d <= 35;
     function planBlocks(plan, duration) {
@@ -513,16 +520,12 @@
         const duration = S.duration || 60;
         const blocks = planBlocks(plan, duration);
         const durations = [...new Set([15, 20, 30, 45, 60, 80, 90, S.hub[S.lang]?.defaultDuration, duration].filter(Boolean))].sort((a, b) => a - b);
-        let checks = {};
-        try { checks = JSON.parse(localStorage.getItem(checklistKey(L)) || '{}'); } catch { /* */ }
         const missing = data.classStats.prevHomeworkMissing || [];
-        const files = [...lessonMaterials(data, 'lesson_plan'), ...lessonMaterials(data, 'teacher_guide')];
         const live = plan.mode === 'live';
         // Videodars: o'quvchi ilovada nima qiladi — sonlar bilan.
         const studentItems = () => {
             const it = [];
             if (L.slides.length || L.konspekt) it.push(['Slaydlar va konspekt', L.slides.length ? `${L.slides.length} ta` : '']);
-            if (L.videoUrl) it.push(['Videodars', '1 ta']);
             if (L.vocabulary.length) it.push(["Yangi so'zlar: ro'yxat + mashq", `${L.vocabulary.length} ta`]);
             if (L.text) it.push([`O'qish: ${L.text.title || 'matn'}`, L.text.questions.length ? `${L.text.questions.length} savol` : '']);
             for (const h of L.homework) it.push([h.title || HW_KIND[h.kind] || h.kind, `${h.questions} savol`]);
@@ -554,17 +557,10 @@
         </div>` : ''}
         ${L.review.length ? `<div class="lh-card"><div class="lh-card-h"><b>O'tgan darsni eslash savollari</b><span class="lh-muted">videodars boshida o'quvchi ham ko'radi</span></div>
             <ol class="lh-qa">${L.review.map(r => `<li>${esc(r.q)}${r.a ? ` <span class="lh-ans">→ ${esc(r.a)}</span>` : ''}</li>`).join('')}</ol></div>` : ''}
-        <div class="lh-card"><div class="lh-card-h"><b>Tayyorgarlik ro'yxati</b><span class="lh-muted">belgilar shu qurilmada saqlanadi</span></div>
-            <ul class="lh-check">${plan.checklist.map((c, i) => `<li><label><input type="checkbox" data-check="${i}"${checks[i] ? ' checked' : ''}> ${esc(c)}</label></li>`).join('')}</ul></div>
-        ${materialSection(data, 'lesson_plan', "Dars rejasi fayllari", "Metodist tayyorlagan rasmiy reja (PDF/Word) — bo'lsa, yuqoridagi avtomatik rejadan ustun turadi.", files.filter(f => f.kind === 'lesson_plan'))}
-        ${materialSection(data, 'teacher_guide', "Ustoz qo'llanmasi (shu dars)", "Teacher's book'ning shu darsga tegishli sahifalari.", files.filter(f => f.kind === 'teacher_guide'))}`;
+`;
         panel.querySelector('.lh-dur select')?.addEventListener('change', e => {
             S.duration = Number(e.target.value); savePrefs(); renderPlan(panel, data); bindMaterialActions(panel, data);
         });
-        panel.querySelectorAll('[data-check]').forEach(cb => cb.addEventListener('change', () => {
-            checks[cb.dataset.check] = cb.checked;
-            try { localStorage.setItem(checklistKey(L), JSON.stringify(checks)); } catch { /* */ }
-        }));
     }
 
     function printPlan(data) {
@@ -763,7 +759,7 @@
                 <label>Qaysi darsgacha<input name="lessonTo" type="number" min="1" max="72" class="lh-input" value="${existing?.meta?.lessonTo || 24}"></label></div>` : ''}
             ${hasPages ? `<label>Darslar boshlanadigan sahifalar <span class="lh-muted">(ixtiyoriy: "1:5, 2:9, 3:14")</span><textarea name="pageMap" rows="3" class="lh-input" placeholder="1:5, 2:9, 3:14">${esc(pm)}</textarea></label>` : ''}
             <label>Izoh <span class="lh-muted">(ixtiyoriy)</span><input name="note" maxlength="300" class="lh-input" value="${esc(existing?.note || '')}"></label>
-            <div class="lh-dialog-actions"><button type="button" class="lh-btn" data-cancel>Bekor qilish</button><button type="submit" class="lh-btn lh-primary">Saqlash</button></div>
+            <div class="lh-dialog-actions">${editing ? `<button type="button" class="lh-btn lh-danger" data-del-in>O'chirish</button><span class="lh-gap"></span>` : ''}<button type="button" class="lh-btn" data-cancel>Bekor qilish</button><button type="submit" class="lh-btn lh-primary">Saqlash</button></div>
             <div class="lh-progress" role="status" hidden>Yuklanmoqda…</div>
         </form>`;
         document.body.appendChild(wrap);
@@ -771,6 +767,7 @@
         const closeForm = trapModal(wrap);
         wrap.addEventListener('click', e => { if (e.target === wrap) closeForm(); });
         wrap.querySelector('[data-cancel]').onclick = closeForm;
+        wrap.querySelector('[data-del-in]')?.addEventListener('click', () => { closeForm(); deleteMaterial(existing.id); });
         form.querySelector('input[name="title"]').focus();
         form.addEventListener('submit', async e => {
             e.preventDefault();
@@ -868,10 +865,36 @@
         LessonPresenter.open({
             title: `${L.no}-dars · ${L.type === 'live' ? 'Jonli dars' : 'Videodars'}`, subtitle: subtitle || plain(L.name),
             sources: list, start, startPage, lesson: data, duration, finish,
+            presence: main && S.today?.next?.lessonNo === L.no && S.today.next.studentId ? { studentId: S.today.next.studentId, name: S.today.next.studentName } : null,
         });
     }
 
     // ── O'quvchilar progressi ───────────────────────────────────────────────
+    // O'quvchilar progressi (DarslikProgress dizayni): 6 ta KPI, "O'quvchilar" jadvali (ustoz filtri, saralash, CSV),
+    // sahifalash va izoh pastda. Qator bosilsa — o'quvchining batafsil sahifasi.
+    const PROG_PAGE = 10;
+    const SORTS = [['attention', "Avval e'tibor kerak"], ['reached', "Joriy dars bo'yicha"], ['time', 'Faol vaqt (7 kun)'], ['homework', 'Uy vazifasi natijasi'], ['name', 'Ism']];
+    const FLAG_PILL = { idle: ['Faol emas', 'warn'], struggling: ['Qiynalyapti', 'warn'], behind: ['Rejadan orqada', 'bad'], frozen: ['Muzlatilgan', 'mute'] };
+    const shortName = n => { const p = String(n || '').trim().split(/\s+/); return p.length > 1 ? `${p[0]} ${p[1][0]}.` : p[0] || ''; };
+    const teacherNameOf = id => (id && window.schoolUI?.teacherName ? window.schoolUI.teacherName(id) : '') || '';
+    // "Bugun 17:05" / "Kecha" / "N kun oldin" (Toshkent vaqti).
+    function lastSeen(isoStr) {
+        if (!isoStr) return 'hech qachon';
+        const tz = d => new Date(new Date(d).getTime() + 5 * 3600e3);
+        const t = tz(isoStr), n = tz(Date.now());
+        const day = d => Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+        const diff = Math.round((day(n) - day(t)) / 86400000);
+        if (diff <= 0) return `Bugun ${String(t.getUTCHours()).padStart(2, '0')}:${String(t.getUTCMinutes()).padStart(2, '0')}`;
+        if (diff === 1) return 'Kecha';
+        return `${diff} kun oldin`;
+    }
+    function durP(sec) {
+        sec = Number(sec) || 0;
+        if (!sec) return '—';
+        const h = Math.floor(sec / 3600), m = Math.round((sec % 3600) / 60);
+        return h ? `${h} soat ${String(m).padStart(2, '0')} daq` : `${Math.max(1, m)} daq`;
+    }
+
     async function renderStudentsView(main) {
         main.innerHTML = skeleton();
         let data = S.students[S.lang];
@@ -880,49 +903,72 @@
             catch (e) { main.innerHTML = `<div class="lh-error"><b>Yuklab bo'lmadi</b><span>${esc(e.message)}</span></div>`; return; }
         }
         if (S.view !== 'students') return;
-        const groups = [...new Set(data.students.map(s => s.group).filter(Boolean))].sort();
-        if (S.group && !groups.includes(S.group)) S.group = '';
-        const scoped = data.students.filter(s => !S.group || s.group === S.group);
+        try { await window.schoolUI?.loadStaffAvatars?.(); } catch { /* ism kerak, avatar emas */ }
+        if (S.view !== 'students') return;
+        const teachers = [...new Set(data.students.map(s => s.teacherId).filter(Boolean))]
+            .map(id => ({ id, name: teacherNameOf(id) || id })).sort((a, b) => a.name.localeCompare(b.name));
+        if (S.teacher && !teachers.some(t => t.id === S.teacher)) S.teacher = '';
+        const scoped = data.students.filter(s => !S.teacher || s.teacherId === S.teacher);
         const active = scoped.filter(s => !s.frozen);
-        const list = sortStudents(scoped);
-        const count = key => active.filter(s => s.flags.some(f => f.key === key)).length;
+        const count = key => active.filter(s => s.flags.some(f => f.key === key));
         const weekTotal = active.reduce((a, s) => a + s.time.week, 0);
-        const avgReached = active.length ? Math.round(active.reduce((a, s) => a + s.reached, 0) / active.length) : 0;
+        const avg = (arr, f) => (arr.length ? Math.round(arr.reduce((a, s) => a + f(s), 0) / arr.length) : 0);
+        const avgReached = avg(active, s => s.reached);
+        const withPlan = active.filter(s => s.expected);
+        const avgPlan = avg(withPlan, s => s.expected);
+        const active7 = active.filter(s => s.time.week > 0 || s.activeDays7 > 0).length;
+        const hours = Math.round(weekTotal / 3600);
+        const per = active.length ? weekTotal / active.length : 0;
+        const perTxt = per >= 3600 ? `~${Math.round(per / 3600)} soat` : `~${Math.max(1, Math.round(per / 60))} daq`;
+        const names = arr => arr.slice(0, 2).map(s => shortName(s.name)).join(', ') + (arr.length > 2 ? ` +${arr.length - 2}` : '');
+        const idle = count('idle'), strug = count('struggling'), behind = count('behind');
+        const q = plain(S.studentQuery || '').trim().toLowerCase();
+        const list = sortStudents(scoped).filter(s => !q || plain(s.name).toLowerCase().includes(q));
+        const pages = Math.max(1, Math.ceil(list.length / PROG_PAGE));
+        S.studentPage = Math.min(S.studentPage || 0, pages - 1);
+        const from = S.studentPage * PROG_PAGE, rows = list.slice(from, from + PROG_PAGE);
+        const sortLabel = (SORTS.find(x => x[0] === S.studentSort) || SORTS[0])[1].toLowerCase();
+        const kpi = (l, v, d, warn) => `<div class="lh-pk${warn ? ' is-warn' : ''}"><span class="lh-pk-l">${l}</span><span class="lh-pk-v">${v}</span><span class="lh-pk-d">${d}</span></div>`;
+        const hw = s => (s.firstTryAvg === null || s.firstTryAvg === undefined ? '<span class="lh-muted">—</span>'
+            : `<div class="lh-pmini" title="Eng yaxshi natija: ${s.homeworkAvg ?? '—'}%"><div class="lh-ptrk"><span class="${s.firstTryAvg < RULES.PASS_PERCENT ? 'lo' : ''}" style="width:${Math.max(0, Math.min(100, s.firstTryAvg))}%"></span></div><b class="${s.firstTryAvg < RULES.PASS_PERCENT ? 'is-lo' : ''}">${s.firstTryAvg}%</b></div>`);
+        const pills = s => { const f = s.flags.filter(x => FLAG_PILL[x.key]); return f.length ? `<div class="lh-pfl">${f.map(x => `<span class="lh-ppill is-${FLAG_PILL[x.key][1]}" title="${esc(x.label)}">${esc(x.key === 'idle' && s.daysIdle === null ? "Ilovaga kirmagan" : FLAG_PILL[x.key][0])}</span>`).join('')}</div>` : '<span class="lh-muted">—</span>'; };
         main.innerHTML = `
-        <div class="lh-kpis">
-            <div class="lh-kpi"><span>O'quvchilar</span><b>${active.length}</b>${scoped.length > active.length ? `<small>+${scoped.length - active.length} muzlatilgan</small>` : ''}</div>
-            <div class="lh-kpi"><span>O'rtacha joriy dars</span><b>${avgReached || '—'}</b><small>72 dan</small></div>
-            <div class="lh-kpi"><span>7 kunda faol vaqt</span><b>${dur(weekTotal)}</b><small>hammasi bo'lib</small></div>
-            <div class="lh-kpi ${count('idle') ? 'is-warn' : ''}"><span>Faol emas (3+ kun)</span><b>${count('idle')}</b></div>
-            <div class="lh-kpi ${count('struggling') ? 'is-warn' : ''}"><span>Uy vazifasida qiynalyapti</span><b>${count('struggling')}</b></div>
-            <div class="lh-kpi ${count('behind') ? 'is-warn' : ''}"><span>Rejadan orqada</span><b>${count('behind')}</b></div>
+        <div class="lh-pk6">
+            ${kpi("O'quvchilar", active.length, `7 kunda ilovada faol: ${active7}${scoped.length > active.length ? ` · +${scoped.length - active.length} muzlatilgan` : ''}`)}
+            ${kpi("O'rtacha joriy dars", `${avgReached || '—'} <small>/ 72</small>`, withPlan.length ? `reja bo'yicha ${avgPlan}-dars` : 'reja belgilanmagan')}
+            ${kpi('Faol vaqt · 7 kun', hours >= 1 ? `${hours} <small>soat</small>` : `${Math.round(weekTotal / 60)} <small>daq</small>`, `jami ${active.length} o'quvchi · boshiga ${perTxt}`)}
+            ${kpi('Faol emas · 3+ kun', idle.length, idle.length ? esc(names(idle)) : "hammasi faol", idle.length)}
+            ${kpi('Qiynalyapti', strug.length, `1-urinish ${RULES.PASS_PERCENT}% dan past · faol o'quvchilar`, strug.length)}
+            ${kpi('Rejadan orqada', behind.length, `1 haftadan ko'p orqada${behind.length ? ` · ${esc(names(behind))}` : ''}`, behind.length)}
         </div>
-        <div class="lh-note">Faol vaqt — ilova ochiq va o'quvchi ishlayotgan vaqt (2 daqiqa harakatsizlikdan keyin to'xtaydi; video va audio ko'rishda — 25 daqiqa). Vaqt va xatolar yangi ilovadan ${data.trackingSince ? `${esc(fmtDate(data.trackingSince))} dan` : 'yangi versiya chiqqandan'} boshlab yig'iladi; dars bosqichlari — avvaldan. "Qiynalyapti" — uy vazifasini birinchi urinishda ${RULES.PASS_PERCENT}% dan past bajarsa yoki o'rtacha 2,5+ urinish qilsa. "Rejadan orqada" — haftasiga ${RULES.LESSONS_PER_WEEK || 6} dars hisobidan 1 haftadan ko'p orqada.</div>
-        <div class="lh-card lh-table-wrap">
-            <div class="lh-card-h"><b>O'quvchilar</b><span class="lh-gap"></span>
-                ${groupSelect(groups)}
-                <input type="search" class="lh-input lh-small" placeholder="Ism bo'yicha" aria-label="O'quvchini qidirish">
-                <select class="lh-input lh-small" data-sort aria-label="Saralash">${[['attention', "Avval e'tibor kerak"], ['reached', "Dars bo'yicha"], ['time', 'Faol vaqt (7 kun)'], ['homework', 'Uy vazifasi natijasi'], ['name', 'Ism']].map(([k, l]) => `<option value="${k}"${S.studentSort === k ? ' selected' : ''}>${l}</option>`).join('')}</select>
-                <button type="button" class="lh-btn" data-csv>⬇ CSV</button>
+        <section class="lh-card lh-pcard" aria-labelledby="lhProgTitle">
+            <div class="lh-pch"><h3 class="lh-pct-t" id="lhProgTitle">O'quvchilar</h3>
+                <div class="lh-prow">
+                    <label class="lh-pinp">${ICO.search}<input type="search" placeholder="Ism bo'yicha" aria-label="O'quvchi qidirish" value="${esc(S.studentQuery || '')}"></label>
+                    <select class="lh-psel" data-teacher aria-label="Ustoz"><option value="">Barcha ustozlar</option>${teachers.map(t => `<option value="${esc(t.id)}"${S.teacher === t.id ? ' selected' : ''}>${esc(t.name)}</option>`).join('')}</select>
+                    <select class="lh-psel" data-sort aria-label="Saralash">${SORTS.map(([k, l]) => `<option value="${k}"${S.studentSort === k ? ' selected' : ''}>${l}</option>`).join('')}</select>
+                    <button type="button" class="lh-pbtn" data-csv>${ICO.download}CSV</button>
+                </div>
             </div>
-            ${list.length ? `<table class="lh-table"><thead><tr><th>O'quvchi</th><th>Joriy dars</th><th>O'rtacha bajarilish</th><th>Tugatgan</th><th>Uy vazifasi<br><span class="lh-muted">1-urinish / eng yaxshi</span></th><th>Xatolar</th><th>Faol vaqt<br><span class="lh-muted">7 kun / jami</span></th><th>Faol kunlar</th><th>Oxirgi faollik</th><th>Holat</th></tr></thead>
-            <tbody>${list.map(s => `<tr data-student="${esc(s.id)}" tabindex="0">
-                <td><b>${esc(s.name)}</b>${s.group ? `<div class="lh-muted">${esc(s.group)}</div>` : ''}${s.role === 'assistant' ? '<div class="lh-tag">yordamchi</div>' : ''}</td>
-                <td><b>${s.reached || '—'}</b>${s.expected ? `<div class="lh-muted">reja: ${s.expected}</div>` : ''}</td>
-                <td>${bar(s.avgPercent)}</td><td>${s.completed}/72</td>
-                <td>${s.homeworkAvg === null ? '—' : `${pct(s.firstTryAvg)} / ${pct(s.homeworkAvg)}`}</td><td>${s.mistakes || '—'}</td>
-                <td>${dur(s.time.week)} <span class="lh-muted">/ ${dur(s.time.total)}</span></td>
-                <td>${s.activeDays7}/7</td><td>${esc(ago(s.lastActive))}</td>
-                <td>${s.flags.length ? s.flags.map(f => `<span class="lh-flag ${f.key}">${esc(f.label)}</span>`).join('') : '<span class="lh-flag ok">Yaxshi</span>'}</td></tr>`).join('')}</tbody></table>`
-                : `<div class="lh-empty-sm">${S.hub[S.lang]?.role === 'teacher' ? "Sizga hali o'quvchi biriktirilmagan" : "Bu yo'nalishda o'quvchi yo'q"}</div>`}
-        </div>`;
+            ${rows.length ? `<div class="lh-pscroll"><table class="lh-ptbl"><thead><tr><th scope="col">O'quvchi</th><th scope="col">Joriy dars</th><th scope="col">Tugatgan</th><th scope="col">Uy vazifasi · 1-urinish</th><th scope="col">Xatolar</th><th scope="col">Faol vaqt · 7 kun</th><th scope="col">Oxirgi faollik</th><th scope="col">Holat</th></tr></thead>
+            <tbody>${rows.map(s => `<tr data-student="${esc(s.id)}" tabindex="0">
+                <td><div class="lh-pnm">${esc(s.name)}</div><div class="lh-pmt">${esc(teacherNameOf(s.teacherId) || '—')}</div></td>
+                <td><b>${s.reached || '—'}</b>${s.expected && s.expected !== s.reached ? ` <span class="lh-pmt is-in">/ ${s.expected} reja</span>` : ''}</td>
+                <td>${s.completed}</td><td>${hw(s)}</td><td>${s.mistakes || '—'}</td>
+                <td>${esc(durP(s.time.week))}</td><td>${esc(lastSeen(s.lastActive))}</td><td>${pills(s)}</td></tr>`).join('')}</tbody></table></div>`
+                : `<div class="lh-empty-sm">${list.length !== scoped.length ? "Qidiruvga mos o'quvchi yo'q" : "Bu yo'nalishda o'quvchi yo'q"}</div>`}
+            <div class="lh-pfoot2">${list.length ? `<b>${from + 1}–${from + rows.length} / ${list.length}</b> · ${esc(sortLabel)}${S.studentPage > 0 ? ' · <button type="button" class="lh-linkbtn" data-pp="-1">oldingi sahifa</button>' : ''}${S.studentPage < pages - 1 ? ' · <button type="button" class="lh-linkbtn" data-pp="1">keyingi sahifa →</button>' : ''}<br>` : ''}Faol vaqt — ilova ochiq va o'quvchi ishlayotgan vaqt (2 daqiqa harakatsizlikdan keyin to'xtaydi). 1-urinish — uy vazifasining birinchi urinishdagi natijasi. Qatorni bosing — o'quvchining batafsil sahifasi ochiladi.</div>
+        </section>`;
         const tbody = main.querySelector('tbody');
-        main.querySelector('input[type="search"]').addEventListener('input', e => {
-            const q = e.target.value.toLowerCase();
-            tbody?.querySelectorAll('tr').forEach(tr => { tr.hidden = !tr.textContent.toLowerCase().includes(q); });
+        const search = main.querySelector('.lh-pinp input');
+        search.addEventListener('input', e => {
+            S.studentQuery = e.target.value; S.studentPage = 0;
+            const pos = e.target.selectionStart;
+            renderStudentsView(main).then(() => { const i = main.querySelector('.lh-pinp input'); if (i) { i.focus(); try { i.setSelectionRange(pos, pos); } catch { /* */ } } });
         });
-        main.querySelector('[data-sort]').addEventListener('change', e => { S.studentSort = e.target.value; renderStudentsView(main); });
-        main.querySelector('[data-group]')?.addEventListener('change', e => { S.group = e.target.value; savePrefs(); renderStudentsView(main); });
+        main.querySelector('[data-sort]').addEventListener('change', e => { S.studentSort = e.target.value; S.studentPage = 0; renderStudentsView(main); });
+        main.querySelector('[data-teacher]').addEventListener('change', e => { S.teacher = e.target.value; S.studentPage = 0; renderStudentsView(main); });
+        main.querySelectorAll('[data-pp]').forEach(b => b.addEventListener('click', () => { S.studentPage += Number(b.dataset.pp); renderStudentsView(main); }));
         main.querySelector('[data-csv]').addEventListener('click', () => exportCsv(list));
         tbody?.querySelectorAll('[data-student]').forEach(tr => {
             tr.addEventListener('click', () => openStudent(tr.dataset.student));
@@ -932,10 +978,10 @@
     }
 
     function exportCsv(list) {
-        const head = ["O'quvchi", 'Guruh', 'Joriy dars', 'Reja', "O'rtacha %", 'Tugatgan', '1-urinish %', 'Eng yaxshi %', 'Xatolar', 'Faol vaqt 7 kun (daq)', 'Faol vaqt jami (daq)', 'Faol kunlar (7)', 'Oxirgi faollik', 'Holat'];
+        const head = ["O'quvchi", 'Ustoz', 'Joriy dars', 'Reja', "O'rtacha %", 'Tugatgan', '1-urinish %', 'Eng yaxshi %', 'Xatolar', 'Faol vaqt 7 kun (daq)', 'Faol vaqt jami (daq)', 'Faol kunlar (7)', 'Oxirgi faollik', 'Holat'];
         // Excel formulasi bo'lib ketmasin (=, +, -, @ bilan boshlanadigan matnlar).
         const q = v => { let t = String(v ?? ''); if (/^[=+\-@\t\r]/.test(t)) t = "'" + t; return `"${t.replace(/"/g, '""')}"`; };
-        const rows = list.map(s => [s.name, s.group, s.reached, s.expected ?? '', s.avgPercent, s.completed, s.firstTryAvg ?? '', s.homeworkAvg ?? '',
+        const rows = list.map(s => [s.name, teacherNameOf(s.teacherId), s.reached, s.expected ?? '', s.avgPercent, s.completed, s.firstTryAvg ?? '', s.homeworkAvg ?? '',
             s.mistakes, Math.round(s.time.week / 60), Math.round(s.time.total / 60), s.activeDays7, s.lastActive ? s.lastActive.slice(0, 10) : '', s.flags.map(f => f.label).join('; ')]);
         const csv = '﻿' + [head, ...rows].map(r => r.map(q).join(';')).join('\n');
         const a = document.createElement('a');
@@ -1085,14 +1131,13 @@
         main.innerHTML = `
         <div class="lh-book">
             <aside class="lh-card lh-book-list">
-                <div class="lh-seg" role="tablist" aria-label="Kitob turi">${BOOK_KINDS.map(k => `<button type="button" role="tab" aria-selected="${k.id === kind.id}" data-bkind="${k.id}">${esc(k.label)}</button>`).join('')}</div>
-                <div class="lh-bchips">
-                    ${files.map((b, i) => `<button type="button" class="lh-bchip${current && b.id === current.id ? ' is-on' : ''}" data-book="${esc(b.id)}" aria-pressed="${!!current && b.id === current.id}" title="${esc(b.title)}"><b>${esc(bookChipName(b, i))}</b><small>${esc(bookRange(b))}</small></button>`).join('')}
-                    ${hub.canEdit ? `<button type="button" class="lh-bchip is-add" data-add="${kind.add}" data-mode="file" title="${esc(kind.label)} qo'shish">${ICO.plus}<small>qo'shish</small></button>` : ''}
+                <div class="lh-bk-pad">
+                    <div class="lh-seg" role="tablist" aria-label="Kitob turi">${BOOK_KINDS.map(k => `<button type="button" role="tab" aria-selected="${k.id === kind.id}" data-bkind="${k.id}">${esc(k.label)}</button>`).join('')}</div>
+                    ${files.length ? `<div class="lh-bchips">
+                        ${files.map((b, i) => { const on = !!current && b.id === current.id; return `<button type="button" class="lh-bchip${on ? ' is-on' : ''}" data-book="${esc(b.id)}" aria-pressed="${on}" title="${esc(b.title)} · ${esc(bookRange(b))}"><b>${esc(bookChipName(b, i))}</b><small>${esc(on ? bookRange(b) : bookRange(b).replace(/-darslar$/, ''))}</small></button>`; }).join('')}
+                    </div>` : `<div class="lh-empty-sm">${esc(kind.label)} hali yuklanmagan.${hub.canEdit ? ' "Ommaviy yuklash" orqali PDF yuklang — sahifalar avtomatik topiladi.' : ' Admin yuklaganda shu yerda chiqadi.'}</div>`}
                 </div>
-                ${!files.length ? `<div class="lh-empty-sm">${esc(kind.label)} hali yuklanmagan.${hub.canEdit ? ' "Ommaviy yuklash" yoki "qo\'shish" orqali PDF yuklang — sahifalar avtomatik topiladi.' : ' Admin yuklaganda shu yerda chiqadi.'}</div>` : ''}
-                ${current && hub.canEdit ? `<div class="lh-bedit"><span class="lh-muted">${esc(current.title)}</span><span class="lh-gap"></span><button type="button" class="lh-btn lh-sq" data-edit="${esc(current.id)}" aria-label="Tahrirlash: ${esc(current.title)}">✎</button><button type="button" class="lh-btn lh-sq lh-danger" data-del="${esc(current.id)}" aria-label="O'chirish: ${esc(current.title)}">🗑</button></div>` : ''}
-                ${current ? `<div class="lh-rlab">Dars → sahifa</div>
+                ${current ? `<div class="lh-bk-grp"><span>Dars → sahifa</span>${hub.canEdit ? `<span class="lh-bk-ed"><button type="button" class="lh-bk-ic" data-edit="${esc(current.id)}" title="Kitobni tahrirlash yoki o\'chirish (nomi, darslar sahifasi)" aria-label="Tahrirlash: ${esc(current.title)}">✎</button></span>` : ''}</div>
                     ${map.length ? `<div class="lh-pmap">${map.map(r => `<button type="button" class="lh-pm" data-pm="${r.page}" data-pmno="${r.no}"><span class="lh-pm-n">${r.no}</span><b>${r.no}-dars</b><small>${r.page}-bet</small></button>`).join('')}</div>
                         <p class="lh-muted lh-pfoot">Sahifalar ommaviy yuklashda PDF ichidan avtomatik topilgan</p>`
                         : `<p class="lh-muted lh-pfoot">Darslar sahifasi belgilanmagan.${hub.canEdit ? ' ✎ tugmasi orqali kiriting ("1:5, 2:9").' : ''}</p>`}` : ''}
@@ -1228,7 +1273,10 @@
         try { all = (await api(`/api/academic/materials?lang=${S.lang}`)).materials || []; }
         catch (e) { main.innerHTML = `<div class="lh-error"><b>Yuklab bo'lmadi</b><span>${esc(e.message)}</span></div>`; return; }
         if (S.view !== 'extra') return;
-        const list = all.filter(m => m.kind === 'extra').sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
+        // Eski "ilova hujjatlari" (mobile_content.documents) — shu jadvalda o'qish uchun qatorlar (js/app.js tpLegacyTextbookDocs).
+        let legacy = [];
+        try { legacy = typeof S.ctx.legacyDocs === 'function' ? S.ctx.legacyDocs(S.lang) || [] : []; } catch { legacy = []; }
+        const list = [...all.filter(m => m.kind === 'extra'), ...legacy].sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
         const cnt = id => list.filter(m => extraType(m).id === id).length;
         const filters = [['all', 'Hammasi', list.length], ['pdf', 'PDF', cnt('pdf')], ['audio', 'Audio', cnt('audio')], ['link', 'Havola', cnt('link')]];
         if (cnt('other')) filters.push(['other', 'Boshqa', cnt('other')]);
@@ -1246,29 +1294,18 @@
                 ${rows.map(m => { const t = extraType(m); const size = m.fileSize ? `${m.fileSize >= 1048576 ? (m.fileSize / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(m.fileSize / 1024)) + ' KB'}` : '';
                     return `<tr><td><span class="lh-xn"><span class="lh-xb is-${t.id}">${esc(t.badge)}</span><span><b>${esc(m.title)}</b><small>${esc(t.id === 'link' ? hostOf(m.url) : size || m.fileName || '')}</small></span></span></td>
                     <td>${esc(t.label)}</td><td>${m.lessonNo ? `${m.lessonNo}-dars` : 'Barcha darslar'}</td><td class="lh-muted">${esc(m.note || '—')}</td><td>${esc(shortDate(m.updatedAt))}</td>
-                    <td class="lh-xa">${hub.canEdit ? `<button type="button" class="lh-btn" data-edit="${esc(m.id)}">Tahrirlash</button><button type="button" class="lh-btn lh-sq lh-danger" data-del="${esc(m.id)}" aria-label="O'chirish: ${esc(m.title)}">🗑</button>`
-                        : safeUrl(m.url) ? (canPresent(m) ? `<button type="button" class="lh-btn" data-present-file="${esc(m.id)}">Ochish</button>` : `<a class="lh-btn" href="${esc(safeUrl(m.url))}" target="_blank" rel="noopener">Ochish</a>`) : ''}</td></tr>`; }).join('')}
+                    <td class="lh-xa">${hub.canEdit && !m.legacy ? `<button type="button" class="lh-btn" data-edit="${esc(m.id)}">Tahrirlash</button>`
+                        : safeUrl(m.url) ? (canPresent(m) ? `<button type="button" class="lh-btn" data-present-file="${esc(m.id)}"${m.legacy && hub.canEdit ? ' title="Ilova hujjati — Mobil ilova bo\'limida tahrirlanadi"' : ''}>Ochish</button>` : `<a class="lh-btn" href="${esc(safeUrl(m.url))}" target="_blank" rel="noopener">Ochish</a>`) : ''}</td></tr>`; }).join('')}
             </tbody></table></div>` : `<div class="lh-empty-sm">${list.length ? "Bu turda material yo'q" : `Hali qo'shimcha material yo'q.${hub.canEdit ? " «Material qo'shish» orqali fayl yoki havola qo'shing." : ''}`}</div>`}
             <footer class="lh-xm-f">${shown.length ? `<span>${from + 1}–${from + rows.length} / ${shown.length}</span>` : ''}
                 ${S.extraPage > 0 ? '<button type="button" class="lh-linkbtn" data-xp="-1">← oldingi</button>' : ''}${S.extraPage < pages - 1 ? '<button type="button" class="lh-linkbtn" data-xp="1">keyingi sahifa →</button>' : ''}
                 <span class="lh-muted">· Kitoblar, ustoz kitobi va dars slaydlari "Ommaviy yuklash" orqali qo'shiladi — bu yerda faqat qo'shimcha materiallar.</span></footer>
-        </section>
-        <details class="lh-card lh-legacy-box"${S.legacyOpen ? ' open' : ''}><summary><b>Eski bo'lim: ilova hujjatlari</b><span class="lh-muted">kurs rejasi, sinov darsi, platforma va jonli dars materiallari</span></summary><div class="lh-legacy tp-textbook-legacy"></div></details>`;
+        </section>`;
         const fake = { materials: list, lesson: null };
         bindMaterialActions(main, fake);
         main.querySelectorAll('[data-xf]').forEach(b => b.addEventListener('click', () => { S.extraFilter = b.dataset.xf; S.extraPage = 0; renderExtraView(main); }));
         main.querySelectorAll('[data-xp]').forEach(b => b.addEventListener('click', () => { S.extraPage += Number(b.dataset.xp); renderExtraView(main); }));
         main.querySelector('[data-xadd]')?.addEventListener('click', () => openExtraForm(() => renderExtraView(main)));
-        const legacy = main.querySelector('.lh-legacy-box');
-        const drawLegacy = () => {
-            const host = legacy.querySelector('.lh-legacy');
-            if (host.dataset.drawn) return;
-            host.dataset.drawn = '1';
-            if (typeof S.ctx.renderLegacy === 'function') S.ctx.renderLegacy(host);
-            else host.innerHTML = '<div class="lh-muted">Mavjud emas</div>';
-        };
-        legacy.addEventListener('toggle', () => { S.legacyOpen = legacy.open; if (legacy.open) drawLegacy(); });
-        if (legacy.open) drawLegacy();
     }
 
     // Yangi qo'shimcha material: dars (yoki barcha darslar), fayl yoki havola.
@@ -1330,6 +1367,13 @@
             }
         });
     }
+
+    // Sahifa sarlavhasi izohi (Darslik / DarslikKitob / DarslikMaterial / DarslikProgress / YordamchiDarslik dizaynlari).
+    (window.rdPageSubs ||= {}).textbook = ({ langLabel }) => {
+        if (window.LessonStart?.isPureAssistant?.()) return "Darslik · yordamchi ustoz · faqat ko'rish va ko'rsatish";
+        const v = VIEWS.find(x => x.id === S.view);
+        return v && v.id !== 'lessons' && langLabel ? `Darslik · ${v.label} · ${langLabel}` : null;
+    };
 
     window.LessonHub = { mount, buildSources, _state: S };
 

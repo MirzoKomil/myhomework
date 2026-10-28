@@ -169,7 +169,7 @@
         el.innerHTML = `
         <div class="wb">
             <div class="wb-bar">
-                ${S.viewAll ? `<label class="wb-tsel"><span>Ustoz:</span><select data-teacher aria-label="Ustoz">${teachers.map(t => `<option value="${esc(t.id)}"${t.id === S.teacherId ? ' selected' : ''}>${esc(t.name)}${t.n ? ` (${t.n})` : ''}</option>`).join('')}</select></label>` : ''}
+                ${S.viewAll ? `<label class="wb-tsel"><span>Ustoz:</span><select data-teacher aria-label="Ustoz">${teachers.map(t => `<option value="${esc(t.id)}"${t.id === S.teacherId ? ' selected' : ''}>${esc(t.name)}</option>`).join('')}</select></label>` : ''}
                 <div class="wb-chips" role="tablist" aria-label="Doskalar">
                     ${chips.map(c => `<button type="button" role="tab" class="wb-chip${cur && c.key === cur.key ? ' is-on' : ''}${c.template ? ' is-tpl' : ''}" data-chip="${esc(c.key)}" aria-selected="${!!cur && c.key === cur.key}"><b>${esc(c.name)}</b><small>${esc(c.sub)}</small></button>`).join('')}
                     ${!chips.length ? `<span class="wb-none">${S.viewAll ? "Bu ustozda hali doska yo'q" : "Bugun dars yo'q — yangi doska oching"}</span>` : ''}
@@ -445,6 +445,9 @@
         if (!S.el?.isConnected || !S.el.offsetParent) return;
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.target.closest?.('input,textarea,select')) { e.preventDefault(); undo(); }
     });
+
+    // Sahifa sarlavhasi izohi: yordamchi ustozda "Elektron doska · yordamchi ustoz" (YordamchiDoska dizayni).
+    (window.rdPageSubs ||= {}).whiteboard = () => (window.LessonStart?.isPureAssistant?.() ? 'Elektron doska · yordamchi ustoz' : null);
 
     window.Whiteboard = { mount, flush, render, _state: S };
 })();

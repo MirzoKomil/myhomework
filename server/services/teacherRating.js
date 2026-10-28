@@ -141,8 +141,47 @@ function prevMonthEnd(now = tashkentNow()) {
 // Joriy oy qatorlariga o'tgan oydagi o'rin va ball (▲/▼ uchun) — faqat o'rin/ball, xom davomat emas.
 // O'tgan oyda reytingda bo'lmagan ustozda prevRank/prevScore = null.
 function attachPrevious(rows, prevRows) {
-    const by = new Map((prevRows || []).map(r => [r.id, r]));
+    // O'tgan oyda birorta ham "Keldi" belgisi yo'q ustoz — o'sha oy ma'lumoti kiritilmagan (masalan, davomat
+    // tizimga 2026-oktyabrdan kiritila boshlagan). Uni 0 ball deb solishtirsak ▲ butun ballni ko'rsatadi —
+    // shuning uchun "ma'lumot yo'q" (prevScore = null, mijozda "—").
+    const by = new Map((prevRows || []).filter(r => r.completed > 0).map(r => [r.id, r]));
     return rows.map(r => { const p = by.get(r.id); return { ...r, prevRank: p ? p.rank : null, prevScore: p ? p.score : null }; });
 }
 
-module.exports = { computeTeacherRating, loadLearningByStudent, expandLessonPatternDays, daysElapsedThisMonthFor, monthKeySuffix, prevMonthEnd, attachPrevious, tashkentNow };
+const MONTH_RE = /^(\d{4})-(0[1-9]|1[0-2])$/;
+// Yangi davomat tizimi (faqat o'quvchining dars kunlaridagi "Keldi", ustozlar o'zlari kiritadi) 2026-oktyabrdan.
+// Undan oldingi oylar davomati to'liq kiritilmagan — solishtirish (▲/▼) va oy almashtirgichi shu oydan boshlanadi.
+const RATING_START = '2026-10';
+// Oyning oxirgi kuni 23:59 (Toshkent vaqti UTC maydonlarida) — o'tgan oylar uchun "now".
+function monthEnd(key) {
+    const [, y, m] = key.match(MONTH_RE);
+    return new Date(Date.UTC(Number(y), Number(m), 0, 23, 59, 0));
+}
+// Davomat qatorlari bor eng birinchi oy (kalitlar: "YYYY-MM_teacherId"). Oy almashtirgichining chap chegarasi.
+function firstDataMonth(state, ownType) {
+    const store = ownType === 'yordamchi' ? (state.assistantAttendance || {}) : (state.mainAttendance || {});
+    const months = Object.keys(store).map(k => k.slice(0, 7)).filter(k => MONTH_RE.test(k) && k >= RATING_START).sort();
+    return months[0] || RATING_START;
+}
+
+// Admin Reyting sahifasi va ustoz Bosh sahifasi uchun yagona javob.
+// month: 'YYYY-MM' (ixtiyoriy, joriy oydan keyingisi bo'lmaydi). loadLearning(now, opts) -> { studentId: pct }.
+// Javobda faqat yakuniy (ism, ball, foizlar, o'rin) — xom davomat yo'q.
+async function ratingResponse({ state, ownType, month, loadLearning, now = tashkentNow() }) {
+    const cur = monthKeySuffix(now);
+    const key = month && MONTH_RE.test(month) && month < cur && month >= RATING_START ? month : cur;
+    const isPast = key !== cur;
+    const at = isPast ? monthEnd(key) : now;
+    const learn = async (when, opts) => { try { return await loadLearning(when, opts); } catch (e) { console.error('teacher-rating: o\'zlashtirish yuklanmadi', e.message); return {}; } };
+    let current = computeTeacherRating(state, ownType, at, await learn(at, isPast ? { untilMonthEnd: true } : undefined), isPast ? { pastMonth: true } : {});
+    // O'tgan oy tanlanganda: hech kimda "Keldi" bo'lmasa — o'sha oy ma'lumoti yo'q (bo'sh ro'yxat).
+    if (isPast && !current.some(r => r.completed > 0)) current = [];
+    const prevNow = prevMonthEnd(at);
+    let prevRows = [];
+    if (monthKeySuffix(prevNow) >= RATING_START) try { prevRows = computeTeacherRating(state, ownType, prevNow, await learn(prevNow, { untilMonthEnd: true }), { pastMonth: true }); }
+    catch (err) { console.error('teacher-rating: o\'tgan oy hisoblanmadi', err.message); }
+    return { month: key, currentMonth: cur, prevMonth: monthKeySuffix(prevNow), firstMonth: firstDataMonth(state, ownType),
+        ownType, rows: attachPrevious(current, prevRows), formula: { attendance: 0.6, learning: 0.4 } };
+}
+
+module.exports = { computeTeacherRating, loadLearningByStudent, expandLessonPatternDays, daysElapsedThisMonthFor, monthKeySuffix, prevMonthEnd, attachPrevious, tashkentNow, ratingResponse, firstDataMonth, RATING_START };

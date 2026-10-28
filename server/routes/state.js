@@ -7,7 +7,7 @@ const router = express.Router();
 const { getTeacherScopedState, findUserById, pool } = require('../db');
 const { scopeState } = require('../services/stateScope');
 const teacherDuties = require('../services/teacherDuties');
-const { computeTeacherRating, loadLearningByStudent, prevMonthEnd, attachPrevious, monthKeySuffix } = require('../services/teacherRating');
+const { loadLearningByStudent, ratingResponse } = require('../services/teacherRating');
 
 // Public endpoint — student app uchun, auth talab qilmaydi
 router.get('/mobile-content', studentAuthOptional, async (req, res) => {
@@ -1063,26 +1063,11 @@ router.get('/teacher-rating', authRequired, async (req, res) => {
             ownType = req.query.type === 'yordamchi' ? 'yordamchi' : 'asosiy';
         }
         const state = await getFullState();
-        let learning = {};
-        try {
-            learning = await loadLearningByStudent(pool);
-        } catch (err) {
-            console.error('teacher-rating: o\'zlashtirish yuklanmadi', err.message);
-        }
-        const current = computeTeacherRating(state, ownType, undefined, learning);
-        // O'tgan oy (▲/▼): xuddi shu hisob, o'tgan oy oxirigacha. Xato bo'lsa ham joriy reyting qaytadi.
-        // Javobga faqat prevRank/prevScore qo'shiladi — xom davomat yo'q.
-        const prevNow = prevMonthEnd();
-        let prevRows = [];
-        try {
-            let prevLearning = {};
-            try { prevLearning = await loadLearningByStudent(pool, prevNow, { untilMonthEnd: true }); }
-            catch (err) { console.error('teacher-rating: o\'tgan oy o\'zlashtirish yuklanmadi', err.message); }
-            prevRows = computeTeacherRating(state, ownType, prevNow, prevLearning, { pastMonth: true });
-        } catch (err) { console.error('teacher-rating: o\'tgan oy hisoblanmadi', err.message); }
-        const rows = attachPrevious(current, prevRows);
-        res.json({ month: new Date().toISOString().slice(0, 7), prevMonth: monthKeySuffix(prevNow), ownType, selfId, rows,
-            formula: { attendance: 0.6, learning: 0.4 } });
+        // ?month=YYYY-MM — o'tgan oy reytingi (admin Reyting sahifasidagi oy almashtirgich). Joriy oydan keyingi oy bo'lmaydi.
+        // O'tgan oy (▲/▼) solishtiruvi: o'sha oyda "Keldi" belgisi bo'lmagan ustozda "—" (ma'lumot yo'q).
+        const data = await ratingResponse({ state, ownType, month: String(req.query.month || ''),
+            loadLearning: (now, opts) => loadLearningByStudent(pool, now, opts) });
+        res.json({ ...data, selfId });
     } catch (err) {
         console.error('GET /api/state/teacher-rating', err);
         res.status(err.status || 500).json({ error: err.status ? err.message : 'Reytingni yuklashda xatolik' });
