@@ -23,11 +23,20 @@ async function send(db, key, text, { silent = false } = {}) {
     const settings = (await store.settings(db))?.data || {};
     if (!settings.liveFeedEnabled) return;
     const events = require('./events');
+    // Cheklovsiz: kecha-kunduz, ovoz bilan; uzun ro'yxatlar Telegram chegarasidan oshmasligi uchun bo'laklarga bo'linadi.
+    const parts = [];
+    let chunk = '';
+    for (const line of String(text).split('\n')) {
+        if (chunk && chunk.length + line.length + 1 > 3300) { parts.push(chunk); chunk = ''; }
+        chunk += (chunk ? '\n' : '') + line;
+    }
+    if (chunk) parts.push(chunk);
     for (const person of await require('./scheduler').roles(db, ['admin']))
-        await events.privateMessage(db, `live:${key}:${person.telegramId}`, person, text, {
-            ...T.HTML, _setting: 'liveFeedEnabled', _expiresAt: new Date(Date.now() + 30 * 60000).toISOString(),
-            ...(silent ? { disable_notification: true } : {})
-        });
+        for (const [n, part] of parts.entries())
+            await events.privateMessage(db, `live:${key}:${person.telegramId}${n ? ':p' + n : ''}`, person, part, {
+                ...T.HTML, _setting: 'liveFeedEnabled', _expiresAt: new Date(Date.now() + 24 * 3600000).toISOString(),
+                ...(silent && settings.liveFeedSilent ? { disable_notification: true } : {})
+            });
 }
 
 async function names(db) {
@@ -55,7 +64,7 @@ function reasonOf(before, after) {
     reason = reason.replace(/\s+/g, ' ').trim();
     return reason.length > 220 ? reason.slice(0, 217) + '…' : reason;
 }
-const list = (items, max = 8) => items.slice(0, max).map(x => '• ' + x).join('\n') + (items.length > max ? `\n• … yana ${items.length - max} ta` : '');
+const list = (items, max = Infinity) => items.slice(0, max).map(x => '• ' + x).join('\n') + (items.length > max ? `\n• … yana ${items.length - max} ta` : '');
 
 async function leadFeed(db) {
     const cursor = (await db.query("SELECT value FROM domwork_bot_live_cursor WHERE name='lead_audit'")).rows[0];
@@ -112,7 +121,7 @@ async function leadFeed(db) {
 }
 
 async function hourly(db, clock, once) {
-    if (clock.minute > 1 || clock.hour < 9 || clock.hour > 22) return;
+    if (clock.minute > 1) return; // har soatda, kecha-kunduz
     await once(db, `live-hourly:${clock.date}:${clock.hour}`, async () => {
         const who = await names(db);
         const rows = (await db.query(`SELECT COALESCE(manager_id,'') AS manager, COUNT(*)::int AS n, MIN(created_at) AS oldest
@@ -121,7 +130,7 @@ async function hourly(db, clock, once) {
         const total = rows.reduce((s, r) => s + r.n, 0);
         const age = d => { const h = Math.floor((Date.now() - new Date(d).getTime()) / 3600000); return h >= 48 ? Math.floor(h / 24) + ' kun' : h >= 1 ? h + ' soat' : '1 soatdan kam'; };
         const text = `🕐 <b>Soat ${String(clock.hour).padStart(2, '0')}:00 · lidlar holati</b>\n\n📥 So‘nggi 1 soatda tushgan: ${T.b(lastHour + ' ta')}\n`
-            + (total ? `⚠️ Ishlatilmay turgan (Yangi lidlar bosqichida): ${T.b(total + ' ta')}\n` + list(rows.map(r => `${T.esc(who(r.manager))} — ${T.b(r.n + ' ta')} (eng eskisi ${age(r.oldest)})`), 12)
+            + (total ? `⚠️ Ishlatilmay turgan (Yangi lidlar bosqichida): ${T.b(total + ' ta')}\n` + list(rows.map(r => `${T.esc(who(r.manager))} — ${T.b(r.n + ' ta')} (eng eskisi ${age(r.oldest)})`))
                 : '✅ Ishlatilmay turgan yangi lid yo‘q — zo‘r!');
         await send(db, `hourly:${clock.date}:${clock.hour}`, text, { silent: true });
     });
