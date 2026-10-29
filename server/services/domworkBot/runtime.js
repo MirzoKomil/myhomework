@@ -222,9 +222,13 @@ function createRuntime({ pool, crm, env = process.env, redisFactory, telegramFac
             let ok = false;
             try {
                 const info = await Promise.race([call('getWebhookInfo', {}), new Promise((_, reject) => setTimeout(() => reject(Error('timeout')), 4000))]);
-                const recentError = info.last_error_date && Date.now() / 1000 - info.last_error_date < 600;
-                const stuck = (await pool.query("SELECT 1 FROM domwork_bot_updates WHERE state IN ('pending','working') AND created_at<NOW()-INTERVAL '5 minutes' LIMIT 1")).rows.length;
-                ok = !!config.webhookUrl && info.url === config.webhookUrl && !recentError && (info.pending_update_count || 0) < 100 && !stuck;
+                // Bitta tasodifiy webhook xatosi yoki qayta urinishdagi update botni "kasal" qilmasin:
+                // nosoz deb faqat Telegram navbati to'planib qolsa (xato davom etyapti) yoki bizda update'lar qayta ishlanmay qolsa.
+                const pending = info.pending_update_count || 0;
+                const recentError = info.last_error_date && Date.now() / 1000 - info.last_error_date < 600 && pending >= 10;
+                const stuck = (await pool.query(`SELECT COUNT(*)::int AS n FROM domwork_bot_updates WHERE (state='pending' AND next_attempt<NOW()-INTERVAL '5 minutes')
+                    OR (state='working' AND lease_until<NOW()-INTERVAL '5 minutes')`)).rows[0].n >= 5;
+                ok = !!config.webhookUrl && info.url === config.webhookUrl && !recentError && pending < 100 && !stuck;
             } catch { ok = false; }
             health = { ok, at: Date.now() };
             return ok;
