@@ -40,6 +40,7 @@ async function init(db) {
     // 30-okt: voronkani ishga tushirish (bir marta). Keyin Bot boshqaruvidan o'chirilsa — o'chiq qoladi.
     await db.query(`UPDATE domwork_bot_settings SET data=data||'{"funnelEnabled":true,"dripEnabled":true,"funnelLaunch20261030":true}'::jsonb
         ||(CASE WHEN data ? 'discountPercent' THEN '{}'::jsonb ELSE '{"discountPercent":15,"discountHours":72}'::jsonb END)
+        ||(CASE WHEN COALESCE(data->>'bonusChannel','')<>'' THEN '{}'::jsonb ELSE '{"bonusChannel":"@domwork"}'::jsonb END)
         WHERE singleton=1 AND NOT (data ? 'funnelLaunch20261030')`);
 }
 
