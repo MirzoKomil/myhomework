@@ -89,14 +89,16 @@
                 <p class="dg-note">«uncertain» — Telegram yuborgan bo‘lishi mumkin. Takror yuborish avtomatik bajarilmaydi.</p>
                 ${deliveries.failures.map(r=>`<p>${esc(r.state)} · ${esc(r.last_error)} · ${esc(r.id)}</p>`).join('')}
                 <h4>Avtomatik vazifalar xatolari</h4>${(deliveries.errors||[]).map(r=>`<p class="dg-error">${esc(new Date(r.created_at).toLocaleString('uz-UZ',{timeZone:'Asia/Tashkent'}))} · ${esc(r.part)} · ${esc(r.message)}</p>`).join('') || '<p>Xato yo‘q ✅</p>'}
+                <label>Hisobot kuni<input class="form-control" type="date" data-db-report-date value="${(()=>{const d=new Date(Date.now()+5*3600000);if(d.getUTCHours()<12)d.setUTCDate(d.getUTCDate()-1);return d.toISOString().slice(0,10);})()}"></label>
                 <button class="btn-secondary-sm" data-db-report-now type="button">Kun yakuni hisobotini hozir yuborish</button></details>
             <button class="btn-secondary-sm" data-db-refresh type="button">Yangilash</button></div>`;
         let busy=false;
         const notify=(value,failed=false)=>{const node=el.querySelector('[data-db-message]');node.textContent=value;node.classList.toggle('dg-error',failed);};
         async function work(fn){if(busy)return;busy=true;const states=[...el.querySelectorAll('button')].map(b=>[b,b.disabled]);states.forEach(([b])=>b.disabled=true);try{await fn();}catch(e){notify(e.message,true);}finally{busy=false;states.forEach(([b,disabled])=>{if(b.isConnected)b.disabled=disabled;});}}
         el.querySelector('[data-db-report-now]')?.addEventListener('click',()=>work(async()=>{
-            if(!confirm('Bugungi kun yakuni hisobotini hozir rahbar, ROP, targetolog va Sotuv/Marketing guruhlariga yuboraymi?'))return;
-            const r=await api('/reports/send-now',{});notify(`Hisobot navbatga qo‘yildi (${r.recipients} ta xodim + guruhlar). 1–2 daqiqada keladi.`);
+            const date=el.querySelector('[data-db-report-date]')?.value;
+            if(!confirm(`${date} kun yakuni hisobotini hozir rahbar, ROP, targetolog va Sotuv/Marketing guruhlariga yuboraymi?`))return;
+            const r=await api('/reports/send-now',date?{date}:{});notify(`Hisobot navbatga qo‘yildi (${r.recipients} ta xodim + guruhlar). 1–2 daqiqada keladi.`);
         }));
         el.querySelector('[data-db-webhook]').onclick=()=>work(async()=>{
             if(!confirm('@Domworkuz_bot uchun CRM webhookini ulaysizmi?'))return;
