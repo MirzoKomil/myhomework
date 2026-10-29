@@ -222,6 +222,11 @@
           <ol class="ss-steps">${steps.map(([t, s], i) => `<li class="${i < cur ? 'done' : i === cur && day <= 5 ? 'now' : ''}"><i>${i < cur ? ICON.check : i + 1}</i><b>${esc(t)}</b><span>${esc(s)}</span></li>`).join('')}</ol></section>`;
     }
     function lastPaid(d) {
+        // 1–5-sana: yopilgan, hali to'lanmagan o'tgan oy (server /api/staff/salary → closed; Bosh/Davomat bilan bir summa).
+        if (d.closed) {
+            const nx = MON[Number(d.month.slice(5)) - 1];
+            return `<div class="ss-kpi"><span>${monName(d.closed.month)} · yopildi</span><b>${num(d.closed.amount)} so'm</b><small>${d.kind === 'assistant' && d.closed.counted ? `${d.closed.counted} aloqa · ` : ''}5-${esc(nx.slice(0, 3))} to'lanadi${d.card4 ? ` · karta •••• ${esc(d.card4)}` : ''}</small></div>`;
+        }
         const prev = (d.history || []).filter(h => h.month < d.month).sort((a, b) => b.month.localeCompare(a.month))[0];
         if (!prev) return `<div class="ss-kpi"><span>O'tgan oy</span><b>—</b><small>hali hisob yo'q</small></div>`;
         return `<div class="ss-kpi"><span>${monName(prev.month)} · ${prev.status === 'paid' ? 'berilgan' : 'hisoblangan'}</span><b>${num(prev.amount)} so'm</b><small>${d.assist?.prevCounted && prev.month === d.assist.prevMonth ? `${d.assist.prevCounted} aloqa · ` : ''}${prev.status === 'paid' && prev.paidAt ? dShort(tzDate(prev.paidAt)) : 'hali berilmagan'}${d.card4 ? `${d.kind === 'assistant' ? ' ' : ' · '}karta •••• ${esc(d.card4)}` : ''}</small></div>`;
@@ -229,6 +234,7 @@
     function chartAndHistory(d, override = null) {
         const cur = override != null ? override : d.current ? Number(d.current.total) || 0 : null;
         const by = new Map(); for (const h of d.history || []) by.set(h.month, h);
+        if (d.closed && !by.has(d.closed.month)) by.set(d.closed.month, { month: d.closed.month, amount: d.closed.amount, status: 'closed' });
         const months = Array.from({ length: 6 }, (_, i) => { const [y, m] = d.month.split('-').map(Number); return new Date(Date.UTC(y, m - 6 + i, 1)).toISOString().slice(0, 7); });
         const rows = months.map(k => k === d.month ? { k, amount: cur ?? by.get(k)?.amount ?? 0, st: 'cur' } : { k, amount: by.get(k)?.amount || 0, st: by.get(k)?.status || 'none' });
         const max = Math.max(1, ...rows.map(r => r.amount));
@@ -236,7 +242,7 @@
         return `<div class="ss-two"><section class="ss-card" aria-labelledby="ssChH"><header class="ss-ch"><h3 id="ssChH">Oxirgi 6 oy · mln so'm</h3></header>
             <div class="ss-pad ss-chart">${rows.map(r => `<div class="ss-bar${r.st === 'cur' ? ' cur' : ''}" title="${monName(r.k)}: ${num(r.amount)} so'm"><em>${r.amount ? fmtM(r.amount) : '—'}</em><i style="height:${Math.max(3, Math.round(r.amount / max * 100))}%"></i><span>${MON3[Number(r.k.slice(5)) - 1]}</span></div>`).join('')}</div></section>
           <section class="ss-card" aria-labelledby="ssHiH"><header class="ss-ch"><h3 id="ssHiH">To'lov tarixi</h3></header>
-            <ul class="ss-hist">${rows.slice().reverse().map(r => `<li><i class="ss-dot ${r.st === 'paid' ? 'ok' : r.st === 'cur' ? 'warn' : r.st === 'unpaid' ? 'info' : ''}"></i><span>${monName(r.k)} · ${r.st === 'paid' ? 'berilgan' : r.st === 'cur' ? 'hozirgacha' : r.st === 'unpaid' ? 'hisoblangan' : 'ma\'lumot yo\'q'}</span><b>${r.amount ? num(r.amount) : '—'}</b></li>`).join('')}</ul></section></div>`;
+            <ul class="ss-hist">${rows.slice().reverse().map(r => `<li><i class="ss-dot ${r.st === 'paid' ? 'ok' : r.st === 'cur' ? 'warn' : r.st === 'unpaid' || r.st === 'closed' ? 'info' : ''}"></i><span>${monName(r.k)} · ${r.st === 'paid' ? 'berilgan' : r.st === 'cur' ? 'hozirgacha' : r.st === 'unpaid' ? 'hisoblangan' : r.st === 'closed' ? 'yopildi · to\'lanmagan' : 'ma\'lumot yo\'q'}</span><b>${r.amount ? num(r.amount) : '—'}</b></li>`).join('')}</ul></section></div>`;
     }
     // Maosh bosqichlari (ustoz va yordamchi): oy 1-sanada yopiladi → 4-sanagacha tekshiruv/e'tiroz → 5-sanada to'lanadi.
     // Dizaynda alohida blok yo'q — jadval ostidagi izoh qatorida ko'rsatiladi.
@@ -337,7 +343,7 @@
         body.innerHTML = head('Mening maoshim · aloqalar bo\'yicha') + `<div class="ss-col">
           <div class="ss-kpis ss-kpis--as">
             <div class="ss-kpi"><span>${monName(d.month)} · hozirgacha</span><b>${num(a.amount)} so'm</b><small>${a.counted} aloqa × ${num(a.rate)}</small></div>
-            <div class="ss-kpi"><span>Oy oxirigacha ko'pi bilan</span><b>${num(a.possible * a.rate)} so'm</b><small>${a.possible} aloqa · ${a.daysLeft} kun qoldi</small></div>
+            <div class="ss-kpi"><span>Oy oxirigacha ko'pi bilan</span><b>${num(a.possibleAmount ?? a.possible * a.rate)} so'm</b><small>${a.possible} aloqa · ${a.daysLeft} kun qoldi</small></div>
             ${lastPaid(d)}</div>
           <section class="ss-card" aria-labelledby="ssAsH"><header class="ss-ch"><h3 id="ssAsH">${monName(d.month)} · o'quvchilar bo'yicha</h3><span class="ss-mt">har o'quvchi bilan oyiga ${a.cap} tagacha · kamida 5 daqiqa</span></header>
             <div class="ss-tw"><table class="ss-tbl ss-tbl--as"><thead><tr><th scope="col">O'quvchi</th><th scope="col" class="n">Hisoblangan aloqa</th><th scope="col" class="n">Summa</th><th scope="col">Holat</th></tr></thead>
@@ -474,6 +480,9 @@
         return root.innerHTML;
     }
     const AUTHOR_ROLE = { admin: 'admin', boshliq: 'rahbar', hr: 'HR', rop: 'ROP' };
+    // Bo'lim (kategoriya): admin izoh (subtitle) yozmagan bo'lsa — kimga mo'ljallanganidan (UstozYoriqnoma: "Akademik · 27-okt · 3 daq o'qish").
+    const CAT = [[['teacher_main', 'teacher_assistant', 'head_of_teachers'], 'Akademik', "Akademik bo'lim"], [['sales_manager', 'rop'], 'Sotuv', "Sotuv bo'limi"], [['hr'], 'HR', "HR bo'limi"], [['marketolog'], 'Marketing', "Marketing bo'limi"]];
+    const catOf = (g, long = false) => { if (g?.subtitle) return g.subtitle; const c = CAT.find(([keys]) => (g?.targetRoles || []).some(t => keys.includes(t))); return c ? c[long ? 2 : 1] : ''; };
     function guidesRoot() {
         const sec = document.getElementById('tab-guides'); if (!sec) return null;
         let root = document.getElementById('sgGuides');
@@ -497,8 +506,8 @@
         const acked = g && G.acks?.get(g.id);
         root.innerHTML = `<div class="sg-head"><h1>Yo'riqnomalar</h1><p>Lavozimingizga tegishli qoidalar · yangilari tepada</p></div>
           ${all.length ? `<div class="sg-grid"><aside class="ss-card sg-list" aria-label="Yo'riqnomalar ro'yxati"><div class="sg-search"><label for="sgQ" class="sg-sr">Qidirish</label><input id="sgQ" type="search" placeholder="Qidirish…" value="${esc(G.q)}"></div>
-            <ul>${list.map(x => { const done = G.acks?.has(x.id); return `<li><button type="button" class="sg-it${x.id === G.sel ? ' on' : ''}" data-g="${esc(x.id)}" aria-current="${x.id === G.sel}"><span class="sg-ic">${ICON.doc}</span><span class="sg-tx"><b>${esc(x.title || 'Nomsiz')}</b><small>${[x.subtitle, x.createdAt ? dShort(tzDate(x.createdAt)) : '', done ? 'o\'qilgan' : readMin(x) + ' daq o\'qish'].filter(Boolean).map(esc).join(' · ')}</small></span>${done ? '' : '<i class="ss-pill info sg-new">Yangi</i>'}</button></li>`; }).join('') || '<li class="ss-mt sg-empty">Topilmadi</li>'}</ul></aside>
-            <article class="ss-card sg-art" aria-labelledby="sgT">${g ? `<div class="sg-body"><h2 id="sgT">${esc(g.title || '')}</h2><p class="sg-meta">${[g.subtitle, author, g.createdAt ? dmy(tzDate(g.createdAt)) : ''].filter(Boolean).map(esc).join(' · ')}</p>
+            <ul>${list.map(x => { const done = G.acks?.has(x.id); return `<li><button type="button" class="sg-it${x.id === G.sel ? ' on' : ''}" data-g="${esc(x.id)}" aria-current="${x.id === G.sel}"><span class="sg-ic">${ICON.doc}</span><span class="sg-tx"><b>${esc(x.title || 'Nomsiz')}</b><small>${[catOf(x), x.createdAt ? dShort(tzDate(x.createdAt)) : '', done ? 'o\'qilgan' : readMin(x) + ' daq o\'qish'].filter(Boolean).map(esc).join(' · ')}</small></span>${done ? '' : '<i class="ss-pill info sg-new">Yangi</i>'}</button></li>`; }).join('') || '<li class="ss-mt sg-empty">Topilmadi</li>'}</ul></aside>
+            <article class="ss-card sg-art" aria-labelledby="sgT">${g ? `<div class="sg-body"><h2 id="sgT">${esc(g.title || '')}</h2><p class="sg-meta">${[catOf(g, true), author, g.createdAt ? dmy(tzDate(g.createdAt)) : ''].filter(Boolean).map(esc).join(' · ')}</p>
               <div class="sg-content">${content}</div></div>
               <footer class="sg-foot"><span class="ss-mt">${acked ? `Tanishib chiqdingiz · ${esc(dmy(tzDate(acked)))}` : 'O\'qib chiqqaningizni tasdiqlang — admin ko\'radi'}</span>${acked ? `<i class="ss-pill ok">${ICON.check} Tanishib chiqdim</i>` : '<button type="button" class="ss-btn ss-btn--pri" data-ack>Tanishib chiqdim</button>'}</footer>` : ''}</article></div>`
             : (typeof teamEmptyState === 'function' ? teamEmptyState('Hozircha yoʻriqnoma yoʻq', 'Sizga tegishli yoʻriqnoma kiritilganda shu yerda chiqadi.', 'board') : '<div class="ss-card ss-pad">Hozircha yoʻriqnoma yoʻq</div>')}`;

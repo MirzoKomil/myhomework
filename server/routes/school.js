@@ -354,6 +354,9 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
     router.post('/makeups/plan', handle(req => write(req, c => planMakeup(req, c, req.body || {}))));
     router.post('/makeups/:id/held', handle(req => write(req, async c => {
         const me = await teacherOf(req);
+        // Rejadagi qoplash faqat o'tgandan keyin (bugun yoki oldin) "o'tkazildi" — tekshiruvga.
+        const cur = (await c.query('SELECT held_date FROM school_makeups WHERE id=$1 AND teacher_id=$2', [req.params.id, me.id])).rows[0];
+        if (cur?.held_date && S.dateStr(cur.held_date) > T.nowLocal().date) throw T.fail(400, 'Qoplash darsi hali o\'tmagan — o\'tgan kuni belgilang');
         const { rows } = await c.query(`UPDATE school_makeups SET status='review' WHERE id=$1 AND teacher_id=$2 AND status='planned' RETURNING *`, [req.params.id, me.id]);
         if (!rows.length) throw T.fail(409, 'Qoplash topilmadi yoki allaqachon belgilangan');
         return { makeup: rows[0] };
@@ -371,16 +374,35 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         if (!st || st.teacher_id !== me.id) throw T.fail(403, 'Bu o\'quvchi sizniki emas');
         return { teacherId: me.id, admin: false };
     }
+    // O'tib bo'lingan qoplash (alohida kun yoki "Keldi · 2 dars") tekshiruvi — planMakeup bilan bir qoida:
+    //  • qoldirilgan dars sanasi ≤ qoplash sanasi, ikkalasi bir oyda; qoplash sanasi o'tgan (kelajakka "o'tkazildi" yo'q);
+    //  • qoldirilgan sanada "Keldi" bo'lsa — qoplash yo'q (admin uchun ham);
+    //  • ustoz: qoldirilgan dars haqiqatan "Kelmadi" deb belgilangan va hali qoplanmagan (S.missedLessons); oy yopilgan bo'lsa — yo'q;
+    //    alohida kun — o'quvchining dars kuni bo'lmagan kun; qo'shaloq dars — o'quvchining dars kuni va shu kuni "Keldi" belgilangan.
     async function insertHeldMakeup(req, c, kind) {
         const own = await makeupOwner(req, c);
-        const missed = T.assertDate(req.body.missedDate), held = T.assertDate(req.body.heldDate);
+        const missed = T.assertDate(req.body.missedDate, 'Qoldirilgan dars sanasi'), held = T.assertDate(req.body.heldDate, 'Qoplash sanasi');
+        const today = T.nowLocal().date;
         if (missed.slice(0, 7) !== held.slice(0, 7)) throw T.fail(400, 'Qoplash shu oy ichida bo\'ladi');
         // Qoplash qoldirilgan darsdan keyin (yoki shu kuni keyinroq) bo'ladi — oldingi sanaga emas.
         if (held < missed) throw T.fail(400, 'Qoplash darsi qoldirilgan darsdan keyin bo\'ladi');
-        if (kind === 'separate' && held > T.nowLocal().date) throw T.fail(400, 'Qoplash darsi hali o\'tmagan');
-        if (kind === 'separate' && !own.admin) {
+        if (held > today) throw T.fail(400, kind === 'double' ? 'Qo\'shaloq dars hali o\'tmagan — dars kuni belgilanadi' : 'Qoplash darsi hali o\'tmagan');
+        const key = `${missed.slice(0, 7)}_${own.teacherId}`;
+        const came = (await c.query('SELECT 1 FROM main_attendance WHERE att_key=$1 AND student_id=$2 AND day=$3 AND present=1', [key, req.body.studentId, Number(missed.slice(8))])).rows.length;
+        if (came) throw T.fail(400, 'Bu sanada o\'quvchi "Keldi" — qoplash kerak emas');
+        if (!own.admin) {
+            if (held.slice(0, 7) < today.slice(0, 7)) throw T.fail(409, 'Oy yopilgan — qoplashni admin orqali kiriting');
+            const open = (await S.missedLessons(c, own.teacherId, { from: missed, to: missed })).some(m => m.studentId === req.body.studentId && m.date === missed && !m.makeup);
+            if (!open) throw T.fail(400, 'Bu sanada "Kelmadi" deb belgilangan, qoplanmagan dars yo\'q');
             const ld = (await c.query('SELECT lesson_day_of_week FROM students WHERE id=$1', [req.body.studentId])).rows[0]?.lesson_day_of_week;
-            if (ld != null && T.patternDays(ld).includes(T.weekday(held))) throw T.fail(400, 'Qoplash darsi o\'quvchining dars kuni bo\'lmagan kunda bo\'ladi — dars kunida "Keldi · 2 dars" ni tanlang');
+            const lessonDay = ld != null && T.patternDays(ld).includes(T.weekday(held));
+            if (kind === 'separate' && lessonDay) throw T.fail(400, 'Qoplash darsi o\'quvchining dars kuni bo\'lmagan kunda bo\'ladi — dars kunida "Keldi · 2 dars" ni tanlang');
+            if (kind === 'double') {
+                if (ld != null && !lessonDay) throw T.fail(400, '"Keldi · 2 dars" faqat o\'quvchining dars kunida — boshqa kunga alohida qoplash darsi qo\'ying');
+                const heldCame = (await c.query('SELECT 1 FROM main_attendance WHERE att_key=$1 AND student_id=$2 AND day=$3 AND present=1',
+                    [`${held.slice(0, 7)}_${own.teacherId}`, req.body.studentId, Number(held.slice(8))])).rows.length;
+                if (!heldCame) throw T.fail(400, 'Qo\'shaloq dars uchun avval shu kuni "Keldi" belgilang');
+            }
         }
         const { rows } = await c.query(`INSERT INTO school_makeups (id,student_id,teacher_id,missed_date,held_date,kind,status,created_by,decided_by,decided_by_name,decided_at,decision_note)
             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`, [randomUUID(), req.body.studentId, own.teacherId, missed, held, kind, own.admin ? 'approved' : 'review', req.user.id,
@@ -465,9 +487,21 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
             card.requests = (await pool.query('SELECT * FROM school_edit_requests WHERE student_id=$1 ORDER BY created_at DESC LIMIT 20', [row.id])).rows;
         }
         if (scope === 'past') { delete card.schedule; delete card.group; }
+        // Yordamchi (faqat shu o'quvchining HOZIRGI yordamchisi — canSee 'assistant'): "Asosiy ustozga yozish" uchun hamkasb Telegram'i.
+        // Telefon berilmaydi — faqat profildagi @username (Sozlamalar → Profil, staff_profile_extra.telegram).
+        if (scope === 'assistant') card.mainTeacher = await mainTeacherContact(pool, row.teacher_id);
         for (const k of Object.keys(card)) if (scope !== 'full' && scope !== 'sales' && MONEY_KEYS.test(k)) delete card[k];
         return { card };
     }));
+    async function mainTeacherContact(db, teacherId) {
+        if (!teacherId) return null;
+        const r = (await db.query(`SELECT he.id, he.name, COALESCE(x.telegram,'') AS telegram FROM hr_employees he
+            LEFT JOIN users u ON LOWER(TRIM(u.email)) = LOWER(TRIM(he.login)) LEFT JOIN staff_profile_extra x ON x.user_id = u.id
+            WHERE he.id=$1 LIMIT 1`, [teacherId]).catch(() => ({ rows: [] }))).rows[0];
+        if (!r) return null;
+        const tg = String(r.telegram || '').trim().replace(/^@?/, '');
+        return { id: r.id, name: r.name, telegram: /^[A-Za-z][A-Za-z0-9_]{3,31}$/.test(tg) ? '@' + tg : '' };
+    }
     // ── Kartaning qo'shimcha bo'limlari: Davomat · O'zlashtirish · To'lovlar · Sotuv tarixi ──
     async function cardRow(req) {
         const row = (await pool.query('SELECT * FROM students WHERE id=$1', [req.params.id])).rows[0];
@@ -602,7 +636,8 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
             const coveredN = mks.filter(m => m.student_id === row.id && ['review', 'approved', 'planned'].includes(m.status)).length;
             const passedPlan = lessonDays.filter(d => d <= td).length;
             const nextDay = lessonDays.find(d => d > td || (d === td && (T.toMin(st.time) ?? 0) > T.nowLocal().min)) || null;
-            const cr = A.countMonth(contacts.filter(c => c.student_id === row.id && c.assistant_id === (row.assistant_teacher_id || '')).map(c => ({ ...c, day: S.dateStr(c.day) })));
+            const cr = A.countMonth(contacts.filter(c => c.student_id === row.id && c.assistant_id === (row.assistant_teacher_id || '')).map(c => ({ ...c, day: S.dateStr(c.day) })),
+                { starts: { [row.id]: A.studentStartOf(row.extra_data) } });
             const ci = cr.students[0]?.items || [];
             const last = ci[ci.length - 1] || null;
             const p = progress[row.id] || null;
@@ -802,6 +837,10 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         const statuses = (await c.query('SELECT * FROM school_student_status WHERE student_id=$1 AND cancelled_at IS NULL', [st.id])).rows;
         if (S.statusOn(statuses, day) !== 'active') throw T.fail(409, 'O\'sha kuni o\'quvchi faol emas (muzlatilgan yoki chiqib ketgan)');
         const reason = String(req.body?.reason || '').trim(); if (reason.length < 5) throw T.fail(400, 'Sababni yozing');
+        // Bir o'quvchi + bir kun uchun bitta ochiq so'rov (parallel yuborishda ham — tranzaksiya qulfi).
+        await c.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`assist_late:${st.id}:${day}`]);
+        const dup = (await c.query(`SELECT 1 FROM school_requests WHERE type='assist_late' AND status='new' AND payload->>'studentId'=$1 AND payload->>'day'=$2 LIMIT 1`, [st.id, day])).rows.length;
+        if (dup) throw T.fail(409, 'Bu o\'quvchi va kun uchun so\'rov allaqachon yuborilgan — admin ko\'rib chiqmoqda');
         const channel = A.CHANNELS[req.body?.channel] ? req.body.channel : 'phone';
         const minutes = Math.max(0, Math.min(180, Math.round(Number(req.body?.minutes) || 0)));
         const { rows } = await c.query(`INSERT INTO school_requests (id,teacher_id,requester_id,requester_name,type,payload,reason) VALUES ($1,$2,$3,$4,'assist_late',$5,$6) RETURNING *`,
@@ -818,7 +857,11 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         // Joriy oy: "oy oxirigacha ko'pi bilan" va har o'quvchida qolgan tavsiya kunlari — Mening maoshim bilan bitta hisob.
         if (duty && String(month) === T.nowLocal().date.slice(0, 7)) {
             const pl = await A.possibleLeft(pool, assistantId, month, rep);
-            rep.possible = pl.possible;
+            rep.possible = pl.possible; rep.possibleAmount = pl.possibleAmount;
+            // Joriy hafta rejasi (Bosh "Bu hafta 12 / 47") — Davomat va Dars jadvali bilan bitta hisob (AttendanceRules.weekPlanCount).
+            const ws = T.weekStart(T.nowLocal().date), we = T.addDays(ws, 6);
+            const wp = await A.plan(pool, { assistantIds: [assistantId], from: ws, to: we }).catch(() => null);
+            if (wp) rep.week = { from: ws, to: we, planned: require('../../js/attendanceRules').weekPlanCount(wp.items) };
             rep.left = Object.fromEntries(pl.students.map(x => [x.studentId, { adviceLeft: x.adviceLeft, possible: x.possible }]));
         }
         return rep;
@@ -861,7 +904,12 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         const month = req.query.month || T.nowLocal().date.slice(0, 7);
         const { from, to } = T.monthBounds(month);
         const rows = (await pool.query('SELECT * FROM school_assist_contacts WHERE student_id=$1 AND day BETWEEN $2 AND $3', [row.id, from, to])).rows;
-        const r = A.countMonth(rows).students[0] || { counted: 0, noAnswer: 0, items: [] };
+        // Har yordamchi o'z oyida alohida hisoblanadi (maosh bilan bir xil); kurs boshlanishidan oldingi aloqa — before_start.
+        const starts = { [row.id]: A.studentStartOf(row.extra_data) };
+        const byA = new Map(); for (const c of rows) { if (!byA.has(c.assistant_id)) byA.set(c.assistant_id, []); byA.get(c.assistant_id).push(c); }
+        const parts = [...byA.values()].map(list => A.countMonth(list, { starts }).students[0]).filter(Boolean);
+        const r = { counted: parts.reduce((n, x) => n + x.counted, 0), noAnswer: parts.reduce((n, x) => n + x.noAnswer, 0),
+            items: parts.flatMap(x => x.items).sort((a, b) => String(a.day).localeCompare(String(b.day))) };
         return { month, cap: A.MONTH_CAP, counted: r.counted, noAnswer: r.noAnswer, items: r.items };
     }));
     // Yordamchi o'quvchilaridagi oy ichidagi o'zgarishlar (muzlatish, qaytish, chiqib ketish, asosiy ustoz almashishi) — faqat o'qish.

@@ -19,21 +19,50 @@ const { fail } = T;
 const MONTHLY_DEFAULT = 40000;
 const RATE = Math.round(MONTHLY_DEFAULT / 13);
 const MONTH_CAP = 13;
+// Aloqalar bo'yicha hisob shu oydan (payroll.js ham shu qiymatni oladi — bitta manba).
+const CONTACTS_FROM = process.env.ASSIST_CONTACTS_FROM || '2026-10';
+// 29-okt qaroridan oldingi yordamchi oylik tarifi (sentyabr va undan oldin: 50 000 → 3 846 so'm × aloqa).
+const LEGACY_MONTHLY = 50000;
+// Summa = round(oylik tarif × hisoblangan aloqalar / 13): 13 aloqa aniq oylik tarif (40 000, 40 001 emas).
+// payrollEngine contacts-v1 bilan bir xil formula (har o'quvchi bo'yicha yaxlitlanadi).
+function contactAmount(monthly, counted) { return Math.round((Number(monthly) || 0) * (Number(counted) || 0) / MONTH_CAP); }
+// O'quvchi kurs boshlagan sana — payrollEngine bilan bir xil (extra_data.startDate || joinDate).
+function studentStartOf(extra) {
+    let x = extra;
+    if (typeof x === 'string') { try { x = JSON.parse(x); } catch { x = {}; } }
+    const v = String(x?.startDate || x?.joinDate || '').slice(0, 10);
+    return /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null;
+}
+async function studentStarts(db, ids) {
+    const list = [...new Set((ids || []).filter(Boolean).map(String))];
+    if (!list.length) return new Map();
+    const rows = (await db.query('SELECT id, extra_data FROM students WHERE id = ANY($1::text[])', [list])).rows;
+    return new Map(rows.map(r => [r.id, studentStartOf(r.extra_data)]).filter(([, d]) => d));
+}
 const MIN_MINUTES = 5;
 const CHANNELS = { phone: 'Telefon', zoom: 'Zoom', meet: 'Google Meet', tg_video: 'Telegram video', tg_group: 'Telegram guruh videodars', tg_text: 'Telegram yozishma' };
 
 // Sof hisob: bir yordamchining oy aloqalari → har o'quvchi bo'yicha hisoblangan soni.
-function countMonth(contacts, rate = RATE) {
+// opts.monthly — yordamchi oylik tarifi (summa = round(monthly × hisoblangan / 13)); eski chaqiruv (2-argument son) — bir aloqa narxi.
+// opts.starts — o'quvchi kurs boshlagan sana (Map yoki obyekt): undan oldingi aloqa "before_start" — sanalmaydi
+// va oylik chegarani band qilmaydi (maosh hisobi bilan bir xil).
+function countMonth(contacts, opts = {}) {
+    if (typeof opts === 'number') opts = { monthly: opts === RATE ? MONTHLY_DEFAULT : opts * MONTH_CAP };
+    const monthly = Number(opts.monthly) > 0 ? Number(opts.monthly) : MONTHLY_DEFAULT;
+    const rate = Math.round(monthly / MONTH_CAP);
+    const startOf = sid => (opts.starts instanceof Map ? opts.starts.get(sid) : opts.starts?.[sid]) || null;
     const byStudent = new Map();
     const rows = [...contacts].filter(c => !c.removed_at)
         .sort((a, b) => String(S.dateStr(a.day)).localeCompare(String(S.dateStr(b.day))) || String(a.created_at).localeCompare(String(b.created_at)));
     for (const c of rows) {
         const sid = c.student_id;
-        if (!byStudent.has(sid)) byStudent.set(sid, { studentId: sid, counted: 0, noAnswer: 0, overCap: 0, short: 0, sameDay: 0, extraText: 0, days: new Set(), textWeeks: new Set(), items: [] });
+        if (!byStudent.has(sid)) byStudent.set(sid, { studentId: sid, counted: 0, noAnswer: 0, overCap: 0, short: 0, sameDay: 0, extraText: 0, beforeStart: 0, days: new Set(), textWeeks: new Set(), items: [] });
         const s = byStudent.get(sid);
         const day = S.dateStr(c.day);
+        const start = startOf(sid);
         let status = 'counted';
-        if (c.outcome === 'no_answer') status = 'no_answer';
+        if (start && day < start) status = 'before_start';
+        else if (c.outcome === 'no_answer') status = 'no_answer';
         else if (c.channel !== 'tg_text' && Number(c.minutes) < MIN_MINUTES) status = 'short';
         else if (s.days.has(day)) status = 'same_day';
         else if (c.channel === 'tg_text' && s.textWeeks.has(T.weekStart(day))) status = 'extra_text';
@@ -43,13 +72,14 @@ function countMonth(contacts, rate = RATE) {
         else if (status === 'over_cap') s.overCap++;
         else if (status === 'short') s.short++;
         else if (status === 'same_day') s.sameDay++;
+        else if (status === 'before_start') s.beforeStart++;
         else s.extraText++;
         s.items.push({ id: c.id, day, at: c.at_min ?? null, channel: c.channel, minutes: c.minutes, outcome: c.outcome, status, note: c.note || '', corrected: !!c.correction_reason });
     }
-    const students = [...byStudent.values()].map(({ days, textWeeks, ...rest }) => ({ ...rest, amount: rest.counted * rate }));
+    const students = [...byStudent.values()].map(({ days, textWeeks, ...rest }) => ({ ...rest, amount: contactAmount(monthly, rest.counted) }));
     const counted = students.reduce((n, s) => n + s.counted, 0);
-    return { students, counted, amount: counted * rate, noAnswer: students.reduce((n, s) => n + s.noAnswer, 0),
-        overCap: students.reduce((n, s) => n + s.overCap, 0) };
+    return { students, counted, rate, monthly, amount: students.reduce((n, s) => n + s.amount, 0), noAnswer: students.reduce((n, s) => n + s.noAnswer, 0),
+        overCap: students.reduce((n, s) => n + s.overCap, 0), beforeStart: students.reduce((n, s) => n + s.beforeStart, 0) };
 }
 
 async function assistantForActor(db, actor) {
@@ -144,23 +174,73 @@ async function adminCorrect(db, actor, body, now = new Date()) {
     return rows[0];
 }
 
-// Bir aloqa narxi — maosh hisobi (payrollEngine contacts-v1: round(tarif / 13)) bilan bitta manba.
-async function contactRate(db, assistantId) {
+// Yordamchi oylik tarifi shu oy uchun — maosh hisobi (payrollEngine contacts-v1: round(tarif × aloqa / 13)) bilan bitta manba:
+//  • shu oy uchun Moliya hisoblagan/to'lagan yozuv (salary_transactions.basis.settings) bo'lsa — o'sha sozlama (keyin o'zgartirilsa ham);
+//  • aks holda: CONTACTS_FROM (2026-10) dan oldingi oylar — eski tarif 50 000 (3 846 so'm), keyingilar — joriy KPI sozlamasi.
+async function monthlyRate(db, assistantId, month = null) {
+    const engine = require('../../../js/payrollEngine');
     try {
-        const engine = require('../../../js/payrollEngine');
+        if (month) {
+            const { from, to } = T.monthBounds(month);
+            const t = (await db.query(`SELECT basis->'settings'->'assistant'->>'rate' AS rate FROM salary_transactions
+                WHERE employee_id=$1 AND period_start <= $3 AND period_end >= $2 AND basis IS NOT NULL ORDER BY (status='paid') DESC, period_start LIMIT 1`, [assistantId, from, to])).rows[0];
+            const snap = Number(t?.rate);
+            if (Number.isFinite(snap) && snap > 0) return { monthly: snap, source: 'paid' };
+            if (month < CONTACTS_FROM) return { monthly: LEGACY_MONTHLY, source: 'legacy' };
+        }
         const emp = (await db.query('SELECT * FROM hr_employees WHERE id=$1', [assistantId])).rows[0] || {};
         const row = (await db.query('SELECT data FROM salary_kpi_settings WHERE language=$1', [engine.language(emp)])).rows[0];
         const monthly = Number(row?.data?.assistant?.rate);
-        return Number.isFinite(monthly) && monthly > 0 ? Math.round(monthly / MONTH_CAP) : RATE;
-    } catch { return RATE; }
+        return { monthly: Number.isFinite(monthly) && monthly > 0 ? monthly : MONTHLY_DEFAULT, source: 'settings' };
+    } catch { return { monthly: month && month < CONTACTS_FROM ? LEGACY_MONTHLY : MONTHLY_DEFAULT, source: 'default' }; }
+}
+// Bir aloqa narxi (ko'rsatish uchun: 3 077 / eski oylar 3 846).
+async function contactRate(db, assistantId, month = null) {
+    return Math.round((await monthlyRate(db, assistantId, month)).monthly / MONTH_CAP);
+}
+// Oyning "faollar" ro'yxati — o'sha oy holati bo'yicha (bugungi flaglar emas), yopilgan oyda o'zgarmaydi:
+//  • chiqib ketgan — shu oy ichida "left" bo'lgan va oy oxirida ham chiqib ketgan;
+//  • faol — kurs shu oy oxirigacha boshlangan, chiqib ketmagan va oyning yarmidan ko'pida faol bo'lgan
+//    (yoki shu oyda hisoblangan aloqasi bor). Muzlatilgan oyning ko'p qismini o'tkazgan o'quvchi kirmaydi.
+async function monthRoster(db, assistantId, month, report) {
+    const R = require('../../../js/attendanceRules');
+    const { from, to } = T.monthBounds(month);
+    const had = new Set(report.students.filter(x => x.counted || x.noAnswer).map(x => x.studentId));
+    const studs = (await db.query(`SELECT id, extra_data FROM students WHERE assistant_teacher_id=$1 OR id = ANY($2::text[])`, [assistantId, [...had]])).rows;
+    if (!studs.length) return { active: [], left: [] };
+    const statuses = (await db.query('SELECT * FROM school_student_status WHERE cancelled_at IS NULL AND student_id = ANY($1::text[])', [studs.map(s => s.id)])).rows;
+    const by = new Map(); for (const r of statuses) { if (!by.has(r.student_id)) by.set(r.student_id, []); by.get(r.student_id).push(r); }
+    const counted = new Map(report.students.map(x => [x.studentId, x.counted]));
+    const active = [], left = [];
+    for (const s of studs) {
+        let x = s.extra_data; if (typeof x === 'string') { try { x = JSON.parse(x); } catch { x = {}; } }
+        if (x?.isStaffDemo === true) continue;
+        const rows = by.get(s.id) || [];
+        const start = studentStartOf(x);
+        if (start && start > to) continue;
+        const span = T.dateRange(start && start > from ? start : from, to, 32);
+        const state = d => rows.length ? R.statusOn(rows, d) : (R.isActiveStudent(x) ? 'active' : 'left');
+        const leftIn = rows.some(r => r.status === 'left' && S.dateStr(r.from_date) >= from && S.dateStr(r.from_date) <= to) && state(to) === 'left';
+        if (leftIn) { left.push(s.id); continue; }
+        const activeDays = span.filter(d => state(d) === 'active').length;
+        if ((counted.get(s.id) || 0) > 0 || activeDays * 2 > span.length) active.push(s.id);
+    }
+    return { active, left };
 }
 async function monthReport(db, assistantId, month) {
     const { from, to } = T.monthBounds(month);
     const contacts = (await db.query('SELECT * FROM school_assist_contacts WHERE assistant_id=$1 AND day BETWEEN $2 AND $3', [assistantId, from, to])).rows;
-    const rate = await contactRate(db, assistantId);
-    const r = countMonth(contacts, rate);
+    const mr = await monthlyRate(db, assistantId, month);
+    const starts = await studentStarts(db, contacts.map(c => c.student_id));
+    const r = countMonth(contacts, { monthly: mr.monthly, starts });
     const corrections = contacts.filter(c => c.correction_reason && !c.removed_at).length;
-    return { month, assistantId, rate, cap: MONTH_CAP, ...r, corrections, state: await monthState(db, month) };
+    // Shu oy uchun to'langan maosh bo'lsa — "yakuniy" summa o'sha to'langan summa (Mening maoshim tarixi bilan bir xil).
+    const paidRow = (await db.query(`SELECT amount, paid_at FROM salary_transactions WHERE employee_id=$1 AND status='paid'
+        AND period_start <= $3 AND period_end >= $2 ORDER BY period_start LIMIT 1`, [assistantId, from, to]).catch(() => ({ rows: [] }))).rows[0];
+    const paid = paidRow ? { amount: Number(paidRow.amount), paidAt: paidRow.paid_at } : null;
+    const roster = await monthRoster(db, assistantId, month, r).catch(() => null);
+    return { month, assistantId, rate: r.rate, monthly: mr.monthly, rateSource: mr.source, policy: month < CONTACTS_FROM ? 'legacy' : 'contacts-v1', cap: MONTH_CAP, ...r,
+        computedAmount: r.amount, amount: paid ? paid.amount : r.amount, paid, roster, corrections, state: await monthState(db, month) };
 }
 
 // Oyni yopish bosqichlari (admin / moliya).
@@ -203,6 +283,8 @@ async function plan(db, { assistantIds = null, from, to, subject = null, now = n
         db.query('SELECT * FROM school_student_status WHERE cancelled_at IS NULL')
     ]);
     const students = stRows.rows.map(S.studentRow).filter(s => !s.legacyInactive && s.assistantId && (!subject || (s.subject || 'english') === subject));
+    // startDate — maosh bilan bir xil (extra_data.startDate || joinDate).
+    for (const s of students) { const r = stRows.rows.find(x => x.id === s.id); s.startDate = studentStartOf(r?.extra_data) || s.startDate; }
     const ids = assistantIds ? assistantIds.map(String) : [...new Set(students.map(s => s.assistantId))];
     const byId = new Map(students.map(s => [s.id, s]));
     const statusBy = new Map();
@@ -212,28 +294,30 @@ async function plan(db, { assistantIds = null, from, to, subject = null, now = n
     const contacts = ids.length ? (await db.query(`SELECT * FROM school_assist_contacts WHERE assistant_id = ANY($1::text[]) AND day BETWEEN $2 AND $3 AND removed_at IS NULL`,
         [ids, mFrom, mTo])).rows.map(c => ({ ...c, day: S.dateStr(c.day) })) : [];
     const statusOf = new Map();
+    const planStarts = await studentStarts(db, contacts.map(c => c.student_id));
     for (const aid of ids) for (const m of new Set(contacts.map(c => c.day.slice(0, 7)))) {
-        const r = countMonth(contacts.filter(c => c.assistant_id === aid && c.day.slice(0, 7) === m));
+        const r = countMonth(contacts.filter(c => c.assistant_id === aid && c.day.slice(0, 7) === m), { starts: planStarts });
         for (const st of r.students) for (const it of st.items) statusOf.set(it.id, it.status);
     }
     const items = [];
     const done = new Set();
+    // Tavsiya kuni: o'quvchining asosiy darslari oralig'i, kurs boshlangan va o'quvchi shu kuni faol (js/attendanceRules.activeOn — bitta ta'rif).
+    const R = require('../../../js/attendanceRules');
+    const adviceOn = (s, d) => !!s && s.day != null && T.adviceDays(s.day).includes(T.weekday(d)) && !(s.startDate && d < String(s.startDate).slice(0, 10))
+        && R.activeOn({ legacyInactive: s.legacyInactive, frozen: s.legacyFrozen }, statusBy.get(s.id) || [], d);
     for (const c of contacts.filter(c => c.day >= from && c.day <= to)) {
         const s = byId.get(c.student_id);
         if (!s && subject) continue;
         const at = c.at_min != null ? Number(c.at_min) : (T.toMin(s?.time) ?? 9 * 60);
         done.add(`${c.student_id}|${c.day}`);
         items.push({ kind: 'contact', id: c.id, assistantId: c.assistant_id, studentId: c.student_id, studentName: s?.name || '', date: c.day, start: at,
-            end: at + Math.max(10, Number(c.minutes) || 0), channel: c.channel, minutes: Number(c.minutes) || 0, outcome: c.outcome, status: statusOf.get(c.id) || 'counted' });
+            end: at + Math.max(10, Number(c.minutes) || 0), channel: c.channel, minutes: Number(c.minutes) || 0, outcome: c.outcome, status: statusOf.get(c.id) || 'counted',
+            advice: adviceOn(s, c.day) && T.toMin(s.time) != null });
     }
     const today = T.nowLocal(now).date;
     for (const d of T.dateRange(from, to, 62)) {
-        const wd = T.weekday(d);
         for (const s of students) {
-            if (s.day == null || !T.adviceDays(s.day).includes(wd) || done.has(`${s.id}|${d}`)) continue;
-            if (s.startDate && d < String(s.startDate).slice(0, 10)) continue;
-            const srows = statusBy.get(s.id) || [];
-            if ((!srows.length && s.legacyFrozen) || S.statusOn(srows, d) !== 'active') continue;
+            if (done.has(`${s.id}|${d}`) || !adviceOn(s, d)) continue;
             const start = T.toMin(s.time); if (start == null) continue;
             items.push({ kind: 'advice', assistantId: s.assistantId, studentId: s.id, studentName: s.name, date: d, start, end: start + 15, past: d < today });
         }
@@ -262,7 +346,9 @@ async function possibleLeft(db, assistantId, month, rep, { pastOnly = false, now
         const counted = byId.get(r.id)?.counted || 0, adviceLeft = left.get(r.id) || 0;
         return { studentId: r.id, name: r.name, teacherId: r.teacher_id, counted, adviceLeft, possible: R.assistPossible(counted, adviceLeft, rep.cap || MONTH_CAP) };
     });
-    return { students, possible: students.reduce((n, x) => n + x.possible, 0) };
+    // Summa har o'quvchi bo'yicha round(oylik tarif × aloqa / 13) — maosh hisobi bilan bir xil yaxlitlash.
+    return { students, possible: students.reduce((n, x) => n + x.possible, 0),
+        possibleAmount: students.reduce((n, x) => n + contactAmount(rep.monthly || MONTHLY_DEFAULT, x.possible), 0) };
 }
 
 // Moliyaga murojaat (yordamchi, yopilgan oy bo'yicha): faqat o'z hisobi, yakuniy tasdiqdan oldin.
@@ -329,4 +415,4 @@ async function monthChanges(db, assistantId, month) {
     return { month, changes: out };
 }
 
-module.exports = { contactRate, possibleLeft, financeRequest, monthChanges, FIN_KINDS, plan, RATE, MONTH_CAP, MIN_MINUTES, CHANNELS, countMonth, mark, removeOwnToday, adminCorrect, monthReport, advanceMonth, isLocked, adviceFor };
+module.exports = { contactRate, monthlyRate, contactAmount, studentStarts, studentStartOf, monthRoster, CONTACTS_FROM, LEGACY_MONTHLY, MONTHLY_DEFAULT, possibleLeft, financeRequest, monthChanges, FIN_KINDS, plan, RATE, MONTH_CAP, MIN_MINUTES, CHANNELS, countMonth, mark, removeOwnToday, adminCorrect, monthReport, advanceMonth, isLocked, adviceFor };
