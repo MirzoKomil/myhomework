@@ -214,20 +214,25 @@ async function salaryDetail(pool, actor, now = new Date()) {
             const ids = mainItems.map(b => b.studentId);
             const stRows = ids.length ? (await db.query('SELECT id, teacher_id, lesson_duration, extra_data FROM students WHERE id = ANY($1::text[])', [ids])).rows : [];
             const dur = new Map(stRows.map(r => [r.id, Number(r.lesson_duration) || 15]));
-            // "Rejada" — faqat faol va hozir shu ustozdagi o'quvchilar (js/attendanceRules.js). Muzlatilgan / to'xtatilgan / tugatgan
-            // yoki oy o'rtasida boshqa ustozga o'tgan o'quvchining shu ustoz bilan o'tgan darslari maoshda qoladi, rejaga faqat o'tgani qo'shiladi.
+            // "Rejada" — payrollEngine breakdown.plan: o'quvchining shu oydagi dars kunlari, o'quvchi faol va o'sha kuni shu ustozda bo'lgan
+            // (ustoz almashsa — shu ustoz davri) — UstozDavomat kartasi (AttendanceRules.monthTotals plan) bilan bir xil. Eski hisobda plan bo'lmasa —
+            // faqat faol va hozir shu ustozdagi o'quvchiga oylik reja, qolganiga o'tilgan darslar.
             const activeIds = new Set(stRows.filter(r => R.isActiveStudent(r) && r.teacher_id === me.emp.id).map(r => r.id));
-            const review = (await db.query(`SELECT student_id FROM school_makeups WHERE teacher_id=$1 AND status='review'
-                AND (to_char(held_date,'YYYY-MM')=$2 OR held_date IS NULL)`, [me.emp.id, month]).catch(() => ({ rows: [] }))).rows;
+            // "Tekshiruvda" — shu oyda o'tilgan va tasdiqlab bo'ladigan qoplashlar: qoldirilgan kunida "Keldi" bor (missed_came) qoplash
+            // hech qachon tasdiqlanmaydi, shuning uchun sanalmaydi (AttendanceRules.reviewMakeups bilan bir xil).
+            const review = (await db.query(`SELECT m.student_id FROM school_makeups m WHERE m.teacher_id=$1 AND m.status='review'
+                AND to_char(m.held_date,'YYYY-MM')=$2 AND NOT EXISTS (SELECT 1 FROM main_attendance a WHERE LEFT(a.att_key, 7) = TO_CHAR(m.missed_date, 'YYYY-MM')
+                    AND a.student_id = m.student_id AND a.day = EXTRACT(DAY FROM m.missed_date)::int AND a.present = 1)`, [me.emp.id, month]).catch(() => ({ rows: [] }))).rows;
             out.reviewMakeups = review.length;
             const groups = new Map();
             for (const b of mainItems) {
-                const isActive = activeIds.has(b.studentId);
-                if (!isActive && !(Number(b.lessons) > 0)) continue;
+                const isActive = activeIds.has(b.studentId), hasPlan = b.plan != null;
+                const plan = hasPlan ? Number(b.plan) || 0 : isActive ? Number(b.expected) || 0 : Number(b.lessons) || 0;
+                if (!(plan > 0) && !(Number(b.lessons) > 0)) continue;
                 const d = dur.get(b.studentId) || 15;
                 if (!groups.has(d)) groups.set(d, { duration: d, students: [], expected: 0, counted: 0, review: 0 });
                 const g = groups.get(d);
-                g.students.push(String(b.name || '').split(' ')[0]); g.expected += isActive ? Number(b.expected) || 0 : Number(b.lessons) || 0; g.counted += Number(b.lessons) || 0;
+                g.students.push(String(b.name || '').split(' ')[0]); g.expected += plan; g.counted += Number(b.lessons) || 0;
                 g.review += review.filter(r => r.student_id === b.studentId).length;
             }
             out.main = { groups: [...groups.values()].sort((a, b) => b.duration - a.duration),
@@ -255,7 +260,7 @@ async function salaryDetail(pool, actor, now = new Date()) {
             const byId = new Map(rep.students.map(x => [x.studentId, x]));
             const list = pl.students.map(p => { const r = byId.get(p.studentId) || { counted: 0, noAnswer: 0, overCap: 0, amount: 0 };
                 return { studentId: p.studentId, name: p.name, mainTeacher: shortName(names.get(p.studentId)), counted: r.counted, noAnswer: r.noAnswer, overCap: r.overCap,
-                    amount: r.amount, possible: p.possible, adviceLeft: p.adviceLeft }; })
+                    amount: r.amount, possible: p.possible, adviceLeft: p.adviceLeft, plan: p.plan }; })
                 .sort((a, b) => a.name.localeCompare(b.name));
             const prev = T.monthBounds(T.addDays(`${month}-01`, -1).slice(0, 7));
             const prevState = await db.query('SELECT * FROM school_assist_months WHERE month=$1', [prev.from.slice(0, 7)]).then(r => r.rows[0] || null).catch(() => null);

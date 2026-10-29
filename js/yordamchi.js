@@ -25,6 +25,8 @@
     const patternDays = d => ([1, 3, 5].includes(Number(d)) ? [1, 3, 5] : [2, 4, 6].includes(Number(d)) ? [2, 4, 6] : Number(d) >= 1 && Number(d) <= 7 ? [Number(d)] : []);
     // assist.js / time.js adviceDays bilan bir xil.
     const advDays = s => { const p = patternDays(s.lessonDayOfWeek); return p.join() === '1,3,5' ? [2, 4, 6] : p.join() === '2,4,6' ? [1, 3, 5] : [1, 2, 3, 4, 5, 6].filter(d => !p.includes(d)); };
+    // Oylik aloqa rejasi (maxraj): AttendanceRules.assistMonthPlan — Bosh "mumkin bo'lgan aloqa" = Davomat "Oktyabr" jami = qatorlar yig'indisi.
+    const monthPlanOf = (s, month, cap = 13) => AttendanceRules.assistMonthPlan(s, s.statusHistory, month, advDays(s), cap);
     // Zaxira: haqiqiy narx serverdan (rep.rate — Moliya → KPI sozlamalari, yordamchi tarifi ÷ 13; 29-okt: 40 000 → 3 077).
     const RATE = 3077, CAP = 13;
     // Usullar dizayndagidek guruhlangan (Ovozli / Video / Yozma).
@@ -371,7 +373,8 @@
         // Har qatorning maxraji — o'quvchining shu haftadagi rejasi (tavsiya kunlari); jami = qatorlar yig'indisi = weekPlanCount.
         const slotsOf = s => slots ? (slots.get(s.id)?.size || 0) : (AttendanceRules.isActiveStudent(s) ? advDays(s).length : 0);
         // Shu hafta tavsiyasi bor (masalan, muzlatishdan shu hafta qaytadigan) o'quvchi ham ro'yxatda — jami reja bilan bir xil.
-        const rows = mine.filter(s => AttendanceRules.isActiveStudent(s) || (by.get(s.id)?.items || []).length || slotsOf(s) > 0)
+        const planM = s => monthPlanOf(s, month, rep.cap || CAP);
+        const rows = mine.filter(s => AttendanceRules.isActiveStudent(s) || (by.get(s.id)?.items || []).length || slotsOf(s) > 0 || planM(s) > 0)
             .sort((a, b) => (a.status === 'inactive') - (b.status === 'inactive') || String(a.lessonDayOfWeek % 2).localeCompare(String(b.lessonDayOfWeek % 2)) || (toMin(a.lessonTime) ?? 0) - (toMin(b.lessonTime) ?? 0));
         const retryRows = rows.filter(s => s.status !== 'inactive' && retry(s));
         // "Hammasi N" — faol o'quvchilar (Bosh va O'quvchilar sahifasidagi "N o'quvchi" bilan bir ta'rif: AttendanceRules.isActiveStudent).
@@ -382,7 +385,7 @@
         // Haftalik reja — bitta hisob (AttendanceRules.weekPlanCount: sana bo'yicha faol o'quvchilarning tavsiya kunlari);
         // Bosh sahifa (/assist/month → week) va Dars jadvali ("N tavsiya") bilan bir xil son.
         const wkTotal = mine.reduce((n, s) => n + weekCounted(s), 0), wkPlan = plan ? AttendanceRules.weekPlanCount(plan.items) : rep.week?.planned ?? active.reduce((n, s) => n + advDays(s).length, 0);
-        const possible = active.length * CAP;
+        const possible = rows.reduce((n, s) => n + planM(s), 0);
         const mLbl = cap1(mName(month));
         root.innerHTML = `<div class="yd-top"><section class="sc-card yd-today"><header class="sc-ch"><h2>Bugun · ${esc(DAY_FULL[wd(td) - 1])} · tavsiya ${todayList.filter(isAdv).length}</h2>
               <span class="sc-row sc-wrap"><span class="sc-pill sc-pill--ok">${nDone} bajarildi</span>${nNa ? `<span class="sc-pill sc-pill--bad">${nNa} javob bermadi</span>` : ''}<span class="sc-pill sc-pill--mute">${nLeft} qoldi</span></span></header>
@@ -402,8 +405,8 @@
               return `<tr class="${gone ? 'yd-gone' : ''}"><td><span class="sc-row">${studentAvatar(s, 34)}<span class="yd-who"><button type="button" class="sc-link yd-nm" data-card="${esc(s.id)}">${esc(s.name)}</button><small class="sc-mt">asosiy: ${esc(teacherName(s.teacherId, true))}${rt && rt.req ? ' · <span class="yd-bad">so\'rov adminda</span>' : ''}</small></span>${tgIcon(gm.get(s.id))}${gone || s.frozen ? '' : callIcon(s.id)}</span></td>
                 <td>${esc(pattern(s.lessonDayOfWeek))}</td><td>${esc(advDays(s).map(d => DAY[d - 1]).join('·'))}${s.lessonTime ? ' · ' + esc(s.lessonTime) : ''}</td>
                 <td>${gone ? '<span class="sc-pill sc-pill--bad">chiqib ketgan</span>' : weekChips(s)}</td><td class="r"><b>${weekCounted(s)}</b> / ${slotsOf(s)}</td>
-                <td class="r">${r.counted} / ${CAP}</td></tr>`; }).join('') || `<tr><td colspan="6" class="sc-mt">${conState.filter === 'retry' ? 'Qayta urinish kerak o\'quvchi yo\'q' : 'Sizga yordamchi sifatida o\'quvchi biriktirilmagan'}</td></tr>`}
-            </tbody><tfoot><tr><td colspan="4">Jami · ${conState.filter === 'all' && rowsExtra ? `${rowsAct} faol + ${rowsExtra} (muzlatilgan / chiqib ketgan)` : `${shown.length} o'quvchi`}</td><td class="r">${shown.reduce((n, s) => n + weekCounted(s), 0)} / ${shown.reduce((n, s) => n + slotsOf(s), 0)}</td><td class="r">${shown.reduce((n, s) => n + (by.get(s.id)?.counted || 0), 0)} / ${shown.filter(s => AttendanceRules.isActiveStudent(s)).length * CAP}</td></tr></tfoot></table></div>
+                <td class="r">${r.counted} / ${planM(s) || '—'}</td></tr>`; }).join('') || `<tr><td colspan="6" class="sc-mt">${conState.filter === 'retry' ? 'Qayta urinish kerak o\'quvchi yo\'q' : 'Sizga yordamchi sifatida o\'quvchi biriktirilmagan'}</td></tr>`}
+            </tbody><tfoot><tr><td colspan="4">Jami · ${conState.filter === 'all' && rowsExtra ? `${rowsAct} faol + ${rowsExtra} (muzlatilgan / chiqib ketgan)` : `${shown.length} o'quvchi`}</td><td class="r">${shown.reduce((n, s) => n + weekCounted(s), 0)} / ${shown.reduce((n, s) => n + slotsOf(s), 0)}</td><td class="r">${shown.reduce((n, s) => n + (by.get(s.id)?.counted || 0), 0)} / ${shown.reduce((n, s) => n + planM(s), 0)}</td></tr></tfoot></table></div>
             <div class="yd-legend"><span><i class="ok"></i>bajarildi</span>${shown.some(s => slots && s.status !== 'inactive' && advDays(s).some(d => !slots.get(s.id)?.has(addDays(ws, d - 1)))) ? '<span><i class="off"></i>tavsiya yo\'q (muzlatilgan)</span>' : ''}<span><i class="na"></i>javob bermadi</span>${shown.some(s => wItems(s).some(i => i.outcome !== 'no_answer' && i.status !== 'counted')) ? '<span><i class="un"></i>hisoblanmadi (qoida)</span>' : ''}<span><i></i>rejada</span></div></section>`;
         const find = id => mine.find(s => s.id === id);
         // "Aloqani belgilash" — dizayndagidek sahifa ichida (Bugun ostida); ochilganda keyingi tavsiya qilingan o'quvchi.
@@ -527,7 +530,7 @@
             return `<div class="oq-dh2">${oqAv(sel, 48)}<div><div class="oq-nm" id="oqDn">${esc(sel.name)}</div><div class="oq-mt">asosiy ${esc(teacherName(sel.teacherId, true))} · ${esc(pattern(sel.lessonDayOfWeek))} ${esc(sel.lessonTime || '')} · tavsiya ${esc(advTxt(sel))} ${esc(sel.lessonTime || '')}</div></div>
                 ${closable ? `<button type="button" class="oq-icb" data-close-detail aria-label="Yopish">${OQ_X}</button>` : ''}</div>
               <div class="oq-kv"><div><small>Ilovada</small><b>${x ? x.reached + ' / 72' : '—'}</b></div><div><small>1-urinish</small><b class="oq-pc ${pctCls(x?.firstTryAvg)}">${x?.firstTryAvg != null ? x.firstTryAvg + '%' : '—'}</b></div>
-                <div><small>Aloqalar · ${esc(mL)}</small><b>${c?.counted || 0} / ${CAP}</b></div><div><small>Bu hafta</small><b>${weekOf(sel)} / ${weekPlanOf(sel)}</b></div></div>
+                <div><small>Aloqalar · ${esc(mL)}</small><b>${c?.counted || 0} / ${monthPlanOf(sel, month, rep?.cap || CAP)}</b></div><div><small>Bu hafta</small><b>${weekOf(sel)} / ${weekPlanOf(sel)}</b></div></div>
               <div data-prog><div class="oq-skel" style="height:96px;margin:0 20px 14px"></div></div>
               <div class="oq-acts2"><button type="button" class="oq-clb is-big" data-call="${esc(sel.id)}">${OQ_PH} Qo'ng'iroq</button><button type="button" class="oq-btn" data-open-card="${esc(sel.id)}">To'liq kartani ochish →</button>${closable ? '<button type="button" class="oq-btn" data-go-contacts>Aloqani belgilash</button>' : ''}</div>
               <div class="oq-hid" style="padding-top:12px">Telefon raqami yashirin — ☎ tugmasi o'quvchining Telegram guruhini ochadi va aloqani belgilaysiz. To'lov va sotuv ma'lumotlari ko'rinmaydi. Savol bo'lsa — asosiy ustozga yozing (xodimlar chati).</div>`;
@@ -549,7 +552,7 @@
                   return `<tr${myState.sel === s.id ? ' class="is-sel" aria-selected="true"' : ''} data-ms="${esc(s.id)}" tabindex="0"><td><div class="oq-who">${oqAv(s, 34)}<div><div class="oq-nm">${esc(s.name)}</div><div class="oq-mt">asosiy: ${esc(teacherName(s.teacherId, true))}</div></div>${oqTg(gm.get(s.id))}${oqCall(s)}</div></td>
                     <td>${esc(advTxt(s))}${s.lessonTime ? ' · ' + esc(s.lessonTime) : ''}<div class="oq-mt" style="margin:2px 0 0">asosiy darslari ${esc(pattern(s.lessonDayOfWeek))}</div></td>
                     <td>${x ? `<b>${x.reached}</b> / 72${x.firstTryAvg != null ? ` · <span class="oq-pc ${pctCls(x.firstTryAvg)}">${x.firstTryAvg}%</span>` : ''}` : '<span class="oq-mt">—</span>'}</td>
-                    <td><b>${weekOf(s)}</b> / ${weekPlanOf(s)}</td><td>${c?.counted || 0} / ${CAP}</td></tr>`; }).join('') || `<tr><td colspan="5" class="oq-empty">${q || myState.f !== 'all' ? 'Hech kim topilmadi' : 'Sizga hali o\'quvchi biriktirilmagan'}</td></tr>`}
+                    <td><b>${weekOf(s)}</b> / ${weekPlanOf(s)}</td><td>${c?.counted || 0} / ${monthPlanOf(s, month, rep?.cap || CAP)}</td></tr>`; }).join('') || `<tr><td colspan="5" class="oq-empty">${q || myState.f !== 'all' ? 'Hech kim topilmadi' : 'Sizga hali o\'quvchi biriktirilmagan'}</td></tr>`}
                 </tbody></table></div><p class="oq-foot">1-urinish — ilovadagi mashqlarni birinchi urinishda to'g'ri bajarish ulushi (baho emas).</p></section>
                 ${sel ? `<aside class="oq-card oq-dp" aria-labelledby="oqDn">${helpDetail(sel, false)}</aside>` : ''}</div></div>`;
             bindCommon(helped);
@@ -559,33 +562,24 @@
         }
 
         // ── UstozOquvchiList ──
-        const att = getItem(STORAGE_KEYS.mainAttendance, {})[`${month}_${tid}`] || {};
-        const absent = new Set((abs.absences || []).map(a => `${a.studentId}|${a.day}`));
+        // Davomat ustuni va yon panel — AttendanceRules.monthTotals qatori (Davomat, Bosh, karta va maosh bilan bitta hisob):
+        // dars kuni, kurs boshlangan, faol kun, tasdiqlangan qoplash (missed_came emas), "tekshiruvda" — tasdiqlab bo'ladiganlari.
+        const att0 = getItem(STORAGE_KEYS.mainAttendance, {})[`${month}_${tid}`] || {};
+        const att = window.teacherDutyUI?.mergeAbsences ? window.teacherDutyUI.mergeAbsences(att0, abs.absences, tid) : att0;
         const cal = window.teacherAttendanceCalendar;
         const own = (typeof resolveTeacherWithVirtual === 'function' && resolveTeacherWithVirtual(tid)) || {};
-        const myMk = (mks.makeups || []).filter(m => m.teacher_id === tid);
-        const day10 = v => String(v || '').slice(0, 10);
+        const MT = AttendanceRules.monthTotals({ id: tid, month, students: mine, mainAtt: att, makeups: mks.makeups || [], teacher: own, todayKey: td });
+        const rowOf = new Map(MT.rows.map(r => [r.id, r]));
         const attOf = s => {
-            const entries = att[s.id] || {};
-            const cells = cal ? cal.cells(month, cal.weekdays(s, own, 'main')).filter(Boolean) : [];
-            const sched = cells.filter(c => c.scheduled);
-            const isP = c => cal.status(entries[c.day]) === 'present', isA = c => !isP(c) && absent.has(`${s.id}|${c.date}`);
-            const days = new Set(sched.filter(isP).map(c => c.day));
-            let n = days.size;
-            const mkM = myMk.filter(m => m.student_id === s.id && day10(m.held_date).slice(0, 7) === month);
-            for (const m of mkM.filter(m => m.status === 'approved')) {
-                const d = Number(day10(m.held_date).slice(8, 10));
-                if (m.kind === 'double') n++; else if (!days.has(d)) { days.add(d); n++; }
-            }
-            const cov = new Map(myMk.filter(m => m.student_id === s.id && ['planned', 'review', 'approved'].includes(m.status)).map(m => [day10(m.missed_date), m]));
-            const absentC = cells.filter(isA);
-            const strip = sched.map(c => ({ day: c.day, st: isP(c) ? '' : isA(c) ? (cov.has(c.date) ? 'q' : 'x') : 'f', label: isP(c) ? 'keldi' : isA(c) ? (cov.has(c.date) ? 'kelmadi, qoplangan' : 'kelmadi') : c.date > td ? 'reja' : 'belgilanmagan' }));
-            return { counted: Math.min(n, sched.length), plan: sched.length, absent: absentC.length,
-                openMissed: absentC.filter(c => !cov.has(c.date) && c.date <= td).map(c => c.day),
-                coveredN: absentC.filter(c => ['approved', 'planned'].includes(cov.get(c.date)?.status)).length,
-                reviewN: absentC.filter(c => cov.get(c.date)?.status === 'review').length,
-                review: mkM.filter(m => m.status === 'review').length, present: sched.filter(isP).length,
-                planLeft: sched.filter(c => c.date > td).length, unmarked: sched.filter(c => c.date <= td && !isP(c) && !isA(c)).length, strip };
+            const r = rowOf.get(s.id);
+            if (!r) return { counted: 0, plan: 0, absent: 0, openMissed: [], coveredN: 0, reviewN: 0, plannedN: 0, review: 0, present: 0, planLeft: 0, unmarked: 0, strip: [] };
+            const cells = cal ? cal.cells(month, cal.weekdays(s, own, 'main')).filter(c => c && c.scheduled && AttendanceRules.taughtOn(s, tid, c.date)) : [];
+            const pres = new Set(r.presentDays), absD = new Set(r.absentDates), unm = new Set(r.unmarkedDates), open = new Set(r.openMissed);
+            const strip = cells.map(c => ({ day: c.day, st: pres.has(c.day) ? '' : absD.has(c.date) ? (open.has(c.date) ? 'x' : 'q') : 'f',
+                label: pres.has(c.day) ? 'keldi' : absD.has(c.date) ? (open.has(c.date) ? 'kelmadi' : 'kelmadi, qoplangan') : unm.has(c.date) ? 'belgilanmagan' : 'reja' }));
+            return { counted: r.counted, plan: r.plan, absent: r.absent, openMissed: r.openMissed.filter(d => d <= td).map(d => Number(d.slice(8))),
+                coveredN: r.covered, reviewN: r.coveredReview, plannedN: r.coveredPlanned, review: r.review, present: r.came,
+                planLeft: r.planLeft, unmarked: r.unmarked, strip };
         };
         const statusOf = (a, x) => {
             const f = new Set((x?.flags || []).map(f => f.key));
@@ -620,7 +614,7 @@
             const dayN = start && start <= td ? Math.round((Date.parse(td) - Date.parse(start)) / 86400000) + 1 : null;
             const phone = sel.phone ? (typeof formatPhoneDisplay === 'function' ? formatPhoneDisplay(sel.phone) : sel.phone) : '';
             const MonL = cap1(mName(month));
-            const parts = [a.coveredN && `${a.coveredN} qoplandi`, a.reviewN && `${a.reviewN} tekshiruvda`].filter(Boolean).join(', ');
+            const parts = [a.coveredN && `${a.coveredN} qoplandi`, a.reviewN && `${a.reviewN} tekshiruvda`, a.plannedN && `${a.plannedN} rejada`].filter(Boolean).join(', ');
             const sumTxt = `${a.present} keldi · ${a.absent} kelmadi${parts ? ` (${parts})` : ''}${a.unmarked ? ` · ${a.unmarked} belgilanmagan` : ''} · ${a.planLeft} reja`;
             return `<div class="oq-dh2">${oqAv(sel, 36)}<div><div class="oq-nm" id="oqDn">${esc(sel.name)}</div><div class="oq-mt">${esc(subj)} · asosiy o'quvchingiz${sel.serialCode ? ' · #' + esc(sel.serialCode) : ''}</div></div><button type="button" class="oq-icb" data-close-detail aria-label="Yopish">${OQ_X}</button></div>
               <div class="oq-kv"><div><small>Ilovada</small><b>${x ? x.reached + ' / 72 dars' : '—'}</b></div><div><small>1-urinish</small><b>${x?.firstTryAvg != null ? x.firstTryAvg + '%' : '—'}</b></div>
@@ -706,7 +700,9 @@
         const done = s => todayOf(s).some(i => i.outcome === 'contacted');
         const noAns = s => todayOf(s).length && !done(s);
         const counted = rep?.counted || 0, amount = rep?.amount || 0;
-        const possible = list.length * cap;
+        // "Mumkin bo'lgan aloqa" — har o'quvchining oylik rejasi yig'indisi (Davomat "Oktyabr" jami bilan bir xil ta'rif):
+        // oyning bir qismida faol bo'lgan (masalan muzlatishdan qaytgan) o'quvchining faol kunlardagi tavsiyalari ham kiradi.
+        const possible = allMine.filter(s => !s.isStaffDemo).reduce((n, s) => n + monthPlanOf(s, month, cap), 0);
         // "Oy oxirigacha ko'pi bilan" — server hisobi (assist.possibleLeft; Sozlamalar → Mening maoshim bilan bitta manba).
         const maxLeft = rep?.possible != null ? rep.possible : null;
         const leftOf = s => rep?.left?.[s.id]?.adviceLeft || 0;

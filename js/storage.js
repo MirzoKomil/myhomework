@@ -34,7 +34,9 @@ const STORAGE_KEYS = {
     individualSalesPlans: 'mh_individual_sales_plans',
     targetMonitoringPlan: 'mh_target_monitoring_plan',
     targetDailyAdSpend: 'mh_target_daily_ad_spend',
-    archive: 'mh_archive'
+    archive: 'mh_archive',
+    // Ustoz almashgan (o'tgan) o'quvchilar — faqat ustoz kabinetida, o'z davri Davomat/Reyting hisobi uchun (server stateForTeacher).
+    pastStudents: 'mh_past_students'
 };
 
 const CACHE_KEY_MAP = {
@@ -68,7 +70,8 @@ const CACHE_KEY_MAP = {
     [STORAGE_KEYS.individualSalesPlans]: 'individualSalesPlans',
     [STORAGE_KEYS.targetMonitoringPlan]: 'targetMonitoringPlan',
     [STORAGE_KEYS.targetDailyAdSpend]: 'targetDailyAdSpend',
-    [STORAGE_KEYS.archive]: 'archive'
+    [STORAGE_KEYS.archive]: 'archive',
+    [STORAGE_KEYS.pastStudents]: 'pastStudents'
 };
 
 const PATCH_KEY_MAP = Object.fromEntries(

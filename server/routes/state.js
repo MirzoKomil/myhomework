@@ -1059,8 +1059,12 @@ router.get('/teacher-rating', authRequired, async (req, res) => {
         // O'tgan oy (▲/▼) solishtiruvi: o'sha oyda "Keldi" belgisi bo'lmagan ustozda "—" (ma'lumot yo'q).
         // Tasdiqlangan qoplashlar ham davomatga kiradi (UstozDavomat bilan bir xil — js/attendanceRules.js monthTotals).
         const makeups = ownType === 'asosiy' && (await pool.query("SELECT to_regclass('public.school_makeups')::text AS t")).rows[0]?.t
-            ? (await pool.query(`SELECT student_id, teacher_id, kind, status, TO_CHAR(held_date,'YYYY-MM-DD') AS held_date, TO_CHAR(missed_date,'YYYY-MM-DD') AS missed_date FROM school_makeups
-                WHERE status='approved' AND held_date IS NOT NULL`)).rows : [];
+            ? (await pool.query(`SELECT m.student_id, m.teacher_id, m.kind, m.status, TO_CHAR(m.held_date,'YYYY-MM-DD') AS held_date, TO_CHAR(m.missed_date,'YYYY-MM-DD') AS missed_date,
+                EXISTS (SELECT 1 FROM main_attendance a WHERE LEFT(a.att_key, 7) = TO_CHAR(m.missed_date, 'YYYY-MM') AND a.student_id = m.student_id
+                    AND a.day = EXTRACT(DAY FROM m.missed_date)::int AND a.present = 1) AS missed_came
+                FROM school_makeups m WHERE m.status='approved' AND m.held_date IS NOT NULL`)).rows : [];
+        // Ustozlar tarixi — state.students[].teacherHistory (getFullState): o'quvchi oy o'rtasida boshqa ustozga o'tsa, darslar
+        // o'tgan ustozning davomati va reytingida (maosh bilan bir xil).
         const data = await ratingResponse({ state, ownType, month: String(req.query.month || ''), makeups,
             loadLearning: (now, opts) => loadLearningByStudent(pool, now, opts) });
         // Ustozga boshqa ustozlarning davomat sonlari (completed/expected/students) berilmaydi — faqat ism, ball, o'rin.

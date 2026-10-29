@@ -306,13 +306,18 @@ async function plan(db, { assistantIds = null, from, to, subject = null, now = n
         db.query(`SELECT id,name,subject,teacher_id,assistant_teacher_id,lesson_day_of_week,lesson_time,lesson_duration,extra_data FROM students WHERE ${where}`, assistantIds ? [assistantIds] : []),
         db.query('SELECT * FROM school_student_status WHERE cancelled_at IS NULL')
     ]);
-    const students = stRows.rows.map(S.studentRow).filter(s => !s.legacyInactive && s.assistantId && (!subject || (s.subject || 'english') === subject));
+    const statusBy = new Map();
+    for (const r of statuses.rows) { if (!statusBy.has(r.student_id)) statusBy.set(r.student_id, []); statusBy.get(r.student_id).push(r); }
+    // Holat yozuvlari bor o'quvchida faollik SANA bo'yicha (masalan 13-okt chiqib ketgan, 4-noy qaytadigan — eski "inactive" belgisi
+    // qaytish kunigacha turadi): qaytgan kunidan tavsiya chiqadi. Yozuvsiz eski "inactive" va xodim demo — hech qachon.
+    const extraOf = r => (typeof r.extra_data === 'object' && r.extra_data ? r.extra_data : (() => { try { return JSON.parse(r.extra_data || '{}'); } catch { return {}; } })());
+    const demo = new Set(stRows.rows.filter(r => extraOf(r).isStaffDemo === true).map(r => r.id));
+    const byDate = s => (statusBy.get(s.id) || []).length > 0;
+    const students = stRows.rows.map(S.studentRow).filter(s => !demo.has(s.id) && (!s.legacyInactive || byDate(s)) && s.assistantId && (!subject || (s.subject || 'english') === subject));
     // startDate — maosh bilan bir xil (extra_data.startDate || joinDate).
     for (const s of students) { const r = stRows.rows.find(x => x.id === s.id); s.startDate = studentStartOf(r?.extra_data) || s.startDate; }
     const ids = assistantIds ? assistantIds.map(String) : [...new Set(students.map(s => s.assistantId))];
     const byId = new Map(students.map(s => [s.id, s]));
-    const statusBy = new Map();
-    for (const r of statuses.rows) { if (!statusBy.has(r.student_id)) statusBy.set(r.student_id, []); statusBy.get(r.student_id).push(r); }
     // Hisob holati (hisoblandi / javob bermadi / ...) oy bo'yicha — countMonth bilan bir xil qoida.
     const mFrom = T.monthBounds(from.slice(0, 7)).from, mTo = T.monthBounds(to.slice(0, 7)).to;
     const contacts = ids.length ? (await db.query(`SELECT * FROM school_assist_contacts WHERE assistant_id = ANY($1::text[]) AND day BETWEEN $2 AND $3 AND removed_at IS NULL`,
@@ -328,7 +333,7 @@ async function plan(db, { assistantIds = null, from, to, subject = null, now = n
     // Tavsiya kuni: o'quvchining asosiy darslari oralig'i, kurs boshlangan va o'quvchi shu kuni faol (js/attendanceRules.activeOn — bitta ta'rif).
     const R = require('../../../js/attendanceRules');
     const adviceOn = (s, d) => !!s && s.day != null && T.adviceDays(s.day).includes(T.weekday(d)) && !(s.startDate && d < String(s.startDate).slice(0, 10))
-        && R.activeOn({ legacyInactive: s.legacyInactive, frozen: s.legacyFrozen }, statusBy.get(s.id) || [], d);
+        && R.activeOn({ legacyInactive: s.legacyInactive && !byDate(s), frozen: s.legacyFrozen }, statusBy.get(s.id) || [], d);
     for (const c of contacts.filter(c => c.day >= from && c.day <= to)) {
         const s = byId.get(c.student_id);
         if (!s && subject) continue;
@@ -363,12 +368,23 @@ async function possibleLeft(db, assistantId, month, rep, { pastOnly = false, now
         for (const i of p.items) if (i.kind === 'advice' && !i.past) left.set(i.studentId, (left.get(i.studentId) || 0) + 1);
     }
     const had = new Set(rep.students.filter(x => x.counted || x.noAnswer).map(x => x.studentId));
-    const rows = (await db.query(`SELECT id, name, teacher_id, extra_data FROM students WHERE ($3 AND assistant_teacher_id=$1) OR id = ANY($2::text[])`,
-        [assistantId, [...had], !pastOnly])).rows.filter(r => had.has(r.id) || (!pastOnly && R.isActiveStudent(r)));
+    const rows = (await db.query(`SELECT id, name, teacher_id, lesson_day_of_week, extra_data FROM students WHERE ($3 AND assistant_teacher_id=$1) OR id = ANY($2::text[])`,
+        [assistantId, [...had], !pastOnly])).rows
+        // Hozir faol yoki shu oyda hali tavsiyasi bor (masalan muzlatishdan oy ichida qaytadigan) o'quvchi ham "ko'pi bilan" hisobiga kiradi —
+        // qaytgan kunidan keyingi tavsiyalar (plan faqat faol kunlarga tavsiya beradi).
+        .filter(r => had.has(r.id) || (!pastOnly && (R.isActiveStudent(r) || left.has(r.id))));
     const byId = new Map(rep.students.map(x => [x.studentId, x]));
+    // Oylik reja (maxraj) — AttendanceRules.assistMonthPlan: YordamchiBosh "mumkin bo'lgan aloqa" va Davomat "oy" ustuni bilan bir xil.
+    const stRows = new Map();
+    if (rows.length && (await db.query("SELECT to_regclass('public.school_student_status')::text AS t")).rows[0]?.t)
+        for (const r of (await db.query('SELECT * FROM school_student_status WHERE student_id = ANY($1::text[]) AND cancelled_at IS NULL', [rows.map(r => r.id)])).rows) {
+            if (!stRows.has(r.student_id)) stRows.set(r.student_id, []); stRows.get(r.student_id).push(r);
+        }
     const students = rows.map(r => {
-        const counted = byId.get(r.id)?.counted || 0, adviceLeft = left.get(r.id) || 0;
-        return { studentId: r.id, name: r.name, teacherId: r.teacher_id, counted, adviceLeft, possible: R.assistPossible(counted, adviceLeft, rep.cap || MONTH_CAP) };
+        const counted = byId.get(r.id)?.counted || 0, adviceLeft = left.get(r.id) || 0, cap = rep.cap || MONTH_CAP;
+        const extra = typeof r.extra_data === 'object' && r.extra_data ? r.extra_data : (() => { try { return JSON.parse(r.extra_data || '{}'); } catch { return {}; } })();
+        const plan = R.assistMonthPlan({ ...extra, id: r.id }, stRows.get(r.id) || [], month, T.adviceDays(r.lesson_day_of_week), cap);
+        return { studentId: r.id, name: r.name, teacherId: r.teacher_id, counted, adviceLeft, plan, possible: R.assistPossible(counted, adviceLeft, cap) };
     });
     // Summa har o'quvchi bo'yicha round(oylik tarif × aloqa / 13) — maosh hisobi bilan bir xil yaxlitlash.
     return { students, possible: students.reduce((n, x) => n + x.possible, 0),

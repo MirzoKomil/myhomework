@@ -35,7 +35,8 @@ test('monthKeySuffix: att_key prefiksiga mos YYYY-MM', () => {
 });
 
 test("computeTeacherRating: ball = davomat 60% + o'zlashtirish 40%, faqat bir xil turdagi ustozlar orasida, xom ma'lumot qaytmaydi", () => {
-    const now = new Date(Date.UTC(2026, 9, 20));
+    // 20-okt 12:00 (Toshkent vaqti UTC maydonlarida) — bugungi 10:00 dars boshlangan, "o'tgan" hisoblanadi.
+    const now = new Date(Date.UTC(2026, 9, 20, 12, 0));
     const state = {
         teachers: [
             { id: 't1', name: 'Zokir Ahmedov', type: 'asosiy' },
@@ -68,6 +69,10 @@ test("computeTeacherRating: ball = davomat 60% + o'zlashtirish 40%, faqat bir xi
     const json = JSON.stringify(rows);
     assert.ok(!json.includes('scores'));
     assert.ok(!json.includes('mainAttendance'));
+    // Bugungi dars hali boshlanmagan (00:00) — "o'tgan" ham, "belgilanmagan" ham emas: s2 rejasi 8 ta o'tgan dars (Davomat % bilan bir xil).
+    const early = computeTeacherRating(state, 'asosiy', new Date(Date.UTC(2026, 9, 20)), { s1: 80, s2: 60 });
+    assert.equal(early.find(r => r.id === 't2').expected, 8);
+    assert.equal(early.find(r => r.id === 't2').score, Math.round(((300 / 8) * 0.6 + 60 * 0.4) * 10) / 10);
 });
 
 test("computeTeacherRating: ilova ma'lumoti bo'lmasa ball faqat davomatdan (ustoz jazolanmaydi); yordamchilar alohida", () => {

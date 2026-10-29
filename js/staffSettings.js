@@ -338,7 +338,7 @@
             const st = s.counted >= a.cap ? `<i class="ss-pill warn">limit to'ldi · ${a.cap + 1}-chi hisoblanmaydi</i>` : near ? `<i class="ss-pill warn">${a.cap} ga yaqin · ${a.cap + 1}-chi hisoblanmaydi</i>`
                 : `<span class="ss-mt">${s.adviceLeft ? `yana ${s.adviceLeft} tavsiya` : 'bu oy tavsiya qolmadi'}</span>`;
             return `<tr><th scope="row"><span class="ss-stu"><span class="ss-sav">${stuAvatar(s.studentId, s.name) || initials(s.name)}</span><span><b>${esc(s.name)}</b><small>asosiy: ${esc(s.mainTeacher || '—')}</small></span></span></th>
-              <td class="n"><b>${s.counted}</b> / ${a.cap}</td><td class="n">${num(s.amount)}</td><td>${st}</td></tr>`;
+              <td class="n"><b>${s.counted}</b> / ${s.plan ?? a.cap}</td><td class="n">${num(s.amount)}</td><td>${st}</td></tr>`;
         }).join('') || '<tr><td colspan="4" class="ss-mt">Sizga hali o\'quvchi biriktirilmagan</td></tr>';
         body.innerHTML = head('Mening maoshim · aloqalar bo\'yicha') + `<div class="ss-col">
           <div class="ss-kpis ss-kpis--as">
@@ -347,7 +347,7 @@
             ${lastPaid(d)}</div>
           <section class="ss-card" aria-labelledby="ssAsH"><header class="ss-ch"><h3 id="ssAsH">${monName(d.month)} · o'quvchilar bo'yicha</h3><span class="ss-mt">har o'quvchi bilan oyiga ${a.cap} tagacha · kamida 5 daqiqa</span></header>
             <div class="ss-tw"><table class="ss-tbl ss-tbl--as"><thead><tr><th scope="col">O'quvchi</th><th scope="col" class="n">Hisoblangan aloqa</th><th scope="col" class="n">Summa</th><th scope="col">Holat</th></tr></thead>
-            <tbody>${rows}</tbody><tfoot><tr><td>Jami · ${a.students.length} o'quvchi</td><td class="n">${a.counted} / ${a.students.length * a.cap}</td><td class="n">${num(a.amount)}</td><td></td></tr></tfoot></table></div>
+            <tbody>${rows}</tbody><tfoot><tr><td>Jami · ${a.students.length} o'quvchi</td><td class="n">${a.counted} / ${a.students.reduce((n, s) => n + (s.plan ?? a.cap), 0)}</td><td class="n">${num(a.amount)}</td><td></td></tr></tfoot></table></div>
             <p class="ss-note ss-mt">Hisoblanmaydi: "javob bermadi", 5 daqiqadan qisqa, bir kundagi ikkinchi aloqa, haftadagi ikkinchi yozishma. Oy yopilganda Moliya tasdiqlaydi. ${esc(payNote(d.month))}</p></section></div>`;
     }
 

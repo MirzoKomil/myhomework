@@ -79,6 +79,17 @@
     };
     const shiftMonth = (m, d) => { const [y, mo] = m.split('-').map(Number), t = new Date(Date.UTC(y, mo - 1 + d, 1)); return t.toISOString().slice(0, 7); };
     const joinVa = a => (a.length > 1 ? `${a.slice(0, -1).join(', ')} va ${a[a.length - 1]}` : a.join(''));
+    // "Kelmadi N · 2 qoplandi, 1 tekshiruvda, 1 rejada" — AttendanceRules.monthTotals qatori (O'quvchilar ro'yxati bilan bir xil matn).
+    const coverTxt = R => { if (!R) return ''; const p = [R.covered && `${R.covered} qoplandi`, R.coveredReview && `${R.coveredReview} tekshiruvda`, R.coveredPlanned && `${R.coveredPlanned} rejada`].filter(Boolean); return p.length ? '· ' + p.join(', ') : ''; };
+    // O'tgan o'quvchi (ustoz almashgan): "Gulnora T.ga o'tdi · 15-okt" — shu ustoz bilan oxirgi kun ustozlar tarixidan.
+    function pastNote(s) {
+        const mon = ['yan', 'fev', 'mar', 'apr', 'may', 'iyn', 'iyl', 'avg', 'sen', 'okt', 'noy', 'dek'];
+        const next = [...(s.teacherHistory || [])].sort((a, b) => String(a.from).localeCompare(String(b.from))).find(h => h.teacherId === s.teacherId);
+        const nm = (getItem(STORAGE_KEYS.teachers, []) || []).find(t => t.id === s.teacherId)?.name || '';
+        const short = String(nm).trim().split(/\s+/), who = short[0] ? short[0] + (short[1] ? ' ' + short[1][0] + '.' : '') : 'boshqa ustoz';
+        const d = next?.from ? `${Number(String(next.from).slice(8, 10))}-${mon[Number(String(next.from).slice(5, 7)) - 1]}` : '';
+        return `o‘tgan o‘quvchi · ${esc(who)}ga o‘tdi${d ? ' · ' + d : ''}`;
+    }
     function render() {
         const root = document.getElementById('mainAttendanceContainer');
         if (!root) return;
@@ -110,8 +121,12 @@
         // masalan 20-oktdan muzlatilganning 1–19-okt darslari Davomat %ga ham, maoshga ham kiradi (server reytingi bilan bitta qoida).
         const isActive = s => window.AttendanceRules.inMonth(s, s.statusHistory, month);
         const countsOn = (s, date) => window.AttendanceRules.lessonCountsOn(s, s.statusHistory, date);
-        const students = all.filter(s => s[field] === id && isActive(s));
         const mainStudents = all.filter(s => s.teacherId === id && isActive(s));
+        // Ustoz almashgan o'quvchi: shu oyda shu ustoz o'tgan darslari (school_teacher_history) Davomat va Reytingda shu ustozda
+        // qoladi — maosh bilan bir xil (AttendanceRules.withPast / taughtOn). Ularning kunlari o'zgartirilmaydi (o'quvchi boshqa ustozda).
+        const pastMain = isMain ? window.AttendanceRules.withPast(mainStudents, getItem(STORAGE_KEYS.pastStudents, []) || [], id, month).filter(s => s.teacherId !== id) : [];
+        const monthMain = [...mainStudents, ...pastMain];
+        const students = selected === 'main' ? monthMain : all.filter(s => s[field] === id && isActive(s));
         const mainStore = getItem(STORAGE_KEYS.mainAttendance, {});
         const mainAtt = withAbsences(mainStore[`${month}_${id}`] || {}, month, id);
         const attendance = selected === 'main' ? mainAtt : (getItem(STORAGE_KEYS.assistantAttendance, {})[`${month}_${id}`] || {});
@@ -126,18 +141,16 @@
         const todayDow = nowT.getUTCDay() || 7;
         const past = c => month < thisMonth || (month === thisMonth && c.day <= todayDay);
         const expectedFor = (s, role = selected) => calendar.cells(month, calendar.weekdays(s, ownTeacher, role)).filter(c => c && c.scheduled && past(c)).length;
-        // Oy rejasi — o'quvchi faol bo'lgan dars kunlari (muzlatilgan / chiqib ketgandan keyingi kunlar rejaga kirmaydi).
-        const planFor = (s, role = 'main') => calendar.cells(month, calendar.weekdays(s, ownTeacher, role)).filter(c => c && c.scheduled && (role !== 'main' || countsOn(s, c.date))).length;
         const teachers = getItem(STORAGE_KEYS.teachers, []);
         const U = window.schoolUI;
         const avatar = (s, n = 36) => (U ? U.studentAvatar(s, n) : '');
         const sched = s => `${U ? U.pattern(s.lessonDayOfWeek) : ''}${s.lessonTime ? ' ' + esc(s.lessonTime) : ''}${s.lessonDuration ? ' · ' + Number(s.lessonDuration) + ' daq' : ''}`;
         const myMk = mk.month === month ? mk.list.filter(m => m.teacher_id === id && ['planned', 'review', 'approved'].includes(m.status)) : [];
         const mkOn = (sid, date) => myMk.find(m => m.student_id === sid && dkey(m.held_date) === date);
-        const mkFor = sid => myMk.filter(m => m.student_id === sid && dkey(m.held_date).slice(0, 7) === month);
         const coveredMissed = sid => new Set(myMk.filter(m => m.student_id === sid).map(m => dkey(m.missed_date)));
-        // Hisobga o'tgan darslar — moliya bilan bir xil: 2026-10 dan dars kunidagi "Keldi" + tasdiqlangan qoplash.
-        const countedFor = s => monthTotals({ id, month, students: [s], mainAtt, makeups: mk.month === month ? mk.list : [], teacher: ownTeacher, todayKey: today }).counted;
+        // Oy hisobi va har o'quvchi qatori — bitta chaqiruv (AttendanceRules.monthTotals): kartadagi raqamlar = oy kartasi yig'indisi.
+        const T = selected === 'main' ? monthTotals({ id, month, students: monthMain, mainAtt, makeups: mk.month === month ? mk.list : [], teacher: ownTeacher, todayKey: today }) : null;
+        const rowOf = new Map((T?.rows || []).map(r => [r.id, r]));
         // Qoplanmagan (kelmagan, qoplash yo'q) darslar — kalendar oynasi va bugungi "Keldi · 2 dars" uchun.
         const openMissedFor = sid => {
             const entries = mainAtt[sid] || {}, covered = coveredMissed(sid);
@@ -217,14 +230,13 @@
         // ── Oy hisobi (asosiy ustozlik) ──
         let sumHtml = '';
         if (isMain) {
-            const T = monthTotals({ id, month, students: mainStudents, mainAtt, makeups: mk.month === month ? mk.list : [], teacher: ownTeacher, todayKey: today });
             const { plan, counted, pct } = T;
             // Sidebar "Akademik bo'lim" soni shu raqam bilan bir xil (js/staffNavBadges.js).
             if (month === thisMonth && ab.month === month && mk.month === month) window.dispatchEvent(new CustomEvent('ustoz:month-unmarked', { detail: { month, n: T.unmarked } }));
             // Maosh — server payroll (/api/payroll/me), Bosh sahifa va "Mening maoshim" bilan bitta manba. Faqat joriy oy.
             if (month === thisMonth) loadPay();
             const pay = month === thisMonth && py.data?.linked && py.data.current ? Number(py.data.current.mainTotal ?? py.data.current.total) || 0 : null;
-            const review = myMk.filter(m => m.status === 'review').length;
+            const review = T.review;
             sumHtml = `<section class="udv-card udv-sum" aria-label="${esc(MN)} hisobi">
                 <div class="udv-sr"><span class="udv-ct">${esc(MN)}</span><span class="udv-mt">${month === thisMonth ? todayDay + ' kun o‘tdi' : month < thisMonth ? 'yopilgan oy' : 'kelgusi oy'}</span></div>
                 <div><div class="udv-sr"><span class="udv-sl">Hisobga o‘tdi</span><span class="udv-sv">${counted} / ${plan}</span></div><div class="udv-trk" role="img" aria-label="${counted} / ${plan}"><span style="width:${plan ? Math.min(100, Math.round(counted / plan * 100)) : 0}%"></span></div></div>
@@ -259,23 +271,21 @@
             if (index >= CARD_LIMIT && !showAllCards) return '';
             const entries = attendance[s.id] || {}, panelId = `teacherDutyCalendar${index}`;
             const cells = calendar.cells(month, calendar.weekdays(s, ownTeacher, selected));
-            const present = Object.values(entries).filter(v => calendar.status(v) === 'present').length;
-            const absentDays = cells.filter(c => c && calendar.status(entries[c.day]) === 'absent').map(c => c.date);
-            const sm = selected === 'main' ? mkFor(s.id) : [], covered = selected === 'main' ? coveredMissed(s.id) : new Set();
-            // "Keldi" ustun: qoldirilgan kunida "Keldi" bo'lgan qoplash maoshga o'tmaydi (server missed_came).
-            const noPayMk = sm.filter(m => m.missed_came === true);
-            const approvedMk = sm.filter(m => m.status === 'approved' && m.missed_came !== true);
-            const reviewMk = sm.filter(m => m.status === 'review'), reviewN = reviewMk.length;
-            const openMissed = absentDays.filter(d => !covered.has(d));
-            const coveredAbs = absentDays.filter(d => covered.has(d));
-            const reviewMissed = new Set(reviewMk.map(m => dkey(m.missed_date)));
-            const plan = selected === 'main' ? planFor(s) : expectedFor(s);
-            const counted = selected === 'main' ? countedFor(s) : present;
-            const exp = expectedFor(s);
+            const R = rowOf.get(s.id), isPast = selected === 'main' && s.teacherId !== id;
+            const present = R ? R.came : Object.values(entries).filter(v => calendar.status(v) === 'present').length;
+            const absentDays = R ? R.absentDates : cells.filter(c => c && calendar.status(entries[c.day]) === 'absent').map(c => c.date);
+            const covered = selected === 'main' ? coveredMissed(s.id) : new Set();
+            // "Keldi" ustun: qoldirilgan kunida "Keldi" bo'lgan qoplash maoshga o'tmaydi (missed_came) — tekshiruvda ham sanalmaydi.
+            const noPayMk = R ? R.noPay : [];
+            const reviewMk = R ? R.reviewList : [], reviewN = reviewMk.length;
+            const openMissed = R ? R.openMissed : [];
+            const plan = R ? R.plan : expectedFor(s);
+            const counted = R ? R.counted : present;
+            const exp = R ? R.expected : expectedFor(s);
             const bad = exp >= 3 && counted / exp < 0.6;
             const open = expanded === s.id;
             const head = `<button type="button" class="udv-acc" data-duty-expand="${esc(s.id)}" aria-expanded="${open}" aria-controls="${panelId}">
-                <span class="udv-avw">${avatar(s, 36)}</span><span class="udv-who"><span class="udv-nm">${esc(s.name)}</span><span class="udv-mt">${selected === 'main' ? sched(s) : 'asosiy ustoz: ' + esc(teachers.find(t => t.id === s.teacherId)?.name || '—')}</span></span>
+                <span class="udv-avw">${avatar(s, 36)}</span><span class="udv-who"><span class="udv-nm">${esc(s.name)}</span><span class="udv-mt">${isPast ? pastNote(s) : selected === 'main' ? sched(s) : 'asosiy ustoz: ' + esc(teachers.find(t => t.id === s.teacherId)?.name || '—')}</span></span>
                 <span class="udv-cnts"><span class="udv-cnt${bad ? ' is-bad' : ''}">${counted} / ${plan} dars${reviewN ? ` <small>+${reviewN}</small>` : ''}</span><span class="udv-trk${bad ? ' is-bad' : ''}"><span style="width:${plan ? Math.min(100, Math.round(counted / plan * 100)) : 0}%"></span></span>${SVG.up}</span></button>`;
             const grid = cells.map(cell => {
                 if (!cell) return '<span class="udv-d is-e" aria-hidden="true"></span>';
@@ -285,15 +295,17 @@
                 const late = state === 'absent' && covered.has(cell.date);
                 // O'quvchi shu kuni faol emas (muzlatilgan / chiqib ketgan) — dars kutilmaydi, "dars kuni emas" kabi ko'rinadi.
                 const frozenDay = selected === 'main' && cell.scheduled && !countsOn(s, cell.date);
+                // Boshqa ustoz o'tgan kun (ustoz almashgan) — bu ustozning dars kuni emas; o'tgan o'quvchida hech bir kun o'zgartirilmaydi.
+                const otherDay = selected === 'main' && cell.scheduled && !window.AttendanceRules.taughtOn(s, id, cell.date);
                 const cls = state === 'present' ? ' is-ok' : state === 'absent' ? ' is-no' : m ? ' is-q' + (m.status === 'review' ? ' is-rev' : '')
-                    : !cell.scheduled || frozenDay ? ' is-x' : cell.date > today ? ' is-pl' : '';
-                return `<button type="button" class="udv-d${cls}${cell.scheduled ? ' duty-scheduled' : ' duty-offday'}${m ? ' duty-has-mk' + (m.status === 'review' ? ' is-review' : '') : ''}${late ? ' is-cv' : ''}${cell.date === today ? ' is-td' : ''}" data-duty-student="${esc(s.id)}" data-duty-day="${cell.day}" data-status="${state}" aria-label="${cell.day}-${MON3[mm - 1]}: ${label}${cell.scheduled ? (frozenDay ? ', o‘quvchi faol emas (muzlatilgan)' : '') : ', dars kuni emas'}${m?.status === 'review' ? ', tekshiruvda' : ''}${m?.missed_came ? ', maoshga o‘tmaydi (qoldirilgan kunda Keldi bor)' : ''}${late ? ', keyin qoplandi' : ''}${cell.date === today ? ', bugun' : ''}" aria-pressed="${state === 'present'}"><time datetime="${cell.date}">${cell.day}</time>${m?.kind === 'double' ? '<sup>×2</sup>' : ''}</button>`;
+                    : !cell.scheduled || frozenDay || otherDay ? ' is-x' : cell.date > today ? ' is-pl' : '';
+                return `<button type="button" class="udv-d${cls}${cell.scheduled ? ' duty-scheduled' : ' duty-offday'}${m ? ' duty-has-mk' + (m.status === 'review' ? ' is-review' : '') : ''}${late ? ' is-cv' : ''}${cell.date === today ? ' is-td' : ''}" data-duty-student="${esc(s.id)}" data-duty-day="${cell.day}" data-status="${state}" ${isPast ? ' disabled' : ''} aria-label="${cell.day}-${MON3[mm - 1]}: ${label}${cell.scheduled ? (frozenDay ? ', o‘quvchi faol emas (muzlatilgan)' : otherDay ? ', boshqa ustoz darsi' : '') : ', dars kuni emas'}${m?.status === 'review' ? ', tekshiruvda' : ''}${m?.missed_came ? ', maoshga o‘tmaydi (qoldirilgan kunda Keldi bor)' : ''}${late ? ', keyin qoplandi' : ''}${cell.date === today ? ', bugun' : ''}" aria-pressed="${state === 'present'}"><time datetime="${cell.date}">${cell.day}</time>${m?.kind === 'double' ? '<sup>×2</sup>' : ''}</button>`;
             }).join('');
             const mon = MON3[mm - 1];
             const csum = selected !== 'main' ? '' : `<div class="udv-csum">
-                <div class="udv-cs"><span class="udv-sl">Hisobga o‘tdi</span><span class="udv-sv is-ok">${counted} <small>/ ${plan} · ${present} keldi${approvedMk.length ? ` + ${approvedMk.length} qoplash` : ''}${reviewN ? ` · +${reviewN} tekshiruvda` : ''}</small></span></div>
-                <div class="udv-cs"><span class="udv-sl">Kelmadi</span><span class="udv-sv is-bad">${absentDays.length} <small>${coveredAbs.length ? `· ${[coveredAbs.filter(d => !reviewMissed.has(d)).length ? coveredAbs.filter(d => !reviewMissed.has(d)).length + ' qoplandi' : '', coveredAbs.filter(d => reviewMissed.has(d)).length ? coveredAbs.filter(d => reviewMissed.has(d)).length + ' tekshiruvda' : ''].filter(Boolean).join(' + ')}` : ''}</small></span></div>
-                <div class="udv-cs"><span class="udv-sl">Qoplash mumkin</span><span class="udv-sv is-teal">${month === thisMonth ? openMissed.length : '—'} <small>${month === thisMonth && openMissed.length ? '· ' + joinVa(openMissed.map(d => Number(d.slice(8)))) + '-' + mon : month !== thisMonth ? 'faqat shu oy ichida' : ''}</small></span></div>
+                <div class="udv-cs"><span class="udv-sl">Hisobga o‘tdi</span><span class="udv-sv is-ok">${counted} <small>/ ${plan} · ${present} keldi${R?.approved ? ` + ${R.approved} qoplash` : ''}${reviewN ? ` · +${reviewN} tekshiruvda` : ''}</small></span></div>
+                <div class="udv-cs"><span class="udv-sl">Kelmadi</span><span class="udv-sv is-bad">${absentDays.length} <small>${coverTxt(R)}</small></span></div>
+                <div class="udv-cs"><span class="udv-sl">Qoplash mumkin</span><span class="udv-sv is-teal">${month === thisMonth && !isPast ? openMissed.length : '—'} <small>${isPast ? 'o‘quvchi boshqa ustozda' : month === thisMonth && openMissed.length ? '· ' + joinVa(openMissed.map(d => Number(d.slice(8)))) + '-' + mon : month !== thisMonth ? 'faqat shu oy ichida' : ''}</small></span></div>
                 <div class="udv-cs"><span class="udv-sl">Tekshiruvda</span><span class="udv-sv is-teal">${reviewN} <small>${reviewN ? 'qoplash · ' + joinVa(reviewMk.map(m => Number(dkey(m.held_date).slice(8)))) + '-' + mon : ''}</small></span></div>
                 ${noPayMk.length ? `<div class="udv-cs udv-cs--wide"><span class="udv-sl">Maoshga o‘tmaydi</span><span class="udv-sv is-bad"><small>${joinVa(noPayMk.map(m => Number(dkey(m.held_date).slice(8)))) + '-' + mon} qoplash · ${esc(U?.MISSED_CAME || 'qoldirilgan kunda "Keldi" bor')}</small></span></div>` : ''}</div>`;
             return `${head}<div id="${panelId}" class="udv-cal" ${open ? '' : 'hidden'}><div class="udv-calw"><div class="udv-cg" role="group" aria-label="${esc(s.name)}, ${esc(MN.toLowerCase())} ${yy}">${DAYS.map(d => `<span class="udv-h">${d}</span>`).join('')}${grid}</div>${csum}</div></div>`;

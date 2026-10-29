@@ -42,50 +42,55 @@
         return out;
     }
 
+    // ── Oy hisobi (bitta manba): AttendanceRules.monthTotals — Davomat "Oktyabr" kartasi, sidebar soni va Reyting bilan bir xil.
+    // Hozirgi o'quvchilar + ustoz almashgan o'quvchilarning shu ustoz davridagi darslari (withPast); "Kelmadi" — school_absences.
+    function mergeAbs(block, list, tid) {
+        if (window.teacherDutyUI?.mergeAbsences) return window.teacherDutyUI.mergeAbsences(block, list, tid);
+        const out = { ...block };
+        for (const a of list || []) {
+            if (a.teacherId !== tid) continue;
+            const day = Number(String(a.day).slice(8, 10)), cur = { ...(out[a.studentId] || {}) };
+            if (cur[day] !== 1 && cur[day] !== true) { cur[day] = 0; out[a.studentId] = cur; }
+        }
+        return out;
+    }
+    function monthCalc(tid, { month, today: td, absences, makeups }) {
+        const block = (getItem(STORAGE_KEYS.mainAttendance, {}) || {})[`${month}_${tid}`] || {};
+        const own = typeof resolveTeacherWithVirtual === 'function' ? resolveTeacherWithVirtual(tid) || {} : {};
+        const students = AttendanceRules.withPast(ownMain(tid), getItem(STORAGE_KEYS.pastStudents, []) || [], tid, month);
+        return AttendanceRules.monthTotals({ id: tid, month, students, mainAtt: mergeAbs(block, absences, tid), makeups, teacher: own, todayKey: td });
+    }
+
     // ── Qoplanmagan darslar (joriy oy, bugungacha) ─────────────────────────
-    // "Kelmadi" = main_attendance dagi 0 yoki school_absences (/attendance/absences); "Keldi" ustun turadi.
-    // Qoplangan = shu sana uchun qoplash bor (rejada / tekshiruvda / tasdiqlangan) — Davomat sahifasi bilan bir xil.
+    // monthTotals qatorlari: kelmagan kun (o'tgan, shu ustoz darsi) va unga qoplash yo'q (rejada / tekshiruvda / tasdiqlangan) —
+    // Davomat "Qoplash mumkin" bilan bir xil. planned — qoplash rejalashtirilgan kelmaganlar.
     async function missed(user = me(), { makeups = null } = {}) {
         const tid = user.linkedTeacherId; if (!tid) return null;
         const td = today(), month = td.slice(0, 7);
         const [ab, mk] = await Promise.all([
             school('/attendance/absences?month=' + month).catch(() => ({ absences: [] })),
             makeups ? Promise.resolve(makeups) : school('/makeups').then(r => r.makeups || []).catch(() => [])]);
-        const att = (getItem(STORAGE_KEYS.mainAttendance, {}) || {})[`${month}_${tid}`] || {};
-        const mine = mk.filter(m => m.teacher_id === tid && ['planned', 'review', 'approved'].includes(m.status));
+        const m = { month, today: td, absences: ab.absences || [], makeups: mk };
+        const T = monthCalc(tid, m), mine = mk.filter(x => x.teacher_id === tid && x.status === 'planned');
         const by = new Map();
-        for (const s of ownMain(tid)) {
-            const marks = att[s.id] || {}, absent = new Set();
-            for (const [d, v] of Object.entries(marks)) if (v === 0 || v === false) absent.add(Number(d));
-            for (const a of ab.absences || []) if (a.teacherId === tid && a.studentId === s.id && String(a.day).slice(0, 7) === month) absent.add(Number(String(a.day).slice(8, 10)));
-            const days = lessonDaySet(s, month), start = dkey(s.startDate || s.joinDate);
-            const dates = [...absent].filter(d => marks[d] !== 1 && marks[d] !== true && (!days || days.has(d)))
-                .map(d => `${month}-${String(d).padStart(2, '0')}`).filter(d => d <= td && (!start || d >= start)).sort();
-            const cover = new Map(mine.filter(m => m.student_id === s.id).map(m => [dkey(m.missed_date), m]));
-            const open = dates.filter(d => !cover.has(d));
-            const planned = dates.filter(d => cover.get(d)?.status === 'planned').map(d => ({ missed: d, held: dkey(cover.get(d).held_date) }));
-            if (open.length || planned.length) by.set(s.id, { student: s, open, planned });
+        for (const r of T.rows) {
+            if (r.past) continue; // o'quvchi boshqa ustozda — qoplashni u qo'yadi
+            const open = r.openMissed.filter(d => d <= td);
+            const planned = r.absentDates.map(d => mine.find(x => x.student_id === r.id && dkey(x.missed_date) === d)).filter(Boolean)
+                .map(x => ({ missed: dkey(x.missed_date), held: dkey(x.held_date) }));
+            if (open.length || planned.length) by.set(r.id, { student: r.student, open, planned });
         }
-        return { month, today: td, by, makeups: mk, absences: ab.absences || [] };
+        return { ...m, by, totals: T };
     }
 
-    // ── O'tgan kunlardagi belgilanmagan darslar (UstozBosh "Bajarish kerak" · "… darsi belgilanmagan · Belgilash") ──
-    // Ta'rif AttendanceRules.monthTotals bilan bir xil: dars kuni, kurs boshlangan, "Keldi" ham "Kelmadi" ham yo'q.
-    // Bugungi darslar "Bugun" ro'yxatida alohida qator bo'lib chiqadi, shuning uchun bu yerda faqat bugungacha bo'lgan kunlar.
+    // ── Belgilanmagan darslar (UstozBosh "Bajarish kerak" · "… darsi belgilanmagan · Belgilash") ──
+    // monthTotals unmarkedDates — maosh kartasi "N belgilanmagan" va sidebar soni bilan bitta raqam
+    // (bugungi dars boshlangandan keyin belgilanmagan bo'lsa ham shu yerda sanaladi).
     function unmarkedPast(user, m) {
         const tid = user.linkedTeacherId; if (!tid || !m) return [];
-        const todayDay = Number(m.today.slice(8));
-        const att = (getItem(STORAGE_KEYS.mainAttendance, {}) || {})[`${m.month}_${tid}`] || {};
-        const out = [];
-        for (const s of ownMain(tid)) {
-            const marks = att[s.id] || {}, days = lessonDaySet(s, m.month), start = dkey(s.startDate || s.joinDate);
-            if (!days) continue;
-            const abs = new Set(m.absences.filter(a => a.teacherId === tid && a.studentId === s.id && String(a.day).slice(0, 7) === m.month).map(a => Number(String(a.day).slice(8, 10))));
-            const dates = [...days].filter(d => d < todayDay && marks[d] !== 1 && marks[d] !== true && marks[d] !== 0 && marks[d] !== false && !abs.has(d))
-                .map(d => `${m.month}-${String(d).padStart(2, '0')}`).filter(d => (!start || d >= start) && AttendanceRules.lessonCountsOn(s, s.statusHistory, d)).sort();
-            if (dates.length) out.push({ student: s, dates });
-        }
-        return out.sort((a, b) => b.dates.length - a.dates.length);
+        const T = m.totals || monthCalc(tid, m);
+        return T.rows.filter(r => r.unmarkedDates.length).map(r => ({ student: r.student, dates: r.unmarkedDates }))
+            .sort((a, b) => b.dates.length - a.dates.length);
     }
     function openDavomatFor(studentId) {
         window.teacherDutyUI?.focus?.(studentId);
@@ -255,9 +260,7 @@
         const [ab, mk] = await Promise.all([school('/attendance/absences?month=' + month).catch(() => ({ absences: [] })),
             school('/makeups').then(r => r.makeups || []).catch(() => [])]);
         if (!foot.isConnected) return;
-        const block = (getItem(STORAGE_KEYS.mainAttendance, {}) || {})[`${month}_${tid}`] || {};
-        const own = typeof resolveTeacherWithVirtual === 'function' ? resolveTeacherWithVirtual(tid) || {} : {};
-        const t = T({ id: tid, month, students: ownMain(tid), mainAtt: window.teacherDutyUI.mergeAbsences(block, ab.absences, tid), makeups: mk, teacher: own, todayKey: td });
+        const t = monthCalc(tid, { month, today: td, absences: ab.absences || [], makeups: mk });
         // Sidebar "Akademik bo'lim" soni — shu "N belgilanmagan" bilan bitta raqam (js/staffNavBadges.js).
         window.dispatchEvent(new CustomEvent('ustoz:month-unmarked', { detail: { month, n: t.unmarked } }));
         if (!t.plan) return;

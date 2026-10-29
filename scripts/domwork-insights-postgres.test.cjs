@@ -83,8 +83,9 @@ test('Domwork recognition, assistant ownership and Russian advertising; no real 
             assert.equal((await db.query("SELECT COUNT(*) FROM domwork_insights_audit WHERE entity_id='s2:2026-10-05'")).rows[0].count,'1');
         });
         await t.test('explicit Russian main role overrides legacy English language without rewriting HR or misclassifying English teachers',async()=>{
-            assert.deepEqual(await write(d=>insights.rateAssistant(d,'dual','2026-10-05',rating,now)),rating);
-            assert.ok((await insights.assistantRanking(db,'t')).includes('5.0'));
+            // 29-okt: asosiy ustoz yordamchi bo'la olmaydi — "dual_role" belgisi bo'lsa ham asosiy ustozni yordamchi sifatida baholab bo'lmaydi.
+            await assert.rejects(write(d=>insights.rateAssistant(d,'dual','2026-10-05',rating,now)),e=>e.status===403);
+            assert.ok(!(await insights.assistantRanking(db,'t')).includes('5.0'));
             assert.equal((await db.query("SELECT lang FROM hr_employees WHERE id='t'")).rows[0].lang,'english');
             assert.equal((await recognition.teachers(db,'2026-10-13','2026-10-13')).rows[0].id,'t');
         });

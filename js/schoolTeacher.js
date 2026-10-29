@@ -92,7 +92,11 @@
             }
         }
         globalThis.__schoolMakeups = makeups.makeups || [];
-        const reviewing = (makeups.makeups || []).filter(m => m.status === 'review').length;
+        // "+N qoplash tekshiruvda" — shu oyda o'tilgan va tasdiqlab bo'ladigan (missed_came emas) qoplashlar: Davomat va
+        // Mening maoshim bilan bitta ta'rif (AttendanceRules.reviewMakeups).
+        const reviewing = window.AttendanceRules?.reviewMakeups
+            ? window.AttendanceRules.reviewMakeups(makeups.makeups, { id: tid, month: td.slice(0, 7), mainAtt: (getItem(STORAGE_KEYS.mainAttendance, {}) || {})[`${td.slice(0, 7)}_${tid}`] }).length
+            : (makeups.makeups || []).filter(m => m.status === 'review' && m.missed_came !== true).length;
 
         // Maosh — server payroll (/api/payroll/me): Davomat va "Mening maoshim" bilan bitta manba (brauzerda hisoblanmaydi).
         const sal = home.querySelector('[data-thx-sal]'), sub = home.querySelector('[data-thx-salsub]');

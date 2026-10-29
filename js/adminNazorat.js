@@ -78,8 +78,14 @@
         const list = typeof filterTeachersByTypeAndSubject === 'function' ? filterTeachersByTypeAndSubject('asosiy', lang) : U().teachersForSubject(lang);
         return [...list].sort((a, b) => String(a.name).localeCompare(String(b.name)));
     }
-    const studentsOf = (tid, lang) => getC('students', []).filter(s => s.teacherId === tid && (!lang || (s.subject || 'english') === lang)
-        && !s.frozen && s.status !== 'inactive' && !s.isStaffDemo);
+    // month berilsa — Davomat oy ro'yxati ustoz kabineti va reyting bilan bir xil (AttendanceRules.inMonth + ustoz almashgan
+    // o'quvchining shu ustoz davri, withPast); berilmasa (eski KPI) — hozir faol o'quvchilar.
+    const studentsOf = (tid, lang, month) => {
+        const all = getC('students', []).filter(s => (!lang || (s.subject || 'english') === lang) && !s.isStaffDemo);
+        const R = window.AttendanceRules;
+        if (month && R?.withPast) return R.withPast(all.filter(s => s.teacherId === tid && R.inMonth(s, s.statusHistory, month)), all, tid, month);
+        return all.filter(s => s.teacherId === tid && !s.frozen && s.status !== 'inactive');
+    };
     function kpiFor(t, month, list) {
         try { return typeof calculateKpiSalary === 'function' && list.length ? calculateKpiSalary(t, month, getC('mainAttendance', {}), list) : null; } catch (e) { return null; }
     }
@@ -103,11 +109,13 @@
         const mine = ctx.mks.filter(m => m.student_id === s.id && m.teacher_id === t.id && ['planned', 'review', 'approved'].includes(m.status));
         const heldOn = new Map(mine.filter(m => m.held_date).map(m => [dkey(m.held_date), m]));
         const covered = new Set(mine.map(m => dkey(m.missed_date)));
-        const cells = [], present = new Set(), unmarked = [], absent = [];
-        let plan = 0, passed = 0;
+        const cells = [], present = new Set(), absent = [];
+        let unmarked = [], plan = 0, passed = 0;
+        const RR = window.AttendanceRules;
         for (let d = 1; d <= days; d++) {
             const date = dateOf(month, d);
-            const sched = wds.includes(wdOf(date)) && (!start || date >= start);
+            // Dars kuni: kurs boshlangan, o'quvchi faol (muzlatilgan / chiqib ketgan kun emas) va o'sha kuni shu ustozda (ustozlar tarixi).
+            const sched = wds.includes(wdOf(date)) && (!start || date >= start) && (!RR || (RR.lessonCountsOn(s, s.statusHistory, date) && RR.taughtOn(s, t.id, date)));
             const v = entries[d], isP = v === 1 || v === true;
             const isA = !isP && (v === 0 || v === false || ctx.abs.has(`${t.id}|${s.id}|${date}`));
             const ended = date < td || (date === td && st != null && nm >= st + dur);
@@ -125,8 +133,20 @@
             if (m.kind === 'double') counted++; else if (!present.has(hd)) { present.add(hd); counted++; }
         }
         counted = Math.min(counted, plan);
-        const review = mine.filter(m => m.status === 'review' && dkey(m.held_date).slice(0, 7) === month);
-        const openMissed = absent.filter(d => !covered.has(d));
+        let review = mine.filter(m => m.status === 'review' && dkey(m.held_date).slice(0, 7) === month);
+        let openMissed = absent.filter(d => !covered.has(d));
+        // Raqamlar — bitta manba (AttendanceRules.monthTotals): ustoz Davomati, Bosh, Reyting va maosh bilan bir xil
+        // (bugungi dars boshlangandan "o'tgan", missed_came qoplash sanalmaydi va "tekshiruvda" emas, ustozlar tarixi).
+        if (RR?.monthTotals) {
+            const marks = { ...entries };
+            for (const d of absent) { const n = Number(d.slice(8)); if (marks[n] !== 1 && marks[n] !== true) marks[n] = 0; }
+            const row = RR.monthTotals({ id: t.id, month, students: [s], mainAtt: { [s.id]: marks }, makeups: ctx.mks, teacher: t, todayKey: td, nowMin: nm }).rows[0];
+            if (row) {
+                plan = row.plan; passed = row.expected; counted = row.counted; review = row.reviewList; openMissed = row.openMissed; unmarked = row.unmarkedDates;
+                const un = new Set(unmarked);
+                for (const c of cells) if (c.state === 'planned' && un.has(c.date)) c.state = 'unmarked';
+            } else { plan = 0; passed = 0; counted = 0; review = []; openMissed = []; unmarked = []; }
+        }
         return { s, cells, plan, passed, counted, unmarked, absent, openMissed, review, mine };
     }
     function buildCtx(month, mks, abs) {
@@ -173,7 +193,7 @@
         // Barcha ustozlar bo'yicha (shu til): belgilanmagan dars kunlari va o'quvchi ko'rsatkichlari.
         const all = teachers.map(t => {
             const tObj = teacherObj(t.id);
-            const rows = studentsOf(t.id, lang).map(s => studentMonth(s, tObj, month, ctx));
+            const rows = studentsOf(t.id, lang, month).map(s => studentMonth(s, tObj, month, ctx));
             return { t, tObj, rows, unmarked: rows.reduce((n, r) => n + r.unmarked.length, 0) };
         });
         const cur = all.find(x => x.t.id === D.teacherId) || { t: { id: '' }, tObj: {}, rows: [], unmarked: 0 };
@@ -186,17 +206,42 @@
         }
         if (seq !== davSeq) return;
         if (D.duty === 'assistant') await loadContacts(cur.rows.map(r => r.s), month);
+        // Maosh — Moliya hisobi (/api/payroll/preview: payrollEngine), ustozning "Mening maoshim" va Bosh sahifasi bilan bitta manba.
+        const pay = canManage() ? await loadPayroll(month, lang) : null;
         if (seq !== davSeq) return;
-        root.innerHTML = davomatHtml({ lang, teachers, all, cur, mks, month, td, asstPay, asstIds });
+        root.innerHTML = davomatHtml({ lang, teachers, all, cur, mks, month, td, asstPay, asstIds, pay });
         bindDavomat(root, { all, cur, mks, ctx, lang });
     }
 
-    function davomatHtml({ lang, teachers, all, cur, mks, month, td, asstPay }) {
+    // Moliya hisobi oy bo'yicha (kesh 60 soniya). Ruxsat bo'lmasa yoki xato — null (eski KPI ko'rinishi qoladi).
+    const payCache = new Map();
+    function loadPayroll(month, lang) {
+        const key = `${month}|${lang}`, hit = payCache.get(key);
+        if (hit && Date.now() - hit.t < 60000) return hit.p;
+        const [y, m] = month.split('-').map(Number), end = `${month}-${String(new Date(Date.UTC(y, m, 0)).getUTCDate()).padStart(2, '0')}`;
+        const p = apiFetch(`/api/payroll/preview?start=${month}-01&end=${end}&language=${lang}`, { timeout: 30000 }).catch(() => null);
+        payCache.set(key, { t: Date.now(), p });
+        return p;
+    }
+    // Moliya qatoridan ustozning asosiy ustozlik maoshi va o'quvchilar bo'yicha summa (KPI ko'rinishi shakliga keltiriladi).
+    function payKpi(pay, tid) {
+        const row = (pay?.rows || []).find(r => r.employeeId === tid);
+        if (!row) return null;
+        const main = (row.breakdown || []).filter(b => b.dutyRole !== 'assistant' && b.unit !== 'contact');
+        const perStudent = [...main.reduce((m, b) => m.set(b.studentId, { id: b.studentId, earned: (m.get(b.studentId)?.earned || 0) + (Number(b.earned) || 0),
+            rate: b.expected ? (Number(b.tariff) || 0) / b.expected : 0 }), new Map()).values()];
+        const total = Number(row.mainTotal ?? (row.assistantTotal != null ? row.total - row.assistantTotal : row.total)) || 0;
+        return { total, perStudent, expected: 1, assistant: Number(row.assistantTotal) || 0, grand: Number(row.total) || 0 };
+    }
+    function davomatHtml({ lang, teachers, all, cur, mks, month, td, asstPay, pay }) {
         const t = cur.t, rowsAll = cur.rows;
-        const kpi = kpiFor(cur.tObj, month, rowsAll.map(r => r.s));
+        const fin = payKpi(pay, t.id);
+        const kpi = fin || kpiFor(cur.tObj, month, rowsAll.map(r => r.s));
         const plan = rowsAll.reduce((n, r) => n + r.plan, 0), counted = rowsAll.reduce((n, r) => n + r.counted, 0), passed = rowsAll.reduce((n, r) => n + r.passed, 0);
         const reviewN = rowsAll.reduce((n, r) => n + r.review.length, 0);
-        const reviewSum = rowsAll.reduce((n, r) => n + r.review.reduce((a, m) => a + (lessonRate(r.s, cur.tObj, kpi, r.plan) || 0), 0), 0);
+        const finRate = sid => Math.round((fin?.perStudent.find(p => p.id === sid)?.rate || 0) / 100) * 100 || null;
+        const rateOf = r => (fin ? finRate(r.s.id) : lessonRate(r.s, cur.tObj, kpi, r.plan));
+        const reviewSum = rowsAll.reduce((n, r) => n + r.review.reduce(a => a + (rateOf(r) || 0), 0), 0);
         const pct = passed ? Math.min(100, Math.round(counted / passed * 100)) : null;
         const mwf = rowsAll.filter(r => [1, 3, 5].includes(Number(r.s.lessonDayOfWeek))).length;
         const perStudent = new Map((kpi?.perStudent || []).map(p => [p.id, p]));
@@ -212,7 +257,7 @@
             return `<th class="an-dh${isT ? ' is-today' : ''}" scope="col"><b>${d}</b><small>${isT ? 'Bugun' : DAY[wdOf(date) - 1]}</small></th>`; }).join('');
         const assistantView = D.duty === 'assistant';
         const bodyRows = rows.map(r => {
-            const s = r.s, ps = perStudent.get(s.id), rate = lessonRate(s, cur.tObj, kpi, r.plan);
+            const s = r.s, ps = perStudent.get(s.id), rate = rateOf(r);
             const cells = r.cells.filter(c => c.d >= from && c.d <= to).map(c => assistantView ? contactCell(s, c) : cellHtml(r, c, td)).join('');
             const low = r.passed >= 3 && r.counted / r.passed < 0.6;
             const right = assistantView ? contactTotals(s)
@@ -238,7 +283,8 @@
             <div><small>O'quvchilar</small><b>${rowsAll.length}</b><span>${mwf} tasi Du·Ch·Ju, ${rowsAll.length - mwf} tasi Se·Pa·Sh</span></div>
             <div><small>Hisobga o'tdi · shu oy</small><b>${counted} <em>/ ${plan}${reviewN ? ` · +${reviewN} tekshiruvda` : ''}</em></b><span class="an-bar" role="img" aria-label="${plan ? Math.round(counted / plan * 100) : 0}%"><i style="width:${plan ? Math.min(100, counted / plan * 100) : 0}%"></i></span></div>
             <div><small>Davomat (KPI)</small><b>${pct == null ? '—' : pct + '%'}</b><span>O'tgan ${passed} darsdan ${counted} tasi hisobga o'tdi</span></div>
-            ${showMoney ? `<div><small>Maosh · hozirgacha</small><b class="an-ok">${kpi ? money(kpi.total + (asstPay || 0)) + " so'm" : '—'}</b><span>${kpi ? `asosiy ${money(kpi.total)}${asstPay ? ` + yordamchi ${money(asstPay)}` : ''}` : ''}${reviewSum ? ` · +${money(reviewSum)} tekshiruvda` : ''}</span></div>` : ''}
+            ${showMoney ? (() => { const extra = fin ? fin.assistant : asstPay || 0, sum = fin ? fin.grand : kpi ? kpi.total + extra : null;
+                return `<div><small>Maosh · hozirgacha</small><b class="an-ok">${sum != null ? money(sum) + " so'm" : '—'}</b><span>${kpi ? `asosiy ${money(kpi.total)}${extra ? ` + yordamchi ${money(extra)}` : ''}` : ''}${reviewSum ? ` · +${money(reviewSum)} tekshiruvda` : ''}</span></div>`; })() : ''}
           </div>
         </section>
         <section class="sc-card an-gridcard">
@@ -340,7 +386,7 @@
         root.querySelector('[data-allmk]')?.addEventListener('click', () => { D.view = 'makeups'; rerender(); });
         root.querySelectorAll('[data-mkyes]').forEach(b => b.onclick = () => decideMakeup(b.dataset.mkyes, 'approve', '', b).then(ok => ok && rerender()));
         root.querySelectorAll('[data-mkno]').forEach(b => b.onclick = () => rejectDrawer(mks.find(m => m.id === b.dataset.mkno), rerender));
-        root.querySelector('[data-excel]')?.addEventListener('click', () => exportCsv(cur));
+        root.querySelector('[data-excel]')?.addEventListener('click', () => exportCsv(cur).catch(e => U().toast?.(e.message || 'Eksport bo\'lmadi')));
         // Eski "Hisob sozlamasi" (ustoz qolipi va davomiylik) — app.js dagi syncTeacherSettings orqali.
         const ps = root.querySelector('[data-set="pattern"]'), ds = root.querySelector('[data-set="duration"]');
         if (ps && ds && typeof syncTeacherSettings === 'function') syncTeacherSettings(D.teacherId, ps, ds, rerender);
@@ -424,10 +470,11 @@
         box.querySelector('[data-tg]')?.addEventListener('click', async () => { await copy(); window.open(tg, '_blank', 'noopener'); });
     }
 
-    function exportCsv(cur) {
+    async function exportCsv(cur) {
         const month = D.month, days = monthDays(month);
         const mark = c => ({ present: 'Keldi', absent: 'Kelmadi', mk: 'Qoplash', unmarked: 'Belgilanmagan', planned: 'Reja', off: '' }[c.state] || '');
-        const kpi = kpiFor(cur.tObj, month, cur.rows.map(r => r.s));
+        // Summa — Moliya hisobi (sahifadagi bilan bir xil); bo'lmasa eski KPI.
+        const kpi = (canManage() && payKpi(await loadPayroll(month, curLang()), cur.t.id)) || kpiFor(cur.tObj, month, cur.rows.map(r => r.s));
         const per = new Map((kpi?.perStudent || []).map(p => [p.id, p]));
         const head = ['O\'quvchi', 'Telefon', 'Jadval', 'Davomiylik', ...Array.from({ length: days }, (_, i) => String(i + 1)), 'Hisobga o\'tdi', 'Reja', ...(canManage() ? ['Maosh'] : [])];
         const lines = [head, ...cur.rows.map(r => [r.s.name, r.s.phone || '', daysWord(r.s), `${r.s.lessonDuration || ''} daq`, ...r.cells.map(mark), r.counted, r.plan, ...(canManage() ? [per.get(r.s.id)?.earned ?? ''] : [])])];

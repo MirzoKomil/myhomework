@@ -561,10 +561,15 @@ async function teacherAbsences(db, { from, to, teacherId = '', studentIds = null
         WHERE day BETWEEN $1 AND $2 AND ($3='' OR teacher_id=$3) AND ($4::text[] IS NULL OR student_id = ANY($4::text[]))`, [from, to, teacherId, ids])).rows;
     let marks = [];
     if ((await db.query("SELECT to_regclass('public.staff_att_lesson_marks')::text AS t")).rows[0]?.t) {
+        // Eski belgilar (staff_att_lesson_marks): faqat o'tgan / bugungi sana va o'quvchining dars kuni (Du·Ch·Ju / Se·Pa·Sh / Ya) —
+        // kelajakdagi yoki dars kuni bo'lmagan eski yozuv "Kelmadi" bo'lib Jadval va qoplash ro'yxatiga chiqmasin.
         marks = (await db.query(`SELECT m.teacher_id, m.student_id, TO_CHAR(m.lesson_date,'YYYY-MM-DD') AS day FROM staff_att_lesson_marks m
-            WHERE m.duty='main' AND m.lesson_date BETWEEN $1 AND $2 AND ($3='' OR m.teacher_id=$3) AND ($5::text[] IS NULL OR m.student_id = ANY($5::text[]))
+            JOIN students s ON s.id = m.student_id
+            WHERE m.duty='main' AND m.lesson_date BETWEEN $1 AND $2 AND m.lesson_date <= $6::date AND ($3='' OR m.teacher_id=$3) AND ($5::text[] IS NULL OR m.student_id = ANY($5::text[]))
+            AND (s.lesson_day_of_week IS NULL OR CASE WHEN s.lesson_day_of_week IN (1,3,5) THEN EXTRACT(ISODOW FROM m.lesson_date) IN (1,3,5)
+                WHEN s.lesson_day_of_week IN (2,4,6) THEN EXTRACT(ISODOW FROM m.lesson_date) IN (2,4,6) ELSE EXTRACT(ISODOW FROM m.lesson_date) = s.lesson_day_of_week END)
             AND NOT EXISTS (SELECT 1 FROM main_attendance a WHERE a.att_key = $4 || '_' || m.teacher_id AND a.student_id=m.student_id
-                AND a.day = EXTRACT(DAY FROM m.lesson_date)::int AND a.present = 1)`, [from, to, teacherId, month, ids])).rows;
+                AND a.day = EXTRACT(DAY FROM m.lesson_date)::int AND a.present = 1)`, [from, to, teacherId, month, ids, T.nowLocal().date])).rows;
     }
     const key = r => `${r.teacher_id}|${r.student_id}|${r.day}`;
     const explicit = new Map(own.map(r => [key(r), r.absent]));

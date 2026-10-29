@@ -601,15 +601,26 @@
     }
     const REQ_KIND = { tariff: 'tarif', teacher: 'ustoz', payment: 'to\'lov' };
 
-    // Oy bo'yicha davomat hisobi: hisobga o'tgan = keldi + tasdiqlangan qoplash (rejadan oshmaydi).
+    // Oy bo'yicha davomat hisobi — AttendanceRules.monthTotals bilan bir xil qoida (Davomat, O'quvchilar ro'yxati, maosh):
+    // hisobga o'tgan = dars kunidagi "Keldi" + tasdiqlangan qoplash (rejadan oshmaydi); qoldirilgan kunida "Keldi" bor qoplash
+    // (missed_came) sanalmaydi va "tekshiruvda" ham emas; "qoplandi" — faqat tasdiqlangani.
     function attStats(a, c) {
-        const month = a.month, td = today();
+        const month = a.month, td = today(), strict = month >= '2026-10', R = window.AttendanceRules;
+        const lessonSet = new Set(a.lessonDays);
         const vals = Object.entries(a.entries).map(([d, e]) => ({ date: `${month}-${String(d).padStart(2, '0')}`, ...e }));
+        const marks = Object.fromEntries(Object.entries(a.entries).map(([d, e]) => [d, e.present ? 1 : 0]));
+        const came = m => (R ? R.missedCame({ missed_date: m.missed }, marks, month) : !!a.entries[Number(String(m.missed || '').slice(8))]?.present);
         const mks = (a.makeups || []).filter(m => m.status !== 'rejected' && m.status !== 'cancelled');
         const inMonth = m => String(m.held || '').slice(0, 7) === month;
-        const approved = mks.filter(m => m.status === 'approved' && inMonth(m)).length, review = mks.filter(m => m.status === 'review' && inMonth(m));
-        const present = vals.filter(v => v.present).length, absentDays = vals.filter(v => !v.present).map(v => v.date).sort();
-        const covered = new Set(mks.map(m => m.missed)), done = new Set(mks.filter(m => m.status === 'approved').map(m => m.missed));
+        const presentDays = vals.filter(v => v.present && (!strict || lessonSet.has(v.date))).map(v => v.date);
+        const seen = new Set(presentDays);
+        let approved = 0;
+        for (const m of mks.filter(m => m.status === 'approved' && inMonth(m) && !came(m))) {
+            if (m.kind === 'double') approved++; else if (!seen.has(m.held)) { seen.add(m.held); approved++; }
+        }
+        const review = mks.filter(m => m.status === 'review' && inMonth(m) && !came(m));
+        const present = presentDays.length, absentDays = vals.filter(v => !v.present).map(v => v.date).sort();
+        const covered = new Set(mks.map(m => m.missed)), done = new Set(mks.filter(m => m.status === 'approved' && !came(m)).map(m => m.missed));
         return { plan: a.lessonDays.length, passed: a.lessonDays.filter(d => d <= td).length, present, absent: absentDays.length, approved, review: review.length,
             reviewDays: review.map(m => m.held).sort(), counted: Math.min(present + approved, a.lessonDays.length),
             coveredAbsent: absentDays.filter(d => done.has(d)).length, open: absentDays.filter(d => !covered.has(d)) };
