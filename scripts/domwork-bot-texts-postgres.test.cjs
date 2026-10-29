@@ -49,6 +49,32 @@ test('sales group celebrates a new sale with a mention; a later debt payment is 
    const personal=rows.find(r=>r.unique_key.startsWith('event:payment:p1:manager')).payload;
    assert.match(personal.text,/Tabriklaymiz, Dilnoza/);assert.match(personal.text,/Rejagacha/);
   });
+  await t.test('team vibes: Friday greeting, joke, 18:00 hot hour; Sunday is quiet; off by default',async()=>{
+   const scheduler=require('../server/services/domworkBot/scheduler');
+   const tick=async iso=>{const c=await pool.connect();try{await c.query('BEGIN');await scheduler.run(c,new Date(iso));await c.query('COMMIT');}catch(e){await c.query('ROLLBACK');throw e;}finally{c.release();}};
+   const vibes=async()=>(await pool.query("SELECT unique_key,payload FROM domwork_bot_outbox WHERE unique_key LIKE 'vibe-%' ORDER BY unique_key")).rows;
+   await pool.query("INSERT INTO domwork_bot_groups(id,type,scope,chat_id,active,created_by,title) VALUES('fam','family','','-100222222',true,'a','Family')");
+   await tick('2026-10-30T13:00:00Z');assert.equal((await vibes()).length,0); // o'chiq
+   await pool.query(`UPDATE domwork_bot_settings SET data=data||'{"teamVibesEnabled":true}'::jsonb`);
+   for(const iso of ['2026-10-30T04:00:00Z','2026-10-30T08:30:00Z','2026-10-30T08:31:00Z','2026-10-30T13:00:00Z','2026-11-01T13:00:00Z']) await tick(iso);
+   const rows=await vibes();
+   assert.deepEqual(rows.map(r=>r.unique_key.split(':')[0]),['vibe-evening','vibe-friday','vibe-joke']);
+   assert.match(rows.find(r=>r.unique_key.startsWith('vibe-friday')).payload.text,/Juma/);
+   assert.match(rows.find(r=>r.unique_key.startsWith('vibe-evening')).payload.text,/18:00|Kech|qaynoq|marafon|nafas|fokus/i);
+  });
+  await t.test('trial not confirmed in 15 minutes: teacher and beacon are nudged once, with buttons',async()=>{
+   const scheduler=require('../server/services/domworkBot/scheduler');
+   const now=new Date('2026-10-30T10:00:00Z');
+   await pool.query("INSERT INTO hr_employees VALUES('h-t','Ezoza Sodiqova','ez@x','rus-oqituvchi','active','russian',false,'')");
+   await pool.query("INSERT INTO domwork_bot_groups(id,type,scope,chat_id,active,created_by,title) VALUES('bc','beacon','','-100333333',true,'a','Mayoq')");
+   await pool.query(`INSERT INTO leads(id,name,language,status,manager_id,extra_data) VALUES('LT','Ali Valiyev','russian','sinov-darsida','h-s',$1)`,
+    [JSON.stringify({trialRequest:{id:'tr1',teacherId:'h-t',scheduledAt:'2026-10-30T20:00',daysCount:1,state:'pending',requestedAt:'2026-10-30T09:40:00Z'},paymentOnboarding:{teacherId:'h-t'},trialLessonAt:'2026-10-30T20:00'})]);
+   const tick=async d=>{const c=await pool.connect();try{await c.query('BEGIN');await scheduler.run(c,d);await c.query('COMMIT');}finally{c.release();}};
+   await tick(now);await tick(new Date(now.getTime()+60000));
+   const rows=(await pool.query("SELECT unique_key,payload FROM domwork_bot_outbox WHERE unique_key LIKE 'trial-nudge:%'")).rows;
+   const beacon=rows.filter(r=>r.unique_key.includes(':beacon'));assert.equal(beacon.length,1);
+   assert.match(beacon[0].payload.text,/15 daqiqadan/);assert.ok(beacon[0].payload.reply_markup.inline_keyboard.length);
+  });
   await t.test('a later payment of the same customer is not announced as a new sale',()=>{
    const pay=group[1].payload;assert.match(pay.text,/To‘lov tushdi/);assert.doesNotMatch(pay.text,/YANGI SOTUV/);assert.match(pay.text,/Qolgan qarz/);
   });
