@@ -90,7 +90,7 @@
 <ol><li>“Telegramda ochish”ni bosing (yoki QR’ni telefon kamerasi bilan skanerlang)</li><li>Botda <b>Start</b> tugmasini bosing</li><li>Shu yerga qayting va tasdiqlang</li></ol>
 <a class="dwact-btn dwact-pri" href="${esc(S.link.url)}" target="_blank" rel="noopener">${PLANE.replace(/28/g, '20')} Telegramda ochish</a>
 <div class="dwact-wait"><span class="dwact-dot"></span>Start bosilishi kutilmoqda…</div>`
-            : `${expired ? '<p>Havola muddati tugadi (5 daqiqa).</p>' : ''}<button type="button" class="dwact-btn dwact-pri" data-act="new">${PLANE.replace(/28/g, '20')} Botni ulash</button>`);
+            : `${expired ? '<p>Havola muddati tugadi (15 daqiqa).</p>' : ''}<button type="button" class="dwact-btn dwact-pri" data-act="new">${PLANE.replace(/28/g, '20')} Botni ulash</button>`);
         }
         S.root.innerHTML = `<div class="dwact-card"><div class="dwact-ic">${PLANE}</div>${body}
 ${S.err ? `<p class="dwact-err">${esc(S.err)}</p>` : ''}
@@ -126,7 +126,7 @@ ${st.admin ? '<button type="button" class="dwact-btn dwact-link" data-act="later
         if (seq !== S.seq || tokenNow() !== tok) return;
         try { if (st.admin && sessionStorage.getItem(LATER) === laterKey()) st = { required: false }; } catch { }
         S.st = st;
-        if (st.required && !st.linked && S.link) {
+        if (st.required && !st.linked) { // sahifa yangilangan bo'lsa ham boshlangan ulanish (Start bosilgan) davom etadi
             try { const link = await call(''); if (seq !== S.seq) return; S.req = link.request; } catch { }
         }
         draw();

@@ -11,6 +11,7 @@ const funnel = require('./funnel');
 const money = value => new Intl.NumberFormat('uz-UZ').format(Number(value) || 0).replace(/[\u00a0\u202f]/g, ' ') + ' UZS';
 const text = value => String(value ?? '').slice(0, 200);
 const empty = 'Hozircha ma’lumot yo‘q.';
+const STAFF_RETURN = '✅ Telegram topildi!\n\nEndi CRMga qayting (brauzer yoki Domwork Teacher ilovasi) — oynada ismingiz chiqadi. «Ha, bu mening Telegramim» tugmasini bosing.\n\nBu yerda boshqa hech narsa bosish yoki raqam yuborish shart emas.';
 function keyboard(identity) {
     const buttons = policy.menu(identity).map(([, label]) => ({ text: label }));
     const rows = []; for (let i = 0; i < buttons.length; i += 2) rows.push(buttons.slice(i, i + 2));
@@ -111,7 +112,7 @@ function createHandler({ crm }) {
             if(message._staffLinkHash || require('./staffLink').startHash(message.text)){
                 await require('./staffLink').claim(db,message);
                 await store.enqueue(db,{key:`u:${update.update_id}:staff-link`,targetId:sender,
-                    payload:{chat_id:sender,text:'Endi CRMga qayting: “Telegram botni ulash” oynasida ismingiz chiqadi — “Ha, bu mening Telegramim” tugmasini bosing.'}});
+                    payload:{chat_id:sender,text:STAFF_RETURN}});
                 return;
             }
             if(message._leadLinkHash || require('./leadLink').startHash(message.text)){
@@ -132,12 +133,15 @@ function createHandler({ crm }) {
                 await discovery.contactLinked(db,identity);
                 return await reply(`Assalomu alaykum, ${text(identity.name)}!\nDomwork shaxsiy kabinetingiz ochildi.`);
             }
-            const command = String(message.text || '').trim();
+            const command = /^\/(start|menu|stop|cancel)$/i.test(String(message.text || '').trim()) ? String(message.text).trim().toLowerCase() : String(message.text || '').trim();
             if (command === '/stop') {
                 if (identity) await db.query('UPDATE domwork_bot_links SET paused=true WHERE telegram_id=$1', [sender]);
                 else await funnel.pause(db, sender);
                 return await reply('Avtomatik xabarlar to‘xtatildi. Davom ettirish uchun /start bosing.', { reply_markup: { remove_keyboard: true } });
             }
+            // Xodim ulanishni boshlagan (Start bosilgan), lekin CRMda hali tasdiqlamagan — eski "raqam yuboring" yo'li ko'rsatilmaydi.
+            if (!identity && (await db.query(`SELECT 1 FROM domwork_staff_telegram_requests WHERE telegram_id=$1 AND state='claimed' AND expires_at>NOW() LIMIT 1`, [sender])).rows.length)
+                return await reply(STAFF_RETURN, { reply_markup: { remove_keyboard: true } });
             if (!identity && await funnel.enabled(db)) return await funnel.message(db, update);
             if (!identity) return await reply('CRM akkauntingizni aniqlash uchun o‘zingizning telefon raqamingizni yuboring.\n\nTelegramdagi raqamingiz CRMdagidan boshqa bo‘lsa: o‘quvchilar — Domwork ilovasi → Profil → “Telegram botni ulash”; xodimlar — CRM → Sozlamalar → Bildirishnomalar → Telegram bot → “Ulash”.',
                 { reply_markup: { keyboard: [[{ text: '📱 Telefon raqamni yuborish', request_contact: true }]], resize_keyboard: true, one_time_keyboard: true } });
