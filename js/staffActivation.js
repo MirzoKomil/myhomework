@@ -87,7 +87,7 @@
 <button type="button" class="dwact-btn dwact-pri" data-act="confirm">Ha, bu mening Telegramim</button>
 <button type="button" class="dwact-btn dwact-sec" data-act="new">Yo‘q, qaytadan</button>`
             : S.link && !expired ? `${qr ? `<svg class="dwact-qr" viewBox="-2 -2 ${qr.size + 4} ${qr.size + 4}" shape-rendering="crispEdges" role="img" aria-label="Bot QR kodi"><rect x="-2" y="-2" width="${qr.size + 4}" height="${qr.size + 4}" fill="#fff"/><path d="${esc(qr.path)}" fill="#0B1220"/></svg>` : ''}
-<ol><li>“Telegramda ochish”ni bosing (yoki QR’ni telefon kamerasi bilan skanerlang)</li><li>Botda <b>Start</b> tugmasini bosing</li><li>Shu yerga qayting va tasdiqlang</li></ol>
+<ol><li>“Telegramda ochish”ni bosing (yoki QR’ni telefon kamerasi bilan skanerlang)</li><li>Botda <b>Start</b> tugmasini bosing — tamom! Bu oyna o‘zi yopiladi.</li></ol>
 <a class="dwact-btn dwact-pri" href="${esc(S.link.url)}" target="_blank" rel="noopener">${PLANE.replace(/28/g, '20')} Telegramda ochish</a>
 <div class="dwact-wait"><span class="dwact-dot"></span>Start bosilishi kutilmoqda…</div>`
             : `${expired ? '<p>Havola muddati tugadi (15 daqiqa).</p>' : ''}<button type="button" class="dwact-btn dwact-pri" data-act="new">${PLANE.replace(/28/g, '20')} Botni ulash</button>`);

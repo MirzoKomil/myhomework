@@ -99,7 +99,7 @@ async function claim(db, message) {
     const row = (await db.query(`SELECT * FROM domwork_staff_telegram_requests WHERE token_hash=$1 AND state IN ('pending','claimed')
         AND expires_at>NOW() FOR UPDATE`, [tokenHash])).rows[0];
     if (!row) throw policy.error(410, 'Havola eskirgan. CRMdan yangi havola oling');
-    await owner(db, { id: row.user_id, role: 'staff', jti: row.session_jti });
+    const me = await owner(db, { id: row.user_id, role: 'staff', jti: row.session_jti });
     if (row.state === 'claimed' && row.telegram_id !== telegramId) throw policy.error(409, 'Bu havola ishlatilgan. CRMdan yangi havola oling');
     const occupied = (await db.query('SELECT account_kind,account_id FROM domwork_bot_links WHERE telegram_id=$1', [telegramId])).rows[0];
     // Telegram avval lid sifatida ulangan bo'lsa (xodim botni oldin oddiy mehmon kabi ochgan) — tasdiqlashda xodimga o'tadi.
@@ -108,8 +108,10 @@ async function claim(db, message) {
     if (row.state === 'pending') await db.query(`UPDATE domwork_staff_telegram_requests SET state='claimed',telegram_id=$2,telegram_name=$3,
         telegram_username=$4,claimed_at=NOW() WHERE id=$1`, [row.id, telegramId,
         String([message.from.first_name, message.from.last_name].filter(Boolean).join(' ')).slice(0, 160), String(message.from.username || '').slice(0, 64)]);
-    // CRMda tasdiqlanmaguncha bot hech qanday xodim ma'lumotini ochmaydi.
-    return { ok: true };
+    // 29-okt: CRMga qaytib tasdiqlash qadami xodimlarni chalg'itdi — Start'ning o'zi ulanishni yakunlaydi.
+    // Havola bir martalik, 15 daqiqa, faqat xodimning tirik CRM sessiyasida yaratiladi va faqat o'z shaxsiy chatida ishlaydi.
+    await finalize(db, row, me, telegramId, 'bot-start');
+    return { ok: true, linked: true };
 }
 async function confirm(pool, actor, input = {}) {
     return queue.transaction(pool, async db => {
@@ -120,24 +122,38 @@ async function confirm(pool, actor, input = {}) {
             WHERE id=$1 AND user_id=$2 AND session_jti=$3 FOR UPDATE`, [input.requestId, me.id, actor.jti])).rows[0];
         if (!row || row.state !== 'claimed' || !row.valid || row.telegram_id !== telegramId)
             throw policy.error(409, 'Ulash so‘rovi eskirgan yoki o‘zgargan. Qayta urinib ko‘ring');
-        const occupied = (await db.query('SELECT account_kind,account_id FROM domwork_bot_links WHERE telegram_id=$1', [telegramId])).rows[0];
-        if (await existing(db, me.id)) throw policy.error(409, 'Telegram allaqachon ulangan');
-        if (occupied && occupied.account_kind !== 'lead') throw policy.error(409, 'Bu Telegram hisobi boshqa CRM akkauntiga bog‘langan');
-        if (occupied) await db.query('DELETE FROM domwork_bot_links WHERE telegram_id=$1', [telegramId]);
-        await db.query("INSERT INTO domwork_bot_links(telegram_id,account_kind,account_id,phone) VALUES($1,'user',$2,$3)", [telegramId, me.id, me.phone || '']);
-        await db.query(`INSERT INTO domwork_staff_telegram_proofs(user_id,telegram_id) VALUES($1,$2)
-            ON CONFLICT(user_id) DO UPDATE SET telegram_id=EXCLUDED.telegram_id,verified_at=NOW()`, [me.id, telegramId]);
-        await db.query("UPDATE domwork_staff_telegram_requests SET state='confirmed',confirmed_at=NOW() WHERE id=$1", [row.id]);
-        const store = require('./store');
-        await store.audit(db, me.id, 'staff-telegram-confirmed', row.id, { telegramId, method: 'crm', replacedLead: occupied?.account_id || null });
-        const identity = await store.identity(db, telegramId);
-        if (identity) {
-            const { keyboard } = require('./handlers');
-            await store.enqueue(db, { key: 'staff-link:' + row.id, targetId: telegramId, role: identity.role, account: identity,
-                payload: { chat_id: telegramId, text: `Assalomu alaykum, ${String(identity.name || '').slice(0, 80)}! Telegram CRM akkauntingizga ulandi. Kerakli bo‘limni tanlang.`, reply_markup: keyboard(identity) } });
-        }
+        await finalize(db, row, me, telegramId, 'crm');
         return { ok: true };
     });
+}
+// Ulanishni yakunlash (bot Start'da avtomatik yoki eski CRM tasdig'i). Chaqiruvchi advisory lock'ni ushlab turadi.
+async function finalize(db, row, me, telegramId, method) {
+    const occupied = (await db.query('SELECT account_kind,account_id FROM domwork_bot_links WHERE telegram_id=$1', [telegramId])).rows[0];
+    if (await existing(db, me.id)) throw policy.error(409, 'Telegram allaqachon ulangan');
+    if (occupied && occupied.account_kind !== 'lead') throw policy.error(409, 'Bu Telegram hisobi boshqa CRM akkauntiga bog‘langan');
+    if (occupied) await db.query('DELETE FROM domwork_bot_links WHERE telegram_id=$1', [telegramId]);
+    await db.query("INSERT INTO domwork_bot_links(telegram_id,account_kind,account_id,phone) VALUES($1,'user',$2,$3)", [telegramId, me.id, me.phone || '']);
+    await db.query(`INSERT INTO domwork_staff_telegram_proofs(user_id,telegram_id) VALUES($1,$2)
+        ON CONFLICT(user_id) DO UPDATE SET telegram_id=EXCLUDED.telegram_id,verified_at=NOW()`, [me.id, telegramId]);
+    await db.query("UPDATE domwork_staff_telegram_requests SET state='confirmed',confirmed_at=NOW(),telegram_id=$2 WHERE id=$1", [row.id, telegramId]);
+    const store = require('./store');
+    await store.audit(db, me.id, 'staff-telegram-confirmed', row.id, { telegramId, method, replacedLead: occupied?.account_id || null });
+    const identity = await store.identity(db, telegramId);
+    if (identity) {
+        const { keyboard } = require('./handlers');
+        await store.enqueue(db, { key: 'staff-link:' + row.id, targetId: telegramId, role: identity.role, account: identity,
+            payload: { chat_id: telegramId, text: `✅ Tayyor, ${String(identity.name || '').slice(0, 80)}! Telegram CRM akkauntingizga ulandi.\n\nCRMdagi oyna o‘zi yopiladi — u yerda hech narsa bosish shart emas. Pastdagi menyudan kerakli bo‘limni tanlang.`, reply_markup: keyboard(identity) } });
+    }
+}
+// Avval (eski oqimda) Start bosib, CRMda tasdiqlamay qolgan xodim botga istalgan xabar yozsa — ulanish yakunlanadi.
+async function finishPending(db, telegramId) {
+    await db.query("SELECT pg_advisory_xact_lock(hashtext('domwork-bot-links'))");
+    const row = (await db.query(`SELECT * FROM domwork_staff_telegram_requests WHERE telegram_id=$1 AND state='claimed' AND expires_at>NOW()
+        ORDER BY claimed_at DESC LIMIT 1 FOR UPDATE`, [telegramId])).rows[0];
+    if (!row) return false;
+    const me = await owner(db, { id: row.user_id, role: 'staff', jti: row.session_jti });
+    await finalize(db, row, me, telegramId, 'bot-start');
+    return true;
 }
 async function cancel(pool, actor, input = {}) {
     return queue.transaction(pool, async db => {
@@ -160,4 +176,4 @@ async function unlink(pool, actor) {
         return { ok: true };
     });
 }
-module.exports = { SCHEMA, PREFIX, init, owner, status, create, startHash, claim, confirm, cancel, unlink };
+module.exports = { SCHEMA, PREFIX, init, owner, status, create, startHash, claim, confirm, finishPending, cancel, unlink };

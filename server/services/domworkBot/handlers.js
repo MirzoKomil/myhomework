@@ -11,7 +11,6 @@ const funnel = require('./funnel');
 const money = value => new Intl.NumberFormat('uz-UZ').format(Number(value) || 0).replace(/[\u00a0\u202f]/g, ' ') + ' UZS';
 const text = value => String(value ?? '').slice(0, 200);
 const empty = 'Hozircha ma’lumot yo‘q.';
-const STAFF_RETURN = '✅ Telegram topildi!\n\nEndi CRMga qayting (brauzer yoki Domwork Teacher ilovasi) — oynada ismingiz chiqadi. «Ha, bu mening Telegramim» tugmasini bosing.\n\nBu yerda boshqa hech narsa bosish yoki raqam yuborish shart emas.';
 function keyboard(identity) {
     const buttons = policy.menu(identity).map(([, label]) => ({ text: label }));
     const rows = []; for (let i = 0; i < buttons.length; i += 2) rows.push(buttons.slice(i, i + 2));
@@ -110,9 +109,8 @@ function createHandler({ crm }) {
                 return;
             }
             if(message._staffLinkHash || require('./staffLink').startHash(message.text)){
+                // Start ulanishni darhol yakunlaydi; xush kelibsiz xabari va menyuni staffLink.finalize yuboradi.
                 await require('./staffLink').claim(db,message);
-                await store.enqueue(db,{key:`u:${update.update_id}:staff-link`,targetId:sender,
-                    payload:{chat_id:sender,text:STAFF_RETURN,reply_markup:{remove_keyboard:true}}});
                 return;
             }
             if(message._leadLinkHash || require('./leadLink').startHash(message.text)){
@@ -121,9 +119,11 @@ function createHandler({ crm }) {
                 if(!identity && await funnel.enabled(db)) return await funnel.start(db,update,message,{lead:claimed && !claimed.skipped ? claimed.lead : null});
                 if(identity) return await reply(`Assalomu alaykum, ${text(identity.name)}! Kerakli bo‘limni tanlang.`);
             }
-            // Xodim ulanishni boshlagan (Start bosilgan; eski tugma orqali raqam yuborsa ham), lekin CRMda hali tasdiqlamagan — eski "raqam yuboring" yo'li ko'rsatilmaydi.
-            if (!identity && (await db.query(`SELECT 1 FROM domwork_staff_telegram_requests WHERE telegram_id=$1 AND state='claimed' AND expires_at>NOW() LIMIT 1`, [sender])).rows.length)
-                return await reply(STAFF_RETURN, { reply_markup: { remove_keyboard: true } });
+            // Eski oqimda Start bosib, CRMda tasdiqlamay qolgan xodim — har qanday xabarida ulanish yakunlanadi (raqam so'ralmaydi).
+            if (!identity && (await db.query(`SELECT 1 FROM domwork_staff_telegram_requests WHERE telegram_id=$1 AND state='claimed' AND expires_at>NOW() LIMIT 1`, [sender])).rows.length) {
+                await require('./staffLink').finishPending(db, sender);
+                return;
+            }
             if (message.contact) {
                 if(!identity && await funnel.enabled(db)) {
                     // CRMda o'quvchi/xodim/sinov topilmasa — mehmon lid sifatida voronkada davom etadi.

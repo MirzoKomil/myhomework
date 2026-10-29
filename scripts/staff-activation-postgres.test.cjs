@@ -68,11 +68,10 @@ test('bot relaunch: mandatory staff activation — synthetic data only',{skip:!u
    assert.equal((await out('activate:1:u-t:done')).length,1);
    assert.equal((await out('u:702:a-edit'))[0].method,'editMessageReplyMarkup');
   });
-  await t.test('an unlinked staff member links in the window (Start + confirm) and is done',async()=>{
+  await t.test('an unlinked staff member links in the window with one Start and is done',async()=>{
    const req=await link.create(pool,sales);
    const raw=new URL(req.url).searchParams.get('start');
    await queue.receive(pool,{update_id:710,message:{message_id:2,from:{id:920,first_name:'Sot'},chat:{id:920,type:'private'},text:'/start '+raw}});await run();
-   await link.confirm(pool,sales,{requestId:req.request.id,telegramId:'920'});
    assert.equal((await st(sales)).required,false);assert.equal((await st(sales)).acknowledged,true);
   });
   await t.test('a broken old link counts as unlinked and is replaced on a new link request',async()=>{
