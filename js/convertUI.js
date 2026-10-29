@@ -18,6 +18,37 @@
     const when = iso => { const d = local(iso); if (!d) return ''; return `${DAY[d.getUTCDay()]} ${d.getUTCDate()}-${MON[d.getUTCMonth()]} ${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`; };
     const patternOf = day => ([2, 4, 6].includes(Number(day)) ? 'tts' : 'mwf');
     const PAT = { mwf: { days: [1, 3, 5], label: 'Du · Ch · Ju' }, tts: { days: [2, 4, 6], label: 'Se · Pa · Sh' } };
+    // Tarif narxi (oyiga) — dizayn (SotuvKonversiya) bo'yicha: 15 daq 75 000, 30 daq 150 000, 60 daq 300 000.
+    const PRICE = { 15: 75000, 30: 150000, 60: 300000 };
+    const COURSE_DAYS = 90;
+    const num = n => String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    const ddmm = d => `${d.slice(8, 10)}.${d.slice(5, 7)}`;
+    const ymdLocal = () => new Date(Date.now() + 5 * 3600000).toISOString().slice(0, 10);
+    const addD = (d, n) => { const x = new Date(d + 'T00:00:00Z'); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
+    const dowOf = d => new Date(d + 'T00:00:00Z').getUTCDay();
+    const dLabel = d => `${DAY[dowOf(d)]} ${Number(d.slice(8))}-${MON[Number(d.slice(5, 7)) - 1]}`;
+    // Konversiya — to'liq sahifa ko'rinishi (SotuvKonversiya): mavjud oyna kontent maydonini to'liq egallaydi,
+    // tepada "← Lidlar · Sinov darsida" va lid ismi. Oyna yopilganda (crm:modal-closed) odatiy ko'rinishga qaytadi.
+    function pageMode(lead) {
+        const ov = document.getElementById('modalOverlay'); if (!ov) return;
+        wrapOpenModal();
+        ov.classList.add('cv-pagemode');
+        // Kontent maydoni: sidebar va yuqori panel ko'rinib turadi (dizayndagidek sahifa).
+        const sb = document.getElementById('sidebar')?.getBoundingClientRect(), hd = document.querySelector('.top-header')?.getBoundingClientRect();
+        if (window.matchMedia('(min-width: 901px)').matches && sb && hd) { ov.style.setProperty('--cv-l', Math.round(sb.right) + 'px'); ov.style.setProperty('--cv-t', Math.round(hd.bottom) + 'px'); }
+        else { ov.style.removeProperty('--cv-l'); ov.style.removeProperty('--cv-t'); }
+        const t = document.getElementById('modalTitle'); if (t && lead?.name) t.textContent = lead.name;
+        const hdr = t?.parentElement;
+        hdr?.querySelector('.cv-back')?.remove();
+        if (hdr && t) {
+            t.insertAdjacentHTML('beforebegin', `<button type="button" class="sc-link cv-back">← Lidlar${lead?.status === 'sinov-darsida' ? ' · Sinov darsida' : ''}</button>`);
+            hdr.querySelector('.cv-back').onclick = () => { if (typeof closeModal === 'function') closeModal(); if (typeof renderLeads === 'function') renderLeads(); };
+        }
+        if (!ov.dataset.cvBound) {
+            ov.dataset.cvBound = '1';
+            ov.addEventListener('crm:modal-closed', () => { ov.classList.remove('cv-pagemode'); ov.querySelector('.modal-header .cv-back')?.remove(); });
+        }
+    }
 
     function trialInfo(lead) {
         const t = lead?.trialRequest || null;
@@ -26,10 +57,20 @@
         return { t, at, held, done: t?.state === 'completed', attended: t?.state === 'completed' ? t.attended !== false : null, teacherId: t?.teacherId || lead?.paymentOnboarding?.teacherId || '' };
     }
     // Qadamlar: 1–2 — sinov holati bo'yicha, keyingilari — joriy qadamgacha bajarilgan.
+    // Qadam faqat haqiqatan bajarilgan bo'lsa "✓": 3 — doimiy jadval saqlangan, 4 — to'lov yozilgan, 5 — guruh kiritilgan.
+    function stepDone(n, lead, tr) {
+        const ob = lead?.paymentOnboarding || {};
+        if (n === 1) return tr.held;
+        if (n === 2) return tr.done;
+        if (n === 3) return typeof leadHasTeacherSchedule === 'function' ? leadHasTeacherSchedule(lead) : !!(ob.teacherId && ob.lessonTime && !ob.isTrial);
+        if (n === 4) return !!lead?.paymentSurvey;
+        if (n === 5) return !!(ob.telegramGroupLink && ob.telegramGroupName);
+        return false;
+    }
     function steps(active, lead) {
         const tr = trialInfo(lead);
         return `<ol class="cv-chips" aria-label="O'quvchiga aylantirish qadamlari">${STEPS.map((l, i) => {
-            const n = i + 1, done = n < active && (n > 2 || (n === 1 ? tr.held : tr.done));
+            const n = i + 1, done = n < active && stepDone(n, lead, tr);
             const cls = n === active ? 'is-now' : done ? 'is-done' : '';
             return `<li class="cv-chip ${cls}"${n === active ? ' aria-current="step"' : ''}>${done ? '✓' : n} ${esc(l)}</li>`;
         }).join('')}</ol>`;
@@ -49,8 +90,9 @@
 
     // ── 3-qadam: Tarif va jadval (mavjud jadval oynasi ustiga) ──
     function enhanceSchedule(modalBody, lead, lang) {
-        if (!modalBody || modalBody.dataset.cvDone) return;
-        modalBody.dataset.cvDone = '1';
+        // #modalBody bitta element — oyna qayta ochilganda eski belgi qolmasin (avval dataset.cvDone qayta ochishda bezakni o'chirib qo'yardi).
+        if (!modalBody || modalBody.querySelector('.cv-lay')) return;
+        delete modalBody.dataset.cvFirst;
         const oldSteps = modalBody.querySelector('.pay-steps');
         const survey = modalBody.querySelector('.lead-survey');
         if (!survey) return;
@@ -67,8 +109,8 @@
         if (durSel) {
             const f = durSel.closest('.lead-survey-field'); if (f) f.hidden = true, f.style.display = 'none';
             const box = document.createElement('section'); box.className = 'cv-box';
-            box.innerHTML = `<h4>Tarif</h4><div class="cv-tar" role="radiogroup" aria-label="Tarif">${[...durSel.options].map(o => `<button type="button" role="radio" data-dur="${esc(o.value)}" aria-checked="${o.value === durSel.value}">${esc(o.value)} daq</button>`).join('')}</div>
-              ${tr.t?.resultNote ? `<p class="cv-rec">Ustoz tavsiyasi: <b>"${esc(tr.t.resultNote)}"</b></p>` : ''}<p class="cv-hint">Oylik narx va to'lov — keyingi qadamda.</p>`;
+            box.innerHTML = `<h4>Tarif</h4><div class="cv-tar" role="radiogroup" aria-label="Tarif">${[...durSel.options].filter(o => o.value).map(o => `<button type="button" role="radio" data-dur="${esc(o.value)}" aria-checked="${o.value === durSel.value}">${esc(o.value)} daq${PRICE[o.value] ? ` · ${num(PRICE[o.value])}<span class="cv-pm"> so'm/oy</span>` : ''}</button>`).join('')}</div>
+              ${tr.t?.resultNote ? `<p class="cv-rec">Ustoz tavsiyasi: <b>"${esc(tr.t.resultNote)}"</b></p>` : ''}<p class="cv-hint">Narx — oyiga. To'lov turi va summasi keyingi qadamda.</p>`;
             survey.prepend(box);
             box.querySelectorAll('[data-dur]').forEach(b => b.onclick = () => { durSel.value = b.dataset.dur; durSel.dispatchEvent(new Event('change', { bubbles: true })); sync(); });
         }
@@ -83,6 +125,22 @@
             const sel = modalBody.querySelector('#onboardScheduleSelected'); if (sel) det.after(sel);
             block.querySelectorAll(':scope > .lead-survey-label, :scope > .lead-survey-hint').forEach(x => { x.hidden = true; x.style.display = 'none'; });
         }
+        const firstBox = document.createElement('div'); firstBox.className = 'cv-first';
+        if (slots) (modalBody.querySelector('#onboardScheduleSelected') || slots).after(firstBox);
+        const firstDates = (pat, time) => {
+            const days = PAT[pat].days; const out = []; let d = ymdLocal(); const nowM = (() => { const x = new Date(Date.now() + 5 * 3600000); return x.getUTCHours() * 60 + x.getUTCMinutes(); })();
+            const tm = time ? Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5)) : 0;
+            for (let i = 0; out.length < 3 && i < 21; i++, d = addD(d, 1)) if (days.includes(dowOf(d)) && !(i === 0 && tm <= nowM)) out.push(d);
+            return out;
+        };
+        const drawFirst = () => {
+            const day = Number(modalBody.dataset.onboardScheduleDay), time = modalBody.dataset.onboardScheduleTime;
+            if (!day || !time) { firstBox.innerHTML = ''; delete modalBody.dataset.cvFirst; return; }
+            const list = firstDates(patternOf(day), time);
+            if (!list.includes(modalBody.dataset.cvFirst)) modalBody.dataset.cvFirst = list[0] || '';
+            firstBox.innerHTML = `<p class="cv-st">Birinchi dars</p><div class="cv-fd" role="radiogroup" aria-label="Birinchi dars">${list.map((d, i) => `<button type="button" role="radio" data-first="${d}" aria-checked="${d === modalBody.dataset.cvFirst}">${esc(dLabel(d))}${i === 0 || d === modalBody.dataset.cvFirst ? ' · ' + esc(time) : ''}</button>`).join('')}</div>`;
+            firstBox.querySelectorAll('[data-first]').forEach(b => b.onclick = () => { modalBody.dataset.cvFirst = b.dataset.first; sync(); });
+        };
         const others = document.createElement('div'); others.className = 'cv-oth';
         teacherSel?.closest('.lead-survey-field')?.after(others);
         const freeTimes = (tid, pat, dur) => {
@@ -130,26 +188,32 @@
             const tid = teacherSel?.value, dur = Number(durSel?.value) || 0;
             const day = Number(modalBody.dataset.onboardScheduleDay), time = modalBody.dataset.onboardScheduleTime;
             const pat = day ? PAT[patternOf(day)] : null, tname = staffName(tid);
+            const fd = modalBody.dataset.cvFirst || '';
             aside.innerHTML = `<h3>Xulosa</h3>${trialBox(lead)}
-              <dl class="cv-dl"><dt>Tarif</dt><dd>${dur ? dur + ' daq' : '—'}</dd><dt>Ustoz</dt><dd>${tname ? esc(tname) : '—'}</dd>
-                <dt>Jadval</dt><dd>${pat && time ? `${pat.label} ${esc(time)}` : '—'}</dd><dt>Kurs</dt><dd>72 dars · 36 jonli</dd></dl>
+              <dl class="cv-dl"><dt>Tarif</dt><dd>${dur ? `${dur} daq${PRICE[dur] ? ` · ${num(PRICE[dur])} so'm/oy` : ''}` : '—'}</dd><dt>Ustoz</dt><dd>${tname ? esc(tname) : '—'}</dd>
+                <dt>Jadval</dt><dd>${pat && time ? `${pat.label} ${esc(time)}` : '—'}</dd><dt>Boshlanish</dt><dd>${fd ? esc(dLabel(fd)) : '—'}</dd>
+                <dt>Kurs</dt><dd>${fd ? `${COURSE_DAYS} kun · ${ddmm(fd)} → ${ddmm(addD(fd, COURSE_DAYS - 1))}` : `${COURSE_DAYS} kun · 72 dars`}</dd></dl>
               <p class="cv-note">Saqlansa vaqt ${tname ? `<b>${esc(shortName(tname))}</b> ` : ''}jadvalida doimiy band bo'ladi${tr.t ? ' va sinov yozuvi jadvaldan chiqadi' : ''}. To'lov qabul qilingach lid "O'quvchi" bo'ladi va ilova logini yaratiladi.</p>`;
         };
         let raf = 0;
-        function sync() { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { drawSlots(); drawOthers(); drawAside(); modalBody.querySelectorAll('[data-dur]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.dur === durSel?.value))); }); }
+        function sync() { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { drawSlots(); drawFirst(); drawOthers(); drawAside(); modalBody.querySelectorAll('[data-dur]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.dur === durSel?.value))); }); }
         teacherSel?.addEventListener('change', sync); durSel?.addEventListener('change', sync);
         new MutationObserver(sync).observe(modalBody, { attributes: true, attributeFilter: ['data-onboard-schedule-day', 'data-onboard-schedule-time', 'data-onboard-schedule-pattern'] });
         const ok = document.getElementById('confirmPaymentTeacherSchedule'); if (ok) ok.textContent = 'Davom etish · To\'lov';
+        pageMode(lead);
         sync();
     }
 
     // ── 4-qadam (To'lov) va 6-qadam (Ilova login): sarlavha va qadamlar ──
     function enhanceStep(modalBody, lead, lang, active) {
         if (!modalBody) return;
-        const t = document.getElementById('modalTitle'); if (t && lead?.name) t.textContent = `O'quvchiga aylantirish · ${lead.name}`;
         const old = modalBody.querySelector('.pay-steps');
         const html = `<p class="cv-sub">${subline(lead, lang)}</p>${steps(active, lead)}`;
         if (old) { old.insertAdjacentHTML('beforebegin', html); old.remove(); } else modalBody.insertAdjacentHTML('afterbegin', html);
+        pageMode(lead);
+        // "Birinchi dars" 3-qadamda tanlangan bo'lsa — "Ilk dars boshlash sanasi" shu bilan to'ladi.
+        const fdIn = modalBody.querySelector('#onboardFirstLessonDate'), fd = lead?.paymentOnboarding?.firstLessonDate;
+        if (active === 6 && fdIn && !fdIn.value && /^\d{4}-\d{2}-\d{2}$/.test(String(fd || ''))) { fdIn.value = fd; fdIn.dispatchEvent(new Event('change', { bubbles: true })); }
         if (active === 6) {
             // Guruh 5-qadamda kiritilgan bo'lsa — maydonlar shu yerda yashirin (qiymati o'sha, tekshiruv o'zgarmaydi).
             const ob = lead?.paymentOnboarding || {};
@@ -185,6 +249,7 @@
             <p class="cv-hint">Saqlangach: student appda "Telegram guruh" tugmasi shu havola bilan ochiladi · ustoz va yordamchi ro'yxatida guruh nomi chiqadi.</p>
             <p class="cv-err" role="alert" data-err hidden></p></div>`,
             `<span class="cv-count">5 / 6 qadam</span><button type="button" class="btn-danger-sm" id="cvGroupCancel">Bekor qilish</button><button type="button" class="btn-primary-sm" id="cvGroupNext">Davom etish</button>`, { wide: true });
+        pageMode(lead);
         const body = document.getElementById('modalBody');
         const link = body.querySelector('#cvGroupLink'), name = body.querySelector('#cvGroupName'), okp = body.querySelector('[data-okpill]'), sug = body.querySelector('[data-sug]');
         const warn = body.querySelector('[data-warn]'), err = body.querySelector('[data-err]');
@@ -198,7 +263,8 @@
         name.addEventListener('input', () => { sug.hidden = true; });
         if (!name.value && typeof apiFetch === 'function') {
             apiFetch(`/api/school/groups/next-name?lang=${lang === 'russian' ? 'russian' : 'english'}`) // lid tili bo'yicha (#127); sotuvda server o'zi aniqlaydi
-                .then(r => { if (!name.value && r?.name) { name.value = r.name; sug.hidden = false; } }).catch(() => {});
+                .then(r => { if (!name.value && r?.name) { name.value = r.name; sug.hidden = false; } })
+                .catch(e => { if (name.value) return; sug.hidden = false; sug.classList.add('cv-sug--err'); sug.textContent = `Keyingi bo'sh raqamni olib bo'lmadi (${(window.LoadErr?.reason(e) || e.message || 'server xatosi')}) — nomni Telegram'dagidek o'zingiz yozing`; });
         }
         check();
         document.getElementById('cvGroupCancel').onclick = () => { closeModal(); if (typeof renderLeads === 'function') renderLeads(); };
@@ -216,5 +282,13 @@
         };
     }
 
+    // Boshqa oyna ochilsa (openModal) — sahifa ko'rinishi olib tashlanadi; konversiya qadamlari uni pageMode() bilan qayta qo'yadi.
+    // (convertUI.js app.js'dan oldin yuklanadi — o'rash birinchi pageMode() chaqiruvida.)
+    function wrapOpenModal() {
+        if (typeof window.openModal !== 'function' || window.openModal.__cv) return;
+        const orig = window.openModal;
+        const wrapped = function (...a) { const ov = document.getElementById('modalOverlay'); ov?.classList.remove('cv-pagemode'); ov?.querySelector('.modal-header .cv-back')?.remove(); return orig.apply(this, a); };
+        wrapped.__cv = true; window.openModal = wrapped;
+    }
     window.convertUI = { steps, subline, enhanceSchedule, enhanceStep, openGroupStep };
 })();

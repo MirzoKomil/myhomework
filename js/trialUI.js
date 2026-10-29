@@ -552,13 +552,24 @@
             const near = a && Math.abs(Date.parse(a.date) - Date.parse(t)) <= 6 * 86400000;
             const tm = a ? (a.date === t ? hm(a.min) : near ? `${DAY[wd(a.date) - 1]} ${hm(a.min)}` : `${dShort(a.date)} ${hm(a.min)}`) : '—';
             if (needsTeacher(x.ph)) {
-                const hint = R.hints[x.lead.id];
+                const h = R.hints[x.lead.id];
+                const hintTxt = h?.err ? `<span class="rs-herr">bo'sh vaqtlarni yuklab bo'lmadi · <button type="button" class="sc-link" data-r-hint-retry>Qayta urinish</button></span>` : h?.txt ? esc(h.txt) : '';
                 const sub = x.ph === 'rejected' ? `${esc(shortName(person(x.req.teacherId)?.name))} rad etdi · ${esc(x.req.reasonLabel || '')}${x.req.proposals?.length ? ` · taklif: ${x.req.proposals.map(p => { const q = local(p); return q ? `${DAY[wd(q.date) - 1]} ${hm(q.min)}` : ''; }).join(', ')}` : ''}`
-                    : `ustoz biriktirilmagan${hint ? ' · ' + esc(hint) : ''}`;
-                return `<div class="tl-li2"><span class="tl-tm2 w">${tm}</span><div class="tl-inf"><div class="tl-nm">${esc(x.lead.name)}${mgr ? ' · ' + esc(mgr) : ''}</div><div class="sc-mt">${sub}</div></div><button type="button" class="sc-btn sc-btn--pri" data-r-assign="${esc(x.lead.id)}">Ustoz biriktirish</button></div>`;
+                    : `ustoz biriktirilmagan${hintTxt ? ' · ' + hintTxt : ''}`;
+                // RopSinov: istagan vaqtda ochiq ustoz yo'q → "Lid bilan HH:MM ni kelishish" va "Admin ochsin" (admin vaqtni ochadi).
+                const ask = x.lead.trialAdminOpen && !x.lead.trialAdminOpen.doneAt ? x.lead.trialAdminOpen : null;
+                const adminBtn = ask ? `<span class="sc-pill sc-pill--info" title="${esc(ask.by || '')}">Adminga yuborildi · ${esc(hm(local(ask.at)?.min ?? 0))}</span>`
+                    : `<button type="button" class="sc-btn" data-r-admin="${esc(x.lead.id)}">Admin ochsin</button>`;
+                const acts = x.ph !== 'rejected' && h && !h.err && h.best && !h.exact
+                    ? `<button type="button" class="sc-btn" data-r-agree="${esc(x.lead.id)}">Lid bilan ${esc(h.best.time)} ni kelishish</button>${adminBtn}`
+                    : `${x.ph !== 'rejected' && h && !h.err && !h.best ? adminBtn : ''}<button type="button" class="sc-btn sc-btn--pri" data-r-assign="${esc(x.lead.id)}">Ustoz biriktirish</button>`;
+                return `<div class="tl-li2"><span class="tl-tm2 w">${tm}</span><div class="tl-inf"><div class="tl-nm">${esc(x.lead.name)}${mgr ? ' · ' + esc(mgr) : ''}</div><div class="sc-mt">${sub}</div></div><span class="rs-acts">${acts}</span></div>`;
             }
             const end = Date.parse(x.req.scheduledAt) + x.dur * 60000;
-            return `<div class="tl-li2"><span class="tl-tm2">${tm}</span><div class="tl-inf"><div class="tl-nm">${esc(x.lead.name)}${mgr ? ' · ' + esc(mgr) : ''}</div><div class="sc-mt">${x.ph === 'overdue' ? `ustoz tasdiqlamagan, vaqti o'tdi · ${esc(shortName(person(x.req.teacherId)?.name))} natijani yozmagan` : `dars o'tdi · ${esc(shortName(person(x.req.teacherId)?.name))} natijani yozmagan`} (${hoursAgo(end)})</div></div>${pill(x.ph)}</div>`;
+            const rem = x.lead.trialRopReminder && x.lead.trialRopReminder.requestId === x.req.id ? x.lead.trialRopReminder : null;
+            const remBtn = rem && Date.now() - Date.parse(rem.at) < 2 * 3600000 ? `<span class="sc-pill sc-pill--info">Eslatildi · ${esc(hm(local(rem.at)?.min ?? 0))}</span>`
+                : `<button type="button" class="sc-btn" data-r-remind="${esc(x.lead.id)}">Ustozga eslatish</button>`;
+            return `<div class="tl-li2"><span class="tl-tm2">${tm}</span><div class="tl-inf"><div class="tl-nm">${esc(x.lead.name)}${mgr ? ' · ' + esc(mgr) : ''}</div><div class="sc-mt">${x.ph === 'overdue' ? `ustoz tasdiqlamagan, vaqti o'tdi · ${esc(shortName(person(x.req.teacherId)?.name))} natijani yozmagan` : `dars o'tdi · ${esc(shortName(person(x.req.teacherId)?.name))} natijani yozmagan`} (${hoursAgo(end)})</div></div><span class="rs-acts">${pill(x.ph)}${remBtn}</span></div>`;
         };
         const curMonth = t.slice(0, 7);
         root.innerHTML = `<div class="sc-root tl-root tl-rop">
@@ -587,6 +598,11 @@
         root.querySelectorAll('[data-r-mon]').forEach(b => b.onclick = () => { R.month = shiftMonth(R.month, Number(b.dataset.rMon)); drawRop(); });
         root.querySelector('[data-r-jadval]').onclick = () => typeof switchTab === 'function' && switchTab('timetable');
         root.querySelectorAll('[data-r-assign]').forEach(b => b.onclick = () => openAssign(R.lang, b.dataset.rAssign, () => drawRop()));
+        root.querySelectorAll('[data-r-remind]').forEach(b => b.onclick = () => ropRemind(all.find(x => x.lead.id === b.dataset.rRemind)));
+        root.querySelectorAll('[data-r-admin]').forEach(b => b.onclick = () => ropAdminOpen(all.find(x => x.lead.id === b.dataset.rAdmin)));
+        root.querySelectorAll('[data-r-agree]').forEach(b => b.onclick = () => { const h = R.hints[b.dataset.rAgree]; if (!h?.best || !window.sotuvSinov) return;
+            window.sotuvSinov.open({ lang: R.lang, leadId: b.dataset.rAgree, isReschedule: true, from: 'trials', onClose: () => { if (R.root?.isConnected) drawRop(); }, preset: { teacherId: h.best.teacherId, date: h.best.date, min: h.best.min } }); });
+        root.querySelectorAll('[data-r-hint-retry]').forEach(b => b.onclick = () => { for (const k of Object.keys(R.hints)) if (R.hints[k]?.err) delete R.hints[k]; drawRop(); });
         ropHints(noTeacher.filter(x => x.ph === 'unassigned'));
     }
     // Ustozsiz sinov uchun: shu kun sinovga ochiq eng yaqin vaqt (umumiy jadvaldan).
@@ -594,15 +610,49 @@
         const miss = list.filter(x => !(x.lead.id in R.hints) && local(x.req.scheduledAt)).slice(0, 5);
         if (!miss.length) return;
         for (const x of miss) {
-            R.hints[x.lead.id] = '';
+            R.hints[x.lead.id] = { txt: '' };
             const a = local(x.req.scheduledAt);
             try {
                 const r = await api(`/api/school/schedule/free?from=${a.date}&to=${a.date}&duration=${x.dur}&lang=${R.lang}`);
-                const best = (r.slots || []).map(s => ({ ...s, d: Math.abs((Number(s.time.slice(0, 2)) * 60 + Number(s.time.slice(3))) - a.min) })).sort((p, q) => p.d - q.d)[0];
-                R.hints[x.lead.id] = best ? (best.d === 0 ? `${shortName(person(best.teacherId)?.name)} ${best.time} sinovga ochiq` : `${hm(a.min)} da ochiq ustoz yo'q · eng yaqini ${best.time} ${shortName(person(best.teacherId)?.name)}`) : "shu kuni sinovga ochiq ustoz yo'q";
-            } catch (_) { /* maslahat ixtiyoriy */ }
+                const best = (r.slots || []).map(s => ({ ...s, min: Number(s.time.slice(0, 2)) * 60 + Number(s.time.slice(3)) })).map(s => ({ ...s, d: Math.abs(s.min - a.min) })).sort((p, q) => p.d - q.d)[0];
+                R.hints[x.lead.id] = best ? { best: { teacherId: best.teacherId, time: best.time, min: best.min, date: best.date || a.date }, exact: best.d === 0,
+                    txt: best.d === 0 ? `${shortName(person(best.teacherId)?.name)} ${best.time} sinovga ochiq` : `${hm(a.min)} da ochiq ustoz yo'q · eng yaqini ${best.time} ${shortName(person(best.teacherId)?.name)}` }
+                    : { txt: "shu kuni sinovga ochiq ustoz yo'q" };
+            } catch (e) { R.hints[x.lead.id] = { err: e }; /* xato jim yo'qolmaydi — qatorda "Qayta urinish" */ }
         }
         if (R.root?.isConnected) drawRop();
+    }
+
+    // "Ustozga eslatish": lidga eslatma belgisi + izoh; ustozning bildirishnomalar panelida (va bot ulangan bo'lsa
+    // Telegram'da) yangi "ROP eslatdi" xabari chiqadi (server/services/staffNotify.js teacherEvents).
+    function leadPatch(x, fn, okMsg) {
+        if (!x || typeof updateLeadInStorage !== 'function') return false;
+        const saved = updateLeadInStorage(R.lang, x.lead.id, fn);
+        if (!saved) { toast('Saqlab bo\'lmadi — sahifani yangilang'); return false; }
+        toast(okMsg); drawRop(); return true;
+    }
+    function ropRemind(x) {
+        if (!x) return;
+        const me = (typeof getCurrentUser === 'function' && getCurrentUser()) || {};
+        const tName = person(x.req.teacherId)?.name || 'Ustoz';
+        const at = new Date().toISOString();
+        const text = `ROP ${firstName(me.name)} ustozga eslatdi: ${tName} — sinov natijasini yozing (${x.lead.name}).`;
+        leadPatch(x, l => ({ ...l, trialRopReminder: { at, by: me.name || 'ROP', requestId: x.req.id, teacherId: x.req.teacherId },
+            comments: [...(Array.isArray(l.comments) ? l.comments : []), typeof createLeadComment === 'function' ? createLeadComment({ type: 'trial-lesson', text, author: me.name || 'ROP' }) : { id: 'c' + Date.now(), type: 'trial-lesson', text, author: me.name || 'ROP', createdAt: at }] }),
+            `${firstName(tName)}ga eslatma yuborildi · bildirishnomalar panelida chiqadi`);
+    }
+    // "Admin ochsin": lid istagan vaqtda sinovga ochiq ustoz yo'q — admin vaqt ochadi (yoki ustoz biriktiradi).
+    // Adminning bildirishnomalar panelida "ROP so'radi" xabari chiqadi; admin biriktirgach so'rov yopiladi.
+    function ropAdminOpen(x) {
+        if (!x) return;
+        const me = (typeof getCurrentUser === 'function' && getCurrentUser()) || {};
+        const a = local(x.req.scheduledAt);
+        if (!confirm(`${x.lead.name}: ${a ? `${relOr(a.date)} ${hm(a.min)}` : ''} — adminga "shu vaqtni sinovga oching" so'rovi yuborilsinmi?`)) return;
+        const at = new Date().toISOString();
+        const text = `ROP ${firstName(me.name)} adminga so'rov yubordi: ${a ? `${a.date.split('-').reverse().join('.')} ${hm(a.min)}` : ''} vaqtini sinovga ochish (lid istagi, ochiq ustoz yo'q).`;
+        leadPatch(x, l => ({ ...l, trialAdminOpen: { at, by: me.name || 'ROP', date: a?.date || null, time: a ? hm(a.min) : null, requestId: x.req.id || null },
+            comments: [...(Array.isArray(l.comments) ? l.comments : []), typeof createLeadComment === 'function' ? createLeadComment({ type: 'trial-lesson', text, author: me.name || 'ROP' }) : { id: 'c' + Date.now(), type: 'trial-lesson', text, author: me.name || 'ROP', createdAt: at }] }),
+            'Adminga yuborildi · admin bildirishnomalarida chiqadi');
     }
 
     window.trialUI = { renderTeacher, renderAdmin, renderRop, openAssign, _state: { T, A, R } };

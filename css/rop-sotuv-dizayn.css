@@ -1,0 +1,136 @@
+/* Paket B — ROP va sotuv menejeri sahifalari dizaynga moslash (AUDIT-ARS, 30-okt).
+   Sidebar (js/ropSotuvNav.js), Sinov qo'yish + Band qilishdagi holatlar (js/sotuvSinov.js), ROP sinov nazorati
+   amallari (js/trialUI.js), Konversiya sahifa ko'rinishi (js/convertUI.js), Sotuv O'quvchilar (js/schoolTeacher.js).
+   Ranglar — mavjud tokenlar (--surface, --text, --kb-*, --sv-*), tungi rejim shu tokenlar orqali. */
+
+/* ── Sidebar: dizayndagi bandlar (asl bandlar yashirin) ── */
+body.rs-rop #sidebarMenu > .menu-item:not(.rs-item)[data-rs-hidden],
+body.rs-sotuv #sidebarMenu > .menu-item:not(.rs-item)[data-rs-hidden] { display: none !important; }
+#sidebarMenu .rs-item svg { width: 20px; height: 20px; flex: 0 0 auto; }
+
+/* Sahifa ichidagi "Boshqa bo'limlar" qatori (dizaynda sidebar'da yo'q, ish uchun kerak bo'lganlar). */
+.rs-more { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 10px; font-size: 12.5px; }
+.rs-more-l { color: var(--text-secondary, #4B5563); font-weight: 600; margin-right: 2px; }
+.rs-more-b { border: 1px solid var(--border, #E6EAF2); background: var(--surface, #fff); color: var(--text, #111827); border-radius: 999px; min-height: 30px; padding: 0 12px; font: 600 12.5px inherit; cursor: pointer; }
+.rs-more-b:hover { border-color: var(--kb-primary, #0B63E5); color: var(--kb-primary, #0B63E5); }
+.rs-more-b:focus-visible { outline: 3px solid var(--kb-ring, #93C5FD); outline-offset: 1px; }
+.rs-ro { margin: 0 0 12px; padding: 10px 14px; border-radius: 12px; background: var(--kb-info-bg, #EFF6FF); color: var(--kb-info-fg, #1D4ED8); font-size: 13px; font-weight: 600; }
+
+/* ── Sotuv O'quvchilar: eski "Faol o'quvchilar / Muzlatilganlar / Qarzdorlar" bloki chiqmaydi ── */
+body.rs-sotuv #tab-students:has(> #schoolMyStudents:not([hidden])) > :not(#schoolMyStudents):not(.rs-more) { display: none !important; }
+
+/* ── Sinov darsi qo'yish (SotuvSinov) ── */
+.ss-hr { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.rs-states { font-size: 13px; font-weight: 700; }
+.ss-wish--ro { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: baseline; line-height: 1.45; }
+.ss-wish-ed { font-size: 12px; font-weight: 700; margin-left: auto; }
+.ss-chips2 { display: flex; flex-wrap: wrap; gap: 6px; }
+.ss-ch2 { min-width: 0; padding: 0 8px; }
+.ss-ch2--d { padding: 0 6px; overflow: hidden; }
+.ss-ch2--d input { width: 134px; max-width: 100%; padding: 0; font-size: 12px; box-sizing: border-box; }
+.ss-lerr { padding: 18px; }
+.rs-herr { color: var(--kb-bad-fg, #B42318); }
+@media (min-width: 1181px) {
+  /* 1440px: to'r 09:00–20:00 oynada, kesilmasdan sig'adi. */
+  .ss-g3 { min-width: 0; }
+  .ss-g3 .ss-tn { width: 132px; padding: 8px 10px; }
+  .ss-g3 td.f button { font-size: 12px; }
+}
+
+/* Band qilishdagi holatlar (SotuvHolatlar) — katalog */
+.rs-sts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 4px 0 12px; }
+.rs-hc { padding: 16px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.rs-hc:last-child { grid-column: 1 / -1; }
+.rs-hc-h { margin: 0; font-size: 12px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--text-secondary, #4B5563); }
+.rs-demo { pointer-events: none; }
+.ss-sl5.is-on { background: var(--kb-primary, #0B63E5); border-color: var(--kb-primary, #0B63E5); color: #fff; }
+.ss-sl5.is-on small { color: #fff; }
+
+/* ── ROP · Sinov darslari nazorati: qator amallari ── */
+.rs-acts { display: inline-flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-end; }
+
+/* ── Konversiya: to'liq sahifa ko'rinishi (SotuvKonversiya) ── */
+#modalOverlay.cv-pagemode { inset: var(--cv-t, 0) 0 0 var(--cv-l, 0); background: var(--bg, #F5F7FB); backdrop-filter: none; align-items: stretch; justify-content: stretch; padding: 16px 24px 24px; }
+#modalOverlay.cv-pagemode .modal { max-width: none !important; width: 100%; max-height: none; height: 100%; border-radius: 16px; box-shadow: none; border: 1px solid var(--border, #E6EAF2); }
+#modalOverlay.cv-pagemode .modal-header { border-bottom: 0; padding: 18px 24px 0; flex-wrap: wrap; row-gap: 2px; }
+#modalOverlay.cv-pagemode .modal-header .cv-back { flex: 1 0 100%; text-align: left; }
+#modalOverlay.cv-pagemode .modal-header h3 { flex: 1 1 auto; }
+#modalOverlay.cv-pagemode .modal-header h3 { font-size: 24px; font-weight: 800; letter-spacing: -.01em; }
+#modalOverlay.cv-pagemode .modal-body { padding-top: 6px; }
+#modalOverlay.cv-pagemode .cv-back { font-size: 13px; font-weight: 700; padding: 0; background: none; border: 0; cursor: pointer; }
+#modalOverlay:not(.cv-pagemode) .cv-back { display: none; }
+.cv-tar button { display: inline-flex; align-items: center; gap: 4px; }
+.cv-tar button .cv-pm { font-weight: 600; opacity: .85; }
+.cv-tar button[aria-checked="false"] .cv-pm { display: none; }
+.cv-first { margin: 12px 0 4px; }
+.cv-fd { display: flex; flex-wrap: wrap; gap: 8px; }
+.cv-fd button { border: 1px solid var(--border, #D0D5DD); background: var(--surface, #fff); color: var(--text); border-radius: 10px; min-height: 40px; padding: 0 14px; font: 700 13px inherit; cursor: pointer; }
+.cv-fd button[aria-checked="true"] { border-color: var(--kb-primary, #0B63E5); background: var(--kb-info-bg); color: var(--kb-info-fg); }
+.cv-sug--err { color: var(--kb-bad-fg, #B42318); }
+@media (max-width: 900px) {
+  #modalOverlay.cv-pagemode { inset: 0; padding: 0; }
+  #modalOverlay.cv-pagemode .modal { border-radius: 0; border: 0; }
+  #modalOverlay.cv-pagemode .modal-header h3 { font-size: 20px; }
+}
+
+/* ── Sotuv · O'quvchilar (SotuvOquvchilar, SotuvOquvchiArxiv) ── */
+.rs-sh { align-items: flex-end; }
+.rs-pillr { white-space: nowrap; }
+.rs-mine { padding: 0; overflow: hidden; }
+.rs-mh { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--border, #E6EAF2); flex-wrap: wrap; }
+.rs-mh h2, .rs-dch h2 { margin: 0; font-size: 15px; font-weight: 800; }
+.rs-tw { overflow-x: auto; }
+.rs-mt { width: 100%; min-width: 860px; }
+.rs-mt th.rs-c1, .rs-mt td.rs-c1 { width: 210px; }
+.rs-mt th, .rs-mt td { padding-left: 8px; padding-right: 8px; }
+.rs-mt td.rs-st .sc-pill { white-space: nowrap; }
+.rs-who { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.rs-nm { display: flex; flex-direction: column; min-width: 0; }
+.rs-nm b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rs-tg { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; background: var(--kb-info-bg, #EFF6FF); color: var(--kb-info-fg, #1D4ED8); flex: 0 0 auto; margin-left: auto; }
+.rs-tg.is-off { background: var(--kb-track, #F2F4F7); color: var(--text-muted, #98A2B3); }
+.rs-mt tr.is-sel td:first-child { box-shadow: inset 3px 0 0 var(--kb-primary, #0B63E5); }
+.rs-mt tr.ms-row.is-sel td { background: var(--kb-info-bg, #EEF4FF); color: inherit; }
+.rs-mt tr.ms-row:hover td { background: var(--kb-track, #F5F7FB); }
+.rs-mt tr.ms-row.is-sel:hover td { background: var(--kb-info-bg, #EEF4FF); }
+.rs-foot { padding: 10px 16px 14px; margin: 0; }
+.rs-two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 16px; }
+.rs-dc { padding: 0; overflow: hidden; display: flex; flex-direction: column; }
+.rs-dch { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--border, #E6EAF2); }
+.rs-k4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0; padding: 12px 16px 4px; }
+.rs-k4 > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.rs-k4 small { font-size: 12px; color: var(--text-secondary, #4B5563); }
+.rs-k4 b { font-size: 18px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rs-dn { padding: 4px 16px 14px; margin: 0; }
+.rs-dact { padding: 0 16px 14px; margin-top: auto; }
+
+/* ── 390px: sotuv menejeri telefonda ishlaydi — ro'yxatlar karta, to'rlar o'z kartasi ichida suriladi ── */
+@media (max-width: 640px) {
+  .rs-sh { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .rs-pillr { white-space: normal; }
+  .rs-mh .sc-seg { width: 100%; overflow-x: auto; flex-wrap: nowrap; }
+  .rs-mh .sc-seg button { white-space: nowrap; flex: 1 0 auto; }
+  .rs-tw { overflow: visible; }
+  .rs-mt { min-width: 0; }
+  .rs-mt thead { display: none; }
+  .rs-mt, .rs-mt tbody { display: block; }
+  .rs-mt tr.ms-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 10px; padding: 12px 14px; border-bottom: 1px solid var(--border, #E6EAF2); }
+  .rs-mt tr.ms-row td { display: block; padding: 0; border: 0; min-width: 0; background: none !important; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rs-mt tr.ms-row td[data-l]::before { display: block; }
+  .rs-mt tr.ms-row td.rs-c1 { grid-column: 1 / -1; width: auto; }
+  .rs-mt tr.ms-row td[data-l]::before { content: attr(data-l); font-size: 11px; color: var(--text-secondary, #4B5563); font-weight: 600; }
+  .rs-mt tr.ms-row td.rs-st { grid-column: span 2; align-self: end; }
+  .rs-mt tr.ms-row td.rs-st::before { display: none; }
+  .rs-mt tr.is-sel td:first-child { box-shadow: none; }
+  .rs-mt tr.is-sel { box-shadow: inset 3px 0 0 var(--kb-primary, #0B63E5); background: var(--kb-info-bg, #EFF6FF); }
+  .rs-two { grid-template-columns: 1fr; }
+  .rs-k4 { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .rs-sts { grid-template-columns: 1fr; }
+  .ss-hr { align-items: flex-start; }
+  .ss-gcard { overflow: hidden; }
+  .ss-gw { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .rs-acts { justify-content: flex-start; }
+  .tl-rop .tl-li2 { flex-wrap: wrap; }
+  .rs-more { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 2px; }
+  .rs-more-b { white-space: nowrap; }
+}

@@ -12,7 +12,7 @@ const workflow = require('../../js/trialWorkflow');
 const ST = require('./staffSettings');
 
 // Katalog: kind → guruhlar → turlar. live=true — panelga hozir serverdan chiqadi; false — sozlama saqlanadi,
-// manba hali ulanmagan ("tez orada"). locked — o'chirib bo'lmaydi. d = [telegram, brauzer] standart.
+// manba hali ulanmagan ("tez orada"). locked — o'chirib bo'lmaydi. d = [telegram, brauzer] standart (ROP/sotuv — RopSozBildirish/SotuvSozBildirish dizayni).
 const CATALOG = {
     teacher: [
         ['Dars', [
@@ -53,11 +53,11 @@ const CATALOG = {
         ['Mening so\'rovlarim', [
             ['edit_decision', 'Tahrir tasdiqlandi / rad etildi / qaytarildi', 'admin yoki ROP · sabab bilan', [1, 1], true]]],
         ['O\'quvchilarim', [
-            ['group_link_missing', 'Telegram guruh havolasi kiritilmagan', 'konvertatsiyadan 24 soat o\'tsa', [1, 1], true],
+            ['group_link_missing', 'Telegram guruh havolasi kiritilmagan', 'konvertatsiyadan 24 soat o\'tsa', [1, 0], true],
             ['student_followup', 'Qaytish oldidan eslatma · qayta jalb qo\'ng\'irog\'i', 'belgilangan kuni · "Faol emas" o\'quvchilar', [1, 1], true],
             ['student_status', 'O\'quvchim muzlatildi / to\'xtatildi / ustozi almashdi', 'admin yoki ROP qilganda', [1, 1], true],
-            ['payment_due', 'To\'lov muddati yaqin / o\'tdi', '3 kun oldin va o\'tgan kuni', [1, 1], true],
-            ['daily_plan', 'Kunlik reja', '20:00 da', [1, 0], true],
+            ['payment_due', 'To\'lov muddati yaqin / o\'tdi', '3 kun oldin va o\'tgan kuni', [1, 0], true],
+            ['daily_plan', 'Kunlik reja', '20:00 da', [0, 1], true],
             ['guide_new', 'Yangi yo\'riqnoma', '', [0, 1], true]]]
     ],
     rop: [
@@ -66,12 +66,12 @@ const CATALOG = {
             ['payment_edit', 'To\'lov tahriri 24 soatdan keyin', 'admin ham ko\'radi · kim birinchi', [1, 1], true]]],
         ['Sinov va lidlar', [
             ['trial_unassigned', 'Sinovga ustoz topilmadi', 'darhol', [1, 1], true],
-            ['trial_outcome', 'Sinov natijasi: o\'tkazildi / kelmadi', 'jamoa bo\'yicha', [0, 1], true],
-            ['hold_expired', 'Ushlab turish tugadi, band qilinmadi', '10 daqiqadan keyin', [1, 0], true]]],
+            ['trial_outcome', 'Sinov natijasi: o\'tkazildi / kelmadi', 'jamoa bo\'yicha', [1, 0], true],
+            ['hold_expired', 'Ushlab turish tugadi, band qilinmadi', '10 daqiqadan keyin', [0, 0], true]]],
         ['Jamoa', [
             ['daily_plan', 'Kunlik reja natijasi', '20:00 da · har menejer bo\'yicha', [1, 0], true],
-            ['group_link_missing', 'Telegram guruh havolasi kiritilmagan', 'menejer nomi bilan', [1, 1], true],
-            ['student_status', 'O\'quvchi muzlatildi / to\'xtatildi', 'jamoa o\'quvchilari', [0, 1], true],
+            ['group_link_missing', 'Telegram guruh havolasi kiritilmagan', 'menejer nomi bilan', [1, 0], true],
+            ['student_status', 'O\'quvchi muzlatildi / to\'xtatildi', 'jamoa o\'quvchilari', [1, 1], true],
             ['guide_new', 'Yangi yo\'riqnoma', '', [0, 1], true]]]
     ],
     admin: [
@@ -208,6 +208,11 @@ async function teacherEvents(db, me, now, ev) {
         if ((t.state === 'pending' && passed) || (t.state === 'accepted' && Number.isFinite(ms) && ms + 30 * 60000 <= now.getTime()))
             ev.push({ id: `trial:${r.id}:${t.id}:result`, type: 'trial_result', cat: 'sinov', tone: 'info', title: `${first(r.name)} sinovi natijasi kutilmoqda`,
                 sub: local ? `${dm(local.date)} ${T.fromMin(local.min)} · natijani yozing` : 'natijani yozing', at: iso(ms + 30 * 60000), go: { tab: 'trial-lessons' } });
+        // ROP "Ustozga eslatish" (RopSinov) — natija hali yozilmagan bo'lsa, har eslatma yangi xabar.
+        const rem = lead.trialRopReminder;
+        if (rem?.at && (!rem.requestId || rem.requestId === t.id) && ['pending', 'accepted'].includes(t.state) && Date.parse(rem.at) > now.getTime() - 3 * 86400000)
+            ev.push({ id: `trial:${r.id}:${t.id}:rop:${rem.at}`, type: 'trial_result', cat: 'sinov', tone: 'warn', title: `ROP eslatdi: ${first(r.name)} sinovi natijasini yozing`,
+                sub: [rem.by ? first(rem.by) : 'ROP', local ? `${dm(local.date)} ${T.fromMin(local.min)}` : ''].filter(Boolean).join(' · '), at: iso(Date.parse(rem.at)), go: { tab: 'trial-lessons' } });
     }
     const since = new Date(now.getTime() - 14 * 86400000);
     const mk = (await db.query(`SELECT m.*, s.name FROM school_makeups m LEFT JOIN students s ON s.id=m.student_id
@@ -493,6 +498,15 @@ async function managerEvents(db, me, now, ev) {
             at: atLocal(today, 9 * 60), go: { tab: 'students' } });
     }
     if (me.kind !== 'admin') return;
+    // ROP "Admin ochsin" (RopSinov): lid istagan vaqtda sinovga ochiq ustoz yo'q — admin vaqt ochadi yoki ustoz biriktiradi.
+    const ask = (await db.query(`SELECT id, name, extra_data FROM leads WHERE deleted_at IS NULL AND status='sinov-darsida' AND extra_data ? 'trialAdminOpen'`)).rows;
+    for (const r of ask) {
+        const x = parseExtra(r.extra_data), a = x.trialAdminOpen || {};
+        const t = workflow.request({ ...x, id: r.id, name: r.name });
+        if (!a.at || a.doneAt || (a.requestId && t && t.id !== a.requestId) || (t && t.teacherId && !x.trialUnassigned)) continue;
+        ev.push({ id: `rop-open:${r.id}:${a.at}`, type: 'trial_unassigned', cat: 'sinov', tone: 'bad', title: `ROP so'radi: sinovga vaqt oching${a.time ? ' · ' + a.time : ''}`,
+            sub: [first(r.name), a.date ? dm(a.date) + (a.time ? ' ' + a.time : '') : '', a.by ? 'ROP ' + first(a.by) : ''].filter(Boolean).join(' · '), at: iso(Date.parse(a.at)), go: { tab: 'timetable' } });
+    }
     // To'lov muddati o'tganlar — kuniga bitta jamlangan xabar.
     const over = team.filter(st => Number(st.extra.debtAmount) > 0 && ymd(st.extra.paymentDueDate) && ymd(st.extra.paymentDueDate) < today);
     if (over.length) ev.push({ id: `overdue:${today}:${over.length}`, type: 'payment_overdue', cat: 'tasdiq', tone: 'bad', title: `To'lov muddati o'tgan: ${over.length} o'quvchi`,

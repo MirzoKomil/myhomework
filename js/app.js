@@ -18255,8 +18255,10 @@ function openPaymentTeacherScheduleModal(lang, leadId, options = {}) {
             return;
         }
 
-        // 8-ish: statusni o'zgartirmasdan faqat jadval ma'lumotini saqlaymiz
-        saveLeadTeacherSchedule(lang, leadId, result.data);
+        // 8-ish: statusni o'zgartirmasdan faqat jadval ma'lumotini saqlaymiz.
+        // SotuvKonversiya: 3-qadamda tanlangan "Birinchi dars" 6-qadamdagi "Ilk dars sanasi"ni to'ldiradi.
+        const firstLessonDate = /^\d{4}-\d{2}-\d{2}$/.test(modalBody.dataset.cvFirst || '') ? modalBody.dataset.cvFirst : null;
+        saveLeadTeacherSchedule(lang, leadId, firstLessonDate ? { ...result.data, firstLessonDate } : result.data);
         closeModal();
         openPaymentProcessModal(lang, leadId, { chainTo });
     };
@@ -18446,6 +18448,10 @@ function openPaymentOnboardingModal(lang, leadId, options = {}) {
     const { chainTo = null } = options;
     const lead = getLeadById(lang, leadId);
     if (!lead) return;
+    // Qadamlar tartibi 3 → 4 → 5 → 6: to'g'ridan-to'g'ri chaqirilsa ham avval doimiy jadval (3) va to'lov (4) —
+    // aks holda guruh oynasi birinchi ochilib, bajarilmagan qadamlar "✓" bo'lib ko'rinardi (audit: SotuvKonversiya).
+    if (window.convertUI && !options.groupDone && !leadHasTeacherSchedule(lead)) { openPaymentTeacherScheduleModal(lang, leadId, { chainTo }); return; }
+    if (window.convertUI && !options.groupDone && !lead.paymentSurvey) { openPaymentProcessModal(lang, leadId, { chainTo }); return; }
     // 5-qadam: Telegram guruh (js/convertUI.js) — guruh hali kiritilmagan bo'lsa, avval o'sha.
     if (window.convertUI && !lead.paymentOnboarding?.telegramGroupLink && !options.groupDone) {
         window.convertUI.openGroupStep(lang, leadId, () => openPaymentOnboardingModal(lang, leadId, { ...options, groupDone: true }));

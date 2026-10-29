@@ -52,5 +52,25 @@ test('new staff notification sources — synthetic data only',{skip:!url},async 
    assert.match(adm.find(e=>e.type==='payment_overdue').title,/1 o'quvchi/);
    for(const [id,h] of [['u-a',21.6],['u-r',21.6],['u-s',21.6]])assert.equal((await N.feed(pool,{id},at(Math.floor(h),36))).partial,undefined,id+' no failing source');
   });
+  // Paket B (RopSinov): "Ustozga eslatish" → ustoz panelida yangi xabar; "Admin ochsin" → admin panelida, ustoz biriktirilgach yo'qoladi.
+  await t.test('ROP sinov amallari: ustozga eslatma va adminga "vaqt oching" so\'rovi',async()=>{
+   await pool.query(`INSERT INTO users(id,name,email,role) VALUES('u-t','Kamola','kam@x','teacher');
+    INSERT INTO hr_employees VALUES('h-t','Kamola Mirzayeva','kam@x','ingliz-oqituvchi','active','english',false,'')`);
+   const past=new Date(at(9).getTime()-3600000).toISOString(), rem=new Date(at(10).getTime()).toISOString();
+   await pool.query(`INSERT INTO leads(id,name,language,status,manager_id,extra_data) VALUES
+    ('T1','Shahzod','english','sinov-darsida','h-s',$1),('T2','Anvar','english','sinov-darsida','h-s',$2)`,
+    [JSON.stringify({trialRequest:{id:'tr1',state:'accepted',teacherId:'h-t',scheduledAt:past,daysCount:1},trialRopReminder:{at:rem,by:'Bahodir Q',requestId:'tr1'}}),
+     JSON.stringify({trialUnassigned:true,trialRequest:{id:'tr2',state:'pending',teacherId:'',scheduledAt:at(23).toISOString(),daysCount:1},trialAdminOpen:{at:rem,by:'Bahodir Q',date:D,time:'08:00',requestId:'tr2'}})]);
+   const tev=await types('u-t',at(11));
+   const r=tev.find(e=>e.id===`trial:T1:tr1:rop:${rem}`);
+   assert.ok(r,'ustoz panelida ROP eslatmasi');assert.match(r.title,/ROP eslatdi: Shahzod/);assert.equal(r.type,'trial_result');
+   const adm=await types('u-a',at(11));
+   assert.match(adm.find(e=>e.id===`rop-open:T2:${rem}`)?.title||'',/ROP so'radi: sinovga vaqt oching · 08:00/);
+   assert.equal((await types('u-r',at(11))).some(e=>/^rop-open:/.test(e.id)),false,'ROP o\'zi bu xabarni olmaydi');
+   await pool.query(`UPDATE leads SET extra_data = extra_data || '{"trialUnassigned":false,"trialRequest":{"id":"tr2","state":"pending","teacherId":"h-t","scheduledAt":"${at(23).toISOString()}","daysCount":1}}'::jsonb WHERE id='T2'`);
+   assert.equal((await types('u-a',at(11))).some(e=>/^rop-open:T2/.test(e.id)),false,'ustoz biriktirilgach so\'rov yopiladi');
+   await pool.query(`UPDATE leads SET extra_data = jsonb_set(extra_data,'{trialRequest,state}','"completed"') WHERE id='T1'`);
+   assert.equal((await types('u-t',at(11))).some(e=>/:rop:/.test(e.id)),false,'natija yozilgach eslatma yo\'q');
+  });
  }finally{await pool.end();}
 });
