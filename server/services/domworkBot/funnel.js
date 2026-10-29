@@ -6,6 +6,7 @@ const { randomUUID } = require('node:crypto');
 const policy = require('./policy');
 const store = require('./store');
 const copy = require('./funnelCopy');
+const T = require('./tone');
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS domwork_bot_visitors (
@@ -32,11 +33,17 @@ async function init(db) {
         ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ, ADD COLUMN IF NOT EXISTS outcome TEXT, ADD COLUMN IF NOT EXISTS outcome_at TIMESTAMPTZ,
         ADD COLUMN IF NOT EXISTS monthly BOOLEAN NOT NULL DEFAULT FALSE, ADD COLUMN IF NOT EXISTS drip_stopped BOOLEAN NOT NULL DEFAULT FALSE,
         ADD COLUMN IF NOT EXISTS noans_at TIMESTAMPTZ, ADD COLUMN IF NOT EXISTS bonus_at TIMESTAMPTZ,
-        ADD COLUMN IF NOT EXISTS drip_checked_at TIMESTAMPTZ, ADD COLUMN IF NOT EXISTS bonus_checked_at TIMESTAMPTZ`);
+        ADD COLUMN IF NOT EXISTS drip_checked_at TIMESTAMPTZ, ADD COLUMN IF NOT EXISTS bonus_checked_at TIMESTAMPTZ,
+        ADD COLUMN IF NOT EXISTS location TEXT, ADD COLUMN IF NOT EXISTS ru_form JSONB NOT NULL DEFAULT '{}'`);
     // Sotuv guruhidagi bot xabari → qaysi mehmonga tegishli (menejer "reply" qilib javob yozadi).
     await db.query(`CREATE TABLE IF NOT EXISTS domwork_bot_relay (chat_id TEXT NOT NULL, message_id BIGINT NOT NULL, telegram_id TEXT NOT NULL,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), PRIMARY KEY(chat_id,message_id))`);
     await db.query("DELETE FROM domwork_bot_relay WHERE created_at<NOW()-INTERVAL '90 days'");
+    // 30-okt: voronkani ishga tushirish (bir marta). Keyin Bot boshqaruvidan o'chirilsa — o'chiq qoladi.
+    await db.query(`UPDATE domwork_bot_settings SET data=data||'{"funnelEnabled":true,"dripEnabled":true,"funnelLaunch20261030":true}'::jsonb
+        ||(CASE WHEN data ? 'discountPercent' THEN '{}'::jsonb ELSE '{"discountPercent":15,"discountHours":72}'::jsonb END)
+        ||(CASE WHEN COALESCE(data->>'bonusChannel','')<>'' THEN '{}'::jsonb ELSE '{"bonusChannel":"@domwork"}'::jsonb END)
+        WHERE singleton=1 AND NOT (data ? 'funnelLaunch20261030')`);
 }
 
 // Admin botga "#voronka <kalit>" izohi bilan fayl yuborib materialni almashtiradi.
@@ -48,7 +55,29 @@ const GUEST_METHODS = ['sendMessage', 'sendPhoto', 'sendVideo', 'sendDocument', 
 const clean = v => String(v ?? '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 120);
 async function settings(db) { return (await store.settings(db)).data || {}; }
 async function enabled(db) { return (await settings(db)).funnelEnabled === true; }
-function media(s, key) { const m = s.funnelMedia?.[key]; return m && MEDIA_FIELD[m.method] && /^[A-Za-z0-9_-]{10,1024}$/.test(m.fileId) ? m : null; }
+// Repodagi tayyor PDFlar: admin "#voronka <kalit>" bilan fayl yuklamagan bo'lsa ham material bor hisoblanadi.
+const BUNDLED_NAMES = { sovga: 'Domwork — 40 ta eng kerakli gap.pdf', qollanma_umumiy: 'Domwork — Ishda kerak 50 ibora.pdf',
+    qollanma_office: 'Domwork — Ish suhbati 15 savol.pdf', qollanma_bank: 'Domwork — Bank va moliya.pdf', qollanma_med: 'Domwork — Tibbiyot.pdf',
+    qollanma_gov: 'Domwork — Davlat xizmati.pdf', qollanma_sales: 'Domwork — Savdo va mijozlar.pdf', qollanma_daily: 'Domwork — Kundalik suhbat.pdf',
+    qollanma_smena: 'Domwork — Ish va smena.pdf', qollanma_hujjat: 'Domwork — Hujjat va patent.pdf', qollanma_kundalik: 'Domwork — Shifokor, politsiya, transport.pdf',
+    oferta: 'Domwork — Ommaviy oferta shartnomasi.pdf', promo1: 'domwork-dars.png', salom: 'domwork.png', cta: 'domwork-menejer.png', sinov: 'domwork-sinov-darsi.png', promo2: 'domwork-ish.png', promo3: 'domwork-rossiya.png', bonus: 'Domwork — Ishda kerak 50 ibora.pdf' };
+const BUNDLED_FILE = { bonus: 'qollanma_umumiy' }; // kanal bonusi — «Ishda kerak 50 ibora» (umumiy qo'llanma)
+const bundledCache = new Map();
+function bundledFile(key) {
+    if (!BUNDLED_NAMES[key]) return null;
+    if (!bundledCache.has(key)) {
+        const image = /\.png$/.test(BUNDLED_NAMES[key]);
+        const path = require('node:path').join(__dirname, '..', '..', 'data', 'funnel', (BUNDLED_FILE[key] || key) + (image ? '.png' : '.pdf'));
+        bundledCache.set(key, require('node:fs').existsSync(path) ? { path, filename: BUNDLED_NAMES[key], image } : null);
+    }
+    return bundledCache.get(key);
+}
+function media(s, key) {
+    const m = s.funnelMedia?.[key];
+    if (m && MEDIA_FIELD[m.method] && /^[A-Za-z0-9_-]{10,1024}$/.test(m.fileId)) return m;
+    const file = bundledFile(key);
+    return file ? { method: file.image ? 'sendPhoto' : 'sendDocument', bundled: key } : null;
+}
 const inline = rows => ({ inline_keyboard: rows.map(r => r.map(([text, data]) => (/^https:\/\//.test(data) ? { text, url: data } : { text, callback_data: data }))) });
 const replyKeyboard = () => ({ keyboard: [[{ text: copy.KEYBOARD.contact }], [{ text: copy.KEYBOARD.guides }, { text: copy.KEYBOARD.faq }]], resize_keyboard: true });
 const track = v => ['russia', 'abroad'].includes(v.segment) ? 'A' : v.segment ? 'B' : String(v.phone).startsWith('7') ? 'A' : 'B';
@@ -63,13 +92,14 @@ const sla = s => Number.isInteger(s.salesSlaMinutes) ? s.salesSlaMinutes : 30;
 
 // Har bir update uchun noyob outbox kalitlari.
 function context(db, update, tid) { let n = 0; return { db, tid, key: () => `f:${update.update_id}:${n++}` }; }
-async function send(c, method, payload, { delayMs = 0, unless = '', automation = false, key = '', expires = '' } = {}) {
+async function send(c, method, payload, { delayMs = 0, unless = '', automation = false, key = '', expires = '', html = false } = {}) {
     await store.enqueue(c.db, { key: key || c.key(), targetId: c.tid, method, notBefore: new Date(Date.now() + delayMs),
-        payload: { chat_id: c.tid, ...payload, _guest: { tid: c.tid, ...(unless ? { unless } : {}) }, ...(automation || delayMs ? { _automation: true } : {}), ...(expires ? { _expiresAt: expires } : {}) } });
+        payload: { chat_id: c.tid, ...payload, ...(html ? { parse_mode: 'HTML' } : {}), _guest: { tid: c.tid, ...(unless ? { unless } : {}) }, ...(automation || delayMs ? { _automation: true } : {}), ...(expires ? { _expiresAt: expires } : {}) } });
 }
 const say = (c, text, markup, opts) => send(c, 'sendMessage', { text, ...(markup ? { reply_markup: markup } : {}) }, opts);
 async function sendMedia(c, m, caption, markup, opts) {
-    await send(c, m.method, { [MEDIA_FIELD[m.method]]: m.fileId, ...(caption ? { caption } : {}), ...(markup ? { reply_markup: markup } : {}) }, opts);
+    const file = m.bundled ? { [MEDIA_FIELD[m.method]]: 'bundled', _bundled: m.bundled } : { [MEDIA_FIELD[m.method]]: m.fileId };
+    await send(c, m.method, { ...file, ...(caption ? { caption } : {}), ...(markup ? { reply_markup: markup } : {}) }, opts);
 }
 async function answer(db, update, text = '') {
     const q = update.callback_query;
@@ -123,7 +153,8 @@ async function ensureLead(db, v, { phone = '', intent = '' } = {}) {
         ORDER BY created_at DESC LIMIT 1`, [phone])).rows[0] : null;
     if (!lead) {
         const id = randomUUID(), name = v.first_name || 'Telegram mehmon';
-        const [utmSource, utmCampaign] = v.source.startsWith('ig:') ? ['instagram', v.source.slice(3)] : ['telegram-bot', ''];
+        const src = /^(ig|fb|tt|yt|ads):(.*)$/.exec(v.source || '');
+        const [utmSource, utmCampaign] = src ? [{ ig: 'instagram', fb: 'facebook', tt: 'tiktok', yt: 'youtube', ads: 'ads' }[src[1]], src[2]] : ['telegram-bot', ''];
         const extra = { utmSource, ...(utmCampaign ? { utmCampaign } : {}), telegramId: v.telegram_id, ...(v.username ? { telegramUsername: v.username } : {}), botIntent: intent };
         const comments = [{ id: randomUUID(), type: 'note', author: 'Bot', ts: Date.now(), date: new Date().toLocaleDateString('uz-UZ'),
             text: `🤖 @Domworkuz_bot orqali keldi${v.username ? ' · @' + v.username : ''} · Telegram ID ${v.telegram_id}` }];
@@ -146,7 +177,7 @@ function profile(v, lead) {
     const quiz = v.quiz_done_at ? `test ${Object.values(v.quiz || {}).filter(x => x.ok).length}/3` : 'test yo‘q';
     return [`👤 ${lead?.name || v.first_name || 'Mehmon'}${v.username ? ' · @' + v.username : ''} · tg://user?id=${v.telegram_id}`,
         `📞 ${lead?.phone || (v.phone ? '+' + v.phone : 'raqam yo‘q — faqat Telegram')}`,
-        `🎯 ${seg}${field ? ' · ' + field : ''}`,
+        `🎯 ${seg}${field ? ' · ' + field : ''}${v.location === 'ru' ? ' · 🇷🇺 ROSSIYADA — qo‘ng‘iroq ishlamaydi, reply bilan yozing' : v.location === 'other' ? ' · 🌍 chet elda — Telegramda yozing' : ''}`,
         `📈 Ball ${v.score} · 1-dars: ${v.lesson_seen_at || v.lesson_parts >= 2 ? 'ko‘rdi' : v.lesson_parts ? 'ochdi' : 'yo‘q'} · ${quiz} · manba: ${v.source}`].join('\n');
 }
 async function salesGroup(db) { return (await db.query("SELECT id,chat_id FROM domwork_bot_groups WHERE type='sales' AND scope='' AND active")).rows[0] || null; }
@@ -174,11 +205,22 @@ async function addScore(db, v, n, reason) {
 
 // ── Qadamlar ──────────────────────────────────────────────────────────────
 async function askSegment(c, opts) {
-    await say(c, copy.text.segment, inline(Object.entries(copy.SEGMENTS).map(([k, s]) => [[s.label, 'f:seg:' + k]])), opts);
+    await say(c, copy.text.segment, inline(Object.entries(copy.SEGMENTS).map(([k, s]) => [[s.label, 'f:seg:' + k]])), { html: true, ...opts });
+}
+// 30-okt: birinchi savol — qayerdasiz? Rossiyada qo'ng'iroq ishlamaydi (GSM/Telegram cheklovi) — u yerdagilar bilan faqat bot orqali yozishamiz.
+async function askLocation(c, opts) {
+    await say(c, copy.text.location, inline([[[copy.LOCATIONS.uz, 'f:loc:uz']], [[copy.LOCATIONS.ru, 'f:loc:ru']], [[copy.LOCATIONS.other, 'f:loc:other']]]), { html: true, ...opts });
+}
+async function ruQuestion(c, i, opts) {
+    const [, text, options] = copy.RU_FORM[i];
+    await say(c, `<b>${text}</b>`, inline(options.map(([k, label]) => [[label, `f:ru:${i}:${k}`]])), { html: true, ...opts });
+}
+async function askGoalUz(c, opts) {
+    await say(c, copy.text.goalUz, inline([[[copy.SEGMENTS.career.label, 'f:seg:career']], [[copy.SEGMENTS.daily.label, 'f:seg:daily']]]), { html: true, ...opts });
 }
 async function askField(c, v, opts) {
     const choices = copy.FIELD_CHOICES[v.segment] || copy.FIELD_CHOICES.career;
-    await say(c, copy.text.field, inline([...choices.map(k => [[copy.FIELDS[k].label, 'f:fld:' + k]]), [[copy.text.later, 'f:fld:none']]]), opts);
+    await say(c, copy.text.field, inline([...choices.map(k => [[copy.FIELDS[k].label, 'f:fld:' + k]]), [[copy.text.later, 'f:fld:none']]]), { html: true, ...opts });
 }
 function landingGoal(comments) {
     try { for (const c of JSON.parse(comments || '[]')) { const m = /Maqsad:\s*([^|]+)/.exec(c?.text || ''); if (m) return copy.LANDING_GOALS[m[1].trim()] || null; } } catch { /* izohsiz */ }
@@ -186,7 +228,9 @@ function landingGoal(comments) {
 }
 async function start(db, update, message, { lead = null, payload = '' } = {}) {
     const from = message.from, c = context(db, update, String(from.id)), s = await settings(db);
-    const source = lead ? 'landing' : /^ig_[A-Za-z0-9_-]{1,40}$/.test(payload) ? 'ig:' + payload.slice(3) : 'organic';
+    // Reklama manbalari: ig_<kampaniya> (Instagram/Chatplace), fb_<kampaniya> (Meta lid-forma "Rahmat" tugmasi), tt_, yt_, ads_.
+    const ad = /^(ig|fb|tt|yt|ads)_([A-Za-z0-9_-]{1,40})$/.exec(payload) || (/^(fb|ads)$/.exec(payload) ? [payload, payload, 'form'] : null);
+    const source = lead ? 'landing' : ad ? ad[1] + ':' + ad[2] : 'organic';
     // Landing raqami tasdiqlanmagan — mehmon raqami faqat Telegram kontakt tugmasi orqali olinadi.
     const v = await upsertVisitor(db, from, { source, leadId: lead?.id || null });
     if (lead && !v.segment) {
@@ -195,14 +239,19 @@ async function start(db, update, message, { lead = null, payload = '' } = {}) {
     }
     await event(db, c.tid, 'start', { source, variant: v.variant });
     const name = clean(String(lead?.name || from.first_name || '').split(' ')[0]) || 'do‘st';
-    await say(c, copy.text.greeting(name, !!lead), replyKeyboard());
+    const hello = media(s, 'salom');
+    if (hello) await sendMedia(c, hello, copy.text.greeting(T.esc(name), !!lead), replyKeyboard(), { html: true });
+    else await say(c, copy.text.greeting(T.esc(name), !!lead), replyKeyboard(), { html: true });
     const gift = media(s, 'sovga'), hasLesson = !!media(s, 'dars1');
     const next = inline([hasLesson ? [[copy.text.lessonWatch, 'f:les']] : [[copy.KEYBOARD.contact, 'f:cta']]]);
-    if (gift) { await sendMedia(c, gift, copy.text.gift + '\n\n' + (hasLesson ? copy.text.giftNext : ''), next); await event(db, c.tid, 'gift'); }
-    else await say(c, hasLesson ? copy.text.giftNext : copy.text.lessonMissing, next);
+    // 1-dars bo'lsa — sovg'a ostida «1-darsni ko'rish»; bo'lmasa sovg'a tugmasiz (keyingi qadam — joylashuv savoli).
+    if (gift) { await sendMedia(c, gift, copy.text.gift + (hasLesson ? '\n\n' + copy.text.giftNext : ''), hasLesson ? next : undefined, { html: true }); await event(db, c.tid, 'gift'); }
+    else if (hasLesson) await say(c, copy.text.giftNext, next);
+    // Meta lid-formasidan kelgan (fb_/ads_) va hali CRM lidiga ulanmagan — arizasini topish uchun bir bosishda raqam.
     // Segment savoli 2 daqiqadan keyin (shu orada tanlangan bo'lsa yuborilmaydi).
     // Qayta /start bosilsa ham bitta kechiktirilgan savol (barqaror kalit).
-    if (!v.segment) await askSegment(c, { delayMs: 120000, unless: 'segment', key: 'f:seg-ask:' + c.tid });
+    // Joylashuv darhol so'raladi (Rossiya/O'zbekiston — aloqa usuli shunga bog'liq); 1-dars bo'lsa — 2 daqiqadan keyin.
+    if (!v.segment) await askLocation(c, hasLesson ? { delayMs: 120000, unless: 'segment', key: 'f:loc-ask:' + c.tid } : { delayMs: 4000, unless: 'segment', key: 'f:loc-ask:' + c.tid });
     else if (!v.field) await askField(c, v, { delayMs: 120000, unless: 'field', key: 'f:fld-ask:' + c.tid });
 }
 async function lesson(c, v, part = 1) {
@@ -236,9 +285,11 @@ async function cta(c, v) {
     }
     const quote = s.funnelTestimonials?.[t];
     const body = copy.text.cta(t, discount) + (quote ? '\n\n' + copy.text.testimonial(quote) : '');
-    const markup = inline([[[copy.text.ctaCall, 'f:call']], [[copy.text.ctaTelegram, 'f:tg'], [copy.text.ctaInfo, 'f:info']]]);
-    const photo = media(s, 'menejer');
-    if (photo && body.length <= 1000) await sendMedia(c, photo, body, markup); else await say(c, body, markup);
+    // Rossiya/boshqa davlat: qo'ng'iroq ishlamaydi — asosiy tugma «Telegramda yozishaylik» (menejer shu bot orqali yozadi).
+    const markup = t === 'A' ? inline([[[copy.text.ctaTelegram, 'f:tg']], [[copy.text.ctaInfo, 'f:info']]])
+        : inline([[[copy.text.ctaCall, 'f:call']], [[copy.text.ctaTelegram, 'f:tg'], [copy.text.ctaInfo, 'f:info']]]);
+    const photo = media(s, 'menejer') || media(s, 'cta');
+    if (photo && body.length <= 1000) await sendMedia(c, photo, body, markup, { html: true }); else await say(c, body, markup, { html: true });
     if (!v.cta_at) await patch(c.db, c.tid, { cta_at: new Date() });
     await event(c.db, c.tid, 'cta', { discount: !!discount });
 }
@@ -277,8 +328,8 @@ async function guide(c, v, fieldKey) {
     const m = media(s, 'qollanma_' + fieldKey) || media(s, 'qollanma_umumiy');
     const buttons = [[[copy.KEYBOARD.contact, 'f:cta']], ...(!v.lesson_parts && media(s, 'dars1') ? [[[copy.text.lessonWatch, 'f:les']]] : [])];
     if (m) {
-        if (f) await say(c, copy.text.promise(f));
-        await sendMedia(c, m, copy.text.guide(f || { label: '📘 Umumiy' }), inline(buttons));
+        if (f) await say(c, copy.text.promise(f), undefined, { html: true });
+        await sendMedia(c, m, copy.text.guide(f || { label: '📘 Umumiy' }), inline(buttons), { html: true });
     } else await say(c, f ? copy.text.promise(f) : copy.text.askManager, inline(buttons)); // tayyor bo'lmagan qo'llanma ko'rsatilmaydi
     if (!v.guide_at) { await patch(c.db, c.tid, { guide_at: new Date() }); await addScore(c.db, v, 1, 'qo‘llanma oldi'); }
     await event(c.db, c.tid, 'guide', { field: fieldKey });
@@ -299,6 +350,40 @@ async function callback(db, update) {
     const c = context(db, update, tid);
     await answer(db, update);
     let m;
+    if ((m = /^f:loc:(uz|ru|other)$/.exec(data))) {
+        await event(db, tid, 'location', { loc: m[1] });
+        // Meta formasidan kelgan — arizasini topish uchun bir bosishda raqam (javobdan keyin, bitta savol bir vaqtda).
+        if (/^(fb|ads):/.test(v.source) && !v.lead_id && !v.phone) {
+            await patch(db, tid, { awaiting: 'match' });
+            await say(c, copy.text.matchAsk, { keyboard: [[{ text: copy.text.contactButton, request_contact: true }], [{ text: copy.text.later }]], resize_keyboard: true, one_time_keyboard: true });
+        }
+        if (m[1] === 'uz') return askGoalUz(c, { delayMs: 1500 });
+        const seg = m[1] === 'ru' ? 'russia' : 'abroad';
+        await patch(db, tid, { segment: seg }); v.segment = seg; await event(db, tid, 'segment', { segment: seg });
+        if (v.lead_id) await leadComment(db, v.lead_id, m[1] === 'ru' ? '🇷🇺 Bot: mijoz ROSSIYADA — qo‘ng‘iroq qilmang, faqat Telegram (bot orqali reply) yozing.' : '🌍 Bot: mijoz boshqa davlatda — avval Telegramda yozing.');
+        await patch(db, tid, { location: m[1] }); v.location = m[1];
+        await say(c, m[1] === 'ru' ? copy.text.ruNote : copy.text.abroadNote, undefined, { html: true, delayMs: 1500 });
+        if (m[1] === 'ru' && !v.ru_form?.done) return ruQuestion(c, 0, { delayMs: 2500 });
+        return askField(c, v, { delayMs: 3000 });
+    }
+    if ((m = /^f:ru:(\d):([a-z]+)$/.exec(data))) {
+        const i = Number(m[1]), q = copy.RU_FORM[i], opt = q?.[2].find(([k]) => k === m[2]);
+        if (!opt) return;
+        const form = { ...(v.ru_form || {}), [q[0]]: opt[1] };
+        await patch(db, tid, { ru_form: form }); v.ru_form = form;
+        if (i + 1 < copy.RU_FORM.length) return ruQuestion(c, i + 1);
+        if (form.done) return;
+        // Anketa tugadi → CRMda organik lid (raqamsiz, Telegram orqali) va Sotuv guruhiga kartochka; menejer reply bilan yozadi.
+        await patch(db, tid, { ru_form: { ...form, done: true }, request: { method: 'telegram', when: 'ru' }, requested_at: new Date() }); v.requested_at = new Date();
+        await ensureLead(db, v, { intent: 'telegram' });
+        const summary = `🇷🇺 Rossiyada · ${form.city} · ${form.job} · daraja: ${form.level} · qulay vaqt: ${form.when}`;
+        await leadComment(db, v.lead_id, `🤖 Bot anketasi: ${summary}\n⚠️ Qo‘ng‘iroq qilmang — Rossiyaga ulanmaydi. Sotuv guruhidagi bot xabariga REPLY qilib yozing (javob mijozga bot orqali boradi).`);
+        await addScore(db, v, 4, 'Rossiya anketasini to‘ldirdi');
+        await notifySales(db, 'ru:' + tid, '🇷🇺 Rossiyadan yangi lid — QO‘NG‘IROQ QILMANG, shu xabarga reply qilib yozing', v, summary, { buttons: true });
+        await event(db, tid, 'request', { method: 'telegram', ru: true });
+        await say(c, copy.text.ruDone(String(form.when).toLowerCase()), undefined, { html: true });
+        return askField(c, v, { delayMs: 2000 });
+    }
     if ((m = /^f:seg:(career|russia|daily|abroad)$/.exec(data))) {
         await patch(db, tid, { segment: m[1] }); v.segment = m[1]; await event(db, tid, 'segment', { segment: m[1] });
         const choices = copy.FIELD_CHOICES[m[1]];
@@ -383,7 +468,7 @@ async function message(db, update) {
     if (text === copy.KEYBOARD.contact) return cta(c, v);
     if (text === copy.KEYBOARD.guides) return v.segment ? askField(c, v) : askSegment(c);
     if (text === copy.KEYBOARD.faq) return faqList(c, v);
-    if (text === copy.text.cancel) { await patch(db, tid, { awaiting: '' }); return say(c, '👌', replyKeyboard()); }
+    if (text === copy.text.cancel || (text === copy.text.later && v.awaiting === 'match')) { await patch(db, tid, { awaiting: '' }); return say(c, '👌', replyKeyboard()); }
     // Erkin matn yoki ovoz → menejerga.
     const s = await settings(db);
     const snippet = text ? text.slice(0, 500) : m.voice ? '[ovozli xabar]' : m.photo ? '[rasm]' : '[xabar]';
@@ -410,6 +495,13 @@ async function contact(db, update, m) {
     await say(c, copy.text.contactSaved, replyKeyboard());
     if (purpose === 'lesson') return lesson(c, v, 1);
     if (purpose === 'call') return askWhen(c, 'call');
+    if (purpose === 'match') {
+        // Ariza topildi: menejerga lid botga ulangani haqida xabar (endi u bot orqali yoza oladi), mehmonga — menejer ismi.
+        const lead = (await db.query('SELECT l.source,h.name AS manager FROM leads l LEFT JOIN hr_employees h ON h.id=l.manager_id WHERE l.id=$1', [v.lead_id])).rows[0];
+        const found = lead && lead.source !== 'Telegram bot'; // bot o'zi yaratgan bo'lsa — ariza topilmagan (boshqa raqam)
+        if (found) await notifySales(db, 'match:' + own.telegramId, '🔗 Arizachi botga ulandi — endi bot orqali ham yozishingiz mumkin', v);
+        return say(c, found ? copy.text.matched(lead.manager ? String(lead.manager).split(' ')[0] : '') : copy.text.matchNew, replyKeyboard());
+    }
     return cta(c, v);
 }
 async function pause(db, tid) { await db.query('UPDATE domwork_bot_visitors SET paused=true,updated_at=NOW() WHERE telegram_id=$1', [tid]); }
@@ -468,7 +560,10 @@ async function report(db, days = 30) {
         .map(r => ({ ...r, blockRate: r.sent ? Math.round(r.blocked / r.sent * 1000) / 10 : 0, alert: r.sent >= 20 && r.blocked / r.sent > 0.015 }));
     const outcomes = (await db.query(`SELECT data->>'action' AS action,COUNT(*)::int AS count FROM domwork_bot_funnel_events
         WHERE event='outcome' AND created_at>NOW()-($1::int*INTERVAL '1 day') GROUP BY 1`, [days])).rows;
-    return { days, steps: ['start', 'gift', 'segment', 'guide', 'lesson_part', 'lesson_seen', 'quiz', 'cta', 'contact', 'request'].map(e => ({ event: e, people: by[e] || 0 })),
+    const st = await settings(db);
+    // Tayyorlik: har material — yuklangan (Telegram fayli), tayyor (repodagi fayl) yoki yo'q.
+    const materials = MEDIA_KEYS.map(k => ({ key: k, state: st.funnelMedia?.[k] ? 'uploaded' : bundledFile(k) ? 'bundled' : 'missing' }));
+    return { materials, days, steps: ['start', 'gift', 'segment', 'guide', 'lesson_part', 'lesson_seen', 'quiz', 'cta', 'contact', 'request'].map(e => ({ event: e, people: by[e] || 0 })),
         faq: by.faq || 0, freeText: by.free_text || 0, bonus: by.bonus || 0, relays: by.relay_out || 0, drips, outcomes };
 }
 
@@ -675,4 +770,4 @@ async function drip(db, now = new Date()) {
     return n;
 }
 
-module.exports = { bonus, relayFromGroup, managerAction, drip, nextItem, SCHEMA, MEDIA_KEYS, init, enabled, start, message, contact, callback, deliverable, adminMedia, pause, blocked, report, track, mask, inHours };
+module.exports = { bundledFile, BUNDLED_NAMES, bonus, relayFromGroup, managerAction, drip, nextItem, SCHEMA, MEDIA_KEYS, init, enabled, start, message, contact, callback, deliverable, adminMedia, pause, blocked, report, track, mask, inHours };

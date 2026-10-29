@@ -30,7 +30,15 @@ function enteredAt(row) {
     return Date.now();
 }
 const ago = ms => { const h = Math.floor(ms / HOUR); return h >= 48 ? Math.floor(h / 24) + ' kun' : h >= 1 ? h + ' soat' : Math.max(1, Math.floor(ms / 60000)) + ' daqiqa'; };
-const line = l => `${T.b(l.name)}${l.phone ? ' · ' + T.esc(l.phone) : ''}`;
+// Rossiya raqami (+7): qo'ng'iroq ko'pincha ulanmaydi — bunday lid «olmadi» deb Sifatsizga chiqarilmaydi, botga ulanadi.
+const isRu = l => /^\+?7\d{10}$/.test(String(l.phone || '').replace(/[^\d+]/g, ''));
+const line = l => `${isRu(l) ? '🇷🇺 ' : ''}${T.b(l.name)}${l.phone ? ' · ' + T.esc(l.phone) : ''}`;
+const RU_HINT = '\n\n🇷🇺 belgili — Rossiya raqamlari: u yerga qo‘ng‘iroq ko‘pincha ulanmaydi. Ularni <b>Sifatsizga chiqarmang</b> — WhatsApp yoki Telegram’ga botga taklif matnini yuboring (pastda). Mijoz botga kirsa, siz bilan shu yerda yozishadi.';
+async function ruInvites(db, leads, max = 5) {
+    const out = [];
+    for (const l of leads.filter(isRu).slice(0, max)) { const inv = await require('./leadLink').inviteFor(db, l.id); if (inv) out.push(`👤 ${T.b(l.name)}:\n<code>${T.esc(inv.text)}</code>`); }
+    return out.length ? '\n\n' + out.join('\n\n') : '';
+}
 const list = (items, fmt = line, max = 25) => items.slice(0, max).map(l => '• ' + fmt(l)).join('\n') + (items.length > max ? `\n• … yana ${items.length - max} ta (CRMda)` : '');
 
 async function load(db, now) {
@@ -85,7 +93,7 @@ async function morning(db, now, clock, once) {
             if (p.trials.length) parts.push(`🧪 <b>Sinov darsi o‘tgan, natija yozilmagan (${p.trials.length} ta)</b>\nGaplashdingizmi? Taassurotini so‘rang va CRMda keyingi bosqichga o‘tkazing:\n${list(p.trials, l => `${line(l)} — dars ${T.esc(T.when(new Date(l.lesson + 5 * HOUR).toISOString().slice(0, 16)))}`)}`);
             if (p.calls.length) parts.push(`📅 <b>Bugun qo‘ng‘iroq qilishga kelishilgan (${p.calls.length} ta)</b>\nVa’da qilgan edingiz — mijoz kutyapti:\n${list(p.calls)}`);
             if (p.trying.length) parts.push(`📞 <b>Qayta qo‘ng‘iroq qilish kerak (${p.trying.length} ta)</b>\n«Bog‘lanishga urinilmoqda»da — yana urinib ko‘ring, Telegramga ham yozing:\n${list(p.trying)}`);
-            if (p.stale.length) parts.push(`🧹 <b>3 kundan oshgan lidlar (${p.stale.length} ta)</b>\nOxirgi marta qo‘ng‘iroq qiling. Olishmasa — <b>Sifatsiz lidlar</b>ga chiqaring, statistikani buzmasin:\n${list(p.stale, l => `${line(l)} — ${ago(l.age)}`)}`);
+            if (p.stale.length) parts.push(`🧹 <b>3 kundan oshgan lidlar (${p.stale.length} ta)</b>\nOxirgi marta qo‘ng‘iroq qiling. Olishmasa — <b>Sifatsiz lidlar</b>ga chiqaring, statistikani buzmasin:\n${list(p.stale, l => `${line(l)} — ${ago(l.age)}`)}${p.stale.some(isRu) ? RU_HINT + await ruInvites(db, p.stale) : ''}`);
             if (p.slow.length) parts.push(`⏳ <b>Bir joyda turib qolganlar (${p.slow.length} ta)</b>\nKeyingi qadamni belgilang:\n${list(p.slow, l => `${line(l)} — ${T.esc(label(l.status))}, ${ago(l.age)}`)}`);
             parts.push(T.i(T.pick(['Kichik qadamlar — katta natija. Omad! 💪', 'Har bir qo‘ng‘iroq — sotuvga bir qadam 📈', 'Bugun kuchli kun bo‘ladi — boshladik! 🚀', 'Siz uddalaysiz — jamoa siz bilan 🤝'], clock.date + id + 'e')));
             await dm(db, `morning:${clock.date}:${id}`, id, parts.join('\n\n'), now, 6);
@@ -138,9 +146,10 @@ async function realtime(db, now, clock, once) {
             const key = `coach-stale:${l.id}:${l.at}`;
             if (!(await db.query('SELECT 1 FROM domwork_bot_jobs WHERE key=$1', [key])).rows.length) { await db.query('INSERT INTO domwork_bot_jobs(key) VALUES($1) ON CONFLICT DO NOTHING', [key]); stale.push(l); }
         }
-        if (stale.length) await dm(db, `stale:${stale[0].id}:${t}`, id, stale.length === 1
+        const ruTail = stale.some(isRu) ? RU_HINT + await ruInvites(db, stale) : '';
+        if (stale.length) await dm(db, `stale:${stale[0].id}:${t}`, id, (stale.length === 1
             ? `🙂 ${name}, ${line(stale[0])} ${ago(stale[0].age)}dan beri «Bog‘lanishga urinilmoqda»da turibdi.\n\nYana bir qo‘ng‘iroq qilib ko‘ring — balki bu safar olar? Telegramga qisqa xabar ham qoldiring 📲\nOlishmasa — <b>Sifatsiz lidlar</b>ga chiqaring, statistikamiz toza bo‘lsin 🧹`
-            : `🙂 ${name}, ${T.b(stale.length + ' ta')} lid 3 kundan beri «Bog‘lanishga urinilmoqda»da turibdi:\n\n${list(stale, l => `${line(l)} — ${ago(l.age)}`)}\n\nHar biriga oxirgi marta qo‘ng‘iroq qilib ko‘ring. Olishmasa — <b>Sifatsiz lidlar</b>ga chiqaring, statistikani buzmasin 🧹`, now, 6);
+            : `🙂 ${name}, ${T.b(stale.length + ' ta')} lid 3 kundan beri «Bog‘lanishga urinilmoqda»da turibdi:\n\n${list(stale, l => `${line(l)} — ${ago(l.age)}`)}\n\nHar biriga oxirgi marta qo‘ng‘iroq qilib ko‘ring. Olishmasa — <b>Sifatsiz lidlar</b>ga chiqaring, statistikani buzmasin 🧹`) + ruTail, now, 6);
         // Sinov darsi o'tdi (3 soat), lid hamon «Sinov darsida».
         for (const l of leads) if (trialPassed(l, now) && t - l.lesson < 3 * DAY) {
             await fire(`coach-trial:${l.id}:${l.booking?.id || l.lesson}`, id,
@@ -199,9 +208,13 @@ async function praise(db, now) {
     const clock = require('./scheduler').localClock(now), awake = clock.hour >= 8 && clock.hour < 21;
     if (awake) for (const [id, leads] of given) {
         const by = [...new Set(leads.map(l => l.actor).filter(Boolean))].join(', ');
+        // 1–3 ta lid bo'lsa — botga ulanmaganlari uchun mijozga yuboriladigan tayyor matn (bosib nusxalanadi).
+        const invites = [];
+        for (const l of leads.length <= 3 ? leads : leads.filter(isRu).slice(0, 5)) { const inv = await require('./leadLink').inviteFor(db, l.id); if (inv) invites.push(`👤 ${T.b(l.name)} uchun:\n<code>${T.esc(inv.text)}</code>`); }
         await dm(db, `given:${id}:${rows[0].id}`, id, `📥 <b>Sizga ${leads.length === 1 ? 'yangi lid' : leads.length + ' ta yangi lid'} biriktirildi</b>${by ? ' · ' + T.esc(by) : ''}\n\n`
             + list(leads, l => `${line(l)}${l.status !== 'yangi-lidlar' ? ' — ' + T.esc(label(l.status)) : ''}`, 30)
-            + `\n\n📞 Darhol qo‘ng‘iroq qiling — mijoz hali issiq! Gaplashgach, CRMda bosqichini o‘zgartiring ✅`, now, 3);
+            + `\n\n📞 Darhol qo‘ng‘iroq qiling — mijoz hali issiq! Gaplashgach, CRMda bosqichini o‘zgartiring ✅`
+            + (invites.length ? `\n\n🤖 Mijozni botga ulang — sovg‘a, eslatmalar va sinov darsi xabarlari avtomatik boradi. Matnni bosib nusxalang va mijozga Telegram/SMS’da yuboring:\n\n${invites.join('\n\n')}` : ''), now, 3);
         for (const l of leads) await db.query('INSERT INTO domwork_bot_jobs(key) VALUES($1) ON CONFLICT DO NOTHING', [`coach-given:${l.id}`]);
     }
     if (!done.size) return;

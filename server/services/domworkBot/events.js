@@ -114,7 +114,9 @@ async function processOne(db) {
                 const buttons=await callbacks.trialButtons(db,lead,booking);
                 const guard={_trial:{leadId:lead.id,requestId:booking.id,teacherId:booking.teacherId,state:booking.state},...T.HTML};
                 await privateMessage(db,key+':teacher',teacher,summary,{reply_markup:buttons,...guard});
-                await privateMessage(db,key+':manager',manager,summary,guard);
+                // Sinovga yozildi, lekin mijoz botga ulanmagan — menejerga tayyor taklif matni (eslatmalar mijozga borishi uchun).
+                const invite=booking.state==='pending'?await require('./leadLink').inviteFor(db,lead.id):null;
+                await privateMessage(db,key+':manager',manager,summary+(invite?`\n\n🤖 Mijoz botga ulanmagan — sinov eslatmalari unga bormaydi. Shu matnni bosib nusxalang va mijozga yuboring:\n<code>${T.esc(invite.text)}</code>`:''),guard);
                 await groupMessage(db,key+':beacon','beacon',summary,{reply_markup:buttons,...guard});
                 if(booking.state==='pending') {
                     const learner=await linked(db,'lead',lead.id);

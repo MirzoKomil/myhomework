@@ -55,7 +55,7 @@ test('isitish, menejer tugmalari, relay va kanal bonusi — synthetic data, no T
   await t.test('next days follow the plan; three ignored messages slow down to every 3 days; a reply resets it',async()=>{
    const day=n=>new Date(AT.getTime()+n*86400000);
    await drip(day(1));assert.match((await out(601)).at(-1).payload.text,/O‘quvchimiz natijasi[\s\S]*domwork_natijalari\/12/);
-   await drip(day(2));assert.match((await out(601)).at(-1).payload.text,/Bonus: «33 ta ish iborasi»/);
+   await drip(day(2));assert.match((await out(601)).at(-1).payload.text,/Bonus: «Ishda kerak 50 ibora»/);
    assert.equal((await v(601)).ignored,3);
    assert.equal(await drip(day(3)),0); // 3 kunlik tanaffus
    await run({update_id:++uid,message:{message_id:1,from:from(601),chat:{id:601,type:'private'},text:'Rahmat'}});

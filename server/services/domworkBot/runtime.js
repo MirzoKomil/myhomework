@@ -131,6 +131,12 @@ function createRuntime({ pool, crm, env = process.env, redisFactory, telegramFac
             if (!await permitted(row)) { await queue.settle(pool, row.id, 'cancelled', 'identity-or-binding-changed'); return true; }
             if (!await redis.deliverySlot(row.target_id)) { await queue.settle(pool, row.id, 'pending', 'local-rate-limit', 1); return true; }
             const payload = Object.fromEntries(Object.entries(row.payload).filter(([key]) => !key.startsWith('_')));
+            // Voronka PDFlari repoda (server/data/funnel/<kalit>.pdf) — admin fayl yuklamagan bo'lsa shu yerdan yuboriladi.
+            if (row.payload._bundled) {
+                const file = require('./funnel').bundledFile(row.payload._bundled);
+                if (!file) { await queue.settle(pool, row.id, 'failed', 'bundled-missing'); return true; }
+                payload[file.image ? 'photo' : 'document'] = { source: require('node:fs').readFileSync(file.path), filename: file.filename };
+            }
             if (row.payload._documentStudentId) {
                 if (row.role !== 'student' || row.payload._account?.id !== row.payload._documentStudentId) {
                     await queue.settle(pool, row.id, 'cancelled', 'document-identity-mismatch'); return true;
