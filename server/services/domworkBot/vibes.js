@@ -182,7 +182,7 @@ async function teamMonth(db, today) {
     const mgrs = (await db.query(`SELECT id FROM hr_employees WHERE role IN ('sotuv-menejeri','sotuv_menejeri','sotuv menejeri','sales_manager')
         AND lang='russian' AND COALESCE(status,'active') <> 'inactive'`)).rows.map(r => r.id);
     const month = today.slice(0, 7);
-    const sum = Number((await db.query(`SELECT COALESCE(SUM(amount),0) AS s FROM payment_records WHERE language='russian' AND NOT legacy_review
+    const sum = Number((await db.query(`SELECT COALESCE(SUM(amount),0) AS s FROM payment_records p WHERE language='russian' AND ${await require('./dailyReports').validReceipt(db,'p')}
         AND paid_date BETWEEN $1::date AND $2::date`, [month + '-01', today])).rows[0].s) || 0;
     const raw = (await db.query("SELECT data FROM json_data WHERE key='individualSalesPlans'")).rows[0]?.data;
     const plans = typeof raw === 'string' ? JSON.parse(raw || '{}') : raw;
@@ -194,9 +194,9 @@ async function lastWeek(db, today) {
     const from = shift(-7), to = shift(-1);
     const r = (await db.query(`SELECT COALESCE(SUM(p.amount),0) AS s, COUNT(DISTINCT p.lead_id) FILTER (WHERE p.source_key LIKE 'lead:%'
             AND NOT EXISTS(SELECT 1 FROM payment_records q WHERE q.lead_id=p.lead_id AND q.source_key LIKE 'lead:%' AND q.paid_date<$1::date)) AS sales,
-        (SELECT h.name FROM payment_records x JOIN hr_employees h ON h.id=x.manager_id WHERE x.language='russian' AND NOT x.legacy_review
+        (SELECT h.name FROM payment_records x JOIN hr_employees h ON h.id=x.manager_id WHERE x.language='russian' AND ${await require('./dailyReports').validReceipt(db,'x')}
             AND x.paid_date BETWEEN $1::date AND $2::date GROUP BY h.id,h.name ORDER BY SUM(x.amount) DESC LIMIT 1) AS top
-        FROM payment_records p WHERE p.language='russian' AND NOT p.legacy_review AND p.paid_date BETWEEN $1::date AND $2::date`, [from, to])).rows[0];
+        FROM payment_records p WHERE p.language='russian' AND ${await require('./dailyReports').validReceipt(db,'p')} AND p.paid_date BETWEEN $1::date AND $2::date`, [from, to])).rows[0];
     return { sum: Number(r.s) || 0, sales: Number(r.sales) || 0, top: r.top || '' };
 }
 async function run(db, settings, clock, now, once) {

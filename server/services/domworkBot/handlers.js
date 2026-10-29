@@ -343,7 +343,10 @@ function createHandler({ crm }) {
                 }
             }
             // Staff integrations are intentionally separate from student/data access.
-            if (crm.staffAction) return await reply(await crm.staffAction(db, identity, action));
+            if (crm.staffAction) {
+                const out = await crm.staffAction(db, identity, action);
+                return out && typeof out === 'object' && out.html ? await reply(out.html, require('./tone').HTML) : await reply(out);
+            }
             return await reply('Bu funksiya hali ulanmagan. Hozircha CRM kabinetidan foydalaning.');
         } catch (error) {
             if (!error.status || error.status >= 500) throw error;

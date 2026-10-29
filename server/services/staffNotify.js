@@ -374,7 +374,7 @@ async function missingGroup(db, list, now) {
 }
 async function dayTotals(db, managerIds, today) {
     const rows = (await db.query(`SELECT manager_id, COUNT(*) FILTER (WHERE paid_date = $2::date) AS n, COALESCE(SUM(amount) FILTER (WHERE paid_date = $2::date), 0) AS day,
-        COALESCE(SUM(amount), 0) AS month FROM payment_records WHERE NOT legacy_review AND manager_id = ANY($1::text[]) AND paid_date BETWEEN $3::date AND $2::date GROUP BY manager_id`,
+        COALESCE(SUM(amount), 0) AS month FROM payment_records p WHERE ${await require('./domworkBot/dailyReports').validReceipt(db, 'p')} AND manager_id = ANY($1::text[]) AND paid_date BETWEEN $3::date AND $2::date GROUP BY manager_id`,
         [managerIds, today, today.slice(0, 7) + '-01'])).rows;
     const plans = (await db.query("SELECT data FROM json_data WHERE key='individualSalesPlans'")).rows[0]?.data;
     const plan = id => Number(require('./domworkBot/staff').personalPlan(typeof plans === 'string' ? JSON.parse(plans) : plans, id, today.slice(0, 7))?.totalAmount) || 0;

@@ -126,7 +126,7 @@ test('Domwork recognition, assistant ownership and Russian advertising; no real 
             assert.equal((await recognition.summary(db,'sales',month+'-01',today,'Sales')).winners.length,0);
             await db.query("DELETE FROM json_data WHERE key='cashFlow'");
         });
-        const enabled={eventsEnabled:true,groupNotificationsEnabled:true,milestonesEnabled:true,employeeWelcomeEnabled:true,releaseNotesEnabled:true};
+        const enabled={eventsEnabled:true,groupNotificationsEnabled:true,milestonesEnabled:true,employeeWelcomeEnabled:true,releaseNotesEnabled:true,awardsTime:'20:00'};
         await t.test('milestones require opt-in, a new receipt crossing net turnover, and current accounting month',async()=>{
             const payment={id:'new',language:'russian',manager_id:'m',paid_date:today};
             assert.deepEqual(await recognition.milestones(db,payment),[]);

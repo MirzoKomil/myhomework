@@ -144,18 +144,39 @@ async function run(db,now=new Date()) {
             for(const identity of await roles(db,['trial'])) await events.privateMessage(db,'promotion:'+clock.date+':'+identity.telegramId,identity,settings.promotionText,{_setting:'promotionsEnabled',_expiresAt:new Date(now.getTime()+3600000).toISOString()});
         });
     }
-    if(settings.reportsEnabled && (reached('20:00') || reached('21:00'))) {
-        const type=reached('20:00')?'daily':'comparison';
+    // Targetolog kechagi reklama ma'lumotini (sarf, lidlar) CRMga kiritmagan bo'lsa: 10:00 — o'ziga, 15:00 — Marketing guruhiga ham.
+    if(settings.remindersEnabled && (reached('10:00') || reached('15:00'))) {
+        const yday=require('./reports').shift(clock.date,-1), step=reached('10:00')?1:2;
+        await once(db,`ads-missing:${yday}:${step}`,async()=>{
+            if(!(await db.query("SELECT to_regclass('target_ad_entries') AS t")).rows[0]?.t) return;
+            if((await db.query("SELECT 1 FROM target_ad_entries WHERE language='russian' AND kind='day' AND date=$1",[yday])).rows.length) return;
+            const opts={...T.HTML,_setting:'remindersEnabled',_expiresAt:new Date(now.getTime()+3600000).toISOString()};
+            const people=await roles(db,['marketing']);
+            for(const p of people) await events.privateMessage(db,`ads-missing:${yday}:${step}:${p.telegramId}`,p,
+                `📝 ${T.esc(T.first(p.name))}, ${T.b(T.dateOnly(yday))} uchun reklama ma’lumoti CRMga hali kiritilmagan.\n\n💵 Sarf va kabinetdagi lidlar sonini kiriting: CRM → Marketing → Target lidlar.\nBusiz kunlik hisobotda 1 lid narxi va CPL hisoblanmaydi 🙏`,opts);
+            if(step===2) await events.groupMessage(db,`ads-missing:${yday}:2:group`,'marketing',
+                `⚠️ ${T.b(T.dateOnly(yday))} uchun reklama sarfi hali kiritilmagan${people.length?': '+people.map(p=>T.who(p.name,p.telegramId)).join(', '):''}.\nIltimos, bugun kiritib qo‘ying — oy hisobotidagi narxlar shunga bog‘liq 📊`,opts);
+        });
+    }
+    // 29-okt: kun yakuni hisobotlari 23:00 da (kechki sotuv soatlari ham kirsin), ROP taqqoslamasi 23:05 da.
+    if(settings.reportsEnabled && (reached('23:00') || reached('23:05'))) {
+        const type=reached('23:00')?'daily':'comparison';
         await once(db,'report:'+clock.date+':'+type,async()=>{
-            for(const identity of await roles(db,type==='daily'?['admin','rop','marketing']:['rop'])) {
-                const action=identity.role==='admin'?'digest':identity.role==='rop'?'reports':'daily';
-                const value=await staff.action(db,identity,action,{now,daily:true,comparison:type==='comparison'});
-                await events.privateMessage(db,'report:'+clock.date+':'+type+':'+identity.telegramId,identity,`📊 <b>${type==='daily'?'Kunlik hisobot':'24 soatlik taqqoslama'}</b> · ${T.dateOnly(clock.date)}\n\n${T.esc(value)}`,{...T.HTML,_setting:'reportsEnabled',_expiresAt:new Date(now.getTime()+3600000).toISOString()});
+            const opts={...T.HTML,_setting:'reportsEnabled',_expiresAt:new Date(now.getTime()+3600000).toISOString()};
+            if(type==='comparison') {
+                for(const identity of await roles(db,['rop'])) {
+                    const value=await staff.action(db,identity,'reports',{now,daily:true,comparison:true});
+                    await events.privateMessage(db,'report:'+clock.date+':comparison:'+identity.telegramId,identity,`🔁 <b>24 soatlik taqqoslama</b> · ${T.dateOnly(clock.date)}\n\n${T.esc(value)}`,opts);
+                }
+                return;
             }
-            for(const [department,role,action] of type==='daily'?[['sales','rop','reports'],['marketing','marketing','daily']]:[]) {
-                const value=await staff.action(db,{role,language:'russian'},action,{now,daily:true,comparison:type==='comparison'});
-                await events.groupMessage(db,'department-report:'+clock.date+':'+type+':'+department,department,`📊 <b>${department==='sales'?'Sotuv bo‘limi':'Marketing'} — kunlik hisobot</b> · ${T.dateOnly(clock.date)}\n\n${T.esc(value)}\n\n${T.i('Bugungi mehnat uchun rahmat! Ertaga yanada kuchliroq 💪')}`,{...T.HTML,_setting:'reportsEnabled',_expiresAt:new Date(now.getTime()+3600000).toISOString()});
-            }
+            const D=require('./dailyReports');
+            const sales=await D.salesDay(db,clock.date), market=await D.marketingDay(db,clock.date);
+            const text={admin:await D.adminText(db,clock.date),rop:D.salesText(sales),marketing:D.marketingText(market)};
+            for(const identity of await roles(db,['admin','rop','marketing']))
+                await events.privateMessage(db,'report:'+clock.date+':daily:'+identity.telegramId,identity,text[identity.role],opts);
+            await events.groupMessage(db,'department-report:'+clock.date+':daily:sales','sales',D.salesText(sales,{group:true}),opts);
+            await events.groupMessage(db,'department-report:'+clock.date+':daily:marketing','marketing',text.marketing,opts);
         });
     }
     if(settings.groupNotificationsEnabled && reached(settings.familyTime || '10:00')) {
