@@ -98,3 +98,74 @@ html[data-theme="dark"] .ad-team b { color: #E6EBF3; }
   .ad-ib:first-child { margin-left: 0; }
   .ad-who { flex-direction: column; align-items: stretch; }
 }
+
+/* ── Dars jadvali (AdminJadval / RopJadval): vaqt oynasi, Biriktirilmagan callout, havolalar ── */
+.sv-win { display: inline-flex; align-items: center; gap: 2px; margin-left: 12px; border: 1px solid var(--kb-input-border, #D0D5DD); border-radius: 10px; background: var(--surface, #fff); padding: 2px; }
+.sv-win button { height: 28px; min-width: 28px; border: 0; background: transparent; border-radius: 8px; cursor: pointer; font: inherit; font-size: 12.5px; font-weight: 700; color: var(--text, #0B1220); padding: 0 6px; }
+.sv-win button:hover:not(:disabled) { background: var(--kb-track, #EEF2F6); }
+.sv-win button:disabled { opacity: .35; cursor: default; }
+.sv-win [data-winall] { min-width: 96px; font-variant-numeric: tabular-nums; }
+.sv-call { position: absolute; top: 50%; transform: translateY(-50%); z-index: 7; display: flex; align-items: center; gap: 10px; max-width: 420px; padding: 7px 8px 7px 12px; border-radius: 10px; background: #0B1220; color: #fff; box-shadow: 0 8px 20px rgba(11,18,32,.25); white-space: nowrap; }
+.sv-call b { font-size: 12.5px; font-weight: 700; }
+.sv-call small { font-size: 11.5px; color: #C2CCDC; overflow: hidden; text-overflow: ellipsis; }
+.sv-call .sc-btn { flex: none; }
+html[data-theme="dark"] .sv-call { background: #E6EBF3; color: #0B1220; }
+html[data-theme="dark"] .sv-call small { color: #4B5563; }
+.sv-links { display: flex; flex-wrap: wrap; gap: 14px; border-top: 1px solid var(--sv-line, #EEF2F6); margin-top: 6px; }
+
+/* ── Qoplash darslari (AdminQoplash): 1440px'da "Holat" ustuni kesilmasin ── */
+.an-lay { grid-template-columns: minmax(0, 1fr) minmax(280px, 340px); }
+.an-mk { width: 100%; table-layout: fixed; }
+.an-mk th:nth-child(1) { width: 30%; } .an-mk th:nth-child(2) { width: 15%; } .an-mk th:nth-child(3) { width: 27%; } .an-mk th:nth-child(4) { width: 12%; } .an-mk th:nth-child(5) { width: 16%; }
+.an-mk td { overflow-wrap: anywhere; }
+.an-mk td:nth-child(5) .sc-pill { white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; display: inline-block; }
+.an-mk th, .an-mk td { padding-left: 10px; padding-right: 10px; }
+.an-mk td:nth-child(2), .an-mk td:nth-child(5), .an-mk th:nth-child(5) { white-space: nowrap; }
+.an-mk .an-held small { white-space: normal; }
+@media (max-width: 1280px) { .an-lay { grid-template-columns: 1fr; } }
+.sv-links .sc-link { font-size: 13px; font-weight: 600; }
+@media (max-width: 760px) { .an-mk { min-width: 640px; } }
+#profilePage.sz-on .profile-nav-item.sz-mode { justify-content: flex-start; gap: 0; }
+
+/* ── O'quvchini tahrirlash (AdminOquvchiTahrir / SotuvOquvchiTahrir) ── */
+.ad-pw { display: flex; gap: 8px; align-items: center; }
+.ad-pw input { flex: 1; min-width: 0; }
+.ad-pw[hidden] { display: none; }
+.ad-lock { font-size: 11px; margin-left: 2px; }
+.ad-was { margin-left: 6px; font-size: 11.5px; font-weight: 700; color: #B54708; }
+.ad-was[hidden] { display: none; }
+.ad-band .ad-slot { margin: 0 0 0 6px; padding: 2px 9px; border-radius: 999px; border: 0; background: #DCFAE6; color: #067647; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.ad-efoot { display: flex; flex-direction: column; gap: 2px; }
+.ad-efoot [data-fwarn] { color: #B42318; font-weight: 700; }
+.ad-efoot [data-fwarn]:empty, .ad-efoot [data-fcount]:empty { display: none; }
+html[data-theme="dark"] .ad-was { color: #FDB022; }
+html[data-theme="dark"] .ad-efoot [data-fwarn] { color: #FDA29B; }
+html[data-theme="dark"] .ad-band .ad-slot { background: #053321; color: #75E0A7; }
+
+/* ── Holat oynalari (AdminKursToxtatish, AdminUstozAlmashtirish) ── */
+.ad-kv { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 6px 12px; margin: 0; font-size: 13px; }
+.ad-kv dt { color: var(--text-muted, #6B7280); }
+.ad-kv dd { margin: 0; }
+.ad-th { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.ad-th li { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+
+/* ── Ixcham LoadErr KPI plitkasi ichida (Davomat "Maosh", O'quvchini tekshirish "Maosh") — KPI raqam uslubini olmasin ── */
+.an-kpis .mh-lerr b, .okx-k .mh-lerr b { font-size: 13px !important; line-height: 1.35 !important; font-weight: 700 !important; color: var(--kb-bad-fg, #B42318) !important; display: inline !important; letter-spacing: 0 !important; }
+.an-kpis .mh-lerr p, .okx-k .mh-lerr p { font-size: 12px; line-height: 1.35; margin: 0; }
+.an-kpis .mh-lerr, .okx-k .mh-lerr { margin-top: 4px; }
+.an-kpi-err small { display: block; }
+
+@media (max-width: 760px) {
+  .ad-whos { flex-wrap: wrap; width: 100%; box-sizing: border-box; }
+  .ad-whos .sc-btn { margin-left: auto; }
+  /* Sozlamalar 390px: nav bitta gorizontal qator (karta ichida aylantiriladi) — kontent birinchi ekranda ko'rinadi. */
+  #profilePage.sz-on #profileNav { flex-wrap: nowrap !important; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding: 6px; border-radius: 14px; }
+  #profilePage.sz-on #profileNav::-webkit-scrollbar { display: none; }
+  #profilePage.sz-on #profileNav .profile-nav-label { display: none; }
+  #profilePage.sz-on #profileNav .profile-nav-item { flex: none; white-space: nowrap; min-height: 36px; }
+  #profilePage.sz-on #profileNav .profile-nav-danger { width: auto !important; margin-top: 0 !important; }
+  #profilePage.sz-on #profileNav .profile-nav-danger::before { display: none; }
+}
+html[data-theme="dark"] .ad-mem.is-none { background: rgba(255,255,255,.08); color: #C2CCDC; }
+html[data-theme="dark"] .ad-apd .sc-quote { background: rgba(255,255,255,.05); color: var(--text, #E5E7EB); }
+html[data-theme="dark"] .ad-gt tr.is-edit { background: rgba(59,139,238,.12); }

@@ -59,7 +59,7 @@ function soldBy(student, managerId) {
 // ── Tahrirlash ───────────────────────────────────────────────────────────────
 // Maydonlar: name, phone, parentPhone, login, newPassword, lessonDay, lessonTime, lessonDuration,
 // tariff, monthlyPrice. Ustoz almashtirish alohida (changeTeacher). To'lovlar — Moliya orqali.
-const DIRECT_FIELDS = ['name', 'phone', 'parentPhone', 'login', 'newPassword'];
+const DIRECT_FIELDS = ['name', 'phone', 'parentPhone', 'login', 'newPassword', 'telegram'];
 const SCHEDULE_FIELDS = ['lessonDay', 'lessonTime', 'lessonDuration'];
 const TARIFF_FIELDS = ['tariff', 'monthlyPrice', 'lessonDuration'];
 
@@ -100,6 +100,24 @@ async function applyEdit(db, actor, studentId, changes, reason, { requestId = nu
         extra.passwordHash = bcrypt.hashSync(p, 10);
         extra.mustChangePassword = true;
         diff.password = ['•••', 'vaqtinchalik parol berildi'];
+    }
+    // Telegram username (AdminOquvchiTahrir "Telegram" maydoni) — @ siz saqlanadi.
+    if ('telegram' in changes) {
+        const t = String(changes.telegram || '').trim().replace(/^@/, '');
+        if (t && !/^[A-Za-z][A-Za-z0-9_]{3,31}$/.test(t)) throw fail(400, 'Telegram username: 4–32 belgi, harf bilan boshlanadi (harf, raqam, _)');
+        if (t !== (extra.telegramUsername || '')) { diff.telegram = [extra.telegramUsername ? '@' + extra.telegramUsername : '', t ? '@' + t : '']; extra.telegramUsername = t; }
+    }
+    // Yordamchi ustoz — faqat admin/ROP (sotuv so'rovi bu maydonni yubormaydi); 29-okt: faqat yordamchi lavozimidagi xodim.
+    if ('assistantTeacherId' in changes) {
+        if (!APPROVER_ROLES.has(actor.role)) throw fail(403, 'Yordamchi ustozni admin yoki ROP almashtiradi');
+        const a = String(changes.assistantTeacherId || '');
+        if (a !== (st.assistantId || '')) {
+            await require('../teacherDuties').validateAssignment(db, { teacherId: st.teacherId, assistantTeacherId: a || null, subject: st.subject },
+                { teacherId: st.teacherId, assistantTeacherId: st.assistantId, subject: st.subject });
+            const nm = async id => (id ? (await db.query('SELECT name FROM hr_employees WHERE id=$1', [id])).rows[0]?.name || id : '—');
+            diff.assistant = [await nm(st.assistantId), await nm(a)];
+            cols.assistant_teacher_id = a || null;
+        }
     }
     if ('tariff' in changes && changes.tariff !== (extra.tariff || '')) { diff.tariff = [extra.tariff || '', String(changes.tariff)]; extra.tariff = String(changes.tariff).slice(0, 40); }
     if ('monthlyPrice' in changes) {

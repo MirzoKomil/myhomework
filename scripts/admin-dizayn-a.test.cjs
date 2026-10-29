@@ -43,3 +43,30 @@ test('O\'quvchini tekshirish va Akademik → Davomat maoshni brauzerda hisoblama
   assert.ok(!/\.catch\(\(\) => \[\]\)/.test(render), 'makeups/absences xatosi yutilmasin');
   assert.match(render, /LoadErr\.html/);
 });
+
+const vm = require('node:vm');
+const { functionSource } = require('./helpers/lead-workflow-fixture.cjs');
+function studentsCtx(store) {
+  const ctx = { STORAGE_KEYS: { hrEmployees: 'hr', teachers: 't', students: 's' }, getItem: (k, d) => store[k] ?? d };
+  vm.createContext(ctx);
+  vm.runInContext(functionSource('js/app.js', 'isStaffDemoStudent') + '\n' + functionSource('js/app.js', 'studentsTeacherOptions'), ctx);
+  return ctx;
+}
+test('O\'quvchilar → "Ustozlar bo\'yicha": har ustoz bir marta, yordamchi kirmaydi', () => {
+  const ctx = studentsCtx({
+    hr: [{ id: 'hr-dil', name: 'Dilnoza', role: 'ingliz-oqituvchi' }, { id: 'hr-san', name: 'Sanjar', role: 'yordamchi' }, { id: 'hr-ru', name: 'Olga', role: 'rus-oqituvchi' }],
+    t: [{ id: 'hr-dil', name: 'Dilnoza', subject: 'english' }, { id: 'hr-san', name: 'Sanjar', subject: 'english', type: 'yordamchi' }, { id: 't-old', name: 'Eski', subject: 'english' }]
+  });
+  const ids = JSON.parse(JSON.stringify(ctx.studentsTeacherOptions('english').map(t => t.id)));
+  assert.deepEqual(ids.sort(), ['hr-dil', 't-old']);
+  assert.deepEqual(JSON.parse(JSON.stringify(ctx.studentsTeacherOptions('russian').map(t => t.id))), ['hr-ru']);
+});
+test('isStaffDemoStudent: isStaffDemo yoki demo_ id', () => {
+  const ctx = studentsCtx({});
+  assert.equal(ctx.isStaffDemoStudent({ id: 'demo_hr-dil' }), true);
+  assert.equal(ctx.isStaffDemoStudent({ id: 'x', isStaffDemo: true }), true);
+  assert.equal(ctx.isStaffDemoStudent({ id: 'st-1' }), false);
+  // renderStudents ro'yxatni demo'siz sanaydi
+  const src = functionSource('js/app.js', 'renderStudents');
+  assert.match(src, /!isStaffDemoStudent\(s\)/);
+});

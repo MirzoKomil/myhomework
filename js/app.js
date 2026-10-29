@@ -895,6 +895,8 @@ function startCoreDataPolling() {
 function isMenuItemActive(el, tab, ctx) {
     // Dizayn sidebar'i: ichki sahifa ochilganda o'z bo'limi faol (Tasdiqlar → O'quvchilar; Guruhlar, Aloqalar → Akademik bo'lim).
     if (DESIGN_TAB_PARENT[tab] && el.dataset.tab === DESIGN_TAB_PARENT[tab] && !el.dataset.navSales) return true;
+    // Sidebar'dan olingan band (yashirin) — o'zi faol bo'lmaydi, ota band faol.
+    if (DESIGN_TAB_PARENT[tab] && el.dataset.tab === tab && el.style.display === 'none') return false;
     if (el.dataset.tab !== tab) return false;
     // ROP / sotuv: "Lidlar", "Reyting"… — Sotuv bo'limining shu ichki bo'limi ochiq bo'lsa faol; "Sotuv bo'limi" esa qolganlarida.
     if (tab === 'sales') {
@@ -1144,7 +1146,7 @@ function renderFrozenStudents() {
     // ko'rishi kerak.
     const _cuFrozen = getCurrentUser();
     const allStudents = getItem(STORAGE_KEYS.students, []);
-    let frozen = allStudents.filter(s => s.frozen);
+    let frozen = allStudents.filter(s => s.frozen && !isStaffDemoStudent(s));
     if (_cuFrozen?.role === 'sales_manager') {
         frozen = filterStudentsForSalesManager(frozen, _cuFrozen);
     }
@@ -10078,6 +10080,23 @@ function getTeacherAssignmentIds(teacherId) {
     return ids;
 }
 
+// O'quvchilar ro'yxati (admin/ROP): xodim demo akkaunti ekanligi.
+function isStaffDemoStudent(s) { return !!s && (s.isStaffDemo === true || String(s.id || '').startsWith('demo_')); }
+// "Ustozlar bo'yicha" filtri: shu tildagi asosiy ustozlar, id bo'yicha bitta (yordamchi lavozimi va type='yordamchi' kirmaydi).
+function studentsTeacherOptions(subject) {
+    const hr = getItem(STORAGE_KEYS.hrEmployees, []);
+    const hrById = new Map(hr.map(e => [e.id, e]));
+    const mainRole = subject === 'russian' ? 'rus-oqituvchi' : 'ingliz-oqituvchi';
+    const out = new Map();
+    for (const e of hr) if (e.role === mainRole && (e.status || 'active') !== 'inactive') out.set(e.id, { id: e.id, name: e.name });
+    for (const t of getItem(STORAGE_KEYS.teachers, [])) {
+        if ((t.subject || 'english') !== subject || out.has(t.id)) continue;
+        const e = hrById.get(t.id);
+        if ((t.type && t.type !== 'asosiy') || (e && e.role === 'yordamchi')) continue;
+        out.set(t.id, { id: t.id, name: t.name });
+    }
+    return [...out.values()].sort((a, b) => String(a.name).localeCompare(String(b.name)));
+}
 function renderStudents() {
     const currentUser = getCurrentUser();
     const isSalesManager = currentUser?.role === 'sales_manager';
@@ -10197,7 +10216,8 @@ function renderStudents() {
     }
 
     // Muzlatilgan o'quvchilarni Faol ro'yxatdan chiqarish
-    students = students.filter(s => !s.frozen);
+    // Xodimlarning demo akkauntlari (isStaffDemo / id "demo_") ro'yxatda ham, "Jami"da ham yo'q — ular faqat HR → xodim kartasida.
+    students = students.filter(s => !s.frozen && !isStaffDemoStudent(s));
 
     // 8-vazifa (qayta ish 4): O'quvchilar bo'limi Sotuv bo'limi bilan to'liq
     // integratsiya qilingan — "Faol o'quvchilar" ro'yxatida FAQAT sotuv
@@ -10245,14 +10265,9 @@ function renderStudents() {
         );
     }
 
-    // Til bo'yicha filtrlangan ustozlar va menejerlar
-    const allTeachers = [
-        ...getItem(STORAGE_KEYS.teachers, []).filter(t => (t.subject || 'english') === subject),
-        ...getItem(STORAGE_KEYS.hrEmployees, []).filter(e =>
-            (subject === 'english' && e.role === 'ingliz-oqituvchi') ||
-            (subject === 'russian' && e.role === 'rus-oqituvchi')
-        )
-    ];
+    // Til bo'yicha filtrlangan ustozlar va menejerlar. "Ustozlar bo'yicha" — faqat asosiy ustozlar, har biri bir marta
+    // (teachers jadvali va HR bir xil id bilan ikki marta kelardi, yordamchi ham kirib qolardi).
+    const allTeachers = studentsTeacherOptions(subject);
     const allManagers = getItem(STORAGE_KEYS.hrEmployees, []).filter(e =>
         (e.role === 'sotuv-menejeri' || e.role === 'sotuv_menejeri' || e.role === 'Sotuv menejeri') &&
         (e.lang || 'english') === subject
@@ -10362,9 +10377,10 @@ function renderStudents() {
     const tbody = document.getElementById('studentsBody');
     if (!tbody) return;
 
+    const staffNameList = [...getItem(STORAGE_KEYS.hrEmployees, []), ...getItem(STORAGE_KEYS.teachers, [])];
     tbody.innerHTML = students.map((s, i) => {
-        const teacher = allTeachers.find(t => t.id === s.teacherId);
-        const asst = allTeachers.find(t => t.id === s.assistantTeacherId);
+        const teacher = allTeachers.find(t => t.id === s.teacherId) || staffNameList.find(t => t.id === s.teacherId);
+        const asst = staffNameList.find(t => t.id === s.assistantTeacherId);
         const manager = allManagers.find(m => m.id === s.managerId);
 
         const ageStr = s.age ? String(s.age) : calculateAge(s.birthDate);

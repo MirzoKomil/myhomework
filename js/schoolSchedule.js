@@ -80,6 +80,14 @@
         // Jadval v2 (js/scheduleV2.js): admin/ROP kun va ustoz haftasi, ustoz Kun/Hafta/Oy, yordamchi tavsiya jadvali.
         // Sotuv menejeri ("Kim bo'sh?") va qolgan ro'yxatlar shu fayldagi eski ko'rinishda qoladi.
         if (V2 && V2.owns(state.view)) return V2.render(root);
+        // AdminSorovlar / AdminQoplash: alohida sahifa — bitta sarlavha va "← Dars jadvali" (jadval sarlavhasi va tablari chizilmaydi).
+        if (window.adminNazorat && isFull() && (state.view === 'requests' || state.view === 'makeups')) {
+            const back = () => { state.view = 'day'; render(root); };
+            root.innerHTML = `<button type="button" class="ad-back" data-sv-back><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg> Dars jadvali</button><div data-body></div>`;
+            root.querySelector('[data-sv-back]').onclick = back;
+            const body = root.querySelector('[data-body]');
+            return state.view === 'requests' ? window.adminNazorat.renderRequests(body) : window.adminNazorat.renderMakeups(body, { lang: state.lang });
+        }
         const tabs = isFull() ? [['day', 'Kun · ustozlar'], ['week', 'Hafta · bitta ustoz'], ['requests', 'So\'rovlar'], ['makeups', 'Qoplash']]
             : r === 'rop' ? [['free', 'Kim bo\'sh?'], ['day', 'Kun · ustozlar'], ['week', 'Hafta · bitta ustoz']] : r === 'teacher' ? [['mine', V2 ? '← Jadval' : 'Mening haftam'], ['trials', 'Sinovlar va so\'rovlar']] : [['free', 'Kim bo\'sh?']];
         root.innerHTML = `<div class="sc-head"><div><h1>Dars jadvali</h1><p class="sc-sub">${r === 'teacher' ? 'Darslaringiz, sinovlar va qoplash · vaqtni so\'rov orqali o\'zgartirasiz' : isSales() ? 'Sinovga ochiq bo\'sh vaqtlar · boshqa o\'quvchilar ismi ko\'rinmaydi' : 'Bitta manba — hamma rolda bir xil · Asia/Tashkent'}</p></div>
