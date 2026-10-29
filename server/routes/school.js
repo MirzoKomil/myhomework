@@ -14,6 +14,7 @@ const A = require('../services/school/assist');
 const R = require('../../js/attendanceRules');
 const { randomUUID } = require('node:crypto');
 const bcrypt = require('bcryptjs');
+const ropScope = require('../services/ropScope');
 
 const FULL = new Set(['admin', 'boshliq']);
 const MANAGE = new Set(['admin', 'boshliq', 'rop']);
@@ -33,6 +34,20 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
             req.user = { ...req.user, role: u.role, name: u.name, email: u.email };
             next();
         } catch { res.status(503).json({ error: 'Akkauntni tekshirib bo\'lmadi' }); }
+    });
+    // ROP faqat o'z til yo'nalishi (HR'dagi til) o'quvchilarini ko'radi va o'zgartiradi:
+    // /students/:id/* (karta, to'lov, tarix, tahrir, muzlatish, ustoz…) — boshqa til → 403.
+    const ropLangs = req => (req.user.role === 'rop' ? ropScope.ropLangsFor(pool, req.user) : Promise.resolve(null));
+    const subjectOk = (langs, subject) => !langs || langs.includes(ropScope.langOfStudent({ subject }));
+    router.use('/students/:id', async (req, res, next) => {
+        try {
+            const langs = await ropLangs(req);
+            if (langs) {
+                const row = (await pool.query('SELECT subject FROM students WHERE id=$1', [req.params.id])).rows[0];
+                if (row && !subjectOk(langs, row.subject)) return res.status(403).json({ error: 'Bu o\'quvchi boshqa til yo\'nalishida — ROP faqat o\'z yo\'nalishini ko\'radi' });
+            }
+            next();
+        } catch (err) { console.error('[school] rop til', err.message); res.status(503).json({ error: 'Ruxsatni tekshirib bo\'lmadi' }); }
     });
     const handle = fn => async (req, res) => {
         try { res.json(await fn(req)); }
@@ -191,6 +206,7 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
             if (!lead) throw T.fail(404, 'Lid topilmadi');
             await checkLeadTeacherLang(c, lead.language, String(req.body?.teacherId || ''));
             if (req.user.role === 'sales_manager' && String(lead.manager_id || '') !== String(await managerId(req) || '-')) throw T.fail(403, 'Faqat o\'z lidingiz uchun');
+            if (!subjectOk(await ropLangs(req), lead.language)) throw T.fail(403, 'ROP faqat o\'z til yo\'nalishidagi lidga sinov qo\'yadi');
             if (SALES.has(req.user.role)) req.body.hold = true;
         }
         else if (kind === 'makeup') return planMakeup(req, c, req.body);
@@ -208,6 +224,7 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         if (!row) throw T.fail(404, 'Lid topilmadi');
         const mid = await managerId(req);
         if (req.user.role === 'sales_manager' && String(row.manager_id || '') !== String(mid || '')) throw T.fail(403, 'Faqat o\'z lidingizni sinovga yozasiz');
+        if (!subjectOk(await ropLangs(req), row.language)) throw T.fail(403, 'ROP faqat o\'z til yo\'nalishidagi lidga sinov qo\'yadi');
         await checkLeadTeacherLang(pool, row.language, holds[0].teacher_id);
         const extra = typeof row.extra_data === 'object' && row.extra_data ? row.extra_data : JSON.parse(row.extra_data || '{}');
         const first = holds[0], date = S.dateStr(first.date), min = Number(first.start_min);
@@ -664,8 +681,9 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         const td = T.nowLocal().date, month = td.slice(0, 7), { from, to } = T.monthBounds(month);
         const mid = req.user.role === 'sales_manager' ? await managerId(req) : (req.query.managerId || null);
         if (!mid) return { month, students: [] };
+        const rl = await ropLangs(req);
         const rows = (await pool.query('SELECT * FROM students')).rows.map(r => ({ row: r, st: S.studentRow(r) }))
-            .filter(x => O.soldBy(x.st, mid) && !x.st.legacyInactive && !x.st.isStaffDemo);
+            .filter(x => O.soldBy(x.st, mid) && !x.st.legacyInactive && !x.st.isStaffDemo && subjectOk(rl, x.row.subject));
         const ids = rows.map(x => x.row.id);
         if (!ids.length) return { month, students: [] };
         const names = new Map((await pool.query(`SELECT id, name FROM hr_employees`)).rows.map(r => [r.id, r.name]));
@@ -727,7 +745,9 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         if (req.user.role === 'teacher') { const own = await teacherOf(req); me = own.id; meA = assistOf(own); } else if (isSales) mid = await managerId(req); else need(req, MANAGE);
         const out = [], changed = [];
         const recent = T.addDays(today, -30);
+        const rl = await ropLangs(req);
         for (const r of rows) {
+            if (!subjectOk(rl, r.subject)) continue;
             const st = S.studentRow(r), state = S.statusOn(by.get(r.id) || [], today);
             const myPast = me ? hist.filter(h => h.student_id === r.id && h.teacher_id === me && h.to_date && S.dateStr(h.to_date) < today) : [];
             const asMine = !!meA && r.assistant_teacher_id === meA;
@@ -832,21 +852,41 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
     router.get('/edit-requests', handle(async req => {
         if (req.user.role === 'sales_manager') return { requests: (await pool.query('SELECT * FROM school_edit_requests WHERE requested_by=$1 ORDER BY created_at DESC LIMIT 100', [req.user.id])).rows };
         need(req, MANAGE);
+        const rl = await ropLangs(req);
         const { rows } = await pool.query(`SELECT r.*, s.name AS student_name FROM school_edit_requests r LEFT JOIN students s ON s.id=r.student_id
-            WHERE ($1='' OR r.status=$1) ORDER BY r.created_at DESC LIMIT 200`, [req.query.status || '']);
-        const counts = (await pool.query('SELECT status, COUNT(*)::int AS n FROM school_edit_requests GROUP BY status')).rows;
+            WHERE ($1='' OR r.status=$1) AND ($2::text[] IS NULL OR COALESCE(NULLIF(s.subject,''),'english') = ANY($2::text[]))
+            ORDER BY r.created_at DESC LIMIT 200`, [req.query.status || '', rl]);
+        const counts = (await pool.query(`SELECT r.status, COUNT(*)::int AS n FROM school_edit_requests r LEFT JOIN students s ON s.id=r.student_id
+            WHERE ($1::text[] IS NULL OR COALESCE(NULLIF(s.subject,''),'english') = ANY($1::text[])) GROUP BY r.status`, [rl])).rows;
         return { requests: rows, counts: Object.fromEntries(counts.map(c => [c.status, c.n])) };
     }));
     // Tasdiqdan oldin server tekshiruvi (yozmaydi): bo'sh vaqt, tarif, to'lovga ta'sir.
-    router.get('/edit-requests/:id/check', handle(req => { need(req, MANAGE); return write(req, c => O.checkRequest(c, req.params.id)); }));
-    router.post('/edit-requests/:id/decide', handle(req => write(req, c => O.decideRequest(c, req.user, req.params.id, req.body || {}).then(r => ({ request: r })))));
+    router.get('/edit-requests/:id/check', handle(async req => {
+        need(req, MANAGE);
+        const rl = await ropLangs(req);
+        if (rl) {
+            const r = (await pool.query('SELECT s.subject FROM school_edit_requests r LEFT JOIN students s ON s.id=r.student_id WHERE r.id=$1', [req.params.id])).rows[0];
+            if (r && !subjectOk(rl, r.subject)) throw T.fail(403, 'Bu so\'rov boshqa til yo\'nalishidagi o\'quvchi bo\'yicha');
+        }
+        return write(req, c => O.checkRequest(c, req.params.id));
+    }));
+    router.post('/edit-requests/:id/decide', handle(async req => {
+        const rl = await ropLangs(req);
+        if (rl) {
+            const r = (await pool.query('SELECT s.subject FROM school_edit_requests r LEFT JOIN students s ON s.id=r.student_id WHERE r.id=$1', [req.params.id])).rows[0];
+            if (r && !subjectOk(rl, r.subject)) throw T.fail(403, 'Bu so\'rov boshqa til yo\'nalishidagi o\'quvchi bo\'yicha');
+        }
+        return write(req, c => O.decideRequest(c, req.user, req.params.id, req.body || {}).then(r => ({ request: r })));
+    }));
 
     // ── Telegram guruhlar ────────────────────────────────────────────────────
     router.get('/groups', handle(async req => {
         need(req, MANAGE);
+        const rl = await ropLangs(req);
         return { groups: (await pool.query(`SELECT g.*, s.name AS student_name, s.teacher_id, s.assistant_teacher_id, s.subject,
                 COALESCE(s.extra_data->>'saleManagerId', s.extra_data->>'managerId', '') AS manager_id FROM school_student_groups g
-            JOIN students s ON s.id=g.student_id WHERE COALESCE(s.extra_data->>'isStaffDemo', 'false') <> 'true' ORDER BY g.name`)).rows, nextName: await O.nextGroupName(pool, await groupLang(req)) };
+            JOIN students s ON s.id=g.student_id WHERE COALESCE(s.extra_data->>'isStaffDemo', 'false') <> 'true'
+              AND ($1::text[] IS NULL OR COALESCE(NULLIF(s.subject,''),'english') = ANY($1::text[])) ORDER BY g.name`, [rl])).rows, nextName: await O.nextGroupName(pool, await groupLang(req)) };
     }));
     router.put('/students/:id/group', handle(async req => {
         const mid = await managerId(req);

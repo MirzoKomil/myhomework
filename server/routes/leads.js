@@ -7,6 +7,9 @@ const { authRequired } = require('../middleware/auth');
 const { webhookSecretRequired } = require('../middleware/webhook');
 const { sendLeadToCapi } = require('../services/capiWebhook');
 const { notifyLeadChannel } = require('../services/leadChannelNotify');
+const ropScope = require('../services/ropScope');
+// ROP faqat HR'dagi o'z til yo'nalishi lidlarini ko'radi va o'zgartiradi (til belgilanmagan — cheklovsiz).
+const ropLangs = req => ropScope.ropLangsFor(require('../db').pool, req.user);
 
 const router = express.Router();
 
@@ -136,7 +139,17 @@ function leadReadRequired(req, res, next) {
 
 async function leadOwnershipRequired(req, res, next) {
     try {
-        if (['admin', 'rop', 'boshliq'].includes(req.user?.role)) return next();
+        if (req.user?.role === 'rop') {
+            const langs = await ropLangs(req);
+            if (langs) {
+                const existing = await getLeadById(req.params.id);
+                const bad = (existing && !langs.includes(ropScope.langOfLead(existing)))
+                    || (req.method === 'PATCH' && req.body?.language && !langs.includes(req.body.language === 'russian' ? 'russian' : 'english'));
+                if (bad) return res.status(403).json({ error: 'ROP faqat o\'z til yo\'nalishidagi lidlarni o\'zgartiradi' });
+            }
+            return next();
+        }
+        if (['admin', 'boshliq'].includes(req.user?.role)) return next();
         const managerId = await getSalesManagerIdForUser(req.user?.id);
         if (!managerId) {
             return res.status(403).json({ error: 'Sotuv menejeri CRM profiliga bog\'lanmagan' });
@@ -175,9 +188,11 @@ function leadArchiveRequired(req, res, next) {
     next();
 }
 
-router.get('/deleted', authRequired, leadArchiveRequired, async (_req, res) => {
+router.get('/deleted', authRequired, leadArchiveRequired, async (req, res) => {
     try {
-        res.json({ leads: await getDeletedLeads() });
+        const langs = req.user.role === 'rop' ? await ropLangs(req) : null;
+        const all = await getDeletedLeads();
+        res.json({ leads: langs ? all.filter(l => langs.includes(ropScope.langOfLead(l))) : all });
     } catch (err) {
         console.error('GET /api/leads/deleted', err);
         res.status(500).json({ error: 'Lidlar arxivini olishda xatolik' });
@@ -231,6 +246,10 @@ router.delete('/:id', authRequired, leadMutationRequired, leadOwnershipRequired,
 
 router.post('/:id/restore', authRequired, leadArchiveRequired, async (req, res) => {
     try {
+        if (req.user.role === 'rop') {
+            const langs = await ropLangs(req), existing = langs ? await getLeadById(req.params.id) : null;
+            if (existing && !langs.includes(ropScope.langOfLead(existing))) return res.status(403).json({ error: 'ROP faqat o\'z til yo\'nalishidagi lidlarni tiklaydi' });
+        }
         const restored = await restoreLead(req.params.id, req.user);
         if (!restored) return res.status(404).json({ error: 'Lid topilmadi' });
         res.json({ ok: true, lead: restored });
@@ -252,6 +271,7 @@ router.get('/', authRequired, leadReadRequired, async (req, res) => {
             const all = await getLeads();
             return res.json(Object.fromEntries(['english', 'russian'].map(l => [l, langs.includes(l) ? (all[l] || []) : []])));
         }
+        if (req.user.role === 'rop') return res.json(ropScope.scopeLeads(await getLeads(), await ropLangs(req)));
         res.json(await getLeads());
     } catch (err) {
         console.error('GET /api/leads', err);
