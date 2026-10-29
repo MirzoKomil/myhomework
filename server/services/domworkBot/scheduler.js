@@ -74,6 +74,10 @@ async function run(db,now=new Date()) {
     if(!lock.locked) return;
     const settings=(await store.settings(db)).data, clock=localClock(now);
     await require('./recognition').run(db,settings,clock,now,once);
+    // Dars guruhida bot yo'q — ROPga eslatma (yangilari har 15 daqiqada, eskilari kuniga bir marta).
+    await db.query('SAVEPOINT group_watch');
+    try { await require('./groupWatch').run(db,settings,clock,now,once); await db.query('RELEASE SAVEPOINT group_watch'); }
+    catch(error) { await db.query('ROLLBACK TO SAVEPOINT group_watch'); console.error('[domwork-bot] group watch failed:', error.code || error.name); }
     // Jamoa kayfiyati (motivatsiya, latifa, Juma, dushanba, oy oxiri) — alohida savepoint.
     await db.query('SAVEPOINT team_vibes');
     try { await require('./vibes').run(db,settings,clock,now,once); await db.query('RELEASE SAVEPOINT team_vibes'); }
@@ -188,4 +192,4 @@ async function run(db,now=new Date()) {
         });
     }
 }
-module.exports={localClock,scheduledToday,checkpoint,once,run};
+module.exports={localClock,scheduledToday,checkpoint,once,run,roles};

@@ -49,8 +49,18 @@ const webFonts = {
 export default function RootLayout() {
   const [loaded, error] = useFonts(Platform.OS === 'web' ? webFonts : nativeFonts);
   const [authLoaded, setAuthLoaded] = useState(false);
-  const { token } = useAuth();
+  const { token, student } = useAuth();
   const isEmbedded = Platform.OS === 'web' && typeof window !== 'undefined' && window.self !== window.top;
+
+  // 29-okt: Domwork (rus tili) o'quvchisi eski ilovaga kirsa — yangi ilovaga (student/v2) o'tkaziladi.
+  // Token ikkala ilovada umumiy (mh_student_token), qayta login so'ralmaydi. CRM ichidagi ko'rish (iframe)
+  // va ingliz tili o'quvchilari eski ilovada qoladi.
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined' || isEmbedded) return;
+    if (!token || student?.lang !== 'russian') return;
+    if (/^\/student\/v2(\/|$)/.test(window.location.pathname)) return;
+    window.location.replace('/student/v2/');
+  }, [token, student?.lang, isEmbedded]);
   const canViewStudent = !!token || isEmbedded;
 
   useEffect(() => {

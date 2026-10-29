@@ -142,6 +142,10 @@ function contentInput(raw) {
     return {method,payload};
 }
 async function recipients(db,segment,groupIds=[]) {
+    if (segment === 'classrooms') {
+        const rows = (await db.query("SELECT id,chat_id FROM domwork_learning_groups WHERE type='classroom' AND NOT archived AND verified_at IS NOT NULL AND chat_id<>''")).rows;
+        return rows.map(r=>({kind:'group',id:r.chat_id,bindingId:r.id}));
+    }
     if (segment === 'groups') {
         if (!Array.isArray(groupIds) || !groupIds.length || groupIds.length>100) throw fail(400,'Guruhlarni tanlang');
         const rows = (await db.query(`SELECT id,chat_id FROM domwork_bot_groups WHERE active AND id=ANY($1::text[])

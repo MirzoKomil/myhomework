@@ -25,7 +25,7 @@ function chunks(value, max = 3500) {
     parts.push(pending); return parts;
 }
 // Xabar tarqatish auditoriyasi — tugmalar (oldin inglizcha so'z yozilardi).
-const SEGMENT_LABELS = { all: '👥 Hammaga', student: '🎓 O‘quvchilar', trial: '🧪 Sinovdagilar', sales: '💼 Sotuv menejerlari', teacher: '👩‍🏫 Ustozlar',
+const SEGMENT_LABELS = { all: '👥 Hammaga', classrooms: '📚 Barcha dars guruhlari', student: '🎓 O‘quvchilar', trial: '🧪 Sinovdagilar', sales: '💼 Sotuv menejerlari', teacher: '👩‍🏫 Ustozlar',
     assistant: '🤝 Yordamchi ustozlar', rop: '📊 ROP', marketing: '📈 Marketing', admin: '🛡 Adminlar' };
 function segmentKeyboard() {
     const labels = Object.values(SEGMENT_LABELS), rows = [];
