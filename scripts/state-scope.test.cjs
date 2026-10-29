@@ -122,3 +122,20 @@ test('teacher state: payrollRates — asosiy ustozga ustoz tariflari, yordamchig
     assert.deepEqual(main.payrollRates, { english: { teacher: { rates: { 15: 75000, 30: 150000, 60: 300000 } } } });
     assert.ok(main.teachers.every(t => !t.colleagueContact));
 });
+
+// 30-okt jonli tekshiruv: Ayubxon ro'yxatida 31 ta xodim demo akkaunti "o'quvchi" bo'lib chiqdi (isStaffDemo state'ga berilmagan edi).
+test('teacher state: xodim demo o\'quvchilari yordamchiga berilmaydi, asosiy ustozga isStaffDemo belgisi bilan boradi', () => {
+    const duties = require('../server/services/teacherDuties');
+    const state = { students: [
+            { id: 's1', name: 'Madina', teacherId: 'dil', assistantTeacherId: 'san', subject: 'english' },
+            { id: 'demo_hr1', name: 'Hamida', teacherId: 'dil', assistantTeacherId: 'san', subject: 'english', isStaffDemo: true },
+            { id: 'demo_hr2', name: 'Komil', teacherId: 'dil', assistantTeacherId: 'san', subject: 'english' }],
+        teachers: [], hrEmployees: [
+            { id: 'dil', name: 'Dilnoza', role: 'ingliz-oqituvchi', lang: 'english' },
+            { id: 'san', name: 'Sanjar', role: 'yordamchi', lang: 'english' }],
+        mainAttendance: {}, assistantAttendance: {}, liveGrades: {}, payrollRates: {} };
+    const asst = duties.stateForTeacher(state, { id: 'san', role: 'yordamchi', lang: 'english' });
+    assert.deepEqual(asst.students.map(s => s.id), ['s1']);
+    const main = duties.stateForTeacher(state, { id: 'dil', role: 'ingliz-oqituvchi', lang: 'english' });
+    assert.equal(main.students.find(s => s.id === 'demo_hr1').isStaffDemo, true);
+});
