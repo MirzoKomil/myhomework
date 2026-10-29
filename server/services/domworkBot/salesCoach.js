@@ -105,9 +105,10 @@ async function ropDigest(db, now, clock, once) {
             const p = plan(leads, now);
             if (p.stale.length || p.trials.length || p.fresh.length || p.slow.length) rows.push({ name: names.get(id) || 'Menejer', p });
         }
-        if (!rows.length) return;
+        const behind = pace((await require('./dailyReports').salesDay(db, clock.date)).people, clock.date);
+        if (!rows.length && !behind.length) return;
         rows.sort((a, b) => (b.p.stale.length + b.p.trials.length) - (a.p.stale.length + a.p.trials.length));
-        const text = `📋 <b>Sotuv jamoasi — bugungi nazorat</b>\n\n` + rows.map(r => `👤 ${T.b(r.name)}: yangi ${r.p.fresh.length} · 3+ kun ${T.b(r.p.stale.length)} · sinov natijasi yo‘q ${T.b(r.p.trials.length)} · turib qolgan ${r.p.slow.length}`).join('\n')
+        const text = `📋 <b>Sotuv jamoasi — bugungi nazorat</b>\n\n` + (behind.length ? `📉 <b>Oy rejasidan orqada:</b>\n${behind.map(p => `• ${T.b(p.name)} — ${Math.round(p.pct * 100)}% (shu kungacha ~${Math.round(p.expected * 100)}% bo‘lishi kerak edi)`).join('\n')}\nUlar bilan alohida gaplashib, bugungi aniq maqsadni kelishing 🎯\n\n` : '') + rows.map(r => `👤 ${T.b(r.name)}: yangi ${r.p.fresh.length} · 3+ kun ${T.b(r.p.stale.length)} · sinov natijasi yo‘q ${T.b(r.p.trials.length)} · turib qolgan ${r.p.slow.length}`).join('\n')
             + '\n\nMenejerlarga vazifalar 10:00 da yuborildi. Kim orqada qolsa — qo‘llab yuboring 🤝';
         const events = require('./events');
         for (const rop of await require('./scheduler').roles(db, ['rop']))
@@ -176,18 +177,32 @@ async function praise(db, now) {
         await db.query("INSERT INTO domwork_bot_live_cursor VALUES('coach_audit',$1) ON CONFLICT DO NOTHING", [max]);
         return;
     }
-    const rows = (await db.query('SELECT id,lead_id,snapshot FROM lead_audit WHERE id>$1 ORDER BY id LIMIT 300', [cursor.value])).rows;
+    const rows = (await db.query('SELECT id,lead_id,action,actor_name,snapshot FROM lead_audit WHERE id>$1 ORDER BY id LIMIT 300', [cursor.value])).rows;
     if (!rows.length) return;
     await db.query("UPDATE domwork_bot_live_cursor SET value=$1 WHERE name='coach_audit'", [rows[rows.length - 1].id]);
-    const done = new Map();
+    const done = new Map(), given = new Map();
     for (const r of rows) {
-        const before = r.snapshot?.before, after = r.snapshot?.after;
-        if (!before || !after || after.language && after.language !== 'russian') continue;
+        const before = r.snapshot?.before, after = r.snapshot?.after || (r.action === 'created' ? r.snapshot : null);
+        if (!after || after.language && after.language !== 'russian') continue;
+        // Yangi biriktirish (ROP/admin bergan yoki tizim taqsimlagan) — menejerga darhol xabar.
+        if (after.managerId && after.managerId !== (before?.managerId || '') && !['tolov-yopildi', 'sifatsiz-lidlar', 'muvaffaqiyatsiz-sotuv'].includes(stages.normalizeLeadStatus(after.status))) {
+            if (!given.has(after.managerId)) given.set(after.managerId, []);
+            given.get(after.managerId).push({ id: r.lead_id, name: after.name || 'Nomsiz', phone: after.phone || '', status: stages.normalizeLeadStatus(after.status), actor: String(r.actor_name || '').trim() });
+        }
+        if (!before) continue;
         const from = stages.normalizeLeadStatus(before.status), to = stages.normalizeLeadStatus(after.status);
         if (from === to || !after.managerId) continue;
         if (!(from === 'boglanishga-urinilmoqda' || SLOW[from] || from === 'sinov-darsida')) continue;
         if (!done.has(after.managerId)) done.set(after.managerId, []);
         done.get(after.managerId).push({ name: after.name, to });
+    }
+    const clock = require('./scheduler').localClock(now), awake = clock.hour >= 8 && clock.hour < 21;
+    if (awake) for (const [id, leads] of given) {
+        const by = [...new Set(leads.map(l => l.actor).filter(Boolean))].join(', ');
+        await dm(db, `given:${id}:${rows[0].id}`, id, `📥 <b>Sizga ${leads.length === 1 ? 'yangi lid' : leads.length + ' ta yangi lid'} biriktirildi</b>${by ? ' · ' + T.esc(by) : ''}\n\n`
+            + list(leads, l => `${line(l)}${l.status !== 'yangi-lidlar' ? ' — ' + T.esc(label(l.status)) : ''}`, 30)
+            + `\n\n📞 Darhol qo‘ng‘iroq qiling — mijoz hali issiq! Gaplashgach, CRMda bosqichini o‘zgartiring ✅`, now, 3);
+        for (const l of leads) await db.query('INSERT INTO domwork_bot_jobs(key) VALUES($1) ON CONFLICT DO NOTHING', [`coach-given:${l.id}`]);
     }
     if (!done.size) return;
     const all = await load(db, now), names = await managers(db), bucket = Math.floor(now.getTime() / (15 * 60000));
@@ -207,10 +222,116 @@ async function praise(db, now) {
     }
 }
 
+// ── ROP uchun: jamoani boshqarish xabarlari ─────────────────────────────────
+async function toRop(db, key, text, now, hours = 3) {
+    const events = require('./events');
+    for (const rop of await require('./scheduler').roles(db, ['rop']))
+        await events.privateMessage(db, `coach:rop-${key}:${rop.telegramId}`, rop, text,
+            { ...T.HTML, _setting: 'salesCoachEnabled', _expiresAt: new Date(now.getTime() + hours * HOUR).toISOString() });
+}
+// Bugungi ko'rsatkichlar menejerlar kesimida (dailyReports bilan bir xil manba): harakat, sinovga, sotuv, tushum.
+async function team(db, now, clock) {
+    const D = require('./dailyReports'), day = await D.salesDay(db, clock.date);
+    const by = byManager(await load(db, now)), out = [];
+    for (const person of day.people) {
+        const tr = await D.transitions(db, clock.date, person.id).catch(() => ({}));
+        const p = plan(by.get(person.id) || [], now);
+        out.push({ ...person, trials: Number(tr?.['sinov-darsida']) || 0, waiting: p.fresh.length, stale: p.stale.length, noResult: p.trials.length });
+    }
+    return { day, people: out };
+}
+function weakest(people) {
+    if (people.length < 2) return [];
+    const avg = people.reduce((s, p) => s + p.processed, 0) / people.length;
+    return people.filter(p => avg >= 4 && p.processed < avg * 0.5).map(p => ({ ...p, avg: Math.round(avg) }));
+}
+const row = p => `👤 ${T.b(p.name)}: ishlagan ${T.b(p.processed)} lid · sinovga ${p.trials} · sotuv ${T.b(p.sales)}${p.day ? ' (' + T.esc(T.sum(p.day)) + ')' : ''}${p.waiting ? ` · ⏳ kutyapti ${p.waiting}` : ''}${p.stale ? ` · 🧹 eski ${p.stale}` : ''}`;
+function callToAction(w) {
+    return w.map(p => `📣 ${T.b(p.name)} bilan gaplashing: bugun atigi ${T.b(p.processed + ' ta')} lid bilan ishladi (jamoada o‘rtacha ${p.avg}).`
+        + (p.waiting ? ` Unda ${T.b(p.waiting + ' ta')} yangi lid qo‘ng‘iroq kutyapti.` : '') + (p.stale ? ` ${p.stale} ta eski lid tozalanmagan.` : '')
+        + ' Nima to‘sqinlik qilyapti — so‘rab, birga reja tuzing 🤝').join('\n\n');
+}
+async function ropPulse(db, now, clock, once, tag) {
+    await once(db, `coach-pulse:${clock.date}:${tag}`, async () => {
+        const t = await team(db, now, clock);
+        if (!t.people.length) return;
+        const people = [...t.people].sort((a, b) => b.processed - a.processed || b.sales - a.sales);
+        const w = weakest(people), best = people[0];
+        const text = `📊 <b>Sotuv pulsi · soat ${tag}</b>\n\n${people.map(row).join('\n')}\n\n💰 Bugun: ${T.b(T.sum(t.day.day))} · ${t.day.sales} ta sotuv`
+            + (best?.processed ? `\n🏅 Eng faol: ${T.b(best.name)} — ${best.processed} ta lid` : '')
+            + (w.length ? `\n\n${callToAction(w)}` : people.every(p => !p.processed) ? `\n\n⚠️ Bugun jamoada hali CRMda harakat ko‘rinmayapti — menejerlarni bir tekshirib chiqing 📞` : `\n\n✅ Jamoa bir maromda ishlayapti — shunday davom!`);
+        await toRop(db, `pulse:${clock.date}:${tag}`, text, now);
+    });
+}
+// 11:30 — bugun CRMda bitta ham lid bilan ishlamagan menejer (ishi bor bo'lsa).
+async function ropInactive(db, now, clock, once) {
+    await once(db, `coach-idle:${clock.date}`, async () => {
+        const t = await team(db, now, clock), idle = t.people.filter(p => !p.processed && (p.waiting || p.stale || p.noResult));
+        if (!idle.length) return;
+        await toRop(db, `idle:${clock.date}`, `🔕 <b>Soat 11:30 — hali CRMda harakat yo‘q</b>\n\n${idle.map(p => `👤 ${T.b(p.name)} — ${p.waiting} ta yangi lid kutyapti${p.stale ? `, ${p.stale} ta eski` : ''}${p.noResult ? `, ${p.noResult} ta sinov natijasi` : ''}`).join('\n')}\n\nIshga kirishdimi? Qo‘ng‘iroq qilib bilib oling 📞`, now);
+    });
+}
+// Yangi lid 30 daqiqadan beri qo'ng'iroqsiz — ROPga (CRM SLA qoidasi bilan bir xil).
+async function ropSpeed(db, now) {
+    const t = now.getTime(), names = await managers(db), late = [];
+    for (const l of await load(db, now)) if (l.status === 'yangi-lidlar' && l.age >= 30 * 60000 && t - l.created < DAY) {
+        if ((await db.query('INSERT INTO domwork_bot_jobs(key) VALUES($1) ON CONFLICT DO NOTHING RETURNING key', [`coach-rop-speed:${l.id}`])).rows.length) late.push(l);
+    }
+    if (late.length) await toRop(db, `speed:${late[0].id}:${t}`, `🚨 <b>Yangi lid 30 daqiqadan beri qo‘ng‘iroqsiz</b>\n\n${list(late, l => `${line(l)} — ${T.esc(names.get(l.manager) || '—')}, ${ago(l.age)}`)}\n\nMenejerni tezlashtiring yoki lidni boshqasiga bering ⚡`, now, 2);
+}
+// ── Kunlik bonuslar (CRM Reyting → Bonuslar: Obed / Obed+30 / Obed+60, chegaralari bonusData'dan) ──
+const DAILY = [{ id: 'obed', label: 'Obed', threshold: 1800000 }, { id: 'obed30', label: 'Obed + 30,000', threshold: 2500000 }, { id: 'obed60', label: 'Obed + 60,000', threshold: 3000000 }];
+async function tiers(db) {
+    let stored = (await db.query("SELECT data FROM json_data WHERE key='bonusData'")).rows[0]?.data || {};
+    if (typeof stored === 'string') { try { stored = JSON.parse(stored); } catch { stored = {}; } }
+    return DAILY.map(b => ({ ...b, ...(stored[b.id] || {}) })).filter(b => Number(b.threshold) > 0).sort((a, b) => a.threshold - b.threshold);
+}
+const PUSH = [
+    'Siz lidlar bilan bog‘lanmay o‘tirgan har daqiqada raqobatchilar mijozlaringizga qo‘ng‘iroq qilib, sotib qo‘yishyapti. Birinchi bo‘lib siz qo‘ng‘iroq qiling! 📞',
+    'Mijoz bugun qaror qiladi — siz bilanmi yoki boshqa maktab bilan? Telefonni oling 💪',
+    'Bugungi yo‘lkira va obedni naqd qilib keting — o‘tirmang, harakat qilaylik! 🍽',
+    'Har bir qo‘ng‘iroq — bonusga bir qadam. Kutib o‘tirgan lid sovib qoladi ❄️ — hozir isitib oling 🔥',
+    'Raqobatchilar uxlamayapti — ular ham shu mijozlarga yozishyapti. Tezlik yutadi ⚡',
+    'Bugun kamida bitta sotuv — va obed sizniki! Kim birinchi? 🏁',
+    'Qo‘ng‘iroqdan qo‘rqmang: eng yomoni — «yo‘q» deyishadi. Eng yaxshisi — bonus 😉',
+    'Kechqurun «bugun ko‘proq qo‘ng‘iroq qilganimda edi» demaylik. Hozir harakat qilamiz! 🚀'
+];
+async function bonus(db, now, clock, once) {
+    const list = await tiers(db);
+    if (!list.length) return;
+    const day = await require('./dailyReports').salesDay(db, clock.date), slot = ['09:30', '12:00', '15:00', '17:30'].find(t => {
+        const [h, m] = t.split(':').map(Number); return clock.hour === h && clock.minute >= m && clock.minute < m + 3; });
+    for (const p of day.people) {
+        const got = list.filter(b => p.day >= b.threshold), next = list.find(b => p.day < b.threshold), name = T.esc(T.first(p.name));
+        // Chegarani bosib o'tdi — darhol tabrik va keyingi pog'ona.
+        for (const b of got) await once(db, `coach-bonus:${clock.date}:${p.id}:${b.id}`, () => dm(db, `bonus:${clock.date}:${p.id}:${b.id}`, p.id,
+            `🍽🎉 <b>${name}, «${T.esc(b.label)}» bonusi sizniki!</b>\nBugungi sotuv: ${T.b(T.sum(p.day))}\n\n`
+            + (next ? `Keyingisi — «${T.esc(next.label)}»: yana ${T.b(T.sum(next.threshold - p.day))}. To‘xtamang! 🚀` : `Bugungi eng yuqori bonus olindi — siz bugun yulduz! ⭐`), now, 4));
+        if (!slot || !next) continue;
+        await once(db, `coach-bonus-push:${clock.date}:${p.id}:${slot}`, () => dm(db, `bonus-push:${clock.date}:${p.id}:${slot}`, p.id,
+            (slot === '09:30'
+                ? `☕ ${name}, bugungi bonuslar:\n${list.map(b => `🍽 ${T.b(b.label)} — ${T.esc(T.sum(b.threshold))} sotuv`).join('\n')}\n\n`
+                : `⏱ ${name}, soat ${slot}. Bugun: ${T.b(T.sum(p.day))} · «${T.esc(next.label)}»gacha yana ${T.b(T.sum(next.threshold - p.day))}\n\n`)
+            + T.pick(PUSH, clock.date + p.id + slot), now, 3));
+    }
+}
+// Oy rejasi sur'ati: kunlar o'tishiga nisbatan sezilarli orqada qolganlar.
+function pace(people, date) {
+    const [y, m, d] = date.split('-').map(Number), days = new Date(Date.UTC(y, m, 0)).getUTCDate(), expected = d / days;
+    return people.filter(p => p.plan > 0).map(p => ({ ...p, pct: p.month / p.plan, expected }))
+        .filter(p => p.pct < expected * 0.7).sort((a, b) => a.pct - b.pct);
+}
+
 async function run(db, settings, clock, now, once) {
-    if (!settings.salesCoachEnabled || clock.day === 7) return; // yakshanba — dam
-    await praise(db, now);
+    if (!settings.salesCoachEnabled) return;
+    await praise(db, now); // biriktirish xabari yakshanba ham ishlaydi (08–21)
+    if (clock.day === 7) return; // yakshanba — dam
     const work = clock.hour >= 9 && clock.hour < 20;
+    if (work) await ropSpeed(db, now);
+    if (clock.hour >= 9 && clock.hour < 21 && clock.minute % 2 === 0) await bonus(db, now, clock, once);
+    if (clock.hour === 11 && clock.minute >= 30 && clock.minute < 35) await ropInactive(db, now, clock, once);
+    if (clock.hour === 13 && clock.minute < 5) await ropPulse(db, now, clock, once, '13:00');
+    if (clock.hour === 18 && clock.minute < 5) await ropPulse(db, now, clock, once, '18:00');
     if (clock.hour === 10 && clock.minute < 5) await morning(db, now, clock, once);
     if (clock.hour === 10 && clock.minute >= 5 && clock.minute < 10) await ropDigest(db, now, clock, once);
     if (clock.hour === 16 && clock.minute < 5) await afternoon(db, now, clock, once);
@@ -218,4 +339,4 @@ async function run(db, settings, clock, now, once) {
     if (work && (clock.hour > 10 || clock.minute >= 10)) await realtime(db, now, clock, once);
 }
 
-module.exports = { init, run, plan, load, enteredAt, morning, realtime, praise, afternoon, ropDigest };
+module.exports = { init, run, plan, load, enteredAt, morning, realtime, praise, afternoon, ropDigest, ropPulse, ropInactive, ropSpeed, team, weakest, pace, bonus, tiers };

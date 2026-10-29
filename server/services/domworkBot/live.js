@@ -17,6 +17,7 @@ async function init(db) {
     await db.query('CREATE TABLE IF NOT EXISTS domwork_bot_errors(id BIGSERIAL PRIMARY KEY, part TEXT NOT NULL, message TEXT, created_at TIMESTAMPTZ DEFAULT NOW())');
     // Abdulloh so'ragan funksiya — bir marta yoqilgan holda boshlanadi; keyin Bot boshqaruvidan o'chirsa, o'chiq qoladi.
     await db.query(`UPDATE domwork_bot_settings SET data=data||'{"liveFeedEnabled":true}'::jsonb WHERE singleton=1 AND NOT (data ? 'liveFeedEnabled')`);
+    await db.query(`UPDATE domwork_bot_settings SET data=data||'{"liveFeedRopEnabled":true}'::jsonb WHERE singleton=1 AND NOT (data ? 'liveFeedRopEnabled')`);
 }
 
 async function send(db, key, text, { silent = false } = {}) {
@@ -31,7 +32,9 @@ async function send(db, key, text, { silent = false } = {}) {
         chunk += (chunk ? '\n' : '') + line;
     }
     if (chunk) parts.push(chunk);
-    for (const person of await require('./scheduler').roles(db, ['admin']))
+    // ROP ham sotuvga oid jonli voqealarni oladi (lidlar, sinov, sotuv, soatlik holat). O'chirish: liveFeedRopEnabled=false.
+    const sales = /^(lead-|hourly|trial|pay)/.test(key) && settings.liveFeedRopEnabled !== false;
+    for (const person of await require('./scheduler').roles(db, sales ? ['admin', 'rop'] : ['admin']))
         for (const [n, part] of parts.entries())
             await events.privateMessage(db, `live:${key}:${person.telegramId}${n ? ':p' + n : ''}`, person, part, {
                 ...T.HTML, _setting: 'liveFeedEnabled', _expiresAt: new Date(Date.now() + 24 * 3600000).toISOString(),
