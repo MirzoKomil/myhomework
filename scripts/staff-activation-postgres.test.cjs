@@ -40,7 +40,8 @@ test('bot relaunch: mandatory staff activation — synthetic data only',{skip:!u
    const r=await act.relaunch(pool,admin);assert.equal(r.sent,1);assert.equal(r.campaign,1);
    const rows=await out('activate:1:u-t:%'),w=rows.find(r=>r.unique_key.endsWith(':w')),ok=rows.find(r=>r.unique_key.endsWith(':ok'));assert.equal(rows.length,2);
    assert.match(w.payload.text,/Rus Ustoz/);assert.match(w.payload.text,/Maoshim/);assert.ok(w.payload.reply_markup.keyboard.length>1);
-   assert.equal(ok.payload.reply_markup.inline_keyboard[0][0].callback_data,'a:ok');
+   assert.equal(ok.payload.reply_markup.inline_keyboard[0][0].callback_data,'a:ok:1');
+   await assert.rejects(act.relaunch(pool,admin),e=>e.status===429); // 10 daqiqa ichida qayta — xabar yog'ilmaydi
   });
   await t.test('the CRM window shows only for eligible staff and never when the bot is down',async()=>{
    assert.deepEqual(await st(teacher),{required:true,linked:true,acknowledged:false,admin:false,name:'Rus Ustoz'});
@@ -52,11 +53,17 @@ test('bot relaunch: mandatory staff activation — synthetic data only',{skip:!u
   });
   await t.test('/start re-offers the button; ✅ Tayyorman closes the window',async()=>{
    await queue.receive(pool,{update_id:700,message:{message_id:1,from:{id:900,first_name:'U'},chat:{id:900,type:'private'},text:'/start'}});await run();
-   assert.equal((await out('u:700:activate')).length,1);
+   assert.equal((await out('activate:1:u-t:s%')).length,1);
    // Begona (ulanmagan) Telegram tugmani bossa — hech narsa tasdiqlanmaydi.
    await queue.receive(pool,{update_id:701,callback_query:{id:'c0',from:{id:999},data:'a:ok',message:{message_id:5,chat:{id:999,type:'private'}}}});await run();
    assert.equal((await st(teacher)).required,true);
-   await queue.receive(pool,{update_id:702,callback_query:{id:'c1',from:{id:900},data:'a:ok',message:{message_id:5,chat:{id:900,type:'private'}}}});await run();
+   // /menu qayta-qayta tugma yubormaydi.
+   await queue.receive(pool,{update_id:703,message:{message_id:3,from:{id:900,first_name:'U'},chat:{id:900,type:'private'},text:'/menu'}});await run();
+   assert.equal((await out('activate:1:u-t:s%')).length,1);
+   // Eski kampaniya tugmasi yangi kampaniyani tasdiqlamaydi.
+   await queue.receive(pool,{update_id:704,callback_query:{id:'c9',from:{id:900},data:'a:ok:7',message:{message_id:5,chat:{id:900,type:'private'}}}});await run();
+   assert.equal((await st(teacher)).required,true);
+   await queue.receive(pool,{update_id:702,callback_query:{id:'c1',from:{id:900},data:'a:ok:1',message:{message_id:5,chat:{id:900,type:'private'}}}});await run();
    assert.equal((await st(teacher)).required,false);
    assert.equal((await out('activate:1:u-t:done')).length,1);
    assert.equal((await out('u:702:a-edit'))[0].method,'editMessageReplyMarkup');
@@ -70,7 +77,12 @@ test('bot relaunch: mandatory staff activation — synthetic data only',{skip:!u
   });
   await t.test('a broken old link counts as unlinked and is replaced on a new link request',async()=>{
    await pool.query("UPDATE users SET phone='+998905555555' WHERE id='u-t'");await pool.query("UPDATE hr_employees SET phone='+998905555555' WHERE id='h-t'");
-   await act.relaunch(pool,admin);
+   const backdate=()=>pool.query(`UPDATE domwork_bot_settings SET data=jsonb_set(data,'{staffActivation,startedAt}',to_jsonb((NOW()-INTERVAL '11 minutes')::text))`);
+   await backdate();
+   // /stop qilgan xodimga avtomatik yuborilmaydi.
+   await pool.query("UPDATE domwork_bot_links SET paused=true WHERE telegram_id='920'");
+   const r2=await act.relaunch(pool,admin);assert.equal(r2.sent,0);
+   await pool.query("UPDATE domwork_bot_links SET paused=false WHERE telegram_id='920'");
    assert.equal((await st(teacher)).linked,false);assert.equal((await link.status(pool,teacher)).linked,false);
    assert.equal((await out('activate:2:u-t:%')).length,0);
    await link.create(pool,teacher);
@@ -78,12 +90,13 @@ test('bot relaunch: mandatory staff activation — synthetic data only',{skip:!u
   });
   await t.test('resend is self-only, rate limited; admin report and stop',async()=>{
    await assert.rejects(act.resend(pool,teacher),e=>e.status===409); // ulanmagan
-   // Qayta ishga tushirishda sotuvchiga xabar hozirgina ketgan — darhol qayta yuborish cheklanadi.
-   await assert.rejects(act.resend(pool,sales),e=>e.status===429);
-   await pool.query("UPDATE domwork_staff_activation SET sent_at=NOW()-INTERVAL '1 minute'");
    await pool.query("UPDATE domwork_bot_links SET paused=true WHERE telegram_id='920'");
-   await act.resend(pool,sales);
+   await act.resend(pool,sales);await assert.rejects(act.resend(pool,sales),e=>e.status===429);
    assert.equal((await pool.query("SELECT paused FROM domwork_bot_links WHERE telegram_id='920'")).rows[0].paused,false);
+   // Admin Telegrami yo'q xodimni qo'lda ozod qiladi.
+   await assert.rejects(act.exempt(pool,sales,'u-t'),e=>e.status===403);
+   await act.exempt(pool,admin,'u-t');assert.equal((await st(teacher)).required,false);
+   assert.equal((await act.report(pool)).people.find(p=>p.id==='u-t').exempt,true);
    await assert.rejects(act.resend(pool,sales),e=>e.status===429);
    const rep=await act.report(pool);
    assert.equal(rep.required,true);assert.deepEqual(rep.people.map(p=>p.id).sort(),['u-a','u-s','u-t']);

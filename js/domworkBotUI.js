@@ -12,7 +12,7 @@
         const seq=++generation;
         el.innerHTML='<p>Bot boshqaruvi yuklanmoqda…</p>';
         let settings,bindings,observed,status,requests,deliveries,learning,funnel,act;
-        try { [settings,bindings,observed,status,requests,deliveries,learning,funnel]=await Promise.all([
+        try { [settings,bindings,observed,status,requests,deliveries,learning,funnel,act]=await Promise.all([
             api('/settings'),api('/bindings'),api('/observed-chats'),api('/status'),api('/leave-requests'),api('/delivery-status'),apiFetch('/api/domwork/groups'),
             api('/funnel/report').catch(()=>null),api('/staff-activation').catch(()=>null)]); }
         catch(error){if(seq===generation)el.textContent=error.message;return;}
@@ -64,13 +64,13 @@
             ${act?(()=>{const roleName={admin:'Admin',rop:'ROP',sales:'Sotuv',marketing:'Marketing',teacher:'Ustoz',assistant:'Yordamchi'};
                 const done=act.people.filter(p=>p.acknowledged).length, linked=act.people.filter(p=>p.linked).length;
                 return `<details ${act.required?'open':''}><summary>Xodimlarni botga ulash (qayta ishga tushirish) — ${done}/${act.people.length} tayyor</summary>
-                <p class="dg-note">«Qayta ishga tushirish» bosilganda: ulangan xodimlarga botdan yangi xush kelibsiz xabari, yangi menyu va «✅ Tayyorman» tugmasi boradi. CRM va ustoz ilovasida mos xodimlarga (rus tili bo‘limi va adminlar) yopilmaydigan oyna chiqadi: ulanmagan — botni ulaydi, ulangan — «Tayyorman»ni bosadi. Bot ishlamay qolsa, oyna chiqmaydi. Siz (admin) «Keyinroq» bosishingiz mumkin.</p>
+                <p class="dg-note">«Qayta ishga tushirish» bosilganda: ulangan xodimlarga botdan yangi xush kelibsiz xabari, yangi menyu va «✅ Tayyorman» tugmasi boradi. CRM va ustoz ilovasida mos xodimlarga (rus tili bo‘limi va adminlar) yopilmaydigan oyna chiqadi: ulanmagan — botni ulaydi, ulangan — «Tayyorman»ni bosadi. Bot xabar qabul qilmay qolsa (webhook/Redis), oyna o‘zi chiqmay qoladi. Siz (admin) «Keyinroq» bosishingiz mumkin. Telegrami yo‘q yoki ulay olmayotgan xodimni «Tayyor deb belgilash» bilan ozod qiling.</p>
                 <p>Holat: ${act.required?'<b>Majburiy rejim yoqilgan</b>':'o‘chiq'} · Ulangan: ${linked} · Tayyor: ${done} · Jami: ${act.people.length}</p>
                 <button type="button" class="btn-primary" data-act-relaunch ${status.state==='ready'?'':'disabled'}>${act.campaign?'Yana qayta ishga tushirish':'Qayta ishga tushirish'}</button>
                 ${act.required?'<button type="button" class="btn-secondary-sm" data-act-stop>Majburiy oynani o‘chirish</button>':''}
-                <table class="dg-table"><thead><tr><th>Xodim</th><th>Rol</th><th>Telegram</th><th>Tayyor</th></tr></thead><tbody>${act.people
+                <table class="dg-table"><thead><tr><th>Xodim</th><th>Rol</th><th>Telegram</th><th>Tayyor</th><th></th></tr></thead><tbody>${act.people
                     .sort((a,b)=>(a.acknowledged-b.acknowledged)||(a.linked-b.linked)||String(a.name).localeCompare(String(b.name)))
-                    .map(p=>`<tr><td>${esc(p.name)}</td><td>${esc(roleName[p.role]||p.role)}</td><td>${p.linked?'✅ ulangan':'— ulanmagan'}</td><td>${p.acknowledged?'✅':'⏳'}</td></tr>`).join('')}</tbody></table></details>`;})():''}
+                    .map(p=>`<tr><td>${esc(p.name)}</td><td>${esc(roleName[p.role]||p.role)}</td><td>${p.linked?'✅ ulangan':'— ulanmagan'}</td><td>${p.exempt?'✅ admin belgiladi':p.acknowledged?'✅':'⏳'}</td><td>${act.required&&!p.acknowledged?`<button type="button" class="btn-secondary-sm" data-act-exempt="${esc(p.id)}">Tayyor deb belgilash</button>`:''}</td></tr>`).join('')}</tbody></table></details>`;})():''}
             <details><summary>Xabar tarqatish</summary><p>Rasm, video va ovozni botning admin menyusi orqali yuborish mumkin. Bu yerda matnli xabarni tayyorlang.</p>
                 <form data-db-broadcast><label>Auditoriya<select class="form-control" name="segment">${Object.entries(roles).map(([id,label])=>`<option value="${id}">${esc(label)}</option>`).join('')}</select></label>
                     <fieldset><legend>Guruhlar — «Tanlangan guruhlar» uchun</legend>${groups.map(g=>`<label class="dg-checkbox"><input type="checkbox" name="group" value="${esc(g.id)}">${esc(g.name)}</label>`).join('') || '<p>Tekshirilgan guruh yo‘q.</p>'}</fieldset>
@@ -130,6 +130,10 @@
             if(!confirm('Hamma ulangan xodimlarga botdan yangi xabar boradi va CRMda majburiy ulash oynasi yoqiladi. Davom etasizmi?'))return;
             const r=await api('/staff-activation/relaunch',{});notify(`Ishga tushirildi: ${r.sent} ta xodimga xabar yuborildi. Qolganlar CRMga kirganda ulaydi.`);await render(el);
         });
+        el.querySelectorAll('[data-act-exempt]').forEach(b=>{b.onclick=()=>work(async()=>{
+            if(!confirm('Bu xodimga majburiy oyna boshqa chiqmaydi (shu ishga tushirish uchun). Belgilaysizmi?'))return;
+            await api('/staff-activation/exempt',{userId:b.dataset.actExempt});await render(el);
+        });});
         const stopAct=el.querySelector('[data-act-stop]');
         if(stopAct)stopAct.onclick=()=>work(async()=>{
             if(!confirm('Majburiy oynani o‘chirasizmi? Ulanmaganlar endi CRMdan bemalol foydalanadi.'))return;

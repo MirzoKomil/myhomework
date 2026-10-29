@@ -11,8 +11,9 @@ const SCHEMA = `
 CREATE TABLE IF NOT EXISTS domwork_staff_activation (
  user_id TEXT NOT NULL, campaign INTEGER NOT NULL, telegram_id TEXT,
  sent_at TIMESTAMPTZ, acknowledged_at TIMESTAMPTZ, PRIMARY KEY(user_id,campaign)
-);`;
-const CALLBACK = 'a:ok';
+);
+ALTER TABLE domwork_staff_activation ADD COLUMN IF NOT EXISTS exempted_by TEXT;`;
+const CALLBACK = /^a:ok(?::(\d{1,9}))?$/; // a:ok:<kampaniya>
 async function init(db) { await db.query(SCHEMA); }
 const ROLE_LABEL = { admin: 'administrator', rop: 'ROP', sales: 'sotuv menejeri', marketing: 'marketing', teacher: 'ustoz', assistant: 'yordamchi ustoz' };
 
@@ -35,6 +36,9 @@ async function acknowledged(db, userId, c) {
     if (!c.startedAt) return false;
     return (await db.query('SELECT 1 FROM domwork_staff_telegram_proofs WHERE user_id=$1 AND verified_at>=$2', [userId, c.startedAt])).rows.length > 0;
 }
+async function exempted(db, userId, c) {
+    return (await db.query('SELECT 1 FROM domwork_staff_activation WHERE user_id=$1 AND campaign=$2 AND exempted_by IS NOT NULL', [userId, c.id])).rows.length > 0;
+}
 function welcomeText(identity, c) {
     const items = policy.menu(identity).map(([, label]) => '• ' + label).join('\n');
     return `Assalomu alaykum, ${String(identity.name || '').slice(0, 80)}! 👋\n\n`
@@ -43,7 +47,7 @@ function welcomeText(identity, c) {
         + (c.notify ? '🔔 CRMdagi muhim bildirishnomalar ham endi shu yerga keladi — CRMni ochmasdan ko‘rasiz.\n\n' : '')
         + 'Menyu yangilandi — istalgan tugmani bosib sinab ko‘ring.';
 }
-const okMarkup = () => ({ inline_keyboard: [[{ text: '✅ Tayyorman', callback_data: CALLBACK }]] });
+const okMarkup = c => ({ inline_keyboard: [[{ text: '✅ Tayyorman', callback_data: 'a:ok:' + c.id }]] });
 const OK_TEXT = 'Bot ishlayotganini tasdiqlash uchun pastdagi tugmani bosing 👇\nShundan keyin CRMdagi oyna yopiladi.';
 async function send(db, userId, link, c, suffix) {
     const store = require('./store'), { keyboard } = require('./handlers');
@@ -51,7 +55,7 @@ async function send(db, userId, link, c, suffix) {
     await store.enqueue(db, { ...base, key: `activate:${c.id}:${userId}:${suffix}:w`,
         payload: { chat_id: link.telegramId, text: welcomeText(link.identity, c), reply_markup: keyboard(link.identity) } });
     await store.enqueue(db, { ...base, key: `activate:${c.id}:${userId}:${suffix}:ok`,
-        payload: { chat_id: link.telegramId, text: OK_TEXT, reply_markup: okMarkup() } });
+        payload: { chat_id: link.telegramId, text: OK_TEXT, reply_markup: okMarkup(c) } });
     await db.query(`INSERT INTO domwork_staff_activation(user_id,campaign,telegram_id,sent_at) VALUES($1,$2,$3,NOW())
         ON CONFLICT(user_id,campaign) DO UPDATE SET telegram_id=EXCLUDED.telegram_id,sent_at=NOW()`, [userId, c.id, link.telegramId]);
 }
@@ -60,12 +64,12 @@ async function send(db, userId, link, c, suffix) {
 async function status(pool, actor, botReady) {
     return queue.transaction(pool, async db => {
         const c = await campaign(db);
-        if (!c.required || !botReady) return { required: false };
+        if (!c.required || !(typeof botReady === 'function' ? await botReady() : botReady)) return { required: false };
         let me;
         try { me = await require('./staffLink').owner(db, actor); }
         catch (error) { if (error.status === 403 || error.status === 409) return { required: false }; throw error; }
         const link = await liveLink(db, me.id);
-        const done = !!link && await acknowledged(db, me.id, c);
+        const done = (!!link && await acknowledged(db, me.id, c)) || await exempted(db, me.id, c);
         return { required: !done, linked: !!link, acknowledged: done, admin: me.role === 'admin', name: me.name || '' };
     });
 }
@@ -92,6 +96,9 @@ async function relaunch(pool, actor) {
         await store.currentAdmin(db, actor);
         const before = (await db.query('SELECT data FROM domwork_bot_settings WHERE singleton=1 FOR UPDATE')).rows[0].data || {};
         const prev = before.staffActivation || {};
+        // Ikki admin birdan bossa yoki qayta-qayta bosilsa xodimlarga xabar yog'ilib ketmasin.
+        if (prev.startedAt && Date.now() - new Date(prev.startedAt).getTime() < 10 * 60000)
+            throw policy.error(429, 'Hozirgina ishga tushirilgan. 10 daqiqadan keyin qayta urinib ko‘ring');
         const next = { required: true, campaign: (Number.isInteger(prev.campaign) ? prev.campaign : 0) + 1, startedAt: new Date().toISOString() };
         await db.query("UPDATE domwork_bot_settings SET data=data||jsonb_build_object('staffActivation',$1::jsonb),revision=revision+1 WHERE singleton=1", [JSON.stringify(next)]);
         const c = await campaign(db);
@@ -99,11 +106,26 @@ async function relaunch(pool, actor) {
         let sent = 0;
         for (const { account_id: userId } of users) {
             const link = await liveLink(db, userId);
-            if (!link) continue;
+            // /stop bosganlarga avtomatik yubormaymiz — ular CRMdagi oynadan "Qayta yuborish"ni bosadi (bu pauzani olib tashlaydi).
+            if (!link || link.identity.paused) continue;
             await send(db, userId, link, c, 'w'); sent++;
         }
         await store.audit(db, actor.id, 'staff-activation-relaunch', 'domwork', { campaign: next.campaign, sent });
         return { ok: true, campaign: next.campaign, sent };
+    });
+}
+// Admin: xodimni qo'lda "tayyor" deb belgilaydi (Telegrami yo'q, boshqa akkauntga band va h.k.) — oyna unga chiqmaydi.
+async function exempt(pool, actor, userId) {
+    return queue.transaction(pool, async db => {
+        const store = require('./store');
+        await store.currentAdmin(db, actor);
+        if (typeof userId !== 'string' || !userId || userId.length > 200) throw policy.error(400, 'Xodimni tanlang');
+        const c = await campaign(db);
+        if (!c.required) throw policy.error(409, 'Majburiy rejim yoqilmagan');
+        await db.query(`INSERT INTO domwork_staff_activation(user_id,campaign,acknowledged_at,exempted_by) VALUES($1,$2,NOW(),$3)
+            ON CONFLICT(user_id,campaign) DO UPDATE SET acknowledged_at=COALESCE(domwork_staff_activation.acknowledged_at,NOW()),exempted_by=EXCLUDED.exempted_by`, [userId, c.id, actor.id]);
+        await store.audit(db, actor.id, 'staff-activation-exempt', userId, { campaign: c.id });
+        return { ok: true };
     });
 }
 async function stop(pool, actor) {
@@ -129,7 +151,9 @@ async function report(pool) {
             if (!me) continue;
             const link = await liveLink(db, me.id);
             const done = !!link && await acknowledged(db, me.id, c);
-            people.push({ id: me.id, name: me.name, role: me.role, linked: !!link, acknowledged: done });
+            const ex = (await db.query('SELECT exempted_by FROM domwork_staff_activation WHERE user_id=$1 AND campaign=$2', [me.id, c.id])).rows[0]?.exempted_by;
+            const ack = done || !!ex;
+            people.push({ id: me.id, name: me.name, role: me.role, linked: !!link, acknowledged: ack, exempt: !!ex });
         }
         return { required: c.required, campaign: c.id, startedAt: c.startedAt, people };
     });
@@ -138,13 +162,16 @@ async function report(pool) {
 async function callback(db, update) {
     const store = require('./store');
     const query = update.callback_query, sender = policy.telegramId(query?.from?.id);
-    if (!sender || query.data !== CALLBACK) return;
+    const m = CALLBACK.exec(query?.data || '');
+    if (!sender || !m) return;
     const answer = text => store.enqueue(db, { key: `u:${update.update_id}:callback`, targetId: sender, method: 'answerCallbackQuery',
         payload: { callback_query_id: query.id, text, show_alert: false } });
     const chat = query.message?.chat;
     const identity = await store.identity(db, sender);
     if (!identity || identity.kind !== 'user' || chat?.type !== 'private' || String(chat.id) !== sender) return answer('Akkaunt topilmadi. /start bosing');
     const c = await campaign(db);
+    // Eski kampaniya tugmasi yoki rejim o'chirilgan — jim javob, hech narsa yozilmaydi.
+    if (!c.required || (m[1] && Number(m[1]) !== c.id)) return answer('Bu tugma eskirgan. Rahmat!');
     await db.query(`INSERT INTO domwork_staff_activation(user_id,campaign,telegram_id,acknowledged_at) VALUES($1,$2,$3,NOW())
         ON CONFLICT(user_id,campaign) DO UPDATE SET acknowledged_at=COALESCE(domwork_staff_activation.acknowledged_at,NOW()),telegram_id=EXCLUDED.telegram_id`,
         [identity.id, c.id, sender]);
@@ -160,7 +187,7 @@ async function onStart(db, update, identity) {
     if (identity?.kind !== 'user') return;
     const c = await campaign(db);
     if (!c.required || await acknowledged(db, identity.id, c)) return;
-    await require('./store').enqueue(db, { key: `u:${update.update_id}:activate`, targetId: identity.telegramId || String(update.message.chat.id),
-        role: identity.role, account: identity, payload: { chat_id: String(update.message.chat.id), text: OK_TEXT, reply_markup: okMarkup() } });
+    await require('./store').enqueue(db, { key: `activate:${c.id}:${identity.id}:s${Math.floor(Date.now() / 600000)}`, targetId: identity.telegramId || String(update.message.chat.id),
+        role: identity.role, account: identity, payload: { chat_id: String(update.message.chat.id), text: OK_TEXT, reply_markup: okMarkup(c) } });
 }
-module.exports = { SCHEMA, CALLBACK, init, status, resend, relaunch, stop, report, callback, onStart, welcomeText };
+module.exports = { SCHEMA, CALLBACK, init, status, resend, relaunch, exempt, stop, report, callback, onStart, welcomeText };

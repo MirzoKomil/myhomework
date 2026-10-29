@@ -14,6 +14,7 @@ function createRuntime({ pool, crm, env = process.env, redisFactory, telegramFac
     try { config = configuration(env); }
     catch { config = configuration({ ...env, DOMWORK_BOT_ENABLED: 'false' }); invalid = true; }
     let redis, telegram, botId, timer, discoveryTimer, pushTimer, busy = false, discoveryBusy = false, pushBusy = false, stopped = false, lastSchedule=0;
+    let health = null;
     let state = invalid ? 'failed' : config.enabled ? 'starting' : 'disabled';
     const handler = createHandler({ crm });
     async function call(method, payload) {
@@ -212,6 +213,22 @@ function createRuntime({ pool, crm, env = process.env, redisFactory, telegramFac
         },
         async stop() { stopped = true; clearInterval(timer); clearInterval(discoveryTimer); clearInterval(pushTimer); await redis?.close(); state = 'stopped'; },
         status() { return { enabled: config.enabled, state, redisReady: !!redis?.ready, webhookPath: '/api/domwork/bot/webhook' }; },
+        // Bot haqiqatan xabar qabul qilib, qayta ishlayaptimi (majburiy oyna faqat shunda chiqadi).
+        // Webhook bizning manzilda, so'nggi 10 daqiqada xatosiz, Telegramda navbat tiqilmagan, bizda inbox tiqilmagan.
+        // Har qanday xato → false (CRM bloklanmaydi). Natija 60 soniya keshlanadi.
+        async healthy() {
+            if (state !== 'ready' || !redis?.ready) return false;
+            if (health && Date.now() - health.at < 60000) return health.ok;
+            let ok = false;
+            try {
+                const info = await Promise.race([call('getWebhookInfo', {}), new Promise((_, reject) => setTimeout(() => reject(Error('timeout')), 4000))]);
+                const recentError = info.last_error_date && Date.now() / 1000 - info.last_error_date < 600;
+                const stuck = (await pool.query("SELECT 1 FROM domwork_bot_updates WHERE state IN ('pending','working') AND created_at<NOW()-INTERVAL '5 minutes' LIMIT 1")).rows.length;
+                ok = !!config.webhookUrl && info.url === config.webhookUrl && !recentError && (info.pending_update_count || 0) < 100 && !stuck;
+            } catch { ok = false; }
+            health = { ok, at: Date.now() };
+            return ok;
+        },
         async receive(update, secret) {
             if (!require('./policy').secretMatches(config.secret, secret)) throw Object.assign(Error('Webhook secret noto‘g‘ri'), { status: 401 });
             if (state !== 'ready' || !redis?.ready) throw Object.assign(Error('Bot hali tayyor emas'), { status: 503 });

@@ -9,7 +9,9 @@
     const BASE = '/api/domwork/staff-telegram';
     const LATER = 'dw_activation_later';
     const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-    const S = { st: null, link: null, req: null, err: '', busy: false, poll: null, root: null, seq: 0 };
+    const S = { st: null, link: null, req: null, err: '', busy: false, poll: null, root: null, seq: 0, tok: null, sig: '', sent: 0 };
+    const tokenNow = () => { try { return localStorage.getItem('mh_token') || ''; } catch { return ''; } };
+    const laterKey = () => tokenNow().slice(-24);
     async function call(path, body) {
         const token = localStorage.getItem('mh_token');
         if (!token) throw Object.assign(Error('no-token'), { silent: true });
@@ -47,7 +49,7 @@
     }
     const PLANE = '<svg width="28" height="28" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M21.9 4.3 18.7 19.4c-.2 1-.9 1.3-1.7.8l-4.8-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.3-4.9 8.9-8c.4-.3-.1-.5-.6-.2L6.5 13.2 1.8 11.7c-1-.3-1-1 .2-1.5L20.6 3c.9-.3 1.6.2 1.3 1.3z"/></svg>';
     function close() {
-        clearInterval(S.poll); S.poll = null; S.link = null; S.req = null; S.err = '';
+        clearInterval(S.poll); S.poll = null; S.link = null; S.req = null; S.err = ''; S.sig = ''; S.sent = 0;
         if (S.root) { S.root.remove(); S.root = null; document.documentElement.style.overflow = ''; }
     }
     function startPoll() {
@@ -56,6 +58,10 @@
     }
     function draw() {
         const st = S.st; if (!st?.required) return close();
+        // Faqat holat o'zgarganda qayta chizamiz (bosish/fokus yo'qolmasin).
+        const sig = JSON.stringify([st, S.link?.url, S.req?.state, S.req?.expired, S.req?.telegram, S.err, S.sent > Date.now()]);
+        if (S.root && sig === S.sig) return;
+        S.sig = sig;
         css();
         if (!S.root) {
             S.root = document.createElement('div'); S.root.className = 'dwact'; S.root.setAttribute('role', 'dialog'); S.root.setAttribute('aria-modal', 'true');
@@ -69,7 +75,7 @@
 <p>Domwork Yordamchisi to‘liq ishga tushdi. Bot sizga Telegramda xabar va yangi menyu yubordi.</p>
 <ol><li>Telegramda <b>@Domworkuz_bot</b>ni oching</li><li>Xabar ostidagi <b>✅ Tayyorman</b> tugmasini bosing</li></ol>
 <a class="dwact-btn dwact-pri" href="https://t.me/Domworkuz_bot" target="_blank" rel="noopener">${PLANE.replace(/28/g, '20')} Botni ochish</a>
-<button type="button" class="dwact-btn dwact-sec" data-act="resend">Xabar kelmadimi? Qayta yuborish</button>
+<button type="button" class="dwact-btn dwact-sec" data-act="resend" ${S.sent > Date.now() ? 'disabled' : ''}>${S.sent > Date.now() ? 'Yuborildi — Telegramni tekshiring' : 'Xabar kelmadimi? Qayta yuborish'}</button>
 <div class="dwact-wait"><span class="dwact-dot"></span>“Tayyorman” bosilishi kutilmoqda — oyna o‘zi yopiladi</div>`;
         } else {
             const req = S.req, claimed = req && !req.expired && req.state === 'claimed' && req.telegram;
@@ -95,31 +101,40 @@ ${st.admin ? '<button type="button" class="dwact-btn dwact-link" data-act="later
         if (S.busy) return;
         S.busy = true; S.err = ''; if (btn) btn.disabled = true;
         try {
-            if (name === 'later') { try { sessionStorage.setItem(LATER, '1'); } catch { } close(); return; }
+            if (name === 'later') { try { sessionStorage.setItem(LATER, laterKey()); } catch { } close(); return; }
             if (name === 'new') { S.link = await call('', {}); S.req = S.link.request; }
             if (name === 'confirm') { await call('/confirm', { requestId: S.req.id, telegramId: S.req.telegram.id }); S.link = null; S.req = null; }
-            if (name === 'resend') { await call('/activation/resend', {}); S.err = ''; if (btn) btn.textContent = 'Yuborildi — Telegramni tekshiring'; }
-        } catch (e) { S.err = e.message; if (e.status === 409 && name === 'new') S.link = null; }
+            if (name === 'resend') { await call('/activation/resend', {}); S.sent = Date.now() + 30000; }
+        } catch (e) {
+            if (e.status === 401 || e.silent) { S.busy = false; return close(); }
+            S.err = e.message + (e.status === 409 && name !== 'resend' ? ' Administratorga murojaat qiling — u sizni «Tayyor» deb belgilay oladi.' : '');
+            if (e.status === 409 && name === 'new') S.link = null;
+        }
         finally { S.busy = false; }
-        await refresh(name === 'resend');
+        await refresh();
+        if (S.root && btn?.isConnected) btn.disabled = false;
     }
-    async function refresh(keepButtons) {
+    async function refresh() {
+        const tok = tokenNow();
+        // Boshqa akkauntga kirildi / chiqildi — eski havola va holat tashlanadi.
+        if (tok !== S.tok) { S.tok = tok; close(); S.st = null; }
+        if (!tok) return close();
         const seq = ++S.seq;
         let st;
-        try { st = await call('/activation'); } catch { return; } // tarmoq xatosi — joriy holat qoladi, CRMni bloklamaymiz
-        if (seq !== S.seq) return;
-        try { if (st.admin && sessionStorage.getItem(LATER)) st = { required: false }; } catch { }
+        try { st = await call('/activation'); }
+        catch (e) { if (seq === S.seq && (e.status === 401 || e.silent)) close(); return; } // boshqa xato — CRMni bloklamaymiz, joriy holat qoladi
+        if (seq !== S.seq || tokenNow() !== tok) return;
+        try { if (st.admin && sessionStorage.getItem(LATER) === laterKey()) st = { required: false }; } catch { }
         S.st = st;
         if (st.required && !st.linked && S.link) {
             try { const link = await call(''); if (seq !== S.seq) return; S.req = link.request; } catch { }
         }
-        if (keepButtons && S.root && st.required && st.linked) return; // "Yuborildi" yozuvi saqlanib qolsin
         draw();
     }
     function boot() {
-        if (!localStorage.getItem('mh_token')) return;
         refresh();
-        // Admin kun davomida "Qayta ishga tushirish"ni bossa ham ochiq oynalarda chiqadi.
+        // Admin kun davomida "Qayta ishga tushirish"ni bossa ham ochiq oynalarda chiqadi; ustoz ilovasida sahifa yangilanmasdan kirish ham kuzatiladi.
+        setInterval(() => { if (document.hidden || S.root) return; if (tokenNow() !== S.tok) refresh(); }, 5000);
         setInterval(() => { if (!document.hidden && !S.root) refresh(); }, 5 * 60000);
         document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
     }

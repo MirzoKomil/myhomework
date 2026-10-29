@@ -71,6 +71,7 @@ async function create(pool, actor) {
             if (live?.kind === 'user' && live.id === me.id) throw policy.error(409, 'Telegram allaqachon ulangan. Almashtirish uchun avval uzing');
             await db.query("DELETE FROM domwork_bot_links WHERE account_kind='user' AND account_id=$1", [me.id]);
             await db.query('DELETE FROM domwork_staff_telegram_proofs WHERE user_id=$1', [me.id]);
+            await db.query('DELETE FROM domwork_bot_sessions WHERE telegram_id=$1', [before.telegram_id]);
             await require('./store').audit(db, me.id, 'staff-telegram-stale-link-removed', me.id, { telegramId: before.telegram_id });
         }
         const recent = (await db.query(`SELECT COUNT(*)::int AS total,COUNT(*) FILTER(WHERE created_at>NOW()-INTERVAL '10 seconds')::int AS fast
