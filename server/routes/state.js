@@ -1018,6 +1018,8 @@ router.patch('/', authRequired, crmStateIdentity, crmStateMutationRequired, asyn
             const langs = await ropScope.ropLangsFor(pool, req.user);
             const needsExisting = langs && ['students', 'teachers', 'mainAttendance', 'assistantAttendance', 'removedStudentIds'].some(k => partial[k] !== undefined);
             toSave = ropScope.guardRopPatch(partial, langs, needsExisting ? await getFullState() : {});
+            // Faqat boshqa til ustozlari kelgan bo'lsa — saqlanadigan narsa qolmaydi (xato emas).
+            if (!Object.keys(toSave).length) return res.json({ ok: true, state: await getStateForUser(req.user) });
         }
         await patchState(toSave, req.user);
         res.json({ ok: true, state: await getStateForUser(req.user) });

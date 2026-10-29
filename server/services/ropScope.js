@@ -101,6 +101,20 @@ function guardRopPatch(partial, langs, existing = {}) {
     };
     const rm = out.removedIds && typeof out.removedIds === 'object' ? out.removedIds : {};
     checkList('students', "O'quvchilar", [...(Array.isArray(out.removedStudentIds) ? out.removedStudentIds : []), ...(Array.isArray(rm.students) ? rm.students : [])]);
+    // Ustozlar: ROP brauzeri yuklanishda HR'dan fan yo'nalishini avtomatik tuzatadi (backfillAllTeacherSubjectsFromHr)
+    // va o'z tilida ko'rmagan ustozni "yangi" deb yuborishi mumkin. Boshqa til ustozlari xatosiz (jim) chiqarib
+    // tashlanadi — ular bazadagidek qoladi, ROP sahifasida esa "Saqlash xatoligi" chiqmaydi.
+    if (Array.isArray(out.teachers)) {
+        const before = new Map((existing.teachers || []).map(x => [String(x.id), x]));
+        const own = t => { const old = before.get(String(t?.id)); return (!old || langs.includes(langOfStudent(old))) && langs.includes(langOfStudent(t)); };
+        const skipped = out.teachers.filter(t => !own(t)).map(t => t?.id);
+        if (skipped.length) {
+            const k = 'skip:' + skipped.join(',');
+            if (!warned.has(k)) { warned.add(k); console.warn(`[ropScope] ROP ustozlar yozuvidan boshqa til yo'nalishidagilar o'tkazib yuborildi: ${skipped.join(', ')}`); }
+            out.teachers = out.teachers.filter(own);
+            if (!out.teachers.length) delete out.teachers;
+        }
+    }
     checkList('teachers', 'Ustozlar', Array.isArray(rm.teachers) ? rm.teachers : []);
     // Davomat serverda "hammasini o'chirib qayta yozish" bilan saqlanadi: ROP faqat
     // o'z tilidagi o'quvchilar qatorini yuboradi, qolganlari bazadagidek qoladi.

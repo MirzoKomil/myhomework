@@ -194,7 +194,10 @@ test('B2: ROP boshqa til o\'quvchisi/ustozini yoza va o\'chira olmaydi', () => {
     assert.throws(() => rop.guardRopPatch({ students: [{ id: 'r1', subject: 'english' }] }, ['english'], ex), e => e.status === 403, 'tilni almashtirib olib bo\'lmaydi');
     assert.throws(() => rop.guardRopPatch({ students: [{ id: 'new', subject: 'russian' }] }, ['english'], ex), e => e.status === 403);
     assert.throws(() => rop.guardRopPatch({ students: [], removedStudentIds: ['r1'] }, ['english'], ex), e => e.status === 403);
-    assert.throws(() => rop.guardRopPatch({ teachers: [{ id: 't-ru', subject: 'russian' }] }, ['english'], ex), e => e.status === 403);
+    // Ustozlar — boshqa til yozuvi jim o'tkazib yuboriladi (brauzerning HR backfill'i), o'z tili saqlanadi.
+    assert.deepEqual(rop.guardRopPatch({ teachers: [{ id: 't-ru', subject: 'russian' }, { id: 't-en', subject: 'english', name: 'X' }] }, ['english'], ex), { teachers: [{ id: 't-en', subject: 'english', name: 'X' }] });
+    assert.deepEqual(rop.guardRopPatch({ teachers: [{ id: 't-ru', subject: 'russian' }] }, ['english'], ex), {});
+    assert.deepEqual(rop.guardRopPatch({ teachers: [{ id: 't-ru', subject: 'english' }] }, ['english'], ex), {}, 'boshqa til ustozining tilini almashtirib bo\'lmaydi');
     assert.ok(rop.guardRopPatch({ students: [{ id: 'r1', subject: 'russian' }] }, null, ex), 'til belgilanmagan — eski xatti-harakat');
 });
 
