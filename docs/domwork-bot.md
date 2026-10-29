@@ -345,3 +345,14 @@ Verify: `node scripts/run-payroll-postgres.cjs scripts/domwork-funnel-drip-postg
 - Broadcast audience and time are chosen with buttons. Lesson reminder at 15 minutes (matches app/FAQ).
 
 Verify: `node scripts/run-payroll-postgres.cjs scripts/staff-notify-telegram-postgres.test.cjs`.
+
+## Qayta ishga tushirish — xodimlarni majburiy faollashtirish (29-okt)
+
+- Bot boshqaruvi → «Xodimlarni botga ulash» → **Qayta ishga tushirish** (faqat admin, bot `ready` bo'lishi shart).
+- Ulangan har bir xodimga: rolga mos xush kelibsiz xabari + yangi menyu + «✅ Tayyorman» (`a:ok`) tugmasi.
+- CRM (`index.html`) va Domwork Teacher (`teacher/index.html`) — `js/staffActivation.js` oynasi:
+  ulanmagan → `ul_` havola/QR → Start → tasdiqlash; ulangan → botda «Tayyorman». Shundan keyingina yopiladi.
+- Oyna chiqmaydi: rus tili bo'limidan tashqari xodimlar, o'quvchilar, bot tayyor emas, server/tarmoq xatosi. Admin — «Keyinroq» (sessiya davomida).
+- Buzilgan eski ulanish (bot endi tanimaydi) ulanmagan hisoblanadi; yangi havola so'ralganda almashtiriladi (auditda).
+- Holat: `domwork_staff_activation(user_id,campaign,…)`, sozlama `staffActivation{required,campaign,startedAt}`.
+- API: `GET/POST /api/domwork/staff-telegram/activation[/resend]`, admin: `GET /api/domwork/bot/staff-activation`, `POST …/relaunch`, `POST …/stop`.

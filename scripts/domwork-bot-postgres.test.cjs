@@ -84,6 +84,7 @@ test('Domwork bot on disposable PostgreSQL (no real Telegram or Redis)', {skip: 
             runtime=createRuntime({pool,crm,autoTick:false,redisFactory:fakeRedis,telegramFactory:()=>({async callApi(method,payload){calls.push({method,payload});return method==='getMe'?{id:999,username:'Domworkuz_bot',is_bot:true}:true;}}),
                 env:{DOMWORK_BOT_ENABLED:'true',DOMWORK_BOT_TOKEN:'123456789:'+'a'.repeat(35),DOMWORK_BOT_WEBHOOK_SECRET:'x'.repeat(40),REDIS_URL:'redis://127.0.0.1:6379'}});
             await runtime.start();assert.equal(runtime.status().state,'ready');
+            assert.equal(await runtime.healthy(),false); // webhook o'rnatilmagan — majburiy oyna chiqmaydi
             await runtime.deliverOne();assert.equal(calls.filter(c=>c.method==='sendMessage').length,1);
             const sent=(await pool.query("SELECT state,payload FROM domwork_bot_outbox WHERE unique_key='u:1:r:0'")).rows[0];assert.equal(sent.state,'sent');assert.deepEqual(sent.payload,{});
             await pool.query("UPDATE users SET role='employee' WHERE id='t'");await runtime.deliverOne();

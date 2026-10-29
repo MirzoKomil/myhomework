@@ -49,3 +49,6 @@
  .dg-card,.dg-form-wrap { padding:16px; }
  .dg-actions button { flex:1; }
 }
+.domwork-groups .dg-table{width:100%;border-collapse:collapse;margin-top:12px;font-size:14px}
+.domwork-groups .dg-table th,.domwork-groups .dg-table td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border-color,#e5e7eb)}
+.domwork-groups .dg-table th{font-weight:600;color:var(--text-muted,#64748b);font-size:12px;text-transform:uppercase;letter-spacing:.03em}
