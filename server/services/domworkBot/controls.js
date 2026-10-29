@@ -26,7 +26,7 @@ async function init(db) { await db.query(SCHEMA); }
 const fail = policy.error;
 function settingsInput(body, previous) {
     const out = { ...previous };
-    for (const key of ['teamVibesEnabled','staffNotifyEnabled','promotionsEnabled','trialRemovalEnabled','groupNotificationsEnabled','remindersEnabled','reportsEnabled','eventsEnabled','milestonesEnabled','dailyAwardsEnabled','weeklyAwardsEnabled','monthlyAwardsEnabled','employeeWelcomeEnabled','releaseNotesEnabled']) {
+    for (const key of ['liveFeedEnabled','teamVibesEnabled','staffNotifyEnabled','promotionsEnabled','trialRemovalEnabled','groupNotificationsEnabled','remindersEnabled','reportsEnabled','eventsEnabled','milestonesEnabled','dailyAwardsEnabled','weeklyAwardsEnabled','monthlyAwardsEnabled','employeeWelcomeEnabled','releaseNotesEnabled']) {
         if (Object.hasOwn(body,key)) {
             if (typeof body[key] !== 'boolean') throw fail(400,'Sozlama boolean bo‘lsin');
             out[key] = body[key];

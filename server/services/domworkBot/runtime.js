@@ -166,7 +166,12 @@ function createRuntime({ pool, crm, env = process.env, redisFactory, telegramFac
                 db.domworkTelegram=(method,payload)=>['getChatMember'].includes(method)?telegram.callApi(method,payload,{signal:AbortSignal.timeout(1500)}):Promise.reject(Error('method'));
                 return handler(db,update);})) break;
             for (let n = 0; n < 5; n++) if (!await queue.transaction(pool,events.processOne)) break;
-            if(Date.now()-lastSchedule>30000) { await queue.transaction(pool,db=>scheduler.run(db)); lastSchedule=Date.now(); }
+            // 30-okt: rejalashtiruvchi xatosi xabar yetkazishni to'xtatmasin (oldin butun tsikl to'xtab qolardi).
+            if(Date.now()-lastSchedule>30000) {
+                lastSchedule=Date.now();
+                try { await queue.transaction(pool,db=>scheduler.run(db)); }
+                catch(error) { console.error('[domwork-bot] scheduler failed:', error.code || error.name, error.message); }
+            }
             for (let n = 0; n < 5; n++) if (!await deliverOne()) break;
         } catch (error) { console.error('[domwork-bot] worker failed:', error.code || error.name); }
         finally { busy = false; }
