@@ -89,7 +89,7 @@
         root.querySelectorAll('[data-lang]').forEach(b => b.onclick = () => { if (state.lang === b.dataset.lang) return; state.lang = b.dataset.lang; state.teacherId = null; render(root); });
         const body = root.querySelector('[data-body]');
         const fn = { day: dayView, week: weekView, requests: requestsView, makeups: makeupsView, free: freeView, mine: mineView, trials: teacherTrialsView }[state.view];
-        try { await fn(body, () => render(root)); } catch (e) { body.innerHTML = `<div class="sc-err">${U().esc(e.message)}</div>`; }
+        try { await fn(body, () => render(root)); } catch (e) { body.innerHTML = window.LoadErr.html({ title: 'Ma\'lumotni yuklab bo\'lmadi', err: e, note: '' }); window.LoadErr.bind(body, () => render(root)); }
     }
     function dateNav(label) {
         return `<div class="ss-nav"><button type="button" class="sc-btn sc-btn--sm" data-d="-1" aria-label="Oldingi">‹</button><b>${label}</b><button type="button" class="sc-btn sc-btn--sm" data-d="1" aria-label="Keyingi">›</button><button type="button" class="sc-btn sc-btn--sm" data-d="0">Bugun</button></div>`;

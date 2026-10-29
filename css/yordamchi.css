@@ -163,3 +163,26 @@ html.rd[data-theme="dark"] .yd-pc.lo { color: #FDA29B; } html.rd[data-theme="dar
 @media (max-width: 600px) {
     html.rd .yd-hh ~ .kbx-top .kbx-tiles b { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.2; overflow-wrap: anywhere; }
 }
+/* Bosh: oy hisobi yuklanmaganda (LoadErr) */
+.yd-plan-err { display: flex; flex-direction: column; gap: 14px; margin-bottom: 20px; }
+.yd-lerr-note { margin: 0; padding: 12px 20px 0; font-size: 13px; color: var(--kb-bad-fg, #B42318); }
+/* OyYopildi · "O'quvchilar bo'yicha yakun" — telefonda (≤640px) har qator ixcham blok: ism; Hisoblangan · Summa; Izoh. Ustunlar kesilmaydi. */
+@media (max-width: 640px) {
+  .yd-closed .yd-tw { overflow: visible; }
+  .yd-closed .sc-table, .yd-closed .sc-table tbody, .yd-closed .sc-table tfoot { display: block; width: 100%; }
+  .yd-closed .sc-table thead { display: none; }
+  .yd-closed .sc-table tr { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; padding: 12px 16px; border-top: 1px solid var(--border, #EEF1F6); }
+  .yd-closed .sc-table td { display: block; padding: 0; border: 0; text-align: left; min-width: 0; }
+  .yd-closed .sc-table td:first-child, .yd-closed .sc-table td:nth-child(4) { grid-column: 1 / -1; }
+  .yd-closed .sc-table td:nth-child(2)::before { content: "Hisoblangan "; color: var(--text-muted, #4B5563); font-size: 12px; font-weight: 500; }
+  .yd-closed .sc-table td:nth-child(3) { text-align: right; }
+  .yd-closed .sc-table td:nth-child(3)::before { content: "Summa "; color: var(--text-muted, #4B5563); font-size: 12px; font-weight: 500; }
+  .yd-closed .sc-table td:nth-child(3)::after { content: " so'm"; color: var(--text-muted, #4B5563); font-size: 12px; }
+  .yd-closed .sc-table td:nth-child(4):empty, .yd-closed .sc-table td.yd-iz0 { display: none; }
+  .yd-closed .sc-table td[colspan] { grid-column: 1 / -1; }
+  .yd-closed .yd-who b { overflow-wrap: anywhere; }
+}
+/* Kech so'rov oynasi: maydon yonidagi xato matni */
+.sc-fd .yd-ferr, .yd-ferr { display: block; margin-top: 4px; color: var(--kb-bad-fg, #B42318); font-size: 12px; font-weight: 600; line-height: 1.4; }
+.sc-fd .yd-ferr[hidden], .yd-ferr[hidden] { display: none; }
+.sc-fd [aria-invalid="true"] { border-color: var(--kb-bad-fg, #B42318) !important; }

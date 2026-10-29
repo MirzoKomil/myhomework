@@ -69,7 +69,7 @@
         const alive = () => container.isConnected && home.isConnected;
         const td = today();
         const mkP = api('/makeups').catch(() => ({ makeups: [] }));
-        const payP = window.UstozHome?.myPay ? window.UstozHome.myPay().catch(() => null) : Promise.resolve(null);
+        const payP = window.UstozHome?.myPay ? window.LoadErr.settle(window.UstozHome.myPay()) : Promise.resolve({ ok: true, value: null });
         // Qoplanmagan darslar (≈ ustoz maoshidan) va "e'tibor kerak" — js/ustozHome.js, parallel yuklanadi.
         const extraP = window.UstozHome?.todoItems ? window.UstozHome.todoItems(user, mkP).catch(() => []) : Promise.resolve([]);
         // 29-okt: asosiy ustoz yordamchi bo'la olmaydi. O'tgan yordamchi aloqalari maoshga kiradi — /api/payroll/me (maosh kartasi).
@@ -91,22 +91,36 @@
                 const sub = row.querySelector('.mot-prize-note'); if (sub) sub.textContent = sub.textContent.replace(' · dars tugagan', '');
             }
         }
+        else {
+            // "Kelmadi" ro'yxati yuklanmadi — tugagan darsni "Belgilanmagan" deb ko'rsatmaymiz (kelmagan bo'lishi mumkin); xabar "Bajarish kerak"da.
+            for (const row of home.querySelectorAll('[data-thx-today] > li[data-thx-duty="main"][data-thx-st="warn"]')) {
+                row.dataset.thxSt = 'unk'; row.className = row.className.replace(/tch-row--\w+/, 'tch-row--wait');
+                const acts = row.querySelector('.tch-row-actions');
+                if (acts) acts.innerHTML = '<span class="uhb-pill uhb-pill--mute" title="Davomat ma\'lumoti yuklanmadi">—</span>';
+            }
+        }
         globalThis.__schoolMakeups = makeups.makeups || [];
         const reviewing = (makeups.makeups || []).filter(m => m.status === 'review').length;
 
         // Maosh — server payroll (/api/payroll/me): Davomat va "Mening maoshim" bilan bitta manba (brauzerda hisoblanmaydi).
         const sal = home.querySelector('[data-thx-sal]'), sub = home.querySelector('[data-thx-salsub]');
-        if (sal) {
-            const pay = await payP;
+        // Xato bo'lsa — bitta naqsh (js/loadError.js): "—" va sabab + "Qayta urinish" (faqat shu karta qayta so'raladi).
+        const fillSal = async pr => {
+            const res = await pr;
             if (!alive()) return;
-            const c = pay?.linked ? pay.current : null;
-            if (!c) { sal.textContent = '—'; if (sub) sub.textContent = 'hisob yuklanmadi · oy yopilganda Moliya tasdiqlaydi'; }
+            const pay = res.ok ? res.value : null, c = pay?.linked ? pay.current : null;
+            if (!res.ok) {
+                sal.textContent = '—';
+                if (sub) { sub.innerHTML = window.LoadErr.html({ title: 'Maosh hisobini yuklab bo\'lmadi', err: res.err, note: '', compact: true, cls: 'thx-sal-err' });
+                    window.LoadErr.bind(sub, () => fillSal(window.LoadErr.settle(window.UstozHome.myPay(true)))); }
+            } else if (!c) { sal.textContent = '—'; if (sub) sub.textContent = 'maosh hisobi bog\'lanmagan · oy yopilganda Moliya tasdiqlaydi'; }
             else {
                 const main = Number(c.mainTotal ?? c.total) || 0, extra = Number(c.assistantTotal) || 0;
                 sal.textContent = num(Number(c.total) || 0);
                 if (sub) sub.innerHTML = `${extra ? `asosiy ${num(main)} + o'tgan yordamchi aloqalari ${num(extra)} · ` : ''}${reviewing ? `<b>+${reviewing} qoplash tekshiruvda</b> (admin tasdiqlasa qo'shiladi) · ` : ''}oy yopilganda Moliya tasdiqlaydi`;
             }
-        }
+        };
+        if (sal) await fillSal(payP);
 
         // Bugungi sinov darslari — bugungi ro'yxatga qo'shiladi (UstozBosh: "30 daq · sinov darsi" + holat pill'i).
         const lessons = (trials.lessons || []).filter(l => l.trialRequest);
@@ -165,10 +179,11 @@
         if (box) {
             const TI = { warn: '<path d="M12 3 2 21h20L12 3zM12 10v5M12 18h.01"/>', user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/>', att: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/>', clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', sync: '<path d="M4 12a8 8 0 0114-5.3L20 9M20 4v5h-5M20 12a8 8 0 01-14 5.3L4 15M4 20v-5h5"/>' };
             const ico = k => TI[k] ? `<span class="thx-ti thx-ti--${k}" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${TI[k]}</svg></span>` : '';
-            box.innerHTML = todo.length ? `<section class="card dashboard-panel thx-todo"><div class="dashboard-panel-head"><h3>Bajarish kerak · ${todo.length}</h3><span>Har biri maoshingiz yoki o'quvchi natijasiga ta'sir qiladi</span></div>
-                <ul>${todo.map((x, i) => `<li>${ico(x.ic)}<div><b>${esc(x.t)}</b><small>${esc(x.s)}</small></div><button type="button" class="sc-btn sc-btn--sm" ${x.act ? `data-act="${i}"` : `data-go="${x.go}"`}>${esc(x.btn)}</button></li>`).join('')}</ul></section>` : '';
+            box.innerHTML = todo.length ? `<section class="card dashboard-panel thx-todo"><div class="dashboard-panel-head"><h3>Bajarish kerak · ${todo.filter(x => !x.err).length}</h3><span>Har biri maoshingiz yoki o'quvchi natijasiga ta'sir qiladi</span></div>
+                <ul>${todo.map((x, i) => x.err ? `<li class="thx-lerr">${window.LoadErr.html({ title: x.t, err: x.err, note: x.s, compact: true })}</li>` : `<li>${ico(x.ic)}<div><b>${esc(x.t)}</b><small>${esc(x.s)}</small></div><button type="button" class="sc-btn sc-btn--sm" ${x.act ? `data-act="${i}"` : `data-go="${x.go}"`}>${esc(x.btn)}</button></li>`).join('')}</ul></section>` : '';
             box.querySelectorAll('[data-go]').forEach(b => b.onclick = () => switchTab(b.dataset.go));
             box.querySelectorAll('[data-act]').forEach(b => b.onclick = () => todo[Number(b.dataset.act)]?.act?.());
+            window.LoadErr.bind(box, () => { if (typeof renderDashboardOverview === 'function') renderDashboardOverview(typeof _lastDashboardOverviewArgs !== 'undefined' ? _lastDashboardOverviewArgs || {} : {}); });
         }
         // Plitka "Bugun": "N dars + N aloqa" / "+N sinov · N belgilanmagan" (dizayndagidek).
         const tile = home.querySelector('.kbx-tiles > div:first-child');

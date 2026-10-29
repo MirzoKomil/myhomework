@@ -147,18 +147,47 @@
     }
 
     // ── Kechikib belgilash so'rovi (admin orqali) — eski oyna, usullar guruhlangan ──
+    // "Admin orqali so'rov" (kech belgilash): sana — oy boshi (yoki o'quvchining kurs boshlangan kuni) … kecha;
+    // xato matni maydon yonida (server xabari ham tegishli maydonga qo'yiladi).
     function lateDrawer(list, done) {
         const { openDrawer, field, esc, today, addDays } = U();
+        const td = today(), maxD = addDays(td, -1), monthStart = maxD.slice(0, 7) + '-01';
+        const startOf = s => { const v = String(s?.startDate || s?.joinDate || '').slice(0, 10); return /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : ''; };
+        const minFor = id => { const st = startOf(list.find(s => s.id === id)); return st && st > monthStart ? st : monthStart; };
+        const ferr = n => `<small class="yd-ferr" data-ferr="${n}" role="alert" hidden></small>`;
         const box = openDrawer({ title: 'Kechikib belgilash so\'rovi', sub: 'Admin tasdiqlasa hisobga qo\'shiladi', body: `
             ${field('O\'quvchi', `<select name="st">${list.map(s => `<option value="${esc(s.id)}">${esc(s.name)}</option>`).join('')}</select>`)}
-            <div class="sc-g2">${field('Sana', `<input type="date" name="day" max="${addDays(today(), -1)}" min="${today().slice(0, 7)}-01">`)}${field('Usul', `<select name="ch">${CHG.map(([g, l]) => `<optgroup label="${g}">${l.map(([v, t]) => `<option value="${v}">${esc(t.replace(/^[☎✉] /, ''))}</option>`).join('')}</optgroup>`).join('')}</select>`)}${field('Davomiylik, daqiqa', '<input name="min" inputmode="numeric">')}</div>
-            ${field('Nega o\'z vaqtida belgilanmadi', '<textarea name="reason" rows="2"></textarea>')}`,
+            <div class="sc-g2">${field('Sana', `<input type="date" name="day" max="${maxD}" min="${minFor(list[0]?.id)}" required aria-describedby="ydFerrDay">${ferr('day')}`)}${field('Usul', `<select name="ch">${CHG.map(([g, l]) => `<optgroup label="${g}">${l.map(([v, t]) => `<option value="${v}">${esc(t.replace(/^[☎✉] /, ''))}</option>`).join('')}</optgroup>`).join('')}</select>`)}${field('Davomiylik, daqiqa', `<input name="min" inputmode="numeric">${ferr('min')}`)}</div>
+            ${field('Nega o\'z vaqtida belgilanmadi', `<textarea name="reason" rows="2"></textarea>${ferr('reason')}`)}`,
             foot: '<button type="button" class="sc-btn" data-close>Bekor</button><button type="button" class="sc-btn sc-btn--pri" data-save>Yuborish</button>' });
+        const q = n => box.querySelector(`[name=${n}]`), v = n => q(n).value;
+        box.querySelector('[data-ferr="day"]').id = 'ydFerrDay';
+        const setErr = (n, msg) => { const el = box.querySelector(`[data-ferr="${n}"]`); if (!el) return false; el.textContent = msg || ''; el.hidden = !msg; q(n)?.setAttribute('aria-invalid', msg ? 'true' : 'false'); return true; };
+        const dmy = d => `${Number(d.slice(8))}-${MON[Number(d.slice(5, 7)) - 1]}`;
+        const checkDay = () => {
+            const d = v('day'), mn = q('day').min;
+            if (!d) return setErr('day', 'Sanani tanlang'), false;
+            if (d > maxD) return setErr('day', `Faqat o'tgan kun — ${dmy(maxD)}gacha (bugungi aloqani o'zingiz belgilaysiz)`), false;
+            if (d < mn) return setErr('day', mn > monthStart ? `O'quvchi kursni ${dmy(mn)}dan boshlagan — undan oldingi kun tanlanmaydi` : `Faqat shu oy kunlari: ${dmy(mn)} — ${dmy(maxD)}`), false;
+            return setErr('day', ''), true;
+        };
+        const checkReason = () => (String(v('reason')).trim().length < 5 ? (setErr('reason', 'Sababni yozing (kamida 5 belgi)'), false) : (setErr('reason', ''), true));
+        q('st').onchange = () => { q('day').min = minFor(v('st')); if (v('day')) checkDay(); };
+        q('day').onchange = checkDay;
+        q('reason').oninput = () => { if (!box.querySelector('[data-ferr="reason"]').hidden) checkReason(); };
         box.querySelector('[data-save]').onclick = async e => {
-            const v = n => box.querySelector(`[name=${n}]`).value;
+            U().errBox(box, '');
+            const okD = checkDay(), okR = checkReason();
+            if (!okD || !okR) { (okD ? q('reason') : q('day')).focus(); return; }
             U().busy(e.target, true);
             try { await U().post('/assist/late-requests', { studentId: v('st'), day: v('day'), channel: v('ch'), minutes: Number(v('min')) || 0, reason: v('reason') }); U().toast('So\'rov yuborildi'); U().closeDrawer(); done?.(); }
-            catch (err) { U().busy(e.target, false); U().errBox(box, err.message); }
+            catch (err) {
+                U().busy(e.target, false);
+                // Server xabari tegishli maydon yonida; boshqa xato — oyna tepasida.
+                const m = String(err.message || '');
+                const fieldOf = /sabab/i.test(m) ? 'reason' : /sana|kun|oy |oy$|muddat|kurs|faol emas|so'rov allaqachon|tasdiqlangan/i.test(m) ? 'day' : '';
+                if (!(fieldOf && setErr(fieldOf, m))) U().errBox(box, m);
+            }
         };
     }
 
@@ -242,7 +271,7 @@
         return `<section class="sc-card yd-closed"><header class="sc-ch"><h2>${esc(cap1(mName(month)))} · o'quvchilar bo'yicha yakun</h2><span class="sc-mt">yopilgan hisob · o'zgarmaydi</span></header>
           <div class="yd-tw"><table class="sc-table"><thead><tr><th>O'quvchi</th><th class="r">Hisoblangan</th><th class="r">Summa, so'm</th><th>Izoh</th></tr></thead><tbody>
           ${rows.map(({ r, s }) => { const l = left.get(s.id); return `<tr class="${l ? 'yd-gone' : ''}"><td><span class="sc-row">${studentAvatar(s, 28)}<span class="yd-who"><b>${esc(s.name)}</b><small class="sc-mt">asosiy: ${esc(s._tname ? U().shortName(s._tname) : teacherName(s.teacherId, true))}${l && l.from ? ` · 1–${esc(dS(U().addDays(l.from, -1)))}` : ''}</small></span></span></td>
-            <td class="r"><b>${r.counted || 0}</b> / ${rep.cap || CAP}</td><td class="r">${num(r.amount ?? (r.counted || 0) * (rep.rate || RATE))}</td><td><div class="yd-izoh">${izoh(r, s)}</div></td></tr>`; }).join('') || `<tr><td colspan="4" class="sc-mt">Bu oyda aloqa yo'q</td></tr>`}
+            <td class="r"><b>${r.counted || 0}</b> / ${rep.cap || CAP}</td><td class="r">${num(r.amount ?? (r.counted || 0) * (rep.rate || RATE))}</td>${(iz => `<td${iz === '—' ? ' class="yd-iz0"' : ''}><div class="yd-izoh">${iz}</div></td>`)(izoh(r, s))}</tr>`; }).join('') || `<tr><td colspan="4" class="sc-mt">Bu oyda aloqa yo'q</td></tr>`}
           </tbody><tfoot><tr><td>Jami · ${rows.length} o'quvchi</td><td class="r">${total}</td><td class="r">${num(amount)}</td><td></td></tr></tfoot></table></div></section>`;
     }
     // Vaqt belgisi Toshkent vaqtida, boshqa sahifalardagi dG() bilan bir xil: "2-noyabr 11:20".
@@ -291,8 +320,8 @@
                 closed ? api(`/assist/changes?month=${month}`).then(r => r.changes).catch(() => []) : null]);
         } catch (e) {
             // Xato holati: jim noto'g'ri raqam emas — aniq xabar va "Qayta urinish" (masalan, 429 — juda ko'p so'rov).
-            root.innerHTML = `<div class="sc-err yd-err" role="alert"><span>Aloqalar ma'lumotini yuklab bo'lmadi: ${esc(e.message)}</span><button type="button" class="sc-btn sc-btn--sm" data-retry>Qayta urinish</button></div>`;
-            root.querySelector('[data-retry]').onclick = () => renderContacts(root);
+            root.innerHTML = window.LoadErr.html({ title: 'Aloqalar ma\'lumotini yuklab bo\'lmadi', err: e });
+            window.LoadErr.bind(root, () => renderContacts(root));
             return;
         }
         const tid = me().linkedTeacherId;
@@ -467,18 +496,25 @@
         const helped = pure ? helpedAll : [];
         if (!root.dataset.loaded) root.innerHTML = '<div class="oq"><div class="oq-skel"></div></div>';
         const lang = (typeof getUserOwnLang === 'function' && getUserOwnLang()) || 'english';
-        const [acad, gm, mks, rep, inact, abs, wplan] = await Promise.all([
-            apiFetch(`/api/academic/students?lang=${lang}`).catch(() => ({ students: [] })),
+        // Xato jim yutilmaydi (LoadErr): yuklanmagan ustunlarda "—" va bitta xabar; qolgan ustunlar ishlayveradi.
+        const LE = window.LoadErr;
+        const [acadR, gm, mksR, repR, inact, absR, wplan] = await Promise.all([
+            LE.settle(apiFetch(`/api/academic/students?lang=${lang}`)),
             groupsMap(),
-            pure ? { makeups: [] } : api('/makeups').catch(() => ({ makeups: [] })),
-            helped.length ? api(`/assist/month?month=${month}`).catch(() => null) : null,
+            LE.settle(pure ? { makeups: [] } : api('/makeups')),
+            LE.settle(helped.length ? api(`/assist/month?month=${month}`) : null),
             inactiveList(),
             // "Kelmadi" belgilari serverda (school_absences) — main_attendance faqat "Keldi"ni saqlaydi.
-            pure ? { absences: [] } : api(`/attendance/absences?month=${month}`).catch(() => ({ absences: [] })),
+            LE.settle(pure ? { absences: [] } : api(`/attendance/absences?month=${month}`)),
             // "Bu hafta N / reja" — maxraj o'quvchining shu haftadagi tavsiya kunlari (Davomat bilan bitta hisob).
             helped.length ? api(`/assist/plan?from=${ws}&to=${addDays(ws, 6)}`).catch(() => null) : null
         ]);
         root.dataset.loaded = '1';
+        const acad = acadR.value || { students: [] }, mks = mksR.value || { makeups: [] }, rep = repR.value, abs = absR.value || { absences: [] };
+        const acadErr = acadR.err, attErr = mksR.err || absR.err, repErr = repR.err;
+        const DASH = '<span class="oq-mt">—</span>';
+        const errParts = [acadErr && 'ilova natijalari', attErr && 'davomat', repErr && 'aloqalar'].filter(Boolean);
+        const errBanner = errParts.length ? `<div class="oq-lerr">${LE.html({ title: `Ma'lumotning bir qismi yuklanmadi: ${errParts.join(', ')}`, err: acadErr || attErr || repErr, note: 'Bu ustunlarda «—» ko\'rsatildi — qolganlari to\'g\'ri.', compact: true })}</div>` : '';
         const ac = new Map((acad.students || []).map(x => [x.id, x]));
         const cnt = new Map((rep?.students || []).map(x => [x.studentId, x]));
         const weekOf = s => (cnt.get(s.id)?.items || []).filter(i => i.day >= ws && i.status === 'counted').length;
@@ -527,7 +563,7 @@
             return `<div class="oq-dh2">${oqAv(sel, 48)}<div><div class="oq-nm" id="oqDn">${esc(sel.name)}</div><div class="oq-mt">asosiy ${esc(teacherName(sel.teacherId, true))} · ${esc(pattern(sel.lessonDayOfWeek))} ${esc(sel.lessonTime || '')} · tavsiya ${esc(advTxt(sel))} ${esc(sel.lessonTime || '')}</div></div>
                 ${closable ? `<button type="button" class="oq-icb" data-close-detail aria-label="Yopish">${OQ_X}</button>` : ''}</div>
               <div class="oq-kv"><div><small>Ilovada</small><b>${x ? x.reached + ' / 72' : '—'}</b></div><div><small>1-urinish</small><b class="oq-pc ${pctCls(x?.firstTryAvg)}">${x?.firstTryAvg != null ? x.firstTryAvg + '%' : '—'}</b></div>
-                <div><small>Aloqalar · ${esc(mL)}</small><b>${c?.counted || 0} / ${CAP}</b></div><div><small>Bu hafta</small><b>${weekOf(sel)} / ${weekPlanOf(sel)}</b></div></div>
+                <div><small>Aloqalar · ${esc(mL)}</small><b>${repErr ? '—' : `${c?.counted || 0} / ${CAP}`}</b></div><div><small>Bu hafta</small><b>${repErr ? '—' : `${weekOf(sel)} / ${weekPlanOf(sel)}`}</b></div></div>
               <div data-prog><div class="oq-skel" style="height:96px;margin:0 20px 14px"></div></div>
               <div class="oq-acts2"><button type="button" class="oq-clb is-big" data-call="${esc(sel.id)}">${OQ_PH} Qo'ng'iroq</button><button type="button" class="oq-btn" data-open-card="${esc(sel.id)}">To'liq kartani ochish →</button>${closable ? '<button type="button" class="oq-btn" data-go-contacts>Aloqani belgilash</button>' : ''}</div>
               <div class="oq-hid" style="padding-top:12px">Telefon raqami yashirin — ☎ tugmasi o'quvchining Telegram guruhini ochadi va aloqani belgilaysiz. To'lov va sotuv ma'lumotlari ko'rinmaydi. Savol bo'lsa — asosiy ustozga yozing (xodimlar chati).</div>`;
@@ -537,22 +573,23 @@
             // ── YordamchiOquvchilar ──
             const flags = s => new Set((ac.get(s.id)?.flags || []).map(f => f.key));
             const F = { all: helped, hard: helped.filter(s => flags(s).has('struggling')), zero: helped.filter(s => !weekOf(s)) };
-            if (!F[myState.f]) myState.f = 'all';
+            if (!F[myState.f] || (acadErr && myState.f === 'hard') || (repErr && myState.f === 'zero')) myState.f = 'all';
             const list = F[myState.f].filter(match);
             if (!myState.sel || !helped.some(s => s.id === myState.sel)) myState.sel = list[0]?.id || '';
             const sel = helped.find(s => s.id === myState.sel);
             root.innerHTML = `<div class="oq">${head('O\'quvchilarim', 'Siz bog\'lanadigan o\'quvchilar · natijalar o\'quvchi ilovasidan · faqat ko\'rish', 'Ism bo\'yicha qidirish')}
               <div class="oq-lay${sel ? '' : ' is-solo'}"><section class="oq-card is-clip" aria-labelledby="oqLt"><div class="oq-ch"><h2 class="oq-ct" id="oqLt">${helped.length} o'quvchi</h2>
-                  <div class="oq-seg" role="group" aria-label="Filtr"><button type="button" data-f="all" aria-pressed="${myState.f === 'all'}">Hammasi</button><button type="button" data-f="hard" aria-pressed="${myState.f === 'hard'}">Qiynalyapti ${F.hard.length}</button><button type="button" data-f="zero" aria-pressed="${myState.f === 'zero'}">Bu hafta 0 aloqa ${F.zero.length}</button><button type="button" data-inactive aria-pressed="false">Faol emas ${notActive.length}</button></div></div>
-                <div class="oq-tw"><table class="oq-t is-y"><thead><tr><th scope="col">O'quvchi</th><th scope="col">Aloqa tavsiyasi</th><th scope="col">Ilovada · 1-urinish</th><th scope="col">Bu hafta</th><th scope="col">${esc(cap1(mName(month)))}</th></tr></thead><tbody>
+                  <div class="oq-seg" role="group" aria-label="Filtr"><button type="button" data-f="all" aria-pressed="${myState.f === 'all'}">Hammasi</button><button type="button" data-f="hard" aria-pressed="${myState.f === 'hard'}"${acadErr ? ' disabled' : ''}>Qiynalyapti ${acadErr ? '—' : F.hard.length}</button><button type="button" data-f="zero" aria-pressed="${myState.f === 'zero'}"${repErr ? ' disabled' : ''}>Bu hafta 0 aloqa ${repErr ? '—' : F.zero.length}</button><button type="button" data-inactive aria-pressed="false">Faol emas ${notActive.length}</button></div></div>
+                ${errBanner}<div class="oq-tw"><table class="oq-t is-y"><thead><tr><th scope="col">O'quvchi</th><th scope="col">Aloqa tavsiyasi</th><th scope="col">Ilovada · 1-urinish</th><th scope="col">Bu hafta</th><th scope="col">${esc(cap1(mName(month)))}</th></tr></thead><tbody>
                 ${list.map(s => { const x = ac.get(s.id), c = cnt.get(s.id);
                   return `<tr${myState.sel === s.id ? ' class="is-sel" aria-selected="true"' : ''} data-ms="${esc(s.id)}" tabindex="0"><td><div class="oq-who">${oqAv(s, 34)}<div><div class="oq-nm">${esc(s.name)}</div><div class="oq-mt">asosiy: ${esc(teacherName(s.teacherId, true))}</div></div>${oqTg(gm.get(s.id))}${oqCall(s)}</div></td>
                     <td>${esc(advTxt(s))}${s.lessonTime ? ' · ' + esc(s.lessonTime) : ''}<div class="oq-mt" style="margin:2px 0 0">asosiy darslari ${esc(pattern(s.lessonDayOfWeek))}</div></td>
                     <td>${x ? `<b>${x.reached}</b> / 72${x.firstTryAvg != null ? ` · <span class="oq-pc ${pctCls(x.firstTryAvg)}">${x.firstTryAvg}%</span>` : ''}` : '<span class="oq-mt">—</span>'}</td>
-                    <td><b>${weekOf(s)}</b> / ${weekPlanOf(s)}</td><td>${c?.counted || 0} / ${CAP}</td></tr>`; }).join('') || `<tr><td colspan="5" class="oq-empty">${q || myState.f !== 'all' ? 'Hech kim topilmadi' : 'Sizga hali o\'quvchi biriktirilmagan'}</td></tr>`}
+                    <td>${repErr ? DASH : `<b>${weekOf(s)}</b> / ${weekPlanOf(s)}`}</td><td>${repErr ? DASH : `${c?.counted || 0} / ${CAP}`}</td></tr>`; }).join('') || `<tr><td colspan="5" class="oq-empty">${q || myState.f !== 'all' ? 'Hech kim topilmadi' : 'Sizga hali o\'quvchi biriktirilmagan'}</td></tr>`}
                 </tbody></table></div><p class="oq-foot">1-urinish — ilovadagi mashqlarni birinchi urinishda to'g'ri bajarish ulushi (baho emas).</p></section>
                 ${sel ? `<aside class="oq-card oq-dp" aria-labelledby="oqDn">${helpDetail(sel, false)}</aside>` : ''}</div></div>`;
             bindCommon(helped);
+            LE.bind(root, re);
             root.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { myState.f = b.dataset.f; re(); });
             fillProgress(sel);
             return;
@@ -596,19 +633,25 @@
             if (f.has('behind')) return ['Rejadan orqada', 'is-warn'];
             return ['Rejada', 'is-ok'];
         };
+        // Holat: davomat yoki ilova ma'lumoti yuklanmagan bo'lsa — "Rejada" deb ishontirmaymiz ("—").
+        const stOf = (a, x) => {
+            if (attErr) return ['—', 'is-mute'];
+            const r = statusOf(a, x);
+            return acadErr && r[1] === 'is-ok' ? ['—', 'is-mute'] : r;
+        };
         const row = (s, kind) => {
             const x = ac.get(s.id), a = kind === 'main' ? attOf(s) : null, c = cnt.get(s.id);
-            const st = kind === 'main' ? statusOf(a, x) : ['Yordamchi', 'is-mute'];
+            const st = kind === 'main' ? stOf(a, x) : ['Yordamchi', 'is-mute'];
             const on = !myState.closed && myState.sel === s.id;
             return `<tr${on ? ' class="is-sel" aria-selected="true"' : ''} data-ms="${esc(s.id)}" tabindex="0"><td><div class="oq-who">${oqAv(s, 36)}<div><div class="oq-nm">${esc(s.name)}</div><div class="oq-mt">${kind === 'main' ? (s.serialCode ? '#' + esc(s.serialCode) : '&nbsp;') : 'asosiy: ' + esc(teacherName(s.teacherId, true))}</div></div>${oqTg(gm.get(s.id))}${kind === 'main' ? '' : oqCall(s)}</div></td>
               <td>${kind === 'main' ? `${esc(pattern(s.lessonDayOfWeek))} ${esc(s.lessonTime || '')}<div class="oq-cb">${Number(s.lessonDuration) || 15} daq</div>` : `tavsiya ${esc(advTxt(s))}${s.lessonTime ? ' ' + esc(s.lessonTime) : ''}<div class="oq-cb">darslari ${esc(pattern(s.lessonDayOfWeek))} ${esc(s.lessonTime || '')}</div>`}</td>
               <td>${x ? `<b>${x.reached || 0}</b> / 72` : '<span class="oq-mt">—</span>'}</td>
-              <td>${kind === 'main' ? `<b>${a.counted}</b> / ${a.plan}${a.review ? ` <span class="oq-plus">+${a.review}</span>` : ''}` : `<b>${c?.counted || 0}</b> / ${CAP}`}</td>
+              <td>${kind === 'main' ? (attErr ? DASH : `<b>${a.counted}</b> / ${a.plan}${a.review ? ` <span class="oq-plus">+${a.review}</span>` : ''}`) : repErr ? DASH : `<b>${c?.counted || 0}</b> / ${CAP}`}</td>
               <td><span class="oq-pill ${st[1]}">${esc(st[0])}</span></td></tr>`;
         };
         // UstozOquvchiList: avval e'tibor kerak bo'lganlar (Holat ≠ "Rejada"), keyin qolganlari — har guruhda dars vaqti bo'yicha.
         const tOf = s => { const m = /^(\d{1,2}):(\d{2})/.exec(String(s.lessonTime || '')); return m ? Number(m[1]) * 60 + Number(m[2]) : 9999; };
-        const needs = new Map(mine.map(s => [s.id, statusOf(attOf(s), ac.get(s.id))[1] !== 'is-ok']));
+        const needs = new Map(mine.map(s => [s.id, stOf(attOf(s), ac.get(s.id))[1] === 'is-warn']));
         const mainRows = mine.filter(match).sort((a, b) => (needs.get(b.id) - needs.get(a.id)) || tOf(a) - tOf(b) || String(a.name).localeCompare(String(b.name))),
             helpRows = helped.filter(match);
         if (!myState.sel || ![...mine, ...helped].some(s => s.id === myState.sel)) myState.sel = (mainRows[0] || helpRows[0])?.id || '';
@@ -624,15 +667,15 @@
             const sumTxt = `${a.present} keldi · ${a.absent} kelmadi${parts ? ` (${parts})` : ''}${a.unmarked ? ` · ${a.unmarked} belgilanmagan` : ''} · ${a.planLeft} reja`;
             return `<div class="oq-dh2">${oqAv(sel, 36)}<div><div class="oq-nm" id="oqDn">${esc(sel.name)}</div><div class="oq-mt">${esc(subj)} · asosiy o'quvchingiz${sel.serialCode ? ' · #' + esc(sel.serialCode) : ''}</div></div><button type="button" class="oq-icb" data-close-detail aria-label="Yopish">${OQ_X}</button></div>
               <div class="oq-kv"><div><small>Ilovada</small><b>${x ? x.reached + ' / 72 dars' : '—'}</b></div><div><small>1-urinish</small><b>${x?.firstTryAvg != null ? x.firstTryAvg + '%' : '—'}</b></div>
-                <div><small>Davomat · ${esc(mName(month))}</small><b>${a.counted} / ${a.plan}${a.review ? ' · +' + a.review : ''}</b></div>
+                <div><small>Davomat · ${esc(mName(month))}</small><b>${attErr ? '—' : `${a.counted} / ${a.plan}${a.review ? ' · +' + a.review : ''}`}</b></div>
                 <div><small>Kurs</small><b>${dayN ? `${dayN}-kun · ${esc(ddmm(start))}${end ? ' → ' + esc(ddmm(end)) : ''}` : start ? `${esc(ddmm(start))} dan` : '—'}</b></div></div>
-              ${a.strip.length ? `<p class="oq-cap">${esc(MonL)} davomati</p><div class="oq-cal2" style="grid-template-columns:repeat(${Math.max(a.strip.length, 1)},1fr)" role="img" aria-label="${esc(MonL)}: ${esc(sumTxt)}">${a.strip.map(c => `<span${c.st ? ` class="${c.st}"` : ''} title="${c.day}-${esc(mL)} · ${c.label}"></span>`).join('')}</div>
+              ${!attErr && a.strip.length ? `<p class="oq-cap">${esc(MonL)} davomati</p><div class="oq-cal2" style="grid-template-columns:repeat(${Math.max(a.strip.length, 1)},1fr)" role="img" aria-label="${esc(MonL)}: ${esc(sumTxt)}">${a.strip.map(c => `<span${c.st ? ` class="${c.st}"` : ''} title="${c.day}-${esc(mL)} · ${c.label}"></span>`).join('')}</div>
                 <p class="oq-capm">${esc(sumTxt)}</p>` : ''}
               <dl class="oq-dl2"><dt>Jadval</dt><dd>${esc(pattern(sel.lessonDayOfWeek))} ${esc(sel.lessonTime || '')} · ${Number(sel.lessonDuration) || 15} daq</dd>
                 <dt>Kurs</dt><dd>${start ? `${esc(ddmmyy(start))}${end ? ' → ' + esc(ddmmyy(end)) : ''}` : '—'}</dd>
                 <dt>Yordamchi ustoz</dt><dd>${sel.assistantTeacherId ? esc(teacherName(sel.assistantTeacherId)) : '—'}</dd>
                 <dt>Telefon</dt><dd>${phone ? `<a href="tel:${esc(String(sel.phone).replace(/[^\d+]/g, ''))}">${esc(phone)}</a>` : '—'}</dd>
-                <dt>Qoplash mumkin</dt><dd${a.openMissed.length ? ' class="is-teal"' : ''}>${a.openMissed.length ? `${a.openMissed.length} dars · ${a.openMissed.join(' va ')}-${esc(mL)}` : 'qoplanmagan dars yo\'q'}</dd></dl>
+                <dt>Qoplash mumkin</dt><dd${!attErr && a.openMissed.length ? ' class="is-teal"' : ''}>${attErr ? '—' : a.openMissed.length ? `${a.openMissed.length} dars · ${a.openMissed.join(' va ')}-${esc(mL)}` : 'qoplanmagan dars yo\'q'}</dd></dl>
               <div class="oq-dact"><button type="button" class="oq-btn is-pri" data-open-card="${esc(sel.id)}">O'quvchi kartasini ochish</button>
                 ${sel.status !== 'inactive' && !sel.frozen ? '<button type="button" class="oq-btn" data-makeup>Qoplash darsi qo\'yish</button>' : ''}<button type="button" class="oq-btn" data-req>Adminga so'rov: jadval o'zgarishi</button></div>
               <div class="oq-hid">${OQ_LOCK}<span>Ustoz almashtirish, muzlatish va to'lovlar — admin bo'limida. Siz so'rov yuborasiz, admin hal qiladi.</span></div>`;
@@ -641,13 +684,14 @@
         root.innerHTML = `<div class="oq">${head('O\'quvchilar', 'Sizga biriktirilgan o\'quvchilar · to\'lov va sotuv ma\'lumotlari ustozga ko\'rsatilmaydi', 'Ism yoki ID bo\'yicha qidirish')}
           <div class="oq-lay${sel ? '' : ' is-solo'}"><section class="oq-card is-clip" aria-labelledby="oqLt"><div class="oq-ch"><h2 class="oq-ct" id="oqLt">Mening o'quvchilarim</h2>
               <div class="oq-seg" role="group" aria-label="Holat"><button type="button" aria-pressed="true">Faol <b>${mine.length}${helped.length ? ' + ' + helped.length : ''}</b></button><button type="button" data-inactive aria-pressed="false">Faol emas <b>${notActive.length}</b></button><button type="button" data-finished aria-pressed="false">Tugatgan <b>${finished.length}</b></button></div></div>
-            <div class="oq-tw"><table class="oq-t"><thead><tr><th scope="col">O'quvchi</th><th scope="col">Jadval</th><th scope="col">Ilovada</th><th scope="col">Davomat · ${esc(mL)}</th><th scope="col">Holat</th></tr></thead><tbody>
+            ${errBanner}<div class="oq-tw"><table class="oq-t"><thead><tr><th scope="col">O'quvchi</th><th scope="col">Jadval</th><th scope="col">Ilovada</th><th scope="col">Davomat · ${esc(mL)}</th><th scope="col">Holat</th></tr></thead><tbody>
             ${mine.length ? `<tr><td colspan="5" class="oq-sec">ASOSIY USTOZLIGINGIZDA · ${mainRows.length}</td></tr>${mainRows.map(s => row(s, 'main')).join('')}` : ''}
             ${helped.length ? `<tr><td colspan="5" class="oq-sec">YORDAMCHI SIFATIDA · ${helpRows.length} · haftasiga 3 aloqa, kamida 5 daqiqa</td></tr>${helpRows.map(s => row(s, 'help')).join('')}` : ''}
             ${!mainRows.length && !helpRows.length ? `<tr><td colspan="5" class="oq-empty">${q ? 'Hech kim topilmadi' : 'Sizga hali o\'quvchi biriktirilmagan'}</td></tr>` : ''}
           </tbody></table></div></section>
           ${sel ? `<aside class="oq-card oq-dp" aria-labelledby="oqDn">${isMainSel ? mainDetail() : helpDetail(sel, true)}</aside>` : ''}</div></div>`;
         bindCommon([...mine, ...helped]);
+        LE.bind(root, re);
         root.querySelector('[data-makeup]')?.addEventListener('click', () => {
             if (window.schoolSchedule?.makeupDrawer) return window.schoolSchedule.makeupDrawer(re, { studentId: sel.id });
             switchTab('timetable');
@@ -681,9 +725,11 @@
         const list = allMine.filter(s => AttendanceRules.isActiveStudent(s));
         const lang = (typeof getUserOwnLang === 'function' && getUserOwnLang()) || 'english';
         const early = Number(td.slice(8)) <= 6;
-        const [rep, prev, gm, acad, reqs, chNow, wplan] = await Promise.all([
-            api(`/assist/month?month=${month}`).catch(() => null),
-            early ? api(`/assist/month?month=${prevMonth}`).catch(() => null) : null,
+        // Oy hisobi xatosi jim yutilmaydi (LoadErr): "0 so'm / Belgilanmagan" soxta raqamlar o'rniga xato kartasi; boshqa bloklar ishlayveradi.
+        const LE = window.LoadErr;
+        const [repR, prevR, gm, acad, reqs, chNow, wplan] = await Promise.all([
+            LE.settle(api(`/assist/month?month=${month}`)),
+            early ? LE.settle(api(`/assist/month?month=${prevMonth}`)) : null,
             groupsMap(),
             apiFetch(`/api/academic/students?lang=${lang}`).catch(() => ({ students: [] })),
             api('/requests').then(r => r.requests || []).catch(() => []),
@@ -692,6 +738,8 @@
             api(`/assist/plan?from=${ws}&to=${addDays(ws, 6)}`).catch(() => null)
         ]);
         if (!container.isConnected) return;
+        const rep = repR.value, repErr = repR.ok ? null : repR.err;
+        const prev = prevR?.ok ? prevR.value : null, prevErr = prevR && !prevR.ok ? prevR.err : null;
         const by = new Map((rep?.students || []).map(x => [x.studentId, x]));
         const ac = new Map((acad.students || []).map(x => [x.id, x]));
         const rate = rep?.rate || RATE, cap = rep?.cap || CAP;
@@ -734,6 +782,7 @@
             container.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => { homeMode = b.dataset.mode; refresh(); });
             container.querySelectorAll('[data-go-plan]').forEach(b => b.onclick = () => switchTab('timetable'));
             container.querySelectorAll('[data-go-contacts]').forEach(b => b.onclick = () => goDavomat(b.dataset.goContacts));
+            LE.bind(container, refresh);
         };
 
         if (mode === 'closed') {
@@ -778,17 +827,19 @@
                 ${stepsHtml(prevMonth, prev, prev2, card4)}</div>
               ${closedTable(prevMonth, prev, ch)}
               <section class="sc-card yd-nov"><header class="sc-ch"><h2>${esc(cap1(mName(month)))} boshlandi</h2><button type="button" class="ahx-link" data-go-contacts="${month}">Bugungi aloqalar →</button></header>
-                <div class="yd-nov-b"><div class="yd-nov-k"><small>${esc(cap1(mName(month)))} · hozirgacha</small><b>${counted} aloqa</b><span class="sc-mt">bugun ${advN} tavsiya · ${doneN} bajarildi · ${list.length} o'quvchi</span></div>
+                <div class="yd-nov-b"><div class="yd-nov-k"><small>${esc(cap1(mName(month)))} · hozirgacha</small>${repErr ? LE.html({ title: `${cap1(mName(month))} aloqalarini yuklab bo'lmadi`, err: repErr, note: '', compact: true })
+                    : `<b>${counted} aloqa</b><span class="sc-mt">bugun ${advN} tavsiya · ${doneN} bajarildi · ${list.length} o'quvchi</span>`}</div>
                   <ul class="yd-chl">${(chNow || []).map(chLine).map(([i, t]) => `<li><span class="yd-chi" aria-hidden="true">${i}</span><span>${t}</span></li>`).join('') || '<li class="sc-mt">O\'quvchilaringizda o\'zgarish yo\'q — tavsiya jadvali avvalgidek.</li>'}</ul></div></section>`;
             bind();
             container.querySelector('[data-fin]')?.addEventListener('click', () => financeDrawer(prevMonth, prev, refresh));
             return;
         }
 
-        const prevBlock = closedAvail ? `<section class="card ahx-card ya-prev"><div class="ahx-card-h"><h3>🔒 ${esc(mName(prevMonth))} yopildi — faqat ko'rish</h3><button type="button" class="ahx-link" data-mode="closed">Batafsil →</button></div>
+        const prevBlock = prevErr ? `<section class="card ahx-card ya-prev">${LE.html({ title: `${cap1(mName(prevMonth))} yakuniy hisobini yuklab bo'lmadi`, err: prevErr, note: '', compact: true })}</section>`
+            : closedAvail ? `<section class="card ahx-card ya-prev"><div class="ahx-card-h"><h3>🔒 ${esc(mName(prevMonth))} yopildi — faqat ko'rish</h3><button type="button" class="ahx-link" data-mode="closed">Batafsil →</button></div>
             <p><b class="ya-big">${esc(money(prev.amount))}</b> · ${esc(payNote(prev))} · ${esc(paySteps(prevMonth, prev).last)}</p></section>` : '';
         const doneN = advised.filter(done).length;
-        const nx = next ? (() => { const x = ac.get(next.id), r = by.get(next.id);
+        const nx = repErr ? '' : next ? (() => { const x = ac.get(next.id), r = by.get(next.id);
             const mins = tmin(next) - nowMin;
             return `<section class="kbx-next" aria-labelledby="yaNext"><span class="kbx-eyebrow">KEYINGI ALOQA · TAVSIYA ${esc(next.lessonTime || '')}${mins > 0 && mins < 24 * 60 ? ` · ${mins >= 60 ? Math.floor(mins / 60) + ' SOAT ' : ''}${mins % 60} DAQIQADAN KEYIN` : ''}</span>
               <h2 id="yaNext">${esc(next.name)}</h2><span class="kbx-dsub">asosiy ustoz ${esc(teacherName(next.teacherId, true))} · darslari ${esc(pattern(next.lessonDayOfWeek))} · bu hafta ${weekOf(next) ? '' : 'hali '}${weekOf(next)}/${weekPlanOf(next)}</span>
@@ -801,17 +852,19 @@
         const rowHtml = s => {
             const t = todayOf(s), okIt = t.find(i => i.status === 'counted') || [...t].reverse().find(i => i.outcome === 'contacted'), last = t[t.length - 1];
             const markPill = (cls, txt) => `<button type="button" class="sc-pill ${cls} ya-mk" data-mark="${esc(s.id)}" title="Aloqani belgilash" aria-label="${esc(s.name)} — aloqani belgilash (${esc(txt)})">${esc(txt)}</button>`;
-            const st = okIt ? `<span class="sc-pill ${okIt.status === 'counted' ? 'sc-pill--ok' : 'sc-pill--mute'}">${CHI[okIt.channel]?.[0] || ''} ${okIt.minutes ? okIt.minutes + ' daq' : ''}</span>`
+            const st = repErr ? '' : okIt ? `<span class="sc-pill ${okIt.status === 'counted' ? 'sc-pill--ok' : 'sc-pill--mute'}">${CHI[okIt.channel]?.[0] || ''} ${okIt.minutes ? okIt.minutes + ' daq' : ''}</span>`
                 : last ? markPill('sc-pill--bad', 'Javob bermadi')
                 : tmin(s) < nowMin ? markPill('sc-pill--warn', 'Belgilanmagan') : markPill('sc-pill--mute', 'Rejada');
-            const dot = okIt ? 'ok' : last ? 'na' : tmin(s) < nowMin ? 'late' : '';
-            const sub = [`tavsiya ${esc(s.lessonTime || '—')}`, okIt ? `bog'landi ${u.hm(okIt.at ?? 0)}` : last ? `urinildi ${u.hm(last.at ?? 0)}` : '', `asosiy ${esc(teacherName(s.teacherId, true))}`, `bu hafta ${weekOf(s)}/${weekPlanOf(s)}`].filter(Boolean).join(' · ');
+            const dot = repErr ? '' : okIt ? 'ok' : last ? 'na' : tmin(s) < nowMin ? 'late' : '';
+            const sub = [`tavsiya ${esc(s.lessonTime || '—')}`, okIt ? `bog'landi ${u.hm(okIt.at ?? 0)}` : last ? `urinildi ${u.hm(last.at ?? 0)}` : '', `asosiy ${esc(teacherName(s.teacherId, true))}`, repErr ? '' : `bu hafta ${weekOf(s)}/${weekPlanOf(s)}`].filter(Boolean).join(' · ');
             return `<li class="ya-row"><b class="ya-time">${esc(s.lessonTime || '—')}</b><i class="yd-dot ${dot}" aria-hidden="true"></i>${studentAvatar(s, 32)}<div class="ya-who"><strong>${esc(s.name)}</strong>
               <span class="mot-prize-note">${sub}</span></div><span class="ya-acts">${callIcon(s.id)}${st}</span></li>`;
         };
         container.innerHTML = `<div class="ahx-head mhx-head yd-hh"><div><h1>${greet}, ${esc(first(user.name))}</h1><p>${headSub}</p></div>${sw}</div>
           ${prevBlock}
-          <div class="kbx-top"><section class="card kbx-plan" aria-labelledby="yaPlan"><div class="kbx-plan-top"><div class="kbx-plan-main">
+          ${repErr ? `<section class="card kbx-plan yd-plan-err" aria-labelledby="yaPlan"><div class="kbx-plan-h"><h2 id="yaPlan">Hisoblangan maosh · ${esc(mName(month))}</h2><button type="button" class="ahx-link" data-go-contacts="${month}">Aloqalar →</button></div>
+            ${LE.html({ title: 'Aloqalar va maosh hisobini yuklab bo\'lmadi', err: repErr, note: 'Summa, aloqalar soni va bugungi holat ko\'rsatilmadi — ma\'lumot yo\'qolmagan.' })}</section>`
+          : `<div class="kbx-top"><section class="card kbx-plan" aria-labelledby="yaPlan"><div class="kbx-plan-top"><div class="kbx-plan-main">
               <div class="kbx-plan-h"><h2 id="yaPlan">Hisoblangan maosh · ${esc(mName(month))}</h2><button type="button" class="ahx-link" data-go-contacts="${month}">Aloqalar →</button></div>
               <div class="kbx-plan-num"><b>${esc(num(amount))}</b><span>so'm · hozirgacha</span></div>
               <span class="kbx-sub">${esc(payNote(rep || { cap, rate }, counted))}</span></div></div>
@@ -819,8 +872,9 @@
               <div class="kbx-bar-foot"><span><strong>${counted}</strong> / ${possible} mumkin bo'lgan aloqa</span><span>${maxLeft != null ? `oy oxirigacha ko'pi bilan ${esc(num(rep?.possibleAmount ?? maxLeft * rate))}` : ''}</span></div>
               <div class="kbx-tiles"><div><span>Bugun</span><b>${doneN} / ${advised.length} aloqa</b><small>${advised.filter(noAns).length ? advised.filter(noAns).length + ' javob bermadi · ' : ''}${advised.filter(s => !done(s) && !noAns(s)).length} qoldi</small></div>
                 <div><span>Bu hafta</span><b>${allMine.reduce((n, s) => n + weekOf(s), 0)} / ${rep?.week?.planned ?? (wplan ? AttendanceRules.weekPlanCount(wplan.items) : list.reduce((n, s) => n + advDays(s).length, 0))}</b><small>tavsiya jadvali bo'yicha</small></div>
-                <div><span>Qayta urinish</span><b>${retry.length}</b><small>${retry.length ? `<span class="kbx-bad yd-bad">${esc(retry.map(([s, r]) => retryNote(s, r, td)).join(' · '))}</span>` : 'yo\'q'}</small></div></div></section>${nx}</div>
+                <div><span>Qayta urinish</span><b>${retry.length}</b><small>${retry.length ? `<span class="kbx-bad yd-bad">${esc(retry.map(([s, r]) => retryNote(s, r, td)).join(' · '))}</span>` : 'yo\'q'}</small></div></div></section>${nx}</div>`}
           <div class="thx-grid"><div class="thx-main"><section class="card dashboard-panel"><div class="dashboard-panel-head"><h3>Bugungi tavsiya · ${advised.length} o'quvchi</h3><button type="button" class="ahx-link" data-go-plan>Tavsiya jadvali →</button></div>
+              ${repErr && advised.length ? '<p class="yd-lerr-note">Aloqa holatlari yuklanmadi — faqat tavsiya jadvali ko\'rsatilgan.</p>' : ''}
               ${advised.length ? `<ul class="ya-list">${advised.map(rowHtml).join('')}</ul>` : `<p class="dashboard-empty">Bugun (${esc(DAY[wdNow - 1])}) tavsiya qilingan aloqa yo'q</p>`}</section></div>
             <aside class="thx-side">${nearCap.length ? `<section class="card ahx-card ya-sc"><div class="ahx-card-h"><h3>${cap} ta limitga yaqinlar</h3></div>
                 <ul class="ya-lim">${nearCap.map(([s, n]) => `<li><div><b>${esc(s.name)}</b><small>${n >= cap ? 'limit to\'ldi — keyingisi hisoblanmaydi' : `oyda yana ${leftOf(s)} tavsiya → ${cap + 1}-chisi hisoblanmaydi`}</small></div><span class="sc-pill sc-pill--warn">${n}/${cap}</span></li>`).join('')}</ul>

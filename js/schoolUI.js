@@ -148,10 +148,14 @@
     // Admin qoplash ro'yxatlari va ustozning Davomat/Jadvalidagi qoplash joylari shu belgini ko'rsatadi.
     const MISSED_CAME = 'qoldirilgan kunda "Keldi" bor — maoshga o\'tmaydi';
     const missedCamePill = m => (m && m.missed_came === true ? `<span class="sc-pill sc-pill--warn" title="${MISSED_CAME}">${MISSED_CAME}</span>` : '');
-    function assistPayNote(rep, counted = rep?.counted) {
+    // "13 aloqa = 40 000 so'm" — yordamchi tarifining yagona matni (Bosh, Maosh, admin "Yordamchi aloqalari" sarlavhasi).
+    function assistPayRule(rep) {
         const cap = Number(rep?.cap) || 13;
         const monthly = Number(rep?.monthly) > 0 ? Number(rep.monthly) : Math.round((Number(rep?.rate) || 0) * cap / 1000) * 1000;
-        return `${Number(counted) || 0} hisoblangan aloqa · har o'quvchi: ${cap} aloqa = ${num(monthly)} so'm`;
+        return `${cap} aloqa = ${num(monthly)} so'm`;
+    }
+    function assistPayNote(rep, counted = rep?.counted) {
+        return `${Number(counted) || 0} hisoblangan aloqa · har o'quvchi: ${assistPayRule(rep)}`;
     }
     const LOCK = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
 
@@ -312,7 +316,12 @@
         el.scrollTop = 0;
         let card;
         try { card = (await api(`/students/${encodeURIComponent(studentId)}/card`)).card; }
-        catch (e) { const sk = el.querySelector('.sc-skel'); if (sk) sk.outerHTML = `<div class="sc-err">${esc(e.message)}</div>`; return; }
+        catch (e) {
+            // Bitta xato naqshi (js/loadError.js): sabab + "Qayta urinish".
+            const sk = el.querySelector('.sc-skel');
+            if (sk) { sk.outerHTML = window.LoadErr.html({ title: 'O\'quvchi kartasini yuklab bo\'lmadi', err: e, note: '' }); window.LoadErr.bind(el, () => openStudent(studentId, tab)); }
+            return;
+        }
         if (!document.getElementById('scCardPage')) return;
         _page = { id: studentId, card, tab, data: {} };
         renderStudent(el, card, tab);
@@ -651,7 +660,8 @@
               <div class="scc-k4"><div><small>Keldi</small><b>${x.present}</b></div><div><small>Kelmadi</small><b class="${x.absent ? 'scc-bad' : ''}">${x.absent}</b></div>
                 <div><small>Qoplandi</small><b>${x.approved}${x.review ? ` <em>+${x.review} tekshiruvda</em>` : ''}</b></div><div><small>Hisobga o'tgan</small><b>${x.counted} / ${x.plan}</b></div></div>
               <ul class="scc-days">${rows.join('') || '<li class="sc-mt">Bu oyda dars yo\'q</li>'}</ul>`;
-        }).catch(e => { mainEl.innerHTML = `<div class="sc-err">${esc(e.message)}</div>`; });
+        }).catch(e => { mainEl.innerHTML = `<header class="sc-ch"><h2>Asosiy ustoz darslari</h2></header><div class="scc-pad">${window.LoadErr.html({ title: 'Darslar davomatini yuklab bo\'lmadi', err: e, note: '', compact: true })}</div>`;
+            window.LoadErr.bind(mainEl, () => attendanceTab(body, c, month)); });
         if (!c.assistantId) return;
         getCon(c, month).then(r => {
             const ws = weekStart(today()), items = r.items.slice().reverse();
@@ -666,13 +676,14 @@
                 const txt = i.outcome === 'no_answer' ? 'hisoblanmaydi' : [i.note && esc(i.note), CST[i.status] && esc(CST[i.status]) + ' · hisoblanmadi'].filter(Boolean).join(' · ');
                 return `<li><span class="scc-date"><b>${esc(dShort(i.day))}</b><small>${DAY[wd(i.day) - 1]}</small></span>${pill}<span class="scc-rt">${txt}</span></li>`; }).join('') || '<li class="sc-mt">Bu oyda aloqa yo\'q</li>'}</ul>
               ${adv.length ? `<p class="scc-foot">Keyingi tavsiya: ${adv.map(esc).join(' · ')}</p>` : ''}`;
-        }).catch(e => { asEl.innerHTML = `<div class="sc-err">${esc(e.message)}</div>`; });
+        }).catch(e => { asEl.innerHTML = `<header class="sc-ch"><h2>Yordamchi aloqalari</h2></header><div class="scc-pad">${window.LoadErr.html({ title: 'Aloqalarni yuklab bo\'lmadi', err: e, note: '', compact: true })}</div>`;
+            window.LoadErr.bind(asEl, () => attendanceTab(body, c, month)); });
     }
 
     // ── O'zlashtirish: ilovadagi natija (faqat o'qish) ──
     async function progressTab(body, c) {
         body.innerHTML = '<div class="sc-skel"></div>';
-        let r; try { r = await getProg(c); } catch (e) { body.innerHTML = `<div class="sc-err">${esc(e.message)}</div>`; return; }
+        let r; try { r = await getProg(c); } catch (e) { body.innerHTML = `<section class="sc-card sc-pad">${window.LoadErr.html({ title: 'Ilova natijalarini yuklab bo\'lmadi', err: e, note: '' })}</section>`; window.LoadErr.bind(body, () => progressTab(body, c)); return; }
         if (!r.detail) { body.innerHTML = '<section class="sc-card sc-pad"><p class="sc-mt">Ilova ma\'lumoti hali yo\'q — o\'quvchi ilovaga kirgach shu yerda chiqadi</p></section>'; return; }
         const d = r.detail, cur = acad.current(d), nl = nextLesson(c);
         const nextLive = cur % 2 === 0 ? cur : cur + 1;
@@ -1159,11 +1170,11 @@
         try {
             if (aid) rep = await api(`/assist/month?assistantId=${encodeURIComponent(aid)}&month=${month}`);
             reqs = (await api('/requests?status=new')).requests.filter(r => r.type === 'assist_late');
-        } catch (e) { root.innerHTML = `<div class="sc-err">${esc(e.message)}</div>`; return; }
+        } catch (e) { root.innerHTML = window.LoadErr.html({ title: 'Yordamchi aloqalarini yuklab bo\'lmadi', err: e, note: '' }); window.LoadErr.bind(root, () => renderAssistAdmin(root)); return; }
         const st = rep?.state || {};
         const locked = month < today().slice(0, 7);
         const step = !locked ? 'Oy davom etmoqda' : !st.prelim_at ? 'Qulflangan · dastlabki tasdiq kutilmoqda' : !st.final_at ? `Dastlabki tasdiq · e'tiroz ${st.objection_until ? fmtDate(String(st.objection_until).slice(0, 10), false) + ' gacha' : ''}` : !st.paid_at ? 'Yakuniy tasdiq · to\'lov kutilmoqda' : 'To\'langan';
-        root.innerHTML = `<div class="sc-head"><div><h1>Yordamchi aloqalari</h1><p class="sc-sub">Har o'quvchi bilan oyiga 13 tagacha × 3 077 so'm (40 000 so'm) · kamida 5 daqiqa · "javob bermadi" hisoblanmaydi</p></div>
+        root.innerHTML = `<div class="sc-head"><div><h1>Yordamchi aloqalari</h1><p class="sc-sub">Har o'quvchi bilan oyiga ${esc(assistPayRule(rep || { cap: 13, monthly: 40000 }))} · kamida 5 daqiqa · "javob bermadi" hisoblanmaydi</p></div>
             <div class="sc-row"><select data-aid>${list.map(a => `<option value="${esc(a.id)}"${a.id === aid ? ' selected' : ''}>${esc(a.name)}</option>`).join('')}</select><input type="month" value="${month}" data-month></div></div>
           ${reqs.length ? `<section class="sc-card"><header class="sc-ch"><h2>Kechikib belgilash so'rovlari · ${reqs.length}</h2></header>${reqs.map(r => `<div class="sc-it"><span class="sc-grow"><b>${esc(r.requester_name)} · ${esc(studentById(r.payload?.studentId)?.name || '')}</b><small>${esc(fmtDate(r.payload?.day))} · ${esc(r.payload?.channel || '')} ${esc(r.payload?.minutes || '')} daq — ${esc(r.reason)}</small></span><button type="button" class="sc-btn sc-btn--pri sc-btn--sm" data-late="${esc(r.id)}">Qo'shish</button></div>`).join('')}</section>` : ''}
           ${rep ? `<div class="sc-kpis"><div class="sc-kpi"><small>Hisoblangan</small><b>${rep.counted}</b><span>${formatMoney(rep.amount)}</span></div><div class="sc-kpi"><small>Javob bermadi</small><b>${rep.noAnswer}</b></div><div class="sc-kpi"><small>Limitdan ortiq</small><b>${rep.overCap}</b></div><div class="sc-kpi"><small>Holat</small><b class="sc-small">${esc(step)}</b></div></div>
@@ -1253,6 +1264,6 @@
         studentAvatar, staffAvatar, staffAvatarUrl, tgPill, teacherName, studentById, teachersForSubject,
         openDrawer, openDialog, closeDrawer, errBox, busy, field, impact, toast, refreshCache, nowMin,
         openStudent, closeStudent, renderApprovals, renderGroups, renderAssistAdmin, loadStaffAvatars, staffAvatarOf: id => staffAvatarUrl(_avatars[id]), acad, dShort, whenTxt, shortName, num,
-        bulkDrawer, correctionDrawer, CHN, CST, assistPayNote, MISSED_CAME, missedCamePill, studentRequestDrawer
+        bulkDrawer, correctionDrawer, CHN, CST, assistPayNote, assistPayRule, MISSED_CAME, missedCamePill, studentRequestDrawer
     });
 })();

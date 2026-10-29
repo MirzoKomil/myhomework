@@ -83,3 +83,17 @@ html[data-theme="dark"] .wb-saved.is-view { color: #A9B4C6; }
 /* "Yana N" — eski doskalarni ochish (fix/baho2-ui) */
 .wb-chip--more { border-style: dashed; }
 .wb-chip--more b { color: var(--text-muted, #4B5563); }
+/* Ko'p yorliq: qator kesilmaydi — sig'maganlari "Yana N" menyusida (js/whiteboard.js fitChips) */
+.wb-chrow { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+.wb-chrow .wb-chips { overflow: hidden; }
+.wb-more { position: relative; flex: 0 0 auto; }
+.wb-more[hidden] { display: none; }
+.wb-chip--more b { color: var(--rd-primary-strong, var(--purple)); }
+.wb-mmenu { left: 0; right: auto; max-height: 360px; overflow-y: auto; }
+.wb-mmenu button { display: flex; flex-direction: column; gap: 2px; }
+.wb-mmenu button small { font-size: 11px; font-weight: 600; color: var(--text-muted, #4B5563); }
+@media (max-width: 760px) {
+    .wb-chrow { order: 3; flex-basis: 100%; }
+    .wb-chrow .wb-chips { order: 0; flex-basis: auto; overflow: hidden; }
+    .wb-mmenu { left: auto; right: 0; width: min(290px, calc(100vw - 32px)); }
+}

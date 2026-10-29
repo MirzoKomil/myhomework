@@ -54,27 +54,34 @@
         if (p.day === yesterdayTz()) return `kecha ${p.hm}`;
         return dm(v);
     }
+    // Dizayndagi ixcham ro'yxat: dastlab 3 ta sessiya va 4 ta kirish; qolgani "Yana ko'rsatish" bilan (sessiyalar — hammasi, tarix — 10 tadan).
+    const SES_N = 3, HIST_N = 4, HIST_STEP = 10;
     const head = () => '<div class="profile-header-bar ss-head"><h1>Sozlamalar</h1><p>Xavfsizlik · qurilmalar va kirishlar</p></div>';
 
     async function render(body) {
         // Javob kelguncha boshqa bo'limga o'tilgan bo'lsa chizilmaydi (js/staffSettings.js render tokeni).
         const tok = body.dataset.ssTok, ok = () => body.isConnected && body.classList.contains('ss-body') && body.dataset.ssTok === tok;
         body.innerHTML = head() + '<div class="ss-col"><div class="ss-card ss-pad ss-muted">Yuklanmoqda…</div></div>';
-        let sessions = [], hist = null, err = null;
+        let sessions = [], hist = null, err = null, histErr = null;
         await Promise.all([
             apiGetSessions().then(r => { sessions = r.sessions || []; }).catch(e => { err = e; }),
-            (typeof apiLoginHistory === 'function' ? apiLoginHistory() : Promise.resolve(null)).then(r => { hist = r; }).catch(() => { hist = null; })
+            (typeof apiLoginHistory === 'function' ? apiLoginHistory() : Promise.resolve(null)).then(r => { hist = r; }).catch(e => { hist = null; histErr = e; })
         ]);
         if (!ok()) return;
-        if (err) { body.innerHTML = head() + `<div class="ss-col"><div class="ss-card ss-pad ss-err" role="alert">${esc(err.message || 'Xatolik')}</div></div>`; return; }
-        draw(body, sessions, hist);
+        // Bitta xato naqshi (js/loadError.js): sabab + "Qayta urinish"; tarix xatosi sessiyalar ro'yxatini to'smaydi.
+        if (err) {
+            body.innerHTML = head() + `<div class="ss-col"><section class="ss-card ss-pad">${window.LoadErr.html({ title: 'Sessiyalarni yuklab bo\'lmadi', err, note: '' })}</section></div>`;
+            window.LoadErr.bind(body, () => render(body));
+            return;
+        }
+        draw(body, sessions, hist, histErr);
     }
 
-    function draw(body, sessions, hist) {
+    function draw(body, sessions, hist, histErr = null, show = { s: SES_N, h: HIST_N }) {
         // Joriy sessiya birinchi, qolganlari oxirgi faollik bo'yicha.
         const list = [...sessions].sort((a, b) => (b.isCurrent - a.isCurrent) || (Date.parse(b.lastSeen || b.createdAt) || 0) - (Date.parse(a.lastSeen || a.createdAt) || 0));
         const others = list.filter(s => !s.isCurrent).length;
-        const rows = list.map(s => {
+        const rows = list.slice(0, show.s).map(s => {
             const d = device(s.userAgent), ip = maskIp(s.ip);
             const sub = [ip, s.isCurrent ? 'hozir faol' : when(s.lastSeen || s.createdAt)].filter(Boolean).join(' · ');
             return `<li class="tgs-ses" data-session-id="${esc(s.id)}"><span class="tgs-ic${d.icon === 'app' ? ' app' : ''}">${ICON[d.icon]}</span>
@@ -89,19 +96,23 @@
         const recentFail = groups.find(g => !g.ok && Date.now() - new Date(g.at) < 7 * 864e5);
         const warn = recentFail ? `<div class="tgs-warn" role="alert"><p><b>${esc(dm(recentFail.at))} — ${recentFail.n} marta noto'g'ri parol${recentFail.ip ? ` (${esc(maskIp(recentFail.ip))})` : ''}.</b> Siz bo'lmasangiz parolni o'zgartiring.${H.failLimit ? ` ${H.failLimit} xatodan keyin kirish ${H.lockMinutes} daqiqaga bloklanadi.` : ''}</p>
             <button type="button" class="ss-btn ss-btn--sm" data-go-pwd>Parolni o'zgartirish</button></div>` : '';
-        const histRows = groups.map(g => { const d = device(g.userAgent);
+        const histRows = groups.slice(0, show.h).map(g => { const d = device(g.userAgent);
             return `<tr><td>${esc(dm(g.at))}</td><td>${esc(shortLabel(d))}</td><td class="tgs-ip">${esc(maskIp(g.ip) || '—')}</td><td>${g.ok ? '<i class="ss-pill ok">Kirdi</i>' : `<i class="ss-pill bad">Noto'g'ri parol${g.n > 1 ? ' × ' + g.n : ''}</i>`}</td></tr>`; }).join('');
         const admin = ['admin', 'boshliq'].includes(me().role);
         body.innerHTML = head() + `<div class="ss-col">
           <section class="ss-card" aria-labelledby="tgsSH"><header class="ss-ch"><h3 id="tgsSH">Faol sessiyalar · ${list.length}</h3>${others ? '<button type="button" class="ss-btn ss-btn--sm" data-end-all>Boshqa hammasidan chiqish</button>' : ''}</header>
-            ${list.length ? `<ul class="tgs-sl">${rows}</ul>` : '<p class="ss-pad ss-mt">Faol sessiya topilmadi</p>'}</section>
+            ${list.length ? `<ul class="tgs-sl">${rows}</ul>` : '<p class="ss-pad ss-mt">Faol sessiya topilmadi</p>'}
+            ${list.length > show.s ? `<div class="tgs-more"><button type="button" class="ss-btn ss-btn--sm" data-more-s>Yana ko'rsatish · ${list.length - show.s} ta</button></div>` : ''}</section>
           ${warn}
           <section class="ss-card" aria-labelledby="tgsHH"><header class="ss-ch"><h3 id="tgsHH">Kirishlar tarixi · 30 kun</h3></header>
-            ${hist == null ? '<p class="ss-pad ss-mt">Tarixni yuklab bo\'lmadi</p>' : groups.length ? `<div class="ss-tw"><table class="ss-tbl tgs-ht"><thead><tr><th scope="col">Vaqt</th><th scope="col">Qurilma</th><th scope="col" title="Shahar ko'rsatilmaydi: IP manzil tashqi xizmatga yuborilmaydi. IP qisqartirilgan holda chiqadi.">IP manzil</th><th scope="col">Natija</th></tr></thead><tbody>${histRows}</tbody></table></div>`
+            ${hist == null ? (histErr ? `<div class="ss-pad">${window.LoadErr.html({ title: 'Kirishlar tarixini yuklab bo\'lmadi', err: histErr, note: '', compact: true })}</div>` : '<p class="ss-pad ss-mt">Tarix mavjud emas</p>') : groups.length ? `<div class="ss-tw"><table class="ss-tbl tgs-ht"><thead><tr><th scope="col">Vaqt</th><th scope="col">Qurilma</th><th scope="col" title="Shahar ko'rsatilmaydi: IP manzil tashqi xizmatga yuborilmaydi. IP qisqartirilgan holda chiqadi.">IP manzil</th><th scope="col">Natija</th></tr></thead><tbody>${histRows}</tbody></table></div>${groups.length > show.h ? `<div class="tgs-more"><button type="button" class="ss-btn ss-btn--sm" data-more-h>Yana ko'rsatish · ${Math.min(HIST_STEP, groups.length - show.h)} ta (jami ${groups.length})</button></div>` : ''}`
                 : '<p class="ss-pad ss-mt">Hozircha yozuv yo\'q — tarix shu yangilanishdan keyin yig\'iladi.</p>'}</section>
           ${admin ? `<section class="ss-card" aria-labelledby="tgsAH"><header class="ss-ch"><h3 id="tgsAH">Xodimni tizimdan chiqarish</h3><span class="ss-badge">faqat admin</span></header>
             <p class="ss-pad ss-mt" style="margin:0">Xodim ishdan ketsa yoki qurilmasi yo'qolsa: HR bo'limi → xodim → "Ishdan bo'shatish" — login bloklanadi va barcha sessiyalari tugaydi. Har bir majburiy chiqarish tarixga yoziladi.</p></section>` : ''}
         </div>`;
+        body.querySelector('[data-more-s]')?.addEventListener('click', () => draw(body, sessions, hist, histErr, { ...show, s: list.length }));
+        body.querySelector('[data-more-h]')?.addEventListener('click', () => draw(body, sessions, hist, histErr, { ...show, h: show.h + HIST_STEP }));
+        window.LoadErr.bind(body, () => render(body));
         body.querySelectorAll('[data-end]').forEach(b => b.addEventListener('click', async () => {
             b.disabled = true;
             try { await apiDeleteSession(b.dataset.end); toast('Sessiya tugatildi'); render(body); }

@@ -22,7 +22,7 @@
         if (mk.loading || (mk.month === month && !mk.stale) || mk.errMonth === month || !window.schoolUI) return;
         mk.loading = true;
         window.schoolUI.api('/makeups').then(r => { mk = { month, list: r.makeups || [], loading: false, stale: false, err: '', errMonth: '' }; globalThis.__schoolMakeups = mk.list; render(); })
-            .catch(e => { mk = { ...mk, loading: false, err: e?.message || 'server javob bermadi', errMonth: month }; render(); });
+            .catch(e => { mk = { ...mk, loading: false, err: e?.message || 'server javob bermadi', errObj: e, errMonth: month }; render(); });
     }
     // "Kelmadi" belgilari (server: school_absences) — main_attendance faqat "Keldi"ni saqlaydi.
     let ab = { month: '', list: [], loading: false, err: '', errMonth: '' };
@@ -30,7 +30,7 @@
         if (ab.loading || (ab.month === month && !ab.stale) || ab.errMonth === month || !window.schoolUI) return;
         ab.loading = true;
         window.schoolUI.api('/attendance/absences?month=' + month).then(r => { ab = { month, list: r.absences || [], loading: false, err: '', errMonth: '' }; globalThis.__schoolAbsences = { month, list: ab.list }; render(); })
-            .catch(e => { ab = { ...ab, loading: false, err: e?.message || 'server javob bermadi', errMonth: month }; render(); });
+            .catch(e => { ab = { ...ab, loading: false, err: e?.message || 'server javob bermadi', errObj: e, errMonth: month }; render(); });
     }
     function withAbsences(block, month, teacherId) {
         if (ab.month !== month || !ab.list.length) return block;
@@ -159,9 +159,8 @@
             const head = `<div class="udv-ch"><h2 class="udv-ct" id="udvMyTitle">O‘quvchilarim davomati</h2><div class="udv-row">${monthPicker}</div></div>`;
             if (loadErr) {
                 root.innerHTML = `<div class="udv"><section class="udv-card udv-my" aria-labelledby="udvMyTitle">${head}
-                    <div class="udv-loaderr" role="alert"><p><b>Davomat ma'lumotini yuklab bo‘lmadi.</b> ${esc(loadErr)}. Raqamlar to‘liq bo‘lmasligi mumkin, shuning uchun ko‘rsatilmadi.</p>
-                    <button type="button" class="udv-btn is-pri" data-udv-retry>Qayta urinish</button></div></section></div>`;
-                root.querySelector('[data-udv-retry]').onclick = () => { mk.errMonth = ''; ab.errMonth = ''; mk.err = ''; ab.err = ''; mk.stale = true; ab.stale = true; render(); };
+                    ${window.LoadErr.html({ title: 'Davomat ma\'lumotini yuklab bo‘lmadi', err: (mk.errMonth === month && mk.err ? mk.errObj : ab.errObj) || { message: loadErr }, cls: 'udv-loaderr', attr: 'data-udv-retry-box' })}</section></div>`;
+                window.LoadErr.bind(root, () => { mk.errMonth = ''; ab.errMonth = ''; mk.err = ''; ab.err = ''; mk.stale = true; ab.stale = true; render(); });
                 bindMonth();
                 return;
             }

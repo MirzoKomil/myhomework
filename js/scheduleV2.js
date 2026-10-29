@@ -227,8 +227,10 @@
             if (st.view === 'week') return await teacherWeekAdmin(root, reload);
             return await dayBoard(root, reload);
         } catch (e) {
+            // Bitta xato naqshi (js/loadError.js): sabab + "Qayta urinish" — bo'sh to'r bilan "dars yo'q" deb ko'rsatilmaydi.
             const b = root.querySelector('[data-body]') || root;
-            b.innerHTML = `<div class="sc-err">${U().esc(e.message)}</div>`;
+            b.innerHTML = window.LoadErr.html({ title: 'Dars jadvalini yuklab bo\'lmadi', err: e, note: 'Darslar ko\'rsatilmadi — jadval o\'zgarmagan.' });
+            window.LoadErr.bind(b, reload);
         }
     }
     function mgrTabs() {
