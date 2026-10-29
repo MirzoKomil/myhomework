@@ -510,7 +510,10 @@ async function report(db, days = 30) {
         .map(r => ({ ...r, blockRate: r.sent ? Math.round(r.blocked / r.sent * 1000) / 10 : 0, alert: r.sent >= 20 && r.blocked / r.sent > 0.015 }));
     const outcomes = (await db.query(`SELECT data->>'action' AS action,COUNT(*)::int AS count FROM domwork_bot_funnel_events
         WHERE event='outcome' AND created_at>NOW()-($1::int*INTERVAL '1 day') GROUP BY 1`, [days])).rows;
-    return { days, steps: ['start', 'gift', 'segment', 'guide', 'lesson_part', 'lesson_seen', 'quiz', 'cta', 'contact', 'request'].map(e => ({ event: e, people: by[e] || 0 })),
+    const st = await settings(db);
+    // Tayyorlik: har material — yuklangan (Telegram fayli), tayyor (repodagi fayl) yoki yo'q.
+    const materials = MEDIA_KEYS.map(k => ({ key: k, state: st.funnelMedia?.[k] ? 'uploaded' : bundledFile(k) ? 'bundled' : 'missing' }));
+    return { materials, days, steps: ['start', 'gift', 'segment', 'guide', 'lesson_part', 'lesson_seen', 'quiz', 'cta', 'contact', 'request'].map(e => ({ event: e, people: by[e] || 0 })),
         faq: by.faq || 0, freeText: by.free_text || 0, bonus: by.bonus || 0, relays: by.relay_out || 0, drips, outcomes };
 }
 
