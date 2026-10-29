@@ -40,6 +40,12 @@ module.exports = function createRouter({ pool, runtime, authRequired }) {
     router.get('/my-telegram-link', handle(req => store.ownAdminLink(pool, req.user)));
     router.post('/my-telegram-link/unlink', handle(req => queue.transaction(pool, db => store.unlinkOwnAdmin(db, req.user, req.body))));
     router.get('/settings', handle(() => store.settings(pool)));
+    router.get('/student-activation', handle(() => require('../services/domworkBot/studentActivation').report(pool)));
+    router.post('/student-activation/relaunch', handle(async req => {
+        if (!(runtime.healthy ? await runtime.healthy() : runtime.status().state === 'ready'))
+            throw Object.assign(Error('Bot xabar qabul qilmayapti (webhook/Redis). Avval «Bot webhookini ulash»ni tekshiring'), { status: 503 });
+        return require('../services/domworkBot/studentActivation').relaunch(pool, req.user); }));
+    router.post('/student-activation/stop', handle(req => require('../services/domworkBot/studentActivation').stop(pool, req.user)));
     router.get('/staff-activation', handle(() => require('../services/domworkBot/staffActivation').report(pool)));
     router.post('/staff-activation/relaunch', handle(async req => {
         // Webhook ishlamasa hech kim Start/Tayyorman bosa olmaydi — bunday holatda yoqilmaydi.

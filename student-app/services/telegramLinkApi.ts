@@ -7,7 +7,7 @@ export type TelegramLinkRequest = {
   id: string; state: 'pending' | 'claimed' | 'confirmed' | 'cancelled'; expired: boolean; expiresAt: string;
   telegram: { id: string; name: string; username: string } | null;
 };
-export type TelegramLinkStatus = { linked: boolean; available: boolean; request: TelegramLinkRequest | null };
+export type TelegramLinkStatus = { linked: boolean; available: boolean; mandatory?: boolean; request: TelegramLinkRequest | null };
 async function request<T>(path: string, body?: object): Promise<T> {
   await ready();
   if (!getToken()) throw Error('O‘quvchi akkauntingiz bilan tizimga kiring.');

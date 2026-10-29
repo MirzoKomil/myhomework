@@ -103,9 +103,8 @@ function createHandler({ crm }) {
         }
         try {
             if(message._studentLinkHash || require('./studentLink').startHash(message.text)){
+                // Start ulanishni darhol yakunlaydi; xush kelibsiz xabari va menyuni studentLink.finalize yuboradi.
                 await require('./studentLink').claim(db,message);
-                await store.enqueue(db,{key:`u:${update.update_id}:student-link`,targetId:sender,
-                    payload:{chat_id:sender,text:'Endi student appdagi “Telegram botga ulash” oynasiga qayting. “Holatni tekshirish”ni bosib, o‘z Telegram hisobingizni tasdiqlang.'}});
                 return;
             }
             if(message._staffLinkHash || require('./staffLink').startHash(message.text)){
@@ -122,6 +121,10 @@ function createHandler({ crm }) {
             // Eski oqimda Start bosib, CRMda tasdiqlamay qolgan xodim — har qanday xabarida ulanish yakunlanadi (raqam so'ralmaydi).
             if (!identity && (await db.query(`SELECT 1 FROM domwork_staff_telegram_requests WHERE telegram_id=$1 AND state='claimed' AND expires_at>NOW() LIMIT 1`, [sender])).rows.length) {
                 await require('./staffLink').finishPending(db, sender);
+                return;
+            }
+            if (!identity && (await db.query(`SELECT 1 FROM domwork_student_telegram_requests WHERE telegram_id=$1 AND state='claimed' AND expires_at>NOW() LIMIT 1`, [sender])).rows.length) {
+                await require('./studentLink').finishPending(db, sender);
                 return;
             }
             if (message.contact) {
@@ -294,7 +297,7 @@ function createHandler({ crm }) {
                     const row = (await db.query("SELECT phone,extra_data FROM students WHERE id=$1 AND subject='russian'", [identity.id])).rows[0];
                     const last4 = policy.phone(row?.phone).slice(-4);
                     const original = last4.length === 4 && row?.extra_data?.passwordHash && await bcrypt.compare(last4, row.extra_data.passwordHash);
-                    return await reply(`Platforma: https://myhomework.uz/student/\nLogin: ${text(row?.extra_data?.login || '+' + policy.phone(row?.phone))}\n`
+                    return await reply(`Platforma: https://myhomework.uz/student/v2/\nLogin: ${text(row?.extra_data?.login || '+' + policy.phone(row?.phone))}\n`
                         + (original ? `Parol: ${last4}` : 'Parol o‘zgartirilgan. Uni ko‘rsatish yoki tiklash uchun administratorga murojaat qiling.'));
                 }
                 if (action === 'grades') {

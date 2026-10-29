@@ -20,7 +20,8 @@ import { DPopupFrame } from './DPopupFrame';
 import { ChipBellIcon, ChipCheckIcon, ChipVideoIcon, CloseIcon, TgIcon } from './icons';
 
 
-export function DBotConnect({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+export function DBotConnect({ visible, onClose, mandatory = false }: { visible: boolean; onClose: () => void; mandatory?: boolean }) {
+  const dismiss = mandatory ? () => {} : onClose;
   const { token } = useAuth();
   const [status, setStatus] = useState<TelegramLinkStatus | null>(null);
   const [busy, setBusy] = useState(false);
@@ -110,7 +111,7 @@ export function DBotConnect({ visible, onClose }: { visible: boolean; onClose: (
   if (error) statusText = error;
 
   return (
-    <DPopupFrame visible={visible} onClose={onClose} width={560}>
+    <DPopupFrame visible={visible} onClose={dismiss} width={560}>
       <View style={s.head}>
         <Image source={designImages.ea02e684d881c58fa4cba7467756a2c8} accessibilityLabel="Qoʻngʻiroqcha chalayotgan Domik" style={s.mascot} resizeMode="contain" />
         <View style={{ flex: 1, gap: 4 }}>
@@ -119,9 +120,9 @@ export function DBotConnect({ visible, onClose }: { visible: boolean; onClose: (
           </Text>
           <Text style={s.handle}>@Domworkuz_bot</Text>
         </View>
-        <Pressable accessibilityRole="button" accessibilityLabel="Yopish (Esc)" onPress={onClose} style={s.close}>
+        {!mandatory && (<Pressable accessibilityRole="button" accessibilityLabel="Yopish (Esc)" onPress={onClose} style={s.close}>
           <CloseIcon />
-        </Pressable>
+        </Pressable>)}
       </View>
       <Text style={s.body}>Muhim xabarlar Telegramga keladi — ilovani ochmasangiz ham hech narsani oʻtkazib yubormaysiz.</Text>
       <View accessibilityRole="list" style={s.chips}>
@@ -143,9 +144,8 @@ export function DBotConnect({ visible, onClose }: { visible: boolean; onClose: (
           {[
             <Text key="1">Botni oching yoki QR kodni telefonda skanerlang</Text>,
             <Text key="2">
-              <Text style={{ fontFamily: fonts.bodyHeavy }}>Start</Text> tugmasini bosing
+              Telegramda <Text style={{ fontFamily: fonts.bodyHeavy }}>Start</Text> tugmasini bosing — tamom, oyna o‘zi yopiladi
             </Text>,
-            <Text key="3">Shu oynada chiqqan ismingizni tasdiqlang</Text>,
           ].map((t, i) => (
             <View key={i} style={s.step}>
               <View style={s.stepNum}>
@@ -176,9 +176,9 @@ export function DBotConnect({ visible, onClose }: { visible: boolean; onClose: (
           <View style={[s.statusDot, !!error && { backgroundColor: '#D92D20', boxShadow: '0 0 0 4px #FDECEC' }]} />
           <Text style={s.statusText}>{statusText}</Text>
         </View>
-        <Pressable accessibilityRole="button" onPress={onClose} style={s.later}>
+        {!mandatory && (<Pressable accessibilityRole="button" onPress={onClose} style={s.later}>
           <Text style={s.laterText}>Keyinroq</Text>
-        </Pressable>
+        </Pressable>)}
         <Pressable
           accessibilityRole="button"
           accessibilityState={{ busy, disabled: busy }}
