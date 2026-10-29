@@ -41,6 +41,15 @@ const QUIZ = [
       hint: 'Joy ma’nosida so‘z oxiri o‘zgaradi: «банк» → «в банке».' }
 ];
 
+// 30-okt: birinchi savol — qayerdasiz (aloqa usuli shunga bog'liq).
+const LOCATIONS = { uz: '🇺🇿 O‘zbekistondaman', ru: '🇷🇺 Rossiyadaman', other: '🌍 Boshqa davlatdaman' };
+// Rossiyadagilar uchun qisqa anketa — menejer qo'ng'iroqsiz, shu bot orqali yozadi (Rossiyada qo'ng'iroq ishlamaydi).
+const RU_FORM = [
+    ['city', '1/4. Rossiyaning qaysi shahridasiz?', [['msk', 'Moskva'], ['spb', 'Sankt-Peterburg'], ['other', 'Boshqa shahar']]],
+    ['job', '2/4. Qanday ishda ishlaysiz?', [['build', '🧱 Qurilish / smena'], ['service', '🛒 Savdo, kafe, xizmat'], ['drive', '🚕 Haydovchi / kuryer'], ['other', 'Boshqa']]],
+    ['level', '3/4. Rus tilini qanchalik bilasiz?', [['zero', 'Umuman bilmayman'], ['little', 'Ozgina tushunaman'], ['speak', 'Gapiraman, lekin xatolar ko‘p']]],
+    ['when', '4/4. Menejer qachon yozsa qulay?', [['morn', 'Ertalab'], ['day', 'Tushdan keyin'], ['eve', 'Kechqurun'], ['wknd', 'Dam olish kuni']]]
+];
 const KEYBOARD = { contact: '📞 Menejer bilan bog‘lanish', guides: '🎁 Qo‘llanmalar', faq: '❓ Savollar' };
 
 const FAQ = {
@@ -70,18 +79,23 @@ const WHEN = { now: 'Hozir', eve: 'Bugun kechqurun', morn: 'Ertaga ertalab', aft
 
 const text = {
     greeting: (name, landing) => landing
-        ? `Assalomu alaykum, ${name}! Arizangiz qabul qilindi ✅\n\nDomwork — rus tilini shaxsiy ustoz bilan o‘rgatadigan onlayn maktab. Pastda tugmalar bor — istalgan payt menejer bilan bog‘lanishingiz mumkin.`
-        : `Assalomu alaykum, ${name}! 👋\n\nDomwork — rus tilini shaxsiy ustoz bilan o‘rgatadigan onlayn maktab. Pastda tugmalar bor — istalgan payt menejer bilan bog‘lanishingiz mumkin.`,
-    gift: 'Va’da qilingan sovg‘a — «40 ta eng kerakli gap» 🎁\nHar bir gapning o‘qilishi ham yozilgan. Kuniga 5 tasini ovoz chiqarib ayting — bir haftada 40 tasi ham tilingizda bo‘ladi.',
+        ? `Assalomu alaykum, <b>${name}</b>! 👋\nArizangiz qabul qilindi ✅\n\n<b>Domwork</b> — rus tilini <b>shaxsiy ustoz bilan</b> o‘rgatadigan onlayn maktab. Guruh yo‘q, shoshilish yo‘q — faqat siz va ustozingiz.\n\nVa’da qilingan sovg‘a 👇`
+        : `Assalomu alaykum, <b>${name}</b>! 👋\nDomwork botiga xush kelibsiz.\n\n<b>Domwork</b> — rus tilini <b>shaxsiy ustoz bilan</b> o‘rgatadigan onlayn maktab. Bu yerda foydali qo‘llanmalar bor, savollaringizga esa menejerimiz javob beradi.\n\nBirinchi sovg‘angiz 👇`,
+    gift: '🎁 <b>«40 ta eng kerakli gap»</b>\n\nSalomlashish, tanishuv, do‘kon, transport, telefon — har bir gapning o‘qilishi va tarjimasi bilan.\n\n💡 Kuniga 5 tasini ovoz chiqarib ayting — bir haftada 40 tasi ham tilingizda bo‘ladi.',
+    location: 'Sizga mos materiallarni yuborishim uchun 👇\n\n<b>Hozir qayerda yashaysiz?</b>',
+    goalUz: '<b>Rus tili sizga nima uchun kerak?</b>',
+    ruNote: '🇷🇺 Tushunarli! Rossiyaga qo‘ng‘iroqlar ko‘pincha ulanmaydi — shuning uchun menejerimiz siz bilan <b>shu yerda, Telegramda</b> yozishadi. Telefon raqam shart emas.\n\nMenejer sizga mos reja tuzishi uchun 4 ta qisqa savol 👇',
+    abroadNote: '🌍 Tushunarli! Menejerimiz siz bilan <b>shu yerda, Telegramda</b> yozishadi — qo‘ng‘iroqsiz, sizga qulay vaqtda.',
+    ruDone: when => `Rahmat! ✅ Ma’lumotlaringiz menejerga yuborildi.\n\n👩‍💼 Menejerimiz <b>${when}</b> shu chatga yozadi: darajangiz, sizga mos jonli dars vaqti va kurs qanday o‘tishini tushuntiradi.\n\nUngacha sohangizga mos qo‘llanmani oling 👇`,
     matchAsk: 'Arizangizni topib, menejeringizni ulab qo‘yishim uchun raqamingizni tasdiqlang — pastdagi tugmani bosing (yozish shart emas) 👇',
     matched: manager => `Rahmat, arizangiz topildi ✅${manager ? `\nMenejeringiz — ${manager}. U siz bilan bog‘lanadi, savollaringizni shu yerga ham yozishingiz mumkin.` : '\nMenejerimiz tez orada bog‘lanadi.'}`,
     matchNew: 'Rahmat, raqamingiz saqlandi ✅ Menejerimiz siz bilan bog‘lanadi.',
     giftNext: 'Endi rus tilida o‘zingizni tanishtirishni o‘rganamiz 👇',
-    segment: 'Sizga mos materiallarni tanlashim uchun bitta savol: rus tili sizga nima uchun kerak?',
-    field: 'Qaysi soha bo‘yicha qo‘llanma yuboray?',
+    segment: '<b>Rus tili sizga nima uchun kerak?</b>',
+    field: '<b>Qaysi soha bo‘yicha qo‘llanma yuboray?</b>\nIshda eng ko‘p kerak bo‘ladigan iboralar va namuna dialoglar bilan 📘',
     later: 'Keyinroq',
-    promise: field => `Domworkda 3 oy davomida ustozingiz bilan ${field.promise}ni mashq qilasiz. Darslar sohangizga moslashtiriladi.`,
-    guide: f => `${f.label} — qo‘llanma 📘\nIboralar o‘qilishi va tarjimasi bilan. Saqlab qo‘ying — ishda kerak bo‘ladi.`,
+    promise: field => `🎯 Domworkda 3 oy davomida ustozingiz bilan aynan <b>${field.promise}</b>ni mashq qilasiz — darslar sohangizga moslashtiriladi.`,
+    guide: f => `${f.label} — <b>qo‘llanma</b> 📘\n\nIboralar o‘qilishi va tarjimasi bilan, 2 ta namuna dialog. Saqlab qo‘ying — kerak bo‘ladi.`,
     lessonAsk: '1-darsni yuboraman 🎬\n\nDarsga mos qo‘llanmalar va eslatmalarni yuborishim uchun raqamingizni tasdiqlang — pastdagi tugmani bosing (raqam yozish shart emas).',
     contactButton: '📱 Raqamni tasdiqlash',
     cancel: 'Bekor qilish',
@@ -90,15 +104,15 @@ const text = {
     lessonMore: '▶️ Davomini ko‘rish',
     lessonSeen: '✅ Ko‘rdim — testni boshlash',
     lessonWatch: '▶️ 1-darsni ko‘rish (5 daq)',
-    lessonMissing: '1-dars tez orada shu yerga keladi. Hozircha menejerimiz sizga kurs qanday o‘tishini tushuntirib beradi 👇',
+    lessonMissing: '🎬 1-dars videosi tayyorlanmoqda — tayyor bo‘lishi bilan shu yerga yuboraman. Hozircha menejerimiz kurs qanday o‘tishini 5 daqiqada tushuntirib beradi 👇',
     quizIntro: 'Kichik test: 3 ta savol, 30 soniya ⏱',
     quizSummary(right, wrong) {
         if (!wrong.length) return 'Asoslar yaxshi! 🎉 3/3.\nYozuvda bilish va og‘zaki gapirish — ikki xil narsa. Og‘zaki gapirishni ustoz bilan jonli darsda mashq qilamiz.';
         if (!right.length) return 'Hech qisi yo‘q 🙂 Individual ustoz aynan shu uchun: noldan, sizning tezligingizda boshlaymiz.\n\nEng muhim qoida: ' + wrong[0].hint;
         return `✅ ${right.map(q => q.topic).join(', ')} — barakalla!\n\nBitta nozik joy: ${wrong[0].hint}\nKo‘pchilik shu yerda adashadi — shaxsiy ustoz bilan bu tez tuzaladi.`;
     },
-    cta: (seg, discount) => `Keyingi qadam — menejerimiz bilan 5–10 daqiqalik suhbat.\n\nSuhbatdan keyin shu botga keladi: darajangiz, ${seg === 'A' ? 'ishingiz va hayotingiz' : 'sohangiz'} bo‘yicha 3 ta asosiy mavzu va haftasiga nechta jonli dars kerakligi. Xohlasangiz, ustoz bilan jonli sinov darsiga ham yozib qo‘yadi.`
-        + (discount ? `\n\n🎁 Bot orqali kelganlar uchun ${discount.percent}% chegirma — ${discount.until}gacha.` : ''),
+    cta: (seg, discount) => `📞 <b>Keyingi qadam — menejer bilan ${seg === 'A' ? 'qisqa yozishma (shu yerda, Telegramda)' : '5–10 daqiqalik suhbat'}</b>\n\nBilib olasiz:\n• darajangiz qanday;\n• ${seg === 'A' ? 'ishingiz va hayotingiz' : 'sohangiz'} bo‘yicha qaysi 3 mavzudan boshlash kerak;\n• haftasiga nechta jonli dars sizga mos.\n\nXohlasangiz, ustoz bilan <b>jonli sinov darsi</b>ga ham yozib qo‘yamiz. Suhbat sizni hech narsaga majburlamaydi.`
+        + (discount ? `\n\n🎁 <b>Bot orqali kelganlar uchun ${discount.percent}% chegirma</b> — ${discount.until} gacha.` : ''),
     ctaCall: '📞 Qo‘ng‘iroq qiling',
     ctaTelegram: '💬 Telegramda yozishaylik',
     ctaInfo: 'ℹ️ Batafsil',
@@ -182,4 +196,4 @@ const drip = {
     noAnswer: name => `${name} sizga qo‘ng‘iroq qildi, lekin ulanmadi. Qachon qulay?`
 };
 
-module.exports = { PHRASES, WEEKLY, MONTHLY, POLL, drip, SEGMENTS, LANDING_GOALS, FIELDS, FIELD_CHOICES, QUIZ, KEYBOARD, FAQ, FAQ_ORDER, WHEN, text };
+module.exports = { LOCATIONS, RU_FORM, PHRASES, WEEKLY, MONTHLY, POLL, drip, SEGMENTS, LANDING_GOALS, FIELDS, FIELD_CHOICES, QUIZ, KEYBOARD, FAQ, FAQ_ORDER, WHEN, text };

@@ -53,10 +53,12 @@ test('lead funnel for unknown Telegram visitors — synthetic data, no Telegram 
    assert.equal(rows[0].payload.reply_markup.keyboard.length,2);
    assert.equal(rows[1].method,'sendDocument');assert.equal(rows[1].payload.document,'GIFT_FILE_ID_123');
    assert.equal(rows[1].payload.reply_markup.inline_keyboard[0][0].callback_data,'f:les');
-   const delayed=rows.find(r=>/nima uchun kerak/.test(r.payload.text||''));
-   assert.ok(new Date(delayed.not_before)-Date.now()>60000);
+   const delayed=rows.find(r=>/qayerda yashaysiz/.test(r.payload.text||''));
+   assert.ok(new Date(delayed.not_before)-Date.now()>60000); // 1-dars bor — joylashuv savoli 2 daqiqadan keyin
    const v=(await pool.query("SELECT * FROM domwork_bot_visitors WHERE telegram_id='701'")).rows[0];
    assert.equal(v.source,'ig:reels12');assert.equal(v.phone,'');
+   await run(cb(701,'f:loc:uz'));
+   assert.ok((await texts(701)).some(x=>/nima uchun kerak/.test(x)));
    await run(cb(701,'f:seg:career'));
    const row={target_kind:'private',target_id:'701',method:'sendMessage',payload:delayed.payload};
    assert.equal(await queue.transaction(pool,db=>funnel.deliverable(db,row)),false);
@@ -107,7 +109,7 @@ test('lead funnel for unknown Telegram visitors — synthetic data, no Telegram 
    const saved=(await pool.query('SELECT payload FROM domwork_bot_updates WHERE update_id=$1',[update.update_id])).rows[0].payload;
    assert.equal(saved.message.text,'/start lead-link');assert.ok(!JSON.stringify(saved).includes(start.slice(10)));
    while(await queue.processOne(pool,handler));
-   assert.match((await texts(702))[0],/Dilshod! Arizangiz qabul qilindi/);
+   assert.match((await texts(702))[0],/<b>Dilshod<\/b>! 👋\nArizangiz qabul qilindi/);
    const v=(await pool.query("SELECT * FROM domwork_bot_visitors WHERE telegram_id='702'")).rows[0];
    assert.equal(v.lead_id,'land-1');assert.equal(v.segment,'career');
    assert.equal(v.phone,''); // landing raqami tasdiqlanmagan — kontakt tugmasi bilan olinadi
@@ -165,6 +167,23 @@ test('lead funnel for unknown Telegram visitors — synthetic data, no Telegram 
    const r=await funnel.report(pool,30);
    const step=e=>r.steps.find(s=>s.event===e).people;
    assert.ok(step('start')>=2);assert.equal(step('request'),1);assert.equal(step('quiz'),1);
+  });
+  await t.test('Russia: no call — 4-question form creates an organic CRM lead and a sales card to reply to',async()=>{
+   await run(msg(704,'/start fb_rus1'));
+   await run(cb(704,'f:loc:ru'));
+   assert.ok((await texts(704)).some(x=>/Rossiyaga qo‘ng‘iroqlar ko‘pincha ulanmaydi/.test(x)));
+   await run(cb(704,'f:ru:0:msk'));await run(cb(704,'f:ru:1:build'));await run(cb(704,'f:ru:2:little'));await run(cb(704,'f:ru:3:eve'));
+   const v=(await pool.query("SELECT * FROM domwork_bot_visitors WHERE telegram_id='704'")).rows[0];
+   assert.equal(v.segment,'russia');assert.equal(v.location,'ru');assert.ok(v.lead_id);assert.ok(v.requested_at);
+   const lead=(await pool.query('SELECT comments,phone,extra_data FROM leads WHERE id=$1',[v.lead_id])).rows[0];
+   assert.match(lead.comments,/Moskva[\s\S]*Qo‘ng‘iroq qilmang/);assert.equal(lead.phone,'');assert.equal(lead.extra_data.utmSource,'facebook');
+   const card=(await pool.query("SELECT payload FROM domwork_bot_outbox WHERE target_id='-1001234567890' AND payload->>'text' LIKE '%Rossiyadan yangi lid%'")).rows[0];
+   assert.ok(card);assert.equal(card.payload._relay,'704');assert.match(card.payload.text,/ROSSIYADA/);
+   assert.ok((await texts(704)).some(x=>/kechqurun<\/b> shu chatga yozadi/.test(x)));
+   // CTA Rossiyada — qo'ng'iroq tugmasi yo'q, asosiysi Telegram.
+   await run(cb(704,'f:cta'));
+   const kb=(await out(704)).at(-1).payload.reply_markup.inline_keyboard.flat().map(b=>b.callback_data);
+   assert.ok(!kb.includes('f:call'));assert.equal(kb[0],'f:tg');
   });
  }finally{await pool.end();}
 });
