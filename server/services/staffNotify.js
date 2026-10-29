@@ -24,7 +24,7 @@ const CATALOG = {
             ['trial_result', 'Sinov natijasi yozilmagan', 'dars tugagach', [1, 0], true]]],
         ['O\'quvchilar', [
             ['assistant_missed_week', 'Yordamchi bu hafta bog\'lanmadi', 'o\'z o\'quvchingiz · Juma 18:00 da', [1, 0], true],
-            ['student_inactive', 'O\'quvchi 3 kundan beri ilovada faol emas', 'kuniga bir marta, 09:00 da', [0, 0], false]]],
+            ['student_inactive', 'O\'quvchi 3 kundan beri ilovada faol emas', 'kuniga bir marta, 09:00 da', [0, 0], true]]],
         ['Boshqa', [
             ['request_decision', 'Vaqt so\'roviga javob', 'admin ochdi / yopdi', [1, 1], true],
             ['guide_new', 'Yangi yo\'riqnoma', '', [0, 1], true],
@@ -53,11 +53,11 @@ const CATALOG = {
         ['Mening so\'rovlarim', [
             ['edit_decision', 'Tahrir tasdiqlandi / rad etildi / qaytarildi', 'admin yoki ROP · sabab bilan', [1, 1], true]]],
         ['O\'quvchilarim', [
-            ['group_link_missing', 'Telegram guruh havolasi kiritilmagan', 'konvertatsiyadan 24 soat o\'tsa', [1, 1], false],
+            ['group_link_missing', 'Telegram guruh havolasi kiritilmagan', 'konvertatsiyadan 24 soat o\'tsa', [1, 1], true],
             ['student_followup', 'Qaytish oldidan eslatma · qayta jalb qo\'ng\'irog\'i', 'belgilangan kuni · "Faol emas" o\'quvchilar', [1, 1], true],
-            ['student_status', 'O\'quvchim muzlatildi / to\'xtatildi / ustozi almashdi', 'admin yoki ROP qilganda', [1, 1], false],
-            ['payment_due', 'To\'lov muddati yaqin / o\'tdi', '3 kun oldin va o\'tgan kuni', [1, 1], false],
-            ['daily_plan', 'Kunlik reja', '20:00 da', [1, 0], false],
+            ['student_status', 'O\'quvchim muzlatildi / to\'xtatildi / ustozi almashdi', 'admin yoki ROP qilganda', [1, 1], true],
+            ['payment_due', 'To\'lov muddati yaqin / o\'tdi', '3 kun oldin va o\'tgan kuni', [1, 1], true],
+            ['daily_plan', 'Kunlik reja', '20:00 da', [1, 0], true],
             ['guide_new', 'Yangi yo\'riqnoma', '', [0, 1], true]]]
     ],
     rop: [
@@ -66,12 +66,12 @@ const CATALOG = {
             ['payment_edit', 'To\'lov tahriri 24 soatdan keyin', 'admin ham ko\'radi · kim birinchi', [1, 1], true]]],
         ['Sinov va lidlar', [
             ['trial_unassigned', 'Sinovga ustoz topilmadi', 'darhol', [1, 1], true],
-            ['trial_outcome', 'Sinov natijasi: o\'tkazildi / kelmadi', 'jamoa bo\'yicha', [0, 1], false],
-            ['hold_expired', 'Ushlab turish tugadi, band qilinmadi', '10 daqiqadan keyin', [1, 0], false]]],
+            ['trial_outcome', 'Sinov natijasi: o\'tkazildi / kelmadi', 'jamoa bo\'yicha', [0, 1], true],
+            ['hold_expired', 'Ushlab turish tugadi, band qilinmadi', '10 daqiqadan keyin', [1, 0], true]]],
         ['Jamoa', [
-            ['daily_plan', 'Kunlik reja natijasi', '20:00 da · har menejer bo\'yicha', [1, 0], false],
-            ['group_link_missing', 'Telegram guruh havolasi kiritilmagan', 'menejer nomi bilan', [1, 1], false],
-            ['student_status', 'O\'quvchi muzlatildi / to\'xtatildi', 'jamoa o\'quvchilari', [0, 1], false],
+            ['daily_plan', 'Kunlik reja natijasi', '20:00 da · har menejer bo\'yicha', [1, 0], true],
+            ['group_link_missing', 'Telegram guruh havolasi kiritilmagan', 'menejer nomi bilan', [1, 1], true],
+            ['student_status', 'O\'quvchi muzlatildi / to\'xtatildi', 'jamoa o\'quvchilari', [0, 1], true],
             ['guide_new', 'Yangi yo\'riqnoma', '', [0, 1], true]]]
     ],
     admin: [
@@ -83,11 +83,11 @@ const CATALOG = {
         ['Jadval va o\'quvchilar', [
             ['trial_unassigned', 'Sinovga ustoz topilmadi', 'darhol · "Ustoz biriktirilmagan"', [1, 1], true],
             ['freeze_ending', 'Muzlatish tugaydi — o\'quvchi qaytadi', '1 kun oldin', [1, 1], true],
-            ['attendance_unmarked_all', 'Davomat belgilanmagan darslar', 'har kuni 21:00 da · ro\'yxat bilan', [1, 0], false],
-            ['group_link_missing', 'Telegram guruh havolasi yo\'q', 'konvertatsiyadan 24 soat o\'tsa', [1, 0], false]]],
+            ['attendance_unmarked_all', 'Davomat belgilanmagan darslar', 'har kuni 21:00 da · ro\'yxat bilan', [1, 0], true],
+            ['group_link_missing', 'Telegram guruh havolasi yo\'q', 'konvertatsiyadan 24 soat o\'tsa', [1, 0], true]]],
         ['Moliya', [
             ['month_close', 'Oy yopildi — yakunni tasdiqlash kerak', '1–5-sana · yordamchi aloqalari', [1, 1], true],
-            ['payment_overdue', 'To\'lov muddati o\'tdi', 'kuniga bir marta · qarzdorlar soni', [1, 0], false]]]
+            ['payment_overdue', 'To\'lov muddati o\'tdi', 'kuniga bir marta · qarzdorlar soni', [1, 0], true]]]
     ],
     other: [['Boshqa', [['guide_new', 'Yangi yo\'riqnoma', '', [0, 1], true]]]]
 };
@@ -227,6 +227,17 @@ async function teacherEvents(db, me, now, ev) {
     }
 }
 
+// Ustoz: o'quvchi 3 kundan beri ilovaga kirmagan — kuniga bitta jamlangan xabar, 09:00 dan.
+async function inactiveStudents(db, me, now, ev) {
+    const { date: today, min } = T.nowLocal(now);
+    if (min < 9 * 60) return;
+    const rows = (await db.query(`SELECT s.id, s.name, s.extra_data, MAX(se.last_seen) AS seen FROM students s LEFT JOIN sessions se ON se.user_id = s.id
+        WHERE s.teacher_id = $1 AND COALESCE(s.extra_data->>'isStaffDemo','false') <> 'true' GROUP BY s.id`, [me.emp.id])).rows
+        .filter(r => R.isActiveStudent(r)).filter(r => !r.seen || new Date(r.seen).getTime() < now.getTime() - 3 * 86400000);
+    if (rows.length) ev.push({ id: `inactive:${today}:${rows.length}`, type: 'student_inactive', cat: 'davomat', tone: 'warn', title: `${rows.length} o'quvchi 3 kundan beri ilovaga kirmagan`,
+        sub: rows.slice(0, 5).map(r => first(r.name)).join(', ') + (rows.length > 5 ? ` va yana ${rows.length - 5}` : '') + ' · bir og\'iz so\'rab qo\'ying', at: atLocal(today, 9 * 60), go: { tab: 'teachers-section' } });
+}
+
 async function assistantEvents(db, me, now, ev) {
     const aid = me.emp.id, { date: today, min: nowMin } = T.nowLocal(now), month = today.slice(0, 7);
     const plan = await A.plan(db, { assistantIds: [aid], from: today, to: today, now });
@@ -304,6 +315,72 @@ async function teacherCommon(db, me, now, ev) {
     }
 }
 
+
+// ── Qo'shimcha manbalar (29-okt): to'lov muddati, o'quvchi holati, guruh havolasi, kunlik reja, jamoa nazorati ──
+const money = n => `${Math.round(Number(n) || 0).toLocaleString('ru-RU').replace(/\s/g, ' ')} so'm`;
+const ymd = v => { const m = /^(\d{4}-\d{2}-\d{2})/.exec(String(v || '')); return m ? m[1] : (v instanceof Date ? S.dateStr(v) : ''); };
+// Menejerning haqiqiy o'quvchilari — CRM'dagi filterStudentsForSalesManager bilan bir xil (o'zi yoki lididan), demo xodimlarsiz.
+async function managerStudents(db, managerIds, lang) {
+    const rows = (await db.query(`SELECT s.id, s.name, s.subject, s.teacher_id, s.extra_data, COALESCE(NULLIF(s.extra_data->>'managerId',''), l.manager_id) AS manager_id
+        FROM students s LEFT JOIN leads l ON l.id = s.extra_data->'leadRef'->>'id'
+        WHERE COALESCE(s.extra_data->>'isStaffDemo','false') <> 'true' AND ($2::text IS NULL OR s.subject = $2)
+        AND ($1::text[] IS NULL OR s.extra_data->>'managerId' = ANY($1::text[]) OR l.manager_id = ANY($1::text[]))`, [managerIds, lang || null])).rows;
+    return rows.map(r => ({ ...r, extra: parseExtra(r.extra_data) })).filter(r => R.isActiveStudent ? R.isActiveStudent({ ...r, extra_data: r.extra }) : true);
+}
+function dueEvents(list, today, ev, own = true) {
+    for (const st of list) {
+        const debt = Number(st.extra.debtAmount) || 0, due = ymd(st.extra.paymentDueDate);
+        if (debt <= 0 || !due) continue;
+        if (due >= today && due <= T.addDays(today, 3))
+            ev.push({ id: `due:${st.id}:${due}:soon`, type: 'payment_due', cat: 'jadval', tone: 'warn', title: own ? 'To\'lov muddati yaqin' : 'To\'lov muddati yaqin',
+                sub: `${first(st.name)} · ${money(debt)} · ${dm(due)}${due === today ? ' (bugun)' : ''}`, at: atLocal(today, 9 * 60), go: { tab: 'students' } });
+        else if (due < today && due >= T.addDays(today, -30))
+            ev.push({ id: `due:${st.id}:${due}:over`, type: 'payment_due', cat: 'jadval', tone: 'bad', title: 'To\'lov muddati o\'tdi',
+                sub: `${first(st.name)} · ${money(debt)} · ${dm(due)} edi — qo'ng'iroq qiling`, at: atLocal(T.addDays(due, 1), 9 * 60), go: { tab: 'students' } });
+    }
+}
+async function statusEvents(db, list, now, ev, withManager = false) {
+    if (!list.length) return;
+    const ids = list.map(st => st.id), by = new Map(list.map(st => [st.id, st]));
+    const since = new Date(now.getTime() - 3 * 86400000);
+    const names = withManager ? new Map((await db.query('SELECT id, name FROM hr_employees')).rows.map(r => [r.id, r.name])) : new Map();
+    const tag = st => withManager && names.get(st.manager_id) ? ` · ${first(names.get(st.manager_id))}` : '';
+    for (const r of (await db.query(`SELECT * FROM school_student_status WHERE student_id = ANY($1::text[]) AND cancelled_at IS NULL AND created_at > $2`, [ids, since])).rows) {
+        const st = by.get(r.student_id), W = { frozen: 'muzlatildi', left: 'to\'xtatdi', restored: 'darsga qaytdi' };
+        ev.push({ id: `st:${r.id}`, type: 'student_status', cat: 'jadval', tone: r.status === 'restored' ? 'ok' : 'warn', title: `O'quvchi ${W[r.status] || r.status}`,
+            sub: [first(st?.name) + tag(st), r.status === 'frozen' && r.to_date ? `${dm(S.dateStr(r.from_date))}–${dm(S.dateStr(r.to_date))}` : dm(S.dateStr(r.from_date)), r.reason].filter(Boolean).join(' · '),
+            at: iso(r.created_at), go: { tab: 'students' } });
+    }
+    // Ustoz almashdi — birinchi biriktirish emas, keyingi o'zgarish.
+    for (const r of (await db.query(`SELECT h.*, he.name AS tname FROM school_teacher_history h LEFT JOIN hr_employees he ON he.id = h.teacher_id
+        WHERE h.student_id = ANY($1::text[]) AND h.created_at > $2
+        AND EXISTS (SELECT 1 FROM school_teacher_history o WHERE o.student_id = h.student_id AND o.id <> h.id AND o.created_at < h.created_at)`, [ids, since])).rows) {
+        const st = by.get(r.student_id);
+        ev.push({ id: `tch:${r.id}`, type: 'student_status', cat: 'jadval', tone: 'info', title: 'O\'quvchining ustozi almashdi',
+            sub: `${first(st?.name)}${tag(st)} · yangi ustoz: ${r.tname || '—'}${r.from_date ? ' · ' + dm(S.dateStr(r.from_date)) + ' dan' : ''}`, at: iso(r.created_at), go: { tab: 'students' } });
+    }
+}
+// Konvertatsiyadan (liddan birinchi tushum) 24 soat o'tib ham Telegram dars guruhi biriktirilmagan o'quvchilar.
+async function missingGroup(db, list, now) {
+    if (!list.length) return [];
+    const ids = list.map(st => st.id);
+    const has = new Set((await db.query(`SELECT student_id FROM school_student_groups WHERE student_id = ANY($1::text[]) AND tg_link <> '' AND NOT archived`, [ids])).rows.map(r => r.student_id));
+    try { for (const r of (await db.query('SELECT student_id FROM domwork_student_group_links WHERE student_id = ANY($1::text[])', [ids])).rows) has.add(r.student_id); } catch { /* jadval bo'lmasa */ }
+    const leadIds = list.map(st => st.extra.leadRef?.id).filter(Boolean);
+    const paidAt = new Map((await db.query(`SELECT lead_id, MIN(created_at) AS at FROM payment_records WHERE lead_id = ANY($1::text[]) AND source_key LIKE 'lead:%' GROUP BY lead_id`, [leadIds])).rows.map(r => [r.lead_id, new Date(r.at).getTime()]));
+    const t = now.getTime();
+    return list.filter(st => !has.has(st.id) && !String(st.extra.telegramGroupLink || '').trim()).map(st => ({ st, at: paidAt.get(st.extra.leadRef?.id) }))
+        .filter(x => x.at && x.at <= t - 86400000 && x.at > t - 30 * 86400000);
+}
+async function dayTotals(db, managerIds, today) {
+    const rows = (await db.query(`SELECT manager_id, COUNT(*) FILTER (WHERE paid_date = $2::date) AS n, COALESCE(SUM(amount) FILTER (WHERE paid_date = $2::date), 0) AS day,
+        COALESCE(SUM(amount), 0) AS month FROM payment_records WHERE NOT legacy_review AND manager_id = ANY($1::text[]) AND paid_date BETWEEN $3::date AND $2::date GROUP BY manager_id`,
+        [managerIds, today, today.slice(0, 7) + '-01'])).rows;
+    const plans = (await db.query("SELECT data FROM json_data WHERE key='individualSalesPlans'")).rows[0]?.data;
+    const plan = id => Number(require('./domworkBot/staff').personalPlan(typeof plans === 'string' ? JSON.parse(plans) : plans, id, today.slice(0, 7))?.totalAmount) || 0;
+    return new Map(managerIds.map(id => { const r = rows.find(x => x.manager_id === id) || {}; return [id, { n: Number(r.n) || 0, day: Number(r.day) || 0, month: Number(r.month) || 0, plan: plan(id) }]; }));
+}
+
 async function salesEvents(db, me, now, ev) {
     if (me.managerId) {
         const holds = (await db.query(`SELECT * FROM school_bookings WHERE status='hold' AND created_by=$1 AND hold_until BETWEEN $2 AND $3`,
@@ -329,6 +406,17 @@ async function salesEvents(db, me, now, ev) {
                 sub: `${first(f.name)} · ${f.kind === 'winback' ? 'chiqib ketgan o\'quvchiga qo\'ng\'iroq qiling' : 'muzlatishdan qaytadi — qo\'ng\'iroq qiling'}`,
                 at: iso(new Date(`${f.due}T04:00:00Z`)), go: { tab: 'students' } });
         }
+        const mine = await managerStudents(db, [me.managerId], me.lang && me.lang !== 'both' ? me.lang : null);
+        dueEvents(mine, today, ev);
+        await statusEvents(db, mine, now, ev);
+        for (const { st, at } of await missingGroup(db, mine, now))
+            ev.push({ id: `glm:${st.id}`, type: 'group_link_missing', cat: 'jadval', tone: 'warn', title: 'Telegram guruh havolasi kiritilmagan',
+                sub: `${first(st.name)} · o'quvchi darsga qaysi guruhda kirishini bilmaydi`, at: iso(at + 86400000), go: { tab: 'students' } });
+        if (T.nowLocal(now).min >= 20 * 60) {
+            const d = (await dayTotals(db, [me.managerId], today)).get(me.managerId);
+            ev.push({ id: `plan:${me.managerId}:${today}`, type: 'daily_plan', cat: 'maosh', tone: d.n ? 'ok' : 'info', title: d.n ? `Bugun ${d.n} ta to'lov · ${money(d.day)}` : 'Bugun to\'lov bo\'lmadi',
+                sub: `Oy: ${money(d.month)}${d.plan > 0 ? ` · reja ${Math.floor(d.month / d.plan * 100)}% · qoldi ${money(Math.max(0, d.plan - d.month))}` : ''}`, at: atLocal(today, 20 * 60), go: { tab: 'sales' } });
+        }
     }
     const er = (await db.query(`SELECT r.*, s.name FROM school_edit_requests r LEFT JOIN students s ON s.id=r.student_id
         WHERE r.requested_by=$1 AND r.status <> 'pending' AND r.decided_at > $2`, [me.user.id, new Date(now.getTime() - 14 * 86400000)])).rows;
@@ -348,7 +436,61 @@ async function managerEvents(db, me, now, ev) {
     const un = await S.unassignedTrials(db, { from: today, to: T.addDays(today, 2), lang: me.kind === 'rop' && me.lang !== 'both' ? me.lang : null });
     for (const u of un) ev.push({ id: `una:${u.leadId}:${u.date}:${u.start}`, type: 'trial_unassigned', cat: 'sinov', tone: 'bad', title: 'Sinovga ustoz biriktirilmagan',
         sub: `${first(u.leadName)} · ${dm(u.date)} ${T.fromMin(u.start)}`, at: iso(now.getTime() - 60000), go: { tab: 'timetable' } });
+    const lang = me.kind === 'rop' && me.lang && me.lang !== 'both' ? me.lang : null;
+    const team = await managerStudents(db, null, lang);
+    const nowMin = T.nowLocal(now).min;
+    if (me.kind === 'rop') {
+        await statusEvents(db, team, now, ev, true);
+        // Jamoa sinov natijalari (so'nggi 2 kun).
+        const tl = (await db.query(`SELECT l.id, l.name, l.extra_data, he.name AS mname FROM leads l LEFT JOIN hr_employees he ON he.id = l.manager_id
+            WHERE l.deleted_at IS NULL AND l.updated_at > $1 AND l.extra_data ? 'trialRequest' AND ($2::text IS NULL OR l.language = $2)`, [new Date(now.getTime() - 2 * 86400000), lang])).rows;
+        for (const r of tl) {
+            const t = workflow.request({ ...parseExtra(r.extra_data), id: r.id, name: r.name }); const done = t && Date.parse(t.completedAt);
+            if (done > now.getTime() - 2 * 86400000) ev.push({ id: `to:${t.id}`, type: 'trial_outcome', cat: 'sinov', tone: t.attended ? 'ok' : 'warn', title: `Sinov ${t.attended ? 'o\'tkazildi' : 'o\'tmadi — kelmadi'}`,
+                sub: [first(r.name), r.mname ? 'menejer ' + first(r.mname) : '', t.resultNote].filter(Boolean).join(' · '), at: iso(done), go: { tab: 'sales' } });
+        }
+        for (const b of (await db.query(`SELECT * FROM school_bookings WHERE status = 'hold' AND hold_until < $1 AND hold_until > $2`, [now, new Date(now.getTime() - 86400000)])).rows)
+            ev.push({ id: `hx:${b.id}`, type: 'hold_expired', cat: 'sinov', tone: 'warn', title: 'Ushlab turish tugadi — band qilinmadi',
+                sub: `${b.created_by_name || 'Menejer'} · ${dm(S.dateStr(b.date))} ${T.fromMin(Number(b.start_min))}`, at: iso(b.hold_until), go: { tab: 'timetable' } });
+        if (nowMin >= 20 * 60) {
+            const mgrs = (await db.query(`SELECT id, name FROM hr_employees WHERE role IN ('sotuv-menejeri','sotuv_menejeri','sotuv menejeri','sales_manager')
+                AND COALESCE(status,'active') <> 'inactive' AND ($1::text IS NULL OR lang = $1 OR lang = 'both') ORDER BY name`, [lang])).rows;
+            if (mgrs.length) {
+                const tot = await dayTotals(db, mgrs.map(m => m.id), today);
+                const sorted = mgrs.map(m => ({ ...m, ...tot.get(m.id) })).sort((a, b) => b.day - a.day);
+                ev.push({ id: `teamplan:${today}`, type: 'daily_plan', cat: 'maosh', tone: 'info', title: `Bugun jamoa: ${sorted.reduce((x, m) => x + m.n, 0)} ta to'lov · ${money(sorted.reduce((x, m) => x + m.day, 0))}`,
+                    sub: sorted.slice(0, 6).map(m => `${first(m.name)} ${m.n}${m.plan > 0 ? ` (${Math.floor(m.month / m.plan * 100)}%)` : ''}`).join(', '), at: atLocal(today, 20 * 60), go: { tab: 'sales' } });
+            }
+        }
+    }
+    const miss = await missingGroup(db, team, now);
+    if (miss.length) {
+        const names = new Map((await db.query('SELECT id, name FROM hr_employees')).rows.map(r => [r.id, r.name]));
+        ev.push({ id: `glm-all:${today}:${miss.length}`, type: 'group_link_missing', cat: 'jadval', tone: 'warn', title: `${miss.length} o'quvchida Telegram guruh havolasi yo'q`,
+            sub: miss.slice(0, 5).map(x => `${first(x.st.name)}${names.get(x.st.manager_id) ? ' (' + first(names.get(x.st.manager_id)) + ')' : ''}`).join(', ') + (miss.length > 5 ? ` va yana ${miss.length - 5}` : ''),
+            at: atLocal(today, 9 * 60), go: { tab: 'students' } });
+    }
     if (me.kind !== 'admin') return;
+    // To'lov muddati o'tganlar — kuniga bitta jamlangan xabar.
+    const over = team.filter(st => Number(st.extra.debtAmount) > 0 && ymd(st.extra.paymentDueDate) && ymd(st.extra.paymentDueDate) < today);
+    if (over.length) ev.push({ id: `overdue:${today}:${over.length}`, type: 'payment_overdue', cat: 'tasdiq', tone: 'bad', title: `To'lov muddati o'tgan: ${over.length} o'quvchi`,
+        sub: `Jami qarz ${money(over.reduce((x, st) => x + Number(st.extra.debtAmount), 0))}`, at: atLocal(today, 9 * 60), go: { tab: 'students' } });
+    // 21:00 — bugun davomati belgilanmagan darslar (ustozlar bo'yicha).
+    if (nowMin >= 21 * 60) {
+        const ctx = await S.loadContext(db, { from: today, to: today, now });
+        const tids = [...new Set(ctx.students.map(st => st.teacherId).filter(Boolean))];
+        const views = tids.map(tid => S.dayView(ctx, tid, today));
+        await S.annotateViews(db, views, { from: today, to: today });
+        const abs = new Set((await db.query('SELECT student_id FROM school_absences WHERE day = $1 AND absent', [today])).rows.map(r => r.student_id));
+        const per = new Map();
+        views.forEach((v, n) => { for (const i of v.items) if (i.kind === 'lesson' && i.studentId && !i.bookingId && i.end <= nowMin && i.att == null && !abs.has(i.studentId)) per.set(tids[n], (per.get(tids[n]) || 0) + 1); });
+        if (per.size) {
+            const names = new Map((await db.query('SELECT id, name FROM hr_employees WHERE id = ANY($1::text[])', [[...per.keys()]])).rows.map(r => [r.id, r.name]));
+            const total = [...per.values()].reduce((a, b) => a + b, 0);
+            ev.push({ id: `attall:${today}`, type: 'attendance_unmarked_all', cat: 'davomat', tone: 'bad', title: `Bugun ${total} ta dars davomati belgilanmagan`,
+                sub: [...per].sort((a, b) => b[1] - a[1]).slice(0, 6).map(([id, n]) => `${first(names.get(id)) || id} ${n}`).join(', '), at: atLocal(today, 21 * 60), go: { tab: 'teachers-section' } });
+        }
+    }
     const mk = (await db.query(`SELECT m.*, s.name, he.name AS tname FROM school_makeups m LEFT JOIN students s ON s.id=m.student_id
         LEFT JOIN hr_employees he ON he.id=m.teacher_id WHERE m.status='review'`)).rows;
     for (const m of mk) ev.push({ id: `mkr:${m.id}`, type: 'makeup_review', cat: 'tasdiq', tone: 'warn', title: 'Qoplash darsi tekshiruvda',
@@ -392,6 +534,7 @@ async function collect(db, actor, now) {
         catch (e) { if (tx) await db.query('ROLLBACK TO SAVEPOINT sn_' + name); errors.push(name); console.error('[staff-notify]', name, e.code || e.message); }
     };
     if (me.kind === 'teacher' && me.emp) await run('teacher', teacherEvents);
+    if (me.kind === 'teacher' && me.emp) await run('inactive', inactiveStudents);
     if (me.assistantDuty && me.emp) await run('assistant', assistantEvents);
     if ((me.kind === 'teacher' || me.kind === 'assistant') && me.emp) await run('common', teacherCommon);
     if (me.kind === 'sales') await run('sales', salesEvents);
@@ -466,13 +609,14 @@ async function pushUser(db, link, now) {
     }
     if (skip.length) await db.query('INSERT INTO staff_notify_tg_sent(user_id,event_id) SELECT $1,unnest($2::text[]) ON CONFLICT DO NOTHING', [link.account_id, skip]);
     if (!out.length) return 0;
-    const line = e => `${String(e.title || '').slice(0, 200)}${e.sub ? ' — ' + String(e.sub).slice(0, 200) : ''}`;
+    const T = require('./domworkBot/tone');
+    const line = e => `${T.b(String(e.title || '').slice(0, 200))}${e.sub ? ' — ' + T.esc(String(e.sub).slice(0, 200)) : ''}`;
     // Bir nechta bo'lsa — bitta jamlangan xabar (masalan tinch soatdan keyin).
-    const text = out.length === 1 ? `🔔 ${String(out[0].title || '').slice(0, 300)}${out[0].sub ? '\n' + String(out[0].sub).slice(0, 600) : ''}`
-        : `🔔 ${out.length} ta yangi xabar:\n` + out.slice(0, 12).map(e => '• ' + line(e)).join('\n') + (out.length > 12 ? `\n… va yana ${out.length - 12} ta — CRM panelida` : '');
+    const text = out.length === 1 ? `🔔 ${T.b(String(out[0].title || '').slice(0, 300))}${out[0].sub ? '\n' + T.esc(String(out[0].sub).slice(0, 600)) : ''}`
+        : `🔔 <b>${out.length} ta yangi xabar</b>\n\n` + out.slice(0, 12).map(e => '▫️ ' + line(e)).join('\n') + (out.length > 12 ? `\n\n… va yana ${out.length - 12} ta — CRM panelida` : '');
     const key = out.length === 1 ? `staff:${link.account_id}:${out[0].id}` : `staff:${link.account_id}:digest:${now.getTime()}`;
     await store.enqueue(db, { key: key.slice(0, 200), targetId: link.telegram_id, role: identity.role, account: identity,
-        payload: { chat_id: link.telegram_id, text: text.slice(0, 3800), reply_markup: { inline_keyboard: [[{ text: 'CRMda ochish', url: 'https://myhomework.uz/' }]] },
+        payload: { chat_id: link.telegram_id, ...T.fit(text, T.HTML).extra, text: T.fit(text, T.HTML).text, reply_markup: { inline_keyboard: [[{ text: '🖥 CRMda ochish', url: ['teacher','assistant'].includes(identity.role) ? 'https://myhomework.uz/teacher/' : 'https://myhomework.uz/' }]] },
             _automation: true, ...(quiet ? { disable_notification: true } : {}) } }); // tinch soatda shoshilinch xabar ovozsiz
     await db.query('INSERT INTO staff_notify_tg_sent(user_id,event_id) SELECT $1,unnest($2::text[]) ON CONFLICT DO NOTHING', [link.account_id, out.map(e => e.id)]);
     return out.length;

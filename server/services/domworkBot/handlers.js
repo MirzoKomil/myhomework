@@ -59,7 +59,7 @@ function createHandler({ crm }) {
             await db.query(`INSERT INTO domwork_bot_trial_members(chat_id,telegram_id,lead_id,request_id) VALUES($1,$2,$3,$4)
                 ON CONFLICT(chat_id,telegram_id) DO UPDATE SET lead_id=EXCLUDED.lead_id,request_id=EXCLUDED.request_id,joined_at=NOW()`,[group.chatId,identity.telegramId,identity.id,booking.id]);
             if((await store.settings(db)).data.groupNotificationsEnabled) await store.enqueue(db,{key:`u:${update.update_id}:welcome`,targetKind:'group',targetId:group.chatId,
-                payload:{chat_id:group.chatId,text:`Assalomu alaykum, ${text(identity.name)}! Domwork sinov darsiga xush kelibsiz!`,_automation:true,_binding:group.id}});
+                payload:{chat_id:group.chatId,text:`Assalomu alaykum, ${require('./tone').who(identity.name,identity.telegramId)}! 👋\n\nDomwork sinov darsiga xush kelibsiz 🎉\nUstoz dars vaqtida shu yerda boshlaydi — bildirishnomalarni yoqib qo‘ying 🔔`,_automation:true,_binding:group.id,...require('./tone').HTML}});
             return;
         }
         if (update.my_chat_member) {

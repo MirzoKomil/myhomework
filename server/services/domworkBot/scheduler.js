@@ -1,4 +1,6 @@
 'use strict';
+const T=require('./tone');
+const hhmm=d=>{const l=new Date(new Date(d).getTime()+5*3600000);return String(l.getUTCHours()).padStart(2,'0')+':'+String(l.getUTCMinutes()).padStart(2,'0');};
 const policy=require('./policy');
 const store=require('./store');
 const events=require('./events');
@@ -56,10 +58,10 @@ async function run(db,now=new Date()) {
             const group=await groups.forStudent(db,student.id,{delivery:true});
             // Ilova va FAQ'da va'da qilingandek: dars havolasi 15 daqiqa oldin.
             for(const minute of [15]) if(checkpoint(at,minute,now)) await once(db,`class:${student.id}:${atText}:${minute}`,async()=>{
-                const message=`Darsingiz ${minute} daqiqadan keyin boshlanadi.${group?'\nGuruh: '+group.inviteLink:''}`;
+                const message=`🔔 ${T.esc(T.first(student.name))}, darsingiz ${T.b(minute+' daqiqadan')} keyin — soat ${T.b(hhmm(at))} da boshlanadi!${group?`\n\n👥 Guruh: ${T.esc(group.inviteLink)}`:''}\n\nTayyorlaning, ustozingiz kutadi ✍️`;
                 const groupGuard=group?{_studentGroup:{studentId:student.id,groupId:group.id}}:{};
-                await events.privateMessage(db,`reminder:${student.id}:${atText}:${minute}`,identity,message,{_setting:'remindersEnabled',_expiresAt:expires(),_schedule:{studentId:student.id,at:atText},...groupGuard});
-                await learningMessage(db,`group-class:${group?.id}:${atText}:${minute}`,group,`Dars boshlanishiga ${minute} daqiqa qoldi.`,{_setting:'remindersEnabled',_expiresAt:expires(),_schedule:{studentId:student.id,at:atText,teacherId:student.teacher_id},...groupGuard});
+                await events.privateMessage(db,`reminder:${student.id}:${atText}:${minute}`,identity,message,{...T.HTML,_setting:'remindersEnabled',_expiresAt:expires(),_schedule:{studentId:student.id,at:atText},...groupGuard});
+                await learningMessage(db,`group-class:${group?.id}:${atText}:${minute}`,group,`🔔 Dars ${T.b(minute+' daqiqadan')} keyin — soat ${T.b(hhmm(at))} da boshlanadi!\nHammani kutamiz 📚`,{...T.HTML,_setting:'remindersEnabled',_expiresAt:expires(),_schedule:{studentId:student.id,at:atText,teacherId:student.teacher_id},...groupGuard});
             });
             const end=new Date(at.getTime()+(Number(student.lesson_duration)||15)*60000);
             if(checkpoint(end,-15,now)) await once(db,`missing-attendance:${student.id}:${atText}`,async()=>{
@@ -67,9 +69,11 @@ async function run(db,now=new Date()) {
                     [clock.date.slice(0,7)+'_'+student.teacher_id,student.id,Number(clock.date.slice(8))])).rows[0];
                 const explicit=(await db.query("SELECT present FROM domwork_bot_attendance_marks WHERE student_id=$1 AND date=$2 AND duty='main'",[student.id,clock.date])).rows[0];
                 if(mark || explicit?.present!=null) return;
-                await events.privateMessage(db,`attendance-reminder:${student.id}:${atText}`,await events.employee(db,student.teacher_id),
-                    `Iltimos, ${student.name} ning darsi bo‘yicha davomatni belgilang.`,{_setting:'remindersEnabled',_expiresAt:expires(),_assignment:{studentId:student.id,teacherId:student.teacher_id,duty:'main'},_schedule:{studentId:student.id,at:atText},_missingAttendance:{studentId:student.id,teacherId:student.teacher_id,duty:'main',date:clock.date}});
-                await events.groupMessage(db,`attendance-team:${student.id}:${atText}`,'teachers','Rejadagi dars uchun davomat hali belgilanmagan. Ustoz kabinetidan tekshiring.',{_expiresAt:expires()});
+                const teacher=await events.employee(db,student.teacher_id);
+                const tName=(await db.query('SELECT name FROM hr_employees WHERE id=$1',[student.teacher_id])).rows[0]?.name || '';
+                await events.privateMessage(db,`attendance-reminder:${student.id}:${atText}`,teacher,
+                    `⏰ ${T.esc(T.first(tName) || 'Ustoz')}, ${T.b(student.name)}ning soat ${T.b(hhmm(at))} dagi darsi bo‘yicha davomat hali belgilanmagan.\n\nBelgilanmagan dars maoshga o‘tmaydi — 1 daqiqa ajrating 🙏`,{...T.HTML,_setting:'remindersEnabled',_expiresAt:expires(),_assignment:{studentId:student.id,teacherId:student.teacher_id,duty:'main'},_schedule:{studentId:student.id,at:atText},_missingAttendance:{studentId:student.id,teacherId:student.teacher_id,duty:'main',date:clock.date}});
+                await events.groupMessage(db,`attendance-team:${student.id}:${atText}`,'teachers',`⏰ ${T.who(tName,teacher?.telegramId)}, ${T.b(student.name)}ning ${T.b(hhmm(at))} dagi darsi bo‘yicha davomat hali belgilanmagan.\nBelgilanmagan dars maoshga o‘tmaydi — 1 daqiqa ajrating 🙏`,{...T.HTML,_expiresAt:expires()});
             });
             if(student.assistant_teacher_id && clock.hour===21 && clock.minute<2) await once(db,`assistant-attendance:${student.id}:${clock.date}`,async()=>{
                 const guard={studentId:student.id,teacherId:student.assistant_teacher_id,duty:'assistant',date:clock.date};
@@ -77,8 +81,8 @@ async function run(db,now=new Date()) {
                     [clock.date.slice(0,7)+'_'+guard.teacherId,student.id,Number(clock.date.slice(8))])).rows[0];
                 if(mark) return;
                 await events.privateMessage(db,`assistant-attendance:${student.id}:${clock.date}`,await events.employee(db,guard.teacherId),
-                    `${student.name} uchun bugungi yordamchi ustozlik davomati belgilanmagan. Kabinetingizdan tekshiring.`,
-                    {_setting:'remindersEnabled',_expiresAt:expires(),_assignment:guard,_missingAttendance:guard});
+                    `📋 Bugun ${T.b(student.name)} bilan aloqa hali belgilanmagan.\n\nKun tugashidan oldin belgilang — aks holda hisoblanmaydi 🙏`,
+                    {...T.HTML,_setting:'remindersEnabled',_expiresAt:expires(),_assignment:guard,_missingAttendance:guard});
             });
         }
         for(const row of (await db.query("SELECT * FROM leads WHERE language='russian' AND status='sinov-darsida' AND deleted_at IS NULL")).rows) {
@@ -87,8 +91,8 @@ async function run(db,now=new Date()) {
             if(!booking || !['pending','accepted'].includes(booking.state)) continue;
             for(const minute of [60,15]) if(checkpoint(booking.scheduledAt,minute,now)) await once(db,`trial-reminder:${lead.id}:${booking.id}:${minute}`,async()=>{
                 const group=await groups.defaultForTeacher(db,'trial',booking.teacherId,{delivery:true});
-                const message=`Sinov darsingiz ${minute} daqiqadan keyin boshlanadi.${group?'\nGuruh: '+group.inviteLink:''}`;
-                const guard={_setting:'remindersEnabled',_expiresAt:expires(),_trial:{leadId:lead.id,requestId:booking.id,teacherId:booking.teacherId,state:booking.state}};
+                const message=`🔔 Sinov darsi ${T.b(minute===60?'1 soatdan':minute+' daqiqadan')} keyin — ${T.b(T.when(booking.scheduledAt))}${group?`\n\n👥 Guruh: ${T.esc(group.inviteLink)}`:''}\n\n${minute===60?'Qulay joy va naushnik tayyorlab qo‘ying 🎧':'Guruhga kiring, ustoz sizni kutmoqda! 👋'}`;
+                const guard={...T.HTML,_setting:'remindersEnabled',_expiresAt:expires(),_trial:{leadId:lead.id,requestId:booking.id,teacherId:booking.teacherId,state:booking.state}};
                 await events.privateMessage(db,`trial-learner:${lead.id}:${booking.id}:${minute}`,await events.linked(db,'lead',lead.id),message,guard);
                 await learningMessage(db,`trial-group:${group?.id}:${booking.id}:${minute}`,group,message,guard);
             });
@@ -106,11 +110,11 @@ async function run(db,now=new Date()) {
             for(const identity of await roles(db,type==='daily'?['admin','rop','marketing']:['rop'])) {
                 const action=identity.role==='admin'?'digest':identity.role==='rop'?'reports':'daily';
                 const value=await staff.action(db,identity,action,{now,daily:true,comparison:type==='comparison'});
-                await events.privateMessage(db,'report:'+clock.date+':'+type+':'+identity.telegramId,identity,`${clock.date} · ${type==='daily'?'Kunlik hisobot':'24 soatlik taqqoslama'}\n${value}`,{_setting:'reportsEnabled',_expiresAt:new Date(now.getTime()+3600000).toISOString()});
+                await events.privateMessage(db,'report:'+clock.date+':'+type+':'+identity.telegramId,identity,`📊 <b>${type==='daily'?'Kunlik hisobot':'24 soatlik taqqoslama'}</b> · ${T.dateOnly(clock.date)}\n\n${T.esc(value)}`,{...T.HTML,_setting:'reportsEnabled',_expiresAt:new Date(now.getTime()+3600000).toISOString()});
             }
             for(const [department,role,action] of type==='daily'?[['sales','rop','reports'],['marketing','marketing','daily']]:[]) {
                 const value=await staff.action(db,{role,language:'russian'},action,{now,daily:true,comparison:type==='comparison'});
-                await events.groupMessage(db,'department-report:'+clock.date+':'+type+':'+department,department,value,{_setting:'reportsEnabled',_expiresAt:new Date(now.getTime()+3600000).toISOString()});
+                await events.groupMessage(db,'department-report:'+clock.date+':'+type+':'+department,department,`📊 <b>${department==='sales'?'Sotuv bo‘limi':'Marketing'} — kunlik hisobot</b> · ${T.dateOnly(clock.date)}\n\n${T.esc(value)}\n\n${T.i('Bugungi mehnat uchun rahmat! Ertaga yanada kuchliroq 💪')}`,{...T.HTML,_setting:'reportsEnabled',_expiresAt:new Date(now.getTime()+3600000).toISOString()});
             }
         });
     }
@@ -119,7 +123,7 @@ async function run(db,now=new Date()) {
         if(clock.day===7 && settings.methodicalText) await once(db,'methodical:'+clock.date,()=>events.groupMessage(db,'methodical:'+clock.date,'teachers',settings.methodicalText));
         if(clock.day===7) await once(db,'video-day:'+clock.date,async()=>{
             const rows=(await db.query("SELECT * FROM domwork_learning_groups WHERE type='classroom' AND NOT archived AND verified_at IS NOT NULL")).rows;
-            for(const row of rows) await learningMessage(db,'video-day:'+clock.date+':'+row.id,groups.dto(row),'Bugun platformadagi video darslarni ko‘ring va yordamchi ustozingiz bilan vazifalarni bajaring. https://myhomework.uz/student/');
+            for(const row of rows) await learningMessage(db,'video-day:'+clock.date+':'+row.id,groups.dto(row),'☀️ Xayrli yakshanba!\n\nBugun dam olish kuni — 15 daqiqa ajratib, platformadagi video darsni ko‘rib qo‘ying va yordamchi ustozingiz bilan vazifani bajaring 📚\n\n👉 https://myhomework.uz/student/\n\nKichik qadamlar katta natija beradi! 💪');
         });
     }
 }
