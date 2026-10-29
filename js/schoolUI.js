@@ -561,7 +561,8 @@
         body.querySelectorAll('[data-go]').forEach(b => b.onclick = () => document.querySelector(`#scCardPage .scc-tab[data-tab="${b.dataset.go}"]`)?.click());
         const fill = (sel, html) => { const x = body.querySelector(sel); if (x) x.innerHTML = html; };
         const swap = (card, html) => { const x = body.querySelector(card); x?.querySelector('.scc-skel')?.insertAdjacentHTML('afterend', html); x?.querySelector('.scc-skel')?.remove(); };
-        if (sc === 'past') { getProg(c).then(r => fill('[data-reached]', String(r.progress?.reached ?? '—'))).catch(() => fill('[data-reached]', '—')); return; }
+        // O'tgan o'quvchi: server ilova natijasini bermaydi (/progress → 403, faqat o'z davri) — so'rov yuborilmaydi (konsolda 403 chiqmasin).
+        if (sc === 'past') { fill('[data-reached]', '—'); return; }
         // Davomat
         Promise.all([getAtt(c, month), c.assistantId ? getCon(c, month).catch(() => null) : null]).then(([a, con]) => {
             const x = attStats(a, c), ws = weekStart(today());
