@@ -3,32 +3,28 @@
  *
  * Ma'lumot va ijro mobil dialoglar/[dialogId].tsx bilan aynan bir xil (u yerdan
  * ko'chirilgan — mobil fayl o'zgarmasligi uchun): CRM speaking mavzusi
- * (replikalar), audio fayl yo'q — replikalar expo-speech bilan o'qiladi, vaqt
- * matn hajmidan taxminiy, progress qurilmada saqlanadi. Mavzuda bitta dialog —
+ * (replikalar); audioUrl bo'lsa — haqiqiy audio, aks holda expo-speech (ijro —
+ * components/v2/library/dialogPlayback), progress qurilmada saqlanadi. Mavzuda bitta dialog —
  * "Mavzudagi dialoglar" ro'yxati bo'sh; "Keyingi dialog" — ro'yxatdagi keyingi mavzu.
  * Klaviatura: Space, ← →, R, S, T, Enter, Esc.
  */
 import { router, useFocusEffect, useLocalSearchParams, type Href } from 'expo-router';
-import * as Speech from 'expo-speech';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { dialogCount, getDialogProgress, saveDialogProgress } from '@/components/v2/library/data';
+import { dialogCount, getDialogProgress } from '@/components/v2/library/data';
+import { hasAudio, topicLines, useAudioDialog, useTtsDialog, type DialogPlayback, type DialogTopic } from '@/components/v2/library/dialogPlayback';
 import { SPEEDS } from '@/components/v2/library/player';
 import { findLessonForTitle, mmss, type LessonRef } from '@/components/v2/library/shared';
 import { R } from '@/constants/v2/routes';
-import type { SpeakingTopic } from '@/data/speakingTopics';
 import { fetchMobileContent } from '@/services/contentApi';
-import { speakableText } from '@/services/richText';
 import { v2Back } from '@/services/v2Nav';
 
 import { FocusFrame, KbdHint } from '../Shell';
 import { useDesktopKeys } from '../useDesktop';
 import { DDialogText, DPlayer, IArrow, ICheck, IChevronLeft, InKbd, SegProgress, T, type DLine } from './ui';
 
-type Topic = SpeakingTopic & { coverUrl?: string };
-const SECONDS_PER_WORD = 0.55; // mobil bilan bir xil taxminiy o'qish tezligi (1×)
-const words = (s: string) => s.split(/\s+/).filter(Boolean).length;
+type Topic = DialogTopic;
 
 export function DDialog() {
   const { dialogId } = useLocalSearchParams<{ dialogId: string }>();
@@ -79,127 +75,34 @@ export function DDialog() {
   return <DialogView key={topic.id} topic={topic} next={next} lesson={lesson} startFrac={startFrac} heard={heard} onHeard={() => setHeard(true)} />;
 }
 
-function DialogView({
-  topic,
-  next,
-  lesson,
-  startFrac,
-  heard,
-  onHeard,
-}: {
-  topic: Topic;
-  next: Topic | null;
-  lesson: LessonRef | null;
-  startFrac: number;
-  heard: boolean;
-  onHeard: () => void;
-}) {
-  const lines = useMemo<DLine[]>(() => topic.lines.map((l) => ({ speaker: l.speaker, ru: l.en, uz: l.uz })), [topic]);
-  const dur = useMemo(() => lines.map((l) => Math.max(1, words(l.ru) * SECONDS_PER_WORD)), [lines]);
-  const starts = useMemo(() => dur.reduce<number[]>((a, d, i) => [...a, i ? a[i - 1] + dur[i - 1] : 0], []), [dur]);
-  const total = dur.reduce((a, b) => a + b, 0);
+type ViewProps = { topic: Topic; next: Topic | null; lesson: LessonRef | null; startFrac: number; heard: boolean; onHeard: () => void };
 
-  const startLine = Math.max(
-    0,
-    starts.findIndex((s, i) => s + dur[i] > startFrac * total),
-  );
-  const [line, setLine] = useState(startFrac > 0 ? startLine : -1);
-  const [inLine, setInLine] = useState(0);
-  const [playing, setPlaying] = useState(false);
-  const [speedIdx, setSpeedIdx] = useState(1);
-  const [repeat, setRepeat] = useState(false);
+function DialogView(props: ViewProps) {
+  return hasAudio(props.topic) ? <AudioDialog {...props} /> : <TtsDialog {...props} />;
+}
+function TtsDialog(props: ViewProps) {
+  const lines = useMemo(() => topicLines(props.topic), [props.topic]);
+  return <DialogBody {...props} lines={lines} pb={useTtsDialog({ ...props, lines })} />;
+}
+function AudioDialog(props: ViewProps) {
+  const lines = useMemo(() => topicLines(props.topic), [props.topic]);
+  return <DialogBody {...props} lines={lines} pb={useAudioDialog({ ...props, lines })} />;
+}
+
+function DialogBody({ topic, next, lesson, heard, lines, pb }: ViewProps & { lines: DLine[]; pb: DialogPlayback }) {
+  const { line, elapsed, total, frac, playing, speedIdx, repeat, toggle, jump, prev, cycleSpeed, toggleRepeat, seek } = pb;
   const [showUz, setShowUz] = useState(true);
-  const playingRef = useRef(false);
-  const repeatRef = useRef(false);
-  repeatRef.current = repeat;
-  const speedRef = useRef(1);
-  speedRef.current = SPEEDS[speedIdx];
-
-  const elapsed = line < 0 ? 0 : Math.min(total, starts[line] + inLine);
-  const frac = total ? elapsed / total : 0;
   const n = dialogCount(topic);
   const h = heard ? n : 0;
   const going = !heard && frac > 0;
 
-  // Ekrandan chiqishda to'xtatamiz va joyni saqlaymiz.
-  const fracRef = useRef(0);
-  fracRef.current = frac;
-  useEffect(
-    () => () => {
-      playingRef.current = false;
-      void Speech.stop();
-      if (fracRef.current > 0) void saveDialogProgress(topic.id, fracRef.current);
-    },
-    [topic.id],
-  );
-
-  useEffect(() => {
-    if (!playing || line < 0) return;
-    const iv = setInterval(() => setInLine((x) => Math.min(dur[line], x + 0.25 * speedRef.current)), 250);
-    return () => clearInterval(iv);
-  }, [playing, line, dur]);
-
-  const speak = useCallback(
-    (k: number) => {
-      if (k >= lines.length) {
-        playingRef.current = false;
-        setPlaying(false);
-        setLine(-1);
-        setInLine(0);
-        void saveDialogProgress(topic.id, 0, true);
-        onHeard();
-        return;
-      }
-      setLine(k);
-      setInLine(0);
-      void Speech.stop();
-      Speech.speak(speakableText(lines[k].ru), {
-        language: 'ru-RU',
-        rate: 0.95 * speedRef.current,
-        onDone: () => {
-          if (!playingRef.current) return;
-          speak(repeatRef.current ? k : k + 1);
-        },
-      });
-    },
-    [lines, topic.id, onHeard],
-  );
-
-  const toggle = () => {
-    if (!lines.length) return;
-    if (playing) {
-      playingRef.current = false;
-      setPlaying(false);
-      void Speech.stop();
-      void saveDialogProgress(topic.id, frac);
-    } else {
-      playingRef.current = true;
-      setPlaying(true);
-      speak(line < 0 ? 0 : line);
-    }
-  };
-  const jump = (k: number) => {
-    const t = Math.max(0, Math.min(lines.length - 1, k));
-    if (playingRef.current) speak(t);
-    else {
-      setLine(t);
-      setInLine(0);
-    }
-  };
-  const cycleSpeed = () => {
-    const k = (speedIdx + 1) % SPEEDS.length;
-    setSpeedIdx(k);
-    speedRef.current = SPEEDS[k];
-    if (playingRef.current && line >= 0) speak(line);
-  };
-  const prev = () => jump(line <= 0 ? 0 : inLine > 1 ? line : line - 1);
   const goNext = () => next && router.replace(R.dialog(next.id) as Href);
 
   useDesktopKeys({
     ' ': toggle,
     ArrowLeft: prev,
     ArrowRight: () => jump(line + 1),
-    r: () => setRepeat((r) => !r),
+    r: toggleRepeat,
     s: cycleSpeed,
     t: () => setShowUz((v) => !v),
     Enter: goNext,
@@ -306,8 +209,9 @@ function DialogView({
               onPrev={prev}
               onNext={() => jump(line + 1)}
               repeat={repeat}
-              onRepeat={() => setRepeat((r) => !r)}
+              onRepeat={toggleRepeat}
               unit="replika"
+              onSeek={seek}
               disabled={!lines.length}
               fmt={mmss}
             />
