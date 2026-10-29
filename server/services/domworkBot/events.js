@@ -103,7 +103,7 @@ async function processOne(db) {
                 const managerName=source.manager_id?(await db.query('SELECT name FROM hr_employees WHERE id=$1',[source.manager_id])).rows[0]?.name || '':'';
                 const head={pending:'🧪 <b>Yangi sinov darsi</b>',accepted:'✅ <b>Ustoz sinov darsini tasdiqladi</b>',rejected:'❌ <b>Ustoz sinov so‘rovini rad etdi</b>',
                     completed:booking.attended?'🎉 <b>Sinov darsi o‘tdi!</b>':'😕 <b>Sinov darsi o‘tmadi</b>'}[booking.state] || '📌 <b>Sinov darsi</b>';
-                const tail={pending:'👇 Ustoz, iltimos, tasdiqlang',rejected:'💼 Menejer, boshqa vaqt yoki ustoz tanlang',
+                const tail={pending:'👇 Ustoz, iltimos, tasdiqlang',accepted:'📲 Menejer, o‘quvchiga vaqtni tasdiqlab qo‘ying — darsdan oldin bot ham eslatadi',rejected:'💼 Menejer, boshqa vaqt yoki ustoz tanlang',
                     completed:booking.attended?'📞 Menejer, endi qo‘ng‘iroq vaqti — taassurot issiqligida gaplashing!':'📞 Menejer, sababini bilib, yangi vaqt taklif qiling'}[booking.state];
                 const summary=`${head}\n\n👤 O‘quvchi: ${T.b(lead.name)}\n🕒 ${T.b(T.when(booking.scheduledAt))}\n👩‍🏫 Ustoz: ${T.who(name,teacher?.telegramId)}`
                     +(managerName?`\n💼 Menejer: ${T.who(managerName,manager?.telegramId)}`:'')
