@@ -374,7 +374,7 @@
             ${qr && !expired ? `<svg class="ss-tgl-qr" viewBox="-2 -2 ${qr.size + 4} ${qr.size + 4}" shape-rendering="crispEdges" role="img" aria-label="@Domworkuz_bot ulash QR kodi"><rect x="-2" y="-2" width="${qr.size + 4}" height="${qr.size + 4}" fill="#fff"/><path d="${esc(qr.path)}" fill="#0B1220"/></svg>` : ''}
             <div class="ss-tgl-tx">
               <ol class="ss-tgl-steps"><li>Telefon kamerasi bilan QR'ni skanerlang yoki "Telegramda ochish"ni bosing</li><li>Botda <b>Start</b> tugmasini bosing</li><li>Shu yerda ismingiz chiqadi — tasdiqlang</li></ol>
-              <p class="ss-mt">${TGL.err ? esc(TGL.err) : claimed ? `Telegram: <b>${esc(req.telegram.name || 'Nomsiz')}</b>${req.telegram.username ? ' · @' + esc(req.telegram.username) : ''}. Bu sizning hisobingizmi?` : expired ? 'Havola muddati tugadi (5 daqiqa).' : 'Telegramda Start bosilishi kutilmoqda…'}</p>
+              <p class="ss-mt">${TGL.err ? esc(TGL.err) : claimed ? `Telegram: <b>${esc(req.telegram.name || 'Nomsiz')}</b>${req.telegram.username ? ' · @' + esc(req.telegram.username) : ''}. Bu sizning hisobingizmi?` : expired ? 'Havola muddati tugadi (15 daqiqa).' : 'Telegramda Start bosilishi kutilmoqda…'}</p>
               <div class="ss-acts">${claimed
                 ? '<button type="button" class="ss-btn ss-btn--sm ss-btn--pri" data-tgl-ok>Ha, bu mening Telegramim</button><button type="button" class="ss-btn ss-btn--sm" data-tgl-new>Yo\'q, qaytadan</button>'
                 : expired ? '<button type="button" class="ss-btn ss-btn--sm ss-btn--pri" data-tgl-new>Yangi havola</button>'

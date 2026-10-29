@@ -45,6 +45,11 @@ test('staff Telegram linking without matching phone — synthetic data only',{sk
    const out=(await pool.query("SELECT payload FROM domwork_bot_outbox WHERE unique_key='u:500:staff-link'")).rows[0].payload;
    assert.ok(out.text.includes('CRM'));assert.ok(!JSON.stringify(out).includes('Rus Ustoz'));
    await assert.rejects(queue.transaction(pool,db=>link.claim(db,msg(901,'/start '+start(req)))),e=>e.status===409);
+   // Tasdiqlashdan oldin /START (katta harf ham) — eski "raqam yuboring" emas, CRMga qaytish ko'rsatmasi.
+   await queue.receive(pool,{update_id:501,message:{...msg(900,'/START'),message_id:9}});
+   await queue.processOne(pool,createHandler({crm:{}}));
+   const back=(await pool.query("SELECT payload FROM domwork_bot_outbox WHERE unique_key='u:501:r:0'")).rows[0].payload;
+   assert.match(back.text,/CRMga qayting/);assert.doesNotMatch(back.text,/raqamingizni yuboring/);
   });
   await t.test('confirmation binds by proof although Telegram phone differs; replaces only a lead link',async()=>{
    await pool.query("INSERT INTO domwork_bot_links(telegram_id,account_kind,account_id,phone) VALUES('900','lead','lead-x','998977777777')");

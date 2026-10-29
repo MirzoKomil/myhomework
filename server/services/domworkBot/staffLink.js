@@ -80,7 +80,7 @@ async function create(pool, actor) {
         await db.query("UPDATE domwork_staff_telegram_requests SET state='cancelled' WHERE user_id=$1 AND state IN ('pending','claimed')", [me.id]);
         const raw = randomBytes(32).toString('base64url'), id = randomUUID();
         const row = (await db.query(`INSERT INTO domwork_staff_telegram_requests(id,user_id,session_jti,token_hash,expires_at)
-            VALUES($1,$2,$3,$4,NOW()+INTERVAL '5 minutes') RETURNING *`, [id, me.id, actor.jti, hash(raw)])).rows[0];
+            VALUES($1,$2,$3,$4,NOW()+INTERVAL '15 minutes') RETURNING *`, [id, me.id, actor.jti, hash(raw)])).rows[0];
         await require('./store').audit(db, me.id, 'staff-telegram-request', id);
         const url = 'https://t.me/Domworkuz_bot?start=' + PREFIX + raw;
         return { request: requestDto(row), url, qr: require('./qr').qrPath(url) };
