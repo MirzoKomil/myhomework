@@ -362,6 +362,10 @@ init().then(async () => {
         // 29-okt: yordamchi ustoz — alohida lavozim. Bir martalik ko'chirish (Mohinur A. → Ayubxon A.), qayta ishga tushsa hech narsa qilmaydi.
         await require('./services/school/assistantSeparation').migrate(crmDb.pool)
             .catch(err => console.error('[yordamchi-alohida] migratsiya xatosi:', err.code || err.message));
+        // Eski Davomat ekranida Se·Pa·Sh o'quvchilarga Du·Ch·Ju sanalariga qo'yilgan "Keldi"lar — o'quvchining o'z dars kunlariga
+        // (bir marta, audit bilan; yakuniy/to'langan oylarga tegilmaydi). Qayta ishga tushsa hech narsa qilmaydi.
+        await require('./services/school/legacyAttendance').migrate(crmDb.pool)
+            .catch(err => console.error('[eski-davomat] migratsiya xatosi:', err.code || err.message));
         const run = () => crmDb.tx(c => require('./services/school/studentOps').applyDue(c), { id: 'system' })
             .catch(err => console.error('[school] holat yangilash xatosi:', err.code || err.message));
         setInterval(run, 60 * 60 * 1000).unref();
