@@ -91,6 +91,7 @@ async function run(db,now=new Date()) {
     await guarded(db,'awards',()=>require('./recognition').run(db,settings,clock,now,once));
     await guarded(db,'live_feed',()=>require('./live').run(db,settings,clock,now,once));
     await guarded(db,'sales_coach',()=>require('./salesCoach').run(db,settings,clock,now,once));
+    await guarded(db,'lead_nurture',()=>require('./leadNurture').run(db,now));
     // Dars guruhida bot yo'q — ROPga eslatma (yangilari har 15 daqiqada, eskilari kuniga bir marta).
     await guarded(db,'group_watch',async()=>{ await require('./groupWatch').run(db,settings,clock,now,once); });
     // Jamoa kayfiyati (motivatsiya, latifa, Juma, dushanba, oy oxiri) — alohida savepoint.

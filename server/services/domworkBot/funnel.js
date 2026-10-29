@@ -37,6 +37,10 @@ async function init(db) {
     await db.query(`CREATE TABLE IF NOT EXISTS domwork_bot_relay (chat_id TEXT NOT NULL, message_id BIGINT NOT NULL, telegram_id TEXT NOT NULL,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), PRIMARY KEY(chat_id,message_id))`);
     await db.query("DELETE FROM domwork_bot_relay WHERE created_at<NOW()-INTERVAL '90 days'");
+    // 30-okt: voronkani ishga tushirish (bir marta). Keyin Bot boshqaruvidan o'chirilsa — o'chiq qoladi.
+    await db.query(`UPDATE domwork_bot_settings SET data=data||'{"funnelEnabled":true,"dripEnabled":true,"funnelLaunch20261030":true}'::jsonb
+        ||(CASE WHEN data ? 'discountPercent' THEN '{}'::jsonb ELSE '{"discountPercent":15,"discountHours":72}'::jsonb END)
+        WHERE singleton=1 AND NOT (data ? 'funnelLaunch20261030')`);
 }
 
 // Admin botga "#voronka <kalit>" izohi bilan fayl yuborib materialni almashtiradi.
@@ -48,7 +52,27 @@ const GUEST_METHODS = ['sendMessage', 'sendPhoto', 'sendVideo', 'sendDocument', 
 const clean = v => String(v ?? '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, 120);
 async function settings(db) { return (await store.settings(db)).data || {}; }
 async function enabled(db) { return (await settings(db)).funnelEnabled === true; }
-function media(s, key) { const m = s.funnelMedia?.[key]; return m && MEDIA_FIELD[m.method] && /^[A-Za-z0-9_-]{10,1024}$/.test(m.fileId) ? m : null; }
+// Repodagi tayyor PDFlar: admin "#voronka <kalit>" bilan fayl yuklamagan bo'lsa ham material bor hisoblanadi.
+const BUNDLED_NAMES = { sovga: 'Domwork — 40 ta eng kerakli gap.pdf', qollanma_umumiy: 'Domwork — Ishda kerak 50 ibora.pdf',
+    qollanma_office: 'Domwork — Ish suhbati 15 savol.pdf', qollanma_bank: 'Domwork — Bank va moliya.pdf', qollanma_med: 'Domwork — Tibbiyot.pdf',
+    qollanma_gov: 'Domwork — Davlat xizmati.pdf', qollanma_sales: 'Domwork — Savdo va mijozlar.pdf', qollanma_daily: 'Domwork — Kundalik suhbat.pdf',
+    qollanma_smena: 'Domwork — Ish va smena.pdf', qollanma_hujjat: 'Domwork — Hujjat va patent.pdf', qollanma_kundalik: 'Domwork — Shifokor, politsiya, transport.pdf',
+    oferta: 'Domwork — Ommaviy oferta shartnomasi.pdf', bonus: 'Domwork — Ishda kerak 50 ibora.pdf' };
+const BUNDLED_FILE = { bonus: 'qollanma_umumiy' }; // kanal bonusi — «Ishda kerak 50 ibora» (umumiy qo'llanma)
+const bundledCache = new Map();
+function bundledFile(key) {
+    if (!BUNDLED_NAMES[key]) return null;
+    if (!bundledCache.has(key)) {
+        const path = require('node:path').join(__dirname, '..', '..', 'data', 'funnel', (BUNDLED_FILE[key] || key) + '.pdf');
+        bundledCache.set(key, require('node:fs').existsSync(path) ? { path, filename: BUNDLED_NAMES[key] } : null);
+    }
+    return bundledCache.get(key);
+}
+function media(s, key) {
+    const m = s.funnelMedia?.[key];
+    if (m && MEDIA_FIELD[m.method] && /^[A-Za-z0-9_-]{10,1024}$/.test(m.fileId)) return m;
+    return bundledFile(key) ? { method: 'sendDocument', bundled: key } : null;
+}
 const inline = rows => ({ inline_keyboard: rows.map(r => r.map(([text, data]) => (/^https:\/\//.test(data) ? { text, url: data } : { text, callback_data: data }))) });
 const replyKeyboard = () => ({ keyboard: [[{ text: copy.KEYBOARD.contact }], [{ text: copy.KEYBOARD.guides }, { text: copy.KEYBOARD.faq }]], resize_keyboard: true });
 const track = v => ['russia', 'abroad'].includes(v.segment) ? 'A' : v.segment ? 'B' : String(v.phone).startsWith('7') ? 'A' : 'B';
@@ -69,7 +93,8 @@ async function send(c, method, payload, { delayMs = 0, unless = '', automation =
 }
 const say = (c, text, markup, opts) => send(c, 'sendMessage', { text, ...(markup ? { reply_markup: markup } : {}) }, opts);
 async function sendMedia(c, m, caption, markup, opts) {
-    await send(c, m.method, { [MEDIA_FIELD[m.method]]: m.fileId, ...(caption ? { caption } : {}), ...(markup ? { reply_markup: markup } : {}) }, opts);
+    const file = m.bundled ? { document: 'bundled', _bundled: m.bundled } : { [MEDIA_FIELD[m.method]]: m.fileId };
+    await send(c, m.method, { ...file, ...(caption ? { caption } : {}), ...(markup ? { reply_markup: markup } : {}) }, opts);
 }
 async function answer(db, update, text = '') {
     const q = update.callback_query;
@@ -123,7 +148,8 @@ async function ensureLead(db, v, { phone = '', intent = '' } = {}) {
         ORDER BY created_at DESC LIMIT 1`, [phone])).rows[0] : null;
     if (!lead) {
         const id = randomUUID(), name = v.first_name || 'Telegram mehmon';
-        const [utmSource, utmCampaign] = v.source.startsWith('ig:') ? ['instagram', v.source.slice(3)] : ['telegram-bot', ''];
+        const src = /^(ig|fb|tt|yt|ads):(.*)$/.exec(v.source || '');
+        const [utmSource, utmCampaign] = src ? [{ ig: 'instagram', fb: 'facebook', tt: 'tiktok', yt: 'youtube', ads: 'ads' }[src[1]], src[2]] : ['telegram-bot', ''];
         const extra = { utmSource, ...(utmCampaign ? { utmCampaign } : {}), telegramId: v.telegram_id, ...(v.username ? { telegramUsername: v.username } : {}), botIntent: intent };
         const comments = [{ id: randomUUID(), type: 'note', author: 'Bot', ts: Date.now(), date: new Date().toLocaleDateString('uz-UZ'),
             text: `🤖 @Domworkuz_bot orqali keldi${v.username ? ' · @' + v.username : ''} · Telegram ID ${v.telegram_id}` }];
@@ -186,7 +212,9 @@ function landingGoal(comments) {
 }
 async function start(db, update, message, { lead = null, payload = '' } = {}) {
     const from = message.from, c = context(db, update, String(from.id)), s = await settings(db);
-    const source = lead ? 'landing' : /^ig_[A-Za-z0-9_-]{1,40}$/.test(payload) ? 'ig:' + payload.slice(3) : 'organic';
+    // Reklama manbalari: ig_<kampaniya> (Instagram/Chatplace), fb_<kampaniya> (Meta lid-forma "Rahmat" tugmasi), tt_, yt_, ads_.
+    const ad = /^(ig|fb|tt|yt|ads)_([A-Za-z0-9_-]{1,40})$/.exec(payload) || (/^(fb|ads)$/.exec(payload) ? [payload, payload, 'form'] : null);
+    const source = lead ? 'landing' : ad ? ad[1] + ':' + ad[2] : 'organic';
     // Landing raqami tasdiqlanmagan — mehmon raqami faqat Telegram kontakt tugmasi orqali olinadi.
     const v = await upsertVisitor(db, from, { source, leadId: lead?.id || null });
     if (lead && !v.segment) {
@@ -200,6 +228,11 @@ async function start(db, update, message, { lead = null, payload = '' } = {}) {
     const next = inline([hasLesson ? [[copy.text.lessonWatch, 'f:les']] : [[copy.KEYBOARD.contact, 'f:cta']]]);
     if (gift) { await sendMedia(c, gift, copy.text.gift + '\n\n' + (hasLesson ? copy.text.giftNext : ''), next); await event(db, c.tid, 'gift'); }
     else await say(c, hasLesson ? copy.text.giftNext : copy.text.lessonMissing, next);
+    // Meta lid-formasidan kelgan (fb_/ads_) va hali CRM lidiga ulanmagan — arizasini topish uchun bir bosishda raqam.
+    if (/^(fb|ads):/.test(v.source) && !v.lead_id && !v.phone) {
+        await patch(db, c.tid, { awaiting: 'match' });
+        await say(c, copy.text.matchAsk, { keyboard: [[{ text: copy.text.contactButton, request_contact: true }], [{ text: copy.text.later }]], resize_keyboard: true, one_time_keyboard: true });
+    }
     // Segment savoli 2 daqiqadan keyin (shu orada tanlangan bo'lsa yuborilmaydi).
     // Qayta /start bosilsa ham bitta kechiktirilgan savol (barqaror kalit).
     if (!v.segment) await askSegment(c, { delayMs: 120000, unless: 'segment', key: 'f:seg-ask:' + c.tid });
@@ -383,7 +416,7 @@ async function message(db, update) {
     if (text === copy.KEYBOARD.contact) return cta(c, v);
     if (text === copy.KEYBOARD.guides) return v.segment ? askField(c, v) : askSegment(c);
     if (text === copy.KEYBOARD.faq) return faqList(c, v);
-    if (text === copy.text.cancel) { await patch(db, tid, { awaiting: '' }); return say(c, '👌', replyKeyboard()); }
+    if (text === copy.text.cancel || (text === copy.text.later && v.awaiting === 'match')) { await patch(db, tid, { awaiting: '' }); return say(c, '👌', replyKeyboard()); }
     // Erkin matn yoki ovoz → menejerga.
     const s = await settings(db);
     const snippet = text ? text.slice(0, 500) : m.voice ? '[ovozli xabar]' : m.photo ? '[rasm]' : '[xabar]';
@@ -410,6 +443,13 @@ async function contact(db, update, m) {
     await say(c, copy.text.contactSaved, replyKeyboard());
     if (purpose === 'lesson') return lesson(c, v, 1);
     if (purpose === 'call') return askWhen(c, 'call');
+    if (purpose === 'match') {
+        // Ariza topildi: menejerga lid botga ulangani haqida xabar (endi u bot orqali yoza oladi), mehmonga — menejer ismi.
+        const lead = (await db.query('SELECT l.source,h.name AS manager FROM leads l LEFT JOIN hr_employees h ON h.id=l.manager_id WHERE l.id=$1', [v.lead_id])).rows[0];
+        const found = lead && lead.source !== 'Telegram bot'; // bot o'zi yaratgan bo'lsa — ariza topilmagan (boshqa raqam)
+        if (found) await notifySales(db, 'match:' + own.telegramId, '🔗 Arizachi botga ulandi — endi bot orqali ham yozishingiz mumkin', v);
+        return say(c, found ? copy.text.matched(lead.manager ? String(lead.manager).split(' ')[0] : '') : copy.text.matchNew, replyKeyboard());
+    }
     return cta(c, v);
 }
 async function pause(db, tid) { await db.query('UPDATE domwork_bot_visitors SET paused=true,updated_at=NOW() WHERE telegram_id=$1', [tid]); }
@@ -675,4 +715,4 @@ async function drip(db, now = new Date()) {
     return n;
 }
 
-module.exports = { bonus, relayFromGroup, managerAction, drip, nextItem, SCHEMA, MEDIA_KEYS, init, enabled, start, message, contact, callback, deliverable, adminMedia, pause, blocked, report, track, mask, inHours };
+module.exports = { bundledFile, BUNDLED_NAMES, bonus, relayFromGroup, managerAction, drip, nextItem, SCHEMA, MEDIA_KEYS, init, enabled, start, message, contact, callback, deliverable, adminMedia, pause, blocked, report, track, mask, inHours };

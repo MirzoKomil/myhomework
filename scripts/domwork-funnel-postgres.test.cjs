@@ -36,6 +36,7 @@ test('lead funnel for unknown Telegram visitors — synthetic data, no Telegram 
     '[{"type":"contact-time","text":"Bog‘lanish uchun qulay vaqt: 12:00–16:00 | Maqsad: Ish va karyera | Sayt: https://domwork.uz"}]');`);
   await groups.initSchema(pool);await store.initSchema(pool);
   await pool.query("INSERT INTO domwork_bot_groups(id,type,scope,chat_id,active,created_by) VALUES('g-sales','sales','','-1001234567890',true,'admin')");
+  await setSettings({funnelEnabled:false,dripEnabled:false}); // 30-okt ishga tushirish migratsiyasi yoqadi — eski xatti-harakat testi uchun o'chiramiz
 
   await t.test('disabled by default: unknown visitor keeps the old phone prompt, landing gets no bot link',async()=>{
    await run(msg(700,'/start'));

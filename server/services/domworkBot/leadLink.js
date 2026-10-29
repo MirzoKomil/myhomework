@@ -20,7 +20,7 @@ async function issue(db, leadId) {
     const lead = (await db.query("SELECT id FROM leads WHERE id=$1 AND language='russian' AND deleted_at IS NULL", [leadId])).rows[0];
     if (!lead) return null;
     const raw = randomBytes(32).toString('base64url');
-    await db.query("INSERT INTO domwork_lead_telegram_tokens(token_hash,lead_id,expires_at) VALUES($1,$2,NOW()+INTERVAL '7 days')", [hash(raw), lead.id]);
+    await db.query("INSERT INTO domwork_lead_telegram_tokens(token_hash,lead_id,expires_at) VALUES($1,$2,NOW()+INTERVAL '14 days')", [hash(raw), lead.id]);
     return 'https://t.me/Domworkuz_bot?start=' + PREFIX + raw;
 }
 function startHash(command) {
@@ -62,4 +62,16 @@ async function issueIfEnabled(pool, leadId) {
         return await issue(pool, leadId);
     } catch (error) { console.error('[lead-link] issue failed:', error.code || error.name); return null; }
 }
-module.exports = { SCHEMA, PREFIX, init, issue, issueIfEnabled, startHash, claim };
+// Menejer uchun: lid hali botga ulanmagan bo'lsa — mijozga yuboradigan tayyor matn (shaxsiy havola bilan).
+// Ulangan bo'lsa yoki voronka o'chiq bo'lsa — null. Faqat shu tranzaksiya ichida (db).
+async function inviteFor(db, leadId) {
+    if (!leadId || !(await db.query("SELECT to_regclass('domwork_lead_telegram_tokens') AS t")).rows[0]?.t) return null;
+    const s = (await db.query('SELECT data FROM domwork_bot_settings WHERE singleton=1')).rows[0]?.data;
+    if (s?.funnelEnabled !== true) return null;
+    const linked = (await db.query(`SELECT 1 FROM domwork_bot_links WHERE account_kind='lead' AND account_id=$1
+        UNION ALL SELECT 1 FROM domwork_bot_visitors WHERE lead_id=$1 LIMIT 1`, [leadId]).catch(() => ({ rows: [] }))).rows.length;
+    if (linked) return null;
+    const url = await issue(db, leadId);
+    return url && { url, text: `Assalomu alaykum! Domworkdan yozyapman 🙂 Sovg‘angiz — «40 ta eng kerakli gap» va dars eslatmalari shu botda: ${url}` };
+}
+module.exports = { SCHEMA, PREFIX, init, issue, issueIfEnabled, inviteFor, startHash, claim };

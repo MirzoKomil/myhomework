@@ -45,12 +45,15 @@ const KEYBOARD = { contact: '📞 Menejer bilan bog‘lanish', guides: '🎁 Qo�
 
 const FAQ = {
     price: ['Narxi qancha?', 'Narx tarifga bog‘liq — jonli dars 15, 30 yoki 60 daqiqa. Menejerimiz sizga shaxsan yozib, aniq raqamni aytadi.'],
-    plan: ['Kurs qanday o‘tadi?', '72 dars, taxminan 3 oy: video darslar + ustoz bilan jonli individual darslar + har kuni 20 daqiqa ilovada mashq. Yordamchi ustoz uy vazifangizni kuzatib boradi.'],
+    plan: ['Kurs qanday o‘tadi?', '72 dars, taxminan 3 oy:\n• haftada 3 kun — ustoz bilan jonli individual dars (Zoom);\n• haftada 3 kun — platformada video dars va topshiriqlar;\n• kun ora — yordamchi ustoz vazifalarni tekshiradi;\n• yakshanba — qo‘shimcha bonus video darslar;\n• har 12 darsdan keyin oraliq imtihon, oxirida sertifikat.\nGuruh darslari yo‘q — hammasi individual.'],
+    start: ['Darslar qachon boshlanadi?', 'To‘lovdan keyin uzog‘i bilan 3 ish kuni ichida. Menejer ustoz va dars vaqtini siz bilan kelishadi.'],
+    freeze: ['Kasal bo‘lsam yoki safarga ketsam?', 'Kursni muzlatib turish mumkin: 3 oy ichida 2 martagacha, har biri 14 kungacha. Darslar yo‘qolmaydi.'],
+    refund: ['Natija bo‘lmasa-chi?', 'Shartnomada natija kafolati bor: barcha shartlarni bajarsangiz (jonli darslarning hammasiga qatnashish, video darslar va vazifalarni to‘liq bajarish, imtihonlarni topshirish), lekin muloqot natijasiga chiqmasangiz — tekshiruvdan so‘ng to‘langan pul to‘liq qaytariladi.\nO‘z xohishingiz bilan to‘xtatsangiz, pul qaytarilmaydi — buning o‘rniga kursni muzlatish mumkin.'],
     try: ['Avval sinab ko‘rsam bo‘ladimi?', 'Ha. Menejer bilan gaplashgach, sizni ustoz bilan jonli sinov darsiga yozib qo‘yadi — darajangizni ko‘rasiz, ustoz bilan tanishasiz.'],
     time: ['Vaqtim yo‘q / smenada ishlayman', 'Kuniga 20–30 daqiqa yetadi. Jonli dars vaqtini o‘zingiz tanlaysiz — kechqurun va dam olish kunlari ham bo‘ladi. Video darslarni istalgan vaqtda ko‘rasiz.'],
     install: ['Bo‘lib to‘lash bormi?', 'Ha — O‘zbekistonda Uzum Nasiya va Paylater orqali. Shartlarini menejer tushuntiradi.'],
     russia: ['Rossiyadan qanday to‘layman?', 'Karta o‘tkazmasi orqali. Shartnoma tuziladi — to‘lov va majburiyatlar yozma ko‘rinishda.'],
-    book: ['Kitob bormi?', 'O‘zbekistonda o‘qiyotganlarga bosma kitob uyiga yetkaziladi. Chet eldagilar uchun kitob mazmuni ilova va video darslarda — qo‘shimcha narsa kerak emas.'],
+    book: ['Kitob bormi?', 'Ha — kurs bilan bosma kitoblar to‘plami sovg‘a qilinadi (300 ming so‘mlik). O‘zbekistonda eng yaqin BTS pochta punktiga yuboriladi, pochta xizmatini o‘zingiz to‘laysiz. Chet eldagilar uchun kitob mazmuni ilova va video darslarda.'],
     missed: ['Darsni o‘tkazib yuborsam?', 'Jonli darsni ustoz bilan boshqa vaqtga ko‘chirasiz. Yordamchi ustoz eslatib turadi, dars yo‘qolmaydi.'],
     shy: ['Gapirishga uyalaman', 'Darslar individual — faqat siz va ustoz. Hech kim kulmaydi, hech kim shoshirmaydi. Xato qilish — o‘rganishning bir qismi.'],
     when: ['Qachon gapira boshlayman?', 'Birinchi jonli darsdanoq gapirasiz — darslar suhbat asosida. Qanchalik ravon gapirishingiz har kungi mashqqa bog‘liq.'],
@@ -60,8 +63,8 @@ const FAQ = {
     free: ['Bu bepulmi?', 'Sovg‘a va 1-dars — sizga. Kursning o‘zi pullik va individual. Sizga mosligini menejer bilan gaplashib bilib olasiz — suhbat sizni hech narsaga majburlamaydi.'],
     career: ['Kareyeramga qanday yordam beradi?', 'Darslar ishdagi real vaziyatlar asosida: yig‘ilish, mijoz, ish suhbati, hujjat. Jonli darslar sohangizga moslashtiriladi.']
 };
-const FAQ_ORDER = { B: ['price', 'plan', 'try', 'install', 'time', 'career', 'book', 'missed', 'shy', 'when', 'age', 'before', 'online', 'free'],
-    A: ['price', 'plan', 'try', 'russia', 'time', 'book', 'missed', 'shy', 'when', 'age', 'before', 'online', 'free'] };
+const FAQ_ORDER = { B: ['price', 'plan', 'try', 'install', 'refund', 'start', 'time', 'career', 'book', 'missed', 'freeze', 'shy', 'when', 'age', 'before', 'online', 'free'],
+    A: ['price', 'plan', 'try', 'russia', 'refund', 'start', 'time', 'book', 'missed', 'freeze', 'shy', 'when', 'age', 'before', 'online', 'free'] };
 
 const WHEN = { now: 'Hozir', eve: 'Bugun kechqurun', morn: 'Ertaga ertalab', aft: 'Ertaga tushdan keyin', wknd: 'Dam olish kuni' };
 
@@ -69,13 +72,16 @@ const text = {
     greeting: (name, landing) => landing
         ? `Assalomu alaykum, ${name}! Arizangiz qabul qilindi ✅\n\nDomwork — rus tilini shaxsiy ustoz bilan o‘rgatadigan onlayn maktab. Pastda tugmalar bor — istalgan payt menejer bilan bog‘lanishingiz mumkin.`
         : `Assalomu alaykum, ${name}! 👋\n\nDomwork — rus tilini shaxsiy ustoz bilan o‘rgatadigan onlayn maktab. Pastda tugmalar bor — istalgan payt menejer bilan bog‘lanishingiz mumkin.`,
-    gift: 'Va’da qilingan sovg‘a — «40 ta eng kerakli gap» 🎁\nAudiosini tinglab, talaffuzni ham takrorlang.',
+    gift: 'Va’da qilingan sovg‘a — «40 ta eng kerakli gap» 🎁\nHar bir gapning o‘qilishi ham yozilgan. Kuniga 5 tasini ovoz chiqarib ayting — bir haftada 40 tasi ham tilingizda bo‘ladi.',
+    matchAsk: 'Arizangizni topib, menejeringizni ulab qo‘yishim uchun raqamingizni tasdiqlang — pastdagi tugmani bosing (yozish shart emas) 👇',
+    matched: manager => `Rahmat, arizangiz topildi ✅${manager ? `\nMenejeringiz — ${manager}. U siz bilan bog‘lanadi, savollaringizni shu yerga ham yozishingiz mumkin.` : '\nMenejerimiz tez orada bog‘lanadi.'}`,
+    matchNew: 'Rahmat, raqamingiz saqlandi ✅ Menejerimiz siz bilan bog‘lanadi.',
     giftNext: 'Endi rus tilida o‘zingizni tanishtirishni o‘rganamiz 👇',
     segment: 'Sizga mos materiallarni tanlashim uchun bitta savol: rus tili sizga nima uchun kerak?',
     field: 'Qaysi soha bo‘yicha qo‘llanma yuboray?',
     later: 'Keyinroq',
     promise: field => `Domworkda 3 oy davomida ustozingiz bilan ${field.promise}ni mashq qilasiz. Darslar sohangizga moslashtiriladi.`,
-    guide: f => `${f.label} — qo‘llanma 📘\nPDF + talaffuz audiosi. Saqlab qo‘ying, ishda kerak bo‘ladi.`,
+    guide: f => `${f.label} — qo‘llanma 📘\nIboralar o‘qilishi va tarjimasi bilan. Saqlab qo‘ying — ishda kerak bo‘ladi.`,
     lessonAsk: '1-darsni yuboraman 🎬\n\nDarsga mos qo‘llanmalar va eslatmalarni yuborishim uchun raqamingizni tasdiqlang — pastdagi tugmani bosing (raqam yozish shart emas).',
     contactButton: '📱 Raqamni tasdiqlash',
     cancel: 'Bekor qilish',
@@ -109,7 +115,7 @@ const text = {
         telegram: ' Shu chatga yozamiz.',
         andLesson: '\n\nUngacha 1-darsni ko‘rib qo‘ying 👇'
     },
-    info: (company) => `Domwork — pullik individual onlayn kurs: 72 dars, taxminan 3 oy, shaxsiy ustoz, ilova va yordamchi ustoz.\n\nShartnoma tuziladi.${company ? '\n' + company : ''}\nO‘quvchilar fikrlari: @domwork_natijalari`,
+    info: (company) => `Domwork — pullik individual onlayn kurs: 72 dars, taxminan 3 oy, shaxsiy ustoz, ilova va yordamchi ustoz.\n\n📄 Ommaviy oferta shartnomasi asosida ishlaymiz: darslar to‘lovdan keyin 3 ish kunida boshlanadi, kursni 2 martagacha muzlatish mumkin, shartnomada natija kafolati bor.\n🏢 ${company || '“Homework” MCHJ — “Domwork” ta’lim loyihasi. To‘lov: Click / Payme («Homework»), bo‘lib to‘lash — Uzum Nasiya, PayLater.'}\n⭐ O‘quvchilar natijalari: @domwork_natijalari`,
     faqTitle: 'Savolingizni tanlang 👇',
     priceDone: 'Menejerimizga xabar berdim — tez orada shu yerda yoki telefonda aniq narxni aytadi.',
     freeText: (inHours, min) => inHours ? `Rahmat! Savolingizni menejerga yubordim — ${min} daqiqa ichida javob beradi.` : 'Rahmat! Savolingizni menejerga yubordim — ertalab birinchi bo‘lib javob beradi.',
@@ -151,7 +157,7 @@ const drip = {
     lessonNudge: name => `${name}, 1-dars atigi 5 daqiqa: ish suhbatida o‘zingizni tanishtirishni o‘rganasiz 👇`,
     phrases: key => { const [title, list] = PHRASES[key]; return `${title}\n\n${list.map(([ru, uz], i) => `${i + 1}. ${ru}\n   ${uz}`).join('\n')}\n\nOvoz chiqarib 2 marta ayting — shunda esda qoladi.`; },
     testimonial: url => `O‘quvchimiz natijasi 👇${url ? '\n' + url : ''}\n\nBoshqa natijalar: @domwork_natijalari`,
-    bonus: channel => `🎁 Bonus: «33 ta ish iborasi» audio.\nOlish uchun ${channel} kanaliga obuna bo‘ling, keyin «Obuna bo‘ldim»ni bosing.`,
+    bonus: channel => `🎁 Bonus: «Ishda kerak 50 ibora» qo‘llanmasi — yig‘ilish, rahbar, mijoz, telefon.\nOlish uchun ${channel} kanaliga obuna bo‘ling, keyin «Obuna bo‘ldim»ni bosing.`,
     bonusJoin: '📢 Kanalga o‘tish',
     bonusCheck: '✅ Obuna bo‘ldim',
     bonusOk: 'Rahmat! Mana bonus 🎁',

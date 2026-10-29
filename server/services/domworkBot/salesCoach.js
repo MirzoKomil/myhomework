@@ -199,9 +199,13 @@ async function praise(db, now) {
     const clock = require('./scheduler').localClock(now), awake = clock.hour >= 8 && clock.hour < 21;
     if (awake) for (const [id, leads] of given) {
         const by = [...new Set(leads.map(l => l.actor).filter(Boolean))].join(', ');
+        // 1–3 ta lid bo'lsa — botga ulanmaganlari uchun mijozga yuboriladigan tayyor matn (bosib nusxalanadi).
+        const invites = [];
+        if (leads.length <= 3) for (const l of leads) { const inv = await require('./leadLink').inviteFor(db, l.id); if (inv) invites.push(`👤 ${T.b(l.name)} uchun:\n<code>${T.esc(inv.text)}</code>`); }
         await dm(db, `given:${id}:${rows[0].id}`, id, `📥 <b>Sizga ${leads.length === 1 ? 'yangi lid' : leads.length + ' ta yangi lid'} biriktirildi</b>${by ? ' · ' + T.esc(by) : ''}\n\n`
             + list(leads, l => `${line(l)}${l.status !== 'yangi-lidlar' ? ' — ' + T.esc(label(l.status)) : ''}`, 30)
-            + `\n\n📞 Darhol qo‘ng‘iroq qiling — mijoz hali issiq! Gaplashgach, CRMda bosqichini o‘zgartiring ✅`, now, 3);
+            + `\n\n📞 Darhol qo‘ng‘iroq qiling — mijoz hali issiq! Gaplashgach, CRMda bosqichini o‘zgartiring ✅`
+            + (invites.length ? `\n\n🤖 Mijozni botga ulang — sovg‘a, eslatmalar va sinov darsi xabarlari avtomatik boradi. Matnni bosib nusxalang va mijozga Telegram/SMS’da yuboring:\n\n${invites.join('\n\n')}` : ''), now, 3);
         for (const l of leads) await db.query('INSERT INTO domwork_bot_jobs(key) VALUES($1) ON CONFLICT DO NOTHING', [`coach-given:${l.id}`]);
     }
     if (!done.size) return;
