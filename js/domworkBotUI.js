@@ -75,7 +75,9 @@
                 <p class="dg-note">«Ishga tushirish» bosilganda: ulangan o‘quvchilarga botdan yangi menyu va xush kelibsiz xabari boradi; ulanmagan faol rus tili o‘quvchilariga yangi ilovada (student/v2) yopilmaydigan oyna chiqadi — «Botni ochish» → Telegramda Start → tamom, oyna o‘zi yopiladi. Bot xabar qabul qilmay qolsa, oyna chiqmaydi.</p>
                 <p>Holat: ${sact.required?'<b>Majburiy rejim yoqilgan</b>':'o‘chiq'} · Ulangan: ${sact.linked} · Faol o‘quvchilar: ${sact.total}${sact.total?` (${Math.round(sact.linked/sact.total*100)}%)`:''}</p>
                 <button type="button" class="btn-primary" data-sact-relaunch ${status.state==='ready'?'':'disabled'}>${sact.campaign?'Yana ishga tushirish':'Ishga tushirish'}</button>
-                ${sact.required?'<button type="button" class="btn-secondary-sm" data-sact-stop>Majburiy oynani o‘chirish</button>':''}</details>`:''}
+                ${sact.required?'<button type="button" class="btn-secondary-sm" data-sact-stop>Majburiy oynani o‘chirish</button>':''}
+                <form data-sact-diag style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><input class="form-control" name="q" placeholder="O‘quvchini tekshirish: ism, telefon yoki login" style="flex:1;min-width:220px"><button class="btn-secondary-sm" type="submit">Tekshirish</button></form>
+                <div data-sact-diag-out></div></details>`:''}
             <details><summary>Xabar tarqatish</summary><p>Rasm, video va ovozni botning admin menyusi orqali yuborish mumkin. Bu yerda matnli xabarni tayyorlang.</p>
                 <form data-db-broadcast><label>Auditoriya<select class="form-control" name="segment">${Object.entries(roles).map(([id,label])=>`<option value="${id}">${esc(label)}</option>`).join('')}</select></label>
                     <fieldset><legend>Guruhlar — «Tanlangan guruhlar» uchun</legend>${groups.map(g=>`<label class="dg-checkbox"><input type="checkbox" name="group" value="${esc(g.id)}">${esc(g.name)}</label>`).join('') || '<p>Tekshirilgan guruh yo‘q.</p>'}</fieldset>
@@ -144,6 +146,12 @@
             if(!confirm('Ulangan o‘quvchilarga botdan yangi xabar boradi va ilovada majburiy ulash oynasi yoqiladi. Davom etasizmi?'))return;
             const r=await api('/student-activation/relaunch',{});notify(`Ishga tushirildi: ${r.sent} ta o‘quvchiga xabar yuborildi. Qolganlar ilovaga kirganda ulaydi.`);await render(el);
         });
+        const diag=el.querySelector('[data-sact-diag]');
+        if(diag)diag.onsubmit=e=>{e.preventDefault();work(async()=>{
+            const r=await api('/student-activation/diagnose?q='+encodeURIComponent(diag.elements.q.value.trim()));
+            el.querySelector('[data-sact-diag-out]').innerHTML=r.students.length?r.students.map(x=>`<article class="dg-card"><h4>${esc(x.name)} · ${esc(x.phone)}${x.login?' · '+esc(x.login):''}</h4>
+                <p>${x.popup?'✅ Oyna chiqishi kerak':'❌ Oyna chiqmaydi: '+x.reasons.map(esc).join('; ')}</p><p class="dg-note">Botga ulangan: ${x.linked?'ha':'yo‘q'} · Sessiyalar: ${x.sessions ?? '—'}${x.lastSeen?' · oxirgi kirish '+esc(new Date(x.lastSeen).toLocaleString('uz-UZ',{timeZone:'Asia/Tashkent'})):''}</p></article>`).join(''):'<p>Topilmadi.</p>';
+        });};
         const sStop=el.querySelector('[data-sact-stop]');
         if(sStop)sStop.onclick=()=>work(async()=>{
             if(!confirm('O‘quvchilar uchun majburiy oynani o‘chirasizmi?'))return;

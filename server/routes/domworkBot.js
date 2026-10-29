@@ -45,6 +45,8 @@ module.exports = function createRouter({ pool, runtime, authRequired }) {
         if (!(runtime.healthy ? await runtime.healthy() : runtime.status().state === 'ready'))
             throw Object.assign(Error('Bot xabar qabul qilmayapti (webhook/Redis). Avval «Bot webhookini ulash»ni tekshiring'), { status: 503 });
         return require('../services/domworkBot/studentActivation').relaunch(pool, req.user); }));
+    router.get('/student-activation/diagnose', handle(async req => require('../services/domworkBot/studentActivation').diagnose(pool, req.user, req.query.q,
+        runtime.healthy ? await runtime.healthy() : runtime.status().state === 'ready')));
     router.post('/student-activation/stop', handle(req => require('../services/domworkBot/studentActivation').stop(pool, req.user)));
     router.get('/staff-activation', handle(() => require('../services/domworkBot/staffActivation').report(pool)));
     router.post('/staff-activation/relaunch', handle(async req => {
