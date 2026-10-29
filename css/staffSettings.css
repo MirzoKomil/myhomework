@@ -270,3 +270,6 @@ html.rd .notif-icon.notif-tone-info { background: var(--kb-info-bg); }
 .ss-tgl .ss-acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .ss-tgl a.ss-btn { text-decoration: none; }
 @media (max-width: 640px) { .ss-tgl-in { flex-direction: column; align-items: stretch; } .ss-tgl-qr { align-self: center; } }
+/* Bildirishnomalar: manbasi hali ulanmagan hodisa — kalitsiz, aniq "Tez orada" (js/staffSettings.js drawNotif) */
+.ss-tbl--np tr.is-soon th b { color: var(--text-muted, #4B5563); }
+.ss-soon-pill { display: inline-flex; align-items: center; min-height: 26px; padding: 0 10px; border-radius: 999px; background: var(--kb-warn-bg, #FEF0C7); color: var(--kb-warn-fg, #93370D); font-size: 12px; font-weight: 700; white-space: nowrap; }

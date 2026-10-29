@@ -118,9 +118,9 @@
 
     function renderError(err) {
         if (!S.el) return;
-        S.el.innerHTML = `<div class="lh-error"><b>Darslik markazini yuklab bo'lmadi.</b><span>${esc(err?.message || err)}</span>
-            <button type="button" class="lh-btn" data-lh-retry>Qayta urinish</button></div>`;
-        S.el.querySelector('[data-lh-retry]').onclick = () => mount(S.el, S.ctx);
+        // Bitta xato naqshi (js/loadError.js).
+        S.el.innerHTML = window.LoadErr.html({ title: 'Darslik markazini yuklab bo\'lmadi', err: err instanceof Error ? err : { message: String(err?.message || err) }, note: '' });
+        window.LoadErr.bind(S.el, () => mount(S.el, S.ctx));
     }
 
     function render() {

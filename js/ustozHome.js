@@ -67,9 +67,10 @@
     async function missed(user = me(), { makeups = null } = {}) {
         const tid = user.linkedTeacherId; if (!tid) return null;
         const td = today(), month = td.slice(0, 7);
+        // Xato yutilmaydi: bo'sh ro'yxat bilan "N ta belgilanmagan" soxta soni chiqmasin — chaqiruvchi xato kartasini ko'rsatadi.
         const [ab, mk] = await Promise.all([
-            school('/attendance/absences?month=' + month).catch(() => ({ absences: [] })),
-            makeups ? Promise.resolve(makeups) : school('/makeups').then(r => r.makeups || []).catch(() => [])]);
+            school('/attendance/absences?month=' + month),
+            makeups ? Promise.resolve(makeups) : school('/makeups').then(r => r.makeups || [])]);
         const m = { month, today: td, absences: ab.absences || [], makeups: mk };
         const T = monthCalc(tid, m), mine = mk.filter(x => x.teacher_id === tid && x.status === 'planned');
         const by = new Map();
@@ -162,8 +163,11 @@
     // "Bajarish kerak" ro'yxatiga qo'shiladigan bandlar (schoolTeacher.homeExtras chizadi).
     async function todoItems(user = me(), makeupsP = null) {
         const mk = makeupsP ? await Promise.resolve(makeupsP).catch(() => null) : null;
-        const [m, att] = await Promise.all([missed(user, { makeups: mk ? mk.makeups || [] : null }).catch(() => null), attention().catch(() => null)]);
+        const [mR, att] = await Promise.all([window.LoadErr.settle(missed(user, { makeups: mk ? mk.makeups || [] : null })), attention().catch(() => null)]);
+        const m = mR.value;
         const items = [];
+        // Davomat ma'lumoti kelmasa — "belgilanmagan/qoplanmagan" bandlari o'rniga xato kartasi (schoolTeacher.homeExtras chizadi).
+        if (!mR.ok) items.push({ err: mR.err, t: 'Davomat ma\'lumotini yuklab bo\'lmadi', s: 'Belgilanmagan va qoplanmagan darslar ko\'rsatilmadi.' });
         const un = unmarkedPast(user, m);
         if (un.length) {
             const n = un.reduce((k, x) => k + x.dates.length, 0);
@@ -257,13 +261,24 @@
         const foot = home?.querySelector('#kbxThPlan')?.closest('.kbx-plan')?.querySelector('.kbx-bar-foot');
         const tid = user.linkedTeacherId; if (!T || !foot || !tid) return;
         const td = today(), month = td.slice(0, 7);
-        const [ab, mk] = await Promise.all([school('/attendance/absences?month=' + month).catch(() => ({ absences: [] })),
-            school('/makeups').then(r => r.makeups || []).catch(() => [])]);
+        const LE = window.LoadErr;
+        const [abR, mkR] = await Promise.all([LE.settle(school('/attendance/absences?month=' + month)), LE.settle(school('/makeups').then(r => r.makeups || []))]);
         if (!foot.isConnected) return;
+        if (!abR.ok || !mkR.ok) {
+            // Soxta "0 kelmadi · N belgilanmagan" o'rniga xato kartasi; qayta urinish faqat shu blokni qayta hisoblaydi.
+            const card = foot.closest('.kbx-plan');
+            card.querySelector('.kbx-plan-h .kbx-pill')?.replaceChildren('Davomat —');
+            card.querySelector('.kbx-bar')?.setAttribute('hidden', '');
+            foot.innerHTML = LE.html({ title: 'Davomat hisobini yuklab bo\'lmadi', err: abR.err || mkR.err, note: '', compact: true });
+            LE.bind(foot, () => decoratePlan(container, user));
+            return;
+        }
+        const ab = abR.value, mk = mkR.value;
         const t = monthCalc(tid, { month, today: td, absences: ab.absences || [], makeups: mk });
         // Sidebar "Akademik bo'lim" soni — shu "N belgilanmagan" bilan bitta raqam (js/staffNavBadges.js).
         window.dispatchEvent(new CustomEvent('ustoz:month-unmarked', { detail: { month, n: t.unmarked } }));
         if (!t.plan) return;
+        if (foot.querySelector('.mh-lerr')) { foot.innerHTML = '<span></span><span></span>'; foot.closest('.kbx-plan')?.querySelector('.kbx-bar')?.removeAttribute('hidden'); } // qayta urinishdan keyin asl tuzilish
         const [l, r] = foot.children;
         l.innerHTML = `<strong>${t.came}</strong> keldi · <strong>${t.absent}</strong> kelmadi · <strong>${t.unmarked}</strong> belgilanmagan = o'tgan ${t.expected}${t.approved ? ` · +${t.approved} qoplash` : ''} → <strong>${t.counted}</strong> hisobga o'tdi`;
         if (r) r.textContent = `oy rejasi ${t.plan} dars`;

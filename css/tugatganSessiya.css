@@ -39,3 +39,5 @@
 .menu-item .tgs-nb { margin-left: auto; min-width: 20px; height: 20px; padding: 0 6px; box-sizing: border-box; border-radius: 999px; display: inline-grid; place-items: center;
     font: 800 11.5px/1 inherit; font-family: inherit; background: var(--kb-warn-bg, #FEF0C7); color: var(--kb-warn-fg, #93370D); flex: none; }
 .menu-item.active .tgs-nb { background: var(--surface, #fff); }
+/* "Yana ko'rsatish" — sessiyalar va kirishlar tarixi (js/staffSessions.js) */
+.tgs-more { display: flex; justify-content: center; padding: 12px 20px 16px; border-top: 1px solid var(--ss-line, #EEF1F6); }

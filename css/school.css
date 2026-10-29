@@ -532,8 +532,20 @@ html.rd[data-theme="dark"] .okx-warn { color: var(--kb-warn-fg); }
 /* Karta sarlavhasi: pill'lar va meta-qator bitta qatorda (YordamchiKarta/UstozOquvchiKarta dizayni, .mt 12px).
    Joy yetmasa meta qisqartiriladi (to'liq matn title'da), telefon kengligida — oddiy o'raladi. */
 .scc-meta { font-size: 12px; }
+/* Meta qatori kesilmaydi (ellipsis yo'q): sig'sa — dizayndagidek pill'lar bilan bir qatorda, sig'masa — keyingi qatorga to'liq o'tadi. */
 @media (min-width: 1100px) {
-    .scc-pills { flex-wrap: nowrap; }
     .scc-pills > :not(.scc-meta) { flex: none; }
-    .scc-meta { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .scc-meta { min-width: 0; overflow-wrap: anywhere; }
 }
+
+/* ── Yuklash xatosi (js/loadError.js) — barcha ustoz/yordamchi sahifalari uchun bitta naqsh (ustoz Davomatidagi karta) ── */
+.mh-lerr { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 14px 16px; border-radius: 14px; background: var(--kb-bad-bg, #FEF3F2); color: var(--kb-bad-fg, #B42318); font-size: 13px; line-height: 1.5; min-width: 0; }
+.mh-lerr p { margin: 0; flex: 1 1 260px; min-width: 0; overflow-wrap: anywhere; }
+.mh-lerr-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 0 16px; border-radius: 12px; border: 1px solid #0065D6; background: #0065D6; color: #FFFFFF; font: 700 14px inherit; font-family: inherit; cursor: pointer; white-space: nowrap; }
+.mh-lerr-btn:hover { background: #0057B8; border-color: #0057B8; }
+.mh-lerr-btn:disabled { opacity: .7; cursor: progress; }
+.mh-lerr.is-compact { padding: 10px 12px; font-size: 12.5px; }
+.mh-lerr.is-compact .mh-lerr-btn { min-height: 34px; padding: 0 12px; font-size: 13px; }
+.mh-lerr-cell { color: var(--kb-bad-fg, #B42318); font-weight: 600; }
+/* Qo'ng'iroqcha paneli: xodim bildirishnomalari yuklanmadi (js/loadError.js) */
+.notif-lerr { padding: 10px 12px; }

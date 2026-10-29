@@ -98,3 +98,7 @@ html.rd #teacherHome .rd-thx-rank-card > .dashboard-empty { padding: 16px 20px; 
   html.rd #teacherHome .thx-todo li .sc-btn { margin-left: 54px; }
   html.rd #teacherHome .thx-todo > .dashboard-panel-head { flex-wrap: wrap; gap: 4px; }
 }
+/* "Bajarish kerak" ichidagi yuklash xatosi (js/loadError.js) — oddiy qator emas, karta */
+html.rd #teacherHome .thx-todo li.thx-lerr { display: block; padding: 12px 20px; }
+html.rd #teacherHome .thx-todo li.thx-lerr > div { display: flex; flex-direction: row; flex-wrap: wrap; }
+html.rd #teacherHome .thx-todo li.thx-lerr b { font-size: inherit; }
