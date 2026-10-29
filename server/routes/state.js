@@ -6,6 +6,7 @@ const { authRequired, studentAuthOptional } = require('../middleware/auth');
 const router = express.Router();
 const { getTeacherScopedState, findUserById, pool } = require('../db');
 const { scopeState } = require('../services/stateScope');
+const ropScope = require('../services/ropScope');
 const teacherDuties = require('../services/teacherDuties');
 const { loadLearningByStudent, ratingResponse } = require('../services/teacherRating');
 
@@ -968,7 +969,10 @@ async function getStateForUser(user) {
         )).rows[0]?.department;
         financeEmployee = ['moliya', 'finance'].includes(String(dept || '').toLowerCase());
     }
-    return scopeState(state, user, { managerId, financeEmployee });
+    const scoped = scopeState(state, user, { managerId, financeEmployee });
+    // ROP: Cash Flow yo'q, faqat o'z til yo'nalishi (HR'dagi til) — services/ropScope.js.
+    if (user.role === 'rop') return ropScope.scopeStateForRop(scoped, await ropScope.ropLangsFor(pool, user));
+    return scoped;
 }
 
 router.get('/', authRequired, crmStateIdentity, crmStateRequired, async (req, res) => {
@@ -1008,7 +1012,14 @@ router.patch('/', authRequired, crmStateIdentity, crmStateMutationRequired, asyn
         }
         if (!Object.keys(partial).length)
             return res.status(400).json({ error: 'Yangilash uchun ma\'lumot yuborilmadi' });
-        await patchState(partial, req.user);
+        let toSave = partial;
+        if (req.user.role === 'rop') {
+            // ROP: moliya kalitlari (kassa, to'lov, reja, bonus) — 403; o'quvchi/ustoz/davomat — faqat o'z tili.
+            const langs = await ropScope.ropLangsFor(pool, req.user);
+            const needsExisting = langs && ['students', 'teachers', 'mainAttendance', 'assistantAttendance', 'removedStudentIds'].some(k => partial[k] !== undefined);
+            toSave = ropScope.guardRopPatch(partial, langs, needsExisting ? await getFullState() : {});
+        }
+        await patchState(toSave, req.user);
         res.json({ ok: true, state: await getStateForUser(req.user) });
     } catch (err) {
         console.error('PATCH /api/state', err);

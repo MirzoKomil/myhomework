@@ -61,7 +61,11 @@ function scopeState(state, user, { managerId, financeEmployee = false } = {}) {
         const own = ownStudentIdsForManager(state.students, state.leads, managerId);
         // Boshqa menejerlarning o'quvchilari reyting/statistika uchun qoladi,
         // lekin telefon va boshqa aloqa maydonlarisiz.
-        state.students = (state.students || []).map(s => own.has(s.id) ? s : stripStudentContacts(s));
+        // Xodimlar demo hisoblari (isStaffDemo) sotuvga kelmaydi — ro'yxat/son/statistika
+        // buzilmasin. Faqat menejerning o'z demo hisobi (ilovani ko'rish uchun) qoladi.
+        state.students = (state.students || [])
+            .filter(s => !s.isStaffDemo || (managerId && String(s.demoForEmployeeId || '') === String(managerId)))
+            .map(s => own.has(s.id) ? s : stripStudentContacts(s));
         state.payments = (state.payments || []).filter(p => own.has(p.studentId));
         state.cashFlow = [];
     } else if (role === 'employee' && !financeEmployee) {

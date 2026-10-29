@@ -30,7 +30,7 @@ test('admin and boshliq keep full HR data', () => {
     }
 });
 
-test('ROP loses colleagues HR private fields but keeps own and students/finance', () => {
+test('ROP loses colleagues HR private fields (scopeState); kassa ropScope da kesiladi', () => {
     const st = scope.scopeState(baseState(), { role: 'rop', email: 'bobur@x.uz' });
     assert.equal(st.hrEmployees[0].cardNumber, '8600111122223333', 'own record stays full');
     for (const key of scope.HR_PRIVATE_FIELDS) assert.equal(st.hrEmployees[1][key], undefined, key);
@@ -50,7 +50,7 @@ test('sales manager: own students full, others without contacts, own payments on
     assert.equal(byId.s3.debtAmount, undefined, 'other managers debts hidden');
     assert.equal(byId.s1.debtAmount, 100);
     assert.equal(byId.s3.managerId, 'm2', 'non-contact fields kept for statistics');
-    assert.equal(byId.s4.phone, undefined, 'staff demo is never treated as own');
+    assert.equal(byId.s4, undefined, 'B3: boshqa xodimlarning demo hisobi sotuvga kelmaydi');
     assert.deepEqual(st.payments.map(p => p.id), ['p1']);
     assert.deepEqual(st.cashFlow, []);
     assert.equal(st.hrEmployees[1].pinfl, undefined);
@@ -138,4 +138,69 @@ test('teacher state: xodim demo o\'quvchilari yordamchiga berilmaydi, asosiy ust
     assert.deepEqual(asst.students.map(s => s.id), ['s1']);
     const main = duties.stateForTeacher(state, { id: 'dil', role: 'ingliz-oqituvchi', lang: 'english' });
     assert.equal(main.students.find(s => s.id === 'demo_hr1').isStaffDemo, true);
+});
+
+// ── Paket B (30-okt): ROP — o'z tili, moliya yozuvi yo'q; sotuvga demo hisoblar kelmaydi ──
+const rop = require('../server/services/ropScope');
+const mixed = () => ({
+    students: [{ id: 'e1', subject: 'english', phone: '1' }, { id: 'r1', subject: 'russian', phone: '2' }, { id: 'e2', subject: '' }],
+    teachers: [{ id: 't-en', subject: 'english' }, { id: 't-ru', subject: 'russian' }],
+    leads: { english: [{ id: 'le' }], russian: [{ id: 'lr' }] },
+    payments: [{ id: 'pe', studentId: 'e1' }, { id: 'pr', studentId: 'r1' }],
+    cashFlow: [{ id: 'c1' }],
+    mainAttendance: { '2026-10_t-en': { e1: { 1: true } }, '2026-10_t-ru': { r1: { 2: true } } },
+    assistantAttendance: {},
+    salesPlan: { english: {} }, bonusData: { b: 1 },
+});
+
+test('B3: sotuv menejeri o\'z demo hisobini ko\'radi, boshqalarnikini — yo\'q', () => {
+    const st = baseState();
+    st.students.push({ id: 'demo_m1', isStaffDemo: true, demoForEmployeeId: 'm1' }, { id: 'demo_m2', isStaffDemo: true, demoForEmployeeId: 'm2' });
+    const out = scope.scopeState(st, { role: 'sales_manager', email: 'z@x.uz' }, { managerId: 'm1' });
+    assert.deepEqual(out.students.filter(s => s.isStaffDemo).map(s => s.id), ['demo_m1']);
+});
+
+test('B2: ROP state faqat o\'z tilida, Cash Flow yo\'q, reja/bonus ko\'rinadi', () => {
+    const en = rop.scopeStateForRop(mixed(), ['english']);
+    assert.deepEqual(en.students.map(s => s.id), ['e1', 'e2']);
+    assert.deepEqual(en.teachers.map(s => s.id), ['t-en']);
+    assert.deepEqual(en.leads, { english: [{ id: 'le' }], russian: [] });
+    assert.deepEqual(en.payments.map(p => p.id), ['pe']);
+    assert.deepEqual(en.cashFlow, []);
+    assert.deepEqual(en.mainAttendance, { '2026-10_t-en': { e1: { 1: true } } });
+    assert.ok(en.salesPlan && en.bonusData, 'ko\'rish uchun qoladi');
+    const ru = rop.scopeStateForRop(mixed(), ['russian']);
+    assert.deepEqual(ru.students.map(s => s.id), ['r1']);
+    assert.deepEqual(ru.leads.english, []);
+    const both = rop.scopeStateForRop(mixed(), ['english', 'russian']);
+    assert.equal(both.students.length, 3);
+    // Til belgilanmagan ROP — eski xatti-harakat (faqat kassa yo'q)
+    const none = rop.scopeStateForRop(mixed(), null);
+    assert.equal(none.students.length, 3); assert.equal(none.leads.russian.length, 1); assert.deepEqual(none.cashFlow, []);
+});
+
+test('B1: ROP moliya kalitlarini yoza olmaydi (tilidan qat\'i nazar)', () => {
+    for (const key of ['cashFlow', 'payments', 'bonusData', 'bonusHistory', 'salesPlan', 'individualSalesPlans'])
+        for (const langs of [['english'], null])
+            assert.throws(() => rop.guardRopPatch({ [key]: key === 'cashFlow' || key === 'payments' || key === 'bonusHistory' ? [] : {} }, langs, {}), e => e.status === 403, key);
+    assert.deepEqual(rop.guardRopPatch({ scripts: [] }, ['english'], {}), { scripts: [] });
+});
+
+test('B2: ROP boshqa til o\'quvchisi/ustozini yoza va o\'chira olmaydi', () => {
+    const ex = mixed();
+    assert.ok(rop.guardRopPatch({ students: [{ id: 'e1', subject: 'english', name: 'X' }] }, ['english'], ex));
+    assert.throws(() => rop.guardRopPatch({ students: [{ id: 'r1', subject: 'russian' }] }, ['english'], ex), e => e.status === 403);
+    assert.throws(() => rop.guardRopPatch({ students: [{ id: 'r1', subject: 'english' }] }, ['english'], ex), e => e.status === 403, 'tilni almashtirib olib bo\'lmaydi');
+    assert.throws(() => rop.guardRopPatch({ students: [{ id: 'new', subject: 'russian' }] }, ['english'], ex), e => e.status === 403);
+    assert.throws(() => rop.guardRopPatch({ students: [], removedStudentIds: ['r1'] }, ['english'], ex), e => e.status === 403);
+    assert.throws(() => rop.guardRopPatch({ teachers: [{ id: 't-ru', subject: 'russian' }] }, ['english'], ex), e => e.status === 403);
+    assert.ok(rop.guardRopPatch({ students: [{ id: 'r1', subject: 'russian' }] }, null, ex), 'til belgilanmagan — eski xatti-harakat');
+});
+
+test('B2: ROP davomati boshqa til qatorlarini o\'chirmaydi va o\'zgartirmaydi', () => {
+    const ex = mixed();
+    const out = rop.guardRopPatch({ mainAttendance: { '2026-10_t-en': { e1: { 1: true, 3: true } }, '2026-10_t-ru': {} } }, ['english'], ex);
+    assert.deepEqual(out.mainAttendance, { '2026-10_t-ru': { r1: { 2: true } }, '2026-10_t-en': { e1: { 1: true, 3: true } } });
+    const hack = rop.guardRopPatch({ mainAttendance: { '2026-10_t-ru': { r1: { 2: true, 9: true } } } }, ['english'], ex);
+    assert.deepEqual(hack.mainAttendance, { '2026-10_t-ru': { r1: { 2: true } } });
 });
