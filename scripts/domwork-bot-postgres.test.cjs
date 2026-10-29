@@ -251,6 +251,7 @@ test('Domwork bot on disposable PostgreSQL (no real Telegram or Redis)', {skip: 
                 await assert.rejects(queue.transaction(pool,async db=>{await events.capture(db,'assignment','s',{},'rolled-back-event');throw Error('fixture');}));
                 assert.equal((await pool.query("SELECT count(*) FROM domwork_bot_events WHERE event_key='rolled-back-event'")).rows[0].count,'0');
                 await pool.query("UPDATE domwork_bot_outbox SET state='cancelled',payload='{}' WHERE state='pending'");
+                await pool.query(`UPDATE domwork_bot_settings SET data=data||'{"liveFeedEnabled":false}'::jsonb`); // jonli kuzatuv bu testga aloqasiz
                 const mark={studentId:'s',date:policy.today(),duty:'main',teacherId:'he',present:false};
                 await queue.transaction(pool,db=>events.attendance(db,mark));
                 await queue.transaction(pool,events.processOne);

@@ -72,7 +72,15 @@ module.exports = function createRouter({ pool, runtime, authRequired }) {
         (SELECT COUNT(*) FROM domwork_bot_outbox o WHERE o.payload->>'_broadcast'=b.id AND o.state='pending') AS pending
         FROM domwork_bot_broadcasts b ORDER BY b.created_at DESC LIMIT 30`)).rows})));
     router.get('/delivery-status', handle(async()=>({counts:(await pool.query('SELECT state,COUNT(*) AS count FROM domwork_bot_outbox GROUP BY state')).rows,
-        failures:(await pool.query("SELECT id,state,last_error,created_at FROM domwork_bot_outbox WHERE state IN ('failed','uncertain') ORDER BY created_at DESC LIMIT 30")).rows})));
+        failures:(await pool.query("SELECT id,state,last_error,created_at FROM domwork_bot_outbox WHERE state IN ('failed','uncertain') ORDER BY created_at DESC LIMIT 30")).rows,
+        errors:(await pool.query("SELECT part,message,created_at FROM domwork_bot_errors ORDER BY id DESC LIMIT 20").catch(()=>({rows:[]}))).rows})));
+    // 30-okt: kun yakuni hisobotini qo'lda (hozir) yuborish — bugungi holat bo'yicha, rahbar/ROP/targetolog va guruhlarga.
+    router.post('/reports/send-now', handle(req => queue.transaction(pool, async db => {
+        const sched=require('../services/domworkBot/scheduler'), now=new Date();
+        const date=require('../services/domworkBot/policy').today(now);
+        const result=await sched.dailyReport(db,date,now,':manual:'+now.getTime());
+        return {ok:true,date,...result};
+    })));
     router.get('/leave-requests', handle(async()=>({requests:(await pool.query(`SELECT l.id,l.reason,l.start_date,l.end_date,l.state,h.name
         FROM domwork_bot_leave_requests l LEFT JOIN hr_employees h ON h.id=l.employee_id ORDER BY l.created_at DESC LIMIT 100`)).rows})));
     router.post('/leave-requests/:id/review', handle(req=>queue.transaction(pool,db=>controls.reviewLeave(db,req.user,req.params.id,req.body?.state))));
