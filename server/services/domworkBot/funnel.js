@@ -60,7 +60,7 @@ const BUNDLED_NAMES = { sovga: 'Domwork — 40 ta eng kerakli gap.pdf', qollanma
     qollanma_office: 'Domwork — Ish suhbati 15 savol.pdf', qollanma_bank: 'Domwork — Bank va moliya.pdf', qollanma_med: 'Domwork — Tibbiyot.pdf',
     qollanma_gov: 'Domwork — Davlat xizmati.pdf', qollanma_sales: 'Domwork — Savdo va mijozlar.pdf', qollanma_daily: 'Domwork — Kundalik suhbat.pdf',
     qollanma_smena: 'Domwork — Ish va smena.pdf', qollanma_hujjat: 'Domwork — Hujjat va patent.pdf', qollanma_kundalik: 'Domwork — Shifokor, politsiya, transport.pdf',
-    oferta: 'Domwork — Ommaviy oferta shartnomasi.pdf', promo1: 'domwork-dars.png', promo2: 'domwork-ish.png', promo3: 'domwork-rossiya.png', bonus: 'Domwork — Ishda kerak 50 ibora.pdf' };
+    oferta: 'Domwork — Ommaviy oferta shartnomasi.pdf', promo1: 'domwork-dars.png', salom: 'domwork.png', cta: 'domwork-menejer.png', sinov: 'domwork-sinov-darsi.png', promo2: 'domwork-ish.png', promo3: 'domwork-rossiya.png', bonus: 'Domwork — Ishda kerak 50 ibora.pdf' };
 const BUNDLED_FILE = { bonus: 'qollanma_umumiy' }; // kanal bonusi — «Ishda kerak 50 ibora» (umumiy qo'llanma)
 const bundledCache = new Map();
 function bundledFile(key) {
@@ -239,7 +239,9 @@ async function start(db, update, message, { lead = null, payload = '' } = {}) {
     }
     await event(db, c.tid, 'start', { source, variant: v.variant });
     const name = clean(String(lead?.name || from.first_name || '').split(' ')[0]) || 'do‘st';
-    await say(c, copy.text.greeting(T.esc(name), !!lead), replyKeyboard(), { html: true });
+    const hello = media(s, 'salom');
+    if (hello) await sendMedia(c, hello, copy.text.greeting(T.esc(name), !!lead), replyKeyboard(), { html: true });
+    else await say(c, copy.text.greeting(T.esc(name), !!lead), replyKeyboard(), { html: true });
     const gift = media(s, 'sovga'), hasLesson = !!media(s, 'dars1');
     const next = inline([hasLesson ? [[copy.text.lessonWatch, 'f:les']] : [[copy.KEYBOARD.contact, 'f:cta']]]);
     // 1-dars bo'lsa — sovg'a ostida «1-darsni ko'rish»; bo'lmasa sovg'a tugmasiz (keyingi qadam — joylashuv savoli).
@@ -286,7 +288,7 @@ async function cta(c, v) {
     // Rossiya/boshqa davlat: qo'ng'iroq ishlamaydi — asosiy tugma «Telegramda yozishaylik» (menejer shu bot orqali yozadi).
     const markup = t === 'A' ? inline([[[copy.text.ctaTelegram, 'f:tg']], [[copy.text.ctaInfo, 'f:info']]])
         : inline([[[copy.text.ctaCall, 'f:call']], [[copy.text.ctaTelegram, 'f:tg'], [copy.text.ctaInfo, 'f:info']]]);
-    const photo = media(s, 'menejer');
+    const photo = media(s, 'menejer') || media(s, 'cta');
     if (photo && body.length <= 1000) await sendMedia(c, photo, body, markup, { html: true }); else await say(c, body, markup, { html: true });
     if (!v.cta_at) await patch(c.db, c.tid, { cta_at: new Date() });
     await event(c.db, c.tid, 'cta', { discount: !!discount });

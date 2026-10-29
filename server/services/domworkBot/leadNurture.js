@@ -64,8 +64,9 @@ async function run(db, now = new Date()) {
                 reply_markup: inline([[[copy.WHEN.now, 'f:w:now'], [copy.WHEN.eve, 'f:w:eve']], [[copy.WHEN.morn, 'f:w:morn'], [copy.text.ctaTelegram, 'f:tg']]]) }, at);
             await db.query("UPDATE domwork_bot_visitors SET request=COALESCE(request,'{\"method\":\"call\"}'::jsonb),updated_at=NOW() WHERE telegram_id=$1", [tid]);
         });
-        if (to === 'boglanildi') await once(() => queue(db, key, tid, 'sendMessage', { text: TEXT.talked(name, manager),
-            reply_markup: inline([[[copy.KEYBOARD.faq, 'f:faqlist']]]) }, sendAt(now, 20 * 60000)));
+        if (to === 'boglanildi') await once(() => require('./funnel').bundledFile('sinov')
+            ? queue(db, key, tid, 'sendPhoto', { photo: 'bundled', _bundled: 'sinov', caption: TEXT.talked(name, manager), reply_markup: inline([[[copy.KEYBOARD.faq, 'f:faqlist']]]) }, sendAt(now, 20 * 60000))
+            : queue(db, key, tid, 'sendMessage', { text: TEXT.talked(name, manager), reply_markup: inline([[[copy.KEYBOARD.faq, 'f:faqlist']]]) }, sendAt(now, 20 * 60000)));
         if (to === 'qaror-jarayonida') await once(async () => {
             await queue(db, key, tid, 'sendMessage', { text: TEXT.deciding(name), reply_markup: inline([[[copy.text.ctaCall, 'f:call'], [copy.text.ctaTelegram, 'f:tg']]]) }, sendAt(now, 2 * 3600000));
             await queue(db, key + ':d2', tid, 'sendMessage', { text: TEXT.decidingNudge(name), reply_markup: inline([[[copy.text.ctaCall, 'f:call']], [[copy.KEYBOARD.faq, 'f:faqlist']]]) }, sendAt(now, 2 * 86400000));
