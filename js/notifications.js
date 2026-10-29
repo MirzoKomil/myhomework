@@ -222,6 +222,14 @@ function renderNotificationPanel() {
     }
     renderNotifListInto('notifList', _notifCat === 'all' ? list : list.filter(n => n.cat === _notifCat));
     renderNotifListInto('settingsNotifList', list);
+    // Xodim bildirishnomalari (/api/staff/notify/feed) yuklanmasa — bitta xato naqshi (js/loadError.js) + "Qayta urinish".
+    const ferr = window.staffNotify?.error?.();
+    const nl = document.getElementById('notifList');
+    if (ferr && nl && window.LoadErr) {
+        nl.insertAdjacentHTML('afterbegin', `<div class="notif-lerr">${window.LoadErr.html({ title: 'Bildirishnomalarni yuklab bo\'lmadi', err: ferr, note: '', compact: true })}</div>`);
+        nl.querySelector('.notif-empty')?.remove();
+        window.LoadErr.bind(nl, () => window.staffNotify.refresh());
+    }
 }
 
 function notifDayLabel(ts) {

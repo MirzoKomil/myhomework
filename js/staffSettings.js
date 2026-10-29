@@ -24,7 +24,9 @@
         check: '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>'
     };
     const head = (sub) => `<div class="profile-header-bar ss-head"><h1>Sozlamalar</h1><p>${esc(sub)}</p></div>`;
-    const errBox = (e) => `<div class="ss-card ss-pad ss-err" role="alert">${esc(e?.message || e || 'Xatolik')}</div>`;
+    // Bitta xato naqshi (js/loadError.js): sabab + "Qayta urinish" (showErr bo'limni qayta yuklaydi).
+    const errBox = (e, title = 'Ma\'lumotni yuklab bo\'lmadi') => `<div class="ss-col"><section class="ss-card ss-pad">${window.LoadErr.html({ title, err: e, note: '' })}</section></div>`;
+    const showErr = (body, h, e, title, retry) => { body.innerHTML = h + errBox(e, title); window.LoadErr.bind(body, () => retry(body)); };
     // Bo'lim ma'lumoti kelguncha foydalanuvchi boshqa bo'limga o'tgan bo'lsa, eski javob yangi bo'limni bosib ketmasin.
     // app.js har renderProfileBody'da 'ss-body' klassini olib tashlaydi, render() esa qaytadan qo'yadi va token beradi.
     let renderSeq = 0;
@@ -53,7 +55,7 @@
             P.data = d; P.taken = tk.taken || []; P.pending = null;
             if (!P.set) P.set = /\/m\d\d\.webp$/.test(d.user.avatar) ? 'm' : /\/f\d\d\.webp$/.test(d.user.avatar) ? 'f' : (/^(m|male|erkak)/i.test(d.gender) ? 'm' : 'f');
             drawProfile(body);
-        } catch (e) { if (ok()) body.innerHTML = head('Profil') + errBox(e); }
+        } catch (e) { if (ok()) showErr(body, head('Profil'), e, 'Profilni yuklab bo\'lmadi', renderProfile); }
     }
     // Tug'ilgan kun (dizayn: "14-may"). Server formati: YYYY-MM-DD yoki MM-DD (services/staffSettings BDAY_RE).
     function bdayText(b) {
@@ -254,7 +256,7 @@
         const ok = guard(body);
         body.innerHTML = head('Mening maoshim') + '<div class="ss-col"><div class="ss-card ss-pad ss-muted">Yuklanmoqda…</div></div>';
         let d;
-        try { d = await api('/salary'); } catch (e) { if (ok()) body.innerHTML = head('Mening maoshim') + errBox(e); return; }
+        try { d = await api('/salary'); } catch (e) { if (ok()) showErr(body, head('Mening maoshim'), e, 'Maosh hisobini yuklab bo\'lmadi', renderSalary); return; }
         if (!ok()) return;
         if (!d.linked) { body.innerHTML = head('Mening maoshim') + `<div class="ss-card ss-pad">Hisobingiz HR ro'yxatidagi xodim yozuviga ulanmagan (login = email). Administratorga murojaat qiling.</div>`; return; }
         if (d.kind === 'assistant' && d.assist) return drawAssistSalary(body, d);
@@ -338,7 +340,7 @@
             const st = s.counted >= a.cap ? `<i class="ss-pill warn">limit to'ldi · ${a.cap + 1}-chi hisoblanmaydi</i>` : near ? `<i class="ss-pill warn">${a.cap} ga yaqin · ${a.cap + 1}-chi hisoblanmaydi</i>`
                 : `<span class="ss-mt">${s.adviceLeft ? `yana ${s.adviceLeft} tavsiya` : 'bu oy tavsiya qolmadi'}</span>`;
             return `<tr><th scope="row"><span class="ss-stu"><span class="ss-sav">${stuAvatar(s.studentId, s.name) || initials(s.name)}</span><span><b>${esc(s.name)}</b><small>asosiy: ${esc(s.mainTeacher || '—')}</small></span></span></th>
-              <td class="n"><b>${s.counted}</b> / ${a.cap}</td><td class="n">${num(s.amount)}</td><td>${st}</td></tr>`;
+              <td class="n"><b>${s.counted}</b> / ${s.plan ?? a.cap}</td><td class="n">${num(s.amount)}</td><td>${st}</td></tr>`;
         }).join('') || '<tr><td colspan="4" class="ss-mt">Sizga hali o\'quvchi biriktirilmagan</td></tr>';
         body.innerHTML = head('Mening maoshim · aloqalar bo\'yicha') + `<div class="ss-col">
           <div class="ss-kpis ss-kpis--as">
@@ -347,7 +349,7 @@
             ${lastPaid(d)}</div>
           <section class="ss-card" aria-labelledby="ssAsH"><header class="ss-ch"><h3 id="ssAsH">${monName(d.month)} · o'quvchilar bo'yicha</h3><span class="ss-mt">har o'quvchi bilan oyiga ${a.cap} tagacha · kamida 5 daqiqa</span></header>
             <div class="ss-tw"><table class="ss-tbl ss-tbl--as"><thead><tr><th scope="col">O'quvchi</th><th scope="col" class="n">Hisoblangan aloqa</th><th scope="col" class="n">Summa</th><th scope="col">Holat</th></tr></thead>
-            <tbody>${rows}</tbody><tfoot><tr><td>Jami · ${a.students.length} o'quvchi</td><td class="n">${a.counted} / ${a.students.length * a.cap}</td><td class="n">${num(a.amount)}</td><td></td></tr></tfoot></table></div>
+            <tbody>${rows}</tbody><tfoot><tr><td>Jami · ${a.students.length} o'quvchi</td><td class="n">${a.counted} / ${a.students.reduce((n, s) => n + (s.plan ?? a.cap), 0)}</td><td class="n">${num(a.amount)}</td><td></td></tr></tfoot></table></div>
             <p class="ss-note ss-mt">Hisoblanmaydi: "javob bermadi", 5 daqiqadan qisqa, bir kundagi ikkinchi aloqa, haftadagi ikkinchi yozishma. Oy yopilganda Moliya tasdiqlaydi. ${esc(payNote(d.month))}</p></section></div>`;
     }
 
@@ -356,7 +358,7 @@
     async function renderNotifSettings(body) {
         const ok = guard(body);
         body.innerHTML = head('Bildirishnomalar · qaysi hodisa, qaysi kanal') + '<div class="ss-col"><div class="ss-card ss-pad ss-muted">Yuklanmoqda…</div></div>';
-        try { NP.data = await api('/notify/prefs'); } catch (e) { if (ok()) body.innerHTML = head('Bildirishnomalar') + errBox(e); return; }
+        try { NP.data = await api('/notify/prefs'); } catch (e) { if (ok()) showErr(body, head('Bildirishnomalar'), e, 'Bildirishnoma sozlamalarini yuklab bo\'lmadi', renderNotifSettings); return; }
         if (ok()) drawNotif(body);
     }
     const tog = (key, ch, on, locked, label) => `<label class="ss-tog"><input type="checkbox" data-pref="${esc(key)}" data-ch="${ch}" ${on ? 'checked' : ''} ${locked ? 'disabled' : ''} aria-label="${esc(label)}"><i></i></label>`;
@@ -408,7 +410,10 @@
         const d = NP.data, q = d.quiet || { from: '22:00', to: '08:00' }, tg = d.channels.telegram;
         const hasSoon = d.groups.some(g => g.items.some(i => !i.live));
         const groups = d.groups.map(g => `<tr class="sec"><th colspan="3" scope="rowgroup">${esc(g.title)}</th></tr>` + g.items.map(i => { const p = d.prefs[i.key] || {};
-            return `<tr><th scope="row"><b>${esc(i.label)}</b>${i.sub || !i.live ? `<small>${esc(i.sub)}${!i.live ? `${i.sub ? ' · ' : ''}<em class="ss-soon" title="Hozircha bu hodisa yuborilmaydi — tanlovingiz saqlanadi va manba ulanganda qo'llanadi">tez orada</em>` : ''}${i.locked ? ' · o\'chirib bo\'lmaydi' : ''}</small>` : ''}</th>
+            // Manbasi hali ulanmagan hodisa (server live:false): kalit ko'rsatilmaydi — "yoqilgan" deb aldamasin; aniq "Tez orada" holati.
+            if (!i.live) return `<tr class="is-soon"><th scope="row"><b>${esc(i.label)}</b><small>${i.sub ? esc(i.sub) + ' · ' : ''}hozircha yuborilmaydi</small></th>
+              <td colspan="2"><span class="ss-soon-pill" title="Bu hodisa uchun xabar manbasi hali ulanmagan — ulanganda shu yerda kalitlar paydo bo'ladi">Tez orada</span></td></tr>`;
+            return `<tr><th scope="row"><b>${esc(i.label)}</b>${i.sub || i.locked ? `<small>${esc(i.sub)}${i.locked ? `${i.sub ? ' · ' : ''}o'chirib bo'lmaydi` : ''}</small>` : ''}</th>
               <td>${tog(i.key, 'tg', p.tg, i.locked, i.label + ' — Telegram')}</td><td>${tog(i.key, 'web', p.web, i.locked, i.label + ' — Brauzer')}</td></tr>`; }).join('')).join('');
         const note = { teacher: 'Shoshilinch xabarlar (sinov tasdig\'i) tinch soatlarda ham keladi.', assistant: 'Tinch soatlarda faqat admin tuzatishi haqidagi xabar keladi.', sales: 'Ushlab turish tugashi haqidagi xabar o\'chirib bo\'lmaydi.',
             rop: 'Menejer so\'rovlari admin bilan birga keladi — kim birinchi hal qilsa, ikkinchisida yopiladi.', admin: 'Tinch soatlarda tasdiqlash so\'rovlari ovozsiz keladi.' }[d.kind] || '';
@@ -425,7 +430,7 @@
             </div>${TGL.open && !tg.botLinked ? '<div class="ss-pad ss-tgl" id="ssTgl" aria-live="polite"></div>' : ''}</section>
           <section class="ss-card" aria-labelledby="ssNH"><header class="ss-ch"><h3 id="ssNH">Nimalar haqida xabar beriladi</h3><button type="button" class="ss-btn ss-btn--sm" data-reset>Standartga qaytarish</button></header>
             <div class="ss-tw"><table class="ss-tbl ss-tbl--np"><thead><tr><th scope="col">Hodisa</th><th scope="col">Telegram</th><th scope="col">Brauzer</th></tr></thead><tbody>${groups}</tbody></table></div>
-            <p class="ss-note ss-mt">O'zgarish darhol saqlanadi. ${esc(note)} ${tg.connected ? 'Telegram belgilangan xabarlar @Domworkuz_bot\'ga keladi (tinch soatlarda faqat shoshilinchlari, ovozsiz).' : tg.botLinked ? 'Bot ulangan. Telegramga yuborishni admin yoqqach, belgilangan xabarlar botga keladi — ungacha panelda.' : 'Telegram tanlovi va tinch soatlar saqlanadi — botni ulang, xabarlar Telegramga keladi.'}${hasSoon ? ' "Tez orada" — xabar manbasi keyingi yangilanishda ulanadi; kalit ishlaydi, tanlovingiz hozirdan saqlanadi.' : ''}</p></section></div>`;
+            <p class="ss-note ss-mt">O'zgarish darhol saqlanadi. ${esc(note)} ${tg.connected ? 'Telegram belgilangan xabarlar @Domworkuz_bot\'ga keladi (tinch soatlarda faqat shoshilinchlari, ovozsiz).' : tg.botLinked ? 'Bot ulangan. Telegramga yuborishni admin yoqqach, belgilangan xabarlar botga keladi — ungacha panelda.' : 'Telegram tanlovi va tinch soatlar saqlanadi — botni ulang, xabarlar Telegramga keladi.'}${hasSoon ? ' «Tez orada» — bu hodisalar haqida xabar hali yuborilmaydi; manba ulanganda kalitlar shu yerda paydo bo\'ladi.' : ''}</p></section></div>`;
         body.querySelectorAll('[data-pref]').forEach(inp => inp.addEventListener('change', async () => {
             const k = inp.dataset.pref, ch = inp.dataset.ch;
             try { NP.data = await api('/notify/prefs', { method: 'PUT', body: { types: { [k]: { [ch]: inp.checked } } } }); window.staffNotify?.refresh(); }
@@ -537,11 +542,13 @@
     const staffNotify = {
         items() { return NF.events.map(e => ({ id: 's:' + e.id, type: TONE_TYPE[e.tone] || 'info', tone: e.tone, etype: e.type, title: e.title, message: e.sub, time: Date.parse(e.at), tab: e.go?.tab || '', section: e.go?.section, guideId: e.go?.guideId, cat: e.cat, serverRead: !!e.read, server: true })); },
         cats() { return NF.cats; },
+        // Serverdagi bildirishnomalar yuklanmagan bo'lsa — xato (panel "bildirishnoma yo'q" deb ishontirmaydi).
+        error() { return NF.err || null; },
         async refresh() {
             if (NF.busy) return NF.busy;
             if (!me()?.role || me().role === 'student') return;
-            NF.busy = api('/notify/feed').then(r => { NF.events = r.events || []; NF.cats = r.cats || []; NF.at = Date.now(); })
-                .catch(() => { /* panel mahalliy bildirishnomalar bilan ishlayveradi */ })
+            NF.busy = api('/notify/feed').then(r => { NF.events = r.events || []; NF.cats = r.cats || []; NF.at = Date.now(); NF.err = null; })
+                .catch(e => { NF.err = e; /* panel mahalliy bildirishnomalar bilan ishlayveradi, tepada xato kartasi */ })
                 .finally(() => { NF.busy = null; if (typeof renderNotificationPanel === 'function') renderNotificationPanel();
                     // Sidebar son belgilari (js/staffSessions.js) shu voqealardan hisoblanadi.
                     window.dispatchEvent(new CustomEvent('staff:feed', { detail: { events: NF.events } })); });

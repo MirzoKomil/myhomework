@@ -42,11 +42,12 @@ test('only actual paid, active Russian students get student menu', () => {
         assert.equal(store.student({...row,extra_data:{...row.extra_data,...extra}},'1'),null);
     assert.equal(store.student({...row,subject:'english'},'1'),null);
 });
-test('all eight menus are scoped; dual role is server-owned', () => {
+test('all eight menus are scoped; main teacher has no assistant duty (29-okt)', () => {
     assert.equal(Object.keys(policy.MENUS).length,8);
     assert.throws(()=>policy.requireAction({role:'student'},'broadcast'),e=>e.status===403);
     assert.throws(()=>policy.requireAction({role:'teacher'},'assistant-duty'),e=>e.status===403);
-    policy.requireAction({role:'teacher',dualRole:true},'assistant-duty');
+    // 29-okt: asosiy ustoz yordamchi bo'la olmaydi — ikkilamchi rol (dualRole) ham "Yordamchi ustozlik" menyusini ochmaydi.
+    assert.throws(()=>policy.requireAction({role:'teacher',dualRole:true},'assistant-duty'),e=>e.status===403);
     assert.equal(actionFor({role:'student'},'📣 Xabar tarqatish'),undefined);
     assert.ok(keyboard({role:'student'}).keyboard.every(row=>row.length<=2));
 });

@@ -69,13 +69,21 @@ function computeTeacherRating(state, ownType, now = tashkentNow(), learning = {}
     // Asosiy ustoz: oyning kamida bir kunida faol bo'lgan o'quvchi (AttendanceRules.inMonth, s.statusHistory — sana bo'yicha);
     // faol bo'lmagan KUNLAR monthTotals ichida chiqariladi. Muzlatishdan oldingi darslar Davomat %, Reyting va maoshda bir xil.
     // Yordamchi (eski davomat) — joriy holat.
+    // Ustozlar tarixi (school_teacher_history): ustoz almashsa — dars o'tgan ustozga (maosh bilan bir xil, AttendanceRules.taughtOn).
+    const hist = new Map();
+    for (const h of opts.teacherHistory || []) {
+        const sid = h.studentId ?? h.student_id; if (!sid) continue;
+        if (!hist.has(sid)) hist.set(sid, []);
+        hist.get(sid).push({ teacherId: h.teacherId ?? h.teacher_id, from: String(h.from ?? h.fromDate ?? h.from_date ?? '').slice(0, 10) });
+    }
     const students = (state.students || []).filter(s => (ownType === 'yordamchi' ? R.isActiveStudent(s) : R.inMonth(s, s.statusHistory, monthSuffix))
-        && (!opts.pastMonth || startedBy(s)));
+        && (!opts.pastMonth || startedBy(s))).map(s => (hist.has(s.id) && ownType !== 'yordamchi' ? { ...s, teacherHistory: hist.get(s.id) } : s));
     const attStore = ownType === 'yordamchi' ? (state.assistantAttendance || {}) : (state.mainAttendance || {});
     const todayKey = now.toISOString().slice(0, 10);
 
     const rows = teachers.map((t) => {
-        const ownStudents = students.filter(s => (ownType === 'yordamchi' ? s.assistantTeacherId : s.teacherId) === t.id);
+        const ownStudents = students.filter(s => (ownType === 'yordamchi' ? s.assistantTeacherId : s.teacherId) === t.id
+            || (ownType !== 'yordamchi' && (s.teacherHistory || []).some(h => h.teacherId === t.id)));
         const attKey = `${monthSuffix}_${t.id}`;
         const presentDays = attStore[attKey] || {};
         let expected = 0, completed = 0;
@@ -83,7 +91,7 @@ function computeTeacherRating(state, ownType, now = tashkentNow(), learning = {}
             // Asosiy ustoz: UstozDavomat "Oktyabr" kartasi bilan AYNAN bitta formula (js/attendanceRules.js monthTotals):
             // dars kunidagi "Keldi" + tasdiqlangan qoplash, har o'quvchida oy rejasidan oshmaydi.
             const T = R.monthTotals({ id: t.id, month: monthSuffix, students: ownStudents, mainAtt: presentDays,
-                makeups: opts.makeups || [], teacher: t, todayKey });
+                makeups: opts.makeups || [], teacher: t, todayKey, nowMin: now.getUTCHours() * 60 + now.getUTCMinutes() });
             expected = T.expected; completed = T.counted;
         } else {
             // Yordamchi (eski davomat bo'yicha) — avvalgidek; reyting UI'da yordamchilarga ko'rsatilmaydi.
@@ -179,18 +187,18 @@ function firstDataMonth(state, ownType) {
 // Admin Reyting sahifasi va ustoz Bosh sahifasi uchun yagona javob.
 // month: 'YYYY-MM' (ixtiyoriy, joriy oydan keyingisi bo'lmaydi). loadLearning(now, opts) -> { studentId: pct }.
 // Javobda faqat yakuniy (ism, ball, foizlar, o'rin) — xom davomat yo'q.
-async function ratingResponse({ state, ownType, month, loadLearning, makeups = [], now = tashkentNow() }) {
+async function ratingResponse({ state, ownType, month, loadLearning, makeups = [], teacherHistory = [], now = tashkentNow() }) {
     const cur = monthKeySuffix(now);
     const key = month && MONTH_RE.test(month) && month < cur && month >= RATING_START ? month : cur;
     const isPast = key !== cur;
     const at = isPast ? monthEnd(key) : now;
     const learn = async (when, opts) => { try { return await loadLearning(when, opts); } catch (e) { console.error('teacher-rating: o\'zlashtirish yuklanmadi', e.message); return {}; } };
-    let current = computeTeacherRating(state, ownType, at, await learn(at, isPast ? { untilMonthEnd: true } : undefined), isPast ? { pastMonth: true, makeups } : { makeups });
+    let current = computeTeacherRating(state, ownType, at, await learn(at, isPast ? { untilMonthEnd: true } : undefined), isPast ? { pastMonth: true, makeups, teacherHistory } : { makeups, teacherHistory });
     // O'tgan oy tanlanganda: hech kimda "Keldi" bo'lmasa — o'sha oy ma'lumoti yo'q (bo'sh ro'yxat).
     if (isPast && !current.some(r => r.completed > 0)) current = [];
     const prevNow = prevMonthEnd(at);
     let prevRows = [];
-    if (monthKeySuffix(prevNow) >= RATING_START) try { prevRows = computeTeacherRating(state, ownType, prevNow, await learn(prevNow, { untilMonthEnd: true }), { pastMonth: true, makeups }); }
+    if (monthKeySuffix(prevNow) >= RATING_START) try { prevRows = computeTeacherRating(state, ownType, prevNow, await learn(prevNow, { untilMonthEnd: true }), { pastMonth: true, makeups, teacherHistory }); }
     catch (err) { console.error('teacher-rating: o\'tgan oy hisoblanmadi', err.message); }
     return { month: key, currentMonth: cur, prevMonth: monthKeySuffix(prevNow), firstMonth: firstDataMonth(state, ownType),
         ownType, rows: attachPrevious(current, prevRows), formula: { attendance: 0.6, learning: 0.4 } };

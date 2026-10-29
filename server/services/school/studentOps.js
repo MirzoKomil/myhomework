@@ -308,7 +308,8 @@ async function restore(db, actor, studentId, body, now = new Date()) {
         if (body.continueFrom === 'restart') ex.progressArchivedAt = from;
         ex.paymentDueDate = from; // yangi to'lov davri birinchi darsdan
         await writeExtra(db, studentId, ex);
-        await audit(db, studentId, 'restore', { from, teacherId, schedule: `${T.patternLabel(day)} ${time}`, continueFrom: body.continueFrom || 'next' }, reason, actor);
+        await audit(db, studentId, 'restore', { from, teacherId, schedule: `${T.patternLabel(day)} ${time}`, continueFrom: body.continueFrom || 'next',
+            ...(body.assistantId && String(body.assistantId) !== st.assistantId ? { assistantId: { from: st.assistantId || null, to: String(body.assistantId) } } : {}) }, reason, actor);
     }
     await syncLegacy(db, studentId, now);
     return { ok: true };

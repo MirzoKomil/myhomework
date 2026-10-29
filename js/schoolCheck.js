@@ -30,7 +30,13 @@
         if (!root.dataset.loaded) root.innerHTML = '<div class="sc-skel"></div>';
         let ov;
         try { ov = await apiFetch(`/api/academic/students?lang=${lang}`); }
-        catch (e) { root.innerHTML = `<div class="sc-err">${esc(e.message)}</div>`; return; }
+        catch (e) {
+            if (seq !== _seq) return;
+            // Bitta xato naqshi (js/loadError.js) — sabab va "Qayta urinish".
+            root.innerHTML = window.LoadErr.html({ title: 'O\'quvchilar natijalarini yuklab bo\'lmadi', err: e, note: 'Ro\'yxat ko\'rsatilmadi — ma\'lumot yo\'qolmagan.' });
+            window.LoadErr.bind(root, () => render(root, { lang }));
+            return;
+        }
         if (seq !== _seq) return;
         root.dataset.loaded = '1';
         const local = new Map((getItem(STORAGE_KEYS.students, []) || []).map(s => [s.id, s]));
@@ -56,8 +62,8 @@
         }
         // Yordamchi aloqalari (oyiga 13 tagacha) — yordamchi konteksti uchun.
         const assistantId = lead ? (ctx === 'assistant' ? st.staff : '') : (ctx === 'assistant' ? me.linkedTeacherId : '');
-        let rep = null;
-        if (ctx === 'assistant') rep = await api(`/assist/month?month=${month}${lead ? '&assistantId=' + encodeURIComponent(assistantId) : ''}`).catch(() => null);
+        let rep = null, repErr = null;
+        if (ctx === 'assistant') rep = await api(`/assist/month?month=${month}${lead ? '&assistantId=' + encodeURIComponent(assistantId) : ''}`).catch(e => { repErr = e; return null; });
         if (seq !== _seq) return;
         const repBy = new Map((rep?.students || []).map(x => [x.studentId, x]));
 
@@ -81,7 +87,9 @@
         if (lead) {
             const who = staffList.find(e => e.id === st.staff);
             let pay = '';
-            if (who && ctx === 'assistant' && rep) {
+            if (who && ctx === 'assistant' && repErr) {
+                pay = `<div class="okx-k okx-pay">${window.LoadErr.html({ title: 'Aloqalar hisobini yuklab bo\'lmadi', err: repErr, note: '', compact: true })}</div>`;
+            } else if (who && ctx === 'assistant' && rep) {
                 pay = `<div class="okx-k"><small>Mashg'ulotlar · shu oy</small><b>${rep.counted} <em>/ ${list.length * (rep.cap || 13)}</em></b></div>
                   <div class="okx-k okx-pay"><small>Taxminiy maosh</small><b>${esc(u.num(rep.amount))} <em>so'm</em></b><span>${esc(u.assistPayNote(rep))} · ${list.length} o'quvchi</span></div>`;
             } else if (who && typeof calculateKpiSalary === 'function') {
@@ -130,9 +138,9 @@
         root.querySelectorAll('[data-sel]').forEach(b => b.onclick = () => {
             st.sel = b.dataset.sel;
             root.querySelectorAll('[data-sel]').forEach(x => { const on = x === b; x.classList.toggle('on', on); on ? x.setAttribute('aria-current', 'true') : x.removeAttribute('aria-current'); });
-            detail(root.querySelector('[data-det]'), list.find(s => s.id === st.sel), { ctx, lead, local, repBy, rep, avg, lang });
+            detail(root.querySelector('[data-det]'), list.find(s => s.id === st.sel), { ctx, lead, local, repBy, rep, repErr, avg, lang });
         });
-        detail(root.querySelector('[data-det]'), list.find(s => s.id === st.sel), { ctx, lead, local, repBy, rep, avg, lang });
+        detail(root.querySelector('[data-det]'), list.find(s => s.id === st.sel), { ctx, lead, local, repBy, rep, repErr, avg, lang });
     }
 
     let _dseq = 0;
@@ -161,7 +169,13 @@
         let r, a = null;
         try {
             [r, a] = await Promise.all([api(`/students/${encodeURIComponent(s.id)}/progress`), o.ctx === 'main' ? api(`/students/${encodeURIComponent(s.id)}/attendance?month=${month}`).catch(() => null) : null]);
-        } catch (e) { if (seq === _dseq) el.querySelector('.okx-body').innerHTML = `<div class="sc-err">${esc(e.message)}</div>`; return; }
+        } catch (e) {
+            if (seq !== _dseq) return;
+            const b = el.querySelector('.okx-body');
+            b.innerHTML = window.LoadErr.html({ title: 'O\'quvchi natijalarini yuklab bo\'lmadi', err: e, note: '' });
+            window.LoadErr.bind(b, () => detail(el, s, o));
+            return;
+        }
         if (seq !== _dseq) return;
         const d = r.detail;
         const body = el.querySelector('.okx-body');
@@ -170,7 +184,7 @@
         const pills = (d.student.flags || []).filter(f => f.key !== 'frozen').map(f => `<span class="sc-pill ${f.key === 'behind' ? 'sc-pill--bad' : 'sc-pill--warn'}">${esc(f.label)}</span>`).join('');
         const f1 = acad.recentFirst(d);
         let fourth;
-        if (o.ctx === 'assistant') { const x = o.repBy.get(s.id); fourth = `<div class="okx-fa"><small>Yordamchi aloqa · oyiga ${o.rep?.cap || 13} tagacha</small><b>${x?.counted || 0} / ${o.rep?.cap || 13}</b></div>`; }
+        if (o.ctx === 'assistant') { const x = o.repBy.get(s.id); fourth = `<div class="okx-fa"><small>Yordamchi aloqa · oyiga ${o.rep?.cap || 13} tagacha</small><b>${o.repErr ? '—' : `${x?.counted || 0} / ${o.rep?.cap || 13}`}</b></div>`; }
         else if (a) {
             const passed = a.lessonDays.filter(x => x <= today()).length, present = Object.values(a.entries).filter(e => e.present).length;
             fourth = `<div class="okx-fa"><small>Davomat · ${esc(mName)}</small><b class="${passed && present / passed < 0.6 ? 'okx-bad' : ''}">${present} <em>/ ${passed} o'tgan</em></b></div>`;

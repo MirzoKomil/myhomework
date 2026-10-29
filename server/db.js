@@ -1195,10 +1195,23 @@ async function getFullState() {
             statusHistory.get(r.student_id).push({ status: r.status, from: r.from_date, to: r.to_date || null, at: r.created_at instanceof Date ? r.created_at.toISOString() : r.created_at });
         }
     }
+    // Ustozlar tarixi (school_teacher_history) — ustoz almashganda dars o'tgan ustozga (Davomat, Reyting, maosh — AttendanceRules.taughtOn).
+    // Faqat o'qish uchun: saveStudents extra_data'ga yozmaydi.
+    const teacherHistory = new Map();
+    if ((await q("SELECT to_regclass('public.school_teacher_history')::text AS t"))[0]?.t) {
+        for (const r of await q(`SELECT student_id, teacher_id, TO_CHAR(from_date,'YYYY-MM-DD') AS from_date, TO_CHAR(to_date,'YYYY-MM-DD') AS to_date
+            FROM school_teacher_history ORDER BY from_date, created_at`)) {
+            if (!teacherHistory.has(r.student_id)) teacherHistory.set(r.student_id, []);
+            teacherHistory.get(r.student_id).push({ teacherId: r.teacher_id, from: r.from_date, to: r.to_date || null });
+        }
+    }
     return {
         teachers: teacherRows.map(rowToTeacher),
         salesManagers: smRows.map(r => ({ id: r.id, name: r.name, avatar: r.avatar || '' })),
-        students: studentRows.map(r => { const st = rowToStudent(r); delete st.statusHistory; if (statusHistory.has(r.id)) st.statusHistory = statusHistory.get(r.id); return st; }),
+        students: studentRows.map(r => { const st = rowToStudent(r); delete st.statusHistory; delete st.teacherHistory;
+            if (statusHistory.has(r.id)) st.statusHistory = statusHistory.get(r.id);
+            if (teacherHistory.has(r.id)) st.teacherHistory = teacherHistory.get(r.id);
+            return st; }),
         timetable,
         mainAttendance: mainAtt,
         assistantAttendance: assistAtt,
@@ -1320,6 +1333,7 @@ async function saveStudents(client, students, removedStudentIds = []) {
         }
         delete extra.hasPassword;
         delete extra.statusHistory; // /api/state o'qish maydoni (school_student_status'dan) — saqlanmaydi
+        delete extra.teacherHistory; // /api/state o'qish maydoni (school_teacher_history'dan) — saqlanmaydi
         const financial = existingById.get(id);
         if (financial?.paymentLedgerManaged) {
             // A stale bulk CRM snapshot cannot undo an independently accepted receipt.
@@ -1341,7 +1355,16 @@ async function saveStudents(client, students, removedStudentIds = []) {
              JSON.stringify(extra)]
         );
         await require('./services/domworkBot/events').assignments(client,existingById.get(s.id),s);
+        // Yordamchi biriktirildi / almashdi — o'quvchi audit yozuvi (yordamchiga "Yangi o'quvchi biriktirildi" bildirishnomasi manbai).
+        const prevAsst = existingById.get(s.id)?.assistantTeacherId || null;
+        if (s.assistantTeacherId && s.assistantTeacherId !== prevAsst) await auditAssistantAssign(client, s.id, prevAsst, s.assistantTeacherId);
     }
+}
+async function auditAssistantAssign(client, studentId, from, to) {
+    if (!(await client.query("SELECT to_regclass('public.school_student_audit')::text AS t")).rows[0]?.t) return;
+    await client.query(`INSERT INTO school_student_audit (student_id,action,changes,reason,actor_id,actor_name,actor_role)
+        VALUES ($1,'assistant-assign',$2,'',COALESCE(NULLIF(current_setting('app.user_id', true),''),'crm'),'CRM','')`,
+        [studentId, JSON.stringify({ assistantId: { from, to } })]);
 }
 
 async function saveSalesManagers(client, list) {
@@ -4053,6 +4076,7 @@ async function patchState(partial, actor = {}) {
 // UPSERT qiladi va ustoz faqat o'ziga biriktirilgan o'quvchini baholay oladi.
 async function getTeacherScopedState(actor) {
     const own = await teacherDuties.teacherForActor(pool, actor);
+    // Ustozlar tarixi (getFullState students[].teacherHistory) — stateForTeacher o'z o'quvchilari va o'tgan o'quvchilari uchun beradi.
     const scoped = teacherDuties.stateForTeacher(await getFullState(), own);
     // Hamkasb (asosiy ustoz) Telegram'i — xodim profilidan (Sozlamalar → Profil), faqat colleagueContact berilganlar uchun.
     const ids = (scoped.teachers || []).filter(t => t.colleagueContact).map(t => t.id);

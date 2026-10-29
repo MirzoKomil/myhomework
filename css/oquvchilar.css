@@ -202,3 +202,5 @@ html.rd[data-theme="dark"] .oq, html.rd[data-theme="dark"] .oqm-back {
   .oqm-db { padding: 0 16px 16px; }
   .oqm-df { padding: 12px 16px; }
 }
+/* Yuklanmagan ustunlar xabari (LoadErr) */
+.oq-lerr { padding: 12px 20px; border-bottom: 1px solid var(--o-bd2); }

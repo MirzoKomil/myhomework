@@ -11,6 +11,7 @@ const T = require('../services/school/time');
 const S = require('../services/school/schedule');
 const O = require('../services/school/studentOps');
 const A = require('../services/school/assist');
+const R = require('../../js/attendanceRules');
 const { randomUUID } = require('node:crypto');
 const bcrypt = require('bcryptjs');
 
@@ -659,10 +660,14 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         if (!ids.length) return { month, students: [] };
         const names = new Map((await pool.query(`SELECT id, name FROM hr_employees`)).rows.map(r => [r.id, r.name]));
         const att = (await pool.query(`SELECT att_key, student_id, day, present FROM main_attendance WHERE student_id = ANY($1::text[]) AND att_key LIKE $2`, [ids, month + '\\_%'])).rows;
-        const mks = (await pool.query(`SELECT student_id, kind, status, TO_CHAR(held_date,'YYYY-MM-DD') AS held, TO_CHAR(missed_date,'YYYY-MM-DD') AS missed FROM school_makeups
-            WHERE student_id = ANY($1::text[]) AND status IN ('planned','review','approved') AND TO_CHAR(missed_date,'YYYY-MM')=$2`, [ids, month])).rows;
+        const mks = (await pool.query(`SELECT m.student_id, m.teacher_id, m.kind, m.status, TO_CHAR(m.held_date,'YYYY-MM-DD') AS held, TO_CHAR(m.missed_date,'YYYY-MM-DD') AS missed,
+            EXISTS (SELECT 1 FROM main_attendance a WHERE LEFT(a.att_key, 7) = TO_CHAR(m.missed_date, 'YYYY-MM') AND a.student_id = m.student_id
+                AND a.day = EXTRACT(DAY FROM m.missed_date)::int AND a.present = 1) AS missed_came FROM school_makeups m
+            WHERE m.student_id = ANY($1::text[]) AND m.status IN ('planned','review','approved') AND TO_CHAR(m.missed_date,'YYYY-MM')=$2`, [ids, month])).rows;
         const contacts = (await pool.query(`SELECT * FROM school_assist_contacts WHERE student_id = ANY($1::text[]) AND day BETWEEN $2 AND $3`, [ids, from, to])).rows;
         const statuses = (await pool.query('SELECT * FROM school_student_status WHERE student_id = ANY($1::text[]) AND cancelled_at IS NULL', [ids])).rows;
+        // "Kelmadi" — school_absences (Davomat bilan bitta o'qish manbai).
+        const absList = await S.teacherAbsences(pool, { from, to, studentIds: ids }).catch(() => []);
         let progress = {}; try { progress = await require('../services/academicHub').progressForIds(pool, ids); } catch { progress = {}; }
         const ws = T.weekStart(td);
         const out = [];
@@ -675,9 +680,16 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
             const dayOf = n => `${month}-${String(n).padStart(2, '0')}`;
             const present = new Set(mine.filter(a => Number(a.present) === 1).map(a => dayOf(a.day)).filter(d => lessonDays.includes(d)));
             const absent = mine.filter(a => Number(a.present) === 0).map(a => dayOf(a.day));
-            let counted = present.size;
-            for (const m of mks.filter(m => m.student_id === row.id && m.status === 'approved')) { if (m.kind === 'double') counted++; else if (m.held && !present.has(m.held)) { present.add(m.held); counted++; } }
-            const coveredN = mks.filter(m => m.student_id === row.id && ['review', 'approved', 'planned'].includes(m.status)).length;
+            // Hisobga o'tgan — bitta manba (js/attendanceRules.js monthTotals): ustoz Davomati, karta va maosh bilan bir xil
+            // (o'quvchining dars kuni va faol kuni, tasdiqlangan qoplash, qoldirilgan kunida "Keldi" bor qoplash sanalmaydi).
+            const own = { id: row.id, teacherId: st.teacherId || '', lessonDayOfWeek: st.day || 1, lessonTime: st.time, startDate: A.studentStartOf(row.extra_data) || null,
+                statusHistory: statuses.filter(x => x.student_id === row.id).map(x => ({ status: x.status, from: S.dateStr(x.from_date), to: x.to_date ? S.dateStr(x.to_date) : null, at: x.created_at })) };
+            const marks = Object.fromEntries(mine.map(a => [Number(a.day), Number(a.present) === 1 ? 1 : 0]));
+            for (const a of absList) if (a.studentId === row.id && a.teacherId === st.teacherId) { const d = Number(String(a.day).slice(8, 10)); if (marks[d] !== 1) marks[d] = 0; }
+            const mt = R.monthTotals({ id: st.teacherId || '', month, students: [own], mainAtt: { [row.id]: marks }, teacher: {}, todayKey: td,
+                makeups: mks.filter(m => m.student_id === row.id).map(m => ({ ...m, held_date: m.held, missed_date: m.missed })) }).rows[0];
+            const counted = mt ? mt.counted : 0;
+            const coveredN = mt ? mt.covered : 0;
             const passedPlan = lessonDays.filter(d => d <= td).length;
             const nextDay = lessonDays.find(d => d > td || (d === td && (T.toMin(st.time) ?? 0) > T.nowLocal().min)) || null;
             const cr = A.countMonth(contacts.filter(c => c.student_id === row.id && c.assistant_id === (row.assistant_teacher_id || '')).map(c => ({ ...c, day: S.dateStr(c.day) })),
@@ -687,7 +699,8 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
             const p = progress[row.id] || null;
             out.push({ id: row.id, name: row.name, state, schedule: { day: st.day, time: st.time, duration: st.duration },
                 teacherId: row.teacher_id || '', teacherName: names.get(row.teacher_id) || '', assistantId: row.assistant_teacher_id || '', assistantName: names.get(row.assistant_teacher_id) || '',
-                lessons: { counted: Math.min(counted, lessonDays.length), plan: lessonDays.length, passedPlan, present: mine.filter(a => Number(a.present) === 1).length, absent: absent.length, covered: coveredN, next: nextDay ? { date: nextDay, time: st.time } : null },
+                lessons: { counted: Math.min(counted, lessonDays.length), plan: mt ? mt.plan : lessonDays.length, passedPlan: mt ? mt.expected : passedPlan,
+                    present: mt ? mt.came : mine.filter(a => Number(a.present) === 1).length, absent: mt ? mt.absent : absent.length, covered: coveredN, next: nextDay ? { date: nextDay, time: st.time } : null },
                 contacts: row.assistant_teacher_id ? { counted: cr.counted, week: ci.filter(i => i.day >= ws && i.status === 'counted').length, noAnswer: cr.noAnswer, last: last ? { day: last.day, status: last.status, channel: last.channel } : null } : null,
                 app: p ? { reached: p.reached, firstTryAvg: p.firstTryAvg, daysIdle: p.daysIdle, flags: (p.flags || []).map(f => f.key) } : null });
         }

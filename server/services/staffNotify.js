@@ -39,7 +39,7 @@ const CATALOG = {
         ['O\'quvchilar', [
             ['student_absent', 'Asosiy darsga kelmadi', 'o\'quvchingiz · dars tugagach', [1, 0], true],
             ['assist_near_cap', 'Limitga yaqin · 12/13', 'oyda 13 tadan ortig\'i hisoblanmaydi', [1, 0], true],
-            ['student_assigned', 'Yangi o\'quvchi biriktirildi', 'admin biriktirganda', [1, 1], false]]],
+            ['student_assigned', 'Yangi o\'quvchi biriktirildi', 'admin biriktirganda', [1, 1], true]]],
         ['Boshqa', [
             ['assist_corrected', 'Admin aloqani tuzatdi', 'sabab bilan', [1, 1], true],
             ['guide_new', 'Yangi yo\'riqnoma', '', [0, 1], true],
@@ -215,6 +215,19 @@ async function teacherEvents(db, me, now, ev) {
     for (const m of mk) ev.push({ id: `makeup:${m.id}:${m.status}`, type: 'makeup_decision', cat: 'davomat', tone: m.status === 'approved' ? 'ok' : 'bad',
         title: `Qoplash darsi ${m.status === 'approved' ? 'tasdiqlandi' : 'rad etildi'}`,
         sub: `${first(m.name)} · ${dm(S.dateStr(m.missed_date))} o'rniga${m.held_date ? ' ' + dm(S.dateStr(m.held_date)) : ''}${m.decision_note ? ' · ' + m.decision_note : ''}`, at: iso(m.decided_at), go: { tab: 'timetable' } });
+    // O'quvchi ilovada 3 kundan beri faol emas (yoki hali kirmagan) — "E'tibor kerak" bilan bitta qoida (academicHub flags 'idle').
+    // Kuniga bir marta, 09:00 da (undan oldin — kechagi eslatma). Faqat hozir shu ustozdagi faol o'quvchilar.
+    const idleDay = nowMin >= 9 * 60 ? today : T.addDays(today, -1);
+    const own = (await db.query('SELECT id, name, extra_data FROM students WHERE teacher_id=$1', [tid])).rows.filter(r => R.isActiveStudent(r));
+    if (own.length) {
+        let prog = {};
+        try { prog = await require('./academicHub').progressForIds(db, own.map(r => r.id)); } catch (e) { if (e.code !== '42P01') throw e; }
+        for (const r of own) {
+            const idle = (prog[r.id]?.flags || []).find(f => f.key === 'idle');
+            if (idle) ev.push({ id: `idle:${r.id}:${idleDay}`, type: 'student_inactive', cat: 'davomat', tone: 'warn', title: `${first(r.name)} ilovada faol emas`,
+                sub: idle.label, at: atLocal(idleDay, 9 * 60), go: { tab: 'students' } });
+        }
+    }
     // Yordamchi bu hafta bog'lanmadi (o'z o'quvchilari, Juma 18:00 dan).
     const wd = T.weekday(today);
     if ((wd === 5 && nowMin >= 18 * 60) || wd > 5) {
@@ -287,6 +300,15 @@ async function assistantEvents(db, me, now, ev) {
                 title: `${first(names.get(s.studentId))} · ${Math.min(s.counted, rep.cap)}/${rep.cap} aloqa`, sub: s.counted >= rep.cap ? 'oylik limit to\'ldi — keyingisi hisoblanmaydi' : `${rep.cap}-chi oxirgisi, undan keyingisi hisoblanmaydi`,
                 at: last ? atLocal(last.day, Number(last.at) || 0) : atLocal(today, 0) });
         }
+    }
+    // Yangi o'quvchi biriktirildi — o'quvchi audit yozuvi (school_student_audit: changes.assistantId.to = shu yordamchi; CRM'da
+    // biriktirish, "Qayta tiklash" yoki ko'chirish yozadi). Oxirgi 14 kun, o'quvchi hali shu yordamchida bo'lsa.
+    if ((await db.query("SELECT to_regclass('public.school_student_audit')::text AS t")).rows[0]?.t) {
+        const asg = (await db.query(`SELECT a.id, a.student_id, a.created_at, s.name, he.name AS tname FROM school_student_audit a
+            JOIN students s ON s.id=a.student_id LEFT JOIN hr_employees he ON he.id=s.teacher_id
+            WHERE a.changes->'assistantId'->>'to' = $1 AND s.assistant_teacher_id = $1 AND a.created_at > $2`, [aid, new Date(now.getTime() - 14 * 86400000)])).rows;
+        for (const r of asg) ev.push({ id: `assign:${r.id}`, type: 'student_assigned', cat: 'aloqa', tone: 'info', title: 'Yangi o\'quvchi biriktirildi',
+            sub: `${first(r.name)}${r.tname ? ` · asosiy ustoz ${first(r.tname)}` : ''} · haftasiga 3 aloqa`, at: iso(r.created_at), go: { tab: 'students' } });
     }
     const corr = (await db.query(`SELECT c.*, s.name FROM school_assist_contacts c LEFT JOIN students s ON s.id=c.student_id
         WHERE c.assistant_id=$1 AND c.correction_reason <> '' AND COALESCE(c.removed_at, c.created_at) > $2`, [aid, new Date(now.getTime() - 7 * 86400000)])).rows;

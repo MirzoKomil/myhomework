@@ -20,7 +20,7 @@
         const { api, esc } = u;
         root.innerHTML = '<div class="sc-skel"></div>';
         let data;
-        try { data = await api('/inactive'); } catch (e) { root.innerHTML = `<div class="sc-err">${esc(e.message)}</div>`; return; }
+        try { data = await api('/inactive'); } catch (e) { root.innerHTML = window.LoadErr.html({ title: 'Arxiv ro\'yxatini yuklab bo\'lmadi', err: e, note: '' }); window.LoadErr.bind(root, () => render(root, opts)); return; }
         if (!root.isConnected) return;
         draw(root, opts, data);
     }
@@ -80,7 +80,8 @@
                 return r;
             }
             if (s.state === 'moved') {
-                r.push(['Siz bilan', `${s.withMe ? `${ddmm(s.withMe.from)} → ${ddmm(s.withMe.to)}` : ''}`]);
+                // Dizayn: "01.09 → 14.10 · Du·Ch·Ju 18:00" — siz bilan davr va dars jadvali.
+                r.push(['Siz bilan', `${s.withMe ? `${ddmm(s.withMe.from)} → ${ddmm(s.withMe.to)}` : ''}${s.schedule?.days ? ' · ' + sched(s) : ''}`]);
                 r.push(['O\'tilgan', `${s.lessons || 0} dars siz bilan`]);
                 if (s.reason) r.push(['Sabab', esc(s.reason)]);
                 r.push(['Hozir', `${esc(shortName(s.teacherName))} · ma'lumotlari endi unda`]);
@@ -101,7 +102,8 @@
         const pill = s => s.state === 'frozen' ? `<span class="sc-pill sc-pill--info">Muzlatilgan · ${esc(dShort(s.from))}${s.to ? ' → ' + esc(dShort(s.to)) : ''}</span>`
             : s.state === 'left' ? `<span class="sc-pill sc-pill--bad">Chiqib ketgan${s.from ? ' · ' + esc(dShort(s.from)) : ''}</span>`
             : s.state === 'finished' ? `<span class="sc-pill sc-pill--ok">Kursni tugatgan${s.from ? ' · ' + esc(dShort(lastDay(s))) : ''}</span>`
-            : `<span class="sc-pill sc-pill--mute">${esc(shortName(s.teacherName))}ga o'tdi · ${esc(dShort(s.from))}</span>`;
+            // O'tgan kun qoidasi: "X.ga o'tdi" sanasi — yangi ustoz boshlagan kun (siz bilan oxirgi kundan keyingi kun).
+            : `<span class="sc-pill sc-pill--mute">${esc(shortName(s.teacherName))}ga o'tdi · ${esc(dShort(addDays(s.withMe?.to || s.from, 1)))}</span>`;
         // Sotuv/admin: eslatma va qo'ng'iroq tugmalari (serverda ham tekshiriladi — faqat o'zi sotgan o'quvchi).
         const actsFor = s => {
             if (!followups) return '';

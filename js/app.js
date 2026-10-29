@@ -3,7 +3,6 @@
 const TAB_TITLES = {
     dashboard: 'Bosh sahifa',
     timetable: 'Dars jadvali',
-    'assistant-attendance': 'Yordamchi ustoz davomati',
     salary: 'Ustozlar maoshi',
     students: "O'quvchilar",
     payments: "To'lovlar",
@@ -1242,7 +1241,6 @@ function renderTab(tab) {
     switch (tab) {
         case 'dashboard': renderDashboard(); break;
         case 'timetable': renderTimetable(); break;
-        case 'assistant-attendance': renderAssistantAttendance(); break;
         case 'salary': renderSalary(); break;
         case 'students': renderStudents(); break;
         case 'payments': renderPayments(); break;
@@ -9679,162 +9677,9 @@ function renderMainAttendance() {
     });
 }
 
-// --- Yordamchi ustoz davomati ---
-function initAsstAttControls() {
-    initSubjectTabs('asstAttSubjectTabs', renderAssistantAttendance);
-    const subject = getSelectedSubject('asstAttSubjectTabs');
-    const teachers = filterTeachersByTypeAndSubject('yordamchi', subject);
-    const sel = document.getElementById('asstAttTeacher');
-    const month = document.getElementById('asstAttMonth');
-    if (!month.value) month.value = getMonthKey(new Date());
-
-    const prev = sel.value;
-    sel.innerHTML = teachers.length
-        ? teachers.map(t => `<option value="${escapeHtml(t.id)}">${escapeHtml(t.name)}</option>`).join('')
-        : '<option value="">— Ustoz yo\'q —</option>';
-    if (prev && teachers.some(t => t.id === prev)) sel.value = prev;
-    else if (teachers.length) sel.value = teachers[0].id;
-
-    sel.onchange = renderAssistantAttendance;
-    month.onchange = renderAssistantAttendance;
-    updateAttSectionTitle('asstAttTitle', subject);
-}
-
-function renderAssistantAttendance() {
-    initAsstAttControls();
-    const subject = getSelectedSubject('asstAttSubjectTabs');
-    const teacherId = document.getElementById('asstAttTeacher').value;
-    if (!teacherId) {
-        document.getElementById('assistantAttendanceContainer').innerHTML =
-            `<p class="text-muted">${getSubjectLabel(subject)} bo'yicha yordamchi ustozlar yo'q. "Ustoz qo'shish" tugmasini bosing.</p>`;
-        document.getElementById('asstAttSummary').innerHTML = '';
-        return;
-    }
-
-    const monthVal = document.getElementById('asstAttMonth').value;
-    const patternSel = document.getElementById('asstAttPattern');
-    const durationSel = document.getElementById('asstAttDuration');
-    const teacher = syncTeacherSettings(teacherId, patternSel, durationSel, renderAssistantAttendance);
-    if (!teacher) return;
-
-    const [year, month] = monthVal.split('-').map(Number);
-    const days = getDaysInMonth(year, month);
-    // 10-vazifa: yordamchi ustoz uchun kunlar haftalik patternga
-    // bog'lanmagan — istalgan kunni belgilay oladi, faqat oyiga avtomatik
-    // hisoblangan chegaradan (getFlexibleAttendanceCap) oshmasligi kerak.
-    const flexCap = getFlexibleAttendanceCap(year, month);
-    const students = getItem(STORAGE_KEYS.students, []).filter(s =>
-        s.assistantTeacherId === teacherId && (s.subject || 'english') === subject
-    );
-    const attendance = getItem(STORAGE_KEYS.assistantAttendance, {});
-    const attKey = `${monthVal}_${teacherId}`;
-    const attendanceForTeacher = attendance[attKey] || {};
-
-    let html = '<table class="table attendance-table"><thead><tr>';
-    html += '<th class="sticky-col">№</th><th class="sticky-col-2">O\'quvchi</th><th>Telefon</th><th>Darslar</th>';
-    for (let d = 1; d <= days; d++) {
-        html += `<th class="att-day lesson-day-col${attIsToday(year, month, d) ? ' att-today' : ''}">${attDayHeadInner(year, month, d)}</th>`;
-    }
-    html += '</tr></thead><tbody>';
-
-    if (!students.length) {
-        html += `<tr><td colspan="${days + 4}" class="text-muted">${getSubjectLabel(subject)} — bu yordamchi ustozga biriktirilgan o'quvchilar yo'q.</td></tr>`;
-    }
-
-    students.forEach((s, i) => {
-        const studentAttendance = attendanceForTeacher[s.id] || {};
-        const markedCount = Object.values(studentAttendance).filter(Boolean).length;
-        html += `<tr><td class="sticky-col">${i + 1}</td><td class="sticky-col-2">${escapeHtml(s.name || '')}</td><td>${formatPhoneDisplay(s.phone) || '—'}</td><td class="asst-lesson-count" data-student="${s.id}">0</td>`;
-        for (let d = 1; d <= days; d++) {
-            const marked = studentAttendance[d];
-            const disabled = !marked && markedCount >= flexCap;
-            html += `<td class="att-cell lesson-day-col ${marked ? 'att-present' : ''}">
-                <input type="checkbox" class="asst-att-check" data-att-key="${attKey}" data-student="${s.id}" data-day="${d}" ${marked ? 'checked' : ''} ${disabled ? 'disabled' : ''}>
-            </td>`;
-        }
-        html += '</tr>';
-    });
-
-    html += '</tbody></table>';
-    // 11-vazifa: admin bitta ekranda ikkalasini (yordamchi + asosiy)
-    // yonma-yon ko'rsin — bahsli holatlarni tekshirish uchun.
-    const companionHtml = renderCompanionAttendanceHtml(students, 'teacherId', STORAGE_KEYS.mainAttendance, monthVal, days, 'Asosiy ustoz davomati');
-    document.getElementById('assistantAttendanceContainer').innerHTML = html + companionHtml;
-
-    const kpi = calculateKpiSalary(teacher, monthVal, attendance, students);
-    renderKpiSummary('asstAttSummary', kpi, teacher.name);
-
-    document.querySelectorAll('.asst-att-check').forEach(cb => {
-        cb.addEventListener('change', () => {
-            const att = getItem(STORAGE_KEYS.assistantAttendance, {});
-            const k = cb.dataset.attKey;
-            const sid = cb.dataset.student;
-            const day = cb.dataset.day;
-            if (!att[k]) att[k] = {};
-            if (!att[k][sid]) att[k][sid] = {};
-            if (cb.checked) att[k][sid][day] = 1;
-            else delete att[k][sid][day];
-            setItem(STORAGE_KEYS.assistantAttendance, att);
-            renderAssistantAttendance();
-        });
-    });
-
-    document.querySelectorAll('.asst-lesson-count').forEach(cell => {
-        const sid = cell.dataset.student;
-        const att = getItem(STORAGE_KEYS.assistantAttendance, {})[attKey]?.[sid] || {};
-        const count = Object.values(att).filter(Boolean).length;
-        cell.textContent = `${count} / ${flexCap}`;
-    });
-}
-
-document.getElementById('addAsstTeacher').addEventListener('click', () => {
-    const currentSubject = getSelectedSubject('asstAttSubjectTabs');
-    openModal("Yordamchi ustoz qo'shish",
-        `<div class="form-group"><label>Ism familiya</label><input id="mAsstName" class="form-control"></div>
-         <div class="form-group"><label>Telefon</label><input id="mAsstPhone" class="form-control"></div>
-         <div class="form-group"><label>Fan</label>
-            <select id="mAsstSubject" class="form-select">
-                <option value="english" ${currentSubject === 'english' ? 'selected' : ''}>🇬🇧 Ingliz tili</option>
-                <option value="russian" ${currentSubject === 'russian' ? 'selected' : ''}>🇷🇺 Rus tili</option>
-            </select>
-         </div>
-         <div class="form-group"><label>Dars kunlari</label>
-            <select id="mAsstPattern" class="form-select">
-                <option value="mwf">Dushanba, Chorshanba, Juma</option>
-                <option value="tts">Seshanba, Payshanba, Shanba</option>
-            </select>
-         </div>
-         <div class="form-group"><label>Dars davomiyligi</label>
-            <select id="mAsstDuration" class="form-select">
-                <option value="15">15 daqiqa (75,000/oy)</option>
-                <option value="30">30 daqiqa (150,000/oy)</option>
-                <option value="60">60 daqiqa (300,000/oy)</option>
-            </select>
-         </div>`,
-        `<button class="btn-primary-sm" id="saveAsstTeacher">Saqlash</button>`
-    );
-    document.getElementById('saveAsstTeacher').onclick = () => {
-        const name = document.getElementById('mAsstName').value.trim();
-        if (!name) return;
-        const teachers = getItem(STORAGE_KEYS.teachers, []);
-        teachers.push({
-            id: 't' + Date.now(),
-            name,
-            type: 'yordamchi',
-            subject: document.getElementById('mAsstSubject').value,
-            phone: document.getElementById('mAsstPhone').value.trim(),
-            schedulePattern: document.getElementById('mAsstPattern').value,
-            lessonDuration: parseInt(document.getElementById('mAsstDuration').value)
-        });
-        setItem(STORAGE_KEYS.teachers, teachers);
-        closeModal();
-        const subj = document.getElementById('mAsstSubject').value;
-        document.querySelectorAll('#asstAttSubjectTabs .subject-tab').forEach(b => {
-            b.classList.toggle('active', b.dataset.subject === subj);
-        });
-        renderAssistantAttendance();
-    };
-});
+// Eski "Yordamchi ustoz davomati" sahifasi (renderAssistantAttendance, #tab-assistant-attendance) olib tashlandi:
+// hech qayerdan ochilmas edi (menyu bandi va switchTab chaqiruvi yo'q). Yordamchi aloqalari — js/yordamchi.js (/api/school/assist/*).
+// STORAGE_KEYS.assistantAttendance faqat eski ma'lumotni o'qish uchun qoladi (server/payroll legacy, hisobotlar).
 
 // --- Akademik bo'lim → "O'quvchini tekshirish" ---
 // Eski Yozishma / Faoliyat / Ijodiy ko'rinishi olib tashlandi (QABUL QILINGAN QARORLAR):
@@ -13259,6 +13104,7 @@ function hbAttendanceStats(period) {
     const now = new Date();
     const monthVal = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     const mainAtt = getItem(STORAGE_KEYS.mainAttendance, {});
+    // Eski yordamchi davomati (legacy kesh) — faqat o'qiladi; yangi yordamchi aloqalari /api/school/assist/* da.
     const asstAtt = getItem(STORAGE_KEYS.assistantAttendance, {});
     const allAtt = { ...mainAtt, ...asstAtt };
 
@@ -13599,6 +13445,7 @@ function aaAtRiskStudents(minMarks = 3, rateThreshold = 50) {
     const now = new Date();
     const monthVal = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     const mainAtt = getItem(STORAGE_KEYS.mainAttendance, {});
+    // Eski yordamchi davomati (legacy kesh) — faqat o'qiladi; yangi yordamchi aloqalari /api/school/assist/* da.
     const asstAtt = getItem(STORAGE_KEYS.assistantAttendance, {});
     const allAtt = { ...mainAtt, ...asstAtt };
     const students = getItem(STORAGE_KEYS.students, []);

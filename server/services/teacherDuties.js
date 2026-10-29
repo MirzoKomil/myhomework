@@ -48,8 +48,24 @@ async function validateAssignment(db, student, before = {}) {
         }
     }
 }
-function stateForTeacher(state, own) {
+// Ustozlar tarixi: state.students[].teacherHistory ([{teacherId, from, to}] — getFullState) yoki opts.teacherHistory
+// (school_teacher_history qatorlari {student_id, teacher_id, from_date, to_date}); opts.today — 'YYYY-MM-DD'.
+function stateForTeacher(state, own, opts = {}) {
     const mainIds = new Set(state.students.filter(s => s.teacherId === own.id).map(s => s.id));
+    // Ustozlar tarixi: o'quvchi oy o'rtasida boshqa ustozga o'tsa, darslar o'tgan ustozga (maosh bilan bir xil — AttendanceRules.taughtOn).
+    // Hozirgi o'quvchilarga — tarix (kim qaysi kundan), o'tgan o'quvchilarga (pastStudents) — faqat shu ustozning o'z davri belgilari.
+    const day = v => (v instanceof Date ? v.toISOString().slice(0, 10) : String(v || '').slice(0, 10));
+    const histBy = new Map();
+    if (!opts.teacherHistory) for (const s of state.students) if (Array.isArray(s.teacherHistory) && s.teacherHistory.length) histBy.set(s.id, s.teacherHistory.map(h => ({ teacherId: h.teacherId, from: day(h.from), to: h.to ? day(h.to) : null })));
+    for (const h of opts.teacherHistory || []) {
+        if (!histBy.has(h.student_id)) histBy.set(h.student_id, []);
+        histBy.get(h.student_id).push({ teacherId: h.teacher_id, from: day(h.from_date), to: h.to_date ? day(h.to_date) : null });
+    }
+    // O'tgan oy boshidan beri shu ustozda bo'lgan, hozir boshqa ustozdagi o'quvchilar (oy hisobi va o'tgan oy reytingi uchun).
+    const since = (() => { const t = String(opts.today || new Date(Date.now() + 5 * 3600000).toISOString()).slice(0, 7); const [y, m] = t.split('-').map(Number);
+        return new Date(Date.UTC(y, m - 2, 1)).toISOString().slice(0, 10); })();
+    const pastIds = new Set(state.students.filter(s => s.teacherId !== own.id && (histBy.get(s.id) || [])
+        .some(h => h.teacherId === own.id && (!h.to || h.to >= since))).map(s => s.id));
     const assistantIds = new Set(hasAssistantDuty(own) ? state.students.filter(s => s.assistantTeacherId === own.id).map(s => s.id) : []);
     const assignedIds = new Set([...mainIds, ...assistantIds]);
     const safeFields = ['id','name','phone','phone2','group','subject','teacherId','assistantTeacherId',
@@ -62,7 +78,11 @@ function stateForTeacher(state, own) {
     const PHONE_FIELDS = new Set(['phone', 'phone2']);
     const students = state.students.filter(s => assignedIds.has(s.id)).map(s =>
         Object.fromEntries(safeFields.filter(key => s[key] !== undefined && !(PHONE_FIELDS.has(key) && !mainIds.has(s.id))).map(key => [key, s[key]])));
-    const teacherIds = new Set([own.id, ...students.map(s => s.teacherId), ...students.map(s => s.assistantTeacherId)]);
+    for (const s of students) if (mainIds.has(s.id) && histBy.has(s.id)) s.teacherHistory = histBy.get(s.id);
+    // Telefonsiz, faqat jadval va holat (Davomat/Reyting hisobi) — o'quvchi kartasi esa "past" doirada (routes/school.js canSee).
+    const pastStudents = state.students.filter(s => pastIds.has(s.id)).map(s => ({ ...Object.fromEntries(safeFields
+        .filter(key => s[key] !== undefined && !PHONE_FIELDS.has(key)).map(key => [key, s[key]])), teacherHistory: histBy.get(s.id), past: true }));
+    const teacherIds = new Set([own.id, ...students.map(s => s.teacherId), ...students.map(s => s.assistantTeacherId), ...pastStudents.map(s => s.teacherId)]);
     const teachers = state.teachers.filter(t => teacherIds.has(t.id)).map(t => t.id === own.id ? t
         : { id: t.id, name: t.name, type: t.type, subject: t.subject });
     for (const e of state.hrEmployees.filter(e => teacherIds.has(e.id) && !teachers.some(t => t.id === e.id))) {
@@ -83,7 +103,7 @@ function stateForTeacher(state, own) {
         .map(([id, entries]) => [id, entries.filter(g => g.teacherId === own.id)]));
     // Whitelist, not blacklist: no finance, credentials, colleagues' HR or grades.
     return { teachers, students, hrEmployees: state.hrEmployees.filter(e => e.id === own.id),
-        mainAttendance: attendance(state.mainAttendance, mainIds),
+        mainAttendance: attendance(state.mainAttendance, new Set([...mainIds, ...pastIds])), pastStudents,
         assistantAttendance: attendance(state.assistantAttendance, assistantIds), liveGrades: grades,
         leads: { english: [], russian: [] }, archive: [], payments: [], cashFlow: [],
         salesManagers: [], timetable: {}, bookRoadmap: [], bonusHistory: [], bonusData: {}, salesPlan: {},

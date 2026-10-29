@@ -209,10 +209,14 @@ test('teacher update and its audit roll back together if audit storage fails', a
     db.query = async (sql, params) => {
         if (sql === 'BEGIN' || sql === 'COMMIT') return { rows: [] };
         if (sql === 'ROLLBACK') { db.rows = structuredClone(initial); return { rows: [] }; }
+        if (/^SELECT set_config\(/.test(sql)) return { rows: [] }; // tx: moliya jurnali konteksti (finCtx) — bu testga aloqasiz
         return regularQuery(sql, params);
     };
     db.release = () => {};
+    // tx() ichida require('./services/finCtx') bor — vm kontekstida jurnal yordamchisining zararsiz o'rnini beramiz.
+    const finCtx = { track: () => () => {}, token: () => 'test', signTx: async () => {}, commitHead: () => {} };
     const context = vm.createContext({ pool: { connect: async () => db }, trialLessons: service,
+        require: name => (name === './services/finCtx' ? finCtx : require(name)),
         rowToLead: fromRow, appendLeadAudit: async () => { throw new Error('audit failure'); } });
     vm.runInContext(functionSource('server/db.js', 'tx') + '\n' + functionSource('server/db.js', 'saveTeacherTrialLesson'), context);
     await assert.rejects(context.saveTeacherTrialLesson(actor, fixture().id,

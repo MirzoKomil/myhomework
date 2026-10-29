@@ -200,13 +200,21 @@
                 }
             }
             const days = presentDays.length + makeupCount;
+            // Oy rejasi (UstozMaosh "Rejada" = UstozDavomat kartasi, AttendanceRules.monthTotals plan): o'quvchining shu oydagi dars kunlari,
+            // o'quvchi faol va o'sha kuni shu ustozda bo'lgan (ustoz almashsa — faqat shu ustoz davri). Maosh bo'luvchisiga ta'sir qilmaydi.
+            const plan = !byMakeups ? expectedCount : !(rules() ? rules().inMonth(s, statusRows || [], block.key) : true) ? 0
+                : Math.min(expectedCount, studentDayList.filter(day => {
+                    const d = date(block.key + '-' + String(day).padStart(2, '0'));
+                    const who = teacherOnDay(s, d);
+                    return activeDay(d) && (who ? who === employee.id : s.teacherId === employee.id);
+                }).length);
             // Faqat o'tgan ustoz sifatida kirgan o'quvchi: hisobga o'tgan darsi bo'lmasa — qatorga chiqmaydi.
             if (!days && !assistant && s.teacherId !== employee.id && !(contactsPolicy && hasContacts(s.id))) continue;
             const count = Math.min(days, expectedCount);
             // contacts-v1: round(tarif × aloqalar / 13) — 13 aloqa aniq oylik tarif (40 000), server assist.countMonth bilan bir xil.
             const earned = byContacts ? money((tariff || 0) * count / CONTACT_CAP) : money((tariff || 0) * count / expectedCount);
             total += earned; lessons += count;
-            breakdown.push({ studentId: s.id, name: s.name, month: block.key, lessons: count, expected: expectedCount, tariff: tariff || 0, earned,
+            breakdown.push({ studentId: s.id, name: s.name, month: block.key, lessons: count, expected: expectedCount, ...(assistant ? {} : { plan }), tariff: tariff || 0, earned,
                 ...(byContacts ? { unit: 'contact' } : {}), ...(makeupCount ? { makeups: makeupCount } : {}) });
         }
         return { total, lessons, studentCount: new Set(breakdown.map(b => b.studentId).concat(students.filter(s => (assistant ? s.assistantTeacherId : s.teacherId) === employee.id).map(s => s.id))).size, breakdown };

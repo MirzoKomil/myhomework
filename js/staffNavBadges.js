@@ -48,7 +48,8 @@
             const block = (getItem(STORAGE_KEYS.mainAttendance, {}) || {})[`${month}_${tid}`] || {};
             const mainAtt = window.teacherDutyUI?.mergeAbsences ? window.teacherDutyUI.mergeAbsences(block, ab.absences, tid) : block;
             const teacher = typeof resolveTeacherWithVirtual === 'function' ? resolveTeacherWithVirtual(tid) || {} : {};
-            const t = window.AttendanceRules.monthTotals({ id: tid, month, students, mainAtt, makeups: mk, teacher, todayKey });
+            const all = window.AttendanceRules.withPast ? window.AttendanceRules.withPast(students, getItem(STORAGE_KEYS.pastStudents, []) || [], tid, month) : students;
+            const t = window.AttendanceRules.monthTotals({ id: tid, month, students: all, mainAtt, makeups: mk, teacher, todayKey });
             unm = { month, n: t.unmarked };
         } catch { /* son bildirishnomalardan qoladi */ }
         unmBusy = false;

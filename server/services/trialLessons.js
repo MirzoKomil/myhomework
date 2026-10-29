@@ -14,8 +14,10 @@ async function teacherForActor(client, actor) {
 const trialComments = lead => (lead.comments || []).filter(c => c.type === 'trial-lesson' || c.type === 'trial-teacher');
 // Sinovni qo'ygan sotuv menejeri — oxirgi "Sinov darsi belgilandi" izohi muallifi (faqat ism).
 const managerName = lead => trialComments(lead).filter(c => c.type === 'trial-lesson').slice(-1)[0]?.author || '';
+// Ustozga (GET/POST /api/trial-lessons — faqat ustoz roli) lidning telefon raqami berilmaydi: lid — sotuv ma'lumoti,
+// ustoz sinovni Meet/xodimlar orqali o'tadi. Sotuv, ROP va admin lidni o'z endpointlaridan (telefon bilan) oladi.
 function summary(lead, teacher) {
-    return { id: lead.id, name: lead.name, phone: lead.phone, language: lead.language,
+    return { id: lead.id, name: lead.name, language: lead.language,
         teacherName: teacher.name, trialRequest: workflow.request(lead),
         durationMin: Number(lead.paymentOnboarding?.lessonDuration) || 30, managerName: managerName(lead),
         comments: trialComments(lead) };

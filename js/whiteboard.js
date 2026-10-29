@@ -65,8 +65,9 @@
             }
             if (S.viewAll && S.teacherId) await loadTeacherToday(S.teacherId);
         } catch (e) {
-            container.innerHTML = `<div class="wb"><div class="lh-error"><b>Doskalarni yuklab bo'lmadi</b><span>${esc(e.message)}</span><button type="button" class="lh-btn" data-retry>Qayta urinish</button></div></div>`;
-            container.querySelector('[data-retry]').onclick = () => mount(container, ctx);
+            // Bitta xato naqshi (js/loadError.js).
+            container.innerHTML = `<div class="wb">${window.LoadErr.html({ title: 'Doskalarni yuklab bo\'lmadi', err: e, note: '' })}</div>`;
+            window.LoadErr.bind(container, () => mount(container, ctx));
             return;
         }
         const chips = chipList();
@@ -114,7 +115,17 @@
         const todayData = S.viewAll ? (S.teacherId ? adminToday[`${S.teacherId}|${d}`] : null) : S.today;
         if (todayData) {
             // Yordamchi (YordamchiDoska dizayni): bajarilmagan aloqalar oldin, bajarilganlar keyin (eng so'nggisi birinchi).
-            const its = todayData.assistant ? [...todayData.items].sort((a, b) => (!!a.done - !!b.done) || (a.done ? b.start - a.start : a.start - b.start)) : todayData.items;
+            // Bir o'quvchiga bitta yorliq: kun ichida bir nechta aloqa (masalan avval "javob bermadi", keyin bog'lanildi) yoki
+            // dars + qoplash bo'lsa ham doska bitta (o'quvchi + kun) — ikki yorliq bir xil kalit bilan ikkalasi "is-on" bo'lib qolardi.
+            const byStudent = new Map();
+            for (const it of todayData.items) {
+                const p = byStudent.get(it.studentId);
+                if (!p) { byStudent.set(it.studentId, { ...it }); continue; }
+                p.done = !!(p.done || it.done); p.noAnswer = !p.done && !!(p.noAnswer || it.noAnswer); p.start = Math.min(p.start, it.start);
+                if (!p.lessonNo && it.lessonNo) p.lessonNo = it.lessonNo;
+            }
+            const uniq = [...byStudent.values()];
+            const its = todayData.assistant ? uniq.sort((a, b) => (!!a.done - !!b.done) || (a.done ? b.start - a.start : a.start - b.start)) : uniq;
             for (const it of its) {
                 const b = boards.find(x => x.studentId === it.studentId && x.lessonDate === d);
                 if (b) used.add(b.id);
@@ -216,8 +227,11 @@
         const isToday = c => !c.template && c.lessonDate === today() && (c.virtual || c.start != null);
         const others = all.filter(c => !c.template && !isToday(c));
         const keepOther = new Set(others.slice(0, 2).map(c => c.key));
-        const hidden = S.chipsAll || S.viewAll ? [] : others.filter(c => !keepOther.has(c.key) && !(cur && c.key === cur.key));
+        const hidden = S.viewAll ? [] : others.filter(c => !keepOther.has(c.key) && !(cur && c.key === cur.key));
         const chips = hidden.length ? all.filter(c => !hidden.includes(c)) : all;
+        // Ko'p yorliq: bir qatorga sig'maganlari (va eski doskalar) "Yana N" menyusiga o'tadi — fitChips() o'lchaydi,
+        // "+ Yangi doska" tugmasi ostiga kirib kesilmaydi.
+        const chipBtn = (c, old) => `<button type="button" role="tab" class="wb-chip${cur && c.key === cur.key ? ' is-on' : ''}${c.template ? ' is-tpl' : ''}" data-chip="${esc(c.key)}"${old ? ' data-old hidden' : ''} aria-selected="${!!cur && c.key === cur.key}"><b>${esc(c.name)}</b><small>${esc(c.sub)}</small></button>`;
         const ro = !canEditCur();
         const teachers = S.viewAll ? teacherOptions() : [];
         const linkTxt = linkText(cur);
@@ -225,11 +239,12 @@
         <div class="wb">
             <div class="wb-bar">
                 ${S.viewAll ? `<label class="wb-tsel"><span>Ustoz: ${esc((teachers.find(t => t.id === S.teacherId) || {}).name || '—')} ▾</span><select data-teacher aria-label="Ustoz">${teachers.map(t => `<option value="${esc(t.id)}"${t.id === S.teacherId ? ' selected' : ''}>${esc(t.name)}</option>`).join('')}</select></label>` : ''}
-                <div class="wb-chips" role="tablist" aria-label="Doskalar">
-                    ${chips.map(c => `<button type="button" role="tab" class="wb-chip${cur && c.key === cur.key ? ' is-on' : ''}${c.template ? ' is-tpl' : ''}" data-chip="${esc(c.key)}" aria-selected="${!!cur && c.key === cur.key}"><b>${esc(c.name)}</b><small>${esc(c.sub)}</small></button>`).join('')}
-                    ${hidden.length ? `<button type="button" class="wb-chip wb-chip--more" data-chips-all aria-label="Yana ${hidden.length} ta eski doskani ko'rsatish"><b>Yana ${hidden.length}</b><small>eski doskalar</small></button>` : ''}
+                <div class="wb-chrow"><div class="wb-chips" role="tablist" aria-label="Doskalar">
+                    ${chips.map(c => chipBtn(c, false)).join('')}${hidden.map(c => chipBtn(c, true)).join('')}
                     ${!chips.length ? `<span class="wb-none">${S.viewAll ? "Bu ustozda hali doska yo'q" : "Bugun dars yo'q — yangi doska oching"}</span>` : ''}
                 </div>
+                <div class="wb-more" hidden><button type="button" class="wb-chip wb-chip--more" data-chips-more aria-haspopup="true" aria-expanded="false"><b data-more-n></b><small>doskalar ▾</small></button>
+                    <div class="wb-menu wb-mmenu" role="menu" hidden></div></div></div>
                 ${!S.viewAll ? `<div class="wb-new"><button type="button" class="wb-newbtn" data-new aria-haspopup="true" aria-expanded="${S.menu}">+ Yangi doska</button>
                     <div class="wb-menu" role="menu"${S.menu ? '' : ' hidden'}>
                         <button type="button" role="menuitem" data-mk="blank">Toza doska</button>
@@ -295,6 +310,45 @@
     }
     const setSaved = () => { const x = S.el?.querySelector('.wb-saved'); if (x) x.innerHTML = savedText(); };
 
+    // Yorliqlar qatorini o'lchab, sig'maganlarini "Yana N" menyusiga yig'adi (tanlangan doska doim ko'rinadi).
+    function fitChips(el) {
+        const box = el.querySelector('.wb-chips'), more = el.querySelector('.wb-more'), menu = more?.querySelector('.wb-mmenu');
+        if (!box || !more || !menu) return;
+        // Oyna o'lchami o'zgarsa — qayta o'lchanadi (bitta kuzatuvchi, yangi chizishda almashtiriladi).
+        if (window.ResizeObserver && S._chipBox !== box) {
+            S._chipRO?.disconnect(); S._chipBox = box;
+            let w = box.parentElement.clientWidth;
+            S._chipRO = new ResizeObserver(() => { const nw = box.parentElement?.clientWidth; if (nw && Math.abs(nw - w) > 2 && box.isConnected) { w = nw; fitChips(el); } });
+            S._chipRO.observe(box.parentElement);
+        }
+        menu.hidden = true; more.querySelector('[data-chips-more]')?.setAttribute('aria-expanded', 'false');
+        const chips = [...box.querySelectorAll('[data-chip]')];
+        const old = new Set(chips.filter(c => c.hasAttribute('data-old')));
+        chips.forEach(c => { c.hidden = old.has(c); });
+        more.hidden = !old.size;
+        if (!old.size && box.scrollWidth <= box.clientWidth + 1) return;
+        more.hidden = false;
+        more.querySelector('[data-more-n]').textContent = 'Yana';
+        const avail = box.clientWidth, gap = parseFloat(getComputedStyle(box).columnGap) || 8;
+        const sel = chips.find(c => c.classList.contains('is-on'));
+        const show = new Set();
+        let used = 0;
+        const fits = c => { c.hidden = false; const w = c.getBoundingClientRect().width + (used ? gap : 0); if (used + w > avail + 0.5) return false; used += w; return true; };
+        if (sel && fits(sel)) show.add(sel);
+        for (const c of chips) { if (show.has(c) || old.has(c)) continue; if (!fits(c)) break; show.add(c); }
+        const rest = chips.filter(c => !show.has(c));
+        rest.forEach(c => { c.hidden = true; });
+        if (!rest.length) { more.hidden = true; return; }
+        more.querySelector('[data-more-n]').textContent = `Yana ${rest.length}`;
+        more.querySelector('[data-chips-more]').setAttribute('aria-label', `Yana ${rest.length} ta doska`);
+        menu.innerHTML = rest.map(c => `<button type="button" role="menuitem" data-mchip="${esc(c.dataset.chip)}"><b>${esc(c.querySelector('b')?.textContent || '')}</b><small>${esc(c.querySelector('small')?.textContent || '')}</small></button>`).join('');
+        menu.querySelectorAll('[data-mchip]').forEach(b => b.addEventListener('click', async () => {
+            const chip = chipList().find(c => c.key === b.dataset.mchip);
+            if (!chip) return;
+            S.menu = false;
+            await select(chip);
+        }));
+    }
     function bind() {
         const el = S.el;
         el.querySelectorAll('[data-chip]').forEach(b => b.addEventListener('click', async () => {
@@ -303,7 +357,13 @@
             S.menu = false;
             await select(chip);
         }));
-        el.querySelector('[data-chips-all]')?.addEventListener('click', () => { S.chipsAll = true; draw(); });
+        fitChips(el);
+        el.querySelector('[data-chips-more]')?.addEventListener('click', e => {
+            e.stopPropagation();
+            const m = el.querySelector('.wb-mmenu'), open = m.hidden;
+            m.hidden = !open; e.currentTarget.setAttribute('aria-expanded', String(open));
+            if (open) setTimeout(() => document.addEventListener('click', function off(ev) { if (!m.contains(ev.target)) { m.hidden = true; el.querySelector('[data-chips-more]')?.setAttribute('aria-expanded', 'false'); } document.removeEventListener('click', off); }), 0);
+        });
         el.querySelector('[data-teacher]')?.addEventListener('change', async e => { S.teacherId = e.target.value; S.cur = null; await loadTeacherToday(S.teacherId); await select(defaultChip(chipList()), { silent: true }); draw(); });
         el.querySelector('[data-new]')?.addEventListener('click', () => { S.menu = !S.menu; const m = el.querySelector('.wb-menu'); m.hidden = !S.menu; el.querySelector('[data-new]').setAttribute('aria-expanded', String(S.menu)); });
         el.querySelectorAll('[data-mk]').forEach(b => b.addEventListener('click', () => menuAction(b.dataset.mk, b.dataset.tpl)));
