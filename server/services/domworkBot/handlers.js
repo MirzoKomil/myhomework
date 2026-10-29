@@ -39,6 +39,7 @@ function createHandler({ crm }) {
         if (update.callback_query) {
             if (/^f:/.test(String(update.callback_query.data || ''))) return require('./funnel').callback(db,update);
             if (/^m:/.test(String(update.callback_query.data || ''))) return require('./funnel').managerAction(db,update);
+            if (update.callback_query.data === require('./staffActivation').CALLBACK) return require('./staffActivation').callback(db,update);
             return callbacks.handle(db,update,crm);
         }
         if(update.chat_member) {
@@ -144,7 +145,8 @@ function createHandler({ crm }) {
                 await db.query('UPDATE domwork_bot_links SET paused=false WHERE telegram_id=$1', [sender]);
                 if(identity.kind==='student') await discovery.requestStudent(db,identity.id);
                 await store.setSession(db, sender, null);
-                return await reply(`Assalomu alaykum, ${text(identity.name)}! Kerakli bo‘limni tanlang.`);
+                await reply(`Assalomu alaykum, ${text(identity.name)}! Kerakli bo‘limni tanlang.`);
+                return await require('./staffActivation').onStart(db, update, identity);
             }
             if (command === '/cancel') {
                 await store.setSession(db, sender, null); return await reply('Bekor qilindi.');

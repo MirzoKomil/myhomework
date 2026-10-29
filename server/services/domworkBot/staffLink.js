@@ -47,7 +47,8 @@ function requestDto(row) {
 async function status(pool, actor) {
     return queue.transaction(pool, async db => {
         const me = await owner(db, actor);
-        const link = await existing(db, me.id);
+        let link = await existing(db, me.id);
+        if (link) { const live = await require('./store').identity(db, link.telegram_id); if (!(live?.kind === 'user' && live.id === me.id)) link = null; }
         const row = (await db.query('SELECT * FROM domwork_staff_telegram_requests WHERE user_id=$1 AND session_jti=$2 ORDER BY created_at DESC LIMIT 1',
             [me.id, actor.jti])).rows[0];
         let telegram = null;
@@ -63,7 +64,15 @@ async function create(pool, actor) {
     return queue.transaction(pool, async db => {
         await db.query("SELECT pg_advisory_xact_lock(hashtext('domwork-bot-links'))");
         const me = await owner(db, actor);
-        if (await existing(db, me.id)) throw policy.error(409, 'Telegram allaqachon ulangan. Almashtirish uchun avval uzing');
+        const before = await existing(db, me.id);
+        if (before) {
+            // Buzilgan ulanish (bot endi bu xodimni tanimaydi: raqam o'zgargan va h.k.) — ulanmagan deb hisoblanadi va yangilanadi.
+            const live = await require('./store').identity(db, before.telegram_id);
+            if (live?.kind === 'user' && live.id === me.id) throw policy.error(409, 'Telegram allaqachon ulangan. Almashtirish uchun avval uzing');
+            await db.query("DELETE FROM domwork_bot_links WHERE account_kind='user' AND account_id=$1", [me.id]);
+            await db.query('DELETE FROM domwork_staff_telegram_proofs WHERE user_id=$1', [me.id]);
+            await require('./store').audit(db, me.id, 'staff-telegram-stale-link-removed', me.id, { telegramId: before.telegram_id });
+        }
         const recent = (await db.query(`SELECT COUNT(*)::int AS total,COUNT(*) FILTER(WHERE created_at>NOW()-INTERVAL '10 seconds')::int AS fast
             FROM domwork_staff_telegram_requests WHERE user_id=$1 AND created_at>NOW()-INTERVAL '1 hour'`, [me.id])).rows[0];
         if (recent.fast || recent.total >= 20) throw policy.error(429, 'Biroz kutib qayta urinib ko‘ring');

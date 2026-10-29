@@ -11,10 +11,10 @@
         if(!el || getCurrentUser()?.role!=='admin') return;
         const seq=++generation;
         el.innerHTML='<p>Bot boshqaruvi yuklanmoqda…</p>';
-        let settings,bindings,observed,status,requests,deliveries,learning,funnel;
+        let settings,bindings,observed,status,requests,deliveries,learning,funnel,act;
         try { [settings,bindings,observed,status,requests,deliveries,learning,funnel]=await Promise.all([
             api('/settings'),api('/bindings'),api('/observed-chats'),api('/status'),api('/leave-requests'),api('/delivery-status'),apiFetch('/api/domwork/groups'),
-            api('/funnel/report').catch(()=>null)]); }
+            api('/funnel/report').catch(()=>null),api('/staff-activation').catch(()=>null)]); }
         catch(error){if(seq===generation)el.textContent=error.message;return;}
         if(seq!==generation || getCurrentUser()?.role!=='admin')return;
         const groups=[...bindings.groups.filter(g=>g.active).map(g=>({id:g.id,name:types[g.type]+' · '+g.title})),
@@ -61,6 +61,16 @@
                 <button class="btn-primary" type="submit">Voronkani saqlash</button></form>
                 ${funnel?`<p>So‘nggi ${funnel.days} kun (odamlar): ${funnel.steps.map(s=>`${esc({start:'Start',gift:'Sovg‘a',segment:'Segment',guide:'Qo‘llanma',lesson_part:'1-dars ochdi',lesson_seen:'Ko‘rdi',quiz:'Test',cta:'Taklif',contact:'Raqam',request:'So‘rov'}[s.event])}: ${s.people}`).join(' → ')} · Savollar: ${funnel.faq} · Yozganlar: ${funnel.freeText} · Kanal bonusi: ${funnel.bonus||0} · Menejer javoblari: ${funnel.relays||0}</p>
                 ${(funnel.drips||[]).length?`<p>Isitish: ${funnel.drips.map(d=>`${esc(d.item)}: ${d.sent} ta${d.blocked?` · blok ${d.blockRate}%`:''}${d.alert?' ⚠️':''}`).join(' · ')}</p>`:''}`:''}</details>
+            ${act?(()=>{const roleName={admin:'Admin',rop:'ROP',sales:'Sotuv',marketing:'Marketing',teacher:'Ustoz',assistant:'Yordamchi'};
+                const done=act.people.filter(p=>p.acknowledged).length, linked=act.people.filter(p=>p.linked).length;
+                return `<details ${act.required?'open':''}><summary>Xodimlarni botga ulash (qayta ishga tushirish) — ${done}/${act.people.length} tayyor</summary>
+                <p class="dg-note">«Qayta ishga tushirish» bosilganda: ulangan xodimlarga botdan yangi xush kelibsiz xabari, yangi menyu va «✅ Tayyorman» tugmasi boradi. CRM va ustoz ilovasida mos xodimlarga (rus tili bo‘limi va adminlar) yopilmaydigan oyna chiqadi: ulanmagan — botni ulaydi, ulangan — «Tayyorman»ni bosadi. Bot ishlamay qolsa, oyna chiqmaydi. Siz (admin) «Keyinroq» bosishingiz mumkin.</p>
+                <p>Holat: ${act.required?'<b>Majburiy rejim yoqilgan</b>':'o‘chiq'} · Ulangan: ${linked} · Tayyor: ${done} · Jami: ${act.people.length}</p>
+                <button type="button" class="btn-primary" data-act-relaunch ${status.state==='ready'?'':'disabled'}>${act.campaign?'Yana qayta ishga tushirish':'Qayta ishga tushirish'}</button>
+                ${act.required?'<button type="button" class="btn-secondary-sm" data-act-stop>Majburiy oynani o‘chirish</button>':''}
+                <table class="dg-table"><thead><tr><th>Xodim</th><th>Rol</th><th>Telegram</th><th>Tayyor</th></tr></thead><tbody>${act.people
+                    .sort((a,b)=>(a.acknowledged-b.acknowledged)||(a.linked-b.linked)||String(a.name).localeCompare(String(b.name)))
+                    .map(p=>`<tr><td>${esc(p.name)}</td><td>${esc(roleName[p.role]||p.role)}</td><td>${p.linked?'✅ ulangan':'— ulanmagan'}</td><td>${p.acknowledged?'✅':'⏳'}</td></tr>`).join('')}</tbody></table></details>`;})():''}
             <details><summary>Xabar tarqatish</summary><p>Rasm, video va ovozni botning admin menyusi orqali yuborish mumkin. Bu yerda matnli xabarni tayyorlang.</p>
                 <form data-db-broadcast><label>Auditoriya<select class="form-control" name="segment">${Object.entries(roles).map(([id,label])=>`<option value="${id}">${esc(label)}</option>`).join('')}</select></label>
                     <fieldset><legend>Guruhlar — «Tanlangan guruhlar» uchun</legend>${groups.map(g=>`<label class="dg-checkbox"><input type="checkbox" name="group" value="${esc(g.id)}">${esc(g.name)}</label>`).join('') || '<p>Tekshirilgan guruh yo‘q.</p>'}</fieldset>
@@ -115,6 +125,16 @@
             await api('/leave-requests/'+encodeURIComponent(button.dataset.dbReview)+'/review',{state:button.dataset.state});await render(el);
         });});
         el.querySelector('[data-db-refresh]').onclick=()=>render(el);
+        const relaunch=el.querySelector('[data-act-relaunch]');
+        if(relaunch)relaunch.onclick=()=>work(async()=>{
+            if(!confirm('Hamma ulangan xodimlarga botdan yangi xabar boradi va CRMda majburiy ulash oynasi yoqiladi. Davom etasizmi?'))return;
+            const r=await api('/staff-activation/relaunch',{});notify(`Ishga tushirildi: ${r.sent} ta xodimga xabar yuborildi. Qolganlar CRMga kirganda ulaydi.`);await render(el);
+        });
+        const stopAct=el.querySelector('[data-act-stop]');
+        if(stopAct)stopAct.onclick=()=>work(async()=>{
+            if(!confirm('Majburiy oynani o‘chirasizmi? Ulanmaganlar endi CRMdan bemalol foydalanadi.'))return;
+            await api('/staff-activation/stop',{});await render(el);
+        });
     }
     window.domworkBotUI={render};
 }());

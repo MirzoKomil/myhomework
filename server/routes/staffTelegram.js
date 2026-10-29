@@ -3,6 +3,7 @@
 // Faqat joriy sessiyadagi xodimning o'zi; boshqa akkaunt ID'si hech qachon so'rovdan olinmaydi.
 const express = require('express');
 const link = require('../services/domworkBot/staffLink');
+const activation = require('../services/domworkBot/staffActivation');
 module.exports = function ({ pool, runtime, authRequired }) {
     const router = express.Router();
     router.use((req, res, next) => { res.set('Cache-Control', 'no-store'); res.set('Referrer-Policy', 'no-referrer'); next(); });
@@ -19,6 +20,9 @@ module.exports = function ({ pool, runtime, authRequired }) {
     router.post('/', handle(req => { ready(); return link.create(pool, req.user); }));
     router.post('/confirm', handle(req => link.confirm(pool, req.user, req.body || {})));
     router.post('/cancel', handle(req => link.cancel(pool, req.user, req.body || {})));
+    // Majburiy faollashtirish oynasi (CRM va ustoz ilovasi). Bot tayyor bo'lmasa oyna chiqmaydi.
+    router.get('/activation', handle(req => activation.status(pool, req.user, runtime.status().state === 'ready')));
+    router.post('/activation/resend', handle(req => { ready(); return activation.resend(pool, req.user); }));
     router.post('/unlink', handle(req => link.unlink(pool, req.user)));
     return router;
 };
