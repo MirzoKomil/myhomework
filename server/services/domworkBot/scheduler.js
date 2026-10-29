@@ -184,7 +184,7 @@ async function run(db,now=new Date()) {
         if(clock.day===7 && settings.methodicalText) await once(db,'methodical:'+clock.date,()=>events.groupMessage(db,'methodical:'+clock.date,'teachers',settings.methodicalText));
         if(clock.day===7) await once(db,'video-day:'+clock.date,async()=>{
             const rows=(await db.query("SELECT * FROM domwork_learning_groups WHERE type='classroom' AND NOT archived AND verified_at IS NOT NULL")).rows;
-            for(const row of rows) await learningMessage(db,'video-day:'+clock.date+':'+row.id,groups.dto(row),'☀️ Xayrli yakshanba!\n\nBugun dam olish kuni — 15 daqiqa ajratib, platformadagi video darsni ko‘rib qo‘ying va yordamchi ustozingiz bilan vazifani bajaring 📚\n\n👉 https://myhomework.uz/student/\n\nKichik qadamlar katta natija beradi! 💪');
+            for(const row of rows) await learningMessage(db,'video-day:'+clock.date+':'+row.id,groups.dto(row),'☀️ Xayrli yakshanba!\n\nBugun dam olish kuni — 15 daqiqa ajratib, platformadagi video darsni ko‘rib qo‘ying va yordamchi ustozingiz bilan vazifani bajaring 📚\n\n👉 https://myhomework.uz/student/v2/\n\nKichik qadamlar katta natija beradi! 💪');
         });
     }
 }

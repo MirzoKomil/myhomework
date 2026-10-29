@@ -11,10 +11,10 @@
         if(!el || getCurrentUser()?.role!=='admin') return;
         const seq=++generation;
         el.innerHTML='<p>Bot boshqaruvi yuklanmoqda…</p>';
-        let settings,bindings,observed,status,requests,deliveries,learning,funnel,act;
-        try { [settings,bindings,observed,status,requests,deliveries,learning,funnel,act]=await Promise.all([
+        let settings,bindings,observed,status,requests,deliveries,learning,funnel,act,sact;
+        try { [settings,bindings,observed,status,requests,deliveries,learning,funnel,act,sact]=await Promise.all([
             api('/settings'),api('/bindings'),api('/observed-chats'),api('/status'),api('/leave-requests'),api('/delivery-status'),apiFetch('/api/domwork/groups'),
-            api('/funnel/report').catch(()=>null),api('/staff-activation').catch(()=>null)]); }
+            api('/funnel/report').catch(()=>null),api('/staff-activation').catch(()=>null),api('/student-activation').catch(()=>null)]); }
         catch(error){if(seq===generation)el.textContent=error.message;return;}
         if(seq!==generation || getCurrentUser()?.role!=='admin')return;
         const groups=[...bindings.groups.filter(g=>g.active).map(g=>({id:g.id,name:types[g.type]+' · '+g.title})),
@@ -71,6 +71,11 @@
                 <table class="dg-table"><thead><tr><th>Xodim</th><th>Rol</th><th>Telegram</th><th>Tayyor</th><th></th></tr></thead><tbody>${act.people
                     .sort((a,b)=>(a.acknowledged-b.acknowledged)||(a.linked-b.linked)||String(a.name).localeCompare(String(b.name)))
                     .map(p=>`<tr><td>${esc(p.name)}</td><td>${esc(roleName[p.role]||p.role)}</td><td>${p.linked?'✅ ulangan':'— ulanmagan'}</td><td>${p.exempt?'✅ admin belgiladi':p.acknowledged?'✅':'⏳'}</td><td>${act.required&&!p.acknowledged?`<button type="button" class="btn-secondary-sm" data-act-exempt="${esc(p.id)}">Tayyor deb belgilash</button>`:''}</td></tr>`).join('')}</tbody></table></details>`;})():''}
+            ${sact?`<details ${sact.required?'open':''}><summary>O‘quvchilarni botga ulash — ${sact.linked}/${sact.total} ulangan</summary>
+                <p class="dg-note">«Ishga tushirish» bosilganda: ulangan o‘quvchilarga botdan yangi menyu va xush kelibsiz xabari boradi; ulanmagan faol rus tili o‘quvchilariga yangi ilovada (student/v2) yopilmaydigan oyna chiqadi — «Botni ochish» → Telegramda Start → tamom, oyna o‘zi yopiladi. Bot xabar qabul qilmay qolsa, oyna chiqmaydi.</p>
+                <p>Holat: ${sact.required?'<b>Majburiy rejim yoqilgan</b>':'o‘chiq'} · Ulangan: ${sact.linked} · Faol o‘quvchilar: ${sact.total}${sact.total?` (${Math.round(sact.linked/sact.total*100)}%)`:''}</p>
+                <button type="button" class="btn-primary" data-sact-relaunch ${status.state==='ready'?'':'disabled'}>${sact.campaign?'Yana ishga tushirish':'Ishga tushirish'}</button>
+                ${sact.required?'<button type="button" class="btn-secondary-sm" data-sact-stop>Majburiy oynani o‘chirish</button>':''}</details>`:''}
             <details><summary>Xabar tarqatish</summary><p>Rasm, video va ovozni botning admin menyusi orqali yuborish mumkin. Bu yerda matnli xabarni tayyorlang.</p>
                 <form data-db-broadcast><label>Auditoriya<select class="form-control" name="segment">${Object.entries(roles).map(([id,label])=>`<option value="${id}">${esc(label)}</option>`).join('')}</select></label>
                     <fieldset><legend>Guruhlar — «Tanlangan guruhlar» uchun</legend>${groups.map(g=>`<label class="dg-checkbox"><input type="checkbox" name="group" value="${esc(g.id)}">${esc(g.name)}</label>`).join('') || '<p>Tekshirilgan guruh yo‘q.</p>'}</fieldset>
@@ -134,6 +139,16 @@
             if(!confirm('Bu xodimga majburiy oyna boshqa chiqmaydi (shu ishga tushirish uchun). Belgilaysizmi?'))return;
             await api('/staff-activation/exempt',{userId:b.dataset.actExempt});await render(el);
         });});
+        const sRel=el.querySelector('[data-sact-relaunch]');
+        if(sRel)sRel.onclick=()=>work(async()=>{
+            if(!confirm('Ulangan o‘quvchilarga botdan yangi xabar boradi va ilovada majburiy ulash oynasi yoqiladi. Davom etasizmi?'))return;
+            const r=await api('/student-activation/relaunch',{});notify(`Ishga tushirildi: ${r.sent} ta o‘quvchiga xabar yuborildi. Qolganlar ilovaga kirganda ulaydi.`);await render(el);
+        });
+        const sStop=el.querySelector('[data-sact-stop]');
+        if(sStop)sStop.onclick=()=>work(async()=>{
+            if(!confirm('O‘quvchilar uchun majburiy oynani o‘chirasizmi?'))return;
+            await api('/student-activation/stop',{});await render(el);
+        });
         const stopAct=el.querySelector('[data-act-stop]');
         if(stopAct)stopAct.onclick=()=>work(async()=>{
             if(!confirm('Majburiy oynani o‘chirasizmi? Ulanmaganlar endi CRMdan bemalol foydalanadi.'))return;

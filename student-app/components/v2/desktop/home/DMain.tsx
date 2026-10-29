@@ -208,6 +208,7 @@ export function DMain() {
   const [now, setNow] = useState(() => new Date());
   const [botLinked, setBotLinked] = useCachedState('home.botLinked', true);
   const [botOpen, setBotOpen] = useState(false);
+  const [botMandatory, setBotMandatory] = useState(false);
   const [todayLightning, setTodayLightning] = useCachedState('home.todayLightning', 0);
   const [wordCount, setWordCount] = useCachedState<number | null>('home.wordCount', null);
   const [streak, setStreak] = useCachedState('home.streak', 0);
@@ -295,7 +296,11 @@ export function DMain() {
         })
         .catch(() => {});
       if (token) {
-        telegramLinkStatus().then((s) => setBotLinked(s.linked)).catch(() => setBotLinked(true));
+        telegramLinkStatus().then((s) => {
+          setBotLinked(s.linked);
+          setBotMandatory(!!s.mandatory && !s.linked);
+          if (s.mandatory && !s.linked) setBotOpen(true);
+        }).catch(() => setBotLinked(true));
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [token, isEmbedded, loadLesson]),
@@ -349,8 +354,10 @@ export function DMain() {
       )}
       <BotConnectPopup
         visible={botOpen}
+        mandatory={botMandatory}
         onClose={() => {
           setBotOpen(false);
+          setBotMandatory(false);
           telegramLinkStatus().then((st) => setBotLinked(st.linked)).catch(() => {});
         }}
       />

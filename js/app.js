@@ -20551,13 +20551,13 @@ function maybeSendAutoStageSms(lang, lead, oldStatus, newStatus, platformAccess)
         messages.push(msg);
         const creds = ensureStudentLoginForLead(lang, lead, platformAccess);
         if (creds) {
-            messages.push(`Assalomu alaykum ${ism}! Domwork maktabiga xush kelibsiz. Ilovaga kirish loginingiz: ${creds.login} Parol: ${creds.password} Kirish uchun havola: https://myhomework.uz/student/`);
+            messages.push(`Assalomu alaykum ${ism}! Domwork maktabiga xush kelibsiz. Ilovaga kirish loginingiz: ${creds.login} Parol: ${creds.password} Kirish uchun havola: ${lang === 'russian' ? 'https://myhomework.uz/student/v2/' : 'https://myhomework.uz/student/'}`);
         }
     } else if (newStatus === 'tolov-yopildi') {
         messages.push(`Tabriklaymiz, siz kurs uchun to'lovlarni to'liq qildingiz, endi mazza qilib kursdan bahramand bo'lishingiz mumkin!`);
         const creds = ensureStudentLoginForLead(lang, lead, platformAccess);
         if (creds) {
-            messages.push(`Assalomu alaykum ${ism}! Domwork maktabiga xush kelibsiz. Ilovaga kirish loginingiz: ${creds.login} Parol: ${creds.password} Kirish uchun havola: https://myhomework.uz/student/`);
+            messages.push(`Assalomu alaykum ${ism}! Domwork maktabiga xush kelibsiz. Ilovaga kirish loginingiz: ${creds.login} Parol: ${creds.password} Kirish uchun havola: ${lang === 'russian' ? 'https://myhomework.uz/student/v2/' : 'https://myhomework.uz/student/'}`);
         }
     }
 
