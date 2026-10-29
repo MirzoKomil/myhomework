@@ -159,9 +159,9 @@ async function sources(db, p) {
         }
     }
     const makeups = (await db.query("SELECT to_regclass('public.school_makeups')::text AS t")).rows[0]?.t
-        ? (await db.query(`SELECT id, student_id, teacher_id, kind, status, TO_CHAR(held_date,'YYYY-MM-DD') AS held_date FROM school_makeups
+        ? (await db.query(`SELECT id, student_id, teacher_id, kind, status, TO_CHAR(held_date,'YYYY-MM-DD') AS held_date, TO_CHAR(missed_date,'YYYY-MM-DD') AS missed_date FROM school_makeups
             WHERE status='approved' AND held_date IS NOT NULL AND TO_CHAR(held_date,'YYYY-MM')=ANY($1::text[])`, [monthKeys])).rows
-            .map(r => ({ id: r.id, studentId: r.student_id, teacherId: r.teacher_id, kind: r.kind, status: r.status, heldDate: r.held_date })) : [];
+            .map(r => ({ id: r.id, studentId: r.student_id, teacherId: r.teacher_id, kind: r.kind, status: r.status, heldDate: r.held_date, missedDate: r.missed_date || null })) : [];
     // Asosiy ustoz almashish tarixi — bir kun ikki ustoz blokida bo'lsa, o'sha kungi ustozga (payrollEngine teacherOnDay).
     const teacherHistory = (await db.query("SELECT to_regclass('public.school_teacher_history')::text AS t")).rows[0]?.t
         ? (await db.query(`SELECT student_id, teacher_id, TO_CHAR(from_date,'YYYY-MM-DD') AS from_date FROM school_teacher_history ORDER BY from_date`)).rows

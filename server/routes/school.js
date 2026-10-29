@@ -429,7 +429,10 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
     // ?month=YYYY-MM — qoldirilgan yoki qoplangan sanasi shu oyda. Rejadagi qoplash vaqti band (booking) dan.
     // ROP faqat o'qiydi va faqat o'z tilidagi o'quvchilar (Akademik → Davomat uchun).
     router.get('/makeups', handle(async req => {
-        if (req.user.role === 'teacher') { const me = await teacherOf(req); return { makeups: (await pool.query('SELECT * FROM school_makeups WHERE teacher_id=$1 ORDER BY created_at DESC LIMIT 200', [me.id])).rows }; }
+        // missed_came — qoldirilgan kunida "Keldi" bor: dars o'tilgan, qoplash maoshga o'tmaydi ("Keldi" ustun; yozuv o'chirilmaydi).
+        const CAME = `EXISTS (SELECT 1 FROM main_attendance a WHERE LEFT(a.att_key, 7) = TO_CHAR(m.missed_date, 'YYYY-MM') AND a.student_id = m.student_id
+            AND a.day = EXTRACT(DAY FROM m.missed_date)::int AND a.present = 1) AS missed_came`;
+        if (req.user.role === 'teacher') { const me = await teacherOf(req); return { makeups: (await pool.query(`SELECT m.*, ${CAME} FROM school_makeups m WHERE m.teacher_id=$1 ORDER BY m.created_at DESC LIMIT 200`, [me.id])).rows }; }
         need(req, MANAGE);
         const month = /^\d{4}-\d{2}$/.test(req.query.month || '') ? req.query.month : '';
         let lang = '';
@@ -438,7 +441,7 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
             const own = e ? langOf(e) : null;
             lang = own === 'both' || !own ? (LANGS.has(req.query.lang) ? req.query.lang : 'english') : own;
         }
-        return { makeups: (await pool.query(`SELECT m.*, b.start_min, b.end_min FROM school_makeups m
+        return { makeups: (await pool.query(`SELECT m.*, b.start_min, b.end_min, ${CAME} FROM school_makeups m
             LEFT JOIN school_bookings b ON b.id=m.booking_id
             ${lang ? 'JOIN students s ON s.id=m.student_id' : ''}
             WHERE ($1='' OR m.status=$1) AND ($2='' OR TO_CHAR(m.missed_date,'YYYY-MM')=$2 OR TO_CHAR(m.held_date,'YYYY-MM')=$2)

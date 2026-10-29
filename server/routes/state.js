@@ -1059,7 +1059,7 @@ router.get('/teacher-rating', authRequired, async (req, res) => {
         // O'tgan oy (▲/▼) solishtiruvi: o'sha oyda "Keldi" belgisi bo'lmagan ustozda "—" (ma'lumot yo'q).
         // Tasdiqlangan qoplashlar ham davomatga kiradi (UstozDavomat bilan bir xil — js/attendanceRules.js monthTotals).
         const makeups = ownType === 'asosiy' && (await pool.query("SELECT to_regclass('public.school_makeups')::text AS t")).rows[0]?.t
-            ? (await pool.query(`SELECT student_id, teacher_id, kind, status, TO_CHAR(held_date,'YYYY-MM-DD') AS held_date FROM school_makeups
+            ? (await pool.query(`SELECT student_id, teacher_id, kind, status, TO_CHAR(held_date,'YYYY-MM-DD') AS held_date, TO_CHAR(missed_date,'YYYY-MM-DD') AS missed_date FROM school_makeups
                 WHERE status='approved' AND held_date IS NOT NULL`)).rows : [];
         const data = await ratingResponse({ state, ownType, month: String(req.query.month || ''), makeups,
             loadLearning: (now, opts) => loadLearningByStudent(pool, now, opts) });

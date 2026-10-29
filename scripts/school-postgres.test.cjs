@@ -261,6 +261,12 @@ test('yagona jadval va o\'quvchi amallari — haqiqiy PostgreSQL', { skip: !url 
                   INSERT INTO main_attendance VALUES ('2026-10_dilnoza','otabek',19,1);`);
                 r = await call('u-admin', 'POST', '/makeups/mk-ota/decide', { decision: 'approve' });
                 assert.equal(r.status, 409); assert.match(r.body.error, /Keldi/);
+                // Admin ro'yxatida belgi: qoldirilgan kunda "Keldi" bor — maoshga o'tmaydi (yozuv o'chirilmaydi).
+                r = await call('u-admin', 'GET', '/makeups?month=2026-10');
+                assert.equal(r.body.makeups.find(m => m.id === 'mk-ota').missed_came, true);
+                assert.equal(r.body.makeups.find(m => m.student_id === 'otabek' && m.status === 'planned').missed_came, false);
+                r = await call('u-dil', 'GET', '/makeups');
+                assert.equal(r.body.makeups.find(m => m.id === 'mk-ota').missed_came, true);
                 r = await call('u-admin', 'POST', '/makeups/mk-ota/decide', { decision: 'reject', note: 'dars o\'tilgan' });
                 assert.equal(r.status, 200);
                 // Yordamchi kechikkan so'rovi: shu kuni hisoblangan aloqa bor → 409; kurs boshlanishidan oldin → 400.

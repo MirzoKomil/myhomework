@@ -64,6 +64,9 @@
             if (strict) for (const m of mine.filter(m => m.status === 'approved')) {
                 const hd = dkey(m.held_date), d = Number(hd.slice(8));
                 if ((start && hd < start) || !lessonCountsOn(s, hist, hd)) continue;
+                // "Keldi" ustun: qoldirilgan kunida "Keldi" bo'lgan qoplash sanalmaydi (payrollEngine bilan bir xil).
+                const md = dkey(m.missed_date);
+                if (md && md.slice(0, 7) === month && cal.status(entries[Number(md.slice(8))]) === 'present') continue;
                 if (m.kind === 'double') { n++; appr++; } else if (!days.has(d)) { days.add(d); n++; appr++; }
             }
             t.students++;

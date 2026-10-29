@@ -146,6 +146,12 @@
             if (who) return who === employee.id;
             return !otherHas(s, key, day) || s.teacherId === employee.id;
         };
+        const missedCame = m => {
+            const md = String(m.missedDate || '').slice(0, 10);
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(md)) return false;
+            const key = md.slice(0, 7), day = Number(md.slice(8));
+            return Object.keys(mainAtt).some(k => k.slice(0, 7) === key && [1, true].includes(mainAtt[k]?.[m.studentId]?.[day]));
+        };
         let total = 0, lessons = 0;
         const breakdown = [];
         for (const s of students) for (const block of months(p)) {
@@ -185,6 +191,9 @@
                 for (const m of source.makeups || []) {
                     if (m.status !== 'approved' || m.teacherId !== employee.id || m.studentId !== s.id || String(m.heldDate || '').slice(0, 7) !== block.key) continue;
                     if (!inRange(date(m.heldDate))) continue;
+                    // "Keldi" ustun: qoldirilgan kunida "Keldi" bor (qaysi ustoz blokida bo'lmasin) — dars o'tilgan, qoplash maoshga o'tmaydi
+                    // (tasdiqlangan bo'lsa ham; yozuv o'chirilmaydi — admin ro'yxatida missedCame belgisi). Ikki marta to'lov yo'q.
+                    if (missedCame(m)) continue;
                     const day = Number(String(m.heldDate).slice(8, 10));
                     if (m.kind === 'double') makeupCount++;
                     else if (!seen.has(day)) { seen.add(day); makeupCount++; }

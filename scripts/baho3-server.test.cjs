@@ -113,3 +113,38 @@ test('state.js: ustoz uchun ishlatilmaydigan PATCH ruxsat ro\'yxati yo\'q (ustoz
     assert.match(patch, /if \(req\.user\.role === 'teacher'\) return res\.status\(403\)/);
     assert.doesNotMatch(patch, /\['mainAttendance', 'assistantAttendance', 'liveGrades'\]/);
 });
+
+test('"Keldi" ustun: qoldirilgan kunida "Keldi" bo\'lgan tasdiqlangan qoplash maoshga ham, Davomat %ga ham o\'tmaydi (ikki marta to\'lov yo\'q)', () => {
+    const base = { hrEmployees: [{ id: 'dil', name: 'Dilnoza', role: 'ingliz-oqituvchi', lang: 'english', startDate: '2026-09-01' }],
+        teachers: [{ id: 'dil', schedulePattern: 'tts' }], leads: { english: [], russian: [] }, assistantAttendance: {},
+        bonusHistory: [], bonusData: {}, cashFlow: [], salesPlan: {}, teacherAttendancePolicy: 'all-days-v1', makeupPolicy: 'approved-v1', makeupPolicyFrom: '2026-10',
+        students: [{ id: 'st-bek', name: 'Bekzod', teacherId: 'dil', lessonDuration: 60, lessonDayOfWeek: 2, startDate: '2026-09-01' }],
+        // 22-okt (Pa) — "Keldi"; 22-okt o'rniga 23-okt (Ju) qoplash tasdiqlangan; 15-okt (Kelmadi) o'rniga 25-okt (Ya) qoplash — haqiqiy.
+        mainAttendance: { '2026-10_dil': { 'st-bek': { 20: 1, 22: 1 } } },
+        makeups: [{ status: 'approved', teacherId: 'dil', studentId: 'st-bek', kind: 'separate', heldDate: '2026-10-23', missedDate: '2026-10-22' },
+            { status: 'approved', teacherId: 'dil', studentId: 'st-bek', kind: 'separate', heldDate: '2026-10-25', missedDate: '2026-10-15' }] };
+    const oct = engine.period('2026-10-01', '2026-10-31');
+    const b = engine.calculate(base, engine.defaults(), oct, 'english').rows.find(r => r.employeeId === 'dil').breakdown.find(x => x.studentId === 'st-bek');
+    assert.equal(b.lessons, 3, '20, 22 Keldi + 25-okt haqiqiy qoplash; 23-okt (22-okt Keldi bo\'lgan) — sanalmaydi');
+    assert.equal(b.makeups, 1);
+    // Boshqa ustoz blokidagi "Keldi" ham ustun (ustoz almashgan oy).
+    const other = { ...base, mainAttendance: { '2026-10_dil': { 'st-bek': { 20: 1 } }, '2026-10_gul': { 'st-bek': { 22: 1 } } } };
+    assert.equal(engine.calculate(other, engine.defaults(), oct, 'english').rows.find(r => r.employeeId === 'dil').breakdown.find(x => x.studentId === 'st-bek').makeups, 1);
+    const T = R.monthTotals({ id: 'dil', month: '2026-10', students: [{ id: 'st-bek', lessonDayOfWeek: 2, startDate: '2026-09-01' }], mainAtt: { 'st-bek': { 20: 1, 22: 1 } },
+        makeups: base.makeups.map(m => ({ teacher_id: 'dil', student_id: m.studentId, status: m.status, kind: m.kind, held_date: m.heldDate, missed_date: m.missedDate })),
+        teacher: { schedulePattern: 'tts' }, todayKey: '2026-10-27' });
+    assert.equal(T.counted, 3); assert.equal(T.approved, 1);
+});
+
+test('Reyting: muzlatishdan oldingi darslar sanaladi (inMonth) — Davomat % va maosh bilan bir xil; muzlatilgan kundagi belgi — yo\'q', () => {
+    const { computeTeacherRating } = require('../server/services/teacherRating');
+    const now = new Date('2026-10-27T12:00:00Z');
+    const state = { teachers: [{ id: 't', name: 'T', type: 'asosiy', schedulePattern: 'tts' }],
+        students: [{ id: 'shi', teacherId: 't', lessonDayOfWeek: 2, lessonTime: '15:00', startDate: '2026-09-01', frozen: true,
+            statusHistory: [{ status: 'frozen', from: '2026-10-20', to: '2026-11-10' }] },
+            { id: 'ziy', teacherId: 't', lessonDayOfWeek: 2, lessonTime: '15:00', status: 'inactive', statusHistory: [{ status: 'left', from: '2026-09-20' }] }],
+        mainAttendance: { '2026-10_t': { shi: { 1: 1, 3: 1, 22: 1 }, ziy: { 1: 1 } } } };
+    const row = computeTeacherRating(state, 'asosiy', now).find(r => r.id === 't');
+    assert.equal(row.completed, 2, '1 va 3-okt; 22-okt muzlatilgan; Ziyoda oktyabrda faol emas');
+    assert.equal(row.expected, 8, 'Se·Pa·Sh 1–17-okt');
+});
