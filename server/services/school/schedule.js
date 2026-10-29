@@ -484,9 +484,11 @@ async function annotateViews(db, views, { from, to }) {
     const [att, mk, dbl, leads] = await Promise.all([
         ids.length ? db.query(`SELECT student_id, LEFT(att_key, 7) AS month, day, present FROM main_attendance
             WHERE student_id = ANY($1::text[]) AND LEFT(att_key, 7) = ANY($2::text[])`, [ids, months]) : { rows: [] },
-        bookingIds.length ? db.query('SELECT booking_id, missed_date, status FROM school_makeups WHERE booking_id = ANY($1::text[])', [bookingIds]) : { rows: [] },
-        ids.length ? db.query(`SELECT student_id, held_date, missed_date, status FROM school_makeups WHERE kind='double' AND student_id = ANY($1::text[])
-            AND held_date BETWEEN $2 AND $3 AND status IN ('planned','review','approved')`, [ids, from, to]) : { rows: [] },
+        bookingIds.length ? db.query(`SELECT m.booking_id, m.missed_date, m.status, EXISTS (SELECT 1 FROM main_attendance a WHERE LEFT(a.att_key, 7) = TO_CHAR(m.missed_date, 'YYYY-MM') AND a.student_id = m.student_id
+            AND a.day = EXTRACT(DAY FROM m.missed_date)::int AND a.present = 1) AS missed_came FROM school_makeups m WHERE m.booking_id = ANY($1::text[])`, [bookingIds]) : { rows: [] },
+        ids.length ? db.query(`SELECT m.student_id, m.held_date, m.missed_date, m.status, EXISTS (SELECT 1 FROM main_attendance a WHERE LEFT(a.att_key, 7) = TO_CHAR(m.missed_date, 'YYYY-MM')
+            AND a.student_id = m.student_id AND a.day = EXTRACT(DAY FROM m.missed_date)::int AND a.present = 1) AS missed_came FROM school_makeups m WHERE m.kind='double' AND m.student_id = ANY($1::text[])
+            AND m.held_date BETWEEN $2 AND $3 AND m.status IN ('planned','review','approved')`, [ids, from, to]) : { rows: [] },
         leadIds.length ? db.query('SELECT id, name, manager_id FROM leads WHERE id = ANY($1::text[])', [leadIds]) : { rows: [] }
     ]);
     const mark = new Map();
@@ -516,11 +518,12 @@ async function annotateViews(db, views, { from, to }) {
             const m = mark.get(`${i.studentId}|${v.date}`);
             if (m != null && i.kind === 'lesson') i.att = m;
             const d = i.kind === 'lesson' && dblBy.get(`${i.studentId}|${v.date}`);
-            if (d) { i.double = true; i.missedDate = dateStr(d.missed_date); }
+            if (d) { i.double = true; i.missedDate = dateStr(d.missed_date); i.missedCame = d.missed_came === true; }
         }
         if (i.kind === 'makeup' && i.bookingId) {
             const m = mkBy.get(i.bookingId);
-            if (m) { i.missedDate = dateStr(m.missed_date); i.makeupStatus = m.status; }
+            // missedCame — qoldirilgan kunida "Keldi" bor: dars o'tilgan, qoplash maoshga o'tmaydi ("Keldi" ustun).
+            if (m) { i.missedDate = dateStr(m.missed_date); i.makeupStatus = m.status; i.missedCame = m.missed_came === true; }
         }
         if (i.kind === 'trial' && i.leadId && leadBy.has(i.leadId)) { i.leadName = leadBy.get(i.leadId).name || ''; i.managerId ||= leadBy.get(i.leadId).manager_id || ''; }
     }

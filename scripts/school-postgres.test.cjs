@@ -251,6 +251,12 @@ test('yagona jadval va o\'quvchi amallari — haqiqiy PostgreSQL', { skip: !url 
                 r = await plan('2026-10-14'); assert.equal(r.status, 409); assert.match(r.body.error, /faol emas/);
                 r = await plan('2026-10-30'); assert.equal(r.status, 400); assert.match(r.body.error, /kelajakda/);
                 r = await plan('2026-10-09'); assert.equal(r.status, 200); assert.equal(r.body.makeup.status, 'planned');
+                // Jadvaldagi qoplash bloki: missedCame — keyin qoldirilgan kunga "Keldi" qo'yilsa true (maoshga o'tmaydi).
+                const mkItem = async () => (await call('u-dil', 'GET', '/schedule?from=2026-10-31&to=2026-10-31')).body.views.flatMap(v => v.items).find(i => i.kind === 'makeup' && i.studentId === 'otabek');
+                assert.equal((await mkItem()).missedCame, false);
+                await pool.query("INSERT INTO main_attendance VALUES ('2026-10_dilnoza','otabek',9,1)");
+                assert.equal((await mkItem()).missedCame, true);
+                await pool.query("DELETE FROM main_attendance WHERE att_key='2026-10_dilnoza' AND student_id='otabek' AND day=9");
                 // Admin alohida qoplash ham "Keldi"/muzlatilgan kunga yo'q.
                 r = await call('u-admin', 'POST', '/makeups/separate', { studentId: 'otabek', missedDate: '2026-10-02', heldDate: '2026-10-03' });
                 assert.equal(r.status, 400); assert.match(r.body.error, /Keldi/);

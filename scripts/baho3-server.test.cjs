@@ -49,7 +49,7 @@ test('AttendanceRules.monthTotals: muzlatilgan kundagi Keldi va qoplash sanalmay
     const mainAtt = { 'st-shi': { 1: 1, 3: 1, 6: 1, 22: 1 } };
     const makeups = [{ teacher_id: 't', student_id: 'st-shi', status: 'approved', kind: 'double', held_date: '2026-10-24' }];
     const T = R.monthTotals({ id: 't', month: '2026-10', students: [s], mainAtt, makeups, teacher: { schedulePattern: 'tts' }, todayKey: '2026-10-27' });
-    assert.equal(T.plan, 14);
+    assert.equal(T.plan, 8, 'oy rejasi — faol dars kunlari (1–17-okt), Davomat kartasi jami = o\'quvchi kartalari yig\'indisi');
     assert.equal(T.counted, 3);
     assert.equal(T.expected, 8, '1–17-okt dars kunlari; 20–27 muzlatilgan — kutilmaydi');
     assert.equal(T.approved, 0);
@@ -147,4 +147,15 @@ test('Reyting: muzlatishdan oldingi darslar sanaladi (inMonth) — Davomat % va 
     const row = computeTeacherRating(state, 'asosiy', now).find(r => r.id === 't');
     assert.equal(row.completed, 2, '1 va 3-okt; 22-okt muzlatilgan; Ziyoda oktyabrda faol emas');
     assert.equal(row.expected, 8, 'Se·Pa·Sh 1–17-okt');
+});
+
+test('staffNotify "Qayta urinish kerak": ochiq "Admin orqali so\'rov" (assist_late) bor o\'quvchi/kun istisno; Profil "Ish vaqti" — js/workHours.text', () => {
+    const fs = require('node:fs'), path = require('node:path');
+    const notify = fs.readFileSync(path.join(__dirname, '../server/services/staffNotify.js'), 'utf8');
+    const q = notify.slice(notify.indexOf("outcome='no_answer'"), notify.indexOf("title: 'Qayta urinish kerak'"));
+    assert.match(q, /NOT EXISTS \(SELECT 1 FROM school_requests r WHERE r\.type='assist_late' AND r\.status='new'/);
+    const st = fs.readFileSync(path.join(__dirname, '../server/services/staffSettings.js'), 'utf8');
+    assert.match(st, /require\('\.\.\/\.\.\/js\/workHours'\)\.text\(hours\)/);
+    const W = require('../js/workHours');
+    assert.equal(W.text([{ weekday: 1, start_min: 600, end_min: 1260 }, { weekday: 1, start_min: 720, end_min: 1200 }, { weekday: 2, start_min: 600, end_min: 1260 }]), 'Du·Se 10:00–21:00');
 });

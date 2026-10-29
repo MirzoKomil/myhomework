@@ -55,7 +55,9 @@
             const started = c => (!start || c.date >= start) && lessonCountsOn(s, hist, c.date);
             const past = c => started(c) && (month < thisMonth || (month === thisMonth && c.day <= todayDay));
             const cells = cal.cells(month, cal.weekdays(s, teacher, 'main')).filter(c => c && c.scheduled);
-            const entries = (mainAtt || {})[s.id] || {}, plan = cells.length, gone = cells.filter(past);
+            // Oy rejasi — o'quvchi faol bo'lgan dars kunlari (muzlatilgan / chiqib ketgandan keyingi kunlar kirmaydi): Davomat kartasi
+            // jami = o'quvchi kartalari yig'indisi (teacherDutyUI planFor). Maosh bo'luvchisi (oydagi jonli darslar) bunga bog'liq emas.
+            const entries = (mainAtt || {})[s.id] || {}, plan = cells.filter(c => lessonCountsOn(s, hist, c.date)).length, gone = cells.filter(past);
             const days = new Set(cells.filter(c => started(c) && cal.status(entries[c.day]) === 'present').map(c => c.day));
             if (!strict) Object.entries(entries).forEach(([d, v]) => { if (cal.status(v) === 'present') days.add(Number(d)); });
             const came = gone.filter(c => days.has(c.day)).length, absent = gone.filter(c => cal.status(entries[c.day]) === 'absent').length;

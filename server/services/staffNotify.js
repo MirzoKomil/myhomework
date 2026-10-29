@@ -240,7 +240,10 @@ async function assistantEvents(db, me, now, ev) {
     const yday = T.addDays(today, -1);
     const na = (await db.query(`SELECT c.student_id, s.name FROM school_assist_contacts c JOIN students s ON s.id=c.student_id
         WHERE c.assistant_id=$1 AND c.day=$2 AND c.outcome='no_answer' AND c.removed_at IS NULL
-        AND NOT EXISTS (SELECT 1 FROM school_assist_contacts x WHERE x.assistant_id=$1 AND x.student_id=c.student_id AND x.day BETWEEN $2 AND $3 AND x.outcome='contacted' AND x.removed_at IS NULL)`,
+        AND NOT EXISTS (SELECT 1 FROM school_assist_contacts x WHERE x.assistant_id=$1 AND x.student_id=c.student_id AND x.day BETWEEN $2 AND $3 AND x.outcome='contacted' AND x.removed_at IS NULL)
+        -- Shu o'quvchi uchun (kecha/bugun) ochiq "Admin orqali so'rov" bor — admin ko'rib chiqmoqda, "Qayta urinish" kerak emas.
+        AND NOT EXISTS (SELECT 1 FROM school_requests r WHERE r.type='assist_late' AND r.status='new' AND r.teacher_id=$1
+            AND r.payload->>'studentId'=c.student_id AND r.payload->>'day' BETWEEN $2::text AND $3::text)`,
         [aid, yday, today])).rows;
     for (const r of na) ev.push({ id: `noanswer:${r.student_id}:${yday}`, type: 'assist_no_answer', cat: 'aloqa', tone: 'warn', title: 'Qayta urinish kerak',
         sub: `${first(r.name)} · kecha javob bermadi`, at: atLocal(today, 9 * 60), go: { tab: 'teachers-section', section: 'attendance' } });
