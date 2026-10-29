@@ -1,9 +1,14 @@
 (function (root, factory) {
-    const api = factory();
+    const api = factory(root);
     if (typeof module === 'object' && module.exports) module.exports = api;
     else root.payrollEngine = api;
-}(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+}(typeof globalThis !== 'undefined' ? globalThis : this, function (root) {
     'use strict';
+    // O'quvchi faolligi (muzlatilgan / chiqib ketgan kun) — js/attendanceRules.js bilan bitta ta'rif (Davomat % bilan bir manba).
+    function rules() {
+        if (typeof module === 'object' && module.exports) return require('./attendanceRules');
+        return root.AttendanceRules || null;
+    }
     const DAY = 86400000;
     const ROLES = { sales: 'Sotuv menejeri', rop: 'ROP', teacher: 'Asosiy ustoz', assistant: 'Yordamchi ustoz' };
     function fail(message) { throw Object.assign(new Error(message), { status: 400 }); }
@@ -141,6 +146,12 @@
             if (who) return who === employee.id;
             return !otherHas(s, key, day) || s.teacherId === employee.id;
         };
+        const missedCame = m => {
+            const md = String(m.missedDate || '').slice(0, 10);
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(md)) return false;
+            const key = md.slice(0, 7), day = Number(md.slice(8));
+            return Object.keys(mainAtt).some(k => k.slice(0, 7) === key && [1, true].includes(mainAtt[k]?.[m.studentId]?.[day]));
+        };
         let total = 0, lessons = 0;
         const breakdown = [];
         for (const s of students) for (const block of months(p)) {
@@ -161,7 +172,12 @@
             const entries = attendance[`${block.key}_${employee.id}`]?.[s.id] || {};
             const hire = date(employee.startDate || employee.joinDate);
             const studentStart = date(s.startDate || s.joinDate);
-            const inRange = d => d && inPeriod(d, p) && d >= block.start && d <= block.end && (!hire || d >= hire) && (!studentStart || d >= studentStart);
+            // O'quvchi o'sha kuni muzlatilgan yoki chiqib ketgan bo'lsa — "Keldi" ham, qoplash ham sanalmaydi (asosiy ustoz;
+            // AttendanceRules.lessonCountsOn — Davomat % bilan bir qoida). source.studentStatus: { [studentId]: school_student_status qatorlari }.
+            // Faqat 'approved-v1' oylaridan (2026-10) — eski to'langan oylar qayta narxlanmaydi.
+            const statusRows = byMakeups && source.studentStatus ? source.studentStatus[s.id] : null;
+            const activeDay = d => !statusRows || !rules() || rules().lessonCountsOn(s, statusRows, d);
+            const inRange = d => d && inPeriod(d, p) && d >= block.start && d <= block.end && (!hire || d >= hire) && (!studentStart || d >= studentStart) && activeDay(d);
             const studentDays = byMakeups ? new Set(studentDayList) : null;
             const presentDays = Object.entries(entries).filter(([day, present]) => {
                 const d = date(block.key + '-' + String(day).padStart(2, '0'));
@@ -175,6 +191,9 @@
                 for (const m of source.makeups || []) {
                     if (m.status !== 'approved' || m.teacherId !== employee.id || m.studentId !== s.id || String(m.heldDate || '').slice(0, 7) !== block.key) continue;
                     if (!inRange(date(m.heldDate))) continue;
+                    // "Keldi" ustun: qoldirilgan kunida "Keldi" bor (qaysi ustoz blokida bo'lmasin) — dars o'tilgan, qoplash maoshga o'tmaydi
+                    // (tasdiqlangan bo'lsa ham; yozuv o'chirilmaydi — admin ro'yxatida missedCame belgisi). Ikki marta to'lov yo'q.
+                    if (missedCame(m)) continue;
                     const day = Number(String(m.heldDate).slice(8, 10));
                     if (m.kind === 'double') makeupCount++;
                     else if (!seen.has(day)) { seen.add(day); makeupCount++; }

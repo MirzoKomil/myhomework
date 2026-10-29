@@ -108,7 +108,10 @@ async function transaction(pool, fn) {
             await db.query('COMMIT'); require('./finCtx').commitHead(db); return result;
         } catch (e) {
             await db.query('ROLLBACK');
-            if (!['40001', '40P01'].includes(e.code) || attempt === 2) throw e;
+            // REPEATABLE READ surati qulf kutishidan OLDIN (pg_advisory_xact_lock so'rovining o'zida) olinadi: parallel ikkinchi
+            // tranzaksiya birinchisining yozuvini ko'rmay qolib noyob indeksga urilishi mumkin (23505) — yangi surat bilan qaytariladi
+            // (masalan bir vaqtda ikki "tasdiqlash" → ikkinchisi "allaqachon tasdiqlangan").
+            if (!['40001', '40P01', '23505'].includes(e.code) || attempt === 2) throw e;
         } finally { untrack(); db.release(); }
     }
 }
@@ -156,18 +159,25 @@ async function sources(db, p) {
         }
     }
     const makeups = (await db.query("SELECT to_regclass('public.school_makeups')::text AS t")).rows[0]?.t
-        ? (await db.query(`SELECT id, student_id, teacher_id, kind, status, TO_CHAR(held_date,'YYYY-MM-DD') AS held_date FROM school_makeups
+        ? (await db.query(`SELECT id, student_id, teacher_id, kind, status, TO_CHAR(held_date,'YYYY-MM-DD') AS held_date, TO_CHAR(missed_date,'YYYY-MM-DD') AS missed_date FROM school_makeups
             WHERE status='approved' AND held_date IS NOT NULL AND TO_CHAR(held_date,'YYYY-MM')=ANY($1::text[])`, [monthKeys])).rows
-            .map(r => ({ id: r.id, studentId: r.student_id, teacherId: r.teacher_id, kind: r.kind, status: r.status, heldDate: r.held_date })) : [];
+            .map(r => ({ id: r.id, studentId: r.student_id, teacherId: r.teacher_id, kind: r.kind, status: r.status, heldDate: r.held_date, missedDate: r.missed_date || null })) : [];
     // Asosiy ustoz almashish tarixi — bir kun ikki ustoz blokida bo'lsa, o'sha kungi ustozga (payrollEngine teacherOnDay).
     const teacherHistory = (await db.query("SELECT to_regclass('public.school_teacher_history')::text AS t")).rows[0]?.t
         ? (await db.query(`SELECT student_id, teacher_id, TO_CHAR(from_date,'YYYY-MM-DD') AS from_date FROM school_teacher_history ORDER BY from_date`)).rows
             .map(r => ({ studentId: r.student_id, teacherId: r.teacher_id, fromDate: r.from_date })) : [];
+    // O'quvchi holati (muzlatilgan / chiqib ketgan) sana bo'yicha — o'sha kundagi "Keldi"/qoplash asosiy ustozga sanalmaydi (payrollEngine).
+    const studentStatus = {};
+    if ((await db.query("SELECT to_regclass('public.school_student_status')::text AS t")).rows[0]?.t) {
+        for (const r of (await db.query(`SELECT student_id, status, TO_CHAR(from_date,'YYYY-MM-DD') AS from_date, TO_CHAR(to_date,'YYYY-MM-DD') AS to_date, created_at
+            FROM school_student_status WHERE cancelled_at IS NULL ORDER BY from_date, created_at`)).rows)
+            (studentStatus[r.student_id] ||= []).push({ status: r.status, from_date: r.from_date, to_date: r.to_date, created_at: r.created_at });
+    }
     const json = (await db.query("SELECT key,data FROM json_data WHERE key=ANY($1::text[])", [['salesPlan', 'bonusHistory', 'bonusData', 'cashFlow']])).rows;
     const blob = Object.fromEntries(json.map(r => [r.key, r.data]));
     return { academicPolicy: 'dual-role-v1', teacherAttendancePolicy: 'all-days-v1', paymentRecords,
         assistantPolicy: 'contacts-v1', assistantContactsFrom: ASSIST_CONTACTS_FROM, assistantContacts,
-        makeupPolicy: 'approved-v1', makeupPolicyFrom: MAKEUP_POLICY_FROM, makeups, teacherHistory, hrEmployees: employees.map(r => ({ id: r.id, name: r.name, role: r.role, lang: r.lang, avatar: r.avatar, dualRole: r.dual_role === true,
+        makeupPolicy: 'approved-v1', makeupPolicyFrom: MAKEUP_POLICY_FROM, makeups, teacherHistory, studentStatus, hrEmployees: employees.map(r => ({ id: r.id, name: r.name, role: r.role, lang: r.lang, avatar: r.avatar, dualRole: r.dual_role === true,
         status: r.status, startDate: r.start_date, joinDate: r.join_date, endDate: r.end_date || '', kpiTemplateId: r.kpi_template_id })),
         teachers: teachers.map(r => ({ id: r.id, schedulePattern: r.schedule_pattern, lessonDuration: r.lesson_duration })),
         students: students.map(r => ({ ...(r.extra_data || {}), id: r.id, name: r.name, subject: r.subject,

@@ -23,8 +23,9 @@
     const me = () => (typeof getCurrentUser === 'function' ? getCurrentUser() : null) || {};
 
     function ownMain(tid) {
-        // Faol — js/attendanceRules.js (server missedLessons bilan bitta ta'rif).
-        const active = s => (typeof AttendanceRules !== 'undefined' && AttendanceRules.isActiveStudent ? AttendanceRules.isActiveStudent(s) : !s.frozen && !s.isStaffDemo && s.status !== 'inactive');
+        // Shu oyda (kamida bir kun) faol — js/attendanceRules.js inMonth (s.statusHistory); Davomat va server bilan bitta ta'rif.
+        const month = today().slice(0, 7);
+        const active = s => (typeof AttendanceRules !== 'undefined' && AttendanceRules.inMonth ? AttendanceRules.inMonth(s, s.statusHistory, month) : !s.frozen && !s.isStaffDemo && s.status !== 'inactive');
         return (getItem(STORAGE_KEYS.students, []) || []).filter(s => String(s.teacherId || '') === String(tid) && active(s));
     }
     function lessonDaySet(s, month) {
@@ -65,7 +66,31 @@
             const planned = dates.filter(d => cover.get(d)?.status === 'planned').map(d => ({ missed: d, held: dkey(cover.get(d).held_date) }));
             if (open.length || planned.length) by.set(s.id, { student: s, open, planned });
         }
-        return { month, today: td, by, makeups: mk };
+        return { month, today: td, by, makeups: mk, absences: ab.absences || [] };
+    }
+
+    // ── O'tgan kunlardagi belgilanmagan darslar (UstozBosh "Bajarish kerak" · "… darsi belgilanmagan · Belgilash") ──
+    // Ta'rif AttendanceRules.monthTotals bilan bir xil: dars kuni, kurs boshlangan, "Keldi" ham "Kelmadi" ham yo'q.
+    // Bugungi darslar "Bugun" ro'yxatida alohida qator bo'lib chiqadi, shuning uchun bu yerda faqat bugungacha bo'lgan kunlar.
+    function unmarkedPast(user, m) {
+        const tid = user.linkedTeacherId; if (!tid || !m) return [];
+        const todayDay = Number(m.today.slice(8));
+        const att = (getItem(STORAGE_KEYS.mainAttendance, {}) || {})[`${m.month}_${tid}`] || {};
+        const out = [];
+        for (const s of ownMain(tid)) {
+            const marks = att[s.id] || {}, days = lessonDaySet(s, m.month), start = dkey(s.startDate || s.joinDate);
+            if (!days) continue;
+            const abs = new Set(m.absences.filter(a => a.teacherId === tid && a.studentId === s.id && String(a.day).slice(0, 7) === m.month).map(a => Number(String(a.day).slice(8, 10))));
+            const dates = [...days].filter(d => d < todayDay && marks[d] !== 1 && marks[d] !== true && marks[d] !== 0 && marks[d] !== false && !abs.has(d))
+                .map(d => `${m.month}-${String(d).padStart(2, '0')}`).filter(d => (!start || d >= start) && AttendanceRules.lessonCountsOn(s, s.statusHistory, d)).sort();
+            if (dates.length) out.push({ student: s, dates });
+        }
+        return out.sort((a, b) => b.dates.length - a.dates.length);
+    }
+    function openDavomatFor(studentId) {
+        window.teacherDutyUI?.focus?.(studentId);
+        if (typeof switchTab === 'function') switchTab('teachers-section', { teachersSection: 'attendance' });
+        setTimeout(() => window.teacherDutyUI?.revealFocused?.(), 120);
     }
 
     // Ustozning o'z maoshi bo'yicha: har o'quvchida (ustoz stavkasi / oylik reja) × qoplansa hisobga o'tadigan darslar.
@@ -134,6 +159,14 @@
         const mk = makeupsP ? await Promise.resolve(makeupsP).catch(() => null) : null;
         const [m, att] = await Promise.all([missed(user, { makeups: mk ? mk.makeups || [] : null }).catch(() => null), attention().catch(() => null)]);
         const items = [];
+        const un = unmarkedPast(user, m);
+        if (un.length) {
+            const n = un.reduce((k, x) => k + x.dates.length, 0);
+            const parts = un.slice(0, 3).map(x => `${first(x.student.name)} ${x.dates.length >= 4 ? x.dates.length + ' ta' : x.dates.map(d => Number(d.slice(8))).join(', ') + '-' + MON3[Number(x.dates[0].slice(5, 7)) - 1]}`);
+            if (un.length > 3) parts.push(`yana ${un.length - 3} o'quvchi`);
+            items.push({ ic: 'warn', t: un.length === 1 && n === 1 ? `${first(un[0].student.name)} · ${dm(un[0].dates[0])} darsi belgilanmagan` : `${n} ta o'tgan dars belgilanmagan`,
+                s: `${parts.join(' · ')} · belgilanmagan dars maoshga o'tmaydi, oy yopilguncha belgilang`, btn: 'Belgilash', act: () => openDavomatFor(un[0].student.id) });
+        }
         if (m) {
             const open = [...m.by.values()].reduce((n, x) => n + x.open.length, 0);
             const planned = [...m.by.values()].reduce((n, x) => n + x.planned.length, 0);
@@ -141,7 +174,7 @@
                 if (mk) globalThis.__schoolMakeups = mk.makeups || [];
                 const loss = lossSum(user, m);
                 const top = [...m.by.values()].filter(x => x.open.length).sort((a, b) => b.open.length - a.open.length)[0];
-                items.push({ ic: 'sync', t: `${open} ta qoplanmagan dars${planned ? ` (${planned} tasi rejada)` : ''}${loss ? ` · ≈ ${num(loss)} so'm` : ''}`,
+                items.push({ ic: 'sync', t: `${open} ta qoplanmagan dars${planned ? ` · yana ${planned} tasiga qoplash rejalashtirilgan` : ''}${loss ? ` · ≈ ${num(loss)} so'm` : ''}`,
                     s: missedText(m), btn: "Qoplash qo'yish",
                     act: () => {
                         const done = () => { try { if (typeof renderDashboardOverview === 'function') renderDashboardOverview(_lastDashboardOverviewArgs || {}); } catch { /* */ } };

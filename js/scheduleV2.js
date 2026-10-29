@@ -173,6 +173,8 @@
     };
     const LEGEND_T = [['k-rsv', 'Muzlatilgan o\'quvchi vaqti · saqlangan, faqat sinov'], ['k-asw', 'Yordamchi aloqasi · band qilmaydi'], ['k-ok', 'Keldi'], ['k-no', 'Kelmadi'], ['k-un', 'Belgilanmagan'], ['k-wait', 'Rejada'], ['k-mk', 'Qoplash'], ['k-tr', 'Sinov darsi'], ['k-free', 'Bo\'sh (sotuv sinov qo\'ya oladi)'], ['k-freex', 'Admin ochgan'], ['k-cls', 'Sinovga yopiq'], ['k-off', 'Ish vaqti emas']];
     // rules — "Jadval qoidalari" havolasi (ustoz/yordamchi: dizaynda sarlavha qatorida tugma yo'q).
+    // "Yordamchi aloqasi" bandi — faqat jadvalda yordamchi aloqasi bo'lsa (asosiy ustozda 29-okt dan yordamchilik yo'q).
+    const legendT = asst => (asst && asst.length ? LEGEND_T : LEGEND_T.filter(([c]) => c !== 'k-asw'));
     const legend = (list, { rules = false } = {}) => `<div class="sv-lg">${list.map(([c, t]) => `<span><i class="sv-sq ${c}"></i>${t}</span>`).join('')}${rules ? '<button type="button" class="sc-link sv-rlink" data-rules>Jadval qoidalari →</button>' : ''}</div>`;
 
     // ── Sahifa sarlavhasi va boshqaruvlar ───────────────────────────────────────
@@ -438,7 +440,7 @@
             ${kpi('#98A2B3', 'Sinovga yopiq', hours(closedM + moM + notTrial), `yopilgan ${hours(closedM)}${moM ? ` · faqat qoplash ${hours(moM)}` : ''}${notTrial ? ` · boshqa ${hours(notTrial)}` : ''}`)}</div>
           <div class="sv-lay">
             <section class="sc-card sv-wcard"><header class="sv-bh"><h2>${weekLabel(from)}</h2><span class="sc-grow"></span><span class="sc-mt">${isFull() ? 'Bo\'sh joyni bosing → ochish / yopish · darsni bosing → o\'quvchi kartasi' : 'Darsni bosing → o\'quvchi kartasi'}</span></header>
-              ${vgrid(cols, range)}${legend(LEGEND_T)}</section>
+              ${vgrid(cols, range)}${legend(legendT(asst))}</section>
             <div class="sv-side">
               <section class="sc-card" data-panel></section>
               <section class="sc-card"><header class="sv-bh"><h2>Ish vaqti shabloni</h2><span class="sc-grow"></span>${isFull() ? '<button type="button" class="sc-btn sc-btn--sm" data-hours>Tahrirlash</button>' : ''}</header>
@@ -524,8 +526,9 @@
         else bindNav(root, mode === 'tday' ? 1 : 7, reload);
         const tid = me().linkedTeacherId;
         api(`/teachers/${encodeURIComponent(tid || '-')}/hours`).then(r => {
-            const grp = new Map(); for (const h of r.hours || []) { const k = `${hm(h.start_min)}–${hm(h.end_min)}`; if (!grp.has(k)) grp.set(k, []); grp.get(k).push(DAY[h.weekday - 1]); }
-            const el = root.querySelector('[data-hrs]'); if (el && grp.size) el.textContent = `Ish vaqtingiz: ${[...grp.entries()].map(([k, ds]) => `${ds.join('·')} ${k}`).join(' · ')} · vaqt Toshkent bo'yicha`;
+            // Bitta formatlovchi (js/workHours.js) — Profil "Ish vaqti" qatori bilan bir xil matn; ustma-ust oraliqlar birlashadi.
+            const txt = window.WorkHours ? window.WorkHours.text(r.hours) : '';
+            const el = root.querySelector('[data-hrs]'); if (el && txt) el.textContent = `Ish vaqtingiz: ${txt} · vaqt Toshkent bo'yicha`;
         }).catch(() => {});
         const [d, plan, reqs] = await Promise.all([api(`/schedule?from=${from}&to=${to}`), api(`/assist/plan?from=${from}&to=${mode === 'tmonth' ? from : to}`).catch(() => null), api('/requests').catch(() => ({ requests: [] }))]);
         const asst = mode === 'tmonth' ? [] : plan?.items || [];
@@ -540,7 +543,7 @@
         body.innerHTML = `<div class="sv-lay">
             <section class="sc-card sv-wcard"><header class="sv-bh"><h2>${mode === 'tday' ? esc(dayLabel(st.date)) : esc(weekTitle(from))} · ${n('lesson')} dars · ${n('makeup')} qoplash · ${n('trial')} sinov${asst.length ? ` · ${asst.length} yordamchi aloqasi (jadvalni band qilmaydi)` : ''}</h2>
               <p class="sc-mt sv-hint">Bo'sh joyni bosing → qoplash darsi · darsni bosing → o'quvchi kartasi</p></header>
-              ${vgrid(cols, range, { cls: mode === 'tday' ? 'is-day' : '' })}${legend(LEGEND_T, { rules: true })}</section>
+              ${vgrid(cols, range, { cls: mode === 'tday' ? 'is-day' : '' })}${legend(legendT(asst), { rules: true })}</section>
             <div class="sv-side">
               <section class="sc-card" data-mk></section>
               <section class="sc-card"><header class="sv-bh"><h2>${mode === 'tday' ? 'Shu kungi' : 'Shu haftadagi'} sinovlar</h2><span class="sc-grow"></span><button type="button" class="sc-link" data-trials>Sinov darslari →</button></header>
@@ -580,6 +583,9 @@
         // (15 daqiqaga yaxlitlanadi). Qoldirilgan dars faqat "Kelmadi" ro'yxatidan, sana qo'lda kiritilmaydi.
         const mkSlot = (el, date, s, e, clickMin) => {
             const dl = el.closest('.sv-dl');
+            // Bugun — o'tib ketgan qismi taklif qilinmaydi: boshlanish hozirgi vaqtdan keyingi 15 daqiqalikka suriladi.
+            if (date === today()) { s = Math.max(s, Math.ceil(U().nowMin() / 15) * 15); clickMin = Math.max(clickMin ?? s, s); }
+            if (date < today() || s >= e) { pickBox(null); mkPanel.innerHTML = '<header class="sv-bh"><h2>Qoplash darsini rejalashtirish</h2></header><p class="sc-mt sv-pp">Bu vaqt o\'tib ketgan — qoplash darsini keyingi bo\'sh vaqtga qo\'ying.</p>'; return; }
             const list = myStudents();
             if (!list.length) { mkPanel.innerHTML = '<header class="sv-bh"><h2>Qoplash darsini rejalashtirish</h2></header><p class="sc-mt sv-pp">Faol o\'quvchingiz yo\'q</p>'; return; }
             const openOf = id => missed.filter(m => m.studentId === id && !m.makeup && m.date.slice(0, 7) === date.slice(0, 7));
@@ -678,7 +684,7 @@
             const na = done && i.outcome === 'no_answer';
             const warn = done && !na && i.status !== 'counted';
             const t = `${first(i.studentName)} ${done ? (na ? '✕' : `${CH_IC[i.channel] || ''} ${i.minutes ? i.minutes + '′' : ''}`) : hm(i.start)}`;
-            const why = warn ? { short: '5 daqiqadan qisqa', same_day: 'shu kuni 2-chi', extra_text: 'haftadagi 2-yozishma', over_cap: '13 dan ortiq', before_start: 'kurs boshlanishidan oldin · sanalmaydi' }[i.status] || 'hisoblanmadi' : '';
+            const why = warn ? (U().CST || {})[i.status] || 'hisoblanmadi' : ''; // sabab matni — schoolUI.CST (bitta manba)
             return { start: i.start, end: i.start + 30, cls: done ? (na ? 'k-no' : warn ? 'k-un' : 'k-ok') : 'k-wait', t,
                 title: `${hm(i.start)} · ${i.studentName} · ${done ? (na ? 'javob bermadi' : `${CH[i.channel] || ''} ${i.minutes} daq${why ? ' · ' + why : ''}`) : 'tavsiya'}`,
                 click: true, attrs: ` data-sid="${esc(i.studentId)}" data-k="${i.kind}"` };

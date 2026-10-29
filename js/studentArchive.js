@@ -68,7 +68,9 @@
                 const until = s.state === 'left' || s.state === 'finished' ? lastDay(s) : s.contacts?.last;
                 r.push(['Siz bilan', `${start ? ddmm(start) + ' → ' : ''}${until ? ddmm(until) : ''}${s.contacts?.total ? ` · ${s.contacts.total} aloqa` : ''}` || '—']);
                 if (s.state === 'frozen') {
-                    r.push(['Holat', `aloqalar to'xtatilgan · ${MON[Number(td.slice(5, 7)) - 1]}da tavsiya yo'q`]);
+                    // Shu oy ichida qaytsa — "qaytguncha", aks holda shu oyda tavsiya umuman yo'q.
+                    const back = s.to ? addDays(s.to, 1) : null, monEnd = addDays(addDays(td.slice(0, 8) + '01', 32).slice(0, 8) + '01', -1);
+                    r.push(['Holat', back && back <= monEnd ? 'aloqalar to\'xtatilgan · qaytguncha tavsiya yo\'q' : `aloqalar to'xtatilgan · ${MON[Number(td.slice(5, 7)) - 1]}da tavsiya yo'q`]);
                     if (s.to) r.push(['Qaytadi', `${esc(dLong(addDays(s.to, 1)))} · tavsiya ${adviceOf(s.schedule?.day)} ${esc(s.schedule?.time || '')} tiklanadi`]);
                 } else if (s.state === 'left' || s.state === 'finished') {
                     const cm = conMonths(s); if (cm.length) r.push(['Aloqalar', esc(cm.join(' · '))]);
@@ -142,7 +144,8 @@
                 : '<p class="oq-empty2">Faol bo\'lmagan o\'quvchi yo\'q</p>';
             const seg = (k, label, n) => `<button type="button" data-artab="${k}" aria-pressed="${tab === k}">${label} <b>${n}</b></button>`;
             root.innerHTML = `<div class="oq"><div class="oq-head"><div><h1 class="oq-h1">${asg ? 'O\'quvchilarim' : 'O\'quvchilar'}</h1><p class="oq-sub">${asg
-                    ? `Faol bo'lmaganlar · faqat siz bilan bo'lgan davr · bugungi tavsiya, haftalik ${Number(opts.active) * 3 || 0} va maoshga qo'shilmaydi`
+                    // Haftalik reja — AttendanceRules.weekPlanCount (Bosh/Davomat/Dars jadvali bilan bitta son); reja kelmasa — raqamsiz.
+                    ? `Faol bo'lmaganlar · faqat siz bilan bo'lgan davr · faol bo'lmagan kunlari bugungi tavsiya, haftalik reja${opts.weekPlan != null ? ` (${Number(opts.weekPlan)})` : ''} va maoshga qo'shilmaydi`
                     : 'Faol bo\'lmagan o\'quvchilar · faqat siz bilan bo\'lgan davr · bugungi darslar, davomat foizi, reyting va maoshga qo\'shilmaydi'}</p></div></div>
               <section class="oq-card is-clip" aria-labelledby="oqArT"><div class="oq-ch"><h2 class="oq-ct" id="oqArT">${esc(opts.title || 'Mening o\'quvchilarim')}</h2>
                 <div class="oq-seg" role="group" aria-label="Holat">${opts.onBack ? `<button type="button" data-back aria-pressed="false">Faol <b>${esc(String(opts.active ?? ''))}</b></button>` : ''}${seg('inactive', 'Faol emas', inN)}${showFin ? seg('finished', 'Tugatgan', finN) : ''}</div></div>

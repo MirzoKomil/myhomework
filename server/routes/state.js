@@ -985,12 +985,8 @@ router.patch('/', authRequired, crmStateIdentity, crmStateMutationRequired, asyn
     try {
         const body = req.body || {};
         const isFullAccess = ['admin', 'rop', 'boshliq'].includes(req.user.role);
-        // 23-vazifa: Targetolog FAQAT Marketing bo'limiga tegishli ikki
-        // kalitni (reja va kunlik reklama ma'lumoti) saqlashi mumkin -
-        // boshqa hech qanday CRM maydonini o'zgartira olmaydi.
-        // 32-vazifa: Ustoz FAQAT davomat (asosiy/yordamchi) va jonli dars
-        // baholarini saqlashi mumkin - boshqa hech qanday CRM maydonini
-        // o'zgartira olmaydi.
+        // Ustoz bu yo'lga umuman kirmaydi (yuqorida 403): davomat faqat POST /teacher-attendance orqali.
+        // Targetolog va boshqa rollar umumiy state'ga hech narsa yozmaydi (target ma'lumotlari — /api/target-ads).
         const allowed = isFullAccess ? [
             'teachers', 'students', 'removedStudentIds', 'salesManagers', 'timetable',
             'mainAttendance', 'assistantAttendance', 'payments', 'hrEmployees',
@@ -1001,11 +997,7 @@ router.patch('/', authRequired, crmStateIdentity, crmStateMutationRequired, asyn
             // saqlanmay, faqat brauzer keshida qolib ketardi. targetMonitoringPlan
             // (10-vazifa) - Target Monitoringi rejasi.
             'individualSalesPlans', 'targetMonitoringPlan', 'targetDailyAdSpend'
-        ] : req.user.role === 'teacher'
-            ? ['mainAttendance', 'assistantAttendance', 'liveGrades']
-            // Targetolog umumiy state'ga hech narsa yozmaydi: target ma'lumotlari
-            // endi alohida /api/target-ads orqali, til va sana ruxsati bilan saqlanadi.
-            : [];
+        ] : [];
         if (isFullAccess) allowed.push('archive');
         const partial = {};
         allowed.forEach(key => { if (body[key] !== undefined) partial[key] = body[key]; });
@@ -1067,7 +1059,7 @@ router.get('/teacher-rating', authRequired, async (req, res) => {
         // O'tgan oy (▲/▼) solishtiruvi: o'sha oyda "Keldi" belgisi bo'lmagan ustozda "—" (ma'lumot yo'q).
         // Tasdiqlangan qoplashlar ham davomatga kiradi (UstozDavomat bilan bir xil — js/attendanceRules.js monthTotals).
         const makeups = ownType === 'asosiy' && (await pool.query("SELECT to_regclass('public.school_makeups')::text AS t")).rows[0]?.t
-            ? (await pool.query(`SELECT student_id, teacher_id, kind, status, TO_CHAR(held_date,'YYYY-MM-DD') AS held_date FROM school_makeups
+            ? (await pool.query(`SELECT student_id, teacher_id, kind, status, TO_CHAR(held_date,'YYYY-MM-DD') AS held_date, TO_CHAR(missed_date,'YYYY-MM-DD') AS missed_date FROM school_makeups
                 WHERE status='approved' AND held_date IS NOT NULL`)).rows : [];
         const data = await ratingResponse({ state, ownType, month: String(req.query.month || ''), makeups,
             loadLearning: (now, opts) => loadLearningByStudent(pool, now, opts) });

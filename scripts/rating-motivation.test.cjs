@@ -110,6 +110,8 @@ test('teacher home: today lessons by time with attendance state, no phones', () 
     const c = ctx('2026-10-20T16:50:00+05:00'); // seshanba
     Object.assign(c, {
         STORAGE_KEYS: { students: 'students', mainAttendance: 'att', assistantAttendance: 'asatt' },
+        // "Faol o'quvchi" — yagona ta'rif (brauzerda window.AttendanceRules, js/attendanceRules.js).
+        AttendanceRules: require('../js/attendanceRules'),
         getTeacherAssignmentIds: () => new Set(['t1']),
         resolveTeacherWithVirtual: () => ({ id: 't1', type: 'asosiy', subject: 'english' }),
         calculateKpiSalary: (t, m, store, list) => ({ total: 278_571, completed: 0, expected: 14 }),
@@ -121,25 +123,32 @@ test('teacher home: today lessons by time with attendance state, no phones', () 
             { id: 's3', name: 'Kamila', teacherId: 't1', lessonDayOfWeek: 6, lessonTime: '17:15', lessonDuration: 15 },
             { id: 's4', name: 'Boshqa', teacherId: 't9', lessonDayOfWeek: 2, lessonTime: '10:00' },
             { id: 's5', name: 'Juma', teacherId: 't1', lessonDayOfWeek: 1, lessonTime: '10:00' },
+            { id: 's6', name: 'Muzlagan', teacherId: 't1', lessonDayOfWeek: 2, lessonTime: '12:00', frozen: true },
         ] : k === 'att' ? { '2026-10_t1': { s1: { 20: 1, 15: 1 }, s2: { 15: 1 } } } : {},
     });
-    vm.runInContext(functionSource('js/app.js', 'renderTeacherTodayBlock') + '\nthis.t = renderTeacherTodayBlock;', c);
+    vm.runInContext(['_thxAbsentServer', 'renderTeacherTodayBlock'].map(n => functionSource('js/app.js', n)).join('\n') + '\nthis.t = renderTeacherTodayBlock;', c);
     const html = c.t({ role: 'teacher', linkedTeacherId: 't1' });
-    assert.match(html, /3 dars · 1 tasi belgilanmagan/);
+    // UstozBosh "Bugun" (.tl2): sarlavhada darslar soni; har qatorda holat pill'i (Keldi / Belgilanmagan / Kutilmoqda).
+    assert.match(html, /Bugun · <span[^>]*>3 dars<\/span>/);
     assert.ok(html.indexOf('Shohruh') < html.indexOf('Doniyor') && html.indexOf('Doniyor') < html.indexOf('Kamila'), 'sorted by time');
-    assert.match(html, /✓ Keldi/);
-    assert.match(html, /Dars tugadi · davomat belgilanmagan/);
-    assert.match(html, /Kutilmoqda/);
+    assert.match(html, /data-thx-sid="s1" data-thx-st="ok"[\s\S]*?>Keldi</);
+    assert.match(html, /data-thx-sid="s2" data-thx-st="warn"[\s\S]*?dars tugagan[\s\S]*?>Belgilanmagan</);
+    assert.match(html, /data-thx-sid="s3" data-thx-st="wait"[\s\S]*?>Kutilmoqda</);
     assert.ok(!html.includes('Boshqa') && !html.includes('Juma') && !html.includes('+99890'));
+    assert.ok(!html.includes('Muzlagan'), 'muzlatilgan o\'quvchi bugungi darslarga kirmaydi (AttendanceRules.isActiveStudent)');
     assert.match(html, /data-thx-todo/, '"Bajarish kerak" bloki serverdan keyin to\'ldiriladi');
     assert.ok(!html.includes('Yordamchi ustozlik') && !html.includes('aloqa'));
     assert.equal(c.t({ role: 'rop' }), '');
 });
 
-test('assistant home: contacts suggested on the opposite days, no old attendance buttons', () => {
+// 29-okt: asosiy ustoz yordamchi bo'la olmaydi — UstozBosh "Bugun" blokida yordamchi aloqasi qatorlari yo'q
+// (yordamchi Bosh sahifasi — js/yordamchi.js assistantHome, tavsiya kunlari serverdagi /assist/plan dan).
+test('teacher home: no assistant contact rows (assistant home is schoolTeacher.assistantHome)', () => {
     const c = ctx('2026-10-20T16:50:00+05:00'); // seshanba
     Object.assign(c, {
         STORAGE_KEYS: { students: 'students', mainAttendance: 'att', assistantAttendance: 'asatt' },
+        // "Faol o'quvchi" — yagona ta'rif (brauzerda window.AttendanceRules, js/attendanceRules.js).
+        AttendanceRules: require('../js/attendanceRules'),
         getTeacherAssignmentIds: () => new Set(['y1']),
         expandLessonPatternDays: d => ([1, 3, 5].includes(+d) ? [1, 3, 5] : [2, 4, 6].includes(+d) ? [2, 4, 6] : [+d]),
         resolveTeacherWithVirtual: id => ({ id, name: id === 'z' ? 'Kamola Mirzayeva' : 'Yordamchi', type: 'yordamchi', subject: 'english' }),
@@ -150,12 +159,9 @@ test('assistant home: contacts suggested on the opposite days, no old attendance
             { id: 'd', name: 'Ketgan', teacherId: 'z', assistantTeacherId: 'y1', lessonDayOfWeek: 1, lessonTime: '11:00', status: 'inactive' },
         ] : {},
     });
-    vm.runInContext(['_assistAdviceDays', '_thxTeacherShort', 'renderTeacherTodayBlock'].map(n => functionSource('js/app.js', n)).join('\n') + '\nthis.t = renderTeacherTodayBlock;', c);
+    vm.runInContext(['renderTeacherTodayBlock'].map(n => functionSource('js/app.js', n)).join('\n') + '\nthis.t = renderTeacherTodayBlock;', c);
     const html = c.t({ role: 'teacher', linkedTeacherId: 'y1' });
-    assert.match(html, /Abbos[\s\S]*yordamchi aloqasi · asosiy ustoz Kamola M\./, 'Du·Ch·Ju o\'quvchisi — seshanba aloqa tavsiya');
-    assert.ok(!html.includes('Ilyos'), 'Se·Pa·Sh o\'quvchisi seshanba kuni tavsiya qilinmaydi');
-    assert.ok(!html.includes('Boshqa') && !html.includes('Ketgan'));
-    assert.match(html, /data-thx-contact="a"/);
+    assert.ok(!html.includes('Abbos') && !html.includes('Ilyos') && !html.includes('Boshqa') && !html.includes('Ketgan'), 'yordamchi o\'quvchilari ustoz "Bugun" blokida yo\'q');
+    assert.ok(!html.includes('data-thx-contact') && !html.includes('yordamchi aloqasi'));
     assert.ok(!html.includes('data-thx-as-mark') && !html.includes('mashgʻulot'));
-    assert.match(html, /0 dars \+ 1 aloqa/);
 });

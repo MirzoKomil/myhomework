@@ -319,7 +319,7 @@
         const list = [...review.slice(0, 4), ...recent];
         return `<section class="sc-card an-panel"><header class="sc-ch"><h2>Qoplash darslari · nazorat</h2>${review.length ? pill('warn', `${review.length} tekshiruvda`) : pill('ok', 'tekshiruv yo\'q')}</header>
           ${list.length ? `<ul class="an-list">${list.map(m => { const s = studentById(m.student_id) || { id: m.student_id, name: m.student_id };
-            return `<li>${sAv(s, 36)}<span class="sc-grow"><b>${esc(s.name)}</b><small>${dS(dkey(m.missed_date))} o'rniga ${m.kind === 'double' ? 'qo\'shaloq · ' : ''}${dS(dkey(m.held_date))} · ${esc(tName(m.teacher_id, true))}</small></span>
+            return `<li>${sAv(s, 36)}<span class="sc-grow"><b>${esc(s.name)}</b><small>${dS(dkey(m.missed_date))} o'rniga ${m.kind === 'double' ? 'qo\'shaloq · ' : ''}${dS(dkey(m.held_date))} · ${esc(tName(m.teacher_id, true))}</small>${U().missedCamePill(m)}</span>
               ${m.status === 'review' ? `<span class="an-acts"><button type="button" class="sc-btn sc-btn--pri sc-btn--sm" data-mkyes="${esc(m.id)}">Tasdiqlash</button><button type="button" class="sc-btn sc-btn--sm" data-mkno="${esc(m.id)}">Rad etish</button></span>` : pill('ok', 'Tasdiqlandi')}</li>`; }).join('')}</ul>`
             : '<p class="sc-mt sc-pad">Bu oy qoplash darsi yo\'q.</p>'}
           <footer class="an-pfoot"><button type="button" class="sc-link" data-allmk>Barcha qoplash darslari · ${mine.length}</button></footer></section>`;
@@ -512,8 +512,8 @@
               <div class="an-scroll"><table class="sc-table an-mk"><thead><tr><th>O'quvchi · ustoz</th><th>Qoldirilgan</th><th>Qoplangan · dalil</th><th class="r">Summa</th><th>Holat</th></tr></thead><tbody>
               ${shown.map(m => { const x = infos.get(m.id), ev = evidence(m), [stl, stc] = MK_ST[m.status] || [m.status, 'mute'];
                 return `<tr class="an-mkr${m.id === M.sel ? ' sel' : ''}" data-mk="${esc(m.id)}" tabindex="0" aria-selected="${m.id === M.sel}"><td><span class="an-who2">${sAv(x.s, 34)}<span><b>${esc(x.s.name)}</b><small>${esc(tName(m.teacher_id))}</small></span></span></td>
-                  <td>${dW(dkey(m.missed_date))}</td><td><span class="an-held"><span>${heldTxt(m, x.s)}</span><small>${timeTxt(m, x.s)}</small><small class="an-ev">${dot(ev[0])}${esc(ev[1])}</small></span></td>
-                  <td class="r">${m.status === 'rejected' || m.status === 'cancelled' ? '—' : x.rate ? money(x.rate) : '—'}</td><td>${pill(stc, stl)}</td></tr>`; }).join('') || '<tr><td colspan="5" class="sc-mt">Qoplash darsi yo\'q</td></tr>'}
+                  <td>${dW(dkey(m.missed_date))}${m.missed_came ? `<br>${U().missedCamePill(m)}` : ''}</td><td><span class="an-held"><span>${heldTxt(m, x.s)}</span><small>${timeTxt(m, x.s)}</small><small class="an-ev">${dot(ev[0])}${esc(ev[1])}</small></span></td>
+                  <td class="r">${m.status === 'rejected' || m.status === 'cancelled' || m.missed_came ? '—' : x.rate ? money(x.rate) : '—'}</td><td>${pill(stc, stl)}</td></tr>`; }).join('') || '<tr><td colspan="5" class="sc-mt">Qoplash darsi yo\'q</td></tr>'}
               </tbody></table></div></section>
             <section class="sc-card an-detail" data-detail></section>
           </div>`;
@@ -572,7 +572,7 @@
         el.innerHTML = `<header class="sc-ch"><h2>${esc(s.name)} · qoplash</h2>${pill(stc, stl)}</header>
           <div class="sc-pad"><dl class="an-kv">
             <dt>Ustoz</dt><dd>${esc(tName(m.teacher_id))}</dd>
-            <dt>Qoldirilgan</dt><dd>${dW(dkey(m.missed_date))} · kelmadi</dd>
+            <dt>Qoldirilgan</dt><dd>${dW(dkey(m.missed_date))} · ${m.missed_came ? U().missedCamePill(m) : 'kelmadi'}</dd>
             <dt>Qoplangan</dt><dd>${hd ? `${dW(hd)} · ${timeTxt(m, s)}${m.kind === 'double' ? ' (qo\'shaloq)' : onLessonDay ? ' (dars kuni)' : ' (dars kuni emas)'}` : '—'}</dd>
             <dt>Dalil</dt><dd>${dot(ev[0])}${esc(ev[1])}</dd>
             <dt>Oylik chegara</dt><dd>${sm.counted} / ${sm.plan} · ${over ? '<span class="an-bad">ortiqcha — hisoblanmaydi</span>' : 'ortiqcha emas'}</dd>
@@ -789,7 +789,7 @@
             <div class="an-mnav"><button type="button" class="sc-btn sc-btn--sm" data-mon="-1" aria-label="Oldingi oy">‹</button><b>${monthLabel(month)}</b><button type="button" class="sc-btn sc-btn--sm" data-mon="1" aria-label="Keyingi oy"${curMonth ? ' disabled' : ''}>›</button></div></div></div>
           ${rep ? `<div class="sc-kpis an-k4">
             <div class="sc-kpi"><small>${monthName(month)}</small><b>${rep.counted} / ${myStudents.length * CAP}</b><span>hisoblangan aloqa</span></div>
-            <div class="sc-kpi"><small>Maosh</small><b>${money(rep.amount)}</b><span>${rep.counted} × ${money(rep.rate || RATE)} so'm</span></div>
+            <div class="sc-kpi"><small>Maosh</small><b>${money(rep.amount)}</b><span>${esc(U().assistPayNote(rep))}</span></div>
             <div class="sc-kpi"><small>${curMonth && A.week === U().weekStart(td) ? 'Bu hafta' : 'Hafta'}</small><b>${weekCounted} / ${myStudents.length * 3}</b><span>tavsiya bo'yicha</span></div>
             <div class="sc-kpi"><small>So'rovlar</small><b>${myReqs.length}</b><span>kechikib belgilash${otherReqs ? ` · boshqalarda ${otherReqs}` : ''}</span></div></div>` : ''}
           ${legacyNote()}

@@ -13,8 +13,9 @@ const mc = {
 };
 
 test("birinchi o'tilmagan jonli dars tanlanadi", () => {
-    assert.deepEqual(pickNextLiveLesson(mc, { subject: 'english' }, []), { id: 'e2', name: '2-dars' });
-    assert.deepEqual(pickNextLiveLesson(mc, { subject: 'english' }, ['e2']), { id: 'e4', name: '4-dars' });
+    // no — kursdagi o'rni (N-dars): Davomat / "Darsni boshlash" / Bosh sahifadagi "N-dars" raqami shu maydondan.
+    assert.deepEqual(pickNextLiveLesson(mc, { subject: 'english' }, []), { id: 'e2', name: '2-dars', no: 2 });
+    assert.deepEqual(pickNextLiveLesson(mc, { subject: 'english' }, ['e2']), { id: 'e4', name: '4-dars', no: 4 });
 });
 
 test("hamma jonli dars o'tilgan bo'lsa oxirgisi qaytadi; fan bo'yicha kurs", () => {

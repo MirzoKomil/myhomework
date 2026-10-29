@@ -209,5 +209,89 @@ test('yagona jadval va o\'quvchi amallari — haqiqiy PostgreSQL', { skip: !url 
                 assert.equal(r.body.card.scope, 'teacher'); assert.equal(r.body.card.mainTeacher, undefined);
             } finally { global.Date = RealDate; await new Promise(r => server.close(r)); }
         });
+
+        // BAHO3 (29-okt qoidalari): qoplash/qoldirilgan dars bitta tekshiruv, qoplanmagan darslar bitta manba,
+        // yordamchi kechikkan so'rovi va yopilgan oy hisobidagi o'quvchilar o'sha oy holati bo'yicha.
+        await t.test('HTTP: admin qoplashi "Keldi"/muzlatilgan/kelajak kunga yo\'q; /attendance/missed; kechikkan so\'rov 409/400; oy hisobi nomlari', async () => {
+            const express = require('express');
+            const RealDate = Date, fixed = new RealDate('2026-10-27T12:27:00Z').getTime(), off = fixed - RealDate.now();
+            global.Date = class extends RealDate { constructor(...a) { if (!a.length) super(RealDate.now() + off); else super(...a); } static now() { return RealDate.now() + off; } };
+            await pool.query(`INSERT INTO students VALUES ('otabek','Otabek','', '','english','dilnoza','sanjar',1,'13:00',30,'{"startDate":"2026-10-01"}'),
+                ('laylo','Laylo','', '','english','dilnoza','sanjar',1,'14:00',30,'{"startDate":"2026-10-15"}');
+              INSERT INTO main_attendance VALUES ('2026-10_dilnoza','otabek',2,1);
+              INSERT INTO school_absences (teacher_id, student_id, day, absent, marked_by) VALUES ('dilnoza','otabek','2026-10-02',true,'u-dil'),
+                ('dilnoza','otabek','2026-10-09',true,'u-dil'),('dilnoza','otabek','2026-10-14',true,'u-dil');
+              INSERT INTO school_student_status (id,student_id,status,from_date,to_date,reason_code,reason,payload,actor_id,actor_name,actor_role)
+                VALUES ('fz-ota','otabek','frozen','2026-10-12','2026-10-18','other','Safar','{}','u-admin','Abdulloh','admin');
+              INSERT INTO school_assist_contacts (id,student_id,assistant_id,day,at_min,channel,minutes,note,outcome,created_by)
+                VALUES ('c-ota20','otabek','sanjar','2026-10-20',600,'phone',8,'','contacted','u-sanjar');`);
+            const users = { 'u-dil': { id: 'u-dil', role: 'teacher', name: 'Dilnoza', email: 'dilnoza@x.uz' }, 'u-sanjar': { id: 'u-sanjar', role: 'teacher', name: 'Sanjar', email: 'sanjar@x.uz' },
+                'u-admin': { id: 'u-admin', role: 'admin', name: 'Abdulloh' } };
+            const app = express(); app.use(express.json());
+            app.use('/api/school', require('../server/routes/school')({ db: { pool, tx: fn => tx(fn) }, authRequired: (req, res, next) => { req.user = { ...users[req.headers['x-user']] }; next(); },
+                findUserById: async id => users[id] || null }));
+            const server = await new Promise(r => { const sv = app.listen(0, '127.0.0.1', () => r(sv)); });
+            const call = async (user, method, path, body) => {
+                const r = await fetch(`http://127.0.0.1:${server.address().port}/api/school${path}`, { method, headers: { 'content-type': 'application/json', 'x-user': user }, body: body ? JSON.stringify(body) : undefined });
+                return { status: r.status, body: await r.json() };
+            };
+            try {
+                // Qoplanmagan darslar — bitta manba: 2-okt "Keldi" ustun, 14-okt muzlatilgan → faqat 9-okt.
+                let r = await call('u-dil', 'GET', '/attendance/missed?month=2026-10');
+                assert.equal(r.status, 200);
+                assert.deepEqual(r.body.missed.filter(m => m.studentId === 'otabek').map(m => m.date), ['2026-10-09']);
+                r = await call('u-admin', 'GET', '/attendance/missed?month=2026-10&teacherId=dilnoza');
+                assert.deepEqual(r.body.missed.filter(m => m.studentId === 'otabek').map(m => [m.date, m.teacherId]), [['2026-10-09', 'dilnoza']]);
+                r = await call('u-admin', 'GET', '/attendance/missed?month=2026-10');
+                assert.ok(r.body.missed.some(m => m.studentId === 'otabek' && m.date === '2026-10-09'));
+                assert.equal((await call('u-sanjar', 'GET', '/attendance/missed?month=2026-10')).body.missed.length, 0, 'yordamchida asosiy darslar yo\'q');
+                // Admin rejaga qo'yish (planMakeup) — ustoz yo'llari bilan bir xil qoldirilgan dars tekshiruvi.
+                const plan = missedDate => call('u-admin', 'POST', '/makeups/plan', { teacherId: 'dilnoza', studentId: 'otabek', missedDate, date: '2026-10-31', time: '11:00', duration: 30 });
+                r = await plan('2026-10-02'); assert.equal(r.status, 400); assert.match(r.body.error, /Keldi/);
+                r = await plan('2026-10-14'); assert.equal(r.status, 409); assert.match(r.body.error, /faol emas/);
+                r = await plan('2026-10-30'); assert.equal(r.status, 400); assert.match(r.body.error, /kelajakda/);
+                r = await plan('2026-10-09'); assert.equal(r.status, 200); assert.equal(r.body.makeup.status, 'planned');
+                // Jadvaldagi qoplash bloki: missedCame — keyin qoldirilgan kunga "Keldi" qo'yilsa true (maoshga o'tmaydi).
+                const mkItem = async () => (await call('u-dil', 'GET', '/schedule?from=2026-10-31&to=2026-10-31')).body.views.flatMap(v => v.items).find(i => i.kind === 'makeup' && i.studentId === 'otabek');
+                assert.equal((await mkItem()).missedCame, false);
+                await pool.query("INSERT INTO main_attendance VALUES ('2026-10_dilnoza','otabek',9,1)");
+                assert.equal((await mkItem()).missedCame, true);
+                await pool.query("DELETE FROM main_attendance WHERE att_key='2026-10_dilnoza' AND student_id='otabek' AND day=9");
+                // Admin alohida qoplash ham "Keldi"/muzlatilgan kunga yo'q.
+                r = await call('u-admin', 'POST', '/makeups/separate', { studentId: 'otabek', missedDate: '2026-10-02', heldDate: '2026-10-03' });
+                assert.equal(r.status, 400); assert.match(r.body.error, /Keldi/);
+                r = await call('u-admin', 'POST', '/makeups/separate', { studentId: 'otabek', missedDate: '2026-10-14', heldDate: '2026-10-24' });
+                assert.equal(r.status, 409);
+                // Qoplash tekshiruvda, keyin qoldirilgan kunga "Keldi" qo'yildi → tasdiqlanmaydi (maoshga ikki marta o'tmasin).
+                await pool.query(`INSERT INTO school_makeups (id,student_id,teacher_id,missed_date,held_date,kind,status,created_by) VALUES ('mk-ota','otabek','dilnoza','2026-10-19','2026-10-20','separate','review','u-dil');
+                  INSERT INTO main_attendance VALUES ('2026-10_dilnoza','otabek',19,1);`);
+                r = await call('u-admin', 'POST', '/makeups/mk-ota/decide', { decision: 'approve' });
+                assert.equal(r.status, 409); assert.match(r.body.error, /Keldi/);
+                // Admin ro'yxatida belgi: qoldirilgan kunda "Keldi" bor — maoshga o'tmaydi (yozuv o'chirilmaydi).
+                r = await call('u-admin', 'GET', '/makeups?month=2026-10');
+                assert.equal(r.body.makeups.find(m => m.id === 'mk-ota').missed_came, true);
+                assert.equal(r.body.makeups.find(m => m.student_id === 'otabek' && m.status === 'planned').missed_came, false);
+                r = await call('u-dil', 'GET', '/makeups');
+                assert.equal(r.body.makeups.find(m => m.id === 'mk-ota').missed_came, true);
+                r = await call('u-admin', 'POST', '/makeups/mk-ota/decide', { decision: 'reject', note: 'dars o\'tilgan' });
+                assert.equal(r.status, 200);
+                // Yordamchi kechikkan so'rovi: shu kuni hisoblangan aloqa bor → 409; kurs boshlanishidan oldin → 400.
+                const late = { reason: 'qo\'ng\'iroq qildim, belgilamadim', channel: 'phone', minutes: 10 };
+                r = await call('u-sanjar', 'POST', '/assist/late-requests', { ...late, studentId: 'otabek', day: '2026-10-20' });
+                assert.equal(r.status, 409); assert.match(r.body.error, /hisoblangan aloqa/);
+                r = await call('u-sanjar', 'POST', '/assist/late-requests', { ...late, studentId: 'laylo', day: '2026-10-10' });
+                assert.equal(r.status, 400); assert.match(r.body.error, /2026-10-15/);
+                assert.equal((await call('u-sanjar', 'POST', '/assist/late-requests', { ...late, studentId: 'otabek', day: '2026-10-21' })).status, 200);
+                // Yopilgan oy hisobidagi o'quvchi: keyin yordamchidan ajratilsa / ustozi almashsa ham o'sha oy holati.
+                await pool.query(`UPDATE students SET assistant_teacher_id=NULL, teacher_id='kamola' WHERE id='otabek';
+                  INSERT INTO school_teacher_history (id,student_id,teacher_id,from_date,to_date,reason,actor_id) VALUES ('th-ota0','otabek','dilnoza','2026-10-01','2026-10-31','almashdi','u-admin'),
+                    ('th-ota','otabek','kamola','2026-11-01',NULL,'almashdi','u-admin');
+                  INSERT INTO school_student_status (id,student_id,status,from_date,reason_code,reason,payload,actor_id,actor_name,actor_role)
+                    VALUES ('lf-ota','otabek','left','2026-10-25','other','Ketdi','{}','u-admin','Abdulloh','admin');`);
+                const rep = await A.monthReport(pool, 'sanjar', '2026-10');
+                assert.deepEqual(rep.people.otabek, { name: 'Otabek', teacherId: 'dilnoza', teacherName: 'Dilnoza', left: true });
+                assert.ok(rep.roster.left.includes('otabek'));
+            } finally { global.Date = RealDate; await new Promise(r => server.close(r)); }
+        });
     } finally { await pool.end(); }
 });

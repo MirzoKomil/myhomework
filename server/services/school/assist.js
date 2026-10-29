@@ -239,8 +239,32 @@ async function monthReport(db, assistantId, month) {
         AND period_start <= $3 AND period_end >= $2 ORDER BY period_start LIMIT 1`, [assistantId, from, to]).catch(() => ({ rows: [] }))).rows[0];
     const paid = paidRow ? { amount: Number(paidRow.amount), paidAt: paidRow.paid_at } : null;
     const roster = await monthRoster(db, assistantId, month, r).catch(() => null);
+    const people = await monthPeople(db, month, [...r.students.map(x => x.studentId), ...(roster?.active || []), ...(roster?.left || [])], roster).catch(() => ({}));
     return { month, assistantId, rate: r.rate, monthly: mr.monthly, rateSource: mr.source, policy: month < CONTACTS_FROM ? 'legacy' : 'contacts-v1', cap: MONTH_CAP, ...r,
-        computedAmount: r.amount, amount: paid ? paid.amount : r.amount, paid, roster, corrections, state: await monthState(db, month) };
+        computedAmount: r.amount, amount: paid ? paid.amount : r.amount, paid, roster, people, corrections, state: await monthState(db, month) };
+}
+// Oy hisobotidagi o'quvchilar — o'sha oy holati bo'yicha (joriy biriktirishdan emas; yopilgan oyda keyin o'zgarmaydi):
+//  { [studentId]: { name, teacherId, teacherName, left } } — asosiy ustoz oy oxiridagi ustozlar tarixidan (school_teacher_history),
+//  tarix yo'q bo'lsa — students.teacher_id; left — shu oyda chiqib ketgan (monthRoster). O'quvchi keyin yordamchidan ajratilsa,
+//  boshqa yordamchiga yoki ustozga o'tsa ham shu oy jadvali avvalgidek ko'rinadi.
+async function monthPeople(db, month, ids, roster) {
+    const list = [...new Set((ids || []).filter(Boolean).map(String))];
+    if (!list.length) return {};
+    const { to } = T.monthBounds(month);
+    const studs = (await db.query('SELECT id, name, teacher_id, extra_data FROM students WHERE id = ANY($1::text[])', [list])).rows;
+    const hist = (await db.query("SELECT to_regclass('public.school_teacher_history')::text AS t")).rows[0]?.t
+        ? (await db.query('SELECT student_id, teacher_id, from_date FROM school_teacher_history WHERE student_id = ANY($1::text[]) AND from_date <= $2 ORDER BY from_date, created_at', [list, to])).rows : [];
+    const lastTeacher = new Map(); for (const h of hist) lastTeacher.set(h.student_id, h.teacher_id);
+    const tIds = [...new Set(studs.map(s => lastTeacher.get(s.id) || s.teacher_id).filter(Boolean))];
+    const names = new Map();
+    if (tIds.length) {
+        const hasTeachers = (await db.query("SELECT to_regclass('public.teachers')::text AS t")).rows[0]?.t;
+        for (const r of (await db.query(`SELECT id, name FROM hr_employees WHERE id = ANY($1::text[])
+            ${hasTeachers ? 'UNION ALL SELECT id, name FROM teachers WHERE id = ANY($1::text[]) AND id NOT IN (SELECT id FROM hr_employees)' : ''}`, [tIds])).rows) names.set(r.id, r.name);
+    }
+    const left = new Set(roster?.left || []);
+    return Object.fromEntries(studs.map(s => { const tid = lastTeacher.get(s.id) || s.teacher_id || null;
+        return [s.id, { name: s.name || '', teacherId: tid, teacherName: tid ? names.get(tid) || '' : '', left: left.has(s.id) }]; }));
 }
 
 // Oyni yopish bosqichlari (admin / moliya).

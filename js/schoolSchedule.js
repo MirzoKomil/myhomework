@@ -230,7 +230,7 @@
         const ST = { planned: ['Rejada', 'sc-pill--info'], review: ['Tekshiruvda', 'sc-pill--warn'], approved: ['Tasdiqlandi', 'sc-pill--ok'], rejected: ['Rad etildi', 'sc-pill--bad'], cancelled: ['Bekor', 'sc-pill--mute'] };
         body.innerHTML = `<div class="sc-note">Qoplash darsi ustoz maoshidan ayrilmasligi uchun: faqat haqiqiy kelmagan dars uchun, shu oy ichida. Tasdiqlangandan keyin maoshga qo'shiladi.</div>
           <section class="sc-card"><table class="sc-table"><thead><tr><th>O'quvchi</th><th>Ustoz</th><th>Qoldirilgan</th><th>Qoplangan</th><th>Tur</th><th>Holat</th><th></th></tr></thead><tbody>
-          ${list.map(m => `<tr><td><button type="button" class="sc-link" data-st="${esc(m.student_id)}">${esc(U().studentById(m.student_id)?.name || m.student_id)}</button></td><td>${esc(U().teacherName(m.teacher_id, true))}</td><td>${esc(fmtDate(String(m.missed_date).slice(0, 10)))}</td><td>${m.held_date ? esc(fmtDate(String(m.held_date).slice(0, 10))) : '—'}</td><td>${m.kind === 'double' ? 'Qo\'shaloq' : 'Alohida'}</td>
+          ${list.map(m => `<tr><td><button type="button" class="sc-link" data-st="${esc(m.student_id)}">${esc(U().studentById(m.student_id)?.name || m.student_id)}</button></td><td>${esc(U().teacherName(m.teacher_id, true))}</td><td>${esc(fmtDate(String(m.missed_date).slice(0, 10)))}${U().missedCamePill(m)}</td><td>${m.held_date ? esc(fmtDate(String(m.held_date).slice(0, 10))) : '—'}</td><td>${m.kind === 'double' ? 'Qo\'shaloq' : 'Alohida'}</td>
             <td><span class="sc-pill ${ST[m.status][1]}">${ST[m.status][0]}</span></td><td>${m.status === 'review' ? `<button type="button" class="sc-btn sc-btn--sm" data-no="${esc(m.id)}">Rad</button> <button type="button" class="sc-btn sc-btn--pri sc-btn--sm" data-yes="${esc(m.id)}">Tasdiqlash</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="7" class="sc-mt">Qoplash yo\'q</td></tr>'}</tbody></table></section>`;
         bindClicks(body, reload);
         const decide = async (id, decision) => {
@@ -353,9 +353,11 @@
             const sid0 = opts.studentId && pool.find(s => s.id === opts.studentId);
             if (opts.studentId && !sid0) return fail('Bu o\'quvchi sizga biriktirilmagan — qoplash faqat o\'z o\'quvchilaringiz uchun');
             const tq = !teacher && sid0 ? `&teacherId=${encodeURIComponent(sid0.teacherId)}` : '';
-            const [ab, mk] = await Promise.all([u.api(`/attendance/absences?month=${month}${tq}`), u.api(teacher ? '/makeups' : `/makeups?month=${month}`)]);
+            // Qoplanmagan darslar — server /attendance/missed (S.missedLessons: "Keldi" ustun, faqat dars kuni, o'quvchi faol kun,
+            // kelajak yo'q) — Bosh sahifa va qoplash yozish tekshiruvi bilan bitta manba (xom "Kelmadi" ro'yxati emas).
+            const [ms, mk] = await Promise.all([u.api(`/attendance/missed?month=${month}${tq}`), u.api(teacher ? '/makeups' : `/makeups?month=${month}`)]);
             const covered = new Map((mk.makeups || []).filter(m => ['planned', 'review', 'approved'].includes(m.status)).map(m => [`${m.student_id}|${String(m.missed_date || '').slice(0, 10)}`, m]));
-            const missedOf = sid => [...new Map((ab.absences || []).filter(a => a.studentId === sid && a.day <= today()).map(a => [a.day, a])).keys()].sort()
+            const missedOf = sid => [...new Set((ms.missed || []).filter(a => a.studentId === sid && a.date <= today()).map(a => a.date))].sort()
                 .map(day => ({ day, mk: covered.get(`${sid}|${day}`) || null }));
             const st = sid0 || pool.find(s => missedOf(s.id).some(m => !m.mk)) || null;
             if (!st) return fail(`Bu oyda qoplanmagan dars yo'q — "Kelmadi" deb belgilangan dars bo'lsa, shu yerda chiqadi`);

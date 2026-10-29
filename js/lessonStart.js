@@ -77,8 +77,13 @@
             }
             const nm = nowMin();
             // Yordamchi aloqasi tavsiya vaqti — o'tib ketgan bo'lsa ham bugun bajarilmagani ko'rsatiladi.
-            const next = items.find(i => !i.done && i.end > nm && i.att !== 1) || (assistant ? items.find(i => !i.done) : null) || null;
-            const data = { assistant, items, next, done: items.filter(i => i.end <= nm || i.att === 1 || i.done).length, total: items.length, lang: teacherLang(user) };
+            // Yordamchi: o'quvchi bo'yicha — bugun bog'langan o'quvchi (avval "javob bermadi" bo'lsa ham) keyingi bo'lmaydi;
+            // aks holda hammasi belgilangach eski "javob bermadi" urinishi banner'ga chiqib qolardi. Hammasi belgilansa — banner yo'q.
+            const doneIds = new Set(items.filter(i => i.done).map(i => i.studentId));
+            const open = assistant ? items.filter(i => !doneIds.has(i.studentId)) : items.filter(i => !i.done);
+            const next = open.find(i => i.end > nm && i.att !== 1) || (assistant ? open[0] : null) || null;
+            const total = assistant ? new Set(items.map(i => i.studentId)).size : items.length;
+            const data = { assistant, items, next, done: assistant ? doneIds.size : items.filter(i => i.end <= nm || i.att === 1 || i.done).length, total, lang: teacherLang(user) };
             cache = { at: Date.now(), key, data, p: null };
             return data;
         })().catch(e => { cache.p = null; throw e; });

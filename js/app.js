@@ -243,6 +243,9 @@ function isLeadsReadOnly(user) {
 
 function applyRoleBasedAccess(user) {
     const role = user.role;
+    // Ustoz va yordamchiga eski admin o'quvchi paneli ("To'lovlar", "Sotuv tarixi" tablari) DOM'ga ham qo'yilmaydi —
+    // ular uchun o'quvchi kartasi schoolUI.openStudent (pul ma'lumotisiz). openStudentDetail ham shunga yo'naltiradi.
+    if (role === 'teacher') ['studentDetailPanel', 'studentDetailOverlay'].forEach(id => document.getElementById(id)?.remove());
     const sidebar = document.getElementById('sidebarMenu');
     if (!sidebar) return;
 
@@ -8147,16 +8150,6 @@ function renderRopDashboardBlock(user) {
 // Ustoz bosh sahifasi: bugungi darslar (oʻz oʻquvchilari, vaqt boʻyicha) va
 // shu oydagi davomat. Telefon/toʻlov koʻrsatilmaydi. Davomat state'da faqat
 // "keldi" belgisi bilan keladi, shuning uchun qolganlari "belgilanmagan".
-// Yordamchi aloqasi uchun tavsiya kunlari: o'quvchining dars kunlariga teskari (Du·Ch·Ju ↔ Se·Pa·Sh).
-function _assistAdviceDays(dow) {
-    return expandLessonPatternDays(dow).includes(1) ? [2, 4, 6] : [1, 3, 5];
-}
-function _thxTeacherShort(teacherId) {
-    const t = typeof resolveTeacherWithVirtual === 'function' ? resolveTeacherWithVirtual(teacherId) : null;
-    const parts = String(t?.name || '').trim().split(/\s+/);
-    return parts[0] ? parts[0] + (parts[1] ? ' ' + parts[1][0] + '.' : '') : '—';
-}
-
 // "Kelmadi" — Davomat va Dars jadvali bilan bitta manba: server "Kelmadi"ni school_absences ga yozadi
 // (/api/school/attendance/absences), main_attendance da faqat "Keldi" qoladi. Ro'yxat brauzer keshida
 // (globalThis.__schoolAbsences — teacherDutyUI va schoolTeacher.homeExtras to'ldiradi); eski 0 belgisi ham hisobga olinadi.
@@ -8178,8 +8171,8 @@ function renderTeacherTodayBlock(user, { todoSlot = true } = {}) {
     const day = now.getDate();
     const nowMin = now.getHours() * 60 + now.getMinutes();
     const all = getItem(STORAGE_KEYS.students, []).filter(s => AttendanceRules.isActiveStudent(s));
+    // 29-okt: asosiy ustoz yordamchi bo'la olmaydi — bu blok faqat asosiy ustozning o'z darslari (yordamchi — schoolTeacher.assistantHome).
     const students = all.filter(s => ids.has(String(s.teacherId || '')));
-    const helped = all.filter(s => ids.has(String(s.assistantTeacherId || '')));
     const att = getItem(STORAGE_KEYS.mainAttendance, {});
     const present = (sid, d) => [...ids].some(tid => att[`${month}_${tid}`]?.[sid]?.[d] === 1);
     const absent = (sid, d) => !present(sid, d) && _thxAbsentServer(ids, month, sid, d, att);
@@ -8187,24 +8180,18 @@ function renderTeacherTodayBlock(user, { todoSlot = true } = {}) {
     const today = students
         .filter(s => s.lessonDayOfWeek != null && s.lessonTime && expandLessonPatternDays(s.lessonDayOfWeek).includes(dow))
         .map(s => ({ ...s, _duty: 'main' }))
-        // Yordamchi aloqasi: o'quvchining dars kunlariga teskari kunlarda tavsiya qilinadi (Du·Ch·Ju ↔ Se·Pa·Sh).
-        .concat(helped.filter(s => s.lessonDayOfWeek != null && s.lessonTime && _assistAdviceDays(s.lessonDayOfWeek).includes(dow)).map(s => ({ ...s, _duty: 'assistant' })))
         .sort((a, b) => (toMin(a.lessonTime) ?? 9999) - (toMin(b.lessonTime) ?? 9999));
     // UstozBosh "Bugun" (dizayndagi .tl2): vaqt · holat nuqtasi · ism · holat pill'i. Amal tugmasi faqat kerak bo'lganda:
-    // joriy/keyingi darsda "Boshlash" (js/ustozHome.js decorateToday), yordamchi aloqasida ☎ va "Aloqani belgilash".
+    // joriy/keyingi darsda "Boshlash" (js/ustozHome.js decorateToday).
     // Davomat belgilash — Akademik → Davomat ("Davomatni ochish →", "Bajarish kerak → Belgilash").
     const pill = (cls, t) => `<span class="uhb-pill uhb-pill--${cls}">${t}</span>`;
-    const phoneSvg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>';
     const rows = today.map(s => {
-        const isAssistant = s._duty === 'assistant';
         const start = toMin(s.lessonTime);
         const dur = Number(s.lessonDuration) || 15;
         const ended = start != null && nowMin >= start + dur;
-        const st = isAssistant ? 'wait' : present(s.id, day) ? 'ok' : absent(s.id, day) ? 'bad' : ended ? 'warn' : start != null && nowMin >= start ? 'now' : 'wait';
-        const sub = isAssistant ? `yordamchi aloqasi · tavsiya · asosiy ustoz ${escapeHtml(_thxTeacherShort(s.teacherId))}` : `${dur} daq · asosiy${st === 'warn' ? ' · dars tugagan' : ''}`;
-        const act = isAssistant
-            ? `<button type="button" class="uhb-clb" data-thx-call="${escapeHtml(s.id)}" title="Qo'ng'iroq qilish — Telegram guruh orqali" aria-label="${escapeHtml(s.name || '')}ga qo'ng'iroq qilish">${phoneSvg}</button><button type="button" class="sc-btn sc-btn--sm uhb-btn" data-thx-contact="${escapeHtml(s.id)}">Aloqani belgilash</button>`
-            : st === 'ok' ? pill('ok', 'Keldi') : st === 'bad' ? pill('bad', 'Kelmadi') : st === 'warn' ? pill('warn', 'Belgilanmagan')
+        const st = present(s.id, day) ? 'ok' : absent(s.id, day) ? 'bad' : ended ? 'warn' : start != null && nowMin >= start ? 'now' : 'wait';
+        const sub = `${dur} daq · asosiy${st === 'warn' ? ' · dars tugagan' : ''}`;
+        const act = st === 'ok' ? pill('ok', 'Keldi') : st === 'bad' ? pill('bad', 'Kelmadi') : st === 'warn' ? pill('warn', 'Belgilanmagan')
             : st === 'now' ? pill('info', 'Hozir') : pill('mute', 'Kutilmoqda');
         return `<li class="tch-row tch-row--${st}" data-thx-sid="${escapeHtml(s.id)}" data-thx-st="${st}" data-thx-duty="${s._duty}" data-thx-dur="${dur}" data-thx-t="${escapeHtml(s.lessonTime)}">
             <b class="tch-time">${escapeHtml(s.lessonTime)}</b>
@@ -8212,34 +8199,14 @@ function renderTeacherTodayBlock(user, { todoSlot = true } = {}) {
             <div class="tch-row-actions">${act}</div>
         </li>`;
     }).join('');
-    const nContacts = today.filter(s => s._duty === 'assistant').length, nLessons = today.length - nContacts;
-    // Sarlavha: "Bugun · 4 dars + 1 sinov + 1 aloqa" — sinovlar serverdan keyin qo'shiladi (schoolTeacher.homeExtras).
-    const mainPanel = (students.length || helped.length) ? `<section class="card dashboard-panel uhb-today"><div class="dashboard-panel-head"><h3>Bugun · <span data-thx-today-count data-l="${nLessons}" data-c="${nContacts}">${nLessons} dars${nContacts ? ` + ${nContacts} aloqa` : ''}</span></h3><button type="button" class="ahx-link" data-teacher-open-att>Davomatni ochish →</button></div>
+    const nLessons = today.length;
+    // Sarlavha: "Bugun · 4 dars + 1 sinov" — sinovlar serverdan keyin qo'shiladi (schoolTeacher.homeExtras).
+    const mainPanel = students.length ? `<section class="card dashboard-panel uhb-today"><div class="dashboard-panel-head"><h3>Bugun · <span data-thx-today-count data-l="${nLessons}">${nLessons} dars</span></h3><button type="button" class="ahx-link" data-teacher-open-att>Davomatni ochish →</button></div>
             ${today.length ? `<ul class="tch-list rd-thx-list" data-thx-today>${rows}</ul>` : '<ul class="tch-list rd-thx-list" data-thx-today></ul><p class="dashboard-empty" data-thx-today-empty>Bugun dars yoʻq</p>'}
         </section>` : '';
-    // "Bajarish kerak" va "Yordamchi ustozlik" bloklari serverdan (/api/school) keyin to'ldiriladi — schoolTeacher.homeExtras.
+    // "Bajarish kerak" bloki serverdan (/api/school) keyin to'ldiriladi — schoolTeacher.homeExtras.
     // UstozBosh: "Bajarish kerak" butun kenglikda — renderTeacherHome uni grid ustiga alohida qo'yadi (todoSlot: false).
     return `<div id="dashboardTeacherToday">${todoSlot ? '<div data-thx-todo></div>' : ''}${mainPanel}</div>`;
-}
-
-// "Bugun" ro'yxatidagi yordamchi aloqasi qatori: ☎ (Telegram guruh + aloqani belgilash) va "Aloqani belgilash".
-// Davomat (Keldi/Kelmadi) Bosh sahifada belgilanmaydi — Akademik → Davomat (UstozBosh dizayni).
-function bindTeacherHomeToday(container, user) {
-    if (!container || user?.role !== 'teacher' || !user.linkedTeacherId) return;
-    const refresh = () => renderDashboardOverview(_lastDashboardOverviewArgs || {});
-    const find = id => getItem(STORAGE_KEYS.students, []).find(s => s.id === id);
-    container.querySelectorAll('[data-thx-contact]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const student = find(btn.dataset.thxContact);
-            if (student && window.schoolTeacher?.markDrawer) window.schoolTeacher.markDrawer(student, refresh);
-        });
-    });
-    container.querySelectorAll('[data-thx-call]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const student = find(btn.dataset.thxCall);
-            if (student && window.schoolTeacher?.callStudent) window.schoolTeacher.callStudent(student, refresh);
-        });
-    });
 }
 
 // Admin bosh sahifasi (2026-10 redizayn): butun maktab bo'yicha bugungi holat.
@@ -8831,7 +8798,6 @@ function teacherHomeStats(user, now = new Date()) {
     const nowMin = now.getHours() * 60 + now.getMinutes();
     const all = getItem(STORAGE_KEYS.students, []).filter(s => AttendanceRules.isActiveStudent(s));
     const students = all.filter(s => ids.has(String(s.teacherId || '')));
-    const helped = all.filter(s => ids.has(String(s.assistantTeacherId || '')));
     const att = getItem(STORAGE_KEYS.mainAttendance, {});
     const present = (sid, d) => [...ids].some(tid => att[`${month}_${tid}`]?.[sid]?.[d] === 1);
     const toMin = t => { const [h, m] = String(t || '').split(':').map(Number); return Number.isFinite(h) ? h * 60 + (m || 0) : null; };
@@ -8865,11 +8831,10 @@ function teacherHomeStats(user, now = new Date()) {
     }).sort((a, b) => (a.start ?? 9999) - (b.start ?? 9999));
     return {
         todayList,
-        todayCount: today.length, unmarked, students: students.length, helped: helped.length, came,
+        todayCount: today.length, unmarked, students: students.length, came,
         attExpected, attPct, attMissed,
         rating: ratings.length ? ratings.reduce((a, b) => a + b, 0) / ratings.length : null, ratingN: ratings.length,
-        // Yordamchi qismi keyin schoolTeacher.homeExtras orqali aloqalar hisobidan qo'shiladi.
-        hasSalary: !!(students.length || helped.length)
+        hasSalary: students.length > 0
     };
 }
 
@@ -8922,7 +8887,7 @@ function renderTeacherHome(user, now = new Date()) {
         : `<b class="ahx-kpi-v">—</b><div class="ahx-kpi-n"><span>jadval sozlanmagan</span></div>`;
     return `<div class="ahx thx" id="teacherHome">
         <div class="rd-thx-rolebanner">Rol kabineti: faqat oʻz oʻquvchilaringiz koʻrinadi — boshqa ustozlarning telefon, toʻlov va qarz maʻlumotlari bu yerda koʻrsatilmaydi.</div>
-        <div class="ahx-head mhx-head uhb-head"><div><h1>${greet}, ${escapeHtml(_firstName(user.name || ''))}</h1><p>${escapeHtml(`${UZ_WEEKDAYS[now.getDay()]}, ${now.getDate()}-${UZ_MONTHS_GEN[now.getMonth()]}`)} · ${s.students} oʻquvchi${s.helped ? ` · yordamchi sifatida ${s.helped}` : ''}</p></div><span class="uhb-pill uhb-pill--info">Faqat oʻz oʻquvchilaringiz koʻrinadi</span></div>
+        <div class="ahx-head mhx-head uhb-head"><div><h1>${greet}, ${escapeHtml(_firstName(user.name || ''))}</h1><p>${escapeHtml(`${UZ_WEEKDAYS[now.getDay()]}, ${now.getDate()}-${UZ_MONTHS_GEN[now.getMonth()]}`)} · ${s.students} oʻquvchi</p></div><span class="uhb-pill uhb-pill--info">Faqat oʻz oʻquvchilaringiz koʻrinadi</span></div>
         ${(() => {
             const month = UZ_MONTHS_GEN[now.getMonth()];
             const plan = kbxPlanCard({
@@ -8935,7 +8900,7 @@ function renderTeacherHome(user, now = new Date()) {
                 tiles: [
                     { l: 'Bugun', v: `${s.todayCount} dars`, small: s.unmarked ? `<span class="kbx-bad">${s.unmarked} tasi belgilanmagan</span>` : (() => { const w = (s.todayList || []).filter(x => x.state !== 'done').length; return w ? `${w} tasi kutilmoqda` : s.todayCount ? 'hammasi belgilangan' : 'dars yoʻq'; })() },
                     { l: 'Reyting', v: '…', attrs: 'data-thx-rating-kpi' },
-                    { l: 'Oʻquvchilar', v: String(s.students), small: s.helped ? `yordamchi: ${s.helped}` : '' }
+                    { l: 'Oʻquvchilar', v: String(s.students), small: '' }
                 ]
             });
             const nx = s.todayList.find(l => l.state === 'now') || s.todayList.find(l => l.state === 'wait');
@@ -9011,7 +8976,6 @@ function renderDashboardOverview(args) {
             const acked = new Set((r.acks || []).map(a => a.guideId));
             container.querySelectorAll('.uhb-gl [data-thx-guide]').forEach(b => { if (!acked.has(b.dataset.thxGuide) && !b.querySelector('.uhb-pill')) b.insertAdjacentHTML('beforeend', '<span class="uhb-pill uhb-pill--info">Yangi</span>'); });
         }).catch(() => {});
-        bindTeacherHomeToday(container, currentUser);
         window.LessonStart?.decorateHome?.(container, currentUser);
         window.UstozHome?.decorateToday?.(container);
         window.UstozHome?.decoratePlan?.(container, currentUser);
@@ -10571,6 +10535,7 @@ function renderStudents() {
 
 // ===== Student Detail Panel =====
 function openStudentDetail(studentId) {
+    if (getCurrentUser()?.role === 'teacher') { window.schoolUI?.openStudent?.(studentId); return; }
     const panel = document.getElementById('studentDetailPanel');
     if (!panel) return;
 

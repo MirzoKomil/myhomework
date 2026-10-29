@@ -87,8 +87,9 @@ test('yopilgan vaqt, faqat qoplash va bandlar', () => {
         { id: 'o2', teacher_id: 'dilnoza', date: null, weekday: 3, start_min: 1080, end_min: 1200, kind: 'makeup_only' }],
         bookings: [{ id: 'b1', teacher_id: 'dilnoza', date: '2026-11-04', start_min: 840, end_min: 870, kind: 'trial', status: 'hold', created_by: 'jahongir' }] });
     const v = S.dayView(c, 'dilnoza', '2026-11-04'); // Ch
-    assert.throws(() => S.checkSlot(v, 'trial', 630, 660), /band|ochiq emas/);
-    assert.throws(() => S.checkSlot(v, 'trial', 1080, 1110), /ochiq emas/);
+    // Yopilgan vaqt — sababi bilan ("Bu vaqt yopilgan (shifokor)"); ta'til sababi esa sotuvga aytilmaydi.
+    assert.throws(() => S.checkSlot(v, 'trial', 630, 660), /yopilgan \(shifokor\)/);
+    assert.throws(() => S.checkSlot(v, 'trial', 1080, 1110), /faqat qoplash darslari uchun/);
     assert.doesNotThrow(() => S.checkSlot(v, 'makeup', 1080, 1110));
     assert.throws(() => S.checkSlot(v, 'trial', 840, 870), /ushlab turibdi/);
     const r = S.redactForSales(v, { id: 'nodira' });

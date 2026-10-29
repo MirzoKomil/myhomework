@@ -84,7 +84,6 @@ const TG_RE = /^@?[A-Za-z][A-Za-z0-9_]{3,31}$/;
 const BDAY_RE = /^(\d{4}-)?\d{2}-\d{2}$/;
 const ROLE_UZ = { 'ingliz-oqituvchi': 'Asosiy ustoz · Ingliz tili', 'rus-oqituvchi': 'Asosiy ustoz · Rus tili', oqituvchi: 'Asosiy ustoz', yordamchi: 'Yordamchi ustoz',
     'sotuv-menejeri': 'Sotuv menejeri', rop: 'ROP · sotuv bo\'limi rahbari' };
-const DAY_UZ = ['Du', 'Se', 'Ch', 'Pa', 'Ju', 'Sh', 'Ya'];
 const shortName = n => { const p = String(n || '').trim().split(/\s+/); return p.length > 1 ? `${p[0]} ${p[1][0]}.` : p[0] || ''; };
 
 async function workInfo(db, me) {
@@ -108,11 +107,9 @@ async function workInfo(db, me) {
             rows.push(['Ish tartibi', 'har o\'quvchi bilan haftasiga 3 aloqa · kamida 5 daqiqa · vaqti erkin']);
         } else {
             const hours = (await db.query('SELECT weekday, start_min, end_min FROM school_teacher_hours WHERE teacher_id=$1 ORDER BY weekday, start_min', [e.id]).catch(() => ({ rows: [] }))).rows;
-            if (hours.length) {
-                const by = new Map();
-                for (const h of hours) { const k = `${T.fromMin(Number(h.start_min))}–${T.fromMin(Number(h.end_min))}`; by.set(k, [...(by.get(k) || []), DAY_UZ[Number(h.weekday) - 1]]); }
-                rows.push(['Ish vaqti', [...by].map(([k, d]) => `${[...new Set(d)].join('·')} ${k}`).join(' · ')]);
-            }
+            // Jadval sarlavhasi bilan bitta formatlovchi (js/workHours.js: tutash oraliqlar birlashtiriladi, kunlar guruhlanadi).
+            const text = require('../../js/workHours').text(hours);
+            if (text) rows.push(['Ish vaqti', text]);
         }
     } else if (me.kind === 'sales') {
         rows.push(['Lavozim', 'Sotuv menejeri']);
@@ -277,7 +274,7 @@ async function salaryDetail(pool, actor, now = new Date()) {
                 let closed = null;
                 if (me.kind === 'assistant') {
                     const rep = await A.monthReport(db, me.emp.id, pm);
-                    if (rep.counted || rep.state?.locked_at) closed = { month: pm, amount: ph ? ph.amount : rep.amount, counted: rep.counted, rate: rep.rate, source: ph ? 'finance' : 'contacts',
+                    if (rep.counted || rep.state?.locked_at) closed = { month: pm, amount: ph ? ph.amount : rep.amount, counted: rep.counted, rate: rep.rate, monthly: rep.monthly, source: ph ? 'finance' : 'contacts',
                         state: rep.state ? { prelimAt: rep.state.prelim_at, objectionUntil: S.dateStr(rep.state.objection_until), finalAt: rep.state.final_at, paidAt: rep.state.paid_at } : null };
                 } else if (me.kind === 'teacher') {
                     let prow = null;

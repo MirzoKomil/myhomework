@@ -86,12 +86,15 @@ test("computeTeacherRating: ilova ma'lumoti bo'lmasa ball faqat davomatdan (usto
 
 test('server/routes/state.js: /teacher-rating ustoz va rahbarlar uchun, getFullState va ilova natijalari orqali hisoblaydi', () => {
     assert.match(stateRoutes, /router\.get\('\/teacher-rating', authRequired, async \(req, res\) => \{/);
-    const fn = stateRoutes.slice(stateRoutes.indexOf("router.get('/teacher-rating'"), stateRoutes.indexOf("router.get('/teacher-rating'") + 1800);
+    const fn = stateRoutes.slice(stateRoutes.indexOf("router.get('/teacher-rating'"), stateRoutes.indexOf("router.get('/teacher-rating'") + 4000);
     assert.match(fn, /\['admin', 'rop', 'boshliq'\]\.includes\(role\)/);
     assert.match(fn, /teacherDuties\.teacherForActor\(pool, req\.user\)/);
     assert.match(fn, /await getFullState\(\)/);
-    assert.match(fn, /loadLearningByStudent\(pool\)/);
-    assert.match(fn, /computeTeacherRating\(state, ownType, undefined, learning\)/);
+    // O'tgan oy (?month=) va ▲/▼ solishtiruvi: ratingResponse; o'zlashtirish — loadLearningByStudent (sana/oy bo'yicha).
+    assert.match(fn, /loadLearning: \(now, opts\) => loadLearningByStudent\(pool, now, opts\)/);
+    assert.match(fn, /await ratingResponse\(\{ state, ownType, month: String\(req\.query\.month \|\| ''\), makeups,/);
+    // Ustozga boshqalarning faqat ism/ball/o'rni.
+    assert.match(fn, /\{ id: r\.id, name: r\.name, score: r\.score, rank: r\.rank, total: r\.total, prevRank: r\.prevRank, prevScore: r\.prevScore \}/);
 });
 
 // Ustoz Bosh sahifasida reyting kartochkasi serverdan alohida (/api/state/
@@ -108,13 +111,15 @@ test('js/app.js: Ustoz Bosh sahifasi reyting kartochkasini apiFetchTeacherRating
     assert.match(app, /_loadTeacherHomeRating\(container\);/);
 });
 
-test('js/app.js: "Bugungi darslar"da Keldi/Kelmadi va Mezonlar tugmalari mavjud davomat-saqlash oqimidan foydalanadi', () => {
-    assert.match(app, /function bindTeacherHomeToday\(container, user\) \{/);
-    const fn = app.slice(app.indexOf('function bindTeacherHomeToday('), app.length);
-    assert.match(fn, /data-thx-mark/);
-    assert.match(fn, /data-thx-contact/, 'yordamchi aloqasi schoolTeacher.markDrawer orqali');
+test('js/app.js: UstozBosh "Bugun" — davomat Akademik → Davomat orqali (Bosh sahifada Keldi/Kelmadi yo\'q); yagona yozish yo\'li /api/state/teacher-attendance', () => {
+    // 29-okt: asosiy ustoz yordamchi bo'la olmaydi — Bosh "Bugun"da yordamchi aloqasi qatori va uning bog'lovchisi yo'q.
+    assert.doesNotMatch(app, /function bindTeacherHomeToday\(/);
+    const fn = app.slice(app.indexOf('function renderTeacherTodayBlock('), app.indexOf('function isAdminHomeUser('));
+    assert.doesNotMatch(fn, /data-thx-mark/, 'Bosh sahifada davomat tugmasi yo\'q (UstozBosh dizayni)');
+    assert.doesNotMatch(fn, /data-thx-contact/, 'yordamchi aloqasi faqat yordamchi Bosh sahifasida (js/yordamchi.js)');
+    assert.match(app, /data-teacher-open-att/, '"Davomatni ochish →" Akademik → Davomatga');
     assert.doesNotMatch(app, /data-thx-grade="/, 'Mezonlar tugmasi yo\'q — o\'quvchiga baho qo\'yilmaydi');
     assert.match(app, /function _openLiveGradeModal\(studentName, dateStr, lessonOptions, onSave\) \{\s*onSave\(null\);/);
-    assert.match(fn, /saveTeacherAttendanceChange\(\{ teacherId, studentId: sid, date: dateStr, present: true, grade \}\)/);
-    assert.match(fn, /saveTeacherAttendanceChange\(\{ teacherId, studentId: sid, date: dateStr, present: false \}\)/);
+    assert.match(app, /async function saveTeacherAttendanceChange\(payload\) \{/);
+    assert.match(fs.readFileSync(path.join(__dirname, '../js/api.js'), 'utf8'), /apiFetch\('\/api\/state\/teacher-attendance'/);
 });
