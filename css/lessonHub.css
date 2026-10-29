@@ -733,3 +733,4 @@ html[data-theme="dark"] .lh { --lh-bd: #24304A; --lh-th: #0D1524; --lh-btnbd: #3
 .lh-pfoot2 .lh-linkbtn { font-size: 12px; }
 @media (max-width: 1180px) { .lh-pk6 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 760px) { .lh-pk6 { grid-template-columns: repeat(2, minmax(0, 1fr)); } .lh-pinp { width: auto; flex: 1 1 100%; } }
+.lp-lerr { max-width: 520px; margin: 40px auto; text-align: left; }

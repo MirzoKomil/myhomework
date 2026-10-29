@@ -154,6 +154,16 @@
         const monthly = Number(rep?.monthly) > 0 ? Number(rep.monthly) : Math.round((Number(rep?.rate) || 0) * cap / 1000) * 1000;
         return `${cap} aloqa = ${num(monthly)} so'm`;
     }
+    // Yordamchi o'quvchilar soni — BITTA yorliq (Bosh, Davomat "Jami", Mening maoshim "Jami"): hozir faol o'quvchilar
+    // (AttendanceRules.isActiveStudent) + shu oy hisobida bor, lekin hozir faol bo'lmaganlar (muzlatilgan / chiqib ketgan) alohida.
+    function assistStudentsLabel(active, extra = 0) {
+        return `${Number(active) || 0} o'quvchi${extra ? ` + ${extra} muzlatilgan / chiqib ketgan` : ''}`;
+    }
+    // "mumkin" (oy rejasi — har o'quvchiga 13 aloqa/oy chegarasi) va "ko'pi bilan" (hisoblangan + qolgan tavsiya kunlari) farqi izohi.
+    function assistPossibleNote(plan, possible, cap = 13) {
+        if (possible == null || plan == null || Number(possible) >= Number(plan)) return '';
+        return `Reja ${plan} — har o'quvchiga oyiga ${cap} aloqa chegarasi bo'yicha; ko'pi bilan ${possible} — hisoblangan + qolgan tavsiya kunlari (o'tgan kunlar qaytmaydi)`;
+    }
     function assistPayNote(rep, counted = rep?.counted) {
         return `${Number(counted) || 0} hisoblangan aloqa · har o'quvchi: ${assistPayRule(rep)}`;
     }
@@ -224,8 +234,8 @@
             if (!rows.length) return '<p class="sc-mt scc-pad">Ilovada hali dars boshlanmagan</p>';
             return `<div class="scc-tw"><table class="scc-kt${compact ? ' is-compact' : ''}"><thead><tr><th scope="col">Dars</th><th scope="col">Bosqichlar</th><th scope="col">1-urinish</th><th scope="col">Urinish</th><th scope="col">Xato</th><th scope="col">Vaqt</th></tr></thead><tbody>
               ${rows.map(l => { const x = acad.lessonStats(l), type = l.type === 'live' ? 'jonli' : 'video';
-                return `<tr><td><b>${l.no}-dars</b>${compact ? ` <small>${type}</small>` : `<small>${type} · ${esc(whenTxt(x.last))}${l.type === 'live' && x.last ? ', ustoz bilan' : ''}</small>`}</td><td>${acad.steps(l)}</td>
-                  <td><b class="scc-pc ${acad.cls(x.first)}">${acad.pct(x.first)}</b></td><td>${x.attempts || '—'}</td><td>${x.mistakes}</td><td>${esc(acad.dur(l.seconds))}</td></tr>`; }).join('')}
+                return `<tr><td data-l="Dars"><b>${l.no}-dars</b>${compact ? ` <small>${type}</small>` : `<small>${type} · ${esc(whenTxt(x.last))}${l.type === 'live' && x.last ? ', ustoz bilan' : ''}</small>`}</td><td data-l="Bosqichlar">${acad.steps(l)}</td>
+                  <td data-l="1-urinish"><b class="scc-pc ${acad.cls(x.first)}">${acad.pct(x.first)}</b></td><td data-l="Urinish">${x.attempts || '—'}</td><td data-l="Xato">${x.mistakes}</td><td data-l="Vaqt">${esc(acad.dur(l.seconds))}</td></tr>`; }).join('')}
             </tbody></table></div>`;
         },
         mistakesList(d, { compact = false, n = 3 } = {}) {
@@ -420,8 +430,8 @@
             <div class="scc-hrow">${studentAvatar(c, 44)}<div class="scc-hmain">
               <div class="scc-hname"><h1>${esc(c.name)}</h1>${sc === 'assistant' ? '<button type="button" class="scc-call" data-act="call"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>Qo\'ng\'iroq</button>' : ''}</div>
               <div class="scc-pills">${sc === 'past' ? '' : tgPill(c.group)} ${statusPill(c)} <span class="sc-pill sc-pill--info">${c.subject === 'russian' ? 'Rus tili' : 'Ingliz tili'}</span><span data-flag></span><span class="scc-meta" data-meta>${meta}</span></div>
-            </div></div>
-            ${acts.length ? `<div class="scc-acts">${acts.map(([k, l, p]) => `<button type="button" class="sc-btn${p ? ' sc-btn--pri' : ''}" data-act="${k}"${k === 'write' ? ` title="${esc(writeTitle(c))}"` : ''}>${esc(k === 'write' ? writeLabel(c) : l)}</button>`).join('')}</div>` : ''}
+            </div>
+            ${acts.length ? `<div class="scc-acts">${acts.map(([k, l, p]) => `<button type="button" class="sc-btn${p ? ' sc-btn--pri' : ''}" data-act="${k}"${k === 'write' ? ` title="${esc(writeTitle(c))}"` : ''}>${esc(k === 'write' ? writeLabel(c) : l)}</button>`).join('')}</div>` : ''}</div>
             <div class="scc-tabs"><div role="tablist" aria-label="Karta bo'limlari">${tabs.map(([k, l]) => `<button type="button" role="tab" class="scc-tab" data-tab="${k}" aria-selected="${k === tab}">${l}</button>`).join('')}</div>${lock ? `<span class="scc-lock">${LOCK}${esc(lock)}</span>` : ''}</div>
           </section>
           <div class="scc-body" data-body></div>`;
@@ -1276,6 +1286,6 @@
         studentAvatar, staffAvatar, staffAvatarUrl, tgPill, teacherName, studentById, teachersForSubject,
         openDrawer, openDialog, closeDrawer, errBox, busy, field, impact, toast, refreshCache, nowMin,
         openStudent, closeStudent, renderApprovals, renderGroups, renderAssistAdmin, loadStaffAvatars, staffAvatarOf: id => staffAvatarUrl(_avatars[id]), acad, dShort, whenTxt, shortName, num,
-        bulkDrawer, correctionDrawer, CHN, CST, assistPayNote, assistPayRule, MISSED_CAME, missedCamePill, studentRequestDrawer
+        bulkDrawer, correctionDrawer, CHN, CST, assistPayNote, assistPayRule, assistStudentsLabel, assistPossibleNote, MISSED_CAME, missedCamePill, studentRequestDrawer
     });
 })();

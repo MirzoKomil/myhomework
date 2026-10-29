@@ -29,7 +29,7 @@ module.exports = function createAcademicRouter({ pool, authRequired, studentAuth
     router.get('/materials', handle(async req => {
         const access = await hub.resolveAccess(pool, req.user);
         const lang = access.lang || (req.query.lang === 'russian' ? 'russian' : 'english');
-        return { materials: await hub.listMaterials(pool, lang) };
+        return { materials: hub.visibleMaterials(await hub.listMaterials(pool, lang), access) };
     }));
     router.post('/materials', handle(async req => ({ material: await hub.saveMaterial(pool, req.user, null, req.body) })));
     router.put('/materials/:id', handle(async req => ({ material: await hub.saveMaterial(pool, req.user, req.params.id, req.body) })));

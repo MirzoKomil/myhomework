@@ -332,6 +332,14 @@
         const U = window.schoolUI;
         return U?.studentAvatar ? U.studentAvatar(s || { id, name }, 30) : '';
     }
+    // "Jami · N o'quvchi + M muzlatilgan / chiqib ketgan" — Bosh va Davomat bilan bitta yorliq (schoolUI.assistStudentsLabel).
+    function studentsLbl(list) {
+        let local = [];
+        try { local = getItem(STORAGE_KEYS.students, []) || []; } catch { /* yo'q */ }
+        const byId = new Map(local.map(x => [x.id, x]));
+        const act = list.filter(s => { const l = byId.get(s.studentId); return l ? window.AttendanceRules.isActiveStudent(l) : true; }).length;
+        return window.schoolUI?.assistStudentsLabel ? window.schoolUI.assistStudentsLabel(act, list.length - act) : `${list.length} o'quvchi`;
+    }
     function drawAssistSalary(body, d) {
         const a = d.assist;
         const rows = a.students.map(s => {
@@ -345,11 +353,11 @@
         body.innerHTML = head('Mening maoshim · aloqalar bo\'yicha') + `<div class="ss-col">
           <div class="ss-kpis ss-kpis--as">
             <div class="ss-kpi"><span>${monName(d.month)} · hozirgacha</span><b>${num(a.amount)} so'm</b><small>${esc(window.schoolUI?.assistPayNote ? window.schoolUI.assistPayNote(a) : `${a.counted} hisoblangan aloqa`)}</small></div>
-            <div class="ss-kpi"><span>Oy oxirigacha ko'pi bilan</span><b>${num(a.possibleAmount ?? a.possible * a.rate)} so'm</b><small>${a.possible} aloqa · ${a.daysLeft} kun qoldi</small></div>
+            <div class="ss-kpi"><span>Oy oxirigacha ko'pi bilan</span><b>${num(a.possibleAmount ?? window.AttendanceRules.assistAmount(a.monthly || a.rate * a.cap, a.possible, a.cap))} so'm</b><small>${a.possible} aloqa · ${a.daysLeft} kun qoldi${(n => n ? `<br>${esc(n)}` : '')(window.schoolUI?.assistPossibleNote?.(a.students.reduce((n, s) => n + (s.plan ?? a.cap), 0), a.possible, a.cap))}</small></div>
             ${lastPaid(d)}</div>
           <section class="ss-card" aria-labelledby="ssAsH"><header class="ss-ch"><h3 id="ssAsH">${monName(d.month)} · o'quvchilar bo'yicha</h3><span class="ss-mt">har o'quvchi bilan oyiga ${a.cap} tagacha · kamida 5 daqiqa</span></header>
             <div class="ss-tw"><table class="ss-tbl ss-tbl--as"><thead><tr><th scope="col">O'quvchi</th><th scope="col" class="n">Hisoblangan aloqa</th><th scope="col" class="n">Summa</th><th scope="col">Holat</th></tr></thead>
-            <tbody>${rows}</tbody><tfoot><tr><td>Jami · ${a.students.length} o'quvchi</td><td class="n">${a.counted} / ${a.students.reduce((n, s) => n + (s.plan ?? a.cap), 0)}</td><td class="n">${num(a.amount)}</td><td></td></tr></tfoot></table></div>
+            <tbody>${rows}</tbody><tfoot><tr><td>Jami · ${esc(studentsLbl(a.students))}</td><td class="n">${a.counted} / ${a.students.reduce((n, s) => n + (s.plan ?? a.cap), 0)}</td><td class="n">${num(a.amount)}</td><td></td></tr></tfoot></table></div>
             <p class="ss-note ss-mt">Hisoblanmaydi: "javob bermadi", 5 daqiqadan qisqa, bir kundagi ikkinchi aloqa, haftadagi ikkinchi yozishma. Oy yopilganda Moliya tasdiqlaydi. ${esc(payNote(d.month))}</p></section></div>`;
     }
 
