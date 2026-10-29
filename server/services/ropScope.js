@@ -11,7 +11,8 @@
 const LANGS = ['english', 'russian'];
 
 // PATCH /api/state orqali ROP yoza olmaydigan kalitlar.
-const ROP_DENIED_STATE_KEYS = ['cashFlow', 'payments', 'bonusData', 'bonusHistory', 'salesPlan', 'individualSalesPlans'];
+// bonusHistory (kimga qaysi bonus berilgani) — ROP ishi bo'lib qoladi (openAddBonusHistoryModal: admin va ROP).
+const ROP_DENIED_STATE_KEYS = ['cashFlow', 'payments', 'bonusData', 'salesPlan', 'individualSalesPlans'];
 
 const langOfStudent = s => (String(s?.subject || '').trim().toLowerCase() === 'russian' ? 'russian' : 'english');
 const langOfLead = l => (l?.language === 'russian' ? 'russian' : 'english');
@@ -81,7 +82,7 @@ function fail(message) { return Object.assign(new Error(message), { status: 403 
 // (faqat kerak bo'lganda). Qaytaradi: tozalangan partial yoki xato tashlaydi.
 function guardRopPatch(partial, langs, existing = {}) {
     const denied = ROP_DENIED_STATE_KEYS.filter(k => partial[k] !== undefined);
-    if (denied.length) throw fail(`ROP moliya ma'lumotini (${denied.join(', ')}) o'zgartira olmaydi — sotuv rejasi va bonuslarni faqat ko'radi. Kassa, to'lov, reja va bonus sozlamalari — admin.`);
+    if (denied.length) throw fail(`ROP moliya ma'lumotini (${denied.join(', ')}) o'zgartira olmaydi — sotuv rejasi va bonus sozlamalarini faqat ko'radi. Kassa, to'lov, reja va bonus sozlamalari — admin.`);
     if (!langs) return partial;
     const out = { ...partial };
     const langName = l => (l === 'russian' ? 'rus' : 'ingliz');

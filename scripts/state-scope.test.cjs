@@ -180,10 +180,11 @@ test('B2: ROP state faqat o\'z tilida, Cash Flow yo\'q, reja/bonus ko\'rinadi', 
 });
 
 test('B1: ROP moliya kalitlarini yoza olmaydi (tilidan qat\'i nazar)', () => {
-    for (const key of ['cashFlow', 'payments', 'bonusData', 'bonusHistory', 'salesPlan', 'individualSalesPlans'])
+    for (const key of ['cashFlow', 'payments', 'bonusData', 'salesPlan', 'individualSalesPlans'])
         for (const langs of [['english'], null])
-            assert.throws(() => rop.guardRopPatch({ [key]: key === 'cashFlow' || key === 'payments' || key === 'bonusHistory' ? [] : {} }, langs, {}), e => e.status === 403, key);
+            assert.throws(() => rop.guardRopPatch({ [key]: key === 'cashFlow' || key === 'payments' ? [] : {} }, langs, {}), e => e.status === 403, key);
     assert.deepEqual(rop.guardRopPatch({ scripts: [] }, ['english'], {}), { scripts: [] });
+    assert.deepEqual(rop.guardRopPatch({ bonusHistory: [] }, ['english'], {}), { bonusHistory: [] }, 'bonus berish (tarix) — ROP ishi');
 });
 
 test('B2: ROP boshqa til o\'quvchisi/ustozini yoza va o\'chira olmaydi', () => {
