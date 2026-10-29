@@ -146,6 +146,7 @@ html.rd[data-theme="dark"] .udv {
 .udv-note b { color: var(--u-teal); }
 .udv-err:empty { display: none; }
 .udv-err { margin: 0; color: var(--u-no); font-weight: 600; font-size: 13px; }
+.udv-err--top { padding: 10px 14px; border-radius: 12px; background: var(--kb-bad-bg, #FEF3F2); color: var(--kb-bad-fg, #B42318); margin-bottom: 12px; }
 .udv-bar { display: flex; justify-content: flex-end; }
 .udv-contacts { padding: 16px 20px 20px; }
 

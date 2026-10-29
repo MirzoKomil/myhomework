@@ -486,6 +486,54 @@ function ensureStaffDemoStudents(currentUser) {
     setItem(STORAGE_KEYS.students, [...students, ...newDemos]);
 }
 
+// /api/state yuklanmasa — butun ilova ustidan rolga mos xato ekrani (BAHO-5 #1).
+// Ilgari .content-main o'rniga "npm install / npm run dev" dasturchi matni chiqar, rol menyusi hali
+// qo'llanmagani sabab ustozga ADMIN sidebari (Sotuv, Moliya, HR…) va "Lid qidirish" ko'rinardi,
+// "Qayta urinish" yo'q edi. Endi: sahifa (sidebar, header) to'liq yopiladi, faqat foydalanuvchi
+// ismi/roli, tushunarli sabab (LoadErr.reason), "Qayta urinish" (bootApp qayta) va "Chiqish".
+// DOM buzilmaydi — qayta urinish muvaffaqiyatli bo'lsa ilova odatdagidek ochiladi.
+function hideBootError() {
+    document.getElementById('mhBootFail')?.remove();
+    document.body.classList.remove('mh-boot-failed');
+}
+function showBootError(user, err) {
+    hideBootError();
+    const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const reason = window.LoadErr ? window.LoadErr.reason(err) : String(err?.message || err || '');
+    const role = user?.role || '';
+    const isAdmin = role === 'admin' || role === 'boshliq';
+    const note = isAdmin
+        ? 'Muammo bir necha daqiqada o\'tmasa, server holatini tekshiring (Railway: Deploy va Postgres).'
+        : 'Muammo bir necha daqiqada o\'tmasa, administratorga xabar bering.';
+    const box = document.createElement('div');
+    box.id = 'mhBootFail';
+    box.className = 'mh-boot-fail';
+    box.setAttribute('role', 'alert');
+    box.innerHTML = `<div class="mh-boot-card">
+        <img src="images/myhomework-logo.png" alt="Homework" class="mh-boot-logo">
+        <h2>Ma'lumotlarni yuklab bo'lmadi</h2>
+        <p class="mh-boot-reason">${esc(reason ? reason.replace(/\.?$/, '.') : '')}</p>
+        <p class="mh-boot-note">${esc(note)}</p>
+        ${user?.name ? `<p class="mh-boot-who">${esc(user.name)}</p>` : ''}
+        <div class="mh-boot-acts">
+            <button type="button" class="mh-lerr-btn" data-boot-retry>Qayta urinish</button>
+            <button type="button" class="mh-boot-out" data-boot-logout>Chiqish</button>
+        </div>
+    </div>`;
+    document.body.appendChild(box);
+    document.body.classList.add('mh-boot-failed');
+    const retry = box.querySelector('[data-boot-retry]');
+    retry.onclick = () => {
+        retry.disabled = true; retry.textContent = 'Yuklanmoqda…';
+        bootApp();
+    };
+    box.querySelector('[data-boot-logout]').onclick = () => {
+        try { clearSession(); } catch (e) { /* ignore */ }
+        window.location.href = 'login.html';
+    };
+    retry.focus();
+}
+
 async function bootApp() {
     const currentUser = getCurrentUser();
     if (!currentUser || !getToken()) {
@@ -501,15 +549,10 @@ async function bootApp() {
             window.location.href = 'login.html';
             return;
         }
-        const main = document.querySelector('.content-main') || document.body;
-        main.innerHTML = `<div class="card" style="margin:40px;text-align:center;padding:40px">
-            <h2>Server bilan ulanish yo'q</h2>
-            <p class="text-muted">Terminalda <code>npm install</code> va <code>npm run dev</code> buyruqlarini ishga tushiring.</p>
-            <p class="text-muted">${err.message}</p>
-            <a href="login.html" class="btn-primary-sm" style="display:inline-block;margin-top:16px;text-decoration:none">Login sahifasi</a>
-        </div>`;
+        showBootError(currentUser, err);
         return;
     }
+    hideBootError();
 
     // O'qituvchi uchun bog'liq teacher ID ni aniqlash
     if (currentUser.role === 'teacher') {
@@ -8863,7 +8906,13 @@ async function _loadTeacherHomeRating(container) {
         }
     } catch (err) {
         if (kpiEl) kpiEl.innerHTML = `<span class="ahx-kpi-l">Reyting</span><b class="ahx-kpi-v">—</b><div class="ahx-kpi-n"><span>yuklanmadi</span></div>`;
-        if (cardEl) cardEl.innerHTML = `<div class="ahx-card-h"><h3>Ustozlar reytingi</h3></div><p class="dashboard-empty">Yuklanmadi: ${escapeHtml(err.message || '')}</p>`;
+        // BAHO-5 #8: umumiy xato kartasi (js/loadError.js) + "Qayta urinish" — faqat reyting qayta so'raladi.
+        if (cardEl) {
+            cardEl.innerHTML = `<div class="ahx-card-h"><h3>Ustozlar reytingi</h3></div>${window.LoadErr
+                ? window.LoadErr.html({ title: 'Reytingni yuklab bo\'lmadi', err, note: '', compact: true })
+                : `<p class="dashboard-empty">Yuklanmadi: ${escapeHtml(err.message || '')}</p>`}`;
+            window.LoadErr?.bind(cardEl, () => _loadTeacherHomeRating(container));
+        }
     }
 }
 
@@ -8964,7 +9013,14 @@ function renderDashboardOverview(args) {
     if (currentUser?.role === 'teacher' && currentUser.linkedTeacherId) {
         container.innerHTML = renderTeacherHome(currentUser);
         const assistRoot = container.querySelector('[data-assist-home]');
-        if (assistRoot) { window.schoolTeacher.assistantHome(assistRoot, currentUser).catch(e => { assistRoot.innerHTML = `<div class="sc-err">${escapeHtml(e.message || 'Yuklanmadi')}</div>`; }); return; }
+        if (assistRoot) {
+            const loadAssist = () => window.schoolTeacher.assistantHome(assistRoot, currentUser).catch(e => {
+                assistRoot.innerHTML = window.LoadErr ? window.LoadErr.html({ title: 'Bosh sahifani yuklab bo\'lmadi', err: e, note: '' }) : `<div class="sc-err">${escapeHtml(e.message || 'Yuklanmadi')}</div>`;
+                window.LoadErr?.bind(assistRoot, loadAssist);
+            });
+            loadAssist();
+            return;
+        }
         container.querySelectorAll('[data-teacher-open-att]').forEach(btn => btn.addEventListener('click', () => switchTab('teachers-section')));
         container.querySelector('[data-thx-guides]')?.addEventListener('click', () => switchTab('guides'));
         container.querySelector('[data-thx-salary]')?.addEventListener('click', () => { switchTab('profile'); if (typeof switchProfileSection === 'function') switchProfileSection('salary'); });
@@ -9955,8 +10011,12 @@ function renderStudents() {
         root.hidden = false;
         [...tabStudents.children].forEach(el => { if (el !== root && !(soldMode && el.classList.contains('sales-pinned'))) el.hidden = true; });
         if (soldMode) tabStudents.querySelectorAll('.sales-pinned .sales-header-lang, .sales-pinned #studentsFiltersBar').forEach(el => { el.hidden = true; });
-        (soldMode ? window.schoolTeacher.renderSoldStudents(root) : window.schoolTeacher.renderMyStudents(root))
-            .catch(err => { root.innerHTML = `<div class="sc-err">${escapeHtml(err.message || 'Yuklanmadi')}</div>`; });
+        const loadMine = () => (soldMode ? window.schoolTeacher.renderSoldStudents(root) : window.schoolTeacher.renderMyStudents(root))
+            .catch(err => {
+                root.innerHTML = window.LoadErr ? window.LoadErr.html({ title: 'O\'quvchilar ro\'yxatini yuklab bo\'lmadi', err, note: '' }) : `<div class="sc-err">${escapeHtml(err.message || 'Yuklanmadi')}</div>`;
+                window.LoadErr?.bind(root, loadMine);
+            });
+        loadMine();
         return;
     }
     // Boshqa bo'limga o'tganda yangi sahifa yashiriladi, eski qismlar qaytadi.

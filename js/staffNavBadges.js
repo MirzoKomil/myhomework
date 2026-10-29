@@ -29,7 +29,8 @@
     // "Kelmadi" — school_absences). Bildirishnomalardagi voqealar faqat oxirgi 7 kunni oladi, shuning uchun son ulardan emas.
     const MON = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentyabr', 'Oktyabr', 'Noyabr', 'Dekabr'];
     const dayFmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tashkent', year: 'numeric', month: '2-digit', day: '2-digit' });
-    let unm = null, unmBusy = false;
+    // unm — oxirgi muvaffaqiyatli hisob; unmErr — oxirgi urinish xato (eski qiymat bo'lmasa sidebar "—", soxta son emas).
+    let unm = null, unmBusy = false, unmErr = false;
     function ownMainStudents(tid) {
         const rules = window.AttendanceRules;
         // Shu oyda faol bo'lgan (AttendanceRules.inMonth) — Davomat oy kartasi bilan bitta ro'yxat.
@@ -40,27 +41,39 @@
         const u = me(), tid = u.linkedTeacherId;
         if (u.role !== 'teacher' || !tid || unmBusy || !window.AttendanceRules || !window.schoolUI) return;
         const students = ownMainStudents(tid);
-        if (!students.length) { unm = null; draw(last); return; }
+        if (!students.length) { unm = null; unmErr = false; draw(last); return; }
         unmBusy = true;
         try {
             const todayKey = dayFmt.format(new Date()), month = todayKey.slice(0, 7);
+            // /makeups belgilanmaganlar soniga ta'sir qilmaydi (monthTotals.unmarked faqat davomat belgilaridan) — uning xatosi sonni buzmaydi.
             const [ab, mk] = await Promise.all([window.schoolUI.api('/attendance/absences?month=' + month), window.schoolUI.api('/makeups').then(r => r.makeups || []).catch(() => [])]);
             const block = (getItem(STORAGE_KEYS.mainAttendance, {}) || {})[`${month}_${tid}`] || {};
             const mainAtt = window.teacherDutyUI?.mergeAbsences ? window.teacherDutyUI.mergeAbsences(block, ab.absences, tid) : block;
             const teacher = typeof resolveTeacherWithVirtual === 'function' ? resolveTeacherWithVirtual(tid) || {} : {};
             const all = window.AttendanceRules.withPast ? window.AttendanceRules.withPast(students, getItem(STORAGE_KEYS.pastStudents, []) || [], tid, month) : students;
             const t = window.AttendanceRules.monthTotals({ id: tid, month, students: all, mainAtt, makeups: mk, teacher, todayKey });
-            unm = { month, n: t.unmarked };
-        } catch { /* son bildirishnomalardan qoladi */ }
+            unm = { month, n: t.unmarked }; unmErr = false;
+        } catch (e) {
+            // BAHO-5 #4: ilgari xato bo'lsa son bildirishnoma voqealariga (boshqa ko'rsatkich, 7 kun) qaytardi — "8" o'rniga 33.
+            // Endi: shu oyning eski qiymati bo'lsa — o'sha qoladi, bo'lmasa — "—" (son noma'lum).
+            unmErr = true;
+            if (unm && unm.month !== dayFmt.format(new Date()).slice(0, 7)) unm = null;
+            console.warn('[staffNavBadges] belgilanmagan darslar soni yuklanmadi', e?.message);
+        }
         unmBusy = false;
         draw(last);
     }
+    // Asosiy o'quvchisi bor ustoz: "Akademik bo'lim" soni FAQAT monthTotals'dan — yuklanguncha belgi yo'q (voqealar soni miltillamaydi),
+    // xato bo'lsa va eski qiymat bo'lmasa "—".
+    const mainTeacher = u => u.role === 'teacher' && !pureAssistant && !!u.linkedTeacherId && ownMainStudents(u.linkedTeacherId).length > 0;
     function countFor(tab, events, u) {
         if (u.role !== 'teacher') return 0;
         if (tab === 'teachers-section' && unm && !pureAssistant) return unm.n;
+        if (tab === 'teachers-section' && mainTeacher(u)) return unmErr ? '—' : 0;
         return new Set((events || []).filter(e => MAP[tab].includes(e.type)).map(e => e.id)).size;
     }
     function labelFor(tab, n) {
+        if (n === '—') return 'Belgilanmagan darslar sonini yuklab bo\'lmadi — Davomat sahifasini oching';
         if (tab === 'teachers-section' && unm && !pureAssistant) return `${MON[Number(unm.month.slice(5)) - 1]}: ${n} ta dars davomati belgilanmagan (Davomat)`;
         return `${n} ta ${TITLE[tab]}`;
     }
@@ -74,7 +87,7 @@
             if (tab === 'trial-lessons' && u.role === 'teacher') el.style.display = pureAssistant && !n ? 'none' : '';
             if (!n) { b?.remove(); continue; }
             if (!b) { b = document.createElement('span'); b.className = 'tgs-nb'; el.appendChild(b); }
-            b.textContent = n > 99 ? '99+' : String(n);
+            b.textContent = typeof n === 'number' && n > 99 ? '99+' : String(n);
             b.setAttribute('aria-label', labelFor(tab, n));
             b.title = labelFor(tab, n);
         }
@@ -82,7 +95,7 @@
 
     window.addEventListener('staff:feed', e => { last = e.detail?.events || []; draw(last); loadUnmarked(); });
     // Davomat sahifasi oy hisobini chizganda — o'sha raqam darhol (qayta so'rovsiz).
-    window.addEventListener('ustoz:month-unmarked', e => { const d = e.detail || {}; if (d.month === dayFmt.format(new Date()).slice(0, 7)) { unm = { month: d.month, n: Number(d.n) || 0 }; draw(last); } });
+    window.addEventListener('ustoz:month-unmarked', e => { const d = e.detail || {}; if (d.month === dayFmt.format(new Date()).slice(0, 7)) { unm = { month: d.month, n: Number(d.n) || 0 }; unmErr = false; draw(last); } });
     // Davomat / sinov o'zgarganda sonlar darhol yangilansin.
     let t = null;
     const later = () => { clearTimeout(t); t = setTimeout(() => window.staffNotify?.refresh?.(), 800); };

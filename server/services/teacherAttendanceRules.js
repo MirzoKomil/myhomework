@@ -40,5 +40,39 @@ async function assertTeacherAttendanceWindow(client, { student, teacherId, date,
     }
 }
 
+// Ustozlar tarixi (school_teacher_history, BAHO-5 #6): asosiy ustoz faqat o'quvchi O'ZIGA biriktirilgan davrdagi kunni belgilaydi.
+//  • yangi ustoz eski ustoz davridagi kunga — 403 (ilgari students.teacher_id bo'yicha o'tib ketardi va eski ustoz kuniga dars yozilardi);
+//  • eski ustoz o'z davridagi kunni (oy yopilmagan bo'lsa — assertTeacherAttendanceWindow) tuzata oladi, o'quvchi hozir boshqa ustozda bo'lsa ham;
+//  • tarixda yo'q, hozir ham biriktirilmagan o'quvchi — 403.
+// Qaysi kun kimniki — AttendanceRules.taughtOn (maosh, Davomat, Reyting bilan bitta qoida). student — students qatori (teacher_id).
+async function assertTeacherOwnsDay(client, { student, teacherId, date }) {
+    const R = require('../../js/attendanceRules');
+    const deny = message => { throw Object.assign(new Error(message), { status: 403 }); };
+    const hasHist = (await client.query("SELECT to_regclass('public.school_teacher_history')::text AS t")).rows[0]?.t;
+    const rows = hasHist ? (await client.query(
+        `SELECT teacher_id, TO_CHAR(from_date,'YYYY-MM-DD') AS from_date, TO_CHAR(to_date,'YYYY-MM-DD') AS to_date
+         FROM school_teacher_history WHERE student_id=$1 ORDER BY from_date, created_at`, [student.id])).rows : [];
+    const current = String(student.teacher_id || '');
+    const mine = current === teacherId || rows.some(h => h.teacher_id === teacherId);
+    if (!mine) deny("Bu o'quvchi ushbu ustozga biriktirilmagan");
+    const s = { teacherId: current, teacherHistory: rows.map(h => ({ teacherId: h.teacher_id, from: h.from_date, to: h.to_date || null })) };
+    if (R.taughtOn(s, teacherId, date)) return;
+    const who = R.teacherOn(s, date);
+    const mineFrom = rows.filter(h => h.teacher_id === teacherId).map(h => h.from_date).sort()[0];
+    if (current === teacherId && who && who !== teacherId) deny(`${date} kuni o'quvchi boshqa ustozda edi — bu kun uning davomatiga kiradi${mineFrom ? ` (sizda ${mineFrom} dan)` : ''}`);
+    deny(`${date} kuni o'quvchi sizga biriktirilmagan edi — davomatni faqat o'z davringizdagi kunlarga qo'yasiz`);
+}
 
-module.exports = { assertTeacherAttendanceWindow, TEACHER_MARK_BEFORE_MIN };
+// Xodim tuzatishi (BAHO-5 #7): yopilgan oyni va kelajak sanani FAQAT admin/boshliq o'zgartiradi (29-okt qarori).
+// ROP (va kelajakda boshqa "to'liq ruxsatli" xodim) — joriy oy, bugungacha: yopilgan oy 409, kelajak 400 (olib tashlash — faqat yopilgan oy cheklovi).
+const CLOSED_MONTH_EDITORS = ['admin', 'boshliq'];
+function assertStaffAttendanceWindow({ actor, date, present, now = new Date() }) {
+    if (CLOSED_MONTH_EDITORS.includes(actor?.role)) return;
+    const T = require('./school/time');
+    const local = T.nowLocal(now), month = String(date).slice(0, 7);
+    const bad = (status, message) => { throw Object.assign(new Error(message), { status }); };
+    if (month < local.date.slice(0, 7)) bad(409, `${month} oyi yopilgan — yopilgan oy davomatini faqat admin yoki boshliq o'zgartiradi`);
+    if (present !== null && date > local.date) bad(400, 'Kelajakdagi sanaga davomat qo\'yib bo\'lmaydi — faqat admin yoki boshliq');
+}
+
+module.exports = { assertTeacherAttendanceWindow, assertTeacherOwnsDay, assertStaffAttendanceWindow, CLOSED_MONTH_EDITORS, TEACHER_MARK_BEFORE_MIN };

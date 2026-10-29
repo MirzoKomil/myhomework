@@ -645,26 +645,48 @@
         body.querySelector('[data-rules]')?.addEventListener('click', rulesDrawer);
         body.querySelectorAll('[data-a]').forEach(b => b.onclick = async () => { try { await U().post(`/bookings/${b.dataset.id}/${b.dataset.a}`); U().toast('Saqlandi'); reload(); } catch (e) { U().toast(e.message, 4000); } });
     }
-    function monthView(body, d, from, to, reload) {
-        const st = SS().state, { esc, today, DAY } = U();
+    // Oy ko'rinishi raqamlari — BITTA MANBA (BAHO-5 #2): teacherDutyUI.monthFor → AttendanceRules.monthTotals, ya'ni Davomat
+    // "Oktyabr" kartasi, Bosh sahifa, sidebar va Reyting bilan bir xil ("Keldi" = came, "Belgilanmagan" = unmarked, "Darslar" = oy rejasi,
+    // "Qoplash" = tasdiqlangan + tekshiruvda + rejada — Bosh "+N qoplash" va Davomat "Tekshiruvda" bilan bir xil).
+    // Ilgari jadval elementlaridan alohida sanalardi (70/25/127 ≠ Davomat 71/33/131). Kunlar rangi ham shu qatorlardan.
+    // "Kelmadi" (school_absences) yoki qoplashlar yuklanmasa — raqamlar o'rniga xato kartasi + "Qayta urinish" (soxta son yo'q).
+    async function monthView(body, d, from, to, reload) {
+        const st = SS().state, { esc, today, DAY, api } = U();
+        const month = from.slice(0, 7), tid = me().linkedTeacherId, td = today();
+        const [abR, mkR] = await Promise.all([window.LoadErr.settle(api('/attendance/absences?month=' + month)), window.LoadErr.settle(api('/makeups'))]);
+        const failed = !abR.ok ? abR.err : !mkR.ok ? mkR.err : null;
+        const T = !failed && tid && window.teacherDutyUI?.monthFor
+            ? window.teacherDutyUI.monthFor(tid, month, { absences: abR.value.absences || [], makeups: mkR.value.makeups || [], todayKey: td }) : null;
+        if (!failed) globalThis.__schoolMakeups = mkR.value.makeups || globalThis.__schoolMakeups;
+        // Kun bo'yicha: keldi / kelmadi / belgilanmagan — monthTotals qatorlaridan; qoplash — shu ustozning shu kungi qoplashlari.
+        const byDay = new Map(), bump = (date, k) => { const o = byDay.get(date) || { ok: 0, no: 0, un: 0, mk: 0 }; o[k]++; byDay.set(date, o); };
+        for (const r of T?.rows || []) {
+            r.presentDays.forEach(day => bump(`${month}-${String(day).padStart(2, '0')}`, 'ok'));
+            r.absentDates.forEach(x => bump(x, 'no'));
+            r.unmarkedDates.forEach(x => bump(x, 'un'));
+        }
+        const myMk = failed ? [] : (mkR.value.makeups || []).filter(m => m.teacher_id === tid && ['planned', 'review', 'approved'].includes(m.status) && String(m.held_date || '').slice(0, 7) === month);
+        myMk.forEach(m => bump(String(m.held_date).slice(0, 10), 'mk'));
         const vBy = new Map(d.views.map(v => [v.date, v]));
         const cells = [];
         for (let k = 1; k < U().wd(from); k++) cells.push('<span class="sv-d e"></span>');
-        let ok = 0, no = 0, un = 0, mkN = 0, plan = 0, total = 0;
         for (const date of (() => { const a = []; let x = from; while (x <= to) { a.push(x); x = U().addDays(x, 1); } return a; })()) {
             const v = vBy.get(date);
-            const L = (v?.items || []).filter(i => i.kind === 'lesson' || i.kind === 'makeup').map(i => look(i, date));
-            total += L.length;
-            const c = { ok: L.filter(l => l.st === 'ok').length, no: L.filter(l => l.st === 'no').length, un: L.filter(l => l.st === 'un').length, mk: L.filter(l => l.st === 'mk').length };
-            ok += c.ok; no += c.no; un += c.un; mkN += c.mk; plan += L.filter(l => l.st === 'wait' || l.st === 'now').length;
+            const L = (v?.items || []).filter(i => i.kind === 'lesson' || i.kind === 'makeup');
+            const c = byDay.get(date) || { ok: 0, no: 0, un: 0, mk: 0 };
             const off = !v || (!v.work.length && !L.length);
-            const cls = off ? 'x' : !L.length ? '' : date > today() ? 'pl' : c.no ? 'no' : c.un ? 'un' : c.mk && !c.ok ? 'q' : 'ok';
-            cells.push(`<button type="button" class="sv-d ${cls}${date === today() ? ' td' : ''}${c.mk ? ' cv' : ''}" data-day="${date}" title="${esc(`${dm(date)} · ${L.length} dars${c.ok ? ` · ${c.ok} keldi` : ''}${c.no ? ` · ${c.no} kelmadi` : ''}${c.un ? ` · ${c.un} belgilanmagan` : ''}`)}">${Number(date.slice(8))}${L.length ? `<sup>${L.length}</sup>` : ''}</button>`);
+            const cls = off ? 'x' : !L.length ? '' : date > td ? 'pl' : failed ? '' : c.no ? 'no' : c.un ? 'un' : c.mk && !c.ok ? 'q' : 'ok';
+            cells.push(`<button type="button" class="sv-d ${cls}${date === td ? ' td' : ''}${c.mk ? ' cv' : ''}" data-day="${date}" title="${esc(`${dm(date)} · ${L.length} dars${c.ok ? ` · ${c.ok} keldi` : ''}${c.no ? ` · ${c.no} kelmadi` : ''}${c.un ? ` · ${c.un} belgilanmagan` : ''}`)}">${Number(date.slice(8))}${L.length ? `<sup>${L.length}</sup>` : ''}</button>`);
         }
         const cs = (l, v, s) => `<div class="sv-cs"><small>${l}</small><b>${v}</b><span>${s}</span></div>`;
+        const planLeft = T ? T.rows.reduce((n, r) => n + r.planLeft, 0) : 0;
+        const sum = failed
+            ? `<div class="sv-csum sv-csum--err">${window.LoadErr.html({ title: 'Oy hisobini yuklab bo\'lmadi', err: failed, compact: true })}</div>`
+            : T ? `<div class="sv-csum">${cs('Darslar', T.plan, `${planLeft} rejada`)}${cs('Keldi', T.came, 'davomatda belgilangan')}${cs('Kelmadi', T.absent, 'qoplash mumkin')}${cs('Belgilanmagan', T.unmarked, 'Akademik → Davomat')}${cs('Qoplash', T.approved + T.review + T.planned, `${T.approved} hisobga o'tdi · ${T.review} tekshiruvda · ${T.planned} rejada`)}</div>` : '';
         body.innerHTML = `<section class="sc-card"><div class="sv-cal"><div class="sv-cg">${DAY.map(x => `<span class="h">${x}</span>`).join('')}${cells.join('')}</div>
-            <div class="sv-csum">${cs('Darslar', total, `${plan} rejada`)}${cs('Keldi', ok, 'davomatda belgilangan')}${cs('Kelmadi', no, 'qoplash mumkin')}${cs('Belgilanmagan', un, 'Akademik → Davomat')}${cs('Qoplash', mkN, 'shu oy')}</div></div>
+            ${sum}</div>
             ${legend([['k-ok', 'Hammasi keldi'], ['k-no', 'Kelmagan bor'], ['k-un', 'Belgilanmagan'], ['k-mk', 'Qoplash'], ['k-wait', 'Rejada'], ['k-off', 'Dars yo\'q']], { rules: true })}</section>`;
+        if (failed) window.LoadErr.bind(body, () => reload());
         body.querySelector('[data-rules]')?.addEventListener('click', rulesDrawer);
         body.querySelectorAll('[data-day]').forEach(b => b.onclick = () => { st.date = b.dataset.day; st.view = 'tday'; SS().render(body.parentElement); });
     }

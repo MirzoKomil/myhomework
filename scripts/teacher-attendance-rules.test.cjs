@@ -50,3 +50,40 @@ test('AttendanceRules: sana bo\'yicha faol va haftalik tavsiya soni', () => {
     assert.equal(R.weekPlanCount(items), 4);
     assert.equal(R.weekPlanSlots(items).get('a').size, 2);
 });
+
+// BAHO-5 #6: ustozlar tarixi — kun o'sha kungi ustozniki (school_teacher_history; AttendanceRules.taughtOn).
+const { assertTeacherOwnsDay: owns, assertStaffAttendanceWindow: staffWin } = require('../server/services/teacherAttendanceRules');
+const histClient = rows => ({ query: async sql => (/to_regclass/.test(sql) ? { rows: [{ t: 'school_teacher_history' }] } : /school_teacher_history/.test(sql) ? { rows } : { rows: [] }) });
+// Temur: 1-sentyabrdan Dilnoza (hr-dil), 15-oktyabrdan Gul (hr-gul) — hozir Gul'da.
+const temurHist = [{ teacher_id: 'hr-dil', from_date: '2026-09-01', to_date: '2026-10-14' }, { teacher_id: 'hr-gul', from_date: '2026-10-15', to_date: null }];
+const temur = { id: 'st-tem', teacher_id: 'hr-gul' };
+test('tarix: yangi ustoz eski ustoz davridagi kunga belgi qo\'ya olmaydi — 403', async () => {
+    await assert.rejects(owns(histClient(temurHist), { student: temur, teacherId: 'hr-gul', date: '2026-10-05' }), e => e.status === 403 && /boshqa ustozda edi/.test(e.message) && /2026-10-15/.test(e.message));
+    await owns(histClient(temurHist), { student: temur, teacherId: 'hr-gul', date: '2026-10-15' });
+    await owns(histClient(temurHist), { student: temur, teacherId: 'hr-gul', date: '2026-10-27' });
+});
+test('tarix: eski ustoz o\'z davridagi kunni tuzatadi, keyingi davrga — 403', async () => {
+    await owns(histClient(temurHist), { student: temur, teacherId: 'hr-dil', date: '2026-10-05' });
+    await owns(histClient(temurHist), { student: temur, teacherId: 'hr-dil', date: '2026-10-14' });
+    await assert.rejects(owns(histClient(temurHist), { student: temur, teacherId: 'hr-dil', date: '2026-10-16' }), e => e.status === 403 && /biriktirilmagan edi/.test(e.message));
+});
+test('tarix: hech qachon biriktirilmagan ustoz — 403; tarixsiz hozirgi ustoz — ruxsat', async () => {
+    await assert.rejects(owns(histClient(temurHist), { student: temur, teacherId: 'hr-boshqa', date: '2026-10-20' }), e => e.status === 403 && /biriktirilmagan/.test(e.message));
+    await owns(histClient([]), { student: { id: 'st-x', teacher_id: 'hr-dil' }, teacherId: 'hr-dil', date: '2026-10-20' });
+    await assert.rejects(owns(histClient([]), { student: { id: 'st-x', teacher_id: 'hr-dil' }, teacherId: 'hr-gul', date: '2026-10-20' }), e => e.status === 403);
+    // Jadval yo'q (eski baza) — hozirgi biriktirish.
+    await owns(client, { student: { id: 'st-x', teacher_id: 'hr-dil' }, teacherId: 'hr-dil', date: '2026-10-20' });
+});
+// BAHO-5 #7: yopilgan oy va kelajak — faqat admin/boshliq.
+test('xodim tuzatishi: ROP yopilgan oyni va kelajakni o\'zgartirmaydi; admin/boshliq — ruxsat', () => {
+    const rop = { role: 'rop' };
+    assert.throws(() => staffWin({ actor: rop, date: '2026-09-29', present: true, now }), e => e.status === 409 && /admin yoki boshliq/.test(e.message));
+    assert.throws(() => staffWin({ actor: rop, date: '2026-09-29', present: null, now }), e => e.status === 409);
+    assert.throws(() => staffWin({ actor: rop, date: '2026-10-29', present: true, now }), e => e.status === 400);
+    staffWin({ actor: rop, date: '2026-10-29', present: null, now }); // kelajakdagi xato belgini olib tashlash — mumkin
+    staffWin({ actor: rop, date: '2026-10-26', present: false, now });
+    for (const role of ['admin', 'boshliq']) {
+        staffWin({ actor: { role }, date: '2026-09-29', present: true, now });
+        staffWin({ actor: { role }, date: '2026-10-29', present: true, now });
+    }
+});

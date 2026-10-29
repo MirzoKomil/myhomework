@@ -498,24 +498,36 @@
     async function renderGuides(openId) {
         const root = guidesRoot(); if (!root) return;
         if (openId) G.sel = openId;
-        if (!G.acks) { G.acks = new Map(); api('/guides/acks/mine').then(r => { G.acks = new Map((r.acks || []).map(a => [a.guideId, a.ackedAt])); drawGuides(root); }).catch(() => {}); }
+        if (!G.acks && !G.acksBusy) loadAcks(root);
         drawGuides(root);
+    }
+    // Tanishganlik holati (BAHO-5 #10): yuklanguncha va xato bo'lsa hech biri "Yangi" deb ko'rsatilmaydi (soxta holat) —
+    // xato bo'lsa ro'yxat tepasida xato kartasi + "Qayta urinish". G.acks — faqat muvaffaqiyatli javobdan.
+    function loadAcks(root) {
+        G.acksBusy = true; G.acksErr = null;
+        return api('/guides/acks/mine')
+            .then(r => { G.acks = new Map((r.acks || []).map(a => [a.guideId, a.ackedAt])); })
+            .catch(e => { G.acks = null; G.acksErr = e; })
+            .finally(() => { G.acksBusy = false; if (root.isConnected) drawGuides(root); });
     }
     function drawGuides(root) {
         const all = guideList(), q = G.q.toLowerCase();
         const list = all.filter(g => !q || `${g.title} ${g.subtitle} ${String(g.content || '').replace(/<[^>]+>/g, ' ')}`.toLowerCase().includes(q));
-        if (!G.sel || !all.some(g => g.id === G.sel)) G.sel = (all.find(g => !G.acks?.has(g.id)) || all[0])?.id || null;
+        const known = !!G.acks; // holat ma'lum (yuklandi)
+        if (!G.sel || !all.some(g => g.id === G.sel)) G.sel = (known && all.find(g => !G.acks.has(g.id)) || all[0])?.id || null;
         const g = all.find(x => x.id === G.sel);
         const content = g ? guideHtml(g.content) : '';
         const author = g?.createdBy ? `${g.createdBy}${AUTHOR_ROLE[g.createdByRole] ? ` (${AUTHOR_ROLE[g.createdByRole]})` : ''}` : '';
         const acked = g && G.acks?.get(g.id);
         root.innerHTML = `<div class="sg-head"><h1>Yo'riqnomalar</h1><p>Lavozimingizga tegishli qoidalar · yangilari tepada</p></div>
           ${all.length ? `<div class="sg-grid"><aside class="ss-card sg-list" aria-label="Yo'riqnomalar ro'yxati"><div class="sg-search"><label for="sgQ" class="sg-sr">Qidirish</label><input id="sgQ" type="search" placeholder="Qidirish…" value="${esc(G.q)}"></div>
-            <ul>${list.map(x => { const done = G.acks?.has(x.id); return `<li><button type="button" class="sg-it${x.id === G.sel ? ' on' : ''}" data-g="${esc(x.id)}" aria-current="${x.id === G.sel}"><span class="sg-ic">${ICON.doc}</span><span class="sg-tx"><b>${esc(x.title || 'Nomsiz')}</b><small>${[catOf(x), x.createdAt ? dShort(tzDate(x.createdAt)) : '', done ? 'o\'qilgan' : readMin(x) + ' daq o\'qish'].filter(Boolean).map(esc).join(' · ')}</small></span>${done ? '' : '<i class="ss-pill info sg-new">Yangi</i>'}</button></li>`; }).join('') || '<li class="ss-mt sg-empty">Topilmadi</li>'}</ul></aside>
+            ${G.acksErr && window.LoadErr ? window.LoadErr.html({ title: 'O\'qilganlik holatini yuklab bo\'lmadi', err: G.acksErr, note: '"Yangi" belgilari ko\'rsatilmadi.', compact: true, cls: 'sg-lerr' }) : ''}
+            <ul>${list.map(x => { const done = G.acks?.has(x.id); return `<li><button type="button" class="sg-it${x.id === G.sel ? ' on' : ''}" data-g="${esc(x.id)}" aria-current="${x.id === G.sel}"><span class="sg-ic">${ICON.doc}</span><span class="sg-tx"><b>${esc(x.title || 'Nomsiz')}</b><small>${[catOf(x), x.createdAt ? dShort(tzDate(x.createdAt)) : '', done ? 'o\'qilgan' : readMin(x) + ' daq o\'qish'].filter(Boolean).map(esc).join(' · ')}</small></span>${done || !known ? '' : '<i class="ss-pill info sg-new">Yangi</i>'}</button></li>`; }).join('') || '<li class="ss-mt sg-empty">Topilmadi</li>'}</ul></aside>
             <article class="ss-card sg-art" aria-labelledby="sgT">${g ? `<div class="sg-body"><h2 id="sgT">${esc(g.title || '')}</h2><p class="sg-meta">${[catOf(g, true), author, g.createdAt ? dmy(tzDate(g.createdAt)) : ''].filter(Boolean).map(esc).join(' · ')}</p>
               <div class="sg-content">${content}</div></div>
-              <footer class="sg-foot"><span class="ss-mt">${acked ? `Tanishib chiqdingiz · ${esc(dmy(tzDate(acked)))}` : 'O\'qib chiqqaningizni tasdiqlang — admin ko\'radi'}</span>${acked ? `<i class="ss-pill ok">${ICON.check} Tanishib chiqdim</i>` : '<button type="button" class="ss-btn ss-btn--pri" data-ack>Tanishib chiqdim</button>'}</footer>` : ''}</article></div>`
+              <footer class="sg-foot"><span class="ss-mt">${!known ? (G.acksErr ? 'Tanishganlik holati yuklanmadi' : 'Holat yuklanmoqda…') : acked ? `Tanishib chiqdingiz · ${esc(dmy(tzDate(acked)))}` : 'O\'qib chiqqaningizni tasdiqlang — admin ko\'radi'}</span>${!known ? '' : acked ? `<i class="ss-pill ok">${ICON.check} Tanishib chiqdim</i>` : '<button type="button" class="ss-btn ss-btn--pri" data-ack>Tanishib chiqdim</button>'}</footer>` : ''}</article></div>`
             : (typeof teamEmptyState === 'function' ? teamEmptyState('Hozircha yoʻriqnoma yoʻq', 'Sizga tegishli yoʻriqnoma kiritilganda shu yerda chiqadi.', 'board') : '<div class="ss-card ss-pad">Hozircha yoʻriqnoma yoʻq</div>')}`;
+        if (G.acksErr) window.LoadErr?.bind(root, () => loadAcks(root));
         root.querySelectorAll('[data-g]').forEach(b => b.onclick = () => { G.sel = b.dataset.g; drawGuides(root); if (innerWidth < 900) root.querySelector('.sg-art')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
         const inp = root.querySelector('#sgQ');
         if (inp) inp.oninput = () => { G.q = inp.value; const pos = inp.selectionStart; drawGuides(root); const again = root.querySelector('#sgQ'); again.focus(); again.setSelectionRange(pos, pos); };

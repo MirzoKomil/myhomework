@@ -177,14 +177,15 @@
             ${main ? `<label class="lp-dlg-opt${canDouble ? '' : ' is-off'}" data-dbl><input type="checkbox" name="double"${canDouble ? '' : ' disabled'}>
                 <span><b>Bu qo'shaloq dars edi</b><small data-dbl-note>Kamida ${DOUBLE_MIN} daqiqa kerak · hozir ${mins} daqiqa</small></span></label>
                 <div class="lp-dlg-pick" data-dbl-pick hidden></div>` : ''}
-            <div class="lp-dlg-act"><button type="button" class="lp-link" data-close title="Davomat qo'ymasdan taqdimotni yopish">Davomatsiz yopish</button><span class="lp-grow"></span>
+            <!-- BAHO-5 #10: dizaynda (Oynalar · "Darsni tugatasizmi?") "Davomatsiz yopish" yo'q — olib tashlandi. Davomatsiz chiqish
+                 taqdimotning o'zida bor: "← Darslik" tugmasi va Esc (lessonPresenter close), davomat Davomat bo'limida qo'yiladi. -->
+            <div class="lp-dlg-act"><span class="lp-grow"></span>
                 <button type="button" class="lp-btn" data-x>Davom etish</button>
                 ${uniq.length ? '<button type="submit" class="lp-btn lp-btn--pri">Tugatish · Keldi</button>' : ''}</div>
             <div class="lp-dlg-msg" role="status"></div></form>`;
         root.appendChild(box);
         const form = box.querySelector('form');
         box.querySelectorAll('[data-x]').forEach(b => { b.onclick = () => box.remove(); });
-        box.querySelector('[data-close]').onclick = () => { box.remove(); close(); };
         (form.querySelector('[type=submit]') || form.querySelector('.lp-dlg-act [data-x]')).focus();
         // Qaysi qoldirilgan dars o'rniga — qoplanmagan darslar (js/ustozHome.js, Davomat bilan bir xil qoida).
         let openMissed = [];
