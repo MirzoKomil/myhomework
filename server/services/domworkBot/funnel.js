@@ -57,21 +57,23 @@ const BUNDLED_NAMES = { sovga: 'Domwork — 40 ta eng kerakli gap.pdf', qollanma
     qollanma_office: 'Domwork — Ish suhbati 15 savol.pdf', qollanma_bank: 'Domwork — Bank va moliya.pdf', qollanma_med: 'Domwork — Tibbiyot.pdf',
     qollanma_gov: 'Domwork — Davlat xizmati.pdf', qollanma_sales: 'Domwork — Savdo va mijozlar.pdf', qollanma_daily: 'Domwork — Kundalik suhbat.pdf',
     qollanma_smena: 'Domwork — Ish va smena.pdf', qollanma_hujjat: 'Domwork — Hujjat va patent.pdf', qollanma_kundalik: 'Domwork — Shifokor, politsiya, transport.pdf',
-    oferta: 'Domwork — Ommaviy oferta shartnomasi.pdf', bonus: 'Domwork — Ishda kerak 50 ibora.pdf' };
+    oferta: 'Domwork — Ommaviy oferta shartnomasi.pdf', promo1: 'domwork-dars.png', promo2: 'domwork-ish.png', promo3: 'domwork-rossiya.png', bonus: 'Domwork — Ishda kerak 50 ibora.pdf' };
 const BUNDLED_FILE = { bonus: 'qollanma_umumiy' }; // kanal bonusi — «Ishda kerak 50 ibora» (umumiy qo'llanma)
 const bundledCache = new Map();
 function bundledFile(key) {
     if (!BUNDLED_NAMES[key]) return null;
     if (!bundledCache.has(key)) {
-        const path = require('node:path').join(__dirname, '..', '..', 'data', 'funnel', (BUNDLED_FILE[key] || key) + '.pdf');
-        bundledCache.set(key, require('node:fs').existsSync(path) ? { path, filename: BUNDLED_NAMES[key] } : null);
+        const image = /\.png$/.test(BUNDLED_NAMES[key]);
+        const path = require('node:path').join(__dirname, '..', '..', 'data', 'funnel', (BUNDLED_FILE[key] || key) + (image ? '.png' : '.pdf'));
+        bundledCache.set(key, require('node:fs').existsSync(path) ? { path, filename: BUNDLED_NAMES[key], image } : null);
     }
     return bundledCache.get(key);
 }
 function media(s, key) {
     const m = s.funnelMedia?.[key];
     if (m && MEDIA_FIELD[m.method] && /^[A-Za-z0-9_-]{10,1024}$/.test(m.fileId)) return m;
-    return bundledFile(key) ? { method: 'sendDocument', bundled: key } : null;
+    const file = bundledFile(key);
+    return file ? { method: file.image ? 'sendPhoto' : 'sendDocument', bundled: key } : null;
 }
 const inline = rows => ({ inline_keyboard: rows.map(r => r.map(([text, data]) => (/^https:\/\//.test(data) ? { text, url: data } : { text, callback_data: data }))) });
 const replyKeyboard = () => ({ keyboard: [[{ text: copy.KEYBOARD.contact }], [{ text: copy.KEYBOARD.guides }, { text: copy.KEYBOARD.faq }]], resize_keyboard: true });
@@ -93,7 +95,7 @@ async function send(c, method, payload, { delayMs = 0, unless = '', automation =
 }
 const say = (c, text, markup, opts) => send(c, 'sendMessage', { text, ...(markup ? { reply_markup: markup } : {}) }, opts);
 async function sendMedia(c, m, caption, markup, opts) {
-    const file = m.bundled ? { document: 'bundled', _bundled: m.bundled } : { [MEDIA_FIELD[m.method]]: m.fileId };
+    const file = m.bundled ? { [MEDIA_FIELD[m.method]]: 'bundled', _bundled: m.bundled } : { [MEDIA_FIELD[m.method]]: m.fileId };
     await send(c, m.method, { ...file, ...(caption ? { caption } : {}), ...(markup ? { reply_markup: markup } : {}) }, opts);
 }
 async function answer(db, update, text = '') {
