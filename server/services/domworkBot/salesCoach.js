@@ -31,7 +31,7 @@ function enteredAt(row) {
 }
 const ago = ms => { const h = Math.floor(ms / HOUR); return h >= 48 ? Math.floor(h / 24) + ' kun' : h >= 1 ? h + ' soat' : Math.max(1, Math.floor(ms / 60000)) + ' daqiqa'; };
 // Rossiya raqami (+7): qo'ng'iroq ko'pincha ulanmaydi — bunday lid «olmadi» deb Sifatsizga chiqarilmaydi, botga ulanadi.
-const isRu = l => /^\+?7\d{10}$/.test(String(l.phone || '').replace(/[^\d+]/g, ''));
+const isRu = l => l.country === 'ru' || /^\+?7\d{10}$/.test(String(l.phone || '').replace(/[^\d+]/g, ''));
 const line = l => `${isRu(l) ? '🇷🇺 ' : ''}${T.b(l.name)}${l.phone ? ' · ' + T.esc(l.phone) : ''}`;
 const RU_HINT = '\n\n🇷🇺 belgili — Rossiya raqamlari: u yerga qo‘ng‘iroq ko‘pincha ulanmaydi. Ularni <b>Sifatsizga chiqarmang</b> — WhatsApp yoki Telegram’ga botga taklif matnini yuboring (pastda). Mijoz botga kirsa, siz bilan shu yerda yozishadi.';
 async function ruInvites(db, leads, max = 5) {
@@ -49,7 +49,7 @@ async function load(db, now) {
         const status = stages.normalizeLeadStatus(r.status), at = enteredAt(r), x = r.extra_data || {};
         const booking = status === 'sinov-darsida' ? workflow.request({ ...x, id: r.id, name: r.name, status: r.status }) : null;
         const lesson = status === 'sinov-darsida' ? Date.parse(booking?.scheduledAt || x.trialLessonAt || x.trialLesson?.date || '') : NaN;
-        return { id: r.id, name: r.name || 'Nomsiz', phone: r.phone || '', status, manager: r.manager_id, at, age: now.getTime() - at,
+        return { id: r.id, name: r.name || 'Nomsiz', phone: r.phone || '', status, manager: r.manager_id, at, age: now.getTime() - at, country: x.country || '', intent: x.botIntent || '',
             created: Date.parse(r.created_at), booking, lesson: Number.isFinite(lesson) ? lesson : null,
             contactDate: status === 'keyin-sotib-olmoqchi' ? x.deferredPurchaseSurvey?.contactDate || '' : '', today };
     });
@@ -135,7 +135,7 @@ async function realtime(db, now, clock, once) {
         const name = T.esc(T.first(names.get(id) || ''));
         // Yangi lid 15 daqiqa kutyapti (faqat oxirgi 24 soatda tushganlar — eski zaxira ertalabki rejada).
         const waiting = [];
-        for (const l of leads) if (l.status === 'yangi-lidlar' && l.age >= 15 * 60000 && t - l.created < DAY) {
+        for (const l of leads) if (l.status === 'yangi-lidlar' && l.intent !== 'lesson' && l.age >= 15 * 60000 && t - l.created < DAY) {
             const key = `coach-new:${l.id}`;
             if (!(await db.query('SELECT 1 FROM domwork_bot_jobs WHERE key=$1', [key])).rows.length) { await db.query('INSERT INTO domwork_bot_jobs(key) VALUES($1) ON CONFLICT DO NOTHING', [key]); waiting.push(l); }
         }
@@ -287,7 +287,7 @@ async function ropInactive(db, now, clock, once) {
 // Yangi lid 30 daqiqadan beri qo'ng'iroqsiz — ROPga (CRM SLA qoidasi bilan bir xil).
 async function ropSpeed(db, now) {
     const t = now.getTime(), names = await managers(db), late = [];
-    for (const l of await load(db, now)) if (l.status === 'yangi-lidlar' && l.age >= 30 * 60000 && t - l.created < DAY) {
+    for (const l of await load(db, now)) if (l.status === 'yangi-lidlar' && l.intent !== 'lesson' && l.age >= 30 * 60000 && t - l.created < DAY) {
         if ((await db.query('INSERT INTO domwork_bot_jobs(key) VALUES($1) ON CONFLICT DO NOTHING RETURNING key', [`coach-rop-speed:${l.id}`])).rows.length) late.push(l);
     }
     if (late.length) await toRop(db, `speed:${late[0].id}:${t}`, `🚨 <b>Yangi lid 30 daqiqadan beri qo‘ng‘iroqsiz</b>\n\n${list(late, l => `${line(l)} — ${T.esc(names.get(l.manager) || '—')}, ${ago(l.age)}`)}\n\nMenejerni tezlashtiring yoki lidni boshqasiga bering ⚡`, now, 2);
@@ -328,6 +328,18 @@ async function bonus(db, now, clock, once) {
             + T.pick(PUSH, clock.date + p.id + slot), now, 3));
     }
 }
+// Botdan kelgan, hali menejer biriktirilmagan lid (ayniqsa Rossiyadan — telefonsiz) 15 daqiqadan oshdi → ROPga.
+async function ropUnowned(db, now) {
+    const rows = (await db.query(`SELECT id,name,extra_data,created_at FROM leads WHERE language='russian' AND deleted_at IS NULL
+        AND COALESCE(manager_id,'')='' AND source='Telegram bot' AND COALESCE(status,'') IN ('','new','yangi-lidlar')
+        AND created_at<NOW()-INTERVAL '15 minutes' AND created_at>NOW()-INTERVAL '3 days'`)).rows;
+    const fresh = [];
+    for (const r of rows) if ((await db.query('INSERT INTO domwork_bot_jobs(key) VALUES($1) ON CONFLICT DO NOTHING RETURNING key', [`coach-unowned:${r.id}`])).rows.length) fresh.push(r);
+    if (!fresh.length) return;
+    await toRop(db, `unowned:${fresh[0].id}:${now.getTime()}`, `🆘 <b>Botdan kelgan lid egasiz — menejer biriktiring</b>\n\n`
+        + fresh.map(r => `• ${r.extra_data?.country === 'ru' ? '🇷🇺 ' : ''}${T.b(r.name)} — ${ago(now.getTime() - Date.parse(r.created_at))} kutyapti${r.extra_data?.country === 'ru' ? ' (Rossiya: qo‘ng‘iroq emas, Sotuv guruhidagi kartochkasiga reply bilan yozish)' : ''}`).join('\n')
+        + `\n\nBiriktirilgan menejerga bot darhol xabar beradi ⚡`, now, 6);
+}
 // Oy rejasi sur'ati: kunlar o'tishiga nisbatan sezilarli orqada qolganlar.
 function pace(people, date) {
     const [y, m, d] = date.split('-').map(Number), days = new Date(Date.UTC(y, m, 0)).getUTCDate(), expected = d / days;
@@ -341,6 +353,7 @@ async function run(db, settings, clock, now, once) {
     if (clock.day === 7) return; // yakshanba — dam
     const work = clock.hour >= 9 && clock.hour < 20;
     if (work) await ropSpeed(db, now);
+    if (work) await ropUnowned(db, now);
     if (clock.hour >= 9 && clock.hour < 21 && clock.minute % 2 === 0) await bonus(db, now, clock, once);
     if (clock.hour === 11 && clock.minute >= 30 && clock.minute < 35) await ropInactive(db, now, clock, once);
     if (clock.hour === 13 && clock.minute < 5) await ropPulse(db, now, clock, once, '13:00');

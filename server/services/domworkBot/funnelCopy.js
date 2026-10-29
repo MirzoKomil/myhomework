@@ -89,6 +89,7 @@ const text = {
     ruDone: when => `Rahmat! ✅ Ma’lumotlaringiz menejerga yuborildi.\n\n👩‍💼 Menejerimiz <b>${when}</b> shu chatga yozadi: darajangiz, sizga mos jonli dars vaqti va kurs qanday o‘tishini tushuntiradi.\n\nUngacha sohangizga mos qo‘llanmani oling 👇`,
     matchAsk: 'Arizangizni topib, menejeringizni ulab qo‘yishim uchun raqamingizni tasdiqlang — pastdagi tugmani bosing (yozish shart emas) 👇',
     matched: manager => `Rahmat, arizangiz topildi ✅${manager ? `\nMenejeringiz — ${manager}. U siz bilan bog‘lanadi, savollaringizni shu yerga ham yozishingiz mumkin.` : '\nMenejerimiz tez orada bog‘lanadi.'}`,
+    matchAskRu: 'Formadagi arizangiz bilan bog‘lab qo‘yishim uchun raqamni bir bosishda tasdiqlang (ixtiyoriy) — yoki «Keyinroq»ni bosing, savollarga o‘tamiz 👇',
     matchNew: 'Rahmat, raqamingiz saqlandi ✅ Menejerimiz siz bilan bog‘lanadi.',
     giftNext: 'Endi rus tilida o‘zingizni tanishtirishni o‘rganamiz 👇',
     segment: '<b>Rus tili sizga nima uchun kerak?</b>',
@@ -135,7 +136,11 @@ const text = {
     freeText: (inHours, min) => inHours ? `Rahmat! Savolingizni menejerga yubordim — ${min} daqiqa ichida javob beradi.` : 'Rahmat! Savolingizni menejerga yubordim — ertalab birinchi bo‘lib javob beradi.',
     askManager: 'Savollaringiz bo‘lsa — menejerimiz 5–10 daqiqada hammasini tushuntiradi 👇',
     paused: 'Avtomatik xabarlar to‘xtatildi. Qaytish uchun /start bosing.',
-    contactSaved: 'Rahmat, raqamingiz tasdiqlandi ✅'
+    contactSaved: 'Rahmat, raqamingiz tasdiqlandi ✅',
+    commandHint: 'Pastdagi tugmalardan foydalaning 👇 Savolingiz bo‘lsa — oddiy matn bilan yozing, menejer javob beradi.',
+    afterGuide: t => t === 'A'
+        ? 'Qo‘llanma foydali bo‘ldimi? 🙂\nSizga mos reja kerak bo‘lsa — menejerimiz shu yerda, Telegramda yozadi: darajangiz va qaysi vaqtda dars qilish qulayligini aniqlaymiz.'
+        : 'Qo‘llanma foydali bo‘ldimi? 🙂\nKeyingi qadam — menejer bilan 5–10 daqiqa: darajangizni bilib olasiz va sizga mos reja tuziladi. Hech narsaga majburlamaydi.'
 };
 
 // ── Isitish (drip) — so'rov qoldirmaganlar; hujjatdagi jadval bo'yicha ──

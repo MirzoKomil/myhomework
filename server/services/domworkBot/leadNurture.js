@@ -24,11 +24,15 @@ async function queue(db, key, tid, method, payload, at) {
 
 const TEXT = {
     trying: m => `${m ? m + ' — menejerimiz' : 'Menejerimiz'} sizga qo‘ng‘iroq qildi, lekin ulanmadi 📞\nQachon qulay? Tanlang — aynan o‘sha vaqtda bog‘lanamiz.`,
+    tryingRu: m => `${m ? m + ' — menejerimiz' : 'Menejerimiz'} siz bilan bog‘lanmoqchi edi 🙂 Rossiyaga qo‘ng‘iroqlar ko‘pincha ulanmaydi — keling, <b>shu yerda yozishamiz</b>.\nQachon qulay?`,
+    tryingD1: name => `${name ? name + ', ' : ''}kecha bog‘lana olmadik 🙂 Sizga qaysi usul qulay — qo‘ng‘iroqmi yoki shu yerda yozishamizmi?`,
+    tryingD3: name => `${name ? name + ', ' : ''}bezovta qilmoqchi emasmiz 🙂 Rus tili hali ham kerak bo‘lsa — bitta tugmani bosing, menejer o‘zingizga qulay vaqtda bog‘lanadi. Kerak bo‘lmasa, bu xabarni e’tiborsiz qoldiring.`,
     talked: (name, m) => `${name ? name + ', ' : ''}${m ? m + ' bilan' : 'menejerimiz bilan'} suhbat uchun rahmat! 🤝\n\nKeyingi qadam — ustoz bilan jonli sinov darsi: darajangizni ko‘rasiz, ustoz bilan tanishasiz va dars qanday o‘tishini o‘zingiz his qilasiz.\n\nSavollaringiz bo‘lsa — shu yerga yozing, menejer javob beradi.`,
-    deciding: name => `${name ? name + ', ' : ''}qaror qilish oson bo‘lishi uchun — eng ko‘p beriladigan savollarga javoblar 👇\n\n✅ ${copy.FAQ.refund[1]}\n\n💳 ${copy.FAQ.install[1]}\n\n⭐ O‘quvchilarimiz natijalari: @domwork_natijalari`,
+    deciding: (name, ru) => `${name ? name + ', ' : ''}qaror qilish oson bo‘lishi uchun — eng ko‘p beriladigan savollarga javoblar 👇\n\n✅ ${copy.FAQ.refund[1]}\n\n💳 ${ru ? copy.FAQ.russia[1] : copy.FAQ.install[1]}\n\n⭐ O‘quvchilarimiz natijalari: @domwork_natijalari`,
     decidingNudge: name => `${name ? name + ', ' : ''}o‘ylab ko‘rdingizmi? 🙂\nYana savol qolgan bo‘lsa — yozing yoki menejerga «qo‘ng‘iroq qiling» deb bosing.`,
     later: (name, date) => `Tushunarli${name ? ', ' + name : ''} 👍${date ? `\n${date} kuni menejerimiz eslatib bog‘lanadi.` : ''}\nUngacha haftada bir-ikki marta foydali iboralar yuborib turamiz — tilingiz «sovib» qolmasin.`,
     laterDay: name => `${name ? name + ', ' : ''}assalomu alaykum! 🙂 Kelishganimizdek, bugun menejerimiz siz bilan bog‘lanadi.\nQulay vaqtni tanlab qo‘ying 👇`,
+    payingRu: name => `${name ? name + ', ' : ''}to‘lov bo‘yicha ma’lumot 💳\n\n• Rossiyadan — karta o‘tkazmasi orqali (rekvizitlarni menejer shu yerda yuboradi).\n\n📄 Shartnoma — ommaviy oferta, quyida ilova qilindi.\n🗓 To‘lovdan keyin darslar uzog‘i bilan 3 ish kunida boshlanadi.\n\nSavol bo‘lsa — shu yerga yozing, menejer javob beradi.`,
     paying: name => `${name ? name + ', ' : ''}to‘lov bo‘yicha ma’lumot 💳\n\n• Click / Payme — «Homework» (Domwork ta’lim loyihasi)\n• Bo‘lib to‘lash — Uzum Nasiya yoki PayLater\n\n📄 Shartnoma — ommaviy oferta, quyida ilova qilindi.\n🗓 To‘lovdan keyin darslar uzog‘i bilan 3 ish kunida boshlanadi.\n\nSavol bo‘lsa — shu yerga yozing, menejer javob beradi.`
 };
 
@@ -56,20 +60,26 @@ async function run(db, now = new Date()) {
         const tid = v.telegram_id, name = first(after.name || v.first_name);
         const manager = after.managerId ? first((await db.query('SELECT name FROM hr_employees WHERE id=$1', [after.managerId])).rows[0]?.name) : '';
         const key = `nurture:${r.lead_id}:${to}`;
+        const ru = v.location === 'ru' || v.segment === 'russia' || after.country === 'ru' || /^\+?7\d{10}$/.test(String(after.phone || '').replace(/[^\d+]/g, ''));
         const once = async fn => { if ((await db.query('INSERT INTO domwork_bot_jobs(key) VALUES($1) ON CONFLICT DO NOTHING RETURNING key', [key])).rows.length) await fn(); };
         if (to === 'boglanishga-urinilmoqda') await once(async () => {
             // Menejerning «Javob yo'q» tugmasi bilan bir xil kalit — bir kunda bitta.
-            const at = sendAt(now, 5 * 60000);
-            await queue(db, `noans:${tid}:${at.toISOString().slice(0, 10)}`, tid, 'sendMessage', { text: TEXT.trying(manager),
-                reply_markup: inline([[[copy.WHEN.now, 'f:w:now'], [copy.WHEN.eve, 'f:w:eve']], [[copy.WHEN.morn, 'f:w:morn'], [copy.text.ctaTelegram, 'f:tg']]]) }, at);
+            const at = sendAt(now, 5 * 60000), stage = { _stage: { leadId: r.lead_id, status: to } };
+            await queue(db, `noans:${tid}:${at.toISOString().slice(0, 10)}`, tid, 'sendMessage', ru
+                ? { text: TEXT.tryingRu(manager), parse_mode: 'HTML', reply_markup: inline([[[copy.text.ctaTelegram, 'f:tg']], [[copy.WHEN.eve, 'f:w:eve'], [copy.WHEN.morn, 'f:w:morn']]]), ...stage }
+                : { text: TEXT.trying(manager), reply_markup: inline([[[copy.WHEN.now, 'f:w:now'], [copy.WHEN.eve, 'f:w:eve']], [[copy.WHEN.morn, 'f:w:morn'], [copy.text.ctaTelegram, 'f:tg']]]), ...stage }, at);
+            // «Bog'lana olmadik» kuzatuvi: 1- va 3-kun — faqat lid hali shu bosqichda bo'lsa yetkaziladi.
+            const choose = inline(ru ? [[[copy.text.ctaTelegram, 'f:tg']]] : [[[copy.text.ctaCall, 'f:call'], [copy.text.ctaTelegram, 'f:tg']]]);
+            await queue(db, key + ':d1', tid, 'sendMessage', { text: TEXT.tryingD1(name), reply_markup: choose, ...stage }, sendAt(new Date(now.getTime() + 86400000)));
+            await queue(db, key + ':d3', tid, 'sendMessage', { text: TEXT.tryingD3(name), reply_markup: choose, ...stage }, sendAt(new Date(now.getTime() + 3 * 86400000)));
             await db.query("UPDATE domwork_bot_visitors SET request=COALESCE(request,'{\"method\":\"call\"}'::jsonb),updated_at=NOW() WHERE telegram_id=$1", [tid]);
         });
         if (to === 'boglanildi') await once(() => require('./funnel').bundledFile('sinov')
             ? queue(db, key, tid, 'sendPhoto', { photo: 'bundled', _bundled: 'sinov', caption: TEXT.talked(name, manager), reply_markup: inline([[[copy.KEYBOARD.faq, 'f:faqlist']]]) }, sendAt(now, 20 * 60000))
             : queue(db, key, tid, 'sendMessage', { text: TEXT.talked(name, manager), reply_markup: inline([[[copy.KEYBOARD.faq, 'f:faqlist']]]) }, sendAt(now, 20 * 60000)));
         if (to === 'qaror-jarayonida') await once(async () => {
-            await queue(db, key, tid, 'sendMessage', { text: TEXT.deciding(name), reply_markup: inline([[[copy.text.ctaCall, 'f:call'], [copy.text.ctaTelegram, 'f:tg']]]) }, sendAt(now, 2 * 3600000));
-            await queue(db, key + ':d2', tid, 'sendMessage', { text: TEXT.decidingNudge(name), reply_markup: inline([[[copy.text.ctaCall, 'f:call']], [[copy.KEYBOARD.faq, 'f:faqlist']]]) }, sendAt(now, 2 * 86400000));
+            await queue(db, key, tid, 'sendMessage', { text: TEXT.deciding(name, ru), reply_markup: inline(ru ? [[[copy.text.ctaTelegram, 'f:tg']]] : [[[copy.text.ctaCall, 'f:call'], [copy.text.ctaTelegram, 'f:tg']]]) }, sendAt(now, 2 * 3600000));
+            await queue(db, key + ':d2', tid, 'sendMessage', { text: TEXT.decidingNudge(name), reply_markup: inline([[[ru ? copy.text.ctaTelegram : copy.text.ctaCall, ru ? 'f:tg' : 'f:call']], [[copy.KEYBOARD.faq, 'f:faqlist']]]) }, sendAt(now, 2 * 86400000));
         });
         if (to === 'keyin-sotib-olmoqchi') await once(async () => {
             const date = after.deferredPurchaseSurvey?.contactDate || '';
@@ -85,7 +95,7 @@ async function run(db, now = new Date()) {
         });
         if (to === 'tolov-jarayonida') await once(async () => {
             const at = sendAt(now, 10 * 60000);
-            await queue(db, key, tid, 'sendMessage', { text: TEXT.paying(name) }, at);
+            await queue(db, key, tid, 'sendMessage', { text: ru ? TEXT.payingRu(name) : TEXT.paying(name) }, at);
             const file = require('./funnel').bundledFile('oferta');
             if (file) await queue(db, key + ':oferta', tid, 'sendDocument', { document: 'bundled', _bundled: 'oferta', caption: '📄 Ommaviy oferta shartnomasi' }, new Date(at.getTime() + 2000));
         });
