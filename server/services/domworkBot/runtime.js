@@ -135,7 +135,7 @@ function createRuntime({ pool, crm, env = process.env, redisFactory, telegramFac
             if (row.payload._bundled) {
                 const file = require('./funnel').bundledFile(row.payload._bundled);
                 if (!file) { await queue.settle(pool, row.id, 'failed', 'bundled-missing'); return true; }
-                payload[file.image ? 'photo' : 'document'] = { source: require('node:fs').readFileSync(file.path), filename: file.filename };
+                payload[file.audio ? 'audio' : file.image ? 'photo' : 'document'] = { source: require('node:fs').readFileSync(file.path), filename: file.filename };
             }
             if (row.payload._documentStudentId) {
                 if (row.role !== 'student' || row.payload._account?.id !== row.payload._documentStudentId) {

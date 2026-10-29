@@ -89,6 +89,7 @@ const text = {
     ruDone: when => `Rahmat! ✅ Ma’lumotlaringiz menejerga yuborildi.\n\n👩‍💼 Menejerimiz <b>${when}</b> shu chatga yozadi: darajangiz, sizga mos jonli dars vaqti va kurs qanday o‘tishini tushuntiradi.\n\nUngacha sohangizga mos qo‘llanmani oling 👇`,
     matchAsk: 'Arizangizni topib, menejeringizni ulab qo‘yishim uchun raqamingizni tasdiqlang — pastdagi tugmani bosing (yozish shart emas) 👇',
     matched: manager => `Rahmat, arizangiz topildi ✅${manager ? `\nMenejeringiz — ${manager}. U siz bilan bog‘lanadi, savollaringizni shu yerga ham yozishingiz mumkin.` : '\nMenejerimiz tez orada bog‘lanadi.'}`,
+    audio: '🎧 <b>Audio varianti</b> — avval o‘zbekcha ma’nosi, keyin ruschasi 2 marta. Ikkinchi marta diktor bilan birga ovoz chiqarib takrorlang.',
     matchAskRu: 'Formadagi arizangiz bilan bog‘lab qo‘yishim uchun raqamni bir bosishda tasdiqlang (ixtiyoriy) — yoki «Keyinroq»ni bosing, savollarga o‘tamiz 👇',
     matchNew: 'Rahmat, raqamingiz saqlandi ✅ Menejerimiz siz bilan bog‘lanadi.',
     giftNext: 'Endi rus tilida o‘zingizni tanishtirishni o‘rganamiz 👇',
