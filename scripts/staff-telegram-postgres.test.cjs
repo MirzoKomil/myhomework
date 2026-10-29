@@ -35,38 +35,22 @@ test('staff Telegram linking without matching phone — synthetic data only',{sk
    const row=(await pool.query('SELECT token_hash FROM domwork_staff_telegram_requests')).rows[0];
    assert.ok(!JSON.stringify(row).includes(start(req).slice(3)));
   });
-  await t.test('Start redacts the token, claims without revealing staff data and creates no identity yet',async()=>{
+  await t.test('Start redacts the token and links in one step, although the Telegram phone differs; replaces only a lead link',async()=>{
+   await pool.query("INSERT INTO domwork_bot_links(telegram_id,account_kind,account_id,phone) VALUES('900','lead','lead-x','998977777777')");
    await queue.receive(pool,{update_id:500,message:msg(900,'/start '+start(req))});
    const saved=(await pool.query('SELECT payload FROM domwork_bot_updates WHERE update_id=500')).rows[0].payload;
    assert.equal(saved.message.text,'/start staff-link');assert.ok(!JSON.stringify(saved).includes(start(req)));
    await queue.processOne(pool,createHandler({crm:{}}));
-   assert.equal((await link.status(pool,teacher)).request.state,'claimed');
-   assert.equal(await store.identity(pool,'900'),null);
-   const out=(await pool.query("SELECT payload FROM domwork_bot_outbox WHERE unique_key='u:500:staff-link'")).rows[0].payload;
-   assert.ok(out.text.includes('CRM'));assert.ok(!JSON.stringify(out).includes('Rus Ustoz'));
-   await assert.rejects(queue.transaction(pool,db=>link.claim(db,msg(901,'/start '+start(req)))),e=>e.status===409);
-   // Tasdiqlashdan oldin /START (katta harf ham) — eski "raqam yuboring" emas, CRMga qaytish ko'rsatmasi.
-   await queue.receive(pool,{update_id:501,message:{...msg(900,'/START'),message_id:9}});
-   await queue.processOne(pool,createHandler({crm:{}}));
-   const back=(await pool.query("SELECT payload FROM domwork_bot_outbox WHERE unique_key='u:501:r:0'")).rows[0].payload;
-   assert.match(back.text,/CRMga qayting/);assert.doesNotMatch(back.text,/raqamingizni yuboring/);
-   // Eski "Telefon raqamni yuborish" tugmasi bosilsa ham — raqam bo'yicha qidirilmaydi.
-   await queue.receive(pool,{update_id:502,message:{...msg(900),message_id:10,contact:{user_id:900,phone_number:'+998920000000',first_name:'B'}}});
-   await queue.processOne(pool,createHandler({crm:{}}));
-   const c=(await pool.query("SELECT payload FROM domwork_bot_outbox WHERE unique_key='u:502:r:0'")).rows[0].payload;
-   assert.match(c.text,/CRMga qayting/);assert.equal(c.reply_markup.remove_keyboard,true);
-  });
-  await t.test('confirmation binds by proof although Telegram phone differs; replaces only a lead link',async()=>{
-   await pool.query("INSERT INTO domwork_bot_links(telegram_id,account_kind,account_id,phone) VALUES('900','lead','lead-x','998977777777')");
-   await assert.rejects(link.confirm(pool,teacher,{requestId:req.request.id,telegramId:'901'}),e=>e.status===409);
-   await link.confirm(pool,teacher,{requestId:req.request.id,telegramId:'900'});
    const id=await store.identity(pool,'900');
    assert.equal(id.kind,'user');assert.equal(id.role,'teacher');assert.equal(id.employeeId,'h-t');
+   assert.equal((await link.status(pool,teacher)).linked,true);
+   const out=(await pool.query("SELECT payload FROM domwork_bot_outbox WHERE unique_key LIKE 'staff-link:%'")).rows;
+   assert.equal(out.length,1);assert.match(out[0].payload.text,/ulandi/);assert.ok(out[0].payload.reply_markup.keyboard.length>0);
+   // Bir martalik: havola boshqa Telegramda ishlamaydi.
+   await assert.rejects(queue.transaction(pool,db=>link.claim(db,msg(901,'/start '+start(req)))),e=>e.status===410);
    // CRM raqami o'zgarsa ham tasdiqlangan ulanish uzilmaydi.
    await pool.query("UPDATE users SET phone='+998909999999' WHERE id='u-t'");await pool.query("UPDATE hr_employees SET phone='+998909999999' WHERE id='h-t'");
    assert.equal((await store.identity(pool,'900'))?.role,'teacher');
-   assert.equal((await link.status(pool,teacher)).linked,true);
-   assert.equal((await pool.query("SELECT COUNT(*) FROM domwork_bot_outbox WHERE unique_key LIKE 'staff-link:%'")).rows[0].count,'1');
    await assert.rejects(link.create(pool,teacher),e=>e.status===409);
   });
   await t.test('another CRM account cannot take an occupied Telegram; unlink is self-only and audited',async()=>{
@@ -83,6 +67,15 @@ test('staff Telegram linking without matching phone — synthetic data only',{sk
    assert.equal((await store.identity(pool,'910'))?.role,'teacher');
    await pool.query("UPDATE users SET phone='+998905555555' WHERE id='u-en'");await pool.query("UPDATE hr_employees SET phone='+998905555555' WHERE id='h-en'");
    assert.equal(await store.identity(pool,'910'),null);
+  });
+  await t.test('a claim left unconfirmed by the old flow is finished by any next message — the phone is never asked',async()=>{
+   await pool.query("DELETE FROM domwork_bot_links WHERE account_id='u-t'");await pool.query("DELETE FROM domwork_staff_telegram_proofs WHERE user_id='u-t'");
+   await pool.query(`INSERT INTO domwork_staff_telegram_requests(id,user_id,session_jti,token_hash,state,telegram_id,expires_at,claimed_at)
+    VALUES('old-claim','u-t','jt','${'b'.repeat(64)}','claimed','930',NOW()+INTERVAL '5 minutes',NOW())`);
+   await queue.receive(pool,{update_id:600,message:{...msg(930,'/START'),message_id:11,contact:{user_id:930,phone_number:'+998920000000',first_name:'B'}}});
+   await queue.processOne(pool,createHandler({crm:{}}));
+   assert.equal((await store.identity(pool,'930'))?.role,'teacher');
+   assert.equal((await pool.query("SELECT COUNT(*) FROM domwork_bot_outbox WHERE unique_key='u:600:r:0'")).rows[0].count,'0');
   });
  }finally{await pool.end();}
 });
