@@ -6,6 +6,7 @@ const groups=require('../domworkGroups');
 const workflow=require('../../../js/trialWorkflow');
 const callbacks=require('./callbacks');
 const T=require('./tone');
+const live=()=>require('./live');
 const money=n=>new Intl.NumberFormat('uz-UZ').format(Number(n)||0).replace(/[\u00a0\u202f]/g,' ')+' UZS';
 async function capture(db,type,referenceId,data={},key) {
     // No replay of old imports or notifications before the bot is deliberately enabled.
@@ -105,9 +106,11 @@ async function processOne(db) {
                     completed:booking.attended?'🎉 <b>Sinov darsi o‘tdi!</b>':'😕 <b>Sinov darsi o‘tmadi</b>'}[booking.state] || '📌 <b>Sinov darsi</b>';
                 const tail={pending:'👇 Ustoz, iltimos, tasdiqlang',accepted:'📲 Menejer, o‘quvchiga vaqtni tasdiqlab qo‘ying — darsdan oldin bot ham eslatadi',rejected:'💼 Menejer, boshqa vaqt yoki ustoz tanlang',
                     completed:booking.attended?'📞 Menejer, endi qo‘ng‘iroq vaqti — taassurot issiqligida gaplashing!':'📞 Menejer, sababini bilib, yangi vaqt taklif qiling'}[booking.state];
-                const summary=`${head}\n\n👤 O‘quvchi: ${T.b(lead.name)}\n🕒 ${T.b(T.when(booking.scheduledAt))}\n👩‍🏫 Ustoz: ${T.who(name,teacher?.telegramId)}`
+                const core=`${head}\n\n👤 O‘quvchi: ${T.b(lead.name)}\n🕒 ${T.b(T.when(booking.scheduledAt))}\n👩‍🏫 Ustoz: ${T.who(name,teacher?.telegramId)}`
                     +(managerName?`\n💼 Menejer: ${T.who(managerName,manager?.telegramId)}`:'')
-                    +(booking.reasonLabel?`\n📝 Sabab: ${T.esc(booking.reasonLabel)}`:'')+(tail?`\n\n${tail}`:'');
+                    +(booking.reasonLabel?`\n📝 Sabab: ${T.esc(booking.reasonLabel)}`:'');
+                const summary=core+(tail?`\n\n${tail}`:'');
+                await live().send(db,'trial:'+row.event_key,core);
                 const buttons=await callbacks.trialButtons(db,lead,booking);
                 const guard={_trial:{leadId:lead.id,requestId:booking.id,teacherId:booking.teacherId,state:booking.state},...T.HTML};
                 await privateMessage(db,key+':teacher',teacher,summary,{reply_markup:buttons,...guard});
@@ -140,6 +143,9 @@ async function processOne(db) {
                     ?`🎉 Tabriklaymiz, ${T.esc(T.first(mgrName))}!\n\nYangi sotuv: ${T.b(payment.snapshot?.name)} — ${T.b(T.sum(payment.amount))}\n${month}${stats.plan>0&&stats.plan>stats.monthSum?`\n🎯 Rejagacha: ${T.b(T.sum(stats.plan-stats.monthSum))}`:''}\n\n${T.i(T.pick(T.CHEERS.sale,payment.id+':p'))}`
                     :`💳 To‘lov qabul qilindi: ${T.b(payment.snapshot?.name)} — ${T.b(T.sum(payment.amount))}${Number(payment.debt_snapshot)>0?`\n⏳ Qolgan qarz: ${T.esc(T.sum(payment.debt_snapshot))}`:'\n✅ Qarz to‘liq yopildi!'}`;
                 await groupMessage(db,key+':sales','sales',group,T.HTML);
+                await live().send(db,'pay:'+row.event_key,stats.isSale
+                    ?`🎉 <b>SOTUV!</b> ${T.who(mgrName,mgr?.telegramId)} — ${T.b(payment.snapshot?.name)} · ${T.b(T.sum(payment.amount))}${tariff}\n${month}`
+                    :`💳 <b>To‘lov</b> · ${T.esc(mgrName)} — ${T.b(payment.snapshot?.name)} · ${T.b(T.sum(payment.amount))}${Number(payment.debt_snapshot)>0?` · qarz qoldi: ${T.esc(T.sum(payment.debt_snapshot))}`:''}`);
                 await privateMessage(db,key+':manager',mgr,personal,T.HTML);
                 if(payment.student_id) await privateMessage(db,key+':student',await linked(db,'student',payment.student_id),
                     `✅ To‘lovingiz qabul qilindi: ${T.b(T.sum(payment.amount))}\n\nRahmat, bizga ishonganingiz uchun! 🤝\nSavollar bo‘lsa — shu yerda yozing yoki menejeringizga murojaat qiling.`,{_studentId:payment.student_id,...T.HTML});
@@ -164,8 +170,14 @@ async function processOne(db) {
                     +(group?`\n👥 Dars guruhi: ${T.esc(group.inviteLink)}`:'')+`\n\n${T.i(T.pick(T.CHEERS.teacher,row.event_key))}`;
                 await privateMessage(db,key+':teacher',teacher,message,{_assignment:{studentId:student.id,teacherId,duty:row.data.duty},
                     ...(group?{_studentGroup:{studentId:student.id,groupId:group.id}}:{}),...T.HTML});
+                await live().send(db,'assign:'+row.event_key,`🎓 <b>O‘quvchi biriktirildi</b>: ${T.b(student.name)} → ${T.esc(tName)}${assistant?' (yordamchi ustoz)':''}${details?'\n'+details:''}`);
                 await groupMessage(db,key+':teachers','teachers',`🎓 ${T.who(tName,teacher?.telegramId)}ga yangi o‘quvchi${assistant?' (yordamchi ustoz)':''}: ${T.b(student.name)}${details?'\n'+details:''}\n\n${T.i(T.pick(T.CHEERS.teacher,row.event_key+':g'))}`,T.HTML);
             }
+        }
+        if(row.type==='attendance') {
+            const st=(await db.query("SELECT name FROM students WHERE id=$1",[row.reference_id])).rows[0];
+            const tn=(await db.query('SELECT name FROM hr_employees WHERE id=$1',[row.data.teacherId])).rows[0]?.name || 'Ustoz';
+            if(st) await live().send(db,'att:'+row.event_key,`${row.data.present?'✅':'🚫'} <b>Davomat</b> · ${T.esc(tn)}${row.data.duty==='assistant'?' (yordamchi)':''}: ${T.b(st.name)} — ${row.data.present?'keldi':'kelmadi'}${row.data.date!==policy.today()?` (${T.esc(row.data.date)} uchun)`:''}`,{silent:true});
         }
         if(row.type==='attendance' && row.data.present===false) {
             const student=(await db.query("SELECT * FROM students WHERE id=$1 AND subject='russian'",[row.reference_id])).rows[0];

@@ -54,4 +54,37 @@ async function report(pool) {
         return { required: c.required, campaign: c.id, total: students.length, linked: students.filter(s => linked.has(s.id)).length };
     });
 }
-module.exports = { campaign, mandatory, relaunch, stop, report };
+// Admin: nega o'quvchiga oyna chiqmayapti — ism/telefon/login bo'yicha qidirib, har bir shartni ko'rsatadi.
+async function diagnose(pool, actor, query, botHealthy) {
+    return queue.transaction(pool, async db => {
+        await require('./store').currentAdmin(db, actor);
+        const q = String(query || '').trim();
+        if (q.length < 3) throw policy.error(400, 'Kamida 3 ta belgi kiriting (ism, telefon yoki login)');
+        const digits = q.replace(/\D/g, '');
+        const rows = (await db.query(`SELECT id,name,phone,subject,extra_data FROM students
+            WHERE name ILIKE $1 OR extra_data->>'login' ILIKE $1 OR ($2<>'' AND regexp_replace(COALESCE(phone,''),'[^0-9]','','g') LIKE $3) ORDER BY name LIMIT 8`,
+            [`%${q}%`, digits.length >= 5 ? digits : '', `%${digits}%`])).rows;
+        const c = await campaign(db);
+        const out = [];
+        for (const r of rows) {
+            const x = r.extra_data || {};
+            const link = (await db.query("SELECT telegram_id,paused FROM domwork_bot_links WHERE account_kind='student' AND account_id=$1", [r.id])).rows[0];
+            const sessions = (await db.query('SELECT COUNT(*)::int AS n, MAX(last_seen) AS seen FROM sessions WHERE user_id=$1', [r.id]).catch(() => ({ rows: [{ n: null }] }))).rows[0];
+            const reasons = [];
+            if (r.subject !== 'russian') reasons.push('rus tili o‘quvchisi emas');
+            if (!x.passwordHash) reasons.push('ilovaga kirish paroli yo‘q');
+            if (!(Number(x.paidAmount) > 0)) reasons.push(`to‘lov summasi CRMda 0 (paidAmount=${x.paidAmount ?? 'yo‘q'})`);
+            if (x.isStaffDemo === true) reasons.push('xodim uchun demo akkaunt');
+            if (x.frozen === true) reasons.push('muzlatilgan');
+            if (x.status === 'inactive') reasons.push('faol emas');
+            if (link) reasons.push('botga allaqachon ulangan' + (link.paused ? ' (/stop bosgan)' : ''));
+            if (!c.required) reasons.push('kampaniya yoqilmagan');
+            if (!botHealthy) reasons.push('bot hozir xabar qabul qilmayapti (webhook/Redis)');
+            if (!sessions?.n) reasons.push('ilovaga kirgan sessiyasi yo‘q');
+            out.push({ name: r.name, phone: r.phone, login: x.login || '', linked: !!link, sessions: sessions?.n ?? null, lastSeen: sessions?.seen || null,
+                popup: reasons.length === 0, reasons });
+        }
+        return { students: out };
+    });
+}
+module.exports = { campaign, mandatory, relaunch, stop, report, diagnose };

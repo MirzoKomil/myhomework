@@ -27,6 +27,20 @@ async function once(db,key,fn) {
     if(!insert.rows.length) return;
     await fn();
 }
+// Har bo'lim alohida savepoint ichida: bittasining xatosi boshqalarini (masalan 23:00 hisobotlarini) to'xtatmaydi.
+// Xato domwork_bot_errors jurnaliga yoziladi (10 daqiqada bir marta) — Bot boshqaruvida ko'rinadi.
+async function guarded(db,part,fn) {
+    const sp='sp_'+part.replace(/[^a-z0-9_]/gi,'_');
+    await db.query('SAVEPOINT '+sp);
+    try { await fn(); await db.query('RELEASE SAVEPOINT '+sp); }
+    catch(error) {
+        await db.query('ROLLBACK TO SAVEPOINT '+sp);
+        console.error('[domwork-bot] '+part+' failed:', error.code || error.name, error.message);
+        await db.query(`INSERT INTO domwork_bot_errors(part,message) SELECT $1,$2 WHERE to_regclass('domwork_bot_errors') IS NOT NULL
+            AND NOT EXISTS(SELECT 1 FROM domwork_bot_errors WHERE part=$1 AND created_at>NOW()-INTERVAL '10 minutes')`,
+            [part,String(error.message || error.code || error.name).slice(0,500)]).catch(()=>{});
+    }
+}
 async function roles(db,allowed) {
     const out=[];
     for(const row of (await db.query('SELECT telegram_id FROM domwork_bot_links WHERE NOT paused')).rows) {
@@ -60,6 +74,7 @@ async function trialNudges(db,now) {
                 `⏰ <b>${T.esc(T.first(tName))}, sinov darsi ${step} daqiqadan beri tasdiqlanmagan!</b>\n\n${body}\n\nO‘quvchi va menejer javobingizni kutyapti — iltimos, hoziroq tasdiqlang yoki rad eting 👇`,{...guard,reply_markup:buttons});
             await events.groupMessage(db,`trial-nudge:${booking.id}:${step}:beacon`,'beacon',
                 `${step===45?'🚨':'⏰'} ${T.who(tName,teacher?.telegramId)}, sinov darsi ${T.b(step+' daqiqadan')} beri tasdiqlanmagan!\n\n${body}\n\n👇 Iltimos, tasdiqlang`,{...guard,reply_markup:buttons});
+            await require('./live').send(db,`trial-wait:${booking.id}:${step}`,`${step===45?'🚨':'⏳'} <b>Ustoz sinov darsini ${step} daqiqadan beri tasdiqlamayapti</b>\n\n${body}\n👩‍🏫 Ustoz: ${T.who(tName,teacher?.telegramId)}`);
             if(step===45) {
                 await events.privateMessage(db,`trial-nudge:${booking.id}:45:manager`,manager,
                     `⚠️ Ustoz ${T.b(tName)} sinov darsini 45 daqiqadan beri tasdiqlamadi.\n\n${body}\n\nUstoz bilan bog‘laning yoki boshqa ustoz tanlang 📞`,guard);
@@ -73,23 +88,21 @@ async function run(db,now=new Date()) {
     const lock=(await db.query("SELECT pg_try_advisory_xact_lock(hashtext('domwork-bot-scheduler')) AS locked")).rows[0];
     if(!lock.locked) return;
     const settings=(await store.settings(db)).data, clock=localClock(now);
-    await require('./recognition').run(db,settings,clock,now,once);
+    await guarded(db,'awards',()=>require('./recognition').run(db,settings,clock,now,once));
+    await guarded(db,'live_feed',()=>require('./live').run(db,settings,clock,now,once));
+    await guarded(db,'sales_coach',()=>require('./salesCoach').run(db,settings,clock,now,once));
+    // Dars guruhida bot yo'q — ROPga eslatma (yangilari har 15 daqiqada, eskilari kuniga bir marta).
+    await guarded(db,'group_watch',async()=>{ await require('./groupWatch').run(db,settings,clock,now,once); });
     // Jamoa kayfiyati (motivatsiya, latifa, Juma, dushanba, oy oxiri) — alohida savepoint.
-    await db.query('SAVEPOINT team_vibes');
-    try { await require('./vibes').run(db,settings,clock,now,once); await db.query('RELEASE SAVEPOINT team_vibes'); }
-    catch(error) { await db.query('ROLLBACK TO SAVEPOINT team_vibes'); console.error('[domwork-bot] vibes failed:', error.code || error.name); }
+    await guarded(db,'team_vibes',async()=>{ await require('./vibes').run(db,settings,clock,now,once); });
     // Sinov darsi 15 daqiqada tasdiqlanmasa — ustozni qayta chaqirish; 45 daqiqada — ROP va menejerga ham.
     if(settings.eventsEnabled) {
-        await db.query('SAVEPOINT trial_nudge');
-        try { await trialNudges(db,now); await db.query('RELEASE SAVEPOINT trial_nudge'); }
-        catch(error) { await db.query('ROLLBACK TO SAVEPOINT trial_nudge'); console.error('[domwork-bot] trial nudge failed:', error.code || error.name); }
+        await guarded(db,'trial_nudge',async()=>{ await trialNudges(db,now); });
     }
     // Isitish alohida savepoint ichida: xatosi eslatma va hisobotlarni orqaga qaytarmasin.
-    await db.query('SAVEPOINT funnel_drip');
-    try { await require('./funnel').drip(db,now); await db.query('RELEASE SAVEPOINT funnel_drip'); }
-    catch(error) { await db.query('ROLLBACK TO SAVEPOINT funnel_drip'); console.error('[domwork-bot] drip failed:', error.code || error.name); }
+    await guarded(db,'funnel_drip',async()=>{ await require('./funnel').drip(db,now); });
     const expires=()=>new Date(now.getTime()+3*60000).toISOString();
-    if(settings.remindersEnabled) {
+    await guarded(db,'reminders',async()=>{ if(settings.remindersEnabled) {
         const students=(await db.query("SELECT * FROM students WHERE subject='russian'")).rows.filter(policy.activeStudent);
         for(const student of students) {
             const at=scheduledToday(student,now);
@@ -113,6 +126,7 @@ async function run(db,now=new Date()) {
                 const tName=(await db.query('SELECT name FROM hr_employees WHERE id=$1',[student.teacher_id])).rows[0]?.name || '';
                 await events.privateMessage(db,`attendance-reminder:${student.id}:${atText}`,teacher,
                     `⏰ ${T.esc(T.first(tName) || 'Ustoz')}, ${T.b(student.name)}ning soat ${T.b(hhmm(at))} dagi darsi bo‘yicha davomat hali belgilanmagan.\n\nBelgilanmagan dars maoshga o‘tmaydi — 1 daqiqa ajrating 🙏`,{...T.HTML,_setting:'remindersEnabled',_expiresAt:expires(),_assignment:{studentId:student.id,teacherId:student.teacher_id,duty:'main'},_schedule:{studentId:student.id,at:atText},_missingAttendance:{studentId:student.id,teacherId:student.teacher_id,duty:'main',date:clock.date}});
+                await require('./live').send(db,`att-missing:${student.id}:${atText}`,`⚠️ <b>Davomat qilinmadi</b>\n👩‍🏫 ${T.esc(tName || 'Ustoz')} — ${T.b(student.name)}, soat ${T.b(hhmm(at))} dagi dars (tugaganiga 15 daqiqa bo‘ldi)`);
                 await events.groupMessage(db,`attendance-team:${student.id}:${atText}`,'teachers',`⏰ ${T.who(tName,teacher?.telegramId)}, ${T.b(student.name)}ning ${T.b(hhmm(at))} dagi darsi bo‘yicha davomat hali belgilanmagan.\nBelgilanmagan dars maoshga o‘tmaydi — 1 daqiqa ajrating 🙏`,{...T.HTML,_expiresAt:expires()});
             });
             if(student.assistant_teacher_id && clock.hour===21 && clock.minute<2) await once(db,`assistant-attendance:${student.id}:${clock.date}`,async()=>{
@@ -137,15 +151,15 @@ async function run(db,now=new Date()) {
                 await learningMessage(db,`trial-group:${group?.id}:${booking.id}:${minute}`,group,message,guard);
             });
         }
-    }
+    }});
     const reached=time=>{const [h,m]=time.split(':').map(Number); return clock.hour===h && clock.minute>=m && clock.minute<m+2;};
-    if(settings.promotionsEnabled && settings.promotionText && reached(settings.promotionTime || '10:00')) {
+    await guarded(db,'promotion',async()=>{ if(settings.promotionsEnabled && settings.promotionText && reached(settings.promotionTime || '10:00')) {
         await once(db,'promotion:'+clock.date,async()=>{
             for(const identity of await roles(db,['trial'])) await events.privateMessage(db,'promotion:'+clock.date+':'+identity.telegramId,identity,settings.promotionText,{_setting:'promotionsEnabled',_expiresAt:new Date(now.getTime()+3600000).toISOString()});
         });
-    }
+    }});
     // Targetolog kechagi reklama ma'lumotini (sarf, lidlar) CRMga kiritmagan bo'lsa: 10:00 — o'ziga, 15:00 — Marketing guruhiga ham.
-    if(settings.remindersEnabled && (reached('10:00') || reached('15:00'))) {
+    await guarded(db,'ads_missing',async()=>{ if(settings.remindersEnabled && (reached('10:00') || reached('15:00'))) {
         const yday=require('./reports').shift(clock.date,-1), step=reached('10:00')?1:2;
         await once(db,`ads-missing:${yday}:${step}`,async()=>{
             if(!(await db.query("SELECT to_regclass('target_ad_entries') AS t")).rows[0]?.t) return;
@@ -157,28 +171,14 @@ async function run(db,now=new Date()) {
             if(step===2) await events.groupMessage(db,`ads-missing:${yday}:2:group`,'marketing',
                 `⚠️ ${T.b(T.dateOnly(yday))} uchun reklama sarfi hali kiritilmagan${people.length?': '+people.map(p=>T.who(p.name,p.telegramId)).join(', '):''}.\nIltimos, bugun kiritib qo‘ying — oy hisobotidagi narxlar shunga bog‘liq 📊`,opts);
         });
+    }});
+    // 29-okt: kun yakuni hisobotlari 23:00 da, ROP taqqoslamasi 23:05 da. 30-okt: 23:00–23:59 oralig'ida qayta urinadi
+    // (bir martalik xato yoki server qayta ishga tushishi hisobotni yo'qotmasin) — once() takrorlanishni to'xtatadi.
+    if(settings.reportsEnabled && clock.hour===23) {
+        await guarded(db,'report_daily',()=>once(db,'report:'+clock.date+':daily',()=>dailyReport(db,clock.date,now)));
+        if(clock.minute>=5) await guarded(db,'report_comparison',()=>once(db,'report:'+clock.date+':comparison',()=>comparisonReport(db,clock.date,now)));
     }
-    // 29-okt: kun yakuni hisobotlari 23:00 da (kechki sotuv soatlari ham kirsin), ROP taqqoslamasi 23:05 da.
-    if(settings.reportsEnabled && (reached('23:00') || reached('23:05'))) {
-        const type=reached('23:00')?'daily':'comparison';
-        await once(db,'report:'+clock.date+':'+type,async()=>{
-            const opts={...T.HTML,_setting:'reportsEnabled',_expiresAt:new Date(now.getTime()+3600000).toISOString()};
-            if(type==='comparison') {
-                for(const identity of await roles(db,['rop'])) {
-                    const value=await staff.action(db,identity,'reports',{now,daily:true,comparison:true});
-                    await events.privateMessage(db,'report:'+clock.date+':comparison:'+identity.telegramId,identity,`🔁 <b>24 soatlik taqqoslama</b> · ${T.dateOnly(clock.date)}\n\n${T.esc(value)}`,opts);
-                }
-                return;
-            }
-            const D=require('./dailyReports');
-            const sales=await D.salesDay(db,clock.date), market=await D.marketingDay(db,clock.date);
-            const text={admin:await D.adminText(db,clock.date),rop:D.salesText(sales),marketing:D.marketingText(market)};
-            for(const identity of await roles(db,['admin','rop','marketing']))
-                await events.privateMessage(db,'report:'+clock.date+':daily:'+identity.telegramId,identity,text[identity.role],opts);
-            await events.groupMessage(db,'department-report:'+clock.date+':daily:sales','sales',D.salesText(sales,{group:true}),opts);
-            await events.groupMessage(db,'department-report:'+clock.date+':daily:marketing','marketing',text.marketing,opts);
-        });
-    }
+    await guarded(db,'family',async()=>{
     if(settings.groupNotificationsEnabled && reached(settings.familyTime || '10:00')) {
         if(settings.familyText) await once(db,'family-content:'+clock.date,()=>events.groupMessage(db,'family-content:'+clock.date,'family',settings.familyText));
         if(clock.day===7 && settings.methodicalText) await once(db,'methodical:'+clock.date,()=>events.groupMessage(db,'methodical:'+clock.date,'teachers',settings.methodicalText));
@@ -186,6 +186,26 @@ async function run(db,now=new Date()) {
             const rows=(await db.query("SELECT * FROM domwork_learning_groups WHERE type='classroom' AND NOT archived AND verified_at IS NOT NULL")).rows;
             for(const row of rows) await learningMessage(db,'video-day:'+clock.date+':'+row.id,groups.dto(row),'☀️ Xayrli yakshanba!\n\nBugun dam olish kuni — 15 daqiqa ajratib, platformadagi video darsni ko‘rib qo‘ying va yordamchi ustozingiz bilan vazifani bajaring 📚\n\n👉 https://myhomework.uz/student/v2/\n\nKichik qadamlar katta natija beradi! 💪');
         });
+    }});
+}
+// Kun yakuni hisobotlari: rahbar, ROP, targetolog (lichka) + Sotuv va Marketing guruhlari.
+// suffix — Bot boshqaruvidagi «Hozir yuborish» tugmasi uchun (navbat kaliti takrorlanmasin).
+async function dailyReport(db,date,now=new Date(),suffix='') {
+    const opts={...T.HTML,_setting:'reportsEnabled',_expiresAt:new Date(now.getTime()+3600000).toISOString()};
+    const D=require('./dailyReports'), tag=date+':daily'+suffix;
+    const sales=await D.salesDay(db,date), market=await D.marketingDay(db,date);
+    const text={admin:await D.adminText(db,date),rop:D.salesText(sales),marketing:D.marketingText(market)};
+    const people=await roles(db,['admin','rop','marketing']);
+    for(const identity of people) await events.privateMessage(db,'report:'+tag+':'+identity.telegramId,identity,text[identity.role],opts);
+    await events.groupMessage(db,'department-report:'+tag+':sales','sales',D.salesText(sales,{group:true}),opts);
+    await events.groupMessage(db,'department-report:'+tag+':marketing','marketing',text.marketing,opts);
+    return {recipients:people.length};
+}
+async function comparisonReport(db,date,now=new Date(),suffix='') {
+    const opts={...T.HTML,_setting:'reportsEnabled',_expiresAt:new Date(now.getTime()+3600000).toISOString()};
+    for(const identity of await roles(db,['rop'])) {
+        const value=await staff.action(db,identity,'reports',{now,daily:true,comparison:true});
+        await events.privateMessage(db,'report:'+date+':comparison'+suffix+':'+identity.telegramId,identity,`🔁 <b>24 soatlik taqqoslama</b> · ${T.dateOnly(date)}\n\n${T.esc(value)}`,opts);
     }
 }
-module.exports={localClock,scheduledToday,checkpoint,once,run};
+module.exports={localClock,scheduledToday,checkpoint,once,run,roles,guarded,dailyReport,comparisonReport};

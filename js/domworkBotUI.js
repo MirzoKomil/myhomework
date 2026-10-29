@@ -2,8 +2,8 @@
     'use strict';
     const esc=v=>escapeHtml(String(v ?? ''));
     const types={sales:'Sotuv',marketing:'Marketing',teachers:'Ustozlar',family:'Family',beacon:'Mayoq'};
-    const roles={all:'Barchaga',trial:'Sinov o‘quvchilari',student:'Faol o‘quvchilar',sales:'Sotuv menejerlari',teacher:'Asosiy ustozlar',assistant:'Yordamchi ustozlar',rop:'ROP',marketing:'Targetolog',admin:'Admin',groups:'Tanlangan guruhlar'};
-    const switches={teamVibesEnabled:'Jamoa kayfiyati: 10:00 motivatsiya, 13:30 latifa, 18:00 “qaynoq soat”, Juma tabrigi, dushanba starti, oy oxiri sanog‘i (Sotuv va Family guruhlari)',staffNotifyEnabled:'Xodim bildirishnomalari Telegramga (CRM panelidagi, har xodimning o‘z tanlovi bo‘yicha)',eventsEnabled:'CRM voqealari xabarlari',remindersEnabled:'Dars va davomat eslatmalari',reportsEnabled:'23:00 kun yakuni hisobotlari (sotuv, marketing, rahbar) va 23:05 ROP taqqoslamasi',groupNotificationsEnabled:'Guruhlarga xabar yuborish',promotionsEnabled:'Sinov o‘quvchilariga kuniga bir xabar',trialRemovalEnabled:'O‘tilgan sinov darsidan keyin guruhdan chiqarish',milestonesEnabled:'20 / 40 / 60 mln sof tushum pog‘onalari tabrigi',dailyAwardsEnabled:'Kun sotuvchisi va kun ustozi',weeklyAwardsEnabled:'Hafta yetakchisi',monthlyAwardsEnabled:'Oy yetakchisi',employeeWelcomeEnabled:'Yangi rus tili xodimiga jamoa tabrigi',releaseNotesEnabled:'Jamoaga CRM yangilanishlari'};
+    const roles={all:'Barchaga',trial:'Sinov o‘quvchilari',student:'Faol o‘quvchilar',sales:'Sotuv menejerlari',teacher:'Asosiy ustozlar',assistant:'Yordamchi ustozlar',rop:'ROP',marketing:'Targetolog',admin:'Admin',groups:'Tanlangan guruhlar',classrooms:'Barcha dars guruhlari (o‘quvchilar guruhlari)'};
+    const switches={liveFeedRopEnabled:'ROP ham jonli kuzatuvni oladi — lidlar, sinov darslari, sotuvlar, soatlik lid holati',salesCoachEnabled:'Sotuv murabbiyi — menejerlarga 10:00 kunlik vazifalar, yangi lid biriktirilganda darhol xabar, kunlik bonus (obed) chaqiruvlari, yangi lid 15 daqiqa kutsa, 3 kundan oshgan lidlar (qayta urinish → Sifatsiz), sinovdan keyingi natija, maqtov, 16:00 eslatma; ROPga 10:05 nazorat',liveFeedEnabled:'Jonli kuzatuv — CRMdagi har bir harakat (lid biriktirish/o‘tkazish va sababi, sinov darsi, sotuv, davomat, har soatda ishlatilmagan lidlar) rahbar lichkasiga',teamVibesEnabled:'Jamoa kayfiyati: 10:00 motivatsiya, 13:30 latifa, 18:00 “qaynoq soat”, Juma tabrigi, dushanba starti, oy oxiri sanog‘i (Sotuv va Family guruhlari)',staffNotifyEnabled:'Xodim bildirishnomalari Telegramga (CRM panelidagi, har xodimning o‘z tanlovi bo‘yicha)',eventsEnabled:'CRM voqealari xabarlari',remindersEnabled:'Dars va davomat eslatmalari',reportsEnabled:'23:00 kun yakuni hisobotlari (sotuv, marketing, rahbar) va 23:05 ROP taqqoslamasi',groupNotificationsEnabled:'Guruhlarga xabar yuborish',promotionsEnabled:'Sinov o‘quvchilariga kuniga bir xabar',trialRemovalEnabled:'O‘tilgan sinov darsidan keyin guruhdan chiqarish',milestonesEnabled:'20 / 40 / 60 mln sof tushum pog‘onalari tabrigi',dailyAwardsEnabled:'Kun sotuvchisi va kun ustozi',weeklyAwardsEnabled:'Hafta yetakchisi',monthlyAwardsEnabled:'Oy yetakchisi',employeeWelcomeEnabled:'Yangi rus tili xodimiga jamoa tabrigi',releaseNotesEnabled:'Jamoaga CRM yangilanishlari'};
     const texts={courseText:'Kurs haqida',platformText:'Platforma haqida',resultsText:'Natijalar',promotionText:'Kunlik sotuv xabari',familyText:'Jamoa xabari',methodicalText:'Haftalik ustozlar posti'};
     let generation=0;
     const api=(path,body,method='POST')=>apiFetch('/api/domwork/bot'+path,body?{method,body:JSON.stringify(body)}:{});
@@ -75,7 +75,9 @@
                 <p class="dg-note">«Ishga tushirish» bosilganda: ulangan o‘quvchilarga botdan yangi menyu va xush kelibsiz xabari boradi; ulanmagan faol rus tili o‘quvchilariga yangi ilovada (student/v2) yopilmaydigan oyna chiqadi — «Botni ochish» → Telegramda Start → tamom, oyna o‘zi yopiladi. Bot xabar qabul qilmay qolsa, oyna chiqmaydi.</p>
                 <p>Holat: ${sact.required?'<b>Majburiy rejim yoqilgan</b>':'o‘chiq'} · Ulangan: ${sact.linked} · Faol o‘quvchilar: ${sact.total}${sact.total?` (${Math.round(sact.linked/sact.total*100)}%)`:''}</p>
                 <button type="button" class="btn-primary" data-sact-relaunch ${status.state==='ready'?'':'disabled'}>${sact.campaign?'Yana ishga tushirish':'Ishga tushirish'}</button>
-                ${sact.required?'<button type="button" class="btn-secondary-sm" data-sact-stop>Majburiy oynani o‘chirish</button>':''}</details>`:''}
+                ${sact.required?'<button type="button" class="btn-secondary-sm" data-sact-stop>Majburiy oynani o‘chirish</button>':''}
+                <form data-sact-diag style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><input class="form-control" name="q" placeholder="O‘quvchini tekshirish: ism, telefon yoki login" style="flex:1;min-width:220px"><button class="btn-secondary-sm" type="submit">Tekshirish</button></form>
+                <div data-sact-diag-out></div></details>`:''}
             <details><summary>Xabar tarqatish</summary><p>Rasm, video va ovozni botning admin menyusi orqali yuborish mumkin. Bu yerda matnli xabarni tayyorlang.</p>
                 <form data-db-broadcast><label>Auditoriya<select class="form-control" name="segment">${Object.entries(roles).map(([id,label])=>`<option value="${id}">${esc(label)}</option>`).join('')}</select></label>
                     <fieldset><legend>Guruhlar — «Tanlangan guruhlar» uchun</legend>${groups.map(g=>`<label class="dg-checkbox"><input type="checkbox" name="group" value="${esc(g.id)}">${esc(g.name)}</label>`).join('') || '<p>Tekshirilgan guruh yo‘q.</p>'}</fieldset>
@@ -85,11 +87,19 @@
             <details><summary>Ruxsat arizalari</summary><div class="dg-list">${requests.requests.map(r=>`<article class="dg-card"><h4>${esc(r.name)}</h4><p>${esc(r.reason)}</p><p>${esc(String(r.start_date).slice(0,10))} — ${esc(String(r.end_date).slice(0,10))}</p><p>${esc(r.state)}</p>${r.state==='pending'?`<button class="btn-primary" data-db-review="${esc(r.id)}" data-state="approved">Tasdiqlash</button> <button class="btn-secondary-sm" data-db-review="${esc(r.id)}" data-state="rejected">Rad etish</button>`:''}</article>`).join('') || '<p>Arizalar yo‘q.</p>'}</div></details>
             <details><summary>Xabarlar monitoringi</summary><p>${deliveries.counts.map(r=>`${esc(r.state)}: ${esc(r.count)}`).join(' · ') || 'Xabarlar yo‘q.'}</p>
                 <p class="dg-note">«uncertain» — Telegram yuborgan bo‘lishi mumkin. Takror yuborish avtomatik bajarilmaydi.</p>
-                ${deliveries.failures.map(r=>`<p>${esc(r.state)} · ${esc(r.last_error)} · ${esc(r.id)}</p>`).join('')}</details>
+                ${deliveries.failures.map(r=>`<p>${esc(r.state)} · ${esc(r.last_error)} · ${esc(r.id)}</p>`).join('')}
+                <h4>Avtomatik vazifalar xatolari</h4>${(deliveries.errors||[]).map(r=>`<p class="dg-error">${esc(new Date(r.created_at).toLocaleString('uz-UZ',{timeZone:'Asia/Tashkent'}))} · ${esc(r.part)} · ${esc(r.message)}</p>`).join('') || '<p>Xato yo‘q ✅</p>'}
+                <label>Hisobot kuni<input class="form-control" type="date" data-db-report-date value="${(()=>{const d=new Date(Date.now()+5*3600000);if(d.getUTCHours()<12)d.setUTCDate(d.getUTCDate()-1);return d.toISOString().slice(0,10);})()}"></label>
+                <button class="btn-secondary-sm" data-db-report-now type="button">Kun yakuni hisobotini hozir yuborish</button></details>
             <button class="btn-secondary-sm" data-db-refresh type="button">Yangilash</button></div>`;
         let busy=false;
         const notify=(value,failed=false)=>{const node=el.querySelector('[data-db-message]');node.textContent=value;node.classList.toggle('dg-error',failed);};
         async function work(fn){if(busy)return;busy=true;const states=[...el.querySelectorAll('button')].map(b=>[b,b.disabled]);states.forEach(([b])=>b.disabled=true);try{await fn();}catch(e){notify(e.message,true);}finally{busy=false;states.forEach(([b,disabled])=>{if(b.isConnected)b.disabled=disabled;});}}
+        el.querySelector('[data-db-report-now]')?.addEventListener('click',()=>work(async()=>{
+            const date=el.querySelector('[data-db-report-date]')?.value;
+            if(!confirm(`${date} kun yakuni hisobotini hozir rahbar, ROP, targetolog va Sotuv/Marketing guruhlariga yuboraymi?`))return;
+            const r=await api('/reports/send-now',date?{date}:{});notify(`Hisobot navbatga qo‘yildi (${r.recipients} ta xodim + guruhlar). 1–2 daqiqada keladi.`);
+        }));
         el.querySelector('[data-db-webhook]').onclick=()=>work(async()=>{
             if(!confirm('@Domworkuz_bot uchun CRM webhookini ulaysizmi?'))return;
             await api('/webhook/setup',{replace:false});notify('Bot webhooki ulandi. Avtomatik xabarlar sozlamalar orqali alohida yoqiladi.');
@@ -144,6 +154,12 @@
             if(!confirm('Ulangan o‘quvchilarga botdan yangi xabar boradi va ilovada majburiy ulash oynasi yoqiladi. Davom etasizmi?'))return;
             const r=await api('/student-activation/relaunch',{});notify(`Ishga tushirildi: ${r.sent} ta o‘quvchiga xabar yuborildi. Qolganlar ilovaga kirganda ulaydi.`);await render(el);
         });
+        const diag=el.querySelector('[data-sact-diag]');
+        if(diag)diag.onsubmit=e=>{e.preventDefault();work(async()=>{
+            const r=await api('/student-activation/diagnose?q='+encodeURIComponent(diag.elements.q.value.trim()));
+            el.querySelector('[data-sact-diag-out]').innerHTML=r.students.length?r.students.map(x=>`<article class="dg-card"><h4>${esc(x.name)} · ${esc(x.phone)}${x.login?' · '+esc(x.login):''}</h4>
+                <p>${x.popup?'✅ Oyna chiqishi kerak':'❌ Oyna chiqmaydi: '+x.reasons.map(esc).join('; ')}</p><p class="dg-note">Botga ulangan: ${x.linked?'ha':'yo‘q'} · Sessiyalar: ${x.sessions ?? '—'}${x.lastSeen?' · oxirgi kirish '+esc(new Date(x.lastSeen).toLocaleString('uz-UZ',{timeZone:'Asia/Tashkent'})):''}</p></article>`).join(''):'<p>Topilmadi.</p>';
+        });};
         const sStop=el.querySelector('[data-sact-stop]');
         if(sStop)sStop.onclick=()=>work(async()=>{
             if(!confirm('O‘quvchilar uchun majburiy oynani o‘chirasizmi?'))return;

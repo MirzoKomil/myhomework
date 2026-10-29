@@ -134,6 +134,14 @@ test('student Telegram linking — no real CRM or Telegram calls',{skip:!url},as
    await SA.stop(pool,{id:'admin'});assert.equal(await SA.mandatory(pool,false),false);
    await pool.query('UPDATE domwork_bot_settings SET data=$1,revision=$2',[saved.data,saved.revision]);
   });
+  await t.test('admin diagnose explains why a student sees no popup',async()=>{
+   const SA=require('../server/services/domworkBot/studentActivation');
+   await assert.rejects(SA.diagnose(pool,{id:'s'},'Paid',true),e=>e.status===403);
+   const a=(await SA.diagnose(pool,{id:'admin'},'Paid RU',true)).students[0];
+   assert.equal(a.popup,false);assert.ok(a.reasons.some(r=>/ulangan/.test(r)));assert.ok(a.reasons.some(r=>/kampaniya/.test(r)));
+   const u=(await SA.diagnose(pool,{id:'admin'},'903333337',true)).students[0];
+   assert.equal(u.name,'Unpaid');assert.ok(u.reasons.some(r=>/paidAmount/.test(r)));
+  });
   await t.test('existing CRM, groups, notification settings and historical student data unchanged',async()=>assert.deepEqual(await snapshot(),original));
  }finally{if(server)await new Promise(resolve=>server.close(resolve));await pool.end();}
 });
