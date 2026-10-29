@@ -76,7 +76,11 @@
         return { cls: 'k-cls', t: i.kind, s: '', st: 'cls' };
     }
     // Ustma-ust tushgan bloklar yonma-yon (yo'lak) joylashadi.
+    // Muzlatilgan o'quvchining saqlangan vaqti (k-rsv) "faqat sinov" uchun — ustiga sinov/dars tushsa, u yo'lak olmaydi:
+    // orqa fonda to'liq kenglikda qoladi, ustidagi blok tor ustunga siqilmaydi ("Shahzo natij…" bo'lmasin).
     function lanes(blocks) {
+        const real = blocks.filter(b => !b.bg && !/\bk-rsv\b/.test(b.cls || ''));
+        for (const b of blocks) if (!b.bg && /\bk-rsv\b/.test(b.cls || '') && real.some(x => x.start < b.end && x.end > b.start)) { b.bg = true; b.under = true; }
         const fg = blocks.filter(b => !b.bg).sort((a, b) => a.start - b.start || b.end - a.end);
         let cluster = [], end = -1;
         const flush = () => { const ln = []; for (const b of cluster) { let k = ln.findIndex(e => e <= b.start); if (k < 0) { k = ln.length; ln.push(0); } ln[k] = b.end; b.lane = k; } for (const b of cluster) b.lanes = ln.length; cluster = []; };
@@ -674,7 +678,7 @@
             const na = done && i.outcome === 'no_answer';
             const warn = done && !na && i.status !== 'counted';
             const t = `${first(i.studentName)} ${done ? (na ? '✕' : `${CH_IC[i.channel] || ''} ${i.minutes ? i.minutes + '′' : ''}`) : hm(i.start)}`;
-            const why = warn ? { short: '5 daqiqadan qisqa', same_day: 'shu kuni 2-chi', extra_text: 'haftadagi 2-yozishma', over_cap: '13 dan ortiq' }[i.status] || 'hisoblanmadi' : '';
+            const why = warn ? { short: '5 daqiqadan qisqa', same_day: 'shu kuni 2-chi', extra_text: 'haftadagi 2-yozishma', over_cap: '13 dan ortiq', before_start: 'kurs boshlanishidan oldin · sanalmaydi' }[i.status] || 'hisoblanmadi' : '';
             return { start: i.start, end: i.start + 30, cls: done ? (na ? 'k-no' : warn ? 'k-un' : 'k-ok') : 'k-wait', t,
                 title: `${hm(i.start)} · ${i.studentName} · ${done ? (na ? 'javob bermadi' : `${CH[i.channel] || ''} ${i.minutes} daq${why ? ' · ' + why : ''}`) : 'tavsiya'}`,
                 click: true, attrs: ` data-sid="${esc(i.studentId)}" data-k="${i.kind}"` };
@@ -684,7 +688,7 @@
         const range = fit([], [...bottoms, { start: 9 * 60, end: 22 * 60 }]); // dizayn: 09:00–22:00
         const advice = items.filter(i => i.kind === 'advice').length, done = items.filter(i => i.kind === 'contact' && i.outcome !== 'no_answer').length;
         const hasUn = shown.some(i => i.kind === 'contact' && i.outcome !== 'no_answer' && i.status !== 'counted');
-        body.innerHTML = `<section class="sc-card sv-wcard"><header class="sv-bh"><h2>${esc(weekTitle(from))} · ${advice + items.filter(i => i.kind === 'contact').length} tavsiya · ${done} bajarildi</h2><span class="sc-grow"></span><span class="sc-mt">Blokni bosing → aloqani belgilash</span></header>
+        body.innerHTML = `<section class="sc-card sv-wcard"><header class="sv-bh"><h2>${esc(weekTitle(from))} · ${window.AttendanceRules?.weekPlanCount ? AttendanceRules.weekPlanCount(items) : advice + items.filter(i => i.kind === 'contact').length} tavsiya · ${done} bajarildi</h2><span class="sc-grow"></span><span class="sc-mt">Blokni bosing → aloqani belgilash</span></header>
             ${items.length ? vgrid(cols, range, { stack: true }) : '<p class="sc-mt sv-pp">Sizga yordamchi sifatida faol o\'quvchi biriktirilmagan.</p>'}
             ${legend([['k-ok', 'Bajarildi (usul · daqiqa)'], ['k-no', 'Javob bermadi'], ...(hasUn ? [['k-un', 'Hisoblanmadi (qoida)']] : []), ['k-wait', 'Tavsiya']], { rules: true })}</section>`;
         body.querySelector('[data-rules]')?.addEventListener('click', rulesDrawer);

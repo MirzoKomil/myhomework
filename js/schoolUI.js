@@ -138,7 +138,7 @@
     const whenTxt = iso => { const d = localDay(iso); if (!d) return '—'; const t = today(); return d === t ? 'bugun' : d === addDays(t, -1) ? 'kecha' : dShort(d); };
     const advDaysOf = day => ([1, 3, 5].includes(Number(day)) ? [2, 4, 6] : [1, 3, 5]);
     const CHN = { phone: ['☎', 'Telefon'], zoom: ['Z', 'Zoom'], meet: ['M', 'Google Meet'], tg_video: ['▶', 'Telegram video'], tg_group: ['▶', 'Telegram guruh videodars'], tg_text: ['✉', 'Telegram yozishma'] };
-    const CST = { counted: '', short: '5 daqiqadan qisqa', same_day: 'shu kuni 2-chi', extra_text: 'haftadagi 2-yozishma', over_cap: '13 dan ortiq' };
+    const CST = { counted: '', short: '5 daqiqadan qisqa', same_day: 'shu kuni 2-chi', extra_text: 'haftadagi 2-yozishma', over_cap: '13 dan ortiq', before_start: 'kurs boshlanishidan oldin · sanalmaydi' };
     const LOCK = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
 
     // ── Ilova natijalari (O'zlashtirish) — karta va "O'quvchini tekshirish" uchun umumiy ──
@@ -383,6 +383,9 @@
             : money ? [serial && '#' + esc(serial), esc(c.phone || '')].filter(Boolean).join(' · ')
             : sc === 'past' ? 'oldingi o\'quvchingiz'
             : [serial && '#' + esc(serial), s.days && `${esc(s.days)} ${esc(s.time || '')} · ${esc(s.duration || '')} daq`, c.startDate && `kurs ${ddmm(String(c.startDate).slice(0, 10))}${end ? ' → ' + ddmm(end) : ''}`, c.assistantId && `yordamchi ${esc(teacherName(c.assistantId))}`].filter(Boolean).join(' · ');
+        // YordamchiKartaAloqa: "Davomat va aloqalar" tabida sarlavhada tugmalar yo'q, meta — o'quvchi ma'lumoti qatori.
+        const metaAloqa = sc === 'assistant' ? [serial && '#' + esc(serial), s.days && `${esc(s.days)} ${esc(s.time || '')}${s.duration ? ` · ${esc(s.duration)} daq` : ''}`,
+            `asosiy ustoz ${esc(teacherName(c.teacherId))}`, `yordamchi ${esc(teacherName(c.assistantId))} (${advDaysOf(s.day).map(x => DAY[x - 1]).join('·')}${s.time ? ' ' + esc(s.time) : ''})`].filter(Boolean).join(' · ') : '';
         const acts = [];
         if (sc === 'teacher' && c.status !== 'left') acts.push(['makeup', 'Qoplash darsi qo\'yish', ''], ['req', 'Adminga so\'rov', '']);
         if (sc === 'assistant') acts.push(['write', 'Asosiy ustozga yozish', ''], ['mat', 'Dars materiallari', 'pri']);
@@ -393,9 +396,9 @@
           <section class="sc-card scc-head">
             <div class="scc-hrow">${studentAvatar(c, 44)}<div class="scc-hmain">
               <div class="scc-hname"><h1>${esc(c.name)}</h1>${sc === 'assistant' ? '<button type="button" class="scc-call" data-act="call"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>Qo\'ng\'iroq</button>' : ''}</div>
-              <div class="scc-pills">${sc === 'past' ? '' : tgPill(c.group)} ${statusPill(c)} <span class="sc-pill sc-pill--info">${c.subject === 'russian' ? 'Rus tili' : 'Ingliz tili'}</span><span data-flag></span><span class="scc-meta">${meta}</span></div>
+              <div class="scc-pills">${sc === 'past' ? '' : tgPill(c.group)} ${statusPill(c)} <span class="sc-pill sc-pill--info">${c.subject === 'russian' ? 'Rus tili' : 'Ingliz tili'}</span><span data-flag></span><span class="scc-meta" data-meta>${meta}</span></div>
             </div></div>
-            ${acts.length ? `<div class="scc-acts">${acts.map(([k, l, p]) => `<button type="button" class="sc-btn${p ? ' sc-btn--pri' : ''}" data-act="${k}">${esc(l)}</button>`).join('')}</div>` : ''}
+            ${acts.length ? `<div class="scc-acts">${acts.map(([k, l, p]) => `<button type="button" class="sc-btn${p ? ' sc-btn--pri' : ''}" data-act="${k}"${k === 'write' ? ` title="${esc(writeTitle(c))}"` : ''}>${esc(k === 'write' ? writeLabel(c) : l)}</button>`).join('')}</div>` : ''}
             <div class="scc-tabs"><div role="tablist" aria-label="Karta bo'limlari">${tabs.map(([k, l]) => `<button type="button" role="tab" class="scc-tab" data-tab="${k}" aria-selected="${k === tab}">${l}</button>`).join('')}</div>${lock ? `<span class="scc-lock">${LOCK}${esc(lock)}</span>` : ''}</div>
           </section>
           <div class="scc-body" data-body></div>`;
@@ -408,10 +411,19 @@
             const m = el.querySelector('[data-act="mat"]'); if (m && r.detail) { m.textContent = `${acad.current(r.detail)}-dars materiallari`; m.dataset.no = acad.current(r.detail); }
         }).catch(() => {});
         if (money) getPay(c).then(p => { const f = el.querySelector('[data-flag]'); const pp = payPill(p); if (f && pp) f.outerHTML = pp; }).catch(() => {});
-        if (sc === 'assistant') getCon(c, today().slice(0, 7)).then(r => { const x = el.querySelector('[data-acount]'); if (x) x.textContent = r.counted; }).catch(() => {});
+        if (sc === 'assistant') getCon(c, today().slice(0, 7)).then(r => { c._acount = r.counted; const x = el.querySelector('[data-acount]'); if (x) x.textContent = r.counted; }).catch(() => {});
         el.querySelectorAll('[data-act]').forEach(b => b.onclick = () => cardAction(b.dataset.act, c, b));
         const show = k => {
             if (_page) _page.tab = k;
+            if (sc === 'assistant') {
+                const aloqa = k === 'davomat', ac = el.querySelector('.scc-acts'), mt = el.querySelector('[data-meta]');
+                if (ac) ac.style.display = aloqa ? 'none' : '';
+                if (mt && aloqa && mt.dataset.mode !== 'aloqa') { mt._full = mt.innerHTML; mt.innerHTML = metaAloqa; mt.dataset.mode = 'aloqa'; }
+                else if (mt && !aloqa && mt.dataset.mode === 'aloqa') {
+                    mt.innerHTML = mt._full; mt.dataset.mode = 'full';
+                    const x = mt.querySelector('[data-acount]'); if (x && c._acount != null) x.textContent = c._acount;
+                }
+            }
             el.querySelectorAll('.scc-tab').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === k)));
             if (k === 'umumiy') summaryTab(body, c);
             else if (k === 'davomat') attendanceTab(body, c);
@@ -431,6 +443,19 @@
         if (due) return `<span class="sc-pill sc-pill--warn">To'lov muddati o'tdi</span>`;
         return '';
     }
+    // Asosiy ustozning Telegram username'i (profil → Telegram "@username"); server yordamchiga faqat shuni beradi.
+    function mainTeacherTg(c) {
+        const raw = String(c.mainTeacher?.telegram || '').trim().replace(/^https?:\/\/(www\.)?t(elegram)?\.me\//i, '').replace(/^@/, '').split(/[/?#\s]/)[0];
+        return /^[A-Za-z][A-Za-z0-9_]{3,31}$/.test(raw) ? raw : '';
+    }
+    const groupLink = c => { const l = String(c.group?.tg_link || c.group?.link || '').trim(); return /^https?:\/\//i.test(l) && !c.group?.archived ? l : ''; };
+    // Tugma matni: username bo'lsa "Asosiy ustozga yozish", bo'lmasa guruh orqali — aniq yoziladi.
+    const writeLabel = c => (!mainTeacherTg(c) && groupLink(c) ? 'Asosiy ustozga yozish · o\'quvchi guruhida' : 'Asosiy ustozga yozish');
+    const writeTitle = c => (mainTeacherTg(c) ? `Telegram: @${mainTeacherTg(c)}` : groupLink(c) ? "Asosiy ustozning Telegram username'i kiritilmagan — o'quvchining Telegram guruhi ochiladi (asosiy ustoz ham shu guruhda)" : writeHint(c));
+    function writeHint(c) {
+        const nm = c.mainTeacher?.name || teacherName(c.teacherId) || 'Asosiy ustoz';
+        return `${nm} profilida Telegram username kiritilmagan, o'quvchining Telegram guruhi ham yo'q — admin orqali bog'laning`;
+    }
     function cardAction(k, c, btn) {
         const reopen = () => openStudent(c.id, _page?.tab || 'umumiy');
         if (k === 'edit') return openCardForm(c.id, 'tahrir', reopen);
@@ -449,11 +474,17 @@
             return;
         }
         if (k === 'write') {
-            // Xodimlar chati CRM'da faqat rahbarlar uchun — asosiy ustozga Telegram orqali (HR'dagi raqam).
+            // Xodimlar chati CRM'da faqat rahbarlar uchun — asosiy ustozga Telegram orqali. Yordamchiga ustozning shaxsiy
+            // telefoni ochilmaydi: server kartada faqat Telegram username'ni beradi (card.mainTeacher.telegram).
+            const tg = mainTeacherTg(c);
+            if (tg) return window.open(`https://t.me/${tg}`, '_blank', 'noopener');
             const t = staffList().find(x => x.id === c.teacherId);
             const digits = String(t?.phone || '').replace(/\D/g, '');
-            if (digits.length >= 9) return window.open(`https://t.me/+${digits.length === 9 ? '998' + digits : digits}`, '_blank', 'noopener');
-            return toast('Asosiy ustozning telefon raqami HR bo\'limida kiritilmagan', 3500);
+            if (c.scope !== 'assistant' && digits.length >= 9) return window.open(`https://t.me/+${digits.length === 9 ? '998' + digits : digits}`, '_blank', 'noopener');
+            // Ustozning username'i yo'q — o'quvchining Telegram guruhi (asosiy ustoz ham shu guruhda).
+            const grp = groupLink(c);
+            if (grp) { toast(`${c.mainTeacher?.name || teacherName(c.teacherId) || 'Asosiy ustoz'} Telegram username kiritmagan — o'quvchi guruhida yozing`, 3500); return window.open(grp, '_blank', 'noopener'); }
+            return toast(writeHint(c), 4500);
         }
         if (k === 'mat') {
             const no = Number(btn?.dataset.no) || 1, lang = c.subject === 'russian' ? 'russian' : 'english';

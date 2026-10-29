@@ -30,19 +30,8 @@ function studentRow(r) {
 // O'quvchining sana bo'yicha holati: 'active' | 'frozen' | 'left'.
 // Yozuvlar vaqt bo'yicha qo'llanadi; bekor qilinganlar hisobga olinmaydi.
 function statusOn(statusRows, date) {
-    let state = 'active';
-    // pg DATE ustunlari Date bo'lib keladi — sana satri va vaqt bo'yicha saralanadi.
-    const ts = v => (v instanceof Date ? v.getTime() : Date.parse(v) || 0);
-    const rows = [...statusRows].filter(r => !r.cancelled_at)
-        .sort((a, b) => dateStr(a.from_date).localeCompare(dateStr(b.from_date)) || ts(a.created_at) - ts(b.created_at));
-    for (const r of rows) {
-        const from = dateStr(r.from_date), to = r.to_date ? dateStr(r.to_date) : null;
-        if (from > date) continue;
-        if (r.status === 'frozen') { if (!to || date <= to) state = 'frozen'; else if (state === 'frozen') state = 'active'; }
-        else if (r.status === 'left') state = 'left';
-        else if (r.status === 'restored') state = 'active';
-    }
-    return state;
+    // Yagona ta'rif — js/attendanceRules.js (CRM va server bir xil hisoblaydi).
+    return require('../../../js/attendanceRules').statusOn(statusRows, date);
 }
 function dateStr(v) {
     if (!v) return null;
@@ -581,24 +570,48 @@ async function teacherAbsences(db, { from, to, teacherId = '', studentIds = null
     return out;
 }
 
+// Qoplanmagan (qoldirilgan) darslar — UstozBosh "Bajarish kerak", Mening maoshim, Dars jadvali va qoplash tekshiruvi uchun
+// bitta qoida (js/ustozHome.js missed bilan bir xil):
+//  • faqat hozir shu ustozdagi faol o'quvchilar (js/attendanceRules.isActiveStudent);
+//  • "Kelmadi" (school_absences yoki eski present=0) — lekin shu kuni "Keldi" bo'lsa, "Keldi" ustun;
+//  • faqat o'quvchining dars kunlari (Du·Ch·Ju / Se·Pa·Sh) va kurs boshlangan kundan.
 async function missedLessons(db, teacherId, { from, to }) {
+    const R = require('../../../js/attendanceRules');
+    const cal = require('../../../js/teacherAttendanceCalendar');
     const months = monthsOf(from, to);
-    // Eski yozuvlar (present = 0) + school_absences — faqat hozir shu ustozning o'quvchilari.
     const { rows: legacy } = await db.query(`SELECT a.student_id, LEFT(a.att_key, 7) AS month, a.day FROM main_attendance a JOIN students s ON s.id = a.student_id
         WHERE s.teacher_id = $1 AND a.present = 0 AND LEFT(a.att_key, 7) = ANY($2::text[])`, [teacherId, months]);
-    const mine = new Set((await db.query('SELECT id FROM students WHERE teacher_id = $1', [teacherId])).rows.map(r => r.id));
+    const stRows = (await db.query('SELECT id, lesson_day_of_week, extra_data FROM students WHERE teacher_id = $1', [teacherId])).rows;
+    // (Tranzaksiya ichida ham chaqiriladi — jadval bo'lmasa so'rov yuborilmaydi, xato tranzaksiyani buzmasin.)
+    const tRow = (await db.query("SELECT to_regclass('public.teachers')::text AS t")).rows[0]?.t
+        ? (await db.query('SELECT schedule_pattern FROM teachers WHERE id=$1', [teacherId])).rows[0] || {} : {};
+    const stud = new Map(stRows.filter(r => R.isActiveStudent(r)).map(r => {
+        const x = parseExtra(r.extra_data);
+        const start = String(x.startDate || x.joinDate || '').slice(0, 10);
+        return [r.id, { days: cal.weekdays({ lessonDayOfWeek: r.lesson_day_of_week }, { schedulePattern: tRow.schedule_pattern }, 'main'), start: /^\d{4}-\d{2}-\d{2}$/.test(start) ? start : null }];
+    }));
+    const present = new Set((await db.query(`SELECT student_id, LEFT(att_key, 7) AS month, day FROM main_attendance WHERE att_key = ANY($1::text[]) AND present = 1`,
+        [months.map(m => `${m}_${teacherId}`)])).rows.map(r => `${r.student_id}|${r.month}-${String(r.day).padStart(2, '0')}`));
     const abs = [];
     for (const m of months) {
         const b = T.monthBounds(m);
-        abs.push(...(await teacherAbsences(db, { from: b.from, to: b.to, teacherId })).filter(a => mine.has(a.studentId)));
+        abs.push(...(await teacherAbsences(db, { from: b.from, to: b.to, teacherId })).filter(a => stud.has(a.studentId)));
     }
     const mk = (await db.query(`SELECT student_id, missed_date, held_date, status FROM school_makeups WHERE teacher_id = $1
         AND status IN ('planned','review','approved') AND to_char(missed_date, 'YYYY-MM') = ANY($2::text[])`, [teacherId, months])).rows;
     const by = new Map(mk.map(m => [`${m.student_id}|${dateStr(m.missed_date)}`, m]));
-    const seen = new Set();
+    const seen = new Set(), today = T.nowLocal().date;
+    const ok = x => {
+        const st = stud.get(x.studentId);
+        // Oraliq oylari bo'yicha (Dars jadvalidagi qoplash paneli butun oyni ko'radi); kelajak sana — yo'q.
+        if (!st || !/^\d{4}-\d{2}-\d{2}$/.test(x.date) || x.date > today) return false;
+        if (present.has(`${x.studentId}|${x.date}`)) return false;
+        if (st.start && x.date < st.start) return false;
+        return st.days.includes(T.weekday(x.date));
+    };
     return [...legacy.map(r => ({ studentId: r.student_id, date: `${r.month}-${String(r.day).padStart(2, '0')}` })),
         ...abs.map(a => ({ studentId: a.studentId, date: a.day }))]
-        .filter(x => /^\d{4}-\d{2}-\d{2}$/.test(x.date) && !seen.has(x.studentId + x.date) && seen.add(x.studentId + x.date))
+        .filter(x => ok(x) && !seen.has(x.studentId + x.date) && seen.add(x.studentId + x.date))
         .map(x => { const m = by.get(`${x.studentId}|${x.date}`); return { ...x, makeup: m ? { status: m.status, heldDate: dateStr(m.held_date) } : null }; })
         .sort((a, b) => a.date.localeCompare(b.date));
 }

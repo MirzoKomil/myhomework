@@ -1035,8 +1035,8 @@ router.post('/teacher-attendance', authRequired, crmStateIdentity, async (req, r
         const result = await recordTeacherAttendance({ ...(req.body || {}), actor: req.user });
         res.json({ ok: true, ...result });
     } catch (err) {
-        console.error('POST /api/state/teacher-attendance', err);
-        res.status(400).json({ error: err.message || 'Davomatni saqlab bo\'lmadi' });
+        if (!err.status) console.error('POST /api/state/teacher-attendance', err);
+        res.status(err.status || 400).json({ error: err.message || 'Davomatni saqlab bo\'lmadi' });
     }
 });
 

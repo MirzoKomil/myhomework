@@ -66,6 +66,14 @@ function stateForTeacher(state, own) {
     for (const e of state.hrEmployees.filter(e => teacherIds.has(e.id) && !teachers.some(t => t.id === e.id))) {
         teachers.push({ id: e.id, name: e.name, type: e.role === 'yordamchi' ? 'yordamchi' : 'asosiy', subject: roles.language(e) });
     }
+    // Yordamchi — o'z o'quvchilarining asosiy ustozi bilan bog'lanishi uchun hamkasb Telegram'i ("Asosiy ustozga yozish";
+    // telefon emas). Faqat yordamchi vazifasi bo'lgan xodimga va faqat o'z o'quvchilarining asosiy ustozlari. Telegram — db.getTeacherScopedState.
+    const mainOfMine = new Set(students.filter(s => assistantIds.has(s.id)).map(s => s.teacherId).filter(id => id && id !== own.id));
+    for (const t of teachers) if (mainOfMine.has(t.id)) t.colleagueContact = { telegram: '' };
+    // Maosh sozlamalaridan faqat o'ziga kerakli qism: asosiy ustozga — ustoz tariflari, yordamchiga — yordamchi tarifi (o'z tilida).
+    const lang = roles.language(own), rates = state.payrollRates?.[lang] || {};
+    const payrollRates = { [lang]: { ...(roles.isMain(own) && rates.teacher ? { teacher: rates.teacher } : {}),
+        ...(hasAssistantDuty(own) && rates.assistant ? { assistant: rates.assistant } : {}) } };
     const attendance = (store, ids) => Object.fromEntries(Object.entries(store || {})
         .filter(([key]) => key.slice(8) === own.id).map(([key, rows]) => [key,
             Object.fromEntries(Object.entries(rows).filter(([id]) => ids.has(id)))]));
@@ -77,7 +85,7 @@ function stateForTeacher(state, own) {
         assistantAttendance: attendance(state.assistantAttendance, assistantIds), liveGrades: grades,
         leads: { english: [], russian: [] }, archive: [], payments: [], cashFlow: [],
         salesManagers: [], timetable: {}, bookRoadmap: [], bonusHistory: [], bonusData: {}, salesPlan: {},
-        mobileContent: state.mobileContent, payrollRates: state.payrollRates,
+        mobileContent: state.mobileContent, payrollRates,
         studentMessages: Object.fromEntries(Object.entries(state.studentMessages || {}).filter(([id]) => assignedIds.has(id))
             .map(([id, threads]) => [id, Object.fromEntries(Object.entries(threads || {}).filter(([slot]) =>
                 (slot === 'main-teacher' && mainIds.has(id)) || (slot === 'assistant-teacher' && assistantIds.has(id))))])),

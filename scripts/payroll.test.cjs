@@ -135,11 +135,15 @@ for (const pattern of ['mwf', 'tts']) test(`teacher tariffs and ${pattern} sched
   const row = calculate(s).rows[0]; assert.equal(row.total, 525000); assert.equal(row.lessons, days.length * 3);
   assert.equal(row.studentCount, 3);
 });
-test('assistant uses 50000 (not main teacher rate), independent day marks with monthly attendance cap', () => {
+test('assistant uses its own rate (default 40000, not main teacher rate), independent day marks with monthly attendance cap', () => {
   const s = source({ hrEmployees: [employee('a', 'yordamchi')], teachers: [{ id: 'a', lessonDuration: 60 }],
     students: [{ id: 's', subject: 'english', assistantTeacherId: 'a', lessonDuration: 60 }],
     assistantAttendance: { '2026-10_a': { s: Object.fromEntries(Array.from({ length: 31 }, (_, i) => [i + 1, true])) } } });
-  const row = calculate(s).rows[0]; assert.equal(row.total, 50000); assert.equal(row.lessons, engine.expectedDays('2026-10').length);
+  // 29-okt qarori: yordamchi — o'quvchi tarifidan qat'i nazar oyiga 40 000.
+  const row = calculate(s).rows[0]; assert.equal(row.total, 40000); assert.equal(row.lessons, engine.expectedDays('2026-10').length);
+  // Eski (to'langan) oylar o'z sozlamasi bilan: 50 000.
+  const old = engine.defaults(); old.assistant.rate = 50000;
+  assert.equal(calculate(s, old).rows[0].total, 50000);
 });
 test('makeups approved-v1: only lesson-day marks plus admin-approved makeups count, from the start month', () => {
   // Nov 2026: Se·Pa·Sh o'quvchi (2026-11-03 Se, 05 Pa, 07 Sh ...). 04 (Ch) — dars kuni emas.
@@ -158,7 +162,7 @@ test('makeups approved-v1: only lesson-day marks plus admin-approved makeups cou
   const before = calculate({ ...s, makeupPolicyFrom: '2026-12' }, engine.defaults(), nov).rows[0];
   assert.equal(before.lessons, 4);
 });
-test('assistant contacts-v1: 3846 per counted contact (cap 13), old attendance ignored from the start month, left student counted', () => {
+test('assistant contacts-v1: round(rate × contacts / 13) per student (cap 13), old attendance ignored from the start month, left student counted', () => {
   const days = n => Object.fromEntries(Array.from({ length: n }, (_, i) => [i + 1, 1]));
   const s = source({ hrEmployees: [employee('a', 'yordamchi')], teachers: [{ id: 'a' }],
     students: [{ id: 's', subject: 'english', assistantTeacherId: 'a' }, { id: 'gone', subject: 'english', assistantTeacherId: 'other', status: 'inactive' }],
@@ -166,11 +170,38 @@ test('assistant contacts-v1: 3846 per counted contact (cap 13), old attendance i
     assistantAttendance: { '2026-10_a': { s: days(31) } },
     assistantContacts: { '2026-10_a': { s: days(15), gone: days(4) } } });
   const row = calculate(s).rows[0];
-  assert.equal(row.lessons, 13 + 4); assert.equal(row.total, 17 * 3846);
+  // 13 aloqa — aniq 40 000 (40 001 emas); 4 aloqa — round(40 000 × 4 / 13) = 12 308.
+  assert.equal(row.lessons, 13 + 4); assert.equal(row.total, 40000 + 12308);
+  assert.deepEqual(row.breakdown.map(b => b.earned).sort((a, b) => a - b), [12308, 40000]);
   assert.ok(row.breakdown.every(b => b.unit === 'contact'));
   // Boshlanish oyidan oldingi oylar va siyosatsiz (eski to'langan) hisoblar eski davomat bo'yicha.
-  const before = calculate({ ...s, assistantContactsFrom: '2026-11' }).rows[0]; assert.equal(before.total, 50000);
-  const legacy = calculate({ ...s, assistantPolicy: undefined }).rows[0]; assert.equal(legacy.total, 50000);
+  const before = calculate({ ...s, assistantContactsFrom: '2026-11' }).rows[0]; assert.equal(before.total, 40000);
+  const legacy = calculate({ ...s, assistantPolicy: undefined }).rows[0]; assert.equal(legacy.total, 40000);
+  // Bir manba: server assist.countMonth bilan bir xil formula.
+  const A = require('../server/services/school/assist');
+  assert.equal(A.contactAmount(40000, 13), 40000); assert.equal(A.contactAmount(40000, 4), 12308);
+});
+test('main teacher switch mid-month: past lessons are paid to the teacher who taught them, never twice', () => {
+  // Temur 1–14-okt Dilnozada (Du·Ch·Ju, 13 dars), 15-oktdan Gulnorada. Davomat bloklari ustoz kaliti bo'yicha.
+  const s = source({ hrEmployees: [employee('dil', 'ingliz-oqituvchi'), employee('gul', 'ingliz-oqituvchi')],
+    teachers: [{ id: 'dil' }, { id: 'gul' }], makeupPolicy: 'approved-v1', makeupPolicyFrom: '2026-10',
+    students: [{ id: 'tem', name: 'Temur', subject: 'english', teacherId: 'gul', lessonDuration: 60, lessonDayOfWeek: 1 }],
+    teacherHistory: [{ studentId: 'tem', teacherId: 'dil', fromDate: '2026-09-01' }, { studentId: 'tem', teacherId: 'gul', fromDate: '2026-10-15' }],
+    mainAttendance: { '2026-10_dil': { tem: { 2: 1, 5: 1, 7: 1, 9: 1, 12: 1, 14: 1 } }, '2026-10_gul': { tem: { 16: 1, 19: 1, 14: 1 } } } });
+  const rows = calculate(s).rows, dil = rows.find(r => r.employeeId === 'dil'), gul = rows.find(r => r.employeeId === 'gul');
+  // 14-okt ikkala blokda — o'sha kuni o'quvchi Dilnozada bo'lgan (tarix) → faqat Dilnozaga.
+  assert.equal(dil.lessons, 6); assert.equal(dil.total, Math.round(300000 * 6 / 13));
+  assert.equal(gul.lessons, 2); assert.equal(gul.total, Math.round(300000 * 2 / 13));
+  assert.ok(dil.breakdown.some(b => b.studentId === 'tem' && b.lessons === 6));
+  // Jami o'quvchi bo'yicha rejadan (13) oshmaydi va bir kun ikki marta to'lanmaydi.
+  assert.equal(dil.lessons + gul.lessons, 8);
+  // Tarix bo'lmasa — bir kunlik to'qnashuv hozirgi ustozga.
+  const noHist = calculate({ ...s, teacherHistory: [] }).rows;
+  assert.equal(noHist.find(r => r.employeeId === 'dil').lessons, 5);
+  assert.equal(noHist.find(r => r.employeeId === 'gul').lessons, 3);
+  // Avvalgi ustozning tasdiqlangan qoplashi ham unga.
+  const mk = calculate({ ...s, makeups: [{ studentId: 'tem', teacherId: 'dil', kind: 'double', status: 'approved', heldDate: '2026-10-12' }] }).rows;
+  assert.equal(mk.find(r => r.employeeId === 'dil').lessons, 7);
 });
 test('absences, strings, invalid day marks, prehire and wrong teacher/student-language marks earn nothing', () => {
   const s = source({ hrEmployees: [employee('t', 'ingliz-oqituvchi', { startDate: '2026-10-12' })],

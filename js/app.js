@@ -8157,6 +8157,17 @@ function _thxTeacherShort(teacherId) {
     return parts[0] ? parts[0] + (parts[1] ? ' ' + parts[1][0] + '.' : '') : '—';
 }
 
+// "Kelmadi" — Davomat va Dars jadvali bilan bitta manba: server "Kelmadi"ni school_absences ga yozadi
+// (/api/school/attendance/absences), main_attendance da faqat "Keldi" qoladi. Ro'yxat brauzer keshida
+// (globalThis.__schoolAbsences — teacherDutyUI va schoolTeacher.homeExtras to'ldiradi); eski 0 belgisi ham hisobga olinadi.
+function _thxAbsentServer(ids, month, sid, d, att) {
+    if ([...ids].some(tid => att?.[`${month}_${tid}`]?.[sid]?.[d] === 0)) return true;
+    const ab = globalThis.__schoolAbsences;
+    if (!ab || ab.month !== month) return false;
+    const day = `${month}-${String(d).padStart(2, '0')}`;
+    return (ab.list || []).some(a => a.studentId === sid && ids.has(String(a.teacherId || '')) && String(a.day).slice(0, 10) === day && a.absent !== false);
+}
+
 function renderTeacherTodayBlock(user, { todoSlot = true } = {}) {
     if (user?.role !== 'teacher' || !user.linkedTeacherId) return '';
     const ids = getTeacherAssignmentIds(user.linkedTeacherId);
@@ -8171,7 +8182,7 @@ function renderTeacherTodayBlock(user, { todoSlot = true } = {}) {
     const helped = all.filter(s => ids.has(String(s.assistantTeacherId || '')));
     const att = getItem(STORAGE_KEYS.mainAttendance, {});
     const present = (sid, d) => [...ids].some(tid => att[`${month}_${tid}`]?.[sid]?.[d] === 1);
-    const absent = (sid, d) => !present(sid, d) && [...ids].some(tid => att[`${month}_${tid}`]?.[sid]?.[d] === 0);
+    const absent = (sid, d) => !present(sid, d) && _thxAbsentServer(ids, month, sid, d, att);
     const toMin = t => { const [h, m] = String(t || '').split(':').map(Number); return Number.isFinite(h) ? h * 60 + (m || 0) : null; };
     const today = students
         .filter(s => s.lessonDayOfWeek != null && s.lessonTime && expandLessonPatternDays(s.lessonDayOfWeek).includes(dow))
@@ -8825,7 +8836,7 @@ function teacherHomeStats(user, now = new Date()) {
     const present = (sid, d) => [...ids].some(tid => att[`${month}_${tid}`]?.[sid]?.[d] === 1);
     const toMin = t => { const [h, m] = String(t || '').split(':').map(Number); return Number.isFinite(h) ? h * 60 + (m || 0) : null; };
     const today = students.filter(s => s.lessonDayOfWeek != null && s.lessonTime && expandLessonPatternDays(s.lessonDayOfWeek).includes(dow));
-    const unmarked = today.filter(s => { const st = toMin(s.lessonTime); return !present(s.id, day) && st != null && nowMin >= st + (Number(s.lessonDuration) || 15); }).length;
+    const unmarked = today.filter(s => { const st = toMin(s.lessonTime); return !present(s.id, day) && !_thxAbsentServer(ids, month, s.id, day, att) && st != null && nowMin >= st + (Number(s.lessonDuration) || 15); }).length;
     // Davomat sahifasi va reyting bilan bir xil (2026-10 dan): faqat o'quvchining o'z dars kunlaridagi
     // (bugungacha) "Keldi" sanaladi, har o'quvchida kutilgandan oshmaydi — eski avtomatik belgilar sanalmaydi.
     const strict = month >= '2026-10';
@@ -8959,7 +8970,6 @@ function renderTeacherHome(user, now = new Date()) {
             })()}</section></div>
         <aside class="thx-side">
             <section class="card ahx-card rd-thx-rank-card" data-thx-rating-card><div class="ahx-card-h"><h3>Ustozlar reytingi</h3></div><p class="dashboard-empty">Yuklanmoqda…</p></section>
-            <section class="card ahx-card thx-assist" data-thx-assist hidden></section>
         </aside></div>
     </div>`;
 }
@@ -11299,7 +11309,17 @@ function renderTeachersSection() {
     switchTeachersSection(sec);
 }
 
+// Ustoz/ROP uchun Akademik bo'limdagi ruxsat etilgan ichki sahifalar (renderTeachersSection bilan bir xil).
+// Reyting sahifasi — admin dizayni (Reyting.dc.html); ustoz o'z o'rnini Bosh sahifadagi kartada ko'radi.
+function _teachersSectionAllowed(section) {
+    const role = getCurrentUser()?.role;
+    if (role === 'teacher') return ['attendance', 'cabinet', 'textbook', 'whiteboard'].includes(section);
+    if (role === 'rop') return ['attendance', 'cabinet'].includes(section);
+    return true;
+}
+
 function switchTeachersSection(section) {
+    if (!_teachersSectionAllowed(section)) section = getCurrentUser()?.role === 'teacher' ? 'attendance' : 'cabinet';
     if (section !== 'whiteboard') window.Whiteboard?.flush?.();
     _tabContext.teachersSection = section;
     document.querySelectorAll('[data-teachers-section]').forEach(btn => {
@@ -11315,6 +11335,8 @@ function switchTeachersSection(section) {
     else if (section === 'whiteboard') renderTpWhiteboard();
     else if (section === 'cabinet') renderTeacherCabinet();
     persistCurrentTab();
+    // Dasturiy o'tishda ham (Bosh → "Ko'rish", Darslik → Doska) sarlavha izohi faol bo'limga mos bo'lsin.
+    if (typeof updateRdPageHead === 'function' && _rdCurrentTab === 'teachers-section') updateRdPageHead('teachers-section');
 }
 
 function getAllTeachersForSection() {
@@ -25058,7 +25080,9 @@ function saveGuideFromModal(editId) {
         const idx = guides.findIndex(g => g.id === editId);
         if (idx >= 0) guides[idx] = { ...guides[idx], title, subtitle, color, sticker, targetRoles, content };
     } else {
-        guides.unshift({ id: 'gd_' + Date.now(), title, subtitle, color, sticker, targetRoles, content, createdAt: new Date().toISOString() });
+        // Muallif — Yo'riqnoma sahifasida "Akademik bo'lim · Abdulloh (admin)" meta qatori uchun (UstozYoriqnoma).
+        const author = getCurrentUser() || {};
+        guides.unshift({ id: 'gd_' + Date.now(), title, subtitle, color, sticker, targetRoles, content, createdAt: new Date().toISOString(), createdBy: _firstName(author.name || ''), createdByRole: author.role || '' });
     }
 
     setItem(STORAGE_KEYS.guides, guides);

@@ -84,13 +84,16 @@ test('main and assistant pay share a single employee row with independent attend
       { id: 'main', name: 'Main', teacherId: 'a', lessonDuration: 30 },
       { id: 'assist', name: 'Assist', teacherId: 'b', assistantTeacherId: 'a', lessonDuration: 60 }],
     mainAttendance: { '2026-10_a': { main: { 2: 1 }, assist: { 2: 1 } } },
-    assistantAttendance: { '2026-10_a': { assist: { 1: 1, 2: 0 } } }, leads: {}, cashFlow: [], bonusHistory: [], salesPlan: {} };
+    assistantAttendance: { '2026-10_a': { assist: { 1: 1, 2: 0 } } }, leads: {}, cashFlow: [], bonusHistory: [], salesPlan: {},
+    // "assist" o'quvchisining asosiy ustozi butun oy 'b' (tarix): 'a' blokidagi asosiy belgi unga to'lanmaydi (29-okt: kim o'tgan — tarix bo'yicha).
+    teacherHistory: [{ studentId: 'assist', teacherId: 'b', fromDate: '2026-09-01' }] };
   const p = engine.period('2026-10-01', '2026-10-31'), settings = engine.defaults();
   const result = engine.calculate(source, settings, p, 'english');
   assert.equal(result.rows.length, 1);
   const row = result.rows[0];
   assert.equal(row.mainTotal, Math.round(150000 / 13));
-  assert.equal(row.assistantTotal, Math.round(50000 / 13));
+  // 29-okt: yordamchi tarifi 40 000 (o'quvchi tarifidan qat'i nazar).
+  assert.equal(row.assistantTotal, Math.round(40000 / 13));
   assert.equal(row.total, row.mainTotal + row.assistantTotal);
   assert.equal(row.studentCount, 2);
   assert.deepEqual(row.breakdown.map(b => b.dutyRole), ['main', 'assistant']);

@@ -117,9 +117,30 @@
         const usesContacts = key => contactsPolicy && key >= String(source.assistantContactsFrom || '');
         const contacts = source.assistantContacts || {};
         const hasContacts = sid => Object.keys(contacts).some(k => k.endsWith('_' + employee.id) && usesContacts(k.slice(0, 7)) && contacts[k][sid]);
+        // Asosiy ustoz oy o'rtasida almashsa: o'tgan darslar o'sha darsni o'tgan (davomatni belgilagan) ustozga to'lanadi —
+        // o'quvchi hozir boshqa ustozda bo'lsa ham, shu davr oylarida `${oy}_${ustoz}` blokida "Keldi" yoki tasdiqlangan qoplash bo'lsa kiradi.
+        const periodMonths = new Set(months(p).map(b => b.key));
+        const mainAtt = source.mainAttendance || {};
+        const taughtBefore = sid => !assistant && (Object.keys(mainAtt).some(k => k.endsWith('_' + employee.id) && periodMonths.has(k.slice(0, 7))
+                && Object.values(mainAtt[k]?.[sid] || {}).some(v => v === 1 || v === true))
+            || (source.makeups || []).some(m => m.status === 'approved' && m.teacherId === employee.id && m.studentId === sid && periodMonths.has(String(m.heldDate || '').slice(0, 7))));
         const students = source.students.filter(s => language(s) === language(employee)
-            && ((assistant ? s.assistantTeacherId : s.teacherId) === employee.id || (contactsPolicy && hasContacts(s.id)))
+            && ((assistant ? s.assistantTeacherId : s.teacherId) === employee.id || (contactsPolicy && hasContacts(s.id)) || taughtBefore(s.id))
             && !(assistant && role(employee) === 'teacher' && s.teacherId === employee.id));
+        // Kim o'tgan: o'quvchining ustozlar tarixi (school_teacher_history) shu kunni qamrasa — o'sha kungi ustozga;
+        // tarix qamramasa — belgilagan ustozga, lekin bir kun ikki ustoz blokida bo'lsa hozirgi asosiy ustozga (ikki marta to'lanmaydi).
+        const history = Array.isArray(source.teacherHistory) ? source.teacherHistory : [];
+        const teacherOnDay = (s, d) => {
+            const rows = history.filter(h => h.studentId === s.id && h.fromDate && h.fromDate <= d).sort((a, b) => a.fromDate.localeCompare(b.fromDate));
+            return rows.length ? rows[rows.length - 1].teacherId : null;
+        };
+        const otherHas = (s, key, day) => Object.keys(mainAtt).some(k => k.slice(0, 7) === key && k !== `${key}_${employee.id}`
+            && [1, true].includes(mainAtt[k]?.[s.id]?.[day]));
+        const taughtBy = (s, key, day, d) => {
+            const who = teacherOnDay(s, d);
+            if (who) return who === employee.id;
+            return !otherHas(s, key, day) || s.teacherId === employee.id;
+        };
         let total = 0, lessons = 0;
         const breakdown = [];
         for (const s of students) for (const block of months(p)) {
@@ -145,7 +166,8 @@
             const presentDays = Object.entries(entries).filter(([day, present]) => {
                 const d = date(block.key + '-' + String(day).padStart(2, '0'));
                 return (present === 1 || present === true) && inRange(d)
-                    && (byMakeups ? studentDays.has(Number(day)) : (assistant || source.teacherAttendancePolicy === 'all-days-v1' || expected.includes(Number(day))));
+                    && (byMakeups ? studentDays.has(Number(day)) : (assistant || source.teacherAttendancePolicy === 'all-days-v1' || expected.includes(Number(day))))
+                    && (assistant || byContacts || taughtBy(s, block.key, Number(day), d));
             }).map(([day]) => Number(day));
             let makeupCount = 0;
             if (byMakeups) {
@@ -159,13 +181,16 @@
                 }
             }
             const days = presentDays.length + makeupCount;
+            // Faqat o'tgan ustoz sifatida kirgan o'quvchi: hisobga o'tgan darsi bo'lmasa — qatorga chiqmaydi.
+            if (!days && !assistant && s.teacherId !== employee.id && !(contactsPolicy && hasContacts(s.id))) continue;
             const count = Math.min(days, expectedCount);
-            const earned = byContacts ? money(Math.round((tariff || 0) / CONTACT_CAP) * count) : money((tariff || 0) * count / expectedCount);
+            // contacts-v1: round(tarif × aloqalar / 13) — 13 aloqa aniq oylik tarif (40 000), server assist.countMonth bilan bir xil.
+            const earned = byContacts ? money((tariff || 0) * count / CONTACT_CAP) : money((tariff || 0) * count / expectedCount);
             total += earned; lessons += count;
             breakdown.push({ studentId: s.id, name: s.name, month: block.key, lessons: count, expected: expectedCount, tariff: tariff || 0, earned,
                 ...(byContacts ? { unit: 'contact' } : {}), ...(makeupCount ? { makeups: makeupCount } : {}) });
         }
-        return { total, lessons, studentCount: students.length, breakdown };
+        return { total, lessons, studentCount: new Set(breakdown.map(b => b.studentId).concat(students.filter(s => (assistant ? s.assistantTeacherId : s.teacherId) === employee.id).map(s => s.id))).size, breakdown };
     }
     function salesFacts(source, lang, p, settings) {
         const leads = source.leads[lang] || [], byManager = {}, warnings = [];

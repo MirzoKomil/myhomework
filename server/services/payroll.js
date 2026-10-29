@@ -2,7 +2,7 @@ const { randomUUID, createHash } = require('crypto');
 const engine = require('../../js/payrollEngine');
 const assist = require('./school/assist');
 // Yordamchi maoshi shu oydan boshlab aloqalar (Abdulloh, 28-okt: oktyabrdan boshlab) (13 × tarif/13) bo'yicha; oldingi oylar eski yordamchi davomati bo'yicha.
-const ASSIST_CONTACTS_FROM = process.env.ASSIST_CONTACTS_FROM || '2026-10';
+const ASSIST_CONTACTS_FROM = assist.CONTACTS_FROM;
 // Qoplash darsi (Abdulloh, 28-okt): shu oydan asosiy ustozga faqat dars kunidagi "Keldi" + admin tasdiqlagan qoplash hisoblanadi.
 const MAKEUP_POLICY_FROM = process.env.MAKEUP_POLICY_FROM || '2026-10';
 
@@ -148,7 +148,9 @@ async function sources(db, p) {
             FROM school_assist_contacts WHERE removed_at IS NULL AND TO_CHAR(day,'YYYY-MM')=ANY($1::text[])`, [monthKeys])).rows;
         const groups = new Map();
         for (const r of rows) { const k = r.day.slice(0, 7) + '_' + r.assistant_id; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(r); }
-        for (const [k, list] of groups) for (const st of assist.countMonth(list).students) for (const i of st.items) {
+        // O'quvchi kurs boshlagan kundan oldingi aloqa sanalmaydi (assist.monthReport bilan bir xil — before_start).
+        const starts = new Map(students.map(r => [r.id, assist.studentStartOf(r.extra_data)]).filter(([, d]) => d));
+        for (const [k, list] of groups) for (const st of assist.countMonth(list, { starts }).students) for (const i of st.items) {
             if (i.status !== 'counted') continue;
             assistantContacts[k] ||= {}; assistantContacts[k][st.studentId] ||= {}; assistantContacts[k][st.studentId][Number(i.day.slice(8))] = 1;
         }
@@ -157,11 +159,15 @@ async function sources(db, p) {
         ? (await db.query(`SELECT id, student_id, teacher_id, kind, status, TO_CHAR(held_date,'YYYY-MM-DD') AS held_date FROM school_makeups
             WHERE status='approved' AND held_date IS NOT NULL AND TO_CHAR(held_date,'YYYY-MM')=ANY($1::text[])`, [monthKeys])).rows
             .map(r => ({ id: r.id, studentId: r.student_id, teacherId: r.teacher_id, kind: r.kind, status: r.status, heldDate: r.held_date })) : [];
+    // Asosiy ustoz almashish tarixi — bir kun ikki ustoz blokida bo'lsa, o'sha kungi ustozga (payrollEngine teacherOnDay).
+    const teacherHistory = (await db.query("SELECT to_regclass('public.school_teacher_history')::text AS t")).rows[0]?.t
+        ? (await db.query(`SELECT student_id, teacher_id, TO_CHAR(from_date,'YYYY-MM-DD') AS from_date FROM school_teacher_history ORDER BY from_date`)).rows
+            .map(r => ({ studentId: r.student_id, teacherId: r.teacher_id, fromDate: r.from_date })) : [];
     const json = (await db.query("SELECT key,data FROM json_data WHERE key=ANY($1::text[])", [['salesPlan', 'bonusHistory', 'bonusData', 'cashFlow']])).rows;
     const blob = Object.fromEntries(json.map(r => [r.key, r.data]));
     return { academicPolicy: 'dual-role-v1', teacherAttendancePolicy: 'all-days-v1', paymentRecords,
         assistantPolicy: 'contacts-v1', assistantContactsFrom: ASSIST_CONTACTS_FROM, assistantContacts,
-        makeupPolicy: 'approved-v1', makeupPolicyFrom: MAKEUP_POLICY_FROM, makeups, hrEmployees: employees.map(r => ({ id: r.id, name: r.name, role: r.role, lang: r.lang, avatar: r.avatar, dualRole: r.dual_role === true,
+        makeupPolicy: 'approved-v1', makeupPolicyFrom: MAKEUP_POLICY_FROM, makeups, teacherHistory, hrEmployees: employees.map(r => ({ id: r.id, name: r.name, role: r.role, lang: r.lang, avatar: r.avatar, dualRole: r.dual_role === true,
         status: r.status, startDate: r.start_date, joinDate: r.join_date, endDate: r.end_date || '', kpiTemplateId: r.kpi_template_id })),
         teachers: teachers.map(r => ({ id: r.id, schedulePattern: r.schedule_pattern, lessonDuration: r.lesson_duration })),
         students: students.map(r => ({ ...(r.extra_data || {}), id: r.id, name: r.name, subject: r.subject,
@@ -183,7 +189,9 @@ function createBasis(source, config, confirmation, row, rows) {
     const ids = row.role === 'rop' ? source.hrEmployees.filter(e => engine.role(e) === 'sales' && engine.language(e) === engine.language(source.hrEmployees.find(e => e.id === row.employeeId) || {})).map(e => e.id) : [];
     ids.push(row.employeeId);
     const contacted = new Set(Object.entries(source.assistantContacts || {}).filter(([k]) => k.endsWith('_' + row.employeeId)).flatMap(([, v]) => Object.keys(v)));
-    const students = source.students.filter(s => row.role === 'teacher' ? s.teacherId === row.employeeId
+    // Oy o'rtasida boshqa ustozga o'tgan o'quvchi — shu ustoz o'tgan darslari hisobda (breakdown) bo'lsa, asosga ham kiradi.
+    const taught = new Set((row.breakdown || []).filter(b => b.dutyRole !== 'assistant' && b.unit !== 'contact').map(b => b.studentId));
+    const students = source.students.filter(s => row.role === 'teacher' ? s.teacherId === row.employeeId || taught.has(s.id)
         || (source.academicPolicy === 'dual-role-v1' && (s.assistantTeacherId === row.employeeId || contacted.has(s.id)))
         : row.role === 'assistant' ? s.assistantTeacherId === row.employeeId || contacted.has(s.id) : false)
         .map(s => ({ id: s.id, name: s.name, subject: s.subject, teacherId: s.teacherId, assistantTeacherId: s.assistantTeacherId,

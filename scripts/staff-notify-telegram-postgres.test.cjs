@@ -44,6 +44,7 @@ test('CRM staff notifications reach Telegram — synthetic data',{skip:!url},asy
   await t.test('first run only sets a baseline — existing items are not flooded',async()=>{
    assert.equal(await push(NOON),0);assert.equal((await sent()).length,0);
    await pool.query('UPDATE staff_notify_tg_state SET last_push_at=NOW()');assert.equal((await N.getPrefs(pool,{id:'u-s'})).channels.telegram.connected,true);
+   await pool.query('UPDATE staff_notify_tg_state SET last_push_at=$1',[NOON]); // test vaqt o'qiga qaytarish
   });
   await t.test('a new event goes to Telegram once, with a CRM button',async()=>{
    await guide('g-new','Yangi sotuv skripti');

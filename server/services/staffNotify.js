@@ -7,6 +7,7 @@
 const T = require('./school/time');
 const S = require('./school/schedule');
 const A = require('./school/assist');
+const R = require('../../js/attendanceRules');
 const workflow = require('../../js/trialWorkflow');
 const ST = require('./staffSettings');
 
@@ -220,7 +221,7 @@ async function teacherEvents(db, me, now, ev) {
         const ws = T.weekStart(today);
         const rows = (await db.query(`SELECT s.id, s.name, s.extra_data FROM students s WHERE s.teacher_id=$1 AND COALESCE(s.assistant_teacher_id,'') <> ''
             AND NOT EXISTS (SELECT 1 FROM school_assist_contacts c WHERE c.student_id=s.id AND c.day BETWEEN $2 AND $3 AND c.removed_at IS NULL AND c.outcome='contacted')`,
-            [tid, ws, T.addDays(ws, 6)])).rows.filter(r => parseExtra(r.extra_data).status !== 'inactive');
+            [tid, ws, T.addDays(ws, 6)])).rows.filter(r => R.isActiveStudent(r));
         if (rows.length) ev.push({ id: `assistweek:${ws}:${rows.length}`, type: 'assistant_missed_week', cat: 'davomat', tone: 'warn', title: `Yordamchi bu hafta ${rows.length} o'quvchi bilan bog'lanmadi`,
             sub: rows.slice(0, 4).map(r => first(r.name)).join(', ') + (rows.length > 4 ? ` va yana ${rows.length - 4}` : ''), at: atLocal(T.addDays(ws, 4), 18 * 60) });
     }
@@ -232,27 +233,30 @@ async function assistantEvents(db, me, now, ev) {
     const advice = plan.items.filter(i => i.kind === 'advice');
     for (const i of advice) if (i.start - 15 <= nowMin)
         ev.push({ id: `advice:${i.studentId}:${today}`, type: 'assist_advice', cat: 'aloqa', tone: 'info', title: `Aloqa tavsiyasi · ${T.fromMin(i.start)}`,
-            sub: `${first(i.studentName)} bilan bog'laning`, at: atLocal(today, Math.max(0, i.start - 15)), go: { tab: 'school-contacts' } });
+            sub: `${first(i.studentName)} bilan bog'laning`, at: atLocal(today, Math.max(0, i.start - 15)), go: { tab: 'teachers-section', section: 'attendance' } });
     if (nowMin >= 20 * 60 && advice.length)
         ev.push({ id: `assistday:${today}`, type: 'assist_unmarked_day', cat: 'aloqa', tone: 'bad', title: `Bugun ${advice.length} ta aloqa belgilanmagan`,
-            sub: `${advice.slice(0, 4).map(i => first(i.studentName)).join(', ')} · shu kuni belgilanmasa hisoblanmaydi`, at: atLocal(today, 20 * 60), go: { tab: 'school-contacts' } });
+            sub: `${advice.slice(0, 4).map(i => first(i.studentName)).join(', ')} · shu kuni belgilanmasa hisoblanmaydi`, at: atLocal(today, 20 * 60), go: { tab: 'teachers-section', section: 'attendance' } });
     const yday = T.addDays(today, -1);
     const na = (await db.query(`SELECT c.student_id, s.name FROM school_assist_contacts c JOIN students s ON s.id=c.student_id
         WHERE c.assistant_id=$1 AND c.day=$2 AND c.outcome='no_answer' AND c.removed_at IS NULL
         AND NOT EXISTS (SELECT 1 FROM school_assist_contacts x WHERE x.assistant_id=$1 AND x.student_id=c.student_id AND x.day BETWEEN $2 AND $3 AND x.outcome='contacted' AND x.removed_at IS NULL)`,
         [aid, yday, today])).rows;
     for (const r of na) ev.push({ id: `noanswer:${r.student_id}:${yday}`, type: 'assist_no_answer', cat: 'aloqa', tone: 'warn', title: 'Qayta urinish kerak',
-        sub: `${first(r.name)} · kecha javob bermadi`, at: atLocal(today, 9 * 60), go: { tab: 'school-contacts' } });
+        sub: `${first(r.name)} · kecha javob bermadi`, at: atLocal(today, 9 * 60), go: { tab: 'teachers-section', section: 'attendance' } });
     const wd = T.weekday(today);
     if ((wd === 5 && nowMin >= 18 * 60) || wd > 5) {
         const ws = T.weekStart(today);
-        const c = (await db.query(`SELECT * FROM school_assist_contacts WHERE assistant_id=$1 AND day BETWEEN $2 AND $3`, [aid, `${month}-01`, today])).rows;
+        // Haftalik reja — Bosh/Davomat/Dars jadvali bilan bitta ta'rif (AttendanceRules.weekPlanSlots: sana bo'yicha faol o'quvchining
+        // shu haftadagi tavsiya kunlari). Muzlatilgan/chiqib ketgan kunlar rejaga kirmaydi; hisoblangan aloqalar — countMonth.
+        const wp = await A.plan(db, { assistantIds: [aid], from: ws, to: T.addDays(ws, 6), now });
+        const slots = R.weekPlanSlots(wp.items);
         const counted = new Map();
-        for (const s of A.countMonth(c).students) counted.set(s.studentId, s.items.filter(x => x.status === 'counted' && x.day >= ws).length);
-        const mine = (await db.query('SELECT id, name, extra_data FROM students WHERE assistant_teacher_id=$1', [aid])).rows.filter(r => parseExtra(r.extra_data).status !== 'inactive');
-        const low = mine.filter(s => (counted.get(s.id) || 0) < 3);
-        if (low.length) ev.push({ id: `weeklow:${ws}:${low.length}`, type: 'assist_week_low', cat: 'aloqa', tone: 'warn', title: `Bu hafta ${low.length} o'quvchida 3 tadan kam aloqa`,
-            sub: low.slice(0, 5).map(s => `${first(s.name)} ${counted.get(s.id) || 0}/3`).join(', '), at: atLocal(T.addDays(ws, 4), 18 * 60), go: { tab: 'school-contacts' } });
+        for (const i of wp.items) if (i.kind === 'contact' && i.status === 'counted') counted.set(i.studentId, (counted.get(i.studentId) || 0) + 1);
+        const names = new Map(wp.items.map(i => [i.studentId, i.studentName]));
+        const low = [...slots].map(([sid, days]) => ({ id: sid, name: names.get(sid) || '', target: days.size, n: counted.get(sid) || 0 })).filter(x => x.n < x.target);
+        if (low.length) ev.push({ id: `weeklow:${ws}:${low.length}`, type: 'assist_week_low', cat: 'aloqa', tone: 'warn', title: `Bu hafta ${low.length} o'quvchida rejadagidan kam aloqa`,
+            sub: low.slice(0, 5).map(s => `${first(s.name)} ${s.n}/${s.target}`).join(', '), at: atLocal(T.addDays(ws, 4), 18 * 60), go: { tab: 'teachers-section', section: 'attendance' } });
     }
     const abs = (await db.query(`SELECT a.student_id, a.day, s.name FROM school_absences a JOIN students s ON s.id=a.student_id
         WHERE s.assistant_teacher_id=$1 AND a.absent AND a.day BETWEEN $2 AND $3`, [aid, yday, today])).rows;
@@ -262,9 +266,13 @@ async function assistantEvents(db, me, now, ev) {
     const near = rep.students.filter(s => s.counted >= rep.cap - 1);
     if (near.length) {
         const names = new Map((await db.query('SELECT id, name FROM students WHERE id = ANY($1::text[])', [near.map(s => s.studentId)])).rows.map(r => [r.id, r.name]));
-        for (const s of near) ev.push({ id: `cap:${s.studentId}:${month}:${Math.min(s.counted, rep.cap)}`, type: 'assist_near_cap', cat: 'aloqa', tone: 'warn',
-            title: `${first(names.get(s.studentId))} · ${Math.min(s.counted, rep.cap)}/${rep.cap} aloqa`, sub: s.counted >= rep.cap ? 'oylik limit to\'ldi — keyingisi hisoblanmaydi' : `${rep.cap}-chi oxirgisi, undan keyingisi hisoblanmaydi`,
-            at: iso(now.getTime() - (now.getTime() % 86400000)) });
+        // Vaqt — limitga yetkazgan (oxirgi hisoblangan) aloqa vaqti, Toshkent bo'yicha (UTC yarim tun — 05:00 emas).
+        for (const s of near) {
+            const last = [...s.items].filter(x => x.status === 'counted').pop();
+            ev.push({ id: `cap:${s.studentId}:${month}:${Math.min(s.counted, rep.cap)}`, type: 'assist_near_cap', cat: 'aloqa', tone: 'warn',
+                title: `${first(names.get(s.studentId))} · ${Math.min(s.counted, rep.cap)}/${rep.cap} aloqa`, sub: s.counted >= rep.cap ? 'oylik limit to\'ldi — keyingisi hisoblanmaydi' : `${rep.cap}-chi oxirgisi, undan keyingisi hisoblanmaydi`,
+                at: last ? atLocal(last.day, Number(last.at) || 0) : atLocal(today, 0) });
+        }
     }
     const corr = (await db.query(`SELECT c.*, s.name FROM school_assist_contacts c LEFT JOIN students s ON s.id=c.student_id
         WHERE c.assistant_id=$1 AND c.correction_reason <> '' AND COALESCE(c.removed_at, c.created_at) > $2`, [aid, new Date(now.getTime() - 7 * 86400000)])).rows;

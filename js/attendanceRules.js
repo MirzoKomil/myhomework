@@ -69,10 +69,51 @@
         t.pct = t.ratio == null ? null : Math.round(t.ratio * 100);
         return t;
     }
+    // O'quvchining SANA bo'yicha holati (school_student_status yozuvlari): 'active' | 'frozen' | 'left'.
+    // Yozuvlar sana, keyin yaratilgan vaqt bo'yicha qo'llanadi; bekor qilinganlar hisobga olinmaydi.
+    // server/services/school/schedule.js statusOn shu funksiyani ishlatadi (bitta ta'rif).
+    function statusOn(statusRows, date) {
+        let state = 'active';
+        const ts = v => (v instanceof Date ? v.getTime() : Date.parse(v) || 0);
+        const rows = [...(statusRows || [])].filter(r => !r.cancelled_at)
+            .sort((a, b) => dkey(a.from_date).localeCompare(dkey(b.from_date)) || ts(a.created_at) - ts(b.created_at));
+        for (const r of rows) {
+            const from = dkey(r.from_date), to = r.to_date ? dkey(r.to_date) : null;
+            if (from > date) continue;
+            if (r.status === 'frozen') { if (!to || date <= to) state = 'frozen'; else if (state === 'frozen') state = 'active'; }
+            else if (r.status === 'left') state = 'left';
+            else if (r.status === 'restored') state = 'active';
+        }
+        return state;
+    }
+    // Shu sanada faolmi — "faol o'quvchi"ning sana bo'yicha ta'rifi (yordamchi tavsiyasi, haftalik reja, bildirishnomalar).
+    // Holat yozuvlari bo'lsa — sana bo'yicha (muzlatish/qaytish/chiqib ketish sanalari); bo'lmasa — isActiveStudent (flaglar).
+    // Demo xodim va eski "inactive" belgisi har doim nofaol.
+    function activeOn(s, statusRows, date) {
+        if (!s) return false;
+        const x = extraOf(s) || s;
+        if (x.isStaffDemo === true || s.staffDemo === true || s.legacyInactive === true) return false;
+        const rows = (statusRows || []).filter(r => !r.cancelled_at);
+        if (!rows.length) return isActiveStudent(s);
+        return statusOn(rows, date) === 'active';
+    }
+    // Haftalik tavsiya soni ("Bu hafta 12 / 47", Dars jadvali "47 tavsiya", "3 tadan kam" bildirishnomasi) — bitta hisob:
+    // /api/school/assist/plan bandlaridan o'quvchi+kun juftliklari: tavsiya (o'quvchi shu kuni faol) + tavsiya kunidagi aloqa
+    // (u shu kungi tavsiyaning o'rnini oladi, server `advice: true` belgisini qo'yadi). Tavsiyadan tashqari aloqalar kirmaydi.
+    function weekPlanSlots(items) {
+        const out = new Map();
+        for (const i of items || []) {
+            if (i.kind !== 'advice' && !(i.kind === 'contact' && i.advice === true)) continue;
+            if (!out.has(i.studentId)) out.set(i.studentId, new Set());
+            out.get(i.studentId).add(i.date);
+        }
+        return out;
+    }
+    function weekPlanCount(items) { let n = 0; for (const set of weekPlanSlots(items).values()) n += set.size; return n; }
     // Yordamchi: oy oxirigacha ko'pi bilan nechta aloqa hisoblanishi mumkin (server assist.remaining bilan bir xil):
     // har o'quvchida min(cap, hisoblangan + qolgan tavsiya kunlari).
     function assistPossible(counted, adviceLeft, cap) {
         return Math.min(cap, (Number(counted) || 0) + (Number(adviceLeft) || 0));
     }
-    return Object.freeze({ INACTIVE, isActiveStudent, monthTotals, assistPossible });
+    return Object.freeze({ INACTIVE, isActiveStudent, statusOn, activeOn, weekPlanSlots, weekPlanCount, monthTotals, assistPossible });
 });
