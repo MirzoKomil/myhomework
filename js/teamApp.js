@@ -196,7 +196,7 @@
     const TITLES = {
         sales: 'Sotuv', marketing: 'Marketing', students: 'Oʻquvchilar', finance: 'Moliya', hr: 'HR boʻlimi',
         analitika: 'Analitika', 'teachers-section': 'Akademik boʻlim', timetable: 'Dars jadvali',
-        'trial-lessons': 'Sinov darslari', guides: 'Yoʻriqnomalar', 'student-app': 'Mobil ilova', profile: 'Profil'
+        'trial-lessons': 'Sinov darslari', guides: 'Yoʻriqnomalar', 'student-app': 'Mobil ilova', profile: 'Sozlamalar'
     };
     function syncTitle() {
         const header = document.querySelector('.top-header');

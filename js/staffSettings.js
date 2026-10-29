@@ -661,11 +661,51 @@
     // va "Tungi rejim"; ikkinchi "Bildirishnomalar" (ro'yxat) yo'q — u qo'ng'iroqcha panelida.
     // Barcha rollarda: bandlari yashirin guruh sarlavhasi (masalan MULOQOT, KUZATUV) ko'rinmaydi.
     const STAFF_HIDDEN = ['notif-list', 'archive', 'telegram-groups', 'support', 'peer-chats', 'activity'];
+    // Admin / ROP / sotuv (AdminSozProfil, RopSozProfil, SotuvSozProfil): "Sozlamalar" sarlavhasi tepada, nav kartasi ostida,
+    // ikonkasiz; guruhlar: PROFIL · XAVFSIZLIK · ADMIN (faqat admin: Xodimlar va rollar, Tariflar, Telegram bot) · TIZIM
+    // (Interfeys tili, Mavzu). Dizaynda yo'q, lekin ishlayotgan bo'limlar (Arxiv, bildirishnomalar tarixi, Qo'llab-quvvatlash,
+    // Maqsaddoshlar suhbati, O'quvchi faoliyati) o'chirilmaydi — admin'da ADMIN, boshqalarda "BOSHQA" guruhida.
+    const THEME_LBL = () => ((typeof getTheme === 'function' ? getTheme() : localStorage.getItem('mh_theme')) === 'dark' ? 'tungi' : 'yorug\'');
+    function designNav(nav, user) {
+        if (nav.dataset.szDesign === user?.role) { syncTheme(); return; }
+        nav.dataset.szDesign = user?.role || '';
+        const item = sec => nav.querySelector(`[data-profile-section="${sec}"]`);
+        const group = (key, label) => {
+            let g = nav.querySelector(`[data-sz-group="${key}"]`);
+            if (!g) { g = document.createElement('div'); g.className = 'profile-nav-group'; g.dataset.szGroup = key; g.innerHTML = `<span class="profile-nav-label">${label}</span>`; }
+            return g;
+        };
+        const go = (label, fn, key) => { let b = nav.querySelector(`[data-sz-go="${key}"]`); if (!b) { b = document.createElement('button'); b.type = 'button'; b.className = 'profile-nav-item'; b.dataset.szGo = key; b.textContent = label; b.addEventListener('click', fn); } return b; };
+        const groups = [...nav.querySelectorAll(':scope > .profile-nav-group')];
+        const [gProfile, gSec] = groups;
+        const gSys = nav.querySelector('#profileNavSystemGroup');
+        const logout = nav.querySelector('#profileLogoutBtn');
+        const admin = isAdmin(user);
+        const gAdmin = group('admin', 'Admin'), gMore = group('more', 'Boshqa');
+        if (admin) {
+            gAdmin.append(go('Xodimlar va rollar', () => typeof switchTab === 'function' && switchTab('hr', { hrSection: 'xodimlar' }), 'hr'),
+                go('Tariflar', () => typeof switchTab === 'function' && switchTab('finance', { financeSection: 'kpi' }), 'tariffs'));
+            const tg = item('telegram-groups'); if (tg) { tg.lastChild.textContent = '\n Telegram bot'; gAdmin.append(tg); }
+        }
+        const nl = item('notif-list'); if (nl) nl.lastChild.textContent = '\n Bildirishnomalar tarixi';
+        for (const sec of ['archive', 'notif-list', 'support', 'peer-chats', 'activity']) { const b = item(sec); if (b) (admin ? gAdmin : gMore).append(b); }
+        // TIZIM: "Interfeys tili · O'zbek" va "Mavzu · …" (tungi/yorug' almashtirgich).
+        let th = nav.querySelector('[data-sz-mode]');
+        if (!th) {
+            th = document.createElement('button'); th.type = 'button'; th.className = 'profile-nav-item sz-mode'; th.dataset.szMode = '';
+            th.addEventListener('click', () => { if (typeof toggleTheme === 'function') toggleTheme(); syncTheme(); });
+        }
+        gSys?.append(th);
+        [gProfile, gSec, ...(admin ? [gAdmin] : []), gSys, gMore].filter(Boolean).forEach(g => nav.insertBefore(g, logout));
+        if (!admin) gAdmin.remove();
+        syncTheme();
+    }
     function adjustNav(user, section) {
         const sal = document.querySelector('[data-profile-section="salary"]');
         if (sal) sal.style.display = isAdmin(user) ? 'none' : '';
         const staff = user?.role === 'teacher';
-        document.getElementById('profilePage')?.classList.toggle('sz-on', staff);
+        document.getElementById('profilePage')?.classList.toggle('sz-on', !!user);
+        if (!staff && user) { const n = document.getElementById('profileNav'); if (n) designNav(n, user); }
         const nav = document.getElementById('profileNav');
         if (nav) {
             const nl = nav.querySelector('[data-profile-section="notif-list"]');
@@ -693,6 +733,8 @@
     function syncTheme() {
         const th = document.querySelector('#profileNav [data-sz-theme]');
         if (th) th.setAttribute('aria-pressed', String((typeof getTheme === 'function' ? getTheme() : localStorage.getItem('mh_theme')) === 'dark'));
+        const md = document.querySelector('#profileNav [data-sz-mode]');
+        if (md) { md.innerHTML = `<span>Mavzu</span><span class="profile-nav-static-value">${THEME_LBL()}</span>`; md.setAttribute('aria-label', `Mavzu: ${THEME_LBL()} — almashtirish`); }
     }
     // Boshqa modul bo'lim qo'shadi (masalan js/staffSessions.js → 'sessions').
     const register = (name, fn) => { if (typeof fn === 'function') SECTIONS[name] = fn; };

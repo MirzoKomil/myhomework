@@ -92,13 +92,18 @@
             } else if (who && ctx === 'assistant' && rep) {
                 pay = `<div class="okx-k"><small>Mashg'ulotlar · shu oy</small><b>${rep.counted} <em>/ ${list.length * (rep.cap || 13)}</em></b></div>
                   <div class="okx-k okx-pay"><small>Taxminiy maosh</small><b>${esc(u.num(rep.amount))} <em>so'm</em></b><span>${esc(u.assistPayNote(rep))} · ${list.length} o'quvchi</span></div>`;
-            } else if (who && typeof calculateKpiSalary === 'function') {
-                try {
-                    const t = (typeof resolveTeacherWithVirtual === 'function' && resolveTeacherWithVirtual(who.id)) || null;
-                    const kpi = t ? calculateKpiSalary(t, month, getItem(STORAGE_KEYS.mainAttendance, {})) : null;
-                    if (kpi) pay = `<div class="okx-k"><small>Darslar · shu oy</small><b>${kpi.completed} <em>/ ${kpi.expected * (kpi.studentCount || 1)}</em></b></div>
-                      <div class="okx-k okx-pay"><small>Taxminiy maosh</small><b>${esc(u.num(kpi.total))} <em>so'm</em></b><span>davomat asosida · ${kpi.studentCount || list.length} o'quvchi</span></div>`;
-                } catch (e) { console.warn('[tekshirish] maosh hisoblanmadi', e.message); }
+            } else if (who && ctx === 'main' && window.adminNazorat?.canSeePayroll?.()) {
+                // Maosh — Akademik → Davomat va Moliya → Maoshlar bilan BITTA manba: server /api/payroll/preview (payrollEngine).
+                // Brauzerdagi taxminiy hisob (calculateKpiSalary) ishlatilmaydi; moliya ruxsati yo'q rol (ROP) maoshni ko'rmaydi.
+                const N = window.adminNazorat, r = await window.LoadErr.settle(N.loadPayroll(month, lang));
+                if (seq !== _seq) return;
+                if (!r.ok) pay = `<div class="okx-k okx-pay">${window.LoadErr.html({ title: 'Maosh hisobini yuklab bo\'lmadi', err: r.err, note: '', compact: true })}</div>`;
+                else {
+                    const row = (r.value?.rows || []).find(x => x.employeeId === who.id), fin = N.payKpi(r.value, who.id);
+                    const lessons = row ? Number(row.mainLessons ?? row.lessons) || 0 : null;
+                    pay = `<div class="okx-k"><small>Darslar · shu oy</small><b>${lessons != null ? lessons : '—'} <em>hisobga o'tdi</em></b></div>
+                      <div class="okx-k okx-pay"><small>Maosh · hozirgacha</small><b>${fin ? esc(u.num(fin.grand)) : '—'} <em>so'm</em></b><span>${fin ? `Moliya hisobi${fin.assistant ? ` · asosiy ${esc(u.num(fin.total))} + yordamchi ${esc(u.num(fin.assistant))}` : ''}` : 'Moliya hisobida bu ustoz yo\'q'}</span></div>`;
+                }
             }
             kpis = `<section class="sc-card okx-top"><label class="okx-pick">${who ? staffAvatar(who, 34) : ''}<span class="okx-pick-t"><b>${esc(who?.name || 'Ustoz yo\'q')}</b><small>${who ? (ctx === 'assistant' ? 'Yordamchi ustoz' : 'Asosiy ustoz') + ' · ustozni almashtirish' : ''}</small></span>
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
@@ -129,6 +134,7 @@
           <p class="sc-mt">1-urinish — ilovadagi mashqlarni birinchi urinishda to'g'ri bajarish ulushi (baho emas). Ma'lumot o'quvchi ilovasidan · faqat ko'rish.</p>`;
 
         const rerender = () => render(root, { lang });
+        window.LoadErr.bind(root.querySelector('.okx-top'), rerender);
         root.querySelector('[data-staff]')?.addEventListener('change', e => { st.staff = e.target.value; st.sel = ''; st.more = false; rerender(); });
         root.querySelectorAll('[data-ctx]').forEach(b => b.onclick = () => { st.ctx = b.dataset.ctx; st.sel = ''; st.filter = 'all'; rerender(); });
         root.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { st.filter = b.dataset.f; st.more = false; rerender(); });

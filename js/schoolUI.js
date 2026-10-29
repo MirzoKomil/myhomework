@@ -46,8 +46,22 @@
     let _avatars = {};
     let _avP = null;
     function loadStaffAvatars() { return (_avP ||= api('/staff-avatars').then(r => { _avatars = r.avatars || {}; }).catch(() => { _avP = null; })); }
+    // Avatar tanlanmagan xodim — jinsiga mos 3D personaj (id bo'yicha doimiy; f01..f36 / m01..m36), bo'sh kulrang doira emas.
+    function genderOf(person) {
+        const e = person?.gender ? person : (staffList().find(x => x.id === person?.id) || person || {});
+        const g = String(e.gender || '').toLowerCase();
+        if (/^(f|female|ayol|a|qiz)/.test(g)) return 'f';
+        if (/^(m|male|erkak|e)/.test(g)) return 'm';
+        const last = String(e.name || '').trim().split(/\s+/)[1] || '';
+        return /(ova|eva|yeva|qizi)$/i.test(last) ? 'f' : 'm';
+    }
+    function presetAvatar(person) {
+        if (!person?.id) return '';
+        let h = 0; for (const ch of String(person.id)) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+        return `/images/staff-avatars/${genderOf(person)}${String(h % 36 + 1).padStart(2, '0')}.webp`;
+    }
     function staffAvatar(person, size = 32) {
-        const url = staffAvatarUrl(person?.avatar || _avatars[person?.id]);
+        const url = staffAvatarUrl(person?.avatar || _avatars[person?.id]) || presetAvatar(person);
         return url ? `<img class="sc-av" src="${esc(url)}" width="${size}" height="${size}" alt="" loading="lazy">`
             : `<span class="sc-av sc-av--blank" style="width:${size}px;height:${size}px" aria-hidden="true"></span>`;
     }
@@ -341,8 +355,14 @@
         let card = _page?.id === studentId ? _page.card : null;
         if (!card) { try { card = (await api(`/students/${encodeURIComponent(studentId)}/card`)).card; } catch (e) { errBox(box, e.message); return; } }
         box.querySelector('.sc-dh .sc-mt')?.remove();
-        box.querySelector('#scDrwTitle').innerHTML = `${studentAvatar(card, 32)} ${esc(card.name)}`;
-        box.querySelector('.sc-dh > div').insertAdjacentHTML('beforeend', `<p class="sc-mt sc-row">${statusPill(card)} ${tgPill(card.group)}</p>`);
+        // Dizayn: AdminOquvchiTahrir "O'quvchini tahrirlash · Ism · #7712", SotuvOquvchiTahrir "Xatoni tuzatish · Ism";
+        // holat oynalari (AdminMuzlatish …) — sarlavha ostida "Hozir: Faol · Se·Pa·Sh 10:00 · Dilnoza S.".
+        const sales = role() === 'sales_manager';
+        const nowTxt = `Hozir: ${{ active: 'Faol', frozen: 'Muzlatilgan', left: card.finished ? 'Kursni tugatgan' : 'Chiqib ketgan' }[card.status] || card.status} · ${card.schedule?.days || ''} ${card.schedule?.time || ''} · ${shortName(teacherName(card.teacherId))}`;
+        box.querySelector('#scDrwTitle').textContent = tab === 'tahrir' ? (sales ? `Xatoni tuzatish · ${card.name}` : 'O\'quvchini tahrirlash') : `Holatni o'zgartirish · ${card.name}`;
+        box.querySelector('.sc-dh > div').insertAdjacentHTML('beforeend', tab === 'tahrir'
+            ? `<p class="sc-mt">${sales ? 'o\'zi sotgan o\'quvchi · shaxsiy maydonlar darhol, tarif va ustoz — tasdiq bilan' : `${esc(card.name)}${card.serialCode ? ' · #' + esc(card.serialCode) : ''} · o'zgarish butun tizimga bir vaqtda tarqaladi`}</p>`
+            : `<p class="sc-mt">${esc(nowTxt)}</p>`);
         const body = box.querySelector('.sc-db'); body.innerHTML = '';
         _onSaved = done || (() => {});
         (tab === 'tahrir' ? editForm : statusForm)(box, body, card);
@@ -762,7 +782,7 @@
     }
     async function paymentsTab(body, c) {
         body.innerHTML = '<div class="sc-skel"></div>';
-        let r; try { r = await getPay(c); } catch (e) { body.innerHTML = `<div class="sc-err">${esc(e.message)}</div>`; return; }
+        let r; try { r = await getPay(c); } catch (e) { body.innerHTML = window.LoadErr.html({ title: 'To\'lovlarni yuklab bo\'lmadi', err: e, note: 'To\'lov va qarz summalari ko\'rsatilmadi.' }); window.LoadErr.bind(body, () => paymentsTab(body, c)); return; }
         const live = r.payments.filter(x => !x.voided), total = live.reduce((n, x) => n + x.amount, 0);
         const plan = payPlan(c, r), debt = Number(r.debtAmount) || 0, td = today();
         const due = r.paymentDueDate ? String(r.paymentDueDate).slice(0, 10) : '';
@@ -793,7 +813,7 @@
     // ── Sotuv tarixi (admin, ROP, sotuv) ──
     async function salesTab(body, c) {
         body.innerHTML = '<div class="sc-skel"></div>';
-        let r; try { r = await getSales(c); } catch (e) { body.innerHTML = `<div class="sc-err">${esc(e.message)}</div>`; return; }
+        let r; try { r = await getSales(c); } catch (e) { body.innerHTML = window.LoadErr.html({ title: 'Sotuv tarixini yuklab bo\'lmadi', err: e, note: '' }); window.LoadErr.bind(body, () => salesTab(body, c)); return; }
         const L = r.lead;
         if (!L) { body.innerHTML = '<section class="sc-card sc-pad"><p class="sc-mt">Bu o\'quvchi lidga bog\'lanmagan (eski yoki qo\'lda qo\'shilgan yozuv)</p></section>'; return; }
         const d = v => v ? esc(dShort(String(v).slice(0, 10))) : '—';
@@ -876,53 +896,102 @@
         });
     }
 
+    // O'quvchini tahrirlash (AdminOquvchiTahrir) va sotuvda "Xatoni tuzatish" (SotuvOquvchiTahrir) — bitta forma, rolga qarab qulflar.
+    // Jadval yoki ustoz o'zgarsa — bo'sh vaqt jonli tekshiriladi (/schedule/free, server saqlashda qayta tekshiradi).
     function editForm(box, body, c) {
         const sales = role() === 'sales_manager';
-        const dur = c.schedule?.duration || 30;
+        const dur = Number(c.schedule?.duration) || 30;
+        const curDay = [1, 3, 5].includes(Number(c.schedule?.day)) ? 1 : 2;
+        const mains = teachersForSubject(c.subject);
+        const assts = assistants().filter(e => e.lang === 'both' || (e.lang === 'russian' ? 'russian' : 'english') === (c.subject === 'russian' ? 'russian' : 'english'));
+        const lock = '<span class="ad-lock" aria-hidden="true">🔒</span>';
+        const was = (k, v) => `<span class="ad-was" data-was="${k}" hidden>edi: ${esc(v || '—')}</span>`;
+        const course = c.startDate ? `${fmtDate(String(c.startDate).slice(0, 10), false)} · 72 dars` : '72 dars';
+        const opt = (list, cur, empty) => `${empty ? `<option value="">${empty}</option>` : ''}${list.map(t => `<option value="${esc(t.id)}"${t.id === cur ? ' selected' : ''}>${esc(t.name)}</option>`).join('')}${cur && !list.some(t => t.id === cur) ? `<option value="${esc(cur)}" selected>${esc(teacherName(cur))}</option>` : ''}`;
         body.innerHTML = `
-          ${sales ? '<div class="sc-note">Ism, telefon, login va parol darhol saqlanadi. Tarif, jadval va ustoz o\'zgarishi admin yoki ROP tasdig\'iga boradi.</div>' : ''}
-          <div class="sc-sec"><h3>Shaxsiy va ilova</h3><div class="sc-g2">
+          ${sales ? '<div class="sc-note">Ism, telefon, Telegram, login va parol darhol saqlanadi. Tarif, jadval va asosiy ustoz o\'zgarishi admin yoki ROP tasdig\'iga boradi.</div>' : ''}
+          <div class="sc-sec"><h3>Shaxsiy</h3><div class="sc-g2">
             ${field('Ism familiya', `<input name="name" value="${esc(c.name)}" maxlength="80" required>`)}
-            ${field('Telefon', `<input name="phone" value="${esc(c.phone || '')}" inputmode="tel">`)}
+            ${field('Telefon (ilova login)', `<input name="phone" value="${esc(c.phone || '')}" inputmode="tel">`)}
             ${field('Ota-ona telefoni', `<input name="parentPhone" value="${esc(c.parentPhone || '')}" inputmode="tel">`)}
-            ${field('Ilova logini', `<input name="login" value="${esc(c.login || '')}" autocomplete="off">`)}
-            ${field('Yangi vaqtinchalik parol', `<input name="newPassword" type="text" autocomplete="new-password" placeholder="o'zgartirilmaydi">`, 'Birinchi kirishda o\'quvchi almashtiradi')}
+            ${field('Telegram', `<input name="telegram" value="${esc(c.telegram ? '@' + c.telegram : '')}" placeholder="@username" autocomplete="off">`)}
+            ${field('Ilova login', `<input name="login" value="${esc(c.login || '')}" autocomplete="off">`)}
+            ${field('Ilova paroli', `<div class="ad-pw"><input value="••••••" disabled aria-label="Joriy parol yashirin"><button type="button" class="sc-btn sc-btn--sm" data-newpw>Yangi parol berish</button></div><input name="newPassword" type="text" autocomplete="new-password" placeholder="vaqtinchalik parol" hidden>`, 'Birinchi kirishda o\'quvchi almashtiradi')}
           </div></div>
           <div class="sc-sec"><h3>O'qish${sales ? ' · tasdiq bilan' : ''}</h3><div class="sc-g2">
-            ${field('Tarif', `<input name="tariff" value="${esc(c.tariff || '')}" maxlength="40">`)}
+            ${field(`Fan ${lock}`, `<select disabled aria-label="Fan"><option>${c.subject === 'russian' ? 'Rus tili' : 'Ingliz tili'}</option></select>`, 'fan o\'zgarmaydi — yangi o\'quvchi sifatida yoziladi')}
+            ${field('Tarif', `<input name="tariff" value="${esc(c.tariff || '')}" maxlength="40" placeholder="${dur} daq">`)}
             ${field('Oylik narx, so\'m', `<input name="monthlyPrice" value="${esc(c.monthlyPrice ?? '')}" inputmode="numeric">`)}
-            ${field('Dars kunlari', `<select name="lessonDay"><option value="1"${[1, 3, 5].includes(Number(c.schedule?.day)) ? ' selected' : ''}>Du·Ch·Ju</option><option value="2"${[2, 4, 6].includes(Number(c.schedule?.day)) ? ' selected' : ''}>Se·Pa·Sh</option></select>`)}
-            ${field('Dars vaqti', `<input name="lessonTime" value="${esc(c.schedule?.time || '')}" placeholder="16:30" pattern="\\d{1,2}:\\d{2}">`)}
-            ${field('Davomiylik', `<select name="lessonDuration">${[15, 30, 45, 60, 90].map(d => `<option value="${d}"${d === dur ? ' selected' : ''}>${d} daq</option>`).join('')}</select>`)}
-            ${field('Qachondan', `<input name="effectiveFrom" type="date" value="${today()}">`, 'Server bo\'sh vaqtni qayta tekshiradi')}
-          </div></div>
+            ${field('Davomiylik', `<select name="lessonDuration">${[...new Set([15, 30, 45, 60, 90, dur])].sort((a, b) => a - b).map(d => `<option value="${d}"${d === dur ? ' selected' : ''}>${d} daq</option>`).join('')}</select>`)}
+            ${field('Asosiy ustoz', `<select name="teacherId">${opt(mains, c.teacherId)}</select>`)}
+            ${field(`Yordamchi ustoz${sales ? ' ' + lock : ''}`, `<select name="assistantTeacherId"${sales ? ' disabled' : ''}>${opt(assts, c.assistantId, '— yo\'q —')}</select>`, sales ? 'faqat admin va ROP' : '')}
+            ${field(`Dars kunlari ${was('day', c.schedule?.days)}`, `<select name="lessonDay"><option value="1"${curDay === 1 ? ' selected' : ''}>Du·Ch·Ju</option><option value="2"${curDay === 2 ? ' selected' : ''}>Se·Pa·Sh</option></select>`)}
+            ${field(`Dars vaqti ${was('time', c.schedule?.time)}`, `<input name="lessonTime" value="${esc(c.schedule?.time || '')}" placeholder="16:30" pattern="\\d{1,2}:\\d{2}">`)}
+            ${field('Qaysi sanadan', `<input name="effectiveFrom" type="date" value="${addDays(today(), 1)}" min="${today()}">`)}
+            ${field(`Kurs ${lock}`, `<input value="${esc(course)}" disabled aria-label="Kurs">`)}
+          </div><div data-live aria-live="polite"></div></div>
           <div class="sc-sec"><h3>Telegram guruh</h3>${isManager() ? `<div class="sc-g2">
             ${field('Guruh nomi', `<input name="groupName" value="${esc(c.group?.name || '')}" placeholder="C40 | onlayn ${c.subject === 'russian' ? 'rus' : 'ingliz'} tili">`)}
-            ${field('Havola', `<input name="groupLink" value="${esc(c.group?.tg_link || '')}" placeholder="https://t.me/+…">`)}</div>` : `<p class="sc-mt">${tgPill(c.group)} · nom va havolani admin yoki ROP o'zgartiradi</p>`}</div>
+            ${field('Havola', `<input name="groupLink" value="${esc(c.group?.tg_link || '')}" placeholder="https://t.me/+…">`)}</div>
+            <p class="sc-mt">Ustoz yoki yordamchi almashsa "guruhga qo'shing" eslatmasi Telegram guruhlar sahifasida chiqadi.</p>` : `<p class="sc-mt">${tgPill(c.group)} · nom va havolani admin yoki ROP o'zgartiradi</p>`}</div>
+          <div class="sc-sec"><h3>Holat${sales ? ' ' + lock : ''}</h3><div class="sc-row sc-wrap">${statusPill(c)}${sales ? '<span class="sc-mt">holat va chegirma — faqat admin va ROP</span>' : '<button type="button" class="sc-btn sc-btn--sm" data-holat>Holatni o\'zgartirish</button>'}</div></div>
           <div class="sc-sec">${field('Sabab (majburiy)', '<textarea name="reason" rows="2" required placeholder="Masalan: telefon raqamida 2 raqam almashgan"></textarea>', 'O\'zgarishlar tarixiga yoziladi')}</div>`;
-        body.dataset.schedTouched = '0';
-        // Jadval faqat foydalanuvchi shu maydonlarga tegsa o'zgargan hisoblanadi (eski qiymat select'da bo'lmasa ham).
-        body.querySelectorAll('[name=lessonDay],[name=lessonTime],[name=lessonDuration]').forEach(i => i.addEventListener('change', () => { body.dataset.schedTouched = '1'; }));
-        const durSel = body.querySelector('[name=lessonDuration]');
-        if (durSel && ![...durSel.options].some(o => Number(o.value) === Number(dur))) durSel.insertAdjacentHTML('afterbegin', `<option value="${dur}" selected>${dur} daq</option>`);
-        box.insertAdjacentHTML('beforeend', `<footer class="sc-df"><span class="sc-mt">O'zgarish ilova, ustoz, sotuv va moliyada birdek yangilanadi</span><div class="sc-row"><button type="button" class="sc-btn" data-close>Bekor</button><button type="button" class="sc-btn sc-btn--pri" data-save>Saqlash</button></div></footer>`);
-        box.querySelector('[data-save]').onclick = async e => {
-            const v = n => body.querySelector(`[name="${n}"]`)?.value?.trim() ?? '';
+        box.insertAdjacentHTML('beforeend', `<footer class="sc-df"><span class="sc-mt ad-efoot"><span>Admin, ROP — hamma maydon · sotuv menejeri — o'zi sotgan o'quvchida xatoni tuzatadi · ustoz ko'rmaydi</span><b data-fwarn></b><span data-fcount></span></span><div class="sc-row"><button type="button" class="sc-btn" data-close>Bekor</button><button type="button" class="sc-btn sc-btn--pri" data-save>Saqlash</button></div></footer>`);
+        const v = n => body.querySelector(`[name="${n}"]`)?.value?.trim() ?? '';
+        const save = box.querySelector('[data-save]'), live = body.querySelector('[data-live]');
+        body.querySelector('[data-newpw]').onclick = e => { const i = body.querySelector('[name=newPassword]'); i.hidden = false; e.currentTarget.closest('.ad-pw').hidden = true; i.focus(); };
+        body.querySelector('[data-holat]')?.addEventListener('click', () => { closeDrawer(); openCardForm(c.id, 'holat', _onSaved); });
+        const schedTouched = () => Number(v('lessonDay')) !== curDay || v('lessonTime') !== (c.schedule?.time || '') || Number(v('lessonDuration')) !== dur;
+        const teacherTouched = () => v('teacherId') && v('teacherId') !== (c.teacherId || '');
+        let band = false, seq = 0;
+        const count = () => {
+            const direct = ['name', 'phone', 'parentPhone', 'login'].filter(k => v(k) !== String(c[k] || '')).length + (v('newPassword') ? 1 : 0) + (v('telegram').replace(/^@/, '') !== (c.telegram || '') ? 1 : 0)
+                + (!sales && v('assistantTeacherId') !== (c.assistantId || '') ? 1 : 0);
+            const appr = (v('tariff') !== (c.tariff || '') || (v('monthlyPrice') !== '' && v('monthlyPrice') !== String(c.monthlyPrice ?? '')) ? 1 : 0) + (schedTouched() ? 1 : 0) + (teacherTouched() ? 1 : 0);
+            box.querySelector('[data-fcount]').textContent = sales && (direct || appr) ? ` · ${direct} ta o'zgarish darhol · ${appr} ta admin tasdig'iga` : '';
+            body.querySelectorAll('[data-was]').forEach(el => { el.hidden = el.dataset.was === 'day' ? Number(v('lessonDay')) === curDay : v('lessonTime') === (c.schedule?.time || ''); });
+        };
+        // Jonli bo'sh vaqt tekshiruvi: tanlangan ustozda shu kunlar va vaqtda (2 hafta, 5+ dars) bo'sh doimiy oraliq.
+        const check = async () => {
+            count();
+            const my = ++seq;
+            if (!schedTouched() && !teacherTouched()) { live.innerHTML = ''; band = false; sync(); return; }
+            const tid = v('teacherId') || c.teacherId, day = v('lessonDay'), time = v('lessonTime'), d = Number(v('lessonDuration')) || dur;
+            if (!tid || !/^\d{1,2}:\d{2}$/.test(time)) { live.innerHTML = ''; band = false; sync(); return; }
+            live.innerHTML = '<p class="sc-mt">Bo\'sh vaqt tekshirilmoqda…</p>';
+            const r = await window.LoadErr.settle(freeSlotsFor(tid, v('effectiveFrom') || addDays(today(), 1), d, day, c.id));
+            if (my !== seq) return;
+            if (!r.ok) { band = false; live.innerHTML = window.LoadErr.html({ title: 'Bo\'sh vaqtni tekshirib bo\'lmadi', err: r.err, note: 'Saqlashda server baribir tekshiradi.', compact: true }); window.LoadErr.bind(live, check); sync(); return; }
+            const times = r.value, ok = times.includes(time);
+            band = !ok;
+            const near = times.slice().sort((a, b) => Math.abs((toMin(a) ?? 0) - (toMin(time) ?? 0)) - Math.abs((toMin(b) ?? 0) - (toMin(time) ?? 0))).slice(0, 4).sort();
+            live.innerHTML = ok ? `<div class="sc-note sc-note--ok"><b>${esc(time)} — ${esc(shortName(teacherName(tid)))} bo'sh</b> · ${esc(pattern(day))} · ${d} daq</div>`
+                : `<div class="sc-note sc-note--bad ad-band"><b>${esc(time)} — ${esc(shortName(teacherName(tid)))} band</b> (${esc(pattern(day))}). ${near.length ? `Bo'sh vaqtlar: ${near.map(t => `<button type="button" class="ad-slot" data-t="${esc(t)}">${esc(t)}</button>`).join('')}` : 'Bu kunlarda bo\'sh doimiy vaqt yo\'q — boshqa ustoz yoki kunni tanlang.'}</div>`;
+            live.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { body.querySelector('[name=lessonTime]').value = b.dataset.t; check(); });
+            sync();
+        };
+        const sync = () => { save.disabled = band; box.querySelector('[data-fwarn]').textContent = band ? ` ${v('lessonTime')} band — bo'sh vaqt tanlang` : ''; };
+        body.querySelectorAll('[name=lessonDay],[name=lessonDuration],[name=teacherId],[name=effectiveFrom]').forEach(i => i.addEventListener('change', check));
+        const lt = body.querySelector('[name=lessonTime]'); lt.addEventListener('change', check); lt.addEventListener('input', () => { clearTimeout(lt._t); lt._t = setTimeout(check, 500); });
+        body.querySelectorAll('input:not([name=lessonTime]),select,textarea').forEach(i => i.addEventListener('input', count));
+        save.onclick = async e => {
             const changes = {};
             if (v('name') !== c.name) changes.name = v('name');
             if (v('phone') && v('phone') !== (c.phone || '')) changes.phone = v('phone');
             if (v('parentPhone') !== (c.parentPhone || '')) changes.parentPhone = v('parentPhone');
+            if (v('telegram').replace(/^@/, '') !== (c.telegram || '')) changes.telegram = v('telegram');
             if (v('login') && v('login') !== (c.login || '')) changes.login = v('login');
             if (v('newPassword')) changes.newPassword = v('newPassword');
             if (v('tariff') !== (c.tariff || '')) changes.tariff = v('tariff');
             if (v('monthlyPrice') !== String(c.monthlyPrice ?? '') && v('monthlyPrice') !== '') changes.monthlyPrice = Number(v('monthlyPrice').replace(/\D/g, ''));
-            const touched = body.dataset.schedTouched === '1';
-            if (touched && (pattern(v('lessonDay')) !== c.schedule?.days || v('lessonTime') !== (c.schedule?.time || '') || Number(v('lessonDuration')) !== Number(c.schedule?.duration))) {
-                Object.assign(changes, { lessonDay: Number(v('lessonDay')), lessonTime: v('lessonTime'), lessonDuration: Number(v('lessonDuration')), effectiveFrom: v('effectiveFrom') });
-            }
+            if (!sales && v('assistantTeacherId') !== (c.assistantId || '')) changes.assistantTeacherId = v('assistantTeacherId');
+            const tChange = teacherTouched();
+            if (tChange && sales) Object.assign(changes, { teacherId: v('teacherId'), teacherFrom: v('effectiveFrom'), lessonDay: Number(v('lessonDay')), lessonTime: v('lessonTime') });
+            else if (schedTouched() && !tChange) Object.assign(changes, { lessonDay: Number(v('lessonDay')), lessonTime: v('lessonTime'), lessonDuration: Number(v('lessonDuration')), effectiveFrom: v('effectiveFrom') });
             const groupChanged = isManager() && (v('groupName') !== (c.group?.name || '') || v('groupLink') !== (c.group?.tg_link || ''));
-            if (!Object.keys(changes).length && !groupChanged) return errBox(box, 'O\'zgarish yo\'q');
+            if (!Object.keys(changes).length && !groupChanged && !(tChange && !sales)) return errBox(box, 'O\'zgarish yo\'q');
             if (v('reason').length < 5) return errBox(box, 'Sababni yozing (kamida 5 belgi)');
+            if (band) return errBox(box, `${v('lessonTime')} band — bo'sh vaqt tanlang`);
             busy(e.target, true); errBox(box, '');
             try {
                 let msg = 'Saqlandi';
@@ -930,11 +999,14 @@
                     const r = await post(`/students/${encodeURIComponent(c.id)}/edit`, { changes, reason: v('reason') });
                     if (r.request) msg = r.applied?.changed ? 'Saqlandi · tarif/jadval o\'zgarishi tasdiqqa yuborildi' : 'Tasdiqqa yuborildi';
                 }
+                // Admin/ROP: asosiy ustoz — ustozlar tarixi bilan (qaysi sanadan), server bo'sh vaqtni qayta tekshiradi.
+                if (tChange && !sales) await post(`/students/${encodeURIComponent(c.id)}/teacher`, { teacherId: v('teacherId'), from: v('effectiveFrom'), lessonDay: Number(v('lessonDay')), lessonTime: v('lessonTime'), reason: v('reason') });
                 if (groupChanged) await api(`/students/${encodeURIComponent(c.id)}/group`, { method: 'PUT', body: { name: v('groupName'), link: v('groupLink'), reason: v('reason') } });
                 toast(msg); await refreshCache(); window.dispatchEvent(new CustomEvent('school:changed'));
                 saved(c);
             } catch (err) { busy(e.target, false); errBox(box, err.message); }
         };
+        count();
     }
 
     // Holat: muzlatish / ustozni almashtirish / qayta tiklash / kursni to'xtatish — alohida bitta oyna.
@@ -983,16 +1055,37 @@
         footer(box, 'Muzlatish', false, async () => { await post(`/students/${encodeURIComponent(c.id)}/freeze`, { from: val(ab, 'from'), to: val(ab, 'to'), reasonCode: radio(ab, 'rcode'), reason: fullReason(ab) }); toast('Muzlatildi'); saved(c); });
     }
     function stopForm(box, ab, c) {
-        ab.innerHTML = `<div class="sc-sec"><h3>Oxirgi dars</h3>${field('Oxirgi dars sanasi', `<input type="date" name="last" value="${today()}">`)}</div>
+        ab.innerHTML = `<div class="sc-sec"><h3>Oxirgi dars</h3><div class="sc-g2">${field('Oxirgi dars sanasi', `<input type="date" name="last" value="${today()}">`)}
+            ${field('O\'tilgan darslar', '<input data-passed value="…" disabled aria-label="O\'tilgan darslar">')}</div></div>
           ${reasonBlock([['Vaqti yo\'q', 'Vaqti yo\'q'], ['Moliyaviy', 'Moliyaviy'], ['Boshqa markaz', 'Boshqa markaz'], ['Natijadan norozi', 'Natijadan norozi'], ['Boshqa', 'Boshqa']], 'Vaqti yo\'q')}
+          <div class="sc-sec"><h3>To'lov</h3><div data-stpay><p class="sc-mt">Yuklanmoqda…</p></div></div>
           <div class="sc-sec"><h3>Saqlansa nima bo'ladi</h3>${impact([
             ['▦', `${esc(teacherName(c.teacherId, true))} jadvalida ${esc(c.schedule?.days || '')} ${esc(c.schedule?.time || '')} keyingi kundan bo'shaydi → sinovga ochiladi`],
             ['◷', 'Yordamchi ro\'yxatidan chiqadi · tarix arxivda qoladi'],
-            ['✈', 'Telegram guruh arxivlanadi'],
+            ['✈', `Telegram guruh${c.group?.name ? ' "' + esc(c.group.name) + '"' : ''} arxivlanadi`],
+            ['☏', 'Sotuv menejeriga vazifa: 30 kundan keyin qayta qo\'ng\'iroq'],
             ['▣', 'Ilova: faqat o\'tgan darslar · yangi dars ochilmaydi'],
             ['☎', 'Sotuv menejerining "Faol emas" ro\'yxatiga tushadi'],
             ['▤', 'Faol o\'quvchilar, davomat va reytingdan chiqadi · qoplanmagan darslar bekor bo\'ladi']])}</div>
           <div class="sc-note sc-note--bad">Qaytarib bo'lmaydigan amal emas — "Qayta tiklash" bilan qaytariladi, vaqti band bo'lsa yangi vaqt tanlanadi.</div>`;
+        // O'tilgan darslar (ilova progressi + shu oy davomati) va to'lov holati — faqat ko'rsatish; pul qaytarish Moliyada.
+        const month = today().slice(0, 7);
+        Promise.all([window.LoadErr.settle(getProg(c)), window.LoadErr.settle(getAtt(c, month))]).then(([pr, at]) => {
+            const el = ab.querySelector('[data-passed]'); if (!el) return;
+            const reached = pr.ok ? (pr.value?.progress?.reached ?? null) : null;
+            const came = at.ok ? Object.values(at.value?.entries || {}).filter(e => e.present).length : null;
+            el.value = [reached != null ? `${reached} / 72` : '—', came != null ? `${came} keldi (${MON_UP[Number(month.slice(5)) - 1].toLowerCase()})` : ''].filter(Boolean).join(' · ');
+        });
+        window.LoadErr.settle(getPay(c)).then(r => {
+            const el = ab.querySelector('[data-stpay]'); if (!el) return;
+            if (!r.ok) { el.innerHTML = window.LoadErr.html({ title: 'To\'lovlarni yuklab bo\'lmadi', err: r.err, note: '', compact: true }); window.LoadErr.bind(el, () => stopForm(box, ab, c)); return; }
+            const live = (r.value.payments || []).filter(x => !x.voided);
+            const mine = live.filter(x => String(x.date || '').slice(0, 7) === month), sum = mine.reduce((n, x) => n + Number(x.amount || 0), 0);
+            const debt = Number(r.value.debtAmount) || 0;
+            el.innerHTML = `<dl class="ad-kv"><dt>${esc(MON_UP[Number(month.slice(5)) - 1])}</dt><dd>${sum ? `${num(sum)} so'm to'langan` : 'shu oy to\'lov yo\'q'}</dd>
+              <dt>Qarz</dt><dd>${r.value.debtAmount != null ? (debt > 0 ? `<b class="ad-bad">${num(debt)} so'm</b>` : 'yo\'q') : '—'}</dd>
+              <dt>Qaytarish</dt><dd>avtomatik emas — kerak bo'lsa Moliya → To'lovlar orqali, sabab bilan</dd></dl>`;
+        });
         footer(box, 'Kursni to\'xtatish', true, async () => { await post(`/students/${encodeURIComponent(c.id)}/stop`, { lastLesson: val(ab, 'last'), reasonCode: radio(ab, 'rcode'), reason: fullReason(ab) }); toast('Kurs to\'xtatildi'); saved(c); });
     }
     // "Kursni tugatdi": jadval/maosh bo'yicha "Kursni to'xtatish" bilan bir xil, lekin ustoz, yordamchi va sotuvda "Tugatgan" bo'lib ko'rinadi.
@@ -1015,9 +1108,9 @@
         }).catch(() => { const p = ab.querySelector('[data-fin-prog]'); if (p) p.textContent = ''; });
         footer(box, 'Kursni tugatdi', false, async () => { await post(`/students/${encodeURIComponent(c.id)}/finish`, { lastLesson: val(ab, 'last'), note: val(ab, 'note') }); toast('Kursni tugatganlar qatoriga o\'tdi'); saved(c); });
     }
-    async function freeSlotsFor(teacherId, from, duration, day) {
+    async function freeSlotsFor(teacherId, from, duration, day, excludeStudentId = '') {
         const to = addDays(from, 13);
-        const r = await api(`/schedule/free?purpose=lesson&teacherId=${encodeURIComponent(teacherId)}&from=${from}&to=${to}&duration=${duration}`);
+        const r = await api(`/schedule/free?purpose=lesson&teacherId=${encodeURIComponent(teacherId)}&from=${from}&to=${to}&duration=${duration}${excludeStudentId ? '&excludeStudentId=' + encodeURIComponent(excludeStudentId) : ''}`);
         const days = [1, 3, 5].includes(Number(day)) ? [1, 3, 5] : [2, 4, 6];
         // Haftalik dars: shu vaqt naqshdagi uchala kunda ham bo'sh bo'lishi kerak.
         const byTime = new Map();
@@ -1046,7 +1139,7 @@
                 pick = oldFree ? old : null;
                 slotsEl.innerHTML = times.length ? times.map(t => `<button type="button" class="sc-slot" aria-pressed="${t === pick}" data-t="${t}">${esc(pattern(day))} ${t}</button>`).join('') : '<span class="sc-mt">Bu ustozda 2 hafta ichida bo\'sh doimiy vaqt yo\'q — boshqa ustozni tanlang</span>';
                 slotsEl.querySelectorAll('.sc-slot').forEach(b => b.onclick = () => { pick = b.dataset.t; slotsEl.querySelectorAll('.sc-slot').forEach(x => x.setAttribute('aria-pressed', String(x === b))); });
-            } catch (e) { slotsEl.textContent = e.message; }
+            } catch (e) { slotsEl.innerHTML = window.LoadErr.html({ title: 'Bo\'sh vaqtlarni yuklab bo\'lmadi', err: e, note: '', compact: true }); window.LoadErr.bind(slotsEl, load); }
         };
         ab.querySelectorAll('select[name=teacher],select[name=day],input[name=from]').forEach(i => i.onchange = load); load();
         footer(box, 'Qayta tiklash', false, async () => {
@@ -1059,20 +1152,36 @@
     function teacherForm(box, ab, c) {
         const from = addDays(today(), 1);
         const list = teachersForSubject(c.subject).filter(t => t.id !== c.teacherId && t.id !== c.assistantId);
+        const oldT = shortName(teacherName(c.teacherId));
+        // Eski ustoz bilan oxirgi dars: yangi ustozning birinchi darsidan oldingi o'quvchi dars kuni.
+        const lastWith = f => { const days = [1, 3, 5].includes(Number(c.schedule?.day)) ? [1, 3, 5] : [2, 4, 6]; let d = addDays(f, -1); for (let k = 0; k < 7 && !days.includes(wd(d)); k++) d = addDays(d, -1); return d; };
+        const hist = (c.teachers || []).slice().sort((a, b) => String(b.from).localeCompare(String(a.from)));
         ab.innerHTML = `<div class="sc-sec"><h3>Yangi ustoz</h3><p class="sc-mt">${esc(c.schedule?.days || '')} ${esc(c.schedule?.time || '')} · ${esc(c.schedule?.duration || '')} daq bo'yicha tekshiriladi</p><div class="sc-tch" data-tch><span class="sc-mt">Tekshirilmoqda…</span></div></div>
-          <div class="sc-sec"><h3>Sana</h3>${field('Yangi ustoz bilan birinchi dars', `<input type="date" name="from" value="${from}" min="${today()}">`, 'Shu kungacha eski ustoz dars o\'tadi va qoplaydi')}</div>
+          <div class="sc-sec"><h3>Sana</h3><div class="sc-g2">${field('Yangi ustoz bilan birinchi dars', `<input type="date" name="from" value="${from}" min="${today()}">`, 'Shu kungacha eski ustoz dars o\'tadi va qoplaydi')}
+            ${field(`${esc(oldT)} bilan oxirgi dars`, `<input data-lastwith value="${esc(fmtDate(lastWith(from)))}" disabled>`)}</div></div>
+          <div class="sc-sec"><h3>Ustozlar tarixi</h3>${hist.length ? `<ul class="ad-th">${hist.map(h => `<li>${staffAvatar({ id: h.teacherId }, 26)}<b>${esc(teacherName(h.teacherId))}</b><span class="sc-mt">${esc(fmtDate(h.from, false))} → ${h.to ? esc(fmtDate(h.to, false)) : 'hozir'}</span></li>`).join('')}</ul>` : `<p class="sc-mt">${esc(teacherName(c.teacherId))} · kurs boshidan</p>`}</div>
           ${reasonBlock([['Ota-ona so\'radi', 'Ota-ona so\'radi'], ['Ustoz yuklamasi', 'Ustoz yuklamasi'], ['Ustoz ketmoqda', 'Ustoz ketmoqda'], ['Boshqa', 'Boshqa']], 'Ota-ona so\'radi')}
-          <div class="sc-sec"><h3>Saqlansa nima bo'ladi</h3>${impact([['▦', 'Eski ustozda vaqt bo\'shaydi → sinovga ochiladi · yangi ustozda band'], ['✈', 'Telegram guruh: yangi ustozni qo\'shing, eskisini chiqaring'], ['↺', 'Qoplanmagan darslar oxirgi kungacha eski ustozda, keyin yangisiga o\'tadi'], ['₪', 'Ustozlar maoshi dars bo\'yicha bo\'linadi · o\'quvchi to\'lovi o\'zgarmaydi'], ['▣', 'Ilova: progress saqlanadi · yangi ustoz rasmi va ismi']])}</div>`;
+          <div class="sc-sec"><h3>Saqlansa nima bo'ladi</h3>${impact([['▦', `${esc(oldT)} jadvalida vaqt bo'shaydi → sinovga ochiladi · yangi ustozda band`],
+            ['↺', 'Qoplanmagan darslar oxirgi kungacha eski ustozda, keyin yangisiga o\'tadi'],
+            ['₪', 'Ustozlar maoshi dars bo\'yicha bo\'linadi (ustozlar tarixi) · o\'quvchi to\'lovi o\'zgarmaydi'],
+            ['◷', c.assistantId ? `Yordamchi ${esc(shortName(teacherName(c.assistantId)))} o'zgarmaydi` : 'Yordamchi biriktirilmagan'],
+            ['✈', `Telegram guruh${c.group?.name ? ' "' + esc(c.group.name) + '"' : ''}: yangi ustozni qo'shing, eskisini chiqaring`],
+            ['▣', 'Ilova: progress saqlanadi · yangi ustoz rasmi va ismi'],
+            ['✉', 'Ustozlarga va sotuv menejeriga xabar · tarixga yoziladi']])}</div>`;
+        ab.querySelector('input[name=from]').addEventListener('change', e => { const el = ab.querySelector('[data-lastwith]'); if (el && e.target.value) el.value = fmtDate(lastWith(e.target.value)); });
         let pick = null;
         const load = async () => {
             const el = ab.querySelector('[data-tch]');
             const rows = await Promise.all(list.map(async t => {
                 try { const times = await freeSlotsFor(t.id, val(ab, 'from'), c.schedule?.duration || 30, c.schedule?.day); return { t, ok: times.includes(c.schedule?.time), alt: times[0] || null }; }
-                catch { return { t, ok: false, alt: null }; }
+                catch (err) { return { t, ok: false, alt: null, err }; }
             }));
+            // Bo'sh vaqtni tekshirib bo'lmasa — "mos vaqt yo'q" deb ko'rsatilmaydi (soxta bo'sh holat), LoadErr.
+            const failed = rows.filter(r => r.err);
+            if (failed.length && failed.length === rows.length) { el.innerHTML = window.LoadErr.html({ title: 'Ustozlarning bo\'sh vaqtini yuklab bo\'lmadi', err: failed[0].err, note: '', compact: true }); window.LoadErr.bind(el, load); el._rows = []; pick = null; return; }
             rows.sort((a, b) => (b.ok - a.ok) || (!!b.alt - !!a.alt));
             pick = rows.find(r => r.ok)?.t.id || null;
-            el.innerHTML = rows.map(r => `<label class="sc-tc${!r.ok && !r.alt ? ' is-off' : ''}"><input type="radio" name="tch" value="${esc(r.t.id)}"${r.t.id === pick ? ' checked' : ''}${!r.ok && !r.alt ? ' disabled' : ''}>${staffAvatar(r.t, 34)}<span class="sc-grow"><b>${esc(r.t.name)}</b><small>${r.ok ? 'vaqt o\'zgarmaydi' : r.alt ? 'shu vaqt band · bo\'sh: ' + esc(r.alt) : 'mos bo\'sh vaqt yo\'q'}</small></span><span class="sc-pill ${r.ok ? 'sc-pill--ok' : r.alt ? 'sc-pill--warn' : 'sc-pill--mute'}">${r.ok ? esc(c.schedule?.time) + ' bo\'sh' : r.alt ? 'band' : '—'}</span></label>`).join('') || '<span class="sc-mt">Boshqa ustoz yo\'q</span>';
+            el.innerHTML = rows.map(r => r.err ? `<label class="sc-tc is-off"><input type="radio" name="tch" disabled>${staffAvatar(r.t, 34)}<span class="sc-grow"><b>${esc(r.t.name)}</b><small>bo'sh vaqtini tekshirib bo'lmadi</small></span><span class="sc-pill sc-pill--mute">?</span></label>` : `<label class="sc-tc${!r.ok && !r.alt ? ' is-off' : ''}"><input type="radio" name="tch" value="${esc(r.t.id)}"${r.t.id === pick ? ' checked' : ''}${!r.ok && !r.alt ? ' disabled' : ''}>${staffAvatar(r.t, 34)}<span class="sc-grow"><b>${esc(r.t.name)}</b><small>${r.ok ? 'vaqt o\'zgarmaydi' : r.alt ? 'shu vaqt band · bo\'sh: ' + esc(r.alt) : 'mos bo\'sh vaqt yo\'q'}</small></span><span class="sc-pill ${r.ok ? 'sc-pill--ok' : r.alt ? 'sc-pill--warn' : 'sc-pill--mute'}">${r.ok ? esc(c.schedule?.time) + ' bo\'sh' : r.alt ? 'band' : '—'}</span></label>`).join('') || '<span class="sc-mt">Boshqa ustoz yo\'q</span>';
             el.querySelectorAll('input[name=tch]').forEach(i => i.onchange = () => { pick = i.value; });
             el._rows = rows;
         };
@@ -1102,83 +1211,232 @@
         }).join('')}</ol>`;
     }
 
-    // ── Sotuv tahrirlari · tasdiq (admin va ROP) ─────────────────────────────
+    // ── Sotuv tahrirlari · tasdiq (admin va ROP) — dizayn AdminSotuvTasdiq / RopTasdiq ─────────────
+    const BACK_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>';
+    const backLink = (tab, label, section = '') => `<button type="button" class="ad-back" data-back-tab="${tab}"${section ? ` data-back-section="${section}"` : ''}>${BACK_ICON} ${esc(label)}</button>`;
+    const whenShort = iso => { const d = new Date(iso); if (!Number.isFinite(d.getTime())) return '';
+        const day = d.toLocaleDateString('sv-SE', { timeZone: 'Asia/Tashkent' }), t = d.toLocaleTimeString('uz-UZ', { timeZone: 'Asia/Tashkent', hour: '2-digit', minute: '2-digit' });
+        const td = today(); return day === td ? `bugun ${t}` : day === addDays(td, -1) ? `kecha ${t}` : `${fmtDate(day, false)} ${t}`; };
+    const sched = (day, time, dur) => `${pattern(day)}${time ? ' ' + time : ''}${dur && toMin(time) != null ? `–${hm(toMin(time) + Number(dur))}` : ''}`;
+    // Ro'yxatdagi qisqa mazmun: "30 → 60 daq", "Otabek → Kamola".
+    function apSummary(r, s) {
+        const ch = r.changes || {};
+        if (r.kind === 'teacher') return `${esc(shortName(teacherName(s.teacherId)))} → ${esc(shortName(teacherName(ch.teacherId)))}`;
+        if (r.kind === 'payment') return esc(ch.method || ch.summary || 'to\'lov tuzatish');
+        const parts = [];
+        if ('lessonDuration' in ch && Number(ch.lessonDuration) !== Number(s.lessonDuration)) parts.push(`${s.lessonDuration || '—'} → ${ch.lessonDuration} daq`);
+        if ('monthlyPrice' in ch) parts.push(`${s.monthlyPrice ? num(s.monthlyPrice) : '—'} → ${num(ch.monthlyPrice)}`);
+        if ('lessonTime' in ch && ch.lessonTime !== s.lessonTime) parts.push(`${s.lessonTime || '—'} → ${ch.lessonTime}`);
+        return esc(parts.join(' · ') || 'tarif');
+    }
+    // Ikkinchi tasdiqlovchi (admin ↔ ROP) — "… ham ko'ryapti" izohi uchun.
+    function otherApprover(s) {
+        const me = (typeof getCurrentUser === 'function' && getCurrentUser()) || {};
+        const lang = s?.subject === 'russian' ? 'russian' : 'english';
+        if (me.role === 'rop') return 'Admin';
+        const rop = staffList().find(e => e.role === 'rop' && (e.status || 'active') !== 'inactive' && (e.lang === 'both' || (e.lang === 'russian' ? 'russian' : 'english') === lang));
+        return rop ? `${shortName(rop.name)} (ROP)` : 'ROP';
+    }
     async function renderApprovals(root) {
-        await loadStaffAvatars();
-        root.innerHTML = '<div class="sc-skel"></div>';
-        let data, filter = root.dataset.filter || 'pending';
-        try { data = await api('/edit-requests'); } catch (e) { root.innerHTML = `<div class="sc-err">${esc(e.message)}</div>`; return; }
-        const counts = data.counts || {};
-        const list = data.requests.filter(r => filter === 'all' || r.status === filter);
-        root.innerHTML = `<div class="sc-head"><div><h1>Sotuv tahrirlari · tasdiq</h1><p class="sc-sub">Admin va ROP teng · kim birinchi qaror qilsa, ikkinchisida yopiladi</p></div>
-            <div class="sc-seg" role="group">${[['pending', 'Kutilmoqda'], ['approved', 'Tasdiqlangan'], ['rejected', 'Rad etilgan'], ['returned', 'Qaytarilgan'], ['all', 'Hammasi']].map(([k, l]) => `<button type="button" data-f="${k}" aria-pressed="${k === filter}">${l}${k !== 'all' && counts[k] ? ' ' + counts[k] : ''}</button>`).join('')}</div></div>
-          <div class="sc-note">Tasdiq so'raydi: tarif yoki narx · jadval · asosiy ustoz. Ism, telefon, login va parolni menejer o'zi tuzatadi — faqat tarixga yoziladi.</div>
-          <div class="sc-lay2"><section class="sc-card sc-inbox">${list.map((r, i) => `<button type="button" class="sc-it" data-i="${i}"><span class="sc-grow"><b>${esc(r.requester_name)} · ${esc(REQ_KIND[r.kind])}</b><small>${esc(r.student_name || '')}</small><small>${esc(new Date(r.created_at).toLocaleString('uz-UZ', { timeZone: 'Asia/Tashkent', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }))} · №${esc(r.number)}</small></span>${reqPill(r)}</button>`).join('') || '<p class="sc-mt sc-pad">So\'rov yo\'q</p>'}</section>
-          <section class="sc-card" data-detail><p class="sc-mt sc-pad">So'rovni tanlang</p></section></div>`;
-        root.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { root.dataset.filter = b.dataset.f; renderApprovals(root); });
-        const open = i => { root.querySelectorAll('.sc-it').forEach(x => x.classList.toggle('sel', x.dataset.i === String(i))); approvalDetail(root, list[i]); };
-        root.querySelectorAll('.sc-it').forEach(b => b.onclick = () => open(Number(b.dataset.i)));
-        if (list.length) open(0);
+        const filter = root.dataset.filter || 'all';
+        if (!root.querySelector('.sc-lay2')) root.innerHTML = `${backLink('students', 'O\'quvchilar')}<div class="sc-skel"></div>`;
+        const [, res, gr] = await Promise.all([loadStaffAvatars(), window.LoadErr.settle(api('/edit-requests')), window.LoadErr.settle(api('/groups'))]);
+        _apGroups = new Map(((gr.ok && gr.value?.groups) || []).filter(g => !g.archived).map(g => [g.student_id, g]));
+        if (!res.ok) {
+            root.innerHTML = `${backLink('students', 'O\'quvchilar')}<div class="sc-head"><div><h1>Sotuv tahrirlari · tasdiq</h1></div></div>${window.LoadErr.html({ title: 'So\'rovlarni yuklab bo\'lmadi', err: res.err })}`;
+            window.LoadErr.bind(root, () => renderApprovals(root));
+            return;
+        }
+        const data = res.value, all = data.requests || [];
+        const counts = { all: all.length, ...(data.counts || {}) };
+        window.refreshApprovalsBadge?.(data.counts || {});
+        const list = all.filter(r => filter === 'all' || r.status === filter);
+        const tabs = [['all', 'Hammasi'], ['pending', 'Kutilmoqda'], ['approved', 'Tasdiqlangan'], ['rejected', 'Rad etilgan'], ['returned', 'Qaytarilgan']].filter(([k]) => k !== 'returned' || counts.returned);
+        const selId = list.some(r => r.id === root.dataset.sel) ? root.dataset.sel : (list.find(r => r.status === 'pending') || list[0])?.id || '';
+        const item = r => { const s = studentById(r.student_id) || {}; const mgr = staffList().find(e => e.name === r.requester_name) || { id: r.requested_by, name: r.requester_name };
+            return `<button type="button" class="sc-it ad-ri${r.id === selId ? ' sel' : ''}" data-id="${esc(r.id)}"${r.id === selId ? ' aria-current="true"' : ''}>${staffAvatar(mgr, 36)}<span class="sc-grow"><b>${esc(shortName(r.requester_name))} · ${esc(REQ_KIND[r.kind] || r.kind)}</b><small>${esc(r.student_name || s.name || '')} · ${apSummary(r, s)}</small><small>${esc(whenShort(r.created_at))}</small></span>${reqPill(r)}</button>`; };
+        root.innerHTML = `${backLink('students', 'O\'quvchilar')}<div class="sc-head"><div><h1>Sotuv tahrirlari · tasdiq</h1><p class="sc-sub">Sotuv menejerlari so'rovlari · admin va ROP ko'radi · tasdiqlansa butun tizimda yangilanadi</p></div>
+            <div class="sc-seg" role="group" aria-label="Holat">${tabs.map(([k, l]) => `<button type="button" data-f="${k}" aria-pressed="${k === filter}">${l}${(k === 'all' || k === 'pending') && counts[k] ? ' ' + counts[k] : ''}</button>`).join('')}</div></div>
+          <div class="sc-note"><b>Qaysi tahrir tasdiq so'raydi:</b> tarif yoki narx · asosiy ustoz · jadval. Ism, telefon, ota-ona raqami, login va parolni menejer o'zi tuzatadi — faqat tarixga yoziladi.</div>
+          <div class="sc-lay2 ad-ap"><section class="sc-card sc-inbox" aria-label="So'rovlar">${list.map(item).join('') || `<p class="sc-mt sc-pad">${filter === 'pending' ? 'Kutilayotgan so\'rov yo\'q' : 'So\'rov yo\'q'}</p>`}</section>
+          <section class="sc-card" data-detail aria-live="polite">${list.length ? '<div class="sc-skel"></div>' : '<p class="sc-mt sc-pad">So\'rovni tanlang</p>'}</section></div>`;
+        root.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { root.dataset.filter = b.dataset.f; root.dataset.sel = ''; renderApprovals(root); });
+        const open = id => { root.dataset.sel = id; root.querySelectorAll('.ad-ri').forEach(x => { const on = x.dataset.id === id; x.classList.toggle('sel', on); on ? x.setAttribute('aria-current', 'true') : x.removeAttribute('aria-current'); }); approvalDetail(root, list.find(r => r.id === id)); };
+        root.querySelectorAll('.ad-ri').forEach(b => b.onclick = () => { open(b.dataset.id); if (window.matchMedia?.('(max-width: 900px)').matches) root.querySelector('[data-detail]')?.scrollIntoView({ block: 'start', behavior: 'smooth' }); });
+        if (selId) open(selId);
     }
     const reqPill = r => `<span class="sc-pill ${{ pending: 'sc-pill--warn', approved: 'sc-pill--ok', rejected: 'sc-pill--bad', returned: 'sc-pill--mute' }[r.status]}">${{ pending: 'Kutilmoqda', approved: 'Tasdiqlandi', rejected: 'Rad etildi', returned: 'Qaytarildi' }[r.status]}</span>`;
-    function approvalDetail(root, r) {
-        const el = root.querySelector('[data-detail]');
-        const s = studentById(r.student_id) || {};
+    // "Nima o'zgaradi": o'zgarmagan qatorlar ham (Dars vaqti, Tarif, Ustoz, Qachondan) — dizayndagidek to'liq jadval.
+    function approvalRows(r, s) {
         const ch = r.changes || {};
-        const rows = [];
-        if (r.kind === 'teacher') rows.push(['Asosiy ustoz', teacherName(s.teacherId), teacherName(ch.teacherId)], ['Qachondan', '—', ch.from ? fmtDate(ch.from) : '—']);
-        if ('tariff' in ch) rows.push(['Tarif', s.tariff || '—', ch.tariff]);
-        if ('monthlyPrice' in ch) rows.push(['Oylik narx', s.monthlyPrice ? formatMoney(s.monthlyPrice) : '—', formatMoney(ch.monthlyPrice)]);
-        if ('lessonDuration' in ch || 'lessonTime' in ch) rows.push(['Jadval', `${pattern(s.lessonDayOfWeek)} ${s.lessonTime || ''} · ${s.lessonDuration || ''} daq`, `${pattern(ch.lessonDay ?? s.lessonDayOfWeek)} ${ch.lessonTime || s.lessonTime} · ${ch.lessonDuration || s.lessonDuration} daq`]);
-        if (ch.effectiveFrom && r.kind !== 'teacher') rows.push(['Qachondan', '—', fmtDate(ch.effectiveFrom)]);
+        const curT = s.lessonDuration ? `${s.lessonDuration} daq${s.monthlyPrice ? ' · ' + num(s.monthlyPrice) + ' so\'m/oy' : ''}` : (s.tariff || '—');
+        const newDur = 'lessonDuration' in ch ? ch.lessonDuration : s.lessonDuration, newPrice = 'monthlyPrice' in ch ? ch.monthlyPrice : s.monthlyPrice;
+        const newT = newDur ? `${newDur} daq${newPrice ? ' · ' + num(newPrice) + ' so\'m/oy' : ''}` : (ch.tariff || s.tariff || '—');
+        const curS = sched(s.lessonDayOfWeek, s.lessonTime, s.lessonDuration);
+        const newS = sched(ch.lessonDay ?? s.lessonDayOfWeek, ch.lessonTime || s.lessonTime, newDur);
+        const from = r.kind === 'teacher' ? ch.from : ch.effectiveFrom;
+        return [['Tarif', curT, newT], ['Dars vaqti', curS, newS], ['Ustoz', teacherName(s.teacherId), r.kind === 'teacher' ? teacherName(ch.teacherId) : teacherName(s.teacherId)],
+            ['Qachondan', '—', from ? `${fmtDate(from)}` : 'tasdiqlangan kundan']];
+    }
+    // "Tasdiqlansa" — qaysi joylar yangilanadi (bitta manba: jadval, moliya, maosh, ilova, yordamchi, tarix).
+    function approvalImpact(r, s) {
+        const ch = r.changes || {}, out = [];
+        const tName = shortName(teacherName(r.kind === 'teacher' ? ch.teacherId : s.teacherId));
+        const from = (r.kind === 'teacher' ? ch.from : ch.effectiveFrom) ? fmtDate(r.kind === 'teacher' ? ch.from : ch.effectiveFrom) : 'tasdiqlangan kundan';
+        const newDur = 'lessonDuration' in ch ? ch.lessonDuration : s.lessonDuration;
+        const schedChanged = r.kind === 'teacher' || 'lessonTime' in ch || 'lessonDay' in ch || ('lessonDuration' in ch && Number(ch.lessonDuration) !== Number(s.lessonDuration));
+        if (schedChanged) out.push(['cal', `${tName} jadvali: ${sched(ch.lessonDay ?? s.lessonDayOfWeek, ch.lessonTime || s.lessonTime, newDur)} band · sinov uchun yopiladi · ${from}`]);
+        if ('monthlyPrice' in ch) out.push(['fin', `Moliya: yangi narx ${num(ch.monthlyPrice)} so'm/oy · qarz shu narxdan hisoblanadi`]);
+        if (r.kind === 'teacher') out.push(['pay', `Maosh: ${from} darslari ${tName}ga, oldingilari ${shortName(teacherName(s.teacherId))}ga`]);
+        else if ('lessonDuration' in ch) out.push(['pay', `${tName} maoshi: ${from} darslar ${newDur} daqiqalik stavka bo'yicha`]);
+        if ('lessonDuration' in ch) out.push(['app', `Ilova: dars davomiyligi ${newDur} daq · darslik progressi o'zgarmaydi`]);
+        if (s.assistantTeacherId) out.push(['asst', `Yordamchi ${shortName(teacherName(s.assistantTeacherId))}: o'zgarish yo'q · oyiga 13 aloqa`]);
+        if (r.kind === 'teacher') out.push(['tg', 'Telegram guruh: yangi ustozni guruhga qo\'shish kerak']);
+        out.push(['log', `Tarixga: so'rov, qaror, kim va qachon · ${shortName(r.requester_name)}ga xabar`]);
+        return out;
+    }
+    const IMP_ICON = { cal: '▦', fin: '₴', pay: '›', app: '▣', asst: '◷', tg: '✈', log: '✎' };
+    let _apSeq = 0, _apGroups = new Map();
+    async function approvalDetail(root, r) {
+        const el = root.querySelector('[data-detail]');
+        if (!el || !r) return;
+        const seq = ++_apSeq;
+        const s = studentById(r.student_id) || {};
         const pending = r.status === 'pending';
-        el.innerHTML = `<header class="sc-ch"><h2>${esc(r.student_name || s.name || '')} · ${r.kind === 'teacher' ? 'ustozni almashtirish' : 'tarif o\'zgarishi'}</h2><span class="sc-mt">№${esc(r.number)} · ${esc(r.requester_name)}</span></header>
-          <div class="sc-pad">
-            <div class="sc-row sc-req"><span class="sc-grow"><b>${esc(r.requester_name)}</b><span class="sc-mt"> · o'z sotgan o'quvchisi · ${esc(new Date(r.created_at).toLocaleString('uz-UZ', { timeZone: 'Asia/Tashkent', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }))}</span></span><button type="button" class="sc-btn" data-card>Kartani ochish</button></div>
-            <h3>Nima o'zgaradi</h3><table class="sc-df-t"><thead><tr><th></th><th>Hozir</th><th></th><th>So'ralgan</th></tr></thead><tbody>${rows.map(([l, a, b]) => `<tr${String(a) === String(b) ? ' class="same"' : ''}><td>${esc(l)}</td><td>${esc(a)}</td><td>${String(a) === String(b) ? '=' : '→'}</td><td><b>${esc(b)}</b></td></tr>`).join('')}</tbody></table>
-            <h3>Menejer sababi</h3><blockquote class="sc-quote">${esc(r.reason)}</blockquote>
-            ${pending ? `<h3>Qaror</h3><div class="sc-dec" role="radiogroup">
-              <label class="sc-dc sc-dc--ok"><input type="radio" name="dec" value="approve"><b>Tasdiqlash</b><small>server bo'sh vaqtni qayta tekshiradi</small></label>
-              <label class="sc-dc sc-dc--no"><input type="radio" name="dec" value="reject"><b>Rad etish</b><small>sabab majburiy</small></label>
+        el.innerHTML = '<div class="sc-skel"></div>';
+        // Server tekshiruvi faqat kutilayotgan so'rovda (yozmaydi; tasdiqlashdagi bilan bir qoida).
+        const chk = pending ? await window.LoadErr.settle(api(`/edit-requests/${encodeURIComponent(r.id)}/check`)) : null;
+        if (seq !== _apSeq) return;
+        const rows = approvalRows(r, s);
+        const mgr = staffList().find(e => e.name === r.requester_name) || { id: r.requested_by, name: r.requester_name };
+        const group = _apGroups.get(r.student_id) || null;
+        const ICON = { ok: '✓', warn: '!', bad: '✕' };
+        const checksHtml = !pending ? '' : !chk.ok ? window.LoadErr.html({ title: 'Server tekshiruvini bajarib bo\'lmadi', err: chk.err, note: 'Tasdiqlashda server baribir qayta tekshiradi.', compact: true })
+            : `<ul class="ad-chk">${chk.value.checks.map(c => `<li class="is-${c.level}"><i aria-hidden="true">${ICON[c.level] || '·'}</i><span>${esc(c.text)}</span></li>`).join('')}</ul>`;
+        const blocked = pending && chk?.ok && chk.value.ok === false;
+        el.innerHTML = `<header class="sc-ch"><h2>${esc(r.student_name || s.name || '')} · ${r.kind === 'teacher' ? 'ustozni almashtirish' : r.kind === 'payment' ? 'to\'lov tuzatish' : 'tarif o\'zgarishi'}</h2><span class="sc-mt">yuborildi ${esc(whenShort(r.created_at))} · №${esc(r.number)}</span></header>
+          <div class="sc-pad ad-apd">
+            <div class="ad-who"><span class="ad-whom">${staffAvatar(mgr, 36)}<span><b>${esc(r.requester_name)}</b><small>so'rov yubordi · o'z sotgan o'quvchisi</small></span></span>
+              <span class="ad-whos">${studentAvatar(s, 36)}<span><b>${esc(r.student_name || s.name || '')}</b>${tgPill(group)}</span><button type="button" class="sc-btn sc-btn--sm" data-card>Kartani ochish</button></span></div>
+            <h3>Nima o'zgaradi</h3>
+            <table class="sc-df-t ad-dt"><thead><tr><th></th><th>Hozir</th><th></th><th>So'ralgan</th></tr></thead><tbody>${rows.map(([l, a, b]) => { const same = String(a) === String(b);
+              return `<tr${same ? ' class="same"' : ''}><td>${esc(l)}</td><td>${esc(a)}</td><td aria-hidden="true">${same ? '=' : '→'}</td><td>${same ? esc(b) : `<b>${esc(b)}</b>`}</td></tr>`; }).join('')}</tbody></table>
+            <h3>Menejer sababi</h3><blockquote class="sc-quote">"${esc(r.reason)}"</blockquote>
+            ${pending ? `<h3>Server tekshiruvi</h3>${checksHtml}
+              <h3>Tasdiqlansa</h3><ul class="ad-imp">${approvalImpact(r, s).map(([k, t]) => `<li><i aria-hidden="true">${IMP_ICON[k]}</i><span>${esc(t)}</span></li>`).join('')}</ul>
+              <h3>Qaror</h3><div class="sc-dec" role="radiogroup" aria-label="Qaror">
+              <label class="sc-dc sc-dc--ok"><input type="radio" name="dec" value="approve"${blocked ? ' disabled' : ''}><b>Tasdiqlash</b><small>${blocked ? 'bo\'sh vaqt yo\'q — avval vaqtni o\'zgartiring' : 'server bo\'sh vaqtni qayta tekshiradi'}</small></label>
+              <label class="sc-dc sc-dc--no"><input type="radio" name="dec" value="reject"><b>Rad etish</b><small>sabab majburiy · menejerga boradi</small></label>
               <label class="sc-dc"><input type="radio" name="dec" value="return"><b>Qaytarish</b><small>menejer tuzatib qayta yuboradi</small></label></div>
-              <textarea name="note" rows="2" class="sc-mtop" placeholder="Izoh (rad etish va qaytarishda majburiy)"></textarea>`
-            : `<div class="sc-note">${reqPill(r)} ${esc(r.decided_by_name || '')} · ${r.decided_at ? esc(new Date(r.decided_at).toLocaleString('uz-UZ', { timeZone: 'Asia/Tashkent' })) : ''}${r.decision_note ? ' — ' + esc(r.decision_note) : ''}</div>`}
+              <textarea name="note" rows="2" class="sc-mtop" placeholder="Izoh (ixtiyoriy) — menejer va tarixda ko'rinadi" aria-label="Izoh"></textarea>`
+            : `<div class="sc-note">${reqPill(r)} ${esc(r.decided_by_name || '')}${r.decided_at ? ' · ' + esc(whenShort(r.decided_at)) : ''}${r.decision_note ? ' — ' + esc(r.decision_note) : ''}</div>`}
           </div>
-          ${pending ? `<footer class="sc-df"><span class="sc-mt">Avval qarorni tanlang</span><button type="button" class="sc-btn sc-btn--pri" data-save disabled>Qarorni saqlash</button></footer>` : ''}`;
+          ${pending ? `<footer class="sc-df"><span class="sc-mt" data-hint>Avval qarorni tanlang · ${esc(otherApprover(s))} ham ko'ryapti — kim birinchi qaror qilsa, ikkinchisida yopiladi</span><span class="sc-row"><button type="button" class="sc-btn" data-cancel>Bekor</button><button type="button" class="sc-btn sc-btn--pri" data-save disabled>Qarorni saqlash</button></span></footer>` : ''}`;
         el.querySelector('[data-card]').onclick = () => openStudent(r.student_id);
+        window.LoadErr.bind(el, () => approvalDetail(root, r));
         if (!pending) return;
         const save = el.querySelector('[data-save]');
         const note = el.querySelector('[name=note]');
-        el.querySelectorAll('[name=dec]').forEach(i => i.onchange = () => { save.disabled = false; note.placeholder = i.value === 'approve' ? 'Izoh (ixtiyoriy)' : 'Sabab (majburiy) — menejerga boradi'; note.required = i.value !== 'approve'; });
+        el.querySelectorAll('[name=dec]').forEach(i => i.onchange = () => { save.disabled = false; note.placeholder = i.value === 'approve' ? 'Izoh (ixtiyoriy) — menejer va tarixda ko\'rinadi' : 'Sabab (majburiy) — menejerga boradi'; note.required = i.value !== 'approve'; });
+        el.querySelector('[data-cancel]').onclick = () => { el.querySelectorAll('[name=dec]').forEach(i => { i.checked = false; }); note.value = ''; save.disabled = true; };
         save.onclick = async () => {
             const decision = el.querySelector('[name=dec]:checked')?.value;
             if (decision !== 'approve' && note.value.trim().length < 3) { note.focus(); return toast('Sababni yozing'); }
             busy(save, true);
-            try { await post(`/edit-requests/${r.id}/decide`, { decision, note: note.value.trim() }); toast('Qaror saqlandi'); await refreshCache(); renderApprovals(root); }
+            try { await post(`/edit-requests/${r.id}/decide`, { decision, note: note.value.trim() }); toast('Qaror saqlandi'); await refreshCache(); root.dataset.sel = ''; renderApprovals(root); }
             catch (e) { busy(save, false); toast(e.message, 4000); }
         };
     }
 
-    // ── Telegram guruhlar (admin, ROP) ───────────────────────────────────────
+    // ── Telegram guruhlar (admin, ROP) — dizayn AdminGuruhlar / RopGuruhlar ─────────────────────────
+    // A'zolar: kutilgan jamoa (o'quvchi, ustoz, yordamchi, sotuv, ROP) va admin/ROP belgilagani (members). Belgilanmagan guruhda
+    // soxta "5/5" yo'q — "belgilanmagan". Ustoz yoki yordamchi almashsa, eski belgi mos kelmaydi → "A'zo yetishmaydi".
+    function groupTeam(g) {
+        const lang = g.subject === 'russian' ? 'russian' : 'english';
+        const rop = staffList().find(e => e.role === 'rop' && (e.status || 'active') !== 'inactive' && (e.lang === 'both' || (e.lang === 'russian' ? 'russian' : 'english') === lang));
+        const want = [['student', true, 'o\'quvchi'], ['teacher', g.teacher_id, 'ustoz'], ['assistant', g.assistant_teacher_id, 'yordamchi'], ['sales', g.manager_id, 'sotuv'], ['rop', rop?.id, 'ROP']].filter(x => x[1]);
+        const m = g.members || {};
+        const marked = Object.keys(m).length > 0;
+        const missing = marked ? want.filter(([k, id]) => (k === 'student' ? m.student !== true : m[k] !== id)) : [];
+        const changed = missing.filter(([k]) => m[k] && k !== 'student').map(([k, id, l]) => `${l === 'ustoz' ? 'Ustoz' : l === 'yordamchi' ? 'Yordamchi' : l} almashdi: ${shortName(teacherName(id))} guruhga qo'shilmagan`);
+        return { want, rop, marked, missing, changed, have: want.length - missing.length };
+    }
     async function renderGroups(root) {
-        await loadStaffAvatars();
-        root.innerHTML = '<div class="sc-skel"></div>';
-        let d; try { d = await api('/groups'); } catch (e) { root.innerHTML = `<div class="sc-err">${esc(e.message)}</div>`; return; }
-        const q = (root.dataset.q || '').toLowerCase();
-        const list = d.groups.filter(g => !q || g.name.toLowerCase().includes(q) || String(g.student_name).toLowerCase().includes(q));
-        const noLink = d.groups.filter(g => !g.tg_link && !g.archived).length, auto = d.groups.filter(g => g.name_source === 'auto').length;
-        root.innerHTML = `<div class="sc-head"><div><h1>Telegram guruhlar</h1><p class="sc-sub">Har o'quvchining individual guruhi · a'zolar: o'quvchi, ustoz, yordamchi, ROP, sotuv menejeri · nomni bosing — Telegram ochiladi</p></div>
+        const isRop = (typeof getCurrentUser === 'function' && getCurrentUser()?.role) === 'rop';
+        if (!root.querySelector('.ad-gr')) root.innerHTML = `${isRop ? backLink('students', 'O\'quvchilar') : backLink('teachers-section', 'Akademik bo\'lim')}<div class="sc-skel"></div>`;
+        const [, res] = await Promise.all([loadStaffAvatars(), window.LoadErr.settle(api('/groups'))]);
+        const back = isRop ? backLink('students', 'O\'quvchilar') : backLink('teachers-section', 'Akademik bo\'lim');
+        if (!res.ok) {
+            root.innerHTML = `${back}<div class="sc-head"><div><h1>Telegram guruhlar</h1></div></div>${window.LoadErr.html({ title: 'Guruhlarni yuklab bo\'lmadi', err: res.err })}`;
+            window.LoadErr.bind(root, () => renderGroups(root));
+            return;
+        }
+        const d = res.value;
+        const groups = d.groups.filter(g => !g.archived).concat(d.groups.filter(g => g.archived));
+        const team = new Map(groups.map(g => [g.student_id, groupTeam(g)]));
+        const q = (root.dataset.q || '').toLowerCase(), f = root.dataset.f || 'all';
+        const live = groups.filter(g => !g.archived);
+        const noLink = live.filter(g => !g.tg_link).length, auto = live.filter(g => g.name_source === 'auto').length;
+        const short = live.filter(g => team.get(g.student_id).missing.length).length, unmarked = live.filter(g => !team.get(g.student_id).marked).length;
+        const list = groups.filter(g => (!q || g.name.toLowerCase().includes(q) || String(g.student_name).toLowerCase().includes(q))
+            && (f === 'all' || (f === 'auto' && g.name_source === 'auto' && !g.archived) || (f === 'short' && team.get(g.student_id).missing.length && !g.archived)));
+        const editing = root.dataset.edit || '';
+        const tgIco = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M21.5 4.3 2.9 11.5c-1.3.5-1.2 1.3-.2 1.6l4.8 1.5 1.8 5.6c.2.6.4.8.9.8.4 0 .6-.2.9-.5l2.3-2.2 4.7 3.5c.9.5 1.5.2 1.7-.8l3.1-14.6c.3-1.3-.5-1.9-1.4-1.5Z"/></svg>';
+        const linkTxt = l => String(l || '').replace(/^https:\/\//, '');
+        const row = g => {
+            const t = team.get(g.student_id), s = studentById(g.student_id) || { id: g.student_id, name: g.student_name };
+            const mem = !t.marked ? `<button type="button" class="ad-mem is-none" data-mem="${esc(g.student_id)}" title="Kim qo'shilganini belgilang">belgilanmagan</button>`
+                : `<button type="button" class="ad-mem ${t.missing.length ? 'is-bad' : 'is-ok'}" data-mem="${esc(g.student_id)}">${t.missing.length ? '' : '✓ '}${t.have} / ${t.want.length}${t.missing.length ? ' · ' + esc(t.missing.map(x => x[2] + ' yo\'q').join(', ')) : ''}</button>`;
+            const nameCell = editing === g.student_id
+                ? `<div class="ad-ged"><input name="gname" value="${esc(g.name)}" aria-label="Guruh nomi" maxlength="80"><input name="glink" value="${esc(g.tg_link || '')}" placeholder="https://t.me/+…" aria-label="Havola"><button type="button" class="sc-btn sc-btn--pri sc-btn--sm" data-gsave="${esc(g.student_id)}">Saqlash</button><button type="button" class="sc-btn sc-btn--sm" data-gcancel>Bekor</button></div>
+                   <small class="sc-mt">${g.name_source === 'auto' ? `eski nom: "${esc(g.name)}" · avtomatik berilgan` : 'nom o\'zgarsa CRM va ilovada darhol yangilanadi'}</small>`
+                : `<b class="ad-gn">${tgIco} ${esc(g.name)}</b>${g.name_source === 'auto' && !g.archived ? ' <span class="sc-pill sc-pill--warn">avtomatik nom</span>' : ''}${g.archived ? ' <span class="sc-pill sc-pill--mute">arxiv</span>' : ''}
+                   <small class="ad-gl">${g.tg_link ? esc(linkTxt(g.tg_link)) : '<span class="ad-bad">havola yo\'q</span>'}</small>${t.changed.map(c => `<small class="ad-bad">${esc(c)}</small>`).join('')}`;
+            return `<tr class="${g.archived ? 'is-muted' : ''}${editing === g.student_id ? ' is-edit' : ''}"><td class="ad-gc" data-label="Guruh">${nameCell}</td>
+              <td data-label="O'quvchi"><button type="button" class="sc-link ad-gs" data-st="${esc(g.student_id)}">${studentAvatar(s, 28)}<span>${esc(g.student_name)}</span></button></td>
+              <td class="ad-team" data-label="Jamoa"><small>ustoz <b>${esc(teacherName(g.teacher_id, true))}</b></small><small>yordamchi <b>${g.assistant_teacher_id ? esc(teacherName(g.assistant_teacher_id, true)) : '—'}</b></small><small>sotuv <b>${g.manager_id ? esc(teacherName(g.manager_id, true)) : '—'}</b></small></td>
+              <td data-label="A'zolar">${g.archived ? '—' : mem}</td>
+              <td class="ad-gact">${editing === g.student_id ? '' : `<button type="button" class="sc-btn sc-btn--sm ad-ib" data-edit="${esc(g.student_id)}" aria-label="${esc(g.name)} — tahrirlash" title="Nom va havolani tahrirlash">✎</button>`}${g.tg_link ? `<a class="sc-btn sc-btn--sm ad-ib ad-tg" href="${esc(g.tg_link)}" target="_blank" rel="noopener" aria-label="Telegramda ochish" title="Telegramda ochish">${tgIco}</a>` : ''}</td></tr>`;
+        };
+        root.innerHTML = `${back}<div class="sc-head ad-gr"><div><h1>Telegram guruhlar</h1><p class="sc-sub">Har o'quvchining individual guruhi · a'zolar: o'quvchi, ustoz, yordamchi, ROP, sotuv menejeri · nom va havolani admin va ROP tahrirlaydi</p></div>
           ${isFull() ? '<button type="button" class="sc-btn" data-auto>Eski guruhlarga nom berish</button>' : ''}</div>
-          <div class="sc-kpis"><div class="sc-kpi"><small>Guruhlar</small><b>${d.groups.length}</b></div><div class="sc-kpi"><small>Avtomatik nom</small><b>${auto}</b><span>nomini tekshiring</span></div><div class="sc-kpi"><small>Havolasiz</small><b>${noLink}</b></div><div class="sc-kpi"><small>Keyingi nom</small><b class="sc-small">${esc(d.nextName)}</b></div></div>
-          <section class="sc-card"><div class="sc-pad"><input type="search" placeholder="Guruh nomi yoki o'quvchi" value="${esc(root.dataset.q || '')}" data-q></div>
-          <table class="sc-table"><thead><tr><th>Guruh</th><th>O'quvchi</th><th>Asosiy ustoz</th><th>Yordamchi</th><th>Nom</th><th></th></tr></thead><tbody>
-          ${list.map(g => `<tr${g.archived ? ' class="is-muted"' : ''}><td>${tgPill(g)}</td><td><button type="button" class="sc-link" data-st="${esc(g.student_id)}">${esc(g.student_name)}</button></td><td>${esc(teacherName(g.teacher_id, true))}</td><td>${g.assistant_teacher_id ? esc(teacherName(g.assistant_teacher_id, true)) : '—'}</td>
-            <td>${g.archived ? '<span class="sc-pill sc-pill--mute">arxiv</span>' : g.name_source === 'auto' ? '<span class="sc-pill sc-pill--warn">avtomatik</span>' : '<span class="sc-pill sc-pill--ok">qo\'lda</span>'}</td><td><button type="button" class="sc-btn sc-btn--sm" data-edit="${esc(g.student_id)}">Tahrirlash</button></td></tr>`).join('')}
-          </tbody></table></section>`;
-        const s = root.querySelector('[data-q]'); s.oninput = () => { root.dataset.q = s.value; clearTimeout(s._t); s._t = setTimeout(() => renderGroups(root).then(() => root.querySelector('[data-q]')?.focus()), 300); };
+          <div class="ad-gq"><input type="search" placeholder="Guruh nomi yoki o'quvchi" value="${esc(root.dataset.q || '')}" data-q aria-label="Qidirish"></div>
+          <div class="sc-kpis ad-k4"><div class="sc-kpi"><small>Guruhlar</small><b>${live.length}</b><span>har faol o'quvchiga bitta</span></div><div class="sc-kpi"><small>Avtomatik nom</small><b>${auto}</b><span>eski guruhlar · nomini tekshiring</span></div>
+            <div class="sc-kpi"><small>A'zo yetishmaydi</small><b${short ? ' class="ad-bad"' : ''}>${short}</b><span>${unmarked ? `ustoz yoki yordamchi almashgan · ${unmarked} tasi belgilanmagan` : 'ustoz yoki yordamchi almashgan'}</span></div><div class="sc-kpi"><small>Havolasiz</small><b>${noLink}</b><span>yangi o'quvchida havola majburiy</span></div></div>
+          <section class="sc-card"><header class="sc-ch"><h2>Guruhlar</h2><div class="sc-seg" role="group" aria-label="Filtr">${[['all', 'Hammasi', live.length], ['auto', 'Avtomatik nom', auto], ['short', 'A\'zo yetishmaydi', short]].map(([k, l, n]) => `<button type="button" data-gf="${k}" aria-pressed="${f === k}">${l} ${n}</button>`).join('')}</div></header>
+          <div class="ad-tw"><table class="sc-table ad-gt"><thead><tr><th>Guruh</th><th>O'quvchi</th><th>Jamoa</th><th>A'zolar</th><th><span class="sr-only">Amallar</span></th></tr></thead><tbody>
+          ${list.map(row).join('') || `<tr><td colspan="5" class="sc-mt">${q || f !== 'all' ? 'Mos guruh topilmadi' : 'Guruh yo\'q'}</td></tr>`}
+          </tbody></table></div>
+          <p class="sc-mt sc-pad ad-gfoot">Guruh nomi bosilsa Telegram'da ochiladi — ustoz, yordamchi, sotuv va ROP kabinetida ham. Nom o'zgarsa CRM va o'quvchi ilovasida darhol yangilanadi; Telegram'dagi nomni bot ham o'zgartiradi.${isRop ? ' · ROP ko\'rinishi — guruhni o\'chirish faqat adminda.' : ''}</p></section>`;
+        const sb = root.querySelector('[data-q]'); sb.oninput = () => { root.dataset.q = sb.value; clearTimeout(sb._t); sb._t = setTimeout(() => renderGroups(root).then(() => { const i = root.querySelector('[data-q]'); i?.focus(); i?.setSelectionRange?.(i.value.length, i.value.length); }), 300); };
+        root.querySelectorAll('[data-gf]').forEach(b => b.onclick = () => { root.dataset.f = b.dataset.gf; renderGroups(root); });
         root.querySelectorAll('[data-st]').forEach(b => b.onclick = () => openStudent(b.dataset.st));
-        root.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => openStudent(b.dataset.edit, 'tahrir'));
+        root.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => { root.dataset.edit = b.dataset.edit; renderGroups(root).then(() => root.querySelector('[name=gname]')?.focus()); });
+        root.querySelector('[data-gcancel]')?.addEventListener('click', () => { root.dataset.edit = ''; renderGroups(root); });
+        root.querySelector('[data-gsave]')?.addEventListener('click', async e => {
+            const id = e.currentTarget.dataset.gsave, name = root.querySelector('[name=gname]').value.trim(), link = root.querySelector('[name=glink]').value.trim();
+            busy(e.currentTarget, true);
+            try { await api(`/students/${encodeURIComponent(id)}/group`, { method: 'PUT', body: JSON.stringify({ name, link, reason: 'Telegram guruhlar sahifasidan tahrirlandi' }) }); toast('Guruh saqlandi'); root.dataset.edit = ''; renderGroups(root); }
+            catch (err) { busy(e.currentTarget, false); toast(err.message, 4000); }
+        });
+        root.querySelectorAll('[data-mem]').forEach(b => b.onclick = () => membersDrawer(groups.find(g => g.student_id === b.dataset.mem), team.get(b.dataset.mem), () => renderGroups(root)));
         root.querySelector('[data-auto]')?.addEventListener('click', async e => { busy(e.target, true); try { const r = await post('/groups/auto-name'); toast(`${r.named} ta guruhga nom berildi`); renderGroups(root); } catch (err) { busy(e.target, false); toast(err.message); } });
+    }
+    // Kim guruhga qo'shilganini belgilash (Telegram'ni bot kuzatmaydi — admin/ROP qo'lda tasdiqlaydi).
+    function membersDrawer(g, t, done) {
+        if (!g || !t) return;
+        const m = g.members || {};
+        const box = openDrawer({ title: `A'zolar · ${g.name}`, sub: esc(g.student_name), body: `<p class="sc-mt">Telegram guruhga kim qo'shilganini belgilang. Ustoz yoki yordamchi almashsa, yangi xodim qo'shilmaguncha "A'zo yetishmaydi" ro'yxatida turadi.</p>
+            <div class="ad-mems">${t.want.map(([k, id, l]) => { const on = k === 'student' ? m.student === true : m[k] === id; const nm = k === 'student' ? g.student_name : teacherName(id);
+              return `<label class="sc-chk"><input type="checkbox" data-k="${k}" value="${esc(k === 'student' ? '1' : id)}"${on || !t.marked ? ' checked' : ''}><span><b>${esc(nm)}</b> <small class="sc-mt">${esc(l)}</small></span></label>`; }).join('')}</div>`,
+            foot: '<button type="button" class="sc-btn" data-close>Bekor</button><button type="button" class="sc-btn sc-btn--pri" data-save>Saqlash</button>' });
+        box.querySelector('[data-save]').onclick = async e => {
+            const members = {};
+            box.querySelectorAll('[data-k]').forEach(c => { if (c.checked) members[c.dataset.k] = c.dataset.k === 'student' ? true : c.value; });
+            busy(e.target, true);
+            try { await api(`/students/${encodeURIComponent(g.student_id)}/group/members`, { method: 'PUT', body: JSON.stringify({ members }) }); toast('A\'zolar saqlandi'); closeDrawer(); done(); }
+            catch (err) { busy(e.target, false); errBox(box, err.message); }
+        };
     }
 
     // ── Yordamchi aloqalari: admin ko'rinishi (tuzatish, kech belgilash, oy yopish) ──

@@ -18,8 +18,9 @@
     const when = iso => { const d = local(iso); if (!d) return ''; return `${DAY[d.getUTCDay()]} ${d.getUTCDate()}-${MON[d.getUTCMonth()]} ${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`; };
     const patternOf = day => ([2, 4, 6].includes(Number(day)) ? 'tts' : 'mwf');
     const PAT = { mwf: { days: [1, 3, 5], label: 'Du · Ch · Ju' }, tts: { days: [2, 4, 6], label: 'Se · Pa · Sh' } };
-    // Tarif narxi (oyiga) — dizayn (SotuvKonversiya) bo'yicha: 15 daq 75 000, 30 daq 150 000, 60 daq 300 000.
-    const PRICE = { 15: 75000, 30: 150000, 60: 300000 };
+    // O'quvchi tarif narxi CRM'da sozlanmagan: dizayndagi 75 000 / 150 000 / 300 000 — ustoz ulushi, mijoz narxi emas.
+    // Noto'g'ri narx ko'rsatmaslik uchun bo'sh; narxlar sozlamasi qo'shilsa shu yerga ulanadi.
+    const PRICE = {};
     const COURSE_DAYS = 90;
     const num = n => String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
     const ddmm = d => `${d.slice(8, 10)}.${d.slice(5, 7)}`;
