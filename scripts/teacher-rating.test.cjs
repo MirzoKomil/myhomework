@@ -35,7 +35,7 @@ test('monthKeySuffix: att_key prefiksiga mos YYYY-MM', () => {
 });
 
 test("computeTeacherRating: ball = davomat 60% + o'zlashtirish 40%, faqat bir xil turdagi ustozlar orasida, xom ma'lumot qaytmaydi", () => {
-    // 20-okt 12:00 (Toshkent vaqti UTC maydonlarida) — bugungi 10:00 dars boshlangan, "o'tgan" hisoblanadi.
+    // 20-okt 12:00 (Toshkent vaqti UTC maydonlarida) — bugungi 10:00 dars tugagan, "o'tgan" hisoblanadi.
     const now = new Date(Date.UTC(2026, 9, 20, 12, 0));
     const state = {
         teachers: [

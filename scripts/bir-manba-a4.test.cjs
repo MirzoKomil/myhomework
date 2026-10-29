@@ -17,11 +17,13 @@ const read = f => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
 const TODAY = '2026-10-27'; // seshanba
 const base = { lessonDuration: 60, startDate: '2026-10-01', status: 'active' };
 
-test('monthTotals: bugungi dars boshlanmaguncha "o\'tgan" ham, "belgilanmagan" ham emas; belgi qo\'yilsa yoki boshlansa — o\'tgan', () => {
+test('monthTotals: bugungi dars tugamaguncha "o\'tgan" ham, "belgilanmagan" ham emas; belgi qo\'yilsa yoki tugasa — o\'tgan', () => {
     const s = { ...base, id: 'a', teacherId: 't1', lessonDayOfWeek: 2, lessonTime: '18:00' };
     const args = { id: 't1', month: '2026-10', students: [s], mainAtt: {}, makeups: [], teacher: {}, todayKey: TODAY };
     const before = R.monthTotals({ ...args, nowMin: 17 * 60 + 27 });
-    const after = R.monthTotals({ ...args, nowMin: 18 * 60 + 1 });
+    const during = R.monthTotals({ ...args, nowMin: 18 * 60 + 30 }); // dars davom etmoqda (60 daq)
+    assert.equal(during.expected, 11); assert.equal(during.unmarked, 11);
+    const after = R.monthTotals({ ...args, nowMin: 19 * 60 });
     assert.equal(before.expected, 11); // 1..24-okt Se·Pa·Sh = 11, 27-okt 18:00 hali boshlanmagan
     assert.equal(before.unmarked, 11);
     assert.equal(after.expected, 12);
@@ -151,6 +153,14 @@ test('bildirishnomalar: "ilovada faol emas" va "yangi o\'quvchi biriktirildi" ma
     assert.match(n, /type: 'student_inactive'/);
     assert.match(n, /type: 'student_assigned'/);
     assert.match(read('server/db.js'), /auditAssistantAssign\(client, s\.id, prevAsst, s\.assistantTeacherId\)/);
+});
+
+test('Doska: bir o\'quvchiga bir kunda bitta yorliq; kech so\'rov oynasi sana chegarasi server qoidasi bilan bir xil', () => {
+    const wb = read('js/whiteboard.js'), y = read('js/yordamchi.js');
+    assert.match(wb, /const byStudent = new Map\(\);[\s\S]*?const uniq = \[\.\.\.byStudent\.values\(\)\]/);
+    assert.match(y, /let monthStart = prevMonth \+ '-01';/);
+    assert.match(y, /\/assist\/month\?month=\$\{prevMonth\}[\s\S]{0,120}final_at/);
+    assert.match(read('server/routes/school.js'), /T\.addDays\(today\.slice\(0, 7\) \+ '-01', -1\)\.slice\(0, 7\)/);
 });
 
 test('GET /api/trial-lessons: ustozga lid telefoni berilmaydi', () => {

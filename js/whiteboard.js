@@ -115,7 +115,17 @@
         const todayData = S.viewAll ? (S.teacherId ? adminToday[`${S.teacherId}|${d}`] : null) : S.today;
         if (todayData) {
             // Yordamchi (YordamchiDoska dizayni): bajarilmagan aloqalar oldin, bajarilganlar keyin (eng so'nggisi birinchi).
-            const its = todayData.assistant ? [...todayData.items].sort((a, b) => (!!a.done - !!b.done) || (a.done ? b.start - a.start : a.start - b.start)) : todayData.items;
+            // Bir o'quvchiga bitta yorliq: kun ichida bir nechta aloqa (masalan avval "javob bermadi", keyin bog'lanildi) yoki
+            // dars + qoplash bo'lsa ham doska bitta (o'quvchi + kun) — ikki yorliq bir xil kalit bilan ikkalasi "is-on" bo'lib qolardi.
+            const byStudent = new Map();
+            for (const it of todayData.items) {
+                const p = byStudent.get(it.studentId);
+                if (!p) { byStudent.set(it.studentId, { ...it }); continue; }
+                p.done = !!(p.done || it.done); p.noAnswer = !p.done && !!(p.noAnswer || it.noAnswer); p.start = Math.min(p.start, it.start);
+                if (!p.lessonNo && it.lessonNo) p.lessonNo = it.lessonNo;
+            }
+            const uniq = [...byStudent.values()];
+            const its = todayData.assistant ? uniq.sort((a, b) => (!!a.done - !!b.done) || (a.done ? b.start - a.start : a.start - b.start)) : uniq;
             for (const it of its) {
                 const b = boards.find(x => x.studentId === it.studentId && x.lessonDate === d);
                 if (b) used.add(b.id);

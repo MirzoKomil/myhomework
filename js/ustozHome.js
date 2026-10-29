@@ -86,7 +86,7 @@
 
     // ── Belgilanmagan darslar (UstozBosh "Bajarish kerak" · "… darsi belgilanmagan · Belgilash") ──
     // monthTotals unmarkedDates — maosh kartasi "N belgilanmagan" va sidebar soni bilan bitta raqam
-    // (bugungi dars boshlangandan keyin belgilanmagan bo'lsa ham shu yerda sanaladi).
+    // (bugungi dars tugagandan keyin belgilanmagan bo'lsa shu yerda sanaladi; dars davomida — yo'q).
     function unmarkedPast(user, m) {
         const tid = user.linkedTeacherId; if (!tid || !m) return [];
         const T = m.totals || monthCalc(tid, m);

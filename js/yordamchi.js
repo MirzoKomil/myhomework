@@ -149,11 +149,13 @@
     }
 
     // ── Kechikib belgilash so'rovi (admin orqali) — eski oyna, usullar guruhlangan ──
-    // "Admin orqali so'rov" (kech belgilash): sana — oy boshi (yoki o'quvchining kurs boshlangan kuni) … kecha;
+    // "Admin orqali so'rov" (kech belgilash): sana chegarasi server qoidasi bilan bir xil (POST /assist/late-requests) —
+    // o'tgan oy boshidan (o'tgan oy yakuniy tasdiqlangan bo'lsa — joriy oy boshidan; o'quvchining kurs boshlangan kuni) … kecha;
     // xato matni maydon yonida (server xabari ham tegishli maydonga qo'yiladi).
     function lateDrawer(list, done) {
         const { openDrawer, field, esc, today, addDays } = U();
-        const td = today(), maxD = addDays(td, -1), monthStart = maxD.slice(0, 7) + '-01';
+        const td = today(), maxD = addDays(td, -1), curStart = td.slice(0, 7) + '-01', prevMonth = addDays(curStart, -1).slice(0, 7);
+        let monthStart = prevMonth + '-01';
         const startOf = s => { const v = String(s?.startDate || s?.joinDate || '').slice(0, 10); return /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : ''; };
         const minFor = id => { const st = startOf(list.find(s => s.id === id)); return st && st > monthStart ? st : monthStart; };
         const ferr = n => `<small class="yd-ferr" data-ferr="${n}" role="alert" hidden></small>`;
@@ -170,11 +172,16 @@
             const d = v('day'), mn = q('day').min;
             if (!d) return setErr('day', 'Sanani tanlang'), false;
             if (d > maxD) return setErr('day', `Faqat o'tgan kun — ${dmy(maxD)}gacha (bugungi aloqani o'zingiz belgilaysiz)`), false;
-            if (d < mn) return setErr('day', mn > monthStart ? `O'quvchi kursni ${dmy(mn)}dan boshlagan — undan oldingi kun tanlanmaydi` : `Faqat shu oy kunlari: ${dmy(mn)} — ${dmy(maxD)}`), false;
+            if (d < mn) return setErr('day', mn > monthStart ? `O'quvchi kursni ${dmy(mn)}dan boshlagan — undan oldingi kun tanlanmaydi` : `Faqat ${dmy(mn)} — ${dmy(maxD)} oralig'idagi kun${monthStart === curStart ? ' (o\'tgan oy yakuniy tasdiqlangan)' : ''}`), false;
             return setErr('day', ''), true;
         };
         const checkReason = () => (String(v('reason')).trim().length < 5 ? (setErr('reason', 'Sababni yozing (kamida 5 belgi)'), false) : (setErr('reason', ''), true));
         q('st').onchange = () => { q('day').min = minFor(v('st')); if (v('day')) checkDay(); };
+        // O'tgan oy yakuniy tasdiqlangan bo'lsa (server isLocked) — faqat joriy oy kunlari.
+        U().api(`/assist/month?month=${prevMonth}`).then(r => {
+            if (!r?.state?.final_at || !box.isConnected) return;
+            monthStart = curStart; q('day').min = minFor(v('st')); if (v('day')) checkDay();
+        }).catch(() => {});
         q('day').onchange = checkDay;
         q('reason').oninput = () => { if (!box.querySelector('[data-ferr="reason"]').hidden) checkReason(); };
         box.querySelector('[data-save]').onclick = async e => {

@@ -84,7 +84,8 @@
     // makeups: school_makeups qatorlari (teacher_id, student_id, status, kind, missed_date, held_date, missed_came).
     // students: shu ustozning shu oydagi o'quvchilari — hozirgilari va ustoz almashgan (o'tgan) o'quvchilar (s.teacherHistory bilan).
     //  • Faqat shu ustoz o'tgan kunlar (taughtOn): almashishdan oldingi darslar oldingi ustozda, keyingilari yangisida — maosh bilan bir xil.
-    //  • Bugungi dars boshlanganidan keyin (yoki belgi qo'yilgan bo'lsa) "o'tgan" — boshlanmagan dars belgilanmagan ham, kutilgan ham emas.
+    //  • Bugungi dars TUGAGANIDAN keyin (boshlanish + davomiylik) yoki belgi qo'yilgan bo'lsa "o'tgan" — boshlanmagan yoki davom
+    //    etayotgan dars belgilanmagan ham, kutilgan ham emas (Davomat %, sidebar, "Bajarish kerak", Reyting — server va brauzer bir xil).
     //  • "Tekshiruvda" — reviewMakeups (missed_came — tasdiqlab bo'lmaydi — kirmaydi).
     // nowMin — Toshkent vaqti daqiqada (berilmasa soatdan); rows — har o'quvchi bo'yicha (Davomat kartalari, O'quvchilar ro'yxati).
     function monthTotals({ id, month, students, mainAtt, makeups, teacher, todayKey, nowMin }) {
@@ -94,12 +95,13 @@
         const t = { plan: 0, expected: 0, came: 0, absent: 0, unmarked: 0, approved: 0, review: 0, counted: 0, students: 0, planned: 0, rows: [] };
         for (const s of (students || []).filter(s => inMonth(s, s.statusHistory, month))) {
             const start = dkey(s.startDate || s.joinDate), hist = s.statusHistory, entries = (mainAtt || {})[s.id] || {};
-            const st = toMin(s.lessonTime);
+            // Bugungi dars tugash vaqti (boshlanish + davomiylik): shundan keyin "o'tgan" (29-okt qarori).
+            const st = toMin(s.lessonTime), end = st == null ? null : st + (Number(s.lessonDuration) || 15);
             // Shu ustozning dars kuni: o'quvchi faol (muzlatilgan / chiqib ketgan kun emas) va o'sha kuni shu ustozda.
             const ownDay = c => lessonCountsOn(s, hist, c.date) && taughtOn(s, id, c.date);
             const started = c => (!start || c.date >= start) && ownDay(c);
             const isPast = c => month < thisMonth || (month === thisMonth && (c.date < todayKey
-                || (c.date === todayKey && (cal.status(entries[c.day]) !== 'empty' || st == null || nm >= st))));
+                || (c.date === todayKey && (cal.status(entries[c.day]) !== 'empty' || end == null || nm >= end))));
             const past = c => started(c) && isPast(c);
             const cells = cal.cells(month, cal.weekdays(s, teacher, 'main')).filter(c => c && c.scheduled);
             // Oy rejasi — o'quvchi faol va shu ustozda bo'lgan dars kunlari: Davomat kartasi jami = o'quvchi kartalari yig'indisi.
