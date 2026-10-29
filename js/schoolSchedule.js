@@ -353,9 +353,11 @@
             const sid0 = opts.studentId && pool.find(s => s.id === opts.studentId);
             if (opts.studentId && !sid0) return fail('Bu o\'quvchi sizga biriktirilmagan — qoplash faqat o\'z o\'quvchilaringiz uchun');
             const tq = !teacher && sid0 ? `&teacherId=${encodeURIComponent(sid0.teacherId)}` : '';
-            const [ab, mk] = await Promise.all([u.api(`/attendance/absences?month=${month}${tq}`), u.api(teacher ? '/makeups' : `/makeups?month=${month}`)]);
+            // Qoplanmagan darslar — server /attendance/missed (S.missedLessons: "Keldi" ustun, faqat dars kuni, o'quvchi faol kun,
+            // kelajak yo'q) — Bosh sahifa va qoplash yozish tekshiruvi bilan bitta manba (xom "Kelmadi" ro'yxati emas).
+            const [ms, mk] = await Promise.all([u.api(`/attendance/missed?month=${month}${tq}`), u.api(teacher ? '/makeups' : `/makeups?month=${month}`)]);
             const covered = new Map((mk.makeups || []).filter(m => ['planned', 'review', 'approved'].includes(m.status)).map(m => [`${m.student_id}|${String(m.missed_date || '').slice(0, 10)}`, m]));
-            const missedOf = sid => [...new Map((ab.absences || []).filter(a => a.studentId === sid && a.day <= today()).map(a => [a.day, a])).keys()].sort()
+            const missedOf = sid => [...new Set((ms.missed || []).filter(a => a.studentId === sid && a.date <= today()).map(a => a.date))].sort()
                 .map(day => ({ day, mk: covered.get(`${sid}|${day}`) || null }));
             const st = sid0 || pool.find(s => missedOf(s.id).some(m => !m.mk)) || null;
             if (!st) return fail(`Bu oyda qoplanmagan dars yo'q — "Kelmadi" deb belgilangan dars bo'lsa, shu yerda chiqadi`);

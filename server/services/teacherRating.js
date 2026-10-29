@@ -66,6 +66,8 @@ function computeTeacherRating(state, ownType, now = tashkentNow(), learning = {}
     const teachers = (state.teachers || []).filter(t => typeOf(t) === ownType);
     const startedBy = s => { const d = String(s.startDate || s.joinDate || '').slice(0, 7); return !/^\d{4}-\d{2}$/.test(d) || d <= monthSuffix; };
     // Faqat faol o'quvchilar (js/attendanceRules.js — muzlatilgan, to'xtatilgan/tugatgan, demo kirmaydi).
+    // Faqat faol o'quvchilar (js/attendanceRules.js — muzlatilgan, to'xtatilgan/tugatgan, demo kirmaydi) — UstozDavomat "Oktyabr"
+    // kartasi bilan bir xil ro'yxat. O'quvchi faol bo'lmagan KUNLAR (s.statusHistory) monthTotals ichida chiqariladi (maosh bilan bir xil).
     const students = (state.students || []).filter(s => R.isActiveStudent(s) && (!opts.pastMonth || startedBy(s)));
     const attStore = ownType === 'yordamchi' ? (state.assistantAttendance || {}) : (state.mainAttendance || {});
     const todayKey = now.toISOString().slice(0, 10);

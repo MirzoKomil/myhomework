@@ -985,12 +985,8 @@ router.patch('/', authRequired, crmStateIdentity, crmStateMutationRequired, asyn
     try {
         const body = req.body || {};
         const isFullAccess = ['admin', 'rop', 'boshliq'].includes(req.user.role);
-        // 23-vazifa: Targetolog FAQAT Marketing bo'limiga tegishli ikki
-        // kalitni (reja va kunlik reklama ma'lumoti) saqlashi mumkin -
-        // boshqa hech qanday CRM maydonini o'zgartira olmaydi.
-        // 32-vazifa: Ustoz FAQAT davomat (asosiy/yordamchi) va jonli dars
-        // baholarini saqlashi mumkin - boshqa hech qanday CRM maydonini
-        // o'zgartira olmaydi.
+        // Ustoz bu yo'lga umuman kirmaydi (yuqorida 403): davomat faqat POST /teacher-attendance orqali.
+        // Targetolog va boshqa rollar umumiy state'ga hech narsa yozmaydi (target ma'lumotlari — /api/target-ads).
         const allowed = isFullAccess ? [
             'teachers', 'students', 'removedStudentIds', 'salesManagers', 'timetable',
             'mainAttendance', 'assistantAttendance', 'payments', 'hrEmployees',
@@ -1001,11 +997,7 @@ router.patch('/', authRequired, crmStateIdentity, crmStateMutationRequired, asyn
             // saqlanmay, faqat brauzer keshida qolib ketardi. targetMonitoringPlan
             // (10-vazifa) - Target Monitoringi rejasi.
             'individualSalesPlans', 'targetMonitoringPlan', 'targetDailyAdSpend'
-        ] : req.user.role === 'teacher'
-            ? ['mainAttendance', 'assistantAttendance', 'liveGrades']
-            // Targetolog umumiy state'ga hech narsa yozmaydi: target ma'lumotlari
-            // endi alohida /api/target-ads orqali, til va sana ruxsati bilan saqlanadi.
-            : [];
+        ] : [];
         if (isFullAccess) allowed.push('archive');
         const partial = {};
         allowed.forEach(key => { if (body[key] !== undefined) partial[key] = body[key]; });

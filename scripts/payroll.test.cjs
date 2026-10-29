@@ -263,6 +263,10 @@ function database() {
     if (sql.startsWith('UPDATE salary_transactions SET status=')) { records.find(r => r.id === params[0]).status = 'paid'; return { rows: [] }; }
     if (sql.startsWith('INSERT INTO salary_audit')) { audits.push({ action: params[0], actor: params[2], before: params[4], after: params[5] }); return { rows: [] }; }
     if (sql.startsWith('BEGIN') || sql.startsWith('SELECT pg_advisory') || ['COMMIT', 'ROLLBACK'].includes(sql)) return { rows: [] };
+    // Moliya tranzaksiya belgisi (finCtx: fin.ctx + search_path) — mock'da imzo jadvali yo'q (to_regclass → null), belgi o'zi yetarli.
+    if (sql.startsWith("SELECT set_config('fin.ctx'")) return { rows: [{}] };
+    // Ikki kishi nazorati (markPaid): hisoblagan xodimni audit'dan aniqlash.
+    if (sql.startsWith("SELECT 1 FROM salary_audit WHERE action='accrue'")) return { rows: audits.filter(a => a.action === 'accrue' && a.actor === params[1]).map(() => ({ '?column?': 1 })) };
     throw Error('Unhandled SQL: ' + sql);
   } };
   return { pool: { connect: async () => db }, calls, records, audits, sourceRows, db };
@@ -407,7 +411,7 @@ test('academic salary view agrees with finance rates, hire/student dates and ass
 
 test('serialization failures retry with a fresh transaction and release every connection', async () => {
   const events = []; let attempts = 0;
-  const pool = { connect: async () => ({ query: async sql => events.push(sql), release: () => events.push('release') }) };
+  const pool = { connect: async () => ({ query: async sql => (events.push(sql), { rows: [{}] }), release: () => events.push('release') }) };
   const result = await service.transaction(pool, async () => {
     if (++attempts === 1) throw Object.assign(Error('concurrent update'), { code: '40001' });
     return 'success';

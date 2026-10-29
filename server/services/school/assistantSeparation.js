@@ -11,8 +11,10 @@
 //    unga hisoblanishda davom etadi (contacts.assistant_id = Mohinur).
 //  • Har o'quvchiga school_student_audit yozuvi (sabab bilan). Yordamchi biriktirish tarixi (from/to)
 //    alohida jadvalda saqlanmaydi — tarix shu audit yozuvi va aloqalardagi assistant_id orqali ko'rinadi.
-//  • Bajarilgani school_migrations jadvaliga yoziladi; qayta ishga tushsa hech narsa qilmaydi
-//    (advisory lock — bir vaqtda ikki jarayon ham ikki marta ko'chirmaydi).
+//  • Bajarilgani school_migrations jadvaliga yoziladi; qayta ishga tushsa hech narsa qilmaydi va logga yozmaydi
+//    (advisory lock — bir vaqtda ikki jarayon ham ikki marta ko'chirmaydi). Ikkalasi topilmasa ham natija
+//    ('not-found') bir marta yoziladi — har ishga tushishda qayta qidirilmaydi; kerak bo'lsa admin qo'lda biriktiradi
+//    (yoki school_migrations dagi shu yozuvni o'chirib, qayta ishga tushiradi).
 //  • Boshqa asosiy ustozlarda qolgan yordamchi o'quvchilar avtomatik KO'CHIRILMAYDI — soni logga yoziladi,
 //    admin "Yordamchi kerak" ogohlantirishida ko'radi (legacyAssignments()).
 const MIGRATION_ID = 'assistant-separation-2026-10-29';
@@ -51,13 +53,14 @@ async function migrate(pool, log = console) {
         await c.query('BEGIN');
         await c.query('SELECT pg_advisory_xact_lock(hashtext($1))', [MIGRATION_ID]);
         const done = (await c.query('SELECT result FROM school_migrations WHERE id=$1', [MIGRATION_ID])).rows[0];
-        if (done) { await c.query('COMMIT'); result = { skipped: 'already-done', ...done.result }; }
+        if (done) { await c.query('COMMIT'); result = { ...done.result, skipped: 'already-done' }; }
         else {
             const main = await findOne(c, ['mohinur', 'azimova'], r => MAIN_ROLES.includes(r.role));
             const asst = await findOne(c, ['ayubxon', 'axmadjonov'], r => r.role === 'yordamchi');
             if (!main.hit || !asst.hit) {
-                await c.query('ROLLBACK');
                 result = { skipped: 'not-found', mohinur: main.count, ayubxon: asst.count };
+                await c.query('INSERT INTO school_migrations (id, result) VALUES ($1,$2)', [MIGRATION_ID, JSON.stringify(result)]);
+                await c.query('COMMIT');
                 log.warn(`[yordamchi-alohida] ko'chirilmadi: Mohinur Azimova (asosiy) ${main.count} ta, Ayubxon Axmadjonov (yordamchi) ${asst.count} ta topildi — ikkalasi bittadan bo'lishi kerak`);
             } else {
                 const lang = roles.language(asst.hit);
@@ -85,7 +88,8 @@ async function migrate(pool, log = console) {
         throw e;
     } finally { c.release(); }
     const legacy = await legacyAssignments(pool);
-    if (legacy.total) log.warn(`[yordamchi-alohida] DIQQAT: ${legacy.total} o'quvchi hali asosiy ustozga yordamchi sifatida biriktirilgan (avtomatik ko'chirilmadi): `
+    // Ogohlantirish faqat ko'chirish shu ishga tushishda bajarilganda (keyin — admin "Yordamchi kerak" ro'yxatida ko'radi).
+    if (legacy.total && result?.skipped !== 'already-done') log.warn(`[yordamchi-alohida] DIQQAT: ${legacy.total} o'quvchi hali asosiy ustozga yordamchi sifatida biriktirilgan (avtomatik ko'chirilmadi): `
         + legacy.teachers.map(t => `${t.name} — ${t.students.length}`).join(', '));
     return { ...result, legacy: legacy.total };
 }

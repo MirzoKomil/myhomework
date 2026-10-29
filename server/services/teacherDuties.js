@@ -53,7 +53,9 @@ function stateForTeacher(state, own) {
     const assistantIds = new Set(hasAssistantDuty(own) ? state.students.filter(s => s.assistantTeacherId === own.id).map(s => s.id) : []);
     const assignedIds = new Set([...mainIds, ...assistantIds]);
     const safeFields = ['id','name','phone','phone2','group','subject','teacherId','assistantTeacherId',
-        'lessonDayOfWeek','lessonTime','lessonDuration','startDate','joinDate','status','frozen','age','gender','serialCode'];
+        'lessonDayOfWeek','lessonTime','lessonDuration','startDate','joinDate','status','frozen','age','gender','serialCode',
+        // statusHistory — [{status, from, to, at}] (sabab/izohsiz): Davomat % sana bo'yicha faollik (AttendanceRules.lessonCountsOn).
+        'statusHistory'];
     // Telefon faqat asosiy ustozga o'z o'quvchisi uchun (JadvalQoidalar: "Telefon raqamini ko'rish — Ustoz ✓, Yordamchi:
     // yashirin · ☎ tugmasi"). Yordamchiga o'quvchi telefoni yuborilmaydi — qo'ng'iroq Telegram guruh orqali.
     // serialCode (#ID) — ustoz/yordamchi ro'yxatida ko'rinadi va ID bo'yicha qidiriladi (to'lov ma'lumoti emas).

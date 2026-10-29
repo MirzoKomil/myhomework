@@ -585,10 +585,19 @@ async function missedLessons(db, teacherId, { from, to }) {
     // (Tranzaksiya ichida ham chaqiriladi — jadval bo'lmasa so'rov yuborilmaydi, xato tranzaksiyani buzmasin.)
     const tRow = (await db.query("SELECT to_regclass('public.teachers')::text AS t")).rows[0]?.t
         ? (await db.query('SELECT schedule_pattern FROM teachers WHERE id=$1', [teacherId])).rows[0] || {} : {};
-    const stud = new Map(stRows.filter(r => R.isActiveStudent(r)).map(r => {
+    // O'quvchi holati sana bo'yicha (muzlatilgan / chiqib ketgan kunning darsi "qoplanmagan" emas — AttendanceRules.activeOn).
+    const stIds = stRows.map(r => r.id);
+    const stStatus = new Map();
+    if (stIds.length && (await db.query("SELECT to_regclass('public.school_student_status')::text AS t")).rows[0]?.t) {
+        for (const r of (await db.query('SELECT * FROM school_student_status WHERE student_id = ANY($1::text[]) AND cancelled_at IS NULL', [stIds])).rows) {
+            if (!stStatus.has(r.student_id)) stStatus.set(r.student_id, []);
+            stStatus.get(r.student_id).push(r);
+        }
+    }
+    const stud = new Map(stRows.filter(r => stStatus.has(r.id) || R.isActiveStudent(r)).map(r => {
         const x = parseExtra(r.extra_data);
         const start = String(x.startDate || x.joinDate || '').slice(0, 10);
-        return [r.id, { days: cal.weekdays({ lessonDayOfWeek: r.lesson_day_of_week }, { schedulePattern: tRow.schedule_pattern }, 'main'), start: /^\d{4}-\d{2}-\d{2}$/.test(start) ? start : null }];
+        return [r.id, { row: r, rows: stStatus.get(r.id) || [], days: cal.weekdays({ lessonDayOfWeek: r.lesson_day_of_week }, { schedulePattern: tRow.schedule_pattern }, 'main'), start: /^\d{4}-\d{2}-\d{2}$/.test(start) ? start : null }];
     }));
     const present = new Set((await db.query(`SELECT student_id, LEFT(att_key, 7) AS month, day FROM main_attendance WHERE att_key = ANY($1::text[]) AND present = 1`,
         [months.map(m => `${m}_${teacherId}`)])).rows.map(r => `${r.student_id}|${r.month}-${String(r.day).padStart(2, '0')}`));
@@ -607,6 +616,7 @@ async function missedLessons(db, teacherId, { from, to }) {
         if (!st || !/^\d{4}-\d{2}-\d{2}$/.test(x.date) || x.date > today) return false;
         if (present.has(`${x.studentId}|${x.date}`)) return false;
         if (st.start && x.date < st.start) return false;
+        if (!R.activeOn(st.row, st.rows, x.date)) return false;
         return st.days.includes(T.weekday(x.date));
     };
     return [...legacy.map(r => ({ studentId: r.student_id, date: `${r.month}-${String(r.day).padStart(2, '0')}` })),

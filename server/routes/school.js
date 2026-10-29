@@ -328,6 +328,19 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
     // (eski POST /bookings {kind:'makeup'} ham shu funksiyaga keladi — ustoz ilovasining eski versiyalari uchun).
     // Qoida (UstozYoriqnoma "Qoplash darsi qoidalari": "Alohida kunda — faqat o'quvchining dars kuni bo'lmagan kunga
     // qo'yiladi"): ustoz o'quvchining dars kuniga alohida qoplash qo'ya olmaydi — o'sha kuni "Keldi · 2 dars".
+    // Qoldirilgan dars — barcha qoplash yo'llari (rejaga qo'yish, alohida kun, qo'shaloq; ustoz va admin) uchun bitta tekshiruv:
+    //  • qoldirilgan sana kelajakda emas (hali o'tmagan dars "qoldirilgan" bo'lmaydi);
+    //  • o'sha kuni "Keldi" bo'lsa (qaysi ustoz belgilaganidan qat'i nazar) — dars o'tilgan, qoplash kerak emas;
+    //  • o'sha kuni o'quvchi faol bo'lgan (muzlatilgan / chiqib ketgan kunning darsi qoplanmaydi — AttendanceRules.activeOn).
+    const cameOn = async (c, studentId, missed) => (await c.query('SELECT 1 FROM main_attendance WHERE LEFT(att_key, 7)=$1 AND student_id=$2 AND day=$3 AND present=1 LIMIT 1',
+        [missed.slice(0, 7), studentId, Number(missed.slice(8))])).rows.length > 0;
+    async function assertMissedLesson(c, studentId, missed) {
+        if (missed > T.nowLocal().date) throw T.fail(400, 'Qoldirilgan dars sanasi kelajakda bo\'lmaydi');
+        if (await cameOn(c, studentId, missed)) throw T.fail(400, 'Bu sanada o\'quvchi "Keldi" — qoplash kerak emas');
+        const st = (await c.query('SELECT id, extra_data FROM students WHERE id=$1', [studentId])).rows[0];
+        const statuses = (await c.query('SELECT * FROM school_student_status WHERE student_id=$1 AND cancelled_at IS NULL', [studentId])).rows;
+        if (st && !require('../../js/attendanceRules').activeOn(st, statuses, missed)) throw T.fail(409, 'O\'sha kuni o\'quvchi faol emas (muzlatilgan yoki chiqib ketgan) — qoplash kerak emas');
+    }
     async function planMakeup(req, c, body = {}) {
         if (req.user.role === 'teacher') { const me = await teacherOf(req); if (body.teacherId !== me.id) throw T.fail(403, 'Faqat o\'z jadvalingizga'); }
         else need(req, FULL);
@@ -337,6 +350,7 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         const held = T.assertDate(body.date);
         if (missed.slice(0, 7) !== held.slice(0, 7)) throw T.fail(400, 'Qoplash shu oy ichida bo\'ladi');
         if (held < missed) throw T.fail(400, 'Qoplash darsi qoldirilgan darsdan keyin bo\'ladi');
+        await assertMissedLesson(c, body.studentId, missed);
         if (req.user.role === 'teacher' && st.lesson_day_of_week != null && T.patternDays(st.lesson_day_of_week).includes(T.weekday(held)))
             throw T.fail(400, 'Qoplash darsi o\'quvchining dars kuni bo\'lmagan kunga qo\'yiladi — dars kunida "Keldi · 2 dars" ni tanlang');
         // Ustoz faqat "Kelmadi" deb belgilangan va hali qoplanmagan darsni tanlaydi (sana qo'lda kiritilmaydi).
@@ -355,8 +369,10 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
     router.post('/makeups/:id/held', handle(req => write(req, async c => {
         const me = await teacherOf(req);
         // Rejadagi qoplash faqat o'tgandan keyin (bugun yoki oldin) "o'tkazildi" — tekshiruvga.
-        const cur = (await c.query('SELECT held_date FROM school_makeups WHERE id=$1 AND teacher_id=$2', [req.params.id, me.id])).rows[0];
+        const cur = (await c.query('SELECT student_id, missed_date, held_date FROM school_makeups WHERE id=$1 AND teacher_id=$2', [req.params.id, me.id])).rows[0];
         if (cur?.held_date && S.dateStr(cur.held_date) > T.nowLocal().date) throw T.fail(400, 'Qoplash darsi hali o\'tmagan — o\'tgan kuni belgilang');
+        // Rejaga qo'yilgandan keyin qoldirilgan kunga "Keldi" qo'yilgan bo'lsa — dars o'tilgan, qoplash ikki marta sanalmaydi.
+        if (cur?.missed_date && await cameOn(c, cur.student_id, S.dateStr(cur.missed_date))) throw T.fail(409, 'Qoldirilgan kunda endi "Keldi" — qoplash kerak emas (admin bekor qiladi)');
         const { rows } = await c.query(`UPDATE school_makeups SET status='review' WHERE id=$1 AND teacher_id=$2 AND status='planned' RETURNING *`, [req.params.id, me.id]);
         if (!rows.length) throw T.fail(409, 'Qoplash topilmadi yoki allaqachon belgilangan');
         return { makeup: rows[0] };
@@ -387,9 +403,7 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         // Qoplash qoldirilgan darsdan keyin (yoki shu kuni keyinroq) bo'ladi — oldingi sanaga emas.
         if (held < missed) throw T.fail(400, 'Qoplash darsi qoldirilgan darsdan keyin bo\'ladi');
         if (held > today) throw T.fail(400, kind === 'double' ? 'Qo\'shaloq dars hali o\'tmagan — dars kuni belgilanadi' : 'Qoplash darsi hali o\'tmagan');
-        const key = `${missed.slice(0, 7)}_${own.teacherId}`;
-        const came = (await c.query('SELECT 1 FROM main_attendance WHERE att_key=$1 AND student_id=$2 AND day=$3 AND present=1', [key, req.body.studentId, Number(missed.slice(8))])).rows.length;
-        if (came) throw T.fail(400, 'Bu sanada o\'quvchi "Keldi" — qoplash kerak emas');
+        await assertMissedLesson(c, req.body.studentId, missed);
         if (!own.admin) {
             if (held.slice(0, 7) < today.slice(0, 7)) throw T.fail(409, 'Oy yopilgan — qoplashni admin orqali kiriting');
             const open = (await S.missedLessons(c, own.teacherId, { from: missed, to: missed })).some(m => m.studentId === req.body.studentId && m.date === missed && !m.makeup);
@@ -434,6 +448,10 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
     router.post('/makeups/:id/decide', handle(req => { need(req, FULL); return write(req, async c => {
         const approve = req.body?.decision === 'approve';
         if (!approve && String(req.body?.note || '').trim().length < 3) throw T.fail(400, 'Rad etish sababini yozing');
+        if (approve) {
+            const m = (await c.query('SELECT student_id, missed_date FROM school_makeups WHERE id=$1', [req.params.id])).rows[0];
+            if (m?.missed_date && await cameOn(c, m.student_id, S.dateStr(m.missed_date))) throw T.fail(409, 'Qoldirilgan kunda "Keldi" bor — bu qoplashni tasdiqlab bo\'lmaydi (maoshga ikki marta o\'tadi), rad eting');
+        }
         const { rows } = await c.query(`UPDATE school_makeups SET status=$2, decided_by=$3, decided_by_name=$4, decided_at=NOW(), decision_note=$5
             WHERE id=$1 AND status='review' RETURNING *`, [req.params.id, approve ? 'approved' : 'rejected', req.user.id, req.user.name || '', String(req.body?.note || '').slice(0, 300)]);
         if (!rows.length) throw T.fail(409, 'Qoplash tekshiruvda emas');
@@ -448,6 +466,29 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         if (req.user.role === 'teacher') teacherId = (await teacherOf(req)).id; else need(req, MANAGE);
         const { from, to } = T.monthBounds(month);
         return { month, absences: await S.teacherAbsences(pool, { from, to, teacherId }) };
+    }));
+
+    // Qoplanmagan (qoplash mumkin) darslar — bitta manba: S.missedLessons ("Keldi" ustun, faqat dars kuni, kurs boshlangandan keyin,
+    // o'quvchi o'sha kuni faol, kelajak yo'q). Ustoz Bosh / Davomat / Dars jadvalidagi "Qoplash darsi" oynasi shu ro'yxatni ko'rsatadi,
+    // qoplash yozish yo'llari (planMakeup, insertHeldMakeup) ham shu qoida bilan tekshiradi.
+    // Ustoz — faqat o'zi; admin/ROP — ?teacherId= (bo'lmasa shu oyda o'quvchisi bor barcha asosiy ustozlar). Pul ma'lumoti yo'q.
+    router.get('/attendance/missed', handle(async req => {
+        const month = /^\d{4}-\d{2}$/.test(req.query.month || '') ? req.query.month : T.nowLocal().date.slice(0, 7);
+        const { from, to } = T.monthBounds(month);
+        let ids, lang = null;
+        if (req.user.role === 'teacher') ids = [(await teacherOf(req)).id];
+        else {
+            need(req, MANAGE);
+            lang = req.user.role === 'rop' ? await reqLang(req) : null;
+            ids = req.query.teacherId ? [String(req.query.teacherId)]
+                : (await pool.query(`SELECT DISTINCT teacher_id FROM students WHERE teacher_id IS NOT NULL
+                    AND ($1::text IS NULL OR COALESCE(NULLIF(subject,''),'english')=$1)`, [lang])).rows.map(r => r.teacher_id);
+        }
+        const missed = [];
+        for (const id of ids) for (const m of await S.missedLessons(pool, id, { from, to })) missed.push({ ...m, teacherId: id });
+        // ROP — faqat o'z tilidagi o'quvchilar.
+        const inLang = lang ? new Set((await pool.query(`SELECT id FROM students WHERE COALESCE(NULLIF(subject,''),'english')=$1`, [lang])).rows.map(r => r.id)) : null;
+        return { month, missed: inLang ? missed.filter(m => inLang.has(m.studentId)) : missed };
     }));
 
     // ── O'quvchi kartasi va amallar ──────────────────────────────────────────
@@ -828,7 +869,7 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
     router.post('/assist/late-requests', handle(req => write(req, async c => {
         const me = await teacherOf(req);
         if (!assistOf(me)) throw T.fail(403, 'So\'rovni faqat yordamchi ustoz yuboradi');
-        const st = (await c.query('SELECT id, assistant_teacher_id FROM students WHERE id=$1', [String(req.body?.studentId || '')])).rows[0];
+        const st = (await c.query('SELECT id, assistant_teacher_id, extra_data FROM students WHERE id=$1', [String(req.body?.studentId || '')])).rows[0];
         if (!st || st.assistant_teacher_id !== me.id) throw T.fail(403, 'Bu o\'quvchi sizga biriktirilmagan');
         const day = T.assertDate(req.body?.day), today = T.nowLocal().date;
         if (day >= today) throw T.fail(400, day === today ? 'Bugungi aloqani o\'zingiz belgilaysiz' : 'Kelajak sanaga so\'rov yuborilmaydi');
@@ -836,6 +877,17 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         if (await A.isLocked(c, day.slice(0, 7))) throw T.fail(409, 'Oy yakuniy tasdiqlangan — o\'zgartirib bo\'lmaydi');
         const statuses = (await c.query('SELECT * FROM school_student_status WHERE student_id=$1 AND cancelled_at IS NULL', [st.id])).rows;
         if (S.statusOn(statuses, day) !== 'active') throw T.fail(409, 'O\'sha kuni o\'quvchi faol emas (muzlatilgan yoki chiqib ketgan)');
+        // Kurs boshlanishidan oldingi kun — aloqa sanalmaydi (before_start), so'rov ham yo'q.
+        const start = A.studentStartOf(st.extra_data);
+        if (start && day < start) throw T.fail(400, `O'quvchi kursni ${start} dan boshlagan — undan oldingi kunga so'rov yuborilmaydi`);
+        // Shu kuni hisoblangan aloqa bor bo'lsa — kuniga 1 ta sanaladi (same_day), so'rov keraksiz.
+        {
+            const { from, to } = T.monthBounds(day.slice(0, 7));
+            const mine = (await c.query('SELECT * FROM school_assist_contacts WHERE assistant_id=$1 AND day BETWEEN $2 AND $3 AND removed_at IS NULL', [me.id, from, to])).rows;
+            const rep = A.countMonth(mine, { starts: start ? new Map([[st.id, start]]) : undefined });
+            const has = rep.students.some(x => x.studentId === st.id && x.items.some(i => i.status === 'counted' && S.dateStr(i.day) === day));
+            if (has) throw T.fail(409, 'Bu kunda o\'quvchi bilan hisoblangan aloqa allaqachon bor — kuniga bitta aloqa sanaladi');
+        }
         const reason = String(req.body?.reason || '').trim(); if (reason.length < 5) throw T.fail(400, 'Sababni yozing');
         // Bir o'quvchi + bir kun uchun bitta ochiq so'rov (parallel yuborishda ham — tranzaksiya qulfi).
         await c.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`assist_late:${st.id}:${day}`]);

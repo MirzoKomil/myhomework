@@ -7,6 +7,10 @@
 //  • Oy hisobi (2026-10 dan): o'quvchining o'z dars kunlaridagi "Keldi" + admin tasdiqlagan qoplash,
 //    har o'quvchida oy rejasidan oshmaydi. O'quvchi boshlagan kundan oldingi kunlar kutilmaydi va sanalmaydi
 //    (moliya bilan bir xil — payrollEngine studentStart).
+//  • O'quvchi o'sha kuni faol bo'lmagan (muzlatilgan / chiqib ketgan — school_student_status) kundagi "Keldi" va qoplash
+//    sanalmaydi, kutilmaydi ham (lessonCountsOn). Server ustozga bunday kunga belgi qo'ydirmaydi (teacherAttendanceRules),
+//    moliya ham shu funksiya bilan sanaydi (payrollEngine) — Davomat % va maosh bitta qoida.
+//    Holat yozuvlari: s.statusHistory ([{status, from, to}] — server /api/state beradi) yoki statusRows (school_student_status qatorlari).
 (function (root, factory) {
     const api = factory(root);
     if (typeof module === 'object' && module.exports) module.exports = api;
@@ -45,9 +49,10 @@
         const thisMonth = todayKey.slice(0, 7), todayDay = Number(todayKey.slice(8));
         const my = (makeups || []).filter(m => m.teacher_id === id && ['planned', 'review', 'approved'].includes(m.status));
         const t = { plan: 0, expected: 0, came: 0, absent: 0, unmarked: 0, approved: 0, review: 0, counted: 0, students: 0 };
-        for (const s of (students || []).filter(isActiveStudent)) {
-            const start = dkey(s.startDate || s.joinDate);
-            const started = c => !start || c.date >= start;
+        for (const s of (students || []).filter(s => inMonth(s, s.statusHistory, month))) {
+            const start = dkey(s.startDate || s.joinDate), hist = s.statusHistory;
+            // Kurs boshlangan va o'quvchi shu kuni faol (muzlatilgan / chiqib ketgan kun kutilmaydi va sanalmaydi).
+            const started = c => (!start || c.date >= start) && lessonCountsOn(s, hist, c.date);
             const past = c => started(c) && (month < thisMonth || (month === thisMonth && c.day <= todayDay));
             const cells = cal.cells(month, cal.weekdays(s, teacher, 'main')).filter(c => c && c.scheduled);
             const entries = (mainAtt || {})[s.id] || {}, plan = cells.length, gone = cells.filter(past);
@@ -58,7 +63,7 @@
             const mine = my.filter(m => m.student_id === s.id && dkey(m.held_date).slice(0, 7) === month);
             if (strict) for (const m of mine.filter(m => m.status === 'approved')) {
                 const hd = dkey(m.held_date), d = Number(hd.slice(8));
-                if (start && hd < start) continue;
+                if ((start && hd < start) || !lessonCountsOn(s, hist, hd)) continue;
                 if (m.kind === 'double') { n++; appr++; } else if (!days.has(d)) { days.add(d); n++; appr++; }
             }
             t.students++;
@@ -75,10 +80,12 @@
     function statusOn(statusRows, date) {
         let state = 'active';
         const ts = v => (v instanceof Date ? v.getTime() : Date.parse(v) || 0);
+        // Qator: school_student_status ({from_date, to_date, created_at}) yoki /api/state statusHistory ({from, to, at}).
+        const fromOf = r => dkey(r.from_date ?? r.from), toOf = r => dkey(r.to_date ?? r.to) || null;
         const rows = [...(statusRows || [])].filter(r => !r.cancelled_at)
-            .sort((a, b) => dkey(a.from_date).localeCompare(dkey(b.from_date)) || ts(a.created_at) - ts(b.created_at));
+            .sort((a, b) => fromOf(a).localeCompare(fromOf(b)) || ts(a.created_at ?? a.at) - ts(b.created_at ?? b.at));
         for (const r of rows) {
-            const from = dkey(r.from_date), to = r.to_date ? dkey(r.to_date) : null;
+            const from = fromOf(r), to = toOf(r);
             if (from > date) continue;
             if (r.status === 'frozen') { if (!to || date <= to) state = 'frozen'; else if (state === 'frozen') state = 'active'; }
             else if (r.status === 'left') state = 'left';
@@ -96,6 +103,27 @@
         const rows = (statusRows || []).filter(r => !r.cancelled_at);
         if (!rows.length) return isActiveStudent(s);
         return statusOn(rows, date) === 'active';
+    }
+    // Shu kundagi dars (Keldi / qoplash) hisobga o'tadimi — o'quvchi faolligi bo'yicha (asosiy ustoz davomati va maosh uchun).
+    // Holat yozuvlari bo'lsa — sana bo'yicha (statusOn === 'active'). Yozuv yo'q bo'lsa — eski o'quvchi: kun cheklanmaydi
+    // (o'quvchi qaysi sanadan muzlatilgani/ketgani noma'lum; oy hisobi esa uni inMonth bilan isActiveStudent bo'yicha oladi).
+    // Demo xodim va eski "inactive" belgisi — hech qachon.
+    function lessonCountsOn(s, statusRows, date) {
+        if (!s) return false;
+        const x = extraOf(s) || s;
+        if (x.isStaffDemo === true || s.staffDemo === true || s.legacyInactive === true) return false;
+        const rows = (statusRows || []).filter(r => !r.cancelled_at);
+        return !rows.length || statusOn(rows, dkey(date)) === 'active';
+    }
+    // Oy hisobiga (Davomat "Oktyabr" kartasi, reyting) kiradimi: holat yozuvlari bo'lsa — oyning kamida bir kunida faol
+    // (masalan 20-oktdan muzlatilgan o'quvchining 1–19-okt darslari sanaladi, maosh bilan bir xil); bo'lmasa — isActiveStudent.
+    function inMonth(s, statusRows, month) {
+        if (!s) return false;
+        const rows = (statusRows || []).filter(r => !r.cancelled_at);
+        if (!rows.length) return isActiveStudent(s);
+        const [y, m] = String(month).split('-').map(Number), last = new Date(Date.UTC(y, m, 0)).getUTCDate();
+        for (let d = 1; d <= last; d++) if (lessonCountsOn(s, rows, `${month}-${String(d).padStart(2, '0')}`)) return true;
+        return false;
     }
     // Haftalik tavsiya soni ("Bu hafta 12 / 47", Dars jadvali "47 tavsiya", "3 tadan kam" bildirishnomasi) — bitta hisob:
     // /api/school/assist/plan bandlaridan o'quvchi+kun juftliklari: tavsiya (o'quvchi shu kuni faol) + tavsiya kunidagi aloqa
@@ -115,5 +143,5 @@
     function assistPossible(counted, adviceLeft, cap) {
         return Math.min(cap, (Number(counted) || 0) + (Number(adviceLeft) || 0));
     }
-    return Object.freeze({ INACTIVE, isActiveStudent, statusOn, activeOn, weekPlanSlots, weekPlanCount, monthTotals, assistPossible });
+    return Object.freeze({ INACTIVE, isActiveStudent, statusOn, activeOn, lessonCountsOn, inMonth, weekPlanSlots, weekPlanCount, monthTotals, assistPossible });
 });

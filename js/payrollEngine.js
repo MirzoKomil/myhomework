@@ -1,9 +1,14 @@
 (function (root, factory) {
-    const api = factory();
+    const api = factory(root);
     if (typeof module === 'object' && module.exports) module.exports = api;
     else root.payrollEngine = api;
-}(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+}(typeof globalThis !== 'undefined' ? globalThis : this, function (root) {
     'use strict';
+    // O'quvchi faolligi (muzlatilgan / chiqib ketgan kun) — js/attendanceRules.js bilan bitta ta'rif (Davomat % bilan bir manba).
+    function rules() {
+        if (typeof module === 'object' && module.exports) return require('./attendanceRules');
+        return root.AttendanceRules || null;
+    }
     const DAY = 86400000;
     const ROLES = { sales: 'Sotuv menejeri', rop: 'ROP', teacher: 'Asosiy ustoz', assistant: 'Yordamchi ustoz' };
     function fail(message) { throw Object.assign(new Error(message), { status: 400 }); }
@@ -161,7 +166,12 @@
             const entries = attendance[`${block.key}_${employee.id}`]?.[s.id] || {};
             const hire = date(employee.startDate || employee.joinDate);
             const studentStart = date(s.startDate || s.joinDate);
-            const inRange = d => d && inPeriod(d, p) && d >= block.start && d <= block.end && (!hire || d >= hire) && (!studentStart || d >= studentStart);
+            // O'quvchi o'sha kuni muzlatilgan yoki chiqib ketgan bo'lsa — "Keldi" ham, qoplash ham sanalmaydi (asosiy ustoz;
+            // AttendanceRules.lessonCountsOn — Davomat % bilan bir qoida). source.studentStatus: { [studentId]: school_student_status qatorlari }.
+            // Faqat 'approved-v1' oylaridan (2026-10) — eski to'langan oylar qayta narxlanmaydi.
+            const statusRows = byMakeups && source.studentStatus ? source.studentStatus[s.id] : null;
+            const activeDay = d => !statusRows || !rules() || rules().lessonCountsOn(s, statusRows, d);
+            const inRange = d => d && inPeriod(d, p) && d >= block.start && d <= block.end && (!hire || d >= hire) && (!studentStart || d >= studentStart) && activeDay(d);
             const studentDays = byMakeups ? new Set(studentDayList) : null;
             const presentDays = Object.entries(entries).filter(([day, present]) => {
                 const d = date(block.key + '-' + String(day).padStart(2, '0'));

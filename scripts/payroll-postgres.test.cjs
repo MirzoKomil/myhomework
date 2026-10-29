@@ -215,6 +215,13 @@ test('real PostgreSQL payroll integration', { skip: !url }, async t => {
         };
         delete require.cache[routePath]; router = require(routePath);
       } finally { Module._load = originalLoad; }
+      // authRequired eski (jti'siz) tokenda xodimni server/db.js orqali tekshiradi (lazy require). Haqiqiy db.js
+      // DATABASE_URL'siz jarayonni to'xtatadi — shu test bazasiga ulangan o'rinbosar modul (faqat shu test davomida).
+      const dbPath = require.resolve('../server/db');
+      const hadDb = require.cache[dbPath];
+      require.cache[dbPath] = { id: dbPath, filename: dbPath, loaded: true, exports: { pool,
+        findUserById: async id => (await pool.query('SELECT * FROM users WHERE id=$1', [id])).rows[0] || null } };
+      t.after?.(() => { if (hadDb) require.cache[dbPath] = hadDb; else delete require.cache[dbPath]; });
       const app = express(); app.use(express.json()); app.use('/api/payroll', router);
       const server = app.listen(0, '127.0.0.1'); await new Promise(resolve => server.once('listening', resolve));
       const base = 'http://127.0.0.1:' + server.address().port + '/api/payroll';

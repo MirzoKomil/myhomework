@@ -1184,10 +1184,21 @@ async function getFullState() {
             studentId: r.student_id || '', completed: !!r.completed, isProbniy: true
         };
     });
+    // O'quvchi holati tarixi (muzlatish / qaytish / chiqib ketish sanalari) — Davomat %, reyting va maosh bitta qoida bilan
+    // (js/attendanceRules.js lessonCountsOn / inMonth) o'sha kuni faol bo'lmagan darsni sanamasligi uchun. Faqat o'qish uchun:
+    // saqlashda (saveStudents) extra_data'ga yozilmaydi.
+    const statusHistory = new Map();
+    if ((await q("SELECT to_regclass('public.school_student_status')::text AS t"))[0]?.t) {
+        for (const r of await q(`SELECT student_id, status, TO_CHAR(from_date,'YYYY-MM-DD') AS from_date, TO_CHAR(to_date,'YYYY-MM-DD') AS to_date, created_at
+            FROM school_student_status WHERE cancelled_at IS NULL ORDER BY from_date, created_at`)) {
+            if (!statusHistory.has(r.student_id)) statusHistory.set(r.student_id, []);
+            statusHistory.get(r.student_id).push({ status: r.status, from: r.from_date, to: r.to_date || null, at: r.created_at instanceof Date ? r.created_at.toISOString() : r.created_at });
+        }
+    }
     return {
         teachers: teacherRows.map(rowToTeacher),
         salesManagers: smRows.map(r => ({ id: r.id, name: r.name, avatar: r.avatar || '' })),
-        students: studentRows.map(rowToStudent),
+        students: studentRows.map(r => { const st = rowToStudent(r); delete st.statusHistory; if (statusHistory.has(r.id)) st.statusHistory = statusHistory.get(r.id); return st; }),
         timetable,
         mainAttendance: mainAtt,
         assistantAttendance: assistAtt,
@@ -1308,6 +1319,7 @@ async function saveStudents(client, students, removedStudentIds = []) {
             if (!extra.leadPaymentSyncKey) extra.leadPaymentSyncKey = existingById.get(id).leadPaymentSyncKey;
         }
         delete extra.hasPassword;
+        delete extra.statusHistory; // /api/state o'qish maydoni (school_student_status'dan) — saqlanmaydi
         const financial = existingById.get(id);
         if (financial?.paymentLedgerManaged) {
             // A stale bulk CRM snapshot cannot undo an independently accepted receipt.
