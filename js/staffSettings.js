@@ -229,7 +229,7 @@
         }
         const prev = (d.history || []).filter(h => h.month < d.month).sort((a, b) => b.month.localeCompare(a.month))[0];
         if (!prev) return `<div class="ss-kpi"><span>O'tgan oy</span><b>—</b><small>hali hisob yo'q</small></div>`;
-        return `<div class="ss-kpi"><span>${monName(prev.month)} · ${prev.status === 'paid' ? 'berilgan' : 'hisoblangan'}</span><b>${num(prev.amount)} so'm</b><small>${d.assist?.prevCounted && prev.month === d.assist.prevMonth ? `${d.assist.prevCounted} aloqa · ` : ''}${prev.status === 'paid' && prev.paidAt ? dShort(tzDate(prev.paidAt)) : 'hali berilmagan'}${d.card4 ? `${d.kind === 'assistant' ? ' ' : ' · '}karta •••• ${esc(d.card4)}` : ''}</small></div>`;
+        return `<div class="ss-kpi"><span>${monName(prev.month)} · ${prev.status === 'paid' ? 'berilgan' : 'hisoblangan'}</span><b>${num(prev.amount)} so'm</b><small>${(() => { const n = d.assist?.prevCounted && prev.month === d.assist.prevMonth ? d.assist.prevCounted : d.kind === 'assistant' ? Number(prev.lessons) || 0 : 0; return n ? `${n} aloqa · ` : ''; })()}${prev.status === 'paid' && prev.paidAt ? dShort(tzDate(prev.paidAt)) : 'hali berilmagan'}${d.card4 ? `${d.kind === 'assistant' ? ' ' : ' · '}karta •••• ${esc(d.card4)}` : ''}</small></div>`;
     }
     function chartAndHistory(d, override = null) {
         const cur = override != null ? override : d.current ? Number(d.current.total) || 0 : null;
@@ -275,7 +275,7 @@
         const assistCnt = a ? (fromPay && c.assistantLessons != null ? Number(c.assistantLessons) || 0 : a.counted) : 0;
         const total = a ? m.total + assistAmt : c.total != null ? Number(c.total) : m.total;
         const miss = d.missed;
-        const banner = miss && miss.open ? `<div class="ss-banner" role="note">${ICON.sync}<p><b>${miss.open} ta qoldirilgan dars hali qoplanmagan${miss.planned ? ` (${miss.planned} tasi rejada)` : ''}.</b> Oy tugashiga ${miss.daysLeft} kun. ${esc(miss.students.slice(0, 3).map(s => `${s.name} ${s.count} ta`).join(', '))}${miss.students.length > 3 ? `, yana ${miss.students.length - 3} ta` : ''}.</p><button type="button" class="ss-btn" data-go-makeup>Qoplash qo'yish</button></div>` : '';
+        const banner = miss && miss.open ? `<div class="ss-banner" role="note">${ICON.sync}<p><b>${miss.open} ta qoldirilgan dars hali qoplanmagan${miss.planned ? ` · yana ${miss.planned} tasiga qoplash rejalashtirilgan` : ''}.</b> Oy tugashiga ${miss.daysLeft} kun. ${esc(miss.students.slice(0, 3).map(s => `${s.name} ${s.count} ta`).join(', '))}${miss.students.length > 3 ? `, yana ${miss.students.length - 3} ta` : ''}.</p><button type="button" class="ss-btn" data-go-makeup>Qoplash qo'yish</button></div>` : '';
         const rowsMain = m.groups.map(g => `<tr><td>${g.duration} daqiqalik</td><td class="ss-names">${esc(g.students.join(', '))}</td><td class="n">${g.expected}</td><td class="n">${g.counted}${g.review ? ` <i class="ss-pill teal">+${g.review} tekshiruvda</i>` : ''}</td><td class="n ss-mt">—</td></tr>`).join('')
             || '<tr><td colspan="5" class="ss-mt">Bu oy asosiy o\'quvchi yo\'q</td></tr>';
         const assistRows = a ? `<tr class="sec"><td colspan="5">Yordamchi ustozlik${a.pastOnly ? ' · o\'tgan aloqalar' : ''} · ${num(a.rate)} so'm × aloqa</td></tr>
@@ -318,7 +318,7 @@
             return `${String(x.student.name || '').trim().split(/\s+/)[0]} ${x.open.length}${i === 0 ? ' ta' : ''}${pl.length ? ` (${pl.join(', ')} rejada)` : ''}`;
         });
         if (rows.length > 3) parts.push(`yana ${rows.length - 3} ta`);
-        const html = `<div class="ss-banner" role="note">${ICON.sync}<p><b>${open} ta qoldirilgan dars hali qoplanmagan${planned ? ` (${planned} tasi rejada)` : ''}${loss ? ` — ≈ ${num(loss)} so'm` : ''}.</b> ${left > 0 ? `Oy tugashiga ${left} kun.` : 'Bugun oyning oxirgi kuni.'} ${esc(parts.join(', '))}.</p><button type="button" class="ss-btn" data-go-makeup>Qoplash qo'yish</button></div>`;
+        const html = `<div class="ss-banner" role="note">${ICON.sync}<p><b>${open} ta qoldirilgan dars hali qoplanmagan${planned ? ` · yana ${planned} tasiga qoplash rejalashtirilgan` : ''}${loss ? ` — ≈ ${num(loss)} so'm` : ''}.</b> ${left > 0 ? `Oy tugashiga ${left} kun.` : 'Bugun oyning oxirgi kuni.'} ${esc(parts.join(', '))}.</p><button type="button" class="ss-btn" data-go-makeup>Qoplash qo'yish</button></div>`;
         const t = document.createElement('div'); t.innerHTML = html; const el = t.firstElementChild;
         if (old) old.replaceWith(el); else body.querySelector('.ss-kpis')?.after(el);
         bindMakeupBtn(body, rows[0]?.student.id);
@@ -342,7 +342,7 @@
         }).join('') || '<tr><td colspan="4" class="ss-mt">Sizga hali o\'quvchi biriktirilmagan</td></tr>';
         body.innerHTML = head('Mening maoshim · aloqalar bo\'yicha') + `<div class="ss-col">
           <div class="ss-kpis ss-kpis--as">
-            <div class="ss-kpi"><span>${monName(d.month)} · hozirgacha</span><b>${num(a.amount)} so'm</b><small>${a.counted} aloqa × ${num(a.rate)}</small></div>
+            <div class="ss-kpi"><span>${monName(d.month)} · hozirgacha</span><b>${num(a.amount)} so'm</b><small>${esc(window.schoolUI?.assistPayNote ? window.schoolUI.assistPayNote(a) : `${a.counted} hisoblangan aloqa`)}</small></div>
             <div class="ss-kpi"><span>Oy oxirigacha ko'pi bilan</span><b>${num(a.possibleAmount ?? a.possible * a.rate)} so'm</b><small>${a.possible} aloqa · ${a.daysLeft} kun qoldi</small></div>
             ${lastPaid(d)}</div>
           <section class="ss-card" aria-labelledby="ssAsH"><header class="ss-ch"><h3 id="ssAsH">${monName(d.month)} · o'quvchilar bo'yicha</h3><span class="ss-mt">har o'quvchi bilan oyiga ${a.cap} tagacha · kamida 5 daqiqa</span></header>

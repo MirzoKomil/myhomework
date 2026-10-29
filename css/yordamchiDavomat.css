@@ -138,3 +138,7 @@ html.rd [data-assist-home] .dashboard-panel-head .ahx-link { font-size: 13px; fo
 /* Dark mode: bu sahifalarda ishlatilgan --text-secondary/--bg-secondary shell'da aniqlanmagan — shu bloklar ichida beramiz */
 html.rd[data-theme="dark"] :is(#mainAttendanceContainer, #teacherHome, .jq, .sv-body, .sv-head, .sc-drawer) { --text-secondary: #A9B4C8; --bg-secondary: #0F1726; }
 .ydm-frm .yd-min input, .ydm-frm textarea { background: var(--surface, #fff); color: var(--text, #0B1220); }
+/* Tavsiya yo'q kun (muzlatilgan / faol emas) — rejadan (AttendanceRules.weekPlanSlots) */
+.yd-week .yd-wk i.off, .yd-week .yd-legend i.off { background: repeating-linear-gradient(135deg, var(--surface-2, #F1F4F8) 0 5px, var(--border, #E6EAF2) 5px 6px); border-color: var(--border, #E6EAF2); color: var(--text-muted, #98A2B3); }
+/* Yuklash xatosi — xabar va "Qayta urinish" */
+.yd-err { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }

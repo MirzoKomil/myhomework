@@ -141,7 +141,9 @@ test('teacher home: today lessons by time with attendance state, no phones', () 
     assert.equal(c.t({ role: 'rop' }), '');
 });
 
-test('assistant home: contacts suggested on the opposite days, no old attendance buttons', () => {
+// 29-okt: asosiy ustoz yordamchi bo'la olmaydi — UstozBosh "Bugun" blokida yordamchi aloqasi qatorlari yo'q
+// (yordamchi Bosh sahifasi — js/yordamchi.js assistantHome, tavsiya kunlari serverdagi /assist/plan dan).
+test('teacher home: no assistant contact rows (assistant home is schoolTeacher.assistantHome)', () => {
     const c = ctx('2026-10-20T16:50:00+05:00'); // seshanba
     Object.assign(c, {
         STORAGE_KEYS: { students: 'students', mainAttendance: 'att', assistantAttendance: 'asatt' },
@@ -157,12 +159,9 @@ test('assistant home: contacts suggested on the opposite days, no old attendance
             { id: 'd', name: 'Ketgan', teacherId: 'z', assistantTeacherId: 'y1', lessonDayOfWeek: 1, lessonTime: '11:00', status: 'inactive' },
         ] : {},
     });
-    vm.runInContext(['_assistAdviceDays', '_thxTeacherShort', 'renderTeacherTodayBlock'].map(n => functionSource('js/app.js', n)).join('\n') + '\nthis.t = renderTeacherTodayBlock;', c);
+    vm.runInContext(['renderTeacherTodayBlock'].map(n => functionSource('js/app.js', n)).join('\n') + '\nthis.t = renderTeacherTodayBlock;', c);
     const html = c.t({ role: 'teacher', linkedTeacherId: 'y1' });
-    assert.match(html, /Abbos[\s\S]*yordamchi aloqasi · tavsiya · asosiy ustoz Kamola M\./, 'Du·Ch·Ju o\'quvchisi — seshanba aloqa tavsiya');
-    assert.ok(!html.includes('Ilyos'), 'Se·Pa·Sh o\'quvchisi seshanba kuni tavsiya qilinmaydi');
-    assert.ok(!html.includes('Boshqa') && !html.includes('Ketgan'));
-    assert.match(html, /data-thx-contact="a"/);
+    assert.ok(!html.includes('Abbos') && !html.includes('Ilyos') && !html.includes('Boshqa') && !html.includes('Ketgan'), 'yordamchi o\'quvchilari ustoz "Bugun" blokida yo\'q');
+    assert.ok(!html.includes('data-thx-contact') && !html.includes('yordamchi aloqasi'));
     assert.ok(!html.includes('data-thx-as-mark') && !html.includes('mashgʻulot'));
-    assert.match(html, /0 dars \+ 1 aloqa/);
 });

@@ -112,11 +112,11 @@ test('js/app.js: Ustoz Bosh sahifasi reyting kartochkasini apiFetchTeacherRating
 });
 
 test('js/app.js: UstozBosh "Bugun" — davomat Akademik → Davomat orqali (Bosh sahifada Keldi/Kelmadi yo\'q); yagona yozish yo\'li /api/state/teacher-attendance', () => {
-    assert.match(app, /function bindTeacherHomeToday\(container, user\) \{/);
-    const fn = app.slice(app.indexOf('function bindTeacherHomeToday('), app.indexOf('function isAdminHomeUser('));
+    // 29-okt: asosiy ustoz yordamchi bo'la olmaydi — Bosh "Bugun"da yordamchi aloqasi qatori va uning bog'lovchisi yo'q.
+    assert.doesNotMatch(app, /function bindTeacherHomeToday\(/);
+    const fn = app.slice(app.indexOf('function renderTeacherTodayBlock('), app.indexOf('function isAdminHomeUser('));
     assert.doesNotMatch(fn, /data-thx-mark/, 'Bosh sahifada davomat tugmasi yo\'q (UstozBosh dizayni)');
-    assert.match(fn, /data-thx-contact/, 'yordamchi aloqasi schoolTeacher.markDrawer orqali');
-    assert.match(fn, /schoolTeacher\.markDrawer/);
+    assert.doesNotMatch(fn, /data-thx-contact/, 'yordamchi aloqasi faqat yordamchi Bosh sahifasida (js/yordamchi.js)');
     assert.match(app, /data-teacher-open-att/, '"Davomatni ochish →" Akademik → Davomatga');
     assert.doesNotMatch(app, /data-thx-grade="/, 'Mezonlar tugmasi yo\'q — o\'quvchiga baho qo\'yilmaydi');
     assert.match(app, /function _openLiveGradeModal\(studentName, dateStr, lessonOptions, onSave\) \{\s*onSave\(null\);/);

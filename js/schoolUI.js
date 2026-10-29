@@ -138,7 +138,21 @@
     const whenTxt = iso => { const d = localDay(iso); if (!d) return '—'; const t = today(); return d === t ? 'bugun' : d === addDays(t, -1) ? 'kecha' : dShort(d); };
     const advDaysOf = day => ([1, 3, 5].includes(Number(day)) ? [2, 4, 6] : [1, 3, 5]);
     const CHN = { phone: ['☎', 'Telefon'], zoom: ['Z', 'Zoom'], meet: ['M', 'Google Meet'], tg_video: ['▶', 'Telegram video'], tg_group: ['▶', 'Telegram guruh videodars'], tg_text: ['✉', 'Telegram yozishma'] };
-    const CST = { counted: '', short: '5 daqiqadan qisqa', same_day: 'shu kuni 2-chi', extra_text: 'haftadagi 2-yozishma', over_cap: '13 dan ortiq', before_start: 'kurs boshlanishidan oldin · sanalmaydi' };
+    // Yordamchi aloqasi hisoblanmagan sababi (contacts-v1 holati) — YAGONA matn manbai: Davomat, Bosh, Dars jadvali,
+    // o'quvchi kartasi va admin "Aloqalar" shu ro'yxatdan oladi (schoolUI.CST).
+    const CST = Object.freeze({ counted: '', short: '5 daqiqadan qisqa', same_day: 'shu kuni 2-chi', extra_text: 'haftadagi 2-yozishma', over_cap: '13 dan ortiq', before_start: 'kurs boshlanishidan oldin · sanalmaydi' });
+    // Yordamchi maoshi izohi. Summa har o'quvchi bo'yicha round(oylik tarif × aloqa / 13) (server assist.contactAmount),
+    // shuning uchun "N × 3 077" yozilmaydi — u summaga teng chiqmaydi (142 × 3 077 = 436 934, summa 436 920).
+    // rep — /assist/month yoki /staff/salary javobi ({ counted, cap, monthly?, rate }); monthly bo'lmasa — rate × 13 mingga yaxlitlanadi.
+    // Qoplash: qoldirilgan kunida "Keldi" bor (server /makeups → missed_came) — "Keldi" ustun, qoplash maoshga o'tmaydi.
+    // Admin qoplash ro'yxatlari va ustozning Davomat/Jadvalidagi qoplash joylari shu belgini ko'rsatadi.
+    const MISSED_CAME = 'qoldirilgan kunda "Keldi" bor — maoshga o\'tmaydi';
+    const missedCamePill = m => (m && m.missed_came === true ? `<span class="sc-pill sc-pill--warn" title="${MISSED_CAME}">${MISSED_CAME}</span>` : '');
+    function assistPayNote(rep, counted = rep?.counted) {
+        const cap = Number(rep?.cap) || 13;
+        const monthly = Number(rep?.monthly) > 0 ? Number(rep.monthly) : Math.round((Number(rep?.rate) || 0) * cap / 1000) * 1000;
+        return `${Number(counted) || 0} hisoblangan aloqa · har o'quvchi: ${cap} aloqa = ${num(monthly)} so'm`;
+    }
     const LOCK = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
 
     // ── Ilova natijalari (O'zlashtirish) — karta va "O'quvchini tekshirish" uchun umumiy ──
@@ -411,7 +425,9 @@
             const m = el.querySelector('[data-act="mat"]'); if (m && r.detail) { m.textContent = `${acad.current(r.detail)}-dars materiallari`; m.dataset.no = acad.current(r.detail); }
         }).catch(() => {});
         if (money) getPay(c).then(p => { const f = el.querySelector('[data-flag]'); const pp = payPill(p); if (f && pp) f.outerHTML = pp; }).catch(() => {});
-        if (sc === 'assistant') getCon(c, today().slice(0, 7)).then(r => { c._acount = r.counted; const x = el.querySelector('[data-acount]'); if (x) x.textContent = r.counted; }).catch(() => {});
+        const metaTitle = () => { const mt = el.querySelector('[data-meta]'); if (mt) mt.title = mt.textContent.trim(); };
+        metaTitle();
+        if (sc === 'assistant') getCon(c, today().slice(0, 7)).then(r => { c._acount = r.counted; const x = el.querySelector('[data-acount]'); if (x) x.textContent = r.counted; metaTitle(); }).catch(() => {});
         el.querySelectorAll('[data-act]').forEach(b => b.onclick = () => cardAction(b.dataset.act, c, b));
         const show = k => {
             if (_page) _page.tab = k;
@@ -423,6 +439,7 @@
                     mt.innerHTML = mt._full; mt.dataset.mode = 'full';
                     const x = mt.querySelector('[data-acount]'); if (x && c._acount != null) x.textContent = c._acount;
                 }
+                metaTitle();
             }
             el.querySelectorAll('.scc-tab').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === k)));
             if (k === 'umumiy') summaryTab(body, c);
@@ -1236,6 +1253,6 @@
         studentAvatar, staffAvatar, staffAvatarUrl, tgPill, teacherName, studentById, teachersForSubject,
         openDrawer, openDialog, closeDrawer, errBox, busy, field, impact, toast, refreshCache, nowMin,
         openStudent, closeStudent, renderApprovals, renderGroups, renderAssistAdmin, loadStaffAvatars, staffAvatarOf: id => staffAvatarUrl(_avatars[id]), acad, dShort, whenTxt, shortName, num,
-        bulkDrawer, correctionDrawer, CHN, CST, studentRequestDrawer
+        bulkDrawer, correctionDrawer, CHN, CST, assistPayNote, MISSED_CAME, missedCamePill, studentRequestDrawer
     });
 })();

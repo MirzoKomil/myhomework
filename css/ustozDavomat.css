@@ -246,3 +246,8 @@ html.rd #teacherHome .thx-main .dashboard-panel > [data-teacher-open-att] { marg
 .oqm-dlg .udv-dlg-st .oqm-pill { margin-left: 0; }
 .oqm-dlg .udv-dlg-st .oqm-link { margin-left: auto; }
 .oqm-dlg .oqm-df:has(#dutyCancel) { flex-wrap: wrap; }
+/* Yuklash xatosi va yuklanish holati (API 429/500 — jim noto'g'ri raqam o'rniga) */
+.udv-loaderr { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 0 20px 18px; padding: 14px 16px; border-radius: 14px; background: var(--kb-bad-bg, #FEF3F2); color: var(--kb-bad-fg, #B42318); font-size: 13px; line-height: 1.5; }
+.udv-loaderr p { margin: 0; }
+.udv-skel { height: 220px; margin: 0 20px 18px; }
+.udv-cs--wide { grid-column: 1 / -1; }

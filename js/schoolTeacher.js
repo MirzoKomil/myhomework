@@ -5,7 +5,9 @@
     'use strict';
     const U = () => window.schoolUI;
     const CH = { phone: 'Telefon', zoom: 'Zoom', meet: 'Google Meet', tg_video: 'Telegram video', tg_group: 'Telegram guruh videodars', tg_text: 'Telegram yozishma' };
-    const ST = { counted: ['hisoblandi', 'sc-pill--ok'], no_answer: ['javob bermadi', 'sc-pill--mute'], short: ['5 daqiqadan qisqa', 'sc-pill--warn'], same_day: ['shu kuni 2-chi', 'sc-pill--mute'], extra_text: ['haftadagi 2-yozishma', 'sc-pill--mute'], over_cap: ['13 dan ortiq', 'sc-pill--mute'], before_start: ['kurs boshlanishidan oldin · sanalmaydi', 'sc-pill--mute'] };
+    // Sabab matnlari — js/schoolUI.js CST (bitta manba); bu yerda faqat pill rangi.
+    const CST = (window.schoolUI && window.schoolUI.CST) || {};
+    const ST = { counted: ['hisoblandi', 'sc-pill--ok'], no_answer: ['javob bermadi', 'sc-pill--mute'], short: [CST.short, 'sc-pill--warn'], same_day: [CST.same_day, 'sc-pill--mute'], extra_text: [CST.extra_text, 'sc-pill--mute'], over_cap: [CST.over_cap, 'sc-pill--mute'], before_start: [CST.before_start, 'sc-pill--mute'] };
 
     // ── O'quvchi oynasida: yordamchi aloqalari (asosiy ustoz, ROP, sotuv — faqat o'qish) ──
     async function contactsBlock(studentId, el) {
@@ -53,29 +55,25 @@
         draw();
     }
 
-    // ── Ustoz bosh sahifasi: "Bajarish kerak", bugungi sinovlar, yordamchi ustozlik (aloqalar) ──
+    // ── Ustoz bosh sahifasi: "Bajarish kerak", bugungi sinovlar ──
     // renderTeacherHome sinxron chiziladi; bu yerda serverdan kelgan qismlar keyin qo'shiladi.
     // Ustozga to'lov/tarif summalari ko'rsatilmaydi — faqat o'z maoshi.
     const num = n => String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
     async function homeExtras(container, user) {
         const u = U(); if (!u || !container) return;
-        const { api, esc, today, wd, weekStart, DAY } = u;
+        const { api, esc, today } = u;
         const tid = user?.linkedTeacherId; if (!tid) return;
         // Bosh sahifa qayta chizilsa (renderDashboardOverview ikki marta), eski chaqiruv yangi ro'yxatga qo'shmasin —
         // aks holda bugungi sinov qatori ikki marta chiqadi.
         const home = container.querySelector('#teacherHome') || container;
         const alive = () => container.isConnected && home.isConnected;
         const td = today();
-        const all = getItem(STORAGE_KEYS.students, []).filter(s => !s.isStaffDemo && s.status !== 'inactive');
-        const helped = all.filter(s => String(s.assistantTeacherId || '') === String(tid));
         const mkP = api('/makeups').catch(() => ({ makeups: [] }));
         const payP = window.UstozHome?.myPay ? window.UstozHome.myPay().catch(() => null) : Promise.resolve(null);
         // Qoplanmagan darslar (≈ ustoz maoshidan) va "e'tibor kerak" — js/ustozHome.js, parallel yuklanadi.
         const extraP = window.UstozHome?.todoItems ? window.UstozHome.todoItems(user, mkP).catch(() => []) : Promise.resolve([]);
-        // Yordamchi aloqalari (/assist/month) — faqat shu ustozga yordamchi sifatida o'quvchi biriktirilgan bo'lsa.
-        // Asosiy ustozning o'tgan aloqalari maoshga kiradi, lekin ular /api/payroll/me (maosh kartasi) dan keladi.
-        const [rep, trials, makeups, abs] = await Promise.all([
-            helped.length ? api(`/assist/month?month=${td.slice(0, 7)}`).catch(() => null) : Promise.resolve(null),
+        // 29-okt: asosiy ustoz yordamchi bo'la olmaydi. O'tgan yordamchi aloqalari maoshga kiradi — /api/payroll/me (maosh kartasi).
+        const [trials, makeups, abs] = await Promise.all([
             (typeof apiFetchTeacherTrialLessons === 'function' ? apiFetchTeacherTrialLessons() : Promise.resolve({ lessons: [] })).catch(() => ({ lessons: [] })),
             mkP,
             api(`/attendance/absences?month=${td.slice(0, 7)}`).catch(() => null)
@@ -106,7 +104,7 @@
             else {
                 const main = Number(c.mainTotal ?? c.total) || 0, extra = Number(c.assistantTotal) || 0;
                 sal.textContent = num(Number(c.total) || 0);
-                if (sub) sub.innerHTML = `${extra ? `asosiy ${num(main)} + ${helped.length ? 'yordamchi' : 'o\'tgan yordamchi aloqalari'} ${num(extra)} · ` : ''}${reviewing ? `<b>+${reviewing} qoplash tekshiruvda</b> (admin tasdiqlasa qo'shiladi) · ` : ''}oy yopilganda Moliya tasdiqlaydi`;
+                if (sub) sub.innerHTML = `${extra ? `asosiy ${num(main)} + o'tgan yordamchi aloqalari ${num(extra)} · ` : ''}${reviewing ? `<b>+${reviewing} qoplash tekshiruvda</b> (admin tasdiqlasa qo'shiladi) · ` : ''}oy yopilganda Moliya tasdiqlaydi`;
             }
         }
 
@@ -135,9 +133,9 @@
             }
             home.querySelector('[data-thx-today-empty]')?.remove();
         }
-        // Sarlavha: "Bugun · N dars + N sinov + N aloqa"; plitka: "+N sinov · N belgilanmagan".
+        // Sarlavha: "Bugun · N dars + N sinov"; plitka: "+N sinov · N belgilanmagan".
         const cnt = home.querySelector('[data-thx-today-count]');
-        if (cnt) { const l = Number(cnt.dataset.l) || 0, c = Number(cnt.dataset.c) || 0, t = todayTrials.length; cnt.textContent = `${l} dars${t ? ` + ${t} sinov` : ''}${c ? ` + ${c} aloqa` : ''}`; }
+        if (cnt) { const l = Number(cnt.dataset.l) || 0, t = todayTrials.length; cnt.textContent = `${l} dars${t ? ` + ${t} sinov` : ''}`; }
 
         // Bajarish kerak — har biri maosh yoki o'quvchi natijasiga ta'sir qiladi.
         const todo = [];
@@ -175,22 +173,14 @@
         // Plitka "Bugun": "N dars + N aloqa" / "+N sinov · N belgilanmagan" (dizayndagidek).
         const tile = home.querySelector('.kbx-tiles > div:first-child');
         if (tile && cnt) {
-            const l = Number(cnt.dataset.l) || 0, c = Number(cnt.dataset.c) || 0, un = home.querySelectorAll('.tch-row--warn[data-thx-duty="main"]').length;
+            const l = Number(cnt.dataset.l) || 0, un = home.querySelectorAll('.tch-row--warn[data-thx-duty="main"]').length;
             const b = tile.querySelector('b'), sm = tile.querySelector('small');
-            if (b) b.textContent = `${l} dars${c ? ` + ${c} aloqa` : ''}`;
+            if (b) b.textContent = `${l} dars`;
             const bits = [todayTrials.length ? `+${todayTrials.length} sinov` : '', un ? `${un} belgilanmagan` : ''].filter(Boolean);
             if (sm && bits.length) sm.innerHTML = `<span class="${un ? 'kbx-bad' : ''}">${esc(bits.join(' · '))}</span>`;
             else if (sm && /belgilanmagan/.test(sm.textContent)) sm.textContent = 'hammasi belgilangan';
         }
 
-        const ws = weekStart(td);
-        // Bugungi yordamchi aloqasi qatorlari: "bu hafta N/3", bugun bog'langan bo'lsa — "Aloqa belgilandi".
-        if (rep) for (const row of home.querySelectorAll('[data-thx-today] > li[data-thx-duty="assistant"]')) {
-            const r = (rep.students || []).find(x => x.studentId === row.dataset.thxSid), items = r?.items || [];
-            const wk = items.filter(i => i.day >= ws && i.status === 'counted').length;
-            const note = row.querySelector('.mot-prize-note'); if (note && !note.dataset.wk) { note.dataset.wk = '1'; note.insertAdjacentText('beforeend', ` · bu hafta ${wk}/3`); }
-            if (items.some(i => i.day === td && i.outcome !== 'no_answer')) row.querySelector('.tch-row-actions').innerHTML = '<span class="uhb-pill uhb-pill--ok">Aloqa belgilandi</span>';
-        }
 
     }
 

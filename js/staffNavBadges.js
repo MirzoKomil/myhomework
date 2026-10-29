@@ -32,7 +32,9 @@
     let unm = null, unmBusy = false;
     function ownMainStudents(tid) {
         const rules = window.AttendanceRules;
-        return (typeof getItem === 'function' ? getItem(STORAGE_KEYS.students, []) : []).filter(s => s.teacherId === tid && (rules ? rules.isActiveStudent(s) : s.status !== 'inactive'));
+        // Shu oyda faol bo'lgan (AttendanceRules.inMonth) — Davomat oy kartasi bilan bitta ro'yxat.
+        const month = dayFmt.format(new Date()).slice(0, 7);
+        return (typeof getItem === 'function' ? getItem(STORAGE_KEYS.students, []) : []).filter(s => s.teacherId === tid && (rules ? rules.inMonth(s, s.statusHistory, month) : s.status !== 'inactive'));
     }
     async function loadUnmarked() {
         const u = me(), tid = u.linkedTeacherId;
