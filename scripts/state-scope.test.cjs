@@ -151,6 +151,7 @@ const mixed = () => ({
     mainAttendance: { '2026-10_t-en': { e1: { 1: true } }, '2026-10_t-ru': { r1: { 2: true } } },
     assistantAttendance: {},
     salesPlan: { english: {} }, bonusData: { b: 1 },
+    hrEmployees: [{ id: 't-en', role: 'ingliz-oqituvchi' }, { id: 't-ru', role: 'rus-oqituvchi', lang: 'english' }, { id: 'y-ru', role: 'yordamchi', lang: 'russian' }, { id: 'm-ru', role: 'sotuv-menejeri', lang: 'russian' }],
 });
 
 test('B3: sotuv menejeri o\'z demo hisobini ko\'radi, boshqalarnikini — yo\'q', () => {
@@ -169,6 +170,7 @@ test('B2: ROP state faqat o\'z tilida, Cash Flow yo\'q, reja/bonus ko\'rinadi', 
     assert.deepEqual(en.cashFlow, []);
     assert.deepEqual(en.mainAttendance, { '2026-10_t-en': { e1: { 1: true } } });
     assert.ok(en.salesPlan && en.bonusData, 'ko\'rish uchun qoladi');
+    assert.deepEqual(en.hrEmployees.map(e => e.id), ['t-en', 'm-ru'], 'boshqa til ustozlari HR ro\'yxatida ham yo\'q; boshqa xodimlar qoladi');
     const ru = rop.scopeStateForRop(mixed(), ['russian']);
     assert.deepEqual(ru.students.map(s => s.id), ['r1']);
     assert.deepEqual(ru.leads.english, []);

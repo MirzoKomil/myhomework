@@ -15,6 +15,9 @@ const LANGS = ['english', 'russian'];
 const ROP_DENIED_STATE_KEYS = ['cashFlow', 'payments', 'bonusData', 'salesPlan', 'individualSalesPlans'];
 
 const langOfStudent = s => (String(s?.subject || '').trim().toLowerCase() === 'russian' ? 'russian' : 'english');
+const TEACHER_HR_ROLES = new Set(['rus-oqituvchi', 'ingliz-oqituvchi', 'yordamchi', 'oqituvchi']);
+// js/app.js backfillAllTeacherSubjectsFromHr bilan bir xil qoida: lavozim, keyin HR'dagi lang.
+const langOfTeacherHr = e => (e?.role === 'rus-oqituvchi' ? 'russian' : e?.role === 'ingliz-oqituvchi' ? 'english' : e?.lang === 'russian' ? 'russian' : 'english');
 const langOfLead = l => (l?.language === 'russian' ? 'russian' : 'english');
 
 const warned = new Set();
@@ -69,6 +72,9 @@ function scopeStateForRop(state, langs) {
     state.students = (state.students || []).filter(s => langs.includes(langOfStudent(s)));
     const own = new Set(state.students.map(s => s.id));
     if (Array.isArray(state.teachers)) state.teachers = state.teachers.filter(t => langs.includes(langOfStudent(t)));
+    // HR: boshqa til ustozlari ham ko'rinmaydi (aks holda brauzerning HR → ustozlar backfill'i ularni "yo'q" deb
+    // har yuklanishda butun ro'yxatni qayta yuborardi). Ustoz bo'lmagan xodimlar o'zgarmaydi.
+    if (Array.isArray(state.hrEmployees)) state.hrEmployees = state.hrEmployees.filter(e => !TEACHER_HR_ROLES.has(e?.role) || langs.includes(langOfTeacherHr(e)));
     if (Array.isArray(state.payments)) state.payments = state.payments.filter(p => own.has(p.studentId));
     state.mainAttendance = filterAttendance(state.mainAttendance, own);
     state.assistantAttendance = filterAttendance(state.assistantAttendance, own);
