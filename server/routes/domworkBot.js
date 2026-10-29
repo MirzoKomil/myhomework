@@ -77,7 +77,11 @@ module.exports = function createRouter({ pool, runtime, authRequired }) {
     // 30-okt: kun yakuni hisobotini qo'lda (hozir) yuborish — bugungi holat bo'yicha, rahbar/ROP/targetolog va guruhlarga.
     router.post('/reports/send-now', handle(req => queue.transaction(pool, async db => {
         const sched=require('../services/domworkBot/scheduler'), now=new Date();
-        const date=require('../services/domworkBot/policy').today(now);
+        const policy=require('../services/domworkBot/policy'), today=policy.today(now), shift=require('../services/domworkBot/reports').shift;
+        // Sana tanlanmasa: tun/ertalab (12:00 gacha) — kechagi kun, keyin — bugungi kun. Faqat oxirgi 7 kun.
+        const hour=new Date(now.getTime()+5*3600000).getUTCHours();
+        const date=req.body?.date || (hour<12?shift(today,-1):today);
+        if(!/^\d{4}-\d{2}-\d{2}$/.test(date) || date>today || date<shift(today,-7)) throw policy.error(400,'Sana oxirgi 7 kun ichida bo‘lsin');
         const result=await sched.dailyReport(db,date,now,':manual:'+now.getTime());
         return {ok:true,date,...result};
     })));
