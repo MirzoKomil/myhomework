@@ -39,11 +39,51 @@ async function learningMessage(db,key,group,text,extra={}) {
     if(!group?.botVerified || !group.chatId || !(await store.settings(db)).data.groupNotificationsEnabled) return;
     await store.enqueue(db,{key,targetKind:'group',targetId:group.chatId,payload:{chat_id:group.chatId,text,_automation:true,_binding:group.id,...extra}});
 }
+async function trialNudges(db,now) {
+    const T=require('./tone'), callbacks=require('./callbacks');
+    for(const row of (await db.query("SELECT * FROM leads WHERE language='russian' AND status='sinov-darsida' AND deleted_at IS NULL")).rows) {
+        const lead={...row.extra_data,id:row.id,name:row.name,status:row.status,language:row.language};
+        const booking=workflow.request(lead);
+        const asked=Date.parse(booking?.requestedAt), lesson=Date.parse(booking?.scheduledAt);
+        if(!booking || booking.state!=='pending' || !Number.isFinite(asked)) continue;
+        const elapsed=now.getTime()-asked;
+        // Faqat yangi so'rovlar (3 soat ichida) va dars hali boshlanmagan — eski navbat birdaniga "uyg'onmasin".
+        if(elapsed<15*60000 || elapsed>3*3600000 || (Number.isFinite(lesson) && lesson<=now.getTime())) continue;
+        const step=elapsed>=45*60000?45:15;
+        await once(db,`trial-nudge:${booking.id}:${step}`,async()=>{
+            const teacher=await events.employee(db,booking.teacherId), manager=row.manager_id?await events.employee(db,row.manager_id):null;
+            const tName=(await db.query('SELECT name FROM hr_employees WHERE id=$1',[booking.teacherId])).rows[0]?.name || 'Ustoz';
+            const guard={...T.HTML,_trial:{leadId:lead.id,requestId:booking.id,teacherId:booking.teacherId,state:booking.state},_expiresAt:new Date(now.getTime()+20*60000).toISOString()};
+            const buttons=await callbacks.trialButtons(db,lead,booking);
+            const body=`👤 ${T.b(lead.name)}\n🕒 ${T.b(T.when(booking.scheduledAt))}`;
+            await events.privateMessage(db,`trial-nudge:${booking.id}:${step}:teacher`,teacher,
+                `⏰ <b>${T.esc(T.first(tName))}, sinov darsi ${step} daqiqadan beri tasdiqlanmagan!</b>\n\n${body}\n\nO‘quvchi va menejer javobingizni kutyapti — iltimos, hoziroq tasdiqlang yoki rad eting 👇`,{...guard,reply_markup:buttons});
+            await events.groupMessage(db,`trial-nudge:${booking.id}:${step}:beacon`,'beacon',
+                `${step===45?'🚨':'⏰'} ${T.who(tName,teacher?.telegramId)}, sinov darsi ${T.b(step+' daqiqadan')} beri tasdiqlanmagan!\n\n${body}\n\n👇 Iltimos, tasdiqlang`,{...guard,reply_markup:buttons});
+            if(step===45) {
+                await events.privateMessage(db,`trial-nudge:${booking.id}:45:manager`,manager,
+                    `⚠️ Ustoz ${T.b(tName)} sinov darsini 45 daqiqadan beri tasdiqlamadi.\n\n${body}\n\nUstoz bilan bog‘laning yoki boshqa ustoz tanlang 📞`,guard);
+                for(const rop of await roles(db,['rop'])) await events.privateMessage(db,`trial-nudge:${booking.id}:45:rop:${rop.telegramId}`,rop,
+                    `🚨 <b>Sinov darsi 45 daqiqadan beri tasdiqlanmagan</b>\n\n${body}\n👩‍🏫 Ustoz: ${T.who(tName,teacher?.telegramId)}\n\nNazoratga oling, iltimos.`,guard);
+            }
+        });
+    }
+}
 async function run(db,now=new Date()) {
     const lock=(await db.query("SELECT pg_try_advisory_xact_lock(hashtext('domwork-bot-scheduler')) AS locked")).rows[0];
     if(!lock.locked) return;
     const settings=(await store.settings(db)).data, clock=localClock(now);
     await require('./recognition').run(db,settings,clock,now,once);
+    // Jamoa kayfiyati (motivatsiya, latifa, Juma, dushanba, oy oxiri) — alohida savepoint.
+    await db.query('SAVEPOINT team_vibes');
+    try { await require('./vibes').run(db,settings,clock,now,once); await db.query('RELEASE SAVEPOINT team_vibes'); }
+    catch(error) { await db.query('ROLLBACK TO SAVEPOINT team_vibes'); console.error('[domwork-bot] vibes failed:', error.code || error.name); }
+    // Sinov darsi 15 daqiqada tasdiqlanmasa — ustozni qayta chaqirish; 45 daqiqada — ROP va menejerga ham.
+    if(settings.eventsEnabled) {
+        await db.query('SAVEPOINT trial_nudge');
+        try { await trialNudges(db,now); await db.query('RELEASE SAVEPOINT trial_nudge'); }
+        catch(error) { await db.query('ROLLBACK TO SAVEPOINT trial_nudge'); console.error('[domwork-bot] trial nudge failed:', error.code || error.name); }
+    }
     // Isitish alohida savepoint ichida: xatosi eslatma va hisobotlarni orqaga qaytarmasin.
     await db.query('SAVEPOINT funnel_drip');
     try { await require('./funnel').drip(db,now); await db.query('RELEASE SAVEPOINT funnel_drip'); }
