@@ -827,18 +827,22 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         const counts = (await pool.query('SELECT status, COUNT(*)::int AS n FROM school_edit_requests GROUP BY status')).rows;
         return { requests: rows, counts: Object.fromEntries(counts.map(c => [c.status, c.n])) };
     }));
+    // Tasdiqdan oldin server tekshiruvi (yozmaydi): bo'sh vaqt, tarif, to'lovga ta'sir.
+    router.get('/edit-requests/:id/check', handle(req => { need(req, MANAGE); return write(req, c => O.checkRequest(c, req.params.id)); }));
     router.post('/edit-requests/:id/decide', handle(req => write(req, c => O.decideRequest(c, req.user, req.params.id, req.body || {}).then(r => ({ request: r })))));
 
     // ── Telegram guruhlar ────────────────────────────────────────────────────
     router.get('/groups', handle(async req => {
         need(req, MANAGE);
-        return { groups: (await pool.query(`SELECT g.*, s.name AS student_name, s.teacher_id, s.assistant_teacher_id FROM school_student_groups g
-            JOIN students s ON s.id=g.student_id ORDER BY g.name`)).rows, nextName: await O.nextGroupName(pool, await groupLang(req)) };
+        return { groups: (await pool.query(`SELECT g.*, s.name AS student_name, s.teacher_id, s.assistant_teacher_id, s.subject,
+                COALESCE(s.extra_data->>'saleManagerId', s.extra_data->>'managerId', '') AS manager_id FROM school_student_groups g
+            JOIN students s ON s.id=g.student_id WHERE COALESCE(s.extra_data->>'isStaffDemo', 'false') <> 'true' ORDER BY g.name`)).rows, nextName: await O.nextGroupName(pool, await groupLang(req)) };
     }));
     router.put('/students/:id/group', handle(async req => {
         const mid = await managerId(req);
         return write(req, c => O.setGroup(c, req.user, req.params.id, req.body || {}, { managerId: mid }).then(g => ({ group: g })));
     }));
+    router.put('/students/:id/group/members', handle(req => { need(req, MANAGE); return write(req, c => O.setGroupMembers(c, req.user, req.params.id, req.body || {}).then(g => ({ group: g }))); }));
     router.get('/groups/next-name', handle(async req => { need(req, new Set([...MANAGE, 'sales_manager'])); return { name: await O.nextGroupName(pool, await groupLang(req)) }; }));
     router.post('/groups/auto-name', handle(req => { need(req, FULL); return write(req, c => O.autoNameGroups(c, req.user).then(n => ({ named: n }))); }));
     // Ustoz/yordamchi/sotuv: o'z o'quvchilari guruh nomi va havolasi (bosilsa Telegram ochiladi).

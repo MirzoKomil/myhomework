@@ -288,6 +288,7 @@ function applyRoleBasedAccess(user) {
         // 17-ish: sahifa obnovleniya (refresh) qilinganda foydalanuvchi
         // oldin qaysi bo'limda bo'lgan bo'lsa, o'sha bo'limdan davom etsin —
         // aks holda hozirgacha har doim "Bosh sahifa"ga qaytib ketardi.
+        applyDesignSidebar(role);
         const last = loadLastTab();
         if (last && last.tab && !hiddenForRop.has(last.tab)) {
             setTimeout(() => switchTab(last.tab, last.ctx || {}), 50);
@@ -314,6 +315,7 @@ function applyRoleBasedAccess(user) {
     sidebar.querySelectorAll('.menu-item').forEach(el => {
         if (allowedSet.has(el.dataset.tab)) el.style.display = '';
     });
+    applyDesignSidebar(role);
     // YordamchiBosh: sof yordamchida (asosiy o'quvchisi yo'q) "Sinov darslari" yo'q; sinov kelsa son belgisi bilan qaytadi (js/staffNavBadges.js).
     if (role === 'teacher') window.staffNavBadges?.applyRole(user);
 
@@ -891,12 +893,90 @@ function startCoreDataPolling() {
 }
 
 function isMenuItemActive(el, tab, ctx) {
+    // Dizayn sidebar'i: ichki sahifa ochilganda o'z bo'limi faol (Tasdiqlar → O'quvchilar; Guruhlar, Aloqalar → Akademik bo'lim).
+    if (DESIGN_TAB_PARENT[tab] && el.dataset.tab === DESIGN_TAB_PARENT[tab] && !el.dataset.navSales) return true;
     if (el.dataset.tab !== tab) return false;
+    // ROP / sotuv: "Lidlar", "Reyting"… — Sotuv bo'limining shu ichki bo'limi ochiq bo'lsa faol; "Sotuv bo'limi" esa qolganlarida.
+    if (tab === 'sales') {
+        const sec = ctx.salesSection || 'leads';
+        const navSec = v => (v === 'trials' ? 'leads' : v);
+        if (el.dataset.navSales) return navSec(el.dataset.navSales) === sec && (el.dataset.navSales !== 'trials' || ctx.navSales === 'trials') && (el.dataset.navSales !== 'leads' || ctx.navSales !== 'trials');
+        const own = [...document.querySelectorAll('#sidebarMenu .menu-item[data-nav-sales]')].some(x => x.style.display !== 'none' && navSec(x.dataset.navSales) === sec);
+        if (own) return false;
+    }
     if (tab === 'placeholder') return el.dataset.placeholder === ctx.placeholder;
     if (el.dataset.subject) return el.dataset.subject === (ctx.subject || '');
     // students endi sidebar sub-itemsiz — tab active bo'lsa, menuItem ham active
     if (ctx.subject && ['leads', 'timetable'].includes(tab)) return false;
     return true;
+}
+
+// Ichki sahifa → sidebar'dagi ota band (AdminSotuvTasdiq, AdminGuruhlar, AdminAloqalar dizaynlari).
+const DESIGN_TAB_PARENT = { 'school-approvals': 'students', 'school-groups': 'teachers-section', 'school-assist': 'teachers-section' };
+// Rol bo'yicha sidebar tartibi (dizayn: Admin*, RopJadval, SotuvJadval). Kalit — data-tab yoki "nav:<sotuv bo'limi>".
+// Dizaynda yo'q, lekin ishlab turgan bo'limlar o'chirilmaydi — ro'yxat oxirida "Boshqa" ostida qoladi.
+const DESIGN_SIDEBAR = {
+    admin: { main: ['dashboard', 'sales', 'marketing', 'students', 'timetable', 'teachers-section', 'finance', 'hr', 'analitika', 'student-app'], extra: [] },
+    rop: { main: ['dashboard', 'sales', 'nav:leads', 'timetable', 'trial-lessons', 'students', 'nav:rating', 'nav:sales-plan'], extra: ['marketing', 'teachers-section', 'student-app', 'guides'] },
+    sales_manager: { main: ['dashboard', 'nav:leads', 'timetable', 'students', 'nav:debtors', 'nav:sales-plan', 'nav:rating', 'nav:scripts', 'nav:trials'], extra: ['marketing', 'analitika', 'student-app', 'guides'] }
+};
+DESIGN_SIDEBAR.boshliq = DESIGN_SIDEBAR.admin;
+function applyDesignSidebar(role) {
+    const sidebar = document.getElementById('sidebarMenu');
+    if (!sidebar) return;
+    syncDesignGoButtons(role);
+    const cfg = DESIGN_SIDEBAR[role];
+    const navItems = [...sidebar.querySelectorAll('.menu-item[data-nav-sales]')];
+    sidebar.querySelector('.menu-sep[data-design-sep]')?.remove();
+    if (!cfg) { navItems.forEach(el => { el.style.display = 'none'; }); return; }
+    const find = key => key.startsWith('nav:') ? sidebar.querySelector(`.menu-item[data-nav-sales="${key.slice(4)}"]`) : sidebar.querySelector(`.menu-item[data-tab="${key}"]:not([data-nav-sales])`);
+    const keep = new Set([...cfg.main, ...cfg.extra]);
+    // Ro'yxatda yo'q bandlar yashiriladi (Tasdiqlar, Telegram guruhlar, Yordamchi aloqalari — O'quvchilar va Akademik bo'lim ichida).
+    sidebar.querySelectorAll(':scope > .menu-item').forEach(el => {
+        const key = el.dataset.navSales ? 'nav:' + el.dataset.navSales : el.dataset.tab;
+        if (!keep.has(key)) el.style.display = 'none';
+        else if (el.dataset.navSales) el.style.display = '';
+    });
+    cfg.main.forEach(k => { const el = find(k); if (el) sidebar.appendChild(el); });
+    const extras = cfg.extra.map(find).filter(el => el && el.style.display !== 'none');
+    if (extras.length) {
+        const sep = document.createElement('div');
+        sep.className = 'menu-sep'; sep.dataset.designSep = '1'; sep.setAttribute('role', 'presentation'); sep.textContent = 'Boshqa';
+        sidebar.appendChild(sep);
+        extras.forEach(el => sidebar.appendChild(el));
+    }
+}
+// Sidebar'dan olingan sahifalarga kirish: O'quvchilar va Akademik bo'lim ichki navigatsiyasidagi tugmalar ([data-go-tab])
+// va sahifa boshidagi "← O'quvchilar" / "← Akademik bo'lim" havolalari ([data-back-tab]).
+function syncDesignGoButtons(role) {
+    document.querySelectorAll('[data-go-tab][data-go-roles]').forEach(b => { b.hidden = !String(b.dataset.goRoles).split(' ').includes(role); });
+    if (['admin', 'boshliq', 'rop'].includes(role)) refreshApprovalsBadge();
+}
+function refreshApprovalsBadge(counts) {
+    const set = c => document.querySelectorAll('[data-approvals-n]').forEach(el => { const n = Number(c?.pending) || 0; el.hidden = !n; el.textContent = n ? String(n) : ''; });
+    if (counts) return set(counts);
+    if (typeof apiFetch !== 'function') return;
+    apiFetch('/api/school/edit-requests?status=pending').then(r => set(r?.counts)).catch(() => set(null));
+}
+window.refreshApprovalsBadge = refreshApprovalsBadge;
+document.addEventListener('click', e => {
+    const go = e.target.closest?.('[data-go-tab], [data-back-tab]');
+    if (!go || typeof switchTab !== 'function') return;
+    e.preventDefault();
+    const tab = go.dataset.goTab || go.dataset.backTab;
+    switchTab(tab, go.dataset.backSection ? { teachersSection: go.dataset.backSection } : {});
+});
+function openDesignNav(item) {
+    const v = item.dataset.navSales;
+    if (v) {
+        switchTab('sales', { salesSection: v === 'trials' ? 'leads' : v, navSales: v });
+        // Sotuv menejeri "Sinov darslari" — lidlar taxtasidagi "Sinov darsida" ustuni.
+        if (v === 'trials') setTimeout(() => document.querySelector('#tab-sales .lead-column-header--trial')?.scrollIntoView({ block: 'nearest', inline: 'start', behavior: 'smooth' }), 400);
+        return true;
+    }
+    // ROP: "Lidlar" alohida band — "Sotuv bo'limi" statistikadan ochiladi.
+    if (item.dataset.tab === 'sales' && getCurrentUser()?.role === 'rop') { switchTab('sales', { salesSection: 'sales-stats' }); return true; }
+    return false;
 }
 
 function updateSidebarActiveState(tab, ctx) {
@@ -925,6 +1005,7 @@ function switchTab(tab, ctx = {}) {
         subject: ctx.subject || null,
         placeholder: ctx.placeholder || null,
         salesSection: tab === 'sales' ? (ctx.salesSection || 'leads') : (ctx.salesSection || null),
+        navSales: tab === 'sales' ? (ctx.navSales || null) : null,
         teachersSection: ctx.teachersSection || null,
         studentsSection: tab === 'students' ? (ctx.studentsSection || 'faol') : (_tabContext.studentsSection || 'faol'),
         hrSection: tab === 'hr' ? (ctx.hrSection || 'xodimlar') : (_tabContext.hrSection || 'xodimlar'),
@@ -1157,6 +1238,7 @@ function initSidebarMenu() {
             e.preventDefault();
             const tab = item.dataset.tab;
             if (!tab) return;
+            if (openDesignNav(item)) return;
             switchTab(tab, {
                 subject: item.dataset.subject || null,
                 placeholder: item.dataset.placeholder || null,

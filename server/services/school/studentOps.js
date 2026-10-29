@@ -183,6 +183,51 @@ async function decideRequest(db, actor, requestId, { decision, note = '' }, hook
     return rows[0];
 }
 
+// Server tekshiruvi (AdminSotuvTasdiq): so'rov tasdiqlansa nima bo'lishi YOZMASDAN tekshiriladi —
+// yangi jadval/ustoz bo'sh vaqtiga sig'adimi (checkWeekly — tasdiqlashdagi bilan bir qoida), tarif to'g'riligi, to'lovga ta'siri.
+// Natija: [{ level: 'ok' | 'warn' | 'bad', text }]; ok=false — tasdiqlash xato beradi.
+async function checkRequest(db, requestId, now = new Date()) {
+    const req = (await db.query('SELECT * FROM school_edit_requests WHERE id=$1', [requestId])).rows[0];
+    if (!req) throw fail(404, 'So\'rov topilmadi');
+    const row = (await db.query('SELECT * FROM students WHERE id=$1', [req.student_id])).rows[0];
+    if (!row) throw fail(404, 'O\'quvchi topilmadi');
+    const { extra, ...st } = extraOf(row);
+    const ch = req.changes || {};
+    const checks = [];
+    const at = T.nowLocal(now);
+    const hhmm = T.fromMin(at.min);
+    const nameOf = async id => (await db.query('SELECT name FROM hr_employees WHERE id=$1', [id])).rows[0]?.name || id;
+    let slot = null;
+    if (req.kind === 'teacher' && ch.teacherId) slot = { teacherId: ch.teacherId, day: ch.lessonDay ?? st.day, time: ch.lessonTime || st.time, duration: st.duration, fromDate: ch.from };
+    else if (req.kind === 'tariff' && ('lessonDay' in ch || 'lessonTime' in ch || 'lessonDuration' in ch) && st.teacherId)
+        slot = { teacherId: st.teacherId, day: 'lessonDay' in ch ? Number(ch.lessonDay) : st.day, time: 'lessonTime' in ch ? String(ch.lessonTime) : st.time,
+            duration: 'lessonDuration' in ch ? Number(ch.lessonDuration) : st.duration, fromDate: ch.effectiveFrom };
+    if (slot) {
+        const who = await nameOf(slot.teacherId), start = T.toMin(slot.time);
+        const label = `${who} · ${T.patternLabel(slot.day)} ${slot.time}${start != null ? '–' + T.fromMin(start + (Number(slot.duration) || 30)) : ''}`;
+        try {
+            if (req.kind === 'teacher') await S.assertTeacher(db, slot.teacherId);
+            await S.checkWeekly(db, { ...slot, excludeStudentId: req.student_id, now });
+            checks.push({ level: 'ok', text: `${label} bo'sh (4 hafta) · tekshirildi ${hhmm}` });
+        } catch (e) {
+            if (!e.status) throw e;
+            checks.push({ level: 'bad', text: `${label}: ${e.message}` });
+        }
+    }
+    if ('lessonDuration' in ch || 'tariff' in ch || 'monthlyPrice' in ch) {
+        const dur = 'lessonDuration' in ch ? Number(ch.lessonDuration) : st.duration;
+        const price = 'monthlyPrice' in ch ? Number(ch.monthlyPrice) : Number(extra.monthlyPrice || 0);
+        const okDur = [15, 30, 60].includes(dur);
+        checks.push({ level: okDur && price > 0 ? 'ok' : 'warn', text: okDur ? `Tarif: ${dur} daq${price ? ` · ${price.toLocaleString('ru-RU').replace(/\u00a0/g, ' ')} so'm/oy` : ' · narx kiritilmagan'}` : `Davomiylik ${dur} daq — standart tariflar 15 / 30 / 60 daq` });
+        if ('monthlyPrice' in ch && Number(ch.monthlyPrice) !== Number(extra.monthlyPrice || 0)) {
+            const from = ch.effectiveFrom && T.isDate(ch.effectiveFrom) ? ch.effectiveFrom : at.date;
+            checks.push({ level: 'warn', text: from > at.date ? `Joriy oy to'lovi o'zgarmaydi — yangi narx ${from} dan keyingi hisobga` : 'Joriy oy to\'lovi avtomatik qayta hisoblanmaydi — farqni Moliyada tekshiring' });
+        }
+    }
+    if (!checks.length) checks.push({ level: 'ok', text: 'Tekshiradigan jadval yoki tarif o\'zgarishi yo\'q' });
+    return { checks, ok: !checks.some(c => c.level === 'bad'), checkedAt: now.toISOString() };
+}
+
 // ── Holat: muzlatish / to'xtatish / qayta tiklash ────────────────────────────
 async function statusRows(db, studentId) {
     return (await db.query('SELECT * FROM school_student_status WHERE student_id=$1 AND cancelled_at IS NULL ORDER BY from_date, created_at', [studentId])).rows;
@@ -415,6 +460,23 @@ async function setGroup(db, actor, studentId, body, { managerId = null } = {}) {
     await audit(db, studentId, 'group', { before: existing ? { link: existing.tg_link, name: existing.name } : null, after: g }, String(body.reason || ''), actor);
     return rows[0];
 }
+// Guruh a'zolari (admin/ROP belgilaydi): kim guruhga qo'shilgan. Faqat ma'lum rollar va matn id'lar saqlanadi.
+const MEMBER_KEYS = ['student', 'teacher', 'assistant', 'sales', 'rop'];
+async function setGroupMembers(db, actor, studentId, body = {}) {
+    if (!APPROVER_ROLES.has(actor.role)) throw fail(403, 'A\'zolarni admin yoki ROP belgilaydi');
+    const g = (await db.query('SELECT * FROM school_student_groups WHERE student_id=$1 FOR UPDATE', [studentId])).rows[0];
+    if (!g) throw fail(404, 'Guruh topilmadi');
+    const src = body.members && typeof body.members === 'object' ? body.members : {};
+    const members = {};
+    for (const k of MEMBER_KEYS) {
+        const v = src[k];
+        if (k === 'student') { if (v === true) members.student = true; continue; }
+        if (typeof v === 'string' && /^[A-Za-z0-9_.:-]{1,80}$/.test(v)) members[k] = v;
+    }
+    const { rows } = await db.query('UPDATE school_student_groups SET members=$2, updated_by=$3, updated_at=NOW() WHERE student_id=$1 RETURNING *', [studentId, JSON.stringify(members), actor.id]);
+    await audit(db, studentId, 'group-members', { before: g.members || {}, after: members }, String(body.reason || ''), actor);
+    return rows[0];
+}
 // Eski guruhlarga avtomatik nom (havolasi bo'lganlarga, nomi yo'qlarga).
 async function autoNameGroups(db, actor) {
     const { rows } = await db.query(`SELECT s.id, s.subject, s.extra_data FROM students s LEFT JOIN school_student_groups g ON g.student_id=s.id
@@ -453,5 +515,5 @@ async function history(db, studentId) {
     return (await db.query('SELECT * FROM school_student_audit WHERE student_id=$1 ORDER BY created_at DESC, id DESC LIMIT 200', [studentId])).rows;
 }
 
-module.exports = { ADMIN_ROLES, APPROVER_ROLES, FREEZE_MAX_DAYS, FINISHED, isFinishedRow, soldBy, applyEdit, edit, createRequest, decideRequest, freeze, stop, finish, restore,
-    changeTeacher, syncLegacy, protectSchoolFields, bumpRev, applyDue, setGroup, nextGroupName, autoNameGroups, ensureProvisionGroup, cleanGroup, history, statusRows, audit };
+module.exports = { ADMIN_ROLES, APPROVER_ROLES, FREEZE_MAX_DAYS, FINISHED, isFinishedRow, soldBy, applyEdit, edit, createRequest, decideRequest, checkRequest, freeze, stop, finish, restore,
+    changeTeacher, syncLegacy, protectSchoolFields, bumpRev, applyDue, setGroup, setGroupMembers, nextGroupName, autoNameGroups, ensureProvisionGroup, cleanGroup, history, statusRows, audit };

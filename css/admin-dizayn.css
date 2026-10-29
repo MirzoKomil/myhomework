@@ -1,0 +1,100 @@
+/* Paket A — Admin / ROP / sotuv dizayniga moslash (AUDIT-ARS 7-bo'lim). Yangi qoidalar faqat shu faylda. */
+
+/* ── Logo: dizayndagi ko'k "H" kvadrat + HOMEWORK (hamma rollarda; ustozda avvaldan shunday) ── */
+.sidebar-brand .ud-brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 15px; letter-spacing: .06em; color: var(--text, #0B1220); line-height: 1; }
+.sidebar-brand .ud-logo { width: 36px; height: 36px; border-radius: 11px; background: #0065D6; display: inline-flex; align-items: center; justify-content: center; color: #FFFFFF; flex: none; }
+.sidebar-brand:has(.ud-brand) .brand-logo { display: none !important; }
+html.rd .sidebar-brand:has(.ud-brand) { justify-content: flex-start; padding: 1px 8px 0; margin-bottom: 22px; min-height: 40px; }
+html.rd[data-theme="dark"] .sidebar-brand .ud-brand { color: #E6EBF3; }
+
+/* ── Sidebar: dizaynda yo'q bandlar "Boshqa" ostida ── */
+.sidebar-menu .menu-sep { margin: 14px 12px 6px; padding-top: 12px; border-top: 1px solid var(--border, #E5E9F0); font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted, #8A94A6); }
+.sidebar.collapsed .menu-sep, html.rd .sidebar.is-collapsed .menu-sep { font-size: 0; margin: 10px 8px; padding-top: 8px; }
+
+/* ── Ichki navigatsiyadagi sahifa tugmalari (Sotuv tahrirlari, Telegram guruhlar, Yordamchi aloqalari) ── */
+.section-nav-go[hidden] { display: none !important; }
+.section-nav-go .nav-go-n { display: inline-flex; min-width: 20px; height: 20px; padding: 0 6px; margin-left: 6px; border-radius: 10px; background: #FEF0C7; color: #93370D; font-size: 12px; font-weight: 700; align-items: center; justify-content: center; }
+.section-nav-go .nav-go-n[hidden] { display: none; }
+html[data-theme="dark"] .section-nav-go .nav-go-n { background: #4A3410; color: #FEC84B; }
+
+/* ── "← O'quvchilar" / "← Akademik bo'lim" orqaga havolasi ── */
+.ad-back { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 6px; padding: 0; border: 0; background: none; color: var(--primary, #0065D6); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.ad-back:hover { text-decoration: underline; }
+.ad-back svg { width: 14px; height: 14px; }
+
+/* ── Sotuv tahrirlari · tasdiq (AdminSotuvTasdiq / RopTasdiq) ── */
+.ad-ap { align-items: start; }
+.ad-ri { display: flex; align-items: flex-start; gap: 12px; text-align: left; }
+.ad-ri .sc-grow small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ad-apd h3 { margin: 18px 0 8px; font-size: 13px; font-weight: 700; }
+.ad-apd h3:first-of-type { margin-top: 14px; }
+.ad-who { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.ad-whom, .ad-whos { display: inline-flex; align-items: center; gap: 10px; min-width: 0; }
+.ad-whom > span, .ad-whos > span { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.ad-whom small { color: var(--text-muted, #6B7280); font-size: 12px; }
+.ad-whos { padding: 8px 10px; border-radius: 12px; background: var(--surface-2, #F5F8FC); }
+.ad-whos .sc-tg { font-size: 12px; }
+.ad-dt td:nth-child(3) { width: 28px; text-align: center; color: var(--primary, #0065D6); }
+.ad-dt tr.same td { color: var(--text-muted, #6B7280); }
+.ad-chk, .ad-imp { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.ad-chk li, .ad-imp li { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; line-height: 20px; }
+.ad-chk li > i, .ad-imp li > i { flex: none; width: 20px; height: 20px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-style: normal; font-size: 12px; font-weight: 700; }
+.ad-chk li.is-ok > i { background: #DCFAE6; color: #067647; }
+.ad-chk li.is-warn > i { background: #FEF0C7; color: #93370D; }
+.ad-chk li.is-bad > i { background: #FEE4E2; color: #B42318; }
+.ad-chk li.is-bad { color: #B42318; }
+.ad-imp li > i { background: #EAF2FF; color: #0065D6; }
+html[data-theme="dark"] .ad-whos { background: rgba(255,255,255,.05); }
+html[data-theme="dark"] .ad-chk li.is-ok > i { background: #053321; color: #75E0A7; }
+html[data-theme="dark"] .ad-chk li.is-warn > i { background: #4A3410; color: #FEC84B; }
+html[data-theme="dark"] .ad-chk li.is-bad > i { background: #55160C; color: #FDA29B; }
+html[data-theme="dark"] .ad-chk li.is-bad { color: #FDA29B; }
+html[data-theme="dark"] .ad-imp li > i { background: #102A56; color: #84ADFF; }
+
+/* ── Telegram guruhlar (AdminGuruhlar / RopGuruhlar) ── */
+.ad-gq { margin: 0 0 16px; max-width: 320px; }
+.ad-gq input { width: 100%; }
+.ad-k4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.ad-bad { color: #B42318 !important; }
+html[data-theme="dark"] .ad-bad { color: #FDA29B !important; }
+.ad-tw { overflow-x: auto; }
+.ad-gt td { vertical-align: middle; }
+.ad-gc { min-width: 240px; }
+.ad-gn { display: inline-flex; align-items: center; gap: 6px; }
+.ad-gn svg { color: #229ED9; }
+.ad-gc small { display: block; margin-top: 3px; font-size: 12px; }
+.ad-gl { color: var(--text-muted, #6B7280); }
+.ad-gs { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; }
+.ad-team small { display: block; font-size: 12px; color: var(--text-muted, #6B7280); line-height: 18px; }
+.ad-team b { color: var(--text, #0B1220); font-weight: 600; }
+.ad-mem { border: 0; border-radius: 999px; padding: 3px 9px; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.ad-mem.is-ok { background: #DCFAE6; color: #067647; }
+.ad-mem.is-bad { background: #FEE4E2; color: #B42318; }
+.ad-mem.is-none { background: var(--surface-2, #F2F4F7); color: var(--text-muted, #6B7280); font-weight: 600; }
+html[data-theme="dark"] .ad-mem.is-ok { background: #053321; color: #75E0A7; }
+html[data-theme="dark"] .ad-mem.is-bad { background: #55160C; color: #FDA29B; }
+html[data-theme="dark"] .ad-team b { color: #E6EBF3; }
+.ad-gact { white-space: nowrap; text-align: right; }
+.ad-ib { width: 34px; height: 34px; padding: 0; display: inline-flex; align-items: center; justify-content: center; margin-left: 6px; }
+.ad-tg { color: #229ED9; }
+.ad-gt tr.is-edit { box-shadow: inset 3px 0 0 var(--primary, #0065D6); background: var(--surface-2, #F5F8FC); }
+.ad-ged { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.ad-ged input { flex: 1 1 180px; min-width: 0; }
+.ad-mems { display: grid; gap: 10px; margin-top: 12px; }
+.ad-mems .sc-chk { display: flex; gap: 10px; align-items: center; }
+.ad-gfoot { margin: 0; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+@media (max-width: 760px) {
+  .ad-k4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ad-gq { max-width: none; }
+  /* 390px: guruhlar jadvali kartalarga aylanadi (gorizontal scroll yo'q). */
+  .ad-gt thead { display: none; }
+  .ad-gt, .ad-gt tbody, .ad-gt tr, .ad-gt td { display: block; width: 100%; }
+  .ad-gt tr { padding: 12px 14px; border-bottom: 1px solid var(--border, #E5E9F0); }
+  .ad-gt td { padding: 3px 0; border: 0; }
+  .ad-gc { min-width: 0; }
+  .ad-gact { text-align: left; }
+  .ad-ib:first-child { margin-left: 0; }
+  .ad-who { flex-direction: column; align-items: stretch; }
+}
