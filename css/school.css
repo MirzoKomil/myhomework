@@ -352,6 +352,11 @@ body.sc-card-open .content-main > .tab-content { display: none !important; }
 .scc-call { display: inline-flex; align-items: center; gap: 8px; min-height: 38px; padding: 0 14px; border-radius: 12px; border: 0; background: var(--kb-ok-bg); color: var(--kb-ok-fg); font: 700 13px inherit; cursor: pointer; }
 .scc-acts { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
 .scc-acts .sc-btn { min-height: 44px; font-weight: 700; }
+/* BAHO-5 yordamchi #4: tugmalar sarlavha qatorining o'ng tomonida, bitta qatorda (YordamchiKarta/UstozOquvchiKarta dizayni);
+   tor ekranda sarlavha ostiga o'tadi. */
+.scc-hrow { flex-wrap: wrap; }
+.scc-hrow > .scc-acts { margin: 0 0 0 auto; align-self: flex-end; flex: none; max-width: 100%; }
+@media (max-width: 1099px) { .scc-hrow > .scc-acts { flex-basis: 100%; margin-top: 6px; } }
 .scc-tabs { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 10px; }
 .scc-tabs [role=tablist] { display: flex; gap: 28px; overflow-x: auto; scrollbar-width: thin; }
 .scc-tab { border: 0; border-bottom: 2px solid transparent; background: none; min-height: 48px; padding: 0 2px; font: 600 14px inherit; color: var(--text-muted, #4B5563); cursor: pointer; white-space: nowrap; }
@@ -549,3 +554,27 @@ html.rd[data-theme="dark"] .okx-warn { color: var(--kb-warn-fg); }
 .mh-lerr-cell { color: var(--kb-bad-fg, #B42318); font-weight: 600; }
 /* Qo'ng'iroqcha paneli: xodim bildirishnomalari yuklanmadi (js/loadError.js) */
 .notif-lerr { padding: 10px 12px; }
+
+/* ── /api/state yuklanmadi (js/app.js showBootError) — ilova ustidan to'liq ekran; rol menyusi/sidebar ko'rinmaydi ── */
+body.mh-boot-failed .app-shell { visibility: hidden; }
+.mh-boot-fail { position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 16px; background: var(--bg, #F5F7FB); color: var(--text, #0B1220); overflow-y: auto; }
+.mh-boot-card { width: 100%; max-width: 440px; background: var(--surface, #FFFFFF); border: 1px solid var(--border, #E6EAF2); border-radius: 20px; padding: 32px 28px; text-align: center; box-shadow: 0 12px 40px rgba(15, 23, 42, .08); }
+.mh-boot-logo { height: 32px; width: auto; margin-bottom: 18px; }
+.mh-boot-card h2 { margin: 0 0 8px; font-size: 20px; font-weight: 800; letter-spacing: -0.01em; }
+.mh-boot-reason { margin: 0 0 6px; color: var(--kb-bad-fg, #B42318); font-size: 14px; font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; }
+.mh-boot-note { margin: 0 0 6px; color: var(--text-muted, #4B5563); font-size: 13px; line-height: 1.5; }
+.mh-boot-who { margin: 0; color: var(--text-light, #64748B); font-size: 12.5px; }
+.mh-boot-acts { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
+.mh-boot-out { min-height: 40px; padding: 0 16px; border-radius: 12px; border: 1px solid var(--border, #E6EAF2); background: transparent; color: var(--text, #0B1220); font: 600 14px inherit; font-family: inherit; cursor: pointer; }
+.mh-boot-out:hover { background: var(--kb-track, #E2E8F0); }
+/* "Darslar bo'yicha" jadvali tor ekranda (≤640px) kesilmaydi — har dars bitta kartaga aylanadi: Dars va Bosqichlar tepada,
+   1-urinish / Urinish / Xato / Vaqt pastda yorliq bilan bir qatorda (YordamchiKarta 390px). */
+@media (max-width: 640px) {
+    .scc-kt:not(.is-compact) thead { display: none; }
+    .scc-kt:not(.is-compact), .scc-kt:not(.is-compact) tbody { display: block; width: 100%; }
+    .scc-kt:not(.is-compact) tr { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px 10px; padding: 12px 16px; border-bottom: 1px solid var(--scc-line); }
+    .scc-kt:not(.is-compact) tr:last-child { border-bottom: 0; }
+    .scc-kt:not(.is-compact) td { padding: 0; border: 0; white-space: normal; min-width: 0; }
+    .scc-kt:not(.is-compact) td:nth-child(1), .scc-kt:not(.is-compact) td:nth-child(2) { grid-column: 1 / -1; }
+    .scc-kt:not(.is-compact) td:nth-child(n+3)::before { content: attr(data-l); display: block; font-size: 11px; font-weight: 700; color: var(--text-muted, #4B5563); margin-bottom: 2px; }
+}

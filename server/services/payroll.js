@@ -69,7 +69,8 @@ async function initSchema(db) {
     await migrateAssistantRate40(db).catch(err => console.error('[maosh] yordamchi tarifi 40 000 ga o\'tkazilmadi:', err.message));
 }
 // 29-okt qarori: yordamchi ustoz — o'quvchi tarifidan qat'i nazar oyiga 40 000 so'm (13 aloqa), 2026-oktyabrdan.
-// Bir marta: hali eski standart 50 000 turgan til sozlamasi 40 000 ga o'tkaziladi (admin boshqa qiymat qo'ygan bo'lsa tegilmaydi).
+// Bir marta: hali eski standart 50 000 turgan til sozlamasi 40 000 ga o'tkaziladi. Admin qo'lda qo'ygan boshqa qiymat (masalan 45 000)
+// — admin qarori, ataylab tegilmaydi (BAHO-5 yordamchi #9b qarori).
 // Oktyabr hali hisoblanmagan (1-noyabrda yopiladi); to'langan oylar o'z basis'idagi sozlama bilan qoladi.
 const ASSIST40_KEY = 'migrate-assistant-rate-40000';
 async function migrateAssistantRate40(db) {

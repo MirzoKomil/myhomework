@@ -37,6 +37,19 @@
         catch (e) { pdfCache.delete(url); throw e; }
     }
 
+    // PDF/fayl xatosi → foydalanuvchiga o'zbekcha sabab (pdf.js "Missing PDF …" kabi xom inglizcha matn ko'rsatilmaydi).
+    function fileErr(e) {
+        const m = String(e?.message || ''), st = Number(e?.status) || 0;
+        if (st === 404 || /Missing PDF|404/i.test(m)) return { message: 'Fayl serverda topilmadi — administratorga xabar bering' };
+        if (st >= 500) return { status: st, message: 'Server xatosi' };
+        if (/Invalid PDF|corrupt|FormatError/i.test(m)) return { message: 'Fayl buzilgan yoki PDF emas' };
+        if (/PDF kutubxonasi/.test(m)) return { message: m };
+        if (e?.name === 'TypeError' || /Failed to fetch|NetworkError|Unexpected server response \(0\)/i.test(m)) return { name: 'TypeError', message: m };
+        return { message: 'Faylni ochib bo\'lmadi' };
+    }
+    const errCard = (title, e) => (window.LoadErr ? window.LoadErr.html({ title, err: fileErr(e), note: '', cls: 'lp-lerr' })
+        : `<div class="lp-empty">${esc(title)}</div>`);
+
     // Manba (source) → slaydlar ro'yxati.
     async function expandSource(src) {
         if (src.type === 'pdf') {
@@ -270,6 +283,14 @@
             st.revealed = false;
             st.undo = [];
             slideEl.className = 'lp-slide';
+            // Manba yuklanmadi (masalan, fayl 404) — bo'sh holat ("Material yo'q 0/0") emas, xato kartasi + "Qayta urinish".
+            if (!s && st.loadErr) {
+                slideEl.innerHTML = errCard('Materialni ochib bo\'lmadi', st.loadErr);
+                $('.lp-count').textContent = '—';
+                const at = st.srcIndex;
+                window.LoadErr?.bind(slideEl, () => loadSource(at, 1));
+                sizeInk(); return;
+            }
             if (!s) { slideEl.innerHTML = '<div class="lp-empty">Material yo\'q</div>'; sizeInk(); return; }
             if (s.type === 'pdf') {
                 $('.lp-loading').hidden = false;
@@ -324,8 +345,9 @@
             st.srcIndex = i;
             $('.lp-source').value = String(i);
             $('.lp-loading').hidden = false;
+            st.loadErr = null;
             try { st.slides = await expandSource(list[i]); }
-            catch (e) { st.slides = []; slideEl.innerHTML = `<div class="lp-empty">${esc(e.message)}</div>`; }
+            catch (e) { st.slides = []; st.loadErr = e; }
             finally { $('.lp-loading').hidden = true; }
             st.index = Math.max(0, Math.min(st.slides.length - 1, (page || 1) - 1));
             syncSeg();
@@ -571,7 +593,13 @@
         const view = el.querySelector('.lp-rview'), input = el.querySelector('input');
         let doc, cur = page, zoom = 1, token = 0;
         try { doc = await loadPdf(url); }
-        catch (e) { view.innerHTML = `<div class="lp-rmsg">Kitobni ochib bo'lmadi: ${esc(e.message)}</div>`; return null; }
+        catch (e) {
+            // Kitob PDF'i ochilmadi — o'zbekcha xato kartasi + "Qayta urinish" (o'quvchi oynasi qayta quriladi).
+            view.innerHTML = `<div class="lp-rmsg">${errCard('Kitobni ochib bo\'lmadi', e)}</div>`;
+            el.querySelector('.lp-rtotal').textContent = '—';
+            window.LoadErr?.bind(view, () => mountPdfReader(el, { url, page, onPage, spread, title }));
+            return null;
+        }
         el.querySelector('.lp-rtotal').textContent = doc.numPages;
         input.max = doc.numPages;
         const two = () => spread && view.clientWidth > 680 && doc.numPages > 1;

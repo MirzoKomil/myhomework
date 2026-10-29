@@ -26,6 +26,10 @@ html.rd[data-theme="dark"] {
     --kb-warn-fg: #FEDF89; --kb-warn-bg: rgba(247, 144, 9, .18);
     --kb-bad-fg: #FECDCA; --kb-bad-bg: rgba(240, 68, 56, .2);
     --kb-info-fg: #9DC4F5; --kb-info-bg: rgba(59, 139, 238, .18);
+    /* BAHO-5 #9: --text-secondary yorug' rejimda e'lon qilinmagan (fallback #374151/#4B5563 ishlaydi), lekin dark'da ham
+       o'sha to'q kulrang fallback qolib, "Tarix" tab, "Dars bo'ldimi?", sub qatorlar (.sc-mt, .tl-ml, .sc-seg) deyarli ko'rinmasdi.
+       Dark token: #A9B4C8 — surface #131C2E ustida ≈ 8.6:1, track #24304A ustida ≈ 6.6:1 (WCAG AA). */
+    --text-secondary: #A9B4C8;
 }
 
 html.rd body { color: var(--text); }

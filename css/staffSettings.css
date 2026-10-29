@@ -172,6 +172,7 @@ html.rd[data-theme="dark"] .ss-tog i { background: var(--kb-track); }
 .sg-grid { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 20px; align-items: start; }
 .sg-search { padding: 14px 18px; }
 .sg-search input { width: 100%; box-sizing: border-box; min-height: 44px; border-radius: 12px; border: 1px solid var(--kb-input-border); padding: 0 12px; background: var(--surface); color: var(--text); font-weight: 500; font-size: 14px; font-family: inherit; }
+.sg-lerr { margin: 0 18px 12px; }
 .sg-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 .sg-list ul { list-style: none; margin: 0; padding: 0; }
 .sg-list li:last-child .sg-it { border-bottom: 0; }

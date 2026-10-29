@@ -57,6 +57,8 @@ test('real PostgreSQL: alohida yordamchi lavozimi, davomat, HR va maosh integrat
     const NOW = new Date('2026-10-29T10:00:00Z');
     const context = vm.createContext({ tx, teacherDuties: duties, require: requireSafe, payroll,
       assertTeacherAttendanceWindow: (c, o) => rules.assertTeacherAttendanceWindow(c, { ...o, now: NOW }),
+      assertTeacherOwnsDay: rules.assertTeacherOwnsDay,
+      assertStaffAttendanceWindow: o => rules.assertStaffAttendanceWindow({ ...o, now: NOW }),
       isUsableList: Array.isArray, guardBulkDelete: async () => {}, staffLifecycle: require('../server/services/staffLifecycle'),
       schoolSchema: { state: { ready: false } },
       replaceSnapshotRows: async (c, table, _label, incoming) => { const ids = (incoming || []).map(i => i.id); if (ids.length) await c.query(`DELETE FROM ${table} WHERE id = ANY($1)`, [ids]); return []; },

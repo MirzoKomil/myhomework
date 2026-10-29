@@ -231,6 +231,21 @@
     function assistPossible(counted, adviceLeft, cap) {
         return Math.min(cap, (Number(counted) || 0) + (Number(adviceLeft) || 0));
     }
+    // Yordamchi summasi — BITTA formula (server assist.contactAmount ham shuni chaqiradi): round(oylik tarif × aloqa / 13).
+    // 13 × 3077 = 40 001 bo'lgani uchun "aloqa × rate" formulasi ishlatilmaydi (BAHO-5 yordamchi #8).
+    const ASSIST_CAP = 13, ASSIST_MONTHLY = 40000;
+    function assistAmount(monthly, counted, cap = ASSIST_CAP) {
+        return Math.round((Number(monthly) || 0) * (Number(counted) || 0) / (Number(cap) || ASSIST_CAP));
+    }
+    // Yordamchining bugungi (bir kunlik) aloqa holati — Bosh va Davomat "Bugun · N bajarildi" uchun bitta qoida (status — server countMonth):
+    //  'ok' — hisoblangan aloqa bor; 'nc' — bog'langan, lekin hisoblanmagan (5 daqiqadan qisqa va h.k.) — qayta urinish mumkin;
+    //  'na' — faqat "javob bermadi"; '' — aloqa yo'q.
+    function assistDayState(items) {
+        const list = items || [];
+        if (list.some(i => i.status === 'counted')) return 'ok';
+        if (!list.length) return '';
+        return list.some(i => i.outcome !== 'no_answer') ? 'nc' : 'na';
+    }
     return Object.freeze({ INACTIVE, isActiveStudent, statusOn, activeOn, lessonCountsOn, inMonth, weekPlanSlots, weekPlanCount, monthTotals, assistPossible,
-        teacherOn, taughtOn, missedCame, reviewMakeups, withPast, assistMonthPlan });
+        teacherOn, taughtOn, missedCame, reviewMakeups, withPast, assistMonthPlan, assistAmount, assistDayState, ASSIST_CAP, ASSIST_MONTHLY });
 });

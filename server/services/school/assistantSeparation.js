@@ -12,9 +12,10 @@
 //  • Har o'quvchiga school_student_audit yozuvi (sabab bilan). Yordamchi biriktirish tarixi (from/to)
 //    alohida jadvalda saqlanmaydi — tarix shu audit yozuvi va aloqalardagi assistant_id orqali ko'rinadi.
 //  • Bajarilgani school_migrations jadvaliga yoziladi; qayta ishga tushsa hech narsa qilmaydi va logga yozmaydi
-//    (advisory lock — bir vaqtda ikki jarayon ham ikki marta ko'chirmaydi). Ikkalasi topilmasa ham natija
-//    ('not-found') bir marta yoziladi — har ishga tushishda qayta qidirilmaydi; kerak bo'lsa admin qo'lda biriktiradi
-//    (yoki school_migrations dagi shu yozuvni o'chirib, qayta ishga tushiradi).
+//    (advisory lock — bir vaqtda ikki jarayon ham ikki marta ko'chirmaydi). Marker FAQAT muvaffaqiyatli ko'chirishda yoki
+//    "ko'chiriladigan narsa yo'q" (Mohinurda yordamchi o'quvchi qolmagan) bo'lganda yoziladi (BAHO-5 yordamchi #9a).
+//    Mohinur yoki Ayubxon (HR lavozimi 'yordamchi') topilmasa — marker yozilmaydi, sabab logga yoziladi va keyingi
+//    ishga tushishda yana urinadi (masalan, admin Ayubxonning lavozimini 'yordamchi' qilgach o'zi bajariladi).
 //  • Boshqa asosiy ustozlarda qolgan yordamchi o'quvchilar avtomatik KO'CHIRILMAYDI — soni logga yoziladi,
 //    admin "Yordamchi kerak" ogohlantirishida ko'radi (legacyAssignments()).
 const MIGRATION_ID = 'assistant-separation-2026-10-29';
@@ -57,11 +58,21 @@ async function migrate(pool, log = console) {
         else {
             const main = await findOne(c, ['mohinur', 'azimova'], r => MAIN_ROLES.includes(r.role));
             const asst = await findOne(c, ['ayubxon', 'axmadjonov'], r => r.role === 'yordamchi');
-            if (!main.hit || !asst.hit) {
-                result = { skipped: 'not-found', mohinur: main.count, ayubxon: asst.count };
+            const pending = main.hit ? Number((await c.query('SELECT COUNT(*)::int AS n FROM students WHERE assistant_teacher_id=$1', [main.hit.id])).rows[0].n) : null;
+            if (main.hit && pending === 0) {
+                // Ko'chiriladigan narsa yo'q — bajarilgan deb yoziladi.
+                result = { skipped: 'nothing-to-move', from: { id: main.hit.id, name: main.hit.name }, moved: [], kept: [] };
                 await c.query('INSERT INTO school_migrations (id, result) VALUES ($1,$2)', [MIGRATION_ID, JSON.stringify(result)]);
                 await c.query('COMMIT');
-                log.warn(`[yordamchi-alohida] ko'chirilmadi: Mohinur Azimova (asosiy) ${main.count} ta, Ayubxon Axmadjonov (yordamchi) ${asst.count} ta topildi — ikkalasi bittadan bo'lishi kerak`);
+                log.log(`[yordamchi-alohida] ${main.hit.name}da yordamchi o'quvchi yo'q — ko'chirish kerak emas`);
+            } else if (!main.hit || !asst.hit) {
+                // Marker yozilmaydi — keyingi ishga tushishda yana urinadi.
+                result = { skipped: 'not-found', retry: true, mohinur: main.count, ayubxon: asst.count };
+                const anyAyub = asst.hit ? null : await findOne(c, ['ayubxon', 'axmadjonov'], () => true);
+                await c.query('COMMIT');
+                const why = [!main.hit ? `Mohinur Azimova (asosiy ustoz lavozimida) ${main.count} ta topildi` : '',
+                    !asst.hit ? (anyAyub?.count ? `Ayubxon Axmadjonov topildi, lekin HR lavozimi 'yordamchi' emas (${anyAyub.hit?.role || anyAyub.count + ' ta moslik'})` : `Ayubxon Axmadjonov (yordamchi) ${asst.count} ta topildi`) : ''].filter(Boolean).join('; ');
+                log.warn(`[yordamchi-alohida] ko'chirilmadi, keyingi ishga tushishda yana uriniladi: ${why} — ikkalasi bittadan bo'lishi kerak`);
             } else {
                 const lang = roles.language(asst.hit);
                 const studs = (await c.query('SELECT id, name, subject, teacher_id FROM students WHERE assistant_teacher_id=$1 ORDER BY name FOR UPDATE', [main.hit.id])).rows;

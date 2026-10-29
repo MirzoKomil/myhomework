@@ -186,3 +186,4 @@ html.rd[data-theme="dark"] .yd-pc.lo { color: #FDA29B; } html.rd[data-theme="dar
 .sc-fd .yd-ferr, .yd-ferr { display: block; margin-top: 4px; color: var(--kb-bad-fg, #B42318); font-size: 12px; font-weight: 600; line-height: 1.4; }
 .sc-fd .yd-ferr[hidden], .yd-ferr[hidden] { display: none; }
 .sc-fd [aria-invalid="true"] { border-color: var(--kb-bad-fg, #B42318) !important; }
+.ya-pnote { margin: 6px 0 0; font-size: 12px; color: var(--text-muted, #4B5563); line-height: 1.45; }

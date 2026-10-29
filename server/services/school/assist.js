@@ -25,7 +25,8 @@ const CONTACTS_FROM = process.env.ASSIST_CONTACTS_FROM || '2026-10';
 const LEGACY_MONTHLY = 50000;
 // Summa = round(oylik tarif × hisoblangan aloqalar / 13): 13 aloqa aniq oylik tarif (40 000, 40 001 emas).
 // payrollEngine contacts-v1 bilan bir xil formula (har o'quvchi bo'yicha yaxlitlanadi).
-function contactAmount(monthly, counted) { return Math.round((Number(monthly) || 0) * (Number(counted) || 0) / MONTH_CAP); }
+// Bitta formula — js/attendanceRules.assistAmount (brauzer zaxirasi ham shu): round(oylik × aloqa / 13).
+function contactAmount(monthly, counted) { return require('../../../js/attendanceRules').assistAmount(monthly, counted, MONTH_CAP); }
 // O'quvchi kurs boshlagan sana — payrollEngine bilan bir xil (extra_data.startDate || joinDate).
 function studentStartOf(extra) {
     let x = extra;
@@ -182,10 +183,14 @@ async function monthlyRate(db, assistantId, month = null) {
     try {
         if (month) {
             const { from, to } = T.monthBounds(month);
-            const t = (await db.query(`SELECT basis->'settings'->'assistant'->>'rate' AS rate FROM salary_transactions
+            // Faqat YAKUNIY oy (to'langan yozuv yoki oy yakuniy tasdiqlangan — school_assist_months.final_at) o'z tarifini saqlaydi.
+            // To'lanmagan qoralama (masalan, 29-oktgacha 50 000 bilan hisoblangan oktyabr) joriy qoida bo'yicha qayta hisoblanadi (BAHO-5 yordamchi #9c).
+            const t = (await db.query(`SELECT basis->'settings'->'assistant'->>'rate' AS rate, status FROM salary_transactions
                 WHERE employee_id=$1 AND period_start <= $3 AND period_end >= $2 AND basis IS NOT NULL ORDER BY (status='paid') DESC, period_start LIMIT 1`, [assistantId, from, to])).rows[0];
             const snap = Number(t?.rate);
-            if (Number.isFinite(snap) && snap > 0) return { monthly: snap, source: 'paid' };
+            const hasMonths = t && t.status !== 'paid' ? (await db.query("SELECT to_regclass('public.school_assist_months')::text AS t")).rows[0]?.t : null;
+            const final = t && (t.status === 'paid' || (hasMonths && !!(await db.query('SELECT final_at FROM school_assist_months WHERE month=$1', [month])).rows[0]?.final_at));
+            if (final && Number.isFinite(snap) && snap > 0) return { monthly: snap, source: t.status === 'paid' ? 'paid' : 'final' };
             if (month < CONTACTS_FROM) return { monthly: LEGACY_MONTHLY, source: 'legacy' };
         }
         const emp = (await db.query('SELECT * FROM hr_employees WHERE id=$1', [assistantId])).rows[0] || {};

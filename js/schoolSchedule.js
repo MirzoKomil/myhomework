@@ -319,13 +319,28 @@
         const box = openDrawer({ title: 'Vaqtimni o\'zgartirish', sub: 'So\'rov admin tasdig\'iga boradi', body: `
             <div class="sc-chips">${[['leave', 'Ta\'til / dam olish'], ['close', 'Vaqtni yopish'], ['open', 'Qo\'shimcha ochish']].map(([k, l]) => `<label class="sc-chip"><input type="radio" name="type" value="${k}"${k === type ? ' checked' : ''}><span>${l}</span></label>`).join('')}</div>
             <div class="sc-g2 sc-mtop">${field('Sana', `<input type="date" name="date" value="${today()}" min="${today()}">`)}${field('Har hafta (ixtiyoriy)', `<select name="weekday"><option value="">— faqat shu sana —</option>${DAY_FULL.map((d, i) => `<option value="${i + 1}">${d}</option>`).join('')}</select>`)}
-            ${field('Boshlanish', '<input name="from" value="00:00">')}${field('Tugash', '<input name="to" value="24:00">')}</div>
-            ${field('Sabab', '<textarea name="reason" rows="2"></textarea>')}`,
+            ${field('Boshlanish', '<input name="from" value="00:00" required inputmode="numeric" pattern="([01][0-9]|2[0-3]):[0-5][0-9]|24:00" placeholder="09:00">')}${field('Tugash', '<input name="to" value="24:00" required inputmode="numeric" pattern="([01][0-9]|2[0-3]):[0-5][0-9]|24:00" placeholder="18:00">')}</div>
+            ${field('Sabab', '<textarea name="reason" rows="2" required minlength="3" maxlength="300" placeholder="Masalan: shifokor qabuli"></textarea>')}`,
             foot: '<button type="button" class="sc-btn" data-close>Bekor</button><button type="button" class="sc-btn sc-btn--pri" data-save>Yuborish</button>' });
+        // Brauzerda tekshiruv (BAHO-5 #10): bo'sh/noto'g'ri shakl serverga yuborilmaydi (ilgari "Yuborish" → konsolda 400).
+        // Qoidalar server bilan bir xil: sabab ≥ 3 belgi, sana (har hafta tanlanmasa), vaqt HH:MM va boshlanish < tugash.
+        const validate = () => {
+            const el = n => box.querySelector(`[name=${n}]`);
+            const HM = /^(([01]\d|2[0-3]):[0-5]\d|24:00)$/;
+            const r = el('reason'), d = el('date'), f = el('from'), t = el('to');
+            r.setCustomValidity(r.value.trim().length < 3 ? 'Sababni yozing (kamida 3 belgi)' : '');
+            d.setCustomValidity(!el('weekday').value && !d.value ? 'Sanani tanlang yoki "Har hafta" kunini belgilang' : '');
+            f.setCustomValidity(HM.test(f.value.trim()) ? '' : 'Vaqtni SS:DD ko\'rinishida yozing, masalan 09:00');
+            t.setCustomValidity(!HM.test(t.value.trim()) ? 'Vaqtni SS:DD ko\'rinishida yozing, masalan 18:00' : HM.test(f.value.trim()) && f.value.trim() >= t.value.trim() ? 'Tugash vaqti boshlanishdan keyin bo\'lsin' : '');
+            for (const x of [d, f, t, r]) if (!x.checkValidity()) { x.reportValidity(); x.focus(); return false; }
+            return true;
+        };
+        box.querySelectorAll('[name=reason],[name=date],[name=from],[name=to],[name=weekday]').forEach(x => x.addEventListener('input', () => { if (x.validationMessage) x.setCustomValidity(''); }));
         box.querySelector('[data-save]').onclick = async e => {
             const v = n => box.querySelector(`[name=${n}]`).value;
+            if (!validate()) return;
             U().busy(e.target, true);
-            try { await U().post('/requests', { type: box.querySelector('[name=type]:checked').value, date: v('weekday') ? undefined : v('date'), weekday: v('weekday') ? Number(v('weekday')) : undefined, repeat: v('weekday') ? 'weekly' : 'once', from: v('from'), to: v('to'), reason: v('reason') }); U().toast('So\'rov yuborildi'); U().closeDrawer(); done(); }
+            try { await U().post('/requests', { type: box.querySelector('[name=type]:checked').value, date: v('weekday') ? undefined : v('date'), weekday: v('weekday') ? Number(v('weekday')) : undefined, repeat: v('weekday') ? 'weekly' : 'once', from: v('from').trim(), to: v('to').trim(), reason: v('reason').trim() }); U().toast('So\'rov yuborildi'); U().closeDrawer(); done(); }
             catch (err) { U().busy(e.target, false); U().errBox(box, err.message); }
         };
     }
@@ -425,7 +440,13 @@
                     state.makeupFor = null; u.toast('Qoplash rejaga qo\'yildi'); u.closeDrawer(); done?.();
                 } catch (err) { u.busy(save, false); u.errBox(dlg, err.message); }
             };
-        } catch (e) { fail(e.message); }
+        } catch (e) {
+            // Yuklash xatosi (/attendance/missed yoki /makeups) — umumiy xato kartasi + "Qayta urinish" (oyna qayta ochiladi).
+            if (!window.LoadErr || !(e?.status || e?.name === 'TypeError')) return fail(e.message);
+            body.innerHTML = window.LoadErr.html({ title: 'Qoplash ma\'lumotini yuklab bo\'lmadi', err: e, note: '' });
+            dlg.querySelector('[data-dsub]').textContent = '';
+            window.LoadErr.bind(body, () => { dlg.querySelector('[data-close]')?.click(); return makeupDrawer(done, opts); });
+        }
     }
     async function teacherTrialsView(body, reload) {
         const { api, esc, fmtDate, hm, today, addDays } = U();

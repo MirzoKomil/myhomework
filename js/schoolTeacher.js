@@ -68,14 +68,18 @@
         const home = container.querySelector('#teacherHome') || container;
         const alive = () => container.isConnected && home.isConnected;
         const td = today();
-        const mkP = api('/makeups').catch(() => ({ makeups: [] }));
+        // /makeups xatosi bo'sh ro'yxatga aylantirilmaydi (BAHO-5 #3): aks holda har "Kelmadi" qoplanmagan deb sanalib,
+        // "Bajarish kerak"da soxta "9 ta qoplanmagan dars · ≈174 700 so'm" chiqardi. todoItems rad etilgan va'dani oladi,
+        // o'zi qayta so'raydi; yana xato bo'lsa — xato kartasi + "Qayta urinish".
+        const mkP = api('/makeups');
+        mkP.catch(() => { /* quyida ishlanadi */ });
         const payP = window.UstozHome?.myPay ? window.LoadErr.settle(window.UstozHome.myPay()) : Promise.resolve({ ok: true, value: null });
         // Qoplanmagan darslar (≈ ustoz maoshidan) va "e'tibor kerak" — js/ustozHome.js, parallel yuklanadi.
         const extraP = window.UstozHome?.todoItems ? window.UstozHome.todoItems(user, mkP).catch(() => []) : Promise.resolve([]);
         // 29-okt: asosiy ustoz yordamchi bo'la olmaydi. O'tgan yordamchi aloqalari maoshga kiradi — /api/payroll/me (maosh kartasi).
         const [trials, makeups, abs] = await Promise.all([
             (typeof apiFetchTeacherTrialLessons === 'function' ? apiFetchTeacherTrialLessons() : Promise.resolve({ lessons: [] })).catch(() => ({ lessons: [] })),
-            mkP,
+            mkP.catch(() => null),
             api(`/attendance/absences?month=${td.slice(0, 7)}`).catch(() => null)
         ]);
         if (!alive()) return;
@@ -99,10 +103,10 @@
                 if (acts) acts.innerHTML = '<span class="uhb-pill uhb-pill--mute" title="Davomat ma\'lumoti yuklanmadi">—</span>';
             }
         }
-        globalThis.__schoolMakeups = makeups.makeups || [];
+        if (makeups) globalThis.__schoolMakeups = makeups.makeups || [];
         // "+N qoplash tekshiruvda" — shu oyda o'tilgan va tasdiqlab bo'ladigan (missed_came emas) qoplashlar: Davomat va
         // Mening maoshim bilan bitta ta'rif (AttendanceRules.reviewMakeups).
-        const reviewing = window.AttendanceRules?.reviewMakeups
+        const reviewing = !makeups ? 0 : window.AttendanceRules?.reviewMakeups
             ? window.AttendanceRules.reviewMakeups(makeups.makeups, { id: tid, month: td.slice(0, 7), mainAtt: (getItem(STORAGE_KEYS.mainAttendance, {}) || {})[`${td.slice(0, 7)}_${tid}`] }).length
             : (makeups.makeups || []).filter(m => m.status === 'review' && m.missed_came !== true).length;
 

@@ -928,9 +928,11 @@
             const wk = x => x.list.filter(i => i.day >= ws && i.day <= we && i.status === 'counted').length;
             const st = after.list.find(i => i.id === '__new')?.status;
             const tot = rep.counted - before.counted + after.counted;
+            // Summa har o'quvchi bo'yicha — server bilan bitta formula (AttendanceRules.assistAmount), faqat shu o'quvchi qatori o'zgaradi.
+            const amt = n => AttendanceRules.assistAmount(rep.monthly || (rep.rate || RATE) * CAP, Math.min(n, CAP), CAP);
             box.querySelector('[data-prev]').innerHTML = U().impact([
                 ['◷', `${esc(U().shortName(s.name))}: hafta ${wk(before)} → ${wk(after)} / 3 · ${monthGen(month)} ${before.counted} → ${after.counted} / ${CAP}`],
-                ['₪', `${esc(U().shortName(assistant?.name || ''))}: ${rep.counted} → ${tot} aloqa · ${money(rep.amount)} → ${money(tot * (rep.rate || RATE))} so'm`],
+                ['₪', `${esc(U().shortName(assistant?.name || ''))}: ${rep.counted} → ${tot} aloqa · ${money(rep.amount)} → ${money(rep.amount - amt(before.counted) + amt(after.counted))} so'm`],
                 ['i', st === 'counted' ? 'Yangi yozuv hisoblanadi' : `Yangi yozuv hisoblanmaydi${U().CST[st] ? ' — ' + U().CST[st] : st === 'no_answer' ? ' — javob bermadi' : ''}`],
                 ['≡', 'O\'zgarishlar tarixiga yoziladi · yordamchi o\'z ro\'yxatida ko\'radi'],
                 ['⊘', `${monthName(month)} yakuniy tasdiqlangandan keyin tuzatish faqat Moliya orqali`]

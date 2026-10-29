@@ -325,6 +325,14 @@ async function listMaterials(pool, lang, lessonNo) {
     return rows.map(materialRow);
 }
 
+// "Javoblar (ustoz uchun)" materiallari — faqat asosiy ustoz va admin/boshliq/ROP ko'radi; yordamchi ustozga yuborilmaydi
+// (BAHO-5 yordamchi #10 qarori: imtihon javoblari o'quvchi bilan ishlaydigan yordamchida bo'lmasin). Belgi: meta.teacherOnly
+// yoki nomida "javob" / "ustoz uchun".
+const isTeacherOnlyMaterial = m => m?.meta?.teacherOnly === true || /javob|ustoz uchun/i.test(String(m?.title || ''));
+function visibleMaterials(list, access) {
+    return access?.teacher && teacherRoles.isAssistant(access.teacher) ? list.filter(m => !isTeacherOnlyMaterial(m)) : list;
+}
+
 const SAFE_URL = /^(\/uploads\/[\w.-]+|https:\/\/[^\s<>"']+)$/i;
 const META_KEYS = ['lessonFrom', 'lessonTo', 'part', 'pageMap', 'pages', 'durationSec'];
 
@@ -429,7 +437,7 @@ async function getHub(pool, actor, { lang: requested, courseId } = {}) {
     const course = pickCourse(mc, lang, courseId);
     const lessons = courseLessons(mc, course);
     const ru = lang === 'russian' ? loadRussianSource() : {};
-    const materials = await listMaterials(pool, lang);
+    const materials = visibleMaterials(await listMaterials(pool, lang), access);
     const byLesson = {};
     for (const m of materials) if (m.lessonNo) (byLesson[m.lessonNo] ||= []).push(m.kind);
     const syllabus = [];
@@ -520,7 +528,7 @@ async function getLesson(pool, actor, { lang: requested, no, courseId } = {}) {
         lang, prevReview: prevSrc.review || [], prevVocab: (prevSrc.vocab || []).slice(0, 6).map(v => v.ru),
         prevName: prevMeta?.name || '', staff: access.role !== 'teacher',
     });
-    const all = await listMaterials(pool, lang);
+    const all = visibleMaterials(await listMaterials(pool, lang), access);
     const materials = all.filter(m => m.lessonNo === n);
     const book = bookPageFor(all.filter(m => m.kind === 'book'), n);
     const students = await accessibleStudents(pool, access, lang);
@@ -1249,7 +1257,7 @@ async function nextLessons(pool, actor, ids) {
     return { lessons: out };
 }
 
-module.exports = {
+module.exports = { visibleMaterials, isTeacherOnlyMaterial,
     TOTAL_LESSONS, LESSON_KINDS, COURSE_KINDS, PASS_PERCENT,
     initSchema, resolveAccess, getHub, getLesson, saveMaterial, archiveMaterial, listMaterials, nextLessons, accessibleStudents,
     studentsOverview, studentDetail, studentDetailById, studentPresence, recordTracking, progressForIds,

@@ -1,6 +1,6 @@
 (function () {
     'use strict';
-    let selected = 'main', expanded = '', busy = false, lastError = '';
+    let selected = 'main', expanded = '', busy = false, lastError = '', shownError = '';
     const esc = value => escapeHtml(String(value ?? ''));
     // 29-okt: "Yordamchi ustoz sifatida ham" (ikkilamchi rol) o'chirildi — yordamchi alohida lavozim.
     function employeeField() { return ''; }
@@ -68,6 +68,8 @@
     const ASSIST_FROM = '2026-10';
     const DAYS = ['Du', 'Se', 'Ch', 'Pa', 'Ju', 'Sh', 'Ya'];
     const MONTHS = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentyabr', 'Oktyabr', 'Noyabr', 'Dekabr'];
+    // Bugungi darsga davomat dars boshlanishidan shuncha daqiqa oldin ochiladi — server TEACHER_MARK_BEFORE_MIN bilan bir xil.
+    const MARK_BEFORE_MIN = 15;
     const toMin = t => { const m = /^(\d{1,2}):(\d{2})/.exec(String(t || '')); return m ? Number(m[1]) * 60 + Number(m[2]) : null; };
     // UstozDavomat dizayni: yuqorida "Bugun" + oy hisobi (ikki ustun), pastda "O'quvchilarim davomati" (segment, oy, akkordeon).
     const SVG = {
@@ -195,7 +197,9 @@
             const liveNo = sid => nx.lessons[sid]?.nextLive?.no || null;
             const rows = list.map(s => {
                 const st = calendar.status((mainAtt[s.id] || {})[todayDay]);
-                const start = toMin(s.lessonTime), started = start == null || nowMin >= start;
+                // Belgilash oynasi server qoidasi bilan bir xil (server/services/teacherAttendanceRules.js TEACHER_MARK_BEFORE_MIN):
+                // bugungi dars boshlanishidan 15 daqiqa oldin ochiladi (18:00 dars → 17:45 dan).
+                const start = toMin(s.lessonTime), started = start == null || nowMin >= start, canMark = start == null || nowMin >= start - MARK_BEFORE_MIN;
                 const ended = start != null && nowMin >= start + (Number(s.lessonDuration) || 15);
                 const live = st === 'present' ? (getItem(STORAGE_KEYS.liveGrades, {})[s.id] || []).find(g => g && g.date === today && g.teacherId === id) : null;
                 const open = st === 'empty' && month >= '2026-10' ? openMissedFor(s.id).filter(d => d < today) : [];
@@ -207,8 +211,8 @@
                 let action, ask = '';
                 if (st === 'present') action = `<span class="udv-pill is-ok">Keldi${live?.lessonName ? ` · ${esc(live.lessonName)}` : ''}</span><button type="button" class="udv-btn" data-duty-today="${esc(s.id)}">O‘zgartirish</button>`;
                 else if (st === 'absent') action = `<span class="udv-pill is-bad">Kelmadi</span><button type="button" class="udv-btn" data-duty-today="${esc(s.id)}">O‘zgartirish</button>`;
-                else if (started) {
-                    action = ended ? '<span class="udv-pill is-warn">Belgilanmagan</span>' : `<span class="udv-pill is-info"><span class="udv-live"></span>Hozir</span>${startBtn(s, 'Darsni boshlash')}`;
+                else if (canMark) {
+                    action = ended ? '<span class="udv-pill is-warn">Belgilanmagan</span>' : started ? `<span class="udv-pill is-info"><span class="udv-live"></span>Hozir</span>${startBtn(s, 'Darsni boshlash')}` : startBtn(s, 'Darsni boshlash') || '<span class="udv-pill is-mute">Kutilmoqda</span>';
                     ask = `<div class="udv-mark" role="group" aria-label="${esc(s.name)} davomatini belgilash"><span class="udv-ml">Dars bo‘ldimi?</span><span class="udv-opt">
                         <button type="button" class="udv-ob is-pri" data-duty-quick="1" data-sid="${esc(s.id)}">Keldi</button>
                         ${open.length ? `<button type="button" class="udv-ob" data-duty-double="${esc(s.id)}" title="Qoplanmagan dars o'rniga: ${open.length === 1 ? dm(open[0]) : 'tanlaysiz'}">Keldi · 2 dars</button>` : ''}
@@ -294,11 +298,12 @@
                 const late = state === 'absent' && covered.has(cell.date);
                 // O'quvchi shu kuni faol emas (muzlatilgan / chiqib ketgan) — dars kutilmaydi, "dars kuni emas" kabi ko'rinadi.
                 const frozenDay = selected === 'main' && cell.scheduled && !countsOn(s, cell.date);
-                // Boshqa ustoz o'tgan kun (ustoz almashgan) — bu ustozning dars kuni emas; o'tgan o'quvchida hech bir kun o'zgartirilmaydi.
+                // Boshqa ustoz o'tgan kun (ustoz almashgan) — bu ustozning dars kuni emas, bosilmaydi (server ham 403, assertTeacherOwnsDay).
+                // O'tgan o'quvchi (hozir boshqa ustozda): faqat O'Z davringizdagi dars kunlarini tuzatasiz (oy yopilmagan bo'lsa).
                 const otherDay = selected === 'main' && cell.scheduled && !window.AttendanceRules.taughtOn(s, id, cell.date);
                 const cls = state === 'present' ? ' is-ok' : state === 'absent' ? ' is-no' : m ? ' is-q' + (m.status === 'review' ? ' is-rev' : '')
                     : !cell.scheduled || frozenDay || otherDay ? ' is-x' : cell.date > today ? ' is-pl' : '';
-                return `<button type="button" class="udv-d${cls}${cell.scheduled ? ' duty-scheduled' : ' duty-offday'}${m ? ' duty-has-mk' + (m.status === 'review' ? ' is-review' : '') : ''}${late ? ' is-cv' : ''}${cell.date === today ? ' is-td' : ''}" data-duty-student="${esc(s.id)}" data-duty-day="${cell.day}" data-status="${state}" ${isPast ? ' disabled' : ''} aria-label="${cell.day}-${MON3[mm - 1]}: ${label}${cell.scheduled ? (frozenDay ? ', o‘quvchi faol emas (muzlatilgan)' : otherDay ? ', boshqa ustoz darsi' : '') : ', dars kuni emas'}${m?.status === 'review' ? ', tekshiruvda' : ''}${m?.missed_came ? ', maoshga o‘tmaydi (qoldirilgan kunda Keldi bor)' : ''}${late ? ', keyin qoplandi' : ''}${cell.date === today ? ', bugun' : ''}" aria-pressed="${state === 'present'}"><time datetime="${cell.date}">${cell.day}</time>${m?.kind === 'double' ? '<sup>×2</sup>' : ''}</button>`;
+                return `<button type="button" class="udv-d${cls}${cell.scheduled ? ' duty-scheduled' : ' duty-offday'}${m ? ' duty-has-mk' + (m.status === 'review' ? ' is-review' : '') : ''}${late ? ' is-cv' : ''}${cell.date === today ? ' is-td' : ''}" data-duty-student="${esc(s.id)}" data-duty-day="${cell.day}" data-status="${state}" ${(isPast && !cell.scheduled) || otherDay ? ' disabled' : ''} aria-label="${cell.day}-${MON3[mm - 1]}: ${label}${cell.scheduled ? (frozenDay ? ', o‘quvchi faol emas (muzlatilgan)' : otherDay ? ', boshqa ustoz darsi' : '') : ', dars kuni emas'}${m?.status === 'review' ? ', tekshiruvda' : ''}${m?.missed_came ? ', maoshga o‘tmaydi (qoldirilgan kunda Keldi bor)' : ''}${late ? ', keyin qoplandi' : ''}${cell.date === today ? ', bugun' : ''}" aria-pressed="${state === 'present'}"><time datetime="${cell.date}">${cell.day}</time>${m?.kind === 'double' ? '<sup>×2</sup>' : ''}</button>`;
             }).join('');
             const mon = MON3[mm - 1];
             const csum = selected !== 'main' ? '' : `<div class="udv-csum">
@@ -314,7 +319,10 @@
             <div class="udv-help"><span>${oldAssist ? 'Bu oy maoshi eski yordamchi davomati bo‘yicha.' : 'Dars kunini bosib davomat qo‘ying. Qayta bossangiz — o‘zgartirasiz yoki olib tashlaysiz.'}</span><div class="udv-leg">${legend}</div></div>
             <div class="udv-list" role="region" aria-label="O'quvchilar">${rowsHtml || '<p class="udv-empty">Bu rolda faol o‘quvchilar biriktirilmagan.</p>'}${more}</div></section>`;
         const note = selected === 'main' ? `<div class="udv-note">${SVG.undo}<div><b>Qoldirilgan darsni qoplash.</b> O‘quvchi kelmagan darsni shu oy ichida o‘tib bersangiz, maoshingizga hisoblanadi: dars kuni bo‘lmagan kunni bosib <b>"Qoplash darsi"</b> qo‘ying yoki keyingi darsda <b>"Keldi · 2 dars"</b> ni tanlang (qo‘shaloq dars). Qoplash admin tasdig‘idan keyin o‘tadi. Oyiga rejadagi darslardan ortiq hisoblanmaydi.</div></div>` : '';
-        root.innerHTML = `<div class="udv">${top}${myCard}${note}<p class="udv-err" data-duty-error role="alert">${esc(lastError)}</p></div>`;
+        // Server xatosi (masalan "davomat 17:45 dan") — sahifa TEPASIDA (ilgari eng pastda, ko'rinmas edi) + toast.
+        root.innerHTML = `<div class="udv"><p class="udv-err udv-err--top" data-duty-error role="alert">${esc(lastError)}</p>${top}${myCard}${note}</div>`;
+        if (lastError && lastError !== shownError) { shownError = lastError; window.schoolUI?.toast?.(lastError, 5000); root.querySelector('[data-duty-error]')?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' }); }
+        if (!lastError) shownError = '';
         bindMonth(); bindToday();
         root.querySelectorAll('[data-duty-expand]').forEach(button => { button.onclick = () => {
             if (busy) return;
@@ -338,20 +346,28 @@
             const dLabel = d => `${Number(d.slice(8))}-${MON3[Number(d.slice(5, 7)) - 1]}`, title = `${dLabel(date)}${dayOf(date) ? ', ' + dayOf(date) : ''}`;
             const STATE = { present: ['Keldi', 'is-ok'], absent: ['Kelmadi', 'is-no'], empty: ['Belgilanmagan', 'is-mute'] }[status] || ['Belgilanmagan', 'is-mute'];
             const pick = missed.length ? `<div class="oqm-fl">Qaysi qoldirilgan dars o'rniga?</div>${missed.map((d, i) => `<label class="oqm-opt"><input type="radio" name="dutyMissed" value="${d}"${i === 0 ? ' checked' : ''}><span class="oqm-radio" aria-hidden="true"></span><span class="oqm-tx"><span class="oqm-nm">${dLabel(d)}${dayOf(d) ? ', ' + esc(dayOf(d)) : ''}</span><span class="oqm-mt">kelmagan · hali qoplanmagan</span></span><span class="oqm-pill is-teal">Qoplash mumkin</span></label>`).join('')}` : '';
-            const mkButtons = !missed.length ? '' : offday
+            const pastStu = role === 'main' && student.teacherId !== id; // ustoz almashgan — qoplash yangi ustozda
+            const mkButtons = !missed.length || pastStu ? '' : offday
                 ? '<button type="button" class="oqm-btn is-pri" id="dutyMkSep">Qoplash darsi o‘tildi</button>'
                 : '<button type="button" class="oqm-btn" id="dutyMkDouble">Keldi · 2 dars</button>';
             // Kelajak sanaga va yopilgan (o'tgan) oyga ustoz davomat qo'ymaydi — server ham rad etadi (recordTeacherAttendance).
             const futureDay = date > today, closedMonth = month < today.slice(0, 7);
+            // Bugungi dars hali 15 daqiqalik oynaga kirmagan — server ham rad etadi (400 "davomat HH:MM dan qo'yiladi").
+            const st0 = toMin(student.lessonTime), opensAt = st0 == null ? null : Math.max(0, st0 - MARK_BEFORE_MIN);
+            const nowT2 = new Date(Date.now() + 5 * 3600000), nowMin2 = nowT2.getUTCHours() * 60 + nowT2.getUTCMinutes(); // oyna ochilgan payt
+            const tooEarly = role === 'main' && !offday && date === today && opensAt != null && nowMin2 < opensAt;
+            const hhmm = m => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
             const note = closedMonth ? 'Oy yopilgan — davomatni endi admin orqali tuzatish mumkin.' : futureDay ? 'Bu kun hali kelmagan — davomat dars kuni qo‘yiladi.'
+                : tooEarly ? `Dars hali boshlanmagan — davomat ${hhmm(opensAt)} dan qo‘yiladi (dars boshlanishidan ${MARK_BEFORE_MIN} daqiqa oldin).`
                 : role === 'main' && offday && month >= '2026-10'
                 ? 'Bu kun dars kuni emas. Maoshga faqat qoplash darsi sifatida, admin tasdig‘idan keyin o‘tadi.'
-                : role === 'main' && offday ? 'Bu kun dars kuni emas.' : '';
-            const noMark = (role === 'main' && offday && month >= '2026-10') || futureDay || closedMonth;
-            const body = `<div class="oqm-box udv-dlg-st">Hozirgi holat: <span class="oqm-pill ${STATE[1]}">${STATE[0]}</span>${status !== 'empty' && !closedMonth ? '<button type="button" class="oqm-link" id="dutyRemove">Belgini olib tashlash</button>' : ''}</div>${pick}<div class="oqm-rule">${note ? esc(note) + ' ' : ''}${futureDay || closedMonth ? '' : noMark && !missed.length ? 'Bu oyda qoplanmagan dars yo‘q.' : 'Shu kundagi davomatni tanlang.'}</div>`;
+                : role === 'main' && offday ? 'Bu kun dars kuni emas.'
+                : pastStu ? 'O‘quvchi hozir boshqa ustozda — siz faqat o‘z davringizdagi darsni tuzatasiz.' : '';
+            const noMark = (role === 'main' && offday && month >= '2026-10') || futureDay || closedMonth || tooEarly;
+            const body = `<div class="oqm-box udv-dlg-st">Hozirgi holat: <span class="oqm-pill ${STATE[1]}">${STATE[0]}</span>${status !== 'empty' && !closedMonth ? '<button type="button" class="oqm-link" id="dutyRemove">Belgini olib tashlash</button>' : ''}</div>${tooEarly || pastStu ? '' : pick}<div class="oqm-rule">${note ? esc(note) + ' ' : ''}${futureDay || closedMonth || tooEarly ? '' : noMark && !missed.length ? 'Bu oyda qoplanmagan dars yo‘q.' : 'Shu kundagi davomatni tanlang.'}</div>`;
             const foot = `<button type="button" class="oqm-btn" id="dutyCancel" data-close>Bekor</button>
                 ${noMark ? '' : '<button type="button" class="oqm-btn" id="dutyAbsent">Kelmadi</button>'}
-                ${mkButtons}
+                ${tooEarly ? '' : mkButtons}
                 ${noMark ? '' : `<button type="button" class="oqm-btn is-pri" id="dutyPresent">${role === 'main' ? 'Keldi' : 'Qatnashdi'}</button>`}`;
             const close = () => (UI?.closeDrawer ? UI.closeDrawer() : closeModal());
             const dlg = UI?.openDialog ? UI.openDialog({ title, sub: `${esc(student.name)} · ${sched(student)}`, body, foot }) : null;
@@ -437,6 +453,17 @@
         }
         return out;
     }
+    // Oy hisobi boshqa sahifalar uchun (Dars jadvali "Oy" ko'rinishi) — Davomat render() bilan AYNAN bir xil kirish:
+    // shu oyda faol o'quvchilar (inMonth) + ustoz almashgan o'quvchilarning shu ustoz davri (withPast), "Keldi" (main_attendance)
+    // + "Kelmadi" (school_absences), qoplashlar → AttendanceRules.monthTotals. absences/makeups chaqiruvchidan (server javobi).
+    function monthFor(id, month, { absences = [], makeups = [], todayKey } = {}) {
+        const R = window.AttendanceRules, all = getItem(STORAGE_KEYS.students, []) || [];
+        const main = all.filter(s => s.teacherId === id && R.inMonth(s, s.statusHistory, month));
+        const students = R.withPast(main, getItem(STORAGE_KEYS.pastStudents, []) || [], id, month);
+        const mainAtt = mergeAbsences((getItem(STORAGE_KEYS.mainAttendance, {}) || {})[`${month}_${id}`] || {}, absences, id);
+        const tk = todayKey || new Date(Date.now() + 5 * 3600000).toISOString().slice(0, 10);
+        return R.monthTotals({ id, month, students, mainAtt, makeups, teacher: resolveTeacherWithVirtual(id) || {}, todayKey: tk });
+    }
     // Boshqa sahifadan (O'quvchini tekshirish → "Davomat kalendari") aniq o'quvchining kalendarini ochish.
     function focus(studentId) {
         selected = 'main'; expanded = String(studentId || ''); showAll = true; autoOpened = true; lastError = '';
@@ -448,5 +475,5 @@
         const b = document.querySelector(`#mainAttendanceContainer [data-duty-expand="${CSS.escape(expanded)}"]`);
         b?.scrollIntoView({ block: 'start', behavior: 'smooth' });
     }
-    window.teacherDutyUI = { employeeField, bindEmployee, bindAssignment, render, monthTotals, mergeAbsences, focus, revealFocused };
+    window.teacherDutyUI = { employeeField, bindEmployee, bindAssignment, render, monthTotals, monthFor, mergeAbsences, focus, revealFocused };
 }());

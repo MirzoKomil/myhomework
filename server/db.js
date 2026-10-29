@@ -4023,6 +4023,23 @@ const SHOP_ORDER_STAGE_LABELS = {
     delivered: 'Yetkazildi',
 };
 
+// Umumiy PATCH /api/state orqali davomat jadvalini qayta yozishda (ROP): yopilgan oy va kelajak kunlar o'zgarmasligi shart —
+// ular faqat admin/boshliq ixtiyorida (BAHO-5 #7, teacherAttendanceRules.assertStaffAttendanceWindow bilan bir qoida).
+async function guardAttendanceBulk(client, tableName, data, actor) {
+    const { CLOSED_MONTH_EDITORS } = require('./services/teacherAttendanceRules');
+    if (CLOSED_MONTH_EDITORS.includes(actor?.role) || !data || typeof data !== 'object') return;
+    const local = require('./services/school/time').nowLocal(new Date()), curMonth = local.date.slice(0, 7), curDay = Number(local.date.slice(8));
+    const locked = (attKey, day) => { const m = String(attKey).slice(0, 7); return m < curMonth || (m === curMonth && Number(day) > curDay) || m > curMonth; };
+    const key = (a, st, d) => `${a}|${st}|${Number(d)}`;
+    const before = new Set((await client.query(`SELECT att_key, student_id, day FROM ${tableName}`)).rows
+        .filter(r => locked(r.att_key, r.day)).map(r => key(r.att_key, r.student_id, r.day)));
+    const after = new Set();
+    for (const [a, students] of Object.entries(data)) for (const [st, days] of Object.entries(students || {}))
+        for (const [d, v] of Object.entries(days || {})) if (v && locked(a, d)) after.add(key(a, st, d));
+    const changed = [...after].some(k => !before.has(k)) || [...before].some(k => !after.has(k));
+    if (changed) throw Object.assign(new Error('Yopilgan oy yoki kelajak sana davomatini faqat admin yoki boshliq o\'zgartiradi'), { status: 409 });
+}
+
 async function patchState(partial, actor = {}) {
     if (partial.payments !== undefined) throw Object.assign(new Error('Eski to‘lov jadvali arxiv. Yangi tushumni To‘lovlar reyestridan qabul qiling'), { status: 409 });
     if (actor.role === 'teacher') throw Object.assign(new Error('Ustoz faqat o‘z davomatini maxsus endpoint orqali saqlaydi'), { status: 403 });
@@ -4037,8 +4054,8 @@ async function patchState(partial, actor = {}) {
         if (partial.students)           await saveStudents(client, partial.students, [...(partial.removedStudentIds || []), ...(removedIds.students || [])]);
         if (partial.salesManagers)      await saveSalesManagers(client, partial.salesManagers);
         if (partial.timetable)          await saveTimetable(client, partial.timetable);
-        if (partial.mainAttendance)     await saveAttendanceTable(client, 'main_attendance', partial.mainAttendance);
-        if (partial.assistantAttendance) await saveAttendanceTable(client, 'assistant_attendance', partial.assistantAttendance);
+        if (partial.mainAttendance)     { await guardAttendanceBulk(client, 'main_attendance', partial.mainAttendance, actor); await saveAttendanceTable(client, 'main_attendance', partial.mainAttendance); }
+        if (partial.assistantAttendance) { await guardAttendanceBulk(client, 'assistant_attendance', partial.assistantAttendance, actor); await saveAttendanceTable(client, 'assistant_attendance', partial.assistantAttendance); }
         if (partial.leads)              await saveLeads(client, partial.leads);
         if (partial.hrEmployees)        await saveHrEmployeesData(client, partial.hrEmployees, actor, removedIds.hrEmployees, partial.changedStatusIds?.hrEmployees || null);
         if (partial.bookRoadmap)        await saveBookRoadmap(client, partial.bookRoadmap, removedIds.bookRoadmap);
@@ -4091,7 +4108,7 @@ async function getTeacherScopedState(actor) {
 }
 
 // Ustoz davomati qoidalari — server/services/teacherAttendanceRules.js (testlanadi).
-const { assertTeacherAttendanceWindow } = require('./services/teacherAttendanceRules');
+const { assertTeacherAttendanceWindow, assertTeacherOwnsDay, assertStaffAttendanceWindow } = require('./services/teacherAttendanceRules');
 
 async function recordTeacherAttendance({ actor, teacherId, studentId, date, present, grade, attendanceType }) {
     if (typeof present !== 'boolean' && present !== null) throw Object.assign(new Error('Davomat boolean yoki olib tashlash uchun null bo‘lishi kerak'), { status: 400 });
@@ -4148,18 +4165,33 @@ async function recordTeacherAttendance({ actor, teacherId, studentId, date, pres
         if (selectedType === 'main' && teacher.type === 'yordamchi') throw Object.assign(new Error('Yordamchi ustoz asosiy davomatni o‘zgartira olmaydi'), { status: 403 });
         if (selectedType === 'assistant' && !isStaffWithFullAccess && teacher.type !== 'yordamchi') throw Object.assign(new Error('Asosiy ustoz yordamchi davomatini belgilamaydi'), { status: 403 });
         const assignmentColumn = selectedType === 'assistant' ? 'assistant_teacher_id' : 'teacher_id';
-        const studentResult = await client.query(
-            `SELECT * FROM students WHERE id = $1 AND ${assignmentColumn} = $2 FOR UPDATE`,
-            [safeStudentId, safeTeacherId]
-        );
+        // Asosiy ustoz (o'zi yozganda): o'quvchi hozir boshqa ustozda bo'lishi mumkin — kun kimniki ekanini ustozlar tarixi hal qiladi
+        // (assertTeacherOwnsDay: eski ustoz o'z davrini tuzatadi, yangi ustoz eski davrga yozolmaydi). Boshqa hollarda — hozirgi biriktirish.
+        const byHistory = selectedType === 'main' && !isStaffWithFullAccess;
+        const studentResult = byHistory
+            ? await client.query('SELECT * FROM students WHERE id = $1 FOR UPDATE', [safeStudentId])
+            : await client.query(`SELECT * FROM students WHERE id = $1 AND ${assignmentColumn} = $2 FOR UPDATE`, [safeStudentId, safeTeacherId]);
         const student = studentResult.rows[0];
         if (!student) {
             throw Object.assign(new Error("Bu o'quvchi ushbu ustozga biriktirilmagan"), { status: 403 });
         }
+        if (byHistory) await assertTeacherOwnsDay(client, { student, teacherId: safeTeacherId, date: String(date) });
         if ((teacher.subject || 'english') !== (student.subject || 'english')) {
             throw Object.assign(new Error("O'quvchi va ustoz fan yo'nalishi mos emas"), { status: 400 });
         }
-        // Ustoz o'zi yozganda (admin/ROP/boshliq tuzatishi — cheklanmaydi). Mavjud yozuvlarga tegilmaydi — faqat yangi yozish tekshiriladi.
+        // Xodim tuzatishi: yopilgan oy va kelajak — faqat admin/boshliq (ROP — joriy oy, bugungacha); ROP — faqat o'z til yo'nalishi.
+        if (isStaffWithFullAccess) {
+            assertStaffAttendanceWindow({ actor, date: String(date), present });
+            if (actor?.role === 'rop') {
+                const lr = (await client.query(`SELECT h.lang FROM users u JOIN hr_employees h ON LOWER(TRIM(h.login)) = LOWER(TRIM(u.email))
+                    WHERE u.id = $1 AND COALESCE(h.status,'active') <> 'inactive' LIMIT 2`, [actor.id])).rows;
+                const lang = lr.length === 1 ? lr[0].lang : null;
+                if ((lang === 'english' || lang === 'russian') && lang !== (student.subject || 'english')) {
+                    throw Object.assign(new Error('Bu til yo‘nalishidagi o‘quvchi davomatiga ruxsat yo‘q'), { status: 403 });
+                }
+            }
+        }
+        // Ustoz o'zi yozganda — to'liq qoidalar. Mavjud yozuvlarga tegilmaydi — faqat yangi yozish tekshiriladi.
         if (!isStaffWithFullAccess) await assertTeacherAttendanceWindow(client, { student, teacherId: safeTeacherId, date: String(date), present, duty: selectedType });
 
         if (selectedType === 'assistant') {

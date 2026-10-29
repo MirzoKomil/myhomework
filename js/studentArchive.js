@@ -64,7 +64,8 @@
                 return r;
             }
             if (s.role === 'assistant') {
-                r.push(['Asosiy', `${esc(shortName(s.teacherName))} · ${sched(s)}`]);
+                // Chiqib ketgan / tugatgan o'quvchida "Asosiy" qatori yo'q (YordamchiOquvchiArxiv dizayni) — faqat muzlatilganda.
+                if (s.state !== 'left' && s.state !== 'finished') r.push(['Asosiy', `${esc(shortName(s.teacherName))} · ${sched(s)}`]);
                 const until = s.state === 'left' || s.state === 'finished' ? lastDay(s) : s.contacts?.last;
                 r.push(['Siz bilan', `${start ? ddmm(start) + ' → ' : ''}${until ? ddmm(until) : ''}${s.contacts?.total ? ` · ${s.contacts.total} aloqa` : ''}` || '—']);
                 if (s.state === 'frozen') {

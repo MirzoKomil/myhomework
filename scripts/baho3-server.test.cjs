@@ -82,29 +82,60 @@ test('payrollEngine: muzlatilgan / chiqib ketgan kundagi "Keldi" va qoplash asos
     assert.equal(sep.breakdown.find(b => b.studentId === 'st-shi').lessons, 1);
 });
 
-test('[yordamchi-alohida]: topilmasa ham natija bir marta yoziladi — keyingi ishga tushishlarda qidiruv ham, log ham yo\'q', async () => {
+test('[yordamchi-alohida]: topilmasa marker yozilmaydi va keyingi ishga tushishda yana urinadi; lavozim tuzatilgach — ko\'chiradi, keyin qayta ishlamaydi', async () => {
     const { migrate, MIGRATION_ID } = require('../server/services/school/assistantSeparation');
-    const done = new Map(), logs = [];
+    const done = new Map(), logs = [], updates = [];
     const log = { log: m => logs.push(m), warn: m => logs.push(m) };
     let hrQueries = 0;
+    // Ayubxon avval "ingliz-oqituvchi" lavozimida (yordamchi emas) — prod'dagi xavf.
+    const hr = [{ id: 'm', name: 'Mohinur Azimova', role: 'ingliz-oqituvchi', lang: 'english', status: 'active' },
+        { id: 'a', name: 'Ayubxon Axmadjonov', role: 'ingliz-oqituvchi', lang: 'english', status: 'active' }];
     const exec = async (sql, params) => {
         if (/CREATE TABLE IF NOT EXISTS school_migrations/.test(sql)) return { rows: [] };
         if (/^(BEGIN|COMMIT|ROLLBACK)/.test(sql) || /pg_advisory_xact_lock/.test(sql)) return { rows: [] };
         if (/SELECT result FROM school_migrations/.test(sql)) return { rows: done.has(params[0]) ? [{ result: done.get(params[0]) }] : [] };
         if (/INSERT INTO school_migrations/.test(sql)) { done.set(params[0], JSON.parse(params[1])); return { rows: [] }; }
-        if (/FROM hr_employees WHERE COALESCE\(status/.test(sql)) { hrQueries++; return { rows: [] }; }
-        if (/FROM students s\s+JOIN hr_employees/.test(sql)) return { rows: [{ id: 's1', name: 'S', subject: 'english', extra_data: {}, aid: 'm', aname: 'Mohinur' }] };
+        if (/FROM hr_employees WHERE COALESCE\(status/.test(sql)) { hrQueries++; return { rows: hr }; }
+        if (/SELECT COUNT\(\*\)::int AS n FROM students WHERE assistant_teacher_id/.test(sql)) return { rows: [{ n: 1 }] };
+        if (/SELECT id, name, subject, teacher_id FROM students WHERE assistant_teacher_id/.test(sql)) return { rows: [{ id: 's1', name: 'S', subject: 'english', teacher_id: 'm' }] };
+        if (/UPDATE students SET assistant_teacher_id/.test(sql)) { updates.push(params); return { rows: [] }; }
+        if (/INSERT INTO school_student_audit/.test(sql)) return { rows: [] };
+        if (/FROM students s\s+JOIN hr_employees/.test(sql)) return { rows: [] };
         throw Error('SQL: ' + sql);
     };
     const pool = { query: exec, connect: async () => ({ query: exec, release() {} }) };
     const first = await migrate(pool, log);
     assert.equal(first.skipped, 'not-found');
-    assert.equal(done.get(MIGRATION_ID).skipped, 'not-found');
-    assert.equal(logs.length, 2, 'topilmadi + "hali biriktirilgan" ogohlantirishi — bir marta');
+    assert.equal(done.has(MIGRATION_ID), false, 'topilmasa marker yozilmaydi');
+    assert.match(logs.join('\n'), /lavozimi 'yordamchi' emas/, 'sabab logda');
     const second = await migrate(pool, log);
-    assert.equal(second.skipped, 'already-done');
-    assert.equal(hrQueries, 2, 'ikkinchi ishga tushishda HR qidirilmaydi');
-    assert.equal(logs.length, 2, 'log takrorlanmaydi');
+    assert.equal(second.skipped, 'not-found', 'ikkinchi ishga tushishda yana urinadi');
+    assert.ok(hrQueries >= 4);
+    hr[1].role = 'yordamchi'; // admin lavozimni tuzatdi
+    const third = await migrate(pool, log);
+    assert.equal(third.moved.length, 1);
+    assert.deepEqual(updates[0], ['s1', 'a', 'm']);
+    assert.ok(done.has(MIGRATION_ID), 'muvaffaqiyatdan keyin marker');
+    const n = hrQueries;
+    assert.equal((await migrate(pool, log)).skipped, 'already-done');
+    assert.equal(hrQueries, n, 'bajarilgandan keyin HR qidirilmaydi');
+});
+test('[yordamchi-alohida]: Mohinurda yordamchi o\'quvchi qolmagan — "ko\'chiriladigan narsa yo\'q" marker yoziladi', async () => {
+    const { migrate, MIGRATION_ID } = require('../server/services/school/assistantSeparation');
+    const done = new Map();
+    const exec = async (sql, params) => {
+        if (/CREATE TABLE|^(BEGIN|COMMIT|ROLLBACK)|pg_advisory_xact_lock|INSERT INTO school_student_audit/.test(sql)) return { rows: [] };
+        if (/SELECT result FROM school_migrations/.test(sql)) return { rows: done.has(params[0]) ? [{ result: done.get(params[0]) }] : [] };
+        if (/INSERT INTO school_migrations/.test(sql)) { done.set(params[0], JSON.parse(params[1])); return { rows: [] }; }
+        if (/FROM hr_employees WHERE COALESCE\(status/.test(sql)) return { rows: [{ id: 'm', name: 'Mohinur Azimova', role: 'ingliz-oqituvchi', status: 'active' }] };
+        if (/SELECT COUNT\(\*\)::int AS n FROM students/.test(sql)) return { rows: [{ n: 0 }] };
+        if (/FROM students s\s+JOIN hr_employees/.test(sql)) return { rows: [] };
+        throw Error('SQL: ' + sql);
+    };
+    const pool = { query: exec, connect: async () => ({ query: exec, release() {} }) };
+    const r = await migrate(pool, { log() {}, warn() {} });
+    assert.equal(r.skipped, 'nothing-to-move');
+    assert.equal(done.get(MIGRATION_ID).skipped, 'nothing-to-move');
 });
 
 test('state.js: ustoz uchun ishlatilmaydigan PATCH ruxsat ro\'yxati yo\'q (ustoz baribir 403)', () => {
