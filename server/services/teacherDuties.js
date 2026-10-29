@@ -66,12 +66,17 @@ function stateForTeacher(state, own, opts = {}) {
         return new Date(Date.UTC(y, m - 2, 1)).toISOString().slice(0, 10); })();
     const pastIds = new Set(state.students.filter(s => s.teacherId !== own.id && (histBy.get(s.id) || [])
         .some(h => h.teacherId === own.id && (!h.to || h.to >= since))).map(s => s.id));
-    const assistantIds = new Set(hasAssistantDuty(own) ? state.students.filter(s => s.assistantTeacherId === own.id).map(s => s.id) : []);
+    // Xodimlar uchun avtomatik yaratilgan demo o'quvchilar (isStaffDemo) yordamchi ro'yxatiga, rejasiga va maoshiga kirmaydi
+    // (server /assist hisobidagidek). Ilgari bu belgi safeFields'da yo'q edi — Ayubxonda 31 ta xodim "o'quvchi" bo'lib ko'rindi.
+    const isDemo = s => s.isStaffDemo === true || String(s.id || '').startsWith('demo_');
+    const assistantIds = new Set(hasAssistantDuty(own) ? state.students.filter(s => s.assistantTeacherId === own.id && !isDemo(s)).map(s => s.id) : []);
     const assignedIds = new Set([...mainIds, ...assistantIds]);
     const safeFields = ['id','name','phone','phone2','group','subject','teacherId','assistantTeacherId',
         'lessonDayOfWeek','lessonTime','lessonDuration','startDate','joinDate','status','frozen','age','gender','serialCode',
         // statusHistory — [{status, from, to, at}] (sabab/izohsiz): Davomat % sana bo'yicha faollik (AttendanceRules.lessonCountsOn).
-        'statusHistory'];
+        'statusHistory',
+        // isStaffDemo — UI demo akkauntni ro'yxat va hisoblardan chiqaradi (yordamchi.js, AttendanceRules).
+        'isStaffDemo'];
     // Telefon faqat asosiy ustozga o'z o'quvchisi uchun (JadvalQoidalar: "Telefon raqamini ko'rish — Ustoz ✓, Yordamchi:
     // yashirin · ☎ tugmasi"). Yordamchiga o'quvchi telefoni yuborilmaydi — qo'ng'iroq Telegram guruh orqali.
     // serialCode (#ID) — ustoz/yordamchi ro'yxatida ko'rinadi va ID bo'yicha qidiriladi (to'lov ma'lumoti emas).
