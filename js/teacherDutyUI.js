@@ -335,12 +335,12 @@
             const mkButtons = !missed.length ? '' : offday
                 ? '<button type="button" class="oqm-btn is-pri" id="dutyMkSep">Qoplash darsi o‘tildi</button>'
                 : '<button type="button" class="oqm-btn" id="dutyMkDouble">Keldi · 2 dars</button>';
+            // Kelajak sanaga va yopilgan (o'tgan) oyga ustoz davomat qo'ymaydi — server ham rad etadi (recordTeacherAttendance).
+            const futureDay = date > today, closedMonth = month < today.slice(0, 7);
             const note = closedMonth ? 'Oy yopilgan — davomatni endi admin orqali tuzatish mumkin.' : futureDay ? 'Bu kun hali kelmagan — davomat dars kuni qo‘yiladi.'
                 : role === 'main' && offday && month >= '2026-10'
                 ? 'Bu kun dars kuni emas. Maoshga faqat qoplash darsi sifatida, admin tasdig‘idan keyin o‘tadi.'
                 : role === 'main' && offday ? 'Bu kun dars kuni emas.' : '';
-            // Kelajak sanaga va yopilgan (o'tgan) oyga ustoz davomat qo'ymaydi — server ham rad etadi (recordTeacherAttendance).
-            const futureDay = date > today, closedMonth = month < today.slice(0, 7);
             const noMark = (role === 'main' && offday && month >= '2026-10') || futureDay || closedMonth;
             const body = `<div class="oqm-box udv-dlg-st">Hozirgi holat: <span class="oqm-pill ${STATE[1]}">${STATE[0]}</span>${status !== 'empty' && !closedMonth ? '<button type="button" class="oqm-link" id="dutyRemove">Belgini olib tashlash</button>' : ''}</div>${pick}<div class="oqm-rule">${note ? esc(note) + ' ' : ''}${futureDay || closedMonth ? '' : noMark && !missed.length ? 'Bu oyda qoplanmagan dars yo‘q.' : 'Shu kundagi davomatni tanlang.'}</div>`;
             const foot = `<button type="button" class="oqm-btn" id="dutyCancel" data-close>Bekor</button>
