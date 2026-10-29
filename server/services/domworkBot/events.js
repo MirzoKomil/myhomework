@@ -43,7 +43,7 @@ async function saleStats(db,payment) {
     const m=(await db.query(`SELECT COALESCE(SUM(amount),0) AS total,
         COUNT(DISTINCT lead_id) FILTER (WHERE source_key LIKE 'lead:%' AND NOT EXISTS(SELECT 1 FROM payment_records q WHERE q.lead_id=p.lead_id
             AND q.source_key LIKE 'lead:%' AND NOT q.legacy_review AND q.paid_date<$2::date)) AS sales
-        FROM payment_records p WHERE language='russian' AND NOT legacy_review AND manager_id=$1 AND paid_date>=$2::date`,[payment.manager_id,month+'-01'])).rows[0];
+        FROM payment_records p WHERE language='russian' AND ${await require('./dailyReports').validReceipt(db,'p')} AND manager_id=$1 AND paid_date>=$2::date`,[payment.manager_id,month+'-01'])).rows[0];
     const plans=(await db.query("SELECT data FROM json_data WHERE key='individualSalesPlans'")).rows[0]?.data;
     const plan=Number(require('./staff').personalPlan(plans,payment.manager_id,month)?.totalAmount)||0;
     const managerName=(await db.query('SELECT name FROM hr_employees WHERE id=$1',[payment.manager_id])).rows[0]?.name || '';

@@ -22,7 +22,7 @@ const MILESTONES=[20000000,40000000,60000000];
 const RELEASE={id:'domwork-bot-insights-2026-10',text:'CRM yangilandi: bot menyulari erkin almashadi; sotuv pog‘onalari va g‘oliblar xabarlari uchun alohida sozlamalar, yordamchi ustoz baholarining aniq tarixi va rus tili reklama sarfi kiritish imkoniyati qo‘shildi.'};
 async function sales(db,start,end,excludeId=null) {
     const records=(await db.query(`SELECT id,lead_id,manager_id,language,amount,TO_CHAR(paid_date,'YYYY-MM-DD') AS date
-        FROM payment_records WHERE language='russian' AND paid_date BETWEEN $1::date AND $2::date`,[start,end])).rows;
+        FROM payment_records p WHERE language='russian' AND paid_date BETWEEN $1::date AND $2::date AND ${await require('./dailyReports').validReceipt(db,'p')}`,[start,end])).rows;
     const employees=(await db.query('SELECT id,name,role,lang,status FROM hr_employees ORDER BY id')).rows.map(r=>({...r}));
     const leads=(await db.query("SELECT id,manager_id,extra_data FROM leads WHERE language='russian'")).rows;
     const cashFlow=(await db.query("SELECT data FROM json_data WHERE key='cashFlow'")).rows[0]?.data;
@@ -98,7 +98,7 @@ async function announce(db,key,type,criterion,start,end,label,setting,now) {
 }
 async function run(db,settings,clock,now,once) {
     if(!settings.groupNotificationsEnabled)return;
-    const [hour,minute]=(settings.awardsTime || '20:00').split(':').map(Number);
+    const [hour,minute]=(settings.awardsTime || '23:00').split(':').map(Number);
     if(clock.hour!==hour||clock.minute<minute||clock.minute>=minute+2)return;
     if(settings.dailyAwardsEnabled) await once(db,'daily-awards:'+clock.date,async()=>{
         await announce(db,'daily-sales:'+clock.date,'sales','sales',clock.date,clock.date,'Kun sotuvchisi','dailyAwardsEnabled',now);

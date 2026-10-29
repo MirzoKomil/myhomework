@@ -131,11 +131,18 @@ async function action(db, identity, actionId, options={}) {
         return rows.filter(r => identity.role === 'rop' || r.extra_data?.trialRequest?.teacherId === identity.employeeId)
             .map(r => `${safe(r.name)} · ${safe(r.extra_data?.trialRequest?.scheduledAt)} · ${safe(r.extra_data?.trialRequest?.state)}\nTasdiqlash/natija: CRM → Sinov darslari`).join('\n\n') || none;
     }
+    // Yangi kunlik hisobotlar (HTML) — 20:00 dagi avtomatik hisobot bilan bir xil manba.
+    if (['reports','income','digest','daily','funnel'].includes(actionId) && ['admin','rop','marketing'].includes(identity.role) && !options.legacy && !options.comparison) {
+        const D = require('./dailyReports'), today = policy.today(options.now);
+        if (actionId === 'digest') return { html: await D.adminText(db, today) };
+        if (['daily','funnel'].includes(actionId) && identity.role === 'marketing') return { html: D.marketingText(await D.marketingDay(db, today)) };
+        return { html: D.salesText(await D.salesDay(db, today)) };
+    }
     if (['income','digest','daily','history','funnel','reports'].includes(actionId) && ['admin','rop','marketing'].includes(identity.role)) {
         const period = policy.monthPeriod(options.now), today=policy.today(options.now);
         const start=options.daily || actionId==='daily'?today:period.start, end=options.daily || actionId==='daily'?today:period.end;
         const totals = (await db.query(`SELECT COUNT(*) AS count,COALESCE(SUM(amount),0) AS amount FROM payment_records
-            WHERE language='russian' AND paid_date BETWEEN $1 AND $2`, [start,end])).rows[0];
+            WHERE language='russian' AND paid_date BETWEEN $1 AND $2 AND ${await require('./dailyReports').validReceipt(db,'payment_records')}`, [start,end])).rows[0];
         const counts = (await db.query("SELECT status,COUNT(*) AS count FROM leads WHERE language='russian' AND deleted_at IS NULL GROUP BY status ORDER BY status")).rows;
         let output=`Davr: ${start} — ${end}\nKirim: ${money(totals.amount)}\nTo‘lovlar soni: ${totals.count}\n\nLidlar bosqichlar bo‘yicha:\n`+stageLines(counts);
         const debt=(await db.query(`SELECT s.extra_data FROM students s WHERE s.subject='russian' AND ${REAL}`)).rows.reduce((sum,r)=>sum+Math.max(0,Number(r.extra_data?.debtAmount)||0),0);
@@ -197,7 +204,7 @@ async function comparison(db,now) {
         (SELECT COUNT(DISTINCT a.lead_id) FROM activity a WHERE a.after_data->>'managerId'=h.id
             AND a.after_data->>'status'='tolov-yopildi' AND COALESCE(a.before_data->>'status','')<>'tolov-yopildi') AS won,
         (SELECT COALESCE(SUM(p.amount),0) FROM payment_records p WHERE p.language='russian' AND p.manager_id=h.id
-            AND p.paid_at>$1::timestamptz AND p.paid_at<=$2::timestamptz) AS receipts
+            AND p.paid_at>$1::timestamptz AND p.paid_at<=$2::timestamptz AND ${await require('./dailyReports').validReceipt(db,'p')}) AS receipts
         FROM hr_employees h WHERE h.role IN ('sotuv-menejeri','sotuv_menejeri','sotuv menejeri','sales_manager')
         AND h.lang='russian' AND COALESCE(h.status,'active')<>'inactive' ORDER BY h.name`,[start,end])).rows;
     const date=value=>new Date(value).toLocaleString('uz-UZ',{timeZone:'Asia/Tashkent'});

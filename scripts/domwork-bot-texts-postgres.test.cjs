@@ -75,6 +75,58 @@ test('sales group celebrates a new sale with a mention; a later debt payment is 
    const beacon=rows.filter(r=>r.unique_key.includes(':beacon'));assert.equal(beacon.length,1);
    assert.match(beacon[0].payload.text,/15 daqiqadan/);assert.ok(beacon[0].payload.reply_markup.inline_keyboard.length);
   });
+  await t.test('daily sales report: voided receipts excluded, today transitions from audit, managers ranked',async()=>{
+   const D=require('../server/services/domworkBot/dailyReports');
+   await pool.query('ALTER TABLE leads ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW(), ADD COLUMN IF NOT EXISTS lead_type TEXT, ADD COLUMN IF NOT EXISTS source TEXT');
+   await pool.query(`CREATE TABLE IF NOT EXISTS lead_audit(id BIGSERIAL PRIMARY KEY,lead_id TEXT,actor_id TEXT,action TEXT,snapshot JSONB,created_at TIMESTAMPTZ DEFAULT NOW())`);
+   await pool.query(`CREATE TABLE IF NOT EXISTS payment_record_voids(record_id TEXT PRIMARY KEY,void_date DATE NOT NULL,reason TEXT NOT NULL)`);
+   await pool.query(`INSERT INTO payment_records(id,source_key,lead_id,language,manager_id,paid_date,amount,method,form,snapshot,actor_id)
+     VALUES('pv','lead:LV:closing','LV','russian','h-s',(NOW() AT TIME ZONE 'Asia/Tashkent')::date,9000000,'card','full','{}','a')`);
+   await pool.query(`INSERT INTO payment_record_voids(record_id,void_date,reason,actor_id,actor_name) VALUES('pv',(NOW() AT TIME ZONE 'Asia/Tashkent')::date,'xato','a','A')`);
+   await pool.query(`INSERT INTO leads(id,name,language,status,manager_id,extra_data) VALUES('LA','A','russian','sinov-darsida','h-s','{}')`);
+   await pool.query(`INSERT INTO lead_audit(lead_id,actor_id,snapshot) VALUES('LA','u-s','{"before":{"status":"boglanildi"},"after":{"status":"sinov-darsida","managerId":"h-s"}}'),
+     ('LA','u-s','{"before":{"status":"sinov-darsida"},"after":{"status":"sinov-darsida","managerId":"h-s"}}')`);
+   const date=new Date(Date.now()+5*3600000).toISOString().slice(0,10);
+   const r=await D.salesDay(pool,date);
+   assert.equal(r.day,1700000);assert.equal(r.payments,2);assert.equal(r.sales,1);
+   assert.equal(r.leads.trial,1);assert.equal(r.plan,10000000);
+   const text=D.salesText(r,{group:true});
+   if(process.env.SHOW_TEXTS)console.log(text);
+   assert.match(text,/Bugun: 1 700 000 so‘m/);assert.match(text,/reja <b>17%<\/b>/);assert.match(text,/🥇 <b>Dilnoza K\.<\/b>/);
+   assert.doesNotMatch(text,/9 000 000/);
+   assert.match(D.salesText(r),/Oy:/);
+  });
+  await t.test('targetolog report: today / 3 days / month lead quality with CRM rules',async()=>{
+   const D=require('../server/services/domworkBot/dailyReports');
+   const date=new Date(Date.now()+5*3600000).toISOString().slice(0,10);
+   await pool.query("DELETE FROM leads");
+   await pool.query(`INSERT INTO leads(id,name,language,status,manager_id,lead_type,extra_data,created_at) VALUES
+    ('q1','A','russian','boglanildi','h-s','target','{"connectedSurvey":{"age":30}}',NOW()),
+    ('q2','B','russian','boglanildi','h-s','target','{"connectedSurvey":{"age":17}}',NOW()),
+    ('q3','C','russian','sifatsiz-lidlar','h-s','target','{}',NOW()),
+    ('q4','D','russian','tolov-yopildi','h-s','target','{"connectedSurvey":{"age":18}}',NOW()),
+    ('q5','E','russian','yangi-lidlar','h-s','organic','{}',NOW()),
+    ('q6','F','russian','boglanildi','h-s','target','{}',NOW()-INTERVAL '2 days')`);
+   await require('../server/services/targetAds').init(pool);
+   await pool.query(`INSERT INTO target_ad_entries(language,kind,date,data,updated_by) VALUES('russian','day',$1,'{"budget":20,"leadCount":6}','a')`,[date]);
+   const m=await D.marketingDay(pool,date);
+   assert.deepEqual([m.today.total,m.today.quality,m.today.low,m.organic],[4,2,2,1]);
+   assert.equal(m.three.total,5);assert.equal(m.month.sold>=1,true);
+   const text=D.marketingText(m);if(process.env.SHOW_TEXTS)console.log(text);
+   assert.match(text,/Bugun: 4 ta target lid/);assert.match(text,/Sifatli: <b>2<\/b> \(50%\)/);assert.match(text,/Oxirgi 3 kun/);assert.match(text,/Oy natijasi/);
+  });
+  await t.test('targetolog reminder: yesterday ad data missing → 15:00 marketing group nudge; entered → silent',async()=>{
+   const scheduler=require('../server/services/domworkBot/scheduler');
+   const tick=async d=>{const c=await pool.connect();try{await c.query('BEGIN');await scheduler.run(c,d);await c.query('COMMIT');}finally{c.release();}};
+   await pool.query("INSERT INTO domwork_bot_groups(id,type,scope,chat_id,active,created_by,title) VALUES('mk','marketing','','-100444444',true,'a','Marketing') ON CONFLICT DO NOTHING");
+   await pool.query(`UPDATE domwork_bot_settings SET data=data||'{"remindersEnabled":true}'::jsonb`);
+   await tick(new Date('2026-11-03T10:00:00Z'));
+   const row=(await pool.query("SELECT payload FROM domwork_bot_outbox WHERE unique_key LIKE 'ads-missing:2026-11-02:2:group%'")).rows[0];
+   assert.match(row.payload.text,/2-noyabr/);
+   await pool.query(`INSERT INTO target_ad_entries(language,kind,date,data,updated_by) VALUES('russian','day','2026-11-03','{"budget":5}','a')`);
+   await tick(new Date('2026-11-04T10:00:00Z'));
+   assert.equal((await pool.query("SELECT COUNT(*) FROM domwork_bot_outbox WHERE unique_key LIKE 'ads-missing:2026-11-03%'")).rows[0].count,'0');
+  });
   await t.test('a later payment of the same customer is not announced as a new sale',()=>{
    const pay=group[1].payload;assert.match(pay.text,/To‘lov tushdi/);assert.doesNotMatch(pay.text,/YANGI SOTUV/);assert.match(pay.text,/Qolgan qarz/);
   });

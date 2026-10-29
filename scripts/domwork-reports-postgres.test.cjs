@@ -48,6 +48,8 @@ test('Domwork reporting on disposable PostgreSQL; all source records preserved',
             INSERT INTO json_data VALUES('salesPlan','{"russian":{"managers":1,"leadsPerDay":1,"avgCheck":10,"conversions":{"mid":100}}}');
             INSERT INTO salary_plan_confirmations VALUES('russian','2026-10-01','2026-10-31',310);`);
         await groups.initSchema(pool);await store.initSchema(pool);
+        await pool.query(`ALTER TABLE payment_records ADD COLUMN manager_id TEXT DEFAULT '',ADD COLUMN source_key TEXT DEFAULT '',ADD COLUMN lead_id TEXT,
+            ADD COLUMN legacy_review BOOLEAN DEFAULT FALSE,ADD COLUMN created_at TIMESTAMPTZ DEFAULT '2026-10-12T10:00:00Z'`);
         const tables=['users','hr_employees','students','leads','lead_audit','payment_records','main_attendance','assistant_attendance','teachers','timetable','json_data','salary_plan_confirmations','domwork_learning_groups','domwork_bot_groups','domwork_bot_links','domwork_bot_settings'];
         const snapshot=async()=>Object.fromEntries(await Promise.all(tables.map(async table=>[table,(await pool.query(`SELECT * FROM ${table} ORDER BY 1`)).rows])));
         const before=await snapshot();
@@ -67,10 +69,10 @@ test('Domwork reporting on disposable PostgreSQL; all source records preserved',
             assert.ok(text.includes('O‘qishni boshlagan pullik o‘quvchilar: 1'));
         });
         await t.test('admin daily digest includes signed inflow and confirmed plan, with no invented missing-day marks',async()=>{
-            const text=await staff.action(pool,{role:'admin'},'digest',{now,daily:true});
-            for(const value of ['Kirim: 90 UZS','Akademik hisobot','Oylik tasdiqlangan sotuv rejasi: 310 UZS','Reja bajarilishi: 29.0%'])assert.ok(text.includes(value),text);
+            const text=(await staff.action(pool,{role:'admin'},'digest',{now,daily:true})).html;
+            for(const value of ['Tushum: <b>90 so‘m</b>','Kun xulosasi','reja <b>29%</b>','Asosiy darslar: qatnashdi <b>1</b> · kelmadi 0'])assert.ok(text.includes(value),text);
             await pool.query("UPDATE salary_plan_confirmations SET amount=500");
-            assert.ok((await staff.action(pool,{role:'admin'},'digest',{now,daily:true})).includes('Reja bajarilishi:')===false);
+            assert.ok((await staff.action(pool,{role:'admin'},'digest',{now,daily:true})).html.includes('reja <b>')===false);
             await pool.query("UPDATE salary_plan_confirmations SET amount=310");
         });
         await t.test('schedule blocks other-language reservations without leaking their student names, and reads only own teacher',async()=>{
@@ -93,7 +95,7 @@ test('Domwork reporting on disposable PostgreSQL; all source records preserved',
                 assert.equal((await fetch(base,{headers:{'X-Test-User':'teacher'}})).status,403);
                 const res=await fetch(base,{headers:{'X-Test-User':'admin'}});assert.equal(res.status,200);
                 assert.equal(res.headers.get('cache-control'),'no-store');const data=await res.json();
-                assert.ok(data.digest.includes('Akademik hisobot'));assert.ok(data.marketingHistory.includes('Haftalik'));
+                assert.ok(data.digest.includes('Kun xulosasi'));assert.ok(data.marketingHistory.includes('Haftalik'));
                 assert.equal((await pool.query('SELECT COUNT(*) FROM domwork_bot_outbox')).rows[0].count,'0');
                 assert.deepEqual(await snapshot(),before);
             }finally{await new Promise(resolve=>server.close(resolve));}

@@ -25,7 +25,7 @@ module.exports = function createRouter({ pool, runtime, authRequired }) {
     router.get('/status', handle(() => runtime.status()));
     // Read-only acceptance preview; does not enable automation or queue messages.
     router.get('/reports/preview', handle(req => queue.transaction(pool,async db=>({
-        digest:await require('../services/domworkBot/staff').action(db,{role:'admin',id:req.user.id},'digest',{daily:true}),
+        digest:await (async()=>{const d=await require('../services/domworkBot/staff').action(db,{role:'admin',id:req.user.id},'digest',{daily:true});return d?.html ?? d;})(),
         marketingHistory:await require('../services/domworkBot/reports').marketingHistory(db)
     }))));
     router.get('/discovery',handle(req=>discovery.list(pool,req.user)));

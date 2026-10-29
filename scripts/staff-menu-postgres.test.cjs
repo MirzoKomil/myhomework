@@ -38,10 +38,11 @@ test('bot staff menus match CRM lists — synthetic data only',{skip:!url},async
    const out=await staff.action(pool,teacher,'students');
    assert.match(out,/Jami: 2 ta/);assert.match(out,/Ali/);assert.match(out,/Vali/);assert.doesNotMatch(out,/Demo xodim|Boshqaniki/);
   });
-  await t.test('lead stages are shown with CRM names in funnel order',async()=>{
+  await t.test('ROP income menu returns the new daily sales report (HTML)',async()=>{
+   await pool.query(`CREATE TABLE lead_audit(lead_id TEXT,actor_id TEXT,snapshot JSONB,created_at TIMESTAMPTZ);CREATE TABLE users(id TEXT,email TEXT);CREATE TABLE user_sales_manager_links(user_id TEXT,manager_id TEXT);CREATE TABLE json_data(key TEXT PRIMARY KEY,data TEXT)`);
+   await pool.query(`ALTER TABLE payment_records ADD COLUMN id TEXT,ADD COLUMN manager_id TEXT,ADD COLUMN source_key TEXT,ADD COLUMN lead_id TEXT,ADD COLUMN legacy_review BOOLEAN DEFAULT FALSE,ADD COLUMN created_at TIMESTAMPTZ DEFAULT NOW();ALTER TABLE leads ADD COLUMN created_at TIMESTAMPTZ DEFAULT NOW(),ADD COLUMN extra_data JSONB DEFAULT '{}'`);
    const out=await staff.action(pool,rop,'income');
-   assert.match(out,/Yangi lidlar: 1\nSinov darsida: 1\nTo‘lov yopildi: 1/);
-   assert.doesNotMatch(out,/tolov-yopildi/);
+   assert.match(out.html,/Sotuv bo‘limi — kun yakuni/);assert.match(out.html,/Muddati o‘tgan qarz|Lidlar bugun/);
   });
  }finally{await pool.end();}
 });
