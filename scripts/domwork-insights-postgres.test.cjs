@@ -136,6 +136,11 @@ test('Domwork recognition, assistant ownership and Russian advertising; no real 
             await write(d=>events.payment(d,'new'));await write(d=>events.processOne(d));
             await write(d=>events.capture(d,'payment','new',{month,milestones:[20000000]},'duplicate-payment'));await write(d=>events.processOne(d));
             assert.equal((await db.query("SELECT COUNT(*) FROM domwork_bot_outbox WHERE unique_key LIKE 'milestone:%'")).rows[0].count,'1');
+            const texts=(await db.query("SELECT unique_key,payload FROM domwork_bot_outbox WHERE unique_key LIKE 'event:%sales%' OR unique_key LIKE 'milestone:%'")).rows;
+            if(process.env.SHOW_TEXTS)for(const r of texts)console.log('\n['+r.unique_key+']\n'+r.payload.text);
+            const sale=texts.find(r=>r.unique_key.startsWith('event:'));
+            assert.equal(sale.payload.parse_mode,'HTML');assert.match(sale.payload.text,/YANGI SOTUV|To‘lov tushdi/);
+            assert.match(texts.find(r=>r.unique_key.startsWith('milestone:')).payload.text,/YANGI POG‘ONA/);
             assert.equal((await db.query("SELECT COUNT(*) FROM domwork_bot_jobs WHERE key LIKE 'milestone:%'")).rows[0].count,'1');
         });
         await t.test('daily/weekly/monthly winners are opt-in, criterion-required, idempotent and tied winners explicit',async()=>{

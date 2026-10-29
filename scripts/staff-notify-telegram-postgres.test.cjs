@@ -49,7 +49,7 @@ test('CRM staff notifications reach Telegram — synthetic data',{skip:!url},asy
   await t.test('a new event goes to Telegram once, with a CRM button',async()=>{
    await guide('g-new','Yangi sotuv skripti');
    assert.equal(await push(NOON2),1);assert.equal(await push(NOON4),0);
-   const [row]=await sent();assert.match(row.payload.text,/Yangi yo'riqnoma\nYangi sotuv skripti/);
+   const [row]=await sent();assert.match(row.payload.text,/<b>Yangi yo'riqnoma<\/b>\nYangi sotuv skripti/);assert.equal(row.payload.parse_mode,'HTML');
    assert.equal(row.payload.reply_markup.inline_keyboard[0][0].url,'https://myhomework.uz/');
   });
   await t.test('quiet hours hold non-urgent items until morning; Telegram off in prefs → never sent',async()=>{
@@ -80,7 +80,7 @@ test('CRM staff notifications reach Telegram — synthetic data',{skip:!url},asy
    assert.equal(await push(later),0); // 1 soatlik uzilish — qayta boshlang'ich
    for(const i of [1,2,3,4])await guide('g-d'+i,'Yangi '+i);
    assert.equal(await push(new Date(later.getTime()+120000)),4);
-   const last=(await sent()).at(-1);assert.match(last.payload.text,/^🔔 4 ta yangi xabar:/);
+   const last=(await sent()).at(-1);assert.match(last.payload.text,/^🔔 <b>4 ta yangi xabar<\/b>/);
    assert.ok(!(await sent()).some(r=>/To‘xtatilgan/.test(r.payload.text)));
   });
  }finally{delete process.env.DOMWORK_BOT_ENABLED;await pool.end();}

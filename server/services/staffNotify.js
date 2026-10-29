@@ -466,13 +466,14 @@ async function pushUser(db, link, now) {
     }
     if (skip.length) await db.query('INSERT INTO staff_notify_tg_sent(user_id,event_id) SELECT $1,unnest($2::text[]) ON CONFLICT DO NOTHING', [link.account_id, skip]);
     if (!out.length) return 0;
-    const line = e => `${String(e.title || '').slice(0, 200)}${e.sub ? ' — ' + String(e.sub).slice(0, 200) : ''}`;
+    const T = require('./domworkBot/tone');
+    const line = e => `${T.b(String(e.title || '').slice(0, 200))}${e.sub ? ' — ' + T.esc(String(e.sub).slice(0, 200)) : ''}`;
     // Bir nechta bo'lsa — bitta jamlangan xabar (masalan tinch soatdan keyin).
-    const text = out.length === 1 ? `🔔 ${String(out[0].title || '').slice(0, 300)}${out[0].sub ? '\n' + String(out[0].sub).slice(0, 600) : ''}`
-        : `🔔 ${out.length} ta yangi xabar:\n` + out.slice(0, 12).map(e => '• ' + line(e)).join('\n') + (out.length > 12 ? `\n… va yana ${out.length - 12} ta — CRM panelida` : '');
+    const text = out.length === 1 ? `🔔 ${T.b(String(out[0].title || '').slice(0, 300))}${out[0].sub ? '\n' + T.esc(String(out[0].sub).slice(0, 600)) : ''}`
+        : `🔔 <b>${out.length} ta yangi xabar</b>\n\n` + out.slice(0, 12).map(e => '▫️ ' + line(e)).join('\n') + (out.length > 12 ? `\n\n… va yana ${out.length - 12} ta — CRM panelida` : '');
     const key = out.length === 1 ? `staff:${link.account_id}:${out[0].id}` : `staff:${link.account_id}:digest:${now.getTime()}`;
     await store.enqueue(db, { key: key.slice(0, 200), targetId: link.telegram_id, role: identity.role, account: identity,
-        payload: { chat_id: link.telegram_id, text: text.slice(0, 3800), reply_markup: { inline_keyboard: [[{ text: 'CRMda ochish', url: 'https://myhomework.uz/' }]] },
+        payload: { chat_id: link.telegram_id, ...T.fit(text, T.HTML).extra, text: T.fit(text, T.HTML).text, reply_markup: { inline_keyboard: [[{ text: '🖥 CRMda ochish', url: ['teacher','assistant'].includes(identity.role) ? 'https://myhomework.uz/teacher/' : 'https://myhomework.uz/' }]] },
             _automation: true, ...(quiet ? { disable_notification: true } : {}) } }); // tinch soatda shoshilinch xabar ovozsiz
     await db.query('INSERT INTO staff_notify_tg_sent(user_id,event_id) SELECT $1,unnest($2::text[]) ON CONFLICT DO NOTHING', [link.account_id, out.map(e => e.id)]);
     return out.length;

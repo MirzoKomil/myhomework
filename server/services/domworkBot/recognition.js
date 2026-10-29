@@ -3,6 +3,20 @@ const engine=require('../../../js/payrollEngine');
 const policy=require('./policy');
 const reports=require('./reports');
 const store=require('./store');
+const T=require('./tone');
+const TITLES={'Kun sotuvchisi':'🏆 <b>Bugungi sotuv chempioni</b>','Kun ustozi':'🌟 <b>Bugungi eng faol ustoz</b>','Hafta yetakchisi':'🏆 <b>Hafta yetakchisi</b>','Oy yetakchisi':'👑 <b>Oy yetakchisi</b>'};
+// G'oliblar: mention (bildirishnoma boradi), medal, natija va iliq tilak.
+async function pretty(db,value,label) {
+    const medal='🥇';
+    const lines=[];
+    for(const r of value.winners) {
+        const person=await require('./events').employee(db,r.id);
+        lines.push(`${medal} ${T.who(r.name,person?.telegramId)} — `+(value.criterion==='sales'?T.b(T.sum(r.value))
+            :`${T.b(r.value+' ta dars')}${r.rating!=null?` · ⭐️ ${r.rating.toFixed(1)} (${r.ratings} baho)`:''}`));
+    }
+    const period=value.start===value.end?T.dateOnly(value.start):`${T.dateOnly(value.start)} — ${T.dateOnly(value.end)}`;
+    return `${TITLES[label] || '🏆 <b>'+T.esc(label)+'</b>'}\n📅 ${period}\n\n${lines.join('\n')}\n\n${T.i(T.pick(T.CHEERS.win,label+value.start))}`;
+}
 const money=n=>new Intl.NumberFormat('uz-UZ').format(n).replace(/[\u00a0\u202f]/g,' ')+' UZS';
 const MILESTONES=[20000000,40000000,60000000];
 const RELEASE={id:'domwork-bot-insights-2026-10',text:'CRM yangilandi: bot menyulari erkin almashadi; sotuv pog‘onalari va g‘oliblar xabarlari uchun alohida sozlamalar, yordamchi ustoz baholarining aniq tarixi va rus tili reklama sarfi kiritish imkoniyati qo‘shildi.'};
@@ -79,7 +93,7 @@ async function summary(db,criterion,start,end,label) {
 async function announce(db,key,type,criterion,start,end,label,setting,now) {
     const value=await summary(db,criterion,start,end,label);
     if(!value.winners.length)return;
-    await require('./events').groupMessage(db,key,type,value.text,{_setting:setting,
+    await require('./events').groupMessage(db,key,type,await pretty(db,value,label),{...T.HTML,_setting:setting,
         _expiresAt:new Date(now.getTime()+3600000).toISOString(),_award:{criterion,start,end,winners:value.winners}});
 }
 async function run(db,settings,clock,now,once) {
