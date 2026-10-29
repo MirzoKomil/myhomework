@@ -19,6 +19,7 @@
     const role = () => (typeof getCurrentUser === 'function' ? getCurrentUser()?.role : '') || '';
     const isFull = () => ['admin', 'boshliq'].includes(role());
     const canManage = () => ['admin', 'boshliq', 'rop'].includes(role());
+    const canSeePayroll = () => ['admin', 'boshliq'].includes(role());
     const getC = (k, d) => (typeof getItem === 'function' && typeof STORAGE_KEYS !== 'undefined' && STORAGE_KEYS[k] ? getItem(STORAGE_KEYS[k], d) : d);
     const pad = n => String(n).padStart(2, '0');
     const today = () => U().today();
@@ -207,7 +208,8 @@
         if (seq !== davSeq) return;
         if (D.duty === 'assistant') await loadContacts(cur.rows.map(r => r.s), month);
         // Maosh — Moliya hisobi (/api/payroll/preview: payrollEngine), ustozning "Mening maoshim" va Bosh sahifasi bilan bitta manba.
-        const pay = canManage() ? await loadPayroll(month, lang) : null;
+        // Moliya hisobiga faqat moliya ruxsati bor rollar (server payroll.access): admin, boshliq; ROP — eski KPI ko'rinishi.
+        const pay = canSeePayroll() ? await loadPayroll(month, lang) : null;
         if (seq !== davSeq) return;
         root.innerHTML = davomatHtml({ lang, teachers, all, cur, mks, month, td, asstPay, asstIds, pay });
         bindDavomat(root, { all, cur, mks, ctx, lang });
@@ -474,7 +476,7 @@
         const month = D.month, days = monthDays(month);
         const mark = c => ({ present: 'Keldi', absent: 'Kelmadi', mk: 'Qoplash', unmarked: 'Belgilanmagan', planned: 'Reja', off: '' }[c.state] || '');
         // Summa — Moliya hisobi (sahifadagi bilan bir xil); bo'lmasa eski KPI.
-        const kpi = (canManage() && payKpi(await loadPayroll(month, curLang()), cur.t.id)) || kpiFor(cur.tObj, month, cur.rows.map(r => r.s));
+        const kpi = (canSeePayroll() && payKpi(await loadPayroll(month, curLang()), cur.t.id)) || kpiFor(cur.tObj, month, cur.rows.map(r => r.s));
         const per = new Map((kpi?.perStudent || []).map(p => [p.id, p]));
         const head = ['O\'quvchi', 'Telefon', 'Jadval', 'Davomiylik', ...Array.from({ length: days }, (_, i) => String(i + 1)), 'Hisobga o\'tdi', 'Reja', ...(canManage() ? ['Maosh'] : [])];
         const lines = [head, ...cur.rows.map(r => [r.s.name, r.s.phone || '', daysWord(r.s), `${r.s.lessonDuration || ''} daq`, ...r.cells.map(mark), r.counted, r.plan, ...(canManage() ? [per.get(r.s.id)?.earned ?? ''] : [])])];
