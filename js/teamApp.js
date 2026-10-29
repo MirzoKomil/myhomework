@@ -347,7 +347,12 @@
             };
             input.addEventListener('input', paint);
             input.addEventListener('change', paint);
+            input.addEventListener('blur', paint);
             wrap.addEventListener('click', () => { try { input.showPicker?.(); } catch { /* ruxsat yo'q */ } });
+            // Dastur qiymatni JS orqali qo'ysa ham (masalan, "Qisman to'lov" tanlanganda bugungi sana) yuz yangilansin —
+            // aks holda maydon to'la bo'lsa ham "kk.oo.yyyy" ko'rinib, o'sha sanani qayta tanlash hech narsa o'zgartirmasdi.
+            const desc = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+            Object.defineProperty(input, 'value', { get() { return desc.get.call(this); }, set(v) { desc.set.call(this, v); paint(); } });
             paint();
         });
     }

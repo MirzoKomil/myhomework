@@ -127,6 +127,7 @@ function V2HomeMobile() {
   const [now, setNow] = useState(() => new Date());
   const [botLinked, setBotLinked] = useCachedState('home.botLinked', true);
   const [botOpen, setBotOpen] = useState(false);
+  const [botMandatory, setBotMandatory] = useState(false);
   const [todayLightning, setTodayLightning] = useCachedState('home.todayLightning', 0);
   const [wordCount, setWordCount] = useCachedState<number | null>('home.wordCount', null);
   // Lesson ekrani bilan bir xil 5 qadam uchun tinglangan dialoglar.
@@ -183,7 +184,12 @@ function V2HomeMobile() {
         .catch(() => {});
       // Bot holati: faqat aniq "ulanmagan" javobi kelganda karta ko'rsatiladi.
       if (token) {
-        telegramLinkStatus().then((s) => setBotLinked(s.linked)).catch(() => setBotLinked(true));
+        telegramLinkStatus().then((s) => {
+          setBotLinked(s.linked);
+          // Admin kampaniyasi: ulanmagan o'quvchiga yopilmaydigan oyna.
+          setBotMandatory(!!s.mandatory && !s.linked);
+          if (s.mandatory && !s.linked) setBotOpen(true);
+        }).catch(() => setBotLinked(true));
       }
     }, [token, isEmbedded, loadLesson]),
   );
@@ -424,8 +430,10 @@ function V2HomeMobile() {
       <HomeNav p={p} />
       <BotConnectPopup
         visible={botOpen}
+        mandatory={botMandatory}
         onClose={() => {
           setBotOpen(false);
+          setBotMandatory(false);
           telegramLinkStatus().then((s) => setBotLinked(s.linked)).catch(() => {});
         }}
       />

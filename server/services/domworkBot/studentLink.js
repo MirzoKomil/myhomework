@@ -42,7 +42,7 @@ async function create(pool,actor){
         if(recent.fast||recent.total>=20)throw policy.error(429,'Biroz kutib qayta urinib ko‘ring');
         await db.query("UPDATE domwork_student_telegram_requests SET state='cancelled' WHERE student_id=$1 AND state IN ('pending','claimed')",[student.id]);
         const raw=randomBytes(32).toString('base64url'),id=randomUUID();
-        const row=(await db.query("INSERT INTO domwork_student_telegram_requests(id,student_id,session_jti,token_hash,expires_at) VALUES($1,$2,$3,$4,NOW()+INTERVAL '5 minutes') RETURNING *",[id,student.id,actor.jti,hash(raw)])).rows[0];
+        const row=(await db.query("INSERT INTO domwork_student_telegram_requests(id,student_id,session_jti,token_hash,expires_at) VALUES($1,$2,$3,$4,NOW()+INTERVAL '15 minutes') RETURNING *",[id,student.id,actor.jti,hash(raw)])).rows[0];
         await require('./store').audit(db,actor.id,'student-telegram-request',id);
         const url='https://t.me/Domworkuz_bot?start=sl_'+raw;
         return{request:requestDto(row),url,qr:require('./qr').qrPath(url)};
@@ -80,8 +80,11 @@ async function claim(db,message){
     if(linked&&linked.telegram_id!==telegramId)throw policy.error(409,'O‘quvchi boshqa Telegramga bog‘langan. Admin bilan bog‘laning');
     if(row.state==='pending')await db.query("UPDATE domwork_student_telegram_requests SET state='claimed',telegram_id=$2,telegram_name=$3,telegram_username=$4,claimed_at=NOW() WHERE id=$1",
         [row.id,telegramId,String([message.from.first_name,message.from.last_name].filter(Boolean).join(' ')).slice(0,160),String(message.from.username||'').slice(0,64)]);
-    // No student name, phone, grades or role is disclosed before platform confirmation.
-    return{ok:true};
+    // 29-okt: ilovaga qaytib tasdiqlash qadami olib tashlandi — Start'ning o'zi ulaydi (xodimlardagidek).
+    // Havola bir martalik, 15 daqiqa, faqat o'quvchining tirik ilova sessiyasida yaratiladi, faqat shaxsiy chatda ishlaydi.
+    const student=(await db.query("SELECT id,name,phone FROM students WHERE id=$1",[row.student_id])).rows[0];
+    await finalize(db,row,student,telegramId,'bot-start');
+    return{ok:true,linked:true};
 }
 async function confirm(pool,actor,input={}){
     return queue.transaction(pool,async db=>{
@@ -90,21 +93,40 @@ async function confirm(pool,actor,input={}){
         if(typeof input.requestId!=='string'||!telegramId)throw policy.error(400,'Telegram hisobini tekshirib tasdiqlang');
         const row=(await db.query('SELECT *,expires_at>NOW() AS valid FROM domwork_student_telegram_requests WHERE id=$1 AND student_id=$2 AND session_jti=$3 FOR UPDATE',[input.requestId,student.id,actor.jti])).rows[0];
         if(!row||row.state!=='claimed'||!row.valid||row.telegram_id!==telegramId)throw policy.error(409,'Ulash so‘rovi eskirgan yoki o‘zgargan. Qayta tekshiring');
-        const occupied=(await db.query('SELECT account_kind,account_id FROM domwork_bot_links WHERE telegram_id=$1',[telegramId])).rows[0],linked=await existing(db,student.id);
-        if((occupied&&occupied.account_kind!=='lead'&&(occupied.account_kind!=='student'||occupied.account_id!==student.id))||(linked&&linked.telegram_id!==telegramId))
-            throw policy.error(409,'Mavjud Telegram bog‘lanishi almashtirilmadi. Admin bilan bog‘laning');
-        if(occupied?.account_kind==='lead')await db.query("DELETE FROM domwork_bot_links WHERE telegram_id=$1 AND account_kind='lead'",[telegramId]);
-        if(!linked)await db.query("INSERT INTO domwork_bot_links(telegram_id,account_kind,account_id,phone) VALUES($1,'student',$2,$3)",[telegramId,student.id,policy.phone(student.phone)]);
-        await db.query('INSERT INTO domwork_student_telegram_proofs(student_id,telegram_id) VALUES($1,$2) ON CONFLICT(student_id) DO NOTHING',[student.id,telegramId]);
-        await db.query("UPDATE domwork_student_telegram_requests SET state='confirmed',confirmed_at=NOW() WHERE id=$1",[row.id]);
-        await require('./store').audit(db,student.id,'student-telegram-confirmed',row.id,{telegramId,method:'platform'});
-        await require('./discovery').requestStudent(db,student.id);
-        const identity=await require('./store').identity(db,telegramId);
-        const {keyboard}=require('./handlers');
-        await require('./store').enqueue(db,{key:'student-link:'+row.id,targetId:telegramId,role:'student',account:identity,
-            payload:{chat_id:telegramId,text:'Telegram hisobingiz student appga ulandi. Kerakli bo‘limni tanlang.',reply_markup:keyboard(identity)}});
+        await finalize(db,row,student,telegramId,'platform');
         return{ok:true};
     });
+}
+// Ulanishni yakunlash. Chaqiruvchi advisory lock'ni ushlab turadi.
+async function finalize(db,row,student,telegramId,method){
+    const occupied=(await db.query('SELECT account_kind,account_id FROM domwork_bot_links WHERE telegram_id=$1',[telegramId])).rows[0],linked=await existing(db,student.id);
+    if((occupied&&occupied.account_kind!=='lead'&&(occupied.account_kind!=='student'||occupied.account_id!==student.id))||(linked&&linked.telegram_id!==telegramId))
+        throw policy.error(409,'Mavjud Telegram bog‘lanishi almashtirilmadi. Admin bilan bog‘laning');
+    if(occupied?.account_kind==='lead')await db.query("DELETE FROM domwork_bot_links WHERE telegram_id=$1 AND account_kind='lead'",[telegramId]);
+    if(!linked)await db.query("INSERT INTO domwork_bot_links(telegram_id,account_kind,account_id,phone) VALUES($1,'student',$2,$3)",[telegramId,student.id,policy.phone(student.phone)]);
+    await db.query('INSERT INTO domwork_student_telegram_proofs(student_id,telegram_id) VALUES($1,$2) ON CONFLICT(student_id) DO NOTHING',[student.id,telegramId]);
+    await db.query("UPDATE domwork_student_telegram_requests SET state='confirmed',confirmed_at=NOW(),telegram_id=$2 WHERE id=$1",[row.id,telegramId]);
+    await require('./store').audit(db,student.id,'student-telegram-confirmed',row.id,{telegramId,method});
+    await require('./discovery').requestStudent(db,student.id);
+    const identity=await require('./store').identity(db,telegramId);
+    if(!identity)return;
+    const {keyboard}=require('./handlers'), T=require('./tone');
+    await require('./store').enqueue(db,{key:'student-link:'+row.id,targetId:telegramId,role:'student',account:identity,
+        payload:{chat_id:telegramId,text:welcome(identity),reply_markup:keyboard(identity),...T.HTML}});
+}
+function welcome(identity){
+    const T=require('./tone');
+    return `🎉 Tabriklaymiz, ${T.esc(T.first(identity.name))}! Telegram Domwork ilovangizga ulandi.\n\n`
+        +'Endi shu yerda:\n🔔 darsdan 15 daqiqa oldin eslatma va jonli dars havolasi\n📊 baho va vazifa natijalari\n💳 to‘lov va shartnoma\n🔑 login va parol\n\n'
+        +'Ilovaga qayting — oyna o‘zi yopiladi. Pastdagi menyudan kerakli bo‘limni tanlang 👇';
+}
+async function finishPending(db,telegramId){
+    await db.query("SELECT pg_advisory_xact_lock(hashtext('domwork-bot-links'))");
+    const row=(await db.query("SELECT * FROM domwork_student_telegram_requests WHERE telegram_id=$1 AND state='claimed' AND expires_at>NOW() ORDER BY claimed_at DESC LIMIT 1 FOR UPDATE",[telegramId])).rows[0];
+    if(!row)return false;
+    const student=await owner(db,{id:row.student_id,role:'student',jti:row.session_jti});
+    await finalize(db,row,student,telegramId,'bot-start');
+    return true;
 }
 async function cancel(pool,actor,input={}){
     return queue.transaction(pool,async db=>{
@@ -114,4 +136,4 @@ async function cancel(pool,actor,input={}){
         return{ok:true};
     });
 }
-module.exports={SCHEMA,init,owner,status,create,claim,confirm,cancel,redact,startHash};
+module.exports={SCHEMA,init,owner,status,create,claim,confirm,finishPending,cancel,redact,startHash,welcome};

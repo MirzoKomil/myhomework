@@ -26,14 +26,16 @@ import {
   type TelegramLinkStatus,
 } from '@/services/telegramLinkApi';
 
-const STEPS = ['Botni ochish', 'Start tugmasini bosing', 'Ilovaga qaytib, ismingizni tasdiqlang'];
+const STEPS = ['«Botni ochish»ni bosing', 'Telegramda Start tugmasini bosing — tamom!'];
 
-export function BotConnectPopup(props: { visible: boolean; onClose: () => void }) {
+// mandatory — o'quvchi botni ulamaguncha oyna yopilmaydi (admin kampaniyasi, server `mandatory` deydi).
+export function BotConnectPopup(props: { visible: boolean; onClose: () => void; mandatory?: boolean }) {
   // Kompyuterda — markazdagi karta (D_BotConnect), telefonda — pastki oyna.
   return useIsDesktop() ? <DBotConnect {...props} /> : <BotConnectPopupMobile {...props} />;
 }
 
-function BotConnectPopupMobile({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+function BotConnectPopupMobile({ visible, onClose, mandatory = false }: { visible: boolean; onClose: () => void; mandatory?: boolean }) {
+  const dismiss = mandatory ? () => {} : onClose;
   const insets = useSafeAreaInsets();
   const { token } = useAuth();
   const [status, setStatus] = useState<TelegramLinkStatus | null>(null);
@@ -108,9 +110,9 @@ function BotConnectPopupMobile({ visible, onClose }: { visible: boolean; onClose
   if (error) statusText = error;
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={dismiss} statusBarTranslucent>
       <View style={styles.root}>
-        <Pressable accessibilityLabel="Yopish" onPress={onClose} style={[StyleSheet.absoluteFill, styles.backdrop]} />
+        <Pressable accessibilityLabel="Yopish" onPress={dismiss} style={[StyleSheet.absoluteFill, styles.backdrop]} />
         <View style={styles.column}>
           <View accessibilityViewIsModal style={[styles.sheet, { paddingBottom: Math.max(24, insets.bottom + 8) }]}>
             <ScrollView bounces={false} contentContainerStyle={styles.sheetInner} showsVerticalScrollIndicator={false}>
@@ -126,11 +128,15 @@ function BotConnectPopupMobile({ visible, onClose }: { visible: boolean; onClose
                   <Text style={styles.title} accessibilityRole="header">Telegram botni ulang</Text>
                   <Text style={styles.handle}>@Domworkuz_bot</Text>
                 </View>
-                <Pressable accessibilityRole="button" accessibilityLabel="Yopish" onPress={onClose} style={styles.close}>
-                  <CloseIcon />
-                </Pressable>
+                {!mandatory && (
+                  <Pressable accessibilityRole="button" accessibilityLabel="Yopish" onPress={onClose} style={styles.close}>
+                    <CloseIcon />
+                  </Pressable>
+                )}
               </View>
-              <Text style={styles.body}>Muhim xabarlar Telegramga keladi — ilovani ochmasangiz ham hech narsani oʻtkazib yubormaysiz.</Text>
+              <Text style={styles.body}>{mandatory
+                ? 'Davom etish uchun botni ulang — 30 soniyalik ish. Muhim xabarlar Telegramga keladi, hech narsani oʻtkazib yubormaysiz.'
+                : 'Muhim xabarlar Telegramga keladi — ilovani ochmasangiz ham hech narsani oʻtkazib yubormaysiz.'}</Text>
               <View style={styles.list} accessibilityRole="list">
                 <View style={styles.item}><ChipBellIcon size={18} color="#1B6FA8" /><Text style={styles.itemText}>Darsdan oldin eslatma</Text></View>
                 <View style={styles.item}><ChipVideoIcon size={18} color="#1B6FA8" /><Text style={styles.itemText}>{lessonTime ? `Jonli darsga havola (${lessonTime})` : 'Jonli darsga havola'}</Text></View>
@@ -141,7 +147,7 @@ function BotConnectPopupMobile({ visible, onClose }: { visible: boolean; onClose
                   <View key={s} style={styles.step}>
                     <View style={styles.stepNum}><Text style={styles.stepNumText}>{i + 1}</Text></View>
                     <Text style={styles.stepText}>
-                      {i === 1 ? <><Text style={{ fontFamily: fonts.bodyHeavy }}>Start</Text> tugmasini bosing</> : s}
+                      {i === 1 ? <>Telegramda <Text style={{ fontFamily: fonts.bodyHeavy }}>Start</Text> tugmasini bosing — tamom!</> : s}
                     </Text>
                   </View>
                 ))}
@@ -160,9 +166,11 @@ function BotConnectPopupMobile({ visible, onClose }: { visible: boolean; onClose
                   <TelegramAltIcon />
                   <Text style={styles.primaryText}>{claimed ? 'Ha, bu mening Telegramim' : 'Botni ochish'}</Text>
                 </Pressable>
-                <Pressable accessibilityRole="button" onPress={onClose} style={styles.later}>
-                  <Text style={styles.laterText}>Keyinroq</Text>
-                </Pressable>
+                {!mandatory && (
+                  <Pressable accessibilityRole="button" onPress={onClose} style={styles.later}>
+                    <Text style={styles.laterText}>Keyinroq</Text>
+                  </Pressable>
+                )}
               </View>
             </ScrollView>
           </View>

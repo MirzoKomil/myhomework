@@ -59,7 +59,7 @@ function createHandler({ crm }) {
             await db.query(`INSERT INTO domwork_bot_trial_members(chat_id,telegram_id,lead_id,request_id) VALUES($1,$2,$3,$4)
                 ON CONFLICT(chat_id,telegram_id) DO UPDATE SET lead_id=EXCLUDED.lead_id,request_id=EXCLUDED.request_id,joined_at=NOW()`,[group.chatId,identity.telegramId,identity.id,booking.id]);
             if((await store.settings(db)).data.groupNotificationsEnabled) await store.enqueue(db,{key:`u:${update.update_id}:welcome`,targetKind:'group',targetId:group.chatId,
-                payload:{chat_id:group.chatId,text:`Assalomu alaykum, ${text(identity.name)}! Domwork sinov darsiga xush kelibsiz!`,_automation:true,_binding:group.id}});
+                payload:{chat_id:group.chatId,text:`Assalomu alaykum, ${require('./tone').who(identity.name,identity.telegramId)}! 👋\n\nDomwork sinov darsiga xush kelibsiz 🎉\nUstoz dars vaqtida shu yerda boshlaydi — bildirishnomalarni yoqib qo‘ying 🔔`,_automation:true,_binding:group.id,...require('./tone').HTML}});
             return;
         }
         if (update.my_chat_member) {
@@ -103,9 +103,8 @@ function createHandler({ crm }) {
         }
         try {
             if(message._studentLinkHash || require('./studentLink').startHash(message.text)){
+                // Start ulanishni darhol yakunlaydi; xush kelibsiz xabari va menyuni studentLink.finalize yuboradi.
                 await require('./studentLink').claim(db,message);
-                await store.enqueue(db,{key:`u:${update.update_id}:student-link`,targetId:sender,
-                    payload:{chat_id:sender,text:'Endi student appdagi “Telegram botga ulash” oynasiga qayting. “Holatni tekshirish”ni bosib, o‘z Telegram hisobingizni tasdiqlang.'}});
                 return;
             }
             if(message._staffLinkHash || require('./staffLink').startHash(message.text)){
@@ -122,6 +121,10 @@ function createHandler({ crm }) {
             // Eski oqimda Start bosib, CRMda tasdiqlamay qolgan xodim — har qanday xabarida ulanish yakunlanadi (raqam so'ralmaydi).
             if (!identity && (await db.query(`SELECT 1 FROM domwork_staff_telegram_requests WHERE telegram_id=$1 AND state='claimed' AND expires_at>NOW() LIMIT 1`, [sender])).rows.length) {
                 await require('./staffLink').finishPending(db, sender);
+                return;
+            }
+            if (!identity && (await db.query(`SELECT 1 FROM domwork_student_telegram_requests WHERE telegram_id=$1 AND state='claimed' AND expires_at>NOW() LIMIT 1`, [sender])).rows.length) {
+                await require('./studentLink').finishPending(db, sender);
                 return;
             }
             if (message.contact) {
@@ -294,7 +297,7 @@ function createHandler({ crm }) {
                     const row = (await db.query("SELECT phone,extra_data FROM students WHERE id=$1 AND subject='russian'", [identity.id])).rows[0];
                     const last4 = policy.phone(row?.phone).slice(-4);
                     const original = last4.length === 4 && row?.extra_data?.passwordHash && await bcrypt.compare(last4, row.extra_data.passwordHash);
-                    return await reply(`Platforma: https://myhomework.uz/student/\nLogin: ${text(row?.extra_data?.login || '+' + policy.phone(row?.phone))}\n`
+                    return await reply(`Platforma: https://myhomework.uz/student/v2/\nLogin: ${text(row?.extra_data?.login || '+' + policy.phone(row?.phone))}\n`
                         + (original ? `Parol: ${last4}` : 'Parol o‘zgartirilgan. Uni ko‘rsatish yoki tiklash uchun administratorga murojaat qiling.'));
                 }
                 if (action === 'grades') {
@@ -343,7 +346,10 @@ function createHandler({ crm }) {
                 }
             }
             // Staff integrations are intentionally separate from student/data access.
-            if (crm.staffAction) return await reply(await crm.staffAction(db, identity, action));
+            if (crm.staffAction) {
+                const out = await crm.staffAction(db, identity, action);
+                return out && typeof out === 'object' && out.html ? await reply(out.html, require('./tone').HTML) : await reply(out);
+            }
             return await reply('Bu funksiya hali ulanmagan. Hozircha CRM kabinetidan foydalaning.');
         } catch (error) {
             if (!error.status || error.status >= 500) throw error;
