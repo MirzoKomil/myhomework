@@ -6,12 +6,39 @@ const reports = require('./reports');
 const money = value => new Intl.NumberFormat('uz-UZ').format(Number(value) || 0).replace(/[\u00a0\u202f]/g,' ') + ' UZS';
 const safe = value => String(value ?? '').slice(0,200);
 const none = 'Hozircha ma’lumot yo‘q.';
-function salary(row) {
+// CRM'dagi lid bosqichlari (js/app.js FUNNEL_STAGES) — botda xom kalit emas, tushunarli nom va voronka tartibi.
+const STAGES = [['yangi-lidlar','Yangi lidlar'],['boglanishga-urinilmoqda','Bog‘lanishga urinilmoqda'],['boglanildi','Bog‘lanildi'],['sinov-darsida','Sinov darsida'],
+    ['qaror-jarayonida','Qaror jarayonida'],['keyin-sotib-olmoqchi','Keyin sotib olmoqchi'],['tolov-jarayonida','To‘lov jarayonida'],['tolov-yopildi','To‘lov yopildi']];
+function stageLines(rows) {
+    const order = new Map(STAGES.map(([id],i)=>[id,i])), label = new Map(STAGES);
+    return rows.slice().sort((a,b)=>(order.get(a.status) ?? 99)-(order.get(b.status) ?? 99))
+        .map(r => `${safe(label.get(r.status) || r.status || 'Bosqichsiz')}: ${r.count}`).join('\n');
+}
+// Xodimlar uchun avtomatik yaratilgan demo o'quvchilar (isStaffDemo) hech qayerda ro'yxatga kirmaydi — CRM'dagidek.
+const REAL = "COALESCE(s.extra_data->>'isStaffDemo','false')<>'true'";
+// CRM'dagi getTeacherAssignmentIds bilan bir xil: eski "teachers" yozuvlari (boshqa ID) ham shu ustozniki.
+async function teacherIds(db, identity, assistant) {
+    const ids = new Set([identity.employeeId]);
+    const he = (await db.query('SELECT name,phone FROM hr_employees WHERE id=$1', [identity.employeeId])).rows[0];
+    if (he && (await db.query("SELECT to_regclass('teachers') AS t")).rows[0].t) {
+        const digits = String(he.phone || '').replace(/\D/g,'');
+        const rows = (await db.query(`SELECT id,name,phone FROM teachers WHERE subject='russian' AND type=$1`, [assistant ? 'yordamchi' : 'asosiy'])).rows;
+        for (const r of rows) {
+            const d = String(r.phone || '').replace(/\D/g,'');
+            if ((digits.length >= 9 && d === digits) || (he.name && String(r.name || '').trim().toLowerCase() === String(he.name).trim().toLowerCase())) ids.add(r.id);
+        }
+    }
+    return [...ids];
+}
+function salary(row, role) {
     if (!row) return 'Xodim uchun KPI hisob-kitobi topilmadi. HRdagi KPI biriktirishni tekshiring.';
-    return `Fiksa: ${money(row.fixed)}\nAylanma: ${money(row.turnover)}\n`
-        + `Komissiya: ${money(row.commission)}\nBonus: ${money(row.bonus)}\n`
-        + (row.mainTotal != null ? `Asosiy ustozlik: ${money(row.mainTotal)}\nYordamchi ustozlik: ${money(row.assistantTotal)}\n` : '')
-        + `Jami: ${money(row.total)}${row.blocked ? '\nReja hali tasdiqlanmagan.' : ''}`;
+    // Faqat shu rolga tegishli qatorlar: ustozga "Aylanma/Komissiya: 0" ko'rsatilmaydi.
+    const teaching = ['teacher','assistant'].includes(role);
+    const lines = teaching
+        ? [['Fiksa', row.fixed], ['Asosiy ustozlik', row.mainTotal], ['Yordamchi ustozlik', row.assistantTotal], ['Bonus', row.bonus]]
+        : [['Fiksa', row.fixed], ['Aylanma (sotuv)', row.turnover], ['Komissiya', row.commission], ['Bonus', row.bonus]];
+    return lines.filter(([, v]) => Number(v) > 0).map(([k, v]) => `${k}: ${money(v)}`).join('\n')
+        + `${lines.some(([, v]) => Number(v) > 0) ? '\n' : ''}💰 Jami: ${money(row.total)}${row.blocked ? '\nReja hali tasdiqlanmagan — summa o‘zgarishi mumkin.' : ''}`;
 }
 async function json(db,key,fallback={}) { return (await db.query('SELECT data FROM json_data WHERE key=$1',[key])).rows[0]?.data || fallback; }
 function personalPlan(raw,id,month) {
@@ -38,7 +65,7 @@ async function action(db, identity, actionId, options={}) {
         const period = policy.monthPeriod(options.now);
         const calculation = await payroll.calculate(db, period, 'russian');
         const own = calculation.rows.find(r => r.employeeId === identity.employeeId || (identity.role === 'sales' && r.employeeId === identity.managerId));
-        if (actionId === 'salary') return `Davr: ${period.start} — ${period.end}\n` + salary(own);
+        if (actionId === 'salary') return `Davr: ${period.start} — ${period.end}\n` + salary(own, identity.role);
         if (actionId === 'ranking') {
             const ranked = calculation.rows.filter(r => r.role === 'sales').sort((a,b)=>b.turnover-a.turnover);
             const index = ranked.findIndex(r => r.employeeId === own?.employeeId);
@@ -66,8 +93,9 @@ async function action(db, identity, actionId, options={}) {
             const assistant = actionId === 'assistant-duty' || identity.role === 'assistant';
             const rows = (await db.query(`SELECT s.id,s.name,s.phone,s.group_name,s.lesson_time,h.name AS main_teacher
                 FROM students s LEFT JOIN hr_employees h ON h.id=s.teacher_id
-                WHERE s.subject='russian' AND ${assistant ? 's.assistant_teacher_id' : 's.teacher_id'}=$1 ORDER BY s.name LIMIT 100`, [identity.employeeId])).rows;
-            let output=rows.map(r => `${safe(r.name)} · ${safe(r.phone)}\n${safe(r.group_name)} · ${safe(r.lesson_time)}${assistant ? '\nAsosiy ustoz: '+safe(r.main_teacher) : ''}`).join('\n\n') || none;
+                WHERE s.subject='russian' AND ${REAL} AND ${assistant ? 's.assistant_teacher_id' : 's.teacher_id'}=ANY($1::text[]) ORDER BY s.name LIMIT 150`,
+                [await teacherIds(db, identity, assistant)])).rows;
+            let output=rows.length ? `Jami: ${rows.length} ta o‘quvchi\n\n` + rows.map(r => `${safe(r.name)} · ${safe(r.phone)}\n${[safe(r.group_name), safe(r.lesson_time)].filter(Boolean).join(' · ') || 'Guruh/vaqt belgilanmagan'}${assistant ? '\nAsosiy ustoz: '+safe(r.main_teacher || '—') : ''}`).join('\n\n') : none;
             if(actionId==='assistant-duty') {
                 const period=policy.monthPeriod(options.now), calculation=await payroll.calculate(db,period,'russian');
                 const own=calculation.rows.find(r=>r.employeeId===identity.employeeId);
@@ -79,10 +107,15 @@ async function action(db, identity, actionId, options={}) {
             return output;
         }
         if (!['sales','rop'].includes(identity.role)) throw policy.error(403, 'Ruxsat yo‘q');
-        const rows = (await db.query(`SELECT id,name,phone,extra_data FROM students WHERE subject='russian'
-            AND ($1::boolean OR extra_data->>'managerId'=$2) ORDER BY name LIMIT 200`, [identity.role === 'rop',identity.managerId || ''])).rows;
-        return rows.filter(r => actionId !== 'debtors' || Number(r.extra_data?.debtAmount)>0)
-            .map(r => `${safe(r.name)} · ${safe(r.phone)}${actionId === 'debtors' ? '\nQarz: '+money(r.extra_data.debtAmount)+' · '+safe(r.extra_data.paymentDueDate) : ''}`).join('\n\n') || none;
+        // CRM'dagi filterStudentsForSalesManager bilan bir xil: o'quvchining menejeri YOKI menejer lididan kelgan o'quvchi.
+        const rows = (await db.query(`SELECT s.id,s.name,s.phone,s.extra_data FROM students s WHERE s.subject='russian' AND ${REAL}
+            AND ($1::boolean OR s.extra_data->>'managerId'=$2 OR EXISTS(SELECT 1 FROM leads l WHERE l.id=s.extra_data->'leadRef'->>'id' AND l.manager_id=$2 AND $2<>''))
+            ORDER BY s.name LIMIT 500`, [identity.role === 'rop',identity.managerId || ''])).rows;
+        if (actionId !== 'debtors') return rows.length ? `Jami: ${rows.length} ta o‘quvchi\n\n` + rows.slice(0,200).map(r => `${safe(r.name)} · ${safe(r.phone)}`).join('\n') : none;
+        const debtors = rows.filter(r => Number(r.extra_data?.debtAmount) > 0).sort((a,b) => Number(b.extra_data.debtAmount) - Number(a.extra_data.debtAmount));
+        if (!debtors.length) return 'Qarzdor o‘quvchi yo‘q 🎉';
+        const total = debtors.reduce((sum,r) => sum + Number(r.extra_data.debtAmount), 0);
+        return `Qarzdorlar: ${debtors.length} ta · Jami qarz: ${money(total)}\n\n` + debtors.slice(0,150).map(r => `${safe(r.name)} · ${safe(r.phone)}\nQarz: ${money(r.extra_data.debtAmount)}${r.extra_data.paymentDueDate ? ' · Muddat: ' + safe(r.extra_data.paymentDueDate) : ''}`).join('\n\n');
     }
     if (actionId === 'groups' && identity.role === 'teacher') {
         const rows=(await db.query(`SELECT name,type,invite_link FROM domwork_learning_groups
@@ -104,8 +137,8 @@ async function action(db, identity, actionId, options={}) {
         const totals = (await db.query(`SELECT COUNT(*) AS count,COALESCE(SUM(amount),0) AS amount FROM payment_records
             WHERE language='russian' AND paid_date BETWEEN $1 AND $2`, [start,end])).rows[0];
         const counts = (await db.query("SELECT status,COUNT(*) AS count FROM leads WHERE language='russian' AND deleted_at IS NULL GROUP BY status ORDER BY status")).rows;
-        let output=`Davr: ${start} — ${end}\nKirim: ${money(totals.amount)}\nTranzaksiyalar: ${totals.count}\n`+counts.map(r => `${safe(r.status)}: ${r.count}`).join('\n');
-        const debt=(await db.query("SELECT extra_data FROM students WHERE subject='russian'")).rows.reduce((sum,r)=>sum+Math.max(0,Number(r.extra_data?.debtAmount)||0),0);
+        let output=`Davr: ${start} — ${end}\nKirim: ${money(totals.amount)}\nTo‘lovlar soni: ${totals.count}\n\nLidlar bosqichlar bo‘yicha:\n`+stageLines(counts);
+        const debt=(await db.query(`SELECT s.extra_data FROM students s WHERE s.subject='russian' AND ${REAL}`)).rows.reduce((sum,r)=>sum+Math.max(0,Number(r.extra_data?.debtAmount)||0),0);
         output+=`\nQoldiq qarz: ${money(debt)}`;
         if(identity.role==='admin' && actionId==='digest') {
             output+='\n\n'+await reports.academicDigest(db,start,end);
