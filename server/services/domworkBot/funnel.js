@@ -155,7 +155,7 @@ async function ensureLead(db, v, { phone = '', intent = '' } = {}) {
         const id = randomUUID(), name = v.first_name || 'Telegram mehmon';
         const src = /^(ig|fb|tt|yt|ads):(.*)$/.exec(v.source || '');
         const [utmSource, utmCampaign] = src ? [{ ig: 'instagram', fb: 'facebook', tt: 'tiktok', yt: 'youtube', ads: 'ads' }[src[1]], src[2]] : ['telegram-bot', ''];
-        const extra = { utmSource, ...(utmCampaign ? { utmCampaign } : {}), telegramId: v.telegram_id, ...(v.username ? { telegramUsername: v.username } : {}), botIntent: intent };
+        const extra = { utmSource, ...(utmCampaign ? { utmCampaign } : {}), telegramId: v.telegram_id, ...(v.username ? { telegramUsername: v.username } : {}), botIntent: intent, ...(v.location === 'ru' || v.segment === 'russia' ? { country: 'ru' } : v.location === 'other' ? { country: 'other' } : {}) };
         const comments = [{ id: randomUUID(), type: 'note', author: 'Bot', ts: Date.now(), date: new Date().toLocaleDateString('uz-UZ'),
             text: `🤖 @Domworkuz_bot orqali keldi${v.username ? ' · @' + v.username : ''} · Telegram ID ${v.telegram_id}` }];
         await db.query(`INSERT INTO leads(id,name,phone,phone2,email,source,language,date,external_id,status,lead_type,comments,attachments,created_at,updated_at,extra_data)
@@ -185,14 +185,16 @@ const managerButtons = tid => ({ inline_keyboard: [[{ text: '📞 Gaplashdim', c
     [{ text: '⏰ Keyinroq', callback_data: `m:${tid}:later` }, { text: '✅ Sinovga yozdim', callback_data: `m:${tid}:trial` }], [{ text: '❌ Rad etdi', callback_data: `m:${tid}:rej` }]] });
 async function notifySales(db, key, title, v, extra = '', { buttons = false } = {}) {
     const lead = v.lead_id ? (await db.query('SELECT name,phone,manager_id FROM leads WHERE id=$1', [v.lead_id])).rows[0] : null;
-    const text = `${title}\n${profile(v, lead)}${extra ? '\n' + extra : ''}\n↩️ Javob yozish: shu xabarga reply qiling — lidga bot orqali boradi.`;
+    const text = `${title}\n${profile(v, lead)}${extra ? '\n' + extra : ''}`;
+    const groupText = text + '\n↩️ Javob yozish: shu xabarga reply qiling — lidga bot orqali boradi.';
+    const dmText = text + '\n↩️ Javob yozish: Sotuv guruhidagi shu lid xabariga reply qiling (bu yerdan yozilgani lidga bormaydi).';
     const events = require('./events');
     // Voronka xabarlari umumiy "guruh xabarlari" tugmasiga bog'liq emas — faqat funnelEnabled va faol "Sotuv" guruhi.
     const group = await salesGroup(db);
     if (group) await store.enqueue(db, { key: 'funnel:' + key + ':' + group.id, targetKind: 'group', targetId: group.chat_id,
-        payload: { chat_id: group.chat_id, text: text.slice(0, 3500), ...(buttons ? { reply_markup: managerButtons(v.telegram_id) } : {}),
+        payload: { chat_id: group.chat_id, text: groupText.slice(0, 3500), ...(buttons ? { reply_markup: managerButtons(v.telegram_id) } : {}),
             _automation: true, _binding: group.id, _funnel: true, _relay: v.telegram_id } });
-    if (lead?.manager_id) await events.privateMessage(db, 'funnel:' + key + ':m', await events.employee(db, lead.manager_id), text);
+    if (lead?.manager_id) await events.privateMessage(db, 'funnel:' + key + ':m', await events.employee(db, lead.manager_id), dmText);
 }
 async function addScore(db, v, n, reason) {
     const before = v.score; v.score = before + n;
@@ -331,7 +333,11 @@ async function guide(c, v, fieldKey) {
         if (f) await say(c, copy.text.promise(f), undefined, { html: true });
         await sendMedia(c, m, copy.text.guide(f || { label: '📘 Umumiy' }), inline(buttons), { html: true });
     } else await say(c, f ? copy.text.promise(f) : copy.text.askManager, inline(buttons)); // tayyor bo'lmagan qo'llanma ko'rsatilmaydi
-    if (!v.guide_at) { await patch(c.db, c.tid, { guide_at: new Date() }); await addScore(c.db, v, 1, 'qo‘llanma oldi'); }
+    if (!v.guide_at) {
+        await patch(c.db, c.tid, { guide_at: new Date() }); await addScore(c.db, v, 1, 'qo‘llanma oldi');
+        // 20 daqiqadan keyin yumshoq taklif (shu orada so'rov qoldirgan bo'lsa — yuborilmaydi).
+        if (!v.requested_at) await say(c, copy.text.afterGuide(track(v)), inline([[[copy.KEYBOARD.contact, 'f:cta']]]), { delayMs: 20 * 60000, unless: 'request', key: 'f:after-guide:' + c.tid, automation: true });
+    }
     await event(c.db, c.tid, 'guide', { field: fieldKey });
 }
 async function faqList(c, v) {
@@ -352,18 +358,20 @@ async function callback(db, update) {
     let m;
     if ((m = /^f:loc:(uz|ru|other)$/.exec(data))) {
         await event(db, tid, 'location', { loc: m[1] });
-        // Meta formasidan kelgan — arizasini topish uchun bir bosishda raqam (javobdan keyin, bitta savol bir vaqtda).
-        if (/^(fb|ads):/.test(v.source) && !v.lead_id && !v.phone) {
-            await patch(db, tid, { awaiting: 'match' });
-            await say(c, copy.text.matchAsk, { keyboard: [[{ text: copy.text.contactButton, request_contact: true }], [{ text: copy.text.later }]], resize_keyboard: true, one_time_keyboard: true });
-        }
-        if (m[1] === 'uz') return askGoalUz(c, { delayMs: 1500 });
+        const needMatch = /^(fb|ads):/.test(v.source) && !v.lead_id && !v.phone;
+        const askMatch = async delayMs => { // Meta arizachisi: arizasini topish uchun bir bosishda raqam (ixtiyoriy)
+            await patch(db, tid, { awaiting: 'match' }); v.awaiting = 'match';
+            await say(c, m[1] === 'uz' ? copy.text.matchAsk : copy.text.matchAskRu, { keyboard: [[{ text: copy.text.contactButton, request_contact: true }], [{ text: copy.text.later }]], resize_keyboard: true, one_time_keyboard: true }, { delayMs });
+        };
+        await patch(db, tid, { location: m[1] }); v.location = m[1];
+        if (m[1] === 'uz') { if (needMatch) await askMatch(0); return askGoalUz(c, { delayMs: 1500 }); }
         const seg = m[1] === 'ru' ? 'russia' : 'abroad';
         await patch(db, tid, { segment: seg }); v.segment = seg; await event(db, tid, 'segment', { segment: seg });
         if (v.lead_id) await leadComment(db, v.lead_id, m[1] === 'ru' ? '🇷🇺 Bot: mijoz ROSSIYADA — qo‘ng‘iroq qilmang, faqat Telegram (bot orqali reply) yozing.' : '🌍 Bot: mijoz boshqa davlatda — avval Telegramda yozing.');
-        await patch(db, tid, { location: m[1] }); v.location = m[1];
         await say(c, m[1] === 'ru' ? copy.text.ruNote : copy.text.abroadNote, undefined, { html: true, delayMs: 1500 });
-        if (m[1] === 'ru' && !v.ru_form?.done) return ruQuestion(c, 0, { delayMs: 2500 });
+        if (needMatch) await askMatch(2500);
+        // Meta arizachisi: avval raqam (arizasi topilsin, dublikat lid ochilmasin), anketa — raqamdan yoki «Keyinroq»dan keyin.
+        if (m[1] === 'ru' && !v.ru_form?.done) return v.awaiting === 'match' ? undefined : ruQuestion(c, 0, { delayMs: 2500 });
         return askField(c, v, { delayMs: 3000 });
     }
     if ((m = /^f:ru:(\d):([a-z]+)$/.exec(data))) {
@@ -376,6 +384,7 @@ async function callback(db, update) {
         // Anketa tugadi → CRMda organik lid (raqamsiz, Telegram orqali) va Sotuv guruhiga kartochka; menejer reply bilan yozadi.
         await patch(db, tid, { ru_form: { ...form, done: true }, request: { method: 'telegram', when: 'ru' }, requested_at: new Date() }); v.requested_at = new Date();
         await ensureLead(db, v, { intent: 'telegram' });
+        await db.query(`UPDATE leads SET extra_data=COALESCE(extra_data,'{}'::jsonb)||'{"country":"ru"}'::jsonb WHERE id=$1`, [v.lead_id]);
         const summary = `🇷🇺 Rossiyada · ${form.city} · ${form.job} · daraja: ${form.level} · qulay vaqt: ${form.when}`;
         await leadComment(db, v.lead_id, `🤖 Bot anketasi: ${summary}\n⚠️ Qo‘ng‘iroq qilmang — Rossiyaga ulanmaydi. Sotuv guruhidagi bot xabariga REPLY qilib yozing (javob mijozga bot orqali boradi).`);
         await addScore(db, v, 4, 'Rossiya anketasini to‘ldirdi');
@@ -468,18 +477,55 @@ async function message(db, update) {
     if (text === copy.KEYBOARD.contact) return cta(c, v);
     if (text === copy.KEYBOARD.guides) return v.segment ? askField(c, v) : askSegment(c);
     if (text === copy.KEYBOARD.faq) return faqList(c, v);
-    if (text === copy.text.cancel || (text === copy.text.later && v.awaiting === 'match')) { await patch(db, tid, { awaiting: '' }); return say(c, '👌', replyKeyboard()); }
-    // Erkin matn yoki ovoz → menejerga.
+    if (text === copy.text.cancel || (text === copy.text.later && v.awaiting === 'match')) {
+        await patch(db, tid, { awaiting: '' }); await say(c, '👌', replyKeyboard());
+        if (v.location === 'ru' && !v.ru_form?.done) return ruQuestion(c, 0, { delayMs: 1000 });
+        return;
+    }
+    if (/^\//.test(text)) return say(c, copy.text.commandHint, replyKeyboard()); // /menu, /help va h.k. — menejerga «savol» bo'lib ketmasin
+    // Raqamni tugma o'rniga yozib yuborgan (kattalar ko'pincha shunday qiladi).
+    const typed = /^\+?[\d\s()-]{9,18}$/.test(text) && text.replace(/\D/g, '').length >= 9 ? text.replace(/\D/g, '') : '';
+    if (typed && ['call', 'lesson', 'match', 'contact'].includes(v.awaiting)) return typedPhone(c, v, typed.length === 9 ? '998' + typed : typed);
+    if (v.paused) await patch(db, tid, { paused: false }); // o'zi yozdi — suhbat davom etadi
+    // Erkin matn yoki ovoz → menejerga. 10 daqiqa ichida qayta yozsa — to'liq kartochka emas, qisqa xabar.
     const s = await settings(db);
     const snippet = text ? text.slice(0, 500) : m.voice ? '[ovozli xabar]' : m.photo ? '[rasm]' : '[xabar]';
-    await notifySales(db, 'msg:' + update.update_id, `✉️ Lid botga yozdi: «${snippet}»`, v);
+    const recent = (await db.query("SELECT 1 FROM domwork_bot_funnel_events WHERE telegram_id=$1 AND event='free_text' AND created_at>NOW()-INTERVAL '10 minutes' LIMIT 1", [tid])).rows.length;
+    const managerTalking = (await db.query("SELECT 1 FROM domwork_bot_funnel_events WHERE telegram_id=$1 AND event='relay_out' AND created_at>NOW()-INTERVAL '24 hours' LIMIT 1", [tid])).rows.length;
+    if (recent) await notifyShort(db, 'msg:' + update.update_id, v, `✉️ ${v.first_name || 'Lid'}: «${snippet}»`);
+    else await notifySales(db, 'msg:' + update.update_id, `✉️ Lid botga yozdi: «${snippet}»`, v);
     // Ovoz/rasm/video — menejer eshitishi/ko'rishi uchun guruhga nusxa (unga ham reply qilish mumkin).
     const group = !text && (m.voice || m.photo || m.video || m.document || m.audio || m.video_note) ? await salesGroup(db) : null;
     if (group) await store.enqueue(db, { key: 'funnel:copy:' + update.update_id, targetKind: 'group', targetId: group.chat_id, method: 'copyMessage',
         payload: { chat_id: group.chat_id, from_chat_id: tid, message_id: m.message_id, _automation: true, _binding: group.id, _funnel: true, _relay: tid } });
     await event(db, tid, 'free_text');
     if (!v.texted_at) { await patch(db, tid, { texted_at: new Date() }); await addScore(db, v, 2, 'savol yozdi'); }
+    // Avto-javob faqat suhbat boshida: menejer yozishayotgan bo'lsa yoki 10 daqiqa ichida aytilgan bo'lsa — jim.
+    if (recent || managerTalking) return;
     return say(c, copy.text.freeText(inHours(s, new Date()), sla(s)), replyKeyboard());
+}
+async function notifyShort(db, key, v, text) {
+    const group = await salesGroup(db);
+    if (group) await store.enqueue(db, { key: 'funnel:' + key + ':' + group.id, targetKind: 'group', targetId: group.chat_id,
+        payload: { chat_id: group.chat_id, text: text.slice(0, 3500), _automation: true, _binding: group.id, _funnel: true, _relay: v.telegram_id } });
+}
+// Raqam yozib yuborildi (tasdiqlanmagan): mavjud CRM lidga ulanmaydi (birovning raqami bo'lishi mumkin) — yangi lid yoki joriy lidga yoziladi.
+async function typedPhone(c, v, phone) {
+    const db = c.db;
+    await patch(db, c.tid, { phone, phone_purpose: (v.awaiting || 'contact') + ':typed', awaiting: '' }); v.phone = phone;
+    await ensureLead(db, v, { phone: '', intent: v.awaiting === 'lesson' ? 'lesson' : 'call' });
+    await db.query("UPDATE leads SET phone=CASE WHEN COALESCE(phone,'')='' THEN $2 ELSE phone END,updated_at=NOW() WHERE id=$1", [v.lead_id, '+' + phone]);
+    await leadComment(db, v.lead_id, `🤖 Bot: mijoz raqamni qo‘lda yozdi: +${phone} (Telegram orqali tasdiqlanmagan).`);
+    await event(db, c.tid, 'contact', { purpose: v.awaiting, typed: true });
+    await say(c, copy.text.contactSaved, replyKeyboard());
+    if (v.awaiting === 'lesson') return lesson(c, v, 1);
+    if (v.awaiting === 'match') {
+        await notifySales(db, 'match-typed:' + c.tid, '🔗 Arizachi raqamini yozib yubordi — CRMdagi arizasini tekshiring (dublikat bo‘lishi mumkin)', v);
+        await say(c, copy.text.matchNew, replyKeyboard());
+        if (v.location === 'ru' && !v.ru_form?.done) return ruQuestion(c, 0, { delayMs: 1000 });
+        return;
+    }
+    return askWhen(c, 'call');
 }
 // Telefon raqami CRMdagi o'quvchi/xodimga mos kelmadi — mehmon lid sifatida davom etadi.
 async function contact(db, update, m) {
@@ -495,6 +541,8 @@ async function contact(db, update, m) {
     await say(c, copy.text.contactSaved, replyKeyboard());
     if (purpose === 'lesson') return lesson(c, v, 1);
     if (purpose === 'call') return askWhen(c, 'call');
+    await db.query("UPDATE leads SET phone=CASE WHEN COALESCE(phone,'')='' THEN $2 ELSE phone END WHERE id=$1", [v.lead_id, '+' + own.phone]);
+    if (purpose === 'match' && v.location === 'ru' && !v.ru_form?.done) await ruQuestion(c, 0, { delayMs: 2500 });
     if (purpose === 'match') {
         // Ariza topildi: menejerga lid botga ulangani haqida xabar (endi u bot orqali yoza oladi), mehmonga — menejer ismi.
         const lead = (await db.query('SELECT l.source,h.name AS manager FROM leads l LEFT JOIN hr_employees h ON h.id=l.manager_id WHERE l.id=$1', [v.lead_id])).rows[0];
@@ -513,7 +561,13 @@ async function deliverable(db, row) {
     if (!GUEST_METHODS.includes(row.method) || row.target_kind !== 'private' || g.tid !== row.target_id) return false;
     if (!(await enabled(db))) return false;
     const v = (await db.query('SELECT * FROM domwork_bot_visitors WHERE telegram_id=$1', [g.tid])).rows[0];
-    if (!v || v.blocked_at || ((row.payload._automation || row.payload._relayOut) && v.paused)) return false;
+    // Menejerning shaxsiy javobi (_relayOut) /stop qilganlarga ham boradi — /stop faqat avtomatik xabarlarni to'xtatadi.
+    if (!v || v.blocked_at || (row.payload._automation && v.paused)) return false;
+    // Bosqichga bog'langan xabar: lid hali o'sha bosqichdami (masalan «javob yo'q» kuzatuvi).
+    if (row.payload._stage) {
+        const l = (await db.query('SELECT status,deleted_at FROM leads WHERE id=$1', [row.payload._stage.leadId])).rows[0];
+        if (!l || l.deleted_at || require('../leadStages').normalizeLeadStatus(l.status) !== row.payload._stage.status) return false;
+    }
     if (g.unless === 'segment' && v.segment) return false;
     if (g.unless === 'field' && (v.field || v.guide_at)) return false;
     if (g.unless === 'request' && v.requested_at) return false;
@@ -643,7 +697,7 @@ async function managerAction(db, update) {
     if (action === 'na') {
         // Lidga bir kunda bir marta: "qo'ng'iroq qildik, qachon qulay?"
         const day = new Date().toISOString().slice(0, 10);
-        await store.enqueue(db, { key: `noans:${tid}:${day}`, targetId: tid,
+        await store.enqueue(db, { key: `noans:${tid}:${day}`, targetId: tid, notBefore: require('./leadNurture').sendAt(new Date()),
             payload: { chat_id: tid, text: copy.drip.noAnswer(name), reply_markup: inline([[[copy.WHEN.eve, 'f:w:eve'], [copy.WHEN.morn, 'f:w:morn']], [[copy.text.ctaTelegram, 'f:tg']]]),
                 _guest: { tid }, _automation: true } });
         await patch(db, tid, { noans_at: new Date(), ...(v.request?.method ? {} : { request: { method: 'call' } }) });

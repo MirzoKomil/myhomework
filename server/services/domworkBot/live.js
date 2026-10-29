@@ -33,7 +33,9 @@ async function send(db, key, text, { silent = false } = {}) {
     }
     if (chunk) parts.push(chunk);
     // ROP ham sotuvga oid jonli voqealarni oladi (lidlar, sinov, sotuv, soatlik holat). O'chirish: liveFeedRopEnabled=false.
-    const sales = /^(lead-|hourly|trial|pay)/.test(key) && settings.liveFeedRopEnabled !== false;
+    // ROP: sotuv voqealari faqat 08:00–22:00 (Toshkent); soatlik holat — faqat rahbarga.
+    const hour = new Date(Date.now() + 5 * 3600000).getUTCHours();
+    const sales = /^(lead-|trial|pay)/.test(key) && settings.liveFeedRopEnabled !== false && hour >= 8 && hour < 22;
     for (const person of await require('./scheduler').roles(db, sales ? ['admin', 'rop'] : ['admin']))
         for (const [n, part] of parts.entries())
             await events.privateMessage(db, `live:${key}:${person.telegramId}${n ? ':p' + n : ''}`, person, part, {

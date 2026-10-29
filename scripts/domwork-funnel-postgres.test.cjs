@@ -185,5 +185,22 @@ test('lead funnel for unknown Telegram visitors — synthetic data, no Telegram 
    const kb=(await out(704)).at(-1).payload.reply_markup.inline_keyboard.flat().map(b=>b.callback_data);
    assert.ok(!kb.includes('f:call'));assert.equal(kb[0],'f:tg');
   });
+  await t.test('typed phone instead of the button is accepted; repeated messages do not repeat the auto-reply; /stop does not block a manager reply',async()=>{
+   await run(msg(790,'/start'));await run(cb(790,'f:loc:uz'));await run(cb(790,'f:seg:career'));await run(cb(790,'f:fld:bank'));
+   await run(cb(790,'f:cta'));await run(cb(790,'f:call'));
+   await run(msg(790,'90 123 45 67'));
+   const v=(await pool.query("SELECT * FROM domwork_bot_visitors WHERE telegram_id='790'")).rows[0];
+   assert.equal(v.phone,'998901234567');assert.ok(v.lead_id);
+   assert.match((await texts(790)).at(-1),/Qachon qulay/);
+   const lead=(await pool.query('SELECT phone,comments FROM leads WHERE id=$1',[v.lead_id])).rows[0];
+   assert.equal(lead.phone,'+998901234567');assert.match(lead.comments,/qo‘lda yozdi/);
+   const acks=async()=>(await texts(790)).filter(x=>/Savolingizni menejerga yubordim/.test(x)).length;
+   await run(msg(790,'Salom, narxi qancha?'));await run(msg(790,'Javob kutyapman'));
+   assert.equal(await acks(),1);
+   await pool.query("UPDATE domwork_bot_visitors SET paused=true WHERE telegram_id='790'");
+   const row={target_kind:'private',target_id:'790',method:'sendMessage',payload:{chat_id:'790',text:'x',_guest:{tid:'790'},_relayOut:true}};
+   assert.equal(await queue.transaction(pool,db=>funnel.deliverable(db,row)),true);
+   assert.equal(await queue.transaction(pool,db=>funnel.deliverable(db,{...row,payload:{...row.payload,_relayOut:undefined,_automation:true}})),false);
+  });
  }finally{await pool.end();}
 });
