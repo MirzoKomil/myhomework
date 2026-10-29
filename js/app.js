@@ -19836,8 +19836,17 @@ function saveVisibleColumns() {
     localStorage.setItem(LEADS_COLUMN_VISIBILITY_KEY, JSON.stringify(payload));
 }
 
+// Telefonda (≤900px) "Ustunlar filtri" yashirin (css/teamApp.css) — u yerda kompyuterda saqlangan tanlov
+// ishlatilmaydi, aks holda yashirib qo'yilgan ustun (masalan "Sinov darsida") telefonda qaytarib bo'lmay qoladi.
+function leadColumnsFilterHidden() {
+    try { return document.documentElement.classList.contains('rd') && window.matchMedia('(max-width: 900px)').matches; } catch { return false; }
+}
+function effectiveVisibleLeadIds() {
+    return leadColumnsFilterHidden() ? new Set(getDefaultVisibleColumnIds()) : _leadsVisibleColumns;
+}
 function getVisibleLeadColumns() {
-    return LEAD_COLUMNS.filter(col => _leadsVisibleColumns.has(col.id));
+    const ids = effectiveVisibleLeadIds();
+    return LEAD_COLUMNS.filter(col => ids.has(col.id));
 }
 
 function closeLeadsColumnsDropdown() {
@@ -21601,7 +21610,7 @@ function renderLeads() {
 
     // Search may temporarily reveal a matching hidden column; never overwrite saved visibility.
     const visibleColumns = _leadSearchQuery
-        ? LEAD_COLUMNS.filter(col => _leadsVisibleColumns.has(col.id) || tagged.some(l => normalizeLeadStatus(l.status) === col.id))
+        ? LEAD_COLUMNS.filter(col => effectiveVisibleLeadIds().has(col.id) || tagged.some(l => normalizeLeadStatus(l.status) === col.id))
         : getVisibleLeadColumns();
     updateLeadSearchStatus(tagged.filter(l =>
         (normalizeLeadStatus(l.status) !== 'sinov-darsida' || trialWorkflow.matchesFilter(l, getTrialAttendanceFilter()))
