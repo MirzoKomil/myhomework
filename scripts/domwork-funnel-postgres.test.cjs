@@ -89,7 +89,7 @@ test('lead funnel for unknown Telegram visitors — synthetic data, no Telegram 
   });
   await t.test('request: call with known phone → time → CRM comment + sales group + honest promise; delayed CTA cancelled',async()=>{
    await run(cb(701,'f:cta'));
-   const ctaRow=(await out(701)).at(-1);assert.match(ctaRow.payload.text,/15% chegirma/);
+   const ctaRow=(await out(701)).at(-1);assert.match(ctaRow.payload.text||ctaRow.payload.caption,/15% chegirma/);
    await run(cb(701,'f:call'));assert.match((await texts(701)).at(-1),/\*\*\* \*\* 67/);
    await run(cb(701,'f:cok'));await run(cb(701,'f:w:now'));
    assert.match((await texts(701)).at(-1),/30 daqiqa ichida/);
