@@ -174,10 +174,10 @@ async function processOne(db) {
                 await groupMessage(db,key+':teachers','teachers',`🎓 ${T.who(tName,teacher?.telegramId)}ga yangi o‘quvchi${assistant?' (yordamchi ustoz)':''}: ${T.b(student.name)}${details?'\n'+details:''}\n\n${T.i(T.pick(T.CHEERS.teacher,row.event_key+':g'))}`,T.HTML);
             }
         }
-        if(row.type==='attendance' && row.data.date===policy.today()) {
+        if(row.type==='attendance') {
             const st=(await db.query("SELECT name FROM students WHERE id=$1",[row.reference_id])).rows[0];
             const tn=(await db.query('SELECT name FROM hr_employees WHERE id=$1',[row.data.teacherId])).rows[0]?.name || 'Ustoz';
-            if(st) await live().send(db,'att:'+row.event_key,`${row.data.present?'✅':'🚫'} <b>Davomat</b> · ${T.esc(tn)}${row.data.duty==='assistant'?' (yordamchi)':''}: ${T.b(st.name)} — ${row.data.present?'keldi':'kelmadi'}`,{silent:true});
+            if(st) await live().send(db,'att:'+row.event_key,`${row.data.present?'✅':'🚫'} <b>Davomat</b> · ${T.esc(tn)}${row.data.duty==='assistant'?' (yordamchi)':''}: ${T.b(st.name)} — ${row.data.present?'keldi':'kelmadi'}${row.data.date!==policy.today()?` (${T.esc(row.data.date)} uchun)`:''}`,{silent:true});
         }
         if(row.type==='attendance' && row.data.present===false) {
             const student=(await db.query("SELECT * FROM students WHERE id=$1 AND subject='russian'",[row.reference_id])).rows[0];
