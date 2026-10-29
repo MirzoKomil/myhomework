@@ -13,7 +13,7 @@ function createRuntime({ pool, crm, env = process.env, redisFactory, telegramFac
     let config, invalid = false;
     try { config = configuration(env); }
     catch { config = configuration({ ...env, DOMWORK_BOT_ENABLED: 'false' }); invalid = true; }
-    let redis, telegram, botId, timer, discoveryTimer, busy = false, discoveryBusy = false, stopped = false, lastSchedule=0;
+    let redis, telegram, botId, timer, discoveryTimer, pushTimer, busy = false, discoveryBusy = false, pushBusy = false, stopped = false, lastSchedule=0;
     let state = invalid ? 'failed' : config.enabled ? 'starting' : 'disabled';
     const handler = createHandler({ crm });
     async function call(method, payload) {
@@ -170,6 +170,14 @@ function createRuntime({ pool, crm, env = process.env, redisFactory, telegramFac
         } catch (error) { console.error('[domwork-bot] worker failed:', error.code || error.name); }
         finally { busy = false; }
     }
+    // CRM xodim bildirishnomalari → Telegram: alohida taymer va ulanish (bot navbatini to'xtatmaydi).
+    async function tickStaffPush() {
+        if(pushBusy || stopped || !redis?.ready) return;
+        pushBusy=true;
+        try { await require('../staffNotify').telegramPush(pool,new Date()); }
+        catch(error){console.error('[domwork-bot] staff push failed:',error.code || error.name);}
+        finally{pushBusy=false;}
+    }
     async function tickDiscovery() {
         if(discoveryBusy || stopped || !redis?.ready) return;
         discoveryBusy=true;
@@ -195,13 +203,14 @@ function createRuntime({ pool, crm, env = process.env, redisFactory, telegramFac
                 if (autoTick) {
                     timer = setInterval(tick, 500); timer.unref();
                     discoveryTimer = setInterval(tickDiscovery, 1000); discoveryTimer.unref();
+                    pushTimer = setInterval(tickStaffPush, 120000); pushTimer.unref();
                 }
             } catch (error) {
                 state = 'failed'; await redis?.close().catch(() => {});
                 console.error('[domwork-bot] startup failed:', error.code || error.name);
             }
         },
-        async stop() { stopped = true; clearInterval(timer); clearInterval(discoveryTimer); await redis?.close(); state = 'stopped'; },
+        async stop() { stopped = true; clearInterval(timer); clearInterval(discoveryTimer); clearInterval(pushTimer); await redis?.close(); state = 'stopped'; },
         status() { return { enabled: config.enabled, state, redisReady: !!redis?.ready, webhookPath: '/api/domwork/bot/webhook' }; },
         async receive(update, secret) {
             if (!require('./policy').secretMatches(config.secret, secret)) throw Object.assign(Error('Webhook secret noto‘g‘ri'), { status: 401 });

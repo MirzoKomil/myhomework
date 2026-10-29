@@ -234,12 +234,12 @@ test('Domwork bot on disposable PostgreSQL (no real Telegram or Redis)', {skip: 
             const scheduler=require('../server/services/domworkBot/scheduler');
             await pool.query("ALTER TABLE students ADD COLUMN assistant_teacher_id TEXT; ALTER TABLE students ADD COLUMN lesson_duration INTEGER; CREATE TABLE main_attendance(att_key TEXT,student_id TEXT,day INTEGER,present INTEGER)");
             await pool.query("UPDATE domwork_bot_settings SET data=data || '{\"remindersEnabled\":true}'::jsonb");
-            const now=new Date('2026-10-12T04:30:00Z');
+            const now=new Date('2026-10-12T04:45:00Z');
             await queue.transaction(pool,db=>scheduler.run(db,now));
             await queue.transaction(pool,db=>scheduler.run(db,now));
-            assert.equal((await pool.query("SELECT count(*) FROM domwork_bot_outbox WHERE unique_key='reminder:s:2026-10-12T05:00:00.000Z:30'")).rows[0].count,'1');
+            assert.equal((await pool.query("SELECT count(*) FROM domwork_bot_outbox WHERE unique_key='reminder:s:2026-10-12T05:00:00.000Z:15'")).rows[0].count,'1');
             await pool.query("UPDATE students SET extra_data=extra_data || '{\"startDate\":\"2026-12-01\"}'::jsonb WHERE id='s'");
-            await queue.transaction(pool,db=>scheduler.run(db,new Date('2026-10-14T04:30:00Z')));
+            await queue.transaction(pool,db=>scheduler.run(db,new Date('2026-10-14T04:45:00Z')));
             assert.equal((await pool.query("SELECT count(*) FROM domwork_bot_outbox WHERE unique_key LIKE 'reminder:s:2026-10-14%'")).rows[0].count,'0');
             await pool.query("UPDATE students SET extra_data=extra_data-'startDate' WHERE id='s'");
         });
@@ -365,8 +365,8 @@ test('Domwork bot on disposable PostgreSQL (no real Telegram or Redis)', {skip: 
         await t.test('leave workflow yields to teacher menu, and pressing leave again starts a fresh request',async()=>{
             const before=await navigationSnapshot();
             await store.setSession(pool,'101',{type:'leave'});
-            const response=await navigate(101,'⚠️ Jarimalarim');
-            assert.equal(response.text,'Hozircha ma’lumot yo‘q.');
+            const response=await navigate(101,'⏰ Face ID davomat');
+            assert.match(response.text,/Face ID belgisi yo‘q/);
             assert.equal(await store.session(pool,'101'),null);
             await store.setSession(pool,'101',{type:'leave',fixture:'unfinished'});
             const restarted=await navigate(101,'📝 Ruxsat so‘rash');

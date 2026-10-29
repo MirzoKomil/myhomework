@@ -91,11 +91,23 @@ const CATALOG = {
     ],
     other: [['Boshqa', [['guide_new', 'Yangi yo\'riqnoma', '', [0, 1], true]]]]
 };
-// Telegram orqali yuborish hali ulanmagan. Ungacha Telegram tanlangan xabar ham panelda ko'rinadi —
-// aks holda (masalan, standart "Telegram ✓ · Brauzer ✗" turlarda) xodim xabarni umuman olmay qoladi.
-// Bot ulanganda true qilinadi va panel faqat "Brauzer" tanloviga qaraydi.
-const TELEGRAM_LIVE = false;
-function shownInPanel(p) { return !p || p.web !== false || (!TELEGRAM_LIVE && p.tg !== false); }
+// Panel o'zgarmaydi: Telegram tanlangan xabar ham panelda qoladi. Telegram — qo'shimcha kanal; bot ishlamasa yoki
+// yetkazilmasa ham xodim xabarni yo'qotmaydi.
+function shownInPanel(p) { return !p || p.web !== false || p.tg !== false; }
+async function telegramLive(db, userId) {
+    if (process.env.DOMWORK_BOT_ENABLED !== 'true') return false;
+    try {
+        const t = (await db.query("SELECT to_regclass('domwork_bot_settings') AS s, to_regclass('domwork_bot_links') AS l")).rows[0];
+        if (!t?.s || !t?.l) return false;
+        const on = (await db.query('SELECT data FROM domwork_bot_settings WHERE singleton=1')).rows[0]?.data?.staffNotifyEnabled === true;
+        if (!on || !(await db.query("SELECT 1 FROM domwork_bot_links WHERE account_kind='user' AND account_id=$1 AND NOT paused", [userId])).rows.length) return false;
+        // "Ulangan" faqat bot haqiqatan yuborib turgan bo'lsa (so'nggi 10 daqiqada shu xodim uchun ishlagan).
+        if (!(await db.query("SELECT to_regclass('staff_notify_tg_state') AS t")).rows[0]?.t) return false;
+        return (await db.query("SELECT 1 FROM staff_notify_tg_state WHERE user_id=$1 AND last_push_at>NOW()-INTERVAL '10 minutes'", [userId])).rows.length > 0;
+    } catch { return false; }
+}
+// Tinch soatlarda ham keladigan shoshilinch turlar.
+const URGENT = new Set(['hold_expiring', 'trial_confirm', 'trial_unassigned']);
 function catalogFor(me) {
     const kinds = me.kind === 'teacher' && me.assistantDuty ? ['teacher', 'assistant'] : [me.kind in CATALOG ? me.kind : 'other'];
     const seen = new Set(), groups = [];
@@ -128,10 +140,11 @@ async function getPrefs(db, actor) {
     const saved = row.prefs || {};
     const tg = (await db.query('SELECT telegram FROM staff_profile_extra WHERE user_id=$1', [me.user.id])).rows[0]?.telegram || '';
     // @Domworkuz_bot'ga ulanganmi (CRM → Bildirishnomalar → "Ulash"). Jadval hali yaratilmagan bo'lsa — yo'q.
+    const live = await telegramLive(db, me.user.id);
     const botLinked = !!(await db.query("SELECT to_regclass('domwork_bot_links') AS t")).rows[0]?.t
         && (await db.query("SELECT 1 FROM domwork_bot_links WHERE account_kind='user' AND account_id=$1", [me.user.id])).rows.length > 0;
     return { kind: me.kind, groups, prefs: effectivePrefs(groups, saved.types || {}), quiet: saved.quiet || QUIET_DEFAULT,
-        channels: { telegram: { username: tg, botLinked, connected: false, note: TELEGRAM_LIVE ? '' : 'Telegram orqali yuborish hali ulanmagan — tanlovingiz saqlanadi, ungacha bu xabarlar qo\'ng\'iroqcha panelida chiqadi' }, browser: { connected: true } } };
+        channels: { telegram: { username: tg, botLinked, connected: live, note: live ? '' : 'Telegram orqali yuborish hali yoqilmagan — tanlovingiz saqlanadi, ungacha bu xabarlar qo\'ng\'iroqcha panelida chiqadi' }, browser: { connected: true } } };
 }
 async function savePrefs(db, actor, body = {}) {
     const me = await ST.identify(db, actor);
@@ -363,18 +376,28 @@ async function guideEvents(db, me, now, ev) {
     }
 }
 
-async function feed(db, actor, now = new Date()) {
+async function collect(db, actor, now) {
     const me = await ST.identify(db, actor);
     const groups = catalogFor(me), row = await loadPrefs(db, me.user.id);
     const prefs = effectivePrefs(groups, row.prefs?.types || {});
     const ev = [], errors = [];
-    const run = async (name, fn) => { try { await fn(db, me, now, ev); } catch (e) { errors.push(name); console.error('[staff-notify]', name, e.code || e.message); } };
+    // Tranzaksiya ichida (bot scheduler) bitta bo'lim xatosi butun tranzaksiyani buzmasin — savepoint.
+    const tx = typeof db.domworkAfterCommit === 'function';
+    const run = async (name, fn) => {
+        if (tx) await db.query('SAVEPOINT sn_' + name);
+        try { await fn(db, me, now, ev); if (tx) await db.query('RELEASE SAVEPOINT sn_' + name); }
+        catch (e) { if (tx) await db.query('ROLLBACK TO SAVEPOINT sn_' + name); errors.push(name); console.error('[staff-notify]', name, e.code || e.message); }
+    };
     if (me.kind === 'teacher' && me.emp) await run('teacher', teacherEvents);
     if (me.assistantDuty && me.emp) await run('assistant', assistantEvents);
     if ((me.kind === 'teacher' || me.kind === 'assistant') && me.emp) await run('common', teacherCommon);
     if (me.kind === 'sales') await run('sales', salesEvents);
     if (me.kind === 'admin' || me.kind === 'rop') await run('manager', managerEvents);
     await run('guides', guideEvents);
+    return { me, row, prefs, ev, errors };
+}
+async function feed(db, actor, now = new Date()) {
+    const { me, row, prefs, ev, errors } = await collect(db, actor, now);
     const seen = new Set();
     const list = ev.filter(e => shownInPanel(prefs[e.type]) && !seen.has(e.id) && seen.add(e.id));
     const ids = list.map(e => e.id);
@@ -399,4 +422,78 @@ async function markRead(db, actor, body = {}) {
     return { ok: true };
 }
 
-module.exports = { CATALOG, catalogFor, effectivePrefs, getPrefs, savePrefs, feed, markRead };
+// ── Telegramga yuborish (@Domworkuz_bot scheduler'i har 2 daqiqada chaqiradi) ──
+// Har xodim uchun shu panel voqealari hisoblanadi; "Telegram" tanlangan va hali yuborilmaganlari botga ketadi.
+// Birinchi marta (yoki yoqilganda) mavjud voqealar "yuborilgan" deb belgilanadi — eski xabarlar to'planib kelmaydi.
+const TG_SCHEMA = `CREATE TABLE IF NOT EXISTS staff_notify_tg_sent (user_id TEXT NOT NULL, event_id TEXT NOT NULL, sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), PRIMARY KEY(user_id,event_id));
+CREATE TABLE IF NOT EXISTS staff_notify_tg_state (user_id TEXT PRIMARY KEY, telegram_id TEXT NOT NULL, baseline_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
+ALTER TABLE staff_notify_tg_state ADD COLUMN IF NOT EXISTS last_push_at TIMESTAMPTZ;`;
+function quietNow(quiet, now) {
+    const q = quiet || QUIET_DEFAULT;
+    if (q.off) return false; // xodim tinch soatlarni o'chirgan
+    const toMin = v => { const [h, m] = String(v).split(':').map(Number); return h * 60 + m; };
+    const t = new Date(now.getTime() + 5 * 3600000), c = t.getUTCHours() * 60 + t.getUTCMinutes(), a = toMin(q.from), b = toMin(q.to);
+    return a <= b ? c >= a && c < b : c >= a || c < b;
+}
+// Bitta xodim — o'z qisqa tranzaksiyasida. Uzilish bo'lsa (to'xtatish, o'chirish, bot ishlamagan, qayta ulash —
+// oxirgi yuborishdan 10 daqiqadan ko'p), mavjud xabarlar qayta "boshlang'ich" deb belgilanadi va ommaviy yuborilmaydi.
+async function pushUser(db, link, now) {
+    const store = require('./domworkBot/store');
+    const identity = await store.identity(db, link.telegram_id);
+    if (!identity || identity.kind !== 'user' || identity.id !== link.account_id) return 0;
+    const { row, prefs, ev, errors } = await collect(db, { id: link.account_id }, now);
+    const state = (await db.query('SELECT telegram_id,last_push_at FROM staff_notify_tg_state WHERE user_id=$1 FOR UPDATE', [link.account_id])).rows[0];
+    const ids = [...new Set(ev.map(e => e.id))];
+    const gap = !state || state.telegram_id !== link.telegram_id || !state.last_push_at || now - new Date(state.last_push_at) > 10 * 60000;
+    if (gap) {
+        if (errors.length) return 0; // to'liq bo'lmagan ro'yxat bilan boshlang'ich belgilanmaydi
+        await db.query(`INSERT INTO staff_notify_tg_state(user_id,telegram_id,last_push_at) VALUES($1,$2,$3)
+            ON CONFLICT(user_id) DO UPDATE SET telegram_id=EXCLUDED.telegram_id,baseline_at=NOW(),last_push_at=EXCLUDED.last_push_at`, [link.account_id, link.telegram_id, now]);
+        if (ids.length) await db.query('INSERT INTO staff_notify_tg_sent(user_id,event_id) SELECT $1,unnest($2::text[]) ON CONFLICT DO NOTHING', [link.account_id, ids]);
+        return 0;
+    }
+    await db.query('UPDATE staff_notify_tg_state SET last_push_at=$2 WHERE user_id=$1', [link.account_id, now]);
+    const done = ids.length ? new Set((await db.query('SELECT event_id FROM staff_notify_tg_sent WHERE user_id=$1 AND event_id=ANY($2::text[])', [link.account_id, ids])).rows.map(r => r.event_id)) : new Set();
+    const quiet = quietNow(row.prefs?.quiet, now), seen = new Set(), skip = [], out = [];
+    for (const e of ev) {
+        if (seen.has(e.id) || done.has(e.id)) continue; seen.add(e.id);
+        if (!prefs[e.type]?.tg) { skip.push(e.id); continue; }
+        if (quiet && !URGENT.has(e.type)) continue; // tinch soat tugagach (hali dolzarb bo'lsa)
+        out.push(e);
+    }
+    if (skip.length) await db.query('INSERT INTO staff_notify_tg_sent(user_id,event_id) SELECT $1,unnest($2::text[]) ON CONFLICT DO NOTHING', [link.account_id, skip]);
+    if (!out.length) return 0;
+    const line = e => `${String(e.title || '').slice(0, 200)}${e.sub ? ' — ' + String(e.sub).slice(0, 200) : ''}`;
+    // Bir nechta bo'lsa — bitta jamlangan xabar (masalan tinch soatdan keyin).
+    const text = out.length === 1 ? `🔔 ${String(out[0].title || '').slice(0, 300)}${out[0].sub ? '\n' + String(out[0].sub).slice(0, 600) : ''}`
+        : `🔔 ${out.length} ta yangi xabar:\n` + out.slice(0, 12).map(e => '• ' + line(e)).join('\n') + (out.length > 12 ? `\n… va yana ${out.length - 12} ta — CRM panelida` : '');
+    const key = out.length === 1 ? `staff:${link.account_id}:${out[0].id}` : `staff:${link.account_id}:digest:${now.getTime()}`;
+    await store.enqueue(db, { key: key.slice(0, 200), targetId: link.telegram_id, role: identity.role, account: identity,
+        payload: { chat_id: link.telegram_id, text: text.slice(0, 3800), reply_markup: { inline_keyboard: [[{ text: 'CRMda ochish', url: 'https://myhomework.uz/' }]] },
+            _automation: true, ...(quiet ? { disable_notification: true } : {}) } }); // tinch soatda shoshilinch xabar ovozsiz
+    await db.query('INSERT INTO staff_notify_tg_sent(user_id,event_id) SELECT $1,unnest($2::text[]) ON CONFLICT DO NOTHING', [link.account_id, out.map(e => e.id)]);
+    return out.length;
+}
+// Bot runtime'i alohida taymer bilan chaqiradi (har 2 daqiqa) — bot xabarlarini yetkazish to'xtab qolmaydi.
+async function telegramPush(pool, now = new Date(), { budgetMs = 20000 } = {}) {
+    const queue = require('./domworkBot/queue');
+    const ready = await queue.transaction(pool, async db => {
+        const settings = (await db.query('SELECT data FROM domwork_bot_settings WHERE singleton=1')).rows[0]?.data || {};
+        if (settings.staffNotifyEnabled !== true || !(await db.query("SELECT to_regclass('staff_notify_prefs') AS t")).rows[0]?.t) return null;
+        await db.query(TG_SCHEMA);
+        await db.query("DELETE FROM staff_notify_tg_sent WHERE sent_at<NOW()-INTERVAL '60 days'");
+        // Eng uzoq kutganlar birinchi — vaqt chegarasida ham hech kim doim navbatdan qolib ketmaydi.
+        return (await db.query(`SELECT l.telegram_id,l.account_id FROM domwork_bot_links l LEFT JOIN staff_notify_tg_state s ON s.user_id=l.account_id
+            WHERE l.account_kind='user' AND NOT l.paused ORDER BY s.last_push_at NULLS FIRST, l.account_id`)).rows;
+    });
+    if (!ready) return 0;
+    const started = Date.now(); let sent = 0;
+    for (const link of ready) {
+        if (Date.now() - started > budgetMs) break; // qolganlari keyingi safar
+        try { sent += await queue.transaction(pool, db => pushUser(db, link, now)); }
+        catch (error) { console.error('[staff-notify] telegram push failed:', error.code || error.name); }
+    }
+    return sent;
+}
+
+module.exports = { CATALOG, catalogFor, effectivePrefs, getPrefs, savePrefs, feed, markRead, telegramPush, quietNow };
