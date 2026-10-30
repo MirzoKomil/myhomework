@@ -1185,7 +1185,7 @@ function renderFrozenStudents() {
                         <td style="color:var(--text-muted);font-size:12px">${i + 1}</td>
                         <td>
                             <div style="display:flex;align-items:center;gap:8px">
-                                <div class="student-avatar-mini">${escapeHtml(initials)}</div>
+                                ${window.schoolUI?.studentAvatar ? window.schoolUI.studentAvatar(s, 36) : `<div class="student-avatar-mini">${escapeHtml(initials)}</div>`}
                                 <span style="font-weight:500">${escapeHtml(s.name || '—')}</span>
                             </div>
                         </td>
@@ -10408,7 +10408,7 @@ function renderStudents() {
             <td><input type="checkbox" class="student-check-input student-check" data-id="${escapeHtml(s.id)}" aria-label="${escapeHtml(s.name || '')} — belgilash"></td>
             <td>
                 <div class="stx-who">
-                    <div class="student-avatar-mini">${escapeHtml(initials)}</div>
+                    ${window.schoolUI?.studentAvatar ? window.schoolUI.studentAvatar(s, 36) : `<div class="student-avatar-mini">${escapeHtml(initials)}</div>`}
                     <div class="stx-who-txt">
                         <span class="stx-name${s.isStaffDemo ? ' is-demo' : ''}">${escapeHtml(s.name || '—')}${s.isStaffDemo ? ` <span class="badge" style="background:#EDE9FE;color:#7C3AED;font-size:10px;font-weight:600" title="Xodim uchun avtomatik yaratilgan demo hisob">DEMO</span>` : ''}</span>
                         <span class="stx-sub">#${escapeHtml(s.serialCode || String(s.id).slice(-6))} · ${escapeHtml(formatPhoneDisplay(s.phone) || '—')}</span>
@@ -27027,7 +27027,7 @@ function renderDebtorsTable(containerId) {
         return `<tr>
             <td>
                 <div class="stx-who">
-                    <div class="student-avatar-mini">${escapeHtml(initials)}</div>
+                    ${window.schoolUI?.studentAvatar ? window.schoolUI.studentAvatar(st, 36) : `<div class="student-avatar-mini">${escapeHtml(initials)}</div>`}
                     <div class="stx-who-txt">
                         <span class="stx-name">${escapeHtml(st.name || '—')}</span>
                         <span class="stx-sub">#${escapeHtml(st.serialCode || String(st.id).slice(-6))} · ${escapeHtml(formatPhoneDisplay(st.phone) || '—')}</span>
