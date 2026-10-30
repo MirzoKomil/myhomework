@@ -63,7 +63,17 @@ const BUNDLED_NAMES = { sovga: 'Domwork — 40 ta eng kerakli gap.pdf', qollanma
     oferta: 'Domwork — Ommaviy oferta shartnomasi.pdf', promo1: 'domwork-dars.png', salom: 'domwork.png', cta: 'domwork-menejer.png', sinov: 'domwork-sinov-darsi.png', promo2: 'domwork-ish.png', promo3: 'domwork-rossiya.png', bonus: 'Domwork — Ishda kerak 50 ibora.pdf' };
 const BUNDLED_FILE = { bonus: 'qollanma_umumiy' }; // kanal bonusi — «Ishda kerak 50 ibora» (umumiy qo'llanma)
 const bundledCache = new Map();
+// Audio variantlar: audio_<material> → server/data/funnel/audio/<material>.mp3 (Google AI Studio TTS, o'zbekcha ma'no + ruscha 2 marta).
 function bundledFile(key) {
+    const audio = /^audio_([a-z_]+)$/.exec(key);
+    if (audio) {
+        if (!bundledCache.has(key)) {
+            const path = require('node:path').join(__dirname, '..', '..', 'data', 'funnel', 'audio', audio[1] + '.mp3');
+            const title = (BUNDLED_NAMES[audio[1]] || 'Domwork.pdf').replace(/\.pdf$/, '');
+            bundledCache.set(key, require('node:fs').existsSync(path) ? { path, filename: title + ' (audio).mp3', audio: true } : null);
+        }
+        return bundledCache.get(key);
+    }
     if (!BUNDLED_NAMES[key]) return null;
     if (!bundledCache.has(key)) {
         const image = /\.png$/.test(BUNDLED_NAMES[key]);
@@ -76,7 +86,7 @@ function media(s, key) {
     const m = s.funnelMedia?.[key];
     if (m && MEDIA_FIELD[m.method] && /^[A-Za-z0-9_-]{10,1024}$/.test(m.fileId)) return m;
     const file = bundledFile(key);
-    return file ? { method: file.image ? 'sendPhoto' : 'sendDocument', bundled: key } : null;
+    return file ? { method: file.audio ? 'sendAudio' : file.image ? 'sendPhoto' : 'sendDocument', bundled: key } : null;
 }
 const inline = rows => ({ inline_keyboard: rows.map(r => r.map(([text, data]) => (/^https:\/\//.test(data) ? { text, url: data } : { text, callback_data: data }))) });
 const replyKeyboard = () => ({ keyboard: [[{ text: copy.KEYBOARD.contact }], [{ text: copy.KEYBOARD.guides }, { text: copy.KEYBOARD.faq }]], resize_keyboard: true });
@@ -248,6 +258,8 @@ async function start(db, update, message, { lead = null, payload = '' } = {}) {
     const next = inline([hasLesson ? [[copy.text.lessonWatch, 'f:les']] : [[copy.KEYBOARD.contact, 'f:cta']]]);
     // 1-dars bo'lsa — sovg'a ostida «1-darsni ko'rish»; bo'lmasa sovg'a tugmasiz (keyingi qadam — joylashuv savoli).
     if (gift) { await sendMedia(c, gift, copy.text.gift + (hasLesson ? '\n\n' + copy.text.giftNext : ''), hasLesson ? next : undefined, { html: true }); await event(db, c.tid, 'gift'); }
+    const giftAudio = media(s, 'audio_sovga');
+    if (gift && giftAudio) await sendMedia(c, giftAudio, copy.text.audio, undefined, { html: true });
     else if (hasLesson) await say(c, copy.text.giftNext, next);
     // Meta lid-formasidan kelgan (fb_/ads_) va hali CRM lidiga ulanmagan — arizasini topish uchun bir bosishda raqam.
     // Segment savoli 2 daqiqadan keyin (shu orada tanlangan bo'lsa yuborilmaydi).
@@ -331,7 +343,9 @@ async function guide(c, v, fieldKey) {
     const buttons = [[[copy.KEYBOARD.contact, 'f:cta']], ...(!v.lesson_parts && media(s, 'dars1') ? [[[copy.text.lessonWatch, 'f:les']]] : [])];
     if (m) {
         if (f) await say(c, copy.text.promise(f), undefined, { html: true });
-        await sendMedia(c, m, copy.text.guide(f || { label: '📘 Umumiy' }), inline(buttons), { html: true });
+        const sound = media(s, 'audio_' + (m.bundled || ('qollanma_' + fieldKey)));
+        await sendMedia(c, m, copy.text.guide(f || { label: '📘 Umumiy' }), sound ? undefined : inline(buttons), { html: true });
+        if (sound) await sendMedia(c, sound, copy.text.audio, inline(buttons), { html: true });
     } else await say(c, f ? copy.text.promise(f) : copy.text.askManager, inline(buttons)); // tayyor bo'lmagan qo'llanma ko'rsatilmaydi
     if (!v.guide_at) {
         await patch(c.db, c.tid, { guide_at: new Date() }); await addScore(c.db, v, 1, 'qo‘llanma oldi');
