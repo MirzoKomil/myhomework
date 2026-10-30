@@ -121,6 +121,19 @@ test('yagona jadval va o\'quvchi amallari — haqiqiy PostgreSQL', { skip: !url 
             await tx(c => A.mark(c, assistant, { studentId: 'malika', outcome: 'no_answer' }, on));
             await assert.rejects(tx(c => A.mark(c, assistant, { studentId: 'madina', channel: 'phone', minutes: 7 }, new Date('2026-11-05T07:00:00Z'))), /muzlatilgan/);
             await tx(c => A.adminCorrect(c, admin, { studentId: 'malika', day: '2026-10-26', channel: 'phone', minutes: 6, reason: 'Kechikib belgilash so\'rovi' }, on));
+            // Tuzatish o'quvchi "O'zgarishlar tarixi"ga yoziladi (kim, sabab, nima qo'shildi / nima edi).
+            let hist = (await O.history(pool, 'malika')).filter(h => h.action === 'assist-correct');
+            assert.equal(hist.length, 1); assert.equal(hist[0].actor_id, 'u-admin'); assert.equal(hist[0].reason, 'Kechikib belgilash so\'rovi');
+            assert.equal(hist[0].changes.kind, 'add'); assert.equal(hist[0].changes.before, null);
+            assert.deepEqual({ day: hist[0].changes.after.day, channel: hist[0].changes.after.channel, minutes: hist[0].changes.after.minutes }, { day: '2026-10-26', channel: 'phone', minutes: 6 });
+            const added = hist[0].changes.after.id;
+            const ed = await tx(c => A.adminCorrect(c, admin, { editId: added, channel: 'zoom', minutes: 9, reason: 'usul noto\'g\'ri belgilangan' }, on));
+            await tx(c => A.adminCorrect(c, admin, { removeId: ed.id, reason: 'ikki marta yozilgan' }, on));
+            hist = (await O.history(pool, 'malika')).filter(h => h.action === 'assist-correct');
+            assert.deepEqual(hist.map(h => h.changes.kind), ['remove', 'edit', 'add']);
+            assert.equal(hist[1].changes.before.channel, 'phone'); assert.equal(hist[1].changes.after.channel, 'zoom');
+            assert.equal(hist[0].changes.before.id, ed.id); assert.equal(hist[0].changes.after, null);
+            await tx(c => A.adminCorrect(c, admin, { studentId: 'malika', day: '2026-10-26', channel: 'phone', minutes: 6, reason: 'qayta qo\'shildi' }, on));
             const rep = await A.monthReport(pool, 'sanjar', '2026-10');
             // 29-okt: 2026-10 dan oyiga 40 000 (13 aloqa) — har aloqa 3 077, summa round(40 000 × n / 13).
             assert.equal(rep.counted, 2); assert.equal(rep.noAnswer, 1); assert.equal(rep.rate, 3077); assert.equal(rep.amount, 6154);
@@ -275,6 +288,20 @@ test('yagona jadval va o\'quvchi amallari — haqiqiy PostgreSQL', { skip: !url 
                 assert.equal(r.body.makeups.find(m => m.id === 'mk-ota').missed_came, true);
                 r = await call('u-admin', 'POST', '/makeups/mk-ota/decide', { decision: 'reject', note: 'dars o\'tilgan' });
                 assert.equal(r.status, 200);
+                // Qaror o'quvchi "O'zgarishlar tarixi"ga yoziladi (kim, qaysi kun, sabab).
+                const mh = (await O.history(pool, 'otabek')).filter(h => h.action.startsWith('makeup-'));
+                assert.equal(mh.length, 1); assert.equal(mh[0].action, 'makeup-rejected'); assert.equal(mh[0].actor_id, 'u-admin');
+                assert.equal(mh[0].reason, 'dars o\'tilgan'); assert.equal(mh[0].changes.makeupId, 'mk-ota'); assert.equal(mh[0].changes.missedDate, '2026-10-19');
+                // Muvaffaqiyatsiz (409) urinish tarixga yozilmaydi; sxema qayta ishga tushsa backfill dublikat qilmaydi.
+                await schema.initSchema(pool);
+                assert.equal((await O.history(pool, 'otabek')).filter(h => h.action.startsWith('makeup-')).length, 1);
+                // Eski (tarixga yozilmagan) tasdiqlangan qoplash — sxema ishga tushganda bir marta ko'chiriladi.
+                await pool.query(`INSERT INTO school_makeups (id,student_id,teacher_id,missed_date,held_date,kind,status,created_by,decided_by,decided_by_name,decided_at)
+                  VALUES ('mk-old','otabek','dilnoza','2026-10-05','2026-10-06','separate','approved','u-dil','u-admin','Abdulloh','2026-10-06T10:00:00Z')`);
+                await schema.initSchema(pool); await schema.initSchema(pool);
+                const old = (await O.history(pool, 'otabek')).filter(h => h.changes.makeupId === 'mk-old');
+                assert.equal(old.length, 1); assert.equal(old[0].action, 'makeup-approved'); assert.equal(old[0].actor_name, 'Abdulloh');
+                await pool.query("DELETE FROM school_makeups WHERE id='mk-old'"); await pool.query("DELETE FROM school_student_audit WHERE changes->>'makeupId'='mk-old'");
                 // Yordamchi kechikkan so'rovi: shu kuni hisoblangan aloqa bor → 409; kurs boshlanishidan oldin → 400.
                 const late = { reason: 'qo\'ng\'iroq qildim, belgilamadim', channel: 'phone', minutes: 10 };
                 r = await call('u-sanjar', 'POST', '/assist/late-requests', { ...late, studentId: 'otabek', day: '2026-10-20' });

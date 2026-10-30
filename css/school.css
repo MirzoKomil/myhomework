@@ -583,3 +583,12 @@ body.mh-boot-failed .app-shell { visibility: hidden; }
 html.rd .sc-ai input[type="radio"]:focus, html.rd .sc-ai input[type="radio"]:focus-visible { outline: none; box-shadow: none; }
 .sc-ai:has(input[type="radio"]:focus-visible) { box-shadow: 0 0 0 3px var(--kb-ring, rgba(0, 101, 214, .18)); }
 .sc-drw:focus { outline: none; }
+.okx-frz { font-size: 10.5px; padding: 0 6px; vertical-align: 1px; margin-left: 4px; }
+/* AdminOquvchiKarta: admin kartasida amal tugmalari ism qatori ostida, o'ngda (alohida qator). */
+.scc-head--stack .scc-hrow > .scc-acts { flex-basis: 100%; margin: 6px 0 0; justify-content: flex-end; }
+/* O'quvchini tekshirish tepa kartasi (dizayn Oquvchilar): kattaroq ustoz tanlagichi, KPI raqamlari 24px, maosh ajralib turadi. */
+.okx-top .okx-pick { min-width: 340px; min-height: 64px; padding: 12px 16px; }
+.okx-top .okx-k { justify-content: center; }
+.okx-top .okx-k b { font-size: 24px; line-height: 1.15; }
+.okx-top .okx-pay b { font-size: 26px; }
+@media (max-width: 700px) { .okx-top .okx-pick { min-width: 0; } }

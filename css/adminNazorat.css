@@ -13,6 +13,11 @@
 .an-dot--plan { background: #F79009; }
 .an-back { display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; padding: 0; color: var(--kb-primary); font: 700 13px inherit; cursor: pointer; align-self: flex-start; }
 .an-back:hover { text-decoration: underline; }
+/* Qoplash sahifasi alohida (dizayn AdminQoplash): Akademik sarlavhasi, tablar va til tanlagichi ko'rinmaydi. */
+#tab-teachers-section.an-solo > .sales-pinned { display: none; }
+#tab-teachers-section.an-solo #tpAttendance > div { padding-top: 24px; }
+/* "Qoldirilgan" ustunidagi kichik belgi: qoldirilgan kunda "Keldi" bor (to'liq matn — title va tafsilot panelida). */
+.an-came { display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; padding: 1px 7px; border-radius: 999px; background: var(--kb-warn-bg, #FEF0C7); color: var(--kb-warn-fg, #93370D); font-size: 11px; font-weight: 700; white-space: nowrap; line-height: 1.6; }
 .an-cap { margin: 14px 0 8px; font-size: 11.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted, #4B5563); }
 .an-mnav { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--kb-input-border); border-radius: 12px; padding: 3px; background: var(--surface, #fff); }
 .an-mnav b { min-width: 118px; text-align: center; font-size: 14px; }
@@ -251,3 +256,20 @@ button.an-c:focus-visible { outline: 3px solid var(--kb-ring); outline-offset: 1
 .an-mnow { display: inline-flex; align-items: center; gap: 8px; }
 .an-stepd { margin-top: 10px; }
 .an-stepd > summary { cursor: pointer; font-size: 12.5px; font-weight: 700; color: var(--text-muted, #4B5563); }
+/* Yordamchi aloqalari (dizayn AdminAloqalar): sarlavha o'ngida izoh; hafta/oy almashtirish va amallar jadval ostida havola qatori. */
+.an-hint2 { font-size: 12.5px; text-align: right; }
+.an-tbar { display: flex; justify-content: space-between; align-items: center; gap: 8px 16px; flex-wrap: wrap; padding: 10px 20px; border-top: 1px solid var(--border, #EEF1F6); }
+.an-tbar .sc-row { gap: 6px 14px; flex-wrap: wrap; }
+.an-tbar .sc-link { font-size: 13px; font-weight: 600; }
+.an-tbar .sc-link[aria-pressed="true"] { text-decoration: underline; }
+.an-stepnow { display: block; margin-top: 4px; font-size: 12px; font-weight: 600; color: var(--text-muted, #4B5563); }
+@media (max-width: 640px) { .an-hint2 { text-align: left; flex-basis: 100%; } }
+/* Davomat ustoz tanlagichi (dizayn Main): avatar + ism + "Asosiy · N faol o'quvchi" bitta kartada; tanlash — ustidagi shaffof select. */
+.an-tpick { position: relative; padding: 8px 12px; gap: 10px; min-height: 52px; cursor: pointer; }
+.an-tpick-t { display: flex; flex-direction: column; flex: 1; min-width: 0; line-height: 1.25; }
+.an-tpick-t b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.an-tpick-t small { font-size: 12px; color: var(--text-muted, #4B5563); }
+.an-tpick select { position: absolute; inset: 0; opacity: 0; width: 100%; min-height: 0; cursor: pointer; }
+/* Dizayn: ro'yxatlardagi o'quvchi ismlari qora qalin matn (havola ko'rinishi — hover/fokusda). */
+.an-list .sc-link { color: var(--text, #0B1220); font-weight: 700; text-decoration: none; text-align: left; }
+.an-list .sc-link:hover, .an-list .sc-link:focus-visible { color: var(--kb-primary, #0065D6); text-decoration: underline; }
