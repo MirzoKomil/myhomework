@@ -168,8 +168,11 @@
     // Qidiruv: telefonda faqat ikonka, bosilganda header ichida ochiladi.
     function buildSearchToggle() {
         // Lid qidiruvi faqat Sotuv bo'limiga kirishi bor rollarda.
+        // ROP va sotuvda asl "Sotuv" bandi ropSotuvNav tomonidan yashiriladi (o'rniga "Lidlar" bandi) — ularda qidiruv bor.
         const salesItem = document.querySelector('#sidebarMenu .menu-item[data-tab="sales"]');
-        if (salesItem && salesItem.style.display === 'none') {
+        const leadsRole = ['rop', 'sales_manager'].includes(currentUser()?.role);
+        document.body.classList.remove('team-no-lead-search');
+        if (!leadsRole && salesItem && salesItem.style.display === 'none') {
             document.body.classList.add('team-no-lead-search');
             return;
         }

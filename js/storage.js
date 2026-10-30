@@ -161,6 +161,11 @@ function setItem(key, value) {
         if (key === STORAGE_KEYS.leads) return;
         // Ustoz umumiy snapshotni yoza olmaydi (server 403) — davomat va boshqalar alohida endpointlar orqali.
         if (typeof getCurrentUser === 'function' && getCurrentUser()?.role === 'teacher') return;
+        // Sotuv menejeri ham umumiy snapshotni yoza olmaydi: kitob yetkazish — alohida yo'l (faqat o'z kartochkalari).
+        if (cacheKey === 'bookRoadmap' && typeof getCurrentUser === 'function' && getCurrentUser()?.role === 'sales_manager') {
+            if (_apiReady) return syncSalesBookRoadmap(value, removedIds);
+            return;
+        }
         if (_apiReady) {
             // Qaytarilgan promise — bir xil kalit (masalan "teachers") uchun
             // ketma-ket bir necha joyda saqlash chaqirilsa (initStorage
@@ -183,6 +188,61 @@ function setItem(key, value) {
         if (value) localStorage.setItem(key, JSON.stringify(value));
         else localStorage.removeItem(key);
     }
+}
+
+// Sotuv menejeri: kitob yetkazish o'zgarishlari umumiy PATCH /api/state o'rniga (u 403 beradi va yozuv
+// yo'qolardi) alohida endpointlarga yuboriladi. Server egalikni (o'z lidi / o'z kartochkasi) o'zi tekshiradi.
+//  • yangi kartochka (liddan) yoki liddan olinadigan maydon o'zgargan → POST /api/state/book-roadmap/from-lead
+//    (lidning o'zi saqlanib bo'lgach — server ma'lumotni bazadagi liddan oladi);
+//  • bosqich / izoh / manzil → PATCH /api/state/book-roadmap/:id.
+// O'chirish — faqat admin.
+const BR_LEAD_FIELDS = ['name', 'studentId', 'phone', 'region', 'managerId'];
+const BR_EDIT_FIELDS = ['status', 'comments', 'address'];
+// Serverdagi holat nusxasi (id → yozuv). Kesh massivi joyida o'zgartiriladi (getItem o'sha massivni qaytaradi),
+// shu sabab "avval qanday edi" — shu nusxadan. Server javobi va /api/state yuklanishida yangilanadi.
+let _brShadow = null;
+function resetBookRoadmapShadow(list) {
+    _brShadow = new Map((Array.isArray(list) ? list : []).filter(x => x && x.id != null).map(x => [x.id, JSON.parse(JSON.stringify(x))]));
+}
+function syncSalesBookRoadmap(next, removedIds) {
+    const same = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+    if (!_brShadow) resetBookRoadmapShadow([]);
+    const byId = _brShadow;
+    const jobs = [];
+    const replace = entry => {
+        if (!entry?.id) return;
+        const list = Array.isArray(_cache.bookRoadmap) ? _cache.bookRoadmap.slice() : [];
+        const i = list.findIndex(x => x && (x.id === entry.id || (entry.leadRef && x.leadRef && x.leadRef.id === entry.leadRef.id && x.leadRef.lang === entry.leadRef.lang)));
+        if (i >= 0) { if (list[i].id !== entry.id) _brShadow.delete(list[i].id); list[i] = { ...list[i], ...entry }; } else list.unshift(entry);
+        _cache.bookRoadmap = list;
+        _brShadow.set(entry.id, JSON.parse(JSON.stringify(entry)));
+    };
+    for (const item of next || []) {
+        if (!item?.id) continue;
+        const old = byId.get(item.id);
+        if (item.leadRef?.id && (!old || BR_LEAD_FIELDS.some(k => !same(old[k], item[k])))) {
+            const wait = typeof waitForLeadPersistence === 'function' ? waitForLeadPersistence(item.leadRef.id) : Promise.resolve();
+            jobs.push(wait.then(() => apiFetch('/api/state/book-roadmap/from-lead', { method: 'POST', body: JSON.stringify({ leadId: item.leadRef.id, entryId: old ? undefined : item.id }) }))
+                .then(r => { replace(r?.entry); return r; }));
+            if (!old) continue;
+        }
+        if (old && BR_EDIT_FIELDS.some(k => !same(old[k], item[k]))) {
+            const body = Object.fromEntries(BR_EDIT_FIELDS.filter(k => !same(old[k], item[k])).map(k => [k, item[k]]));
+            jobs.push(apiFetch('/api/state/book-roadmap/' + encodeURIComponent(item.id), { method: 'PATCH', body: JSON.stringify(body) })
+                .then(r => { replace(r?.entry); return r; }));
+        }
+    }
+    if ((removedIds || []).length) jobs.push(Promise.reject(new Error('Kitob yetkazish yozuvini o\'chirishni admin bajaradi')));
+    return Promise.allSettled(jobs).then(rs => {
+        const bad = rs.find(r => r.status === 'rejected');
+        if (bad) {
+            console.error('Kitob yetkazish saqlash xatoligi:', bad.reason?.message);
+            showSaveError(bad.reason?.message || 'Kitob yetkazish yozuvi saqlanmadi');
+            // Keshni serverdagi holatga qaytarish (soxta "saqlandi" ko'rinish qolmasin).
+            if (typeof apiFetch === 'function') apiFetch('/api/state', { fresh: true }).then(st => { if (Array.isArray(st?.bookRoadmap)) { _cache.bookRoadmap = st.bookRoadmap; resetBookRoadmapShadow(st.bookRoadmap); } if (typeof renderBookRoadmap === 'function' && document.getElementById('bookRoadmapKanban')?.offsetParent) renderBookRoadmap(); }).catch(() => {});
+        }
+        return rs;
+    });
 }
 
 // Serverdagi maxsus endpoint muvaffaqiyatli tugagandan keyin ekrandagi
@@ -239,6 +299,7 @@ async function refreshLeadsFromApi() {
 async function reloadStateFromApi() {
     const state = await apiLoadState();
     _cache = { ..._cache, ...state };
+    resetBookRoadmapShadow(_cache.bookRoadmap);
     return state;
 }
 
@@ -246,6 +307,7 @@ async function initStorage() {
     try {
         const state = await apiLoadState();
         _cache = { ...state };
+        resetBookRoadmapShadow(_cache.bookRoadmap);
         _apiReady = true;
         // Ketma-ket await qilinadi — bir nechtasi bir vaqtda "teachers" (yoki
         // boshqa) kalitiga PATCH yuborsa, tarmoqda poyga bo'lib, birining

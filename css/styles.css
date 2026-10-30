@@ -4357,7 +4357,8 @@ body {
     padding: 12px 14px;
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
-    background: #F5F6FA;
+    /* Token: tungi rejimda oq fon + oq matn bo'lmasin (Konversiya 4/6-qadam, lid so'rovnomalari). */
+    background: var(--rd-hover, var(--bg));
     cursor: pointer;
     font-size: 14px;
     color: var(--text);

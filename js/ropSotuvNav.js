@@ -96,7 +96,8 @@
         menu.querySelectorAll('.rs-item').forEach(x => x.remove());
         if (!ORDER[r]) { current = null; return; }
         current = r;
-        menu.querySelectorAll(':scope > .menu-item, :scope > .menu-group').forEach(el => { el.style.display = 'none'; el.dataset.rsHidden = '1'; });
+        // Asl bandlar va ularning "Boshqa" ajratgichi (js/app.js applyDesignSidebar) — bo'sh sarlavha qolmasin.
+        menu.querySelectorAll(':scope > .menu-item, :scope > .menu-group, :scope > .menu-sep').forEach(el => { el.style.display = 'none'; el.dataset.rsHidden = '1'; });
         const frag = document.createDocumentFragment();
         for (const k of ORDER[r]) {
             const it = ITEMS[k];
