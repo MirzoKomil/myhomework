@@ -210,3 +210,13 @@ test('B2: ROP davomati boshqa til qatorlarini o\'chirmaydi va o\'zgartirmaydi', 
     const hack = rop.guardRopPatch({ mainAttendance: { '2026-10_t-ru': { r1: { 2: true, 9: true } } } }, ['english'], ex);
     assert.deepEqual(hack.mainAttendance, { '2026-10_t-ru': { r1: { 2: true } } });
 });
+
+test('sotuv menejeri: kitob yetkazish — faqat o\'z kartochkalari (boshqalarning manzili kelmaydi)', () => {
+    const st = baseState();
+    st.bookRoadmap = [{ id: 'b1', managerId: 'm1', address: 'A' }, { id: 'b2', managerId: 'm2', address: 'B' }];
+    assert.deepEqual(scope.scopeState(st, { role: 'sales_manager', email: 'bobur@x.uz' }, { managerId: 'm1' }).bookRoadmap.map(b => b.id), ['b1']);
+    const st2 = baseState(); st2.bookRoadmap = [{ id: 'b1', managerId: 'm1' }];
+    assert.deepEqual(scope.scopeState(st2, { role: 'sales_manager' }, { managerId: '' }).bookRoadmap, []);
+    const st3 = baseState(); st3.bookRoadmap = [{ id: 'b1', managerId: 'm1' }, { id: 'b2', managerId: 'm2' }];
+    assert.equal(scope.scopeState(st3, { role: 'admin' }).bookRoadmap.length, 2);
+});

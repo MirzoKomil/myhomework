@@ -1032,6 +1032,40 @@ router.patch('/', authRequired, crmStateIdentity, crmStateMutationRequired, asyn
 // 32-vazifa: ustoz davomatni umumiy CRM snapshotini yozmasdan, faqat o'z
 // o'quvchisi uchun saqlaydi. Shu orqali boshqa ustoz davomatini tasodifan
 // almashtirish ham, "faqat admin yoki ROP" xatosi ham bartaraf bo'ladi.
+// Kitob yetkazish — sotuv menejeri uchun alohida yo'l. Sotuv umumiy snapshotni (PATCH /) yoza
+// olmaydi: ilgari konversiyadagi kartochka va kanbandagi o'zgarishlar 403 bilan yo'qolardi.
+// Sotuv faqat o'z lidi / o'z kartochkasi; ROP — o'z tili; admin/boshliq — hammasi.
+const bookRoadmapLead = { // kechiktirilgan require (testlar state.js'ni cheklangan require bilan yuklaydi)
+    upsertFromLead: (...a) => require('../services/bookRoadmapLead').upsertFromLead(...a),
+    updateOwnEntry: (...a) => require('../services/bookRoadmapLead').updateOwnEntry(...a),
+    toClient: r => require('../services/bookRoadmapLead').toClient(r)
+};
+async function bookRoadmapActor(req) {
+    const role = req.user.role;
+    if (!['admin', 'boshliq', 'rop', 'sales_manager'].includes(role)) throw Object.assign(new Error('Kitob yetkazish yozuviga ruxsat yo\'q'), { status: 403 });
+    return {
+        actor: req.user,
+        managerId: role === 'sales_manager' ? await getSalesManagerIdForUser(req.user.id) : null,
+        langs: role === 'rop' ? await ropScope.ropLangsFor(pool, req.user) : null
+    };
+}
+const bookRoadmapRoute = fn => async (req, res) => {
+    try {
+        const ctx = await bookRoadmapActor(req);
+        const out = await require('../db').tx(client => fn(client, ctx, req), req.user);
+        res.json({ ok: true, ...(out.created !== undefined ? { created: out.created } : {}), entry: bookRoadmapLead.toClient(out.entry) });
+    } catch (err) {
+        if (!err.status) console.error('[state] kitob yetkazish', req.method, req.path, err);
+        res.status(err.status || 500).json({ error: err.status ? err.message : 'Kitob yetkazish yozuvini saqlab bo\'lmadi' });
+    }
+};
+// Liddan yaratish/yangilash (konversiya: lid "To'lov jarayonida"ga o'tganda).
+router.post('/book-roadmap/from-lead', authRequired, crmStateIdentity, bookRoadmapRoute((client, ctx, req) =>
+    bookRoadmapLead.upsertFromLead(client, { ...ctx, leadId: req.body?.leadId, entryId: req.body?.entryId })));
+// Kanban: bosqich, izohlar, manzil.
+router.patch('/book-roadmap/:id', authRequired, crmStateIdentity, bookRoadmapRoute((client, ctx, req) =>
+    bookRoadmapLead.updateOwnEntry(client, { ...ctx, entryId: req.params.id, patch: { status: req.body?.status, comments: req.body?.comments, address: req.body?.address } })));
+
 router.post('/teacher-attendance', authRequired, crmStateIdentity, async (req, res) => {
     try {
         if (!['admin', 'rop', 'boshliq', 'teacher'].includes(req.user?.role)) {
