@@ -68,6 +68,8 @@ function scopeState(state, user, { managerId, financeEmployee = false } = {}) {
             .map(s => own.has(s.id) ? s : stripStudentContacts(s));
         state.payments = (state.payments || []).filter(p => own.has(p.studentId));
         state.cashFlow = [];
+        // Kitob yetkazish: faqat o'z kartochkalari (boshqa menejer mijozlarining manzili va telefoni kelmaydi).
+        if (Array.isArray(state.bookRoadmap)) state.bookRoadmap = managerId ? state.bookRoadmap.filter(b => String(b.managerId || '') === String(managerId)) : [];
     } else if (role === 'employee' && !financeEmployee) {
         state.students = (state.students || []).map(stripStudentContacts);
         state.payments = [];

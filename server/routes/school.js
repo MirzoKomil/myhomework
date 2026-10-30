@@ -252,8 +252,15 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         if (req.user.role === 'teacher') { teacherId = (await teacherOf(req)).id; if (action === 'cancel') throw T.fail(403, 'Bekor qilishni admin qiladi'); }
         else if (SALES.has(req.user.role)) {
             if (action !== 'cancel') throw T.fail(403, 'Natijani ustoz yozadi');
-            const b = (await c.query('SELECT created_by, kind FROM school_bookings WHERE id=$1', [req.params.id])).rows[0];
+            const b = (await c.query('SELECT created_by, kind, lead_id, teacher_id FROM school_bookings WHERE id=$1', [req.params.id])).rows[0];
             if (!b || b.kind !== 'trial' || (b.created_by !== req.user.id && req.user.role !== 'rop')) throw T.fail(403, 'Faqat o\'zingiz band qilgan sinovni bekor qilasiz');
+            // ROP faqat o'z til yo'nalishidagi sinovni bekor qiladi: til — lid tilidan, lid bo'lmasa ustoz tilidan.
+            const rl = await ropLangs(req);
+            if (rl) {
+                const lead = b.lead_id ? (await c.query('SELECT language FROM leads WHERE id=$1', [b.lead_id])).rows[0] : null;
+                const tl = lead?.language || (await teacherLangs()).get(b.teacher_id);
+                if (tl !== 'both' && !subjectOk(rl, tl)) throw T.fail(403, 'ROP faqat o\'z til yo\'nalishidagi sinovni bekor qiladi');
+            }
         } else need(req, FULL);
         return { booking: await S.transition(c, req.params.id, action, { teacherId }) };
     })));

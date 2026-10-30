@@ -80,6 +80,21 @@ test('ROP til cheklovi — haqiqiy PostgreSQL', { skip: !url }, async t => {
             assert.match(r.body.error, /til/);
         });
 
+        await t.test('sinov bandini bekor qilish: ROP faqat o\'z tilida (lid tili, lid bo\'lmasa ustoz tili)', async () => {
+            await pool.query(`INSERT INTO school_bookings(id, teacher_id, kind, lead_id, date, start_min, end_min, status, created_by) VALUES
+              ('b-ru','rus','trial','l-ru','2026-11-03',600,630,'pending','u-ropru'),('b-en','dil','trial','l-en','2026-11-03',600,630,'pending','u-rop'),
+              ('b-ru2','rus','trial',null,'2026-11-04',600,630,'pending','u-ropru'),('b-ru3','rus','trial','l-ru','2026-11-05',600,630,'pending','u-ropru')`);
+            const enOnRu = await call('u-rop', 'POST', '/bookings/b-ru/cancel');
+            assert.equal(enOnRu.status, 403);
+            assert.match(enOnRu.body.error, /til/);
+            assert.equal((await call('u-rop', 'POST', '/bookings/b-ru2/cancel')).status, 403, 'lidsiz band — ustoz tili');
+            assert.equal((await call('u-ropru', 'POST', '/bookings/b-en/cancel')).status, 403);
+            assert.equal((await pool.query(`SELECT status FROM school_bookings WHERE id='b-ru'`)).rows[0].status, 'pending');
+            assert.equal((await call('u-ropru', 'POST', '/bookings/b-ru/cancel')).status, 200);
+            assert.equal((await call('u-rop', 'POST', '/bookings/b-en/cancel')).status, 200);
+            assert.equal((await call('u-admin', 'POST', '/bookings/b-ru3/cancel')).status, 200, 'admin o\'zgarmagan');
+        });
+
         await t.test('jadval: ROP so\'ralgan tilni emas, o\'z tilini oladi', async () => {
             const r = await call('u-ropru', 'GET', '/schedule?from=2026-11-03&to=2026-11-03&lang=english');
             assert.equal(r.status, 200);
