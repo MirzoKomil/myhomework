@@ -203,7 +203,9 @@ async function run(db, settings, clock, now, once) {
     if (!settings.teamVibesEnabled || clock.day === 7) return; // yakshanba — dam
     // 30-okt: oyna 2 daqiqa edi — rejalashtiruvchi shu 2 daqiqada band bo'lsa (deploy, ko'p xabar), xabar butun kunga
     // tushib qolardi. Endi 45 daqiqa ichida yetib oladi; once() kuniga bir martadan oshirmaydi.
-    const at = (h, m) => { const t = clock.hour * 60 + clock.minute, s = h * 60 + m; return t >= s && t < s + 45; };
+    // Kechikkan xabar keyingi xabar vaqtigacha yetib oladi (masalan, 10:00 motivatsiya — 13:00 gacha); undan keyin ma'nosi yo'q.
+    const UNTIL = { 540: 780, 570: 780, 600: 780, 660: 780, 810: 960, 1080: 1170 };
+    const at = (h, m) => { const t = clock.hour * 60 + clock.minute, s = h * 60 + m; return t >= s && t < (UNTIL[s] || s + 45); };
     const due = [[9, 0], [9, 30], [10, 0], [11, 0], [13, 30], [18, 0]].some(([h, m]) => at(h, m));
     // Nega xabar bormayotgani Bot boshqaruvidagi «Avtomatik vazifalar xatolari»da ko'rinadi (throw emas — boshqa xabarlar to'xtamasin).
     const note = message => db.query(`INSERT INTO domwork_bot_errors(part,message) SELECT 'team_vibes',$1 WHERE to_regclass('domwork_bot_errors') IS NOT NULL
