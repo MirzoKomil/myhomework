@@ -157,12 +157,20 @@ async function edit(db, actor, studentId, body, { managerId = null, now = new Da
     const row = await lockStudent(db, studentId);
     if (!soldBy(extraOf(row), managerId)) throw fail(403, 'Faqat o\'zingiz sotgan o\'quvchini tahrirlaysiz');
     const direct = Object.fromEntries(Object.entries(changes).filter(([k]) => DIRECT_FIELDS.includes(k)));
-    const tariff = Object.fromEntries(Object.entries(changes).filter(([k]) => TARIFF_FIELDS.includes(k) || SCHEDULE_FIELDS.includes(k) || k === 'effectiveFrom'));
-    if (Object.keys(tariff).length === 1 && tariff.effectiveFrom) delete tariff.effectiveFrom;
+    // O'zgarishsiz qiymatlar so'rovga kirmaydi (60 → 60 kabi "bo'sh" so'rov ROP navbatiga tushmasin).
+    const { extra: ex0, ...st0 } = extraOf(row);
+    const cur = { lessonDay: st0.day, lessonTime: st0.time, lessonDuration: st0.duration, tariff: ex0.tariff || '', monthlyPrice: Number(ex0.monthlyPrice || 0) };
+    const same = (k, v) => (k === 'lessonDay' || k === 'lessonDuration' || k === 'monthlyPrice' ? Number(v) === Number(cur[k]) : String(v ?? '') === String(cur[k] ?? ''));
+    const tariff = Object.fromEntries(Object.entries(changes).filter(([k, v]) => (TARIFF_FIELDS.includes(k) || SCHEDULE_FIELDS.includes(k)) && !same(k, v)));
+    if (Object.keys(tariff).length && changes.effectiveFrom) tariff.effectiveFrom = changes.effectiveFrom;
+    const teacherSame = changes.teacherId && String(changes.teacherId) === String(st0.teacherId || '')
+        && (changes.lessonDay == null || Number(changes.lessonDay) === Number(st0.day)) && (changes.lessonTime == null || String(changes.lessonTime) === String(st0.time));
+    if (!Object.keys(direct).length && !Object.keys(tariff).length && (!changes.teacherId || teacherSame))
+        throw fail(400, 'O\'zgarish yo\'q — yangi qiymatlar hozirgisi bilan bir xil');
     const out = { applied: null, request: null };
     if (Object.keys(direct).length) out.applied = await applyEdit(db, actor, studentId, direct, reason, { now });
     if (Object.keys(tariff).length) out.request = await createRequest(db, actor, studentId, 'tariff', tariff, reason);
-    if (changes.teacherId) out.request = await createRequest(db, actor, studentId, 'teacher',
+    if (changes.teacherId && !teacherSame) out.request = await createRequest(db, actor, studentId, 'teacher',
         { teacherId: changes.teacherId, from: changes.teacherFrom, lessonDay: changes.lessonDay, lessonTime: changes.lessonTime }, reason);
     return out;
 }

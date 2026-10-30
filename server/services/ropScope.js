@@ -65,8 +65,10 @@ function filterAttendance(map, ownIds) {
 
 // GET /api/state ROP javobi: kassa yo'q; til berilgan bo'lsa — faqat o'z tilidagi
 // lidlar, o'quvchilar, ustozlar, ularning to'lovlari va davomati.
-function scopeStateForRop(state, langs) {
+function scopeStateForRop(state, langs, { ownEmployeeId = null } = {}) {
     state.cashFlow = [];
+    // Xodimlar demo hisoblari (isStaffDemo) ROP'ga kelmaydi — faqat o'zining demo hisobi (ilovani ko'rish uchun).
+    if (Array.isArray(state.students)) state.students = state.students.filter(s => !s?.isStaffDemo || (ownEmployeeId && String(s.demoForEmployeeId || '') === String(ownEmployeeId)));
     if (!langs) return state;
     state.leads = scopeLeads(state.leads, langs);
     state.students = (state.students || []).filter(s => langs.includes(langOfStudent(s)));

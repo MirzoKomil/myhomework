@@ -246,6 +246,22 @@
         if (!list.length) return '';
         return list.some(i => i.outcome !== 'no_answer') ? 'nc' : 'na';
     }
+    // "Tekshiruvda" qoplashlarning maoshga o'tadigan qismi — Davomat ("+N tekshiruvda", qator "+summa"), "Qoplash darslari ·
+    // nazorat" va Qoplash sahifasi ("+N so'm kutmoqda", Summa ustuni) uchun BITTA qoida:
+    //  • summa — server payroll stavkasi (payrollEngine: o'quvchi tarifi / oydagi darslari; /api/payroll/preview perStudent.rate);
+    //  • qoldirilgan kunida "Keldi" bor (missedCame) qoplash kirmaydi — tasdiqlab ham bo'lmaydi, maoshga ham o'tmaydi;
+    //  • oy rejasidan oshgani kirmaydi (hisobga o'tgan + tekshiruvdagi ≤ reja) — moliya ham rejadan ortiq sanamaydi.
+    // row: monthTotals().rows[i] (plan, counted, reviewList); rate: bir dars summasi (null — noma'lum, summa ko'rsatilmaydi).
+    // Natija: { ids: maoshga o'tadigan tekshiruvdagi qoplash id'lari, count, sum, over: rejadan oshgani uchun o'tmaydiganlar }.
+    function pendingMakeupPay(row, rate) {
+        const list = (row && row.reviewList) || [];
+        const room = Math.max(0, (Number(row && row.plan) || 0) - (Number(row && row.counted) || 0));
+        // Qo'shaloq dars ikki dars kuni egallamaydi — har biri bitta dars sifatida (payrollEngine bilan bir xil: bitta qoplash = bitta dars).
+        const sorted = [...list].sort((a, b) => dkey(a.held_date ?? a.heldDate).localeCompare(dkey(b.held_date ?? b.heldDate)));
+        const ok = sorted.slice(0, room), over = sorted.slice(room);
+        const r = rate == null || !isFinite(Number(rate)) ? null : Number(rate);
+        return { ids: ok.map(m => m.id), count: ok.length, sum: r == null ? null : ok.length * r, over: over.map(m => m.id) };
+    }
     return Object.freeze({ INACTIVE, isActiveStudent, statusOn, activeOn, lessonCountsOn, inMonth, weekPlanSlots, weekPlanCount, monthTotals, assistPossible,
-        teacherOn, taughtOn, missedCame, reviewMakeups, withPast, assistMonthPlan, assistAmount, assistDayState, ASSIST_CAP, ASSIST_MONTHLY });
+        teacherOn, taughtOn, missedCame, reviewMakeups, pendingMakeupPay, withPast, assistMonthPlan, assistAmount, assistDayState, ASSIST_CAP, ASSIST_MONTHLY });
 });

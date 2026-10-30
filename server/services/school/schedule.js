@@ -257,8 +257,11 @@ async function checkWeekly(db, { teacherId, day, time, duration, fromDate, exclu
     const ctx = await loadContext(db, { teacherIds: [teacherId], from, to, now });
     ctx.students = ctx.students.filter(s => s.id !== excludeStudentId);
     const days = T.patternDays(day);
+    const nowL = T.nowLocal(now);
     for (const d of T.dateRange(from, to)) {
         if (!days.includes(T.weekday(d))) continue;
+        // Bugungi vaqti boshlanib/o'tib bo'lgan dars yangi jadvalda bo'lmaydi — bugungi o'tgan dars "band" emas.
+        if (d === nowL.date && start <= nowL.min) continue;
         const v = dayView(ctx, teacherId, d);
         if (!fits(v.free, start, end)) {
             const clash = v.items.find(i => T.overlaps(i, { start, end }) && i.kind !== 'reserved');

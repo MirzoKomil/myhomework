@@ -160,3 +160,9 @@ html.rd[data-theme="dark"] #profilePage.sz-on .profile-nav-item:hover { backgrou
 html.rd[data-theme="dark"] #profilePage.sz-on .profile-nav-item.active { background: rgba(59, 139, 238, .18); color: #8FC0FF; }
 html.rd[data-theme="dark"] #profilePage.sz-on .profile-nav-danger { color: #F97066; }
 html.rd[data-theme="dark"] .ss-body .ss-tbl.ss-tbl--np tbody tr.sec th { color: #CBD5E1; background: rgba(255, 255, 255, .03); }
+/* BAHO-6 #9: dizaynda yo'q bo'limlar — yig'ma "Boshqa bo'limlar" guruhi (yopiq; faol band bo'lsa ko'rinadi). */
+#profilePage.sz-on .sz-fold { display: flex; align-items: center; justify-content: space-between; width: 100%; border: 0; background: none; cursor: pointer; text-align: left; text-transform: uppercase; font-family: inherit; }
+#profilePage.sz-on .sz-fold::after { content: "▾"; font-size: 12px; transition: transform .15s; }
+#profilePage.sz-on .profile-nav-group.is-open > .sz-fold::after { transform: rotate(180deg); }
+#profilePage.sz-on .profile-nav-group[data-sz-group="more"]:not(.is-open) > .profile-nav-item:not(.active) { display: none !important; }
+#profilePage.sz-on .sz-fold:focus-visible { outline: 2px solid var(--kb-primary, #0065D6); outline-offset: 2px; border-radius: 8px; }

@@ -1460,6 +1460,17 @@ let _activeShopProductCategory = 'merch';
 // kalitlarni o'qiydi: mh_student_token / mh_student_info).
 let _staffDemoTokenPromise = null;
 function _ensureStaffDemoToken() {
+    // ROP / sotuv: demo hisobi yo'q bo'lsa serverga so'rov yuborilmaydi (avval 404 va konsol xatosi) — sahifada izoh.
+    const cu = getCurrentUser();
+    if (!_staffDemoTokenPromise && ['rop', 'sales_manager'].includes(cu?.role)) {
+        const me = getItem(STORAGE_KEYS.hrEmployees, []).find(e => String(e.login || '').trim().toLowerCase() === String(cu.email || '').trim().toLowerCase());
+        const hasDemo = !!me && getItem(STORAGE_KEYS.students, []).some(s => s.isStaffDemo && String(s.demoForEmployeeId || '') === String(me.id));
+        if (!hasDemo) {
+            const panel = document.getElementById('mobileViewPanel');
+            if (panel && !panel.querySelector('.rs-nodemo')) panel.insertAdjacentHTML('afterbegin', '<p class="rs-ro rs-nodemo" role="note">Sizning demo o\'quvchi hisobingiz hali yaratilmagan — ilova kirish sahifasi bilan ochiladi. Demo hisobni admin HR bo\'limida yaratadi.</p>');
+            return Promise.resolve();
+        }
+    }
     if (!_staffDemoTokenPromise) {
         _staffDemoTokenPromise = apiGetMyDemoToken().then(res => {
             if (res?.token && res?.student) {
@@ -1706,6 +1717,7 @@ function switchMobileSection(section) {
         const frame = document.getElementById('studentAppFrame');
         if (frame && frame.src === 'about:blank') frame.src = _studentAppPreviewUrl();
         _updateStudentAppPreviewLinks();
+        _populateDemoStudentSelect();
     }
 }
 
@@ -7718,27 +7730,36 @@ function _populateDemoStudentSelect() {
     const sel = document.getElementById('demoStudentSelect');
     if (!sel) return;
     const currentUser = getCurrentUser();
-    const selWrap = sel.closest('.form-group') || sel.parentElement;
+    const selWrap = sel.closest('.team-demo-card') || sel.closest('.form-group') || sel.parentElement;
 
-    // Bu tanlov mobil ilovaning global namuna profilini almashtiradi. Ustoz
-    // undan foydalansa boshqa o'quvchining ilova profili o'zgarib ketardi va
-    // u baribir bu kalitni saqlash huquqiga ega emas. Ustozning haqiqiy
-    // o'quvchilari endi bevosita pastdagi davomat jadvalida ko'rinadi.
-    if (currentUser?.role === 'teacher') {
+    // Bu tanlov mobil ilovaning global namuna profilini almashtiradi — faqat admin/boshliq (Mobil ilova → Ilovani ko'rish).
+    // Ustoz va boshqa rollar uni ko'rmaydi: boshqa o'quvchining ilova profili o'zgarib ketardi.
+    if (!['admin', 'boshliq'].includes(currentUser?.role)) {
         if (selWrap) selWrap.hidden = true;
         return;
     }
     if (selWrap) selWrap.hidden = false;
-    let allStudents = getItem(STORAGE_KEYS.students, []);
+    // BAHO-6 #1: faqat faol o'quvchilar (muzlatilgan / chiqib ketgan emas); xodimlarning demo akkauntlari (isStaffDemo)
+    // ro'yxatga kirmaydi — faqat o'zingizning demo akkauntingiz (bo'lsa).
+    const R = window.AttendanceRules;
+    const own = s => isStaffDemoStudent(s) && currentUser && [currentUser.id, currentUser.linkedTeacherId, currentUser.employeeId].filter(Boolean).includes(s.demoForEmployeeId);
+    const active = s => (R?.isActiveStudent ? R.isActiveStudent(s) || own(s) : !s.frozen && s.status !== 'inactive');
+    const allStudents = getItem(STORAGE_KEYS.students, []).filter(s => (!isStaffDemoStudent(s) || own(s)) && active(s))
+        .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
 
     const current = getItem(STORAGE_KEYS.demoStudentId, '');
+    const cur = current && !allStudents.some(s => s.id === current) ? getItem(STORAGE_KEYS.students, []).find(s => s.id === current) : null;
     sel.innerHTML = '<option value="">— tanlanmagan —</option>' +
+        (cur ? `<option value="${escapeHtml(cur.id)}" selected>${escapeHtml(cur.name || cur.id)} (hozirgi · faol emas)</option>` : '') +
         allStudents.map(s => `<option value="${escapeHtml(s.id)}" ${s.id === current ? 'selected' : ''}>${escapeHtml(s.name)}</option>`).join('');
     if (!sel.dataset.bound) {
         sel.dataset.bound = '1';
         sel.addEventListener('change', () => {
             setItem(STORAGE_KEYS.demoStudentId, sel.value);
             showMiniToast("Namuna o'quvchi yangilandi");
+            // Ilova ko'rinishi ochiq bo'lsa — yangi namuna bilan qayta yuklanadi.
+            const frame = document.getElementById('studentAppFrame');
+            if (frame && frame.src && frame.src !== 'about:blank') { try { frame.src = _studentAppPreviewUrl(); } catch (e) { /* ixtiyoriy */ } }
         });
     }
 }
@@ -10218,6 +10239,9 @@ function renderStudents() {
     // Muzlatilgan o'quvchilarni Faol ro'yxatdan chiqarish
     // Xodimlarning demo akkauntlari (isStaffDemo / id "demo_") ro'yxatda ham, "Jami"da ham yo'q — ular faqat HR → xodim kartasida.
     students = students.filter(s => !s.frozen && !isStaffDemoStudent(s));
+    // ROP: "Faol" — yagona qoida (js/attendanceRules.js isActiveStudent): kursi tugagan / "inactive" o'quvchi kirmaydi
+    // (sotuv O'quvchilaridagi "Faol emas" bilan bir xil). Admin ro'yxati o'zgarmagan.
+    if (currentUser?.role === 'rop' && window.AttendanceRules?.isActiveStudent) students = students.filter(s => window.AttendanceRules.isActiveStudent(s));
 
     // 8-vazifa (qayta ish 4): O'quvchilar bo'limi Sotuv bo'limi bilan to'liq
     // integratsiya qilingan — "Faol o'quvchilar" ro'yxatida FAQAT sotuv
@@ -18546,6 +18570,13 @@ function openPaymentOnboardingModal(lang, leadId, options = {}) {
     const { chainTo = null } = options;
     const lead = getLeadById(lang, leadId);
     if (!lead) return;
+    // Sotuv/ROP: o'quvchiga aylantirilgan (6-qadam saqlangan) lid uchun 6-qadam qayta ochilmaydi — lid kartasi ochiladi.
+    if (window.convertUI && !chainTo && ['sales_manager', 'rop'].includes(getCurrentUser()?.role)
+        && ['tolov-jarayonida', 'tolov-yopildi'].includes(normalizeLeadStatus(lead.status)) && lead.paymentOnboarding?.becomeStudent) {
+        showMiniToast("Lid allaqachon o'quvchiga aylantirilgan — ma'lumotlar lid kartasida", 3000);
+        if (typeof openLeadOverview === 'function') openLeadOverview(lang, leadId);
+        return;
+    }
     // Qadamlar tartibi 3 → 4 → 5 → 6: to'g'ridan-to'g'ri chaqirilsa ham avval doimiy jadval (3) va to'lov (4) —
     // aks holda guruh oynasi birinchi ochilib, bajarilmagan qadamlar "✓" bo'lib ko'rinardi (audit: SotuvKonversiya).
     if (window.convertUI && !options.groupDone && !leadHasTeacherSchedule(lead)) { openPaymentTeacherScheduleModal(lang, leadId, { chainTo }); return; }

@@ -301,7 +301,8 @@
     function savedText() {
         if (S.viewAll) {
             const b = S.cur?.board;
-            return b?.updatedAt ? `Oxirgi o'zgarish: ${esc(shortName(b.updatedByName || b.ownerName))}, ${esc(dayLabel(dateOfIso(b.updatedAt)))} ${esc(timeOf(b.updatedAt))}` : '';
+            // Dizayn (Doska): "Oxirgi o'zgarish: Dilnoza S., bugun 10:52" — doska hali chizilmagan bo'lsa ham qator ko'rinadi.
+            return b?.updatedAt ? `Oxirgi o'zgarish: ${esc(shortName(b.updatedByName || b.ownerName))}, ${esc(dayLabel(dateOfIso(b.updatedAt)))} ${esc(timeOf(b.updatedAt))}` : 'Oxirgi o\'zgarish: — · doska hali chizilmagan';
         }
         if (S.error && S.dirty) return `<span class="wb-bad">Saqlanmadi — qayta urinilmoqda</span>`;
         if (S.saving || S.dirty) return 'Saqlanmoqda…';

@@ -195,7 +195,9 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
             for (const f of src) for (let t = Math.ceil(f.start / step) * step; t + duration <= f.end; t += step) list.push({ teacherId: v.teacherId, date: v.date, time: T.fromMin(t) });
         }
         const now = T.nowLocal();
-        return { duration, purpose, slots: list.filter(s => s.date > now.date || T.toMin(s.time) > now.min) };
+        // Ish vaqti kiritilmagan ustoz (dayView.noHours — 07:00–22:00 taxmin): mijoz "bo'sh: 07:00" kabi taklif qilmasin (BAHO-6).
+        const noHours = [...new Set(vs.filter(v => v.noHours).map(v => v.teacherId))];
+        return { duration, purpose, slots: list.filter(s => s.date > now.date || T.toMin(s.time) > now.min), noHours };
     }));
     router.post('/bookings', handle(req => write(req, async c => {
         const kind = req.body?.kind;

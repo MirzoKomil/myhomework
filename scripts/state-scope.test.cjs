@@ -220,3 +220,11 @@ test('sotuv menejeri: kitob yetkazish — faqat o\'z kartochkalari (boshqalarnin
     const st3 = baseState(); st3.bookRoadmap = [{ id: 'b1', managerId: 'm1' }, { id: 'b2', managerId: 'm2' }];
     assert.equal(scope.scopeState(st3, { role: 'admin' }).bookRoadmap.length, 2);
 });
+
+test('ROP: xodimlar demo hisoblari /api/state ga kelmaydi (faqat o\'zining demo hisobi)', () => {
+    const rop = require('../server/services/ropScope');
+    const st = () => ({ students: [{ id: 's1', subject: 'english' }, { id: 'demo-dil', subject: 'english', isStaffDemo: true, demoForEmployeeId: 'hr-dil' },
+        { id: 'demo-rop', subject: 'english', isStaffDemo: true, demoForEmployeeId: 'hr-rop' }], payments: [], mainAttendance: {}, assistantAttendance: {} });
+    assert.deepEqual(rop.scopeStateForRop(st(), ['english'], { ownEmployeeId: 'hr-rop' }).students.map(s => s.id), ['s1', 'demo-rop']);
+    assert.deepEqual(rop.scopeStateForRop(st(), null).students.map(s => s.id), ['s1'], 'tilsiz ROP ham demo olmaydi');
+});
