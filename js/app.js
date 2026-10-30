@@ -19773,11 +19773,9 @@ function saveVisibleColumns() {
     localStorage.setItem(LEADS_COLUMN_VISIBILITY_KEY, JSON.stringify(payload));
 }
 
-// Telefonda (≤900px) "Ustunlar filtri" yashirin (css/teamApp.css) — u yerda kompyuterda saqlangan tanlov
-// ishlatilmaydi, aks holda yashirib qo'yilgan ustun (masalan "Sinov darsida") telefonda qaytarib bo'lmay qoladi.
-function leadColumnsFilterHidden() {
-    try { return document.documentElement.classList.contains('rd') && window.matchMedia('(max-width: 900px)').matches; } catch { return false; }
-}
+// 30-okt (Abdulloh): "Ustunlar filtri" hamma ekranda (telefonda ham) ochiq — har kim o'zi xohlagan ustunni
+// ko'rsatadi/yashiradi (standart: "Sifatsiz lid" va "Muvaffaqiyatsiz sotuv" yashirin). Tanlov hamma joyda bir xil.
+function leadColumnsFilterHidden() { return false; }
 function effectiveVisibleLeadIds() {
     return leadColumnsFilterHidden() ? new Set(getDefaultVisibleColumnIds()) : _leadsVisibleColumns;
 }

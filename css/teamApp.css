@@ -1711,10 +1711,21 @@ html.rd .rating-main-tabs {
         color: var(--rd-primary-strong);
     }
 
-    /* Bitta ustunli telefonda "Ustunlar filtri" kerak emas */
-    html.rd #leadsFiltersBar .leads-columns-filter-wrap,
-    html.rd #bookRoadmapFiltersBar .leads-columns-filter-wrap {
-        display: none !important;
+    /* "Ustunlar filtri" telefonda ham ko'rinadi (30-okt). Filtrlar qatori gorizontal suriladi (overflow) —
+       ro'yxat unda kesilmasligi uchun pastdan chiqadigan varaq ko'rinishida (fixed). */
+    html.rd #leadsFiltersBar .leads-columns-dropdown,
+    html.rd #bookRoadmapFiltersBar .leads-columns-dropdown {
+        position: fixed;
+        left: 16px;
+        right: 16px;
+        top: auto;
+        bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+        width: auto;
+        max-width: none;
+        max-height: 60vh;
+        overflow-y: auto;
+        z-index: 1200;
+        box-shadow: 0 12px 40px rgba(16, 24, 40, .22);
     }
 
     html.rd .user-avatar {
