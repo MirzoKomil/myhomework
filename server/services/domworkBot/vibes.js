@@ -1,6 +1,6 @@
 'use strict';
 // Jamoa kayfiyati: motivatsiya, latifa, "qaynoq soat", Juma tabrigi, dushanba starti, oy oxiri sanog'i.
-// Sozlama: teamVibesEnabled (Bot boshqaruvi). Har xabar kuniga bir marta (scheduler.once), yakshanba — dam.
+// Sozlama: teamVibesEnabled (Bot boshqaruvi, 30-okt dan standart yoqilgan) + groupNotificationsEnabled. Har xabar kuniga bir marta (scheduler.once), yakshanba — dam.
 const T = require('./tone');
 const MORNING = [
     'Har bir qo‘ng‘iroq — kimningdir hayotini o‘zgartirish imkoniyati. Bugun shu imkoniyatlarni qo‘ldan boy bermaylik! 📞',
@@ -200,9 +200,21 @@ async function lastWeek(db, today) {
     return { sum: Number(r.s) || 0, sales: Number(r.sales) || 0, top: r.top || '' };
 }
 async function run(db, settings, clock, now, once) {
-    if (!settings.teamVibesEnabled || !settings.groupNotificationsEnabled || clock.day === 7) return; // yakshanba — dam
+    if (!settings.teamVibesEnabled || clock.day === 7) return; // yakshanba — dam
+    // 30-okt: oyna 2 daqiqa edi — rejalashtiruvchi shu 2 daqiqada band bo'lsa (deploy, ko'p xabar), xabar butun kunga
+    // tushib qolardi. Endi 45 daqiqa ichida yetib oladi; once() kuniga bir martadan oshirmaydi.
+    const at = (h, m) => { const t = clock.hour * 60 + clock.minute, s = h * 60 + m; return t >= s && t < s + 45; };
+    const due = [[9, 0], [9, 30], [10, 0], [11, 0], [13, 30], [18, 0]].some(([h, m]) => at(h, m));
+    // Nega xabar bormayotgani Bot boshqaruvidagi «Avtomatik vazifalar xatolari»da ko'rinadi (throw emas — boshqa xabarlar to'xtamasin).
+    const note = message => db.query(`INSERT INTO domwork_bot_errors(part,message) SELECT 'team_vibes',$1 WHERE to_regclass('domwork_bot_errors') IS NOT NULL
+        AND NOT EXISTS(SELECT 1 FROM domwork_bot_errors WHERE part='team_vibes' AND message=$1 AND created_at>NOW()-INTERVAL '3 hours')`, [message]);
+    if (!settings.groupNotificationsEnabled) {
+        if (due) await note('Jamoa kayfiyati yoqilgan, lekin «Guruhlarga xabar yuborish» o‘chiq — sotuv guruhiga xabar bormaydi');
+        return;
+    }
+    if (due && !(await db.query("SELECT 1 FROM domwork_bot_groups WHERE type='sales' AND scope='' AND active")).rows.length)
+        await note('Sotuv bo‘limi guruhi botga ulanmagan yoki faol emas — kayfiyat xabarlari yuborilmayapti');
     const events = require('./events');
-    const at = (h, m) => clock.hour === h && clock.minute >= m && clock.minute < m + 2;
     const opts = { ...T.HTML, _setting: 'teamVibesEnabled', _expiresAt: new Date(now.getTime() + 3600000).toISOString() };
     const send = (key, type, text) => once(db, key, () => events.groupMessage(db, key, type, text, opts));
     // Juma tabrigi — butun jamoaga (Family guruhi).

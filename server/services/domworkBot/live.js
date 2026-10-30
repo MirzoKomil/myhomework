@@ -18,6 +18,8 @@ async function init(db) {
     // Abdulloh so'ragan funksiya — bir marta yoqilgan holda boshlanadi; keyin Bot boshqaruvidan o'chirsa, o'chiq qoladi.
     await db.query(`UPDATE domwork_bot_settings SET data=data||'{"liveFeedEnabled":true}'::jsonb WHERE singleton=1 AND NOT (data ? 'liveFeedEnabled')`);
     await db.query(`UPDATE domwork_bot_settings SET data=data||'{"liveFeedRopEnabled":true}'::jsonb WHERE singleton=1 AND NOT (data ? 'liveFeedRopEnabled')`);
+    // Jamoa kayfiyati (sotuv guruhiga 10:00 motivatsiya, 13:30 latifa, 18:00 qaynoq soat) hech qachon standart yoqilmagan edi.
+    await db.query(`UPDATE domwork_bot_settings SET data=data||'{"teamVibesEnabled":true}'::jsonb WHERE singleton=1 AND NOT (data ? 'teamVibesEnabled')`);
 }
 
 async function send(db, key, text, { silent = false } = {}) {

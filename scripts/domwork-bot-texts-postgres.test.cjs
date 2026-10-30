@@ -49,14 +49,16 @@ test('sales group celebrates a new sale with a mention; a later debt payment is 
    const personal=rows.find(r=>r.unique_key.startsWith('event:payment:p1:manager')).payload;
    assert.match(personal.text,/Tabriklaymiz, Dilnoza/);assert.match(personal.text,/Rejagacha/);
   });
-  await t.test('team vibes: Friday greeting, joke, 18:00 hot hour; Sunday is quiet; off by default',async()=>{
+  await t.test('team vibes: Friday greeting, joke, 18:00 hot hour; Sunday is quiet; late tick catches up; switch off = silent',async()=>{
    const scheduler=require('../server/services/domworkBot/scheduler');
    const tick=async iso=>{const c=await pool.connect();try{await c.query('BEGIN');await scheduler.run(c,new Date(iso));await c.query('COMMIT');}catch(e){await c.query('ROLLBACK');throw e;}finally{c.release();}};
    const vibes=async()=>(await pool.query("SELECT unique_key,payload FROM domwork_bot_outbox WHERE unique_key LIKE 'vibe-%' ORDER BY unique_key")).rows;
    await pool.query("INSERT INTO domwork_bot_groups(id,type,scope,chat_id,active,created_by,title) VALUES('fam','family','','-100222222',true,'a','Family')");
+   await pool.query(`UPDATE domwork_bot_settings SET data=data||'{"teamVibesEnabled":false}'::jsonb`);
    await tick('2026-10-30T13:00:00Z');assert.equal((await vibes()).length,0); // o'chiq
    await pool.query(`UPDATE domwork_bot_settings SET data=data||'{"teamVibesEnabled":true}'::jsonb`);
-   for(const iso of ['2026-10-30T04:00:00Z','2026-10-30T08:30:00Z','2026-10-30T08:31:00Z','2026-10-30T13:00:00Z','2026-11-01T13:00:00Z']) await tick(iso);
+   // 09:20 da (oyna ichida, kechikib) ham Juma tabrigi yetib boradi; 13:30 va 13:31 — bitta latifa.
+   for(const iso of ['2026-10-30T04:20:00Z','2026-10-30T04:21:00Z','2026-10-30T08:30:00Z','2026-10-30T08:31:00Z','2026-10-30T13:00:00Z','2026-11-01T13:00:00Z']) await tick(iso);
    const rows=await vibes();
    assert.deepEqual(rows.map(r=>r.unique_key.split(':')[0]),['vibe-evening','vibe-friday','vibe-joke']);
    assert.match(rows.find(r=>r.unique_key.startsWith('vibe-friday')).payload.text,/Juma/);
