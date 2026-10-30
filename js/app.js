@@ -8584,7 +8584,14 @@ function computeManagerHome({ user, managerId, leads, students, now = new Date()
     });
     const dueOf = s => { const d = s.paymentDueDate ? new Date(s.paymentDueDate) : null; return d && !Number.isNaN(d.getTime()) ? d : null; };
     const todayStart = new Date(now.toDateString());
-    const myStudents = students.filter(s => !s.frozen && !s.isStaffDemo);
+    // "Faol" — O'quvchilar sahifasi (GET /api/school/sold-students) bilan bitta qoida (BAHO7 7-band):
+    // demo va eski "inactive" kirmaydi, holat yozuvi bo'yicha bugun "chiqib ketgan" kirmaydi; muzlatilgan alohida.
+    const _R = window.AttendanceRules;
+    const _todayL = new Date(now.getTime() + 5 * 3600000).toISOString().slice(0, 10);
+    const stateOf = s => (_R?.statusOn && (s.statusHistory || []).length ? _R.statusOn(s.statusHistory, _todayL)
+        : s.frozen || s.legacyFrozen ? 'frozen' : (_R?.isActiveStudent && !_R.isActiveStudent(s)) ? 'left' : 'active');
+    const listed = students.filter(s => String(s.managerId || '') === String(managerId) && !s.isStaffDemo && !s.legacyInactive && stateOf(s) !== 'left');
+    const myStudents = listed.filter(s => stateOf(s) === 'active');
     const withDebt = myStudents.filter(s => Number(s.debtAmount || 0) > 0);
     const overdue = withDebt.filter(s => { const d = dueOf(s); return d && d < todayStart; });
     overdue.forEach(s => tasks.push({ kind: 'debt', late: true, at: dueOf(s).getTime(), student: s, title: `${s.name || "Oʻquvchi"} · toʻlov`, sub: `Kelishilgan sana ${formatDateShort(s.paymentDueDate)} oʻtdi · qoldiq ${formatMoney(s.debtAmount)}` }));
@@ -8611,7 +8618,7 @@ function computeManagerHome({ user, managerId, leads, students, now = new Date()
         lang, sales, target, dueByToday, deals, place, conv, teamConv, quality, daysInMonth,
         next, queue, queueCount, slaLateCount: slaLate.length,
         tasks, upcoming, funnel, openLeads: funnel.reduce((a, f) => a + f.count, 0),
-        active: myStudents.length, installments: withDebt.length, overdue
+        active: myStudents.length, frozenN: listed.length - myStudents.length, installments: withDebt.length, overdue
     };
 }
 
@@ -8647,7 +8654,7 @@ function renderKobaltTop(d, managerId, now = new Date()) {
             <div><span>Konversiya</span><b>${d.conv == null ? '—' : `${d.conv.toFixed(1).replace('.', ',')}%`}</b></div>
             <div><span>Maoshim · taxminiy</span><b id="mhxSalary">…</b><small id="mhxSalaryNote">oy yopilganda aniqlanadi</small></div>
         </div></section>`
-        : `<section class="card kbx-plan"><div class="kbx-plan-top"><div class="kbx-plan-main"><div class="kbx-plan-h"><h2>Oylik reja</h2></div><span class="kbx-sub">ROP individual reja kiritmagan. ${d.deals} ta bitim · ${d.place ? `${d.place}-oʻrin` : ''}</span></div>${gift}</div><div class="kbx-tiles"><div><span>Maoshim · taxminiy</span><b id="mhxSalary">…</b><small id="mhxSalaryNote">oy yopilganda aniqlanadi</small></div></div></section>`;
+        : `<section class="card kbx-plan"><div class="kbx-plan-top"><div class="kbx-plan-main"><div class="kbx-plan-h"><h2>Oylik reja</h2></div><span class="kbx-sub">Reja belgilanmagan — rejani admin belgilaydi. ${d.deals} ta bitim${d.place ? ` · ${d.place}-oʻrin` : ''}</span></div>${gift}</div><div class="kbx-tiles"><div><span>Maoshim · taxminiy</span><b id="mhxSalary">…</b><small id="mhxSalaryNote">oy yopilganda aniqlanadi</small></div></div></section>`;
     const dur = ms => { const m = Math.max(1, Math.round(ms / 60000)); return m < 60 ? `${m} daq` : m < 1440 ? `${Math.floor(m / 60)} soat` : `${Math.floor(m / 1440)} kun`; };
     let next;
     if (d.next) {
@@ -8719,7 +8726,7 @@ function renderManagerHome(user, managerId, leads, students, now = new Date()) {
                 ${d.tasks.length ? `<ul class="mhx-tasks">${d.tasks.slice(0, 8).map(taskRow).join('')}</ul>${d.tasks.length > 8 ? `<p class="mhx-sub">Yana ${d.tasks.length - 8} ta — Lidlar va Qarzdorlar boʻlimida</p>` : ''}` : emptyTasks}
                 ${d.upcoming.length ? `<h4 class="mhx-h4">Yaqinlashayotgan · kelishilgan toʻlov sanalari</h4><ul class="mhx-tasks">${d.upcoming.slice(0, 5).map(upRow).join('')}</ul>` : ''}
                 <h4 class="mhx-h4">Mening oʻquvchilarim</h4>
-                <ul class="mhx-stats mhx-stats--row"><li><b>${d.active}</b><span>Faol</span></li><li><b>${d.installments}</b><span>Boʻlib toʻlamoqda</span></li><li><b class="${d.overdue.length ? 'is-bad' : ''}">${d.overdue.length}</b><span>Qarzdor</span></li></ul>
+                <ul class="mhx-stats mhx-stats--row"><li><b>${d.active}</b><span>Faol${d.frozenN ? ` · +${d.frozenN} muzlatilgan` : ''}</span></li><li><b>${d.installments}</b><span>Boʻlib toʻlamoqda</span></li><li><b class="${d.overdue.length ? 'is-bad' : ''}">${d.overdue.length}</b><span>Qarzdor</span></li></ul>
                 ${d.overdue.length ? `<button type="button" class="ahx-link" data-mhx-go="debtors">Qarzdorlarim: ${escapeHtml(d.overdue.slice(0, 3).map(s => shortPersonName(s.name || '')).join(', '))} →</button>` : ''}
             </section>
             </div>
@@ -8862,7 +8869,7 @@ function renderRopHome(user, students, leads, now = new Date()) {
             const plan = kbxPlanCard({
                 id: 'kbxRopPlan', title: `Jamoa rejasi · ${UZ_MONTHS_GEN[now.getMonth()]}`,
                 pill: d.teamTarget > 0 ? (pc.gap >= 0 ? { cls: 'ok', text: `Rejadan ${_kbxMln(pc.gap)} mln oldinda` } : { cls: 'warn', text: `${_kbxMln(-pc.gap)} mln ortda` }) : null,
-                big: `${_kbxMln(d.teamSales)} mln`, of: d.teamTarget > 0 ? `/ ${_kbxMln(d.teamTarget)} mln soʻm` : 'soʻm · reja kiritilmagan',
+                big: `${_kbxMln(d.teamSales)} mln`, of: d.teamTarget > 0 ? `/ ${_kbxMln(d.teamTarget)} mln soʻm` : 'soʻm · reja belgilanmagan',
                 sub: `${pc.daysLeft} kun qoldi${d.teamTarget > 0 ? ` · bugungacha ${_kbxMln(pc.due)} mln boʻlishi kerak edi` : ''} · ${d.managers.length} menejer`,
                 bar: d.teamTarget > 0 ? { pct: pc.pct, due: pc.duePct, ok: pc.gap >= 0, label: `${pc.pct}% bajarildi, bugungacha ${pc.duePct}% kerak` } : null,
                 foot: d.teamTarget > 0 ? [`<strong>${pc.pct}%</strong> bajarildi`, `Shu tempda <strong>${_kbxMln(pc.forecast)} mln</strong>${pc.forecast < d.teamTarget ? ` — rejaga <strong>${_kbxMln(d.teamTarget - pc.forecast)} mln</strong> yetmaydi` : ''}`] : null,
@@ -25270,7 +25277,9 @@ function getManagerPeriodTarget(managerId, period) {
         if (period === 'haftalik') return Math.round(plan.totalAmount * (WEEKLY_TARGET / MONTHLY_TARGET));
         return plan.totalAmount;
     }
-    return getPeriodTarget(period);
+    // Individual reja yo'q — 0 ("reja belgilanmagan"). Ilgari doimiy 33 mln'ga qaytardi: Bosh sahifada
+    // "33 mln reja", Sotuv rejasida esa "reja belgilanmagan" ko'rinardi (BAHO7 6-band).
+    return 0;
 }
 
 function fmtMoney(n) {
@@ -25349,8 +25358,9 @@ function saveSalesPlanPatch(lang, patch) {
 // ya'ni hech kimning mavjud rejasi yo'qolmaydi.
 const INDIVIDUAL_SALES_PLAN_DEFAULTS = { totalAmount: 0, dealsCount: 0, avgCheck: 0 };
 const MONTH_KEY_RE = /^\d{4}-\d{2}$/;
+// Dizayn va CRM'ning boshqa sahifalari bilan bir xil yozilish: "Sentyabr", "Oktyabr".
 const UZ_MONTHS = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun',
-    'Iyul', 'Avgust', 'Sentabr', 'Oktabr', 'Noyabr', 'Dekabr'];
+    'Iyul', 'Avgust', 'Sentyabr', 'Oktyabr', 'Noyabr', 'Dekabr'];
 
 function currentMonthKey() {
     const d = new Date();
@@ -25825,7 +25835,7 @@ function renderSalesPlanIndividualPlanCard() {
         <div class="sp-empty">
             <span class="sp-empty-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg></span>
             <div class="sp-empty-t">${escapeHtml(monthKeyLabel(oy))} uchun reja belgilanmagan</div>
-            ${_spIsManager ? '<div class="sp-empty-s">Rejani ROP belgilaydi — belgilangach shu yerda kunlik maqsadingiz chiqadi.</div>' : '<button class="btn-primary-sm" id="spIndSetPlanBtn">+ Reja belgilash</button>'}
+            ${_spIsManager ? '<div class="sp-empty-s">Rejani admin belgilaydi — belgilangach shu yerda kunlik maqsadingiz chiqadi.</div>' : '<button class="btn-primary-sm" id="spIndSetPlanBtn">+ Reja belgilash</button>'}
         </div>`;
         wireMonth();
         return;
@@ -26206,6 +26216,18 @@ function renderLeaderboardSection() {
     const _ratingLangFilter = _leadsLangFilter === 'russian' ? 'russian' : 'english';
     const allSalesManagers = getActiveSalesManagers(_ratingLangFilter);
     const payrollIncome = payrollUI.leaderboardIncome(_ratingLangFilter, _ratingPeriod);
+    // Reyting daromadi (/api/payroll/leaderboard) kelmagan bo'lsa — soxta "0 so'm", "Siz birinchisiz" o'rniga
+    // yuklanish yoki xato kartasi va "Qayta urinish" (BAHO7 5-band). Oxirgi muvaffaqiyatli javob bo'lsa — o'sha qoladi.
+    const _lbState = payrollUI.leaderboardState ? payrollUI.leaderboardState(_ratingLangFilter, _ratingPeriod) : { loaded: true };
+    if (!_lbState.loaded) {
+        if (_lbState.err && window.LoadErr) {
+            el.innerHTML = window.LoadErr.html({ title: 'Reytingni yuklab bo\'lmadi', err: _lbState.err, note: 'Natijalar to\'liq bo\'lmasligi mumkin, shuning uchun ko\'rsatilmadi.' });
+            window.LoadErr.bind(el, () => { payrollUI.leaderboardRetry(); renderLeaderboardSection(); });
+        } else {
+            el.innerHTML = '<p class="sc-mt" role="status" aria-live="polite" style="padding:24px 4px">Reyting yuklanmoqda…</p>';
+        }
+        return;
+    }
     const managers = _cuRating && _cuRating.role === 'rop'
         ? allSalesManagers.filter(m => (m.lang || 'english') === (_cuRating.linkedRopLang || 'english'))
         : allSalesManagers;
@@ -26233,7 +26255,7 @@ function renderLeaderboardSection() {
     const podiumHTML = top3.length ? `
     <div class="rating-podium">
         ${top3.map((m, i) => {
-            const pct = Math.min(100, m.target > 0 ? Math.round((m.sales / m.target) * 100) : 0);
+            const pct = m.target > 0 ? Math.min(100, Math.round((m.sales / m.target) * 100)) : null;
             return `<div class="rating-podium-card bonus-card--3d" style="background:${podiumColors[i] || '#6366f1'}">
                 <div class="bonus-card-shine"></div>
                 <div class="rating-podium-rank">${podiumMedals[i]}</div>
@@ -26242,9 +26264,9 @@ function renderLeaderboardSection() {
                 <div class="rating-podium-sales">${fmtMoney(m.sales)}</div>
                 <div style="font-size:12px;opacity:.85;margin-top:2px">${m.deals} ta bitim · ${m.totalLeads} lid</div>
                 <div class="rating-podium-prog-wrap">
-                    <div class="rating-podium-prog-bar" style="width:${pct}%"></div>
+                    <div class="rating-podium-prog-bar" style="width:${pct || 0}%"></div>
                 </div>
-                <div class="rating-podium-pct">${pct}% maqsad</div>
+                <div class="rating-podium-pct">${pct == null ? 'reja belgilanmagan' : `${pct}% maqsad`}</div>
             </div>`;
         }).join('')}
     </div>` : '';
@@ -26291,14 +26313,14 @@ function renderLeaderboardSection() {
                             </td>
                             <td style="text-align:right;font-weight:700;color:#059669">${m.deals} ta</td>
                             <td style="text-align:right;font-weight:700;color:#6366f1">${fmtMoney(m.sales)}</td>
-                            <td style="text-align:right;color:var(--text-muted)">${fmtMoney(m.target)}</td>
+                            <td style="text-align:right;color:var(--text-muted)">${m.target > 0 ? fmtMoney(m.target) : 'belgilanmagan'}</td>
                             <td style="text-align:right;color:#16a34a;font-weight:600">${commission == null ? '—' : payrollUI.money(commission)}</td>
                             <td>
                                 <div style="display:flex;align-items:center;gap:8px">
                                     <div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden">
                                         <div style="width:${pct}%;height:100%;background:${barColor};border-radius:4px;transition:width .4s"></div>
                                     </div>
-                                    <span style="font-size:12px;font-weight:700;color:${barColor};white-space:nowrap">🚩 ${pct}%</span>
+                                    <span style="font-size:12px;font-weight:700;color:${barColor};white-space:nowrap">${m.target > 0 ? `🚩 ${pct}%` : '—'}</span>
                                 </div>
                             </td>
                         </tr>`;

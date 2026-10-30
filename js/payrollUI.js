@@ -291,7 +291,8 @@
         root.querySelectorAll('[data-payroll-start],[data-payroll-end]').forEach(el => { el.disabled = state.mode !== 'custom'; });
         load(section, true);
     }
-    const income = { key: '', values: {}, loading: false, refreshed: 0 };
+    // loaded — shu davr uchun server javobi bor; err — oxirgi so'rov xatosi (Reyting soxta 0 o'rniga xato kartasini ko'rsatadi).
+    const income = { key: '', values: {}, loading: false, refreshed: 0, loaded: false, err: null };
     function leaderboardPeriod(kind) {
         const d = new Date(); let end = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
         let start = end;
@@ -301,21 +302,31 @@
     }
     function leaderboardIncome(lang, kind) {
         const p = leaderboardPeriod(kind), key = lang + ':' + p.start + ':' + p.end;
-        if (income.key !== key) { income.key = key; income.values = {}; income.refreshed = 0; }
+        if (income.key !== key) { income.key = key; income.values = {}; income.refreshed = 0; income.loaded = false; income.err = null; }
         if (!income.loading && Date.now() - income.refreshed > 30000) {
             income.loading = true;
+            const redraw = () => { if (income.key === key && document.getElementById('ratingLeaderboard')?.offsetParent) renderLeaderboardSection(); };
             api('leaderboard?' + new URLSearchParams({ ...p, language: lang })).then(data => {
-                if (income.key === key) { income.values = data.income; income.refreshed = Date.now();
-                    if (document.getElementById('ratingLeaderboard')?.offsetParent) renderLeaderboardSection(); }
-            }).catch(() => { income.refreshed = Date.now(); }).finally(() => { income.loading = false; });
+                if (income.key === key) { income.values = data.income || {}; income.refreshed = Date.now(); income.loaded = true; income.err = null; }
+            }).catch(err => { if (income.key === key) { income.refreshed = Date.now();
+                // 403 — bu rolga daromad ko'rsatilmaydi (xato emas): reyting daromadsiz chiqadi.
+                if (err?.status === 403) { income.values = {}; income.loaded = true; income.err = null; } else income.err = err; } })
+                .finally(() => { income.loading = false; redraw(); });
         }
         return income.values;
     }
+    // Reyting holati: { loaded, loading, err } — xato yoki birinchi yuklanishda raqamlar ko'rsatilmaydi.
+    function leaderboardState(lang, kind) {
+        leaderboardIncome(lang, kind);
+        return { loaded: income.loaded, loading: income.loading, err: income.err };
+    }
+    // "Qayta urinish": keshni eskirgan deb belgilab, darhol qayta so'raydi.
+    function leaderboardRetry() { income.refreshed = 0; income.err = null; }
     setInterval(() => {
         if (document.hidden) return;
         const panel = document.querySelector('.finance-panel.active');
         if (panel?.offsetParent && ['maoshlar', 'kpi'].includes(panel.dataset.financePanel)) load(panel.dataset.financePanel);
         if (document.getElementById('ratingLeaderboard')?.offsetParent) renderLeaderboardSection();
     }, 30000);
-    window.payrollUI = { render, employeeField, bindEmployee, leaderboardIncome, money, collectSettings };
+    window.payrollUI = { render, employeeField, bindEmployee, leaderboardIncome, leaderboardState, leaderboardRetry, money, collectSettings };
 }());

@@ -334,8 +334,11 @@
         const M = statesModel();
         const dd = d => `${U().DAY[U().wd(d) - 1]} ${Number(d.slice(8))}-${MON[Number(d.slice(5, 7)) - 1]}`;
         const pick = (c, label, pri, days = 1) => `<button type="button" class="sc-btn${pri ? ' sc-btn--pri' : ''}" data-st-pick="${esc(c.t)}|${c.date}|${c.m}|${days}"${P.busy ? ' disabled' : ''}>${esc(label)}</button>`;
-        const card = (n, title, body) => `<section class="sc-card rs-hc"><h3 class="rs-hc-h">${n} · ${esc(title)}</h3>${body}</section>`;
+        const card = (n, title, body, isSample = false) => `<section class="sc-card rs-hc${isSample ? ' is-sample' : ''}"><h3 class="rs-hc-h">${n} · ${esc(title)}${isSample ? ' <span class="rs-hc-nm">· namuna</span>' : ''}</h3>${body}</section>`;
         const empty = t => `<p class="sc-mt rs-hc-empty">${esc(t)}</p>`;
+        // Bo'sh holat (dizayn: "3 · ... · namuna"): holat hozir yo'q — qanday ko'rinishi namunasi va o'chiq tugmalar, ostida haqiqiy holat matni.
+        const sample = (kind, icon, title, text, btns, note) => `<div class="rs-hc-sample" aria-hidden="true">${toastBox(kind, icon, esc(title), esc(text))}
+              <div class="sc-row sc-wrap">${btns.map((b, i) => `<button type="button" class="sc-btn${i ? '' : ' sc-btn--pri'}" disabled tabindex="-1">${esc(b)}</button>`).join('')}</div></div>${empty(note)}`;
         const lbl = c => `${short(tname(c.t))} · ${U().DAY[U().wd(c.date) - 1]} ${hm(c.m)}`;
         const c1 = M.busyT
             ? `${toastBox('bad', '⚠', `${esc(short(tname(M.busyT)))} · ${esc(dd(M.tm))} ${hm(M.wish)} band`, 'Bu vaqt allaqachon band (dars yoki boshqa menejerning sinovi). Tanlov saqlanmaydi.')}
@@ -352,11 +355,13 @@
             ? `${toastBox('info', '↺', `${esc(short(tname(String(R.r.teacherId))))} · ${esc(R.l.name)}${ra ? ` · ${esc(dd(ra.date))} ${hm(ra.min)}` : ''}`, `"${esc(R.r.reasonLabel || 'Rad etildi')}".${rp.length ? ` Taklif: ${rp.map(x => `${esc(dayShort(x.date))} · ${hm(x.min)}`).join(', ')}.` : ' Ustoz vaqt taklif qilmadi.'}`)}
                ${rp.length ? `<div class="ss-alt2" role="group" aria-label="Ustoz taklif qilgan vaqtlar">${rp.map((x, i) => `<button type="button" class="ss-ch3" data-st-rp="${i}" aria-pressed="${i === (P.stRp || 0)}">${esc(dayShort(x.date))} · ${hm(x.min)}</button>`).join('')}</div>` : ''}
                <div class="sc-row sc-wrap">${rp.length ? `<button type="button" class="sc-btn sc-btn--pri" data-st-rej-go${P.busy ? ' disabled' : ''}>Lidga yuborish va band qilish</button>` : ''}<button type="button" class="sc-btn" data-st-rej-other>Boshqa ustoz</button></div>`
-            : empty('Hozir ustoz rad etgan sinov yo\'q. Rad etilsa, shu yerda va lid sahifasida chiqadi.');
+            : sample('info', '↺', 'Ustoz · Lid · sana va vaqt', '"Shu vaqtda bandman". Taklif: ustoz bergan 2–3 ta vaqt.', ['Lidga yuborish va band qilish', 'Boshqa ustoz'],
+                'Hozir ustoz rad etgan sinov yo\'q. Rad etilsa, shu yerda va lid sahifasida chiqadi.');
         const c4 = M.none != null
             ? `${toastBox('warn', '!', `Ertaga ${hm(M.none)} — sinovga ochiq ustoz yo'q`, M.noneNear ? `Eng yaqin bo'sh vaqt: ${hm(M.noneNear.m)} (${esc(short(tname(M.noneNear.t)))}). Lid aynan ${hm(M.none)} ni xohlasa, adminga yuboring.` : `Lid aynan ${hm(M.none)} ni xohlasa, adminga yuboring.`)}
                <div class="sc-row sc-wrap"><button type="button" class="sc-btn sc-btn--pri" data-st-unassigned="${M.none}"${P.busy ? ' disabled' : ''}>Adminga yuborish · "Ustoz biriktirilmagan"</button>${M.noneNear ? pick(M.noneNear, `${hm(M.noneNear.m)} ni taklif qilish`) : ''}</div>`
-            : empty('Ertaga 08:00–21:30 oralig\'ida har yarim soatda kamida bitta ustoz bo\'sh.');
+            : sample('warn', '!', 'Ertaga 08:00 — sinovga ochiq ustoz yo\'q', 'Eng erta bo\'sh vaqt va ustoz shu yerda ko\'rsatiladi. Lid aynan o\'sha vaqtni xohlasa, adminga yuboring.', ['Adminga yuborish · "Ustoz biriktirilmagan"', 'Eng yaqin vaqtni taklif qilish'],
+                'Hozir bu holat yo\'q: ertaga 08:00–21:30 oralig\'ida har yarim soatda kamida bitta ustoz bo\'sh.');
         const P5 = M.partial;
         const c5 = P5
             ? `${toastBox('warn', '!', `${esc(short(tname(P5.t)))} · ${hm(P5.m)} · ${M.d3.map(d => `${esc(dayShort(d))} ${dayFits(P5.t, d, P5.m) ? '✓' : '✗'}`).join(' · ')}`, 'Uchala kun bir vaqtda bo\'lishi kerak. Mos variantlar:')}
@@ -368,8 +373,8 @@
           <div class="rs-sts">
             ${card(1, 'Boshqa menejer oldinroq band qildi', c1)}
             ${card(2, 'Ushlab turish vaqti tugadi (1-holatdan oldin)', c2)}
-            ${card(3, 'Ustoz rad etdi va vaqt taklif qildi', c3)}
-            ${card(4, 'Lid istagan vaqtda hech kim bo\'sh emas', c4)}
+            ${card(3, 'Ustoz rad etdi va vaqt taklif qildi', c3, !R)}
+            ${card(4, 'Lid istagan vaqtda hech kim bo\'sh emas', c4, M.none == null)}
             ${card(5, '3 kunlik sinovda bir kun band', c5)}
           </div>`;
         const back = () => { P.view = null; draw(); document.getElementById('ssPage')?.scrollTo?.(0, 0); };

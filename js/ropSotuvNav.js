@@ -52,8 +52,9 @@
     let current = null;
 
     function activeKey() {
-        // Sinov qo'yish / holatlar sahifasi: sidebar'dagi "Sinov darslari"dan ochilgan bo'lsa — o'sha band, aks holda (liddan, holatlar) — "Lidlar" (dizayn).
-        if (document.body.classList.contains('ss-page-open') && role() === 'sales_manager') return window.sotuvSinov?.from?.() === 'trials' ? 'trialSotuv' : 'leads';
+        // Sinov qo'yish / holatlar sahifasi — "← Lidlar" ostidagi sahifa: dizaynda (SotuvSinov, SotuvHolatlar) faol band "Lidlar",
+        // qaysi joydan ochilganidan qat'i nazar (BAHO7).
+        if (document.body.classList.contains('ss-page-open') && role() === 'sales_manager') return 'leads';
         const tab = document.querySelector('.tab-content.active')?.id?.replace(/^tab-/, '') || '';
         const sec = typeof _tabContext !== 'undefined' ? _tabContext.salesSection : '';
         const keys = ORDER[role()] || [];

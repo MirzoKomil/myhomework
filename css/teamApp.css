@@ -1566,6 +1566,17 @@ html.rd .sfx-head h1 {
         width: auto;
     }
 
+    /* Kitob yetkazish kartasi: footer'da izoh + "Qo'ng'iroq" + Organik/Target — telefon qatoriga sig'maydi
+       (390px'da raqam ustiga tushardi). Kontaktlar to'liq kenglikda, amallar alohida qatorda. */
+    html.rd #bookRoadmapKanban .lead-card > .lead-card-contacts { grid-column: 1 / -1; }
+    html.rd #bookRoadmapKanban .lead-card > .lead-card-footer {
+        grid-column: 1 / -1;
+        grid-row: auto;
+        margin-top: 10px;
+        flex-wrap: wrap;
+        row-gap: 8px;
+    }
+
     /* Reyting: ichki tablar va davr bitta qatorda */
     html.rd .rating-main-tabs {
         flex-direction: row;
