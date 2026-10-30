@@ -114,7 +114,13 @@
         try {
             await Promise.resolve(window.schoolUI?.loadStaffAvatars?.()).catch(() => {});
             data = await apiFetch('/api/state/teacher-rating?type=' + encodeURIComponent(S.type) + (S.month ? '&month=' + encodeURIComponent(S.month) : ''));
-        } catch (err) { if (seq === S.seq) container.innerHTML = `<div class="rtg"><p class="rtg-mt">${esc(err.message)}</p></div>`; return; }
+        } catch (err) {
+            if (seq !== S.seq) return;
+            // Bitta xato naqshi (js/loadError.js): o'rinlar va ballar ko'rsatilmaydi, "Qayta urinish".
+            container.innerHTML = `<div class="rtg">${window.LoadErr.html({ title: 'Reytingni yuklab bo\'lmadi', err })}</div>`;
+            window.LoadErr.bind(container, () => render(container, { lang }));
+            return;
+        }
         if (seq !== S.seq) return;
         S.data = data;
         container.innerHTML = view(data, lang);

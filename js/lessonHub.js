@@ -921,7 +921,7 @@
         let data = S.students[S.lang];
         if (!data || !fresh('students:' + S.lang)) {
             try { data = S.students[S.lang] = await api(`/api/academic/students?lang=${S.lang}`); stamp('students:' + S.lang); }
-            catch (e) { main.innerHTML = `<div class="lh-error"><b>Yuklab bo'lmadi</b><span>${esc(e.message)}</span></div>`; return; }
+            catch (e) { main.innerHTML = window.LoadErr.html({ title: 'O\'quvchilar progressini yuklab bo\'lmadi', err: e }); window.LoadErr.bind(main, () => renderStudentsView(main)); return; }
         }
         if (S.view !== 'students') return;
         try { await window.schoolUI?.loadStaffAvatars?.(); } catch { /* ism kerak, avatar emas */ }
@@ -1302,7 +1302,7 @@
         main.innerHTML = skeleton();
         let all;
         try { all = (await api(`/api/academic/materials?lang=${S.lang}`)).materials || []; }
-        catch (e) { main.innerHTML = `<div class="lh-error"><b>Yuklab bo'lmadi</b><span>${esc(e.message)}</span></div>`; return; }
+        catch (e) { main.innerHTML = window.LoadErr.html({ title: 'Qo\'shimcha materiallarni yuklab bo\'lmadi', err: e, note: '' }); window.LoadErr.bind(main, () => renderExtraView(main)); return; }
         if (S.view !== 'extra') return;
         // Eski "ilova hujjatlari" (mobile_content.documents) — shu jadvalda o'qish uchun qatorlar (js/app.js tpLegacyTextbookDocs).
         let legacy = [];

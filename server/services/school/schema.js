@@ -93,6 +93,9 @@ CREATE TABLE IF NOT EXISTS school_student_groups (
  updated_by TEXT NOT NULL, updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE UNIQUE INDEX IF NOT EXISTS school_student_groups_name ON school_student_groups(LOWER(name));
+-- AdminGuruhlar "A'zolar": admin/ROP Telegram guruhga kim qo'shilganini belgilaydi ({ teacher, assistant, sales, rop: xodim id, student: true }).
+-- Bo'sh {} — hali belgilanmagan (soxta "5/5" ko'rsatilmaydi).
+ALTER TABLE school_student_groups ADD COLUMN IF NOT EXISTS members JSONB NOT NULL DEFAULT '{}'::jsonb;
 CREATE TABLE IF NOT EXISTS school_assist_contacts (
  id TEXT PRIMARY KEY, student_id TEXT NOT NULL, assistant_id TEXT NOT NULL,
  day DATE NOT NULL, at_min SMALLINT, channel TEXT NOT NULL,

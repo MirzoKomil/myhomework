@@ -18,7 +18,9 @@
     const dm = d => { const [, m, dd] = d.split('-').map(Number); return `${dd}-${MON[m - 1]}`; };
     const short = name => { const p = String(name || '').trim().split(/\s+/); return p.length > 1 ? `${p[0]} ${p[1][0]}.` : (p[0] || ''); };
     const first = name => String(name || '').trim().split(/\s+/)[0] || '';
-    const hours = m => { const h = Math.round(m / 6) / 10; return `${String(h).replace('.', ',')} soat`; };
+    // Dizayn: "28.5 soat" (o'nlik nuqta bilan).
+    const hours = m => { const h = Math.round(m / 6) / 10; return `${h} soat`; };
+    const WIN = 240; // "‹ 09:00–13:00 ›" — kun to'rining 4 soatlik oynasi (AdminJadval / RopJadval)
 
     function isAssistant() {
         const u = me(); if (u.role !== 'teacher') return false;
@@ -180,7 +182,7 @@
     // ── Sahifa sarlavhasi va boshqaruvlar ───────────────────────────────────────
     // inline — ustoz/yordamchi (UstozJadval, YordamchiJadval): boshqaruvlar sarlavha qatorining o'ngida,
     // "Qoidalar" tugmasi yo'q (havola legenda qatorida). Admin/ROP — boshqaruvlar sarlavha ostida (AdminJadval).
-    function header(root, { title, sub, tabs = [], right = '', nav = '', lang = false, extra = '', inline = false, back = false }) {
+    function header(root, { title, sub, tabs = [], right = '', nav = '', lang = false, extra = '', inline = false, back = false, rulesBtn = true }) {
         const st = SS().state;
         const { esc } = U();
         const ctl = `${tabs.length ? `<div class="sc-seg sv-seg" role="tablist">${tabs.map(([k, l]) => `<button type="button" role="tab" data-v="${k}" aria-pressed="${k === st.view}">${esc(l)}</button>`).join('')}</div>` : ''}
@@ -190,7 +192,7 @@
           <div data-body class="sv-body"><div class="sc-skel"></div></div>`
             : `<div class="sv-head"><div class="sv-ht"><h1>${title}</h1><p class="sc-sub">${sub}</p></div>${right}</div>
           <div class="sv-ctl">${ctl}
-            <span class="sc-grow"></span><button type="button" class="sc-btn sc-btn--sm sv-rules" data-rules>Qoidalar</button></div>
+            <span class="sc-grow"></span>${rulesBtn ? '<button type="button" class="sc-btn sc-btn--sm sv-rules" data-rules>Qoidalar</button>' : ''}</div>
           <div data-body class="sv-body"><div class="sc-skel"></div></div>`;
         root.querySelectorAll('[data-v]').forEach(b => b.onclick = () => { st.view = b.dataset.v; SS().render(root); });
         root.querySelectorAll('[data-lang]').forEach(b => b.onclick = () => { if (st.lang === b.dataset.lang) return; st.lang = b.dataset.lang; st.teacherId = null; SS().render(root); });
@@ -233,10 +235,9 @@
             window.LoadErr.bind(b, reload);
         }
     }
-    function mgrTabs() {
-        return isFull() ? [['day', 'Kun · ustozlar'], ['week', 'Hafta · bitta ustoz'], ['requests', 'So\'rovlar'], ['makeups', 'Qoplash']]
-            : [['day', 'Kun · ustozlar'], ['week', 'Hafta · bitta ustoz']];
-    }
+    // Dizayn: tab qatorida faqat "Kun · ustozlar / Hafta · bitta ustoz". So'rovlar va Qoplash — alohida sahifa ("← Dars jadvali"),
+    // admin "E'tibor kerak" panelidagi havolalardan ochiladi.
+    function mgrTabs() { return [['day', 'Kun · ustozlar'], ['week', 'Hafta · bitta ustoz']]; }
     const langName = l => (l === 'russian' ? 'Rus tili' : 'Ingliz tili');
 
     // ═══ Admin / ROP: kun · ustozlar ═══════════════════════════════════════════
@@ -245,7 +246,7 @@
         const canPick = SS().canPickLang();
         const body = header(root, { title: 'Dars jadvali',
             sub: `Barcha ustozlar · ${langName(st.lang)} · vaqt Toshkent bo'yicha · ${isRop() ? 'ROP: hamma ustoz, sinov va menejerlar · vaqtni ochish/yopish faqat adminda' : 'yagona jadval, har rol o\'z vakolatida ko\'radi'}`,
-            tabs: mgrTabs(), nav: navBox(dayLabel(st.date)), lang: canPick,
+            tabs: mgrTabs(), nav: navBox(dayLabel(st.date)), lang: canPick, rulesBtn: false,
             right: isRop() ? '<button type="button" class="sc-btn sc-btn--pri sv-big" data-book>+ Sinov darsi qo\'yish</button>' : '' });
         bindNav(root, 1, reload);
         root.querySelector('[data-book]')?.addEventListener('click', () => { st.view = 'free'; SS().render(root); });
@@ -278,14 +279,28 @@
         const trialLeft = todayViews.reduce((n, v) => n + sum(isToday ? subtract(v.trialFree || [], [{ start: 0, end: nowMin() }]) : isPast ? [] : v.trialFree || []), 0);
         const views0 = todayViews.concat(unassigned.length ? [{ items: unassigned, work: [] }] : []);
         const range = fit(views0, asst);
-        const pct = m => ((Math.max(range[0], Math.min(range[1], m)) - range[0]) / (range[1] - range[0]) * 100);
+        // Ko'rinadigan oyna: 4 soat (dizayn "‹ 09:00–13:00 ›") yoki butun kun. Bugun — hozirgi vaqt oynada, aks holda birinchi darsdan.
+        const winFits = range[1] - range[0] > WIN;
+        if (st.winDate !== date) { st.winDate = date; const first0 = Math.min(...lessons.map(i => i.start), ...unassigned.map(u => u.start), range[1] - WIN);
+            st.win = Math.floor(((isToday ? nowMin() - 60 : first0) / 60)) * 60; }
+        const clampWin = w => Math.max(range[0], Math.min(range[1] - WIN, w));
+        let vr = range;
+        const setVr = () => { vr = st.winAll || !winFits ? range : [clampWin(st.win), clampWin(st.win) + WIN]; };
+        setVr();
+        const pct = m => ((Math.max(vr[0], Math.min(vr[1], m)) - vr[0]) / (vr[1] - vr[0]) * 100);
         const pos = (s, e) => `left:${pct(s).toFixed(3)}%;width:calc(${(pct(e) - pct(s)).toFixed(3)}% - 3px)`;
-        const hb = (s, e, cls, t, sub, attrs = '', title = '') => `<${attrs ? 'button type="button"' : 'div'} class="sv-hb ${cls}" style="${pos(s, e)}"${attrs} title="${esc(title || `${hm(s)}–${hm(e)} · ${t}${sub ? ' · ' + sub : ''}`)}">${t ? esc(t) : ''}${sub ? `<small>${esc(sub)}</small>` : ''}</${attrs ? 'button' : 'div'}>`;
+        const hb = (s, e, cls, t, sub, attrs = '', title = '') => (e <= vr[0] || s >= vr[1]) ? '' : `<${attrs ? 'button type="button"' : 'div'} class="sv-hb ${cls}" style="${pos(s, e)}"${attrs} title="${esc(title || `${hm(s)}–${hm(e)} · ${t}${sub ? ' · ' + sub : ''}`)}">${t ? esc(t) : ''}${sub ? `<small>${esc(sub)}</small>` : ''}</${attrs ? 'button' : 'div'}>`;
+        const winBox = () => !winFits ? '' : `<div class="sv-win" role="group" aria-label="Vaqt oynasi"><button type="button" data-win="-1" aria-label="Oldingi soatlar"${!st.winAll && clampWin(st.win) <= range[0] ? ' disabled' : ''}>‹</button><button type="button" data-winall aria-pressed="${!!st.winAll}" title="${st.winAll ? '4 soatlik oynaga qaytish' : 'Butun kunni ko\'rsatish'}">${st.winAll ? `${hm(range[0])}–${hm(range[1])}` : `${hm(vr[0])}–${hm(vr[1])}`}</button><button type="button" data-win="1" aria-label="Keyingi soatlar"${!st.winAll && clampWin(st.win) >= range[1] - WIN ? ' disabled' : ''}>›</button></div>`;
         const draw = () => {
+            setVr();
             showFree = st.showFree !== false; hideAs = !!st.hideAssist;
-            let axis = ''; for (let h = range[0] / 60; h < range[1] / 60; h++) axis += `<span style="left:${pct(h * 60).toFixed(3)}%">${String(h).padStart(2, '0')}:00</span>`;
+            let axis = ''; for (let h = vr[0] / 60; h < vr[1] / 60; h++) axis += `<span style="left:${pct(h * 60).toFixed(3)}%">${String(h).padStart(2, '0')}:00</span>`;
             const row = (label, track, cls = '') => `<div class="sv-hr ${cls}"><div class="sv-hl">${label}</div><div class="sv-ht2">${track}</div></div>`;
-            const unRow = unassigned.length ? row(`<span><b>Biriktirilmagan</b><small>sinovlar · ${unassigned.length}</small></span>`, unassigned.map(u => hb(u.start, u.end, 'k-tr k-un2', first(u.leadName), 'ustoz yo\'q', ` data-un="${esc(u.leadId)}"`)).join(''), 'is-un') : '';
+            // Dizayn: biriktirilmagan sinov ustida qora callout — lid, vaqt, menejer, shu vaqtda bo'sh ustoz va "Biriktirish".
+            const cu = unassigned.find(u => u.end > vr[0] && u.start < vr[1]);
+            const callout = !cu ? '' : (() => { const freeT = todayViews.filter(v => (v.trialFree || []).some(f => f.start <= cu.start && cu.end <= f.end)).map(v => short(tname(v.teacherId)));
+                return `<div class="sv-call" style="left:${Math.min(pct(cu.start), 58).toFixed(2)}%"><b>${esc(cu.leadName || 'Lid')} · sinov ${hm(cu.start)}–${hm(cu.end)}</b><small>${[mgr.get(cu.managerId) && 'menejer ' + first(mgr.get(cu.managerId)), freeT.length ? 'bo\'sh: ' + freeT.slice(0, 2).join(', ') : 'bo\'sh ustoz yo\'q'].filter(Boolean).map(esc).join(' · ')}</small><button type="button" class="sc-btn sc-btn--pri sc-btn--sm" data-un="${esc(cu.leadId)}">Biriktirish</button></div>`; })();
+            const unRow = unassigned.length ? row(`<span><b>Biriktirilmagan</b><small>sinovlar · ${unassigned.length}</small></span>`, unassigned.map(u => hb(u.start, u.end, 'k-tr k-un2', first(u.leadName), 'ustoz yo\'q', ` data-un="${esc(u.leadId)}"`)).join('') + callout, 'is-un') : '';
             const tRows = todayViews.map(v => {
                 const bl = teacherBlocks(v, range, { free: showFree, names: true, assist: hideAs ? [] : asst.filter(a => a.assistantId === v.teacherId) });
                 const tr = bl.map(b => hb(b.start, b.end, b.cls, b.t, b.s, b.click || b.attrs?.includes('data-st') ? b.attrs : '')).join('');
@@ -303,14 +318,16 @@
                 return row(`${staffAvatar({ id: a.id }, 30)}<span><b>${esc(a.name)}</b><small>yordamchi · ${its.length} aloqa</small></span>`, tr, 'is-as');
             }).join('');
             const nowM = nowMin();
-            const nowLine = isToday && nowM >= range[0] && nowM <= range[1] ? `<i class="sv-hnow" style="left:calc(var(--hl) + (100% - var(--hl)) * ${(pct(nowM) / 100).toFixed(4)})"><em>${hm(nowM)}</em></i>` : '';
+            const nowLine = isToday && nowM >= vr[0] && nowM <= vr[1] ? `<i class="sv-hnow" style="left:calc(var(--hl) + (100% - var(--hl)) * ${(pct(nowM) / 100).toFixed(4)})"><em>${hm(nowM)}</em></i>` : '';
             return `<div class="sv-hw"><div class="sv-hbd"><div class="sv-hr sv-hax"><div class="sv-hl">Ustoz</div><div class="sv-ht2">${axis}</div></div>${unRow}${tRows}${aRows}${nowLine}</div></div>`;
         };
         const nowList = L.filter(x => x.l.st === 'now').map(x => x.i);
         const attention = [
             ...unassigned.map(u => { const freeT = todayViews.filter(v => (v.trialFree || []).some(f => f.start <= u.start && u.end <= f.end)).map(v => short(tname(v.teacherId))); return { t: u.start, h: `<b>${esc(u.leadName)} · sinov</b><small>ustoz yo'q${freeT.length ? ` · ${esc(freeT.slice(0, 2).join(', '))} ${hm(u.start)} bo'sh` : ''}</small>`, act: `<button type="button" class="sc-btn sc-btn--pri sc-btn--sm" data-un="${esc(u.leadId)}">Biriktirish</button>` }; }),
-            ...L.filter(x => x.l.st === 'un').map(x => ({ t: x.i.start, h: `<b><button type="button" class="sc-link" data-st="${esc(x.i.studentId)}">${esc(first(x.i.studentName))}</button> · ${esc(short(tname(x.i.teacherId)))}</b><small>belgilanmagan</small>` })),
-            ...trialsToday.filter(t => !t.unassigned && t.status === 'confirmed' && when(date, t).past).map(t => ({ t: t.start, h: `<b>${esc(first(t.leadName) || 'Lid')} · sinov natijasi</b><small>${esc(short(tname(t.teacherId)))} yozmagan</small>` })),
+            ...L.filter(x => x.l.st === 'un').map(x => ({ t: x.i.start, h: `<b><button type="button" class="sc-link" data-st="${esc(x.i.studentId)}">${esc(first(x.i.studentName))}</button> · ${esc(short(tname(x.i.teacherId)))}</b><small>belgilanmagan</small>`,
+                act: `<button type="button" class="sc-btn sc-btn--sm" data-rem="un|${esc(x.i.teacherId)}|${esc(x.i.studentName || '')}|${x.i.start}">Eslatish</button>` })),
+            ...trialsToday.filter(t => !t.unassigned && t.status === 'confirmed' && when(date, t).past).map(t => ({ t: t.start, h: `<b>${esc(first(t.leadName) || 'Lid')} · sinov natijasi</b><small>${esc(short(tname(t.teacherId)))} yozmagan</small>`,
+                act: `<button type="button" class="sc-btn sc-btn--sm" data-rem="tr|${esc(t.teacherId)}|${esc(t.leadName || '')}|${t.start}">Eslatish</button>` })),
             ...L.filter(x => x.l.st === 'no').map(x => ({ t: x.i.start, h: `<b><button type="button" class="sc-link" data-st="${esc(x.i.studentId)}">${esc(first(x.i.studentName))}</button> · ${esc(short(tname(x.i.teacherId)))}</b><small>kelmadi · qoplanmagan</small>` }))
         ];
         const trialPill = t => t.unassigned ? ['Ustoz yo\'q', 'sc-pill--warn'] : t.status === 'pending' ? ['Tasdiq kutilmoqda', 'sc-pill--info'] : t.status === 'hold' ? ['Ushlab turilgan', 'sc-pill--mute'] : t.status === 'confirmed' && when(t.date, t).past ? ['Natija kutilmoqda', 'sc-pill--warn'] : t.status === 'done' ? ['O\'tkazildi', 'sc-pill--ok'] : t.status === 'no_show' ? ['Lid kelmadi', 'sc-pill--mute'] : ['Tasdiqlangan', 'sc-pill--ok'];
@@ -328,15 +345,16 @@
             ${kpi('#F79009', 'Belgilanmagan', unN, 'dars tugagan, ustoz belgilamagan')}
             ${kpi('#7A5AF8', 'Sinov darslari', trialsToday.length, `${trialWait} natija kutilmoqda · ${unassigned.length} ustozsiz`)}</div>
           ${assistants.length ? `<div class="sc-card sv-strip"><span class="sc-pill sv-pill-teal">Yordamchi aloqalari</span><span class="sc-grow">darslar soniga kirmaydi · ${asLine}</span>${isFull() ? '<button type="button" class="sc-link" data-assist>Batafsil →</button>' : ''}</div>` : ''}
-          <section class="sc-card sv-board"><header class="sv-bh"><h2>${isToday ? 'Bugun' : esc(dm(date))} · ustozlar bo'yicha</h2><span class="sc-grow"></span>
+          <section class="sc-card sv-board"><header class="sv-bh"><h2>${isToday ? 'Bugun' : esc(dm(date))} · ustozlar bo'yicha</h2><span data-winbox>${winBox()}</span><span class="sc-grow"></span>
               <label class="sv-tgl"><input type="checkbox" data-free${showFree ? ' checked' : ''}><i></i>Sinov uchun bo'sh vaqtlar</label>
               ${assistants.length ? `<label class="sv-tgl"><input type="checkbox" data-hideas${hideAs ? ' checked' : ''}><i></i>Yordamchilarni yashirish</label>` : ''}
               ${isPast ? '' : `<span class="sc-pill sc-pill--ok">${isToday ? 'Bugun yana' : 'Shu kuni'} ${hours(trialLeft)} sinovga ochiq</span>`}</header>
             <div data-board>${todayViews.length || unassigned.length ? draw() : '<p class="sc-mt sv-pp">Bu kunda ish vaqti belgilangan ustoz yo\'q. "Hafta · bitta ustoz" → "Ish vaqti shabloni" orqali kiriting.</p>'}</div>
-            ${legend([['k-ok', 'Keldi'], ['k-no', 'Kelmadi'], ['k-un', 'Belgilanmagan'], ['k-now', 'Hozir'], ['k-wait', 'Kutilmoqda'], ['k-mk', 'Qoplash'], ['k-tr', 'Sinov darsi'], ['k-free', 'Bo\'sh · sinovga ochiq'], ['k-freex', 'Admin qo\'shgan vaqt'], ['k-free2', 'Bo\'sh · sinovga yopiq'], ['k-off', 'Ish vaqti emas'], ['k-as', 'Yordamchi aloqasi · darslar soniga kirmaydi (avatar — o\'quvchi)']])}</section>
+            ${legend([['k-ok', 'Keldi'], ['k-no', 'Kelmadi'], ['k-un', 'Belgilanmagan'], ['k-now', 'Hozir'], ['k-wait', 'Kutilmoqda'], ['k-mk', 'Qoplash'], ['k-tr', 'Sinov darsi'], ['k-free', 'Bo\'sh · sinovga ochiq'], ['k-freex', 'Admin qo\'shgan vaqt'], ['k-free2', 'Bo\'sh · sinovga yopiq'], ['k-off', 'Ish vaqti emas'], ['k-as', 'Yordamchi aloqasi · darslar soniga kirmaydi (avatar — o\'quvchi)']], { rules: true })}</section>
           <div class="sv-g3">
             <section class="sc-card sv-pn"><h3 class="sv-ph">Hozir darsda · ${nowList.length}</h3>${nowList.map(i => `<div class="sv-li"><span class="sv-tm">${hm(i.start)}</span><span class="sc-grow"><b><button type="button" class="sc-link" data-st="${esc(i.studentId)}">${esc(first(i.studentName))}</button> · ${esc(short(tname(i.teacherId)))}</b><small>${i.end - i.start} daq · ${i.end - nowMin()} daq qoldi</small></span></div>`).join('') || `<p class="sc-mt sv-pp">${isToday ? 'Hozir dars yo\'q' : 'Faqat bugungi kunda ko\'rinadi'}</p>`}</section>
-            ${isRop() ? managersPanel() : `<section class="sc-card sv-pn"><h3 class="sv-ph">E'tibor kerak · ${attention.length}</h3>${attention.sort((a, b) => a.t - b.t).map(a => `<div class="sv-li"><span class="sv-tm">${hm(a.t)}</span><span class="sc-grow">${a.h}</span>${a.act || ''}</div>`).join('') || '<p class="sc-mt sv-pp">Hammasi joyida</p>'}</section>`}
+            ${isRop() ? managersPanel() : `<section class="sc-card sv-pn"><h3 class="sv-ph">E'tibor kerak · ${attention.length}</h3>${attention.sort((a, b) => a.t - b.t).map(a => `<div class="sv-li"><span class="sv-tm">${hm(a.t)}</span><span class="sc-grow">${a.h}</span>${a.act || ''}</div>`).join('') || '<p class="sc-mt sv-pp">Hammasi joyida</p>'}
+              ${isFull() ? '<p class="sv-pp sv-links"><button type="button" class="sc-link" data-goview="requests">Ustozlar so\'rovlari →</button><button type="button" class="sc-link" data-goview="makeups">Qoplash darslari →</button></p>' : ''}</section>`}
             <section class="sc-card sv-pn"><h3 class="sv-ph">Sinov darslari · ${isToday ? 'bugun' : dm(date)} ${trialsToday.length} · ertaga ${trialsTom.length}</h3>${[...trialsToday, ...trialsTom].sort((a, b) => a.date.localeCompare(b.date) || a.start - b.start).map(trialRow).join('') || '<p class="sc-mt sv-pp">Sinov yo\'q</p>'}
               <p class="sc-mt sv-pp">Natijasi yozilgan sinov jadvaldan chiqadi — tarixi "Sinov darslari" bo'limida.</p></section>
           </div>`;
@@ -345,12 +363,36 @@
             body.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { st.teacherId = b.dataset.t; st.view = 'week'; SS().render(root); });
             body.querySelectorAll('[data-un]').forEach(b => b.onclick = () => unassignedDrawer(unassigned.find(u => u.leadId === b.dataset.un), todayViews, tname, mgr));
             body.querySelectorAll('[data-tr]').forEach(b => b.onclick = () => typeof switchTab === 'function' && switchTab('trial-lessons'));
+            body.querySelectorAll('[data-win]').forEach(b => b.onclick = () => { if (st.winAll) st.winAll = false; else st.win = clampWin(clampWin(st.win) + Number(b.dataset.win) * 120); redraw(); });
+            body.querySelector('[data-winall]')?.addEventListener('click', () => { st.winAll = !st.winAll; redraw(); });
         };
         bind();
+        body.querySelectorAll('[data-rem]').forEach(b => b.onclick = () => {
+            const [kind, tid, who, start] = b.dataset.rem.split('|');
+            const tn = tname(tid), f = first(tn), when2 = `${isToday ? 'bugun' : dm(date)} ${hm(Number(start))}`;
+            remindLesson({ teacherId: tid, tname: tn, title: kind === 'tr' ? `${who} · sinov natijasi` : `${who} · belgilanmagan dars`,
+                text: kind === 'tr' ? `Assalomu alaykum, ${f}! ${when2} dagi ${who} sinov darsining natijasi hali yozilmagan. Iltimos, CRM → Sinov darslari bo'limida natijani belgilang. Rahmat!`
+                    : `Assalomu alaykum, ${f}! ${when2} dagi ${who} darsi davomatda belgilanmagan. Iltimos, CRM → Akademik bo'lim → Davomat bo'limida "Keldi" yoki "Kelmadi" qo'ying. Rahmat!` });
+        });
+        body.querySelector('.sv-lg [data-rules]')?.addEventListener('click', rulesDrawer);
+        body.querySelectorAll('[data-goview]').forEach(b => b.onclick = () => { st.view = b.dataset.goview; SS().render(root); });
         body.querySelector('[data-assist]')?.addEventListener('click', () => typeof switchTab === 'function' && switchTab('school-assist'));
-        const redraw = () => { const el = body.querySelector('[data-board]'); if (todayViews.length || unassigned.length) el.innerHTML = draw(); bind(); };
+        const redraw = () => { const el = body.querySelector('[data-board]'); if (todayViews.length || unassigned.length) el.innerHTML = draw(); const wb = body.querySelector('[data-winbox]'); if (wb) wb.innerHTML = winBox(); bind(); };
         body.querySelector('[data-free]').onchange = e => { st.showFree = e.target.checked; redraw(); };
         body.querySelector('[data-hideas]')?.addEventListener('change', e => { st.hideAssist = e.target.checked; redraw(); });
+    }
+    // "Eslatish" (E'tibor kerak): ustozga belgilanmagan dars / sinov natijasi haqida tayyor matn — nusxalash yoki Telegram'da ochish.
+    function remindLesson({ teacherId, tname, text, title }) {
+        const { openDrawer, esc, field, toast } = U();
+        const e = hrList().find(x => x.id === teacherId) || {};
+        const digits = String(e.phone || e.login || '').replace(/\D/g, '');
+        const tg = digits.length >= 9 ? `https://t.me/+${digits.length === 9 ? '998' + digits : digits}` : '';
+        const box = openDrawer({ title: `Eslatish · ${tname}`, sub: esc(title), body: `${field('Eslatma matni', `<textarea name="txt" rows="6">${esc(text)}</textarea>`, 'Matnni nusxalab ustozga Telegram\'da yuboring')}
+            ${tg ? '' : '<div class="sc-note sc-note--warn">Ustozning telefon raqami HR profilida yo\'q — matnni nusxalab o\'zingiz yuboring.</div>'}`,
+            foot: `<button type="button" class="sc-btn" data-close>Yopish</button><span class="sc-row"><button type="button" class="sc-btn" data-copy>Nusxalash</button>${tg ? '<button type="button" class="sc-btn sc-btn--pri" data-tg>Telegram\'da ochish</button>' : ''}</span>` });
+        const copy = async () => { const v = box.querySelector('[name=txt]').value; try { await navigator.clipboard.writeText(v); toast('Matn nusxalandi'); } catch { box.querySelector('[name=txt]').select(); toast('Matnni belgilab nusxalang'); } };
+        box.querySelector('[data-copy]').onclick = copy;
+        box.querySelector('[data-tg]')?.addEventListener('click', async () => { await copy(); window.open(tg, '_blank', 'noopener'); });
     }
     function unassignedDrawer(u, views, tname, mgr) {
         if (!u) return;

@@ -129,7 +129,8 @@
         const taughtBefore = sid => !assistant && (Object.keys(mainAtt).some(k => k.endsWith('_' + employee.id) && periodMonths.has(k.slice(0, 7))
                 && Object.values(mainAtt[k]?.[sid] || {}).some(v => v === 1 || v === true))
             || (source.makeups || []).some(m => m.status === 'approved' && m.teacherId === employee.id && m.studentId === sid && periodMonths.has(String(m.heldDate || '').slice(0, 7))));
-        const students = source.students.filter(s => language(s) === language(employee)
+        // Xodimlarning demo akkauntlari (isStaffDemo) maoshga ham, o'quvchi soniga ham kirmaydi.
+        const students = source.students.filter(s => !s.isStaffDemo && language(s) === language(employee)
             && ((assistant ? s.assistantTeacherId : s.teacherId) === employee.id || (contactsPolicy && hasContacts(s.id)) || taughtBefore(s.id))
             && !(assistant && role(employee) === 'teacher' && s.teacherId === employee.id));
         // Kim o'tgan: o'quvchining ustozlar tarixi (school_teacher_history) shu kunni qamrasa — o'sha kungi ustozga;

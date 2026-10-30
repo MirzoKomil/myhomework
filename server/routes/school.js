@@ -112,8 +112,10 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
     }
 
     // ── Jadval ───────────────────────────────────────────────────────────────
-    async function views(req, from, to, teacherIds, lang = null) {
+    async function views(req, from, to, teacherIds, lang = null, { excludeStudentId = null } = {}) {
         const ctx = await S.loadContext(pool, { teacherIds, from, to });
+        // O'quvchi tahririda o'zining hozirgi darsi bo'sh vaqtni "band" qilmasin (checkWeekly bilan bir qoida).
+        if (excludeStudentId) ctx.students = ctx.students.filter(s => s.id !== excludeStudentId);
         let ids = teacherIds || [...new Set([...ctx.hours.map(h => h.teacher_id), ...ctx.students.map(s => s.teacherId).filter(Boolean)])];
         // Xodimlar ro'yxatida yo'q (o'chirilgan/test) ustoz qatori nomsiz chiqmasin.
         if (lang) { const tl = await teacherLangs(); ids = ids.filter(id => tl.has(id) && fits(tl.get(id), lang)); }
@@ -178,7 +180,15 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         const from = T.assertDate(req.query.from), to = T.assertDate(req.query.to || from);
         const duration = Math.min(120, Math.max(15, Number(req.query.duration) || 30));
         const purpose = req.query.purpose === 'lesson' ? 'lesson' : 'trial';
-        const vs = await views(req, from, to, req.query.teacherId ? [req.query.teacherId] : null, await reqLang(req));
+        // excludeStudentId — faqat admin/ROP (o'quvchi tahriri); sotuv menejeriga ta'sir qilmaydi.
+        let excl = String(req.query.excludeStudentId || '') || null;
+        if (excl && !(FULL.has(req.user.role) || req.user.role === 'rop')) {
+            // Sotuv menejeri — faqat o'zi sotgan o'quvchi uchun.
+            const mid = req.user.role === 'sales_manager' ? await managerId(req) : null;
+            const row = mid ? (await pool.query("SELECT 1 FROM students WHERE id=$1 AND extra_data->>'managerId'=$2", [excl, mid])).rows[0] : null;
+            if (!row) excl = null;
+        }
+        const vs = await views(req, from, to, req.query.teacherId ? [req.query.teacherId] : null, await reqLang(req), { excludeStudentId: excl });
         const step = 30, list = [];
         for (const v of vs) {
             const src = purpose === 'trial' ? v.trialFree : v.free;
@@ -543,7 +553,7 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
             pendingTeacherChange: extra.pendingTeacherChange || null, startDate: extra.startDate || null, serialCode: extra.serialCode || '', scope };
         card.finished = card.status === 'left' && O.isFinishedRow(statuses.filter(s => s.status === 'left').pop());
         if (scope === 'full' || scope === 'sales') {
-            Object.assign(card, { phone: row.phone, parentPhone: extra.parentPhone || '', login: extra.login || '', tariff: extra.tariff || '', monthlyPrice: extra.monthlyPrice || null,
+            Object.assign(card, { phone: row.phone, parentPhone: extra.parentPhone || '', login: extra.login || '', telegram: extra.telegramUsername || '', tariff: extra.tariff || '', monthlyPrice: extra.monthlyPrice || null,
                 paymentDueDate: extra.paymentDueDate || null, debtAmount: extra.debtAmount ?? null, managerId: extra.managerId || null, schoolRev: extra.schoolRev || 0 });
             card.history = await O.history(pool, row.id);
             card.requests = (await pool.query('SELECT * FROM school_edit_requests WHERE student_id=$1 ORDER BY created_at DESC LIMIT 20', [row.id])).rows;
@@ -850,6 +860,16 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
             WHERE ($1::text[] IS NULL OR COALESCE(NULLIF(s.subject,''),'english') = ANY($1::text[])) GROUP BY r.status`, [rl])).rows;
         return { requests: rows, counts: Object.fromEntries(counts.map(c => [c.status, c.n])) };
     }));
+    // Tasdiqdan oldin server tekshiruvi (yozmaydi): bo'sh vaqt, tarif, to'lovga ta'sir.
+    router.get('/edit-requests/:id/check', handle(async req => {
+        need(req, MANAGE);
+        const rl = await ropLangs(req);
+        if (rl) {
+            const r = (await pool.query('SELECT s.subject FROM school_edit_requests r LEFT JOIN students s ON s.id=r.student_id WHERE r.id=$1', [req.params.id])).rows[0];
+            if (r && !subjectOk(rl, r.subject)) throw T.fail(403, 'Bu so\'rov boshqa til yo\'nalishidagi o\'quvchi bo\'yicha');
+        }
+        return write(req, c => O.checkRequest(c, req.params.id));
+    }));
     router.post('/edit-requests/:id/decide', handle(async req => {
         const rl = await ropLangs(req);
         if (rl) {
@@ -863,13 +883,16 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
     router.get('/groups', handle(async req => {
         need(req, MANAGE);
         const rl = await ropLangs(req);
-        return { groups: (await pool.query(`SELECT g.*, s.name AS student_name, s.teacher_id, s.assistant_teacher_id FROM school_student_groups g
-            JOIN students s ON s.id=g.student_id WHERE ($1::text[] IS NULL OR COALESCE(NULLIF(s.subject,''),'english') = ANY($1::text[])) ORDER BY g.name`, [rl])).rows, nextName: await O.nextGroupName(pool, await groupLang(req)) };
+        return { groups: (await pool.query(`SELECT g.*, s.name AS student_name, s.teacher_id, s.assistant_teacher_id, s.subject,
+                COALESCE(s.extra_data->>'saleManagerId', s.extra_data->>'managerId', '') AS manager_id FROM school_student_groups g
+            JOIN students s ON s.id=g.student_id WHERE COALESCE(s.extra_data->>'isStaffDemo', 'false') <> 'true'
+              AND ($1::text[] IS NULL OR COALESCE(NULLIF(s.subject,''),'english') = ANY($1::text[])) ORDER BY g.name`, [rl])).rows, nextName: await O.nextGroupName(pool, await groupLang(req)) };
     }));
     router.put('/students/:id/group', handle(async req => {
         const mid = await managerId(req);
         return write(req, c => O.setGroup(c, req.user, req.params.id, req.body || {}, { managerId: mid }).then(g => ({ group: g })));
     }));
+    router.put('/students/:id/group/members', handle(req => { need(req, MANAGE); return write(req, c => O.setGroupMembers(c, req.user, req.params.id, req.body || {}).then(g => ({ group: g }))); }));
     router.get('/groups/next-name', handle(async req => { need(req, new Set([...MANAGE, 'sales_manager'])); return { name: await O.nextGroupName(pool, await groupLang(req)) }; }));
     router.post('/groups/auto-name', handle(req => { need(req, FULL); return write(req, c => O.autoNameGroups(c, req.user).then(n => ({ named: n }))); }));
     // Ustoz/yordamchi/sotuv: o'z o'quvchilari guruh nomi va havolasi (bosilsa Telegram ochiladi).

@@ -180,13 +180,16 @@
         const lang = curLang();
         D.month ||= today().slice(0, 7);
         if (D.view === 'makeups') return renderMakeups(root, { lang, month: D.month, back: () => { D.view = 'grid'; renderDavomat(); } });
-        if (!root.firstChild) root.innerHTML = '<div class="sc-skel"></div>';
-        let mks = [], abs = [];
-        try {
-            await U().loadStaffAvatars();
-            [mks, abs] = await Promise.all([loadMakeups(D.month, lang).catch(() => []), loadAbsences(D.month).catch(() => [])]);
-        } catch (e) { /* jadval baribir chiziladi */ }
+        if (!root.firstChild || root.querySelector('.mh-lerr')) root.innerHTML = '<div class="sc-skel"></div>';
+        // Qoplash va "Kelmadi" belgilari hisobning bir qismi: biri yiqilsa soxta raqam (81/131, boshqa maosh) ko'rsatilmaydi — LoadErr.
+        const [, mkR, abR] = await Promise.all([U().loadStaffAvatars().catch(() => null), window.LoadErr.settle(loadMakeups(D.month, lang)), window.LoadErr.settle(loadAbsences(D.month))]);
         if (seq !== davSeq) return;
+        if (!mkR.ok || !abR.ok) {
+            root.innerHTML = window.LoadErr.html({ title: 'Davomat ma\'lumotini yuklab bo\'lmadi', err: mkR.err || abR.err });
+            window.LoadErr.bind(root, () => renderDavomat());
+            return;
+        }
+        const mks = mkR.value, abs = abR.value;
         const teachers = teachersFor(lang);
         if (!teachers.some(t => t.id === D.teacherId)) D.teacherId = teachers[0]?.id || '';
         const ctx = buildCtx(D.month, mks, abs);
@@ -199,19 +202,14 @@
         });
         const cur = all.find(x => x.t.id === D.teacherId) || { t: { id: '' }, tObj: {}, rows: [], unmarked: 0 };
         const asstIds = [...new Set(cur.rows.map(r => r.s.assistantTeacherId).filter(Boolean))];
-        let asstPay = null;
-        if (canManage() && D.teacherId && getC('students', []).some(s => s.assistantTeacherId === D.teacherId)) {
-            const key = `${D.teacherId}|${month}`;
-            if (!(key in D.asst)) D.asst[key] = await U().api(`/assist/month?assistantId=${encodeURIComponent(D.teacherId)}&month=${month}`).then(r => r.amount).catch(() => null);
-            asstPay = D.asst[key];
-        }
-        if (seq !== davSeq) return;
         if (D.duty === 'assistant') await loadContacts(cur.rows.map(r => r.s), month);
-        // Maosh — Moliya hisobi (/api/payroll/preview: payrollEngine), ustozning "Mening maoshim" va Bosh sahifasi bilan bitta manba.
-        // Moliya hisobiga faqat moliya ruxsati bor rollar (server payroll.access): admin, boshliq; ROP — eski KPI ko'rinishi.
-        const pay = canSeePayroll() ? await loadPayroll(month, lang) : null;
+        // Maosh — FAQAT Moliya hisobi (/api/payroll/preview: payrollEngine): Davomat, O'quvchini tekshirish va Moliya → Maoshlar
+        // bitta raqam. Moliya ruxsati yo'q rollar (ROP) maoshni ko'rmaydi — brauzerdagi taxminiy hisob ko'rsatilmaydi.
+        let pay = null, payErr = null;
+        if (canSeePayroll()) { const r = await window.LoadErr.settle(loadPayroll(month, lang)); pay = r.value; payErr = r.ok ? null : r.err; if (!r.ok) payCache.delete(`${month}|${lang}`); }
         if (seq !== davSeq) return;
-        root.innerHTML = davomatHtml({ lang, teachers, all, cur, mks, month, td, asstPay, asstIds, pay });
+        root.innerHTML = davomatHtml({ lang, teachers, all, cur, mks, month, td, asstIds, pay, payErr });
+        window.LoadErr.bind(root, () => renderDavomat());
         bindDavomat(root, { all, cur, mks, ctx, lang });
     }
 
@@ -221,7 +219,8 @@
         const key = `${month}|${lang}`, hit = payCache.get(key);
         if (hit && Date.now() - hit.t < 60000) return hit.p;
         const [y, m] = month.split('-').map(Number), end = `${month}-${String(new Date(Date.UTC(y, m, 0)).getUTCDate()).padStart(2, '0')}`;
-        const p = apiFetch(`/api/payroll/preview?start=${month}-01&end=${end}&language=${lang}`, { timeout: 30000 }).catch(() => null);
+        const p = apiFetch(`/api/payroll/preview?start=${month}-01&end=${end}&language=${lang}`, { timeout: 30000 });
+        p.catch(() => payCache.delete(key));
         payCache.set(key, { t: Date.now(), p });
         return p;
     }
@@ -235,14 +234,14 @@
         const total = Number(row.mainTotal ?? (row.assistantTotal != null ? row.total - row.assistantTotal : row.total)) || 0;
         return { total, perStudent, expected: 1, assistant: Number(row.assistantTotal) || 0, grand: Number(row.total) || 0 };
     }
-    function davomatHtml({ lang, teachers, all, cur, mks, month, td, asstPay, pay }) {
+    function davomatHtml({ lang, teachers, all, cur, mks, month, td, pay, payErr }) {
         const t = cur.t, rowsAll = cur.rows;
         const fin = payKpi(pay, t.id);
-        const kpi = fin || kpiFor(cur.tObj, month, rowsAll.map(r => r.s));
+        const kpi = fin;
         const plan = rowsAll.reduce((n, r) => n + r.plan, 0), counted = rowsAll.reduce((n, r) => n + r.counted, 0), passed = rowsAll.reduce((n, r) => n + r.passed, 0);
         const reviewN = rowsAll.reduce((n, r) => n + r.review.length, 0);
         const finRate = sid => Math.round((fin?.perStudent.find(p => p.id === sid)?.rate || 0) / 100) * 100 || null;
-        const rateOf = r => (fin ? finRate(r.s.id) : lessonRate(r.s, cur.tObj, kpi, r.plan));
+        const rateOf = r => (fin ? finRate(r.s.id) : null);
         const reviewSum = rowsAll.reduce((n, r) => n + r.review.reduce(a => a + (rateOf(r) || 0), 0), 0);
         const pct = passed ? Math.min(100, Math.round(counted / passed * 100)) : null;
         const mwf = rowsAll.filter(r => [1, 3, 5].includes(Number(r.s.lessonDayOfWeek))).length;
@@ -253,7 +252,7 @@
         if (D.half < 0) D.half = month === td.slice(0, 7) && Number(td.slice(8)) > 15 ? 1 : 0;
         const from = D.half ? 16 : 1, to = D.half ? days : 15;
         const unmarkedMine = cur.unmarked;
-        const showMoney = canManage();
+        const showMoney = canSeePayroll();
         const teacherOpts = teachers.map(x => { const a = all.find(y => y.t.id === x.id); return `<option value="${esc(x.id)}"${x.id === t.id ? ' selected' : ''}>${esc(x.name)} · ${a.rows.length} o'quvchi${a.unmarked ? ` · ${a.unmarked} belgilanmagan` : ''}</option>`; }).join('');
         const head = Array.from({ length: to - from + 1 }, (_, i) => from + i).map(d => { const date = dateOf(month, d); const isT = date === td;
             return `<th class="an-dh${isT ? ' is-today' : ''}" scope="col"><b>${d}</b><small>${isT ? 'Bugun' : DAY[wdOf(date) - 1]}</small></th>`; }).join('');
@@ -285,8 +284,9 @@
             <div><small>O'quvchilar</small><b>${rowsAll.length}</b><span>${mwf} tasi Du·Ch·Ju, ${rowsAll.length - mwf} tasi Se·Pa·Sh</span></div>
             <div><small>Hisobga o'tdi · shu oy</small><b>${counted} <em>/ ${plan}${reviewN ? ` · +${reviewN} tekshiruvda` : ''}</em></b><span class="an-bar" role="img" aria-label="${plan ? Math.round(counted / plan * 100) : 0}%"><i style="width:${plan ? Math.min(100, counted / plan * 100) : 0}%"></i></span></div>
             <div><small>Davomat (KPI)</small><b>${pct == null ? '—' : pct + '%'}</b><span>O'tgan ${passed} darsdan ${counted} tasi hisobga o'tdi</span></div>
-            ${showMoney ? (() => { const extra = fin ? fin.assistant : asstPay || 0, sum = fin ? fin.grand : kpi ? kpi.total + extra : null;
-                return `<div><small>Maosh · hozirgacha</small><b class="an-ok">${sum != null ? money(sum) + " so'm" : '—'}</b><span>${kpi ? `asosiy ${money(kpi.total)}${extra ? ` + yordamchi ${money(extra)}` : ''}` : ''}${reviewSum ? ` · +${money(reviewSum)} tekshiruvda` : ''}</span></div>`; })() : ''}
+            ${showMoney ? (payErr ? `<div class="an-kpi-err"><small>Maosh · hozirgacha</small>${window.LoadErr.html({ title: 'Maosh hisobini yuklab bo\'lmadi', err: payErr, note: '', compact: true })}</div>`
+                : (() => { const extra = fin ? fin.assistant : 0, sum = fin ? fin.grand : null;
+                return `<div><small>Maosh · hozirgacha</small><b class="an-ok">${sum != null ? money(sum) + " so'm" : '—'}</b><span>${fin ? `asosiy ${money(fin.total)}${extra ? ` + yordamchi ${money(extra)}` : ''}` : (t.id ? 'Moliya hisobida bu ustoz yo\'q' : '')}${reviewSum ? ` · +${money(reviewSum)} tekshiruvda` : ''}</span></div>`; })()) : ''}
           </div>
         </section>
         <section class="sc-card an-gridcard">
@@ -475,11 +475,11 @@
     async function exportCsv(cur) {
         const month = D.month, days = monthDays(month);
         const mark = c => ({ present: 'Keldi', absent: 'Kelmadi', mk: 'Qoplash', unmarked: 'Belgilanmagan', planned: 'Reja', off: '' }[c.state] || '');
-        // Summa — Moliya hisobi (sahifadagi bilan bir xil); bo'lmasa eski KPI.
-        const kpi = (canSeePayroll() && payKpi(await loadPayroll(month, curLang()), cur.t.id)) || kpiFor(cur.tObj, month, cur.rows.map(r => r.s));
+        // Summa — faqat Moliya hisobi (sahifadagi bilan bir xil); moliya ruxsati yo'q rolda ustun yo'q.
+        const kpi = canSeePayroll() ? payKpi(await loadPayroll(month, curLang()), cur.t.id) : null;
         const per = new Map((kpi?.perStudent || []).map(p => [p.id, p]));
-        const head = ['O\'quvchi', 'Telefon', 'Jadval', 'Davomiylik', ...Array.from({ length: days }, (_, i) => String(i + 1)), 'Hisobga o\'tdi', 'Reja', ...(canManage() ? ['Maosh'] : [])];
-        const lines = [head, ...cur.rows.map(r => [r.s.name, r.s.phone || '', daysWord(r.s), `${r.s.lessonDuration || ''} daq`, ...r.cells.map(mark), r.counted, r.plan, ...(canManage() ? [per.get(r.s.id)?.earned ?? ''] : [])])];
+        const head = ['O\'quvchi', 'Telefon', 'Jadval', 'Davomiylik', ...Array.from({ length: days }, (_, i) => String(i + 1)), 'Hisobga o\'tdi', 'Reja', ...(canSeePayroll() ? ['Maosh'] : [])];
+        const lines = [head, ...cur.rows.map(r => [r.s.name, r.s.phone || '', daysWord(r.s), `${r.s.lessonDuration || ''} daq`, ...r.cells.map(mark), r.counted, r.plan, ...(canSeePayroll() ? [per.get(r.s.id)?.earned ?? ''] : [])])];
         const csv = '﻿' + lines.map(l => l.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(';')).join('\r\n');
         const a = document.createElement('a');
         a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
@@ -524,8 +524,13 @@
         M.month = opts.month || M.month || today().slice(0, 7);
         root.innerHTML = '<div class="sc-skel"></div>';
         let list;
-        try { await U().loadStaffAvatars(); list = await loadMakeups(M.month, opts.lang || '', true); await loadAbsences(M.month).catch(() => []); await loadSessions(M.month); }
-        catch (e) { root.innerHTML = `<div class="sc-err">${esc(e.message)}</div>`; return; }
+        try { await Promise.all([U().loadStaffAvatars().catch(() => null), loadMakeups(M.month, opts.lang || '', true).then(v => { list = v; }), loadAbsences(M.month, true), loadSessions(M.month)]); }
+        catch (e) {
+            root.innerHTML = `${opts.back ? `<button type="button" class="an-back" data-back>${ICON.back} Akademik · Davomat</button>` : ''}<div class="sc-head"><div><h1>Qoplash darslari</h1></div></div>${window.LoadErr.html({ title: 'Qoplash darslarini yuklab bo\'lmadi', err: e })}`;
+            window.LoadErr.bind(root, () => renderMakeups(root, opts));
+            root.querySelector('[data-back]')?.addEventListener('click', () => opts.back());
+            return;
+        }
         if (opts.lang) list = list.filter(m => (studentById(m.student_id)?.subject || 'english') === opts.lang);
         const ctx = buildCtx(M.month, mkCache.list, abCache.key === M.month ? abCache.list : []);
         const td = today(), month = M.month;
@@ -670,8 +675,12 @@
         root.classList.add('an-page');
         root.innerHTML = '<div class="sc-skel"></div>';
         let all;
-        try { await U().loadStaffAvatars(); all = (await U().api('/requests')).requests.filter(r => r.type !== 'assist_late'); }
-        catch (e) { root.innerHTML = `<div class="sc-err">${esc(e.message)}</div>`; return; }
+        try { const [, r] = await Promise.all([U().loadStaffAvatars().catch(() => null), U().api('/requests')]); all = r.requests.filter(r => r.type !== 'assist_late'); }
+        catch (e) {
+            root.innerHTML = `<div class="sc-head"><div><h1>Ustozlar so'rovlari</h1></div></div>${window.LoadErr.html({ title: 'So\'rovlarni yuklab bo\'lmadi', err: e })}`;
+            window.LoadErr.bind(root, () => renderRequests(root));
+            return;
+        }
         const map = { new: 'new', approved: 'approved', rejected: 'rejected' };
         const list = all.filter(r => r.status === map[R.tab]);
         const n = all.filter(r => r.status === 'new').length;
@@ -791,27 +800,39 @@
             ${L.teachers.map(t => `${esc(t.name)} — ${t.students.length} (${t.students.slice(0, 4).map(x => esc(x.name)).join(', ')}${t.students.length > 4 ? '…' : ''})`).join('; ')}.
             O'quvchi tahririda yordamchi lavozimidagi xodimni tanlang.</div>`;
     }
+    let asSeq = 0;
     async function renderAssist(root) {
         if (!root) return;
         root.classList.add('an-page');
-        await U().loadStaffAvatars();
+        const seq = ++asSeq;
+        // Skelet darhol (oldin avatarlar va legacy ketma-ket kutilib, 2–4 s oq sahifa turardi).
+        root.innerHTML = '<div class="sc-skel"></div>';
         A.month ||= today().slice(0, 7);
-        A.legacy = await U().api(`/assist/legacy?month=${A.month}`).catch(() => null);
-        const list = assistantList((A.legacy?.past || []).map(p => p.id));
-        if (!list.some(a => a.id === A.aid)) A.aid = list[0]?.id || '';
         const month = A.month, td = today(), curMonth = month === td.slice(0, 7);
+        const repOf = id => U().api(`/assist/month?assistantId=${encodeURIComponent(id)}&month=${month}`);
+        const S = window.LoadErr.settle;
+        // Hammasi parallel: avatarlar, legacy ro'yxat, so'rovlar va asosiy ro'yxatdagi yordamchilarning oy hisobi.
+        const base = assistantList();
+        const [, legR, rqR, ...baseReps] = await Promise.all([U().loadStaffAvatars().catch(() => null), S(U().api(`/assist/legacy?month=${month}`)),
+            S(U().api('/requests?status=new')), ...base.map(a => S(repOf(a.id)))]);
+        if (seq !== asSeq) return;
+        const fail = (title, err) => { root.innerHTML = `<div class="sc-head"><div><h1>Yordamchi aloqalari</h1></div></div>${window.LoadErr.html({ title, err })}`; window.LoadErr.bind(root, () => renderAssist(root)); };
+        if (!legR.ok) return fail('Yordamchilar ro\'yxatini yuklab bo\'lmadi', legR.err);
+        if (!rqR.ok) return fail('So\'rovlarni yuklab bo\'lmadi', rqR.err);
+        A.legacy = legR.value;
+        const list = assistantList((A.legacy?.past || []).map(p => p.id));
+        const repBy = new Map(base.map((a, i) => [a.id, baseReps[i]]));
+        const extra = list.filter(a => !repBy.has(a.id));
+        if (extra.length) { const rs = await Promise.all(extra.map(a => S(repOf(a.id)))); extra.forEach((a, i) => repBy.set(a.id, rs[i])); if (seq !== asSeq) return; }
+        if (!list.some(a => a.id === A.aid)) A.aid = list[0]?.id || '';
         const lastDay = dateOf(month, monthDays(month));
         if (!A.week || A.week.slice(0, 7) > month || U().addDays(A.week, 6) < month + '-01') A.week = U().weekStart(curMonth ? td : lastDay);
-        root.innerHTML = '<div class="sc-skel"></div>';
-        let rep = null, reqs = [], reps = [], finReqs = [];
-        try {
-            [reps, reqs] = await Promise.all([
-                Promise.all(list.map(a => U().api(`/assist/month?assistantId=${encodeURIComponent(a.id)}&month=${month}`).catch(() => null))),
-                U().api('/requests?status=new').then(r => r.requests.filter(x => x.type === 'assist_late' || x.type === 'assist_finance'))
-            ]);
-            finReqs = reqs.filter(x => x.type === 'assist_finance'); reqs = reqs.filter(x => x.type === 'assist_late');
-            rep = reps[list.findIndex(a => a.id === A.aid)] || null;
-        } catch (e) { root.innerHTML = `<div class="sc-err">${esc(e.message)}</div>`; return; }
+        const selR = repBy.get(A.aid);
+        if (A.aid && selR && !selR.ok) return fail('Yordamchi aloqalarini yuklab bo\'lmadi', selR.err);
+        const reps = list.map(a => (repBy.get(a.id)?.ok ? repBy.get(a.id).value : null));
+        let reqs = (rqR.value?.requests || []).filter(x => x.type === 'assist_late' || x.type === 'assist_finance');
+        const finReqs = reqs.filter(x => x.type === 'assist_finance'); reqs = reqs.filter(x => x.type === 'assist_late');
+        const rep = reps[list.findIndex(a => a.id === A.aid)] || null;
         const a = list.find(x => x.id === A.aid);
         const st = rep?.state || {};
         const final = !!st.final_at;
@@ -963,5 +984,5 @@
         box.querySelector('[data-rej]')?.addEventListener('click', () => { U().closeDrawer(); lateReject(req, done); });
     }
 
-    window.adminNazorat = { renderDavomat, renderMakeups, renderRequests, renderAssist, state: { D, M, R, A } };
+    window.adminNazorat = { renderDavomat, renderMakeups, renderRequests, renderAssist, loadPayroll, payKpi, canSeePayroll, state: { D, M, R, A } };
 })();

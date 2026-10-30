@@ -346,7 +346,7 @@
               <div class="sc-kpi"><small>Ro'yxatda</small><b>${week.length}</b><span>${openN} faol · ${week.length - openN} ta oxirgi 7 kunda yakunlangan</span></div>
               <div class="sc-kpi"><small>Bugungi sinovlar</small><b>${todayRows.length}</b><span>${esc(todaySub || '—')}</span></div>
               <div class="sc-kpi${noTeacher.length ? ' sc-kpi--warn' : ''}"><small>Ustoz biriktirilmagan</small><b>${noTeacher.length}</b><span>Biriktirilmaguncha dars bo'lmaydi</span></div>
-              <div class="sc-kpi"><small>Natija kutilmoqda</small><b>${waiting.length}</b><span>Dars o'tdi, ustoz natijani yozmagan</span></div>
+              <div class="sc-kpi"><small>Natija kutilmoqda</small><b>${waiting.length}</b><span>${(() => { const od = waiting.filter(x => x.ph === 'overdue').length; return od ? `Dars o'tdi, natija yozilmagan · shundan ${od} tasi "Muddati o'tdi"` : 'Dars o\'tdi, ustoz natijani yozmagan'; })()}</span></div>
             </div>
             <div class="tl-split">
               <section class="sc-card" aria-labelledby="tlAT">
@@ -371,6 +371,7 @@
         root.querySelectorAll('[data-a-filter]').forEach(b => b.onclick = () => { A.filter = b.dataset.aFilter; drawAdmin(); });
         root.querySelectorAll('[data-a-assign]').forEach(b => b.onclick = () => openAssign(A.lang, b.dataset.aAssign, () => drawAdmin()));
         root.querySelectorAll('[data-a-open]').forEach(b => b.onclick = () => openLead(A.lang, b.dataset.aOpen));
+        const ld = root.querySelector('[data-a-load]'); if (ld) window.LoadErr.bind(ld, () => loadTeacherLoad());
     }
     // Ustozlarning bugungi yuklamasi (umumiy jadvaldan).
     async function loadTeacherLoad() {
@@ -389,12 +390,12 @@
                 const left = (v.trialFree || []).map(f => ({ start: Math.max(f.start, Math.ceil(nm / 30) * 30), end: f.end })).filter(f => f.end - f.start >= 30);
                 return { id: v.teacherId, name: names.get(v.teacherId), lessons, trials, left, pct: work ? Math.min(100, Math.round(busy / work * 100)) : 0 };
             }).sort((a, b) => b.left.length - a.left.length || a.name.localeCompare(b.name));
-        } catch (e) { A.load = { err: e.message }; }
-        const el = A.root?.querySelector('[data-a-load]'); if (el) el.innerHTML = loadHtml();
+        } catch (e) { A.load = { err: e }; A.loadFor = ''; }
+        const el = A.root?.querySelector('[data-a-load]'); if (el) { el.innerHTML = loadHtml(); window.LoadErr.bind(el, () => loadTeacherLoad()); }
     }
     function loadHtml() {
         if (!A.load) return '<p class="sc-mt">Yuklanmoqda…</p>';
-        if (A.load.err) return `<p class="sc-mt">${esc(A.load.err)}</p>`;
+        if (A.load.err) return window.LoadErr.html({ title: 'Ustozlar yuklamasini yuklab bo\'lmadi', err: A.load.err, note: 'Bo\'sh vaqtlar ko\'rsatilmadi.', compact: true });
         if (!A.load.length) return '<p class="sc-mt">Bugun ish vaqti belgilangan ustoz yo\'q.</p>';
         return A.load.map(x => `<div><div class="tl-bl"><span>${esc(x.name)}</span><span>${x.lessons} dars${x.trials ? ` + ${x.trials} sinov` : ''} · qolgan: ${x.left.length ? x.left.map(f => `${hm(f.start)}–${hm(f.end)}`).join(', ') : "yo'q"}</span></div>
             <div class="tl-bar" role="img" aria-label="Band ${x.pct}%"><span style="width:${x.pct}%"></span></div></div>`).join('');
@@ -424,7 +425,7 @@
                 const r = await api(`/api/school/schedule?from=${st.time.date}&to=${st.time.date}&lang=${lang}`);
                 st.teachers = (r.teachers || []).filter(t => ['oqituvchi', 'ingliz-oqituvchi', 'rus-oqituvchi'].includes(t.role));
                 st.views = r.views || []; st.err = '';
-            } catch (e) { st.err = e.message; st.views = []; }
+            } catch (e) { st.err = e; st.views = []; }
             draw();
         }
         function statusOf(t) {
@@ -446,7 +447,7 @@
                 if (st.time.src === 'teacher' && !st.teacherId && rowsT.some(r => r.t.id === rejectedBy && r.s.ok)) st.teacherId = rejectedBy;
                 // Birinchi bo'sh ustoz oldindan tanlanadi (Oynalar dizayni); admin boshqasini tanlashi mumkin.
                 if (!st.teacherId) { const f = rowsT.find(r => r.s.ok && !r.rej); if (f) st.teacherId = f.t.id; }
-                list = st.err ? `<div class="sc-err">${esc(st.err)}</div>` : rowsT.map(({ t, s, rej }) => {
+                list = st.err ? window.LoadErr.html({ title: 'Ustozlar jadvalini yuklab bo\'lmadi', err: st.err, note: 'Bo\'sh vaqtlar ko\'rsatilmadi.', compact: true }) : rowsT.map(({ t, s, rej }) => {
                     const v = st.views.find(x => x.teacherId === t.id);
                     const lessons = (v?.items || []).filter(i => i.kind === 'lesson').length;
                     // Tanlangan vaqtni o'z ichiga olgan ochiq oraliq (dizayndagidek: "17:30–19:00 sinovga ochiq").
@@ -467,6 +468,7 @@
             save.disabled = past || !st.teacherId || !st.views || !(st.teachers || []).some(t => t.id === st.teacherId && statusOf(t).ok);
             body.querySelectorAll('[data-as-time]').forEach(b => b.onclick = () => { st.time = times[Number(b.dataset.asTime)]; st.teacherId = ''; load(); });
             body.querySelectorAll('input[name=tlAsT]').forEach(i => i.onchange = () => { st.teacherId = i.value; save.disabled = past; });
+            window.LoadErr.bind(body, () => load());
             body.querySelector('[data-as-apply]').onclick = () => {
                 const dt = body.querySelector('[data-as-date]').value, tm = body.querySelector('[data-as-tm]').value;
                 const m = /^(\d{1,2}):(\d{2})$/.exec(tm || '');

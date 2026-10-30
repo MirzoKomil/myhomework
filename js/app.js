@@ -288,6 +288,7 @@ function applyRoleBasedAccess(user) {
         // 17-ish: sahifa obnovleniya (refresh) qilinganda foydalanuvchi
         // oldin qaysi bo'limda bo'lgan bo'lsa, o'sha bo'limdan davom etsin —
         // aks holda hozirgacha har doim "Bosh sahifa"ga qaytib ketardi.
+        applyDesignSidebar(role);
         const last = loadLastTab();
         if (last && last.tab && !hiddenForRop.has(last.tab)) {
             setTimeout(() => switchTab(last.tab, last.ctx || {}), 50);
@@ -314,6 +315,7 @@ function applyRoleBasedAccess(user) {
     sidebar.querySelectorAll('.menu-item').forEach(el => {
         if (allowedSet.has(el.dataset.tab)) el.style.display = '';
     });
+    applyDesignSidebar(role);
     // YordamchiBosh: sof yordamchida (asosiy o'quvchisi yo'q) "Sinov darslari" yo'q; sinov kelsa son belgisi bilan qaytadi (js/staffNavBadges.js).
     if (role === 'teacher') window.staffNavBadges?.applyRole(user);
 
@@ -891,12 +893,92 @@ function startCoreDataPolling() {
 }
 
 function isMenuItemActive(el, tab, ctx) {
+    // Dizayn sidebar'i: ichki sahifa ochilganda o'z bo'limi faol (Tasdiqlar → O'quvchilar; Guruhlar, Aloqalar → Akademik bo'lim).
+    if (DESIGN_TAB_PARENT[tab] && el.dataset.tab === DESIGN_TAB_PARENT[tab] && !el.dataset.navSales) return true;
+    // Sidebar'dan olingan band (yashirin) — o'zi faol bo'lmaydi, ota band faol.
+    if (DESIGN_TAB_PARENT[tab] && el.dataset.tab === tab && el.style.display === 'none') return false;
     if (el.dataset.tab !== tab) return false;
+    // ROP / sotuv: "Lidlar", "Reyting"… — Sotuv bo'limining shu ichki bo'limi ochiq bo'lsa faol; "Sotuv bo'limi" esa qolganlarida.
+    if (tab === 'sales') {
+        const sec = ctx.salesSection || 'leads';
+        const navSec = v => (v === 'trials' ? 'leads' : v);
+        if (el.dataset.navSales) return navSec(el.dataset.navSales) === sec && (el.dataset.navSales !== 'trials' || ctx.navSales === 'trials') && (el.dataset.navSales !== 'leads' || ctx.navSales !== 'trials');
+        const own = [...document.querySelectorAll('#sidebarMenu .menu-item[data-nav-sales]')].some(x => x.style.display !== 'none' && navSec(x.dataset.navSales) === sec);
+        if (own) return false;
+    }
     if (tab === 'placeholder') return el.dataset.placeholder === ctx.placeholder;
     if (el.dataset.subject) return el.dataset.subject === (ctx.subject || '');
     // students endi sidebar sub-itemsiz — tab active bo'lsa, menuItem ham active
     if (ctx.subject && ['leads', 'timetable'].includes(tab)) return false;
     return true;
+}
+
+// Ichki sahifa → sidebar'dagi ota band (AdminSotuvTasdiq, AdminGuruhlar, AdminAloqalar dizaynlari).
+const DESIGN_TAB_PARENT = { 'school-approvals': 'students', 'school-groups': 'teachers-section', 'school-assist': 'teachers-section' };
+// Rol bo'yicha sidebar tartibi (dizayn: Admin*, RopJadval, SotuvJadval). Kalit — data-tab yoki "nav:<sotuv bo'limi>".
+// Dizaynda yo'q, lekin ishlab turgan bo'limlar o'chirilmaydi — ro'yxat oxirida "Boshqa" ostida qoladi.
+const DESIGN_SIDEBAR = {
+    admin: { main: ['dashboard', 'sales', 'marketing', 'students', 'timetable', 'teachers-section', 'finance', 'hr', 'analitika', 'student-app'], extra: [] },
+    rop: { main: ['dashboard', 'sales', 'nav:leads', 'timetable', 'trial-lessons', 'students', 'nav:rating', 'nav:sales-plan'], extra: ['marketing', 'teachers-section', 'student-app', 'guides'] },
+    sales_manager: { main: ['dashboard', 'nav:leads', 'timetable', 'students', 'nav:debtors', 'nav:sales-plan', 'nav:rating', 'nav:scripts', 'nav:trials'], extra: ['marketing', 'analitika', 'student-app', 'guides'] }
+};
+DESIGN_SIDEBAR.boshliq = DESIGN_SIDEBAR.admin;
+function applyDesignSidebar(role) {
+    const sidebar = document.getElementById('sidebarMenu');
+    if (!sidebar) return;
+    syncDesignGoButtons(role);
+    const cfg = DESIGN_SIDEBAR[role];
+    const navItems = [...sidebar.querySelectorAll('.menu-item[data-nav-sales]')];
+    sidebar.querySelector('.menu-sep[data-design-sep]')?.remove();
+    if (!cfg) { navItems.forEach(el => { el.style.display = 'none'; }); return; }
+    const find = key => key.startsWith('nav:') ? sidebar.querySelector(`.menu-item[data-nav-sales="${key.slice(4)}"]`) : sidebar.querySelector(`.menu-item[data-tab="${key}"]:not([data-nav-sales])`);
+    const keep = new Set([...cfg.main, ...cfg.extra]);
+    // Ro'yxatda yo'q bandlar yashiriladi (Tasdiqlar, Telegram guruhlar, Yordamchi aloqalari — O'quvchilar va Akademik bo'lim ichida).
+    sidebar.querySelectorAll(':scope > .menu-item').forEach(el => {
+        const key = el.dataset.navSales ? 'nav:' + el.dataset.navSales : el.dataset.tab;
+        if (!keep.has(key)) el.style.display = 'none';
+        else if (el.dataset.navSales) el.style.display = '';
+    });
+    cfg.main.forEach(k => { const el = find(k); if (el) sidebar.appendChild(el); });
+    const extras = cfg.extra.map(find).filter(el => el && el.style.display !== 'none');
+    if (extras.length) {
+        const sep = document.createElement('div');
+        sep.className = 'menu-sep'; sep.dataset.designSep = '1'; sep.setAttribute('role', 'presentation'); sep.textContent = 'Boshqa';
+        sidebar.appendChild(sep);
+        extras.forEach(el => sidebar.appendChild(el));
+    }
+}
+// Sidebar'dan olingan sahifalarga kirish: O'quvchilar va Akademik bo'lim ichki navigatsiyasidagi tugmalar ([data-go-tab])
+// va sahifa boshidagi "← O'quvchilar" / "← Akademik bo'lim" havolalari ([data-back-tab]).
+function syncDesignGoButtons(role) {
+    document.querySelectorAll('[data-go-tab][data-go-roles]').forEach(b => { b.hidden = !String(b.dataset.goRoles).split(' ').includes(role); });
+    if (['admin', 'boshliq', 'rop'].includes(role)) refreshApprovalsBadge();
+}
+function refreshApprovalsBadge(counts) {
+    const set = c => document.querySelectorAll('[data-approvals-n]').forEach(el => { const n = Number(c?.pending) || 0; el.hidden = !n; el.textContent = n ? String(n) : ''; });
+    if (counts) return set(counts);
+    if (typeof apiFetch !== 'function') return;
+    apiFetch('/api/school/edit-requests?status=pending').then(r => set(r?.counts)).catch(() => set(null));
+}
+window.refreshApprovalsBadge = refreshApprovalsBadge;
+document.addEventListener('click', e => {
+    const go = e.target.closest?.('[data-go-tab], [data-back-tab]');
+    if (!go || typeof switchTab !== 'function') return;
+    e.preventDefault();
+    const tab = go.dataset.goTab || go.dataset.backTab;
+    switchTab(tab, go.dataset.backSection ? { teachersSection: go.dataset.backSection } : {});
+});
+function openDesignNav(item) {
+    const v = item.dataset.navSales;
+    if (v) {
+        switchTab('sales', { salesSection: v === 'trials' ? 'leads' : v, navSales: v });
+        // Sotuv menejeri "Sinov darslari" — lidlar taxtasidagi "Sinov darsida" ustuni.
+        if (v === 'trials') setTimeout(() => document.querySelector('#tab-sales .lead-column-header--trial')?.scrollIntoView({ block: 'nearest', inline: 'start', behavior: 'smooth' }), 400);
+        return true;
+    }
+    // ROP: "Lidlar" alohida band — "Sotuv bo'limi" statistikadan ochiladi.
+    if (item.dataset.tab === 'sales' && getCurrentUser()?.role === 'rop') { switchTab('sales', { salesSection: 'sales-stats' }); return true; }
+    return false;
 }
 
 function updateSidebarActiveState(tab, ctx) {
@@ -925,6 +1007,7 @@ function switchTab(tab, ctx = {}) {
         subject: ctx.subject || null,
         placeholder: ctx.placeholder || null,
         salesSection: tab === 'sales' ? (ctx.salesSection || 'leads') : (ctx.salesSection || null),
+        navSales: tab === 'sales' ? (ctx.navSales || null) : null,
         teachersSection: ctx.teachersSection || null,
         studentsSection: tab === 'students' ? (ctx.studentsSection || 'faol') : (_tabContext.studentsSection || 'faol'),
         hrSection: tab === 'hr' ? (ctx.hrSection || 'xodimlar') : (_tabContext.hrSection || 'xodimlar'),
@@ -1063,7 +1146,7 @@ function renderFrozenStudents() {
     // ko'rishi kerak.
     const _cuFrozen = getCurrentUser();
     const allStudents = getItem(STORAGE_KEYS.students, []);
-    let frozen = allStudents.filter(s => s.frozen);
+    let frozen = allStudents.filter(s => s.frozen && !isStaffDemoStudent(s));
     if (_cuFrozen?.role === 'sales_manager') {
         frozen = filterStudentsForSalesManager(frozen, _cuFrozen);
     }
@@ -1157,6 +1240,7 @@ function initSidebarMenu() {
             e.preventDefault();
             const tab = item.dataset.tab;
             if (!tab) return;
+            if (openDesignNav(item)) return;
             switchTab(tab, {
                 subject: item.dataset.subject || null,
                 placeholder: item.dataset.placeholder || null,
@@ -9996,6 +10080,23 @@ function getTeacherAssignmentIds(teacherId) {
     return ids;
 }
 
+// O'quvchilar ro'yxati (admin/ROP): xodim demo akkaunti ekanligi.
+function isStaffDemoStudent(s) { return !!s && (s.isStaffDemo === true || String(s.id || '').startsWith('demo_')); }
+// "Ustozlar bo'yicha" filtri: shu tildagi asosiy ustozlar, id bo'yicha bitta (yordamchi lavozimi va type='yordamchi' kirmaydi).
+function studentsTeacherOptions(subject) {
+    const hr = getItem(STORAGE_KEYS.hrEmployees, []);
+    const hrById = new Map(hr.map(e => [e.id, e]));
+    const mainRole = subject === 'russian' ? 'rus-oqituvchi' : 'ingliz-oqituvchi';
+    const out = new Map();
+    for (const e of hr) if (e.role === mainRole && (e.status || 'active') !== 'inactive') out.set(e.id, { id: e.id, name: e.name });
+    for (const t of getItem(STORAGE_KEYS.teachers, [])) {
+        if ((t.subject || 'english') !== subject || out.has(t.id)) continue;
+        const e = hrById.get(t.id);
+        if ((t.type && t.type !== 'asosiy') || (e && e.role === 'yordamchi')) continue;
+        out.set(t.id, { id: t.id, name: t.name });
+    }
+    return [...out.values()].sort((a, b) => String(a.name).localeCompare(String(b.name)));
+}
 function renderStudents() {
     const currentUser = getCurrentUser();
     const isSalesManager = currentUser?.role === 'sales_manager';
@@ -10115,7 +10216,8 @@ function renderStudents() {
     }
 
     // Muzlatilgan o'quvchilarni Faol ro'yxatdan chiqarish
-    students = students.filter(s => !s.frozen);
+    // Xodimlarning demo akkauntlari (isStaffDemo / id "demo_") ro'yxatda ham, "Jami"da ham yo'q — ular faqat HR → xodim kartasida.
+    students = students.filter(s => !s.frozen && !isStaffDemoStudent(s));
 
     // 8-vazifa (qayta ish 4): O'quvchilar bo'limi Sotuv bo'limi bilan to'liq
     // integratsiya qilingan — "Faol o'quvchilar" ro'yxatida FAQAT sotuv
@@ -10163,14 +10265,9 @@ function renderStudents() {
         );
     }
 
-    // Til bo'yicha filtrlangan ustozlar va menejerlar
-    const allTeachers = [
-        ...getItem(STORAGE_KEYS.teachers, []).filter(t => (t.subject || 'english') === subject),
-        ...getItem(STORAGE_KEYS.hrEmployees, []).filter(e =>
-            (subject === 'english' && e.role === 'ingliz-oqituvchi') ||
-            (subject === 'russian' && e.role === 'rus-oqituvchi')
-        )
-    ];
+    // Til bo'yicha filtrlangan ustozlar va menejerlar. "Ustozlar bo'yicha" — faqat asosiy ustozlar, har biri bir marta
+    // (teachers jadvali va HR bir xil id bilan ikki marta kelardi, yordamchi ham kirib qolardi).
+    const allTeachers = studentsTeacherOptions(subject);
     const allManagers = getItem(STORAGE_KEYS.hrEmployees, []).filter(e =>
         (e.role === 'sotuv-menejeri' || e.role === 'sotuv_menejeri' || e.role === 'Sotuv menejeri') &&
         (e.lang || 'english') === subject
@@ -10280,9 +10377,10 @@ function renderStudents() {
     const tbody = document.getElementById('studentsBody');
     if (!tbody) return;
 
+    const staffNameList = [...getItem(STORAGE_KEYS.hrEmployees, []), ...getItem(STORAGE_KEYS.teachers, [])];
     tbody.innerHTML = students.map((s, i) => {
-        const teacher = allTeachers.find(t => t.id === s.teacherId);
-        const asst = allTeachers.find(t => t.id === s.assistantTeacherId);
+        const teacher = allTeachers.find(t => t.id === s.teacherId) || staffNameList.find(t => t.id === s.teacherId);
+        const asst = staffNameList.find(t => t.id === s.assistantTeacherId);
         const manager = allManagers.find(m => m.id === s.managerId);
 
         const ageStr = s.age ? String(s.age) : calculateAge(s.birthDate);
