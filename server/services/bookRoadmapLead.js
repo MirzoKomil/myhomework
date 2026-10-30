@@ -86,6 +86,35 @@ const cleanComment = c => (c && typeof c === 'object' ? {
     ...(c.reasonId ? { reasonId: String(c.reasonId).slice(0, 64) } : {}), createdAt: String(c.createdAt || new Date().toISOString()).slice(0, 40)
 } : null);
 
+const PAYMENT_HOLD = 'Kitobni jo\'natishdan oldin to\'lov tasdiqlanishi kerak (to\'liq to\'lov yoki nasiya)';
+// Jo'natish bosqichiga faqat to'lovi tasdiqlangan lid (to'liq / nasiya / "To'lov yopildi").
+// Lidsiz (qo'lda qo'shilgan eski) karta — avvalgidek cheklovsiz (js/app.js getBookRoadmapPaymentGate).
+async function assertPaidForShipping(client, leadRef, label = '') {
+    const ref = refOf(leadRef);
+    const lead = ref?.id ? (await client.query('SELECT status, extra_data FROM leads WHERE id=$1', [String(ref.id)])).rows[0] : null;
+    const pt = lead ? obj(lead.extra_data).paymentSurvey?.paymentType : null;
+    if (lead && lead.status !== 'tolov-yopildi' && pt !== 'full' && pt !== 'installment')
+        throw fail(409, label ? `${label}: ${PAYMENT_HOLD}` : PAYMENT_HOLD);
+}
+
+/**
+ * Admin/boshliq umumiy snapshot (PATCH /api/state bookRoadmap) — bosqich o'zgargan
+ * (yoki yangi) har bir kartada ham xuddi shu "to'lovdan oldin jo'natilmaydi" qoidasi.
+ * Ilgari bu yo'l kartani to'g'ridan-to'g'ri qayta yozardi va qoida chetlab o'tilardi.
+ */
+async function assertSnapshotTransitions(client, items) {
+    if (!Array.isArray(items) || !items.length) return;
+    const ids = items.map(i => String(i?.id || '')).filter(Boolean);
+    const cur = new Map((await client.query('SELECT id, status FROM book_roadmap WHERE id = ANY($1)', [ids])).rows.map(r => [String(r.id), r.status]));
+    for (const it of items) {
+        if (!it?.id) continue;
+        const status = it.status || 'yangi-oquvchi';
+        if (cur.get(String(it.id)) === status) continue;
+        if (!STATUSES.has(status)) throw fail(400, `${it.name || 'Karta'}: bosqich noto'g'ri`);
+        if (SHIPPING.has(status)) await assertPaidForShipping(client, it.leadRef ?? null, it.name || 'Karta');
+    }
+}
+
 /**
  * Sotuv menejeri o'z kartochkasining bosqichi, izohlari va manzilini o'zgartiradi
  * (kanban). Ism/telefon/menejer/lid havolasi — faqat liddan (upsertFromLead) yoki admin.
@@ -100,13 +129,7 @@ async function updateOwnEntry(client, { entryId, patch = {}, actor, managerId = 
     const next = { status: cur.status, comments: arr(cur.comments), address: cur.address || '', dispatched: cur.dispatched_at || '', delivered: cur.delivered_at || '' };
     if (patch.status !== undefined && patch.status !== cur.status) {
         if (!STATUSES.has(patch.status)) throw fail(400, 'Bosqich noto\'g\'ri');
-        if (SHIPPING.has(patch.status)) {
-            const ref = refOf(cur.lead_ref);
-            const lead = ref?.id ? (await client.query('SELECT status, extra_data FROM leads WHERE id=$1', [String(ref.id)])).rows[0] : null;
-            const pt = lead ? obj(lead.extra_data).paymentSurvey?.paymentType : null;
-            if (lead && lead.status !== 'tolov-yopildi' && pt !== 'full' && pt !== 'installment')
-                throw fail(409, 'Kitobni jo\'natishdan oldin to\'lov tasdiqlanishi kerak (to\'liq to\'lov yoki nasiya)');
-        }
+        if (SHIPPING.has(patch.status)) await assertPaidForShipping(client, cur.lead_ref);
         next.status = patch.status;
         const today = new Date(now.getTime() + 5 * 3600000).toISOString().slice(0, 10);
         if (DISPATCHED.has(next.status) && !next.dispatched) next.dispatched = today;
@@ -130,4 +153,4 @@ const toClient = r => r && ({
     deliveredAt: r.delivered_at || '', comments: arr(r.comments), createdAt: r.created_at || null
 });
 
-module.exports = { upsertFromLead, updateOwnEntry, toClient, STATUSES, NEED_STATUSES, todayLabel };
+module.exports = { upsertFromLead, updateOwnEntry, assertSnapshotTransitions, toClient, STATUSES, NEED_STATUSES, todayLabel };

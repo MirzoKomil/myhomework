@@ -575,6 +575,9 @@ async function restore(db, actor, id, { restoreLead, insertLead, validateStudent
         const row = { ...(snap.row || (snap.legacyItem ? legacyToRow(r.entity_type, snap.legacyItem) : null) || {}) };
         if (!row.id) throw err(400, 'Nusxa bo‘sh, tiklab bo‘lmaydi');
         if (r.source_table === 'students') warnings.push(...await reviewRestoredStudent(db, row, validateStudent));
+        // O'quvchi ID'si (serialCode) shu orada boshqa o'quvchiga berilgan bo'lsa — takror bo'lmasin.
+        if (r.source_table === 'students' && await require('./publicSerial').freeForRestore(db, 'students', row) === '')
+            warnings.push("O'quvchi ID'si boshqa o'quvchida band edi — ID olib tashlandi");
         await insertRawRow(db, r.source_table, row);
         if (r.source_table === 'hr_candidates') {
             const { rows: m } = await db.query('SELECT COUNT(*)::int AS n FROM archive_media WHERE record_id=$1', [id]);

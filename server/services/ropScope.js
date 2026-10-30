@@ -18,6 +18,7 @@ const langOfStudent = s => (String(s?.subject || '').trim().toLowerCase() === 'r
 const TEACHER_HR_ROLES = new Set(['rus-oqituvchi', 'ingliz-oqituvchi', 'yordamchi', 'oqituvchi']);
 // js/app.js backfillAllTeacherSubjectsFromHr bilan bir xil qoida: lavozim, keyin HR'dagi lang.
 const langOfTeacherHr = e => (e?.role === 'rus-oqituvchi' ? 'russian' : e?.role === 'ingliz-oqituvchi' ? 'english' : e?.lang === 'russian' ? 'russian' : 'english');
+const langOfBookEntry = b => (String(b?.lang || '').trim().toLowerCase() === 'russian' ? 'russian' : 'english');
 const langOfLead = l => (l?.language === 'russian' ? 'russian' : 'english');
 
 const warned = new Set();
@@ -78,6 +79,8 @@ function scopeStateForRop(state, langs, { ownEmployeeId = null } = {}) {
     // har yuklanishda butun ro'yxatni qayta yuborardi). Ustoz bo'lmagan xodimlar o'zgarmaydi.
     if (Array.isArray(state.hrEmployees)) state.hrEmployees = state.hrEmployees.filter(e => !TEACHER_HR_ROLES.has(e?.role) || langs.includes(langOfTeacherHr(e)));
     if (Array.isArray(state.payments)) state.payments = state.payments.filter(p => own.has(p.studentId));
+    // Kitob yetkazish kartalari (ism, telefon, manzil, lid havolasi) — faqat o'z tili.
+    if (Array.isArray(state.bookRoadmap)) state.bookRoadmap = state.bookRoadmap.filter(b => langs.includes(langOfBookEntry(b)));
     state.mainAttendance = filterAttendance(state.mainAttendance, own);
     state.assistantAttendance = filterAttendance(state.assistantAttendance, own);
     return state;
@@ -90,6 +93,9 @@ function fail(message) { return Object.assign(new Error(message), { status: 403 
 // (faqat kerak bo'lganda). Qaytaradi: tozalangan partial yoki xato tashlaydi.
 function guardRopPatch(partial, langs, existing = {}) {
     const denied = ROP_DENIED_STATE_KEYS.filter(k => partial[k] !== undefined);
+    // Kitob yetkazish: ROP umumiy snapshot orqali yozmaydi — faqat /api/state/book-roadmap/:id
+    // (til va "to'lovdan oldin jo'natilmaydi" qoidasi o'sha yerda tekshiriladi).
+    if (partial.bookRoadmap !== undefined) throw fail("Kitob yetkazish yozuvi umumiy saqlash orqali o'zgartirilmaydi — kartaning o'zidan (bosqich, izoh, manzil) saqlang");
     if (denied.length) throw fail(`ROP moliya ma'lumotini (${denied.join(', ')}) o'zgartira olmaydi — sotuv rejasi va bonus sozlamalarini faqat ko'radi. Kassa, to'lov, reja va bonus sozlamalari — admin.`);
     if (!langs) return partial;
     const out = { ...partial };
@@ -139,4 +145,4 @@ function guardRopPatch(partial, langs, existing = {}) {
     return out;
 }
 
-module.exports = { ropLangsFor, scopeLeads, scopeStateForRop, guardRopPatch, langOfStudent, langOfLead, ROP_DENIED_STATE_KEYS, normalizeLang };
+module.exports = { ropLangsFor, scopeLeads, scopeStateForRop, guardRopPatch, langOfStudent, langOfLead, langOfBookEntry, ROP_DENIED_STATE_KEYS, normalizeLang };

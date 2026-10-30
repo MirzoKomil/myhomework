@@ -11898,7 +11898,7 @@ document.getElementById('addStudentBtn').addEventListener('click', () => {
         const subjectVal = document.getElementById('mStSubject').value;
         const lang = subjectVal === 'russian' ? 'russian' : 'english';
         const leadId = 'l' + Date.now();
-        const serialCode = generateNextLeadSerial();
+        // O'quvchi ID'si (serialCode) — server beradi (lid saqlanganda, noyob); brauzer ID o'ylab topmaydi.
         const leadsData = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
         leadsData[lang] = leadsData[lang] || [];
         const newLead = {
@@ -11910,7 +11910,6 @@ document.getElementById('addStudentBtn').addEventListener('click', () => {
             source: 'Organik',
             leadType: 'organic',
             status: leadStage,
-            serialCode,
             comments: [],
             managerPhoto: null,
             attachments: [],
@@ -11922,7 +11921,6 @@ document.getElementById('addStudentBtn').addEventListener('click', () => {
 
         const newStudent = {
             id: 's' + Date.now(),
-            serialCode,
             leadRef: { lang, id: leadId },
             name,
             phone,
@@ -16412,110 +16410,13 @@ function openTolovJarayonidaFlow(lang, leadId, fromStatus) {
     beginTolovJarayonidaPaymentFlow(lang, leadId);
 }
 
-const LEAD_SERIAL_COUNTER_KEY = 'mh_leadSerialCounter';
-
-function parseLeadSerialCode(code) {
-    const m = String(code || '').match(/^([A-Z]{2})(\d{3})$/);
-    if (!m) return null;
-    return { letters: m[1], num: parseInt(m[2], 10) };
-}
-
-function incrementLeadSerialLetters(letters) {
-    let a = letters.charCodeAt(0) - 65;
-    let b = letters.charCodeAt(1) - 65;
-    b += 1;
-    if (b > 25) {
-        b = 0;
-        a += 1;
-    }
-    if (a > 25) {
-        a = 0;
-        b = 0;
-    }
-    return String.fromCharCode(65 + a) + String.fromCharCode(65 + b);
-}
-
-function formatLeadSerialCode(letters, num) {
-    return letters + String(num).padStart(3, '0');
-}
-
-function compareLeadSerialCodes(a, b) {
-    const pa = parseLeadSerialCode(a);
-    const pb = parseLeadSerialCode(b);
-    if (!pa || !pb) return 0;
-    if (pa.letters !== pb.letters) return pa.letters.localeCompare(pb.letters);
-    return pa.num - pb.num;
-}
-
-function getMaxExistingLeadSerial() {
-    const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
-    let max = null;
-    [...(leads.english || []), ...(leads.russian || [])].forEach(lead => {
-        if (!lead.serialCode) return;
-        if (!max || compareLeadSerialCodes(lead.serialCode, max) > 0) max = lead.serialCode;
-    });
-    return max;
-}
-
-function syncLeadSerialCounterFromExisting() {
-    const max = getMaxExistingLeadSerial();
-    if (!max) return;
-    try {
-        const stored = localStorage.getItem(LEAD_SERIAL_COUNTER_KEY);
-        if (!stored || compareLeadSerialCodes(max, stored) > 0) {
-            localStorage.setItem(LEAD_SERIAL_COUNTER_KEY, max);
-        }
-    } catch { /* ignore */ }
-}
-
-function generateNextLeadSerial() {
-    syncLeadSerialCounterFromExisting();
-    let letters = 'AA';
-    let num = 0;
-    try {
-        const parsed = parseLeadSerialCode(localStorage.getItem(LEAD_SERIAL_COUNTER_KEY));
-        if (parsed) {
-            letters = parsed.letters;
-            num = parsed.num;
-        }
-    } catch { /* ignore */ }
-
-    num += 1;
-    if (num > 999) {
-        num = 1;
-        letters = incrementLeadSerialLetters(letters);
-    }
-    const code = formatLeadSerialCode(letters, num);
-    try {
-        localStorage.setItem(LEAD_SERIAL_COUNTER_KEY, code);
-    } catch { /* ignore */ }
-    return code;
-}
-
-// 8-vazifa: ilgari faqat "tolov-jarayonida" statusidagi lidlarga ID
-// berilardi — shu sababli "To'lov yopildi"ga to'g'ridan-to'g'ri o'tgan
-// yoki bu tuzatishdan oldingi eski lidlarda ID umuman yo'q edi.
+// O'quvchi ID'si (serialCode, masalan AA001) endi FAQAT serverda beriladi — lid to'lov bosqichiga
+// o'tib saqlanganda, tranzaksiya ichida va noyob (server/services/publicSerial.js). Ilgari brauzer
+// "ko'rinib turgan lidlarning eng kattasi + 1" ni berardi: sotuv menejeri faqat o'z lidlarini ko'rgani
+// uchun ikki menejer bir xil ID berardi, sahifa ochilishining o'zi esa lidlarni PATCH qilardi.
+// Server bergan ID persistLeadChange javobidan keshga yoziladi (rememberServerLeadSerial).
+// To'lov bosqichlari (lid shu yerda o'quvchiga aylanadi va server ID beradi).
 const LEAD_STATUSES_NEED_SERIAL = new Set(['tolov-jarayonida', 'tolov-yopildi']);
-
-function backfillMissingLeadSerials() {
-    syncLeadSerialCounterFromExisting();
-    const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
-    let changed = false;
-    const changedLeads = [];
-    ['english', 'russian'].forEach(lang => {
-        (leads[lang] || []).forEach((lead, idx) => {
-            if (LEAD_STATUSES_NEED_SERIAL.has(normalizeLeadStatus(lead.status)) && !lead.serialCode) {
-                leads[lang][idx] = { ...lead, serialCode: generateNextLeadSerial() };
-                changedLeads.push({ lang, lead: leads[lang][idx] });
-                changed = true;
-            }
-        });
-    });
-    if (changed) {
-        setItem(STORAGE_KEYS.leads, leads);
-        changedLeads.forEach(item => persistLeadChange(item.lang, item.lead).catch(() => {}));
-    }
-}
 
 // 8-vazifa (qayta ish 3): allaqachon o'quvchiga aylangan, lekin bu
 // tuzatishlardan oldin yaratilgani uchun serialCode'i yo'q yozuvlarni
@@ -16529,35 +16430,19 @@ function backfillMissingLeadSerials() {
 // Bog'langan lid o'zi ham hali ID olmagan bo'lsa, shu yerning o'zida
 // yangi ID generatsiya qilinadi.
 function backfillStudentSerialCodesFromLeads() {
+    // Faqat ekrandagi nusxa: lidda server bergan ID bo'lsa, ID'siz o'quvchi kartasida ham ko'rinadi.
+    // Serverga hech narsa yuborilmaydi (bazada bu bog'lanishni server o'zi to'ldiradi) va ID yaratilmaydi.
     const students = getItem(STORAGE_KEYS.students, []);
     const leadsData = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
-    const leadLocationById = new Map();
-    ['english', 'russian'].forEach(lang => {
-        (leadsData[lang] || []).forEach((l, idx) => leadLocationById.set(l.id, { lang, idx }));
+    const serialByLead = new Map();
+    ['english', 'russian'].forEach(lang => (leadsData[lang] || []).forEach(l => { if (l?.serialCode) serialByLead.set(l.id, l.serialCode); }));
+    let changed = false;
+    const updated = students.map(s => {
+        if (s.serialCode || !s.leadRef?.id || !serialByLead.has(s.leadRef.id)) return s;
+        changed = true;
+        return { ...s, serialCode: serialByLead.get(s.leadRef.id) };
     });
-    let leadsChanged = false;
-    let studentsChanged = false;
-    const changedLeadRows = [];
-    const updatedStudents = students.map(s => {
-        if (s.serialCode || !s.leadRef?.id) return s;
-        const loc = leadLocationById.get(s.leadRef.id);
-        if (!loc) return s;
-        const lead = leadsData[loc.lang][loc.idx];
-        let serial = lead.serialCode;
-        if (!serial) {
-            serial = generateNextLeadSerial();
-            leadsData[loc.lang][loc.idx] = { ...lead, serialCode: serial };
-            changedLeadRows.push({ lang: loc.lang, lead: leadsData[loc.lang][loc.idx] });
-            leadsChanged = true;
-        }
-        studentsChanged = true;
-        return { ...s, serialCode: serial };
-    });
-    if (leadsChanged) {
-        setItem(STORAGE_KEYS.leads, leadsData);
-        changedLeadRows.forEach(item => persistLeadChange(item.lang, item.lead).catch(() => {}));
-    }
-    if (studentsChanged) setItem(STORAGE_KEYS.students, updatedStudents);
+    if (changed) setCachedItem(STORAGE_KEYS.students, updated);
 }
 
 // Gulhayoxon Hoshimova kabi HR ro'yxatida bor-u, hali haqiqiy
@@ -16646,8 +16531,7 @@ function ensureLeadPaymentStatus(lang, leadId, scheduleData = null) {
     updateLeadInStorage(lang, leadId, l => {
         const next = {
             ...l,
-            status: 'tolov-jarayonida',
-            serialCode: l.serialCode || generateNextLeadSerial()
+            status: 'tolov-jarayonida'
         };
         if (scheduleData) {
             next.paymentOnboarding = { ...(l.paymentOnboarding || {}), ...scheduleData };
@@ -18705,7 +18589,6 @@ function openPaymentOnboardingModal(lang, leadId, options = {}) {
             return {
                 ...base,
                 status: 'tolov-jarayonida',
-                serialCode: base.serialCode || generateNextLeadSerial(),
                 paymentOnboarding: { ...(base.paymentOnboarding || {}), ...onboarding },
                 comments: [...base.comments, createLeadComment({
                     type: 'payment-onboarding',
@@ -20459,6 +20342,16 @@ function updateCachedLeadVersion(lang, leadId, updatedAt) {
     setItem(STORAGE_KEYS.leads, leads);
 }
 
+// Server bergan o'quvchi ID'si (serialCode) — keshdagi lidga (keyingi saqlashlar ham shu ID bilan ketadi).
+function rememberServerLeadSerial(lang, leadId, serialCode) {
+    if (!serialCode) return;
+    const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
+    const lead = (leads[lang] || []).find(item => item.id === leadId);
+    if (!lead || lead.serialCode === serialCode) return;
+    lead.serialCode = serialCode;
+    setCachedItem(STORAGE_KEYS.leads, leads);
+}
+
 function persistLeadChange(lang, lead, onSaved) {
     if (!lead?.id) return Promise.reject(new Error('Lid ID topilmadi'));
     // Targetolog kabi "faqat ko'rish" rollari serverga hech qanday lid o'zgarishini yubormaydi
@@ -20478,6 +20371,7 @@ function persistLeadChange(lang, lead, onSaved) {
         if (latestVersion) snapshot.updatedAt = latestVersion;
         const result = await apiSaveLead(lang, snapshot);
         const saved = result.lead || snapshot;
+        rememberServerLeadSerial(lang, leadId, saved.serialCode);
         cacheProvisionedStudent(result.platformAccess?.student);
         if (saved.updatedAt) {
             _leadServerVersions.set(leadId, saved.updatedAt);
@@ -21610,8 +21504,6 @@ function getLeadColumnLimit(colId) { return _leadColumnLimits[colId] || LEAD_COL
 function renderLeads() {
     const board = document.getElementById('leadsKanban');
     if (!board) return;
-
-    backfillMissingLeadSerials();
 
     const _cuRender = getCurrentUser();
     const _isSalesManagerRender = _cuRender && _cuRender.role === 'sales_manager';
@@ -23893,7 +23785,8 @@ function renderBookRoadmapCard(item) {
     }
     ).join('');
 
-    const deleteItem = !_isSalesManager
+    // O'chirish — faqat admin/boshliq (ROP va sotuv kartani alohida yo'l bilan faqat tahrirlaydi).
+    const deleteItem = !_isSalesManager && _cu?.role !== 'rop'
         ? `<button type="button" class="lead-card-menu-item lead-card-menu-item--danger" data-br-delete="${item.id}">Yozuvni o'chirish</button>`
         : '';
 
@@ -23967,7 +23860,8 @@ function renderBookRoadmap() {
     // yozuv qo'sha olmasligi kerak.
     const _cuBr = getCurrentUser();
     const addBrBtn = document.getElementById('addBookRoadmapHeaderBtn');
-    if (addBrBtn && _cuBr?.role === 'sales_manager') {
+    // ROP ham: karta faqat liddan (konversiyada) yaratiladi — server ROP'ga umumiy yozuvni bermaydi.
+    if (addBrBtn && ['sales_manager', 'rop'].includes(_cuBr?.role)) {
         addBrBtn.style.display = 'none';
     }
 
@@ -24113,6 +24007,8 @@ function openBookRoadmapModal(existing = null) {
     const _cuBr = getCurrentUser();
     const _isSmBr = _cuBr && _cuBr.role === 'sales_manager';
     const brAutoManagerId = _isSmBr ? (_cuBr.linkedManagerId || '') : d.managerId;
+    // Sotuv va ROP: ism, telefon, ID, menejer, til — liddan olinadi; o'zgartiriladigani bosqich va manzil.
+    const _brLocked = isEdit && (_isSmBr || _cuBr?.role === 'rop') ? ' disabled' : '';
 
     const managerOptions = `<option value="">— Menejerni tanlang —</option>` +
         managers.map(m => `<option value="${escapeHtml(m.id)}"${m.id === brAutoManagerId ? ' selected' : ''}>${escapeHtml(m.name)}</option>`).join('');
@@ -24127,25 +24023,25 @@ function openBookRoadmapModal(existing = null) {
         <div style="display:flex;flex-direction:column;gap:12px">
             <div class="form-group">
                 <label>Ism Familya *</label>
-                <input type="text" id="brName" class="form-control" value="${escapeHtml(d.name)}" placeholder="To'liq ism">
+                <input type="text" id="brName" class="form-control"${_brLocked} value="${escapeHtml(d.name)}" placeholder="To'liq ism">
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
                 <div class="form-group">
                     <label>Student ID</label>
-                    <input type="text" id="brStudentId" class="form-control" value="${escapeHtml(d.studentId || '')}" placeholder="ID raqam">
+                    <input type="text" id="brStudentId" class="form-control"${_brLocked} value="${escapeHtml(d.studentId || '')}" placeholder="ID raqam">
                 </div>
                 <div class="form-group">
                     <label>Sana</label>
-                    <input type="text" id="brDate" class="form-control" value="${escapeHtml(d.date || '')}" placeholder="kk.oo.yyyy">
+                    <input type="text" id="brDate" class="form-control"${_brLocked} value="${escapeHtml(d.date || '')}" placeholder="kk.oo.yyyy">
                 </div>
             </div>
             <div class="form-group">
                 <label>Telefon raqam</label>
-                <input type="text" id="brPhone" class="form-control" value="${escapeHtml(d.phone || '')}" placeholder="+998 90 000 00 00">
+                <input type="text" id="brPhone" class="form-control"${_brLocked} value="${escapeHtml(d.phone || '')}" placeholder="+998 90 000 00 00">
             </div>
             <div class="form-group">
                 <label>Viloyat, tuman</label>
-                <input type="text" id="brRegion" class="form-control" value="${escapeHtml(d.region || '')}" placeholder="Toshkent, Yunusobod">
+                <input type="text" id="brRegion" class="form-control"${_brLocked} value="${escapeHtml(d.region || '')}" placeholder="Toshkent, Yunusobod">
             </div>
             <div class="form-group">
                 <label>Yetkazib berish manzili</label>
@@ -24154,18 +24050,18 @@ function openBookRoadmapModal(existing = null) {
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
                 <div class="form-group" ${_isSmBr ? 'style="display:none"' : ''}>
                     <label>Sotuv menejeri</label>
-                    <select id="brManager" class="form-control">${managerOptions}</select>
+                    <select id="brManager" class="form-control"${_brLocked}>${managerOptions}</select>
                 </div>
                 <div class="form-group">
                     <label>Organik / Target</label>
-                    <select id="brKind" class="form-control">
+                    <select id="brKind" class="form-control"${_brLocked}>
                         <option value="organik"${d.kind !== 'target' ? ' selected' : ''}>Organik</option>
                         <option value="target"${d.kind === 'target' ? ' selected' : ''}>Target</option>
                     </select>
                 </div>
                 <div class="form-group">
                     <label>Til</label>
-                    <select id="brLang" class="form-control">
+                    <select id="brLang" class="form-control"${_brLocked}>
                         <option value="english"${dLang !== 'russian' ? ' selected' : ''}>Ingliz tili</option>
                         <option value="russian"${dLang === 'russian' ? ' selected' : ''}>Rus tili</option>
                     </select>
