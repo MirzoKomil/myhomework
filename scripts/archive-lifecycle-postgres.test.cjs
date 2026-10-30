@@ -199,6 +199,16 @@ test('arxiv + ishdan bo‘shatish (PostgreSQL)', { skip: !url }, async t => {
         await assert.rejects(tx(c => lifecycle.offboard(c, actor, { employeeId: 't-1', reason: 'Ketdi' })), e => e.code === 'TEACHER_HAS_STUDENTS');
         const p = await lifecycle.preview(pool, actor, 't-1');
         assert.equal(p.teacherStudents.main.length, 1);
+        // 31-okt: kursni tark etgan o'quvchi ishdan bo'shatishni to'smaydi (school_student_status 'left').
+        await pool.query(`CREATE TABLE IF NOT EXISTS school_student_status (id TEXT PRIMARY KEY, student_id TEXT NOT NULL, status TEXT NOT NULL,
+            from_date DATE NOT NULL, to_date DATE, reason_code TEXT NOT NULL DEFAULT '', reason TEXT NOT NULL DEFAULT '', payload JSONB NOT NULL DEFAULT '{}',
+            actor_id TEXT NOT NULL DEFAULT '', actor_name TEXT NOT NULL DEFAULT '', actor_role TEXT NOT NULL DEFAULT '', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            cancelled_at TIMESTAMPTZ, cancelled_by TEXT)`);
+        await pool.query(`INSERT INTO school_student_status (id, student_id, status, from_date) VALUES ('ss-left-1', 'st-t1', 'left', CURRENT_DATE - 10)`);
+        assert.equal((await lifecycle.preview(pool, actor, 't-1')).teacherStudents.main.length, 0, 'chiqib ketgan o\u2018quvchi sanalmaydi');
+        await pool.query(`INSERT INTO school_student_status (id, student_id, status, from_date) VALUES ('ss-rest-1', 'st-t1', 'restored', CURRENT_DATE - 2)`);
+        assert.equal((await lifecycle.preview(pool, actor, 't-1')).teacherStudents.main.length, 1, 'qayta tiklangan o\u2018quvchi yana sanaladi');
+        await pool.query(`DELETE FROM school_student_status WHERE student_id='st-t1'`);
     });
 
     await t.test('ochiq lidi bor xodimni oddiy o‘chirib bo‘lmaydi; toza xodim arxivga o‘chadi', async () => {
