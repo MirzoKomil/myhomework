@@ -127,3 +127,9 @@ html.rd[data-theme="dark"] .tl-flow { background: rgba(255, 255, 255, .03); }
 /* Admin jadvali: uzun holat ("Muddati o'tdi · natija kerak") kesilmasin — ikki qatorga o'tadi. */
 .tl-table td:last-child .sc-pill { white-space: normal; line-height: 1.3; }
 .tl-table td:last-child { padding-right: 20px; }
+/* Akademik → Sinov darsi: lid qisqa kartasi (drawer) */
+.tl-kv { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 10px 12px; margin: 0; font-size: 14px; }
+.tl-kv dt { color: var(--text-muted, #4B5563); font-weight: 600; } .tl-kv dd { margin: 0; font-weight: 600; min-width: 0; }
+.tl-notes { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.tl-notes li { border: 1px solid var(--border, #EEF1F6); border-radius: 12px; padding: 10px 12px; font-size: 13px; }
+.tl-notes p { margin: 4px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }

@@ -130,6 +130,15 @@ DO $$ BEGIN
   ALTER TABLE school_requests ADD CONSTRAINT school_requests_type_check CHECK (type IN ('leave','close','open','assist_late','student','assist_finance'));
  END IF;
 END $$;
+-- Ilgari qabul qilingan qoplash qarorlari o'quvchi "O'zgarishlar tarixi"ga bir marta ko'chiriladi (qayta ishga tushirilsa xavfsiz).
+INSERT INTO school_student_audit (student_id,action,changes,reason,actor_id,actor_name,actor_role,created_at)
+ SELECT m.student_id, CASE WHEN m.status='approved' THEN 'makeup-approved' ELSE 'makeup-rejected' END,
+  jsonb_build_object('makeupId', m.id, 'missedDate', TO_CHAR(m.missed_date,'YYYY-MM-DD'), 'heldDate', TO_CHAR(m.held_date,'YYYY-MM-DD'), 'teacherId', m.teacher_id, 'kind', m.kind, 'backfill', true),
+  COALESCE(m.decision_note,''), COALESCE(NULLIF(m.decided_by,''),'system'), COALESCE(m.decided_by_name,''), CASE WHEN COALESCE(m.decided_by,'')='' THEN 'system' ELSE '' END,
+  COALESCE(m.decided_at, m.held_date::timestamptz, m.created_at)
+ FROM school_makeups m
+ WHERE m.status IN ('approved','rejected')
+  AND NOT EXISTS (SELECT 1 FROM school_student_audit a WHERE a.student_id=m.student_id AND a.action IN ('makeup-approved','makeup-rejected') AND a.changes->>'makeupId'=m.id);
 `;
 // Jadvallar yaratilgach true — db.js dagi ilgaklar (sinov to'qnashuvi, guruh) faqat shunda ishlaydi.
 const state = { ready: false };

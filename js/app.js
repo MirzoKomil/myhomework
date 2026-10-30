@@ -8383,7 +8383,9 @@ function computeAdminHome({ students, leads, now = new Date() }) {
     const st = l => normalizeLeadStatus(l.status);
     const dayOf = l => leadTashkentDayKey(l.createdAt || l.date);
 
-    const active = students.filter(s => !s.frozen && !s.isStaffDemo && s.status !== 'inactive');
+    // "Faol" — O'quvchilar → Faol ro'yxati bilan bir xil qoida (AttendanceRules.isActiveStudent).
+    const isActive = window.AttendanceRules?.isActiveStudent || (s => !s.frozen && !s.isStaffDemo && s.status !== 'inactive');
+    const active = students.filter(s => isActive(s) && !String(s.id || '').startsWith('demo_'));
     const newThisMonth = active.filter(s => String(s.startDate || '').slice(0, 7) === monthKey).length;
 
     const managers = getSalesManagers().filter(m => staffStatus.isActive(m) || getManagerSalesForPeriod(m.id, 'oylik') > 0);
@@ -8427,12 +8429,14 @@ function computeAdminHome({ students, leads, now = new Date() }) {
         ...l,
         state: l.start == null ? 'wait' : nowMin >= l.start + l.dur ? 'done' : nowMin >= l.start ? 'now' : 'wait'
     }));
+    // Dars jadvali bilan bir xil ta'rif: har o'quvchi darsi alohida sanaladi (bir vaqtdagi bir nechta o'quvchi bitta qatorda, izohli).
+    const lessonCount = lessons.reduce((n, l) => n + l.count, 0);
 
     return {
         todayKey, active: active.length, newThisMonth, revenue, target, dealsMonth,
         leadsToday, leadsYesterday, leadsMonth, debtors: withDebt.length,
         overdueCount: overdue.length, overdueSum: overdue.reduce((s, x) => s + Number(x.debtAmount || 0), 0),
-        funnel, unanswered, unassigned, lessons, mgrRows
+        funnel, unanswered, unassigned, lessons, lessonCount, mgrRows
     };
 }
 
@@ -8529,7 +8533,7 @@ function renderAdminHome(user, students, leads, now = new Date()) {
                     note: 'Qarzdorlar roʻyxatida har biriga eslatma yuborish mumkin.',
                     primary: { label: 'Qarzdorlar', attrs: 'data-ahx-go="debtors"' }, secondary: { label: 'Lidlar', attrs: 'data-ahx-go="leads"' } })
                 : kbxDarkCard({ id: 'kbxAdmAct', eyebrow: nowLesson ? (nowLesson.state === 'now' ? 'HOZIR DARSDA' : `KEYINGI DARS · ${nowLesson.time}`) : 'BUGUNGI DARSLAR', title: nowLesson ? (nowLesson.group || nowLesson.names[0] || 'Dars') : 'Darslar tugadi',
-                    sub: nowLesson ? `${teacherName(nowLesson.teacherId)} · ${nowLesson.dur} daq` : `${d.lessons.length} ta dars boʻldi`,
+                    sub: nowLesson ? `${teacherName(nowLesson.teacherId)} · ${nowLesson.dur} daq` : `${d.lessonCount} ta dars boʻldi`,
                     chips: [d.unanswered ? { t: `${d.unanswered} javobsiz lid`, cls: 'red' } : null].filter(Boolean),
                     primary: { label: 'Dars jadvali', attrs: 'data-ahx-go="timetable"' }, secondary: { label: 'Lidlar', attrs: 'data-ahx-go="leads"' } });
             return `<div class="kbx-top">${plan}${dark}</div>`;
@@ -8539,8 +8543,8 @@ function renderAdminHome(user, students, leads, now = new Date()) {
                 <ul class="ahx-funnel">${d.funnel.map(f => `<li><span>${escapeHtml(f.label)}</span><i aria-hidden="true"><em style="width:${f.count ? Math.max(3, f.count / maxFunnel * 100) : 0}%"></em></i><b>${f.count}</b></li>`).join('')}</ul>
                 <div class="ahx-closed"><b>${d.dealsMonth}</b><div><strong>${escapeHtml(monthName[0].toUpperCase() + monthName.slice(1))}da toʻlov yopildi</strong><span>bu oy ${d.leadsMonth} ta yangi lid · nisbat ${String(conv).replace('.', ',')}%</span></div></div>
             </section>
-            <section class="card ahx-card"><div class="ahx-card-h"><h3>Bugungi darslar <small>· ${shownLessons.length < d.lessons.length ? `${shownLessons.length} / ${d.lessons.length}` : d.lessons.length} ta</small></h3><button type="button" class="ahx-link" data-ahx-go="timetable">Dars jadvali</button></div>
-                ${shownLessons.length ? `<ul class="ahx-lessons">${shownLessons.map(l => `<li><b>${escapeHtml(l.time)}</b><div><strong>${escapeHtml(l.group || (l.count === 1 ? l.names[0] : `${l.names[0]} va yana ${l.count - 1} ta`) || 'Dars')}</strong><span>${escapeHtml(teacherName(l.teacherId))}${l.group ? ` · ${l.count} oʻquvchi` : ''} · ${l.dur} daq</span></div><span class="ahx-pill ${stateLabel[l.state][1]}">${stateLabel[l.state][0]}</span></li>`).join('')}</ul>` : '<p class="dashboard-empty">Bugun dars yoʻq</p>'}
+            <section class="card ahx-card"><div class="ahx-card-h"><h3>Bugungi darslar <small>· ${d.lessonCount} ta${shownLessons.length < d.lessons.length ? `, ${shownLessons.reduce((n, l) => n + l.count, 0)} tasi koʻrsatilgan` : ''}</small></h3><button type="button" class="ahx-link" data-ahx-go="timetable">Dars jadvali</button></div>
+                ${shownLessons.length ? `<ul class="ahx-lessons">${shownLessons.map(l => `<li><b>${escapeHtml(l.time)}</b><div><strong>${escapeHtml(l.group || (l.count === 1 ? l.names[0] : `${l.names[0]} va yana ${l.count - 1} ta`) || 'Dars')}</strong><span>${escapeHtml(teacherName(l.teacherId))}${l.group || l.count > 1 ? ` · ${l.count} oʻquvchi` : ''} · ${l.dur} daq</span></div><span class="ahx-pill ${stateLabel[l.state][1]}">${stateLabel[l.state][0]}</span></li>`).join('')}</ul>` : '<p class="dashboard-empty">Bugun dars yoʻq</p>'}
             </section>
             <section class="card ahx-card ahx-card--flush"><div class="ahx-card-h"><h3>Sotuv menejerlari · ${escapeHtml(monthName)}</h3><button type="button" class="ahx-link" data-ahx-go="rating">Reyting</button></div>
                 ${d.mgrRows.length ? `<div class="ahx-tbl-wrap"><table class="ahx-tbl"><thead><tr><th scope="col">Menejer</th><th scope="col">Sotuvlar</th><th scope="col">Summa</th><th scope="col">Reja</th></tr></thead>
@@ -10239,9 +10243,10 @@ function renderStudents() {
     // Muzlatilgan o'quvchilarni Faol ro'yxatdan chiqarish
     // Xodimlarning demo akkauntlari (isStaffDemo / id "demo_") ro'yxatda ham, "Jami"da ham yo'q — ular faqat HR → xodim kartasida.
     students = students.filter(s => !s.frozen && !isStaffDemoStudent(s));
-    // ROP: "Faol" — yagona qoida (js/attendanceRules.js isActiveStudent): kursi tugagan / "inactive" o'quvchi kirmaydi
-    // (sotuv O'quvchilaridagi "Faol emas" bilan bir xil). Admin ro'yxati o'zgarmagan.
-    if (currentUser?.role === 'rop' && window.AttendanceRules?.isActiveStudent) students = students.filter(s => window.AttendanceRules.isActiveStudent(s));
+    // "Faol" — yagona qoida (js/attendanceRules.js isActiveStudent): kursi tugagan / "inactive" o'quvchi kirmaydi
+    // (sotuv O'quvchilaridagi "Faol emas" va Bosh sahifadagi "Faol o'quvchilar" soni bilan bir xil).
+    // ROP ham, admin/boshliq ham shu ta'rifni ko'radi; ustoz kabineti o'z biriktirishlari bo'yicha qoladi.
+    if (!isTeacherRole && window.AttendanceRules?.isActiveStudent) students = students.filter(s => window.AttendanceRules.isActiveStudent(s));
 
     // 8-vazifa (qayta ish 4): O'quvchilar bo'limi Sotuv bo'limi bilan to'liq
     // integratsiya qilingan — "Faol o'quvchilar" ro'yxatida FAQAT sotuv
@@ -21036,14 +21041,14 @@ function _leadRecordingBodyHtml(recordings, state, readOnly) {
     const listHtml = state === 'loading'
         ? `<div class="text-muted" style="padding:20px 0;text-align:center">Yuklanmoqda...</div>`
         : state === 'error'
-        ? `<div class="text-muted" style="padding:20px 0;text-align:center">Zapislarni yuklashda xatolik</div>`
+        ? `<div class="text-muted" style="padding:20px 0;text-align:center">Qo'ng'iroq yozuvlarini yuklashda xatolik</div>`
         : recordings.length
         ? recordings.map(r => `
             <div class="lead-recording-item" style="padding:12px 0;border-bottom:1px solid var(--border)">
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
                     <div style="font-size:12px;color:var(--text-muted);flex:1;min-width:0">${escapeHtml(new Date(r.createdAt).toLocaleString('uz-UZ'))} · ${r.source === 'beeline' ? 'Beeline' : "Qo'lda yuklangan"}${r.uploadedBy ? ' · ' + escapeHtml(r.uploadedBy) : ''}</div>
                     ${readOnly ? '' : `<button type="button" class="lead-recording-delete" data-recording-delete="${escapeHtml(r.id)}"
-                        title="Zapisni o'chirish" aria-label="Zapisni o'chirish">
+                        title="Yozuvni o'chirish" aria-label="Yozuvni o'chirish">
                         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <polyline points="3 6 5 6 21 6"/>
                             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
@@ -21052,12 +21057,12 @@ function _leadRecordingBodyHtml(recordings, state, readOnly) {
                 </div>
                 <audio controls style="width:100%" src="${escapeHtml(r.url)}"></audio>
             </div>`).join('')
-        : `<p class="text-muted lead-empty-hint" style="margin-top:4px">Hozircha zapis mavjud emas</p>`;
+        : `<p class="text-muted lead-empty-hint" style="margin-top:4px">Hozircha qo'ng'iroq yozuvi yo'q</p>`;
 
     const uploadSectionHtml = readOnly ? '' : `
     <div style="margin-top:14px">
         <input type="file" id="recordingFileInput" accept="audio/*" style="display:none">
-        <button type="button" class="btn-primary-sm" id="recordingUploadBtn">+ Zapis yuklash</button>
+        <button type="button" class="btn-primary-sm" id="recordingUploadBtn">+ Yozuv yuklash</button>
         <div style="font-size:11px;color:var(--text-muted);margin-top:8px;line-height:1.5">Beeline IP Telefoniyasi ulanganda qo'ng'iroqlar avtomatik shu yerga tushadi. Hozircha telefoningizning o'z qo'ng'iroq-yozuvchisi bilan yozib, shu yerdan yuklashingiz mumkin.</div>
     </div>`;
 
@@ -21093,13 +21098,13 @@ function openLeadRecordingModal(lang, leadId) {
             try {
                 const uploaded = await apiUploadFile(file);
                 await apiAddCallRecording(lang, leadId, uploaded.url, uploaded.fileName, 0);
-                showMiniToast('Zapis yuklandi');
+                showMiniToast('Yozuv yuklandi');
                 refreshLeadRecordingCounts();
                 await refresh();
             } catch (err) {
                 alert('Yuklashda xatolik: ' + (err.message || err));
                 uploadBtn.disabled = false;
-                uploadBtn.textContent = '+ Zapis yuklash';
+                uploadBtn.textContent = '+ Yozuv yuklash';
             } finally {
                 fileInput.value = '';
             }
@@ -21115,7 +21120,7 @@ function openLeadRecordingModal(lang, leadId) {
                 btn.disabled = true;
                 try {
                     await apiDeleteCallRecording(btn.dataset.recordingDelete, lang, leadId);
-                    showMiniToast("Zapis o'chirildi");
+                    showMiniToast("Yozuv o'chirildi");
                     refreshLeadRecordingCounts();
                     await refresh();
                 } catch (err) {
@@ -21139,7 +21144,7 @@ function openLeadRecordingModal(lang, leadId) {
         }
     }
 
-    openModal(`${escapeHtml(lead.name)} — Zapis`, _leadRecordingBodyHtml([], 'loading', _readOnly), '');
+    openModal(`${escapeHtml(lead.name)} — qo'ng'iroq yozuvlari`, _leadRecordingBodyHtml([], 'loading', _readOnly), '');
     if (!_readOnly) bindUploadBtn(refresh);
     refresh();
 }
@@ -21319,7 +21324,7 @@ function openLeadOverview(lang, leadId) {
     const readOnly = isLeadsReadOnly(user);
     const footer = `
         <button type="button" class="btn-primary-sm" data-lov-act="comments">${readOnly ? 'Izohlar' : 'Izoh qoʻshish'}</button>
-        <button type="button" class="lov-btn" data-lov-act="recording">Zapis</button>`;
+        <button type="button" class="lov-btn" data-lov-act="recording">Qoʻngʻiroq yozuvlari</button>`;
     openModal(lead.name || 'Lid kartasi', renderLeadOverviewHtml(lead, lang, user, { actions: true }), footer, { wide: true });
     const actions = {
         manager: () => openAssignManagerModal(lang, leadId),
