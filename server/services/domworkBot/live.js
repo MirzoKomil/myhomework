@@ -51,6 +51,26 @@ async function names(db) {
     for (const r of (await db.query('SELECT id,name FROM hr_employees')).rows) map.set(r.id, r.name);
     return id => (id ? map.get(id) || 'Noma’lum xodim' : 'biriktirilmagan');
 }
+// lead_audit.actor_name ba'zan ism emas, login (telefon/email) bo'ladi — xodim ismiga aylantiramiz.
+const digits = v => String(v || '').replace(/\D/g, '').slice(-9);
+async function actors(db) {
+    const byLogin = new Map(), byId = new Map();
+    for (const r of (await db.query('SELECT id,name,login,phone,email FROM hr_employees')).rows) {
+        byId.set(r.id, r.name);
+        for (const k of [r.login, r.email]) if (k) byLogin.set(String(k).trim().toLowerCase(), r.name);
+        for (const k of [r.login, r.phone, r.email]) if (digits(k).length === 9) byLogin.set(digits(k), r.name);
+    }
+    const users = new Map();
+    try { for (const r of (await db.query('SELECT id,name,email FROM users')).rows) users.set(r.id, r); } catch { /* users jadvali yo'q (test) */ }
+    const human = v => v && !/^[+\d\s()-]{7,}$/.test(v) && !v.includes('@');
+    return (id, raw) => {
+        const name = String(raw || '').trim(), u = users.get(id);
+        if (human(name)) return name;
+        if (human(u?.name)) return u.name;
+        return byId.get(id) || byLogin.get(name.toLowerCase()) || byLogin.get(digits(name)) || byLogin.get(String(u?.email || '').toLowerCase())
+            || byLogin.get(digits(u?.email)) || name || 'Tizim';
+    };
+}
 
 function newComments(before, after) {
     const old = new Set((before?.comments || []).map(c => c?.id || JSON.stringify(c)));
@@ -84,7 +104,7 @@ async function leadFeed(db) {
     if (!rows.length) return;
     await db.query("UPDATE domwork_bot_live_cursor SET value=$1 WHERE name='lead_audit'", [rows[rows.length - 1].id]);
     const langs = new Map((await db.query('SELECT id,language FROM leads WHERE id=ANY($1)', [[...new Set(rows.map(r => r.lead_id))]])).rows.map(r => [r.id, r.language]));
-    const who = await names(db);
+    const who = await names(db), actorName = await actors(db);
     const created = [], assigned = new Map(), moved = new Map(), deleted = [];
     const push = (map, key, value) => { if (!map.has(key)) map.set(key, []); map.get(key).push(value); };
     for (const row of rows) {
@@ -92,21 +112,21 @@ async function leadFeed(db) {
         const before = snap.before || null, after = snap.after || (row.action === 'created' ? snap : null);
         const lang = langs.get(row.lead_id) || after?.language || before?.language;
         if (lang !== 'russian') continue;
-        const actor = String(row.actor_name || '').trim() || 'Tizim';
+        const actor = actorName(row.actor_id, row.actor_name);
         const name = (after || before)?.name || 'Nomsiz lid';
-        if (row.action === 'deleted') { deleted.push({ actor, name }); continue; }
+        if (row.action === 'deleted') { deleted.push({ actor, name, manager: before?.managerId || '' }); continue; }
         if (row.action === 'created' || !before) { created.push({ name, source: after?.source || '', manager: after?.managerId || '' }); continue; }
         if (!after) continue;
         if ((before.managerId || '') !== (after.managerId || ''))
             push(assigned, [actor, before.managerId || '', after.managerId || ''].join('|'), name);
         const from = stages.normalizeLeadStatus(before.status), to = stages.normalizeLeadStatus(after.status);
-        if (from !== to) push(moved, [actor, from, to].join('|'), { name, reason: reasonOf(before, after) });
+        if (from !== to) push(moved, [actor, from, to].join('|'), { name, reason: reasonOf(before, after), manager: after.managerId || '' });
     }
     if (created.length) {
         const by = {};
         for (const c of created) by[c.source || 'Noma’lum manba'] = (by[c.source || 'Noma’lum manba'] || 0) + 1;
         await send(db, `lead-new:${rows[0].id}`, `🆕 <b>${created.length} ta yangi lid</b> · ${T.esc(Object.entries(by).map(([k, v]) => `${k}: ${v}`).join(', '))}\n`
-            + list(created.map(c => `${T.esc(c.name)}${c.manager ? ' → ' + T.esc(who(c.manager)) : ''}`)), { silent: true });
+            + list(created.map(c => `${T.esc(c.name)} → ${c.manager ? T.esc(who(c.manager)) : 'hali biriktirilmagan'}`)), { silent: true });
     }
     for (const [key, leads] of assigned) {
         const [actor, from, to] = key.split('|');
@@ -118,13 +138,15 @@ async function leadFeed(db) {
     for (const [key, items] of moved) {
         const [actor, from, to] = key.split('|');
         const icon = { 'sifatsiz-lidlar': '🚫', 'muvaffaqiyatsiz-sotuv': '💔', 'tolov-yopildi': '🎉', 'sinov-darsida': '🧪', 'keyin-sotib-olmoqchi': '⏳' }[to] || '🔀';
+        // Mas'ul menejer — lid kimga biriktirilgan; harakatni boshqa odam qilgan bo'lsa ham aniq ko'rinadi.
+        const owner = m => `👤 Mas’ul: ${T.b(who(m))}`;
         const text = items.length === 1
-            ? `${icon} <b>${T.esc(actor)}</b>: ${T.b(items[0].name)}\n${T.esc(stage(from))} → ${T.b(stage(to))}${items[0].reason ? `\n📝 Sabab: ${T.i(items[0].reason)}` : ''}`
+            ? `${icon} <b>${T.esc(actor)}</b>: ${T.b(items[0].name)}\n${T.esc(stage(from))} → ${T.b(stage(to))}\n${owner(items[0].manager)}${items[0].reason ? `\n📝 Sabab: ${T.i(items[0].reason)}` : ''}`
             : `${icon} <b>${T.esc(actor)}</b> ${T.b(items.length + ' ta')} lidni ${T.esc(stage(from))} → ${T.b(stage(to))}ga o‘tkazdi\n`
-              + list(items.map(x => T.esc(x.name) + (x.reason ? ' — ' + T.i(x.reason) : '')));
+              + list(items.map(x => T.esc(x.name) + ` (${T.esc(who(x.manager))})` + (x.reason ? ' — ' + T.i(x.reason) : '')));
         await send(db, `lead-move:${rows[0].id}:${key}`, text);
     }
-    if (deleted.length) await send(db, `lead-del:${rows[0].id}`, `🗑 <b>Lid o‘chirildi</b>\n` + list(deleted.map(d => `${T.esc(d.actor)}: ${T.esc(d.name)}`)));
+    if (deleted.length) await send(db, `lead-del:${rows[0].id}`, `🗑 <b>Lid o‘chirildi</b>\n` + list(deleted.map(d => `${T.esc(d.actor)}: ${T.esc(d.name)} (mas’ul: ${T.esc(who(d.manager))})`)));
 }
 
 async function hourly(db, clock, once) {
