@@ -143,7 +143,7 @@ async function preview(db, actor, employeeId) {
     };
     if (roles.isMain(mapEmployee(emp)) || emp.role === 'yordamchi' || emp.dual_role === true) {
         const { rows } = await db.query(
-            `SELECT id, name, teacher_id, assistant_teacher_id FROM students WHERE teacher_id = $1 OR assistant_teacher_id = $1 ORDER BY name`, [emp.id]);
+            `SELECT s.id, s.name, s.teacher_id, s.assistant_teacher_id FROM students s WHERE (s.teacher_id = $1 OR s.assistant_teacher_id = $1) AND ${await currentStudentSql(db)} ORDER BY s.name`, [emp.id]);
         out.teacherStudents = {
             main: rows.filter(r => r.teacher_id === emp.id).map(r => ({ id: r.id, name: r.name })),
             assistant: rows.filter(r => r.assistant_teacher_id === emp.id).map(r => ({ id: r.id, name: r.name }))
@@ -154,6 +154,21 @@ async function preview(db, actor, employeeId) {
     }
     if (!out.accounts.length) out.warnings.push('Bu xodimga bog‘langan login akkaunt topilmadi.');
     return out;
+}
+
+// Hozir o'qiyotgan o'quvchilar: kursni tark etgan (school_student_status 'left', bekor qilinmagan, oxirgi holat) va
+// xodim demo akkauntlari hisobga olinmaydi — ishdan bo'shatishni ular to'sib qo'ymasin (31-okt: Mohlaroy, chiqib ketgan Malika).
+// Hozir o'qiyotgan o'quvchilar: kursni tark etgan (school_student_status 'left', bekor qilinmagan, keyin tiklanmagan) va
+// xodim demo akkauntlari hisobga olinmaydi — ishdan bo'shatishni ular to'sib qo'ymasin (31-okt: Mohlaroy, chiqib ketgan Malika).
+// Akademik jadvali hali yaratilmagan bazada (eski o'rnatish, testlar) faqat demo filtri qo'llanadi.
+async function currentStudentSql(db) {
+    const demo = `COALESCE(s.extra_data->>'isStaffDemo','false') <> 'true'`;
+    const has = (await db.query(`SELECT to_regclass('school_student_status') IS NOT NULL AS ok`)).rows[0]?.ok;
+    if (!has) return demo;
+    return `${demo} AND NOT EXISTS (SELECT 1 FROM school_student_status ss WHERE ss.student_id = s.id AND ss.cancelled_at IS NULL
+        AND ss.status = 'left' AND ss.from_date <= CURRENT_DATE
+        AND NOT EXISTS (SELECT 1 FROM school_student_status r WHERE r.student_id = s.id AND r.cancelled_at IS NULL
+            AND r.status = 'restored' AND r.from_date >= ss.from_date))`;
 }
 
 async function openLoad(db) {
@@ -183,7 +198,7 @@ async function offboard(db, actor, body = {}) {
 
     // Ustoz: o'quvchilar avval odatiy o'tkazish oqimi orqali ko'chirilishi shart.
     const { rows: teaching } = await db.query(
-        'SELECT COUNT(*)::int AS n FROM students WHERE teacher_id = $1 OR assistant_teacher_id = $1', [emp.id]);
+        `SELECT COUNT(*)::int AS n FROM students s WHERE (s.teacher_id = $1 OR s.assistant_teacher_id = $1) AND ${await currentStudentSql(db)}`, [emp.id]);
     if (teaching[0].n > 0) {
         throw err(409, `Bu ustozga ${teaching[0].n} ta o‘quvchi biriktirilgan. Avval ularni boshqa ustozga o‘tkazing.`, 'TEACHER_HAS_STUDENTS');
     }
