@@ -28,6 +28,12 @@ body.rs-sotuv #tab-students:has(> #schoolMyStudents:not([hidden])) > :not(#schoo
 .ss-ch2 { min-width: 0; padding: 0 8px; }
 .ss-ch2--d { padding: 0 6px; overflow: hidden; }
 .ss-ch2--d input { width: 134px; max-width: 100%; padding: 0; font-size: 12px; box-sizing: border-box; }
+/* BAHO7: "Boshqa sana" katagi qatorda siqilmaydi — kalendar belgisi sana matni ustiga tushmaydi */
+.ss-chips2 > .ss-ch2--d { flex: 0 0 auto; width: 146px; box-sizing: border-box; }
+.ss-chips2 > .ss-ch2--d input { width: 100%; }
+html.rd .ss-ch2--d .team-date { width: 100%; }
+html.rd .ss-ch2--d .team-date-face { left: 4px; font-size: 12.5px; font-weight: 600; }
+.ss-ch2--d input::-webkit-calendar-picker-indicator { margin-left: 2px; cursor: pointer; }
 .ss-lerr { padding: 18px; }
 .rs-herr { color: var(--kb-bad-fg, #B42318); }
 @media (min-width: 1181px) {
@@ -160,3 +166,33 @@ body.rs-sotuv #tab-students:has(> #schoolMyStudents:not([hidden])) > :not(#schoo
 body.rs-rating #salesSectionNav, body.rs-rating #rsMoreSales { display: none !important; }
 .rs-rtbar { display: inline-flex; width: auto; margin: 0 0 14px; }
 [data-sales-panel="rating"].rs-rt-teachers > :not(#rsRatingBar):not(#rsRatingTeachers) { display: none !important; }
+
+/* ── BAHO7 · Konversiya dizayn bo'yicha (SotuvKonversiya / SotuvKonvertGuruh) ── */
+/* Sahifa ko'rinishida X yo'q — chiqish "← Lidlar" havolasi orqali. */
+#modalOverlay.cv-pagemode #modalClose { display: none; }
+/* 3/4/6-qadam (Xulosa kartasi bor): asosiy tugma kartada, pastki panel kerak emas ("Bekor qilish" yo'q). */
+@media (min-width: 901px) { #modalOverlay.cv-pagemode .modal.cv-hasaside .modal-footer { display: none; } }
+/* Qadamlar: raqamli doiralar, "›" bilan (dizayn) */
+.cv-dots { gap: 6px 4px; align-items: center; }
+.cv-dstep { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: var(--text-muted, #4B5563); }
+.cv-dstep:not(:last-child)::after { content: "›"; margin: 0 6px 0 4px; color: var(--text-muted, #98A2B3); font-weight: 700; }
+.cv-dn { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; font-size: 11.5px; font-weight: 800; color: var(--text-muted, #4B5563); background: transparent; flex: none; }
+.cv-dstep.is-done { color: var(--text, #0B1220); }
+.cv-dstep.is-done .cv-dn { background: #12B76A; color: #fff; }
+.cv-dstep.is-now { color: var(--text, #0B1220); font-weight: 800; }
+.cv-dstep.is-now .cv-dn { background: var(--kb-primary, #0B63E5); color: #fff; }
+/* "Doimiy jadval" kartasi: vaqtlar to'ri kesilmaydi (ichki skroll yo'q), dizayndagidek keng kataklar */
+.cv-sched { margin-top: 0; }
+.cv-sched .cv-slots { max-height: none; overflow: visible; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.cv-sched .cv-oth { margin: 12px 0 0; }
+.cv-oth-l { display: inline-flex; flex-wrap: wrap; gap: 8px; }
+.cv-sched .cv-grid { margin-top: 12px; }
+@media (max-width: 1180px) { .cv-sched .cv-slots { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .cv-sched .cv-slots { grid-template-columns: repeat(2, minmax(0, 1fr)); } .cv-dstep { font-size: 12px; } .cv-dstep:not(:last-child)::after { margin: 0 2px; } }
+/* SotuvHolatlar bo'sh holati (dizayn "· namuna"): namuna xira, tugmalar o'chiq, ostida haqiqiy holat */
+.rs-hc-nm { font-weight: 600; color: var(--text-muted, #4B5563); text-transform: none; }
+.rs-hc-sample { display: flex; flex-direction: column; gap: 10px; opacity: .6; pointer-events: none; user-select: none; }
+.rs-hc.is-sample .rs-hc-empty { margin-top: 10px; }
+/* ROP / sotuv · Dars jadvali (RopJadval, SotuvJadval): ustoz qatorida avatar yo'q, ism to'liq (dizayn) — kesilmaydi, kerak bo'lsa 2 qator */
+body.rs-rop .sv-hl > .sc-av, body.rs-sotuv .sv-hl > .sc-av { display: none; }
+body.rs-rop .sv-hl b, body.rs-rop .sv-hl .sc-link, body.rs-sotuv .sv-hl b, body.rs-sotuv .sv-hl .sc-link { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; line-height: 1.25; }

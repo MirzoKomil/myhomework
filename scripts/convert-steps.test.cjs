@@ -31,3 +31,13 @@ test('haqiqatan bajarilgan qadamlar ✓', () => {
     const noPay = { ...lead, paymentSurvey: undefined };
     assert.deepEqual(done(cv.steps(6, noPay)), ['Sinov', 'Natija', 'Tarif va jadval', 'Telegram guruh']);
 });
+
+test('BAHO7: konversiya sahifasi — raqamli doiralar (dizayn), bajarilgan qadam ✓, joriy aria-current', () => {
+    const cv = load();
+    const lead = { trialRequest: { state: 'completed', attended: true, teacherId: 't1', scheduledAt: '2026-10-27T10:30:00Z' }, paymentOnboarding: { teacherId: 't1', isTrial: true } };
+    const html = cv.steps(3, lead, 'dots');
+    assert.match(html, /class="cv-chips cv-dots"/);
+    assert.equal([...html.matchAll(/class="cv-dstep is-done"/g)].length, 2);
+    assert.match(html, /class="cv-dstep is-now" aria-current="step"><span class="cv-dn" aria-hidden="true">3<\/span>Tarif va jadval/);
+    assert.doesNotMatch(html, /Narx — oyiga/);
+});

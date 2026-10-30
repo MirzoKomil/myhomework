@@ -199,7 +199,9 @@
     const TITLES = {
         sales: 'Sotuv', marketing: 'Marketing', students: 'Oʻquvchilar', finance: 'Moliya', hr: 'HR boʻlimi',
         analitika: 'Analitika', 'teachers-section': 'Akademik boʻlim', timetable: 'Dars jadvali',
-        'trial-lessons': 'Sinov darslari', guides: 'Yoʻriqnomalar', 'student-app': 'Mobil ilova', profile: 'Sozlamalar'
+        'trial-lessons': 'Sinov darslari', guides: 'Yoʻriqnomalar', 'student-app': 'Mobil ilova', profile: 'Sozlamalar',
+        // ROP: Tasdiq va Guruhlar sahifalari (dizayn RopTasdiq / RopGuruhlar) — logo emas, sahifa nomi.
+        'school-approvals': 'Sotuv tahrirlari', 'school-groups': 'Telegram guruhlar', 'school-assist': 'Yordamchi aloqalari'
     };
     function syncTitle() {
         const header = document.querySelector('.top-header');
@@ -360,8 +362,8 @@
         });
     }
 
-    // Oy tanlagich (type=month): "Oktabr 2026" — brauzer tilidan qat'i nazar.
-    const UZ_MONTHS = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentabr', 'Oktabr', 'Noyabr', 'Dekabr'];
+    // Oy tanlagich (type=month): "Oktyabr 2026" — brauzer tilidan qat'i nazar.
+    const UZ_MONTHS = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentyabr', 'Oktyabr', 'Noyabr', 'Dekabr'];
     function enhanceMonths(root) {
         root.querySelectorAll('input[type="month"]:not([data-team-date])').forEach(input => {
             input.dataset.teamDate = '1';

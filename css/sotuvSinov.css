@@ -111,3 +111,6 @@ html.rd[data-theme="dark"] .ss-sbar { background: #050912; border: 1px solid var
   .ss-big { white-space: normal; text-align: center; }
 }
 .ss-jhint { white-space: normal; }
+/* BAHO7: ustoz ismi to'liq (dizayndagidek "Kamola Mirzayeva"), kesilmaydi — kerak bo'lsa ikki qatorga o'tadi */
+.ss-g3 .ss-tn { width: 212px; }
+.ss-g3 th.ss-tn .ss-nm { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; line-height: 1.2; }

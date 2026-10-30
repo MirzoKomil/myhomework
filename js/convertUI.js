@@ -68,8 +68,14 @@
         if (n === 5) return !!(ob.telegramGroupLink && ob.telegramGroupName);
         return false;
     }
-    function steps(active, lead) {
+    // style 'dots' — SotuvKonversiya sahifasi (raqamli doiralar, "›" bilan); standart — chiplar (SotuvKonvertGuruh oynasi).
+    function steps(active, lead, style = 'chips') {
         const tr = trialInfo(lead);
+        if (style === 'dots') return `<ol class="cv-chips cv-dots" aria-label="O'quvchiga aylantirish qadamlari">${STEPS.map((l, i) => {
+            const n = i + 1, done = n < active && stepDone(n, lead, tr);
+            const cls = n === active ? 'is-now' : done ? 'is-done' : '';
+            return `<li class="cv-dstep ${cls}"${n === active ? ' aria-current="step"' : ''}><span class="cv-dn" aria-hidden="true">${done ? '✓' : n}</span>${done ? '<span class="sr-only">bajarildi: </span>' : ''}${esc(l)}</li>`;
+        }).join('')}</ol>`;
         return `<ol class="cv-chips" aria-label="O'quvchiga aylantirish qadamlari">${STEPS.map((l, i) => {
             const n = i + 1, done = n < active && stepDone(n, lead, tr);
             const cls = n === active ? 'is-now' : done ? 'is-done' : '';
@@ -97,7 +103,7 @@
         const oldSteps = modalBody.querySelector('.pay-steps');
         const survey = modalBody.querySelector('.lead-survey');
         if (!survey) return;
-        oldSteps?.insertAdjacentHTML('beforebegin', `<p class="cv-sub">${subline(lead, lang)}</p>${steps(3, lead)}`);
+        oldSteps?.insertAdjacentHTML('beforebegin', `<p class="cv-sub">${subline(lead, lang)}</p>${steps(3, lead, 'dots')}`);
         oldSteps?.remove();
         const lay = document.createElement('div'); lay.className = 'cv-lay';
         lay.innerHTML = '<div class="cv-main"></div><aside class="cv-aside" aria-label="Xulosa"></aside>';
@@ -111,23 +117,31 @@
             const f = durSel.closest('.lead-survey-field'); if (f) f.hidden = true, f.style.display = 'none';
             const box = document.createElement('section'); box.className = 'cv-box';
             box.innerHTML = `<h4>Tarif</h4><div class="cv-tar" role="radiogroup" aria-label="Tarif">${[...durSel.options].filter(o => o.value).map(o => `<button type="button" role="radio" data-dur="${esc(o.value)}" aria-checked="${o.value === durSel.value}">${esc(o.value)} daq${PRICE[o.value] ? ` · ${num(PRICE[o.value])}<span class="cv-pm"> so'm/oy</span>` : ''}</button>`).join('')}</div>
-              ${tr.t?.resultNote ? `<p class="cv-rec">Ustoz tavsiyasi: <b>"${esc(tr.t.resultNote)}"</b></p>` : ''}<p class="cv-hint">Narx — oyiga. To'lov turi va summasi keyingi qadamda.</p>`;
+              ${tr.t?.resultNote ? `<p class="cv-rec">Ustoz tavsiyasi: <b>"${esc(tr.t.resultNote)}"</b></p>` : ''}`;
             survey.prepend(box);
             box.querySelectorAll('[data-dur]').forEach(b => b.onclick = () => { durSel.value = b.dataset.dur; durSel.dispatchEvent(new Event('change', { bubbles: true })); sync(); });
         }
         // Bo'sh vaqt kartalari: tanlangan kunlarning UCHALASIDA ham bo'sh vaqtlar. To'liq jadval — "Barcha vaqtlar" ichida.
+        // Dizayn (SotuvKonversiya): "Doimiy jadval · Ustoz" kartasi — bo'sh vaqtlar to'ri (kesilmaydi), "Boshqa ustoz" chiplari,
+        // to'liq jadval (yig'ilgan), tanlangan vaqt va "Birinchi dars" bitta kartada. Asl ustoz select'i yashirin — tanlov chiplar orqali.
         let slots = null;
+        const others = document.createElement('div'); others.className = 'cv-oth';
+        const firstBox = document.createElement('div'); firstBox.className = 'cv-first';
         if (block && picker) {
+            const card = document.createElement('section'); card.className = 'cv-box cv-sched'; card.setAttribute('aria-label', 'Doimiy jadval');
+            // Asl blok ustoz tanlanmaguncha yashirin — karta undan tashqarida (ustoz chiplari doim ko'rinadi).
+            block.before(card);
             slots = document.createElement('div'); slots.className = 'cv-slotw';
-            picker.before(slots);
             const det = document.createElement('details'); det.className = 'cv-grid';
             det.innerHTML = '<summary>Barcha vaqtlar jadvali (har kun alohida)</summary>';
-            picker.before(det); det.appendChild(picker);
-            const sel = modalBody.querySelector('#onboardScheduleSelected'); if (sel) det.after(sel);
+            det.appendChild(picker);
+            card.append(slots, others, det);
+            const sel = modalBody.querySelector('#onboardScheduleSelected'); if (sel) card.appendChild(sel);
+            card.appendChild(firstBox);
             block.querySelectorAll(':scope > .lead-survey-label, :scope > .lead-survey-hint').forEach(x => { x.hidden = true; x.style.display = 'none'; });
-        }
-        const firstBox = document.createElement('div'); firstBox.className = 'cv-first';
-        if (slots) (modalBody.querySelector('#onboardScheduleSelected') || slots).after(firstBox);
+        } else teacherSel?.closest('.lead-survey-field')?.after(others);
+        const tField = teacherSel?.closest('.lead-survey-field');
+        if (tField && slots) { tField.hidden = true; tField.style.display = 'none'; }
         const firstDates = (pat, time) => {
             const days = PAT[pat].days; const out = []; let d = ymdLocal(); const nowM = (() => { const x = new Date(Date.now() + 5 * 3600000); return x.getUTCHours() * 60 + x.getUTCMinutes(); })();
             const tm = time ? Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5)) : 0;
@@ -142,8 +156,6 @@
             firstBox.innerHTML = `<p class="cv-st">Birinchi dars</p><div class="cv-fd" role="radiogroup" aria-label="Birinchi dars">${list.map((d, i) => `<button type="button" role="radio" data-first="${d}" aria-checked="${d === modalBody.dataset.cvFirst}">${esc(dLabel(d))}${i === 0 || d === modalBody.dataset.cvFirst ? ' · ' + esc(time) : ''}</button>`).join('')}</div>`;
             firstBox.querySelectorAll('[data-first]').forEach(b => b.onclick = () => { modalBody.dataset.cvFirst = b.dataset.first; sync(); });
         };
-        const others = document.createElement('div'); others.className = 'cv-oth';
-        teacherSel?.closest('.lead-survey-field')?.after(others);
         const freeTimes = (tid, pat, dur) => {
             if (!g('getTeacherBusyWeeklySlots') || !g('canFitWeeklyLesson') || !g('generateTimeSlots')) return [];
             const busy = getTeacherBusyWeeklySlots(tid, null, lead?.id || null), days = PAT[pat].days;
@@ -155,7 +167,7 @@
         const drawSlots = () => {
             if (!slots) return;
             const tid = teacherSel?.value, dur = Number(durSel?.value) || 30;
-            if (!tid) { slots.innerHTML = ''; return; }
+            if (!tid) { slots.innerHTML = '<div class="cv-sh"><b>Doimiy jadval</b></div><p class="cv-st">Avval ustozni tanlang — bo\'sh vaqtlar shu yerda chiqadi.</p>'; return; }
             const pat = PAT[modalBody.dataset.onboardSchedulePattern] ? modalBody.dataset.onboardSchedulePattern : 'mwf';
             const list = freeTimes(tid, pat, dur), pickT = modalBody.dataset.onboardScheduleTime, pickD = Number(modalBody.dataset.onboardScheduleDay);
             const full = list.filter(x => !x.busyDays.length);
@@ -182,7 +194,7 @@
             const tid = teacherSel?.value, dur = Number(durSel?.value) || 30;
             const pat = PAT[modalBody.dataset.onboardSchedulePattern] ? modalBody.dataset.onboardSchedulePattern : 'mwf';
             const pool = teacherSel ? [...teacherSel.options].filter(o => o.value && o.value !== tid) : [];
-            others.innerHTML = pool.length ? `<span class="cv-hint">${tid ? 'Boshqa ustoz:' : 'Ustozlar:'}</span>${pool.map(o => `<button type="button" class="cv-ot" data-tid="${esc(o.value)}">${esc(shortName(o.textContent))} · ${freeTimes(o.value, pat, dur).filter(x => !x.busyDays.length).length} vaqt</button>`).join('')}` : '';
+            others.innerHTML = pool.length ? `<span class="cv-hint" id="cvOthL">${tid ? 'Boshqa ustoz:' : 'Ustozni tanlang:'}</span><span class="cv-oth-l" role="group" aria-labelledby="cvOthL">${pool.map(o => `<button type="button" class="cv-ot" data-tid="${esc(o.value)}" title="${esc(o.textContent)}">${esc(shortName(o.textContent))} · ${freeTimes(o.value, pat, dur).filter(x => !x.busyDays.length).length} vaqt</button>`).join('')}</span>` : '';
             others.querySelectorAll('[data-tid]').forEach(b => b.onclick = () => { teacherSel.value = b.dataset.tid; teacherSel.dispatchEvent(new Event('change', { bubbles: true })); sync(); });
         };
         const drawAside = () => {
@@ -249,7 +261,7 @@
     function enhanceStep(modalBody, lead, lang, active) {
         if (!modalBody) return;
         const old = modalBody.querySelector('.pay-steps');
-        const html = `<p class="cv-sub">${subline(lead, lang)}</p>${steps(active, lead)}`;
+        const html = `<p class="cv-sub">${subline(lead, lang)}</p>${steps(active, lead, 'dots')}`;
         if (old) { old.insertAdjacentHTML('beforebegin', html); old.remove(); } else modalBody.insertAdjacentHTML('afterbegin', html);
         pageMode(lead);
         const ob = lead?.paymentOnboarding || {};
@@ -271,6 +283,13 @@
         if (active === 6) {
             // Guruh 5-qadamda kiritilgan bo'lsa — maydonlar shu yerda yashirin (qiymati o'sha, tekshiruv o'zgarmaydi).
             if (ob.telegramGroupLink && ob.telegramGroupName) ['#onboardTelegramGroupLink', '#onboardTelegramGroupName'].forEach(s => hideField(modalBody.querySelector(s)?.closest('.lead-survey-field')));
+            // Yordamchi 5-qadamda tanlangan — shu yerda qiymati o'sha, maydon yashirin (tekshiruv o'zgarmaydi).
+            const aSel = modalBody.querySelector('#onboardAssistantTeacherId');
+            if (aSel && ob.assistantTeacherId && [...aSel.options].some(o => o.value === ob.assistantTeacherId && !o.disabled)) {
+                aSel.value = ob.assistantTeacherId; aSel.dispatchEvent(new Event('change', { bubbles: true }));
+                const f = aSel.closest('.lead-survey-field'); hideField(f);
+                f?.insertAdjacentHTML('afterend', `<p class="cv-hint cv-fixed">Yordamchi ustoz: <b>${esc(staffName(ob.assistantTeacherId) || aSel.selectedOptions[0]?.textContent || '')}</b> · 5-qadamda tanlangan</p>`);
+            }
             if (ob.telegramGroupName) modalBody.querySelector('.cv-chips')?.insertAdjacentHTML('afterend', `<p class="cv-hint">Telegram guruh: <b>${esc(ob.telegramGroupName)}</b> · ${esc(String(ob.telegramGroupLink || '').replace(/^https:\/\//, ''))}</p>`);
             // Doimiy jadval 3-qadamda saqlangan — ustoz, davomiylik va 15 daqiqalik to'r qayta chiqmaydi.
             if (hasSched && modalBody.dataset.onboardScheduleDay && modalBody.dataset.onboardScheduleTime) {
@@ -297,8 +316,14 @@
         const me = (typeof getCurrentUser === 'function' && getCurrentUser()) || {};
         const rop = items('hrEmployees').find(e => /^rop$/i.test(String(e.role || '')) && (e.status || 'active') !== 'inactive');
         const first = String(lead.name || '').split(' ')[0];
+        // Yordamchi ustoz shu qadamda tanlanadi (dizayn: "Yordamchi · Sanjar Y." guruh a'zolari ichida) — 6-qadamda qayta so'ralmaydi.
+        const subject = lang === 'russian' ? 'russian' : 'english';
+        const asstList = (g('filterTeachersByTypeAndSubject') ? filterTeachersByTypeAndSubject('yordamchi', subject) : [])
+            .filter(t => t && t.id && t.id !== ob.teacherId && (t.status || 'active') !== 'inactive');
+        let asstId = ob.assistantTeacherId && asstList.some(t => t.id === ob.assistantTeacherId) ? ob.assistantTeacherId : (ob.assistantTeacherId || '');
+        const asstLabel = () => `Yordamchi${asstId ? ' · ' + shortName(staffName(asstId) || asstList.find(t => t.id === asstId)?.name) : ' ustoz'}`;
         const members = [['student', `O'quvchi · ${first || '—'}`], ['teacher', `Ustoz · ${shortName(staffName(ob.teacherId))}`],
-            ['assistant', `Yordamchi${ob.assistantTeacherId ? ' · ' + shortName(staffName(ob.assistantTeacherId)) : ' ustoz'}`], ['rop', `ROP${rop ? ' · ' + shortName(rop.name) : ''}`], ['me', `Siz · ${shortName(me.name)}`]];
+            ['assistant', asstLabel()], ['rop', `ROP${rop ? ' · ' + shortName(rop.name) : ''}`], ['me', `Siz · ${shortName(me.name)}`]];
         const saved = ob.telegramMembers || {};
         const pay = [ps.paymentTypeLabel, ps.amountLabel].filter(Boolean).join(' · ');
         const sched = ob.lessonDayOfWeek ? `${shortName(staffName(ob.teacherId))} ${PAT[patternOf(ob.lessonDayOfWeek)].label.replace(/ · /g, '·')} ${ob.lessonTime || ''}` : '';
@@ -309,11 +334,13 @@
             <label class="cv-f"><span>Guruh havolasi *</span><span class="cv-field"><input type="url" id="cvGroupLink" class="form-control" placeholder="https://t.me/+..." value="${esc(ob.telegramGroupLink || '')}" autocomplete="off"><span class="sc-pill sc-pill--ok cv-ok" data-okpill hidden>✓ to'g'ri havola</span></span></label>
             <label class="cv-f"><span>Guruh nomi *</span><span class="cv-field"><input type="text" id="cvGroupName" class="form-control" maxlength="80" value="${esc(ob.telegramGroupName || '')}" placeholder="C40 | onlayn ${lang === 'russian' ? 'rus' : 'ingliz'} tili"><span class="cv-sug" data-sug hidden>tizim taklifi · keyingi bo'sh raqam</span></span>
               <small>Telegram'dagi nom bilan bir xil yozing · takrorlanmasligi tekshiriladi</small></label>
+            ${asstList.length ? `<label class="cv-f"><span>Yordamchi ustoz *</span><select id="cvAssistant" class="form-control"><option value="">— Yordamchi ustozni tanlang —</option>${asstList.map(t => `<option value="${esc(t.id)}"${t.id === asstId ? ' selected' : ''}>${esc(t.name)}</option>`).join('')}</select>
+              <small>Guruhga shu ustoz qo'shiladi · 6-qadamda qayta so'ralmaydi</small></label>` : ''}
             <fieldset class="cv-f"><legend>Guruhga qo'shilganini belgilang</legend><div class="cv-mem">${members.map(([k, l]) => `<label><input type="checkbox" data-mem="${k}"${saved[k] ? ' checked' : ''}>${esc(l)}</label>`).join('')}</div></fieldset>
             <p class="cv-warn" data-warn hidden></p>
             <p class="cv-hint">Saqlangach: student appda "Telegram guruh" tugmasi shu havola bilan ochiladi · ustoz va yordamchi ro'yxatida guruh nomi chiqadi.</p>
             <p class="cv-err" role="alert" data-err hidden></p></div>`,
-            `<span class="cv-count">5 / 6 qadam</span><button type="button" class="btn-danger-sm" id="cvGroupCancel">Bekor qilish</button><button type="button" class="btn-primary-sm" id="cvGroupNext">Davom etish</button>`, { wide: true });
+            `<span class="cv-count">5 / 6 qadam</span><button type="button" class="btn-secondary-sm" id="cvGroupBack" title="To'lov saqlangan — tarif va jadvalga qaytish">Orqaga</button><button type="button" class="btn-primary-sm" id="cvGroupNext">Davom etish</button>`, { wide: true });
         pageMode(lead);
         const body = document.getElementById('modalBody');
         const link = body.querySelector('#cvGroupLink'), name = body.querySelector('#cvGroupName'), okp = body.querySelector('[data-okpill]'), sug = body.querySelector('[data-sug]');
@@ -325,6 +352,13 @@
             warn.textContent = miss.length ? `${miss.join(', ')} hali qo'shilmagan — guruhga qo'shishni unutmang.` : '';
         };
         link.addEventListener('input', check); body.querySelectorAll('[data-mem]').forEach(c => c.addEventListener('change', check));
+        const asstSel = body.querySelector('#cvAssistant');
+        asstSel?.addEventListener('change', () => {
+            asstId = asstSel.value; members[2][1] = asstLabel();
+            const lab = body.querySelector('[data-mem="assistant"]')?.parentElement;
+            if (lab) lab.lastChild.textContent = members[2][1];
+            check();
+        });
         name.addEventListener('input', () => { sug.hidden = true; });
         if (!name.value && typeof apiFetch === 'function') {
             apiFetch(`/api/school/groups/next-name?lang=${lang === 'russian' ? 'russian' : 'english'}`) // lid tili bo'yicha (#127); sotuvda server o'zi aniqlaydi
@@ -332,15 +366,18 @@
                 .catch(e => { if (name.value) return; sug.hidden = false; sug.classList.add('cv-sug--err'); sug.textContent = `Keyingi bo'sh raqamni olib bo'lmadi (${(window.LoadErr?.reason(e) || e.message || 'server xatosi')}) — nomni Telegram'dagidek o'zingiz yozing`; });
         }
         check();
-        document.getElementById('cvGroupCancel').onclick = () => { closeModal(); if (typeof renderLeads === 'function') renderLeads(); };
+        // "Orqaga" — oldingi tahrirlanadigan qadam: to'lov (4) saqlangan, shu sabab "Tarif va jadval" (3).
+        document.getElementById('cvGroupBack').onclick = () => { closeModal(); if (typeof openPaymentTeacherScheduleModal === 'function') openPaymentTeacherScheduleModal(lang, leadId); };
         document.getElementById('cvGroupNext').onclick = () => {
             const l = link.value.trim(), n = name.value.trim().replace(/\s+/g, ' ');
             const fail = (m, el) => { err.hidden = false; err.textContent = m; el?.focus(); };
             if (!l) return fail('Telegram guruh havolasini kiriting', link);
             if (!LINK_RE.test(l)) return fail('Havola https://t.me/... ko\'rinishida bo\'lsin', link);
             if (n.length < 2) return fail('Telegram guruh nomini kiriting', name);
+            if (asstSel && !asstSel.value) return fail('Yordamchi ustozni tanlang', asstSel);
             const mem = Object.fromEntries(members.map(([k]) => [k, body.querySelector(`[data-mem="${k}"]`).checked]));
-            const upd = updateLeadInStorage(lang, leadId, x => ({ ...x, paymentOnboarding: { ...(x.paymentOnboarding || {}), telegramGroupLink: l, telegramGroupName: n, telegramMembers: mem } }));
+            const upd = updateLeadInStorage(lang, leadId, x => ({ ...x, paymentOnboarding: { ...(x.paymentOnboarding || {}), telegramGroupLink: l, telegramGroupName: n, telegramMembers: mem,
+                ...(asstSel ? { assistantTeacherId: asstSel.value } : {}) } }));
             if (!upd) return fail('Lid topilmadi');
             closeModal();
             next?.();
