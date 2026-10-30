@@ -287,7 +287,29 @@
             : ['result', 'overdue'].includes(x.ph) ? `o'tdi · ${x.dur} daq` : ['done', 'sold'].includes(x.ph) ? "o'tkazildi" : x.ph === 'noshow' ? 'lid kelmadi' : `${x.dur} daq`;
         return `<div class="tl-nm">${esc(main)}</div><div class="sc-mt">${esc(sub)}</div>`;
     }
-    function openLead(lang, id) { if (typeof openLeadOverview === 'function') openLeadOverview(lang, id); }
+    // Lid qisqa kartasi (Akademik → Sinov darsi): eski lid modali o'rniga yagona drawer uslubida (Oynalar dizayni) —
+    // sinov holati, ustoz, vaqt, menejer, oxirgi izohlar; amallar: izoh, qo'ng'iroq yozuvlari, sotuvda ochish.
+    function openLead(lang, id, x) {
+        const l = x?.lead || (typeof getLeadById === 'function' ? getLeadById(lang, id) : null);
+        if (!l || !U().openDrawer) { if (typeof openLeadOverview === 'function') openLeadOverview(lang, id); return; }
+        const req = x?.req || l.trialRequest || {}, at = local(req.scheduledAt), ph = x?.ph;
+        const stage = typeof FUNNEL_STAGES !== 'undefined' && typeof normalizeLeadStatus === 'function' ? FUNNEL_STAGES.find(f => f.id === normalizeLeadStatus(l.status))?.label : '';
+        const notes = (Array.isArray(l.comments) ? l.comments : []).filter(c => c && c.text).slice(-3).reverse();
+        const phone = l.phone ? (typeof formatPhoneDisplay === 'function' ? formatPhoneDisplay(l.phone) : l.phone) : '';
+        const row = (k, v) => `<dt>${k}</dt><dd>${v}</dd>`;
+        const box = U().openDrawer({ title: l.name || 'Lid', sub: [esc(phone), esc(langLabel(lang)), stage && esc(stage)].filter(Boolean).join(' · '),
+            body: `<div class="sc-sec"><h3>Sinov darsi</h3><dl class="tl-kv">
+                ${row('Holat', ph ? pill(ph) : '—')}
+                ${row('Vaqt', at ? esc(`${relOr(at.date)}, ${hm(at.min)}${x?.dur ? ` · ${x.dur} daq` : ''}`) : 'vaqt tanlanmagan')}
+                ${row('Ustoz', req.teacherId ? `<span class="tl-who">${staffAv(req.teacherId, 24)}${esc(person(req.teacherId)?.name || '—')}</span>` : 'biriktirilmagan')}
+                ${row('Menejer', esc(mgrName(l) || '—'))}</dl></div>
+              <div class="sc-sec"><h3>Oxirgi izohlar</h3>${notes.length ? `<ul class="tl-notes">${notes.map(c => `<li><b>${esc(c.author || '')}</b>${c.createdAt || c.date ? ` <span class="sc-mt">${esc(String(c.createdAt || c.date).slice(0, 10).split('-').reverse().join('.'))}</span>` : ''}<p>${esc(c.text)}</p></li>`).join('')}</ul>` : '<p class="sc-mt">Izoh yo\'q</p>'}</div>`,
+            foot: `<button type="button" class="sc-btn" data-lrec>Qo'ng'iroq yozuvlari</button><span class="sc-row"><button type="button" class="sc-btn" data-lnote>Izohlar</button>${needsTeacher(ph) ? `<button type="button" class="sc-btn sc-btn--pri" data-lassign>Ustoz biriktirish</button>` : ''}</span>` });
+        const go = fn => () => { U().closeDrawer?.(); fn(); };
+        box.querySelector('[data-lrec]')?.addEventListener('click', go(() => typeof openLeadRecordingModal === 'function' && openLeadRecordingModal(lang, l.id)));
+        box.querySelector('[data-lnote]')?.addEventListener('click', go(() => typeof openLeadCommentsModal === 'function' && openLeadCommentsModal(lang, l.id)));
+        box.querySelector('[data-lassign]')?.addEventListener('click', go(() => openAssign(lang, l.id, () => drawAdmin())));
+    }
 
     // ════════════════════════════════════════════════════════════════════════
     // ADMIN · Akademik bo'lim → Sinov darsi (Sinov)
@@ -323,7 +345,8 @@
         const waiting = rows.filter(x => ['result', 'overdue'].includes(x.ph));
         const todaySub = todayRows.slice().sort((a, b) => String(a.req.scheduledAt).localeCompare(String(b.req.scheduledAt))).slice(0, 3)
             .map(x => `${hm(local(x.req.scheduledAt).min)} ${needsTeacher(x.ph) ? 'ustozsiz' : ['result', 'overdue', 'done', 'noshow', 'sold'].includes(x.ph) ? "o'tdi" : x.ph === 'pending' ? 'tasdiqsiz' : 'tasdiqlangan'}`).join(' · ');
-        const chips = FILTERS.filter(([f]) => f === 'all' || !['overdue', 'noshow'].includes(f) || list.some(x => matchFilter(x, f)))
+        // Dizayn: soni 0 bo'lgan holat chiplari ko'rsatilmaydi (faqat "Hammasi" va tanlangan filtr qoladi).
+        const chips = FILTERS.filter(([f]) => f === 'all' || f === A.filter || list.some(x => matchFilter(x, f)))
             .map(([f, label]) => `<button type="button" class="tl-chip" data-a-filter="${f}" aria-pressed="${A.filter === f}">${esc(label)} <b>${list.filter(x => matchFilter(x, f)).length}</b></button>`).join('');
         const tr = x => {
             const l = x.lead, tId = x.req.teacherId;
@@ -370,7 +393,7 @@
         root.querySelectorAll('[data-a-period]').forEach(b => b.onclick = () => { A.period = b.dataset.aPeriod; drawAdmin(); });
         root.querySelectorAll('[data-a-filter]').forEach(b => b.onclick = () => { A.filter = b.dataset.aFilter; drawAdmin(); });
         root.querySelectorAll('[data-a-assign]').forEach(b => b.onclick = () => openAssign(A.lang, b.dataset.aAssign, () => drawAdmin()));
-        root.querySelectorAll('[data-a-open]').forEach(b => b.onclick = () => openLead(A.lang, b.dataset.aOpen));
+        root.querySelectorAll('[data-a-open]').forEach(b => b.onclick = () => openLead(A.lang, b.dataset.aOpen, shown.find(x => x.lead.id === b.dataset.aOpen)));
         const ld = root.querySelector('[data-a-load]'); if (ld) window.LoadErr.bind(ld, () => loadTeacherLoad());
     }
     // Ustozlarning bugungi yuklamasi (umumiy jadvaldan).

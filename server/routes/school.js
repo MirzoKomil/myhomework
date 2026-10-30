@@ -495,7 +495,12 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         const { rows } = await c.query(`UPDATE school_makeups SET status=$2, decided_by=$3, decided_by_name=$4, decided_at=NOW(), decision_note=$5
             WHERE id=$1 AND status='review' RETURNING *`, [req.params.id, approve ? 'approved' : 'rejected', req.user.id, req.user.name || '', String(req.body?.note || '').slice(0, 300)]);
         if (!rows.length) throw T.fail(409, 'Qoplash tekshiruvda emas');
-        return { makeup: rows[0] };
+        // O'quvchi kartasi "O'zgarishlar tarixi": qoplash qarori (kim, qachon, qaysi kun uchun, sabab).
+        const mk = rows[0];
+        await O.audit(c, mk.student_id, approve ? 'makeup-approved' : 'makeup-rejected',
+            { makeupId: mk.id, missedDate: S.dateStr(mk.missed_date), heldDate: mk.held_date ? S.dateStr(mk.held_date) : null, teacherId: mk.teacher_id, kind: mk.kind },
+            mk.decision_note || '', req.user);
+        return { makeup: mk };
     }); }));
 
     // Asosiy ustoz "Kelmadi" belgilari (oy bo'yicha): school_absences + eski yozuvlar uchun ustoz belgilagan, lekin

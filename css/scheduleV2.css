@@ -182,6 +182,8 @@ button.sv-b:focus-visible { outline: 3px solid var(--kb-ring); outline-offset: 1
 .sv-hl { display: flex; align-items: center; gap: 10px; padding: 6px 12px 6px 16px; font-size: 14px; min-width: 0; }
 .sv-hl > span { min-width: 0; } .sv-hl b, .sv-hl .sc-link { font-weight: 700; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .sv-hl small { display: block; font-size: 12px; color: var(--text-secondary, #4B5563); }
+/* Dizayn: ustoz ismi qora matn (havola ko'rinishi faqat hover/fokusda). */
+.sv-hl .sc-link { color: var(--text, #0B1220); text-align: left; } .sv-hl .sc-link:hover, .sv-hl .sc-link:focus-visible { color: var(--kb-primary, #0065D6); text-decoration: underline; }
 .sv-ht2 { position: relative; background-image: linear-gradient(90deg, var(--sv-grid) 1px, transparent 1px); }
 .sv-hax .sv-ht2 span { position: absolute; top: 50%; transform: translate(-2px, -50%); font-size: 11.5px; font-weight: 700; color: var(--text-secondary); }
 .sv-hb { position: absolute; top: 6px; bottom: 6px; border-radius: 9px; padding: 4px 7px; box-sizing: border-box; font-family: inherit; font-weight: 700; font-size: 11px; line-height: 1.25; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; border: 1px solid transparent; text-align: left; z-index: 2; display: flex; flex-direction: column; justify-content: flex-start; margin: 0; }
@@ -232,3 +234,4 @@ button.sv-hb { cursor: pointer; } button.sv-hb:focus-visible { outline: 3px soli
 .sv-wrapli .sv-acts { flex-basis: 100%; justify-content: flex-end; }
 .sv-pickbox { pointer-events: none; z-index: 5 !important; }
 @media (max-width: 760px) { .sv-strip > .sc-grow { flex-basis: 100%; order: 2; } }
+.sv-kpi b .sv-kmin { font-size: .62em; font-weight: 700; white-space: nowrap; }

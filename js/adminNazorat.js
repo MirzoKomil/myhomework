@@ -15,7 +15,9 @@
     const MON_S = ['yan', 'fev', 'mar', 'apr', 'may', 'iyun', 'iyul', 'avg', 'sen', 'okt', 'noy', 'dek'];
     const DAY = ['Du', 'Se', 'Ch', 'Pa', 'Ju', 'Sh', 'Ya'];
     const DAY_F = ['Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba', 'Yakshanba'];
-    const RATES = { 15: 75000, 30: 150000, 60: 300000 };
+    // Ustoz tarifi (o'quvchi / oy) — FAQAT Moliya → KPI sozlamasidan (salary_kpi_settings → state.payrollRates); qattiq yozilgan raqam yo'q.
+    // Sozlama kelmagan bo'lsa — null (summa ko'rsatilmaydi, "KPI sozlamasida" deyiladi).
+    const kpiRate = (lang, d) => { const r = getC('payrollRates', {})?.[lang || 'english']?.teacher?.rates; const v = Number(r?.[d]); return Number.isFinite(v) && v > 0 ? v : null; };
     const role = () => (typeof getCurrentUser === 'function' ? getCurrentUser()?.role : '') || '';
     const isFull = () => ['admin', 'boshliq'].includes(role());
     const canManage = () => ['admin', 'boshliq', 'rop'].includes(role());
@@ -50,6 +52,7 @@
     const ICON = {
         info: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>',
         dl: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>',
+        warn: '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>',
         back: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>'
     };
 
@@ -159,6 +162,15 @@
         if (!root) { root = document.createElement('div'); root.id = 'anDavRoot'; root.className = 'sc-root an-root'; wrap.prepend(root); }
         return root;
     }
+    function soloMode(on) {
+        const sec = document.getElementById('tab-teachers-section');
+        if (sec && sec.classList.contains('an-solo') !== on) sec.classList.toggle('an-solo', on);
+    }
+    // Yon menyudan "Akademik bo'lim" bosilsa yoki boshqa bo'limga o'tilsa — Qoplash sahifasidan Davomatga qaytiladi (tablar yana ko'rinadi).
+    document.addEventListener('click', e => {
+        if (D.view !== 'makeups' || !e.target?.closest?.('[data-tab]')) return;
+        D.view = 'grid'; soloMode(false);
+    }, true);
     let davSeq = 0;
     async function renderDavomat() {
         const root = davRoot();
@@ -166,6 +178,8 @@
         const seq = ++davSeq;
         const lang = curLang();
         D.month ||= today().slice(0, 7);
+        // Dizayn AdminQoplash: alohida sahifa — faqat "← Akademik · Davomat" (Akademik sarlavhasi, tablar va til tanlagichi yashiriladi).
+        soloMode(D.view === 'makeups');
         if (D.view === 'makeups') return renderMakeups(root, { lang, month: D.month, back: () => { D.view = 'grid'; renderDavomat(); } });
         if (!root.firstChild || root.querySelector('.mh-lerr')) root.innerHTML = '<div class="sc-skel"></div>';
         // Qoplash va "Kelmadi" belgilari hisobning bir qismi: biri yiqilsa soxta raqam (81/131, boshqa maosh) ko'rsatilmaydi — LoadErr.
@@ -217,17 +231,32 @@
         if (!row) return null;
         const main = (row.breakdown || []).filter(b => b.dutyRole !== 'assistant' && b.unit !== 'contact');
         const perStudent = [...main.reduce((m, b) => m.set(b.studentId, { id: b.studentId, earned: (m.get(b.studentId)?.earned || 0) + (Number(b.earned) || 0),
-            rate: b.expected ? (Number(b.tariff) || 0) / b.expected : 0 }), new Map()).values()];
+            rate: b.expected ? (Number(b.tariff) || 0) / b.expected : 0, tariff: Number(b.tariff) || 0, expected: Number(b.expected) || 0,
+            lessons: (m.get(b.studentId)?.lessons || 0) + (Number(b.lessons) || 0) }), new Map()).values()];
         const total = Number(row.mainTotal ?? (row.assistantTotal != null ? row.total - row.assistantTotal : row.total)) || 0;
         return { total, perStudent, expected: 1, assistant: Number(row.assistantTotal) || 0, grand: Number(row.total) || 0 };
     }
-    // Bitta dars summasi — FAQAT server payroll stavkasi (o'quvchi tarifi / oydagi darslari), 100 so'mga yaxlitlangan.
-    // Davomat, "Qoplash darslari · nazorat" va Qoplash sahifasi shu funksiyadan oladi. Moliya yo'q — null (summa "—").
-    function payRate(fin, sid) { return Math.round((fin?.perStudent.find(p => p.id === sid)?.rate || 0) / 100) * 100 || null; }
-    function pendingPay(r, rate) {
+    // Qoplash summasi — FAQAT server payroll hisobi (payrollEngine: o'quvchi summasi = round(tarif × darslar / oydagi darslar)).
+    // payRate → o'quvchining Moliya qatori ({ tariff, expected, lessons, earned }) yoki null (Moliya yo'q — summa "—").
+    // Bitta dars summasi = maoshdagi o'zgarish so'mgacha: round(T·(n+1)/E) − round(T·n/E) — 100 ga yaxlitlanmaydi, shuning uchun
+    // "+N so'm kutmoqda" tasdiqlangandan keyingi Moliya → Maoshlar farqiga aynan teng. Davomat, nazorat paneli va Qoplash sahifasi shu yerdan.
+    function payRate(fin, sid) { const p = fin?.perStudent.find(x => x.id === sid); return p && p.tariff > 0 && p.expected > 0 ? p : null; }
+    const payAt = (p, n) => Math.round(p.tariff * n / p.expected);
+    const lessonAmt = (p, n) => (p ? payAt(p, n + 1) - payAt(p, n) : null);
+    function pendingPay(r, p) {
         const RR = window.AttendanceRules;
-        if (!RR?.pendingMakeupPay) return { ids: [], count: 0, sum: null, over: [] };
-        return RR.pendingMakeupPay({ plan: r.plan, counted: r.counted, reviewList: r.review }, rate);
+        if (!RR?.pendingMakeupPay) return { ids: [], count: 0, sum: null, over: [], amt: () => null };
+        const x = RR.pendingMakeupPay({ plan: r.plan, counted: r.counted, reviewList: r.review }, null);
+        // Tekshiruvdagi i-qoplash summasi — joriy darslar ustiga ketma-ket qo'shilgandagi farq (yig'indisi = sum).
+        return { ...x, sum: p ? payAt(p, p.lessons + x.count) - payAt(p, p.lessons) : null, amt: id => { const i = x.ids.indexOf(id); return p && i >= 0 ? lessonAmt(p, p.lessons + i) : null; } };
+    }
+    // Tasdiqlangan qoplashning maoshdagi ulushi: shu oy tasdiqlanganlar ichidagi o'rni bo'yicha (ular darslar sonining oxirgi qismi).
+    function approvedAmt(p, list, m) {
+        if (!p) return null;
+        const ap = list.filter(x => x.status === 'approved' && x.student_id === m.student_id && x.teacher_id === m.teacher_id && dkey(x.held_date).slice(0, 7) === dkey(m.held_date).slice(0, 7))
+            .sort((a, b) => dkey(a.held_date).localeCompare(dkey(b.held_date)) || String(a.id).localeCompare(String(b.id)));
+        const j = ap.findIndex(x => x.id === m.id);
+        return j < 0 ? null : lessonAmt(p, Math.max(0, p.lessons - ap.length + j));
     }
     function davomatHtml({ lang, teachers, all, cur, mks, month, td, pay, payErr }) {
         const t = cur.t, rowsAll = cur.rows;
@@ -249,7 +278,7 @@
         const from = D.half ? 16 : 1, to = D.half ? days : 15;
         const unmarkedMine = cur.unmarked;
         const showMoney = canSeePayroll();
-        const teacherOpts = teachers.map(x => { const a = all.find(y => y.t.id === x.id); return `<option value="${esc(x.id)}"${x.id === t.id ? ' selected' : ''}>${esc(x.name)} · ${a.rows.length} o'quvchi</option>`; }).join('');
+        const teacherOpts = teachers.map(x => { return `<option value="${esc(x.id)}"${x.id === t.id ? ' selected' : ''}>${esc(x.name)} · ${countsLabel(studentCounts(x.id, lang))}</option>`; }).join('');
         const head = Array.from({ length: to - from + 1 }, (_, i) => from + i).map(d => { const date = dateOf(month, d); const isT = date === td;
             return `<th class="an-dh${isT ? ' is-today' : ''}" scope="col"><b>${d}</b><small>${isT ? 'Bugun' : DAY[wdOf(date) - 1]}</small></th>`; }).join('');
         const assistantView = D.duty === 'assistant';
@@ -267,16 +296,17 @@
         const curMonth = month === td.slice(0, 7);
         const left = curMonth ? days - Number(td.slice(8)) : 0;
         return `
-        <div class="sc-note an-info">${ICON.info}<span>Dars kunlari o'quvchining jadvaliga qarab avtomatik ajratiladi. <b>Har bir o'quvchi alohida hisoblanadi:</b> ustoz har o'quvchidan oyiga tarifigacha oladi (60 daq — 300 000, 30 daq — 150 000, 15 daq — 75 000 so'm), faqat o'quvchi kelgan darslar uchun.</span></div>
+        <div class="sc-note an-info">${ICON.info}<span>Dars kunlari o'quvchining jadvaliga qarab avtomatik ajratiladi. <b>Har bir o'quvchi alohida hisoblanadi:</b> ustoz har o'quvchidan oyiga tarifigacha oladi (${[60, 30, 15].every(d => kpiRate(lang, d)) ? `${[60, 30, 15].map(d => `${d} daq — ${money(kpiRate(lang, d))}`).join(', ')} so'm · Moliya → KPI sozlamasi` : 'tarif Moliya → KPI sozlamasida'}), faqat o'quvchi kelgan darslar uchun.</span></div>
         <section class="sc-card an-filters">
           <div class="an-frow">
-            <label class="an-fd an-fd--t"><span>Ustoz</span><span class="an-tsel">${t.id ? tAv(t.id, 30) : ''}<select data-f="teacher" aria-label="Ustoz">${teacherOpts || '<option value="">— Ustoz yo\'q —</option>'}</select></span></label>
+            <label class="an-fd an-fd--t"><span>Ustoz</span><span class="an-tsel an-tpick">${t.id ? tAv(t.id, 32) : ''}<span class="an-tpick-t"><b>${esc(t.name || 'Ustoz yo\'q')}</b>${t.id ? `<small>Asosiy · ${countsLabel(studentCounts(t.id, lang))}</small>` : ''}</span>
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg><select data-f="teacher" aria-label="Ustoz">${teacherOpts || '<option value="">— Ustoz yo\'q —</option>'}</select></span></label>
             <label class="an-fd"><span>Jadval</span><select data-f="pat"><option value="all">Barcha kunlar</option><option value="mwf"${D.pat === 'mwf' ? ' selected' : ''}>Du · Ch · Ju</option><option value="tts"${D.pat === 'tts' ? ' selected' : ''}>Se · Pa · Sh</option></select></label>
-            <label class="an-fd"><span>Davomiylik</span><select data-f="dur"><option value="all">Barchasi</option>${[60, 30, 15].map(d => `<option value="${d}"${String(D.dur) === String(d) ? ' selected' : ''}>${d} daq — ${money(RATES[d])}/oy</option>`).join('')}</select></label>
+            <label class="an-fd"><span>Davomiylik</span><select data-f="dur"><option value="all">Barchasi</option>${[60, 30, 15].map(d => `<option value="${d}"${String(D.dur) === String(d) ? ' selected' : ''}>${d} daq${kpiRate(lang, d) ? ` — ${money(kpiRate(lang, d))}/oy` : ''}</option>`).join('')}</select></label>
             <div class="an-fd"><span>Oy</span><div class="an-mnav"><button type="button" class="sc-btn sc-btn--sm" data-mon="-1" aria-label="Oldingi oy">‹</button><b>${monthLabel(month)}</b><button type="button" class="sc-btn sc-btn--sm" data-mon="1" aria-label="Keyingi oy"${curMonth ? ' disabled' : ''}>›</button></div></div>
           </div>
           <div class="an-kpis">
-            <div><small>O'quvchilar · shu oy</small><b>${rowsAll.length}</b><span>${(() => { const now = t.id ? activeStudentCount(t.id, lang) : 0; return now !== rowsAll.length ? `hozir faol ${now} · ` : ''; })()}${mwf} tasi Du·Ch·Ju, ${rowsAll.length - mwf} tasi Se·Pa·Sh</span></div>
+            <div><small>O'quvchilar · shu oy</small><b>${rowsAll.length}</b><span>${t.id ? `hozir ${countsLabel(studentCounts(t.id, lang), '')}`.trim() + ' · ' : ''}${mwf} tasi Du·Ch·Ju, ${rowsAll.length - mwf} tasi Se·Pa·Sh</span></div>
             <div><small>Hisobga o'tdi · shu oy</small><b>${counted} <em>/ ${plan}${reviewN ? ` · +${reviewN} tekshiruvda` : ''}</em></b><span class="an-bar" role="img" aria-label="${plan ? Math.round(counted / plan * 100) : 0}%"><i style="width:${plan ? Math.min(100, counted / plan * 100) : 0}%"></i></span></div>
             <div><small>Davomat (KPI)</small><b>${pct == null ? '—' : pct + '%'}</b><span>O'tgan ${passed} darsdan ${counted} tasi hisobga o'tdi</span></div>
             ${showMoney ? (payErr ? `<div class="an-kpi-err"><small>Maosh · hozirgacha</small>${window.LoadErr.html({ title: 'Maosh hisobini yuklab bo\'lmadi', err: payErr, note: '', compact: true })}</div>`
@@ -373,8 +403,8 @@
         const amount = m => {
             if (m.status !== 'review' || !pay) return '';
             const r = (all || []).find(x => x.t.id === m.teacher_id)?.rows.find(y => y.s.id === m.student_id);
-            const rate = payRate(payKpi(pay, m.teacher_id), m.student_id);
-            return r && rate && pendingPay(r, rate).ids.includes(m.id) ? ` · <b class="an-ok">+${money(rate)} so'm</b>` : '';
+            const a = r ? pendingPay(r, payRate(payKpi(pay, m.teacher_id), m.student_id)).amt(m.id) : null;
+            return a ? ` · <b class="an-ok">+${money(a)} so'm</b>` : '';
         };
         const review = mine.filter(m => m.status === 'review');
         const recent = mine.filter(m => m.status === 'approved').slice(0, Math.max(0, 3 - review.length));
@@ -403,7 +433,7 @@
         root.querySelector('[data-allmk]')?.addEventListener('click', () => { D.view = 'makeups'; rerender(); });
         root.querySelectorAll('[data-mkyes]').forEach(b => b.onclick = () => decideMakeup(b.dataset.mkyes, 'approve', '', b).then(ok => ok && rerender()));
         root.querySelectorAll('[data-mkno]').forEach(b => b.onclick = () => rejectDrawer(mks.find(m => m.id === b.dataset.mkno), rerender));
-        root.querySelector('[data-excel]')?.addEventListener('click', () => exportCsv(cur).catch(e => U().toast?.(e.message || 'Eksport bo\'lmadi')));
+        root.querySelector('[data-excel]')?.addEventListener('click', () => exportXlsx(cur).catch(e => U().toast?.(e.message || 'Eksport bo\'lmadi')));
         // Eski "Hisob sozlamasi" (ustoz qolipi va davomiylik) — Moliya → KPI'da (payrollUI renderTeacherLegacy).
         root.querySelectorAll('[data-unm]').forEach(b => b.onclick = () => { D.unm = b.dataset.unm; rerender(); });
         root.querySelectorAll('[data-remind1]').forEach(b => b.onclick = () => {
@@ -490,7 +520,7 @@
         box.querySelector('[data-tg]')?.addEventListener('click', async () => { await copy(); window.open(tg, '_blank', 'noopener'); });
     }
 
-    async function exportCsv(cur) {
+    async function exportXlsx(cur) {
         const month = D.month, days = monthDays(month);
         const mark = c => ({ present: 'Keldi', absent: 'Kelmadi', mk: 'Qoplash', unmarked: 'Belgilanmagan', planned: 'Reja', off: '' }[c.state] || '');
         // Summa — faqat Moliya hisobi (sahifadagi bilan bir xil); moliya ruxsati yo'q rolda ustun yo'q.
@@ -498,11 +528,14 @@
         const per = new Map((kpi?.perStudent || []).map(p => [p.id, p]));
         const head = ['O\'quvchi', 'Telefon', 'Jadval', 'Davomiylik', ...Array.from({ length: days }, (_, i) => String(i + 1)), 'Hisobga o\'tdi', 'Reja', ...(canSeePayroll() ? ['Maosh'] : [])];
         const lines = [head, ...cur.rows.map(r => [r.s.name, r.s.phone || '', daysWord(r.s), `${r.s.lessonDuration || ''} daq`, ...r.cells.map(mark), r.counted, r.plan, ...(canSeePayroll() ? [per.get(r.s.id)?.earned ?? ''] : [])])];
-        const csv = '﻿' + lines.map(l => l.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(';')).join('\r\n');
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
-        a.download = `davomat-${String(cur.t.name || 'ustoz').replace(/\s+/g, '-')}-${month}.csv`;
-        document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+        // Haqiqiy .xlsx (repo'dagi js/vendor/xlsx — Reyting eksporti bilan bir xil kutubxona).
+        const X = typeof loadXlsxLib === 'function' ? await loadXlsxLib() : window.XLSX;
+        if (!X) throw new Error('Excel kutubxonasini yuklab bo\'lmadi');
+        const ws = X.utils.aoa_to_sheet(lines);
+        ws['!cols'] = head.map((h, i) => ({ wch: i === 0 ? 24 : i < 4 ? 14 : i < 4 + days ? 4 : 12 }));
+        const wb = X.utils.book_new();
+        X.utils.book_append_sheet(wb, ws, `${monthName(month)} ${month.slice(0, 4)}`.slice(0, 31));
+        X.writeFile(wb, `davomat-${String(cur.t.name || 'ustoz').replace(/\s+/g, '-')}-${month}.xlsx`);
     }
 
     // ── Qoplash darslari ─────────────────────────────────────────────────────
@@ -571,7 +604,10 @@
             // Tekshiruvdagi qoplash maoshga o'tadimi: qoldirilgan kunda "Keldi" yo'q va oy rejasidan oshmaydi (AttendanceRules.pendingMakeupPay).
             const counts = m.status === 'review' ? pendingPay(sm, rate).ids.includes(m.id) : null;
             const why = counts !== false ? '' : m.missed_came || window.AttendanceRules?.missedCame?.(m, (ctx.att[`${month}_${m.teacher_id}`] || {})[s.id], month) ? 'qoldirilgan kunda "Keldi" bor' : 'oy rejasidan oshadi';
-            return { s, t, sm, rate, counts, why };
+            // Rejadagi qoplash — o'tilib tasdiqlansa qo'shiladigan keyingi dars summasi (tekshiruvdagilardan keyin).
+            const amt = m.status === 'review' ? (counts ? pendingPay(sm, rate).amt(m.id) : null) : m.status === 'approved' ? approvedAmt(rate, list, m)
+                : m.status === 'planned' && rate ? lessonAmt(rate, rate.lessons + pendingPay(sm, rate).count) : null;
+            return { s, t, sm, rate: amt, counts, why };
         };
         const infos = new Map(list.map(m => [m.id, info(m)]));
         const reviewSum = by('review').reduce((n, m) => { const x = infos.get(m.id); return n + (x.counts && x.rate ? x.rate : 0); }, 0);
@@ -598,7 +634,7 @@
               <div class="an-scroll"><table class="sc-table an-mk"><thead><tr><th>O'quvchi · ustoz</th><th>Qoldirilgan</th><th>Qoplangan · dalil</th><th class="r">Summa</th><th>Holat</th></tr></thead><tbody>
               ${shown.map(m => { const x = infos.get(m.id), ev = evidence(m), [stl, stc] = MK_ST[m.status] || [m.status, 'mute'];
                 return `<tr class="an-mkr${m.id === M.sel ? ' sel' : ''}" data-mk="${esc(m.id)}" tabindex="0" aria-selected="${m.id === M.sel}"><td><span class="an-who2">${sAv(x.s, 34)}<span><b>${esc(x.s.name)}</b><small>${esc(tName(m.teacher_id))}</small></span></span></td>
-                  <td>${dW(dkey(m.missed_date))}${m.missed_came ? `<br>${U().missedCamePill(m)}` : ''}</td><td><span class="an-held"><span>${heldTxt(m, x.s)}</span><small>${timeTxt(m, x.s)}</small><small class="an-ev">${dot(ev[0])}${esc(ev[1])}</small></span></td>
+                  <td>${dW(dkey(m.missed_date))}${m.missed_came ? `<br><span class="an-came" title="${esc(U().MISSED_CAME)}">${ICON.warn}"Keldi" bor</span>` : ''}</td><td><span class="an-held"><span>${heldTxt(m, x.s)}</span><small>${timeTxt(m, x.s)}</small><small class="an-ev">${dot(ev[0])}${esc(ev[1])}</small></span></td>
                   <td class="r">${x.counts === false ? '—<small class="an-nopay">maoshga o\'tmaydi</small>' : m.status === 'rejected' || m.status === 'cancelled' || m.missed_came ? '—' : x.rate ? money(x.rate) : '—'}</td><td>${pill(stc, stl)}</td></tr>`; }).join('') || '<tr><td colspan="5" class="sc-mt">Qoplash darsi yo\'q</td></tr>'}
               </tbody></table></div></section>
             <section class="sc-card an-detail" data-detail></section>
@@ -904,30 +940,25 @@
               return `<div class="an-lrq">${sAv(s, 36)}<span class="sc-grow"><b>${esc(s.name)} · ${dWF(pp.day)}</b><small>${esc(U().shortName(r.requester_name))}: "${esc(r.reason)}"${pp.channel ? ` — ${esc((U().CHN[pp.channel] || ['', pp.channel])[1].toLowerCase())}${pp.minutes ? ', ' + esc(pp.minutes) + ' daq' : ''}` : ''}</small></span>
                 ${isFull() && !final ? `<span class="an-acts"><button type="button" class="sc-btn sc-btn--sm" data-lno="${esc(r.id)}">Rad etish</button><button type="button" class="sc-btn sc-btn--pri sc-btn--sm" data-lyes="${esc(r.id)}">Tasdiqlash · hisoblanadi</button></span>` : ''}</div>`; }).join('')}</section>` : ''}
           ${rep ? `<section class="sc-card"><header class="sc-ch"><h2>${A.all ? `${monthName(month)} · barcha aloqalar` : `${curMonth && A.week === U().weekStart(td) ? 'Bu hafta' : `${dS(A.week)} – ${dS(wEnd)}`} · barcha aloqalar`}</h2>
-              <div class="sc-row">${A.all ? '' : '<button type="button" class="sc-btn sc-btn--sm" data-wk="-1" aria-label="Oldingi hafta">‹</button><button type="button" class="sc-btn sc-btn--sm" data-wk="1" aria-label="Keyingi hafta">›</button>'}
-              <details class="an-more"><summary class="sc-btn sc-btn--sm" aria-label="Boshqa amallar" title="Boshqa amallar">⋯</summary><div class="an-menu" role="menu">
-                <button type="button" role="menuitem" data-all aria-pressed="${A.all}">${A.all ? 'Haftalik ko\'rinish' : 'Butun oy'}</button>
-                ${isFull() && !final ? '<button type="button" role="menuitem" data-bulk>O\'tgan kunlarni kiritish</button><button type="button" role="menuitem" data-add>+ Aloqa qo\'shish</button>' : ''}
-                <button type="button" role="menuitem" data-mon="-1">‹ Oldingi oy</button>${curMonth ? '' : '<button type="button" role="menuitem" data-mon="1">Keyingi oy ›</button>'}
-              </div></details></div></header>
-            <p class="an-hint">Tuzatish → usul, daqiqa yoki sanani o'zgartirish · tarixga yoziladi · yordamchi o'z ro'yxatida ko'radi</p>
+              <span class="sc-mt an-hint2">Tuzatish → usul, daqiqa yoki sanani o'zgartirish · tarixga yoziladi · yordamchi o'z ro'yxatida ko'radi</span></header>
             <div class="an-scroll"><table class="sc-table an-al"><thead><tr><th>Vaqt</th><th>O'quvchi</th><th>Usul</th><th class="r">Daqiqa</th><th>Hisob</th><th></th></tr></thead><tbody>
             ${shown.map(i => { const s = studentById(i.studentId) || { id: i.studentId, name: i.studentId };
               return `<tr><td>${dWF(i.day)}${i.at != null ? ' · ' + hm(i.at) : ''}</td><td><span class="an-who2">${sAv(s, 28)}<b>${esc(s.name)}</b></span></td><td>${esc(chn(i))}${i.corrected ? ' <span class="sc-pill sc-pill--info">tuzatilgan</span>' : ''}</td>
                 <td class="r">${i.outcome === 'no_answer' ? '—' : esc(i.minutes)}</td><td>${hisob(i)}</td><td class="r">${isFull() && !final ? `<button type="button" class="sc-btn sc-btn--sm" data-fix="${esc(i.id)}">Tuzatish</button>` : ''}</td></tr>`; }).join('') || `<tr><td colspan="6" class="sc-mt">${A.all ? 'Bu oy' : 'Bu haftada'} aloqa yo'q</td></tr>`}
             </tbody></table></div>
+            <div class="an-tbar"><div class="sc-row">${A.all ? '' : '<button type="button" class="sc-link" data-wk="-1">‹ Oldingi hafta</button><button type="button" class="sc-link" data-wk="1">Keyingi hafta ›</button>'}
+                <button type="button" class="sc-link" data-all aria-pressed="${A.all}">${A.all ? 'Haftalik ko\'rinish' : 'Butun oy'}</button>
+                <button type="button" class="sc-link" data-mon="-1">‹ ${esc(monthName(addMonth(month, -1)))}</button>${curMonth ? '' : `<button type="button" class="sc-link" data-mon="1">${esc(monthName(addMonth(month, 1)))} ›</button>`}</div>
+              ${isFull() && !final ? '<div class="sc-row"><button type="button" class="sc-link" data-bulk>O\'tgan kunlarni kiritish</button><button type="button" class="sc-link" data-add>+ Aloqa qo\'shish</button></div>' : ''}</div>
             <details class="an-sum"><summary>O'quvchilar bo'yicha · ${rep.students.length}</summary><div class="an-scroll"><table class="sc-table"><thead><tr><th>O'quvchi</th><th class="r">Hisoblangan</th><th class="r">Summa</th><th>Izoh</th></tr></thead><tbody>${rep.students.map(s => `<tr><td>${sAv(studentById(s.studentId), 26)} ${esc(studentById(s.studentId)?.name || s.studentId)}</td><td class="r"><b>${s.counted}</b> / ${CAP}</td><td class="r">${money(s.amount)}</td><td class="sc-mt">${[s.noAnswer && `${s.noAnswer} javob bermadi`, s.overCap && `${s.overCap} ta limitdan ortiq`, s.short && `${s.short} ta 5 daqiqadan qisqa`].filter(Boolean).join(' · ') || '—'}</td></tr>`).join('')}</tbody>
               <tfoot><tr><td>Jami</td><td class="r">${rep.counted}</td><td class="r">${money(rep.amount)}</td><td></td></tr></tfoot></table></div></details></section>
           <section class="sc-card"><header class="sc-ch"><h2>${monthName(month)}ni yopish</h2><span class="sc-mt">${ended ? `${monthGen(month)} tugagan` : `${dS(lastDay)} 23:59 dan keyin`}</span></header>
-            <div class="an-close"><p class="sc-mt">${totals || '—'}. Yakuniy tasdiqdan keyin o'zgartirish faqat Moliya orqali.</p>${stepBtn}</div>
-            <details class="an-stepd"><summary>Bosqich: ${esc(steps[stepIdx][0])}${steps[stepIdx][1] ? ' · ' + esc(steps[stepIdx][1]) : ''}</summary>
-            <ol class="an-steps">${steps.map(([l, sub], i) => `<li class="${i < stepIdx ? 'done' : i === stepIdx ? 'cur' : ''}"><b>${l}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</li>`).join('')}</ol></details></section>`
+            <div class="an-close"><p class="sc-mt">${totals || '—'}. Yakuniy tasdiqdan keyin o'zgartirish faqat Moliya orqali.<span class="an-stepnow" title="${esc(steps.map(([l], i) => `${i + 1}. ${l}`).join(' → '))}">Bosqich ${stepIdx + 1}/${steps.length}: ${esc(steps[stepIdx][0])}${steps[stepIdx][1] ? ' · ' + esc(steps[stepIdx][1]) : ''}</span></p>${stepBtn}</div></section>`
             : '<p class="sc-mt">Yordamchi ustoz yo\'q</p>'}`;
         const re = () => renderAssist(root);
         root.querySelectorAll('[data-aid]').forEach(b => b.onclick = () => { A.aid = b.dataset.aid; re(); });
         root.querySelectorAll('[data-mon]').forEach(b => b.onclick = () => { A.month = addMonth(A.month, Number(b.dataset.mon)); A.week = ''; re(); });
         root.querySelector('[data-mon-now]')?.addEventListener('click', () => { A.month = td.slice(0, 7); A.week = ''; re(); });
-        if (!root.dataset.moreBound) { root.dataset.moreBound = '1'; document.addEventListener('click', e => root.querySelectorAll('details.an-more[open]').forEach(d => { if (!d.contains(e.target)) d.open = false; })); }
         root.querySelectorAll('[data-wk]').forEach(b => b.onclick = () => { const n = U().addDays(A.week, 7 * Number(b.dataset.wk)); if (n.slice(0, 7) <= month && U().addDays(n, 6) >= month + '-01') { A.week = n; re(); } });
         root.querySelector('[data-all]')?.addEventListener('click', () => { A.all = !A.all; re(); });
         root.querySelectorAll('[data-step]').forEach(b => b.onclick = async () => { U().busy(b, true); try { await U().post(`/assist/months/${month}/${b.dataset.step}`); toast('Saqlandi'); re(); } catch (e) { U().busy(b, false); toast(e.message, 4000); } });
@@ -1028,6 +1059,16 @@
     // ustozda dars kuni bo'lgan — Davomat jadvali qatorlari; demo xodim akkauntlari kirmaydi). Akademik → Davomat, O'quvchini
     // tekshirish va Moliya → Maoshlar shu funksiyadan oladi. activeStudentCount — hozir faol (muzlatilmagan, chiqmagan) qismi.
     const monthStudentCount = (tid, lang, month) => studentsOf(tid, lang, month || today().slice(0, 7)).length;
-    const activeStudentCount = (tid, lang) => studentsOf(tid, lang).length;
-    window.adminNazorat = { renderDavomat, renderMakeups, renderRequests, renderAssist, loadPayroll, payKpi, canSeePayroll, monthStudentCount, activeStudentCount, state: { D, M, R, A } };
+    // Ustozning HOZIRGI o'quvchilari — bitta ta'rif, aniq yorliq bilan (Davomat, Hafta · bitta ustoz, O'quvchini tekshirish):
+    // faol = AttendanceRules.isActiveStudent (muzlatilmagan, chiqmagan, demosiz); muzlatilgan — alohida sanaladi, faolga qo'shilmaydi.
+    function studentCounts(tid, lang) {
+        const R = window.AttendanceRules;
+        const mine = getC('students', []).filter(s => s.teacherId === tid && (!lang || (s.subject || 'english') === lang) && !s.isStaffDemo && !String(s.id || '').startsWith('demo_'));
+        const active = mine.filter(s => (R?.isActiveStudent ? R.isActiveStudent(s) : !s.frozen && s.status !== 'inactive')).length;
+        const frozen = mine.filter(s => s.frozen === true && !(R?.INACTIVE || ['inactive']).includes(String(s.status || '').toLowerCase())).length;
+        return { active, frozen };
+    }
+    const countsLabel = (c, noun = 'o\'quvchi') => `${c.active} faol${c.frozen ? ` + ${c.frozen} muzlatilgan` : ''} ${noun}`;
+    const activeStudentCount = (tid, lang) => studentCounts(tid, lang).active;
+    window.adminNazorat = { renderDavomat, renderMakeups, renderRequests, renderAssist, loadPayroll, payKpi, canSeePayroll, monthStudentCount, activeStudentCount, studentCounts, countsLabel, state: { D, M, R, A } };
 })();

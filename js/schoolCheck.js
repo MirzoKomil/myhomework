@@ -111,8 +111,9 @@
               <div class="okx-ks">${(() => {
                 // "O'quvchilar · shu oy" — Akademik → Davomat va Moliya bilan bitta ta'rif (adminNazorat.monthStudentCount).
                 const N = window.adminNazorat, mc = who && ctx === 'main' && N?.monthStudentCount ? N.monthStudentCount(who.id, lang, month) : null;
-                const now = mc != null && N.activeStudentCount ? N.activeStudentCount(who.id, lang) : null;
-                return mc != null ? `<div class="okx-k"><small>O'quvchilar · shu oy</small><b>${mc}</b>${now != null && now !== mc ? `<span>hozir faol ${now}</span>` : ''}</div>`
+                // Hozirgi o'quvchilar — bitta ta'rif va yorliq (Davomat, Hafta · bitta ustoz bilan): "8 faol + 1 muzlatilgan"; ro'yxat ham shular.
+                const now = mc != null && N.studentCounts ? N.studentCounts(who.id, lang) : null;
+                return mc != null ? `<div class="okx-k"><small>O'quvchilar · shu oy</small><b>${mc}</b>${now ? `<span>hozir ${esc(N.countsLabel(now, '').trim())}${now.active + now.frozen !== list.length ? ` · ro'yxatda ${list.length}` : ''}</span>` : ''}</div>`
                     : `<div class="okx-k"><small>${ctx === 'assistant' ? 'O\'quvchilar · yordamchi sifatida' : 'O\'quvchilar · hozir'}</small><b>${list.length}</b></div>`; })()}${pay || `<div class="okx-k"><small>E'tibor kerak</small><b class="okx-warn">${att.length}</b></div><div class="okx-k"><small>Uy vazifasi · 1-urinish</small><b>${avg != null ? avg + '%' : '—'}</b></div>`}</div></section>`;
         } else {
             const seg = st.counts.main && st.counts.assistant ? `<div class="sc-seg okx-seg" role="group" aria-label="O'quvchilar"><button type="button" data-ctx="main" aria-pressed="${ctx === 'main'}">Asosiy · ${st.counts.main}</button><button type="button" data-ctx="assistant" aria-pressed="${ctx === 'assistant'}">Yordamchi sifatida · ${st.counts.assistant}</button></div>` : '';
@@ -126,7 +127,7 @@
                 : `${s.reached || 0}-dars${keys(s).has('struggling') ? ' · qiynalyapti' : keys(s).has('behind') ? ' · rejadan orqada' : lead ? ' · ' + esc(actTxt(s)) : ''}`;
             const v = s.firstTryAvg;
             return `<button type="button" class="okx-it${s.id === st.sel ? ' on' : ''}" data-sel="${esc(s.id)}"${s.id === st.sel ? ' aria-current="true"' : ''}>${studentAvatar(local.get(s.id) || s, 36)}
-              <span class="okx-it-t"><b>${esc(s.name)}</b><small>${meta}</small></span>
+              <span class="okx-it-t"><b>${esc(s.name)}${local.get(s.id)?.frozen === true ? ' <span class="sc-pill sc-pill--info okx-frz">muzlatilgan</span>' : ''}</b><small>${meta}</small></span>
               <span class="okx-lp"><small>1-urinish</small><b class="${v != null && v < 55 ? 'okx-lo' : ''}">${v != null ? v + '%' : '—'}</b>${lead ? '' : `<i class="okx-trk"><i class="${v != null && v < PASS ? 'lo' : ''}" style="width:${Math.min(100, v || 0)}%"></i></i>`}</span></button>`;
         };
         root.innerHTML = `${kpis}
