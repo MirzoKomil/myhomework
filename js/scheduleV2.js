@@ -297,9 +297,12 @@
             let axis = ''; for (let h = vr[0] / 60; h < vr[1] / 60; h++) axis += `<span style="left:${pct(h * 60).toFixed(3)}%">${String(h).padStart(2, '0')}:00</span>`;
             const row = (label, track, cls = '') => `<div class="sv-hr ${cls}"><div class="sv-hl">${label}</div><div class="sv-ht2">${track}</div></div>`;
             // Dizayn: biriktirilmagan sinov ustida qora callout — lid, vaqt, menejer, shu vaqtda bo'sh ustoz va "Biriktirish".
-            const cu = unassigned.find(u => u.end > vr[0] && u.start < vr[1]);
+            // Oynadan tashqaridagi biriktirilmagan sinov ham ko'rinadi: callout "→ HH:MM" tugmasi oynani o'sha vaqtga suradi.
+            const cuIn = unassigned.find(u => u.end > vr[0] && u.start < vr[1]);
+            const cu = cuIn || unassigned[0];
+            const goBtn = !cuIn && cu ? `<button type="button" class="sc-btn sc-btn--sm" data-wingo="${cu.start}">→ ${hm(cu.start)}</button>` : '';
             const callout = !cu ? '' : (() => { const freeT = todayViews.filter(v => (v.trialFree || []).some(f => f.start <= cu.start && cu.end <= f.end)).map(v => short(tname(v.teacherId)));
-                return `<div class="sv-call" style="left:${Math.min(pct(cu.start), 58).toFixed(2)}%"><b>${esc(cu.leadName || 'Lid')} · sinov ${hm(cu.start)}–${hm(cu.end)}</b><small>${[mgr.get(cu.managerId) && 'menejer ' + first(mgr.get(cu.managerId)), freeT.length ? 'bo\'sh: ' + freeT.slice(0, 2).join(', ') : 'bo\'sh ustoz yo\'q'].filter(Boolean).map(esc).join(' · ')}</small><button type="button" class="sc-btn sc-btn--pri sc-btn--sm" data-un="${esc(cu.leadId)}">Biriktirish</button></div>`; })();
+                return `<div class="sv-call" style="${cuIn ? `left:${Math.min(pct(cu.start), 58).toFixed(2)}%` : cu.start >= vr[1] ? 'right:8px' : 'left:8px'}"><b>${esc(cu.leadName || 'Lid')} · sinov ${hm(cu.start)}–${hm(cu.end)}</b><small>${[mgr.get(cu.managerId) && 'menejer ' + first(mgr.get(cu.managerId)), freeT.length ? 'bo\'sh: ' + freeT.slice(0, 2).join(', ') : 'bo\'sh ustoz yo\'q'].filter(Boolean).map(esc).join(' · ')}</small>${goBtn}<button type="button" class="sc-btn sc-btn--pri sc-btn--sm" data-un="${esc(cu.leadId)}">Biriktirish</button></div>`; })();
             const unRow = unassigned.length ? row(`<span><b>Biriktirilmagan</b><small>sinovlar · ${unassigned.length}</small></span>`, unassigned.map(u => hb(u.start, u.end, 'k-tr k-un2', first(u.leadName), 'ustoz yo\'q', ` data-un="${esc(u.leadId)}"`)).join('') + callout, 'is-un') : '';
             const tRows = todayViews.map(v => {
                 const bl = teacherBlocks(v, range, { free: showFree, names: true, assist: hideAs ? [] : asst.filter(a => a.assistantId === v.teacherId) });
@@ -365,6 +368,7 @@
             body.querySelectorAll('[data-tr]').forEach(b => b.onclick = () => typeof switchTab === 'function' && switchTab('trial-lessons'));
             body.querySelectorAll('[data-win]').forEach(b => b.onclick = () => { if (st.winAll) st.winAll = false; else st.win = clampWin(clampWin(st.win) + Number(b.dataset.win) * 120); redraw(); });
             body.querySelector('[data-winall]')?.addEventListener('click', () => { st.winAll = !st.winAll; redraw(); });
+            body.querySelectorAll('[data-wingo]').forEach(b => b.onclick = () => { st.winAll = false; st.win = clampWin(Math.floor((Number(b.dataset.wingo) - 60) / 60) * 60); redraw(); });
         };
         bind();
         body.querySelectorAll('[data-rem]').forEach(b => b.onclick = () => {

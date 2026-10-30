@@ -23,6 +23,15 @@
     // ── Faol bo'lmagan o'quvchilar (ustoz, sotuv): o'z davri, faollar bilan aralashmaydi ──
     // Sahifa ichida (root berilsa) — holat bo'yicha kartalar (js/studentArchive.js); aks holda eski oyna.
     async function openInactive(root, opts) {
+        // Sotuv: arxiv — O'quvchilar sahifasining o'zida (SotuvOquvchiArxiv, bo'limli kartalar), yon oyna emas.
+        const isSales = typeof getCurrentUser === 'function' && getCurrentUser()?.role === 'sales_manager';
+        if (isSales && !(root && root.nodeType === 1) && typeof switchTab === 'function') {
+            soldState.tab = 'inactive';
+            const r = document.getElementById('schoolMyStudents');
+            if (document.getElementById('tab-students')?.classList.contains('active') && r && !r.hidden) return renderSoldStudents(r);
+            switchTab('students', { studentsSection: 'faol' });
+            return;
+        }
         if (window.studentArchive) return root && root.nodeType === 1 ? window.studentArchive.render(root, opts || {}) : window.studentArchive.openDrawer();
         const { api, esc, openDrawer, fmtDate, studentAvatar } = U();
         const box = openDrawer({ title: 'Faol emas', sub: 'Muzlatilgan, chiqib ketgan va boshqa ustozga o\'tganlar · faqat siz bilan bo\'lgan davr', body: '<div class="sc-skel"></div>', wide: true });

@@ -47,7 +47,7 @@
         }
         if (!ov.dataset.cvBound) {
             ov.dataset.cvBound = '1';
-            ov.addEventListener('crm:modal-closed', () => { ov.classList.remove('cv-pagemode'); ov.querySelector('.modal-header .cv-back')?.remove(); });
+            ov.addEventListener('crm:modal-closed', () => { ov.classList.remove('cv-pagemode'); ov.querySelector('.modal-header .cv-back')?.remove(); ov.querySelector('.modal.cv-hasaside')?.classList.remove('cv-hasaside'); });
         }
     }
 
@@ -194,34 +194,98 @@
               <dl class="cv-dl"><dt>Tarif</dt><dd>${dur ? `${dur} daq${PRICE[dur] ? ` · ${num(PRICE[dur])} so'm/oy` : ''}` : '—'}</dd><dt>Ustoz</dt><dd>${tname ? esc(tname) : '—'}</dd>
                 <dt>Jadval</dt><dd>${pat && time ? `${pat.label} ${esc(time)}` : '—'}</dd><dt>Boshlanish</dt><dd>${fd ? esc(dLabel(fd)) : '—'}</dd>
                 <dt>Kurs</dt><dd>${fd ? `${COURSE_DAYS} kun · ${ddmm(fd)} → ${ddmm(addD(fd, COURSE_DAYS - 1))}` : `${COURSE_DAYS} kun · 72 dars`}</dd></dl>
-              <p class="cv-note">Saqlansa vaqt ${tname ? `<b>${esc(shortName(tname))}</b> ` : ''}jadvalida doimiy band bo'ladi${tr.t ? ' va sinov yozuvi jadvaldan chiqadi' : ''}. To'lov qabul qilingach lid "O'quvchi" bo'ladi va ilova logini yaratiladi.</p>`;
+              <p class="cv-note">Saqlansa vaqt ${tname ? `<b>${esc(shortName(tname))}</b> ` : ''}jadvalida doimiy band bo'ladi${tr.t ? ' va sinov yozuvi jadvaldan chiqadi' : ''}. To'lov qabul qilingach lid "O'quvchi" bo'ladi va ilova logini yaratiladi.</p>
+              <button type="button" class="btn-primary-sm cv-go">Davom etish · To'lov</button>`;
+            aside.querySelector('.cv-go').onclick = () => document.getElementById('confirmPaymentTeacherSchedule')?.click();
         };
         let raf = 0;
         function sync() { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { drawSlots(); drawFirst(); drawOthers(); drawAside(); modalBody.querySelectorAll('[data-dur]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.dur === durSel?.value))); }); }
         teacherSel?.addEventListener('change', sync); durSel?.addEventListener('change', sync);
         new MutationObserver(sync).observe(modalBody, { attributes: true, attributeFilter: ['data-onboard-schedule-day', 'data-onboard-schedule-time', 'data-onboard-schedule-pattern'] });
         const ok = document.getElementById('confirmPaymentTeacherSchedule'); if (ok) ok.textContent = 'Davom etish · To\'lov';
+        modalBody.closest('.modal')?.classList.add('cv-hasaside');
         pageMode(lead);
         sync();
     }
 
-    // ── 4-qadam (To'lov) va 6-qadam (Ilova login): sarlavha va qadamlar ──
+    // ── 4-qadam (To'lov) va 6-qadam (Ilova login): sarlavha, qadamlar, Xulosa paneli ──
+    // 3-qadamda tanlangan tarif (dars davomiyligi) va doimiy jadval qayta so'ralmaydi: 4-qadamda "Tarif" radiosi
+    // jadvaldagi davomiylik bilan tanlangan va yashirin; 6-qadamda ustoz/davomiylik/15 daqiqalik to'r yashirin —
+    // qiymatlari o'sha (asl maydonlar, tekshiruv o'zgarmaydi), o'rniga bir qatorlik xulosa va "O'zgartirish".
+    function schedLine(lead) {
+        const ob = lead?.paymentOnboarding || {};
+        if (!ob.lessonDayOfWeek || !ob.lessonTime) return '';
+        const pat = PAT[patternOf(ob.lessonDayOfWeek)];
+        return `${pat.label} ${ob.lessonTime}`;
+    }
+    function hideField(el) { if (el) { el.hidden = true; el.style.display = 'none'; } }
+    function summaryAside(modalBody, lead, lang, active, btnId, btnLabel) {
+        if (modalBody.querySelector('.cv-lay')) return;
+        const survey = modalBody.querySelector('.lead-survey'); if (!survey) return;
+        const lay = document.createElement('div'); lay.className = 'cv-lay';
+        lay.innerHTML = '<div class="cv-main"></div><aside class="cv-aside" aria-label="Xulosa"></aside>';
+        survey.before(lay); lay.querySelector('.cv-main').appendChild(survey);
+        const aside = lay.querySelector('.cv-aside');
+        const draw = () => {
+            const ob = lead?.paymentOnboarding || {}, ps = lead?.paymentSurvey || {};
+            const dur = Number(ob.lessonDuration) || (typeof getLeadLessonDuration === 'function' ? getLeadLessonDuration(lead) : 0);
+            const chosen = active === 4 ? modalBody.querySelector('[data-payment-field="paymentType"]:checked') : null;
+            const amount = active === 4 ? modalBody.querySelector('[data-payment-field="amount"]:checked') : null;
+            const fd = ob.firstLessonDate || modalBody.querySelector('#onboardFirstLessonDate')?.value || '';
+            const payTxt = active === 4 ? [chosen?.closest('label')?.textContent.trim(), amount?.value === 'custom' ? (modalBody.querySelector('#paymentCustomAmount')?.value || '') : amount?.closest('label')?.textContent.trim()].filter(Boolean).join(' · ')
+                : [ps.paymentTypeLabel, ps.amountLabel].filter(Boolean).join(' · ');
+            aside.innerHTML = `<h3>Xulosa</h3>${trialBox(lead)}
+              <dl class="cv-dl"><dt>Tarif</dt><dd>${dur ? `${dur} daq` : '—'}</dd><dt>Ustoz</dt><dd>${esc(staffName(ob.teacherId) || '—')}</dd>
+                <dt>Jadval</dt><dd>${esc(schedLine(lead) || '—')}</dd><dt>Boshlanish</dt><dd>${/^\d{4}-\d{2}-\d{2}$/.test(fd) ? esc(dLabel(fd)) : '—'}</dd>
+                <dt>To'lov</dt><dd>${esc(payTxt || '—')}</dd>${ob.telegramGroupName ? `<dt>Guruh</dt><dd>${esc(ob.telegramGroupName)}</dd>` : ''}</dl>
+              <p class="cv-note">${active === 4 ? 'To\'lov saqlangach lid "To\'lov jarayonida" bosqichiga o\'tadi, keyin Telegram guruh va ilova login.' : 'Saqlansa lid "O\'quvchi" bo\'ladi, ilova logini yaratiladi va kitob yetkazish kartochkasi ochiladi.'}</p>
+              <button type="button" class="btn-primary-sm cv-go">${esc(btnLabel)}</button>`;
+            aside.querySelector('.cv-go').onclick = () => document.getElementById(btnId)?.click();
+        };
+        modalBody.addEventListener('change', () => requestAnimationFrame(draw));
+        modalBody.closest('.modal')?.classList.add('cv-hasaside');
+        draw();
+    }
     function enhanceStep(modalBody, lead, lang, active) {
         if (!modalBody) return;
         const old = modalBody.querySelector('.pay-steps');
         const html = `<p class="cv-sub">${subline(lead, lang)}</p>${steps(active, lead)}`;
         if (old) { old.insertAdjacentHTML('beforebegin', html); old.remove(); } else modalBody.insertAdjacentHTML('afterbegin', html);
         pageMode(lead);
+        const ob = lead?.paymentOnboarding || {};
+        const hasSched = typeof leadHasTeacherSchedule === 'function' ? leadHasTeacherSchedule(lead) : !!(ob.teacherId && ob.lessonTime && !ob.isTrial);
+        if (active === 4) {
+            // Tarif 3-qadamda (dars davomiyligi) tanlangan — qayta so'ralmaydi.
+            const dur = String(Number(ob.lessonDuration) || '');
+            const radio = modalBody.querySelector(`[data-payment-field="tariff"][value="${dur}"]`);
+            if (radio && hasSched) {
+                radio.checked = true; radio.dispatchEvent(new Event('change', { bubbles: true }));
+                const sec = radio.closest('.lead-survey-section'); hideField(sec);
+                sec?.insertAdjacentHTML('afterend', `<p class="cv-hint cv-fixed">Tarif: <b>${esc(dur)} daqiqalik</b> · 3-qadamda tanlangan</p>`);
+            }
+            summaryAside(modalBody, lead, lang, 4, 'confirmPaymentProcess', 'Davom etish · Telegram guruh');
+        }
         // "Birinchi dars" 3-qadamda tanlangan bo'lsa — "Ilk dars boshlash sanasi" shu bilan to'ladi.
-        const fdIn = modalBody.querySelector('#onboardFirstLessonDate'), fd = lead?.paymentOnboarding?.firstLessonDate;
+        const fdIn = modalBody.querySelector('#onboardFirstLessonDate'), fd = ob.firstLessonDate;
         if (active === 6 && fdIn && !fdIn.value && /^\d{4}-\d{2}-\d{2}$/.test(String(fd || ''))) { fdIn.value = fd; fdIn.dispatchEvent(new Event('change', { bubbles: true })); }
         if (active === 6) {
             // Guruh 5-qadamda kiritilgan bo'lsa — maydonlar shu yerda yashirin (qiymati o'sha, tekshiruv o'zgarmaydi).
-            const ob = lead?.paymentOnboarding || {};
-            if (ob.telegramGroupLink && ob.telegramGroupName) ['#onboardTelegramGroupLink', '#onboardTelegramGroupName'].forEach(s => {
-                const f = modalBody.querySelector(s)?.closest('.lead-survey-field'); if (f) { f.hidden = true; f.style.display = 'none'; }
-            });
+            if (ob.telegramGroupLink && ob.telegramGroupName) ['#onboardTelegramGroupLink', '#onboardTelegramGroupName'].forEach(s => hideField(modalBody.querySelector(s)?.closest('.lead-survey-field')));
             if (ob.telegramGroupName) modalBody.querySelector('.cv-chips')?.insertAdjacentHTML('afterend', `<p class="cv-hint">Telegram guruh: <b>${esc(ob.telegramGroupName)}</b> · ${esc(String(ob.telegramGroupLink || '').replace(/^https:\/\//, ''))}</p>`);
+            // Doimiy jadval 3-qadamda saqlangan — ustoz, davomiylik va 15 daqiqalik to'r qayta chiqmaydi.
+            if (hasSched && modalBody.dataset.onboardScheduleDay && modalBody.dataset.onboardScheduleTime) {
+                const tSel = modalBody.querySelector('#onboardTeacherId');
+                hideField(tSel?.closest('.lead-survey-field'));
+                hideField(modalBody.querySelector('#onboardLessonDuration')?.closest('.lead-survey-field'));
+                hideField(modalBody.querySelector('#onboardScheduleBlock'));
+                const line = document.createElement('div'); line.className = 'lead-survey-field cv-fixed';
+                line.innerHTML = `<span class="lead-survey-label">Doimiy jadval</span><p class="cv-hint"><b>${esc(staffName(ob.teacherId) || '—')}</b> · ${esc(schedLine(lead))} · ${esc(String(ob.lessonDuration || ''))} daq · 3-qadamda tanlangan <button type="button" class="sc-link cv-resched">O'zgartirish</button></p>`;
+                tSel?.closest('.lead-survey-field')?.before(line);
+                line.querySelector('.cv-resched').onclick = () => { if (typeof closeModal === 'function') closeModal(); if (typeof openPaymentTeacherScheduleModal === 'function') openPaymentTeacherScheduleModal(lang, lead.id); };
+                // MutationObserver/sync qayta ochmasin.
+                new MutationObserver(() => { const b = modalBody.querySelector('#onboardScheduleBlock'); if (b && b.style.display !== 'none') hideField(b); }).observe(modalBody, { subtree: true, attributes: true, attributeFilter: ['hidden', 'style'] });
+            }
+            summaryAside(modalBody, lead, lang, 6, 'confirmPaymentOnboarding', 'Saqlash · O\'quvchi yaratish');
         }
     }
 
@@ -288,7 +352,7 @@
     function wrapOpenModal() {
         if (typeof window.openModal !== 'function' || window.openModal.__cv) return;
         const orig = window.openModal;
-        const wrapped = function (...a) { const ov = document.getElementById('modalOverlay'); ov?.classList.remove('cv-pagemode'); ov?.querySelector('.modal-header .cv-back')?.remove(); return orig.apply(this, a); };
+        const wrapped = function (...a) { const ov = document.getElementById('modalOverlay'); ov?.classList.remove('cv-pagemode'); ov?.querySelector('.modal-header .cv-back')?.remove(); ov?.querySelector('.modal.cv-hasaside')?.classList.remove('cv-hasaside'); return orig.apply(this, a); };
         wrapped.__cv = true; window.openModal = wrapped;
     }
     window.convertUI = { steps, subline, enhanceSchedule, enhanceStep, openGroupStep };

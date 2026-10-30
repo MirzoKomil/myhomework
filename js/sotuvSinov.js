@@ -288,30 +288,111 @@
         }
     }
 
-    // ── Band qilishdagi holatlar (SotuvHolatlar) — 5 holat katalogi, har birida keyingi qadam ──
+    // ── Band qilishdagi holatlar (SotuvHolatlar) — 5 holat, HAQIQIY jadvaldan (ertangi kun, lid istagi yoki 10:00) ──
+    // Har tugma haqiqiy amal: vaqtni ushlab turish, ustoz taklifini qabul qilish, adminga "Ustoz biriktirilmagan"
+    // yuborish. Ushlab turish lid uchun — lid tanlanmagan bo'lsa, asosiy sahifada lid so'raladi (P.pending).
+    function withDays(n, fn) { const keep = P.days; P.days = n; try { return fn(); } finally { P.days = keep; } }
+    function rejectedLeads() {
+        return myLeads().filter(l => l.status === 'sinov-darsida').map(l => ({ l, r: W().request(l) }))
+            .filter(x => x.r && x.r.state === 'rejected').sort((a, b) => String(b.r.rejectedAt || b.r.scheduledAt || '').localeCompare(String(a.r.rejectedAt || a.r.scheduledAt || '')));
+    }
+    function statesModel() {
+        const tm = U().addDays(U().today(), 1);
+        const wish = P.wish != null ? P.wish : 10 * 60;
+        const keepDate = P.date; P.date = tm;
+        try {
+            const ts = visibleTeachers(tm);
+            const near = candidates(tm, wish);
+            // 1 — istagan vaqtda band ustoz (haqiqiy band) va eng yaqin bo'sh vaqtlar.
+            const busyT = ts.find(t => { const v = view(t, tm); return v && v.work.some(w => w.start <= wish && wish + P.dur <= w.end) && !dayFits(t, tm, wish); });
+            // 2 — hozir ushlab turish mumkin bo'lgan haqiqiy bo'sh vaqt.
+            const free = near[0] || null;
+            // 4 — 08:00–21:30 orasida hech kim bo'sh bo'lmagan eng erta ish vaqti (avval lid istagi).
+            const workAt = m => ts.some(t => (view(t, tm)?.work || []).some(w => w.start <= m && m + P.dur <= w.end));
+            const nobody = m => !ts.some(t => dayFits(t, tm, m));
+            let none = null;
+            if (workAt(wish) && nobody(wish)) none = wish;
+            else for (let m = 8 * 60; m <= 21 * 60 + 30; m += STEP) if (nobody(m) && (workAt(m) || m < 9 * 60)) { none = m; break; }
+            const noneNear = none == null ? null : candidates(tm, none)[0] || null;
+            // 5 — 3 kunlik sinov: birinchi kuni bo'sh, lekin keyingi kunlardan biri band.
+            const d3 = trialDates(tm, 3);
+            let partial = null;
+            for (const t of ts) { for (let m = 8 * 60; m <= 21 * 60 && !partial; m += STEP) if (dayFits(t, tm, m) && !d3.every(d => dayFits(t, d, m))) partial = { t, m }; if (partial) break; }
+            const alt3 = withDays(3, () => candidates(tm, partial ? partial.m : wish)).slice(0, 3);
+            return { tm, wish, busyT, near: near.filter(c => !(busyT && c.t === busyT && c.m === wish)).slice(0, 3), free, none, noneNear, d3, partial, alt3, rej: rejectedLeads()[0] || null };
+        } finally { P.date = keepDate; }
+    }
     function drawStates(el) {
-        const ts = (P.data?.teachers || []).map(t => short(t.name)).filter(Boolean);
-        const tA = ts[0] || 'Kamola M.', tB = ts[1] || 'Gulnora T.', tC = ts[2] || 'Dilnoza S.', tD = ts[3] || 'Javlonbek Q.';
-        const tm = U().addDays(U().today(), 1), d2 = trialDates(tm, 3);
+        const head = `<div class="sv-head"><div class="sv-ht"><button type="button" class="sc-link sv-back" data-back-states>← Sinov darsi qo'yish</button>
+              <h1>Band qilishdagi holatlar</h1><p class="sc-sub">Sotuv menejeri va ROP ko'radigan xabarlar · har birida keyingi qadam tayyor · ertangi kun bo'yicha haqiqiy jadval</p></div></div>`;
+        if (!P.data || P.failed) {
+            el.innerHTML = head + (P.failed ? `<section class="sc-card ss-lerr">${window.LoadErr.html({ title: 'Ustozlar jadvalini yuklab bo\'lmadi', err: P.err, note: 'Holatlar haqiqiy bo\'sh vaqtlardan hisoblanadi — jadvalsiz ko\'rsatilmadi.' })}</section>` : '<div class="sc-skel"></div>');
+            el.querySelector('[data-back-states]').onclick = () => { P.view = null; draw(); };
+            window.LoadErr.bind(el, () => load());
+            return;
+        }
+        const M = statesModel();
         const dd = d => `${U().DAY[U().wd(d) - 1]} ${Number(d.slice(8))}-${MON[Number(d.slice(5, 7)) - 1]}`;
-        const btn = (t, pri) => `<span class="sc-btn${pri ? ' sc-btn--pri' : ''} rs-demo" aria-hidden="true">${esc(t)}</span>`;
+        const pick = (c, label, pri, days = 1) => `<button type="button" class="sc-btn${pri ? ' sc-btn--pri' : ''}" data-st-pick="${esc(c.t)}|${c.date}|${c.m}|${days}"${P.busy ? ' disabled' : ''}>${esc(label)}</button>`;
         const card = (n, title, body) => `<section class="sc-card rs-hc"><h3 class="rs-hc-h">${n} · ${esc(title)}</h3>${body}</section>`;
-        el.innerHTML = `<div class="sv-head"><div class="sv-ht"><button type="button" class="sc-link sv-back" data-back-states>← Sinov darsi qo'yish</button>
-              <h1>Band qilishdagi holatlar</h1><p class="sc-sub">Sotuv menejeri va ROP ko'radigan xabarlar · har birida keyingi qadam tayyor</p></div></div>
+        const empty = t => `<p class="sc-mt rs-hc-empty">${esc(t)}</p>`;
+        const lbl = c => `${short(tname(c.t))} · ${U().DAY[U().wd(c.date) - 1]} ${hm(c.m)}`;
+        const c1 = M.busyT
+            ? `${toastBox('bad', '⚠', `${esc(short(tname(M.busyT)))} · ${esc(dd(M.tm))} ${hm(M.wish)} band`, 'Bu vaqt allaqachon band (dars yoki boshqa menejerning sinovi). Tanlov saqlanmaydi.')}
+               <b class="ss-lab">Lid istagiga eng yaqin bo'sh vaqtlar:</b><div class="ss-alt2">${M.near.map(c => pick(c, lbl(c))).join('') || empty('Ertaga bo\'sh vaqt yo\'q — boshqa sana tanlang.')}</div>`
+            : empty(`Ertaga ${hm(M.wish)} da band ustoz yo'q — bu holat hozir yuz bermaydi.`) + (M.near.length ? `<div class="ss-alt2">${M.near.map(c => pick(c, lbl(c))).join('')}</div>` : '');
+        const c2 = M.free
+            ? `${toastBox('warn', '⏳', '10 daqiqa o\'tsa — vaqt qo\'yib yuboriladi', `${esc(short(tname(M.free.t)))} · ${esc(dd(M.tm))} ${hm(M.free.m)} hozir bo'sh. Ushlab turasizmi?`)}
+               <div class="sc-row sc-wrap">${pick(M.free, 'Qayta ushlab turish', true)}<button type="button" class="sc-btn" data-st-back>Boshqa vaqt</button></div>`
+            : empty('Ertaga sinovga ochiq bo\'sh vaqt yo\'q.');
+        const R = M.rej;
+        const rp = R ? (R.r.proposals || []).map(local).filter(Boolean) : [];
+        const ra = R ? local(R.r.scheduledAt) : null;
+        const c3 = R
+            ? `${toastBox('info', '↺', `${esc(short(tname(String(R.r.teacherId))))} · ${esc(R.l.name)}${ra ? ` · ${esc(dd(ra.date))} ${hm(ra.min)}` : ''}`, `"${esc(R.r.reasonLabel || 'Rad etildi')}".${rp.length ? ` Taklif: ${rp.map(x => `${esc(dayShort(x.date))} · ${hm(x.min)}`).join(', ')}.` : ' Ustoz vaqt taklif qilmadi.'}`)}
+               ${rp.length ? `<div class="ss-alt2" role="group" aria-label="Ustoz taklif qilgan vaqtlar">${rp.map((x, i) => `<button type="button" class="ss-ch3" data-st-rp="${i}" aria-pressed="${i === (P.stRp || 0)}">${esc(dayShort(x.date))} · ${hm(x.min)}</button>`).join('')}</div>` : ''}
+               <div class="sc-row sc-wrap">${rp.length ? `<button type="button" class="sc-btn sc-btn--pri" data-st-rej-go${P.busy ? ' disabled' : ''}>Lidga yuborish va band qilish</button>` : ''}<button type="button" class="sc-btn" data-st-rej-other>Boshqa ustoz</button></div>`
+            : empty('Hozir ustoz rad etgan sinov yo\'q. Rad etilsa, shu yerda va lid sahifasida chiqadi.');
+        const c4 = M.none != null
+            ? `${toastBox('warn', '!', `Ertaga ${hm(M.none)} — sinovga ochiq ustoz yo'q`, M.noneNear ? `Eng yaqin bo'sh vaqt: ${hm(M.noneNear.m)} (${esc(short(tname(M.noneNear.t)))}). Lid aynan ${hm(M.none)} ni xohlasa, adminga yuboring.` : `Lid aynan ${hm(M.none)} ni xohlasa, adminga yuboring.`)}
+               <div class="sc-row sc-wrap"><button type="button" class="sc-btn sc-btn--pri" data-st-unassigned="${M.none}"${P.busy ? ' disabled' : ''}>Adminga yuborish · "Ustoz biriktirilmagan"</button>${M.noneNear ? pick(M.noneNear, `${hm(M.noneNear.m)} ni taklif qilish`) : ''}</div>`
+            : empty('Ertaga 08:00–21:30 oralig\'ida har yarim soatda kamida bitta ustoz bo\'sh.');
+        const P5 = M.partial;
+        const c5 = P5
+            ? `${toastBox('warn', '!', `${esc(short(tname(P5.t)))} · ${hm(P5.m)} · ${M.d3.map(d => `${esc(dayShort(d))} ${dayFits(P5.t, d, P5.m) ? '✓' : '✗'}`).join(' · ')}`, 'Uchala kun bir vaqtda bo\'lishi kerak. Mos variantlar:')}
+               <div class="ss-slots">${M.alt3.map((c, i) => `<button type="button" class="ss-sl5${i ? '' : ' is-on'}" data-st-pick="${esc(c.t)}|${c.date}|${c.m}|3"${P.busy ? ' disabled' : ''}>${esc(short(tname(c.t)))} ${hm(c.m)}<small>${M.d3.map(dayShort).join(' · ')}</small></button>`).join('')}
+                 <div class="ss-sl5 is-no">${esc(short(tname(P5.t)))} ${hm(P5.m)}<small>${esc(M.d3.filter(d => !dayFits(P5.t, d, P5.m)).map(dayShort).join(', '))} band</small></div></div>`
+            : (M.alt3.length ? `${empty('Ertangi 3 kunlik sinovda bitta kuni band bo\'lgan vaqt yo\'q. Uch kunda ham bo\'sh variantlar:')}<div class="ss-slots">${M.alt3.map(c => `<button type="button" class="ss-sl5" data-st-pick="${esc(c.t)}|${c.date}|${c.m}|3">${esc(short(tname(c.t)))} ${hm(c.m)}<small>${M.d3.map(dayShort).join(' · ')}</small></button>`).join('')}</div>` : empty('3 kunlik sinov uchun bo\'sh vaqt yo\'q.'));
+        el.innerHTML = `${head}
+          ${P.alert?.type === 'error' ? `<div class="sc-err" role="alert">${esc(P.alert.msg)}</div>` : ''}
           <div class="rs-sts">
-            ${card(1, 'Boshqa menejer oldinroq band qildi', `${toastBox('bad', '⚠', `${esc(tA)} · ${esc(dd(tm))} 10:00 endi band`, 'Boshqa menejer bir necha soniya oldin band qildi. Sizning tanlovingiz saqlanmadi.')}
-              <b class="ss-lab">Lid istagiga eng yaqin bo'sh vaqtlar:</b><div class="ss-alt2">${btn(`${tB} · 10:30`)}${btn(`${tA} · 12:00`)}${btn(`${tC} · 12:00`)}</div>`)}
-            ${card(2, 'Ushlab turish vaqti tugadi (1-holatdan oldin)', `${toastBox('warn', '⏳', '10 daqiqa o\'tdi — vaqt qo\'yib yuborildi', `${esc(tA)} · ${esc(dd(tm))} 10:00 hali bo'sh. Qayta ushlab turasizmi?`)}
-              <div class="sc-row sc-wrap">${btn('Qayta ushlab turish', true)}${btn('Boshqa vaqt')}</div>`)}
-            ${card(3, 'Ustoz rad etdi va vaqt taklif qildi · namuna', `${toastBox('info', '↺', `${esc(tC)} · Lid · ${esc(dd(tm))} 16:00`, `"Shu vaqtda bandman". Taklif: ${esc(dd(tm))} · 17:00, ${esc(dd(d2[1]))} · 17:00.`)}
-              <div class="ss-alt2">${btn(`${dd(tm)} · 17:00`, true)}${btn(`${dd(d2[1])} · 17:00`)}</div><div class="sc-row sc-wrap">${btn('Lidga yuborish va band qilish', true)}${btn('Boshqa ustoz')}</div>`)}
-            ${card(4, 'Lid istagan vaqtda hech kim bo\'sh emas', `${toastBox('warn', '!', 'Ertaga 08:00 — sinovga ochiq ustoz yo\'q', `Eng erta bo'sh vaqt: 10:00 (${esc(tA)}). Lid aynan 08:00 ni xohlasa, adminga yuboring.`)}
-              <div class="sc-row sc-wrap">${btn('Adminga yuborish · "Ustoz biriktirilmagan"', true)}${btn('10:00 ni taklif qilish')}</div>`)}
-            ${card(5, '3 kunlik sinovda bir kun band', `${toastBox('warn', '!', `${esc(tB)} · 10:30 · ${d2.map((d, i) => `${esc(dayShort(d))} ${i === 2 ? '✗ (dars bor)' : '✓'}`).join(' · ')}`, 'Uchala kun bir vaqtda bo\'lishi kerak. Mos variantlar:')}
-              <div class="ss-slots">${[[tB, '14:00'], [tC, '12:00'], [tD, '15:00']].map(([t, h], i) => `<span class="ss-sl5${i ? '' : ' is-on'}" aria-hidden="true">${esc(t)} ${h}<small>${d2.map(dayShort).join(' · ')}</small></span>`).join('')}<span class="ss-sl5 is-no" aria-hidden="true">${esc(tA)} 10:00<small>${esc(dayShort(d2[2]))} band</small></span></div>`)}
-          </div>
-          <p class="sc-mt">Bu sahifa — ma'lumotnoma. Har bir holat "Sinov darsi qo'yish" sahifasida haqiqiy vaqt va lid bilan, kerak bo'lganda o'zi chiqadi.</p>`;
-        el.querySelector('[data-back-states]').onclick = () => { P.view = null; draw(); };
+            ${card(1, 'Boshqa menejer oldinroq band qildi', c1)}
+            ${card(2, 'Ushlab turish vaqti tugadi (1-holatdan oldin)', c2)}
+            ${card(3, 'Ustoz rad etdi va vaqt taklif qildi', c3)}
+            ${card(4, 'Lid istagan vaqtda hech kim bo\'sh emas', c4)}
+            ${card(5, '3 kunlik sinovda bir kun band', c5)}
+          </div>`;
+        const back = () => { P.view = null; draw(); document.getElementById('ssPage')?.scrollTo?.(0, 0); };
+        el.querySelector('[data-back-states]').onclick = back;
+        el.querySelector('[data-st-back]')?.addEventListener('click', () => { P.date = M.tm; back(); });
+        el.querySelectorAll('[data-st-pick]').forEach(b => b.onclick = () => {
+            const [t, d, m, days] = b.dataset.stPick.split('|');
+            P.view = null; P.date = d; P.days = Number(days) || 1; P.alert = null;
+            if (!P.lead) { P.pending = { teacherId: t, date: d, min: Number(m) }; P.alert = { type: 'error', msg: `Lidni tanlang — ${short(tname(t))} · ${dayShort(d)} ${hm(Number(m))} shu lid uchun ushlab turiladi.` }; draw(); return; }
+            hold(t, d, Number(m));
+        });
+        el.querySelectorAll('[data-st-rp]').forEach(b => b.onclick = () => { P.stRp = Number(b.dataset.stRp); draw(); });
+        el.querySelector('[data-st-rej-go]')?.addEventListener('click', () => {
+            const k = P.stRp || 0;
+            open({ lang: R.l._lang, leadId: R.l.id, from: P.from, onClose: P.onClose });
+            if (P) { P.rejPick = k; const go = () => (P?.data ? acceptProposal() : setTimeout(go, 200)); go(); }
+        });
+        el.querySelector('[data-st-rej-other]')?.addEventListener('click', () => { open({ lang: R.l._lang, leadId: R.l.id, from: P.from, onClose: P.onClose }); if (P) { P.rejDismissed = true; P.mode = 'any'; } });
+        el.querySelector('[data-st-unassigned]')?.addEventListener('click', e => {
+            P.view = null; P.date = M.tm; P.wish = Number(e.currentTarget.dataset.stUnassigned); P.alert = null;
+            if (!P.lead) { P.alert = { type: 'error', msg: `Lidni tanlang — so'ng "Adminga yuborish" (${hm(P.wish)}).` }; draw(); return; }
+            draw(); sendUnassigned();
+        });
     }
 
     // ── Chizish ─────────────────────────────────────────────────────────────
@@ -523,8 +604,7 @@
         const lang = st.lang || 'english';
         const lbl = d => `${d === today ? 'Bugun · ' : d === tom ? 'Ertaga · ' : ''}${U().DAY[U().wd(d) - 1]}, ${dm(d)}`;
         root.innerHTML = `<div class="sv-head"><div class="sv-ht"><h1>Dars jadvali</h1><p class="sc-sub">Ustozlarning bo'sh va band vaqti · o'quvchilar ismi ko'rinmaydi · vaqt Toshkent bo'yicha</p></div>
-            <div class="sv-ctl"><span class="sc-pill sc-pill--info">${lang === 'russian' ? 'Rus tili' : 'Ingliz tili'}</span>
-              <div class="sv-mon" role="group" aria-label="Sana"><button type="button" data-d="-1" aria-label="Oldingi kun"${date <= today ? ' disabled' : ''}>‹</button><span>${esc(lbl(date))}</span><button type="button" data-d="1" aria-label="Keyingi kun">›</button></div>
+            <div class="sv-ctl"><div class="sv-mon" role="group" aria-label="Sana"><button type="button" data-d="-1" aria-label="Oldingi kun"${date <= today ? ' disabled' : ''}>‹</button><span>${esc(lbl(date))}</span><button type="button" data-d="1" aria-label="Keyingi kun">›</button></div>
               <button type="button" class="sc-btn sc-btn--pri sv-big" data-new>+ Sinov darsi qo'yish</button></div></div>
           <div data-body class="sv-body"><div class="sc-skel"></div></div>`;
         const reload = () => SS.render(root);
@@ -560,10 +640,22 @@
         let H0 = 9 * 60, H1 = 21 * 60;
         for (const v of vDay) for (const x of [...v.work, ...v.items]) { H0 = Math.min(H0, Math.floor(x.start / 60) * 60); H1 = Math.max(H1, Math.ceil(x.end / 60) * 60); }
         for (const u of unDay) { H0 = Math.min(H0, Math.floor(u.start / 60) * 60); H1 = Math.max(H1, Math.ceil(u.end / 60) * 60); }
-        const pct = m => ((Math.max(H0, Math.min(H1, m)) - H0) / (H1 - H0) * 100);
+        // Ko'rinadigan oyna (dizayn "‹ 09:00–13:00 ›", RopJadval bilan bir xil 4 soat): bugun — hozirgi vaqtdan, aks holda birinchi ish soatidan.
+        // "Butun kun" tugmasi bilan 07–22 to'liq. Bloklar kesilmaydi — har blok oynada keng ko'rinadi.
+        const WIN = 240, full = [H0, H1], winFits = H1 - H0 > WIN;
+        const clampW = w => Math.max(H0, Math.min(H1 - WIN, w));
+        if (st.sWinDate !== date) {
+            st.sWinDate = date;
+            const firstWork = Math.min(...vDay.flatMap(v => v.work.map(w => w.start)), ...unDay.map(u => u.start), H1 - WIN);
+            st.sWin = Math.floor(((date === today ? nowM - 60 : firstWork) / 60)) * 60;
+        }
+        let vr = full;
+        const setVr = () => { vr = st.sWinAll || !winFits ? full : [clampW(st.sWin), clampW(st.sWin) + WIN]; };
+        setVr();
+        const pct = m => ((Math.max(vr[0], Math.min(vr[1], m)) - vr[0]) / (vr[1] - vr[0]) * 100);
         const pos = (s, e) => `left:${pct(s).toFixed(3)}%;width:calc(${(pct(e) - pct(s)).toFixed(3)}% - 3px)`;
         const leadName = id => allLeads().find(l => l.id === id)?.name || '';
-        const hb = (s, e, cls, t, sub, attrs = '', title = '') => `<${attrs ? 'button type="button"' : 'div'} class="sv-hb ${cls}" style="${pos(s, e)}"${attrs} title="${esc(title || `${hm(s)}–${hm(e)} · ${t}${sub ? ' · ' + sub : ''}`)}">${esc(e - s >= 30 ? t : '')}${sub && e - s >= 60 ? `<small>${esc(sub)}</small>` : ''}</${attrs ? 'button' : 'div'}>`;
+        const hb = (s, e, cls, t, sub, attrs = '', title = '') => (e <= vr[0] || s >= vr[1]) ? '' : `<${attrs ? 'button type="button"' : 'div'} class="sv-hb ${cls}" style="${pos(s, e)}"${attrs} title="${esc(title || `${hm(s)}–${hm(e)} · ${t}${sub ? ' · ' + sub : ''}`)}">${esc(e - s >= 30 ? t : '')}${sub && e - s >= 60 ? `<small>${esc(sub)}</small>` : ''}</${attrs ? 'button' : 'div'}>`;
         const lane = v => {
             const out = [];
             for (const g of subtract([{ start: H0, end: H1 }], v.work)) out.push(hb(g.start, g.end, 'k-off', 'ish vaqti emas', ''));
@@ -587,14 +679,22 @@
             }
             return out.join('');
         };
-        let axis = ''; for (let h = H0 / 60; h < H1 / 60; h++) axis += `<span style="left:${pct(h * 60).toFixed(3)}%">${String(h).padStart(2, '0')}:00</span>`;
         const row = (label, track, cls = '') => `<div class="sv-hr ${cls}"><div class="sv-hl">${label}</div><div class="sv-ht2">${track}</div></div>`;
-        const unRow = unDay.length ? row(`<span><b>Biriktirilmagan</b><small>sinovlar · ${unDay.length}</small></span>`, unDay.map(u => hb(u.start, u.end, 'k-hold', u.mine ? first(u.leadName) || 'Sinov' : 'Sinov', 'ustoz kerak', '', `${hm(u.start)}–${hm(u.end)} · sinov · ustoz kerak${u.mine && u.leadName ? ' · ' + u.leadName : ''}`)).join(''), 'is-un') : '';
+        const winBox = () => !winFits ? '' : `<div class="sv-win" role="group" aria-label="Vaqt oynasi"><button type="button" data-win="-1" aria-label="Oldingi soatlar"${!st.sWinAll && clampW(st.sWin) <= H0 ? ' disabled' : ''}>‹</button><button type="button" data-winall aria-pressed="${!!st.sWinAll}" title="${st.sWinAll ? '4 soatlik oynaga qaytish' : 'Butun kunni ko\'rsatish'}">${hm(vr[0])}–${hm(vr[1])}</button><button type="button" data-win="1" aria-label="Keyingi soatlar"${!st.sWinAll && clampW(st.sWin) >= H1 - WIN ? ' disabled' : ''}>›</button></div>`;
+        const drawBoard = () => {
+        let axis = ''; for (let h = Math.ceil(vr[0] / 60); h < vr[1] / 60; h++) axis += `<span style="left:${pct(h * 60).toFixed(3)}%">${String(h).padStart(2, '0')}:00</span>`;
+        // "Biriktirilmagan" qatori doim (dizayn): ustozsiz sinovlar; oynadan tashqaridagilar — "→ HH:MM" tugmasi.
+        const unOut = unDay.filter(u => u.end <= vr[0] || u.start >= vr[1]);
+        const unTrack = unDay.map(u => hb(u.start, u.end, 'k-hold', u.mine ? first(u.leadName) || 'Sinov' : 'Sinov', 'ustoz kerak', '', `${hm(u.start)}–${hm(u.end)} · sinov · ustoz kerak${u.mine && u.leadName ? ' · ' + u.leadName : ''}`)).join('')
+            + (unOut.length ? `<button type="button" class="sc-btn sc-btn--sm ss-unout" data-wingo="${unOut[0].start}">→ ${hm(unOut[0].start)}${unOut.length > 1 ? ` (+${unOut.length - 1})` : ''}</button>` : '')
+            + (!unDay.length ? '<span class="ss-unnone">ustozsiz sinov yo\'q</span>' : '');
+        const unRow = row(`<span><b>Biriktirilmagan</b><small>sinovlar · ${unDay.length}</small></span>`, unTrack, 'is-un');
         const tRows = vDay.map(v => row(`${U().staffAvatar(teachers.find(t => t.id === v.teacherId) || { id: v.teacherId }, 30)}<span><button type="button" class="sc-link" data-t="${esc(v.teacherId)}">${esc(tn(v.teacherId))}</button><small>${v.items.filter(i => i.kind === 'lesson').length} dars · ${hrs(openOf(v))} ochiq</small></span>`, lane(v),
             v.items.some(i => i.kind === 'trial' && i.mine) ? 'ss-rmine' : '')).join('');
-        const nowLine = date === today && nowM >= H0 && nowM <= H1 ? `<i class="sv-hnow" style="left:calc(var(--hl) + (100% - var(--hl)) * ${(pct(nowM) / 100).toFixed(4)})"><em>${hm(nowM)}</em></i>` : '';
-        const board = vDay.length || unDay.length ? `<div class="sv-hw"><div class="sv-hbd"><div class="sv-hr sv-hax"><div class="sv-hl">Ustoz</div><div class="sv-ht2">${axis}</div></div>${unRow}${tRows}${nowLine}</div></div>`
+        const nowLine = date === today && nowM >= vr[0] && nowM <= vr[1] ? `<i class="sv-hnow" style="left:calc(var(--hl) + (100% - var(--hl)) * ${(pct(nowM) / 100).toFixed(4)})"><em>${hm(nowM)}</em></i>` : '';
+        return vDay.length || unDay.length ? `<div class="sv-hw"><div class="sv-hbd"><div class="sv-hr sv-hax"><div class="sv-hl">Ustoz</div><div class="sv-ht2">${axis}</div></div>${unRow}${tRows}${nowLine}</div></div>`
             : '<p class="sc-mt sv-pp">Bu kunda ish vaqti belgilangan ustoz yo\'q.</p>';
+        };
         const top = vTom.map(v => ({ v, m: openOf(v) })).filter(x => x.m > 0).sort((a, b) => b.m - a.m).slice(0, 3);
         const pill = ph => { const x = W().PHASES[ph] || { label: ph, tone: 'mute' }; return `<span class="sc-pill sc-pill--${x.tone}">${esc(x.label)}</span>`; };
         const mineRow = x => {
@@ -608,19 +708,27 @@
             ${kpi('#12B76A', `Ertaga · ${dayShort(tom)}`, hrs(tomOpen), tomFirst ? `eng erta ${hm(tomFirst.f.start)} · ${esc(short(tn(tomFirst.v.teacherId)))}` : 'sinovga ochiq vaqt yo\'q')}
             ${kpi('#7A5AF8', 'Mening sinovlarim', mineL.length, mineL.length ? esc(mineL.slice(0, 3).map(x => first(x.l.name) + (x.ph === 'unassigned' ? ' (ustozsiz)' : '')).join(' · ')) : 'hozircha yo\'q')}
             ${kpi('#F79009', 'Tasdiq kutilmoqda', pend.length, pend.length ? esc(`${first(pend[0].l.name)} · ${short(tn(String(pend[0].r?.teacherId || '')))} hali tasdiqlamagan`) : 'hammasi ko\'rib chiqilgan')}</div>
-          <section class="sc-card sv-board"><header class="sv-bh"><h2>${date === today ? 'Bugun' : esc(lbl(date))} · ustozlar bo'yicha</h2><span class="sc-grow"></span>
+          <section class="sc-card sv-board"><header class="sv-bh"><h2>${date === today ? 'Bugun' : esc(lbl(date))} · ustozlar bo'yicha</h2><span data-winbox>${winBox()}</span><span class="sc-grow"></span>
             <span class="sc-pill sc-pill--ok ss-jhint">Yashil joyni bosing → sinov qo'yish oynasi shu vaqt bilan ochiladi</span></header>
-            ${board}
-            <div class="sv-lg"><span><i class="sv-sq ss-sq-b"></i>Band (dars)</span><span><i class="sv-sq k-tr"></i>Sinov</span><span><i class="sv-sq k-free"></i>Sinovga ochiq</span><span><i class="sv-sq k-hold"></i>Tanlanmoqda / ustoz kutilmoqda</span><span><i class="sv-sq k-cls"></i>Sinovga yopiq</span><span><i class="sv-sq k-off"></i>Ish vaqti emas</span></div></section>
+            <div data-board>${drawBoard()}</div>
+            <div class="sv-lg"><span><i class="sv-sq ss-sq-b"></i>Band (dars)</span><span><i class="sv-sq k-tr"></i>Sinov</span><span><i class="sv-sq k-free"></i>Sinovga ochiq</span><span><i class="sv-sq k-hold"></i>Tanlanmoqda / ustoz kutilmoqda</span><span><i class="sv-sq k-cls"></i>Sinovga yopiq</span><span><i class="sv-sq k-off"></i>Ish vaqti emas</span><button type="button" class="sc-link sv-rlink" data-rules>Jadval qoidalari →</button></div></section>
           <div class="sv-g3">
             <section class="sc-card sv-pn"><h3 class="sv-ph">Mening sinovlarim${me().name ? ' · ' + esc(first(me().name)) : ''}</h3>${mineL.map(mineRow).join('') || '<p class="sc-mt sv-pp">"Sinov darsida" bosqichida lidingiz yo\'q</p>'}</section>
             <section class="sc-card sv-pn"><h3 class="sv-ph">Ertaga eng ko'p ochiq</h3>${top.map(x => `<div class="sv-li"><span class="sv-tm">${hrsS(x.m)}</span><span class="sc-grow"><b>${esc(tn(x.v.teacherId))}</b><small>${esc((x.v.trialFree || []).slice(0, 2).map(f => `${hm(f.start)}–${hm(f.end)}`).join(', '))}${(x.v.trialFree || []).length > 2 ? ' …' : ''}</small></span></div>`).join('') || '<p class="sc-mt sv-pp">Ertaga sinovga ochiq vaqt yo\'q</p>'}</section>
             <section class="sc-card sv-pn"><h3 class="sv-ph">Qoida</h3><p class="sv-pp ss-rule">Siz faqat <b>sinovga ochiq</b> vaqtni band qila olasiz. Vaqt 10 daqiqa siz uchun ushlab turiladi. Ustoz tasdiqlagach lidga xabar boradi. Natija yozilgach sinov jadvaldan chiqadi.</p></section>
           </div>`;
-        body.querySelectorAll('[data-free]').forEach(b => b.onclick = () => { const [t, m] = b.dataset.free.split('|'); open({ lang, from: 'schedule', onClose: reload, preset: { teacherId: t, date, min: Number(m) } }); });
-        body.querySelectorAll('[data-t]').forEach(b => b.onclick = () => open({ lang, from: 'schedule', onClose: reload, preset: { teacherId: b.dataset.t, date, min: date === today ? nowM : 0 } }));
+        const bindBoard = () => {
+            body.querySelectorAll('[data-free]').forEach(b => b.onclick = () => { const [t, m] = b.dataset.free.split('|'); open({ lang, from: 'schedule', onClose: reload, preset: { teacherId: t, date, min: Number(m) } }); });
+            body.querySelectorAll('[data-board] [data-t]').forEach(b => b.onclick = () => open({ lang, from: 'schedule', onClose: reload, preset: { teacherId: b.dataset.t, date, min: date === today ? nowM : 0 } }));
+            body.querySelectorAll('[data-win]').forEach(b => b.onclick = () => { if (st.sWinAll) st.sWinAll = false; else st.sWin = clampW(clampW(st.sWin) + Number(b.dataset.win) * 120); redrawBoard(); });
+            body.querySelector('[data-winall]')?.addEventListener('click', () => { st.sWinAll = !st.sWinAll; redrawBoard(); });
+            body.querySelectorAll('[data-wingo]').forEach(b => b.onclick = () => { st.sWinAll = false; st.sWin = clampW(Math.floor((Number(b.dataset.wingo) - 60) / 60) * 60); redrawBoard(); });
+        };
+        const redrawBoard = () => { setVr(); body.querySelector('[data-board]').innerHTML = drawBoard(); const wb = body.querySelector('[data-winbox]'); if (wb) wb.innerHTML = winBox(); bindBoard(); };
+        bindBoard();
+        body.querySelector('[data-rules]')?.addEventListener('click', () => (window.scheduleV2?.rulesDrawer ? window.scheduleV2.rulesDrawer() : window.jadvalQoidalar?.open()));
         body.querySelectorAll('[data-re]').forEach(b => b.onclick = () => { const [lg, id] = b.dataset.re.split('|'); open({ lang: lg, leadId: id, from: 'schedule', onClose: reload, isReschedule: true }); });
     }
 
-    window.sotuvSinov = { enabled, open, close, renderJadval, _t: { trialDates, patternDays, merge, subtract } };
+    window.sotuvSinov = { enabled, open, close, renderJadval, from: () => P?.from || null, _t: { trialDates, patternDays, merge, subtract } };
 })();

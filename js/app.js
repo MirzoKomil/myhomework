@@ -1460,6 +1460,17 @@ let _activeShopProductCategory = 'merch';
 // kalitlarni o'qiydi: mh_student_token / mh_student_info).
 let _staffDemoTokenPromise = null;
 function _ensureStaffDemoToken() {
+    // ROP / sotuv: demo hisobi yo'q bo'lsa serverga so'rov yuborilmaydi (avval 404 va konsol xatosi) — sahifada izoh.
+    const cu = getCurrentUser();
+    if (!_staffDemoTokenPromise && ['rop', 'sales_manager'].includes(cu?.role)) {
+        const me = getItem(STORAGE_KEYS.hrEmployees, []).find(e => String(e.login || '').trim().toLowerCase() === String(cu.email || '').trim().toLowerCase());
+        const hasDemo = !!me && getItem(STORAGE_KEYS.students, []).some(s => s.isStaffDemo && String(s.demoForEmployeeId || '') === String(me.id));
+        if (!hasDemo) {
+            const panel = document.getElementById('mobileViewPanel');
+            if (panel && !panel.querySelector('.rs-nodemo')) panel.insertAdjacentHTML('afterbegin', '<p class="rs-ro rs-nodemo" role="note">Sizning demo o\'quvchi hisobingiz hali yaratilmagan — ilova kirish sahifasi bilan ochiladi. Demo hisobni admin HR bo\'limida yaratadi.</p>');
+            return Promise.resolve();
+        }
+    }
     if (!_staffDemoTokenPromise) {
         _staffDemoTokenPromise = apiGetMyDemoToken().then(res => {
             if (res?.token && res?.student) {
@@ -10228,6 +10239,9 @@ function renderStudents() {
     // Muzlatilgan o'quvchilarni Faol ro'yxatdan chiqarish
     // Xodimlarning demo akkauntlari (isStaffDemo / id "demo_") ro'yxatda ham, "Jami"da ham yo'q — ular faqat HR → xodim kartasida.
     students = students.filter(s => !s.frozen && !isStaffDemoStudent(s));
+    // ROP: "Faol" — yagona qoida (js/attendanceRules.js isActiveStudent): kursi tugagan / "inactive" o'quvchi kirmaydi
+    // (sotuv O'quvchilaridagi "Faol emas" bilan bir xil). Admin ro'yxati o'zgarmagan.
+    if (currentUser?.role === 'rop' && window.AttendanceRules?.isActiveStudent) students = students.filter(s => window.AttendanceRules.isActiveStudent(s));
 
     // 8-vazifa (qayta ish 4): O'quvchilar bo'limi Sotuv bo'limi bilan to'liq
     // integratsiya qilingan — "Faol o'quvchilar" ro'yxatida FAQAT sotuv
@@ -18556,6 +18570,13 @@ function openPaymentOnboardingModal(lang, leadId, options = {}) {
     const { chainTo = null } = options;
     const lead = getLeadById(lang, leadId);
     if (!lead) return;
+    // Sotuv/ROP: o'quvchiga aylantirilgan (6-qadam saqlangan) lid uchun 6-qadam qayta ochilmaydi — lid kartasi ochiladi.
+    if (window.convertUI && !chainTo && ['sales_manager', 'rop'].includes(getCurrentUser()?.role)
+        && ['tolov-jarayonida', 'tolov-yopildi'].includes(normalizeLeadStatus(lead.status)) && lead.paymentOnboarding?.becomeStudent) {
+        showMiniToast("Lid allaqachon o'quvchiga aylantirilgan — ma'lumotlar lid kartasida", 3000);
+        if (typeof openLeadOverview === 'function') openLeadOverview(lang, leadId);
+        return;
+    }
     // Qadamlar tartibi 3 → 4 → 5 → 6: to'g'ridan-to'g'ri chaqirilsa ham avval doimiy jadval (3) va to'lov (4) —
     // aks holda guruh oynasi birinchi ochilib, bajarilmagan qadamlar "✓" bo'lib ko'rinardi (audit: SotuvKonversiya).
     if (window.convertUI && !options.groupDone && !leadHasTeacherSchedule(lead)) { openPaymentTeacherScheduleModal(lang, leadId, { chainTo }); return; }
