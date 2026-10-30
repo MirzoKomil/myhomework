@@ -1024,6 +1024,8 @@ router.patch('/', authRequired, crmStateIdentity, crmStateMutationRequired, asyn
             // Faqat boshqa til ustozlari kelgan bo'lsa — saqlanadigan narsa qolmaydi (xato emas).
             if (!Object.keys(toSave).length) return res.json({ ok: true, state: await getStateForUser(req.user) });
         }
+        // Admin/boshliq: kitob kartasini jo'natish bosqichiga o'tkazish ham to'lov shartiga bo'ysunadi.
+        if (toSave.bookRoadmap !== undefined) await bookRoadmapLead.assertSnapshotTransitions(pool, toSave.bookRoadmap);
         await patchState(toSave, req.user);
         res.json({ ok: true, state: await getStateForUser(req.user) });
     } catch (err) {
@@ -1041,6 +1043,7 @@ router.patch('/', authRequired, crmStateIdentity, crmStateMutationRequired, asyn
 const bookRoadmapLead = { // kechiktirilgan require (testlar state.js'ni cheklangan require bilan yuklaydi)
     upsertFromLead: (...a) => require('../services/bookRoadmapLead').upsertFromLead(...a),
     updateOwnEntry: (...a) => require('../services/bookRoadmapLead').updateOwnEntry(...a),
+    assertSnapshotTransitions: (...a) => require('../services/bookRoadmapLead').assertSnapshotTransitions(...a),
     toClient: r => require('../services/bookRoadmapLead').toClient(r)
 };
 async function bookRoadmapActor(req) {

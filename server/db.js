@@ -13,6 +13,7 @@ const studentAccess = require('../js/studentAccess');
 const { provisionLeadStudent, STUDENT_PROVISION_LOCK } = require('./services/leadStudentProvisioning');
 const leadWorkflow = require('../js/leadWorkflow');
 const { migrateMergedLeadStage } = require('./services/leadWorkflowMigration');
+const publicSerial = require('./services/publicSerial');
 const trialWorkflow = require('../js/trialWorkflow');
 const trialLessons = require('./services/trialLessons');
 const payroll = require('./services/payroll');
@@ -1310,6 +1311,8 @@ async function saveStudents(client, students, removedStudentIds = []) {
     students = [...students, ...existingRows.map(rowToStudent).filter(s =>
         s.autoProvisionedFromLead && !ids.has(s.id) && !removed.has(s.id))];
     await replaceSnapshotRows(client, 'students', "O'quvchilar", students, [...removed]);
+    // O'quvchi ID'si serverniki: bazadagisi yoki bog'langan lidniki (brauzer nusxasi emas).
+    if (typeof publicSerial !== 'undefined') await publicSerial.guardStudentSerials(client, students, existingById);
     for (const s of students) {
         await teacherDuties.validateAssignment(client, s, existingById.get(s.id));
         const { id, name, phone, group, subject, teacherId, assistantTeacherId,
@@ -1610,6 +1613,10 @@ async function upsertLeadWithClient(client, lead, language, options = {}) {
             merged.statusChangedAt = reviewedAt;
         }
     }
+    // O'quvchi ID'si (serialCode) — faqat server beradi (to'lov bosqichida, umumiy qulf ostida, noyob).
+    // (typeof — testlar bu funksiyani cheklangan vm kontekstida yuklaydi.)
+    const serial = typeof publicSerial !== 'undefined'
+        ? await publicSerial.applyToLead(client, before, merged, leadWorkflow.canonicalStatus(merged.status)) : { assigned: false };
     const p = leadDbPayload(merged, language, existingRow?.created_at);
     if (!p.name.trim()) throw new Error('Lid ismi bo\'sh bo\'lmasligi kerak');
 
@@ -1640,6 +1647,7 @@ async function upsertLeadWithClient(client, lead, language, options = {}) {
              JSON.stringify(p.extra), p.createdAt]
         ));
     }
+    if (serial.assigned) await publicSerial.syncLinked(client, p.id, serial.code);
     const saved = { ...rowToLead(rows[0]), language: rows[0].language };
     if (options.audit !== false) {
         await appendLeadAudit(
@@ -1657,6 +1665,13 @@ async function upsertLeadWithClient(client, lead, language, options = {}) {
 // o'chirilgan paytdagi holatida qaytarish. Bosqich anketalari tekshirilmaydi —
 // bu yangi harakat emas, tarixiy yozuvni joyiga qo'yish. Audit'ga yoziladi.
 async function insertRestoredLead(client, lead, language, actor = {}) {
+    // Tiklanayotgan lidning ID'si boshqa lidda band bo'lsa — yangi ID (takror bo'lmasin).
+    const sc = typeof publicSerial !== 'undefined' ? publicSerial.canonical(lead?.serialCode) : '';
+    if (sc && (await client.query(`SELECT 1 FROM leads WHERE extra_data->>'serialCode' = $1 AND id <> $2 LIMIT 1`, [sc, String(lead.id || '')])).rows.length) {
+        const fresh = await publicSerial.allocate(client);
+        console.warn(`[serial-takror] arxivdan tiklangan lid ${lead.id}: ${sc} band edi → ${fresh}`);
+        lead = { ...lead, serialCode: fresh };
+    }
     const p = leadDbPayload(lead, language, null);
     if (!p.id || !p.name.trim()) throw Object.assign(new Error('Lid nusxasi to‘liq emas'), { status: 400 });
     const { rows } = await client.query(
@@ -2626,7 +2641,8 @@ async function getStudentPublicId(student) {
 
     const publicId = linkedSerial || String(student?.id || '').slice(-6);
     if (publicId && student?.id && student.serialCode !== publicId) {
-        await q1("UPDATE students SET extra_data = COALESCE(extra_data, '{}'::jsonb) || $1::jsonb WHERE id = $2", [JSON.stringify({ serialCode: publicId }), student.id]);
+        await q1("UPDATE students SET extra_data = COALESCE(extra_data, '{}'::jsonb) || $1::jsonb WHERE id = $2", [JSON.stringify({ serialCode: publicId }), student.id])
+            .catch(err => console.warn(`[serial-takror] o'quvchi ${student.id}: ID ${publicId} yozilmadi — ${err.message}`));
     }
     return publicId;
 }
@@ -4657,6 +4673,9 @@ async function init() {
     await migrateRenameGarbledCourse().catch(err => console.error('[DB] Kurs nomini tuzatishda xatolik:', err.message));
     await migrateCommunityRemoveFakeSeed().catch(err => console.error('[DB] Hamjamiyat soxta postlarini tozalashda xatolik:', err.message));
     await migrateCommunityRemoveUnverifiedLegacyPosts().catch(err => console.error('[DB] Hamjamiyat muallifi tasdiqlanmagan postlarni tozalashda xatolik:', err.message));
+    // O'quvchi ID'lari: mavjud takrorlarni tuzatish (audit bilan), keyin UNIQUE indekslar.
+    await tx(publicSerial.migrate).catch(err => console.error('[serial-takror] tuzatishda xatolik:', err.message));
+    await publicSerial.ensureIndexes(pool).catch(err => console.error('[serial-takror] UNIQUE indeks yaratilmadi (takror qolgan bo\'lishi mumkin):', err.message));
 }
 
 // ── "Hisoblangan" (computed/auto) eslatmalarni push orqali yetkazish ────────

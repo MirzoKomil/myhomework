@@ -161,8 +161,9 @@ function setItem(key, value) {
         if (key === STORAGE_KEYS.leads) return;
         // Ustoz umumiy snapshotni yoza olmaydi (server 403) — davomat va boshqalar alohida endpointlar orqali.
         if (typeof getCurrentUser === 'function' && getCurrentUser()?.role === 'teacher') return;
-        // Sotuv menejeri ham umumiy snapshotni yoza olmaydi: kitob yetkazish — alohida yo'l (faqat o'z kartochkalari).
-        if (cacheKey === 'bookRoadmap' && typeof getCurrentUser === 'function' && getCurrentUser()?.role === 'sales_manager') {
+        // Sotuv menejeri va ROP kitob yetkazishni umumiy snapshot orqali yozmaydi (server 403) — alohida yo'l:
+        // sotuv faqat o'z kartochkalari, ROP faqat o'z tili; "to'lovdan oldin jo'natilmaydi" qoidasi serverda.
+        if (cacheKey === 'bookRoadmap' && typeof getCurrentUser === 'function' && ['sales_manager', 'rop'].includes(getCurrentUser()?.role)) {
             if (_apiReady) return syncSalesBookRoadmap(value, removedIds);
             return;
         }
@@ -190,7 +191,7 @@ function setItem(key, value) {
     }
 }
 
-// Sotuv menejeri: kitob yetkazish o'zgarishlari umumiy PATCH /api/state o'rniga (u 403 beradi va yozuv
+// Sotuv menejeri va ROP: kitob yetkazish o'zgarishlari umumiy PATCH /api/state o'rniga (u 403 beradi va yozuv
 // yo'qolardi) alohida endpointlarga yuboriladi. Server egalikni (o'z lidi / o'z kartochkasi) o'zi tekshiradi.
 //  • yangi kartochka (liddan) yoki liddan olinadigan maydon o'zgargan → POST /api/state/book-roadmap/from-lead
 //    (lidning o'zi saqlanib bo'lgach — server ma'lumotni bazadagi liddan oladi);

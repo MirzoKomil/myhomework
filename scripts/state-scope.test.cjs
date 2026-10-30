@@ -181,6 +181,15 @@ test('B2: ROP state faqat o\'z tilida, Cash Flow yo\'q, reja/bonus ko\'rinadi', 
     assert.equal(none.students.length, 3); assert.equal(none.leads.russian.length, 1); assert.deepEqual(none.cashFlow, []);
 });
 
+test('BAHO7: ROP kitob yetkazish kartalari — faqat o\'z tili; umumiy PATCH orqali yozilmaydi', () => {
+    const st = () => ({ ...mixed(), bookRoadmap: [{ id: 'be', lang: 'english' }, { id: 'br', lang: 'russian' }, { id: 'bx' }] });
+    assert.deepEqual(rop.scopeStateForRop(st(), ['english']).bookRoadmap.map(b => b.id), ['be', 'bx']);
+    assert.deepEqual(rop.scopeStateForRop(st(), ['russian']).bookRoadmap.map(b => b.id), ['br']);
+    assert.equal(rop.scopeStateForRop(st(), ['english', 'russian']).bookRoadmap.length, 3);
+    for (const langs of [['english'], ['russian'], null])
+        assert.throws(() => rop.guardRopPatch({ bookRoadmap: [] }, langs, {}), e => e.status === 403, 'faqat /api/state/book-roadmap/:id');
+});
+
 test('B1: ROP moliya kalitlarini yoza olmaydi (tilidan qat\'i nazar)', () => {
     for (const key of ['cashFlow', 'payments', 'bonusData', 'salesPlan', 'individualSalesPlans'])
         for (const langs of [['english'], null])
