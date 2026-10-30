@@ -92,6 +92,7 @@
             days: Math.max(1, Math.min(3, Number(lead?.paymentOnboarding?.trialDaysCount) || 1)), mode: opts.preset?.teacherId ? 'teacher' : 'any',
             teacherId: opts.preset?.teacherId || '', wish: opts.preset ? opts.preset.min : (prevAt && prevAt.date >= today ? prevAt.min : null), note: '',
             sel: null, hold: null, alert: null, rejDismissed: false, rejPick: 0, data: null, err: '', loadedAt: 0, busy: false, pending: opts.preset || null, timers: [] };
+        applyLeadWish(P);
         const el = pageEl();
         el.innerHTML = '<div class="sc-skel"></div>';
         el.scrollTop = 0;
@@ -121,8 +122,14 @@
             if (P !== p) return;
             p.data = { teachers: (d.teachers || []).filter(t => ['oqituvchi', 'ingliz-oqituvchi', 'rus-oqituvchi'].includes(t.role) || !t.role), views: d.views || [], unassigned: d.unassigned || [], from, to };
             p.byKey = new Map(p.data.views.map(v => [v.teacherId + '|' + v.date, v]));
-            p.err = ''; p.loadedAt = Date.now();
-        } catch (e) { if (P !== p) return; p.err = e.message; if (!p.data) p.data = { teachers: [], views: [], unassigned: [] }; p.byKey ||= new Map(); }
+            p.err = null; p.failed = false; p.loadedAt = Date.now();
+        } catch (e) {
+            if (P !== p) return;
+            // Xato: soxta "0 soat" ko'rsatilmaydi. Avval yuklangan bo'lsa — eski jadval qoladi va ogohlantirish chiqadi;
+            // umuman yuklanmagan bo'lsa — LoadErr kartasi + "Qayta urinish", sana chiplari "—".
+            p.err = e; if (!p.data) { p.failed = true; p.data = { teachers: [], views: [], unassigned: [] }; } p.byKey ||= new Map();
+        }
+        if (!p.err) p.failed = false;
         draw();
     }
     const view = (t, d) => P.byKey?.get(t + '|' + d) || null;
@@ -267,15 +274,59 @@
         if (await hold(String(r.teacherId), a.date, a.min)) await confirmHold();
     }
 
+    // Lid kartasidagi istak (oxirgi "• Lid istagi: …" izohi) — o'qish rejimida ko'rsatiladi, vaqti tanlovga olinadi.
+    function applyLeadWish(p) {
+        p.wishText = '';
+        const cs = Array.isArray(p.lead?.comments) ? p.lead.comments : [];
+        for (let i = cs.length - 1; i >= 0; i--) {
+            const m = /Lid istagi:\s*([^\n]+)/.exec(String(cs[i]?.text || ''));
+            if (m) { p.wishText = m[1].trim(); break; }
+        }
+        if (p.wishText && p.wish == null) {
+            const t = /(\d{1,2}):(\d{2})/.exec(p.wishText);
+            if (t) p.wish = Math.round((Number(t[1]) * 60 + Number(t[2])) / STEP) * STEP;
+        }
+    }
+
+    // ── Band qilishdagi holatlar (SotuvHolatlar) — 5 holat katalogi, har birida keyingi qadam ──
+    function drawStates(el) {
+        const ts = (P.data?.teachers || []).map(t => short(t.name)).filter(Boolean);
+        const tA = ts[0] || 'Kamola M.', tB = ts[1] || 'Gulnora T.', tC = ts[2] || 'Dilnoza S.', tD = ts[3] || 'Javlonbek Q.';
+        const tm = U().addDays(U().today(), 1), d2 = trialDates(tm, 3);
+        const dd = d => `${U().DAY[U().wd(d) - 1]} ${Number(d.slice(8))}-${MON[Number(d.slice(5, 7)) - 1]}`;
+        const btn = (t, pri) => `<span class="sc-btn${pri ? ' sc-btn--pri' : ''} rs-demo" aria-hidden="true">${esc(t)}</span>`;
+        const card = (n, title, body) => `<section class="sc-card rs-hc"><h3 class="rs-hc-h">${n} · ${esc(title)}</h3>${body}</section>`;
+        el.innerHTML = `<div class="sv-head"><div class="sv-ht"><button type="button" class="sc-link sv-back" data-back-states>← Sinov darsi qo'yish</button>
+              <h1>Band qilishdagi holatlar</h1><p class="sc-sub">Sotuv menejeri va ROP ko'radigan xabarlar · har birida keyingi qadam tayyor</p></div></div>
+          <div class="rs-sts">
+            ${card(1, 'Boshqa menejer oldinroq band qildi', `${toastBox('bad', '⚠', `${esc(tA)} · ${esc(dd(tm))} 10:00 endi band`, 'Boshqa menejer bir necha soniya oldin band qildi. Sizning tanlovingiz saqlanmadi.')}
+              <b class="ss-lab">Lid istagiga eng yaqin bo'sh vaqtlar:</b><div class="ss-alt2">${btn(`${tB} · 10:30`)}${btn(`${tA} · 12:00`)}${btn(`${tC} · 12:00`)}</div>`)}
+            ${card(2, 'Ushlab turish vaqti tugadi (1-holatdan oldin)', `${toastBox('warn', '⏳', '10 daqiqa o\'tdi — vaqt qo\'yib yuborildi', `${esc(tA)} · ${esc(dd(tm))} 10:00 hali bo'sh. Qayta ushlab turasizmi?`)}
+              <div class="sc-row sc-wrap">${btn('Qayta ushlab turish', true)}${btn('Boshqa vaqt')}</div>`)}
+            ${card(3, 'Ustoz rad etdi va vaqt taklif qildi · namuna', `${toastBox('info', '↺', `${esc(tC)} · Lid · ${esc(dd(tm))} 16:00`, `"Shu vaqtda bandman". Taklif: ${esc(dd(tm))} · 17:00, ${esc(dd(d2[1]))} · 17:00.`)}
+              <div class="ss-alt2">${btn(`${dd(tm)} · 17:00`, true)}${btn(`${dd(d2[1])} · 17:00`)}</div><div class="sc-row sc-wrap">${btn('Lidga yuborish va band qilish', true)}${btn('Boshqa ustoz')}</div>`)}
+            ${card(4, 'Lid istagan vaqtda hech kim bo\'sh emas', `${toastBox('warn', '!', 'Ertaga 08:00 — sinovga ochiq ustoz yo\'q', `Eng erta bo'sh vaqt: 10:00 (${esc(tA)}). Lid aynan 08:00 ni xohlasa, adminga yuboring.`)}
+              <div class="sc-row sc-wrap">${btn('Adminga yuborish · "Ustoz biriktirilmagan"', true)}${btn('10:00 ni taklif qilish')}</div>`)}
+            ${card(5, '3 kunlik sinovda bir kun band', `${toastBox('warn', '!', `${esc(tB)} · 10:30 · ${d2.map((d, i) => `${esc(dayShort(d))} ${i === 2 ? '✗ (dars bor)' : '✓'}`).join(' · ')}`, 'Uchala kun bir vaqtda bo\'lishi kerak. Mos variantlar:')}
+              <div class="ss-slots">${[[tB, '14:00'], [tC, '12:00'], [tD, '15:00']].map(([t, h], i) => `<span class="ss-sl5${i ? '' : ' is-on'}" aria-hidden="true">${esc(t)} ${h}<small>${d2.map(dayShort).join(' · ')}</small></span>`).join('')}<span class="ss-sl5 is-no" aria-hidden="true">${esc(tA)} 10:00<small>${esc(dayShort(d2[2]))} band</small></span></div>`)}
+          </div>
+          <p class="sc-mt">Bu sahifa — ma'lumotnoma. Har bir holat "Sinov darsi qo'yish" sahifasida haqiqiy vaqt va lid bilan, kerak bo'lganda o'zi chiqadi.</p>`;
+        el.querySelector('[data-back-states]').onclick = () => { P.view = null; draw(); };
+    }
+
     // ── Chizish ─────────────────────────────────────────────────────────────
     function draw() {
         const el = document.getElementById('ssPage'); if (!el || !P) return;
+        if (P.view === 'states') { drawStates(el); return; }
         const back = P.from === 'schedule' ? '← Dars jadvali' : '← Lidlar';
+        const main = !P.data ? '' : P.failed ? `<section class="sc-card ss-gcard ss-lerr">${window.LoadErr.html({ title: 'Ustozlar jadvalini yuklab bo\'lmadi', err: P.err, note: 'Bo\'sh vaqtlar ko\'rsatilmadi — hech narsa band qilinmadi.' })}</section>`
+            : `${alerts()}${grid()}${sbar()}`;
         el.innerHTML = `<div class="sv-head"><div class="sv-ht"><button type="button" class="sc-link sv-back" data-back>${back}</button>
               <h1>Sinov darsi qo'yish</h1><p class="sc-sub">Umumiy jadvaldan · faqat "sinovga ochiq" vaqtlar tanlanadi · boshqa o'quvchilar ismi ko'rinmaydi</p></div>
-            <span class="sc-pill sc-pill--info ss-hpill">Barcha menejerlarning band qilgan vaqtlari hisobga olingan</span></div>
-          ${P.data ? `<div class="ss-lay">${aside()}<div class="ss-main">${alerts()}${grid()}${sbar()}</div></div>` : '<div class="sc-skel"></div>'}`;
+            <div class="ss-hr"><span class="sc-pill sc-pill--info ss-hpill">Barcha menejerlarning band qilgan vaqtlari hisobga olingan</span><button type="button" class="sc-link rs-states" data-states>Band qilishdagi holatlar →</button></div></div>
+          ${P.data ? `<div class="ss-lay">${aside()}<div class="ss-main">${main}</div></div>` : '<div class="sc-skel"></div>'}`;
         bind(el);
+        window.LoadErr.bind(el, () => load());
         tick();
     }
     function aside() {
@@ -286,7 +337,7 @@
                 .sort((a, b) => String(a.name).localeCompare(String(b.name))).slice(0, 400).map(l => `<option value="${esc(l._lang + '|' + l.id)}">${esc(l.name)}${l.phone ? ' · ' + esc(String(l.phone).slice(-4)) : ''}${l._lang === 'russian' ? ' · rus' : ''}</option>`).join('')}</select><small class="sc-mt">Faqat sizning lidlaringiz</small></label>`;
         const times = []; for (let m = 8 * 60; m <= 21 * 60 + 30; m += 30) times.push(m);
         const chips = [0, 1, 2, 3, 4].map(k => { const d = U().addDays(today, k); const sm = P.data.views.filter(v => v.date === d && P.data.teachers.some(t => t.id === v.teacherId)).reduce((n, v) => n + sum(futureFree(v, v.trialFree)), 0);
-            return `<button type="button" class="ss-ch2" data-date="${d}" aria-pressed="${d === P.date}">${rel(d) || dayShort(d)}<small>${k === 1 ? dayShort(d) + ' · ' : ''}${hrs(sm)}</small></button>`; }).join('');
+            return `<button type="button" class="ss-ch2" data-date="${d}" aria-pressed="${d === P.date}">${rel(d) || dayShort(d)}<small>${k === 1 ? dayShort(d) + ' · ' : ''}${P.failed ? '—' : hrs(sm)}</small></button>`; }).join('');
         const custom = P.date > U().addDays(today, 4) ? `<button type="button" class="ss-ch2" aria-pressed="true">${dayShort(P.date)}<small>${dm(P.date)}</small></button>` : '';
         const cands = candidates().slice(0, 3);
         const exact = c => P.wish != null && c.m === P.wish;
@@ -294,8 +345,9 @@
         const teacherSel = P.mode === 'teacher' ? `<select data-tsel aria-label="Ustoz"><option value="">— ustozni tanlang —</option>${P.data.teachers.map(t => `<option value="${esc(t.id)}"${t.id === P.teacherId ? ' selected' : ''}>${esc(t.name)}</option>`).join('')}</select>` : '';
         return `<aside class="sc-card ss-aside" aria-label="Lid va sinov parametrlari"><div class="ss-lead">
             ${leadBox}
-            <div class="ss-wish"><b>Lid istagi:</b> <select data-wish aria-label="Lid istagan vaqt"><option value="">vaqt —</option>${times.map(m => `<option value="${m}"${m === P.wish ? ' selected' : ''}>${hm(m)}</option>`).join('')}</select> atrofida
-              <input data-note type="text" maxlength="200" value="${esc(P.note)}" placeholder="Izoh: daraja, qanday bog'lanadi…" aria-label="Lid istagi izohi"></div>
+            ${P.wishText && !P.wishEdit ? `<div class="ss-wish ss-wish--ro"><b>Lid istagi:</b> ${esc(P.wishText)}<button type="button" class="sc-link ss-wish-ed" data-wish-edit>O'zgartirish</button></div>`
+              : `<div class="ss-wish"><b>Lid istagi:</b> <select data-wish aria-label="Lid istagan vaqt"><option value="">vaqt —</option>${times.map(m => `<option value="${m}"${m === P.wish ? ' selected' : ''}>${hm(m)}</option>`).join('')}</select> atrofida
+              <input data-note type="text" maxlength="200" value="${esc(P.note)}" placeholder="Izoh: daraja, qanday bog'lanadi…" aria-label="Lid istagi izohi"></div>`}
             <div class="ss-lf"><span>Sana</span><div class="ss-chips2">${chips}${custom}<label class="ss-ch2 ss-ch2--d" title="Boshqa sana"><input type="date" data-dpick min="${today}" max="${U().addDays(today, 13)}" value="${P.date}" aria-label="Boshqa sana"></label></div></div>
             <div class="ss-lf"><span>Davomiyligi</span><div class="sc-seg ss-full" role="group" aria-label="Davomiyligi">${[15, 30, 60].map(n => `<button type="button" data-dur="${n}" aria-pressed="${n === P.dur}">${n} daq</button>`).join('')}</div></div>
             <div class="ss-lf"><span>Necha kunlik sinov</span><div class="sc-seg ss-full" role="group" aria-label="Kunlar">${[1, 2, 3].map(n => `<button type="button" data-days="${n}" aria-pressed="${n === P.days}">${n} kun</button>`).join('')}</div>
@@ -305,7 +357,7 @@
           <h3 class="sv-ph ss-ph">${P.wish != null ? 'Istakka eng yaqin' : 'Eng erta bo\'sh vaqtlar'}</h3>
           <ul class="ss-alt">${cands.map(c => `<li><div class="sc-grow"><b>${esc(candLabel(c))}</b><small>${P.wish != null ? diffTxt(c.m - P.wish) : `${hrs(openMin(c.t, c.date))} ochiq`}</small></div>
               ${selOf(c) ? `<span class="sc-pill sc-pill--ok">${exact(c) ? 'Mos' : 'Tanlandi'}</span>` : `${exact(c) ? '<span class="sc-pill sc-pill--ok">Mos</span>' : ''}<button type="button" class="sc-btn sc-btn--sm" data-pick="${esc(c.t)}|${c.date}|${c.m}">Tanlash</button>`}</li>`).join('')
-            || `<li class="sc-mt">${dayShort(P.date)}: ${P.dur} daqiqalik${P.days > 1 ? `, ${P.days} kunlik` : ''} sinovga ochiq vaqt yo'q</li>`}</ul>
+            || `<li class="sc-mt">${P.failed ? 'Jadval yuklanmadi — bo\'sh vaqtlar noma\'lum' : `${dayShort(P.date)}: ${P.dur} daqiqalik${P.days > 1 ? `, ${P.days} kunlik` : ''} sinovga ochiq vaqt yo'q`}</li>`}</ul>
         </aside>`;
     }
     function toastBox(kind, icon, title, text, extra = '') {
@@ -313,7 +365,7 @@
     }
     function alerts() {
         const out = [];
-        if (P.err) out.push(`<div class="sc-err">${esc(P.err)}</div>`);
+        if (P.err) out.push(window.LoadErr.html({ title: 'Jadvalni yangilab bo\'lmadi', err: P.err, note: 'Oxirgi yuklangan holat ko\'rsatilmoqda.', compact: true }));
         const r = rejected();
         if (r) {
             const a = local(r.scheduledAt);
@@ -380,8 +432,11 @@
     function grid() {
         const ts = visibleTeachers();
         const views = ts.map(t => view(t, P.date)).filter(Boolean);
-        let H0 = 9 * 60, H1 = 21 * 60;
-        for (const v of views) for (const w of v.work) { H0 = Math.min(H0, Math.floor(w.start / 60) * 60); H1 = Math.max(H1, Math.ceil(w.end / 60) * 60); }
+        // Ko'rinadigan oyna 09:00–20:00 (SotuvSinov dizayni, 1440px'ga sig'adi); sinovga ochiq vaqt yoki band sinov
+        // shu oynadan tashqarida bo'lsa — o'sha soatgacha kengayadi (ish vaqtining bo'sh/yopiq chetlari oynani kengaytirmaydi).
+        let H0 = 9 * 60, H1 = 20 * 60;
+        for (const v of views) for (const x of [...futureFree(v, v.trialFree), ...(v.items || []).filter(i => i.kind === 'trial')]) { H0 = Math.min(H0, Math.floor(x.start / 60) * 60); H1 = Math.max(H1, Math.ceil(x.end / 60) * 60); }
+        if (P.sel) { H0 = Math.min(H0, Math.floor(P.sel.m / 60) * 60); H1 = Math.max(H1, Math.ceil((P.sel.m + P.dur) / 60) * 60); }
         const cols = []; for (let m = H0; m < H1; m += STEP) cols.push(m);
         const pref = m => P.wish != null && Math.abs(m - P.wish) <= 120;
         const head = `<tr><th class="ss-tn" scope="col"><span class="sc-mt">Ustoz</span></th>${cols.map(m => `<th${m % 60 ? ' class="hh' + (pref(m) ? ' pref' : '') + '"' : ` scope="col"${pref(m) ? ' class="pref"' : ''}`}>${m % 60 ? '' : hm(m)}</th>`).join('')}</tr>`;
@@ -437,11 +492,13 @@
         el.querySelector('[data-tsel]')?.addEventListener('change', e => { P.teacherId = e.target.value; draw(); });
         el.querySelector('[data-wish]')?.addEventListener('change', e => { P.wish = e.target.value === '' ? null : Number(e.target.value); draw(); });
         el.querySelector('[data-note]')?.addEventListener('input', e => { P.note = e.target.value; });
+        el.querySelector('[data-wish-edit]')?.addEventListener('click', () => { P.wishEdit = true; draw(); });
+        el.querySelector('[data-states]')?.addEventListener('click', () => { P.view = 'states'; draw(); document.getElementById('ssPage')?.scrollTo?.(0, 0); });
         el.querySelector('[data-lead]')?.addEventListener('change', async e => {
             const [lang, id] = String(e.target.value || '').split('|');
             if (!id) return;
             const lead = findLead(lang, id); if (!lead) return;
-            P.lead = lead; P.alert = null;
+            P.lead = lead; P.alert = null; P.wishEdit = false; applyLeadWish(P);
             const d0 = W().durationOf(lead); if ([15, 30, 60].includes(d0)) P.dur = d0;
             if (lang !== P.lang) { P.lang = lang; await load(); } else draw();
             if (P.pending) { const p = P.pending; P.pending = null; const m = firstFreeIn(p.teacherId, p.date, p.min); if (m != null) hold(p.teacherId, p.date, m); }
@@ -479,7 +536,7 @@
             const [a, b] = await Promise.all([U().api(`/schedule?from=${today}&to=${tom}&lang=${lang}&mode=free`),
                 date === today || date === tom ? null : U().api(`/schedule?from=${date}&to=${date}&lang=${lang}&mode=free`)]);
             d = a; dt = b || a;
-        } catch (e) { body.innerHTML = `<div class="sc-err">${esc(e.message)}</div>`; return; }
+        } catch (e) { body.innerHTML = window.LoadErr.html({ title: 'Dars jadvalini yuklab bo\'lmadi', err: e, note: 'Bo\'sh vaqtlar va sinovlar ko\'rsatilmadi.' }); window.LoadErr.bind(body, reload); return; }
         const teachers = (d.teachers || []);
         const tn = id => teachers.find(t => t.id === id)?.name || U().teacherName(id);
         const known = v => teachers.some(t => t.id === v.teacherId);

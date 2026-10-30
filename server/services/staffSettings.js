@@ -115,6 +115,18 @@ async function workInfo(db, me) {
         rows.push(['Lavozim', 'Sotuv menejeri']);
         const rop = (await db.query(`SELECT name FROM hr_employees WHERE role='rop' AND COALESCE(status,'active') <> 'inactive' AND (lang=$1 OR lang='both') ORDER BY name LIMIT 1`, [me.lang || 'english'])).rows[0];
         if (rop) rows.push(['Rahbar', `${rop.name} (ROP)`]);
+        // SotuvSozProfil: "Sotgan o'quvchilar · N faol · N faol emas" — O'quvchilar sahifasidagi (sold-students / inactive) bilan bir xil qoida.
+        if (me.managerId) {
+            const st = (await db.query(`SELECT id, extra_data FROM students WHERE extra_data->>'managerId' = $1`, [String(me.managerId)]).catch(() => ({ rows: [] }))).rows
+                .map(r => ({ id: r.id, x: typeof r.extra_data === 'object' && r.extra_data ? r.extra_data : {} })).filter(r => !r.x.isStaffDemo);
+            if (st.length) {
+                const today = T.nowLocal().date;
+                const stat = (await db.query('SELECT student_id, status, from_date, to_date, created_at, reason FROM school_student_status WHERE student_id = ANY($1::text[]) AND cancelled_at IS NULL ORDER BY from_date, created_at', [st.map(r => r.id)]).catch(() => ({ rows: [] }))).rows;
+                let act = 0, inact = 0;
+                for (const r of st) { const s2 = S.statusOn(stat.filter(x => x.student_id === r.id), today); if (s2 === 'active' && !r.x.legacyInactive && !r.x.frozen) act++; else inact++; }
+                rows.push(['Sotgan o\'quvchilar', `${act} faol · ${inact} faol emas`]);
+            }
+        }
     } else if (me.kind === 'rop') {
         rows.push(['Lavozim', 'ROP · sotuv bo\'limi rahbari']);
         const team = (await db.query(`SELECT name FROM hr_employees WHERE role='sotuv-menejeri' AND COALESCE(status,'active') <> 'inactive' AND ($1::text IS NULL OR lang=$1 OR lang='both') ORDER BY name`,
@@ -122,6 +134,14 @@ async function workInfo(db, me) {
         if (team.length) rows.push(['Jamoa', `${team.length} menejer · ${team.map(t => t.name).join(', ')}`]);
         rows.push(['Tasdiqlaydi', 'menejerlarning tarif, ustoz va 24 soatdan keyingi to\'lov tahrirlari (admin bilan teng)']);
     } else if (e.role) rows.push(['Lavozim', ROLE_UZ[e.role] || e.role]);
+    // Ofis xodimlari (ROP, sotuv): "Ish vaqti" — Xodimlar davomati grafigidan (HR belgilaydi).
+    if ((me.kind === 'rop' || me.kind === 'sales') && e.id) {
+        const sch = (await db.query('SELECT tracked, days FROM staff_att_schedules WHERE employee_id=$1', [e.id]).catch(() => ({ rows: [] }))).rows[0];
+        const toMin = c => { const m = /^(\d{1,2}):(\d{2})$/.exec(String(c || '')); return m ? Number(m[1]) * 60 + Number(m[2]) : null; };
+        const hours = sch ? Object.entries(sch.days || {}).map(([w, d]) => ({ weekday: Number(w), start_min: toMin(d?.start), end_min: toMin(d?.end) })).filter(h => h.start_min != null && h.end_min != null) : [];
+        const text = require('../../js/workHours').text(hours);
+        rows.push(['Ish vaqti', text || 'belgilanmagan · HR grafik qo\'yadi']);
+    }
     if (joined) rows.push(['Ishga kirgan', String(joined).slice(0, 10)]);
     return rows.map(([label, value]) => ({ label, value }));
 }
@@ -132,7 +152,8 @@ async function getProfile(db, actor) {
     const hrBirth = String(me.emp?.birth_date || '').slice(0, 10);
     return {
         kind: me.kind, assistantDuty: me.assistantDuty,
-        user: { id: me.user.id, name: me.user.name, email: me.user.email, role: me.user.role, phone: me.user.phone || '', bio: me.user.bio || '', avatar: me.user.avatar || '' },
+        // Telefon: profilda kiritilmagan bo'lsa — HR yozuvidagi raqam (Sozlamalar → Profil'da bo'sh placeholder emas).
+        user: { id: me.user.id, name: me.user.name, email: me.user.email, role: me.user.role, phone: me.user.phone || me.emp?.phone || '', bio: me.user.bio || '', avatar: me.user.avatar || '' },
         extra: { telegram: x.telegram || '', birthday: x.birthday || (BDAY_RE.test(hrBirth) ? hrBirth : ''), ext: x.ext || '' },
         gender: me.emp?.gender || '',
         canEditName: FULL.has(me.user.role),
