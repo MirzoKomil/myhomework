@@ -57,10 +57,10 @@ test('sales group celebrates a new sale with a mention; a later debt payment is 
    await pool.query(`UPDATE domwork_bot_settings SET data=data||'{"teamVibesEnabled":false}'::jsonb`);
    await tick('2026-10-30T13:00:00Z');assert.equal((await vibes()).length,0); // o'chiq
    await pool.query(`UPDATE domwork_bot_settings SET data=data||'{"teamVibesEnabled":true}'::jsonb`);
-   // 09:20 da (oyna ichida, kechikib) ham Juma tabrigi yetib boradi; 13:30 va 13:31 — bitta latifa.
-   for(const iso of ['2026-10-30T04:20:00Z','2026-10-30T04:21:00Z','2026-10-30T08:30:00Z','2026-10-30T08:31:00Z','2026-10-30T13:00:00Z','2026-11-01T13:00:00Z']) await tick(iso);
+   // 11:40 da (kechikib) ham Juma tabrigi yetib boradi; 13:30 va 13:31 — bitta latifa.
+   for(const iso of ['2026-10-30T06:40:00Z','2026-10-30T06:41:00Z','2026-10-30T08:30:00Z','2026-10-30T08:31:00Z','2026-10-30T13:00:00Z','2026-11-01T13:00:00Z']) await tick(iso);
    const rows=await vibes();
-   assert.deepEqual(rows.map(r=>r.unique_key.split(':')[0]),['vibe-evening','vibe-friday','vibe-joke']);
+   assert.deepEqual(rows.map(r=>r.unique_key.split(':')[0]),['vibe-evening','vibe-friday','vibe-joke','vibe-monthend','vibe-morning']);
    assert.match(rows.find(r=>r.unique_key.startsWith('vibe-friday')).payload.text,/Juma/);
    assert.match(rows.find(r=>r.unique_key.startsWith('vibe-evening')).payload.text,/18:00|Kech|qaynoq|marafon|nafas|fokus/i);
   });
