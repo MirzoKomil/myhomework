@@ -119,12 +119,15 @@
     // Drawer/oynadagi sana va vaqt maydonlari — CRM'ning o'z sana maydoni (js/teamApp.js enhanceDates: .team-date + "kk.oo.yyyy"
     // yuzi) bilan bir xil; vaqt — 24 soatlik "ss:dd" yuzi. Brauzer tili qanday bo'lmasin "10/31/2026", "10:05 AM" ko'rinmaydi.
     // teamApp faqat .main-area'ni kuzatadi, drawer esa body'ga qo'shiladi — shuning uchun shu yerda (bir xil belgi: data-team-date).
+    const UZ_MON_FULL = ['yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun', 'iyul', 'avgust', 'sentyabr', 'oktyabr', 'noyabr', 'dekabr'];
+    const UZ_WD = ['Ya', 'Du', 'Se', 'Ch', 'Pa', 'Ju', 'Sh'];
+    const uzDateFace = v => { const [y, m, d] = v.split('-').map(Number); return `${d}-${UZ_MON_FULL[m - 1]}, ${UZ_WD[new Date(Date.UTC(y, m - 1, d)).getUTCDay()]}`; };
     function uzFields(root) {
         root.querySelectorAll('input[type="date"]:not([data-team-date]), input[type="time"]:not([data-team-date])').forEach(input => {
             input.dataset.teamDate = '1';
             const isTime = input.type === 'time';
             const wrap = document.createElement('span');
-            wrap.className = isTime ? 'team-date team-time' : 'team-date';
+            wrap.className = isTime ? 'team-date team-time sc-pick' : 'team-date sc-pick';
             input.parentNode.insertBefore(wrap, input);
             wrap.appendChild(input);
             const face = document.createElement('span');
@@ -133,7 +136,8 @@
             wrap.appendChild(face);
             const paint = () => {
                 const v = input.value;
-                face.textContent = isTime ? (/^\d{2}:\d{2}/.test(v) ? v.slice(0, 5) : 'ss:dd') : (/^\d{4}-\d{2}-\d{2}$/.test(v) ? v.split('-').reverse().join('.') : 'kk.oo.yyyy');
+                // Dizayn tanlagichi: "31-oktyabr, Sh" (bo'sh — "kk.oo.yyyy"); vaqt 24 soatlik.
+                face.textContent = isTime ? (/^\d{2}:\d{2}/.test(v) ? v.slice(0, 5) : 'ss:dd') : (/^\d{4}-\d{2}-\d{2}$/.test(v) ? uzDateFace(v) : 'kk.oo.yyyy');
                 wrap.classList.toggle('is-empty', !v);
                 wrap.classList.toggle('is-off', input.disabled);
             };
@@ -489,7 +493,7 @@
         if (isManager()) acts.push(['status', 'Holatni o\'zgartirish', '']);
         if (money && typeof inflowUI !== 'undefined' && typeof inflowUI?.openPayment === 'function') acts.push(['pay', '+ To\'lov qabul qilish', '']);
         el.innerHTML = `<button type="button" class="scc-back" data-back>← ${sc === 'assistant' ? 'O\'quvchilarim' : 'O\'quvchilar'}</button>
-          <section class="sc-card scc-head">
+          <section class="sc-card scc-head${sc === 'full' ? ' scc-head--stack' : ''}">
             <div class="scc-hrow">${studentAvatar(c, 44)}<div class="scc-hmain">
               <div class="scc-hname"><h1>${esc(c.name)}</h1>${sc === 'assistant' ? '<button type="button" class="scc-call" data-act="call"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>Qo\'ng\'iroq</button>' : ''}</div>
               <div class="scc-pills">${sc === 'past' ? '' : tgPill(c.group)} ${statusPill(c)} <span class="sc-pill sc-pill--info">${c.subject === 'russian' ? 'Rus tili' : 'Ingliz tili'}</span><span data-flag></span><span class="scc-meta" data-meta>${meta}</span></div>
@@ -615,15 +619,27 @@
         const frozenNext = (c.statuses || []).find(x => x.status === 'frozen' && x.from > today());
         const end = courseEnd(c);
         const teachers = (c.teachers || []).filter(t => t.from > '2001-01-01');
+        // Chiqib ketgan / kursni tugatgan o'quvchi (dizayn AdminQaytaTiklash kartasi): "Oxirgi o'qish" va "Chiqish" (sana, sabab, kim).
+        const leftNow = c.status === 'left' && (sc === 'full' || sc === 'sales');
+        const exitCard = () => {
+            const l = (c.statuses || []).filter(x => x.status === 'left').pop() || {};
+            const h = (c.history || []).find(x => x.action === 'stop' || x.action === 'finish');
+            const who = h ? `${shortName(h.actor_name)}${{ admin: ' (admin)', boshliq: ' (boshliq)', rop: ' (ROP)' }[h.actor_role] || ''}` : '';
+            return `<section class="sc-card"><header class="sc-ch"><h2>${c.finished ? 'Kursni tugatdi' : 'Chiqish'}</h2>${statusPill(c)}</header>
+              <dl class="scc-dl"><dt>Sana</dt><dd>${l.from ? esc(fmtDate(c.finished ? addDays(l.from, -1) : l.from, false)) : '—'}</dd>
+                <dt>Sabab</dt><dd>${esc(l.reason || h?.reason || '—')}</dd>
+                <dt>Kim</dt><dd>${esc(who || '—')}</dd>
+                ${h?.changes?.lastLesson ? `<dt>Oxirgi dars</dt><dd>${esc(dShort(h.changes.lastLesson))}</dd>` : ''}</dl></section>`;
+        };
         body.innerHTML = `<div class="scc-g3${money ? '' : ' is-two'}">
-            <section class="sc-card"><header class="sc-ch"><h2>O'qish</h2><span class="sc-pill sc-pill--info">${c.subject === 'russian' ? 'Rus' : 'Ingliz'}${s.duration ? ' · ' + esc(s.duration) + ' daq' : ''}</span></header>
+            <section class="sc-card"><header class="sc-ch"><h2>${leftNow ? 'Oxirgi o\'qish' : 'O\'qish'}</h2><span class="sc-pill sc-pill--info">${c.subject === 'russian' ? 'Rus' : 'Ingliz'}${s.duration ? ' · ' + esc(s.duration) + ' daq' : ''}</span></header>
               <dl class="scc-dl"><dt>Asosiy ustoz</dt><dd>${esc(teacherName(c.teacherId))}</dd><dt>Yordamchi ustoz</dt><dd>${c.assistantId ? esc(teacherName(c.assistantId)) : '—'}</dd>
                 ${s.days ? `<dt>Jadval</dt><dd>${esc(s.days)} ${esc(s.time || '')}</dd>` : ''}
                 <dt>Kurs</dt><dd>${c.startDate ? `${ddmm(String(c.startDate).slice(0, 10))}${end ? ' → ' + ddmm(end) : ''} · ` : ''}<span data-reached>…</span> / 72 dars</dd>
                 ${sc === 'past' ? '' : `<dt>Muzlatish</dt><dd>${c.status === 'frozen' ? 'hozir muzlatilgan' : frozenNext ? `rejada · ${esc(dShort(frozenNext.from))} – ${esc(dShort(frozenNext.to))}` : frozenUsed ? 'ishlatilgan · qolmadi' : 'yo\'q · 1 marta qoldi'}</dd>`}
                 ${c.pendingTeacherChange ? `<dt>Ustoz almashadi</dt><dd>${esc(teacherName(c.pendingTeacherChange.teacherId))} · ${esc(fmtDate(c.pendingTeacherChange.from))}</dd>` : ''}
                 ${teachers.length > 1 ? `<dt>Ustozlar tarixi</dt><dd>${teachers.map(t => `${esc(shortName(teacherName(t.teacherId)))} ${esc(dShort(t.from))}`).join(' → ')}</dd>` : ''}</dl></section>
-            ${sc === 'past' ? '' : `<section class="sc-card" data-attcard><header class="sc-ch"><h2>Davomat · ${esc(mName)}</h2><button type="button" class="scc-lnk" data-go="davomat">Batafsil →</button></header><div class="sc-skel scc-skel"></div></section>`}
+            ${leftNow ? exitCard() : sc === 'past' ? '' : `<section class="sc-card" data-attcard><header class="sc-ch"><h2>Davomat · ${esc(mName)}</h2><button type="button" class="scc-lnk" data-go="davomat">Batafsil →</button></header><div class="sc-skel scc-skel"></div></section>`}
             ${money ? `<section class="sc-card" data-paycard><header class="sc-ch"><h2>To'lov</h2><span data-pp></span></header><div class="sc-skel scc-skel"></div></section>` : ''}
           </div>
           ${sc === 'past' ? '' : `<div class="scc-g2k${money ? '' : ' is-one'}">
@@ -634,10 +650,12 @@
         body.querySelectorAll('[data-go]').forEach(b => b.onclick = () => document.querySelector(`#scCardPage .scc-tab[data-tab="${b.dataset.go}"]`)?.click());
         const fill = (sel, html) => { const x = body.querySelector(sel); if (x) x.innerHTML = html; };
         const swap = (card, html) => { const x = body.querySelector(card); x?.querySelector('.scc-skel')?.insertAdjacentHTML('afterend', html); x?.querySelector('.scc-skel')?.remove(); };
+        // Karta bloki yuklanmasa — soxta matn emas, bitta xato naqshi (js/loadError.js): sabab + "Qayta urinish" (Umumiy qayta chiziladi, kelgan bloklar keshdan).
+        const fail = (card, title) => e => { swap(card, `<div class="scc-pad">${window.LoadErr.html({ title, err: e, note: '', compact: true })}</div>`); window.LoadErr.bind(body.querySelector(card), () => summaryTab(body, c)); };
         // O'tgan o'quvchi: server ilova natijasini bermaydi (/progress → 403, faqat o'z davri) — so'rov yuborilmaydi (konsolda 403 chiqmasin).
         if (sc === 'past') { fill('[data-reached]', '—'); return; }
-        // Davomat
-        Promise.all([getAtt(c, month), c.assistantId ? getCon(c, month).catch(() => null) : null]).then(([a, con]) => {
+        // Davomat (chiqib ketgan o'quvchida — "Chiqish" kartasi; davomat "Davomat va aloqalar" tabida)
+        if (!leftNow) Promise.all([getAtt(c, month), c.assistantId ? getCon(c, month) : null]).then(([a, con]) => {
             const x = attStats(a, c), ws = weekStart(today());
             const last = Object.entries(a.entries).sort((p, q) => Number(q[0]) - Number(p[0]))[0];
             const lastDate = last ? `${month}-${String(last[0]).padStart(2, '0')}` : '';
@@ -648,7 +666,7 @@
               <dt>Tekshiruvda</dt><dd>${x.review ? `${x.review} qoplash · ${x.reviewDays.map(dShort).join(', ')}` : '—'}</dd>
               ${c.assistantId ? `<dt>Yordamchi aloqalari</dt><dd>${con ? `${con.counted} / ${con.cap} · bu hafta ${con.items.filter(i => i.day >= ws && i.status === 'counted').length} / 3` : '—'}</dd>` : ''}
               <dt>Oxirgi dars</dt><dd>${lastDate ? `${lastDate === today() ? 'bugun' : dShort(lastDate)}${s.time ? ' ' + esc(s.time) : ''} · ${last[1].present ? 'keldi' : 'kelmadi'}` : '—'}</dd></dl>`);
-        }).catch(e => swap('[data-attcard]', `<p class="sc-mt scc-pad">${esc(e.message)}</p>`));
+        }).catch(fail('[data-attcard]', 'Davomatni yuklab bo\'lmadi'));
         // O'zlashtirish qisqacha
         getProg(c).then(r => {
             fill('[data-reached]', String(r.progress?.reached ?? 0));
@@ -657,7 +675,7 @@
             swap('[data-ozcard]', `<div class="scc-mini"><div><small>Ilovada</small><b>${d.student.reached || 0} / 72</b></div><div><small>1-urinish</small><b class="scc-pc ${acad.cls(f)}">${acad.pct(f)}</b></div>
               <div><small>Faol · 7 kun</small><b>${esc(acad.dur(d.student.time?.week).replace(' daq', ' d'))}</b></div><div><small>Imtihon</small><b class="scc-pc ${ex.cls}">${esc(ex.v)}</b></div></div>
               <div class="scc-pathw">${acad.path(d)}</div>`);
-        }).catch(e => swap('[data-ozcard]', `<p class="sc-mt scc-pad">${esc(e.message)}</p>`));
+        }).catch(fail('[data-ozcard]', 'O\'zlashtirishni yuklab bo\'lmadi'));
         if (!money) return;
         // To'lov
         getPay(c).then(p => {
@@ -671,7 +689,7 @@
               <dt>Keyingi to'lov</dt><dd>${due ? `${esc(dShort(due))} · ${left >= 0 ? left + ' kun qoldi' : -left + ' kun o\'tdi'}` : '—'}</dd>
               <dt>Qarz</dt><dd class="${Number(p.debtAmount) > 0 ? 'scc-bad' : ''}">${p.debtAmount != null ? esc(num(p.debtAmount)) + ' so\'m' : '—'}</dd>
               <dt>To'lovlar</dt><dd>${live.length} ta · jami ${esc(num(live.reduce((n, x) => n + x.amount, 0)))} so'm</dd></dl>`);
-        }).catch(e => swap('[data-paycard]', `<p class="sc-mt scc-pad">${esc(e.message)}</p>`));
+        }).catch(fail('[data-paycard]', 'To\'lov ma\'lumotini yuklab bo\'lmadi'));
         // Sotuv tarixi
         getSales(c).then(r => {
             const L = r.lead;
@@ -680,7 +698,7 @@
                 [L.trialLessonAt, `sinov darsi · ${esc(shortName(teacherName(c.teacherId)))}`], [L.closedDate, `to'lov yopildi${L.saleManager ? ' · ' + esc(String(L.saleManager).split(' ')[0]) : ''}`],
                 [c.startDate, 'o\'quvchiga aylandi · ilova login berildi']].filter(x => x[0]);
             swap('[data-salecard]', `<ul class="scc-tl">${ev.map(([d, t]) => `<li><b>${esc(dShort(String(d).slice(0, 10)))}</b> · ${t}</li>`).join('')}</ul>`);
-        }).catch(e => swap('[data-salecard]', `<p class="sc-mt scc-pad">${esc(e.message)}</p>`));
+        }).catch(fail('[data-salecard]', 'Sotuv tarixini yuklab bo\'lmadi'));
     }
     const REQ_KIND = { tariff: 'tarif', teacher: 'ustoz', payment: 'to\'lov' };
 
@@ -876,12 +894,15 @@
         freeze: 'Ustoz jadvali · yordamchi aloqalari · to\'lov sanasi', 'unfreeze-early': 'Ustoz jadvali · yordamchi aloqalari', 'freeze-cancelled': 'Ustoz jadvali',
         stop: 'Jadvaldan chiqdi · sotuv "Faol emas" · guruh arxivi', finish: 'Jadvaldan chiqdi · "Tugatgan" bo\'limi · guruh arxivi', restore: 'Ustoz jadvali · yordamchi · guruh qaytdi', 'teacher-change': 'Ustoz kabineti · jadval · guruh',
         group: 'CRM · student app · ustoz kabineti', 'request-tariff': 'Admin va ROP tasdig\'iga', 'request-teacher': 'Admin va ROP tasdig\'iga', 'request-payment': 'Admin va ROP tasdig\'iga',
-        'request-approved': 'Menejerga xabar', 'request-rejected': 'Menejerga xabar', 'request-returned': 'Menejerga xabar' };
+        'request-approved': 'Menejerga xabar', 'request-rejected': 'Menejerga xabar', 'request-returned': 'Menejerga xabar',
+        'makeup-approved': 'Ustoz maoshi · davomat', 'assist-correct': 'Yordamchi aloqalari · yordamchi maoshi' };
+    const CH_UZ = { phone: 'Telefon', zoom: 'Zoom', meet: 'Google Meet', tg_video: 'Telegram video', tg_group: 'Telegram guruh videodars', tg_text: 'Telegram yozishma' };
+    const contactText = k => k ? `${dShort(k.day)}${k.at ? ' ' + k.at : ''} · ${k.outcome === 'no_answer' ? 'javob bermadi' : `${CH_UZ[k.channel] || k.channel}${k.minutes ? ', ' + k.minutes + ' daq' : ''}`}` : '';
     function historyRows(c) {
         // So'rov yozuvlarida o'zgarish matni reqSummary orqali (o'quvchining hozirgi qiymati bilan).
         const out = [];
         for (const h of c.history || []) {
-            const ch = h.changes || {}, base = { at: h.created_at, who: `${shortName(h.actor_name)}${ROLE_UZ[h.actor_role] ? ' · ' + ROLE_UZ[h.actor_role] : ''}`, reason: h.reason || '' };
+            const ch = h.changes || {}, base = { at: h.created_at, who: h.actor_name ? `${shortName(h.actor_name)}${ROLE_UZ[h.actor_role] ? ' · ' + ROLE_UZ[h.actor_role] : ''}` : (h.changes?.backfill ? 'Tizim · avvalgi qaror' : 'Tizim'), reason: h.reason || '' };
             const lbl = ACTION_LABEL[h.action] || h.action;
             if (h.action === 'edit') {
                 const ks = Object.keys(ch).filter(k => Array.isArray(ch[k]));
@@ -898,6 +919,12 @@
             else if (h.action === 'stop') Object.assign(x, { field: 'Holat', from: 'Faol', to: `Chiqib ketgan · oxirgi dars ${dShort(ch.lastLesson)}` });
             else if (h.action === 'finish') Object.assign(x, { field: 'Holat', from: 'Faol', to: `Kursni tugatgan · oxirgi dars ${dShort(ch.lastLesson)}` });
             else if (h.action === 'restore') Object.assign(x, { field: 'Holat', from: 'Faol emas', to: `Faol · ${dShort(ch.from)}${ch.schedule ? ', ' + ch.schedule : ''}` });
+            else if (h.action === 'makeup-approved' || h.action === 'makeup-rejected') Object.assign(x, { field: lbl, from: `${dShort(ch.missedDate)} qoldirilgan`,
+                to: `${h.action === 'makeup-approved' ? 'tasdiqlandi' : 'rad etildi'}${ch.heldDate ? ' · ' + dShort(ch.heldDate) + ' o\'tildi' : ''}${ch.teacherId ? ' · ' + shortName(teacherName(ch.teacherId)) : ''}` });
+            else if (h.action === 'assist-correct') Object.assign(x, { field: lbl,
+                from: ch.before ? contactText(ch.before) : null,
+                to: ch.kind === 'remove' ? 'o\'chirildi' : `${ch.kind === 'late-request' ? 'so\'rov tasdiqlandi: ' : !ch.before ? 'qo\'shildi: ' : ''}${contactText(ch.after)}` });
+            else if (h.action === 'assistant-assign') Object.assign(x, { field: lbl, from: ch.assistantId?.from ? teacherName(ch.assistantId.from) : null, to: teacherName(ch.assistantId?.to) });
             else if (h.action.startsWith('request-')) Object.assign(x, { field: lbl, to: ch.kind ? (REQ_KIND[ch.kind] || ch.kind) + ' o\'zgarishi' : reqSummary({ changes: ch, student_id: c.id, kind: h.action.slice(8) }, true) });
             out.push(x);
         }
@@ -1215,7 +1242,6 @@
         ab.innerHTML = `<div class="sc-sec"><h3>Yangi ustoz</h3><p class="sc-mt">${esc(c.schedule?.days || '')} ${esc(c.schedule?.time || '')} · ${esc(c.schedule?.duration || '')} daq bo'yicha tekshiriladi</p><div class="sc-tch" data-tch><span class="sc-mt">Tekshirilmoqda…</span></div></div>
           <div class="sc-sec"><h3>Sana</h3><div class="sc-g2">${field('Yangi ustoz bilan birinchi dars', `<input type="date" name="from" value="${from}" min="${today()}">`, 'Shu kungacha eski ustoz dars o\'tadi va qoplaydi')}
             ${field(`${esc(oldT)} bilan oxirgi dars`, `<input data-lastwith value="${esc(fmtDate(lastWith(from)))}" disabled>`)}</div></div>
-          <div class="sc-sec"><h3>Ustozlar tarixi</h3>${hist.length ? `<ul class="ad-th">${hist.map(h => `<li>${staffAvatar({ id: h.teacherId }, 26)}<b>${esc(teacherName(h.teacherId))}</b><span class="sc-mt">${esc(fmtDate(h.from, false))} → ${h.to ? esc(fmtDate(h.to, false)) : 'hozir'}</span></li>`).join('')}</ul>` : `<p class="sc-mt">${esc(teacherName(c.teacherId))} · kurs boshidan</p>`}</div>
           ${reasonBlock([['Ota-ona so\'radi', 'Ota-ona so\'radi'], ['Ustoz yuklamasi', 'Ustoz yuklamasi'], ['Ustoz ketmoqda', 'Ustoz ketmoqda'], ['Boshqa', 'Boshqa']], 'Ota-ona so\'radi')}
           <div class="sc-sec"><h3>Saqlansa nima bo'ladi</h3>${impact([['▦', `${esc(oldT)} jadvalida vaqt bo'shaydi → sinovga ochiladi · yangi ustozda band`],
             ['↺', 'Qoplanmagan darslar oxirgi kungacha eski ustozda, keyin yangisiga o\'tadi'],
@@ -1223,9 +1249,20 @@
             ['◷', c.assistantId ? `Yordamchi ${esc(shortName(teacherName(c.assistantId)))} o'zgarmaydi` : 'Yordamchi biriktirilmagan'],
             ['✈', `Telegram guruh${c.group?.name ? ' "' + esc(c.group.name) + '"' : ''}: yangi ustozni qo'shing, eskisini chiqaring`],
             ['▣', 'Ilova: progress saqlanadi · yangi ustoz rasmi va ismi'],
-            ['✉', 'Ustozlarga va sotuv menejeriga xabar · tarixga yoziladi']])}</div>`;
-        ab.querySelector('input[name=from]').addEventListener('change', e => { const el = ab.querySelector('[data-lastwith]'); if (el && e.target.value) el.value = fmtDate(lastWith(e.target.value)); });
+            ['✉', 'Ustozlarga va sotuv menejeriga xabar · tarixga yoziladi']])}</div>
+          <div class="sc-sec ad-thbox"><h3>Ustozlar tarixi</h3><div data-thist></div></div>`;
         let pick = null;
+        // Dizayn AdminUstozAlmashtirish: tarix + saqlansa qanday bo'lishi (eski ustoz "→ oxirgi dars", yangisi "birinchi dars →").
+        const paintHist = () => {
+            const f = val(ab, 'from'), past = hist.filter(h => h.teacherId !== c.teacherId || h.to).slice().reverse();
+            const cur = hist.find(h => h.teacherId === c.teacherId && !h.to);
+            const li = (id, txt, cls = '') => `<li class="${cls}">${staffAvatar({ id }, 24)}<b>${esc(teacherName(id))}</b><span class="sc-mt">${txt}</span></li>`;
+            ab.querySelector('[data-thist]').innerHTML = `<ul class="ad-th">${past.map(h => li(h.teacherId, `${h.from > '2001-01-01' ? esc(fmtDate(h.from, false)) : 'kurs boshidan'} → ${h.to ? esc(fmtDate(h.to, false)) : 'hozir'}`)).join('')}
+              ${li(c.teacherId, `${cur?.from > '2001-01-01' ? esc(fmtDate(cur.from, false)) : 'kurs boshidan'} → ${f ? esc(fmtDate(lastWith(f), false)) : 'hozir'}`)}
+              ${pick ? li(pick, `${f ? esc(fmtDate(f, false)) : '—'} →`, 'is-new') : '<li class="sc-mt">Yangi ustozni tanlang</li>'}</ul>`;
+        };
+        ab.querySelector('input[name=from]').addEventListener('change', e => { const el = ab.querySelector('[data-lastwith]'); if (el && e.target.value) el.value = fmtDate(lastWith(e.target.value)); paintHist(); });
+        paintHist();
         const load = async () => {
             const el = ab.querySelector('[data-tch]');
             const rows = await Promise.all(list.map(async t => {
@@ -1238,8 +1275,8 @@
             rows.sort((a, b) => (b.ok - a.ok) || (!!b.alt - !!a.alt));
             pick = rows.find(r => r.ok)?.t.id || null;
             el.innerHTML = rows.map(r => r.err ? `<label class="sc-tc is-off"><input type="radio" name="tch" disabled>${staffAvatar(r.t, 34)}<span class="sc-grow"><b>${esc(r.t.name)}</b><small>bo'sh vaqtini tekshirib bo'lmadi</small></span><span class="sc-pill sc-pill--mute">?</span></label>` : `<label class="sc-tc${!r.ok && !r.alt ? ' is-off' : ''}"><input type="radio" name="tch" value="${esc(r.t.id)}"${r.t.id === pick ? ' checked' : ''}${!r.ok && !r.alt ? ' disabled' : ''}>${staffAvatar(r.t, 34)}<span class="sc-grow"><b>${esc(r.t.name)}</b><small>${r.ok ? 'vaqt o\'zgarmaydi' : r.alt ? 'shu vaqt band · bo\'sh: ' + esc(r.alt) : r.noHours ? 'ish vaqti kiritilmagan — Dars jadvalida kiriting' : 'mos bo\'sh vaqt yo\'q'}</small></span><span class="sc-pill ${r.ok ? 'sc-pill--ok' : r.alt ? 'sc-pill--warn' : 'sc-pill--mute'}">${r.ok ? esc(c.schedule?.time) + ' bo\'sh' : r.alt ? 'band' : '—'}</span></label>`).join('') || '<span class="sc-mt">Boshqa ustoz yo\'q</span>';
-            el.querySelectorAll('input[name=tch]').forEach(i => i.onchange = () => { pick = i.value; });
-            el._rows = rows;
+            el.querySelectorAll('input[name=tch]').forEach(i => i.onchange = () => { pick = i.value; paintHist(); });
+            el._rows = rows; paintHist();
         };
         ab.querySelector('input[name=from]').onchange = load; load();
         footer(box, 'Almashtirish', false, async () => {
@@ -1251,7 +1288,8 @@
     }
     const ACTION_LABEL = { edit: 'Tahrir', freeze: 'Muzlatildi', stop: 'Kurs to\'xtatildi', finish: 'Kursni tugatdi', restore: 'Qayta tiklandi', 'unfreeze-early': 'Muzlatishdan erta qaytdi',
         'teacher-change': 'Ustoz almashtirildi', group: 'Telegram guruh', 'request-tariff': 'So\'rov: tarif', 'request-teacher': 'So\'rov: ustoz',
-        'request-approved': 'So\'rov tasdiqlandi', 'request-rejected': 'So\'rov rad etildi', 'request-returned': 'So\'rov qaytarildi' };
+        'request-approved': 'So\'rov tasdiqlandi', 'request-rejected': 'So\'rov rad etildi', 'request-returned': 'So\'rov qaytarildi',
+        'makeup-approved': 'Qoplash darsi', 'makeup-rejected': 'Qoplash darsi', 'assist-correct': 'Yordamchi aloqasi', 'assistant-assign': 'Yordamchi ustoz' };
     const FIELD_LABEL = { name: 'Ism', phone: 'Telefon', parentPhone: 'Ota-ona', login: 'Login', password: 'Parol', tariff: 'Tarif', monthlyPrice: 'Narx', schedule: 'Jadval', assistant: 'Yordamchi ustoz' };
     function historyList(c) {
         if (!c.history?.length) return '<p class="sc-mt">Hali o\'zgarish yo\'q</p>';
@@ -1420,9 +1458,10 @@
     async function renderGroups(root) {
         const isRop = (typeof getCurrentUser === 'function' && getCurrentUser()?.role) === 'rop';
         // Kirish — O'quvchilar bo'limi navigatsiyasidan (admin, boshliq, ROP — BAHO-6 #6), qaytish ham o'sha yerga.
-        if (!root.querySelector('.ad-gr')) root.innerHTML = `${backLink('students', 'O\'quvchilar')}<div class="sc-skel"></div>`;
+        // Dizayn AdminGuruhlar: sarlavha ustida orqaga havola yo'q (sahifa yon menyudagi "Akademik bo'lim" ostida).
+        if (!root.querySelector('.ad-gr')) root.innerHTML = '<div class="sc-skel"></div>';
         const [, res] = await Promise.all([loadStaffAvatars(), window.LoadErr.settle(api('/groups'))]);
-        const back = backLink('students', 'O\'quvchilar');
+        const back = '';
         if (!res.ok) {
             root.innerHTML = `${back}<div class="sc-head"><div><h1>Telegram guruhlar</h1></div></div>${window.LoadErr.html({ title: 'Guruhlarni yuklab bo\'lmadi', err: res.err })}`;
             window.LoadErr.bind(root, () => renderGroups(root));

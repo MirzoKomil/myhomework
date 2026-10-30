@@ -18,9 +18,11 @@
     const dm = d => { const [, m, dd] = d.split('-').map(Number); return `${dd}-${MON[m - 1]}`; };
     const short = name => { const p = String(name || '').trim().split(/\s+/); return p.length > 1 ? `${p[0]} ${p[1][0]}.` : (p[0] || ''); };
     const first = name => String(name || '').trim().split(/\s+/)[0] || '';
-    // Dizayn: "28.5 soat" (o'nlik nuqta bilan).
-    const hours = m => { const h = Math.round(m / 6) / 10; return `${h} soat`; };
-    const WIN = 240; // "‹ 09:00–13:00 ›" — kun to'rining 4 soatlik oynasi (AdminJadval / RopJadval)
+    // Davomiylik: "49 soat 20 daq" (kasr nuqtasiz; butun soatda — "28 soat", soatdan kam — "40 daq").
+    const hours = m => { const t = Math.max(0, Math.round(Number(m) || 0)), h = Math.floor(t / 60), r = t % 60; return h || !r ? `${h} soat${r ? ` ${r} daq` : ''}` : `${r} daq`; };
+    // KPI katta raqami: "63 soat <small>45 daq</small>" (bir qatorda sig'adi).
+    const hoursBig = m => { const t = hours(m).split(' soat '); return t.length === 2 ? `${t[0]} soat <small class="sv-kmin">${t[1]}</small>` : hours(m); };
+    const WIN = 480; // Kun to'rining ko'rinadigan oynasi — 8 soat (dizayn AdminJadval / RopJadval: 13:00–21:00 o'qi), "‹ ›" bilan suriladi
 
     function isAssistant() {
         const u = me(); if (u.role !== 'teacher') return false;
@@ -251,7 +253,9 @@
         bindNav(root, 1, reload);
         root.querySelector('[data-book]')?.addEventListener('click', () => { st.view = 'free'; SS().render(root); });
         const date = st.date, next = addDays(date, 1);
-        const [d, plan] = await Promise.all([api(`/schedule?from=${date}&to=${next}&lang=${st.lang}`), api(`/assist/plan?from=${date}&to=${date}&lang=${st.lang}`).catch(() => null)]);
+        // Yordamchi rejasi alohida blok: xato bo'lsa jim yashirilmaydi — strip o'rnida xato kartasi va "Qayta urinish".
+        let planErr = null;
+        const [d, plan] = await Promise.all([api(`/schedule?from=${date}&to=${next}&lang=${st.lang}`), api(`/assist/plan?from=${date}&to=${date}&lang=${st.lang}`).catch(e => { planErr = e; return null; })]);
         const tmap = new Map((d.teachers || []).map(t => [t.id, t]));
         const tname = id => tmap.get(id)?.name || U().teacherName(id);
         const mgr = new Map((d.managers || []).map(m => [m.id, m.name]));
@@ -290,7 +294,7 @@
         const pct = m => ((Math.max(vr[0], Math.min(vr[1], m)) - vr[0]) / (vr[1] - vr[0]) * 100);
         const pos = (s, e) => `left:${pct(s).toFixed(3)}%;width:calc(${(pct(e) - pct(s)).toFixed(3)}% - 3px)`;
         const hb = (s, e, cls, t, sub, attrs = '', title = '') => (e <= vr[0] || s >= vr[1]) ? '' : `<${attrs ? 'button type="button"' : 'div'} class="sv-hb ${cls}" style="${pos(s, e)}"${attrs} title="${esc(title || `${hm(s)}–${hm(e)} · ${t}${sub ? ' · ' + sub : ''}`)}">${t ? esc(t) : ''}${sub ? `<small>${esc(sub)}</small>` : ''}</${attrs ? 'button' : 'div'}>`;
-        const winBox = () => !winFits ? '' : `<div class="sv-win" role="group" aria-label="Vaqt oynasi"><button type="button" data-win="-1" aria-label="Oldingi soatlar"${!st.winAll && clampWin(st.win) <= range[0] ? ' disabled' : ''}>‹</button><button type="button" data-winall aria-pressed="${!!st.winAll}" title="${st.winAll ? '4 soatlik oynaga qaytish' : 'Butun kunni ko\'rsatish'}">${st.winAll ? `${hm(range[0])}–${hm(range[1])}` : `${hm(vr[0])}–${hm(vr[1])}`}</button><button type="button" data-win="1" aria-label="Keyingi soatlar"${!st.winAll && clampWin(st.win) >= range[1] - WIN ? ' disabled' : ''}>›</button></div>`;
+        const winBox = () => !winFits ? '' : `<div class="sv-win" role="group" aria-label="Vaqt oynasi"><button type="button" data-win="-1" aria-label="Oldingi soatlar"${!st.winAll && clampWin(st.win) <= range[0] ? ' disabled' : ''}>‹</button><button type="button" data-winall aria-pressed="${!!st.winAll}" title="${st.winAll ? '8 soatlik oynaga qaytish' : 'Butun kunni ko\'rsatish'}">${st.winAll ? `${hm(range[0])}–${hm(range[1])}` : `${hm(vr[0])}–${hm(vr[1])}`}</button><button type="button" data-win="1" aria-label="Keyingi soatlar"${!st.winAll && clampWin(st.win) >= range[1] - WIN ? ' disabled' : ''}>›</button></div>`;
         const draw = () => {
             setVr();
             showFree = st.showFree !== false; hideAs = !!st.hideAssist;
@@ -347,6 +351,7 @@
             ${kpi('#D92D20', 'Qoldirildi', missN, 'kelmadi · qoplash mumkin')}
             ${kpi('#F79009', 'Belgilanmagan', unN, 'dars tugagan, ustoz belgilamagan')}
             ${kpi('#7A5AF8', 'Sinov darslari', trialsToday.length, `${trialWait} natija kutilmoqda · ${unassigned.length} ustozsiz`)}</div>
+          ${planErr ? window.LoadErr.html({ title: 'Yordamchi aloqalarini yuklab bo\'lmadi', err: planErr, note: 'Yordamchi qatorlari ko\'rsatilmadi — darslar jadvali to\'liq.', compact: true, attr: 'data-planerr' }) : ''}
           ${assistants.length ? `<div class="sc-card sv-strip"><span class="sc-pill sv-pill-teal">Yordamchi aloqalari</span><span class="sc-grow">darslar soniga kirmaydi · ${asLine}</span>${isFull() ? '<button type="button" class="sc-link" data-assist>Batafsil →</button>' : ''}</div>` : ''}
           <section class="sc-card sv-board"><header class="sv-bh"><h2>${isToday ? 'Bugun' : esc(dm(date))} · ustozlar bo'yicha</h2><span data-winbox>${winBox()}</span><span class="sc-grow"></span>
               <label class="sv-tgl"><input type="checkbox" data-free${showFree ? ' checked' : ''}><i></i>Sinov uchun bo'sh vaqtlar</label>
@@ -371,6 +376,7 @@
             body.querySelectorAll('[data-wingo]').forEach(b => b.onclick = () => { st.winAll = false; st.win = clampWin(Math.floor((Number(b.dataset.wingo) - 60) / 60) * 60); redraw(); });
         };
         bind();
+        if (planErr) window.LoadErr.bind(body.querySelector('[data-planerr]'), reload);
         body.querySelectorAll('[data-rem]').forEach(b => b.onclick = () => {
             const [kind, tid, who, start] = b.dataset.rem.split('|');
             const tn = tname(tid), f = first(tn), when2 = `${isToday ? 'bugun' : dm(date)} ${hm(Number(start))}`;
@@ -427,9 +433,12 @@
         root.querySelector('[data-tid]')?.addEventListener('change', e => { st.teacherId = e.target.value; reload(); });
         if (!st.teacherId) { body.innerHTML = '<p class="sc-mt">Bu yo\'nalishda ustoz yo\'q</p>'; return; }
         const tid = st.teacherId;
+        // Ish vaqti shabloni sarlavha, KPI va shablon kartasining asosi — xato bo'lsa butun ko'rinish xato kartasi ("ish vaqti kiritilmagan" deb yolg'on aytilmaydi).
+        // Yordamchi rejasi va o'zgarishlar tarixi — alohida bloklar: xato bo'lsa o'z joyida xato kartasi va "Qayta urinish".
+        let planErr = null, chgErr = null;
         const [d, hrs, plan, chg] = await Promise.all([api(`/schedule?from=${from}&to=${to}&teacherId=${encodeURIComponent(tid)}&lang=${st.lang}`),
-            api(`/teachers/${encodeURIComponent(tid)}/hours`).catch(() => ({ hours: [] })), api(`/assist/plan?from=${from}&to=${to}&assistantId=${encodeURIComponent(tid)}&lang=${st.lang}`).catch(() => null),
-            api(`/teachers/${encodeURIComponent(tid)}/changes`).catch(() => ({ changes: [] }))]);
+            api(`/teachers/${encodeURIComponent(tid)}/hours`), api(`/assist/plan?from=${from}&to=${to}&assistantId=${encodeURIComponent(tid)}&lang=${st.lang}`).catch(e => { planErr = e; return null; }),
+            api(`/teachers/${encodeURIComponent(tid)}/changes`).catch(e => { chgErr = e; return null; })]);
         const views = d.views;
         const asst = plan?.items || [];
         const days = weekDays(from, views);
@@ -456,7 +465,9 @@
         const contig = wdays.length > 2 && wdays.every((w, k) => !k || w === wdays[k - 1] + 1);
         const pats = [...new Set(mine.map(x => Number(x.lessonDayOfWeek ?? x.schedule?.day)).filter(n => n === 1 || n === 2))].sort().map(n => (n === 1 ? 'Du·Ch·Ju' : 'Se·Pa·Sh'));
         const subEl = root.querySelector('[data-wsub]');
-        if (subEl) subEl.textContent = [t?.role === 'yordamchi' ? 'Yordamchi ustoz' : 'Asosiy ustoz', langName(st.lang), `${mine.length} o'quvchi${asIds.size ? ` + ${asIds.size} yordamchi` : ''}`,
+        // O'quvchilar soni — Davomat va O'quvchini tekshirish bilan bitta ta'rif: "8 faol + 1 muzlatilgan o'quvchi" (adminNazorat.studentCounts).
+        const N = window.adminNazorat, cntTxt = N?.studentCounts ? N.countsLabel(N.studentCounts(tid, st.lang)) : `${mine.length} o'quvchi`;
+        if (subEl) subEl.textContent = [t?.role === 'yordamchi' ? 'Yordamchi ustoz' : 'Asosiy ustoz', langName(st.lang), `${cntTxt}${asIds.size ? ` + ${asIds.size} yordamchi` : ''}`,
             wdays.length ? `ish vaqti ${contig ? `${DAY[wdays[0] - 1]}–${DAY[wdays[wdays.length - 1] - 1]}` : wdays.map(w => DAY[w - 1]).join('·')}${pats.length ? ` (o'quvchilari ${pats.join(' va ')})` : ''}` : 'ish vaqti kiritilmagan',
             ...(isRop() ? ['vaqtni ochish/yopish faqat adminda'] : [])].join(' · ');
         // "O'zgarishlar tarixi" — server (ochish/yopish, shablon, sinov band qilish, qoplash), kim · qachon · sabab.
@@ -476,25 +487,25 @@
             if (e.type === 'booking') return `<li>${who} · ${whenTxt(e)} ${hm(e.start)} ${esc(first(e.name) || 'o\'quvchi')} ${e.kind === 'makeup' ? 'qoplash darsini qo\'ydi' : 'bir martalik dars qo\'ydi'}<small>${ago(e.at)}${e.status === 'cancelled' ? ' · bekor qilingan' : ''}</small></li>`;
             return '';
         };
-        const histHtml = (chg.changes || []).slice(0, 6).map(histLi).join(''); // dizayndagidek oxirgi 6 ta
+        const histHtml = (chg?.changes || []).slice(0, 6).map(histLi).join(''); // dizayndagidek oxirgi 6 ta
         const cols = days.map(date => {
             const v = vBy.get(date) || { date, items: [], work: [], free: [], trialFree: [], opens: [], makeupOnly: [] };
             return { date, label: DAY[U().wd(date) - 1], blocks: teacherBlocks(v, range, { clickFree: isFull(), clickOv: isFull(), assist: asst.filter(a => a.date === date) }) };
         });
-        body.innerHTML = `<div class="sv-kpis sv-k5">${kpi('', 'Ish vaqti · hafta', hours(work), `shablon ${hours(work - opened)}${opened ? ` + admin ochgan ${hours(opened)}` : ''}`)}
+        body.innerHTML = `<div class="sv-kpis sv-k5">${kpi('', 'Ish vaqti · hafta', hoursBig(work), `shablon ${hours(work - opened)}${opened ? ` + admin ochgan ${hours(opened)}` : ''}`)}
             ${kpi('#0065D6', 'Darslar', les.length + mk.length, `${hours(sum(les) + sum(mk))} · +${mk.length} qoplash${asst.length ? ` · ${asst.length} aloqa alohida` : ''}`)}
             ${kpi('#7A5AF8', 'Sinov darslari', tr.length, `${tr.filter(i => i.status === 'confirmed' && when(i.date, i).past).length} natija kutilmoqda · ${tr.filter(i => i.status === 'pending').length} tasdiq kutilmoqda`)}
-            ${kpi('#12B76A', 'Sinovga ochiq', hours(trialOpen), `hozirdan keyin ${hours(trialAfter)}`)}
-            ${kpi('#98A2B3', 'Sinovga yopiq', hours(closedM + moM + notTrial), `yopilgan ${hours(closedM)}${moM ? ` · faqat qoplash ${hours(moM)}` : ''}${notTrial ? ` · boshqa ${hours(notTrial)}` : ''}`)}</div>
+            ${kpi('#12B76A', 'Sinovga ochiq', hoursBig(trialOpen), `hozirdan keyin ${hours(trialAfter)}`)}
+            ${kpi('#98A2B3', 'Sinovga yopiq', hoursBig(closedM + moM + notTrial), `yopilgan ${hours(closedM)}${moM ? ` · faqat qoplash ${hours(moM)}` : ''}${notTrial ? ` · boshqa ${hours(notTrial)}` : ''}`)}</div>
           <div class="sv-lay">
-            <section class="sc-card sv-wcard"><header class="sv-bh"><h2>${weekLabel(from)}</h2><span class="sc-grow"></span><span class="sc-mt">${isFull() ? 'Bo\'sh joyni bosing → ochish / yopish · darsni bosing → o\'quvchi kartasi' : 'Darsni bosing → o\'quvchi kartasi'}</span></header>
+            <section class="sc-card sv-wcard">${planErr ? window.LoadErr.html({ title: 'Yordamchi aloqalarini yuklab bo\'lmadi', err: planErr, note: 'Aloqa bloklari to\'rda ko\'rsatilmadi — darslar to\'liq.', compact: true, attr: 'data-planerr' }) : ''}<header class="sv-bh"><h2>${weekLabel(from)}</h2><span class="sc-grow"></span><span class="sc-mt">${isFull() ? 'Bo\'sh joyni bosing → ochish / yopish · darsni bosing → o\'quvchi kartasi' : 'Darsni bosing → o\'quvchi kartasi'}</span></header>
               ${vgrid(cols, range)}${legend(legendT(asst))}</section>
             <div class="sv-side">
               <section class="sc-card" data-panel></section>
               <section class="sc-card"><header class="sv-bh"><h2>Ish vaqti shabloni</h2><span class="sc-grow"></span>${isFull() ? '<button type="button" class="sc-btn sc-btn--sm" data-hours>Tahrirlash</button>' : ''}</header>
                 <dl class="sv-dl3">${[...grp.entries()].map(([k, ws]) => `<dt>${ws.sort().map(w => DAY[w - 1]).join(' · ')}</dt><dd>${esc(k)}</dd>`).join('') || '<dt>—</dt><dd>Ish vaqti kiritilmagan</dd>'}
                   ${offDays.length && (hrs.hours || []).length ? `<dt>${offDays.map(w => DAY_FULL[w - 1]).join(', ')}</dt><dd>dam olish</dd>` : ''}<dt>Sinov uchun</dt><dd>ish vaqtidagi barcha bo'sh joy, istisnolar bilan</dd></dl></section>
-              <section class="sc-card"><header class="sv-bh"><h2>O'zgarishlar tarixi</h2></header><ul class="sv-hist">${histHtml || '<li class="sc-mt">Oxirgi 30 kunda o\'zgarish yo\'q</li>'}</ul></section>
+              <section class="sc-card" data-chgbox><header class="sv-bh"><h2>O'zgarishlar tarixi</h2></header>${chgErr ? window.LoadErr.html({ title: 'O\'zgarishlar tarixini yuklab bo\'lmadi', err: chgErr, note: '', compact: true }) : `<ul class="sv-hist">${histHtml || '<li class="sc-mt">Oxirgi 30 kunda o\'zgarish yo\'q</li>'}</ul>`}</section>
             </div></div>`;
         const panel = body.querySelector('[data-panel]');
         const idle = () => {
@@ -503,6 +514,8 @@
             panel.querySelector('[data-ov-new]')?.addEventListener('click', () => SS()._.overrideDrawer(tid, reload));
         };
         idle();
+        if (planErr) window.LoadErr.bind(body.querySelector('[data-planerr]'), reload);
+        if (chgErr) window.LoadErr.bind(body.querySelector('[data-chgbox]'), reload);
         body.querySelector('[data-hours]')?.addEventListener('click', () => SS()._.hoursDrawer(tid, reload));
         body.querySelectorAll('[data-st]').forEach(b => b.onclick = () => U().openStudent(b.dataset.st));
         body.querySelectorAll('[data-tr]').forEach(b => b.onclick = () => typeof switchTab === 'function' && switchTab('trial-lessons'));

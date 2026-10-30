@@ -129,6 +129,14 @@ async function removeOwnToday(db, actor, id, now = new Date()) {
     return rows[0];
 }
 // Admin tuzatishi: o'tgan kunga qo'shish yoki o'chirish, sabab bilan. Qulflangan oyda — yo'q.
+// Aloqa tuzatishi o'quvchi kartasi "O'zgarishlar tarixi"ga yoziladi (school_student_audit, action 'assist-correct').
+const contactBrief = c => c ? { id: c.id, day: S.dateStr(c.day), at: c.at_min != null ? T.fromMin(c.at_min) : null, channel: c.channel, minutes: Number(c.minutes) || 0, outcome: c.outcome } : null;
+async function auditCorrection(db, actor, studentId, kind, before, after, reason, requestId = null) {
+    if (!studentId) return;
+    await require('./studentOps').audit(db, studentId, 'assist-correct',
+        { kind, assistantId: (after || before)?.assistant_id || null, before: contactBrief(before), after: contactBrief(after) }, reason, actor, requestId);
+}
+
 async function adminCorrect(db, actor, body, now = new Date()) {
     if (!['admin', 'boshliq'].includes(actor.role)) throw fail(403, 'Aloqani faqat admin tuzatadi');
     const reason = String(body.reason || '').trim();
@@ -137,7 +145,9 @@ async function adminCorrect(db, actor, body, now = new Date()) {
         const c = (await db.query('SELECT * FROM school_assist_contacts WHERE id=$1 FOR UPDATE', [body.removeId])).rows[0];
         if (!c) throw fail(404, 'Yozuv topilmadi');
         if (await isLocked(db, S.dateStr(c.day).slice(0, 7))) throw fail(409, 'Oy yakuniy tasdiqlangan — o\'zgartirib bo\'lmaydi');
-        return (await db.query('UPDATE school_assist_contacts SET removed_at=NOW(), removed_by=$2, correction_reason=$3 WHERE id=$1 RETURNING *', [c.id, actor.id, reason])).rows[0];
+        const removed = (await db.query('UPDATE school_assist_contacts SET removed_at=NOW(), removed_by=$2, correction_reason=$3 WHERE id=$1 RETURNING *', [c.id, actor.id, reason])).rows[0];
+        await auditCorrection(db, actor, c.student_id, 'remove', c, null, reason);
+        return removed;
     }
     // Qatordan tuzatish (usul, vaqt, daqiqa yoki sana): eski yozuv o'chiriladi (tarixda qoladi), o'rniga yangisi — bitta tranzaksiyada.
     let prev = null;
@@ -172,6 +182,7 @@ async function adminCorrect(db, actor, body, now = new Date()) {
             noAnswer ? 0 : Math.round(Number(body.minutes) || 0), String(body.note ?? prev?.note ?? '').slice(0, 500), noAnswer ? 'no_answer' : 'contacted', actor.id, reason]);
     if (body.requestId) await db.query(`UPDATE school_requests SET status='approved', decided_by=$2, decided_by_name=$3, decided_at=NOW() WHERE id=$1 AND status='new'`,
         [body.requestId, actor.id, actor.name || '']);
+    await auditCorrection(db, actor, rows[0].student_id, prev ? 'edit' : body.requestId ? 'late-request' : 'add', prev, rows[0], reason, body.requestId || null);
     return rows[0];
 }
 
