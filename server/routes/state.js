@@ -971,7 +971,10 @@ async function getStateForUser(user) {
     }
     const scoped = scopeState(state, user, { managerId, financeEmployee });
     // ROP: Cash Flow yo'q, faqat o'z til yo'nalishi (HR'dagi til) — services/ropScope.js.
-    if (user.role === 'rop') return ropScope.scopeStateForRop(scoped, await ropScope.ropLangsFor(pool, user));
+    if (user.role === 'rop') {
+        const own = user.email ? (await pool.query('SELECT id FROM hr_employees WHERE LOWER(TRIM(login)) = LOWER(TRIM($1)) LIMIT 1', [user.email])).rows[0]?.id : null;
+        return ropScope.scopeStateForRop(scoped, await ropScope.ropLangsFor(pool, user), { ownEmployeeId: own || null });
+    }
     return scoped;
 }
 

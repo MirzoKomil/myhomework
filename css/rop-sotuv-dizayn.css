@@ -134,3 +134,29 @@ body.rs-sotuv #tab-students:has(> #schoolMyStudents:not([hidden])) > :not(#schoo
   .rs-more { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 2px; }
   .rs-more-b { white-space: nowrap; }
 }
+
+/* ── Konversiya 3/4/6-qadam: asosiy tugma Xulosa kartasida (dizayn), pastki panelda faqat "Bekor qilish" ── */
+.cv-aside .cv-go { width: 100%; min-height: 44px; font-size: 14px; }
+.cv-fixed { margin: 0 0 8px; }
+.cv-fixed .cv-resched { font-size: 12.5px; font-weight: 700; margin-left: 6px; }
+@media (min-width: 901px) {
+  .modal.cv-hasaside .modal-footer .btn-primary-sm { display: none; }
+}
+@media (max-width: 900px) {
+  .cv-aside .cv-go { display: none; }
+}
+/* SotuvHolatlar: bo'sh holat matni, telefonda bitta ustun */
+.rs-hc-empty { margin: 0; }
+.rs-hc .sc-btn[disabled] { opacity: .55; cursor: default; }
+@media (max-width: 760px) { .rs-sts { grid-template-columns: minmax(0, 1fr); } }
+
+/* ── Sotuv · Dars jadvali: "Biriktirilmagan" qatori doim, oynadan tashqaridagi sinovga o'tish ── */
+.sv-hr.is-un .sv-ht2 { position: relative; }
+.ss-unout { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); z-index: 3; }
+.ss-unnone { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 12px; color: var(--text-muted, #4B5563); }
+.sv-lg .sv-rlink { margin-left: auto; font-size: 12.5px; font-weight: 700; }
+
+/* ── Reyting (ROP / sotuv): dizayn tilidagi sahifa — ichki "Sotuv" tablar va "Boshqa bo'limlar" yashirin ── */
+body.rs-rating #salesSectionNav, body.rs-rating #rsMoreSales { display: none !important; }
+.rs-rtbar { display: inline-flex; width: auto; margin: 0 0 14px; }
+[data-sales-panel="rating"].rs-rt-teachers > :not(#rsRatingBar):not(#rsRatingTeachers) { display: none !important; }

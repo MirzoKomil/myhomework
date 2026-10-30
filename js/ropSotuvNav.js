@@ -44,14 +44,16 @@
             ['analitika', 'Analitika'], ['student-app', 'Mobil ilova'], ['guides', 'Yoʻriqnomalar']]
     };
     // ROP: Tasdiqlar va Telegram guruhlar — dizaynda "O'quvchilar" ichida (RopTasdiq, RopGuruhlar).
-    const STUDENT_LINKS = { rop: [['school-approvals', 'Sotuv tahrirlari · tasdiq'], ['school-groups', 'Telegram guruhlar']] };
+    // Ular O'quvchilar sahifasining ichki tablarida bor (index.html data-go-tab … data-go-roles="… rop") — takror qator chiqarilmaydi.
+    const STUDENT_LINKS = {};
 
     const role = () => (typeof getCurrentUser === 'function' ? getCurrentUser()?.role : '') || '';
     const on = () => !!ORDER[role()];
     let current = null;
 
     function activeKey() {
-        if (document.body.classList.contains('ss-page-open') && role() === 'sales_manager') return 'trialSotuv';
+        // Sinov qo'yish / holatlar sahifasi: sidebar'dagi "Sinov darslari"dan ochilgan bo'lsa — o'sha band, aks holda (liddan, holatlar) — "Lidlar" (dizayn).
+        if (document.body.classList.contains('ss-page-open') && role() === 'sales_manager') return window.sotuvSinov?.from?.() === 'trials' ? 'trialSotuv' : 'leads';
         const tab = document.querySelector('.tab-content.active')?.id?.replace(/^tab-/, '') || '';
         const sec = typeof _tabContext !== 'undefined' ? _tabContext.salesSection : '';
         const keys = ORDER[role()] || [];
@@ -127,9 +129,46 @@
         el.innerHTML = `<span class="rs-more-l">Boshqa boʻlimlar:</span>${links.map(([tab, label, ctx], i) => `<button type="button" class="rs-more-b" data-i="${i}">${label}</button>`).join('')}`;
         el.querySelectorAll('[data-i]').forEach(b => b.onclick = () => { const [tab, , ctx] = links[Number(b.dataset.i)]; window.sotuvSinov?.close?.({ silent: true }); if (tab === 'sales' && document.getElementById('tab-sales')?.classList.contains('active') && typeof switchSalesSection === 'function') switchSalesSection(ctx.salesSection); else switchTab(tab, ctx || {}); mark(); });
     }
+    // Reyting (sidebar → "Reyting"): dizayn tilidagi sahifa — sarlavha "Reyting", ichki "Sotuv" tablar qatori va
+    // "Boshqa bo'limlar" yashirin. ROP uchun "Sotuv menejerlari · Ustozlar" almashtirgichi: "Ustozlar" — Reyting dizayni
+    // (js/reytingUI.js, /api/state/teacher-rating — server ROP'ga ruxsat beradi), faqat ROP tili.
+    const RT = { view: 'sales' };
+    function ratingView() {
+        const r = role();
+        const on = !!ORDER[r] && document.getElementById('tab-sales')?.classList.contains('active')
+            && typeof _tabContext !== 'undefined' && _tabContext.salesSection === 'rating' && !document.body.classList.contains('ss-page-open');
+        document.body.classList.toggle('rs-rating', on);
+        const panel = document.querySelector('[data-sales-panel="rating"]');
+        const head = document.querySelector('#tab-sales > .sales-pinned > .rd-page-head');
+        if (!on || !panel) { document.getElementById('rsRatingTeachers')?.setAttribute('hidden', ''); panel?.classList.remove('rs-rt-teachers'); return; }
+        const lang = (typeof getUserOwnLang === 'function' && getUserOwnLang()) || 'english';
+        if (head) {
+            head.querySelector('h1').textContent = 'Reyting';
+            head.querySelector('p').textContent = `${RT.view === 'teachers' ? 'Ustozlar' : 'Sotuv menejerlari'} · ${lang === 'russian' ? 'Rus tili' : 'Ingliz tili'} yoʻnalishi`;
+        }
+        let bar = document.getElementById('rsRatingBar');
+        if (r === 'rop') {
+            if (!bar) {
+                bar = document.createElement('div'); bar.id = 'rsRatingBar'; bar.className = 'sc-seg rs-rtbar'; bar.setAttribute('role', 'group'); bar.setAttribute('aria-label', 'Reyting turi');
+                bar.innerHTML = '<button type="button" data-rtv="sales">Sotuv menejerlari</button><button type="button" data-rtv="teachers">Ustozlar</button>';
+                panel.prepend(bar);
+                bar.querySelectorAll('[data-rtv]').forEach(b => b.onclick = () => { RT.view = b.dataset.rtv; ratingView(); });
+            }
+            bar.querySelectorAll('[data-rtv]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.rtv === RT.view)));
+        } else bar?.remove();
+        const teachers = r === 'rop' && RT.view === 'teachers';
+        panel.classList.toggle('rs-rt-teachers', teachers);
+        let box = document.getElementById('rsRatingTeachers');
+        if (teachers) {
+            if (!box) { box = document.createElement('div'); box.id = 'rsRatingTeachers'; bar.after(box); }
+            box.hidden = false;
+            if (!box.dataset.drawn && window.ReytingUI) { box.dataset.drawn = '1'; window.ReytingUI.render(box, { lang }); }
+        } else if (box) box.hidden = true;
+    }
     function decorate() {
         const r = role();
         if (!ORDER[r]) return;
+        ratingView();
         strip('rsMoreSales', MORE[r], document.getElementById('tab-sales'));
         if (STUDENT_LINKS[r]) strip('rsMoreStudents', STUDENT_LINKS[r], document.getElementById('tab-students'));
     }
@@ -156,6 +195,7 @@
     wrap('applyRoleBasedAccess', apply);
     wrap('switchTab', () => mark());
     wrap('switchSalesSection', () => mark());
+    wrap('updateRdPageHead', () => { if (on()) ratingView(); });
     // Yuklanishda allaqachon qo'llangan bo'lsa.
     try { const u = typeof getCurrentUser === 'function' ? getCurrentUser() : null; if (u && document.querySelector('#sidebarMenu .menu-item[style*="display"]')) apply(u); } catch (_) { /* hali kirilmagan */ }
 

@@ -17,7 +17,7 @@
 <tr><th>Sinov darsini band qilish</th><td class="y">✓</td><td class="y">✓</td><td class="y">✓ ochiq vaqtga</td><td class="n">—</td><td class="n">—</td></tr>
 <tr><th>Ustoz biriktirish (bo'sh vaqt yo'q bo'lsa)</th><td class="y">✓</td><td class="y">✓</td><td class="n">so'rov</td><td class="n">—</td><td class="n">—</td></tr>
 <tr><th>Ish vaqti shabloni</th><td class="y">✓</td><td class="n">—</td><td class="n">—</td><td class="n">so'rov</td><td class="n">so'rov</td></tr>
-<tr><th>Sanaga ochish / yopish</th><td class="y">✓</td><td class="p">sinovdan yopish</td><td class="n">—</td><td class="n">so'rov</td><td class="n">so'rov</td></tr>
+<tr><th>Sanaga ochish / yopish</th><td class="y">✓</td><td class="n">— (admin; 30-okt qarori)</td><td class="n">—</td><td class="n">so'rov</td><td class="n">so'rov</td></tr>
 <tr><th>Qoplash darsi qo'yish</th><td class="y">✓</td><td class="n">—</td><td class="n">—</td><td class="y">✓ (tekshiruvda)</td><td class="n">— (qoplanmaydi)</td></tr>
 <tr><th>Sinov tasdig'i va natijasi</th><td class="p">ko'radi</td><td class="p">ko'radi</td><td class="p">ko'radi</td><td class="y">✓</td><td class="n">—</td></tr>
 <tr><th>To'lov ma'lumotlari</th><td class="y">✓</td><td class="y">✓</td><td class="y">✓</td><td class="n">hech qachon</td><td class="n">hech qachon</td></tr>

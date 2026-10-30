@@ -32,7 +32,8 @@
         rebooked: { label: "Qayta qo'yildi", tone: 'mute' },
         closed: { label: 'Sinovdan chiqarildi', tone: 'mute' }
     };
-    const SOLD_STATUSES = new Set(['tolov-yopildi']);
+    // "Sotildi" — sotuv O'quvchilari bilan bir manba: lid "To'lov jarayonida"ga o'tganda o'quvchi yaratiladi (js/app.js LEAD_STATUSES_NEED_SERIAL).
+    const SOLD_STATUSES = new Set(['tolov-jarayonida', 'tolov-yopildi']);
     // Sinov darsi holati (bitta manba). opts: { leadStatus, durationMin, now (ms), archived }.
     // Tasdiqlanmagan va vaqti o'tib ketgan sinov "osilib" qolmaydi — "Muddati o'tdi · natija kerak".
     function phase(request, opts = {}) {
