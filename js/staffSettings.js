@@ -593,7 +593,7 @@
     };
 
     // ── Parol (UstozSozParol, YordamchiSozParol; Sotuv/ROP/Admin ham shu tuzilishda) ─────────────
-    // Tekshiruv va saqlash app.js'dagi umumiy funksiyalar: _pwdChecks (xodimga kamida 8 belgi — server
+    // Tekshiruv va saqlash app.js'dagi umumiy funksiyalar: _pwdChecks (xodimga kamida 4 belgi — server
     // services/authSecurity ham tekshiradi), bindProfilePasswordUi, handleProfilePasswordChange. Bu yerda faqat
     // dizayndagi karta tuzilishi; element id'lari o'sha funksiyalar kutganidek.
     function ago(v) {

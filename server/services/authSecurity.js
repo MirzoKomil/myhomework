@@ -3,12 +3,13 @@
 //  • kirishlar tarixi (muvaffaqiyatli va noto'g'ri parol) — 30 kun ko'rinadi;
 //  • bir login + IP dan 15 daqiqada 5 marta noto'g'ri parol → 15 daqiqa blok
 //    (faqat shu IP uchun — boshqa odam egasini butunlay bloklab qo'ya olmaydi);
-//  • xodim paroli kamida 8 belgi, harf va raqam, eskisidan farqli; o'zgartirilgan vaqt saqlanadi.
+//  • xodim paroli kamida 4 belgi (30-okt direktor qarori: standart — telefonning oxirgi 4 raqami), eskisidan farqli;
+//    o'zgartirilgan vaqt saqlanadi.
 const { randomUUID } = require('node:crypto');
 
 const FAIL_LIMIT = 5;
 const LOCK_MINUTES = 15;
-const STAFF_MIN = 8;
+const STAFF_MIN = 4;
 
 let ready = null;
 function ensure(pool) {
@@ -57,7 +58,6 @@ function checkNewPassword(user, current, next) {
     const staff = user.role !== 'student';
     const min = staff ? STAFF_MIN : 6;
     if (String(next).length < min) return `Yangi parol kamida ${min} belgidan iborat bo'lishi kerak`;
-    if (staff && !(/[A-Za-zА-Яа-яЁё]/.test(next) && /\d/.test(next))) return 'Parolda harf ham, raqam ham bo\'lsin';
     if (current === next) return 'Yangi parol eskisidan farqli bo\'lsin';
     return null;
 }

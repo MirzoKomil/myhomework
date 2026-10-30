@@ -6002,15 +6002,14 @@ function renderProfileEditSection(user) {
 }
 
 // Sozlamalar → Parol (UstozSozParol): talablar ro'yxati, kuch ko'rsatkichi, boshqa qurilmalardan chiqarish.
-// Xodim paroli kamida 8 belgi, harf va raqam (server ham tekshiradi: services/authSecurity).
-function _pwdMin() { return getCurrentUser()?.role === 'student' ? 6 : 8; }
+// Xodim paroli oddiy (30-okt direktor qarori): kamida 4 belgi, eskisidan farqli — standart telefonning oxirgi 4 raqami.
+// Server ham tekshiradi: services/authSecurity.
+function _pwdMin() { return getCurrentUser()?.role === 'student' ? 6 : 4; }
 function _pwdChecks(next, current) {
     const min = _pwdMin();
     return [
         { ok: next.length >= min, t: `Kamida ${min} belgi` },
-        { ok: /[A-Za-zА-Яа-яЁё]/.test(next) && /\d/.test(next), t: 'Harf va raqam' },
-        { ok: !!next && next !== current, t: 'Eski paroldan farqli' },
-        { ok: /[A-ZА-ЯЁ]/.test(next), t: 'Katta harf (tavsiya)', soft: true }
+        { ok: !!next && next !== current, t: 'Eski paroldan farqli' }
     ];
 }
 function bindProfilePasswordUi() {
@@ -6019,11 +6018,12 @@ function bindProfilePasswordUi() {
     const update = () => {
         const checks = _pwdChecks(nw.value, cur.value);
         document.querySelectorAll('#profilePwdRules li').forEach((li, i) => li.classList.toggle('ok', checks[i].ok));
-        const score = checks.filter(c => c.ok).length + (nw.value.length >= 16 ? 1 : 0);
+        // Talablar bajarilsa — yashil (qat'iylik majburiy emas, faqat ma'lumot).
+        const okAll = checks.every(c => c.ok);
         const meter = document.getElementById('profilePwdMeter');
-        if (meter) { meter.style.width = `${Math.min(100, score * 20)}%`; meter.dataset.level = score >= 4 ? 'ok' : score >= 3 ? 'mid' : 'low'; }
+        if (meter) { meter.style.width = !nw.value ? '0%' : okAll ? '100%' : '40%'; meter.dataset.level = okAll ? 'ok' : 'low'; }
         const st = document.getElementById('profilePwdStrength');
-        if (st) st.textContent = !nw.value ? '' : score >= 4 ? 'Kuchli' : score >= 3 ? 'O\'rtacha' : 'Zaif';
+        if (st) st.textContent = !nw.value ? '' : okAll ? 'Mos' : 'Talablarga mos emas';
         const m = document.getElementById('profilePwdMatch');
         if (m) { m.textContent = !cf.value ? '' : cf.value === nw.value ? 'mos' : 'mos emas'; m.className = 'pwd-match ' + (cf.value === nw.value ? 'ok' : 'bad'); }
     };
