@@ -330,7 +330,7 @@
             const teacherCell = needsTeacher(x.ph)
                 ? `${x.ph === 'rejected' && tId ? `<div class="sc-mt">rad etdi: ${esc(shortName(person(tId)?.name))}</div>` : ''}<button type="button" class="sc-btn sc-btn--pri sc-btn--sm" data-a-assign="${esc(l.id)}">Ustoz biriktirish</button>`
                 : `<span class="tl-who">${staffAv(tId, 28)}${esc(person(tId)?.name || '—')}</span>`;
-            return `<tr><td><div class="tl-who">${leadAv(l, 36)}<div><button type="button" class="tl-namebtn" data-a-open="${esc(l.id)}">${esc(l.name || '—')}</button><div class="sc-mt">${esc(l.phone || '')}${mgrName(l) ? `<br>menejer ${esc(firstName(mgrName(l)))}` : ''}</div></div></div></td>
+            return `<tr><td><div class="tl-who">${leadAv(l, 36)}<div><button type="button" class="tl-namebtn" data-a-open="${esc(l.id)}">${esc(l.name || '—')}</button><div class="sc-mt">${esc(l.phone ? (typeof formatPhoneDisplay === 'function' ? formatPhoneDisplay(l.phone) : l.phone) : '')}${mgrName(l) ? `<br>menejer ${esc(firstName(mgrName(l)))}` : ''}</div></div></div></td>
                 <td>${teacherCell}</td><td>${timeCell(x)}</td><td>${pill(x.ph, null, true)}</td></tr>`;
         };
         const todayCard = todayRows.length ? todayRows.slice().sort((a, b) => String(a.req.scheduledAt).localeCompare(String(b.req.scheduledAt))).map(x => {

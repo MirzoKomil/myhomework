@@ -30,6 +30,11 @@ html.rd[data-theme="dark"] {
        o'sha to'q kulrang fallback qolib, "Tarix" tab, "Dars bo'ldimi?", sub qatorlar (.sc-mt, .tl-ml, .sc-seg) deyarli ko'rinmasdi.
        Dark token: #A9B4C8 — surface #131C2E ustida ≈ 8.6:1, track #24304A ustida ≈ 6.6:1 (WCAG AA). */
     --text-secondary: #A9B4C8;
+    /* BAHO-6 #3: --surface-2 / --bg-secondary yorug' rejimda e'lon qilinmagan (har joyda o'z och fallbacki), dark'da ham o'sha
+       oq fallback qolib, drawer pastki paneli (.sc-df: Tahrir, Muzlatish, Kursni to'xtatish, Qayta tiklash, Ustoz almashtirish),
+       jadval sarlavha qatorlari va progress yo'laklari oq chiqardi. Dark: surface #131C2E dan biroz to'q panel. */
+    --surface-2: #0F1726;
+    --bg-secondary: #1A2438;
 }
 
 html.rd body { color: var(--text); }

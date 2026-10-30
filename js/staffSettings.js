@@ -688,7 +688,17 @@
             const tg = item('telegram-groups'); if (tg) { tg.lastChild.textContent = '\n Telegram bot'; gAdmin.append(tg); }
         }
         const nl = item('notif-list'); if (nl) nl.lastChild.textContent = '\n Bildirishnomalar tarixi';
-        for (const sec of ['archive', 'notif-list', 'support', 'peer-chats', 'activity']) { const b = item(sec); if (b) (admin ? gAdmin : gMore).append(b); }
+        // BAHO-6 #9: dizaynda yo'q, lekin ishlayotgan bo'limlar — barcha rollarda pastdagi yig'ma "Boshqa bo'limlar" guruhida
+        // (yopiq turadi; ochilgan bo'lim bo'lsa o'zi ko'rinadi). Admin guruhida faqat dizayndagi 3 band qoladi.
+        for (const sec of ['archive', 'notif-list', 'support', 'peer-chats', 'activity']) { const b = item(sec); if (b) gMore.append(b); }
+        if (!gMore.dataset.szFold) {
+            gMore.dataset.szFold = '1';
+            const lbl = gMore.querySelector('.profile-nav-label');
+            const tg = document.createElement('button');
+            tg.type = 'button'; tg.className = 'profile-nav-label sz-fold'; tg.setAttribute('aria-expanded', 'false'); tg.textContent = 'Boshqa bo\'limlar';
+            tg.addEventListener('click', () => { const on = !gMore.classList.contains('is-open'); gMore.classList.toggle('is-open', on); tg.setAttribute('aria-expanded', String(on)); });
+            if (lbl) lbl.replaceWith(tg); else gMore.prepend(tg);
+        }
         // TIZIM: "Interfeys tili · O'zbek" va "Mavzu · …" (tungi/yorug' almashtirgich).
         let th = nav.querySelector('[data-sz-mode]');
         if (!th) {

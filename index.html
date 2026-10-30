@@ -16,15 +16,15 @@
     <link rel="stylesheet" href="css/lessonHub.css?v=20261029a5">
     <link rel="stylesheet" href="css/whiteboard.css?v=20261029b4">
     <link rel="stylesheet" href="css/staffAttendance.css?v=20261026k2">
-    <link rel="stylesheet" href="css/kobalt.css?v=20261029a5">
-    <link rel="stylesheet" href="css/school.css?v=20261029a5">
+    <link rel="stylesheet" href="css/kobalt.css?v=20261030g">
+    <link rel="stylesheet" href="css/school.css?v=20261030g">
     <link rel="stylesheet" href="css/ustozToliq.css?v=20261029ust">
     <link rel="stylesheet" href="css/trial.css?v=20261029sin2">
     <link rel="stylesheet" href="css/scheduleV2.css?v=20261029a5">
     <link rel="stylesheet" href="css/jadvalQoidalar.css?v=20261029jad">
     <link rel="stylesheet" href="css/jadvalUstoz.css?v=20261029jad">
     <link rel="stylesheet" href="css/sotuvSinov.css?v=20261029sot">
-    <link rel="stylesheet" href="css/adminNazorat.css?v=20261029adm">
+    <link rel="stylesheet" href="css/adminNazorat.css?v=20261030g">
     <link rel="stylesheet" href="css/kartaPul.css?v=20261029kon">
     <link rel="stylesheet" href="css/staffSettings.css?v=20261029a5">
     <link rel="stylesheet" href="css/yordamchi.css?v=20261029a5">
@@ -32,10 +32,10 @@
     <link rel="stylesheet" href="css/tugatganSessiya.css?v=20261029b4">
     <link rel="stylesheet" href="css/ustozDavomat.css?v=20261029a5">
     <link rel="stylesheet" href="css/ustozBosh.css?v=20261029b4">
-    <link rel="stylesheet" href="css/sozlamalar.css?v=20261029soz">
+    <link rel="stylesheet" href="css/sozlamalar.css?v=20261030g">
     <link rel="stylesheet" href="css/darslikReyting.css?v=20261029dar">
     <link rel="stylesheet" href="css/oquvchilar.css?v=20261029b4">
-    <link rel="stylesheet" href="css/admin-dizayn.css?v=20261030a">
+    <link rel="stylesheet" href="css/admin-dizayn.css?v=20261030g">
     <link rel="stylesheet" href="css/rop-sotuv-dizayn.css?v=20261030b">
 </head>
 
@@ -417,8 +417,8 @@
                                     <button type="button" class="section-nav-item" data-teachers-section="textbook">Darslik</button>
                                     <button type="button" class="section-nav-item" data-teachers-section="whiteboard">Elektron doska</button>
                                     <button type="button" class="section-nav-item" data-teachers-section="cabinet">Oʻquvchini tekshirish</button>
-                                    <button type="button" class="section-nav-item section-nav-go" data-go-tab="school-assist" data-go-roles="admin boshliq" hidden>Yordamchi aloqalari</button>
-                                    <button type="button" class="section-nav-item section-nav-go" data-go-tab="school-groups" data-go-roles="admin boshliq" hidden>Telegram guruhlar</button>
+                                    <!-- BAHO-6 #6: Main dizaynida 6 ta tab. "Yordamchi aloqalari" — Dars jadvali ("Yordamchi aloqalari · Batafsil →")
+                                         va Davomat → "Yordamchi (ko'rish)" orqali; "Telegram guruhlar" — O'quvchilar bo'limi navigatsiyasida. -->
                                 </nav>
                                 <div class="sales-header-lang" id="teachersLangActions">
                                     <div class="leads-lang-tabs" id="teachersLangTabs">
@@ -469,13 +469,6 @@
                                         <div id="mainAttSummary" class="kpi-summary"></div>
                                         <div class="table-responsive" id="mainAttendanceContainer"></div>
                                     </div>
-                                    <div class="card team-demo-card" style="margin-top:16px">
-                                        <div class="card-header"><h3>Namuna oʻquvchi (ilova uchun)</h3></div>
-                                        <div class="team-demo-body">
-                                            <p class="text-muted" style="margin-bottom:10px;font-size:13px">Mobil ilovaning namoyish profili shu yerda tanlangan oʻquvchining haqiqiy davomat va jonli dars baholarini koʻrsatadi.</p>
-                                            <select id="demoStudentSelect" class="form-control-sm"></select>
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
                             <div class="sales-panel" data-teachers-panel="trial" id="tpTrial"></div>
@@ -525,7 +518,7 @@
                                     <button type="button" class="section-nav-item" data-students-section="qarzdorlar">Qarzdorlar</button>
                                     <button type="button" class="section-nav-item" id="btnSchoolInactive" hidden onclick="window.schoolTeacher?.openInactive()">Faol emas</button>
                                     <button type="button" class="section-nav-item section-nav-go" data-go-tab="school-approvals" data-go-roles="admin boshliq rop" hidden>Sotuv tahrirlari · tasdiq <b class="nav-go-n" data-approvals-n hidden></b></button>
-                                    <button type="button" class="section-nav-item section-nav-go" data-go-tab="school-groups" data-go-roles="rop" hidden>Telegram guruhlar</button>
+                                    <button type="button" class="section-nav-item section-nav-go" data-go-tab="school-groups" data-go-roles="admin boshliq rop" hidden>Telegram guruhlar</button>
                                 </nav>
                                 <div class="sales-header-lang">
                                     <div class="leads-lang-tabs" id="studentsSubjectTabs" style="margin:0">
@@ -1331,6 +1324,11 @@
                             <div class="sales-panel active" data-mobile-panel="edit" id="mobileEditPanel"></div>
                             <div class="sales-panel" data-mobile-panel="stats" id="mobileStatsPanel"></div>
                             <div class="sales-panel" data-mobile-panel="view" id="mobileViewPanel">
+                                <!-- BAHO-6 #1: "Namuna o'quvchi" Davomat sahifasidan (dizaynda yo'q) shu yerga — ilova ko'rinishi yonida. Faqat admin/boshliq. -->
+                                <div class="team-demo-card mob-demo-pick" id="mobileDemoPick" hidden>
+                                    <label for="demoStudentSelect"><b>Namuna oʻquvchi (ilova uchun)</b><small>Ilovaning namoyish profili shu oʻquvchining haqiqiy davomati va jonli dars baholarini koʻrsatadi. Roʻyxatda faqat faol oʻquvchilar.</small></label>
+                                    <select id="demoStudentSelect" class="form-control-sm"></select>
+                                </div>
                                 <div id="mobileEmployeeViewActions" style="display:none;padding:12px 16px 0;text-align:center">
                                     <button type="button" class="btn-ghost" id="mobileOpenSeparateBtn">Alohida koʻrish</button>
                                 </div>
@@ -1589,9 +1587,9 @@
     <script src="js/financeEngine.js?v=20261026m"></script>
     <script src="js/financeUI.js?v=20261026m"></script>
     <script src="js/payrollEngine.js?v=20261030a"></script>
-    <script src="js/payrollUI.js?v=20261026r7"></script>
+    <script src="js/payrollUI.js?v=20261030g"></script>
     <script src="js/teacherAttendanceCalendar.js?v=20261008a"></script>
-    <script src="js/attendanceRules.js?v=20261029a5"></script>
+    <script src="js/attendanceRules.js?v=20261030g"></script>
     <script src="js/teacherDutyUI.js?v=20261029a5"></script>
     <script src="js/ustozShell.js?v=20261029soz"></script>
     <script src="js/domworkBotUI.js?v=20261030funnel"></script>
@@ -1604,7 +1602,7 @@
     <script src="js/lessonHub.js?v=20261030a"></script>
     <script src="js/lessonStart.js?v=20261029a5"></script>
     <script src="js/ustozHome.js?v=20261029ab4"></script>
-    <script src="js/whiteboard.js?v=20261029ab4"></script>
+    <script src="js/whiteboard.js?v=20261030g"></script>
     <script src="js/reytingUI.js?v=20261030a"></script>
     <script src="js/lessonImport.js?v=20261026a"></script>
     <script src="js/targetSheet.js?v=20261026a"></script>
@@ -1613,23 +1611,23 @@
     <script src="js/staffOffboardingUI.js?v=20261026arx1"></script>
     <script src="js/staffAttendanceUI.js?v=20261026a"></script>
     <script src="js/workHours.js?v=20261029b3"></script>
-    <script src="js/schoolUI.js?v=20261030a"></script>
+    <script src="js/schoolUI.js?v=20261030g"></script>
     <script src="js/schoolSchedule.js?v=20261030a"></script>
     <script src="js/scheduleV2.js?v=20261030a"></script>
     <script src="js/jadvalQoidalar.js?v=20261029jad"></script>
     <script src="js/schoolTeacher.js?v=20261030b"></script>
     <script src="js/yordamchi.js?v=20261029a5"></script>
     <script src="js/studentArchive.js?v=20261029a5"></script>
-    <script src="js/schoolCheck.js?v=20261030a"></script>
-    <script src="js/trialUI.js?v=20261030c"></script>
+    <script src="js/schoolCheck.js?v=20261030g"></script>
+    <script src="js/trialUI.js?v=20261030g"></script>
     <script src="js/sotuvSinov.js?v=20261030b"></script>
-    <script src="js/adminNazorat.js?v=20261030a"></script>
+    <script src="js/adminNazorat.js?v=20261030g"></script>
     <script src="js/convertUI.js?v=20261030c"></script>
-    <script src="js/staffSettings.js?v=20261030c"></script>
+    <script src="js/staffSettings.js?v=20261030g"></script>
     <script src="js/staffActivation.js?v=20261029st"></script>
     <script src="js/staffSessions.js?v=20261029b4"></script>
     <script src="js/staffNavBadges.js?v=20261029a5"></script>
-    <script src="js/app.js?v=20261030d"></script>
+    <script src="js/app.js?v=20261030g"></script>
     <script src="js/ropSotuvNav.js?v=20261030b"></script>
     <script src="js/teamApp.js?v=20261030a"></script>
     <script src="js/teamIcons.js?v=20261026r7"></script>

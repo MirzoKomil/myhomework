@@ -578,3 +578,8 @@ body.mh-boot-failed .app-shell { visibility: hidden; }
     .scc-kt:not(.is-compact) td:nth-child(1), .scc-kt:not(.is-compact) td:nth-child(2) { grid-column: 1 / -1; }
     .scc-kt:not(.is-compact) td:nth-child(n+3)::before { content: attr(data-l); display: block; font-size: 11px; font-weight: 700; color: var(--text-muted, #4B5563); margin-bottom: 2px; }
 }
+/* BAHO-6 #10: holat oynasidagi radio fokus ramkasi — dumaloq (kvadrat ko'rinmaydi). */
+.sc-ai input[type="radio"] { flex: none; }
+html.rd .sc-ai input[type="radio"]:focus, html.rd .sc-ai input[type="radio"]:focus-visible { outline: none; box-shadow: none; }
+.sc-ai:has(input[type="radio"]:focus-visible) { box-shadow: 0 0 0 3px var(--kb-ring, rgba(0, 101, 214, .18)); }
+.sc-drw:focus { outline: none; }

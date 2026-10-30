@@ -169,3 +169,20 @@ html[data-theme="dark"] .ad-band .ad-slot { background: #053321; color: #75E0A7;
 html[data-theme="dark"] .ad-mem.is-none { background: rgba(255,255,255,.08); color: #C2CCDC; }
 html[data-theme="dark"] .ad-apd .sc-quote { background: rgba(255,255,255,.05); color: var(--text, #E5E7EB); }
 html[data-theme="dark"] .ad-gt tr.is-edit { background: rgba(59,139,238,.12); }
+
+/* BAHO-6 #7: drawer/oynadagi sana va vaqt — CRM sana maydoni (.team-date, js/teamApp.js) bilan bir xil; vaqt 24 soatlik. */
+html.rd .team-date > input[type="time"] { color: transparent; width: 100%; }
+html.rd .team-date > input[type="time"]::-webkit-datetime-edit { opacity: 0; }
+.sc-fd .team-date, .sc-g2 .team-date { display: flex; width: 100%; }
+.sc-fd .team-date > input { flex: 1 1 auto; min-width: 0; }
+html.rd .team-date.is-off .team-date-face { color: var(--text-light, #64748B); }
+/* O'quvchini tahrirlash: band vaqt (AdminOquvchiTahrir) — maydon qizil, sabab "Saqlash" yonida. */
+.sc-fd.is-band select, .sc-fd.is-band input { border-color: #F04438 !important; box-shadow: 0 0 0 3px rgba(240, 68, 56, .12); }
+.ad-efooter { flex-wrap: wrap; }
+.ad-fwarn { color: #B42318; font-size: 12.5px; font-weight: 700; align-self: center; }
+.ad-fwarn:empty { display: none; }
+html[data-theme="dark"] .ad-fwarn { color: #FDA29B; }
+.ad-more { margin-top: 10px; }
+.ad-more > summary { cursor: pointer; font-size: 13px; font-weight: 700; color: var(--kb-primary, #0065D6); padding: 4px 0; }
+.ad-more > .sc-g2 { margin-top: 8px; }
+.ad-gauto { display: flex; justify-content: flex-end; border-top: 1px solid var(--border, #E6EAF2); }

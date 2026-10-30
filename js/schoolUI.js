@@ -100,12 +100,54 @@
             <button type="button" class="sc-x" data-close aria-label="Yopish">✕</button></header>
             <div class="sc-db">${body}</div>${foot ? `<footer class="sc-df">${foot}</footer>` : ''}</aside>`;
         document.body.appendChild(wrap);
+        watchFields(wrap);
         wrap.addEventListener('click', e => { if (e.target === wrap || e.target.closest('[data-close]')) closeDrawer(); });
         const onKey = e => { if (e.key === 'Escape') closeDrawer(); };
         document.addEventListener('keydown', onKey);
         _drawer = { el: wrap, onKey, onClose };
         setTimeout(() => wrap.querySelector('input,select,textarea,button:not([data-close])')?.focus(), 30);
         return wrap.querySelector('.sc-drw');
+    }
+    // Dars vaqti tanlovi — 24 soatlik "ss:dd" (07:00–22:00, 15 daqiqa qadam; joriy vaqt ro'yxatda bo'lmasa qo'shiladi).
+    function timeOpts(cur) {
+        const list = [];
+        for (let m = 7 * 60; m <= 22 * 60; m += 15) list.push(`${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`);
+        const c = /^\d{1,2}:\d{2}$/.test(String(cur || '')) ? String(cur).padStart(5, '0') : '';
+        if (c && !list.includes(c)) list.push(c);
+        return `${c ? '' : '<option value="">— tanlang —</option>'}${list.sort().map(x => `<option value="${x}"${x === c ? ' selected' : ''}>${x}</option>`).join('')}`;
+    }
+    // Drawer/oynadagi sana va vaqt maydonlari — CRM'ning o'z sana maydoni (js/teamApp.js enhanceDates: .team-date + "kk.oo.yyyy"
+    // yuzi) bilan bir xil; vaqt — 24 soatlik "ss:dd" yuzi. Brauzer tili qanday bo'lmasin "10/31/2026", "10:05 AM" ko'rinmaydi.
+    // teamApp faqat .main-area'ni kuzatadi, drawer esa body'ga qo'shiladi — shuning uchun shu yerda (bir xil belgi: data-team-date).
+    function uzFields(root) {
+        root.querySelectorAll('input[type="date"]:not([data-team-date]), input[type="time"]:not([data-team-date])').forEach(input => {
+            input.dataset.teamDate = '1';
+            const isTime = input.type === 'time';
+            const wrap = document.createElement('span');
+            wrap.className = isTime ? 'team-date team-time' : 'team-date';
+            input.parentNode.insertBefore(wrap, input);
+            wrap.appendChild(input);
+            const face = document.createElement('span');
+            face.className = 'team-date-face';
+            face.setAttribute('aria-hidden', 'true');
+            wrap.appendChild(face);
+            const paint = () => {
+                const v = input.value;
+                face.textContent = isTime ? (/^\d{2}:\d{2}/.test(v) ? v.slice(0, 5) : 'ss:dd') : (/^\d{4}-\d{2}-\d{2}$/.test(v) ? v.split('-').reverse().join('.') : 'kk.oo.yyyy');
+                wrap.classList.toggle('is-empty', !v);
+                wrap.classList.toggle('is-off', input.disabled);
+            };
+            ['input', 'change', 'blur'].forEach(e => input.addEventListener(e, paint));
+            if (!isTime) wrap.addEventListener('click', () => { if (!input.disabled) { try { input.showPicker?.(); } catch { /* ruxsat yo'q */ } } });
+            const desc = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+            Object.defineProperty(input, 'value', { configurable: true, get() { return desc.get.call(this); }, set(v) { desc.set.call(this, v); paint(); } });
+            paint();
+        });
+    }
+    function watchFields(wrap) {
+        uzFields(wrap);
+        let q = false;
+        new MutationObserver(() => { if (q) return; q = true; requestAnimationFrame(() => { q = false; uzFields(wrap); }); }).observe(wrap, { childList: true, subtree: true });
     }
     function closeDrawer() {
         if (!_drawer) return;
@@ -124,6 +166,7 @@
             <div class="oqm-dh"><div><h2 id="oqmTitle">${esc(title)}</h2>${sub ? `<div class="oqm-mt" data-dsub>${sub}</div>` : ''}</div><button type="button" class="oqm-x" data-close aria-label="Yopish">${X_SVG}</button></div>
             <div class="oqm-db sc-db">${body}</div>${foot ? `<div class="oqm-df">${foot}</div>` : ''}</section>`;
         document.body.appendChild(wrap);
+        watchFields(wrap);
         wrap.addEventListener('click', e => { if (e.target === wrap || e.target.closest('[data-close]')) closeDrawer(); });
         const onKey = e => { if (e.key === 'Escape') closeDrawer(); };
         document.addEventListener('keydown', onKey);
@@ -358,8 +401,8 @@
         // Dizayn: AdminOquvchiTahrir "O'quvchini tahrirlash · Ism · #7712", SotuvOquvchiTahrir "Xatoni tuzatish · Ism";
         // holat oynalari (AdminMuzlatish …) — sarlavha ostida "Hozir: Faol · Se·Pa·Sh 10:00 · Dilnoza S.".
         const sales = role() === 'sales_manager';
-        const nowTxt = `Hozir: ${{ active: 'Faol', frozen: 'Muzlatilgan', left: card.finished ? 'Kursni tugatgan' : 'Chiqib ketgan' }[card.status] || card.status} · ${card.schedule?.days || ''} ${card.schedule?.time || ''} · ${shortName(teacherName(card.teacherId))}`;
-        box.querySelector('#scDrwTitle').textContent = tab === 'tahrir' ? (sales ? `Xatoni tuzatish · ${card.name}` : 'O\'quvchini tahrirlash') : `Holatni o'zgartirish · ${card.name}`;
+        const nowTxt = `Hozir: ${{ active: 'Faol', frozen: 'Muzlatilgan', left: card.finished ? 'Kursni tugatgan' : 'Chiqib ketgan' }[card.status] || card.status} · ${card.schedule?.days || ''} ${card.schedule?.time || ''} · ${shortName(teacherName(card.teacherId))}${(card.managerId || card.group?.manager_id) ? ` · sotuv ${shortName(teacherName(card.managerId || card.group.manager_id))}` : ''}`;
+        box.querySelector('#scDrwTitle').textContent = tab === 'tahrir' ? (sales ? `Xatoni tuzatish · ${card.name}` : 'O\'quvchini tahrirlash') : `O'quvchi holati · ${card.name}`;
         box.querySelector('.sc-dh > div').insertAdjacentHTML('beforeend', tab === 'tahrir'
             ? `<p class="sc-mt">${sales ? 'o\'zi sotgan o\'quvchi · shaxsiy maydonlar darhol, tarif va ustoz — tasdiq bilan' : `${esc(card.name)}${card.serialCode ? ' · #' + esc(card.serialCode) : ''} · o'zgarish butun tizimga bir vaqtda tarqaladi`}</p>`
             : `<p class="sc-mt">${esc(nowTxt)}</p>`);
@@ -915,28 +958,30 @@
             ${field('Telefon (ilova login)', `<input name="phone" value="${esc(c.phone || '')}" inputmode="tel">`)}
             ${field('Ota-ona telefoni', `<input name="parentPhone" value="${esc(c.parentPhone || '')}" inputmode="tel">`)}
             ${field('Telegram', `<input name="telegram" value="${esc(c.telegram ? '@' + c.telegram : '')}" placeholder="@username" autocomplete="off">`)}
-            ${field('Ilova login', `<input name="login" value="${esc(c.login || '')}" autocomplete="off">`)}
+            ${field('Ilova login', `<input name="login" value="${esc(c.login || '')}" autocomplete="off" placeholder="${esc(c.phone ? (typeof formatPhoneDisplay === 'function' ? formatPhoneDisplay(c.phone) : c.phone) + ' · telefon' : '')}">`)}
             ${field('Ilova paroli', `<div class="ad-pw"><input value="••••••" disabled aria-label="Joriy parol yashirin"><button type="button" class="sc-btn sc-btn--sm" data-newpw>Yangi parol berish</button></div><input name="newPassword" type="text" autocomplete="new-password" placeholder="vaqtinchalik parol" hidden>`, 'Birinchi kirishda o\'quvchi almashtiradi')}
           </div></div>
           <div class="sc-sec"><h3>O'qish${sales ? ' · tasdiq bilan' : ''}</h3><div class="sc-g2">
-            ${field(`Fan ${lock}`, `<select disabled aria-label="Fan"><option>${c.subject === 'russian' ? 'Rus tili' : 'Ingliz tili'}</option></select>`, 'fan o\'zgarmaydi — yangi o\'quvchi sifatida yoziladi')}
-            ${field('Tarif', `<input name="tariff" value="${esc(c.tariff || '')}" maxlength="40" placeholder="${dur} daq">`)}
-            ${field('Oylik narx, so\'m', `<input name="monthlyPrice" value="${esc(c.monthlyPrice ?? '')}" inputmode="numeric">`)}
-            ${field('Davomiylik', `<select name="lessonDuration">${[...new Set([15, 30, 45, 60, 90, dur])].sort((a, b) => a - b).map(d => `<option value="${d}"${d === dur ? ' selected' : ''}>${d} daq</option>`).join('')}</select>`)}
+            ${field('Fan', `<select disabled aria-label="Fan (o'zgarmaydi)" title="Fan o'zgarmaydi — yangi o'quvchi sifatida yoziladi"><option>${c.subject === 'russian' ? 'Rus tili' : 'Ingliz tili'}</option></select>`)}
+            ${field('Tarif', `<select name="lessonDuration" aria-label="Tarif">${[...new Set([15, 30, 60, dur])].sort((a, b) => a - b).map(d => `<option value="${d}"${d === dur ? ' selected' : ''}>${d} daq${d === dur && Number(c.monthlyPrice) ? ` · ${num(c.monthlyPrice)} so'm/oy` : ''}</option>`).join('')}</select>`)}
             ${field('Asosiy ustoz', `<select name="teacherId">${opt(mains, c.teacherId)}</select>`)}
             ${field(`Yordamchi ustoz${sales ? ' ' + lock : ''}`, `<select name="assistantTeacherId"${sales ? ' disabled' : ''}>${opt(assts, c.assistantId, '— yo\'q —')}</select>`, sales ? 'faqat admin va ROP' : '')}
             ${field(`Dars kunlari ${was('day', c.schedule?.days)}`, `<select name="lessonDay"><option value="1"${curDay === 1 ? ' selected' : ''}>Du·Ch·Ju</option><option value="2"${curDay === 2 ? ' selected' : ''}>Se·Pa·Sh</option></select>`)}
-            ${field(`Dars vaqti ${was('time', c.schedule?.time)}`, `<input name="lessonTime" value="${esc(c.schedule?.time || '')}" placeholder="16:30" pattern="\\d{1,2}:\\d{2}">`)}
+            ${field(`Dars vaqti ${was('time', c.schedule?.time)}`, `<select name="lessonTime">${timeOpts(c.schedule?.time)}</select>`)}
             ${field('Qaysi sanadan', `<input name="effectiveFrom" type="date" value="${addDays(today(), 1)}" min="${today()}">`)}
             ${field(`Kurs ${lock}`, `<input value="${esc(course)}" disabled aria-label="Kurs">`)}
-          </div><div data-live aria-live="polite"></div></div>
+          </div><div data-live aria-live="polite"></div>
+          <details class="ad-more"${c.tariff && c.tariff !== `${dur} daq` ? ' open' : ''}><summary>Narx va tarif nomi</summary><div class="sc-g2">
+            ${field('Oylik narx, so\'m', `<input name="monthlyPrice" value="${esc(c.monthlyPrice ?? '')}" inputmode="numeric" placeholder="masalan, 300 000">`)}
+            ${field('Tarif nomi', `<input name="tariff" value="${esc(c.tariff || '')}" maxlength="40" placeholder="${dur} daq">`, 'shartnomadagi nom (ixtiyoriy)')}
+          </div></details></div>
           <div class="sc-sec"><h3>Telegram guruh</h3>${isManager() ? `<div class="sc-g2">
             ${field('Guruh nomi', `<input name="groupName" value="${esc(c.group?.name || '')}" placeholder="C40 | onlayn ${c.subject === 'russian' ? 'rus' : 'ingliz'} tili">`)}
             ${field('Havola', `<input name="groupLink" value="${esc(c.group?.tg_link || '')}" placeholder="https://t.me/+…">`)}</div>
             <p class="sc-mt">Ustoz yoki yordamchi almashsa "guruhga qo'shing" eslatmasi Telegram guruhlar sahifasida chiqadi.</p>` : `<p class="sc-mt">${tgPill(c.group)} · nom va havolani admin yoki ROP o'zgartiradi</p>`}</div>
           <div class="sc-sec"><h3>Holat${sales ? ' ' + lock : ''}</h3><div class="sc-row sc-wrap">${statusPill(c)}${sales ? '<span class="sc-mt">holat va chegirma — faqat admin va ROP</span>' : '<button type="button" class="sc-btn sc-btn--sm" data-holat>Holatni o\'zgartirish</button>'}</div></div>
           <div class="sc-sec">${field('Sabab (majburiy)', '<textarea name="reason" rows="2" required placeholder="Masalan: telefon raqamida 2 raqam almashgan"></textarea>', 'O\'zgarishlar tarixiga yoziladi')}</div>`;
-        box.insertAdjacentHTML('beforeend', `<footer class="sc-df"><span class="sc-mt ad-efoot"><span>Admin, ROP — hamma maydon · sotuv menejeri — o'zi sotgan o'quvchida xatoni tuzatadi · ustoz ko'rmaydi</span><b data-fwarn></b><span data-fcount></span></span><div class="sc-row"><button type="button" class="sc-btn" data-close>Bekor</button><button type="button" class="sc-btn sc-btn--pri" data-save>Saqlash</button></div></footer>`);
+        box.insertAdjacentHTML('beforeend', `<footer class="sc-df ad-efooter"><span class="sc-mt ad-efoot"><span>Admin, ROP — hamma maydon · sotuv menejeri — o'zi sotgan o'quvchida xatoni tuzatadi · ustoz ko'rmaydi</span><span data-fcount></span></span><div class="sc-row"><button type="button" class="sc-btn" data-close>Bekor</button><b class="ad-fwarn" data-fwarn role="status"></b><button type="button" class="sc-btn sc-btn--pri" data-save>Saqlash</button></div></footer>`);
         const v = n => body.querySelector(`[name="${n}"]`)?.value?.trim() ?? '';
         const save = box.querySelector('[data-save]'), live = body.querySelector('[data-live]');
         body.querySelector('[data-newpw]').onclick = e => { const i = body.querySelector('[name=newPassword]'); i.hidden = false; e.currentTarget.closest('.ad-pw').hidden = true; i.focus(); };
@@ -970,8 +1015,10 @@
             live.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { body.querySelector('[name=lessonTime]').value = b.dataset.t; check(); });
             sync();
         };
-        const sync = () => { save.disabled = band; box.querySelector('[data-fwarn]').textContent = band ? ` ${v('lessonTime')} band — bo'sh vaqt tanlang` : ''; };
+        const sync = () => { save.disabled = band; box.querySelector('[data-fwarn]').textContent = band ? `${v('lessonTime')} band — bo'sh vaqt tanlang` : ''; body.querySelector('[name=lessonTime]')?.closest('.sc-fd')?.classList.toggle('is-band', band); };
         body.querySelectorAll('[name=lessonDay],[name=lessonDuration],[name=teacherId],[name=effectiveFrom]').forEach(i => i.addEventListener('change', check));
+        // Tarif (davomiylik) tanlansa — standart tarif nomi ("30 daq") ham yangilanadi; qo'lda yozilgan nom tegilmaydi.
+        body.querySelector('[name=lessonDuration]')?.addEventListener('change', e => { const ti = body.querySelector('[name=tariff]'); if (ti && (!ti.value.trim() || /^\d+\s*daq$/i.test(ti.value.trim()))) ti.value = c.tariff || ti.value.trim() ? `${e.target.value} daq` : ''; count(); });
         const lt = body.querySelector('[name=lessonTime]'); lt.addEventListener('change', check); lt.addEventListener('input', () => { clearTimeout(lt._t); lt._t = setTimeout(check, 500); });
         body.querySelectorAll('input:not([name=lessonTime]),select,textarea').forEach(i => i.addEventListener('input', count));
         save.onclick = async e => {
@@ -1026,9 +1073,12 @@
         const render = k => { box.querySelector('.sc-df')?.remove(); ({ freeze: freezeForm, teacher: teacherForm, restore: restoreForm, stop: stopForm, finish: finishForm })[k](box, ab, c); };
         body.querySelectorAll('input[name="act"]').forEach(r => r.onchange = () => render(r.value));
         render(first);
+        // Fokus — oynaning o'zida (drawer birinchi radioga — "Muzlatish"ga — fokus berib, tanlanmagan bandni ramka bilan ko'rsatardi).
+        // Tab bosilsa tanlangan amal radiosiga o'tiladi (radiogroup).
+        setTimeout(() => { box.setAttribute('tabindex', '-1'); box.focus({ preventScroll: true }); }, 40);
     }
     function footer(box, label, danger, onSave) {
-        box.insertAdjacentHTML('beforeend', `<footer class="sc-df"><span class="sc-mt">Admin va ROP · sabab tarixga yoziladi</span><div class="sc-row"><button type="button" class="sc-btn" data-close>Bekor</button><button type="button" class="${danger ? 'sc-btn sc-btn--dg' : 'sc-btn sc-btn--pri'}" data-save>${label}</button></div></footer>`);
+        box.insertAdjacentHTML('beforeend', `<footer class="sc-df"><span class="sc-mt">Admin va ROP · sabab majburiy</span><div class="sc-row"><button type="button" class="sc-btn" data-close>Bekor</button><button type="button" class="${danger ? 'sc-btn sc-btn--dg' : 'sc-btn sc-btn--pri'}" data-save>${label}</button></div></footer>`);
         box.querySelector('[data-save]').onclick = async e => {
             busy(e.target, true); errBox(box, '');
             try { await onSave(); await refreshCache(); window.dispatchEvent(new CustomEvent('school:changed')); }
@@ -1115,8 +1165,13 @@
         // Haftalik dars: shu vaqt naqshdagi uchala kunda ham bo'sh bo'lishi kerak.
         const byTime = new Map();
         for (const s of r.slots) { if (!days.includes(wd(s.date))) continue; const k = s.time; byTime.set(k, (byTime.get(k) || new Set()).add(s.date)); }
-        return [...byTime.entries()].filter(([, set]) => set.size >= 5).map(([t]) => t).sort();
+        const out = [...byTime.entries()].filter(([, set]) => set.size >= 5).map(([t]) => t).sort();
+        // Ish vaqti kiritilmagan ustoz — server 07:00–22:00 deb taxmin qiladi; taklif sifatida ishlatilmaydi (noHours).
+        out.noHours = (r.noHours || []).includes(teacherId);
+        return out;
     }
+    // Eng yaqin bo'sh vaqt (joriy vaqtga) — ro'yxatning birinchisi (07:00) emas.
+    const nearestTime = (times, cur) => { const c = toMin(cur); return c == null ? times[0] || null : times.slice().sort((a, b) => Math.abs(toMin(a) - c) - Math.abs(toMin(b) - c))[0] || null; };
     function restoreForm(box, ab, c) {
         const frozen = c.status === 'frozen';
         const from = addDays(today(), 1);
@@ -1137,7 +1192,8 @@
                 const old = c.schedule?.time; const oldFree = tid === c.teacherId && pattern(day) === c.schedule?.days && times.includes(old);
                 ab.querySelector('[data-old]').innerHTML = old && tid === c.teacherId ? (oldFree ? `<div class="sc-note sc-note--ok">Eski vaqt bo'sh: ${esc(c.schedule.days)} ${esc(old)}</div>` : `<div class="sc-note sc-note--bad"><b>Eski vaqt band: ${esc(c.schedule.days)} ${esc(old)}</b> — yangi vaqt tanlang</div>`) : '';
                 pick = oldFree ? old : null;
-                slotsEl.innerHTML = times.length ? times.map(t => `<button type="button" class="sc-slot" aria-pressed="${t === pick}" data-t="${t}">${esc(pattern(day))} ${t}</button>`).join('') : '<span class="sc-mt">Bu ustozda 2 hafta ichida bo\'sh doimiy vaqt yo\'q — boshqa ustozni tanlang</span>';
+                slotsEl.innerHTML = (times.noHours ? '<p class="sc-note sc-note--warn">Bu ustozning ish vaqti kiritilmagan — vaqtlar taxminiy (07:00–22:00). Dars jadvalida ish vaqtini kiriting.</p>' : '')
+                    + (times.length ? times.map(t => `<button type="button" class="sc-slot" aria-pressed="${t === pick}" data-t="${t}">${esc(pattern(day))} ${t}</button>`).join('') : '<span class="sc-mt">Bu ustozda 2 hafta ichida bo\'sh doimiy vaqt yo\'q — boshqa ustozni tanlang</span>');
                 slotsEl.querySelectorAll('.sc-slot').forEach(b => b.onclick = () => { pick = b.dataset.t; slotsEl.querySelectorAll('.sc-slot').forEach(x => x.setAttribute('aria-pressed', String(x === b))); });
             } catch (e) { slotsEl.innerHTML = window.LoadErr.html({ title: 'Bo\'sh vaqtlarni yuklab bo\'lmadi', err: e, note: '', compact: true }); window.LoadErr.bind(slotsEl, load); }
         };
@@ -1173,7 +1229,7 @@
         const load = async () => {
             const el = ab.querySelector('[data-tch]');
             const rows = await Promise.all(list.map(async t => {
-                try { const times = await freeSlotsFor(t.id, val(ab, 'from'), c.schedule?.duration || 30, c.schedule?.day); return { t, ok: times.includes(c.schedule?.time), alt: times[0] || null }; }
+                try { const times = await freeSlotsFor(t.id, val(ab, 'from'), c.schedule?.duration || 30, c.schedule?.day); return { t, ok: times.includes(c.schedule?.time), alt: times.noHours ? null : nearestTime(times, c.schedule?.time), noHours: times.noHours }; }
                 catch (err) { return { t, ok: false, alt: null, err }; }
             }));
             // Bo'sh vaqtni tekshirib bo'lmasa — "mos vaqt yo'q" deb ko'rsatilmaydi (soxta bo'sh holat), LoadErr.
@@ -1181,7 +1237,7 @@
             if (failed.length && failed.length === rows.length) { el.innerHTML = window.LoadErr.html({ title: 'Ustozlarning bo\'sh vaqtini yuklab bo\'lmadi', err: failed[0].err, note: '', compact: true }); window.LoadErr.bind(el, load); el._rows = []; pick = null; return; }
             rows.sort((a, b) => (b.ok - a.ok) || (!!b.alt - !!a.alt));
             pick = rows.find(r => r.ok)?.t.id || null;
-            el.innerHTML = rows.map(r => r.err ? `<label class="sc-tc is-off"><input type="radio" name="tch" disabled>${staffAvatar(r.t, 34)}<span class="sc-grow"><b>${esc(r.t.name)}</b><small>bo'sh vaqtini tekshirib bo'lmadi</small></span><span class="sc-pill sc-pill--mute">?</span></label>` : `<label class="sc-tc${!r.ok && !r.alt ? ' is-off' : ''}"><input type="radio" name="tch" value="${esc(r.t.id)}"${r.t.id === pick ? ' checked' : ''}${!r.ok && !r.alt ? ' disabled' : ''}>${staffAvatar(r.t, 34)}<span class="sc-grow"><b>${esc(r.t.name)}</b><small>${r.ok ? 'vaqt o\'zgarmaydi' : r.alt ? 'shu vaqt band · bo\'sh: ' + esc(r.alt) : 'mos bo\'sh vaqt yo\'q'}</small></span><span class="sc-pill ${r.ok ? 'sc-pill--ok' : r.alt ? 'sc-pill--warn' : 'sc-pill--mute'}">${r.ok ? esc(c.schedule?.time) + ' bo\'sh' : r.alt ? 'band' : '—'}</span></label>`).join('') || '<span class="sc-mt">Boshqa ustoz yo\'q</span>';
+            el.innerHTML = rows.map(r => r.err ? `<label class="sc-tc is-off"><input type="radio" name="tch" disabled>${staffAvatar(r.t, 34)}<span class="sc-grow"><b>${esc(r.t.name)}</b><small>bo'sh vaqtini tekshirib bo'lmadi</small></span><span class="sc-pill sc-pill--mute">?</span></label>` : `<label class="sc-tc${!r.ok && !r.alt ? ' is-off' : ''}"><input type="radio" name="tch" value="${esc(r.t.id)}"${r.t.id === pick ? ' checked' : ''}${!r.ok && !r.alt ? ' disabled' : ''}>${staffAvatar(r.t, 34)}<span class="sc-grow"><b>${esc(r.t.name)}</b><small>${r.ok ? 'vaqt o\'zgarmaydi' : r.alt ? 'shu vaqt band · bo\'sh: ' + esc(r.alt) : r.noHours ? 'ish vaqti kiritilmagan — Dars jadvalida kiriting' : 'mos bo\'sh vaqt yo\'q'}</small></span><span class="sc-pill ${r.ok ? 'sc-pill--ok' : r.alt ? 'sc-pill--warn' : 'sc-pill--mute'}">${r.ok ? esc(c.schedule?.time) + ' bo\'sh' : r.alt ? 'band' : '—'}</span></label>`).join('') || '<span class="sc-mt">Boshqa ustoz yo\'q</span>';
             el.querySelectorAll('input[name=tch]').forEach(i => i.onchange = () => { pick = i.value; });
             el._rows = rows;
         };
@@ -1363,9 +1419,10 @@
     }
     async function renderGroups(root) {
         const isRop = (typeof getCurrentUser === 'function' && getCurrentUser()?.role) === 'rop';
-        if (!root.querySelector('.ad-gr')) root.innerHTML = `${isRop ? backLink('students', 'O\'quvchilar') : backLink('teachers-section', 'Akademik bo\'lim')}<div class="sc-skel"></div>`;
+        // Kirish — O'quvchilar bo'limi navigatsiyasidan (admin, boshliq, ROP — BAHO-6 #6), qaytish ham o'sha yerga.
+        if (!root.querySelector('.ad-gr')) root.innerHTML = `${backLink('students', 'O\'quvchilar')}<div class="sc-skel"></div>`;
         const [, res] = await Promise.all([loadStaffAvatars(), window.LoadErr.settle(api('/groups'))]);
-        const back = isRop ? backLink('students', 'O\'quvchilar') : backLink('teachers-section', 'Akademik bo\'lim');
+        const back = backLink('students', 'O\'quvchilar');
         if (!res.ok) {
             root.innerHTML = `${back}<div class="sc-head"><div><h1>Telegram guruhlar</h1></div></div>${window.LoadErr.html({ title: 'Guruhlarni yuklab bo\'lmadi', err: res.err })}`;
             window.LoadErr.bind(root, () => renderGroups(root));
@@ -1398,8 +1455,7 @@
               <td data-label="A'zolar">${g.archived ? '—' : mem}</td>
               <td class="ad-gact">${editing === g.student_id ? '' : `<button type="button" class="sc-btn sc-btn--sm ad-ib" data-edit="${esc(g.student_id)}" aria-label="${esc(g.name)} — tahrirlash" title="Nom va havolani tahrirlash">✎</button>`}${g.tg_link ? `<a class="sc-btn sc-btn--sm ad-ib ad-tg" href="${esc(g.tg_link)}" target="_blank" rel="noopener" aria-label="Telegramda ochish" title="Telegramda ochish">${tgIco}</a>` : ''}</td></tr>`;
         };
-        root.innerHTML = `${back}<div class="sc-head ad-gr"><div><h1>Telegram guruhlar</h1><p class="sc-sub">Har o'quvchining individual guruhi · a'zolar: o'quvchi, ustoz, yordamchi, ROP, sotuv menejeri · nom va havolani admin va ROP tahrirlaydi</p></div>
-          ${isFull() ? '<button type="button" class="sc-btn" data-auto>Eski guruhlarga nom berish</button>' : ''}</div>
+        root.innerHTML = `${back}<div class="sc-head ad-gr"><div><h1>Telegram guruhlar</h1><p class="sc-sub">Har o'quvchining individual guruhi · a'zolar: o'quvchi, ustoz, yordamchi, ROP, sotuv menejeri · nom va havolani admin va ROP tahrirlaydi</p></div></div>
           <div class="ad-gq"><input type="search" placeholder="Guruh nomi yoki o'quvchi" value="${esc(root.dataset.q || '')}" data-q aria-label="Qidirish"></div>
           <div class="sc-kpis ad-k4"><div class="sc-kpi"><small>Guruhlar</small><b>${live.length}</b><span>har faol o'quvchiga bitta</span></div><div class="sc-kpi"><small>Avtomatik nom</small><b>${auto}</b><span>eski guruhlar · nomini tekshiring</span></div>
             <div class="sc-kpi"><small>A'zo yetishmaydi</small><b${short ? ' class="ad-bad"' : ''}>${short}</b><span>${unmarked ? `ustoz yoki yordamchi almashgan · ${unmarked} tasi belgilanmagan` : 'ustoz yoki yordamchi almashgan'}</span></div><div class="sc-kpi"><small>Havolasiz</small><b>${noLink}</b><span>yangi o'quvchida havola majburiy</span></div></div>
@@ -1407,6 +1463,7 @@
           <div class="ad-tw"><table class="sc-table ad-gt"><thead><tr><th>Guruh</th><th>O'quvchi</th><th>Jamoa</th><th>A'zolar</th><th><span class="sr-only">Amallar</span></th></tr></thead><tbody>
           ${list.map(row).join('') || `<tr><td colspan="5" class="sc-mt">${q || f !== 'all' ? 'Mos guruh topilmadi' : 'Guruh yo\'q'}</td></tr>`}
           </tbody></table></div>
+          ${isFull() && f === 'auto' && auto ? '<div class="sc-pad ad-gauto"><button type="button" class="sc-btn" data-auto>Avtomatik nomli guruhlarga nom berish</button></div>' : ''}
           <p class="sc-mt sc-pad ad-gfoot">Guruh nomi bosilsa Telegram'da ochiladi — ustoz, yordamchi, sotuv va ROP kabinetida ham. Nom o'zgarsa CRM va o'quvchi ilovasida darhol yangilanadi; Telegram'dagi nomni bot ham o'zgartiradi.${isRop ? ' · ROP ko\'rinishi — guruhni o\'chirish faqat adminda.' : ''}</p></section>`;
         const sb = root.querySelector('[data-q]'); sb.oninput = () => { root.dataset.q = sb.value; clearTimeout(sb._t); sb._t = setTimeout(() => renderGroups(root).then(() => { const i = root.querySelector('[data-q]'); i?.focus(); i?.setSelectionRange?.(i.value.length, i.value.length); }), 300); };
         root.querySelectorAll('[data-gf]').forEach(b => b.onclick = () => { root.dataset.f = b.dataset.gf; renderGroups(root); });

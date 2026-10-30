@@ -87,6 +87,16 @@
             message(root, result.warnings.length ? result.warnings.join(' · ') : '');
         } catch (e) { if (request === state.seq) message(root, e.message, true); }
     }
+    // "O'quvchilar" — Akademik → Davomat bilan bitta ta'rif (adminNazorat.monthStudentCount: shu oydagi asosiy o'quvchilar, demosiz);
+    // yordamchi sifatidagilar alohida yoziladi (BAHO-6 #8: avval bitta yorliq ostida 17 = asosiy + yordamchi + nofaol yozuvlar edi).
+    function studentsTxt(row) {
+        const N = window.adminNazorat, b = row.breakdown || [];
+        const asst = new Set(b.filter(x => x.dutyRole === 'assistant' || x.unit === 'contact').map(x => x.studentId)).size;
+        const isMain = b.some(x => x.dutyRole !== 'assistant' && x.unit !== 'contact') || row.mainTotal !== undefined;
+        if (!N?.monthStudentCount || !state.month) return `${row.studentCount || 0} o‘quvchi`;
+        const main = isMain ? N.monthStudentCount(row.employeeId, _financeLang, state.month) : 0;
+        return [main ? `${main} o‘quvchi · shu oy` : '', asst ? `${asst} o‘quvchi yordamchi sifatida` : ''].filter(Boolean).join(' + ') || '0 o‘quvchi';
+    }
     function renderPayroll(root, result) {
         root.dataset.manualDirty = '';
         const body = root.querySelector('[data-payroll-body]');
@@ -99,7 +109,7 @@
             ${result.rows.map(row => `<tr>
                 <td data-label="Xodim"><div class="payroll-person">${row.avatar ? `<img src="${esc(row.avatar)}" alt="">` : `<span class="payroll-avatar">${esc(String(row.name || '?').trim().split(/\s+/).map(w => w[0] || '').slice(0, 2).join('').toUpperCase())}</span>`}<div><strong>${esc(row.name)}</strong><small>${esc(row.roleLabel)}</small></div></div></td>
                 <td data-label="Davr">${esc(typeof formatDateShort === 'function' ? formatDateShort(result.period.start) : result.period.start)}<br>${esc(typeof formatDateShort === 'function' ? formatDateShort(result.period.end) : result.period.end)}</td>
-                <td data-label="Parametrlar">Fiksa: ${money(row.fixed)}<br>${row.role === 'sales' || row.role === 'rop' ? `Aylanma: ${money(row.turnover)}<br>Ulush: ${money(row.commission)}` : `${row.studentCount || 0} o‘quvchi · ${row.lessons || 0} dars`}
+                <td data-label="Parametrlar">Fiksa: ${money(row.fixed)}<br>${row.role === 'sales' || row.role === 'rop' ? `Aylanma: ${money(row.turnover)}<br>Ulush: ${money(row.commission)}` : `${studentsTxt(row)} · ${row.lessons || 0} dars`}
                     ${row.role === 'rop' ? `<br>Toza aylanma: ${money(row.cleanTurnover)}<br>Reja: ${Number(row.completion).toFixed(1)}% · ulush ${row.rate}%${row.blocked ? '<p class="payroll-alert">Reja tasdiqlanmagan</p>' : ''}` : ''}
                     ${row.mainTotal !== undefined ? `<p>Asosiy: ${money(row.mainTotal)} · ${row.mainLessons} dars<br>Yordamchi: ${money(row.assistantTotal)} · ${row.assistantLessons} dars</p>` : ''}
                     ${row.breakdown?.length ? `<details><summary>O‘quvchilar bo‘yicha</summary>${row.breakdown.map(b => `<p>${esc(b.name)} · ${b.dutyRole === 'assistant' ? 'Yordamchi · ' : b.dutyRole === 'main' ? 'Asosiy · ' : ''}${esc(b.month)}: ${b.lessons}/${b.expected} dars → ${money(b.earned)}</p>`).join('')}</details>` : ''}</td>
@@ -167,6 +177,24 @@
             ${numberInput(role === 'sales' ? 'Fiksa (so‘m)' : 'Ulush (%)', 'tier-value', role === 'sales' ? t.fixed : t.rate)}
             <button type="button" class="btn-danger-sm payroll-tier-del" data-remove-tier="${role}:${i}" aria-label="Pog‘onani o‘chirish" title="O‘chirish" ${all.length <= 1 || (role === 'rop' && i === all.length - 1) ? 'disabled' : ''}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"/></svg></button></div>`).join('');
     }
+    // Ustozning eski "Hisob sozlamasi" (qolip va asosiy davomiylik — o'quvchida dars kuni/davomiylik bo'lmasa ishlatiladi).
+    // Avval Akademik → Davomat sahifasida edi (Main dizaynida yo'q, BAHO-6 #5) — endi Moliya → KPI'da, maosh sozlamalari yonida.
+    function renderTeacherLegacy(body) {
+        if (typeof syncTeacherSettings !== 'function') return;
+        const list = (typeof filterTeachersByTypeAndSubject === 'function' ? filterTeachersByTypeAndSubject('asosiy', _financeLang) : [])
+            .slice().sort((a, b) => String(a.name).localeCompare(String(b.name)));
+        if (!list.length) return;
+        const box = document.createElement('details');
+        box.className = 'card payroll-audit payroll-legacy';
+        box.innerHTML = `<summary>Ustozlar · hisob sozlamasi (eski qolip)</summary><p class="payroll-note">O'quvchining o'z dars kunlari va davomiyligi bo'lmasa shu qolip ishlatiladi. Yangi o'quvchilarda jadval o'quvchi kartasidan olinadi.</p>
+            <div class="payroll-legacy-list">${list.map(x => `<div class="payroll-legacy-row" data-tid="${esc(x.id)}"><b>${esc(x.name)}</b>
+              <label>Qolip <select data-set="pattern"><option value="mwf">Du · Ch · Ju</option><option value="tts">Se · Pa · Sh</option></select></label>
+              <label>Davomiylik <select data-set="duration"><option value="15">15 daq</option><option value="30">30 daq</option><option value="60">60 daq</option></select></label></div>`).join('')}</div>`;
+        body.appendChild(box);
+        box.querySelectorAll('[data-tid]').forEach(row => {
+            try { syncTeacherSettings(row.dataset.tid, row.querySelector('[data-set="pattern"]'), row.querySelector('[data-set="duration"]'), () => { if (typeof showMiniToast === 'function') showMiniToast('Saqlandi'); }); } catch (e) { row.hidden = true; }
+        });
+    }
     function renderSettings(root, config) {
         const result = state.result, c = config.data, body = root.querySelector('[data-payroll-body]');
         const bonusList = typeof _allBonusList === 'function' ? _allBonusList() : [];
@@ -183,6 +211,7 @@
             <section class="card payroll-config"><h3>ROPdan chegiriladigan maosh</h3>${numberInput('Targetolog jami oylik maoshi (so‘m)', 'targetMonthlySalary', c.targetMonthlySalary)}<p class="payroll-note">Reklama byudjeti kiritilmaydi. Moslashuvchan davrda kalendar kunlariga mutanosib hisoblanadi.</p></section>
             <section class="card payroll-config"><h3>Pul bonuslari</h3><p class="payroll-note">Bonus olganlar ro‘yxatidan olinadi. Sovg‘a / dollar mukofotining so‘mdagi qiymatini o‘zingiz kiriting; avtomatik valyuta taxmini qilinmaydi.</p>${[...bonuses].map(([id, label]) => numberInput(label + ' (so‘m)', 'bonus.' + id, c.bonusAmounts[id] ?? 0)).join('')}</section>
             </div></form><details class="card payroll-audit"><summary>O‘zgarishlar tarixi (oxirgi 100 ta)</summary>${config.history.map(h => `<details><summary>${esc(h.actor_name)} · ${esc(new Date(h.created_at).toLocaleString())} · ${esc(h.action)} · ${esc(h.entity_id)}</summary><pre>${esc(JSON.stringify({ old: h.before_data, new: h.after_data }, null, 2))}</pre></details>`).join('') || '<p>O‘zgarishlar yo‘q</p>'}</details>`;
+        renderTeacherLegacy(body);
         const form = body.querySelector('form');
         form.addEventListener('input', () => { state.dirty = true; });
         form.querySelector('[name="rop.hasFixed"]').onchange = event => { form.querySelector('[data-rop-fixed]').hidden = !event.target.checked; state.dirty = true; };

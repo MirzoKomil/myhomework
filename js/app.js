@@ -1706,6 +1706,7 @@ function switchMobileSection(section) {
         const frame = document.getElementById('studentAppFrame');
         if (frame && frame.src === 'about:blank') frame.src = _studentAppPreviewUrl();
         _updateStudentAppPreviewLinks();
+        _populateDemoStudentSelect();
     }
 }
 
@@ -7718,27 +7719,36 @@ function _populateDemoStudentSelect() {
     const sel = document.getElementById('demoStudentSelect');
     if (!sel) return;
     const currentUser = getCurrentUser();
-    const selWrap = sel.closest('.form-group') || sel.parentElement;
+    const selWrap = sel.closest('.team-demo-card') || sel.closest('.form-group') || sel.parentElement;
 
-    // Bu tanlov mobil ilovaning global namuna profilini almashtiradi. Ustoz
-    // undan foydalansa boshqa o'quvchining ilova profili o'zgarib ketardi va
-    // u baribir bu kalitni saqlash huquqiga ega emas. Ustozning haqiqiy
-    // o'quvchilari endi bevosita pastdagi davomat jadvalida ko'rinadi.
-    if (currentUser?.role === 'teacher') {
+    // Bu tanlov mobil ilovaning global namuna profilini almashtiradi — faqat admin/boshliq (Mobil ilova → Ilovani ko'rish).
+    // Ustoz va boshqa rollar uni ko'rmaydi: boshqa o'quvchining ilova profili o'zgarib ketardi.
+    if (!['admin', 'boshliq'].includes(currentUser?.role)) {
         if (selWrap) selWrap.hidden = true;
         return;
     }
     if (selWrap) selWrap.hidden = false;
-    let allStudents = getItem(STORAGE_KEYS.students, []);
+    // BAHO-6 #1: faqat faol o'quvchilar (muzlatilgan / chiqib ketgan emas); xodimlarning demo akkauntlari (isStaffDemo)
+    // ro'yxatga kirmaydi — faqat o'zingizning demo akkauntingiz (bo'lsa).
+    const R = window.AttendanceRules;
+    const own = s => isStaffDemoStudent(s) && currentUser && [currentUser.id, currentUser.linkedTeacherId, currentUser.employeeId].filter(Boolean).includes(s.demoForEmployeeId);
+    const active = s => (R?.isActiveStudent ? R.isActiveStudent(s) || own(s) : !s.frozen && s.status !== 'inactive');
+    const allStudents = getItem(STORAGE_KEYS.students, []).filter(s => (!isStaffDemoStudent(s) || own(s)) && active(s))
+        .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
 
     const current = getItem(STORAGE_KEYS.demoStudentId, '');
+    const cur = current && !allStudents.some(s => s.id === current) ? getItem(STORAGE_KEYS.students, []).find(s => s.id === current) : null;
     sel.innerHTML = '<option value="">— tanlanmagan —</option>' +
+        (cur ? `<option value="${escapeHtml(cur.id)}" selected>${escapeHtml(cur.name || cur.id)} (hozirgi · faol emas)</option>` : '') +
         allStudents.map(s => `<option value="${escapeHtml(s.id)}" ${s.id === current ? 'selected' : ''}>${escapeHtml(s.name)}</option>`).join('');
     if (!sel.dataset.bound) {
         sel.dataset.bound = '1';
         sel.addEventListener('change', () => {
             setItem(STORAGE_KEYS.demoStudentId, sel.value);
             showMiniToast("Namuna o'quvchi yangilandi");
+            // Ilova ko'rinishi ochiq bo'lsa — yangi namuna bilan qayta yuklanadi.
+            const frame = document.getElementById('studentAppFrame');
+            if (frame && frame.src && frame.src !== 'about:blank') { try { frame.src = _studentAppPreviewUrl(); } catch (e) { /* ixtiyoriy */ } }
         });
     }
 }
