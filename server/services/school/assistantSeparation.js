@@ -105,4 +105,55 @@ async function migrate(pool, log = console) {
     return { ...result, legacy: legacy.total };
 }
 
-module.exports = { MIGRATION_ID, REASON, migrate, legacyAssignments };
+// 30-okt (Abdulloh): "boshqa asosiy ustozlarda qolgan yordamchi o'quvchilarni Ayubxonga qo'yaver".
+// Bir martalik: asosiy ustozga (yordamchi lavozimida bo'lmagan xodimga) yordamchi sifatida biriktirilgan Ayubxon tilidagi
+// faol o'quvchilar (demo emas) Ayubxonga o'tkaziladi. Boshqa til, Ayubxonning o'z asosiy o'quvchisi — tegilmaydi (logga).
+// O'tgan aloqalar va maosh o'zgarmaydi (contacts.assistant_id). Har o'quvchiga audit; school_migrations markeri.
+const MIGRATION_ALL_ID = 'assistant-separation-all-2026-10-30';
+const REASON_ALL = 'Asosiy ustoz yordamchi bo\'la olmaydi — barcha qolgan yordamchi o\'quvchilar Ayubxon Axmadjonovga o\'tkazildi (30-okt qarori)';
+
+async function migrateAll(pool, log = console) {
+    await pool.query(`CREATE TABLE IF NOT EXISTS school_migrations (id TEXT PRIMARY KEY, ran_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), result JSONB NOT NULL DEFAULT '{}')`);
+    const c = await pool.connect();
+    try {
+        await c.query('BEGIN');
+        // Marker qatori birinchi bo'lib yoziladi — parallel jarayon shu qatorda kutadi va keyin hech narsa qilmaydi.
+        const claimed = (await c.query(`INSERT INTO school_migrations (id, result) VALUES ($1, '{}') ON CONFLICT (id) DO NOTHING RETURNING id`, [MIGRATION_ALL_ID])).rowCount;
+        if (!claimed) { await c.query('COMMIT'); return { skipped: 'already-done' }; }
+        const asst = await findOne(c, ['ayubxon', 'axmadjonov'], r => r.role === 'yordamchi');
+        if (!asst.hit) {
+            // Marker qaytariladi — keyingi ishga tushishda yana urinadi.
+            await c.query('ROLLBACK');
+            log.warn(`[yordamchi-hammasi] ko'chirilmadi: Ayubxon Axmadjonov (HR lavozimi 'yordamchi') ${asst.count} ta topildi — bittasi bo'lishi kerak; keyingi ishga tushishda yana uriniladi`);
+            return { skipped: 'not-found', retry: true };
+        }
+        const lang = roles.language(asst.hit);
+        const legacy = await legacyAssignments(c);
+        const moved = [], kept = [];
+        for (const t of legacy.teachers) for (const st of t.students) {
+            const s = (await c.query('SELECT id, name, subject, teacher_id, assistant_teacher_id FROM students WHERE id=$1 FOR UPDATE', [st.id])).rows[0];
+            if (!s || s.assistant_teacher_id !== t.id) continue;
+            if ((s.subject || 'english') !== lang || s.teacher_id === asst.hit.id) { kept.push({ id: s.id, name: s.name, from: t.name }); continue; }
+            await c.query(`UPDATE students SET assistant_teacher_id=$2,
+                extra_data = COALESCE(extra_data,'{}'::jsonb) || jsonb_build_object('schoolRev', COALESCE((extra_data->>'schoolRev')::int,0)+1)
+                WHERE id=$1 AND assistant_teacher_id=$3`, [s.id, asst.hit.id, t.id]);
+            await c.query(`INSERT INTO school_student_audit (student_id,action,changes,reason,actor_id,actor_name,actor_role)
+                VALUES ($1,'edit',$2,$3,'system','Tizim (migratsiya)','system')`,
+                [s.id, JSON.stringify({ assistant: [t.name, asst.hit.name], assistantId: { from: t.id, to: asst.hit.id } }), REASON_ALL]);
+            moved.push({ id: s.id, name: s.name, from: t.name });
+        }
+        const result = { to: { id: asst.hit.id, name: asst.hit.name }, moved, kept };
+        await c.query('UPDATE school_migrations SET result=$2 WHERE id=$1', [MIGRATION_ALL_ID, JSON.stringify(result)]);
+        await c.query('COMMIT');
+        const by = moved.reduce((m, x) => (m[x.from] = (m[x.from] || 0) + 1, m), {});
+        log.log(`[yordamchi-hammasi] ${asst.hit.name}ga ${moved.length} o'quvchi o'tkazildi`
+            + (moved.length ? ` (${Object.entries(by).map(([n, k]) => `${n} — ${k}`).join(', ')})` : '')
+            + (kept.length ? `; ${kept.length} ta boshqa til yoki Ayubxonning o'z o'quvchisi — tegilmadi` : ''));
+        return result;
+    } catch (e) {
+        await c.query('ROLLBACK').catch(() => {});
+        throw e;
+    } finally { c.release(); }
+}
+
+module.exports = { MIGRATION_ID, MIGRATION_ALL_ID, REASON, migrate, migrateAll, legacyAssignments };

@@ -362,6 +362,9 @@ init().then(async () => {
         // 29-okt: yordamchi ustoz — alohida lavozim. Bir martalik ko'chirish (Mohinur A. → Ayubxon A.), qayta ishga tushsa hech narsa qilmaydi.
         await require('./services/school/assistantSeparation').migrate(crmDb.pool)
             .catch(err => console.error('[yordamchi-alohida] migratsiya xatosi:', err.code || err.message));
+        // 30-okt: qolgan barcha asosiy ustozlardagi yordamchi o'quvchilar ham Ayubxonga (bir marta, audit bilan).
+        await require('./services/school/assistantSeparation').migrateAll(crmDb.pool)
+            .catch(err => console.error('[yordamchi-hammasi] migratsiya xatosi:', err.code || err.message));
         // Eski Davomat ekranida Se·Pa·Sh o'quvchilarga Du·Ch·Ju sanalariga qo'yilgan "Keldi"lar — o'quvchining o'z dars kunlariga
         // (bir marta, audit bilan; yakuniy/to'langan oylarga tegilmaydi). Qayta ishga tushsa hech narsa qilmaydi.
         await require('./services/school/legacyAttendance').migrate(crmDb.pool)

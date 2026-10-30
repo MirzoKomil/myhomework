@@ -1063,10 +1063,16 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
 
     // ── Xodim: vaqtinchalik parol (parol hech kimga ko'rinmaydi) va avatar ───
     router.post('/staff/:userId/temp-password', handle(req => { need(req, FULL); return write(req, async c => {
-        const pass = String(req.body?.password || '');
-        if (pass.length < 8) throw T.fail(400, 'Vaqtinchalik parol kamida 8 belgi');
-        const u = (await c.query('SELECT id, role FROM users WHERE id=$1 FOR UPDATE', [req.params.userId])).rows[0];
+        // 30-okt direktor qarori: parol oddiy — kamida 4 belgi; berilmasa xodim telefonining oxirgi 4 raqami.
+        const u = (await c.query('SELECT id, role, email FROM users WHERE id=$1 FOR UPDATE', [req.params.userId])).rows[0];
         if (!u) throw T.fail(404, 'Xodim topilmadi');
+        let pass = String(req.body?.password || '').trim();
+        if (!pass) {
+            const hr = (await c.query(`SELECT phone, login FROM hr_employees WHERE LOWER(TRIM(login))=LOWER(TRIM($1)) LIMIT 1`, [u.email || ''])).rows[0];
+            pass = String(hr?.phone || hr?.login || u.email || '').replace(/\D/g, '').slice(-4);
+            if (pass.length < 4) throw T.fail(400, 'Xodim telefoni topilmadi — vaqtinchalik parolni kiriting');
+        }
+        if (pass.length < 4) throw T.fail(400, 'Vaqtinchalik parol kamida 4 belgi');
         await c.query('UPDATE users SET password_hash=$2 WHERE id=$1', [u.id, bcrypt.hashSync(pass, 10)]);
         await c.query('DELETE FROM sessions WHERE user_id=$1', [u.id]);
         await c.query(`INSERT INTO school_student_audit (student_id,action,changes,reason,actor_id,actor_name,actor_role) VALUES ($1,'staff-temp-password','{}',$2,$3,$4,$5)`,
