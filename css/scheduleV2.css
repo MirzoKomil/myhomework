@@ -137,6 +137,8 @@ html.rd[data-theme="dark"] {
 .k-free2 { background: transparent; border-color: var(--sv-cls-bd) !important; color: var(--sv-cls-fg); }
 .k-freex { background: var(--sv-x-bg); border: 1.5px dashed var(--sv-x-bd) !important; color: var(--sv-x-fg); }
 .k-cls { background: var(--sv-cls-bg); border-color: var(--sv-cls-bd) !important; color: var(--sv-cls-fg); font-weight: 600 !important; }
+.k-cls.k-brk { background: repeating-linear-gradient(135deg, #FFF4E5 0 5px, #FFFFFF 5px 10px); border-color: #FDBA74 !important; color: #C4320A; font-weight: 700 !important; }
+html[data-theme="dark"] .k-cls.k-brk { background: repeating-linear-gradient(135deg, rgba(249, 115, 22, .2) 0 5px, transparent 5px 10px); border-color: rgba(249, 115, 22, .55) !important; color: #FDBA74; }
 .k-mo { border-style: dashed !important; }
 .k-off { background: repeating-linear-gradient(135deg, var(--sv-off-a) 0 6px, var(--sv-off-b) 6px 7px); border-color: transparent !important; color: var(--sv-off-fg); font-weight: 600 !important; }
 .k-as { background: var(--sv-as-bg); border-color: var(--sv-as-bd) !important; color: var(--sv-as-fg); }

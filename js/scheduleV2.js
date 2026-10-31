@@ -75,6 +75,8 @@
             const s = i.status === 'confirmed' && w.past ? 'natija kutilmoqda' : TRIAL[i.status] || i.status || '';
             return { cls: i.status === 'hold' ? 'k-hold' : i.status === 'done' || i.status === 'no_show' ? 'k-trd' : 'k-tr', t: `${first(i.leadName) || 'Lid'} · sinov`, s, st: 'tr' };
         }
+        // Sinovga tanaffus (ustoz oladi): faqat sinovga yopadi; sabab shu ko'rinishga (admin/ROP/ustoz) keladi.
+        if (i.kind === 'break') return { cls: 'k-cls k-brk', t: 'Tanaffus', s: [i.reason, i.note].filter(Boolean).join(' · '), st: 'cls' };
         if (i.kind === 'close') return { cls: 'k-cls', t: '🔒 yopildi', s: [i.reason, i.by && 'admin'].filter(Boolean).join(' · '), st: 'cls' };
         if (i.kind === 'leave') return { cls: 'k-cls', t: 'Ta\'til', s: i.reason || '', st: 'cls' };
         return { cls: 'k-cls', t: i.kind, s: '', st: 'cls' };
@@ -162,10 +164,11 @@
         }
         for (const i of v.items || []) {
             const l = look(i, v.date, { names });
-            const attrs = i.studentId ? ` data-st="${esc(i.studentId)}"` : i.kind === 'trial' ? ` data-tr="${esc(i.bookingId || '')}" data-lead="${esc(i.leadId || '')}"` : i.overrideId ? ` data-ovid="${esc(i.overrideId)}"` : '';
+            // Tanaffus bosilmaydi (override paneli "yopish" uchun — tanaffus /breaks orqali boshqariladi).
+            const attrs = i.kind === 'break' ? '' : i.studentId ? ` data-st="${esc(i.studentId)}"` : i.kind === 'trial' ? ` data-tr="${esc(i.bookingId || '')}" data-lead="${esc(i.leadId || '')}"` : i.overrideId ? ` data-ovid="${esc(i.overrideId)}"` : '';
             // Dars jadvali v3 uslubi (ustoz haftasi, .is-q15): dars rangi davomiylikdan (15/30/60), holat — kichik yozuv.
             const dk = i.kind === 'lesson' || i.kind === 'reserved' ? ` jvd${i.end - i.start <= 15 ? 15 : i.end - i.start <= 30 ? 30 : 60}` : '';
-            out.push({ start: i.start, end: i.end, cls: l.cls + dk, t: l.t, s: l.s, click: !!attrs && (i.kind !== 'close' && i.kind !== 'leave' || clickOv), attrs: attrs + (i.overrideId ? ` data-ovk="${esc(i.kind)}"` : '') });
+            out.push({ start: i.start, end: i.end, cls: l.cls + dk, t: l.t, s: l.s, click: !!attrs && (i.kind !== 'close' && i.kind !== 'leave' || clickOv), attrs: attrs + (i.overrideId && i.kind !== 'break' ? ` data-ovk="${esc(i.kind)}"` : '') });
         }
         for (const a of assist) {
             const end = Math.max(a.end, a.start + 30);

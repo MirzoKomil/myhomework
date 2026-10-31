@@ -456,7 +456,7 @@
             const a = st.time.min, b = st.time.min + dur;
             if (!v || !(v.work || []).some(w => w.start <= a && b <= w.end)) return { ok: false, why: 'ish vaqti emas' };
             const clash = (v.items || []).find(i => i.start < b && a < i.end && !['reserved'].includes(i.kind));
-            if (clash) return { ok: false, why: `${hm(clash.start)}–${hm(clash.end)} ${clash.kind === 'trial' ? 'boshqa sinovda' : clash.kind === 'close' || clash.kind === 'leave' ? 'yopiq' : clash.studentName ? `${firstName(clash.studentName)} bilan darsda` : 'darsda'}` };
+            if (clash) return { ok: false, why: `${hm(clash.start)}–${hm(clash.end)} ${clash.kind === 'trial' ? 'boshqa sinovda' : clash.kind === 'break' ? 'ustoz tanaffusda' : clash.kind === 'close' || clash.kind === 'leave' ? 'yopiq' : clash.studentName ? `${firstName(clash.studentName)} bilan darsda` : 'darsda'}` };
             if (!(v.trialFree || []).some(f => f.start <= a && b <= f.end)) return { ok: false, why: 'sinovga yopiq' };
             return { ok: true, v };
         }
