@@ -547,15 +547,12 @@
     }
 
     // ---------- pastki oynalar (sheet) ----------
-    let ignorePop = 0;
     function openSheet(html, cls = '') {
         closeSheet(true, true);
         sheetEl = document.createElement('div');
         sheetEl.className = 'sa-sheet-wrap';
         sheetEl.innerHTML = `<button type="button" class="sa-dim" data-sa-sheetclose aria-label="Yopish"></button><section class="sa-sheet ${cls}" role="dialog" aria-modal="true" tabindex="-1"><span class="sa-handle" aria-hidden="true"></span>${html}</section>`;
         document.body.appendChild(sheetEl);
-        // Android "orqaga" pastki oynani yopsin (ilovadan chiqib ketmasin).
-        if (window.history?.pushState) { const d0 = Number(history.state?.saD) || 0; if (history.state?.saSheet) history.replaceState({ sa: S.screen, saD: d0, saSheet: true }, ''); else history.pushState({ sa: S.screen, saD: d0 + 1, saSheet: true }, ''); }
         const h2 = sheetEl.querySelector('h2'); if (h2) { h2.id = 'saSheetT'; sheetEl.querySelector('.sa-sheet').setAttribute('aria-labelledby', 'saSheetT'); }
         sheetEl.addEventListener('click', onClick);
         sheetEl.addEventListener('keydown', e => {
@@ -572,7 +569,6 @@
     function closeSheet(instant, fromPop) {
         if (!sheetEl) return;
         const el = sheetEl; sheetEl = null;
-        if (!fromPop && history.state?.saSheet) { ignorePop++; history.back(); }
         if (instant) { el.remove(); return; }
         el.classList.add('is-out');
         setTimeout(() => el.remove(), 220);
@@ -776,14 +772,11 @@
         render(true);
     }
     // Brauzer tarixi: asosiy tablar bitta yozuvni almashtiradi (tarix cheksiz o'smaydi), ichki sahifalar qo'shadi.
-    function histPush(screen, reset) {
-        if (!window.history?.pushState) return;
-        const depth = Number(history.state?.saD) || 0;
-        if (reset) {
-            if (screen === 'home') history.replaceState({ sa: 'home', saD: depth }, '');
-            else if (depth >= 1) history.replaceState({ sa: screen, saD: depth }, '');
-            else history.pushState({ sa: screen, saD: 1 }, '');
-        } else history.pushState({ sa: screen, saD: depth + 1 }, '');
+    // Tarix modeli: ilova o'z ichki stekini yuritadi; brauzer tarixida faqat bitta "qo'riqchi" yozuv turadi.
+    // Android "orqaga" -> popstate -> ichki orqaga -> qo'riqchi qayta qo'yiladi. Poyga (race) bo'lmaydi.
+    function histPush() { /* ataylab bo'sh: tarixni qo'riqchi yozuv boshqaradi */ }
+    function armGuard() {
+        try { if (window.history?.pushState && !history.state?.saGuard) history.pushState({ saGuard: 1 }, ''); } catch (e) { /* tarix yo'q */ }
     }
     function back() {
         if (sheetEl) { closeSheet(); return true; }
@@ -813,7 +806,6 @@
     function openCrm(spec) {
         const [tab, section] = String(spec).split(':');
         S.stack.push({ screen: S.screen, lead: S.lead, tab: S.tab });
-        if (window.history?.pushState) history.pushState({ sa: 'crm' }, '');
         S.crmTab = TAB_OF[S.screen] === 'plan' ? 'plan' : TAB_OF[S.screen] === 'leads' ? 'leads' : 'menu';
         S.screen = 'crm';
         showApp(false);
@@ -878,7 +870,7 @@
         if ('saLead' in d) return openLead(d.saLead);
         if ('saNav' in d) { if (d.saNav === 'jadval') return openJadval(); return go(d.saNav, { reset: true }); }
         if ('saGo' in d) return go(d.saGo);
-        if ('saBack' in d) { if ((Number(history.state?.saD) || 0) > 0) history.back(); else if (!back()) go('home', { reset: true }); return; }
+        if ('saBack' in d) { if (!back()) go('home', { reset: true }); return; }
         if ('saStage' in d) { S.stage = d.saStage; render(true); const c = root.querySelector('.sa-chip.is-on'); c?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }); return; }
         if ('saStagego' in d) { S.stage = d.saStagego; S.q = ''; return go('leads', { reset: true }); }
         if ('saTg' in d) { if (g('openLeadTelegramProfile')) openLeadTelegramProfile(lang(), d.saTg); return; }
@@ -961,6 +953,7 @@
 
     function enable() {
         document.body.classList.add('sa-on');
+        armGuard();
         if (!root) {
             root = document.createElement('main');
             root.id = 'saApp';
@@ -990,12 +983,13 @@
         window.addEventListener('focus', onVisible);
         window.addEventListener('popstate', () => {
             if (!isOn()) return;
-            if (ignorePop) { ignorePop--; return; }
-            // Android "orqaga": avval ochiq CRM oynasi, keyin pastki oyna, keyin ekran.
+            // Android "orqaga": avval ochiq CRM oynasi, keyin pastki oyna, keyin ekran. Bosh sahifada — ilovadan chiqadi.
+            let handled = false;
             const ov = document.getElementById('modalOverlay');
-            if (ov && ov.style.display !== 'none' && g('closeModal')) { closeModal(); history.pushState({ sa: S.screen, saD: (Number(history.state?.saD) || 0) + 1 }, ''); return; }
-            if (sheetEl) { closeSheet(false, true); return; }
-            back();
+            if (ov && ov.style.display !== 'none' && g('closeModal')) { closeModal(); handled = true; }
+            else if (sheetEl) { closeSheet(false, true); handled = true; }
+            else handled = back();
+            if (handled) armGuard();
         });
         MQ.addEventListener?.('change', sync);
         // Jadval/sinov sahifalari (jadvalV3, sotuvSinov) CRM ichida ochiladi — ular ochiq turganda ilova qatlami yashiriladi.

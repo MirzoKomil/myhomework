@@ -1,6 +1,6 @@
 /* Domwork Team — sotuv menejeri telefon ilovasi (js/sotuvApp.js). Faqat body.sa-on (sales_manager, ≤900px). */
 /* Shrift ilova ichida (oflayn va tez ochilish uchun, Google Fonts'ga bog'liq emas). Litsenziya: fonts/PlusJakartaSans-OFL.txt */
-@font-face { font-family: 'Plus Jakarta Sans'; font-style: normal; font-weight: 200 800; font-display: swap; src: url('../fonts/PlusJakartaSans-var.woff2') format('woff2'); }
+@font-face { font-family: 'DW Jakarta'; font-style: normal; font-weight: 200 800; font-display: swap; src: url('../fonts/PlusJakartaSans-var.woff2') format('woff2'); }
 
 body.sa-on {
     --sa-blue: #0065D6; --sa-blue-d: #0057B8; --sa-blue-t: #EAF3FF; --sa-blue-l: #DCEBFF;
@@ -16,10 +16,16 @@ body.sa-on.sa-app-hidden .main-area, body.sa-on.sa-app-hidden .content-layout { 
 
 .sa-app {
     position: fixed; inset: 0 0 var(--sa-nav-h) 0; z-index: 250; display: flex; flex-direction: column;
-    background: var(--sa-bg); color: var(--sa-ink); font-family: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    background: var(--sa-bg); color: var(--sa-ink); font-family: 'DW Jakarta', 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
     -webkit-font-smoothing: antialiased; overflow: hidden; -webkit-tap-highlight-color: transparent;
 }
 .sa-app[hidden] { display: none; }
+/* Ilova qatlami doim yorug' — CRM qorong'i mavzusi o'zgaruvchilari ichkarida qayta belgilanadi (izohlar tarixi o'qiladigan bo'lsin). */
+.sa-app, .sa-sheet-wrap, .sa-nav {
+    color-scheme: light;
+    --bg: #F5F7FB; --surface: #FFFFFF; --text: #0B1220; --text-muted: #4B5563; --text-light: #6B7280; --border: #E6EAF2;
+    --purple-light: #EAF3FF; --blue-light: #EAF3FF; --success-bg: #ECFDF3; --danger-bg: #FEF3F2; --warning-bg: #FEF0C7; --pink-bg: #FDF2F8;
+}
 .sa-app *, .sa-sheet-wrap *, .sa-nav * { box-sizing: border-box; }
 .sa-app button, .sa-sheet-wrap button, .sa-nav button { font-family: inherit; line-height: 1.3; color: inherit; cursor: pointer; }
 .sa-app textarea, .sa-app input, .sa-sheet-wrap textarea { font-family: inherit; }
@@ -362,7 +368,7 @@ body.sa-on.sa-app-hidden .main-area, body.sa-on.sa-app-hidden .content-layout { 
 
 /* ---------- pastki menyu ---------- */
 .sa-nav { display: none; }
-body.sa-on .sa-nav { display: grid; position: fixed; left: 0; right: 0; bottom: 0; z-index: 260; height: var(--sa-nav-h); padding: 6px 6px env(safe-area-inset-bottom); grid-template-columns: repeat(5, minmax(0, 1fr)); background: #FFFFFF; border-top: 1px solid var(--sa-line); font-family: 'Plus Jakarta Sans', system-ui, sans-serif; }
+body.sa-on .sa-nav { display: grid; position: fixed; left: 0; right: 0; bottom: 0; z-index: 260; height: var(--sa-nav-h); padding: 6px 6px env(safe-area-inset-bottom); grid-template-columns: repeat(5, minmax(0, 1fr)); background: #FFFFFF; border-top: 1px solid var(--sa-line); font-family: 'DW Jakarta', 'Plus Jakarta Sans', system-ui, sans-serif; }
 body.sa-on.modal-open .sa-nav { z-index: 249; }
 .sa-nav button { border: 0; background: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: var(--sa-mut); font-size: 12px; font-weight: 600; min-height: 56px; }
 .sa-nav button.is-on { color: var(--sa-blue-d); font-weight: 800; }
@@ -373,7 +379,7 @@ body.sa-on.modal-open .sa-nav { z-index: 249; }
 /* ---------- pastki oyna (sheet) ---------- */
 @keyframes saSheet { from { transform: translateY(100%); } to { transform: none; } }
 @keyframes saSheetOut { to { transform: translateY(100%); } }
-.sa-sheet-wrap { position: fixed; inset: 0; z-index: 1140; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: var(--sa-ink, #0B1220); }
+.sa-sheet-wrap { position: fixed; inset: 0; z-index: 1140; font-family: 'DW Jakarta', 'Plus Jakarta Sans', system-ui, sans-serif; color: var(--sa-ink, #0B1220); }
 .sa-dim { position: absolute; inset: 0; border: 0; background: rgba(11, 18, 32, .52); animation: saFade .25s ease both; }
 .sa-sheet { position: absolute; left: 0; right: 0; bottom: 0; max-height: 92vh; max-height: 92dvh; overflow-y: auto; overscroll-behavior: contain; background: #FFFFFF; border-radius: 28px 28px 0 0; padding: 10px 18px calc(20px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 12px; box-shadow: 0 -12px 40px rgba(11, 18, 32, .2); animation: saSheet .36s cubic-bezier(.2, .9, .25, 1) both; }
 .sa-sheet-wrap.is-out .sa-sheet { animation: saSheetOut .2s ease-in both; }
@@ -417,11 +423,11 @@ body.sa-on.modal-open .sa-nav { z-index: 249; }
 
 /* Mavjud oynalar (#modalOverlay) — telefonda pastki oyna ko'rinishida. */
 body.sa-on .modal-overlay { align-items: flex-end !important; padding: 0 !important; }
-body.sa-on .modal-overlay > .modal { width: 100% !important; max-width: 100% !important; max-height: 92vh; max-height: 92dvh; margin: 0 !important; border-radius: 28px 28px 0 0 !important; animation: saSheet .36s cubic-bezier(.2, .9, .25, 1) both; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; padding-bottom: env(safe-area-inset-bottom); }
+body.sa-on .modal-overlay > .modal { width: 100% !important; max-width: 100% !important; max-height: 92vh; max-height: 92dvh; margin: 0 !important; border-radius: 28px 28px 0 0 !important; animation: saSheet .36s cubic-bezier(.2, .9, .25, 1) both; font-family: 'DW Jakarta', 'Plus Jakarta Sans', system-ui, sans-serif; padding-bottom: env(safe-area-inset-bottom); }
 body.sa-on .modal-overlay > .modal .modal-header { position: relative; padding-top: 22px; }
 body.sa-on .modal-overlay > .modal .modal-header::before { content: ''; position: absolute; top: 8px; left: 50%; width: 40px; height: 5px; margin-left: -20px; border-radius: 999px; background: #CBD5E1; }
 body.sa-on .modal-overlay > .modal .modal-close { min-width: 44px; min-height: 44px; }
-body.sa-on .modal-overlay > .modal .modal-footer { position: sticky; bottom: 0; background: #FFFFFF; }
+body.sa-on .modal-overlay > .modal .modal-footer { position: sticky; bottom: 0; background: var(--surface, #FFFFFF); }
 body.sa-on .modal-overlay > .modal .modal-footer .btn { min-height: 48px; }
 
 /* toast */
@@ -431,7 +437,7 @@ body.sa-on .modal-overlay > .modal .modal-footer .btn { min-height: 48px; }
 .sa-toast > span:nth-child(2) { flex: 1; }
 .sa-toast-i { flex: none; width: 26px; height: 26px; border-radius: 50%; background: #12B76A; display: grid; place-items: center; }
 .sa-toast--warn .sa-toast-i { background: #F79009; }
-.sa-toast button { border: 0; background: none; min-height: 40px; padding: 0 8px; color: #9DC4F5; font: 800 13px 'Plus Jakarta Sans', system-ui, sans-serif; cursor: pointer; }
+.sa-toast button { border: 0; background: none; min-height: 40px; padding: 0 8px; color: #9DC4F5; font: 800 13px 'DW Jakarta', 'Plus Jakarta Sans', system-ui, sans-serif; cursor: pointer; }
 
 @media (prefers-reduced-motion: reduce) {
     .sa-app *, .sa-sheet-wrap *, .sa-toast, .sa-app.sa-enter .sa-body, body.sa-on .modal-overlay > .modal { animation: none !important; transition: none !important; }
