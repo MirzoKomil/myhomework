@@ -470,3 +470,7 @@ body.sa-on.sa-full .sa-toast { bottom: calc(92px + env(safe-area-inset-bottom));
 
 .sa-kvs.sa-kvs--in { margin-top: 10px; padding: 4px 0 0; border-top: 1px solid var(--sa-line); }
 .sa-hist .lead-comment-item:not([class*="lead-comment-item--"]) { border-color: var(--sa-line) !important; }
+
+/* CRM sahifalari (Jadval, Sinov va h.k.) telefonda: sahifa aylantirilganda kontent iPhone holat paneli (soat, batareya) ostiga kirmasin.
+   Barcha rollar uchun (ROP, ustoz ham iPhone'dan kiradi); ilova qatlami ochiq bo'lsa — uning o'z yuqori qismi bor. */
+@media (max-width: 900px) { html.rd body:not(.auth-body):not(.sa-on)::before, html.rd body.sa-on.sa-app-hidden::before { content: ''; position: fixed; left: 0; right: 0; top: 0; height: env(safe-area-inset-top, 0px); background: var(--surface, #FFFFFF); z-index: 1100; pointer-events: none; } }
