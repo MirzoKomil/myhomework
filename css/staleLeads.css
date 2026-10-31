@@ -99,16 +99,13 @@ body.sl-locked { overflow: hidden; }
 .sl-pill { position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 1125; display: inline-flex; align-items: center; gap: 6px;
     background: #93370D; color: #FFFFFF; font-size: 13px; font-weight: 800; padding: 7px 12px; border-radius: 999px; box-shadow: 0 8px 20px rgba(11, 18, 32, .25); font-variant-numeric: tabular-nums; pointer-events: none; }
 
-/* Bosh sahifa ogohlantirish kartasi (ilova) */
-.sl-warn { width: 100%; text-align: left; background: #FFFAEB; border: 1px solid #FEDF89; border-radius: 22px; padding: 14px; display: flex; flex-direction: column; gap: 10px; color: var(--sl-ink); }
-.sl-warn-h { display: flex; gap: 12px; align-items: flex-start; }
-.sl-warn-i { flex: none; width: 44px; height: 44px; border-radius: 14px; background: #FEF0C7; color: #93370D; display: grid; place-items: center; animation: slSway 1.2s ease-in-out .3s 2; transform-origin: 50% 20%; }
-.sl-warn-t { display: flex; flex-direction: column; gap: 3px; }
-.sl-warn-t strong { font-size: 15px; }
-.sl-warn-t > span { font-size: 13px; color: var(--sl-ink2); line-height: 1.45; }
-.sl-warn-f { display: flex; align-items: center; gap: 8px; }
-.sl-stack { display: flex; flex: 1; }
-.sl-warn-b { height: 40px; padding: 0 14px; border-radius: 12px; background: #93370D; color: #FFFFFF; font-size: 13px; font-weight: 800; display: inline-flex; align-items: center; gap: 6px; }
+/* Bosh sahifa ogohlantirish qatori (ilova) */
+.sl-warn { width: 100%; text-align: left; background: #FFFAEB; border: 1px solid #FEDF89; border-radius: 20px; padding: 12px 14px; display: flex; align-items: center; gap: 12px; color: var(--sl-ink); }
+.sl-warn-i { flex: none; width: 40px; height: 40px; border-radius: 12px; background: #FEF0C7; color: #93370D; display: grid; place-items: center; animation: slSway 1.2s ease-in-out .3s 2; transform-origin: 50% 20%; }
+.sl-warn-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.sl-warn-t strong { font-size: 14px; }
+.sl-warn-t > span { font-size: 12px; color: var(--sl-ink2); line-height: 1.4; }
+.sl-warn-c { flex: none; color: #93370D; display: grid; }
 
 /* ROP: qoida */
 .sl-rule-btn { display: inline-flex; align-items: center; gap: 6px; margin-right: 8px; }
