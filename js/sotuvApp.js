@@ -315,6 +315,11 @@
         </div>
         <div class="sa-bar"><button type="button" class="sa-btn sa-btn--outline" data-sa-stagesheet="${esc(l.id)}">Bosqichni oʻzgartirish${ic('down', 16, 2.4)}</button></div>`;
     }
+    // Izoh vaqti maketdagidek nisbiy ("Bugun 11:20", "Kecha 11:20", "29-okt 11:20"); to'liq sana title'da qoladi.
+    const relTime = html => html.replace(/<time class="lead-comment-time" datetime="([^"]*)">([^<]*)<\/time>/, (m, iso, txt) => {
+        const t = parseT(iso.replace(/&amp;/g, '&'));
+        return t ? `<time class="lead-comment-time" datetime="${iso}" title="${txt}">${esc(when(t))}</time>` : m;
+    });
     function tabHistory(l, comments) {
         const item = typeof window.renderLeadCommentItem === 'function' ? window.renderLeadCommentItem : null;
         return `
@@ -323,7 +328,7 @@
           <textarea id="saNote" rows="2" maxlength="2000" placeholder="Izoh yozing…"></textarea>
           <div class="sa-note-a"><button type="button" class="sa-btn sa-btn--soft" data-sa-followup="${esc(l.id)}">${ic('clock', 16, 2.2)}Eslatma qoʻyish</button><button type="submit" class="sa-btn sa-btn--primary sa-btn--sm">Saqlash</button></div>
         </form>
-        ${comments.length ? `<div class="sa-hist">${comments.map(c => item ? item(c) : `<div class="lead-comment-item"><div class="lead-comment-text">${esc(c.text)}</div></div>`).join('')}</div>` : `<p class="sa-muted">Hali izoh yoʻq</p>`}`;
+        ${comments.length ? `<div class="sa-hist">${comments.map(c => item ? relTime(item(c)) : `<div class="lead-comment-item"><div class="lead-comment-text">${esc(c.text)}</div></div>`).join('')}</div>` : `<p class="sa-muted">Hali izoh yoʻq</p>`}`;
     }
     function tabInfo(l) {
         const row = (k, v) => (v || v === 0) && String(v).trim() ? `<div class="sa-kv"><span>${esc(k)}</span><b>${esc(v)}</b></div>` : '';
@@ -354,7 +359,9 @@
         ${Object.keys(cs).length ? `<h3 class="sa-h3">Anketa</h3><div class="sa-card sa-kvs">${row('Kim uchun', cs.applicantLabel || cs.applicant)}${row('Yoshi', cs.age)}${row('Jinsi', cs.genderLabel || cs.gender)}${row('Til darajasi', cs.languageLevelLabel || cs.languageLevel)}${row('Maqsadi', cs.learningGoalLabel || cs.learningGoal)}${row('Yashash joyi', cs.residenceLabel || cs.regionLabel || cs.region || cs.countryLabel || cs.country)}${row('Tushuntirildi', info)}</div>` : ''}
         ${l.decisionSurvey?.reasonLabel ? `<h3 class="sa-h3">Qaror</h3><div class="sa-card sa-kvs">${row('Sabab', l.decisionSurvey.reasonLabel)}</div>` : ''}
         ${dp ? `<h3 class="sa-h3">Keyin sotib oladi</h3><div class="sa-card sa-raw">${defReason ? `<div class="sa-kv"><span>Sabab</span><b>${esc(defReason)}</b></div>` : ''}${dp}</div>` : ''}
-        ${tr ? `<h3 class="sa-h3">Sinov darsi</h3><div class="sa-card sa-raw">${tr}</div>` : ''}
+        ${tr ? (() => { const rq = window.trialWorkflow?.request ? trialWorkflow.request(l) : null; const at = parseT(rq?.scheduledAt || l.trialLessonAt); const tid = rq?.teacherId || l.trialLesson?.teacherId;
+            const hint = [rq?.reasonLabel, rq?.rejectNote, rq?.resultNote].filter(Boolean).join(' · ');
+            return `<h3 class="sa-h3">Sinov darsi</h3><div class="sa-card sa-raw">${tr}${at || tid || hint ? `<div class="sa-kvs sa-kvs--in">${row('Vaqti', at ? when(at) : '')}${row('Ustoz', tid ? teacherName(tid) : '')}${row('Izoh', hint)}</div>` : ''}</div>`; })() : ''}
         ${ps.paymentType || ps.amount || ps.totalAmount ? `<h3 class="sa-h3">Toʻlov</h3><div class="sa-card sa-kvs">${row('Toʻlov turi', ps.paymentTypeLabel || PT[ps.paymentType] || ps.paymentType)}${row('Nasiya hamkori', ps.installmentPartnerLabel || ps.installmentPartner)}${row('Tarif', ps.tariffLabel || ps.tariff)}${row('Kurs narxi', total ? num(total) : '')}${row('Summa', ps.amountLabel || (ps.amount ? num(ps.amount) : ''))}${row('Toʻlangan', paidA ? num(paidA) : '')}${row('Qarz', debtA ? num(debtA) : '')}${row('Oxirgi toʻlov', ps.lastPaymentDateLabel || dt(ps.lastPaymentDate))}${row('Keyingi toʻlov', ps.nextPaymentDateLabel || dt(ps.nextPaymentDate))}</div>` : ''}
         ${pc.closedDate || pc.actualAmount || l.closedDate ? `<h3 class="sa-h3">Toʻlov yopildi</h3><div class="sa-card sa-kvs">${row('Sana', pc.closedDateLabel || dt(pc.closedDate || l.closedDate))}${row('Haqiqiy summa', pc.actualAmount ? num(pc.actualAmount) : '')}${row('Jami', pc.totalAmount ? num(pc.totalAmount) : '')}${Object.keys(pc).filter(k => /Label$/.test(k) && k !== 'closedDateLabel' && pc[k]).map(k => row(PCL[k] || k.replace(/Label$/, ''), pc[k])).join('')}</div>` : ''}
         ${po.teacherId || po.lessonTime || po.studentFullName ? `<h3 class="sa-h3">Oʻquvchi va jadval</h3><div class="sa-card sa-kvs">${row('Oʻquvchi', po.studentFullName || [po.studentFirstName, po.studentLastName].filter(Boolean).join(' '))}${row('Ustoz', teacherName(po.teacherId) || po.teacherName)}${row('Yordamchi', teacherName(po.assistantTeacherId) || po.assistantTeacherName)}${row('Jinsi', po.genderLabel || po.gender)}${row('Oʻquvchiga aylandi', po.becomeStudent === 'yes' || po.becomeStudent === true ? 'Ha' : po.becomeStudent === 'no' ? 'Yoʻq' : '')}${row('Dars kuni', DOW[Number(po.lessonDayOfWeek)] || '')}${row('Dars vaqti', po.lessonTime)}${row('Davomiyligi', po.lessonDuration ? po.lessonDuration + ' daqiqa' : '')}${row('Birinchi dars', dt(po.firstLessonDate))}${row('Daraja', po.courseLevelLabel || po.courseLevel)}${row('Shartnoma', po.contractNumber ? '№' + po.contractNumber + (po.contractDate ? ' · ' + dt(po.contractDate) : '') : '')}${row('Shartnoma turi', po.contractTypeLabel || po.contractType)}${row('Telegram guruh', po.telegramGroupName || po.telegramGroupLink)}${row('Kitob manzili', po.bookAddress)}${row('Ilova', po.platformConnectedLabel || (po.platformConnected === 'yes' || po.platformConnected === true ? 'Ulangan' : po.platformConnected === 'no' ? 'Ulanmagan' : ''))}</div>` : ''}
@@ -560,6 +567,15 @@
         sheetEl.addEventListener('click', onClick);
         sheetEl.addEventListener('keydown', e => {
             if (e.key === 'Escape') { e.preventDefault(); closeSheet(); return; }
+            const pick = e.target.closest?.('[data-sa-pick]');
+            if (pick && /^Arrow(Left|Right|Up|Down)$/.test(e.key)) {
+                e.preventDefault();
+                const all = [...sheetEl.querySelectorAll('[data-sa-pick]')];
+                const step = /Right|Down/.test(e.key) ? 1 : -1;
+                const nx = all[(all.indexOf(pick) + step + all.length) % all.length];
+                nx.focus(); nx.click();
+                return;
+            }
             if (e.key !== 'Tab') return;
             const f = [...sheetEl.querySelectorAll('button:not([disabled]), a[href], textarea, input')].filter(x => x.offsetParent !== null && !x.classList.contains('sa-dim'));
             if (!f.length) return;
@@ -597,7 +613,7 @@
           </div>
           <button type="button" class="sa-link" data-sa-outcome="junk">Notoʻgʻri raqam yoki boshqa til → Sifatsiz</button>
           <div class="sa-fld"><span id="saCrNoteL">Qisqa izoh</span>
-            <div class="sa-qchips">${['Narxni soʻradi', 'Oila bilan maslahatlashadi', 'Kechqurun qulay', 'Ish uchun', 'Farzandi uchun'].map(t => `<button type="button" class="sa-qchip" data-sa-qchip>${t}</button>`).join('')}</div>
+            <div class="sa-qchips">${['Narxni soʻradi', 'Oila bilan maslahatlashadi', 'Kechqurun qulay', 'Ish uchun', 'Farzandi uchun'].map(t => `<button type="button" class="sa-qchip" aria-pressed="false" data-sa-qchip>${t}</button>`).join('')}</div>
             <textarea id="saCrNote" rows="2" maxlength="2000" aria-labelledby="saCrNoteL" placeholder="Nima deb kelishdingiz?"></textarea></div>
           <button type="button" class="sa-btn sa-btn--primary sa-cr-save" data-sa-crsave disabled>Natijani tanlang</button>
           <p class="sa-sh-foot">Izoh lid tarixiga yoziladi</p>`, 'sa-sheet--call');
@@ -626,6 +642,7 @@
         if (!l) return;
         const note = document.getElementById('saCrNote')?.value.trim();
         const s = st(l);
+        // Izoh qo'ng'iroq haqidagi fakt — keyingi CRM oynasi bekor qilinsa ham tarixda qoladi (ataylab).
         if (note) addComment(id, note);
         if (k === 'talked') {
             const before = PATH.indexOf(s) >= 0 && PATH.indexOf(s) < PATH.indexOf('boglanildi');
@@ -638,7 +655,7 @@
         if (k === 'noanswer') {
             if (s === 'yangi-lidlar') { move(id, 'boglanishga-urinilmoqda'); return; }
             const r = (typeof LEAD_CONTACT_FAIL_REASONS !== 'undefined' ? LEAD_CONTACT_FAIL_REASONS : []).find(x => x.id === 'no-answer');
-            addComment(id, r?.label || 'Javob bermadi', 'contact-fail', { reason: r?.label || 'Javob bermadi', reasonId: 'no-answer' });
+            addComment(id, `Qo'ng'iroq qilindi, lekin: ${r?.label || 'Javob bermadi'}`, 'contact-fail', { reason: r?.label || 'Javob bermadi', reasonId: 'no-answer' });
             closeSheet();
             toast('“Javob bermadi” yozildi. Eslatma qoʻyasizmi?', 'ok', { label: 'Eslatma', fn: () => followUpFor(id) });
             render();
@@ -724,7 +741,7 @@
         toastEl = document.createElement('div');
         toastEl.className = `sa-toast sa-toast--${kind}`;
         toastEl.setAttribute('role', 'status');
-        toastEl.innerHTML = `<span class="sa-toast-i">${ic(kind === 'ok' ? 'check' : 'lock', 14, 3)}</span><span>${esc(msg)}</span>${action ? '<button type="button">' + esc(action.label) + '</button>' : ''}`;
+        toastEl.innerHTML = `<span class="sa-toast-i">${ic(kind === 'ok' ? 'check' : kind === 'info' ? 'back' : 'lock', 14, 3)}</span><span>${esc(msg)}</span>${action ? '<button type="button">' + esc(action.label) + '</button>' : ''}`;
         if (action) toastEl.querySelector('button').onclick = () => { toastEl?.remove(); action.fn(); };
         document.body.appendChild(toastEl);
         const el = toastEl;
@@ -780,7 +797,7 @@
     // Brauzer tarixi: asosiy tablar bitta yozuvni almashtiradi (tarix cheksiz o'smaydi), ichki sahifalar qo'shadi.
     // Tarix modeli: ilova o'z ichki stekini yuritadi; brauzer tarixida faqat bitta "qo'riqchi" yozuv turadi.
     // Android "orqaga" -> popstate -> ichki orqaga -> qo'riqchi qayta qo'yiladi. Poyga (race) bo'lmaydi.
-    function histPush() { armGuard(); } // har qanday ichkariga o'tishda qo'riqchi qayta qo'yiladi
+    const histPush = () => armGuard(); // har qanday ichkariga o'tishda qo'riqchi qayta qo'yiladi
     function armGuard() {
         try { if (window.history?.pushState && !history.state?.saGuard) history.pushState({ saGuard: 1 }, ''); } catch (e) { /* tarix yo'q */ }
     }
@@ -907,7 +924,7 @@
         }
         if ('saCrsave' in d) { const id = sheetEl?.querySelector('[data-sa-lead-id]')?.dataset.saLeadId; if (id && t.dataset.k) outcome(id, t.dataset.k); return; }
         if ('saOutcome' in d) { const id = sheetEl?.querySelector('[data-sa-lead-id]')?.dataset.saLeadId; if (id) outcome(id, d.saOutcome); return; }
-        if ('saQchip' in d) { const ta = document.getElementById('saCrNote'); t.classList.toggle('is-on'); if (ta) { const v = t.textContent.trim(); ta.value = ta.value.includes(v) ? ta.value.replace(v, '').replace(/^[,\s]+|[,\s]+$/g, '').replace(/,\s*,/g, ',') : (ta.value ? ta.value.replace(/[.\s]+$/, '') + ', ' : '') + v; } return; }
+        if ('saQchip' in d) { const ta = document.getElementById('saCrNote'); t.setAttribute('aria-pressed', t.classList.toggle('is-on') ? 'true' : 'false'); if (ta) { const v = t.textContent.trim(); ta.value = ta.value.includes(v) ? ta.value.replace(v, '').replace(/^[,\s]+|[,\s]+$/g, '').replace(/,\s*,/g, ',') : (ta.value ? ta.value.replace(/[.\s]+$/, '') + ', ' : '') + v; } return; }
         if ('saFollowup' in d) return followUpFor(d.saFollowup);
         if ('saNotify' in d) { if (g('openLeadNotifyModal')) openLeadNotifyModal(lang(), d.saNotify); return; }
         if ('saRecmanage' in d) { if (g('openLeadRecordingModal')) openLeadRecordingModal(lang(), d.saRecmanage); return; }
@@ -991,6 +1008,8 @@
         document.body.classList.remove('sa-on', 'sa-app-hidden', 'sa-crm-page', 'sa-full');
         closeSheet(true, true);
         if (root) root.hidden = true;
+        // Keng ekranga o'tildi — ilovaning "qo'riqchi" tarix yozuvi qoldirilmaydi (birinchi "Orqaga" bekor ketmasin).
+        try { if (history.state?.saGuard) history.back(); } catch (e) { /* tarix yo'q */ }
     }
     function sync() { if (isOn()) enable(); else disable(); }
 
@@ -1010,6 +1029,7 @@
             else if (sheetEl) { closeSheet(false, true); handled = true; }
             else handled = back();
             if (handled) armGuard();
+            else if (S.screen === 'home') toast('Chiqish uchun yana bir marta “Orqaga” bosing', 'info');
         });
         MQ.addEventListener?.('change', sync);
         // Jadval/sinov sahifalari (jadvalV3, sotuvSinov) CRM ichida ochiladi — ular ochiq turganda ilova qatlami yashiriladi.

@@ -67,7 +67,7 @@ body.sa-on.sa-app-hidden .main-area, body.sa-on.sa-app-hidden .content-layout { 
 .sa-me i { position: absolute; right: 0; bottom: 0; width: 12px; height: 12px; border-radius: 50%; background: #12B76A; border: 2px solid var(--sa-bg); }
 .sa-icon-btn { position: relative; flex: none; width: 44px; height: 44px; border-radius: 14px; border: 1px solid var(--sa-line2); background: #FFFFFF; display: grid; place-items: center; color: var(--sa-ink2); padding: 0; }
 .sa-icon-btn.sa-ghost { border: 0; background: transparent; color: var(--sa-ink); }
-.sa-icon-btn.sa-sm { width: 36px; height: 36px; min-width: 44px; }
+.sa-icon-btn.sa-sm { width: 44px; height: 44px; min-width: 44px; }
 .sa-icon-btn.has-dot::after { content: ''; position: absolute; top: 9px; right: 9px; width: 9px; height: 9px; border-radius: 50%; background: var(--sa-blue); border: 2px solid #FFFFFF; }
 .sa-dot-n { position: absolute; top: -5px; right: -5px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 999px; background: #D92D20; color: #FFFFFF; font-size: 11px; font-weight: 800; display: grid; place-items: center; border: 2px solid var(--sa-bg); }
 .sa-badge { height: 40px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--sa-line2); background: #FFFFFF; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; }
@@ -242,7 +242,7 @@ body.sa-on.sa-app-hidden .main-area, body.sa-on.sa-app-hidden .content-layout { 
 .sa-note-a { display: flex; justify-content: space-between; gap: 8px; }
 /* Mavjud izoh elementlari (renderLeadCommentItem) — yangi uslubda, ma'lumot o'zgarmaydi. */
 .sa-hist { display: flex; flex-direction: column; gap: 8px; }
-.sa-hist .lead-comment-item { border: 1px solid var(--sa-line) !important; border-radius: 16px !important; padding: 12px 14px !important; margin: 0 !important; box-shadow: none !important; font-size: 14px; color: var(--sa-ink); }
+.sa-hist .lead-comment-item { border-width: 1px !important; border-style: solid !important; border-radius: 16px !important; padding: 12px 14px !important; margin: 0 !important; box-shadow: none !important; font-size: 14px; color: var(--sa-ink); }
 .sa-hist .lead-comment-badge { border-radius: 999px; font-size: 11px; font-weight: 800; padding: 2px 8px; }
 .sa-hist .lead-comment-meta, .sa-hist .lead-comment-date, .sa-hist .lead-comment-author { font-size: 12px !important; color: var(--sa-mut) !important; }
 .sa-kvs { padding: 4px 14px; }
@@ -439,7 +439,7 @@ body.sa-on .modal-overlay > .modal .modal-footer .btn { min-height: 48px; }
 
 /* toast */
 @keyframes saToast { from { transform: translateY(120%); opacity: 0; } to { transform: none; opacity: 1; } }
-.sa-toast { position: fixed; left: 16px; right: 16px; bottom: calc(var(--sa-nav-h, 68px) + 12px); z-index: 1300; display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 16px; background: #0B1220; color: #FFFFFF; font: 600 14px/1.35 'Plus Jakarta Sans', system-ui, sans-serif; box-shadow: 0 14px 30px rgba(11, 18, 32, .3); animation: saToast .3s cubic-bezier(.2, .8, .2, 1) both; }
+.sa-toast { position: fixed; left: 16px; right: 16px; bottom: calc(var(--sa-nav-h, 68px) + 12px); z-index: 1300; display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 16px; background: #0B1220; color: #FFFFFF; font: 600 14px/1.35 'DW Jakarta', 'Plus Jakarta Sans', system-ui, sans-serif; box-shadow: 0 14px 30px rgba(11, 18, 32, .3); animation: saToast .3s cubic-bezier(.2, .8, .2, 1) both; }
 .sa-toast.is-out { opacity: 0; transform: translateY(40%); transition: opacity .25s, transform .25s; }
 .sa-toast > span:nth-child(2) { flex: 1; }
 .sa-toast-i { flex: none; width: 26px; height: 26px; border-radius: 50%; background: #12B76A; display: grid; place-items: center; }
@@ -467,3 +467,6 @@ body.sa-on.sa-full { --sa-nav-h: 0px; }
 body.sa-on.sa-full .sa-nav { display: none; }
 body.sa-on.sa-full .sa-bar { padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
 body.sa-on.sa-full .sa-toast { bottom: calc(92px + env(safe-area-inset-bottom)); }
+
+.sa-kvs.sa-kvs--in { margin-top: 10px; padding: 4px 0 0; border-top: 1px solid var(--sa-line); }
+.sa-hist .lead-comment-item:not([class*="lead-comment-item--"]) { border-color: var(--sa-line) !important; }
