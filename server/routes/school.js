@@ -460,7 +460,10 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         // Ustoz ilovasi v2 (1-noyabr): qoplash admin tasdig'isiz darhol hisobga o'tadi; nazoratchi o'quvchiga qo'ng'iroq qilib tekshiradi, kerak bo'lsa rad etadi.
         const { rows } = await c.query(`UPDATE school_makeups SET status='approved', decided_at=NOW(), decision_note='ustoz belgiladi — tasdiqsiz' WHERE id=$1 AND teacher_id=$2 AND status='planned' RETURNING *`, [req.params.id, me.id]);
         if (!rows.length) throw T.fail(409, 'Qoplash topilmadi yoki allaqachon belgilangan');
-        return { makeup: rows[0] };
+        const mk = rows[0];
+        await O.audit(c, mk.student_id, 'makeup-approved', { makeupId: mk.id, missedDate: S.dateStr(mk.missed_date), heldDate: mk.held_date ? S.dateStr(mk.held_date) : null,
+            teacherId: mk.teacher_id, kind: mk.kind, auto: true }, 'ustoz belgiladi — tasdiqsiz', req.user);
+        return { makeup: mk };
     })));
     // O'tib bo'lingan qoplash darsi (dars kuni bo'lmagan kunda) — darhol hisobga o'tadi (1-noyabr qarori: admin tasdig'i yo'q,
     // nazoratchi qo'ng'iroq qilib tekshiradi va kerak bo'lsa rad etadi). Admin (Akademik → Davomat) o'quvchining asosiy ustozi
@@ -507,11 +510,25 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         const heldStart = req.body.heldTime != null && req.body.heldTime !== '' ? T.toMin(req.body.heldTime) : null;
         if (req.body.heldTime && heldStart == null) throw T.fail(400, 'Qoplash vaqti noto\'g\'ri');
         const full = req.body.full === false ? false : req.body.full === true ? true : null;
+        // "Band soatlar yopiq" — serverda ham: o'sha kuni shu vaqtda boshqa dars/sinov/qoplash bo'lsa, qoplash shu vaqtga yozilmaydi.
+        if (heldStart != null && kind === 'separate') {
+            const st = (await c.query('SELECT lesson_duration FROM students WHERE id=$1', [req.body.studentId])).rows[0];
+            const dur = Number(st?.lesson_duration) || 30;
+            const ctx = await S.loadContext(c, { teacherIds: [own.teacherId], from: held, to: held });
+            const v = S.dayView(ctx, own.teacherId, held);
+            const clash = v.items.find(i => ['lesson', 'trial', 'makeup'].includes(i.kind) && i.studentId !== req.body.studentId
+                && !['cancelled', 'rejected', 'no_show'].includes(i.status) && i.start < heldStart + dur && heldStart < i.end);
+            if (clash) throw T.fail(409, `${T.fromMin(heldStart)} da boshqa dars bor — boshqa vaqtni tanlang`);
+        }
         const { rows } = await c.query(`INSERT INTO school_makeups (id,student_id,teacher_id,missed_date,held_date,kind,status,created_by,decided_by,decided_by_name,decided_at,decision_note,held_start_min,held_full)
             VALUES ($1,$2,$3,$4,$5,$6,'approved',$7,$8,$9,NOW(),$10,$11,$12) RETURNING *`, [randomUUID(), req.body.studentId, own.teacherId, missed, held, kind, req.user.id,
             own.admin ? req.user.id : null, own.admin ? req.user.name || '' : null, own.admin ? 'admin kiritdi (Akademik → Davomat)' : 'ustoz kiritdi — tasdiqsiz', heldStart, full])
             .catch(e => { if (e.code === '23505') throw T.fail(409, 'Bu dars uchun qoplash allaqachon bor'); throw e; });
-        return { makeup: rows[0] };
+        const mk = rows[0];
+        // O'quvchi "O'zgarishlar tarixi": kim kiritgani (backfill "system" deb yozmasin).
+        await O.audit(c, mk.student_id, 'makeup-approved', { makeupId: mk.id, missedDate: missed, heldDate: held, teacherId: mk.teacher_id, kind, auto: !own.admin,
+            ...(heldStart != null ? { heldTime: T.fromMin(heldStart) } : {}), ...(full === false ? { full: false } : {}) }, mk.decision_note || '', req.user);
+        return { makeup: mk };
     }
     router.post('/makeups/separate', handle(req => write(req, c => insertHeldMakeup(req, c, 'separate'))));
     router.post('/makeups/double', handle(req => write(req, c => insertHeldMakeup(req, c, 'double'))));
@@ -543,6 +560,12 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         if (approve) {
             const m = (await c.query('SELECT student_id, missed_date FROM school_makeups WHERE id=$1', [req.params.id])).rows[0];
             if (m?.missed_date && await cameOn(c, m.student_id, S.dateStr(m.missed_date))) throw T.fail(409, 'Qoldirilgan kunda "Keldi" bor — bu qoplashni tasdiqlab bo\'lmaydi (maoshga ikki marta o\'tadi), rad eting');
+        }
+        if (!approve) {
+            // Hisobga o'tgan qoplashni rad etish faqat joriy oyda — yopilgan (maoshi hisoblangan) oy jimgina o'zgarmasin.
+            const cur = (await c.query('SELECT status, missed_date, held_date FROM school_makeups WHERE id=$1', [req.params.id])).rows[0];
+            const m = S.dateStr(cur?.held_date || cur?.missed_date || '').slice(0, 7);
+            if (cur?.status === 'approved' && m && m < T.nowLocal().date.slice(0, 7)) throw T.fail(409, `${m} oyi yopilgan — bu qoplashni endi rad etib bo'lmaydi`);
         }
         const { rows } = await c.query(`UPDATE school_makeups SET status=$2, decided_by=$3, decided_by_name=$4, decided_at=NOW(), decision_note=$5
             WHERE id=$1 AND (status='review' OR ($6 AND status='approved')) RETURNING *`, [req.params.id, approve ? 'approved' : 'rejected', req.user.id, req.user.name || '', String(req.body?.note || '').slice(0, 300), !approve]);

@@ -534,6 +534,14 @@
             const isCur = msMonth === cur, next = D().shiftMonth(msMonth, 1), nm = monName(next);
             const h = histOf(msMonth), paid = !!(h && (h.paidAt || h.status === 'paid'));
             const groups = payGroups(msMonth), tot = groups.reduce((a, g) => ({ c: a.c + g.c, p: a.p + g.p, sum: a.sum + g.sum }), { c: 0, p: 0, sum: 0 });
+            // Bitta manba: guruhlar yig'indisi server summasiga (joriy oy — mainTotal/total, yopilgan oy — tarix) moslanadi;
+            // ilova faqat taqsimotni (ulushni) qoidadan hisoblaydi.
+            const base = isCur ? Number(sal?.current?.mainTotal ?? sal?.current?.total) : h ? Number(h.amount) : NaN;
+            if (Number.isFinite(base) && base > 0 && tot.sum > 0) {
+                const f = base / tot.sum; let acc = 0;
+                groups.forEach((g, i) => { g.sum = i === groups.length - 1 ? Math.round(base) - acc : Math.round(g.sum * f); acc += g.sum; });
+                tot.sum = Math.round(base);
+            }
             const amount = isCur ? sal?.current?.total ?? null : h ? h.amount : tot.sum;
             const estimate = !isCur && !h;
             const prevAmt = isCur ? histOf(prev)?.amount : histOf(D().shiftMonth(msMonth, -1))?.amount;
@@ -659,7 +667,7 @@
               <nav aria-label="Bo'limlar" class="a2 bq-tiles">
                 ${tile('data-u-push="darslik"', 'inf', P.book, 'Darslik', '72 dars')}
                 ${tile('data-u-go="jadval"', 'wa', P.trial, 'Sinov darslari', trialsToday ? `Bugun ${trialsToday} ta` : "bugun yo'q")}
-                ${tile('data-u-push="maosh"', 'ok', P.money, 'Maosh', total != null ? `${mln(total)} mln` : 'hisob', total != null ? 'color: #067647; font-weight: 700' : '')}
+                ${tile('data-u-push="maosh"', 'ok', P.money, 'Maosh', total != null ? `${mln(total)} mln · ${D().MON[+D().now().month.slice(5) - 1]}` : 'hisob', total != null ? 'color: #067647; font-weight: 700' : '')}
                 ${tile('data-u-push="reyting"', 'wa', P.cup, 'Reyting', rk ? `${rk.rank}-o'rin` : 'ustozlar')}
                 ${tile('data-bq-break', 'bq-or', P.coffee, 'Tanaffus', 'sinovga tanaffus olish')}
                 ${tile('data-bq-inactive', 'mu', P.box, 'Faol emas', `${s.inactive?.length ?? 0} o'quvchi`)}

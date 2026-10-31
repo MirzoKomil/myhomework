@@ -98,8 +98,12 @@ CREATE UNIQUE INDEX IF NOT EXISTS school_student_groups_name ON school_student_g
 ALTER TABLE school_makeups ADD COLUMN IF NOT EXISTS held_start_min SMALLINT;
 ALTER TABLE school_makeups ADD COLUMN IF NOT EXISTS held_full BOOLEAN;
 -- Ustoz ilovasi v2: "Sinovga tanaffus" — ustoz admin ochgan sinov vaqtiga tanaffus oladi (kind='break', faqat sana, sabab majburiy).
-ALTER TABLE school_overrides DROP CONSTRAINT IF EXISTS school_overrides_kind_check;
-ALTER TABLE school_overrides ADD CONSTRAINT school_overrides_kind_check CHECK (kind IN ('open','close','makeup_only','leave','break'));
+DO $$ BEGIN
+ IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='school_overrides_kind_check' AND pg_get_constraintdef(oid) LIKE '%break%') THEN
+  ALTER TABLE school_overrides DROP CONSTRAINT IF EXISTS school_overrides_kind_check;
+  ALTER TABLE school_overrides ADD CONSTRAINT school_overrides_kind_check CHECK (kind IN ('open','close','makeup_only','leave','break'));
+ END IF;
+END $$;
 ALTER TABLE school_overrides ADD COLUMN IF NOT EXISTS reason_code TEXT NOT NULL DEFAULT '';
 ALTER TABLE school_overrides ADD COLUMN IF NOT EXISTS note TEXT NOT NULL DEFAULT '';
 ALTER TABLE school_student_groups ADD COLUMN IF NOT EXISTS members JSONB NOT NULL DEFAULT '{}'::jsonb;

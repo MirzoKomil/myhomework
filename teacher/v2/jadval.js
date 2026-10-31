@@ -19,7 +19,8 @@
 
     // ── Yordamchilar ──
     const today = () => D().now().date;
-    const tomorrow = () => U.addDays(today(), 1);
+    // "Ertaga" = keyingi ish kuni (yakshanba dam olish) — sinov ham, tanaffus ham shu kunlarga (server addBreak bilan bir qoida).
+    const tomorrow = () => { const d = U.addDays(today(), 1); return D().wdOf(d) === 7 ? U.addDays(d, 1) : d; };
     const weekStart = date => U.addDays(date, 1 - D().wdOf(date));
     const trials = () => D().S.trials || [];
     const tReq = l => D().tReq(l);

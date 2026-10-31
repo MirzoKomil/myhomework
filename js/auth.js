@@ -70,6 +70,8 @@ function mhSaveSession(data) {
     localStorage.setItem('mh_currentUser', JSON.stringify(data.user));
 }
 
+// ?e= faqat ma'lum kodlar — URL orqali istalgan (soxta) xabar ko'rsatib bo'lmasin.
+const MH_BACK_MESSAGES = { expired: 'Sessiya tugadi — qayta kiring', blocked: 'Bu akkaunt bloklangan. Rahbariyatga murojaat qiling.' };
 function mhBackMessage() {
-    try { return new URLSearchParams(location.search).get('e') || ''; } catch { return ''; }
+    try { return MH_BACK_MESSAGES[new URLSearchParams(location.search).get('e') || ''] || ''; } catch { return ''; }
 }

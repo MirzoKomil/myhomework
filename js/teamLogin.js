@@ -343,7 +343,7 @@
             <div class="col" style="gap:10px">
               <div class="tl-step"><span>1</span><span>${tg ? "Adminga yozing — login avtomatik qo'shiladi" : "Administratorga murojaat qiling va loginingizni ayting"}</span></div>
               <div class="tl-step"><span>2</span><span>Vaqtinchalik parol bilan kiring</span></div>
-              <div class="tl-step"><span>3</span><span>Ilova yangi parol qo'yishni so'raydi</span></div>
+              <div class="tl-step"><span>3</span><span>Profilda o'zingizga yangi parol qo'ying</span></div>
             </div>
             ${tg ? `<a class="tl-cta" href="${esc(href)}" target="_blank" rel="noopener"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 4L3 11l6 2 2 6 3-4 5 4z"/></svg>Telegramda adminga yozish</a>`
                 : `<div class="tl-hint">${INFO}<span>Administrator raqami yoki Telegram manzilini jamoa guruhidan oling.</span></div>`}

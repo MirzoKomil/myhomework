@@ -330,7 +330,7 @@
     // ── Kirish ──────────────────────────────────────────────────────────────
     function renderLogin(error = '') {
         // Domwork Team: kirish bitta — umumiy login sahifasi (/). U yerda ustoz rolini aniqlab, shu ilovaga qaytaradi.
-        if (window.UstozV2) { location.replace(error ? '/?e=' + encodeURIComponent(error) : '/'); return; }
+        if (window.UstozV2) { location.replace(error ? '/?e=expired' : '/'); return; }
         root.innerHTML = `<div style="padding: 56px 24px 32px; display: flex; flex-direction: column; gap: 28px; min-height: 100vh; background: #FFFFFF">
           <div style="display: flex; flex-direction: column; gap: 14px">
             <div style="width: 60px; height: 60px; border-radius: 18px; background: #0065D6; display: flex; align-items: center; justify-content: center; color: #FFFFFF">${ico(I.grad, 32)}</div>

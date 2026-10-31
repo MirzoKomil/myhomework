@@ -372,7 +372,9 @@ const BREAK_REASONS = { health: 'Sog\'lig\'im', personal: 'Shaxsiy ish', tech: '
 async function addBreak(db, actor, teacherId, input, now = new Date()) {
     const today = T.nowLocal(now);
     const date = T.assertDate(input.date);
-    if (date < today.date || date > T.addDays(today.date, 1)) throw fail(400, 'Tanaffus faqat bugun yoki ertaga uchun olinadi');
+    // Bugun yoki keyingi ish kuni (yakshanba dam olish) — sinov ham shu kunlarga qo'yiladi.
+    const next = T.addDays(today.date, 1), nextWork = T.weekday(next) === 7 ? T.addDays(next, 1) : next;
+    if (date < today.date || date > nextWork || (date !== today.date && date !== nextWork)) throw fail(400, 'Tanaffus faqat bugun yoki keyingi ish kuni uchun olinadi');
     const code = String(input.reasonCode || '');
     if (!BREAK_REASONS[code]) throw fail(400, 'Sababni tanlang');
     const note = String(input.note || '').trim().slice(0, 300);
