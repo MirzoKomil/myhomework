@@ -249,16 +249,17 @@
         const ids = COLS().map(c => c.id);
         const counts = Object.fromEntries(ids.map(id => [id, pool.filter(l => st(l) === id).length]));
         const rows = (q ? pool : pool.filter(l => st(l) === S.stage)).map(l => ({ l, b: badge(l) }))
-            .sort((a, b) => a.b.sort - b.b.sort || (a.b.t || 0) - (b.b.t || 0));
+            .sort(S.sortNew ? (a, b) => (assignedAt(b.l) || 0) - (assignedAt(a.l) || 0) : (a, b) => a.b.sort - b.b.sort || (a.b.t || 0) - (b.b.t || 0));
         const redCount = rows.filter(r => r.b.tone === 'red').length;
         return `
         <header class="sa-top sa-top--leads">
           <div class="sa-top-row"><h1>Lidlar <em>${all.length}</em></h1>
+            <button type="button" class="sa-icon-btn${S.sortNew ? ' has-dot' : ''}" data-sa-sort aria-label="${S.sortNew ? 'Saralash: eng yangilari birinchi' : 'Saralash: muhimlari birinchi'}">${ic('sort')}</button>
             <button type="button" class="sa-icon-btn${S.src !== 'all' ? ' has-dot' : ''}" data-sa-filter aria-label="Manba boʻyicha filtr">${ic('filter')}</button></div>
           <label class="sa-search">${ic('search', 18)}<span class="sa-sr">Lid qidirish</span><input type="search" id="saLeadSearch" placeholder="Ism, telefon yoki ID" value="${esc(S.q)}" autocomplete="off">${S.q ? `<button type="button" class="sa-icon-btn sa-ghost sa-sm" data-sa-clearq aria-label="Qidiruvni tozalash">${ic('close', 16, 2.4)}</button>` : ''}</label>
           ${q ? `<div class="sa-q-info">${rows.length ? `${rows.length} ta lid topildi` : 'Hech narsa topilmadi'}</div>` : `<div class="sa-chips" role="tablist" aria-label="Bosqichlar">${ids.map(id => `<button type="button" role="tab" aria-selected="${id === S.stage}" class="sa-chip${id === S.stage ? ' is-on' : ''}" data-sa-stage="${id}">${esc(SHORT[id] || colLabel(id))}<b>${counts[id] || 0}</b></button>`).join('')}</div>`}
         </header>
-        ${q ? '' : `<div class="sa-hint"><span>${esc(colLabel(S.stage))}</span><span>${redCount ? `<b>${redCount} tasi</b> kechikkan` : ''}</span></div>`}
+        ${q ? '' : `<div class="sa-hint"><span>${esc(colLabel(S.stage))} · ${S.sortNew ? 'eng yangilari birinchi' : 'muhimlari birinchi'}</span><span>${redCount ? `<b>${redCount} tasi</b> kechikkan` : ''}</span></div>`}
         <div class="sa-body sa-rows">
           ${rows.length ? rows.map(({ l, b }, i) => `
             <article class="sa-lrow" style="--i:${Math.min(i, 10)}">
@@ -334,6 +335,8 @@
         const IQ = typeof LEAD_INFO_PROVIDED_QUESTIONS !== 'undefined' ? LEAD_INFO_PROVIDED_QUESTIONS : [];
         const info = (Array.isArray(l.infoProvidedSurvey) ? l.infoProvidedSurvey : []).filter(a => a && a.answer === 'yes')
             .map(a => String(a.label || (IQ.find(q => q.id === a.id) || {}).label || a.id || '').replace(/\?$/, '').replace(/(tushuntirildi|aytildi|taklif qilindi)mi$/, '$1')).filter(Boolean).join(', ');
+        const dt = v => (v && /^\d{4}-\d{2}-\d{2}/.test(String(v)) && g('formatDateShort') ? formatDateShort(String(v).slice(0, 10)) : v);
+        const PCL = { debtClearedLabel: 'Qarz yopildimi', debtClearedDateLabel: 'Qarz yopilgan sana', installmentReceivedLabel: 'Nasiya puli keldimi', installmentReceivedDateLabel: 'Nasiya kelgan sana' };
         const PT = { full: 'Toʻliq', partial: 'Qisman', debtor: 'Qarzga', installment: 'Nasiya' };
         const DOW = ['', 'Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba', 'Yakshanba'];
         const pc = l.paymentClosedSurvey || {};
@@ -351,9 +354,9 @@
         ${l.decisionSurvey?.reasonLabel ? `<h3 class="sa-h3">Qaror</h3><div class="sa-card sa-kvs">${row('Sabab', l.decisionSurvey.reasonLabel)}</div>` : ''}
         ${dp ? `<h3 class="sa-h3">Keyin sotib oladi</h3><div class="sa-card sa-raw">${defReason ? `<div class="sa-kv"><span>Sabab</span><b>${esc(defReason)}</b></div>` : ''}${dp}</div>` : ''}
         ${tr ? `<h3 class="sa-h3">Sinov darsi</h3><div class="sa-card sa-raw">${tr}</div>` : ''}
-        ${ps.paymentType || ps.amount || ps.totalAmount ? `<h3 class="sa-h3">Toʻlov</h3><div class="sa-card sa-kvs">${row('Toʻlov turi', ps.paymentTypeLabel || PT[ps.paymentType] || ps.paymentType)}${row('Nasiya hamkori', ps.installmentPartnerLabel || ps.installmentPartner)}${row('Tarif', ps.tariffLabel || ps.tariff)}${row('Kurs narxi', total ? num(total) : '')}${row('Summa', ps.amountLabel || (ps.amount ? num(ps.amount) : ''))}${row('Toʻlangan', paidA ? num(paidA) : '')}${row('Qarz', debtA ? num(debtA) : '')}${row('Oxirgi toʻlov', ps.lastPaymentDateLabel || ps.lastPaymentDate)}${row('Keyingi toʻlov', ps.nextPaymentDateLabel || ps.nextPaymentDate)}</div>` : ''}
-        ${pc.closedDate || pc.actualAmount || l.closedDate ? `<h3 class="sa-h3">Toʻlov yopildi</h3><div class="sa-card sa-kvs">${row('Sana', pc.closedDateLabel || pc.closedDate || l.closedDate)}${row('Haqiqiy summa', pc.actualAmount ? num(pc.actualAmount) : '')}${row('Jami', pc.totalAmount ? num(pc.totalAmount) : '')}</div>` : ''}
-        ${po.teacherId || po.lessonTime || po.studentFullName ? `<h3 class="sa-h3">Oʻquvchi va jadval</h3><div class="sa-card sa-kvs">${row('Oʻquvchi', po.studentFullName || [po.studentFirstName, po.studentLastName].filter(Boolean).join(' '))}${row('Ustoz', teacherName(po.teacherId))}${row('Yordamchi', teacherName(po.assistantTeacherId))}${row('Dars kuni', DOW[Number(po.lessonDayOfWeek)] || '')}${row('Dars vaqti', po.lessonTime)}${row('Davomiyligi', po.lessonDuration ? po.lessonDuration + ' daqiqa' : '')}${row('Birinchi dars', po.firstLessonDate)}${row('Daraja', po.courseLevel)}${row('Shartnoma', po.contractNumber ? '№' + po.contractNumber + (po.contractDate ? ' · ' + po.contractDate : '') : '')}${row('Telegram guruh', po.telegramGroupName || po.telegramGroupLink)}${row('Kitob manzili', po.bookAddress)}${row('Ilova', po.platformConnected ? 'Ulangan' : '')}</div>` : ''}
+        ${ps.paymentType || ps.amount || ps.totalAmount ? `<h3 class="sa-h3">Toʻlov</h3><div class="sa-card sa-kvs">${row('Toʻlov turi', ps.paymentTypeLabel || PT[ps.paymentType] || ps.paymentType)}${row('Nasiya hamkori', ps.installmentPartnerLabel || ps.installmentPartner)}${row('Tarif', ps.tariffLabel || ps.tariff)}${row('Kurs narxi', total ? num(total) : '')}${row('Summa', ps.amountLabel || (ps.amount ? num(ps.amount) : ''))}${row('Toʻlangan', paidA ? num(paidA) : '')}${row('Qarz', debtA ? num(debtA) : '')}${row('Oxirgi toʻlov', ps.lastPaymentDateLabel || dt(ps.lastPaymentDate))}${row('Keyingi toʻlov', ps.nextPaymentDateLabel || dt(ps.nextPaymentDate))}</div>` : ''}
+        ${pc.closedDate || pc.actualAmount || l.closedDate ? `<h3 class="sa-h3">Toʻlov yopildi</h3><div class="sa-card sa-kvs">${row('Sana', pc.closedDateLabel || dt(pc.closedDate || l.closedDate))}${row('Haqiqiy summa', pc.actualAmount ? num(pc.actualAmount) : '')}${row('Jami', pc.totalAmount ? num(pc.totalAmount) : '')}${Object.keys(pc).filter(k => /Label$/.test(k) && k !== 'closedDateLabel' && pc[k]).map(k => row(PCL[k] || k.replace(/Label$/, ''), pc[k])).join('')}</div>` : ''}
+        ${po.teacherId || po.lessonTime || po.studentFullName ? `<h3 class="sa-h3">Oʻquvchi va jadval</h3><div class="sa-card sa-kvs">${row('Oʻquvchi', po.studentFullName || [po.studentFirstName, po.studentLastName].filter(Boolean).join(' '))}${row('Ustoz', teacherName(po.teacherId) || po.teacherName)}${row('Yordamchi', teacherName(po.assistantTeacherId) || po.assistantTeacherName)}${row('Jinsi', po.genderLabel || po.gender)}${row('Oʻquvchiga aylandi', po.becomeStudent === 'yes' || po.becomeStudent === true ? 'Ha' : po.becomeStudent === 'no' ? 'Yoʻq' : '')}${row('Dars kuni', DOW[Number(po.lessonDayOfWeek)] || '')}${row('Dars vaqti', po.lessonTime)}${row('Davomiyligi', po.lessonDuration ? po.lessonDuration + ' daqiqa' : '')}${row('Birinchi dars', dt(po.firstLessonDate))}${row('Daraja', po.courseLevelLabel || po.courseLevel)}${row('Shartnoma', po.contractNumber ? '№' + po.contractNumber + (po.contractDate ? ' · ' + dt(po.contractDate) : '') : '')}${row('Shartnoma turi', po.contractTypeLabel || po.contractType)}${row('Telegram guruh', po.telegramGroupName || po.telegramGroupLink)}${row('Kitob manzili', po.bookAddress)}${row('Ilova', po.platformConnectedLabel || (po.platformConnected === 'yes' || po.platformConnected === true ? 'Ulangan' : po.platformConnected === 'no' ? 'Ulanmagan' : ''))}</div>` : ''}
         ${l.failedSaleReason?.label ? `<h3 class="sa-h3">Muvaffaqiyatsiz</h3><div class="sa-card sa-kvs">${row('Sabab', l.failedSaleReason.label)}</div>` : ''}
         ${l.sifatsizReason?.label ? `<h3 class="sa-h3">Sifatsiz</h3><div class="sa-card sa-kvs">${row('Sabab', l.sifatsizReason.label)}</div>` : ''}`;
     }
@@ -550,6 +553,15 @@
         sheetEl.innerHTML = `<button type="button" class="sa-dim" data-sa-sheetclose aria-label="Yopish"></button><section class="sa-sheet ${cls}" role="dialog" aria-modal="true" tabindex="-1"><span class="sa-handle" aria-hidden="true"></span>${html}</section>`;
         document.body.appendChild(sheetEl);
         sheetEl.addEventListener('click', onClick);
+        sheetEl.addEventListener('keydown', e => {
+            if (e.key === 'Escape') { e.preventDefault(); closeSheet(); return; }
+            if (e.key !== 'Tab') return;
+            const f = [...sheetEl.querySelectorAll('button:not([disabled]), a[href], textarea, input')].filter(x => x.offsetParent !== null && !x.classList.contains('sa-dim'));
+            if (!f.length) return;
+            const first = f[0], last = f[f.length - 1];
+            if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+            else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+        });
         sheetEl.querySelector('.sa-sheet')?.focus({ preventScroll: true });
     }
     function closeSheet(instant) {
@@ -611,7 +623,7 @@
             const before = PATH.indexOf(s) >= 0 && PATH.indexOf(s) < PATH.indexOf('boglanildi');
             closeSheet();
             if (before) move(id, 'boglanildi');
-            else toast(note ? 'Izoh saqlandi' : 'Qayd etildi', 'ok');
+            else { if (!note) addComment(id, 'Qoʻngʻiroq: gaplashildi'); toast('Tarixga yozildi', 'ok'); }
             render();
             return;
         }
@@ -751,13 +763,25 @@
     function go(screen, opts = {}) {
         if (opts.reset) S.stack = [];
         else if (S.screen !== screen) S.stack.push({ screen: S.screen, lead: S.lead, tab: S.tab });
-        if (window.history && !opts.fromPop) { if (opts.reset) history.replaceState({ sa: screen }, ''); else history.pushState({ sa: screen }, ''); }
+        if (opts.reset && screen !== 'home') S.stack = [{ screen: 'home' }]; // asosiy tabdan "orqaga" — Bosh sahifaga
+        if (!opts.fromPop) histPush(screen, opts.reset);
         S.screen = screen;
         if (screen !== 'crm') showApp(true);
         render(true);
     }
+    // Brauzer tarixi: asosiy tablar bitta yozuvni almashtiradi (tarix cheksiz o'smaydi), ichki sahifalar qo'shadi.
+    function histPush(screen, reset) {
+        if (!window.history?.pushState) return;
+        const depth = Number(history.state?.saD) || 0;
+        if (reset) {
+            if (screen === 'home') history.replaceState({ sa: 'home', saD: depth }, '');
+            else if (depth >= 1) history.replaceState({ sa: screen, saD: depth }, '');
+            else history.pushState({ sa: screen, saD: 1 }, '');
+        } else history.pushState({ sa: screen, saD: depth + 1 }, '');
+    }
     function back() {
         if (sheetEl) { closeSheet(); return true; }
+        closeCrmPages();
         const prev = S.stack.pop();
         if (!prev) { if (S.screen !== 'home') { go('home', { reset: true, fromPop: true }); return true; } return false; }
         S.screen = prev.screen; S.lead = prev.lead; S.tab = prev.tab || 'tarix';
@@ -772,6 +796,8 @@
         try { _openJadval(); } finally { openJadval._busy = false; }
     }
     function _openJadval() {
+        S.stack = [{ screen: 'home' }];
+        histPush('jadval', true);
         S.crmTab = 'jadval';
         S.screen = 'crm';
         showApp(false);
@@ -831,13 +857,14 @@
             const a = document.activeElement;
             const typing = a && root?.contains(a) && /^(TEXTAREA|INPUT)$/.test(a.tagName) && a.id !== 'saLeadSearch';
             if (typing) { setTimeout(queueRender, 4000); return; } // yozish paytida ekran qayta chizilmaydi
+            if (root && [...root.querySelectorAll('audio')].some(x => !x.paused)) { setTimeout(queueRender, 5000); return; } // yozuv tinglanayotganda ham
             if (!sheetEl && !document.body.classList.contains('modal-open')) render(false);
         });
     }
 
     // ---------- hodisalar ----------
     function onClick(e) {
-        const t = e.target.closest('[data-sa-lead],[data-sa-nav],[data-sa-go],[data-sa-back],[data-sa-stage],[data-sa-stagego],[data-sa-call],[data-sa-tg],[data-sa-sms],[data-sa-move],[data-sa-retrial],[data-sa-survey],[data-sa-tab],[data-sa-stagesheet],[data-sa-sheetclose],[data-sa-outcome],[data-sa-qchip],[data-sa-followup],[data-sa-notify],[data-sa-recmanage],[data-sa-recretry],[data-sa-crm],[data-sa-trials],[data-sa-notif],[data-sa-filter],[data-sa-src],[data-sa-clearq],[data-sa-rper],[data-sa-pay],[data-sa-logout],[data-sa-install],[data-sa-nread],[data-sa-nitem],[data-sa-skip]');
+        const t = e.target.closest('[data-sa-lead],[data-sa-nav],[data-sa-go],[data-sa-back],[data-sa-stage],[data-sa-stagego],[data-sa-call],[data-sa-tg],[data-sa-sms],[data-sa-move],[data-sa-retrial],[data-sa-survey],[data-sa-tab],[data-sa-stagesheet],[data-sa-sheetclose],[data-sa-outcome],[data-sa-qchip],[data-sa-followup],[data-sa-notify],[data-sa-recmanage],[data-sa-recretry],[data-sa-crm],[data-sa-trials],[data-sa-notif],[data-sa-filter],[data-sa-src],[data-sa-clearq],[data-sa-rper],[data-sa-pay],[data-sa-logout],[data-sa-install],[data-sa-nread],[data-sa-nitem],[data-sa-skip],[data-sa-sort]');
         if (!t) return;
         const d = t.dataset;
         if ('saCall' in d) { callPending = { id: d.saCall, at: Date.now() }; return; } // tel: havolasi o'zi ochiladi
@@ -869,7 +896,7 @@
         if ('saRecmanage' in d) { if (g('openLeadRecordingModal')) openLeadRecordingModal(lang(), d.saRecmanage); return; }
         if ('saRecretry' in d) { loadRecordings(S.lead); return; }
         if ('saCrm' in d) return openCrm(d.saCrm);
-        if ('saTrials' in d) { if (window.sotuvSinov?.open) { S.crmTab = 'menu'; S.stack.push({ screen: S.screen }); S.screen = 'crm'; showApp(false); window.sotuvSinov.open({ lang: lang(), from: 'trials', onClose: () => back() }); syncNav(); } return; }
+        if ('saTrials' in d) { if (window.sotuvSinov?.open) { S.crmTab = 'menu'; S.stack.push({ screen: S.screen }); histPush('crm', false); S.screen = 'crm'; showApp(false); window.sotuvSinov.open({ lang: lang(), from: 'trials', onClose: () => back() }); syncNav(); } return; }
         if ('saNotif' in d) return openNotifSheet();
         if ('saNread' in d) { if (g('markAllNotificationsRead')) markAllNotificationsRead(); openNotifSheet(); syncNav(); return; }
         if ('saNitem' in d) return openNotifItem(d.saNitem);
@@ -878,6 +905,7 @@
         if ('saClearq' in d) { S.q = ''; render(true); return; }
         if ('saRper' in d) { S.ratingPeriod = d.saRper; render(false); return; }
         if ('saPay' in d) { window.inflowUI?.openPayment?.(d.saPay); return; }
+        if ('saSort' in d) { S.sortNew = !S.sortNew; render(true); toast(S.sortNew ? 'Eng yangilari birinchi' : 'Muhimlari birinchi', 'ok'); return; }
         if ('saSkip' in d) { S.skip = (S.skip || 0) + 1; render(false); return; }
         if ('saLogout' in d) { document.getElementById('profileLogoutBtn')?.click(); return; }
         if ('saInstall' in d) { if (deferredInstall) { deferredInstall.prompt(); deferredInstall = null; render(false); } }
@@ -889,7 +917,7 @@
         const ta = f.querySelector('textarea');
         const v = ta?.value.trim();
         if (!v) { ta?.focus(); return; }
-        if (addComment(S.lead, v)) { toast('Izoh saqlandi', 'ok'); render(false); }
+        if (addComment(S.lead, v)) { ta.value = ''; toast('Izoh saqlandi', 'ok'); render(false); }
     }
     function onInput(e) {
         if (e.target.id !== 'saLeadSearch') return;
