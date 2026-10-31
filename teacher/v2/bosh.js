@@ -165,6 +165,12 @@
             ev.push({ id: `sal:${h.start}:${h.status}`, cat: 'maosh', tone: 'ok', ic: 'money', title: `${d.MON[m][0].toUpperCase()}${d.MON[m].slice(1)} ${h.paidAt ? "maoshi to'landi" : 'yopildi'} · ${d.money(h.amount)} so'm`,
                 sub: h.paidAt ? `${fmtShort(d.tz(h.paidAt).date)} kartangizga` : `e'tiroz 4-${d.MON[payM]}gacha · to'lov 5-${d.MON[payM]}`, t, go: { push: ['maosh', ''] } });
         }
+        const rt = S0.rating, mine = rt?.rows?.find(r => r.id === rt.selfId);
+        if (mine?.prevRank) {
+            const pm = d.shiftMonth(n.month, -1), nm = d.MON[+pm.slice(5) - 1];
+            ev.push({ id: `rating:${pm}:${mine.prevRank}`, cat: 'boshqa', tone: 'wa', ic: 'cup', title: `${nm[0].toUpperCase()}${nm.slice(1)} reytingi: ${mine.prevRank}-o'rin`,
+                sub: `${d.MON[+n.month.slice(5) - 1]}da hozir ${mine.rank}-o'rin${mine.score != null ? ` · ${mine.score} ball` : ''}`, t: at(`${n.month}-01`, 9 * 60), go: { push: ['reyting', ''] } });
+        }
         for (const { s, at: from } of welcomeCandidates()) {
             const f = firstLesson(s, from > n.date ? from : n.date);
             ev.push({ id: `new:${s.id}:${from}`, cat: 'dars', tone: 'vio', ic: 'userplus', title: `Yangi o'quvchi: ${esc(d.short(s.name))}`,
@@ -549,7 +555,7 @@
     ${unread.length ? '<button type="button" class="bs-rdall" data-bs-readall>O\'qildi</button>' : '<span style="width: 64px"></span>'}
   </div>
   <div class="bd nb" style="padding-top: 10px">
-    <div class="chips bs-chips" role="group" aria-label="Turi">${CATS.map(([k, l]) => { const c = k === 'all' ? unread.length : unread.filter(e => e.cat === k).length; return `<button type="button" class="chip${cat === k ? ' on' : ''}" data-bs-cat="${k}" aria-pressed="${cat === k}">${l}${c ? ` · ${c}` : ''}</button>`; }).join('')}</div>
+    <div class="chips bs-chips" role="group" aria-label="Turi">${CATS.map(([k, l]) => { const c = k === 'all' ? unread.length : 0; return `<button type="button" class="chip${cat === k ? ' on' : ''}" data-bs-cat="${k}" aria-pressed="${cat === k}">${l}${c ? ` · ${c}` : ''}</button>`; }).join('')}</div>
     ${fresh.length ? `<div class="xs b" style="letter-spacing: .06em; padding: 4px 4px 0">${allToday ? 'BUGUN' : 'YANGI'}</div><div class="card l a1">${fresh.map(e => item(e, true)).join('')}</div>` : ''}
     ${old.length ? `<div class="xs b" style="letter-spacing: .06em; padding: 4px 4px 0">${fresh.length ? 'OLDINROQ' : "O'QILGAN"}</div><div class="card l a2">${old.map(e => item(e, false)).join('')}</div>` : ''}
     ${!list.length ? `<div class="card a1" style="align-items: center; text-align: center; gap: 8px; padding: 22px 16px">

@@ -13,7 +13,6 @@
 .ph .bs-chips { overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 0 16px }
 .ph .bs-chips::-webkit-scrollbar { display: none }
 .ph .bs-chips .chip { font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; min-height: 36px }
-.ph a.bs-nt { color: #0B1220 }
 .bs-nt { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid #EEF2F8; color: #0B1220; position: relative }
 .bs-nt:last-child { border-bottom: 0 }
 .bs-nt .bs-ic { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; flex: none }

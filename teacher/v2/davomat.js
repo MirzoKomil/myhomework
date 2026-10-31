@@ -12,8 +12,8 @@
     const QULF_FROM = '2026-11-18';
     const MARK_BEFORE = 15; // server TEACHER_MARK_BEFORE_MIN bilan bir xil
     const INTRO_KEY = 'dwt_dv_intro', FLT_KEY = 'dwt_dv_flt';
-    // Dizayndagi 5 sabab → server kodlari (sick|travel|noanswer|other). "Ogohlantirmadi" uchun alohida kod yo'q — other + izoh.
-    const REASONS = [['nowarn', 'Ogohlantirmadi', 'other'], ['sick', 'Kasal', 'sick'], ['travel', 'Uzrli sabab', 'travel'], ['noanswer', "Aloqa bo'lmadi", 'noanswer'], ['other', 'Boshqa', 'other']];
+    // Dizayndagi 5 sabab → server kodlari (server/db.js ABSENCE_REASONS). Eski yozuvlar: other + "Ogohlantirmadi · ..." izohi ham tan olinadi.
+    const REASONS = [['nowarn', 'Ogohlantirmadi', 'nowarn'], ['sick', 'Kasal', 'sick'], ['travel', 'Uzrli sabab', 'travel'], ['noanswer', "Aloqa bo'lmadi", 'noanswer'], ['other', 'Boshqa', 'other']];
     const ICO = {
         prev: '<path d="M15 6l-6 6 6 6"></path>', next: '<path d="M9 6l6 6-6 6"></path>',
         ok: '<path d="M5 12l5 5L20 7"></path>', x: '<path d="M6 6l12 12M18 6L6 18"></path>',
@@ -203,7 +203,7 @@
                 try {
                     let extra = {}, r;
                     if (pick === 'p') extra = onTime ? { heldFrom: '', heldTo: '' } : { heldFrom: d.hm(tmin(from)), heldTo: d.hm(tmin(to)) };
-                    else { const rr = REASONS.find(x => x[0] === reason); extra = { reasonCode: rr[2], reasonNote: rr[0] === 'nowarn' ? ['Ogohlantirmadi', note.trim()].filter(Boolean).join(' · ') : note.trim() }; }
+                    else { const rr = REASONS.find(x => x[0] === reason); extra = { reasonCode: rr[2], reasonNote: note.trim() }; }
                     r = await saveMark(s, date, pick === 'p', extra);
                     if (pick === 'p' && dbl && dMiss) {
                         if (r === 'queued') { U.toast("Internet yo'q — Keldi saqlandi, qoplashni ulanganda qo'shing"); close(); U.render(); onDone?.(); return; }

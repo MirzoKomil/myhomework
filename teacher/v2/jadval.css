@@ -101,8 +101,4 @@
 .jd-wks{flex:1;display:flex;flex-wrap:wrap;gap:6px}
 .jd-wk{display:inline-flex;align-items:center;height:28px;padding:0 8px;border-radius:8px;font-size:12px;font-weight:700;color:#0B1220;background:#EEF1F6;white-space:nowrap}
 @media (prefers-reduced-motion:reduce){.jd-mdl.jd-anim,.jd-bell.jd-anim::after{animation:none}}
-/* .ph button{font:inherit} (ustoz.css) .btn qalinligini yo'qotadi — jadval tugmalari dizayndagidek 800 */
-.ph button.btn:is(.jd-res,[data-jd-break],[data-jd-unbreak],[data-go],[data-jd-acc],[data-jd-rej],[data-jd-send],[data-jd-done],[data-jd-wk]){font-weight:800;font-size:15px}
-.ph button.btn.sm:is(.jd-res,[data-jd-wk]){font-size:14px}
 .jd-shw > *{flex-shrink:0}
-.ph .seg.jd-seg44 button,.ph .jd-shw .seg button{font-size:14px;font-weight:700}

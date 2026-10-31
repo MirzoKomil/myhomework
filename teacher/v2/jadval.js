@@ -199,7 +199,7 @@ ${free ? `<div style="display: grid; grid-template-columns: 1fr; gap: 8px; flex:
     }
 
     // ── P2: Sinovga tanaffus olish oynasi ──
-    const BREAK_FALLBACK = [['tired', 'Charchadim / dam olish'], ['health', "Sog'lig'im"], ['family', 'Oilaviy ish'], ['study', "O'qish / tayyorgarlik"], ['other', 'Boshqa sabab']].map(([code, label]) => ({ code, label }));
+    const BREAK_FALLBACK = [['health', "Sog'lig'im"], ['personal', 'Shaxsiy ish'], ['tech', 'Internet / texnika'], ['other', 'Boshqa']].map(([code, label]) => ({ code, label }));
     let breakReasons = null;
     function openBreak(whole) {
         const c = tfLoad();
@@ -255,7 +255,7 @@ ${!rows.length ? `<div class="note w" style="padding: 10px 12px"><span>${!by[st.
                     if (st.busy) return;
                     if (!merged.length) return U.toast(st.whole ? "Bu kunda bo'sh sinov vaqti yo'q" : 'Vaqtni tanlang');
                     if (!st.reason) return U.toast('Sababni tanlang');
-                    if (st.reason === 'other' && st.note.trim().length < 3) return U.toast('"Boshqa sabab" uchun izoh yozing');
+                    if (st.reason === 'other' && st.note.trim().length < 3) return U.toast('"Boshqa" uchun izoh yozing');
                     st.busy = true; draw();
                     // Butun kun: kunda sinov yoki tanaffus bo'lmasa — wholeDay; aks holda bo'sh vaqtlar ro'yxati (server sinovli vaqtni rad etadi).
                     const pure = st.whole && !rows.some(r => r.kind !== 'free');
