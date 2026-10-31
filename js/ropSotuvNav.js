@@ -84,7 +84,7 @@
             return;
         }
         const [tab, ctx] = it.go;
-        window.sotuvSinov?.close?.({ silent: true });
+        window.sotuvSinov?.close?.({ silent: true }); window.jadvalV3?.close?.({ silent: true });
         if (tab === 'sales' && document.getElementById('tab-sales')?.classList.contains('active') && typeof switchSalesSection === 'function') switchSalesSection(ctx.salesSection);
         else switchTab(tab, ctx || {});
         mark();
@@ -128,7 +128,7 @@
             where.prepend(el);
         }
         el.innerHTML = `<span class="rs-more-l">Boshqa boʻlimlar:</span>${links.map(([tab, label, ctx], i) => `<button type="button" class="rs-more-b" data-i="${i}">${label}</button>`).join('')}`;
-        el.querySelectorAll('[data-i]').forEach(b => b.onclick = () => { const [tab, , ctx] = links[Number(b.dataset.i)]; window.sotuvSinov?.close?.({ silent: true }); if (tab === 'sales' && document.getElementById('tab-sales')?.classList.contains('active') && typeof switchSalesSection === 'function') switchSalesSection(ctx.salesSection); else switchTab(tab, ctx || {}); mark(); });
+        el.querySelectorAll('[data-i]').forEach(b => b.onclick = () => { const [tab, , ctx] = links[Number(b.dataset.i)]; window.sotuvSinov?.close?.({ silent: true }); window.jadvalV3?.close?.({ silent: true }); if (tab === 'sales' && document.getElementById('tab-sales')?.classList.contains('active') && typeof switchSalesSection === 'function') switchSalesSection(ctx.salesSection); else switchTab(tab, ctx || {}); mark(); });
     }
     // Reyting (sidebar → "Reyting"): dizayn tilidagi sahifa — sarlavha "Reyting", ichki "Sotuv" tablar qatori va
     // "Boshqa bo'limlar" yashirin. ROP uchun "Sotuv menejerlari · Ustozlar" almashtirgichi: "Ustozlar" — Reyting dizayni

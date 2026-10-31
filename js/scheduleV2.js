@@ -102,12 +102,15 @@
         for (const b of [...blocks].sort((a, c) => a.start - c.start)) { b.top = Math.max(b.start, prev + STACK_STEP); prev = b.top; }
         return blocks;
     }
-    function vgrid(cols, [H0, H1], { cls = '', stack = false } = {}) {
+    function vgrid(cols, [H0, H1], { cls = '', stack = false, q15 = false } = {}) {
         const { esc } = U();
         const H = (H1 - H0) / 60;
         const y = m => `calc(var(--hh) * ${((m - H0) / 60).toFixed(4)})`;
         const td = U().today(), now = U().nowMin();
-        let axis = ''; for (let h = H0 / 60; h < H1 / 60; h++) axis += `<span style="top:${y(h * 60)}">${String(h).padStart(2, '0')}:00</span>`;
+        let axis = '';
+        // Dars jadvali v3 uslubi (ustoz): har 15 daqiqa yozilgan qator — soat qalin, :30 o'rtacha, :15/:45 och (css/jadvalV3.css).
+        if (q15) { for (let m = H0; m < H1; m += 15) axis += `<span class="sv-q sv-q--${m % 60 === 0 ? 'h' : m % 60 === 30 ? 'half' : 'q'}" style="top:${y(m)}">${U().hm(m)}</span>`; cls = `${cls} is-q15`.trim(); }
+        else for (let h = H0 / 60; h < H1 / 60; h++) axis += `<span style="top:${y(h * 60)}">${String(h).padStart(2, '0')}:00</span>`;
         const col = c => {
             if (stack) stackTops(c.blocks); else lanes(c.blocks);
             const bl = c.blocks.map(b => {
@@ -160,7 +163,9 @@
         for (const i of v.items || []) {
             const l = look(i, v.date, { names });
             const attrs = i.studentId ? ` data-st="${esc(i.studentId)}"` : i.kind === 'trial' ? ` data-tr="${esc(i.bookingId || '')}" data-lead="${esc(i.leadId || '')}"` : i.overrideId ? ` data-ovid="${esc(i.overrideId)}"` : '';
-            out.push({ start: i.start, end: i.end, cls: l.cls, t: l.t, s: l.s, click: !!attrs && (i.kind !== 'close' && i.kind !== 'leave' || clickOv), attrs: attrs + (i.overrideId ? ` data-ovk="${esc(i.kind)}"` : '') });
+            // Dars jadvali v3 uslubi (ustoz haftasi, .is-q15): dars rangi davomiylikdan (15/30/60), holat — kichik yozuv.
+            const dk = i.kind === 'lesson' || i.kind === 'reserved' ? ` jvd${i.end - i.start <= 15 ? 15 : i.end - i.start <= 30 ? 30 : 60}` : '';
+            out.push({ start: i.start, end: i.end, cls: l.cls + dk, t: l.t, s: l.s, click: !!attrs && (i.kind !== 'close' && i.kind !== 'leave' || clickOv), attrs: attrs + (i.overrideId ? ` data-ovk="${esc(i.kind)}"` : '') });
         }
         for (const a of assist) {
             const end = Math.max(a.end, a.start + 30);
@@ -176,6 +181,8 @@
         return views.some(v => v.date === sun && (v.items.length || (v.work.length && !v.noHours))) ? days : days.slice(0, 6);
     };
     const LEGEND_T = [['k-rsv', 'Muzlatilgan o\'quvchi vaqti · saqlangan, faqat sinov'], ['k-asw', 'Yordamchi aloqasi · band qilmaydi'], ['k-ok', 'Keldi'], ['k-no', 'Kelmadi'], ['k-un', 'Belgilanmagan'], ['k-wait', 'Rejada'], ['k-mk', 'Qoplash'], ['k-tr', 'Sinov darsi'], ['k-free', 'Bo\'sh (sotuv sinov qo\'ya oladi)'], ['k-freex', 'Admin ochgan'], ['k-cls', 'Sinovga yopiq'], ['k-off', 'Ish vaqti emas']];
+    // Ustoz haftasi (Dars jadvali v3 uslubi): hamma rolda bir xil belgilar; bo'sh joy ko'rinmaydi, bosilsa qoplash rejalashtiriladi.
+    const LEGEND_Q15 = [['jvd15', '15 daqiqalik dars'], ['jvd30', '30 daqiqalik dars'], ['jvd60', '60 daqiqalik dars'], ['k-tr', 'Sinov darsi'], ['k-mk', 'Qoplash'], ['k-rsv', 'Muzlatilgan · joyi saqlangan'], ['k-free', 'Boʻsh joyni bosing → qoplash darsi']];
     // rules — "Jadval qoidalari" havolasi (ustoz/yordamchi: dizaynda sarlavha qatorida tugma yo'q).
     // "Yordamchi aloqasi" bandi — faqat jadvalda yordamchi aloqasi bo'lsa (asosiy ustozda 29-okt dan yordamchilik yo'q).
     const legendT = asst => (asst && asst.length ? LEGEND_T : LEGEND_T.filter(([c]) => c !== 'k-asw'));
@@ -604,7 +611,7 @@
         body.innerHTML = `<div class="sv-lay">
             <section class="sc-card sv-wcard"><header class="sv-bh"><h2>${mode === 'tday' ? esc(dayLabel(st.date)) : esc(weekTitle(from))} · ${n('lesson')} dars · ${n('makeup')} qoplash · ${n('trial')} sinov${asst.length ? ` · ${asst.length} yordamchi aloqasi (jadvalni band qilmaydi)` : ''}</h2>
               <p class="sc-mt sv-hint">Bo'sh joyni bosing → qoplash darsi · darsni bosing → o'quvchi kartasi</p></header>
-              ${vgrid(cols, range, { cls: mode === 'tday' ? 'is-day' : '' })}${legend(legendT(asst), { rules: true })}</section>
+              ${vgrid(cols, range, { cls: mode === 'tday' ? 'is-day' : '', q15: true })}${legend(LEGEND_Q15, { rules: true })}</section>
             <div class="sv-side">
               <section class="sc-card" data-mk></section>
               <section class="sc-card"><header class="sv-bh"><h2>${mode === 'tday' ? 'Shu kungi' : 'Shu haftadagi'} sinovlar</h2><span class="sc-grow"></span><button type="button" class="sc-link" data-trials>Sinov darslari →</button></header>

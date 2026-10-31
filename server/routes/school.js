@@ -127,7 +127,9 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         const role = req.user.role;
         if (role === 'teacher') {
             const me = await teacherOf(req);
-            return { views: await views(req, from, to, [me.id]), scope: 'own' };
+            // Ustozga sotuv menejeri kimligi (soldBy) kerak emas — yuborilmaydi.
+            const own = (await views(req, from, to, [me.id])).map(v => ({ ...v, items: v.items.map(({ soldBy, ...i }) => i) }));
+            return { views: own, scope: 'own' };
         }
         const lang = await reqLang(req);
         if (FULL.has(role)) return { views: await views(req, from, to, teacherId ? [teacherId] : null, lang), scope: 'full', lang };

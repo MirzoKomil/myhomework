@@ -74,6 +74,10 @@
         if (!canPickLang()) state.lang = ownLang();
         const r = role();
         const V2 = window.scheduleV2;
+        // Dars jadvali v3 (js/jadvalV3.js): admin, boshliq, ROP, sotuv — "Sinov darsi" / "Darslar".
+        // Admin "Ustoz ish vaqti →" bilan V2 "Hafta · bitta ustoz"ga o'tadi; "Kun · ustozlar" tabi yana v3'ni ochadi.
+        const V3 = window.jadvalV3;
+        if (V3?.enabled() && (!state.view || ['day', 'free', 'v3'].includes(state.view))) { state.view = 'v3'; return V3.render(root); }
         state.view ||= V2 && r !== 'sales_manager' ? V2.defaultView() : r === 'teacher' ? 'mine' : isSales() ? 'free' : 'day';
         // Sotuv menejeri: SotuvJadval (js/sotuvSinov.js) — KPI, ustozlar bo'yicha kun, "+ Sinov darsi qo'yish".
         if (r === 'sales_manager' && window.sotuvSinov && state.view === 'free') return window.sotuvSinov.renderJadval(root);

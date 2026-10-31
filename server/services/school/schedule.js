@@ -131,7 +131,7 @@ function dayView(ctx, teacherId, date) {
         const state = !srows.length && s.legacyFrozen ? 'frozen' : statusOn(srows, date);
         if (state === 'left') continue;
         const start = T.toMin(time); if (start == null) continue;
-        items.push({ start, end: start + duration, kind: state === 'frozen' ? 'reserved' : 'lesson', studentId: s.id, studentName: s.name });
+        items.push({ start, end: start + duration, kind: state === 'frozen' ? 'reserved' : 'lesson', studentId: s.id, studentName: s.name, soldBy: s.managerId || null });
     }
     for (const b of ctx.bookings.filter(b => b.teacher_id === teacherId && b.date === date)) {
         items.push({ start: Number(b.start_min), end: Number(b.end_min), kind: b.kind === 'once' ? 'lesson' : b.kind, bookingId: b.id,
@@ -454,7 +454,13 @@ function redactForSales(view, actor, managerId = null) {
         const mine = i.createdBy === actor.id || (!!managerId && i.managerId === String(managerId)) || (actor.role === 'rop' && i.kind === 'trial');
         // "Sinovga yopish" sababi sotuvga ham ko'rinadi (AdminJadvalUstoz: "Sabab — ustoz va sotuv ko'radi"); ta'til sababi — yo'q.
         const why = i.kind === 'close' && i.reason ? { reason: i.reason } : {};
-        return { start: i.start, end: i.end, kind: i.kind === 'reserved' ? 'lesson' : i.kind, status: i.status, mine, ...why,
+        // Dars jadvali v3 ("Darslar"): sotuv menejeri faqat o'zi sotgan o'quvchining ismini ko'radi; qolganlari — "Band".
+        // Muzlatilgan o'quvchi joyi "frozen" belgisi bilan (o'qiyotganlar ro'yxatiga kirmaydi), ism yuborilmaydi.
+        const isLesson = i.kind === 'lesson' || i.kind === 'reserved';
+        const ownStudent = isLesson && !i.bookingId && !!managerId && !!i.soldBy && String(i.soldBy) === String(managerId);
+        const student = ownStudent ? { ownStudent: true, studentId: i.studentId, studentName: i.studentName } : {};
+        return { start: i.start, end: i.end, kind: i.kind === 'reserved' ? 'lesson' : i.kind, status: i.status, mine, ...why, ...student,
+            frozen: i.kind === 'reserved' || undefined,
             bookingId: mine ? i.bookingId : undefined, leadId: mine ? i.leadId : undefined, fromLead: i.fromLead || undefined, holdUntil: i.holdUntil || undefined };
     }) };
 }

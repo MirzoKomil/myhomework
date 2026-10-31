@@ -142,3 +142,22 @@ test('eski CRM da muzlatilgan o\'quvchi joyi faqat sinovga ochiq', () => {
     const v = S.dayView(c, 'dilnoza', '2026-11-03');
     assert.equal(v.items.find(i => i.studentId === 'madina').kind, 'reserved');
 });
+
+test('Dars jadvali v3 (Darslar): sotuv menejeri faqat o\'zi sotgan o\'quvchi ismini ko\'radi', () => {
+    const c = ctx();
+    c.students = c.students.map(s => ({ ...s, managerId: s.id === 'malika' ? 'm1' : 'm2' }));
+    c.statusBy.set('madina', [{ status: 'frozen', from_date: '2026-11-03', to_date: '2026-11-16' }]);
+    const v = S.dayView(c, 'dilnoza', '2026-11-03'); // Se: madina (muzlatilgan), malika
+    const mine = S.redactForSales(v, { id: 'u1', role: 'sales_manager' }, 'm1');
+    const malika = mine.items.find(i => i.start === 1080);
+    assert.equal(malika.studentName, 'Malika');
+    assert.equal(malika.ownStudent, true);
+    const madina = mine.items.find(i => i.start === 600);
+    assert.ok(!madina.studentName && !madina.studentId, 'boshqa menejer o\'quvchisi — ism yo\'q');
+    assert.equal(madina.frozen, true);
+    assert.ok(mine.items.every(i => !('soldBy' in i)), 'sotuvchi kimligi yuborilmaydi');
+    const other = S.redactForSales(v, { id: 'u2', role: 'sales_manager' }, 'm3');
+    assert.ok(other.items.every(i => !i.studentName && !i.studentId));
+    const rop = S.redactForSales(v, { id: 'u3', role: 'rop' }, null);
+    assert.ok(rop.items.every(i => !i.studentName), 'ROP "Kim bo\'sh?" (mode=free) — ismsiz');
+});
