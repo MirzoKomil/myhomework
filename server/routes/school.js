@@ -142,6 +142,33 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         }
         throw T.fail(403, 'Jadvalga ruxsat yo\'q');
     }
+    // Dars jadvali v3: katak ma'lumotnomasi (ism, telefon, sotuv menejeri, guruh).
+    // Joy bo'yicha topiladi (ustoz + sana + vaqt) — jadval javobiga telefon/ID qo'shilmaydi.
+    // Admin/ROP: darslar va sinovlar; sotuv menejeri: faqat sinovlar (barcha menejerlarniki); ustoz — yo'q.
+    router.get('/schedule/cell', handle(async req => {
+        const role = req.user.role, manage = MANAGE.has(role);
+        if (!manage && !SALES.has(role)) throw T.fail(403, 'Ruxsat yo\'q');
+        const teacherId = String(req.query.teacherId || '');
+        const date = T.assertDate(req.query.date);
+        const start = Number(req.query.start), end = Number(req.query.end || start + 30);
+        if (!teacherId || !Number.isInteger(start) || !Number.isInteger(end) || start < 0 || end > 1440 || end <= start) throw T.fail(400, 'Notoʻgʻri katak');
+        const lang = await reqLang(req);
+        const v = (await views(req, date, date, [teacherId], lang))[0];
+        if (!v) return { items: [] };
+        const hit = v.items.filter(i => i.start < end && i.end > start);
+        const trials = hit.filter(i => i.kind === 'trial' && i.leadId && i.status !== 'hold');
+        const lessons = manage ? hit.filter(i => i.kind === 'lesson' && i.studentId) : [];
+        const leadIds = [...new Set(trials.map(i => i.leadId))], stIds = [...new Set(lessons.map(i => i.studentId))];
+        const leads = leadIds.length ? (await pool.query('SELECT id, name, phone, manager_id FROM leads WHERE id = ANY($1) AND deleted_at IS NULL', [leadIds])).rows : [];
+        const sts = stIds.length ? (await pool.query(`SELECT id, name, phone, group_name, extra_data->>'managerId' AS manager_id FROM students WHERE id = ANY($1)`, [stIds])).rows : [];
+        const mIds = [...new Set([...leads, ...sts].map(r => r.manager_id).filter(Boolean).map(String))];
+        const mgr = new Map(mIds.length ? (await pool.query('SELECT id, name FROM sales_managers WHERE id = ANY($1)', [mIds])).rows.map(r => [String(r.id), r.name]) : []);
+        const L = new Map(leads.map(r => [r.id, r])), St = new Map(sts.map(r => [r.id, r]));
+        const items = [];
+        for (const i of trials) { const r = L.get(i.leadId); if (r) items.push({ kind: 'trial', start: i.start, end: i.end, name: r.name, phone: r.phone || '', manager: mgr.get(String(r.manager_id || '')) || '', group: 'Sinov darsi' }); }
+        for (const i of lessons) { const r = St.get(i.studentId); if (r) items.push({ kind: 'lesson', start: i.start, end: i.end, name: r.name, phone: r.phone || '', manager: mgr.get(String(r.manager_id || '')) || '', group: r.group_name || '' }); }
+        return { items: items.sort((a, b) => a.start - b.start) };
+    }));
     router.get('/schedule', handle(async req => {
         const from = T.assertDate(req.query.from || T.nowLocal().date);
         const to = T.assertDate(req.query.to || from);

@@ -4,7 +4,7 @@
    Telefon (≤900px): soat tasmasi + ustozlar ro'yxati / ustoz kartalari.
    Prefiks: jv-. Ranglar faqat tokenlardan (yorug' va tungi rejim).
    ========================================================================== */
-.jv, .jv-dim {
+.jv, .jv-dim, .jv-pop {
     --jv-bg: #F4F6FA; --jv-card: #FFFFFF; --jv-line: #E2E8F0; --jv-line2: #F1F5F9; --jv-soft: #F8FAFC;
     --jv-text: #0F172A; --jv-text2: #334155; --jv-mute: #64748B; --jv-faint: #94A3B8; --jv-ghost: #CBD5E1;
     --jv-pri: #0065D6; --jv-pri2: #0057B8; --jv-pri-bg: #EAF3FF; --jv-pri-line: #9DC4F5;
@@ -20,7 +20,7 @@
     color: var(--jv-text);
     font-variant-numeric: tabular-nums;
 }
-html[data-theme="dark"] .jv, html[data-theme="dark"] .jv-dim {
+html[data-theme="dark"] .jv, html[data-theme="dark"] .jv-dim, html[data-theme="dark"] .jv-pop {
     --jv-bg: #0B1220; --jv-card: #131C2E; --jv-line: #24304A; --jv-line2: #1B2538; --jv-soft: #0F1726;
     --jv-text: #E6EDF7; --jv-text2: #C3CEDF; --jv-mute: #A9B4C8; --jv-faint: #7C8AA3; --jv-ghost: #3A4763;
     --jv-pri: #3B8BEE; --jv-pri2: #9DC4F5; --jv-pri-bg: rgba(59, 139, 238, .18); --jv-pri-line: #3B6FB0;
@@ -358,4 +358,37 @@ html[data-theme="dark"] .sv-wk.is-q15 .sv-b.jvd60 { background: rgba(59, 139, 23
     .sv-wkw:has(> .sv-wk.is-q15) { max-height: calc(100vh - 300px); min-height: 420px; overflow-y: auto; }
     .sv-wk.is-q15 .sv-dh { z-index: 4; background: var(--surface, #FFFFFF); }
     html[data-theme="dark"] .sv-wk.is-q15 .sv-dh { background: var(--surface, #131C2E); }
+}
+
+/* ---------- Katak ma'lumotnomasi (Sinov / Darsi bor) ---------- */
+.jv-s.is-info { cursor: pointer; }
+.jv-s.is-info:hover, .jv-s.is-info[aria-expanded="true"] { filter: brightness(.96); box-shadow: 0 0 0 2px var(--jv-pri-line); }
+.jv-s--trial.is-info:hover, .jv-s--trial.is-info[aria-expanded="true"], .jv-s--mineTrial.is-info[aria-expanded="true"] { box-shadow: 0 0 0 2px var(--jv-vio-line); }
+.jv-act.is-info { border: 0; font: inherit; cursor: pointer; }
+.jv-act.is-info.jv-act--busy { background: var(--jv-pri-bg); color: var(--jv-pri2); }
+.jv-pop { position: fixed; z-index: 1200; width: 300px; max-width: calc(100vw - 16px); box-sizing: border-box; background: var(--jv-card); color: var(--jv-text); border: 1px solid var(--jv-line); border-radius: 14px; box-shadow: 0 16px 40px rgba(15, 23, 42, .18); padding: 12px 14px 14px; font-size: 13px; font-family: inherit; animation: jvPopIn .12s ease-out; }
+@keyframes jvPopIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.jv-pop-top { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: var(--jv-mute); margin-bottom: 8px; }
+.jv-pop-top span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.jv-pop-x { flex: none; width: 26px; height: 26px; border: 0; border-radius: 8px; background: var(--jv-soft); color: var(--jv-mute); cursor: pointer; font-size: 12px; }
+.jv-pop-x:hover { color: var(--jv-text); }
+.jv-pop-i + .jv-pop-i { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--jv-line2); }
+.jv-pop-h { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.jv-pop-h b { font-size: 15px; font-weight: 800; line-height: 1.25; }
+.jv-pop-tag { flex: none; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 999px; white-space: nowrap; }
+.jv-pop-tag--trial { background: var(--jv-vio-bg); color: var(--jv-vio); }
+.jv-pop-tag--lesson { background: var(--jv-pri-bg); color: var(--jv-pri2); }
+.jv-pop dl { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.jv-pop-r { display: flex; justify-content: space-between; gap: 12px; }
+.jv-pop-r dt { color: var(--jv-mute); font-weight: 600; flex: none; }
+.jv-pop-r dd { margin: 0; font-weight: 700; text-align: right; min-width: 0; overflow-wrap: anywhere; }
+.jv-pop-r a { color: var(--jv-pri); text-decoration: none; }
+.jv-pop-r a:hover { text-decoration: underline; }
+.jv-pop-no { color: var(--jv-faint); font-weight: 600; }
+.jv-pop-empty { margin: 0; color: var(--jv-mute); }
+.jv-pop-sk { height: 64px; border-radius: 10px; background: linear-gradient(90deg, var(--jv-soft), var(--jv-line2), var(--jv-soft)); background-size: 200% 100%; animation: jvSk 1s linear infinite; }
+@keyframes jvSk { to { background-position: -200% 0; } }
+@media (max-width: 900px) {
+    .jv-pop { left: 8px !important; right: 8px; top: auto !important; bottom: calc(8px + env(safe-area-inset-bottom, 0px)); width: auto; max-width: none; border-radius: 18px; padding: 14px 16px 16px; font-size: 14px; }
+    .jv-pop-h b { font-size: 16px; }
 }

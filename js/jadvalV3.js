@@ -82,6 +82,7 @@
     // ── Ma'lumot ─────────────────────────────────────────────────────────────
     async function load() {
         const seq = ++J.seq, date = curDate(), L = lang();
+        infoCache.clear();
         J.loading = true;
         try {
             // Darslar: kunlar guruhining 3 kuni (masalan Du, Ch, Ju) birga yuklanadi va birlashtiriladi.
@@ -141,6 +142,84 @@
     }
     const CELL = { free: 'Boʻsh', busy: 'Darsi bor', trial: 'Sinov', mineTrial: 'Mening sinovim', hold: 'Ushlab turilgan', mine: 'Siz ushlab turibsiz',
         leave: 'Taʼtil', closed: 'Yopiq', notrial: 'Band', off: 'Ish vaqti emas', past: '—' };
+    // Katak ma'lumotnomasi: admin/ROP — "Darsi bor" va "Sinov"; sotuv menejeri — faqat "Sinov" (barcha menejerlarniki).
+    const infoAble = k => k === 'trial' || k === 'mineTrial' || (k === 'busy' && ['admin', 'boshliq', 'rop'].includes(role()));
+    const infoCache = new Map();
+    const pop = { el: null, btn: null, pinned: false, tOpen: 0, tClose: 0 };
+    function fmtPhone(p) {
+        const d = String(p || '').replace(/\D/g, '');
+        if (d.length === 12 && d.startsWith('998')) return `+998 ${d.slice(3, 5)} ${d.slice(5, 8)} ${d.slice(8, 10)} ${d.slice(10)}`;
+        if (d.length === 9) return `+998 ${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5, 7)} ${d.slice(7)}`;
+        return String(p || '');
+    }
+    function cellInfo(tid, m) {
+        const key = `${lang()}|${J.data.date}|${tid}|${m}`;
+        if (!infoCache.has(key)) {
+            const q = U().api(`/schedule/cell?teacherId=${encodeURIComponent(tid)}&date=${J.data.date}&start=${m}&end=${m + TRIAL}&lang=${lang()}`).then(r => r.items || []);
+            q.catch(() => infoCache.delete(key));
+            infoCache.set(key, q);
+        }
+        return infoCache.get(key);
+    }
+    function closeInfo() {
+        clearTimeout(pop.tOpen); clearTimeout(pop.tClose);
+        pop.el?.remove(); pop.btn?.setAttribute('aria-expanded', 'false');
+        pop.el = null; pop.btn = null; pop.pinned = false;
+        document.removeEventListener('pointerdown', onPopOutside, true);
+        document.removeEventListener('keydown', onPopKey, true);
+        window.removeEventListener('resize', closeInfo);
+        document.getElementById('tab-timetable')?.removeEventListener('scroll', closeInfo);
+    }
+    function onPopOutside(e) { if (pop.el && !pop.el.contains(e.target) && !pop.btn?.contains(e.target)) closeInfo(); }
+    function onPopKey(e) { if (e.key === 'Escape' && pop.el) { const b = pop.btn; closeInfo(); b?.focus(); e.stopPropagation(); } }
+    function placePop() {
+        if (!pop.el || !pop.btn || MOBILE.matches) return;
+        const r = pop.btn.getBoundingClientRect(), w = pop.el.offsetWidth, h = pop.el.offsetHeight;
+        let left = Math.min(Math.max(8, r.left + r.width / 2 - w / 2), innerWidth - w - 8);
+        let top = r.bottom + 8;
+        if (top + h > innerHeight - 8) top = Math.max(8, r.top - h - 8);
+        pop.el.style.left = `${left}px`; pop.el.style.top = `${top}px`;
+    }
+    function infoHtml(items, tid, m) {
+        const t = J.data.teachers.find(x => x.id === tid);
+        const head = `<div class="jv-pop-top"><span>${esc(t ? t.name : '')} · ${hm(m)}–${hm(m + TRIAL)}</span><button type="button" class="jv-pop-x" data-pop-x aria-label="Yopish">✕</button></div>`;
+        if (!items.length) return head + '<p class="jv-pop-empty">Maʼlumot topilmadi.</p>';
+        const row = (k, v, html) => `<div class="jv-pop-r"><dt>${k}</dt><dd>${html || (v ? esc(v) : '<span class="jv-pop-no">—</span>')}</dd></div>`;
+        return head + items.map(i => `<div class="jv-pop-i"><div class="jv-pop-h"><b>${esc(i.name || '—')}</b><span class="jv-pop-tag jv-pop-tag--${i.kind}">${i.kind === 'trial' ? 'Sinov' : 'Dars'} · ${hm(i.start)}–${hm(i.end)}</span></div>
+            <dl>${row('Telefon', i.phone, i.phone ? `<a href="tel:+${String(i.phone).replace(/\D/g, '').replace(/^(?!998)(\d{9})$/, '998$1')}">${esc(fmtPhone(i.phone))}</a>` : '')}${row('Sotuv menejeri', i.manager)}${row('Guruh', i.group)}</dl></div>`).join('');
+    }
+    async function openInfo(btn, pinned) {
+        if (pop.btn === btn && pop.el) { if (pinned) pop.pinned = true; return; }
+        closeInfo();
+        const [tid, m] = btn.dataset.info.split('|');
+        const el = document.createElement('div');
+        el.className = 'jv-pop'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Maʼlumotnoma');
+        el.innerHTML = `<div class="jv-pop-top"><span>Yuklanmoqda…</span></div><div class="jv-pop-sk"></div>`;
+        document.body.appendChild(el);
+        Object.assign(pop, { el, btn, pinned });
+        btn.setAttribute('aria-expanded', 'true');
+        placePop();
+        el.addEventListener('mouseenter', () => clearTimeout(pop.tClose));
+        el.addEventListener('mouseleave', () => { if (!pop.pinned) pop.tClose = setTimeout(closeInfo, 200); });
+        el.addEventListener('click', e => { if (e.target.closest('[data-pop-x]')) { closeInfo(); btn.focus(); } });
+        document.addEventListener('pointerdown', onPopOutside, true);
+        document.addEventListener('keydown', onPopKey, true);
+        window.addEventListener('resize', closeInfo);
+        document.getElementById('tab-timetable')?.addEventListener('scroll', closeInfo, { passive: true });
+        let items;
+        try { items = await cellInfo(tid, Number(m)); } catch (err) { if (pop.el === el) { el.innerHTML = `<div class="jv-pop-top"><span>Maʼlumotni yuklab boʻlmadi</span><button type="button" class="jv-pop-x" data-pop-x aria-label="Yopish">✕</button></div><p class="jv-pop-empty">${esc(err.message || '')}</p>`; placePop(); } return; }
+        if (pop.el !== el) return;
+        el.innerHTML = infoHtml(items, tid, Number(m));
+        placePop();
+    }
+    function bindInfo(root) {
+        root.querySelectorAll('[data-info]').forEach(b => {
+            b.onclick = e => { e.stopPropagation(); if (pop.btn === b && pop.pinned) { closeInfo(); return; } openInfo(b, true); };
+            if (MOBILE.matches) return;
+            b.onmouseenter = () => { clearTimeout(pop.tClose); clearTimeout(pop.tOpen); if (pop.pinned && pop.btn !== b) return; pop.tOpen = setTimeout(() => openInfo(b, false), 250); };
+            b.onmouseleave = () => { clearTimeout(pop.tOpen); if (pop.btn === b && !pop.pinned) pop.tClose = setTimeout(closeInfo, 200); };
+        });
+    }
 
     function freeAt(m) {
         const out = [];
@@ -183,14 +262,14 @@
         J.timers.forEach(clearInterval); J.timers = [];
         J.timers.push(setInterval(tick, 1000));
         // Boshqa menejerlar band qilganini ko'rish uchun jim yangilash (input/oyna ochiq bo'lmasa).
-        J.timers.push(setInterval(() => { if (!J.busy && !J.picker && !J.hold && J.root && document.body.contains(J.root) && J.root.offsetParent) load(); }, 30000));
+        J.timers.push(setInterval(() => { if (!J.busy && !J.picker && !J.hold && !pop.el && J.root && document.body.contains(J.root) && J.root.offsetParent) load(); }, 30000));
         J.root.innerHTML = '<div class="sc-skel"></div>';
         load();
     }
     function closePage({ silent = false, saved = false } = {}) {
         const page = J.page;
         if (J.hold) releaseHold();
-        closeOverlay();
+        closeOverlay(); closeInfo();
         J.timers.forEach(clearInterval); J.timers = [];
         if (!page) { J.lead = null; J.opts = {}; return; }
         const opts = J.opts;
@@ -214,8 +293,10 @@
         }
         if (!J.data) return;
         const mob = MOBILE.matches;
+        closeInfo();
         root.innerHTML = `<div class="jv${mob ? ' jv--m' : ''}">${header()}${leadBanner()}${toolbar()}${J.mode === 'sinov' ? (mob ? sinovMobile() : sinovDesktop()) : (mob ? darsMobile() : darsDesktop())}</div>`;
         bind(root);
+        bindInfo(root);
         if (!mob) stick(root);
     }
     // Aylantirganda filtrlar, ustozlar qatori va o'ng panel tepada qotib turadi (solishtirish uchun).
@@ -281,7 +362,8 @@
                 const on = J.sel && J.sel.t === t.id && J.sel.m === m;
                 const lab = st.k === 'free' && on ? '✓ Tanlandi' : CELL[st.k];
                 const inner = st.k === 'free' && on ? '<span class="jv-on-l">✓ Tanlandi</span><span class="jv-on-x">✕ Bekor qilish</span>' : lab;
-                return `<div class="jv-cell"><button type="button" class="jv-s jv-s--${st.k}${on ? ' is-on' : ''}"${st.k === 'free' ? ` data-slot="${esc(t.id)}|${m}"` : ' tabindex="-1" aria-disabled="true"'} aria-label="${esc(t.name)} · ${hm(m)} · ${lab}${on ? ' (qayta bosing — bekor qilish)' : ''}"${on ? ' title="Qayta bosing — tanlov bekor qilinadi"' : ''}>${inner}</button></div>`;
+                const inf = infoAble(st.k);
+                return `<div class="jv-cell"><button type="button" class="jv-s jv-s--${st.k}${on ? ' is-on' : ''}${inf ? ' is-info' : ''}"${st.k === 'free' ? ` data-slot="${esc(t.id)}|${m}"` : inf ? ` data-info="${esc(t.id)}|${m}" aria-haspopup="dialog"` : ' tabindex="-1" aria-disabled="true"'} aria-label="${esc(t.name)} · ${hm(m)} · ${lab}${on ? ' (qayta bosing — bekor qilish)' : ''}"${on ? ' title="Qayta bosing — tanlov bekor qilinadi"' : ''}>${inner}</button></div>`;
             }).join('');
             const past = isToday && m < now;
             const cnt = past ? '<span class="jv-cnt is-past">oʻtdi</span>' : `<span class="jv-cnt jv-cnt--${free >= 4 ? 'ok' : free >= 2 ? 'mid' : free === 1 ? 'low' : 'none'}">${free} ta</span>`;
@@ -332,6 +414,7 @@
         const free = list.filter(x => x.st.k === 'free').length;
         const rows = list.map(({ t, st, n }) => `<div class="jv-mrow">${U().staffAvatar(t, 40)}<span><b>${esc(t.name)}</b><small>${n} dars bu kuni</small></span>${st.k === 'free'
             ? `<button type="button" class="jv-act" data-book="${esc(t.id)}|${sel}"${J.busy ? ' disabled' : ''}>${J.lead ? 'Tanlash' : 'Sinov qoʻyish'}</button>`
+            : infoAble(st.k) ? `<button type="button" class="jv-act jv-act--${st.k} is-info" data-info="${esc(t.id)}|${sel}" aria-haspopup="dialog">${CELL[st.k]} ⓘ</button>`
             : `<em class="jv-act jv-act--${st.k}">${CELL[st.k]}</em>`}</div>`).join('');
         return `<div class="jv-mb"><div class="jv-eyebrow jv-pad">Soatni tanlang</div><div class="jv-hours">${chips}</div>
             <div class="jv-sum"><span class="jv-sum-n">${free}</span><div><b>${hm(sel)} da ${free} ta ustoz boʻsh</b><small>${hm(sel)}–${hm(sel + TRIAL)} · kam yuklangan ustoz birinchi</small></div></div>
