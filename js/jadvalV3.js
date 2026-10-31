@@ -205,6 +205,7 @@
         document.addEventListener('pointerdown', onPopOutside, true);
         document.addEventListener('keydown', onPopKey, true);
         window.addEventListener('resize', closeInfo);
+        window.addEventListener('resize', () => { if (J.root && MOBILE.matches && document.body.contains(J.root)) fitMobile(J.root); });
         document.getElementById('tab-timetable')?.addEventListener('scroll', closeInfo, { passive: true });
         let items;
         try { items = await cellInfo(tid, Number(m)); } catch (err) { if (pop.el === el) { el.innerHTML = `<div class="jv-pop-top"><span>Maʼlumotni yuklab boʻlmadi</span><button type="button" class="jv-pop-x" data-pop-x aria-label="Yopish">✕</button></div><p class="jv-pop-empty">${esc(err.message || '')}</p>`; placePop(); } return; }
@@ -298,6 +299,25 @@
         bind(root);
         bindInfo(root);
         if (!mob) stick(root);
+        else fitMobile(root);
+    }
+    // Telefon · Sinov: sarlavha, kun va soat tanlash joyida turadi — faqat ustozlar roʻyxati aylanadi.
+    // Balandlik = koʻrinadigan ekran − jadval boshi − pastki menyu (ilova yoki eski telefon menyusi).
+    function fitMobile(root) {
+        const jv = root.querySelector('.jv--m');
+        if (!jv) return;
+        const host = root.closest('.tab-content');
+        if (J.mode !== 'sinov' || !jv.querySelector('.jv-mlist')) { jv.classList.remove('jv--fit'); jv.style.removeProperty('height'); host?.classList.remove('jv-fit-host'); return; }
+        host?.classList.add('jv-fit-host');
+        const navTop = [...document.querySelectorAll('.sa-nav, .team-bottom-nav')]
+            .map(n => n.getBoundingClientRect()).filter(r => r.height > 0 && r.top < window.innerHeight)
+            .reduce((m, r) => Math.min(m, r.top), window.innerHeight);
+        const sc = root.closest('.tab-content') || document.scrollingElement;
+        if (sc) sc.scrollTop = 0;
+        const top = jv.getBoundingClientRect().top;
+        const h = Math.max(320, Math.floor(navTop - top - 8));
+        jv.style.height = h + 'px';
+        jv.classList.add('jv--fit');
     }
     // Aylantirganda filtrlar, ustozlar qatori va o'ng panel tepada qotib turadi (solishtirish uchun).
     let stickRO = null;
@@ -418,8 +438,7 @@
             : `<em class="jv-act jv-act--${st.k}">${CELL[st.k]}</em>`}</div>`).join('');
         return `<div class="jv-mb"><div class="jv-eyebrow jv-pad">Soatni tanlang</div><div class="jv-hours">${chips}</div>
             <div class="jv-sum"><span class="jv-sum-n">${free}</span><div><b>${hm(sel)} da ${free} ta ustoz boʻsh</b><small>${hm(sel)}–${hm(sel + TRIAL)} · kam yuklangan ustoz birinchi</small></div></div>
-            <div class="jv-mlist">${rows || '<div class="jv-empty">Bu tilda ustoz topilmadi.</div>'}</div>
-            <p class="jv-mt jv-pad">Sinov qoʻyilganda vaqt 10 daqiqa siz uchun ushlab turiladi.</p></div>`;
+            <div class="jv-mlist">${rows || '<div class="jv-empty">Bu tilda ustoz topilmadi.</div>'}<p class="jv-mt jv-pad">Sinov qoʻyilganda vaqt 10 daqiqa siz uchun ushlab turiladi.</p></div></div>`;
     }
     const slotFreeCount = m => J.data.teachers.reduce((n, t) => n + (slotState(J.data.views.get(t.id), m).k === 'free' ? 1 : 0), 0);
 
