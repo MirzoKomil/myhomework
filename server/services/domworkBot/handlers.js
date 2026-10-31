@@ -246,7 +246,7 @@ function createHandler({ crm }) {
                     const booking=trial.request(lead);
                     if(booking?.teacherId!==identity.employeeId) continue;
                     if(++found>30) break;
-                    await reply(`${lead.name}\n${booking.scheduledAt}\nHolat: ${booking.state}${booking.reasonLabel?'\nSabab: '+booking.reasonLabel:''}`,
+                    await reply(`${lead.name}\n${require('./tone').when(booking.scheduledAt)}\nHolat: ${booking.state}${booking.reasonLabel?'\nSabab: '+booking.reasonLabel:''}`,
                         {reply_markup:await callbacks.trialButtons(db,lead,booking),_trial:{leadId:lead.id,requestId:booking.id,teacherId:booking.teacherId,state:booking.state}});
                 }
                 if(!found) await reply(empty);
