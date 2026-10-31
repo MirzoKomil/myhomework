@@ -70,6 +70,8 @@
     const empty = (icon, title, text, btn = '') => `<div class="card bq-empty"><div class="bq-flt">${svg(icon, 44, 1.6)}</div><strong>${title}</strong>${text ? `<span class="s">${text}</span>` : ''}${btn}</div>`;
     const sheetHead = (title, sub = '') => `<div class="row"><div class="col g1"><h2 class="bq-shh">${title}</h2>${sub ? `<span class="s">${sub}</span>` : ''}</div><button type="button" class="icb" data-u-close aria-label="Yopish">${svg(P.x, 20, 2.2)}</button></div>`;
     const loading = (e, key, n = 2, h = 72) => e.err && !e.data ? U.err(e, key) : U.skel(n, h);
+    // Pastdan oyna — .bq klassi bilan (bo'lim uslublari oynada ham ishlasin).
+    const sheet = (html, bind, opts) => U.sheet(html, (el, close) => { el.classList.add('bq'); bind?.(el, close); }, opts);
     // Ustozning o'z rasmi (S.user.avatar — /images/staff-avatars/... yoki yuklangan rasm), bo'lmasa bosh harf.
     function meAvatar(size, style = '') {
         const u = S().user || {}, a = u.avatar;
@@ -105,16 +107,16 @@
         const list = S().inactive;
         if (list == null) return `<div class="note w" role="alert"><span>Faol bo'lmagan o'quvchilar yuklanmadi.</span><button type="button" class="btn sm" data-bq-reload style="margin-left: auto">Qayta urinish</button></div>`;
         if (!list.length) return empty(P.box, "Faol bo'lmagan o'quvchi yo'q", "Muzlatilgan, boshqa ustozga o'tgan yoki kursni tugatgan o'quvchilar shu yerda ko'rinadi.");
-        const groups = [['frozen', 'Muzlatilgan', 'inf'], ['moved', "Boshqa ustozga o'tgan", 'vio'], ['left', 'Chiqib ketgan', 'mu'], ['finished', 'Kursni tugatganlar', 'ok']];
+        const groups = [['frozen', 'Muzlatilgan', 'inf', 'Muzlatilgan'], ['moved', "Boshqa ustozga o'tgan", 'vio', "O'tgan"], ['left', 'Chiqib ketgan', 'mu', 'Chiqib ketgan'], ['finished', 'Kursni tugatganlar', 'ok', 'Tugatgan']];
         const fd = d => d ? D().fmtDate(String(d).slice(0, 10)) : '';
-        return groups.map(([k, label, tone]) => {
+        return groups.map(([k, label, tone, short]) => {
             const g = list.filter(x => x.state === k); if (!g.length) return '';
             return `<span class="bq-gh">${label.toUpperCase()} · ${g.length}</span><div class="card l">${g.map(x => {
                 const s = D().stuOf(x.id);
                 const sub = k === 'frozen' ? `${fd(x.from)}${x.to ? ' → ' + fd(x.to) : ''}${x.to ? ` · ${fd(U.addDays(String(x.to).slice(0, 10), 1))} qaytadi` : ''}`
                     : k === 'moved' ? `${fd(x.from)} dan` : k === 'finished' ? `${x.lessons || 0} dars siz bilan${x.reached != null ? ` · ilovada ${x.reached} / 72` : ''}`
                         : `${fd(x.from)}${x.lessons ? ` · ${x.lessons} dars siz bilan` : ''}${x.reason ? ' · ' + esc(x.reason) : ''}`;
-                const inner = `${D().avatar(x, 'av bq-a42')}<div class="col g1"><span class="nm">${esc(x.name)}</span><span class="s">${sub}${s && s.lessonTime && k === 'frozen' ? ' · ' + esc(D().patternLabel(s.lessonDayOfWeek) + ' ' + s.lessonTime) : ''}</span></div><span class="pill ${tone}">${label.split(' ')[0]}</span>`;
+                const inner = `${D().avatar(x, 'av bq-a42')}<div class="col g1"><span class="nm">${esc(x.name)}</span><span class="s">${sub}${s && s.lessonTime && k === 'frozen' ? ' · ' + esc(D().patternLabel(s.lessonDayOfWeek) + ' ' + s.lessonTime) : ''}</span></div><span class="pill ${tone}">${short}</span>`;
                 return s ? `<a class="li" href="#" data-u-push="karta" data-arg="${esc(x.id)}">${inner}</a>` : `<div class="li">${inner}</div>`;
             }).join('')}</div>`;
         }).join('') + `<span class="xs bq-foot">Bu o'quvchilar bugungi darslar, davomat, reyting va maoshga qo'shilmaydi. Muzlatilgan o'quvchi qaytganda avtomatik "Faol"ga o'tadi.</span>`;
@@ -129,7 +131,7 @@
                 .map(s => ({ s, p: statusOf(s) })).sort((a, b) => a.p.w - b.p.w || (D().toMin(a.s.lessonTime) ?? 9999) - (D().toMin(b.s.lessonTime) ?? 9999)).map(x => x.s);
             const chip = (k, l, n) => `<button type="button" class="chip${stF === k ? ' on' : ''}" data-st-f="${k}" aria-pressed="${stF === k}">${l}${n ? ` · ${n}` : ''}</button>`;
             return `<header class="hd" style="padding-bottom: 4px"><div class="t"><span class="date">Sizga biriktirilgan o'quvchilar</span><h1 style="font-size: 26px">O'quvchilarim</h1></div></header>
-            <div class="bd" style="gap: 10px">
+            <div class="bd bq" style="gap: 10px">
               ${U.offline()}
               ${stSeg === 'active' ? `<div class="bq-srch"><label for="bq-q" class="sr">Qidirish</label>${svg(P.search, 20, 2).replace('stroke="currentColor"', 'stroke="#4B5563"')}<input id="bq-q" type="search" placeholder="Ism yoki ID" value="${esc(stQ)}" autocomplete="off"></div>` : ''}
               <div class="seg bq-seg44" role="tablist"><button type="button" role="tab" data-st-seg="active" class="${stSeg === 'active' ? 'on' : ''}" aria-selected="${stSeg === 'active'}">Faol · ${all.length}</button><button type="button" role="tab" data-st-seg="inactive" class="${stSeg === 'inactive' ? 'on' : ''}" aria-selected="${stSeg === 'inactive'}">Faol emas · ${inN}</button></div>
@@ -235,7 +237,7 @@
     U.page('karta', {
         render(id) {
             const s = D().stuOf(id);
-            if (!s) return `${bar()}<div class="bd nb">${empty(P.users, "O'quvchi topilmadi", "O'quvchi sizga biriktirilmagan yoki ro'yxatdan chiqarilgan.", `<button type="button" class="btn sm" data-u-go="oquvchilar" style="margin-top: 4px; min-height: 44px">O'quvchilar</button>`)}</div>`;
+            if (!s) return `${bar()}<div class="bd nb bq">${empty(P.users, "O'quvchi topilmadi", "O'quvchi sizga biriktirilmagan yoki ro'yxatdan chiqarilgan.", `<button type="button" class="btn sm" data-u-go="oquvchilar" style="margin-top: 4px; min-height: 44px">O'quvchilar</button>`)}</div>`;
             const tab = cardTab[id] || 'gen', de = tab === 'dav' ? null : detailE(id), det = de?.data;
             const g = (groupsE().data?.groups || []).find(x => x.student_id === id);
             const n = D().now(), start = String(s.startDate || '').slice(0, 10), kun = start && start <= n.date ? dayDiff(start, n.date) + 1 : null;
@@ -243,7 +245,7 @@
             const tgOk = g?.tg_link && /^https:\/\//.test(g.tg_link);
             const seg = `<div class="seg bq-seg44" role="tablist">${[['gen', 'Umumiy'], ['dav', 'Davomat'], ['oz', "O'zlashtirish"]].map(([k, l]) => `<button type="button" role="tab" data-ct="${k}" class="${tab === k ? 'on' : ''}" aria-selected="${tab === k}">${l}</button>`).join('')}</div>`;
             return `${bar()}
-            <div class="bd nb" style="padding-top: 4px; gap: 12px">
+            <div class="bd nb bq" style="padding-top: 4px; gap: 12px">
               ${U.offline()}
               <div class="row a1">${D().avatar(s, 'av bq-a64')}<div class="col g1"><strong class="bq-name">${esc(s.name)}</strong><span class="s">ID ${esc(s.id)} · ${esc(sched(s))}</span><span class="xs" style="margin-top: 2px">Kurs: ${kun ? `${kun}-kun · ` : ''}${reached ? `${reached}-dars` : 'hali boshlanmagan'}</span></div></div>
               <div class="bq-act a2">
@@ -276,7 +278,7 @@
             const sid = id || sqStu, s = sid ? D().stuOf(sid) : null;
             const mine = myReqs().filter(r => !id || payOf(r).studentId === id);
             return `${bar()}
-            <div class="bd nb" style="padding-top: 0; gap: 12px">
+            <div class="bd nb bq" style="padding-top: 0; gap: 12px">
               ${U.offline()}
               <div class="col" style="padding: 0 4px"><h1 class="ttl" style="padding: 0">Adminga so'rov</h1><span class="s">${s ? `${esc(s.name)} · ${esc(sched(s))}` : "O'quvchi bo'yicha — admin CRM'da hal qiladi"}</span></div>
               ${!id ? `<div class="fl"><label for="bq-sqs">O'quvchi</label><select id="bq-sqs" class="bq-sel"><option value="">Tanlang</option>${(S().main || []).map(x => `<option value="${esc(x.id)}"${x.id === sqStu ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>` : ''}
@@ -319,7 +321,7 @@
     }
     const isExam = no => no % 12 === 0;
     const bookOf = no => Math.ceil(no / 24);
-    let dkBook = 0, dkScrolled = false;
+    let dkBook = 0;
     const lessonSub = l => {
         if (isExam(l.no)) return 'ilovada avtomatik tekshiriladi';
         const c = l.counts || {};
@@ -330,18 +332,19 @@
             const he = hubE(), hub = he.data, n = D().now();
             const today = todayLive(), ahead = today.filter(x => x.t + dur(x.s) > n.min && x.l);
             const todayNos = new Set(today.map(x => x.l?.no).filter(Boolean));
-            if (!dkBook) dkBook = ahead[0]?.l ? bookOf(ahead[0].l.no) : today.find(x => x.l) ? bookOf(today.find(x => x.l).l.no) : 1;
-            const lessons = (hub?.syllabus || []).filter(l => bookOf(l.no) === dkBook);
+            if (!dkBook && (nextE().data || nextE().err)) dkBook = ahead[0]?.l ? bookOf(ahead[0].l.no) : today.find(x => x.l) ? bookOf(today.find(x => x.l).l.no) : 1;
+            const book = dkBook || 1;
+            const lessons = (hub?.syllabus || []).filter(l => bookOf(l.no) === (dkBook || 1));
             const tb = (hub?.courseMaterials || []).some(m => m.kind === 'teacher_book');
             return `${bar()}
-            <div class="bd nb" style="padding-top: 0; gap: 10px">
+            <div class="bd nb bq" style="padding-top: 0; gap: 10px">
               ${U.offline()}
               <div class="col" style="padding: 0 4px"><h1 class="ttl" style="padding: 0">Darslik</h1><span class="s">${esc(hub?.course?.name || langOf())} · ${hub?.syllabus?.length || 72} dars · 3 kitob${tb ? ' · Ustoz kitobi' : ''}</span></div>
               ${ahead.length ? `<section class="blue a1">${U.HEX('bqDkHex').replace('class="hex"', 'class="hex bq-hex12"')}
                 <span class="bq-eb">BUGUN OLDINDA · ${ahead.length} DARS</span>
                 <div class="bq-tcs">${ahead.map(x => `<a class="bq-tc" href="#" data-u-push="darshub" data-arg="${x.l.no}"><b style="font-size: 15px">${x.l.no} · ${esc(x.l.name || '')}</b><span style="font-size: 12px; color: #DCEBFF">${esc(D().first(x.s.name))} · ${esc(x.s.lessonTime || '')}</span></a>`).join('')}</div>
               </section>` : ''}
-              <div class="seg bq-seg44" role="tablist">${[1, 2, 3].map(b => `<button type="button" role="tab" data-dk="${b}" class="${dkBook === b ? 'on' : ''}" aria-selected="${dkBook === b}">${b}-kitob${dkBook === b ? ` · ${(b - 1) * 24 + 1}–${b * 24}` : ''}</button>`).join('')}</div>
+              <div class="seg bq-seg44" role="tablist">${[1, 2, 3].map(b => `<button type="button" role="tab" data-dk="${b}" class="${book === b ? 'on' : ''}" aria-selected="${book === b}">${b}-kitob${book === b ? ` · ${(b - 1) * 24 + 1}–${b * 24}` : ''}</button>`).join('')}</div>
               ${!hub ? loading(he, 'bq:hub', 4, 58) : `<div class="card l a2">${lessons.map(l => {
                   const td = todayNos.has(l.no), ex = isExam(l.no);
                   return `<a class="li" href="#" data-u-push="darshub" data-arg="${l.no}"${td ? ' data-bq-today' : ''}><span class="bq-num${ex ? ' ex' : td ? ' td' : ''}">${l.no}</span><div class="col g1"><span class="nm">${esc(l.name || `${l.no}-dars`)}</span><span class="s">${esc(lessonSub(l))}</span></div>${td ? '<span class="pill inf">Bugun</span>' : ex ? '<span class="pill wa">Imtihon</span>' : chevR()}</a>`;
@@ -349,9 +352,7 @@
             </div>`;
         },
         bind(root) {
-            root.querySelectorAll('[data-dk]').forEach(b => b.onclick = () => { dkBook = +b.dataset.dk; dkScrolled = true; U.render(); });
-            const t = root.querySelector('[data-bq-today]'), bd = root.querySelector('.bd');
-            if (t && bd && !dkScrolled) { dkScrolled = true; requestAnimationFrame(() => { bd.scrollTop = Math.max(0, t.offsetTop - bd.offsetTop - 3 * t.offsetHeight - 260); }); }
+            root.querySelectorAll('[data-dk]').forEach(b => b.onclick = () => { dkBook = +b.dataset.dk; U.render(); });
         }
     });
 
@@ -388,7 +389,7 @@
               </section>` : '';
             const plan = L?.plan;
             return `${bar('', `<span class="pill inf" style="margin-right: 8px">${bookOf(no)}-kitob${d?.book?.page ? ` · ${esc(d.book.page)}-bet` : ''}</span>`)}
-            <div class="bd nb" style="padding-top: 0; gap: 12px">
+            <div class="bd nb bq" style="padding-top: 0; gap: 12px">
               ${U.offline()}
               <div class="col" style="padding: 0 4px"><span class="xs b bq-ey">${no}-DARS · ${no % 2 ? 'VIDEODARS' : 'JONLI DARS'}</span><h1 class="ttl" style="padding: 0">${esc(L?.name || `${no}-dars`)}</h1>${today.length ? `<span class="s">Bugun: ${today.map(x => `${esc(D().first(x.s.name))} ${esc(x.s.lessonTime || '')}`).join(', ')}</span>` : L?.topic ? `<span class="s">${esc(L.topic)}</span>` : ''}</div>
               <a href="#" class="btn p w a1 bq-start" data-u-push="taqdimot" data-arg="${no}"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">${P.play}</svg>Taqdimotni boshlash</a>
@@ -432,11 +433,11 @@
             if (TQ.key !== key) { TQ.key = key; TQ.idx = Number(iS) || 0; TQ.ink = {}; TQ.hist = {}; TQ.t0 = Date.now(); }
             const le = no ? lessonE(no) : null, L = le?.data?.lesson;
             const slides = no && !L ? [] : tqSlides(L);
-            TQ.idx = Math.min(TQ.idx, Math.max(0, slides.length - 1));
+            if (slides.length) TQ.idx = Math.min(TQ.idx, slides.length - 1);
             const x = slides[TQ.idx];
             const tools = [['pen', 'Qalam', P.pen], ['marker', 'Marker', P.marker], ['text', 'Matn', P.text], ['eraser', "O'chirg'ich", P.eraser]];
             const title = no ? `${no} · ${L?.name || `${no}-dars`}` : 'Doska';
-            return `<div class="bq-tq" role="dialog" aria-modal="true" aria-label="${esc(title)}">
+            return `<div class="bq-tq bq" role="dialog" aria-modal="true" aria-label="${esc(title)}">
               <div class="bq-tq-main">
                 <div class="bq-tq-top"><a href="#" class="bq-nb2" data-u-back aria-label="Taqdimotni yopish">${svg(P.x, 18, 2.4)}</a><b class="bq-tq-ttl">${esc(title)}</b><span class="bq-tq-cnt">${slides.length ? `${TQ.idx + 1} / ${slides.length}` : ''}</span><span style="flex: 1"></span>${navigator.onLine === false ? '<span class="pill bad">Internet yo\'q</span>' : ''}<b class="bq-tq-time" aria-label="Dars vaqti">${mmss(Date.now() - TQ.t0)}</b></div>
                 <div class="bq-tq-stage${x?.k === 'blank' ? ' blank' : ''}">${no && !L ? (le.err ? `<div class="bq-tq-msg">${esc(le.err.message || 'Yuklanmadi')}<button type="button" class="btn sm" data-u-retry="bq:les:${no}">Qayta urinish</button></div>` : '<div class="bq-tq-msg">Yuklanmoqda…</div>') : `<div class="bq-tq-slide${x?.k === 'img' ? ' img' : ''}">${x ? tqSlideHtml(x, L) : ''}</div>`}<canvas class="bq-tq-ink" aria-hidden="true"></canvas></div>
@@ -524,7 +525,7 @@
     const histOf = month => (S().salary?.history || []).find(h => String(h.start || '').slice(0, 7) === month) || null;
     function histSheet() {
         const h = S().salary?.history || [];
-        U.sheet(`${sheetHead("Maosh tarixi", "So'nggi 12 oy")}<div class="card l" style="border: 0; padding: 0">${h.map(x => { const m = String(x.start).slice(0, 7), paid = x.paidAt || x.status === 'paid'; return `<div class="li"><div class="col g1"><span class="nm">${cap1(monName(m))} ${m.slice(0, 4)}</span><span class="s">${paid ? `to'langan${x.paidAt ? ' · ' + D().fmtDate(D().tz(x.paidAt).date) : ''}` : 'hisoblangan · to\'lov kutilmoqda'}</span></div><b style="font-size: 15px">${D().money(x.amount)}</b></div>`; }).join('') || '<div class="li"><span class="s">Hali to\'langan oy yo\'q</span></div>'}</div>`, null, { label: 'Maosh tarixi' });
+        sheet(`${sheetHead("Maosh tarixi", "So'nggi 12 oy")}<div class="card l" style="border: 0; padding: 0">${h.map(x => { const m = String(x.start).slice(0, 7), paid = x.paidAt || x.status === 'paid'; return `<div class="li"><div class="col g1"><span class="nm">${cap1(monName(m))} ${m.slice(0, 4)}</span><span class="s">${paid ? `to'langan${x.paidAt ? ' · ' + D().fmtDate(D().tz(x.paidAt).date) : ''}` : 'hisoblangan · to\'lov kutilmoqda'}</span></div><b style="font-size: 15px">${D().money(x.amount)}</b></div>`; }).join('') || '<div class="li"><span class="s">Hali to\'langan oy yo\'q</span></div>'}</div>`, null, { label: 'Maosh tarixi' });
     }
     U.page('maosh', {
         render() {
@@ -545,7 +546,7 @@
             const maxV = Math.max(...pts.map(p => p.v), 1), sel = pts.some(p => p.m === msMonth) ? msMonth : pts[pts.length - 1]?.m;
             const unc = isCur ? (S().main || []).reduce((a, s) => a + D().uncovered(s).length, 0) : 0;
             return `${bar()}
-            <div class="bd nb" style="padding-top: 0; gap: 12px">
+            <div class="bd nb bq" style="padding-top: 0; gap: 12px">
               ${U.offline()}
               <h1 class="ttl">Maosh</h1>
               <div class="seg bq-seg44" role="tablist"><button type="button" role="tab" data-ms="${prev}" class="${!isCur ? 'on' : ''}" aria-selected="${!isCur}">${cap1(monName(prev))} · ${histOf(prev)?.paidAt || histOf(prev)?.status === 'paid' ? "to'landi" : t >= `${cur}-01` ? 'yopildi' : 'joriy'}</button><button type="button" role="tab" data-ms="${cur}" class="${isCur ? 'on' : ''}" aria-selected="${isCur}">${cap1(monName(cur))} · joriy</button></div>
@@ -586,7 +587,7 @@
     const ini = name => esc(String(name || '').trim().slice(0, 2));
     function rtMonthSheet(r) {
         const ms = []; for (let m = r.currentMonth || D().now().month; m >= (r.firstMonth || m) && ms.length < 12; m = D().shiftMonth(m, -1)) ms.push(m);
-        U.sheet(`${sheetHead('Oyni tanlang')}<div class="col" style="gap: 8px">${ms.map(m => `<button type="button" class="opt${(rtMonth || r.currentMonth) === m ? ' on' : ''}" data-rm="${m}"><span class="rad"></span><span class="g1" style="font-size: 15px; font-weight: 700">${cap1(monName(m))} ${m.slice(0, 4)}${m === r.currentMonth ? ' · joriy' : ''}</span></button>`).join('')}</div>`,
+        sheet(`${sheetHead('Oyni tanlang')}<div class="col" style="gap: 8px">${ms.map(m => `<button type="button" class="opt${(rtMonth || r.currentMonth) === m ? ' on' : ''}" data-rm="${m}"><span class="rad"></span><span class="g1" style="font-size: 15px; font-weight: 700">${cap1(monName(m))} ${m.slice(0, 4)}${m === r.currentMonth ? ' · joriy' : ''}</span></button>`).join('')}</div>`,
             (el, close) => el.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { rtMonth = b.dataset.rm === r.currentMonth ? '' : b.dataset.rm; close(); U.render(); }), { label: 'Oy' });
     }
     U.page('reyting', {
@@ -618,7 +619,7 @@
             }
             const rest = rows.filter(x => x.rank > 3);
             return `${bar('', `<button type="button" class="chip" data-bq-rm style="margin-right: 8px; min-height: 44px">${cap1(monName(m))} ▾</button>`)}
-            <div class="bd nb" style="padding-top: 0; gap: 14px">
+            <div class="bd nb bq" style="padding-top: 0; gap: 14px">
               ${U.offline()}
               <h1 class="ttl">Ustozlar reytingi</h1>
               ${!r ? loading(e, 'bq:rt:' + rtMonth, 3, 96) : !rows.length ? empty(P.cup, 'Reyting hali shakllanmagan', "Darslar belgilangach ustozlar reytingi shu yerda chiqadi.") : `
@@ -647,7 +648,7 @@
             const newG = D().myGuides().filter(D().guideIsNew).length;
             const wait = waiting().length;
             const tile = (attr, cls, icon, title, sub, subStyle = '') => `<a class="bq-tile" href="#" ${attr}><span class="bq-ic40 ${cls}">${svg(icon, 20, 2)}</span><span class="col"><strong>${title}</strong><span class="xs"${subStyle ? ` style="${subStyle}"` : ''}>${sub}</span></span></a>`;
-            return `<div class="bd" style="padding-top: 16px; gap: 14px">
+            return `<div class="bd bq" style="padding-top: 16px; gap: 14px">
               ${U.offline()}
               <h1 class="ttl">Menyu</h1>
               <a href="#" data-u-push="profil" class="blue a1 bq-mcard">${U.HEX('bqMnHex').replace('class="hex"', 'class="hex bq-hex12"')}
@@ -677,7 +678,7 @@
             root.querySelector('[data-bq-break]')?.addEventListener('click', e => { e.preventDefault(); if (U.jadval?.openTanaffus) U.jadval.openTanaffus(); else U.go('jadval'); });
             root.querySelector('[data-bq-inactive]')?.addEventListener('click', e => { e.preventDefault(); stSeg = 'inactive'; U.go('oquvchilar'); });
             root.querySelector('[data-bq-logout]')?.addEventListener('click', () => {
-                U.sheet(`${sheetHead('Chiqasizmi?', "Bu telefondan akkauntdan chiqasiz. Internet yo'qligida saqlangan davomat belgilari yo'qolmaydi.")}<button type="button" class="btn w" data-bq-out style="color: #B42318; border-color: #FECDCA">Chiqish</button><button type="button" class="btn w" data-u-close>Bekor qilish</button>`,
+                sheet(`${sheetHead('Chiqasizmi?', "Bu telefondan akkauntdan chiqasiz. Internet yo'qligida saqlangan davomat belgilari yo'qolmaydi.")}<button type="button" class="btn w" data-bq-out style="color: #B42318; border-color: #FECDCA">Chiqish</button><button type="button" class="btn w" data-u-close>Bekor qilish</button>`,
                     el => { el.querySelector('[data-bq-out]').onclick = () => { D().logout(false); location.replace('/'); }; }, { label: 'Chiqish' });
             });
         }
@@ -704,7 +705,7 @@
     }
     function openPassword() {
         const minLen = histE().data?.minLength || 4;
-        U.sheet(`${sheetHead("Parolni o'zgartirish")}
+        sheet(`${sheetHead("Parolni o'zgartirish")}
             <div class="fl"><label for="bq-p0">Joriy parol</label><input id="bq-p0" type="password" autocomplete="current-password"></div>
             <div class="fl"><label for="bq-p1">Yangi parol</label><input id="bq-p1" type="password" autocomplete="new-password"></div>
             <div class="fl"><label for="bq-p2">Yangi parolni takrorlang</label><input id="bq-p2" type="password" autocomplete="new-password"></div>
@@ -733,7 +734,7 @@
             const sw = (k, l) => { const p = pr.data?.prefs?.[k], on = !!(p && (p.tg || p.web)); return `<div class="bq-rw"><span class="bq-kk">${esc(k === 'lesson_soon' && labelOf(k) ? labelOf(k) : l)}</span><button type="button" class="bq-sw${on ? ' on' : ''}" data-np="${k}" aria-label="${esc(l)}" aria-pressed="${on}"${pr.data ? '' : ' disabled'}></button></div>`; };
             const t = pr.data?.channels?.telegram;
             return `${bar('Profil', '<span style="width: 64px"></span>')}
-            <div class="bd nb" style="padding-top: 6px; gap: 10px">
+            <div class="bd nb bq" style="padding-top: 6px; gap: 10px">
               ${U.offline()}
               <div class="col a1" style="align-items: center; gap: 6px">
                 <div style="position: relative">${meAvatar(84, 'border: 3px solid #FFFFFF; box-shadow: 0 0 0 1px #CBD5E1')}<label class="bq-camb" aria-label="Rasmni almashtirish">${svg(P.cam, 16, 2.2)}<input type="file" accept="image/*" data-bq-av class="sr"></label></div>
@@ -798,7 +799,7 @@
             const histHtml = `<span class="bq-gh">KIRISHLAR · 30 KUN</span>
               <div class="card l">${!lh.data ? loading(lh, 'bq:lh', 2, 48) : ev.slice(0, 15).map(e => `<div class="li"><div class="col g1"><span class="nm">${esc(D().stamp(e.at))}</span><span class="s">${esc(uaLabel(e.userAgent).label)}${e.ip ? ' · ' + esc(e.ip) : ''}</span></div><span class="pill ${e.ok ? 'ok' : 'bad'}">${e.ok ? 'Kirdi' : 'Xato parol'}</span></div>`).join('') || '<div class="li"><span class="s">Yozuv yo\'q</span></div>'}</div>`;
             return `${bar(arg === 'qurilma' ? 'Qurilmalar' : 'Kirish tarixi', '<span style="width: 64px"></span>')}
-            <div class="bd nb" style="padding-top: 6px; gap: 10px">
+            <div class="bd nb bq" style="padding-top: 6px; gap: 10px">
               ${U.offline()}
               ${fails.length ? `<div class="note w" role="alert">${svg(P.alert, 18, 2).replace('<svg', '<svg style="flex: none; margin-top: 1px"')}<span><b>${esc(D().stamp(lf.at))} — ${fails.length} marta noto'g'ri parol${lf.ip ? ' (' + esc(lf.ip) + ')' : ''}.</b> Siz bo'lmasangiz, parolni o'zgartiring. ${lh.data.failLimit || 5} xatodan keyin kirish ${lh.data.lockMinutes || 15} daqiqaga yopiladi.</span></div>` : ''}
               ${arg === 'qurilma' ? sesHtml + histHtml : histHtml + sesHtml}
@@ -842,7 +843,7 @@
             const list = all.filter(g => (!q || `${g.title} ${g.subtitle || ''}`.toLowerCase().includes(q)) && (gF === 'all' || (gF === 'new' ? isNew(g) : g.subtitle === gF)));
             const chip = (k, l) => `<button type="button" class="chip${gF === k ? ' on' : ''}" data-gf="${esc(k)}" aria-pressed="${gF === k}">${l}</button>`;
             return `${bar()}
-            <div class="bd nb" style="padding-top: 0; gap: 10px">
+            <div class="bd nb bq" style="padding-top: 0; gap: 10px">
               ${U.offline()}
               <div class="col" style="padding: 0 4px"><h1 class="ttl" style="padding: 0">Yo'riqnomalar</h1><span class="s">Lavozimingizga tegishli · yangilari tepada</span></div>
               <div class="bq-srch"><label for="bq-gq" class="sr">Qidirish</label>${svg(P.search, 20, 2).replace('stroke="currentColor"', 'stroke="#4B5563"')}<input id="bq-gq" type="search" placeholder="Yo'riqnoma qidirish" value="${esc(gQ)}" autocomplete="off"></div>
@@ -861,11 +862,11 @@
     U.page('maqola', {
         render(id) {
             const g = D().myGuides().find(x => x.id === id);
-            if (!g) return `${bar()}<div class="bd nb">${empty(P.help, "Yo'riqnoma topilmadi", "U o'chirilgan yoki sizning lavozimingizga tegishli emas.")}</div>`;
+            if (!g) return `${bar()}<div class="bd nb bq">${empty(P.help, "Yo'riqnoma topilmadi", "U o'chirilgan yoki sizning lavozimingizga tegishli emas.")}</div>`;
             const wasNew = D().guideIsNew(g);
             const read = D().store.get('dwt_guides_read', []); if (!read.includes(g.id)) D().store.set('dwt_guides_read', [...read, g.id].slice(-200));
             return `${bar()}
-            <div class="bd nb" style="padding-top: 0; gap: 10px">
+            <div class="bd nb bq" style="padding-top: 0; gap: 10px">
               <div class="col" style="padding: 0 4px; gap: 6px">${wasNew || g.subtitle ? `<span class="pill ${wasNew ? 'inf' : 'mu'}" style="align-self: flex-start">${wasNew ? 'Yangi' : ''}${wasNew && g.subtitle ? ' · ' : ''}${esc(g.subtitle || '')}</span>` : ''}<h1 class="ttl" style="padding: 0; font-size: 24px">${esc(g.sticker ? g.sticker + ' ' : '')}${esc(g.title || '')}</h1><span class="s">${g.createdAt ? D().fmtDate(D().tz(g.createdAt).date) + ' · ' : ''}${readMin(g)} daq o'qish</span></div>
               <article class="card bq-art">${safeHtml(g.content) || '<p class="s">Matn yo\'q.</p>'}</article>
             </div>`;

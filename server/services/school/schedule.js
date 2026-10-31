@@ -367,7 +367,8 @@ async function updateOverride(db, actor, id, input, now = new Date()) {
 // ── Sinovga tanaffus (ustoz ilovasi v2) ──
 // Ustoz faqat admin sinovga OCHGAN vaqtiga (trialOpen ish vaqti yoki "open") tanaffus oladi: bugun yoki ertaga (sinov ham shu kunlarga qo'yiladi).
 // Sinov band qilingan vaqtga olinmaydi (409 — avval sinovni rad etadi). Sabab majburiy; ROP va admin ko'radi, sotuv faqat "Tanaffus".
-const BREAK_REASONS = { tired: 'Charchadim / dam olish', health: 'Sog\'lig\'im', family: 'Oilaviy ish', study: 'O\'qish / tayyorgarlik', other: 'Boshqa sabab' };
+// Dizayn (P2 "Sinovga tanaffus"): Sog'lig'im · Shaxsiy ish · Internet / texnika · Boshqa.
+const BREAK_REASONS = { health: 'Sog\'lig\'im', personal: 'Shaxsiy ish', tech: 'Internet / texnika', other: 'Boshqa' };
 async function addBreak(db, actor, teacherId, input, now = new Date()) {
     const today = T.nowLocal(now);
     const date = T.assertDate(input.date);

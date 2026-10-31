@@ -1,5 +1,9 @@
 /* boshqa — O'quvchilar, Karta, Darslik, DarsHub, Taqdimot, Maosh, Reyting, Menyu, Profil (dizayn helmet uslublari, .bq- prefiks bilan) */
-.bq-seg44 a,.bq-seg44 button{height:44px}
+.bq-seg44 a,.bq-seg44 button{height:44px;white-space:nowrap}
+/* .ph button{font:inherit} (ustoz.css moslamasi) .seg/.btn qalinligini bekor qiladi — bo'lim ichida dizayndagidek tiklanadi */
+.bq .seg button{font-size:14px;font-weight:700}
+.bq button.btn{font-size:15px;font-weight:800}
+.bq button.btn.sm{font-size:14px}
 .blue>*:not(.hex):not(.bq-shn){position:relative}
 .blue>.bq-hex12{position:absolute;inset:0;opacity:.12}
 .bq-rel{position:relative}
@@ -26,7 +30,7 @@
 .bq-srch{position:relative;flex:none}
 .bq-srch input{width:100%;height:48px;border-radius:16px;border:1.5px solid #CBD5E1;background:#FFFFFF;padding:0 14px 0 44px;font:inherit;font-size:15px;color:#0B1220}
 .bq-srch svg{position:absolute;left:14px;top:14px}
-.bq-mp{width:auto;min-width:56px;max-width:150px;flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:5px}
+.bq-mp{width:56px;flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:5px}
 .bq-a42{width:42px;height:42px}
 .bq-a64{width:64px;height:64px;border:3px solid #FFFFFF;box-shadow:0 0 0 1px #CBD5E1}
 
@@ -63,7 +67,6 @@
 .bq-tcs::-webkit-scrollbar{display:none}
 .ph a.bq-tc{color:#FFFFFF}
 .bq-tc{flex:1 0 46%;min-width:0;min-height:44px;background:rgba(255,255,255,.12);border-radius:16px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;color:#FFFFFF}
-.bq-tc b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* Dars materiallari */
 .bq-ey{letter-spacing:.06em;color:#0057B8}
@@ -72,20 +75,18 @@
 .bq-cb{font-weight:800;color:inherit;opacity:.7}
 .bq-sls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;flex:none}
 .bq-sl{aspect-ratio:16/10;border-radius:12px;padding:8px;display:flex;flex-direction:column;justify-content:space-between;font-size:11px;font-weight:700;color:#0B1220;border:1px solid #E6EAF2;background:#FFFFFF center/cover no-repeat;overflow:hidden;line-height:1.25}
-.ph a.bq-sl{color:#0B1220}
 .bq-sl i{font-style:normal;font-size:12px;font-weight:800;color:#4B5563}
 .ph a.bq-sl.f{background-color:#0B1220;color:#FFFFFF;border-color:#0B1220}
 .bq-sl.f i{color:#9DC4F5}
 .ph a.bq-sl.m{background:#F1F5F9;color:#3A4456;align-items:center;justify-content:center;font-size:13px}
 .bq-doc{display:flex;align-items:center;gap:12px}
-.ph a.bq-doc{color:#0B1220}
 .bq-ic{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;flex:none}
 
 /* Taqdimot — yotiq ekran (tik telefonda 90° buriladi) */
 .bq-tq{position:fixed;inset:0;z-index:50;box-sizing:border-box;font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:#0B1220;color:#FFFFFF;display:flex;gap:10px;padding:10px 12px 10px 16px;overflow:hidden;padding-left:max(16px,env(safe-area-inset-left));padding-right:max(12px,env(safe-area-inset-right))}
 @media (orientation:portrait){.bq-tq{inset:auto;top:0;left:100vw;width:100vh;width:100dvh;height:100vw;transform-origin:top left;transform:rotate(90deg)}}
 .bq-tq-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
-.bq-tq-top{display:flex;align-items:center;gap:10px;height:44px;flex:none}
+.bq-tq-top{display:flex;align-items:center;gap:10px;height:36px;flex:none}
 .bq-tq-ttl{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .bq-tq-cnt{font-size:13px;color:#C7D2E3;white-space:nowrap}
 .bq-tq-time{font-size:14px;font-variant-numeric:tabular-nums}
@@ -153,12 +154,10 @@
 .bq-rkp{align-self:flex-start;margin-top:4px;font-size:12px;font-weight:800;background:rgba(255,255,255,.18);border-radius:999px;padding:3px 10px}
 .bq-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;flex:none}
 .bq-tile{position:relative;background:#FFFFFF;border:1px solid #E6EAF2;border-radius:20px;padding:12px 10px;display:flex;flex-direction:column;gap:10px;color:#0B1220;min-height:96px}
-.ph a.bq-tile{color:#0B1220}
 .bq-tile strong{font-size:13px;font-weight:700}
 .bq-ic40{width:40px;height:40px;border-radius:12px;display:grid;place-items:center}
 .bq-or{background:#FFF4E5;color:#C4320A}
 .bq-ml{min-height:52px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #EEF2F8;color:#0B1220}
-.ph a.bq-ml{color:#0B1220}
 .bq-ml:last-child{border-bottom:0}
 .bq-mlt{font-size:15px;font-weight:600}
 .ph button.bq-out{border:0;border-radius:0;background:transparent;padding:0;font:inherit;color:#B42318;text-align:left;width:100%}

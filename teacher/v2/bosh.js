@@ -203,7 +203,7 @@
       </a>
       ${pills.length ? `<div style="display: flex; gap: 6px; flex-wrap: wrap">${pills.map(p => `<span class="pill" style="color: #FFFFFF; background: rgba(255,255,255,.14)">${p}</span>`).join('')}</div>` : ''}
       <div style="display: flex; gap: 8px">
-        <button type="button" class="btn p${i.live || reduced() ? '' : ' pulse'}" data-bs-start="${esc(i.studentId)}" style="flex: 1">${i.live ? svg('screen', 18) + 'Darsga qaytish' : U.svg(P.play, 18, 0).replace('fill="none"', 'fill="currentColor"') + 'Darsni boshlash'}</button>
+        <button type="button" class="btn bs-btn p${i.live || reduced() ? '' : ' pulse'}" data-bs-start="${esc(i.studentId)}" style="flex: 1">${i.live ? svg('screen', 18) + 'Darsga qaytish' : U.svg(P.play, 18, 0).replace('fill="none"', 'fill="currentColor"') + 'Darsni boshlash'}</button>
         ${g?.tg_link ? `<a href="${esc(g.tg_link)}" target="_blank" rel="noopener" class="btn gh" aria-label="Telegram guruhini ochish" style="width: 48px; padding: 0; color: #FFFFFF">${svg('tg')}</a>` : ''}
         ${li.no ? `<a href="#" data-u-push="taqdimot" data-arg="${li.no}" class="btn gh" aria-label="${li.no}-dars slaydlarini ochish" style="width: 48px; padding: 0; color: #FFFFFF">${svg('screen')}</a>` : ''}
       </div>
@@ -385,8 +385,8 @@
     </section>
   </div>
   <div class="bs-foot">
-    ${on ? `<button type="button" class="btn p" data-bs-finish style="flex: 1; height: 54px; font-size: 16px">${U.svg('<rect x="6" y="6" width="12" height="12" rx="2"></rect>', 18, 0).replace('fill="none"', 'fill="currentColor"')}Darsni tugatish</button>`
-        : `<button type="button" class="btn p" data-bs-start="${esc(sid)}" style="flex: 1; height: 54px; font-size: 16px">${U.svg(P.play, 18, 0).replace('fill="none"', 'fill="currentColor"')}Darsni boshlash</button>`}
+    ${on ? `<button type="button" class="btn bs-btn p" data-bs-finish style="flex: 1; height: 54px; font-size: 16px">${U.svg('<rect x="6" y="6" width="12" height="12" rx="2"></rect>', 18, 0).replace('fill="none"', 'fill="currentColor"')}Darsni tugatish</button>`
+        : `<button type="button" class="btn bs-btn p" data-bs-start="${esc(sid)}" style="flex: 1; height: 54px; font-size: 16px">${U.svg(P.play, 18, 0).replace('fill="none"', 'fill="currentColor"')}Darsni boshlash</button>`}
   </div>`;
     }
     U.page('dars', {
@@ -418,7 +418,7 @@
     </fieldset>
     <div class="bs-rs" data-reasons hidden><span class="xs b" style="letter-spacing: .04em">SABABI</span><div class="bs-rch">${REASONS.map(([k, l]) => `<button type="button" class="chip" data-r="${k}" aria-pressed="false">${l}</button>`).join('')}</div>
       <div class="fl"><label for="bsIz">Izoh · ixtiyoriy</label><textarea id="bsIz" maxlength="300" placeholder="Masalan: ota-onasi ogohlantirdi"></textarea></div></div>
-    <button type="button" class="btn p w" data-save style="height: 54px; font-size: 16px">Saqlash va tugatish</button>
+    <button type="button" class="btn bs-btn p w" data-save style="height: 54px; font-size: 16px">Saqlash va tugatish</button>
     <span class="xs" data-msg role="status" style="text-align: center; min-height: 20px">Kerak bo'lsa, Davomat bo'limida shu oy ichida o'zgartirasiz</span>`,
         (el, close) => {
             let present = true, reason = '';
@@ -466,7 +466,7 @@
         }
         d.setAtt(s.id, date, present);
         set(K.live, null);
-        if (!queued) api('/api/academic/sessions', { method: 'POST', body: { studentId: s.id, startedAt: live.startedAt, endedAt: new Date().toISOString(), lessonNo: present ? live.lessonNo : null } })
+        if (!queued && present) api('/api/academic/sessions', { method: 'POST', body: { studentId: s.id, startedAt: live.startedAt, endedAt: new Date().toISOString(), lessonNo: live.lessonNo } })
             .then(() => U.drop('bs:ses:')).catch(() => {});
         U.drop('bs:nx:');
         if (present) {
@@ -620,8 +620,8 @@
         <div class="col g1"><b style="font-size: 15px">${d.MON[+n.month.slice(5) - 1][0].toUpperCase()}${d.MON[+n.month.slice(5) - 1].slice(1)}dagi <span class="${a('bs-cn')}" style="color: #FDB022">${conv}-</span>konversiyangiz</b><span style="font-size: 12px; color: #C7D2E3">sinov darsingizdan kursga yozilganlar</span></div>
       </div>` : ''}
       <div style="display: grid; grid-template-columns: 1fr 1.3fr; gap: 8px">
-        <button type="button" class="btn" data-bs-x>Yopish</button>
-        <button type="button" class="btn p" data-bs-open="karta">Kartani ochish</button>
+        <button type="button" class="btn bs-btn" data-bs-x>Yopish</button>
+        <button type="button" class="btn bs-btn p" data-bs-open="karta">Kartani ochish</button>
       </div>
     </div>
   </section>`;
@@ -650,8 +650,8 @@
         <span style="font-size: 15px; font-weight: 700; color: #0B3A73">o'quvchi</span>
       </div>
       <div style="display: grid; grid-template-columns: 1fr 1.3fr; gap: 8px">
-        <button type="button" class="btn" data-bs-x>Yopish</button>
-        <button type="button" class="btn p" data-bs-open="darslik">${reached ? `${reached}-darsni ko'rish` : "1-darsni ko'rish"}</button>
+        <button type="button" class="btn bs-btn" data-bs-x>Yopish</button>
+        <button type="button" class="btn bs-btn p" data-bs-open="darslik">${reached ? `${reached}-darsni ko'rish` : "1-darsni ko'rish"}</button>
       </div>
     </div>
   </section>`;

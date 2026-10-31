@@ -2,6 +2,8 @@
    Dizayn helmet uslublari bo'lim prefiksi bilan (.bs-). Harakat — Motion.dc.html: faqat transform/opacity, "Kamroq harakat"da o'chadi. */
 
 /* Bosh */
+/* ustoz.css '.ph button{font:inherit}' .btn qalinligini bosadi — bo'lim tugmalari dizayndagi 800/15px */
+.ph button.bs-btn, .bs-ov button.bs-btn { font-weight: 800; font-size: 15px }
 .ph .bs-today a.li { color: #0B1220 }
 @keyframes bsFlt { 0%, 100% { transform: translateY(0) } 50% { transform: translateY(-6px) } }
 .bs-flt { animation: bsFlt 3s ease-in-out infinite }
@@ -21,7 +23,6 @@
 .bs-nt.new .bs-un { right: 14px }
 
 /* 03 · Jonli dars */
-.ph a.bs-tl { color: #0B1220 }
 .bs-tl { background: #FFFFFF; border: 1px solid #E6EAF2; border-radius: 18px; padding: 12px; display: flex; flex-direction: column; gap: 8px; color: #0B1220; min-height: 92px }
 .bs-tl .bs-tic { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center }
 .bs-tl b { font-size: 14px; font-weight: 700 }

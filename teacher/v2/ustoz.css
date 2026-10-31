@@ -133,7 +133,7 @@ html,body{margin:0;background:#E9EEF6}
 .ph{width:100%;max-width:520px;height:100vh;height:100dvh;margin:0 auto}
 .ph .bd{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 .ph .nav{position:absolute;padding-bottom:max(26px,env(safe-area-inset-bottom))}
-.ph button{font:inherit;cursor:pointer}
+:where(.ph) button{font-family:inherit;cursor:pointer}
 .ph button:disabled{cursor:default}
 .ph .scrim,.ph .sheet{position:absolute}
 .ph .sheet{max-height:92%;overflow-y:auto}
