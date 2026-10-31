@@ -74,7 +74,7 @@
     function logCall(id) {
         if (!isSales() || !g('updateLeadInStorage') || !g('createLeadComment')) return;
         const l = g('getLeadById') ? getLeadById(lang(), id) : null;
-        if (!l) return;
+        if (!l || !PRE.has(st(l))) return; // dalil faqat bog'lanishdan oldingi lidlar uchun kerak — ortiqcha saqlash yo'q
         const last = callsOf(l).filter(c => c.type === 'call-attempt').pop();
         if (last && Date.now() - last.t < 2 * 60000) return; // ketma-ket bosishlar bitta urinish
         const u = user();
@@ -114,7 +114,10 @@
         document.body.appendChild(S.el);
         document.body.classList.add('sl-locked');
         S.el.addEventListener('click', onClick);
-        S.el.addEventListener('keydown', onKey);
+        document.addEventListener('keydown', onKey, true);
+        setInert(true);
+        // Ilovaning boshqa pastki oynalari qulf ustida qolmasin (qo'ng'iroq natijasi oynasidan tashqari).
+        document.querySelectorAll('.sa-sheet-wrap').forEach(w => { if (!w.querySelector('.sa-sheet--call')) { try { window.sotuvApp?.closeSheet?.(); } catch (e) { w.remove(); } } });
         render();
         S.el.querySelector('.sl-gate')?.focus({ preventScroll: true });
         clearInterval(S.timer);
@@ -125,6 +128,18 @@
         closeSheet();
         S.el?.remove(); S.el = null; S.open = false; S.sig = '';
         document.body.classList.remove('sl-locked');
+        document.removeEventListener('keydown', onKey, true);
+        setInert(false);
+    }
+    // Fon (ilova, CRM) qulf paytida klaviatura/ekran o'quvchi uchun ham yopiq.
+    const KEEP = el => el.classList?.contains('sl-wrap') || el.classList?.contains('sl-sheet-wrap') || el.classList?.contains('sl-pill')
+        || el.classList?.contains('sa-sheet-wrap') || el.classList?.contains('sa-toast') || el.classList?.contains('dwact') || el.id === 'modalOverlay'
+        || ['SCRIPT', 'STYLE', 'LINK'].includes(el.tagName);
+    function setInert(on) {
+        [...document.body.children].forEach(el => {
+            if (on) { if (!KEEP(el) && !el.inert) { el.inert = true; el.dataset.slInert = '1'; } }
+            else if (el.dataset.slInert) { el.inert = false; delete el.dataset.slInert; }
+        });
     }
     function finish() {
         if (!S.el) { closeGate(); return; }
@@ -146,7 +161,7 @@
         const rows = lock.map(l => {
             const called = hasRecentCall(l), calls = callsOf(l), last = calls[calls.length - 1], [bg, fg] = avc(l.id), ph = telOf(l.phone);
             const meta = called
-                ? `<span class="sl-ok">Bugun ${hm(last.t)} qoʻngʻiroq qilindi — javob yoʻq</span>`
+                ? `<span class="sl-ok">${when(last.t)} qoʻngʻiroq qilindi — javob yoʻq</span>`
                 : `<span>Urinishlar: ${calls.length} · bugun qoʻngʻiroq yoʻq</span>`;
             return `<li class="sl-row">
               <div class="sl-row-h"><span class="sl-av" style="background:${bg};color:${fg}" aria-hidden="true">${esc(initials(l.name))}</span>
@@ -166,6 +181,7 @@
         }).join('');
         const gate = S.el.querySelector('.sl-gate');
         const keepScroll = gate.querySelector('.sl-list')?.scrollTop || 0;
+        const ae = document.activeElement, focusKey = ae && gate.contains(ae) ? [...ae.attributes].filter(a => a.name.startsWith('data-sl-')).map(a => `[${a.name}="${a.value}"]`).join('') : '';
         gate.innerHTML = `
           <span class="sl-handle" aria-hidden="true"></span>
           <div class="sl-head"><span class="sl-bell">${ic(I.bell, 26)}</span>
@@ -176,6 +192,7 @@
           <div class="sl-foot"><span>${ic(I.lock, 12, 2.6)} Shu lidlar hal boʻlguncha boshqa boʻlimlar vaqtincha yopiq</span>
             ${graceUsed() ? '<span class="sl-muted">Bugungi 5 daqiqalik imtiyoz ishlatilgan</span>' : '<button type="button" class="sl-link" data-sl-grace>Juda zarur ishim bor (5 daqiqa)</button>'}</div>`;
         const list = gate.querySelector('.sl-list'); if (list) list.scrollTop = keepScroll;
+        if (!S.sheet) { const f = focusKey && gate.querySelector(focusKey); (f || gate).focus({ preventScroll: true }); }
     }
 
     // ---------- ichki oynalar ----------
@@ -186,10 +203,12 @@
         S.sheet.innerHTML = `<button type="button" class="sl-sdim" data-sl-sclose aria-label="Yopish"></button><section class="sl-sheet ${cls}" role="dialog" aria-modal="true" tabindex="-1"><span class="sl-handle" aria-hidden="true"></span>${html}</section>`;
         document.body.appendChild(S.sheet);
         S.sheet.addEventListener('click', onClick);
-        S.sheet.addEventListener('keydown', onKey);
+        if (!S.open) S.sheet.addEventListener('keydown', onKey2);
         S.sheet.querySelector('.sl-sheet')?.focus({ preventScroll: true });
     }
-    function closeSheet() { S.sheet?.remove(); S.sheet = null; }
+    function closeSheet() { S.sheet?.remove(); S.sheet = null; if (S.open && S.el && !S.done) S.el.querySelector('.sl-gate')?.focus({ preventScroll: true }); }
+    // Qulf yo'q paytda (CRM'ning "Sifatsiz" o'rami) ochilgan oyna uchun klaviatura.
+    function onKey2(e) { if (e.key === 'Escape') { e.preventDefault(); closeSheet(); } }
 
     function sheetCallFirst(l) {
         const ph = telOf(l.phone), [bg, fg] = avc(l.id);
@@ -232,9 +251,10 @@
         const l = g('getLeadById') ? getLeadById(lang(), id) : null;
         if (!l || !g('updateLeadInStorage')) return;
         if (!hasRecentCall(l)) { sheetCallFirst(l); return; }
-        const reason = reasonId === 'wrong-phone'
-            ? { reasonId: 'wrong-phone', label: 'Notoʻgʻri telefon raqami (mavjud emas)' }
-            : { reasonId: 'no-answer', label: 'Telefonni olmadi (bir marta ham bogʻlanilmadi)' };
+        const id2 = reasonId === 'wrong-phone' ? 'wrong-phone' : 'no-answer';
+        // Yorliq CRM ro'yxatidan (statistika yorliq bo'yicha guruhlaydi — bir xil yozilishi shart).
+        const crm = (typeof SIFATSIZ_LID_REASONS !== 'undefined' ? SIFATSIZ_LID_REASONS : []).find(r => r.id === id2);
+        const reason = { reasonId: id2, label: crm?.label || (id2 === 'wrong-phone' ? "Noto'g'ri telefon raqami (mavjud emas)" : "Telefonni olmadi (bir marta ham bog'lanilmadi)") };
         const u = user();
         updateLeadInStorage(lang(), id, x => {
             const b = g('normalizeLeadExtras') ? normalizeLeadExtras(x) : x;
@@ -294,6 +314,10 @@
         if ('slSclose' in d) { closeSheet(); }
     }
     function onKey(e) {
+        if (!S.open) return;
+        // Ustida ilova oynasi (qo'ng'iroq natijasi) yoki CRM oynasi ochiq — klaviatura o'shalarniki.
+        const ov = document.getElementById('modalOverlay');
+        if (document.querySelector('.sa-sheet-wrap') || (ov && ov.style.display && ov.style.display !== 'none')) return;
         if (e.key === 'Escape') { e.preventDefault(); if (S.sheet) closeSheet(); else sheetBlocked(); return; }
         if (e.key !== 'Tab') return;
         const scope = S.sheet || S.el;
@@ -329,7 +353,7 @@
         const { warn, lock, rule } = compute();
         const list = warn.concat(lock);
         if (!list.length) return '';
-        const left = Math.max(1, rule.lockDays - (warn.length ? ageDays(warn[warn.length - 1]) : rule.lockDays));
+        const left = Math.max(1, rule.lockDays - (warn.length ? ageDays(warn[0]) : rule.lockDays));
         return `<button type="button" class="sl-warn" data-sa-stalewarn>
           <span class="sl-warn-h"><span class="sl-warn-i">${ic(I.clock, 22)}</span><span class="sl-warn-t"><strong>${list.length} ta lid ${rule.warnDays} kundan beri telefonni olmayapti</strong>
           <span>Bugun yana qoʻngʻiroq qiling. ${lock.length ? 'Baʼzilari allaqachon “Sifatsiz”ga oʻtkazilishi shart.' : `<b>${left} kundan keyin</b> ular “Sifatsiz”ga oʻtkazilishi shart boʻladi.`}</span></span></span>

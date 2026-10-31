@@ -1081,7 +1081,7 @@
     openCrm = function (spec) { openCrm._busy = true; try { _openCrm(spec); } finally { openCrm._busy = false; } };
 
     window.sotuvApp = { open: go, openLead, openCallResult, openStageSheet, back, render: () => render(false), state: S,
-        markCall: id => { callPending = { id, at: Date.now() }; } };
+        markCall: id => { callPending = { id, at: Date.now() }; }, closeSheet: () => closeSheet(true) };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(init, 60));
     else setTimeout(init, 60);
 })();

@@ -35,9 +35,24 @@ async function saveRules(pool, patch, langs) {
 }
 
 const ts = v => { const t = typeof v === 'number' ? v : Date.parse(v || ''); return Number.isFinite(t) ? t : 0; };
+// Dalil vaqti — server qabul qilgan vaqt (serverAt). Telefon soati noto'g'ri bo'lsa ham ishlaydi.
+// serverAt yo'q eski izohlar uchun telefon vaqti keng chegarada qabul qilinadi.
 function hasRecentCall(lead, now = Date.now()) {
-    return (Array.isArray(lead?.comments) ? lead.comments : [])
-        .some(c => c && CALL_EVIDENCE_TYPES.has(c.type) && now - ts(c.createdAt) <= CALL_WINDOW_MS && ts(c.createdAt) <= now + 60000);
+    return (Array.isArray(lead?.comments) ? lead.comments : []).some(c => {
+        if (!c || !CALL_EVIDENCE_TYPES.has(c.type)) return false;
+        const s = ts(c.serverAt);
+        if (s) return now - s <= CALL_WINDOW_MS;
+        const t = ts(c.createdAt);
+        return t > 0 && Math.abs(now - t) <= CALL_WINDOW_MS;
+    });
+}
+// Yangi qo'ng'iroq izohlariga server vaqtini qo'yadi (mavjudlariga tegmaydi).
+function stampCallEvidence(existing, incoming, now = new Date()) {
+    if (!incoming || !Array.isArray(incoming.comments)) return;
+    const had = new Set((Array.isArray(existing?.comments) ? existing.comments : []).map(c => c && c.id).filter(Boolean));
+    for (const c of incoming.comments) {
+        if (c && CALL_EVIDENCE_TYPES.has(c.type) && !c.serverAt && !had.has(c.id)) c.serverAt = now.toISOString();
+    }
 }
 
 // Sotuv menejeri bog'lanishdan oldingi bosqichdagi lidni "Sifatsiz"ga o'tkazmoqchi — oxirgi 24 soatda
@@ -50,4 +65,4 @@ function assertCallBeforeSifatsiz(existing, incoming, role) {
     throw Object.assign(new Error('Avval shu lidga qoʻngʻiroq qilib koʻring — olmasa, keyin “Sifatsiz”ga oʻtkazasiz.'), { status: 409, code: 'CALL_FIRST' });
 }
 
-module.exports = { DEFAULT_RULE, cleanRule, getRules, saveRules, hasRecentCall, assertCallBeforeSifatsiz };
+module.exports = { DEFAULT_RULE, cleanRule, getRules, saveRules, hasRecentCall, stampCallEvidence, assertCallBeforeSifatsiz };
