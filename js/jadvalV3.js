@@ -203,6 +203,19 @@
         const mob = MOBILE.matches;
         root.innerHTML = `<div class="jv${mob ? ' jv--m' : ''}">${header()}${leadBanner()}${toolbar()}${J.mode === 'sinov' ? (mob ? sinovMobile() : sinovDesktop()) : (mob ? darsMobile() : darsDesktop())}</div>`;
         bind(root);
+        if (!mob) stick(root);
+    }
+    // Aylantirganda filtrlar, ustozlar qatori va o'ng panel tepada qotib turadi (solishtirish uchun).
+    let stickRO = null;
+    function stick(root) {
+        const jv = root.querySelector('.jv'), tb = root.querySelector('.jv-tb');
+        if (!jv || !tb) return;
+        const set = () => jv.style.setProperty('--jv-st', `${tb.offsetHeight + 18}px`);
+        set();
+        stickRO?.disconnect();
+        if (window.ResizeObserver) { stickRO = new ResizeObserver(set); stickRO.observe(tb); }
+        const sc = root.querySelector('.jv-scroll'), gh = root.querySelector('.jv-ghw');
+        if (sc && gh) sc.addEventListener('scroll', () => { gh.scrollLeft = sc.scrollLeft; }, { passive: true });
     }
     function header() {
         const L = lang();
@@ -263,7 +276,7 @@
         const over = isToday && firstLive >= b;
         const empty = !T.length ? `<div class="jv-empty">Bu tilda ustoz topilmadi.</div>`
             : over ? `<div class="jv-empty">Bugun bu oraliqda boʻsh vaqt qolmadi.<br><button type="button" class="jv-btn jv-btn--soft jv-inl" data-day="next">${esc(nextName())}ni koʻrish</button></div>` : '';
-        return `<div class="jv-body"><div class="jv-card jv-grid"><div class="jv-scroll">${head}${rows}</div>${empty}</div>${sinovPanel()}</div>`;
+        return `<div class="jv-body"><div class="jv-card jv-grid"><div class="jv-ghw">${head}</div><div class="jv-scroll">${rows}</div>${empty}</div>${sinovPanel()}</div>`;
     }
     function sinovPanel() {
         const legend = `<div class="jv-card jv-legend"><div class="jv-eyebrow">Belgilar</div>
@@ -353,7 +366,7 @@
             return `<div class="jv-col" style="height:${H}px">${blocks}</div>`;
         }).join('');
         const empty = !T.length ? `<div class="jv-empty">Bu tilda ustoz topilmadi.</div>` : '';
-        return `<div class="jv-body"><div class="jv-card jv-grid"><div class="jv-scroll">${head}<div class="jv-tl" style="grid-template-columns:${cols}"><div class="jv-ticks">${ticks}</div>${colsHtml}</div></div>${empty}</div>${darsPanel()}</div>`;
+        return `<div class="jv-body"><div class="jv-card jv-grid"><div class="jv-ghw">${head}</div><div class="jv-scroll"><div class="jv-tl" style="grid-template-columns:${cols}"><div class="jv-ticks">${ticks}</div>${colsHtml}</div></div>${empty}</div>${darsPanel()}</div>`;
     }
     function darsPanel() {
         const legend = `<div class="jv-card jv-legend"><div class="jv-eyebrow">Belgilar</div>
