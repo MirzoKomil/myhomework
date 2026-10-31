@@ -717,12 +717,13 @@
             const check = () => { const p = v('#bq-p1'), ok = p.length >= minLen; el.querySelector('#bq-pr').className = 'note ' + (p && !ok ? 'w' : 'i'); return ok; };
             el.querySelector('#bq-p1').oninput = check;
             el.querySelector('[data-save]').onclick = async e => {
+                const btn = e.currentTarget;
                 if (!v('#bq-p0')) return U.toast('Joriy parolni kiriting');
                 if (!check()) return U.toast('Parol talablarga mos emas');
                 if (v('#bq-p1') !== v('#bq-p2')) return U.toast('Yangi parollar mos emas');
-                e.currentTarget.disabled = true;
+                btn.disabled = true;
                 try { await api('/api/auth/change-password', { method: 'POST', body: { currentPassword: v('#bq-p0'), newPassword: v('#bq-p1'), logoutOthers: el.querySelector('#bq-lo').checked } }); U.drop('bq:ss'); close(); U.toast("Parol o'zgartirildi", { ok: true }); }
-                catch (err) { e.currentTarget.disabled = false; U.toast(err.message); }
+                catch (err) { btn.disabled = false; U.toast(err.message); }
             };
         }, { label: "Parolni o'zgartirish" });
     }
@@ -809,7 +810,7 @@
         bind(root) {
             root.querySelector('[data-bq-pwd]')?.addEventListener('click', openPassword);
             root.querySelectorAll('[data-kill]').forEach(b => b.onclick = async () => { b.disabled = true; try { await api(`/api/auth/sessions/${encodeURIComponent(b.dataset.kill)}`, { method: 'DELETE' }); U.drop('bq:ss'); U.toast('Qurilma chiqarildi', { ok: true }); U.render(); } catch (err) { U.toast(err.message); b.disabled = false; } });
-            root.querySelector('[data-killall]')?.addEventListener('click', async e => { e.currentTarget.disabled = true; try { await api('/api/auth/sessions/others', { method: 'DELETE' }); U.drop('bq:ss'); U.toast('Boshqa qurilmalardan chiqildi', { ok: true }); U.render(); } catch (err) { U.toast(err.message); } });
+            root.querySelector('[data-killall]')?.addEventListener('click', async e => { const btn = e.currentTarget; btn.disabled = true; try { await api('/api/auth/sessions/others', { method: 'DELETE' }); U.drop('bq:ss'); U.toast('Boshqa qurilmalardan chiqildi', { ok: true }); U.render(); } catch (err) { btn.disabled = false; U.toast(err.message); } });
         }
     });
 
