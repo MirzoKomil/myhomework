@@ -734,6 +734,9 @@ function startLeadsPolling() {
             const prev = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
             const prevFingerprint = getLeadPollFingerprint(prev);
             const leads = await apiFetchLeads();
+            // Telefon uyqudan uyg'onganda yoki aloqa uzilganda server bo'sh/chala javob qaytarishi mumkin —
+            // bunday javob jimgina o'tkazib yuboriladi (keyingi so'rovda yangilanadi), "Saqlash xatoligi" chiqmaydi.
+            if (!isValidLeadsShape(leads)) return;
             if (hasPendingLeadChanges() || mutationGeneration !== getLeadMutationGeneration()) return;
             const changed = prevFingerprint !== getLeadPollFingerprint(leads);
             setItem(STORAGE_KEYS.leads, leads);

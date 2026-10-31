@@ -12,7 +12,9 @@ body.sa-on {
 /* Eski telefon qatlami (teamApp pastki menyusi, sarlavha) ilova ochiq turganda ko'rinmaydi. */
 body.sa-on #teamBottomNav { display: none !important; }
 body.sa-on:not(.sa-app-hidden) .top-header, body.sa-on:not(.sa-app-hidden) .sidebar { visibility: hidden; }
-body.sa-on.sa-app-hidden .main-area, body.sa-on.sa-app-hidden .content-layout { padding-bottom: calc(var(--sa-nav-h) + 12px) !important; }
+/* CRM sahifalari ilova menyusi ostida: bo'sh joy faqat aylanadigan qismning ichida (bir marta), aks holda ro'yxat bilan menyu orasida katta bo'shliq qoladi. */
+body.sa-on.sa-app-hidden .main-area, body.sa-on.sa-app-hidden .content-layout { padding-bottom: 0 !important; }
+body.sa-on.sa-app-hidden .tab-content { padding-bottom: calc(var(--sa-nav-h) + 16px) !important; }
 
 .sa-app {
     position: fixed; inset: 0 0 var(--sa-nav-h) 0; z-index: 250; display: flex; flex-direction: column;
@@ -470,3 +472,7 @@ body.sa-on.sa-full .sa-toast { bottom: calc(92px + env(safe-area-inset-bottom));
 
 .sa-kvs.sa-kvs--in { margin-top: 10px; padding: 4px 0 0; border-top: 1px solid var(--sa-line); }
 .sa-hist .lead-comment-item:not([class*="lead-comment-item--"]) { border-color: var(--sa-line) !important; }
+
+/* CRM sahifalari (Jadval, Sinov va h.k.) telefonda: sahifa aylantirilganda kontent iPhone holat paneli (soat, batareya) ostiga kirmasin.
+   Barcha rollar uchun (ROP, ustoz ham iPhone'dan kiradi); ilova qatlami ochiq bo'lsa — uning o'z yuqori qismi bor. */
+@media (max-width: 900px) { html.rd body:not(.auth-body):not(.sa-on)::before, html.rd body.sa-on.sa-app-hidden::before { content: ''; position: fixed; left: 0; right: 0; top: 0; height: env(safe-area-inset-top, 0px); background: var(--surface, #FFFFFF); z-index: 1100; pointer-events: none; } }
