@@ -156,12 +156,18 @@ router.post('/login', async (req, res) => {
             return res.status(400).json({ error: 'Login va parol kiriting' });
         const login = email.trim(), userAgent = req.headers['user-agent'] || '', ip = clientIp(req);
         // 5 marta noto'g'ri parol (shu login + shu IP, 15 daqiqa) → 15 daqiqa kutish. Xavfsizlik jurnali ishlamasa kirish to'xtamaydi.
-        if (await security.isLocked(dbPool(), login, ip).catch(() => false))
-            return res.status(429).json({ error: `Ko'p marta noto'g'ri parol kiritildi. ${security.LOCK_MINUTES} daqiqadan keyin qayta urinib ko'ring.` });
+        if (await security.isLocked(dbPool(), login, ip).catch(() => false)) {
+            const st = await security.failState(dbPool(), login, ip).catch(() => null);
+            return res.status(429).json({ error: `Ko'p marta noto'g'ri parol kiritildi. ${security.LOCK_MINUTES} daqiqadan keyin qayta urinib ko'ring.`,
+                locked: true, retryAfterSec: st?.retryAfterSec || security.LOCK_MINUTES * 60 });
+        }
         const user = await findUserByEmail(login);
         if (!user || !bcrypt.compareSync(password, user.password_hash)) {
             await security.record(dbPool(), { userId: user?.id || null, login, ok: false, reason: 'wrong_password', ip, userAgent }).catch(() => {});
-            return res.status(401).json({ error: 'Login yoki parol noto\'g\'ri' });
+            // Qolgan urinishlar (ilova "Yana N ta urinish qoldi" ko'rsatadi); 0 bo'lsa — endi qulf.
+            const st = await security.failState(dbPool(), login, ip).catch(() => null);
+            if (st && st.attemptsLeft === 0) return res.status(429).json({ error: `Ko'p marta noto'g'ri parol kiritildi. ${security.LOCK_MINUTES} daqiqadan keyin qayta urinib ko'ring.`, locked: true, retryAfterSec: st.retryAfterSec });
+            return res.status(401).json({ error: 'Login yoki parol noto\'g\'ri', ...(st ? { attemptsLeft: st.attemptsLeft, failLimit: security.FAIL_LIMIT } : {}) });
         }
         if (user.disabled_at)
             return res.status(403).json({ error: 'Bu akkaunt bloklangan (xodim ishdan bo‘shatilgan). Rahbariyatga murojaat qiling.' });

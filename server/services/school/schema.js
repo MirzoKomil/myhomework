@@ -95,6 +95,13 @@ CREATE TABLE IF NOT EXISTS school_student_groups (
 CREATE UNIQUE INDEX IF NOT EXISTS school_student_groups_name ON school_student_groups(LOWER(name));
 -- AdminGuruhlar "A'zolar": admin/ROP Telegram guruhga kim qo'shilganini belgilaydi ({ teacher, assistant, sales, rop: xodim id, student: true }).
 -- Bo'sh {} — hali belgilanmagan (soxta "5/5" ko'rsatilmaydi).
+ALTER TABLE school_makeups ADD COLUMN IF NOT EXISTS held_start_min SMALLINT;
+ALTER TABLE school_makeups ADD COLUMN IF NOT EXISTS held_full BOOLEAN;
+-- Ustoz ilovasi v2: "Sinovga tanaffus" — ustoz admin ochgan sinov vaqtiga tanaffus oladi (kind='break', faqat sana, sabab majburiy).
+ALTER TABLE school_overrides DROP CONSTRAINT IF EXISTS school_overrides_kind_check;
+ALTER TABLE school_overrides ADD CONSTRAINT school_overrides_kind_check CHECK (kind IN ('open','close','makeup_only','leave','break'));
+ALTER TABLE school_overrides ADD COLUMN IF NOT EXISTS reason_code TEXT NOT NULL DEFAULT '';
+ALTER TABLE school_overrides ADD COLUMN IF NOT EXISTS note TEXT NOT NULL DEFAULT '';
 ALTER TABLE school_student_groups ADD COLUMN IF NOT EXISTS members JSONB NOT NULL DEFAULT '{}'::jsonb;
 CREATE TABLE IF NOT EXISTS school_assist_contacts (
  id TEXT PRIMARY KEY, student_id TEXT NOT NULL, assistant_id TEXT NOT NULL,
@@ -115,6 +122,13 @@ CREATE TABLE IF NOT EXISTS school_assist_months (
 CREATE TABLE IF NOT EXISTS school_absences (
  teacher_id TEXT NOT NULL, student_id TEXT NOT NULL, day DATE NOT NULL, absent BOOLEAN NOT NULL DEFAULT TRUE,
  marked_by TEXT NOT NULL DEFAULT '', marked_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), PRIMARY KEY (teacher_id, student_id, day)
+);
+ALTER TABLE school_absences ADD COLUMN IF NOT EXISTS reason_code TEXT NOT NULL DEFAULT '';
+ALTER TABLE school_absences ADD COLUMN IF NOT EXISTS reason_note TEXT NOT NULL DEFAULT '';
+-- Ustoz ilovasi v2: dars rejadagidan boshqa vaqtda o'tgan bo'lsa — haqiqiy vaqti (nazorat uchun, maoshga ta'sir qilmaydi).
+CREATE TABLE IF NOT EXISTS school_lesson_times (
+ teacher_id TEXT NOT NULL, student_id TEXT NOT NULL, day DATE NOT NULL, start_min SMALLINT NOT NULL, end_min SMALLINT NOT NULL,
+ marked_by TEXT NOT NULL DEFAULT '', marked_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), PRIMARY KEY (teacher_id, student_id, day), CHECK (end_min > start_min)
 );
 -- Ustozning o'quvchi bo'yicha so'rovi ("Adminga so'rov" — muzlatish, ustoz, jadval): 'student' turi.
 DO $$ BEGIN

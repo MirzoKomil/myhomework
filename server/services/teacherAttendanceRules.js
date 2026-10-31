@@ -36,7 +36,7 @@ async function assertTeacherAttendanceWindow(client, { student, teacherId, date,
         const t = (await client.query("SELECT to_regclass('public.teachers')::text AS t")).rows[0]?.t
             ? (await client.query('SELECT schedule_pattern FROM teachers WHERE id=$1', [teacherId])).rows[0] || {} : {};
         const days = cal.weekdays({ lessonDayOfWeek: student.lesson_day_of_week }, { schedulePattern: t.schedule_pattern }, 'main');
-        if (!days.includes(T.weekday(date))) bad(400, 'Bu kun o\'quvchining dars kuni emas — o\'tilgan darsni "Qoplash darsi" orqali kiriting (admin tasdiqlaydi)');
+        if (!days.includes(T.weekday(date))) bad(400, 'Bu kun o\'quvchining dars kuni emas — o\'tilgan darsni "Qoplash darsi" orqali kiriting');
     }
 }
 

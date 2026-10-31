@@ -281,6 +281,8 @@
         S.tab = tab; history.replaceState({ pages: [], tab }, '', hashFor()); render();
     }
     function render() {
+        // v2 ishga tushgan bo'lsa, eski ilovaning kechikkan qayta chizishlari (reyting, lazy, online) v2 ramkasiga yo'naltiriladi.
+        if (window.UstozV2?.active && S.user) return window.U.render();
         if (!S.user) return renderLogin();
         if (!S.state) return;
         const t = top(), pg = t && PAGES[t.id];
@@ -327,6 +329,8 @@
 
     // ── Kirish ──────────────────────────────────────────────────────────────
     function renderLogin(error = '') {
+        // Domwork Team: kirish bitta — umumiy login sahifasi (/). U yerda ustoz rolini aniqlab, shu ilovaga qaytaradi.
+        if (window.UstozV2) { location.replace(error ? '/?e=' + encodeURIComponent(error) : '/'); return; }
         root.innerHTML = `<div style="padding: 56px 24px 32px; display: flex; flex-direction: column; gap: 28px; min-height: 100vh; background: #FFFFFF">
           <div style="display: flex; flex-direction: column; gap: 14px">
             <div style="width: 60px; height: 60px; border-radius: 18px; background: #0065D6; display: flex; align-items: center; justify-content: center; color: #FFFFFF">${ico(I.grad, 32)}</div>
@@ -1692,6 +1696,7 @@
 
     // ── Ishga tushirish ─────────────────────────────────────────────────────
     function errorScreen(err) {
+        window.dwtCss?.('/teacher/app.css?v=2');
         const at = hm(now().min);
         root.innerHTML = `${offlineBar()}<div class="top"><div class="grow"><h1>Domwork Teacher</h1><div class="sub">Yuklanmadi</div></div></div>
           <div class="body" style="justify-content: center; align-items: center; text-align: center; gap: 12px; padding-top: 80px; padding-bottom: 140px">
@@ -1718,6 +1723,9 @@
                 root.querySelector('#out').onclick = () => logout(false);
                 return;
             }
+            // Ustoz ilovasi v2 (1-noyabr dizayni): asosiy ustoz uchun yangi ekranlar (teacher/v2/*). Yordamchi — hozircha shu eski ko'rinish.
+            if (window.UstozV2 && !isAssistantOnly()) { (window.UstozV2.css || []).forEach(h => window.dwtCss?.(h)); window.UstozV2.start(); flushOutbox(); return; }
+            window.dwtCss?.('/teacher/app.css?v=2');
             const h = parseHash();
             S.tab = h.tab; S.pages = [];
             history.replaceState({ pages: [], tab: S.tab }, '', '#' + S.tab);
@@ -1735,7 +1743,11 @@
         if (document.visibilityState === 'visible' && S.user && S.state && Date.now() - (S._loadedAt || 0) > 120000) loadAll().then(() => { if (!document.querySelector('.sheet')) render(); }).catch(() => {});
     });
     try { S.user = JSON.parse(localStorage.getItem(USER) || 'null'); } catch { S.user = null; }
-    if (!localStorage.getItem(TOKEN) || S.user?.role !== 'teacher') { S.user = null; renderLogin(); }
+    // Umumiy yadro v2 uchun (teacher/v2/core.js): ma'lumot, API, davomat va sinov qoidalari — bitta manba.
+    window.DWT = { S, api, lazy, drop, loadAll, now, esc, money, pad, hm, toMin, tz, stamp, ago, day10, wdOf, fmtDate, first, short, avatar, initials,
+        attFor, setAtt, lessonDays, markOf, coveredBy, uncovered, monthStats, patternOf, patternLabel, trialPhase, tReq, tAt, trialManager, myGuides, guideIsNew,
+        outbox, flushOutbox, store, logout, toast, OUTBOX, REASONS, cal, DAY, DAY_FULL, MON, MON_S, isAssistantOnly, stuOf, shiftMonth };
+    if (!localStorage.getItem(TOKEN) || S.user?.role !== 'teacher') { S.user = null; if (window.UstozV2) location.replace('/'); else renderLogin(); }
     else boot();
     window.__dwt = S;
 })();

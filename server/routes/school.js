@@ -305,6 +305,19 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
     router.post('/overrides', handle(req => { need(req, FULL); return write(req, c => S.addOverride(c, req.user, req.body || {}).then(o => ({ override: o }))); }));
     router.put('/overrides/:id', handle(req => { need(req, FULL); return write(req, c => S.updateOverride(c, req.user, req.params.id, req.body || {}).then(o => ({ override: o }))); }));
     router.delete('/overrides/:id', handle(req => { need(req, FULL); return write(req, c => S.removeOverride(c, req.user, req.params.id).then(o => ({ override: o }))); }));
+    // Ustoz ilovasi v2 — "Sinovga tanaffus": ustoz o'zi oladi / bekor qiladi; admin ustoz nomidan bekor qila oladi.
+    // Admin va ROP ga bildirishnoma (staffNotify: trial_break) — Telegram bot orqali ham.
+    router.post('/breaks', handle(req => write(req, async c => {
+        let teacherId;
+        if (req.user.role === 'teacher') teacherId = (await teacherOf(req)).id;
+        else { need(req, FULL); teacherId = String(req.body?.teacherId || ''); if (!teacherId) throw T.fail(400, 'Ustoz tanlanmagan'); }
+        return { breaks: await S.addBreak(c, req.user, teacherId, req.body || {}) };
+    })));
+    router.delete('/breaks/:id', handle(req => write(req, async c => {
+        const teacherId = req.user.role === 'teacher' ? (await teacherOf(req)).id : (need(req, FULL), null);
+        return { break: await S.removeBreak(c, req.user, teacherId, req.params.id) };
+    })));
+    router.get('/breaks/reasons', handle(async () => ({ reasons: Object.entries(S.BREAK_REASONS).map(([code, label]) => ({ code, label })) })));
     router.get('/teachers/:id/hours', handle(async req => {
         if (req.user.role === 'teacher' && (await teacherOf(req)).id !== req.params.id) throw T.fail(403, 'Faqat o\'z ish vaqtingiz');
         return { hours: (await pool.query('SELECT * FROM school_teacher_hours WHERE teacher_id=$1 ORDER BY weekday,start_min', [req.params.id])).rows };
@@ -394,7 +407,7 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
             [r.id, approve ? 'approved' : 'rejected', req.user.id, req.user.name || '', String(req.body?.note || '').slice(0, 300)]);
         return { request: rows[0], override, makeups };
     }); }));
-    // Qoplash: ustoz "Q" yoki "Keldi · 2 dars" belgilagach → tekshiruvga; admin tasdiqlaydi.
+    // Qoplash: ustoz "Q" yoki "Keldi · 2 dars" belgilagach → darhol hisobga (tasdiqsiz); nazoratchi kerak bo'lsa rad etadi.
     // Qoplash darsini rejaga qo'yish (Dars jadvali → bo'sh vaqt → "Qoplash darsi"). Yagona yo'l: POST /makeups/plan
     // (eski POST /bookings {kind:'makeup'} ham shu funksiyaga keladi — ustoz ilovasining eski versiyalari uchun).
     // Qoida (UstozYoriqnoma "Qoplash darsi qoidalari": "Alohida kunda — faqat o'quvchining dars kuni bo'lmagan kunga
@@ -444,12 +457,13 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         if (cur?.held_date && S.dateStr(cur.held_date) > T.nowLocal().date) throw T.fail(400, 'Qoplash darsi hali o\'tmagan — o\'tgan kuni belgilang');
         // Rejaga qo'yilgandan keyin qoldirilgan kunga "Keldi" qo'yilgan bo'lsa — dars o'tilgan, qoplash ikki marta sanalmaydi.
         if (cur?.missed_date && await cameOn(c, cur.student_id, S.dateStr(cur.missed_date))) throw T.fail(409, 'Qoldirilgan kunda endi "Keldi" — qoplash kerak emas (admin bekor qiladi)');
-        const { rows } = await c.query(`UPDATE school_makeups SET status='review' WHERE id=$1 AND teacher_id=$2 AND status='planned' RETURNING *`, [req.params.id, me.id]);
+        // Ustoz ilovasi v2 (1-noyabr): qoplash admin tasdig'isiz darhol hisobga o'tadi; nazoratchi o'quvchiga qo'ng'iroq qilib tekshiradi, kerak bo'lsa rad etadi.
+        const { rows } = await c.query(`UPDATE school_makeups SET status='approved', decided_at=NOW(), decision_note='ustoz belgiladi — tasdiqsiz' WHERE id=$1 AND teacher_id=$2 AND status='planned' RETURNING *`, [req.params.id, me.id]);
         if (!rows.length) throw T.fail(409, 'Qoplash topilmadi yoki allaqachon belgilangan');
         return { makeup: rows[0] };
     })));
-    // O'tib bo'lingan qoplash darsi (dars kuni bo'lmagan kunda) — darhol tekshiruvga; admin tasdiqlasa maoshga o'tadi.
-    // Ustoz o'z o'quvchisi uchun yuboradi → "Tekshiruvda". Admin (Akademik → Davomat) o'quvchining asosiy ustozi
+    // O'tib bo'lingan qoplash darsi (dars kuni bo'lmagan kunda) — darhol hisobga o'tadi (1-noyabr qarori: admin tasdig'i yo'q,
+    // nazoratchi qo'ng'iroq qilib tekshiradi va kerak bo'lsa rad etadi). Admin (Akademik → Davomat) o'quvchining asosiy ustozi
     // nomidan kiritadi — admin o'zi tasdiqlovchi bo'lgani uchun darhol "Tasdiqlandi" (kim kiritgani yoziladi).
     async function makeupOwner(req, c) {
         const st = (await c.query('SELECT teacher_id FROM students WHERE id=$1', [req.body?.studentId])).rows[0];
@@ -489,9 +503,13 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
                 if (!heldCame) throw T.fail(400, 'Qo\'shaloq dars uchun avval shu kuni "Keldi" belgilang');
             }
         }
-        const { rows } = await c.query(`INSERT INTO school_makeups (id,student_id,teacher_id,missed_date,held_date,kind,status,created_by,decided_by,decided_by_name,decided_at,decision_note)
-            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`, [randomUUID(), req.body.studentId, own.teacherId, missed, held, kind, own.admin ? 'approved' : 'review', req.user.id,
-            own.admin ? req.user.id : null, own.admin ? req.user.name || '' : null, own.admin ? new Date() : null, own.admin ? 'admin kiritdi (Akademik → Davomat)' : ''])
+        // Vaqt (ixtiyoriy): ustoz ilovasi "Soat nechada o'tdingiz?" va "To'liq bo'ldimi?" — nazoratchi qo'ng'iroqda solishtiradi.
+        const heldStart = req.body.heldTime != null && req.body.heldTime !== '' ? T.toMin(req.body.heldTime) : null;
+        if (req.body.heldTime && heldStart == null) throw T.fail(400, 'Qoplash vaqti noto\'g\'ri');
+        const full = req.body.full === false ? false : req.body.full === true ? true : null;
+        const { rows } = await c.query(`INSERT INTO school_makeups (id,student_id,teacher_id,missed_date,held_date,kind,status,created_by,decided_by,decided_by_name,decided_at,decision_note,held_start_min,held_full)
+            VALUES ($1,$2,$3,$4,$5,$6,'approved',$7,$8,$9,NOW(),$10,$11,$12) RETURNING *`, [randomUUID(), req.body.studentId, own.teacherId, missed, held, kind, req.user.id,
+            own.admin ? req.user.id : null, own.admin ? req.user.name || '' : null, own.admin ? 'admin kiritdi (Akademik → Davomat)' : 'ustoz kiritdi — tasdiqsiz', heldStart, full])
             .catch(e => { if (e.code === '23505') throw T.fail(409, 'Bu dars uchun qoplash allaqachon bor'); throw e; });
         return { makeup: rows[0] };
     }
@@ -527,7 +545,8 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
             if (m?.missed_date && await cameOn(c, m.student_id, S.dateStr(m.missed_date))) throw T.fail(409, 'Qoldirilgan kunda "Keldi" bor — bu qoplashni tasdiqlab bo\'lmaydi (maoshga ikki marta o\'tadi), rad eting');
         }
         const { rows } = await c.query(`UPDATE school_makeups SET status=$2, decided_by=$3, decided_by_name=$4, decided_at=NOW(), decision_note=$5
-            WHERE id=$1 AND status='review' RETURNING *`, [req.params.id, approve ? 'approved' : 'rejected', req.user.id, req.user.name || '', String(req.body?.note || '').slice(0, 300)]);
+            WHERE id=$1 AND (status='review' OR ($6 AND status='approved')) RETURNING *`, [req.params.id, approve ? 'approved' : 'rejected', req.user.id, req.user.name || '', String(req.body?.note || '').slice(0, 300), !approve]);
+        // Tasdiqsiz hisobga o'tgan qoplashni nazoratchi qo'ng'iroqdan keyin rad etishi mumkin (approved → rejected).
         if (!rows.length) throw T.fail(409, 'Qoplash tekshiruvda emas');
         // O'quvchi kartasi "O'zgarishlar tarixi": qoplash qarori (kim, qachon, qaysi kun uchun, sabab).
         const mk = rows[0];

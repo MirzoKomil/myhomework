@@ -33,6 +33,17 @@ async function isLocked(pool, login, ip) {
     return rows[0].n >= FAIL_LIMIT;
 }
 
+// Ustoz ilovasi v2 (Kirish K3/K4): qolgan urinishlar va qulf qachon ochilishi. isLocked bilan bir qoida —
+// so'nggi 15 daqiqadagi xatolar; qulf eng so'nggi 5 xatoning eng eskisi 15 daqiqadan o'tganda ochiladi.
+async function failState(pool, login, ip) {
+    await ensure(pool);
+    const { rows } = await pool.query(`SELECT at FROM login_events WHERE LOWER(login)=LOWER($1) AND ip=$2 AND NOT ok
+        AND at > NOW() - ($3 || ' minutes')::interval ORDER BY at DESC LIMIT $4`, [login, ip, String(LOCK_MINUTES), FAIL_LIMIT]);
+    const left = Math.max(0, FAIL_LIMIT - rows.length);
+    const retryAfterSec = left === 0 ? Math.max(1, Math.ceil((new Date(rows[rows.length - 1].at).getTime() + LOCK_MINUTES * 60000 - Date.now()) / 1000)) : 0;
+    return { attemptsLeft: left, retryAfterSec };
+}
+
 async function record(pool, { userId = null, login, ok, reason = '', ip = '', userAgent = '' }) {
     await ensure(pool);
     await pool.query(`INSERT INTO login_events (id, user_id, login, ok, reason, ip, user_agent) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
@@ -71,4 +82,4 @@ async function passwordChangedAt(pool, userId) {
     return (await pool.query('SELECT password_changed_at FROM users WHERE id=$1', [userId])).rows[0]?.password_changed_at || null;
 }
 
-module.exports = { FAIL_LIMIT, LOCK_MINUTES, STAFF_MIN, ensure, isLocked, record, history, maskIp, checkNewPassword, markPasswordChanged, passwordChangedAt };
+module.exports = { FAIL_LIMIT, LOCK_MINUTES, STAFF_MIN, ensure, isLocked, failState, record, history, maskIp, checkNewPassword, markPasswordChanged, passwordChangedAt };
