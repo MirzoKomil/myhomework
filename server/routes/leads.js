@@ -8,6 +8,7 @@ const { webhookSecretRequired } = require('../middleware/webhook');
 const { sendLeadToCapi } = require('../services/capiWebhook');
 const { notifyLeadChannel } = require('../services/leadChannelNotify');
 const ropScope = require('../services/ropScope');
+const staleLeads = require('../services/staleLeads');
 // ROP faqat HR'dagi o'z til yo'nalishi lidlarini ko'radi va o'zgartiradi (til belgilanmagan — cheklovsiz).
 const ropLangs = req => ropScope.ropLangsFor(require('../db').pool, req.user);
 
@@ -199,6 +200,19 @@ router.get('/deleted', authRequired, leadArchiveRequired, async (req, res) => {
     }
 });
 
+// "Qotib qolgan lidlar" qoidasi (necha kunda ogohlantirish / qulf) — til bo'yicha.
+router.get('/stale-rule', authRequired, leadReadRequired, async (req, res) => {
+    try { res.json({ rules: await staleLeads.getRules(require('../db').pool) }); }
+    catch (err) { console.error('GET /api/leads/stale-rule', err); res.json({ rules: { english: staleLeads.DEFAULT_RULE, russian: staleLeads.DEFAULT_RULE } }); }
+});
+router.put('/stale-rule', authRequired, async (req, res) => {
+    if (!['admin', 'rop', 'boshliq'].includes(req.user?.role)) return res.status(403).json({ error: 'Qoidani faqat ROP yoki admin oʻzgartiradi' });
+    try {
+        const langs = req.user.role === 'rop' ? await ropLangs(req) : null;
+        res.json({ rules: await staleLeads.saveRules(require('../db').pool, req.body?.rules || {}, langs) });
+    } catch (err) { console.error('PUT /api/leads/stale-rule', err); res.status(500).json({ error: 'Qoidani saqlab boʻlmadi' }); }
+});
+
 // CRM ichidagi barcha lid o'zgarishlari endi bitta qator bo'yicha yoziladi.
 // Eski generic /api/state snapshot yo'li 200+ lidni yo'qotgan — bu endpoint
 // boshqa lidlarning birortasiga tegmaydi.
@@ -217,6 +231,13 @@ router.patch('/:id', authRequired, leadMutationRequired, leadOwnershipRequired, 
         }
         if (!['english', 'russian'].includes(language)) {
             return res.status(400).json({ error: 'Til english yoki russian bo\'lishi kerak' });
+        }
+        if (Array.isArray(lead.comments) && lead.comments.some(c => c && (c.type === 'call-attempt' || c.type === 'contact-fail'))) {
+            const existing = await getLeadById(req.params.id);
+            staleLeads.stampCallEvidence(existing, lead);
+            if (req.user.role === 'sales_manager' && lead.status === 'sifatsiz-lidlar') staleLeads.assertCallBeforeSifatsiz(existing, lead, req.user.role);
+        } else if (req.user.role === 'sales_manager' && lead.status === 'sifatsiz-lidlar') {
+            staleLeads.assertCallBeforeSifatsiz(await getLeadById(req.params.id), lead, req.user.role);
         }
         const { lead: saved, platformAccess } = await upsertLead({ ...lead, id: req.params.id }, language, req.user);
         res.json({ ok: true, lead: saved, platformAccess });

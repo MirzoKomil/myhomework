@@ -204,6 +204,7 @@
           ${bell()}
         </header>
         <div class="sa-body sa-stagger">
+          ${window.staleLeads?.homeCardHtml ? window.staleLeads.homeCardHtml() : ''}
           <button type="button" class="sa-card sa-plan" data-sa-nav="plan">
             <span class="sa-ring"><svg width="84" height="84" viewBox="0 0 84 84" role="img" aria-label="Reja ${pct ?? 0}% bajarildi"><circle cx="42" cy="42" r="36" fill="none" stroke="#E2E8F0" stroke-width="9"/><circle class="sa-ring-v" cx="42" cy="42" r="36" fill="none" stroke="#0065D6" stroke-width="9" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${Math.round(C - C * ring / 100)}" transform="rotate(-90 42 42)" style="--off:${Math.round(C - C * ring / 100)}"/></svg><b>${pct == null ? '—' : pct + '%'}</b><small>reja</small></span>
             <span class="sa-plan-t"><span class="sa-k">${MON[now.getMonth()][0].toUpperCase() + MON[now.getMonth()].slice(1)} rejasi</span>
@@ -892,16 +893,17 @@
 
     // ---------- hodisalar ----------
     function onClick(e) {
-        const t = e.target.closest('[data-sa-lead],[data-sa-nav],[data-sa-go],[data-sa-back],[data-sa-stage],[data-sa-stagego],[data-sa-call],[data-sa-tg],[data-sa-sms],[data-sa-move],[data-sa-retrial],[data-sa-survey],[data-sa-tab],[data-sa-stagesheet],[data-sa-sheetclose],[data-sa-outcome],[data-sa-pick],[data-sa-crsave],[data-sa-qchip],[data-sa-followup],[data-sa-notify],[data-sa-recmanage],[data-sa-recretry],[data-sa-crm],[data-sa-trials],[data-sa-notif],[data-sa-filter],[data-sa-src],[data-sa-clearq],[data-sa-rper],[data-sa-pay],[data-sa-logout],[data-sa-install],[data-sa-nread],[data-sa-nitem],[data-sa-skip],[data-sa-sort]');
+        const t = e.target.closest('[data-sa-lead],[data-sa-nav],[data-sa-go],[data-sa-back],[data-sa-stage],[data-sa-stagego],[data-sa-call],[data-sa-tg],[data-sa-sms],[data-sa-move],[data-sa-retrial],[data-sa-survey],[data-sa-tab],[data-sa-stagesheet],[data-sa-sheetclose],[data-sa-outcome],[data-sa-stalewarn],[data-sa-pick],[data-sa-crsave],[data-sa-qchip],[data-sa-followup],[data-sa-notify],[data-sa-recmanage],[data-sa-recretry],[data-sa-crm],[data-sa-trials],[data-sa-notif],[data-sa-filter],[data-sa-src],[data-sa-clearq],[data-sa-rper],[data-sa-pay],[data-sa-logout],[data-sa-install],[data-sa-nread],[data-sa-nitem],[data-sa-skip],[data-sa-sort]');
         if (!t) return;
         const d = t.dataset;
-        if ('saCall' in d) { callPending = { id: d.saCall, at: Date.now() }; return; } // tel: havolasi o'zi ochiladi
+        if ('saCall' in d) { callPending = { id: d.saCall, at: Date.now() }; try { window.staleLeads?.logCall?.(d.saCall); } catch (er) { /* dalil yozilmasa ham qo'ng'iroq ochiladi */ } return; } // tel: havolasi o'zi ochiladi
         e.preventDefault();
         if ('saLead' in d) return openLead(d.saLead);
         if ('saNav' in d) { if (d.saNav === 'jadval') return openJadval(); return go(d.saNav, { reset: true }); }
         if ('saGo' in d) return go(d.saGo);
         if ('saBack' in d) { if (!back()) go('home', { reset: true }); return; }
         if ('saStage' in d) { S.stage = d.saStage; render(true); const c = root.querySelector('.sa-chip.is-on'); c?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }); return; }
+        if ('saStalewarn' in d) { S.stage = 'boglanishga-urinilmoqda'; S.q = ''; return go('leads', { reset: true }); }
         if ('saStagego' in d) { S.stage = d.saStagego; S.q = ''; return go('leads', { reset: true }); }
         if ('saTg' in d) { if (g('openLeadTelegramProfile')) openLeadTelegramProfile(lang(), d.saTg); return; }
         if ('saSms' in d) { if (g('openLeadSmsTemplateModal')) openLeadSmsTemplateModal(lang(), d.saSms); return; }
@@ -1078,7 +1080,8 @@
     const _openCrm = openCrm;
     openCrm = function (spec) { openCrm._busy = true; try { _openCrm(spec); } finally { openCrm._busy = false; } };
 
-    window.sotuvApp = { open: go, openLead, openCallResult, openStageSheet, back, render: () => render(false), state: S };
+    window.sotuvApp = { open: go, openLead, openCallResult, openStageSheet, back, render: () => render(false), state: S,
+        markCall: id => { callPending = { id, at: Date.now() }; }, closeSheet: () => closeSheet(true) };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(init, 60));
     else setTimeout(init, 60);
 })();
