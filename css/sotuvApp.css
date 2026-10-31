@@ -12,7 +12,9 @@ body.sa-on {
 /* Eski telefon qatlami (teamApp pastki menyusi, sarlavha) ilova ochiq turganda ko'rinmaydi. */
 body.sa-on #teamBottomNav { display: none !important; }
 body.sa-on:not(.sa-app-hidden) .top-header, body.sa-on:not(.sa-app-hidden) .sidebar { visibility: hidden; }
-body.sa-on.sa-app-hidden .main-area, body.sa-on.sa-app-hidden .content-layout { padding-bottom: calc(var(--sa-nav-h) + 12px) !important; }
+/* CRM sahifalari ilova menyusi ostida: bo'sh joy faqat aylanadigan qismning ichida (bir marta), aks holda ro'yxat bilan menyu orasida katta bo'shliq qoladi. */
+body.sa-on.sa-app-hidden .main-area, body.sa-on.sa-app-hidden .content-layout { padding-bottom: 0 !important; }
+body.sa-on.sa-app-hidden .tab-content { padding-bottom: calc(var(--sa-nav-h) + 16px) !important; }
 
 .sa-app {
     position: fixed; inset: 0 0 var(--sa-nav-h) 0; z-index: 250; display: flex; flex-direction: column;
