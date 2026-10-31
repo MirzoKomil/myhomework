@@ -7,7 +7,8 @@
     'use strict';
     const g = n => typeof window[n] === 'function';
     const DAY = 86400000, CALL_WINDOW = DAY, GRACE_MS = 5 * 60000;
-    const DEFAULT = { warnDays: 3, lockDays: 5 };
+    const DEFAULT = { warnDays: 3, lockDays: 5, callsPerDay: 30 };
+    const CLOSED = new Set(['tolov-yopildi', 'muvaffaqiyatsiz-sotuv', 'sifatsiz-lidlar']);
     const PRE = new Set(['yangi-lidlar', 'boglanishga-urinilmoqda']);
     const AFTER = new Set(['boglanildi', 'malumot-berildi', 'sinov-darsida', 'qaror-jarayonida', 'keyin-sotib-olmoqchi', 'tolov-jarayonida', 'tolov-yopildi']);
     const CALL_TYPES = new Set(['call-attempt', 'contact-fail']);
@@ -74,7 +75,7 @@
     function logCall(id) {
         if (!isSales() || !g('updateLeadInStorage') || !g('createLeadComment')) return;
         const l = g('getLeadById') ? getLeadById(lang(), id) : null;
-        if (!l || !PRE.has(st(l))) return; // dalil faqat bog'lanishdan oldingi lidlar uchun kerak — ortiqcha saqlash yo'q
+        if (!l || CLOSED.has(st(l))) return; // yopilgan lidlarga qo'ng'iroq hisobga olinmaydi (kunlik qo'ng'iroqlar soni ochiq lidlar bo'yicha)
         const last = callsOf(l).filter(c => c.type === 'call-attempt').pop();
         if (last && Date.now() - last.t < 2 * 60000) return; // ketma-ket bosishlar bitta urinish
         const u = user();
@@ -355,9 +356,10 @@
         if (!list.length) return '';
         const left = Math.max(1, rule.lockDays - (warn.length ? ageDays(warn[0]) : rule.lockDays));
         return `<button type="button" class="sl-warn" data-sa-stalewarn>
-          <span class="sl-warn-h"><span class="sl-warn-i">${ic(I.clock, 22)}</span><span class="sl-warn-t"><strong>${list.length} ta lid ${rule.warnDays} kundan beri telefonni olmayapti</strong>
-          <span>Bugun yana qoʻngʻiroq qiling. ${lock.length ? 'Baʼzilari allaqachon “Sifatsiz”ga oʻtkazilishi shart.' : `<b>${left} kundan keyin</b> ular “Sifatsiz”ga oʻtkazilishi shart boʻladi.`}</span></span></span>
-          <span class="sl-warn-f"><span class="sl-stack">${list.slice(0, 4).map(l => { const [bg, fg] = avc(l.id); return `<span class="sl-av sl-av--s" style="background:${bg};color:${fg}">${esc(initials(l.name))}</span>`; }).join('')}</span><span class="sl-warn-b">${ic(I.phone, 15)}Qoʻngʻiroq qilish</span></span>
+          <span class="sl-warn-i">${ic(I.clock, 20)}</span>
+          <span class="sl-warn-t"><strong>${list.length} ta lid ${rule.warnDays} kundan beri olmayapti</strong>
+          <span>${lock.length ? 'Baʼzilarini hoziroq “Sifatsiz”ga oʻtkazish shart' : `<b>${left} kundan keyin</b> “Sifatsiz”ga oʻtkazish shart`}</span></span>
+          <span class="sl-warn-c">${ic('<path d="M9 6l6 6-6 6"/>', 18, 2.4)}</span>
         </button>`;
     }
 
@@ -392,7 +394,8 @@
             const rows = Object.entries(byM).filter(([, o]) => o.lock || o.warn || o.closed).map(([id, o]) => `<tr><td>${esc((mgrs.find(m => String(m.id) === id) || {}).name || id)}</td><td>${o.warn}</td><td>${o.lock}</td><td>${o.closed}</td></tr>`).join('');
             return `<div class="sl-rule-lang"><h4>${title}</h4>
               <div class="sl-rule-in"><label>Ogohlantirish (kun)<input type="number" min="1" max="60" value="${r.warnDays}" data-sl-rule="${lg}:warnDays"></label>
-              <label>Majburiy qulf (kun)<input type="number" min="2" max="90" value="${r.lockDays}" data-sl-rule="${lg}:lockDays"></label></div>
+              <label>Majburiy qulf (kun)<input type="number" min="2" max="90" value="${r.lockDays}" data-sl-rule="${lg}:lockDays"></label>
+              <label>Kunlik qoʻngʻiroq maqsadi<input type="number" min="1" max="300" value="${r.callsPerDay}" data-sl-rule="${lg}:callsPerDay"></label></div>
               ${rows ? `<table class="sl-rule-t"><thead><tr><th>Menejer</th><th>Ogohlantirish</th><th>Qulf</th><th>Bu oy majburan yopildi</th></tr></thead><tbody>${rows}</tbody></table>` : '<p class="text-muted" style="margin:6px 0 0">Hozir qotib qolgan lid yoʻq</p>'}</div>`;
         }).join('');
         openModal('Qotib qolgan lidlar qoidasi', `<p class="text-muted" style="margin:0 0 12px">“Bogʻlanishga urinilmoqda”da turib, bir marta ham telefonni olmagan lidlar — menejerga berilgan kundan hisoblanadi. Qulf kuni kelganda sotuv menejeri ilovani ochganda shu lidlarni hal qilmaguncha boshqa ishlarga oʻta olmaydi (kuniga bir marta 5 daqiqalik imtiyoz bor). “Sifatsiz”ga faqat qoʻngʻiroqdan keyin oʻtkaziladi.</p>${stats}`,
@@ -441,5 +444,5 @@
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => tryBoot());
     else tryBoot();
 
-    window.staleLeads = { compute, check, logCall, hasRecentCall, homeCardHtml, openRuleModal, _state: S };
+    window.staleLeads = { compute, check, logCall, hasRecentCall, homeCardHtml, openRuleModal, rule: () => ruleFor(lang()), _state: S };
 })();

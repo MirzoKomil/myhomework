@@ -166,6 +166,43 @@
     const empty = (img, title, text, btn) => `<div class="sa-empty"><img src="images/empty/${img}.webp" alt="" width="104" height="104"><strong>${esc(title)}</strong><span>${esc(text)}</span>${btn || ''}</div>`;
 
     // ---------- ekranlar ----------
+    // Bugungi qo'ng'iroq faoliyati — lid tarixidagi "call-attempt" (qo'ng'iroq tugmasi) va natija izohlaridan.
+    const CALL_T = new Set(['call-attempt']);
+    function todayCalls(leads, now = new Date()) {
+        const k = dayKey(now), out = { calls: 0, leads: 0, got: 0 };
+        for (const l of leads) {
+            const cs = (Array.isArray(l.comments) ? l.comments : []).filter(Boolean);
+            const mine = cs.filter(c => CALL_T.has(c.type) && parseT(c.createdAt) && dayKey(parseT(c.createdAt)) === k);
+            if (!mine.length) continue;
+            out.calls += mine.length; out.leads++;
+            const lastCall = Math.max(...mine.map(c => parseT(c.createdAt)));
+            const after = cs.filter(c => parseT(c.createdAt) >= lastCall && !CALL_T.has(c.type));
+            const failed = after.some(c => c.type === 'contact-fail');
+            const moved = parseT(l.slaStageEnteredAt) >= lastCall;
+            if (!failed && (moved || after.length)) out.got++;
+        }
+        return out;
+    }
+    const lastCallAt = l => (Array.isArray(l.comments) ? l.comments : []).filter(c => c && (c.type === 'call-attempt' || c.type === 'contact-fail')).reduce((m, c) => Math.max(m, parseT(c.createdAt) || 0), 0);
+    const attemptsOf = l => (Array.isArray(l.comments) ? l.comments : []).filter(c => c && (c.type === 'call-attempt' || c.type === 'contact-fail')).length;
+    // Navbat hech qachon bo'sh emas: avval eslatma/SLA navbati (computeManagerHome), keyin "Urinilmoqda" va "Yangi" —
+    // eng uzoq vaqt qo'ng'iroq qilinmagani birinchi.
+    function callQueue(d, leads) {
+        const own = new Set(leads.map(l => l.id));
+        const base = [...(d?.next?.lead ? [d.next.lead] : []), ...(d?.queue || [])].filter(l => own.has(l.id));
+        const seen = new Set(base.map(l => l.id));
+        const extra = leads.filter(l => !seen.has(l.id) && ['boglanishga-urinilmoqda', 'yangi-lidlar'].includes(st(l)) && telOf(l.phone))
+            .sort((a, b) => (lastCallAt(a) - lastCallAt(b)) || ((assignedAt(a) || 0) - (assignedAt(b) || 0)));
+        return [...base, ...extra].filter((l, i, a) => a.findIndex(x => x.id === l.id) === i).map(l => leadById(l.id) || l);
+    }
+    function myRank() {
+        const ms = g('getActiveSalesManagers') ? getActiveSalesManagers(lang()) : [];
+        if (ms.length < 2 || !g('getManagerSalesForPeriod')) return null;
+        const rows = ms.map(m => ({ id: m.id, name: m.name, sales: getManagerSalesForPeriod(m.id, 'oylik') || 0 })).sort((a, b) => b.sales - a.sales);
+        const i = rows.findIndex(r => String(r.id) === String(mid()));
+        if (i < 0) return null;
+        return { pos: i + 1, gap: i > 0 ? rows[i - 1].sales - rows[i].sales : (rows[1] ? rows[0].sales - rows[1].sales : 0), ahead: i > 0 ? rows[i - 1] : rows[1] || null, first: i === 0 };
+    }
     function screenHome() {
         const u = user(), now = new Date();
         let d = null;
@@ -173,29 +210,33 @@
         const leads = LEADS();
         const pct = d && d.target > 0 ? Math.round(d.sales / d.target * 100) : null;
         const ring = pct == null ? 0 : Math.min(100, pct);
-        const C = 226;
+        const C = 170;
         const daysLeft = d ? Math.max(1, d.daysInMonth - now.getDate() + 1) : 1;
         const left = d && d.target > d.sales ? d.target - d.sales : 0;
         const trials = leads.filter(l => st(l) === 'sinov-darsida' && trialAt(l) && dayKey(trialAt(l)) === dayKey(now)).sort((a, b) => trialAt(a) - trialAt(b));
+        const nextTrial = trials.find(l => trialAt(l) > Date.now());
         const paying = leads.filter(l => st(l) === 'tolov-jarayonida');
         const payingSum = paying.reduce((a, l) => a + (Number(l.paymentSurvey?.debtAmount || l.paymentSurvey?.amount || 0) || 0), 0);
-        const tasks = (d?.tasks || []).filter(t => t.kind === 'lead');
-        const late = tasks.filter(t => t.late).length;
-        const own = new Set(leads.map(l => l.id));
-        if (d && d.next?.lead && !own.has(d.next.lead.id)) d.next = null;
+        const pool = callQueue(d, leads);
         const skip = S.skip || 0;
-        const nextPool = [...(d?.next?.lead ? [d.next.lead] : []), ...(d?.queue || [])].filter((l, i, a) => own.has(l.id) && a.findIndex(x => x.id === l.id) === i);
-        const nextLead = nextPool.length ? nextPool[skip % nextPool.length] : null;
-        const next = nextLead ? leadById(nextLead.id) || nextLead : null;
-        if (d && next && d.next && next.id !== d.next.lead?.id) { const b0 = badge(next); d.next = { lead: next, reason: b0.tone === 'red' ? 'late' : 'today', at: b0.t || Date.now() }; }
+        const idx = pool.length ? skip % pool.length : 0;
+        const next = pool[idx] || null;
         let nextChip = '';
-        if (d?.next) {
-            if (d.next.reason === 'sla') nextChip = pill('SLA oʻtdi · ' + dur(d.next.ms), 'red-d');
-            else if (d.next.reason === 'late') nextChip = pill('Kechikdi · ' + hm(d.next.at), 'red-d');
-            else if (d.next.reason === 'today') nextChip = pill(hm(d.next.at) + ' · ' + dur(d.next.at - Date.now()) + ' qoldi', 'amber-d');
-            else nextChip = pill('Yangi · ' + dur(d.next.ms) + ' qoldi', 'blue-d');
+        if (next) {
+            const fromD = d?.next?.lead && d.next.lead.id === next.id ? d.next : null;
+            if (fromD?.reason === 'sla') nextChip = pill('SLA oʻtdi · ' + dur(fromD.ms), 'red-d');
+            else if (fromD?.reason === 'late') nextChip = pill('Kechikdi · ' + hm(fromD.at), 'red-d');
+            else if (fromD?.reason === 'today') nextChip = pill(hm(fromD.at) + ' · ' + dur(fromD.at - Date.now()) + ' qoldi', 'amber-d');
+            else if (st(next) === 'boglanishga-urinilmoqda') { const a = assignedAt(next); nextChip = pill(`${a ? Math.max(0, Math.floor((Date.now() - a) / DAY)) + ' kun · ' : ''}${attemptsOf(next)} urinish`, 'gray-d'); }
+            else if (fromD) nextChip = pill('Yangi · ' + dur(fromD.ms) + ' qoldi', 'blue-d');
         }
-        const queue = (d?.queue || []).filter(l => own.has(l.id) && (!next || l.id !== next.id)).slice(0, 3).map(l => leadById(l.id) || l);
+        const lc = next ? lastCallAt(next) : 0;
+        const nextMeta = next ? [colLabel(st(next)), lc ? 'oxirgi qoʻngʻiroq: ' + when(lc).toLowerCase() : (st(next) === 'boglanishga-urinilmoqda' ? 'hali qoʻngʻiroq yoʻq' : ''), kindLabel(next)].filter(Boolean).join(' · ') : '';
+        const upcoming = pool.length > 1 ? [...pool.slice(idx + 1), ...pool.slice(0, idx)] : [];
+        const tc = todayCalls(leads, now);
+        const goal = Math.max(1, Number(window.staleLeads?.rule?.()?.callsPerDay) || 30);
+        const callPct = Math.min(100, Math.round(tc.calls / goal * 100));
+        const rk = myRank();
         const greet = now.getHours() < 12 ? 'Xayrli tong' : now.getHours() < 18 ? 'Xayrli kun' : 'Xayrli kech';
         return `
         <header class="sa-top">
@@ -204,39 +245,33 @@
           ${bell()}
         </header>
         <div class="sa-body sa-stagger">
+          ${next ? `
+          <section class="sa-next" aria-label="Keyingi qoʻngʻiroq">
+            <div class="sa-next-h"><span>KEYINGI QOʻNGʻIROQ · ${idx + 1} / ${pool.length}</span>${nextChip}</div>
+            <button type="button" class="sa-next-n" data-sa-lead="${esc(next.id)}"><strong>${esc(next.name || 'Lid')}</strong><span>${esc(nextMeta)}</span></button>
+            <div class="sa-next-a">
+              ${telOf(next.phone) ? `<a class="sa-btn sa-btn--primary sa-pulse" href="tel:${esc(telOf(next.phone))}" data-sa-call="${esc(next.id)}">${ic('phone', 18, 2.2)}Qoʻngʻiroq qilish</a>` : `<button type="button" class="sa-btn sa-btn--primary" data-sa-lead="${esc(next.id)}">Lidni ochish</button>`}
+              ${pool.length > 1 ? `<button type="button" class="sa-icon-btn sa-on-dark" data-sa-skip aria-label="Keyingi lidga oʻtish">${ic('skip')}</button>` : ''}
+            </div>
+            ${upcoming.length ? `<div class="sa-next-q">${upcoming.slice(0, 3).map((l, i) => `<button type="button" data-sa-lead="${esc(l.id)}">${i === 0 ? 'Keyin: ' : ''}${esc(firstName(l.name) || 'Lid')}</button>`).join('')}${upcoming.length > 3 ? `<span>+${upcoming.length - 3}</span>` : ''}</div>` : ''}
+          </section>` : `<section class="sa-card sa-calm">${ic('check', 22, 2.6)}<span><strong>Hamma lidlar bilan gaplashilgan</strong><em>Qoʻngʻiroq kutayotgan lid yoʻq</em></span></section>`}
           ${window.staleLeads?.homeCardHtml ? window.staleLeads.homeCardHtml() : ''}
-          <button type="button" class="sa-card sa-plan" data-sa-nav="plan">
-            <span class="sa-ring"><svg width="84" height="84" viewBox="0 0 84 84" role="img" aria-label="Reja ${pct ?? 0}% bajarildi"><circle cx="42" cy="42" r="36" fill="none" stroke="#E2E8F0" stroke-width="9"/><circle class="sa-ring-v" cx="42" cy="42" r="36" fill="none" stroke="#0065D6" stroke-width="9" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${Math.round(C - C * ring / 100)}" transform="rotate(-90 42 42)" style="--off:${Math.round(C - C * ring / 100)}"/></svg><b>${pct == null ? '—' : pct + '%'}</b><small>reja</small></span>
+          <section class="sa-sec" aria-label="Bugun">
+            <div class="sa-sec-h"><h2>Bugun</h2><span class="sa-sec-note">soat ${hm(now)} holatiga</span></div>
+            <div class="sa-tiles">
+              <button type="button" class="sa-tile" data-sa-stagego="boglanishga-urinilmoqda"><span>Qoʻngʻiroq</span><strong>${tc.calls}<small> / ${goal}</small></strong><i class="sa-tile-bar" aria-hidden="true"><b style="width:${callPct}%"></b></i><em>${tc.calls >= goal ? 'Maqsad bajarildi' : `${goal - tc.calls} ta qoldi`}</em></button>
+              <button type="button" class="sa-tile" data-sa-nav="leads"><span>Oldi</span><strong>${tc.got}</strong><em class="${tc.leads ? 'is-green' : ''}">${tc.leads ? Math.round(tc.got / tc.leads * 100) + '% javob' : 'hali yoʻq'}</em></button>
+              <button type="button" class="sa-tile" data-sa-nav="jadval"><span>Sinov</span><strong>${trials.length}</strong><em class="is-green">${nextTrial ? hm(trialAt(nextTrial)) + ' da' : trials.length ? 'bugun' : 'qoʻyish'}</em></button>
+            </div>
+          </section>
+          <button type="button" class="sa-card sa-plan sa-plan--c" data-sa-nav="plan">
+            <span class="sa-ring sa-ring--s"><svg width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Reja ${pct ?? 0}% bajarildi"><circle cx="32" cy="32" r="27" fill="none" stroke="#E2E8F0" stroke-width="8"/><circle class="sa-ring-v" cx="32" cy="32" r="27" fill="none" stroke="#0065D6" stroke-width="8" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${Math.round(C - C * ring / 100)}" transform="rotate(-90 32 32)" style="--off:${Math.round(C - C * ring / 100)};--c:${C}"/></svg><b>${pct == null ? '—' : pct + '%'}</b></span>
             <span class="sa-plan-t"><span class="sa-k">${MON[now.getMonth()][0].toUpperCase() + MON[now.getMonth()].slice(1)} rejasi</span>
               <span class="sa-plan-v"><strong>${mln(d?.sales || 0)}</strong>${d?.target ? `<em>/ ${mln(d.target)}</em>` : ''}</span>
-              ${d?.target ? (left ? pill(`Kuniga ${num(Math.ceil(left / daysLeft))} kerak`, 'amber') : pill('Reja bajarildi', 'green')) : pill('Reja hali qoʻyilmagan', 'gray')}</span>
-            <img class="sa-plan-img" src="images/kobalt-money.webp" alt="" width="58">
+              ${d?.target ? (left ? pill(`Kuniga ${mln(Math.ceil(left / daysLeft))} kerak`, 'amber') : pill('Reja bajarildi', 'green')) : pill('Reja hali qoʻyilmagan', 'gray')}</span>
+            <span class="sa-plan-pay"><span>Toʻlovda</span><strong>${paying.length}${payingSum ? ' · ' + mln(payingSum) : ''}</strong></span>
           </button>
-          <div class="sa-tiles">
-            <button type="button" class="sa-tile" data-sa-nav="leads"><span>Vazifalar</span><strong>${tasks.length}</strong><em class="${late ? 'is-red' : ''}">${late ? late + ' ta kechikkan' : 'bugun'}</em></button>
-            <button type="button" class="sa-tile" data-sa-nav="jadval"><span>Sinov</span><strong>${trials.length}</strong><em class="is-green">${trials.find(l => trialAt(l) > Date.now()) ? hm(trials.find(l => trialAt(l) > Date.now()) && trialAt(trials.find(l => trialAt(l) > Date.now()))) + ' da' : 'bugun'}</em></button>
-            <button type="button" class="sa-tile" data-sa-stagego="tolov-jarayonida"><span>Toʻlovda</span><strong>${paying.length}</strong><em class="is-blue">${payingSum ? mln(payingSum) : 'lid'}</em></button>
-          </div>
-          ${next ? `
-          <section class="sa-next">
-            <div class="sa-next-h"><span>KEYINGI QOʻNGʻIROQ · 1 / ${Math.max(1, d.queueCount)}</span>${nextChip}</div>
-            <button type="button" class="sa-next-n" data-sa-lead="${esc(next.id)}"><strong>${esc(next.name || 'Lid')}</strong><span>${esc(colLabel(st(next)))} · ${esc(metaLine(next))}</span></button>
-            <div class="sa-next-a">
-              ${telOf(next.phone) ? `<a class="sa-btn sa-btn--primary sa-pulse" href="tel:${esc(telOf(next.phone))}" data-sa-call="${esc(next.id)}">${ic('phone', 18, 2.2)}Qoʻngʻiroq qilish</a>` : ''}
-              <button type="button" class="sa-icon-btn sa-on-dark" data-sa-tg="${esc(next.id)}" aria-label="Telegramda yozish">${ic('tg')}</button>
-              <button type="button" class="sa-icon-btn sa-on-dark" data-sa-skip aria-label="Keyingi lidga oʻtish">${ic('skip')}</button>
-            </div>
-          </section>` : `<section class="sa-card sa-calm">${ic('check', 22, 2.6)}<span><strong>Navbat boʻsh</strong><em>Hozircha kechikkan qoʻngʻiroq yoʻq</em></span></section>`}
-          <section class="sa-sec">
-            <div class="sa-sec-h"><h2>Bugungi sinovlar</h2><button type="button" class="sa-link" data-sa-nav="jadval">+ Sinov qoʻyish</button></div>
-            ${trials.length ? `<div class="sa-trials">${trials.slice(0, 4).map(l => {
-                const t = trialAt(l), a = l.trialRequest?.attended;
-                const chip = a === true ? pill('Keldi', 'green') : a === false ? pill('Kelmadi', 'red') : t > Date.now() ? pill(dur(t - Date.now()) + ' qoldi', 'blue') : pill('Natija kerak', 'amber');
-                return `<button type="button" class="sa-card sa-trial" data-sa-lead="${esc(l.id)}"><span class="sa-trial-h"><strong>${hm(t)}</strong>${chip}</span><strong>${esc(l.name || 'Lid')}</strong><em>${esc(teacherName(l.trialRequest?.teacherId) ? 'Ustoz ' + teacherName(l.trialRequest?.teacherId) : 'Ustoz biriktirilmoqda')}</em></button>`;
-            }).join('')}</div>` : `<div class="sa-card sa-muted-card">Bugun sinov yoʻq. Jadvalda boʻsh vaqtlar bor.</div>`}
-          </section>
-          ${queue.length ? `<section class="sa-sec"><div class="sa-sec-h"><h2>Navbat <em>· yana ${Math.max(0, d.queueCount - 1)} ta</em></h2><button type="button" class="sa-link" data-sa-nav="leads">Hammasi</button></div>
-            <div class="sa-card sa-list">${queue.map(l => { const b = badge(l); return `<div class="sa-row"><span class="sa-when sa-when--${b.tone}">${esc(b.text)}</span><button type="button" class="sa-row-t" data-sa-lead="${esc(l.id)}"><strong>${esc(l.name || 'Lid')}</strong><span>${esc(colLabel(st(l)))} · ${esc(kindLabel(l))}</span></button>${callBtn(l, false)}</div>`; }).join('')}</div></section>` : ''}
+          ${rk ? `<button type="button" class="sa-card sa-rankrow" data-sa-go="rating"><span class="sa-rankrow-n">${rk.pos}</span><span class="sa-rankrow-t"><strong>Reytingda ${rk.pos}-oʻrin</strong><span>${rk.first ? (rk.ahead ? `Keyingisidan <b>${mln(rk.gap)}</b> oldindasiz` : 'Oʻrningizni saqlang') : `${rk.pos - 1}-oʻringa <b>${mln(rk.gap)}</b> qoldi${rk.ahead ? ' · ' + esc(firstName(rk.ahead.name)) : ''}`}</span></span>${ic('chev', 18, 2.4)}</button>` : ''}
         </div>`;
     }
 

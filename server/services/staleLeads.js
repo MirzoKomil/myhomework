@@ -2,7 +2,7 @@
 // "Qotib qolgan lidlar" qoidasi: "Bog'lanishga urinilmoqda"da turib, bir marta ham bog'lanilmagan lidlar.
 // warnDays — ogohlantirish, lockDays — sotuv menejerining ishi shu lidlar hal bo'lguncha qulflanadi (klientda).
 // Server: qoida sozlamasi (til bo'yicha) va "qo'ng'iroq qilmasdan Sifatsizga o'tkazib bo'lmaydi" tekshiruvi.
-const DEFAULT_RULE = Object.freeze({ warnDays: 3, lockDays: 5 });
+const DEFAULT_RULE = Object.freeze({ warnDays: 3, lockDays: 5, callsPerDay: 30 });
 const KEY = 'staleLeadRule';
 const CALL_EVIDENCE_TYPES = new Set(['call-attempt', 'contact-fail']);
 const CALL_WINDOW_MS = 24 * 60 * 60 * 1000;
@@ -13,7 +13,9 @@ function cleanRule(r) {
     const warnDays = Number.isFinite(w) && w >= 1 && w <= 60 ? w : DEFAULT_RULE.warnDays;
     let lockDays = Number.isFinite(l) && l >= 1 && l <= 90 ? l : DEFAULT_RULE.lockDays;
     if (lockDays <= warnDays) lockDays = warnDays + 1;
-    return { warnDays, lockDays };
+    const c = Math.round(Number(r?.callsPerDay));
+    const callsPerDay = Number.isFinite(c) && c >= 1 && c <= 300 ? c : DEFAULT_RULE.callsPerDay;
+    return { warnDays, lockDays, callsPerDay };
 }
 
 async function getRules(pool) {

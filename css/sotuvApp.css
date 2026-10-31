@@ -123,7 +123,7 @@ body.sa-on.sa-app-hidden .tab-content { padding-bottom: calc(var(--sa-nav-h) + 1
 .sa-ring svg { position: absolute; inset: 0; }
 .sa-ring b { position: relative; font-size: 20px; font-weight: 800; letter-spacing: -.02em; }
 .sa-ring small { position: relative; font-size: 11px; font-weight: 700; color: var(--sa-mut); }
-@keyframes saRing { from { stroke-dashoffset: 226; } to { stroke-dashoffset: var(--off); } }
+@keyframes saRing { from { stroke-dashoffset: var(--c, 226); } to { stroke-dashoffset: var(--off); } }
 .sa-app.sa-enter .sa-ring-v { animation: saRing 1.1s var(--sa-ease) .15s both; }
 .sa-plan-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 .sa-plan-v { display: flex; align-items: baseline; gap: 5px; flex-wrap: wrap; }
@@ -476,3 +476,27 @@ body.sa-on.sa-full .sa-toast { bottom: calc(92px + env(safe-area-inset-bottom));
 /* CRM sahifalari (Jadval, Sinov va h.k.) telefonda: sahifa aylantirilganda kontent iPhone holat paneli (soat, batareya) ostiga kirmasin.
    Barcha rollar uchun (ROP, ustoz ham iPhone'dan kiradi); ilova qatlami ochiq bo'lsa — uning o'z yuqori qismi bor. */
 @media (max-width: 900px) { html.rd body:not(.auth-body):not(.sa-on)::before, html.rd body.sa-on.sa-app-hidden::before { content: ''; position: fixed; left: 0; right: 0; top: 0; height: env(safe-area-inset-top, 0px); background: var(--surface, #FFFFFF); z-index: 1100; pointer-events: none; } }
+
+/* Bosh sahifa v2 (dizayn "02b · Bosh — yangi") */
+.sa-pill--gray-d { color: #E2E8F0; background: rgba(255, 255, 255, .12); }
+.sa-next-q { display: flex; gap: 6px; flex-wrap: wrap; }
+.sa-next-q button, .sa-next-q span { border: 0; min-height: 30px; font-size: 12px; font-weight: 700; color: #FFFFFF !important; background: rgba(255, 255, 255, .1); border-radius: 999px; padding: 4px 10px; display: inline-flex; align-items: center; }
+.sa-sec-note { font-size: 12px; font-weight: 700; color: var(--sa-mut); }
+.sa-tile strong small { font-size: 13px; font-weight: 600; color: var(--sa-mut); }
+.sa-tile-bar { display: block; height: 5px; border-radius: 999px; background: #E2E8F0; overflow: hidden; }
+.sa-tile-bar b { display: block; height: 5px; border-radius: 999px; background: var(--sa-blue); transition: width .5s var(--sa-ease); }
+.sa-plan--c { padding: 12px 14px; gap: 14px; }
+.sa-ring--s { width: 64px; height: 64px; }
+.sa-ring--s b { font-size: 15px; }
+.sa-plan--c .sa-plan-v strong { font-size: 20px; }
+.sa-plan--c .sa-pill { white-space: nowrap; }
+.sa-plan-pay { flex: none; display: flex; flex-direction: column; align-items: flex-end; text-align: right; gap: 2px; }
+.sa-plan-pay span { font-size: 12px; font-weight: 600; color: var(--sa-mut); }
+.sa-plan-pay strong { font-size: 15px; font-weight: 800; white-space: nowrap; }
+.sa-rankrow { width: 100%; text-align: left; display: flex; align-items: center; gap: 12px; padding: 12px 14px; color: var(--sa-ink) !important; }
+.sa-rankrow-n { flex: none; width: 40px; height: 40px; border-radius: 12px; background: var(--sa-blue-t); color: var(--sa-blue-d); display: grid; place-items: center; font-size: 16px; font-weight: 800; }
+.sa-rankrow-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.sa-rankrow-t strong { font-size: 14px; }
+.sa-rankrow-t span { font-size: 12px; color: var(--sa-mut); }
+.sa-rankrow-t b { color: var(--sa-ink); }
+.sa-rankrow > svg { color: var(--sa-mut); flex: none; }
