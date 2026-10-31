@@ -36,7 +36,7 @@ html[data-theme="dark"] .jv, html[data-theme="dark"] .jv-dim {
 }
 .jv { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
 .jv button { font-family: inherit; }
-.jv-page { padding: 4px 0 24px; }
+.jv-page { padding: 4px 0 24px; height: 100%; overflow-y: auto; box-sizing: border-box; }
 body.jv-page-open .content-main > .tab-content { display: none !important; }
 
 /* ---------- Sarlavha ---------- */
@@ -268,6 +268,14 @@ button.jv-ml { cursor: pointer; }
 
 @media (max-width: 1180px) {
     .jv-side { width: 300px; }
+}
+/* Kompyuter: aylantirganda filtrlar, ustozlar qatori va o'ng panel qotib turadi */
+.jv-ghw { overflow: hidden; }
+@media (min-width: 901px) {
+    .jv-tb { position: sticky; top: 0; z-index: 6; box-shadow: 0 0 0 18px var(--jv-bg); }
+    .jv-grid { overflow: clip; }
+    .jv-ghw { position: sticky; top: var(--jv-st, 88px); z-index: 5; box-shadow: 0 -1px 0 var(--jv-line); }
+    .jv-side { position: sticky; top: var(--jv-st, 88px); max-height: calc(100vh - var(--jv-st, 88px) - 110px); overflow-y: auto; scrollbar-width: thin; }
 }
 @media (max-width: 900px) {
     .jv { gap: 12px; }
