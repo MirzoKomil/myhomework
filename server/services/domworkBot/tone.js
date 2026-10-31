@@ -15,9 +15,13 @@ function who(name, telegramId) {
 }
 const first = name => String(name || '').trim().split(/\s+/)[0] || '';
 // "2026-10-30T18:00" (Toshkent mahalliy) yoki Date → "30-oktabr, payshanba · 18:00"
+// Zonali ISO ("…Z" yoki "…+05:00") — haqiqiy lahza: CRM sinov vaqtini toISOString() (UTC) qilib saqlaydi,
+// uni matndan kesib olsak 5 soat erta chiqadi. Shuning uchun zonali qiymat Toshkentga o'giriladi.
+const ZONED = /[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})$/i;
 function when(value) {
     let y, mo, d, hm;
-    const m = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}:\d{2}))?/.exec(typeof value === 'string' ? value : '');
+    const m = typeof value === 'string' && !ZONED.test(value.trim())
+        ? /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}:\d{2}))?/.exec(value) : null;
     if (m) { [y, mo, d, hm] = [Number(m[1]), Number(m[2]), Number(m[3]), m[4] || '']; }
     else {
         const t = value instanceof Date ? value : new Date(value);

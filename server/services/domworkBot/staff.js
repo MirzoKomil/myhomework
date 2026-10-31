@@ -129,7 +129,7 @@ async function action(db, identity, actionId, options={}) {
     if (actionId === 'trial-lessons' && ['teacher','rop'].includes(identity.role)) {
         const rows = (await db.query("SELECT name,extra_data FROM leads WHERE language='russian' AND status='sinov-darsida' AND deleted_at IS NULL ORDER BY updated_at DESC LIMIT 200")).rows;
         return rows.filter(r => identity.role === 'rop' || r.extra_data?.trialRequest?.teacherId === identity.employeeId)
-            .map(r => `${safe(r.name)} · ${safe(r.extra_data?.trialRequest?.scheduledAt)} · ${safe(r.extra_data?.trialRequest?.state)}\nTasdiqlash/natija: CRM → Sinov darslari`).join('\n\n') || none;
+            .map(r => `${safe(r.name)} · ${safe(require('./tone').when(r.extra_data?.trialRequest?.scheduledAt))} · ${safe(r.extra_data?.trialRequest?.state)}\nTasdiqlash/natija: CRM → Sinov darslari`).join('\n\n') || none;
     }
     // Yangi kunlik hisobotlar (HTML) — 20:00 dagi avtomatik hisobot bilan bir xil manba.
     if (['reports','income','digest','daily','funnel'].includes(actionId) && ['admin','rop','marketing'].includes(identity.role) && !options.legacy && !options.comparison) {
