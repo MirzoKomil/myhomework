@@ -910,7 +910,7 @@
         if (focusId && focusId !== 'saLeadSearch') document.getElementById(focusId)?.focus({ preventScroll: true });
         if (focusSearch) { const i = document.getElementById('saLeadSearch'); if (i) { i.focus(); try { i.setSelectionRange(caret, caret); } catch (e) { /* type=search */ } } }
         if (S.screen === 'card') { loadRecCounts(); if (S.tab === 'rec') loadRecordings(S.lead); }
-        if (deferredInstall) root.querySelectorAll('[data-sa-install]').forEach(b => { b.hidden = false; });
+        if (!isStandalone()) root.querySelectorAll('[data-sa-install]').forEach(b => { b.hidden = false; });
         syncNav();
     }
     function queueRender() {
@@ -983,7 +983,7 @@
         if ('saSort' in d) { S.sortNew = !S.sortNew; render(true); toast(S.sortNew ? 'Eng yangilari birinchi' : 'Muhimlari birinchi', 'ok'); return; }
         if ('saSkip' in d) { S.skip = (S.skip || 0) + 1; render(false); return; }
         if ('saLogout' in d) { document.getElementById('profileLogoutBtn')?.click(); return; }
-        if ('saInstall' in d) { if (deferredInstall) { deferredInstall.prompt(); deferredInstall = null; render(false); } }
+        if ('saInstall' in d) { if (deferredInstall) { deferredInstall.prompt(); deferredInstall = null; render(false); } else installHelp(); return; }
     }
     function onSubmit(e) {
         const f = e.target.closest('[data-sa-noteform]');
@@ -1012,6 +1012,20 @@
 
     // PWA: "Bosh ekranga qo'shish" taklifi (brauzer ruxsat bersa).
     let deferredInstall = null;
+    const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const isStandalone = () => window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone === true;
+    // O'rnatish yo'riqnomasi: iPhone'da avtomatik tugma yo'q — "Ulashish → Bosh ekranga qo'shish"; Androidda brauzer menyusi.
+    function installHelp() {
+        const ios = isIOS();
+        const step = (n, t, sub) => `<li class="sa-inst-s"><b>${n}</b><span><strong>${t}</strong>${sub ? `<em>${sub}</em>` : ''}</span></li>`;
+        const share = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M8 7l4-4 4 4"/><path d="M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/></svg>';
+        openSheet(`<div class="sa-sh-h"><img src="images/app/icon-192.png" alt="" width="48" height="48" class="sa-inst-ic"><div><h2>Ilovani telefonga oʻrnatish</h2><span>Domwork Team · 1 daqiqa</span></div></div>
+          <ol class="sa-inst">${ios
+            ? step(1, `Safari pastidagi ${share} <u>Ulashish</u> tugmasini bosing`, 'Chrome’da: manzil satridagi ulashish belgisi') + step(2, '“Bosh ekranga qoʻshish” ni tanlang', 'Roʻyxatni biroz pastga suring') + step(3, '“Qoʻshish” ni bosing', 'Bosh ekranda Domwork Team belgisi paydo boʻladi')
+            : step(1, 'Chrome’da yuqori oʻngdagi ⋮ menyuni oching', '') + step(2, '“Ilovani oʻrnatish” yoki “Bosh ekranga qoʻshish” ni tanlang', '') + step(3, '“Oʻrnatish” ni bosing', 'Bosh ekranda Domwork Team belgisi paydo boʻladi')}</ol>
+          <p class="sa-sh-foot">Keyin ilovani shu belgidan oching — brauzersiz, toʻliq ekranda ishlaydi.</p>
+          <button type="button" class="sa-btn sa-btn--primary sa-cr-save" data-sa-sheetclose>Tushunarli</button>`);
+    }
     window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredInstall = e; if (isOn()) render(false); });
 
     // Mavjud renderlar ishlaganda (30 soniyalik so'rov, saqlash, modal yopilishi) ekranimiz ham yangilanadi.
