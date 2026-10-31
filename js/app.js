@@ -404,89 +404,9 @@ function resolveHrEmployeeSubject(employee) {
     return employee?.lang === 'russian' ? 'russian' : 'english';
 }
 
-// Berilgan ustoz (yoki uning nusxalari — getTeacherAssignmentIds) nomiga
-// biriktirilgan HAQIQIY (demo bo'lmagan) o'quvchilar sonini sanaydi.
-function _countRealStudentsForTeacher(teacherId, students, field) {
-    const ids = getTeacherAssignmentIds(teacherId);
-    return students.filter(s => !s.isStaffDemo && ids.has(String(s[field] || ''))).length;
-}
-
-// Demo o'quvchi uchun berilgan tildagi eng ko'p (haqiqiy) o'quvchisi bor
-// ustoz/yordamchi ustozni tanlaydi — "support ustoz" talabi ham shu orqali
-// (type='yordamchi') qoplanadi, chunki bazada alohida "support" tushunchasi
-// yo'q.
-function pickBusiestTeacherForDemo(subject, type, students) {
-    const candidates = filterTeachersByTypeAndSubject(type, subject);
-    if (!candidates.length) return null;
-    const field = type === 'yordamchi' ? 'assistantTeacherId' : 'teacherId';
-    let best = null, bestCount = -1;
-    candidates.forEach(t => {
-        const count = _countRealStudentsForTeacher(t.id, students, field);
-        if (count > bestCount) { bestCount = count; best = t; }
-    });
-    return best ? best.id : null;
-}
-
-function pickBusiestManagerForDemo(subject, students) {
-    const candidates = getItem(STORAGE_KEYS.hrEmployees, []).filter(e =>
-        (e.role === 'sotuv-menejeri' || e.role === 'sotuv_menejeri') &&
-        e.status !== 'inactive' &&
-        resolveHrEmployeeSubject(e) === subject
-    );
-    if (!candidates.length) return null;
-    let best = null, bestCount = -1;
-    candidates.forEach(m => {
-        const count = students.filter(s => !s.isStaffDemo && s.managerId === m.id).length;
-        if (count > bestCount) { bestCount = count; best = m; }
-    });
-    return best ? best.id : null;
-}
-
-// Bitta xodim uchun "soxta o'quvchi" yozuvini yasaydi — u orqali xodim
-// mobil ilovani real o'quvchi ma'lumotlariga tegmasdan, o'z nomi bilan
-// ko'ra oladi (login = telefon, parol = raqamning oxirgi 4 xonasi). Toq
-// kunlar/soat 02:00 barcha demo hisoblar uchun bir xil — ular haqiqatan
-// "qatnashmaydi", faqat ilovani ko'rish uchun.
-function buildStaffDemoStudent(employee, students) {
-    const subject = resolveHrEmployeeSubject(employee);
-    const login = normalizeEmployeePhoneLogin(employee.phone);
-    return {
-        id: 'demo_' + employee.id,
-        name: employee.name,
-        phone: employee.phone || '',
-        login,
-        password: login.slice(-4),
-        subject,
-        teacherId: pickBusiestTeacherForDemo(subject, 'asosiy', students) || null,
-        assistantTeacherId: pickBusiestTeacherForDemo(subject, 'yordamchi', students) || null,
-        managerId: pickBusiestManagerForDemo(subject, students) || '',
-        lessonDayOfWeek: 1,
-        lessonTime: '02:00',
-        lessonDuration: 15,
-        telegramGroupLink: 'https://t.me/+Q6Lrqx9LjIBjYmQy',
-        debtAmount: 0,
-        paidAmount: 0,
-        isStaffDemo: true,
-        demoForEmployeeId: employee.id
-    };
-}
-
-// Mavjud VA yangi qo'shilgan xodimlar uchun demo o'quvchi hisobini
-// avtomatik ta'minlaydi — syncHrLoginRoles bilan bir xil patternda, har
-// bir admin sessiyasida ishga tushadi, lekin allaqachon hisobi bor
-// xodimlarni qayta yaratmaydi (demoForEmployeeId orqali idempotent).
-function ensureStaffDemoStudents(currentUser) {
-    if (currentUser?.role !== 'admin') return;
-    const employees = getItem(STORAGE_KEYS.hrEmployees, []);
-    const students = getItem(STORAGE_KEYS.students, []);
-    const existingIds = new Set(students.filter(s => s.isStaffDemo).map(s => s.demoForEmployeeId));
-    const missing = employees.filter(e =>
-        e.status !== 'inactive' && !existingIds.has(e.id) && normalizeEmployeePhoneLogin(e.phone)
-    );
-    if (!missing.length) return;
-    const newDemos = missing.map(e => buildStaffDemoStudent(e, students));
-    setItem(STORAGE_KEYS.students, [...students, ...newDemos]);
-}
+// Xodimlar uchun avtomatik demo o'quvchi yaratish olib tashlandi (31-okt): endi
+// yangi xodim akkaunti ochilganda demo o'quvchi yaratilmaydi. Avval yaratilgan
+// demo hisoblar (isStaffDemo) bazada qoladi va barcha ro'yxat/hisoblardan filtrlanadi.
 
 // /api/state yuklanmasa — butun ilova ustidan rolga mos xato ekrani (BAHO-5 #1).
 // Ilgari .content-main o'rniga "npm install / npm run dev" dasturchi matni chiqar, rol menyusi hali
@@ -750,7 +670,6 @@ async function bootApp() {
     setUiLang(getUiLang());
     initUserUI(currentUser);
     syncHrLoginRoles(currentUser);
-    ensureStaffDemoStudents(currentUser);
     renderDashboard();
     renderCalendarWidget();
     startLeadsPolling();
@@ -1460,16 +1379,14 @@ let _activeShopProductCategory = 'merch';
 // kalitlarni o'qiydi: mh_student_token / mh_student_info).
 let _staffDemoTokenPromise = null;
 function _ensureStaffDemoToken() {
-    // ROP / sotuv: demo hisobi yo'q bo'lsa serverga so'rov yuborilmaydi (avval 404 va konsol xatosi) — sahifada izoh.
+    // Xodimlarga demo o'quvchi endi avtomatik yaratilmaydi (31-okt). Demo hisobi yo'q
+    // xodim uchun serverga so'rov yuborilmaydi (404/konsol xatosi bo'lmasin) — ilova
+    // oddiy kirish sahifasi bilan ochiladi. Eski demo hisobi borlar avvalgidek ko'radi.
     const cu = getCurrentUser();
     if (!_staffDemoTokenPromise && ['rop', 'sales_manager'].includes(cu?.role)) {
         const me = getItem(STORAGE_KEYS.hrEmployees, []).find(e => String(e.login || '').trim().toLowerCase() === String(cu.email || '').trim().toLowerCase());
         const hasDemo = !!me && getItem(STORAGE_KEYS.students, []).some(s => s.isStaffDemo && String(s.demoForEmployeeId || '') === String(me.id));
-        if (!hasDemo) {
-            const panel = document.getElementById('mobileViewPanel');
-            if (panel && !panel.querySelector('.rs-nodemo')) panel.insertAdjacentHTML('afterbegin', '<p class="rs-ro rs-nodemo" role="note">Sizning demo o\'quvchi hisobingiz hali yaratilmagan — ilova kirish sahifasi bilan ochiladi. Demo hisobni admin HR bo\'limida yaratadi.</p>');
-            return Promise.resolve();
-        }
+        if (!hasDemo) return Promise.resolve();
     }
     if (!_staffDemoTokenPromise) {
         _staffDemoTokenPromise = apiGetMyDemoToken().then(res => {
