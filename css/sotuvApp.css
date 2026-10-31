@@ -93,7 +93,7 @@ body.sa-on.sa-app-hidden .main-area, body.sa-on.sa-app-hidden .content-layout { 
 .sa-num { font-variant-numeric: tabular-nums; font-size: 14px; }
 .sa-h3 { margin: 8px 4px 0; font-size: 12px; font-weight: 800; color: var(--sa-mut); letter-spacing: .06em; text-transform: uppercase; }
 .sa-h3.is-red { color: var(--sa-red); }
-.is-red { color: var(--sa-red) !important; } .is-amber { color: var(--sa-amber) !important; } .is-green { color: var(--sa-green) !important; } .is-blue { color: var(--sa-blue-d) !important; }
+.sa-app .is-red, .sa-sheet-wrap .is-red { color: var(--sa-red) !important; } .sa-app .is-amber { color: var(--sa-amber) !important; } .sa-app .is-green { color: var(--sa-green) !important; } .sa-app .is-blue { color: var(--sa-blue-d) !important; }
 
 /* tugmalar */
 .sa-btn { min-height: 44px; padding: 0 16px; border-radius: 14px; border: 0; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: 15px; font-weight: 800; white-space: nowrap; }

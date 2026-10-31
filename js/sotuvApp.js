@@ -81,7 +81,8 @@
     const LEADS = () => {
         const all = g('getItem') ? getItem(STORAGE_KEYS.leads, { english: [], russian: [] }) : { english: [], russian: [] };
         const m = String(mid() || '');
-        return (all[lang()] || []).filter(l => !l.deletedAt && (!m || String(l.managerId) === m));
+        if (!m) return []; // menejer bog'lanmagan bo'lsa — eski filtrdagidek hech narsa ko'rsatilmaydi
+        return (all[lang()] || []).filter(l => !l.deletedAt && String(l.managerId) === m);
     };
     const leadById = id => (g('getLeadById') ? getLeadById(lang(), id) : LEADS().find(l => l.id === id));
     const COLS = () => (typeof LEAD_COLUMNS !== 'undefined' ? LEAD_COLUMNS : []);
@@ -348,7 +349,7 @@
         <div class="sa-card sa-kvs">
           ${row('Kimning lidi', mgr)}${row('Telefon', l.phone && (g('formatPhoneDisplay') ? formatPhoneDisplay(l.phone) : l.phone))}${row('2-telefon', l.phone2 && (g('formatPhoneDisplay') ? formatPhoneDisplay(l.phone2) : l.phone2))}
           ${row('Yoʻnalish', lang() === 'russian' ? 'Rus tili' : 'Ingliz tili')}${row('Manba', srcLabel(l))}${row('Lid turi', kindLabel(l))}
-          ${row('Kelgan vaqti', assignedAt(l) ? when(assignedAt(l)) : l.date)}${row('ID', (l.serialCode || l.serialNumber) ? '#' + (l.serialCode || l.serialNumber) : '')}${row('Hudud', l.region || cs.regionLabel || cs.region || cs.countryLabel || cs.country)}
+          ${row('Kelgan vaqti', parseT(l.createdAt) ? when(parseT(l.createdAt)) : l.date)}${row('Sizga berilgan', parseT(l.managerAssignedAt) && parseT(l.managerAssignedAt) !== parseT(l.createdAt) ? when(parseT(l.managerAssignedAt)) : '')}${row('ID', (l.serialCode || l.serialNumber) ? '#' + (l.serialCode || l.serialNumber) : '')}${row('Hudud', l.region || cs.regionLabel || cs.region || cs.countryLabel || cs.country)}
         </div>
         ${Object.keys(cs).length ? `<h3 class="sa-h3">Anketa</h3><div class="sa-card sa-kvs">${row('Kim uchun', cs.applicantLabel || cs.applicant)}${row('Yoshi', cs.age)}${row('Jinsi', cs.genderLabel || cs.gender)}${row('Til darajasi', cs.languageLevelLabel || cs.languageLevel)}${row('Maqsadi', cs.learningGoalLabel || cs.learningGoal)}${row('Yashash joyi', cs.residenceLabel || cs.regionLabel || cs.region || cs.countryLabel || cs.country)}${row('Tushuntirildi', info)}</div>` : ''}
         ${l.decisionSurvey?.reasonLabel ? `<h3 class="sa-h3">Qaror</h3><div class="sa-card sa-kvs">${row('Sabab', l.decisionSurvey.reasonLabel)}</div>` : ''}
@@ -397,9 +398,9 @@
         const paid = [];
         pool.filter(l => String(owner(l)) === String(mid())).forEach(l => {
             const s = st(l);
-            const partial = s === 'tolov-jarayonida' && Number(l.paymentSurvey?.paidAmount) > 0;
+            const partial = g('_isPartialInProgressLead') ? _isPartialInProgressLead(l) : (s === 'tolov-jarayonida' && l.paymentSurvey?.paymentType === 'partial' && Number(l.paymentSurvey?.paidAmount) > 0);
             if (s !== 'tolov-yopildi' && !partial) return;
-            const t = parseT(partial ? l.paymentSurvey?.lastPaymentDate : (l.paymentClosedSurvey?.closedDate || l.closedDate || l.createdAt));
+            const t = parseT(g('_getLeadRankingDate') ? _getLeadRankingDate(l) : (partial ? l.paymentSurvey?.lastPaymentDate : (l.paymentClosedSurvey?.closedDate || l.closedDate || l.createdAt)));
             const v = g('_getLeadRankingAmount') ? _getLeadRankingAmount(l) : 0;
             if (!t) return;
             const day = days.find(x => x.k === dayKey(t)); if (day) day.v += v;
@@ -530,7 +531,7 @@
         return `
         ${topBack('Profil', '')}
         <div class="sa-body sa-stagger">
-          <section class="sa-prof">${staffImg(mid(), u.name, 92)}<strong>${esc(u.name || '')}</strong><span>Sotuv menejeri · ${lang() === 'russian' ? 'Rus tili' : 'Ingliz tili'}${u.email ? ' · ' + esc(u.email) : ''}</span></section>
+          <section class="sa-prof">${staffImg(mid(), u.name, 92)}<strong>${esc(u.name || '')}</strong><span>Sotuv menejeri · ${lang() === 'russian' ? 'Rus tili' : 'Ingliz tili'}${u.phone ? ' · ' + esc(g('formatPhoneDisplay') ? formatPhoneDisplay(u.phone) : u.phone) : ''}</span></section>
           <button type="button" class="sa-install" data-sa-install hidden><span class="sa-ic-box">${ic('plus', 20)}</span><span><strong>Ilovani oʻrnatish</strong><em>Bosh ekranga belgi qoʻshiladi</em></span><b>Oʻrnatish</b></button>
           <h3 class="sa-h3">Sozlamalar</h3>
           <div class="sa-card sa-list">
@@ -539,19 +540,23 @@
             <button type="button" class="sa-row sa-row-btn" data-sa-crm="profile">${ic('gear', 20)}<span class="sa-row-t"><strong>Faol qurilmalar va Telegram bot</strong><span>Sessiyalar, botga ulanish</span></span>${ic('chev', 18, 2.2)}</button>
           </div>
           <div class="sa-card sa-list">
-            <button type="button" class="sa-row sa-row-btn" data-sa-install hidden>${ic('plus', 20)}<span class="sa-row-t"><strong>Ilovani oʻrnatish</strong><span>Bosh ekranga belgi qoʻshiladi</span></span>${ic('chev', 18, 2.2)}</button>
+            
             <button type="button" class="sa-row sa-row-btn sa-danger" data-sa-logout>${ic('logout', 20)}<span class="sa-row-t"><strong>Chiqish</strong></span></button>
           </div>
         </div>`;
     }
 
     // ---------- pastki oynalar (sheet) ----------
+    let ignorePop = 0;
     function openSheet(html, cls = '') {
-        closeSheet(true);
+        closeSheet(true, true);
         sheetEl = document.createElement('div');
         sheetEl.className = 'sa-sheet-wrap';
         sheetEl.innerHTML = `<button type="button" class="sa-dim" data-sa-sheetclose aria-label="Yopish"></button><section class="sa-sheet ${cls}" role="dialog" aria-modal="true" tabindex="-1"><span class="sa-handle" aria-hidden="true"></span>${html}</section>`;
         document.body.appendChild(sheetEl);
+        // Android "orqaga" pastki oynani yopsin (ilovadan chiqib ketmasin).
+        if (window.history?.pushState) { const d0 = Number(history.state?.saD) || 0; if (history.state?.saSheet) history.replaceState({ sa: S.screen, saD: d0, saSheet: true }, ''); else history.pushState({ sa: S.screen, saD: d0 + 1, saSheet: true }, ''); }
+        const h2 = sheetEl.querySelector('h2'); if (h2) { h2.id = 'saSheetT'; sheetEl.querySelector('.sa-sheet').setAttribute('aria-labelledby', 'saSheetT'); }
         sheetEl.addEventListener('click', onClick);
         sheetEl.addEventListener('keydown', e => {
             if (e.key === 'Escape') { e.preventDefault(); closeSheet(); return; }
@@ -564,9 +569,10 @@
         });
         sheetEl.querySelector('.sa-sheet')?.focus({ preventScroll: true });
     }
-    function closeSheet(instant) {
+    function closeSheet(instant, fromPop) {
         if (!sheetEl) return;
         const el = sheetEl; sheetEl = null;
+        if (!fromPop && history.state?.saSheet) { ignorePop++; history.back(); }
         if (instant) { el.remove(); return; }
         el.classList.add('is-out');
         setTimeout(() => el.remove(), 220);
@@ -872,7 +878,7 @@
         if ('saLead' in d) return openLead(d.saLead);
         if ('saNav' in d) { if (d.saNav === 'jadval') return openJadval(); return go(d.saNav, { reset: true }); }
         if ('saGo' in d) return go(d.saGo);
-        if ('saBack' in d) { if (!back()) go('home', { reset: true }); return; }
+        if ('saBack' in d) { if ((Number(history.state?.saD) || 0) > 0) history.back(); else if (!back()) go('home', { reset: true }); return; }
         if ('saStage' in d) { S.stage = d.saStage; render(true); const c = root.querySelector('.sa-chip.is-on'); c?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }); return; }
         if ('saStagego' in d) { S.stage = d.saStagego; S.q = ''; return go('leads', { reset: true }); }
         if ('saTg' in d) { if (g('openLeadTelegramProfile')) openLeadTelegramProfile(lang(), d.saTg); return; }
@@ -959,7 +965,6 @@
             root = document.createElement('main');
             root.id = 'saApp';
             root.className = 'sa-app';
-            root.setAttribute('aria-live', 'polite');
             document.body.appendChild(root);
             root.addEventListener('click', onClick);
             root.addEventListener('submit', onSubmit);
@@ -985,10 +990,11 @@
         window.addEventListener('focus', onVisible);
         window.addEventListener('popstate', () => {
             if (!isOn()) return;
+            if (ignorePop) { ignorePop--; return; }
             // Android "orqaga": avval ochiq CRM oynasi, keyin pastki oyna, keyin ekran.
             const ov = document.getElementById('modalOverlay');
-            if (ov && ov.style.display !== 'none' && g('closeModal')) { closeModal(); history.pushState({ sa: S.screen }, ''); return; }
-            if (sheetEl) { closeSheet(); history.pushState({ sa: S.screen }, ''); return; }
+            if (ov && ov.style.display !== 'none' && g('closeModal')) { closeModal(); history.pushState({ sa: S.screen, saD: (Number(history.state?.saD) || 0) + 1 }, ''); return; }
+            if (sheetEl) { closeSheet(false, true); return; }
             back();
         });
         MQ.addEventListener?.('change', sync);
@@ -1011,6 +1017,7 @@
                     else if (S.screen !== 'crm' && !leadsTab && tab !== 'dashboard' && booted) {
                         // Mavjud oqim boshqa sahifaga o'tkazdi (masalan jadval) — o'sha sahifani ko'rsatamiz.
                         S.stack.push({ screen: S.screen, lead: S.lead, tab: S.tab });
+                        histPush('crm', false);
                         S.crmTab = tab === 'timetable' ? 'jadval' : 'menu'; S.screen = 'crm'; showApp(false); syncNav();
                     }
                 }
