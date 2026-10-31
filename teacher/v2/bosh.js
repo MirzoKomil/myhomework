@@ -117,7 +117,8 @@
         return S0.main.filter(s => !s.frozen).map(s => {
             const h = (s.teacherHistory || []).filter(x => x.teacherId === meId && !x.to).map(x => String(x.from || '').slice(0, 10)).sort().slice(-1)[0];
             const at = h || String(s.startDate || '').slice(0, 10);
-            return /^\d{4}-\d{2}-\d{2}$/.test(at) && at >= since && at <= U.addDays(n.date, 14) ? { s, at } : null;
+            const sd = String(s.startDate || '').slice(0, 10), first = /^\d{4}-\d{2}-\d{2}$/.test(sd) && sd > at ? sd : at;
+            return /^\d{4}-\d{2}-\d{2}$/.test(at) && at >= since && at <= U.addDays(n.date, 14) ? { s, at, first } : null;
         }).filter(Boolean);
     }
     function firstLesson(s, from) {
@@ -171,10 +172,10 @@
             ev.push({ id: `rating:${pm}:${mine.prevRank}`, cat: 'boshqa', tone: 'wa', ic: 'cup', title: `${nm[0].toUpperCase()}${nm.slice(1)} reytingi: ${mine.prevRank}-o'rin`,
                 sub: `${d.MON[+n.month.slice(5) - 1]}da hozir ${mine.rank}-o'rin${mine.score != null ? ` · ${mine.score} ball` : ''}`, t: at(`${n.month}-01`, 9 * 60), go: { push: ['reyting', ''] } });
         }
-        for (const { s, at: from } of welcomeCandidates()) {
-            const f = firstLesson(s, from > n.date ? from : n.date);
+        for (const { s, at: from, first } of welcomeCandidates()) {
+            const f = firstLesson(s, first);
             ev.push({ id: `new:${s.id}:${from}`, cat: 'dars', tone: 'vio', ic: 'userplus', title: `Yangi o'quvchi: ${esc(d.short(s.name))}`,
-                sub: [`${d.patternLabel(s.lessonDayOfWeek)} ${esc(s.lessonTime || '')}`.trim(), `${durOf(s)} daq`, f ? `${fmtShort(f).replace(/-\w+$/, m => '-' + d.MON[+f.slice(5, 7) - 1])}dan boshlaydi` : ''].filter(Boolean).join(' · '), t: at(from, 9 * 60), go: { push: ['karta', s.id] } });
+                sub: [`${d.patternLabel(s.lessonDayOfWeek)} ${esc(s.lessonTime || '')}`.trim(), `${durOf(s)} daq`, f ? `${+f.slice(8)}-${d.MON[+f.slice(5, 7) - 1]}dan ${f > n.date ? 'boshlaydi' : 'boshlagan'}` : ''].filter(Boolean).join(' · '), t: at(from, 9 * 60), go: { push: ['karta', s.id] } });
         }
         for (const g of d.myGuides()) {
             const t = Date.parse(g.createdAt); if (!(t > since)) continue;
@@ -228,7 +229,7 @@
         const d = D(), n = d.now(), nd = nextDayInfo();
         const finished = st.total > 0;
         const when = nd ? (nd.date === U.addDays(n.date, 1) ? 'Ertaga' : `${d.DAY_FULL[d.wdOf(nd.date) - 1]} kuni`) : '';
-        const text = `${finished ? "Bugungi darslar tugadi — barakalla." : `${d.DAY_FULL[n.wd - 1]} — dam oling.`}${nd ? ` ${when} birinchi dars ${esc(nd.s.lessonTime)} da, ${esc(d.first(nd.s.name))} bilan.` : ''}`;
+        const text = `${finished ? 'Barakalla!' : `${d.DAY_FULL[n.wd - 1]} — dam oling.`}${nd ? ` ${when} birinchi dars ${esc(nd.s.lessonTime)} da, ${esc(d.first(nd.s.name))} bilan.` : ''}`;
         return `<div class="card a1" style="align-items: center; text-align: center; gap: 8px; padding: 22px 16px">
       <div class="bs-flt" style="width: 96px; height: 96px; border-radius: 50%; background: ${finished ? '#ECFDF3' : '#EAF3FF'}; display: grid; place-items: center">${U.svg(finished ? P.tick : P.mug, 48, 1.6).replace('stroke="currentColor"', `stroke="${finished ? '#067647' : '#0065D6'}"`)}</div>
       <strong style="font-size: 18px; font-weight: 800">${finished ? 'Bugungi darslar tugadi' : "Bugun dars yo'q"}</strong>
@@ -436,7 +437,7 @@
                 reasons.hidden = present || delegate;
                 save.textContent = present ? 'Saqlash va tugatish' : delegate ? 'Tugatish va sababini yozish' : 'Kelmadi — saqlash';
             });
-            el.querySelectorAll('[data-r]').forEach(b => b.onclick = () => { reason = b.dataset.r; el.querySelectorAll('[data-r]').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', String(x === b)); }); });
+            el.querySelectorAll('[data-r]').forEach(b => b.onclick = () => { reason = b.dataset.r; msg.style.color = ''; msg.textContent = ''; el.querySelectorAll('[data-r]').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', String(x === b)); }); });
             save.onclick = async () => {
                 if (!present && delegate) { set(K.live, null); close(); U.go('home'); setTimeout(() => U.davomat.openDay(sid, live.date), 0); return; }
                 if (!present && !reason) { msg.textContent = 'Sababini tanlang'; msg.style.color = '#B42318'; return; }
@@ -590,7 +591,7 @@
         if (U.activeLock()) return; // qulf (sinov/davomat) ustun — keyingi ochilishda ko'rsatiladi
         const d = D(), s = it.s, n = d.now(), seen = get(K.welcome, []);
         set(K.welcome, [...seen, s.id].slice(-300));
-        const g = it.group, from = it.at > n.date ? it.at : n.date, fl = firstLesson(s, from);
+        const g = it.group, fl = firstLesson(s, it.first || it.at);
         const flTxt = fl ? `${d.DAY[d.wdOf(fl) - 1]}, ${+fl.slice(8)}-${d.MON_S[+fl.slice(5, 7) - 1].toLowerCase()} · ${esc(s.lessonTime || '')}` : '—';
         const lang = langOf(s) === 'russian' ? 'Rus tili' : 'Ingliz tili', reached = S().progress[s.id]?.reached;
         const cnt = S().main.filter(x => !x.frozen).length;
@@ -626,7 +627,7 @@
         <div class="col g1"><b style="font-size: 15px">${d.MON[+n.month.slice(5) - 1][0].toUpperCase()}${d.MON[+n.month.slice(5) - 1].slice(1)}dagi <span class="${a('bs-cn')}" style="color: #FDB022">${conv}-</span>konversiyangiz</b><span style="font-size: 12px; color: #C7D2E3">sinov darsingizdan kursga yozilganlar</span></div>
       </div>` : ''}
       <div style="display: grid; grid-template-columns: 1fr 1.3fr; gap: 8px">
-        <button type="button" class="btn bs-btn" data-bs-x>Yopish</button>
+        <button type="button" class="btn bs-btn" data-bs-x style="color: #0057B8">Yopish</button>
         <button type="button" class="btn bs-btn p" data-bs-open="karta">Kartani ochish</button>
       </div>
     </div>
@@ -656,7 +657,7 @@
         <span style="font-size: 15px; font-weight: 700; color: #0B3A73">o'quvchi</span>
       </div>
       <div style="display: grid; grid-template-columns: 1fr 1.3fr; gap: 8px">
-        <button type="button" class="btn bs-btn" data-bs-x>Yopish</button>
+        <button type="button" class="btn bs-btn" data-bs-x style="color: #0057B8">Yopish</button>
         <button type="button" class="btn bs-btn p" data-bs-open="darslik">${reached ? `${reached}-darsni ko'rish` : "1-darsni ko'rish"}</button>
       </div>
     </div>
@@ -677,7 +678,7 @@
             document.removeEventListener('keydown', onKey); closeOverlay(ov);
             if (to === 'karta') U.push('karta', s.id); else U.push('darslik', reached || 1);
         };
-        ov.querySelector('.btn.p').focus({ preventScroll: true });
+        ov.querySelector('.btn.p').focus({ preventScroll: true, focusVisible: false });
         if (it.trial && !r) U.confetti();
     }
     async function checkWelcome() {
