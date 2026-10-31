@@ -15635,6 +15635,7 @@ const FAILED_SALE_FROM_COLUMN_MAP = {
 };
 
 const SIFATSIZ_LID_REASONS = [
+    { id: 'no-answer',      label: 'Telefonni olmadi (bir marta ham bog\'lanilmadi)' },
     { id: 'wrong-phone',    label: 'Noto\'g\'ri telefon raqami (mavjud emas)' },
     { id: 'duplicate',      label: 'Dublikat lid (bir odam bir necha marta qolgan)' },
     { id: 'fake',           label: 'Hazil yoki soxta murojaat' },
