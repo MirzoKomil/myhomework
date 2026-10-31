@@ -130,6 +130,7 @@
         const since = parseT(l.slaStageEnteredAt) || parseT(l.statusChangedAt) || assignedAt(l);
         return { text: since ? dur(now - since) + ' shu bosqichda' : colLabel(s), tone: 'blue', sort: 4, t: since || 0 };
     }
+    const localDay = v => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(v || '')); if (m) return new Date(+m[1], +m[2] - 1, +m[3]).getTime(); const t = parseT(v); return t ? new Date(new Date(t).toDateString()).getTime() : null; };
     const formatShort = v => { const t = parseT(v); if (!t) return String(v || ''); const d = new Date(t); return `${d.getDate()}-${MON[d.getMonth()].slice(0, 3)}`; };
     function metaLine(l) {
         const s = st(l), parts = [];
@@ -156,7 +157,7 @@
         if (!ph) return '';
         return `<a class="sa-call${primary ? ' is-primary' : ''}" href="tel:${esc(ph)}" data-sa-call="${esc(l.id)}" aria-label="${esc(l.name || 'Lid')}ga qoʻngʻiroq">${ic('phone', 20, 2.2)}</a>`;
     };
-    const topBack = (title, sub, back = 'back', extra = '') => `<header class="sa-top sa-top--page"><button type="button" class="sa-icon-btn sa-ghost" data-sa-${back} aria-label="Orqaga">${ic('back', 22, 2.2)}</button><div class="sa-top-t"><h1>${esc(title)}</h1>${sub ? `<span>${esc(sub)}</span>` : ''}</div>${extra}</header>`;
+    const topBack = (title, sub, back = 'back', extra = '') => `<header class="sa-top sa-top--page${/^Lidlar|^Lid$/.test(title) ? ' sa-top--crumb' : ''}"><button type="button" class="sa-icon-btn sa-ghost" data-sa-${back} aria-label="Orqaga">${ic('back', 22, 2.2)}</button><div class="sa-top-t"><h1>${esc(title)}</h1>${sub ? `<span>${esc(sub)}</span>` : ''}</div>${extra}</header>`;
     const bell = () => {
         const n = g('getUnreadCount') ? getUnreadCount() : 0;
         return `<button type="button" class="sa-icon-btn" data-sa-notif aria-label="Bildirishnomalar${n ? ', ' + n + ' ta yangi' : ''}">${ic('bell')}${n ? `<span class="sa-dot-n">${n > 9 ? '9+' : n}</span>` : ''}</button>`;
@@ -179,7 +180,13 @@
         const payingSum = paying.reduce((a, l) => a + (Number(l.paymentSurvey?.debtAmount || l.paymentSurvey?.amount || 0) || 0), 0);
         const tasks = (d?.tasks || []).filter(t => t.kind === 'lead');
         const late = tasks.filter(t => t.late).length;
-        const next = d?.next?.lead ? leadById(d.next.lead.id) || d.next.lead : null;
+        const own = new Set(leads.map(l => l.id));
+        if (d && d.next?.lead && !own.has(d.next.lead.id)) d.next = null;
+        const skip = S.skip || 0;
+        const nextPool = [...(d?.next?.lead ? [d.next.lead] : []), ...(d?.queue || [])].filter((l, i, a) => own.has(l.id) && a.findIndex(x => x.id === l.id) === i);
+        const nextLead = nextPool.length ? nextPool[skip % nextPool.length] : null;
+        const next = nextLead ? leadById(nextLead.id) || nextLead : null;
+        if (d && next && d.next && next.id !== d.next.lead?.id) { const b0 = badge(next); d.next = { lead: next, reason: b0.tone === 'red' ? 'late' : 'today', at: b0.t || Date.now() }; }
         let nextChip = '';
         if (d?.next) {
             if (d.next.reason === 'sla') nextChip = pill('SLA oʻtdi · ' + dur(d.next.ms), 'red-d');
@@ -187,7 +194,7 @@
             else if (d.next.reason === 'today') nextChip = pill(hm(d.next.at) + ' · ' + dur(d.next.at - Date.now()) + ' qoldi', 'amber-d');
             else nextChip = pill('Yangi · ' + dur(d.next.ms) + ' qoldi', 'blue-d');
         }
-        const queue = (d?.queue || []).filter(l => !next || l.id !== next.id).slice(0, 3).map(l => leadById(l.id) || l);
+        const queue = (d?.queue || []).filter(l => own.has(l.id) && (!next || l.id !== next.id)).slice(0, 3).map(l => leadById(l.id) || l);
         const greet = now.getHours() < 12 ? 'Xayrli tong' : now.getHours() < 18 ? 'Xayrli kun' : 'Xayrli kech';
         return `
         <header class="sa-top">
@@ -215,7 +222,7 @@
             <div class="sa-next-a">
               ${telOf(next.phone) ? `<a class="sa-btn sa-btn--primary sa-pulse" href="tel:${esc(telOf(next.phone))}" data-sa-call="${esc(next.id)}">${ic('phone', 18, 2.2)}Qoʻngʻiroq qilish</a>` : ''}
               <button type="button" class="sa-icon-btn sa-on-dark" data-sa-tg="${esc(next.id)}" aria-label="Telegramda yozish">${ic('tg')}</button>
-              <button type="button" class="sa-icon-btn sa-on-dark" data-sa-lead="${esc(next.id)}" aria-label="Lid kartasini ochish">${ic('chev')}</button>
+              <button type="button" class="sa-icon-btn sa-on-dark" data-sa-skip aria-label="Keyingi lidga oʻtish">${ic('skip')}</button>
             </div>
           </section>` : `<section class="sa-card sa-calm">${ic('check', 22, 2.6)}<span><strong>Navbat boʻsh</strong><em>Hozircha kechikkan qoʻngʻiroq yoʻq</em></span></section>`}
           <section class="sa-sec">
@@ -234,7 +241,9 @@
     function screenLeads() {
         const all = LEADS();
         const q = S.q.trim();
-        const match = l => !q || (g('leadMatchesSearch') ? leadMatchesSearch(l, q) : String(l.name + ' ' + l.phone).toLowerCase().includes(q.toLowerCase()));
+        const qd = q.replace(/^#/, '').toLowerCase();
+        const match = l => !q || (g('leadMatchesSearch') ? leadMatchesSearch(l, q) : String(l.name + ' ' + l.phone).toLowerCase().includes(qd))
+            || (qd && String(l.serialCode || l.serialNumber || '').toLowerCase().includes(qd));
         const srcOk = l => S.src === 'all' || (S.src === 'target' ? l.leadType === 'target' : l.leadType !== 'target');
         const pool = all.filter(l => srcOk(l) && match(l));
         const ids = COLS().map(c => c.id);
@@ -280,6 +289,7 @@
         const beforeConnected = PATH.indexOf(s) >= 0 && PATH.indexOf(s) < PATH.indexOf('boglanildi');
         const trialLocked = !survey && beforeConnected;
         const comments = (Array.isArray(l.comments) ? [...l.comments] : []).sort((a, c) => (parseT(c.createdAt) || 0) - (parseT(a.createdAt) || 0));
+        const recN = recCounts ? recCounts[lang() + ':' + l.id] || 0 : 0;
         const tabs = [['tarix', 'Tarix'], ['info', 'Maʼlumot'], ['rec', 'Yozuvlar']];
         return `
         ${topBack(SHORT[s] ? 'Lidlar · ' + SHORT[s] : 'Lid', '', 'back', '')}
@@ -298,7 +308,7 @@
           </section>
           ${alerts.length ? `<button type="button" class="sa-alert" data-sa-notify="${esc(l.id)}">${ic('clock', 18, 2.2)}<span>${esc(alerts[0].title || alerts[0].message || 'Muddat oʻtdi')}${alerts.length > 1 ? ` · yana ${alerts.length - 1}` : ''}</span><b>Koʻrib chiqish</b></button>` : ''}
           ${!survey && s !== 'muvaffaqiyatsiz-sotuv' && s !== 'sifatsiz-lidlar' && s !== 'tolov-yopildi' ? `<button type="button" class="sa-survey-cta" data-sa-survey="${esc(l.id)}"><span class="sa-ic-box">${ic('survey')}</span><span><strong>Anketa · ${sc} / 11</strong><em>Gaplashgach toʻldiring — “Bogʻlanildi” uchun shart</em></span>${ic('chev', 18, 2.4)}</button>` : ''}
-          <div class="sa-seg" role="tablist" aria-label="Lid maʼlumotlari">${tabs.map(([k, t]) => `<button type="button" role="tab" aria-selected="${S.tab === k}" class="${S.tab === k ? 'is-on' : ''}" data-sa-tab="${k}">${t}${k === 'tarix' && comments.length ? ` <b>${comments.length}</b>` : ''}</button>`).join('')}</div>
+          <div class="sa-seg" role="tablist" aria-label="Lid maʼlumotlari">${tabs.map(([k, t]) => `<button type="button" role="tab" aria-selected="${S.tab === k}" class="${S.tab === k ? 'is-on' : ''}" data-sa-tab="${k}">${t}${k === 'tarix' && comments.length ? ` <b>${comments.length}</b>` : ''}${k === 'rec' && recN ? ` <b>${recN}</b>` : ''}</button>`).join('')}</div>
           <div class="sa-tabpane">${S.tab === 'tarix' ? tabHistory(l, comments) : S.tab === 'info' ? tabInfo(l) : `<div id="saRec" class="sa-rec">${recSkeleton()}</div>`}</div>
         </div>
         <div class="sa-bar"><button type="button" class="sa-btn sa-btn--outline" data-sa-stagesheet="${esc(l.id)}">Bosqichni oʻzgartirish${ic('down', 16, 2.4)}</button></div>`;
@@ -321,20 +331,37 @@
         const tr = g('renderLeadTrialStatus') ? renderLeadTrialStatus(l) : '';
         const dp = g('renderDeferredPurchaseDates') ? renderDeferredPurchaseDates(l) : '';
         const mgr = g('getSalesManagers') ? (getSalesManagers().find(m => String(m.id) === String(l.managerId)) || {}).name : '';
-        const info = (Array.isArray(l.infoProvidedSurvey) ? l.infoProvidedSurvey : []).filter(a => a.answer === 'yes').map(a => a.label).join(', ');
+        const IQ = typeof LEAD_INFO_PROVIDED_QUESTIONS !== 'undefined' ? LEAD_INFO_PROVIDED_QUESTIONS : [];
+        const info = (Array.isArray(l.infoProvidedSurvey) ? l.infoProvidedSurvey : []).filter(a => a && a.answer === 'yes')
+            .map(a => String(a.label || (IQ.find(q => q.id === a.id) || {}).label || a.id || '').replace(/\?$/, '').replace(/(tushuntirildi|aytildi|taklif qilindi)mi$/, '$1')).filter(Boolean).join(', ');
+        const PT = { full: 'Toʻliq', partial: 'Qisman', debtor: 'Qarzga', installment: 'Nasiya' };
+        const DOW = ['', 'Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba', 'Yakshanba'];
+        const pc = l.paymentClosedSurvey || {};
+        const total = Number(ps.totalAmount) || 0, paidA = Number(ps.paidAmount) || 0;
+        const debtA = Number(ps.debtAmount) || (total && paidA && total > paidA ? total - paidA : 0);
+        const dps = l.deferredPurchaseSurvey || {};
+        const defReason = dps.otherReason || dps.reasonLabel || ((window.leadWorkflow?.DEFERRED_REASONS || []).find(x => x.id === dps.reasonId) || {}).label;
         return `
         <div class="sa-card sa-kvs">
           ${row('Kimning lidi', mgr)}${row('Telefon', l.phone && (g('formatPhoneDisplay') ? formatPhoneDisplay(l.phone) : l.phone))}${row('2-telefon', l.phone2 && (g('formatPhoneDisplay') ? formatPhoneDisplay(l.phone2) : l.phone2))}
           ${row('Yoʻnalish', lang() === 'russian' ? 'Rus tili' : 'Ingliz tili')}${row('Manba', srcLabel(l))}${row('Lid turi', kindLabel(l))}
-          ${row('Kelgan vaqti', assignedAt(l) ? when(assignedAt(l)) : l.date)}${row('ID', l.serialCode ? '#' + l.serialCode : '')}${row('Hudud', l.region)}
+          ${row('Kelgan vaqti', assignedAt(l) ? when(assignedAt(l)) : l.date)}${row('ID', (l.serialCode || l.serialNumber) ? '#' + (l.serialCode || l.serialNumber) : '')}${row('Hudud', l.region || cs.regionLabel || cs.region || cs.countryLabel || cs.country)}
         </div>
-        ${Object.keys(cs).length ? `<h3 class="sa-h3">Anketa</h3><div class="sa-card sa-kvs">${row('Kim uchun', cs.applicantLabel || cs.applicant)}${row('Yoshi', cs.age)}${row('Jinsi', cs.genderLabel || cs.gender)}${row('Til darajasi', cs.languageLevelLabel || cs.languageLevel)}${row('Maqsadi', cs.learningGoalLabel || cs.learningGoal)}${row('Yashash joyi', cs.residenceLabel || cs.regionLabel || cs.countryLabel)}${row('Tushuntirildi', info)}</div>` : ''}
+        ${Object.keys(cs).length ? `<h3 class="sa-h3">Anketa</h3><div class="sa-card sa-kvs">${row('Kim uchun', cs.applicantLabel || cs.applicant)}${row('Yoshi', cs.age)}${row('Jinsi', cs.genderLabel || cs.gender)}${row('Til darajasi', cs.languageLevelLabel || cs.languageLevel)}${row('Maqsadi', cs.learningGoalLabel || cs.learningGoal)}${row('Yashash joyi', cs.residenceLabel || cs.regionLabel || cs.region || cs.countryLabel || cs.country)}${row('Tushuntirildi', info)}</div>` : ''}
         ${l.decisionSurvey?.reasonLabel ? `<h3 class="sa-h3">Qaror</h3><div class="sa-card sa-kvs">${row('Sabab', l.decisionSurvey.reasonLabel)}</div>` : ''}
-        ${dp ? `<h3 class="sa-h3">Keyin sotib oladi</h3><div class="sa-card sa-raw">${l.deferredPurchaseSurvey?.reasonLabel ? `<div class="sa-kv"><span>Sabab</span><b>${esc(l.deferredPurchaseSurvey.otherReason || l.deferredPurchaseSurvey.reasonLabel)}</b></div>` : ''}${dp}</div>` : ''}
+        ${dp ? `<h3 class="sa-h3">Keyin sotib oladi</h3><div class="sa-card sa-raw">${defReason ? `<div class="sa-kv"><span>Sabab</span><b>${esc(defReason)}</b></div>` : ''}${dp}</div>` : ''}
         ${tr ? `<h3 class="sa-h3">Sinov darsi</h3><div class="sa-card sa-raw">${tr}</div>` : ''}
-        ${ps.paymentType || po.teacherId ? `<h3 class="sa-h3">Toʻlov va jadval</h3><div class="sa-card sa-kvs">${row('Toʻlov turi', ps.paymentTypeLabel || ps.paymentType)}${row('Tarif', ps.tariffLabel || ps.tariff)}${row('Summa', ps.amountLabel || (ps.amount ? num(ps.amount) : ''))}${row('Toʻlangan', ps.paidAmount ? num(ps.paidAmount) : '')}${row('Qarz', ps.debtAmount ? num(ps.debtAmount) : '')}${row('Keyingi toʻlov', ps.nextPaymentDateLabel || ps.nextPaymentDate)}${row('Ustoz', teacherName(po.teacherId))}${row('Dars vaqti', po.lessonTime)}${row('Telegram guruh', po.telegramGroupName)}</div>` : ''}
+        ${ps.paymentType || ps.amount || ps.totalAmount ? `<h3 class="sa-h3">Toʻlov</h3><div class="sa-card sa-kvs">${row('Toʻlov turi', ps.paymentTypeLabel || PT[ps.paymentType] || ps.paymentType)}${row('Nasiya hamkori', ps.installmentPartnerLabel || ps.installmentPartner)}${row('Tarif', ps.tariffLabel || ps.tariff)}${row('Kurs narxi', total ? num(total) : '')}${row('Summa', ps.amountLabel || (ps.amount ? num(ps.amount) : ''))}${row('Toʻlangan', paidA ? num(paidA) : '')}${row('Qarz', debtA ? num(debtA) : '')}${row('Oxirgi toʻlov', ps.lastPaymentDateLabel || ps.lastPaymentDate)}${row('Keyingi toʻlov', ps.nextPaymentDateLabel || ps.nextPaymentDate)}</div>` : ''}
+        ${pc.closedDate || pc.actualAmount || l.closedDate ? `<h3 class="sa-h3">Toʻlov yopildi</h3><div class="sa-card sa-kvs">${row('Sana', pc.closedDateLabel || pc.closedDate || l.closedDate)}${row('Haqiqiy summa', pc.actualAmount ? num(pc.actualAmount) : '')}${row('Jami', pc.totalAmount ? num(pc.totalAmount) : '')}</div>` : ''}
+        ${po.teacherId || po.lessonTime || po.studentFullName ? `<h3 class="sa-h3">Oʻquvchi va jadval</h3><div class="sa-card sa-kvs">${row('Oʻquvchi', po.studentFullName || [po.studentFirstName, po.studentLastName].filter(Boolean).join(' '))}${row('Ustoz', teacherName(po.teacherId))}${row('Yordamchi', teacherName(po.assistantTeacherId))}${row('Dars kuni', DOW[Number(po.lessonDayOfWeek)] || '')}${row('Dars vaqti', po.lessonTime)}${row('Davomiyligi', po.lessonDuration ? po.lessonDuration + ' daqiqa' : '')}${row('Birinchi dars', po.firstLessonDate)}${row('Daraja', po.courseLevel)}${row('Shartnoma', po.contractNumber ? '№' + po.contractNumber + (po.contractDate ? ' · ' + po.contractDate : '') : '')}${row('Telegram guruh', po.telegramGroupName || po.telegramGroupLink)}${row('Kitob manzili', po.bookAddress)}${row('Ilova', po.platformConnected ? 'Ulangan' : '')}</div>` : ''}
         ${l.failedSaleReason?.label ? `<h3 class="sa-h3">Muvaffaqiyatsiz</h3><div class="sa-card sa-kvs">${row('Sabab', l.failedSaleReason.label)}</div>` : ''}
         ${l.sifatsizReason?.label ? `<h3 class="sa-h3">Sifatsiz</h3><div class="sa-card sa-kvs">${row('Sabab', l.sifatsizReason.label)}</div>` : ''}`;
+    }
+    let recCounts = null, recCountsAt = 0;
+    function loadRecCounts() {
+        if (!g('apiFetchCallRecordingCounts') || Date.now() - recCountsAt < 60000) return;
+        recCountsAt = Date.now();
+        Promise.resolve(apiFetchCallRecordingCounts()).then(c => { recCounts = c?.counts || c || {}; if (S.screen === 'card') queueRender(); }).catch(() => {});
     }
     const recSkeleton = () => `<div class="sa-sk" style="height:56px"></div><div class="sa-sk" style="height:56px"></div>`;
     async function loadRecordings(id) {
@@ -472,7 +499,7 @@
         const students = g('filterStudentsForSalesManager') ? filterStudentsForSalesManager(getItem(STORAGE_KEYS.students, []) || [], u) : [];
         const today = new Date(new Date().toDateString()).getTime();
         const list = students.filter(s => !s.isStaffDemo && Number(s.debtAmount) > 0)
-            .map(s => ({ s, due: parseT(s.paymentDueDate) })).sort((a, b) => (a.due || 9e15) - (b.due || 9e15));
+            .map(s => ({ s, due: localDay(s.paymentDueDate) })).sort((a, b) => (a.due || 9e15) - (b.due || 9e15));
         const over = list.filter(x => x.due && x.due < today), soon = list.filter(x => !x.due || x.due >= today);
         const total = list.reduce((a, x) => a + Number(x.s.debtAmount || 0), 0);
         const card = ({ s, due }, overdue) => {
@@ -501,8 +528,14 @@
         ${topBack('Profil', '')}
         <div class="sa-body sa-stagger">
           <section class="sa-prof">${staffImg(mid(), u.name, 92)}<strong>${esc(u.name || '')}</strong><span>Sotuv menejeri · ${lang() === 'russian' ? 'Rus tili' : 'Ingliz tili'}${u.email ? ' · ' + esc(u.email) : ''}</span></section>
+          <button type="button" class="sa-install" data-sa-install hidden><span class="sa-ic-box">${ic('plus', 20)}</span><span><strong>Ilovani oʻrnatish</strong><em>Bosh ekranga belgi qoʻshiladi</em></span><b>Oʻrnatish</b></button>
+          <h3 class="sa-h3">Sozlamalar</h3>
           <div class="sa-card sa-list">
-            <button type="button" class="sa-row sa-row-btn" data-sa-crm="profile">${ic('gear', 20)}<span class="sa-row-t"><strong>Sozlamalar</strong><span>Parol, sessiyalar, bildirishnomalar, Telegram bot</span></span>${ic('chev', 18, 2.2)}</button>
+            <button type="button" class="sa-row sa-row-btn" data-sa-crm="profile">${ic('lock', 20)}<span class="sa-row-t"><strong>Parolni oʻzgartirish</strong><span>Kamida 12 belgi</span></span>${ic('chev', 18, 2.2)}</button>
+            <button type="button" class="sa-row sa-row-btn" data-sa-crm="profile">${ic('bell', 20)}<span class="sa-row-t"><strong>Bildirishnomalar</strong><span>Qaysi xabarlar kelishi</span></span>${ic('chev', 18, 2.2)}</button>
+            <button type="button" class="sa-row sa-row-btn" data-sa-crm="profile">${ic('gear', 20)}<span class="sa-row-t"><strong>Faol qurilmalar va Telegram bot</strong><span>Sessiyalar, botga ulanish</span></span>${ic('chev', 18, 2.2)}</button>
+          </div>
+          <div class="sa-card sa-list">
             <button type="button" class="sa-row sa-row-btn" data-sa-install hidden>${ic('plus', 20)}<span class="sa-row-t"><strong>Ilovani oʻrnatish</strong><span>Bosh ekranga belgi qoʻshiladi</span></span>${ic('chev', 18, 2.2)}</button>
             <button type="button" class="sa-row sa-row-btn sa-danger" data-sa-logout>${ic('logout', 20)}<span class="sa-row-t"><strong>Chiqish</strong></span></button>
           </div>
@@ -556,7 +589,10 @@
         const u = user();
         return updateLeadInStorage(lang(), id, l => {
             const b = g('normalizeLeadExtras') ? normalizeLeadExtras(l) : l;
-            return { ...b, comments: [...(b.comments || []), createLeadComment({ text, author: u.name, type, ...extra })] };
+            const c = createLeadComment({ text, author: u.name, type, ...extra });
+            const ids = new Set((b.comments || []).map(x => x && x.id));
+            if (ids.has(c.id)) c.id = c.id + '_' + Math.random().toString(36).slice(2, 7);
+            return { ...b, comments: [...(b.comments || []), c] };
         });
     }
     function move(id, to) {
@@ -695,6 +731,7 @@
             if (!b) return;
             const id = b.dataset.saTabNav;
             S.stack = [];
+            closeCrmPages();
             if (id === 'jadval') openJadval();
             else go(id, { reset: true });
         });
@@ -706,10 +743,15 @@
         const n = LEADS().filter(l => st(l) === 'yangi-lidlar').length;
         nav.innerHTML = TABS.map(t => `<button type="button" data-sa-tab-nav="${t.id}" class="${active === t.id ? 'is-on' : ''}" ${active === t.id ? 'aria-current="page"' : ''}><span class="sa-nav-i">${ic(t.icon, 22, active === t.id ? 2.2 : 1.9)}${t.id === 'leads' && n ? `<b>${n > 99 ? '99+' : n}</b>` : ''}</span>${t.label}</button>`).join('');
     }
+    // Ochiq qolgan sinov/jadval sahifalari (taymer, ushlab turilgan vaqt) yopiladi — fon so'rovlari to'xtaydi.
+    function closeCrmPages() {
+        try { if (document.body.classList.contains('ss-page-open')) window.sotuvSinov?.close?.({ silent: true }); } catch (e) { /* yopiq */ }
+        try { if (document.body.classList.contains('jv-page-open')) window.jadvalV3?.close?.({ silent: true }); } catch (e) { /* yopiq */ }
+    }
     function go(screen, opts = {}) {
         if (opts.reset) S.stack = [];
         else if (S.screen !== screen) S.stack.push({ screen: S.screen, lead: S.lead, tab: S.tab });
-        if (window.history?.pushState && !opts.fromPop) history.pushState({ sa: screen }, '');
+        if (window.history && !opts.fromPop) { if (opts.reset) history.replaceState({ sa: screen }, ''); else history.pushState({ sa: screen }, ''); }
         S.screen = screen;
         if (screen !== 'crm') showApp(true);
         render(true);
@@ -763,6 +805,9 @@
         const html = S.screen === 'leads' ? screenLeads() : S.screen === 'card' ? screenCard() : S.screen === 'plan' ? screenPlan()
             : S.screen === 'rating' ? screenRating() : S.screen === 'menu' ? screenMenu() : S.screen === 'debtors' ? screenDebtors()
             : S.screen === 'profile' ? screenProfile() : screenHome();
+        const keep = {};
+        root.querySelectorAll('textarea[id], input[id]').forEach(el => { if (el.id !== 'saLeadSearch' && el.value) keep[el.id] = el.value; });
+        const focusId = document.activeElement && root.contains(document.activeElement) ? document.activeElement.id : '';
         const focusSearch = document.activeElement?.id === 'saLeadSearch';
         const caret = focusSearch ? document.activeElement.selectionStart : 0;
         const prevScroll = root.querySelector('.sa-body')?.scrollTop || 0;
@@ -771,20 +816,28 @@
         const body = root.querySelector('.sa-body');
         if (body && !scrollTop) body.scrollTop = prevScroll;
         if (scrollTop) { root.classList.remove('sa-enter'); void root.offsetWidth; root.classList.add('sa-enter'); }
+        Object.keys(keep).forEach(id => { const el = document.getElementById(id); if (el && !el.value) el.value = keep[id]; });
+        if (focusId && focusId !== 'saLeadSearch') document.getElementById(focusId)?.focus({ preventScroll: true });
         if (focusSearch) { const i = document.getElementById('saLeadSearch'); if (i) { i.focus(); try { i.setSelectionRange(caret, caret); } catch (e) { /* type=search */ } } }
-        if (S.screen === 'card' && S.tab === 'rec') loadRecordings(S.lead);
+        if (S.screen === 'card') { loadRecCounts(); if (S.tab === 'rec') loadRecordings(S.lead); }
         if (deferredInstall) root.querySelectorAll('[data-sa-install]').forEach(b => { b.hidden = false; });
         syncNav();
     }
     function queueRender() {
         if (renderQueued) return;
         renderQueued = true;
-        requestAnimationFrame(() => { renderQueued = false; if (!sheetEl && !document.body.classList.contains('modal-open')) render(false); });
+        requestAnimationFrame(() => {
+            renderQueued = false;
+            const a = document.activeElement;
+            const typing = a && root?.contains(a) && /^(TEXTAREA|INPUT)$/.test(a.tagName) && a.id !== 'saLeadSearch';
+            if (typing) { setTimeout(queueRender, 4000); return; } // yozish paytida ekran qayta chizilmaydi
+            if (!sheetEl && !document.body.classList.contains('modal-open')) render(false);
+        });
     }
 
     // ---------- hodisalar ----------
     function onClick(e) {
-        const t = e.target.closest('[data-sa-lead],[data-sa-nav],[data-sa-go],[data-sa-back],[data-sa-stage],[data-sa-stagego],[data-sa-call],[data-sa-tg],[data-sa-sms],[data-sa-move],[data-sa-retrial],[data-sa-survey],[data-sa-tab],[data-sa-stagesheet],[data-sa-sheetclose],[data-sa-outcome],[data-sa-qchip],[data-sa-followup],[data-sa-notify],[data-sa-recmanage],[data-sa-recretry],[data-sa-crm],[data-sa-trials],[data-sa-notif],[data-sa-filter],[data-sa-src],[data-sa-clearq],[data-sa-rper],[data-sa-pay],[data-sa-logout],[data-sa-install],[data-sa-nread],[data-sa-nitem]');
+        const t = e.target.closest('[data-sa-lead],[data-sa-nav],[data-sa-go],[data-sa-back],[data-sa-stage],[data-sa-stagego],[data-sa-call],[data-sa-tg],[data-sa-sms],[data-sa-move],[data-sa-retrial],[data-sa-survey],[data-sa-tab],[data-sa-stagesheet],[data-sa-sheetclose],[data-sa-outcome],[data-sa-qchip],[data-sa-followup],[data-sa-notify],[data-sa-recmanage],[data-sa-recretry],[data-sa-crm],[data-sa-trials],[data-sa-notif],[data-sa-filter],[data-sa-src],[data-sa-clearq],[data-sa-rper],[data-sa-pay],[data-sa-logout],[data-sa-install],[data-sa-nread],[data-sa-nitem],[data-sa-skip]');
         if (!t) return;
         const d = t.dataset;
         if ('saCall' in d) { callPending = { id: d.saCall, at: Date.now() }; return; } // tel: havolasi o'zi ochiladi
@@ -825,6 +878,7 @@
         if ('saClearq' in d) { S.q = ''; render(true); return; }
         if ('saRper' in d) { S.ratingPeriod = d.saRper; render(false); return; }
         if ('saPay' in d) { window.inflowUI?.openPayment?.(d.saPay); return; }
+        if ('saSkip' in d) { S.skip = (S.skip || 0) + 1; render(false); return; }
         if ('saLogout' in d) { document.getElementById('profileLogoutBtn')?.click(); return; }
         if ('saInstall' in d) { if (deferredInstall) { deferredInstall.prompt(); deferredInstall = null; render(false); } }
     }
@@ -901,7 +955,14 @@
         hookRenders();
         document.addEventListener('visibilitychange', onVisible);
         window.addEventListener('focus', onVisible);
-        window.addEventListener('popstate', () => { if (isOn()) back(); });
+        window.addEventListener('popstate', () => {
+            if (!isOn()) return;
+            // Android "orqaga": avval ochiq CRM oynasi, keyin pastki oyna, keyin ekran.
+            const ov = document.getElementById('modalOverlay');
+            if (ov && ov.style.display !== 'none' && g('closeModal')) { closeModal(); history.pushState({ sa: S.screen }, ''); return; }
+            if (sheetEl) { closeSheet(); history.pushState({ sa: S.screen }, ''); return; }
+            back();
+        });
         MQ.addEventListener?.('change', sync);
         // Jadval/sinov sahifalari (jadvalV3, sotuvSinov) CRM ichida ochiladi — ular ochiq turganda ilova qatlami yashiriladi.
         new MutationObserver(() => {
