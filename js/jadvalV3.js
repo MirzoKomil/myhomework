@@ -267,7 +267,8 @@
                 if (st.k === 'free') free++;
                 const on = J.sel && J.sel.t === t.id && J.sel.m === m;
                 const lab = st.k === 'free' && on ? '✓ Tanlandi' : CELL[st.k];
-                return `<div class="jv-cell"><button type="button" class="jv-s jv-s--${st.k}${on ? ' is-on' : ''}"${st.k === 'free' ? ` data-slot="${esc(t.id)}|${m}"` : ' tabindex="-1" aria-disabled="true"'} aria-label="${esc(t.name)} · ${hm(m)} · ${lab}">${lab}</button></div>`;
+                const inner = st.k === 'free' && on ? '<span class="jv-on-l">✓ Tanlandi</span><span class="jv-on-x">✕ Bekor qilish</span>' : lab;
+                return `<div class="jv-cell"><button type="button" class="jv-s jv-s--${st.k}${on ? ' is-on' : ''}"${st.k === 'free' ? ` data-slot="${esc(t.id)}|${m}"` : ' tabindex="-1" aria-disabled="true"'} aria-label="${esc(t.name)} · ${hm(m)} · ${lab}${on ? ' (qayta bosing — bekor qilish)' : ''}"${on ? ' title="Qayta bosing — tanlov bekor qilinadi"' : ''}>${inner}</button></div>`;
             }).join('');
             const past = isToday && m < now;
             const cnt = past ? '<span class="jv-cnt is-past">oʻtdi</span>' : `<span class="jv-cnt jv-cnt--${free >= 4 ? 'ok' : free >= 2 ? 'mid' : free === 1 ? 'low' : 'none'}">${free} ta</span>`;
@@ -297,6 +298,7 @@
             <p class="jv-mt">${esc(dayWord(J.data.date))} · ${esc(dayLabel(J.data.date))} · bu vaqtda ${list.length} ta ustoz boʻsh</p>
             <div class="jv-sub">Kim boʻsh — kam yuklangani birinchi</div><div class="jv-opts">${rows || '<p class="jv-warn">Bu vaqt endi boʻsh emas — boshqa vaqtni tanlang.</p>'}</div>
             ${pick ? `<button type="button" class="jv-btn" data-book="${esc(pick.id)}|${m}"${J.busy ? ' disabled' : ''}>${btn}</button>` : ''}
+            <button type="button" class="jv-unsel" data-unsel>✕ Tanlovni bekor qilish</button>
             <p class="jv-mt">${J.lead ? 'Lid avtomatik “Sinov darsida” ustuniga oʻtadi. Ustoz tasdiqlagach sizga xabar keladi.' : 'Bosilganda lid tanlash oynasi ochiladi. Vaqt 10 daqiqa siz uchun ushlab turiladi.'}</p></div>${un}${legend}</aside>`;
     }
 
@@ -438,11 +440,12 @@
         root.querySelectorAll('[data-day]').forEach(b => b.onclick = () => { if (J.day === b.dataset.day) return; J.day = b.dataset.day; J.sel = null; J.mobT = null; load(); });
         root.querySelectorAll('[data-pat]').forEach(b => b.onclick = () => { if (J.pat === b.dataset.pat) return; J.pat = b.dataset.pat; J.sel = null; load(); });
         root.querySelectorAll('[data-range]').forEach(b => b.onclick = () => { J.range = b.dataset.range; draw(); });
-        root.querySelectorAll('[data-slot]').forEach(b => b.onclick = () => { const [t, m] = b.dataset.slot.split('|'); J.sel = { t, m: Number(m) }; draw(); });
+        root.querySelectorAll('[data-slot]').forEach(b => b.onclick = () => { const [t, m] = b.dataset.slot.split('|'); J.sel = J.sel && J.sel.t === t && J.sel.m === Number(m) ? null : { t, m: Number(m) }; draw(); });
         root.querySelectorAll('[data-pick-t]').forEach(b => b.onclick = () => { J.sel = { ...J.sel, t: b.dataset.pickT }; draw(); });
+        root.querySelectorAll('[data-unsel]').forEach(b => b.onclick = () => { J.sel = null; draw(); });
         root.querySelectorAll('[data-hour]').forEach(b => b.onclick = () => { J.mobT = Number(b.dataset.hour); draw(); });
         root.querySelectorAll('[data-book]').forEach(b => b.onclick = () => { const [t, m] = b.dataset.book.split('|'); startBooking(t, Number(m)); });
-        root.querySelectorAll('[data-lesson]').forEach(b => b.onclick = () => { const [t, sid, s] = b.dataset.lesson.split('|'); J.sel = { t, sid, start: Number(s) }; draw(); });
+        root.querySelectorAll('[data-lesson]').forEach(b => b.onclick = () => { const [t, sid, s] = b.dataset.lesson.split('|'); J.sel = J.sel?.sid === sid && J.sel.t === t && J.sel.start === Number(s) ? null : { t, sid, start: Number(s) }; draw(); });
         root.querySelectorAll('[data-open-st]').forEach(b => b.onclick = () => U().openStudent(b.dataset.openSt));
         const move = (sid, tid) => (U().openCardForm ? U().openCardForm(sid, 'holat', () => { J.sel = null; load(); }, { act: 'teacher', teacherId: tid || null }) : U().openStudent(sid));
         root.querySelectorAll('[data-move-st]').forEach(b => b.onclick = () => move(b.dataset.moveSt));

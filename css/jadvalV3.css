@@ -269,6 +269,13 @@ button.jv-ml { cursor: pointer; }
 @media (max-width: 1180px) {
     .jv-side { width: 300px; }
 }
+/* Tanlangan katak: qayta bosish — bekor qilish */
+.jv-s .jv-on-x { display: none; }
+.jv-s.is-on:hover .jv-on-l, .jv-s.is-on:focus-visible .jv-on-l { display: none; }
+.jv-s.is-on:hover .jv-on-x, .jv-s.is-on:focus-visible .jv-on-x { display: inline; }
+.jv-s.is-on:hover { filter: brightness(.9); }
+.jv-unsel { align-self: center; border: 0; background: none; padding: 4px 8px; color: var(--jv-mute); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; border-radius: 8px; }
+.jv-unsel:hover { color: var(--jv-text); background: var(--jv-soft); }
 /* Kompyuter: aylantirganda filtrlar, ustozlar qatori va o'ng panel qotib turadi */
 .jv-ghw { overflow: hidden; }
 @media (min-width: 901px) {
@@ -336,3 +343,9 @@ button.jv-ml { cursor: pointer; }
 html[data-theme="dark"] .sv-wk.is-q15 .sv-b.jvd15 { background: rgba(14, 165, 233, .16) !important; color: #7DD3FC !important; border-color: rgba(14, 165, 233, .4) !important; }
 html[data-theme="dark"] .sv-wk.is-q15 .sv-b.jvd30 { background: rgba(59, 139, 238, .2) !important; color: #9DC4F5 !important; border-color: rgba(59, 139, 238, .45) !important; }
 html[data-theme="dark"] .sv-wk.is-q15 .sv-b.jvd60 { background: rgba(59, 139, 238, .34) !important; color: #DBEAFE !important; border-color: rgba(59, 139, 238, .6) !important; }
+/* Ustoz haftasi (kompyuter): to'r o'z ichida aylanadi, kunlar qatori tepada qotib turadi */
+@media (min-width: 901px) {
+    .sv-wkw:has(> .sv-wk.is-q15) { max-height: calc(100vh - 300px); min-height: 420px; overflow-y: auto; }
+    .sv-wk.is-q15 .sv-dh { z-index: 4; background: var(--surface, #FFFFFF); }
+    html[data-theme="dark"] .sv-wk.is-q15 .sv-dh { background: var(--surface, #131C2E); }
+}
