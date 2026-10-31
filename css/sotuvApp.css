@@ -398,6 +398,10 @@ body.sa-on.modal-open .sa-nav { z-index: 249; }
 .sa-opt strong { font-size: 13px; line-height: 1.2; }
 .sa-opt em { font-style: normal; font-size: 11px; font-weight: 700; color: #4B5563; display: inline-flex; align-items: center; gap: 3px; }
 .sa-opt.is-locked { border-style: dashed; background: #F8FAFC; color: #4B5563; }
+.sa-opt.is-on { border: 2px solid var(--sa-blue); background: var(--sa-blue-t); color: var(--sa-blue-d); }
+.sa-opt.is-on em { color: var(--sa-blue-d); }
+.sa-cr-save { width: 100%; height: 54px; border-radius: 16px; border: 0; font-size: 16px; font-weight: 800; }
+.sa-cr-save:disabled { background: #E2E8F0 !important; color: #4B5563 !important; box-shadow: none; }
 .sa-fld { display: flex; flex-direction: column; gap: 8px; }
 .sa-fld > span { font-size: 13px; font-weight: 700; color: #3A4456; }
 .sa-qchips { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -457,3 +461,9 @@ body.modal-open .sa-toast { display: none; }
 .sa-install > span:nth-child(2) { flex: 1; display: flex; flex-direction: column; }
 .sa-install strong { font-size: 15px; } .sa-install em { font-style: normal; font-size: 12px; color: #DCEBFF; }
 .sa-install b { height: 40px; padding: 0 14px; border-radius: 12px; background: #FFFFFF; color: var(--sa-blue-d); font-size: 13px; font-weight: 800; display: grid; place-items: center; }
+
+/* Lid kartasi — to'liq ekran: pastki menyu yashiriladi, harakat paneli xavfsiz zonani hisobga oladi. */
+body.sa-on.sa-full { --sa-nav-h: 0px; }
+body.sa-on.sa-full .sa-nav { display: none; }
+body.sa-on.sa-full .sa-bar { padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
+body.sa-on.sa-full .sa-toast { bottom: calc(92px + env(safe-area-inset-bottom)); }

@@ -584,10 +584,10 @@
         const s = st(l);
         const before = PATH.indexOf(s) >= 0 && PATH.indexOf(s) < PATH.indexOf('boglanildi');
         const locked = before && !hasSurvey(l);
-        const opt = (k, icon, tone, title, sub, isLocked) => `<button type="button" class="sa-opt${isLocked ? ' is-locked' : ''}" data-sa-outcome="${k}">${ic(icon, 22, 2.2).replace('currentColor', `var(--sa-${tone})`)}<strong>${title}</strong>${sub ? `<em>${isLocked ? ic('lock', 12, 2.6) : ''}${sub}</em>` : ''}</button>`;
+        const opt = (k, icon, tone, title, sub, isLocked) => `<button type="button" class="sa-opt${isLocked ? ' is-locked' : ''}" role="radio" aria-checked="false" data-sa-pick="${k}">${ic(icon, 22, 2.2).replace('currentColor', `var(--sa-${tone})`)}<strong>${title}</strong>${sub ? `<em>${isLocked ? ic('lock', 12, 2.6) : ''}${sub}</em>` : ''}</button>`;
         openSheet(`
           <div class="sa-sh-h"><span class="sa-ic-box sa-tone-green">${ic('phone', 22, 2.2)}</span><div><h2>Qoʻngʻiroq qanday oʻtdi?</h2><span>${esc(l.name || 'Lid')}</span></div><button type="button" class="sa-link" data-sa-sheetclose>Keyin</button></div>
-          <div class="sa-opts" data-sa-lead-id="${esc(id)}">
+          <div class="sa-opts" role="radiogroup" aria-label="Natija" data-sa-lead-id="${esc(id)}">
             ${opt('talked', 'sms', 'blue', 'Gaplashdik', before ? 'anketa ochiladi' : '')}
             ${opt('noanswer', 'nope', 'red', 'Javob bermadi', '')}
             ${opt('later', 'clock', 'amber', 'Keyin oladi', 'sana soʻraladi')}
@@ -599,7 +599,9 @@
           <div class="sa-fld"><span id="saCrNoteL">Qisqa izoh</span>
             <div class="sa-qchips">${['Narxni soʻradi', 'Oila bilan maslahatlashadi', 'Kechqurun qulay', 'Ish uchun', 'Farzandi uchun'].map(t => `<button type="button" class="sa-qchip" data-sa-qchip>${t}</button>`).join('')}</div>
             <textarea id="saCrNote" rows="2" maxlength="2000" aria-labelledby="saCrNoteL" placeholder="Nima deb kelishdingiz?"></textarea></div>
-          <p class="sa-sh-foot">Natijani tanlang — izoh lid tarixiga yoziladi</p>`, 'sa-sheet--call');
+          <button type="button" class="sa-btn sa-btn--primary sa-cr-save" data-sa-crsave disabled>Natijani tanlang</button>
+          <p class="sa-sh-foot">Izoh lid tarixiga yoziladi</p>`, 'sa-sheet--call');
+        openCallResult._before = before;
     }
 
     function addComment(id, text, type = 'manual', extra = {}) {
@@ -822,6 +824,7 @@
         window.scrollTo?.(0, 0);
     }
     function showApp(on) {
+        if (!on) document.body.classList.remove('sa-full');
         document.body.classList.toggle('sa-app-hidden', !on);
         document.body.classList.toggle('sa-crm-page', !on);
         if (root) root.hidden = !on;
@@ -830,7 +833,8 @@
     // ---------- chizish ----------
     function render(scrollTop) {
         if (!root || !isOn()) return;
-        if (S.screen === 'crm') { syncNav(); return; }
+        if (S.screen === 'crm') { document.body.classList.remove('sa-full'); syncNav(); return; }
+        document.body.classList.toggle('sa-full', S.screen === 'card'); // lid kartasi to'liq ekran (maketdagidek), pastki menyusiz
         const html = S.screen === 'leads' ? screenLeads() : S.screen === 'card' ? screenCard() : S.screen === 'plan' ? screenPlan()
             : S.screen === 'rating' ? screenRating() : S.screen === 'menu' ? screenMenu() : S.screen === 'debtors' ? screenDebtors()
             : S.screen === 'profile' ? screenProfile() : screenHome();
@@ -867,7 +871,7 @@
 
     // ---------- hodisalar ----------
     function onClick(e) {
-        const t = e.target.closest('[data-sa-lead],[data-sa-nav],[data-sa-go],[data-sa-back],[data-sa-stage],[data-sa-stagego],[data-sa-call],[data-sa-tg],[data-sa-sms],[data-sa-move],[data-sa-retrial],[data-sa-survey],[data-sa-tab],[data-sa-stagesheet],[data-sa-sheetclose],[data-sa-outcome],[data-sa-qchip],[data-sa-followup],[data-sa-notify],[data-sa-recmanage],[data-sa-recretry],[data-sa-crm],[data-sa-trials],[data-sa-notif],[data-sa-filter],[data-sa-src],[data-sa-clearq],[data-sa-rper],[data-sa-pay],[data-sa-logout],[data-sa-install],[data-sa-nread],[data-sa-nitem],[data-sa-skip],[data-sa-sort]');
+        const t = e.target.closest('[data-sa-lead],[data-sa-nav],[data-sa-go],[data-sa-back],[data-sa-stage],[data-sa-stagego],[data-sa-call],[data-sa-tg],[data-sa-sms],[data-sa-move],[data-sa-retrial],[data-sa-survey],[data-sa-tab],[data-sa-stagesheet],[data-sa-sheetclose],[data-sa-outcome],[data-sa-pick],[data-sa-crsave],[data-sa-qchip],[data-sa-followup],[data-sa-notify],[data-sa-recmanage],[data-sa-recretry],[data-sa-crm],[data-sa-trials],[data-sa-notif],[data-sa-filter],[data-sa-src],[data-sa-clearq],[data-sa-rper],[data-sa-pay],[data-sa-logout],[data-sa-install],[data-sa-nread],[data-sa-nitem],[data-sa-skip],[data-sa-sort]');
         if (!t) return;
         const d = t.dataset;
         if ('saCall' in d) { callPending = { id: d.saCall, at: Date.now() }; return; } // tel: havolasi o'zi ochiladi
@@ -892,6 +896,16 @@
         if ('saTab' in d) { S.tab = d.saTab; render(false); return; }
         if ('saStagesheet' in d) return openStageSheet(d.saStagesheet);
         if ('saSheetclose' in d) return closeSheet();
+        if ('saPick' in d) {
+            sheetEl?.querySelectorAll('[data-sa-pick]').forEach(b => { const on = b === t; b.classList.toggle('is-on', on); b.setAttribute('aria-checked', on ? 'true' : 'false'); });
+            const sv = sheetEl?.querySelector('[data-sa-crsave]');
+            if (sv) {
+                const L = { talked: openCallResult._before ? 'Saqlash va anketaga oʻtish' : 'Saqlash', noanswer: 'Saqlash', later: 'Saqlash va sanani tanlash', trial: 'Saqlash va vaqt tanlash', pay: 'Saqlash va toʻlovga oʻtish', fail: 'Saqlash va sabab' };
+                sv.disabled = false; sv.dataset.k = d.saPick; sv.textContent = L[d.saPick] || 'Saqlash';
+            }
+            return;
+        }
+        if ('saCrsave' in d) { const id = sheetEl?.querySelector('[data-sa-lead-id]')?.dataset.saLeadId; if (id && t.dataset.k) outcome(id, t.dataset.k); return; }
         if ('saOutcome' in d) { const id = sheetEl?.querySelector('[data-sa-lead-id]')?.dataset.saLeadId; if (id) outcome(id, d.saOutcome); return; }
         if ('saQchip' in d) { const ta = document.getElementById('saCrNote'); t.classList.toggle('is-on'); if (ta) { const v = t.textContent.trim(); ta.value = ta.value.includes(v) ? ta.value.replace(v, '').replace(/^[,\s]+|[,\s]+$/g, '').replace(/,\s*,/g, ',') : (ta.value ? ta.value.replace(/[.\s]+$/, '') + ', ' : '') + v; } return; }
         if ('saFollowup' in d) return followUpFor(d.saFollowup);
@@ -974,7 +988,8 @@
         render(true);
     }
     function disable() {
-        document.body.classList.remove('sa-on', 'sa-app-hidden', 'sa-crm-page');
+        document.body.classList.remove('sa-on', 'sa-app-hidden', 'sa-crm-page', 'sa-full');
+        closeSheet(true, true);
         if (root) root.hidden = true;
     }
     function sync() { if (isOn()) enable(); else disable(); }
