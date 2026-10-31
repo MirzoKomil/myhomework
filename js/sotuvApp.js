@@ -548,9 +548,12 @@
 
     // ---------- pastki oynalar (sheet) ----------
     function openSheet(html, cls = '') {
+        const opener = sheetEl ? openSheet._opener : document.activeElement;
         closeSheet(true, true);
+        openSheet._opener = opener;
         sheetEl = document.createElement('div');
         sheetEl.className = 'sa-sheet-wrap';
+        armGuard();
         sheetEl.innerHTML = `<button type="button" class="sa-dim" data-sa-sheetclose aria-label="Yopish"></button><section class="sa-sheet ${cls}" role="dialog" aria-modal="true" tabindex="-1"><span class="sa-handle" aria-hidden="true"></span>${html}</section>`;
         document.body.appendChild(sheetEl);
         const h2 = sheetEl.querySelector('h2'); if (h2) { h2.id = 'saSheetT'; sheetEl.querySelector('.sa-sheet').setAttribute('aria-labelledby', 'saSheetT'); }
@@ -569,6 +572,7 @@
     function closeSheet(instant, fromPop) {
         if (!sheetEl) return;
         const el = sheetEl; sheetEl = null;
+        if (!fromPop || !instant) { const o = openSheet._opener; openSheet._opener = null; if (o && o.isConnected && o.focus) setTimeout(() => o.focus({ preventScroll: true }), 0); }
         if (instant) { el.remove(); return; }
         el.classList.add('is-out');
         setTimeout(() => el.remove(), 220);
@@ -774,7 +778,7 @@
     // Brauzer tarixi: asosiy tablar bitta yozuvni almashtiradi (tarix cheksiz o'smaydi), ichki sahifalar qo'shadi.
     // Tarix modeli: ilova o'z ichki stekini yuritadi; brauzer tarixida faqat bitta "qo'riqchi" yozuv turadi.
     // Android "orqaga" -> popstate -> ichki orqaga -> qo'riqchi qayta qo'yiladi. Poyga (race) bo'lmaydi.
-    function histPush() { /* ataylab bo'sh: tarixni qo'riqchi yozuv boshqaradi */ }
+    function histPush() { armGuard(); } // har qanday ichkariga o'tishda qo'riqchi qayta qo'yiladi
     function armGuard() {
         try { if (window.history?.pushState && !history.state?.saGuard) history.pushState({ saGuard: 1 }, ''); } catch (e) { /* tarix yo'q */ }
     }
@@ -806,6 +810,7 @@
     function openCrm(spec) {
         const [tab, section] = String(spec).split(':');
         S.stack.push({ screen: S.screen, lead: S.lead, tab: S.tab });
+        armGuard();
         S.crmTab = TAB_OF[S.screen] === 'plan' ? 'plan' : TAB_OF[S.screen] === 'leads' ? 'leads' : 'menu';
         S.screen = 'crm';
         showApp(false);

@@ -25,6 +25,9 @@ body.sa-on.sa-app-hidden .main-area, body.sa-on.sa-app-hidden .content-layout { 
     color-scheme: light;
     --bg: #F5F7FB; --surface: #FFFFFF; --text: #0B1220; --text-muted: #4B5563; --text-light: #6B7280; --border: #E6EAF2;
     --purple-light: #EAF3FF; --blue-light: #EAF3FF; --success-bg: #ECFDF3; --danger-bg: #FEF3F2; --warning-bg: #FEF0C7; --pink-bg: #FDF2F8;
+    --text-secondary: #4B5563; --surface-2: #F5F7FB; --bg-secondary: #F1F5F9;
+    --kb-primary: #0065D6; --kb-primary-hover: #0057B8; --kb-ring: rgba(0, 101, 214, .18); --kb-input-border: #CBD5E1; --kb-track: #E2E8F0;
+    --kb-ok-fg: #05603A; --kb-ok-bg: #DCFAE6; --kb-warn-fg: #93370D; --kb-warn-bg: #FEF0C7; --kb-bad-fg: #B42318; --kb-bad-bg: #FEF3F2; --kb-info-fg: #0057B8; --kb-info-bg: #EAF3FF;
 }
 .sa-app *, .sa-sheet-wrap *, .sa-nav * { box-sizing: border-box; }
 .sa-app button, .sa-sheet-wrap button, .sa-nav button { font-family: inherit; line-height: 1.3; color: inherit; cursor: pointer; }
@@ -239,7 +242,7 @@ body.sa-on.sa-app-hidden .main-area, body.sa-on.sa-app-hidden .content-layout { 
 .sa-note-a { display: flex; justify-content: space-between; gap: 8px; }
 /* Mavjud izoh elementlari (renderLeadCommentItem) — yangi uslubda, ma'lumot o'zgarmaydi. */
 .sa-hist { display: flex; flex-direction: column; gap: 8px; }
-.sa-hist .lead-comment-item { background: #FFFFFF; border: 1px solid var(--sa-line) !important; border-radius: 16px !important; padding: 12px 14px !important; margin: 0 !important; box-shadow: none !important; font-size: 14px; color: var(--sa-ink); }
+.sa-hist .lead-comment-item { border: 1px solid var(--sa-line) !important; border-radius: 16px !important; padding: 12px 14px !important; margin: 0 !important; box-shadow: none !important; font-size: 14px; color: var(--sa-ink); }
 .sa-hist .lead-comment-badge { border-radius: 999px; font-size: 11px; font-weight: 800; padding: 2px 8px; }
 .sa-hist .lead-comment-meta, .sa-hist .lead-comment-date, .sa-hist .lead-comment-author { font-size: 12px !important; color: var(--sa-mut) !important; }
 .sa-kvs { padding: 4px 14px; }
