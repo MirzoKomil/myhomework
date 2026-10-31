@@ -163,7 +163,9 @@
         for (const i of v.items || []) {
             const l = look(i, v.date, { names });
             const attrs = i.studentId ? ` data-st="${esc(i.studentId)}"` : i.kind === 'trial' ? ` data-tr="${esc(i.bookingId || '')}" data-lead="${esc(i.leadId || '')}"` : i.overrideId ? ` data-ovid="${esc(i.overrideId)}"` : '';
-            out.push({ start: i.start, end: i.end, cls: l.cls, t: l.t, s: l.s, click: !!attrs && (i.kind !== 'close' && i.kind !== 'leave' || clickOv), attrs: attrs + (i.overrideId ? ` data-ovk="${esc(i.kind)}"` : '') });
+            // Dars jadvali v3 uslubi (ustoz haftasi, .is-q15): dars rangi davomiylikdan (15/30/60), holat — kichik yozuv.
+            const dk = i.kind === 'lesson' || i.kind === 'reserved' ? ` jvd${i.end - i.start <= 15 ? 15 : i.end - i.start <= 30 ? 30 : 60}` : '';
+            out.push({ start: i.start, end: i.end, cls: l.cls + dk, t: l.t, s: l.s, click: !!attrs && (i.kind !== 'close' && i.kind !== 'leave' || clickOv), attrs: attrs + (i.overrideId ? ` data-ovk="${esc(i.kind)}"` : '') });
         }
         for (const a of assist) {
             const end = Math.max(a.end, a.start + 30);
@@ -179,6 +181,8 @@
         return views.some(v => v.date === sun && (v.items.length || (v.work.length && !v.noHours))) ? days : days.slice(0, 6);
     };
     const LEGEND_T = [['k-rsv', 'Muzlatilgan o\'quvchi vaqti · saqlangan, faqat sinov'], ['k-asw', 'Yordamchi aloqasi · band qilmaydi'], ['k-ok', 'Keldi'], ['k-no', 'Kelmadi'], ['k-un', 'Belgilanmagan'], ['k-wait', 'Rejada'], ['k-mk', 'Qoplash'], ['k-tr', 'Sinov darsi'], ['k-free', 'Bo\'sh (sotuv sinov qo\'ya oladi)'], ['k-freex', 'Admin ochgan'], ['k-cls', 'Sinovga yopiq'], ['k-off', 'Ish vaqti emas']];
+    // Ustoz haftasi (Dars jadvali v3 uslubi): hamma rolda bir xil belgilar; bo'sh joy ko'rinmaydi, bosilsa qoplash rejalashtiriladi.
+    const LEGEND_Q15 = [['jvd15', '15 daqiqalik dars'], ['jvd30', '30 daqiqalik dars'], ['jvd60', '60 daqiqalik dars'], ['k-tr', 'Sinov darsi'], ['k-mk', 'Qoplash'], ['k-rsv', 'Muzlatilgan · joyi saqlangan'], ['k-free', 'Boʻsh joyni bosing → qoplash darsi']];
     // rules — "Jadval qoidalari" havolasi (ustoz/yordamchi: dizaynda sarlavha qatorida tugma yo'q).
     // "Yordamchi aloqasi" bandi — faqat jadvalda yordamchi aloqasi bo'lsa (asosiy ustozda 29-okt dan yordamchilik yo'q).
     const legendT = asst => (asst && asst.length ? LEGEND_T : LEGEND_T.filter(([c]) => c !== 'k-asw'));
@@ -607,7 +611,7 @@
         body.innerHTML = `<div class="sv-lay">
             <section class="sc-card sv-wcard"><header class="sv-bh"><h2>${mode === 'tday' ? esc(dayLabel(st.date)) : esc(weekTitle(from))} · ${n('lesson')} dars · ${n('makeup')} qoplash · ${n('trial')} sinov${asst.length ? ` · ${asst.length} yordamchi aloqasi (jadvalni band qilmaydi)` : ''}</h2>
               <p class="sc-mt sv-hint">Bo'sh joyni bosing → qoplash darsi · darsni bosing → o'quvchi kartasi</p></header>
-              ${vgrid(cols, range, { cls: mode === 'tday' ? 'is-day' : '', q15: true })}${legend(legendT(asst), { rules: true })}</section>
+              ${vgrid(cols, range, { cls: mode === 'tday' ? 'is-day' : '', q15: true })}${legend(LEGEND_Q15, { rules: true })}</section>
             <div class="sv-side">
               <section class="sc-card" data-mk></section>
               <section class="sc-card"><header class="sv-bh"><h2>${mode === 'tday' ? 'Shu kungi' : 'Shu haftadagi'} sinovlar</h2><span class="sc-grow"></span><button type="button" class="sc-link" data-trials>Sinov darslari →</button></header>

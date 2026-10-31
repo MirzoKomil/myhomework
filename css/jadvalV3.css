@@ -309,3 +309,22 @@ button.jv-ml { cursor: pointer; }
 @media (max-width: 760px) { .sv-wk.is-q15 { --hh: 96px; } .sv-wk.is-q15 .sv-tl span.sv-q { height: 24px; font-size: 12px; } .sv-wk.is-q15 .sv-dl { background-size: 100% var(--hh), 100% 24px; } }
 
 .jv-inl { display: inline-block; width: auto; margin-top: 12px; padding: 10px 16px; }
+
+/* Ustoz haftasi bloklari — v3 ranglari (Darslar bilan bir xil): bo'sh joy ko'rinmaydi, bosiladigan bo'sh joy hover'da. */
+.sv-wk.is-q15 .sv-b.is-bg { background: transparent !important; border-color: transparent !important; color: transparent !important; box-shadow: none !important; }
+.sv-wk.is-q15 button.sv-b.is-bg:hover, .sv-wk.is-q15 button.sv-b.is-bg:focus-visible { background: rgba(0, 101, 214, .06) !important; border: 1px dashed #9DC4F5 !important; color: #0057B8 !important; }
+.sv-wk.is-q15 button.sv-b.is-bg:hover::after { content: "+ qoplash"; font-size: 11px; font-weight: 700; }
+.sv-wk.is-q15 .sv-b.is-bg small { display: none; }
+.sv-wk.is-q15 .sv-b.jvd15, .sv-lg .sv-sq.jvd15 { background: #E0F2FE !important; color: #026AA2 !important; border: 1px solid #B9E6FE !important; }
+.sv-wk.is-q15 .sv-b.jvd30, .sv-lg .sv-sq.jvd30 { background: #EAF3FF !important; color: #0057B8 !important; border: 1px solid #C7DEFA !important; }
+.sv-wk.is-q15 .sv-b.jvd60, .sv-lg .sv-sq.jvd60 { background: #D6E8FB !important; color: #0B4A8F !important; border: 1px solid #9DC4F5 !important; }
+.sv-wk.is-q15 .sv-b.k-rsv { opacity: .7; }
+.sv-wk.is-q15 .sv-b.k-tr, .sv-wk.is-q15 .sv-b.k-hold { background: #F4EBFF !important; color: #6941C6 !important; border: 1px solid #E9D7FE !important; }
+.sv-wk.is-q15 .sv-b small { font-weight: 600; opacity: .8; }
+.sv-wk.is-q15 .sv-b.k-no small { color: #B42318; opacity: 1; }
+.sv-wk.is-q15 .sv-b.k-un small { color: #93370D; opacity: 1; }
+.sv-wk.is-q15 .sv-b.k-ok small { color: #05603A; opacity: 1; }
+.sv-wk.is-q15 .sv-b { border-radius: 7px; }
+html[data-theme="dark"] .sv-wk.is-q15 .sv-b.jvd15 { background: rgba(14, 165, 233, .16) !important; color: #7DD3FC !important; border-color: rgba(14, 165, 233, .4) !important; }
+html[data-theme="dark"] .sv-wk.is-q15 .sv-b.jvd30 { background: rgba(59, 139, 238, .2) !important; color: #9DC4F5 !important; border-color: rgba(59, 139, 238, .45) !important; }
+html[data-theme="dark"] .sv-wk.is-q15 .sv-b.jvd60 { background: rgba(59, 139, 238, .34) !important; color: #DBEAFE !important; border-color: rgba(59, 139, 238, .6) !important; }
