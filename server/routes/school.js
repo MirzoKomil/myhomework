@@ -162,7 +162,12 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         const leads = leadIds.length ? (await pool.query('SELECT id, name, phone, manager_id FROM leads WHERE id = ANY($1) AND deleted_at IS NULL', [leadIds])).rows : [];
         const sts = stIds.length ? (await pool.query(`SELECT id, name, phone, group_name, extra_data->>'managerId' AS manager_id FROM students WHERE id = ANY($1)`, [stIds])).rows : [];
         const mIds = [...new Set([...leads, ...sts].map(r => r.manager_id).filter(Boolean).map(String))];
-        const mgr = new Map(mIds.length ? (await pool.query('SELECT id, name FROM sales_managers WHERE id = ANY($1)', [mIds])).rows.map(r => [String(r.id), r.name]) : []);
+        // Sotuv menejerlari HR xodimlari ro'yxatida (getSalesManagers); eski yozuvlar uchun sales_managers ham.
+        const mgr = new Map();
+        if (mIds.length) {
+            for (const r of (await pool.query('SELECT id, name FROM sales_managers WHERE id = ANY($1)', [mIds]).catch(() => ({ rows: [] }))).rows) mgr.set(String(r.id), r.name);
+            for (const r of (await pool.query('SELECT id, name FROM hr_employees WHERE id = ANY($1)', [mIds])).rows) if (r.name) mgr.set(String(r.id), r.name);
+        }
         const L = new Map(leads.map(r => [r.id, r])), St = new Map(sts.map(r => [r.id, r]));
         const items = [];
         for (const i of trials) { const r = L.get(i.leadId); if (r) items.push({ kind: 'trial', start: i.start, end: i.end, name: r.name, phone: r.phone || '', manager: mgr.get(String(r.manager_id || '')) || '', group: 'Sinov darsi' }); }
