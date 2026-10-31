@@ -60,7 +60,10 @@
     }
     function tabAllowed(tab) {
         const item = document.querySelector(`#sidebarMenu [data-tab="${tab}"]`);
-        return !item || item.style.display !== 'none';
+        if (!item) return true;
+        // ropSotuvNav.js ROP/sotuvda asl bandlarni dizayn uchun yashiradi — ruxsatni asl holatdan olamiz.
+        if (item.dataset.rsHidden) return item.dataset.rsPrev !== 'none';
+        return item.style.display !== 'none';
     }
 
     let _activeTab = 'dashboard';
@@ -564,6 +567,8 @@
         // Sidebar ruxsatlari applyRoleBasedAccess'dan keyin aniq bo'ladi.
         const tryNav = (n = 0) => {
             const ready = document.querySelector('#sidebarMenu .menu-item[style*="display: none"]') || n > 20;
+            // ropSotuvNav hali ishlamagan bo'lsa (ROP/sotuv), u ishlagach quramiz — aks holda ruxsatlar noto'g'ri o'qiladi.
+            if (ready && ['rop', 'sales_manager'].includes(user?.role) && !document.querySelector('#sidebarMenu .rs-item') && n <= 20) { setTimeout(() => tryNav(n + 1), 150); return; }
             if (ready || ['admin', 'boshliq'].includes(user?.role)) { buildSearchToggle(); buildBottomNav(); }
             else setTimeout(() => tryNav(n + 1), 150);
         };

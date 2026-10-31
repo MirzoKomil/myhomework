@@ -100,7 +100,13 @@
         if (!ORDER[r]) { current = null; return; }
         current = r;
         // Asl bandlar va ularning "Boshqa" ajratgichi (js/app.js applyDesignSidebar) — bo'sh sarlavha qolmasin.
-        menu.querySelectorAll(':scope > .menu-item, :scope > .menu-group, :scope > .menu-sep').forEach(el => { el.style.display = 'none'; el.dataset.rsHidden = '1'; });
+        // Ruxsat bo'yicha yashirilganmi — asl holat saqlanadi (teamApp.js pastki menyusi shunga qaraydi: dizayn uchun yashirilgan
+        // band ruxsat yo'qligini bildirmaydi). Qayta chaqirilganda asl qiymat ustidan yozilmaydi.
+        menu.querySelectorAll(':scope > .menu-item, :scope > .menu-group, :scope > .menu-sep').forEach(el => {
+            // Boshqa kod (ruxsatlar) bandni qayta ko'rsatgan bo'lsa — yangi holat yoziladi, eski qiymat qotib qolmaydi.
+            if (!el.dataset.rsHidden || el.style.display !== 'none') el.dataset.rsPrev = el.style.display === 'none' ? 'none' : '';
+            el.style.display = 'none'; el.dataset.rsHidden = '1';
+        });
         const frag = document.createDocumentFragment();
         for (const k of ORDER[r]) {
             const it = ITEMS[k];
