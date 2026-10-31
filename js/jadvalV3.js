@@ -126,8 +126,8 @@
         if (fits(v.work, s, e)) return { k: 'notrial' };
         return { k: 'off' };
     }
-    const CELL = { free: 'Boʻsh', busy: 'Band', trial: 'Sinov', mineTrial: 'Mening sinovim', hold: 'Ushlab turilgan', mine: 'Siz ushlab turibsiz',
-        leave: 'Taʼtil', closed: 'Yopiq', notrial: 'Sinovga yopiq', off: 'Ish vaqti emas', past: '—' };
+    const CELL = { free: 'Boʻsh', busy: 'Darsi bor', trial: 'Sinov', mineTrial: 'Mening sinovim', hold: 'Ushlab turilgan', mine: 'Siz ushlab turibsiz',
+        leave: 'Taʼtil', closed: 'Yopiq', notrial: 'Band', off: 'Ish vaqti emas', past: '—' };
 
     function freeAt(m) {
         const out = [];
@@ -281,9 +281,9 @@
     }
     function sinovPanel() {
         const legend = `<div class="jv-card jv-legend"><div class="jv-eyebrow">Belgilar</div>
-            <div><i class="jv-sw jv-s--free"></i>Boʻsh — bosib tanlang</div><div><i class="jv-sw jv-s--busy"></i>Band — darsi bor</div>
+            <div><i class="jv-sw jv-s--free"></i>Boʻsh — bosib tanlang</div><div><i class="jv-sw jv-s--busy"></i>Darsi bor — oʻquvchi bilan dars</div>
             <div><i class="jv-sw jv-s--trial"></i>Boshqa sinov qoʻyilgan</div><div><i class="jv-sw jv-s--hold"></i>Boshqa menejer ushlab turibdi</div>
-            ${role() === 'sales_manager' ? '<div><i class="jv-sw jv-s--mineTrial"></i>Mening sinovim</div>' : ''}<div><i class="jv-sw jv-s--notrial"></i>Taʼtil / yopiq / ish vaqti emas</div></div>`;
+            ${role() === 'sales_manager' ? '<div><i class="jv-sw jv-s--mineTrial"></i>Mening sinovim</div>' : ''}<div><i class="jv-sw jv-s--notrial"></i>Band — sinovga yopiq / taʼtil</div><div><i class="jv-sw jv-s--off"></i>Ish vaqti emas</div></div>`;
         const un = (isFull() || role() === 'rop') && J.data.unassigned?.length
             ? `<div class="jv-card jv-note"><b>Ustoz biriktirilmagan sinovlar · ${J.data.unassigned.length}</b><p>Lid istagan vaqtda hech kim boʻsh boʻlmagan.</p><button type="button" class="jv-btn jv-btn--soft" data-goto-trials>Sinov darslarini ochish</button></div>` : '';
         if (!J.sel) {

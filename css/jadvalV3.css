@@ -102,11 +102,11 @@ body.jv-page-open .content-main > .tab-content { display: none !important; }
 .jv-s--free { background: var(--jv-ok-bg); color: var(--jv-ok); border-color: var(--jv-ok-line); cursor: pointer; }
 .jv-s--free:hover { filter: brightness(.97); }
 .jv-s--free.is-on { background: var(--jv-pri); color: #FFFFFF; border: 2px solid var(--jv-pri); }
-.jv-s--busy { background: var(--jv-line2); color: var(--jv-faint); }
+.jv-s--busy { background: var(--jv-pri-bg); color: var(--jv-pri2); }
 .jv-s--trial { background: var(--jv-vio-bg); color: var(--jv-vio); border-color: var(--jv-vio-line); }
 .jv-s--mineTrial { background: var(--jv-vio-bg); color: var(--jv-vio); border-color: var(--jv-vio); font-weight: 700; }
 .jv-s--hold, .jv-s--mine { background: var(--jv-warn-bg); color: var(--jv-warn); border-color: var(--jv-warn-line); }
-.jv-s--leave, .jv-s--closed, .jv-s--notrial { background: var(--jv-soft); color: var(--jv-faint); border: 1px dashed var(--jv-line); }
+.jv-s--leave, .jv-s--closed, .jv-s--notrial { background: repeating-linear-gradient(135deg, var(--jv-soft) 0 5px, var(--jv-line2) 5px 10px); color: var(--jv-faint); border: 1px solid var(--jv-line); }
 .jv-s--off { background: transparent; color: var(--jv-ghost); border: 1px dashed var(--jv-line2); }
 .jv-s--past { color: var(--jv-ghost); }
 .jv-cnt { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; }
@@ -269,6 +269,16 @@ button.jv-ml { cursor: pointer; }
 @media (max-width: 1180px) {
     .jv-side { width: 300px; }
 }
+/* Gorizontal aylantirganda Soat (chap) va Bo'sh soni (o'ng) ustunlari qotib turadi */
+.jv-gh > .jv-gh-t:first-child, .jv-gt, .jv-ticks { position: sticky; left: 0; z-index: 3; background: var(--jv-card); box-shadow: 1px 0 0 var(--jv-line2); }
+.jv-gh > .jv-gh-t:first-child { background: var(--jv-soft); }
+.jv-gh > .jv-gh-t { align-self: stretch; display: flex; align-items: flex-end; }
+.jv-gh > .jv-gh-t.jv-c { justify-content: center; }
+.jv-gh > .jv-gh-t.jv-c, .jv-gc { position: sticky; right: 0; z-index: 3; background: var(--jv-card); box-shadow: -1px 0 0 var(--jv-line2); }
+.jv-gh > .jv-gh-t.jv-c { background: var(--jv-soft); }
+.jv-gr.is-now .jv-gt, .jv-gr.is-now .jv-gc { background: linear-gradient(var(--jv-now-bg), var(--jv-now-bg)), var(--jv-card); }
+.jv-gr.is-now .jv-gt { box-shadow: inset 3px 0 0 var(--jv-now), 1px 0 0 var(--jv-line2); }
+.jv-gr--fold .jv-gt { background: var(--jv-soft); }
 /* Tanlangan katak: qayta bosish — bekor qilish */
 .jv-s .jv-on-x { display: none; }
 .jv-s.is-on:hover .jv-on-l, .jv-s.is-on:focus-visible .jv-on-l { display: none; }
