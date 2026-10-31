@@ -32,6 +32,19 @@
     const esc = s => U().esc(s);
     const hm = m => U().hm(m);
     const short = n => { const p = String(n || '').trim().split(/\s+/); return p.length > 1 ? `${p[0]} ${p[1][0]}.` : (p[0] || ''); };
+    // Ustoz nomi jadvalda faqat ism bilan (familiya harfisiz). Shu oynada bir xil ismli ustozlar bo'lsa,
+    // CRM'ga keyin qo'shilgani (id = "hr" + qo'shilgan vaqt) yonida 2, 3 … raqami turadi.
+    const firstName = n => String(n || '').trim().split(/\s+/)[0] || '';
+    const addedAt = t => { const m = /(\d{6,})/.exec(String(t?.id || '')); return m ? Number(m[1]) : Infinity; };
+    function teacherLabels(list) {
+        const by = new Map();
+        for (const t of list || []) { const k = firstName(t.name).toLocaleLowerCase('uz'); if (!by.has(k)) by.set(k, []); by.get(k).push(t); }
+        const out = new Map();
+        for (const g of by.values()) g.slice().sort((a, b) => addedAt(a) - addedAt(b) || String(a.id).localeCompare(String(b.id)))
+            .forEach((t, i) => out.set(String(t.id), firstName(t.name) + (i ? ` ${i + 1}` : '')));
+        return out;
+    }
+    const tName = t => (t && J.data && (J.data._labels ||= teacherLabels(J.data.teachers)).get(String(t.id))) || firstName(t?.name);
     const dm = d => `${Number(d.slice(8))}-${MON[Number(d.slice(5, 7)) - 1]}`;
     const tashDate = ms => new Date(ms + 5 * 3600000).toISOString().slice(0, 10);
     const tashMin = ms => { const d = new Date(ms + 5 * 3600000); return d.getUTCHours() * 60 + d.getUTCMinutes(); };
@@ -255,7 +268,7 @@
         const T = J.data.teachers, now = U().nowMin(), isToday = J.data.date === today();
         const nowRow = isToday ? Math.floor(now / 30) * 30 : -1;
         const cols = `72px repeat(${Math.max(1, T.length)}, minmax(104px, 1fr)) 76px`;
-        const head = `<div class="jv-gh" style="grid-template-columns:${cols}"><div class="jv-gh-t">Soat</div>${T.map(t => `<div class="jv-gh-c">${U().staffAvatar(t, 30)}<b>${esc(short(t.name))}</b><small>${lessonsOf(J.data.views.get(t.id))} dars</small></div>`).join('')}<div class="jv-gh-t jv-c">Boʻsh</div></div>`;
+        const head = `<div class="jv-gh" style="grid-template-columns:${cols}"><div class="jv-gh-t">Soat</div>${T.map(t => `<div class="jv-gh-c">${U().staffAvatar(t, 30)}<b>${esc(tName(t))}</b><small>${lessonsOf(J.data.views.get(t.id))} dars</small></div>`).join('')}<div class="jv-gh-t jv-c">Boʻsh</div></div>`;
         let rows = '';
         // Bugun: o'tgan soatlar bitta yig'ma qatorda (jadval hozirgi vaqtdan boshlanadi).
         const firstLive = isToday ? Math.max(a, Math.ceil((now + 1) / 30) * 30) : a;
@@ -293,7 +306,7 @@
         const m = J.sel.m, list = freeAt(m);
         const pick = list.find(t => t.id === J.sel.t) || list[0];
         const rows = list.map((t, i) => `<button type="button" class="jv-opt${pick && t.id === pick.id ? ' is-on' : ''}" data-pick-t="${esc(t.id)}">${U().staffAvatar(t, 36)}<span><b>${esc(t.name)}</b><small>${lessonsOf(J.data.views.get(t.id))} dars bu kuni</small></span><em class="jv-tag${i === 0 ? ' jv-tag--ok' : ''}">${i === 0 ? 'Tavsiya' : 'Boʻsh'}</em></button>`).join('');
-        const btn = pick ? (J.lead ? `${esc(short(J.lead.name))} → ${esc(short(pick.name))} · sinovni qoʻyish` : `${esc(short(pick.name))} ga sinov qoʻyish`) : '';
+        const btn = pick ? (J.lead ? `${esc(short(J.lead.name))} → ${esc(tName(pick))} · sinovni qoʻyish` : `${esc(tName(pick))} ga sinov qoʻyish`) : '';
         return `<aside class="jv-side"><div class="jv-card jv-pn"><div class="jv-eyebrow">Sinov darsi · 30 daqiqa</div><h2>${hm(m)} – ${hm(m + TRIAL)}</h2>
             <p class="jv-mt">${esc(dayWord(J.data.date))} · ${esc(dayLabel(J.data.date))} · bu vaqtda ${list.length} ta ustoz boʻsh</p>
             <div class="jv-sub">Kim boʻsh — kam yuklangani birinchi</div><div class="jv-opts">${rows || '<p class="jv-warn">Bu vaqt endi boʻsh emas — boshqa vaqtni tanlang.</p>'}</div>
@@ -344,7 +357,7 @@
         const { a, b } = rangeMins();
         const T = J.data.teachers;
         const cols = `64px repeat(${Math.max(1, T.length)}, minmax(120px, 1fr))`;
-        const head = `<div class="jv-gh" style="grid-template-columns:${cols}"><div class="jv-gh-t">Soat</div>${T.map(t => `<div class="jv-gh-c">${U().staffAvatar(t, 30)}<b>${esc(short(t.name))}</b><small>${esc(teacherMeta(J.data.views.get(t.id)))}</small></div>`).join('')}</div>`;
+        const head = `<div class="jv-gh" style="grid-template-columns:${cols}"><div class="jv-gh-t">Soat</div>${T.map(t => `<div class="jv-gh-c">${U().staffAvatar(t, 30)}<b>${esc(tName(t))}</b><small>${esc(teacherMeta(J.data.views.get(t.id)))}</small></div>`).join('')}</div>`;
         let ticks = '';
         for (let m = a; m < b; m += 15) {
             const k = m % 60 === 0 ? 'h' : m % 60 === 30 ? 'half' : 'q';
@@ -386,7 +399,7 @@
         const cand = canMove() ? J.data.teachers.filter(x => { const xv = J.data.views.get(x.id); return x.id !== t.id && xv && (xv.days || [xv]).every(dv => fits(dv.work, i.start, i.end)
             && !(dv.items || []).some(o => o.start < i.end && o.end > i.start && o.kind !== 'reserved' && !o.frozen)); })
             .sort((x, y) => lessonsOf(J.data.views.get(x.id)) - lessonsOf(J.data.views.get(y.id))) : [];
-        const facts = [['Vaqti', `${hm(i.start)} – ${hm(i.end)}`], ['Davomiyligi', `${d} daqiqa`], ['Kunlari', J.pat === 'toq' ? 'Du · Ch · Ju' : 'Se · Pa · Sh'], ['Ustoz', short(t.name)]];
+        const facts = [['Vaqti', `${hm(i.start)} – ${hm(i.end)}`], ['Davomiyligi', `${d} daqiqa`], ['Kunlari', J.pat === 'toq' ? 'Du · Ch · Ju' : 'Se · Pa · Sh'], ['Ustoz', tName(t)]];
         return `<aside class="jv-side"><div class="jv-card jv-pn"><div class="jv-eyebrow">Tanlangan dars</div><h2>${esc(i.studentName || 'Band')}</h2>
             <p class="jv-mt">${esc(t.name)}</p><div class="jv-facts">${facts.map(([k, v]) => `<div><small>${k}</small><b>${esc(v)}</b></div>`).join('')}</div>
             ${canMove() ? `<div class="jv-sub">Shu vaqtda darsi yoʻq ustozlar · ${cand.length} ta</div><div class="jv-opts">${cand.map((x, n) => `<button type="button" class="jv-opt" data-move-to="${esc(i.studentId)}|${esc(x.id)}">${U().staffAvatar(x, 36)}<span><b>${esc(x.name)}</b><small>${lessonsOf(J.data.views.get(x.id))} dars bu kuni${n === 0 ? ' · tavsiya' : ''}</small></span><em class="jv-tag${n === 0 ? ' jv-tag--ok' : ''}">Koʻchirish</em></button>`).join('') || '<p class="jv-mt">Bu vaqtda hamma ustozda dars bor.</p>'}</div>` : ''}
@@ -415,7 +428,7 @@
     // ── Darslar · telefon ────────────────────────────────────────────────────
     function darsMobile() {
         const T = J.data.teachers;
-        const chips = [['all', 'Hammasi'], ...T.map(t => [t.id, short(t.name)])].map(([k, l]) => `<button type="button" class="jv-fc${J.tf === k ? ' is-on' : ''}" data-tf="${esc(k)}">${esc(l)}</button>`).join('');
+        const chips = [['all', 'Hammasi'], ...T.map(t => [t.id, tName(t)])].map(([k, l]) => `<button type="button" class="jv-fc${J.tf === k ? ' is-on' : ''}" data-tf="${esc(k)}">${esc(l)}</button>`).join('');
         const cards = T.filter(t => J.tf === 'all' || t.id === J.tf).map(t => {
             const v = J.data.views.get(t.id), ls = lessonItems(v).sort((x, y) => x.start - y.start);
             const leave = (v?.items || []).some(i => i.kind === 'leave');
@@ -538,7 +551,7 @@
             closeOverlay();
             await U().refreshCache();
             const t = J.data?.teachers.find(x => x.id === h.t);
-            toast(`${h.lead.name} sinovga yozildi · ${short(t?.name || '')} tasdiqlagach xabar keladi · Lidlar → “Sinov darsida”`, 4500);
+            toast(`${h.lead.name} sinovga yozildi · ${tName(t)} tasdiqlagach xabar keladi · Lidlar → “Sinov darsida”`, 4500);
             if (J.page) return closePage({ saved: true });
             J.sel = null; load();
         } catch (e) {
@@ -569,7 +582,7 @@
     function slotLine(teacherId, m, date) {
         if (!teacherId) return { t: null, text: 'Avval lidni tanlang, keyin jadvaldan vaqtni belgilaysiz' };
         const t = J.data.teachers.find(x => x.id === teacherId);
-        return { t, text: `${short(t?.name || '')} · ${dayWord(date)}, ${dayLabel(date)} · ${hm(m)}–${hm(m + TRIAL)}` };
+        return { t, text: `${tName(t)} · ${dayWord(date)}, ${dayLabel(date)} · ${hm(m)}–${hm(m + TRIAL)}` };
     }
     function openPicker(teacherId, m) {
         J.picker = { t: teacherId, m, date: J.data.date, q: '', tab: 'fit', col: 'all', sel: null };
@@ -668,5 +681,5 @@
     }
 
     window.jadvalV3 = { enabled, render, openForLead, close: closePage, _state: J,
-        _test: { slotState, nextWork, patDate, patDates, mergeDays, wishOf, nextName, isFit: (l, m) => isFit(l, m), COLS } };
+        _test: { teacherLabels, slotState, nextWork, patDate, patDates, mergeDays, wishOf, nextName, isFit: (l, m) => isFit(l, m), COLS } };
 })();
