@@ -912,6 +912,7 @@ function updateSidebarActiveState(tab, ctx) {
 function switchTab(tab, ctx = {}) {
     window.schoolUI?.closeStudent?.();
     window.sotuvSinov?.close?.({ silent: true });
+    window.jadvalV3?.close?.({ silent: true });
     if (tab !== 'trial-lessons' && _teacherTrialPollTimer) {
         clearInterval(_teacherTrialPollTimer);
         _teacherTrialPollTimer = null;
@@ -16209,6 +16210,9 @@ function openTrialScheduleModal(lang, leadId, options = {}) {
     const lead = getLeadById(lang, leadId);
     if (!lead) return;
     // SotuvSinov: yagona jadvaldan "Sinov darsi qo'yish" sahifasi (js/sotuvSinov.js). Eski oyna — zaxira.
+    // Dars jadvali v3: Lidlar bo'limidagi sinov tugmalari yangi jadvalni shu lid bilan ochadi (js/jadvalV3.js).
+    if (!options.legacy && window.jadvalV3?.enabled?.()
+        && window.jadvalV3.openForLead({ lang, leadId, isReschedule, prevOutcome })) return;
     if (!options.legacy && window.sotuvSinov?.enabled?.()
         && window.sotuvSinov.open({ lang, leadId, isReschedule, prevOutcome, from: 'leads' })) return;
     // 5-ish: lang parametridan foydalanish (lead.language bilan bir xil, lekin ishonchli)

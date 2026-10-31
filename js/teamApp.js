@@ -30,7 +30,8 @@
         sales_manager: [
             { id: 'home', label: 'Bosh', icon: 'home', tab: 'dashboard' },
             { id: 'leads', label: 'Lidlar', icon: 'leads', tab: 'sales', sales: 'leads' },
-            { id: 'rating', label: 'Reyting', icon: 'trophy', tab: 'sales', sales: 'rating' },
+            // Dars jadvali v3: sinov qo'yish kuniga ko'p marta — pastki panelda (A varianti). Reyting "Menyu"da.
+            { id: 'timetable', label: 'Jadval', icon: 'calendar', tab: 'timetable' },
             { id: 'plan', label: 'Rejam', icon: 'target', tab: 'sales', sales: 'sales-plan' }
         ],
         rop: [
