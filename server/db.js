@@ -24,6 +24,7 @@ const finance = require('./services/finance');
 const teacherDuties = require('./services/teacherDuties');
 const archive = require('./services/archive');
 const staffLifecycle = require('./services/staffLifecycle');
+const staffDemoCleanup = require('./services/staffDemoCleanup');
 // Yagona dars jadvali / o'quvchi amallari (server/services/school) — jadvallari tayyor bo'lsagina ishlaydi.
 const schoolSchema = require('./services/school/schema');
 const schoolSchedule = require('./services/school/schedule');
@@ -1301,6 +1302,8 @@ const BCRYPT_HASH_RE = /^\$2[aby]\$\d{2}\$/;
 
 async function saveStudents(client, students, removedStudentIds = []) {
     if (!isUsableList(students, 'saveStudents')) return;
+    // Xodim demo o'quvchilari olib tashlangan (31-okt): eski brauzer nusxasidan kelsa ham qayta yozilmaydi.
+    students = students.filter(s => !staffDemoCleanup.isStaffDemoRow(s));
     await client.query(STUDENT_PROVISION_LOCK);
     const { rows: existingRows } = await client.query('SELECT * FROM students FOR UPDATE');
     const existingById = new Map(existingRows.map(r => [r.id, rowToStudent(r)]));
@@ -4674,6 +4677,7 @@ async function init() {
     await migrateCommunityRemoveFakeSeed().catch(err => console.error('[DB] Hamjamiyat soxta postlarini tozalashda xatolik:', err.message));
     await migrateCommunityRemoveUnverifiedLegacyPosts().catch(err => console.error('[DB] Hamjamiyat muallifi tasdiqlanmagan postlarni tozalashda xatolik:', err.message));
     // O'quvchi ID'lari: mavjud takrorlarni tuzatish (audit bilan), keyin UNIQUE indekslar.
+    await staffDemoCleanup.removeStaffDemoStudents(pool).catch(err => console.error('[xodim-demo] tozalashda xatolik:', err.message));
     await tx(publicSerial.migrate).catch(err => console.error('[serial-takror] tuzatishda xatolik:', err.message));
     await publicSerial.ensureIndexes(pool).catch(err => console.error('[serial-takror] UNIQUE indeks yaratilmadi (takror qolgan bo\'lishi mumkin):', err.message));
 }
