@@ -58,3 +58,18 @@ test('uch kunni birlashtirish: dars takrorlanmaydi, bir kunlik ta\'til butun gur
     const all = J._test.mergeDays([{ items: [leave] }, { items: [leave] }, { items: [leave] }], 3);
     assert.equal(all.items.filter(i => i.kind === 'leave').length, 1);
 });
+
+test('ustoz nomi: faqat ism, bir xil ismlarda keyin qo\'shilganiga 2, 3 …', () => {
+    const J = load('2026-11-02');
+    const m = J._test.teacherLabels([
+        { id: 'hr1793285859809', name: 'Madina Ismoilova' },
+        { id: 'hr1793187430278', name: 'Gulsima Sabitovna' },
+        { id: 'hr1793439866747', name: 'Madina Sohibjonova' },
+        { id: 'hr1799000000000', name: 'madina Karimova' },
+        { id: 'hr1785321855019', name: 'Gulhayoxon' }]);
+    assert.equal(m.get('hr1793187430278'), 'Gulsima');
+    assert.equal(m.get('hr1785321855019'), 'Gulhayoxon');
+    assert.equal(m.get('hr1793285859809'), 'Madina');
+    assert.equal(m.get('hr1793439866747'), 'Madina 2');
+    assert.equal(m.get('hr1799000000000'), 'madina 3');
+});
