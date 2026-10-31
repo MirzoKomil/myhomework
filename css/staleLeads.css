@@ -141,3 +141,19 @@ body.sl-locked { overflow: hidden; }
     .sl-bar i { transition: none; }
 }
 .sl-wrap .sl-gate:focus-visible, .sl-sheet-wrap .sl-sheet:focus-visible { outline: none; }
+
+/* Ustoz sinov bo'yicha qaror qildi — popup (js/trialPopup.js) */
+.tp-wrap { z-index: 1160; }
+.tp-pop { gap: 12px; }
+.tp-ic { width: 76px; height: 76px; border-radius: 50%; display: grid; place-items: center; animation: slPop .5s cubic-bezier(.2, .9, .25, 1) both; }
+.tp-pop--ok .tp-ic { background: var(--sl-green-t); color: var(--sl-green); }
+.tp-pop--bad .tp-ic { background: #FEF0C7; color: #93370D; animation: slPop .5s cubic-bezier(.2, .9, .25, 1) both, slShake .5s ease .5s both; }
+.tp-pop--warn .tp-ic { background: var(--sl-red-t); color: var(--sl-red); }
+.tp-body { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.tp-body strong { font-size: 16px; }
+.tp-body > span { font-size: 14px; color: var(--sl-ink2); font-weight: 600; }
+.tp-body em { font-style: normal; font-size: 13px; color: var(--sl-mut); line-height: 1.5; margin-top: 4px; }
+.tp-props { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 6px; font-size: 12px; color: var(--sl-mut); }
+.tp-props span { width: 100%; }
+.tp-props b { background: var(--sl-blue-t); color: var(--sl-blue-d); border-radius: 999px; padding: 4px 10px; font-size: 13px; }
+@media (prefers-reduced-motion: reduce) { .tp-ic, .tp-pop--bad .tp-ic { animation: none !important; } }
