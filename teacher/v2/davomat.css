@@ -1,1 +1,102 @@
-/* davomat — bo'lim uslublari */
+/* Ustoz v2 — Davomat (H1/H1t/H1j, F2–F6, L0–L3). Dizayn helmet uslublari, "dv-" prefiksi bilan. */
+/* H1 — filtr */
+.dv-flt{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;background:#E9EEF6;border-radius:16px;padding:4px;flex:none}
+.dv-flt button{height:44px;border-radius:12px;display:grid;place-items:center;font:inherit;font-size:14px;font-weight:800;color:#3A4456;border:0;background:transparent;padding:0}
+.dv-flt button.on{background:#FFFFFF;color:#0B1220;box-shadow:0 1px 3px rgba(11,18,32,.14)}
+/* H1 — jadval */
+.dv-tbw{background:#FFFFFF;border:1px solid #E6EAF2;border-radius:24px;padding:6px 0;position:relative;overflow:hidden;flex:none}
+.dv-mh{display:flex;align-items:center;justify-content:space-between;padding:6px 14px 8px;border-bottom:1px solid #F1F5F9}
+.dv-sc{overflow-x:auto;scrollbar-width:none;overscroll-behavior-x:contain}.dv-sc::-webkit-scrollbar{display:none}
+.dv-tr{display:flex;align-items:center;width:max-content;min-width:100%;min-height:58px;border-top:1px solid #F1F5F9}
+.dv-tr:first-child{border-top:0}
+.ph .dv-cw{width:var(--cw);flex:none;display:grid;place-items:center;align-self:stretch;border:0;background:transparent;padding:0;margin:0;font:inherit;color:inherit}
+button.dv-cw{cursor:pointer}
+.dv-nmc{position:sticky;left:0;z-index:2;flex:none;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:#0B1220;align-self:stretch;width:128px;padding-left:12px;background:#FFFFFF;box-shadow:8px 0 10px -8px rgba(11,18,32,.14)}
+.dv-nmc img{width:30px;height:30px;border-radius:50%;object-fit:cover;flex:none}
+.dv-nmc .nn{display:flex;flex-direction:column;line-height:1.2;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dv-nmc small{font-size:11px;font-weight:800;color:#64748B}
+.dv-tr.out .dv-nmc{color:#94A3B8}.dv-tr.out .dv-nmc img{filter:grayscale(1);opacity:.6}
+.dv-k2{position:relative;display:grid;place-items:center;font-style:normal;color:#FFFFFF;font-weight:800;width:34px;height:34px;border-radius:12px;font-size:14px;font-variant-numeric:tabular-nums}
+.dv-k2.g{background:#12B76A}.dv-k2.r{background:#F04438}.dv-k2.y{background:#FFFFFF;color:#B54708;box-shadow:inset 0 0 0 2.5px #F79009}.dv-k2.b{background:#2E90FA}.dv-k2.f{background:#FFFFFF;color:#94A3B8;box-shadow:inset 0 0 0 1.5px #E2E8F0}.dv-k2.x{background:repeating-linear-gradient(135deg,#E2E8F0 0 3px,#F8FAFC 3px 7px);color:#94A3B8}
+.dv-k2.r::before{content:"";position:absolute;left:5px;right:5px;top:50%;height:2px;background:rgba(255,255,255,.75);transform:rotate(-35deg)}
+.dv-k2.now{box-shadow:0 0 0 2px #FFFFFF,0 0 0 4px #0B1220}.dv-k2.y.now{box-shadow:inset 0 0 0 2.5px #F79009,0 0 0 2px #FFFFFF,0 0 0 4px #0B1220}.dv-k2.f.now{box-shadow:inset 0 0 0 1.5px #E2E8F0,0 0 0 2px #FFFFFF,0 0 0 4px #0B1220}
+.dv-pq{position:absolute;top:-7px;right:-8px;height:15px;padding:0 4px;border-radius:999px;background:#2E90FA;color:#FFFFFF;font-size:9px;font-weight:800;display:grid;place-items:center;border:2px solid #FFFFFF;line-height:1}
+.dv-fade{position:absolute;right:0;top:0;bottom:0;width:30px;background:linear-gradient(90deg,rgba(255,255,255,0),#FFFFFF);pointer-events:none;z-index:3}
+.dv-empty{padding:22px 14px;text-align:center;font-size:14px;color:#4B5563}
+.dv-lgd2,.dv-cgl{display:flex;flex-wrap:wrap;gap:8px 14px;justify-content:center;flex:none}
+.dv-cgl{gap:6px 12px}
+.dv-lgd2 span,.dv-cgl span{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#3A4456}
+.dv-lgd2 i,.dv-cgl i{width:14px;height:14px;border-radius:4px;display:inline-block}
+.li.dv-due{background:#FFFAEB;margin:0 -14px;padding:10px 14px;color:#0057B8}
+/* F2 — oy kalendari (ichki sahifa, pastdan oyna ko'rinishida) */
+.dv-oyw{display:contents}
+.ph .sheet.dv-oy{top:60px;max-height:none;gap:12px}
+.dv-cg{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.dv-wd{font-size:11px;font-weight:800;color:#5B6B82;text-align:center}
+.ph .dv-dc{position:relative;height:44px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font:inherit;font-size:15px;font-weight:800;color:#0057B8;background:#F8FAFC;font-variant-numeric:tabular-nums;border:0;padding:0}
+.dv-dc small{font-size:8px;font-weight:700;line-height:1;opacity:.9}
+.dv-dc.o{background:transparent;color:#CBD5E1}
+.dv-dc.g{background:#12B76A;color:#FFFFFF}.dv-dc.r{background:#F04438;color:#FFFFFF}.dv-dc.b{background:#2E90FA;color:#FFFFFF}
+.dv-dc.r::before{content:"";position:absolute;left:8px;right:8px;top:50%;height:2px;background:rgba(255,255,255,.75);transform:rotate(-30deg)}
+.dv-dc.f{background:#FFFFFF;color:#94A3B8;box-shadow:inset 0 0 0 1.5px #E2E8F0}
+.dv-dc.y{background:#FFFFFF;color:#B54708;box-shadow:inset 0 0 0 2.5px #F79009}
+.dv-dc.x{background:repeating-linear-gradient(135deg,#E2E8F0 0 3px,#F8FAFC 3px 7px);color:#94A3B8}
+.dv-dc.t{box-shadow:0 0 0 2px #FFFFFF,0 0 0 4px #0B1220}.dv-dc.y.t{box-shadow:inset 0 0 0 2.5px #F79009,0 0 0 2px #FFFFFF,0 0 0 4px #0B1220}.dv-dc.f.t{box-shadow:inset 0 0 0 1.5px #E2E8F0,0 0 0 2px #FFFFFF,0 0 0 4px #0B1220}
+.dv-dc .dv-pq{right:-6px}
+/* F3–F6 — oynalar */
+.ph > .scrim.dv-top{z-index:28}.ph > .sheet.dv-top{z-index:29}
+.dv-dch{width:52px;height:52px;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:800;flex:none;line-height:1.05;font-variant-numeric:tabular-nums}
+.dv-dch b{font-size:20px}.dv-dch small{font-size:10px;font-weight:700}
+.dv-dch.g{background:#12B76A;color:#FFFFFF}.dv-dch.r{background:#F04438;color:#FFFFFF}.dv-dch.b{background:#2E90FA;color:#FFFFFF}
+.dv-dch.y{background:#FFFFFF;color:#B54708;box-shadow:inset 0 0 0 2.5px #F79009}.dv-dch.x{background:#F1F5F9;color:#64748B}
+.dv-dch.q{background:#F5FAFF;color:#1570EF;box-shadow:inset 0 0 0 2px #2E90FA}
+.dv-dch.sm{width:48px;height:48px;border-radius:14px}.dv-dch.sm b{font-size:18px}
+.dv-st{font-size:12px;font-weight:800;letter-spacing:.05em;color:#3A4456}
+.dv-bg2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.dv-bg2 button{height:56px;border-radius:16px;border:1.5px solid #CBD5E1;background:#FFFFFF;font:inherit;font-size:16px;font-weight:800;color:#3A4456;display:flex;align-items:center;justify-content:center;gap:8px}
+.dv-bg2 button svg{width:18px;height:18px}
+.dv-bg2 .og{background:#12B76A;border-color:#12B76A;color:#FFFFFF}.dv-bg2 .orr{background:#F04438;border-color:#F04438;color:#FFFFFF}
+.dv-tb{background:#F5F7FB;border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.dv-tt{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.dv-tt label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:700;color:#3A4456}
+.dv-tt input{height:48px;border-radius:12px;border:1.5px solid #CBD5E1;font:inherit;font-size:18px;font-weight:800;text-align:center;color:#0B1220;background:#FFFFFF;width:100%}
+.ph .dv-seg44 a,.ph .dv-seg44 button{height:44px}
+.dv-addq{border-style:dashed;color:#1570EF;border-color:#84CAFF;height:46px;font-size:14px}
+.dv-dbl{display:flex;flex-direction:column;gap:8px;border:1.5px solid #84CAFF;border-radius:16px;padding:12px;background:#F5FAFF}
+.ph .dv-lnk{border:0;background:transparent;color:#0057B8;font-weight:800;font-size:13px;min-height:32px;padding:0 4px}
+.dv-opt{min-height:50px}
+.dv-opt.on{border-color:#2E90FA;box-shadow:0 0 0 3px #D1E9FF;background:#F5FAFF}.dv-opt.on .rad{border-color:#2E90FA}.dv-opt.on .rad::after{background:#2E90FA}
+.dv-mx{position:relative;width:34px;height:34px;border-radius:12px;background:#F04438;color:#FFFFFF;display:grid;place-items:center;font-weight:800;font-size:14px;flex:none;overflow:hidden}
+.dv-mx i{position:absolute;left:6px;right:6px;top:50%;height:2px;background:rgba(255,255,255,.75);transform:rotate(-30deg)}
+.dv-tg3{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.dv-tg3 button{height:46px;border-radius:12px;border:1.5px solid #CBD5E1;background:#FFFFFF;font:inherit;font-size:14px;font-weight:800;color:#0B1220;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1;padding:0 2px}
+.dv-tg3 button small{font-size:9px;font-weight:700;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dv-tg3 button.on{background:#2E90FA;border-color:#2E90FA;color:#FFFFFF}
+.dv-tg3 button:disabled{background:#F1F5F9;border-color:#E2E8F0;color:#64748B}
+.ph .sheet.dv-center{align-items:center;text-align:center}
+.dv-ok72{width:72px;height:72px;border-radius:50%;background:#ECFDF3;color:#067647;display:grid;place-items:center;flex:none}
+.ph .chips .chip{cursor:pointer}
+/* L0–L3 — davomat qulfi */
+.dv-mdl{position:absolute;left:14px;right:14px;z-index:8;background:#FFFFFF;border-radius:28px;padding:22px 18px 18px;display:flex;flex-direction:column;gap:14px;box-shadow:0 24px 60px rgba(11,18,32,.35);animation:dvIn .5s cubic-bezier(.2,.9,.25,1.15) .1s both;max-height:calc(100% - 150px);overflow-y:auto}
+@keyframes dvIn{0%{transform:translateY(40px) scale(.92);opacity:0}100%{transform:none;opacity:1}}
+@keyframes dvShake{0%,100%{transform:rotate(0)}20%{transform:rotate(-12deg)}40%{transform:rotate(10deg)}60%{transform:rotate(-6deg)}80%{transform:rotate(4deg)}}
+@keyframes dvPop{0%{transform:scale(.3);opacity:0}70%{transform:scale(1.12);opacity:1}100%{transform:scale(1)}}
+.dv-lk{width:76px;height:76px;border-radius:24px;display:grid;place-items:center;align-self:center;flex:none;animation:dvShake .7s ease-in-out .6s 2}
+.dv-lk.dv-pop{animation:dvPop .55s cubic-bezier(.2,.8,.2,1) .2s both}
+.dv-stp{display:flex;gap:12px;align-items:flex-start;text-align:left}
+.dv-stp i{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-weight:800;flex:none}
+.dv-mk{display:flex;align-items:center;gap:10px;padding:10px;border-radius:18px;background:#FFFAEB;border:1.5px solid #FEDF89;flex:none}
+.dv-mk.dn{background:#FFFFFF;border-color:#E6EAF2}
+.dv-mk .b2{display:flex;gap:6px;flex:none}
+.dv-mk .b2 button{width:52px;height:44px;border-radius:12px;display:grid;place-items:center;border:0;padding:0}
+.dv-mk .b2 button:disabled{opacity:.5}
+.dv-pills{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.ph .sheet.dv-l2{z-index:9}
+.dv-lnav{position:absolute;left:0;right:0;bottom:0;height:84px;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));z-index:7}
+.dv-lnav button{border:0;background:transparent;padding:0;margin:0}
+.ph .u-lock .scrim{z-index:6}
+@media (prefers-reduced-motion:reduce){.dv-mdl,.dv-lk,.dv-lk.dv-pop{animation:none}}
+/* .ph button{font:inherit} (ustoz.css, keyinroq) .btn / .seg / .chip qalinligini bosib ketadi — shu bo'lim oynalarida tiklanadi */
+.ph .dv-top .btn,.ph .dv-oy .btn,.ph .u-lock .btn{font-weight:800}
+.ph .dv-top .seg button{font-weight:700;font-size:14px}
+.ph .dv-top .chip{font-size:13px;font-weight:700}

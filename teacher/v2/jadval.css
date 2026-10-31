@@ -1,1 +1,108 @@
-/* jadval — bo'lim uslublari */
+/* Jadval bo'limi (teacher/v2/jadval.js) — dizayn helmet uslublari: S1/S1e/S2/S3/S4/S5/SinovNatija/P1/P2/P3. Prefiks: .jd- */
+/* Yuqori tablar: Sinov darslari | Darslar */
+.jd-tabs2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;background:#E9EEF6;border-radius:16px;padding:4px;flex:none}
+.jd-tabs2 button{height:44px;border-radius:12px;border:0;background:transparent;display:flex;align-items:center;justify-content:center;gap:8px;font:inherit;font-size:15px;font-weight:800;color:#3A4456}
+.jd-tabs2 button.on{background:#FFFFFF;color:#0B1220;box-shadow:0 1px 3px rgba(11,18,32,.14)}
+.jd-tabs2 .c{min-width:22px;height:22px;border-radius:999px;background:#7F56D9;color:#FFFFFF;font-size:12px;display:grid;place-items:center;padding:0 6px}
+/* Filtr: Bugun · Ertaga · Tanaffus */
+.jd-dd3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;flex:none}
+.jd-dd3 button{height:46px;border-radius:14px;background:#FFFFFF;border:1px solid #E6EAF2;display:flex;align-items:center;justify-content:center;gap:6px;font:inherit;font-size:14px;font-weight:800;color:#3A4456}
+.jd-dd3 button.on{background:#0B1220;border-color:#0B1220;color:#FFFFFF}
+.jd-dd3 button small{font-size:12px;font-weight:700;opacity:.75}
+/* Bo'lim sarlavhasi */
+.jd-sh3{display:flex;align-items:center;gap:8px;padding:4px 4px 0;flex:none}
+.jd-sh3 i{width:8px;height:8px;border-radius:50%}
+.jd-sh3 b{font-size:12px;font-weight:800;letter-spacing:.06em;color:#3A4456;flex:1}
+/* Chipta karta */
+.jd-tk{display:flex;flex:none;border-radius:20px;overflow:hidden;background:#FFFFFF;border:1px solid #E6EAF2}
+.jd-stub{width:82px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:14px 0;flex:none}
+.jd-stub span{font-size:11px;font-weight:700;opacity:.85}
+.jd-stub strong{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}
+.jd-cut{width:0;border-left:2px dashed #E2E8F0;margin:10px 0;position:relative}
+.jd-tb{flex:1;min-width:0;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.jd-tk .s-w{background:#FFFAEB;color:#B54708}.jd-tk .s-v{background:#F4EBFF;color:#6941C6}.jd-tk .s-g{background:#ECFDF3;color:#067647}
+.jd-tk .s-r{background:#FEF3F2;color:#B42318}.jd-tk .s-m{background:#F1F5F9;color:#3A4456}
+.ph .btn.jd-res{align-self:flex-start;height:44px;background:#B54708;border-color:#B54708;color:#FFFFFF}
+.ph .jd-link{justify-content:center;gap:6px;font:inherit;font-size:14px;font-weight:700;min-height:44px;flex:none;border:0;background:transparent;color:#0057B8}
+/* Tanaffus vaqtlari */
+.jd-slot{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid #EEF2F8;width:100%}
+.jd-slot:last-child{border-bottom:0}
+.jd-slot b{font-size:16px;font-weight:800;font-variant-numeric:tabular-nums;width:110px;flex:none;text-align:left}
+.ph button.jd-slotb{border:0;border-bottom:1px solid #EEF2F8;background:transparent;font:inherit;color:#0B1220;text-align:left;min-height:52px}
+.ph button.jd-slotb:last-child{border-bottom:0}
+.ph .card.l > .jd-slot:first-child{border-top-left-radius:21px;border-top-right-radius:21px}
+.ph .card.l > .jd-slot:last-child{border-bottom-left-radius:21px;border-bottom-right-radius:21px}
+.jd-stripe{background:repeating-linear-gradient(135deg,#FFF4E5 0 6px,#FFFFFF 6px 12px)}
+.jd-ptn{color:#C4320A;background:#FFF4E5}
+.jd-chk{width:24px;height:24px;border-radius:8px;border:2px solid #CBD5E1;display:grid;place-items:center;flex:none;background:#FFFFFF}
+.jd-chk.on{background:#C4320A;border-color:#C4320A;color:#FFFFFF}
+.jd-pz{width:44px;height:44px;border-radius:14px;background:#C4320A;color:#FFFFFF;display:grid;place-items:center;flex:none}
+.jd-st{font-size:12px;font-weight:800;letter-spacing:.05em;color:#3A4456}
+.jd-shw{display:flex;flex-direction:column;gap:inherit;flex:1;min-height:0}
+.ph .chips button.chip{font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.ph .seg.jd-seg44 a,.ph .seg.jd-seg44 button,.ph .sheet .seg button{height:44px}
+.ph .btn[aria-disabled="true"]{cursor:default}
+/* Natija oynasi: sana belgisi */
+.jd-nb{width:48px;height:48px;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;font-weight:700;line-height:1.2;flex:none}
+.jd-nb b{font-size:14px}
+/* Qulf modal (S3, S5) */
+.jd-mdl{position:absolute;left:14px;right:14px;z-index:8;background:#FFFFFF;border-radius:28px;padding:20px 18px 18px;display:flex;flex-direction:column;gap:14px;box-shadow:0 24px 60px rgba(11,18,32,.35);max-height:calc(100% - 80px);overflow-y:auto}
+.jd-mdl.jd-anim{animation:jdIn .5s cubic-bezier(.2,.9,.25,1.15) .1s both}
+@keyframes jdIn{0%{transform:translateY(40px) scale(.92);opacity:0}100%{transform:none;opacity:1}}
+@keyframes jdRing{0%{transform:scale(.85);opacity:.7}100%{transform:scale(1.7);opacity:0}}
+.jd-bell{position:relative;width:72px;height:72px;border-radius:24px;background:#F4EBFF;color:#6941C6;display:grid;place-items:center;align-self:center;flex:none}
+.jd-bell::after{content:"";position:absolute;inset:0;border-radius:24px;border:3px solid #9E77ED}
+.jd-bell.jd-anim::after{animation:jdRing 1.5s ease-out .5s 3 both}
+.jd-trc{background:#F9F5FF;border:1.5px solid #E9D7FE;border-radius:20px;padding:14px;display:flex;flex-direction:column;gap:10px}
+/* Taklif vaqtlari (S4) */
+.jd-sl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.jd-sl button{height:52px;border-radius:12px;border:1.5px solid #CBD5E1;background:#FFFFFF;font:inherit;color:#0B1220;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:12px;font-weight:700}
+.jd-sl button b{font-size:15px;font-weight:800}
+.jd-sl button.on{border-color:#6941C6;background:#F9F5FF;box-shadow:0 0 0 3px #E9D7FE;color:#6941C6}
+/* Darslar (S2): kunlar va 15 daqiqalik to'r */
+.jd-days{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;flex:none}
+.jd-days button{height:56px;border-radius:16px;background:#FFFFFF;border:1px solid #E6EAF2;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#3A4456;font:inherit;font-size:12px;font-weight:700;position:relative;padding:0}
+.jd-days button b{font-size:17px;font-weight:800;color:#0B1220}
+.jd-days button.on{background:#0065D6;border-color:#0065D6;color:#DCEBFF}
+.jd-days button.on b{color:#FFFFFF}
+.jd-days button i{position:absolute;bottom:6px;width:5px;height:5px;border-radius:50%;background:#94A3B8}
+.jd-days button.on i{background:#FFFFFF}
+.jd-grid{position:relative;display:grid;grid-template-columns:52px 1fr;border-radius:18px;background:#FFFFFF;border:1px solid #E6EAF2;overflow:hidden;flex:none}
+.jd-tl{display:flex;flex-direction:column;border-right:1px solid #EEF2F8}
+.jd-tl span{height:24px;font-size:12px;display:flex;align-items:center;padding-left:8px;border-bottom:1px solid #F1F5F9;font-variant-numeric:tabular-nums}
+.jd-tl .h{font-weight:800;color:#0B1220;background:#F8FAFC}
+.jd-tl .hf{font-weight:700;color:#64748B}
+.jd-tl .q{font-weight:600;color:#64748B}
+.jd-dl{position:relative;background-image:linear-gradient(#EEF2F8 1px,transparent 1px),linear-gradient(rgba(148,163,184,.14) 1px,transparent 1px);background-size:100% 96px,100% 24px}
+.ph .jd-b{position:absolute;left:6px;right:6px;border-radius:8px;padding:4px 8px;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;font:inherit;font-size:13px;font-weight:800;overflow:hidden;text-align:left;white-space:nowrap;line-height:1.3;cursor:pointer}
+.ph .jd-b small{font-size:11px;font-weight:600;opacity:.85;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.ph .jd-b.jd-one{flex-direction:row;align-items:center;justify-content:flex-start;gap:6px;padding:0 8px;font-size:12px}
+.jd-d15{background:#E0F2FE;color:#026AA2;border:1px solid #B9E6FE}
+.jd-d30{background:#EAF3FF;color:#0057B8;border:1px solid #C7DEFA}
+.jd-d60{background:#D6E8FB;color:#0B4A8F;border:1px solid #9DC4F5}
+.jd-dtr{background:#F4EBFF;color:#6941C6;border:1px solid #E9D7FE}
+.jd-dmk{background:#CCF1EE;color:#0B5F56;border:1px solid #0E9384}
+.ph .jd-dbr{background:repeating-linear-gradient(135deg,#FFF4E5 0 6px,#FFFFFF 6px 12px);color:#C4320A;border:1px dashed #FDBA74;z-index:0}
+.ph .jd-dcl{background:repeating-linear-gradient(135deg,#F2F4F7 0 6px,#E4E7EC 6px 12px);color:#3A4456;border:1px solid #E4E7EC;cursor:default;z-index:0}
+.jd-dl .jd-d15,.jd-dl .jd-d30,.jd-dl .jd-d60,.jd-dl .jd-dtr,.jd-dl .jd-dmk{z-index:1}
+.jd-past{opacity:.6}
+.jd-b .s-ok{color:#05603A}.jd-b .s-no{color:#B42318}.jd-b .s-un{color:#93370D}
+.jd-now{position:absolute;left:0;right:0;height:2px;background:#D92D20;z-index:2;pointer-events:none}
+.jd-now::before{content:"";position:absolute;left:-4px;top:-4px;width:10px;height:10px;border-radius:50%;background:#D92D20}
+.jd-gapl{position:absolute;left:0;right:0;height:0;border-top:2px dashed #CBD5E1;pointer-events:none}
+.jd-lg{display:flex;flex-wrap:wrap;gap:6px 12px;padding:0 4px;flex:none}
+.jd-lg span{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:#3A4456}
+.jd-lg i{width:12px;height:12px;border-radius:4px;flex:none}
+/* Hafta ko'rinishi */
+.ph button.jd-wrow{width:100%;border:0;border-bottom:1px solid #EEF2F8;background:transparent;font:inherit;text-align:left;align-items:flex-start}
+.ph button.jd-wrow:last-child{border-bottom:0}
+.jd-wd{width:48px;flex:none;padding-top:6px;font-size:14px;font-weight:800;color:#0B1220}
+.jd-wd.td{color:#0057B8}
+.jd-wks{flex:1;display:flex;flex-wrap:wrap;gap:6px}
+.jd-wk{display:inline-flex;align-items:center;height:28px;padding:0 8px;border-radius:8px;font-size:12px;font-weight:700;color:#0B1220;background:#EEF1F6;white-space:nowrap}
+@media (prefers-reduced-motion:reduce){.jd-mdl.jd-anim,.jd-bell.jd-anim::after{animation:none}}
+/* .ph button{font:inherit} (ustoz.css) .btn qalinligini yo'qotadi — jadval tugmalari dizayndagidek 800 */
+.ph button.btn:is(.jd-res,[data-jd-break],[data-jd-unbreak],[data-go],[data-jd-acc],[data-jd-rej],[data-jd-send],[data-jd-done],[data-jd-wk]){font-weight:800;font-size:15px}
+.ph button.btn.sm:is(.jd-res,[data-jd-wk]){font-size:14px}
+.jd-shw > *{flex-shrink:0}
+.ph .seg.jd-seg44 button,.ph .jd-shw .seg button{font-size:14px;font-weight:700}
