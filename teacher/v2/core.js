@@ -73,7 +73,9 @@
         try { html = pg ? pg.render(cur.arg) : tb ? tb.render() : ''; }
         catch (err) { console.error('[ustoz]', err); html = errorBox(err); }
         const showNav = !pg || pg.nav;
+        const keep = [...root.querySelectorAll(':scope > .u-toast, :scope > .u-cf')];
         root.innerHTML = `${html}${showNav ? nav() : ''}${lock ? `<div class="u-lock" data-lock="${lock[0]}">${lock[1].render()}</div>` : ''}`;
+        keep.forEach(x => root.append(x)); // toast va konfetti qayta chizishda yo'qolmasin
         root.classList.toggle('u-locked', !!lock);
         root.querySelectorAll('[data-u-tab]').forEach(a => a.onclick = e => {
             e.preventDefault();
@@ -156,7 +158,7 @@
     U.err = (e, key) => `<div class="note w" role="alert"><span>${U.esc(e?.err?.message || 'Yuklanmadi')}</span><button type="button" class="btn sm" data-u-retry="${U.esc(key)}" style="margin-left: auto">Qayta urinish</button></div>`;
     document.addEventListener('click', e => { const b = e.target.closest?.('[data-u-retry]'); if (b) { U.drop(b.dataset.uRetry); U.render(); } });
     U.offline = () => navigator.onLine === false
-        ? `<div class="u-off" role="status">${U.svg('<path d="M1 1l22 22M16.7 11.1A10.9 10.9 0 0119 12.6M5 12.6a10.9 10.9 0 015.2-2.5M10.7 5A16 16 0 0122.6 9M1.4 9a16 16 0 014.3-2.7M8.5 16.1a5 5 0 016.9 0M12 20h.01"></path>', 20)}<div class="col g1"><b style="font-size: 14px">Internet yo'q</b><span style="font-size: 12px; color: #C7D2E3">${(D().outbox() || []).length ? `${D().outbox().length} ta davomat belgisi saqlandi · ulanganda o'zi yuboriladi` : 'Oxirgi yuklangan ma\'lumot ko\'rsatilmoqda'}</span></div></div>` : '';
+        ? `<div class="u-off" role="status"><span style="color: #FDB022; display: inline-flex">${U.svg('<path d="M1 1l22 22M16.7 11.1A10.9 10.9 0 0119 12.6M5 12.6a10.9 10.9 0 015.2-2.5M10.7 5A16 16 0 0122.6 9M1.4 9a16 16 0 014.3-2.7M8.5 16.1a5 5 0 016.9 0M12 20h.01"></path>', 20)}</span><div class="col g1"><b style="font-size: 14px">Internet yo'q</b><span style="font-size: 12px; color: #C7D2E3">${(D().outbox() || []).length ? `${D().outbox().length} ta davomat belgisi saqlandi · ulanganda o'zi yuboriladi` : 'Oxirgi yuklangan ma\'lumot ko\'rsatilmoqda'}</span></div></div>` : '';
     // Sana yozuvlari: "Dushanba, 16-noyabr"
     U.dateLong = date => { const d = D(); const [, m, dd] = date.split('-'); return `${d.DAY_FULL[d.wdOf(date) - 1]}, ${+dd}-${d.MON[+m - 1]}`; };
     U.addDays = (date, n) => { const t = new Date(`${date}T00:00:00Z`); t.setUTCDate(t.getUTCDate() + n); return t.toISOString().slice(0, 10); };

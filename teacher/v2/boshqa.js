@@ -301,7 +301,7 @@
                 try {
                     const r = await api('/api/school/requests', { method: 'POST', body: { type: 'student', studentId: sid, topic: sqTopic, reason: note } });
                     S().requests = [r.request || { id: 'tmp' + Date.now(), type: 'student', status: 'new', reason: note, payload: { studentId: sid, topic: sqTopic } }, ...(S().requests || [])];
-                    sqBusy = false; U.toast("So'rov adminga yuborildi", { ok: true }); U.render();
+                    sqBusy = false; U.render(); U.toast("So'rov adminga yuborildi", { ok: true });
                 } catch (err) { sqBusy = false; btn.disabled = false; U.toast(err.message); }
             };
         }
@@ -722,7 +722,12 @@
                 if (!check()) return U.toast('Parol talablarga mos emas');
                 if (v('#bq-p1') !== v('#bq-p2')) return U.toast('Yangi parollar mos emas');
                 btn.disabled = true;
-                try { await api('/api/auth/change-password', { method: 'POST', body: { currentPassword: v('#bq-p0'), newPassword: v('#bq-p1'), logoutOthers: el.querySelector('#bq-lo').checked } }); U.drop('bq:ss'); close(); U.toast("Parol o'zgartirildi", { ok: true }); }
+                try {
+                    const others = el.querySelector('#bq-lo').checked;
+                    await api('/api/auth/change-password', { method: 'POST', body: { currentPassword: v('#bq-p0'), newPassword: v('#bq-p1'), logoutOthers: others } });
+                    const ss = sessE(); if (others && ss.data?.sessions) ss.data.sessions = ss.data.sessions.filter(x => x.isCurrent);
+                    close(); U.toast("Parol o'zgartirildi", { ok: true });
+                }
                 catch (err) { btn.disabled = false; U.toast(err.message); }
             };
         }, { label: "Parolni o'zgartirish" });
@@ -767,7 +772,7 @@
                 const k = b.dataset.np, prevP = { ...(e.data.prefs[k] || {}) }, on = !(prevP.tg || prevP.web);
                 e.data.prefs[k] = { tg: on, web: on }; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on));
                 try { const r = await api('/api/staff/notify/prefs', { method: 'PUT', body: { types: { [k]: { tg: on, web: on } } } }); if (r?.prefs) e.data = r; U.toast('Saqlandi', { ok: true }); }
-                catch (err) { e.data.prefs[k] = prevP; U.toast(err.message); U.render(); }
+                catch (err) { e.data.prefs[k] = prevP; U.render(); U.toast(err.message); }
             });
             const f = root.querySelector('[data-bq-av]');
             if (f) f.onchange = async () => {
@@ -776,7 +781,7 @@
                     const dataUrl = await resizeImage(file);
                     const r = await api('/api/auth/avatar', { method: 'POST', body: { dataUrl } });
                     const u = S().user; if (u) { u.avatar = r.url || dataUrl; D().store.set('mh_currentUser', u); }
-                    U.toast('Rasm saqlandi', { ok: true }); U.render();
+                    U.render(); U.toast('Rasm saqlandi', { ok: true });
                 } catch (err) { U.toast(err.message); }
             };
         }
@@ -809,8 +814,8 @@
         },
         bind(root) {
             root.querySelector('[data-bq-pwd]')?.addEventListener('click', openPassword);
-            root.querySelectorAll('[data-kill]').forEach(b => b.onclick = async () => { b.disabled = true; try { await api(`/api/auth/sessions/${encodeURIComponent(b.dataset.kill)}`, { method: 'DELETE' }); U.drop('bq:ss'); U.toast('Qurilma chiqarildi', { ok: true }); U.render(); } catch (err) { U.toast(err.message); b.disabled = false; } });
-            root.querySelector('[data-killall]')?.addEventListener('click', async e => { const btn = e.currentTarget; btn.disabled = true; try { await api('/api/auth/sessions/others', { method: 'DELETE' }); U.drop('bq:ss'); U.toast('Boshqa qurilmalardan chiqildi', { ok: true }); U.render(); } catch (err) { btn.disabled = false; U.toast(err.message); } });
+            root.querySelectorAll('[data-kill]').forEach(b => b.onclick = async () => { b.disabled = true; try { await api(`/api/auth/sessions/${encodeURIComponent(b.dataset.kill)}`, { method: 'DELETE' }); const ss = sessE(); if (ss.data?.sessions) ss.data.sessions = ss.data.sessions.filter(x => x.id !== b.dataset.kill); U.render(); U.toast('Qurilma chiqarildi', { ok: true }); } catch (err) { U.toast(err.message); b.disabled = false; } });
+            root.querySelector('[data-killall]')?.addEventListener('click', async e => { const btn = e.currentTarget; btn.disabled = true; try { await api('/api/auth/sessions/others', { method: 'DELETE' }); const ss = sessE(); if (ss.data?.sessions) ss.data.sessions = ss.data.sessions.filter(x => x.isCurrent); U.render(); U.toast('Boshqa qurilmalardan chiqildi', { ok: true }); } catch (err) { btn.disabled = false; U.toast(err.message); } });
         }
     });
 

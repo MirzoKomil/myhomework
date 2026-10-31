@@ -378,7 +378,7 @@
         : tile('video', { cls: 'mu' }, 'Telegram guruh', groups().loading ? 'yuklanmoqda…' : "guruh havolasi yo'q", 'aria-disabled="true" data-bs-nogroup')}
       ${tile('screen', { st: 'background: #0065D6; color: #FFFFFF' }, 'Slaydlar', f?.slides ? `${f.slides} ta · ekranni ulashish` : 'ekranni ulashish', li.no ? `data-u-push="taqdimot" data-arg="${li.no}"` : 'aria-disabled="true"')}
       ${tile('book', { cls: 'wa' }, 'Ustoz kitobi', f?.teacherBook ? `${f.teacherBook} · dars rejasi` : 'dars rejasi', li.no ? `data-u-push="darshub" data-arg="${li.no}"` : 'aria-disabled="true"')}
-      ${tile('pen', { cls: 'mu' }, 'Doska', 'yozish va chizish', li.no ? `data-u-push="taqdimot" data-arg="${li.no}:doska"` : 'aria-disabled="true"')}
+      ${tile('pen', { cls: 'mu' }, 'Doska', 'yozish va chizish', li.no ? `data-u-push="taqdimot"` : 'aria-disabled="true"')}
     </div>
 
     <section class="card a3" aria-labelledby="bsHol">
