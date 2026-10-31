@@ -803,6 +803,10 @@
     }
     function back() {
         if (sheetEl) { closeSheet(); return true; }
+        // Ilova ekrani ustida ochilgan jadval/sinov sahifasi (masalan "Sinovga yozildi") — faqat o'sha sahifa yopiladi,
+        // ilova o'sha ekranda qoladi (sahifaning o'z "← Lidlar" tugmasi bilan bir xil).
+        const pageOpen = document.body.classList.contains('jv-page-open') || document.body.classList.contains('ss-page-open');
+        if (pageOpen && S.screen !== 'crm') { closeCrmPages(); return true; }
         closeCrmPages();
         const prev = S.stack.pop();
         if (!prev) { if (S.screen !== 'home') { go('home', { reset: true, fromPop: true }); return true; } return false; }
