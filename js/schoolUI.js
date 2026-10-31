@@ -397,7 +397,10 @@
         _page = { id: studentId, card, tab, data: {} };
         renderStudent(el, card, tab);
     }
-    async function openCardForm(studentId, tab, done) {
+    // preset (Dars jadvali v3 → "Ko'chirish"): { act: 'teacher', teacherId } — oyna shu amal va ustoz tanlangan holda ochiladi.
+    let _preset = null;
+    async function openCardForm(studentId, tab, done, preset = null) {
+        _preset = preset;
         const box = openDrawer({ title: tab === 'tahrir' ? 'O\'quvchini tahrirlash' : 'Holatni o\'zgartirish', sub: 'Yuklanmoqda…', body: '<div class="sc-skel"></div>', wide: true });
         let card = _page?.id === studentId ? _page.card : null;
         if (!card) { try { card = (await api(`/students/${encodeURIComponent(studentId)}/card`)).card; } catch (e) { errBox(box, e.message); return; } }
@@ -1093,7 +1096,7 @@
             ['stop', 'Kursni to\'xtatish', 'o\'quvchi chiqib ketadi', st === 'left'],
             ['finish', 'Kursni tugatdi', 'kurs oxirigacha o\'qidi · "Tugatgan" bo\'limiga o\'tadi', st === 'left']
         ];
-        const first = acts.find(a => !a[3])?.[0] || 'freeze';
+        const first = (_preset?.act && acts.find(a => a[0] === _preset.act && !a[3]))?.[0] || acts.find(a => !a[3])?.[0] || 'freeze';
         body.innerHTML = `<div class="sc-sec"><h3>Amal</h3><div class="sc-alst" role="radiogroup">${acts.map(([k, l, h, off]) =>
             `<label class="sc-ai${k === 'stop' ? ' sc-ai--dg' : ''}${off ? ' is-off' : ''}"><input type="radio" name="act" value="${k}"${off ? ' disabled' : ''}${k === first ? ' checked' : ''}><span><b>${l}</b><small>${h}</small></span></label>`).join('')}</div></div><div class="sc-actbody"></div>`;
         const ab = body.querySelector('.sc-actbody');
@@ -1273,9 +1276,9 @@
             const failed = rows.filter(r => r.err);
             if (failed.length && failed.length === rows.length) { el.innerHTML = window.LoadErr.html({ title: 'Ustozlarning bo\'sh vaqtini yuklab bo\'lmadi', err: failed[0].err, note: '', compact: true }); window.LoadErr.bind(el, load); el._rows = []; pick = null; return; }
             rows.sort((a, b) => (b.ok - a.ok) || (!!b.alt - !!a.alt));
-            pick = rows.find(r => r.ok)?.t.id || null;
+            pick = (_preset?.teacherId && rows.find(r => r.ok && r.t.id === _preset.teacherId)?.t.id) || rows.find(r => r.ok)?.t.id || null;
             el.innerHTML = rows.map(r => r.err ? `<label class="sc-tc is-off"><input type="radio" name="tch" disabled>${staffAvatar(r.t, 34)}<span class="sc-grow"><b>${esc(r.t.name)}</b><small>bo'sh vaqtini tekshirib bo'lmadi</small></span><span class="sc-pill sc-pill--mute">?</span></label>` : `<label class="sc-tc${!r.ok && !r.alt ? ' is-off' : ''}"><input type="radio" name="tch" value="${esc(r.t.id)}"${r.t.id === pick ? ' checked' : ''}${!r.ok && !r.alt ? ' disabled' : ''}>${staffAvatar(r.t, 34)}<span class="sc-grow"><b>${esc(r.t.name)}</b><small>${r.ok ? 'vaqt o\'zgarmaydi' : r.alt ? 'shu vaqt band · bo\'sh: ' + esc(r.alt) : r.noHours ? 'ish vaqti kiritilmagan — Dars jadvalida kiriting' : 'mos bo\'sh vaqt yo\'q'}</small></span><span class="sc-pill ${r.ok ? 'sc-pill--ok' : r.alt ? 'sc-pill--warn' : 'sc-pill--mute'}">${r.ok ? esc(c.schedule?.time) + ' bo\'sh' : r.alt ? 'band' : '—'}</span></label>`).join('') || '<span class="sc-mt">Boshqa ustoz yo\'q</span>';
-            el.querySelectorAll('input[name=tch]').forEach(i => i.onchange = () => { pick = i.value; paintHist(); });
+            el.querySelectorAll('input[name=tch]').forEach(i => { if (pick && i.value === pick) i.checked = true; i.onchange = () => { pick = i.value; paintHist(); }; });
             el._rows = rows; paintHist();
         };
         ab.querySelector('input[name=from]').onchange = load; load();
@@ -1639,7 +1642,7 @@
         api, post, esc, today, addDays, wd, weekStart, fmtDate, hm, toMin, pattern, DAY, DAY_FULL,
         studentAvatar, staffAvatar, staffAvatarUrl, tgPill, teacherName, studentById, teachersForSubject,
         openDrawer, openDialog, closeDrawer, errBox, busy, field, impact, toast, refreshCache, nowMin,
-        openStudent, closeStudent, renderApprovals, renderGroups, renderAssistAdmin, loadStaffAvatars, staffAvatarOf: id => staffAvatarUrl(_avatars[id]), acad, dShort, whenTxt, shortName, num,
+        openStudent, openCardForm, closeStudent, renderApprovals, renderGroups, renderAssistAdmin, loadStaffAvatars, staffAvatarOf: id => staffAvatarUrl(_avatars[id]), acad, dShort, whenTxt, shortName, num,
         bulkDrawer, correctionDrawer, CHN, CST, assistPayNote, assistPayRule, assistStudentsLabel, assistPossibleNote, MISSED_CAME, missedCamePill, studentRequestDrawer
     });
 })();
