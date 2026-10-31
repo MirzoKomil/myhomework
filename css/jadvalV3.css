@@ -307,3 +307,5 @@ button.jv-ml { cursor: pointer; }
 .sv-wk.is-q15 .sv-tl span.sv-q--q { font-weight: 600; color: #94A3B8; }
 .sv-wk.is-q15 .sv-dl { background-image: linear-gradient(var(--sv-grid) 1px, transparent 1px), linear-gradient(rgba(148, 163, 184, .14) 1px, transparent 1px); background-size: 100% var(--hh), 100% 30px; }
 @media (max-width: 760px) { .sv-wk.is-q15 { --hh: 96px; } .sv-wk.is-q15 .sv-tl span.sv-q { height: 24px; font-size: 12px; } .sv-wk.is-q15 .sv-dl { background-size: 100% var(--hh), 100% 24px; } }
+
+.jv-inl { display: inline-block; width: auto; margin-top: 12px; padding: 10px 16px; }

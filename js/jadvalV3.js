@@ -56,6 +56,9 @@
     function patDate(pat) { const days = pat === 'juft' ? JUFT : TOQ; let d = today(); for (let i = 0; i < 8 && !days.includes(U().wd(d)); i++) d = U().addDays(d, 1); return d; }
     const defaultPat = () => (JUFT.includes(U().wd(today())) ? 'juft' : 'toq');
     const curDate = () => (J.mode === 'sinov' ? sinovDate() : patDate(J.pat || defaultPat()));
+    // "Ertaga" faqat haqiqatan ertangi kun bo'lsa; shanbadan keyin — "Dushanba".
+    const nextName = () => { const n = nextWork(today()); return n === U().addDays(today(), 1) ? 'Ertaga' : DAYL[U().wd(n) - 1]; };
+    const dayWord = d => (d === today() ? 'Bugun' : d === nextWork(today()) ? nextName() : DAYL[U().wd(d) - 1]);
     const dayLabel = d => `${DAY[U().wd(d) - 1]} · ${dm(d)}`;
     function lang() {
         if (J.lead) return J.lead._lang;
@@ -68,14 +71,40 @@
         const seq = ++J.seq, date = curDate(), L = lang();
         J.loading = true;
         try {
-            const r = await U().api(`/schedule?from=${date}&to=${date}&lang=${L}${J.mode === 'sinov' ? '&mode=free' : ''}`);
+            // Darslar: kunlar guruhining 3 kuni (masalan Du, Ch, Ju) birga yuklanadi va birlashtiriladi.
+            const dates = J.mode === 'sinov' ? [date] : patDates(date);
+            const r = await U().api(`/schedule?from=${dates[0]}&to=${dates[dates.length - 1]}&lang=${L}${J.mode === 'sinov' ? '&mode=free' : ''}`);
             if (seq !== J.seq) return;
-            const views = new Map((r.views || []).filter(v => v.date === date).map(v => [v.teacherId, v]));
+            const views = new Map();
+            if (J.mode === 'sinov') for (const v of r.views || []) { if (v.date === date) views.set(v.teacherId, v); }
+            else {
+                const by = new Map();
+                for (const v of r.views || []) if (dates.includes(v.date)) { if (!by.has(v.teacherId)) by.set(v.teacherId, []); by.get(v.teacherId).push(v); }
+                for (const [tid, vs] of by) views.set(tid, mergeDays(vs, dates.length));
+            }
             const teachers = (r.teachers || []).filter(t => views.has(t.id));
             J.data = { date, lang: L, mode: J.mode, teachers, views, unassigned: r.unassigned || [], scope: r.scope };
             J.err = null;
         } catch (e) { if (seq === J.seq) { J.err = e; J.data = null; } }
         if (seq === J.seq) { J.loading = false; draw(); }
+    }
+    // Darslar: guruhdagi kunlar ro'yxati (birinchi sanadan boshlab, 7 kun ichida).
+    function patDates(d0) {
+        const days = TOQ.includes(U().wd(d0)) ? TOQ : JUFT, out = [];
+        for (let d = d0, i = 0; i < 7 && out.length < 3; i++, d = U().addDays(d, 1)) if (days.includes(U().wd(d))) out.push(d);
+        return out;
+    }
+    // Uch kunni bitta ko'rinishga: darslar birlashtiriladi (takrorlanmaydi); ta'til/yopiq faqat hamma kunda bo'lsa ko'rsatiladi.
+    function mergeDays(vs, n) {
+        const seen = new Set(), items = [];
+        for (const v of vs) for (const i of v.items || []) {
+            if (i.kind === 'leave' || i.kind === 'close') continue;
+            const k = `${i.kind}|${i.studentId || i.bookingId || ''}|${i.start}`;
+            if (!seen.has(k)) { seen.add(k); items.push(i); }
+        }
+        const lv = (vs[0].items || []).filter(i => i.kind === 'leave');
+        for (const l of lv) if (vs.length === n && vs.every(v => (v.items || []).some(x => x.kind === 'leave' && x.start <= l.start && x.end >= l.end))) items.push(l);
+        return { ...vs[0], items: items.sort((a, b) => a.start - b.start), days: vs };
     }
     const lessonItems = v => (v?.items || []).filter(i => i.kind === 'lesson' && !i.bookingId && !i.frozen);
     const lessonsOf = v => lessonItems(v).length;
@@ -149,9 +178,9 @@
         const page = J.page;
         if (J.hold) releaseHold();
         closeOverlay();
+        J.timers.forEach(clearInterval); J.timers = [];
         if (!page) { J.lead = null; J.opts = {}; return; }
         const opts = J.opts;
-        J.timers.forEach(clearInterval); J.timers = [];
         page.remove(); document.body.classList.remove('jv-page-open');
         J.page = null; J.lead = null; J.opts = {}; J.root = null; J.data = null;
         if (silent) return;
@@ -182,8 +211,8 @@
             : `Ustozlarning asosiy darslari · faqat oʻqiyotgan oʻquvchilar · ${L === 'russian' ? 'Rus' : 'Ingliz'} tili`;
         const back = J.page ? `<button type="button" class="jv-back" data-close-page>${svg('back', 16)} Lidlar</button>` : '';
         const langSeg = !J.lead && canPickLang() ? `<div class="jv-seg jv-seg--sm" role="group" aria-label="Yoʻnalish"><button type="button" data-lang="english" aria-pressed="${L === 'english'}">Ingliz</button><button type="button" data-lang="russian" aria-pressed="${L === 'russian'}">Rus</button></div>` : '';
-        const modes = J.page ? '' : `<div class="jv-seg" role="tablist" aria-label="Jadval">${[['sinov', 'Sinov darsi'], ['darslar', 'Darslar']].map(([k, l]) =>
-            `<button type="button" role="tab" data-mode="${k}" aria-selected="${J.mode === k}">${l}</button>`).join('')}</div>`;
+        const modes = J.page ? '' : `<div class="jv-seg" role="group" aria-label="Jadval">${[['sinov', 'Sinov darsi'], ['darslar', 'Darslar']].map(([k, l]) =>
+            `<button type="button" data-mode="${k}" aria-pressed="${J.mode === k}">${l}</button>`).join('')}</div>`;
         const extra = !J.page && isFull() ? `<button type="button" class="jv-link" data-admin-week>Ustoz ish vaqti →</button>` : '';
         return `<div class="jv-head">${back}<div class="jv-title"><h1>${J.page ? 'Sinov darsini qoʻyish' : 'Dars jadvali'}</h1><p>${esc(sub)}</p></div>
             <div class="jv-headr">${extra}${langSeg}${modes}</div></div>`;
@@ -199,7 +228,7 @@
     function toolbar() {
         const chip = (on, attrs, label, sub = '') => `<button type="button" class="jv-chip${on ? ' is-on' : ''}" ${attrs} aria-pressed="${on}">${label}${sub ? `<small>${sub}</small>` : ''}</button>`;
         const days = J.mode === 'sinov'
-            ? chip(J.day === 'today', 'data-day="today"', 'Bugun', dayLabel(today())) + chip(J.day === 'next', 'data-day="next"', 'Ertaga', dayLabel(nextWork(today())))
+            ? chip(J.day === 'today', 'data-day="today"', 'Bugun', dayLabel(today())) + chip(J.day === 'next', 'data-day="next"', nextName(), dayLabel(nextWork(today())))
             : chip(J.pat === 'toq', 'data-pat="toq"', 'Toq kunlar', 'Du · Ch · Ju') + chip(J.pat === 'juft', 'data-pat="juft"', 'Juft kunlar', 'Se · Pa · Sh');
         const r = J.range || 'eve';
         const ranges = MOBILE.matches ? '' : `<div class="jv-tb-g"><span class="jv-tb-l">Vaqt:</span>${chip(r === 'morn', 'data-range="morn"', '07:00 – 14:00')}${chip(r === 'eve', 'data-range="eve"', '14:00 – 24:00')}</div>`;
@@ -231,7 +260,9 @@
             const cnt = past ? '<span class="jv-cnt is-past">oʻtdi</span>' : `<span class="jv-cnt jv-cnt--${free >= 4 ? 'ok' : free >= 2 ? 'mid' : free === 1 ? 'low' : 'none'}">${free} ta</span>`;
             rows += `<div class="jv-gr${m === nowRow ? ' is-now' : ''}${past ? ' is-past' : ''}" style="grid-template-columns:${cols}"><div class="jv-gt">${hm(m)}</div>${cells}<div class="jv-gc">${cnt}</div></div>`;
         }
-        const empty = !T.length ? `<div class="jv-empty">Bu tilda ustoz topilmadi.</div>` : '';
+        const over = isToday && firstLive >= b;
+        const empty = !T.length ? `<div class="jv-empty">Bu tilda ustoz topilmadi.</div>`
+            : over ? `<div class="jv-empty">Bugun bu oraliqda boʻsh vaqt qolmadi.<br><button type="button" class="jv-btn jv-btn--soft jv-inl" data-day="next">${esc(nextName())}ni koʻrish</button></div>` : '';
         return `<div class="jv-body"><div class="jv-card jv-grid"><div class="jv-scroll">${head}${rows}</div>${empty}</div>${sinovPanel()}</div>`;
     }
     function sinovPanel() {
@@ -250,7 +281,7 @@
         const rows = list.map((t, i) => `<button type="button" class="jv-opt${pick && t.id === pick.id ? ' is-on' : ''}" data-pick-t="${esc(t.id)}">${U().staffAvatar(t, 36)}<span><b>${esc(t.name)}</b><small>${lessonsOf(J.data.views.get(t.id))} dars bu kuni</small></span><em class="jv-tag${i === 0 ? ' jv-tag--ok' : ''}">${i === 0 ? 'Tavsiya' : 'Boʻsh'}</em></button>`).join('');
         const btn = pick ? (J.lead ? `${esc(short(J.lead.name))} → ${esc(short(pick.name))} · sinovni qoʻyish` : `${esc(short(pick.name))} ga sinov qoʻyish`) : '';
         return `<aside class="jv-side"><div class="jv-card jv-pn"><div class="jv-eyebrow">Sinov darsi · 30 daqiqa</div><h2>${hm(m)} – ${hm(m + TRIAL)}</h2>
-            <p class="jv-mt">${esc(J.day === 'today' ? 'Bugun' : 'Ertaga')} · ${esc(dayLabel(J.data.date))} · bu vaqtda ${list.length} ta ustoz boʻsh</p>
+            <p class="jv-mt">${esc(dayWord(J.data.date))} · ${esc(dayLabel(J.data.date))} · bu vaqtda ${list.length} ta ustoz boʻsh</p>
             <div class="jv-sub">Kim boʻsh — kam yuklangani birinchi</div><div class="jv-opts">${rows || '<p class="jv-warn">Bu vaqt endi boʻsh emas — boshqa vaqtni tanlang.</p>'}</div>
             ${pick ? `<button type="button" class="jv-btn" data-book="${esc(pick.id)}|${m}"${J.busy ? ' disabled' : ''}>${btn}</button>` : ''}
             <p class="jv-mt">${J.lead ? 'Lid avtomatik “Sinov darsida” ustuniga oʻtadi. Ustoz tasdiqlagach sizga xabar keladi.' : 'Bosilganda lid tanlash oynasi ochiladi. Vaqt 10 daqiqa siz uchun ushlab turiladi.'}</p></div>${un}${legend}</aside>`;
@@ -262,6 +293,7 @@
         const start = isToday ? Math.max(7 * 60, Math.ceil((now + 1) / 30) * 30) : 7 * 60;
         const hours = [];
         for (let m = start; m < 23 * 60 + 30; m += 30) hours.push(m);
+        if (!hours.length) return `<div class="jv-mb"><div class="jv-empty">Bugun boʻsh vaqt qolmadi.<br><button type="button" class="jv-btn jv-btn--soft jv-inl" data-day="next">${esc(nextName())}ni koʻrish</button></div></div>`;
         if (J.mobT == null || J.mobT < start) J.mobT = hours.find(m => freeAt(m).length) ?? start;
         const sel = J.mobT;
         const chips = hours.map(m => { const n = slotFreeCount(m), past = isToday && m < now, on = m === sel;
@@ -335,9 +367,9 @@
                 <p class="jv-mt">${canMove() ? 'Darsni bossangiz, tafsilotlar va koʻchirish chiqadi.' : 'Jadval faqat koʻrish uchun.'}</p></div>${legend}</aside>`;
         }
         const { i, t } = sel, d = i.end - i.start;
-        // Ko'chirish mumkin: shu vaqt ish vaqti ichida va darsi/sinovi/ta'tili yo'q (server saqlashda 3 kunni ham tekshiradi).
-        const cand = canMove() ? J.data.teachers.filter(x => { const xv = J.data.views.get(x.id); return x.id !== t.id && xv && fits(xv.work, i.start, i.end)
-            && !(xv.items || []).some(o => o.start < i.end && o.end > i.start && o.kind !== 'reserved' && !o.frozen); })
+        // Ko'chirish mumkin: guruhning har 3 kunida shu vaqt ish vaqti ichida va darsi/sinovi/ta'tili yo'q (server ham tekshiradi).
+        const cand = canMove() ? J.data.teachers.filter(x => { const xv = J.data.views.get(x.id); return x.id !== t.id && xv && (xv.days || [xv]).every(dv => fits(dv.work, i.start, i.end)
+            && !(dv.items || []).some(o => o.start < i.end && o.end > i.start && o.kind !== 'reserved' && !o.frozen)); })
             .sort((x, y) => lessonsOf(J.data.views.get(x.id)) - lessonsOf(J.data.views.get(y.id))) : [];
         const facts = [['Vaqti', `${hm(i.start)} – ${hm(i.end)}`], ['Davomiyligi', `${d} daqiqa`], ['Kunlari', J.pat === 'toq' ? 'Du · Ch · Ju' : 'Se · Pa · Sh'], ['Ustoz', short(t.name)]];
         return `<aside class="jv-side"><div class="jv-card jv-pn"><div class="jv-eyebrow">Tanlangan dars</div><h2>${esc(i.studentName || 'Band')}</h2>
@@ -469,7 +501,9 @@
             openSheet();
         } catch (e) {
             J.busy = false;
-            toast(e.message || 'Vaqtni ushlab boʻlmadi', 4500);
+            // Lidda faol sinov bor: avval "Sinov darslari"da natija yoziladi yoki bekor qilinadi, keyin qayta qo'yiladi.
+            if (/allaqachon/i.test(e.message || '')) toast(`${lead.name}: sinov allaqachon qoʻyilgan. Uni “Sinov darslari” boʻlimida bekor qiling yoki natijasini yozing, keyin qayta qoʻying.`, 6500);
+            else toast(e.message || 'Vaqtni ushlab boʻlmadi', 4500);
             J.sel = null; await load();
         }
     }
@@ -519,7 +553,7 @@
     function slotLine(teacherId, m, date) {
         if (!teacherId) return { t: null, text: 'Avval lidni tanlang, keyin jadvaldan vaqtni belgilaysiz' };
         const t = J.data.teachers.find(x => x.id === teacherId);
-        return { t, text: `${short(t?.name || '')} · ${date === today() ? 'Bugun' : 'Ertaga'}, ${dayLabel(date)} · ${hm(m)}–${hm(m + TRIAL)}` };
+        return { t, text: `${short(t?.name || '')} · ${dayWord(date)}, ${dayLabel(date)} · ${hm(m)}–${hm(m + TRIAL)}` };
     }
     function openPicker(teacherId, m) {
         J.picker = { t: teacherId, m, date: J.data.date, q: '', tab: 'fit', col: 'all', sel: null };
@@ -543,7 +577,7 @@
         const all = pickableLeads(), q = P.q.trim();
         const tabs = [...(P.m == null ? [] : [['fit', 'Shu vaqtga mos', all.filter(l => isFit(l, P.m))]]), ['today', 'Bugun gaplashilgan', all.filter(isToday)], ['all', 'Hammasi', all]];
         const base = q ? all.filter(l => matches(l, q)) : tabs.find(t => t[0] === P.tab)[2];
-        const list = (q || P.col === 'all' ? base : base.filter(l => COL_OF(l.status) === P.col))
+        const list = (P.col === 'all' ? base : base.filter(l => COL_OF(l.status) === P.col))
             .sort((a, b) => (isFit(b, P.m) - isFit(a, P.m)) || ((lastTouch(b) || 0) - (lastTouch(a) || 0)));
         const shown = list.slice(0, 150);
         if (!P.sel && shown[0] && P.tab === 'fit' && !q) P.sel = shown[0].id;
@@ -558,8 +592,8 @@
         const html = `<header class="jv-mh"><div class="jv-mh-r"><h2>Sinov uchun lidni tanlang</h2><button type="button" class="jv-x" data-x aria-label="Yopish">✕</button></div>
             <div class="jv-slot">${t ? U().staffAvatar(t, 28) : ''}<b>${esc(text)}</b></div>
             <label class="jv-q">${svg('search', 18)}<input id="jvLeadQ" type="search" autocomplete="off" placeholder="Ism yoki telefonning oxirgi 4 raqami" value="${esc(P.q)}" aria-label="Lid qidirish"></label>
-            ${q ? '' : `<div class="jv-tabs">${tabs.map(([k, l, arr]) => `<button type="button" class="jv-tab${P.tab === k ? ' is-on' : ''}" data-ptab="${k}">${l} <b>${arr.length}</b></button>`).join('')}</div>
-            <div class="jv-colf"><span>Lidlar ustuni:</span>${cols.map(([k, l, n]) => `<button type="button" class="jv-cf${P.col === k ? ' is-on' : ''}" data-pcol="${k}">${esc(l)} · ${n}</button>`).join('')}</div>`}</header>
+            ${q ? '' : `<div class="jv-tabs">${tabs.map(([k, l, arr]) => `<button type="button" class="jv-tab${P.tab === k ? ' is-on' : ''}" data-ptab="${k}">${l} <b>${arr.length}</b></button>`).join('')}</div>`}
+            ${`<div class="jv-colf"><span>Lidlar ustuni:</span>${cols.map(([k, l, n]) => `<button type="button" class="jv-cf${P.col === k ? ' is-on' : ''}" data-pcol="${k}">${esc(l)} · ${n}</button>`).join('')}</div>`}</header>
             <div class="jv-mlb">${rows || `<p class="jv-empty">${emptyTxt}</p>`}${more}</div>
             <footer class="jv-mf"><div><small>Tanlangan lid</small><b>${esc(selLead?.name || '—')}</b></div><button type="button" class="jv-btn" data-pick-go${selLead ? '' : ' disabled'}>${P.t ? 'Sinovni qoʻyish' : 'Shu lidni tanlash'}</button></footer>`;
         let box = document.querySelector('#jvOverlay .jv-picker');
@@ -567,6 +601,7 @@
         if (!box || first) box = overlay('jv-picker', html); else box.innerHTML = html;
         const inp = box.querySelector('#jvLeadQ');
         inp.oninput = () => { P.q = inp.value; P.sel = null; drawPicker(); };
+        trapFocus(box);
         if (first || focused) { inp.focus(); if (caret != null) try { inp.setSelectionRange(caret, caret); } catch { /* */ } }
         box.querySelectorAll('[data-ptab]').forEach(b => b.onclick = () => { P.tab = b.dataset.ptab; P.sel = null; drawPicker(); });
         box.querySelectorAll('[data-pcol]').forEach(b => b.onclick = () => { P.col = b.dataset.pcol; P.sel = null; drawPicker(); });
@@ -577,6 +612,16 @@
             if (!tid) { J.lead = lead; J.opts = { ...J.opts, leadId: lead.id }; J.sel = null; J.data && J.data.lang !== lead._lang ? load() : draw(); return; }
             hold(tid, m, lead);
         });
+    }
+    // Oyna ichida Tab bilan aylanish (fokus tashqariga chiqmaydi).
+    function trapFocus(box) {
+        box.onkeydown = e => {
+            if (e.key !== 'Tab') return;
+            const f = [...box.querySelectorAll('button:not([disabled]),input,[tabindex]:not([tabindex="-1"])')].filter(x => x.offsetParent);
+            if (!f.length) return;
+            if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f[f.length - 1].focus(); }
+            else if (!e.shiftKey && document.activeElement === f[f.length - 1]) { e.preventDefault(); f[0].focus(); }
+        };
     }
     function openSheet() {
         overlay('jv-sheet', '');
@@ -594,6 +639,7 @@
             <div class="jv-mf jv-mf--col"><button type="button" class="jv-btn" data-confirm${J.busy ? ' disabled' : ''}>${J.busy ? 'Saqlanmoqda…' : 'Sinovni qoʻyish'}</button><button type="button" class="jv-btn jv-btn--soft" data-x>Boshqa vaqt tanlash</button></div>
             <p class="jv-mt">Ustoz tasdiqlagach sizga bildirishnoma keladi. Lid holati “Sinov darsida”ga oʻtadi.</p>`;
         box.querySelector('[data-confirm]').onclick = confirmHold;
+        trapFocus(box); if (!err) box.querySelector('[data-confirm]')?.focus();
         box.querySelectorAll('[data-x]').forEach(b => b.onclick = cancelOverlay);
     }
     const sheetError = msg => drawSheet(msg);
@@ -606,5 +652,5 @@
     }
 
     window.jadvalV3 = { enabled, render, openForLead, close: closePage, _state: J,
-        _test: { slotState, nextWork, patDate, wishOf, isFit: (l, m) => isFit(l, m), COLS } };
+        _test: { slotState, nextWork, patDate, patDates, mergeDays, wishOf, nextName, isFit: (l, m) => isFit(l, m), COLS } };
 })();
