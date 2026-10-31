@@ -107,7 +107,8 @@
     }
     function rangeMins() {
         const r = J.range || 'eve';
-        const [a, b] = r === 'morn' ? [7 * 60, 14 * 60] : [14 * 60, 24 * 60];
+        // Sinov: 30 daqiqalik oxirgi qator 23:00 (ish vaqti 23:59 gacha — 23:30–24:00 sig'maydi). Darslar: 24:00 gacha.
+        const [a, b] = r === 'morn' ? [7 * 60, 14 * 60] : [14 * 60, J.mode === 'sinov' ? 23 * 60 + 30 : 24 * 60];
         return { a, b };
     }
 
@@ -200,7 +201,7 @@
             ? chip(J.day === 'today', 'data-day="today"', 'Bugun', dayLabel(today())) + chip(J.day === 'next', 'data-day="next"', 'Ertaga', dayLabel(nextWork(today())))
             : chip(J.pat === 'toq', 'data-pat="toq"', 'Toq kunlar', 'Du · Ch · Ju') + chip(J.pat === 'juft', 'data-pat="juft"', 'Juft kunlar', 'Se · Pa · Sh');
         const r = J.range || 'eve';
-        const ranges = MOBILE.matches && J.mode === 'sinov' ? '' : `<div class="jv-tb-g"><span class="jv-tb-l">Vaqt:</span>${chip(r === 'morn', 'data-range="morn"', '07:00 – 14:00')}${chip(r === 'eve', 'data-range="eve"', '14:00 – 24:00')}</div>`;
+        const ranges = MOBILE.matches ? '' : `<div class="jv-tb-g"><span class="jv-tb-l">Vaqt:</span>${chip(r === 'morn', 'data-range="morn"', '07:00 – 14:00')}${chip(r === 'eve', 'data-range="eve"', '14:00 – 24:00')}</div>`;
         const hint = MOBILE.matches ? '' : `<span class="jv-pill">${J.mode === 'sinov' ? 'Har bir sinov 30 daqiqa' : 'Har qator 15 daqiqa'}</span>`;
         return `<div class="jv-tb"><div class="jv-tb-g">${days}</div>${ranges ? `<i class="jv-tb-sep"></i>${ranges}` : ''}${hint}</div>`;
     }
@@ -222,7 +223,7 @@
                 const lab = st.k === 'free' && on ? '✓ Tanlandi' : CELL[st.k];
                 return `<div class="jv-cell"><button type="button" class="jv-s jv-s--${st.k}${on ? ' is-on' : ''}"${st.k === 'free' ? ` data-slot="${esc(t.id)}|${m}"` : ' tabindex="-1" aria-disabled="true"'} aria-label="${esc(t.name)} · ${hm(m)} · ${lab}">${lab}</button></div>`;
             }).join('');
-            const past = isToday && m + 30 <= now;
+            const past = isToday && m < now;
             const cnt = past ? '<span class="jv-cnt is-past">oʻtdi</span>' : `<span class="jv-cnt jv-cnt--${free >= 4 ? 'ok' : free >= 2 ? 'mid' : free === 1 ? 'low' : 'none'}">${free} ta</span>`;
             rows += `<div class="jv-gr${m === nowRow ? ' is-now' : ''}${past ? ' is-past' : ''}" style="grid-template-columns:${cols}"><div class="jv-gt">${hm(m)}</div>${cells}<div class="jv-gc">${cnt}</div></div>`;
         }
@@ -253,9 +254,9 @@
     // ── Sinov darsi · telefon ────────────────────────────────────────────────
     function sinovMobile() {
         const now = U().nowMin(), isToday = J.data.date === today();
-        const start = isToday ? Math.max(7 * 60, Math.floor(now / 30) * 30) : 7 * 60;
+        const start = isToday ? Math.max(7 * 60, Math.ceil((now + 1) / 30) * 30) : 7 * 60;
         const hours = [];
-        for (let m = start; m < 24 * 60; m += 30) hours.push(m);
+        for (let m = start; m < 23 * 60 + 30; m += 30) hours.push(m);
         if (J.mobT == null || J.mobT < start) J.mobT = hours.find(m => freeAt(m).length) ?? start;
         const sel = J.mobT;
         const chips = hours.map(m => { const n = slotFreeCount(m), past = isToday && m < now, on = m === sel;
@@ -306,7 +307,7 @@
                 const d = i.end - i.start, tone = durTone(d), named = !!i.studentName;
                 const click = (canMove() || i.ownStudent) && i.studentId;
                 const on = J.sel?.sid && J.sel.sid === i.studentId && J.sel.t === t.id;
-                const time = d <= 15 ? `${d} daq` : `${hm(i.start)}–${hm(i.end)} · ${d} daq`;
+                const time = d <= 15 ? `${d} daq` : `${hm(i.start)}–${hm(i.end)}`;
                 return `<${click ? 'button type="button"' : 'div'} class="jv-blk jv-blk--d${tone}${d <= 15 ? ' is-row' : ''}${named ? '' : ' is-anon'}${on ? ' is-on' : ''}" style="top:${top + 2}px;height:${h - 4}px"${click ? ` data-lesson="${esc(t.id)}|${esc(i.studentId)}|${i.start}|${i.end}"` : ''} title="${esc(`${lessonName(i)} · ${hm(i.start)}–${hm(i.end)}`)}"><b>${esc(lessonName(i))}</b><small>${time}</small></${click ? 'button' : 'div'}>`;
             }).join('');
             return `<div class="jv-col" style="height:${H}px">${blocks}</div>`;

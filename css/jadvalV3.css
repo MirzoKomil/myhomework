@@ -179,7 +179,7 @@ button.jv-opt { cursor: pointer; }
 .jv-x { width: 36px; height: 36px; border: 0; border-radius: 10px; background: var(--jv-line2); color: var(--jv-text2); font-size: 16px; cursor: pointer; flex: none; }
 .jv-slot { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: var(--jv-pri-bg); color: var(--jv-pri2); font-size: 14px; }
 .jv-q { display: flex; align-items: center; gap: 10px; padding: 0 14px; height: 46px; border-radius: 12px; border: 2px solid var(--jv-pri); background: var(--jv-card); color: var(--jv-mute); }
-.jv-q input { flex: 1; min-width: 0; border: 0; outline: none; font-size: 15px; background: transparent; color: var(--jv-text); font-family: inherit; }
+.jv-q input { -webkit-appearance: none; appearance: none; border: 0 !important; box-shadow: none !important; padding: 0 !important; height: auto !important; background: transparent !important; flex: 1; min-width: 0; border: 0; outline: none; font-size: 15px; background: transparent; color: var(--jv-text); font-family: inherit; }
 .jv-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
 .jv-tab { padding: 8px 12px; border-radius: 999px; border: 1px solid var(--jv-line); background: var(--jv-card); color: var(--jv-text2); font-size: 13px; font-weight: 600; cursor: pointer; }
 .jv-tab b { font-weight: 800; }
@@ -292,3 +292,12 @@ button.jv-ml { cursor: pointer; }
     .jv-kv, .jv-timer { margin-left: 16px; margin-right: 16px; }
     .jv-sheet > .jv-mt, .jv-sheet > .jv-warn { margin: 0 16px 10px; }
 }
+
+/* ---------- Ustoz jadvali (js/scheduleV2.js teacherView) — v3 uslubi: 15 daqiqalik qatorlar ---------- */
+.sv-wk.is-q15 { --hh: 120px; }
+.sv-wk.is-q15 .sv-tl span.sv-q { right: auto; left: 0; width: 100%; box-sizing: border-box; padding: 0 10px; height: 30px; display: flex; align-items: center; transform: none; font-size: 13px; border-bottom: 1px solid var(--sv-grid, #F1F5F9); }
+.sv-wk.is-q15 .sv-tl span.sv-q--h { font-weight: 800; color: var(--text, #0F172A); background: var(--surface-2, #F8FAFC); }
+.sv-wk.is-q15 .sv-tl span.sv-q--half { font-weight: 700; color: var(--text-secondary, #64748B); }
+.sv-wk.is-q15 .sv-tl span.sv-q--q { font-weight: 600; color: #94A3B8; }
+.sv-wk.is-q15 .sv-dl { background-image: linear-gradient(var(--sv-grid) 1px, transparent 1px), linear-gradient(rgba(148, 163, 184, .14) 1px, transparent 1px); background-size: 100% var(--hh), 100% 30px; }
+@media (max-width: 760px) { .sv-wk.is-q15 { --hh: 96px; } .sv-wk.is-q15 .sv-tl span.sv-q { height: 24px; font-size: 12px; } .sv-wk.is-q15 .sv-dl { background-size: 100% var(--hh), 100% 24px; } }
