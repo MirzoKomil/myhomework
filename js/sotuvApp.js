@@ -536,7 +536,6 @@
           <div class="sa-card sa-list">
             <button type="button" class="sa-row sa-row-btn" data-sa-crm="profile">${ic('gear', 20)}<span class="sa-row-t"><strong>Sozlamalar</strong><span>Parol, bildirishnomalar, Telegram bot</span></span>${ic('chev', 18, 2.2)}</button>
             <button type="button" class="sa-row sa-row-btn" data-sa-install hidden>${ic('plus', 20)}<span class="sa-row-t"><strong>Ilovani oʻrnatish</strong><span>Bosh ekranga belgi qoʻshiladi</span></span>${ic('chev', 18, 2.2)}</button>
-            <button type="button" class="sa-row sa-row-btn sa-danger" data-sa-logout>${ic('logout', 20)}<span class="sa-row-t"><strong>Chiqish</strong></span></button>
           </div>
         </div>`;
     }
@@ -583,7 +582,6 @@
             <button type="button" class="sa-row sa-row-btn" data-sa-crm="profile">${ic('gear', 20)}<span class="sa-row-t"><strong>Faol qurilmalar va Telegram bot</strong><span>Sessiyalar, botga ulanish</span></span>${ic('chev', 18, 2.2)}</button>
           </div>
           <div class="sa-card sa-list">
-            
             <button type="button" class="sa-row sa-row-btn sa-danger" data-sa-logout>${ic('logout', 20)}<span class="sa-row-t"><strong>Chiqish</strong></span></button>
           </div>
         </div>`;
