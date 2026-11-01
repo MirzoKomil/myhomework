@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "973143227657",
+    "project_id": "domwork-team",
+    "storage_bucket": "domwork-team.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:973143227657:android:fd13960acf9ba0ba4fa7d8",
+        "android_client_info": {
+          "package_name": "uz.domwork.team"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCstX8XNoV6RFjSR_IRBNM8kejxpsQzXvc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -9,6 +9,7 @@ const S = require('./school/schedule');
 const A = require('./school/assist');
 const R = require('../../js/attendanceRules');
 const workflow = require('../../js/trialWorkflow');
+const leadWf = require('../../js/leadWorkflow');
 const ST = require('./staffSettings');
 
 // Katalog: kind → guruhlar → turlar. live=true — panelga hozir serverdan chiqadi; false — sozlama saqlanadi,
@@ -46,6 +47,10 @@ const CATALOG = {
             ['salary_ready', 'Oylik maosh hisoblandi', 'oy oxirida', [1, 0], true]]]
     ],
     sales: [
+        ['Lidlar', [
+            ['lead_assigned', 'Yangi lid biriktirildi', 'ROP biriktirganda · telefonga darhol', [0, 1], true],
+            ['lead_followup', 'Bog\'lanish vaqti keldi', 'izohda belgilagan vaqtingizda', [0, 1], true],
+            ['lead_stale', 'Qotib qolgan lidlar', 'har kuni 10:00 da · qulfdan bir kun oldin ogohlantirish', [0, 1], true]]],
         ['Sinov darslari', [
             ['hold_expiring', 'Ushlab turish tugashiga 2 daqiqa', '10 daqiqalik band', [1, 1], true, true],
             ['trial_teacher_decision', 'Ustoz sinovni tasdiqladi / rad etdi', 'darhol', [1, 1], true],
@@ -61,6 +66,8 @@ const CATALOG = {
             ['guide_new', 'Yangi yo\'riqnoma', '', [0, 1], true]]]
     ],
     rop: [
+        ['Lidlar', [
+            ['lead_new', 'Yangi lid keldi — taqsimlash kerak', 'darhol · 30 daqiqada taqsimlanmasa qayta eslatiladi', [0, 1], true]]],
         ['Tasdiqlash kerak', [
             ['edit_request', 'Sotuv menejeri tahriri — tarif yoki ustoz', 'kutilayotgan so\'rovlar', [1, 1], true],
             ['payment_edit', 'To\'lov tahriri 24 soatdan keyin', 'admin ham ko\'radi · kim birinchi', [1, 1], true]]],
@@ -91,6 +98,19 @@ const CATALOG = {
             ['month_close', 'Oy yopildi — yakunni tasdiqlash kerak', '1–5-sana · yordamchi aloqalari', [1, 1], true],
             ['payment_overdue', 'To\'lov muddati o\'tdi', 'kuniga bir marta · qarzdorlar soni', [1, 0], true]]]
     ],
+    targetolog: [
+        ['Hisobot', [
+            ['target_report', 'Kechagi reklama hisoboti kiritilmagan', '10:00 va 15:00 da · kiritilmaguncha kabinet qulf', [0, 1], true, true]]],
+        ['Lid sifati', [
+            ['target_quality', 'Kechagi lidlar sifati', 'har kuni 11:00 da · sifatsiz ulushi bilan', [0, 1], true]]],
+        ['Boshqa', [['guide_new', 'Yangi yo\'riqnoma', '', [0, 1], true]]]
+    ],
+    hr: [
+        ['Nomzodlar', [
+            ['hr_candidate_new', 'Yangi nomzod keldi', 'bot orqali ariza tushganda', [0, 1], true],
+            ['hr_interview_soon', 'Suhbatga 1 soat qoldi', 'belgilangan suhbat vaqtidan oldin', [0, 1], true]]],
+        ['Boshqa', [['guide_new', 'Yangi yo\'riqnoma', '', [0, 1], true]]]
+    ],
     other: [['Boshqa', [['guide_new', 'Yangi yo\'riqnoma', '', [0, 1], true]]]]
 };
 // Panel o'zgarmaydi: Telegram tanlangan xabar ham panelda qoladi. Telegram — qo'shimcha kanal; bot ishlamasa yoki
@@ -110,8 +130,15 @@ async function telegramLive(db, userId) {
 }
 // Tinch soatlarda ham keladigan shoshilinch turlar.
 const URGENT = new Set(['hold_expiring', 'trial_confirm', 'trial_unassigned']);
+// Targetolog va HR — staffSettings'da "other" turidagi rollar; bildirishnoma katalogi akkaunt roliga qarab.
+function roleKind(me) {
+    if (me.kind !== 'other') return me.kind;
+    const r = me.user?.role;
+    return r === 'targetolog' ? 'targetolog' : r === 'hr' ? 'hr' : 'other';
+}
 function catalogFor(me) {
-    const kinds = me.kind === 'teacher' && me.assistantDuty ? ['teacher', 'assistant'] : [me.kind in CATALOG ? me.kind : 'other'];
+    const rk = roleKind(me);
+    const kinds = me.kind === 'teacher' && me.assistantDuty ? ['teacher', 'assistant'] : [rk in CATALOG ? rk : 'other'];
     const seen = new Set(), groups = [];
     for (const [n, k] of kinds.entries()) for (const [title, items] of CATALOG[k]) {
         const list = items.filter(i => !seen.has(i[0])).map(([key, label, sub, d, live, locked]) => { seen.add(key); return { key, label, sub, tg: !!d[0], web: !!d[1], live: !!live, locked: !!locked }; });
@@ -410,7 +437,59 @@ async function dayTotals(db, managerIds, today) {
     return new Map(managerIds.map(id => { const r = rows.find(x => x.manager_id === id) || {}; return [id, { n: Number(r.n) || 0, day: Number(r.day) || 0, month: Number(r.month) || 0, plan: plan(id) }]; }));
 }
 
+// Sotuv menejerining lidlari bo'yicha telefon push'i uchun voqealar (pushOnly — qo'ng'iroqcha panelida bular
+// allaqachon brauzerda hisoblanadi: bog'lanish eslatmasi, qotgan lidlar oynasi; takrorlanmasin).
+const STALE_AFTER = new Set(['boglanildi', 'malumot-berildi', 'sinov-darsida', 'qaror-jarayonida', 'keyin-sotib-olmoqchi', 'tolov-jarayonida', 'tolov-yopildi']);
+const LEAD_CLOSED = new Set(['tolov-yopildi', 'muvaffaqiyatsiz-sotuv', 'sifatsiz-lidlar']);
+const tsOf = v => { const t = typeof v === 'number' ? v : Date.parse(v || ''); return Number.isFinite(t) ? t : 0; };
+const parseArr = raw => { if (Array.isArray(raw)) return raw; try { const a = JSON.parse(raw || '[]'); return Array.isArray(a) ? a : []; } catch { return []; } };
+async function salesLeadEvents(db, me, now, ev) {
+    const DAY = 86400000, t0 = now.getTime();
+    const rows = (await db.query(`SELECT id, name, status, comments, extra_data, language, created_at FROM leads
+        WHERE manager_id=$1 AND deleted_at IS NULL`, [String(me.managerId)])).rows;
+    let rules = null;
+    try { rules = await require('./staleLeads').getRules(db); } catch { rules = null; }
+    const today = T.nowLocal(now).date, nowMin = T.nowLocal(now).min;
+    const stale = { warn: 0, lockSoon: 0, lock: 0 };
+    for (const r of rows) {
+        const x = parseExtra(r.extra_data), status = leadWf.canonicalStatus(r.status);
+        const assigned = tsOf(x.managerAssignedAt);
+        // 1) Yangi lid biriktirildi (so'nggi 2 kun ichida berilgan, hali ochiq)
+        if (assigned && t0 - assigned < 2 * DAY && assigned <= t0 + 60000 && !LEAD_CLOSED.has(status))
+            ev.push({ id: `la:${r.id}:${assigned}`, type: 'lead_assigned', cat: 'lid', tone: 'info', pushOnly: true, title: 'Yangi lid biriktirildi',
+                sub: `${String(r.name || 'Mijoz').trim()} · tezroq qo'ng'iroq qiling`, at: iso(assigned), go: { tab: 'sales', leadId: r.id } });
+        if (LEAD_CLOSED.has(status)) continue;
+        const comments = parseArr(r.comments);
+        // 2) Bog'lanish vaqti keldi (menejer izohda belgilagan; keyin izoh yozilgan bo'lsa — hal bo'lgan)
+        for (const c of comments) {
+            if (!c || c.type !== 'follow-up-reminder') continue;
+            const at = tsOf(c.reminderAt);
+            if (!at || at > t0 || t0 - at > DAY) continue;
+            if (comments.some(o => o !== c && tsOf(o.createdAt) > at)) continue;
+            ev.push({ id: `lfu:${r.id}:${c.id || at}`, type: 'lead_followup', cat: 'lid', tone: 'warn', pushOnly: true, title: 'Bog\'lanish vaqti keldi',
+                sub: `${String(r.name || 'Mijoz').trim()} · qo'ng'iroq qiling va natijani izohga yozing`, at: iso(at), go: { tab: 'sales', leadId: r.id } });
+        }
+        // 3) Qotib qolgan lidlar (bir marta ham bog'lanilmagan, "Bog'lanishga urinilmoqda"da)
+        if (status !== 'boglanishga-urinilmoqda') continue;
+        const hist = Array.isArray(x.stageHistory) ? x.stageHistory : [];
+        if (hist.some(h => h && STALE_AFTER.has(h.to)) || (x.connectedSurvey && Object.keys(x.connectedSurvey).length)) continue;
+        const rule = rules?.[(r.language || me.lang) === 'english' ? 'english' : 'russian'] || { warnDays: 3, lockDays: 5 };
+        const days = Math.floor((t0 - (assigned || tsOf(r.created_at))) / DAY);
+        if (days >= rule.lockDays) stale.lock++; else if (days >= rule.lockDays - 1) stale.lockSoon++; else if (days >= rule.warnDays) stale.warn++;
+    }
+    // Kuniga bir marta, 10:00 da — bitta jamlangan eslatma.
+    if (nowMin >= 10 * 60 && (stale.warn || stale.lockSoon || stale.lock)) {
+        const total = stale.warn + stale.lockSoon + stale.lock;
+        ev.push({ id: `stale:${me.managerId}:${today}`, type: 'lead_stale', cat: 'lid', tone: stale.lock ? 'bad' : 'warn', pushOnly: true,
+            title: stale.lock ? `${stale.lock} ta lid sabab ilova qulflanadi` : `${total} ta lid qotib qolmoqda`,
+            sub: stale.lock ? 'Har biriga qayta qo\'ng\'iroq qiling — keyin boshqa ishlar ochiladi'
+                : stale.lockSoon ? `${stale.lockSoon} tasi ertaga ilovani qulflaydi · bugun qo'ng'iroq qiling` : 'Bir marta ham bog\'lanilmagan — bugun qayta qo\'ng\'iroq qiling',
+            at: atLocal(today, 10 * 60), go: { tab: 'sales' } });
+    }
+}
+
 async function salesEvents(db, me, now, ev) {
+    if (me.managerId) await salesLeadEvents(db, me, now, ev);
     if (me.managerId) {
         const holds = (await db.query(`SELECT * FROM school_bookings WHERE status='hold' AND created_by=$1 AND hold_until BETWEEN $2 AND $3`,
             [me.user.id, now, new Date(now.getTime() + 2 * 60000)])).rows;
@@ -563,6 +642,70 @@ async function managerEvents(db, me, now, ev) {
     }
 }
 
+// ROP: taqsimlanmagan yangi lidlar (o'z tili bo'yicha). Push uchun — panelda lidlar kanbanida allaqachon ko'rinadi.
+async function ropLeadEvents(db, me, now, ev) {
+    const langs = me.lang === 'english' || me.lang === 'russian' ? [me.lang] : ['english', 'russian'];
+    const rows = (await db.query(`SELECT id, name, status, language, source, extra_data, created_at FROM leads
+        WHERE deleted_at IS NULL AND COALESCE(manager_id,'')='' AND language = ANY($1::text[]) AND created_at > $2`,
+        [langs, new Date(now.getTime() - 86400000)])).rows;
+    for (const r of rows) {
+        if (leadWf.canonicalStatus(r.status) !== 'yangi-lidlar') continue;
+        if (parseExtra(r.extra_data).recoveryPending === true) continue;
+        const t = tsOf(r.created_at), name = String(r.name || 'Mijoz').trim(), src = String(r.source || '').trim();
+        ev.push({ id: `lnew:${r.id}`, type: 'lead_new', cat: 'lid', tone: 'info', pushOnly: true, title: 'Yangi lid keldi — taqsimlang',
+            sub: [name, src, r.language === 'russian' ? 'rus tili' : 'ingliz tili'].filter(Boolean).join(' · '), at: iso(t), go: { tab: 'sales' } });
+        if (now.getTime() - t >= 30 * 60000)
+            ev.push({ id: `lnew30:${r.id}`, type: 'lead_new', cat: 'lid', tone: 'warn', pushOnly: true, title: '30 daqiqadan beri taqsimlanmagan lid',
+                sub: `${name} · menejerga biriktiring — lid soviyapti`, at: iso(t + 30 * 60000), go: { tab: 'sales' } });
+    }
+}
+
+// Targetolog: kechagi hisobot (kiritilmaguncha kabinet qulf) va kechagi target lidlar sifati.
+async function targetEvents(db, me, now, ev) {
+    const TA = require('./targetAds');
+    const { date: today, min } = T.nowLocal(now);
+    try {
+        const st = await TA.status(db, { id: me.user.id });
+        if (st.locked && st.missing.length) {
+            const sub = `${st.missing.length === 1 ? 'Kechagi kun' : st.missing.length + ' kun'} kiritilmagan · kiritmaguningizcha kabinet qulf`;
+            if (min >= 10 * 60) ev.push({ id: `tr:${today}`, type: 'target_report', cat: 'boshqa', tone: 'bad', title: 'Kechagi reklama hisobotini kiriting', sub, at: atLocal(today, 10 * 60), go: { tab: 'report' } });
+            if (min >= 15 * 60) ev.push({ id: `tr2:${today}`, type: 'target_report', cat: 'boshqa', tone: 'bad', title: 'Hisobot hali kiritilmagan', sub, at: atLocal(today, 15 * 60), go: { tab: 'report' } });
+        }
+    } catch (e) { if (e.status !== 403) throw e; }
+    if (min < 11 * 60) return;
+    const langs = await TA.targetologLangs(db, me.user);
+    if (!langs || !langs.length) return;
+    const yday = T.addDays(today, -1);
+    const rows = (await db.query(`SELECT status FROM leads WHERE deleted_at IS NULL AND lead_type='target' AND language = ANY($1::text[])
+        AND created_at >= $2 AND created_at < $3`, [langs, atLocal(yday, 0), atLocal(today, 0)])).rows;
+    const n = rows.length, bad = rows.filter(r => leadWf.canonicalStatus(r.status) === 'sifatsiz-lidlar').length;
+    const pct = n ? Math.round(bad / n * 100) : 0;
+    ev.push(n ? { id: `tq:${today}`, type: 'target_quality', cat: 'boshqa', tone: pct >= 30 ? 'bad' : 'ok', title: `Kecha ${n} ta lid · sifatsiz ${pct}%`,
+        sub: `Sifatli: ${n - bad} · sifatsiz: ${bad} (hozircha)${pct >= 30 ? ' — kreativ va auditoriyani tekshiring' : ''}`, at: atLocal(today, 11 * 60), go: { tab: 'stats' } }
+        : { id: `tq:${today}`, type: 'target_quality', cat: 'boshqa', tone: 'warn', title: 'Kecha target lid kelmadi', sub: 'Reklama kabinetini tekshiring', at: atLocal(today, 11 * 60), go: { tab: 'stats' } });
+}
+
+// HR: yangi nomzodlar (o'z til yo'nalishi bo'yicha) va 1 soatdan keyingi suhbatlar.
+async function hrEvents(db, me, now, ev) {
+    const HS = require('./hrStages');
+    const lang = me.emp?.lang, langs = !me.emp || me.emp.status === 'inactive' ? [] : lang === 'both' ? ['english', 'russian'] : lang === 'russian' ? ['russian'] : ['english'];
+    if (!langs.length) return;
+    const rows = (await db.query(`SELECT id, full_name, vacancy_id, vacancy_name, stage, interview_at, interview_location, created_at FROM hr_candidates
+        WHERE created_at > $1 OR (interview_at BETWEEN $2 AND $3)`, [new Date(now.getTime() - 2 * 86400000), now, new Date(now.getTime() + 61 * 60000)])).rows;
+    for (const r of rows) {
+        if (!HS.candidateVisible({ vacancyId: r.vacancy_id }, langs)) continue;
+        const name = String(r.full_name || 'Nomzod').trim();
+        const created = tsOf(r.created_at);
+        if (created && now.getTime() - created < 2 * 86400000)
+            ev.push({ id: `hrc:${r.id}`, type: 'hr_candidate_new', cat: 'boshqa', tone: 'info', title: `Yangi nomzod: ${first(name)}`,
+                sub: [r.vacancy_name, 'tezroq bog\'laning'].filter(Boolean).join(' · '), at: iso(created), go: { tab: 'candidates' } });
+        const iv = tsOf(r.interview_at);
+        if (iv && iv > now.getTime() && iv - 60 * 60000 <= now.getTime())
+            ev.push({ id: `hri:${r.id}:${iv}`, type: 'hr_interview_soon', cat: 'boshqa', tone: 'warn', title: 'Suhbatga 1 soat qoldi',
+                sub: [name, T.fromMin(T.nowLocal(new Date(iv)).min), r.interview_location].filter(Boolean).join(' · '), at: iso(iv - 60 * 60000), go: { tab: 'candidates' } });
+    }
+}
+
 async function guideEvents(db, me, now, ev) {
     const acked = new Set((await db.query('SELECT guide_id FROM staff_guide_acks WHERE user_id=$1', [me.user.id])).rows.map(r => r.guide_id));
     for (const g of await ST.myGuides(db, me)) {
@@ -590,13 +733,16 @@ async function collect(db, actor, now) {
     if ((me.kind === 'teacher' || me.kind === 'assistant') && me.emp) await run('common', teacherCommon);
     if (me.kind === 'sales') await run('sales', salesEvents);
     if (me.kind === 'admin' || me.kind === 'rop') await run('manager', managerEvents);
+    if (me.kind === 'rop') await run('ropleads', ropLeadEvents);
+    if (roleKind(me) === 'targetolog') await run('target', targetEvents);
+    if (roleKind(me) === 'hr') await run('hr', hrEvents);
     await run('guides', guideEvents);
     return { me, row, prefs, ev, errors };
 }
 async function feed(db, actor, now = new Date()) {
     const { me, row, prefs, ev, errors } = await collect(db, actor, now);
     const seen = new Set();
-    const list = ev.filter(e => shownInPanel(prefs[e.type]) && !seen.has(e.id) && seen.add(e.id));
+    const list = ev.filter(e => !e.pushOnly && shownInPanel(prefs[e.type]) && !seen.has(e.id) && seen.add(e.id));
     const ids = list.map(e => e.id);
     const reads = ids.length ? new Set((await db.query('SELECT event_id FROM staff_notify_reads WHERE user_id=$1 AND event_id = ANY($2::text[])', [me.user.id, ids])).rows.map(r => r.event_id)) : new Set();
     const before = row.read_before ? new Date(row.read_before).getTime() : 0;
@@ -654,7 +800,7 @@ async function pushUser(db, link, now) {
     const quiet = quietNow(row.prefs?.quiet, now), seen = new Set(), skip = [], out = [];
     for (const e of ev) {
         if (seen.has(e.id) || done.has(e.id)) continue; seen.add(e.id);
-        if (!prefs[e.type]?.tg) { skip.push(e.id); continue; }
+        if (e.pushOnly || !prefs[e.type]?.tg) { skip.push(e.id); continue; } // pushOnly — faqat telefon ilovasiga
         if (quiet && !URGENT.has(e.type)) continue; // tinch soat tugagach (hali dolzarb bo'lsa)
         out.push(e);
     }
@@ -694,4 +840,4 @@ async function telegramPush(pool, now = new Date(), { budgetMs = 20000 } = {}) {
     return sent;
 }
 
-module.exports = { CATALOG, catalogFor, effectivePrefs, getPrefs, savePrefs, feed, markRead, telegramPush, quietNow };
+module.exports = { CATALOG, catalogFor, effectivePrefs, getPrefs, savePrefs, feed, markRead, telegramPush, quietNow, collect, URGENT };

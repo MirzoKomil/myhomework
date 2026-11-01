@@ -391,6 +391,16 @@ init().then(async () => {
         setInterval(run, 5 * 60 * 1000).unref();
         setTimeout(run, 60 * 1000).unref();
     }).catch(err => console.error('[staff-attendance] Jadval yaratilmadi:', err.code || err.message));
+    // "Domwork Team" Android ilovasiga push (FCM): har daqiqada yangi xodim xabarlari telefonga.
+    // FCM_SERVICE_ACCOUNT env bo'lmasa — jadval yaratiladi, yuborish o'tkazib yuboriladi.
+    const staffPush = require('./services/staffPush');
+    await staffPush.initSchema(crmDb.pool).then(() => {
+        const fcm = require('./services/fcm');
+        console.log('[push] FCM:', fcm.configured() ? `ulangan (${fcm.status().project})` : 'sozlanmagan — FCM_SERVICE_ACCOUNT env kerak');
+        const run = () => staffPush.tick(crmDb.pool).catch(err => console.error('[push] tekshiruv xatosi:', err.code || err.message));
+        setInterval(run, 60 * 1000).unref();
+        setTimeout(run, 45 * 1000).unref();
+    }).catch(err => console.error('[push] Jadval yaratilmadi:', err.code || err.message));
     void domworkBot.start();
     app.listen(PORT, '0.0.0.0', () => {
         console.log(`Myhomework.uz server: port ${PORT}`);

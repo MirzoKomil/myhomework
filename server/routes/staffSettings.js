@@ -35,6 +35,21 @@ module.exports = function createStaffRouter({ pool, authRequired, findUserById }
     router.post('/notify/read', handle(req => N.markRead(pool, req.user, req.body || {})));
     router.get('/notify/prefs', handle(req => N.getPrefs(pool, req.user)));
     router.put('/notify/prefs', handle(req => N.savePrefs(pool, req.user, req.body || {})));
+    // "Domwork Team" Android ilovasi — push token (FCM). Faqat o'z akkauntiga.
+    const P = require('../services/staffPush');
+    const ph = fn => async (req, res) => {
+        try {
+            if (!P.state.ready) return res.status(503).json({ error: 'Push jadvali hali tayyor emas' });
+            res.json(await fn(req));
+        } catch (err) {
+            if (!err.status) console.error('[staff-push]', req.path, err.code || err.message);
+            res.status(err.status || 500).json({ error: err.status ? err.message : 'Server xatoligi — qayta urinib ko\'ring' });
+        }
+    };
+    router.post('/push/register', ph(req => P.register(pool, req.user, req.body || {})));
+    router.post('/push/unregister', ph(req => P.unregister(pool, req.user, req.body || {})));
+    router.get('/push/mine', ph(req => P.mine(pool, req.user)));
+    router.post('/push/test', ph(req => P.test(pool, req.user)));
     router.get('/guides/acks/mine', handle(async req => ({ acks: await ST.myAcks(pool, req.user) })));
     router.get('/guides/acks', handle(async req => ({ acks: await ST.allAcks(pool, req.user, req.query.guideId ? String(req.query.guideId) : null) })));
     router.post('/guides/:id/ack', handle(req => ST.ackGuide(pool, req.user, req.params.id)));
