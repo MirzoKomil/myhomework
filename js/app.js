@@ -8739,11 +8739,13 @@ function bindManagerHome(container) {
 // Faqat ROPning o'z til yo'nalishi.
 function computeRopHome({ user, students, leads, now = new Date() }) {
     const lang = user?.linkedRopLang || 'english';
-    const list = (leads[lang] || []).map(l => ({ ...l, _lang: lang }));
+    // 'both' — ikkala til birlashtiriladi (ilgari leads['both'] o'qilib, ro'yxat bo'sh chiqardi).
+    const langs = lang === 'both' ? ['english', 'russian'] : [lang];
+    const list = langs.flatMap(lg => (leads[lg] || []).filter(l => !l.deletedAt).map(l => ({ ...l, _lang: lg })));
     const st = l => normalizeLeadStatus(l.status);
-    const managers = getActiveSalesManagers(lang);
+    const managers = langs.flatMap(lg => getActiveSalesManagers(lg));
     let alerts = [];
-    try { alerts = getLeadSlaNotificationsForCurrentUser().filter(a => a.audience === 'rop' && a.leadLang === lang); } catch (e) { alerts = []; }
+    try { alerts = getLeadSlaNotificationsForCurrentUser().filter(a => a.audience === 'rop' && langs.includes(a.leadLang)); } catch (e) { alerts = []; }
     const open = alerts.filter(a => {
         const lead = list.find(l => l.id === a.leadId);
         return lead && !parseLeadSlaTime(lead.slaRopAcknowledged?.[a.stageKey]);
@@ -8767,11 +8769,11 @@ function computeRopHome({ user, students, leads, now = new Date() }) {
     const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
     const forecast = now.getDate() ? Math.round(teamSales / now.getDate() * daysInMonth) : teamSales;
     const todayStart = new Date(now.toDateString());
-    const overdue = students.filter(s => !s.frozen && !s.isStaffDemo && (s.subject || 'english') === lang && Number(s.debtAmount || 0) > 0)
+    const overdue = students.filter(s => !s.frozen && !s.isStaffDemo && langs.includes(s.subject || 'english') && Number(s.debtAmount || 0) > 0)
         .filter(s => { const d = s.paymentDueDate ? new Date(s.paymentDueDate) : null; return d && !Number.isNaN(d.getTime()) && d < todayStart; });
     const funnel = FUNNEL_STAGES.filter(s => s.id !== 'tolov-yopildi').map(s => ({ ...s, count: list.filter(l => st(l) === s.id).length }));
     return {
-        lang, list, managers, open, lateCount, unassigned, newCount, rows, teamSales, teamTarget, forecast,
+        lang, langs, list, managers, open, lateCount, unassigned, newCount, rows, teamSales, teamTarget, forecast,
         overdueCount: overdue.length, overdueSum: overdue.reduce((a, s) => a + Number(s.debtAmount || 0), 0),
         funnel, openLeads: funnel.reduce((a, f) => a + f.count, 0)
     };
@@ -8797,14 +8799,14 @@ function renderRopHome(user, students, leads, now = new Date()) {
             <div class="rpx-esc-main"><strong>${escapeHtml(lead.name || 'Lid')}</strong>
                 <span class="mhx-sub">${escapeHtml(shortPersonName(getLeadSlaManagerName(lead) || '—'))} · ${ago(a.time)}</span></div>
             <div class="rpx-actions">
-                <button type="button" class="mhx-btn rpx-icon" data-rpx-open="${escapeHtml(a.leadId)}" title="Lidni ochish" aria-label="Lidni ochish"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg></button>
-                <button type="button" class="btn-primary-sm" data-rop-esc-lead="${escapeHtml(a.leadId)}">Koʻrildi</button>
+                <button type="button" class="mhx-btn rpx-icon" data-rpx-open="${escapeHtml(a.leadId)}" data-lead-lang="${escapeHtml(a.leadLang || '')}" title="Lidni ochish" aria-label="Lidni ochish"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg></button>
+                <button type="button" class="btn-primary-sm" data-rop-esc-lead="${escapeHtml(a.leadId)}" data-lead-lang="${escapeHtml(a.leadLang || '')}">Koʻrildi</button>
             </div>
         </li>`;
     }).join('');
     const tone = p => p == null ? '' : p >= 90 ? '' : p >= 60 ? ' is-mid' : ' is-low';
     return `<div class="ahx rpx" id="ropHome">
-        <div class="ahx-head mhx-head"><div><h1>${greet}, ${escapeHtml(_firstName(user?.name || ''))}</h1><p>${escapeHtml(`${UZ_WEEKDAYS[now.getDay()]}, ${now.getDate()}-${UZ_MONTHS_GEN[now.getMonth()]}`)} · ${d.lang === 'russian' ? 'Rus' : 'Ingliz'} tili · ${d.managers.length} menejer</p></div></div>
+        <div class="ahx-head mhx-head"><div><h1>${greet}, ${escapeHtml(_firstName(user?.name || ''))}</h1><p>${escapeHtml(`${UZ_WEEKDAYS[now.getDay()]}, ${now.getDate()}-${UZ_MONTHS_GEN[now.getMonth()]}`)} · ${d.lang === 'both' ? 'Ingliz va rus' : d.lang === 'russian' ? 'Rus' : 'Ingliz'} tili · ${d.managers.length} menejer</p></div></div>
         ${(() => {
             const pc = kbxPace(d.teamSales, d.teamTarget, now);
             const plan = kbxPlanCard({
@@ -8848,8 +8850,8 @@ function renderRopHome(user, students, leads, now = new Date()) {
 }
 
 function bindRopHome(container, user) {
-    container.querySelectorAll('[data-rop-esc-lead]').forEach(btn => btn.addEventListener('click', () => openLeadNotifyModal(user?.linkedRopLang || 'english', btn.dataset.ropEscLead)));
-    container.querySelectorAll('[data-rpx-open]').forEach(btn => btn.addEventListener('click', () => openLeadOverview(user?.linkedRopLang || 'english', btn.dataset.rpxOpen)));
+    container.querySelectorAll('[data-rop-esc-lead]').forEach(btn => btn.addEventListener('click', () => openLeadNotifyModal(btn.dataset.leadLang || user?.linkedRopLang || 'english', btn.dataset.ropEscLead)));
+    container.querySelectorAll('[data-rpx-open]').forEach(btn => btn.addEventListener('click', () => openLeadOverview(btn.dataset.leadLang || user?.linkedRopLang || 'english', btn.dataset.rpxOpen)));
     container.querySelectorAll('[data-rpx-go]').forEach(btn => btn.addEventListener('click', () => {
         switchTab('sales');
         switchSalesSection(btn.dataset.rpxGo);
@@ -19236,7 +19238,7 @@ const LEAD_SLA_MINUTE = 60 * 1000;
 const LEAD_SLA_RULES = {
     'yangi-lidlar': {
         manager: [{ after: 0, text: "🚨 Yangi lid! Mijoz yaqinda so'rov qoldirdi. Hali 'issiq' vaqtida darhol qo'ng'iroq qiling!" }],
-        rop: { after: 30, text: "⚠️ Eskalatsiya: Yangi lid 15 daqiqadan beri ko'rib chiqilmadi! Menejer: {manager}." }
+        rop: { after: 30, text: "⚠️ Eskalatsiya: Yangi lid 30 daqiqadan beri ko'rib chiqilmadi! Menejer: {manager}." }
     },
     'boglanishga-urinilmoqda': {
         manager: [{ after: 120, text: "📞 2-urinish: Mijoz ko'tarmadi. Telegram/SMS orqali qisqa matnli xabar yuboring." }, { after: 360, text: "🎙 3-urinish: Qayta aloqaga chiqing yoki SMS/Telegram xabar qoldiring." }],
@@ -19302,6 +19304,12 @@ function getLeadSlaStageStartedAt(lead) {
 
 function getLeadSlaBaseTime(lead, rule) {
     return rule.trialBased ? (parseLeadSlaTime(lead.trialLessonAt) || getLeadSlaStageStartedAt(lead)) : getLeadSlaStageStartedAt(lead);
+}
+
+// ROP til yo'nalishi: HR'da 'both' bo'lsa — ikkala til (ilgari 'both' hech bir tilga mos kelmasdi).
+function ropLangMatches(user, lang) {
+    const l = user?.linkedRopLang || 'english';
+    return l === 'both' || l === lang;
 }
 
 function getLeadSlaStageKey(lead) {
@@ -19375,7 +19383,7 @@ function getLeadSlaAlerts(lead, lang, user = getCurrentUser()) {
     const now = Date.now();
     const baseTime = getLeadSlaBaseTime(lead, rule);
     const interpolate = text => text.replace('{name}', lead.name || 'Mijoz').replace('{manager}', getLeadSlaManagerName(lead));
-    const isLanguageRop = user.role === 'rop' && (user.linkedRopLang || 'english') === lang;
+    const isLanguageRop = user.role === 'rop' && ropLangMatches(user, lang);
     const isMainAdmin = user.role === 'admin';
     const alerts = [...followUps];
     if (isAssignedManager) alerts.push(...getLeadSlaManagerAlerts(lead));
@@ -20457,7 +20465,9 @@ function maybeSendAutoStageSms(lang, lead, oldStatus, newStatus, platformAccess)
     if (messages.length) sendAutoSmsMessages(lead, messages);
 }
 
-function updateLeadInStorage(lang, leadId, updater) {
+// opts.skipAutoSms — bosqich o'zgarsa ham mijozga avtomatik SMS yuborilmaydi (masalan ROP sinovni bekor qilganda
+// lid sinovdan chiqariladi — bu mijoz uchun yangi bosqich emas).
+function updateLeadInStorage(lang, leadId, updater, opts = {}) {
     // "Faqat ko'rish" rollari (targetolog) lidni lokal ham o'zgartirmaydi
     if (isLeadsReadOnly(getCurrentUser())) return null;
     const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
@@ -20483,7 +20493,7 @@ function updateLeadInStorage(lang, leadId, updater) {
     leads[lang] = list;
     setItem(STORAGE_KEYS.leads, leads);
     persistLeadChange(lang, list[idx], (saved, access) => {
-        maybeSendAutoStageSms(lang, saved, oldStatus, newStatus, access);
+        if (!opts.skipAutoSms) maybeSendAutoStageSms(lang, saved, oldStatus, newStatus, access);
     }).catch(() => {});
     // Kitob yetkazish kartochkasi to'lov jarayoni boshlanishi bilan ochiladi.
     // Lid eski ma'lumotlardan yoki qo'lda to'g'ridan-to'g'ri "To'lov yopildi"
@@ -21104,7 +21114,7 @@ function openLeadNotifyModal(lang, leadId) {
     // ochgandagina o'qilgan bo'ladi. Admin faqat kuzatuvchi hisoblanadi.
     const managerId = user?.linkedManagerId || (typeof getDashboardManagerId === 'function' ? getDashboardManagerId(user) : '');
     const isAssignedManager = user?.role === 'sales_manager' && managerId && lead.managerId === managerId;
-    const isAssignedRop = user?.role === 'rop' && (user.linkedRopLang || 'english') === lang;
+    const isAssignedRop = user?.role === 'rop' && ropLangMatches(user, lang);
     if (isAssignedManager || isAssignedRop) {
         markLeadSlaAlertsRead(alerts.filter(alert =>
             (isAssignedManager && alert.audience === 'manager') ||
@@ -21464,8 +21474,13 @@ function renderLeads() {
         _leadsLangFilter = _cuRender.linkedManagerLang || _cuRender.linkedRopLang || 'english';
         const langTabsEl = document.getElementById('leadsLangTabs');
         if (langTabsEl) langTabsEl.style.display = 'none';
+        // ROP lidlarni ommaviy biriktira oladi (taqsimlash) — panel faqat sotuv menejeriga yashiriladi;
+        // ROP uchun belgilanganda ko'rinadi (updateBulkBar).
         const bulkBarEl = document.getElementById('bulkActionsBar');
-        if (bulkBarEl) bulkBarEl.style.display = 'none';
+        if (bulkBarEl && _isSalesManagerRender) bulkBarEl.style.display = 'none';
+        // ROP'ga faqat ommaviy biriktirish — ommaviy o'chirish ilgarigidek yopiq (kompyuterga yangi xavfli amal qo'shilmaydi).
+        const bulkDelEl = document.getElementById('bulkDeleteBtn');
+        if (bulkDelEl && _isRopRender) bulkDelEl.style.display = 'none';
     } else if (_cuRender?.role === 'targetolog') {
         // Targetolog faqat ruxsat berilgan til(lar)ni ko'radi; bitta bo'lsa tablar yashiriladi.
         const langs = _cuRender.linkedTargetLangs || [];
@@ -21603,7 +21618,10 @@ function renderLeads() {
                 bulkCount.textContent = `${checked.length} ta lid tanlandi`;
                 // Til almashtirilganda ro'yxat yangilanadi — aks holda Rus lidlari
                 // Ingliz menejerlariga biriktirilib qolishi mumkin edi.
-                const bulkLang = _leadsLangFilter === 'russian' ? 'russian' : 'english';
+                // Ikki tilli ROP ('both'): menejerlar belgilangan lidlar tilidan olinadi.
+                const pickedLangs = [...new Set(checked.map(cb => cb.dataset.lang).filter(Boolean))];
+                const bulkLang = _leadsLangFilter === 'both' && pickedLangs.length === 1 ? pickedLangs[0]
+                    : (_leadsLangFilter === 'russian' ? 'russian' : 'english');
                 if (bulkSelect.dataset.populated !== bulkLang) {
                     const managers = getBulkLeadManagers(bulkLang);
                     bulkSelect.innerHTML = '<option value="">— Menejerni tanlang —</option>' + managers.map(m => `<option value="${escapeHtml(m.id)}">${escapeHtml(m.name)}</option>`).join('');
@@ -21625,6 +21643,7 @@ function renderLeads() {
             const managerId = bulkSelect.value;
             if (!managerId) return showNotification('Xatolik', 'Menejerni tanlang', 'error');
             const targets = tanlanganlar();
+            if (_leadsLangFilter === 'both' && new Set(targets.map(t => t.lang)).size > 1) return showNotification('Xatolik', 'Bir tildagi lidlarni tanlang — menejerlar til boʻyicha', 'error');
             const name = bulkSelect.options[bulkSelect.selectedIndex]?.text || '';
             if (targets.length > 30 && !confirm(`${targets.length} ta lid ${name} ga biriktiriladi. Davom etasizmi?`)) return;
             applyBulkLeadAssignment(targets.map(t => ({ ...t, managerId })));
@@ -22053,7 +22072,9 @@ function applyBulkLeadAssignment(items) {
 
 function openBulkSplitModal(targets) {
     if (!targets.length) return;
-    const lang = _leadsLangFilter === 'russian' ? 'russian' : 'english';
+    const tLangs = [...new Set(targets.map(t => t.lang).filter(Boolean))];
+    if (_leadsLangFilter === 'both' && tLangs.length > 1) return showNotification('Xatolik', 'Bir tildagi lidlarni tanlang — menejerlar til boʻyicha', 'error');
+    const lang = _leadsLangFilter === 'both' && tLangs.length === 1 ? tLangs[0] : (_leadsLangFilter === 'russian' ? 'russian' : 'english');
     const managers = getBulkLeadManagers(lang);
     if (!managers.length) return showNotification('Xatolik', 'Bu yoʻnalishda sotuv menejeri yoʻq', 'error');
     const allLeads = (getItem(STORAGE_KEYS.leads, { english: [], russian: [] })[lang]) || [];

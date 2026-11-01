@@ -516,6 +516,7 @@ async function managerEvents(db, me, now, ev) {
     for (const r of ask) {
         const x = parseExtra(r.extra_data), a = x.trialAdminOpen || {};
         const t = workflow.request({ ...x, id: r.id, name: r.name });
+        if (workflow.isCancelled({ ...x, status: 'sinov-darsida' })) continue; // sinov bekor qilingan — vaqt ochish kerak emas
         if (!a.at || a.doneAt || (a.requestId && t && t.id !== a.requestId) || (t && t.teacherId && !x.trialUnassigned)) continue;
         ev.push({ id: `rop-open:${r.id}:${a.at}`, type: 'trial_unassigned', cat: 'sinov', tone: 'bad', title: `ROP so'radi: sinovga vaqt oching${a.time ? ' · ' + a.time : ''}`,
             sub: [first(r.name), a.date ? dm(a.date) + (a.time ? ' ' + a.time : '') : '', a.by ? 'ROP ' + first(a.by) : ''].filter(Boolean).join(' · '), at: iso(Date.parse(a.at)), go: { tab: 'timetable' } });
