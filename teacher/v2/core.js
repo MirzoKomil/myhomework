@@ -54,6 +54,8 @@
         history.pushState({ r: { tab: R.tab, stack: R.stack } }, '', hash()); U.render(true);
     };
     U.back = () => { if (R.stack.length) history.back(); };
+    // Ichki sahifaning "orqaga" yorlig'i — qaysi bo'limdan ochilgan bo'lsa o'sha nom (Bosh, Aloqalar, O'quvchilar, Menyu ...).
+    U.tabLabel = () => (tabList().find(t => t[0] === R.tab) || [])[1] || 'Orqaga';
     U.current = () => R.stack[R.stack.length - 1] || { id: R.tab, arg: '', tab: true };
     window.addEventListener('popstate', e => {
         if (!started) return;
@@ -182,7 +184,7 @@
             MODE = D().isAssistantOnly() ? 'yordamchi' : 'ustoz';
             document.title = MODE === 'yordamchi' ? 'Domwork Team — Yordamchi ustoz' : 'Domwork Team — Ustoz';
             root = document.getElementById('app');
-            root.className = MODE === 'yordamchi' ? 'ph u-y' : 'ph';
+            root.className = 'ph';
             const p = parse();
             R.tab = p.tab; R.stack = [];
             history.replaceState({ r: { tab: R.tab, stack: [] } }, '', hash());

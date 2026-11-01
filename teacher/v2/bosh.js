@@ -156,8 +156,9 @@
         for (const r of S0.requests || []) {
             const t = Date.parse(r.decided_at); if (!(t > since) || r.status === 'new') continue;
             const p = r.payload || {};
+            const late = r.type === 'assist_late'; // yordamchi: kechikkan aloqa so'rovi
             ev.push({ id: `rq:${r.id}:${r.status}`, cat: 'dars', tone: r.status === 'approved' ? 'ok' : 'bad', ic: r.status === 'approved' ? 'ok' : 'no',
-                title: `Vaqt so'rovi ${r.status === 'approved' ? 'tasdiqlandi' : 'rad etildi'}`, sub: [p.date ? fmtShort(d.day10(p.date)) : '', p.from && r.type !== 'leave' ? `${p.from}–${p.to}` : '', esc(r.reason || ''), r.decision_note ? esc(r.decision_note) : ''].filter(Boolean).join(' · '), t, go: { tab: 'jadval' } });
+                title: `${late ? "Kechikkan aloqa so'rovi" : "Vaqt so'rovi"} ${r.status === 'approved' ? 'tasdiqlandi' : 'rad etildi'}`, sub: [p.date || p.day ? fmtShort(d.day10(p.date || p.day)) : '', p.from && r.type !== 'leave' ? `${p.from}–${p.to}` : '', esc(r.reason || ''), r.decision_note ? esc(r.decision_note) : ''].filter(Boolean).join(' · '), t, go: late ? { push: ['y-kech', ''] } : { tab: 'jadval' } });
         }
         for (const h of S0.salary?.history || []) {
             if (!h.end) continue;
@@ -723,4 +724,6 @@
         const cur = U.current();
         if ((cur.id === 'home' || cur.id === 'bildirish') && !document.querySelector('#app > .sheet')) U.render();
     }, 15000);
+    // Yordamchi rejimi (yordamchi.js): Bosh va Menyu'dagi bildirishnoma soni — bitta manba.
+    U.bs = { unreadCount };
 })();

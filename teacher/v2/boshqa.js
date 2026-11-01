@@ -887,5 +887,5 @@
         }
     });
     // Yordamchi ustoz rejimi (teacher/v2/yordamchi.js) uchun umumiy yordamchilar — bitta ko'rinish.
-    U.bq = { meAvatar, langOf, tgPill, sheet, sheetHead, P, svg, setInactive: () => { stSeg = 'inactive'; } };
+    U.bq = { langOf, tgPill };
 })();

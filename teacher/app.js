@@ -1746,7 +1746,7 @@
     // Umumiy yadro v2 uchun (teacher/v2/core.js): ma'lumot, API, davomat va sinov qoidalari — bitta manba.
     window.DWT = { S, api, lazy, drop, loadAll, now, esc, money, pad, hm, toMin, tz, stamp, ago, day10, wdOf, fmtDate, first, short, avatar, initials,
         attFor, setAtt, lessonDays, markOf, coveredBy, uncovered, monthStats, patternOf, patternLabel, trialPhase, tReq, tAt, trialManager, myGuides, guideIsNew,
-        outbox, flushOutbox, store, logout, toast, OUTBOX, REASONS, cal, DAY, DAY_FULL, MON, MON_S, isAssistantOnly, stuOf, shiftMonth, CHANNELS, CAP };
+        outbox, flushOutbox, store, logout, toast, OUTBOX, REASONS, cal, DAY, DAY_FULL, MON, MON_S, isAssistantOnly, stuOf, shiftMonth, CHANNELS };
     if (!localStorage.getItem(TOKEN) || S.user?.role !== 'teacher') { S.user = null; if (window.UstozV2) location.replace('/'); else renderLogin(); }
     else boot();
     window.__dwt = S;

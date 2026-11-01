@@ -58,8 +58,22 @@
     const helped = () => (S().helped || []).slice().sort((a, b) => String(a.name).localeCompare(String(b.name)));
     const money = v => D().money(v);
     const thousand = v => `${Math.round((Number(v) || 0) / 1000)}`;
-    const tel = s => { const p = String(s?.phone || s?.parentPhone || '').replace(/[^\d+]/g, ''); return p.length >= 9 ? `tel:${p.startsWith('+') ? p : '+' + (p.length === 9 ? '998' + p : p)}` : ''; };
-    const tgLink = s => { const u = String(s?.telegramUsername || s?.telegram || '').replace(/^@/, '').trim(); return /^[A-Za-z0-9_]{4,}$/.test(u) ? `https://t.me/${u}` : ''; };
+    // Yordamchiga o'quvchi telefoni berilmaydi (server teacherDuties: "qo'ng'iroq Telegram guruh orqali") — bog'lanish dars guruhi orqali.
+    const groupsE = () => U.load('yd:grp', () => U.api('/api/school/my-groups').then(r => r.groups || []), { ttl: 600000 });
+    const groupLink = s => { const g = (groupsE().data || []).find(x => x.student_id === s.id); return g?.tg_link && /^https:\/\//.test(g.tg_link) ? g.tg_link : ''; };
+    // Asosiy ustoz ismi — state.teachers (server faqat o'z o'quvchilarining ustozlarini beradi).
+    const teacherOf = s => D().first((S().state?.teachers || []).find(t => t.id === s?.teacherId)?.name || '');
+    const capOf = month => Number(repOf(month).data?.cap) || CAP;
+    const monthlyOf = month => Number(repOf(month).data?.monthly) || 0;
+    // Muzlatish oralig'i (statusHistory yoki Faol emas ro'yxati) — "24-noyabrgacha", "10–24-noy".
+    function freezeOf(s) {
+        const n = now().date;
+        const h = (s.statusHistory || []).filter(x => x.status === 'frozen' && String(x.from || '').slice(0, 10) <= n && (!x.to || String(x.to).slice(0, 10) >= n)).slice(-1)[0]
+            || (S().inactive || []).find(x => x.id === s.id && x.state === 'frozen');
+        if (!h) return null;
+        return { from: String(h.from || '').slice(0, 10), to: h.to ? String(h.to).slice(0, 10) : '' };
+    }
+    const shortDate = d => `${+d.slice(8)}-${D().MON_S[+d.slice(5, 7) - 1].toLowerCase()}`;
     const greet = () => { const h = now().hour; return h < 11 ? 'Xayrli tong' : h < 18 ? 'Xayrli kun' : 'Xayrli kech'; };
 
     // ── Oy hisobi (S.assist — joriy, S.assistPrev — o'tgan; boshqalari yuklanadi) ──
@@ -127,29 +141,31 @@
     // ─────────────────────────────────────────────────────────────────────
     // Y01 · Bosh
     // ─────────────────────────────────────────────────────────────────────
-    function meAvatar(n, style = '') {
-        if (U.bq?.meAvatar) return U.bq.meAvatar(n, style);
-        const u = S().user || {};
-        return `<span class="av" style="width: ${n}px; height: ${n}px; display: grid; place-items: center; background: #0065D6; color: #FFFFFF; font-weight: 800; ${style}">${esc((D().first(u.name)[0] || '').toUpperCase())}</span>`;
+    // O'z avatari: rasm bo'lsa rasm, bo'lmasa ism va familiya bosh harflari ("AA").
+    function meAvatar(n, style = '', light = false) {
+        const u = S().user || {}, a = u.avatar;
+        if (a && /^(\/|https:|data:image)/.test(a)) return `<img class="av" src="${esc(a)}" alt="" style="width: ${n}px; height: ${n}px; ${style}">`;
+        const ini = String(u.name || S().me?.name || '').trim().split(/\s+/).slice(0, 2).map(w => w[0] || '').join('').toUpperCase();
+        return `<span class="av yd-ini${light ? ' l' : ''}" style="width: ${n}px; height: ${n}px; font-size: ${Math.round(n * 0.36)}px; ${style}">${esc(ini)}</span>`;
     }
+    const unread = () => { try { return U.bs?.unreadCount?.() || 0; } catch { return 0; } };
     function homeRender() {
         const n = now(), s0 = S(), user = s0.user || {}, rep = s0.assist;
         const list = todayList(), done = doneToday(list);
         const pend = list.filter(x => ['wait', 'r'].includes(todayState(x.s).k));
         const next = pend.find(x => todayState(x.s).k === 'wait') || pend[0] || null;
-        const active = helped().filter(s => !s.frozen).length, max = active * CAP;
+        const max = helped().length * capOf(n.month); // muzlaganda ham chegara o'zgarmaydi
         let hero;
         if (next) {
             const s = next.s, sr = stuRep(n.month, s.id), pr = s0.progress?.[s.id]?.reached;
-            const t = tel(s), g = tgLink(s);
+            const g = groupLink(s), tn = teacherOf(s);
             hero = `<section class="dark a1" aria-label="Keyingi aloqa">${U.HEX('ydHex')}
-              <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px"><span class="eb">KEYINGI ALOQA · ${D().hm(next.t)}</span>${todayState(s).k === 'r' ? '<span class="pill" style="color: #FDE68A; background: rgba(247,144,9,.22)">javob bermagan · qayta</span>' : `<span class="pill" style="color: #A6F4C5; background: rgba(18,183,106,.2)">bugun darsi yo'q</span>`}</div>
-              <a href="#" class="row" data-u-push="y-karta" data-arg="${esc(s.id)}" style="color: #FFFFFF">${ava(s, 48).replace('style="', 'style="border: 2px solid rgba(255,255,255,.7); ')}<div class="col"><strong style="font-size: 20px; font-weight: 800">${esc(s.name)}</strong><span style="font-size: 13px; color: #C7D2E3">Dars ${esc(D().patternLabel(s.lessonDayOfWeek))} ${esc(s.lessonTime || '')}${s.teacherName ? ' · ustoz ' + esc(D().first(s.teacherName)) : ''}</span></div></a>
-              <div style="display: flex; gap: 6px; flex-wrap: wrap"><span class="pill yd-pw">${monName(n.month)} ${sr.counted} / ${CAP}</span><span class="pill yd-pw">bu hafta ${weekCount(s.id)} / 3</span>${pr ? `<span class="pill yd-pw">ilovada ${pr}-darsda</span>` : ''}</div>
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px"><span class="eb">KEYINGI ALOQA · ${D().hm(next.t)}</span>${todayState(s).k === 'r' ? '<span class="pill" style="color: #FDE68A; background: rgba(247,144,9,.22)">javob bermagan · qayta</span>' : `<span class="pill" style="color: #A6F4C5; background: rgba(18,183,106,.2)">odatdagi vaqti ${esc(s.lessonTime || '—')}</span>`}</div>
+              <a href="#" class="row" data-u-push="y-karta" data-arg="${esc(s.id)}" style="color: #FFFFFF">${ava(s, 48).replace('style="', 'style="border: 2px solid rgba(255,255,255,.7); ')}<div class="col"><strong style="font-size: 20px; font-weight: 800">${esc(s.name)}</strong><span style="font-size: 13px; color: #C7D2E3">Dars ${esc(D().patternLabel(s.lessonDayOfWeek))} ${esc(s.lessonTime || '')}${tn ? ' · ustoz ' + esc(tn) : ''}</span></div></a>
+              <div style="display: flex; gap: 6px; flex-wrap: wrap"><span class="pill yd-pw">${monName(n.month)} ${sr.counted} / ${capOf(n.month)}</span><span class="pill yd-pw">bu hafta ${weekCount(s.id)} / 3</span>${pr ? `<span class="pill yd-pw">ilovada ${pr}-darsda</span>` : ''}</div>
               <div style="display: flex; gap: 8px">
                 <button type="button" class="btn p pulse" data-yd-mark="${esc(s.id)}" style="flex: 1">${svg(P.tick, 18, 2.6)}Aloqani belgilash</button>
-                ${t ? `<a href="${esc(t)}" class="btn gh" aria-label="${esc(D().first(s.name))}ga qo'ng'iroq qilish" style="width: 48px; padding: 0">${svg(P.phone)}</a>` : ''}
-                ${g ? `<a href="${esc(g)}" target="_blank" rel="noopener" class="btn gh" aria-label="${esc(D().first(s.name))}ga Telegramda yozish" style="width: 48px; padding: 0">${svg(P.tg)}</a>` : ''}
+                ${g ? `<a href="${esc(g)}" target="_blank" rel="noopener" class="btn gh" aria-label="${esc(D().first(s.name))} dars guruhini ochish (Telegram)" style="width: 48px; padding: 0">${svg(P.tg)}</a>` : ''}
               </div></section>`;
         } else if (list.length) {
             hero = `<section class="dark a1" aria-label="Bugun">${U.HEX('ydHex')}<span class="eb">BUGUN</span><strong style="font-size: 20px; font-weight: 800">Bugungi aloqalar bajarildi</strong><span style="font-size: 13px; color: #C7D2E3">${list.length} o'quvchining hammasi bilan gaplashdingiz. Ertangi tavsiyalar Jadvalda.</span><a href="#jadval" data-u-go="jadval" class="btn gh" style="align-self: flex-start">Jadvalni ochish</a></section>`;
@@ -158,15 +174,15 @@
         }
         const row = x => {
             const s = x.s, st = todayState(s), isNext = next && next.s.id === s.id;
-            const sub = st.k === 'ok' || st.k === 'n' ? `${esc(CH_FULL[st.c.channel] || '')}${st.c.minutes && st.c.channel !== 'tg_text' ? ` · ${st.c.minutes} daq` : ''}` : st.k === 'r' ? "qayta urinib ko'ring" : isNext ? 'keyingi' : esc(D().patternLabel(s.lessonDayOfWeek)) + ' darslari';
+            const sub = st.k === 'ok' || st.k === 'n' ? `${esc(CH_FULL[st.c.channel] || '')}${st.c.minutes && st.c.channel !== 'tg_text' ? ` · ${st.c.minutes} daq` : ''}` : st.k === 'r' ? "qayta urinib ko'ring" : [teacherOf(s) ? `ustoz ${esc(teacherOf(s))}` : '', isNext ? 'keyingi' : ''].filter(Boolean).join(' · ') || esc(D().patternLabel(s.lessonDayOfWeek)) + ' darslari';
             const pill = st.k === 'ok' ? '<span class="pill ok">Hisoblandi</span>' : st.k === 'n' ? '<span class="pill mu">Hisoblanmadi</span>' : st.k === 'r' ? '<span class="pill wa">Javob bermadi</span>' : isNext ? '<span class="pill inf">Keyingi</span>' : '<span class="pill mu">Kutilmoqda</span>';
             const attr = st.k === 'ok' ? `data-u-push="y-karta" data-arg="${esc(s.id)}"` : `data-yd-mark="${esc(s.id)}"`;
-            return `<a class="li" href="#" ${attr}><span class="tm${st.k === 'ok' ? ' mut' : ''}"${isNext ? ' style="color: #0057B8"' : ''}>${D().hm(x.t)}</span>${ava(s, 36)}<div class="col g1"><span class="nm">${esc(D().short(s.name))}</span><span class="s">${sub}</span></div>${pill}</a>`;
+            return `<a class="li" href="#" ${attr}><span class="tm${st.k === 'ok' || st.k === 'n' || st.k === 'r' ? ' mut' : ''}"${isNext ? ' style="color: #0057B8"' : ''}>${D().hm(x.t)}</span>${ava(s, 36)}<div class="col g1"><span class="nm">${esc(D().short(s.name))}</span><span class="s">${sub}</span></div>${pill}</a>`;
         };
         return `<header class="hd">
             <a href="#" data-u-push="profil" aria-label="Profil" style="position: relative; flex: none">${meAvatar(46, 'border: 2px solid #FFFFFF; box-shadow: 0 0 0 1px #CBD5E1')}<span aria-hidden="true" style="position: absolute; right: 0; bottom: 0; width: 12px; height: 12px; border-radius: 50%; background: #12B76A; border: 2px solid #F5F7FB"></span></a>
             <div class="t"><span class="date">${esc(U.dateLong(n.date))}</span><h1>${greet()}, ${esc(D().first(user.name || s0.me?.name))}</h1></div>
-            <a class="icb" href="#" data-u-push="bildirish" aria-label="Bildirishnomalar">${svg(P.bell)}</a>
+            <a class="icb" href="#" data-u-push="bildirish" aria-label="Bildirishnomalar${unread() ? `, ${unread()} ta yangi` : ''}">${svg(P.bell)}${unread() ? `<span class="n">${unread() > 99 ? '99+' : unread()}</span>` : ''}</a>
           </header>
           <div class="bd">${U.offline()}
             ${hero}
@@ -194,27 +210,28 @@
     let jDay = null;
     function jadvalRender() {
         const n = now();
-        if (!jDay || jDay < weekStart(n.date) || jDay > U.addDays(weekStart(n.date), 13)) jDay = wd(n.date) === 7 ? U.addDays(n.date, 1) : n.date;
+        // Joriy hafta (yakshanba — keyingi hafta); hafta almashtirgich dizaynda yo'q.
+        const cw = weekStart(wd(n.date) === 7 ? U.addDays(n.date, 1) : n.date);
+        if (!jDay || jDay < cw || jDay > U.addDays(cw, 5)) jDay = wd(n.date) === 7 ? U.addDays(n.date, 1) : n.date;
         const ws = weekStart(jDay), ds = Array.from({ length: 6 }, (_, k) => U.addDays(ws, k));
         const e = planE(ws, U.addDays(ws, 5));
         const items = e.data?.items || [];
         const cnt = d => new Set(items.filter(i => i.date === d && (i.kind === 'advice' || i.advice)).map(i => i.studentId)).size;
         const list = items.filter(i => i.date === jDay && (i.kind === 'advice' || i.kind === 'contact')).sort((a, b) => a.start - b.start);
-        const seen = new Set();
-        const rows = list.filter(i => { if (seen.has(i.studentId)) return false; seen.add(i.studentId); return true; }).map(i => {
-            const s = D().stuOf(i.studentId), its = items.filter(x => x.studentId === i.studentId && x.date === jDay && x.kind === 'contact');
-            const c = its.find(x => x.status === 'counted'), o = its.find(x => x.outcome === 'contacted'), na = its.find(x => x.outcome === 'no_answer');
-            const sr = stuRep(jDay.slice(0, 7), i.studentId);
-            const pill = c ? '<span class="pill ok">Hisoblandi</span>' : o ? '<span class="pill mu">Hisoblanmadi</span>' : na ? '<span class="pill wa">Javob bermadi</span>' : `<span class="pill ${jDay === n.date ? 'inf' : 'mu'}">${sr.counted}/${CAP}</span>`;
+        const seen = new Set(), M = jDay.slice(0, 7);
+        const uniq = list.filter(i => { if (seen.has(i.studentId)) return false; seen.add(i.studentId); return true; });
+        const st = i => { const its = items.filter(x => x.studentId === i.studentId && x.date === jDay && x.kind === 'contact'); return { c: its.find(x => x.status === 'counted'), o: its.find(x => x.outcome === 'contacted'), na: its.find(x => x.outcome === 'no_answer') }; };
+        const nextId = jDay === n.date ? (uniq.find(i => { const x = st(i); return !x.c && !x.o && !x.na; }) || {}).studentId : null;
+        const rows = uniq.map(i => {
+            const s = D().stuOf(i.studentId), { c, o, na } = st(i), isNext = i.studentId === nextId, tn = teacherOf(s);
+            const pill = c ? '<span class="pill ok">Hisoblandi</span>' : o ? '<span class="pill mu">Hisoblanmadi</span>' : na ? '<span class="pill wa">Javob bermadi</span>' : `<span class="pill ${isNext ? 'inf' : 'mu'}">${stuRep(M, i.studentId).counted}/${capOf(M)}</span>`;
             const attr = jDay === n.date && !c ? `data-yd-mark="${esc(i.studentId)}"` : `data-u-push="y-karta" data-arg="${esc(i.studentId)}"`;
-            return `<a class="li" href="#" ${attr}><span class="tm${c ? ' mut' : ''}">${D().hm(i.start)}</span>${s ? ava(s, 36) : ''}<div class="col g1"><span class="nm">${esc(s?.name || i.studentName || '')}</span><span class="s">${s ? `dars ${esc(D().patternLabel(s.lessonDayOfWeek))} ${esc(s.lessonTime || '')}${s.teacherName ? ' · ' + esc(D().first(s.teacherName)) : ''}` : ''}</span></div>${pill}</a>`;
+            return `<a class="li" href="#" ${attr}><span class="tm${c || na ? ' mut' : ''}"${isNext ? ' style="color: #0057B8"' : ''}>${D().hm(i.start)}</span>${s ? ava(s, 36) : ''}<div class="col g1"><span class="nm">${esc(s?.name || i.studentName || '')}</span><span class="s">${s ? `dars ${esc(D().patternLabel(s.lessonDayOfWeek))} ${esc(s.lessonTime || '')}${tn ? ' · ' + esc(tn) : ''}` : ''}</span></div>${pill}</a>`;
         });
-        const prevW = U.addDays(ws, -7), nextW = U.addDays(ws, 7), minW = weekStart(n.date), maxW = U.addDays(minW, 7);
-        return `<header class="hd" style="padding-bottom: 4px"><div class="t"><span class="date">Aloqa tavsiyalari · ${+ds[0].slice(8)}–${+ds[5].slice(8)}-${monName(ds[5].slice(0, 7))}</span><h1 style="font-size: 26px">Jadval</h1></div>
-            <div style="display: flex; gap: 6px"><button type="button" class="icb" data-yd-wk="${prevW}" aria-label="Oldingi hafta"${prevW < minW ? ' disabled style="opacity: .4"' : ''}>${svg(P.prev, 18, 2.2)}</button><button type="button" class="icb" data-yd-wk="${nextW}" aria-label="Keyingi hafta"${nextW > maxW ? ' disabled style="opacity: .4"' : ''}>${svg(P.chev, 18, 2.2)}</button></div></header>
+        return `<header class="hd" style="padding-bottom: 4px"><div class="t"><span class="date">Aloqa tavsiyalari · ${+ds[0].slice(8)}–${+ds[5].slice(8)}-${monName(ds[5].slice(0, 7))}</span><h1 style="font-size: 26px">Jadval</h1></div></header>
           <div class="bd" style="gap: 10px">${U.offline()}
             <nav class="yd-wk a1" aria-label="Hafta kunlari">${ds.map(d => `<button type="button" data-yd-day="${d}" class="${d === jDay ? 'on' : ''}"${d === n.date ? ' aria-current="date"' : ''}>${D().DAY[wd(d) - 1]}<b>${+d.slice(8)}</b><i>${e.data ? `${cnt(d)} ta` : '…'}</i></button>`).join('')}</nav>
-            <div class="note i a2">${svg(P.info, 18, 2).replace('<svg', '<svg style="flex: none; margin-top: 1px"')}<span>${jDay === n.date ? 'Bugun' : 'Shu kuni'} darsi <b>yo'q</b> o'quvchilar, odatdagi dars vaqti bo'yicha. Majburiy emas — istalgan vaqt aloqa qilsangiz bo'ladi.</span></div>
+            <div class="note i a2">${svg(P.info, 18, 2).replace('<svg', '<svg style="flex: none; margin-top: 1px"')}<span>${jDay === n.date ? 'Bugun' : 'Shu kuni'} darsi <b>yo'q</b> o'quvchilar, ularning odatdagi dars vaqti bo'yicha. Majburiy emas — istalgan vaqt aloqa qilsangiz bo'ladi.</span></div>
             ${e.err ? U.err(e, `yd:plan:${ws}:${U.addDays(ws, 5)}`) : !e.data ? U.skel(3, 56) : rows.length ? `<div class="card l a3">${rows.join('')}</div>` : `<div class="card"><span class="s">Bu kunga tavsiya yo'q.</span></div>`}
             ${rows.length ? '<span class="xs" style="padding: 0 4px">Yorliqdagi son — shu oy hisobga o\'tgan aloqalar</span>' : ''}
           </div>`;
@@ -224,7 +241,6 @@
         bind(root) {
             bindCommon(root);
             root.querySelectorAll('[data-yd-day]').forEach(b => b.onclick = () => { jDay = b.dataset.ydDay; U.render(); });
-            root.querySelectorAll('[data-yd-wk]').forEach(b => b.onclick = () => { if (b.disabled) return; const ws = b.dataset.ydWk, n = now(); jDay = ws <= n.date && n.date <= U.addDays(ws, 5) ? n.date : ws; U.render(); });
         }
     }, Y);
 
@@ -233,17 +249,15 @@
     // ─────────────────────────────────────────────────────────────────────
     const FLT_KEY = 'dwt_v2_yd_flt';
     let aMonth = null, aFlt = null; const aScroll = {};
-    function columns(month, f) {
-        const want = f === 'odd' ? [1, 3, 5] : f === 'even' ? [2, 4, 6] : null;
-        return days(month).filter(x => { const w = wd(x); return want ? want.includes(w) : w !== 7; });
-    }
+    // Dizayn Y03: har guruh alohida jadval — "Toq kunlar · Du Ch Ju" va "Juft kunlar · Se Pa Sh" (har birida faqat o'z kunlari).
+    const GROUPS = [['odd', 'Toq kunlar · Du Ch Ju', [1, 3, 5]], ['even', 'Juft kunlar · Se Pa Sh', [2, 4, 6]], ['other', 'Boshqa kunlar', null]];
+    const groupOfStu = s => { const p = adviceDays(s.lessonDayOfWeek).join(); return p === '1,3,5' ? 'odd' : p === '2,4,6' ? 'even' : 'other'; };
+    const colsOf = (month, wds) => days(month).filter(x => { const w = wd(x); return wds ? wds.includes(w) : w !== 7; });
     function aloqaRender() {
         const n = now();
         aMonth ||= n.month; aFlt ||= D().store.get(FLT_KEY, 'all');
         const rep = repOf(aMonth), adv = adviceSet(aMonth), isCur = aMonth === n.month, M = cap(monName(aMonth));
         const all = helped();
-        const inF = s => { const p = adviceDays(s.lessonDayOfWeek); return aFlt === 'all' || (aFlt === 'odd' ? p[0] === 1 : p[0] === 2); };
-        const rows = all.filter(inF), cols = columns(aMonth, aFlt);
         let g = 0, r = 0, y = 0, b = 0;
         for (const s of all) {
             const sr = stuRep(aMonth, s.id); g += sr.counted; r += sr.noAnswer;
@@ -251,15 +265,25 @@
             if (isCur && inPattern(s, n.date) && cellOf(s, n.date, aMonth, adv) === 'y') y++;
         }
         if (rep.data) { g = rep.data.counted ?? g; r = rep.data.noAnswer ?? r; }
-        const grid = rows.length ? rows.map(s => {
-            const sr = stuRep(aMonth, s.id), ex = extras(s, aMonth), out = s.frozen;
-            return `<div class="dv-tr${out ? ' out' : ''}"><a class="dv-nmc" href="#" data-u-push="yd-oy" data-arg="${esc(s.id)}" aria-label="${esc(s.name)} — oylik aloqalar">${D().avatar(s, '')}<span class="nn">${esc(D().first(s.name))}<small>${sr.counted} / ${CAP}</small></span></a>${cols.map(x => {
-                if (!inPattern(s, x)) return '<span class="dv-cw"></span>';
-                const c = cellOf(s, x, aMonth, adv), k = c === 'n' ? 'f yd-n' : c, plus = ex.get(x);
-                return `<button type="button" class="dv-cw" data-yd-cell="${esc(s.id)}|${x}" aria-label="${esc(D().first(s.name))}, ${+x.slice(8)}-${monName(aMonth)} · ${CELL_T[c]}${plus ? ` · yana ${plus} ta boshqa kunda` : ''}"><i class="dv-k2 ${k}${x === n.date ? ' now' : ''}">${+x.slice(8)}${plus ? `<span class="dv-pq">+${plus}</span>` : ''}</i></button>`;
-            }).join('')}</div>`;
-        }).join('') : `<div class="dv-empty">${all.length ? (aFlt === 'odd' ? "Toq kunlarda (Du·Ch·Ju) aloqa qilinadigan o'quvchi yo'q" : "Juft kunlarda (Se·Pa·Sh) aloqa qilinadigan o'quvchi yo'q") : "Sizga hali o'quvchi biriktirilmagan"}</div>`;
-        const ti = isCur ? Math.max(0, cols.findIndex(x => x >= n.date)) : cols.length - 1;
+        const cp = capOf(aMonth);
+        const table = (gid, title, wds) => {
+            const rows = all.filter(s => groupOfStu(s) === gid), cols = colsOf(aMonth, wds);
+            if (!rows.length) return '';
+            const nx = cols.find(x => x >= n.date);
+            const note = !isCur ? "oy yopilgan · faqat ko'rish" : nx === n.date ? 'bugun qora halqada' : nx ? `${nx === U.addDays(n.date, 1) ? 'ertaga' : 'keyingi'} — ${+nx.slice(8)}` : 'oy tugadi';
+            const ti = isCur ? Math.max(0, cols.findIndex(x => x >= n.date)) : cols.length - 1;
+            const grid = rows.map(s => {
+                const sr = stuRep(aMonth, s.id), ex = extras(s, aMonth);
+                return `<div class="dv-tr${s.frozen ? ' out' : ''}"><a class="dv-nmc" href="#" data-u-push="yd-oy" data-arg="${esc(s.id)}" aria-label="${esc(s.name)} — oylik aloqalar">${D().avatar(s, '')}<span class="nn">${esc(D().first(s.name))}<small>${sr.counted} / ${cp}</small></span></a>${cols.map(x => {
+                    if (!inPattern(s, x)) return '<span class="dv-cw"></span>';
+                    const c = cellOf(s, x, aMonth, adv), k = c === 'n' ? 'f yd-n' : c, plus = ex.get(x);
+                    return `<button type="button" class="dv-cw" data-yd-cell="${esc(s.id)}|${x}" aria-label="${esc(D().first(s.name))}, ${+x.slice(8)}-${monName(aMonth)} · ${CELL_T[c]}${plus ? ` · yana ${plus} ta boshqa kunda` : ''}"><i class="dv-k2 ${k}${x === n.date ? ' now' : ''}">${+x.slice(8)}${plus ? `<span class="dv-pq">+${plus}</span>` : ''}</i></button>`;
+                }).join('')}</div>`;
+            }).join('');
+            return `<div class="dv-tbw a2" style="--cw: 46px"><div class="dv-mh"><b style="font-size: 14px">${title}</b><span class="xs">${note}</span></div><span class="dv-fade" aria-hidden="true"></span><div class="dv-sc" data-ti="${ti}" data-gid="${gid}">${grid}</div></div>`;
+        };
+        const tables = GROUPS.filter(([gid]) => aFlt === 'all' || aFlt === gid || (gid === 'other' && aFlt === 'all')).map(([gid, t, w]) => table(gid, t, w)).join('');
+        const empty = `<div class="dv-tbw a2"><div class="dv-empty">${all.length ? (aFlt === 'odd' ? "Toq kunlarda (Du·Ch·Ju) aloqa qilinadigan o'quvchi yo'q" : "Juft kunlarda (Se·Pa·Sh) aloqa qilinadigan o'quvchi yo'q") : "Sizga hali o'quvchi biriktirilmagan"}</div></div>`;
         const prevM = D().shiftMonth(aMonth, -1), nextM = D().shiftMonth(aMonth, 1);
         return `<header class="hd" style="padding-bottom: 4px"><div class="t"><span class="date">${esc(U.dateLong(n.date))}</span><h1 style="font-size: 26px">Aloqalar · ${M}</h1></div>
             <div style="display: flex; gap: 6px"><button type="button" class="icb" data-yd-mon="-1" aria-label="${cap(monName(prevM))}">${svg(P.prev, 18, 2.2)}</button><button type="button" class="icb" data-yd-mon="1" aria-label="${cap(monName(nextM))}"${isCur ? ' disabled style="opacity: .4"' : ''}>${svg(P.chev, 18, 2.2)}</button></div></header>
@@ -267,7 +291,7 @@
             ${!rep.data && !rep.loading ? (isCur ? `<div class="note w" role="alert"><span>Aloqa hisobi yuklanmadi.</span><button type="button" class="btn sm" data-yd-reload style="margin-left: auto">Qayta urinish</button></div>` : U.err(rep, `yd:rep:${aMonth}`)) : ''}
             <div class="sm2 a1"><div><b style="color: #067647">${g}</b><span>hisoblandi</span></div><div><b style="color: #B42318">${r}</b><span>javob bermadi</span></div><div${y ? ' style="border-color: #FEC84B; background: #FFFAEB"' : ''}><b style="color: ${y ? '#B54708' : '#0B1220'}">${y}</b><span>belgilang</span></div><div><b style="color: #1570EF">${b}</b><span>boshqa kuni</span></div></div>
             <nav class="dv-flt" aria-label="Kunlar filtri">${[['all', 'Hammasi'], ['odd', 'Toq kunlar'], ['even', 'Juft kunlar']].map(([k, l]) => `<button type="button" data-yd-flt="${k}" class="${aFlt === k ? 'on' : ''}" aria-pressed="${aFlt === k}">${l}</button>`).join('')}</nav>
-            <div class="dv-tbw a2" style="--cw: 46px"><div class="dv-mh"><b style="font-size: 14px">${M}</b><span class="xs">${isCur ? 'raqam — sana · bugun qora halqada' : "oy yopilgan · faqat ko'rish"}</span></div>${rows.length ? '<span class="dv-fade" aria-hidden="true"></span>' : ''}<div class="dv-sc" data-ti="${ti}">${grid}</div></div>
+            ${tables || empty}
             <div class="dv-lgd2"><span><i style="background: #12B76A"></i>Hisoblandi</span><span><i style="background: #F04438"></i>Javob bermadi</span><span><i style="background: #FFFFFF; box-shadow: inset 0 0 0 2px #F79009"></i>Belgilang</span><span><i style="background: #2E90FA; border-radius: 999px"></i>+1 boshqa kuni</span><span><i style="background: #FFFFFF; box-shadow: inset 0 0 0 1.5px #E2E8F0"></i>Oldinda</span><span><i style="background: repeating-linear-gradient(135deg, #E2E8F0 0 3px, #F8FAFC 3px 6px)"></i>Muzlagan</span></div>
             ${isCur ? todayCard() : ''}
           </div>`;
@@ -288,7 +312,7 @@
         if (date > n.date) return U.toast("Bu kun hali kelmagan — aloqa o'sha kuni belgilanadi");
         if (date === n.date) return openMark(sid);
         const its = itemsOn(date.slice(0, 7), sid, date);
-        if (its.length) return U.push('y-karta', sid);
+        if (its.some(i => i.status === 'counted')) return U.push('y-karta', sid);
         if (date.slice(0, 7) !== n.month) return U.toast(`${cap(monName(date.slice(0, 7)))} yopilgan — o'zgartirishni admin qiladi`);
         U.push('y-kech', `${sid}|${date}`);
     }
@@ -300,10 +324,11 @@
             root.querySelectorAll('[data-yd-flt]').forEach(b => b.onclick = () => { aFlt = b.dataset.ydFlt; D().store.set(FLT_KEY, aFlt); U.render(); });
             root.querySelectorAll('[data-yd-mon]').forEach(b => b.onclick = () => { if (b.disabled) return; const v = D().shiftMonth(aMonth, +b.dataset.ydMon); if (v <= n.month) { aMonth = v; U.render(); } });
             root.querySelectorAll('[data-yd-cell]').forEach(b => b.onclick = () => { const [sid, date] = b.dataset.ydCell.split('|'); onCell(sid, date); });
-            const sc = root.querySelector('.dv-sc'); if (!sc) return;
-            const key = `${aMonth}|${aFlt}`;
-            sc.scrollLeft = aScroll[key] != null ? aScroll[key] : Math.max(0, (+sc.dataset.ti - 3) * 46);
-            sc.onscroll = () => { aScroll[key] = sc.scrollLeft; };
+            root.querySelectorAll('.dv-sc').forEach(sc => {
+                const key = `${aMonth}|${sc.dataset.gid}`;
+                sc.scrollLeft = aScroll[key] != null ? aScroll[key] : Math.max(0, (+sc.dataset.ti - 1) * 46); // bugungi (yoki keyingi) ustun chapdan 2-o'rinda
+                sc.onscroll = () => { aScroll[key] = sc.scrollLeft; };
+            });
         }
     }, Y);
 
@@ -322,17 +347,17 @@
                 const cnt = its.find(i => i.status === 'counted') || its.find(i => i.outcome === 'contacted');
                 const sm = cnt ? (cnt.channel === 'tg_text' ? 'yozishma' : cnt.channel === 'phone' ? `${cnt.minutes} daq` : (CH.find(x => x[0] === cnt.channel)?.[1] || '')) : '';
                 if (inPattern(s, c.date) || its.length) {
-                    const k = its.length ? cellOf(s, c.date, month, adv) : inPattern(s, c.date) ? cellOf(s, c.date, month, adv) : '';
+                    const k = cellOf(s, c.date, month, adv);
                     const cls = k === 'n' ? 'f yd-n' : k;
                     const tm = k === 'y' && adv?.get(sid)?.get(c.date) != null ? D().hm(adv.get(sid).get(c.date)) : '';
                     out.push(`<button type="button" class="dv-dc ${cls}${t}" data-yd-cell="${esc(sid)}|${c.date}" aria-label="${c.day}-${monName(month)} · ${CELL_T[k] || ''}">${c.day}${sm || tm ? `<small>${esc(sm || tm)}</small>` : ''}</button>`);
-                } else out.push(`<button type="button" class="dv-dc${t}" data-yd-cell="${esc(sid)}|${c.date}" aria-label="${c.day}-${monName(month)} · tavsiya qilinmagan kun">${c.day}</button>`);
+                } else out.push(`<button type="button" class="dv-dc yd-od${t}" data-yd-cell="${esc(sid)}|${c.date}" aria-label="${c.day}-${monName(month)} · tavsiya qilinmagan kun">${c.day}</button>`);
             }
             for (let i = 1; out.length % 7; i++) out.push(`<span class="dv-dc o">${i}</span>`);
-            const left = Math.max(0, CAP - sr.counted), amt = Math.round((repOf(month).data?.monthly || 40000) * sr.counted / CAP);
+            const left = Math.max(0, capOf(month) - sr.counted), amt = Number(sr.amount) || 0; // summa — serverdan (bitta manba)
             return `<div class="dv-oyw">${hd}<div class="scrim" data-u-back aria-hidden="true"></div>
               <section class="sheet dv-oy" role="dialog" aria-modal="true" aria-labelledby="yd-oyh"><span class="grab" aria-hidden="true"></span>
-                <div class="row">${ava(s, 44)}<div class="col g1"><h2 id="yd-oyh" style="font-size: 19px; font-weight: 800">${esc(s.name)}</h2><span class="s">Aloqa ${esc(adviceLabel(s))} · dars ${esc(s.lessonTime || '—')}${s.frozen ? ' · muzlatilgan' : ''}</span></div><button type="button" class="icb" data-u-back aria-label="Yopish" style="border: 0; background: #F1F5F9">${svg(P.x, 18, 2.4)}</button></div>
+                <div class="row">${ava(s, 44)}<div class="col g1"><h2 id="yd-oyh" style="font-size: 19px; font-weight: 800">${esc(s.name)}</h2><span class="s">Aloqa ${esc(adviceLabel(s))} · odatdagi vaqti ${esc(s.lessonTime || '—')}${s.frozen ? ' · muzlatilgan' : ''}</span></div><button type="button" class="icb" data-u-back aria-label="Yopish" style="border: 0; background: #F1F5F9">${svg(P.x, 18, 2.4)}</button></div>
                 <div class="sm2"><div><b style="color: #067647">${sr.counted}</b><span>hisoblandi</span></div><div><b style="color: #B42318">${sr.noAnswer}</b><span>javob bermadi</span></div><div><b>${left}</b><span>qoldi</span></div><div><b style="color: #1570EF">${money(amt)}</b><span>so'm</span></div></div>
                 <div class="dv-cg">${D().DAY.map(x => `<span class="dv-wd">${x}</span>`).join('')}${out.join('')}</div>
                 <div class="dv-cgl"><span><i style="background: #12B76A"></i>Hisoblandi</span><span><i style="background: #F04438"></i>Javob bermadi</span><span><i style="background: #FFFFFF; box-shadow: inset 0 0 0 2px #F79009"></i>Bugun</span><span><i style="background: #FFFFFF; box-shadow: inset 0 0 0 1.5px #E2E8F0"></i>Tavsiya kuni</span><span><i style="background: #F8FAFC; box-shadow: inset 0 0 0 1px #E2E8F0"></i>Boshqa kun</span></div>
@@ -352,21 +377,21 @@
     // ─────────────────────────────────────────────────────────────────────
     function openMark(sid) {
         const n = now(), s = D().stuOf(sid); if (!s) return;
-        const rep = S().assist;
-        if (rep?.state?.locked_at && rep.month !== n.month) return U.toast('Oy yopilgan');
-        const sr = stuRep(n.month, sid), wk = weekCount(sid);
+        const sr = stuRep(n.month, sid), wk = weekCount(sid), CP = capOf(n.month);
         const st = { out: 'contacted', ch: 'phone', min: 10, naCh: 'phone' };
         const ws = weekStart(n.date);
         const textDone = (sr.items || []).find(i => i.day >= ws && i.channel === 'tg_text' && i.status === 'counted');
         const todayDone = (sr.items || []).find(i => i.day === n.date && i.status === 'counted');
         const dch = () => `<span class="dv-dch ${st.out === 'no_answer' ? 'r' : 'y'}"><b>${n.day}</b><small>${D().DAY[n.wd - 1]}</small></span>`;
-        const head = () => `<div class="row">${dch()}<div class="col g1"><h2 style="font-size: 19px; font-weight: 800">${esc(D().first(s.name))}</h2><span class="s">Bugun · ${monName(n.month)} ${sr.counted}/${CAP} · hafta ${wk}/3</span></div>${ava(s, 40)}</div>`;
+        const head = () => `<div class="row">${dch()}<div class="col g1"><h2 style="font-size: 19px; font-weight: 800">${esc(D().first(s.name))}</h2><span class="s">Bugun · ${monName(n.month)} ${sr.counted}/${CP} · hafta ${wk}/3</span></div>${ava(s, 40)}</div>`;
+        // Y05 — shu hafta yozishma hisoblangan: alohida varaq (sarlavha + ×, to'liq nomli usullar, "Usulni o'zgartirish").
+        const y05 = () => st.out === 'contacted' && st.ch === 'tg_text' && !!textDone && !todayDone;
         const outBtns = () => `<div class="dv-bg2"><button type="button" data-o="contacted" class="${st.out === 'contacted' ? 'og' : ''}" aria-pressed="${st.out === 'contacted'}">${svg(P.tick, 18, 3.5)}Gaplashdik</button><button type="button" data-o="no_answer" class="${st.out === 'no_answer' ? 'orr' : ''}" aria-pressed="${st.out === 'no_answer'}">${svg(P.x, 18, 3.5)}Javob bermadi</button></div>`;
         const warn = () => {
             if (st.out === 'no_answer') return `<div class="note i" style="padding: 10px 12px"><span>Tarixga yoziladi, lekin hisobga o'tmaydi. Bugun qayta bog'lansangiz, katak <b style="color: #067647">yashil</b> bo'ladi.</span></div>`;
             if (todayDone) return `<div class="note w">${svg(P.warn, 18, 2).replace('<svg', '<svg style="flex: none; margin-top: 1px"')}<span>Bugun ${esc(D().first(s.name))} bilan aloqa <b>hisoblangan</b>. Bu ham yoziladi, lekin kuniga 1 ta hisoblanadi.</span></div>`;
             if (st.ch === 'tg_text' && textDone) return `<div class="note w">${svg(P.warn, 18, 2).replace('<svg', '<svg style="flex: none; margin-top: 1px"')}<span>Bu hafta ${esc(D().first(s.name))} bilan yozishma <b>${+textDone.day.slice(8)}-${monName(textDone.day.slice(0, 7))}da</b> hisoblangan. Bu yozishma tarixga yoziladi, lekin <b>hisobga o'tmaydi</b>. Qo'ng'iroq yoki video aloqa hisoblanadi.</span></div>`;
-            if (sr.counted >= CAP) return `<div class="note w">${svg(P.warn, 18, 2).replace('<svg', '<svg style="flex: none; margin-top: 1px"')}<span>Bu oy ${CAP} ta aloqa to'lgan — yoziladi, lekin maoshga qo'shilmaydi.</span></div>`;
+            if (sr.counted >= CP) return `<div class="note w">${svg(P.warn, 18, 2).replace('<svg', '<svg style="flex: none; margin-top: 1px"')}<span>Bu oy ${CP} ta aloqa to'lgan — yoziladi, lekin maoshga qo'shilmaydi.</span></div>`;
             return '';
         };
         const body = () => st.out === 'no_answer' ? `
@@ -376,14 +401,29 @@
             <div class="yd-ug" role="radiogroup" aria-label="Usul">${CH.map(([k, l, ic]) => `<button type="button" role="radio" aria-checked="${st.ch === k}" data-ch="${k}" class="${st.ch === k ? 'on' : ''}">${svg(ic, 18, 2)}${l}</button>`).join('')}</div>
             ${st.ch === 'tg_text' ? '' : `<span class="dv-st">NECHA DAQIQA?</span>
             <div class="yd-dm" role="radiogroup" aria-label="Davomiylik">${[5, 10, 15, 20, 30].map(v => `<button type="button" role="radio" aria-checked="${st.min === v}" data-min="${v}" class="${st.min === v ? 'on' : ''}">${v === 30 ? '30+' : v}</button>`).join('')}</div>`}`;
-        const saveTxt = () => st.out === 'contacted' && ((st.ch === 'tg_text' && textDone) || todayDone || sr.counted >= CAP) ? 'Baribir saqlash' : 'Saqlash';
-        const html = () => `${head()}${outBtns()}${body()}${warn()}
-            <div class="fl"><label for="yd-nt">Izoh · ixtiyoriy</label><textarea id="yd-nt" placeholder="${st.out === 'no_answer' ? "Masalan: 2 marta qo'ng'iroq qildim" : "Masalan: 21-dars so'zlarini takrorladik"}"></textarea></div>
-            <button type="button" class="btn p w yd-save" data-save>${saveTxt()}</button>
-            <span class="xs" style="text-align: center">${st.out === 'no_answer' ? 'Javob bermadi — hisoblanmaydi' : st.ch === 'tg_text' ? 'Yozishma haftasiga 1 ta hisoblanadi · ertaga faqat admin o\'zgartiradi' : "Kamida 5 daqiqa · kuniga 1 ta hisoblanadi · ertaga faqat admin o'zgartiradi"}</span>`;
+        const saveTxt = () => st.out === 'contacted' && (todayDone || sr.counted >= CP) ? 'Baribir saqlash' : 'Saqlash';
+        const izoh = ph => `<div class="fl"><label for="yd-nt">Izoh <span class="yd-opt">· ixtiyoriy</span></label><textarea id="yd-nt" placeholder="${ph}"></textarea></div>`;
+        const CH_LONG = [['phone', 'Telefon', P.phone], ['tg_video', 'Telegram video', P.video], ['tg_group', 'Guruh videodars', P.group], ['zoom', 'Zoom', P.zoom], ['meet', 'Google Meet', P.meet], ['tg_text', 'Yozishma', P.msg]];
+        const html = () => {
+            if (y05()) return `<div class="row">${ava(s, 44)}<div class="col g1"><h2 style="font-size: 18px; font-weight: 800">${esc(D().first(s.name))} bilan aloqa</h2><span class="s">Bugun · ${monName(n.month)} ${sr.counted}/${CP} · hafta ${wk}/3</span></div><button type="button" class="yd-x" data-u-close aria-label="Yopish">${svg(P.x, 18, 2.4)}</button></div>
+                <span class="yd-lb">Qanday bog'landingiz?</span>
+                <div class="yd-ug2" role="radiogroup" aria-label="Usul">${CH_LONG.map(([k, l, ic]) => `<button type="button" role="radio" aria-checked="${st.ch === k}" data-ch="${k}" class="${st.ch === k ? 'on' : ''}">${svg(ic, 18, 2)}${l}</button>`).join('')}</div>
+                ${warn()}
+                ${izoh('Nima haqida yozishdingiz?')}
+                <div class="yd-b2"><button type="button" class="btn" data-ch="phone">Usulni o'zgartirish</button><button type="button" class="btn p" data-save>Baribir saqlash</button></div>
+                <span class="xs" style="text-align: center">Yozishma haftasiga 1 ta hisoblanadi</span>`;
+            if (st.out === 'no_answer') return `${head()}${outBtns()}${body()}
+                ${izoh("Masalan: 2 marta qo'ng'iroq qildim")}
+                ${warn()}
+                <button type="button" class="btn p w yd-save" data-save>Saqlash</button>`;
+            return `${head()}${outBtns()}${body()}${warn()}
+                ${izoh("Masalan: 21-dars so'zlarini takrorladik")}
+                <button type="button" class="btn p w yd-save" data-save>${saveTxt()}</button>
+                <span class="xs" style="text-align: center">${st.ch === 'tg_text' ? 'Yozishma haftasiga 1 ta hisoblanadi · ertaga faqat admin o\'zgartiradi' : "Kamida 5 daqiqa · kuniga 1 ta hisoblanadi · ertaga faqat admin o'zgartiradi"}</span>`;
+        };
         U.sheet(`<div class="yd-mk">${html()}</div>`, (el, close) => {
             const box = el.querySelector('.yd-mk');
-            const draw = () => { const note = box.querySelector('#yd-nt')?.value || ''; box.innerHTML = html(); box.querySelector('#yd-nt').value = note; wire(); };
+            const draw = () => { const note = box.querySelector('#yd-nt')?.value || ''; box.innerHTML = html(); box.querySelector('#yd-nt').value = note; box.querySelectorAll('[data-u-close]').forEach(b => b.onclick = close); wire(); };
             const wire = () => {
                 box.querySelectorAll('[data-o]').forEach(b => b.onclick = () => { st.out = b.dataset.o; draw(); });
                 box.querySelectorAll('[data-ch]').forEach(b => b.onclick = () => { st.ch = b.dataset.ch; draw(); });
@@ -395,15 +435,16 @@
                     const minutes = outcome === 'no_answer' || channel === 'tg_text' ? 0 : st.min;
                     try {
                         await U.api('/api/school/assist/contacts', { method: 'POST', body: { studentId: s.id, outcome, channel, minutes, note: box.querySelector('#yd-nt').value.trim(), at: D().hm(t.min) } });
-                        const before = doneToday(todayList()), total = todayList().length;
+                        const before = doneToday(todayList()), total = todayList().length, amt0 = Number(S().assist?.amount) || 0;
                         S().assist = await U.api(`/api/school/assist/month?month=${t.month}`).catch(() => S().assist);
+                        addGain(t.date, (Number(S().assist?.amount) || 0) - amt0); // bugun qo'shilgan summa — server hisobi farqi
                         U.drop('yd:plan:');
                         close();
                         const after = doneToday(todayList());
                         if (outcome === 'no_answer') U.toast('Javob bermadi — yozildi', { ok: true });
                         else {
                             const it = (stuRep(t.month, s.id).items || []).filter(i => i.day === t.date).slice(-1)[0];
-                            U.toast(it?.status === 'counted' ? `Aloqa saqlandi · ${stuRep(t.month, s.id).counted}/${CAP}` : `Saqlandi · ${ST_TXT[it?.status] || 'hisoblanmadi'}`, { ok: it?.status === 'counted' });
+                            U.toast(it?.status === 'counted' ? `Aloqa saqlandi · ${stuRep(t.month, s.id).counted}/${capOf(t.month)}` : `Saqlandi · ${ST_TXT[it?.status] || 'hisoblanmadi'}`, { ok: it?.status === 'counted' });
                         }
                         U.render();
                         if (total && after === total && before < total) setTimeout(() => dayDone(after), 450);
@@ -413,7 +454,6 @@
             wire();
         }, { label: `${s.name} bilan aloqa` });
     }
-    U.yordamchi = { openMark };
 
     // ── Y06 · Bugungi aloqalar tugadi — tabrik (kuniga bir marta) ──
     const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -427,21 +467,35 @@
         ov.querySelector('.bs-scr').onclick = close;
         ov.querySelectorAll('[data-ov-x]').forEach(b => b.onclick = close);
         onOpen?.(ov, close);
-        ov.querySelector('.btn.p')?.focus({ preventScroll: true });
+        ov.querySelector('.btn.p')?.focus({ preventScroll: true, focusVisible: false });
         return close;
+    }
+    // Bugun qo'shilgan summa: har saqlashda server oy hisobining (amount) oldin/keyin farqi yig'iladi.
+    const GAIN = 'dwt_v2_yd_gain';
+    function addGain(date, v) { const g = D().store.get(GAIN, null); D().store.set(GAIN, { date, sum: (g?.date === date ? g.sum : 0) + Math.max(0, Number(v) || 0) }); }
+    function gainToday() {
+        const n = now(), g = D().store.get(GAIN, null);
+        if (g?.date === n.date && g.sum > 0) return g.sum;
+        // Ilova orqali kuzatilmagan bo'lsa — server tarifi bilan (har o'quvchida bugungi hisoblangan aloqa ulushi).
+        const m = monthlyOf(n.month), cp = capOf(n.month);
+        return (S().assist?.students || []).reduce((a, x) => {
+            const today = (x.items || []).some(i => i.day === n.date && i.status === 'counted');
+            return a + (today ? Math.round(m * x.counted / cp) - Math.round(m * (x.counted - 1) / cp) : 0);
+        }, 0);
     }
     function dayDone(count) {
         const n = now(), key = 'dwt_v2_yd_daydone';
         if (D().store.get(key, '') === n.date) return;
         D().store.set(key, n.date);
-        const list = todayList(), rate = (S().assist?.monthly || 40000) / CAP;
+        document.querySelector('#app > .u-toast')?.remove();
+        const list = todayList();
         const tom = U.addDays(n.date, wd(n.date) === 6 ? 2 : 1), tomN = helped().filter(s => !s.frozen && inPattern(s, tom)).length;
         const a = c => reduced() ? '' : c;
         overlay(`<section class="bs-mdl ${a('yd-in')}" role="dialog" aria-modal="true" aria-labelledby="ydTb" style="top: 120px; padding: 24px 18px 18px; display: flex; flex-direction: column; gap: 14px">
             <span class="${a('yd-pop')}" style="width: 80px; height: 80px; border-radius: 26px; background: #ECFDF3; color: #067647; display: grid; place-items: center; align-self: center">${svg(P.tick, 42, 2.6)}</span>
             <div class="col" style="gap: 6px; align-items: center; text-align: center"><h2 id="ydTb" style="font-size: 23px; font-weight: 800; letter-spacing: -.02em">Bugungi aloqalar tugadi!</h2><span class="s" style="font-size: 14px; line-height: 1.5">${count} o'quvchining hammasi bilan gaplashdingiz. O'quvchilar buni sezadi.</span></div>
             <div class="yd-avs" aria-hidden="true">${list.slice(0, 3).map(x => ava(x.s, 36)).join('')}${list.length > 3 ? `<span class="yd-more">+${list.length - 3}</span>` : ''}</div>
-            <div class="yd-st3"><div><b>${count}</b><span>bugun</span></div><div><b style="color: #067647">+${money(Math.round(rate * count))}</b><span>so'm</span></div><div><b>${S().assist?.counted ?? 0}</b><span>${monName(n.month)}da</span></div></div>
+            <div class="yd-st3"><div><b>${count}</b><span>bugun</span></div><div><b style="color: #067647">+${money(gainToday())}</b><span>so'm</span></div><div><b>${S().assist?.counted ?? 0}</b><span>${monName(n.month)}da</span></div></div>
             <button type="button" class="btn p w" data-ov-x>Rahmat!</button>
             <span class="xs" style="text-align: center">${tomN ? `Ertaga ${tomN} ta tavsiya bor · ${D().DAY_FULL[wd(tom) - 1]}` : 'Ertaga tavsiya yo\'q'}</span>
           </section>`);
@@ -469,7 +523,7 @@
         const lang = U.bq?.langOf ? U.bq.langOf() : '';
         const stars = [['left: 54px; top: 40px', 18, '#FDB022', 0], ['right: 64px; top: 34px', 12, '#FFFFFF', .5], ['right: 48px; bottom: 44px', 14, '#FDB022', .9], ['left: 70px; bottom: 36px', 10, '#9DC4F5', 1.2]];
         const starD = P.star.match(/d="([^"]+)"/)[1];
-        const monthly = S().assist?.monthly || 40000;
+        const monthly = monthlyOf(n.month);
         overlay(`<section class="bs-mdl ${a('bs-in2')}" role="dialog" aria-modal="true" aria-labelledby="ydYb" style="top: 64px">
             <div style="position: relative; height: 196px; background: #0B1220; overflow: hidden; display: grid; place-items: center">
               <span style="position: absolute; inset: 0; opacity: .07">${U.HEX('ydYbHex')}</span>
@@ -484,17 +538,17 @@
               <div class="col ${a('bs-v1')}" style="gap: 6px; align-items: center">
                 <span class="pill inf">Sizga yangi o'quvchi biriktirildi</span>
                 <h2 id="ydYb" style="font-size: 25px; font-weight: 800; letter-spacing: -.02em; line-height: 1.2">${esc(s.name)}<br>endi siz bilan!</h2>
-                <span class="s">${s.teacherName ? `Asosiy ustoz ${esc(D().first(s.teacherName))} · ` : ''}${lang}${S().progress?.[s.id]?.reached ? ` · ilovada ${S().progress[s.id].reached}-darsda` : ' · noldan boshlaydi'}</span>
+                <span class="s">${teacherOf(s) ? `Asosiy ustoz ${esc(teacherOf(s))} · ` : ''}${lang}${S().progress?.[s.id]?.reached ? ` · ilovada ${S().progress[s.id].reached}-darsda` : ' · noldan boshlaydi'}</span>
               </div>
               <div class="${a('bs-v2')}" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; text-align: left">
                 <div class="bs-fc"><span class="xs b">Birinchi aloqa</span><div style="font-size: 15px; font-weight: 800">${first === n.date ? 'Bugun' : esc(firstTxt)}</div><span class="xs">odatdagi vaqti ${esc(s.lessonTime || '—')}</span></div>
-                <div class="bs-fc"><span class="xs b">Darslari</span><div style="font-size: 15px; font-weight: 800">${esc(D().patternLabel(s.lessonDayOfWeek) || '—')}</div><span class="xs">aloqa ${esc(adviceLabel(s))}</span></div>
+                <div class="bs-fc"><span class="xs b">Darslari</span><div style="font-size: 15px; font-weight: 800">${esc(D().patternLabel(s.lessonDayOfWeek) || '—')}</div><span class="xs">${esc(s.lessonTime || '')} · aloqa ${esc(adviceLabel(s))}</span></div>
               </div>
               <div class="${a('bs-v3')}" style="display: flex; align-items: center; justify-content: center; gap: 10px; background: #EAF3FF; border-radius: 18px; padding: 12px 14px; flex-wrap: wrap">
                 <span style="font-size: 15px; font-weight: 700; color: #0B3A73">Endi sizda</span>
                 <span style="position: relative; display: inline-block; min-width: 40px; height: 34px; padding: 0 6px; overflow: hidden; background: #0065D6; color: #FFFFFF; border-radius: 10px; font-size: 22px; font-weight: 800; text-align: center; line-height: 34px">${reduced() ? cnt : `<span class="bs-fo">${cnt - 1}</span><span class="bs-fi">${cnt}</span>&nbsp;`}</span>
                 <span style="font-size: 15px; font-weight: 700; color: #0B3A73">o'quvchi</span>
-                <span class="xs" style="width: 100%; color: #0B3A73">oyiga yana ${money(monthly)} so'mgacha</span>
+                ${monthly ? `<span class="xs" style="width: 100%; color: #0B3A73">oyiga yana ${money(monthly)} so'mgacha</span>` : ''}
               </div>
               <div style="display: grid; grid-template-columns: 1fr 1.3fr; gap: 8px">
                 <button type="button" class="btn bs-btn" data-ov-x style="color: #0057B8">Yopish</button>
@@ -519,11 +573,12 @@
         const noWeek = s => !s.frozen && weekCount(s.id) === 0;
         const q = oQ.trim().toLowerCase();
         const list = all.filter(s => (!q || String(s.name).toLowerCase().includes(q) || String(s.serialCode || '').toLowerCase().includes(q)) && (oF === 'all' || (oF === 'week' ? noWeek(s) : s.frozen)));
-        const order = s => s.frozen ? 3 : weekCount(s.id) === 0 ? 0 : stuRep(n.month, s.id).counted >= CAP ? 2 : 1;
+        const cp = capOf(n.month);
+        const order = s => s.frozen ? 3 : weekCount(s.id) === 0 ? 0 : stuRep(n.month, s.id).counted >= cp ? 2 : 1;
         list.sort((a, b) => order(a) - order(b) || stuRep(n.month, a.id).counted - stuRep(n.month, b.id).counted);
         const inact = S().inactive || [];
-        const pill = s => s.frozen ? '<span class="pill mu">Muzlagan</span>' : stuRep(n.month, s.id).counted >= CAP ? "<span class=\"pill ok\">To'ldi</span>" : weekCount(s.id) === 0 ? `<span class="pill wa">Hafta 0/3</span>` : '<span class="pill ok">Rejada</span>';
-        const row = s => `<a class="li" href="#" data-u-push="y-karta" data-arg="${esc(s.id)}">${ava(s, 42)}<div class="col g1"><span class="nm">${esc(s.name)}</span><span class="s">${s.teacherName ? esc(D().first(s.teacherName)) + ' · ' : ''}${esc(D().patternLabel(s.lessonDayOfWeek))} ${esc(s.lessonTime || '')}</span></div><div class="yd-mp">${pill(s)}<span class="xs b">${stuRep(n.month, s.id).counted} / ${CAP}</span></div></a>`;
+        const pill = s => s.frozen ? '<span class="pill mu">Muzlagan</span>' : stuRep(n.month, s.id).counted >= cp ? "<span class=\"pill ok\">To'ldi</span>" : weekCount(s.id) === 0 ? `<span class="pill wa">Hafta 0/3</span>` : '<span class="pill ok">Rejada</span>';
+        const row = s => `<a class="li" href="#" data-u-push="y-karta" data-arg="${esc(s.id)}">${ava(s, 42)}<div class="col g1"><span class="nm">${esc(s.name)}</span><span class="s">${teacherOf(s) ? esc(teacherOf(s)) + ' · ' : ''}${s.frozen && freezeOf(s)?.to ? `${shortDate(freezeOf(s).to)}gacha` : `${esc(D().patternLabel(s.lessonDayOfWeek))} ${esc(s.lessonTime || '')}`}</span></div><div class="yd-mp">${pill(s)}<span class="xs b">${stuRep(n.month, s.id).counted} / ${cp}</span></div></a>`;
         const inRow = x => `<div class="li">${D().avatar(x, 'av" style="width: 42px; height: 42px')}<div class="col g1"><span class="nm">${esc(x.name)}</span><span class="s">${x.state === 'frozen' ? 'muzlatilgan' : x.state === 'moved' ? "boshqa yordamchiga o'tgan" : x.state === 'finished' ? 'kursni tugatgan' : 'chiqib ketgan'}${x.contacts?.total ? ` · ${x.contacts.total} aloqa` : ''}</span></div><span class="pill mu">Faol emas</span></div>`;
         return `<header class="hd" style="padding-bottom: 4px"><div class="t"><span class="date">Yordamchi sifatida biriktirilganlar</span><h1 style="font-size: 26px">O'quvchilarim</h1></div></header>
           <div class="bd bq" style="gap: 10px">${U.offline()}
@@ -550,15 +605,15 @@
     U.page('y-karta', {
         render(sid) {
             const n = now(), s = D().stuOf(sid);
-            const bar = `<div class="bar"><a class="back" href="#" data-u-back>${svg(P.prev, 22, 2.2)}Orqaga</a></div>`;
+            const bar = `<div class="bar"><a class="back" href="#" data-u-back>${svg(P.prev, 22, 2.2)}${esc(U.tabLabel())}</a></div>`;
             if (!s) return `${bar}<div class="bd nb"><div class="note w" role="alert"><span>O'quvchi topilmadi yoki sizga biriktirilmagan.</span></div></div>`;
-            const sr = stuRep(n.month, sid), pr = S().progress?.[sid] || {}, t = tel(s), g = tgLink(s);
+            const sr = stuRep(n.month, sid), pr = S().progress?.[sid] || {}, g = groupLink(s), tn = teacherOf(s), cp = capOf(n.month);
             const todayOk = (sr.items || []).some(i => i.day === n.date && i.status === 'counted');
             let content;
             if (kTab === 'aloqa') {
                 const its = (sr.items || []).slice().reverse();
                 content = `<section class="card a3" style="gap: 12px"><div class="yd-g2">
-                    <div class="col"><span class="xs b">${cap(monName(n.month))}</span><strong class="yd-big">${sr.counted}<span class="xs"> / ${CAP} aloqa</span></strong></div>
+                    <div class="col"><span class="xs b">${cap(monName(n.month))}</span><strong class="yd-big">${sr.counted}<span class="xs"> / ${cp} aloqa</span></strong></div>
                     <div class="col"><span class="xs b">Bu hafta</span><strong class="yd-big"${weekCount(sid) === 0 ? ' style="color: #B54708"' : ''}>${weekCount(sid)}<span class="xs"> / 3</span></strong></div>
                     <div class="col"><span class="xs b">Odatdagi vaqti</span><strong style="font-size: 16px">${esc(s.lessonTime || '—')}</strong></div>
                     <div class="col"><span class="xs b">Aloqa kunlari</span><strong style="font-size: 16px">${esc(adviceLabel(s).replace(/·/g, ' · '))}</strong></div></div></section>
@@ -571,15 +626,15 @@
             } else {
                 content = `<section class="card l a3">
                     <div class="li"><span class="s g1">Darslari</span><b style="font-size: 14px">${esc(D().patternLabel(s.lessonDayOfWeek))} ${esc(s.lessonTime || '')}</b></div>
-                    ${s.teacherName ? `<div class="li"><span class="s g1">Asosiy ustoz</span><b style="font-size: 14px">${esc(s.teacherName)}</b></div>` : ''}
+                    ${tn ? `<div class="li"><span class="s g1">Asosiy ustoz</span><b style="font-size: 14px">${esc(tn)}</b></div>` : ''}
                     ${startOf(s) ? `<div class="li"><span class="s g1">Kursni boshlagan</span><b style="font-size: 14px">${D().fmtDate(startOf(s))}</b></div>` : ''}
-                    <div class="li"><span class="s g1">Holati</span><b style="font-size: 14px">${s.frozen ? 'Muzlatilgan' : 'Faol'}</b></div></section>`;
+                    <div class="li"><span class="s g1">Holati</span><b style="font-size: 14px">${s.frozen ? `Muzlatilgan${freezeOf(s)?.to ? ' · ' + shortDate(freezeOf(s).to) + 'gacha' : ''}` : 'Faol'}</b></div></section>`;
             }
             return `${bar}<div class="bd nb" style="padding-top: 4px; gap: 12px">
-                <div class="row a1">${ava(s, 64).replace('style="', 'style="border: 3px solid #FFFFFF; box-shadow: 0 0 0 1px #CBD5E1; ')}<div class="col g1"><strong style="font-size: 21px; font-weight: 800">${esc(s.name)}</strong><span class="s">${s.serialCode ? `ID ${esc(s.serialCode)} · ` : ''}dars ${esc(D().patternLabel(s.lessonDayOfWeek))} ${esc(s.lessonTime || '')}</span><span class="xs" style="margin-top: 2px">${s.teacherName ? `Asosiy ustoz: ${esc(D().first(s.teacherName))} · ` : ''}${pr.reached ? `${pr.reached}-dars` : 'hali boshlanmagan'}</span></div></div>
+                <div class="row a1">${ava(s, 64).replace('style="', 'style="border: 3px solid #FFFFFF; box-shadow: 0 0 0 1px #CBD5E1; ')}<div class="col g1"><strong style="font-size: 21px; font-weight: 800">${esc(s.name)}</strong><span class="s">${s.serialCode ? `ID ${esc(s.serialCode)} · ` : ''}dars ${esc(D().patternLabel(s.lessonDayOfWeek))} ${esc(s.lessonTime || '')}</span><span class="xs" style="margin-top: 2px">${tn ? `Asosiy ustoz: ${esc(tn)} · ` : ''}${pr.reached ? `${pr.reached}-dars` : 'hali boshlanmagan'}</span></div></div>
                 <div class="yd-act a2">
-                  ${t ? `<a href="${esc(t)}">${svg(P.phone)}Qo'ng'iroq</a>` : `<span class="yd-dis" aria-disabled="true">${svg(P.phone)}Raqam yo'q</span>`}
-                  ${g ? `<a href="${esc(g)}" target="_blank" rel="noopener">${svg(P.tg)}Telegram</a>` : `<span class="yd-dis" aria-disabled="true">${svg(P.tg)}Telegram</span>`}
+                  ${g ? `<a href="${esc(g)}" target="_blank" rel="noopener">${svg(P.tg)}Dars guruhi</a>` : `<span class="yd-dis" aria-disabled="true">${svg(P.tg)}Guruh yo'q</span>`}
+                  <a href="#" data-u-push="sorov" data-arg="${esc(sid)}">${svg(P.msg)}Adminga so'rov</a>
                   ${s.frozen ? `<span class="yd-dis" aria-disabled="true">${svg(P.tick, 20, 2.4)}Muzlagan</span>` : `<a href="#" class="pr" data-yd-mark="${esc(sid)}">${svg(P.tick, 20, 2.4)}${todayOk ? 'Yana belgilash' : 'Belgilash'}</a>`}
                 </div>
                 <div class="seg bq-seg44" role="tablist">${[['gen', 'Umumiy'], ['aloqa', 'Aloqalar'], ['oz', "O'zlashtirish"]].map(([k, l]) => `<button type="button" role="tab" data-yd-kt="${k}" class="${kTab === k ? 'on' : ''}" aria-selected="${kTab === k}">${l}</button>`).join('')}</div>
@@ -600,23 +655,22 @@
         render() {
             const n = now(), prevM = D().shiftMonth(n.month, -1), month = mPrev ? prevM : n.month;
             const e = repOf(month), rep = e.data, nm = D().shiftMonth(month, 1), NM = monName(nm);
-            const monthly = rep?.monthly || 40000;
-            const active = helped().filter(s => !s.frozen).length;
+            const monthly = Number(rep?.monthly) || 0, cp = capOf(month), all = helped().length; // muzlaganda ham chegara o'zgarmaydi
             const bar = `<div class="bar"><a class="back" href="#" data-u-back>${svg(P.prev, 22, 2.2)}Menyu</a></div>`;
             const seg = `<div class="seg bq-seg44"><button type="button" data-yd-mp="1" class="${mPrev ? 'on' : ''}">${cap(monName(prevM))} · ${S().assistPrev?.state?.paid_at ? "to'landi" : 'yopildi'}</button><button type="button" data-yd-mp="0" class="${mPrev ? '' : 'on'}">${cap(monName(n.month))} · joriy</button></div>`;
             if (!rep) return `${bar}<div class="bd nb" style="padding-top: 0; gap: 12px"><h1 class="ttl">Maosh</h1>${seg}${e.err && e.err !== 'x' ? U.err(e, `yd:rep:${month}`) : e.err === 'x' ? '<div class="note w"><span>Aloqa hisobi yuklanmadi.</span></div>' : U.skel(2, 120)}</div>`;
             const lastDay = days(n.month).slice(-1)[0], left = Math.max(0, (Date.parse(lastDay) - Date.parse(n.date)) / 86400000);
             const st = rep.state || {};
             const pill = !mPrev ? `${left} kun qoldi` : st.paid_at ? "To'landi" : st.final_at ? 'Yakuniy tasdiqlandi' : st.prelim_at ? "E'tiroz muddati" : 'Moliya tekshiradi';
-            const rows = helped().map(s => ({ s, c: stuRep(month, s.id).counted })).filter(x => x.c || !mPrev).sort((a, b) => b.c - a.c);
+            const rows = helped().map(s => { const r = stuRep(month, s.id); return { s, c: r.counted, a: Number(r.amount) || 0 }; }).filter(x => x.c || !mPrev).sort((a, b) => b.c - a.c);
             const shown = mAll ? rows : rows.slice(0, 5);
             const step = (cls, t, sub) => `<div><i class="${cls}"></i><b>${t}</b>${sub}</div>`;
             return `${bar}<div class="bd nb" style="padding-top: 0; gap: 12px">
               <h1 class="ttl">Maosh</h1>${seg}
               <section class="blue a1">${U.HEX('ydMsHex').replace('class="hex"', 'class="hex bq-hex12"')}
-                <div class="bq-rel" style="display: flex; justify-content: space-between; align-items: center"><span class="yd-eb">${monName(month).toUpperCase()} · ${mPrev ? (st.final_at ? 'YAKUNIY' : 'DASTLABKI') : 'HOZIRCHA'}</span><span class="pill" style="background: rgba(255,255,255,.2); color: #FFFFFF">${pill}</span></div>
+                <div class="bq-rel" style="display: flex; justify-content: space-between; align-items: center"><span class="yd-eb">${monName(month).toUpperCase()} · ${mPrev ? (st.final_at ? 'YAKUNIY' : st.prelim_at ? 'DASTLABKI' : 'TEKSHIRUVDA') : 'HOZIRCHA'}</span><span class="pill" style="background: rgba(255,255,255,.2); color: #FFFFFF">${pill}</span></div>
                 <div class="bq-rel" style="display: flex; align-items: baseline; gap: 6px"><strong class="yd-amt">${money(rep.amount)}</strong><span style="font-size: 15px; font-weight: 700; color: #DCEBFF">so'm</span></div>
-                <span class="bq-rel" style="font-size: 13px; color: #DCEBFF">${rep.counted} ${mPrev ? '' : `/ ${active * CAP} `}aloqa${mPrev ? ` · ${rep.students?.length || 0} o'quvchi` : ` · to'liq bajarilsa ${money(active * monthly)}`}</span>
+                <span class="bq-rel" style="font-size: 13px; color: #DCEBFF">${rep.counted} ${mPrev ? '' : `/ ${all * cp} `}aloqa${mPrev ? ` · ${rep.students?.length || 0} o'quvchi` : monthly ? ` · to'liq bajarilsa ${money(all * monthly)}` : ''}</span>
                 <div class="yd-stp" style="margin-top: 4px">
                   ${step(mPrev ? 'd' : 'n', mPrev ? 'Oy yopildi' : 'Oy davom etmoqda', mPrev ? `1-${NM}` : `${+lastDay.slice(8)}-${monName(n.month)}gacha`)}
                   ${step(mPrev ? (st.final_at ? 'd' : 'n') : '', "E'tiroz", `4-${NM}gacha`)}
@@ -624,8 +678,8 @@
                 </div>
               </section>
               <div class="sh" style="flex: none"><h2 style="font-size: 15px">O'quvchilar bo'yicha</h2>${rows.length > 5 ? `<button type="button" class="yd-link" data-yd-all>${mAll ? 'Kamroq' : `Hammasi · ${rows.length}`}</button>` : ''}</div>
-              ${shown.length ? `<section class="card l a2">${shown.map(x => `<div class="li">${ava(x.s, 36)}<div class="col g1"><span class="nm">${esc(D().short(x.s.name))}</span><span class="s">${x.c} / ${CAP}${x.c >= CAP ? " · to'ldi" : ''}${x.s.frozen ? ' · muzlagan' : ''}</span></div><b style="font-size: 15px">${money(Math.round(monthly * x.c / CAP))}</b></div>`).join('')}</section>` : `<div class="card"><span class="s">Bu oy hali aloqa yo'q.</span></div>`}
-              <div class="note i a3">${svg(P.info, 18, 2).replace('<svg', '<svg style="flex: none; margin-top: 1px"')}<span>Har o'quvchi uchun: ${money(monthly)} so'm × aloqa ÷ ${CAP}. Oyiga ${CAP} tadan ortig'i hisoblanmaydi. Muzlagan kunlarda aloqa belgilanmaydi, chegara esa o'zgarmaydi.</span></div>
+              ${shown.length ? `<section class="card l a2">${shown.map(x => `<div class="li">${ava(x.s, 36)}<div class="col g1"><span class="nm">${esc(D().short(x.s.name))}</span><span class="s">${x.c} / ${cp}${x.c >= cp ? " · to'ldi" : ''}${x.s.frozen ? (freezeOf(x.s) ? ` · ${+freezeOf(x.s).from.slice(8)}–${freezeOf(x.s).to ? shortDate(freezeOf(x.s).to) : ''} muzlagan` : ' · muzlagan') : ''}</span></div><b style="font-size: 15px">${money(x.a)}</b></div>`).join('')}</section>` : `<div class="card"><span class="s">Bu oy hali aloqa yo'q.</span></div>`}
+              <div class="note i a3">${svg(P.info, 18, 2).replace('<svg', '<svg style="flex: none; margin-top: 1px"')}<span>Har o'quvchi uchun: ${money(monthly)} so'm × aloqa ÷ ${cp}. Oyiga ${cp} tadan ortig'i hisoblanmaydi. Muzlagan kunlarda aloqa belgilanmaydi, chegara esa o'zgarmaydi.</span></div>
             </div>`;
         },
         bind(root) {
@@ -652,7 +706,7 @@
             return `<div class="bd bq" style="padding-top: 16px; gap: 14px">${U.offline()}
               <h1 class="ttl">Menyu</h1>
               <a href="#" data-u-push="profil" class="blue a1 bq-mcard">${U.HEX('ydMnHex').replace('class="hex"', 'class="hex bq-hex12"')}
-                ${meAvatar(56, 'position: relative; border: 3px solid rgba(255,255,255,.85)')}
+                ${meAvatar(56, 'position: relative; border: 3px solid rgba(255,255,255,.85)', true)}
                 <div class="col g1 bq-rel" style="gap: 2px"><strong style="font-size: 18px; font-weight: 800">${esc(D().first(user.name || s.me?.name))}</strong><span style="font-size: 13px; color: #DCEBFF">Yordamchi ustoz${lang ? ' · ' + lang : ''} · ${helped().length} o'quvchi</span><span class="bq-rkp">${cap(monName(n.month))}: ${rep?.counted ?? 0} aloqa</span></div>
                 <span class="bq-rel">${svg(P.chev, 20, 2.2)}</span>
               </a>
@@ -665,7 +719,7 @@
                 ${tile('data-u-push="sorov"', 'mu', P.msg, "Adminga so'rov", 'yangi yozish')}
                 ${tile('data-yd-rules', 'inf', P.rules, 'Aloqa qoidalari', 'nima hisoblanadi')}
                 ${tile('data-u-push="yoriq"', 'inf', P.help, "Yo'riqnomalar", newG ? `${newG} ta yangi` : 'qoidalar', newG ? 'color: #0057B8; font-weight: 700' : '')}
-                ${tile('data-u-push="bildirish"', 'mu', P.bell, 'Xabarlar', 'bildirishnomalar')}
+                ${tile('data-u-push="bildirish"', 'mu', P.bell, 'Xabarlar', unread() ? `${unread()} ta yangi` : 'bildirishnomalar', unread() ? 'color: #0057B8; font-weight: 700' : '')}
               </nav>
               <div class="card l a3">
                 <a class="bq-ml" href="#" data-u-push="profil">${svg(P.tg).replace('currentColor', '#3A4456')}<span class="g1 bq-mlt">Telegram bot</span>${U.bq?.tgPill ? U.bq.tgPill() : ''}</a>
@@ -693,7 +747,9 @@
         const n = now(), s = D().stuOf(sid); if (!s) return [];
         const counted = new Set((stuRep(n.month, sid).items || []).filter(i => i.status === 'counted').map(i => i.day));
         const pend = new Set((S().requests || []).filter(r => r.type === 'assist_late' && r.status === 'new' && r.payload?.studentId === sid).map(r => D().day10(r.payload.day)));
-        return days(n.month).filter(d => d < n.date && wd(d) !== 7 && !counted.has(d) && !pend.has(d) && !(startOf(s) && d < startOf(s))).reverse();
+        // Faqat o'quvchi faol bo'lgan tavsiya kunlari (muzlagan/chiqqan kunlarga server 409 qaytaradi) — /assist/plan bilan bir xil.
+        const adv = adviceSet(n.month)?.get(sid);
+        return days(n.month).filter(d => d < n.date && wd(d) !== 7 && !counted.has(d) && !pend.has(d) && !(startOf(s) && d < startOf(s)) && (adv ? adv.has(d) : !s.frozen && inPattern(s, d))).reverse();
     }
     U.page('y-kech', {
         render(arg) {
@@ -706,18 +762,20 @@
             const locked = !!S().assist?.state?.final_at;
             const mine = (S().requests || []).filter(r => r.type === 'assist_late' && D().day10(r.payload?.day || '').slice(0, 7) === n.month);
             const stName = { new: ['wa', 'Kutilmoqda'], approved: ['ok', 'Tasdiqlandi'], rejected: ['bad', 'Rad etildi'] };
-            const sel = (id, label, opts, val) => `<div class="col" style="gap: 6px"><label class="yd-lb" for="${id}">${label}</label><div class="yd-sel">${`<select id="${id}">${opts.map(([v, t]) => `<option value="${esc(v)}"${v === val ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>`}${svg(P.down, 18, 2.2).replace('currentColor', '#4B5563')}</div></div>`;
-            return `<div class="bar"><a class="back" href="#" data-u-back>${svg(P.prev, 22, 2.2)}Orqaga</a></div>
+            const sel = (id, label, opts, val, lead = '') => `<div class="col" style="gap: 6px"><label class="yd-lb" for="${id}">${label}</label><div class="yd-sel${lead ? ' av' : ''}">${lead}<select id="${id}">${opts.map(([v, t]) => `<option value="${esc(v)}"${v === val ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>${svg(P.down, 18, 2.2).replace('currentColor', '#4B5563')}</div></div>`;
+            // Dizayn Y11: usul va daqiqa — bitta tanlov ("Telefon · 10"); yozishmada daqiqa yo'q.
+            const UM = D().CHANNELS.flatMap(([k, l]) => k === 'tg_text' ? [[`${k}|0`, CH.find(c => c[0] === k)[1]]] : [5, 10, 15, 20, 30].map(m => [`${k}|${m}`, `${CH.find(c => c[0] === k)?.[1] || l} · ${m === 30 ? '30+' : m}`]));
+            const umVal = `${kf.ch}|${kf.ch === 'tg_text' ? 0 : kf.min}`, ks = D().stuOf(kf.sid);
+            return `<div class="bar"><a class="back" href="#" data-u-back>${svg(P.prev, 22, 2.2)}${esc(U.tabLabel())}</a></div>
               <div class="bd nb" style="padding-top: 0; gap: 12px">
                 <h1 class="ttl">Kechikkan aloqa</h1>
                 <div class="note i a1">${svg(P.clock, 18, 2).replace('<svg', '<svg style="flex: none; margin-top: 1px"')}<span>Aloqa o'sha kuni belgilanadi. Esdan chiqqan bo'lsa — shu yerdan yozing, admin tasdiqlasa hisobga o'tadi. Faqat <b>shu oy</b> kunlari uchun.</span></div>
                 ${locked ? `<div class="note w"><span><b>${cap(monName(n.month))} yakuniy tasdiqlangan</b> — so'rov yuborib bo'lmaydi.</span></div>` : list.length ? `<section class="card a2" style="gap: 12px">
-                  ${sel('yd-ks', "O'quvchi", list.map(s => [s.id, s.name]), kf.sid)}
+                  ${sel('yd-ks', "O'quvchi", list.map(s => [s.id, s.name]), kf.sid, ks ? ava(ks, 32).replace('class="av"', 'class="av yd-sav"') : '')}
                   <div class="yd-g2" style="gap: 8px">
                     ${ds.length ? sel('yd-kd', 'Qachon', ds.map(d => [d, `${+d.slice(8)}-${D().MON_S[+d.slice(5, 7) - 1].toLowerCase()}, ${D().DAY[wd(d) - 1]}`]), kf.day) : '<div class="col" style="gap: 6px"><span class="yd-lb">Qachon</span><span class="s" style="min-height: 52px; display: flex; align-items: center">Belgilanmagan kun yo\'q</span></div>'}
-                    ${sel('yd-kc', 'Usul', D().CHANNELS.map(([k, l]) => [k, l]), kf.ch)}
+                    ${sel('yd-kc', 'Usul · daqiqa', UM, umVal)}
                   </div>
-                  ${kf.ch === 'tg_text' ? '' : `<div class="col" style="gap: 6px"><span class="yd-lb">Necha daqiqa?</span><div class="yd-dm" role="radiogroup" aria-label="Davomiylik">${[5, 10, 15, 20, 30].map(v => `<button type="button" role="radio" aria-checked="${kf.min === v}" data-kmin="${v}" class="${kf.min === v ? 'on' : ''}">${v === 30 ? '30+' : v}</button>`).join('')}</div></div>`}
                   <div class="fl"><label for="yd-kw">Nega o'sha kuni belgilanmadi? <span style="color: #B42318">*</span></label><textarea id="yd-kw" placeholder="Masalan: internet yo'q edi">${esc(kf.why)}</textarea></div>
                   <button type="button" class="btn p w" data-yd-send${!kf.day ? ' disabled' : ''}>Adminga yuborish</button>
                 </section>` : `<div class="card"><span class="s">Sizga hali o'quvchi biriktirilmagan.</span></div>`}
@@ -729,8 +787,7 @@
             const keep = () => { kf.why = root.querySelector('#yd-kw')?.value || kf.why; };
             root.querySelector('#yd-ks')?.addEventListener('change', e => { keep(); kf.sid = e.target.value; kf.day = ''; U.render(); });
             root.querySelector('#yd-kd')?.addEventListener('change', e => { kf.day = e.target.value; });
-            root.querySelector('#yd-kc')?.addEventListener('change', e => { keep(); kf.ch = e.target.value; U.render(); });
-            root.querySelectorAll('[data-kmin]').forEach(b => b.onclick = () => { keep(); kf.min = +b.dataset.kmin; U.render(); });
+            root.querySelector('#yd-kc')?.addEventListener('change', e => { const [c, m] = e.target.value.split('|'); kf.ch = c; if (+m) kf.min = +m; });
             root.querySelector('[data-yd-send]')?.addEventListener('click', async e => {
                 keep();
                 const reason = kf.why.trim();
