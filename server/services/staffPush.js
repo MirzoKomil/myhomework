@@ -61,7 +61,7 @@ async function deliver(pool, userId, role, msg) {
 async function test(pool, actor) {
     if (!fcm.configured()) throw Object.assign(new Error('Push hali sozlanmagan (serverda FCM kaliti yo\'q)'), { status: 503 });
     const u = (await pool.query('SELECT role FROM users WHERE id=$1', [actor.id])).rows[0] || {};
-    const r = await deliver(pool, String(actor.id), u.role, { title: 'Bildirishnomalar ishlayapti ✅', body: 'Domwork Team xabarlari endi shu telefonga keladi.', tag: 'test', id: `test:${Date.now()}`,
+    const r = await deliver(pool, String(actor.id), u.role, { title: 'Bildirishnomalar ishlayapti ✅', body: 'Jamoa xabarlari endi shu telefonga keladi.', tag: 'test', id: `test:${Date.now()}`,
         url: u.role === 'teacher' ? 'https://myhomework.uz/teacher/' : 'https://myhomework.uz/' });
     if (!r.devices) throw Object.assign(new Error('Bu akkauntda ilova o\'rnatilgan telefon topilmadi'), { status: 404 });
     return { ok: r.ok > 0, ...r };

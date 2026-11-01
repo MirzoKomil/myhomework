@@ -60,7 +60,7 @@
     const PHONE = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/></svg>';
     const CHECK = (s, w) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>`;
     const hex = (id, op) => `<svg class="hx" aria-hidden="true" width="100%" height="100%"${op ? ` style="opacity:${op}"` : ''}><defs><pattern id="${id}" width="48" height="41.6" patternUnits="userSpaceOnUse"><path d="M12 0h24l12 20.8-12 20.8H12L0 20.8z" fill="none" stroke="#FFFFFF" stroke-width="1.5"/></pattern></defs><rect width="100%" height="100%" fill="url(#${id})"/></svg>`;
-    const brand = () => `<span class="tl-brand"><img src="${MARK}" alt="Domwork"><b>Domwork Team</b></span>`;
+    const brand = () => `<span class="tl-brand"><img src="${MARK}" alt="Domwork"><b>Jamoa</b></span>`;
 
     // ── Holat ──
     const st = { scr: '', slide: 0, login: '', pw: '', remember: ls.get(REMEMBER_KEY) !== '0', err: null, busy: false, lockUntil: 0, user: null, pushed: false };
@@ -332,7 +332,7 @@
         if (sheetOpen) return;
         sheetOpen = true;
         const tg = adminTg(), login = fmtLogin(st.login);
-        const text = `Assalomu alaykum! Domwork Team ilovasiga kirish parolimni unutdim.${login ? ' Login: ' + login : ''}`;
+        const text = `Assalomu alaykum! Jamoa ilovasiga kirish parolimni unutdim.${login ? ' Login: ' + login : ''}`;
         const href = tg ? `https://t.me/${encodeURIComponent(tg)}?text=${encodeURIComponent(text)}` : '';
         const wrap = document.createElement('div');
         wrap.innerHTML = `<div class="tl-scrim" data-close></div>

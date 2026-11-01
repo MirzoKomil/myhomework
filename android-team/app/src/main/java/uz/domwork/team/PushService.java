@@ -47,7 +47,7 @@ public class PushService extends FirebaseMessagingService {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
         NotificationManager nm = ctx.getSystemService(NotificationManager.class);
         if (nm == null || nm.getNotificationChannel(CHANNEL) != null) return;
-        NotificationChannel ch = new NotificationChannel(CHANNEL, "Domwork xabarlari", NotificationManager.IMPORTANCE_HIGH);
+        NotificationChannel ch = new NotificationChannel(CHANNEL, "Jamoa xabarlari", NotificationManager.IMPORTANCE_HIGH);
         ch.setDescription("Yangi lidlar, sinov darslari va eslatmalar");
         ch.enableVibration(true);
         ch.setVibrationPattern(new long[]{0, 250, 120, 250});

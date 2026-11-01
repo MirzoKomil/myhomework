@@ -1,4 +1,4 @@
-name: Domwork Team APK
+name: Jamoa APK
 
 on:
   push:
@@ -59,13 +59,13 @@ jobs:
         run: |
           if [ "$DWT_SIGNED" = "1" ]; then export DWT_KEYSTORE="$DWT_KS_PATH"; fi
           gradle -p android-team assembleRelease --no-daemon
-          cp android-team/app/build/outputs/apk/release/app-release*.apk DomworkTeam.apk
-          ls -la DomworkTeam.apk
+          cp android-team/app/build/outputs/apk/release/app-release*.apk Jamoa.apk
+          ls -la Jamoa.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: DomworkTeam-1.0.${{ github.run_number }}
-          path: DomworkTeam.apk
+          name: Jamoa-1.0.${{ github.run_number }}
+          path: Jamoa.apk
 
       - name: Release
         if: github.event_name != 'pull_request'
@@ -73,9 +73,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="team-v1.0.${{ github.run_number }}"
-          NOTE="Domwork Team — xodimlar ilovasi (sotuv, ROP, ustoz, HR, targetolog). Telefonga DomworkTeam.apk ni yuklab o'rnating. Birinchi ochilishda bildirishnomalarga ruxsat bering."
+          NOTE="Jamoa — xodimlar ilovasi (sotuv, ROP, ustoz, HR, targetolog). Telefonga Jamoa.apk ni yuklab o'rnating. Birinchi ochilishda bildirishnomalarga ruxsat bering."
           if [ "$DWT_SIGNED" = "1" ]; then
-            gh release create "$TAG" DomworkTeam.apk --title "Domwork Team 1.0.${{ github.run_number }}" --notes "$NOTE" --latest
+            gh release create "$TAG" Jamoa.apk --title "Jamoa 1.0.${{ github.run_number }}" --notes "$NOTE" --latest
           else
-            gh release create "$TAG" DomworkTeam.apk --title "Domwork Team 1.0.${{ github.run_number }} (test imzo)" --notes "$NOTE" --prerelease
+            gh release create "$TAG" Jamoa.apk --title "Jamoa 1.0.${{ github.run_number }} (test imzo)" --notes "$NOTE" --prerelease
           fi

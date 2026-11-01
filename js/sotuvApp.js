@@ -1030,10 +1030,10 @@
         const ios = isIOS();
         const step = (n, t, sub) => `<li class="sa-inst-s"><b>${n}</b><span><strong>${t}</strong>${sub ? `<em>${sub}</em>` : ''}</span></li>`;
         const share = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M8 7l4-4 4 4"/><path d="M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/></svg>';
-        openSheet(`<div class="sa-sh-h"><img src="images/app/icon-192.png" alt="" width="48" height="48" class="sa-inst-ic"><div><h2>Ilovani telefonga oʻrnatish</h2><span>Domwork Team · 1 daqiqa</span></div></div>
+        openSheet(`<div class="sa-sh-h"><img src="images/app/icon-192.png" alt="" width="48" height="48" class="sa-inst-ic"><div><h2>Ilovani telefonga oʻrnatish</h2><span>Jamoa · 1 daqiqa</span></div></div>
           <ol class="sa-inst">${ios
-            ? step(1, `Safari pastidagi ${share} <u>Ulashish</u> tugmasini bosing`, 'Chrome’da: manzil satridagi ulashish belgisi') + step(2, '“Bosh ekranga qoʻshish” ni tanlang', 'Roʻyxatni biroz pastga suring') + step(3, '“Qoʻshish” ni bosing', 'Bosh ekranda Domwork Team belgisi paydo boʻladi')
-            : step(1, 'Chrome’da yuqori oʻngdagi ⋮ menyuni oching', '') + step(2, '“Ilovani oʻrnatish” yoki “Bosh ekranga qoʻshish” ni tanlang', '') + step(3, '“Oʻrnatish” ni bosing', 'Bosh ekranda Domwork Team belgisi paydo boʻladi')}</ol>
+            ? step(1, `Safari pastidagi ${share} <u>Ulashish</u> tugmasini bosing`, 'Chrome’da: manzil satridagi ulashish belgisi') + step(2, '“Bosh ekranga qoʻshish” ni tanlang', 'Roʻyxatni biroz pastga suring') + step(3, '“Qoʻshish” ni bosing', 'Bosh ekranda Jamoa belgisi paydo boʻladi')
+            : step(1, 'Chrome’da yuqori oʻngdagi ⋮ menyuni oching', '') + step(2, '“Ilovani oʻrnatish” yoki “Bosh ekranga qoʻshish” ni tanlang', '') + step(3, '“Oʻrnatish” ni bosing', 'Bosh ekranda Jamoa belgisi paydo boʻladi')}</ol>
           <p class="sa-sh-foot">Keyin ilovani shu belgidan oching — brauzersiz, toʻliq ekranda ishlaydi.</p>
           <button type="button" class="sa-btn sa-btn--primary sa-cr-save" data-sa-sheetclose>Tushunarli</button>`);
     }
