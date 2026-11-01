@@ -4132,7 +4132,9 @@ const { assertTeacherAttendanceWindow, assertTeacherOwnsDay, assertStaffAttendan
 // Ustoz ilovasi v2: "Kelmadi" sababi (reasonCode: nowarn|sick|travel|noanswer|other + izoh) va dars boshqa vaqtda o'tgan bo'lsa
 // haqiqiy vaqti (heldFrom/heldTo, "HH:MM"). Ikkalasi ham ixtiyoriy, maoshga ta'sir qilmaydi — nazorat uchun.
 const ABSENCE_REASONS = { nowarn: 'Ogohlantirmadi', sick: 'Kasal', travel: 'Uzrli sabab', noanswer: 'Aloqa bo\'lmadi', other: 'Boshqa' };
-async function recordTeacherAttendance({ actor, teacherId, studentId, date, present, grade, attendanceType, reasonCode, reasonNote, heldFrom, heldTo }) {
+async function recordTeacherAttendance({ actor, teacherId, studentId, date, present, grade, attendanceType, reasonCode, reasonNote, heldFrom, heldTo, requireReason }) {
+    // Ustoz ilovasi v2: "Kelmadi" sababsiz saqlanmaydi (eski klientlar requireReason yubormaydi — ular uchun avvalgidek).
+    if (present === false && requireReason === true && !ABSENCE_REASONS[reasonCode]) throw Object.assign(new Error('Kelmadi sababini tanlang'), { status: 400 });
     if (typeof present !== 'boolean' && present !== null) throw Object.assign(new Error('Davomat boolean yoki olib tashlash uchun null bo‘lishi kerak'), { status: 400 });
     if (attendanceType !== undefined && !['main', 'assistant'].includes(attendanceType)) throw new Error('Davomat roli noto‘g‘ri');
     const safeTeacherId = String(teacherId || '').trim();

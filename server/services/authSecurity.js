@@ -26,10 +26,17 @@ function ensure(pool) {
     return ready;
 }
 
+// Qulf kaliti normallashgan login: "+998 90 123 45 67", "901234567", "(90)1234567" — bitta akkaunt (findUserByEmail oxirgi 9 raqam bo'yicha topadi),
+// shuning uchun yozilish ko'rinishini almashtirib 5 urinishni aylanib o'tib bo'lmaydi.
+function loginKey(login) {
+    const s = String(login || '').trim(), d = s.replace(/\D/g, '');
+    return /^[\s+()0-9-]+$/.test(s) && d.length >= 9 ? d.slice(-9) : s.toLowerCase();
+}
+const KEY_SQL = `(CASE WHEN login ~ '^[[:space:]+()0-9-]+$' AND LENGTH(REGEXP_REPLACE(login,'[^0-9]','','g')) >= 9 THEN RIGHT(REGEXP_REPLACE(login,'[^0-9]','','g'),9) ELSE LOWER(login) END)`;
 async function isLocked(pool, login, ip) {
     await ensure(pool);
     const { rows } = await pool.query(`SELECT COUNT(*)::int AS n, MAX(at) AS last FROM login_events
-        WHERE LOWER(login)=LOWER($1) AND ip=$2 AND NOT ok AND at > NOW() - ($3 || ' minutes')::interval`, [login, ip, String(LOCK_MINUTES)]);
+        WHERE ${KEY_SQL}=$1 AND ip=$2 AND NOT ok AND at > NOW() - ($3 || ' minutes')::interval`, [loginKey(login), ip, String(LOCK_MINUTES)]);
     return rows[0].n >= FAIL_LIMIT;
 }
 
@@ -37,11 +44,19 @@ async function isLocked(pool, login, ip) {
 // so'nggi 15 daqiqadagi xatolar; qulf eng so'nggi 5 xatoning eng eskisi 15 daqiqadan o'tganda ochiladi.
 async function failState(pool, login, ip) {
     await ensure(pool);
-    const { rows } = await pool.query(`SELECT at FROM login_events WHERE LOWER(login)=LOWER($1) AND ip=$2 AND NOT ok
-        AND at > NOW() - ($3 || ' minutes')::interval ORDER BY at DESC LIMIT $4`, [login, ip, String(LOCK_MINUTES), FAIL_LIMIT]);
+    const { rows } = await pool.query(`SELECT at FROM login_events WHERE ${KEY_SQL}=$1 AND ip=$2 AND NOT ok
+        AND at > NOW() - ($3 || ' minutes')::interval ORDER BY at DESC LIMIT $4`, [loginKey(login), ip, String(LOCK_MINUTES), FAIL_LIMIT]);
     const left = Math.max(0, FAIL_LIMIT - rows.length);
     const retryAfterSec = left === 0 ? Math.max(1, Math.ceil((new Date(rows[rows.length - 1].at).getTime() + LOCK_MINUTES * 60000 - Date.now()) / 1000)) : 0;
     return { attemptsLeft: left, retryAfterSec };
+}
+
+// Akkaunt bo'yicha umumiy cheklov (IP dan qat'i nazar): 15 daqiqada 3×FAIL_LIMIT xato — akkaunt vaqtincha yopiladi.
+async function accountLocked(pool, userId) {
+    if (!userId) return false;
+    await ensure(pool);
+    const { rows } = await pool.query(`SELECT COUNT(*)::int AS n FROM login_events WHERE user_id=$1 AND NOT ok AND at > NOW() - ($2 || ' minutes')::interval`, [userId, String(LOCK_MINUTES)]);
+    return rows[0].n >= FAIL_LIMIT * 3;
 }
 
 async function record(pool, { userId = null, login, ok, reason = '', ip = '', userAgent = '' }) {
@@ -82,4 +97,4 @@ async function passwordChangedAt(pool, userId) {
     return (await pool.query('SELECT password_changed_at FROM users WHERE id=$1', [userId])).rows[0]?.password_changed_at || null;
 }
 
-module.exports = { FAIL_LIMIT, LOCK_MINUTES, STAFF_MIN, ensure, isLocked, failState, record, history, maskIp, checkNewPassword, markPasswordChanged, passwordChangedAt };
+module.exports = { FAIL_LIMIT, LOCK_MINUTES, STAFF_MIN, ensure, isLocked, failState, accountLocked, loginKey, record, history, maskIp, checkNewPassword, markPasswordChanged, passwordChangedAt };

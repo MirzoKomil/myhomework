@@ -247,7 +247,7 @@
             return `${bar()}
             <div class="bd nb bq" style="padding-top: 4px; gap: 12px">
               ${U.offline()}
-              <div class="row a1">${D().avatar(s, 'av bq-a64')}<div class="col g1"><strong class="bq-name">${esc(s.name)}</strong><span class="s">ID ${esc(s.id)} · ${esc(sched(s))}</span><span class="xs" style="margin-top: 2px">Kurs: ${kun ? `${kun}-kun · ` : ''}${reached ? `${reached}-dars` : 'hali boshlanmagan'}</span></div></div>
+              <div class="row a1">${D().avatar(s, 'av bq-a64')}<div class="col g1"><strong class="bq-name">${esc(s.name)}</strong><span class="s">${s.serialCode ? `ID ${esc(s.serialCode)} · ` : ''}${esc(sched(s))}</span><span class="xs" style="margin-top: 2px">Kurs: ${kun ? `${kun}-kun · ` : ''}${reached ? `${reached}-dars` : 'hali boshlanmagan'}</span></div></div>
               <div class="bq-act a2">
                 ${tgOk ? `<a href="${esc(g.tg_link)}" target="_blank" rel="noopener">${svg(P.tg, 20, 2)}Dars guruhi</a>` : `<a href="#" data-bq-nogroup aria-disabled="true" class="bq-off">${svg(P.tg, 20, 2)}Dars guruhi</a>`}
                 <a href="#" data-u-push="sorov" data-arg="${esc(s.id)}">${svg(P.msg, 20, 2)}Adminga so'rov</a>

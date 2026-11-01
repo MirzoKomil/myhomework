@@ -565,7 +565,10 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
             // Hisobga o'tgan qoplashni rad etish faqat joriy oyda — yopilgan (maoshi hisoblangan) oy jimgina o'zgarmasin.
             const cur = (await c.query('SELECT status, missed_date, held_date FROM school_makeups WHERE id=$1', [req.params.id])).rows[0];
             const m = S.dateStr(cur?.held_date || cur?.missed_date || '').slice(0, 7);
-            if (cur?.status === 'approved' && m && m < T.nowLocal().date.slice(0, 7)) throw T.fail(409, `${m} oyi yopilgan — bu qoplashni endi rad etib bo'lmaydi`);
+            // E'tiroz 4-sanagacha: o'tgan oy qoplashini keyingi oyning 4-sanasigacha rad etish mumkin, keyin — oy yopilgan.
+            const now = T.nowLocal().date, curM = now.slice(0, 7), prevM = T.addDays(`${curM}-01`, -1).slice(0, 7);
+            const open = m === curM || (m === prevM && Number(now.slice(8)) <= 4);
+            if (cur?.status === 'approved' && m && m < curM && !open) throw T.fail(409, `${m} oyi yopilgan — bu qoplashni endi rad etib bo'lmaydi`);
         }
         const { rows } = await c.query(`UPDATE school_makeups SET status=$2, decided_by=$3, decided_by_name=$4, decided_at=NOW(), decision_note=$5
             WHERE id=$1 AND (status='review' OR ($6 AND status='approved')) RETURNING *`, [req.params.id, approve ? 'approved' : 'rejected', req.user.id, req.user.name || '', String(req.body?.note || '').slice(0, 300), !approve]);

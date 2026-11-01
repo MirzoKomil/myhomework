@@ -121,7 +121,7 @@
     // ── Saqlash (davomat) — internet yo'q bo'lsa telefonda navbat (eski ilova bilan bir xil outbox) ──
     async function saveMark(s, date, present, extra = {}) {
         const d = D(), S = d.S;
-        const body = { teacherId: S.me.id, studentId: s.id, date, present, attendanceType: 'main', ...extra };
+        const body = { teacherId: S.me.id, studentId: s.id, date, present, attendanceType: 'main', requireReason: true, ...extra };
         const apply = () => { d.setAtt(s.id, date, present === null ? null : present ? 1 : 0); local.set(`${s.id}|${date}`, present === null ? null : present ? 1 : 0); if (present === false && extra.reasonCode) reasons.set(`${s.id}|${date}`, { reasonCode: extra.reasonCode, reasonNote: extra.reasonNote || '' }); };
         try {
             await d.api('/api/state/teacher-attendance', { method: 'POST', body });

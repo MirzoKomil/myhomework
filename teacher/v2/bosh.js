@@ -149,6 +149,7 @@
         }
         for (const m of S0.makeups || []) {
             const t = Date.parse(m.decided_at); if (!(t > since) || !['approved', 'rejected'].includes(m.status)) continue;
+            if (m.status === 'approved' && !m.decided_by) continue; // o'zi kiritgan, tasdiqsiz hisobga o'tgan — hech kim "tasdiqlamagan"
             ev.push({ id: `mk:${m.id}:${m.status}`, cat: 'davomat', tone: m.status === 'approved' ? 'ok' : 'bad', ic: m.status === 'approved' ? 'ok' : 'no', title: `Qoplash ${m.status === 'approved' ? 'tasdiqlandi' : 'rad etildi'}`,
                 sub: `${esc(d.first(d.stuOf(m.student_id)?.name || ''))} · ${fmtShort(d.day10(m.missed_date))} o'rniga${m.decision_note ? ' · ' + esc(m.decision_note) : ''}`, t, go: { tab: 'davomat' } });
         }
@@ -453,7 +454,7 @@
     }
     async function saveAttendance(s, live, present, o) {
         const d = D(), S0 = S(), date = live.date;
-        const body = { teacherId: S0.me.id, studentId: s.id, date, present, attendanceType: 'main' };
+        const body = { teacherId: S0.me.id, studentId: s.id, date, present, attendanceType: 'main', requireReason: true };
         if (present) { body.heldFrom = o.heldFrom; body.heldTo = o.heldTo; }
         else { body.reasonCode = o.reasonCode; if (o.reasonNote) body.reasonNote = o.reasonNote; }
         const before = S0.salary?.current?.total;

@@ -162,6 +162,8 @@ router.post('/login', async (req, res) => {
                 locked: true, retryAfterSec: st?.retryAfterSec || security.LOCK_MINUTES * 60 });
         }
         const user = await findUserByEmail(login);
+        if (user && await security.accountLocked(dbPool(), user.id).catch(() => false))
+            return res.status(429).json({ error: `Ko'p marta noto'g'ri parol kiritildi. ${security.LOCK_MINUTES} daqiqadan keyin qayta urinib ko'ring.`, locked: true, retryAfterSec: security.LOCK_MINUTES * 60 });
         if (!user || !bcrypt.compareSync(password, user.password_hash)) {
             await security.record(dbPool(), { userId: user?.id || null, login, ok: false, reason: 'wrong_password', ip, userAgent }).catch(() => {});
             // Qolgan urinishlar (ilova "Yana N ta urinish qoldi" ko'rsatadi); 0 bo'lsa — endi qulf.
