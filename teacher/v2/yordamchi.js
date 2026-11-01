@@ -74,6 +74,7 @@
         return { from: String(h.from || '').slice(0, 10), to: h.to ? String(h.to).slice(0, 10) : '' };
     }
     const shortDate = d => `${+d.slice(8)}-${D().MON_S[+d.slice(5, 7) - 1].toLowerCase()}`;
+    const longDate = d => `${+d.slice(8)}-${D().MON[+d.slice(5, 7) - 1]}`;
     const greet = () => { const h = now().hour; return h < 11 ? 'Xayrli tong' : h < 18 ? 'Xayrli kun' : 'Xayrli kech'; };
 
     // ── Oy hisobi (S.assist — joriy, S.assistPrev — o'tgan; boshqalari yuklanadi) ──
@@ -282,7 +283,7 @@
             }).join('');
             return `<div class="dv-tbw a2" style="--cw: 46px"><div class="dv-mh"><b style="font-size: 14px">${title}</b><span class="xs">${note}</span></div><span class="dv-fade" aria-hidden="true"></span><div class="dv-sc" data-ti="${ti}" data-gid="${gid}">${grid}</div></div>`;
         };
-        const tables = GROUPS.filter(([gid]) => aFlt === 'all' || aFlt === gid || (gid === 'other' && aFlt === 'all')).map(([gid, t, w]) => table(gid, t, w)).join('');
+        const tables = GROUPS.filter(([gid]) => aFlt === 'all' || aFlt === gid || gid === 'other') // aralash kunli o'quvchilar har filtrda ko'rinadi.map(([gid, t, w]) => table(gid, t, w)).join('');
         const empty = `<div class="dv-tbw a2"><div class="dv-empty">${all.length ? (aFlt === 'odd' ? "Toq kunlarda (Du·Ch·Ju) aloqa qilinadigan o'quvchi yo'q" : "Juft kunlarda (Se·Pa·Sh) aloqa qilinadigan o'quvchi yo'q") : "Sizga hali o'quvchi biriktirilmagan"}</div></div>`;
         const prevM = D().shiftMonth(aMonth, -1), nextM = D().shiftMonth(aMonth, 1);
         return `<header class="hd" style="padding-bottom: 4px"><div class="t"><span class="date">${esc(U.dateLong(n.date))}</span><h1 style="font-size: 26px">Aloqalar · ${M}</h1></div>
@@ -326,7 +327,7 @@
             root.querySelectorAll('[data-yd-cell]').forEach(b => b.onclick = () => { const [sid, date] = b.dataset.ydCell.split('|'); onCell(sid, date); });
             root.querySelectorAll('.dv-sc').forEach(sc => {
                 const key = `${aMonth}|${sc.dataset.gid}`;
-                sc.scrollLeft = aScroll[key] != null ? aScroll[key] : Math.max(0, (+sc.dataset.ti - 1) * 46); // bugungi (yoki keyingi) ustun chapdan 2-o'rinda
+                sc.scrollLeft = aScroll[key] != null ? aScroll[key] : Math.max(0, (+sc.dataset.ti - 3) * 46); // ustoz Davomati bilan bir xil: bugungi ustun chapdan 4-o'rinda
                 sc.onscroll = () => { aScroll[key] = sc.scrollLeft; };
             });
         }
@@ -410,7 +411,7 @@
                 <div class="yd-ug2" role="radiogroup" aria-label="Usul">${CH_LONG.map(([k, l, ic]) => `<button type="button" role="radio" aria-checked="${st.ch === k}" data-ch="${k}" class="${st.ch === k ? 'on' : ''}">${svg(ic, 18, 2)}${l}</button>`).join('')}</div>
                 ${warn()}
                 ${izoh('Nima haqida yozishdingiz?')}
-                <div class="yd-b2"><button type="button" class="btn" data-ch="phone">Usulni o'zgartirish</button><button type="button" class="btn p" data-save>Baribir saqlash</button></div>
+                <div class="yd-b2"><button type="button" class="btn" data-ch="phone" style="color: #0057B8">Usulni o'zgartirish</button><button type="button" class="btn p" data-save>Baribir saqlash</button></div>
                 <span class="xs" style="text-align: center">Yozishma haftasiga 1 ta hisoblanadi</span>`;
             if (st.out === 'no_answer') return `${head()}${outBtns()}${body()}
                 ${izoh("Masalan: 2 marta qo'ng'iroq qildim")}
@@ -435,9 +436,8 @@
                     const minutes = outcome === 'no_answer' || channel === 'tg_text' ? 0 : st.min;
                     try {
                         await U.api('/api/school/assist/contacts', { method: 'POST', body: { studentId: s.id, outcome, channel, minutes, note: box.querySelector('#yd-nt').value.trim(), at: D().hm(t.min) } });
-                        const before = doneToday(todayList()), total = todayList().length, amt0 = Number(S().assist?.amount) || 0;
+                        const before = doneToday(todayList()), total = todayList().length;
                         S().assist = await U.api(`/api/school/assist/month?month=${t.month}`).catch(() => S().assist);
-                        addGain(t.date, (Number(S().assist?.amount) || 0) - amt0); // bugun qo'shilgan summa — server hisobi farqi
                         U.drop('yd:plan:');
                         close();
                         const after = doneToday(todayList());
@@ -470,19 +470,8 @@
         ov.querySelector('.btn.p')?.focus({ preventScroll: true, focusVisible: false });
         return close;
     }
-    // Bugun qo'shilgan summa: har saqlashda server oy hisobining (amount) oldin/keyin farqi yig'iladi.
-    const GAIN = 'dwt_v2_yd_gain';
-    function addGain(date, v) { const g = D().store.get(GAIN, null); D().store.set(GAIN, { date, sum: (g?.date === date ? g.sum : 0) + Math.max(0, Number(v) || 0) }); }
-    function gainToday() {
-        const n = now(), g = D().store.get(GAIN, null);
-        if (g?.date === n.date && g.sum > 0) return g.sum;
-        // Ilova orqali kuzatilmagan bo'lsa — server tarifi bilan (har o'quvchida bugungi hisoblangan aloqa ulushi).
-        const m = monthlyOf(n.month), cp = capOf(n.month);
-        return (S().assist?.students || []).reduce((a, x) => {
-            const today = (x.items || []).some(i => i.day === n.date && i.status === 'counted');
-            return a + (today ? Math.round(m * x.counted / cp) - Math.round(m * (x.counted - 1) / cp) : 0);
-        }, 0);
-    }
+    // Bugun qo'shilgan summa — server oy hisobidan (rep.today: bugungi aloqalarsiz hisob bilan farq).
+    const gainToday = () => Number(S().assist?.today?.amount) || 0;
     function dayDone(count) {
         const n = now(), key = 'dwt_v2_yd_daydone';
         if (D().store.get(key, '') === n.date) return;
@@ -578,7 +567,7 @@
         list.sort((a, b) => order(a) - order(b) || stuRep(n.month, a.id).counted - stuRep(n.month, b.id).counted);
         const inact = S().inactive || [];
         const pill = s => s.frozen ? '<span class="pill mu">Muzlagan</span>' : stuRep(n.month, s.id).counted >= cp ? "<span class=\"pill ok\">To'ldi</span>" : weekCount(s.id) === 0 ? `<span class="pill wa">Hafta 0/3</span>` : '<span class="pill ok">Rejada</span>';
-        const row = s => `<a class="li" href="#" data-u-push="y-karta" data-arg="${esc(s.id)}">${ava(s, 42)}<div class="col g1"><span class="nm">${esc(s.name)}</span><span class="s">${teacherOf(s) ? esc(teacherOf(s)) + ' · ' : ''}${s.frozen && freezeOf(s)?.to ? `${shortDate(freezeOf(s).to)}gacha` : `${esc(D().patternLabel(s.lessonDayOfWeek))} ${esc(s.lessonTime || '')}`}</span></div><div class="yd-mp">${pill(s)}<span class="xs b">${stuRep(n.month, s.id).counted} / ${cp}</span></div></a>`;
+        const row = s => `<a class="li" href="#" data-u-push="y-karta" data-arg="${esc(s.id)}">${ava(s, 42)}<div class="col g1"><span class="nm">${esc(s.name)}</span><span class="s">${teacherOf(s) ? esc(teacherOf(s)) + ' · ' : ''}${s.frozen && freezeOf(s)?.to ? `${longDate(freezeOf(s).to)}gacha` : `${esc(D().patternLabel(s.lessonDayOfWeek))} ${esc(s.lessonTime || '')}`}</span></div><div class="yd-mp">${pill(s)}<span class="xs b">${stuRep(n.month, s.id).counted} / ${cp}</span></div></a>`;
         const inRow = x => `<div class="li">${D().avatar(x, 'av" style="width: 42px; height: 42px')}<div class="col g1"><span class="nm">${esc(x.name)}</span><span class="s">${x.state === 'frozen' ? 'muzlatilgan' : x.state === 'moved' ? "boshqa yordamchiga o'tgan" : x.state === 'finished' ? 'kursni tugatgan' : 'chiqib ketgan'}${x.contacts?.total ? ` · ${x.contacts.total} aloqa` : ''}</span></div><span class="pill mu">Faol emas</span></div>`;
         return `<header class="hd" style="padding-bottom: 4px"><div class="t"><span class="date">Yordamchi sifatida biriktirilganlar</span><h1 style="font-size: 26px">O'quvchilarim</h1></div></header>
           <div class="bd bq" style="gap: 10px">${U.offline()}
@@ -628,7 +617,7 @@
                     <div class="li"><span class="s g1">Darslari</span><b style="font-size: 14px">${esc(D().patternLabel(s.lessonDayOfWeek))} ${esc(s.lessonTime || '')}</b></div>
                     ${tn ? `<div class="li"><span class="s g1">Asosiy ustoz</span><b style="font-size: 14px">${esc(tn)}</b></div>` : ''}
                     ${startOf(s) ? `<div class="li"><span class="s g1">Kursni boshlagan</span><b style="font-size: 14px">${D().fmtDate(startOf(s))}</b></div>` : ''}
-                    <div class="li"><span class="s g1">Holati</span><b style="font-size: 14px">${s.frozen ? `Muzlatilgan${freezeOf(s)?.to ? ' · ' + shortDate(freezeOf(s).to) + 'gacha' : ''}` : 'Faol'}</b></div></section>`;
+                    <div class="li"><span class="s g1">Holati</span><b style="font-size: 14px">${s.frozen ? `Muzlatilgan${freezeOf(s)?.to ? ' · ' + longDate(freezeOf(s).to) + 'gacha' : ''}` : 'Faol'}</b></div></section>`;
             }
             return `${bar}<div class="bd nb" style="padding-top: 4px; gap: 12px">
                 <div class="row a1">${ava(s, 64).replace('style="', 'style="border: 3px solid #FFFFFF; box-shadow: 0 0 0 1px #CBD5E1; ')}<div class="col g1"><strong style="font-size: 21px; font-weight: 800">${esc(s.name)}</strong><span class="s">${s.serialCode ? `ID ${esc(s.serialCode)} · ` : ''}dars ${esc(D().patternLabel(s.lessonDayOfWeek))} ${esc(s.lessonTime || '')}</span><span class="xs" style="margin-top: 2px">${tn ? `Asosiy ustoz: ${esc(tn)} · ` : ''}${pr.reached ? `${pr.reached}-dars` : 'hali boshlanmagan'}</span></div></div>
@@ -656,7 +645,7 @@
             const n = now(), prevM = D().shiftMonth(n.month, -1), month = mPrev ? prevM : n.month;
             const e = repOf(month), rep = e.data, nm = D().shiftMonth(month, 1), NM = monName(nm);
             const monthly = Number(rep?.monthly) || 0, cp = capOf(month), all = helped().length; // muzlaganda ham chegara o'zgarmaydi
-            const bar = `<div class="bar"><a class="back" href="#" data-u-back>${svg(P.prev, 22, 2.2)}Menyu</a></div>`;
+            const bar = `<div class="bar"><a class="back" href="#" data-u-back>${svg(P.prev, 22, 2.2)}${esc(U.tabLabel())}</a></div>`;
             const seg = `<div class="seg bq-seg44"><button type="button" data-yd-mp="1" class="${mPrev ? 'on' : ''}">${cap(monName(prevM))} · ${S().assistPrev?.state?.paid_at ? "to'landi" : 'yopildi'}</button><button type="button" data-yd-mp="0" class="${mPrev ? '' : 'on'}">${cap(monName(n.month))} · joriy</button></div>`;
             if (!rep) return `${bar}<div class="bd nb" style="padding-top: 0; gap: 12px"><h1 class="ttl">Maosh</h1>${seg}${e.err && e.err !== 'x' ? U.err(e, `yd:rep:${month}`) : e.err === 'x' ? '<div class="note w"><span>Aloqa hisobi yuklanmadi.</span></div>' : U.skel(2, 120)}</div>`;
             const lastDay = days(n.month).slice(-1)[0], left = Math.max(0, (Date.parse(lastDay) - Date.parse(n.date)) / 86400000);
@@ -747,9 +736,11 @@
         const n = now(), s = D().stuOf(sid); if (!s) return [];
         const counted = new Set((stuRep(n.month, sid).items || []).filter(i => i.status === 'counted').map(i => i.day));
         const pend = new Set((S().requests || []).filter(r => r.type === 'assist_late' && r.status === 'new' && r.payload?.studentId === sid).map(r => D().day10(r.payload.day)));
-        // Faqat o'quvchi faol bo'lgan tavsiya kunlari (muzlagan/chiqqan kunlarga server 409 qaytaradi) — /assist/plan bilan bir xil.
-        const adv = adviceSet(n.month)?.get(sid);
-        return days(n.month).filter(d => d < n.date && wd(d) !== 7 && !counted.has(d) && !pend.has(d) && !(startOf(s) && d < startOf(s)) && (adv ? adv.has(d) : !s.frozen && inPattern(s, d))).reverse();
+        // Shu oyning o'quvchi faol bo'lgan istalgan o'tgan kuni (tavsiya kuni bo'lmasa ham — server ham shunday qabul qiladi).
+        // Muzlagan / chiqib ketgan kunlar statusHistory bo'yicha chiqariladi (server ularga 409 qaytaradi).
+        const off = (s.statusHistory || []).filter(h => h.status && h.status !== 'active');
+        const inactive = d => off.some(h => String(h.from || '').slice(0, 10) <= d && (!h.to || String(h.to).slice(0, 10) >= d));
+        return days(n.month).filter(d => d < n.date && !counted.has(d) && !pend.has(d) && !(startOf(s) && d < startOf(s)) && !inactive(d)).reverse();
     }
     U.page('y-kech', {
         render(arg) {
@@ -758,7 +749,9 @@
             const list = helped();
             if (!kf.sid || !list.some(s => s.id === kf.sid)) kf.sid = list[0]?.id || '';
             const ds = kf.sid ? lateDays(kf.sid) : [];
-            if (!ds.includes(kf.day)) kf.day = ds.find(d => inPattern(D().stuOf(kf.sid), d)) || ds[0] || '';
+            // Kalendardan bosilgan kun ro'yxatda bo'lmasa — jimgina almashtirilmaydi, sababi aytiladi.
+            const askedBad = aSid === kf.sid && aDay && kf.day === aDay && !ds.includes(aDay) ? aDay : '';
+            if (!ds.includes(kf.day)) kf.day = askedBad ? '' : ds.find(d => inPattern(D().stuOf(kf.sid), d)) || ds[0] || '';
             const locked = !!S().assist?.state?.final_at;
             const mine = (S().requests || []).filter(r => r.type === 'assist_late' && D().day10(r.payload?.day || '').slice(0, 7) === n.month);
             const stName = { new: ['wa', 'Kutilmoqda'], approved: ['ok', 'Tasdiqlandi'], rejected: ['bad', 'Rad etildi'] };
@@ -770,6 +763,7 @@
               <div class="bd nb" style="padding-top: 0; gap: 12px">
                 <h1 class="ttl">Kechikkan aloqa</h1>
                 <div class="note i a1">${svg(P.clock, 18, 2).replace('<svg', '<svg style="flex: none; margin-top: 1px"')}<span>Aloqa o'sha kuni belgilanadi. Esdan chiqqan bo'lsa — shu yerdan yozing, admin tasdiqlasa hisobga o'tadi. Faqat <b>shu oy</b> kunlari uchun.</span></div>
+                ${askedBad ? `<div class="note w" role="alert"><span><b>${longDate(askedBad)}</b> uchun so'rov yuborib bo'lmaydi: o'sha kuni hisoblangan aloqa yoki ochiq so'rov bor, yoki o'quvchi faol bo'lmagan. Boshqa kunni tanlang.</span></div>` : ''}
                 ${locked ? `<div class="note w"><span><b>${cap(monName(n.month))} yakuniy tasdiqlangan</b> — so'rov yuborib bo'lmaydi.</span></div>` : list.length ? `<section class="card a2" style="gap: 12px">
                   ${sel('yd-ks', "O'quvchi", list.map(s => [s.id, s.name]), kf.sid, ks ? ava(ks, 32).replace('class="av"', 'class="av yd-sav"') : '')}
                   <div class="yd-g2" style="gap: 8px">

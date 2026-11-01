@@ -1079,6 +1079,12 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
             const wp = await A.plan(pool, { assistantIds: [assistantId], from: ws, to: we }).catch(() => null);
             if (wp) rep.week = { from: ws, to: we, planned: require('../../js/attendanceRules').weekPlanCount(wp.items) };
             rep.left = Object.fromEntries(pl.students.map(x => [x.studentId, { adviceLeft: x.adviceLeft, possible: x.possible }]));
+            // Bugun qo'shilgan summa (yordamchi "Bugungi aloqalar tugadi" tabrigi) — xuddi shu countMonth, bugungi aloqalarsiz hisob bilan farq.
+            const today = T.nowLocal().date, { from } = T.monthBounds(String(month));
+            const before = (await pool.query('SELECT * FROM school_assist_contacts WHERE assistant_id=$1 AND day BETWEEN $2 AND $3', [assistantId, from, T.addDays(today, -1)])).rows;
+            const starts = await A.studentStarts(pool, before.map(c => c.student_id));
+            const r0 = A.countMonth(before, { monthly: rep.monthly, starts });
+            rep.today = { counted: Math.max(0, rep.counted - r0.counted), amount: Math.max(0, (rep.computedAmount ?? rep.amount) - r0.amount) };
         }
         return rep;
     }));

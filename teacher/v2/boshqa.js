@@ -281,11 +281,11 @@
             <div class="bd nb bq" style="padding-top: 0; gap: 12px">
               ${U.offline()}
               <div class="col" style="padding: 0 4px"><h1 class="ttl" style="padding: 0">Adminga so'rov</h1><span class="s">${s ? `${esc(s.name)} · ${esc(sched(s))}` : "O'quvchi bo'yicha — admin CRM'da hal qiladi"}</span></div>
-              ${!id ? `<div class="fl"><label for="bq-sqs">O'quvchi</label><select id="bq-sqs" class="bq-sel"><option value="">Tanlang</option>${(S().main || []).map(x => `<option value="${esc(x.id)}"${x.id === sqStu ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>` : ''}
+              ${!id ? `<div class="fl"><label for="bq-sqs">O'quvchi</label><select id="bq-sqs" class="bq-sel"><option value="">Tanlang</option>${(D().isAssistantOnly() ? S().helped : S().main || []).map(x => `<option value="${esc(x.id)}"${x.id === sqStu ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>` : ''}
               <fieldset class="bq-fs"><legend class="bq-lg">Nima kerak?</legend>${SQ.map(([k, l, d]) => `<button type="button" class="opt${k === sqTopic ? ' on' : ''}" data-sq="${k}" aria-pressed="${k === sqTopic}"><span class="rad"></span><span class="col g1"><b style="font-size: 15px">${l}</b><span class="xs">${esc(d)}</span></span></button>`).join('')}</fieldset>
               <div class="fl"><label for="bq-sqz">Izoh</label><textarea id="bq-sqz" maxlength="300" placeholder="qisqacha: nima va qachondan"></textarea></div>
               <button type="button" class="btn p w" data-sqsend${sqBusy ? ' disabled' : ''}>Yuborish</button>
-              <span class="xs bq-foot">O'z ish vaqtingizni yopish yoki sinovga tanaffus — Jadval bo'limida.</span>
+              ${D().isAssistantOnly() ? '' : '<span class="xs bq-foot">O\'z ish vaqtingizni yopish yoki sinovga tanaffus — Jadval bo\'limida.</span>'}
               ${mine.length ? `<span class="bq-gh">YUBORILGANLAR · ${mine.length}</span><div class="card l">${mine.map(r => { const p = payOf(r), st = D().stuOf(p.studentId); return `<div class="li"><div class="col g1"><span class="nm">${esc(SQL[p.topic] || "So'rov")}${!id && st ? ' · ' + esc(D().first(st.name)) : ''}</span><span class="s" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${esc(r.reason || '')}${r.decision_note ? ' · ' + esc(r.decision_note) : ''}</span></div>${reqPill(r)}</div>`; }).join('')}</div>` : ''}
             </div>`;
         },
