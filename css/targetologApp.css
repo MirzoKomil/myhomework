@@ -11,7 +11,9 @@ body.tg-on, body.tg-lock-desk {
     --tg-ease: cubic-bezier(.2, .8, .2, 1);
 }
 body.tg-on #teamBottomNav { display: none !important; }
-body.tg-on:not(.tg-crm) .top-header, body.tg-on:not(.tg-crm) .sidebar { visibility: hidden; }
+/* Ilova ochiq turganda orqadagi CRM sahifasi umuman chizilmaydi (display:none) — aks holda telefon minglab lid kartasini
+   ko'rinmasa ham joylashtirib, ilovani sekinlashtiradi. CRM sahifasi (Sozlamalar, Yo'riqnomalar) ochilganda qaytadi. */
+body.tg-on:not(.tg-crm) .main-area, body.tg-on:not(.tg-crm) .sidebar, body.tg-on:not(.tg-crm) .sidebar-overlay { display: none !important; }
 body.tg-on.tg-crm .tab-content { padding-bottom: calc(var(--tg-nav-h) + 16px) !important; }
 
 .tg-app, .tg-nav, .tg-pop {
@@ -241,6 +243,8 @@ body.tg-on.tg-crm .tab-content { padding-bottom: calc(var(--tg-nav-h) + 16px) !i
 body.tg-lock-desk .tg-pop .tg-sheet { bottom: 50%; transform: translateY(50%); border-radius: 30px; animation: none; max-width: 440px; }
 body.tg-lock-desk .tg-pop.tg-pop--entry .tg-app { position: absolute; inset: 40px 50% 40px auto; transform: translateX(50%); width: 440px; border-radius: 28px; box-shadow: 0 30px 80px rgba(11, 18, 32, .35); }
 body.tg-lock-desk .tg-pop.tg-pop--entry .tg-foot { position: sticky; }
+
+.tg-app.tg-still *, .tg-app.tg-still *::after { animation: none !important; }
 
 @media (prefers-reduced-motion: reduce) {
     .tg-scr, .tg-s1, .tg-s2, .tg-s3, .tg-s4, .tg-bars7 i, .tg-bar i, .tg-weeks i, .tg-sheet, .tg-shake, .tg-pop-ico, .tg-pulse::after, .tg-conf span, .tg-rays, .tg-toast, .tg-ring circle.tg-ring-v { animation: none !important; transition: none !important; }

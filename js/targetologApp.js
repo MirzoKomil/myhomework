@@ -24,7 +24,11 @@
     const SOLD = new Set(['tolov-yopildi']); // "Toʻladi" — faqat toʻlovi yopilgan lid
 
     // ---------- sana ----------
-    function todayKey() { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tashkent', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()); }
+    // Intl formatterlarni bir marta yaratamiz — har chaqiruvda yangisini qurish telefonda juda sekin.
+    const F_DAY = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tashkent', year: 'numeric', month: '2-digit', day: '2-digit' });
+    const F_HOUR = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Tashkent', hour: '2-digit', hour12: false });
+    const F_HM = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Tashkent', hour: '2-digit', minute: '2-digit', hour12: false });
+    function todayKey() { return F_DAY.format(new Date()); }
     const addDays = (k, n) => new Date(Date.parse(k + 'T00:00:00Z') + n * DAY).toISOString().slice(0, 10);
     const dObj = k => new Date(k + 'T00:00:00Z');
     const dayLong = k => { const d = dObj(k); return `${WD[d.getUTCDay()]}, ${d.getUTCDate()}-${MON[d.getUTCMonth()]}`; };
@@ -34,9 +38,18 @@
     const prevMonth = m => { const [y, mo] = m.split('-').map(Number); return mo === 1 ? `${y - 1}-12` : `${y}-${String(mo - 1).padStart(2, '0')}`; };
     const nextMonth = m => { const [y, mo] = m.split('-').map(Number); return mo === 12 ? `${y + 1}-01` : `${y}-${String(mo + 1).padStart(2, '0')}`; };
     const daysIn = m => new Date(Date.UTC(Number(m.slice(0, 4)), Number(m.slice(5, 7)), 0)).getUTCDate();
-    const leadDay = l => (g('leadTashkentDayKey') ? leadTashkentDayKey(l.createdAt || l.date) : String(l.createdAt || '').slice(0, 10)) || null;
+    function dayOfRaw(raw) {
+        if (raw === null || raw === undefined || raw === '') return null;
+        const t = String(raw).trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(t)) return t;
+        const dm = t.match(/^(\d{1,2})[./](\d{1,2})[./](\d{4})$/);
+        if (dm) return `${dm[3]}-${dm[2].padStart(2, '0')}-${dm[1].padStart(2, '0')}`;
+        const d = new Date(typeof raw === 'number' ? raw : t);
+        return Number.isNaN(d.getTime()) ? null : F_DAY.format(d);
+    }
+    const leadDay = l => dayOfRaw(l.createdAt || l.date);
     const ts = v => { const t = Date.parse(v || ''); return Number.isFinite(t) ? t : null; };
-    const hourOf = t => Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Tashkent', hour: '2-digit', hour12: false }).format(new Date(t))) % 24;
+    const hourOf = t => Number(F_HOUR.format(new Date(t))) % 24;
 
     // ---------- ikonkalar ----------
     const P = {
@@ -87,9 +100,21 @@
     const trialBooked = l => !!(l.trialRequest || l.trialLessonAt || (l.trialHistory || []).length || stOf(l) === 'sinov-darsida'
         || (l.stageHistory || []).some(h => h.to === 'sinov-darsida'));
     const trialCame = l => !!(l.trialRequest?.attended || (l.trialHistory || []).some(t => t.attended));
+    // Lidlar indeksi: CRM lidlar ro'yxati o'zgarmaguncha (har 30 soniyada yangilanadi) bir marta hisoblanadi.
+    // Har ekran va har tugma bosilishida minglab lidni qayta saralash ilovani qotirardi.
+    const IDX = {};
     function leadsOf(lang, month) {
-        return (allLeads()[lang] || []).filter(l => isTarget(l) && !l.deletedAt).map(l => ({ l, day: leadDay(l) }))
-            .filter(x => x.day && (!month || x.day.slice(0, 7) === month));
+        const arr = allLeads()[lang] || [];
+        let c = IDX[lang];
+        if (!c || c.arr !== arr || c.len !== arr.length) {
+            const all = [];
+            for (const l of arr) { if (!l || l.deletedAt || !isTarget(l)) continue; const day = leadDay(l); if (day) all.push({ l, day }); }
+            c = IDX[lang] = { arr, len: arr.length, all, byMonth: new Map(), agg: new Map() };
+        }
+        if (!month) return c.all;
+        let m = c.byMonth.get(month);
+        if (!m) { m = c.all.filter(x => x.day.slice(0, 7) === month); c.byMonth.set(month, m); }
+        return m;
     }
     function sumQ(list) {
         const o = { n: list.length, good: 0, bad: 0, pending: 0, sold: 0, trial: 0, came: 0 };
@@ -118,7 +143,16 @@
         return S.status;
     }
     function monthAgg(lang, month) {
-        const ads = adsNow(lang, month); const days = ads?.days || {};
+        const ads = adsNow(lang, month);
+        leadsOf(lang, null);
+        const memo = IDX[lang]?.agg, hit = memo?.get(month);
+        if (hit && hit.ads === ads) return hit.v;
+        const v = monthAggRaw(lang, month, ads);
+        memo?.set(month, { ads, v });
+        return v;
+    }
+    function monthAggRaw(lang, month, ads) {
+        const days = ads?.days || {};
         const list = leadsOf(lang, month); const q = sumQ(list);
         const budget = Object.values(days).reduce((s, d) => s + (Number(d.budget) || 0), 0);
         const meta = Object.values(days).reduce((s, d) => s + (Number(d.leadCount) || 0), 0);
@@ -157,7 +191,7 @@
     function screenHome() {
         const u = user(), today = todayKey(), y = addDays(today, -1);
         const name = String(u.name || '').trim().split(/\s+/)[0] || '';
-        const h = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Tashkent', hour: '2-digit', hour12: false }).format(new Date())) % 24;
+        const h = Number(F_HOUR.format(new Date())) % 24;
         const hello = h < 11 ? 'Xayrli tong' : h < 18 ? 'Xayrli kun' : 'Xayrli kech';
         const month = today.slice(0, 7) === y.slice(0, 7) ? today.slice(0, 7) : y.slice(0, 7);
         const a = monthAgg(S.lang, month);
@@ -500,7 +534,9 @@
 
     // ---------- T06 Lidlar ----------
     function screenLeads() {
-        const all = leadsOf(S.lang, null).sort((x, y) => (ts(y.l.createdAt) || 0) - (ts(x.l.createdAt) || 0));
+        // Saralangan ro'yxat indeksda saqlanadi (har harf yozilganda qayta saralanmaydi).
+        const c = IDX[S.lang] || (leadsOf(S.lang, null), IDX[S.lang]);
+        const all = c.sorted || (c.sorted = leadsOf(S.lang, null).map(x => ({ ...x, t: ts(x.l.createdAt) || 0 })).sort((x, y) => y.t - x.t));
         const q = S.leadQ.trim().toLowerCase();
         const f = all.filter(x => (S.leadTab === 'all' || quality(x.l) === S.leadTab)
             && (!q || [x.l.name, campOf(x.l), adOf(x.l)].some(s => String(s || '').toLowerCase().includes(q))));
@@ -531,7 +567,7 @@
         const x = leadsOf(S.lang, null).find(x => String(x.l.id) === String(S.lead)) || Object.values(allLeads()).flat().map(l => ({ l, day: leadDay(l) })).find(x => String(x.l.id) === String(S.lead));
         if (!x) return back('Lid kartasi') + '<div class="tg-scr"><div class="tg-card tg-empty">Lid topilmadi</div></div>';
         const l = x.l, k = quality(l), cs = l.connectedSurvey || {}, s = stOf(l);
-        const when = v => { const t = ts(v); if (!t) return ''; const d = new Date(t); const dk = g('leadTashkentDayKey') ? leadTashkentDayKey(v) : ''; return `${dk ? dayShort(dk) : ''}, ${new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Tashkent', hour: '2-digit', minute: '2-digit', hour12: false }).format(d)}`; };
+        const when = v => { const t = ts(v); if (!t) return ''; const d = new Date(t); const dk = dayOfRaw(v); return `${dk ? dayShort(dk) : ''}, ${F_HM.format(d)}`; };
         const STAGE = { 'yangi-lidlar': 'Lid keldi', 'boglanishga-urinilmoqda': 'Bogʻlanishga urinilmoqda', boglanildi: 'Bogʻlanildi · sifatli', 'qaror-jarayonida': 'Qaror jarayonida', 'sinov-darsida': 'Sinov darsiga yozildi', 'keyin-sotib-olmoqchi': 'Keyinroq oladi', 'tolov-jarayonida': 'Toʻlov jarayonida', 'tolov-yopildi': 'Toʻladi — oʻquvchi boʻldi', 'muvaffaqiyatsiz-sotuv': 'Sotuv boʻlmadi', 'sifatsiz-lidlar': 'Sifatsiz' };
         const hist = (l.stageHistory || []).filter(h => h.to && STAGE[h.to]);
         const items = hist.length ? hist.map(h => ({ t: STAGE[h.to], at: h.at, cls: h.to === 'tolov-yopildi' ? 'ok' : h.to === 'sifatsiz-lidlar' ? 'bad' : '' }))
@@ -676,12 +712,16 @@
         const y = root.scrollTop;
         const html = S.screen === 'entry' ? screenEntry(false) : S.screen === 'report' ? screenReport() : S.screen === 'stats' ? screenStats()
             : S.screen === 'notif' ? screenNotif() : S.screen === 'leads' ? screenLeads() : S.screen === 'lead' ? screenLead() : S.screen === 'menu' ? screenMenu() : S.screen === 'crm' ? '' : screenHome();
+        // Animatsiya faqat yangi ekran ochilganda; ma'lumot yangilanganda (har 30 s, harf yozilganda) qayta o'ynamaydi.
+        root.classList.toggle('tg-still', !scrollTop);
         root.innerHTML = html;
         root.scrollTop = scrollTop ? 0 : y;
         if (keep?.k) { const el = keep.k === 'q' ? root.querySelector('[data-tg-q]') : root.querySelector(`[data-tg-in="${keep.k}"]`); if (el) { el.focus(); try { el.setSelectionRange(keep.s, keep.s); } catch (e) { /* raqamli input */ } } }
         syncNav();
     }
     const queueRender = () => { cancelAnimationFrame(rq); rq = requestAnimationFrame(() => render(false)); };
+    // CRM lidlarni yangilaganda (holat o'zgargan bo'lishi mumkin) — oylik yig'indilar qayta hisoblanadi.
+    const invalidate = () => { Object.values(IDX).forEach(c => { c.agg.clear(); }); };
 
     function openPop(html, locked, extra) {
         closePop();
@@ -748,7 +788,7 @@
     async function refresh() {
         if (!isTg()) return;
         await loadStatus();
-        S.ads = {}; await ensureData();
+        S.ads = {}; invalidate(); await ensureData();
         if (S.status?.locked) { if (MQ.matches && S.screen === 'entry') render(false); else if (!pop || !pop.dataset.locked) showLock(); }
         else { if (pop?.dataset.locked && !pop.querySelector('.tg-sheet h2#tgSvT')) closePop(); checkWins(); }
         if (isOn() && S.screen !== 'entry') render(false);
@@ -784,7 +824,7 @@
         // CRM 30 soniyada lidlarni yangilaydi — ekranimiz ham yangilansin (kiritish paytida emas).
         ['renderDashboard', 'renderLeads', 'renderSales'].forEach(name => {
             const orig = window[name]; if (typeof orig !== 'function' || orig._tg) return;
-            const w = function () { const r = orig.apply(this, arguments); if (isOn() && S.screen !== 'entry' && S.screen !== 'crm') queueRender(); return r; };
+            const w = function () { const r = orig.apply(this, arguments); invalidate(); if (isOn() && S.screen !== 'entry' && S.screen !== 'crm') queueRender(); return r; };
             w._tg = true; window[name] = w;
         });
         clearInterval(timer);
