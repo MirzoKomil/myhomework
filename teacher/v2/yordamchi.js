@@ -263,8 +263,9 @@
         for (const s of all) {
             const sr = stuRep(aMonth, s.id); g += sr.counted; r += sr.noAnswer;
             for (const v of extras(s, aMonth).values()) b += v;
-            if (isCur && inPattern(s, n.date) && cellOf(s, n.date, aMonth, adv) === 'y') y++;
         }
+        // "Belgilang" — pastki "Bugun" kartasidagi bilan bir xil: vaqti kelgan, hali belgilanmagan tavsiyalar.
+        if (isCur) y = todayList().filter(x => todayState(x.s).k === 'wait' && x.t <= n.min).length;
         if (rep.data) { g = rep.data.counted ?? g; r = rep.data.noAnswer ?? r; }
         const cp = capOf(aMonth);
         const table = (gid, title, wds) => {
@@ -379,6 +380,10 @@
     // ─────────────────────────────────────────────────────────────────────
     function openMark(sid) {
         const n = now(), s = D().stuOf(sid); if (!s) return;
+        // Muzlagan kunda aloqa belgilanmaydi (server ham 409 qaytaradi) — oyna ochilmaydi.
+        const fr = freezeOf(s);
+        if (s.frozen || (fr && fr.from <= n.date && (!fr.to || fr.to >= n.date)))
+            return U.toast(`${D().first(s.name)} muzlatilgan${fr?.to ? ` (${longDate(fr.to)}gacha)` : ''} — bu kunlarda aloqa belgilanmaydi`);
         const sr = stuRep(n.month, sid), wk = weekCount(sid), CP = capOf(n.month);
         const st = { out: 'contacted', ch: 'phone', min: 10, naCh: 'phone' };
         const ws = weekStart(n.date);
@@ -458,19 +463,6 @@
 
     // ── Y06 · Bugungi aloqalar tugadi — tabrik (kuniga bir marta) ──
     const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
-    function overlay(html, onOpen) {
-        const ov = document.createElement('div'); ov.className = 'bs-ov';
-        ov.innerHTML = `<div class="bs-ovin"><div class="bs-scr" aria-hidden="true"></div>${html}</div>`;
-        document.body.appendChild(ov);
-        const close = () => { document.removeEventListener('keydown', onKey); ov.classList.add('out'); setTimeout(() => ov.remove(), reduced() ? 0 : 180); };
-        const onKey = e => { if (e.key === 'Escape') close(); };
-        document.addEventListener('keydown', onKey);
-        ov.querySelector('.bs-scr').onclick = close;
-        ov.querySelectorAll('[data-ov-x]').forEach(b => b.onclick = close);
-        onOpen?.(ov, close);
-        ov.querySelector('.btn.p')?.focus({ preventScroll: true, focusVisible: false });
-        return close;
-    }
     // Bugun qo'shilgan summa — server oy hisobidan (rep.today: bugungi aloqalarsiz hisob bilan farq).
     const gainToday = () => Number(S().assist?.today?.amount) || 0;
     async function dayDone(count) {
@@ -484,7 +476,7 @@
         const tomN = tp ? new Set((tp.items || []).filter(i => i.kind === 'advice').map(i => i.studentId)).size : null;
         document.querySelector('#app > .u-toast')?.remove();
         const a = c => reduced() ? '' : c;
-        overlay(`<section class="bs-mdl ${a('yd-in')}" role="dialog" aria-modal="true" aria-labelledby="ydTb" style="top: 120px; padding: 24px 18px 18px; display: flex; flex-direction: column; gap: 14px">
+        U.bs.overlay(`<section class="bs-mdl ${a('yd-in')}" role="dialog" aria-modal="true" aria-labelledby="ydTb" style="top: 120px; padding: 24px 18px 18px; display: flex; flex-direction: column; gap: 14px">
             <span class="${a('yd-pop')}" style="width: 80px; height: 80px; border-radius: 26px; background: #ECFDF3; color: #067647; display: grid; place-items: center; align-self: center">${svg(P.tick, 42, 2.6)}</span>
             <div class="col" style="gap: 6px; align-items: center; text-align: center"><h2 id="ydTb" style="font-size: 23px; font-weight: 800; letter-spacing: -.02em">Bugungi aloqalar tugadi!</h2><span class="s" style="font-size: 14px; line-height: 1.5">${count} o'quvchining hammasi bilan gaplashdingiz. O'quvchilar buni sezadi.</span></div>
             <div class="yd-avs" aria-hidden="true">${list.slice(0, 3).map(x => ava(x.s, 36)).join('')}${list.length > 3 ? `<span class="yd-more">+${list.length - 3}</span>` : ''}</div>
@@ -517,7 +509,7 @@
         const stars = [['left: 54px; top: 40px', 18, '#FDB022', 0], ['right: 64px; top: 34px', 12, '#FFFFFF', .5], ['right: 48px; bottom: 44px', 14, '#FDB022', .9], ['left: 70px; bottom: 36px', 10, '#9DC4F5', 1.2]];
         const starD = P.star.match(/d="([^"]+)"/)[1];
         const monthly = monthlyOf(n.month);
-        overlay(`<section class="bs-mdl ${a('bs-in2')}" role="dialog" aria-modal="true" aria-labelledby="ydYb" style="top: 64px">
+        const { ov, close } = U.bs.overlay(`<section class="bs-mdl ${a('bs-in2')}" role="dialog" aria-modal="true" aria-labelledby="ydYb" style="top: 64px">
             <div style="position: relative; height: 196px; background: #0B1220; overflow: hidden; display: grid; place-items: center">
               <span style="position: absolute; inset: 0; opacity: .07">${U.HEX('ydYbHex')}</span>
               ${stars.map(([pos, sz, c, dl]) => `<svg class="${a('bs-st')}" aria-hidden="true" width="${sz}" height="${sz}" viewBox="0 0 24 24" style="position: absolute; ${pos}; animation-delay: ${dl}s"><path d="${starD}" fill="${c}"></path></svg>`).join('')}
@@ -548,11 +540,8 @@
                 <button type="button" class="btn bs-btn p" data-ov-open>Kartani ochish</button>
               </div>
             </div>
-          </section>`, (ov, close) => {
-            ov.querySelector('[data-ov-x]').onclick = () => { close(); setTimeout(() => after?.(), 250); };
-            ov.querySelector('.bs-scr').onclick = () => { close(); setTimeout(() => after?.(), 250); };
-            ov.querySelector('[data-ov-open]').onclick = () => { close(); U.push('y-karta', s.id); };
-        });
+          </section>`, () => setTimeout(() => after?.(), 250));
+        ov.querySelector('[data-ov-open]').onclick = () => { close(null); U.push('y-karta', s.id); };
     }
     U.onStart.push(() => setTimeout(() => { try { checkNew(); } catch (err) { console.error('[yordamchi]', err); } }, 500));
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') setTimeout(() => { try { checkNew(); } catch { /* */ } }, 3000); });
