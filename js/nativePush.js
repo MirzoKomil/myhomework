@@ -79,7 +79,7 @@
             { id: 'notif', ok: safe(() => N.notifGranted(), true), title: 'Bildirishnomalar', sub: 'Yangi lid, sinov darsi va eslatmalar telefonga keladi', btn: 'Yoqish', act: () => N.requestNotif() },
             { id: 'battery', ok: !safe(() => N.batteryRestricted(), false), title: 'Batareya: cheklovsiz', sub: 'Ilova yopiq bo\'lsa ham xabar kechikmasin', btn: 'Sozlash', act: () => N.openBattery() }
         ];
-        if (needsAutostart()) list.push({ id: 'auto', ok: ls.get(AUTO) === '1', title: 'Avtozapusk', sub: 'Ochilgan oynada "Domwork Team"ni yoqing, so\'ng qaytib "Bajarildi"ni bosing',
+        if (needsAutostart()) list.push({ id: 'auto', ok: ls.get(AUTO) === '1', title: 'Avtozapusk', sub: 'Ochilgan oynada "Jamoa"ni yoqing, so\'ng qaytib "Bajarildi"ni bosing',
             btn: 'Ochish', act: () => { N.openAutostart(); autoOpened = true; } });
         return list;
     }

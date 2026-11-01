@@ -182,7 +182,7 @@
         css: ['ustoz', 'bosh', 'jadval', 'davomat', 'boshqa', 'yordamchi'].map(n => `/teacher/v2/${n}.css?v=${V}`),
         start() {
             MODE = D().isAssistantOnly() ? 'yordamchi' : 'ustoz';
-            document.title = MODE === 'yordamchi' ? 'Domwork Team — Yordamchi ustoz' : 'Domwork Team — Ustoz';
+            document.title = MODE === 'yordamchi' ? 'Jamoa — Yordamchi ustoz' : 'Jamoa — Ustoz';
             root = document.getElementById('app');
             root.className = 'ph';
             const p = parse();

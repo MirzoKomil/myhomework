@@ -770,7 +770,7 @@
                 <a class="bq-rw" href="#" data-u-push="kirish" data-arg="tarix"><span class="bq-kk">Kirish tarixi</span><span class="bq-v">urinishlar</span>${chevR('#4B5563')}</a>
                 <a class="bq-rw" href="#" data-u-push="kirish" data-arg="qurilma"><span class="bq-kk">Kirgan qurilmalar</span><span class="bq-v">${ss.data ? `${(ss.data.sessions || []).length} ta` : ''}</span>${chevR('#4B5563')}</a>
               </div>
-              <span class="xs bq-foot" style="text-align: center">Domwork Team · ${D().isAssistantOnly() ? 'Yordamchi ustoz' : 'Ustoz'} · 2.0</span>
+              <span class="xs bq-foot" style="text-align: center">Jamoa · ${D().isAssistantOnly() ? 'Yordamchi ustoz' : 'Ustoz'} · 2.0</span>
             </div>`;
         },
         bind(root) {
@@ -798,7 +798,7 @@
     // Kirish tarixi va qurilmalar (/api/auth/login-history, /api/auth/sessions)
     function uaLabel(ua) {
         const u = String(ua || '');
-        const app = /DomworkTeacher|Domwork Teacher/i.test(u) ? 'Domwork Team' : /Telegram/i.test(u) ? 'Telegram' : /Edg\//.test(u) ? 'Edge' : /Chrome\//.test(u) ? 'Chrome' : /Firefox\//.test(u) ? 'Firefox' : /Safari\//.test(u) ? 'Safari' : u ? 'Brauzer' : "Noma'lum";
+        const app = /DomworkTeam\//.test(u) ? 'Jamoa ilovasi' : /DomworkTeacher|Domwork Teacher/i.test(u) ? 'Domwork Teacher' : /Telegram/i.test(u) ? 'Telegram' : /Edg\//.test(u) ? 'Edge' : /Chrome\//.test(u) ? 'Chrome' : /Firefox\//.test(u) ? 'Firefox' : /Safari\//.test(u) ? 'Safari' : u ? 'Brauzer' : "Noma'lum";
         const os = /Android/i.test(u) ? 'Android' : /iPhone|iPad|iOS/i.test(u) ? 'iOS' : /Windows/i.test(u) ? 'Windows' : /Mac OS|Macintosh/i.test(u) ? 'macOS' : /Linux/i.test(u) ? 'Linux' : '';
         return { label: os ? `${app} · ${os}` : app, mobile: /Android|iPhone|iPad|Mobile/i.test(u) };
     }

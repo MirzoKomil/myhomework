@@ -581,7 +581,7 @@
     }
 
     function init() {
-        if (MOBILE.matches) document.title = 'Domwork Team';
+        if (MOBILE.matches) document.title = 'Jamoa';
         hideSplash();
         const user = currentUser();
         if (user?.role) document.body.dataset.role = user.role;
