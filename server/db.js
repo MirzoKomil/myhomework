@@ -4129,7 +4129,12 @@ async function getTeacherScopedState(actor) {
 // Ustoz davomati qoidalari — server/services/teacherAttendanceRules.js (testlanadi).
 const { assertTeacherAttendanceWindow, assertTeacherOwnsDay, assertStaffAttendanceWindow } = require('./services/teacherAttendanceRules');
 
-async function recordTeacherAttendance({ actor, teacherId, studentId, date, present, grade, attendanceType }) {
+// Ustoz ilovasi v2: "Kelmadi" sababi (reasonCode: nowarn|sick|travel|noanswer|other + izoh) va dars boshqa vaqtda o'tgan bo'lsa
+// haqiqiy vaqti (heldFrom/heldTo, "HH:MM"). Ikkalasi ham ixtiyoriy, maoshga ta'sir qilmaydi — nazorat uchun.
+const ABSENCE_REASONS = { nowarn: 'Ogohlantirmadi', sick: 'Kasal', travel: 'Uzrli sabab', noanswer: 'Aloqa bo\'lmadi', other: 'Boshqa' };
+async function recordTeacherAttendance({ actor, teacherId, studentId, date, present, grade, attendanceType, reasonCode, reasonNote, heldFrom, heldTo, requireReason }) {
+    // Ustoz ilovasi v2: "Kelmadi" sababsiz saqlanmaydi (eski klientlar requireReason yubormaydi — ular uchun avvalgidek).
+    if (present === false && requireReason === true && !ABSENCE_REASONS[reasonCode]) throw Object.assign(new Error('Kelmadi sababini tanlang'), { status: 400 });
     if (typeof present !== 'boolean' && present !== null) throw Object.assign(new Error('Davomat boolean yoki olib tashlash uchun null bo‘lishi kerak'), { status: 400 });
     if (attendanceType !== undefined && !['main', 'assistant'].includes(attendanceType)) throw new Error('Davomat roli noto‘g‘ri');
     const safeTeacherId = String(teacherId || '').trim();
@@ -4291,9 +4296,19 @@ async function recordTeacherAttendance({ actor, teacherId, studentId, date, pres
         // Maoshga ta'sir qilmaydi.
         if (schoolSchema.state.ready) {
             if (present) await client.query('DELETE FROM school_absences WHERE teacher_id=$1 AND student_id=$2 AND day=$3', [safeTeacherId, safeStudentId, date]);
-            else await client.query(`INSERT INTO school_absences (teacher_id, student_id, day, absent, marked_by) VALUES ($1,$2,$3,$4,$5)
-                ON CONFLICT (teacher_id, student_id, day) DO UPDATE SET absent=EXCLUDED.absent, marked_by=EXCLUDED.marked_by, marked_at=NOW()`,
-                [safeTeacherId, safeStudentId, date, present === false, String(actor?.id || '')]);
+            else {
+                const code = present === false && ABSENCE_REASONS[reasonCode] ? reasonCode : '';
+                await client.query(`INSERT INTO school_absences (teacher_id, student_id, day, absent, marked_by, reason_code, reason_note) VALUES ($1,$2,$3,$4,$5,$6,$7)
+                ON CONFLICT (teacher_id, student_id, day) DO UPDATE SET absent=EXCLUDED.absent, marked_by=EXCLUDED.marked_by, marked_at=NOW(),
+                  reason_code=EXCLUDED.reason_code, reason_note=EXCLUDED.reason_note`,
+                [safeTeacherId, safeStudentId, date, present === false, String(actor?.id || ''), code, code ? String(reasonNote || '').trim().slice(0, 300) : '']);
+            }
+            const toM = v => { const m = /^(\d{1,2}):(\d{2})$/.exec(String(v || '')); return m && +m[1] < 24 && +m[2] < 60 ? +m[1] * 60 + +m[2] : null; };
+            const hf = present ? toM(heldFrom) : null, ht = present ? toM(heldTo) : null;
+            if (hf != null && ht != null && ht > hf) await client.query(`INSERT INTO school_lesson_times (teacher_id, student_id, day, start_min, end_min, marked_by) VALUES ($1,$2,$3,$4,$5,$6)
+                ON CONFLICT (teacher_id, student_id, day) DO UPDATE SET start_min=EXCLUDED.start_min, end_min=EXCLUDED.end_min, marked_by=EXCLUDED.marked_by, marked_at=NOW()`,
+                [safeTeacherId, safeStudentId, date, hf, ht, String(actor?.id || '')]);
+            else if (present !== true || heldFrom === '') await client.query('DELETE FROM school_lesson_times WHERE teacher_id=$1 AND student_id=$2 AND day=$3', [safeTeacherId, safeStudentId, date]);
         }
 
         result = {

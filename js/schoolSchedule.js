@@ -14,7 +14,7 @@
         }
         H0 = Math.max(0, lo); H1 = Math.min(24 * 60, hi);
     }
-    const KIND = { lesson: 'Dars', trial: 'Sinov', makeup: 'Qoplash', reserved: 'Muzlatilgan · sinovga ochiq', close: 'Yopiq', leave: 'Ta\'til', makeup_only: 'Faqat qoplash' };
+    const KIND = { lesson: 'Dars', trial: 'Sinov', makeup: 'Qoplash', reserved: 'Muzlatilgan · sinovga ochiq', close: 'Yopiq', leave: 'Ta\'til', makeup_only: 'Faqat qoplash', break: 'Tanaffus' };
     const STATUS = { hold: 'ushlab turilgan', pending: 'ustoz tasdig\'ida', confirmed: 'tasdiqlangan', done: 'o\'tkazildi', no_show: 'kelmadi' };
     const state = { date: null, view: null, teacherId: null, duration: 30, lang: null };
     // Ingliz va rus tili jadvali alohida: admin/ROP tanlaydi, sotuv menejeri faqat o'z tilini ko'radi (server ham cheklaydi).
@@ -37,8 +37,8 @@
         const free = (sales ? view.trialFree : view.free).map(f => `<i class="ss-free" style="left:${pct(f.start)}%;width:${pct(f.end) - pct(f.start)}%" title="Bo'sh ${hm(f.start)}–${hm(f.end)}"${sales ? ` data-free="${view.teacherId}|${view.date}|${f.start}|${f.end}"` : ''}></i>`).join('');
         const work = view.work.map(w => `<i class="ss-work" style="left:${pct(w.start)}%;width:${pct(w.end) - pct(w.start)}%"></i>`).join('');
         const items = view.items.map(i => {
-            const k = sales && !i.mine && i.kind !== 'close' && i.kind !== 'leave' ? (i.kind === 'trial' && i.status === 'hold' ? 'held' : 'busy') : i.kind;
-            const label = sales ? (i.mine ? 'Mening sinovim' : i.kind === 'trial' && i.status === 'hold' ? 'Ushlab turilgan' : '')
+            const k = sales && !i.mine && i.kind !== 'close' && i.kind !== 'leave' && i.kind !== 'break' ? (i.kind === 'trial' && i.status === 'hold' ? 'held' : 'busy') : i.kind;
+            const label = sales ? (i.mine ? 'Mening sinovim' : i.kind === 'trial' && i.status === 'hold' ? 'Ushlab turilgan' : i.kind === 'break' ? 'Tanaffus' : '')
                 : i.studentName || (i.kind === 'trial' ? 'Sinov' : KIND[i.kind] || '');
             const title = `${hm(i.start)}–${hm(i.end)} · ${KIND[i.kind] || i.kind}${i.status ? ' · ' + (STATUS[i.status] || i.status) : ''}${!sales && i.studentName ? ' · ' + i.studentName : ''}${i.reason ? ' · ' + i.reason : ''}`;
             const data = !sales && i.studentId ? ` data-st="${esc(i.studentId)}"` : i.bookingId ? ` data-bk="${esc(i.bookingId)}"` : i.overrideId && isFull() ? ` data-ov="${esc(i.overrideId)}"` : '';

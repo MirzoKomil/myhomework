@@ -17,6 +17,7 @@
     --jv-d30: #EAF3FF; --jv-d30f: #0057B8; --jv-d30l: #C7DEFA;
     --jv-d60: #D6E8FB; --jv-d60f: #0B4A8F; --jv-d60l: #9DC4F5;
     --jv-seg: #E8EDF5; --jv-dim: rgba(15, 23, 42, .45);
+    --jv-brk: #C4320A; --jv-brk-bg: #FFF4E5; --jv-brk-line: #FDBA74; --jv-brk-soft: #FFFAF5;
     color: var(--jv-text);
     font-variant-numeric: tabular-nums;
 }
@@ -33,6 +34,7 @@ html[data-theme="dark"] .jv, html[data-theme="dark"] .jv-dim, html[data-theme="d
     --jv-d30: rgba(59, 139, 238, .2); --jv-d30f: #9DC4F5; --jv-d30l: rgba(59, 139, 238, .45);
     --jv-d60: rgba(59, 139, 238, .34); --jv-d60f: #DBEAFE; --jv-d60l: rgba(59, 139, 238, .6);
     --jv-seg: #1B2538; --jv-dim: rgba(2, 6, 23, .6);
+    --jv-brk: #FDBA74; --jv-brk-bg: rgba(249, 115, 22, .2); --jv-brk-line: rgba(249, 115, 22, .55); --jv-brk-soft: rgba(249, 115, 22, .07);
 }
 .jv { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
 .jv button { font-family: inherit; }
@@ -107,6 +109,12 @@ body.jv-page-open .content-main > .tab-content { display: none !important; }
 .jv-s--mineTrial { background: var(--jv-vio-bg); color: var(--jv-vio); border-color: var(--jv-vio); font-weight: 700; }
 .jv-s--hold, .jv-s--mine { background: var(--jv-warn-bg); color: var(--jv-warn); border-color: var(--jv-warn-line); }
 .jv-s--leave, .jv-s--closed, .jv-s--notrial { background: repeating-linear-gradient(135deg, var(--jv-soft) 0 5px, var(--jv-line2) 5px 10px); color: var(--jv-faint); border: 1px solid var(--jv-line); }
+/* Sinovga tanaffus (ustoz oladi): to'q sariq chiziqli katak — sinov qo'yib bo'lmaydi; admin/ROP bossa sababi panelda */
+.jv-s--break { background: repeating-linear-gradient(135deg, var(--jv-brk-bg) 0 5px, var(--jv-card) 5px 10px); color: var(--jv-brk); font-weight: 700; border: 1.5px solid var(--jv-brk-line); }
+.jv-s--break.is-click { cursor: pointer; }
+.jv-s--break.is-click:hover { border-color: var(--jv-brk); }
+.jv-s--break.is-on { border: 2px solid var(--jv-brk); }
+.jv-sw.jv-s--break { background: repeating-linear-gradient(135deg, var(--jv-brk-bg) 0 4px, var(--jv-card) 4px 8px); border: 1.5px solid var(--jv-brk-line); }
 .jv-s--off { background: transparent; color: var(--jv-ghost); border: 1px dashed var(--jv-line2); }
 .jv-s--past { color: var(--jv-ghost); }
 .jv-cnt { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; }
@@ -153,7 +161,8 @@ button.jv-opt { cursor: pointer; }
 .jv-opt small { font-size: 12px; color: var(--jv-mute); }
 .jv-tag { font-style: normal; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 999px; white-space: nowrap; background: var(--jv-pri-bg); color: var(--jv-pri2); }
 .jv-tag--ok { background: var(--jv-ok-bg); color: var(--jv-ok); }
-.jv-btn { display: block; width: 100%; text-align: center; padding: 12px; border: 0; border-radius: 12px; background: var(--jv-pri); color: #FFFFFF; font-weight: 700; font-size: 14px; cursor: pointer; }
+.jv-btn { display: block; width: 100%; box-sizing: border-box; text-align: center; padding: 12px; border: 0; border-radius: 12px; background: var(--jv-pri); color: #FFFFFF; font-weight: 700; font-size: 14px; cursor: pointer; text-decoration: none; font-family: inherit; }
+a.jv-btn:hover, a.jv-btn:visited { color: #FFFFFF; text-decoration: none; }
 .jv-btn:hover { background: var(--jv-pri2); }
 .jv-btn[disabled] { opacity: .55; cursor: default; }
 .jv-btn--soft { background: var(--jv-pri-bg); color: var(--jv-pri2); }
@@ -249,6 +258,8 @@ html.rd .jv-dim .jv-q input, html .jv-dim .jv-q input[type="search"] { outline: 
 button.jv-act { background: var(--jv-pri); color: #FFFFFF; cursor: pointer; min-height: 36px; }
 .jv-act--trial, .jv-act--mineTrial { background: var(--jv-vio-bg); color: var(--jv-vio); }
 .jv-act--hold, .jv-act--mine { background: var(--jv-warn-bg); color: var(--jv-warn); }
+.jv-act--break { background: repeating-linear-gradient(135deg, var(--jv-brk-bg) 0 5px, var(--jv-card) 5px 10px); color: var(--jv-brk); box-shadow: inset 0 0 0 1.5px var(--jv-brk-line); }
+.jv-mrow--brk { background: var(--jv-brk-soft); border-color: var(--jv-brk-line); }
 .jv-fchips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
 .jv-fc { flex: none; padding: 8px 14px; border-radius: 999px; font-size: 13px; font-weight: 700; border: 1px solid var(--jv-line); background: var(--jv-card); color: var(--jv-text2); cursor: pointer; }
 .jv-fc.is-on { border-color: var(--jv-text); background: var(--jv-text); color: var(--jv-card); }

@@ -8,6 +8,9 @@
 // Lidlar bo'limidagi sinov tugmalari ham shu sahifani lid bilan ochadi (openForLead).
 // Maxfiylik serverda: sotuvga boshqa o'quvchi/lid ismlari kelmaydi (redactForSales),
 // sotuv menejeri faqat o'zi sotgan o'quvchi ismini ko'radi. Bu fayl faqat ko'rsatadi.
+// "Sinovga tanaffus" (ustoz ilovasi v2, kind:'break'): to'q sariq chiziqli "Tanaffus" katagi — sinov qo'yib bo'lmaydi.
+// Admin/boshliq/ROP katakni bossa o'ng panelda Sabab / Olingan / Izoh / Kim ko'radi (dizayn P4d); telefonda sabab
+// qatorda yoziladi (P4). Sotuv menejeriga server sababni yubormaydi — faqat "Tanaffus".
 (function () {
     'use strict';
     const U = () => window.schoolUI;
@@ -16,6 +19,8 @@
     const role = () => user().role || '';
     const isFull = () => ['admin', 'boshliq'].includes(role());
     const canMove = () => ['admin', 'boshliq', 'rop'].includes(role());
+    // Tanaffus sababini ko'radiganlar (server: sotuv menejeriga sabab yuborilmaydi).
+    const seesBreak = () => ['admin', 'boshliq', 'rop'].includes(role());
     const enabled = () => !!window.schoolUI && ['admin', 'boshliq', 'rop', 'sales_manager'].includes(role());
     const ownLang = () => (typeof getUserOwnLang === 'function' && getUserOwnLang()) || '';
     const canPickLang = () => isFull() || (role() === 'rop' && !ownLang());
@@ -59,7 +64,7 @@
     const svg = (k, s = 18) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[k]}</svg>`;
 
     // ── Holat ────────────────────────────────────────────────────────────────
-    const J = { mode: 'sinov', day: 'today', pat: null, range: null, sel: null, mobT: null, tf: 'all', data: null, err: null, loading: false, seq: 0,
+    const J = { mode: 'sinov', day: 'today', pat: null, range: null, sel: null, brk: null, mobT: null, tf: 'all', data: null, err: null, loading: false, seq: 0,
         lead: null, opts: {}, page: null, root: null, hold: null, busy: false, picker: null, timers: [] };
 
     // ── Sanalar ──────────────────────────────────────────────────────────────
@@ -96,11 +101,31 @@
                 for (const v of r.views || []) if (dates.includes(v.date)) { if (!by.has(v.teacherId)) by.set(v.teacherId, []); by.get(v.teacherId).push(v); }
                 for (const [tid, vs] of by) views.set(tid, mergeDays(vs, dates.length));
             }
+            if (J.mode === 'sinov' && r.scope === 'sales' && seesBreak()) await enrichBreaks(views, date, L);
+            if (seq !== J.seq) return;
             const teachers = (r.teachers || []).filter(t => views.has(t.id));
             J.data = { date, lang: L, mode: J.mode, teachers, views, unassigned: r.unassigned || [], scope: r.scope };
             J.err = null;
         } catch (e) { if (seq === J.seq) { J.err = e; J.data = null; } }
         if (seq === J.seq) { J.loading = false; draw(); }
+    }
+    // ROP "Sinov darsi"ni sotuvdagidek (mode=free) oladi — u yerda tanaffus sababi yo'q. Tanaffus bo'lsa,
+    // shu kunning to'liq ko'rinishi (scope manage) olinib, sabab/izoh/kim/qachon qo'shiladi. Xato bo'lsa — faqat "Tanaffus".
+    async function enrichBreaks(views, date, L) {
+        const need = [...views.values()].some(v => (v.items || []).some(i => i.kind === 'break' && !i.reason));
+        if (!need) return;
+        try {
+            const r = await U().api(`/schedule?from=${date}&to=${date}&lang=${L}`);
+            const full = new Map((r.views || []).filter(v => v.date === date).map(v => [v.teacherId, v]));
+            for (const [tid, v] of views) {
+                const fv = full.get(tid); if (!fv) continue;
+                v.items = (v.items || []).map(i => {
+                    if (i.kind !== 'break') return i;
+                    const f = (fv.items || []).find(x => x.kind === 'break' && x.start === i.start && x.end === i.end);
+                    return f ? { ...i, ...f } : i;
+                });
+            }
+        } catch { /* sababsiz ko'rsatiladi */ }
     }
     // Darslar: guruhdagi kunlar ro'yxati (birinchi sanadan boshlab, 7 kun ichida).
     function patDates(d0) {
@@ -136,12 +161,14 @@
         if (tr) return { k: tr.status === 'hold' ? (mine ? 'mine' : 'hold') : mine ? 'mineTrial' : 'trial' };
         if (hit.some(i => i.kind === 'leave')) return { k: 'leave' };
         if (hit.some(i => i.kind === 'close')) return { k: 'closed' };
+        const br = hit.find(i => i.kind === 'break');
+        if (br) return { k: 'break', b: br };
         if (hit.length) return { k: 'busy' };
         if (fits(v.work, s, e)) return { k: 'notrial' };
         return { k: 'off' };
     }
     const CELL = { free: 'Boʻsh', busy: 'Darsi bor', trial: 'Sinov', mineTrial: 'Mening sinovim', hold: 'Ushlab turilgan', mine: 'Siz ushlab turibsiz',
-        leave: 'Taʼtil', closed: 'Yopiq', notrial: 'Band', off: 'Ish vaqti emas', past: '—' };
+        leave: 'Taʼtil', closed: 'Yopiq', notrial: 'Band', off: 'Ish vaqti emas', past: '—', break: 'Tanaffus' };
     // Katak ma'lumotnomasi: admin/ROP — "Darsi bor" va "Sinov"; sotuv menejeri — faqat "Sinov" (barcha menejerlarniki).
     const infoAble = k => k === 'trial' || k === 'mineTrial' || (k === 'busy' && ['admin', 'boshliq', 'rop'].includes(role()));
     const infoCache = new Map();
@@ -254,7 +281,7 @@
         el.setAttribute('role', 'region'); el.setAttribute('aria-label', 'Sinov darsini qoʻyish');
         (document.querySelector('.content-main') || document.body).appendChild(el);
         document.body.classList.add('jv-page-open');
-        J.page = el; J.root = el; J.lead = lead; J.opts = opts; J.mode = 'sinov'; J.sel = null; J.mobT = null; J.data = null;
+        J.page = el; J.root = el; J.lead = lead; J.opts = opts; J.mode = 'sinov'; J.sel = null; J.brk = null; J.mobT = null; J.data = null;
         mount();
         return true;
     }
@@ -383,7 +410,10 @@
                 const lab = st.k === 'free' && on ? '✓ Tanlandi' : CELL[st.k];
                 const inner = st.k === 'free' && on ? '<span class="jv-on-l">✓ Tanlandi</span><span class="jv-on-x">✕ Bekor qilish</span>' : lab;
                 const inf = infoAble(st.k);
-                return `<div class="jv-cell"><button type="button" class="jv-s jv-s--${st.k}${on ? ' is-on' : ''}${inf ? ' is-info' : ''}"${st.k === 'free' ? ` data-slot="${esc(t.id)}|${m}"` : inf ? ` data-info="${esc(t.id)}|${m}" aria-haspopup="dialog"` : ' tabindex="-1" aria-disabled="true"'} aria-label="${esc(t.name)} · ${hm(m)} · ${lab}${on ? ' (qayta bosing — bekor qilish)' : ''}"${on ? ' title="Qayta bosing — tanlov bekor qilinadi"' : ''}>${inner}</button></div>`;
+                // Tanaffus: admin/ROP bossa — o'ng panelda sababi; sotuvga faqat yozuv (bosilmaydi).
+                const brk = st.k === 'break' && seesBreak();
+                const bOn = brk && J.brk && J.brk.t === t.id && sameBreak(J.brk, st.b);
+                return `<div class="jv-cell"><button type="button" class="jv-s jv-s--${st.k}${on || bOn ? ' is-on' : ''}${inf ? ' is-info' : ''}${brk ? ' is-click' : ''}"${st.k === 'free' ? ` data-slot="${esc(t.id)}|${m}"` : brk ? ` data-brk="${esc(t.id)}|${m}" aria-pressed="${!!bOn}"` : inf ? ` data-info="${esc(t.id)}|${m}" aria-haspopup="dialog"` : ' tabindex="-1" aria-disabled="true"'} aria-label="${esc(t.name)} · ${hm(m)} · ${lab}${on ? ' (qayta bosing — bekor qilish)' : ''}"${on ? ' title="Qayta bosing — tanlov bekor qilinadi"' : ''}>${inner}</button></div>`;
             }).join('');
             const past = isToday && m < now;
             const cnt = past ? '<span class="jv-cnt is-past">oʻtdi</span>' : `<span class="jv-cnt jv-cnt--${free >= 4 ? 'ok' : free >= 2 ? 'mid' : free === 1 ? 'low' : 'none'}">${free} ta</span>`;
@@ -398,9 +428,12 @@
         const legend = `<div class="jv-card jv-legend"><div class="jv-eyebrow">Belgilar</div>
             <div><i class="jv-sw jv-s--free"></i>Boʻsh — bosib tanlang</div><div><i class="jv-sw jv-s--busy"></i>Darsi bor — oʻquvchi bilan dars</div>
             <div><i class="jv-sw jv-s--trial"></i>Boshqa sinov qoʻyilgan</div><div><i class="jv-sw jv-s--hold"></i>Boshqa menejer ushlab turibdi</div>
-            ${role() === 'sales_manager' ? '<div><i class="jv-sw jv-s--mineTrial"></i>Mening sinovim</div>' : ''}<div><i class="jv-sw jv-s--notrial"></i>Band — sinovga yopiq / taʼtil</div><div><i class="jv-sw jv-s--off"></i>Ish vaqti emas</div></div>`;
+            ${role() === 'sales_manager' ? '<div><i class="jv-sw jv-s--mineTrial"></i>Mening sinovim</div>' : ''}<div><i class="jv-sw jv-s--break"></i>${seesBreak() ? 'Ustoz tanaffusda — bosing, sababi chiqadi' : 'Ustoz tanaffusda — sinov qoʻyib boʻlmaydi'}</div>
+            <div><i class="jv-sw jv-s--notrial"></i>Band — sinovga yopiq / taʼtil</div><div><i class="jv-sw jv-s--off"></i>Ish vaqti emas</div></div>`;
         const un = (isFull() || role() === 'rop') && J.data.unassigned?.length
             ? `<div class="jv-card jv-note"><b>Ustoz biriktirilmagan sinovlar · ${J.data.unassigned.length}</b><p>Lid istagan vaqtda hech kim boʻsh boʻlmagan.</p><button type="button" class="jv-btn jv-btn--soft" data-goto-trials>Sinov darslarini ochish</button></div>` : '';
+        const bp = J.brk && seesBreak() ? breakPanel() : '';
+        if (bp) return `<aside class="jv-side">${bp}${un}${legend}</aside>`;
         if (!J.sel) {
             return `<aside class="jv-side"><div class="jv-card jv-pn"><div class="jv-eyebrow">Sinov darsi · 30 daqiqa</div><h2>Vaqtni tanlang</h2>
                 <p class="jv-mt">Jadvaldan yashil “Boʻsh” katakni bosing. ${J.lead ? `Sinov <b>${esc(J.lead.name)}</b> uchun qoʻyiladi.` : 'Keyin lidni tanlaysiz.'}</p></div>${un}${legend}</aside>`;
@@ -417,6 +450,48 @@
             <p class="jv-mt">${J.lead ? 'Lid avtomatik “Sinov darsida” ustuniga oʻtadi. Ustoz tasdiqlagach sizga xabar keladi.' : 'Bosilganda lid tanlash oynasi ochiladi. Vaqt 10 daqiqa siz uchun ushlab turiladi.'}</p></div>${un}${legend}</aside>`;
     }
 
+    // ── Tanaffus (sinovga tanaffus) ──────────────────────────────────────────
+    const sameBreak = (a, b) => !!a && !!b && (a.id ? a.id === b.overrideId : a.start === b.start && a.end === b.end);
+    function findBreak(sel) {
+        const v = J.data?.views.get(sel.t);
+        const list = (v?.items || []).filter(i => i.kind === 'break');
+        return list.find(i => sameBreak(sel, i)) || list.find(i => i.start <= sel.m && sel.m < i.end) || null;
+    }
+    // "Olingan": bugun — "15:08 da oldi", boshqa kun — "31-okt · 15:08". Ustoz o'rniga admin olgan bo'lsa — ismi.
+    function takenAt(b, t) {
+        const ms = Date.parse(b.at || '');
+        const who = b.by && t && firstName(b.by) !== firstName(t.name) ? ` · ${b.by}` : '';
+        if (!Number.isFinite(ms)) return b.by || '—';
+        return (tashDate(ms) === today() ? `${hm(tashMin(ms))} da oldi` : `${dm(tashDate(ms))} · ${hm(tashMin(ms))}`) + who;
+    }
+    // Ustozga Telegram: HR kartasidagi telefon raqami orqali (t.me/+998…). Raqam bo'lmasa tugma chiqmaydi.
+    function teacherTg(t) {
+        try {
+            const hr = typeof getItem === 'function' && typeof STORAGE_KEYS !== 'undefined' ? getItem(STORAGE_KEYS.hrEmployees, []) : [];
+            const e = (hr || []).find(x => String(x.id) === String(t?.id));
+            const d = String(e?.phone || '').replace(/\D/g, '');
+            return d.length === 9 ? `https://t.me/+998${d}` : d.length === 12 && d.startsWith('998') ? `https://t.me/+${d}` : '';
+        } catch { return ''; }
+    }
+    function breakPanel() {
+        const b = findBreak(J.brk), t = J.data.teachers.find(x => x.id === J.brk.t);
+        if (!b || !t) { J.brk = null; return ''; }
+        const tg = teacherTg(t);
+        const facts = [['Sabab', b.reason || '—'], ['Olingan', b.reason ? takenAt(b, t) : '—'], ['Izoh', b.note || '—'], ['Kim koʻradi', 'ROP va admin']];
+        return `<div class="jv-card jv-pn jv-pn--brk"><div class="jv-eyebrow">Sinovga tanaffus</div><h2>${esc(tName(t))} · ${hm(b.start)} – ${hm(b.end)}</h2>
+            <p class="jv-mt">${esc(dayWord(J.data.date))} · ${esc(dayLabel(J.data.date))} · bu vaqtga sinov qoʻyib boʻlmaydi</p>
+            <div class="jv-facts">${facts.map(([k, v]) => `<div><small>${k}</small><b>${esc(v)}</b></div>`).join('')}</div>
+            ${tg ? `<a class="jv-btn" href="${esc(tg)}" target="_blank" rel="noopener">Ustozga Telegramda yozish</a>` : ''}
+            <button type="button" class="jv-btn${tg ? ' jv-btn--soft' : ''}" data-brk-free="${J.brk.m}">Boshqa boʻsh ustozni koʻrish</button>
+            <p class="jv-mt">Sotuv menejeri katakda faqat “Tanaffus” yozuvini koʻradi. Ustoz tanaffusni bekor qilsa, vaqt yana boʻsh boʻladi va botdan xabar keladi.</p></div>`;
+    }
+    // Telefon qatoridagi izoh (P4): "Tanaffusda · Sabab: «izoh» · 15:08". Sotuvga — faqat "Tanaffusda".
+    function breakNote(b) {
+        if (!b || !seesBreak() || !b.reason) return 'Tanaffusda';
+        const ms = Date.parse(b.at || '');
+        return `Tanaffusda · ${b.reason}${b.note ? `: «${b.note}»` : ''}${Number.isFinite(ms) ? ' · ' + hm(tashMin(ms)) : ''}`;
+    }
+
     // ── Sinov darsi · telefon ────────────────────────────────────────────────
     function sinovMobile() {
         const now = U().nowMin(), isToday = J.data.date === today();
@@ -428,11 +503,11 @@
         const sel = J.mobT;
         const chips = hours.map(m => { const n = slotFreeCount(m), past = isToday && m < now, on = m === sel;
             return `<button type="button" class="jv-hr${on ? ' is-on' : ''}${past ? ' is-past' : ''}" data-hour="${m}"${past ? ' disabled' : ''}><b>${hm(m)}</b><small class="jv-hr-n jv-hr-n--${n >= 3 ? 'ok' : n >= 1 ? 'low' : 'none'}">${past ? '—' : n + ' boʻsh'}</small></button>`; }).join('');
-        const rank = { free: 0, mineTrial: 1, busy: 2, trial: 3, hold: 4, mine: 4, notrial: 5, closed: 5, leave: 6, off: 7, past: 8 };
+        const rank = { free: 0, mineTrial: 1, busy: 2, trial: 3, hold: 4, mine: 4, break: 5, notrial: 6, closed: 6, leave: 7, off: 8, past: 9 };
         const list = J.data.teachers.map(t => ({ t, st: slotState(J.data.views.get(t.id), sel), n: lessonsOf(J.data.views.get(t.id)) }))
             .sort((x, y) => rank[x.st.k] - rank[y.st.k] || x.n - y.n);
         const free = list.filter(x => x.st.k === 'free').length;
-        const rows = list.map(({ t, st, n }) => `<div class="jv-mrow">${U().staffAvatar(t, 40)}<span><b>${esc(t.name)}</b><small>${n} dars bu kuni</small></span>${st.k === 'free'
+        const rows = list.map(({ t, st, n }) => `<div class="jv-mrow${st.k === 'break' ? ' jv-mrow--brk' : ''}">${U().staffAvatar(t, 40)}<span><b>${esc(t.name)}</b><small>${st.k === 'break' ? esc(breakNote(st.b)) : `${n} dars bu kuni`}</small></span>${st.k === 'free'
             ? `<button type="button" class="jv-act" data-book="${esc(t.id)}|${sel}"${J.busy ? ' disabled' : ''}>${J.lead ? 'Tanlash' : 'Sinov qoʻyish'}</button>`
             : infoAble(st.k) ? `<button type="button" class="jv-act jv-act--${st.k} is-info" data-info="${esc(t.id)}|${sel}" aria-haspopup="dialog">${CELL[st.k]} ⓘ</button>`
             : `<em class="jv-act jv-act--${st.k}">${CELL[st.k]}</em>`}</div>`).join('');
@@ -499,7 +574,7 @@
         const { i, t } = sel, d = i.end - i.start;
         // Ko'chirish mumkin: guruhning har 3 kunida shu vaqt ish vaqti ichida va darsi/sinovi/ta'tili yo'q (server ham tekshiradi).
         const cand = canMove() ? J.data.teachers.filter(x => { const xv = J.data.views.get(x.id); return x.id !== t.id && xv && (xv.days || [xv]).every(dv => fits(dv.work, i.start, i.end)
-            && !(dv.items || []).some(o => o.start < i.end && o.end > i.start && o.kind !== 'reserved' && !o.frozen)); })
+            && !(dv.items || []).some(o => o.start < i.end && o.end > i.start && o.kind !== 'reserved' && o.kind !== 'break' && !o.frozen)); })
             .sort((x, y) => lessonsOf(J.data.views.get(x.id)) - lessonsOf(J.data.views.get(y.id))) : [];
         const facts = [['Vaqti', `${hm(i.start)} – ${hm(i.end)}`], ['Davomiyligi', `${d} daqiqa`], ['Kunlari', J.pat === 'toq' ? 'Du · Ch · Ju' : 'Se · Pa · Sh'], ['Ustoz', tName(t)]];
         return `<aside class="jv-side"><div class="jv-card jv-pn"><div class="jv-eyebrow">Tanlangan dars</div><h2>${esc(i.studentName || 'Band')}</h2>
@@ -545,19 +620,27 @@
 
     // ── Bog'lash ─────────────────────────────────────────────────────────────
     function bindHead(root) {
-        root.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => { if (J.mode === b.dataset.mode) return; J.mode = b.dataset.mode; J.sel = null; J.mobT = null; J.data = null; draw(); load(); });
-        root.querySelectorAll('[data-lang]').forEach(b => b.onclick = () => { const st = SS()?.state; if (!st || st.lang === b.dataset.lang) return; st.lang = b.dataset.lang; st.teacherId = null; J.sel = null; J.tf = 'all'; load(); });
+        root.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => { if (J.mode === b.dataset.mode) return; J.mode = b.dataset.mode; J.sel = null; J.brk = null; J.mobT = null; J.data = null; draw(); load(); });
+        root.querySelectorAll('[data-lang]').forEach(b => b.onclick = () => { const st = SS()?.state; if (!st || st.lang === b.dataset.lang) return; st.lang = b.dataset.lang; st.teacherId = null; J.sel = null; J.brk = null; J.tf = 'all'; load(); });
         root.querySelector('[data-close-page]')?.addEventListener('click', () => closePage());
         root.querySelector('[data-admin-week]')?.addEventListener('click', () => { const st = SS()?.state; if (!st) return; st.view = 'week'; J.timers.forEach(clearInterval); J.timers = []; SS().render(J.root); });
     }
     function bind(root) {
         bindHead(root);
-        root.querySelectorAll('[data-day]').forEach(b => b.onclick = () => { if (J.day === b.dataset.day) return; J.day = b.dataset.day; J.sel = null; J.mobT = null; load(); });
+        root.querySelectorAll('[data-day]').forEach(b => b.onclick = () => { if (J.day === b.dataset.day) return; J.day = b.dataset.day; J.sel = null; J.brk = null; J.mobT = null; load(); });
         root.querySelectorAll('[data-pat]').forEach(b => b.onclick = () => { if (J.pat === b.dataset.pat) return; J.pat = b.dataset.pat; J.sel = null; load(); });
         root.querySelectorAll('[data-range]').forEach(b => b.onclick = () => { J.range = b.dataset.range; draw(); });
-        root.querySelectorAll('[data-slot]').forEach(b => b.onclick = () => { const [t, m] = b.dataset.slot.split('|'); J.sel = J.sel && J.sel.t === t && J.sel.m === Number(m) ? null : { t, m: Number(m) }; draw(); });
+        root.querySelectorAll('[data-slot]').forEach(b => b.onclick = () => { const [t, m] = b.dataset.slot.split('|'); J.brk = null; J.sel = J.sel && J.sel.t === t && J.sel.m === Number(m) ? null : { t, m: Number(m) }; draw(); });
+        root.querySelectorAll('[data-brk]').forEach(b => b.onclick = () => {
+            const [t, m] = b.dataset.brk.split('|'), it = findBreak({ t, m: Number(m) });
+            if (!it) return;
+            J.sel = null;
+            J.brk = J.brk && J.brk.t === t && sameBreak(J.brk, it) ? null : { t, m: Number(m), id: it.overrideId || null, start: it.start, end: it.end };
+            draw();
+        });
+        root.querySelectorAll('[data-brk-free]').forEach(b => b.onclick = () => { const m = Number(b.dataset.brkFree); J.brk = null; J.sel = { t: freeAt(m)[0]?.id || null, m }; draw(); });
         root.querySelectorAll('[data-pick-t]').forEach(b => b.onclick = () => { J.sel = { ...J.sel, t: b.dataset.pickT }; draw(); });
-        root.querySelectorAll('[data-unsel]').forEach(b => b.onclick = () => { J.sel = null; draw(); });
+        root.querySelectorAll('[data-unsel]').forEach(b => b.onclick = () => { J.sel = null; J.brk = null; draw(); });
         root.querySelectorAll('[data-hour]').forEach(b => b.onclick = () => { J.mobT = Number(b.dataset.hour); draw(); });
         root.querySelectorAll('[data-book]').forEach(b => b.onclick = () => { const [t, m] = b.dataset.book.split('|'); startBooking(t, Number(m)); });
         root.querySelectorAll('[data-lesson]').forEach(b => b.onclick = () => { const [t, sid, s] = b.dataset.lesson.split('|'); J.sel = J.sel?.sid === sid && J.sel.t === t && J.sel.start === Number(s) ? null : { t, sid, start: Number(s) }; draw(); });

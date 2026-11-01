@@ -67,7 +67,8 @@ const CATALOG = {
         ['Sinov va lidlar', [
             ['trial_unassigned', 'Sinovga ustoz topilmadi', 'darhol', [1, 1], true],
             ['trial_outcome', 'Sinov natijasi: o\'tkazildi / kelmadi', 'jamoa bo\'yicha', [1, 0], true],
-            ['hold_expired', 'Ushlab turish tugadi, band qilinmadi', '10 daqiqadan keyin', [0, 0], true]]],
+            ['hold_expired', 'Ushlab turish tugadi, band qilinmadi', '10 daqiqadan keyin', [0, 0], true],
+            ['trial_break', 'Ustoz sinovga tanaffus oldi / bekor qildi', 'darhol · sababi bilan', [1, 1], true]]],
         ['Jamoa', [
             ['daily_plan', 'Kunlik reja natijasi', '20:00 da · har menejer bo\'yicha', [1, 0], true],
             ['group_link_missing', 'Telegram guruh havolasi kiritilmagan', 'menejer nomi bilan', [1, 0], true],
@@ -78,11 +79,12 @@ const CATALOG = {
         ['Tasdiqlash kerak', [
             ['edit_request', 'Sotuv menejeri tahriri — tarif yoki ustoz', 'kutilayotgan so\'rovlar', [1, 1], true],
             ['payment_edit', 'To\'lov tahriri 24 soatdan keyin', 'sabab bilan · ROP ham ko\'radi', [1, 1], true],
-            ['makeup_review', 'Qoplash darsi tekshiruvda', 'ustoz belgilaganda', [1, 1], true],
+            ['makeup_review', 'Qoplash darsi kiritildi — qo\'ng\'iroq bilan tekshiring', 'ustoz kiritganda · tasdiqsiz hisobga o\'tadi', [1, 1], true],
             ['assist_late', 'Aloqani tuzatish so\'rovi', 'yordamchi ustozdan', [1, 1], true]]],
         ['Jadval va o\'quvchilar', [
             ['trial_unassigned', 'Sinovga ustoz topilmadi', 'darhol · "Ustoz biriktirilmagan"', [1, 1], true],
             ['freeze_ending', 'Muzlatish tugaydi — o\'quvchi qaytadi', '1 kun oldin', [1, 1], true],
+            ['trial_break', 'Ustoz sinovga tanaffus oldi / bekor qildi', 'darhol · sababi bilan', [1, 1], true],
             ['attendance_unmarked_all', 'Davomat belgilanmagan darslar', 'har kuni 21:00 da · ro\'yxat bilan', [1, 0], true],
             ['group_link_missing', 'Telegram guruh havolasi yo\'q', 'konvertatsiyadan 24 soat o\'tsa', [1, 0], true]]],
         ['Moliya', [
@@ -497,6 +499,17 @@ async function managerEvents(db, me, now, ev) {
             sub: miss.slice(0, 5).map(x => `${first(x.st.name)}${names.get(x.st.manager_id) ? ' (' + first(names.get(x.st.manager_id)) + ')' : ''}`).join(', ') + (miss.length > 5 ? ` va yana ${miss.length - 5}` : ''),
             at: atLocal(today, 9 * 60), go: { tab: 'students' } });
     }
+    // "Sinovga tanaffus" (ustoz ilovasi v2): so'nggi 2 kunda olingan va bekor qilingan tanaffuslar — sababi bilan (ROP — o'z tilidagi ustozlar).
+    const br = (await db.query(`SELECT o.*, he.name AS tname, he.lang AS tlang FROM school_overrides o LEFT JOIN hr_employees he ON he.id=o.teacher_id
+        WHERE o.kind='break' AND (o.created_at > $1 OR o.removed_at > $1)`, [new Date(now.getTime() - 2 * 86400000)])).rows
+        .filter(r => me.kind === 'admin' || !lang || !r.tlang || r.tlang === 'both' || r.tlang === lang);
+    for (const r of br) {
+        const when = `${dm(S.dateStr(r.date))} ${T.fromMin(Number(r.start_min))}–${T.fromMin(Number(r.end_min))}`;
+        ev.push({ id: `brk:${r.id}`, type: 'trial_break', cat: 'jadval', tone: 'warn', title: `${first(r.tname) || 'Ustoz'} sinovga tanaffus oldi`,
+            sub: [when, r.reason, r.note].filter(Boolean).join(' · '), at: iso(r.created_at), go: { tab: 'timetable' } });
+        if (r.removed_at) ev.push({ id: `brkx:${r.id}`, type: 'trial_break', cat: 'jadval', tone: 'info', title: `${first(r.tname) || 'Ustoz'} tanaffusni bekor qildi`,
+            sub: `${when} · sinovga yana ochiq`, at: iso(r.removed_at), go: { tab: 'timetable' } });
+    }
     if (me.kind !== 'admin') return;
     // ROP "Admin ochsin" (RopSinov): lid istagan vaqtda sinovga ochiq ustoz yo'q — admin vaqt ochadi yoki ustoz biriktiradi.
     const ask = (await db.query(`SELECT id, name, extra_data FROM leads WHERE deleted_at IS NULL AND status='sinov-darsida' AND extra_data ? 'trialAdminOpen'`)).rows;
@@ -527,10 +540,11 @@ async function managerEvents(db, me, now, ev) {
                 sub: [...per].sort((a, b) => b[1] - a[1]).slice(0, 6).map(([id, n]) => `${first(names.get(id)) || id} ${n}`).join(', '), at: atLocal(today, 21 * 60), go: { tab: 'teachers-section' } });
         }
     }
+    // Qoplash endi tasdiqsiz hisobga o'tadi: nazoratchiga so'nggi 3 kunda ustoz kiritganlari (o'quvchiga qo'ng'iroq qilib tekshirish uchun) + eski "review" lar.
     const mk = (await db.query(`SELECT m.*, s.name, he.name AS tname FROM school_makeups m LEFT JOIN students s ON s.id=m.student_id
-        LEFT JOIN hr_employees he ON he.id=m.teacher_id WHERE m.status='review'`)).rows;
-    for (const m of mk) ev.push({ id: `mkr:${m.id}`, type: 'makeup_review', cat: 'tasdiq', tone: 'warn', title: 'Qoplash darsi tekshiruvda',
-        sub: `${first(m.tname)} · ${first(m.name)} · ${dm(S.dateStr(m.missed_date))} o'rniga`, at: iso(m.created_at), go: { tab: 'teachers-section' } });
+        LEFT JOIN hr_employees he ON he.id=m.teacher_id WHERE m.status='review' OR (m.status='approved' AND m.decided_by IS NULL AND m.created_at > $1)`, [new Date(now.getTime() - 3 * 86400000)])).rows;
+    for (const m of mk) ev.push({ id: `mkr:${m.id}`, type: 'makeup_review', cat: 'tasdiq', tone: 'warn', title: m.status === 'review' ? 'Qoplash darsi tekshiruvda' : 'Qoplash darsi kiritildi — qo\'ng\'iroq bilan tekshiring',
+        sub: `${first(m.tname)} · ${first(m.name)} · ${dm(S.dateStr(m.missed_date))} o'rniga${m.held_date ? ' · ' + dm(S.dateStr(m.held_date)) + (m.held_start_min != null ? ' ' + T.fromMin(Number(m.held_start_min)) : '') : ''}`, at: iso(m.created_at), go: { tab: 'teachers-section' } });
     const late = (await db.query(`SELECT * FROM school_requests WHERE type='assist_late' AND status='new'`)).rows;
     for (const r of late) ev.push({ id: `late:${r.id}`, type: 'assist_late', cat: 'tasdiq', tone: 'warn', title: 'Aloqani tuzatish so\'rovi',
         sub: [r.requester_name, r.reason].filter(Boolean).join(' · '), at: iso(r.created_at), go: { tab: 'teachers-section' } });

@@ -112,6 +112,9 @@ function dayView(ctx, teacherId, date) {
     for (const o of ov.filter(o => o.kind === 'open')) work.push({ start: o.start_min, end: o.end_min, trialOpen: true, opened: true });
     const closed = ov.filter(o => o.kind === 'close' || o.kind === 'leave').map(o => ({ start: o.start_min, end: o.end_min, kind: o.kind, reason: o.reason, overrideId: o.id,
         by: o.created_by_name || '', at: o.created_at || null, weekly: o.date == null }));
+    // "Sinovga tanaffus" (ustoz oladi): faqat sinovga yopadi — darslar va qoplashga ta'sir qilmaydi. Sababni ustozning o'zi, ROP va admin ko'radi.
+    const breaks = ov.filter(o => o.kind === 'break').map(o => ({ start: o.start_min, end: o.end_min, kind: 'break', reason: o.reason, reasonCode: o.reason_code || '', note: o.note || '',
+        overrideId: o.id, by: o.created_by_name || '', at: o.created_at || null }));
     // Admin qo'shimcha ochgan vaqtlar (jadvalda "admin ochdi" bo'lib ko'rinadi, bosib bekor qilinadi).
     const opens = ov.filter(o => o.kind === 'open').map(o => ({ start: o.start_min, end: o.end_min, overrideId: o.id, reason: o.reason, by: o.created_by_name || '', at: o.created_at || null, weekly: o.date == null }));
     const makeupOnly = ov.filter(o => o.kind === 'makeup_only').map(o => ({ start: o.start_min, end: o.end_min, kind: 'makeup_only', overrideId: o.id, reason: o.reason, by: o.created_by_name || '', at: o.created_at || null, weekly: o.date == null }));
@@ -141,13 +144,15 @@ function dayView(ctx, teacherId, date) {
         items.push({ start: l.start, end: l.end, kind: 'trial', status: l.status, leadId: l.leadId, managerId: l.managerId, fromLead: true });
     }
     for (const c of closed) items.push(c);
+    for (const b of breaks) items.push(b);
     items.sort((a, b) => a.start - b.start);
     // Sinovga ochiq bo'sh joy: ish vaqti − (dars, sinov, qoplash, yopilgan, faqat-qoplash).
     // Muzlatilgan o'quvchi joyi ("reserved") faqat sinovga ochiq bo'ladi.
     const hard = items.filter(i => i.kind !== 'reserved');
-    const free = T.subtract(T.merge(work.map(w => ({ start: w.start, end: w.end }))), [...items, ...makeupOnly]);
+    const lessonBusy = items.filter(i => i.kind !== 'break');
+    const free = T.subtract(T.merge(work.map(w => ({ start: w.start, end: w.end }))), [...lessonBusy, ...makeupOnly]);
     const trialFree = T.subtract(work.filter(w => w.trialOpen).map(w => ({ start: w.start, end: w.end })), [...hard, ...makeupOnly]);
-    const makeupFree = T.subtract(work.map(w => ({ start: w.start, end: w.end })), hard.filter(i => i.kind !== 'makeup_only'));
+    const makeupFree = T.subtract(work.map(w => ({ start: w.start, end: w.end })), hard.filter(i => i.kind !== 'makeup_only' && i.kind !== 'break'));
     return { teacherId, date, weekday: wd, work: T.merge(work), items, free, trialFree, makeupFree, makeupOnly, opens, noHours: !!noHours };
 }
 
@@ -359,6 +364,53 @@ async function updateOverride(db, actor, id, input, now = new Date()) {
     await removeOverride(db, actor, id);
     return addOverride(db, actor, { ...input, teacherId: cur.teacher_id }, now);
 }
+// ── Sinovga tanaffus (ustoz ilovasi v2) ──
+// Ustoz faqat admin sinovga OCHGAN vaqtiga (trialOpen ish vaqti yoki "open") tanaffus oladi: bugun yoki ertaga (sinov ham shu kunlarga qo'yiladi).
+// Sinov band qilingan vaqtga olinmaydi (409 — avval sinovni rad etadi). Sabab majburiy; ROP va admin ko'radi, sotuv faqat "Tanaffus".
+// Dizayn (P2 "Sinovga tanaffus"): Sog'lig'im · Shaxsiy ish · Internet / texnika · Boshqa.
+const BREAK_REASONS = { health: 'Sog\'lig\'im', personal: 'Shaxsiy ish', tech: 'Internet / texnika', other: 'Boshqa' };
+async function addBreak(db, actor, teacherId, input, now = new Date()) {
+    const today = T.nowLocal(now);
+    const date = T.assertDate(input.date);
+    // Bugun yoki keyingi ish kuni (yakshanba dam olish) — sinov ham shu kunlarga qo'yiladi.
+    const next = T.addDays(today.date, 1), nextWork = T.weekday(next) === 7 ? T.addDays(next, 1) : next;
+    if (date < today.date || date > nextWork || (date !== today.date && date !== nextWork)) throw fail(400, 'Tanaffus faqat bugun yoki keyingi ish kuni uchun olinadi');
+    const code = String(input.reasonCode || '');
+    if (!BREAK_REASONS[code]) throw fail(400, 'Sababni tanlang');
+    const note = String(input.note || '').trim().slice(0, 300);
+    if (code === 'other' && note.length < 3) throw fail(400, '"Boshqa sabab" uchun izoh yozing');
+    await lockTeacher(db, teacherId);
+    const ctx = await loadContext(db, { teacherIds: [teacherId], from: date, to: date, now });
+    const v = dayView(ctx, teacherId, date);
+    const trialWork = T.merge(ctx.hours.filter(h => h.teacher_id === teacherId && Number(h.weekday) === v.weekday && h.trial_open !== false)
+        .map(h => ({ start: Number(h.start_min), end: Number(h.end_min) })).concat(v.opens.map(o => ({ start: o.start, end: o.end }))));
+    if (!trialWork.length) throw fail(400, 'Bu kunda admin sinovga vaqt ochmagan — tanaffus kerak emas');
+    let ranges;
+    if (input.wholeDay) ranges = trialWork;
+    else {
+        const slots = (Array.isArray(input.slots) ? input.slots : [{ from: input.from, to: input.to }]).map(x => ({ start: T.toMin(x.from), end: T.toMin(x.to) }));
+        if (!slots.length || slots.some(x => x.start == null || x.end == null || x.end <= x.start)) throw fail(400, 'Vaqtni tanlang');
+        for (const x of slots) if (!trialWork.some(w => w.start <= x.start && x.end <= w.end)) throw fail(400, `${T.fromMin(x.start)}–${T.fromMin(x.end)} sinovga ochiq vaqt emas`);
+        ranges = T.merge(slots);
+    }
+    if (date === today.date) ranges = ranges.map(r => ({ start: Math.max(r.start, Math.ceil(today.min / 30) * 30), end: r.end })).filter(r => r.end > r.start);
+    if (!ranges.length) throw fail(400, 'Bu vaqt allaqachon o\'tib ketgan');
+    const trial = v.items.find(i => i.kind === 'trial' && !['cancelled', 'rejected', 'done', 'no_show'].includes(i.status) && ranges.some(r => T.overlaps(i, r)));
+    if (trial) throw fail(409, `${T.fromMin(trial.start)} da sinov qo'yilgan — bu vaqtga tanaffus olib bo'lmaydi`);
+    if (v.items.some(i => i.kind === 'break' && ranges.some(r => T.overlaps(i, r)))) throw fail(409, 'Bu vaqtda tanaffus allaqachon olingan');
+    const out = [];
+    for (const r of ranges) out.push((await db.query(`INSERT INTO school_overrides (id,teacher_id,date,weekday,start_min,end_min,kind,reason,reason_code,note,created_by,created_by_name)
+        VALUES ($1,$2,$3,NULL,$4,$5,'break',$6,$7,$8,$9,$10) RETURNING *`,
+        [randomUUID(), teacherId, date, r.start, r.end, BREAK_REASONS[code], code, note, actor.id, actor.name || ''])).rows[0]);
+    return out;
+}
+async function removeBreak(db, actor, teacherId, id) {
+    const { rows } = await db.query(`UPDATE school_overrides SET removed_at=NOW(), removed_by=$3 WHERE id=$1 AND kind='break' AND removed_at IS NULL
+        AND ($2::text IS NULL OR teacher_id=$2) RETURNING *`, [id, teacherId, actor.id]);
+    if (!rows.length) throw fail(404, 'Tanaffus topilmadi');
+    return rows[0];
+}
+
 // Admin: ustozning haftalik ish vaqti (to'liq almashtiriladi). Bir kunda bir nechta oraliq bo'lishi mumkin.
 // Qisqartirilsa — kelgusi 4 haftada ish vaqtidan tashqarida qoladigan darslar ro'yxati qaytariladi (409),
 // admin tasdiqlamaguncha saqlanmaydi. Har o'zgarish school_hours_log'ga yoziladi.
@@ -454,6 +506,8 @@ function redactForSales(view, actor, managerId = null) {
         const mine = i.createdBy === actor.id || (!!managerId && i.managerId === String(managerId)) || (actor.role === 'rop' && i.kind === 'trial');
         // "Sinovga yopish" sababi sotuvga ham ko'rinadi (AdminJadvalUstoz: "Sabab — ustoz va sotuv ko'radi"); ta'til sababi — yo'q.
         const why = i.kind === 'close' && i.reason ? { reason: i.reason } : {};
+        // Tanaffus sababi sotuv menejeriga ko'rinmaydi — faqat "Tanaffus" yozuvi (ROP/admin to'liq ko'radi).
+        if (i.kind === 'break') return { start: i.start, end: i.end, kind: 'break', mine: false };
         // Dars jadvali v3 ("Darslar"): sotuv menejeri faqat o'zi sotgan o'quvchining ismini ko'radi; qolganlari — "Band".
         // Muzlatilgan o'quvchi joyi "frozen" belgisi bilan (o'qiyotganlar ro'yxatiga kirmaydi), ism yuborilmaydi.
         const isLesson = i.kind === 'lesson' || i.kind === 'reserved';
@@ -566,7 +620,7 @@ async function teacherAbsences(db, { from, to, teacherId = '', studentIds = null
     const month = from.slice(0, 7);
     const ids = Array.isArray(studentIds) ? studentIds.map(String) : null;
     if (ids && !ids.length) return [];
-    const own = (await db.query(`SELECT teacher_id, student_id, TO_CHAR(day,'YYYY-MM-DD') AS day, absent FROM school_absences
+    const own = (await db.query(`SELECT teacher_id, student_id, TO_CHAR(day,'YYYY-MM-DD') AS day, absent, reason_code, reason_note FROM school_absences
         WHERE day BETWEEN $1 AND $2 AND ($3='' OR teacher_id=$3) AND ($4::text[] IS NULL OR student_id = ANY($4::text[]))`, [from, to, teacherId, ids])).rows;
     let marks = [];
     if ((await db.query("SELECT to_regclass('public.staff_att_lesson_marks')::text AS t")).rows[0]?.t) {
@@ -582,7 +636,8 @@ async function teacherAbsences(db, { from, to, teacherId = '', studentIds = null
     }
     const key = r => `${r.teacher_id}|${r.student_id}|${r.day}`;
     const explicit = new Map(own.map(r => [key(r), r.absent]));
-    const out = own.filter(r => r.absent).map(r => ({ teacherId: r.teacher_id, studentId: r.student_id, day: r.day }));
+    const out = own.filter(r => r.absent).map(r => ({ teacherId: r.teacher_id, studentId: r.student_id, day: r.day,
+        ...(r.reason_code ? { reasonCode: r.reason_code, reasonNote: r.reason_note || '' } : {}) }));
     for (const m of marks) if (!explicit.has(key(m))) out.push({ teacherId: m.teacher_id, studentId: m.student_id, day: m.day });
     return out;
 }
@@ -644,4 +699,5 @@ async function missedLessons(db, teacherId, { from, to }) {
 }
 
 module.exports = { annotateViews, unassignedTrials, missedLessons, teacherAbsences, HOLD_MINUTES, studentRow, statusOn, teacherOn, dateStr, loadContext, dayView, checkSlot, fits, book, confirmHold,
-    transition, releaseLead, checkWeekly, addOverride, removeOverride, updateOverride, overrideImpact, setHours, changes, assertTeacher, daySummary, redactForSales, lockTeacher, leadTrialSlots, checkLeadTrial };
+    transition, releaseLead, checkWeekly, addOverride, removeOverride, updateOverride, overrideImpact, setHours, changes, assertTeacher, daySummary, redactForSales, lockTeacher, leadTrialSlots, checkLeadTrial,
+    addBreak, removeBreak, BREAK_REASONS };

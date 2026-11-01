@@ -1,0 +1,93 @@
+/* Ustoz ilovasi v2 — Bosh bo'limi (Main, Bildirish, Dars, DarsYakun, DarsTabrik, YangiSinovdan, YangiBiriktirildi).
+   Dizayn helmet uslublari bo'lim prefiksi bilan (.bs-). Harakat — Motion.dc.html: faqat transform/opacity, "Kamroq harakat"da o'chadi. */
+
+/* Bosh */
+/* ustoz.css '.ph button{font:inherit}' .btn qalinligini bosadi — bo'lim tugmalari dizayndagi 800/15px */
+.ph button.bs-btn, .bs-ov button.bs-btn { font-weight: 800; font-size: 15px }
+.ph .bs-today a.li { color: #0B1220 }
+@keyframes bsFlt { 0%, 100% { transform: translateY(0) } 50% { transform: translateY(-6px) } }
+.bs-flt { animation: bsFlt 3s ease-in-out infinite }
+
+/* 02 · Bildirishnomalar */
+.bs-rdall { min-height: 44px; display: inline-flex; align-items: center; font: inherit; font-size: 14px; font-weight: 700; padding: 0 8px; border: 0; background: transparent; color: #0057B8 }
+.ph .bs-chips { overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 0 16px }
+.ph .bs-chips::-webkit-scrollbar { display: none }
+.ph .bs-chips .chip { font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; min-height: 36px }
+.bs-nt { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid #EEF2F8; color: #0B1220; position: relative }
+.bs-nt:last-child { border-bottom: 0 }
+.bs-nt .bs-ic { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; flex: none }
+.bs-nt.new { background: #F5FAFF; margin: 0 -14px; padding: 12px 14px; border-radius: 14px }
+.bs-nt.old .bs-tt { color: #4B5563 }
+.bs-nt .bs-un { position: absolute; right: 0; top: 16px; width: 9px; height: 9px; border-radius: 50%; background: #0065D6 }
+.bs-nt.new .bs-un { right: 14px }
+
+/* 03 · Jonli dars */
+.bs-tl { background: #FFFFFF; border: 1px solid #E6EAF2; border-radius: 18px; padding: 12px; display: flex; flex-direction: column; gap: 8px; color: #0B1220; min-height: 92px }
+.bs-tl .bs-tic { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center }
+.bs-tl b { font-size: 14px; font-weight: 700 }
+.bs-tl[aria-disabled="true"] { opacity: .6 }
+.bs-foot { position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 16px 28px; padding-bottom: max(28px, env(safe-area-inset-bottom)); background: #FFFFFF; border-top: 1px solid #E6EAF2; display: flex; gap: 8px; z-index: 5 }
+
+/* 04 · Darsni tugatish (oyna) */
+.bs-rs { display: flex; flex-direction: column; gap: 10px }
+.bs-rs[hidden] { display: none }
+.bs-rch { display: flex; flex-wrap: wrap; gap: 8px }
+.bs-rch .chip { font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; min-height: 40px }
+
+/* 04b · Dars yakunlandi — tabrik */
+.bs-tb { position: absolute; inset: 0; background: #FFFFFF; display: flex; flex-direction: column; overflow-y: auto; z-index: 3 }
+.bs-tbb { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 20px 24px 32px; padding-bottom: max(32px, env(safe-area-inset-bottom)); gap: 16px; position: relative; z-index: 2; text-align: center }
+@keyframes bsDraw { from { stroke-dashoffset: 60 } to { stroke-dashoffset: 0 } }
+.bs-ck { stroke-dasharray: 60; animation: bsDraw .5s ease-out .35s both }
+@keyframes bsPopc { 0% { transform: scale(.4); opacity: 0 } 70% { transform: scale(1.08); opacity: 1 } 100% { transform: scale(1) } }
+.bs-pc { animation: bsPopc .5s cubic-bezier(.2,.8,.2,1) both }
+@keyframes bsHalo { 0% { transform: scale(.8); opacity: .6 } 100% { transform: scale(1.6); opacity: 0 } }
+.bs-halo { position: absolute; inset: 0; border-radius: 50%; border: 3px solid #12B76A; animation: bsHalo 1.4s ease-out .4s 2 }
+@keyframes bsUp2 { from { transform: translateY(16px); opacity: 0 } to { transform: none; opacity: 1 } }
+.bs-u1 { animation: bsUp2 .45s cubic-bezier(.2,.8,.2,1) .55s both }
+.bs-u2 { animation: bsUp2 .45s cubic-bezier(.2,.8,.2,1) .7s both }
+.bs-u3 { animation: bsUp2 .45s cubic-bezier(.2,.8,.2,1) .85s both }
+
+/* 08b / 08c · Yangi o'quvchi tabriklari (body ustidagi qatlam — ilova qayta chizilsa ham turadi) */
+.bs-ov { position: fixed; inset: 0; z-index: 50; display: flex; justify-content: center; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #0B1220; -webkit-font-smoothing: antialiased }
+.bs-ov * { box-sizing: border-box }
+.bs-ov h2 { margin: 0 }
+.bs-ovin { position: relative; width: 100%; max-width: 520px; height: 100%; overflow-y: auto }
+.bs-scr { position: absolute; inset: 0; background: rgba(11,18,32,.6); animation: bsFade .25s ease both }
+.bs-ov.out { opacity: 0; transition: opacity .18s ease }
+@keyframes bsFade { from { opacity: 0 } to { opacity: 1 } }
+.bs-mdl { position: absolute; left: 16px; right: 16px; z-index: 8; background: #FFFFFF; border-radius: 28px; overflow: hidden; box-shadow: 0 24px 60px rgba(11,18,32,.35); margin-bottom: 24px }
+.bs-fc { background: #F5F7FB; border-radius: 16px; padding: 10px 12px }
+.bs-ov .btn { width: 100% }
+@keyframes bsSpin { to { transform: rotate(360deg) } }
+.bs-rays { position: absolute; left: 50%; top: 50%; width: 360px; height: 360px; margin: -180px 0 0 -180px; animation: bsSpin 14s linear infinite; opacity: .55 }
+.bs-rays.still { animation: none }
+@keyframes bsMIn { 0% { transform: translateY(40px) scale(.9); opacity: 0 } 100% { transform: none; opacity: 1 } }
+.bs-in { animation: bsMIn .5s cubic-bezier(.2,.9,.25,1.15) .1s both }
+@keyframes bsMIn2 { 0% { transform: translateY(60px) scale(.92); opacity: 0 } 100% { transform: none; opacity: 1 } }
+.bs-in2 { animation: bsMIn2 .55s cubic-bezier(.2,.9,.25,1.15) .1s both }
+@keyframes bsAvPop { 0% { transform: scale(0) } 60% { transform: scale(1.15) } 100% { transform: scale(1) } }
+.bs-avp { animation: bsAvPop .6s cubic-bezier(.2,.8,.2,1) .35s both }
+@keyframes bsAvPop2 { 0% { transform: scale(0) rotate(-12deg) } 60% { transform: scale(1.12) rotate(4deg) } 100% { transform: none } }
+.bs-avp2 { animation: bsAvPop2 .65s cubic-bezier(.2,.8,.2,1) .35s both }
+@keyframes bsBurst { 0% { transform: translate(0,0) scale(.4); opacity: 1 } 100% { transform: translate(var(--x),var(--y)) scale(1) rotate(260deg); opacity: 0 } }
+.bs-bp { position: absolute; left: 50%; top: 92px; width: 10px; height: 10px; border-radius: 3px; animation: bsBurst 1.3s cubic-bezier(.15,.7,.3,1) .45s both }
+@keyframes bsUp3 { from { transform: translateY(12px); opacity: 0 } to { transform: none; opacity: 1 } }
+.bs-v1 { animation: bsUp3 .4s ease-out .7s both } .bs-v2 { animation: bsUp3 .4s ease-out .85s both } .bs-v3 { animation: bsUp3 .4s ease-out 1s both }
+@keyframes bsCnt { from { transform: scale(.6); opacity: 0 } to { transform: none; opacity: 1 } }
+.bs-cn { display: inline-block; animation: bsCnt .5s cubic-bezier(.2,.9,.25,1.3) 1.1s both }
+@keyframes bsRing { 0% { transform: scale(.8); opacity: .8 } 100% { transform: scale(1.9); opacity: 0 } }
+.bs-rg { position: absolute; inset: 0; border-radius: 50%; border: 3px solid #FDB022; animation: bsRing 1.6s ease-out .5s 3 }
+@keyframes bsTw { 0%, 100% { transform: scale(.4); opacity: 0 } 50% { transform: scale(1); opacity: 1 } }
+.bs-st { animation: bsTw 1.8s ease-in-out infinite }
+@keyframes bsFlipOut { 0% { transform: translateY(0); opacity: 1 } 100% { transform: translateY(-100%); opacity: 0 } }
+@keyframes bsFlipIn { 0% { transform: translateY(100%); opacity: 0 } 100% { transform: none; opacity: 1 } }
+.bs-fo { position: absolute; inset: 0; animation: bsFlipOut .4s ease-in 1.2s both }
+.bs-fi { position: absolute; inset: 0; animation: bsFlipIn .45s cubic-bezier(.2,.9,.25,1.3) 1.5s both }
+
+@media (prefers-reduced-motion: reduce) {
+  .bs-flt, .bs-ck, .bs-pc, .bs-halo, .bs-u1, .bs-u2, .bs-u3, .bs-rays, .bs-in, .bs-in2, .bs-avp, .bs-avp2, .bs-v1, .bs-v2, .bs-v3, .bs-cn, .bs-rg, .bs-st, .bs-scr { animation: none }
+  .bs-bp, .bs-fo { display: none }
+  .bs-fi { animation: none }
+  .bs-ov.out { transition: none }
+}

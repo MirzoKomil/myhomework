@@ -481,7 +481,7 @@
             if (!exact.length && firstDay.length) {
                 // 5-holat: ko'p kunlik sinovda bir kun band.
                 const t = firstDay[0];
-                const marks = dates.map(d => { const ok = dayFits(t, d, P.wish); const v = view(t, d); const why = ok ? '' : !v || !v.work.length ? 'ish kuni emas' : (v.items || []).some(i => overlaps(i, { start: P.wish, end: P.wish + P.dur }) && i.kind !== 'close' && i.kind !== 'leave') ? 'dars bor' : 'sinovga yopiq';
+                const marks = dates.map(d => { const ok = dayFits(t, d, P.wish); const v = view(t, d); const why = ok ? '' : !v || !v.work.length ? 'ish kuni emas' : (v.items || []).some(i => overlaps(i, { start: P.wish, end: P.wish + P.dur }) && i.kind !== 'close' && i.kind !== 'leave' && i.kind !== 'break') ? 'dars bor' : 'sinovga yopiq';
                     return `${esc(dayShort(d))}${d === dates[dates.length - 1] && d.slice(5, 7) !== P.date.slice(5, 7) ? '-' + MON[Number(d.slice(5, 7)) - 1] : ''} ${ok ? '✓' : `✗ (${why})`}`; }).join(' · ');
                 const alt = candidates().slice(0, 3);
                 out.push(`<section class="sc-card ss-st">${toastBox('warn', '!', `${esc(short(tname(t)))} · ${hm(P.wish)} · ${marks}`, `${P.days === 3 ? 'Uchala' : 'Ikkala'} kun bir vaqtda bo'lishi kerak. Mos variantlar:`)}
@@ -508,7 +508,7 @@
         if (it) {
             if (it.kind === 'trial' && it.status === 'hold') return it.mine ? 'mh' : 'h';
             if (it.kind === 'trial') return 't';
-            if (it.kind === 'close' || it.kind === 'leave') return 'c';
+            if (it.kind === 'close' || it.kind === 'leave' || it.kind === 'break') return 'c';
             return 'b';
         }
         if (d === U().today() && m < U().nowMin()) return inside(v.work, m, m + STEP) ? 'p' : 'o';
@@ -679,7 +679,8 @@
                     const nm = i.mine && i.leadId ? first(leadName(i.leadId)) : '';
                     out.push(i.status === 'hold' ? hb(i.start, i.end, 'k-hold', i.mine ? 'siz' : 'tanlanmoqda', '', '', `${hm(i.start)}–${hm(i.end)} · ${i.mine ? 'siz ushlab turibsiz' : 'boshqa menejer tanlayapti'}`)
                         : hb(i.start, i.end, 'k-tr' + (i.mine ? ' ss-mine' : ''), nm || 'Sinov', i.mine ? 'mening sinovim' : '', '', `${hm(i.start)}–${hm(i.end)} · ${i.mine ? `mening sinovim${nm ? ' · ' + nm : ''}` : 'sinov'}`));
-                } else if (i.kind === 'close' || i.kind === 'leave') out.push(hb(i.start, i.end, 'k-cls', 'yopiq', ''));
+                } else if (i.kind === 'break') out.push(hb(i.start, i.end, 'k-cls k-brk', 'tanaffus', ''));
+                else if (i.kind === 'close' || i.kind === 'leave') out.push(hb(i.start, i.end, 'k-cls', 'yopiq', ''));
                 else out.push(hb(i.start, i.end, 'ss-busy', 'band', ''));
             }
             return out.join('');
