@@ -2,17 +2,19 @@
 <html lang="uz" class="rd">
 
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <script>
     // Domwork Team: telefonda ustoz CRM'ning eski ko'rinishiga emas, yangi ustoz ilovasiga (/teacher/) o'tadi.
     // "?full=1" — ustoz ilovasidagi "To'liq versiya" havolasi uchun (aylanib qolmasin).
     (function () { try {
-        if (!window.matchMedia('(max-width: 900px)').matches || /[?&]full=1/.test(location.search)) return;
+        // Viewport meta'dan KEYIN: undan oldin iPhone matchMedia'ga 980px deb javob berardi va yo'naltirish ishlamagan. Zaxira — telefon ekrani (≤600px).
+        var phone = window.matchMedia('(max-width: 900px)').matches || Math.min(screen.width || 9999, screen.height || 9999) <= 600;
+        if (!phone || /[?&]full=1/.test(location.search)) return;
         var u = JSON.parse(localStorage.getItem('mh_currentUser') || 'null');
         if (u && u.role === 'teacher' && localStorage.getItem('mh_token')) location.replace('/teacher/');
     } catch (e) {} })();
     </script>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Myhomework.uz — Admin Panel</title>
     <link rel="icon" href="images/myhomework-logo.png" type="image/png">
     <link rel="manifest" href="/manifest.webmanifest">
