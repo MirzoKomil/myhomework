@@ -2,6 +2,15 @@
 <html lang="uz" class="rd">
 
 <head>
+    <script>
+    // Domwork Team: telefonda ustoz CRM'ning eski ko'rinishiga emas, yangi ustoz ilovasiga (/teacher/) o'tadi.
+    // "?full=1" — ustoz ilovasidagi "To'liq versiya" havolasi uchun (aylanib qolmasin).
+    (function () { try {
+        if (!window.matchMedia('(max-width: 900px)').matches || /[?&]full=1/.test(location.search)) return;
+        var u = JSON.parse(localStorage.getItem('mh_currentUser') || 'null');
+        if (u && u.role === 'teacher' && localStorage.getItem('mh_token')) location.replace('/teacher/');
+    } catch (e) {} })();
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Myhomework.uz — Admin Panel</title>
