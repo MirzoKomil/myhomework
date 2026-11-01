@@ -560,7 +560,26 @@
         });
     }
 
+    // Telefonda yuklanish oynasi (index.html #teamSplash): pastki menyu qurilib, sahifa 400 ms tinchigach (ma'lumot chizib bo'lingach)
+    // olib tashlanadi — shunda yuklanish paytida umumiy "Xush kelibsiz" sahifasi ko'rinib qolmaydi. Eng ko'pi 4 soniya.
+    function hideSplash() {
+        const sp = document.getElementById('teamSplash'); if (!sp) return;
+        if (!MOBILE.matches) { sp.remove(); return; }
+        const t0 = Date.now(); let last = Date.now();
+        const main = document.querySelector('.main-area') || document.body;
+        const mo = new MutationObserver(() => { last = Date.now(); });
+        mo.observe(main, { childList: true, subtree: true });
+        const tick = () => {
+            const ready = document.getElementById('teamBottomNav') && Date.now() - last > 400;
+            if (ready || Date.now() - t0 > 4000) { mo.disconnect(); sp.classList.add('out'); setTimeout(() => sp.remove(), 300); }
+            else setTimeout(tick, 120);
+        };
+        tick();
+    }
+
     function init() {
+        if (MOBILE.matches) document.title = 'Domwork Team';
+        hideSplash();
         const user = currentUser();
         if (user?.role) document.body.dataset.role = user.role;
         buildDrawerProfile();

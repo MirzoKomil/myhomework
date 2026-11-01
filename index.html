@@ -59,6 +59,22 @@
 </head>
 
 <body>
+    <!-- Domwork Team (telefon): rol kabineti tayyor bo'lguncha umumiy CRM sahifasi ko'rinmasin — brend yuklanish oynasi. js/teamApp.js olib tashlaydi. -->
+    <style>
+    #teamSplash{display:none}
+    @media (max-width:900px){
+        #teamSplash{display:flex;position:fixed;inset:0;z-index:2147483000;background:#F5F7FB;flex-direction:column;align-items:center;justify-content:center;gap:18px;transition:opacity .25s ease}
+        #teamSplash.out{opacity:0;pointer-events:none}
+        #teamSplash img{width:72px;height:auto;animation:tsPulse 1.4s ease-in-out infinite}
+        #teamSplash b{font:800 18px/1.2 'Plus Jakarta Sans',system-ui,sans-serif;color:#0B1220;letter-spacing:.01em}
+        #teamSplash i{display:block;width:120px;height:4px;border-radius:999px;background:#E2E8F0;overflow:hidden;position:relative}
+        #teamSplash i::after{content:"";position:absolute;inset:0;width:40%;border-radius:999px;background:#0065D6;animation:tsBar 1.1s ease-in-out infinite}
+        @keyframes tsPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+        @keyframes tsBar{0%{transform:translateX(-100%)}100%{transform:translateX(250%)}}
+        @media (prefers-reduced-motion:reduce){#teamSplash img,#teamSplash i::after{animation:none}}
+    }
+    </style>
+    <div id="teamSplash" role="status" aria-label="Yuklanmoqda"><img src="/images/app/mark.png" alt=""><b>Domwork Team</b><i></i></div>
     <div class="app-shell">
         <div class="sidebar-backdrop" id="sidebarBackdrop" aria-hidden="true"></div>
         <!-- Sidebar -->
@@ -1649,7 +1665,7 @@
     <script src="js/staffNavBadges.js?v=20261029a5"></script>
     <script src="js/app.js?v=20261101b"></script>
     <script src="js/ropSotuvNav.js?v=20261101b"></script>
-    <script src="js/teamApp.js?v=20261101a"></script>
+    <script src="js/teamApp.js?v=20261101b"></script>
     <script src="js/sotuvApp.js?v=20261101n"></script>
     <script src="js/staleLeads.js?v=20261101d"></script>
     <script src="js/trialPopup.js?v=20261101a"></script>
