@@ -74,7 +74,8 @@ function scopeState(state, user, { managerId, financeEmployee = false } = {}) {
         state.students = (state.students || []).map(stripStudentContacts);
         state.payments = [];
         state.cashFlow = [];
-    } else if (role === 'targetolog') {
+    } else if (role === 'targetolog' || role === 'hr') {
+        // HR menejer: o'quvchi kontaktlari, to'lovlar va kassa kerak emas (moliya — faqat Moliya).
         state.students = (state.students || []).map(stripStudentContacts);
         state.payments = [];
         state.cashFlow = [];
