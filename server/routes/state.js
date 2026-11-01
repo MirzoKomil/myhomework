@@ -464,8 +464,8 @@ router.get('/call-recordings/counts', authRequired, async (req, res) => {
 router.get('/call-recordings', authRequired, async (req, res) => {
     try {
         const { lang, leadId } = req.query;
-        const langs = await require('../services/targetAds').targetologLangs(require('../db').pool, req.user);
-        if (langs && !langs.includes(lang === 'russian' ? 'russian' : 'english')) return res.status(403).json({ error: 'Bu til yo‘nalishiga ruxsat yo‘q' });
+        // Targetolog qo'ng'iroq yozuvlarini (suhbat ovozi) eshitmaydi — faqat statistika.
+        if (req.user?.role === 'targetolog') return res.status(403).json({ error: 'Qoʻngʻiroq yozuvlari targetologga ochiq emas' });
         const data = await getCallRecordings(lang, leadId);
         res.json(data);
     } catch (err) {
@@ -951,7 +951,7 @@ async function getStateForUser(user) {
         // ustunlar) — lekin faqat HR'da ruxsat berilgan til yo'nalish(lar)ida.
         // Har qanday lid mutatsiyasi serverda 403 bilan rad etiladi.
         const langs = await require('../services/targetAds').targetologLangs(require('../db').pool, user);
-        state.leads = Object.fromEntries(['english', 'russian'].map(l => [l, langs.includes(l) ? (state.leads?.[l] || []) : []]));
+        state.leads = require('../services/targetAds').redactLeadsForTargetolog(Object.fromEntries(['english', 'russian'].map(l => [l, langs.includes(l) ? (state.leads?.[l] || []) : []])));
         state.archive = [];
     } else if (!['admin', 'rop', 'boshliq'].includes(user.role)) {
         // Ustoz/xodim kabinetiga Sotuv lidlarining PII ma'lumoti kerak emas.

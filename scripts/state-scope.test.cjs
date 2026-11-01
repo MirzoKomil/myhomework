@@ -79,6 +79,15 @@ test('targetolog: student contacts and payments removed', () => {
     assert.deepEqual(st.payments, []);
 });
 
+test('targetolog: kitob yetkazish, bonus va shaxsiy rejalar kelmaydi', () => {
+    const st = scope.scopeState({ ...baseState(), bookRoadmap: [{ id: 'b1', phone: '+99890', address: 'Andijon', comments: [{ text: 'x' }] }],
+        bonusData: { m1: { amount: 500000 } }, bonusHistory: [{ amount: 1 }], individualSalesPlans: { m1: 9000000 } }, { role: 'targetolog', email: 'z@x.uz' });
+    assert.deepEqual(st.bookRoadmap, []);
+    assert.deepEqual(st.bonusData, {});
+    assert.deepEqual(st.bonusHistory, []);
+    assert.deepEqual(st.individualSalesPlans, {});
+});
+
 test('saving HR list as ROP never wipes hidden private fields', () => {
     const old = [{ id: 'e2', login: 'aziza@x.uz', card_number: '8600999988887777', passport_series: 'AB7654321',
         pinfl: '43210987654321', address: 'Toshkent', birth_date: '1996-02-02' },
