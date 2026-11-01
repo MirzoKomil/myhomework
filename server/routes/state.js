@@ -951,7 +951,7 @@ async function getStateForUser(user) {
         // ustunlar) — lekin faqat HR'da ruxsat berilgan til yo'nalish(lar)ida.
         // Har qanday lid mutatsiyasi serverda 403 bilan rad etiladi.
         const langs = await require('../services/targetAds').targetologLangs(require('../db').pool, user);
-        state.leads = Object.fromEntries(['english', 'russian'].map(l => [l, langs.includes(l) ? (state.leads?.[l] || []) : []]));
+        state.leads = require('../services/targetAds').redactLeadsForTargetolog(Object.fromEntries(['english', 'russian'].map(l => [l, langs.includes(l) ? (state.leads?.[l] || []) : []])));
         state.archive = [];
     } else if (!['admin', 'rop', 'boshliq'].includes(user.role)) {
         // Ustoz/xodim kabinetiga Sotuv lidlarining PII ma'lumoti kerak emas.

@@ -11,12 +11,14 @@
 //
 // Ruxsat: admin/boshliq — ikkala til, o'qish+yozish. ROP — o'z tili, faqat
 // o'qish. Targetolog — HR'da berilgan til(lar) bo'yicha o'qish va kunlik
-// ma'lumotni kiritish (bugun va oxirgi 7 kun ichida).
+// ma'lumotni kiritish: joriy oy kunlari (kecha va undan oldin), oy tugagach
+// yana 1 kun — o'tgan oyni ham (2026-11 "Targetolog ilovasi" qarori).
+// Qulf: targetolog kechagi kunni kiritmaguncha ilova yopiq (status()).
 
 const crypto = require('crypto');
 
 const LANGS = ['english', 'russian'];
-const TARGETOLOG_EDIT_WINDOW_DAYS = 7;
+const TARGETOLOG_EDIT_WINDOW_DAYS = 7; // eski qoida — endi editRange() ishlatiladi (moslik uchun eksport qolgan)
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS target_ad_entries (
@@ -52,6 +54,26 @@ function validDay(key) {
 }
 const validMonth = m => /^\d{4}-(0[1-9]|1[0-2])$/.test(String(m || ''));
 function daysBetween(a, b) { return Math.round((new Date(b + 'T00:00:00Z') - new Date(a + 'T00:00:00Z')) / 86400000); }
+function addDays(key, n) { return new Date(Date.parse(key + 'T00:00:00Z') + n * 86400000).toISOString().slice(0, 10); }
+// Targetolog tuzata oladigan oraliq: kechagi kun oyining 1-sanasidan kechagacha.
+// 1-noyabrda: 1–31-oktyabr; 2-noyabrda: faqat 1-noyabr (oktyabr yopildi).
+function editRange(today) {
+    const to = addDays(today, -1);
+    return { from: to.slice(0, 8) + '01', to };
+}
+// Qulf uchun: kiritilmagan kunlar. Targetolog birinchi marta kiritgan kundan
+// oldingi kunlar talab qilinmaydi (yangi xodim bir oylik qarzga tushmaydi).
+// Qulf ishga tushgan kun — undan oldingi bo'shliqlar talab qilinmaydi (TARGET_LOCK_START bilan o'zgartiriladi).
+const LOCK_START = /^\d{4}-\d{2}-\d{2}$/.test(process.env.TARGET_LOCK_START || '') ? process.env.TARGET_LOCK_START : '2026-11-01';
+function missingDays(today, enteredDates, firstEver, lockStart = LOCK_START) {
+    const { from, to } = editRange(today);
+    let start = firstEver && firstEver > from ? firstEver : (firstEver ? from : to);
+    if (lockStart && start < lockStart) start = lockStart;
+    const have = new Set(enteredDates);
+    const out = [];
+    for (let d = start; d <= to; d = addDays(d, 1)) if (!have.has(d)) out.push(d);
+    return out;
+}
 
 // HR yozuvidagi "lang" maydoni: 'english' | 'russian' | 'both'
 function langsFromHr(lang) {
@@ -105,7 +127,11 @@ function cleanData(kind, data) {
         const kvalLeadCount = num(data?.kvalLeadCount, { integer: true, max: 100000, allowNull: true });
         if (kvalLeadCount != null && kvalLeadCount > leadCount) throw error(400, 'Sifatli lidlar soni jami lid sonidan oshmasligi kerak');
         const note = String(data?.note || '').trim().slice(0, 300);
-        return { budget: num(data?.budget, { max: 1e7 }), leadCount, kvalLeadCount, note };
+        // Ko'rishlar va kliklar (Ads Manager) — eski yozuvlarda yo'q, shuning uchun ixtiyoriy.
+        const impressions = num(data?.impressions, { integer: true, max: 1e9, allowNull: true });
+        const clicks = num(data?.clicks, { integer: true, max: 1e9, allowNull: true });
+        if (impressions != null && clicks != null && clicks > impressions) throw error(400, 'Kliklar soni ko‘rishlar sonidan oshmasligi kerak');
+        return { budget: num(data?.budget, { max: 1e7 }), leadCount, kvalLeadCount, impressions, clicks, note };
     }
     const lidSoni = num(data?.lidSoni, { integer: true, max: 1e6 });
     const kvalLidSoni = num(data?.kvalLidSoni, { integer: true, max: 1e6 });
@@ -184,8 +210,8 @@ async function month(db, actor, { language, month: monthKey }) {
         permissions: {
             canEditDays: access.writeDay.includes(language),
             canEditPlan: access.writePlan,
-            editFrom: access.editAnyDay ? null : new Date(Date.parse(today + 'T00:00:00Z') - TARGETOLOG_EDIT_WINDOW_DAYS * 86400000).toISOString().slice(0, 10),
-            editTo: access.editAnyDay ? today : new Date(Date.parse(today + 'T00:00:00Z') - 86400000).toISOString().slice(0, 10),
+            editFrom: access.editAnyDay ? null : editRange(today).from,
+            editTo: access.editAnyDay ? today : editRange(today).to,
             langs: access.read
         }
     };
@@ -204,8 +230,8 @@ async function save(db, actor, body) {
         const today = tashkentToday();
         if (date > today) throw error(400, 'Kelajak sanaga ma’lumot kiritib bo‘lmaydi');
         if (!access.editAnyDay && date >= today) throw error(400, 'Kunlik maʼlumot kun tugagach kiritiladi — bugungi kunni ertaga kiriting');
-        if (!access.editAnyDay && daysBetween(date, today) > TARGETOLOG_EDIT_WINDOW_DAYS)
-            throw error(403, `Targetolog faqat oxirgi ${TARGETOLOG_EDIT_WINDOW_DAYS} kun ma’lumotini kirita oladi. Eski sanani admin tuzatadi`);
+        if (!access.editAnyDay && date < editRange(today).from)
+            throw error(403, 'Bu oy yopilgan — oy tugagach faqat 1 kun tuzatish mumkin. Eski sanani admin tuzatadi');
     } else throw error(400, 'Noto‘g‘ri tur');
     if (!Number.isInteger(revision) || revision < 0) throw error(400, 'Versiya talab qilinadi');
     const data = cleanData(kind, body.data);
@@ -231,6 +257,67 @@ async function history(db, actor, { language, kind, date }) {
     return { history: rows.map(r => ({ before: r.before_data, after: r.after_data, at: r.created_at, by: r.actor })) };
 }
 
+// Targetolog lidlarni faqat statistika uchun ko'radi: telefon, email, Telegram,
+// izoh matnlari, sotuvchi ismi/ID'si va to'lov summalari kelmaydi (oq ro'yxat).
+// Qo'ng'iroqlardan faqat turi va vaqti qoladi — umumiy "qo'ng'iroq tezligi"
+// statistikasi uchun; ekranlarda lid bo'yicha vaqt ko'rsatilmaydi.
+const TL_CALL_TYPES = new Set(['call-attempt', 'contact-fail']);
+const TL_KEEP = ['id', 'name', 'language', 'source', 'leadType', 'status', 'date', 'createdAt', 'updatedAt',
+    'utmSource', 'utmCampaign', 'utmContent', 'metaAdId', 'metaAdName', 'metaAdsetName', 'metaCampaignName', 'metaFormId', 'metaFormName', 'trialLessonAt'];
+function trialLite(t) { return t && typeof t === 'object' ? { state: t.state || '', attended: t.attended === true, scheduledAt: t.scheduledAt || null } : null; }
+function redactLeadForTargetolog(l) {
+    if (!l || typeof l !== 'object') return l;
+    const out = {};
+    for (const k of TL_KEEP) if (l[k] !== undefined) out[k] = l[k];
+    const cs = l.connectedSurvey;
+    if (cs && typeof cs === 'object') out.connectedSurvey = { applicant: cs.applicant || '', gender: cs.gender || '', age: cs.age ?? null,
+        languageLevel: cs.languageLevel || '', learningGoal: cs.learningGoal || '', residenceType: cs.residenceType || '', region: cs.region || '', country: cs.country || '',
+        applicantLabel: cs.applicantLabel || '', genderLabel: cs.genderLabel || '', languageLevelLabel: cs.languageLevelLabel || '', learningGoalLabel: cs.learningGoalLabel || '',
+        regionLabel: cs.regionLabel || '', countryLabel: cs.countryLabel || '' };
+    if (l.sifatsizReason) out.sifatsizReason = { reasonId: l.sifatsizReason.reasonId || '', label: l.sifatsizReason.label || '' };
+    if (Array.isArray(l.stageHistory)) out.stageHistory = l.stageHistory.filter(Boolean).map(h => ({ from: h.from || '', to: h.to || '', at: h.at || h.changedAt || h.createdAt || null }));
+    out.comments = (Array.isArray(l.comments) ? l.comments : []).filter(c => c && TL_CALL_TYPES.has(c.type)).map(c => ({ type: c.type, createdAt: c.createdAt || c.ts || null }));
+    if (l.trialRequest) out.trialRequest = trialLite(l.trialRequest);
+    if (Array.isArray(l.trialHistory)) out.trialHistory = l.trialHistory.map(trialLite).filter(Boolean);
+    out.phone = ''; out.phone2 = ''; out.email = ''; out.managerId = ''; out.attachments = [];
+    return out;
+}
+// Takroriy lid: shu telefon raqami avvalroq boshqa lidda bo'lgan (raqamning o'zi yuborilmaydi — faqat belgi).
+function phoneKey(p) { const d = String(p || '').replace(/\D/g, ''); return d.length >= 9 ? d.slice(-9) : ''; }
+function redactLeadsForTargetolog(byLang) {
+    const all = Object.values(byLang || {}).flatMap(v => Array.isArray(v) ? v : []);
+    const firstAt = new Map();
+    for (const l of all) {
+        const k = phoneKey(l?.phone); if (!k) continue;
+        const t = Date.parse(l.createdAt || '') || 0;
+        const prev = firstAt.get(k);
+        if (!prev || t < prev.t || (t === prev.t && String(l.id) < String(prev.id))) firstAt.set(k, { t, id: l.id });
+    }
+    return Object.fromEntries(Object.entries(byLang || {}).map(([k, v]) => [k, Array.isArray(v) ? v.map(l => {
+        const r = redactLeadForTargetolog(l);
+        const f = firstAt.get(phoneKey(l?.phone));
+        if (r && f && f.id !== l.id) r.dupPhone = true;
+        return r;
+    }) : v]));
+}
+
+// Qulf holati: targetolog uchun kiritilmagan kunlar (har til bo'yicha).
+// Boshqa rollar uchun qulf yo'q (bo'sh ro'yxat).
+async function status(db, actor) {
+    const access = await accessFor(db, actor);
+    const today = tashkentToday();
+    if (access.role !== 'targetolog') return { today, locked: false, missing: [] };
+    const missing = [];
+    for (const language of access.writeDay) {
+        const { from, to } = editRange(today);
+        const rows = (await db.query(`SELECT date FROM target_ad_entries WHERE language=$1 AND kind='day' AND date BETWEEN $2 AND $3`, [language, from, to])).rows;
+        const first = (await db.query(`SELECT MIN(date) AS d FROM target_ad_entries WHERE language=$1 AND kind='day'`, [language])).rows[0]?.d || null;
+        for (const date of missingDays(today, rows.map(r => r.date), first)) missing.push({ language, date });
+    }
+    missing.sort((a, b) => a.date.localeCompare(b.date) || a.language.localeCompare(b.language));
+    return { today, locked: missing.length > 0, missing, langs: access.writeDay };
+}
+
 // Domwork bot hisobotlari uchun (rus tili): davr bo'yicha reklama sarfi va reja.
 async function advertising(db, language, start, end) {
     const rows = (await db.query(`SELECT kind,date,data FROM target_ad_entries WHERE language=$1
@@ -241,4 +328,4 @@ async function advertising(db, language, start, end) {
         plan: plan ? { ...plan, kvalLidPct: plan.lidSoni ? Math.round(plan.kvalLidSoni / plan.lidSoni * 1000) / 10 : null } : null };
 }
 
-module.exports = { SCHEMA, init, month, save, history, advertising, accessFor, targetologLangs, langsFromHr, cleanData, TARGETOLOG_EDIT_WINDOW_DAYS };
+module.exports = { SCHEMA, init, month, save, history, status, advertising, accessFor, targetologLangs, langsFromHr, cleanData, editRange, missingDays, redactLeadForTargetolog, redactLeadsForTargetolog, TARGETOLOG_EDIT_WINDOW_DAYS };

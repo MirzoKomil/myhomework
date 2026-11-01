@@ -101,6 +101,44 @@ async function fetchMetaLead(leadgenId, config) {
     return data;
 }
 
+// Targetolog statistikasi uchun: reklama (kreativ), kampaniya va forma nomlari.
+// Page token bilan o'qib bo'lmasa (ads_read yo'q) — jim o'tadi, faqat ID saqlanadi.
+const _metaNameCache = new Map();
+async function graphName(path, fields, token) {
+    const key = path + '|' + fields;
+    if (_metaNameCache.has(key)) return _metaNameCache.get(key);
+    let data = null;
+    try {
+        const url = new URL(`https://graph.facebook.com/${GRAPH_API_VERSION}/${encodeURIComponent(path)}`);
+        url.searchParams.set('fields', fields);
+        url.searchParams.set('access_token', token);
+        const response = await fetch(url);
+        if (response.ok) data = await response.json().catch(() => null);
+    } catch (e) { data = null; }
+    if (_metaNameCache.size > 500) _metaNameCache.clear();
+    _metaNameCache.set(key, data);
+    return data;
+}
+async function adAttribution(metaLead, config, formName = '') {
+    const out = {};
+    if (metaLead?.ad_id) out.metaAdId = String(metaLead.ad_id);
+    if (metaLead?.form_id) out.metaFormId = String(metaLead.form_id);
+    const token = process.env.META_ADS_ACCESS_TOKEN || config?.pageToken; // ads_read ruxsatli token bo'lsa — kampaniya nomlari aniqroq
+    if (!token) return out;
+    if (metaLead?.ad_id) {
+        const ad = await graphName(String(metaLead.ad_id), 'name,adset{name},campaign{name}', token);
+        if (ad?.name) out.metaAdName = String(ad.name).slice(0, 255);
+        if (ad?.adset?.name) out.metaAdsetName = String(ad.adset.name).slice(0, 255);
+        if (ad?.campaign?.name) out.metaCampaignName = String(ad.campaign.name).slice(0, 255);
+    }
+    if (formName) out.metaFormName = String(formName).slice(0, 255);
+    else if (metaLead?.form_id) {
+        const form = await graphName(String(metaLead.form_id), 'name', config.pageToken);
+        if (form?.name) out.metaFormName = String(form.name).slice(0, 255);
+    }
+    return out;
+}
+
 async function importLead(leadgenId, expectedPageId, config) {
     const metaLead = await fetchMetaLead(leadgenId, config);
     if (config.pageId && String(expectedPageId || metaLead.page_id || '') !== String(config.pageId)) {
@@ -120,6 +158,7 @@ async function importLead(leadgenId, expectedPageId, config) {
         createdAt: metaLead.created_time,
         date: formatMetaDate(metaLead.created_time),
         fbLeadId: metaLead.id || leadgenId,
+        ...(await adAttribution(metaLead, config)),
     });
     return result;
 }
@@ -417,7 +456,8 @@ router.post('/recovery/apply', authRequired, recoveryAdminRequired, async (_req,
                     status: 'yangi-lidlar',
                     leadType: 'target',
                     createdAt: metaLead.created_time,
-                    date: formatMetaDate(metaLead.created_time)
+                    date: formatMetaDate(metaLead.created_time),
+                    ...(await adAttribution(metaLead, config))
                 });
                 if (result.restored) restored++;
                 else if (result.duplicate) duplicate++;
