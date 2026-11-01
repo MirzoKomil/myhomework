@@ -1434,7 +1434,7 @@
             ${unc.length ? `<button type="button" class="btn w sm pri" data-qoplash="${esc(s.id)}" style="margin-top: 6px">Qoplash qo'yish · ${unc.length} dars</button>` : ''}
             <button type="button" class="btn w sm" data-sorov>Adminga so'rov: jadvalni o'zgartirish</button>
           </section>
-          <a class="btn w" href="/index.html">${ico(I.ext)}To'liq kartani ochish</a>
+          <a class="btn w" href="/index.html?full=1">${ico(I.ext)}To'liq kartani ochish</a>
         </div>`;
     }
     function renderAsstCard(s) {
@@ -1551,7 +1551,7 @@
               ${(plan.blocks || []).map(b => `<div class="card" style="display: flex; flex-direction: column; gap: 6px"><span class="eyebrow" style="color: #0057B8">${esc(b.when || '')}</span><h3>${esc(b.title || '')}</h3>${(b.items || []).map(i => `<span class="small">· ${esc(i)}</span>`).join('')}${b.tip ? `<span class="xs muted">${esc(b.tip)}</span>` : ''}</div>`).join('')}
               ${vocab.length ? `<div class="card"><h3>So'zlar · ${vocab.length}</h3><div class="chips" style="margin-top: 6px">${vocab.slice(0, 24).map(v => `<span class="chip">${esc(v.word)} — ${esc(v.translation || '')}</span>`).join('')}</div></div>` : ''}
               ${mats.length ? `<div class="card" style="padding: 4px 14px"><div class="list">${mats.map(m => `<a class="li" href="${esc(m.url)}" target="_blank" rel="noopener"><span class="pill info" style="min-width: 54px; justify-content: center">${esc(m.kind || 'fayl')}</span><span class="small" style="flex: 1">${esc(m.title || '')}</span>${ico(I.ext)}</a>`).join('')}</div></div>` : ''}
-              <a class="btn w pri" href="/index.html">${ico(I.ext)}Slaydlarni to'liq versiyada ochish</a>`;
+              <a class="btn w pri" href="/index.html?full=1">${ico(I.ext)}Slaydlarni to'liq versiyada ochish</a>`;
         } catch (err) { const box = el.querySelector('#lb'); if (box) box.outerHTML = `<div class="note w">${esc(err.message)}</div>`; }
     }
 
@@ -1661,7 +1661,7 @@
             <button type="button" class="li" data-push="bildirish"><b class="small" style="flex: 1">Bildirishnomalar</b>${notifUnread() ? `<span class="pill info">${notifUnread()}</span>` : ''}${chev}</button>
           </div></div>
           <div class="card" style="padding: 4px 14px"><div class="list">
-            <a class="li" href="/index.html"><div class="col" style="flex: 1"><b class="small">To'liq versiya</b><span class="xs muted">Profil, sozlamalar, slaydlar va doska</span></div>${ico(I.ext)}</a>
+            <a class="li" href="/index.html?full=1"><div class="col" style="flex: 1"><b class="small">To'liq versiya</b><span class="xs muted">Profil, sozlamalar, slaydlar va doska</span></div>${ico(I.ext)}</a>
             <button type="button" class="li" data-act="refresh"><b class="small" style="flex: 1">Ma'lumotni yangilash</b></button>
             <button type="button" class="li" data-act="out" style="color: #B42318"><b class="small" style="flex: 1">Chiqish</b></button>
           </div></div>
