@@ -7,6 +7,7 @@
 // shuning uchun vaqt alohida "bo'shatilmaydi", holat o'zgarishi bilan o'zi bo'shaydi.
 const { randomUUID } = require('node:crypto');
 const T = require('./time');
+const workflow = require('../../../js/trialWorkflow');
 const { fail } = T;
 
 const HOLD_MINUTES = 10;
@@ -599,6 +600,7 @@ async function unassignedTrials(db, { from, to, lang = null }) {
     for (const r of rows) {
         if (lang && (r.language === 'russian' ? 'russian' : 'english') !== lang) continue;
         const l = parseLead(r);
+        if (workflow.isCancelled({ ...l, status: 'sinov-darsida' })) continue; // so'rov faqat 'sinov-darsida' lidlarni oladi · ROP/admin bekor qilgan sinov — "ustozsiz" emas, xabar ham ketmaydi
         const tr = l.trialRequest, ob = l.paymentOnboarding || {};
         if (String(tr?.teacherId || ob.teacherId || '')) continue;
         if (tr && !['pending', 'accepted'].includes(tr.state || 'pending')) continue;

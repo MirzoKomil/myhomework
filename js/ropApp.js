@@ -197,6 +197,7 @@
             .catch(e => { S.ap = { ...(prev || { list: [], counts: {} }), at: Date.now(), err: e }; queueRender(); return S.ap; });
         return S.ap.p;
     }
+    const apOrder = (a, b) => (parseT(b.created_at) || 0) - (parseT(a.created_at) || 0);
     const pendingAp = () => (S.ap?.list || []).filter(r => r.status === 'pending');
 
     // Sinov darslari — trialUI bilan bir xil manba (lid → trialWorkflow.request / phase).
@@ -210,8 +211,7 @@
             if (!req && !inTrial) continue;
             const d = W().durationOf(l);
             const r = req || { teacherId: '', scheduledAt: l.trialLessonAt || '' };
-            const cancelled = inTrial && l.trialCancelled && l.trialCancelled.rev === l.trialScheduleRevision;
-            out.push({ lead: l, req: r, ph: cancelled ? 'cancelled' : W().phase(req || {}, { leadStatus: l.status, durationMin: d }), dur: d, at: local(r.scheduledAt) });
+            out.push({ lead: l, req: r, ph: W().isCancelled?.(l) ? 'cancelled' : W().phase(req || {}, { leadStatus: l.status, durationMin: d }), dur: d, at: local(r.scheduledAt) });
         }
         return out;
     }
@@ -328,7 +328,7 @@
         if (f) return { text: (f.overdue ? 'Qoʻngʻiroq kechikdi · ' : '') + when(f.at), tone: f.overdue ? 'red' : 'blue', sort: f.overdue ? 0 : 2, t: f.at };
         if (s === 'yangi-lidlar') { const a = assignedAt(l); const calls = callsOf(l).length; return { text: dur(now - (a || now)) + (calls ? '' : ' · qoʻngʻiroq yoʻq'), tone: a && now - a > 30 * MIN && !calls ? 'red' : 'gray', sort: 1, t: a || 0 }; }
         if (s === 'sinov-darsida') { const r = W()?.request(l); const t = parseT(r?.scheduledAt || l.trialLessonAt); const ph = W() ? W().phase(r || {}, { leadStatus: l.status, durationMin: W().durationOf(l) }) : '';
-            if (l.trialCancelled && l.trialCancelled.rev === l.trialScheduleRevision) return { text: 'Sinov bekor qilindi · qayta qoʻyish', tone: 'amber', sort: 1, t: t || 0 };
+            if (W()?.isCancelled?.(l)) return { text: 'Sinov bekor qilindi · qayta qoʻyish', tone: 'amber', sort: 1, t: t || 0 };
             if (needsTeacher(ph)) return { text: (t ? when(t) + ' · ' : '') + 'ustozsiz', tone: 'red', sort: 0, t: t || 0 };
             if (ph === 'result' || ph === 'overdue') return { text: 'Natija kiritilmagan', tone: 'red', sort: 0, t: t || 0 };
             if (t) return { text: when(t), tone: ph === 'pending' ? 'amber' : 'green', sort: 2, t }; }
@@ -489,15 +489,19 @@
         const R = typeof LEAD_SLA_RULES !== 'undefined' ? LEAD_SLA_RULES : {};
         const ruleLine = [['yangi-lidlar', 'Yangi lid'], ['boglanishga-urinilmoqda', 'Urinilmoqda'], ['boglanildi', 'Bogʻlanildi'], ['sinov-darsida', 'Sinovdan keyin'], ['qaror-jarayonida', 'Qaror'], ['tolov-jarayonida', 'Toʻlov']]
             .filter(([k]) => R[k]?.rop).map(([k, t]) => `${t} — ${ruleTxt(R[k].rop.after)}`).join(' · ');
+        // Menejersiz lidni "ko'rib qo'yish" foydasiz — uni biriktirish kerak (Taqsimlash).
+        const ackBtn = (a, l, small) => (!l.managerId
+            ? `<button type="button" class="sa-btn ${small ? 'sa-btn--outline sa-btn--sm' : 'sa-btn--primary'}" data-ra-go="distribute">Biriktirish</button>`
+            : `<button type="button" class="sa-btn ${small ? 'sa-btn--outline sa-btn--sm' : 'sa-btn--primary'}" data-ra-ack="${esc(a.leadId)}" data-ll="${a.leadLang}">Koʻrildi</button>`);
         const card = ({ a, l, left }, big) => {
             const m = mgrName(l.managerId), r = slaRule(l), since = Date.now() - (a.time - (r?.after || 0) * MIN);
             const tg = l.managerId ? mgrTg(l.managerId) : '';
             const sub = `${firstName(m) || 'Menejersiz'} · ${SHORT[st(l)] || colLabel(st(l))}`;
             const lt = left > 0 ? dur(left) : 'adminga ketdi';
-            if (!big) return `<article class="sa-card ra-sla ra-sla--s">${staffImg(l.managerId, m, 40)}<span class="sa-row-t"><button type="button" class="ra-link-t" data-ra-lead="${esc(l.id)}" data-ll="${l._lang}"><strong>${esc(l.name)}</strong></button><span>${esc(sub)}</span><em class="is-red">${esc(durLong(since))} · qoida ${esc(ruleTxt(r?.after || 0))}</em></span><button type="button" class="sa-btn sa-btn--outline sa-btn--sm" data-ra-ack="${esc(a.leadId)}" data-ll="${a.leadLang}">Koʻrildi</button></article>`;
+            if (!big) return `<article class="sa-card ra-sla ra-sla--s">${staffImg(l.managerId, m, 40)}<span class="sa-row-t"><button type="button" class="ra-link-t" data-ra-lead="${esc(l.id)}" data-ll="${l._lang}"><strong>${esc(l.name)}</strong></button><span>${esc(sub)}</span><em class="is-red">${esc(durLong(since))} · qoida ${esc(ruleTxt(r?.after || 0))}</em></span>${ackBtn(a, l, true)}</article>`;
             return `<article class="sa-card ra-sla${left < 6 * 3600000 ? ' is-hot' : ''}"><div class="ra-sla-h">${staffImg(l.managerId, m, 40)}<span class="sa-row-t"><button type="button" class="ra-link-t" data-ra-lead="${esc(l.id)}" data-ll="${l._lang}"><strong>${esc(l.name)}</strong></button><span>${esc(sub)}</span></span>${pill(lt, left < 6 * 3600000 ? 'redsolid' : 'amber')}</div>
               <div class="ra-sla-p">${pill('Qoida: ' + ruleTxt(r?.after || 0), 'gray')}${pill('Turibdi: ' + durLong(since), 'red')}</div>
-              <div class="ra-sla-a">${tg ? `<a class="sa-btn sa-btn--outline" href="${esc(tg)}" target="_blank" rel="noopener">${ic('tg', 16, 2.2)}${esc(firstName(m))}ga yozish</a>` : ''}<button type="button" class="sa-btn sa-btn--primary" data-ra-ack="${esc(a.leadId)}" data-ll="${a.leadLang}">Koʻrildi</button></div></article>`;
+              <div class="ra-sla-a">${tg ? `<a class="sa-btn sa-btn--outline" href="${esc(tg)}" target="_blank" rel="noopener">${ic('tg', 16, 2.2)}${esc(firstName(m))}ga yozish</a>` : ''}${ackBtn(a, l, false)}</div></article>`;
         };
         return `
         ${topBack('SLA oʻtgan lidlar', `${list.length} ta · “Koʻrildi” bosilmasa 24 soatda adminga oʻtadi`)}
@@ -562,7 +566,7 @@
     function screenApprovals() {
         if (!S.ap || (S.ap.loading && !S.ap.list?.length)) { loadApprovals(); return `${topBack('Tasdiqlar', 'Menejerlarning tahrir soʻrovlari')}<div class="sa-body">${'<div class="sa-sk" style="height:120px"></div>'.repeat(3)}</div>`; }
         const all = S.ap.list || [];
-        const pend = all.filter(r => r.status === 'pending').sort((a, b) => (parseT(a.created_at) || 0) - (parseT(b.created_at) || 0));
+        const pend = all.filter(r => r.status === 'pending').sort(apOrder); // eng yangisi birinchi (Tasdiq ekrani bilan bir tartib)
         const done = all.filter(r => r.status !== 'pending').sort((a, b) => (parseT(b.decided_at) || 0) - (parseT(a.decided_at) || 0));
         const list = S.apTab === 'pending' ? pend : done;
         const me = user();
@@ -592,7 +596,7 @@
         const all = S.ap?.list || [];
         const r = all.find(x => x.id === S.apId);
         if (!r) return `${crumb('Tasdiqlar')}<div class="sa-body">${empty('board', 'Soʻrov topilmadi', 'Roʻyxatni yangilang')}</div>`;
-        const pend = all.filter(x => x.status === 'pending').sort((a, b) => (parseT(a.created_at) || 0) - (parseT(b.created_at) || 0));
+        const pend = all.filter(x => x.status === 'pending').sort(apOrder);
         const s = studentOf(r), m = reqMgr(r), rc = receiptOf(r);
         const [kl, tone] = KIND[r.kind] || ['SOʻROV', 'gray'];
         const pending = r.status === 'pending';
@@ -649,7 +653,7 @@
         }
     }
     function showApproved(r) {
-        const pend = pendingAp().filter(x => x.id !== r.id).sort((a, b) => (parseT(a.created_at) || 0) - (parseT(b.created_at) || 0));
+        const pend = pendingAp().filter(x => x.id !== r.id).sort(apOrder);
         // Shu ko'rib chiqish seansida hal qilinganlar + qolganlar = jami; keyingisi — done + 1.
         S.apDone = (S.apDone || 0) + 1;
         const done = S.apDone, total = done + pend.length;
@@ -857,7 +861,7 @@
           <div class="sa-fld"><span>Sabab · <b class="is-red">majburiy</b></span><div class="sa-qchips">${rs.map(t => `<button type="button" class="sa-qchip ra-qchip" aria-pressed="false" data-ra-tcr="${esc(t)}">${esc(t)}</button>`).join('')}</div></div>
           <div class="sa-fld"><span>Izoh</span><textarea id="raTcNote" rows="2" maxlength="400" placeholder="Ixtiyoriy — “Boshqa”da majburiy"></textarea></div>
           <button type="button" class="sa-btn ra-btn-redsolid sa-cr-save" data-ra-tcsave disabled>Sinovni bekor qilish</button>
-          <p class="sa-sh-foot">${esc([tn, mg].filter(Boolean).join(', '))}${tn || mg ? ' va lidga' : 'Lidga'} (bot orqali) xabar ketadi · ${x.at ? hmm(x.at.min) + ' soati' : 'vaqt'} yana boʻsh boʻladi</p>`, 'ra-sheet');
+          <p class="sa-sh-foot">Sinov bekor qilinadi, ${x.at ? hmm(x.at.min) + ' soati' : 'vaqt'} boʻshaydi · lidga xabar yuborilmaydi${mg ? ` · ${esc(mg)} CRM’da koʻradi` : ''}</p>`, 'ra-sheet');
     }
     function syncTc() {
         if (!sheetEl || !S.tc) return;
@@ -892,6 +896,7 @@
                 trialCancelled: { rev, at: now, by: me.name || 'ROP', reason, requestId: x.req.id || null },
                 comments: [...(Array.isArray(l.comments) ? l.comments : []), createLeadComment({ type: 'trial-lesson', text, author: me.name || 'ROP' })] };
         }, { skipAutoSms: true });
+        release('tcancel:' + tc.id);
         closeSheet();
         if (x.at) delete S.sched[x.at.date];
         toast(saved ? 'Sinov bekor qilindi · vaqt boʻshadi' : 'Saqlab boʻlmadi', saved ? 'ok' : 'warn');

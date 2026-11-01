@@ -268,7 +268,7 @@
             const req = inTrial ? W().request(l) : (l.trialRequest?.id ? l.trialRequest : null);
             const dur = W().durationOf(l);
             if (req || inTrial) out.push({ lead: l, req: req || { teacherId: '', scheduledAt: l.trialLessonAt || '' }, archived: false,
-                ph: W().phase(req || {}, { leadStatus: l.status, durationMin: dur }), dur });
+                ph: W().isCancelled?.(l) ? 'cancelled' : W().phase(req || {}, { leadStatus: l.status, durationMin: dur }), dur });
             if (withArchive) for (const a of Array.isArray(l.trialHistory) ? l.trialHistory : []) {
                 if (a && a.scheduledAt) out.push({ lead: l, req: a, archived: true, ph: W().phase(a, { archived: true, durationMin: dur }), dur });
             }

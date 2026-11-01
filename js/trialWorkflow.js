@@ -30,8 +30,15 @@
         noshow: { label: 'Lid kelmadi', tone: 'bad' },
         sold: { label: 'Sotildi', tone: 'ok' },
         rebooked: { label: "Qayta qo'yildi", tone: 'mute' },
-        closed: { label: 'Sinovdan chiqarildi', tone: 'mute' }
+        closed: { label: 'Sinovdan chiqarildi', tone: 'mute' },
+        cancelled: { label: 'Sinov bekor qilindi', tone: 'mute' }
     };
+    // ROP/admin sinovni bekor qilgan (lid "Sinov darsida"da qoladi, ustoz va band olib tashlangan). Belgi faqat
+    // shu jadval revision'iga tegishli — menejer qayta sinov qo'ysa (yangi revision) bekor holati o'z-o'zidan tushadi.
+    function isCancelled(lead) {
+        const c = lead && lead.trialCancelled;
+        return !!(c && c.rev && lead.status === 'sinov-darsida' && c.rev === lead.trialScheduleRevision);
+    }
     // "Sotildi" — sotuv O'quvchilari bilan bir manba: lid "To'lov jarayonida"ga o'tganda o'quvchi yaratiladi (js/app.js LEAD_STATUSES_NEED_SERIAL).
     const SOLD_STATUSES = new Set(['tolov-jarayonida', 'tolov-yopildi']);
     // Sinov darsi holati (bitta manba). opts: { leadStatus, durationMin, now (ms), archived }.
@@ -57,6 +64,7 @@
         return Number(lead?.paymentOnboarding?.lessonDuration) || parseInt(lead?.paymentSurvey?.tariff, 10) || 30;
     }
     function leadPhase(lead, now) {
+        if (isCancelled(lead)) return 'cancelled';
         return phase(request(lead), { leadStatus: lead?.status, now, durationMin: durationOf(lead) });
     }
     function cleanProposals(list, now) {
@@ -154,5 +162,5 @@
             reasonLabel: payload.attended ? '' : reason.label, completedAt: now, completedBy: actor.id,
             ...(overdue ? { confirmedLate: true } : {}), ...(note ? { resultNote: note } : {}) };
     }
-    return { REASONS, REJECT_REASONS, PHASES, MAX_PROPOSALS, phase, leadPhase, durationOf, cleanProposals, booking, sameBooking, request, attended, matchesFilter, syncSchedule, transition };
+    return { REASONS, REJECT_REASONS, PHASES, MAX_PROPOSALS, phase, leadPhase, isCancelled, durationOf, cleanProposals, booking, sameBooking, request, attended, matchesFilter, syncSchedule, transition };
 });
