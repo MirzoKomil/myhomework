@@ -283,7 +283,8 @@
             }).join('');
             return `<div class="dv-tbw a2" style="--cw: 46px"><div class="dv-mh"><b style="font-size: 14px">${title}</b><span class="xs">${note}</span></div><span class="dv-fade" aria-hidden="true"></span><div class="dv-sc" data-ti="${ti}" data-gid="${gid}">${grid}</div></div>`;
         };
-        const tables = GROUPS.filter(([gid]) => aFlt === 'all' || aFlt === gid || gid === 'other') // aralash kunli o'quvchilar har filtrda ko'rinadi.map(([gid, t, w]) => table(gid, t, w)).join('');
+        // Aralash kunli o'quvchilar ("Boshqa kunlar") har filtrda ko'rinadi.
+        const tables = GROUPS.filter(([gid]) => aFlt === 'all' || aFlt === gid || gid === 'other').map(([gid, t, w]) => table(gid, t, w)).join('');
         const empty = `<div class="dv-tbw a2"><div class="dv-empty">${all.length ? (aFlt === 'odd' ? "Toq kunlarda (Du·Ch·Ju) aloqa qilinadigan o'quvchi yo'q" : "Juft kunlarda (Se·Pa·Sh) aloqa qilinadigan o'quvchi yo'q") : "Sizga hali o'quvchi biriktirilmagan"}</div></div>`;
         const prevM = D().shiftMonth(aMonth, -1), nextM = D().shiftMonth(aMonth, 1);
         return `<header class="hd" style="padding-bottom: 4px"><div class="t"><span class="date">${esc(U.dateLong(n.date))}</span><h1 style="font-size: 26px">Aloqalar · ${M}</h1></div>
@@ -472,13 +473,16 @@
     }
     // Bugun qo'shilgan summa — server oy hisobidan (rep.today: bugungi aloqalarsiz hisob bilan farq).
     const gainToday = () => Number(S().assist?.today?.amount) || 0;
-    function dayDone(count) {
+    async function dayDone(count) {
         const n = now(), key = 'dwt_v2_yd_daydone';
         if (D().store.get(key, '') === n.date) return;
         D().store.set(key, n.date);
-        document.querySelector('#app > .u-toast')?.remove();
         const list = todayList();
-        const tom = U.addDays(n.date, wd(n.date) === 6 ? 2 : 1), tomN = helped().filter(s => !s.frozen && inPattern(s, tom)).length;
+        // Ertangi tavsiyalar soni — server rejasidan (/assist/plan: muzlatish va kurs boshlanishi hisobga olingan).
+        const tom = U.addDays(n.date, wd(n.date) === 6 ? 2 : 1);
+        const tp = await U.api(`/api/school/assist/plan?from=${tom}&to=${tom}`).catch(() => null);
+        const tomN = tp ? new Set((tp.items || []).filter(i => i.kind === 'advice').map(i => i.studentId)).size : null;
+        document.querySelector('#app > .u-toast')?.remove();
         const a = c => reduced() ? '' : c;
         overlay(`<section class="bs-mdl ${a('yd-in')}" role="dialog" aria-modal="true" aria-labelledby="ydTb" style="top: 120px; padding: 24px 18px 18px; display: flex; flex-direction: column; gap: 14px">
             <span class="${a('yd-pop')}" style="width: 80px; height: 80px; border-radius: 26px; background: #ECFDF3; color: #067647; display: grid; place-items: center; align-self: center">${svg(P.tick, 42, 2.6)}</span>
@@ -486,7 +490,7 @@
             <div class="yd-avs" aria-hidden="true">${list.slice(0, 3).map(x => ava(x.s, 36)).join('')}${list.length > 3 ? `<span class="yd-more">+${list.length - 3}</span>` : ''}</div>
             <div class="yd-st3"><div><b>${count}</b><span>bugun</span></div><div><b style="color: #067647">+${money(gainToday())}</b><span>so'm</span></div><div><b>${S().assist?.counted ?? 0}</b><span>${monName(n.month)}da</span></div></div>
             <button type="button" class="btn p w" data-ov-x>Rahmat!</button>
-            <span class="xs" style="text-align: center">${tomN ? `Ertaga ${tomN} ta tavsiya bor · ${D().DAY_FULL[wd(tom) - 1]}` : 'Ertaga tavsiya yo\'q'}</span>
+            ${tomN == null ? '' : `<span class="xs" style="text-align: center">${tomN ? `${wd(tom) === wd(U.addDays(n.date, 1)) ? 'Ertaga' : D().DAY_FULL[wd(tom) - 1] + ' kuni'} ${tomN} ta tavsiya bor · ${D().DAY_FULL[wd(tom) - 1]}` : "Keyingi ish kuni tavsiya yo'q"}</span>`}
           </section>`);
         U.confetti();
     }
@@ -740,7 +744,7 @@
         // Muzlagan / chiqib ketgan kunlar statusHistory bo'yicha chiqariladi (server ularga 409 qaytaradi).
         const off = (s.statusHistory || []).filter(h => h.status && h.status !== 'active');
         const inactive = d => off.some(h => String(h.from || '').slice(0, 10) <= d && (!h.to || String(h.to).slice(0, 10) >= d));
-        return days(n.month).filter(d => d < n.date && !counted.has(d) && !pend.has(d) && !(startOf(s) && d < startOf(s)) && !inactive(d)).reverse();
+        return days(n.month).filter(d => d < n.date && wd(d) !== 7 && !counted.has(d) && !pend.has(d) && !(startOf(s) && d < startOf(s)) && !inactive(d)).reverse();
     }
     U.page('y-kech', {
         render(arg) {
