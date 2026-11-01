@@ -752,7 +752,7 @@
               ${U.offline()}
               <div class="col a1" style="align-items: center; gap: 6px">
                 <div style="position: relative">${meAvatar(84, 'border: 3px solid #FFFFFF; box-shadow: 0 0 0 1px #CBD5E1')}<label class="bq-camb" aria-label="Rasmni almashtirish">${svg(P.cam, 16, 2.2)}<input type="file" accept="image/*" data-bq-av class="sr"></label></div>
-                <strong style="font-size: 19px; font-weight: 800">${esc(D().first(user.name || s.me?.name))}</strong><span class="s" style="text-align: center">Ustoz · ${langOf()} · rasm o'quvchi ilovasida ko'rinadi</span>
+                <strong style="font-size: 19px; font-weight: 800">${esc(D().first(user.name || s.me?.name))}</strong><span class="s" style="text-align: center">${D().isAssistantOnly() ? 'Yordamchi ustoz' : 'Ustoz'} · ${langOf()} · rasm o'quvchi ilovasida ko'rinadi</span>
               </div>
               <span class="bq-gh">ISH MA'LUMOTLARI</span>
               <div class="card l a2">
@@ -770,7 +770,7 @@
                 <a class="bq-rw" href="#" data-u-push="kirish" data-arg="tarix"><span class="bq-kk">Kirish tarixi</span><span class="bq-v">urinishlar</span>${chevR('#4B5563')}</a>
                 <a class="bq-rw" href="#" data-u-push="kirish" data-arg="qurilma"><span class="bq-kk">Kirgan qurilmalar</span><span class="bq-v">${ss.data ? `${(ss.data.sessions || []).length} ta` : ''}</span>${chevR('#4B5563')}</a>
               </div>
-              <span class="xs bq-foot" style="text-align: center">Domwork Team · Ustoz · 2.0</span>
+              <span class="xs bq-foot" style="text-align: center">Domwork Team · ${D().isAssistantOnly() ? 'Yordamchi ustoz' : 'Ustoz'} · 2.0</span>
             </div>`;
         },
         bind(root) {
@@ -886,4 +886,6 @@
             </div>`;
         }
     });
+    // Yordamchi ustoz rejimi (teacher/v2/yordamchi.js) uchun umumiy yordamchilar — bitta ko'rinish.
+    U.bq = { meAvatar, langOf, tgPill, sheet, sheetHead, P, svg, setInactive: () => { stSeg = 'inactive'; } };
 })();

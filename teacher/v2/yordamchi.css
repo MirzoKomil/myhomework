@@ -1,0 +1,74 @@
+/* Yordamchi ustoz v2 — kanvas "Yordamchi ustoz" (Y01–Y13). Umumiy uslub: ustoz.css; oy jadvali va kalendar — davomat.css (dv-); menyu — boshqa.css (bq-). */
+/* Ro'yxat qatorlari va menyu plitkalari — dizayndagidek qora matn (havola rangi emas) */
+.ph.u-y a.li,.ph.u-y a.bq-tile,.ph.u-y a.bq-ml,.ph.u-y a.dv-nmc,.ph.u-y a.k{color:#0B1220}
+/* Y01 */
+.yd-ks{font-size:13px;color:#4B5563;font-weight:600}
+.dark .pill.yd-pw{color:#FFFFFF;background:rgba(255,255,255,.14)}
+.yd-shl{min-height:44px;min-width:44px;display:inline-flex;align-items:center;justify-content:flex-end}
+/* Y02 */
+.yd-wk{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;flex:none}
+.yd-wk button{height:62px;border-radius:16px;background:#FFFFFF;border:1px solid #E6EAF2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:#3A4456;font:inherit;font-size:12px;font-weight:700;padding:0;cursor:pointer}
+.yd-wk b{font-size:18px;color:#0B1220}
+.yd-wk i{font-style:normal;font-size:11px;color:#4B5563}
+.yd-wk button.on{background:#0065D6;border-color:#0065D6;color:#DCEBFF}
+.yd-wk button.on b,.yd-wk button.on i{color:#FFFFFF}
+/* Y03 — "hisoblanmadi" katagi (5 daqiqadan kam, haftada 2-yozishma va h.k.) */
+.dv-k2.yd-n,.dv-dc.yd-n{background:#94A3B8;color:#FFFFFF;box-shadow:none}
+.dv-k2.yd-n.now{box-shadow:0 0 0 2px #FFFFFF,0 0 0 4px #0B1220}
+/* Y04 — belgilash oynasi */
+.yd-mk{display:flex;flex-direction:column;gap:12px}
+.yd-ug{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.yd-ug button{height:52px;border-radius:14px;border:1.5px solid #E6EAF2;background:#FFFFFF;font:inherit;font-size:12px;font-weight:700;color:#3A4456;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;line-height:1.1;padding:0;cursor:pointer}
+.yd-ug button.on{border-color:#0065D6;background:#F5F9FF;box-shadow:0 0 0 3px #D6E7FD;color:#0057B8}
+.yd-dm{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.yd-dm button{height:44px;border-radius:12px;border:1.5px solid #E6EAF2;background:#FFFFFF;font:inherit;font-size:14px;font-weight:800;color:#3A4456;padding:0;cursor:pointer}
+.yd-dm button.on{background:#0B1220;border-color:#0B1220;color:#FFFFFF}
+.yd-mk .chips{flex-wrap:wrap}
+.yd-mk button.chip,.yd-chips button.chip{font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.ph .btn.yd-save{height:54px;font-size:16px}
+/* Y06 / Y06b — tabriklar */
+@keyframes ydIn{0%{transform:translateY(40px) scale(.92);opacity:0}100%{transform:none;opacity:1}}
+.yd-in{animation:ydIn .5s cubic-bezier(.2,.9,.25,1.15) .1s both}
+@keyframes ydPop{0%{transform:scale(.3);opacity:0}70%{transform:scale(1.12);opacity:1}100%{transform:scale(1)}}
+.yd-pop{animation:ydPop .55s cubic-bezier(.2,.8,.2,1) .25s both}
+.yd-avs{display:flex;justify-content:center}
+.yd-avs img,.yd-avs .yd-more{width:36px;height:36px;border-radius:50%;border:2px solid #FFFFFF;margin-left:-8px;object-fit:cover}
+.yd-avs .yd-more{display:grid;place-items:center;background:#F1F5F9;color:#3A4456;font-size:12px;font-weight:800}
+.yd-st3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.yd-st3 div{background:#F5F7FB;border-radius:16px;padding:10px;display:flex;flex-direction:column;gap:2px;align-items:center;text-align:center}
+.yd-st3 b{font-size:20px;font-weight:800}.yd-st3 span{font-size:12px;color:#4B5563;font-weight:700}
+.yd-new{position:absolute;right:-6px;top:-4px;height:28px;padding:0 10px;border-radius:999px;background:#FDB022;color:#0B1220;font-size:13px;font-weight:800;display:grid;place-items:center;border:3px solid #0B1220}
+@media (prefers-reduced-motion:reduce){.yd-in,.yd-pop{animation:none}}
+/* Y07 */
+.yd-mp{width:76px;flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:5px}
+.yd-chips{overflow-x:auto;scrollbar-width:none}.yd-chips::-webkit-scrollbar{display:none}
+/* Y08 */
+.yd-act{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;flex:none}
+.yd-act a,.yd-act .yd-dis{height:56px;border-radius:16px;background:#FFFFFF;border:1px solid #E6EAF2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:12px;font-weight:700;color:#0B1220}
+.yd-act a svg{color:#0065D6}
+.ph .yd-act a.pr{background:#0065D6;border-color:#0065D6;color:#FFFFFF}
+.yd-act a.pr svg{color:#FFFFFF}
+.yd-act .yd-dis{color:#94A3B8}
+.yd-g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.yd-big{font-size:22px;font-weight:800}
+.yd-hi{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid #EEF2F8;min-height:52px}
+.yd-hi:last-child{border-bottom:0}
+.yd-dt{width:44px;flex:none;display:flex;flex-direction:column;align-items:center;line-height:1.1}
+.yd-dt b{font-size:16px;font-weight:800}.yd-dt small{font-size:11px;color:#4B5563;font-weight:700}
+/* Y09 */
+.yd-eb{font-size:12px;font-weight:800;letter-spacing:.06em;color:#DCEBFF}
+.yd-amt{font-size:36px;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.yd-stp{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;position:relative}
+.yd-stp div{display:flex;flex-direction:column;gap:4px;font-size:12px;color:#DCEBFF}
+.yd-stp b{font-size:13px;color:#FFFFFF}
+.yd-stp i{height:5px;border-radius:999px;background:rgba(255,255,255,.25)}
+.yd-stp i.d{background:#FFFFFF}
+.yd-stp i.n{background:linear-gradient(90deg,#FFFFFF 50%,rgba(255,255,255,.25) 50%)}
+.ph button.yd-link{border:0;background:transparent;font:inherit;font-size:13px;font-weight:700;color:#0057B8;min-height:44px;padding:0;cursor:pointer}
+/* Y10 */
+.yd-rk{width:28px;height:28px;border-radius:50%;background:#ECFDF3;color:#067647;display:grid;place-items:center;flex:none}
+/* Y11 */
+.yd-lb{font-size:13px;font-weight:700;color:#3A4456}
+.yd-sel{position:relative}
+.yd-sel select{width:100%;min-height:52px;border-radius:14px;border:1.5px solid #CBD5E1;background:#FFFFFF;padding:0 36px 0 12px;font:inherit;font-size:15px;font-weight:700;color:#0B1220;appearance:none;-webkit-appearance:none}
+.yd-sel svg{position:absolute;right:12px;top:17px;pointer-events:none}
