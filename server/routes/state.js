@@ -882,7 +882,7 @@ router.post('/demo-shop-orders', studentAuthOptional, async (req, res) => {
 });
 
 function crmStateRequired(req, res, next) {
-    if (!['admin', 'rop', 'boshliq', 'sales_manager', 'teacher', 'employee', 'targetolog'].includes(req.user?.role)) {
+    if (!['admin', 'rop', 'boshliq', 'sales_manager', 'teacher', 'employee', 'targetolog', 'hr'].includes(req.user?.role)) {
         return res.status(403).json({ error: 'CRM ma\'lumotlariga ruxsat yo\'q' });
     }
     next();

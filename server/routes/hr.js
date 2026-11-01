@@ -12,7 +12,18 @@ const {
     listCandidates, getCandidateById, updateCandidate, deleteCandidate,
     getMedia, insertCandidate, addMedia, MAX_MEDIA_BYTES,
 } = require('../services/hrCandidates');
-const { HR_STAGES, HR_STAGE_LABEL_BY_ID, normalizeHrStage, VACANCIES, VACANCY_BY_ID } = require('../services/hrStages');
+const { HR_STAGES, HR_STAGE_LABEL_BY_ID, normalizeHrStage, VACANCIES, VACANCY_BY_ID, candidateVisible } = require('../services/hrStages');
+
+// HR menejer (role=hr) faqat HR'da berilgan til yo'nalish(lar)ini ko'radi —
+// hr_employees.lang: 'english' | 'russian' | 'both'. Yozuv yo'q yoki faol emas — hech narsa.
+// Boshqa rollar (admin, boshliq, rop) uchun null = cheklov yo'q.
+async function hrLangsFor(user) {
+    if (user?.role !== 'hr') return null;
+    const row = (await require('../db').pool.query(
+        'SELECT lang, status FROM hr_employees WHERE LOWER(TRIM(login)) = LOWER(TRIM($1)) LIMIT 1', [user.email || ''])).rows[0];
+    if (!row || row.status === 'inactive') return [];
+    return row.lang === 'both' ? ['english', 'russian'] : row.lang === 'russian' ? ['russian'] : ['english'];
+}
 const { VACANCY_QUESTIONS } = require('../services/hrQuestions');
 const hrBot = require('../services/hrBot');
 
@@ -86,7 +97,9 @@ router.get('/meta', authRequired, (req, res) => {
 
 router.get('/candidates', authRequired, hrAccess, async (req, res) => {
     try {
-        res.json({ candidates: await listCandidates() });
+        const langs = await hrLangsFor(req.user);
+        const all = await listCandidates();
+        res.json({ candidates: langs ? all.filter(c => candidateVisible(c, langs)) : all });
     } catch (err) {
         console.error('GET /api/hr/candidates', err);
         res.status(500).json({ error: 'Xatolik' });
@@ -96,7 +109,7 @@ router.get('/candidates', authRequired, hrAccess, async (req, res) => {
 router.get('/candidates/:id', authRequired, hrAccess, async (req, res) => {
     try {
         const candidate = await getCandidateById(req.params.id);
-        if (!candidate) return res.status(404).json({ error: 'Nomzod topilmadi' });
+        if (!candidate || !candidateVisible(candidate, await hrLangsFor(req.user))) return res.status(404).json({ error: 'Nomzod topilmadi' });
         res.json({ candidate });
     } catch (err) {
         console.error('GET /api/hr/candidates/:id', err);
@@ -130,7 +143,7 @@ router.patch('/candidates/:id', authRequired, hrAccess, async (req, res) => {
         }
 
         const existing = await getCandidateById(req.params.id);
-        if (!existing) return res.status(404).json({ error: 'Nomzod topilmadi' });
+        if (!existing || !candidateVisible(existing, await hrLangsFor(req.user))) return res.status(404).json({ error: 'Nomzod topilmadi' });
 
         const authorName = req.user?.name || 'Admin';
         // Agar frontend o'zi yangi izoh(lar) qo'shib yuborgan bo'lsa (masalan
@@ -199,6 +212,10 @@ router.get('/candidates/:id/media/:kind', async (req, res) => {
     try {
         const current = await require('../db').findUserById(payload.id);
         if (!current || !HR_ROLES.includes(current.role)) return res.status(403).json({ error: 'Bu faylga ruxsat yoʻq' });
+        if (current.role === 'hr') {
+            const cand = await getCandidateById(req.params.id);
+            if (!cand || !candidateVisible(cand, await hrLangsFor(current))) return res.status(403).json({ error: 'Bu faylga ruxsat yoʻq' });
+        }
     } catch {
         return res.status(503).json({ error: 'Akkaunt ruxsatini tekshirib boʻlmadi' });
     }
