@@ -74,10 +74,17 @@ function scopeState(state, user, { managerId, financeEmployee = false } = {}) {
         state.students = (state.students || []).map(stripStudentContacts);
         state.payments = [];
         state.cashFlow = [];
-    } else if (role === 'targetolog') {
+    } else if (role === 'targetolog' || role === 'hr') {
+        // HR menejer: o'quvchi kontaktlari, to'lovlar va kassa kerak emas (moliya — faqat Moliya).
         state.students = (state.students || []).map(stripStudentContacts);
         state.payments = [];
         state.cashFlow = [];
+        // Targetolog faqat reklama/lid statistikasini ko'radi: kitob yetkazish (telefon, manzil, izohlar),
+        // bonuslar va shaxsiy sotuv rejalari (maosh bilan bog'liq) kelmaydi.
+        state.bookRoadmap = [];
+        if (state.bonusData !== undefined) state.bonusData = {};
+        if (state.bonusHistory !== undefined) state.bonusHistory = [];
+        if (state.individualSalesPlans !== undefined) state.individualSalesPlans = {};
     }
     return state;
 }

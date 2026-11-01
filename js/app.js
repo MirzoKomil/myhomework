@@ -348,6 +348,8 @@ function applyRoleBasedAccess(user) {
         setTimeout(() => switchTab(restoreTab || 'dashboard', restoreCtx), 50);
     } else if (role === 'targetolog') {
         setTimeout(() => switchTab(restoreTab || 'marketing', restoreCtx), 50);
+    } else if (role === 'hr') {
+        setTimeout(() => switchTab(restoreTab || 'hr', restoreCtx), 50);
     } else {
         // employee yoki noma'lum rol — mobil ilovaga o'tkazish
         setTimeout(() => switchTab(restoreTab || 'student-app', restoreCtx), 50);
@@ -382,6 +384,7 @@ async function syncHrLoginRoles(currentUser) {
             : (e.role === 'sotuv-menejeri' || e.role === 'sotuv_menejeri') ? 'sales_manager'
             : (e.role === 'oqituvchi' || e.role === 'ingliz-oqituvchi' || e.role === 'rus-oqituvchi' || e.role === 'yordamchi') ? 'teacher'
             : e.role === 'targetolog' ? 'targetolog'
+            : e.role === 'hr' ? 'hr'
             : 'employee',
         salesManagerId: (e.role === 'sotuv-menejeri' || e.role === 'sotuv_menejeri') ? e.id : ''
     }));
@@ -645,6 +648,19 @@ async function bootApp() {
         }
         if (langs.length && !langs.includes(_leadsLangFilter)) _leadsLangFilter = langs[0];
         if (langs.length && !langs.includes(_marketingLang)) _marketingLang = langs[0];
+    }
+
+    // HR menejer: HR'da berilgan til yo'nalish(lar)i — targetolog bilan bir xil qoida.
+    if (currentUser.role === 'hr') {
+        const hrEmployees = getItem(STORAGE_KEYS.hrEmployees, []);
+        const login = String(currentUser.email || '').trim().toLowerCase();
+        const linked = hrEmployees.find(e => login && String(e.login || '').trim().toLowerCase() === login);
+        const active = linked && linked.status !== 'inactive';
+        const langs = !active ? [] : linked.lang === 'both' ? ['english', 'russian'] : linked.lang === 'russian' ? ['russian'] : linked.lang === 'english' ? ['english'] : [];
+        if (JSON.stringify(currentUser.linkedHrLangs) !== JSON.stringify(langs)) {
+            currentUser.linkedHrLangs = langs;
+            setCurrentUser(currentUser);
+        }
     }
 
     // 6-vazifa: Ustoz (asosiy va yordamchi) uchun ham til yo'nalishini
@@ -22341,6 +22357,7 @@ const HR_ROLE_MAP = {
     'yordamchi': "Yordamchi o'qituvchi",
     'marketolog': 'Marketolog',
     'targetolog': 'Targetolog',
+    'hr': 'HR menejer',
     'head-of-teachers': 'Head of Teachers'
 };
 
@@ -22352,6 +22369,7 @@ const HR_ROLE_MAP_MODAL = {
     'yordamchi': "Yordamchi o'qituvchi",
     'marketolog': 'Marketolog',
     'targetolog': 'Targetolog',
+    'hr': 'HR menejer',
     'head-of-teachers': 'Head of Teachers',
     'buxgalter': 'Buxgalter (Moliya)'
 };
@@ -22512,16 +22530,25 @@ function managerLangHtml(selected = 'english') {
 function targetLangHtml(selected = 'english') {
     const opt = (v, label) => `<label><input type="radio" name="empTargetLang" value="${v}" ${selected === v ? 'checked' : ''}> ${label}</label>`;
     return `<div class="form-group" id="empTargetLangWrap" style="display:none">
-        <label>Til yo'nalishi (targetolog kabineti)</label>
+        <label id="empTargetLangLabel">Til yo'nalishi (targetolog kabineti)</label>
         <div class="emp-lang-sub">${opt('english', 'Ingliz tili')}${opt('russian', 'Rus tili')}${opt('both', 'Ikkalasi')}</div>
-        <small style="color:var(--text-muted)">Targetolog faqat shu yo'nalish(lar)ning Sotuv bo'limini ko'radi va Marketing → Target lidlar'ga maʼlumot kiritadi.</small>
+        <small id="empTargetLangHint" style="color:var(--text-muted)">Targetolog faqat shu yo'nalish(lar)ning Sotuv bo'limini ko'radi va Marketing → Target lidlar'ga maʼlumot kiritadi.</small>
     </div>`;
 }
 function bindTargetLangToggle(roleSelectId) {
     const roleEl = document.getElementById(roleSelectId);
     const wrap = document.getElementById('empTargetLangWrap');
     if (!roleEl || !wrap) return;
-    const toggle = () => { wrap.style.display = roleEl.value === 'targetolog' ? '' : 'none'; };
+    const toggle = () => {
+        const isHr = roleEl.value === 'hr';
+        wrap.style.display = (roleEl.value === 'targetolog' || isHr) ? '' : 'none';
+        const lbl = document.getElementById('empTargetLangLabel');
+        const hint = document.getElementById('empTargetLangHint');
+        if (lbl) lbl.textContent = isHr ? "Til yo'nalishi (HR kabineti)" : "Til yo'nalishi (targetolog kabineti)";
+        if (hint) hint.textContent = isHr
+            ? "HR faqat shu yo'nalish(lar)ning nomzod va xodimlarini ko'radi. Umumiy vakansiyalar (Sotuv, ROP, Metodist, Brend yuzi) — ikkala tilga."
+            : "Targetolog faqat shu yo'nalish(lar)ning Sotuv bo'limini ko'radi va Marketing → Target lidlar'ga maʼlumot kiritadi.";
+    };
     roleEl.addEventListener('change', toggle);
     toggle();
 }
@@ -22973,7 +23000,7 @@ function openEditEmployeeModal(empId) {
         ${trialGroupLinkHtml(emp.trialGroupLink || '')}
         ${managerLangHtml(emp.lang || 'english')}
         ${ropLangHtml(emp.lang || 'english')}
-        ${targetLangHtml(emp.role === 'targetolog' ? (emp.lang || 'english') : 'english')}
+        ${targetLangHtml((emp.role === 'targetolog' || emp.role === 'hr') ? (emp.lang || 'english') : 'english')}
         <div class="form-group">
             <label>Telefon raqam</label>
             <input type="tel" id="editEmpPhone" class="form-control" value="${escapeHtml(emp.phone || '')}" placeholder="+998 90 123 45 67">
@@ -23114,7 +23141,7 @@ function openEditEmployeeModal(empId) {
             email: document.getElementById('editEmpEmail').value.trim(),
             department: document.getElementById('editEmpDepartment').value,
             status: document.getElementById('editEmpStatus').value,
-            lang: isMgrEdit ? resolveManagerLang() : isRopEdit ? resolveRopLang() : resolvedRole === 'yordamchi' ? resolveTeacherLang() : resolvedRole === 'targetolog' ? resolveTargetLang() : (emp.lang || 'english'),
+            lang: isMgrEdit ? resolveManagerLang() : isRopEdit ? resolveRopLang() : resolvedRole === 'yordamchi' ? resolveTeacherLang() : (resolvedRole === 'targetolog' || resolvedRole === 'hr') ? resolveTargetLang() : (emp.lang || 'english'),
             cardNumber: document.getElementById('editEmpCardNumber').value.trim(),
             passportSeries: document.getElementById('editEmpPassportSeries').value.trim(),
             address: document.getElementById('editEmpAddress').value.trim(),
@@ -23144,6 +23171,7 @@ function openEditEmployeeModal(empId) {
             : (resolvedRole === 'sotuv-menejeri' || resolvedRole === 'sotuv_menejeri') ? 'sales_manager'
             : (resolvedRole === 'oqituvchi' || resolvedRole === 'ingliz-oqituvchi' || resolvedRole === 'rus-oqituvchi' || resolvedRole === 'yordamchi') ? 'teacher'
             : resolvedRole === 'targetolog' ? 'targetolog'
+            : resolvedRole === 'hr' ? 'hr'
             : 'employee';
         if (newPassword) {
             try {
@@ -23372,12 +23400,13 @@ function openAddEmployeeModal() {
             kpiTemplateId: document.getElementById('employeeKpiTemplate')?.value || '',
             cardNumber, passportSeries, address, trialGroupLink,
             joinDate: startDate || new Date().toISOString().slice(0, 10),
-            lang: isMgr ? resolveManagerLang() : isRop ? resolveRopLang() : role === 'yordamchi' ? resolveTeacherLang() : role === 'targetolog' ? resolveTargetLang() : 'english'
+            lang: isMgr ? resolveManagerLang() : isRop ? resolveRopLang() : role === 'yordamchi' ? resolveTeacherLang() : (role === 'targetolog' || role === 'hr') ? resolveTargetLang() : 'english'
         };
         const hrUserRole = role === 'rop' ? 'rop'
             : (role === 'sotuv-menejeri' || role === 'sotuv_menejeri') ? 'sales_manager'
             : (role === 'oqituvchi' || role === 'ingliz-oqituvchi' || role === 'rus-oqituvchi' || role === 'yordamchi') ? 'teacher'
             : role === 'targetolog' ? 'targetolog'
+            : role === 'hr' ? 'hr'
             : 'employee';
         const saveBtn = document.getElementById('saveAddEmployee');
         if (saveBtn) saveBtn.disabled = true;

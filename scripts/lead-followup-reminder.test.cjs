@@ -22,7 +22,7 @@ function ctx(user) {
         block('const LEAD_COLUMNS = [', '];'), 'const LEAD_STATUS_IDS = new Set(LEAD_COLUMNS.map(c => c.id));',
         block('const LEAD_SLA_RULES = {', '\n};'),
         block('const LEAD_FOLLOWUP_CLOSED', ';'),
-        ...['normalizeLeadStatus', 'parseLeadSlaTime', 'getLeadSlaStageStartedAt', 'getLeadSlaBaseTime', 'getLeadSlaStageKey', 'getLeadSlaManagerName',
+        ...['normalizeLeadStatus', 'ropLangMatches', 'parseLeadSlaTime', 'getLeadSlaStageStartedAt', 'getLeadSlaBaseTime', 'getLeadSlaStageKey', 'getLeadSlaManagerName',
             'isLeadRecoveryPending', 'getLeadSlaManagerAlerts', 'getLeadFollowUpAlerts', 'getLeadSlaAlerts', 'getLeadSlaCardAlerts'].map(n => functionSource('js/app.js', n)),
         'this.f = getLeadFollowUpAlerts; this.a = getLeadSlaAlerts; this.card = getLeadSlaCardAlerts;',
     ].join('\n');

@@ -10,7 +10,7 @@
     const LIVE_KEY = 'mh_session_live';          // sessionStorage: shu oyna ochiq ekan sessiya tirik
     const AUTO_KEY = 'tl_auto_at';               // avtomatik o'tish halqasidan himoya
     const FAIL_LIMIT_DEFAULT = 5, LOCK_MIN_DEFAULT = 15;
-    const ROLES = { admin: 'Administrator', boshliq: 'Rahbar', rop: 'ROP', sales_manager: 'Sotuv menejeri', teacher: 'Ustoz', targetolog: 'Targetolog' };
+    const ROLES = { admin: 'Administrator', boshliq: 'Rahbar', rop: 'ROP', sales_manager: 'Sotuv menejeri', teacher: 'Ustoz', targetolog: 'Targetolog', hr: 'HR menejer' };
     const MARK = 'images/app/mark.png', LOGO = 'images/app/icon-512.png';
 
     // Admin Telegram manzili: <meta name="dwt-admin-telegram"> yoki window.DWT_ADMIN_TG (bo'sh bo'lsa — faqat yo'riqnoma).

@@ -4360,6 +4360,8 @@ async function insertLead({
     // faqat keyinchalik CAPI orqali reklama optimizatsiyasi sifatliroq
     // ishlamaydi (faqat telefon/email bo'yicha moslashtirishga tushadi).
     utmSource, utmCampaign, utmContent, fbclid, fbLeadId, ctwaClid, igUsername,
+    // Meta Lead Ads: reklama/kampaniya/forma (targetolog statistikasi uchun)
+    metaAdId, metaAdName, metaAdsetName, metaCampaignName, metaFormId, metaFormName,
 }) {
     const src = normalizeLeadSource(source);
     const lang = languageForSource(src, language);
@@ -4424,6 +4426,7 @@ async function insertLead({
     if (fbLeadId) extra.fbLeadId = String(fbLeadId).slice(0, 255);
     if (ctwaClid) extra.ctwaClid = String(ctwaClid).slice(0, 500);
     if (igUsername) extra.igUsername = String(igUsername).slice(0, 255);
+    for (const [k, v] of Object.entries({ metaAdId, metaAdName, metaAdsetName, metaCampaignName, metaFormId, metaFormName })) if (v) extra[k] = String(v).slice(0, 255);
 
     const lead = {
         id, name, phone: phone || '', phone2: phone2 || '', email: email || '', source: src,
