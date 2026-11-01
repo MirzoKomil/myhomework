@@ -1723,8 +1723,8 @@
                 root.querySelector('#out').onclick = () => logout(false);
                 return;
             }
-            // Ustoz ilovasi v2 (1-noyabr dizayni): asosiy ustoz uchun yangi ekranlar (teacher/v2/*). Yordamchi — hozircha shu eski ko'rinish.
-            if (window.UstozV2 && !isAssistantOnly()) { (window.UstozV2.css || []).forEach(h => window.dwtCss?.(h)); window.UstozV2.start(); flushOutbox(); return; }
+            // Ustoz ilovasi v2 (1-noyabr dizayni): asosiy ustoz ham, yordamchi ustoz ham — yangi ekranlar (teacher/v2/*, yordamchi: yordamchi.js).
+            if (window.UstozV2) { (window.UstozV2.css || []).forEach(h => window.dwtCss?.(h)); window.UstozV2.start(); flushOutbox(); return; }
             window.dwtCss?.('/teacher/app.css?v=2');
             const h = parseHash();
             S.tab = h.tab; S.pages = [];
@@ -1746,7 +1746,7 @@
     // Umumiy yadro v2 uchun (teacher/v2/core.js): ma'lumot, API, davomat va sinov qoidalari — bitta manba.
     window.DWT = { S, api, lazy, drop, loadAll, now, esc, money, pad, hm, toMin, tz, stamp, ago, day10, wdOf, fmtDate, first, short, avatar, initials,
         attFor, setAtt, lessonDays, markOf, coveredBy, uncovered, monthStats, patternOf, patternLabel, trialPhase, tReq, tAt, trialManager, myGuides, guideIsNew,
-        outbox, flushOutbox, store, logout, toast, OUTBOX, REASONS, cal, DAY, DAY_FULL, MON, MON_S, isAssistantOnly, stuOf, shiftMonth };
+        outbox, flushOutbox, store, logout, toast, OUTBOX, REASONS, cal, DAY, DAY_FULL, MON, MON_S, isAssistantOnly, stuOf, shiftMonth, CHANNELS };
     if (!localStorage.getItem(TOKEN) || S.user?.role !== 'teacher') { S.user = null; if (window.UstozV2) location.replace('/'); else renderLogin(); }
     else boot();
     window.__dwt = S;

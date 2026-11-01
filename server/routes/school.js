@@ -1027,7 +1027,7 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
     // Yordamchi: o'tgan kunni belgilamay qolgan aloqa uchun admin orqali so'rov. Server tekshiradi:
     //  • faqat yordamchi lavozimidagi xodim (asosiy ustoz — 403);
     //  • faqat o'quvchining HOZIRGI yordamchisi (boshqa yordamchining o'quvchisi — 403);
-    //  • faqat o'tgan sana (bugun — o'zi belgilaydi, kelajak — yo'q), joriy yoki o'tgan oy, oy yakuniy tasdiqlanmagan;
+    //  • faqat o'tgan sana (bugun — o'zi belgilaydi, kelajak — yo'q), faqat joriy oy, oy yakuniy tasdiqlanmagan;
     //  • o'sha kuni o'quvchi faol bo'lgan (muzlatilgan / chiqib ketgan kunga — yo'q).
     router.post('/assist/late-requests', handle(req => write(req, async c => {
         const me = await teacherOf(req);
@@ -1036,7 +1036,8 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         if (!st || st.assistant_teacher_id !== me.id) throw T.fail(403, 'Bu o\'quvchi sizga biriktirilmagan');
         const day = T.assertDate(req.body?.day), today = T.nowLocal().date;
         if (day >= today) throw T.fail(400, day === today ? 'Bugungi aloqani o\'zingiz belgilaysiz' : 'Kelajak sanaga so\'rov yuborilmaydi');
-        if (day.slice(0, 7) < T.addDays(today.slice(0, 7) + '-01', -1).slice(0, 7)) throw T.fail(409, 'Bu oy uchun so\'rov muddati o\'tgan');
+        // 1-noy (Abdulloh): kechikkan aloqa faqat shu oy uchun yoziladi — o'tgan oy yopilgan, uni admin tuzatadi.
+        if (day.slice(0, 7) !== today.slice(0, 7)) throw T.fail(409, 'Kechikkan aloqa faqat shu oy kunlari uchun yoziladi — o\'tgan oyni admin tuzatadi');
         if (await A.isLocked(c, day.slice(0, 7))) throw T.fail(409, 'Oy yakuniy tasdiqlangan — o\'zgartirib bo\'lmaydi');
         const statuses = (await c.query('SELECT * FROM school_student_status WHERE student_id=$1 AND cancelled_at IS NULL', [st.id])).rows;
         if (S.statusOn(statuses, day) !== 'active') throw T.fail(409, 'O\'sha kuni o\'quvchi faol emas (muzlatilgan yoki chiqib ketgan)');
@@ -1078,6 +1079,12 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
             const wp = await A.plan(pool, { assistantIds: [assistantId], from: ws, to: we }).catch(() => null);
             if (wp) rep.week = { from: ws, to: we, planned: require('../../js/attendanceRules').weekPlanCount(wp.items) };
             rep.left = Object.fromEntries(pl.students.map(x => [x.studentId, { adviceLeft: x.adviceLeft, possible: x.possible }]));
+            // Bugun qo'shilgan summa (yordamchi "Bugungi aloqalar tugadi" tabrigi) — xuddi shu countMonth, bugungi aloqalarsiz hisob bilan farq.
+            const today = T.nowLocal().date, { from } = T.monthBounds(String(month));
+            const before = (await pool.query('SELECT * FROM school_assist_contacts WHERE assistant_id=$1 AND day BETWEEN $2 AND $3', [assistantId, from, T.addDays(today, -1)])).rows;
+            const starts = await A.studentStarts(pool, before.map(c => c.student_id));
+            const r0 = A.countMonth(before, { monthly: rep.monthly, starts });
+            rep.today = { counted: Math.max(0, rep.counted - r0.counted), amount: Math.max(0, (rep.computedAmount ?? rep.amount) - r0.amount) };
         }
         return rep;
     }));

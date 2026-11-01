@@ -281,11 +281,11 @@
             <div class="bd nb bq" style="padding-top: 0; gap: 12px">
               ${U.offline()}
               <div class="col" style="padding: 0 4px"><h1 class="ttl" style="padding: 0">Adminga so'rov</h1><span class="s">${s ? `${esc(s.name)} · ${esc(sched(s))}` : "O'quvchi bo'yicha — admin CRM'da hal qiladi"}</span></div>
-              ${!id ? `<div class="fl"><label for="bq-sqs">O'quvchi</label><select id="bq-sqs" class="bq-sel"><option value="">Tanlang</option>${(S().main || []).map(x => `<option value="${esc(x.id)}"${x.id === sqStu ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>` : ''}
+              ${!id ? `<div class="fl"><label for="bq-sqs">O'quvchi</label><select id="bq-sqs" class="bq-sel"><option value="">Tanlang</option>${(D().isAssistantOnly() ? S().helped : S().main || []).map(x => `<option value="${esc(x.id)}"${x.id === sqStu ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>` : ''}
               <fieldset class="bq-fs"><legend class="bq-lg">Nima kerak?</legend>${SQ.map(([k, l, d]) => `<button type="button" class="opt${k === sqTopic ? ' on' : ''}" data-sq="${k}" aria-pressed="${k === sqTopic}"><span class="rad"></span><span class="col g1"><b style="font-size: 15px">${l}</b><span class="xs">${esc(d)}</span></span></button>`).join('')}</fieldset>
               <div class="fl"><label for="bq-sqz">Izoh</label><textarea id="bq-sqz" maxlength="300" placeholder="qisqacha: nima va qachondan"></textarea></div>
               <button type="button" class="btn p w" data-sqsend${sqBusy ? ' disabled' : ''}>Yuborish</button>
-              <span class="xs bq-foot">O'z ish vaqtingizni yopish yoki sinovga tanaffus — Jadval bo'limida.</span>
+              ${D().isAssistantOnly() ? '' : '<span class="xs bq-foot">O\'z ish vaqtingizni yopish yoki sinovga tanaffus — Jadval bo\'limida.</span>'}
               ${mine.length ? `<span class="bq-gh">YUBORILGANLAR · ${mine.length}</span><div class="card l">${mine.map(r => { const p = payOf(r), st = D().stuOf(p.studentId); return `<div class="li"><div class="col g1"><span class="nm">${esc(SQL[p.topic] || "So'rov")}${!id && st ? ' · ' + esc(D().first(st.name)) : ''}</span><span class="s" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${esc(r.reason || '')}${r.decision_note ? ' · ' + esc(r.decision_note) : ''}</span></div>${reqPill(r)}</div>`; }).join('')}</div>` : ''}
             </div>`;
         },
@@ -752,7 +752,7 @@
               ${U.offline()}
               <div class="col a1" style="align-items: center; gap: 6px">
                 <div style="position: relative">${meAvatar(84, 'border: 3px solid #FFFFFF; box-shadow: 0 0 0 1px #CBD5E1')}<label class="bq-camb" aria-label="Rasmni almashtirish">${svg(P.cam, 16, 2.2)}<input type="file" accept="image/*" data-bq-av class="sr"></label></div>
-                <strong style="font-size: 19px; font-weight: 800">${esc(D().first(user.name || s.me?.name))}</strong><span class="s" style="text-align: center">Ustoz · ${langOf()} · rasm o'quvchi ilovasida ko'rinadi</span>
+                <strong style="font-size: 19px; font-weight: 800">${esc(D().first(user.name || s.me?.name))}</strong><span class="s" style="text-align: center">${D().isAssistantOnly() ? 'Yordamchi ustoz' : 'Ustoz'} · ${langOf()} · rasm o'quvchi ilovasida ko'rinadi</span>
               </div>
               <span class="bq-gh">ISH MA'LUMOTLARI</span>
               <div class="card l a2">
@@ -770,7 +770,7 @@
                 <a class="bq-rw" href="#" data-u-push="kirish" data-arg="tarix"><span class="bq-kk">Kirish tarixi</span><span class="bq-v">urinishlar</span>${chevR('#4B5563')}</a>
                 <a class="bq-rw" href="#" data-u-push="kirish" data-arg="qurilma"><span class="bq-kk">Kirgan qurilmalar</span><span class="bq-v">${ss.data ? `${(ss.data.sessions || []).length} ta` : ''}</span>${chevR('#4B5563')}</a>
               </div>
-              <span class="xs bq-foot" style="text-align: center">Domwork Team · Ustoz · 2.0</span>
+              <span class="xs bq-foot" style="text-align: center">Domwork Team · ${D().isAssistantOnly() ? 'Yordamchi ustoz' : 'Ustoz'} · 2.0</span>
             </div>`;
         },
         bind(root) {
@@ -886,4 +886,6 @@
             </div>`;
         }
     });
+    // Yordamchi ustoz rejimi (teacher/v2/yordamchi.js) uchun umumiy yordamchilar — bitta ko'rinish.
+    U.bq = { langOf, tgPill };
 })();

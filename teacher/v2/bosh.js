@@ -156,8 +156,9 @@
         for (const r of S0.requests || []) {
             const t = Date.parse(r.decided_at); if (!(t > since) || r.status === 'new') continue;
             const p = r.payload || {};
+            const late = r.type === 'assist_late'; // yordamchi: kechikkan aloqa so'rovi
             ev.push({ id: `rq:${r.id}:${r.status}`, cat: 'dars', tone: r.status === 'approved' ? 'ok' : 'bad', ic: r.status === 'approved' ? 'ok' : 'no',
-                title: `Vaqt so'rovi ${r.status === 'approved' ? 'tasdiqlandi' : 'rad etildi'}`, sub: [p.date ? fmtShort(d.day10(p.date)) : '', p.from && r.type !== 'leave' ? `${p.from}–${p.to}` : '', esc(r.reason || ''), r.decision_note ? esc(r.decision_note) : ''].filter(Boolean).join(' · '), t, go: { tab: 'jadval' } });
+                title: `${late ? "Kechikkan aloqa so'rovi" : "Vaqt so'rovi"} ${r.status === 'approved' ? 'tasdiqlandi' : 'rad etildi'}`, sub: [p.date || p.day ? fmtShort(d.day10(p.date || p.day)) : '', p.from && r.type !== 'leave' ? `${p.from}–${p.to}` : '', esc(r.reason || ''), r.decision_note ? esc(r.decision_note) : ''].filter(Boolean).join(' · '), t, go: late ? { push: ['y-kech', ''] } : { tab: 'jadval' } });
         }
         for (const h of S0.salary?.history || []) {
             if (!h.end) continue;
@@ -587,6 +588,21 @@
         ov.classList.add('out');
         setTimeout(() => { ov.remove(); after?.(); }, reduced() ? 0 : 180);
     }
+    // Tabrik oynasi (bs-ov) — umumiy: ustoz tabriklari va yordamchi tabriklari (yordamchi.js, U.bs.overlay).
+    // Fon yoki [data-bs-x]/[data-ov-x] bosilsa, Esc — yopiladi va onClosed chaqiriladi; close(null) — onClosed'siz yopish.
+    function openOverlay(html, onClosed) {
+        const ov = document.createElement('div');
+        ov.className = 'bs-ov';
+        ov.innerHTML = `<div class="bs-ovin"><div class="bs-scr" aria-hidden="true"></div>${html}</div>`;
+        document.body.appendChild(ov);
+        const onKey = e => { if (e.key === 'Escape') close(); };
+        function close(after = onClosed) { document.removeEventListener('keydown', onKey); closeOverlay(ov, after || undefined); }
+        document.addEventListener('keydown', onKey);
+        ov.querySelector('.bs-scr').onclick = () => close();
+        ov.querySelectorAll('[data-bs-x], [data-ov-x]').forEach(b => b.onclick = () => close());
+        ov.querySelector('.btn.p')?.focus({ preventScroll: true, focusVisible: false });
+        return { ov, close };
+    }
     function showWelcome(queue) {
         const it = queue.shift(); if (!it) return;
         if (U.activeLock()) return; // qulf (sinov/davomat) ustun — keyingi ochilishda ko'rsatiladi
@@ -664,22 +680,12 @@
     </div>
   </section>`;
         }
-        const ov = document.createElement('div');
-        ov.className = 'bs-ov';
-        ov.innerHTML = `<div class="bs-ovin"><div class="bs-scr" aria-hidden="true"></div>${html}</div>`;
-        document.body.appendChild(ov);
-        const next = () => setTimeout(() => showWelcome(queue), 250);
-        const close = () => { document.removeEventListener('keydown', onKey); closeOverlay(ov, next); };
-        const onKey = e => { if (e.key === 'Escape') close(); };
-        document.addEventListener('keydown', onKey);
-        ov.querySelector('[data-bs-x]').onclick = close;
-        ov.querySelector('.bs-scr').onclick = close;
+        const { ov, close } = openOverlay(html, () => setTimeout(() => showWelcome(queue), 250));
         ov.querySelector('[data-bs-open]').onclick = e => {
             const to = e.currentTarget.dataset.bsOpen;
-            document.removeEventListener('keydown', onKey); closeOverlay(ov);
+            close(null);
             if (to === 'karta') U.push('karta', s.id); else U.push('darslik', reached || 1);
         };
-        ov.querySelector('.btn.p').focus({ preventScroll: true, focusVisible: false });
         if (it.trial && !r) U.confetti();
     }
     async function checkWelcome() {
@@ -723,4 +729,6 @@
         const cur = U.current();
         if ((cur.id === 'home' || cur.id === 'bildirish') && !document.querySelector('#app > .sheet')) U.render();
     }, 15000);
+    // Yordamchi rejimi (yordamchi.js): Bosh va Menyu'dagi bildirishnoma soni — bitta manba.
+    U.bs = { unreadCount, overlay: openOverlay };
 })();

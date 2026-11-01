@@ -16,11 +16,20 @@
         ['oquvchilar', "O'quvchilar", '<path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 00-3-3.9M16 3.1a4 4 0 010 7.8"></path>'],
         ['menyu', 'Menyu', '<path d="M4 7h16M4 12h16M4 17h16"></path>']
     ];
-    const tabs = {}, pages = {}, locks = {}, badges = {};
-    U.tab = (id, def) => { tabs[id] = def; };
+    // Rol bo'yicha alohida ro'yxat: asosiy ustoz ('ustoz') va yordamchi ustoz ('yordamchi', teacher/v2/yordamchi.js).
+    // Ichki sahifalar umumiy (id lar farqli); pastki menyu, qulf va qizil sonlar — faqat o'z rolida.
+    const REG = { ustoz: { tabs: {}, locks: {}, badges: {} }, yordamchi: { tabs: {}, locks: {}, badges: {} } };
+    const pages = {};
+    let MODE = 'ustoz';
+    const tabs = new Proxy({}, { get: (_, k) => REG[MODE].tabs[k], has: (_, k) => k in REG[MODE].tabs });
+    const locks = () => REG[MODE].locks, badges = () => REG[MODE].badges;
+    U.tab = (id, def, mode = 'ustoz') => { REG[mode].tabs[id] = def; };
     U.page = (id, def) => { pages[id] = def; };
-    U.lock = (id, def) => { locks[id] = def; };
-    U.badge = (id, fn) => { badges[id] = fn; };
+    U.lock = (id, def, mode = 'ustoz') => { REG[mode].locks[id] = def; };
+    U.badge = (id, fn, mode = 'ustoz') => { REG[mode].badges[id] = fn; };
+    U.mode = () => MODE;
+    // Yordamchida 3-bo'lim "Aloqalar" (telefon belgisi) — id o'zgarmaydi ('davomat'), hash va bog'lanishlar bir xil qoladi.
+    const tabList = () => MODE === 'yordamchi' ? TABS.map(t => t[0] === 'davomat' ? ['davomat', 'Aloqalar', '<path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3.1 19.5 19.5 0 01-6-6A19.8 19.8 0 012.1 4.2 2 2 0 014.1 2h3a2 2 0 012 1.7c.1.9.4 1.8.7 2.7a2 2 0 01-.5 2.1L8 9.8a16 16 0 006 6l1.3-1.3a2 2 0 012.1-.4c.9.3 1.8.6 2.7.7a2 2 0 011.7 2z"></path>'] : t) : TABS;
 
     let root = null, R = { tab: 'home', stack: [] }, started = false;
     const D = () => window.DWT;
@@ -45,6 +54,8 @@
         history.pushState({ r: { tab: R.tab, stack: R.stack } }, '', hash()); U.render(true);
     };
     U.back = () => { if (R.stack.length) history.back(); };
+    // Ichki sahifaning "orqaga" yorlig'i — qaysi bo'limdan ochilgan bo'lsa o'sha nom (Bosh, Aloqalar, O'quvchilar, Menyu ...).
+    U.tabLabel = () => (tabList().find(t => t[0] === R.tab) || [])[1] || 'Orqaga';
     U.current = () => R.stack[R.stack.length - 1] || { id: R.tab, arg: '', tab: true };
     window.addEventListener('popstate', e => {
         if (!started) return;
@@ -57,12 +68,12 @@
 
     // ── Chizish ──
     function nav() {
-        return `<nav class="nav" aria-label="Pastki menyu">${TABS.map(([id, label, d]) => {
-            const on = R.tab === id, n = badges[id] ? Number(badges[id]()) || 0 : 0;
+        return `<nav class="nav" aria-label="Pastki menyu">${tabList().map(([id, label, d]) => {
+            const b = badges()[id], on = R.tab === id, n = b ? Number(b()) || 0 : 0;
             return `<a href="#${id}" data-u-tab="${id}"${on ? ' class="on" aria-current="page"' : ''}><span class="i">${U.svg(d, 20, on ? 2.2 : 1.9)}${n ? `<span class="bdg">${n}</span>` : ''}</span>${label}</a>`;
         }).join('')}</nav>`;
     }
-    U.activeLock = () => Object.entries(locks).sort((a, b) => (a[1].priority || 9) - (b[1].priority || 9)).find(([, l]) => { try { return l.active(); } catch { return false; } }) || null;
+    U.activeLock = () => Object.entries(locks()).sort((a, b) => (a[1].priority || 9) - (b[1].priority || 9)).find(([, l]) => { try { return l.active(); } catch { return false; } }) || null;
     U.render = (top = false) => {
         if (!root) return;
         if (root.querySelector(':scope > .sheet') && !top) { R.dirty = true; return; }
@@ -166,10 +177,12 @@
     window.addEventListener('online', () => { if (started) { D().flushOutbox(); U.render(); } });
     window.addEventListener('offline', () => { if (started) U.render(); });
 
-    const V = '20261101a';
+    const V = '20261101y';
     window.UstozV2 = {
-        css: ['ustoz', 'bosh', 'jadval', 'davomat', 'boshqa'].map(n => `/teacher/v2/${n}.css?v=${V}`),
+        css: ['ustoz', 'bosh', 'jadval', 'davomat', 'boshqa', 'yordamchi'].map(n => `/teacher/v2/${n}.css?v=${V}`),
         start() {
+            MODE = D().isAssistantOnly() ? 'yordamchi' : 'ustoz';
+            document.title = MODE === 'yordamchi' ? 'Domwork Team — Yordamchi ustoz' : 'Domwork Team — Ustoz';
             root = document.getElementById('app');
             root.className = 'ph';
             const p = parse();
