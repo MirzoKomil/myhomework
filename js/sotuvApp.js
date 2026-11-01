@@ -163,6 +163,17 @@
         const n = g('getUnreadCount') ? getUnreadCount() : 0;
         return `<button type="button" class="sa-icon-btn" data-sa-notif aria-label="Bildirishnomalar${n ? ', ' + n + ' ta yangi' : ''}">${ic('bell')}${n ? `<span class="sa-dot-n">${n > 9 ? '9+' : n}</span>` : ''}</button>`;
     };
+    // Qo'ng'iroqcha raqami joyida yangilanadi (tugma almashtirilmaydi — fokus va ochuvchi saqlanadi).
+    function refreshBell() {
+        const n = g('getUnreadCount') ? getUnreadCount() : 0;
+        document.querySelectorAll('#saApp [data-sa-notif]').forEach(b => {
+            b.setAttribute('aria-label', `Bildirishnomalar${n ? ', ' + n + ' ta yangi' : ''}`);
+            let d = b.querySelector('.sa-dot-n');
+            if (!n) { d?.remove(); return; }
+            if (!d) { d = document.createElement('span'); d.className = 'sa-dot-n'; b.appendChild(d); }
+            d.textContent = n > 9 ? '9+' : String(n);
+        });
+    }
     const empty = (img, title, text, btn) => `<div class="sa-empty"><img src="images/empty/${img}.webp" alt="" width="104" height="104"><strong>${esc(title)}</strong><span>${esc(text)}</span>${btn || ''}</div>`;
 
     // ---------- ekranlar ----------
@@ -622,6 +633,7 @@
     function closeSheet(instant, fromPop) {
         if (!sheetEl) return;
         const el = sheetEl; sheetEl = null;
+        refreshBell();
         if (!fromPop || !instant) { const o = openSheet._opener; openSheet._opener = null; if (o && o.isConnected && o.focus) setTimeout(() => o.focus({ preventScroll: true }), 0); }
         if (instant) { el.remove(); return; }
         el.classList.add('is-out');
@@ -745,7 +757,8 @@
     }
     function openNotifSheet() {
         const list = notifList();
-        const unread = list.filter(n => !n.read).length;
+        const unread = g('getUnreadCount') ? getUnreadCount() : list.filter(n => !n.read).length;
+        refreshBell();
         const today = dayKey(Date.now());
         const tone = n => (/debt|qarz/i.test(n.type || n.cat || '') ? 'red' : /sla|follow|eslatma/i.test(n.type || n.kind || '') ? 'amber' : /trial|sinov/i.test(n.type || '') ? 'green' : 'blue');
         const icon = n => ({ red: 'debt', amber: 'clock', green: 'trial', blue: 'bell' }[tone(n)]);
@@ -971,7 +984,7 @@
         if ('saCrm' in d) return openCrm(d.saCrm);
         if ('saTrials' in d) { if (window.sotuvSinov?.open) { S.crmTab = 'menu'; S.stack.push({ screen: S.screen }); histPush('crm', false); S.screen = 'crm'; showApp(false); window.sotuvSinov.open({ lang: lang(), from: 'trials', onClose: () => back() }); syncNav(); } return; }
         if ('saNotif' in d) return openNotifSheet();
-        if ('saNread' in d) { if (g('markAllNotificationsRead')) markAllNotificationsRead(); openNotifSheet(); syncNav(); return; }
+        if ('saNread' in d) { if (g('markAllNotificationsRead')) markAllNotificationsRead(); openNotifSheet(); refreshBell(); syncNav(); return; }
         if ('saNitem' in d) return openNotifItem(d.saNitem);
         if ('saFilter' in d) return openFilterSheet();
         if ('saSrc' in d) { S.src = d.saSrc; closeSheet(); render(true); return; }
