@@ -2,7 +2,7 @@
 // "Domwork Team" Android ilovasiga push (FCM). Manba — xodim bildirishnomalari (staffNotify.collect): qo'ng'iroqcha
 // panelidagi va faqat push uchun hisoblanadigan voqealar. Har daqiqada har ilova o'rnatgan xodim uchun yangi
 // voqealar tekshiriladi va telefoniga yuboriladi (ilova yopiq bo'lsa ham keladi).
-// Sozlama: xodimning "Bildirishnomalar" sozlamasidagi brauzer/ilova (web) tanlovi; tinch soatlar hurmat qilinadi.
+// Sozlama: xodimning "Bildirishnomalar" sozlamasida Telegram yoki brauzer — birortasi yoqilgan bo'lsa telefonga ham keladi; tinch soatlar hurmat qilinadi.
 // Birinchi ulanishda (yoki uzilishdan keyin) mavjud voqealar "yuborilgan" deb belgilanadi — eski xabarlar to'planib kelmaydi.
 const fcm = require('./fcm');
 const N = require('./staffNotify');
@@ -94,7 +94,7 @@ async function pushUser(pool, userId, role, now) {
         for (const e of ev) {
             if (seen.has(e.id) || done.has(e.id)) continue; seen.add(e.id);
             if (Date.parse(e.at) > now.getTime() + 60000) continue; // vaqti hali kelmagan
-            if (prefs[e.type] && prefs[e.type].web === false) { skip.push(e.id); continue; }
+            if (prefs[e.type] && prefs[e.type].web === false && prefs[e.type].tg === false) { skip.push(e.id); continue; } // ikkala kanal o'chirilgan bo'lsagina
             if (quiet && !N.URGENT.has(e.type)) continue; // tinch soat tugagach (hali dolzarb bo'lsa)
             out.push(e);
         }

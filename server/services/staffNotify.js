@@ -66,6 +66,8 @@ const CATALOG = {
             ['guide_new', 'Yangi yo\'riqnoma', '', [0, 1], true]]]
     ],
     rop: [
+        ['Lidlar', [
+            ['lead_new', 'Yangi lid keldi — taqsimlash kerak', 'darhol · 30 daqiqada taqsimlanmasa qayta eslatiladi', [0, 1], true]]],
         ['Tasdiqlash kerak', [
             ['edit_request', 'Sotuv menejeri tahriri — tarif yoki ustoz', 'kutilayotgan so\'rovlar', [1, 1], true],
             ['payment_edit', 'To\'lov tahriri 24 soatdan keyin', 'admin ham ko\'radi · kim birinchi', [1, 1], true]]],
@@ -96,6 +98,19 @@ const CATALOG = {
             ['month_close', 'Oy yopildi — yakunni tasdiqlash kerak', '1–5-sana · yordamchi aloqalari', [1, 1], true],
             ['payment_overdue', 'To\'lov muddati o\'tdi', 'kuniga bir marta · qarzdorlar soni', [1, 0], true]]]
     ],
+    targetolog: [
+        ['Hisobot', [
+            ['target_report', 'Kechagi reklama hisoboti kiritilmagan', '10:00 va 15:00 da · kiritilmaguncha kabinet qulf', [0, 1], true, true]]],
+        ['Lid sifati', [
+            ['target_quality', 'Kechagi lidlar sifati', 'har kuni 11:00 da · sifatsiz ulushi bilan', [0, 1], true]]],
+        ['Boshqa', [['guide_new', 'Yangi yo\'riqnoma', '', [0, 1], true]]]
+    ],
+    hr: [
+        ['Nomzodlar', [
+            ['hr_candidate_new', 'Yangi nomzod keldi', 'bot orqali ariza tushganda', [0, 1], true],
+            ['hr_interview_soon', 'Suhbatga 1 soat qoldi', 'belgilangan suhbat vaqtidan oldin', [0, 1], true]]],
+        ['Boshqa', [['guide_new', 'Yangi yo\'riqnoma', '', [0, 1], true]]]
+    ],
     other: [['Boshqa', [['guide_new', 'Yangi yo\'riqnoma', '', [0, 1], true]]]]
 };
 // Panel o'zgarmaydi: Telegram tanlangan xabar ham panelda qoladi. Telegram — qo'shimcha kanal; bot ishlamasa yoki
@@ -115,8 +130,15 @@ async function telegramLive(db, userId) {
 }
 // Tinch soatlarda ham keladigan shoshilinch turlar.
 const URGENT = new Set(['hold_expiring', 'trial_confirm', 'trial_unassigned']);
+// Targetolog va HR — staffSettings'da "other" turidagi rollar; bildirishnoma katalogi akkaunt roliga qarab.
+function roleKind(me) {
+    if (me.kind !== 'other') return me.kind;
+    const r = me.user?.role;
+    return r === 'targetolog' ? 'targetolog' : r === 'hr' ? 'hr' : 'other';
+}
 function catalogFor(me) {
-    const kinds = me.kind === 'teacher' && me.assistantDuty ? ['teacher', 'assistant'] : [me.kind in CATALOG ? me.kind : 'other'];
+    const rk = roleKind(me);
+    const kinds = me.kind === 'teacher' && me.assistantDuty ? ['teacher', 'assistant'] : [rk in CATALOG ? rk : 'other'];
     const seen = new Set(), groups = [];
     for (const [n, k] of kinds.entries()) for (const [title, items] of CATALOG[k]) {
         const list = items.filter(i => !seen.has(i[0])).map(([key, label, sub, d, live, locked]) => { seen.add(key); return { key, label, sub, tg: !!d[0], web: !!d[1], live: !!live, locked: !!locked }; });
@@ -620,6 +642,70 @@ async function managerEvents(db, me, now, ev) {
     }
 }
 
+// ROP: taqsimlanmagan yangi lidlar (o'z tili bo'yicha). Push uchun — panelda lidlar kanbanida allaqachon ko'rinadi.
+async function ropLeadEvents(db, me, now, ev) {
+    const langs = me.lang === 'english' || me.lang === 'russian' ? [me.lang] : ['english', 'russian'];
+    const rows = (await db.query(`SELECT id, name, status, language, source, extra_data, created_at FROM leads
+        WHERE deleted_at IS NULL AND COALESCE(manager_id,'')='' AND language = ANY($1::text[]) AND created_at > $2`,
+        [langs, new Date(now.getTime() - 86400000)])).rows;
+    for (const r of rows) {
+        if (leadWf.canonicalStatus(r.status) !== 'yangi-lidlar') continue;
+        if (parseExtra(r.extra_data).recoveryPending === true) continue;
+        const t = tsOf(r.created_at), name = String(r.name || 'Mijoz').trim(), src = String(r.source || '').trim();
+        ev.push({ id: `lnew:${r.id}`, type: 'lead_new', cat: 'lid', tone: 'info', pushOnly: true, title: 'Yangi lid keldi — taqsimlang',
+            sub: [name, src, r.language === 'russian' ? 'rus tili' : 'ingliz tili'].filter(Boolean).join(' · '), at: iso(t), go: { tab: 'sales' } });
+        if (now.getTime() - t >= 30 * 60000)
+            ev.push({ id: `lnew30:${r.id}`, type: 'lead_new', cat: 'lid', tone: 'warn', pushOnly: true, title: '30 daqiqadan beri taqsimlanmagan lid',
+                sub: `${name} · menejerga biriktiring — lid soviyapti`, at: iso(t + 30 * 60000), go: { tab: 'sales' } });
+    }
+}
+
+// Targetolog: kechagi hisobot (kiritilmaguncha kabinet qulf) va kechagi target lidlar sifati.
+async function targetEvents(db, me, now, ev) {
+    const TA = require('./targetAds');
+    const { date: today, min } = T.nowLocal(now);
+    try {
+        const st = await TA.status(db, { id: me.user.id });
+        if (st.locked && st.missing.length) {
+            const sub = `${st.missing.length === 1 ? 'Kechagi kun' : st.missing.length + ' kun'} kiritilmagan · kiritmaguningizcha kabinet qulf`;
+            if (min >= 10 * 60) ev.push({ id: `tr:${today}`, type: 'target_report', cat: 'boshqa', tone: 'bad', title: 'Kechagi reklama hisobotini kiriting', sub, at: atLocal(today, 10 * 60), go: { tab: 'report' } });
+            if (min >= 15 * 60) ev.push({ id: `tr2:${today}`, type: 'target_report', cat: 'boshqa', tone: 'bad', title: 'Hisobot hali kiritilmagan', sub, at: atLocal(today, 15 * 60), go: { tab: 'report' } });
+        }
+    } catch (e) { if (e.status !== 403) throw e; }
+    if (min < 11 * 60) return;
+    const langs = await TA.targetologLangs(db, me.user);
+    if (!langs || !langs.length) return;
+    const yday = T.addDays(today, -1);
+    const rows = (await db.query(`SELECT status FROM leads WHERE deleted_at IS NULL AND lead_type='target' AND language = ANY($1::text[])
+        AND created_at >= $2 AND created_at < $3`, [langs, atLocal(yday, 0), atLocal(today, 0)])).rows;
+    const n = rows.length, bad = rows.filter(r => leadWf.canonicalStatus(r.status) === 'sifatsiz-lidlar').length;
+    const pct = n ? Math.round(bad / n * 100) : 0;
+    ev.push(n ? { id: `tq:${today}`, type: 'target_quality', cat: 'boshqa', tone: pct >= 30 ? 'bad' : 'ok', title: `Kecha ${n} ta lid · sifatsiz ${pct}%`,
+        sub: `Sifatli: ${n - bad} · sifatsiz: ${bad} (hozircha)${pct >= 30 ? ' — kreativ va auditoriyani tekshiring' : ''}`, at: atLocal(today, 11 * 60), go: { tab: 'stats' } }
+        : { id: `tq:${today}`, type: 'target_quality', cat: 'boshqa', tone: 'warn', title: 'Kecha target lid kelmadi', sub: 'Reklama kabinetini tekshiring', at: atLocal(today, 11 * 60), go: { tab: 'stats' } });
+}
+
+// HR: yangi nomzodlar (o'z til yo'nalishi bo'yicha) va 1 soatdan keyingi suhbatlar.
+async function hrEvents(db, me, now, ev) {
+    const HS = require('./hrStages');
+    const lang = me.emp?.lang, langs = !me.emp || me.emp.status === 'inactive' ? [] : lang === 'both' ? ['english', 'russian'] : lang === 'russian' ? ['russian'] : ['english'];
+    if (!langs.length) return;
+    const rows = (await db.query(`SELECT id, full_name, vacancy_id, vacancy_name, stage, interview_at, interview_location, created_at FROM hr_candidates
+        WHERE created_at > $1 OR (interview_at BETWEEN $2 AND $3)`, [new Date(now.getTime() - 2 * 86400000), now, new Date(now.getTime() + 61 * 60000)])).rows;
+    for (const r of rows) {
+        if (!HS.candidateVisible({ vacancyId: r.vacancy_id }, langs)) continue;
+        const name = String(r.full_name || 'Nomzod').trim();
+        const created = tsOf(r.created_at);
+        if (created && now.getTime() - created < 2 * 86400000)
+            ev.push({ id: `hrc:${r.id}`, type: 'hr_candidate_new', cat: 'boshqa', tone: 'info', title: `Yangi nomzod: ${first(name)}`,
+                sub: [r.vacancy_name, 'tezroq bog\'laning'].filter(Boolean).join(' · '), at: iso(created), go: { tab: 'candidates' } });
+        const iv = tsOf(r.interview_at);
+        if (iv && iv > now.getTime() && iv - 60 * 60000 <= now.getTime())
+            ev.push({ id: `hri:${r.id}:${iv}`, type: 'hr_interview_soon', cat: 'boshqa', tone: 'warn', title: 'Suhbatga 1 soat qoldi',
+                sub: [name, T.fromMin(T.nowLocal(new Date(iv)).min), r.interview_location].filter(Boolean).join(' · '), at: iso(iv - 60 * 60000), go: { tab: 'candidates' } });
+    }
+}
+
 async function guideEvents(db, me, now, ev) {
     const acked = new Set((await db.query('SELECT guide_id FROM staff_guide_acks WHERE user_id=$1', [me.user.id])).rows.map(r => r.guide_id));
     for (const g of await ST.myGuides(db, me)) {
@@ -647,6 +733,9 @@ async function collect(db, actor, now) {
     if ((me.kind === 'teacher' || me.kind === 'assistant') && me.emp) await run('common', teacherCommon);
     if (me.kind === 'sales') await run('sales', salesEvents);
     if (me.kind === 'admin' || me.kind === 'rop') await run('manager', managerEvents);
+    if (me.kind === 'rop') await run('ropleads', ropLeadEvents);
+    if (roleKind(me) === 'targetolog') await run('target', targetEvents);
+    if (roleKind(me) === 'hr') await run('hr', hrEvents);
     await run('guides', guideEvents);
     return { me, row, prefs, ev, errors };
 }
