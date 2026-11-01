@@ -237,7 +237,7 @@ body.ra-on .modal-overlay > .modal .modal-footer .btn { min-height: 48px; }
 .ra-who.is-admin { background: var(--sa-green-t); color: var(--sa-green); }
 .ra-apd { padding-bottom: 110px; }
 .ra-stu { display: flex; align-items: center; gap: 14px; padding: 14px; }
-.ra-stu > span { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ra-stu > span:not(.sa-av) { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .ra-stu strong { font-size: 18px; font-weight: 800; }
 .ra-stu em { font-style: normal; font-size: 13px; color: var(--sa-mut); line-height: 1.4; }
 .ra-chg { padding: 12px 14px; display: flex; flex-direction: column; }
@@ -260,7 +260,7 @@ body.ra-on .modal-overlay > .modal .modal-footer .btn { min-height: 48px; }
 .ra-imp i { flex: none; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; color: #FFFFFF; background: #12B76A; }
 .ra-imp.is-warn i { background: #F79009; } .ra-imp.is-bad i { background: #D92D20; }
 .ra-decided { display: flex; align-items: center; gap: 12px; padding: 12px 14px; }
-.ra-decided > span { display: flex; flex-direction: column; gap: 2px; }
+.ra-decided > span:not(.sa-av) { display: flex; flex-direction: column; gap: 2px; }
 .ra-decided strong { font-size: 14px; }
 .ra-decided em { font-style: normal; font-size: 12px; color: var(--sa-mut); }
 .ra-apbar { gap: 8px; flex-wrap: wrap; }

@@ -8783,8 +8783,8 @@ function renderRopHome(user, students, leads, now = new Date()) {
             <div class="rpx-esc-main"><strong>${escapeHtml(lead.name || 'Lid')}</strong>
                 <span class="mhx-sub">${escapeHtml(shortPersonName(getLeadSlaManagerName(lead) || '—'))} · ${ago(a.time)}</span></div>
             <div class="rpx-actions">
-                <button type="button" class="mhx-btn rpx-icon" data-rpx-open="${escapeHtml(a.leadId)}" data-lang="${escapeHtml(a.leadLang || '')}" title="Lidni ochish" aria-label="Lidni ochish"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg></button>
-                <button type="button" class="btn-primary-sm" data-rop-esc-lead="${escapeHtml(a.leadId)}" data-lang="${escapeHtml(a.leadLang || '')}">Koʻrildi</button>
+                <button type="button" class="mhx-btn rpx-icon" data-rpx-open="${escapeHtml(a.leadId)}" data-lead-lang="${escapeHtml(a.leadLang || '')}" title="Lidni ochish" aria-label="Lidni ochish"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg></button>
+                <button type="button" class="btn-primary-sm" data-rop-esc-lead="${escapeHtml(a.leadId)}" data-lead-lang="${escapeHtml(a.leadLang || '')}">Koʻrildi</button>
             </div>
         </li>`;
     }).join('');
@@ -8834,8 +8834,8 @@ function renderRopHome(user, students, leads, now = new Date()) {
 }
 
 function bindRopHome(container, user) {
-    container.querySelectorAll('[data-rop-esc-lead]').forEach(btn => btn.addEventListener('click', () => openLeadNotifyModal(btn.dataset.lang || user?.linkedRopLang || 'english', btn.dataset.ropEscLead)));
-    container.querySelectorAll('[data-rpx-open]').forEach(btn => btn.addEventListener('click', () => openLeadOverview(btn.dataset.lang || user?.linkedRopLang || 'english', btn.dataset.rpxOpen)));
+    container.querySelectorAll('[data-rop-esc-lead]').forEach(btn => btn.addEventListener('click', () => openLeadNotifyModal(btn.dataset.leadLang || user?.linkedRopLang || 'english', btn.dataset.ropEscLead)));
+    container.querySelectorAll('[data-rpx-open]').forEach(btn => btn.addEventListener('click', () => openLeadOverview(btn.dataset.leadLang || user?.linkedRopLang || 'english', btn.dataset.rpxOpen)));
     container.querySelectorAll('[data-rpx-go]').forEach(btn => btn.addEventListener('click', () => {
         switchTab('sales');
         switchSalesSection(btn.dataset.rpxGo);

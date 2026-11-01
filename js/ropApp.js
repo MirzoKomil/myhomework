@@ -378,7 +378,7 @@
         ${q ? '' : `<div class="sa-hint"><span>${rows.length ? esc(hint) : 'Bu menejerda shu bosqichda lid yoʻq'}</span><span>${red ? `<b>${red} tasi</b> kechikkan` : ''}</span></div>`}
         <div class="sa-body sa-rows">
           ${rows.length ? rows.map(({ l, b }, i) => `
-            <button type="button" class="sa-lrow ra-lrow" style="--i:${Math.min(i, 10)}" data-ra-lead="${esc(l.id)}" data-lang="${l._lang}">
+            <button type="button" class="sa-lrow ra-lrow" style="--i:${Math.min(i, 10)}" data-ra-lead="${esc(l.id)}" data-ll="${l._lang}">
               <span class="sa-row-t"><strong>${esc(l.name || 'Nomaʼlum')}</strong><span>${q ? esc(SHORT[st(l)] || '') + ' · ' : ''}${esc(metaLine(l))}</span>${pill(b.text, b.tone)}</span>
               <span class="ra-lrow-m">${l.managerId ? staffImg(l.managerId, mgrName(l.managerId), 34) : `<span class="ra-noman">${ic('userplus', 16, 2.2)}</span>`}<em>${esc(l.managerId ? firstName(mgrName(l.managerId)) || 'Menejer' : 'yoʻq')}</em></span>
             </button>`).join('') : empty('board', q ? 'Topilmadi' : `“${SHORT[S.stage] || colLabel(S.stage)}” bosqichi boʻsh`, q ? 'Ism yoki raqamni tekshirib koʻring' : 'Bu bosqichda hozircha lid yoʻq')}
@@ -488,10 +488,10 @@
             const tg = l.managerId ? mgrTg(l.managerId) : '';
             const sub = `${firstName(m) || 'Menejersiz'} · ${SHORT[st(l)] || colLabel(st(l))}`;
             const lt = left > 0 ? dur(left) : 'adminga ketdi';
-            if (!big) return `<article class="sa-card ra-sla ra-sla--s">${staffImg(l.managerId, m, 40)}<span class="sa-row-t"><button type="button" class="ra-link-t" data-ra-lead="${esc(l.id)}" data-lang="${l._lang}"><strong>${esc(l.name)}</strong></button><span>${esc(sub)}</span><em class="is-red">${esc(durLong(since))} · qoida ${esc(ruleTxt(r?.after || 0))}</em></span><button type="button" class="sa-btn sa-btn--outline sa-btn--sm" data-ra-ack="${esc(a.leadId)}" data-lang="${a.leadLang}">Koʻrildi</button></article>`;
-            return `<article class="sa-card ra-sla${left < 6 * 3600000 ? ' is-hot' : ''}"><div class="ra-sla-h">${staffImg(l.managerId, m, 40)}<span class="sa-row-t"><button type="button" class="ra-link-t" data-ra-lead="${esc(l.id)}" data-lang="${l._lang}"><strong>${esc(l.name)}</strong></button><span>${esc(sub)}</span></span>${pill(lt, left < 6 * 3600000 ? 'redsolid' : 'amber')}</div>
+            if (!big) return `<article class="sa-card ra-sla ra-sla--s">${staffImg(l.managerId, m, 40)}<span class="sa-row-t"><button type="button" class="ra-link-t" data-ra-lead="${esc(l.id)}" data-ll="${l._lang}"><strong>${esc(l.name)}</strong></button><span>${esc(sub)}</span><em class="is-red">${esc(durLong(since))} · qoida ${esc(ruleTxt(r?.after || 0))}</em></span><button type="button" class="sa-btn sa-btn--outline sa-btn--sm" data-ra-ack="${esc(a.leadId)}" data-ll="${a.leadLang}">Koʻrildi</button></article>`;
+            return `<article class="sa-card ra-sla${left < 6 * 3600000 ? ' is-hot' : ''}"><div class="ra-sla-h">${staffImg(l.managerId, m, 40)}<span class="sa-row-t"><button type="button" class="ra-link-t" data-ra-lead="${esc(l.id)}" data-ll="${l._lang}"><strong>${esc(l.name)}</strong></button><span>${esc(sub)}</span></span>${pill(lt, left < 6 * 3600000 ? 'redsolid' : 'amber')}</div>
               <div class="ra-sla-p">${pill('Qoida: ' + ruleTxt(r?.after || 0), 'gray')}${pill('Turibdi: ' + durLong(since), 'red')}</div>
-              <div class="ra-sla-a">${tg ? `<a class="sa-btn sa-btn--outline" href="${esc(tg)}" target="_blank" rel="noopener">${ic('tg', 16, 2.2)}${esc(firstName(m))}ga yozish</a>` : ''}<button type="button" class="sa-btn sa-btn--primary" data-ra-ack="${esc(a.leadId)}" data-lang="${a.leadLang}">Koʻrildi</button></div></article>`;
+              <div class="ra-sla-a">${tg ? `<a class="sa-btn sa-btn--outline" href="${esc(tg)}" target="_blank" rel="noopener">${ic('tg', 16, 2.2)}${esc(firstName(m))}ga yozish</a>` : ''}<button type="button" class="sa-btn sa-btn--primary" data-ra-ack="${esc(a.leadId)}" data-ll="${a.leadLang}">Koʻrildi</button></div></article>`;
         };
         return `
         ${topBack('SLA oʻtgan lidlar', `${list.length} ta · “Koʻrildi” bosilmasa 24 soatda adminga oʻtadi`)}
@@ -709,16 +709,16 @@
             const mg = firstName(mgrName(x.lead.managerId)), tn = firstName(person(x.req.teacherId)?.name);
             const rem = x.lead.trialRopReminder && x.lead.trialRopReminder.requestId === x.req.id && now - (parseT(x.lead.trialRopReminder.at) || 0) < 2 * 3600000;
             const M = {
-                teacher: ['ustozsiz', 'red', `${mg ? mg + ' qoʻydi' : 'Menejersiz'}${x.ph === 'rejected' ? ' · ' + (tn || 'ustoz') + ' rad etdi' : ''}`, `<button type="button" class="sa-btn sa-btn--primary sa-btn--sm" data-ra-tassign="${esc(x.lead.id)}" data-lang="${x.lead._lang}">Ustoz berish</button>`],
-                wait: ['kutilmoqda', 'amber', `Ustoz ${tn} ${dur(now - (parseT(x.req.requestedAt) || now))} tasdiqlamadi`, rem ? pill('Eslatildi', 'blue') : `<button type="button" class="sa-btn sa-btn--outline sa-btn--sm" data-ra-tremind="${esc(x.lead.id)}" data-lang="${x.lead._lang}">Eslatish</button>`],
-                result: ['natija yoʻq', 'amber', `Ustoz ${tn} natijani yozmagan`, rem ? pill('Eslatildi', 'blue') : `<button type="button" class="sa-btn sa-btn--outline sa-btn--sm" data-ra-tremind="${esc(x.lead.id)}" data-lang="${x.lead._lang}">Eslatish</button>`],
-                manager: ['natija yoʻq', 'amber', `Keldi · ${mg || 'menejer'} natija kiritmagan`, mgrTg(x.lead.managerId) ? `<a class="sa-btn sa-btn--outline sa-btn--sm" href="${esc(mgrTg(x.lead.managerId))}" target="_blank" rel="noopener">Yozish</a>` : `<button type="button" class="sa-btn sa-btn--outline sa-btn--sm" data-ra-lead="${esc(x.lead.id)}" data-lang="${x.lead._lang}">Ochish</button>`]
+                teacher: ['ustozsiz', 'red', `${mg ? mg + ' qoʻydi' : 'Menejersiz'}${x.ph === 'rejected' ? ' · ' + (tn || 'ustoz') + ' rad etdi' : ''}`, `<button type="button" class="sa-btn sa-btn--primary sa-btn--sm" data-ra-tassign="${esc(x.lead.id)}" data-ll="${x.lead._lang}">Ustoz berish</button>`],
+                wait: ['kutilmoqda', 'amber', `Ustoz ${tn} ${dur(now - (parseT(x.req.requestedAt) || now))} tasdiqlamadi`, rem ? pill('Eslatildi', 'blue') : `<button type="button" class="sa-btn sa-btn--outline sa-btn--sm" data-ra-tremind="${esc(x.lead.id)}" data-ll="${x.lead._lang}">Eslatish</button>`],
+                result: ['natija yoʻq', 'amber', `Ustoz ${tn} natijani yozmagan`, rem ? pill('Eslatildi', 'blue') : `<button type="button" class="sa-btn sa-btn--outline sa-btn--sm" data-ra-tremind="${esc(x.lead.id)}" data-ll="${x.lead._lang}">Eslatish</button>`],
+                manager: ['natija yoʻq', 'amber', `Keldi · ${mg || 'menejer'} natija kiritmagan`, mgrTg(x.lead.managerId) ? `<a class="sa-btn sa-btn--outline sa-btn--sm" href="${esc(mgrTg(x.lead.managerId))}" target="_blank" rel="noopener">Yozish</a>` : `<button type="button" class="sa-btn sa-btn--outline sa-btn--sm" data-ra-lead="${esc(x.lead.id)}" data-ll="${x.lead._lang}">Ochish</button>`]
             }[kind];
-            return `<article class="ra-tint is-${M[1]}"><span class="ra-tt"><strong>${x.at ? (x.at.date === day ? hmm(x.at.min) : x.at.date < t0 ? 'Kecha' : 'Ertaga') : '—'}</strong><em class="is-${M[1]}">${M[0]}</em></span><button type="button" class="sa-row-t ra-link-t" data-ra-lead="${esc(x.lead.id)}" data-lang="${x.lead._lang}"><strong>${esc(x.lead.name)}</strong><span>${esc(M[2])}</span></button>${M[3]}</article>`;
+            return `<article class="ra-tint is-${M[1]}"><span class="ra-tt"><strong>${x.at ? (x.at.date === day ? hmm(x.at.min) : x.at.date < t0 ? 'Kecha' : 'Ertaga') : '—'}</strong><em class="is-${M[1]}">${M[0]}</em></span><button type="button" class="sa-row-t ra-link-t" data-ra-lead="${esc(x.lead.id)}" data-ll="${x.lead._lang}"><strong>${esc(x.lead.name)}</strong><span>${esc(M[2])}</span></button>${M[3]}</article>`;
         };
         const lRow = r => r.b
             ? `<div class="ra-tl"><span class="ra-tt"><strong>${hmm(r.b.start)}</strong></span><span class="sa-row-t"><strong>Ustoz ${esc(firstName(r.b.t))} · tanaffus</strong><span>${hmm(r.b.start)}–${hmm(r.b.end)}${r.b.reason ? ' · sabab: ' + esc(r.b.reason) : ''}</span></span><span class="ra-brk">tanaffus</span></div>`
-            : `<div class="ra-tl"><span class="ra-tt"><strong>${hmm(r.x.at.min)}</strong></span><button type="button" class="sa-row-t ra-link-t" data-ra-lead="${esc(r.x.lead.id)}" data-lang="${r.x.lead._lang}"><strong>${esc(r.x.lead.name)}</strong><span>Ustoz ${esc(firstName(person(r.x.req.teacherId)?.name) || '—')} · ${r.x.ph === 'accepted' ? 'tasdiqlandi' : 'tasdiq kutilmoqda'}</span></button><button type="button" class="sa-icon-btn" data-ra-tmore="${esc(r.x.lead.id)}" data-lang="${r.x.lead._lang}" aria-label="${esc(r.x.lead.name)} — amallar">${ic('dots', 20, 2.4)}</button></div>`;
+            : `<div class="ra-tl"><span class="ra-tt"><strong>${hmm(r.x.at.min)}</strong></span><button type="button" class="sa-row-t ra-link-t" data-ra-lead="${esc(r.x.lead.id)}" data-ll="${r.x.lead._lang}"><strong>${esc(r.x.lead.name)}</strong><span>Ustoz ${esc(firstName(person(r.x.req.teacherId)?.name) || '—')} · ${r.x.ph === 'accepted' ? 'tasdiqlandi' : 'tasdiq kutilmoqda'}</span></button><button type="button" class="sa-icon-btn" data-ra-tmore="${esc(r.x.lead.id)}" data-ll="${r.x.lead._lang}" aria-label="${esc(r.x.lead.name)} — amallar">${ic('dots', 20, 2.4)}</button></div>`;
         return `
         <header class="sa-top sa-top--leads ra-trtop">
           <div class="sa-top-row"><h1>Jadval</h1>${seg([['today', 'Bugun'], ['tomorrow', `Ertaga${tomorrowN ? ' · ' + tomorrowN : ''}`]], S.trDay, 'ra-trday', 'Kun')}</div>
@@ -799,7 +799,7 @@
           <div class="ra-mopts" role="radiogroup" aria-label="Ustoz" data-ra-tabody></div>
           <button type="button" class="sa-btn sa-btn--primary sa-cr-save" data-ra-tasave disabled>Yuklanmoqda…</button>
           <p class="sa-sh-foot">Ustoz qabul qilmaguncha uning ilovasi kutadi · 45 daqda javob boʻlmasa sizga xabar keladi</p>
-          <div class="ra-two-btn"><button type="button" class="sa-btn sa-btn--outline" data-ra-tresched="${esc(id)}" data-lang="${x.lead._lang}">Boshqa vaqt kelishish</button><button type="button" class="sa-btn sa-btn--outline" data-ra-tadmin="${esc(id)}" data-lang="${x.lead._lang}">Admin soat ochsin</button></div>`, 'ra-sheet');
+          <div class="ra-two-btn"><button type="button" class="sa-btn sa-btn--outline" data-ra-tresched="${esc(id)}" data-ll="${x.lead._lang}">Boshqa vaqt kelishish</button><button type="button" class="sa-btn sa-btn--outline" data-ra-tadmin="${esc(id)}" data-ll="${x.lead._lang}">Admin soat ochsin</button></div>`, 'ra-sheet');
         draw(null);
         if (base) draw(await schedFor(base.date));
     }
@@ -829,10 +829,10 @@
     function openTrialMore(id, lg) {
         const x = trialOf(id, lg); if (!x) return;
         openSheet(`<div class="sa-sh-h"><div><h2>${esc(x.lead.name)}</h2><span>${x.at ? hmm(x.at.min) : ''} · Ustoz ${esc(firstName(person(x.req.teacherId)?.name) || '—')}</span></div><button type="button" class="sa-icon-btn ra-x" data-ra-sheetclose aria-label="Yopish">${ic('close', 18, 2.4)}</button></div>
-          <div class="sa-opts2"><button type="button" class="sa-opt2" data-ra-lead="${esc(id)}" data-lang="${x.lead._lang}">Lid kartasini ochish${ic('chev', 18, 2.4)}</button>
-          <button type="button" class="sa-opt2" data-ra-tresched="${esc(id)}" data-lang="${x.lead._lang}">Boshqa vaqtga koʻchirish${ic('chev', 18, 2.4)}</button>
-          <button type="button" class="sa-opt2" data-ra-tremind="${esc(id)}" data-lang="${x.lead._lang}">Ustozga eslatish${ic('chev', 18, 2.4)}</button>
-          <button type="button" class="sa-opt2 ra-danger" data-ra-tcancel="${esc(id)}" data-lang="${x.lead._lang}">Sinovni bekor qilish${ic('chev', 18, 2.4)}</button></div>`, 'ra-sheet');
+          <div class="sa-opts2"><button type="button" class="sa-opt2" data-ra-lead="${esc(id)}" data-ll="${x.lead._lang}">Lid kartasini ochish${ic('chev', 18, 2.4)}</button>
+          <button type="button" class="sa-opt2" data-ra-tresched="${esc(id)}" data-ll="${x.lead._lang}">Boshqa vaqtga koʻchirish${ic('chev', 18, 2.4)}</button>
+          <button type="button" class="sa-opt2" data-ra-tremind="${esc(id)}" data-ll="${x.lead._lang}">Ustozga eslatish${ic('chev', 18, 2.4)}</button>
+          <button type="button" class="sa-opt2 ra-danger" data-ra-tcancel="${esc(id)}" data-ll="${x.lead._lang}">Sinovni bekor qilish${ic('chev', 18, 2.4)}</button></div>`, 'ra-sheet');
     }
     function openTrialCancel(id, lg) {
         const x = trialOf(id, lg); if (!x) return;
@@ -840,7 +840,7 @@
         const rs = ['Lid oʻzi soʻradi', 'Ustoz qatnasha olmaydi', 'Notoʻgʻri qoʻyilgan', 'Boshqa (izoh bilan)'];
         const tn = firstName(person(x.req.teacherId)?.name), mg = firstName(mgrName(x.lead.managerId));
         openSheet(`<div class="sa-sh-h"><div><h2>Sinovni bekor qilasizmi?</h2><span>${esc(x.lead.name)} · ${x.at ? (x.at.date === tToday() ? 'bugun' : 'ertaga') + ' ' + hmm(x.at.min) : ''}${tn ? ' · Ustoz ' + esc(tn) : ''}${mg ? ' · ' + esc(mg) + ' qoʻygan' : ''}</span></div><button type="button" class="sa-icon-btn ra-x" data-ra-sheetclose aria-label="Yopish">${ic('close', 18, 2.4)}</button></div>
-          <button type="button" class="ra-info ra-info--btn" data-ra-tresched="${esc(id)}" data-lang="${x.lead._lang}">${ic('redo', 20, 2.2)}<span>Bekor qilish oʻrniga boshqa vaqtga koʻchirish (bugun yoki ertaga)</span>${ic('chev', 18, 2.4)}</button>
+          <button type="button" class="ra-info ra-info--btn" data-ra-tresched="${esc(id)}" data-ll="${x.lead._lang}">${ic('redo', 20, 2.2)}<span>Bekor qilish oʻrniga boshqa vaqtga koʻchirish (bugun yoki ertaga)</span>${ic('chev', 18, 2.4)}</button>
           <div class="sa-fld"><span>Sabab · <b class="is-red">majburiy</b></span><div class="sa-qchips">${rs.map(t => `<button type="button" class="sa-qchip ra-qchip" aria-pressed="false" data-ra-tcr="${esc(t)}">${esc(t)}</button>`).join('')}</div></div>
           <div class="sa-fld"><span>Izoh</span><textarea id="raTcNote" rows="2" maxlength="400" placeholder="Ixtiyoriy — “Boshqa”da majburiy"></textarea></div>
           <button type="button" class="sa-btn ra-btn-redsolid sa-cr-save" data-ra-tcsave disabled>Sinovni bekor qilish</button>
@@ -1045,7 +1045,7 @@
         <div class="sa-body">
           ${!e || (e.loading && !e.items) ? '<div class="sa-sk" style="height:70px"></div>'.repeat(3)
             : e.err ? `<div class="sa-err">${ic('x', 18)}<span>Arxivni yuklab boʻlmadi</span><button type="button" class="sa-btn sa-btn--outline sa-btn--sm" data-ra-arreload>Qayta urinish</button></div>`
-            : e.items.length ? e.items.map((it, i) => `<article class="sa-card ra-arc" style="--i:${Math.min(i, 8)}"><span class="sa-row-t"><strong>${esc(it.title || '—')}</strong><span>Oʻchirdi: ${esc(it.deletedBy === me.name ? 'siz' : firstName(it.deletedBy) || 'tizim')} · ${it.deletedAt ? esc(shortDate(parseT(it.deletedAt))) : ''} · ${it.reason ? '“' + esc(it.reason) + '”' : 'sababsiz'}</span></span>${it.restorable !== false ? `<button type="button" class="sa-btn sa-btn--outline sa-btn--sm" data-ra-restore="${esc(it.id)}" data-type="${esc(it.type)}" data-eid="${esc(it.entityId || '')}" data-lang="${esc(it.lang || '')}">Tiklash</button>` : ''}</article>`).join('')
+            : e.items.length ? e.items.map((it, i) => `<article class="sa-card ra-arc" style="--i:${Math.min(i, 8)}"><span class="sa-row-t"><strong>${esc(it.title || '—')}</strong><span>Oʻchirdi: ${esc(it.deletedBy === me.name ? 'siz' : firstName(it.deletedBy) || 'tizim')} · ${it.deletedAt ? esc(shortDate(parseT(it.deletedAt))) : ''} · ${it.reason ? '“' + esc(it.reason) + '”' : 'sababsiz'}</span></span>${it.restorable !== false ? `<button type="button" class="sa-btn sa-btn--outline sa-btn--sm" data-ra-restore="${esc(it.id)}" data-type="${esc(it.type)}" data-eid="${esc(it.entityId || '')}" data-ll="${esc(it.lang || '')}">Tiklash</button>` : ''}</article>`).join('')
             : empty('board', 'Arxiv boʻsh', 'Oʻchirilgan yozuvlar shu yerda saqlanadi')}
           ${tab === 'lead' ? `<div class="ra-info">${ic('info', 18, 2.2)}<span>Tiklangan lid oʻchirgan menejerga emas, “biriktirilmagan”ga qaytadi — keyin taqsimlaysiz.</span></div>` : ''}
         </div>`;
@@ -1057,7 +1057,7 @@
             if (g('reloadStateFromApi')) await reloadStateFromApi().catch(() => {});
             if (b.dataset.type === 'lead' && b.dataset.eid) {
                 // Tiklangan lid "biriktirilmagan"ga — ROP qayta taqsimlaydi (dizayn qoidasi).
-                const lg = b.dataset.lang === 'russian' ? 'russian' : 'english';
+                const lg = b.dataset.ll === 'russian' ? 'russian' : 'english';
                 const l = leadById(b.dataset.eid, lg);
                 if (l?.managerId && g('updateLeadInStorage')) updateLeadInStorage(lg, l.id, x => ({ ...x, managerId: '' }));
             }
@@ -1336,7 +1336,7 @@
             const hit = ALL().find(l => String(l.phone || '').replace(/\D/g, '').slice(-9) === key);
             const d = dups[0], box = sheetEl.querySelector('[data-ra-dup]');
             box.hidden = false;
-            box.innerHTML = `${ic('warn', 20, 2.2)}<span><strong>Bu raqam bazada bor:</strong> ${esc(shortName(d.name))} · ${esc(d.extra || d.kind)}</span>${hit ? `<button type="button" class="sa-link" data-ra-lead="${esc(hit.id)}" data-lang="${hit._lang}">Ochish</button>` : ''}`;
+            box.innerHTML = `${ic('warn', 20, 2.2)}<span><strong>Bu raqam bazada bor:</strong> ${esc(shortName(d.name))} · ${esc(d.extra || d.kind)}</span>${hit ? `<button type="button" class="sa-link" data-ra-lead="${esc(hit.id)}" data-ll="${hit._lang}">Ochish</button>` : ''}`;
             sheetEl.querySelector('[data-ra-phbox]').classList.add('is-warn');
             la.dupOk = phone;
             sheetEl.querySelector('[data-ra-lasave]').textContent = 'Baribir yangi lid qilib qoʻshish';
@@ -1548,7 +1548,7 @@
         if ('raGo' in d) { if (d.raGo === 'approvals') S.apTab = 'pending'; return go(d.raGo); }
         if ('raNav' in d) return go(d.raNav, { reset: true });
         if ('raBack' in d) { if (!back()) go('home', { reset: true }); return; }
-        if ('raLead' in d) return openLead(d.raLead, d.lang);
+        if ('raLead' in d) return openLead(d.raLead, d.ll);
         if ('raMan' in d) { S.man = d.raMan; render(true); return; }
         if ('raStage' in d) { S.stage = d.raStage; render(true); root.querySelector('.sa-chip.is-on')?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: reduceMotion() ? 'auto' : 'smooth' }); return; }
         if ('raClearq' in d) { S.q = ''; render(true); return; }
@@ -1575,7 +1575,7 @@
         if ('raAssigngo' in d) { const as = S.as; if (!as) return; return doAssign(as.ids.map(id => ({ lang: as.lg, id, managerId: as.pick }))); }
         if ('raRsr' in d) { S.rs.reason = S.rs.reason === d.raRsr ? '' : d.raRsr; sheetEl.querySelectorAll('[data-ra-rsr]').forEach(b => { const on = b.dataset.raRsr === S.rs.reason; b.classList.toggle('is-on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); }); return; }
         if ('raRsgo' in d) return doReassign();
-        if ('raAck' in d) return ackSla(d.raAck, d.lang);
+        if ('raAck' in d) return ackSla(d.raAck, d.ll);
         if ('raAptab' in d) { S.apTab = d.raAptab; render(true); return; }
         if ('raAp' in d) { S.apId = d.raAp; return go('approval'); }
         if ('raApreload' in d) { loadApprovals(true); return; }
@@ -1588,14 +1588,14 @@
         if ('raTrday' in d) { S.trDay = d.raTrday; render(true); return; }
         if ('raTrseg' in d) { if (d.raTrseg === 'trial') return openTrialPage({ lang: LANGS()[0] }); if (d.raTrseg === 'lessons') return openCrm('timetable'); return; }
         if ('raTrialnew' in d) return openTrialPage({ lang: LANGS()[0] });
-        if ('raTassign' in d) return openTrialAssign(d.raTassign, d.lang);
+        if ('raTassign' in d) return openTrialAssign(d.raTassign, d.ll);
         if ('raTapick' in d) { S.ta.pick = d.raTapick; const e2 = S.sched[(trialOf(S.ta.id, S.ta.lg)?.at || {}).date]; if (e2) S.ta.draw(e2); return; }
         if ('raTasave' in d) return saveTrialAssign();
-        if ('raTremind' in d) { closeSheet(true); return ropRemind(trialOf(d.raTremind, d.lang)); }
-        if ('raTadmin' in d) return ropAdminOpen(trialOf(d.raTadmin, d.lang));
-        if ('raTresched' in d) { const x = trialOf(d.raTresched, d.lang); return openTrialPage({ lang: x?.lead._lang || d.lang, leadId: d.raTresched, isReschedule: true }); }
-        if ('raTmore' in d) return openTrialMore(d.raTmore, d.lang);
-        if ('raTcancel' in d) return openTrialCancel(d.raTcancel, d.lang);
+        if ('raTremind' in d) { closeSheet(true); return ropRemind(trialOf(d.raTremind, d.ll)); }
+        if ('raTadmin' in d) return ropAdminOpen(trialOf(d.raTadmin, d.ll));
+        if ('raTresched' in d) { const x = trialOf(d.raTresched, d.ll); return openTrialPage({ lang: x?.lead._lang || d.ll, leadId: d.raTresched, isReschedule: true }); }
+        if ('raTmore' in d) return openTrialMore(d.raTmore, d.ll);
+        if ('raTcancel' in d) return openTrialCancel(d.raTcancel, d.ll);
         if ('raTcr' in d) { S.tc.reason = d.raTcr; syncTc(); if (/^Boshqa/.test(d.raTcr)) document.getElementById('raTcNote')?.focus(); return; }
         if ('raTcsave' in d) return saveTrialCancel();
         if ('raTper' in d) { S.teamPer = d.raTper; render(true); return; }
