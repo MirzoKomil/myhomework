@@ -10,7 +10,23 @@ function getNotifications() {
     }
 }
 
+// O'qilgan belgilari alohida, ro'yxatdan mustaqil saqlanadi. Ilgari ro'yxat har sinxronda qaytadan qurilardi:
+// ilova ochilib lidlar hali yuklanmagan paytda lid eslatmalari ro'yxatdan tushib qolar va "o'qilgan" belgisi
+// bilan birga yo'qolardi — lidlar kelgach ular yana o'qilmagan bo'lib chiqardi (9+ qaytib kelardi).
+const NOTIF_READ_KEY = 'mh_notif_read';
+function getNotifReadIds() {
+    try { return new Set(JSON.parse(localStorage.getItem(NOTIF_READ_KEY) || '[]')); } catch { return new Set(); }
+}
+function rememberNotifRead(ids) {
+    const set = getNotifReadIds();
+    const before = set.size;
+    ids.forEach(id => { if (id != null) { set.delete(String(id)); set.add(String(id)); } });
+    if (set.size === before && !ids.length) return;
+    try { localStorage.setItem(NOTIF_READ_KEY, JSON.stringify([...set].slice(-3000))); } catch { /* joy yo'q */ }
+}
+
 function saveNotifications(list) {
+    rememberNotifRead(list.filter(n => n.read).map(n => n.id));
     localStorage.setItem(NOTIF_KEY, JSON.stringify(list));
 }
 
@@ -105,7 +121,8 @@ function buildRoleNotifications(user, now = new Date()) {
 
 function syncNotifications() {
     const existing = getNotifications();
-    const readIds = new Set(existing.filter(n => n.read).map(n => n.id));
+    const readIds = getNotifReadIds();
+    existing.forEach(n => { if (n.read) readIds.add(String(n.id)); });
     const seenAt = new Map(existing.map(n => [n.id, n.time]));
     const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
     const fresh = buildRoleNotifications(user);
@@ -123,7 +140,7 @@ function syncNotifications() {
         ...n,
         cat: n.cat || notifLocalCat(n),
         time: Number(n.time) || seenAt.get(n.id) || Date.now(),
-        read: n.server ? (n.serverRead || readIds.has(n.id)) : readIds.has(n.id)
+        read: n.server ? (n.serverRead || readIds.has(String(n.id))) : readIds.has(String(n.id))
     })).sort((a, b) => (a.read - b.read) || (b.time - a.time));
 
     saveNotifications(merged);
