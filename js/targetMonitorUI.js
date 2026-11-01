@@ -243,6 +243,8 @@
 
     function managersTable(lang, monthKey) {
         if (typeof computeTargetManagerStats !== 'function' || typeof getSalesManagers !== 'function') return '';
+        // Targetologga lidlar sotuvchisiz keladi (maxfiylik) — menejerlar jadvali faqat admin/ROP uchun.
+        if (typeof getCurrentUser === 'function' && getCurrentUser()?.role === 'targetolog') return '';
         const all = getItem(STORAGE_KEYS.leads, { english: [], russian: [] })[lang] || [];
         const managers = getSalesManagers(lang).filter(m => m.login).sort((a, b) => (a.name || '').localeCompare(b.name || '', 'uz'));
         if (!managers.length) return '';
@@ -289,7 +291,7 @@
 
     function legend() {
         return `<details class="tsx-legend"><summary>Qanday hisoblanadi?</summary><ul>
-            <li><b>Targetolog kiritadi</b> — har kuni kechagi kun uchun (bugungi kun tugagach): reklama sarfi ($), reklama kabinetidagi lid soni, oʻzi sanagan sifatli lid soni. Targetolog faqat oxirgi 7 kunni kirita/tuzata oladi, eski kunlarni admin tuzatadi. Har bir oʻzgarish kim/qachon bilan tarixga yoziladi.</li>
+            <li><b>Targetolog kiritadi</b> — har kuni kechagi kun uchun (bugungi kun tugagach): reklama sarfi ($), reklama kabinetidagi lid soni, oʻzi sanagan sifatli lid soni. Targetolog joriy oy kunlarini (oy tugagach yana 1 kun) kirita/tuzata oladi, eski kunlarni admin tuzatadi. Kechagi kun kiritilmaguncha targetolog kabineti qulflanadi. Har bir oʻzgarish kim/qachon bilan tarixga yoziladi.</li>
             <li><b>🔒 CRM</b> — shu kuni CRM'ga tushgan “Target” manbali lidlar (Tashkent vaqti bilan). Organik lidlar kirmaydi. Bu qatorlarni hech kim qoʻlda oʻzgartira olmaydi.</li>
             <li><b>Sifatli lid (CRM)</b> — “Bogʻlanildi” va undan keyingi bosqichdagi lidlar (sinov, qaror, toʻlov, muvaffaqiyatsiz sotuv ham). <b>Sifatsiz</b> — “Sifatsiz lidlar” ustuni. <b>Hali ishlanmagan</b> — “Yangi lidlar” va “Bogʻlanishga urinilmoqda”; ular ishlanganda sifat raqamlari oʻzgaradi.</li>
             <li><b>Lid narxi</b> = reklama sarfi ÷ lid soni. CRM narxida faqat sarfi kiritilgan kunlarning lidlari olinadi. <b>Toʻliq lid narxi</b> va <b>ROAS</b>da fixed ham hisobga olinadi (oylik fixed ÷ oy kunlari, har kunga).</li>

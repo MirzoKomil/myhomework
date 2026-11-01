@@ -53,7 +53,6 @@ function validDay(key) {
     return Number.isFinite(d.getTime()) && d.toISOString().slice(0, 10) === key;
 }
 const validMonth = m => /^\d{4}-(0[1-9]|1[0-2])$/.test(String(m || ''));
-function daysBetween(a, b) { return Math.round((new Date(b + 'T00:00:00Z') - new Date(a + 'T00:00:00Z')) / 86400000); }
 function addDays(key, n) { return new Date(Date.parse(key + 'T00:00:00Z') + n * 86400000).toISOString().slice(0, 10); }
 // Targetolog tuzata oladigan oraliq: kechagi kun oyining 1-sanasidan kechagacha.
 // 1-noyabrda: 1–31-oktyabr; 2-noyabrda: faqat 1-noyabr (oktyabr yopildi).
@@ -274,6 +273,10 @@ function redactLeadForTargetolog(l) {
         languageLevel: cs.languageLevel || '', learningGoal: cs.learningGoal || '', residenceType: cs.residenceType || '', region: cs.region || '', country: cs.country || '',
         applicantLabel: cs.applicantLabel || '', genderLabel: cs.genderLabel || '', languageLevelLabel: cs.languageLevelLabel || '', learningGoalLabel: cs.learningGoalLabel || '',
         regionLabel: cs.regionLabel || '', countryLabel: cs.countryLabel || '' };
+    // ROAS (tushum) uchun faqat summa va sanalar — chek, to'lov usuli, izoh kelmaydi.
+    const ps = l.paymentSurvey, pc = l.paymentClosedSurvey;
+    if (ps && typeof ps === 'object') out.paymentSurvey = { paymentType: ps.paymentType || '', paidAmount: ps.paidAmount ?? null, lastPaymentDate: ps.lastPaymentDate || '', totalAmount: ps.totalAmount ?? null, tariff: ps.tariff ?? null };
+    if (pc && typeof pc === 'object') out.paymentClosedSurvey = { closedDate: pc.closedDate || '', installmentReceived: pc.installmentReceived || '', installmentReceivedDate: pc.installmentReceivedDate || '', actualAmount: pc.actualAmount ?? null };
     if (l.sifatsizReason) out.sifatsizReason = { reasonId: l.sifatsizReason.reasonId || '', label: l.sifatsizReason.label || '' };
     if (Array.isArray(l.stageHistory)) out.stageHistory = l.stageHistory.filter(Boolean).map(h => ({ from: h.from || '', to: h.to || '', at: h.at || h.changedAt || h.createdAt || null }));
     out.comments = (Array.isArray(l.comments) ? l.comments : []).filter(c => c && TL_CALL_TYPES.has(c.type)).map(c => ({ type: c.type, createdAt: c.createdAt || c.ts || null }));
@@ -311,7 +314,8 @@ async function status(db, actor) {
     for (const language of access.writeDay) {
         const { from, to } = editRange(today);
         const rows = (await db.query(`SELECT date FROM target_ad_entries WHERE language=$1 AND kind='day' AND date BETWEEN $2 AND $3`, [language, from, to])).rows;
-        const first = (await db.query(`SELECT MIN(date) AS d FROM target_ad_entries WHERE language=$1 AND kind='day'`, [language])).rows[0]?.d || null;
+        // Qulf faqat shu targetolog o'zi kirita boshlagan kundan (admin yoki eski yozuvlar hisobga olinmaydi).
+        const first = (await db.query(`SELECT MIN(date) AS d FROM target_ad_entries WHERE language=$1 AND kind='day' AND updated_by=$2`, [language, String(actor.id)])).rows[0]?.d || null;
         for (const date of missingDays(today, rows.map(r => r.date), first)) missing.push({ language, date });
     }
     missing.sort((a, b) => a.date.localeCompare(b.date) || a.language.localeCompare(b.language));

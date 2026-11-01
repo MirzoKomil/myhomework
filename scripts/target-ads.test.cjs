@@ -47,7 +47,8 @@ test('targetologga lid: telefon, izoh, sotuvchi, to‘lov kelmaydi', () => {
     };
     const r = t.redactLeadForTargetolog(lead);
     assert.strictEqual(r.phone, ''); assert.strictEqual(r.phone2, ''); assert.strictEqual(r.email, ''); assert.strictEqual(r.managerId, '');
-    assert.strictEqual(r.managerName, undefined); assert.strictEqual(r.telegramUsername, undefined); assert.strictEqual(r.paymentSurvey, undefined);
+    assert.strictEqual(r.managerName, undefined); assert.strictEqual(r.telegramUsername, undefined);
+    assert.deepStrictEqual(r.paymentSurvey, { paymentType: '', paidAmount: null, lastPaymentDate: '', totalAmount: '1200000', tariff: null }); // ROAS uchun faqat summa
     assert.deepStrictEqual(r.comments, [{ type: 'call-attempt', createdAt: '2026-10-28T16:18:00Z' }]);
     assert.strictEqual(r.connectedSurvey.phone, undefined); assert.strictEqual(r.connectedSurvey.region, 'Andijon');
     assert.deepStrictEqual(r.stageHistory, [{ from: '', to: 'yangi-lidlar', at: '2026-10-28T16:14:00Z' }]);

@@ -21,7 +21,7 @@
     const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
     const LANG_NAME = { russian: 'Rus tili', english: 'Ingliz tili' };
     const PENDING = new Set(['yangi-lidlar', 'boglanishga-urinilmoqda']);
-    const SOLD = new Set(['tolov-jarayonida', 'tolov-yopildi']);
+    const SOLD = new Set(['tolov-yopildi']); // "Toʻladi" — faqat toʻlovi yopilgan lid
 
     // ---------- sana ----------
     function todayKey() { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tashkent', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()); }
@@ -109,7 +109,11 @@
     const adsNow = (lang = S.lang, month = S.month) => S.ads[lang + '|' + month] || null;
     async function loadStatus() {
         try { S.status = await apiFetch('/api/target-ads/status', { fresh: true }); }
-        catch (e) { S.status = S.status || { locked: false, missing: [], error: e.message }; }
+        catch (e) {
+            S.status = S.status || { locked: false, missing: [], error: e.message };
+            // Holatni olib bo'lmadi (internet) — qulf tekshiruvi keyinroq qayta uriniladi.
+            clearTimeout(loadStatus._t); loadStatus._t = setTimeout(() => refresh(), 15000);
+        }
         if (S.status?.langs?.length) { S.langs = S.status.langs; if (!S.langs.includes(S.lang)) S.lang = S.langs[0]; }
         return S.status;
     }
@@ -247,7 +251,7 @@
         S.saving = true; S.entryErr = ''; S.entryErrKey = ''; render();
         try {
             await apiFetch('/api/target-ads', { method: 'PUT', body: JSON.stringify({ language: S.lang, kind: 'day', date, revision: e.revision || 0,
-                data: { budget, leadCount, impressions, clicks, kvalLeadCount: e.kvalLeadCount ?? null, note: String(d.note ?? e.note ?? '').trim() } }) });
+                data: { budget, leadCount, impressions, clicks, kvalLeadCount: e.kvalLeadCount == null ? null : Math.min(e.kvalLeadCount, leadCount), note: String(d.note ?? e.note ?? '').trim() } }) });
             await loadAds(S.lang, date.slice(0, 7), true);
             const wasLocked = !!S.status?.locked;
             await loadStatus();

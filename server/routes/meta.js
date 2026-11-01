@@ -112,11 +112,12 @@ async function graphName(path, fields, token) {
         const url = new URL(`https://graph.facebook.com/${GRAPH_API_VERSION}/${encodeURIComponent(path)}`);
         url.searchParams.set('fields', fields);
         url.searchParams.set('access_token', token);
-        const response = await fetch(url);
+        // Sekin Graph lid importini osiltirmasin: 3 soniyadan keyin nomsiz davom etamiz.
+        const response = await fetch(url, { signal: AbortSignal.timeout(3000) });
         if (response.ok) data = await response.json().catch(() => null);
     } catch (e) { data = null; }
-    if (_metaNameCache.size > 500) _metaNameCache.clear();
-    _metaNameCache.set(key, data);
+    // Faqat muvaffaqiyatli javob keshlanadi — vaqtinchalik xatodan keyin nom keyingi lidda qayta so'raladi.
+    if (data) { if (_metaNameCache.size > 500) _metaNameCache.clear(); _metaNameCache.set(key, data); }
     return data;
 }
 async function adAttribution(metaLead, config, formName = '') {
@@ -457,7 +458,7 @@ router.post('/recovery/apply', authRequired, recoveryAdminRequired, async (_req,
                     leadType: 'target',
                     createdAt: metaLead.created_time,
                     date: formatMetaDate(metaLead.created_time),
-                    ...(await adAttribution(metaLead, config))
+                    ...(await adAttribution(metaLead, getPageConfig()))
                 });
                 if (result.restored) restored++;
                 else if (result.duplicate) duplicate++;
