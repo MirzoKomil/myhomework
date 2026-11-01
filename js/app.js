@@ -20449,7 +20449,9 @@ function maybeSendAutoStageSms(lang, lead, oldStatus, newStatus, platformAccess)
     if (messages.length) sendAutoSmsMessages(lead, messages);
 }
 
-function updateLeadInStorage(lang, leadId, updater) {
+// opts.skipAutoSms — bosqich o'zgarsa ham mijozga avtomatik SMS yuborilmaydi (masalan ROP sinovni bekor qilganda
+// lid sinovdan chiqariladi — bu mijoz uchun yangi bosqich emas).
+function updateLeadInStorage(lang, leadId, updater, opts = {}) {
     // "Faqat ko'rish" rollari (targetolog) lidni lokal ham o'zgartirmaydi
     if (isLeadsReadOnly(getCurrentUser())) return null;
     const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
@@ -20475,7 +20477,7 @@ function updateLeadInStorage(lang, leadId, updater) {
     leads[lang] = list;
     setItem(STORAGE_KEYS.leads, leads);
     persistLeadChange(lang, list[idx], (saved, access) => {
-        maybeSendAutoStageSms(lang, saved, oldStatus, newStatus, access);
+        if (!opts.skipAutoSms) maybeSendAutoStageSms(lang, saved, oldStatus, newStatus, access);
     }).catch(() => {});
     // Kitob yetkazish kartochkasi to'lov jarayoni boshlanishi bilan ochiladi.
     // Lid eski ma'lumotlardan yoki qo'lda to'g'ridan-to'g'ri "To'lov yopildi"
@@ -21460,6 +21462,9 @@ function renderLeads() {
         // ROP uchun belgilanganda ko'rinadi (updateBulkBar).
         const bulkBarEl = document.getElementById('bulkActionsBar');
         if (bulkBarEl && _isSalesManagerRender) bulkBarEl.style.display = 'none';
+        // ROP'ga faqat ommaviy biriktirish — ommaviy o'chirish ilgarigidek yopiq (kompyuterga yangi xavfli amal qo'shilmaydi).
+        const bulkDelEl = document.getElementById('bulkDeleteBtn');
+        if (bulkDelEl && _isRopRender) bulkDelEl.style.display = 'none';
     } else if (_cuRender?.role === 'targetolog') {
         // Targetolog faqat ruxsat berilgan til(lar)ni ko'radi; bitta bo'lsa tablar yashiriladi.
         const langs = _cuRender.linkedTargetLangs || [];
@@ -21597,7 +21602,10 @@ function renderLeads() {
                 bulkCount.textContent = `${checked.length} ta lid tanlandi`;
                 // Til almashtirilganda ro'yxat yangilanadi — aks holda Rus lidlari
                 // Ingliz menejerlariga biriktirilib qolishi mumkin edi.
-                const bulkLang = _leadsLangFilter === 'russian' ? 'russian' : 'english';
+                // Ikki tilli ROP ('both'): menejerlar belgilangan lidlar tilidan olinadi.
+                const pickedLangs = [...new Set(checked.map(cb => cb.dataset.lang).filter(Boolean))];
+                const bulkLang = _leadsLangFilter === 'both' && pickedLangs.length === 1 ? pickedLangs[0]
+                    : (_leadsLangFilter === 'russian' ? 'russian' : 'english');
                 if (bulkSelect.dataset.populated !== bulkLang) {
                     const managers = getBulkLeadManagers(bulkLang);
                     bulkSelect.innerHTML = '<option value="">— Menejerni tanlang —</option>' + managers.map(m => `<option value="${escapeHtml(m.id)}">${escapeHtml(m.name)}</option>`).join('');
@@ -21619,6 +21627,7 @@ function renderLeads() {
             const managerId = bulkSelect.value;
             if (!managerId) return showNotification('Xatolik', 'Menejerni tanlang', 'error');
             const targets = tanlanganlar();
+            if (_leadsLangFilter === 'both' && new Set(targets.map(t => t.lang)).size > 1) return showNotification('Xatolik', 'Bir tildagi lidlarni tanlang — menejerlar til boʻyicha', 'error');
             const name = bulkSelect.options[bulkSelect.selectedIndex]?.text || '';
             if (targets.length > 30 && !confirm(`${targets.length} ta lid ${name} ga biriktiriladi. Davom etasizmi?`)) return;
             applyBulkLeadAssignment(targets.map(t => ({ ...t, managerId })));
@@ -22047,7 +22056,9 @@ function applyBulkLeadAssignment(items) {
 
 function openBulkSplitModal(targets) {
     if (!targets.length) return;
-    const lang = _leadsLangFilter === 'russian' ? 'russian' : 'english';
+    const tLangs = [...new Set(targets.map(t => t.lang).filter(Boolean))];
+    if (_leadsLangFilter === 'both' && tLangs.length > 1) return showNotification('Xatolik', 'Bir tildagi lidlarni tanlang — menejerlar til boʻyicha', 'error');
+    const lang = _leadsLangFilter === 'both' && tLangs.length === 1 ? tLangs[0] : (_leadsLangFilter === 'russian' ? 'russian' : 'english');
     const managers = getBulkLeadManagers(lang);
     if (!managers.length) return showNotification('Xatolik', 'Bu yoʻnalishda sotuv menejeri yoʻq', 'error');
     const allLeads = (getItem(STORAGE_KEYS.leads, { english: [], russian: [] })[lang]) || [];

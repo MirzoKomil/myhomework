@@ -52,6 +52,10 @@
     const nowMin = () => { const d = new Date(Date.now() + TZ); return d.getUTCHours() * 60 + d.getUTCMinutes(); };
     const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
     const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* saqlab bo'lmasa ham ishlaydi */ } };
+    // Ikki marta bosishdan himoya: bir xil yozuv amali 1,5 soniya ichida (yoki so'rov tugaguncha) qayta bajarilmaydi.
+    const busyKeys = new Map();
+    const once = (key, ms = 1500) => { const t = busyKeys.get(key); if (t && Date.now() - t < ms) return false; busyKeys.set(key, Date.now()); return true; };
+    const release = key => busyKeys.delete(key);
     const reduceMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
     // ---------- ikonkalar ----------
@@ -206,7 +210,8 @@
             if (!req && !inTrial) continue;
             const d = W().durationOf(l);
             const r = req || { teacherId: '', scheduledAt: l.trialLessonAt || '' };
-            out.push({ lead: l, req: r, ph: W().phase(req || {}, { leadStatus: l.status, durationMin: d }), dur: d, at: local(r.scheduledAt) });
+            const cancelled = inTrial && l.trialCancelled && l.trialCancelled.rev === l.trialScheduleRevision;
+            out.push({ lead: l, req: r, ph: cancelled ? 'cancelled' : W().phase(req || {}, { leadStatus: l.status, durationMin: d }), dur: d, at: local(r.scheduledAt) });
         }
         return out;
     }
@@ -323,6 +328,7 @@
         if (f) return { text: (f.overdue ? 'Qoʻngʻiroq kechikdi · ' : '') + when(f.at), tone: f.overdue ? 'red' : 'blue', sort: f.overdue ? 0 : 2, t: f.at };
         if (s === 'yangi-lidlar') { const a = assignedAt(l); const calls = callsOf(l).length; return { text: dur(now - (a || now)) + (calls ? '' : ' · qoʻngʻiroq yoʻq'), tone: a && now - a > 30 * MIN && !calls ? 'red' : 'gray', sort: 1, t: a || 0 }; }
         if (s === 'sinov-darsida') { const r = W()?.request(l); const t = parseT(r?.scheduledAt || l.trialLessonAt); const ph = W() ? W().phase(r || {}, { leadStatus: l.status, durationMin: W().durationOf(l) }) : '';
+            if (l.trialCancelled && l.trialCancelled.rev === l.trialScheduleRevision) return { text: 'Sinov bekor qilindi · qayta qoʻyish', tone: 'amber', sort: 1, t: t || 0 };
             if (needsTeacher(ph)) return { text: (t ? when(t) + ' · ' : '') + 'ustozsiz', tone: 'red', sort: 0, t: t || 0 };
             if (ph === 'result' || ph === 'overdue') return { text: 'Natija kiritilmagan', tone: 'red', sort: 0, t: t || 0 };
             if (t) return { text: when(t), tone: ph === 'pending' ? 'amber' : 'green', sort: 2, t }; }
@@ -409,7 +415,7 @@
         const item = typeof window.renderLeadCommentItem === 'function' ? window.renderLeadCommentItem : null;
         const tg = l.managerId ? mgrTg(l.managerId) : '';
         return `
-        ${crumb('Lidlar · ' + (SHORT[s] || colLabel(s)))}
+        ${crumb('Lidlar · ' + (SHORT[s] || colLabel(s)), `<button type="button" class="sa-icon-btn sa-ghost" data-ra-cardmore="${esc(l.id)}" aria-label="Boshqa amallar" aria-haspopup="dialog">${ic('dots', 22, 2.4)}</button>`)}
         <div class="sa-body sa-card-page">
           <section class="sa-lead-hero">
             <div class="sa-lead-id">${avatar(l.name, 60)}<div><h2>${esc(l.name || 'Nomaʼlum')}</h2>${ph ? `<a class="sa-phone" href="tel:${esc(ph)}">${esc(g('formatPhoneDisplay') ? formatPhoneDisplay(l.phone) : l.phone)}</a>` : ''}
@@ -468,7 +474,7 @@
             const ls = leads.filter(l => l._lang === lg); if (!ls.length) continue;
             const ms = assignMgrs(lg).map(m => m.id);
             if (!ms.length) continue;
-            const load = g('leadLoadByManager') ? leadLoadByManager(leadsAll()[lg] || [], ms) : {};
+            const load = g('leadLoadByManager') ? leadLoadByManager((leadsAll()[lg] || []).filter(l => l && !l.deletedAt), ms) : {};
             const plan = g('planEvenLeadSplit') ? planEvenLeadSplit(ls.map(l => l.id), ms, load) : [];
             plan.forEach(p => out.push({ ...p, lang: lg }));
         }
@@ -479,7 +485,7 @@
     function screenSla() {
         const d = ropHome();
         const list = (d?.open || []).map(a => { const l = leadById(a.leadId, a.leadLang); return l ? { a, l, left: a.time + DAY - Date.now() } : null; }).filter(Boolean).sort((x, y) => x.left - y.left);
-        const soon = list.filter(x => x.left < 6 * 3600000), rest = list.filter(x => x.left >= 6 * 3600000);
+        const gone = list.filter(x => x.left <= 0), soon = list.filter(x => x.left > 0 && x.left < 6 * 3600000), rest = list.filter(x => x.left >= 6 * 3600000);
         const R = typeof LEAD_SLA_RULES !== 'undefined' ? LEAD_SLA_RULES : {};
         const ruleLine = [['yangi-lidlar', 'Yangi lid'], ['boglanishga-urinilmoqda', 'Urinilmoqda'], ['boglanildi', 'Bogʻlanildi'], ['sinov-darsida', 'Sinovdan keyin'], ['qaror-jarayonida', 'Qaror'], ['tolov-jarayonida', 'Toʻlov']]
             .filter(([k]) => R[k]?.rop).map(([k, t]) => `${t} — ${ruleTxt(R[k].rop.after)}`).join(' · ');
@@ -496,6 +502,7 @@
         return `
         ${topBack('SLA oʻtgan lidlar', `${list.length} ta · “Koʻrildi” bosilmasa 24 soatda adminga oʻtadi`)}
         <div class="sa-body sa-stagger">
+          ${gone.length ? `<h3 class="sa-h3 is-red">ADMINGA OʻTGAN · ${gone.length}</h3>${gone.map(x => card(x, true)).join('')}` : ''}
           ${soon.length ? `<h3 class="sa-h3 is-red">ADMINGA OʻTISHIGA OZ QOLDI</h3>${soon.map(x => card(x, true)).join('')}` : ''}
           ${rest.length ? `<h3 class="sa-h3">BOSHQALAR · ADMINGACHA 6 SOATDAN KOʻP</h3>${rest.map((x, i) => card(x, i < 1)).join('')}` : ''}
           ${!list.length ? empty('board', 'SLA oʻtgan lid yoʻq', 'Barcha menejerlar oʻz vaqtida ishlayapti') : ''}
@@ -504,6 +511,8 @@
     }
     function ackSla(id, lg) {
         const l = leadById(id, lg); if (!l) return;
+        if (!once('ack:' + id)) return;
+        root?.querySelectorAll(`[data-ra-ack="${CSS.escape(id)}"], [data-ra-notify="${CSS.escape(id)}"]`).forEach(b => { b.disabled = true; });
         const alerts = g('getLeadSlaCardAlerts') ? getLeadSlaCardAlerts(l, l._lang).filter(a => a.audience === 'rop') : [];
         const a = alerts[0];
         if (!a || !g('updateLeadInStorage')) { if (g('openLeadNotifyModal')) openLeadNotifyModal(l._lang, id); return; }
@@ -641,14 +650,17 @@
     }
     function showApproved(r) {
         const pend = pendingAp().filter(x => x.id !== r.id).sort((a, b) => (parseT(a.created_at) || 0) - (parseT(b.created_at) || 0));
-        const total = pend.length + 1;
+        // Shu ko'rib chiqish seansida hal qilinganlar + qolganlar = jami; keyingisi — done + 1.
+        S.apDone = (S.apDone || 0) + 1;
+        const done = S.apDone, total = done + pend.length;
+        if (!pend.length) S.apDone = 0;
         const next = pend[0];
         const T = { payment: 'Toʻlov tasdiqlandi', tariff: 'Tarif tasdiqlandi', teacher: 'Ustoz almashtirildi' }[r.kind] || 'Tasdiqlandi';
         const sm = apSummary(r);
         overlay(`<section class="ra-pop" role="dialog" aria-modal="true" aria-labelledby="raPopT">
             <span class="ra-okc ra-okc--dark">${ic('check', 30, 3)}</span>
             <div class="ra-pop-t"><h2 id="raPopT">${T}</h2><span>${esc(r.student_name || '')}${sm.neu ? ' · ' + esc(sm.neu) : ''}. ${esc(firstName(r.requester_name))}ga xabar ketdi.</span></div>
-            ${next ? `<div class="ra-next"><em>KEYINGISI · 2 / ${total}</em><strong>${esc(next.student_name || '')} · ${esc((KIND[next.kind] || ['soʻrov'])[0].toLowerCase())}</strong>${bar(Math.round(1 / total * 100) + 50, 'blue')}</div>` : ''}
+            ${next ? `<div class="ra-next"><em>KEYINGISI · ${done + 1} / ${total}</em><strong>${esc(next.student_name || '')} · ${esc((KIND[next.kind] || ['soʻrov'])[0].toLowerCase())}</strong>${bar(Math.round(done / total * 100), 'blue')}</div>` : ''}
             <div class="ra-pop-a">${next ? `<button type="button" class="sa-btn sa-btn--primary" data-ra-ovgo="ap:${esc(next.id)}">Keyingisini ochish</button>` : ''}<button type="button" class="sa-link" data-ra-ovgo="approvals">Roʻyxatga qaytish</button></div></section>`);
     }
     function openRejectSheet(kind) {
@@ -736,7 +748,7 @@
     const trialOf = (id, lg) => trialRows().find(x => x.lead.id === id && (!lg || x.lead._lang === lg));
     // trialUI "Ustozga eslatish" bilan bir xil yozuv (trialRopReminder + izoh) — ustoz panelida "ROP eslatdi".
     function ropRemind(x) {
-        if (!x || !g('updateLeadInStorage')) return;
+        if (!x || !g('updateLeadInStorage') || !once('remind:' + x.lead.id)) return;
         const me = user(), tn = person(x.req.teacherId)?.name || 'Ustoz', at = new Date().toISOString();
         const text = `ROP ${firstName(me.name)} ustozga eslatdi: ${tn} — sinov natijasini yozing (${x.lead.name}).`;
         const saved = updateLeadInStorage(x.lead._lang, x.lead.id, l => ({ ...l, trialRopReminder: { at, by: me.name || 'ROP', requestId: x.req.id, teacherId: x.req.teacherId },
@@ -746,7 +758,8 @@
     }
     // trialUI "Admin ochsin" bilan bir xil yozuv (trialAdminOpen).
     function ropAdminOpen(x) {
-        if (!x || !g('updateLeadInStorage')) return;
+        if (!x || !g('updateLeadInStorage') || !once('admin:' + x.lead.id)) return;
+        sheetEl?.querySelectorAll('[data-ra-tadmin]').forEach(b => { b.disabled = true; });
         const me = user(), a = x.at, at = new Date().toISOString();
         const text = `ROP ${firstName(me.name)} adminga so'rov yubordi: ${a ? `${a.date.split('-').reverse().join('.')} ${hmm(a.min)}` : ''} vaqtini sinovga ochish (lid istagi, ochiq ustoz yo'q).`;
         const saved = updateLeadInStorage(x.lead._lang, x.lead.id, l => ({ ...l, trialAdminOpen: { at, by: me.name || 'ROP', date: a?.date || null, time: a ? hmm(a.min) : null, requestId: x.req.id || null },
@@ -781,7 +794,7 @@
                 let ok = true, why = '';
                 if (!v || !(v.work || []).some(w => w.start <= a && b <= w.end)) { ok = false; why = 'ish vaqti emas'; }
                 const clash = ok && (v.items || []).find(i => i.start < b && a < i.end && i.kind !== 'reserved');
-                if (clash) { ok = false; why = `${hmmS(clash.start)} da ${clash.kind === 'trial' ? 'boshqa sinov bor' : clash.kind === 'break' ? 'tanaffus' : 'darsi bor'} · band`; }
+                if (clash) { ok = false; why = `${hmm(clash.start)} da ${clash.kind === 'trial' ? 'boshqa sinov bor' : clash.kind === 'break' ? 'tanaffus' : 'darsi bor'} · band`; }
                 if (ok && !(v.trialFree || []).some(f => f.start <= a && b <= f.end)) { ok = false; why = 'sinovga yopiq'; }
                 if (x.ph === 'rejected' && String(t.id) === String(x.req.teacherId)) { ok = false; why = 'rad etgan'; }
                 const trials = (v?.items || []).filter(i => i.kind === 'trial').length;
@@ -803,10 +816,10 @@
         draw(null);
         if (base) draw(await schedFor(base.date));
     }
-    const hmmS = m => hmm(m);
     // trialUI openAssign "Biriktirish" bilan bir xil yozuv (status, paymentOnboarding, trialRequest, izoh).
     function saveTrialAssign() {
-        const ta = S.ta; if (!ta?.pick) return;
+        const ta = S.ta; if (!ta?.pick || !sheetEl || !once('tassign:' + ta.id)) return;
+        S.ta = null;
         const x = trialOf(ta.id, ta.lg); if (!x || !x.at) return;
         const t = (S.sched[x.at.date]?.data?.teachers || []).find(y => y.id === ta.pick); if (!t) return;
         const me = user(), at = isoOf(x.at.date, x.at.min);
@@ -853,20 +866,32 @@
         const sv = sheetEl.querySelector('[data-ra-tcsave]');
         if (sv) sv.disabled = !S.tc.reason || (/^Boshqa/.test(S.tc.reason) && note.length < 3);
     }
-    // Bekor qilish: "Kim bo'sh?" orqali yaratilgan band (school_bookings) — POST /bookings/:id/cancel (ROP ruxsati bor);
-    // lid "Sinov darsida"dan "Bog'lanildi"ga qaytariladi (lid sinovi jadvalda shu bosqichdan hisoblanadi) + izoh.
+    // Bekor qilish: "Kim bo'sh?" orqali yaratilgan band (school_bookings) — POST /bookings/:id/cancel (ROP ruxsati bor).
+    // Lid bosqichi O'ZGARMAYDI (bosqich o'zgarishi mijozga avtomatik SMS yuborardi). Ustoz bog'lanishi sotuvSinov'dagi
+    // mavjud "ustozsiz" yo'li bilan olib tashlanadi (trialUnassigned + yangi trialScheduleRevision, teacherId yo'q) —
+    // server (trialWorkflow.syncSchedule) joriy so'rovni trialHistory'ga arxivlaydi, jadvaldagi joy bo'shaydi.
+    // trialCancelled — shu revision bekor qilinganini bildiradi (ROP nazoratida "ustozsiz" deb chiqmaydi).
     async function saveTrialCancel() {
-        const tc = S.tc; const x = tc && trialOf(tc.id, tc.lg); if (!x) return;
+        const tc = S.tc; const x = tc && trialOf(tc.id, tc.lg); if (!x || !sheetEl || !once('tcancel:' + tc.id, 15000)) return;
         const note = document.getElementById('raTcNote')?.value.trim() || '';
-        const sv = sheetEl?.querySelector('[data-ra-tcsave]'); if (sv) sv.disabled = true;
+        const sv = sheetEl.querySelector('[data-ra-tcsave]'); if (sv) sv.disabled = true;
         try {
             const e = x.at ? await schedFor(x.at.date, true) : null;
             const ids = (e?.data?.views || []).flatMap(v => (v.items || []).filter(i => i.kind === 'trial' && i.leadId === x.lead.id && i.bookingId && ['hold', 'pending', 'confirmed'].includes(i.status)).map(i => i.bookingId));
             for (const b of ids) await sApi(`/bookings/${encodeURIComponent(b)}/cancel`, { method: 'POST', body: {} });
-        } catch (err) { toast(err.message || 'Bandni bekor qilib boʻlmadi', 'warn'); if (sv) sv.disabled = false; return; }
-        const me = user();
-        const text = `Sinov darsi bekor qilindi (ROP ${firstName(me.name)}): ${tc.reason}${note ? ' — ' + note : ''}${x.at ? ` · ${x.at.date.split('-').reverse().join('.')} ${hmm(x.at.min)}` : ''}`;
-        const saved = updateLeadInStorage(x.lead._lang, x.lead.id, l => ({ ...l, status: 'boglanildi', comments: [...(Array.isArray(l.comments) ? l.comments : []), createLeadComment({ type: 'trial-lesson', text, author: me.name || 'ROP' })] }));
+        } catch (err) { release('tcancel:' + tc.id); toast(err.message || 'Bandni bekor qilib boʻlmadi', 'warn'); if (sv) sv.disabled = false; return; }
+        S.tc = null;
+        const me = user(), now = new Date().toISOString();
+        const reason = `${tc.reason}${note ? ' — ' + note : ''}`;
+        const text = `Sinov darsi bekor qilindi (ROP ${firstName(me.name)}): ${reason}${x.at ? ` · ${x.at.date.split('-').reverse().join('.')} ${hmm(x.at.min)}` : ''}`;
+        const rev = globalThis.crypto?.randomUUID?.() || 'trial-cancel-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+        const saved = updateLeadInStorage(x.lead._lang, x.lead.id, l => {
+            const ob = { ...(l.paymentOnboarding || {}) }; delete ob.teacherId;
+            const tl = l.trialLesson ? { ...l.trialLesson } : null; if (tl) delete tl.teacherId;
+            return { ...l, paymentOnboarding: ob, ...(tl ? { trialLesson: tl } : {}), trialUnassigned: true, trialScheduleRevision: rev,
+                trialCancelled: { rev, at: now, by: me.name || 'ROP', reason, requestId: x.req.id || null },
+                comments: [...(Array.isArray(l.comments) ? l.comments : []), createLeadComment({ type: 'trial-lesson', text, author: me.name || 'ROP' })] };
+        }, { skipAutoSms: true });
         closeSheet();
         if (x.at) delete S.sched[x.at.date];
         toast(saved ? 'Sinov bekor qilindi · vaqt boʻshadi' : 'Saqlab boʻlmadi', saved ? 'ok' : 'warn');
@@ -1068,14 +1093,14 @@
 
     // ---------- SMS ----------
     function smsGroups() {
-        const all = ALL(), now = Date.now();
+        const all = ALL();
         const ws = (() => { const d = new Date(); d.setDate(d.getDate() - ((d.getDay() || 7) - 1)); d.setHours(0, 0, 0, 0); return d.getTime(); })();
         const ms = monthStart();
         return [
             { k: 'qaror', t: 'Qaror jarayonida', s: 'Hali toʻlov qilmaganlar', list: all.filter(l => st(l) === 'qaror-jarayonida') },
             { k: 'noshow', t: 'Sinovga kelmaganlar', s: 'Shu hafta', list: all.filter(l => { const r = l.trialRequest; return r?.state === 'completed' && r.attended === false && (parseT(r.completedAt) || 0) >= ws; }) },
             { k: 'price', t: 'Muvaffaqiyatsiz · narx sababli', s: 'Shu oy', list: all.filter(l => st(l) === 'muvaffaqiyatsiz-sotuv' && /narx/i.test(l.failedSaleReason?.label || '') && (closedAt(l) || 0) >= ms) }
-        ].map(x => ({ ...x, list: x.list.filter(l => telOf(l.phone)) })).map(x => (void now, x));
+        ].map(x => ({ ...x, list: x.list.filter(l => telOf(l.phone)) }));
     }
     function screenSms() {
         const gs = smsGroups(), cur = gs.find(x => x.k === S.sms) || gs[0];
@@ -1199,17 +1224,34 @@
     }
     // Markazdagi tabrik oynalari va to'liq ekranli "Reja bajarildi".
     function overlay(html, cls = '') {
-        closeOverlay();
+        const opener = overlayEl ? overlay._opener : (sheetEl ? openSheet._opener : document.activeElement);
+        closeOverlay(true);
+        overlay._opener = opener;
         overlayEl = document.createElement('div');
         overlayEl.className = 'ra-ov ' + cls;
         overlayEl.innerHTML = `<div class="ra-ov-dim" aria-hidden="true"></div>${html}`;
         document.body.appendChild(overlayEl);
         overlayEl.addEventListener('click', onClick);
-        overlayEl.addEventListener('keydown', e => { if (e.key === 'Escape') closeOverlay(); });
+        overlayEl.addEventListener('keydown', e => {
+            if (e.key === 'Escape') { e.preventDefault(); closeOverlay(); return; }
+            if (e.key !== 'Tab') return;
+            const f = [...overlayEl.querySelectorAll('button:not([disabled]), a[href]')].filter(x => x.offsetParent !== null);
+            if (!f.length) { e.preventDefault(); return; }
+            const first = f[0], last = f[f.length - 1];
+            if (e.shiftKey && (document.activeElement === first || !overlayEl.contains(document.activeElement))) { e.preventDefault(); last.focus(); }
+            else if (!e.shiftKey && (document.activeElement === last || !overlayEl.contains(document.activeElement))) { e.preventDefault(); first.focus(); }
+        });
         armGuard();
-        setTimeout(() => overlayEl?.querySelector('button')?.focus({ preventScroll: true }), 30);
+        setTimeout(() => overlayEl?.querySelector('[role="dialog"] button, [role="dialog"] a[href]')?.focus({ preventScroll: true }), 30);
     }
-    function closeOverlay() { if (overlayEl) { overlayEl.remove(); overlayEl = null; } }
+    // Yopilganda fokus ochuvchi tugmaga (u hali sahifada bo'lsa) yoki ilova sarlavhasiga qaytadi.
+    function closeOverlay(keepOpener) {
+        if (!overlayEl) return;
+        overlayEl.remove(); overlayEl = null;
+        if (keepOpener) return;
+        const o = overlay._opener; overlay._opener = null;
+        setTimeout(() => { const t = o && o.isConnected && o.offsetParent !== null ? o : root?.querySelector('h1, button'); if (t) { if (!t.matches('button, a, [tabindex]')) t.setAttribute('tabindex', '-1'); t.focus({ preventScroll: true }); } }, 0);
+    }
 
     // Menejer tanlash (taqsimlash va almashtirish uchun bitta ro'yxat).
     function mgrOptions(lg, opts = {}) {
@@ -1241,7 +1283,8 @@
           <p class="sa-sh-foot" data-ra-asfoot>${esc(firstName(sv.name))}ga darhol bildirishnoma boradi · 30 daqiqada qoʻngʻiroq qilishi kerak</p>`, 'ra-sheet');
     }
     function doAssign(items) {
-        if (!items.length) return;
+        if (!items.length || !once('assign')) return;
+        document.querySelectorAll('[data-ra-assigngo], [data-ra-even]').forEach(b => { b.disabled = true; });
         const before = ALL().filter(l => !l.managerId && OPEN.has(st(l))).length;
         if (g('applyBulkLeadAssignment')) applyBulkLeadAssignment(items.map(x => ({ lang: x.lang, id: x.id, managerId: x.managerId })));
         else items.forEach(x => updateLeadInStorage(x.lang, x.id, l => ({ ...l, managerId: x.managerId })));
@@ -1282,7 +1325,9 @@
           <p class="sa-sh-foot" data-ra-rsfoot>${cur && staleOf(l) ? `${esc(firstName(cur))}ning qulfi yechiladi · ` : ''}${esc(firstName(list[0].m.name))}da qotish hisobi bugundan boshlanadi (${ruleFor(l._lang).warnDays} / ${ruleFor(l._lang).lockDays} kun)</p>`, 'ra-sheet');
     }
     function doReassign() {
-        const rs = S.rs; const l = rs && leadById(rs.id, rs.lg); if (!l || !rs.pick) return;
+        const rs = S.rs; const l = rs && leadById(rs.id, rs.lg); if (!l || !rs.pick || !sheetEl || !once('reassign:' + rs.id)) return;
+        S.rs = null;
+        sheetEl.querySelectorAll('[data-ra-rsgo]').forEach(b => { b.disabled = true; });
         const me = user(), from = l.managerId ? mgrName(l.managerId) : 'biriktirilmagan', to = mgrName(rs.pick);
         const text = `ROP ${firstName(me.name)} lidni ${firstName(from) || from} → ${firstName(to)}ga oʻtkazdi${rs.reason ? ` · sabab: ${rs.reason}` : ''}`;
         // managerAssignedAt updateLeadInStorage'da yangilanadi — yangi menejerda qotish hisobi bugundan.
@@ -1292,6 +1337,13 @@
         if (g('renderLeads')) try { renderLeads(); } catch (e) { /* CRM sahifasi yopiq */ }
         toast(`${firstName(to)}ga oʻtkazildi`, 'ok');
         render(false);
+    }
+    // Lid kartasi "⋯": ROP uchun mavjud lid amallari (o'chirish ROP'ga berilmagan — "15-ish" qoidasi).
+    function openCardMore(id, lg) {
+        const l = leadById(id, lg); if (!l) return;
+        const row = (attr, t) => `<button type="button" class="sa-opt2" ${attr}="${esc(id)}">${t}${ic('chev', 18, 2.4)}</button>`;
+        openSheet(`<div class="sa-sh-h"><div><h2>${esc(l.name || 'Lid')}</h2><span>${esc(colLabel(st(l)))}</span></div><button type="button" class="sa-icon-btn ra-x" data-ra-sheetclose aria-label="Yopish">${ic('close', 18, 2.4)}</button></div>
+          <div class="sa-opts2">${row('data-ra-cm-sms', 'Mijozga SMS (shablon)')}${row('data-ra-cm-follow', 'Eslatma qoʻyish')}${row('data-ra-cm-rec', 'Qoʻngʻiroq yozuvlari')}${row('data-ra-cm-full', 'Toʻliq lid kartasi')}</div>`, 'ra-sheet');
     }
     function openStageSheet(id, lg) {
         const l = leadById(id, lg); if (!l) return;
@@ -1342,6 +1394,7 @@
             sheetEl.querySelector('[data-ra-lasave]').textContent = 'Baribir yangi lid qilib qoʻshish';
             return;
         }
+        if (!once('leadadd')) return; // dublikat ogohlantirishidan keyingi haqiqiy saqlash — bir marta
         const mgr = document.getElementById('raLaMgr').value || '';
         const me = user(), nowIso = new Date().toISOString();
         const leadType = la.src === 'Target' ? 'target' : 'organic';
@@ -1353,6 +1406,7 @@
         leads[lang].push(newLead);
         setItem(STORAGE_KEYS.leads, leads);
         if (g('persistLeadChange')) persistLeadChange(lang, newLead).catch(e => toast(e.message || 'Serverga saqlanmadi', 'warn'));
+        S.la = null;
         closeSheet();
         if (g('renderLeads')) try { renderLeads(); } catch (e) { /* yopiq */ }
         toast(`${name} — lid qoʻshildi${mgr ? ' · ' + firstName(mgrName(mgr)) + 'ga berildi' : ''}`, 'ok');
@@ -1532,7 +1586,7 @@
 
     // ---------- hodisalar ----------
     function onClick(e) {
-        const t = e.target.closest('[data-ra-go],[data-ra-nav],[data-ra-back],[data-ra-lead],[data-ra-man],[data-ra-stage],[data-ra-clearq],[data-ra-leadadd],[data-ra-reassign],[data-ra-hist],[data-ra-tglead],[data-ra-notify],[data-ra-stagesheet],[data-ra-move],[data-ra-sheetclose],[data-ra-selall],[data-ra-pick],[data-ra-even],[data-ra-assignsheet],[data-ra-mpick],[data-ra-assigngo],[data-ra-rsr],[data-ra-rsgo],[data-ra-ack],[data-ra-aptab],[data-ra-ap],[data-ra-apreload],[data-ra-approve],[data-ra-reject],[data-ra-rjk],[data-ra-rjr],[data-ra-rjsave],[data-ra-apnext],[data-ra-ovgo],[data-ra-ovclose],[data-ra-trday],[data-ra-trseg],[data-ra-tassign],[data-ra-tapick],[data-ra-tasave],[data-ra-tremind],[data-ra-tadmin],[data-ra-tresched],[data-ra-tmore],[data-ra-tcancel],[data-ra-tcr],[data-ra-tcsave],[data-ra-trialnew],[data-ra-tper],[data-ra-mgr],[data-ra-mleads],[data-ra-funper],[data-ra-stlang],[data-ra-step],[data-ra-stsave],[data-ra-artab],[data-ra-arreload],[data-ra-restore],[data-ra-smsg],[data-ra-smssend],[data-ra-ncat],[data-ra-nread],[data-ra-nitem],[data-ra-crm],[data-ra-logout],[data-ra-lasrc],[data-ra-lasave]');
+        const t = e.target.closest('[data-ra-go],[data-ra-nav],[data-ra-back],[data-ra-lead],[data-ra-man],[data-ra-stage],[data-ra-clearq],[data-ra-leadadd],[data-ra-reassign],[data-ra-hist],[data-ra-tglead],[data-ra-notify],[data-ra-stagesheet],[data-ra-move],[data-ra-sheetclose],[data-ra-selall],[data-ra-pick],[data-ra-even],[data-ra-assignsheet],[data-ra-mpick],[data-ra-assigngo],[data-ra-rsr],[data-ra-rsgo],[data-ra-ack],[data-ra-aptab],[data-ra-ap],[data-ra-apreload],[data-ra-approve],[data-ra-reject],[data-ra-rjk],[data-ra-rjr],[data-ra-rjsave],[data-ra-apnext],[data-ra-ovgo],[data-ra-ovclose],[data-ra-trday],[data-ra-trseg],[data-ra-tassign],[data-ra-tapick],[data-ra-tasave],[data-ra-tremind],[data-ra-tadmin],[data-ra-tresched],[data-ra-tmore],[data-ra-tcancel],[data-ra-tcr],[data-ra-tcsave],[data-ra-trialnew],[data-ra-tper],[data-ra-mgr],[data-ra-mleads],[data-ra-funper],[data-ra-stlang],[data-ra-step],[data-ra-stsave],[data-ra-artab],[data-ra-arreload],[data-ra-restore],[data-ra-smsg],[data-ra-smssend],[data-ra-ncat],[data-ra-nread],[data-ra-nitem],[data-ra-crm],[data-ra-logout],[data-ra-lasrc],[data-ra-lasave],[data-ra-cardmore],[data-ra-cm-sms],[data-ra-cm-follow],[data-ra-cm-rec],[data-ra-cm-full]');
         if (!t) return;
         const d = t.dataset;
         if (t.tagName === 'A' && t.getAttribute('href')) return; // tel:, t.me — o'zi ochiladi
@@ -1560,6 +1614,15 @@
         if ('raTglead' in d) { const l = leadById(d.raTglead, S.leadLang); if (l && g('openLeadTelegramProfile')) openLeadTelegramProfile(l._lang, l.id); return; }
         if ('raNotify' in d) { const l = leadById(d.raNotify, S.leadLang); if (l) ackSla(l.id, l._lang); return; }
         if ('raStagesheet' in d) return openStageSheet(d.raStagesheet, S.leadLang);
+        if ('raCardmore' in d) return openCardMore(d.raCardmore, S.leadLang);
+        if ('raCmSms' in d || 'raCmFollow' in d || 'raCmRec' in d || 'raCmFull' in d) {
+            const l = leadById(d.raCmSms || d.raCmFollow || d.raCmRec || d.raCmFull, S.leadLang); closeSheet(true); if (!l) return;
+            if ('raCmSms' in d && g('openLeadSmsTemplateModal')) openLeadSmsTemplateModal(l._lang, l.id);
+            else if ('raCmFollow' in d && g('openLeadFollowUpReminderModal')) openLeadFollowUpReminderModal(l._lang, l.id, l.name, user().name);
+            else if ('raCmRec' in d && g('openLeadRecordingModal')) openLeadRecordingModal(l._lang, l.id);
+            else if ('raCmFull' in d && g('openLeadOverview')) openLeadOverview(l._lang, l.id);
+            return;
+        }
         if ('raMove' in d) { const sl = S.stageLead; closeSheet(true); if (sl && g('requestLeadStageChange')) requestLeadStageChange(sl.lg, sl.id, d.raMove); return; }
         if ('raEven' in d) { const sel = ALL().filter(l => S.sel.has(l.id)); const plan = evenPlan(sel); if (!plan.length) { toast('Faol menejer topilmadi', 'warn'); return; } return doAssign(plan.map(p => ({ lang: p.lang, id: p.leadId, managerId: p.managerId }))); }
         if ('raAssignsheet' in d) return openAssignSheet();
@@ -1577,7 +1640,7 @@
         if ('raRsgo' in d) return doReassign();
         if ('raAck' in d) return ackSla(d.raAck, d.ll);
         if ('raAptab' in d) { S.apTab = d.raAptab; render(true); return; }
-        if ('raAp' in d) { S.apId = d.raAp; return go('approval'); }
+        if ('raAp' in d) { S.apId = d.raAp; S.apDone = 0; return go('approval'); }
         if ('raApreload' in d) { loadApprovals(true); return; }
         if ('raApprove' in d) { t.disabled = true; return decide(S.apId, 'approve', ''); }
         if ('raReject' in d) return openRejectSheet(d.raReject);

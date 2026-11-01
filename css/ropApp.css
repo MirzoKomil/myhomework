@@ -203,7 +203,7 @@ body.ra-on .modal-overlay > .modal .modal-footer .btn { min-height: 48px; }
 .ra-sla--s { flex-direction: row; align-items: center; gap: 12px; }
 .ra-sla--s .sa-row-t em { font-style: normal; font-size: 12px; font-weight: 700; }
 .ra-sla .sa-row-t > span { white-space: normal !important; }
-.ra-link-t { border: 0; background: none; padding: 0; text-align: left; color: var(--sa-ink) !important; min-height: 24px; }
+.ra-link-t { border: 0; background: none; padding: 0; text-align: left; color: var(--sa-ink) !important; min-height: 44px; display: flex; flex-direction: column; justify-content: center; }
 .ra-rules-card { border: 1.5px dashed var(--sa-line2); border-radius: 18px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
 .ra-rules-card strong { font-size: 14px; }
 .ra-rules-card span { font-size: 13px; color: var(--sa-ink2); line-height: 1.55; }
@@ -226,7 +226,8 @@ body.ra-on .modal-overlay > .modal .modal-footer .btn { min-height: 48px; }
 .ra-diff del { color: var(--sa-mut); }
 .ra-diff svg { color: var(--sa-mut); flex: none; }
 .ra-apc-f { display: flex; align-items: center; gap: 8px; }
-.ra-apc-f > span { flex: 1; min-width: 0; font-size: 12px; color: var(--sa-mut); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ra-apc-f .sa-av { flex: none; }
+.ra-apc-f > span:not(.sa-av) { flex: 1; min-width: 0; font-size: 12px; color: var(--sa-mut); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ra-apc-f b { font-size: 13px; font-weight: 800; color: var(--sa-blue-d); }
 .ra-recents { padding: 4px 14px; }
 .ra-recent { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #EEF2F8; font-size: 13px; }
