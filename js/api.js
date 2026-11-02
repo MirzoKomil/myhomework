@@ -54,7 +54,12 @@ async function _apiFetchRaw(path, options = {}) {
         res = await fetch(path, { ...options, headers, signal: controller.signal });
     } catch (e) {
         clearTimeout(timer);
-        if (e.name === 'AbortError') throw new Error('So\'rov vaqti tugadi. Internet aloqasini tekshiring.');
+        if (e.name === 'AbortError') {
+            // timeout=true — chaqiruvchi so'rov serverda davom etayotgan bo'lishi mumkinligini biladi (masalan SMS yuborish).
+            const te = new Error('So\'rov vaqti tugadi. Internet aloqasini tekshiring.');
+            te.timeout = true;
+            throw te;
+        }
         throw e;
     }
     clearTimeout(timer);
@@ -330,10 +335,13 @@ async function apiFetchSmsHistory(limit) {
 // Har bir qabul qiluvchiga alohida so'rov ketadi (Eskiz'da batch endpoint
 // ishonchliligi tekshirilmagan) — shu sabab katta ro'yxatlarda javob
 // standart 15s'dan uzoqroq kutilishi kerak.
-async function apiSendSms(recipients, message, audience) {
+// opts.skipAlreadySent — ommaviy yuborishda: server yaqinda shu raqamga aynan shu matn
+// ketgan bo'lsa qayta yubormaydi (timeoutdan keyin qayta bosilganda ikki marta pul yechilmaydi).
+// Timeout'da xato `err.timeout === true` bilan keladi — server yuborishda davom etgan bo'lishi mumkin.
+async function apiSendSms(recipients, message, audience, opts = {}) {
     return apiFetch('/api/sms/send', {
         method: 'POST',
-        body: JSON.stringify({ recipients, message, audience }),
+        body: JSON.stringify({ recipients, message, audience, ...(opts.skipAlreadySent ? { skipAlreadySent: true } : {}) }),
         timeout: Math.min(120000, 15000 + recipients.length * 1500)
     });
 }

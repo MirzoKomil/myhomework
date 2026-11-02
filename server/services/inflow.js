@@ -275,8 +275,9 @@ async function receive(pool, actor, body) {
         if (!Number.isSafeInteger(paid + amount)) throw error(400, 'Summa chegaradan oshdi');
         const result = await insert(db, { sourceKey: key, amount, paidDate, paidAt: time ? paidDate + 'T' + time + ':00+05:00' : null, method, receiptUrl,
             total: paid + debt, tariff: Number(s.lessonDuration), form: amount === debt ? 'full' : 'partial', debt: debt - amount }, ctx, user);
+        // Muzlatish (frozen) va status to'lovdan mustaqil: qarz to'langani muzlatilgan o'quvchini faollashtirmaydi.
         const extras = { paidAmount: paid + amount, debtAmount: debt - amount, lastPaymentDate: paidDate, paymentCount: (Number(s.paymentCount) || 0) + 1,
-            paymentLedgerManaged: true, paymentLedgerOpeningPaid: openingPaid, status: 'active', frozen: false, ...(debt === amount ? { paymentDueDate: '' } : {}) };
+            paymentLedgerManaged: true, paymentLedgerOpeningPaid: openingPaid, ...(debt === amount ? { paymentDueDate: '' } : {}) };
         await db.query('UPDATE students SET extra_data=extra_data || $2::jsonb WHERE id=$1', [s.id, JSON.stringify(extras)]);
         // Keep authorship in lead history without replacing earlier manager/teacher comments.
         if (lead) {
