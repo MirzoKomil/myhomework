@@ -105,6 +105,7 @@ img{display:block}
 .player{background:var(--bg);border-radius:16px;padding:6px 12px 6px 6px;display:flex;align-items:center;gap:10px}
 .player .pb{width:44px;height:44px;border-radius:22px;border:none;background:var(--blue);display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .player .track{height:5px;border-radius:3px;background:var(--line)}.player .track>i{display:block;height:5px;border-radius:3px;background:var(--blue);width:0}
+.spk.loading,.word.loading{opacity:.55;animation:bob 1s ease-in-out infinite}
 .spk{display:inline-flex;align-items:center;justify-content:center;gap:4px;min-width:44px;min-height:44px;border:none;border-radius:12px;background:var(--bluel);color:var(--blued);font-size:13px;font-weight:800;padding:0 10px}
 .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .stat{background:#fff;border-radius:16px;padding:10px;text-align:center;display:flex;flex-direction:column;gap:2px}
