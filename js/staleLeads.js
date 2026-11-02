@@ -155,7 +155,7 @@
     }
     // Fon (ilova, CRM) qulf paytida klaviatura/ekran o'quvchi uchun ham yopiq.
     const KEEP = el => el.classList?.contains('sl-wrap') || el.classList?.contains('sl-sheet-wrap') || el.classList?.contains('sl-pill')
-        || el.classList?.contains('sa-sheet-wrap') || el.classList?.contains('sa-toast') || el.classList?.contains('dwact') || el.id === 'modalOverlay'
+        || el.classList?.contains('sa-sheet-wrap') || el.classList?.contains('sdc-wrap') || el.classList?.contains('sa-toast') || el.classList?.contains('dwact') || el.id === 'modalOverlay'
         || ['SCRIPT', 'STYLE', 'LINK'].includes(el.tagName);
     function setInert(on) {
         [...document.body.children].forEach(el => {
@@ -337,9 +337,9 @@
     }
     function onKey(e) {
         if (!S.open) return;
-        // Ustida ilova oynasi (qo'ng'iroq natijasi) yoki CRM oynasi ochiq — klaviatura o'shalarniki.
+        // Ustida ilova oynasi (qo'ng'iroq natijasi — telefon .sa-sheet-wrap, kompyuter .sdc-wrap) yoki CRM oynasi ochiq — klaviatura o'shalarniki.
         const ov = document.getElementById('modalOverlay');
-        if (document.querySelector('.sa-sheet-wrap') || (ov && ov.style.display && ov.style.display !== 'none')) return;
+        if (document.querySelector('.sa-sheet-wrap, .sdc-wrap') || (ov && ov.style.display && ov.style.display !== 'none')) return;
         if (e.key === 'Escape') { e.preventDefault(); if (S.sheet) closeSheet(); else sheetBlocked(); return; }
         if (e.key !== 'Tab') return;
         const scope = S.sheet || S.el;

@@ -1,5 +1,8 @@
 // ROP kompyuter kabineti — Lidlar (dizayn RK02 "RopKLeadsC", 9.5) va ichki oynalar (RK02.*).
-// FAQAT ropDesk.isRop() (role = rop, ekran > 900px). Sotuv menejeri / admin kanbani o'zgarmaydi.
+// ropDesk.isDesk(): ROP (role = rop) va sotuv menejeri (role = sales_manager, dizayn SotKLeads), ekran > 900px.
+// ROPga xos qismlar (menejer biriktirish / M, menejersiz filtri, badge filtri, ommaviy biriktirish) — faqat isRop().
+// Sotuv menejerida: menejer tugmasi yo'q, kartani bosish = belgilash, ommaviy panelda "SMS yuborish",
+// tepada qo'ng'iroq navbati (js/sotDesk/call.js) va qotgan lidlar banneri. Admin va telefon kanbani o'zgarmaydi.
 // Qoida: hech bir funksiya yo'qolmaydi. Karta prod renderLeadCard natijasidan quriladi — undagi barcha tugmalar
 // (data-lead-open, -comments, -recording, -notify, -manager-photo, menyu: menejer / bosqich / SMS / Telegram,
 // belgilash checkbox'i) o'sha elementlar, faqat dizayn tartibida joylashtiriladi; renderLeads ulagan
@@ -9,7 +12,9 @@
 (function () {
     'use strict';
     const RD = window.ropDesk = window.ropDesk || {};
-    const on = () => !!RD.isRop?.();
+    const on = () => !!RD.isDesk?.();
+    const rop = () => !!RD.isRop?.();
+    const sot = () => !!RD.isSot?.();
     const g = n => (typeof window[n] === 'function' ? window[n] : null);
     const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const ls = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* ixtiyoriy */ } } };
@@ -30,6 +35,9 @@
     const avColor = id => { let h = 0; for (const c of String(id || '')) h = (h * 31 + c.charCodeAt(0)) >>> 0; return AV[h % AV.length]; };
     const shortName = n => { const p = String(n || '').trim().split(/\s+/); return p[0] ? p[0] + (p[1] ? ' ' + p[1][0] + '.' : '') : ''; };
     const initials = n => String(n || '').trim().split(/\s+/).map(w => w[0] || '').slice(0, 2).join('').toUpperCase();
+
+    // Sotuv menejeri: belgilangan lidlar (qayta chizilganda ham saqlanadi; SMS uchun).
+    const SEL = new Set();
 
     // ---------- yosh (option B: prod shkalasi hamma ochiq ustunda) ----------
     // _leadAgeChip bilan bir xil: <1 kun yashil, 1–3 kun sariq, 3+ qizil; matn: daq / soat / kun.
@@ -92,14 +100,22 @@
         const comN = Array.isArray(l.comments) ? l.comments.length : 0;
         const stripe = age ? { ok: '#12B76A', warn: '#F79009', late: '#F04438' }[age.lvl] : '#CBD5E1';
         // Prod qismlari (mantig'i o'zgarmasin): checkbox, menyu, bildirishnoma (o'qilmaganlar), sabab, sinov holati, qatnashdi, kechiktirilgan sanalar.
-        const cb = pick(art, '.lead-bulk-checkbox');
+        let cb = pick(art, '.lead-bulk-checkbox');
+        // Sotuv menejeri: prod kartada checkbox yo'q (faqat admin/ROP) — belgilash SMS uchun shu yerda qo'shiladi.
+        if (!cb && sot()) {
+            cb = document.createElement('input');
+            cb.type = 'checkbox'; cb.className = 'lead-bulk-checkbox';
+            cb.dataset.id = String(l.id); cb.dataset.lang = langKey;
+            if (SEL.has(String(l.id))) { cb.checked = true; cb.setAttribute('checked', ''); }
+        }
         const menu = pick(art, '.lead-card-menu-wrap');
         const notify = pick(art, '[data-lead-notify]');
         const reason = pick(art, '.lead-contact-reason-badge, .lead-card-contact-reason, [class*="contact-reason"]');
         const trial = pick(art, '.lead-card-trial-status');
         const attended = pick(art, '.lead-trial-attended');
         const deferred = pick(art, '.lead-deferred-dates, .lead-card-deferred, [class*="deferred"]');
-        const mgrBtn = pick(art, '[data-lead-manager-photo]');
+        let mgrBtn = pick(art, '[data-lead-manager-photo]');
+        if (sot()) mgrBtn = null; // sotuv menejeri o'zi — menejer tugmasi kerak emas (dizayn SotKLeads)
         const comBtn = pick(art, '[data-lead-comments]');
         const recBtn = pick(art, '[data-lead-recording]');
         const nameBtn = pick(art, '[data-lead-open]');
@@ -117,8 +133,8 @@
         if (risks.length) art.dataset.rkRisk = risks.join(' ');
         art.style.setProperty('--rk-stripe', stripe);
         art.setAttribute('aria-describedby', 'rkCardHelp');
-        art.setAttribute('aria-keyshortcuts', 'Enter F2 Space Shift+Space M S');
-        art.setAttribute('aria-label', [l.name, (LEAD_COLUMNS.find(c => c.id === s) || {}).label, age?.label, mgr ? shortName(mgr.name) : 'menejersiz', stale?.k === 'lock' ? 'qulflangan' : stale ? 'ogohlantirilgan' : '', fu?.overdue ? 'qoʻngʻiroq muddati oʻtdi' : '', unread ? unread + ' ta bildirishnoma' : ''].filter(Boolean).join(', '));
+        art.setAttribute('aria-keyshortcuts', sot() ? 'Enter F2 Space Shift+Space S' : 'Enter F2 Space Shift+Space M S');
+        art.setAttribute('aria-label', [l.name, (LEAD_COLUMNS.find(c => c.id === s) || {}).label, age?.label, sot() ? '' : mgr ? shortName(mgr.name) : 'menejersiz', stale?.k === 'lock' ? 'qulflangan' : stale ? 'ogohlantirilgan' : '', fu?.overdue ? 'qoʻngʻiroq muddati oʻtdi' : '', unread ? unread + ' ta bildirishnoma' : ''].filter(Boolean).join(', '));
 
         if (nameBtn) { nameBtn.className = 'rk-nm lead-card-name-btn'; nameBtn.setAttribute('aria-haspopup', 'dialog'); nameBtn.title = 'Lid kartasini ochish: ' + (l.name || ''); }
         const r1 = `<div class="rk-r1">${cb ? '<label class="rk-cbx" title="Belgilash (Space)"></label>' : ''}<span class="rk-nm-slot"></span>${attended ? '<span class="rk-att" role="img" aria-label="Sinov darsida qatnashdi" title="Sinov darsida qatnashdi">✓</span>' : ''}<span class="rk-menu-slot"></span></div>`;
@@ -319,9 +335,11 @@
         if (tot) {
             const q = typeof _leadSearchQuery !== 'undefined' && _leadSearchQuery;
             const n = [...document.querySelectorAll('#leadsKanban .lead-column:not(.rk-shut) .lead-column-count, #leadsKanban .rk-mini .lead-column-count')].reduce((a, c) => a + (Number(String(c.textContent).split('/')[0]) || 0), 0);
-            tot.innerHTML = `${q ? 'Topildi' : 'Jami'} <strong>${n}</strong>`;
+            if (sot()) { const t = sotTotals(); tot.innerHTML = q ? `Topildi <strong>${n}</strong>` : `${t.open} ochiq · <strong>${t.all} jami</strong>`; tot.title = 'Joriy filtrlar boʻyicha: ochiq bosqichlardagi / barcha lidlar'; }
+            else tot.innerHTML = `${q ? 'Topildi' : 'Jami'} <strong>${n}</strong>`;
         }
         hiddenCols();
+        if (sot()) sotTop();
         // Doska ekran balandligini to'ldiradi, ustunlar ichida skroll (dizayn 1440×960).
         const board = document.getElementById('leadsKanban');
         if (board) board.style.setProperty('--rk-top', Math.max(0, Math.round(board.getBoundingClientRect().top + window.scrollY)) + 'px');
@@ -387,6 +405,125 @@
     }
     RD.leads = { openUnassigned, clearBadgeFilter };
 
+    // ---------- Sotuv menejeri (dizayn SotKLeads / SotKL_Call) ----------
+    const curLang = () => (typeof _leadsLangFilter !== 'undefined' && _leadsLangFilter === 'russian' ? 'russian' : 'english');
+    // "27 ochiq · 53 jami" — joriy filtrlar (menejer, sana, manba) bo'yicha, renderLeads bilan bir xil ro'yxat.
+    function sotTotals() {
+        const all = ((g('getItem') ? getItem(STORAGE_KEYS.leads, { english: [], russian: [] }) : {})[curLang()] || []).map(l => ({ ...l, _lang: curLang() }));
+        let list = all.filter(l => !l.deletedAt);
+        try { if (g('filterLeadsByManager')) list = filterLeadsByManager(list); if (g('filterLeadsByDateAndSource')) list = filterLeadsByDateAndSource(list); } catch (e) { /* filtrsiz */ }
+        return { all: list.length, open: list.filter(l => OPEN.has(st(l))).length };
+    }
+    // Doska tepasi: qo'ng'iroq navbati (call.js) + qotgan lidlar banneri (staleLeads, 3-kun ogohlantirish).
+    function sotTop() {
+        const board = document.getElementById('leadsKanban'); if (!board) return;
+        let top = document.getElementById('sdLeadsTop');
+        if (!top) { top = document.createElement('div'); top.id = 'sdLeadsTop'; top.className = 'sd-ltop'; board.before(top); }
+        const q = window.sotDesk?.queueBarHtml ? window.sotDesk.queueBarHtml() : '';
+        top.innerHTML = q + staleBannerHtml();
+        top.hidden = !top.innerHTML.trim();
+        top.querySelector('[data-sd-stalego]')?.addEventListener('click', showStale);
+        window.sotDesk?.bindQueue?.(top);
+    }
+    function staleBannerHtml() {
+        const SL = window.staleLeads; if (!SL?.compute) return '';
+        let d; try { d = SL.compute(); } catch (e) { return ''; }
+        const list = d.warn.concat(d.lock); if (!list.length) return '';
+        const left = Math.max(1, d.rule.lockDays - (d.warn.length ? SL.ageDays(d.warn[0]) : d.rule.lockDays));
+        return `<div class="sd-warn" role="status"><span class="sd-warn-i">${SVG(P.clock, 20, 2.2)}</span><span class="sd-warn-t"><strong>${list.length} ta lid ${d.rule.warnDays} kundan beri olmayapti</strong><span>${d.lock.length ? 'Baʼzilarini hoziroq “Sifatsiz”ga oʻtkazish shart' : `${left} kundan keyin “Sifatsiz”ga oʻtkazish shart`}</span></span><button type="button" class="sd-btn2" data-sd-stalego>Lidlarni koʻrsatish</button></div>`;
+    }
+    // "Lidlarni ko'rsatish": "Urinilmoqda" ustuni ochiladi, eng eski qotgan lid kartasiga fokus.
+    function showStale() {
+        const SL = window.staleLeads; if (!SL?.compute) return;
+        const d = SL.compute(); const f = d.lock[0] || d.warn[0]; if (!f) return;
+        const col = 'boglanishga-urinilmoqda';
+        const sh = shutSet(); if (sh.has(col)) { sh.delete(col); saveShut(sh); }
+        R.risk = '';
+        if (typeof _leadColumnLimits !== 'undefined') _leadColumnLimits[col] = 100000;
+        if (typeof _leadsVisibleColumns !== 'undefined' && !_leadsVisibleColumns.has(col)) { _leadsVisibleColumns.add(col); g('saveVisibleColumns') && saveVisibleColumns(); }
+        renderLeads();
+        const sel = () => document.querySelector(`#leadsKanban .lead-card[data-lead-id="${CSS.escape(String(f.id))}"]`);
+        // Qotgan lid sana/manba filtri ortida qolsa (masalan "Joriy oy" — o'tgan oy lidi) — filtrlar kengaytiriladi.
+        if (!sel() && typeof _leadsDateFilter !== 'undefined') {
+            _leadsDateFilter = { preset: 'all', from: '', to: '' };
+            if (typeof _leadsSourceFilter !== 'undefined') { _leadsSourceFilter = 'all'; const sf = document.getElementById('leadsSourceFilter'); if (sf) sf.value = 'all'; const sd = document.getElementById('leadsSourceFilterDisplay'); if (sd) sd.textContent = 'Manba: Hammasi'; }
+            g('updateLeadsDateFilterLabel') && updateLeadsDateFilterLabel();
+            renderLeads();
+            g('showMiniToast') && showMiniToast('Qotgan lidlar koʻrinishi uchun sana filtri: Barcha vaqt');
+        }
+        const c = sel();
+        if (c) {
+            // Faqat ustun ichida va doskada suriladi (sahifa konteyneri surilsa ustun sarlavhalari yo'qoladi).
+            const box = c.closest('.lead-column-cards'), b = document.getElementById('leadsKanban'), colEl = c.closest('.lead-column');
+            if (box) box.scrollTop += c.getBoundingClientRect().top - box.getBoundingClientRect().top - 60;
+            if (b && colEl) { const br = b.getBoundingClientRect(), cr = colEl.getBoundingClientRect(); if (cr.left < br.left || cr.right > br.right) b.scrollLeft += cr.left - br.left - 16; }
+            c.focus({ preventScroll: true }); c.classList.add('sd-flash'); setTimeout(() => c.classList.remove('sd-flash'), 1600); }
+    }
+    // Ommaviy panel (sotuv): "N ta lid tanlandi · SMS yuborish · Bekor qilish". ROP paneli (biriktirish) ko'rsatilmaydi.
+    function sotBulk() {
+        const present = new Set([...document.querySelectorAll('#leadsKanban .lead-bulk-checkbox')].map(c => String(c.dataset.id)));
+        [...SEL].forEach(id => { if (!present.has(id)) SEL.delete(id); });
+        let bar = document.getElementById('sdBulk');
+        if (!SEL.size || !on() || !document.getElementById('tab-sales')?.classList.contains('active')) { bar?.remove(); document.getElementById('leadsKanban')?.removeAttribute('data-picking'); return; }
+        document.getElementById('leadsKanban')?.setAttribute('data-picking', '1');
+        if (!bar) {
+            bar = document.createElement('div'); bar.id = 'sdBulk'; bar.className = 'sd-bulk'; bar.setAttribute('role', 'region'); bar.setAttribute('aria-label', 'Tanlangan lidlar');
+            bar.innerHTML = '<strong aria-live="polite"></strong><button type="button" class="sd-bulk-sms" aria-haspopup="dialog">SMS yuborish</button><button type="button" class="sd-bulk-x">Bekor qilish</button>';
+            bar.querySelector('.sd-bulk-sms').addEventListener('click', openBulkSms);
+            bar.querySelector('.sd-bulk-x').addEventListener('click', () => { SEL.clear(); document.querySelectorAll('#leadsKanban .lead-bulk-checkbox:checked').forEach(c => { c.checked = false; c.closest('.lead-card')?.classList.remove('is-sel'); }); sotBulk(); });
+            document.body.appendChild(bar);
+        }
+        bar.querySelector('strong').textContent = `${SEL.size} ta lid tanlandi`;
+    }
+    // SMS segmentlari: ʻ/ʼ kabi belgilar bo'lsa Unicode (70, ko'p qismli — 67), aks holda 160/153.
+    const smsSeg = t => { const uni = /[^\x00-\x7F]/.test(t); const per = uni ? (t.length > 70 ? 67 : 70) : (t.length > 160 ? 153 : 160); return { uni, len: t.length, seg: Math.max(1, Math.ceil(t.length / per)) }; };
+    // Tanlanganlarga SMS — mavjud LEAD_SMS_TEMPLATES va apiSendSms (SMS sahifasidagi ommaviy yuborish kabi: har kimga
+    // o'z ismi bilan, skipAlreadySent — timeoutdan keyin qayta bosilsa ikki marta pul yechilmaydi).
+    function openBulkSms() {
+        if (!g('openModal') || !g('apiSendSms')) return;
+        const lang = curLang();
+        const leads = [...SEL].map(id => (g('getLeadById') ? getLeadById(lang, id) : null)).filter(Boolean);
+        const rec = leads.map(l => ({ l, phone: g('getLeadMessagingPhone') ? getLeadMessagingPhone(l) : '' }));
+        const ok = rec.filter(r => r.phone), noPh = rec.length - ok.length;
+        const tpls = (typeof LEAD_SMS_TEMPLATES !== 'undefined' ? LEAD_SMS_TEMPLATES[lang] : []) || [];
+        if (!ok.length) { g('showMiniToast') && showMiniToast('Tanlangan lidlarda telefon raqami yoʻq'); return; }
+        const first = n => String(n || '').trim().split(/\s+/)[0] || 'mijoz';
+        const names = ok.map(r => first(r.l.name));
+        const to = `${ok.length} ta lid: ${names.slice(0, 3).join(', ')}${names.length > 3 ? ` va yana ${names.length - 3}` : ''} — har biriga oʻz ismi bilan`;
+        openModal('SMS xabar yuborish', `<div class="sd-sms"><p class="sd-sms-to">${esc(to)}${noPh ? ` · <b>${noPh} tasida raqam yoʻq</b>` : ''}</p>
+            <div class="sd-sms-t" role="radiogroup" aria-label="Shablon">${tpls.map((t, i) => `<label class="sd-rad"><input type="radio" name="sdSmsT" value="${i}"${i === 0 ? ' checked' : ''}><span>${esc(t.replace('{name}', '{ism}'))}</span></label>`).join('')}</div>
+            <p class="sd-sms-seg" aria-live="polite"></p><div class="sd-sms-res" role="status"></div></div>`,
+            `<button type="button" class="btn-ghost" id="sdSmsCancel">Bekor qilish</button><button type="button" class="btn-primary-sm" id="sdSmsSend">SMS yuborish</button>`);
+        const body = document.querySelector('#modalOverlay .sd-sms'); if (!body) return;
+        const cur = () => tpls[Number(body.querySelector('input[name="sdSmsT"]:checked')?.value || 0)] || tpls[0] || '';
+        const paint = () => {
+            const t = cur(); const longest = ok.reduce((m, r) => { const x = t.replace('{name}', r.l.name || 'mijoz'); return x.length > m.length ? x : m; }, '');
+            const sg = smsSeg(longest), tot = ok.reduce((a, r) => a + smsSeg(t.replace('{name}', r.l.name || 'mijoz')).seg, 0);
+            body.querySelector('.sd-sms-seg').textContent = `Matn: ${sg.len} belgigacha · ${sg.seg} SMS${sg.uni ? ' (ʻ va ʼ belgilari sababli Unicode — 70 belgidan)' : ''} · jami ${ok.length} qabul qiluvchi → ${tot} SMS`;
+        };
+        body.addEventListener('change', paint); paint();
+        document.getElementById('sdSmsCancel').onclick = () => closeModal();
+        const send = document.getElementById('sdSmsSend');
+        send.onclick = async () => {
+            if (send.disabled) return;
+            const t = cur();
+            const recipients = ok.map(r => ({ id: r.l.id, type: 'lead', name: r.l.name || 'Lid', phone: r.phone, message: t.replace('{name}', r.l.name || 'mijoz') }));
+            send.disabled = true; send.textContent = 'Yuborilmoqda...';
+            const res = body.querySelector('.sd-sms-res'); res.textContent = '';
+            try {
+                const r = await apiSendSms(recipients, t, 'lidlar', { skipAlreadySent: true });
+                closeModal();
+                SEL.clear(); renderLeads();
+                g('showMiniToast') && showMiniToast(`SMS yuborildi: ${r?.sent || 0} ta${r?.failed ? ` · ${r.failed} ta xato` : ''}${r?.skipped ? ` · ${r.skipped} ta oʻtkazildi (allaqachon yuborilgan)` : ''}`, 6000);
+            } catch (err) {
+                if (err && err.timeout) { closeModal(); g('showMiniToast') && showMiniToast('Javob kelmadi — SMS yuborilgan boʻlishi mumkin. Qayta yuborsangiz, yuborilganlari oʻtkazib yuboriladi.', 7000); return; }
+                res.innerHTML = `<div class="sd-alert" role="alert">SMS yuborilmadi: ${esc(err?.message || 'nomaʼlum xatolik')}. Shablon tanlovi saqlanib qoldi.</div>`;
+                send.disabled = false; send.textContent = 'Qayta yuborish';
+            }
+        };
+    }
+    RD.leads.showStale = showStale;
+
     // ---------- belgilash, klaviatura ----------
     const S = { last: null };
     function setPicked(cb, v) { if (!cb || cb.checked === v) return; cb.checked = v; cb.dispatchEvent(new Event('change', { bubbles: true })); }
@@ -421,6 +558,7 @@
         board.addEventListener('change', e => {
             const cb = e.target.closest?.('.lead-bulk-checkbox'); if (!cb) return;
             cb.closest('.lead-card')?.classList.toggle('is-sel', cb.checked);
+            if (sot()) { if (cb.checked) SEL.add(String(cb.dataset.id)); else SEL.delete(String(cb.dataset.id)); sotBulk(); }
             if (!e.isTrusted) return;
             const c = cb.closest('.lead-card'); S.last = { id: c?.dataset.leadId, col: c?.closest('.lead-column')?.dataset.status };
         });
@@ -434,7 +572,7 @@
             if (K === 'Enter') { e.preventDefault(); c.querySelector('[data-lead-open]')?.click(); }
             else if (K === 'F2') { e.preventDefault(); c.classList.add('rk-kin'); c.querySelector('button, a')?.focus(); }
             else if (K === ' ') { e.preventDefault(); togglePick(c, e.shiftKey); }
-            else if (K === 'm' || K === 'M') { e.preventDefault(); (c.querySelector('[data-lead-menu-manager]') || c.querySelector('[data-lead-manager-photo]'))?.click(); }
+            else if ((K === 'm' || K === 'M') && rop()) { e.preventDefault(); (c.querySelector('[data-lead-menu-manager]') || c.querySelector('[data-lead-manager-photo]'))?.click(); }
             else if (K === 's' || K === 'S' || K === 'ContextMenu') { e.preventDefault(); c.querySelector('[data-lead-menu-toggle]')?.click(); }
             else if (K.startsWith('Arrow')) {
                 e.preventDefault();
@@ -456,7 +594,7 @@
         board.addEventListener('focusout', e => { const c = e.target.closest?.('.lead-card.rk-kin'); if (c && !c.contains(e.relatedTarget)) c.classList.remove('rk-kin'); });
         board.addEventListener('scroll', () => { if (on()) hiddenCols(); }, { passive: true });
         // Shift + g'ildirak — gorizontal surish (brauzer o'zi ham qiladi); oddiy g'ildirak ustun ichida.
-        if (!document.getElementById('rkCardHelp')) document.body.insertAdjacentHTML('beforeend', '<span id="rkCardHelp" class="sr-only">Enter — lid kartasini ochish. F2 — karta tugmalariga kirish. Space — belgilash, Shift+Space — oraliq. M — menejer. S — amallar menyusi.</span>');
+        if (!document.getElementById('rkCardHelp')) document.body.insertAdjacentHTML('beforeend', `<span id="rkCardHelp" class="sr-only">Enter — lid kartasini ochish. F2 — karta tugmalariga kirish. Space — belgilash, Shift+Space — oraliq.${sot() ? '' : ' M — menejer.'} S — amallar menyusi.</span>`);
     }
     // Ommaviy panel: "N ta lid tanlandi" + 30 tadan ko'p bo'lsa ogohlantirish (prod confirm saqlanadi).
     function bulkBar() {
@@ -521,7 +659,7 @@
         const board = document.getElementById('leadsKanban');
         if (board) board.classList.toggle('rk-board', on());
         if (!on() || !board) return r;
-        try { bindBoard(board); decorateColumns(board); toolbar(); bulkBar(); allDone(board); paintRec(); RD.refreshBadges?.(); } catch (e) { console.warn('[ropDesk] lidlar', e.message); }
+        try { bindBoard(board); decorateColumns(board); toolbar(); if (rop()) { bulkBar(); allDone(board); } else sotBulk(); paintRec(); RD.refreshBadges?.(); } catch (e) { console.warn('[ropDesk] lidlar', e.message); }
         return r;
     });
     // #ID qidiruv (dizayn: "Lid: ism, telefon yoki #ID") — faqat ROPda qo'shimcha moslik.
