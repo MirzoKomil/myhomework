@@ -703,6 +703,7 @@
                 ${tile('data-yd-rules', 'inf', P.rules, 'Aloqa qoidalari', 'nima hisoblanadi')}
                 ${tile('data-u-push="yoriq"', 'inf', P.help, "Yo'riqnomalar", newG ? `${newG} ta yangi` : 'qoidalar', newG ? 'color: #0057B8; font-weight: 700' : '')}
                 ${window.davomat?.menuInfo().tracked ? tile('data-dv-go="my"', 'inf', P.clock, 'Mening davomatim', 'kalendar · soʻrovlar') : ''}
+                ${window.jarima && !jarima.counts()?.exempt ? tile('data-jr-go="my"', 'wa', P.money, 'Mening jarimalarim', 'maosh va yuvish') : ''}
                 ${tile('data-u-push="bildirish"', 'mu', P.bell, 'Xabarlar', unread() ? `${unread()} ta yangi` : 'bildirishnomalar', unread() ? 'color: #0057B8; font-weight: 700' : '')}
               </nav>
               <div class="card l a3">

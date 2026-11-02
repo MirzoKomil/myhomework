@@ -1182,7 +1182,8 @@
         const mi = window.davomat?.menuInfo(); if (!mi) return '';
         const t = (go, icon, tone, title, sub, badge) => `<button type="button" class="ra-mt" ${go}><span class="ra-mt-i sa-tone-${tone}">${ic(icon, 20, 2)}</span><span class="ra-mt-t"><strong>${title}</strong>${sub ? `<em>${sub}</em>` : ''}</span>${badge ? `<b class="ra-badge">${badge}</b>` : ''}</button>`;
         return (mi.approver ? t('data-dv-go="team"', 'students', 'green', 'Xodimlar davomati', '') + t('data-dv-go="approvals"', 'clock', 'blue', 'Davomat soʻrovlari', '', mi.pending) : '')
-            + (mi.tracked ? t('data-dv-go="my"', 'check', 'gray', 'Mening davomatim', '') : '');
+            + (mi.tracked ? t('data-dv-go="my"', 'check', 'gray', 'Mening davomatim', '') : '')
+            + (window.jarima ? jarima.menuItems().map(x => t(`data-jr-go="${x.go}"`, x.go === 'issue' ? 'warn' : x.go === 'washok' ? 'approve' : 'receipt', x.go === 'issue' ? 'red' : 'amber', x.title, x.sub || '', x.badge || '')).join('') : '');
     }
     function screenMenu() {
         const u = user(), d = ropHome();
