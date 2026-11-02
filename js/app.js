@@ -19505,7 +19505,13 @@ function getLeadSlaAlerts(lead, lang, user = getCurrentUser()) {
 
 function getLeadSlaNotificationsForCurrentUser() {
     const leads = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
-    return ['english', 'russian'].flatMap(lang => (leads[lang] || []).flatMap(lead => getLeadSlaAlerts(normalizeLeadExtras(lead), lang).map(alert => ({ ...alert, leadId: lead.id, leadLang: lang, tab: 'sales' }))));
+    // Foydalanuvchi va uning menejer ID'si BIR marta aniqlanadi. Ilgari har bir lid uchun getCurrentUser()
+    // (localStorage JSON.parse) va getDashboardManagerId (HR ro'yxatini filtrlash) qayta chaqirilardi —
+    // 2 000+ lidda bir tab almashinuvida ~14 000 marta, ROP kabineti "qotib" qolardi.
+    const u = getCurrentUser();
+    const managerId = u ? (u.linkedManagerId || getDashboardManagerId(u)) : '';
+    const user = u && managerId && !u.linkedManagerId ? { ...u, linkedManagerId: managerId } : u;
+    return ['english', 'russian'].flatMap(lang => (leads[lang] || []).flatMap(lead => getLeadSlaAlerts(normalizeLeadExtras(lead), lang, user).map(alert => ({ ...alert, leadId: lead.id, leadLang: lang, tab: 'sales' }))));
 }
 
 // Asosiy admin kartochka ichida menejerga yuborilgan buyruqlarni kuzatadi,
@@ -20041,14 +20047,20 @@ function getLeadKind(lead) {
     return 'organic';
 }
 
+// Intl formatlovchilari BIR marta yaratiladi: toLocale*String('uz-UZ') har chaqiruvda yangisini quradi
+// (kanbanda har karta uchun ikki marta — 2 000+ lidda sezilarli qotish). Natija aynan bir xil.
+let _leadTimeFmt = null, _leadDateFmt = null;
 function formatLeadTime(lead) {
     if (lead.createdAt) {
         const d = new Date(lead.createdAt);
         if (!Number.isNaN(d.getTime())) {
             const now = new Date();
             const sameDay = d.toDateString() === now.toDateString();
-            const time = d.toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
-            return sameDay ? `Bugun ${time}` : d.toLocaleDateString('uz-UZ');
+            if (!_leadTimeFmt) {
+                try { _leadTimeFmt = new Intl.DateTimeFormat('uz-UZ', { hour: '2-digit', minute: '2-digit' }); _leadDateFmt = new Intl.DateTimeFormat('uz-UZ'); }
+                catch { _leadTimeFmt = { format: x => x.toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' }) }; _leadDateFmt = { format: x => x.toLocaleDateString('uz-UZ') }; }
+            }
+            return sameDay ? `Bugun ${_leadTimeFmt.format(d)}` : _leadDateFmt.format(d);
         }
     }
     return lead.date || '—';

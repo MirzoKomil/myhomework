@@ -79,33 +79,68 @@
     const SKIP = 'textarea, input, [contenteditable], .chat, [class*="chat-"], .lead-card-comment, .guide-body, .guide-content, .rich-text, .msg, .message';
     const svg = name => `<svg class="team-ico" viewBox="0 0 24 24" aria-hidden="true">${P[name]}</svg>`;
 
+    function swap1(el) {
+        if (el.dataset.teamIco) return;
+        // Arzon tekshiruv avval: birinchi bo'sh bo'lmagan bola matn va emoji bilan boshlanadimi; closest(SKIP) — faqat keyin.
+        let first = null;
+        for (let n = el.firstChild; n; n = n.nextSibling) { if (n.nodeType === 1 || (n.nodeType === 3 && n.textContent.trim())) { first = n; break; } }
+        if (!first || first.nodeType !== 3) return;
+        const m = RX.exec(first.textContent);
+        if (!m || el.closest(SKIP)) return;
+        el.dataset.teamIco = '1';
+        const name = MAP[m[1]] || MAP[m[1].replace('️', '')];
+        first.textContent = first.textContent.slice(m[0].length);
+        const span = document.createElement('span');
+        span.className = 'team-ico-wrap';
+        span.innerHTML = svg(name);
+        // Faqat ikonka bo'lgan qutichalarda (.stat-icon) matn qolmaydi
+        el.insertBefore(span, first);
+    }
     function swap(root) {
-        root.querySelectorAll(SCOPE).forEach(el => {
-            if (el.closest(SKIP) || el.dataset.teamIco) return;
-            const first = [...el.childNodes].find(n => n.nodeType === 3 ? n.textContent.trim() : n.nodeType === 1);
-            if (!first || first.nodeType !== 3) return;
-            const m = RX.exec(first.textContent);
-            if (!m) return;
-            el.dataset.teamIco = '1';
-            const name = MAP[m[1]] || MAP[m[1].replace('️', '')];
-            first.textContent = first.textContent.slice(m[0].length);
-            const span = document.createElement('span');
-            span.className = 'team-ico-wrap';
-            span.innerHTML = svg(name);
-            // Faqat ikonka bo'lgan qutichalarda (.stat-icon) matn qolmaydi
-            el.insertBefore(span, first);
-        });
+        if (!root) return;
+        if (root.matches?.(SCOPE)) swap1(root);
+        root.querySelectorAll(SCOPE).forEach(swap1);
     }
 
-    let pending = false;
+    // Faqat YANGI qo'shilgan elementlar ko'riladi. Ilgari har qanday DOM o'zgarishida butun .main-area (katta kanbanda
+    // 15 000+ element) qayta qidirilardi — ROP/sotuv kabinetida har render va skrollda qotish.
+    let pending = false, full = true;
+    const roots = new Set();
     function schedule() {
         if (pending) return;
         pending = true;
-        requestAnimationFrame(() => { pending = false; const area = document.querySelector('.main-area'); if (area) swap(area); swap(document.getElementById('modalContainer') || document.createElement('div')); });
+        requestAnimationFrame(() => {
+            pending = false;
+            if (full) {
+                full = false; roots.clear();
+                const area = document.querySelector('.main-area'); if (area) swap(area);
+                swap(document.getElementById('modalContainer') || document.createElement('div'));
+                return;
+            }
+            const list = [...roots]; roots.clear();
+            const set = new Set(list);
+            for (const el of list) {
+                if (!el.isConnected) continue;
+                // Ichma-ich qo'shilganlar — faqat eng tashqisi (ota-onasi ro'yxatda bo'lsa o'tkazib yuboriladi).
+                let p = el.parentElement, inner = false;
+                while (p) { if (set.has(p)) { inner = true; break; } p = p.parentElement; }
+                if (!inner) swap(el);
+            }
+        });
+    }
+    function onMut(muts) {
+        for (const m of muts) {
+            for (const n of m.addedNodes) {
+                if (n.nodeType === 1) roots.add(n);
+                else if (n.nodeType === 3 && n.parentElement) roots.add(n.parentElement);
+            }
+        }
+        if (roots.size > 400) { full = true; roots.clear(); }
+        if (full || roots.size) schedule();
     }
     function init() {
         schedule();
-        new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
+        new MutationObserver(onMut).observe(document.body, { childList: true, subtree: true });
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
     else init();

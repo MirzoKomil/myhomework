@@ -338,11 +338,24 @@
             if (sot()) { const t = sotTotals(); tot.innerHTML = q ? `Topildi <strong>${n}</strong>` : `${t.open} ochiq · <strong>${t.all} jami</strong>`; tot.title = 'Joriy filtrlar boʻyicha: ochiq bosqichlardagi / barcha lidlar'; }
             else tot.innerHTML = `${q ? 'Topildi' : 'Jami'} <strong>${n}</strong>`;
         }
-        hiddenCols();
         if (sot()) sotTop();
-        // Doska ekran balandligini to'ldiradi, ustunlar ichida skroll (dizayn 1440×960).
-        const board = document.getElementById('leadsKanban');
-        if (board) board.style.setProperty('--rk-top', Math.max(0, Math.round(board.getBoundingClientRect().top + window.scrollY)) + 'px');
+        measureSoon();
+    }
+    // O'lchash (getBoundingClientRect) render ichida emas, keyingi kadrda — bitta layout. Ilgari har renderLeads'da
+    // DOM o'zgarishlari orasida majburiy layout (forced reflow) bo'lib, katta doskada ~100 ms qo'shardi.
+    let measureQ = 0;
+    function measureSoon() {
+        if (measureQ) return;
+        // rAF + setTimeout: kadr chizilgandan keyin o'qiladi — layout allaqachon tayyor, qayta hisoblanmaydi.
+        measureQ = requestAnimationFrame(() => setTimeout(() => {
+            measureQ = 0;
+            if (!on()) return;
+            const board = document.getElementById('leadsKanban'); if (!board || !board.isConnected) return;
+            // Doska ekran balandligini to'ldiradi, ustunlar ichida skroll (dizayn 1440×960).
+            const top = Math.max(0, Math.round(board.getBoundingClientRect().top + window.scrollY)) + 'px';
+            hiddenCols();
+            if (board.style.getPropertyValue('--rk-top') !== top) board.style.setProperty('--rk-top', top);
+        }, 0));
     }
     function resetFilters() {
         if (typeof _leadsManagerFilter !== 'undefined') _leadsManagerFilter = 'all';
@@ -363,8 +376,11 @@
         const right = cols.filter(c => c.getBoundingClientRect().left >= br.right - 20);
         const name = c => c.querySelector('.lead-column-title')?.textContent || '';
         const L = document.querySelector('#tab-sales .rk-hid-l'), Rr = document.querySelector('#tab-sales .rk-hid-r');
-        if (L) { L.hidden = !left.length; L.innerHTML = left.length ? `<button type="button" aria-label="${esc(left.map(name).join(', '))} — doskani chapga surish" title="${esc(left.map(name).join(', '))}">← ${left.length}</button>` : ''; }
-        if (Rr) { Rr.hidden = !right.length; Rr.innerHTML = right.length ? `<button type="button" aria-label="${esc(right.map(name).join(', '))} — doskani oʻngga surish" title="Doskani oʻngga surish (Shift + gʻildirak ham ishlaydi)">${right.length} →</button>` : ''; }
+        // Faqat o'zgarganda yoziladi: har skroll hodisasida innerHTML qayta yozilsa, butun sahifadagi MutationObserver'lar
+        // (teamApp, teamIcons, statusBand) qayta ishlab, gorizontal skroll qotardi.
+        const setIf = (el, hid, html) => { if (el.hidden !== hid) el.hidden = hid; if (el._rkHtml !== html) { el._rkHtml = html; el.innerHTML = html; } };
+        if (L) setIf(L, !left.length, left.length ? `<button type="button" aria-label="${esc(left.map(name).join(', '))} — doskani chapga surish" title="${esc(left.map(name).join(', '))}">← ${left.length}</button>` : '');
+        if (Rr) setIf(Rr, !right.length, right.length ? `<button type="button" aria-label="${esc(right.map(name).join(', '))} — doskani oʻngga surish" title="Doskani oʻngga surish (Shift + gʻildirak ham ishlaydi)">${right.length} →</button>` : '');
     }
     function wireHidden() {
         document.querySelector('#tab-sales .rk-hid-l')?.addEventListener('click', () => { const b = document.getElementById('leadsKanban'); b?.scrollBy({ left: -560, behavior: 'smooth' }); });
@@ -592,7 +608,7 @@
             }
         });
         board.addEventListener('focusout', e => { const c = e.target.closest?.('.lead-card.rk-kin'); if (c && !c.contains(e.relatedTarget)) c.classList.remove('rk-kin'); });
-        board.addEventListener('scroll', () => { if (on()) hiddenCols(); }, { passive: true });
+        board.addEventListener('scroll', () => { if (on()) measureSoon(); }, { passive: true });
         // Shift + g'ildirak — gorizontal surish (brauzer o'zi ham qiladi); oddiy g'ildirak ustun ichida.
         if (!document.getElementById('rkCardHelp')) document.body.insertAdjacentHTML('beforeend', `<span id="rkCardHelp" class="sr-only">Enter — lid kartasini ochish. F2 — karta tugmalariga kirish. Space — belgilash, Shift+Space — oraliq.${sot() ? '' : ' M — menejer.'} S — amallar menyusi.</span>`);
     }
@@ -653,7 +669,35 @@
 
     // ---------- app.js funksiyalariga ulanish ----------
     function wrapFn(name, make) { const orig = window[name]; if (typeof orig !== 'function' || orig.__rkl) return; const fn = make(orig); fn.__rkl = true; window[name] = fn; ORIG[name] = orig; }
-    wrapFn('renderLeadCard', orig => function (lead, langKey) { const html = orig.apply(this, arguments); if (!on()) return html; try { return card(html, lead, langKey); } catch (e) { console.warn('[ropDesk] karta', e.message); return html; } });
+    // Bezatilgan karta keshi: asl HTML, lidning kartaga ta'sir qiluvchi maydonlari, daqiqa (yosh/muddat yozuvlari),
+    // menejer, qotgan-lid qoidasi va belgilash holati bir xil bo'lsa — qayta parse/serialize qilinmaydi.
+    // Ilgari har renderLeads'da har karta 3 marta HTML parse/serialize qilinardi (katta doskada ~100 ms+).
+    const CARD_CACHE = new Map();
+    function cardKey(html, lead, langKey) {
+        const l = lead || {};
+        const mgr = l.managerId ? (g('getItem') ? getItem(STORAGE_KEYS.salesManagers, []) : []).find(m => m.id === l.managerId) : null;
+        const rules = window.staleLeads?.rules?.();
+        const r = rules && rules[langKey === 'english' ? 'english' : 'russian'];
+        const fu = g('getLeadNextFollowUp') && g('normalizeLeadExtras') ? getLeadNextFollowUp(normalizeLeadExtras(l)) : null;
+        return [html, langKey, Math.floor(Date.now() / MIN), sot() ? (SEL.has(String(l.id)) ? 'S1' : 'S0') : rop() ? 'R' : 'D',
+            mgr ? `${mgr.id}|${mgr.name}|${mgr.avatar || ''}` : '-', r ? `${r.warnDays}/${r.lockDays}` : '-',
+            l.updatedAt, l.statusChangedAt, l.createdAt, l.managerAssignedAt, l.status, l.managerId, l.phone, l.phone2, l.serialCode, l.kind, l.leadType, l.source,
+            Array.isArray(l.comments) ? l.comments.length : 0, Array.isArray(l.stageHistory) ? l.stageHistory.length : 0,
+            l.connectedSurvey ? Object.keys(l.connectedSurvey).length : 0, fu ? `${fu.at}|${fu.overdue ? 1 : 0}` : '-'].join('\u0001');
+    }
+    wrapFn('renderLeadCard', orig => function (lead, langKey) {
+        const html = orig.apply(this, arguments);
+        if (!on()) return html;
+        try {
+            const k = cardKey(html, lead, langKey);
+            const hit = CARD_CACHE.get(k);
+            if (hit !== undefined) return hit;
+            const out = card(html, lead, langKey);
+            if (CARD_CACHE.size > 4000) CARD_CACHE.clear();
+            CARD_CACHE.set(k, out);
+            return out;
+        } catch (e) { console.warn('[ropDesk] karta', e.message); return html; }
+    });
     wrapFn('renderLeads', orig => function () {
         const r = orig.apply(this, arguments);
         const board = document.getElementById('leadsKanban');
@@ -685,5 +729,5 @@
         const fn = function (sec) { if (B.saved && sec !== 'leads') clearBadgeFilter({ silent: true }); const r = sss.apply(this, arguments); if (on()) toolbar(); return r; };
         fn.__rkl = true; window.switchSalesSection = fn;
     }
-    window.addEventListener('resize', () => { if (on()) hiddenCols(); });
+    window.addEventListener('resize', () => { if (on()) measureSoon(); });
 })();
