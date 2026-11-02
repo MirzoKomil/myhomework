@@ -722,7 +722,8 @@
         } catch (e) {
             J.busy = false;
             // Lidda faol sinov bor: avval "Sinov darslari"da natija yoziladi yoki bekor qilinadi, keyin qayta qo'yiladi.
-            if (/allaqachon/i.test(e.message || '')) toast(`${lead.name}: sinov allaqachon qoʻyilgan. Uni “Sinov darslari” boʻlimida bekor qiling yoki natijasini yozing, keyin qayta qoʻying.`, 6500);
+            // Vaqti o'tgan, natijasiz sinovni server o'zi "Kelmadi" deb yopadi; bu xabar faqat oldinda turgan sinov uchun chiqadi.
+            if (/allaqachon/i.test(e.message || '')) toast(`${lead.name}: ${(e.message || '').replace(/^Bu lid uchun /, '')}, keyin qayta qoʻying.`, 7000);
             else toast(e.message || 'Vaqtni ushlab boʻlmadi', 4500);
             J.sel = null; await load();
         }

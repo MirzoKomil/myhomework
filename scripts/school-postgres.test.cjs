@@ -47,6 +47,19 @@ test('yagona jadval va o\'quvchi amallari — haqiqiy PostgreSQL', { skip: !url 
             await tx(c => S.book(c, sales2, { ...input, leadId: 'lead-2' }, later)); // ushlab turish tugadi
         });
 
+        await t.test('qayta sinov: vaqti o\'tgan, natijasiz sinov "Kelmadi" deb yopiladi; oldindagisi to\'sadi', async () => {
+            await pool.query(`INSERT INTO school_bookings (id,teacher_id,kind,lead_id,date,start_min,end_min,status,group_id,note,created_by)
+                VALUES ('old-tr','dilnoza','trial','lead-gulya','2026-10-24',1080,1110,'confirmed','g-old','','u-sales'),
+                       ('fut-tr','dilnoza','trial','lead-fut','2026-10-30',660,690,'confirmed','g-fut','','u-sales')`);
+            const b = await tx(c => S.book(c, sales, { kind: 'trial', teacherId: 'dilnoza', date: '2026-10-29', time: '17:00', duration: 30, leadId: 'lead-gulya' }, now));
+            assert.equal(b.length, 1);
+            const old = (await pool.query("SELECT status, note FROM school_bookings WHERE id='old-tr'")).rows[0];
+            assert.equal(old.status, 'no_show');
+            assert.match(old.note, /avto/);
+            await assert.rejects(tx(c => S.book(c, sales, { kind: 'trial', teacherId: 'dilnoza', date: '2026-10-29', time: '17:30', duration: 30, leadId: 'lead-fut' }, now)), /allaqachon band qilingan: 30\.10\.2026 11:00/);
+            assert.equal((await pool.query("SELECT status FROM school_bookings WHERE id='fut-tr'")).rows[0].status, 'confirmed', 'oldindagi sinovga tegilmaydi');
+        });
+
         await t.test('muzlatish: 30 kun, kursda bir marta, to\'lov muddati suriladi, vaqt sinovga ochiladi', async () => {
             await assert.rejects(tx(c => O.freeze(c, admin, 'madina', { from: '2026-11-03', to: '2026-12-10', reason: 'Safar' }, now)), /30/);
             await assert.rejects(tx(c => O.freeze(c, sales, 'madina', { from: '2026-11-03', to: '2026-11-16', reason: 'Safar' }, now)), /admin yoki ROP/);
