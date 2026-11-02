@@ -67,9 +67,8 @@ test('1-dars mini app: open, steps scored once, voice, request → CRM — synth
    assert.equal((await call('/event',{type:'drop_table',data:{}})).status,400);
    assert.equal((await call('/event',{type:'game',data:[]})).status,400);
   });
-  await t.test('existing bot hot-lead alert fires once when score crosses 6',async()=>{
-   const hot=(await outbox()).filter(r=>/Issiq lid/.test(r.payload.text||''));assert.equal(hot.length,1);
-   assert.match(hot[0].payload.text,/Mini ilova/);
+  await t.test('mini app leads are not "hot" at 6 — threshold is 15 (opening + video + homework is only warm)',async()=>{
+   assert.equal((await outbox()).filter(r=>/Issiq lid/.test(r.payload.text||'')).length,0);
   });
   await t.test('voice: wrong type / too big refused; low match asks retry and gives no points; good match finishes lesson',async()=>{
    const q='?expected='+encodeURIComponent('Меня́ зову́т Дилшо́д. Мне 32 го́да. Я рабо́таю в ба́нке.')+'&skip=Дилшод';
@@ -104,7 +103,17 @@ test('1-dars mini app: open, steps scored once, voice, request → CRM — synth
    // Dars lid paydo bo'lishidan oldin tugagan — xulosa so'rov paytida bir marta yoziladi.
    assert.equal((lead.comments.match(/1-darsni to‘liq o‘tdi/g)||[]).length,1);
    assert.equal(r.body.state.phoneMasked,'+99890 *** ** 11');
-   assert.equal((await outbox()).filter(m=>/Botdan so‘rov/.test(m.payload.text||'')).length,1);
+   const req=(await outbox()).filter(m=>/Botdan so‘rov/.test(m.payload.text||''));assert.equal(req.length,1);
+   // Menejer qo'ng'iroqdan oldin mini ilova natijasi va va'da vaqtini ko'radi.
+   assert.match(req[0].payload.text,/🎓 Namuna dars \(tugatdi\): video 100% · vazifa 5\/5 · o‘yin ✓ · ovoz \d+% aniq/);
+   assert.match(req[0].payload.text,/⏱ Lidga «~10 daqiqa ichida» deb va'da qilindi — \d\d:\d\d gacha/);
+   // Va'da vaqti o'tdi — bitta eslatma; natija belgilansa — yo'q.
+   const later=new Date(Date.now()+11*60000);
+   assert.equal(await queue.transaction(pool,db=>miniapp.salesSla(db,new Date(Date.now()+3*60000))),0);
+   assert.equal(await queue.transaction(pool,db=>miniapp.salesSla(db,later)),1);
+   assert.equal(await queue.transaction(pool,db=>miniapp.salesSla(db,later)),0);
+   const sla=(await outbox()).filter(m=>/Va'da vaqti o‘tdi/.test(m.payload.text||''));
+   assert.equal(sla.length,1);assert.ok(sla[0].payload.reply_markup.inline_keyboard.length>0);
   });
   await t.test('resources: gift PDF goes to the bot once a day; unknown material is not sent',async()=>{
    await pool.query(`UPDATE domwork_bot_settings SET data=data||'{"funnelMedia":{"sovga":{"method":"sendDocument","fileId":"GIFT_FILE_ID_123"}}}'::jsonb WHERE singleton=1`);
@@ -154,7 +163,7 @@ test('1-dars mini app: open, steps scored once, voice, request → CRM — synth
   });
   await t.test('return nudge: half-done lesson after 2h, once, 10:00–20:00 Tashkent; not for holdout / requested / finished',async()=>{
    await call('/open',{}, {id:812});await call('/event',{type:'video',data:{percent:90}},{id:812});
-   await call('/open',{}, {id:813});await pool.query("UPDATE domwork_bot_visitors SET holdout=true WHERE telegram_id='813'");
+   await call('/open',{}, {id:813});await pool.query("UPDATE domwork_bot_visitors SET holdout=(telegram_id='813')"); // nazorat guruhi tasodifiy (10%) — testda aniq
    await pool.query("UPDATE domwork_miniapp_progress SET last_seen_at=NOW()-INTERVAL '3 hours'");
    const t15=new Date(Date.now()-Date.now()%86400000+86400000+10*3600000); // ertaga 15:00 Toshkent
    assert.equal(await queue.transaction(pool,db=>miniapp.nudge(db,new Date(t15.getTime()+7*3600000))),0); // 22:00 — jim
