@@ -21,6 +21,8 @@ import android.os.Bundle;
 import android.view.View;
 import android.view.Window;
 import android.webkit.CookieManager;
+import android.webkit.GeolocationPermissions;
+import android.webkit.PermissionRequest;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
@@ -39,6 +41,12 @@ public class MainActivity extends Activity {
     static final String HOST = "myhomework.uz";
     private static final int NOTIF_REQUEST = 42;
     private static final int FILE_REQUEST = 41;
+    private static final int CAMERA_REQUEST = 43;
+    private static final int LOCATION_REQUEST = 44;
+    /** Sahifa kamera so'raganda tizim ruxsati hali yo'q bo'lsa — ruxsat oynasidan keyin javob beriladi. */
+    private PermissionRequest pendingWebPermission;
+    private GeolocationPermissions.Callback pendingGeoCallback;
+    private String pendingGeoOrigin;
     private WebView web;
     private ValueCallback<Uri[]> fileCallback;
     private boolean showingOffline = false;
@@ -112,7 +120,41 @@ public class MainActivity extends Activity {
                 }
                 return true;
             }
+
+            /** Davomat selfiesi: kamera faqat myhomework.uz sahifasiga beriladi (mikrofon va boshqa resurslar — yo'q). */
+            @Override
+            public void onPermissionRequest(final PermissionRequest request) {
+                runOnUiThread(() -> {
+                    Uri origin = request.getOrigin();
+                    boolean ours = origin != null && "https".equals(origin.getScheme()) && isOurHost(origin.getHost());
+                    boolean onlyCamera = true;
+                    for (String r : request.getResources()) if (!PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(r)) onlyCamera = false;
+                    if (!ours || !onlyCamera) { request.deny(); return; }
+                    if (cameraGranted()) { request.grant(new String[]{PermissionRequest.RESOURCE_VIDEO_CAPTURE}); return; }
+                    if (pendingWebPermission != null) pendingWebPermission.deny();
+                    pendingWebPermission = request;
+                    requestPermissions(new String[]{Manifest.permission.CAMERA}, CAMERA_REQUEST);
+                });
+            }
+
+            @Override
+            public void onPermissionRequestCanceled(PermissionRequest request) {
+                if (pendingWebPermission == request) pendingWebPermission = null;
+            }
+
+            /** Joylashuv — faqat myhomework.uz uchun, saqlanmaydi (har ochilishda tizim ruxsati tekshiriladi). */
+            @Override
+            public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
+                Uri u = Uri.parse(origin);
+                if (!"https".equals(u.getScheme()) || !isOurHost(u.getHost())) { callback.invoke(origin, false, false); return; }
+                if (locationGranted()) { callback.invoke(origin, true, false); return; }
+                if (pendingGeoCallback != null) pendingGeoCallback.invoke(pendingGeoOrigin, false, false);
+                pendingGeoCallback = callback;
+                pendingGeoOrigin = origin;
+                requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION}, LOCATION_REQUEST);
+            }
         });
+        s.setGeolocationEnabled(true);
 
         web.addJavascriptInterface(new Bridge(), "DomworkNative");
         PushService.ensureChannel(this);
@@ -123,6 +165,34 @@ public class MainActivity extends Activity {
         String start = data != null && HOST.equals(data.getHost()) ? data.toString() : BuildConfig.APP_URL;
         if (savedInstanceState != null) web.restoreState(savedInstanceState);
         else web.loadUrl(start);
+    }
+
+    static boolean isOurHost(String host) {
+        return host != null && (host.equals(HOST) || host.endsWith("." + HOST));
+    }
+
+    private boolean cameraGranted() {
+        return Build.VERSION.SDK_INT < 23 || checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private boolean locationGranted() {
+        return Build.VERSION.SDK_INT < 23 || checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                || checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    /** Ruxsat so'rash; ilgari "boshqa so'ramang" bilan rad etilgan bo'lsa — ilova sozlamalari ochiladi. */
+    private void askRuntime(String perm, String[] perms, int code) {
+        if (Build.VERSION.SDK_INT < 23) { notifyPage(); return; }
+        if (checkSelfPermission(perm) == PackageManager.PERMISSION_GRANTED) { notifyPage(); return; }
+        SharedPreferences p = prefs();
+        String key = "asked_" + code;
+        if (p.getBoolean(key, false) && !shouldShowRequestPermissionRationale(perm)) { openAppSettings(); return; }
+        p.edit().putBoolean(key, true).apply();
+        requestPermissions(perms, code);
+    }
+
+    private void openAppSettings() {
+        safeStart(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + getPackageName())));
     }
 
     /** true — ilova ichida emas, tashqarida ochildi. */
@@ -262,6 +332,22 @@ public class MainActivity extends Activity {
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
         super.onRequestPermissionsResult(requestCode, permissions, results);
         if (requestCode == NOTIF_REQUEST) notifyPage();
+        if (requestCode == CAMERA_REQUEST) {
+            if (pendingWebPermission != null) {
+                if (cameraGranted()) pendingWebPermission.grant(new String[]{PermissionRequest.RESOURCE_VIDEO_CAPTURE});
+                else pendingWebPermission.deny();
+                pendingWebPermission = null;
+            }
+            notifyPage();
+        }
+        if (requestCode == LOCATION_REQUEST) {
+            if (pendingGeoCallback != null) {
+                pendingGeoCallback.invoke(pendingGeoOrigin, locationGranted(), false);
+                pendingGeoCallback = null;
+                pendingGeoOrigin = null;
+            }
+            notifyPage();
+        }
     }
 
     /** Sahifa uchun ko'prik: window.DomworkNative.* */
@@ -278,6 +364,13 @@ public class MainActivity extends Activity {
         @JavascriptInterface public void openBattery() { runOnUiThread(MainActivity.this::openBattery); }
         @JavascriptInterface public void openAutostart() { runOnUiThread(MainActivity.this::openAutostart); }
         @JavascriptInterface public void refresh() { runOnUiThread(MainActivity.this::refreshToken); }
+        // Davomat (D00 · ruxsatlar ekrani)
+        @JavascriptInterface public boolean cameraGranted() { return MainActivity.this.cameraGranted(); }
+        @JavascriptInterface public boolean locationGranted() { return MainActivity.this.locationGranted(); }
+        @JavascriptInterface public void requestCamera() { runOnUiThread(() -> askRuntime(Manifest.permission.CAMERA, new String[]{Manifest.permission.CAMERA}, CAMERA_REQUEST)); }
+        @JavascriptInterface public void requestLocation() { runOnUiThread(() -> askRuntime(Manifest.permission.ACCESS_FINE_LOCATION,
+                new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION}, LOCATION_REQUEST)); }
+        @JavascriptInterface public void openAppSettings() { runOnUiThread(MainActivity.this::openAppSettings); }
         @JavascriptInterface public void testLocal() {
             PushService.show(MainActivity.this, "Bildirishnoma sinovi", "Shu ko'rinishda xabarlar keladi.", null, "local-test", "local-test");
         }
