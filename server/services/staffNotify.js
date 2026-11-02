@@ -564,7 +564,7 @@ async function salesEvents(db, me, now, ev) {
     }
     const er = (await db.query(`SELECT r.*, s.name FROM school_edit_requests r LEFT JOIN students s ON s.id=r.student_id
         WHERE r.requested_by=$1 AND r.status <> 'pending' AND r.decided_at > $2`, [me.user.id, new Date(now.getTime() - 14 * 86400000)])).rows;
-    const W = { approved: 'tasdiqlandi', rejected: 'rad etildi', returned: 'qaytarildi' }, K = { tariff: 'Tarif', teacher: 'Ustoz', payment: 'To\'lov' };
+    const W = { approved: 'tasdiqlandi', rejected: 'rad etildi', returned: 'qaytarildi' }, K = { tariff: 'Tarif', teacher: 'Ustoz', payment: 'To\'lov', due: 'Muddatni surish' };
     for (const r of er) ev.push({ id: `er:${r.id}:${r.status}`, type: 'edit_decision', cat: 'sorov', tone: r.status === 'approved' ? 'ok' : 'bad',
         title: `${K[r.kind] || 'Tahrir'} so'rovi ${W[r.status] || r.status}`, sub: [first(r.name), r.decided_by_name, r.decision_note].filter(Boolean).join(' · '), at: iso(r.decided_at) });
 }
@@ -572,7 +572,7 @@ async function salesEvents(db, me, now, ev) {
 async function managerEvents(db, me, now, ev) {
     const er = (await db.query(`SELECT r.*, s.name, s.subject FROM school_edit_requests r LEFT JOIN students s ON s.id=r.student_id WHERE r.status='pending'`)).rows
         .filter(r => me.kind === 'admin' || !me.lang || me.lang === 'both' || (r.subject || 'english') === me.lang);
-    const K = { tariff: 'tarif', teacher: 'ustoz' };
+    const K = { tariff: 'tarif', teacher: 'ustoz', due: 'to\'lov muddatini surish' };
     for (const r of er) ev.push({ id: `erp:${r.id}`, type: r.kind === 'payment' ? 'payment_edit' : 'edit_request', cat: 'tasdiq', tone: 'warn',
         title: r.kind === 'payment' ? 'To\'lov tahriri — tasdiqlash kerak' : `Menejer tahriri — ${K[r.kind] || r.kind}`,
         sub: [r.requester_name, first(r.name), r.reason].filter(Boolean).join(' · '), at: iso(r.created_at), go: { tab: 'teachers-section' } });
