@@ -104,6 +104,8 @@ async function run(db,now=new Date()) {
     await guarded(db,'funnel_drip',async()=>{ await require('./funnel').drip(db,now); });
     // 1-dars mini ilovasini yarmida qoldirganlarga bitta qaytarish xabari.
     await guarded(db,'miniapp_nudge',async()=>{ await require('./miniapp').nudge(db,now); });
+    // «Hozir qo'ng'iroq» so'rovi va'da vaqtida natijasiz — sotuv guruhi va menejerga eslatma.
+    await guarded(db,'sales_sla',async()=>{ await require('./miniapp').salesSla(db,now); });
     const expires=()=>new Date(now.getTime()+3*60000).toISOString();
     await guarded(db,'reminders',async()=>{ if(settings.remindersEnabled) {
         const students=(await db.query("SELECT * FROM students WHERE subject='russian'")).rows.filter(policy.activeStudent);

@@ -39,7 +39,10 @@ CREATE TABLE IF NOT EXISTS domwork_miniapp_voice (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS domwork_miniapp_voice_tid ON domwork_miniapp_voice(telegram_id, created_at DESC);`;
-async function init(db) { await db.query(SCHEMA); }
+async function init(db) {
+    await db.query(SCHEMA);
+    await db.query('ALTER TABLE domwork_bot_visitors ADD COLUMN IF NOT EXISTS sla_alert_at TIMESTAMPTZ');
+}
 
 const httpError = (status, message) => Object.assign(Error(message), { status });
 
@@ -341,4 +344,25 @@ async function nudge(db, now = new Date()) {
     return rows.length;
 }
 
-module.exports = { init, nudge, SCHEMA, POINTS, STEPS, verifyInitData, matchSpeech, transcribe, open, state, track, saveVoice, scoreVoice, voiceForStaff, request };
+// ── Va'da vaqti o'tdi (dizayn: StaffSla / RopSla) ─────────────────────────
+// «Hozir qo'ng'iroq qiling» so'rovi va'da qilingan vaqtda natijasiz qolsa — sotuv guruhi (ROP) va menejerga bitta eslatma.
+// Lidga uzr yuborilmaydi: menejer qo'ng'iroq qilib, tugmani bosmagan bo'lishi mumkin.
+async function salesSla(db, now = new Date()) {
+    const s = await funnel.settings(db);
+    if (s.funnelEnabled !== true || !funnel.inHours(s, now)) return 0;
+    const min = funnel.promiseMinutes(s);
+    const rows = (await db.query(`SELECT * FROM domwork_bot_visitors WHERE requested_at IS NOT NULL AND outcome IS NULL AND sla_alert_at IS NULL
+          AND request->>'method'='call' AND request->>'when'='now' AND requested_at<$1::timestamptz-make_interval(mins=>$2::int) AND requested_at>$1::timestamptz-INTERVAL '6 hours'
+        ORDER BY requested_at LIMIT 20 FOR UPDATE SKIP LOCKED`, [now, min])).rows;
+    for (const v of rows) {
+        await funnel.patch(db, v.telegram_id, { sla_alert_at: now });
+        const late = Math.round((now - new Date(v.requested_at)) / 60000);
+        await funnel.notifySales(db, 'sla:' + v.telegram_id + ':' + new Date(v.requested_at).toISOString(),
+            `⏰ Va'da vaqti o‘tdi — lid ${late} daqiqadan beri qo‘ng‘iroqni kutyapti (so‘rov ${funnel.hhmm(new Date(v.requested_at))} da)`, v,
+            'Qo‘ng‘iroq qilgan bo‘lsangiz — natijani pastdagi tugma bilan belgilang. ROP: menejer javob bermasa, boshqasiga bering.', { buttons: true });
+        await funnel.event(db, v.telegram_id, 'sales_sla', { late });
+    }
+    return rows.length;
+}
+
+module.exports = { init, nudge, salesSla, SCHEMA, POINTS, STEPS, verifyInitData, matchSpeech, transcribe, open, state, track, saveVoice, scoreVoice, voiceForStaff, request };

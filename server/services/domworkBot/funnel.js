@@ -105,6 +105,9 @@ function salesHours(s) {
 }
 const inHours = (s, now) => { const h = salesHours(s), c = clock(now); return c >= h.from && c < h.to; };
 const sla = s => Number.isInteger(s.salesSlaMinutes) ? s.salesSlaMinutes : 30;
+// Lidga aytiladigan va'da (mini ilova bilan bir xil): kamida 10 daqiqa.
+const promiseMinutes = s => Math.max(10, sla(s));
+const hhmm = d => { const t = new Date(d.getTime() + 5 * 3600000); return String(t.getUTCHours()).padStart(2, '0') + ':' + String(t.getUTCMinutes()).padStart(2, '0'); };
 
 // Har bir update uchun noyob outbox kalitlari.
 function context(db, update, tid) { let n = 0; return { db, tid, key: () => `f:${update.update_id}:${n++}` }; }
@@ -192,20 +195,32 @@ async function ensureLead(db, v, { phone = '', intent = '' } = {}) {
 }
 
 // ── Sotuv bo'limiga xabar ─────────────────────────────────────────────────
-function profile(v, lead) {
+function profile(v, lead, { mini = false } = {}) {
     const seg = copy.SEGMENTS[v.segment]?.label || 'segment tanlanmagan', field = copy.FIELDS[v.field]?.label || '';
     const quiz = v.quiz_done_at ? `test ${Object.values(v.quiz || {}).filter(x => x.ok).length}/3` : 'test yo‘q';
     return [`👤 ${lead?.name || v.first_name || 'Mehmon'}${v.username ? ' · @' + v.username : ''} · tg://user?id=${v.telegram_id}`,
         `📞 ${lead?.phone || (v.phone ? '+' + v.phone : 'raqam yo‘q — faqat Telegram')}`,
         `🎯 ${seg}${field ? ' · ' + field : ''}${v.location === 'ru' ? ' · 🇷🇺 ROSSIYADA — qo‘ng‘iroq ishlamaydi, reply bilan yozing' : v.location === 'other' ? ' · 🌍 chet elda — Telegramda yozing' : ''}`,
-        `📈 Ball ${v.score} · 1-dars: ${v.lesson_seen_at || v.lesson_parts >= 2 ? 'ko‘rdi' : v.lesson_parts ? 'ochdi' : 'yo‘q'} · ${quiz} · manba: ${v.source}`].join('\n');
+        `📈 Ball ${v.score}${mini ? '' : ` · 1-dars: ${v.lesson_seen_at || v.lesson_parts >= 2 ? 'ko‘rdi' : v.lesson_parts ? 'ochdi' : 'yo‘q'} · ${quiz}`} · manba: ${v.source}`].join('\n');
+}
+// Mini ilova natijasi — sotuv xabarlarida bitta qator (menejer qo'ng'iroqdan oldin ko'radi).
+async function miniappLine(db, tid) {
+    if (!(await miniappStarted(db, tid))) return '';
+    const p = (await db.query('SELECT steps,answers,finished_at FROM domwork_miniapp_progress WHERE telegram_id=$1', [tid])).rows[0];
+    if (!p) return '';
+    const a = p.answers || {}, hw = a.homework || {}, g = a.game || {}, voice = a.voice || {};
+    const parts = [`video ${a.videoPercent != null ? a.videoPercent + '%' : '—'}`, `vazifa ${hw.correct != null ? hw.correct + '/' + (hw.total || 5) : '—'}`,
+        `o‘yin ${p.steps.game ? '✓' : '—'}`, `ovoz ${p.steps.voice ? (voice.score != null ? voice.score + '% aniq' : 'yozildi') : '—'}`];
+    const about = [hw.age ? `${hw.age} yosh` : '', hw.work ? `ish: ${clean(hw.work)}` : ''].filter(Boolean).join(', ');
+    return `🎓 Namuna dars${p.finished_at ? ' (tugatdi)' : ''}: ${parts.join(' · ')}${about ? ' · ' + about : ''}${p.steps.voice ? ' · 🎧 ovozi CRMda' : ''}`;
 }
 async function salesGroup(db) { return (await db.query("SELECT id,chat_id FROM domwork_bot_groups WHERE type='sales' AND scope='' AND active")).rows[0] || null; }
 const managerButtons = tid => ({ inline_keyboard: [[{ text: '📞 Gaplashdim', callback_data: `m:${tid}:talk` }, { text: '🔕 Javob yo‘q', callback_data: `m:${tid}:na` }],
     [{ text: '⏰ Keyinroq', callback_data: `m:${tid}:later` }, { text: '✅ Sinovga yozdim', callback_data: `m:${tid}:trial` }], [{ text: '❌ Rad etdi', callback_data: `m:${tid}:rej` }]] });
 async function notifySales(db, key, title, v, extra = '', { buttons = false } = {}) {
     const lead = v.lead_id ? (await db.query('SELECT name,phone,manager_id FROM leads WHERE id=$1', [v.lead_id])).rows[0] : null;
-    const text = `${title}\n${profile(v, lead)}${extra ? '\n' + extra : ''}`;
+    const mini = await miniappLine(db, v.telegram_id);
+    const text = `${title}\n${profile(v, lead, { mini: !!mini })}${mini ? '\n' + mini : ''}${extra ? '\n' + extra : ''}`;
     const groupText = text + '\n↩️ Javob yozish: shu xabarga reply qiling — lidga bot orqali boradi.';
     const dmText = text + '\n↩️ Javob yozish: Sotuv guruhidagi shu lid xabariga reply qiling (bu yerdan yozilgani lidga bormaydi).';
     const events = require('./events');
@@ -219,7 +234,9 @@ async function notifySales(db, key, title, v, extra = '', { buttons = false } = 
 async function addScore(db, v, n, reason) {
     const before = v.score; v.score = before + n;
     await patch(db, v.telegram_id, { score: v.score });
-    if (before < 6 && v.score >= 6 && !v.requested_at && !v.hot_at) {
+    // Mini ilova lidlari ochish/video/vazifadan tez ball yig'adi — ular uchun issiq chegarasi 15 (UX hujjati: iliq 8–14, issiq ≥15).
+    const hot = (await miniappStarted(db, v.telegram_id)) ? 15 : 6;
+    if (before < hot && v.score >= hot && !v.requested_at && !v.hot_at) {
         await patch(db, v.telegram_id, { hot_at: new Date() });
         await notifySales(db, 'hot:' + v.telegram_id, '🔥 Issiq lid (so‘rov qoldirmagan) — faqat Telegramda yumshoq yozing, qo‘ng‘iroq qilmang', v, 'Sabab: ' + reason, { buttons: true });
     }
@@ -340,10 +357,12 @@ async function finishRequest(c, v, whenKey) {
     // Eski tugmani qayta bosish sotuvga takroriy xabar va izoh yubormaydi.
     if (!same) {
         await leadComment(c.db, v.lead_id, `🤖 Bot: menejer bilan bog‘lanishni so‘radi — ${method === 'call' ? 'qo‘ng‘iroq' : 'faqat Telegram'}, ${whenText}. Ball ${v.score}.`);
-        await notifySales(c.db, `req:${c.tid}:${method}:${whenKey}:${new Date().toISOString().slice(0, 10)}`, `📞 Botdan so‘rov: ${method === 'call' ? 'qo‘ng‘iroq qiling' : 'Telegramda yozing'} — ${whenText}`, v, '', { buttons: true });
+        const promise = method === 'call' && whenKey === 'now' && inHours(s, new Date())
+            ? `⏱ Lidga «~${promiseMinutes(s)} daqiqa ichida» deb va'da qilindi — ${hhmm(new Date(Date.now() + promiseMinutes(s) * 60000))} gacha qo‘ng‘iroq qiling va natijani tugma bilan belgilang.` : '';
+        await notifySales(c.db, `req:${c.tid}:${method}:${whenKey}:${new Date().toISOString().slice(0, 10)}`, `📞 Botdan so‘rov: ${method === 'call' ? 'qo‘ng‘iroq qiling' : 'Telegramda yozing'} — ${whenText}`, v, promise, { buttons: true });
     }
     const now = new Date(), open = inHours(s, now);
-    let reply = whenKey === 'now' ? (open ? copy.text.done.nowIn(sla(s)) : copy.text.done.offHours(salesHours(s).label)) : copy.text.done.later(whenText);
+    let reply = whenKey === 'now' ? (open ? copy.text.done.nowIn(promiseMinutes(s)) : copy.text.done.offHours(salesHours(s).label)) : copy.text.done.later(whenText);
     if (method === 'telegram') reply += copy.text.done.telegram;
     const showLesson = !v.lesson_parts && lessonReady(s) && !(await miniappStarted(c.db, c.tid));
     await say(c, reply + (showLesson ? copy.text.done.andLesson : ''), showLesson ? inline([[lessonBtn(s)]]) : replyKeyboard());
@@ -864,4 +883,4 @@ async function sendMaterial(db, tid, key, field = '') {
     return true;
 }
 const WHEN_KEYS = Object.keys(copy.WHEN);
-module.exports = { MINIAPP_URL, miniappOn, inline, say, sendMaterial, visitor, upsertVisitor, patch, event, settings, addScore, finishRequest, leadComment, sla, WHEN_KEYS, bundledFile, BUNDLED_NAMES, bonus, relayFromGroup, managerAction, drip, nextItem, SCHEMA, MEDIA_KEYS, init, enabled, start, message, contact, callback, deliverable, adminMedia, pause, blocked, report, track, mask, inHours };
+module.exports = { hhmm, notifySales, promiseMinutes, miniappLine, MINIAPP_URL, miniappOn, inline, say, sendMaterial, visitor, upsertVisitor, patch, event, settings, addScore, finishRequest, leadComment, sla, WHEN_KEYS, bundledFile, BUNDLED_NAMES, bonus, relayFromGroup, managerAction, drip, nextItem, SCHEMA, MEDIA_KEYS, init, enabled, start, message, contact, callback, deliverable, adminMedia, pause, blocked, report, track, mask, inHours };
