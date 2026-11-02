@@ -32,7 +32,22 @@ async function handle(db,update,crm) {
         const data=token.data, chat=query.message?.chat;
         const privateChat=chat?.type==='private' && String(chat.id)===sender;
         if(data.type!=='trial' && !privateChat) throw policy.error(403,'Bu amal faqat shaxsiy kabinetda');
-        if(data.type==='leave') {
+        if(data.type==='attreq') {
+            // Davomat so'rovi (DavTelegram): Tasdiqlash — darhol; Rad etish — bot sabab so'raydi.
+            const att=require('../staffAttendance');
+            if(data.decision==='reject') {
+                const row=(await db.query("SELECT state FROM staff_att_requests WHERE id=$1",[data.id])).rows[0];
+                if(!row) throw policy.error(404,'Soʻrov topilmadi');
+                if(row.state!=='pending') throw policy.error(409,'Soʻrov allaqachon koʻrib chiqilgan');
+                await store.setSession(db,sender,{type:'attreq-reject',id:data.id});
+                await store.enqueue(db,{key:`u:${update.update_id}:attreq`,targetId:sender,role:identity.role,account:identity,
+                    payload:{chat_id:sender,text:'Rad etish sababini yozing — javobingiz xodimga yuboriladi.\nBekor qilish: /cancel'}});
+                return await answer(db,update,'Sababni yozing');
+            }
+            await att.decideRequest(db,{id:identity.id},data.id,{decision:'approve'});
+            if(query.message?.message_id) await store.enqueue(db,{key:`u:${update.update_id}:attreq:kb`,targetId:sender,method:'editMessageReplyMarkup',
+                payload:{chat_id:sender,message_id:query.message.message_id,reply_markup:{inline_keyboard:[[{text:'✅ Tasdiqlandi',callback_data:'dw:done'}]]}}});
+        } else if(data.type==='leave') {
             await controls.reviewLeave(db,{id:identity.id},data.id,data.state);
         } else if(data.type==='broadcast') {
             await controls.confirmBroadcast(db,{id:identity.id},data.id,data.fingerprint,data.cancel===true);
