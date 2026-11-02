@@ -27144,7 +27144,10 @@ function openDebtorMenu(studentId, triggerBtn) {
     menu.innerHTML = `
         <div class="ctx-item" data-action="call" style="padding:10px 18px;cursor:pointer;font-size:14px;display:flex;gap:10px;align-items:center">📞 Qo'ng'iroq qilish</div>
         <div class="ctx-item" data-action="sms"  style="padding:10px 18px;cursor:pointer;font-size:14px;display:flex;gap:10px;align-items:center">💬 SMS yuborish</div>
-        <div class="ctx-item" data-action="payment" style="padding:10px 18px;cursor:pointer;font-size:14px;display:flex;gap:10px;align-items:center">💳 To‘lov qabul qilish</div>
+        ${s.debtAmount == null
+            // Qarz aniqlanmagan — server "To'lov joriy qarzdan oshmasligi kerak" deb rad etadi; avval shartnoma summasi kerak.
+            ? `<div class="ctx-item ctx-item--off" data-action="payment-off" aria-disabled="true" title="Avval shartnoma summasini kiriting (Moliya)" style="padding:10px 18px;cursor:not-allowed;font-size:14px;display:flex;flex-direction:column;gap:2px;opacity:.55"><span>💳 To‘lov qabul qilish</span><small style="font-size:11.5px;color:var(--text-muted)">avval shartnoma summasini kiriting (Moliya)</small></div>`
+            : `<div class="ctx-item" data-action="payment" style="padding:10px 18px;cursor:pointer;font-size:14px;display:flex;gap:10px;align-items:center">💳 To‘lov qabul qilish</div>`}
         <div class="ctx-item" data-action="edit" style="padding:10px 18px;cursor:pointer;font-size:14px;display:flex;gap:10px;align-items:center">✏️ Qarz tahrirlash</div>
     `;
     document.body.appendChild(menu);
@@ -27158,7 +27161,7 @@ function openDebtorMenu(studentId, triggerBtn) {
         menu.style.left = left + 'px';
     }
 
-    menu.querySelectorAll('.ctx-item').forEach(item => {
+    menu.querySelectorAll('.ctx-item:not(.ctx-item--off)').forEach(item => {
         item.addEventListener('mouseenter', () => item.style.background = 'var(--hover-bg,rgba(0,0,0,.05))');
         item.addEventListener('mouseleave', () => item.style.background = '');
         item.onclick = () => {
@@ -27180,49 +27183,52 @@ function openDebtorMenu(studentId, triggerBtn) {
     setTimeout(() => document.addEventListener('click', close, true), 0);
 }
 
+// Qarzni tahrirlash: faqat kelishilgan sana, izoh va eslatma yoziladi. To'langan/qarz/to'lovlar soni reyestrdan
+// keladi (inflow) — ularni bu oynadan qayta yozish parallel qabul qilingan to'lovni yo'qotardi (stale write).
+// Tarif ham bu yerda o'zgartirilmaydi (auditni chetlab o'tardi). Kelishilgan sana o'zgarsa sabab majburiy va
+// student.paymentDueHistory'ga yoziladi.
+const DEBTOR_TARIFF_NAMES = { 15: 'Start', 30: 'Standart', 60: 'VIP' };
+function debtorTariffLabel(s) {
+    const d = Number(s?.lessonDuration) || 15;
+    return `${d} daq · ${DEBTOR_TARIFF_NAMES[d] || s?.tariff || 'Standart'}`;
+}
 function openDebtorEditModal(studentId) {
     const students = getItem(STORAGE_KEYS.students, []);
     const s = students.find(s => s.id === studentId);
     if (!s) return;
+    const fld = 'width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box';
+    const lab = 'font-size:12px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:4px';
+    const ro = (label, value) => `<div><span style="${lab}">${label}</span><div class="de-ro" style="${fld};background:var(--bg-soft,#F5F7FB)">${escapeHtml(value)}</div></div>`;
+    const history = Array.isArray(s.paymentDueHistory) ? s.paymentDueHistory.slice(-5).reverse() : [];
+    const histHtml = history.length ? `<div class="de-hist"><span style="${lab}">Sana oʻzgarishlari</span><ul style="margin:0;padding-left:18px;font-size:13px;color:var(--text-muted)">${history.map(h =>
+        `<li>${escapeHtml(h.from ? formatDateShort(h.from) : '—')} → ${escapeHtml(h.to ? formatDateShort(h.to) : '—')} · ${escapeHtml(h.reason || '')}${h.by ? ` · ${escapeHtml(h.by)}` : ''}${h.at ? ` · ${escapeHtml(formatDateShort(String(h.at).slice(0, 10)))}` : ''}</li>`).join('')}</ul></div>` : '';
 
     const body = `
         <div style="display:flex;flex-direction:column;gap:14px">
-            <p class="text-muted">Yangi tushumni kartochkadagi “To‘lov qabul qilish” orqali kiriting. Summa va tarix reyestrdan olinadi.</p>
-            <div>
-                <label style="font-size:12px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:4px">To'langan summa (so'm)</label>
-                <input type="text" inputmode="numeric" id="dePaid" readonly data-money-input value="${s.paidAmount || 0}" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box">
+            <p class="text-muted">Yangi tushumni “Toʻlov qabul qilish” orqali kiriting. Summa, qarz va toʻlovlar soni reyestrdan olinadi — bu yerda oʻzgarmaydi.</p>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                ${ro("Toʻlangan summa", formatMoney(Number(s.paidAmount) || 0))}
+                ${ro('Qarz miqdori', s.debtAmount == null ? 'Aniqlanmagan' : formatMoney(Number(s.debtAmount) || 0))}
+                ${ro('Tarif', debtorTariffLabel(s))}
+                ${ro('Toʻlovlar', `${Number(s.paymentCount) || 0} ta${s.lastPaymentDate ? ` · oxirgi ${formatDateShort(s.lastPaymentDate)}` : ''}`)}
             </div>
             <div>
-                <label style="font-size:12px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:4px">Qarz miqdori (so'm)</label>
-                <input type="text" inputmode="numeric" id="deDebt" readonly data-money-input value="${s.debtAmount || 0}" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box">
+                <label for="deDueDate" style="${lab}">Kelishilgan toʻlov sanasi</label>
+                <input type="date" lang="en-GB" id="deDueDate" value="${escapeHtml(s.paymentDueDate || '')}" style="${fld}">
+            </div>
+            <div id="deReasonWrap" hidden>
+                <label for="deDueReason" style="${lab}">Sana oʻzgarish sababi <span style="color:#DC2626">*</span></label>
+                <textarea id="deDueReason" rows="2" placeholder="Masalan: oylik 10-sanada tushadi" style="${fld};resize:vertical"></textarea>
+                <div id="deDueReasonErr" role="alert" style="color:#DC2626;font-size:12px;margin-top:4px" hidden>Sababni yozing — u tarixga yoziladi.</div>
+            </div>
+            ${histHtml}
+            <div>
+                <label for="deComment" style="${lab}">Izoh</label>
+                <textarea id="deComment" rows="2" style="${fld};resize:vertical">${escapeHtml(s.comment || '')}</textarea>
             </div>
             <div>
-                <label style="font-size:12px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:4px">To'lov muddati</label>
-                <input type="date" lang="en-GB" id="deDueDate" value="${s.paymentDueDate || ''}" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box">
-            </div>
-            <div>
-                <label style="font-size:12px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:4px">Tarif</label>
-                <select id="deTariff" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box">
-                    <option value="standard" ${(s.tariff||'standard')==='standard'?'selected':''}>Standard</option>
-                    <option value="premium" ${s.tariff==='premium'?'selected':''}>Premium</option>
-                    <option value="vip" ${s.tariff==='vip'?'selected':''}>VIP</option>
-                </select>
-            </div>
-            <div>
-                <label style="font-size:12px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:4px">Oxirgi to'lov sanasi</label>
-                <input type="date" readonly lang="en-GB" id="deLastPayment" value="${s.lastPaymentDate || ''}" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box">
-            </div>
-            <div>
-                <label style="font-size:12px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:4px">To'lovlar soni</label>
-                <input type="number" readonly id="dePayCount" value="${s.paymentCount || 0}" min="0" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box">
-            </div>
-            <div>
-                <label style="font-size:12px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:4px">Izoh</label>
-                <textarea id="deComment" rows="2" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box;resize:vertical">${escapeHtml(s.comment || '')}</textarea>
-            </div>
-            <div>
-                <label style="font-size:12px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:4px">Eslatma</label>
-                <textarea id="deNote" rows="2" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box;resize:vertical">${escapeHtml(s.note || '')}</textarea>
+                <label for="deNote" style="${lab}">Eslatma</label>
+                <textarea id="deNote" rows="2" style="${fld};resize:vertical">${escapeHtml(s.note || '')}</textarea>
             </div>
         </div>`;
 
@@ -27231,18 +27237,34 @@ function openDebtorEditModal(studentId) {
         <button class="btn-primary-sm" id="debtorSaveBtn">Saqlash</button>`;
 
     openModal(`Qarz tahrirlash — ${s.name}`, body, footer);
-    wireMoneyInputs();
+    const prevDue = s.paymentDueDate || '';
+    const dueEl = document.getElementById('deDueDate');
+    const reasonWrap = document.getElementById('deReasonWrap');
+    const syncReason = () => { reasonWrap.hidden = (dueEl.value || '') === prevDue; };
+    dueEl?.addEventListener('input', syncReason);
+    dueEl?.addEventListener('change', syncReason);
 
     document.getElementById('debtorSaveBtn').onclick = () => {
-        const paid = Number((document.getElementById('dePaid')?.value || '0').replace(/,/g, ''));
-        const debt = Number((document.getElementById('deDebt')?.value || '0').replace(/,/g, ''));
-        const dueDate = document.getElementById('deDueDate')?.value || '';
-        const tariff = document.getElementById('deTariff')?.value || 'standard';
-        const lastPayment = document.getElementById('deLastPayment')?.value || '';
-        const payCount = Number(document.getElementById('dePayCount')?.value || 0);
+        const dueDate = dueEl?.value || '';
         const comment = document.getElementById('deComment')?.value || '';
         const note = document.getElementById('deNote')?.value || '';
-        updateStudent(studentId, { paidAmount: paid, debtAmount: debt, paymentDueDate: dueDate, tariff, lastPaymentDate: lastPayment, paymentCount: payCount, comment, note });
+        const fields = { comment, note };
+        if (dueDate !== prevDue) {
+            const reason = (document.getElementById('deDueReason')?.value || '').trim();
+            if (!reason) {
+                const err = document.getElementById('deDueReasonErr');
+                if (err) err.hidden = false;
+                document.getElementById('deDueReason')?.focus();
+                return;
+            }
+            const me = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+            // Eng so'nggi nusxa ustidan yoziladi (oyna ochilgandan beri boshqa o'zgarish bo'lgan bo'lishi mumkin).
+            const fresh = getItem(STORAGE_KEYS.students, []).find(x => x.id === studentId) || s;
+            fields.paymentDueDate = dueDate;
+            fields.paymentDueHistory = [...(Array.isArray(fresh.paymentDueHistory) ? fresh.paymentDueHistory : []),
+                { from: prevDue, to: dueDate, reason, by: me?.name || me?.email || '', byId: me?.id || '', at: new Date().toISOString() }].slice(-50);
+        }
+        updateStudent(studentId, fields);
         closeModal();
         refreshAllDebtorViews();
     };
