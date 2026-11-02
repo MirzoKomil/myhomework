@@ -14231,11 +14231,13 @@ async function _smsHandleSend() {
     btn.textContent = 'Yuborilmoqda...';
     resultEl.textContent = '';
     try {
-        const res = await apiSendSms(recipients, message, _smsAudience);
+        // skipAlreadySent: oldingi urinish timeout bo'lib, server baribir yuborgan bo'lsa — qayta pul yechilmaydi.
+        const res = await apiSendSms(recipients, message, _smsAudience, { skipAlreadySent: true });
         const errors = (res.results || []).filter(item => item.status === 'error')
             .map(item => item.error).filter(Boolean);
         resultEl.innerHTML = `<span style="color:#059669">${res.sent} ta yuborildi</span>` +
             (res.failed ? `, <span style="color:#DC2626">${res.failed} ta xato</span>` : '') +
+            (res.skipped ? `, <span style="color:var(--text-muted)">${res.skipped} ta oʻtkazildi (shu matn allaqachon yuborilgan)</span>` : '') +
             (errors.length ? `<div style="margin-top:6px;color:#DC2626">Sabab: ${escapeHtml(errors.slice(0, 3).join('; '))}</div>` : '');
         document.getElementById('smsMessage').value = '';
         _smsUpdateCharCount();
@@ -14244,7 +14246,17 @@ async function _smsHandleSend() {
         _smsFetchHistory();
         _smsFetchBalance();
     } catch (err) {
-        resultEl.innerHTML = `<span style="color:#DC2626">Xatolik: ${escapeHtml(err.message || 'nomalum')}</span>`;
+        if (err && err.timeout) {
+            // Server kutishni to'xtatmaydi — SMSlar ketgan bo'lishi mumkin. Ko'r-ko'rona qayta yuborish taklif qilinmaydi:
+            // avval tarix tekshiriladi; qayta bosilsa server shu matn ketgan raqamlarni o'tkazib yuboradi.
+            resultEl.innerHTML = `<div class="sms-timeout" role="alert"><b>Javob kelmadi — SMSlar yuborilgan boʻlishi mumkin. Tarixni tekshiring.</b>
+                <div style="margin-top:4px;color:var(--text-muted)">Qayta yuborsangiz, shu matn allaqachon ketgan raqamlar oʻtkazib yuboriladi.</div>
+                <button type="button" class="btn-secondary-sm" id="smsTimeoutRefresh" style="margin-top:8px">Tarixni yangilash</button></div>`;
+            document.getElementById('smsTimeoutRefresh')?.addEventListener('click', () => { _smsFetchHistory(); _smsFetchBalance(); });
+            _smsFetchHistory();
+        } else {
+            resultEl.innerHTML = `<span style="color:#DC2626">Xatolik: ${escapeHtml(err.message || 'nomalum')}</span>`;
+        }
     } finally {
         btn.disabled = false;
         btn.textContent = 'Yuborish';
@@ -14389,7 +14401,7 @@ let _salesFunnelDemographicFilters = {
 
 const FUNNEL_STAGES = [
     { id: 'yangi-lidlar',             label: "Yangi lidlar",             color: '#3B82F6' },
-    { id: 'boglanishga-urinilmoqda',  label: "Bogʻlanishga urinilmoqda", color: '#7C3AED' },
+    { id: 'boglanishga-urinilmoqda',  label: "Urinilmoqda", color: '#7C3AED' },
     { id: 'boglanildi',               label: "Bogʻlanildi",              color: '#0891B2' },
     { id: 'sinov-darsida',            label: "Sinov darsida",            color: '#16A34A' },
     { id: 'qaror-jarayonida',         label: "Qaror jarayonida",         color: '#EA580C' },
@@ -15080,17 +15092,27 @@ function buildReachedFunnel(leads) {
     const withHistory = reached.filter(r => r.hasHistory).length;
     const labels = SALES_MAIN_PATH.map(id => (FUNNEL_STAGES.find(f => f.id === id) || {}).label || id);
     const counts = SALES_MAIN_PATH.map((_, i) => reached.filter(r => r.idx >= i).length);
+    // ROP kompyuter (js/ropDesk): "Eng katta yo'qotish" — faqat bosqichdan CHIQQAN lidlar bo'yicha (hali shu bosqichda
+    // turganlar, jumladan biriktirilmagan yangi lidlar navbati, yo'qotish hisoblanmaydi). Boshqa rollarda o'zgarish yo'q.
+    let low = -1, lowTxt = '';
+    if (window.ropDeskPages?.isRopDesk?.()) {
+        const cur = leads.map(l => salesPathIndex(l?.status));
+        const pass = counts.map((n, i) => { if (!i) return null; const left = counts[i - 1] - cur.filter(c => c === i - 1).length; return left > 0 ? n / left : null; });
+        pass.forEach((v, i) => { if (v != null && v < 1 && (low < 0 || v < pass[low])) low = i; });
+        if (low > 0) lowTxt = `Eng katta yoʻqotish: ${labels[low - 1].toLowerCase()} → ${labels[low].toLowerCase()} (bosqichdan chiqqanlarning ${Math.round((1 - pass[low]) * 100)}% oʻtmadi)`;
+    }
     const rows = counts.map((n, i) => {
         const prev = i ? counts[i - 1] : n;
         const step = i && prev ? Math.round(n / prev * 1000) / 10 : 100;
-        return `<li class="sfx-row"><span class="sfx-name">${escapeHtml(labels[i])}</span>
-            <span class="sfx-track" aria-hidden="true"><span style="width:${counts[0] ? Math.max(n ? 2 : 0, Math.round(n / counts[0] * 100)) : 0}%;background:#0065D6"></span></span>
-            <span class="sfx-val"><b>${n}</b>${i ? ` · ${String(step).replace('.', ',')}% oldingidan` : ''}</span></li>`;
+        return `<li class="sfx-row${i === low ? ' sfx-row--low' : ''}"><span class="sfx-name">${escapeHtml(labels[i])}</span>
+            <span class="sfx-track" aria-hidden="true"><span style="width:${counts[0] ? Math.max(n ? 2 : 0, Math.round(n / counts[0] * 100)) : 0}%;background:${i === low ? '#F79009' : '#0065D6'}"></span></span>
+            <span class="sfx-val"><b>${n}</b>${i ? ` · ${String(step).replace('.', ',')}% oldingidan` : ''}${i === low ? ' <span class="sfx-lowb">↓ eng past</span>' : ''}</span></li>`;
     }).join('');
     return `
     <section class="sfx-card" aria-labelledby="sfxReachH">
         <div class="sfx-card-head"><h2 id="sfxReachH">Qaysi bosqichgacha yetgan</h2><span>har bosqich — shu yerga yoki undan keyingiga yetgan lidlar</span></div>
         <ol class="sfx-rows sfx-rows--wide">${rows}</ol>
+        ${lowTxt ? `<p class="sfx-note sfx-note--low">${escapeHtml(lowTxt)}</p>` : ''}
         <p class="sfx-note">Bosqichlar tarixi ${withHistory} / ${leads.length} ta lidda bor (server 21-oktabrdan yozmoqda). Tarixi yoʻq lidlar hozirgi bosqichi boʻyicha hisoblanadi — muvaffaqiyatsiz/sifatsizga oʻtganlarining oldingi bosqichlari hali koʻrinmaydi, shuning uchun bu raqamlar vaqt oʻtishi bilan aniqlashadi.</p>
     </section>`;
 }
@@ -15757,7 +15779,7 @@ function openSifatsizLidFlow(lang, leadId) {
     };
 }
 
-function openMuvaffaqiyatsizSotuvFlow(lang, leadId, fromStatus) {
+function openMuvaffaqiyatsizSotuvFlow(lang, leadId, fromStatus, opts = {}) {
     const lead = getLeadById(lang, leadId);
     if (!lead) return;
 
@@ -15803,23 +15825,35 @@ function openMuvaffaqiyatsizSotuvFlow(lang, leadId, fromStatus) {
         const reason = group?.reasons.find(r => r.id === selected.value);
         if (!reason) return;
 
-        const user = getCurrentUser();
-        const author = user?.name || 'Admin';
-        const updated = updateLeadInStorage(lang, leadId, l => ({
-            ...normalizeLeadExtras(l),
-            status: 'muvaffaqiyatsiz-sotuv',
-            failedSaleReason: { groupId, reasonId: reason.id, label: reason.label },
-            comments: [...normalizeLeadExtras(l).comments, createLeadComment({
-                type: 'failed-sale',
-                text: `Muvaffaqiyatsiz sotuv: ${reason.label}`,
-                reason: reason.label,
-                author
-            })]
-        }));
-        if (!updated) { alert('Lid topilmadi'); return; }
-        closeModal();
-        renderLeads();
+        // Sabab birinchi so'raladigan yo'l (startMvCascade): anketa kerak bo'lsa — avval anketa, keyin saqlash.
+        if (typeof opts.onReason === 'function') {
+            closeModal();
+            if (opts.onReason(groupId, reason.id)) return;
+        }
+        saveFailedSaleReason(lang, leadId, groupId, reason.id);
     };
+}
+
+function saveFailedSaleReason(lang, leadId, groupId, reasonId) {
+    const group = FAILED_SALE_REASON_GROUPS.find(g => g.id === groupId);
+    const reason = group?.reasons.find(r => r.id === reasonId);
+    if (!reason) return;
+    const user = getCurrentUser();
+    const author = user?.name || 'Admin';
+    const updated = updateLeadInStorage(lang, leadId, l => ({
+        ...normalizeLeadExtras(l),
+        status: 'muvaffaqiyatsiz-sotuv',
+        failedSaleReason: { groupId, reasonId: reason.id, label: reason.label },
+        comments: [...normalizeLeadExtras(l).comments, createLeadComment({
+            type: 'failed-sale',
+            text: `Muvaffaqiyatsiz sotuv: ${reason.label}`,
+            reason: reason.label,
+            author
+        })]
+    }));
+    if (!updated) { alert('Lid topilmadi'); return; }
+    closeModal();
+    renderLeads();
 }
 
 function needsContactFailPrompt(fromStatus, toStatus) {
@@ -16146,20 +16180,39 @@ function getSkippedSurveySteps(fromStatus, toStatus, lead) {
     return steps;
 }
 
+// Egasi qarori (A, 2026-11-02): Yangi / Urinilmoqda → Muvaffaqiyatsiz sotuvda avval sabab so'raladi.
+// Sabab "bog'lanib bo'lmadi" turidan bo'lsa (Javob bermadi 6+, Ko'tarmadi 6+, Noto'g'ri raqam) — lid bilan
+// hech gaplashilmagan, Bog'lanildi anketasi so'ralmaydi. Boshqa sabablarda anketa so'raladi, keyin tanlangan
+// sabab qayta so'ralmay saqlanadi. Barcha rollar uchun.
+const FAILED_SALE_NO_CONTACT_REASON_IDS = new Set(['no-pickup-6', 'no-response-6', 'wrong-number']);
+const FAILED_SALE_REASON_FIRST_FROM = new Set(['yangi-lidlar', 'boglanishga-urinilmoqda']);
+
 function startMvCascade(lang, leadId, fromStatus, finalStatus) {
+    if (finalStatus === 'muvaffaqiyatsiz-sotuv' && FAILED_SALE_REASON_FIRST_FROM.has(normalizeLeadStatus(fromStatus))) {
+        openMuvaffaqiyatsizSotuvFlow(lang, leadId, fromStatus, {
+            onReason: (groupId, reasonId) => {
+                if (FAILED_SALE_NO_CONTACT_REASON_IDS.has(reasonId)) return false; // darhol saqlanadi
+                _mvCascade = { lang, leadId, fromStatus, finalStatus, failPreset: { groupId, reasonId } };
+                continueMvCascade();
+                return true;
+            }
+        });
+        return;
+    }
     _mvCascade = { lang, leadId, fromStatus, finalStatus };
     continueMvCascade();
 }
 
 function continueMvCascade() {
     if (!_mvCascade) return;
-    const { lang, leadId, fromStatus, finalStatus } = _mvCascade;
+    const { lang, leadId, fromStatus, finalStatus, failPreset } = _mvCascade;
     const lead = getLeadById(lang, leadId);
     if (!lead) { _mvCascade = null; return; }
 
     const steps = getSkippedSurveySteps(fromStatus, finalStatus, lead);
     if (!steps.length) {
         _mvCascade = null;
+        if (failPreset && finalStatus === 'muvaffaqiyatsiz-sotuv') { saveFailedSaleReason(lang, leadId, failPreset.groupId, failPreset.reasonId); return; }
         dispatchLeadTargetFlow(lang, leadId, fromStatus, finalStatus);
         return;
     }
@@ -18215,11 +18268,13 @@ function paymentStepsHtml(active) {
 }
 
 function openPaymentTeacherScheduleModal(lang, leadId, options = {}) {
-    const { chainTo = null } = options;
+    // edit: true — jadval saqlangan bo'lsa ham shu oyna ochiladi (konversiyada "Orqaga" / "O'zgartirish"),
+    // aks holda saqlangan jadvalda darhol keyingi qadamga o'tib ketardi.
+    const { chainTo = null, edit = false } = options;
     const lead = getLeadById(lang, leadId);
     if (!lead) return;
 
-    if (leadHasTeacherSchedule(lead)) {
+    if (!edit && leadHasTeacherSchedule(lead)) {
         // Status ni BU YERDA o'zgartirmaymiz — openPaymentOnboardingModal tasdiqlanganda o'zgaradi
         openPaymentProcessModal(lang, leadId, { chainTo });
         return;
@@ -18465,7 +18520,7 @@ function openPaymentOnboardingModal(lang, leadId, options = {}) {
     if (window.convertUI && !options.groupDone && !lead.paymentSurvey) { openPaymentProcessModal(lang, leadId, { chainTo }); return; }
     // 5-qadam: Telegram guruh (js/convertUI.js) — guruh hali kiritilmagan bo'lsa, avval o'sha.
     if (window.convertUI && !lead.paymentOnboarding?.telegramGroupLink && !options.groupDone) {
-        window.convertUI.openGroupStep(lang, leadId, () => openPaymentOnboardingModal(lang, leadId, { ...options, groupDone: true }));
+        window.convertUI.openGroupStep(lang, leadId, () => openPaymentOnboardingModal(lang, leadId, { ...options, groupDone: true }), { chainTo });
         return;
     }
 
@@ -19255,7 +19310,7 @@ function formatEnhancedPaymentClosedComment(closedSurvey, scheduleData) {
 
 const LEAD_COLUMNS = [
     { id: 'yangi-lidlar', label: "Yangi lidlar", bg: '#EFF6FF', border: '#93C5FD', headerBg: 'rgba(59,130,246,0.14)', title: '#1D4ED8', count: '#2563EB' },
-    { id: 'boglanishga-urinilmoqda', label: "Bogʻlanishga urinilmoqda", bg: '#F5F3FF', border: '#C4B5FD', headerBg: 'rgba(124,58,237,0.12)', title: '#5B21B6', count: '#7C3AED' },
+    { id: 'boglanishga-urinilmoqda', label: "Urinilmoqda", bg: '#F5F3FF', border: '#C4B5FD', headerBg: 'rgba(124,58,237,0.12)', title: '#5B21B6', count: '#7C3AED' },
     { id: 'boglanildi', label: "Bogʻlanildi", bg: '#ECFEFF', border: '#67E8F9', headerBg: 'rgba(6,182,212,0.12)', title: '#0E7490', count: '#0891B2' },
     { id: 'sinov-darsida', label: "Sinov darsida", bg: '#F0FDF4', border: '#86EFAC', headerBg: 'rgba(22,163,74,0.12)', title: '#166534', count: '#16A34A' },
     { id: 'qaror-jarayonida', label: "Qaror jarayonida", bg: '#FFF7ED', border: '#FDBA74', headerBg: 'rgba(234,88,12,0.12)', title: '#C2410C', count: '#EA580C' },
@@ -20202,6 +20257,12 @@ function openLeadSmsTemplateModal(lang, leadId) {
             closeModal();
             showMiniToast('SMS yuborildi');
         } catch (err) {
+            if (err && err.timeout) {
+                // Server yuborishda davom etgan bo'lishi mumkin — ikkinchi marta bosib ikki SMS ketmasin.
+                closeModal();
+                showMiniToast('Javob kelmadi — SMS yuborilgan boʻlishi mumkin. Tarixni tekshiring.', 6000);
+                return;
+            }
             showMiniToast(`SMS yuborilmadi: ${err.message || "noma'lum xatolik"}`);
             sendBtn.disabled = false;
             sendBtn.textContent = 'SMS yuborish';
@@ -27126,7 +27187,10 @@ function openDebtorMenu(studentId, triggerBtn) {
     menu.innerHTML = `
         <div class="ctx-item" data-action="call" style="padding:10px 18px;cursor:pointer;font-size:14px;display:flex;gap:10px;align-items:center">📞 Qo'ng'iroq qilish</div>
         <div class="ctx-item" data-action="sms"  style="padding:10px 18px;cursor:pointer;font-size:14px;display:flex;gap:10px;align-items:center">💬 SMS yuborish</div>
-        <div class="ctx-item" data-action="payment" style="padding:10px 18px;cursor:pointer;font-size:14px;display:flex;gap:10px;align-items:center">💳 To‘lov qabul qilish</div>
+        ${s.debtAmount == null
+            // Qarz aniqlanmagan — server "To'lov joriy qarzdan oshmasligi kerak" deb rad etadi; avval shartnoma summasi kerak.
+            ? `<div class="ctx-item ctx-item--off" data-action="payment-off" aria-disabled="true" title="Avval shartnoma summasini kiriting (Moliya)" style="padding:10px 18px;cursor:not-allowed;font-size:14px;display:flex;flex-direction:column;gap:2px;opacity:.55"><span>💳 To‘lov qabul qilish</span><small style="font-size:11.5px;color:var(--text-muted)">avval shartnoma summasini kiriting (Moliya)</small></div>`
+            : `<div class="ctx-item" data-action="payment" style="padding:10px 18px;cursor:pointer;font-size:14px;display:flex;gap:10px;align-items:center">💳 To‘lov qabul qilish</div>`}
         <div class="ctx-item" data-action="edit" style="padding:10px 18px;cursor:pointer;font-size:14px;display:flex;gap:10px;align-items:center">✏️ Qarz tahrirlash</div>
     `;
     document.body.appendChild(menu);
@@ -27140,7 +27204,7 @@ function openDebtorMenu(studentId, triggerBtn) {
         menu.style.left = left + 'px';
     }
 
-    menu.querySelectorAll('.ctx-item').forEach(item => {
+    menu.querySelectorAll('.ctx-item:not(.ctx-item--off)').forEach(item => {
         item.addEventListener('mouseenter', () => item.style.background = 'var(--hover-bg,rgba(0,0,0,.05))');
         item.addEventListener('mouseleave', () => item.style.background = '');
         item.onclick = () => {
@@ -27162,49 +27226,52 @@ function openDebtorMenu(studentId, triggerBtn) {
     setTimeout(() => document.addEventListener('click', close, true), 0);
 }
 
+// Qarzni tahrirlash: faqat kelishilgan sana, izoh va eslatma yoziladi. To'langan/qarz/to'lovlar soni reyestrdan
+// keladi (inflow) — ularni bu oynadan qayta yozish parallel qabul qilingan to'lovni yo'qotardi (stale write).
+// Tarif ham bu yerda o'zgartirilmaydi (auditni chetlab o'tardi). Kelishilgan sana o'zgarsa sabab majburiy va
+// student.paymentDueHistory'ga yoziladi.
+const DEBTOR_TARIFF_NAMES = { 15: 'Start', 30: 'Standart', 60: 'VIP' };
+function debtorTariffLabel(s) {
+    const d = Number(s?.lessonDuration) || 15;
+    return `${d} daq · ${DEBTOR_TARIFF_NAMES[d] || s?.tariff || 'Standart'}`;
+}
 function openDebtorEditModal(studentId) {
     const students = getItem(STORAGE_KEYS.students, []);
     const s = students.find(s => s.id === studentId);
     if (!s) return;
+    const fld = 'width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font-size:14px;font-family:inherit;box-sizing:border-box';
+    const lab ='font-size:12px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:4px';
+    const ro = (label, value) => `<div><span style="${lab}">${label}</span><div class="de-ro" style="${fld};background:var(--bg-soft,#F5F7FB)">${escapeHtml(value)}</div></div>`;
+    const history = Array.isArray(s.paymentDueHistory) ? s.paymentDueHistory.slice(-5).reverse() : [];
+    const histHtml = history.length ? `<div class="de-hist"><span style="${lab}">Sana oʻzgarishlari</span><ul style="margin:0;padding-left:18px;font-size:13px;color:var(--text-muted)">${history.map(h =>
+        `<li>${escapeHtml(h.from ? formatDateShort(h.from) : '—')} → ${escapeHtml(h.to ? formatDateShort(h.to) : '—')} · ${escapeHtml(h.reason || '')}${h.by ? ` · ${escapeHtml(h.by)}` : ''}${h.at ? ` · ${escapeHtml(formatDateShort(String(h.at).slice(0, 10)))}` : ''}</li>`).join('')}</ul></div>` : '';
 
     const body = `
         <div style="display:flex;flex-direction:column;gap:14px">
-            <p class="text-muted">Yangi tushumni kartochkadagi “To‘lov qabul qilish” orqali kiriting. Summa va tarix reyestrdan olinadi.</p>
-            <div>
-                <label style="font-size:12px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:4px">To'langan summa (so'm)</label>
-                <input type="text" inputmode="numeric" id="dePaid" readonly data-money-input value="${s.paidAmount || 0}" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box">
+            <p class="text-muted">Yangi tushumni “Toʻlov qabul qilish” orqali kiriting. Summa, qarz va toʻlovlar soni reyestrdan olinadi — bu yerda oʻzgarmaydi.</p>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                ${ro("Toʻlangan summa", formatMoney(Number(s.paidAmount) || 0))}
+                ${ro('Qarz miqdori', s.debtAmount == null ? 'Aniqlanmagan' : formatMoney(Number(s.debtAmount) || 0))}
+                ${ro('Tarif', debtorTariffLabel(s))}
+                ${ro('Toʻlovlar', `${Number(s.paymentCount) || 0} ta${s.lastPaymentDate ? ` · oxirgi ${formatDateShort(s.lastPaymentDate)}` : ''}`)}
             </div>
             <div>
-                <label style="font-size:12px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:4px">Qarz miqdori (so'm)</label>
-                <input type="text" inputmode="numeric" id="deDebt" readonly data-money-input value="${s.debtAmount || 0}" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box">
+                <label for="deDueDate" style="${lab}">Kelishilgan toʻlov sanasi</label>
+                <input type="date" lang="en-GB" id="deDueDate" value="${escapeHtml(s.paymentDueDate || '')}" style="${fld}">
+            </div>
+            <div id="deReasonWrap" hidden>
+                <label for="deDueReason" style="${lab}">Sana oʻzgarish sababi <span style="color:#DC2626">*</span></label>
+                <textarea id="deDueReason" rows="2" placeholder="Masalan: oylik 10-sanada tushadi" style="${fld};resize:vertical"></textarea>
+                <div id="deDueReasonErr" role="alert" style="color:#DC2626;font-size:12px;margin-top:4px" hidden>Sababni yozing — u tarixga yoziladi.</div>
+            </div>
+            ${histHtml}
+            <div>
+                <label for="deComment" style="${lab}">Izoh</label>
+                <textarea id="deComment" rows="2" style="${fld};resize:vertical">${escapeHtml(s.comment || '')}</textarea>
             </div>
             <div>
-                <label style="font-size:12px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:4px">To'lov muddati</label>
-                <input type="date" lang="en-GB" id="deDueDate" value="${s.paymentDueDate || ''}" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box">
-            </div>
-            <div>
-                <label style="font-size:12px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:4px">Tarif</label>
-                <select id="deTariff" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box">
-                    <option value="standard" ${(s.tariff||'standard')==='standard'?'selected':''}>Standard</option>
-                    <option value="premium" ${s.tariff==='premium'?'selected':''}>Premium</option>
-                    <option value="vip" ${s.tariff==='vip'?'selected':''}>VIP</option>
-                </select>
-            </div>
-            <div>
-                <label style="font-size:12px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:4px">Oxirgi to'lov sanasi</label>
-                <input type="date" readonly lang="en-GB" id="deLastPayment" value="${s.lastPaymentDate || ''}" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box">
-            </div>
-            <div>
-                <label style="font-size:12px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:4px">To'lovlar soni</label>
-                <input type="number" readonly id="dePayCount" value="${s.paymentCount || 0}" min="0" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box">
-            </div>
-            <div>
-                <label style="font-size:12px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:4px">Izoh</label>
-                <textarea id="deComment" rows="2" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box;resize:vertical">${escapeHtml(s.comment || '')}</textarea>
-            </div>
-            <div>
-                <label style="font-size:12px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:4px">Eslatma</label>
-                <textarea id="deNote" rows="2" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box;resize:vertical">${escapeHtml(s.note || '')}</textarea>
+                <label for="deNote" style="${lab}">Eslatma</label>
+                <textarea id="deNote" rows="2" style="${fld};resize:vertical">${escapeHtml(s.note || '')}</textarea>
             </div>
         </div>`;
 
@@ -27213,18 +27280,34 @@ function openDebtorEditModal(studentId) {
         <button class="btn-primary-sm" id="debtorSaveBtn">Saqlash</button>`;
 
     openModal(`Qarz tahrirlash — ${s.name}`, body, footer);
-    wireMoneyInputs();
+    const prevDue = s.paymentDueDate || '';
+    const dueEl = document.getElementById('deDueDate');
+    const reasonWrap = document.getElementById('deReasonWrap');
+    const syncReason = () => { reasonWrap.hidden = (dueEl.value || '') === prevDue; };
+    dueEl?.addEventListener('input', syncReason);
+    dueEl?.addEventListener('change', syncReason);
 
     document.getElementById('debtorSaveBtn').onclick = () => {
-        const paid = Number((document.getElementById('dePaid')?.value || '0').replace(/,/g, ''));
-        const debt = Number((document.getElementById('deDebt')?.value || '0').replace(/,/g, ''));
-        const dueDate = document.getElementById('deDueDate')?.value || '';
-        const tariff = document.getElementById('deTariff')?.value || 'standard';
-        const lastPayment = document.getElementById('deLastPayment')?.value || '';
-        const payCount = Number(document.getElementById('dePayCount')?.value || 0);
+        const dueDate = dueEl?.value || '';
         const comment = document.getElementById('deComment')?.value || '';
         const note = document.getElementById('deNote')?.value || '';
-        updateStudent(studentId, { paidAmount: paid, debtAmount: debt, paymentDueDate: dueDate, tariff, lastPaymentDate: lastPayment, paymentCount: payCount, comment, note });
+        const fields = { comment, note };
+        if (dueDate !== prevDue) {
+            const reason = (document.getElementById('deDueReason')?.value || '').trim();
+            if (!reason) {
+                const err = document.getElementById('deDueReasonErr');
+                if (err) err.hidden = false;
+                document.getElementById('deDueReason')?.focus();
+                return;
+            }
+            const me = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+            // Eng so'nggi nusxa ustidan yoziladi (oyna ochilgandan beri boshqa o'zgarish bo'lgan bo'lishi mumkin).
+            const fresh = getItem(STORAGE_KEYS.students, []).find(x => x.id === studentId) || s;
+            fields.paymentDueDate = dueDate;
+            fields.paymentDueHistory = [...(Array.isArray(fresh.paymentDueHistory) ? fresh.paymentDueHistory : []),
+                { from: prevDue, to: dueDate, reason, by: me?.name || me?.email || '', byId: me?.id || '', at: new Date().toISOString() }].slice(-50);
+        }
+        updateStudent(studentId, fields);
         closeModal();
         refreshAllDebtorViews();
     };

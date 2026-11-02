@@ -203,7 +203,9 @@ router.get('/deleted', authRequired, leadArchiveRequired, async (req, res) => {
 // "Qotib qolgan lidlar" qoidasi (necha kunda ogohlantirish / qulf) — til bo'yicha.
 router.get('/stale-rule', authRequired, leadReadRequired, async (req, res) => {
     try { res.json({ rules: await staleLeads.getRules(require('../db').pool) }); }
-    catch (err) { console.error('GET /api/leads/stale-rule', err); res.json({ rules: { english: staleLeads.DEFAULT_RULE, russian: staleLeads.DEFAULT_RULE } }); }
+    // Xatoda standart qoida (3/5/30) qaytarilmaydi: aks holda ROP sahifasi xatoni ko'rsatmay, saqlashda haqiqiy
+    // qoidani standart bilan almashtirib yuborishi mumkin edi. Mijoz o'zi oldingi/standart qoida bilan davom etadi.
+    catch (err) { console.error('GET /api/leads/stale-rule', err); res.status(503).json({ error: 'Qoidani yuklab boʻlmadi — keyinroq qayta urining' }); }
 });
 router.put('/stale-rule', authRequired, async (req, res) => {
     if (!['admin', 'rop', 'boshliq'].includes(req.user?.role)) return res.status(403).json({ error: 'Qoidani faqat ROP yoki admin oʻzgartiradi' });

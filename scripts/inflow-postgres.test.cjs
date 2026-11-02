@@ -48,10 +48,10 @@ test('real PostgreSQL inflow integration', { skip: !url }, async t => {
             assert.equal(out.records[0].amount, 600000); assert.equal(out.records[0].paidDate, '2026-09-30'); assert.equal(out.records[0].legacyReview, true);
             assert.equal(out.summary.debt, 1400000);
         });
-        await t.test('debt acceptance creates second receipt, activates academic access and is retry-safe', async () => {
+        await t.test('debt acceptance creates second receipt, keeps freeze status and is retry-safe', async () => {
             await reset(); await migrate();
             const out = await service.receive(pool, manager, receipt('debt'));
-            assert.equal(out.student.paidAmount, 2000000); assert.equal(out.student.debtAmount, 0); assert.equal(out.student.frozen, false); assert.equal(out.student.status, 'active'); assert.equal('passwordHash' in out.student, false);
+            assert.equal(out.student.paidAmount, 2000000); assert.equal(out.student.debtAmount, 0); assert.equal(out.student.frozen, true); assert.equal(out.student.status, 'paused'); assert.equal('passwordHash' in out.student, false);
             assert.equal((await service.receive(pool, manager, receipt('debt'))).duplicate, true);
             const list = await service.transaction(pool, db => service.list(db, admin, { language: 'english' }));
             assert.equal(list.records.length, 2); assert.equal(list.summary.amount, 2000000); assert.equal(list.summary.debt, 0);

@@ -206,7 +206,7 @@
               <dl class="cv-dl"><dt>Tarif</dt><dd>${dur ? `${dur} daq${PRICE[dur] ? ` · ${num(PRICE[dur])} so'm/oy` : ''}` : '—'}</dd><dt>Ustoz</dt><dd>${tname ? esc(tname) : '—'}</dd>
                 <dt>Jadval</dt><dd>${pat && time ? `${pat.label} ${esc(time)}` : '—'}</dd><dt>Boshlanish</dt><dd>${fd ? esc(dLabel(fd)) : '—'}</dd>
                 <dt>Kurs</dt><dd>${fd ? `${COURSE_DAYS} kun · ${ddmm(fd)} → ${ddmm(addD(fd, COURSE_DAYS - 1))}` : `${COURSE_DAYS} kun · 72 dars`}</dd></dl>
-              <p class="cv-note">Saqlansa vaqt ${tname ? `<b>${esc(shortName(tname))}</b> ` : ''}jadvalida doimiy band bo'ladi${tr.t ? ' va sinov yozuvi jadvaldan chiqadi' : ''}. To'lov qabul qilingach lid "O'quvchi" bo'ladi va ilova logini yaratiladi.</p>
+              <p class="cv-note">Saqlansa vaqt ${tname ? `<b>${esc(shortName(tname))}</b> ` : ''}jadvalida doimiy band bo'ladi${tr.t ? ' va sinov yozuvi jadvaldan chiqadi' : ''}. Lid bosqichi hozir o'zgarmaydi: 6-qadamda (ilova login) "To'lov jarayonida", to'lov yopilganda "To'lov yopildi" bo'ladi.</p>
               <button type="button" class="btn-primary-sm cv-go">Davom etish · To'lov</button>`;
             aside.querySelector('.cv-go').onclick = () => document.getElementById('confirmPaymentTeacherSchedule')?.click();
         };
@@ -250,7 +250,7 @@
               <dl class="cv-dl"><dt>Tarif</dt><dd>${dur ? `${dur} daq` : '—'}</dd><dt>Ustoz</dt><dd>${esc(staffName(ob.teacherId) || '—')}</dd>
                 <dt>Jadval</dt><dd>${esc(schedLine(lead) || '—')}</dd><dt>Boshlanish</dt><dd>${/^\d{4}-\d{2}-\d{2}$/.test(fd) ? esc(dLabel(fd)) : '—'}</dd>
                 <dt>To'lov</dt><dd>${esc(payTxt || '—')}</dd>${ob.telegramGroupName ? `<dt>Guruh</dt><dd>${esc(ob.telegramGroupName)}</dd>` : ''}</dl>
-              <p class="cv-note">${active === 4 ? 'To\'lov saqlangach lid "To\'lov jarayonida" bosqichiga o\'tadi, keyin Telegram guruh va ilova login.' : 'Saqlansa lid "O\'quvchi" bo\'ladi, ilova logini yaratiladi va kitob yetkazish kartochkasi ochiladi.'}</p>
+              <p class="cv-note">${active === 4 ? 'To\'lov ma\'lumoti saqlanadi, lid bosqichi hozir o\'zgarmaydi. Keyin Telegram guruh va ilova login: 6-qadamda lid "To\'lov jarayonida", to\'lov yopilganda "To\'lov yopildi" bo\'ladi.' : 'Saqlansa lid "To\'lov jarayonida" bosqichiga o\'tadi va ilova logini yaratiladi. To\'lov yopilganda lid "To\'lov yopildi" bo\'ladi.'}</p>
               <button type="button" class="btn-primary-sm cv-go">${esc(btnLabel)}</button>`;
             aside.querySelector('.cv-go').onclick = () => document.getElementById(btnId)?.click();
         };
@@ -300,7 +300,7 @@
                 const line = document.createElement('div'); line.className = 'lead-survey-field cv-fixed';
                 line.innerHTML = `<span class="lead-survey-label">Doimiy jadval</span><p class="cv-hint"><b>${esc(staffName(ob.teacherId) || '—')}</b> · ${esc(schedLine(lead))} · ${esc(String(ob.lessonDuration || ''))} daq · 3-qadamda tanlangan <button type="button" class="sc-link cv-resched">O'zgartirish</button></p>`;
                 tSel?.closest('.lead-survey-field')?.before(line);
-                line.querySelector('.cv-resched').onclick = () => { if (typeof closeModal === 'function') closeModal(); if (typeof openPaymentTeacherScheduleModal === 'function') openPaymentTeacherScheduleModal(lang, lead.id); };
+                line.querySelector('.cv-resched').onclick = () => { if (typeof closeModal === 'function') closeModal(); if (typeof openPaymentTeacherScheduleModal === 'function') openPaymentTeacherScheduleModal(lang, lead.id, { edit: true }); };
                 // MutationObserver/sync qayta ochmasin.
                 new MutationObserver(() => { const b = modalBody.querySelector('#onboardScheduleBlock'); if (b && b.style.display !== 'none') hideField(b); }).observe(modalBody, { subtree: true, attributes: true, attributeFilter: ['hidden', 'style'] });
             }
@@ -309,7 +309,7 @@
     }
 
     // ── 5-qadam: Telegram guruh (alohida oyna) ──
-    function openGroupStep(lang, leadId, next) {
+    function openGroupStep(lang, leadId, next, opts = {}) {
         const lead = typeof getLeadById === 'function' ? getLeadById(lang, leadId) : null;
         if (!lead) return;
         const ob = lead.paymentOnboarding || {}, ps = lead.paymentSurvey || {};
@@ -367,7 +367,8 @@
         }
         check();
         // "Orqaga" — oldingi tahrirlanadigan qadam: to'lov (4) saqlangan, shu sabab "Tarif va jadval" (3).
-        document.getElementById('cvGroupBack').onclick = () => { closeModal(); if (typeof openPaymentTeacherScheduleModal === 'function') openPaymentTeacherScheduleModal(lang, leadId); };
+        // { edit: true } — jadval saqlangan bo'lsa ham 3-qadam ochiladi (avval darhol 4/6-qadamga o'tib ketardi).
+        document.getElementById('cvGroupBack').onclick = () => { closeModal(); if (typeof openPaymentTeacherScheduleModal === 'function') openPaymentTeacherScheduleModal(lang, leadId, { edit: true, chainTo: opts.chainTo || null }); };
         document.getElementById('cvGroupNext').onclick = () => {
             const l = link.value.trim(), n = name.value.trim().replace(/\s+/g, ' ');
             const fail = (m, el) => { err.hidden = false; err.textContent = m; el?.focus(); };
