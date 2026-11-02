@@ -157,6 +157,7 @@ function dayStatus(input) {
     }
     const late = Math.max(0, inMin - start);
     base.lateMinutes = late > settings.graceMinutes ? late : 0;
+    base.rawLateMinutes = late; // jarimalar o'z imtiyozi bilan hisoblaydi (server/services/fines)
     let status = base.lateMinutes ? 'late' : 'on_time';
     if (lastOut && outMin > inMin) {
         const early = Math.max(0, end - outMin);

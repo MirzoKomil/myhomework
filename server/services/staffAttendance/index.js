@@ -1190,4 +1190,6 @@ async function tick(db, now = new Date()) {
 module.exports = { initSchema, actor, getSettings, saveSettings, me, challenge, submitOwnFace, check, employees, saveSchedule,
     myMonth, myRequests, createRequest, clearApproverCache, cancelRequest, inbox, decideRequest, team, teamRecord, saveOffice, pushEvents, scopeFor, routeFor,
     enrollFor, reviewFace, deleteFace, daily, monthly, setOverride, photo, tick, computeDay, lessonReport, transaction, ipAllowed, goneSql,
-    MAX_ATTEMPTS_PER_DAY, TEACHER_HR_ROLES, FRAME_W, FRAME_H };
+    MAX_ATTEMPTS_PER_DAY, TEACHER_HR_ROLES, FRAME_W, FRAME_H,
+    // Jarimalar (server/services/fines) kun natijalari va tasdiqlovchi doirasini shu yerdan oladi.
+    loadContext, statusFor, freeze, empLang, approverUsers, priorEvents };
