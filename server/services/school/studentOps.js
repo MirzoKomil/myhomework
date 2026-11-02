@@ -13,6 +13,7 @@ const { fail } = T;
 
 const ADMIN_ROLES = new Set(['admin', 'boshliq']);
 const APPROVER_ROLES = new Set(['admin', 'boshliq', 'rop']);
+const TEACHER_CHANGE_ROLES = new Set([...APPROVER_ROLES, 'akademik']);
 const FREEZE_MAX_DAYS = 30;
 
 function reasonText(r, min = 5) {
@@ -396,8 +397,13 @@ async function openTeacherPeriod(db, actor, studentId, teacherId, from, reason, 
         [randomUUID(), studentId, teacherId, from, reason, actor.id]);
 }
 async function changeTeacher(db, actor, studentId, body, { requestId = null, now = new Date() } = {}) {
-    if (!APPROVER_ROLES.has(actor.role)) throw fail(403, 'Ustozni admin yoki ROP almashtiradi');
-    const from = T.assertDate(body.from, 'Yangi ustoz bilan birinchi dars');
+    // Akademik rahbar ham (til tekshiruvi — routes/school.js). Sana: from yoki effectiveFrom; bo'lmasa bugundan.
+    if (!TEACHER_CHANGE_ROLES.has(actor.role)) throw fail(403, 'Ustozni admin, ROP yoki akademik rahbar almashtiradi');
+    const today = T.nowLocal(now).date;
+    const from = T.assertDate(body.from || body.effectiveFrom || today, 'Yangi ustoz bilan birinchi dars');
+    // To'g'ridan-to'g'ri almashtirish o'tgan sanadan bo'lmaydi (o'tgan darslar va maosh eski ustozda qoladi).
+    // Tasdiqlangan sotuv so'rovi (requestId) — so'rovdagi sana bilan, avvalgidek.
+    if (!requestId && from < today) throw fail(400, 'Oʻtgan sanadan oʻtkazib boʻlmaydi');
     const row = await lockStudent(db, studentId);
     const st = extraOf(row);
     const teacherId = String(body.teacherId || '');

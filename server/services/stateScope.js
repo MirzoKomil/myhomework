@@ -85,6 +85,15 @@ function scopeState(state, user, { managerId, financeEmployee = false } = {}) {
         if (state.bonusData !== undefined) state.bonusData = {};
         if (state.bonusHistory !== undefined) state.bonusHistory = [];
         if (state.individualSalesPlans !== undefined) state.individualSalesPlans = {};
+    } else if (role === 'akademik') {
+        // Akademik rahbar o'quvchilarga qo'ng'iroq qiladi — o'quvchi telefoni qoladi (o'quvchilar kattalar, ota-ona yo'q).
+        // To'lov, kassa, kitob yetkazish, bonus va sotuv rejalari — kerak emas.
+        state.payments = [];
+        state.cashFlow = [];
+        state.bookRoadmap = [];
+        if (state.bonusData !== undefined) state.bonusData = {};
+        if (state.bonusHistory !== undefined) state.bonusHistory = [];
+        if (state.individualSalesPlans !== undefined) state.individualSalesPlans = {};
     }
     return state;
 }

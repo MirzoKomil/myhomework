@@ -882,7 +882,7 @@ router.post('/demo-shop-orders', studentAuthOptional, async (req, res) => {
 });
 
 function crmStateRequired(req, res, next) {
-    if (!['admin', 'rop', 'boshliq', 'sales_manager', 'teacher', 'employee', 'targetolog', 'hr'].includes(req.user?.role)) {
+    if (!['admin', 'rop', 'boshliq', 'sales_manager', 'teacher', 'employee', 'targetolog', 'hr', 'akademik'].includes(req.user?.role)) {
         return res.status(403).json({ error: 'CRM ma\'lumotlariga ruxsat yo\'q' });
     }
     next();
@@ -974,6 +974,11 @@ async function getStateForUser(user) {
     if (user.role === 'rop') {
         const own = user.email ? (await pool.query('SELECT id FROM hr_employees WHERE LOWER(TRIM(login)) = LOWER(TRIM($1)) LIMIT 1', [user.email])).rows[0]?.id : null;
         return ropScope.scopeStateForRop(scoped, await ropScope.ropLangsFor(pool, user), { ownEmployeeId: own || null });
+    }
+    // Akademik rahbar: faqat o'z til yo'nalishi (o'quvchilar, ustozlar, davomat) — ROP filtri bilan bir xil; lidlar yo'q (yuqorida).
+    if (user.role === 'akademik') {
+        const langs = await require('../services/academicHead').langsFor(pool, user);
+        return ropScope.scopeStateForRop(scoped, langs, { ownEmployeeId: null });
     }
     return scoped;
 }
@@ -1095,7 +1100,8 @@ router.get('/teacher-rating', authRequired, async (req, res) => {
         // Yagona reyting: ustoz o'z turidagi ro'yxatni ko'radi, admin/ROP/boshliq
         // ikkala turni (?type=asosiy|yordamchi) ko'ra oladi.
         const role = req.user?.role;
-        const isLead = ['admin', 'rop', 'boshliq'].includes(role);
+        // Akademik rahbar ham (faqat o'z til yo'nalishidagi ustozlar — pastda filtrlanadi).
+        const isLead = ['admin', 'rop', 'boshliq'].includes(role) || role === 'akademik';
         if (role !== 'teacher' && !isLead) {
             return res.status(403).json({ error: 'Reyting faqat ustoz va rahbarlar uchun' });
         }
@@ -1123,6 +1129,11 @@ router.get('/teacher-rating', authRequired, async (req, res) => {
         // Ustozga boshqa ustozlarning davomat sonlari (completed/expected/students) berilmaydi — faqat ism, ball, o'rin.
         if (role === 'teacher') data.rows = (data.rows || []).map(r => r.id === selfId ? r
             : { id: r.id, name: r.name, score: r.score, rank: r.rank, total: r.total, prevRank: r.prevRank, prevScore: r.prevScore });
+        if (role === 'akademik') {
+            const langs = await require('../services/academicHead').langsFor(pool, req.user) || [];
+            const emps = new Map((await pool.query('SELECT id, role, lang FROM hr_employees')).rows.map(e => [e.id, e]));
+            data.rows = (data.rows || []).filter(r => require('../services/academicHead').teacherFits(emps.get(r.id), langs));
+        }
         res.json({ ...data, selfId });
     } catch (err) {
         console.error('GET /api/state/teacher-rating', err);

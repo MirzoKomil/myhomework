@@ -62,6 +62,7 @@ function guideTags(me) {
     if (r === 'sales_manager') return ['sales_manager'];
     if (r === 'rop') return ['rop'];
     if (r === 'hr') return ['hr'];
+    if (r === 'akademik') return ['head_of_teachers'];
     if (me.kind === 'assistant') return ['teacher_assistant'];
     if (me.kind === 'teacher') return ['teacher_main'];
     if (r === 'employee' && me.emp?.role === 'marketolog') return ['marketolog'];

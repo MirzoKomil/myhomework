@@ -20,6 +20,8 @@ const CATALOG = {
             ['lesson_soon', 'Darsdan 15 daqiqa oldin', 'bugungi dars boshlanishidan oldin', [1, 1], true],
             ['attendance_unmarked', 'Davomat belgilanmay qolsa', 'dars tugagach 30 daqiqada', [1, 1], true],
             ['makeup_decision', 'Qoplash darsi tasdiqlandi / rad etildi', 'admin qarori', [1, 1], true]]],
+        ['O\'quvchi ko\'chirildi', [
+            ['student_moved', 'O\'quvchi sizga o\'tkazildi / sizdan boshqa ustozga o\'tdi', 'akademik rahbar yoki admin · sana bilan', [1, 1], true]]],
         ['Sinov darsi', [
             ['trial_confirm', 'Sinov band qilindi — tasdiqlash kerak', 'darhol', [1, 1], true],
             ['trial_result', 'Sinov natijasi yozilmagan', 'dars tugagach', [1, 0], true]]],
@@ -111,8 +113,29 @@ const CATALOG = {
             ['hr_interview_soon', 'Suhbatga 1 soat qoldi', 'belgilangan suhbat vaqtidan oldin', [0, 1], true]]],
         ['Boshqa', [['guide_new', 'Yangi yo\'riqnoma', '', [0, 1], true]]]
     ],
+    // Akademik rahbar (role=akademik) — telefon kabineti (js/akademikApp.js); go.screen — kabinet ekrani.
+    akademik: [
+        ['Muammolar', [
+            ['acad_problem_overdue', 'Muammo muddati oʻtdi', 'har kuni 09:00 dan · kuniga bir marta', [1, 1], true],
+            ['acad_problem_followup', 'Yopilgan muammoni qayta tekshirish vaqti', '7 kundan keyin · yopishda belgilangan', [1, 1], true]]],
+        ['Ustozlar', [
+            ['acad_teacher_locked', 'Ustoz appi qulfda — davomat belgilanmagan', 'kuniga bir marta', [1, 1], true],
+            ['acad_trial_rejected', 'Ustoz sinov darsini rad etdi', 'darhol · sababi bilan', [1, 1], true],
+            ['acad_break', 'Ustoz sinovga tanaffus oldi', 'darhol · sababi bilan', [1, 1], true],
+            ['acad_makeup_new', 'Qoplash darsi kiritildi — tekshiring', 'ustoz kiritganda · qoʻngʻiroq bilan', [1, 1], true]]],
+        ['Oʻquvchilar va yordamchilar', [
+            ['acad_risk_new', 'Oʻquvchi ketish xavfida', 'yangi sabab paydo boʻlganda · 09:00 dan', [1, 0], true],
+            ['acad_late_contact', 'Kechikkan aloqa soʻrovi', 'yordamchidan · joriy oy', [1, 1], true]]],
+        ['Boshqa', [['guide_new', 'Yangi yo\'riqnoma', '', [0, 1], true]]]
+    ],
     other: [['Boshqa', [['guide_new', 'Yangi yo\'riqnoma', '', [0, 1], true]]]]
 };
+// Akademik muammo masʼuli boshqa xodim bo'lsa — unga ham eslatma (har qanday katalogning "Boshqa" guruhida).
+for (const [k, groups] of Object.entries(CATALOG)) {
+    if (k === 'akademik') continue;
+    const g = groups.find(x => x[0] === 'Boshqa') || groups[groups.length - 1];
+    g[1].push(['acad_problem_overdue', 'Sizga topshirilgan muammo muddati oʻtdi', 'akademik rahbar · har kuni 09:00 dan', [1, 1], true]);
+}
 // Panel o'zgarmaydi: Telegram tanlangan xabar ham panelda qoladi. Telegram — qo'shimcha kanal; bot ishlamasa yoki
 // yetkazilmasa ham xodim xabarni yo'qotmaydi.
 function shownInPanel(p) { return !p || p.web !== false || p.tg !== false; }
@@ -134,7 +157,7 @@ const URGENT = new Set(['hold_expiring', 'trial_confirm', 'trial_unassigned']);
 function roleKind(me) {
     if (me.kind !== 'other') return me.kind;
     const r = me.user?.role;
-    return r === 'targetolog' ? 'targetolog' : r === 'hr' ? 'hr' : 'other';
+    return r === 'targetolog' ? 'targetolog' : r === 'hr' ? 'hr' : r === 'akademik' ? 'akademik' : 'other';
 }
 function catalogFor(me) {
     const rk = roleKind(me);
@@ -242,6 +265,19 @@ async function teacherEvents(db, me, now, ev) {
         if (rem?.at && (!rem.requestId || rem.requestId === t.id) && ['pending', 'accepted'].includes(t.state) && Date.parse(rem.at) > now.getTime() - 3 * 86400000)
             ev.push({ id: `trial:${r.id}:${t.id}:rop:${rem.at}`, type: 'trial_result', cat: 'sinov', tone: 'warn', title: `ROP eslatdi: ${first(r.name)} sinovi natijasini yozing`,
                 sub: [rem.by ? first(rem.by) : 'ROP', local ? `${dm(local.date)} ${T.fromMin(local.min)}` : ''].filter(Boolean).join(' · '), at: iso(Date.parse(rem.at)), go: { tab: 'trial-lessons' } });
+    }
+    // O'quvchi boshqa ustozga o'tkazildi (school_teacher_history): yangi ustozga — "sizga o'tkazildi", eski ustozga — "boshqa ustozga o'tdi".
+    for (const h of (await db.query(`SELECT h.id, h.student_id, h.teacher_id, h.from_date, h.created_at, s.name AS sname, he.name AS tname,
+        (SELECT o.teacher_id FROM school_teacher_history o WHERE o.student_id=h.student_id AND o.id<>h.id AND o.created_at <= h.created_at ORDER BY o.from_date DESC, o.created_at DESC LIMIT 1) AS prev_id
+        FROM school_teacher_history h JOIN students s ON s.id=h.student_id LEFT JOIN hr_employees he ON he.id=h.teacher_id
+        WHERE h.created_at > $2 AND h.reason <> 'boshlang''ich' AND (h.teacher_id=$1 OR EXISTS (SELECT 1 FROM school_teacher_history o WHERE o.student_id=h.student_id AND o.id<>h.id
+            AND o.teacher_id=$1 AND o.created_at <= h.created_at))`, [tid, new Date(now.getTime() - 7 * 86400000)])).rows) {
+        if (h.prev_id == null || h.prev_id === h.teacher_id) continue;
+        const toMe = h.teacher_id === tid;
+        if (!toMe && h.prev_id !== tid) continue;
+        ev.push({ id: `moved:${h.id}:${toMe ? 'in' : 'out'}`, type: 'student_moved', cat: 'jadval', tone: 'info',
+            title: toMe ? `${first(h.sname)} sizga oʻtkazildi` : `${first(h.sname)} boshqa ustozga oʻtdi`,
+            sub: `${dm(S.dateStr(h.from_date))} dan${toMe ? '' : ` · yangi ustoz: ${first(h.tname)}`}`, at: iso(h.created_at), go: { tab: 'students' } });
     }
     const since = new Date(now.getTime() - 14 * 86400000);
     const mk = (await db.query(`SELECT m.*, s.name FROM school_makeups m LEFT JOIN students s ON s.id=m.student_id
@@ -706,6 +742,72 @@ async function hrEvents(db, me, now, ev) {
     }
 }
 
+// Akademik rahbar: muammolar, ustozlar, qoplash, xavf, kechikkan aloqa — o'z til yo'nalish(lar)i bo'yicha.
+async function akademikEvents(db, me, now, ev) {
+    const H = require('./academicHead');
+    const langs = H.langsFromHr(me.emp?.lang);
+    if (!langs.length) return;
+    const { date: today, min: nowMin } = T.nowLocal(now);
+    const since3 = new Date(now.getTime() - 3 * 86400000);
+    const staff = (await db.query(`SELECT id, name, role, lang FROM hr_employees WHERE COALESCE(status,'active') <> 'inactive'`)).rows;
+    const teachers = staff.filter(e => ['oqituvchi', 'ingliz-oqituvchi', 'rus-oqituvchi'].includes(e.role) && H.teacherFits(e, langs));
+    const tIds = teachers.map(t => t.id), tName = new Map(staff.map(e => [e.id, e.name]));
+    await acadOverdue(db, me, now, ev, langs);
+    if (nowMin >= 9 * 60 && tIds.length) {
+        const locks = await H.teacherLocks(db, tIds, now);
+        for (const [tid, l] of locks) ev.push({ id: `acadlock:${tid}:${today}`, type: 'acad_teacher_locked', cat: 'davomat', tone: 'bad',
+            title: `${first(tName.get(tid))} — appi qulfda`, sub: `${l.count} ta dars davomati belgilanmagan`, at: atLocal(today, 9 * 60), go: { tab: 'dashboard', screen: 'teacher', id: tid } });
+    }
+    for (const t of await H.trialsOf(db, tIds)) {
+        const r = workflow.request(t.lead);
+        if (!r || r.state !== 'rejected' || !(Date.parse(r.rejectedAt || '') > since3.getTime())) continue;
+        ev.push({ id: `acadtr:${t.id}:${r.id}`, type: 'acad_trial_rejected', cat: 'sinov', tone: 'warn', title: `${first(tName.get(r.teacherId))} sinovni rad etdi`,
+            sub: [first(t.name), r.reasonLabel, r.rejectNote].filter(Boolean).join(' · '), at: iso(r.rejectedAt), go: { tab: 'dashboard', screen: 'teacher', id: r.teacherId } });
+    }
+    if (tIds.length) for (const b of (await db.query(`SELECT * FROM school_overrides WHERE kind='break' AND created_at > $1 AND teacher_id = ANY($2::text[])`, [since3, tIds])).rows)
+        ev.push({ id: `acadbrk:${b.id}`, type: 'acad_break', cat: 'jadval', tone: b.removed_at ? 'info' : 'warn', title: `${first(tName.get(b.teacher_id))} sinovga tanaffus oldi${b.removed_at ? ' (bekor qilindi)' : ''}`,
+            sub: `${dm(S.dateStr(b.date))} ${T.fromMin(Number(b.start_min))}–${T.fromMin(Number(b.end_min))} · ${b.reason}${b.note ? ' · ' + b.note : ''}`, at: iso(b.created_at), go: { tab: 'dashboard', screen: 'teacher', id: b.teacher_id } });
+    for (const m of (await db.query(`SELECT m.id, m.teacher_id, m.held_date, m.created_at, s.name FROM school_makeups m JOIN students s ON s.id=m.student_id
+        WHERE m.status='approved' AND m.check_status IS NULL AND m.created_at > $1 AND COALESCE(NULLIF(s.subject,''),'english') = ANY($2::text[])`, [since3, langs])).rows)
+        ev.push({ id: `acadmk:${m.id}`, type: 'acad_makeup_new', cat: 'tasdiq', tone: 'info', title: 'Qoplash darsi kiritildi — tekshiring',
+            sub: `${first(m.name)} · ${first(tName.get(m.teacher_id))}${m.held_date ? ' · ' + dm(S.dateStr(m.held_date)) : ''}`, at: iso(m.created_at), go: { tab: 'dashboard', screen: 'makeups' } });
+    for (const r of (await db.query(`SELECT r.id, r.requester_name, r.created_at, r.payload, s.name, s.subject FROM school_requests r LEFT JOIN students s ON s.id = r.payload->>'studentId'
+        WHERE r.type='assist_late' AND r.status='new' AND r.created_at > $1`, [new Date(now.getTime() - 7 * 86400000)])).rows) {
+        if (!langs.includes(H.studentLang(r.subject))) continue;
+        ev.push({ id: `acadlate:${r.id}`, type: 'acad_late_contact', cat: 'sorov', tone: 'info', title: 'Kechikkan aloqa soʻrovi',
+            sub: `${first(r.requester_name)} · ${first(r.name)}${r.payload?.day ? ' · ' + dm(r.payload.day) : ''}`, at: iso(r.created_at), go: { tab: 'dashboard', screen: 'late' } });
+    }
+    if (nowMin >= 9 * 60) {
+        const sc = await H.scopeData(db, langs, now);
+        for (const st of sc.active) if (st.risk) ev.push({ id: `acadrisk:${st.id}:${st.risk.reason}`, type: 'acad_risk_new', cat: 'boshqa', tone: 'warn',
+            title: `${first(st.name)} ketish xavfida`, sub: [st.risk.reasonText, st.teacherName ? 'ustoz ' + first(st.teacherName) : ''].filter(Boolean).join(' · '),
+            at: atLocal(today, 9 * 60), go: { tab: 'dashboard', screen: 'student', id: st.id } });
+    }
+}
+// Muddati o'tgan muammolar: rahbarga (o'z tilidagi hammasi) va masʼul xodimga (o'ziga topshirilgan). Kuniga bitta, 09:00 dan.
+// Rahbarga qo'shimcha: yopishda "7 kundan keyin qayta tekshirish" belgilangan muammo vaqti kelsa (acad_problem_followup).
+async function acadOverdue(db, me, now, ev, langs = null) {
+    if (!(await db.query("SELECT to_regclass('public.academic_problems')::text AS t")).rows[0]?.t) return;
+    const { date: today, min: nowMin } = T.nowLocal(now);
+    if (nowMin < 9 * 60) return;
+    const head = Array.isArray(langs);
+    const rows = (await db.query(`SELECT * FROM academic_problems WHERE removed_at IS NULL AND stage <> 'closed' AND due_at < $1
+        AND (${head ? 'lang = ANY($2::text[])' : 'owner_id = $2'})`, [now, head ? langs : String(me.emp?.id || '-')])).rows;
+    // Faqat o'qish: remind_count kunlik taymerda oshadi (academicHead.remindOverdue, server/index.js).
+    for (const p of rows) {
+        const days = Math.max(0, Math.floor((now - new Date(p.due_at)) / 86400000));
+        const due = new Date(p.due_at).toISOString(), nine = atLocal(today, 9 * 60);
+        ev.push({ id: `acadod:${p.id}:${today}`, type: 'acad_problem_overdue', cat: 'boshqa', tone: 'bad', title: `Muammo muddati oʻtdi: ${String(p.title).slice(0, 80)}`,
+            sub: [first(p.student_name), p.owner_name ? 'masʼul ' + first(p.owner_name) : 'masʼul yoʻq', days ? `${days} kun` : 'bugun'].join(' · '),
+            at: due > nine ? due : nine, go: { tab: 'dashboard', screen: 'problem', id: p.id } });
+    }
+    if (!head) return;
+    for (const p of (await db.query(`SELECT id, title, student_name, followup_at FROM academic_problems WHERE removed_at IS NULL AND stage='closed'
+        AND followup_at IS NOT NULL AND followup_at <= $1 AND followup_at > $3 AND lang = ANY($2::text[])`, [now, langs, new Date(now.getTime() - 14 * 86400000)])).rows)
+        ev.push({ id: `acadfu:${p.id}`, type: 'acad_problem_followup', cat: 'boshqa', tone: 'info', title: `Qayta tekshiring: ${String(p.title).slice(0, 80)}`,
+            sub: `${first(p.student_name)} · yopilganiga 7 kun boʻldi — natija saqlanib qoldimi?`, at: iso(p.followup_at), go: { tab: 'dashboard', screen: 'problem', id: p.id } });
+}
+
 async function guideEvents(db, me, now, ev) {
     const acked = new Set((await db.query('SELECT guide_id FROM staff_guide_acks WHERE user_id=$1', [me.user.id])).rows.map(r => r.guide_id));
     for (const g of await ST.myGuides(db, me)) {
@@ -736,6 +838,8 @@ async function collect(db, actor, now) {
     if (me.kind === 'rop') await run('ropleads', ropLeadEvents);
     if (roleKind(me) === 'targetolog') await run('target', targetEvents);
     if (roleKind(me) === 'hr') await run('hr', hrEvents);
+    if (roleKind(me) === 'akademik') await run('akademik', akademikEvents);
+    else if (me.emp) await run('acadowner', acadOverdue);
     await run('guides', guideEvents);
     return { me, row, prefs, ev, errors };
 }

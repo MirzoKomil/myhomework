@@ -21,9 +21,11 @@
     const canMove = () => ['admin', 'boshliq', 'rop'].includes(role());
     // Tanaffus sababini ko'radiganlar (server: sotuv menejeriga sabab yuborilmaydi).
     const seesBreak = () => ['admin', 'boshliq', 'rop'].includes(role());
-    const enabled = () => !!window.schoolUI && ['admin', 'boshliq', 'rop', 'sales_manager'].includes(role());
-    const ownLang = () => (typeof getUserOwnLang === 'function' && getUserOwnLang()) || '';
-    const canPickLang = () => isFull() || (role() === 'rop' && !ownLang());
+    // Akademik rahbar (js/akademikApp.js): sinov vaqtlarini admin kabi ochadi/yopadi (faqat o'z tili), sinov qo'ymaydi.
+    const isAcad = () => role() === 'akademik';
+    const enabled = () => !!window.schoolUI && ['admin', 'boshliq', 'rop', 'sales_manager', 'akademik'].includes(role());
+    const ownLang = () => (isAcad() && window.akademikApp?.ownLang?.()) || (typeof getUserOwnLang === 'function' && getUserOwnLang()) || '';
+    const canPickLang = () => isFull() || ((role() === 'rop' || isAcad()) && !ownLang());
     const MOBILE = window.matchMedia('(max-width: 900px)');
     const DAY = ['Du', 'Se', 'Ch', 'Pa', 'Ju', 'Sh', 'Ya'];
     const DAYL = ['Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba', 'Yakshanba'];
@@ -413,6 +415,7 @@
                 // Tanaffus: admin/ROP bossa — o'ng panelda sababi; sotuvga faqat yozuv (bosilmaydi).
                 const brk = st.k === 'break' && seesBreak();
                 const bOn = brk && J.brk && J.brk.t === t.id && sameBreak(J.brk, st.b);
+                if (acSlotAble(st.k)) return `<div class="jv-cell"><button type="button" class="jv-s jv-s--${st.k} is-click" data-acslot="${esc(t.id)}|${m}" aria-haspopup="dialog" aria-label="${esc(t.name)} · ${hm(m)} · ${CELL[st.k]} — ${st.k === 'free' ? 'sinovga yopish' : 'sinovga ochish'}">${CELL[st.k]}</button></div>`;
                 return `<div class="jv-cell"><button type="button" class="jv-s jv-s--${st.k}${on || bOn ? ' is-on' : ''}${inf ? ' is-info' : ''}${brk ? ' is-click' : ''}"${st.k === 'free' ? ` data-slot="${esc(t.id)}|${m}"` : brk ? ` data-brk="${esc(t.id)}|${m}" aria-pressed="${!!bOn}"` : inf ? ` data-info="${esc(t.id)}|${m}" aria-haspopup="dialog"` : ' tabindex="-1" aria-disabled="true"'} aria-label="${esc(t.name)} · ${hm(m)} · ${lab}${on ? ' (qayta bosing — bekor qilish)' : ''}"${on ? ' title="Qayta bosing — tanlov bekor qilinadi"' : ''}>${inner}</button></div>`;
             }).join('');
             const past = isToday && m < now;
@@ -507,7 +510,9 @@
         const list = J.data.teachers.map(t => ({ t, st: slotState(J.data.views.get(t.id), sel), n: lessonsOf(J.data.views.get(t.id)) }))
             .sort((x, y) => rank[x.st.k] - rank[y.st.k] || x.n - y.n);
         const free = list.filter(x => x.st.k === 'free').length;
-        const rows = list.map(({ t, st, n }) => `<div class="jv-mrow${st.k === 'break' ? ' jv-mrow--brk' : ''}">${U().staffAvatar(t, 40)}<span><b>${esc(t.name)}</b><small>${st.k === 'break' ? esc(breakNote(st.b)) : `${n} dars bu kuni`}</small></span>${st.k === 'free'
+        const rows = list.map(({ t, st, n }) => `<div class="jv-mrow${st.k === 'break' ? ' jv-mrow--brk' : ''}">${U().staffAvatar(t, 40)}<span><b>${esc(t.name)}</b><small>${st.k === 'break' ? esc(breakNote(st.b)) : `${n} dars bu kuni`}</small></span>${acSlotAble(st.k)
+            ? `<button type="button" class="jv-act${st.k === 'free' ? '' : ' jv-act--acopen'}" data-acslot="${esc(t.id)}|${sel}" aria-haspopup="dialog">${st.k === 'free' ? 'Boʻsh · yopish' : CELL[st.k] + ' · ochish'}</button>`
+            : st.k === 'free'
             ? `<button type="button" class="jv-act" data-book="${esc(t.id)}|${sel}"${J.busy ? ' disabled' : ''}>${J.lead ? 'Tanlash' : 'Sinov qoʻyish'}</button>`
             : infoAble(st.k) ? `<button type="button" class="jv-act jv-act--${st.k} is-info" data-info="${esc(t.id)}|${sel}" aria-haspopup="dialog">${CELL[st.k]} ⓘ</button>`
             : `<em class="jv-act jv-act--${st.k}">${CELL[st.k]}</em>`}</div>`).join('');
@@ -643,6 +648,7 @@
         root.querySelectorAll('[data-unsel]').forEach(b => b.onclick = () => { J.sel = null; J.brk = null; draw(); });
         root.querySelectorAll('[data-hour]').forEach(b => b.onclick = () => { J.mobT = Number(b.dataset.hour); draw(); });
         root.querySelectorAll('[data-book]').forEach(b => b.onclick = () => { const [t, m] = b.dataset.book.split('|'); startBooking(t, Number(m)); });
+        root.querySelectorAll('[data-acslot]').forEach(b => b.onclick = () => { const [t, m] = b.dataset.acslot.split('|'); acSlotSheet(t, Number(m)); });
         root.querySelectorAll('[data-lesson]').forEach(b => b.onclick = () => { const [t, sid, s] = b.dataset.lesson.split('|'); J.sel = J.sel?.sid === sid && J.sel.t === t && J.sel.start === Number(s) ? null : { t, sid, start: Number(s) }; draw(); });
         root.querySelectorAll('[data-open-st]').forEach(b => b.onclick = () => U().openStudent(b.dataset.openSt));
         const move = (sid, tid) => (U().openCardForm ? U().openCardForm(sid, 'holat', () => { J.sel = null; load(); }, { act: 'teacher', teacherId: tid || null }) : U().openStudent(sid));
@@ -863,6 +869,57 @@
         if (left <= 0) { J.hold = null; closeOverlay(); toast('Ushlab turish muddati tugadi — vaqtni qaytadan tanlang', 4500); J.sel = null; load(); return; }
         const el = document.querySelector('#jvOverlay [data-timer]');
         if (el) el.innerHTML = `${svg('clock', 18)} Vaqt siz uchun ushlab turilibdi · ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')} qoldi`;
+    }
+
+    // ── Akademik rahbar: sinov vaqtini ochish / yopish (A13) — admin bilan bir xil /api/school/overrides ──
+    // Bo'sh katak → sinovga yopish (sabab majburiy); "Band" (shablonda sinovga yopiq) → qo'shimcha ochish;
+    // "Yopiq" (yopish yozuvi bor) → yozuvni bekor qilib qayta ochish. "Faqat shu sana" yoki "Har <hafta kuni>".
+    const acSlotAble = k => isAcad() && J.mode === 'sinov' && (k === 'free' || k === 'notrial' || k === 'closed');
+    async function acSlotSheet(tid, m) {
+        const t = J.data?.teachers.find(x => x.id === tid), v = J.data?.views.get(tid); if (!t || !v) return;
+        const st = slotState(v, m), date = J.data.date, wdN = U().wd(date), e = m + TRIAL;
+        const ov = st.k === 'closed' ? (v.items || []).find(i => i.kind === 'close' && i.start < e && i.end > m && i.overrideId) : null;
+        const closing = st.k === 'free';
+        const verb = closing ? 'sinovga yopish' : 'sinovga ochish';
+        const box = overlay('jv-sheet jv-acs', '');
+        let rep = ov?.weekly ? 'weekly' : 'once', confirm = false;
+        const wdL = DAYL[wdN - 1].toLowerCase();
+        const draw = (hist, err) => {
+            box.innerHTML = `<header class="jv-mh"><div class="jv-mh-r"><h2>${hm(m)}–${hm(e)} · ${verb}</h2><button type="button" class="jv-x" data-x aria-label="Bekor qilish">✕</button></div>
+                <p class="jv-mt">${esc(tName(t))} · ${DAYL[wdN - 1]}, ${esc(dm(date).replace(/-(\w+)$/, (x, mo) => '-' + ({ yan: 'yanvar', fev: 'fevral', mar: 'mart', apr: 'aprel', may: 'may', iyun: 'iyun', iyul: 'iyul', avg: 'avgust', sen: 'sentabr', okt: 'oktabr', noy: 'noyabr', dek: 'dekabr' }[mo] || mo)))} · hozir ${closing ? 'ochiq' : 'yopiq'}</p></header>
+                ${ov ? `<p class="jv-acs-cur">Yopilgan: ${esc([ov.weekly ? 'har ' + wdL : 'faqat shu sana', ov.reason ? '«' + ov.reason + '»' : '', ov.by || ''].filter(Boolean).join(' · '))}. Qayta ochilsa bu yozuv bekor qilinadi.</p>`
+                : `<fieldset class="jv-acs-fs"><legend>Qancha muddatga <i>*</i></legend><div class="jv-acs-ch">${[['once', `Faqat ${dm(date)}`], ['weekly', `Har ${wdL}`]].map(([k, l]) => `<label class="jv-acs-c"><input type="radio" name="acrep" value="${k}"${rep === k ? ' checked' : ''}><span>${l}</span></label>`).join('')}</div></fieldset>`}
+                ${`<label class="jv-acs-fs"><span>Sabab${closing ? ' <i>*</i>' : ''}</span>${closing ? '<small>Yopishda majburiy</small>' : ''}<input class="jv-acs-in" name="acwhy" maxlength="200" placeholder="${closing ? 'Masalan: metodik seminar' : 'Masalan: sinovga talab koʻp'}"></label>`}
+                <div class="jv-acs-fs"><span>Shu vaqt tarixi</span><div class="jv-acs-h">${hist == null ? 'Yuklanmoqda…' : hist.length ? hist.map(x => esc(x)).join('<br>') : 'Oʻzgarish boʻlmagan'}</div></div>
+                <p class="jv-acs-note">Admin bilan bir xil huquq. Bot ${esc(tName(t))}ga xabar beradi.</p>
+                ${err ? `<p class="jv-warn" role="alert">${esc(err)}</p>` : ''}
+                <button type="button" class="jv-btn jv-acs-ok${closing ? ' is-close' : ''}" data-acok>${confirm ? 'Baribir saqlash' : closing ? 'Sinovga yopish' : 'Sinovga ochish'}</button>`;
+            box.querySelectorAll('[name=acrep]').forEach(r => r.onchange = () => { rep = r.value; });
+            box.querySelector('[data-acok]').onclick = save;
+            trapFocus(box);
+        };
+        let hist = null;
+        const save = async ev => {
+            const why = box.querySelector('[name=acwhy]')?.value.trim() || '';
+            if (closing && why.length < 3) { box.querySelector('[name=acwhy]')?.focus(); toast('Yopish sababini yozing', 3500); return; }
+            ev.target.disabled = true;
+            try {
+                if (ov) await U().api('/overrides/' + encodeURIComponent(ov.overrideId) + (why ? '?reason=' + encodeURIComponent(why) : ''), { method: 'DELETE', body: JSON.stringify({ reason: why }) });
+                else await U().post('/overrides', { teacherId: tid, kind: closing ? 'close' : 'open', repeat: rep, date, weekday: wdN, from: hm(m), to: hm(e), reason: why, confirm });
+                closeOverlay(); toast(closing ? `${tName(t)} · ${hm(m)} sinovga yopildi` : `${tName(t)} · ${hm(m)} sinovga ochildi`); load();
+            } catch (er) {
+                if (er?.data?.needConfirm && !confirm) { confirm = true; draw(hist, er.message); return; }
+                draw(hist, er.message || 'Saqlab boʻlmadi');
+            }
+        };
+        draw(null);
+        try {
+            const r = await U().api(`/teachers/${encodeURIComponent(tid)}/changes?days=60`);
+            const DS = ['Du', 'Se', 'Ch', 'Pa', 'Ju', 'Sh', 'Ya'];
+            hist = (r.changes || []).filter(x => x.type === 'override' && x.start < e && x.end > m && (x.date ? x.date === date : Number(x.weekday) === wdN)).slice(0, 5)
+                .map(x => `${dm(tashDate(Date.parse(x.at)))} · ${x.by || '—'} ${x.action === 'remove' ? 'bekor qildi' : x.kind === 'open' ? 'ochdi' : 'yopdi'} · ${x.date ? 'faqat ' + dm(x.date) : 'har ' + (DS[Number(x.weekday) - 1] || '')}${x.reason ? ' · «' + x.reason + '»' : ''}`);
+        } catch { hist = []; }
+        if (document.body.contains(box)) draw(hist);
     }
 
     window.jadvalV3 = { enabled, render, openForLead, close: closePage, _state: J,

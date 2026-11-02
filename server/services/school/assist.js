@@ -137,8 +137,11 @@ async function auditCorrection(db, actor, studentId, kind, before, after, reason
         { kind, assistantId: (after || before)?.assistant_id || null, before: contactBrief(before), after: contactBrief(after) }, reason, actor, requestId);
 }
 
-async function adminCorrect(db, actor, body, now = new Date()) {
-    if (!['admin', 'boshliq'].includes(actor.role)) throw fail(403, 'Aloqani faqat admin tuzatadi');
+// opts.viaHead — faqat services/academicHead.decideLate ichidan (til va joriy oy o'sha yerda tekshiriladi). Ochiq
+// /assist/corrections yo'li opts bermaydi — akademik u yerda rad etiladi.
+async function adminCorrect(db, actor, body, now = new Date(), opts = {}) {
+    const viaHead = opts.viaHead === true && actor.role === 'akademik' && !!body.requestId && !body.removeId && !body.editId;
+    if (!['admin', 'boshliq'].includes(actor.role) && !viaHead) throw fail(403, 'Aloqani faqat admin tuzatadi');
     const reason = String(body.reason || '').trim();
     if (reason.length < 5) throw fail(400, 'Tuzatish sababini yozing');
     if (body.removeId) {

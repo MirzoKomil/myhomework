@@ -227,7 +227,10 @@ const ROLE_TABS = {
     // (yopilgan oy — o'sha oy tanlangan holda; havolalar schoolTeacher.goDavomat orqali); ilova ko'rinishi — Darslik → "O'quvchi ko'rinishida ochish".
     teacher:       ['dashboard', 'students', 'timetable', 'teachers-section', 'trial-lessons', 'guides'],
     employee:      ['student-app', 'guides'],
-    hr:            ['dashboard', 'hr', 'guides']
+    hr:            ['dashboard', 'hr', 'guides'],
+    // Akademik rahbar (Head of Teachers): telefonda o'z kabineti (js/akademikApp.js); kompyuterda — Bosh, o'quvchilar,
+    // Akademik bo'lim (davomat, progress), dars jadvali (o'qish) va yo'riqnomalar. Ma'lumot serverda tili bo'yicha kesiladi.
+    akademik:      ['dashboard', 'students', 'teachers-section', 'timetable', 'guides']
 };
 
 // 8-vazifa: Sotuv bo'limida hech qanday amal (o'chirish, menejer/bosqich
@@ -350,6 +353,8 @@ function applyRoleBasedAccess(user) {
         setTimeout(() => switchTab(restoreTab || 'marketing', restoreCtx), 50);
     } else if (role === 'hr') {
         setTimeout(() => switchTab(restoreTab || 'hr', restoreCtx), 50);
+    } else if (role === 'akademik') {
+        setTimeout(() => switchTab(restoreTab || 'dashboard', restoreCtx), 50);
     } else {
         // employee yoki noma'lum rol — mobil ilovaga o'tkazish
         setTimeout(() => switchTab(restoreTab || 'student-app', restoreCtx), 50);
@@ -385,6 +390,7 @@ async function syncHrLoginRoles(currentUser) {
             : (e.role === 'oqituvchi' || e.role === 'ingliz-oqituvchi' || e.role === 'rus-oqituvchi' || e.role === 'yordamchi') ? 'teacher'
             : e.role === 'targetolog' ? 'targetolog'
             : e.role === 'hr' ? 'hr'
+            : e.role === 'head-of-teachers' ? 'akademik'
             : 'employee',
         salesManagerId: (e.role === 'sotuv-menejeri' || e.role === 'sotuv_menejeri') ? e.id : ''
     }));
@@ -650,8 +656,8 @@ async function bootApp() {
         if (langs.length && !langs.includes(_marketingLang)) _marketingLang = langs[0];
     }
 
-    // HR menejer: HR'da berilgan til yo'nalish(lar)i — targetolog bilan bir xil qoida.
-    if (currentUser.role === 'hr') {
+    // HR menejer va akademik rahbar: HR'da berilgan til yo'nalish(lar)i — targetolog bilan bir xil qoida.
+    if (currentUser.role === 'hr' || currentUser.role === 'akademik') {
         const hrEmployees = getItem(STORAGE_KEYS.hrEmployees, []);
         const login = String(currentUser.email || '').trim().toLowerCase();
         const linked = hrEmployees.find(e => login && String(e.login || '').trim().toLowerCase() === login);
@@ -22358,7 +22364,7 @@ const HR_ROLE_MAP = {
     'marketolog': 'Marketolog',
     'targetolog': 'Targetolog',
     'hr': 'HR menejer',
-    'head-of-teachers': 'Head of Teachers'
+    'head-of-teachers': 'Akademik rahbar (Head of Teachers)'
 };
 
 // Modal dropdown uchun (ingliz/rus — separate sub-field orqali belgilanadi)
@@ -22370,7 +22376,7 @@ const HR_ROLE_MAP_MODAL = {
     'marketolog': 'Marketolog',
     'targetolog': 'Targetolog',
     'hr': 'HR menejer',
-    'head-of-teachers': 'Head of Teachers',
+    'head-of-teachers': 'Akademik rahbar (Head of Teachers)',
     'buxgalter': 'Buxgalter (Moliya)'
 };
 
@@ -22491,6 +22497,7 @@ function resolveGuideAudienceTags(user) {
     if (role === 'sales_manager') return ['sales_manager'];
     if (role === 'rop') return ['rop'];
     if (role === 'hr') return ['hr'];
+    if (role === 'akademik') return ['head_of_teachers'];
 
     const findLinkedEmployee = () => {
         const hrEmployees = getItem(STORAGE_KEYS.hrEmployees, []);
@@ -22540,12 +22547,14 @@ function bindTargetLangToggle(roleSelectId) {
     const wrap = document.getElementById('empTargetLangWrap');
     if (!roleEl || !wrap) return;
     const toggle = () => {
-        const isHr = roleEl.value === 'hr';
-        wrap.style.display = (roleEl.value === 'targetolog' || isHr) ? '' : 'none';
+        const isHr = roleEl.value === 'hr', isAk = roleEl.value === 'head-of-teachers';
+        wrap.style.display = (roleEl.value === 'targetolog' || isHr || isAk) ? '' : 'none';
         const lbl = document.getElementById('empTargetLangLabel');
         const hint = document.getElementById('empTargetLangHint');
-        if (lbl) lbl.textContent = isHr ? "Til yo'nalishi (HR kabineti)" : "Til yo'nalishi (targetolog kabineti)";
-        if (hint) hint.textContent = isHr
+        if (lbl) lbl.textContent = isAk ? "Til yo'nalishi (akademik rahbar)" : isHr ? "Til yo'nalishi (HR kabineti)" : "Til yo'nalishi (targetolog kabineti)";
+        if (hint) hint.textContent = isAk
+            ? "Akademik rahbar faqat shu yo'nalish(lar)ning ustoz, yordamchi va o'quvchilarini ko'radi."
+            : isHr
             ? "HR faqat shu yo'nalish(lar)ning nomzod va xodimlarini ko'radi. Umumiy vakansiyalar (Sotuv, ROP, Metodist, Brend yuzi) — ikkala tilga."
             : "Targetolog faqat shu yo'nalish(lar)ning Sotuv bo'limini ko'radi va Marketing → Target lidlar'ga maʼlumot kiritadi.";
     };
@@ -23000,7 +23009,7 @@ function openEditEmployeeModal(empId) {
         ${trialGroupLinkHtml(emp.trialGroupLink || '')}
         ${managerLangHtml(emp.lang || 'english')}
         ${ropLangHtml(emp.lang || 'english')}
-        ${targetLangHtml((emp.role === 'targetolog' || emp.role === 'hr') ? (emp.lang || 'english') : 'english')}
+        ${targetLangHtml((emp.role === 'targetolog' || emp.role === 'hr' || emp.role === 'head-of-teachers') ? (emp.lang || 'english') : 'english')}
         <div class="form-group">
             <label>Telefon raqam</label>
             <input type="tel" id="editEmpPhone" class="form-control" value="${escapeHtml(emp.phone || '')}" placeholder="+998 90 123 45 67">
@@ -23141,7 +23150,7 @@ function openEditEmployeeModal(empId) {
             email: document.getElementById('editEmpEmail').value.trim(),
             department: document.getElementById('editEmpDepartment').value,
             status: document.getElementById('editEmpStatus').value,
-            lang: isMgrEdit ? resolveManagerLang() : isRopEdit ? resolveRopLang() : resolvedRole === 'yordamchi' ? resolveTeacherLang() : (resolvedRole === 'targetolog' || resolvedRole === 'hr') ? resolveTargetLang() : (emp.lang || 'english'),
+            lang: isMgrEdit ? resolveManagerLang() : isRopEdit ? resolveRopLang() : resolvedRole === 'yordamchi' ? resolveTeacherLang() : (resolvedRole === 'targetolog' || resolvedRole === 'hr' || resolvedRole === 'head-of-teachers') ? resolveTargetLang() : (emp.lang || 'english'),
             cardNumber: document.getElementById('editEmpCardNumber').value.trim(),
             passportSeries: document.getElementById('editEmpPassportSeries').value.trim(),
             address: document.getElementById('editEmpAddress').value.trim(),
@@ -23172,6 +23181,7 @@ function openEditEmployeeModal(empId) {
             : (resolvedRole === 'oqituvchi' || resolvedRole === 'ingliz-oqituvchi' || resolvedRole === 'rus-oqituvchi' || resolvedRole === 'yordamchi') ? 'teacher'
             : resolvedRole === 'targetolog' ? 'targetolog'
             : resolvedRole === 'hr' ? 'hr'
+            : resolvedRole === 'head-of-teachers' ? 'akademik'
             : 'employee';
         if (newPassword) {
             try {
@@ -23400,13 +23410,14 @@ function openAddEmployeeModal() {
             kpiTemplateId: document.getElementById('employeeKpiTemplate')?.value || '',
             cardNumber, passportSeries, address, trialGroupLink,
             joinDate: startDate || new Date().toISOString().slice(0, 10),
-            lang: isMgr ? resolveManagerLang() : isRop ? resolveRopLang() : role === 'yordamchi' ? resolveTeacherLang() : (role === 'targetolog' || role === 'hr') ? resolveTargetLang() : 'english'
+            lang: isMgr ? resolveManagerLang() : isRop ? resolveRopLang() : role === 'yordamchi' ? resolveTeacherLang() : (role === 'targetolog' || role === 'hr' || role === 'head-of-teachers') ? resolveTargetLang() : 'english'
         };
         const hrUserRole = role === 'rop' ? 'rop'
             : (role === 'sotuv-menejeri' || role === 'sotuv_menejeri') ? 'sales_manager'
             : (role === 'oqituvchi' || role === 'ingliz-oqituvchi' || role === 'rus-oqituvchi' || role === 'yordamchi') ? 'teacher'
             : role === 'targetolog' ? 'targetolog'
             : role === 'hr' ? 'hr'
+            : role === 'head-of-teachers' ? 'akademik'
             : 'employee';
         const saveBtn = document.getElementById('saveAddEmployee');
         if (saveBtn) saveBtn.disabled = true;
