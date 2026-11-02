@@ -235,6 +235,8 @@ app.use('/api/domwork/bot', domworkBotRouter({ pool: crmDb.pool, runtime: domwor
 // Xodimlar davomati (Face ID + lokatsiya) va ustozlar dars nazorati
 app.use('/api/staff-attendance', require('./routes/staffAttendance')({ pool: crmDb.pool,
     authRequired: require('./middleware/auth').authRequired }));
+// Jarimalar va rag'bat (davomat avtomatik + rahbar yozadigan, yuvish, e'tiroz, admin sozlamalari)
+app.use('/api/fines', require('./routes/fines')({ pool: crmDb.pool, authRequired: require('./middleware/auth').authRequired }));
 // Xodim sozlamalari: profil qo'shimchalari, maosh tafsiloti, bildirishnomalar, yo'riqnoma bilan tanishish.
 app.use('/api/staff', require('./routes/staffSettings')({ pool: crmDb.pool,
     authRequired: require('./middleware/auth').authRequired, findUserById: crmDb.findUserById }));
@@ -391,6 +393,13 @@ init().then(async () => {
         setInterval(run, 5 * 60 * 1000).unref();
         setTimeout(run, 60 * 1000).unref();
     }).catch(err => console.error('[staff-attendance] Jadval yaratilmadi:', err.code || err.message));
+    // Jarimalar: davomat kun natijalaridan avtomatik (har 5 daqiqa), takrorlanmaydi.
+    const fines = require('./services/fines');
+    await fines.initSchema(crmDb.pool).then(() => {
+        const run = () => fines.tick(crmDb.pool).catch(err => console.error('[fines] tekshiruv xatosi:', err.message));
+        setInterval(run, 5 * 60 * 1000).unref();
+        setTimeout(run, 90 * 1000).unref();
+    }).catch(err => console.error('[fines] Jadval yaratilmadi:', err.code || err.message));
     // "Domwork Team" Android ilovasiga push (FCM): har daqiqada yangi xodim xabarlari telefonga.
     // FCM_SERVICE_ACCOUNT env bo'lmasa — jadval yaratiladi, yuborish o'tkazib yuboriladi.
     const staffPush = require('./services/staffPush');

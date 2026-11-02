@@ -674,6 +674,7 @@
                 ${tile('data-u-push="sorov"', 'mu', P.msg, "Adminga so'rov", wait ? `${wait} javob kutmoqda` : "jadval, muzlatish")}
                 ${tile('data-u-push="taqdimot"', 'mu', P.pen, 'Doska', "bo'sh doska")}
                 ${tile('data-u-push="yoriq"', 'inf', P.help, "Yo'riqnomalar", newG ? `${newG} ta yangi` : 'qoidalar', newG ? 'color: #0057B8; font-weight: 700' : '')}
+                ${window.jarima && !jarima.counts()?.exempt ? tile('data-jr-go="my"', 'wa', P.money, 'Mening jarimalarim', 'maosh va yuvish') : ''}
               </nav>
               <div class="card l a3">
                 <a class="bq-ml" href="#" data-u-push="profil">${svg(P.tg, 20, 2).replace('currentColor', '#3A4456')}<span class="g1 bq-mlt">Telegram bot</span>${tgPill()}</a>

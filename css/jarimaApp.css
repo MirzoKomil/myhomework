@@ -1,0 +1,120 @@
+/* Jarimalar — Jamoa telefon ilovasi (js/jarimaApp.js). Asos: css/davomatApp.css (dv-*). Dizayn: J01–J09. */
+.jr-calc { background: #0B1220; color: #FFFFFF; border-radius: 24px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.jr-eyebrow { font-size: 12px; font-weight: 800; letter-spacing: .06em; color: #9DC4F5; }
+.jr-lines { display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+.jr-lines > div { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.jr-lines > div > span { color: #C7D2E3; }
+.jr-neg { color: #FDA29B; }
+.jr-pos { color: #6CE9A6; }
+.jr-hr { display: block; height: 1px; background: rgba(255, 255, 255, .15); }
+.jr-take > span { color: #FFFFFF !important; font-weight: 700; }
+.jr-take strong { font-size: 26px; letter-spacing: -.02em; }
+.jr-capline { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: #C7D2E3; }
+.jr-wash { background: #ECFDF3; border: 1px solid #ABEFC6; border-radius: 20px; padding: 14px; display: flex; flex-direction: column; gap: 8px; color: #0B1220; text-align: left; width: 100%; }
+.jr-wash-h { display: flex; align-items: center; gap: 12px; color: #067647; }
+.jr-wash-h strong { font-size: 15px; color: #0B1220; }
+.jr-wash-h em { font-size: 13px; font-weight: 600; color: #067647; }
+.jr-wash-ic { flex: none; width: 44px; height: 44px; border-radius: 14px; background: #D1FADF; display: grid; place-items: center; }
+.jr-bar-l { font-size: 12px; font-weight: 800; color: #067647; }
+.jr-bar { display: block; height: 8px; border-radius: 999px; background: #D1FADF; overflow: hidden; }
+.jr-bar i { display: block; height: 8px; border-radius: 999px; background: #079455; transform-origin: left; animation: dvBar .8s cubic-bezier(.2, .8, .2, 1) .3s both; }
+.jr-wash-n { font-size: 12px; color: #067647; }
+.jr-row { display: flex; align-items: center; gap: 12px; min-height: 62px; border: 0; border-bottom: 1px solid #E6EAF2; background: transparent; padding: 8px 0; text-align: left; color: inherit; width: 100%; }
+.jr-row:last-child { border-bottom: 0; }
+.jr-row strong { font-size: 14px; }
+.jr-row em { font-size: 12px; color: #4B5563; }
+.jr-row > svg { color: #4B5563; flex: none; }
+.jr-amt { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex: none; }
+.jr-amt strong { font-size: 14px; }
+.jr-strike { text-decoration: line-through; color: #4B5563; }
+.jr-two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.jr-two .dv-btn { min-height: 52px; font-size: 14px; }
+.jr-monthnav { display: flex; justify-content: space-between; }
+.jr-h3 { margin: 6px 0 0; font-size: 12px; font-weight: 800; letter-spacing: .06em; color: #4B5563; }
+.jr-rule { display: flex; align-items: center; gap: 12px; min-height: 58px; border-bottom: 1px solid #E6EAF2; }
+.jr-rule:last-child { border-bottom: 0; }
+.jr-rule strong { font-size: 14px; }
+.jr-rule em { font-size: 12px; color: #4B5563; }
+.jr-rule-a { flex: none; font-size: 15px; }
+.jr-rule-a.jr-pos { color: #067647; }
+.jr-progress { background: #FFFFFF; border: 1px solid #E6EAF2; border-radius: 20px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+.jr-progress > div { display: flex; justify-content: space-between; font-size: 14px; }
+.jr-progress em { font-style: normal; font-size: 12px; color: #4B5563; }
+.jr-progress .jr-bar { background: #E2E8F0; }
+.jr-ways { display: flex; flex-direction: column; gap: 10px; }
+.jr-way { background: #FFFFFF; border: 1px solid #E6EAF2; border-radius: 20px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.jr-way-h { display: flex; align-items: flex-start; gap: 12px; }
+.jr-way-h strong { font-size: 15px; }
+.jr-way-h em { font-size: 13px; color: #4B5563; line-height: 1.4; }
+.jr-way-ic { flex: none; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; }
+.jr-blue { background: #EAF3FF; color: #0057B8; } .jr-amber { background: #FEF0C7; color: #B54708; } .jr-green { background: #ECFDF3; color: #067647; } .jr-gray { background: #F1F5F9; color: #3A4456; }
+.jr-price { flex: none; font-size: 13px; color: #067647; text-align: right; max-width: 130px; white-space: nowrap; }
+.jr-price.jr-wrap { white-space: normal; max-width: 96px; }
+.jr-way-n { font-size: 13px; font-weight: 700; color: #3A4456; }
+.jr-detail { background: #FFFFFF; border: 1px solid #E6EAF2; border-radius: 22px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.jr-detail-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.jr-detail-h strong { font-size: 17px; }
+.jr-detail-h h2 { margin: 0; font-size: 16px; font-weight: 800; }
+.jr-detail-h span { font-size: 12px; font-weight: 700; color: #4B5563; }
+.jr-big { font-size: 26px; letter-spacing: -.02em; color: #B42318; }
+.jr-red { color: #B42318 !important; }
+.jr-evid { background: #FFFFFF; border: 1px solid #E6EAF2; border-radius: 20px; padding: 12px 14px; display: flex; align-items: center; gap: 12px; color: #0B1220; text-align: left; width: 100%; }
+.jr-evid strong { font-size: 14px; }
+.jr-evid em { font-size: 12px; color: #4B5563; }
+.jr-evid-ic { flex: none; width: 48px; height: 48px; border-radius: 14px; background: radial-gradient(ellipse 65% 55% at 50% 40%, #5B6B82 0%, #2B3546 80%); color: #FFFFFF; display: grid; place-items: center; }
+.jr-appeal { background: #FFFFFF; border: 1px solid #E6EAF2; border-radius: 22px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.jr-card { background: #FFFFFF; border: 1px solid #E6EAF2; border-radius: 22px; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.jr-sum { display: flex; justify-content: space-between; align-items: center; background: #F5F7FB; border-radius: 14px; padding: 12px 14px; font-size: 13px; color: #4B5563; }
+.jr-sum strong { font-size: 16px; color: #0B1220; }
+.jr-pop-ic { flex: none; width: 52px; height: 52px; border-radius: 16px; background: #FEF0C7; color: #93370D; display: grid; place-items: center; }
+.jr-easy { background: #ECFDF3; border: 1px solid #ABEFC6; border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 4px; color: #067647; }
+.jr-easy strong { font-size: 14px; }
+.jr-easy span { font-size: 13px; line-height: 1.45; }
+.jr-ava { width: 40px; height: 40px; background: #DCEBFF; color: #0057B8; font-size: 14px; }
+.jr-neg2 { flex: none; font-size: 15px; color: #B42318; }
+select.dv-input { appearance: auto; }
+
+/* ---------- Admin (kompyuter): Jarima va ragʻbat (J05) ---------- */
+.jra { max-width: 1180px; margin: 0 auto; padding: 8px 0 40px; display: flex; flex-direction: column; gap: 18px; font-family: 'DW Jakarta', 'Plus Jakarta Sans', system-ui, sans-serif; color: var(--text, #0B1220); }
+.jra-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.jra-head small { font-size: 13px; color: var(--text-muted, #4B5563); font-weight: 600; }
+.jra-head h1 { margin: 2px 0 4px; font-size: 26px; font-weight: 800; letter-spacing: -.02em; }
+.jra-head p { margin: 0; font-size: 14px; color: var(--text-muted, #4B5563); }
+.jra-save { min-height: 48px; padding: 0 20px; border-radius: 14px; border: 0; background: var(--kb-primary, #0065D6); color: #FFFFFF; font: inherit; font-size: 15px; font-weight: 800; cursor: pointer; }
+.jra-save:disabled { opacity: .5; cursor: default; }
+.jra-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(300px, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 1000px) { .jra-grid { grid-template-columns: 1fr; } }
+.jra-card { background: var(--surface, #FFFFFF); border: 1px solid var(--border, #E6EAF2); border-radius: 20px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.jra-card h2 { margin: 0; font-size: 16px; font-weight: 800; }
+.jra-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.jra-tabs button { min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--kb-input-border, #CBD5E1); background: var(--surface, #FFFFFF); color: var(--text, #3A4456); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.jra-tabs button.is-on { background: #0B1220; border-color: #0B1220; color: #FFFFFF; }
+.jra-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.jra-table th { text-align: left; font-size: 12px; font-weight: 800; letter-spacing: .04em; color: var(--text-muted, #4B5563); padding: 8px; border-bottom: 2px solid var(--border, #E6EAF2); }
+.jra-table td { padding: 10px 8px; border-bottom: 1px solid var(--border, #EEF2F8); vertical-align: middle; }
+.jra-table td small { display: block; font-size: 12px; color: var(--text-muted, #4B5563); }
+.jra-table input[type="number"], .jra-num { width: 120px; min-height: 40px; border-radius: 10px; border: 1px solid var(--kb-input-border, #CBD5E1); padding: 0 10px; font: inherit; font-weight: 700; background: var(--surface, #FFFFFF); color: inherit; }
+.jra-table input[type="text"] { width: 100%; min-height: 40px; border-radius: 10px; border: 1px solid var(--kb-input-border, #CBD5E1); padding: 0 10px; font: inherit; background: var(--surface, #FFFFFF); color: inherit; }
+.jra-unit { margin-left: 6px; font-size: 12px; color: var(--text-muted, #4B5563); }
+.jra-add { align-self: flex-start; min-height: 40px; padding: 0 14px; border-radius: 12px; border: 1.5px dashed var(--kb-input-border, #CBD5E1); background: transparent; color: var(--kb-primary, #0057B8); font: inherit; font-weight: 800; cursor: pointer; }
+.jra-soft { display: flex; flex-direction: column; }
+.jra-soft > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 58px; border-bottom: 1px solid var(--border, #EEF2F8); }
+.jra-soft > div:last-child { border-bottom: 0; }
+.jra-soft strong { display: block; font-size: 14px; }
+.jra-soft small { font-size: 12px; color: var(--text-muted, #4B5563); }
+.jra-hist { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; }
+.jra-hist li { padding: 10px 0; border-bottom: 1px solid var(--border, #EEF2F8); font-size: 13px; }
+.jra-hist li:last-child { border-bottom: 0; }
+.jra-hist small { display: block; color: var(--text-muted, #4B5563); margin-top: 2px; }
+.jra-msg { margin: 0; font-size: 13px; font-weight: 700; color: #067647; }
+.jra-msg.is-bad { color: #B42318; }
+.jra-sw { position: relative; display: inline-grid; place-items: center; width: 52px; height: 40px; cursor: pointer; }
+.jra-sw input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.jra-sw span { width: 42px; height: 24px; border-radius: 999px; background: #CBD5E1; position: relative; transition: background .2s; }
+.jra-sw span::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #FFFFFF; transition: transform .2s; }
+.jra-sw input:checked + span { background: var(--kb-primary, #0065D6); }
+.jra-sw input:checked + span::after { transform: translateX(18px); }
+.jra-sw input:focus-visible + span { outline: 3px solid var(--kb-primary, #0065D6); outline-offset: 2px; }
+/* Moliya → Maoshlar: jarima ustuni */
+.payroll-fine { display: block; margin-top: 4px; font-size: 12px; font-weight: 700; color: #B42318; }
+.payroll-fine.is-zero { color: var(--text-muted, #4B5563); font-weight: 600; }
