@@ -34,8 +34,12 @@ function saveNotifications(list) {
 // qiladigan holat. Ilgari: har bir eski to'lov yozuvi uchun alohida
 // "Qarzdorlik" (hammaga, ustozga ham), har kuni bir xil davomat eslatmasi,
 // jami lidlar soni va hammasida "Hozirgina" vaqti chiqardi.
+// Formatlovchi BIR marta yaratiladi: har chaqiruvda new Intl.DateTimeFormat (timeZone bilan) qimmat — bildirishnomalar
+// paneli har sahifa almashganda qayta chiziladi va har xabar uchun 3 marta chaqirilardi (~130 ms qotish).
+let _notifDayFmt = null;
 function notifTashkentDay(date = new Date()) {
-    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tashkent', year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
+    if (!_notifDayFmt) _notifDayFmt = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tashkent', year: 'numeric', month: '2-digit', day: '2-digit' });
+    return _notifDayFmt.format(date);
 }
 
 function notifAt(dayKey, hhmm) {
@@ -251,8 +255,10 @@ function renderNotificationPanel() {
 
 function notifDayLabel(ts) {
     const key = notifTashkentDay(new Date(ts));
-    const today = notifTashkentDay();
-    const yesterday = notifTashkentDay(new Date(Date.now() - 86400000));
+    const now = Date.now();
+    // Bugun/kecha kalitlari daqiqasiga bir marta hisoblanadi (ro'yxatdagi har xabar uchun qayta emas).
+    if (!notifDayLabel._c || now - notifDayLabel._c.at > 60000) notifDayLabel._c = { at: now, today: notifTashkentDay(new Date(now)), yesterday: notifTashkentDay(new Date(now - 86400000)) };
+    const { today, yesterday } = notifDayLabel._c;
     if (key === today) return 'Bugun';
     if (key === yesterday) return 'Kecha';
     return 'Oldinroq';

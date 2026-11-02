@@ -548,7 +548,9 @@
             _pending = false;
             const board = document.getElementById('leadsKanban');
             ['leadsKanban', 'bookRoadmapKanban', 'hrVacBoard', 'shopDeliveryKanban'].forEach(id => enhanceBoard(document.getElementById(id)));
-            markOverflow(board);
+            // scrollWidth o'qish — kadr chizilgandan keyin (layout tayyor). Ilgari bu yerda, DOM yozuvlari orasida majburiy
+            // layout bo'lib, katta kanbanda har o'zgarishda ~25 ms qo'shardi.
+            setTimeout(() => markOverflow(board), 0);
             syncTitle();
             enhanceCards(document);
             enhanceDates(document);
