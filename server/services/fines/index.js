@@ -39,6 +39,11 @@ CREATE UNIQUE INDEX IF NOT EXISTS staff_fine_washes_ref ON staff_fine_washes(emp
 CREATE UNIQUE INDEX IF NOT EXISTS staff_fine_washes_day ON staff_fine_washes(employee_id, kind, (evidence->>'date'))
  WHERE kind IN ('hours','sunday') AND state IN ('pending','approved');
 ALTER TABLE staff_fines ADD COLUMN IF NOT EXISTS note TEXT NOT NULL DEFAULT '';
+-- Bekor qilingan (keyin sababli bo'lgan) jarimaning yuvilgan summasi joylashtirilmagan qismi — admin uchun belgi.
+CREATE TABLE IF NOT EXISTS staff_fine_credits (
+ id TEXT PRIMARY KEY, employee_id TEXT NOT NULL, month TEXT NOT NULL, fine_id TEXT NOT NULL UNIQUE, amount INTEGER NOT NULL CHECK(amount > 0),
+ note TEXT NOT NULL DEFAULT '', resolved BOOLEAN NOT NULL DEFAULT FALSE, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 CREATE INDEX IF NOT EXISTS staff_fine_washes_inbox ON staff_fine_washes(state, created_at);
 `;
 
@@ -123,18 +128,43 @@ async function syncAttendance(db, now = new Date()) {
                 produced.add(f.ref);
                 // "Oyning 1-kechikishi" butun oy bo'yicha — oy boshidan beri hisoblangan
                 const id = randomUUID();
+                // Upsert: avtomatik bekor qilingani qayta faollashadi; yuvilmagan faol jarima yangi hisobga moslanadi
+                // (masalan 1-kechikish sababli bo'lsa, keyingisi "ogohlantirish"ga aylanadi). Qo'lda bekor/e'tiroz/yuvilgan — tegilmaydi.
                 const ins = await db.query(`INSERT INTO staff_fines(id,employee_id,user_id,role,work_date,month,code,label,amount,warning,source,ref,evidence)
-                    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'attendance',$11,$12) ON CONFLICT (employee_id, ref) WHERE ref IS NOT NULL DO NOTHING RETURNING id`,
+                    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'attendance',$11,$12)
+                    ON CONFLICT (employee_id, ref) WHERE ref IS NOT NULL DO UPDATE SET state='active', note='', amount=EXCLUDED.amount, warning=EXCLUDED.warning,
+                        code=EXCLUDED.code, label=EXCLUDED.label, evidence=EXCLUDED.evidence
+                    WHERE (staff_fines.state='cancelled' AND staff_fines.note='auto')
+                       OR (staff_fines.state='active' AND staff_fines.washed=0 AND (staff_fines.amount, staff_fines.warning, staff_fines.code, staff_fines.label)
+                           IS DISTINCT FROM (EXCLUDED.amount, EXCLUDED.warning, EXCLUDED.code, EXCLUDED.label))
+                    RETURNING id, (xmax = 0) AS inserted, seen_at`,
                     [id, e.id, e.user_id || null, role, f.date, month, f.code, f.label, f.amount, f.warning, f.ref, JSON.stringify({ date: f.date, minutes: f.minutes || null })]);
-                if (ins.rowCount) created.push({ id, employeeId: e.id, name: e.name, userId: e.user_id, ...f });
+                const row = ins.rows[0];
+                if (row && row.inserted) created.push({ id, employeeId: e.id, name: e.name, userId: e.user_id, ...f });
+                else if (row && f.amount > 0 && !f.warning) {
+                    // qayta faollashgan yoki summasi oshgan — egasi yana ko'rsin (popup), xabar takrorlanmaydi (outbox kaliti)
+                    await db.query('UPDATE staff_fines SET seen_at=NULL WHERE id=$1', [row.id]);
+                }
             }
         }
         // Endi chiqmaydigan jarima (HR tuzatdi, so'rov tasdiqlandi, sozlama…) — yuvilmagan bo'lsa avtomatik bekor.
         // Bugun hali yakunlanmagan: faqat kechikish ko'riladi, shuning uchun bugungi boshqa turdagi jarimalar tegilmaydi.
-        const existing = (await db.query(`SELECT id,ref,TO_CHAR(work_date,'YYYY-MM-DD') AS d FROM staff_fines WHERE employee_id=$1 AND source='attendance'
-            AND state='active' AND washed=0 AND work_date BETWEEN $2 AND $3`, [e.id, start, today])).rows;
+        const existing = (await db.query(`SELECT id,ref,month,code,amount,washed,TO_CHAR(work_date,'YYYY-MM-DD') AS d FROM staff_fines WHERE employee_id=$1 AND source='attendance'
+            AND state='active' AND work_date BETWEEN $2 AND $3`, [e.id, start, today])).rows.map(f => ({ ...f, amount: Number(f.amount), washed: Number(f.washed) }));
         const stale = existing.filter(f => !produced.has(f.ref) && (f.d < today || /:late$|:streak3$/.test(f.ref)));
-        if (stale.length) await db.query(`UPDATE staff_fines SET state='cancelled',note='auto' WHERE id=ANY($1::text[]) AND state='active' AND washed=0`, [stale.map(f => f.id)]);
+        for (const f of stale) {
+            const c = await db.query(`UPDATE staff_fines SET state='cancelled',note='auto',washed=0 WHERE id=$1 AND state='active' RETURNING id`, [f.id]);
+            if (!c.rowCount || !f.washed) continue;
+            // Qisman yuvilgan jarima endi yo'q — yuvilgan summa shu oyning boshqa faol jarimalariga o'tadi (eng kichigidan),
+            // sig'masa — kredit (admin ko'radi: Moliya → Maoshlar).
+            const cfgM = R.configFor(vers, f.month + '-01');
+            const others = (await db.query(`SELECT id,code,amount,washed,state,warning FROM staff_fines WHERE employee_id=$1 AND month=$2 AND state='active' AND id<>$3`, [e.id, f.month, f.id])).rows
+                .map(x => ({ ...x, amount: Number(x.amount), washed: Number(x.washed) }));
+            const { parts, unused } = R.allocateWash(others, f.washed, cfgM);
+            for (const p of parts) await db.query('UPDATE staff_fines SET washed=washed+$2 WHERE id=$1', [p.id, p.amount]);
+            if (unused > 0) await db.query(`INSERT INTO staff_fine_credits(id,employee_id,month,fine_id,amount,note) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT (fine_id) DO NOTHING`,
+                [randomUUID(), e.id, f.month, f.id, unused, 'Yuvilgan jarima keyin sababli boʻldi — summa joylashtirilmadi']);
+        }
         // 10 ish kuni ketma-ket vaqtida — eng kichik jarima o'zi yuviladi (oy ichidagi seriyalar).
         const cfgNow = R.configFor(vers, today);
         const sw = R.streakWashes(days.filter(d => d.date >= from && d.date < today), cfgNow);
@@ -514,6 +544,11 @@ async function monthTotals(db, user, month, salaries = {}) {
     for (const [id, list] of Object.entries(by)) {
         const s = R.monthSummary(list, salaries[id] != null ? Number(salaries[id]) : null, cfg);
         out[id] = { gross: s.gross, washed: s.washed, net: s.net, cap: s.cap, deducted: s.deducted, bonus: s.bonus, count: list.filter(f => !f.warning && f.state !== 'cancelled').length };
+    }
+    // Kredit: yuvilgan jarima keyin sababli bo'ldi va summani boshqa jarimaga o'tkazib bo'lmadi — admin hal qiladi.
+    for (const c of (await db.query('SELECT employee_id,SUM(amount)::int AS s FROM staff_fine_credits WHERE month=$1 AND NOT resolved GROUP BY 1', [month])).rows) {
+        out[c.employee_id] ||= { gross: 0, washed: 0, net: 0, cap: null, deducted: 0, bonus: 0, count: 0 };
+        out[c.employee_id].credit = Number(c.s);
     }
     return { month, totals: out, cleanBonus: cfg.soft.cleanMonthOn ? cfg.soft.cleanMonthBonus : 0 };
 }

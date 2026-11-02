@@ -118,6 +118,7 @@
                 el.className = 'payroll-fine' + (f?.deducted ? '' : ' is-zero');
                 el.textContent = f?.deducted ? `Jarima: −${money(f.deducted)}${f.washed ? ` (yuvildi ${money(f.washed)})` : ''} → qoʻlga ${money(Math.max(0, salaries[id] - f.deducted))}${multi ? ' (ikkala til jami)' : ''}`
                     : f?.count === 0 || !f ? (r.cleanBonus ? `Jarima yoʻq · “Toza oy” +${money(r.cleanBonus)}` : 'Jarima yoʻq') : 'Jarima yuvilgan';
+                if (f?.credit) el.textContent += ` · ⚠ kredit ${money(f.credit)} (yuvilgan jarima keyin sababli boʻldi — tekshiring)`;
                 td.appendChild(el);
             }
         }).catch(() => { /* jarimalar moduli yo'q yoki ruxsat yo'q — maosh jadvali o'zgarmaydi */ });

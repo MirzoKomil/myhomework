@@ -256,5 +256,57 @@ test('jarimalar — PostgreSQL', { skip: !url }, async t => {
       assert.equal(tot.totals['e-ali'].cap, 800000);
       assert.equal(Object.keys(tot.totals).filter(k => k === 'e-ali').length, 1);
     });
+
+    await t.test('qayta faollashish va yangilanish: sababli → bekor → tuzatish olib tashlandi → yana faol; 1-kechikish sababli bo‘lsa keyingisi ogohlantirish', async () => {
+      await pool.query("INSERT INTO hr_employees(id,name,role,lang,login,status) VALUES('e-qa','Qodir','sotuv-menejeri','english','qa','active')");
+      await pool.query("INSERT INTO users(id,name,email,role) VALUES('qa','Qodir','qa','sales_manager')");
+      await att.saveSchedule(pool, user('boss'), 'e-qa', { days: DAYS });
+      await pool.query("INSERT INTO staff_att_faces(employee_id,descriptors,state,submitted_by,first_approved_at) VALUES('e-qa','[]','approved','boss','2027-02-01')");
+      await pool.query("UPDATE staff_att_schedules SET tracked_since='2027-02-07' WHERE employee_id='e-qa'");
+      const q = async () => (await pool.query("SELECT TO_CHAR(work_date,'YYYY-MM-DD') d,code,amount,warning,state,note FROM staff_fines WHERE employee_id='e-qa' AND code LIKE 'late_%' AND code<>'late_streak3' ORDER BY work_date")).rows
+        .map(r => [r.d, Number(r.amount), r.warning, r.state]);
+      await ev('e-qa', '2027-02-08', 'in', '09:10'); await ev('e-qa', '2027-02-08', 'out', '18:00');   // 1-kechikish
+      await ev('e-qa', '2027-02-09', 'in', '09:20'); await ev('e-qa', '2027-02-09', 'out', '18:00');   // 2-kechikish — 30 000 (dekabrdan yangi summa)
+      await fines.tick(pool, at('2027-02-10', '12:00'));
+      assert.deepEqual(await q(), [['2027-02-08', 0, true, 'active'], ['2027-02-09', 30000, false, 'active']]);
+      // B: 1-kechikish sababli → 9-fevral endi oyning 1-kechikishi — bepul ogohlantirish
+      await att.setOverride(pool, user('boss'), { employeeId: 'e-qa', date: '2027-02-08', status: 'excused', note: 'shifokor' });
+      await fines.tick(pool, at('2027-02-10', '12:05'));
+      assert.deepEqual(await q(), [['2027-02-08', 0, true, 'cancelled'], ['2027-02-09', 0, true, 'active']]);
+      // A: tuzatish olib tashlandi → 8-fevral yana faol (ogohlantirish), 9-fevral yana 30 000
+      await att.setOverride(pool, user('boss'), { employeeId: 'e-qa', date: '2027-02-08', status: null });
+      await fines.tick(pool, at('2027-02-10', '12:10'));
+      assert.deepEqual(await q(), [['2027-02-08', 0, true, 'active'], ['2027-02-09', 30000, false, 'active']]);
+      // qo'lda bekor qilingan (e'tiroz qabul) qayta tiklanmaydi
+      await pool.query("UPDATE staff_fines SET state='cancelled',note='' WHERE employee_id='e-qa' AND work_date='2027-02-09'");
+      await fines.tick(pool, at('2027-02-10', '12:15'));
+      assert.equal((await q())[1][3], 'cancelled');
+      await pool.query("UPDATE staff_fines SET state='active' WHERE employee_id='e-qa' AND work_date='2027-02-09'");
+      // B: tasdiqlangan "kech qolaman" pog'onani o'zgartiradi (20 → 5 daq: jarima yo'q → bekor)
+      await pool.query("INSERT INTO staff_att_requests(id,employee_id,user_id,type,work_date,at_time,reason,approver_kind,state) VALUES('rq-qa','e-qa','qa','late','2027-02-09','09:15','Transport','rop','approved')");
+      await pool.query("DELETE FROM staff_att_day_results WHERE employee_id='e-qa'");
+      await fines.tick(pool, at('2027-02-10', '12:20'));
+      assert.deepEqual((await q())[1], ['2027-02-09', 30000, false, 'cancelled'], '5 daq — imtiyoz ichida, jarima yo‘q');
+    });
+
+    await t.test('qisman yuvilgan jarima kuni sababli bo‘lsa: bekor, yuvilgan summa boshqa jarimaga; sig‘masa — kredit', async () => {
+      await ev('e-qa', '2027-02-10', 'in', '09:40'); await ev('e-qa', '2027-02-10', 'out', '18:00');   // 2-kechikish (8-fevraldan keyin) — 50 000
+      await ev('e-qa', '2027-02-11', 'in', '08:55'); await ev('e-qa', '2027-02-11', 'out', '16:00');   // erta ketish — 25 000
+      await fines.tick(pool, at('2027-02-12', '12:00'));
+      const late = (await pool.query("SELECT id,amount FROM staff_fines WHERE employee_id='e-qa' AND work_date='2027-02-10' AND code LIKE 'late_%'")).rows[0];
+      const early = (await pool.query("SELECT id FROM staff_fines WHERE employee_id='e-qa' AND code='early_leave'")).rows[0];
+      await pool.query('UPDATE staff_fines SET washed=30000 WHERE id=$1', [late.id]);   // qisman yuvilgan
+      await att.setOverride(pool, user('boss'), { employeeId: 'e-qa', date: '2027-02-10', status: 'excused', note: 'HR' });
+      await fines.tick(pool, at('2027-02-12', '12:05'));
+      const l2 = (await pool.query('SELECT state,note,washed FROM staff_fines WHERE id=$1', [late.id])).rows[0];
+      assert.deepEqual([l2.state, l2.note, Number(l2.washed)], ['cancelled', 'auto', 0]);
+      assert.equal(Number((await pool.query('SELECT washed FROM staff_fines WHERE id=$1', [early.id])).rows[0].washed), 25000, '30 000 dan 25 000 erta ketishga');
+      const cr = (await pool.query("SELECT amount FROM staff_fine_credits WHERE employee_id='e-qa'")).rows;
+      assert.deepEqual(cr.map(r => Number(r.amount)), [5000], 'qolgan 5 000 — kredit');
+      const tot = await fines.monthTotals(pool, user('boss'), '2027-02', { 'e-qa': 5000000 });
+      assert.equal(tot.totals['e-qa'].credit, 5000);
+      await fines.tick(pool, at('2027-02-12', '12:10'));
+      assert.equal((await pool.query("SELECT COUNT(*)::int n FROM staff_fine_credits WHERE employee_id='e-qa'")).rows[0].n, 1, 'takrorlanmaydi');
+    });
   } finally { await pool.end(); }
 });
