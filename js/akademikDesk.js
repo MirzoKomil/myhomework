@@ -31,7 +31,10 @@
         if (typeof switchTab !== 'function') return;
         if (key === 'slots') { switchTab('timetable', { akdNav: 'slots' }); return; }
         if (key === 'book') { switchTab('teachers-section', { teachersSection: 'textbook', akdNav: 'book' }); return; }
+        // Davomat (js/davomatApp.js — Face ID): davomat.open('team' | 'approvals' | 'my'); oʻz davomati zaxirasi — eski tekshirish oynasi.
+        if (key === 'att' || key === 'attreq') { if (dvApplies(key)) window.davomat.open(key === 'att' ? 'team' : 'approvals'); return; }
         if (key === 'myatt') {
+            if (dvApplies('myatt')) { window.davomat.open('my'); return; }
             if (window.staffAttendanceUI?.openCheckSheet) { window.staffAttendanceUI.openCheckSheet(); markWhileOpen('myatt', '.satt-overlay'); return; }
             switchTab('profile', { akdNav: 'myatt' }); return;
         }
@@ -48,6 +51,13 @@
         switchTab('akademik', { akd: key });
     }
 
+    const dvInfo = () => { try { return window.davomat?.menuInfo?.() || null; } catch (e) { return null; } };
+    // Band koʻrinadimi: yordamchilar davomati / soʻrovlar — tasdiqlovchi 'academic'; oʻz davomati — kuzatiladi (kompyuterda eski oyna zaxirasi bor).
+    function dvApplies(key) {
+        const mi = dvInfo();
+        if (key === 'myatt') return !!(window.davomat?.open && mi?.tracked);
+        return !!(window.davomat?.open && mi?.approver === 'academic');
+    }
     // Oyna bilan ochiladigan band (Mening davomatim): oyna ochiq turganda sidebar'da shu band faol, yopilgach avvalgisi qaytadi.
     function markWhileOpen(key, sel) {
         const item = document.querySelector(`#sidebarMenu .menu-item[data-akd="${key}"]`); if (!item) return;
@@ -371,7 +381,7 @@
             ${sil.length ? `<div class="akd-hist"><h3>Aloqasiz qolganlar</h3><ul class="akd-sil">${sil.slice(0, 5).map(x => `<li><a href="#" data-k-student="${esc(x.studentId)}">${esc(k.shortName(x.name))}</a><small>ustoz ${esc(k.first(x.teacherName))}</small>${k.chip(`${num(x.days)} kun`, num(x.days) >= 6 ? 'red' : 'amber')}</li>`).join('')}</ul></div>` : ''}
             <div class="akd-lrs">
               ${lr('Bugun', esc(at.today || '—'))}
-              ${lr(`Davomat · ${esc(mon)}`, esc(at.monthText || '—'))}
+              ${lr(`Davomat · ${esc(mon)}`, dvApplies('att') ? `<a href="#" data-k-go="att">${esc(at.monthText || 'Koʻrish')} ›</a>` : esc(at.monthText || '—'))}
               ${lr('Kechikkan aloqalar', `<a href="#" data-k-go="late">${num(a.lateContactsPending) ? `${num(a.lateContactsPending)} ta kutmoqda` : 'Yoʻq'} ›</a>`)}
               ${lr(`Maosh · ${esc(mon)} (faqat koʻrish)`, `${num(sal.counted)} aloqa · ≈ ${esc(k.money(sal.amount))}`)}
               ${lr('Hisob', '40 000 soʻm × aloqa ÷ 13, oʻquvchi boʻyicha')}
@@ -581,7 +591,14 @@
             problems: k.peek(k.API.problems('open'))?.counts?.open,
             makeups: t.makeupsPending,
             late: k.peek(k.API.late('pending')) ? (k.peek(k.API.late('pending')).items || []).length : null,
+            attreq: dvApplies('attreq') ? dvInfo().pending : null,
         };
+        // DAVOMAT bandlari faqat davomat.menuInfo() mos kelsa (davomatApp telefonda yuklanadi; kompyuterda — "Mening davomatim" zaxira oynasi bilan).
+        ['att', 'attreq'].forEach(key => { const a = document.querySelector(`#sidebarMenu .menu-item[data-akd="${key}"]`); if (a) a.style.display = dvApplies(key) ? '' : 'none'; });
+        const myA = document.querySelector('#sidebarMenu .menu-item[data-akd="myatt"]');
+        if (myA) myA.style.display = dvApplies('myatt') || (isDesk() && window.staffAttendanceUI?.openCheckSheet) ? '' : 'none';
+        const dvSep = [...document.querySelectorAll('#sidebarMenu .menu-sep--group')].find(x => x.textContent.trim() === 'Davomat');
+        if (dvSep) dvSep.style.display = ['att', 'attreq', 'myatt'].some(key => document.querySelector(`#sidebarMenu .menu-item[data-akd="${key}"]`)?.style.display !== 'none') ? '' : 'none';
         document.querySelectorAll('[data-akd-badge]').forEach(b => {
             const n = Number(vals[b.dataset.akdBadge]) || 0;
             b.hidden = !n; b.textContent = n ? (n > 99 ? '99+' : String(n)) : '';
@@ -636,7 +653,7 @@
         if ('kNew' in d) { if (d.kNewfor) newFor(d.kNewfor); else openNew(); return; }
         if ('kGo' in d) {
             const view = d.kGo;
-            if (['slots', 'myatt', 'book'].includes(view)) { nav(view); return; }
+            if (['slots', 'att', 'attreq', 'myatt', 'book'].includes(view)) { nav(view); return; }
             nav(view, { ptab: d.kPtab, pq: d.kPq, pteacher: d.kPteacher, mteacher: d.kMteacher, rtab: d.kRtab, rteacher: d.kRteacher });
             return;
         }
@@ -738,6 +755,9 @@
             if (activeTab() && !document.querySelector('.aka-sheet-wrap')) draw();
         }, 60000);
         updateBadges();
+        // davomatApp /me ni oʻzi yuklaydi (telefonda) — kelgach DAVOMAT bandlari koʻrinishi yangilanadi.
+        let dvTries = 0;
+        const dvPoll = setInterval(() => { updateBadges(); if (window.davomat?.state?.() || ++dvTries > 20) clearInterval(dvPoll); }, 1500);
     }
     function boot() { if (isAk()) init(); }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(boot, 120));

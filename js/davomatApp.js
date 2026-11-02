@@ -840,8 +840,8 @@
         if (mi.approver) items.push(['approvals', 'Davomat soʻrovlari', mi.pending], ['team', mi.approver === 'academic' ? 'Yordamchilar davomati' : mi.approver === 'admin' ? 'Barcha xodimlar davomati' : 'Xodimlar davomati', 0]);
         if (mi.tracked) items.push(['my', 'Mening davomatim', 0]);
         if (mi.approver === 'admin') items.push(['office', 'Ofis joylashuvi', 0]);
-        // ROP / sotuv / HR / yordamchi o'z ilovasining menyusidan foydalanadi
-        if (['rop', 'sales_manager', 'hr', 'teacher'].includes(user().role)) items.length = 0;
+        // ROP / sotuv / HR / yordamchi / akademik rahbar o'z ilovasining menyusidan foydalanadi (akademik — js/akademikApp.js, js/akademikDesk.js)
+        if (['rop', 'sales_manager', 'hr', 'teacher', 'akademik'].includes(user().role)) items.length = 0;
         let box = nav.querySelector('.dv-drawer');
         // Jarimalar (js/jarimaApp.js): admin — sozlamalar (Moliya → Jarimalar) va yuvish so'rovlari; akademik — o'zi + ustozlari.
         const jr = (window.jarima && !['rop', 'sales_manager', 'hr', 'teacher', 'targetolog'].includes(user().role)) ? jarima.menuItems() : [];
@@ -852,7 +852,7 @@
         if (box.innerHTML !== html) box.innerHTML = html;
         if (!document.querySelector('#tab-dashboard [data-dv-home]') && mi.tracked) {
             const dash = document.getElementById('tab-dashboard');
-            if (dash && !document.body.classList.contains('sa-on') && !document.body.classList.contains('ra-on') && !document.body.classList.contains('hra-on')) dash.insertAdjacentHTML('afterbegin', homeCard());
+            if (dash && !document.body.classList.contains('sa-on') && !document.body.classList.contains('ra-on') && !document.body.classList.contains('hra-on') && !document.body.classList.contains('aka-on')) dash.insertAdjacentHTML('afterbegin', homeCard());
         }
         paintHome();
     }

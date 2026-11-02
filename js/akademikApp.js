@@ -177,6 +177,11 @@
         if (g('getUnreadCount') && window.staffNotify) { try { return getUnreadCount(); } catch (e) { /* */ } }
         return num(peek(API.ov)?.unreadNotifications);
     }
+    // Davomat (js/davomatApp.js, Face ID): menuInfo() — {tracked, approver, pending}. Bandlar shu boʻyicha koʻrinadi; bosish — davomat.open() (data-dv-go).
+    const dvInfo = () => { try { return window.davomat?.menuInfo?.() || null; } catch (e) { return null; } };
+    let dvAsked = false;
+    function dvEnsure() { if (window.davomat && !window.davomat.state?.() && !dvAsked) { dvAsked = true; Promise.resolve(window.davomat.refresh?.()).then(() => render(false), () => {}); } }
+    const dvAcademic = () => dvInfo()?.approver === 'academic';
     const scoreTone = s => (num(s) >= 80 ? 'green' : num(s) >= 65 ? 'amber' : 'red');
     const pctTone = (v, good = 80, mid = 60) => (num(v) >= good ? '' : num(v) >= mid ? 'amber' : 'red');
 
@@ -210,7 +215,8 @@
         const att = (o.teachersAttention || []).slice(0, 3);
         const attRow = (r) => { const tone = r.tone === 'red' ? 'red' : r.tone === 'blue' ? 'blue' : 'amber';
             return `<button type="button" class="aka-arow" data-a-teacher="${esc(r.id)}">${ava(first(r.name), 40, tone === 'blue' ? 'blue' : tone)}<span class="aka-arow-t"><span><strong>${esc(first(r.name))}</strong>${r.reason ? chip(r.reason, tone) : ''}</span>${bar(r.onPlanPct, tone)}<small>${num(r.students)} oʻquvchi · ${pct(r.onPlanPct)}% rejada oʻqiyapti</small></span></button>`; };
-        return head + `<div class="aka-body aka-body--home">${hero}
+        dvEnsure();
+        return head + `<div class="aka-body aka-body--home">${window.davomat ? window.davomat.homeCard() : ''}${hero}
             <button type="button" class="aka-btn aka-btn--line aka-s2" data-a-go="pnew">${ic('plus', 18, 2.4)}Muammo yozish</button>
             <section class="aka-sec aka-s2"><div class="aka-sh"><h2>Hozir hal qiling</h2><span class="${sum ? 'c-red' : 'c-green'}">${sum ? `${cats.length} toifa · ${sum} ta` : 'Hammasi hal qilingan'}</span></div>
                 <div class="aka-grid2">${tiles.map(tileHtml).join('')}</div></section>
@@ -640,7 +646,7 @@
         } else {
             body = withData(API.assistants, d => {
                 const sm = d.summary || {}, items = d.items || [];
-                return `<section class="aka-dark3 aka-s1"><div><small>7 kunda aloqa</small><strong>${num(sm.contacted7)} / ${num(sm.total)}</strong></div><div><small>5+ kun aloqasiz</small><strong class="${num(sm.silent5) ? 'c-yel' : ''}">${num(sm.silent5)}</strong></div><div><small>Yordamchilar</small><strong>${items.length}</strong></div></section>
+                return `<section class="aka-dark3 aka-s1"><div><small>7 kunda aloqa</small><strong>${num(sm.contacted7)} / ${num(sm.total)}</strong></div><div><small>5+ kun aloqasiz</small><strong class="${num(sm.silent5) ? 'c-yel' : ''}">${num(sm.silent5)}</strong></div>${dvAcademic() ? `<button type="button" data-dv-go="approvals"><small>Davomat</small><strong>Soʻrovlar${num(dvInfo().pending) ? ' · ' + num(dvInfo().pending) : ''} ›</strong></button>` : `<div><small>Yordamchilar</small><strong>${items.length}</strong></div>`}</section>
                     <section class="aka-card aka-list aka-s2">${items.length ? items.map(a => { const r = num(a.students) ? num(a.contacted7) / num(a.students) * 100 : 0;
                         const desc = [`${num(a.students)} oʻquvchi`, `7 kunda ${num(a.contacted7)} tasi bilan aloqa`, `${num(a.silent5)} tasi 5+ kun aloqasiz`, a.note || ''].filter(Boolean).join(' · ');
                         return `<button type="button" class="aka-arow aka-arow--12" data-a-assistant="${esc(a.id)}" aria-label="${esc(first(a.name))}: ${esc(desc)}${a.attendance?.text ? ', ' + esc(a.attendance.text) : ''}">${ava(first(a.name), 42)}<span class="aka-arow-t"><span><strong>${esc(first(a.name))}</strong>${a.attendance?.text ? chip(a.attendance.text, a.attendance.tone || 'grey') : ''}</span>${bar(r, r >= 75 ? 'blue' : 'amber')}<small>${esc(desc)}</small></span></button>`; }).join('') : emptyBox('team', 'Yordamchi ustoz yoʻq')}</section>
@@ -699,7 +705,7 @@
             <section class="aka-card aka-kvbox aka-s2"><div class="aka-sb aka-mt10"><h2>Aloqasiz qolganlar</h2><span class="aka-b12">eng uzogʻi birinchi</span></div>
                 ${shown.length ? shown.map(x => `<button type="button" class="aka-srow aka-srow--56" data-a-student="${esc(x.studentId)}">${ava(x.name, 36)}<span><strong>${esc(shortName(x.name))}</strong><small>ustoz ${esc(first(x.teacherName))}</small></span>${chip(`${num(x.days)} kun aloqasiz`, num(x.days) >= 6 ? 'red' : 'amber')}</button>`).join('') : '<p class="aka-muted aka-pad">Hamma oʻquvchi bilan 5 kun ichida aloqa boʻlgan</p>'}
                 ${!S.silentAll && sil.length > 4 ? `<button type="button" class="aka-kv aka-kv--a aka-kv--top" data-a-silentall><strong class="c-blue">Yana ${sil.length - 4} ta</strong>${ic('chev', 18)}</button>` : ''}</section>
-            <section class="aka-card aka-kvbox aka-s3"><h2>Davomat va tasdiqlar</h2>${kv('Bugun', at.today || '—')}${kv(`Davomat · ${mon}dan (yuz + GPS)`, at.monthText || '—')}${kv('Kechikkan aloqalar', num(a.lateContactsPending) ? `${num(a.lateContactsPending)} ta kutmoqda ›` : 'Yoʻq ›', { link: 'data-a-go="late"' })}</section>
+            <section class="aka-card aka-kvbox aka-s3"><h2>Davomat va tasdiqlar</h2>${kv('Bugun', at.today || '—')}${dvAcademic() ? kv(`Davomat · ${mon}dan (yuz + GPS)`, `${at.monthText || 'Koʻrish'} ›`, { link: 'data-dv-go="team"' }) + kv('Davomat soʻrovlari', num(dvInfo().pending) ? `${num(dvInfo().pending)} ta ›` : 'Yoʻq ›', { link: 'data-dv-go="approvals"' }) : kv(`Davomat · ${mon}dan (yuz + GPS)`, at.monthText || '—')}${kv('Kechikkan aloqalar', num(a.lateContactsPending) ? `${num(a.lateContactsPending)} ta kutmoqda ›` : 'Yoʻq ›', { link: 'data-a-go="late"' })}</section>
             <section class="aka-card aka-kvbox aka-s3"><div class="aka-sb aka-mt10"><h2>Maosh · ${mon} (joriy)</h2>${chip('Faqat koʻrish')}</div>${kv('Sanalgan aloqalar', `${num(sal.counted)} · ${mon}ning ${now.getDate()} kunida`)}${kv('Hozircha', '≈ ' + money(sal.amount))}${kv('Hisob', '40 000 soʻm × aloqa ÷ 13, oʻquvchi boʻyicha')}${kv('Toʻlov', `Oy tugagach tekshiriladi · ${sal.payDate ? dLong(sal.payDate) : '5-' + MON[(now.getMonth() + 1) % 12]}`)}</section></div>
             ${bbar(`${tg ? `<a class="aka-btn aka-btn--out" href="${esc(tg)}" target="_blank" rel="noopener">${ic('send', 18)}Telegramda yozish</a>` : `<span class="aka-btn aka-btn--off">${ic('send', 18)}Telegram yoʻq</span>`}<button type="button" class="aka-btn aka-btn--pri aka-btn--14" data-a-newfor="assistant">${ic('plus', 18, 2.6)}Muammo yozish</button>`)}`;
     }
@@ -758,12 +764,19 @@
         const badge = n => (n ? `<b class="aka-badge">${n > 99 ? '99+' : n}</b>` : '');
         const row = (icon, tone, title, right, attr) => `<button type="button" class="aka-mrow" ${attr}><span class="aka-qi t-${tone}">${ic(icon, 18)}</span><strong>${esc(title)}</strong>${right}${ic('chev', 18)}</button>`;
         const meta = s => `<span class="aka-mmeta">${esc(s)}</span>`;
+        // DAVOMAT — davomatApp (Face ID): akademik rahbar yordamchilarning tasdiqlovchisi; oʻz davomati — kuzatilsa.
+        dvEnsure();
+        const mi = dvInfo() || {};
+        const dav = (mi.approver === 'academic' ? row('face', 'green', 'Yordamchilar davomati', '', 'data-dv-go="team"') + row('clock', 'amber', 'Davomat soʻrovlari', badge(num(mi.pending)), 'data-dv-go="approvals"') : '')
+            + (mi.tracked ? row('clock', 'grey', 'Mening davomatim', '', 'data-dv-go="my"') : '');
+        // Jarimalar (js/jarimaApp.js): oʻzi va ustozlari — ROP menyusidagidek.
+        const fines = window.jarima && window.jarima.counts?.() ? window.jarima.menuItems().map(x => row(x.go === 'issue' ? 'alert' : x.go === 'washok' ? 'check' : 'note', x.go === 'issue' ? 'red' : 'amber', x.title, badge(num(x.badge)), `data-jr-go="${esc(x.go)}"`)).join('') : '';
         return `<div class="aka-body aka-body--menu">
             <button type="button" class="aka-card aka-prof aka-s1" data-a-profile>${ava(u.name || myName(), 52, 'dark')}<span><strong>${esc(u.name || myName())}</strong><small>Akademik rahbar${myLangLabel() ? ' · ' + esc(myLangLabel()) : ''}</small></span>${ic('chev', 18)}</button>
             <div class="aka-mgroups aka-s2">
               <section class="aka-mg"><h2 class="aka-cap">NAZORAT</h2><div class="aka-card aka-list">${row('clock', 'blue', 'Qoplash tekshiruvi', badge(num(t.makeupsPending)), 'data-a-go="makeups"')}${row('alert', 'amber', 'Xavfdagi oʻquvchilar', meta(String(num(t.risk))), 'data-a-go="risk"')}${row('clock', 'blue', 'Kechikkan aloqalar', badge(lateN), 'data-a-go="late"')}${row('cap', 'purple', 'Sinov vaqtlari', meta('Dars jadvali'), 'data-a-crm="timetable"')}</div></section>
-              <section class="aka-mg"><h2 class="aka-cap">DAVOMAT</h2><div class="aka-card aka-list">${row('clock', 'grey', 'Mening davomatim', '', 'data-a-att="me"')}</div></section>
-              <section class="aka-mg"><h2 class="aka-cap">BOSHQA</h2><div class="aka-card aka-list">${row('archive', 'grey', 'Arxiv · yopilgan muammolar', '', 'data-a-go="problems" data-a-ptab="closed"')}${row('bell', 'grey', 'Bildirishnoma sozlamalari', '', 'data-a-crm="profile:notifications"')}${row('gear', 'grey', 'Parolni oʻzgartirish', '', 'data-a-crm="profile:security"')}</div></section>
+              ${dav ? `<section class="aka-mg"><h2 class="aka-cap">DAVOMAT</h2><div class="aka-card aka-list">${dav}</div></section>` : ''}
+              <section class="aka-mg"><h2 class="aka-cap">BOSHQA</h2><div class="aka-card aka-list">${row('archive', 'grey', 'Arxiv · yopilgan muammolar', '', 'data-a-go="problems" data-a-ptab="closed"')}${fines}${row('bell', 'grey', 'Bildirishnoma sozlamalari', '', 'data-a-crm="profile:notifications"')}${row('gear', 'grey', 'Parolni oʻzgartirish', '', 'data-a-crm="profile:security"')}</div></section>
             </div></div>`;
     }
 
@@ -956,12 +969,12 @@
         return true;
     }
     // Davomat: mavjud xodimlar davomati ekranlari (HR → Davomat), o'z davomati — kamera oynasi.
+    // Davomat sahifalari — js/davomatApp.js (davomat.open). Zaxira (davomat yuklanmagan): eski oʻz davomati oynasi.
     function openAttendance(kind) {
-        if (kind === 'me') {
-            if (window.staffAttendanceUI?.openCheckSheet) { window.staffAttendanceUI.openCheckSheet(); return; }
-            openCrm('profile'); return;
-        }
-        openCrm('hr:davomat');
+        const page = kind === 'me' ? 'my' : kind === 'requests' ? 'approvals' : 'team';
+        if (window.davomat?.open && (page === 'my' ? dvInfo()?.tracked : dvAcademic())) { window.davomat.open(page); return; }
+        if (page === 'my' && window.staffAttendanceUI?.openCheckSheet) { window.staffAttendanceUI.openCheckSheet(); return; }
+        toast('Davomat maʼlumoti hali yuklanmadi', 'bad');
     }
 
     // ---------- hodisalar ----------
@@ -1113,7 +1126,7 @@
         dlg: { owner: sheetOwner, postpone: sheetPostpone, close: sheetClose, makeup: sheetMakeup, transfer: sheetTransfer, lateReject: sheetLateReject, teacherHistory: sheetTeacherHistory },
         notifs: { list: notifList, NLOOK, NGO, open: id => { if (g('markNotificationRead')) { try { markNotificationRead(id); } catch (e) { /* */ } } } },
     };
-    window.akademikApp = { init, go, back, openScreen, render: () => render(false), state: S, ownLang, langs: myLangs, kit, _test: { normP, riskTone, dueOptions, cache: C } };
+    window.akademikApp = { init, go, back, openScreen, openAttendance, render: () => render(false), state: S, ownLang, langs: myLangs, kit, _test: { normP, riskTone, dueOptions, cache: C } };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(init, 80));
     else setTimeout(init, 80);
 })();

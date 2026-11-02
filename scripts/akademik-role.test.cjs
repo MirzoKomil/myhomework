@@ -176,7 +176,7 @@ test('kompyuter kabineti: ustozlar jadvali ustunlari, sidebar va modul ulanishi'
     assert.match(html, /<script src="js\/akademikApp\.js\?v=[^"]+"><\/script>\s*<script src="js\/akademikDesk\.js\?v=[^"]+"><\/script>/, 'desk telefondagi kit dan keyin yuklanadi');
     assert.match(html, /css\/akademikDesk\.css\?v=/);
     assert.match(html, /<section id="tab-akademik" class="tab-content"><div id="akademikDeskRoot"/);
-    for (const k of ['home', 'problems', 'teachers', 'makeups', 'risk', 'late', 'slots', 'myatt', 'book', 'archive'])
+    for (const k of ['home', 'problems', 'teachers', 'makeups', 'risk', 'late', 'slots', 'att', 'attreq', 'myatt', 'book', 'archive'])
         assert.match(html, new RegExp(`data-tab="akademik" data-akd="${k}" style="display:none"`), k);
     const app = read('js/app.js');
     assert.match(app, /DESIGN_SIDEBAR\.akademik = \{/);
@@ -196,6 +196,21 @@ test('telefon: kabinet bandlari telefon ekranlariga, zaxira pastki panel koʻrin
     assert.match(read('js/app.js'), /if \(!desk && window\.akademikApp\?\.openScreen\?\.\(item\.dataset\.akd\)\) return true;/);
     const ak = read('js/akademikApp.js');
     assert.match(ak, /function openScreen\(key\)/);
-    assert.doesNotMatch(ak, /'Yordamchilar davomati'|'Davomat soʻrovlari'/, 'Face ID tugaguncha HR davomat sahifasi (403) menyuda yoʻq');
+    assert.doesNotMatch(ak, /openCrm\('hr:davomat'\)/, 'HR davomat sahifasi (akademikka 403) emas — davomat.open()');
+    assert.match(ak, /mi\.approver === 'academic' \? row\('face', 'green', 'Yordamchilar davomati', '', 'data-dv-go="team"'\)/);
     assert.match(read('server/services/academicHead.js'), /unaccepted\.push\(\{ time: [^}]*teacherId: r\.teacherId \|\| null \}\)/);
+});
+
+test('davomat (Face ID): akademik login roli — kuzatiladi va yordamchilar tasdiqlovchisi; DAVOMAT bloki kabinetniki', () => {
+    const rules = require('../server/services/staffAttendance/rules');
+    const who = { userRole: 'akademik', empRole: 'head-of-teachers' };
+    assert.strictEqual(rules.staffKind(who), 'academic');
+    assert.strictEqual(rules.roleTracked(who), true);
+    assert.strictEqual(rules.approverKind(who), 'admin', 'oʻz soʻrovlari — direktorga');
+    assert.strictEqual(rules.approverScope({ ...who, langs: ['russian'] })?.kind, 'academic');
+    const dv = read('js/davomatApp.js');
+    assert.match(dv, /\['rop', 'sales_manager', 'hr', 'teacher', 'akademik'\]\.includes\(user\(\)\.role\)\) items\.length = 0/, 'drawer DAVOMAT dublikati yoʻq');
+    assert.match(dv, /!document\.body\.classList\.contains\('aka-on'\)\) dash\.insertAdjacentHTML/, 'telefon kabinetida umumiy bosh kartasi qoʻshilmaydi');
+    assert.match(read('js/akademikApp.js'), /window\.davomat \? window\.davomat\.homeCard\(\) : ''/, 'kabinet boshida davomat kartasi');
+    assert.match(read('js/app.js'), /\['Davomat', \['akd:att', 'akd:attreq', 'akd:myatt'\]\]/);
 });
