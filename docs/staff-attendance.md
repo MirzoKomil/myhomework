@@ -42,6 +42,10 @@ yuz mos kelmadi, yangi yuz namunasi. Buning uchun ular botga o'z akkauntini ulag
 - **APK 1.1:** kamera va joylashuv ruxsatlari faqat myhomework.uz uchun; birinchi ochilishda ruxsatlar ekrani (D00).
 - API: `/me/month`, `/me/day`, `/me/requests` (+ `/:id/cancel`), `/requests`, `/requests/:id/decide`, `/team`, `/team/:id/day`, `/settings/office`.
 - Testlar: `node --test scripts/davomat-faceid.test.cjs` (sof qoidalar).
+- Tasdiqlovchilar ro'yxati (kim ROP / akademik rahbar, qaysi tilda) `/me` uchun 60 soniya keshlanadi: HR lavozim yoki tilni
+  o'zgartirsa, ilovadagi "So'rov boradi" yozuvi ko'pi bilan 1 daqiqa eski ko'rinishi mumkin. Telegram xabari va so'rov
+  yo'nalishi saqlash paytida keshsiz hisoblanadi; HR xodimlar ro'yxatini saqlaganda kesh tozalanadi (`clearApproverCache`).
+- Javob so'rash va kelish/ketish bitta xodim qulfi ostida (`staff_att:<id>`) — bugungi "kech qolaman" kelish bilan poygaga kirmaydi.
 
 ## Qarorlar
 - Ofis: Mavr School, Andijon — 40.789035, 72.346787, radius 150 m (HR → Davomat → Sozlamalar).

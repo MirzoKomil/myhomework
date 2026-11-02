@@ -647,6 +647,8 @@ async function approverUsers(db, route) {
 // Tasdiqlovchilar ro'yxati kam o'zgaradi, /me esa har 15–60 soniyada so'raladi — 60 s kesh (marshrut bo'yicha).
 const APPROVER_TTL_MS = 60000;
 const approverCache = new Map();
+// HR xodim lavozimi/tili yoki loginini o'zgartirsa — kesh darhol tozalanadi (aks holda ko'pi bilan 60 s eski).
+function clearApproverCache() { approverCache.clear(); }
 async function approverUsersCached(db, route) {
     const key = route.kind + '|' + (route.lang || '');
     const hit = approverCache.get(key);
@@ -699,7 +701,13 @@ async function createRequest(pool, user, body, now = new Date()) {
     const route = await effectiveRoute(pool, a);
     const id = randomUUID();
     await transaction(pool, async db => {
-        await db.query('SELECT pg_advisory_xact_lock(hashtext($1))', ['staff_att_req:' + a.employee_id]);
+        // Belgilash (checkLocked) bilan bir xil xodim qulfi: so'rov va kelish/ketish bir-biriga aralashmaydi.
+        await db.query('SELECT pg_advisory_xact_lock(hashtext($1))', ['staff_att:' + a.employee_id]);
+        if (input.date === today) {
+            const now2 = await priorEvents(db, a.employee_id, today);
+            rules.normalizeRequest(body, { today, day, inOk: now2.some(e => e.ok && e.kind === 'in' && e.location_method !== 'outside'),
+                outOk: now2.some(e => e.ok && e.kind === 'out') });
+        }
         const dup = (await db.query(`SELECT 1 FROM staff_att_requests WHERE employee_id=$1 AND work_date=$2 AND type=$3 AND state IN ('pending','approved')`,
             [a.employee_id, input.date, input.type])).rows[0];
         if (dup) throw error(409, 'Bu kun uchun shunday soʻrov allaqachon bor');
@@ -1180,6 +1188,6 @@ async function tick(db, now = new Date()) {
 }
 
 module.exports = { initSchema, actor, getSettings, saveSettings, me, challenge, submitOwnFace, check, employees, saveSchedule,
-    myMonth, myRequests, createRequest, cancelRequest, inbox, decideRequest, team, teamRecord, saveOffice, pushEvents, scopeFor, routeFor,
+    myMonth, myRequests, createRequest, clearApproverCache, cancelRequest, inbox, decideRequest, team, teamRecord, saveOffice, pushEvents, scopeFor, routeFor,
     enrollFor, reviewFace, deleteFace, daily, monthly, setOverride, photo, tick, computeDay, lessonReport, transaction, ipAllowed, goneSql,
     MAX_ATTEMPTS_PER_DAY, TEACHER_HR_ROLES, FRAME_W, FRAME_H };
