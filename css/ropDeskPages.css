@@ -1,0 +1,167 @@
+/* ROP kompyuter kabineti (B) — Lidlar'dan tashqari sahifalar. Hammasi body.rop-desk-v2 (role=rop, >900px) ostida;
+   boshqa rollarga ta'sir qilmaydi. Tokenlar Lidlar dizayni bilan bir xil. */
+body.rop-desk-v2 {
+    --rdp-pri: #0065D6; --rdp-pri-50: #EAF3FF; --rdp-tx: #0B1220; --rdp-mt: #4B5563; --rdp-bd: #E6EAF2; --rdp-bg: #F5F7FB;
+    --rdp-red: #D92D20; --rdp-red-50: #FEF3F2; --rdp-red-bd: #FECDCA; --rdp-amb: #B54708; --rdp-amb-50: #FFFAEB; --rdp-amb-bd: #FEDF89;
+    --rdp-grn: #067647; --rdp-grn-50: #ECFDF3; --rdp-card: #fff; --rdp-r: 14px;
+}
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) body.rop-desk-v2 { --rdp-tx: #E6EAF2; --rdp-mt: #9AA4B2; --rdp-bd: #273244; --rdp-bg: #0F1623; --rdp-card: #151E2E; --rdp-pri-50: #12284A; --rdp-red-50: #3A1614; --rdp-amb-50: #33240D; --rdp-grn-50: #0F2A1E; }
+}
+:root[data-theme="dark"] body.rop-desk-v2 { --rdp-tx: #E6EAF2; --rdp-mt: #9AA4B2; --rdp-bd: #273244; --rdp-bg: #0F1623; --rdp-card: #151E2E; --rdp-pri-50: #12284A; --rdp-red-50: #3A1614; --rdp-amb-50: #33240D; --rdp-grn-50: #0F2A1E; }
+
+/* ---- ROP bo'limlari (tab-rdp-*) faqat ROP'da ---- */
+.rdp-tab { display: none; }
+body:not(.rop-desk-v2) .rdp-tab { display: none !important; }
+body.rop-desk-v2 .rdp-tab.active { display: block; }
+body.rop-desk-v2 .rdp-root { padding: 0 0 96px; color: var(--rdp-tx); max-width: 1440px; }
+
+/* ---- Sotuv bo'limidagi ROP sahifalari: asl "Sotuv" sarlavhasi, ichki tablar, "Boshqa bo'limlar" yashiriladi ---- */
+#rdpSalesHead { display: none; }
+body.rop-desk-v2[data-rdp] #tab-sales > .sales-pinned,
+body.rop-desk-v2[data-rdp] #tab-sales > #rsMoreSales { display: none !important; }
+body.rop-desk-v2[data-rdp="funnel"] #rdpSalesHead, body.rop-desk-v2[data-rdp="rating"] #rdpSalesHead, body.rop-desk-v2[data-rdp="plan"] #rdpSalesHead,
+body.rop-desk-v2[data-rdp="debt"] #rdpSalesHead, body.rop-desk-v2[data-rdp="script"] #rdpSalesHead { display: block; padding: 22px 28px 0; }
+
+/* ---- sarlavha ---- */
+body.rop-desk-v2 .rdp-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
+body.rop-desk-v2 .rdp-head h1 { margin: 0; font-size: 24px; line-height: 1.2; font-weight: 800; letter-spacing: -.02em; color: var(--rdp-tx); display: flex; align-items: center; gap: 10px; }
+body.rop-desk-v2 .rdp-head p { margin: 4px 0 0; color: var(--rdp-mt); font-size: 13.5px; line-height: 1.45; max-width: 860px; }
+body.rop-desk-v2 .rdp-head-r { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+body.rop-desk-v2 .rdp-chip { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 6px; background: var(--rdp-pri-50); color: var(--rdp-pri); font-size: 12px; font-weight: 700; letter-spacing: 0; }
+
+/* ---- umumiy bo'laklar ---- */
+body.rop-desk-v2 .rdp-card { background: var(--rdp-card); border: 1px solid var(--rdp-bd); border-radius: var(--rdp-r); padding: 16px; margin-bottom: 14px; }
+body.rop-desk-v2 .rdp-card h2 { margin: 0 0 10px; font-size: 16px; font-weight: 800; color: var(--rdp-tx); }
+body.rop-desk-v2 .rdp-card-h { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+body.rop-desk-v2 .rdp-mt { color: var(--rdp-mt); font-size: 12.5px; line-height: 1.45; }
+body.rop-desk-v2 .rdp-red { color: var(--rdp-red); }
+body.rop-desk-v2 .rdp-link { border: 0; background: none; padding: 0; color: var(--rdp-pri); font: inherit; font-weight: 700; cursor: pointer; }
+body.rop-desk-v2 .rdp-link:hover { text-decoration: underline; }
+body.rop-desk-v2 .rdp-btn { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border-radius: 9px; border: 1px solid var(--rdp-bd); background: var(--rdp-card); color: var(--rdp-tx); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; text-decoration: none; white-space: nowrap; }
+body.rop-desk-v2 .rdp-btn:hover:not(:disabled) { border-color: #C7D2E3; background: var(--rdp-bg); }
+body.rop-desk-v2 .rdp-btn--pri { background: var(--rdp-pri); border-color: var(--rdp-pri); color: #fff; }
+body.rop-desk-v2 .rdp-btn--pri:hover:not(:disabled) { background: #0057B8; border-color: #0057B8; }
+body.rop-desk-v2 .rdp-btn:disabled { opacity: .5; cursor: not-allowed; }
+body.rop-desk-v2 .rdp-btn:focus-visible, body.rop-desk-v2 .rdp-fchip:focus-visible, body.rop-desk-v2 .rdp-mt-r:focus-visible { outline: 2px solid var(--rdp-pri); outline-offset: 2px; }
+body.rop-desk-v2 .rdp-av { display: inline-grid; place-items: center; flex-shrink: 0; border-radius: 50%; color: #fff; font-weight: 800; }
+body.rop-desk-v2 .rdp-av--empty { background: transparent !important; color: var(--rdp-mt); border: 1.5px dashed #C7D2E3; width: 40px; height: 40px; }
+body.rop-desk-v2 .rdp-pill { display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: 6px; background: var(--rdp-bg); color: var(--rdp-mt); font-size: 11.5px; font-weight: 700; white-space: nowrap; }
+body.rop-desk-v2 .rdp-pill--red { background: var(--rdp-red-50); color: var(--rdp-red); }
+body.rop-desk-v2 .rdp-pill--amber { background: var(--rdp-amb-50); color: var(--rdp-amb); }
+body.rop-desk-v2 .rdp-pill--solid { background: var(--rdp-red); color: #fff; height: 22px; padding: 0 9px; }
+body.rop-desk-v2 .rdp-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 14px; }
+body.rop-desk-v2 .rdp-kpi { background: var(--rdp-card); border: 1px solid var(--rdp-bd); border-radius: var(--rdp-r); padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; }
+body.rop-desk-v2 .rdp-kpi small { font-size: 12.5px; font-weight: 700; color: var(--rdp-mt); }
+body.rop-desk-v2 .rdp-kpi b { font-size: 24px; font-weight: 800; color: var(--rdp-tx); }
+body.rop-desk-v2 .rdp-kpi span { font-size: 12.5px; color: var(--rdp-mt); }
+body.rop-desk-v2 .rdp-kpi--red { background: var(--rdp-red-50); border-color: var(--rdp-red-bd); }
+body.rop-desk-v2 .rdp-kpi--red b { color: var(--rdp-red); }
+body.rop-desk-v2 .rdp-kpi--amber { background: var(--rdp-amb-50); border-color: var(--rdp-amb-bd); }
+body.rop-desk-v2 .rdp-kpi--amber b { color: var(--rdp-amb); }
+body.rop-desk-v2 .rdp-cols { display: grid; grid-template-columns: minmax(0, 1fr) 350px; gap: 14px; align-items: start; }
+body.rop-desk-v2 .rdp-fchips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+body.rop-desk-v2 .rdp-fchip { height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--rdp-bd); background: var(--rdp-card); color: var(--rdp-tx); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+body.rop-desk-v2 .rdp-fchip b { min-width: 20px; height: 20px; border-radius: 999px; background: var(--rdp-bg); display: inline-grid; place-items: center; font-size: 11.5px; padding: 0 5px; }
+body.rop-desk-v2 .rdp-fchip.is-on { border-color: var(--rdp-pri); background: var(--rdp-pri-50); color: var(--rdp-pri); }
+body.rop-desk-v2 .rdp-fchip.is-on b { background: var(--rdp-pri); color: #fff; }
+body.rop-desk-v2 .rdp-inline { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--rdp-mt); margin-bottom: 12px; }
+body.rop-desk-v2 .rdp-inline select { height: 34px; border: 1px solid var(--rdp-bd); border-radius: 9px; padding: 0 10px; background: var(--rdp-card); color: var(--rdp-tx); font: inherit; font-size: 13px; font-weight: 700; }
+body.rop-desk-v2 .rdp-sec { margin: 6px 0 8px; font-size: 13px; font-weight: 800; letter-spacing: .02em; color: var(--rdp-mt); }
+body.rop-desk-v2 .rdp-sec.is-red { color: var(--rdp-red); }
+body.rop-desk-v2 .rdp-sec span { font-weight: 600; color: var(--rdp-mt); margin-left: 6px; letter-spacing: 0; }
+body.rop-desk-v2 .rdp-empty { border: 1px dashed var(--rdp-bd); border-radius: var(--rdp-r); padding: 36px; text-align: center; display: flex; flex-direction: column; gap: 4px; color: var(--rdp-mt); }
+body.rop-desk-v2 .rdp-empty b { color: var(--rdp-tx); font-size: 15px; }
+body.rop-desk-v2 .rdp-errbox { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; border-color: var(--rdp-red-bd); background: var(--rdp-red-50); }
+body.rop-desk-v2 .rdp-errbox b { color: var(--rdp-red); }
+body.rop-desk-v2 .rdp-sk { color: var(--rdp-mt); min-height: 120px; }
+body.rop-desk-v2 .rdp-kv { display: grid; grid-template-columns: 1fr auto 150px; gap: 10px; align-items: baseline; padding: 7px 0; border-bottom: 1px solid var(--rdp-bd); font-size: 13.5px; }
+body.rop-desk-v2 .rdp-kv b { font-weight: 800; }
+body.rop-desk-v2 .rdp-kv small { color: var(--rdp-mt); font-size: 12px; }
+body.rop-desk-v2 .rdp-who { display: flex; align-items: center; gap: 9px; min-width: 0; }
+body.rop-desk-v2 .rdp-stickyfoot { position: fixed; right: 0; bottom: 0; left: var(--sidebar-width, 248px); display: flex; justify-content: flex-end; align-items: center; gap: 10px; padding: 14px 28px; background: var(--rdp-card); border-top: 1px solid var(--rdp-bd); z-index: 20; }
+body.rop-desk-v2 .rdp-stickyfoot .rdp-btn { height: 38px; padding: 0 16px; }
+body.rop-desk-v2 .rdp-stickyfoot > span { margin-right: auto; font-size: 13px; }
+
+/* ---- Tasdiqlar (schoolUI.renderApprovals) ---- */
+body.rop-desk-v2 #schoolApprovalsRoot > .ad-back { display: none; }
+body.rop-desk-v2 #schoolApprovalsRoot > .sc-head h1 { display: flex; align-items: center; gap: 10px; font-size: 24px; }
+body.rop-desk-v2 #schoolApprovalsRoot .sc-head .rdp-n { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; margin-left: 4px; border-radius: 999px; background: var(--rdp-bd); color: var(--rdp-tx); font-size: 11.5px; }
+body.rop-desk-v2 #schoolApprovalsRoot .sc-head [aria-pressed="true"] .rdp-n { background: var(--rdp-pri); color: #fff; }
+body.rop-desk-v2 #schoolApprovalsRoot > .sc-note { background: var(--rdp-card); border: 1px solid var(--rdp-bd); color: var(--rdp-tx); }
+body.rop-desk-v2 #schoolApprovalsRoot .rdp-ap-lh { display: flex; justify-content: space-between; padding: 12px 14px 8px; font-size: 12.5px; font-weight: 700; color: var(--rdp-mt); }
+body.rop-desk-v2 #schoolApprovalsRoot .ad-ap { align-items: stretch; }
+body.rop-desk-v2 #schoolApprovalsRoot .ad-ap > .sc-inbox { max-height: calc(100vh - 270px); overflow: auto; }
+body.rop-desk-v2 #schoolApprovalsRoot .rdp-ap-det { display: flex; flex-direction: column; max-height: calc(100vh - 270px); min-height: 520px; overflow: hidden; }
+body.rop-desk-v2 #schoolApprovalsRoot .rdp-ap-det > .sc-ch { flex-shrink: 0; display: flex; align-items: center; gap: 10px; }
+body.rop-desk-v2 #schoolApprovalsRoot .rdp-ap-det > .sc-ch h2 { margin-right: auto; }
+body.rop-desk-v2 #schoolApprovalsRoot .rdp-ap-det > .ad-apd { flex: 1 1 auto; overflow: auto; min-height: 0; }
+body.rop-desk-v2 #schoolApprovalsRoot .ad-apd > h3, body.rop-desk-v2 #schoolApprovalsRoot .rdp-ap-two h3, body.rop-desk-v2 #schoolApprovalsRoot .rdp-ap-dec > h3 { text-transform: uppercase; font-size: 12.5px; letter-spacing: .04em; color: var(--rdp-mt); font-weight: 800; }
+body.rop-desk-v2 #schoolApprovalsRoot .ad-dt { border: 1px solid var(--rdp-bd); border-radius: 12px; overflow: hidden; }
+body.rop-desk-v2 #schoolApprovalsRoot .rdp-ap-two { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+body.rop-desk-v2 #schoolApprovalsRoot .rdp-ap-dec { flex-shrink: 0; padding: 12px 20px 4px; border-top: 1px solid var(--rdp-bd); background: var(--rdp-card); }
+body.rop-desk-v2 #schoolApprovalsRoot .rdp-ap-dec > h3 { margin: 0 0 8px; }
+body.rop-desk-v2 #schoolApprovalsRoot .rdp-ap-dec .sc-dec { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+body.rop-desk-v2 #schoolApprovalsRoot .rdp-ap-dec textarea { width: 100%; box-sizing: border-box; }
+body.rop-desk-v2 #schoolApprovalsRoot .rdp-ap-det > .sc-df { flex-shrink: 0; }
+
+/* ---- SLA ---- */
+body.rop-desk-v2 .rdp-sla-list { display: flex; flex-direction: column; background: var(--rdp-card); border: 1px solid var(--rdp-bd); border-radius: var(--rdp-r); overflow: hidden; margin-bottom: 16px; }
+body.rop-desk-v2 .rdp-sla-card { display: grid; grid-template-columns: 40px minmax(0, 1fr) 190px; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--rdp-bd); border-left: 3px solid transparent; }
+body.rop-desk-v2 .rdp-sla-card:last-child { border-bottom: 0; }
+body.rop-desk-v2 .rdp-sla-card.is-late { border-left-color: var(--rdp-red); background: linear-gradient(90deg, var(--rdp-red-50), transparent 40%); }
+body.rop-desk-v2 .rdp-sla-card.is-soon { border-left-color: #F79009; }
+body.rop-desk-v2 .rdp-sla-main { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+body.rop-desk-v2 .rdp-sla-name { font-size: 15px; font-weight: 800; }
+body.rop-desk-v2 .rdp-sla-sub { font-size: 13px; color: var(--rdp-mt); font-weight: 600; }
+body.rop-desk-v2 .rdp-sla-pills { display: flex; gap: 6px; margin-top: 2px; }
+body.rop-desk-v2 .rdp-sla-msg { margin: 2px 0 6px; font-size: 13px; color: var(--rdp-tx); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body.rop-desk-v2 .rdp-sla-acts { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+body.rop-desk-v2 .rdp-sla-side { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; text-align: right; }
+body.rop-desk-v2 .rdp-sla-side small { font-size: 12px; color: var(--rdp-mt); }
+body.rop-desk-v2 .rdp-sla-bar { width: 100%; height: 5px; border-radius: 99px; background: var(--rdp-bd); overflow: hidden; }
+body.rop-desk-v2 .rdp-sla-bar i { display: block; height: 100%; background: var(--rdp-red); border-radius: 99px; }
+body.rop-desk-v2 .rdp-mt-t { display: flex; flex-direction: column; margin: 0 -6px 8px; }
+body.rop-desk-v2 .rdp-mt-r { display: grid; grid-template-columns: minmax(0, 1fr) 56px 56px; align-items: center; gap: 6px; padding: 8px 6px; border: 0; border-radius: 8px; background: none; color: var(--rdp-tx); font: inherit; font-size: 13.5px; font-weight: 700; text-align: left; cursor: pointer; }
+body.rop-desk-v2 .rdp-mt-r > span:nth-child(n+2) { text-align: center; }
+body.rop-desk-v2 .rdp-mt-r .rdp-who { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body.rop-desk-v2 .rdp-mt-h { cursor: default; font-size: 12.5px; color: var(--rdp-mt); }
+body.rop-desk-v2 button.rdp-mt-r:hover, body.rop-desk-v2 .rdp-mt-r.is-on { background: var(--rdp-pri-50); }
+body.rop-desk-v2 .rdp-dotn { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--rdp-red); color: #fff; font-style: normal; font-size: 12px; }
+
+/* ---- Qotgan lidlar qoidasi ---- */
+body.rop-desk-v2 .rdp-cols--st { grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr); }
+body.rop-desk-v2 .rdp-st-in { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+body.rop-desk-v2 .rdp-fld { display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 700; }
+body.rop-desk-v2 .rdp-fld input { height: 40px; border: 1px solid var(--rdp-bd); border-radius: 9px; padding: 0 12px; font: inherit; font-size: 14px; font-weight: 500; background: var(--rdp-card); color: var(--rdp-tx); }
+body.rop-desk-v2 .rdp-fld input:focus { outline: none; border-color: var(--rdp-pri); box-shadow: 0 0 0 3px var(--rdp-pri-50); }
+body.rop-desk-v2 .rdp-fld small { font-weight: 500; color: var(--rdp-mt); font-size: 12px; }
+body.rop-desk-v2 .rdp-fld.is-err input { border-color: var(--rdp-red); }
+body.rop-desk-v2 .rdp-fld.is-err small { color: var(--rdp-red); }
+body.rop-desk-v2 .rdp-st-days { display: flex; margin: 14px 0 8px; border-radius: 10px; overflow: hidden; font-size: 12.5px; font-weight: 800; }
+body.rop-desk-v2 .rdp-st-days span { padding: 9px 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body.rop-desk-v2 .rdp-st-days .is-ok { background: var(--rdp-grn-50); color: var(--rdp-grn); }
+body.rop-desk-v2 .rdp-st-days .is-warn { background: var(--rdp-amb-50); color: var(--rdp-amb); }
+body.rop-desk-v2 .rdp-st-days .is-lock { background: var(--rdp-red-50); color: var(--rdp-red); }
+body.rop-desk-v2 .rdp-st-prev { margin-top: 8px; padding: 10px 12px; border: 1px solid var(--rdp-bd); border-radius: 10px; background: var(--rdp-bg); font-size: 13.5px; }
+body.rop-desk-v2 .rdp-st-legend { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; font-size: 13px; color: var(--rdp-mt); }
+body.rop-desk-v2 .rdp-st-legend li { display: flex; gap: 10px; }
+body.rop-desk-v2 .rdp-st-legend b { color: var(--rdp-tx); }
+body.rop-desk-v2 .rdp-st-legend i { width: 10px; height: 10px; border-radius: 50%; margin-top: 4px; flex-shrink: 0; background: #98A2B3; }
+body.rop-desk-v2 .rdp-st-legend i.is-warn { background: #F79009; } body.rop-desk-v2 .rdp-st-legend i.is-lock { background: var(--rdp-red); } body.rop-desk-v2 .rdp-st-legend i.is-ok { background: #12B76A; }
+body.rop-desk-v2 .rdp-tbl { display: flex; flex-direction: column; }
+body.rop-desk-v2 .rdp-tr { display: grid; grid-template-columns: minmax(0, 2fr) 1fr 1fr 1fr; gap: 10px; align-items: center; padding: 10px 8px; border-bottom: 1px solid var(--rdp-bd); font-size: 13.5px; }
+body.rop-desk-v2 .rdp-th { font-size: 12.5px; font-weight: 700; color: var(--rdp-mt); }
+body.rop-desk-v2 .rdp-cnt { display: inline-grid; place-items: center; min-width: 38px; height: 20px; border-radius: 999px; font-style: normal; font-weight: 800; font-size: 12.5px; }
+body.rop-desk-v2 .rdp-cnt--warn { background: var(--rdp-amb-50); color: var(--rdp-amb); }
+body.rop-desk-v2 .rdp-cnt--lock { background: var(--rdp-red-50); color: var(--rdp-red); }
+
+/* ---- Arxiv ---- */
+body.rop-desk-v2 .rdp-arch .arx-head { display: none; }
+body.rop-desk-v2 .rdp-arch .arx { padding: 0; border: 0; background: none; }
+body.rop-desk-v2 .rdp-arch .arx-row { background: var(--rdp-card); }
+
+@media (max-width: 1200px) {
+    body.rop-desk-v2 .rdp-cols, body.rop-desk-v2 .rdp-cols--st { grid-template-columns: 1fr; }
+    body.rop-desk-v2 .rdp-kpis { grid-template-columns: repeat(2, 1fr); }
+}
