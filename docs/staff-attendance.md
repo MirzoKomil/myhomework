@@ -44,7 +44,8 @@ yuz mos kelmadi, yangi yuz namunasi. Buning uchun ular botga o'z akkauntini ulag
 - Testlar: `node --test scripts/davomat-faceid.test.cjs` (sof qoidalar).
 - Tasdiqlovchilar ro'yxati (kim ROP / akademik rahbar, qaysi tilda) `/me` uchun 60 soniya keshlanadi: HR lavozim yoki tilni
   o'zgartirsa, ilovadagi "So'rov boradi" yozuvi ko'pi bilan 1 daqiqa eski ko'rinishi mumkin. Telegram xabari va so'rov
-  yo'nalishi saqlash paytida keshsiz hisoblanadi; HR xodimlar ro'yxatini saqlaganda kesh tozalanadi (`clearApproverCache`).
+  yo'nalishi saqlash paytida keshsiz hisoblanadi; HR xodimlar ro'yxatini saqlaganda va login roli yaratilganda/o'zgarganda
+  (`/api/auth/create-user`, `/sync-roles`) kesh tozalanadi (`clearApproverCache`). Bazada qo'lda o'zgartirilsa — 60 s ichida.
 - Javob so'rash va kelish/ketish bitta xodim qulfi ostida (`staff_att:<id>`) — bugungi "kech qolaman" kelish bilan poygaga kirmaydi.
 
 ## Qarorlar

@@ -171,3 +171,17 @@ test('Toshkent yarim tun chegarasi: UTC 18:59 / 19:00 — boshqa kun; tun yarmid
     // 60 kunlik chegara oy oxiri/yil o'tishida ham to'g'ri
     assert.equal(rules.normalizeRequest({ type: 'absent', date: '2027-01-30', reason: 'x' }, { today: '2026-12-01', day }).date, '2027-01-30');
 });
+
+test('xom kechikish (jarimalar uchun) tasdiqlangan "kech qolaman" vaqtidan hisoblanadi', () => {
+    const late = [{ id: 'r1', type: 'late', time: '10:30', reason: 'Shifokor', state: 'approved' }];
+    const mk = clock => rules.dayStatus({ date: monday, today: monday, nowMinutes: time.parseClock('12:00'), day, settings, events: [{ kind: 'in', occurred_at: at(monday, clock) }] });
+    assert.equal(mk('10:20').rawLateMinutes, 80);
+    const ok = rules.applyRequests(mk('10:20'), late, settings);
+    assert.deepEqual([ok.status, ok.rawLateMinutes], ['excused', 0]);
+    const over = rules.applyRequests(mk('10:38'), late, settings);
+    assert.deepEqual([over.status, over.lateMinutes, over.rawLateMinutes], ['excused', 0, 0], '8 daq — imtiyoz ichida');
+    const far = rules.applyRequests(mk('10:55'), late, settings);
+    assert.deepEqual([far.status, far.rawLateMinutes], ['late', 25]);
+    const whole = rules.applyRequests(mk('10:55'), [{ type: 'absent', state: 'approved' }], settings);
+    assert.equal(whole.rawLateMinutes, 0);
+});

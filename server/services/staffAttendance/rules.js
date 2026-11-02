@@ -269,9 +269,9 @@ function applyRequests(base, requests, settings, clockNow = null, { officeIn = f
     const inMin = t.parseClock(out.inClock), outMin = t.parseClock(out.outClock);
     const approved = type => list.find(r => r.state === 'approved' && r.type === type);
     const pending = list.some(r => r.state === 'pending' && r.type !== 'early_leave');
-    if (list.some(r => r.state === 'pending' && r.type === 'outside')) return { ...out, status: 'pending', lateMinutes: 0 };
+    if (list.some(r => r.state === 'pending' && r.type === 'outside')) return { ...out, status: 'pending', lateMinutes: 0, rawLateMinutes: 0 };
     const whole = approved('absent') || approved('outside');
-    if (whole) return { ...out, status: 'excused', lateMinutes: 0, earlyMinutes: 0, note: whole.reason || '', request: whole.id };
+    if (whole) return { ...out, status: 'excused', lateMinutes: 0, rawLateMinutes: 0, earlyMinutes: 0, note: whole.reason || '', request: whole.id };
     let excused = null;
     const late = approved('late');
     // Ruxsat vaqti hali kelmagan (yoki imtiyozi o'tmagan) — "kelmadi" emas, kutilmoqda.
@@ -279,8 +279,10 @@ function applyRequests(base, requests, settings, clockNow = null, { officeIn = f
         && ['absent', 'waiting'].includes(out.status)) return { ...out, status: 'waiting', lateMinutes: 0 };
     if (late && ['late', 'on_time'].includes(out.status) && inMin != null) {
         const over = inMin - t.parseClock(late.time);
+        // Jarimalar xom kechikishni o'qiydi — ruxsat vaqtidan hisoblanadi.
+        out.rawLateMinutes = Math.max(0, over);
         if (over > settings.graceMinutes) { out.lateMinutes = over; out.status = 'late'; }
-        else if (out.status === 'late') { out.lateMinutes = 0; out.status = 'excused'; excused = late; }
+        else if (out.status === 'late') { out.lateMinutes = 0; out.rawLateMinutes = 0; out.status = 'excused'; excused = late; }
     }
     const early = approved('early_leave');
     if (early && out.earlyMinutes && outMin != null) {
@@ -289,7 +291,7 @@ function applyRequests(base, requests, settings, clockNow = null, { officeIn = f
         if (!out.earlyMinutes && !excused) excused = early;
         if (!out.earlyMinutes && out.status === 'on_time') out.status = 'excused';
     }
-    if (pending && ['late', 'absent', 'waiting'].includes(out.status)) { out.status = 'pending'; out.lateMinutes = 0; }
+    if (pending && ['late', 'absent', 'waiting'].includes(out.status)) { out.status = 'pending'; out.lateMinutes = 0; out.rawLateMinutes = 0; }
     if (excused) { out.note = excused.reason || ''; out.request = excused.id; }
     return out;
 }
