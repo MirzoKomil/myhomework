@@ -73,7 +73,7 @@
   let timers = [];
   const later = (fn, ms) => timers.push(setTimeout(fn, ms));
   const every = (fn, ms) => timers.push(setInterval(fn, ms));
-  function stopTimers() { timers.forEach(t => { clearTimeout(t); clearInterval(t); }); timers = []; recorder.stop(true); try { speechSynthesis.cancel(); } catch { /* */ } }
+  function stopTimers() { timers.forEach(t => { if (t && t.off) return t.off(); clearTimeout(t); clearInterval(t); }); timers = []; recorder.stop(true); try { speechSynthesis.cancel(); } catch { /* */ } }
 
   function render() {
     const cur = stack[stack.length - 1];
@@ -170,7 +170,7 @@
     el.innerHTML = `<div class="body">
       <div class="row" style="justify-content:space-between"><div><div class="kicker b">${finished ? '1-DARS TUGATILDI' : '72 DARSDAN 1-DARS'}</div><p class="h2">${finished ? 'Xush kelibsiz' + (S.name ? ', ' + firstName() : '') + '!' : 'Oʻzingizni tanishtiring'}</p></div><span class="chip ${finished ? 'green' : ''}">${done}/4</span></div>
       ${S.requested ? `<div class="card" style="background:var(--greenl)"><div class="row">${ICON.phone('#087A4A')}<span class="sub" style="color:var(--greend)">Soʻrovingiz qabul qilindi · ${advisor()} bogʻlanadi</span></div></div>` : ''}
-      ${row('video', 1, 'Video dars', st.video ? `Koʻrildi${a.videoPercent ? ' ' + a.videoPercent + '%' : ''}` : '≈5 daqiqa', ICON.video(), 'var(--bluel)')}
+      ${row('video', 1, 'Video dars', st.video ? `Koʻrildi${a.videoPercent ? ' ' + a.videoPercent + '%' : ''}` : 'Ustoz bilan tanishuv', ICON.video(), 'var(--bluel)')}
       ${row('homework', 2, 'Uy vazifasi', st.homework ? `${hw.correct ?? 5} / ${hw.total ?? 5}` : '5 ta mashq · ≈3 daq', ICON.hw(), 'var(--bluel)')}
       ${row('game', 3, '2 ta oʻyin', st.game ? `Ish suhbati ${g.dialog ?? 4}/4 · juftlar ${g.pairs ?? 6}/6` : 'Ish suhbati + juftlar · ≈3 daq', ICON.game(), 'var(--violetl)')}
       ${row('voice', 4, st.voice ? 'Oʻzingiz gapirdingiz' : 'Oʻzingiz gapiring', st.voice ? (a.voice?.score != null ? a.voice.score + '% aniq' : 'ovoz yozildi') : 'Ovozingizni yozasiz · ≈1 daq', ICON.mic('#B34700', 22), 'var(--orangel)')}
@@ -191,22 +191,38 @@
 
   SCREENS.video = el => {
     const hasVideo = !!S.videoUrl;
+    const yt = (/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([A-Za-z0-9_-]{11})/.exec(S.videoUrl || '') || [])[1] || '';
     el.innerHTML = `<div class="body">${backLink()}
-      <div class="row" style="justify-content:space-between"><div><div class="kicker b">1-DARS · VIDEO</div><p class="h2" lang="ru">Меня́ зову́т…</p></div><span class="chip">≈5 daq</span></div>
-      <div class="video">${hasVideo ? `<video src="${esc(S.videoUrl)}" controls playsinline preload="metadata"></video>` : `<div class="placeholder">${domik('teacher', 72)}<b>Video tez orada joylanadi</b><span class="sub" style="color:#C8CFDC">Hozircha quyidagi konspektni oʻqib, iboralarni tinglang</span></div>`}</div>
+      <div class="row" style="justify-content:space-between"><div><div class="kicker b">1-DARS · VIDEO</div><p class="h2" lang="ru">Меня́ зову́т…</p></div><span class="chip">${S.steps.video ? 'Koʻrildi ✓' : 'Video'}</span></div>
+      <div class="video">${yt ? `<iframe src="https://www.youtube-nocookie.com/embed/${yt}?enablejsapi=1&playsinline=1&rel=0&modestbranding=1&origin=${encodeURIComponent(location.origin)}" title="1-dars videosi" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen style="width:100%;height:100%;border:0;display:block"></iframe>` : hasVideo ? `<video src="${esc(S.videoUrl)}" controls playsinline preload="metadata"></video>` : `<div class="placeholder">${domik('teacher', 72)}<b>Video tez orada joylanadi</b><span class="sub" style="color:#C8CFDC">Hozircha quyidagi konspektni oʻqib, iboralarni tinglang</span></div>`}</div>
       <div class="card konspekt"><div class="row" style="justify-content:space-between"><b>Konspekt</b><span class="sub">4 ibora${canSpeak() ? ' · audio' : ''}</span></div>
         ${L.KONSPEKT.map(k => `<div class="item"><div class="grow"><div lang="ru" style="font-size:16px;font-weight:800">${k.ru}</div><div class="sub">${esc(k.uz)}</div></div>${spkBtn(k.ru)}</div>`).join('')}</div>
       <div class="card"><div class="kicker">SOʻZLAR · BOSING — TINGLANG</div><div class="words">${L.VOCAB.map(([r, u]) => `<button class="word" style="font-size:15px;min-height:44px;display:flex;flex-direction:column;justify-content:center" data-say="${esc(r)}"><span lang="ru">${r}</span><span class="sub" style="font-size:12px">${esc(u)}</span></button>`).join('')}</div></div>
-    </div>${bar(`${hasVideo && !S.steps.video ? '<div class="note" data-vnote>Videoni oxirigacha koʻrsangiz +3 ball</div>' : ''}<button class="btn" data-next>Vazifaga oʻtish</button>`)}`;
+    </div>${bar(`${hasVideo && !S.steps.video ? '<div class="note" data-vnote>Videoni oxirigacha koʻring — mashqlar shunga tayanadi</div>' : ''}<button class="btn" data-next>Vazifaga oʻtish</button>`)}`;
     wireSay(el); wire(el, {});
-    const v = el.querySelector('video');
-    let maxSeen = S.answers?.videoPercent || 0, sent = S.steps.video;
-    if (v) v.addEventListener('timeupdate', () => {
-      if (!v.duration) return;
-      const p = Math.round(v.currentTime / v.duration * 100);
+    const v = el.querySelector('video'), frame = el.querySelector('iframe');
+    let maxSeen = S.answers?.videoPercent || 0, sent = S.steps.video, ytDur = 0;
+    const progress = (cur, dur) => {
+      if (!dur) return;
+      const p = Math.round(cur / dur * 100);
       if (p > maxSeen && p - maxSeen < 15) maxSeen = p; // oldinga sakrash hisoblanmaydi
       if (!sent && maxSeen >= 80) { sent = true; track('video', { percent: maxSeen }); haptic('ok'); const n = el.querySelector('[data-vnote]'); if (n) n.textContent = 'Video koʻrildi ✓'; }
-    });
+    };
+    if (v) v.addEventListener('timeupdate', () => progress(v.currentTime, v.duration));
+    if (frame) {
+      // YouTube pleyeri postMessage orqali vaqtni yuboradi (iframe_api skriptisiz).
+      const listen = () => { try { frame.contentWindow.postMessage(JSON.stringify({ event: 'listening', id: 1, channel: 'widget' }), '*'); } catch { /* */ } };
+      frame.addEventListener('load', listen); every(listen, 3000);
+      const onMsg = e => {
+        if (!/^https:\/\/www\.youtube(-nocookie)?\.com$/.test(e.origin)) return;
+        let d; try { d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; } catch { return; }
+        const info = d && d.info; if (!info) return;
+        if (info.duration) ytDur = info.duration;
+        if (typeof info.currentTime === 'number') progress(info.currentTime, ytDur);
+      };
+      window.addEventListener('message', onMsg);
+      timers.push({ off: () => window.removeEventListener('message', onMsg) });
+    }
     el.querySelector('[data-next]').onclick = async () => {
       if (!hasVideo && !S.steps.video) await track('video', { percent: 100, noVideo: true });
       else if (hasVideo && !sent && maxSeen > 0) track('video', { percent: maxSeen });

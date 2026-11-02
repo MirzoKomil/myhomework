@@ -295,6 +295,7 @@ app.get(['/miniapp', '/miniapp/'], (req, res) => {
     res.removeHeader('X-Frame-Options');
     res.setHeader('Content-Security-Policy', ["default-src 'self'", "script-src 'self' https://telegram.org", "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
         "font-src 'self' data: https://fonts.gstatic.com", "img-src 'self' data: blob:", "media-src 'self' blob: https:", "connect-src 'self'",
+        "frame-src https://www.youtube-nocookie.com https://www.youtube.com",
         "frame-ancestors 'self' https://web.telegram.org https://*.telegram.org", "base-uri 'none'", "form-action 'none'", "object-src 'none'"].join('; '));
     res.setHeader('Cache-Control', 'no-cache');
     res.sendFile(path.join(ROOT, 'miniapp', 'index.html'));

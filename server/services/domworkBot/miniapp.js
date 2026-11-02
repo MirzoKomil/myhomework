@@ -9,6 +9,8 @@ const funnel = require('./funnel');
 // Ball jadvali (UX hujjati bilan bir xil). Qo'ng'iroq so'rovi balli funnel.finishRequest orqali emas, shu yerda beriladi.
 const POINTS = { open: 2, video: 3, homework: 2, game: 2, voice: 3, locked: 1, request: 5 };
 const STEPS = ['video', 'homework', 'game', 'voice'];
+// Kursning 1-dars videosi (platformadagi 1-dars, YouTube). Bot boshqaruvida miniappVideoUrl bilan almashtiriladi.
+const DEFAULT_VIDEO = 'https://youtu.be/yTRiBmSrdh4';
 const MAX_VOICE_BYTES = 1024 * 1024;
 const VOICE_MIME = /^audio\/(ogg|webm|mp4|mpeg|wav|x-m4a|aac)(;.*)?$/;
 
@@ -148,7 +150,7 @@ function view(v, p, mgr, s, now = new Date()) {
         hasPhone: !!v.phone,
         phoneMasked: v.phone ? funnel.mask(v.phone) : '',
         // 1-dars videosi — veb pleyer uchun https manzil (Bot boshqaruvi sozlamasi). Yo'q bo'lsa — konspekt rejimi.
-        videoUrl: /^https:\/\/[^\s"'<>]{8,500}$/.test(s.miniappVideoUrl || '') ? s.miniappVideoUrl : null,
+        videoUrl: /^https:\/\/[^\s"'<>]{8,500}$/.test(s.miniappVideoUrl || '') ? s.miniappVideoUrl : DEFAULT_VIDEO,
         sales: { open: funnel.inHours(s, now), slaMinutes: funnel.sla(s) },
         discount
     };
