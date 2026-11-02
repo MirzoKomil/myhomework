@@ -67,6 +67,7 @@
     }
     function mark() {
         if (!on()) return;
+        if (window.ropDesk?.isRop?.()) { window.ropDesk.mark(); decorate(); return; }
         const k = activeKey();
         document.querySelectorAll('#sidebarMenu .rs-item').forEach(a => {
             const is = a.dataset.rs === k;
@@ -107,6 +108,9 @@
             if (!el.dataset.rsHidden || el.style.display !== 'none') el.dataset.rsPrev = el.style.display === 'none' ? 'none' : '';
             el.style.display = 'none'; el.dataset.rsHidden = '1';
         });
+        // ROP kompyuter kabineti (js/ropDesk/shell.js): guruhlangan sidebar — faqat role = rop, ekran > 900px.
+        if (r === 'rop' && window.ropDesk?.isRop?.()) { window.ropDesk.apply(); window.ropDesk.buildNav(menu); mark(); return; }
+        document.querySelectorAll('#sidebarMenu .rk-nav').forEach(x => x.remove());
         const frag = document.createDocumentFragment();
         for (const k of ORDER[r]) {
             const it = ITEMS[k];
