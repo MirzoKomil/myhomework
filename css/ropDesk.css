@@ -128,7 +128,7 @@ body.rop-desk-v2.rk-sales-lead #addLeadBtn { height: 36px; padding: 0 14px; bord
 /* ---------- Lidlar — doska ---------- */
 body.rop-desk-v2 #leadsKanban.rk-board { gap: 10px; align-items: stretch; padding: 12px 0 16px; overflow-x: auto; overflow-y: hidden; position: relative; }
 body.rop-desk-v2 #leadsKanban .lead-column.rk-col { flex: none; width: 256px; min-width: 0; max-height: 100%; align-self: stretch; padding: 0 8px 8px; box-sizing: border-box; border: 0; border-top: 3px solid var(--rk-col); border-radius: 16px; background: var(--rk-soft) !important; display: flex; flex-direction: column; gap: 6px; position: relative; }
-body.rop-desk-v2 #leadsKanban .lead-column-header.rk-ch { position: static; display: flex; flex-direction: column; align-items: stretch; gap: 6px; padding: 10px 4px 2px; margin: 0; background: transparent !important; border: 0; box-shadow: none; }
+body.rop-desk-v2 #leadsKanban .lead-column-header.rk-ch { position: static; display: flex; flex-direction: column; flex-wrap: nowrap; height: auto; align-items: stretch; gap: 6px; padding: 10px 4px 2px; margin: 0; background: transparent !important; border: 0; box-shadow: none; }
 body.rop-desk-v2 .rk-ch1 { display: flex; align-items: center; gap: 8px; }
 body.rop-desk-v2 .rk-dot { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--rk-col); }
 body.rop-desk-v2 #leadsKanban .rk-ch1 .lead-column-title { margin: 0; flex: 1; min-width: 0; font-size: 14px; font-weight: 800; line-height: 1.25; color: var(--rk-ink) !important; }
