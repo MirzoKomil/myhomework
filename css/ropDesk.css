@@ -289,7 +289,7 @@ body.rop-desk-v2 .rk-tn { font-size: 11px; font-weight: 800; padding: 1px 6px; b
 body.rop-desk-v2 .rk-tn.is-red { background: var(--rk-red); color: #FFFFFF; }
 body.rop-desk-v2 .modal.rk-drw .modal-body { padding: 16px 20px; }
 body.rop-desk-v2 .modal.rk-drw .modal-footer { padding: 12px 20px 16px; border-top: 1px solid var(--rk-line); justify-content: flex-start; flex-wrap: wrap; }
-body.rop-desk-v2.rk-sales-lead #leadsKanban.rk-board { height: calc(100dvh - var(--rk-top, 180px)); min-height: 420px; box-sizing: border-box; }
+body.rop-desk-v2.rk-sales-lead #leadsKanban.rk-board { height: calc(100dvh - var(--rk-top, 180px)); min-height: 420px; box-sizing: border-box; grid-template-rows: minmax(0, 1fr); grid-auto-rows: minmax(0, 1fr); }
 body.rop-desk-v2.rk-sales-lead #leadsKanban.rk-board > .lead-column.rk-col:not(.rk-shut) { height: 100%; }
 body.rop-desk-v2 .rk-rf { display: flex; flex-direction: column; gap: 6px; padding: 0 2px; position: relative; }
 body.rop-desk-v2 #leadsKanban #leadContactFilterButton { width: 100%; height: 28px; padding: 0 10px; margin: 0; border-radius: 8px; border: 1px solid var(--rk-line2); background: var(--rk-card); font: inherit; font-size: 12px; font-weight: 700; color: var(--rk-ink2); display: flex; align-items: center; gap: 6px; cursor: pointer; transform: none; }
