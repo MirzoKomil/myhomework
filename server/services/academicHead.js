@@ -494,7 +494,7 @@ async function overview(db, user, query = {}, now = new Date()) {
         const r = workflow.request(t.lead);
         if (!r || r.state !== 'pending' || t.status !== 'sinov-darsida') continue;
         const ms = Date.parse(r.scheduledAt);
-        if (Number.isFinite(ms) && ms > now.getTime()) unaccepted.push({ time: new Date(ms).toISOString(), teacher: sc.names.get(r.teacherId) || '' });
+        if (Number.isFinite(ms) && ms > now.getTime()) unaccepted.push({ time: new Date(ms).toISOString(), teacher: sc.names.get(r.teacherId) || '', teacherId: r.teacherId || null });
     }
     unaccepted.sort((a, b) => a.time.localeCompare(b.time));
     const risk = sc.active.filter(s => s.risk);

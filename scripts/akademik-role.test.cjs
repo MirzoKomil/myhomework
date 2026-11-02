@@ -190,3 +190,12 @@ test('kompyuter kabineti: ustozlar jadvali ustunlari, sidebar va modul ulanishi'
     assert.match(desk, /const MQ = window\.matchMedia\('\(max-width: 900px\)'\);/);
     assert.doesNotMatch(desk, /localStorage|sessionStorage/);
 });
+
+test('telefon: kabinet bandlari telefon ekranlariga, zaxira pastki panel koʻrinadigan bandga; sinov plitasi ustoz id bilan', () => {
+    assert.match(read('js/teamApp.js'), /akademik: \[\s*\{ id: 'home', label: 'Bosh', icon: 'home', tab: 'akademik' \}/);
+    assert.match(read('js/app.js'), /if \(!desk && window\.akademikApp\?\.openScreen\?\.\(item\.dataset\.akd\)\) return true;/);
+    const ak = read('js/akademikApp.js');
+    assert.match(ak, /function openScreen\(key\)/);
+    assert.doesNotMatch(ak, /'Yordamchilar davomati'|'Davomat soʻrovlari'/, 'Face ID tugaguncha HR davomat sahifasi (403) menyuda yoʻq');
+    assert.match(read('server/services/academicHead.js'), /unaccepted\.push\(\{ time: [^}]*teacherId: r\.teacherId \|\| null \}\)/);
+});

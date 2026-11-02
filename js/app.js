@@ -937,7 +937,13 @@ document.addEventListener('click', e => {
 });
 function openDesignNav(item) {
     // Akademik rahbar: kabinet bo'limlari va mavjud sahifalarga havolalar (js/akademikDesk.js).
-    if (item.dataset.akd) { window.akademikDesk ? window.akademikDesk.nav(item.dataset.akd) : switchTab('akademik', { akd: item.dataset.akd }); return true; }
+    // Telefonda (≤900px) kabinet bandlari — telefon kabinetining ekranlari (umumiy sahifa rejimidan chiqib), sahifa bandlari (Sinov vaqtlari, Darslik) — o'sha sahifa.
+    if (item.dataset.akd) {
+        const desk = !window.akademikDesk || window.akademikDesk.isDesk();
+        if (!desk && window.akademikApp?.openScreen?.(item.dataset.akd)) return true;
+        window.akademikDesk ? window.akademikDesk.nav(item.dataset.akd) : switchTab('akademik', { akd: item.dataset.akd });
+        return true;
+    }
     const v = item.dataset.navSales;
     if (v) {
         switchTab('sales', { salesSection: v === 'trials' ? 'leads' : v, navSales: v });

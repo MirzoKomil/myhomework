@@ -640,7 +640,7 @@
         } else {
             body = withData(API.assistants, d => {
                 const sm = d.summary || {}, items = d.items || [];
-                return `<section class="aka-dark3 aka-s1"><div><small>7 kunda aloqa</small><strong>${num(sm.contacted7)} / ${num(sm.total)}</strong></div><div><small>5+ kun aloqasiz</small><strong class="${num(sm.silent5) ? 'c-yel' : ''}">${num(sm.silent5)}</strong></div><button type="button" data-a-att="requests"><small>Davomat</small><strong>Soʻrovlar ›</strong></button></section>
+                return `<section class="aka-dark3 aka-s1"><div><small>7 kunda aloqa</small><strong>${num(sm.contacted7)} / ${num(sm.total)}</strong></div><div><small>5+ kun aloqasiz</small><strong class="${num(sm.silent5) ? 'c-yel' : ''}">${num(sm.silent5)}</strong></div><div><small>Yordamchilar</small><strong>${items.length}</strong></div></section>
                     <section class="aka-card aka-list aka-s2">${items.length ? items.map(a => { const r = num(a.students) ? num(a.contacted7) / num(a.students) * 100 : 0;
                         const desc = [`${num(a.students)} oʻquvchi`, `7 kunda ${num(a.contacted7)} tasi bilan aloqa`, `${num(a.silent5)} tasi 5+ kun aloqasiz`, a.note || ''].filter(Boolean).join(' · ');
                         return `<button type="button" class="aka-arow aka-arow--12" data-a-assistant="${esc(a.id)}" aria-label="${esc(first(a.name))}: ${esc(desc)}${a.attendance?.text ? ', ' + esc(a.attendance.text) : ''}">${ava(first(a.name), 42)}<span class="aka-arow-t"><span><strong>${esc(first(a.name))}</strong>${a.attendance?.text ? chip(a.attendance.text, a.attendance.tone || 'grey') : ''}</span>${bar(r, r >= 75 ? 'blue' : 'amber')}<small>${esc(desc)}</small></span></button>`; }).join('') : emptyBox('team', 'Yordamchi ustoz yoʻq')}</section>
@@ -699,7 +699,7 @@
             <section class="aka-card aka-kvbox aka-s2"><div class="aka-sb aka-mt10"><h2>Aloqasiz qolganlar</h2><span class="aka-b12">eng uzogʻi birinchi</span></div>
                 ${shown.length ? shown.map(x => `<button type="button" class="aka-srow aka-srow--56" data-a-student="${esc(x.studentId)}">${ava(x.name, 36)}<span><strong>${esc(shortName(x.name))}</strong><small>ustoz ${esc(first(x.teacherName))}</small></span>${chip(`${num(x.days)} kun aloqasiz`, num(x.days) >= 6 ? 'red' : 'amber')}</button>`).join('') : '<p class="aka-muted aka-pad">Hamma oʻquvchi bilan 5 kun ichida aloqa boʻlgan</p>'}
                 ${!S.silentAll && sil.length > 4 ? `<button type="button" class="aka-kv aka-kv--a aka-kv--top" data-a-silentall><strong class="c-blue">Yana ${sil.length - 4} ta</strong>${ic('chev', 18)}</button>` : ''}</section>
-            <section class="aka-card aka-kvbox aka-s3"><h2>Davomat va tasdiqlar</h2>${kv('Bugun', at.today || '—')}${kv(`Davomat · ${mon}dan (yuz + GPS)`, `${at.monthText || 'Koʻrish'} ›`, { link: 'data-a-att="list"' })}${at.requests != null ? kv('Davomat soʻrovlari', num(at.requests) ? `${num(at.requests)} ta ›` : 'Yoʻq', num(at.requests) ? { link: 'data-a-att="requests"' } : {}) : ''}${kv('Kechikkan aloqalar', num(a.lateContactsPending) ? `${num(a.lateContactsPending)} ta kutmoqda ›` : 'Yoʻq ›', { link: 'data-a-go="late"' })}</section>
+            <section class="aka-card aka-kvbox aka-s3"><h2>Davomat va tasdiqlar</h2>${kv('Bugun', at.today || '—')}${kv(`Davomat · ${mon}dan (yuz + GPS)`, at.monthText || '—')}${kv('Kechikkan aloqalar', num(a.lateContactsPending) ? `${num(a.lateContactsPending)} ta kutmoqda ›` : 'Yoʻq ›', { link: 'data-a-go="late"' })}</section>
             <section class="aka-card aka-kvbox aka-s3"><div class="aka-sb aka-mt10"><h2>Maosh · ${mon} (joriy)</h2>${chip('Faqat koʻrish')}</div>${kv('Sanalgan aloqalar', `${num(sal.counted)} · ${mon}ning ${now.getDate()} kunida`)}${kv('Hozircha', '≈ ' + money(sal.amount))}${kv('Hisob', '40 000 soʻm × aloqa ÷ 13, oʻquvchi boʻyicha')}${kv('Toʻlov', `Oy tugagach tekshiriladi · ${sal.payDate ? dLong(sal.payDate) : '5-' + MON[(now.getMonth() + 1) % 12]}`)}</section></div>
             ${bbar(`${tg ? `<a class="aka-btn aka-btn--out" href="${esc(tg)}" target="_blank" rel="noopener">${ic('send', 18)}Telegramda yozish</a>` : `<span class="aka-btn aka-btn--off">${ic('send', 18)}Telegram yoʻq</span>`}<button type="button" class="aka-btn aka-btn--pri aka-btn--14" data-a-newfor="assistant">${ic('plus', 18, 2.6)}Muammo yozish</button>`)}`;
     }
@@ -755,8 +755,6 @@
     function scrMenu() {
         const u = user(), o = peek(API.ov) || need(API.ov).d || {}, t = o.tiles || {};
         const lateN = (need(API.late('pending')).d?.items || []).length;
-        const as = need(API.assistants).d?.items || [];
-        const came = as.filter(a => /^keldi/i.test(a.attendance?.text || '')).length;
         const badge = n => (n ? `<b class="aka-badge">${n > 99 ? '99+' : n}</b>` : '');
         const row = (icon, tone, title, right, attr) => `<button type="button" class="aka-mrow" ${attr}><span class="aka-qi t-${tone}">${ic(icon, 18)}</span><strong>${esc(title)}</strong>${right}${ic('chev', 18)}</button>`;
         const meta = s => `<span class="aka-mmeta">${esc(s)}</span>`;
@@ -764,7 +762,7 @@
             <button type="button" class="aka-card aka-prof aka-s1" data-a-profile>${ava(u.name || myName(), 52, 'dark')}<span><strong>${esc(u.name || myName())}</strong><small>Akademik rahbar${myLangLabel() ? ' · ' + esc(myLangLabel()) : ''}</small></span>${ic('chev', 18)}</button>
             <div class="aka-mgroups aka-s2">
               <section class="aka-mg"><h2 class="aka-cap">NAZORAT</h2><div class="aka-card aka-list">${row('clock', 'blue', 'Qoplash tekshiruvi', badge(num(t.makeupsPending)), 'data-a-go="makeups"')}${row('alert', 'amber', 'Xavfdagi oʻquvchilar', meta(String(num(t.risk))), 'data-a-go="risk"')}${row('clock', 'blue', 'Kechikkan aloqalar', badge(lateN), 'data-a-go="late"')}${row('cap', 'purple', 'Sinov vaqtlari', meta('Dars jadvali'), 'data-a-crm="timetable"')}</div></section>
-              <section class="aka-mg"><h2 class="aka-cap">DAVOMAT</h2><div class="aka-card aka-list">${row('face', 'green', 'Yordamchilar davomati', as.length ? meta(`${came} / ${as.length} keldi`) : '', 'data-a-att="list"')}${row('clock', 'amber', 'Davomat soʻrovlari', badge(num(t.attendanceRequests ?? o.attendanceRequests)), 'data-a-att="requests"')}${row('clock', 'grey', 'Mening davomatim', '', 'data-a-att="me"')}</div></section>
+              <section class="aka-mg"><h2 class="aka-cap">DAVOMAT</h2><div class="aka-card aka-list">${row('clock', 'grey', 'Mening davomatim', '', 'data-a-att="me"')}</div></section>
               <section class="aka-mg"><h2 class="aka-cap">BOSHQA</h2><div class="aka-card aka-list">${row('archive', 'grey', 'Arxiv · yopilgan muammolar', '', 'data-a-go="problems" data-a-ptab="closed"')}${row('bell', 'grey', 'Bildirishnoma sozlamalari', '', 'data-a-crm="profile:notifications"')}${row('gear', 'grey', 'Parolni oʻzgartirish', '', 'data-a-crm="profile:security"')}</div></section>
             </div></div>`;
     }
@@ -941,6 +939,22 @@
         const p = S.stack.pop(); Object.assign(S, p || { screen: 'menu' });
         render(true);
     }
+    // Telefonda sidebar (Menyu) dagi kabinet bandi bosilsa: umumiy sahifa rejimidan chiqib, kabinet ekraniga.
+    const DESK_TO_SCREEN = { home: ['home'], problems: ['problems', { ptab: 'open' }], archive: ['problems', { ptab: 'closed' }], teachers: ['teachers', { ttab: 'teachers' }], makeups: ['makeups', { mtab: 'pending' }], risk: ['risk', { rtab: 'all' }], late: ['late', { ltab: 'pending' }] };
+    function openScreen(key) {
+        const tgt = DESK_TO_SCREEN[key];
+        if (!tgt || !isOn()) return false;
+        if (document.body.classList.contains('sidebar-open')) document.getElementById('sidebarToggle')?.click();
+        if (S.screen === 'crm') {
+            document.querySelector('.aka-backbar')?.remove();
+            document.body.classList.remove('aka-crm');
+            try { window.jadvalV3?.close?.({ silent: true }); } catch (e) { /* */ }
+            if (root) root.hidden = false;
+        }
+        S.screen = 'home';
+        go(tgt[0], { ...(tgt[1] || {}) });
+        return true;
+    }
     // Davomat: mavjud xodimlar davomati ekranlari (HR → Davomat), o'z davomati — kamera oynasi.
     function openAttendance(kind) {
         if (kind === 'me') {
@@ -1099,7 +1113,7 @@
         dlg: { owner: sheetOwner, postpone: sheetPostpone, close: sheetClose, makeup: sheetMakeup, transfer: sheetTransfer, lateReject: sheetLateReject, teacherHistory: sheetTeacherHistory },
         notifs: { list: notifList, NLOOK, NGO, open: id => { if (g('markNotificationRead')) { try { markNotificationRead(id); } catch (e) { /* */ } } } },
     };
-    window.akademikApp = { init, go, back, render: () => render(false), state: S, ownLang, langs: myLangs, kit, _test: { normP, riskTone, dueOptions, cache: C } };
+    window.akademikApp = { init, go, back, openScreen, render: () => render(false), state: S, ownLang, langs: myLangs, kit, _test: { normP, riskTone, dueOptions, cache: C } };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(init, 80));
     else setTimeout(init, 80);
 })();

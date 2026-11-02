@@ -94,9 +94,11 @@
     // Bildirishnoma koʻrinishi va manzili — telefondagi (kit.notifs) bilan bir; faqat AkdHome dizayni farq qiladigan ikonkalar ustiga yoziladi.
     const nLook = () => ({ ...K().notifs.NLOOK, acad_makeup_new: ['phone', 'blue'], acad_risk_new: ['trend', 'amber'] });
     const nView = etype => (etype === 'acad_problem_followup' ? 'archive' : K().notifs.NGO[etype]?.[0] || null);
-    // "Sinov qabul qilinmagan" — oʻsha ustozning paneli (ism roʻyxatda topilsa), aks holda Sinov vaqtlari (Dars jadvali v3).
+    // "Sinov qabul qilinmagan" — oʻsha ustozning paneli (server teacherId; eski javobda — ism boʻyicha), aks holda Sinov vaqtlari (Dars jadvali v3).
     function trialGo(nt) {
-        const k = K(), t = nt && (k.need(k.API.teachers).d?.items || []).find(x => k.first(x.name) === k.first(nt.teacher));
+        const k = K(); if (!nt) return 'data-k-go="slots"';
+        if (nt.teacherId) return `data-k-teacher="${k.esc(nt.teacherId)}"`;
+        const t = (k.need(k.API.teachers).d?.items || []).find(x => k.first(x.name) === k.first(nt.teacher));
         return t ? `data-k-teacher="${k.esc(t.id)}"` : 'data-k-go="slots"';
     }
     function viewHome() {
@@ -630,7 +632,7 @@
         if (t.tagName === 'A') e.preventDefault();
         if ('kRetry' in d) { const c = k.need(d.kRetry); c.e = null; c.at = 0; k.need(d.kRetry, true); draw(); return; }
         // Oyna yopilgach fokus shu tugmaga qaytadi (sahifa oraliqda qayta chizilgan boʻlsa ham).
-        if (['kNew', 'kOwner', 'kPostpone', 'kClose', 'kTransfer', 'kThist', 'kLrej', 'kMres'].some(x => x in d)) opener = focusSel(t);
+        if (['kNew', 'kOwner', 'kPostpone', 'kClose', 'kTransfer', 'kThist', 'kLrej'].some(x => x in d) || d.kMres === 'not_held') opener = focusSel(t);
         if ('kNew' in d) { if (d.kNewfor) newFor(d.kNewfor); else openNew(); return; }
         if ('kGo' in d) {
             const view = d.kGo;

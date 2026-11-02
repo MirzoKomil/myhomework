@@ -49,9 +49,10 @@
         hr: [
             { id: 'home', label: 'Bosh', icon: 'home', tab: 'hr' }
         ],
-        // Akademik rahbar: telefonda js/akademikApp.js o'z pastki panelini chizadi (bu faqat zaxira).
+        // Akademik rahbar: telefonda js/akademikApp.js o'z pastki panelini chizadi (bu faqat zaxira, has-team-nav uchun).
+        // Oddiy "dashboard" bandi akademik sidebar'ida yashirin — koʻrinib turgan kabinet bandi (data-akd="home") bilan tekshiriladi.
         akademik: [
-            { id: 'home', label: 'Bosh', icon: 'home', tab: 'dashboard' }
+            { id: 'home', label: 'Bosh', icon: 'home', tab: 'akademik' }
         ],
         _default: [
             { id: 'home', label: 'Bosh', icon: 'home', tab: 'dashboard' },
