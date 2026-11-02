@@ -89,12 +89,16 @@
         if (!c.p && (force || (!c.d && !c.e) || stale)) {
             c.p = apiFetch(url, { fresh: true })
                 .then(d => { c.d = d || {}; c.e = null; }, e => { if (!c.d) c.e = e; })
-                .finally(() => { c.p = null; c.at = Date.now(); if (root) render(false); });
+                .finally(() => { c.p = null; c.at = Date.now(); if (root) render(false); emit(); });
         }
         return c;
     }
     const peek = url => C.get(url)?.d || null;
-    function invalidate(...prefixes) { for (const k of [...C.keys()]) if (prefixes.some(p => k.startsWith(p))) C.get(k).at = 0; }
+    // Kompyuter kabineti (js/akademikDesk.js) shu keshni ishlatadi: maʼlumot kelganda yoki eskirganda qayta chizadi.
+    const listeners = new Set();
+    let emitQ = false;
+    function emit() { if (emitQ || !listeners.size) return; emitQ = true; Promise.resolve().then(() => { emitQ = false; listeners.forEach(fn => { try { fn(); } catch (e) { console.error('[akademikApp] listener', e); } }); }); }
+    function invalidate(...prefixes) { for (const k of [...C.keys()]) if (prefixes.some(p => k.startsWith(p))) C.get(k).at = 0; emit(); }
     const API = {
         me: '/api/academic/head/me', ov: '/api/academic/head/overview',
         problems: (st, q) => `/api/academic/problems?status=${st}${q ? '&q=' + encodeURIComponent(q) : ''}`,
@@ -485,12 +489,12 @@
             <p class="aka-info aka-s1">Qoplash ustoz kiritgan zahoti maoshga kiradi. Oʻquvchiga qoʻngʻiroq qilib tekshiring: dars boʻlmagan boʻlsa, keyingi oyning 4-sanasigacha rad etish mumkin.</p>
             ${tabs('mtab', [['pending', 'Kutmoqda' + cnt('pending')], ['held', 'Tekshirildi'], ['not_held', 'Dars boʻlmagan']], S.mtab, 'Holat')}${body}</div>`;
     }
-    function sheetMakeup(id) {
+    function sheetMakeup(id, pre = '') {
         const m = (peek(API.makeups(S.mtab))?.items || []).find(x => String(x.id) === String(id)); if (!m) return;
         const opts = [['held', 'Dars oʻtildi', 'Tekshirildi, maoshda qoladi'], ['not_held', 'Dars boʻlmagan', m.canReject === false ? 'Rad etish muddati oʻtgan (keyingi oyning 4-sanasi)' : 'Qoplash rad etiladi va maoshdan chiqadi · ustozga xabar boradi', m.canReject === false], ['no_answer', 'Javob bermadi', 'Navbatda qoladi, keyinroq qayta qoʻngʻiroq']];
-        openSheet('Qoʻngʻiroq natijasi', [shortName(m.studentName), 'ustoz ' + first(m.teacherName), m.heldAt ? dtComma(m.heldAt) : '', m.lessonNo ? m.lessonNo + '-dars' : ''].filter(Boolean).join(' · '), `${fs('Oʻquvchi nima dedi?', true, rcards('mr', opts, ''))}
+        openSheet('Qoʻngʻiroq natijasi', [shortName(m.studentName), 'ustoz ' + first(m.teacherName), m.heldAt ? dtComma(m.heldAt) : '', m.lessonNo ? m.lessonNo + '-dars' : ''].filter(Boolean).join(' · '), `${fs('Oʻquvchi nima dedi?', true, rcards('mr', opts, pre))}
             <label class="aka-fld"><span class="aka-lbl">Izoh</span><small class="aka-hint aka-hint--up">«Dars boʻlmagan» tanlanganda majburiy</small><textarea class="aka-ta" rows="2" maxlength="1000" data-note placeholder="Oʻquvchi nima dedi"></textarea></label>
-            <label class="aka-sw"><span><strong>Muammo kartasini ochish</strong><small>Ustoz ${esc(first(m.teacherName))} boʻyicha, izoh bilan</small></span><input type="checkbox" role="switch" data-op></label>
+            <label class="aka-sw"><span><strong>Muammo kartasini ochish</strong><small>Ustoz ${esc(first(m.teacherName))} boʻyicha, izoh bilan</small></span><input type="checkbox" role="switch" data-op${pre === 'not_held' ? ' checked' : ''}></label>
             <button type="button" class="aka-btn aka-btn--pri aka-btn--54" data-ok>Saqlash</button>`, w => {
             w.addEventListener('change', e => { if (e.target.name === 'mr') w.querySelector('[data-op]').checked = e.target.value === 'not_held'; });
             w.querySelector('[data-ok]').onclick = async ev => {
@@ -1082,7 +1086,17 @@
         setInterval(() => { if (isOn() && document.visibilityState === 'visible' && !sheetEl) refresh(); }, 60000);
     }
 
-    window.akademikApp = { init, go, back, render: () => render(false), state: S, ownLang, langs: myLangs, _test: { normP, riskTone, dueOptions, cache: C } };
+    // Kompyuter kabineti uchun umumiy toʻplam: oynalar telefondagi bilan bir xil boʻlishi uchun shu yerdagi funksiyalar ishlatiladi.
+    const kit = {
+        API, need, peek, invalidate, send, on: fn => { listeners.add(fn); return () => listeners.delete(fn); },
+        esc, ic, ava, chip, bar, chips, fs, rcards, note, emptyBox, errBox, initials, first, shortName, num, pct, money, telHref, tgHref,
+        toDate, localDate, dayDiff, hm, dShort, dLong, dtShort, dtComma, relDT, overdueTxt, addDays, greet, MON, MON3, WD,
+        STAGES, stageOf, TYPES, SOURCES, SRC_LOW, SRC_CHIP, RESULTS, RISK, EV_IC, EV_T, TONE_BAR, normP, f, isMe, myName, myLangLabel, langLabel, scoreTone, pctTone, riskTone, minTxt,
+        dueOptions, newDraft, localStudents, staffList, openSheet, closeSheet, toast, patchProblem, decideLate,
+        dlg: { owner: sheetOwner, postpone: sheetPostpone, close: sheetClose, makeup: sheetMakeup, transfer: sheetTransfer, lateReject: sheetLateReject, howScore: sheetHowScore, rejects: sheetRejects, teacherHistory: sheetTeacherHistory, staffPick: sheetStaffPick },
+        notifs: { list: notifList, NLOOK, NGO, open: id => { if (g('markNotificationRead')) { try { markNotificationRead(id); } catch (e) { /* */ } } } },
+    };
+    window.akademikApp = { init, go, back, render: () => render(false), state: S, ownLang, langs: myLangs, kit, _test: { normP, riskTone, dueOptions, cache: C } };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(init, 80));
     else setTimeout(init, 80);
 })();

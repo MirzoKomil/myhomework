@@ -680,7 +680,8 @@ async function teachers(db, user, query = {}, now = new Date()) {
         const p = onPlanPct(mine);
         const flag = lock ? { text: 'Qulfda · davomat', tone: 'red' } : pr?.overdue ? { text: `${pr.overdue} muammo muddati oʻtdi`, tone: 'red' }
             : p != null && p < 60 ? { text: `Rejada ${p}%`, tone: 'amber' } : pr?.open ? { text: `${pr.open} ochiq muammo`, tone: 'blue' } : null;
-        return { id: t.id, name: t.name, score: rr ? rr.score : null, students: mine.length, onPlanPct: p, onTimePct: tm ? pct(tm.onTime, tm.judged) : null, flag };
+        return { id: t.id, name: t.name, score: rr ? rr.score : null, students: mine.length, onPlanPct: p, onTimePct: tm ? pct(tm.onTime, tm.judged) : null,
+            attendancePct: rr?.davomatPct ?? null, masteryPct: rr?.learnPct ?? null, flag };
     }).sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
     items.forEach((x, i) => { x.rank = x.score == null ? null : i + 1; });
     let on = 0, all = 0;
@@ -689,7 +690,8 @@ async function teachers(db, user, query = {}, now = new Date()) {
     const breaks = tIds.length ? Number((await db.query(`SELECT COUNT(*)::int AS n FROM school_overrides WHERE kind='break' AND removed_at IS NULL AND date >= $1 AND teacher_id = ANY($2::text[])`,
         [T.nowLocal(now).date, tIds])).rows[0]?.n || 0) : 0;
     const rejects = (await trialsOf(db, tIds)).filter(t => { const r = workflow.request(t.lead); return r?.state === 'rejected' && Date.parse(r.rejectedAt || '') > daysAgo(now, 30).getTime(); }).length;
-    return { items: items.map(({ id, name, rank, score, students, onPlanPct: o, onTimePct, flag }) => ({ id, name, rank, score, students, onPlanPct: o, onTimePct, flag })),
+    // attendancePct / masteryPct — kompyuter jadvalidagi "Davomat" va "Oʻzlashtirish" ustunlari (ball tarkibi, kartadagi bilan bir manba).
+    return { items: items.map(({ id, name, rank, score, students, onPlanPct: o, onTimePct, attendancePct, masteryPct, flag }) => ({ id, name, rank, score, students, onPlanPct: o, onTimePct, attendancePct, masteryPct, flag })),
         summary: { onTimePct: pct(on, all), breaksPlanned: breaks, trialRejects30: rejects } };
 }
 async function teacherSalary(db, emp, now = new Date()) {

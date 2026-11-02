@@ -166,3 +166,27 @@ test('bildirishnomalar: eslatma hisobi faqat taymerda, follow-up va student_move
     assert.ok(keys({ kind: 'teacher', user: { role: 'teacher' } }).includes('student_moved'));
     assert.match(sn, /id: `acadfu:\$\{p\.id\}`/);
 });
+
+test('kompyuter kabineti: ustozlar jadvali ustunlari, sidebar va modul ulanishi', () => {
+    // AkdTeachers: "Davomat" va "Oʻzlashtirish" ustunlari roʻyxat javobida (ustoz kartasi bilan bir manba — reyting qatori).
+    const svc = read('server/services/academicHead.js');
+    assert.strictEqual((svc.match(/attendancePct: rr\?\.davomatPct \?\? null, masteryPct: rr\?\.learnPct \?\? null/g) || []).length, 2, 'roʻyxat va karta');
+    assert.match(svc, /items: items\.map\(\(\{ id, name, rank, score, students, onPlanPct: o, onTimePct, attendancePct, masteryPct, flag \}\)/);
+    const html = read('index.html');
+    assert.match(html, /<script src="js\/akademikApp\.js\?v=[^"]+"><\/script>\s*<script src="js\/akademikDesk\.js\?v=[^"]+"><\/script>/, 'desk telefondagi kit dan keyin yuklanadi');
+    assert.match(html, /css\/akademikDesk\.css\?v=/);
+    assert.match(html, /<section id="tab-akademik" class="tab-content"><div id="akademikDeskRoot"/);
+    for (const k of ['home', 'problems', 'teachers', 'makeups', 'risk', 'late', 'slots', 'att', 'attreq', 'myatt', 'book', 'archive'])
+        assert.match(html, new RegExp(`data-tab="akademik" data-akd="${k}" style="display:none"`), k);
+    const app = read('js/app.js');
+    assert.match(app, /DESIGN_SIDEBAR\.akademik = \{/);
+    assert.match(app, /case 'akademik': window\.akademikDesk\?\.render\(/);
+    assert.match(app, /if \(role === 'akademik'\) allowedSet\.add\('akademik'\)/);
+    // Telefon oynalari kompyuterda ham ishlatiladi (bir xil koʻrinish va mantiq).
+    const ak = read('js/akademikApp.js');
+    assert.match(ak, /dlg: \{ owner: sheetOwner, postpone: sheetPostpone, close: sheetClose, makeup: sheetMakeup, transfer: sheetTransfer, lateReject: sheetLateReject/);
+    assert.match(ak, /const isOn = \(\) => user\(\)\.role === 'akademik' && MQ\.matches;/, 'telefon kabineti faqat ≤900px');
+    const desk = read('js/akademikDesk.js');
+    assert.match(desk, /const MQ = window\.matchMedia\('\(max-width: 900px\)'\);/);
+    assert.doesNotMatch(desk, /localStorage|sessionStorage/);
+});
