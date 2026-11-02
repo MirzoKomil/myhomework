@@ -1,0 +1,18 @@
+    // Sotuv menejeri sidebar (barcha sotuv bordlarida bir xil). Prod: ropSotuvNav.js ORDER.sales_manager :38, MORE :43.
+    const IC = {
+      home: 'M3 10.5 12 4l9 6.5V20H3z', leads: 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 3a4 4 0 110 8 4 4 0 010-8z',
+      cal: 'M3 9.5h18M8 3v3M16 3v3M5 4.5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2v-12a2 2 0 012-2z', trial: 'M8.5 12l2.5 2.5 4.5-5M6 4h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2z',
+      stu: 'M2 8l10-5 10 5-10 5zM6 10.5V16c0 1.5 2.7 3 6 3s6-1.5 6-3v-5.5', debt: 'M2 6h20v13H2zM2 10h20',
+      plan: 'M12 3a9 9 0 110 18 9 9 0 010-18zM12 8a4 4 0 110 8 4 4 0 010-8z', rating: 'M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0z',
+      script: 'M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9zM14 3v6h6M8 13h8M8 17h5', funnel: 'M4 20V11M10 20V4M16 20v-6M2 20h20',
+      sms: 'M4 4h16v12H5l-1 4zM8 9h8M8 12h5', book: 'M4 5.5A2.5 2.5 0 016.5 3H20v15H6.5A2.5 2.5 0 004 20.5zM4 20.5A2.5 2.5 0 006.5 23H20v-5'
+    };
+    const mkNav = (curKey, onPick) => {
+      const I = (k, label, o) => Object.assign({ item: true, grp: false, k, label, tip: label, icon: IC[k], cur: k === curKey ? 'page' : 'false', badge: '', aria: '', pick: () => { if (k !== curKey && onPick) onPick(k, label); }, pickBadge: () => {} }, o || {});
+      const G = l => ({ grp: true, item: false, label: l });
+      return [
+        I('home', 'Bosh'), I('leads', 'Lidlar'), I('cal', 'Dars jadvali'), I('trial', 'Sinov darslari'), I('stu', 'Oʻquvchilar'), I('debt', 'Qarzdorlar'),
+        I('plan', 'Sotuv rejasi'), I('rating', 'Reyting'), I('script', 'Skriptlar'),
+        G('BOSHQA'), I('funnel', 'Statistika', { tip: 'Statistika (sotuv)' }), I('sms', 'SMS', { tip: 'SMS rassilka' }), I('book', 'Kitob yetkazish')
+      ];
+    };

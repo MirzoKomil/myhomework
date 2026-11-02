@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<title>ROP — Bosh</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#0057B8;text-decoration:none}a:hover{color:#0B1220}
+@keyframes dwRing{from{stroke-dashoffset:226}to{stroke-dashoffset:104}}
+@keyframes dwUp{from{transform:translateY(14px);opacity:0}to{transform:none;opacity:1}}
+@keyframes dwPulse{0%{transform:scale(1);opacity:.55}80%,100%{transform:scale(1.12);opacity:0}}
+.dw-ring{animation:dwRing 1.1s cubic-bezier(.2,.8,.2,1) .2s both}
+.dw-s1{animation:dwUp .45s cubic-bezier(.2,.8,.2,1) .05s both}
+.dw-s2{animation:dwUp .45s cubic-bezier(.2,.8,.2,1) .12s both}
+.dw-s3{animation:dwUp .45s cubic-bezier(.2,.8,.2,1) .19s both}
+.dw-pulse{position:relative}.dw-pulse::after{content:"";position:absolute;inset:-1px;border-radius:20px;border:2px solid #F04438;animation:dwPulse 1.8s ease-out 3}
+@media (prefers-reduced-motion:reduce){.dw-ring,.dw-s1,.dw-s2,.dw-s3,.dw-pulse::after{animation:none}}
+a,button,label{transition:transform .2s ease}a:active,button:active{transform:scale(.97)}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #0B1220; background: #F5F7FB; position: relative; overflow: hidden; display: flex; flex-direction: column">
+  <header style="padding: 14px 16px 8px 20px; display: flex; align-items: center; gap: 12px">
+    <a href="RopMenu.dc.html" aria-label="Profil va menyu" style="flex: none; position: relative; width: 46px; height: 46px; border-radius: 50%; background: #0B1220; color: #FFFFFF; display: grid; place-items: center; font-size: 15px; font-weight: 800; box-shadow: 0 0 0 2px #FFFFFF, 0 0 0 3px #CBD5E1">DK<span aria-hidden="true" style="position: absolute; right: -1px; bottom: -1px; width: 12px; height: 12px; border-radius: 50%; background: #12B76A; border: 2px solid #F5F7FB"></span></a>
+    <div style="flex: 1; min-width: 0; display: flex; flex-direction: column">
+      <span style="font-size: 13px; color: #4B5563; font-weight: 500">Payshanba, 19-noyabr · <strong style="color: #0057B8">ROP · Rus tili</strong></span>
+      <h1 style="margin: 0; font-size: 19px; font-weight: 800; letter-spacing: -0.01em">Xayrli tong, Dilnoza</h1>
+    </div>
+    <a href="RopNotif.dc.html" aria-label="Bildirishnomalar, 5 ta yangi" style="position: relative; width: 44px; height: 44px; border-radius: 14px; border: 1px solid #CBD5E1; background: #FFFFFF; display: grid; place-items: center; color: #3A4456; box-sizing: border-box"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 00-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0"></path></svg><span style="position: absolute; top: -5px; right: -5px; min-width: 20px; height: 20px; border-radius: 999px; background: #D92D20; color: #FFFFFF; font-size: 12px; font-weight: 800; display: grid; place-items: center; border: 2px solid #F5F7FB">5</span></a>
+  </header>
+
+  <div style="flex: 1; overflow: hidden; padding: 6px 16px 100px; display: flex; flex-direction: column; gap: 12px">
+    <a href="RopTeam.dc.html" class="dw-s1" style="flex: none; background: #0B1220; color: #FFFFFF; border-radius: 24px; padding: 16px; display: flex; flex-direction: column; gap: 12px; position: relative; overflow: hidden">
+      <svg aria-hidden="true" width="100%" height="100%" style="position: absolute; inset: 0; opacity: .06"><defs><pattern id="rhHex" width="48" height="41.6" patternUnits="userSpaceOnUse"><path d="M12 0h24l12 20.8-12 20.8H12L0 20.8z" fill="none" stroke="#FFFFFF" stroke-width="1.5"></path></pattern></defs><rect width="100%" height="100%" fill="url(#rhHex)"></rect></svg>
+      <div style="position: relative; display: flex; align-items: center; gap: 14px">
+        <div style="position: relative; width: 84px; height: 84px; flex: none">
+          <svg width="84" height="84" viewBox="0 0 84 84" role="img" aria-label="Jamoa rejasi 54% bajarildi"><circle cx="42" cy="42" r="36" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="9"></circle><circle class="dw-ring" cx="42" cy="42" r="36" fill="none" stroke="#3B8BEE" stroke-width="9" stroke-linecap="round" stroke-dasharray="226" stroke-dashoffset="104" transform="rotate(-90 42 42)"></circle></svg>
+          <div style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center"><strong style="font-size: 20px; font-weight: 800">54%</strong><span style="font-size: 12px; font-weight: 700; color: #C7D2E3">reja</span></div>
+        </div>
+        <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px">
+          <span style="font-size: 12px; font-weight: 700; color: #9DC4F5; letter-spacing: .06em">JAMOA REJASI · NOYABR</span>
+          <div style="display: flex; align-items: baseline; gap: 5px"><strong style="font-size: 26px; font-weight: 800; letter-spacing: -0.03em">64,8 mln</strong><span style="font-size: 13px; color: #C7D2E3; font-weight: 600">/ 120 mln</span></div>
+          <span style="font-size: 12px; color: #C7D2E3">81 toʻlov · oʻrtacha chek 800 000</span>
+        </div>
+      </div>
+      <div style="position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px">
+        <div style="background: rgba(255,255,255,.08); border-radius: 14px; padding: 8px 10px; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; color: #C7D2E3; font-weight: 600">Kuniga kerak</span><strong style="font-size: 15px">4,6 mln</strong></div>
+        <div style="background: rgba(255,255,255,.08); border-radius: 14px; padding: 8px 10px; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; color: #C7D2E3; font-weight: 600">Prognoz</span><strong style="font-size: 15px; color: #FDE68A">108 mln</strong></div>
+        <div style="background: rgba(255,255,255,.08); border-radius: 14px; padding: 8px 10px; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; color: #C7D2E3; font-weight: 600">Bugun bilan</span><strong style="font-size: 15px">12 kun</strong></div>
+      </div>
+    </a>
+
+    <section class="dw-s2" style="flex: none; display: flex; flex-direction: column; gap: 8px">
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 4px"><h2 style="margin: 0; font-size: 17px; font-weight: 800">Hozir hal qiling</h2><span style="font-size: 13px; font-weight: 700; color: #B42318">4 toifa · 15 ta</span></div>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+        <a href="RopDistribute.dc.html" class="dw-pulse" style="background: #FFFFFF; border: 1.5px solid #FDA29B; border-radius: 20px; padding: 12px; display: flex; flex-direction: column; gap: 6px; color: #0B1220">
+          <div style="display: flex; align-items: center; justify-content: space-between"><span style="width: 36px; height: 36px; border-radius: 12px; background: #FEF3F2; color: #B42318; display: grid; place-items: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M19 8v6M22 11h-6"></path></svg></span><strong style="font-size: 26px; font-weight: 800; letter-spacing: -0.02em">7</strong></div>
+          <strong style="font-size: 14px">Biriktirilmagan lid</strong>
+          <span style="font-size: 12px; color: #B42318; font-weight: 700">Eng eskisi 42 daq kutyapti</span>
+        </a>
+        <a href="RopApprovals.dc.html" style="background: #FFFFFF; border: 1px solid #E6EAF2; border-radius: 20px; padding: 12px; display: flex; flex-direction: column; gap: 6px; color: #0B1220">
+          <div style="display: flex; align-items: center; justify-content: space-between"><span style="width: 36px; height: 36px; border-radius: 12px; background: #EAF3FF; color: #0057B8; display: grid; place-items: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"></path></svg></span><strong style="font-size: 26px; font-weight: 800; letter-spacing: -0.02em">3</strong></div>
+          <strong style="font-size: 14px">Tasdiq kutmoqda</strong>
+          <span style="font-size: 12px; color: #4B5563; font-weight: 600">Toʻlov, tarif, ustoz</span>
+        </a>
+        <a href="RopSla.dc.html" style="background: #FFFFFF; border: 1px solid #E6EAF2; border-radius: 20px; padding: 12px; display: flex; flex-direction: column; gap: 6px; color: #0B1220">
+          <div style="display: flex; align-items: center; justify-content: space-between"><span style="width: 36px; height: 36px; border-radius: 12px; background: #FEF0C7; color: #93370D; display: grid; place-items: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg></span><strong style="font-size: 26px; font-weight: 800; letter-spacing: -0.02em">4</strong></div>
+          <strong style="font-size: 14px">SLA oʻtgan lid</strong>
+          <span style="font-size: 12px; color: #93370D; font-weight: 700">1 tasi 2 s 50 daqda adminga</span>
+        </a>
+        <a href="RopTrials.dc.html" style="background: #FFFFFF; border: 1px solid #E6EAF2; border-radius: 20px; padding: 12px; display: flex; flex-direction: column; gap: 6px; color: #0B1220">
+          <div style="display: flex; align-items: center; justify-content: space-between"><span style="width: 36px; height: 36px; border-radius: 12px; background: #F1E8FF; color: #5B21B6; display: grid; place-items: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16" rx="3"></rect><path d="M3 9.5h18M8 3v3M16 3v3"></path></svg></span><strong style="font-size: 26px; font-weight: 800; letter-spacing: -0.02em">1</strong></div>
+          <strong style="font-size: 14px">Sinov ustozsiz</strong>
+          <span style="font-size: 12px; color: #4B5563; font-weight: 600">Bugun 15:00 · Kamol N.</span>
+        </a>
+      </div>
+    </section>
+
+    <section class="dw-s3" style="flex: none; display: flex; flex-direction: column; gap: 8px">
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 4px"><h2 style="margin: 0; font-size: 17px; font-weight: 800">Jamoa bugun</h2><a href="RopTeam.dc.html" style="font-size: 14px; font-weight: 700; min-height: 44px; display: flex; align-items: center">Hammasi · 6</a></div>
+      <div style="background: #FFFFFF; border: 1px solid #E6EAF2; border-radius: 20px; padding: 2px 14px; display: flex; flex-direction: column">
+        <a href="RopManager.dc.html" style="display: flex; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid #EEF2F8; color: inherit">
+          <span style="position: relative; flex: none"><img src="/_blob/b9aca71346c3fe5b85756b5797dc7cb1" alt="" style="width: 40px; height: 40px; border-radius: 50%; display: block"><span aria-hidden="true" style="position: absolute; right: -1px; bottom: -1px; width: 11px; height: 11px; border-radius: 50%; background: #12B76A; border: 2px solid #FFFFFF"></span></span>
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px"><span style="display: flex; justify-content: space-between"><strong style="font-size: 14px">Zarina</strong><strong style="font-size: 13px; font-variant-numeric: tabular-nums">1,6 mln</strong></span><span aria-hidden="true" style="height: 5px; border-radius: 999px; background: #E2E8F0"><span style="display: block; width: 60%; height: 5px; border-radius: 999px; background: #0065D6"></span></span><span style="font-size: 12px; color: #4B5563">18 / 30 qoʻngʻiroq · 2 toʻlov</span></span>
+        </a>
+        <a href="RopManager.dc.html" style="display: flex; align-items: center; gap: 12px; padding: 9px 0; color: inherit">
+          <span style="position: relative; flex: none"><img src="/_blob/afdd3e8f963453ddcc22787871d42350" alt="" style="width: 40px; height: 40px; border-radius: 50%; display: block"><span aria-hidden="true" style="position: absolute; right: -1px; bottom: -1px; width: 11px; height: 11px; border-radius: 50%; background: #F79009; border: 2px solid #FFFFFF"></span></span>
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px"><span style="display: flex; justify-content: space-between"><strong style="font-size: 14px">Nodira</strong><span style="font-size: 12px; font-weight: 800; color: #B42318; background: #FEF3F2; border-radius: 999px; padding: 1px 8px">10:24 da keldi · kechikdi</span></span><span aria-hidden="true" style="height: 5px; border-radius: 999px; background: #E2E8F0"><span style="display: block; width: 7%; height: 5px; border-radius: 999px; background: #F79009"></span></span><span style="font-size: 12px; color: #4B5563">2 / 30 qoʻngʻiroq · 3 ta qotgan lid</span></span>
+        </a>
+      </div>
+    </section>
+  </div>
+
+  <nav aria-label="Pastki menyu" style="position: absolute; left: 0; right: 0; bottom: 0; height: 84px; background: #FFFFFF; border-top: 1px solid #E6EAF2; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); padding: 6px 6px 26px; box-sizing: border-box">
+    <a href="RopHome.dc.html" aria-current="page" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: #0057B8; font-size: 12px; font-weight: 800"><span style="width: 52px; height: 28px; border-radius: 999px; background: #EAF3FF; display: grid; place-items: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5L12 3l9 7.5V20a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"></path></svg></span>Bosh</a>
+    <a href="RopLeads.dc.html" aria-label="Lidlar, 7 ta biriktirilmagan" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: #4B5563; font-size: 12px; font-weight: 600"><span style="position: relative; width: 52px; height: 28px; display: grid; place-items: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 00-3-3.9M16 3.1a4 4 0 010 7.8"></path></svg><span style="position: absolute; top: -3px; right: 4px; min-width: 18px; height: 18px; padding: 0 4px; box-sizing: border-box; border-radius: 999px; background: #D92D20; color: #FFFFFF; font-size: 12px; font-weight: 800; display: grid; place-items: center">7</span></span>Lidlar</a>
+    <a href="RopTrials.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: #4B5563; font-size: 12px; font-weight: 600"><span style="width: 52px; height: 28px; display: grid; place-items: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16" rx="3"></rect><path d="M3 9.5h18M8 3v3M16 3v3"></path></svg></span>Jadval</a>
+    <a href="RopTeam.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: #4B5563; font-size: 12px; font-weight: 600"><span style="width: 52px; height: 28px; display: grid; place-items: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V11M10 20V5M16 20v-7M21 20H3"></path></svg></span>Jamoa</a>
+    <a href="RopMenu.dc.html" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: #4B5563; font-size: 12px; font-weight: 600"><span style="width: 52px; height: 28px; display: grid; place-items: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"></path></svg></span>Menyu</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

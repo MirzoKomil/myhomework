@@ -1,0 +1,550 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<title>ROP kompyuter — Oʻquvchiga aylantirish</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+sc-for,sc-if{display:contents}
+button,input,select,textarea{font-family:inherit}
+:focus-visible{outline:2px solid #0065D6;outline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.skip{position:absolute;left:12px;top:-60px;z-index:90;height:40px;padding:0 16px;border-radius:10px;border:0;background:#0B1220;color:#FFFFFF;font-size:14px;font-weight:800;cursor:pointer}
+.skip:focus{top:12px}
+/* sidebar */
+.sb{flex:none;width:248px;background:#FFFFFF;border-right:1px solid #E6EAF2;padding:10px 12px;box-sizing:border-box;display:flex;flex-direction:column;gap:1px;transition:width .2s ease;overflow:hidden}
+.nr{display:flex;align-items:center;gap:4px}
+.mi{flex:1;min-width:0;display:flex;align-items:center;gap:12px;min-height:38px;padding:0 10px;border-radius:12px;color:#3A4456;font-size:14px;font-weight:600;border:0;background:transparent;cursor:pointer;text-align:left}
+.mi:hover{background:#F1F5F9;color:#0B1220}
+.mi svg{width:18px;height:18px;flex:none}
+.mi[aria-current="page"]{background:#EAF3FF;color:#0057B8;font-weight:800}
+.lbl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.grp{font-size:12px;font-weight:800;color:#4B5563;letter-spacing:.06em;padding:12px 10px 4px;margin:0}
+.cnt{flex:none;min-width:28px;height:24px;padding:0 7px;box-sizing:border-box;border-radius:999px;background:#D92D20;color:#FFFFFF;font-size:12px;font-weight:800;display:grid;place-items:center;border:0;cursor:pointer}
+.cnt:hover{background:#B42318}
+.sb-min{width:76px;padding:10px 8px}
+.sb-min .lbl,.sb-min .grp,.sb-min .brand{display:none}
+.sb-min .nr{position:relative}
+.sb-min .mi{justify-content:center;padding:0}
+.sb-min .cnt{position:absolute;right:-2px;top:-4px;min-width:24px;height:24px;border:2px solid #FFFFFF}
+/* toolbar */
+.fbox{height:36px;display:flex;align-items:center;gap:6px;padding:0 10px 0 12px;border-radius:10px;border:1px solid #E2E8F0;background:#FFFFFF;font-size:13px;font-weight:600;color:#3A4456;box-sizing:border-box;white-space:nowrap;cursor:pointer}
+.fbox:hover{border-color:#94A3B8}
+.fbox.act{background:#EAF3FF;border-color:#0065D6;color:#0057B8;font-weight:800}
+.fbox.vb{background:#F1E8FF;border-color:#7C3AED;color:#5B21B6;font-weight:800}
+.dd{position:absolute;top:42px;left:0;z-index:40;background:#FFFFFF;border:1px solid #E6EAF2;border-radius:14px;box-shadow:0 16px 40px rgba(16,24,40,.16);padding:8px;display:flex;flex-direction:column;gap:2px;min-width:280px}
+.dd label,.dd .pr{display:flex;align-items:center;gap:8px;min-height:32px;padding:0 8px;border-radius:8px;font-size:13px;font-weight:600;color:#0B1220;cursor:pointer;border:0;background:transparent;text-align:left}
+.dd label:hover,.dd .pr:hover,.dd .pr:focus-visible{background:#F1F5F9}
+.dd .pr[aria-checked="true"]{background:#EAF3FF;color:#0057B8;font-weight:800}
+.dd input[type=checkbox]{width:16px;height:16px;margin:0;accent-color:#0065D6}
+.dd .ap{height:36px;margin-top:6px;border:0;border-radius:10px;background:#0065D6;color:#FFFFFF;font-size:13px;font-weight:800;cursor:pointer}
+.dd .ap[aria-disabled="true"]{background:#CBD5E1;color:#4B5563;cursor:not-allowed}
+.dh{font-size:12px;font-weight:800;color:#4B5563;padding:4px 8px}
+.kbd{display:inline-grid;place-items:center;min-width:22px;height:22px;padding:0 5px;box-sizing:border-box;border-radius:6px;border:1px solid #CBD5E1;border-bottom-width:2px;background:#FFFFFF;font-size:11px;font-weight:800;color:#3A4456}
+/* board */
+.col{flex:none;width:256px;min-height:0;max-height:100%;background:#F1F5F9;border-radius:16px;padding:0 8px 8px;box-sizing:border-box;display:flex;flex-direction:column;gap:6px;border-top:3px solid transparent;transition:background .15s ease}
+.col.drop{background:#EAF3FF;outline:2px dashed #0065D6;outline-offset:-2px}
+.ch{display:flex;flex-direction:column;gap:6px;padding:10px 4px 2px}
+.ch1{display:flex;align-items:center;gap:8px}
+.ct{margin:0;flex:1;min-width:0;font-size:14px;font-weight:800;line-height:1.25;color:#0B1220}
+.ch2{display:flex;align-items:center;gap:6px;min-height:26px;flex-wrap:wrap}
+.pk{flex:none;height:26px;padding:0 10px;border-radius:999px;border:0;background:#0065D6;color:#FFFFFF;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap}
+.pk:hover{background:#0057B8}
+.sum{font-size:12px;font-weight:600;color:#4B5563;white-space:nowrap}
+.rk{height:26px;display:inline-flex;align-items:center;gap:4px;padding:0 9px;border-radius:999px;border:0;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap}
+.rk[aria-pressed="true"]{box-shadow:inset 0 0 0 2px currentColor}
+.seg{display:grid;grid-template-columns:auto auto auto;gap:4px;padding:0 2px}
+.seg button{white-space:nowrap;display:flex;align-items:center;justify-content:center;gap:3px;height:28px;padding:0 7px;border-radius:999px;border:1px solid #E2E8F0;background:#FFFFFF;color:#3A4456;font-size:12px;font-weight:700;cursor:pointer}
+.seg button[aria-pressed="true"]{background:#0065D6;border-color:#0065D6;color:#FFFFFF}
+.lst{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin:0 -4px;padding:2px 4px 4px;scrollbar-width:thin;scrollbar-color:#CBD5E1 transparent}
+.lst>*{flex:none}
+.card{position:relative;flex:none;background:#FFFFFF;border:1px solid #E6EAF2;border-left-width:3px;border-radius:12px;padding:7px 8px 7px 8px;box-shadow:0 1px 2px rgba(16,24,40,.05);display:flex;flex-direction:column;gap:4px;transition:box-shadow .15s ease,border-color .15s ease,opacity .15s ease;cursor:grab}
+.card:hover{box-shadow:0 8px 20px rgba(16,24,40,.10);border-color:#CBD5E1}
+.card:focus-visible{outline:2px solid #0065D6;outline-offset:1px}
+.card.drag{opacity:.4;border-style:dashed;box-shadow:none}
+.card{user-select:none}
+.card.sel{background:#F5F9FF}
+.card.kin{box-shadow:0 0 0 2px #0065D6}
+.r1{display:flex;align-items:flex-start;gap:4px}
+.cbx{flex:none;width:24px;height:24px;display:grid;place-items:center;margin-left:-3px;cursor:pointer}
+.cbx input{width:16px;height:16px;margin:0;accent-color:#0065D6;cursor:pointer}
+.nm{flex:1;min-width:0;min-height:24px;border:0;background:none;padding:2px 0 0;font-size:14px;font-weight:800;line-height:1.25;color:#0B1220;text-align:left;cursor:pointer;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.nm:hover{color:#0057B8;text-decoration:underline}
+.ic{position:relative;flex:none;width:28px;height:28px;border-radius:8px;border:0;background:transparent;color:#4B5563;display:grid;place-items:center;cursor:pointer}
+.ic:hover{background:#F1F5F9;color:#0B1220}
+.att{flex:none;width:20px;height:20px;margin-top:2px;border-radius:50%;background:#ECFDF3;color:#067647;font-size:11px;font-weight:800;display:grid;place-items:center}
+.meta{display:flex;align-items:center;gap:6px;flex-wrap:nowrap;font-size:12px;color:#4B5563;min-height:22px;overflow:hidden}
+.chip{display:inline-flex;align-items:center;gap:4px;height:22px;font-size:12px;font-weight:800;border-radius:999px;padding:0 8px;white-space:nowrap;flex:none}
+.src{display:inline-flex;align-items:center;gap:5px;font-weight:700;color:#3A4456;white-space:nowrap}
+.src i{width:7px;height:7px;border-radius:50%}
+.ser{font-weight:800;color:#0B1220;background:#F1F5F9;border-radius:6px;padding:1px 6px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.r3{display:flex;align-items:center;gap:6px;min-height:24px;font-size:13px;color:#3A4456}
+.ph{display:inline-flex;align-items:center;gap:6px;min-height:24px;color:#3A4456;font-variant-numeric:tabular-nums;text-decoration:none;border-radius:6px;white-space:nowrap}
+.ph:hover{color:#0057B8}
+.ph svg{flex:none;color:#6B7280}
+.cp{width:24px;height:24px;border-radius:6px;border:0;background:transparent;color:#4B5563;display:none;place-items:center;cursor:pointer;font-size:12px;flex:none}
+.card:hover .cp,.card:focus-within .cp,.card.kin .cp{display:grid}
+.cp:hover{background:#F1F5F9}
+.p2{height:22px;padding:0 7px;border-radius:999px;border:0;background:#F1F5F9;color:#3A4456;font-size:12px;font-weight:800;cursor:pointer}
+.tm{margin-left:auto;font-size:12px;color:#4B5563;white-space:nowrap;font-variant-numeric:tabular-nums}
+.r4{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.dfr{display:flex;flex-direction:column;gap:2px;white-space:nowrap;font-size:12px;color:#3A4456;background:#EEF2FF;border-radius:8px;padding:4px 8px}
+.ft{display:flex;align-items:center;gap:4px}
+.fb{height:28px;min-width:28px;border-radius:999px;border:0;background:#F1F5F9;color:#3A4456;display:inline-flex;align-items:center;justify-content:center;gap:4px;font-size:12px;font-weight:700;cursor:pointer;padding:0 8px;box-sizing:border-box}
+.fb:hover{background:#E2E8F0}
+.fb.z{background:transparent;color:#6B7280;padding:0}
+.mg{max-width:118px}
+.mg b{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.av{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:10px;font-weight:800;flex:none;overflow:hidden}
+.more{flex:none;height:34px;border-radius:10px;border:1px dashed #CBD5E1;background:transparent;font-size:12px;font-weight:700;color:#3A4456;cursor:pointer}
+.more:hover{background:#FFFFFF}
+.empty{flex:none;display:flex;flex-direction:column;align-items:center;gap:6px;padding:22px 8px;border:1px dashed #CBD5E1;border-radius:12px;color:#4B5563;font-size:13px;font-weight:600;text-align:center}
+.sk{flex:none;height:112px;border-radius:12px;background:linear-gradient(90deg,#E9EEF5 0%,#F5F7FB 50%,#E9EEF5 100%);background-size:200% 100%;animation:sh 1.2s linear infinite}
+.skn{display:inline-block;width:26px;height:20px;border-radius:999px;background:linear-gradient(90deg,#E2E8F0 0%,#F5F7FB 50%,#E2E8F0 100%);background-size:200% 100%;animation:sh 1.2s linear infinite}
+.sv{position:absolute;inset:0;border-radius:11px;background:rgba(255,255,255,.75);display:flex;align-items:center;justify-content:center;gap:8px;font-size:12px;font-weight:800;color:#0057B8}
+.spin{width:16px;height:16px;border-radius:50%;border:2px solid #BFDBFE;border-top-color:#0065D6;animation:rot .8s linear infinite}
+/* popovers */
+.mn{position:absolute;z-index:60;width:256px;background:#FFFFFF;border:1px solid #E6EAF2;border-radius:12px;box-shadow:0 16px 36px rgba(16,24,40,.18);padding:6px;display:flex;flex-direction:column}
+.mn button{min-height:34px;border:0;background:transparent;text-align:left;padding:0 10px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:#0B1220;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.mn button:hover,.mn button:focus-visible{background:#F1F5F9;outline:0;box-shadow:inset 0 0 0 2px #0065D6}
+.mn .dg{color:#B42318}
+.mn [role=option]{min-height:36px;border:0;background:transparent;text-align:left;padding:0 10px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:#0B1220;display:flex;align-items:center;gap:8px}
+.mn [role=option]:hover,.mn [role=option]:focus-visible{background:#F1F5F9;outline:0;box-shadow:inset 0 0 0 2px #0065D6}
+.mn [role=option][aria-selected=true]{background:#EAF3FF;color:#0057B8;font-weight:800}
+.mn [role=option][aria-disabled=true]{color:#94A3B8;cursor:not-allowed}
+.fld{min-width:0;display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:700;color:#3A4456}
+.fld textarea{box-sizing:border-box;width:100%;min-width:0;border:1px solid #CBD5E1;border-radius:10px;padding:8px 10px;font-size:14px;color:#0B1220;resize:vertical}
+.fld input,.fld select{box-sizing:border-box;width:100%;min-width:0;height:40px;border:1px solid #CBD5E1;border-radius:10px;padding:0 10px;font-size:14px;color:#0B1220}
+.rad{display:flex;align-items:center;gap:10px;min-height:42px;padding:0 12px;border-radius:12px;border:1px solid #E6EAF2;font-size:14px;font-weight:600;cursor:pointer}
+.rad input{width:18px;height:18px;margin:0;accent-color:#0065D6}
+.mn .kb{font-size:11px;font-weight:700;color:#4B5563}
+.rp{background:#FFFFFF;border:1px solid #E6EAF2;border-radius:12px;box-shadow:0 12px 28px rgba(16,24,40,.12);padding:6px;display:flex;flex-direction:column;gap:2px;position:relative;z-index:40}
+.rp label{display:flex;align-items:center;gap:8px;min-height:30px;padding:0 6px;border-radius:8px;font-size:13px;font-weight:600;color:#0B1220;cursor:pointer}
+.rp label:hover{background:#F1F5F9}
+.rp b{margin-left:auto;font-size:12px;color:#4B5563}
+.mp input{height:34px;border:1px solid #CBD5E1;border-radius:8px;padding:0 10px;font-size:13px;margin:2px 2px 6px;outline:0}
+.mp input:focus{border-color:#0065D6;box-shadow:0 0 0 3px rgba(0,101,214,.18)}
+.load{margin-left:auto;font-size:12px;font-weight:700;color:#4B5563;white-space:nowrap}
+.vt{writing-mode:vertical-rl;transform:rotate(180deg);font-size:14px;font-weight:800;color:#0B1220;white-space:nowrap}
+.sch:focus-within{border-color:#0065D6!important;box-shadow:0 0 0 3px rgba(0,101,214,.2)}
+.drw{position:absolute;top:0;right:0;bottom:0;z-index:78;width:520px;background:#FFFFFF;border-left:1px solid #E6EAF2;box-shadow:-20px 0 50px rgba(11,18,32,.18);display:flex;flex-direction:column}
+.dtabs{display:flex;gap:2px;padding:0 20px;border-bottom:1px solid #E6EAF2}
+.dtabs button{height:42px;padding:0 12px;border:0;background:transparent;font-size:13px;font-weight:700;color:#3A4456;cursor:pointer;border-bottom:3px solid transparent;display:flex;align-items:center;gap:6px}
+.dtabs button[aria-selected=true]{color:#0057B8;border-bottom-color:#0065D6;font-weight:800}
+.dbody{flex:1;min-height:0;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:14px}
+.dsec{border:1px solid #E6EAF2;border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.dsec h4{margin:0;font-size:13px;font-weight:800;color:#0B1220}
+.kv{display:grid;grid-template-columns:120px 1fr;gap:6px 10px;font-size:13px}
+.kv span:nth-child(odd){color:#4B5563}
+.step{display:flex;gap:4px}
+.step i{flex:1;height:6px;border-radius:999px;background:#E2E8F0}
+.step i.on{background:#0065D6}
+.cm{display:flex;flex-direction:column;gap:4px;padding:10px 12px;border-radius:12px;background:#F8FAFC;font-size:13px;white-space:pre-line}
+.cm b{font-size:12px;color:#4B5563;font-weight:700}
+.btn2{height:36px;padding:0 14px;border-radius:10px;border:1px solid #CBD5E1;background:#FFFFFF;font-size:13px;font-weight:700;cursor:pointer;color:#0B1220}
+.btnp{height:36px;padding:0 14px;border-radius:10px;border:0;background:#0065D6;color:#FFFFFF;font-size:13px;font-weight:800;cursor:pointer}
+.skt{display:inline-block;width:36px;height:14px;border-radius:6px;vertical-align:middle;background:linear-gradient(90deg,#E2E8F0 0%,#F5F7FB 50%,#E2E8F0 100%);background-size:200% 100%;animation:sh 1.2s linear infinite}
+.mp{z-index:90}
+.seg2{display:flex;flex-wrap:wrap;gap:6px}
+.lvl4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.lvl4 label{min-width:0;padding:0 6px;white-space:nowrap}
+[data-modal] .btnp,[data-modal] .btn2{white-space:nowrap}
+.lvl4 label{justify-content:center;padding:0 6px;font-size:12px}
+.seg2.bad label{border-color:#D92D20}
+.err{font-size:12px;font-weight:700;color:#B42318}
+.ferr input,.ferr select,.ferr textarea{border-color:#D92D20 !important}
+.malert{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:#FEF3F2;border:1px solid #FDA29B;color:#7A271A;font-size:13px;font-weight:600}
+.seg2 label{display:flex;align-items:center;gap:6px;min-height:36px;padding:0 12px;border-radius:10px;border:1px solid #E6EAF2;font-size:13px;font-weight:600;cursor:pointer}
+.seg2 input{margin:0;accent-color:#0065D6}
+.demo{position:absolute;left:740px;top:10px;z-index:76;display:flex;align-items:center;gap:4px;padding:4px;border-radius:12px;background:#FFFFFF;border:1.5px dashed #7C3AED;box-shadow:0 6px 18px rgba(16,24,40,.12)}
+.demo span{font-size:11px;font-weight:800;color:#5B21B6;padding:0 6px;letter-spacing:.04em}
+.demo button{height:28px;padding:0 9px;border-radius:8px;border:0;background:transparent;font-size:12px;font-weight:700;color:#3A4456;cursor:pointer}
+.demo button[aria-pressed="true"]{background:#7C3AED;color:#FFFFFF}
+@keyframes up{from{transform:translateY(10px);opacity:0}to{transform:none;opacity:1}}
+@keyframes bar{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+@keyframes sh{from{background-position:200% 0}to{background-position:-200% 0}}
+@keyframes rot{to{transform:rotate(360deg)}}
+.up{animation:up .22s cubic-bezier(.2,.8,.2,1) both}
+.bar{animation:bar 10s linear both;transform-origin:left}
+.paused .bar{animation-play-state:paused}
+@media (prefers-reduced-motion:reduce){.up,.bar,.sk,.skn,.spin{animation:none}.card{transition:none}}
+button{transition:background .15s ease}
+.cvback{border:0;background:none;color:#0057B8;font-size:14px;font-weight:800;cursor:pointer;padding:6px 4px}
+.dmb{height:28px;padding:0 10px;border-radius:8px;border:0;background:transparent;font-size:12px;font-weight:700;color:#3A4456;cursor:pointer}
+.dmb[aria-pressed="true"]{background:#7C3AED;color:#FFFFFF}
+.dots{list-style:none;margin:0;padding:0;display:flex;gap:6px;flex-wrap:wrap}
+.dots li{display:flex;align-items:center;gap:6px;height:32px;padding:0 12px 0 6px;border-radius:999px;background:#FFFFFF;border:1px solid #E6EAF2;font-size:13px;font-weight:700;color:#4B5563}
+.dots li .dn{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:#E9EEF5;font-size:12px;font-weight:800}
+.dots li.ok{color:#067647}.dots li.ok .dn{background:#DCFAE6;color:#067647}
+.dots li.now{border-color:#0065D6;color:#0057B8;background:#EAF3FF}.dots li.now .dn{background:#0065D6;color:#FFFFFF}
+.box{background:#FFFFFF;border:1px solid #E6EAF2;border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.box h3{margin:0;font-size:14px;font-weight:800}
+.hint{font-size:12px;color:#4B5563;margin:4px 0 0}
+.st{margin:6px 0 0;font-size:12px;font-weight:800;color:#3A4456}
+.trial,.done{padding:10px 14px;border-radius:12px;background:#ECFDF3;border:1px solid #ABEFC6;font-size:13px;color:#067647}
+.trial b,.done b{margin-right:6px}
+.tar,.slots,.fd,.pat{display:flex;gap:8px;flex-wrap:wrap}
+.tar button,.slots button,.fd button,.pat button{min-height:40px;padding:6px 14px;border-radius:12px;border:1px solid #CBD5E1;background:#FFFFFF;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;gap:2px;font-size:13px;color:#0B1220}
+.tar button{min-width:170px}
+.slots button{width:112px}
+.tar small,.slots small{font-size:11px;color:#4B5563;font-weight:600}
+.pat button{flex-direction:row;align-items:center;font-weight:700}
+.tar button[aria-checked="true"],.slots button[aria-checked="true"],.fd button[aria-checked="true"],.pat button[aria-checked="true"]{border-color:#0065D6;background:#EAF3FF;box-shadow:inset 0 0 0 1px #0065D6}
+.slots button.busy{background:#F8FAFC;color:#94A3B8;cursor:not-allowed;border-style:dashed}
+.slots button.busy small{color:#B42318}
+.all summary{font-size:13px;font-weight:700;color:#0057B8;cursor:pointer}
+.opts{display:flex;flex-wrap:wrap;gap:8px}
+.op{display:flex;align-items:center;gap:8px;min-height:38px;padding:0 12px;border-radius:10px;border:1px solid #E6EAF2;font-size:13px;font-weight:600;cursor:pointer}
+.op.on{border-color:#0065D6;background:#EAF3FF}
+.op input,.yn input,.mem input{accent-color:#0065D6;margin:0}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.g1{gap:12px}
+.fld input,.fld select{box-sizing:border-box;width:100%;min-width:0;height:40px;border:1px solid #CBD5E1;border-radius:10px;padding:0 10px;font-size:14px;color:#0B1220}
+.fld small{font-weight:500;color:#4B5563}
+.row{display:flex;align-items:center;gap:8px}
+.okp{flex:none;font-size:12px;font-weight:800;color:#067647;background:#DCFAE6;border-radius:999px;padding:3px 10px}
+.sug{flex:none;font-size:12px;font-weight:700;color:#5B21B6;background:#F5F3FF;border-radius:999px;padding:3px 10px}
+.mem{border:0;margin:0;padding:0}.mem legend{font-size:12px;font-weight:800;color:#3A4456;margin-bottom:6px}
+.mem div{display:flex;flex-wrap:wrap;gap:8px}.mem label{display:flex;align-items:center;gap:6px;min-height:34px;padding:0 10px;border-radius:10px;border:1px solid #E6EAF2;font-size:13px;font-weight:600}
+.warn{margin:0;padding:8px 12px;border-radius:10px;background:#FFFAEB;border:1px solid #FEC84B;color:#93370D;font-size:13px;font-weight:600}
+.yn{display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:13px}.yn > span{min-width:200px;font-weight:700;color:#3A4456}.yn label{display:flex;align-items:center;gap:6px;font-weight:600}
+.aside{flex:none;width:300px;position:sticky;top:0;background:#FFFFFF;border:1px solid #E6EAF2;border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.aside h2{margin:0;font-size:15px;font-weight:800}
+.aside dl{margin:0;display:grid;grid-template-columns:96px 1fr;gap:8px 10px;font-size:13px}
+.aside dt{color:#4B5563;font-weight:600}.aside dd{margin:0;font-weight:700}.aside dd.mute{color:#94A3B8;font-weight:600}
+.toast{position:absolute;right:24px;bottom:84px;z-index:95;background:#0B1220;color:#FFFFFF;border-radius:14px;padding:12px 16px;font-size:13px;font-weight:700;box-shadow:0 20px 50px rgba(11,18,32,.35)}
+.box.bad{border-color:#D92D20;box-shadow:0 0 0 1px #D92D20}
+.chipb{height:28px;padding:0 10px;border-radius:999px;border:1px solid #CBD5E1;background:#FFFFFF;font-size:12px;font-weight:700;color:#0057B8;cursor:pointer}
+.lnk{border:0;background:none;padding:0;color:#0057B8;font-weight:800;font-size:12px;text-decoration:underline;cursor:pointer}
+.ctx{margin:0;display:grid;grid-template-columns:140px 1fr;gap:6px 10px;font-size:13px}.ctx dt{color:#4B5563;font-weight:600}.ctx dd{margin:0;font-weight:700}.ctx dd.mute{color:#94A3B8}
+</style>
+</helmet>
+<div data-root="1" style="height: 960px; box-sizing: border-box; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #0B1220; background: #F5F7FB; display: flex; position: relative; overflow: hidden">
+  <nav aria-label="Asosiy menyu" class="{{ sbCls }}">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 4px 2px 8px"><span aria-hidden="true" style="flex: none; width: 34px; height: 34px; border-radius: 9px; background: #0065D6; color: #FFFFFF; display: grid; place-items: center; font-weight: 800; font-size: 17px">H</span><strong class="brand" style="font-size: 16px; letter-spacing: .02em; flex: 1">HOMEWORK</strong><button type="button" class="ic" onClick="{{ toggleSb }}" aria-label="{{ sbLab }}" title="{{ sbLab }}" aria-expanded="{{ sbExp }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ sbIcon }}"></path></svg></button></div>
+    <sc-for list="{{ nav }}" as="n" hint-placeholder-count="19">
+      <sc-if value="{{ n.grp }}" hint-placeholder-val="{{ false }}"><h2 class="grp">{{ n.label }}</h2></sc-if>
+      <sc-if value="{{ n.item }}" hint-placeholder-val="{{ true }}">
+        <div class="nr"><button type="button" class="mi" title="{{ n.tip }}" aria-current="{{ n.cur }}" onClick="{{ n.pick }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ n.icon }}"></path></svg><span class="lbl">{{ n.label }}</span></button><sc-if value="{{ n.badge }}" hint-placeholder-val="{{ false }}"><button type="button" class="cnt" title="{{ n.aria }}" aria-label="{{ n.aria }}" onClick="{{ n.pickBadge }}">{{ n.badge }}</button></sc-if></div>
+      </sc-if>
+    </sc-for>
+    <span style="flex: 1"></span>
+    <div class="nr"><button type="button" class="mi" title="Boshqa boʻlimlar: Oʻquvchini tekshirish, Mobil ilova, Target lidlar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="5" cy="12" r="1.5"></circle><circle cx="12" cy="12" r="1.5"></circle><circle cx="19" cy="12" r="1.5"></circle></svg><span class="lbl">Boshqa boʻlimlar</span></button></div>
+    <div class="nr"><button type="button" class="mi" title="Sozlamalar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"></path></svg><span class="lbl">Sozlamalar</span></button></div>
+  </nav>
+  <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative">
+    <header style="height: 56px; flex: none; padding: 0 24px; display: flex; align-items: center; gap: 14px; background: #FFFFFF; border-bottom: 1px solid #E6EAF2; box-sizing: border-box">
+      <button type="button" class="cvback" onClick="{{ goBack }}">← Lidlar · Sinov darsida</button>
+      <span style="flex: 1"></span>
+      <div role="group" aria-label="Demo: qadamni tanlash" style="display: flex; align-items: center; gap: 4px; padding: 4px; border: 1px dashed #A78BFA; border-radius: 12px; background: #F5F3FF">
+        <span style="font-size: 11px; font-weight: 800; color: #5B21B6; padding: 0 6px">DEMO QADAM</span>
+        <sc-for list="{{ demoSteps }}" as="d" hint-placeholder-count="5"><button type="button" aria-pressed="{{ d.on }}" onClick="{{ d.pick }}" class="dmb">{{ d.t }}</button></sc-for>
+      </div>
+      <span style="display: flex; align-items: center; gap: 10px"><span aria-hidden="true" style="width: 36px; height: 36px; border-radius: 50%; background: #0B1220; color: #FFFFFF; display: grid; place-items: center; font-size: 13px; font-weight: 800">IM</span><span style="display: flex; flex-direction: column; line-height: 1.2"><b style="font-size: 14px">Islom Mominov</b><span style="font-size: 12px; color: #4B5563">ROP · Rus tili</span></span></span>
+    </header>
+
+    <main style="flex: 1; min-height: 0; overflow: auto; padding: 18px 28px 0; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px">
+      <div style="display: flex; flex-direction: column; gap: 4px">
+        <h1 style="margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.02em">{{ title }}</h1>
+        <p style="margin: 0; font-size: 13px; color: #4B5563">+998 94 610 72 35 · Rus tili · menejer Robiya · sinov: Ya 1-noy 18:00, Dilnoza Karimova</p>
+      </div>
+      <ol class="dots" aria-label="Oʻquvchiga aylantirish qadamlari">
+        <sc-for list="{{ stepDots }}" as="d" hint-placeholder-count="6"><li class="{{ d.cls }}" aria-current="{{ d.cur }}"><span class="dn" aria-hidden="true">{{ d.n }}</span><sc-if value="{{ d.done }}" hint-placeholder-val="{{ false }}"><span class="sr">bajarildi: </span></sc-if>{{ d.t }}</li></sc-for>
+      </ol>
+
+      <div style="display: flex; gap: 16px; align-items: flex-start; min-height: 0">
+        <section aria-labelledby="stepH" style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; padding-bottom: 90px">
+          <h2 id="stepH" class="sr">{{ stepName }}</h2>
+
+          <sc-if value="{{ s3 }}" hint-placeholder-val="{{ true }}">
+            <div class="trial"><b>✓ Sinov natijasi · Dilnoza K.</b> Oʻtkazildi. “Darsda faol boʻldi, guruhga tayyor”</div>
+            <div class="{{ bx.tar }}" id="f_tar"><h3>Tarif *</h3><div class="tar" role="radiogroup" aria-label="Tarif" aria-invalid="{{ ivTar }}"><sc-for list="{{ tariffs }}" as="t" hint-placeholder-count="3"><button type="button" role="radio" aria-checked="{{ t.on }}" onClick="{{ t.pick }}"><b>{{ t.t }}</b><small>{{ t.sub }}</small></button></sc-for></div>
+              <p class="hint">Dars davomiyligini tanlang · ustoz tavsiyasi: <b>“Darsda faol boʻldi, guruhga tayyor”</b> · narx CRM'da sozlanmagan — summa 4-qadamda tanlanadi</p></div>
+            <div class="{{ bx.sch }}" id="f_sch"><h3>Doimiy jadval · Ustoz</h3>
+              <div style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap">
+                <div style="display: flex; flex-direction: column; gap: 6px"><span style="font-size: 13px"><b>Ustoz: {{ tchName }}</b>{{ tchTrial }}</span><span style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center; font-size: 12px; color: #4B5563">Boshqa ustoz:<sc-for list="{{ otherT }}" as="t" hint-placeholder-count="2"><button type="button" class="chipb" aria-pressed="{{ t.on }}" onClick="{{ t.pick }}">{{ t.t }}</button></sc-for></span></div>
+                <div role="radiogroup" aria-label="Dars kunlari" class="pat"><sc-for list="{{ pats }}" as="p" hint-placeholder-count="2"><button type="button" role="radio" aria-checked="{{ p.on }}" onClick="{{ p.pick }}">{{ p.t }}</button></sc-for></div>
+              </div>
+              <p class="st">Boʻsh vaqtlar — tanlangan kunlarning uchalasida ham boʻsh:</p>
+              <div class="slots" role="radiogroup" aria-label="Dars vaqti"><sc-for list="{{ slots }}" as="x" hint-placeholder-count="8"><button type="button" role="radio" aria-checked="{{ x.on }}" aria-disabled="{{ x.dis }}" onClick="{{ x.pick }}" class="{{ x.cls }}"><b>{{ x.t }}</b><small>{{ x.sub }}</small></button></sc-for></div>
+              <details class="all"><summary>Barcha vaqtlar jadvali (har kun alohida)</summary><p class="hint">Har kun uchun 15 daqiqalik kataklar — Dars jadvali v3 bilan bir xil koʻrinish (oʻzgarmaydi).</p></details>
+              <sc-if value="{{ showFd }}" hint-placeholder-val="{{ true }}"><p class="st" id="f_fd">Birinchi dars</p>
+              <div class="fd" role="radiogroup" aria-label="Birinchi dars"><sc-for list="{{ firsts }}" as="f" hint-placeholder-count="3"><button type="button" role="radio" aria-checked="{{ f.on }}" onClick="{{ f.pick }}">{{ f.t }}</button></sc-for></div></sc-if>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ s4 }}" hint-placeholder-val="{{ false }}">
+            <div class="{{ bx.pt }}" id="f_pt"><h3>Toʻlov turi *</h3><div class="opts"><sc-for list="{{ payTypes }}" as="o" hint-placeholder-count="4"><label class="{{ o.cls }}"><input type="radio" name="pt" checked="{{ o.on }}" onChange="{{ o.pick }}">{{ o.t }}</label></sc-for></div><sc-if value="{{ isFull }}" hint-placeholder-val="{{ false }}"><p class="hint" style="margin: 0">Toʻlov usuli va chek toʻlov yopilganda soʻraladi.</p></sc-if></div>
+            <sc-if value="{{ isInst }}" hint-placeholder-val="{{ false }}"><div class="{{ bx.ip }}" id="f_ip"><h3>Nasiya hamkori *</h3><div class="opts"><sc-for list="{{ partners }}" as="o" hint-placeholder-count="3"><label class="{{ o.cls }}"><input type="radio" name="ip" checked="{{ o.on }}" onChange="{{ o.pick }}">{{ o.t }}</label></sc-for></div></div></sc-if>
+            <div class="box"><h3>Tarif</h3><p class="hint" style="margin: 0">Tarif: <b>{{ tarLab }}</b> · 3-qadamda tanlangan</p></div>
+            <div class="{{ bx.am }}" id="f_am"><h3>Summa *</h3><div class="opts"><sc-for list="{{ amounts }}" as="o" hint-placeholder-count="7"><label class="{{ o.cls }}"><input type="radio" name="am" checked="{{ o.on }}" onChange="{{ o.pick }}">{{ o.t }}</label></sc-for></div>
+              <sc-if value="{{ isCustom }}" hint-placeholder-val="{{ false }}"><label class="fld" style="width: 260px; margin-top: 8px">Boshqa summa *<input type="text" inputmode="numeric" placeholder="Masalan: 2 400 000" value="{{ customV }}" onInput="{{ customIn }}"></label></sc-if></div>
+            <sc-if value="{{ isPartial }}" hint-placeholder-val="{{ false }}"><div class="{{ bx.pp }}" id="f_pp"><h3>Qisman toʻlov tafsilotlari</h3>
+              <div class="g2">
+                <label class="fld">Qancha toʻladi *<input type="text" inputmode="numeric" placeholder="Masalan: 500 000" value="{{ paidV }}" onInput="{{ paidIn }}"></label>
+                <label class="fld">Qarzdorligi<input type="text" inputmode="numeric" placeholder="Avtomatik hisoblanadi yoki qoʻlda kiriting" value="{{ debtV }}" onInput="{{ debtIn }}"><small>Avtomatik hisoblandi · xohlasangiz qoʻlda oʻzgartirishingiz mumkin</small></label>
+                <label class="fld">Qachon toʻladi *<input type="date" value="{{ lastV }}" onInput="{{ lastIn }}"></label>
+                <label class="fld">Keyingi toʻlovni qachon amalga oshiradi *<input type="date" value="{{ nextV }}" onInput="{{ nextIn }}"></label>
+              </div>
+              <div class="g2" style="margin-top: 4px"><label class="fld">Toʻlov usuli *<select onChange="{{ pmIn }}"><option value="">Usulni tanlang</option><sc-for list="{{ methods }}" as="m" hint-placeholder-count="7"><option value="{{ m.id }}" selected="{{ m.sel }}">{{ m.t }}</option></sc-for></select></label>
+                <div class="fld">Chek (rasm yoki PDF) *<span class="row"><button type="button" class="btn2" onClick="{{ rcPick }}">{{ rcLab }}</button><sc-if value="{{ rcOn }}" hint-placeholder-val="{{ false }}"><span class="okp">✓ yuklandi</span></sc-if></span></div></div>
+              <p class="hint" style="margin: 0">Faqat haqiqatan qabul qilingan tushum uchun majburiy. Kredit arizasi tushum emas.</p></div></sc-if>
+            <sc-if value="{{ smallAsk }}" hint-placeholder-val="{{ false }}"><div class="warn" role="alertdialog" aria-label="Summani tasdiqlash" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap"><span style="flex: 1">{{ smallTxt }}</span><button type="button" class="btn2" onClick="{{ smallNo }}">Bekor qilish</button><button type="button" class="btnp" onClick="{{ smallYes }}">OK — summa toʻgʻri</button></div></sc-if>
+          </sc-if>
+
+          <sc-if value="{{ s5 }}" hint-placeholder-val="{{ false }}">
+            <p style="margin: 0; font-size: 13px; color: #4B5563">{{ s5sub }}</p>
+            <div class="box g1">
+              <label class="{{ linkCls }}">Guruh havolasi *<span class="row"><input type="url" placeholder="https://t.me/+..." value="{{ linkV }}" onInput="{{ linkIn }}" autocomplete="off"><sc-if value="{{ linkOk }}" hint-placeholder-val="{{ false }}"><span class="okp">✓ toʻgʻri havola</span></sc-if></span></label>
+              <label class="{{ nameCls }}">Guruh nomi *<span class="row"><input type="text" maxlength="80" value="{{ gnameV }}" onInput="{{ gnameIn }}" placeholder="C40 | onlayn rus tili"><sc-if value="{{ sugOn }}" hint-placeholder-val="{{ false }}"><span class="sug">tizim taklifi · keyingi boʻsh raqam</span></sc-if></span><small>Telegram'dagi nom bilan bir xil yozing · takrorlanmasligi tekshiriladi</small></label>
+              <label class="{{ asCls }}">Yordamchi ustoz *<select onChange="{{ asIn }}"><option value="">— Yordamchi ustozni tanlang —</option><sc-for list="{{ assistants }}" as="a" hint-placeholder-count="3"><option value="{{ a.id }}" selected="{{ a.sel }}">{{ a.t }}</option></sc-for></select><small>Guruhga shu ustoz qoʻshiladi · 6-qadamda qayta soʻralmaydi</small></label>
+              <fieldset class="mem"><legend>Guruhga qoʻshilganini belgilang</legend><div><sc-for list="{{ members }}" as="m" hint-placeholder-count="5"><label><input type="checkbox" checked="{{ m.on }}" onChange="{{ m.pick }}">{{ m.t }}</label></sc-for></div></fieldset>
+              <sc-if value="{{ memWarn }}" hint-placeholder-val="{{ false }}"><p class="warn">{{ memWarn }}</p></sc-if>
+              <p class="hint" style="margin: 0">Saqlangach: student appda “Telegram guruh” tugmasi shu havola bilan ochiladi · ustoz va yordamchi roʻyxatida guruh nomi chiqadi.</p>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ s6 }}" hint-placeholder-val="{{ false }}">
+            <div class="{{ bx.q }}">
+              <div class="yn" id="f_bs"><span>Oʻquvchiga aylansinmi? *</span><sc-for list="{{ ynBecome }}" as="o" hint-placeholder-count="2"><label><input type="radio" name="bs" checked="{{ o.on }}" onChange="{{ o.pick }}">{{ o.t }}</label></sc-for></div>
+              <div class="yn" id="f_pl"><span>Oʻquvchiga platforma ulab berildimi? *</span><sc-for list="{{ ynPlat }}" as="o" hint-placeholder-count="2"><label><input type="radio" name="pl" checked="{{ o.on }}" onChange="{{ o.pick }}">{{ o.t }}</label></sc-for></div>
+              </div>
+            <div class="{{ bx.ct }}"><h3>Oʻquvchi bilan shartnoma tuzildimi? *</h3><div class="opts" id="f_ct"><sc-for list="{{ contracts }}" as="o" hint-placeholder-count="2"><label class="{{ o.cls }}"><input type="radio" name="ct" checked="{{ o.on }}" onChange="{{ o.pick }}">{{ o.t }}</label></sc-for></div>
+              <p class="hint">Shartnoma raqami saqlash bosilganda avtomatik generatsiya qilinadi</p></div>
+            <div class="{{ bx.kb }}"><h3>Kitob yetkazib berish boʻyicha</h3>
+              <div class="g2">
+                <label class="fld" id="f_fn">Ism *<input type="text" placeholder="Ism" value="{{ fnV }}" onInput="{{ fnIn }}"></label>
+                <label class="fld" id="f_ln">Familiya *<input type="text" placeholder="Familiya" value="{{ lnV }}" onInput="{{ lnIn }}"></label>
+              </div>
+              <div class="yn" id="f_gd"><span>Jinsi *</span><sc-for list="{{ genders }}" as="o" hint-placeholder-count="2"><label><input type="radio" name="gd" checked="{{ o.on }}" onChange="{{ o.pick }}">{{ o.t }}</label></sc-for></div>
+              <div class="yn" id="f_cl"><span>Kurs darajasi *</span><sc-for list="{{ levels }}" as="o" hint-placeholder-count="4"><label><input type="radio" name="cl" checked="{{ o.on }}" onChange="{{ o.pick }}">{{ o.t }}</label></sc-for></div>
+              <label class="fld" id="f_ad" style="margin-top: 8px">Kitob yetkazib berilishdagi aniq manzil *<input type="text" placeholder="Manzil" value="{{ adV }}" onInput="{{ adIn }}"></label>
+              <p class="hint">Oʻqituvchi: <b>{{ tchName }}</b> · {{ schedTxt }} · 3-qadamda tanlangan <button type="button" class="lnk" onClick="{{ toStep3 }}">Oʻzgartirish</button> · Yordamchi ustoz: <b>{{ asLab }}</b> · 5-qadamda tanlangan</p>
+              <p class="hint" style="margin: 0">Telegram guruh: <b>{{ gnameV }}</b> · {{ linkShort }} </p>
+              <label class="fld" style="width: 260px">Ilk dars boshlash sanasi *<input type="date" value="{{ fdV }}" onInput="{{ fdIn }}"><small>{{ fdLab }} · 3-qadamdan</small></label></div>
+          </sc-if>
+
+          <sc-if value="{{ s8 }}" hint-placeholder-val="{{ false }}"><div class="done" role="status" style="padding: 18px 20px; font-size: 15px"><b>✓ Toʻlov yopildi</b> Malika Sodiqova “Toʻlov yopildi” bosqichiga oʻtdi · izoh yozildi{{ doneMoney }}</div></sc-if>
+          <sc-if value="{{ s7 }}" hint-placeholder-val="{{ false }}">
+            <div class="done"><b>✓ Oʻquvchi yaratildi</b> Ilova logini yaratildi · kitob yetkazish kartochkasi ochildi · lid “Toʻlov jarayonida” · toʻlovni yoping.</div>
+            <div class="box"><h3>Toʻlov maʼlumotlari</h3><dl class="ctx"><sc-for list="{{ ctx }}" as="r" hint-placeholder-count="4"><dt>{{ r.k }}</dt><dd class="{{ r.cls }}">{{ r.v }}</dd></sc-for></dl></div>
+            <div class="{{ bx.cl }}">
+              <div class="g2">
+                <label class="fld" id="f_cd">Toʻlov yopilgan sana *<input type="date" value="{{ closedV }}" onInput="{{ closedIn }}"></label>
+                <label class="fld" id="f_tot">Jami qabul qilingan summa — zaklad va oldingi toʻlovlar bilan (soʻm) *<input type="text" inputmode="numeric" placeholder="Masalan: 500,000" value="{{ totalV }}" onInput="{{ totalIn }}"></label>
+              </div>
+              <label class="op" style="align-self: flex-start" id="f_nd"><input type="checkbox" checked="{{ noDebtOn }}" onChange="{{ noDebtPick }}">Oʻquvchi haqiqatdan ham qarzdor emas</label>
+            </div>
+            <sc-if value="{{ hasDebtBox }}" hint-placeholder-val="{{ false }}"><div class="{{ bx.dbt }}"><h3>Avvalgi qarz: {{ debtV }}</h3>
+              <div class="yn"><span>Qarz haqiqatdan yopilganmi? *</span><sc-for list="{{ ynDebt }}" as="o" hint-placeholder-count="2"><label><input type="radio" name="dc" checked="{{ o.on }}" onChange="{{ o.pick }}">{{ o.t }}</label></sc-for></div>
+              <sc-if value="{{ dcYes }}" hint-placeholder-val="{{ false }}"><div class="yn"><span>Qanday usulda yopildi? *</span><sc-for list="{{ dcMethods }}" as="o" hint-placeholder-count="2"><label><input type="radio" name="dcm" checked="{{ o.on }}" onChange="{{ o.pick }}">{{ o.t }}</label></sc-for></div>
+                <sc-if value="{{ dcInst }}" hint-placeholder-val="{{ false }}"><div class="yn"><span>Qaysi nasiya hamkor orqali? *</span><sc-for list="{{ dcPartners }}" as="o" hint-placeholder-count="3"><label><input type="radio" name="dcp" checked="{{ o.on }}" onChange="{{ o.pick }}">{{ o.t }}</label></sc-for></div>
+                <label class="fld" style="width: 260px">Qarzlar yopilgan sana *<input type="date" value="{{ dcDateV }}" onInput="{{ dcDateIn }}"></label></sc-if></sc-if></div></sc-if>
+            <sc-if value="{{ hasDebtor }}" hint-placeholder-val="{{ false }}"><div class="{{ bx.dbt }}"><h3>Qarzdor — umumiy summa: {{ amtLabV }}</h3>
+              <div class="yn"><span>Toʻlov amalga oshirilganmi? *</span><sc-for list="{{ ynDebt }}" as="o" hint-placeholder-count="2"><label><input type="radio" name="dc" checked="{{ o.on }}" onChange="{{ o.pick }}">{{ o.t }}</label></sc-for></div>
+              <sc-if value="{{ dcYes }}" hint-placeholder-val="{{ false }}"><label class="fld" style="width: 260px">Qachon tushdi? *<input type="date" value="{{ dcDateV }}" onInput="{{ dcDateIn }}"></label></sc-if></div></sc-if>
+            <sc-if value="{{ hasInst }}" hint-placeholder-val="{{ false }}"><div class="{{ bx.dbt }}"><h3>Nasiya hamkor: {{ ipLab }} — {{ amtLabV }}</h3>
+              <div class="yn"><span>Nasiya hamkordan toʻlov tushganmi? *</span><sc-for list="{{ ynDebt }}" as="o" hint-placeholder-count="2"><label><input type="radio" name="dc" checked="{{ o.on }}" onChange="{{ o.pick }}">{{ o.t }}</label></sc-for></div>
+              <sc-if value="{{ dcYes }}" hint-placeholder-val="{{ false }}"><label class="fld" style="width: 260px">Qachon tushdi? *<input type="date" value="{{ dcDateV }}" onInput="{{ dcDateIn }}"></label></sc-if></div></sc-if>
+            <sc-if value="{{ smallAsk }}" hint-placeholder-val="{{ false }}"><div class="warn" role="alertdialog" aria-label="Summani tasdiqlash" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap"><span style="flex: 1">{{ smallTxt }}</span><button type="button" class="btn2" onClick="{{ smallNo }}">Bekor qilish</button><button type="button" class="btnp" onClick="{{ smallYes }}">OK — summa toʻgʻri</button></div></sc-if>
+            <sc-if value="{{ proofNeed }}" hint-placeholder-val="{{ true }}"><div class="{{ bx.pr }}"><h3>{{ proofHead }}</h3><div class="g2"><label class="fld">Toʻlov usuli *<select onChange="{{ pm2In }}"><option value="">Usulni tanlang</option><sc-for list="{{ methods2 }}" as="m" hint-placeholder-count="7"><option value="{{ m.id }}" selected="{{ m.sel }}">{{ m.t }}</option></sc-for></select></label>
+              <div class="fld">Chek (rasm yoki PDF) *<span class="row"><button type="button" class="btn2" onClick="{{ rc2Pick }}">{{ rc2Lab }}</button><sc-if value="{{ rc2On }}" hint-placeholder-val="{{ false }}"><span class="okp">✓ yuklandi</span></sc-if></span></div></div>
+              <p class="hint" style="margin: 0">Faqat haqiqatan qabul qilingan tushum uchun majburiy. Kredit arizasi tushum emas.</p></div></sc-if>
+          </sc-if>
+        </section>
+
+        <aside aria-label="Xulosa" class="aside">
+          <h2>Xulosa</h2>
+          <dl><sc-for list="{{ summary }}" as="r" hint-placeholder-count="7"><dt>{{ r.k }}</dt><dd class="{{ r.cls }}">{{ r.v }}</dd></sc-for></dl>
+          <p class="hint" style="margin: 0">{{ asideNote }}</p>
+        </aside>
+      </div>
+    </main>
+
+    <footer style="position: absolute; left: 0; right: 0; bottom: 0; height: 68px; padding: 0 28px; display: flex; align-items: center; gap: 10px; background: #FFFFFF; border-top: 1px solid #E6EAF2; box-sizing: border-box">
+      <sc-if value="{{ err }}" hint-placeholder-val="{{ false }}"><p class="err" role="alert" style="margin: 0">{{ err }}</p></sc-if>
+      <span style="flex: 1"></span>
+      <span style="font-size: 13px; font-weight: 700; color: #4B5563">{{ count }}</span>
+      <sc-if value="{{ canBack }}" hint-placeholder-val="{{ false }}"><button type="button" class="btn2" onClick="{{ back }}" title="{{ backT }}">Orqaga</button></sc-if><sc-if value="{{ canCancel }}" hint-placeholder-val="{{ true }}"><button type="button" class="btn2" onClick="{{ goBack }}">Bekor qilish</button></sc-if>
+      <button type="button" class="btnp" onClick="{{ next }}" aria-disabled="{{ saving }}">{{ btnLab }}</button>
+    </footer>
+    <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}"><div role="status" class="toast">{{ toast }}</div></sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":960}}'>
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.state = { sb: true, step: 3, tar: '', tch: 'dil', pat: 'mwf', slot: '', fd: '', pt: '', ip: '', am: '', custom: '', smallOk: false, smallAsk: false, paid: '', debt: '', last: '', nextP: '', pm: '', rc: false, link: '', gname: '', sug: false, as: '', mem: {}, bs: '', pl: '', ct: '', fn: 'Malika', ln: 'Sodiqova', gd: '', cl: '', ad: '', closed: '2026-11-02', total: '', noDebt: false, dc: '', dcm: '', dcp: '', dcDate: '', pm2: '', rc2: false, err: '', errK: '', toast: '' };
+    this._t = null;
+  }
+  focusSoon(sel) { setTimeout(() => { const el = document.querySelector(sel); if (el && el.focus) el.focus(); }, 30); }
+  renderVals() {
+    const s = this.state;
+    const IC = {
+      home: 'M3 10.5 12 4l9 6.5V20H3z', leads: 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 3a4 4 0 110 8 4 4 0 010-8z',
+      cal: 'M3 9.5h18M8 3v3M16 3v3M5 4.5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2v-12a2 2 0 012-2z', trial: 'M8.5 12l2.5 2.5 4.5-5M6 4h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2z',
+      check: 'M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11', clock: 'M12 3a9 9 0 110 18 9 9 0 010-18zM12 7v5l3 2', lock: 'M7 11V7a5 5 0 0110 0v4M5 11h14v10H5z', arch: 'M21 8v13H3V8M1 3h22v5H1zM10 12h4',
+      funnel: 'M3 4h18l-7 8v6l-4 2v-8z', rating: 'M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0z', plan: 'M12 3a9 9 0 110 18 9 9 0 010-18zM12 8a4 4 0 110 8 4 4 0 010-8z', debt: 'M2 6h20v13H2zM2 10h20',
+      script: 'M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9zM14 3v6h6M8 13h8M8 17h5', sms: 'M4 4h16v12H5l-1 4zM8 9h8M8 12h5', stu: 'M2 8l10-5 10 5-10 5zM6 10.5V16c0 1.5 2.7 3 6 3s6-1.5 6-3v-5.5', tg: 'M21 4L3 11l6 2 2 6 3-4 5 4z'
+    };
+    const I = (k, label, icon, o) => Object.assign({ item: true, grp: false, k, label, tip: label, icon: IC[icon], cur: 'false', badge: '', aria: '', pick: () => this.setState({ viaBadge: false }), pickBadge: () => {} }, o || {});
+    const G = l => ({ grp: true, item: false, label: l });
+
+    const mkNav = (unN, loading) => [
+      I('home', 'Bosh sahifa', 'home'), I('leads', 'Lidlar', 'leads', { cur: 'page', badge: loading ? '…' : unN ? String(unN) : '', aria: unN + ' ta menejersiz ochiq lid — faqat ularni koʻrsatish', pickBadge: () => this.setState({ viaBadge: true, picked: {}, allNew: false, excl: {} }) }), I('cal', 'Dars jadvali', 'cal'), I('trial', 'Sinov nazorati', 'trial'),
+      G('NAZORAT'), I('check', 'Tasdiqlar', 'check', { badge: '3', aria: '3 ta tasdiq kutilmoqda' }), I('sla', 'SLA', 'clock', { badge: '19', aria: '19 ta SLA harakat kerak', tip: 'SLA — javob muddati nazorati' }), I('lock', 'Qotgan lidlar qoidasi', 'lock', { tip: 'Qotgan lidlar qoidasi (sozlama)' }), I('arch', 'Arxiv', 'arch', { tip: 'Arxiv (tarix)' }),
+      G('SOTUV'), I('funnel', 'Voronka', 'funnel', { tip: 'Voronka: statistika va menejerlar samaradorligi' }), I('rating', 'Reyting va bonus', 'rating'), I('plan', 'Sotuv rejasi', 'plan', { tip: 'Sotuv rejasi (koʻrish)' }), I('debt', 'Qarzdorlar', 'debt'), I('script', 'Skript va yoʻriqnoma', 'script'), I('sms', 'SMS yuborish', 'sms'),
+      G('OʻQUVCHILAR'), I('stu', 'Oʻquvchilar', 'stu'), I('tg', 'Telegram guruh', 'tg')
+    ];
+    const nav = mkNav(79, false).map(n => n.k === 'leads' ? Object.assign({}, n, { pickBadge: () => {} }) : n);
+    const DAYN = ['Ya', 'Du', 'Se', 'Ch', 'Pa', 'Ju', 'Sh'];
+    const PAT = { mwf: { t: 'Du · Ch · Ju' }, tts: { t: 'Se · Pa · Sh' } };
+    const TN = { dil: 'Dilnoza Karimova', sha: 'Shahnoza Qodirova', nod: 'Nodira Aliyeva' };
+    // [vaqt, band kunlar (mwf), band kunlar (tts)] — uchala kun boʻsh boʻlsa tanlanadi
+    const SLB = { dil: [['08:00', [], [2]], ['09:30', [1], []], ['14:00', [], []], ['15:30', [], [4, 6]], ['17:00', [], []], ['18:00', [3], []], ['19:00', [], []], ['20:30', [], [2]]],
+      sha: [['10:00', [], []], ['16:00', [], [4]], ['19:30', [], []]], nod: [['09:00', [], []], ['18:30', [], []]] };
+    const SL = SLB[s.tch];
+    // Bugun Du 2-noy, 01:43 — Du·Ch·Ju uchun bugungi vaqt hali oʻtmagan
+    const FD = { mwf: [['2026-11-02', 'Du 2-noy'], ['2026-11-04', 'Ch 4-noy'], ['2026-11-06', 'Ju 6-noy']], tts: [['2026-11-03', 'Se 3-noy'], ['2026-11-05', 'Pa 5-noy'], ['2026-11-07', 'Sh 7-noy']] };
+    const PT = [['full', 'Toʻliq toʻlov'], ['partial', 'Qisman toʻlov'], ['debtor', 'Qarzdor (keyin toʻlaydi)'], ['installment', 'Nasiya (hamkor orqali)']];
+    const IP = [['paylater', 'Paylater'], ['uzum', 'Uzum Nasiya'], ['other', 'Boshqa']];
+    const AM = [['1200000', '1,200,000'], ['1500000', '1,500,000'], ['1800000', '1,800,000'], ['2100000', '2,100,000'], ['4500000', '4,500,000'], ['6000000', '6,000,000'], ['other', 'Boshqa summa']];
+    const CT = [['partial', 'Qisman toʻlov boʻyicha shartnoma tuzildi'], ['full', 'Toʻliq toʻlov boʻyicha shartnoma tuzildi']];
+    const LV = [['zero', '0 dan'], ['beginner', 'Boshlangʻich'], ['intermediate', 'Oʻrta'], ['advanced', 'Yuqori']];
+    const AS = [['sev', 'Sevinch Olimova'], ['otb', 'Otabek Yusupov'], ['jav', 'Javlonbek Rahimov']];
+    const METH = [['card', 'Karta'], ['uzum', 'Uzum Nasiya'], ['paylater', 'Paylater'], ['bank', 'Bank hisobi'], ['payme', 'Payme'], ['click', 'Click'], ['cash', 'Naqd']];
+    const LINK_RE = /^https:\/\/t\.me\/(\+[A-Za-z0-9_-]{8,64}|joinchat\/[A-Za-z0-9_-]{8,64}|[A-Za-z0-9_]{5,32})$/;
+    const num = v => String(v || '').replace(/\D/g, '');
+    const fmt = v => String(Math.round(+v || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    const set = o => this.setState(Object.assign({ err: '', errK: '' }, o));
+    const opt = (arr, key) => arr.map(o => ({ t: o[1], on: s[key] === o[0], cls: 'op' + (s[key] === o[0] ? ' on' : ''), pick: () => set({ [key]: o[0] }) }));
+    const amt = s.am === 'other' ? +num(s.custom) : +s.am || 0;
+    const amtLab = s.am === 'other' ? (num(s.custom) ? fmt(num(s.custom)) : '') : (AM.find(a => a[0] === s.am) || [0, ''])[1];
+    const autoDebt = s.pt === 'partial' && amt && num(s.paid) ? Math.max(0, amt - +num(s.paid)) : 0;
+    const debtVal = num(s.debt) ? +num(s.debt) : autoDebt;
+    const slotOk = x => (s.pat === 'mwf' ? x[1] : x[2]).length === 0;
+    const fdRow = FD[s.pat].find(f => f[0] === s.fd);
+    const fdLab = s.fd ? (fdRow ? fdRow[1] : (['Ya', 'Du', 'Se', 'Ch', 'Pa', 'Ju', 'Sh'][new Date(s.fd + 'T00:00:00Z').getUTCDay()] + ' ' + (+s.fd.slice(8)) + '-' + ['yan', 'fev', 'mar', 'apr', 'may', 'iyun', 'iyul', 'avg', 'sen', 'okt', 'noy', 'dek'][+s.fd.slice(5, 7) - 1])) + (s.slot ? ' · ' + s.slot : '') : '';
+    const addD = (d, n) => { const x = new Date(d + 'T00:00:00Z'); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
+    const ddmm = d => d.slice(8, 10) + '.' + d.slice(5, 7);
+    const ptLab = (PT.find(p => p[0] === s.pt) || [0, ''])[1];
+    const ipLab = (IP.find(p => p[0] === s.ip) || [0, ''])[1];
+    const asLab = (AS.find(a => a[0] === s.as) || [0, ''])[1];
+    const short = n => { const p = String(n || '').split(' '); return p[0] ? p[0] + (p[1] ? ' ' + p[1][0] + '.' : '') : '—'; };
+    // ROP oʻzi aylantirayotgani uchun "ROP" va "Siz" bitta qatorga birlashtirilgan
+    const MEM = [['student', 'Oʻquvchi · Malika'], ['teacher', 'Ustoz · ' + short(TN[s.tch])], ['assistant', 'Yordamchi' + (asLab ? ' · ' + short(asLab) : ' ustoz')], ['rop', 'ROP (siz) · Islom M.']];
+    const STEPS = ['Sinov', 'Natija', 'Tarif va jadval', 'Toʻlov', 'Telegram guruh', 'Ilova login'];
+    const hasDebt = s.pt === 'partial', hasDebtor = s.pt === 'debtor', hasInst = s.pt === 'installment';
+    const alreadyPaid = s.pt === 'partial' ? +num(s.paid) : 0;
+    const received = s.pt !== 'installment' || s.dc === 'yes';
+    const proofNeed = received && +num(s.total) > alreadyPaid;
+    const valid = () => {
+      if (s.step === 3) { if (!s.tar) return ['Dars davomiyligini tanlang', '#f_tar button', 'tar']; if (!s.slot) return ['Dars kunini va soatini jadvaldan tanlang', '.slots button', 'sch']; }
+      if (s.step === 4) {
+        if (!s.pt) return ['Toʻlov turini tanlang', '#f_pt input', 'pt'];
+        if (!s.am) return ['Summani tanlang', '#f_am input', 'am'];
+        if (s.pt === 'installment' && !s.ip) return ['Nasiya hamkorini tanlang', '#f_ip input', 'ip'];
+        if (s.am === 'other' && !(+num(s.custom) > 0)) return ['Boshqa summani kiriting', '#f_am input[type=text]', 'am'];
+        if (s.pt === 'partial') {
+          if (!num(s.paid)) return ['Qancha toʻlaganini kiriting', '#f_pp input', 'pp']; if (!(+num(s.paid) > 0)) return ['Toʻlangan summa notoʻgʻri', '#f_pp input', 'pp'];
+          if (+num(s.paid) > amt) return ['Toʻlangan summa umumiy summadan katta boʻlmasligi kerak', '#f_pp input', 'pp'];
+          if (!s.last) return ['Oxirgi toʻlov sanasini kiriting', '#f_pp input[type=date]', 'pp'];
+          if (!s.nextP) return ['Keyingi toʻlov sanasini kiriting', '#f_pp input[type=date]', 'pp'];
+          if (!s.pm) return ['Toʻlov usulini tanlang', '#f_pp select', 'pp'];
+          if (!s.rc) return ['Chekni rasm yoki PDF shaklida yuklang', '#f_pp .row button', 'pp'];
+        }
+      }
+      if (s.step === 5) { const l = s.link.trim(); if (!l) return ['Telegram guruh havolasini kiriting', 'input[type=url]', 'link']; if (!LINK_RE.test(l)) return ['Havola https://t.me/... koʻrinishida boʻlsin', 'input[type=url]', 'link']; if (s.gname.trim().length < 2) return ['Telegram guruh nomini kiriting', 'input[maxlength]', 'gname']; if (!s.as) return ['Yordamchi ustozni tanlang', '.g1 select', 'as']; }
+      if (s.step === 6) { if (!s.bs) return ['«Oʻquvchiga aylansinmi?» savoliga javob bering', '#f_bs input', 'q']; if (!s.pl) return ['«Platforma ulab berildimi?» savoliga javob bering', '#f_pl input', 'q']; if (!s.ct) return ['Shartnoma turini tanlang', '#f_ct input', 'ct']; if (!s.fn.trim()) return ['Oʻquvchi ismi kiritilishi shart', '#f_fn input', 'kb']; if (!s.ln.trim()) return ['Oʻquvchi familiyasi kiritilishi shart', '#f_ln input', 'kb']; if (!s.gd) return ['Jinsi tanlanishi shart', '#f_gd input', 'kb']; if (!s.cl) return ['Kurs darajasini tanlang', '#f_cl input', 'kb']; if (!s.ad.trim()) return ['Kitob yetkazib berish manzilini kiriting', '#f_ad input', 'kb']; if (!s.fd) return ['Ilk dars boshlash sanasini belgilang', 'input[type=date]', 'kb']; if ((s.pat === 'mwf' ? [1, 3, 5] : [2, 4, 6]).indexOf(new Date(s.fd + 'T00:00:00Z').getUTCDay()) < 0) return ['Ilk dars sanasi ustozning dars kuniga (masalan juft yoki toq kunlarga) toʻgʻri kelishi kerak', 'input[type=date]', 'kb']; }
+      if (s.step === 7) {
+        if (!s.closed) return ['Yopilgan sanani kiriting', '#f_cd input', 'cl'];
+        if (!num(s.total)) return ['Toʻlov qilingan summani kiriting', '#f_tot input', 'cl'];
+        if (+num(s.total) > 0 && +num(s.total) < 10000 && s.smallOkT !== s.total) return ['__small_tot'];
+        if (!s.noDebt) return ['Oʻquvchi qarzdor emasligini tasdiqlang', '#f_nd input', 'cl'];
+        if (hasDebt && debtVal > 0) { if (!s.dc) return ['Qarz yopilganmi? savoliga javob bering', '.dbt input', 'dbt']; if (s.dc === 'yes') { if (!s.dcm) return ['Qarz qanday usulda yopildi?', '.dbt input[name=dcm]', 'dbt']; if (s.dcm === 'installment') { if (!s.dcp) return ['Nasiya hamkorini tanlang', '.dbt input[name=dcp]', 'dbt']; if (!s.dcDate) return ['Qarz yopilgan sanani kiriting', '.dbt input[type=date]', 'dbt']; } } }
+        if (hasDebtor) { if (!s.dc) return ['Toʻlov amalga oshirilganmi? savoliga javob bering', '.dbt input', 'dbt']; if (s.dc === 'yes' && !s.dcDate) return ['Toʻlov tushgan sanani kiriting', '.dbt input[type=date]', 'dbt']; }
+        if (hasInst) { if (!s.dc) return ['Nasiya hamkordan toʻlov tushganmi? savoliga javob bering', '.dbt input', 'dbt']; if (s.dc === 'yes' && !s.dcDate) return ['Toʻlov tushgan sanani kiriting', '.dbt input[type=date]', 'dbt']; }
+        if (s.pt === 'partial' && +num(s.total) < +num(s.paid)) return ['Jami summa oldingi tushumlardan kam boʻlishi mumkin emas', '#f_tot input', 'cl'];
+        if (proofNeed && !s.pm2) return ['Toʻlov usulini tanlang', '.pr select', 'pr'];
+        if (proofNeed && !s.rc2) return ['Chekni rasm yoki PDF shaklida yuklang', '.pr .row button', 'pr'];
+      }
+      return null;
+    };
+    const go = st => { this.setState({ step: st, err: '', errK: '' }); this.focusSoon('#stepH'); };
+    const BTN = { 3: 'Davom etish · Toʻlov', 4: 'Davom etish · Telegram guruh', 5: 'Davom etish', 6: 'Saqlash va koʻchirish', 7: 'Saqlash va yopish', 8: 'Lidlarga qaytish' };
+    const bxc = k => 'box' + (s.errK === k ? ' bad' : '');
+    const summ = [
+      ['Tarif', s.tar ? s.tar + ' daq' : '—'], ['Ustoz', TN[s.tch]], ['Jadval', s.slot ? PAT[s.pat].t + ' ' + s.slot : '—'], ['Boshlanish', fdLab || '—'],
+      ['Kurs', s.fd ? '90 kun · ' + ddmm(s.fd) + ' → ' + ddmm(addD(s.fd, 89)) : '90 kun · 72 dars'],
+      ['Toʻlov', s.pt ? ptLab + (amtLab ? ' · ' + amtLab : '') : '—'], ['Guruh', s.gname.trim() || '—']
+    ];
+    const toast = t => { this.setState({ toast: t }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: '' }), 3000); };
+    const yn = key => [['yes', 'Ha'], ['no', 'Yoʻq']].map(o => ({ t: o[1], on: s[key] === o[0], pick: () => set({ [key]: o[0] }) }));
+    return {
+      nav, sbCls: s.sb ? 'sb' : 'sb sb-min', sbExp: s.sb ? 'true' : 'false', sbLab: s.sb ? 'Menyuni yigʻish' : 'Menyuni ochish', sbIcon: s.sb ? 'M15 6l-6 6 6 6' : 'M9 6l6 6-6 6', toggleSb: () => this.setState({ sb: !s.sb }),
+      goBack: () => toast(s.step >= 4 ? 'Lidlarga qaytildi — joriy qadam saqlanmadi, oldingi qadamlar saqlangan' : 'Lidlarga qaytildi — hech narsa oʻzgarmadi'),
+      demoSteps: [[3, '3 Tarif'], [4, '4 Toʻlov'], [5, '5 Guruh'], [6, '6 Login'], [7, 'Yopish']].map(d => ({ t: d[1], on: s.step === d[0] ? 'true' : 'false', pick: () => go(d[0]) })),
+      title: 'Malika Sodiqova', stepName: s.step >= 7 ? 'Toʻlov yopildi' : STEPS[s.step - 1],
+      stepDots: STEPS.map((t, i) => { const n = i + 1, act = Math.min(s.step, 6), done = n < act || s.step >= 7; return { t, n: done ? '✓' : String(n), done, cur: n === act && s.step < 7 ? 'step' : 'false', cls: n === act && s.step < 7 ? 'now' : done ? 'ok' : '' }; }),
+      s3: s.step === 3, s4: s.step === 4, s5: s.step === 5, s6: s.step === 6, s7: s.step === 7, s8: s.step === 8,
+      bx: { tar: bxc('tar'), sch: bxc('sch'), pt: bxc('pt'), ip: bxc('ip'), am: bxc('am'), pp: bxc('pp'), q: bxc('q'), ct: bxc('ct'), kb: bxc('kb'), cl: bxc('cl'), dbt: bxc('dbt') + ' dbt', pr: bxc('pr') + ' pr' },
+      ivTar: s.errK === 'tar' ? 'true' : 'false',
+      tariffs: [['15', '15 daqiqalik'], ['30', '30 daqiqalik'], ['60', '60 daqiqalik']].map(t => ({ t: t[1], sub: 'Haftada 3 dars · 90 kun', on: s.tar === t[0] ? 'true' : 'false', pick: () => set({ tar: t[0] }) })),
+      tchName: TN[s.tch], tchTrial: s.tch === 'dil' ? ' · sinov ustozi' : '',
+      otherT: Object.keys(TN).filter(k => k !== s.tch).map(k => ({ t: short(TN[k]) + ' · ' + SLB[k].filter(x => (s.pat === 'mwf' ? x[1] : x[2]).length === 0).length + ' vaqt', on: 'false', pick: () => set({ tch: k, slot: '', fd: '' }) })),
+      pats: Object.keys(PAT).map(k => ({ t: PAT[k].t, on: s.pat === k ? 'true' : 'false', pick: () => set({ pat: k, slot: '', fd: '' }) })),
+      slots: SL.map(x => { const ok = slotOk(x), busy = s.pat === 'mwf' ? x[1] : x[2]; return { t: x[0], sub: ok ? PAT[s.pat].t.replace(/ · /g, '·') + (+x[0].slice(0, 2) >= 17 ? ' · kechki' : '') : busy.map(d => DAYN[d]).join(', ') + ' band', dis: ok ? 'false' : 'true', on: s.slot === x[0] ? 'true' : 'false', cls: ok ? '' : 'busy', pick: () => { if (ok) set({ slot: x[0], fd: s.fd && FD[s.pat].some(f => f[0] === s.fd) ? s.fd : FD[s.pat][0][0] }); } }; }),
+      showFd: !!s.slot,
+      firsts: FD[s.pat].map(f => ({ t: f[1] + ' · ' + s.slot, on: s.fd === f[0] ? 'true' : 'false', pick: () => set({ fd: f[0] }) })),
+      payTypes: opt(PT, 'pt'), partners: opt(IP, 'ip'), amounts: opt(AM, 'am'), isInst: s.pt === 'installment', isFull: s.pt === 'full', isPartial: s.pt === 'partial', isCustom: s.am === 'other',
+      tarLab: s.tar ? s.tar + ' daqiqalik' : '—',
+      customV: s.custom, customIn: e => set({ custom: e.target.value, smallOk: false, smallAsk: false }), paidV: s.paid, paidIn: e => set({ paid: e.target.value, smallAsk: false }),
+      debtV: debtVal ? fmt(debtVal) + ' soʻm' : '', debtIn: e => set({ debt: e.target.value }), lastV: s.last, lastIn: e => set({ last: e.target.value }), nextV: s.nextP, nextIn: e => set({ nextP: e.target.value }),
+      methods: METH.map(m => ({ id: m[0], t: m[1], sel: s.pm === m[0] })), pmIn: e => set({ pm: e.target.value }), rcLab: s.rc ? 'chek_0211.jpg' : 'Chekni tanlash', rcOn: s.rc, rcPick: () => set({ rc: true }),
+      smallAsk: !!s.smallAsk, smallTxt: 'Summa ' + fmt(s.smallAsk === 'paid' ? num(s.paid) : s.smallAsk === 'tot' ? num(s.total) : amt) + ' soʻm — juda kichik. Nollar tushib qolmaganmi (300 oʻrniga 300 000)?', smallNo: () => this.setState({ smallAsk: false, err: s.smallAsk === 'paid' ? 'Toʻlangan summani tekshiring' : s.smallAsk === 'tot' ? 'Toʻlov summasini tekshiring' : 'Summani tekshiring', errK: s.smallAsk === 'paid' ? 'pp' : s.smallAsk === 'tot' ? 'cl' : 'am' }), smallYes: () => { const k = s.smallAsk; this.setState(k === 'paid' ? { smallAsk: false, smallOkP: s.paid } : k === 'tot' ? { smallAsk: false, smallOkT: s.total } : { smallAsk: false, smallOk: true }); },
+      s5sub: [s.pt ? 'Toʻlov: ' + ptLab + (amtLab ? ' · ' + amtLab : '') : '', s.slot ? short(TN[s.tch]) + ' ' + PAT[s.pat].t.replace(/ · /g, '·') + ' ' + s.slot : '', 'sinov 1-noy oʻtkazildi'].filter(Boolean).join(' · '),
+      linkV: s.link, linkShort: s.link.trim(), linkIn: e => set({ link: e.target.value }), linkOk: LINK_RE.test(s.link.trim()), linkCls: 'fld' + (s.errK === 'link' ? ' ferr' : ''),
+      gnameV: s.gname, gnameIn: e => set({ gname: e.target.value, sug: false }), sugOn: s.sug, nameCls: 'fld' + (s.errK === 'gname' ? ' ferr' : ''),
+      assistants: AS.map(a => ({ id: a[0], t: a[1], sel: s.as === a[0] })), asIn: e => set({ as: e.target.value }), asCls: 'fld' + (s.errK === 'as' ? ' ferr' : ''), asLab: asLab || '—',
+      members: MEM.map(m => ({ t: m[1], on: !!s.mem[m[0]], pick: () => { const n = Object.assign({}, s.mem); n[m[0]] = !n[m[0]]; this.setState({ mem: n }); } })),
+      memWarn: (() => { const miss = MEM.filter(m => !s.mem[m[0]]).map(m => m[1].split(' · ')[0].replace(' (siz)', '')); return miss.length ? miss.join(', ') + ' hali qoʻshilmagan — guruhga qoʻshishni unutmang.' : ''; })(),
+      ynBecome: yn('bs'), ynPlat: yn('pl'),
+      contracts: opt(CT, 'ct'), genders: [['m', 'Erkak'], ['f', 'Ayol']].map(o => ({ t: o[1], on: s.gd === o[0], pick: () => set({ gd: o[0] }) })), levels: LV.map(o => ({ t: o[1], on: s.cl === o[0], pick: () => set({ cl: o[0] }) })),
+      fnV: s.fn, fnIn: e => set({ fn: e.target.value }), lnV: s.ln, lnIn: e => set({ ln: e.target.value }), adV: s.ad, adIn: e => set({ ad: e.target.value }),
+      schedTxt: s.slot ? PAT[s.pat].t + ' ' + s.slot + ' · ' + (s.tar || '—') + ' daq' : 'jadval 3-qadamda tanlanadi', toStep3: () => go(3),
+      fdV: s.fd, fdIn: e => { const v = e.target.value; if (!v) { set({ fd: '' }); return; } const dow = new Date(v + 'T00:00:00Z').getUTCDay(); const ok = (s.pat === 'mwf' ? [1, 3, 5] : [2, 4, 6]).indexOf(dow) >= 0; if (ok) { set({ fd: v }); return; } let d = v; for (let i = 1; i < 7; i++) { const x = new Date(v + 'T00:00:00Z'); x.setUTCDate(x.getUTCDate() + i); if ((s.pat === 'mwf' ? [1, 3, 5] : [2, 4, 6]).indexOf(x.getUTCDay()) >= 0) { d = x.toISOString().slice(0, 10); break; } } set({ fd: d }); toast('Sana ustozning dars kuniga (' + PAT[s.pat].t + ') moslab oʻzgartirildi'); }, fdLab: fdLab || '—',
+      ctx: [['Toʻlov turi', ptLab || '—'], ['Tarif', s.tar ? s.tar + ' daqiqalik' : '—'], ['Summa', amtLab || '—']].concat(hasDebt ? [['Qarz miqdori', debtVal ? fmt(debtVal) + ' soʻm' : '—']] : []).concat(hasInst ? [['Nasiya hamkori', ipLab || '—']] : []).map(r => ({ k: r[0], v: r[1], cls: r[1] === '—' ? 'mute' : '' })),
+      closedV: s.closed, closedIn: e => set({ closed: e.target.value }), totalV: s.total, totalIn: e => set({ total: e.target.value, smallAsk: false }),
+      noDebtOn: s.noDebt, noDebtPick: () => set({ noDebt: !s.noDebt }),
+      hasDebt, hasDebtBox: hasDebt && debtVal > 0, hasDebtor, hasInst, proofNeed, proofHead: 'Yangi tushum: ' + fmt(+num(s.total) - alreadyPaid) + ' soʻm' + (alreadyPaid ? ' (' + fmt(+num(s.total)) + ' − ' + fmt(alreadyPaid) + ' avval)' : '') + ' — shu toʻlov cheki', doneMoney: proofNeed ? ' · ' + fmt(+num(s.total) - alreadyPaid) + ' soʻm tushum moliyaga yuborildi (' + ((hasDebtor || hasInst) && s.dcDate ? s.dcDate : s.closed).split('-').reverse().join('.') + ')' : ' · yangi tushum yoʻq', amtLabV: amtLab || '—', ipLab: ipLab || '—',
+      ynDebt: [['yes', 'Ha'], ['no', 'Yoʻq']].map(o => ({ t: o[1], on: s.dc === o[0], pick: () => set({ dc: o[0], dcDate: o[0] === 'yes' ? (s.dcDate || '2026-11-02') : s.dcDate }) })), dcYes: s.dc === 'yes',
+      dcMethods: [['full', 'Toʻliq toʻlab berildi'], ['installment', 'Nasiya hamkor orqali yopildi']].map(o => ({ t: o[1], on: s.dcm === o[0], pick: () => set({ dcm: o[0] }) })), dcInst: s.dcm === 'installment',
+      dcPartners: IP.map(o => ({ t: o[1], on: s.dcp === o[0], pick: () => set({ dcp: o[0] }) })), dcDateV: s.dcDate, dcDateIn: e => set({ dcDate: e.target.value }),
+      methods2: METH.map(m => ({ id: m[0], t: m[1], sel: s.pm2 === m[0] })), pm2In: e => set({ pm2: e.target.value }), rc2Lab: s.rc2 ? 'chek_yopish.pdf' : 'Chekni tanlash', rc2On: s.rc2, rc2Pick: () => set({ rc2: true }),
+      summary: summ.map(r => ({ k: r[0], v: r[1], cls: r[1] === '—' ? 'mute' : '' })),
+      asideNote: s.step === 3 ? 'Saqlansa vaqt ' + short(TN[s.tch]) + ' jadvalida doimiy band boʻladi va sinov yozuvi jadvaldan chiqadi.' : s.step === 4 ? 'Saqlansa toʻlov maʼlumoti yoziladi; lid bosqichi 6-qadam saqlanganda oʻzgaradi.' : s.step === 6 ? 'Saqlansa lid “Toʻlov jarayonida” boʻladi, ilova logini yaratiladi va kitob yetkazish kartochkasi ochiladi.' : s.step === 7 ? 'Saqlansa lid “Toʻlov yopildi” bosqichiga oʻtadi.' : s.step === 8 ? 'Konversiya yakunlandi. Oʻquvchi kartasi va kitob yetkazish “Oʻquvchilar” boʻlimida.' : 'Lid faqat qadam saqlangandan keyin koʻchadi.',
+      err: s.err, count: s.step === 8 ? '' : s.step === 7 ? 'Yakuniy qadam' : s.step + ' / 6 qadam', canBack: s.step === 5, canCancel: s.step !== 5 && s.step !== 8,
+      backT: 'Toʻlov saqlangan — tarif va jadvalga qaytish', back: () => go(3),
+      btnLab: BTN[s.step],
+      next: () => {
+        const v = valid(); if (v && v[0] === '__small_tot') { this.setState({ smallAsk: 'tot' }); return; } if (v) { this.setState({ err: v[0], errK: v[2] }); this.focusSoon(v[1]); return; }
+        if (s.step === 4 && amt > 0 && amt < 10000 && !s.smallOk) { this.setState({ smallAsk: 'am' }); return; } if (s.step === 4 && s.pt === 'partial' && +num(s.paid) < 10000 && s.smallOkP !== s.paid) { this.setState({ smallAsk: 'paid' }); return; }
+        if (s.step === 4 && !s.gname) this.setState({ gname: 'C41 | onlayn rus tili', sug: true });
+        if (s.step === 8) { toast('Lidlar sahifasiga qaytildi'); return; } if (s.step === 7) { this.setState({ step: 8, err: '', errK: '' }); return; }
+        go(s.step + 1);
+      },
+      toast: s.toast
+    };
+  }
+}
+</script>
+</body>
+</html>

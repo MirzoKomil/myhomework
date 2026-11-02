@@ -1,0 +1,10 @@
+    // --- Qotgan lidlar (staleLeads.js: DEFAULT warn 3 / lock 5, compute, openGate, render, sheet*) ---
+    const LOCK0 = CARDS.try.map((k, i) => k.sd >= RULE.lockDays ? 'try' + i : '').filter(Boolean);
+    const gInit = (s.gInit || LOCK0).concat(lockL.map(x => x.key).filter(k => (s.gInit || LOCK0).indexOf(k) < 0));
+    const gDone = !loading && !NOSTALE && !s.gClosed && !s.graceOn && lockL.length === 0 && gInit.length > 0;
+    if (gDone && !this._gdT) this._gdT = setTimeout(() => { this._gdT = null; this.setState({ gClosed: true }); this.focusSoon('[data-card]'); }, 1700);
+    gOpenNow = !loading && !NOSTALE && !s.graceOn && !s.gClosed && (lockL.length > 0 || gDone);
+    const startGrace = () => { this._gEnd = Date.now() + 5 * 60000; clearInterval(this._pi); this._pi = setInterval(() => { const left = this._gEnd - Date.now(); const el = document.getElementById('skPillT'); if (left <= 0) { clearInterval(this._pi); this._pi = null; this.setState({ graceOn: false }); this.focusSoon('[data-gate]'); return; } if (el) el.textContent = 'Erkin rejim · ' + Math.floor(left / 60000) + ':' + String(Math.floor(left % 60000 / 1000)).padStart(2, '0'); }, 1000); };
+    const pillLeft = Math.max(0, (this._gEnd || 0) - Date.now());
+    const gBlockedGo = () => { this.setState({ sh: { t: 'blocked', key: '' } }); this.focusSoon('[data-sheet] .sk-bpri'); };
+    const solvedN = gInit.length - lockL.length;

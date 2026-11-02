@@ -1,0 +1,106 @@
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    // Demo soat: Dushanba 02.11.2026 01:43. ROP Islom Mominov — arxivda faqat Rus tili + tilsiz (skript/bonus) yozuvlar.
+    const I = (id, type, title, sub, lang, reason, at, by, fields, x) => Object.assign({ id, type, title, sub, lang, reason, at, by, fields, rsAt: '', rsBy: '' }, x || {});
+    this.I0 = [
+      I('lead:7f21', 'lead', 'Sardor Rahimov', '+998 90 145 22 81 · Bogʻlanildi', 'russian', '', '2026-11-01 22:14', 'Kamola Shahobiddinova', [['Ism', 'Sardor Rahimov'], ['Telefon', '+998 90 145 22 81'], ['Holat', 'Bogʻlanildi'], ['Til', 'Rus'], ['Menejer', 'Kamola Shahobiddinova'], ['Manba', 'Instagram'], ['Yaratilgan', '28.10.2026, 11:02']], { stage: 'Bogʻlanildi' }),
+      I('lead:7e90', 'lead', 'Munisa Olimova', '+998 93 410 05 72 · Yangi lidlar', 'russian', '', '2026-11-01 18:40', 'Robiya Usmonova', [['Ism', 'Munisa Olimova'], ['Telefon', '+998 93 410 05 72'], ['Holat', 'Yangi lidlar'], ['Til', 'Rus'], ['Menejer', 'Robiya Usmonova'], ['Manba', 'Target (Meta)'], ['Yaratilgan', '01.11.2026, 17:55']], { stage: 'Yangi lidlar' }),
+      I('a-bonus-okt', 'bonus', 'Robiya Usmonova · 450 000 soʻm', '', '', '', '2026-11-01 09:30', 'Islom Mominov', [['Sarlavha', 'Oktabr bonusi'], ['Xodim', 'Robiya Usmonova'], ['Summa', '450 000 soʻm'], ['Sana', '31.10.2026']]),
+      I('a-book-2', 'bookRoadmap', 'Zarina Holmatova — 2-kitob', 'Toshkent sh., Chilonzor · Yetkazilmoqda', 'russian', '', '2026-10-31 16:05', 'Kamola Shahobiddinova', [['Ism', 'Zarina Holmatova'], ['Telefon', '+998 94 377 58 02'], ['Manzil', 'Toshkent sh., Chilonzor 9-kv'], ['Holat', 'Yetkazilmoqda'], ['Til', 'Rus']]),
+      I('lead:7c11', 'lead', 'Diyor Qosimov', '+998 97 233 18 60 · Qaror jarayonida', 'russian', '', '2026-10-31 15:02', 'Islom Mominov', [['Ism', 'Diyor Qosimov'], ['Telefon', '+998 97 233 18 60'], ['Holat', 'Qaror jarayonida'], ['Til', 'Rus'], ['Menejer', 'Gulchehra Mamadaliyeva'], ['Manba', 'Telegram bot'], ['Yaratilgan', '24.10.2026, 09:40']], { stage: 'Qaror jarayonida' }),
+      I('a-stu-sev', 'student', 'Sabina Toʻrayeva', '+998 93 774 25 16', 'russian', '', '2026-10-30 10:15', 'Islom Mominov', [['Ism', 'Sabina Toʻrayeva'], ['Telefon', '+998 93 774 25 16'], ['Guruh', 'RU-2 · Boshlangʻich'], ['Ustoz', 'Feruza Tojiboyeva'], ['Til', 'Rus'], ['Toʻlangan', '1 800 000 soʻm'], ['Qarz', '0 soʻm']], { group: 'RU-2 · Boshlangʻich', gone: 'Feruza Tojiboyeva' }),
+      I('lead:7a02', 'lead', 'Kamila Ergasheva', '+998 99 301 44 17 · Sinov darsida', 'russian', '', '2026-10-29 12:48', 'Hamidaxon Boymirzayeva', [['Ism', 'Kamila Ergasheva'], ['Telefon', '+998 99 301 44 17'], ['Holat', 'Sinov darsida'], ['Til', 'Rus'], ['Menejer', 'Hamidaxon Boymirzayeva'], ['Manba', 'Instagram'], ['Yaratilgan', '20.10.2026, 14:12']], { stage: 'Sinov darsida' }),
+      I('a-stu-abb', 'student', 'Abbos Yoʻldoshev', '+998 90 664 12 09', 'russian', '', '2026-10-27 18:22', 'Gulchehra Mamadaliyeva', [['Ism', 'Abbos Yoʻldoshev'], ['Telefon', '+998 90 664 12 09'], ['Guruh', 'RU-5 · A2'], ['Ustoz', 'Shahnoza Qodirova'], ['Til', 'Rus'], ['Toʻlangan', '900 000 soʻm'], ['Qarz', '450 000 soʻm']], { group: 'RU-5 · A2' }),
+      I('a-script-v2', 'script', 'Narx eʼtirozi — rus tili (v2)', '', 'russian', '', '2026-10-25 11:10', 'Islom Mominov', [['Sarlavha', 'Narx eʼtirozi — rus tili (v2)'], ['Turkum', 'Eʼtirozlar'], ['Matn', '1. Tushunaman, narx muhim. 2. Oyiga 4 ta jonli dars + kitob... (7 qadam)']]),
+      I('a-lead-bob', 'lead', 'Bobur Sattorov', '+998 97 402 81 49', 'russian', 'Eski arxivdan koʻchirildi (butunlay oʻchgan lid)', '2026-10-12 09:00', 'Gulchehra Mamadaliyeva', [['Ism', 'Bobur Sattorov'], ['Telefon', '+998 97 402 81 49'], ['Holat', 'Toʻlov yopildi'], ['Til', 'Rus']], { stage: 'Toʻlov yopildi', conflict: 'Bu ID bilan lid allaqachon bor' }),
+      I('a-bonus-sen', 'bonus', 'Kamola Shahobiddinova · 300 000 soʻm', '', '', '', '2026-10-03 10:00', 'Islom Mominov', [['Sarlavha', 'Sentabr bonusi'], ['Xodim', 'Kamola Shahobiddinova'], ['Summa', '300 000 soʻm'], ['Sana', '30.09.2026']]),
+      I('a-stu-lay', 'student', 'Laylo Rasulova', '+998 91 220 73 15', 'russian', 'Eski arxivdan koʻchirildi', '2026-09-14 08:30', '', [['Ism', 'Laylo Rasulova'], ['Telefon', '+998 91 220 73 15'], ['Guruh', 'RU-1 · Boshlangʻich'], ['Til', 'Rus']], { group: 'RU-1 · Boshlangʻich' }),
+      I('a-lead-mal', 'lead', 'Malika Tursunova', '+998 93 220 45 61', 'russian', 'Lid tiklandi', '2026-10-30 20:11', 'Robiya Usmonova', [['Ism', 'Malika Tursunova'], ['Telefon', '+998 93 220 45 61'], ['Til', 'Rus']], { rsAt: '2026-11-01 14:20', rsBy: 'Islom Mominov', stage: 'Bogʻlanishga urinilmoqda' }),
+      I('a-stu-ozo', 'student', 'Ozoda Karimova', '+998 94 118 40 26', 'russian', '', '2026-10-21 13:00', 'Kamola Shahobiddinova', [['Ism', 'Ozoda Karimova'], ['Telefon', '+998 94 118 40 26'], ['Guruh', 'RU-3 · A1'], ['Til', 'Rus']], { rsAt: '2026-10-28 10:05', rsBy: 'Islom Mominov', group: 'RU-3 · A1' })
+    ];
+    this.state = this.fresh('ok');
+    this._t = null;
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && this.state.cf && !this.state.cfBusy) this.setState({ cf: '' }); });
+  }
+  fresh(demo) { return { sb: true, demo, retried: false, items: demo === 'empty' ? [] : this.I0.map(x => Object.assign({}, x)), type: '', q: '', st: 'deleted', from: '', to: '', n: 8, sel: demo === 'empty' ? '' : 'lead:7f21', cf: '', cfBusy: false, cfErr: '', cfDead: false, toast: null }; }
+  focusSoon(sel) { setTimeout(() => { const el = document.querySelector(sel); if (el && el.focus) el.focus(); }, 30); }
+  renderVals() {
+    const s = this.state;
+__NAVJS__
+__MKNAV__
+    // ---- production: js/archiveCenter.js (TYPE_META, canRestore ~162, confirmRestore), server/services/archive.js (ROP_TYPES, ropLangs ~81, restore ~544) ----
+    const ME = 'Islom Mominov';
+    const TM = { lead: ['Lidlar', 'Lid', '#0065D6', 'L'], student: ['Oʻquvchilar', 'Oʻquvchi', '#7C3AED', 'Oʻ'], bookRoadmap: ['Kitob yetkazish', 'Kitob yetkazish', '#D97706', 'K'], script: ['Sotuv skriptlari', 'Sotuv skripti', '#0E7490', 'S'], bonus: ['Bonuslar', 'Bonus', '#16A34A', 'B'] };
+    const ROP_TYPES = ['lead', 'student', 'bookRoadmap', 'script', 'bonus'];
+    const LOCKED = ['Xodimlar', 'Ishdan boʻshatishlar', 'HR nomzodlar', 'Pul oqimi', 'Yoʻriqnomalar', 'Doʻkon buyurtmalari', 'Bildirishnomalar', 'Hamjamiyat postlari', 'Hamjamiyat izohlari', 'Dars izohlari', 'Qoʻngʻiroq yozuvlari', 'Mobil ilova kontenti', 'Yuklangan fayllar', 'Tashkiliy tuzilma', 'Ustozlar (eski)'];
+    const fmt = v => { if (!v) return '—'; const d = v.slice(0, 10).split('-'); return d[2] + '.' + d[1] + '.' + d[0] + ', ' + v.slice(11, 16); };
+    const toast = (t, o) => { this.setState({ toast: Object.assign({ t }, o || {}) }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: null }), o && o.warn ? 7000 : 4500); };
+    const loading = s.demo === 'load', loadErr = s.demo === 'err' && !s.retried, ready = !loading && !loadErr;
+    const canRestore = t => ROP_TYPES.indexOf(t) >= 0; // archiveCenter.canRestore — role 'rop'
+    const byName = b => (b ? (b === ME ? ME + ' (siz)' : b) : 'Tizim');
+    const isDel = x => !x.rsAt;
+    const counts = {}; s.items.filter(isDel).forEach(x => { counts[x.type] = (counts[x.type] || 0) + 1; });
+    const lk = s.type === 'locked';
+    const qq = s.q.trim().toLowerCase();
+    const list = lk ? [] : s.items.filter(x => (!s.type || x.type === s.type) && (s.st === 'all' || (s.st === 'deleted' ? isDel(x) : !isDel(x)))
+      && (!qq || x.title.toLowerCase().includes(qq) || x.sub.toLowerCase().replace(/\s/g, '').includes(qq.replace(/\s/g, '')) || x.id.toLowerCase() === qq)
+      && (!s.from || x.at.slice(0, 10) >= s.from) && (!s.to || x.at.slice(0, 10) <= s.to))
+      .sort((a, b) => (a.at < b.at ? 1 : -1));
+    const filtered = !!(s.q || s.from || s.to || s.st !== 'deleted');
+    const mgrOf = x => { const f = x.fields.find(f => f[0] === 'Menejer'); return f ? f[1] : ''; };
+    const cons = x => x.type === 'lead' ? ['Lid “' + (x.stage || 'oldingi') + '” bosqichiga, Lidlar roʻyxatiga qaytadi.', (mgrOf(x) ? 'Menejer: biriktirilmagan — oldingi menejer ' + mgrOf(x) + 'ga qaytmaydi.' : 'Menejer: biriktirilmagan.') + ' Keyin Taqsimlashda biriktirasiz.', 'Lid tarixiga “tiklandi” yozuvi qoʻshiladi.']
+      : x.type === 'student' ? ['Oʻquvchi “' + x.group + '” guruhiga va maʼlumotlari bilan qaytadi.', x.gone ? 'Ustoz ' + x.gone + ' ishda emas — ustoz maydoni boʻshatiladi, keyin qayta tanlaysiz.' : 'Ishdan ketgan ustoz yoki menejer qayta biriktirilmaydi — boʻlsa, ogohlantirish chiqadi.', 'Oʻquvchi ID si boshqa oʻquvchida band boʻlsa, ID olib tashlanadi.']
+      : ['Yozuv “' + TM[x.type][0] + '” boʻlimiga qaytadi.', 'Shu ID bilan yozuv allaqachon joyida boʻlsa, tiklash bekor qilinadi.'];
+    const pick = id => { this.setState({ sel: id }); this.focusSoon('[data-detail] h2'); };
+    const openCf = id => { this.setState({ cf: id, cfBusy: false, cfErr: '', cfDead: false }); this.focusSoon('[data-cf] [data-yes]'); };
+    const rows = list.slice(0, s.n).map(x => ({ id: x.id, cls: 'ax-row' + (s.sel === x.id ? ' ax-on' : '') + (x.rsAt ? ' ax-rs' : ''), ic: TM[x.type][3], icSt: 'background:' + TM[x.type][2],
+      title: x.title, typeL: TM[x.type][1], lang: x.lang === 'russian' ? 'Rus' : '', rs: !!x.rsAt, rsT: 'Tiklangan · ' + fmt(x.rsAt) + (x.rsBy ? ' · ' + x.rsBy : ''), sub: x.sub,
+      verb: 'Oʻchirdi', by: byName(x.by), at: fmt(x.at), reason: x.reason ? '“' + x.reason + '”' : 'sababsiz',
+      can: !x.rsAt && canRestore(x.type), restore: () => openCf(x.id), resLab: x.title + ' — tiklash', view: () => pick(x.id), viewLab: x.title + ' — nusxani koʻrish' }));
+    const dx = s.items.find(x => x.id === s.sel && (!lk));
+    const d = dx ? { ic: TM[dx.type][3], icSt: 'background:' + TM[dx.type][2], title: dx.title, typeL: TM[dx.type][1], verb: 'Oʻchirdi', by: byName(dx.by), at: fmt(dx.at),
+      fields: dx.fields.map(f => ({ k: f[0], v: f[1] })), reason: dx.reason || 'sababsiz — oʻchirishda sabab soʻralmaydi', rs: !!dx.rsAt, rsT: '✓ Tiklangan · ' + fmt(dx.rsAt) + (dx.rsBy ? ' · ' + dx.rsBy : '') + (dx.type === 'lead' ? ' · biriktirilmaganlarga qaytgan' : ''),
+      can: !dx.rsAt && canRestore(dx.type), cons: cons(dx), consCls: 'ax-cons' + (dx.gone || dx.conflict ? ' ax-cw' : ''), restore: () => openCf(dx.id),
+      no: !!dx.rsAt, noT: 'Bu yozuv allaqachon tiklangan — qayta tiklab boʻlmaydi. Kerak boʻlsa, joyidagi yozuvni oching.' } : null;
+    // ---- tasdiq ----
+    const cx = s.cf ? s.items.find(x => x.id === s.cf) : null;
+    const doRestore = () => {
+      if (s.cfBusy || s.cfDead) return;
+      this.setState({ cfBusy: true, cfErr: '' });
+      setTimeout(() => {
+        if (this.state.demo === 'rErr') { this.setState({ cfBusy: false, cfErr: 'Arxiv bilan ishlashda xatolik. Qayta urinib koʻring.' }); return; }
+        if (cx.conflict) { this.setState({ cfBusy: false, cfErr: cx.conflict + ' — joyidagi lidni Lidlar boʻlimidan qidiring.', cfDead: true }); return; }
+        this.setState({ cf: '', cfBusy: false, items: this.state.items.map(x => (x.id === cx.id ? Object.assign({}, x, { rsAt: '2026-11-02 01:44', rsBy: ME }) : x)) });
+        if (cx.type === 'lead') toast(cx.title + ' tiklandi · biriktirilmagan lidlarga qaytdi', { act: 'Taqsimlash', go: () => toast('Lidlar → Taqsimlash ochiladi') });
+        else if (cx.gone) toast(cx.title + ' tiklandi. Ustoz ' + cx.gone + ' ishda emas — ustozni qayta tanlang', { warn: true, act: 'Oʻquvchini ochish', go: () => toast('Oʻquvchilar → ' + cx.title + ' ochiladi') });
+        else toast(cx.title + ' tiklandi');
+        this.focusSoon('[data-q]');
+      }, 650);
+    };
+    const nav = mkNav(79, false).map(n => Object.assign({}, n, { cur: n.k === 'arch' ? 'page' : 'false', pickBadge: () => {}, pick: () => { if (n.k === 'arch' || !n.item) return; toast(n.label + ' sahifasi ochiladi'); } }));
+    const dlgKey = close => e => { if (e.key === 'Escape') { e.preventDefault(); close(); return; } if (e.key === 'Tab') { const bs = Array.prototype.slice.call(e.currentTarget.querySelectorAll('button')); const ix = bs.indexOf(document.activeElement); e.preventDefault(); (e.shiftKey ? (bs[ix - 1] || bs[bs.length - 1]) : (bs[ix + 1] || bs[0])).focus(); } };
+    const total = Object.keys(counts).reduce((a, k) => a + counts[k], 0);
+    const allEmpty = ready && s.items.length === 0;
+    return {
+      nav, sbCls: s.sb ? 'sb' : 'sb sb-min', sbExp: s.sb ? 'true' : 'false', sbLab: s.sb ? 'Menyuni yigʻish' : 'Menyuni ochish', sbIcon: s.sb ? 'M15 6l-6 6 6 6' : 'M9 6l6 6-6 6', toggleSb: () => this.setState({ sb: !s.sb }),
+      demo: [['ok', 'Oddiy'], ['load', 'Yuklanmoqda'], ['err', 'Xato'], ['empty', 'Boʻsh'], ['rErr', 'Tiklash xatosi']].map(x => ({ t: x[1], on: s.demo === x[0] ? 'true' : 'false', pick: () => { clearTimeout(this._t); this.setState(this.fresh(x[0])); } })),
+      loading, loadErr, ready, retry: () => this.setState({ retried: true }),
+      chips: [{ k: '', t: 'Hammasi', n: String(total), dot: false }].concat(ROP_TYPES.map(k => ({ k, t: TM[k][0], n: String(counts[k] || 0), dot: true, dotSt: 'background:' + TM[k][2] })))
+        .map(c => Object.assign(c, { on: s.type === c.k ? 'true' : 'false', pick: () => this.setState({ type: c.k, n: 8 }) })),
+      lkOn: lk ? 'true' : 'false', lkOn2: lk && !allEmpty, lkPick: () => this.setState({ type: lk ? '' : 'locked' }), locked: LOCKED,
+      q: s.q, qIn: e => this.setState({ q: e.target.value, n: 8 }), stOpts: [['deleted', 'Oʻchirilganlar'], ['restored', 'Tiklanganlar'], ['all', 'Hammasi']].map(o => ({ v: o[0], t: o[1], sel: s.st === o[0] })), stIn: e => this.setState({ st: e.target.value, n: 8 }),
+      from: s.from, to: s.to, fromIn: e => this.setState({ from: e.target.value }), toIn: e => this.setState({ to: e.target.value }),
+      filtered, clear: () => this.setState({ q: '', st: 'deleted', from: '', to: '', n: 8 }),
+      showList: !lk && list.length > 0, rows, shown: list.length + ' ta yozuv' + (s.st === 'deleted' ? ' · oʻchirilganlar' : s.st === 'restored' ? ' · tiklanganlar' : '') + ' · yangilari tepada · sahifada 8 tadan (demo; kodda 50)',
+      more: list.length > s.n, moreN: String(list.length - s.n), moreOn: () => this.setState({ n: s.n + 8 }),
+      fEmpty: !lk && !allEmpty && list.length === 0, fEmptyT: s.st === 'restored' ? 'Tiklangan yozuv yoʻq' : 'Bu filtr boʻyicha oʻchirilgan yozuv yoʻq', allEmpty,
+      leadInfo: s.type === 'lead' && list.length > 0,
+      dHas: !!d, d: d || {}, dNone: !d && !allEmpty,
+      cf: !!cx, cfKey: dlgKey(() => { if (!s.cfBusy) this.setState({ cf: '' }); }),
+      cfV: cx ? { title: cx.title, cons: cons(cx), consCls: 'ax-cons' + (cx.gone ? ' ax-cw' : ''), err: !!s.cfErr, errT: s.cfErr, busy: s.cfBusy ? 'true' : 'false', yesT: s.cfBusy ? 'Tiklanmoqda…' : s.cfErr && !s.cfDead ? 'Qayta urinish' : 'Ha, tiklash', yes: doRestore, showYes: !s.cfDead,
+        no: () => { if (s.cfBusy) return; this.setState({ cf: '' }); }, noT: s.cfDead ? 'Yopish' : 'Bekor qilish' } : {},
+      toast: !!s.toast, toastT: s.toast ? s.toast.t : '', toastCls: 'ax-toast' + (s.toast && s.toast.warn ? ' ax-tw' : ''), toastAct: !!(s.toast && s.toast.act), toastActT: s.toast ? s.toast.act : '', toastGo: () => s.toast && s.toast.go && s.toast.go()
+    };
+  }
+}

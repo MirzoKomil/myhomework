@@ -1,0 +1,239 @@
+<style>
+.sn-wrap{display:grid;grid-template-columns:360px minmax(0,1fr) 296px;gap:12px;align-items:start}
+.sn-col{display:flex;flex-direction:column;gap:12px;min-width:0}
+.sn-h{display:flex;align-items:center;gap:8px;margin:0;font-size:15px;font-weight:800}
+.sn-n{width:22px;height:22px;border-radius:50%;background:#0B1220;color:#FFFFFF;display:inline-grid;place-items:center;font-size:12px;font-weight:800;flex:none}
+.sn-lbl{font-size:12px;font-weight:800;color:#3A4456;letter-spacing:.03em;margin:0}
+.sn-pre{display:flex;flex-direction:column;gap:6px}
+.sn-opt{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:12px;border:1px solid #E6EAF2;background:#FFFFFF;cursor:pointer;text-align:left;font:inherit;color:#0B1220;width:100%}
+.sn-opt:hover{border-color:#94A3B8}
+.sn-opt[aria-checked="true"]{border-color:#0065D6;background:#EAF3FF;box-shadow:inset 0 0 0 1px #0065D6}
+.sn-rad{width:16px;height:16px;border-radius:50%;border:2px solid #94A3B8;flex:none;box-sizing:border-box}
+.sn-opt[aria-checked="true"] .sn-rad{border:5px solid #0065D6}
+.sn-ot{flex:1;display:flex;flex-direction:column;gap:1px;min-width:0}.sn-ot b{font-size:13px}.sn-ot span{font-size:12px;color:#4B5563}
+.sn-cnt{min-width:26px;height:22px;border-radius:999px;background:#EEF2F6;display:grid;place-items:center;font-size:12px;font-weight:800;padding:0 6px;box-sizing:border-box}
+.sn-opt[aria-checked="true"] .sn-cnt{background:#0065D6;color:#FFFFFF}
+.sn-tabs{display:flex;gap:2px;padding:3px;border-radius:12px;background:#EEF2F6}
+.sn-tab{flex:1;height:32px;border:0;border-radius:9px;background:transparent;font:inherit;font-size:12px;font-weight:700;color:#3A4456;cursor:pointer;white-space:nowrap}
+.sn-tab[aria-selected="true"]{background:#FFFFFF;color:#0B1220;box-shadow:0 1px 3px rgba(11,18,32,.12)}
+.sn-in{height:36px;border:1px solid #CBD5E1;border-radius:10px;padding:0 10px;font:inherit;font-size:13px;color:#0B1220;background:#FFFFFF;box-sizing:border-box;width:100%}
+.sn-in:focus,.sn-ta:focus{outline:2px solid #0065D6;outline-offset:1px;border-color:#0065D6}
+.sn-sel{height:32px;border:1px solid #CBD5E1;border-radius:10px;padding:0 8px;font-size:12px;font-weight:700;color:#0B1220;background:#FFFFFF;flex:1;min-width:0}
+.sn-all{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;cursor:pointer}
+.sn-list{border:1px solid #E6EAF2;border-radius:12px;max-height:330px;overflow:auto;background:#FFFFFF}
+.sn-r{display:flex;align-items:center;gap:10px;padding:8px 12px;border-top:1px solid #EEF2F6;cursor:pointer;font-size:13px}
+.sn-r:first-child{border-top:0}
+.sn-r:hover{background:#F8FAFC}
+.sn-r.sn-on{background:#F3F8FF}
+.sn-r input,.sn-all input{width:16px;height:16px;accent-color:#0065D6;flex:none;margin:0}
+.sn-ri{flex:1;min-width:0;display:flex;flex-direction:column}
+.sn-ri b{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sn-ri span{font-size:12px;color:#4B5563;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sn-flag.sn-fbad{color:#B42318;background:#FEE4E2}.sn-flag.sn-fok{color:#067647;background:#DCFAE6}
+.sn-flag{font-size:11px;font-weight:800;color:#93370D;background:#FEF0C7;border-radius:6px;padding:1px 6px;white-space:nowrap}
+.sn-ta{width:100%;box-sizing:border-box;min-height:150px;border:1px solid #CBD5E1;border-radius:12px;padding:10px 12px;font:inherit;font-size:14px;line-height:1.5;color:#0B1220;resize:vertical}
+.sn-ta.sn-bad{border-color:#D92D20;background:#FFFBFA}
+.sn-chips{display:flex;gap:6px;flex-wrap:wrap}
+.sn-chip{height:28px;padding:0 10px;border-radius:8px;border:1px dashed #0065D6;background:#F3F8FF;color:#0057B8;font:inherit;font-size:12px;font-weight:800;cursor:pointer;font-family:ui-monospace,Menlo,monospace}
+.sn-chip:hover{background:#EAF3FF}
+.sn-ph{padding:10px 12px;background:#F8FAFC;border:1px solid #E6EAF2;border-radius:12px;display:flex;flex-direction:column;gap:7px}
+.sn-meter{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.sn-m{border:1px solid #E6EAF2;border-radius:12px;padding:8px 10px;display:flex;flex-direction:column;gap:1px;background:#FFFFFF}
+.sn-m small{font-size:11px;font-weight:700;color:#4B5563}.sn-m b{font-size:18px;font-weight:800}.sn-m span{font-size:11px;color:#4B5563}
+.sn-m.sn-mbad{background:#FEF3F2;border-color:#FECDCA}.sn-m.sn-mbad b{color:#B42318}
+.sn-segbar{display:flex;gap:3px;height:6px}.sn-segbar i{flex:1;border-radius:3px;background:#E6EAF2}.sn-segbar i.sn-f{background:#0065D6}.sn-segbar i.sn-x{background:#F79009}
+.sn-warn{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:12px;background:#FFFAEB;border:1px solid #FEC84B;font-size:12px;color:#7A2E0E;line-height:1.45}
+.sn-warn b{display:block;font-size:13px;color:#93370D}
+.sn-info{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:12px;background:#F0F7FF;border:1px solid #B2D4FF;font-size:12px;color:#123A6B;line-height:1.45}
+.sn-bad2{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:12px;background:#FEF3F2;border:1px solid #FECDCA;font-size:12px;color:#912018;line-height:1.45}
+.sn-bad2 b{display:block;font-size:13px;color:#B42318}
+.sn-mini{height:28px;padding:0 10px;font-size:12px;border-radius:8px}
+.sn-foot{display:flex;align-items:center;gap:10px;padding-top:4px}
+.sn-send{height:42px;padding:0 20px;font-size:14px}
+.sn-send[aria-disabled="true"]{background:#94A3B8;border-color:#94A3B8;cursor:not-allowed}
+.sn-err{font-size:12px;font-weight:700;color:#B42318;margin:0}
+.sn-phone{border-radius:22px;background:#0B1220;padding:10px;display:flex;flex-direction:column}
+.sn-scr{border-radius:16px;background:#F2F4F7;padding:12px 10px 14px;display:flex;flex-direction:column;gap:8px;min-height:250px}
+.sn-from{font-size:11px;font-weight:700;color:#4B5563;text-align:center}
+.sn-bub{align-self:flex-start;max-width:92%;background:#FFFFFF;border-radius:14px 14px 14px 4px;padding:9px 11px;font-size:13px;line-height:1.45;color:#0B1220;white-space:pre-wrap;word-break:break-word;box-shadow:0 1px 2px rgba(11,18,32,.08)}
+.sn-hole{background:#FEE4E2;color:#B42318;border-radius:4px;padding:0 3px;font-weight:700}
+.sn-fill{background:#EAF3FF;color:#0057B8;border-radius:4px;padding:0 3px;font-weight:700}
+.sn-pnav{display:flex;align-items:center;gap:6px}
+.sn-pnav span{flex:1;text-align:center;font-size:12px;font-weight:700;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sn-ib{width:30px;height:30px;border-radius:8px;border:1px solid #CBD5E1;background:#FFFFFF;cursor:pointer;font-size:14px;font-weight:800;color:#0B1220}
+.sn-ib:disabled{opacity:.4;cursor:default}
+.sn-bal{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;border-radius:999px;border:1px solid #E6EAF2;background:#FFFFFF;font-size:13px;font-weight:700}
+.sn-bal i{width:8px;height:8px;border-radius:50%;background:#12B76A}
+.sn-bal.sn-blow{background:#FEF3F2;border-color:#FECDCA;color:#B42318}.sn-bal.sn-blow i{background:#D92D20}
+.sn-bal.sn-bunk{color:#4B5563}.sn-bal.sn-bunk i{background:#94A3B8}
+.sn-prog{height:8px;border-radius:999px;background:#E6EAF2;overflow:hidden;position:relative}
+.sn-prog i{position:absolute;top:0;bottom:0;width:35%;border-radius:999px;background:#0065D6;animation:snmv 1.1s ease-in-out infinite}
+@keyframes snmv{0%{left:-35%}100%{left:100%}}
+.sn-res{display:flex;flex-direction:column;border:1px solid #E6EAF2;border-radius:12px;max-height:250px;overflow:auto}
+.sn-rr{display:grid;grid-template-columns:18px minmax(0,1fr);gap:2px 8px;padding:7px 10px;border-top:1px solid #EEF2F6;font-size:12px}
+.sn-rr:first-child{border-top:0}
+.sn-rr b{font-size:13px;grid-column:2}.sn-rr > span:first-child{grid-row:1/3;padding-top:1px}.sn-rr > span:last-child{grid-column:2;color:#4B5563}
+.sn-ok{color:#067647;font-weight:800}.sn-no{color:#B42318;font-weight:800}
+.sn-sum{display:flex;gap:8px}
+.sn-sum div{flex:1;border-radius:12px;padding:8px 10px;display:flex;flex-direction:column}
+.sn-sum b{font-size:20px;font-weight:800}.sn-sum span{font-size:12px;font-weight:700}
+.sn-sg{background:#ECFDF3;color:#067647}.sn-sr{background:#FEF3F2;color:#B42318}
+.sn-ht{display:flex;flex-direction:column;font-size:13px}
+.sn-hr{display:grid;grid-template-columns:150px 130px minmax(0,1fr) 84px 170px 116px 130px;gap:10px;align-items:center;padding:9px 10px;border-top:1px solid #EEF2F6}
+.sn-hr > span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.sn-hh{font-size:12px;font-weight:700;color:#4B5563;border-top:0}
+.sn-st{display:inline-flex;align-items:center;height:22px;border-radius:999px;padding:0 9px;font-size:12px;font-weight:800}
+.sn-st.sn-sok{background:#DCFAE6;color:#067647}.sn-st.sn-sbad{background:#FEE4E2;color:#B42318}
+.sn-hf{display:flex;gap:6px}
+.sn-hc{height:30px;padding:0 12px;border-radius:999px;border:1px solid #CBD5E1;background:#FFFFFF;font:inherit;font-size:12px;font-weight:700;cursor:pointer;color:#0B1220}
+.sn-hc[aria-pressed="true"]{border-color:#0065D6;background:#EAF3FF;color:#0057B8}
+.sn-dnote{font-size:12px;color:#5B21B6;background:#F5F3FF;border:1px dashed #A78BFA;border-radius:10px;padding:8px 10px;margin:0;line-height:1.45}
+.sn-dlg{position:absolute;inset:0;background:rgba(11,18,32,.45);display:grid;place-items:center;z-index:90}
+.sn-dl{margin:0;display:grid;grid-template-columns:150px 1fr;gap:7px 10px;font-size:13px}
+.sn-dl dt{color:#4B5563;font-weight:600}.sn-dl dd{margin:0;font-weight:700}
+.sn-toast{position:absolute;left:28px;bottom:24px;z-index:95;background:#0B1220;color:#FFFFFF;border-radius:14px;padding:12px 16px;font-size:13px;font-weight:700;box-shadow:0 20px 50px rgba(11,18,32,.35);max-width:620px}
+.sn-empty{padding:22px;text-align:center;color:#4B5563;font-size:13px}
+</style>
+<div data-root="1" style="height: 960px; box-sizing: border-box; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #0B1220; background: #F5F7FB; display: flex; position: relative; overflow: hidden">
+__NAV__
+  <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative">
+    <header style="height: 56px; flex: none; padding: 0 24px; display: flex; align-items: center; gap: 14px; background: #FFFFFF; border-bottom: 1px solid #E6EAF2; box-sizing: border-box">
+      <span style="font-size: 13px; color: #4B5563; white-space: nowrap">Sotuv · <b style="color: #0B1220">SMS yuborish</b></span>
+      <span style="flex: 1"></span>
+      <div role="group" aria-label="Demo holat" style="display: flex; align-items: center; gap: 4px; padding: 4px; border: 1px dashed #A78BFA; border-radius: 12px; background: #F5F3FF">
+        <span style="font-size: 11px; font-weight: 800; color: #5B21B6; padding: 0 6px">HOLAT</span>
+        <sc-for list="{{ demo }}" as="d" hint-placeholder-count="6"><button type="button" aria-pressed="{{ d.on }}" onClick="{{ d.pick }}" class="dmb">{{ d.t }}</button></sc-for>
+      </div>
+      <span style="display: flex; align-items: center; gap: 10px"><span aria-hidden="true" style="width: 36px; height: 36px; border-radius: 50%; background: #0B1220; color: #FFFFFF; display: grid; place-items: center; font-size: 13px; font-weight: 800">IM</span><span style="display: flex; flex-direction: column; line-height: 1.2"><b style="font-size: 14px; white-space: nowrap">Islom Mominov</b><span style="font-size: 12px; color: #4B5563">ROP · Rus tili</span></span></span>
+    </header>
+
+    <main style="flex: 1; min-height: 0; overflow: auto; padding: 20px 28px 40px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; align-items: flex-end; gap: 12px">
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 4px">
+          <h1 style="margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.02em">SMS yuborish</h1>
+          <p style="margin: 0; font-size: 13px; color: #4B5563">{{ sub }}</p>
+        </div>
+        <span class="{{ balCls }}" role="status" title="Eskiz.uz hisobi · /api/sms/balance"><i aria-hidden="true"></i>{{ balT }}</span>
+        <span class="tag">Rus tili</span>
+      </div>
+
+      <sc-if value="{{ ready }}" hint-placeholder-val="{{ true }}">
+        <div class="sn-wrap">
+          <!-- 1. KIMGA -->
+          <section class="box sn-col" aria-labelledby="snK">
+            <h2 class="sn-h" id="snK"><span class="sn-n" aria-hidden="true">1</span>Kimga</h2>
+            <p class="sn-lbl">TAYYOR GURUHLAR</p>
+            <div class="sn-pre" role="radiogroup" aria-label="Tayyor guruh">
+              <sc-for list="{{ presets }}" as="p" hint-placeholder-count="4"><button type="button" role="radio" class="sn-opt" aria-checked="{{ p.on }}" onClick="{{ p.pick }}" data-pre="{{ p.k }}"><span class="sn-rad" aria-hidden="true"></span><span class="sn-ot"><b>{{ p.t }}</b><span>{{ p.s }}</span></span><span class="sn-cnt">{{ p.n }}</span></button></sc-for>
+            </div>
+            <p class="sn-lbl" style="margin-top: 4px">AUDITORIYA</p>
+            <div class="sn-tabs" role="tablist" aria-label="Auditoriya"><sc-for list="{{ auds }}" as="a" hint-placeholder-count="3"><button type="button" role="tab" class="sn-tab" aria-selected="{{ a.on }}" onClick="{{ a.pick }}" data-aud="{{ a.k }}">{{ a.t }}</button></sc-for></div>
+            <input type="search" class="sn-in" placeholder="Ism yoki telefon boʻyicha qidirish..." aria-label="Ism yoki telefon boʻyicha qidirish" value="{{ q }}" onInput="{{ qIn }}" data-q="1">
+            <div style="display: flex; gap: 8px; align-items: center">
+              <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: #4B5563; flex: 1; min-width: 0">{{ fLab }}<select class="sn-sel" onChange="{{ fIn }}" aria-label="{{ fLab }}"><sc-for list="{{ fOpts }}" as="o" hint-placeholder-count="6"><option value="{{ o.v }}" selected="{{ o.sel }}">{{ o.t }}</option></sc-for></select></label>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px">
+              <label class="sn-all"><input type="checkbox" checked="{{ allOn }}" onChange="{{ allPick }}" data-all="1">Hammasini tanlash ({{ fCount }})</label>
+              <span style="flex: 1"></span>
+              <sc-if value="{{ anySel }}" hint-placeholder-val="{{ false }}"><button type="button" class="lnk" onClick="{{ clearSel }}" style="font-size: 12px">Tozalash</button></sc-if>
+            </div>
+            <div class="sn-list" role="group" aria-label="Qabul qiluvchilar">
+              <sc-for list="{{ rows }}" as="r" hint-placeholder-count="8"><label class="{{ r.cls }}" data-rid="{{ r.key }}"><input type="checkbox" checked="{{ r.on }}" onChange="{{ r.pick }}" aria-label="{{ r.name }}"><span class="sn-ri"><b>{{ r.name }}</b><span>{{ r.sub }}</span></span><sc-if value="{{ r.flag }}" hint-placeholder-val="{{ false }}"><span class="sn-flag" title="Ustoz yoki guruh havolasi yoʻq">havolasiz</span></sc-if><sc-if value="{{ r.bad }}" hint-placeholder-val="{{ false }}"><span class="sn-flag sn-fbad" title="Server faqat 998XXXXXXXXX raqamga yuboradi">notoʻgʻri raqam</span></sc-if><sc-if value="{{ r.dn }}" hint-placeholder-val="{{ false }}"><span class="sn-flag sn-fok" title="Bu matn bu raqamga tarixda “Yuborildi”">yuborilgan</span></sc-if></label></sc-for>
+              <sc-if value="{{ noRows }}" hint-placeholder-val="{{ false }}"><div class="sn-empty">Hech kim topilmadi<sc-if value="{{ hasQ }}" hint-placeholder-val="{{ false }}"><br><button type="button" class="lnk" onClick="{{ clearQ }}">Qidiruvni tozalash</button></sc-if></div></sc-if>
+            </div>
+            <p class="hint" style="margin: 0">{{ selNote }}</p>
+          </section>
+
+          <!-- 2. XABAR -->
+          <section class="box sn-col" aria-labelledby="snX">
+            <h2 class="sn-h" id="snX"><span class="sn-n" aria-hidden="true">2</span>Xabar matni</h2>
+            <textarea id="snText" class="{{ taCls }}" rows="6" maxlength="900" placeholder="SMS matnini kiriting..." aria-label="Xabar matni" aria-invalid="{{ taInv }}" aria-describedby="snCnt" onInput="{{ textIn }}">{{ text }}</textarea>
+            <sc-if value="{{ textErr }}" hint-placeholder-val="{{ false }}"><p class="sn-err" role="alert">Xabar matnini kiriting</p></sc-if>
+            <div class="sn-ph">
+              <b style="font-size: 12px">Har kimga moslashadigan qismlar</b>
+              <div class="sn-chips"><sc-for list="{{ chips }}" as="c" hint-placeholder-count="3"><button type="button" class="sn-chip" onClick="{{ c.add }}" title="{{ c.l }}" aria-label="{{ c.aria }}">{{ c.k }}</button></sc-for></div>
+              <span style="font-size: 11px; color: #4B5563; line-height: 1.5">Bosilganda matnga qoʻshiladi. Yuborilayotganda har bir odam uchun alohida almashtiriladi — masalan <b>{sinov_guruh}</b> oʻsha oʻquvchiga biriktirilgan ustozning guruh havolasiga aylanadi.</span>
+            </div>
+            <div class="sn-meter" id="snCnt" aria-live="polite">
+              <div class="sn-m"><small>Belgilar</small><b>{{ m.len }}</b><span>{{ m.lenS }}</span></div>
+              <div class="sn-m"><small>Bir kishiga</small><b>{{ m.seg }}</b><span>{{ m.segS }}</span></div>
+              <div class="{{ m.totC }}"><small>Jami sarf</small><b>{{ m.tot }}</b><span>{{ m.totS }}</span></div>
+            </div>
+            <sc-if value="{{ uni }}" hint-placeholder-val="{{ true }}"><div class="sn-info"><span aria-hidden="true">ℹ</span><span style="flex: 1">{{ uniT }}</span><sc-if value="{{ canAscii }}" hint-placeholder-val="{{ true }}"><button type="button" class="btn2 sn-mini" onClick="{{ toAscii }}">ʻ → ' almashtirish</button></sc-if></div></sc-if>
+            <sc-if value="{{ miss }}" hint-placeholder-val="{{ false }}"><div class="sn-warn" role="status"><span aria-hidden="true">⚠</span><span><b>{{ missT }}</b>{{ missD }}</span></div></sc-if>
+            <sc-if value="{{ balNote }}" hint-placeholder-val="{{ false }}"><div class="sn-info" role="status"><span aria-hidden="true">ℹ</span><span>Eskiz balansini olib boʻlmadi — yuborish mumkin, lekin sarf balansga solishtirilmaydi.</span></div></sc-if>
+            <sc-if value="{{ bad }}" hint-placeholder-val="{{ false }}"><div class="sn-bad2" role="status"><span aria-hidden="true">⚠</span><span><b>{{ badT }}</b>{{ badD }}</span></div></sc-if>
+            <sc-if value="{{ dupe }}" hint-placeholder-val="{{ false }}"><div class="sn-info" role="status"><span aria-hidden="true">ℹ</span><span>{{ dupeT }}</span></div></sc-if>
+            <sc-if value="{{ low }}" hint-placeholder-val="{{ false }}"><div class="sn-warn" role="status"><span aria-hidden="true">⚠</span><span><b>{{ lowT }}</b>{{ lowD }}</span></div></sc-if>
+            <sc-if value="{{ tmo }}" hint-placeholder-val="{{ false }}"><div class="sn-warn" role="alert"><span aria-hidden="true">⏱</span><span style="flex: 1"><b>Javob kelmadi — SMSlar yuborilgan boʻlishi mumkin. Tarixni tekshiring.</b>Server {{ tmoT }} ta raqamga navbat bilan yuborishda davom etishi mumkin. Qayta yuborishdan oldin tarixni yangilang — “Yuborildi” boʻlganlar tanlovdan olinadi.</span><button type="button" class="btn2 sn-mini" onClick="{{ refreshHist }}" data-refresh="1">Tarixni yangilash</button></div></sc-if>
+            <div class="sn-foot">
+              <span style="font-size: 13px; color: #4B5563; flex: 1" role="status">{{ selCount }}</span>
+              <button type="button" class="btnp sn-send" onClick="{{ send }}" aria-disabled="{{ sendDis }}" aria-describedby="snWhy" data-send="1">{{ sendT }}</button>
+            </div>
+            <sc-if value="{{ why }}" hint-placeholder-val="{{ false }}"><p class="sn-err" id="snWhy" role="alert" style="text-align: right">{{ why }}</p></sc-if>
+          </section>
+
+          <!-- 3. KOʻRINISHI / NATIJA -->
+          <section class="box sn-col" aria-labelledby="snP">
+            <sc-if value="{{ showPv }}" hint-placeholder-val="{{ true }}">
+              <h2 class="sn-h" id="snP"><span class="sn-n" aria-hidden="true">3</span>Koʻrinishi</h2>
+              <sc-if value="{{ pv.has }}" hint-placeholder-val="{{ true }}">
+                <div class="sn-pnav"><button type="button" class="sn-ib" onClick="{{ pv.prev }}" disabled="{{ pv.noPrev }}" aria-label="Oldingi qabul qiluvchi">‹</button><span aria-live="polite">{{ pv.who }}</span><button type="button" class="sn-ib" onClick="{{ pv.next }}" disabled="{{ pv.noNext }}" aria-label="Keyingi qabul qiluvchi">›</button></div>
+                <div class="sn-phone"><div class="sn-scr"><span class="sn-from">Domwork · {{ pv.phone }}</span><div class="sn-bub" data-pv="1"><sc-for list="{{ pv.parts }}" as="x" hint-placeholder-count="3"><span class="{{ x.c }}">{{ x.t }}</span></sc-for></div><span style="font-size: 11px; color: #4B5563">{{ pv.meta }}</span></div></div>
+                <p class="hint" style="margin: 0"><span class="sn-fill">koʻk</span> — almashtirilgan qism, <span class="sn-hole">qizil</span> — maʼlumot topilmadi (boʻsh ketadi).</p>
+              </sc-if>
+              <sc-if value="{{ pv.none }}" hint-placeholder-val="{{ false }}"><div class="sn-empty" style="border: 1px dashed #CBD5E1; border-radius: 12px">Qabul qiluvchi tanlang — xabar uning ismi bilan shu yerda koʻrinadi</div></sc-if>
+            </sc-if>
+            <sc-if value="{{ sending }}" hint-placeholder-val="{{ false }}">
+              <h2 class="sn-h" id="snP">Yuborilmoqda…</h2>
+              <div class="sn-prog" role="progressbar" aria-label="SMS yuborilmoqda" aria-busy="true"><i></i></div>
+              <p style="margin: 0; font-size: 13px; color: #3A4456">{{ sendingT }}</p>
+              <p class="hint" style="margin: 0">Server har bir raqamga alohida soʻrov yuboradi. Sahifani yopmang — natija shu yerda chiqadi.</p>
+            </sc-if>
+            <sc-if value="{{ done }}" hint-placeholder-val="{{ false }}">
+              <h2 class="sn-h" id="snP">Natija</h2>
+              <div class="sn-sum"><div class="sn-sg"><b>{{ res.sent }}</b><span>ta yuborildi</span></div><sc-if value="{{ res.hasFail }}" hint-placeholder-val="{{ true }}"><div class="sn-sr"><b>{{ res.failed }}</b><span>ta xato</span></div></sc-if></div>
+              <div class="sn-res" role="list" aria-label="Har bir qabul qiluvchi natijasi"><sc-for list="{{ res.rows }}" as="x" hint-placeholder-count="6"><div class="sn-rr" role="listitem"><span class="{{ x.ic }}" aria-hidden="true">{{ x.i }}</span><b>{{ x.name }}</b><span>{{ x.d }}<sc-if value="{{ x.fail }}" hint-placeholder-val="{{ false }}"> <button type="button" class="lnk" onClick="{{ x.open }}" style="font-size: 12px">{{ x.openT }}</button></sc-if></span></div></sc-for></div>
+              <p class="hint" style="margin: 0">Tarix va balans yangilandi. Matn va tanlov tozalandi — xato ketganlarni qayta tanlab, raqamini tuzatib yuborish mumkin.</p>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap"><sc-if value="{{ res.hasFail }}" hint-placeholder-val="{{ true }}"><button type="button" class="btnp sn-mini" onClick="{{ res.retry }}" style="height: 34px">Xatolarni qayta tanlash ({{ res.failed }})</button></sc-if><button type="button" class="btn2 sn-mini" onClick="{{ res.close }}" style="height: 34px">Yangi xabar</button></div>
+            </sc-if>
+          </section>
+        </div>
+
+        <p class="sn-dnote"><b>Dizayn farqi:</b> (1) ROP faqat Rus tili lidlari va oʻquvchilarini koʻradi — hozirgi desktopda “Sotuv lidlari” ingliz+rus lidlarini, “Oʻquvchilar” esa barcha oʻquvchilarni aralash beradi; bu ataylab tuzatish. (2) Tayyor guruhlar, ʻ/kirill boʻyicha 70/160 segment hisobi va bitta tasdiq oynasi mobil ROP ekranidan; desktopda ikki <i>confirm()</i> va har doim 70 belgi. (3) Yangi: “ʻ → '” almashtirish tugmasi, notoʻgʻri raqam belgisi (server qoidasi oldindan), kam balans ogohlantirishi (kodda tekshiruv yoʻq), har raqam boʻyicha natija va “Yubordi” ustuni (kodda faqat “N ta yuborildi, M ta xato”). (4) Javob kelmasa — koʻr-koʻrona qayta yuborish oʻrniga tarixni yangilash; tarixda “Yuborildi” boʻlgan raqam shu matn bilan qayta yuborilmaydi.</p>
+
+        <section class="box" aria-labelledby="snH">
+          <div style="display: flex; align-items: center; gap: 10px">
+            <h2 id="snH" style="flex: 1">Yuborilgan SMS tarixi</h2>
+            <sc-if value="{{ hOk }}" hint-placeholder-val="{{ true }}"><div class="sn-hf" role="group" aria-label="Holat boʻyicha"><sc-for list="{{ hfs }}" as="f" hint-placeholder-count="3"><button type="button" class="sn-hc" aria-pressed="{{ f.on }}" onClick="{{ f.pick }}">{{ f.t }}</button></sc-for></div></sc-if>
+          </div>
+          <sc-if value="{{ hLoad }}" hint-placeholder-val="{{ false }}"><div aria-busy="true" aria-label="Tarix yuklanmoqda"><div class="sk" style="width: 90%"></div><div class="sk" style="width: 80%"></div><div class="sk" style="width: 85%"></div><div class="sk" style="width: 70%"></div></div></sc-if>
+          <sc-if value="{{ hErr }}" hint-placeholder-val="{{ false }}"><div class="malert" role="alert"><span style="flex: 1">Xatolik: Tarixni yuklashda xatolik</span><button type="button" class="btn2" onClick="{{ hRetry }}">Qayta urinish</button></div></sc-if>
+          <sc-if value="{{ hOk }}" hint-placeholder-val="{{ true }}">
+          <sc-if value="{{ hHas }}" hint-placeholder-val="{{ true }}">
+            <div class="sn-ht" role="table" aria-label="Yuborilgan SMS tarixi">
+              <div class="sn-hr sn-hh" role="row"><span role="columnheader">Qabul qiluvchi</span><span role="columnheader">Telefon</span><span role="columnheader">Xabar</span><span role="columnheader">Holat</span><span role="columnheader">Sabab</span><span role="columnheader">Vaqt</span><span role="columnheader">Yubordi</span></div>
+              <sc-for list="{{ hist }}" as="h" hint-placeholder-count="8"><div class="sn-hr" role="row" data-h="1"><span role="cell" style="font-weight: 700" title="{{ h.by }}">{{ h.name }}</span><span role="cell">{{ h.phone }}</span><span role="cell" title="{{ h.msg }}" style="color: #3A4456">{{ h.msg }}</span><span role="cell"><span class="{{ h.sc }}">{{ h.st }}</span></span><span role="cell" title="{{ h.err }}" style="{{ h.errSt }}">{{ h.errT }}</span><span role="cell" style="color: #4B5563">{{ h.at }}</span><span role="cell" style="color: #3A4456">{{ h.by }}</span></div></sc-for>
+            </div>
+            <sc-if value="{{ hMore }}" hint-placeholder-val="{{ true }}"><button type="button" class="btn2" onClick="{{ hMoreOn }}" style="align-self: flex-start">Yana koʻrsatish ({{ hLeft }} ta)</button></sc-if>
+          </sc-if>
+          <sc-if value="{{ hEmpty }}" hint-placeholder-val="{{ false }}"><div class="sn-empty" role="status">{{ hEmptyT }}</div></sc-if>
+          </sc-if>
+          <p class="hint" style="margin: 0">ROP barcha menejerlar yuborgan SMSlarni koʻradi; menejer — faqat oʻzi yuborganlarini. Oxirgi 50 ta yozuv.</p>
+        </section>
+      </sc-if>
+    </main>
+
+    <sc-if value="{{ cf }}" hint-placeholder-val="{{ false }}"><div class="sn-dlg"><div role="dialog" aria-modal="true" aria-labelledby="cfH" class="box" style="width: 500px" data-cf="1" onKeyDown="{{ cfKey }}">
+      <h2 id="cfH">{{ cfV.q }}</h2>
+      <dl class="sn-dl"><dt>Auditoriya</dt><dd>{{ cfV.aud }}</dd><dt>Bir kishiga</dt><dd>{{ cfV.seg }}</dd><dt>Jami sarf</dt><dd>{{ cfV.tot }}</dd><dt>Balansda qoladi</dt><dd>{{ cfV.left }}</dd></dl>
+      <div class="qq-prev" style="white-space: pre-wrap; line-height: 1.45"><b style="display: block; font-size: 12px; color: #4B5563; margin-bottom: 4px">{{ cfV.pvWho }}</b>{{ cfV.pv }}</div>
+      <sc-if value="{{ cfV.miss }}" hint-placeholder-val="{{ false }}"><div class="sn-warn"><span aria-hidden="true">⚠</span><span><b>{{ cfV.missT }}</b>Sabab: ularga ustoz biriktirilmagan yoki ustozning guruh havolasi kiritilmagan. Ularga havolasiz SMS ketadi.</span></div></sc-if>
+      <sc-if value="{{ cfV.bad }}" hint-placeholder-val="{{ false }}"><div class="sn-bad2"><span aria-hidden="true">⚠</span><span><b>{{ cfV.badT }}</b></span></div></sc-if>
+      <sc-if value="{{ cfV.dupe }}" hint-placeholder-val="{{ false }}"><div class="sn-info"><span aria-hidden="true">ℹ</span><span>{{ cfV.dupeT }}</span></div></sc-if>
+      <p class="hint" style="margin: 0">SMS maktab hisobidan (Eskiz) yechiladi va qaytarib boʻlmaydi.</p>
+      <div style="display: flex; gap: 8px; justify-content: flex-end"><button type="button" class="btn2" onClick="{{ cfV.no }}">Bekor qilish</button><button type="button" class="btnp" onClick="{{ cfV.yes }}" data-yes="1">{{ cfV.yesT }}</button></div>
+    </div></div></sc-if>
+    <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}"><div role="status" class="sn-toast">{{ toastT }}</div></sc-if>
+  </div>
+</div>

@@ -1,0 +1,17 @@
+  <sc-if value="{{ shOpen }}" hint-placeholder-val="{{ false }}">
+    <div class="sk-ov" style="z-index: 90">
+      <button type="button" class="sk-dim" tabindex="-1" aria-label="Yopish" onClick="{{ shClose }}" style="background: rgba(11,18,32,.30); cursor: pointer"></button>
+      <section role="dialog" aria-modal="true" aria-labelledby="shT" class="sk-sheet up" data-sheet="1" tabindex="-1" onKeyDown="{{ shKey }}" style="position: relative">
+        <sc-if value="{{ shCf }}" hint-placeholder-val="{{ false }}">
+          <div class="sk-center"><span class="sk-big sk-ib-g"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3.1 19.5 19.5 0 01-6-6A19.8 19.8 0 012.1 4.2 2 2 0 014.1 2h3a2 2 0 012 1.7c.1.9.4 1.8.7 2.7a2 2 0 01-.5 2.1L8 9.8a16 16 0 006 6l1.3-1.3a2 2 0 012.1-.5c.9.3 1.8.6 2.7.7a2 2 0 011.7 2z"></path></svg></span>
+            <h2 id="shT">Avval bir qoʻngʻiroq qilib koʻring</h2>
+            <p>{{ shName }}ga bugun hali qoʻngʻiroq qilinmagan. Iltimos, avval qoʻngʻiroq qilib koʻring — olmasa, shu yerning oʻzida “Sifatsiz”ga oʻtkazasiz.</p></div>
+          <div class="sk-card"><span class="sk-av" aria-hidden="true" style="{{ shAvSt }}">{{ shIni }}</span><div class="sk-rt"><strong>{{ shName }}</strong><span>{{ shTel }}</span></div><sc-if value="{{ shDays }}" hint-placeholder-val="{{ false }}"><span class="sk-pr">{{ shDays }}</span></sc-if></div>
+          <a class="sk-b sk-bpri sk-bxl" href="{{ shTelH }}" onClick="{{ shCallNow }}" title="{{ shTelT }}" style="text-decoration: none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3.1 19.5 19.5 0 01-6-6A19.8 19.8 0 012.1 4.2 2 2 0 014.1 2h3a2 2 0 012 1.7c.1.9.4 1.8.7 2.7a2 2 0 01-.5 2.1L8 9.8a16 16 0 006 6l1.3-1.3a2 2 0 012.1-.5c.9.3 1.8.6 2.7.7a2 2 0 011.7 2z"></path></svg>Hozir qoʻngʻiroq qilish</a>
+          <p class="sk-note">Qoʻngʻiroqdan qaytganingizda natijani belgilaysiz</p>
+          <p class="sk-dnote"><b>Prod qoidasi:</b> “Yangi” yoki “Urinilmoqda”dagi lidni oxirgi 24 soatda qoʻngʻiroqsiz “Sifatsiz”ga oʻtkazib boʻlmaydi (staleLeads.js wrapSifatsiz, server CALL_FIRST). Qoʻngʻiroq qayd etilgach sabab oynasi odatdagidek ochiladi.</p>
+        </sc-if>
+__STALE_SHEETS__
+      </section>
+    </div>
+  </sc-if>

@@ -1,0 +1,251 @@
+<div data-root="1" style="height: 960px; box-sizing: border-box; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #0B1220; background: #F5F7FB; display: flex; position: relative; overflow: hidden">
+<style>
+.mp-ro{display:flex;align-items:center;gap:10px;margin:0;padding:10px 14px;border-radius:12px;background:#F1F5F9;border:1px solid #CBD5E1;font-size:13px;font-weight:700;color:#334155}
+.mp-tabs{display:flex;gap:4px;padding:4px;background:#EEF2F6;border-radius:12px;align-self:flex-start}
+.mp-tab{height:34px;padding:0 16px;border:0;border-radius:9px;background:transparent;font:inherit;font-size:13px;font-weight:700;color:#3A4456;cursor:pointer}
+.mp-tab[aria-selected="true"]{background:#FFFFFF;color:#0057B8;font-weight:800;box-shadow:0 1px 3px rgba(16,24,40,.12)}
+.mp-tab:focus-visible{outline:2px solid #0065D6;outline-offset:2px}
+.mp-grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:14px;align-items:start}
+.mp-col{display:flex;flex-direction:column;gap:14px;min-width:0}
+.mp-ch{display:flex;align-items:center;gap:10px}.mp-ch h2{flex:1}
+.mp-sel{height:36px;border:1px solid #CBD5E1;border-radius:10px;padding:0 8px;font:inherit;font-size:13px;font-weight:600;background:#FFFFFF;color:#0B1220}
+.mp-hero{display:flex;gap:16px;align-items:center;padding:18px 20px;border-radius:18px;background:linear-gradient(135deg,#0B1220,#1E2A4A);color:#FFFFFF}
+.mp-hero small{font-size:11px;font-weight:800;letter-spacing:.08em;color:#A5B4FC}
+.mp-big{display:flex;align-items:baseline;gap:8px}.mp-big b{font-size:34px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}.mp-big em{font-style:normal;font-size:16px;color:#CBD5E1;font-weight:700}
+.mp-hsub{font-size:13px;color:#CBD5E1}
+.mp-hbar{position:relative;height:10px;border-radius:999px;background:rgba(255,255,255,.16);margin-top:10px}
+.mp-hbar i{position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:#4ADE80}
+.mp-hbar em{position:absolute;top:-4px;width:3px;height:18px;border-radius:2px;background:#FFFFFF}
+.mp-hfoot{display:flex;justify-content:space-between;font-size:12px;color:#CBD5E1;margin-top:6px}.mp-hfoot b{color:#FFFFFF}
+.mp-pace{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:10px}
+.mp-pi{display:flex;flex-direction:column;gap:3px;padding:12px 14px;border:1px solid #E6EAF2;border-radius:14px;background:#FFFFFF}
+.mp-pi span{font-size:12px;font-weight:700;color:#4B5563}.mp-pi b{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums}.mp-pi b small{font-size:12px;color:#4B5563;font-weight:700}.mp-pi>small{font-size:12px;color:#4B5563}
+.mp-pi.mp-ph{background:#EAF3FF;border-color:#B2CCFF}.mp-pi.mp-ph b{color:#0057B8}
+.mp-ok{color:#067647!important;font-weight:800}.mp-bad{color:#B42318!important;font-weight:800}
+.mp-prize{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;background:#FFFAEB;border:1px solid #FEDF89;font-size:13px}
+.mp-prize i{font-style:normal;font-size:22px}.mp-prize small{display:block;font-size:11px;font-weight:800;color:#93370D}
+.mp-cmp{display:flex;flex-direction:column;font-size:13px}
+.mp-cr{display:grid;grid-template-columns:1.3fr 1fr 1fr 1.3fr;gap:10px;align-items:center;padding:10px 4px;border-bottom:1px solid #EEF2F6}
+.mp-cr span:not(:first-child){text-align:right}.mp-hd{font-size:12px;font-weight:800;color:#4B5563}
+.mp-cc{display:flex;align-items:center;justify-content:flex-end;gap:8px}.mp-cb{flex:1;max-width:110px;height:6px;border-radius:999px;background:#EEF2F6;overflow:hidden}.mp-cb i{display:block;height:100%;border-radius:999px}
+.mp-note{margin:0;padding:10px 12px;border-radius:12px;background:#EFF6FF;border:1px solid #B2CCFF;color:#1E3A8A;font-size:13px}
+.mp-empty{display:flex;flex-direction:column;align-items:center;gap:6px;padding:36px 16px;text-align:center;color:#4B5563;font-size:13px}.mp-empty b{font-size:15px;color:#0B1220}
+.mp-tiers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.mp-tier{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:12px;border:1px solid #E6EAF2;background:#F8FAFC;font-size:12px}
+.mp-tier strong{font-size:13px}.mp-tier span{color:#4B5563;font-variant-numeric:tabular-nums}.mp-tier em{font-style:normal;font-weight:800;color:#93370D}
+.mp-tier.mp-tok{background:#ECFDF3;border-color:#ABEFC6}.mp-tier.mp-tok em{color:#067647}
+.mp-bars{display:flex;align-items:flex-end;gap:5px;height:110px;padding-top:6px}
+.mp-bars span{flex:1;border-radius:5px 5px 2px 2px;background:#B2CCFF;min-height:3px;position:relative}
+.mp-bars span.mp-today{background:#0065D6}.mp-bars span.mp-best{background:#12B76A}
+.mp-bl{display:flex;justify-content:space-between;font-size:11px;color:#4B5563;font-weight:600}
+.mp-gifts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mp-gift{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:12px;border:1px solid #E6EAF2;font-size:12px;color:#4B5563}
+.mp-gift strong{font-size:13px;color:#0B1220}.mp-gift i{font-style:normal;font-size:20px}
+.mp-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #EEF2F6;font-size:13px}.mp-row:last-child{border-bottom:0}
+.mp-row .mp-ck{flex:none;width:26px;height:26px;border-radius:50%;background:#ECFDF3;color:#067647;display:grid;place-items:center;font-weight:800}
+.mp-row div{flex:1;display:flex;flex-direction:column;min-width:0}.mp-row div span{font-size:12px;color:#4B5563}.mp-row b{font-variant-numeric:tabular-nums}
+.mp-diff{margin:0;font-size:12px;color:#4B5563;background:#F5F3FF;border:1px dashed #A78BFA;border-radius:10px;padding:8px 12px;line-height:1.45}.mp-diff b{color:#5B21B6}
+.mp-dtag{display:inline-block;font-size:10px;font-weight:800;color:#5B21B6;border:1px dashed #A78BFA;border-radius:999px;padding:1px 7px;margin-left:6px;vertical-align:2px;background:#F5F3FF}
+.mp-skel{border-radius:14px;background:linear-gradient(90deg,#E9EEF5 0%,#F5F7FB 50%,#E9EEF5 100%);background-size:200% 100%;animation:sh 1.2s linear infinite}
+.mp-link{border:0;background:transparent;color:#0057B8;font:inherit;font-size:13px;font-weight:800;cursor:pointer;padding:0}
+
+.pl-ro{display:flex;align-items:center;gap:10px;margin:0;padding:10px 14px;border-radius:12px;background:#F1F5F9;border:1px solid #CBD5E1;font-size:13px;font-weight:700;color:#334155}
+.pl-ro svg{width:16px;height:16px;flex:none}
+.pl-tabs{display:flex;gap:4px;padding:4px;background:#EEF2F6;border-radius:12px;align-self:flex-start}
+.pl-tab{height:34px;padding:0 16px;border:0;border-radius:9px;background:transparent;font:inherit;font-size:13px;font-weight:700;color:#3A4456;cursor:pointer}
+.pl-tab[aria-selected="true"]{background:#FFFFFF;color:#0B1220;box-shadow:0 1px 3px rgba(11,18,32,.12)}
+.pl-tab:focus-visible,.pl-per:focus-visible,.pl-mrow:focus-visible{outline:2px solid #0065D6;outline-offset:2px}
+.pl-ph{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.pl-ph h2{margin:0;font-size:15px;font-weight:800}
+.pl-formula{margin:0;font-size:12px;color:#4B5563}
+.pl-pg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px 14px}
+.pl-pf{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:700;color:#3A4456}
+.pl-in{position:relative}
+.pl-in input{box-sizing:border-box;width:100%;height:38px;border:1px solid #E2E8F0;border-radius:10px;padding:0 32px 0 10px;font:inherit;font-size:14px;font-weight:700;color:#0B1220;background:#F8FAFC;cursor:default}
+.pl-in input:focus{outline:2px solid #94A3B8;outline-offset:1px}
+.pl-in svg{position:absolute;right:10px;top:11px;width:15px;height:15px;color:#94A3B8}
+.pl-pers{display:flex;gap:6px;align-items:center}
+.pl-pers span{font-size:12px;font-weight:700;color:#4B5563;margin-right:4px}
+.pl-per{height:32px;padding:0 14px;border-radius:999px;border:1px solid #CBD5E1;background:#FFFFFF;font:inherit;font-size:12px;font-weight:700;color:#0B1220;cursor:pointer}
+.pl-per[aria-pressed="true"]{border-color:#0065D6;background:#0065D6;color:#FFFFFF}
+.pl-tiers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.pl-tier{background:#FFFFFF;border:1px solid #E6EAF2;border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.pl-tier.pl-main{border-color:#0065D6;box-shadow:0 0 0 1px #0065D6}
+.pl-th{display:flex;align-items:center;gap:8px}
+.pl-th h3{margin:0;font-size:15px;font-weight:800;flex:1}
+.pl-chip{font-size:12px;font-weight:800;border-radius:999px;padding:3px 10px}
+.pl-cw{background:#FEF0C7;color:#93370D}.pl-cp{background:#EAF3FF;color:#0057B8}.pl-co{background:#DCFAE6;color:#067647}
+.pl-mn{font-size:11px;font-weight:800;color:#0057B8}
+.pl-unit{font-size:11px;color:#4B5563}
+.pl-tt{display:flex;flex-direction:column;font-size:13px}
+.pl-tr{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) minmax(0,.8fr);gap:6px;padding:6px 0;border-top:1px solid #EEF2F6;align-items:baseline}
+.pl-tr > span:not(:first-child){text-align:right;font-variant-numeric:tabular-nums}
+.pl-tr.pl-hd{border-top:0;font-size:11px;font-weight:700;color:#4B5563}
+.pl-tr.pl-st{font-weight:800}
+.pl-rl{color:#3A4456}
+.pl-pos{color:#067647;font-weight:800}.pl-neg{color:#B42318;font-weight:800}
+.pl-ft{display:flex;flex-direction:column;font-size:13px}
+.pl-fr{display:grid;grid-template-columns:minmax(0,1.6fr) repeat(2,minmax(0,1fr)) minmax(0,1.2fr);gap:10px;padding:9px 4px;border-top:1px solid #EEF2F6;align-items:center}
+.pl-fr > span:not(:first-child){text-align:right;font-variant-numeric:tabular-nums}
+.pl-fr.pl-hd{border-top:0;font-size:12px;font-weight:700;color:#4B5563}
+.pl-ok{color:#067647;font-weight:800}.pl-warn{color:#93370D;font-weight:800}.pl-bad{color:#B42318;font-weight:800}.pl-mut{color:#4B5563}
+.pl-badge{display:inline-block;border-radius:999px;padding:2px 9px;font-weight:800;font-size:12px}
+.pl-badge.pl-ok{background:#DCFAE6}.pl-badge.pl-warn{background:#FEF0C7}.pl-badge.pl-bad{background:#FEE4E2}
+.pl-wrap{display:flex;gap:14px;align-items:flex-start}
+.pl-col{flex:1;min-width:0;display:flex;flex-direction:column;gap:14px}
+.pl-aside{width:330px;flex:none;display:flex;flex-direction:column;gap:14px}
+.pl-sel{height:36px;border:1px solid #CBD5E1;border-radius:10px;padding:0 8px;font:inherit;font-size:13px;font-weight:700;color:#0B1220;background:#FFFFFF}
+.pl-ch{display:flex;align-items:center;gap:10px}
+.pl-ch h2{margin:0;font-size:16px;font-weight:800;flex:1}
+.pl-pace{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:10px}
+.pl-pi{border:1px solid #E6EAF2;border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:2px;background:#FFFFFF}
+.pl-pi > span{font-size:12px;font-weight:700;color:#4B5563}
+.pl-pi b{font-size:24px;font-weight:800;letter-spacing:-.02em;line-height:1.2}
+.pl-pi b small{font-size:13px;font-weight:700;color:#4B5563}
+.pl-pi > small{font-size:12px;color:#4B5563}
+.pl-pi.pl-hero{background:#0B1220;border-color:#0B1220;color:#FFFFFF}
+.pl-pi.pl-hero > span,.pl-pi.pl-hero > small,.pl-pi.pl-hero b small{color:#CBD5E1}
+.pl-gap{font-weight:800}.pl-gap.pl-gok{color:#067647}.pl-gap.pl-gbad{color:#B42318}
+.pl-prize{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:#F5F3FF;border:1px solid #DDD6FE;font-size:13px}
+.pl-prize i{font-style:normal;font-size:22px}
+.pl-prize small{display:block;font-size:11px;font-weight:700;color:#5B21B6}
+.pl-prog{display:flex;flex-direction:column;gap:6px}
+.pl-progh{display:flex;justify-content:space-between;font-size:13px;font-weight:700}
+.pl-bar{position:relative;height:12px;border-radius:999px;background:#EEF2F6}
+.pl-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:999px}
+.pl-bar em{position:absolute;top:-4px;width:3px;height:20px;border-radius:2px;background:#0B1220;margin-left:-1px}
+.pl-leg{display:flex;gap:14px;font-size:11px;color:#4B5563}
+.pl-leg span{display:flex;align-items:center;gap:5px}
+.pl-dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+.pl-cmp{display:flex;flex-direction:column;font-size:13px}
+.pl-cr{display:grid;grid-template-columns:minmax(0,1.3fr) repeat(2,minmax(0,1fr)) minmax(0,1.6fr);gap:10px;padding:9px 4px;border-top:1px solid #EEF2F6;align-items:center}
+.pl-cr.pl-hd{border-top:0;font-size:12px;font-weight:700;color:#4B5563}
+.pl-cr > span:nth-child(2),.pl-cr > span:nth-child(3){text-align:right;font-variant-numeric:tabular-nums}
+.pl-cc{display:flex;align-items:center;gap:8px;justify-content:flex-end}
+.pl-cb{width:110px;height:6px;border-radius:999px;background:#EEF2F6;overflow:hidden}
+.pl-cb i{display:block;height:100%;border-radius:999px}
+.pl-cc b{min-width:44px;text-align:right}
+.pl-note{margin:0;padding:10px 12px;border-radius:10px;font-size:13px;background:#EFF6FF;border:1px solid #BFDBFE;color:#1E3A8A}
+.pl-empty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:34px 16px;text-align:center}
+.pl-empty i{font-style:normal;width:52px;height:52px;border-radius:50%;background:#EEF2F6;display:grid;place-items:center}
+.pl-empty b{font-size:15px}
+.pl-empty span{font-size:13px;color:#4B5563}
+.pl-mrow{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:4px 10px;align-items:center;padding:9px 8px;border:0;border-radius:12px;background:transparent;font:inherit;text-align:left;cursor:pointer;color:#0B1220;width:100%}
+.pl-mrow:hover{background:#F1F5F9}
+.pl-mrow[aria-pressed="true"]{background:#EAF3FF;box-shadow:inset 0 0 0 1px #93C5FD}
+.pl-av{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;color:#FFFFFF;font-size:11px;font-weight:800}
+.pl-mn2{display:flex;flex-direction:column;min-width:0;font-size:13px}
+.pl-mn2 b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pl-mn2 small{font-size:12px;color:#4B5563}
+.pl-mbar{grid-column:2 / 4;height:5px;border-radius:999px;background:#EEF2F6;overflow:hidden}
+.pl-mbar i{display:block;height:100%}
+.pl-dnote{font-size:12px;color:#5B21B6;background:#F5F3FF;border:1px dashed #A78BFA;border-radius:10px;padding:8px 10px;margin:0}
+.pl-toast{position:absolute;left:28px;bottom:24px;z-index:95;background:#0B1220;color:#FFFFFF;border-radius:14px;padding:12px 16px;font-size:13px;font-weight:700;box-shadow:0 20px 50px rgba(11,18,32,.35);max-width:620px}
+</style>
+__NAV__
+  <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative">
+__HDR__
+    <main style="flex: 1; min-height: 0; overflow: auto; padding: 18px 28px 28px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; align-items: flex-end; gap: 12px">
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 4px">
+          <div style="display: flex; align-items: center; gap: 10px"><h1 style="margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.02em">Sotuv rejasi</h1><span class="tag">Rus tili</span></div>
+          <p style="margin: 0; font-size: 13px; color: #4B5563">{{ subT }}</p>
+        </div>
+        <div class="mp-tabs" role="tablist" aria-label="Reja turi" onKeyDown="{{ tabKey }}"><sc-for list="{{ tabs }}" as="t" hint-placeholder-count="2"><button type="button" role="tab" class="mp-tab" id="{{ t.id }}" aria-selected="{{ t.on }}" tabindex="{{ t.ti }}" onClick="{{ t.pick }}">{{ t.t }}</button></sc-for></div>
+      </div>
+      <p class="mp-ro" role="note"><span aria-hidden="true">🔒</span>Sotuv rejasini admin belgilaydi — bu yerda faqat koʻrish mumkin.</p>
+
+      <sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}"><div aria-busy="true" aria-label="Reja yuklanmoqda" class="mp-grid"><div class="mp-col"><div class="mp-skel" style="height: 150px"></div><div class="mp-skel" style="height: 90px"></div><div class="mp-skel" style="height: 180px"></div></div><div class="mp-col"><div class="mp-skel" style="height: 140px"></div><div class="mp-skel" style="height: 200px"></div></div></div></sc-if>
+      <sc-if value="{{ loadErr }}" hint-placeholder-val="{{ false }}"><div class="malert" role="alert"><span style="flex: 1">Rejani yuklab boʻlmadi — server javob bermadi. Raqamlar notoʻgʻri chiqmasligi uchun koʻrsatilmadi.</span><button type="button" class="btn2" onClick="{{ retry }}">Qayta urinish</button></div></sc-if>
+
+      <sc-if value="{{ showTeam }}" hint-placeholder-val="{{ true }}">
+        <div role="tabpanel" aria-labelledby="mpTabTeam" style="display: flex; flex-direction: column; gap: 14px">
+          <section class="box" aria-labelledby="plParH">
+            <div class="pl-ph"><h2 id="plParH">Parametrlar</h2><p class="pl-formula">Lidlar = menejerlar × kunlik lid × kun · sotuvlar = lidlar × konversiya · summa = sotuvlar × chek · byudjet = lidlar × lid narxi</p></div>
+            <div class="pl-pg"><sc-for list="{{ params }}" as="p" hint-placeholder-count="8"><label class="pl-pf" for="{{ p.id }}">{{ p.l }}<span class="pl-in"><input id="{{ p.id }}" type="text" value="{{ p.v }}" readonly aria-readonly="true" title="Rejani admin belgilaydi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M7 11V7a5 5 0 0110 0v4M5 11h14v10H5z"/></svg></span></label></sc-for></div>
+          </section>
+          <div class="pl-pers" role="group" aria-label="Davr"><span>Davr</span><sc-for list="{{ pers }}" as="p" hint-placeholder-count="4"><button type="button" class="pl-per" aria-pressed="{{ p.on }}" onClick="{{ p.pick }}">{{ p.t }}</button></sc-for></div>
+          <p class="pl-note" role="note" style="margin: 0">{{ indSumT }}</p>
+          <div class="pl-tiers"><sc-for list="{{ ttiers }}" as="c" hint-placeholder-count="3">
+            <section class="{{ c.cls }}" aria-label="{{ c.aria }}">
+              <div class="pl-th"><h3>{{ c.l }}</h3><span class="{{ c.chipC }}">{{ c.conv }}</span></div>
+              <sc-if value="{{ c.main }}" hint-placeholder-val="{{ false }}"><span class="pl-mn">Fakt shu reja bilan solishtiriladi</span></sc-if>
+              <span class="pl-unit">Summalar soʻmda</span>
+              <div class="pl-tt" role="table" aria-label="{{ c.aria }}">
+                <div class="pl-tr pl-hd" role="row"><span role="columnheader">Koʻrsatkich</span><span role="columnheader">{{ c.perH }}</span><span role="columnheader">Kun</span></div>
+                <sc-for list="{{ c.rows }}" as="r" hint-placeholder-count="6"><div class="{{ r.cls }}" role="row"><span class="pl-rl" role="rowheader">{{ r.l }}</span><span role="cell" class="{{ r.pc }}">{{ r.p }}</span><span role="cell">{{ r.d }}</span></div></sc-for>
+              </div>
+            </section>
+          </sc-for></div>
+          <section class="box" aria-labelledby="plFactH">
+            <div class="pl-ph"><h2 id="plFactH">{{ factH }}</h2><p class="pl-formula">Bugungacha reja = “Oʻrtacha” reja × {{ factDays }} kun</p></div>
+            <div class="pl-ft" role="table" aria-labelledby="plFactH">
+              <div class="pl-fr pl-hd" role="row"><span role="columnheader">Koʻrsatkich</span><span role="columnheader">Fakt</span><span role="columnheader">Bugungacha reja</span><span role="columnheader">Bajarilish</span></div>
+              <sc-for list="{{ factRows }}" as="r" hint-placeholder-count="7"><div class="pl-fr" role="row"><span role="rowheader">{{ r.l }}</span><span role="cell"><b class="{{ r.fc }}">{{ r.f }}</b></span><span role="cell" class="pl-mut">{{ r.p }}</span><span role="cell"><span class="{{ r.vc }}">{{ r.v }}</span></span></div></sc-for>
+            </div>
+            <p class="hint" style="margin: 0">Lid soni — shu oyda yaratilgan Rus tili lidlari (Sotuv bazasi). Sotuv — barcha Rus tili menejerlarining shu oydagi toʻlovlari. Byudjet = lid soni × lid narxi.</p>
+          </section>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ showTeamNote }}" hint-placeholder-val="{{ true }}"><p class="pl-dnote"><b>Dizayn farqi:</b> kodda parametrlar oddiy kiritish maydonlari, ROP va sotuv menejeri uchun <code>readonly</code> (ropSotuvNav.js lockPlan) qilinadi va “Reja belgilash/tahrirlash” tugmalari olib tashlanadi — bu yerda qulf belgisi bilan koʻrsatildi. “Plan / Fakt” almashtirgichi kodda yashirin (fakt jadvali reja ostida) — bu yerda ham yoʻq.</p></sc-if>
+
+      <sc-if value="{{ showInd }}" hint-placeholder-val="{{ true }}">
+        <div class="mp-grid" role="tabpanel" aria-labelledby="mpTabInd">
+          <div class="mp-col">
+            <section class="box" aria-labelledby="mpIndH" style="gap: 14px">
+              <div class="mp-ch"><h2 id="mpIndH">Oylik reja</h2><label for="mpMonth" style="font-size: 12px; font-weight: 700; color: #4B5563">Oy</label><select id="mpMonth" class="mp-sel" onChange="{{ setMonth }}"><sc-for list="{{ monthOpts }}" as="o" hint-placeholder-count="13"><option value="{{ o.v }}" selected="{{ o.sel }}">{{ o.t }}</option></sc-for></select></div>
+              <sc-if value="{{ ind.empty }}" hint-placeholder-val="{{ false }}"><div class="mp-empty" role="status"><span aria-hidden="true" style="font-size: 26px">◎</span><b>{{ ind.emptyT }}</b><sc-if value="{{ ind.factT }}" hint-placeholder-val="{{ false }}"><span style="font-size: 20px; font-weight: 800; color: #0B1220">{{ ind.factT }}</span></sc-if><span>Rejani admin belgilaydi — belgilangach shu yerda kunlik maqsadingiz chiqadi.</span></div></sc-if>
+              <sc-if value="{{ ind.has }}" hint-placeholder-val="{{ true }}">
+                <div class="mp-hero">
+                  <div style="flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0">
+                    <small>SHAXSIY REJA · {{ ind.monT }}</small>
+                    <div class="mp-big"><b>{{ ind.factM }}</b><em>/ {{ ind.planM }} mln soʻm</em></div>
+                    <span class="mp-hsub">{{ ind.dealsT }}</span>
+                    <div class="mp-hbar" role="progressbar" aria-label="{{ ind.barL }}" aria-valuenow="{{ ind.pct }}" aria-valuemin="0" aria-valuemax="100"><i style="{{ ind.barSt }}"></i><sc-if value="{{ ind.pace }}" hint-placeholder-val="{{ true }}"><em style="{{ ind.todaySt }}" title="Bugungacha shu yerda boʻlish kerak"></em></sc-if></div>
+                    <div class="mp-hfoot"><span><b>{{ ind.pctT }}</b> bajarildi</span><span>{{ ind.footR }}</span></div>
+                  </div>
+                </div>
+                <sc-if value="{{ ind.pace }}" hint-placeholder-val="{{ true }}">
+                  <div class="mp-pace">
+                    <div class="mp-pi mp-ph"><span>Bugungi maqsad · reja uchun</span><b title="{{ ind.perDayT }}">{{ ind.perDay }}<small> mln soʻm</small></b><small>{{ ind.perDayS }}</small></div>
+                    <div class="mp-pi"><span>Rejagacha qoldi</span><b title="{{ ind.leftT }}">{{ ind.left }}<small> mln soʻm</small></b><small>{{ ind.daysLeft }}</small></div>
+                    <div class="mp-pi"><span>Bugungacha kerak edi</span><b title="{{ ind.dueT }}">{{ ind.due }}<small> mln soʻm</small></b><small class="{{ ind.gapC }}">{{ ind.gap }}</small></div>
+                  </div>
+                  <div class="mp-prize"><i aria-hidden="true">📱</i><span><small>Qoʻshimcha maqsad</small>{{ ind.prizeT }}</span></div>
+                </sc-if>
+                <sc-if value="{{ ind.carried }}" hint-placeholder-val="{{ false }}"><p class="mp-note" role="note">{{ ind.carriedT }}</p></sc-if>
+                <div class="mp-cmp" role="table" aria-label="Reja va fakt">
+                  <div class="mp-cr mp-hd" role="row"><span role="columnheader">Koʻrsatkich</span><span role="columnheader">Reja</span><span role="columnheader">Fakt</span><span role="columnheader">Bajarildi</span></div>
+                  <sc-for list="{{ ind.rows }}" as="r" hint-placeholder-count="3"><div class="mp-cr" role="row"><span role="rowheader" style="font-weight: 700">{{ r.l }}</span><span role="cell">{{ r.p }}</span><span role="cell"><b>{{ r.f }}</b></span><span role="cell" class="mp-cc"><span class="mp-cb" aria-hidden="true"><i style="{{ r.bar }}"></i></span><b class="{{ r.vc }}">{{ r.v }}</b></span></div></sc-for>
+                </div>
+              </sc-if>
+            </section>
+            <section class="box" aria-labelledby="mpDayH" style="gap: 10px">
+              <div class="mp-ch"><h2 id="mpDayH">Kunlik tushum <span class="mp-dtag">Dizayn farqi · mobil</span></h2><span class="hint" style="margin: 0">soʻnggi 14 kun</span></div>
+              <div class="mp-bars" role="img" aria-label="{{ barsL }}"><sc-for list="{{ bars }}" as="x" hint-placeholder-count="14"><span class="{{ x.cls }}" style="{{ x.h }}" title="{{ x.t }}"></span></sc-for></div>
+              <div class="mp-bl"><span>{{ barsFrom }}</span><span>{{ barsBest }}</span><span>Bugun</span></div>
+            </section>
+          </div>
+          <aside class="mp-col">
+            <section class="box" aria-labelledby="mpBonH" style="gap: 10px">
+              <div class="mp-ch"><h2 id="mpBonH">Bugungi bonus <span class="mp-dtag">Dizayn farqi · mobil</span></h2><span class="hint" style="margin: 0">{{ todayT }}</span></div>
+              <div class="mp-tiers"><sc-for list="{{ tiers }}" as="t" hint-placeholder-count="3"><div class="{{ t.cls }}"><strong>{{ t.l }}</strong><span>{{ t.th }}</span><em>{{ t.st }}</em></div></sc-for></div>
+            </section>
+            <section class="box" aria-labelledby="mpPayH" style="gap: 4px">
+              <div class="mp-ch"><h2 id="mpPayH">Soʻnggi toʻlovlar <span class="mp-dtag">Dizayn farqi · mobil</span></h2></div>
+              <sc-if value="{{ hasPays }}" hint-placeholder-val="{{ true }}"><div role="list"><sc-for list="{{ pays }}" as="p" hint-placeholder-count="5"><div class="mp-row" role="listitem"><span class="mp-ck" aria-hidden="true">✓</span><div><strong>{{ p.n }}</strong><span>{{ p.w }}</span></div><b>{{ p.v }}</b></div></sc-for></div></sc-if>
+              <sc-if value="{{ noPays }}" hint-placeholder-val="{{ false }}"><p class="hint" style="margin: 8px 0">Shu oy hali toʻlov yoʻq</p></sc-if>
+            </section>
+            <section class="box" aria-labelledby="mpGiftH" style="gap: 10px">
+              <div class="mp-ch"><h2 id="mpGiftH">Oylik sovgʻalar <span class="mp-dtag">Dizayn farqi · mobil</span></h2></div>
+              <div class="mp-gifts"><sc-for list="{{ gifts }}" as="g" hint-placeholder-count="4"><div class="mp-gift"><i aria-hidden="true">{{ g.i }}</i><strong>{{ g.l }}</strong><span>{{ g.s }}</span></div></sc-for></div>
+            </section>
+            <p class="mp-diff"><b>Dizayn farqi:</b> qora “SHAXSIY REJA” kartasi (production’dagi oddiy progress satri oʻrnida, “Shu tempda …” — Bosh sahifa Kobalt bloki hisobi), “Bugungi bonus”, “Kunlik tushum”, “Soʻnggi toʻlovlar” va “Oylik sovgʻalar” — mobil ilovaning “Rejam” ekranidan (sotuvApp.js screenPlan) olindi; desktop’dagi renderSalesPlanIndividual’da ular yoʻq. Hisob bir xil: reyting manbai (getLeadStatsForRankings), DAILY_BONUSES / MONTHLY_BONUSES.</p>
+          </aside>
+        </div>
+      </sc-if>
+    </main>
+    <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}"><div role="status" class="toast" style="bottom: 24px">{{ toast }}</div></sc-if>
+  </div>
+</div>

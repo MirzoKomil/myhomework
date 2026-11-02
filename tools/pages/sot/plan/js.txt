@@ -1,0 +1,123 @@
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.state = { sb: true, demo: 'ok', retried: false, tab: 'ind', per: 'full', month: '2026-11', toast: '' };
+    this._t = null;
+  }
+  focusSoon(sel) { setTimeout(() => { const el = document.querySelector(sel); if (el && el.focus) el.focus(); }, 30); }
+  renderVals() {
+    const s = this.state;
+__NAVJS__
+__MKNAV__
+    const toast = t => { this.setState({ toast: t }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: '' }), 3000); };
+    const nav = mkNav({}).map(n => Object.assign({}, n, { cur: n.k === 'plan' ? 'page' : 'false', pickBadge: () => {}, pick: () => { if (n.k === 'plan' || !n.item) return; toast(n.label + ' sahifasi ochiladi'); } }));
+    const grp = n => String(Math.abs(Math.round(Number(n) || 0))).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    const num = n => (n < 0 ? '−' : '') + grp(n);
+    const money = n => num(n) + ' soʻm';
+    const mlnN = n => String(Math.round((Number(n) || 0) / 1e5) / 10).replace('.', ',');
+    const mln = n => { const v = (Number(n) || 0) / 1e6; return v ? String(Math.round(v * 10) / 10).replace('.', ',') + ' mln soʻm' : '0 soʻm'; };
+    const loading = s.demo === 'load', loadErr = s.demo === 'err' && !s.retried, ready = !loading && !loadErr;
+    const noFact = s.demo === 'nofact', noPlan = s.demo === 'noplan';
+    const pct1 = n => (Math.round((Number(n) || 0) * 10) / 10).toFixed(1).replace('.', ',') + '%';
+    const spct = n => { const v = Math.round(Number(n) || 0); return (v > 0 ? '+' : v < 0 ? '−' : '') + grp(v) + '%'; };
+    // ---- Jamoaviy reja: getSalesPlan('russian') (SALES_PLAN_DEFAULTS ustiga admin kiritgan qiymatlar) ----
+    const plan = { managers: 4, leadsPerDay: 10, duration: 30, leadCost: 9500, avgCheck: 1900000, conversions: { min: 4.5, mid: 5.0, max: 5.5 } };
+    const metrics = (conv, days) => {
+      const lk = Math.round(plan.managers * plan.leadsPerDay), sk = Math.round(lk * conv / 100), sumK = sk * plan.avgCheck, bk = lk * plan.leadCost;
+      const ld = lk * days, sd = Math.round(ld * conv / 100), sumD = sd * plan.avgCheck, bd = ld * plan.leadCost;
+      return { kunlik: { lidSoni: lk, sotuvSoni: sk, sotuvSumma: sumK, budjet: bk, romi: bk > 0 ? (sumK - bk) / bk * 100 : 0 }, davr: { lidSoni: ld, konversiya: conv, sotuvSoni: sd, avgCheck: plan.avgCheck, sotuvSumma: sumD, budjet: bd, romi: bd > 0 ? (sumD - bd) / bd * 100 : 0, days } };
+    };
+    // getSalesPlanPeriods(30): Oylik jami, 1–10, 10–20, 20–30
+    const periods = [{ key: 'full', label: 'Oylik jami', days: plan.duration }];
+    for (let d = 0; d < plan.duration; d += 10) { const nx = Math.min(d + 10, plan.duration); periods.push({ key: 'seg-' + d, label: (d === 0 ? 1 : d) + '–' + nx, days: nx - d }); }
+    const ap = periods.find(p => p.key === s.per) || periods[0];
+    const TIER = [['min', 'Minimal', 'pl-chip pl-cw'], ['mid', 'Oʻrtacha', 'pl-chip pl-cp'], ['max', 'Zoʻr', 'pl-chip pl-co']];
+    const tiers = TIER.map(t => {
+      const conv = plan.conversions[t[0]], m = metrics(conv, ap.days), main = t[0] === 'mid';
+      const R = (l, p, d, strong, pc) => ({ l, p, d, cls: 'pl-tr' + (strong ? ' pl-st' : ''), pc: pc || '' });
+      return { l: t[1], chipC: t[2], conv: pct1(conv), main, cls: 'pl-tier' + (main ? ' pl-main' : ''), aria: t[1] + ' reja', perH: ap.label + ' · ' + m.davr.days + ' kun',
+        rows: [R('Lidlar', num(m.davr.lidSoni), num(m.kunlik.lidSoni)), R('Konversiya', pct1(conv), '—'), R('Sotuvlar', num(m.davr.sotuvSoni), num(m.kunlik.sotuvSoni)), R('Sotuv summasi', num(m.davr.sotuvSumma), num(m.kunlik.sotuvSumma), true), R('Reklama byudjeti', num(m.davr.budjet), num(m.kunlik.budjet)), R('ROMI', spct(m.davr.romi), '—', false, m.davr.romi >= 0 ? 'pl-pos' : 'pl-neg')] };
+    });
+    const params = [['spManagers', 'Menejer soni', num(plan.managers)], ['spLeadsPerDay', 'Lid (1 menejerga, kunlik)', num(plan.leadsPerDay)], ['spDuration', 'Muddat (kun)', num(plan.duration)], ['spLeadCost', 'Lid narxi (soʻm)', num(plan.leadCost)], ['spAvgCheck', 'Oʻrtacha chek (soʻm)', num(plan.avgCheck)], ['spConvMin', 'Konversiya — min (%)', '4,5'], ['spConvMid', 'Konversiya — oʻrtacha (%)', '5,0'], ['spConvMax', 'Konversiya — zoʻr (%)', '5,5']].map(p => ({ id: p[0], l: p[1], v: p[2] }));
+    // ---- Fakt: computeSalesPlanFactMetrics('russian') — 1–2 noyabr ----
+    const FD = 2; // now.getDate()
+    const fLid = noFact ? 0 : 13, fDeals = noFact ? 0 : 4, fSum = noFact ? 0 : 9400000; // Voronka: 1–2 noyabr 13 ta Rus tili lid; Reyting: KS 5,3 · HB 2,6 · GM 1,5 mln
+    const f = { lidSoni: fLid, sotuvSoni: fDeals, sotuvSumma: fSum, konversiya: fLid ? fDeals / fLid * 100 : 0, avgCheck: fDeals ? Math.round(fSum / fDeals) : 0, budjet: fLid * plan.leadCost };
+    f.romi = f.budjet > 0 ? (f.sotuvSumma - f.budjet) / f.budjet * 100 : 0;
+    const pd = metrics(plan.conversions.mid, Math.min(FD, plan.duration)).davr;
+    const pc = (a, b) => (b > 0 ? Math.round(a / b * 100) : null);
+    const vcls = v => 'pl-badge ' + (v === null ? '' : v >= 100 ? 'pl-ok' : v >= 80 ? 'pl-warn' : 'pl-bad');
+    const budgetDiff = pd.budjet - f.budjet;
+    const factRows = [['Lidlar', num(f.lidSoni), num(pd.lidSoni), pc(f.lidSoni, pd.lidSoni)], ['Sotuvlar', num(f.sotuvSoni), num(pd.sotuvSoni), pc(f.sotuvSoni, pd.sotuvSoni)], ['Sotuv summasi', money(f.sotuvSumma), money(pd.sotuvSumma), pc(f.sotuvSumma, pd.sotuvSumma)], ['Konversiya', pct1(f.konversiya), pct1(pd.konversiya), pc(f.konversiya, pd.konversiya)], ['Oʻrtacha chek', money(f.avgCheck), money(pd.avgCheck), pc(f.avgCheck, pd.avgCheck)]]
+      .map(r => ({ l: r[0], f: r[1], p: r[2], v: r[3] === null ? '—' : r[3] + '%', vc: vcls(r[3]), fc: '' }))
+      .concat([{ l: 'Reklama byudjeti · lid × lid narxi', f: money(f.budjet), p: money(pd.budjet), v: budgetDiff >= 0 ? 'rejadan ' + money(budgetDiff) + ' kam' : 'rejadan ' + money(-budgetDiff) + ' koʻp', vc: budgetDiff >= 0 ? 'pl-ok' : 'pl-bad', fc: '' },
+        { l: 'ROMI', f: spct(f.romi), p: spct(pd.romi), v: '—', vc: 'pl-mut', fc: f.romi >= 0 ? 'pl-pos' : 'pl-neg' }]);
+    // getIndividualSalesPlan('KS', oy) / getManagerSalesForMonth — RopK_Plan bilan bir xil raqamlar
+    const PLANS = { '2026-09': [38000000, 20, 1900000], '2026-10': [40000000, 21, 1900000], '2026-11': [40000000, 21, 1900000] };
+    const FACT = { '2026-09': [36100000, 19], '2026-10': [44800000, 23], '2026-11': [5300000, 2] };
+    const UZM = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentyabr', 'Oktyabr', 'Noyabr', 'Dekabr'];
+    const mLab = k => UZM[+k.slice(5) - 1] + ' ' + k.slice(0, 4);
+    const JORIY = '2026-11', daysIn = 30;
+    const getPlan = oy => { if (noPlan && oy === JORIY) return null; if (PLANS[oy]) return { a: PLANS[oy][0], d: PLANS[oy][1], c: PLANS[oy][2] }; const prior = Object.keys(PLANS).filter(k => k <= oy).sort().pop(); return prior && !noPlan ? { a: PLANS[prior][0], d: PLANS[prior][1], c: PLANS[prior][2], from: prior } : null; };
+    const getFact = oy => (noFact && oy === JORIY) ? [0, 0] : (FACT[oy] || [0, 0]);
+    const months = []; for (let i = 6; i >= -6; i--) { const d = new Date(2026, 10 + i, 1); months.push(d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0')); }
+    const oy = s.month;
+    const tone = p => (p >= 100 ? '#0F9D6B' : p >= 60 ? '#7C3AED' : '#E5484D');
+    const today = noFact ? 0 : 1900000;
+    let ind = { empty: false, has: false, rows: [] };
+    const p = getPlan(oy), fa = getFact(oy), act = fa[0], deals = fa[1], avgF = deals ? Math.round(act / deals) : 0;
+    if (!p) ind = { empty: true, emptyT: mLab(oy) + ' uchun reja belgilanmagan', factT: act ? mlnN(act) + ' mln · ' + deals + ' ta bitim' : '', has: false, rows: [] };
+    else {
+      const pct = p.a > 0 ? Math.min(100, Math.round(act / p.a * 100)) : 0, pctRaw = p.a > 0 ? Math.round(act / p.a * 100) : 0;
+      const isNow = oy === JORIY, daysLeft = Math.max(1, daysIn - FD + 1);
+      const left = Math.max(0, p.a - act), due = Math.round(p.a * FD / daysIn), diff = act - due, perDay = Math.ceil(left / daysLeft);
+      const forecast = Math.round(act / FD * daysIn);
+      const cmp = (l, pv, fv, fmt) => { const q = pv > 0 ? Math.round(fv / pv * 100) : 0; return { l, p: fmt(pv), f: fmt(fv), v: pv > 0 ? q + '%' : '—', vc: q >= 100 ? 'mp-ok' : q < 60 && pv > 0 ? 'mp-bad' : '', bar: 'width:' + Math.min(100, q) + '%;background:' + tone(q) }; };
+      const m1 = n => { const v = (Number(n) || 0) / 1e6; return v ? String(Math.round(v * 10) / 10).replace('.', ',') + ' mln' : '0'; };
+      const m2 = n => { const v = (Number(n) || 0) / 1e6; return v ? String(Math.round(v * 100) / 100).replace('.', ',') + ' mln' : '0'; };
+      const fut = oy > JORIY;
+      ind = { empty: false, has: true, pace: isNow && p.a > 0, monT: mLab(oy).toUpperCase(),
+        factM: mlnN(act), planM: mlnN(p.a), dealsT: deals + ' ta toʻlov' + (deals ? ' · oʻrtacha chek ' + num(avgF) + ' soʻm' : ''),
+        barL: pctRaw + '% bajarildi' + (isNow ? ', bugungacha ' + Math.round(due / p.a * 100) + '% kerak edi' : ''),
+        footR: isNow ? (forecast < p.a ? 'Shu tempda ' + mln(forecast).replace(' soʻm', '') + ' — rejaga ' + mln(p.a - forecast).replace(' soʻm', '') + ' yetmaydi' : 'Shu tempda ' + mln(forecast).replace(' soʻm', '') + ' — reja bajariladi') : fut ? 'Oy hali boshlanmagan' : (pctRaw >= 100 ? 'Reja bajarilgan' : 'Oy yopilgan'),
+        perDay: mlnN(perDay), perDayT: money(perDay), perDayS: 'Har kuni shuncha sotsangiz — rejaga yetasiz' + (today ? ' · bugun ' + mln(today) : ''),
+        left: mlnN(left), leftT: money(left), daysLeft: daysLeft + ' kun qoldi', due: mlnN(due), dueT: money(due),
+        gap: (diff >= 0 ? '+' : '−') + mln(Math.abs(diff)).replace(' soʻm', '') + ' ' + (diff >= 0 ? 'oldinda' : 'orqada'), gapC: diff >= 0 ? 'mp-ok' : 'mp-bad',
+        prizeT: 'iPhone 17 Pro sovgʻasigacha ' + mln(120000000 - act),
+        carried: !!p.from, carriedT: p.from ? 'Bu reja ' + mLab(p.from) + ' oyidan avtomatik koʻchirilgan. Admin ' + mLab(oy) + ' uchun alohida reja belgilasa, oʻsha qoʻllanadi.' : '',
+        pct: String(pct), pctT: pctRaw + '%', barSt: 'width:' + pct + '%;background:' + (pctRaw >= 100 ? '#4ADE80' : '#60A5FA'), todaySt: 'left:' + Math.round(FD / daysIn * 100) + '%',
+        rows: [cmp('Sotuv summasi', p.a, act, m1), cmp('Sotuvlar soni', p.d, deals, num), cmp('Oʻrtacha chek', p.c, avgF, m2)] };
+    }
+    // ---- Mobil "Rejam" qismlari (sotuvApp.js screenPlan) — joriy oy, reyting manbai ----
+    // Soʻnggi 14 kun: 20-okt … 2-noy. Okt oxiri — oktyabr 44,8 mln ichidan; 1-noy 3,4 mln, 2-noy 1,9 mln (Voronka/Reyting bilan bir xil).
+    const D14 = [['2026-10-20', 1900000], ['2026-10-21', 0], ['2026-10-22', 3400000], ['2026-10-23', 1900000], ['2026-10-24', 0], ['2026-10-25', 2600000], ['2026-10-26', 1450000], ['2026-10-27', 0], ['2026-10-28', 3800000], ['2026-10-29', 1900000], ['2026-10-30', 2600000], ['2026-10-31', 0], ['2026-11-01', 3400000], ['2026-11-02', 1900000]]
+      .map(x => [x[0], noFact && x[0] >= '2026-11-01' ? 0 : x[1]]);
+    const max = Math.max(1, ...D14.map(x => x[1]));
+    const best = D14.reduce((a, b) => (b[1] > a[1] ? b : a), D14[0]);
+    const MON3 = ['yan', 'fev', 'mar', 'apr', 'may', 'iyn', 'iyl', 'avg', 'sen', 'okt', 'noy', 'dek'];
+    const dd = k => +k.slice(8) + '-' + MON3[+k.slice(5, 7) - 1];
+    const DAILY = [['Obed', 1800000], ['Obed + 30,000', 2500000], ['Obed + 60,000', 3000000]];
+    const GIFTS = [['📱', 'iPhone 17 Pro', 120000000], ['💻', 'MacBook', 160000000], ['💰', '$2,000 Pul mukofoti', 220000000], ['🕋', '2 kishilik Umra + $500', 300000000]];
+    const monthSales = noFact ? 0 : 5300000;
+    const PAYS = noFact ? [] : [['Zarina Qosimova', 'Bugun, 00:58', 1900000], ['Behruz Olimov', 'Kecha, 18:20', 3400000], ['Lobar Tursunova', '30-okt, 16:05', 2600000], ['Akmal Rahmonov', '29-okt, 12:40', 1900000], ['Feruza Islomova', '28-okt, 19:10', 3800000]];
+    return {
+      crumb0: 'Sotuv', crumb: 'Sotuv rejasi', nav, sbCls: s.sb ? 'sb' : 'sb sb-min', sbExp: s.sb ? 'true' : 'false', sbLab: s.sb ? 'Menyuni yigʻish' : 'Menyuni ochish', sbIcon: s.sb ? 'M15 6l-6 6 6 6' : 'M9 6l6 6-6 6', toggleSb: () => this.setState({ sb: !s.sb }),
+      demo: [['ok', 'Oddiy', ''], ['load', 'Yuklanmoqda', ''], ['err', 'Xato', 'Reja yoki fakt yuklanmadi'], ['noplan', 'Boʻsh', 'Noyabr uchun reja belgilanmagan'], ['nofact', 'Fakt yoʻq', 'Shu oy hali toʻlov yoʻq']].map(d => ({ t: d[1], tip: d[2] || d[1], on: s.demo === d[0] ? 'true' : 'false', pick: () => this.setState({ demo: d[0], retried: false, toast: '', month: '2026-11', tab: 'ind' }) })),
+      loading, loadErr, retry: () => this.setState({ retried: true }), toast: s.toast,
+      tabs: [['ind', 'Mening rejam', 'mpTabInd'], ['team', 'Jamoaviy reja', 'mpTabTeam']].map(t => ({ t: t[1], id: t[2], on: s.tab === t[0] ? 'true' : 'false', ti: s.tab === t[0] ? '0' : '-1', pick: () => this.setState({ tab: t[0] }) })),
+      tabKey: e => { if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return; e.preventDefault(); const nx = s.tab === 'ind' ? 'team' : 'ind'; this.setState({ tab: nx }); this.focusSoon('#' + (nx === 'ind' ? 'mpTabInd' : 'mpTabTeam')); },
+      showInd: ready && s.tab === 'ind', showTeam: ready && s.tab === 'team', showTeamNote: ready && s.tab === 'team',
+      subT: s.tab === 'team' ? 'Jamoaviy reja · Rus tili yoʻnalishi · faqat koʻrish' : 'Shaxsiy oylik rejangiz va uning bajarilishi',
+      params, pers: periods.map(p => ({ t: p.label, on: p.key === ap.key ? 'true' : 'false', pick: () => this.setState({ per: p.key }) })), ttiers: tiers,
+      indSumT: 'Individual rejalar yigʻindisi (Noyabr 2026): 108 mln · 1 menejerda reja yoʻq — “Oʻrtacha” jamoaviy reja: ' + mln(metrics(plan.conversions.mid, plan.duration).davr.sotuvSumma).replace(' soʻm', ''),
+      factH: 'Fakt · 1–' + FD + ' noyabr', factDays: String(FD), factRows,
+      monthOpts: months.map(k => ({ v: k, t: mLab(k) + (k === JORIY ? ' (joriy)' : ''), sel: k === oy })), setMonth: e => this.setState({ month: e.target.value }), ind,
+      bars: D14.map((x, i) => ({ cls: i === 13 ? 'mp-today' : x === best && x[1] ? 'mp-best' : '', h: 'height:' + Math.round(x[1] / max * 100) + '%', t: dd(x[0]) + ': ' + (x[1] ? mln(x[1]) : '0') })),
+      barsL: 'Soʻnggi 14 kundagi tushum: ' + D14.map(x => dd(x[0]) + ' ' + (x[1] ? mlnN(x[1]) + ' mln' : '0')).join(', '),
+      barsFrom: dd(D14[0][0]), barsBest: best[1] ? 'eng yaxshi: ' + dd(best[0]) + ' · ' + mln(best[1]) : '',
+      todayT: 'bugun ' + mln(today), tiers: DAILY.map(b => { const ok = today >= b[1]; return { cls: 'mp-tier' + (ok ? ' mp-tok' : ''), l: b[0], th: mln(b[1]), st: ok ? '✓ olindi' : mln(b[1] - today) + ' qoldi' }; }),
+      pays: PAYS.map(x => ({ n: x[0], w: x[1], v: num(x[2]) })), hasPays: PAYS.length > 0, noPays: PAYS.length === 0,
+      gifts: GIFTS.map(g => ({ i: g[0], l: g[1], s: monthSales >= g[2] ? '✓ olindi' : mln(g[2] - monthSales) + ' qoldi' }))
+    };
+  }
+}

@@ -1,0 +1,210 @@
+<style>
+.pl-ro{display:flex;align-items:center;gap:10px;margin:0;padding:10px 14px;border-radius:12px;background:#F1F5F9;border:1px solid #CBD5E1;font-size:13px;font-weight:700;color:#334155}
+.pl-ro svg{width:16px;height:16px;flex:none}
+.pl-tabs{display:flex;gap:4px;padding:4px;background:#EEF2F6;border-radius:12px;align-self:flex-start}
+.pl-tab{height:34px;padding:0 16px;border:0;border-radius:9px;background:transparent;font:inherit;font-size:13px;font-weight:700;color:#3A4456;cursor:pointer}
+.pl-tab[aria-selected="true"]{background:#FFFFFF;color:#0B1220;box-shadow:0 1px 3px rgba(11,18,32,.12)}
+.pl-tab:focus-visible,.pl-per:focus-visible,.pl-mrow:focus-visible{outline:2px solid #0065D6;outline-offset:2px}
+.pl-ph{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.pl-ph h2{margin:0;font-size:15px;font-weight:800}
+.pl-formula{margin:0;font-size:12px;color:#4B5563}
+.pl-pg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px 14px}
+.pl-pf{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:700;color:#3A4456}
+.pl-in{position:relative}
+.pl-in input{box-sizing:border-box;width:100%;height:38px;border:1px solid #E2E8F0;border-radius:10px;padding:0 32px 0 10px;font:inherit;font-size:14px;font-weight:700;color:#0B1220;background:#F8FAFC;cursor:default}
+.pl-in input:focus{outline:2px solid #94A3B8;outline-offset:1px}
+.pl-in svg{position:absolute;right:10px;top:11px;width:15px;height:15px;color:#94A3B8}
+.pl-pers{display:flex;gap:6px;align-items:center}
+.pl-pers span{font-size:12px;font-weight:700;color:#4B5563;margin-right:4px}
+.pl-per{height:32px;padding:0 14px;border-radius:999px;border:1px solid #CBD5E1;background:#FFFFFF;font:inherit;font-size:12px;font-weight:700;color:#0B1220;cursor:pointer}
+.pl-per[aria-pressed="true"]{border-color:#0065D6;background:#0065D6;color:#FFFFFF}
+.pl-tiers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.pl-tier{background:#FFFFFF;border:1px solid #E6EAF2;border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.pl-tier.pl-main{border-color:#0065D6;box-shadow:0 0 0 1px #0065D6}
+.pl-th{display:flex;align-items:center;gap:8px}
+.pl-th h3{margin:0;font-size:15px;font-weight:800;flex:1}
+.pl-chip{font-size:12px;font-weight:800;border-radius:999px;padding:3px 10px}
+.pl-cw{background:#FEF0C7;color:#93370D}.pl-cp{background:#EAF3FF;color:#0057B8}.pl-co{background:#DCFAE6;color:#067647}
+.pl-mn{font-size:11px;font-weight:800;color:#0057B8}
+.pl-unit{font-size:11px;color:#4B5563}
+.pl-tt{display:flex;flex-direction:column;font-size:13px}
+.pl-tr{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) minmax(0,.8fr);gap:6px;padding:6px 0;border-top:1px solid #EEF2F6;align-items:baseline}
+.pl-tr > span:not(:first-child){text-align:right;font-variant-numeric:tabular-nums}
+.pl-tr.pl-hd{border-top:0;font-size:11px;font-weight:700;color:#4B5563}
+.pl-tr.pl-st{font-weight:800}
+.pl-rl{color:#3A4456}
+.pl-pos{color:#067647;font-weight:800}.pl-neg{color:#B42318;font-weight:800}
+.pl-ft{display:flex;flex-direction:column;font-size:13px}
+.pl-fr{display:grid;grid-template-columns:minmax(0,1.6fr) repeat(2,minmax(0,1fr)) minmax(0,1.2fr);gap:10px;padding:9px 4px;border-top:1px solid #EEF2F6;align-items:center}
+.pl-fr > span:not(:first-child){text-align:right;font-variant-numeric:tabular-nums}
+.pl-fr.pl-hd{border-top:0;font-size:12px;font-weight:700;color:#4B5563}
+.pl-ok{color:#067647;font-weight:800}.pl-warn{color:#93370D;font-weight:800}.pl-bad{color:#B42318;font-weight:800}.pl-mut{color:#4B5563}
+.pl-badge{display:inline-block;border-radius:999px;padding:2px 9px;font-weight:800;font-size:12px}
+.pl-badge.pl-ok{background:#DCFAE6}.pl-badge.pl-warn{background:#FEF0C7}.pl-badge.pl-bad{background:#FEE4E2}
+.pl-wrap{display:flex;gap:14px;align-items:flex-start}
+.pl-col{flex:1;min-width:0;display:flex;flex-direction:column;gap:14px}
+.pl-aside{width:330px;flex:none;display:flex;flex-direction:column;gap:14px}
+.pl-sel{height:36px;border:1px solid #CBD5E1;border-radius:10px;padding:0 8px;font:inherit;font-size:13px;font-weight:700;color:#0B1220;background:#FFFFFF}
+.pl-ch{display:flex;align-items:center;gap:10px}
+.pl-ch h2{margin:0;font-size:16px;font-weight:800;flex:1}
+.pl-pace{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:10px}
+.pl-pi{border:1px solid #E6EAF2;border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:2px;background:#FFFFFF}
+.pl-pi > span{font-size:12px;font-weight:700;color:#4B5563}
+.pl-pi b{font-size:24px;font-weight:800;letter-spacing:-.02em;line-height:1.2}
+.pl-pi b small{font-size:13px;font-weight:700;color:#4B5563}
+.pl-pi > small{font-size:12px;color:#4B5563}
+.pl-pi.pl-hero{background:#0B1220;border-color:#0B1220;color:#FFFFFF}
+.pl-pi.pl-hero > span,.pl-pi.pl-hero > small,.pl-pi.pl-hero b small{color:#CBD5E1}
+.pl-gap{font-weight:800}.pl-gap.pl-gok{color:#067647}.pl-gap.pl-gbad{color:#B42318}
+.pl-prize{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:#F5F3FF;border:1px solid #DDD6FE;font-size:13px}
+.pl-prize i{font-style:normal;font-size:22px}
+.pl-prize small{display:block;font-size:11px;font-weight:700;color:#5B21B6}
+.pl-prog{display:flex;flex-direction:column;gap:6px}
+.pl-progh{display:flex;justify-content:space-between;font-size:13px;font-weight:700}
+.pl-bar{position:relative;height:12px;border-radius:999px;background:#EEF2F6}
+.pl-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:999px}
+.pl-bar em{position:absolute;top:-4px;width:3px;height:20px;border-radius:2px;background:#0B1220;margin-left:-1px}
+.pl-leg{display:flex;gap:14px;font-size:11px;color:#4B5563}
+.pl-leg span{display:flex;align-items:center;gap:5px}
+.pl-dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+.pl-cmp{display:flex;flex-direction:column;font-size:13px}
+.pl-cr{display:grid;grid-template-columns:minmax(0,1.3fr) repeat(2,minmax(0,1fr)) minmax(0,1.6fr);gap:10px;padding:9px 4px;border-top:1px solid #EEF2F6;align-items:center}
+.pl-cr.pl-hd{border-top:0;font-size:12px;font-weight:700;color:#4B5563}
+.pl-cr > span:nth-child(2),.pl-cr > span:nth-child(3){text-align:right;font-variant-numeric:tabular-nums}
+.pl-cc{display:flex;align-items:center;gap:8px;justify-content:flex-end}
+.pl-cb{width:110px;height:6px;border-radius:999px;background:#EEF2F6;overflow:hidden}
+.pl-cb i{display:block;height:100%;border-radius:999px}
+.pl-cc b{min-width:44px;text-align:right}
+.pl-note{margin:0;padding:10px 12px;border-radius:10px;font-size:13px;background:#EFF6FF;border:1px solid #BFDBFE;color:#1E3A8A}
+.pl-empty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:34px 16px;text-align:center}
+.pl-empty i{font-style:normal;width:52px;height:52px;border-radius:50%;background:#EEF2F6;display:grid;place-items:center}
+.pl-empty b{font-size:15px}
+.pl-empty span{font-size:13px;color:#4B5563}
+.pl-mrow{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:4px 10px;align-items:center;padding:9px 8px;border:0;border-radius:12px;background:transparent;font:inherit;text-align:left;cursor:pointer;color:#0B1220;width:100%}
+.pl-mrow:hover{background:#F1F5F9}
+.pl-mrow[aria-pressed="true"]{background:#EAF3FF;box-shadow:inset 0 0 0 1px #93C5FD}
+.pl-av{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;color:#FFFFFF;font-size:11px;font-weight:800}
+.pl-mn2{display:flex;flex-direction:column;min-width:0;font-size:13px}
+.pl-mn2 b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pl-mn2 small{font-size:12px;color:#4B5563}
+.pl-mbar{grid-column:2 / 4;height:5px;border-radius:999px;background:#EEF2F6;overflow:hidden}
+.pl-mbar i{display:block;height:100%}
+.pl-dnote{font-size:12px;color:#5B21B6;background:#F5F3FF;border:1px dashed #A78BFA;border-radius:10px;padding:8px 10px;margin:0}
+.pl-toast{position:absolute;left:28px;bottom:24px;z-index:95;background:#0B1220;color:#FFFFFF;border-radius:14px;padding:12px 16px;font-size:13px;font-weight:700;box-shadow:0 20px 50px rgba(11,18,32,.35);max-width:620px}
+</style>
+<div data-root="1" style="height: 960px; box-sizing: border-box; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #0B1220; background: #F5F7FB; display: flex; position: relative; overflow: hidden">
+__NAV__
+  <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative">
+    <header style="height: 56px; flex: none; padding: 0 24px; display: flex; align-items: center; gap: 14px; background: #FFFFFF; border-bottom: 1px solid #E6EAF2; box-sizing: border-box">
+      <span style="font-size: 13px; color: #4B5563; white-space: nowrap">Sotuv · <b style="color: #0B1220">Sotuv rejasi</b></span>
+      <span style="flex: 1"></span>
+      <div role="group" aria-label="Demo holat" style="display: flex; align-items: center; gap: 4px; padding: 4px; border: 1px dashed #A78BFA; border-radius: 12px; background: #F5F3FF">
+        <span style="font-size: 11px; font-weight: 800; color: #5B21B6; padding: 0 6px">HOLAT</span>
+        <sc-for list="{{ demo }}" as="d" hint-placeholder-count="6"><button type="button" aria-pressed="{{ d.on }}" onClick="{{ d.pick }}" class="dmb">{{ d.t }}</button></sc-for>
+      </div>
+      <span style="display: flex; align-items: center; gap: 10px"><span aria-hidden="true" style="width: 36px; height: 36px; border-radius: 50%; background: #0B1220; color: #FFFFFF; display: grid; place-items: center; font-size: 13px; font-weight: 800">IM</span><span style="display: flex; flex-direction: column; line-height: 1.2"><b style="font-size: 14px; white-space: nowrap">Islom Mominov</b><span style="font-size: 12px; color: #4B5563">ROP · Rus tili</span></span></span>
+    </header>
+
+    <main style="flex: 1; min-height: 0; overflow: auto; padding: 20px 28px 40px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; align-items: flex-end; gap: 12px">
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 4px">
+          <h1 style="margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.02em">Sotuv rejasi</h1>
+          <p style="margin: 0; font-size: 13px; color: #4B5563">Lidlar, konversiya va budjet asosida sotuv rejasi va bajarilishi</p>
+        </div>
+        <span class="tag" title="ROP faqat oʻz tilini koʻradi">Rus tili</span>
+      </div>
+      <p class="pl-ro" role="note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M7 11V7a5 5 0 0110 0v4M5 11h14v10H5z"/></svg>Sotuv rejasini admin belgilaydi — bu yerda faqat koʻrish mumkin.</p>
+      <div class="pl-tabs" role="tablist" aria-label="Reja turi"><sc-for list="{{ tabs }}" as="t" hint-placeholder-count="2"><button type="button" role="tab" class="pl-tab" id="{{ t.id }}" aria-selected="{{ t.on }}" tabindex="{{ t.ti }}" onClick="{{ t.pick }}" onKeyDown="{{ tabKey }}">{{ t.t }}</button></sc-for></div>
+
+      <sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}">
+        <div aria-busy="true" aria-label="Yuklanmoqda" style="display: flex; flex-direction: column; gap: 14px">
+          <div class="box"><div class="sk" style="width: 20%"></div><div class="sk" style="width: 90%; height: 38px"></div><div class="sk" style="width: 90%; height: 38px"></div></div>
+          <div class="pl-tiers"><div class="box"><div class="sk" style="width: 40%"></div><div class="sk" style="width: 90%"></div><div class="sk" style="width: 80%"></div><div class="sk" style="width: 85%"></div></div><div class="box"><div class="sk" style="width: 40%"></div><div class="sk" style="width: 90%"></div><div class="sk" style="width: 80%"></div><div class="sk" style="width: 85%"></div></div><div class="box"><div class="sk" style="width: 40%"></div><div class="sk" style="width: 90%"></div><div class="sk" style="width: 80%"></div><div class="sk" style="width: 85%"></div></div></div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ loadErr }}" hint-placeholder-val="{{ false }}"><div class="malert" role="alert"><span style="flex: 1">Sotuv rejasini yuklab boʻlmadi — server javob bermadi</span><button type="button" class="btn2" onClick="{{ retry }}">Qayta urinish</button></div></sc-if>
+
+      <sc-if value="{{ showTeam }}" hint-placeholder-val="{{ true }}">
+        <div role="tabpanel" aria-labelledby="plTabTeam" style="display: flex; flex-direction: column; gap: 14px">
+          <section class="box" aria-labelledby="plParH">
+            <div class="pl-ph"><h2 id="plParH">Parametrlar</h2><p class="pl-formula">Lidlar = menejerlar × kunlik lid × kun · sotuvlar = lidlar × konversiya · summa = sotuvlar × chek · byudjet = lidlar × lid narxi</p></div>
+            <div class="pl-pg"><sc-for list="{{ params }}" as="p" hint-placeholder-count="8"><label class="pl-pf" for="{{ p.id }}">{{ p.l }}<span class="pl-in"><input id="{{ p.id }}" type="text" value="{{ p.v }}" readonly aria-readonly="true" title="Rejani admin belgilaydi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M7 11V7a5 5 0 0110 0v4M5 11h14v10H5z"/></svg></span></label></sc-for></div>
+          </section>
+          <div class="pl-pers" role="group" aria-label="Davr"><span>Davr</span><sc-for list="{{ pers }}" as="p" hint-placeholder-count="4"><button type="button" class="pl-per" aria-pressed="{{ p.on }}" onClick="{{ p.pick }}">{{ p.t }}</button></sc-for></div>
+          <p class="pl-note" role="note" style="margin: 0">{{ indSumT }}</p>
+          <div class="pl-tiers"><sc-for list="{{ tiers }}" as="c" hint-placeholder-count="3">
+            <section class="{{ c.cls }}" aria-label="{{ c.aria }}">
+              <div class="pl-th"><h3>{{ c.l }}</h3><span class="{{ c.chipC }}">{{ c.conv }}</span></div>
+              <sc-if value="{{ c.main }}" hint-placeholder-val="{{ false }}"><span class="pl-mn">Fakt shu reja bilan solishtiriladi</span></sc-if>
+              <span class="pl-unit">Summalar soʻmda</span>
+              <div class="pl-tt" role="table" aria-label="{{ c.aria }}">
+                <div class="pl-tr pl-hd" role="row"><span role="columnheader">Koʻrsatkich</span><span role="columnheader">{{ c.perH }}</span><span role="columnheader">Kun</span></div>
+                <sc-for list="{{ c.rows }}" as="r" hint-placeholder-count="6"><div class="{{ r.cls }}" role="row"><span class="pl-rl" role="rowheader">{{ r.l }}</span><span role="cell" class="{{ r.pc }}">{{ r.p }}</span><span role="cell">{{ r.d }}</span></div></sc-for>
+              </div>
+            </section>
+          </sc-for></div>
+          <section class="box" aria-labelledby="plFactH">
+            <div class="pl-ph"><h2 id="plFactH">{{ factH }}</h2><p class="pl-formula">Bugungacha reja = “Oʻrtacha” reja × {{ factDays }} kun</p></div>
+            <div class="pl-ft" role="table" aria-labelledby="plFactH">
+              <div class="pl-fr pl-hd" role="row"><span role="columnheader">Koʻrsatkich</span><span role="columnheader">Fakt</span><span role="columnheader">Bugungacha reja</span><span role="columnheader">Bajarilish</span></div>
+              <sc-for list="{{ factRows }}" as="r" hint-placeholder-count="7"><div class="pl-fr" role="row"><span role="rowheader">{{ r.l }}</span><span role="cell"><b class="{{ r.fc }}">{{ r.f }}</b></span><span role="cell" class="pl-mut">{{ r.p }}</span><span role="cell"><span class="{{ r.vc }}">{{ r.v }}</span></span></div></sc-for>
+            </div>
+            <p class="hint" style="margin: 0">Lid soni — shu oyda yaratilgan Rus tili lidlari (Sotuv bazasi). Sotuv — barcha Rus tili menejerlarining shu oydagi toʻlovlari. Byudjet = lid soni × lid narxi.</p>
+          </section>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ showInd }}" hint-placeholder-val="{{ false }}">
+        <div role="tabpanel" aria-labelledby="plTabInd" class="pl-wrap">
+          <div class="pl-col">
+            <div class="box" style="flex-direction: row; align-items: center; gap: 10px">
+              <label for="plMgr" style="font-size: 13px; color: #4B5563; font-weight: 600; white-space: nowrap">Sotuv menejeri:</label>
+              <select id="plMgr" class="pl-sel" style="min-width: 240px" onChange="{{ setMgr }}"><sc-for list="{{ mgrOpts }}" as="o" hint-placeholder-count="4"><option value="{{ o.v }}" selected="{{ o.sel }}">{{ o.t }}</option></sc-for></select>
+            </div>
+            <sc-if value="{{ noMgr }}" hint-placeholder-val="{{ false }}"><div class="box pl-empty" role="status"><i aria-hidden="true">👤</i><b>Sotuv menejeri topilmadi</b><span>Rus tili yoʻnalishida faol sotuv menejeri yoʻq</span></div></sc-if>
+            <sc-if value="{{ hasMgr }}" hint-placeholder-val="{{ true }}">
+              <section class="box" aria-labelledby="plIndH" style="gap: 14px">
+                <div class="pl-ch"><h2 id="plIndH">Oylik reja</h2><label for="plMonth" style="font-size: 12px; font-weight: 700; color: #4B5563">Oy</label><select id="plMonth" class="pl-sel" style="min-width: 170px" onChange="{{ setMonth }}"><sc-for list="{{ monthOpts }}" as="o" hint-placeholder-count="13"><option value="{{ o.v }}" selected="{{ o.sel }}">{{ o.t }}</option></sc-for></select></div>
+                <sc-if value="{{ ind.empty }}" hint-placeholder-val="{{ false }}">
+                  <div class="pl-empty" role="status"><i aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#64748B" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg></i><b>{{ ind.emptyT }}</b><span>Rejani admin belgilaydi — belgilangach shu yerda Reja/Fakt solishtiruvi chiqadi.</span></div>
+                </sc-if>
+                <sc-if value="{{ ind.has }}" hint-placeholder-val="{{ true }}">
+                  <sc-if value="{{ ind.pace }}" hint-placeholder-val="{{ true }}">
+                    <div class="pl-pace">
+                      <div class="pl-pi pl-hero"><span>Bugungi maqsad · reja uchun</span><b title="{{ ind.perDayT }}">{{ ind.perDay }}<small> mln soʻm</small></b><small>{{ ind.perDayS }}</small></div>
+                      <div class="pl-pi"><span>Rejagacha qoldi</span><b title="{{ ind.leftT }}">{{ ind.left }}<small> mln soʻm</small></b><small>{{ ind.daysLeft }}</small></div>
+                      <div class="pl-pi"><span>Bugungacha kerak edi</span><b title="{{ ind.dueT }}">{{ ind.due }}<small> mln soʻm</small></b><small class="{{ ind.gapC }}">{{ ind.gap }}</small></div>
+                    </div>
+                    <sc-if value="{{ ind.prize }}" hint-placeholder-val="{{ true }}"><div class="pl-prize"><i aria-hidden="true">📱</i><span><small>Qoʻshimcha maqsad</small>{{ ind.prizeT }}</span></div></sc-if>
+                  </sc-if>
+                  <sc-if value="{{ ind.legacyN }}" hint-placeholder-val="{{ false }}"><p class="pl-note" role="note" style="background: #FFFAEB; border-color: #FEC84B; color: #93370D">{{ ind.legacyT }}</p></sc-if>
+                  <sc-if value="{{ ind.carried }}" hint-placeholder-val="{{ false }}"><p class="pl-note" role="note">{{ ind.carriedT }}</p></sc-if>
+                  <div class="pl-prog">
+                    <div class="pl-progh"><span>Oy rejasi</span><b>{{ ind.pctT }}</b></div>
+                    <span class="pl-bar" role="progressbar" aria-label="Oy rejasi bajarilishi" aria-valuenow="{{ ind.pct }}" aria-valuemin="0" aria-valuemax="100"><i style="{{ ind.barSt }}"></i><sc-if value="{{ ind.pace }}" hint-placeholder-val="{{ true }}"><em style="{{ ind.todaySt }}" title="Bugungacha shu yerda boʻlish kerak"></em></sc-if></span>
+                    <sc-if value="{{ ind.pace }}" hint-placeholder-val="{{ true }}"><div class="pl-leg"><span><i class="pl-dot" style="{{ ind.dotSt }}"></i>bajarildi</span><span><i class="pl-dot" style="background: #0B1220"></i>bugungacha kerak</span></div></sc-if>
+                  </div>
+                  <div class="pl-cmp" role="table" aria-label="Reja va fakt">
+                    <div class="pl-cr pl-hd" role="row"><span role="columnheader">Koʻrsatkich</span><span role="columnheader" style="text-align: right">Reja</span><span role="columnheader" style="text-align: right">Fakt</span><span role="columnheader" style="text-align: right">Bajarildi</span></div>
+                    <sc-for list="{{ ind.rows }}" as="r" hint-placeholder-count="3"><div class="pl-cr" role="row"><span role="rowheader" style="font-weight: 700">{{ r.l }}</span><span role="cell">{{ r.p }}</span><span role="cell"><b>{{ r.f }}</b></span><span role="cell" class="pl-cc"><span class="pl-cb" aria-hidden="true"><i style="{{ r.bar }}"></i></span><b class="{{ r.vc }}">{{ r.v }}</b></span></div></sc-for>
+                  </div>
+                </sc-if>
+              </section>
+            </sc-if>
+          </div>
+          <aside class="pl-aside">
+            <sc-if value="{{ hasMgr }}" hint-placeholder-val="{{ true }}"><section class="box" aria-labelledby="plTeamH">
+              <h2 id="plTeamH">{{ teamH }}</h2>
+              <div style="display: flex; flex-direction: column; gap: 2px"><sc-for list="{{ mrows }}" as="m" hint-placeholder-count="4"><button type="button" class="pl-mrow" aria-pressed="{{ m.on }}" onClick="{{ m.pick }}" aria-label="{{ m.lab }}"><span class="pl-av" aria-hidden="true" style="{{ m.av }}">{{ m.ini }}</span><span class="pl-mn2"><b>{{ m.n }}</b><small>{{ m.sub }}</small></span><b class="{{ m.paceC }}" style="font-size: 12px; white-space: nowrap">{{ m.paceT }}</b><span class="pl-mbar" aria-hidden="true"><i style="{{ m.bar }}"></i></span></button></sc-for></div>
+              <p class="hint" style="margin: 0">Qatorni bossangiz shu menejerning rejasi ochiladi.</p>
+            </section></sc-if>
+            <p class="pl-dnote"><b>Dizayn farqi:</b> “Jamoa” roʻyxati — yangi qoʻshimcha (kodda faqat menejer tanlash maydoni bor). Reja belgilanmagan holatda kod ROP uchun faqat sarlavhani qoldiradi (“+ Reja belgilash” olib tashlanadi) — bu yerda “Rejani admin belgilaydi” izohi qoʻshildi. Koʻchirilgan reja eslatmasida kodning “Tahrirlab saqlasangiz…” jumlasi ROP uchun “Admin … belgilasa” deb yozildi.</p>
+          </aside>
+        </div>
+      </sc-if>
+      <sc-if value="{{ showTeamNote }}" hint-placeholder-val="{{ true }}"><p class="pl-dnote"><b>Dizayn farqi:</b> kodda parametrlar oddiy kiritish maydonlari, ROP uchun <code>readonly</code> qilinadi va “Reja belgilash/tahrirlash” tugmalari olib tashlanadi — bu yerda qulf belgisi bilan koʻrsatildi. “Plan / Fakt” almashtirgichi kodda yashirin (fakt jadvali reja ostida) — bu yerda ham yoʻq.</p></sc-if>
+    </main>
+
+    <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}"><div role="status" class="pl-toast">{{ toastT }}</div></sc-if>
+  </div>
+</div>

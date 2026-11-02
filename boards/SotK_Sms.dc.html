@@ -1,0 +1,709 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<title>SMS</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+sc-for,sc-if{display:contents}
+button,input,select,textarea{font-family:inherit}
+:focus-visible{outline:2px solid #0065D6;outline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.skip{position:absolute;left:12px;top:-60px;z-index:90;height:40px;padding:0 16px;border-radius:10px;border:0;background:#0B1220;color:#FFFFFF;font-size:14px;font-weight:800;cursor:pointer}
+.skip:focus{top:12px}
+/* sidebar */
+.sb{flex:none;width:248px;background:#FFFFFF;border-right:1px solid #E6EAF2;padding:10px 12px;box-sizing:border-box;display:flex;flex-direction:column;gap:1px;transition:width .2s ease;overflow:hidden}
+.nr{display:flex;align-items:center;gap:4px}
+.mi{flex:1;min-width:0;display:flex;align-items:center;gap:12px;min-height:38px;padding:0 10px;border-radius:12px;color:#3A4456;font-size:14px;font-weight:600;border:0;background:transparent;cursor:pointer;text-align:left}
+.mi:hover{background:#F1F5F9;color:#0B1220}
+.mi svg{width:18px;height:18px;flex:none}
+.mi[aria-current="page"]{background:#EAF3FF;color:#0057B8;font-weight:800}
+.lbl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.grp{font-size:12px;font-weight:800;color:#4B5563;letter-spacing:.06em;padding:12px 10px 4px;margin:0}
+.cnt{flex:none;min-width:28px;height:24px;padding:0 7px;box-sizing:border-box;border-radius:999px;background:#D92D20;color:#FFFFFF;font-size:12px;font-weight:800;display:grid;place-items:center;border:0;cursor:pointer}
+.cnt:hover{background:#B42318}
+.sb-min{width:76px;padding:10px 8px}
+.sb-min .lbl,.sb-min .grp,.sb-min .brand{display:none}
+.sb-min .nr{position:relative}
+.sb-min .mi{justify-content:center;padding:0}
+.sb-min .cnt{position:absolute;right:-2px;top:-4px;min-width:24px;height:24px;border:2px solid #FFFFFF}
+/* toolbar */
+.fbox{height:36px;display:flex;align-items:center;gap:6px;padding:0 10px 0 12px;border-radius:10px;border:1px solid #E2E8F0;background:#FFFFFF;font-size:13px;font-weight:600;color:#3A4456;box-sizing:border-box;white-space:nowrap;cursor:pointer}
+.fbox:hover{border-color:#94A3B8}
+.fbox.act{background:#EAF3FF;border-color:#0065D6;color:#0057B8;font-weight:800}
+.fbox.vb{background:#F1E8FF;border-color:#7C3AED;color:#5B21B6;font-weight:800}
+.dd{position:absolute;top:42px;left:0;z-index:40;background:#FFFFFF;border:1px solid #E6EAF2;border-radius:14px;box-shadow:0 16px 40px rgba(16,24,40,.16);padding:8px;display:flex;flex-direction:column;gap:2px;min-width:280px}
+.dd label,.dd .pr{display:flex;align-items:center;gap:8px;min-height:32px;padding:0 8px;border-radius:8px;font-size:13px;font-weight:600;color:#0B1220;cursor:pointer;border:0;background:transparent;text-align:left}
+.dd label:hover,.dd .pr:hover,.dd .pr:focus-visible{background:#F1F5F9}
+.dd .pr[aria-checked="true"]{background:#EAF3FF;color:#0057B8;font-weight:800}
+.dd input[type=checkbox]{width:16px;height:16px;margin:0;accent-color:#0065D6}
+.dd .ap{height:36px;margin-top:6px;border:0;border-radius:10px;background:#0065D6;color:#FFFFFF;font-size:13px;font-weight:800;cursor:pointer}
+.dd .ap[aria-disabled="true"]{background:#CBD5E1;color:#4B5563;cursor:not-allowed}
+.dh{font-size:12px;font-weight:800;color:#4B5563;padding:4px 8px}
+.kbd{display:inline-grid;place-items:center;min-width:22px;height:22px;padding:0 5px;box-sizing:border-box;border-radius:6px;border:1px solid #CBD5E1;border-bottom-width:2px;background:#FFFFFF;font-size:11px;font-weight:800;color:#3A4456}
+/* board */
+.col{flex:none;width:256px;min-height:0;max-height:100%;background:#F1F5F9;border-radius:16px;padding:0 8px 8px;box-sizing:border-box;display:flex;flex-direction:column;gap:6px;border-top:3px solid transparent;transition:background .15s ease}
+.col.drop{background:#EAF3FF;outline:2px dashed #0065D6;outline-offset:-2px}
+.ch{display:flex;flex-direction:column;gap:6px;padding:10px 4px 2px}
+.ch1{display:flex;align-items:center;gap:8px}
+.ct{margin:0;flex:1;min-width:0;font-size:14px;font-weight:800;line-height:1.25;color:#0B1220}
+.ch2{display:flex;align-items:center;gap:6px;min-height:26px;flex-wrap:wrap}
+.pk{flex:none;height:26px;padding:0 10px;border-radius:999px;border:0;background:#0065D6;color:#FFFFFF;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap}
+.pk:hover{background:#0057B8}
+.sum{font-size:12px;font-weight:600;color:#4B5563;white-space:nowrap}
+.rk{height:26px;display:inline-flex;align-items:center;gap:4px;padding:0 9px;border-radius:999px;border:0;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap}
+.rk[aria-pressed="true"]{box-shadow:inset 0 0 0 2px currentColor}
+.seg{display:grid;grid-template-columns:auto auto auto;gap:4px;padding:0 2px}
+.seg button{white-space:nowrap;display:flex;align-items:center;justify-content:center;gap:3px;height:28px;padding:0 7px;border-radius:999px;border:1px solid #E2E8F0;background:#FFFFFF;color:#3A4456;font-size:12px;font-weight:700;cursor:pointer}
+.seg button[aria-pressed="true"]{background:#0065D6;border-color:#0065D6;color:#FFFFFF}
+.lst{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin:0 -4px;padding:2px 4px 4px;scrollbar-width:thin;scrollbar-color:#CBD5E1 transparent}
+.lst>*{flex:none}
+.card{position:relative;flex:none;background:#FFFFFF;border:1px solid #E6EAF2;border-left-width:3px;border-radius:12px;padding:7px 8px 7px 8px;box-shadow:0 1px 2px rgba(16,24,40,.05);display:flex;flex-direction:column;gap:4px;transition:box-shadow .15s ease,border-color .15s ease,opacity .15s ease;cursor:grab}
+.card:hover{box-shadow:0 8px 20px rgba(16,24,40,.10);border-color:#CBD5E1}
+.card:focus-visible{outline:2px solid #0065D6;outline-offset:1px}
+.card.drag{opacity:.4;border-style:dashed;box-shadow:none}
+.card{user-select:none}
+.card.sel{background:#F5F9FF}
+.card.kin{box-shadow:0 0 0 2px #0065D6}
+.r1{display:flex;align-items:flex-start;gap:4px}
+.cbx{flex:none;width:24px;height:24px;display:grid;place-items:center;margin-left:-3px;cursor:pointer}
+.cbx input{width:16px;height:16px;margin:0;accent-color:#0065D6;cursor:pointer}
+.nm{flex:1;min-width:0;min-height:24px;border:0;background:none;padding:2px 0 0;font-size:14px;font-weight:800;line-height:1.25;color:#0B1220;text-align:left;cursor:pointer;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.nm:hover{color:#0057B8;text-decoration:underline}
+.ic{position:relative;flex:none;width:28px;height:28px;border-radius:8px;border:0;background:transparent;color:#4B5563;display:grid;place-items:center;cursor:pointer}
+.ic:hover{background:#F1F5F9;color:#0B1220}
+.att{flex:none;width:20px;height:20px;margin-top:2px;border-radius:50%;background:#ECFDF3;color:#067647;font-size:11px;font-weight:800;display:grid;place-items:center}
+.meta{display:flex;align-items:center;gap:6px;flex-wrap:nowrap;font-size:12px;color:#4B5563;min-height:22px;overflow:hidden}
+.chip{display:inline-flex;align-items:center;gap:4px;height:22px;font-size:12px;font-weight:800;border-radius:999px;padding:0 8px;white-space:nowrap;flex:none}
+.src{display:inline-flex;align-items:center;gap:5px;font-weight:700;color:#3A4456;white-space:nowrap}
+.src i{width:7px;height:7px;border-radius:50%}
+.ser{font-weight:800;color:#0B1220;background:#F1F5F9;border-radius:6px;padding:1px 6px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.r3{display:flex;align-items:center;gap:6px;min-height:24px;font-size:13px;color:#3A4456}
+.ph{display:inline-flex;align-items:center;gap:6px;min-height:24px;color:#3A4456;font-variant-numeric:tabular-nums;text-decoration:none;border-radius:6px;white-space:nowrap}
+.ph:hover{color:#0057B8}
+.ph svg{flex:none;color:#6B7280}
+.cp{width:24px;height:24px;border-radius:6px;border:0;background:transparent;color:#4B5563;display:none;place-items:center;cursor:pointer;font-size:12px;flex:none}
+.card:hover .cp,.card:focus-within .cp,.card.kin .cp{display:grid}
+.cp:hover{background:#F1F5F9}
+.p2{height:22px;padding:0 7px;border-radius:999px;border:0;background:#F1F5F9;color:#3A4456;font-size:12px;font-weight:800;cursor:pointer}
+.tm{margin-left:auto;font-size:12px;color:#4B5563;white-space:nowrap;font-variant-numeric:tabular-nums}
+.r4{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.dfr{display:flex;flex-direction:column;gap:2px;white-space:nowrap;font-size:12px;color:#3A4456;background:#EEF2FF;border-radius:8px;padding:4px 8px}
+.ft{display:flex;align-items:center;gap:4px}
+.fb{height:28px;min-width:28px;border-radius:999px;border:0;background:#F1F5F9;color:#3A4456;display:inline-flex;align-items:center;justify-content:center;gap:4px;font-size:12px;font-weight:700;cursor:pointer;padding:0 8px;box-sizing:border-box}
+.fb:hover{background:#E2E8F0}
+.fb.z{background:transparent;color:#6B7280;padding:0}
+.mg{max-width:118px}
+.mg b{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.av{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:10px;font-weight:800;flex:none;overflow:hidden}
+.more{flex:none;height:34px;border-radius:10px;border:1px dashed #CBD5E1;background:transparent;font-size:12px;font-weight:700;color:#3A4456;cursor:pointer}
+.more:hover{background:#FFFFFF}
+.empty{flex:none;display:flex;flex-direction:column;align-items:center;gap:6px;padding:22px 8px;border:1px dashed #CBD5E1;border-radius:12px;color:#4B5563;font-size:13px;font-weight:600;text-align:center}
+.sk{flex:none;height:112px;border-radius:12px;background:linear-gradient(90deg,#E9EEF5 0%,#F5F7FB 50%,#E9EEF5 100%);background-size:200% 100%;animation:sh 1.2s linear infinite}
+.skn{display:inline-block;width:26px;height:20px;border-radius:999px;background:linear-gradient(90deg,#E2E8F0 0%,#F5F7FB 50%,#E2E8F0 100%);background-size:200% 100%;animation:sh 1.2s linear infinite}
+.sv{position:absolute;inset:0;border-radius:11px;background:rgba(255,255,255,.75);display:flex;align-items:center;justify-content:center;gap:8px;font-size:12px;font-weight:800;color:#0057B8}
+.spin{width:16px;height:16px;border-radius:50%;border:2px solid #BFDBFE;border-top-color:#0065D6;animation:rot .8s linear infinite}
+/* popovers */
+.mn{position:absolute;z-index:60;width:256px;background:#FFFFFF;border:1px solid #E6EAF2;border-radius:12px;box-shadow:0 16px 36px rgba(16,24,40,.18);padding:6px;display:flex;flex-direction:column}
+.mn button{min-height:34px;border:0;background:transparent;text-align:left;padding:0 10px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:#0B1220;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.mn button:hover,.mn button:focus-visible{background:#F1F5F9;outline:0;box-shadow:inset 0 0 0 2px #0065D6}
+.mn .dg{color:#B42318}
+.mn [role=option]{min-height:36px;border:0;background:transparent;text-align:left;padding:0 10px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:#0B1220;display:flex;align-items:center;gap:8px}
+.mn [role=option]:hover,.mn [role=option]:focus-visible{background:#F1F5F9;outline:0;box-shadow:inset 0 0 0 2px #0065D6}
+.mn [role=option][aria-selected=true]{background:#EAF3FF;color:#0057B8;font-weight:800}
+.mn [role=option][aria-disabled=true]{color:#94A3B8;cursor:not-allowed}
+.fld{min-width:0;display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:700;color:#3A4456}
+.fld textarea{box-sizing:border-box;width:100%;min-width:0;border:1px solid #CBD5E1;border-radius:10px;padding:8px 10px;font-size:14px;color:#0B1220;resize:vertical}
+.fld input,.fld select{box-sizing:border-box;width:100%;min-width:0;height:40px;border:1px solid #CBD5E1;border-radius:10px;padding:0 10px;font-size:14px;color:#0B1220}
+.rad{display:flex;align-items:center;gap:10px;min-height:42px;padding:0 12px;border-radius:12px;border:1px solid #E6EAF2;font-size:14px;font-weight:600;cursor:pointer}
+.rad input{width:18px;height:18px;margin:0;accent-color:#0065D6}
+.mn .kb{font-size:11px;font-weight:700;color:#4B5563}
+.rp{background:#FFFFFF;border:1px solid #E6EAF2;border-radius:12px;box-shadow:0 12px 28px rgba(16,24,40,.12);padding:6px;display:flex;flex-direction:column;gap:2px;position:relative;z-index:40}
+.rp label{display:flex;align-items:center;gap:8px;min-height:30px;padding:0 6px;border-radius:8px;font-size:13px;font-weight:600;color:#0B1220;cursor:pointer}
+.rp label:hover{background:#F1F5F9}
+.rp b{margin-left:auto;font-size:12px;color:#4B5563}
+.mp input{height:34px;border:1px solid #CBD5E1;border-radius:8px;padding:0 10px;font-size:13px;margin:2px 2px 6px;outline:0}
+.mp input:focus{border-color:#0065D6;box-shadow:0 0 0 3px rgba(0,101,214,.18)}
+.load{margin-left:auto;font-size:12px;font-weight:700;color:#4B5563;white-space:nowrap}
+.vt{writing-mode:vertical-rl;transform:rotate(180deg);font-size:14px;font-weight:800;color:#0B1220;white-space:nowrap}
+.sch:focus-within{border-color:#0065D6!important;box-shadow:0 0 0 3px rgba(0,101,214,.2)}
+.drw{position:absolute;top:0;right:0;bottom:0;z-index:78;width:520px;background:#FFFFFF;border-left:1px solid #E6EAF2;box-shadow:-20px 0 50px rgba(11,18,32,.18);display:flex;flex-direction:column}
+.dtabs{display:flex;gap:2px;padding:0 20px;border-bottom:1px solid #E6EAF2}
+.dtabs button{height:42px;padding:0 12px;border:0;background:transparent;font-size:13px;font-weight:700;color:#3A4456;cursor:pointer;border-bottom:3px solid transparent;display:flex;align-items:center;gap:6px}
+.dtabs button[aria-selected=true]{color:#0057B8;border-bottom-color:#0065D6;font-weight:800}
+.dbody{flex:1;min-height:0;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:14px}
+.dsec{border:1px solid #E6EAF2;border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.dsec h4{margin:0;font-size:13px;font-weight:800;color:#0B1220}
+.kv{display:grid;grid-template-columns:120px 1fr;gap:6px 10px;font-size:13px}
+.kv span:nth-child(odd){color:#4B5563}
+.step{display:flex;gap:4px}
+.step i{flex:1;height:6px;border-radius:999px;background:#E2E8F0}
+.step i.on{background:#0065D6}
+.cm{display:flex;flex-direction:column;gap:4px;padding:10px 12px;border-radius:12px;background:#F8FAFC;font-size:13px;white-space:pre-line}
+.cm b{font-size:12px;color:#4B5563;font-weight:700}
+.btn2{height:36px;padding:0 14px;border-radius:10px;border:1px solid #CBD5E1;background:#FFFFFF;font-size:13px;font-weight:700;cursor:pointer;color:#0B1220}
+.btnp{height:36px;padding:0 14px;border-radius:10px;border:0;background:#0065D6;color:#FFFFFF;font-size:13px;font-weight:800;cursor:pointer}
+.skt{display:inline-block;width:36px;height:14px;border-radius:6px;vertical-align:middle;background:linear-gradient(90deg,#E2E8F0 0%,#F5F7FB 50%,#E2E8F0 100%);background-size:200% 100%;animation:sh 1.2s linear infinite}
+.mp{z-index:90}
+.seg2{display:flex;flex-wrap:wrap;gap:6px}
+.lvl4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.lvl4 label{min-width:0;padding:0 6px;white-space:nowrap}
+[data-modal] .btnp,[data-modal] .btn2{white-space:nowrap}
+.lvl4 label{justify-content:center;padding:0 6px;font-size:12px}
+.seg2.bad label{border-color:#D92D20}
+.err{font-size:12px;font-weight:700;color:#B42318}
+.ferr input,.ferr select,.ferr textarea{border-color:#D92D20 !important}
+.malert{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:#FEF3F2;border:1px solid #FDA29B;color:#7A271A;font-size:13px;font-weight:600}
+.seg2 label{display:flex;align-items:center;gap:6px;min-height:36px;padding:0 12px;border-radius:10px;border:1px solid #E6EAF2;font-size:13px;font-weight:600;cursor:pointer}
+.seg2 input{margin:0;accent-color:#0065D6}
+.demo{position:absolute;left:740px;top:10px;z-index:76;display:flex;align-items:center;gap:4px;padding:4px;border-radius:12px;background:#FFFFFF;border:1.5px dashed #7C3AED;box-shadow:0 6px 18px rgba(16,24,40,.12)}
+.demo span{font-size:11px;font-weight:800;color:#5B21B6;padding:0 6px;letter-spacing:.04em}
+.demo button{height:28px;padding:0 9px;border-radius:8px;border:0;background:transparent;font-size:12px;font-weight:700;color:#3A4456;cursor:pointer}
+.demo button[aria-pressed="true"]{background:#7C3AED;color:#FFFFFF}
+@keyframes up{from{transform:translateY(10px);opacity:0}to{transform:none;opacity:1}}
+@keyframes bar{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+@keyframes sh{from{background-position:200% 0}to{background-position:-200% 0}}
+@keyframes rot{to{transform:rotate(360deg)}}
+.up{animation:up .22s cubic-bezier(.2,.8,.2,1) both}
+.bar{animation:bar 10s linear both;transform-origin:left}
+.paused .bar{animation-play-state:paused}
+@media (prefers-reduced-motion:reduce){.up,.bar,.sk,.skn,.spin{animation:none}.card{transition:none}}
+button{transition:background .15s ease}
+.cvback{border:0;background:none;color:#0057B8;font-size:14px;font-weight:800;cursor:pointer;padding:6px 4px}
+.dmb{height:28px;padding:0 10px;border-radius:8px;border:0;background:transparent;font-size:12px;font-weight:700;color:#3A4456;cursor:pointer}
+.dmb[aria-pressed="true"]{background:#7C3AED;color:#FFFFFF}
+.dots{list-style:none;margin:0;padding:0;display:flex;gap:6px;flex-wrap:wrap}
+.dots li{display:flex;align-items:center;gap:6px;height:32px;padding:0 12px 0 6px;border-radius:999px;background:#FFFFFF;border:1px solid #E6EAF2;font-size:13px;font-weight:700;color:#4B5563}
+.dots li .dn{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:#E9EEF5;font-size:12px;font-weight:800}
+.dots li.ok{color:#067647}.dots li.ok .dn{background:#DCFAE6;color:#067647}
+.dots li.now{border-color:#0065D6;color:#0057B8;background:#EAF3FF}.dots li.now .dn{background:#0065D6;color:#FFFFFF}
+.box{background:#FFFFFF;border:1px solid #E6EAF2;border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.box h3{margin:0;font-size:14px;font-weight:800}
+.hint{font-size:12px;color:#4B5563;margin:4px 0 0}
+.st{margin:6px 0 0;font-size:12px;font-weight:800;color:#3A4456}
+.trial,.done{padding:10px 14px;border-radius:12px;background:#ECFDF3;border:1px solid #ABEFC6;font-size:13px;color:#067647}
+.trial b,.done b{margin-right:6px}
+.tar,.slots,.fd,.pat{display:flex;gap:8px;flex-wrap:wrap}
+.tar button,.slots button,.fd button,.pat button{min-height:40px;padding:6px 14px;border-radius:12px;border:1px solid #CBD5E1;background:#FFFFFF;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;gap:2px;font-size:13px;color:#0B1220}
+.tar button{min-width:170px}
+.slots button{width:112px}
+.tar small,.slots small{font-size:11px;color:#4B5563;font-weight:600}
+.pat button{flex-direction:row;align-items:center;font-weight:700}
+.tar button[aria-checked="true"],.slots button[aria-checked="true"],.fd button[aria-checked="true"],.pat button[aria-checked="true"]{border-color:#0065D6;background:#EAF3FF;box-shadow:inset 0 0 0 1px #0065D6}
+.slots button.busy{background:#F8FAFC;color:#94A3B8;cursor:not-allowed;border-style:dashed}
+.slots button.busy small{color:#B42318}
+.all summary{font-size:13px;font-weight:700;color:#0057B8;cursor:pointer}
+.opts{display:flex;flex-wrap:wrap;gap:8px}
+.op{display:flex;align-items:center;gap:8px;min-height:38px;padding:0 12px;border-radius:10px;border:1px solid #E6EAF2;font-size:13px;font-weight:600;cursor:pointer}
+.op.on{border-color:#0065D6;background:#EAF3FF}
+.op input,.yn input,.mem input{accent-color:#0065D6;margin:0}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.g1{gap:12px}
+.fld input,.fld select{box-sizing:border-box;width:100%;min-width:0;height:40px;border:1px solid #CBD5E1;border-radius:10px;padding:0 10px;font-size:14px;color:#0B1220}
+.fld small{font-weight:500;color:#4B5563}
+.row{display:flex;align-items:center;gap:8px}
+.okp{flex:none;font-size:12px;font-weight:800;color:#067647;background:#DCFAE6;border-radius:999px;padding:3px 10px}
+.sug{flex:none;font-size:12px;font-weight:700;color:#5B21B6;background:#F5F3FF;border-radius:999px;padding:3px 10px}
+.mem{border:0;margin:0;padding:0}.mem legend{font-size:12px;font-weight:800;color:#3A4456;margin-bottom:6px}
+.mem div{display:flex;flex-wrap:wrap;gap:8px}.mem label{display:flex;align-items:center;gap:6px;min-height:34px;padding:0 10px;border-radius:10px;border:1px solid #E6EAF2;font-size:13px;font-weight:600}
+.warn{margin:0;padding:8px 12px;border-radius:10px;background:#FFFAEB;border:1px solid #FEC84B;color:#93370D;font-size:13px;font-weight:600}
+.yn{display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:13px}.yn > span{min-width:200px;font-weight:700;color:#3A4456}.yn label{display:flex;align-items:center;gap:6px;font-weight:600}
+.aside{flex:none;width:300px;position:sticky;top:0;background:#FFFFFF;border:1px solid #E6EAF2;border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.aside h2{margin:0;font-size:15px;font-weight:800}
+.aside dl{margin:0;display:grid;grid-template-columns:96px 1fr;gap:8px 10px;font-size:13px}
+.aside dt{color:#4B5563;font-weight:600}.aside dd{margin:0;font-weight:700}.aside dd.mute{color:#94A3B8;font-weight:600}
+.toast{position:absolute;right:24px;bottom:84px;z-index:95;background:#0B1220;color:#FFFFFF;border-radius:14px;padding:12px 16px;font-size:13px;font-weight:700;box-shadow:0 20px 50px rgba(11,18,32,.35)}
+.box.bad{border-color:#D92D20;box-shadow:0 0 0 1px #D92D20}
+.chipb{height:28px;padding:0 10px;border-radius:999px;border:1px solid #CBD5E1;background:#FFFFFF;font-size:12px;font-weight:700;color:#0057B8;cursor:pointer}
+.lnk{border:0;background:none;padding:0;color:#0057B8;font-weight:800;font-size:12px;text-decoration:underline;cursor:pointer}
+.ctx{margin:0;display:grid;grid-template-columns:140px 1fr;gap:6px 10px;font-size:13px}.ctx dt{color:#4B5563;font-weight:600}.ctx dd{margin:0;font-weight:700}.ctx dd.mute{color:#94A3B8}
+.box h2{margin:0;font-size:15px;font-weight:800}
+.tag{font-size:12px;font-weight:800;color:#0057B8;background:#EAF3FF;border-radius:999px;padding:4px 10px}
+.qq-g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.qq-tl{display:flex;flex-direction:column;gap:6px}.qq-tlbar{display:flex;border-radius:10px;overflow:hidden;height:34px;font-size:12px;font-weight:700}
+.qq-seg{display:flex;align-items:center;padding:0 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qq-seg.qq-ok{background:#ECFDF3;color:#067647}.qq-seg.qq-warn{background:#FFFAEB;color:#93370D}.qq-seg.qq-lock{background:#FEF3F2;color:#B42318}
+.qq-prev{padding:10px 12px;border-radius:12px;background:#F8FAFC;border:1px solid #E6EAF2;font-size:13px}
+.qq-steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;font-size:13px;color:#3A4456}.qq-steps li{display:flex;gap:10px}
+.qq-dot{flex:none;width:10px;height:10px;border-radius:50%;margin-top:4px}.qq-dot.qq-ok{background:#12B76A}.qq-dot.qq-warn{background:#F79009}.qq-dot.qq-lock{background:#D92D20}.qq-dot.qq-mute{background:#94A3B8}
+.qq-t{display:flex;flex-direction:column;font-size:13px}.qq-tr{display:grid;grid-template-columns:2fr 1fr 1fr 1.4fr;align-items:center;padding:10px 8px;border-bottom:1px solid #EEF2F6}.qq-th{font-size:12px;color:#4B5563;font-weight:700}
+.qq-mn{font-weight:700;display:flex;align-items:center;gap:8px}.qq-av{width:26px;height:26px;border-radius:50%;display:inline-grid;place-items:center;font-size:11px;font-weight:800;flex:none}
+.qq-pill{display:inline-block;min-width:24px;text-align:center;border-radius:999px;padding:2px 8px;font-weight:800}.qq-pw{background:#FEF0C7;color:#93370D}.qq-pl{background:#FEE4E2;color:#B42318}.qq-pz{color:#64748B}.qq-prev.qq-bad{background:#FEF3F2;border-color:#FECDCA;color:#B42318;font-weight:700}
+.sk{height:14px;border-radius:7px;background:#E9EEF5;margin:6px 0}
+.malert{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:#FEF3F2;border:1px solid #FECDCA;color:#B42318;font-size:13px;font-weight:700}
+</style>
+</helmet>
+<style>
+.sn-wrap{display:grid;grid-template-columns:360px minmax(0,1fr) 296px;gap:12px;align-items:start}
+.sn-col{display:flex;flex-direction:column;gap:12px;min-width:0}
+.sn-h{display:flex;align-items:center;gap:8px;margin:0;font-size:15px;font-weight:800}
+.sn-n{width:22px;height:22px;border-radius:50%;background:#0B1220;color:#FFFFFF;display:inline-grid;place-items:center;font-size:12px;font-weight:800;flex:none}
+.sn-lbl{font-size:12px;font-weight:800;color:#3A4456;letter-spacing:.03em;margin:0}
+.sn-pre{display:flex;flex-direction:column;gap:6px}
+.sn-opt{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:12px;border:1px solid #E6EAF2;background:#FFFFFF;cursor:pointer;text-align:left;font:inherit;color:#0B1220;width:100%}
+.sn-opt:hover{border-color:#94A3B8}
+.sn-opt[aria-checked="true"]{border-color:#0065D6;background:#EAF3FF;box-shadow:inset 0 0 0 1px #0065D6}
+.sn-rad{width:16px;height:16px;border-radius:50%;border:2px solid #94A3B8;flex:none;box-sizing:border-box}
+.sn-opt[aria-checked="true"] .sn-rad{border:5px solid #0065D6}
+.sn-ot{flex:1;display:flex;flex-direction:column;gap:1px;min-width:0}.sn-ot b{font-size:13px}.sn-ot span{font-size:12px;color:#4B5563}
+.sn-cnt{min-width:26px;height:22px;border-radius:999px;background:#EEF2F6;display:grid;place-items:center;font-size:12px;font-weight:800;padding:0 6px;box-sizing:border-box}
+.sn-opt[aria-checked="true"] .sn-cnt{background:#0065D6;color:#FFFFFF}
+.sn-tabs{display:flex;gap:2px;padding:3px;border-radius:12px;background:#EEF2F6}
+.sn-tab{flex:1;height:32px;border:0;border-radius:9px;background:transparent;font:inherit;font-size:12px;font-weight:700;color:#3A4456;cursor:pointer;white-space:nowrap}
+.sn-tab[aria-selected="true"]{background:#FFFFFF;color:#0B1220;box-shadow:0 1px 3px rgba(11,18,32,.12)}
+.sn-in{height:36px;border:1px solid #CBD5E1;border-radius:10px;padding:0 10px;font:inherit;font-size:13px;color:#0B1220;background:#FFFFFF;box-sizing:border-box;width:100%}
+.sn-in:focus,.sn-ta:focus{outline:2px solid #0065D6;outline-offset:1px;border-color:#0065D6}
+.sn-sel{height:32px;border:1px solid #CBD5E1;border-radius:10px;padding:0 8px;font-size:12px;font-weight:700;color:#0B1220;background:#FFFFFF;flex:1;min-width:0}
+.sn-all{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;cursor:pointer}
+.sn-list{border:1px solid #E6EAF2;border-radius:12px;max-height:330px;overflow:auto;background:#FFFFFF}
+.sn-r{display:flex;align-items:center;gap:10px;padding:8px 12px;border-top:1px solid #EEF2F6;cursor:pointer;font-size:13px}
+.sn-r:first-child{border-top:0}
+.sn-r:hover{background:#F8FAFC}
+.sn-r.sn-on{background:#F3F8FF}
+.sn-r input,.sn-all input{width:16px;height:16px;accent-color:#0065D6;flex:none;margin:0}
+.sn-ri{flex:1;min-width:0;display:flex;flex-direction:column}
+.sn-ri b{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sn-ri span{font-size:12px;color:#4B5563;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sn-flag.sn-fbad{color:#B42318;background:#FEE4E2}.sn-flag.sn-fok{color:#067647;background:#DCFAE6}
+.sn-flag{font-size:11px;font-weight:800;color:#93370D;background:#FEF0C7;border-radius:6px;padding:1px 6px;white-space:nowrap}
+.sn-ta{width:100%;box-sizing:border-box;min-height:150px;border:1px solid #CBD5E1;border-radius:12px;padding:10px 12px;font:inherit;font-size:14px;line-height:1.5;color:#0B1220;resize:vertical}
+.sn-ta.sn-bad{border-color:#D92D20;background:#FFFBFA}
+.sn-chips{display:flex;gap:6px;flex-wrap:wrap}
+.sn-chip{height:28px;padding:0 10px;border-radius:8px;border:1px dashed #0065D6;background:#F3F8FF;color:#0057B8;font:inherit;font-size:12px;font-weight:800;cursor:pointer;font-family:ui-monospace,Menlo,monospace}
+.sn-chip:hover{background:#EAF3FF}
+.sn-ph{padding:10px 12px;background:#F8FAFC;border:1px solid #E6EAF2;border-radius:12px;display:flex;flex-direction:column;gap:7px}
+.sn-meter{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.sn-m{border:1px solid #E6EAF2;border-radius:12px;padding:8px 10px;display:flex;flex-direction:column;gap:1px;background:#FFFFFF}
+.sn-m small{font-size:11px;font-weight:700;color:#4B5563}.sn-m b{font-size:18px;font-weight:800}.sn-m span{font-size:11px;color:#4B5563}
+.sn-m.sn-mbad{background:#FEF3F2;border-color:#FECDCA}.sn-m.sn-mbad b{color:#B42318}
+.sn-segbar{display:flex;gap:3px;height:6px}.sn-segbar i{flex:1;border-radius:3px;background:#E6EAF2}.sn-segbar i.sn-f{background:#0065D6}.sn-segbar i.sn-x{background:#F79009}
+.sn-warn{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:12px;background:#FFFAEB;border:1px solid #FEC84B;font-size:12px;color:#7A2E0E;line-height:1.45}
+.sn-warn b{display:block;font-size:13px;color:#93370D}
+.sn-info{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:12px;background:#F0F7FF;border:1px solid #B2D4FF;font-size:12px;color:#123A6B;line-height:1.45}
+.sn-bad2{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:12px;background:#FEF3F2;border:1px solid #FECDCA;font-size:12px;color:#912018;line-height:1.45}
+.sn-bad2 b{display:block;font-size:13px;color:#B42318}
+.sn-mini{height:28px;padding:0 10px;font-size:12px;border-radius:8px}
+.sn-foot{display:flex;align-items:center;gap:10px;padding-top:4px}
+.sn-send{height:42px;padding:0 20px;font-size:14px}
+.sn-send[aria-disabled="true"]{background:#94A3B8;border-color:#94A3B8;cursor:not-allowed}
+.sn-err{font-size:12px;font-weight:700;color:#B42318;margin:0}
+.sn-phone{border-radius:22px;background:#0B1220;padding:10px;display:flex;flex-direction:column}
+.sn-scr{border-radius:16px;background:#F2F4F7;padding:12px 10px 14px;display:flex;flex-direction:column;gap:8px;min-height:250px}
+.sn-from{font-size:11px;font-weight:700;color:#4B5563;text-align:center}
+.sn-bub{align-self:flex-start;max-width:92%;background:#FFFFFF;border-radius:14px 14px 14px 4px;padding:9px 11px;font-size:13px;line-height:1.45;color:#0B1220;white-space:pre-wrap;word-break:break-word;box-shadow:0 1px 2px rgba(11,18,32,.08)}
+.sn-hole{background:#FEE4E2;color:#B42318;border-radius:4px;padding:0 3px;font-weight:700}
+.sn-fill{background:#EAF3FF;color:#0057B8;border-radius:4px;padding:0 3px;font-weight:700}
+.sn-pnav{display:flex;align-items:center;gap:6px}
+.sn-pnav span{flex:1;text-align:center;font-size:12px;font-weight:700;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sn-ib{width:30px;height:30px;border-radius:8px;border:1px solid #CBD5E1;background:#FFFFFF;cursor:pointer;font-size:14px;font-weight:800;color:#0B1220}
+.sn-ib:disabled{opacity:.4;cursor:default}
+.sn-bal{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;border-radius:999px;border:1px solid #E6EAF2;background:#FFFFFF;font-size:13px;font-weight:700}
+.sn-bal i{width:8px;height:8px;border-radius:50%;background:#12B76A}
+.sn-bal.sn-blow{background:#FEF3F2;border-color:#FECDCA;color:#B42318}.sn-bal.sn-blow i{background:#D92D20}
+.sn-bal.sn-bunk{color:#4B5563}.sn-bal.sn-bunk i{background:#94A3B8}
+.sn-prog{height:8px;border-radius:999px;background:#E6EAF2;overflow:hidden;position:relative}
+.sn-prog i{position:absolute;top:0;bottom:0;width:35%;border-radius:999px;background:#0065D6;animation:snmv 1.1s ease-in-out infinite}
+@keyframes snmv{0%{left:-35%}100%{left:100%}}
+.sn-res{display:flex;flex-direction:column;border:1px solid #E6EAF2;border-radius:12px;max-height:250px;overflow:auto}
+.sn-rr{display:grid;grid-template-columns:18px minmax(0,1fr);gap:2px 8px;padding:7px 10px;border-top:1px solid #EEF2F6;font-size:12px}
+.sn-rr:first-child{border-top:0}
+.sn-rr b{font-size:13px;grid-column:2}.sn-rr > span:first-child{grid-row:1/3;padding-top:1px}.sn-rr > span:last-child{grid-column:2;color:#4B5563}
+.sn-ok{color:#067647;font-weight:800}.sn-no{color:#B42318;font-weight:800}
+.sn-sum{display:flex;gap:8px}
+.sn-sum div{flex:1;border-radius:12px;padding:8px 10px;display:flex;flex-direction:column}
+.sn-sum b{font-size:20px;font-weight:800}.sn-sum span{font-size:12px;font-weight:700}
+.sn-sg{background:#ECFDF3;color:#067647}.sn-sr{background:#FEF3F2;color:#B42318}
+.sn-ht{display:flex;flex-direction:column;font-size:13px}
+.sn-hr{display:grid;grid-template-columns:150px 130px minmax(0,1fr) 84px 170px 116px 130px;gap:10px;align-items:center;padding:9px 10px;border-top:1px solid #EEF2F6}
+.sn-hr > span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.sn-hh{font-size:12px;font-weight:700;color:#4B5563;border-top:0}
+.sn-st{display:inline-flex;align-items:center;height:22px;border-radius:999px;padding:0 9px;font-size:12px;font-weight:800}
+.sn-st.sn-sok{background:#DCFAE6;color:#067647}.sn-st.sn-sbad{background:#FEE4E2;color:#B42318}
+.sn-hf{display:flex;gap:6px}
+.sn-hc{height:30px;padding:0 12px;border-radius:999px;border:1px solid #CBD5E1;background:#FFFFFF;font:inherit;font-size:12px;font-weight:700;cursor:pointer;color:#0B1220}
+.sn-hc[aria-pressed="true"]{border-color:#0065D6;background:#EAF3FF;color:#0057B8}
+.sn-dnote{font-size:12px;color:#5B21B6;background:#F5F3FF;border:1px dashed #A78BFA;border-radius:10px;padding:8px 10px;margin:0;line-height:1.45}
+.sn-dlg{position:absolute;inset:0;background:rgba(11,18,32,.45);display:grid;place-items:center;z-index:90}
+.sn-dl{margin:0;display:grid;grid-template-columns:150px 1fr;gap:7px 10px;font-size:13px}
+.sn-dl dt{color:#4B5563;font-weight:600}.sn-dl dd{margin:0;font-weight:700}
+.sn-toast{position:absolute;left:28px;bottom:24px;z-index:95;background:#0B1220;color:#FFFFFF;border-radius:14px;padding:12px 16px;font-size:13px;font-weight:700;box-shadow:0 20px 50px rgba(11,18,32,.35);max-width:620px}
+.sn-empty{padding:22px;text-align:center;color:#4B5563;font-size:13px}
+</style>
+<div data-root="1" style="height: 960px; box-sizing: border-box; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #0B1220; background: #F5F7FB; display: flex; position: relative; overflow: hidden">
+  <nav aria-label="Asosiy menyu" class="{{ sbCls }}">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 4px 2px 8px"><span aria-hidden="true" style="flex: none; width: 34px; height: 34px; border-radius: 9px; background: #0065D6; color: #FFFFFF; display: grid; place-items: center; font-weight: 800; font-size: 17px">H</span><strong class="brand" style="font-size: 16px; letter-spacing: .02em; flex: 1">HOMEWORK</strong><button type="button" class="ic" onClick="{{ toggleSb }}" aria-label="{{ sbLab }}" title="{{ sbLab }}" aria-expanded="{{ sbExp }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ sbIcon }}"></path></svg></button></div>
+    <sc-for list="{{ nav }}" as="n" hint-placeholder-count="13">
+      <sc-if value="{{ n.grp }}" hint-placeholder-val="{{ false }}"><h2 class="grp">{{ n.label }}</h2></sc-if>
+      <sc-if value="{{ n.item }}" hint-placeholder-val="{{ true }}">
+        <div class="nr"><button type="button" class="mi" title="{{ n.tip }}" aria-current="{{ n.cur }}" onClick="{{ n.pick }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ n.icon }}"></path></svg><span class="lbl">{{ n.label }}</span></button><sc-if value="{{ n.badge }}" hint-placeholder-val="{{ false }}"><button type="button" class="cnt" title="{{ n.aria }}" aria-label="{{ n.aria }}" onClick="{{ n.pickBadge }}">{{ n.badge }}</button></sc-if></div>
+      </sc-if>
+    </sc-for>
+    <span style="flex: 1"></span>
+    <div class="nr"><button type="button" class="mi" title="Boshqa boʻlimlar: Analitika, Mobil ilova, Yoʻriqnomalar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="5" cy="12" r="1.5"></circle><circle cx="12" cy="12" r="1.5"></circle><circle cx="19" cy="12" r="1.5"></circle></svg><span class="lbl">Boshqa boʻlimlar</span></button></div>
+    <div class="nr"><button type="button" class="mi" title="Sozlamalar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"></path></svg><span class="lbl">Sozlamalar</span></button></div>
+  </nav>
+  <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative">
+    <header style="height: 56px; flex: none; padding: 0 24px; display: flex; align-items: center; gap: 14px; background: #FFFFFF; border-bottom: 1px solid #E6EAF2; box-sizing: border-box">
+      <span style="font-size: 13px; color: #4B5563">{{ crumb0 }} · <b style="color: #0B1220">{{ crumb }}</b></span>
+      <span style="flex: 1"></span>
+      <div role="group" aria-label="Demo holat" style="display: flex; align-items: center; gap: 4px; padding: 4px; border: 1px dashed #A78BFA; border-radius: 12px; background: #F5F3FF">
+        <span style="font-size: 11px; font-weight: 800; color: #5B21B6; padding: 0 6px">HOLAT</span>
+        <sc-for list="{{ demo }}" as="d" hint-placeholder-count="5"><button type="button" aria-pressed="{{ d.on }}" onClick="{{ d.pick }}" class="dmb" title="{{ d.tip }}">{{ d.t }}</button></sc-for>
+      </div>
+      <span style="display: flex; align-items: center; gap: 10px"><span aria-hidden="true" style="width: 36px; height: 36px; border-radius: 50%; background: #5B21B6; color: #FFFFFF; display: grid; place-items: center; font-size: 13px; font-weight: 800">KS</span><span style="display: flex; flex-direction: column; line-height: 1.2"><b style="font-size: 14px">Kamola Shahobiddinova</b><span style="font-size: 12px; color: #4B5563">Sotuv menejeri · Rus tili</span></span></span>
+    </header>
+
+
+    <main style="flex: 1; min-height: 0; overflow: auto; padding: 20px 28px 40px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; align-items: flex-end; gap: 12px">
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 4px">
+          <h1 style="margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.02em">SMS yuborish</h1>
+          <p style="margin: 0; font-size: 13px; color: #4B5563">{{ sub }}</p>
+        </div>
+        <span class="{{ balCls }}" role="status" title="Eskiz.uz hisobi · /api/sms/balance"><i aria-hidden="true"></i>{{ balT }}</span>
+        <span class="tag">Rus tili</span>
+      </div>
+
+      <sc-if value="{{ ready }}" hint-placeholder-val="{{ true }}">
+        <div class="sn-wrap">
+          <!-- 1. KIMGA -->
+          <section class="box sn-col" aria-labelledby="snK">
+            <h2 class="sn-h" id="snK"><span class="sn-n" aria-hidden="true">1</span>Kimga</h2>
+            <p class="sn-lbl">TAYYOR GURUHLAR</p>
+            <div class="sn-pre" role="radiogroup" aria-label="Tayyor guruh">
+              <sc-for list="{{ presets }}" as="p" hint-placeholder-count="4"><button type="button" role="radio" class="sn-opt" aria-checked="{{ p.on }}" onClick="{{ p.pick }}" data-pre="{{ p.k }}"><span class="sn-rad" aria-hidden="true"></span><span class="sn-ot"><b>{{ p.t }}</b><span>{{ p.s }}</span></span><span class="sn-cnt">{{ p.n }}</span></button></sc-for>
+            </div>
+            <p class="sn-lbl" style="margin-top: 4px">AUDITORIYA</p>
+            <div class="sn-tabs" role="tablist" aria-label="Auditoriya"><sc-for list="{{ auds }}" as="a" hint-placeholder-count="3"><button type="button" role="tab" class="sn-tab" aria-selected="{{ a.on }}" onClick="{{ a.pick }}" data-aud="{{ a.k }}">{{ a.t }}</button></sc-for></div>
+            <input type="search" class="sn-in" placeholder="Ism yoki telefon boʻyicha qidirish..." aria-label="Ism yoki telefon boʻyicha qidirish" value="{{ q }}" onInput="{{ qIn }}" data-q="1">
+            <div style="display: flex; gap: 8px; align-items: center">
+              <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: #4B5563; flex: 1; min-width: 0">{{ fLab }}<select class="sn-sel" onChange="{{ fIn }}" aria-label="{{ fLab }}"><sc-for list="{{ fOpts }}" as="o" hint-placeholder-count="6"><option value="{{ o.v }}" selected="{{ o.sel }}">{{ o.t }}</option></sc-for></select></label>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px">
+              <label class="sn-all"><input type="checkbox" checked="{{ allOn }}" onChange="{{ allPick }}" data-all="1">Hammasini tanlash ({{ fCount }})</label>
+              <span style="flex: 1"></span>
+              <sc-if value="{{ anySel }}" hint-placeholder-val="{{ false }}"><button type="button" class="lnk" onClick="{{ clearSel }}" style="font-size: 12px">Tozalash</button></sc-if>
+            </div>
+            <div class="sn-list" role="group" aria-label="Qabul qiluvchilar">
+              <sc-for list="{{ rows }}" as="r" hint-placeholder-count="8"><label class="{{ r.cls }}" data-rid="{{ r.key }}"><input type="checkbox" checked="{{ r.on }}" onChange="{{ r.pick }}" aria-label="{{ r.name }}"><span class="sn-ri"><b>{{ r.name }}</b><span>{{ r.sub }}</span></span><sc-if value="{{ r.flag }}" hint-placeholder-val="{{ false }}"><span class="sn-flag" title="Ustoz yoki guruh havolasi yoʻq">havolasiz</span></sc-if><sc-if value="{{ r.bad }}" hint-placeholder-val="{{ false }}"><span class="sn-flag sn-fbad" title="Server faqat 998XXXXXXXXX raqamga yuboradi">notoʻgʻri raqam</span></sc-if><sc-if value="{{ r.dn }}" hint-placeholder-val="{{ false }}"><span class="sn-flag sn-fok" title="Bu matn bu raqamga tarixda “Yuborildi”">yuborilgan</span></sc-if></label></sc-for>
+              <sc-if value="{{ noRows }}" hint-placeholder-val="{{ false }}"><div class="sn-empty">Hech kim topilmadi<sc-if value="{{ hasQ }}" hint-placeholder-val="{{ false }}"><br><button type="button" class="lnk" onClick="{{ clearQ }}">Qidiruvni tozalash</button></sc-if></div></sc-if>
+            </div>
+            <p class="hint" style="margin: 0">{{ selNote }}</p>
+          </section>
+
+          <!-- 2. XABAR -->
+          <section class="box sn-col" aria-labelledby="snX">
+            <h2 class="sn-h" id="snX"><span class="sn-n" aria-hidden="true">2</span>Xabar matni</h2>
+            <textarea id="snText" class="{{ taCls }}" rows="6" maxlength="900" placeholder="SMS matnini kiriting..." aria-label="Xabar matni" aria-invalid="{{ taInv }}" aria-describedby="snCnt" onInput="{{ textIn }}">{{ text }}</textarea>
+            <sc-if value="{{ textErr }}" hint-placeholder-val="{{ false }}"><p class="sn-err" role="alert">Xabar matnini kiriting</p></sc-if>
+            <div class="sn-ph">
+              <b style="font-size: 12px">Har kimga moslashadigan qismlar</b>
+              <div class="sn-chips"><sc-for list="{{ chips }}" as="c" hint-placeholder-count="3"><button type="button" class="sn-chip" onClick="{{ c.add }}" title="{{ c.l }}" aria-label="{{ c.aria }}">{{ c.k }}</button></sc-for></div>
+              <span style="font-size: 11px; color: #4B5563; line-height: 1.5">Bosilganda matnga qoʻshiladi. Yuborilayotganda har bir odam uchun alohida almashtiriladi — masalan <b>{sinov_guruh}</b> oʻsha oʻquvchiga biriktirilgan ustozning guruh havolasiga aylanadi.</span>
+            </div>
+            <div class="sn-meter" id="snCnt" aria-live="polite">
+              <div class="sn-m"><small>Belgilar</small><b>{{ m.len }}</b><span>{{ m.lenS }}</span></div>
+              <div class="sn-m"><small>Bir kishiga</small><b>{{ m.seg }}</b><span>{{ m.segS }}</span></div>
+              <div class="{{ m.totC }}"><small>Jami sarf</small><b>{{ m.tot }}</b><span>{{ m.totS }}</span></div>
+            </div>
+            <sc-if value="{{ uni }}" hint-placeholder-val="{{ true }}"><div class="sn-info"><span aria-hidden="true">ℹ</span><span style="flex: 1">{{ uniT }}</span><sc-if value="{{ canAscii }}" hint-placeholder-val="{{ true }}"><button type="button" class="btn2 sn-mini" onClick="{{ toAscii }}">ʻ → ' almashtirish</button></sc-if></div></sc-if>
+            <sc-if value="{{ miss }}" hint-placeholder-val="{{ false }}"><div class="sn-warn" role="status"><span aria-hidden="true">⚠</span><span><b>{{ missT }}</b>{{ missD }}</span></div></sc-if>
+            <sc-if value="{{ balNote }}" hint-placeholder-val="{{ false }}"><div class="sn-info" role="status"><span aria-hidden="true">ℹ</span><span>Eskiz balansini olib boʻlmadi — yuborish mumkin, lekin sarf balansga solishtirilmaydi.</span></div></sc-if>
+            <sc-if value="{{ bad }}" hint-placeholder-val="{{ false }}"><div class="sn-bad2" role="status"><span aria-hidden="true">⚠</span><span><b>{{ badT }}</b>{{ badD }}</span></div></sc-if>
+            <sc-if value="{{ dupe }}" hint-placeholder-val="{{ false }}"><div class="sn-info" role="status"><span aria-hidden="true">ℹ</span><span>{{ dupeT }}</span></div></sc-if>
+            <sc-if value="{{ low }}" hint-placeholder-val="{{ false }}"><div class="sn-warn" role="status"><span aria-hidden="true">⚠</span><span><b>{{ lowT }}</b>{{ lowD }}</span></div></sc-if>
+            <sc-if value="{{ tmo }}" hint-placeholder-val="{{ false }}"><div class="sn-warn" role="alert"><span aria-hidden="true">⏱</span><span style="flex: 1"><b>Javob kelmadi — SMSlar yuborilgan boʻlishi mumkin. Tarixni tekshiring.</b>Server {{ tmoT }} ta raqamga navbat bilan yuborishda davom etishi mumkin. Qayta yuborishdan oldin tarixni yangilang — “Yuborildi” boʻlganlar tanlovdan olinadi.</span><button type="button" class="btn2 sn-mini" onClick="{{ refreshHist }}" data-refresh="1">Tarixni yangilash</button></div></sc-if>
+            <div class="sn-foot">
+              <span style="font-size: 13px; color: #4B5563; flex: 1" role="status">{{ selCount }}</span>
+              <button type="button" class="btnp sn-send" onClick="{{ send }}" aria-disabled="{{ sendDis }}" aria-describedby="snWhy" data-send="1">{{ sendT }}</button>
+            </div>
+            <sc-if value="{{ why }}" hint-placeholder-val="{{ false }}"><p class="sn-err" id="snWhy" role="alert" style="text-align: right">{{ why }}</p></sc-if>
+          </section>
+
+          <!-- 3. KOʻRINISHI / NATIJA -->
+          <section class="box sn-col" aria-labelledby="snP">
+            <sc-if value="{{ showPv }}" hint-placeholder-val="{{ true }}">
+              <h2 class="sn-h" id="snP"><span class="sn-n" aria-hidden="true">3</span>Koʻrinishi</h2>
+              <sc-if value="{{ pv.has }}" hint-placeholder-val="{{ true }}">
+                <div class="sn-pnav"><button type="button" class="sn-ib" onClick="{{ pv.prev }}" disabled="{{ pv.noPrev }}" aria-label="Oldingi qabul qiluvchi">‹</button><span aria-live="polite">{{ pv.who }}</span><button type="button" class="sn-ib" onClick="{{ pv.next }}" disabled="{{ pv.noNext }}" aria-label="Keyingi qabul qiluvchi">›</button></div>
+                <div class="sn-phone"><div class="sn-scr"><span class="sn-from">Domwork · {{ pv.phone }}</span><div class="sn-bub" data-pv="1"><sc-for list="{{ pv.parts }}" as="x" hint-placeholder-count="3"><span class="{{ x.c }}">{{ x.t }}</span></sc-for></div><span style="font-size: 11px; color: #4B5563">{{ pv.meta }}</span></div></div>
+                <p class="hint" style="margin: 0"><span class="sn-fill">koʻk</span> — almashtirilgan qism, <span class="sn-hole">qizil</span> — maʼlumot topilmadi (boʻsh ketadi).</p>
+              </sc-if>
+              <sc-if value="{{ pv.none }}" hint-placeholder-val="{{ false }}"><div class="sn-empty" style="border: 1px dashed #CBD5E1; border-radius: 12px">Qabul qiluvchi tanlang — xabar uning ismi bilan shu yerda koʻrinadi</div></sc-if>
+            </sc-if>
+            <sc-if value="{{ sending }}" hint-placeholder-val="{{ false }}">
+              <h2 class="sn-h" id="snP">Yuborilmoqda…</h2>
+              <div class="sn-prog" role="progressbar" aria-label="SMS yuborilmoqda" aria-busy="true"><i></i></div>
+              <p style="margin: 0; font-size: 13px; color: #3A4456">{{ sendingT }}</p>
+              <p class="hint" style="margin: 0">Server har bir raqamga alohida soʻrov yuboradi. Sahifani yopmang — natija shu yerda chiqadi.</p>
+            </sc-if>
+            <sc-if value="{{ done }}" hint-placeholder-val="{{ false }}">
+              <h2 class="sn-h" id="snP">Natija</h2>
+              <div class="sn-sum"><div class="sn-sg"><b>{{ res.sent }}</b><span>ta yuborildi</span></div><sc-if value="{{ res.hasFail }}" hint-placeholder-val="{{ true }}"><div class="sn-sr"><b>{{ res.failed }}</b><span>ta xato</span></div></sc-if></div>
+              <div class="sn-res" role="list" aria-label="Har bir qabul qiluvchi natijasi"><sc-for list="{{ res.rows }}" as="x" hint-placeholder-count="6"><div class="sn-rr" role="listitem"><span class="{{ x.ic }}" aria-hidden="true">{{ x.i }}</span><b>{{ x.name }}</b><span>{{ x.d }}<sc-if value="{{ x.fail }}" hint-placeholder-val="{{ false }}"> <button type="button" class="lnk" onClick="{{ x.open }}" style="font-size: 12px">{{ x.openT }}</button></sc-if></span></div></sc-for></div>
+              <p class="hint" style="margin: 0">Tarix va balans yangilandi. Matn va tanlov tozalandi — xato ketganlarni qayta tanlab, raqamini tuzatib yuborish mumkin.</p>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap"><sc-if value="{{ res.hasFail }}" hint-placeholder-val="{{ true }}"><button type="button" class="btnp sn-mini" onClick="{{ res.retry }}" style="height: 34px">Xatolarni qayta tanlash ({{ res.failed }})</button></sc-if><button type="button" class="btn2 sn-mini" onClick="{{ res.close }}" style="height: 34px">Yangi xabar</button></div>
+            </sc-if>
+          </section>
+        </div>
+
+        <p class="sn-dnote"><b>Dizayn farqi:</b> (1) Sotuv menejeri faqat oʻziga biriktirilgan lidlar va oʻz oʻquvchilarini koʻradi — production’da roʻyxat brauzerdagi maʼlumotdan olinadi, server esa sotuv menejeriga faqat oʻz lid/oʻquvchilarini beradi; auditoriya lokal, shuning uchun sahifa darajasidagi “roʻyxatni yuklab boʻlmadi” xatosi yoʻq. (2) Tayyor guruhlar, ʻ/kirill boʻyicha 70/160 segment hisobi va bitta tasdiq oynasi mobil ROP ekranidan; desktopda ikki <i>confirm()</i> va har doim 70 belgi. (3) Yangi: “ʻ → '” almashtirish tugmasi, notoʻgʻri raqam belgisi (server qoidasi oldindan), kam balans ogohlantirishi (kodda tekshiruv yoʻq), har raqam boʻyicha natija va “Yubordi” ustuni (kodda faqat “N ta yuborildi, M ta xato”). (4) Javob kelmasa — koʻr-koʻrona qayta yuborish oʻrniga tarixni yangilash; tarixda “Yuborildi” boʻlgan raqam shu matn bilan qayta yuborilmaydi.</p>
+
+        <section class="box" aria-labelledby="snH">
+          <div style="display: flex; align-items: center; gap: 10px">
+            <h2 id="snH" style="flex: 1">Yuborilgan SMS tarixi</h2>
+            <sc-if value="{{ hOk }}" hint-placeholder-val="{{ true }}"><div class="sn-hf" role="group" aria-label="Holat boʻyicha"><sc-for list="{{ hfs }}" as="f" hint-placeholder-count="3"><button type="button" class="sn-hc" aria-pressed="{{ f.on }}" onClick="{{ f.pick }}">{{ f.t }}</button></sc-for></div></sc-if>
+          </div>
+          <sc-if value="{{ hLoad }}" hint-placeholder-val="{{ false }}"><div aria-busy="true" aria-label="Tarix yuklanmoqda"><div class="sk" style="width: 90%"></div><div class="sk" style="width: 80%"></div><div class="sk" style="width: 85%"></div><div class="sk" style="width: 70%"></div></div></sc-if>
+          <sc-if value="{{ hErr }}" hint-placeholder-val="{{ false }}"><div class="malert" role="alert"><span style="flex: 1">Xatolik: Tarixni yuklashda xatolik</span><button type="button" class="btn2" onClick="{{ hRetry }}">Qayta urinish</button></div></sc-if>
+          <sc-if value="{{ hOk }}" hint-placeholder-val="{{ true }}">
+          <sc-if value="{{ hHas }}" hint-placeholder-val="{{ true }}">
+            <div class="sn-ht" role="table" aria-label="Yuborilgan SMS tarixi">
+              <div class="sn-hr sn-hh" role="row"><span role="columnheader">Qabul qiluvchi</span><span role="columnheader">Telefon</span><span role="columnheader">Xabar</span><span role="columnheader">Holat</span><span role="columnheader">Sabab</span><span role="columnheader">Vaqt</span><span role="columnheader">Yubordi</span></div>
+              <sc-for list="{{ hist }}" as="h" hint-placeholder-count="8"><div class="sn-hr" role="row" data-h="1"><span role="cell" style="font-weight: 700" title="{{ h.by }}">{{ h.name }}</span><span role="cell">{{ h.phone }}</span><span role="cell" title="{{ h.msg }}" style="color: #3A4456">{{ h.msg }}</span><span role="cell"><span class="{{ h.sc }}">{{ h.st }}</span></span><span role="cell" title="{{ h.err }}" style="{{ h.errSt }}">{{ h.errT }}</span><span role="cell" style="color: #4B5563">{{ h.at }}</span><span role="cell" style="color: #3A4456">{{ h.by }}</span></div></sc-for>
+            </div>
+            <sc-if value="{{ hMore }}" hint-placeholder-val="{{ true }}"><button type="button" class="btn2" onClick="{{ hMoreOn }}" style="align-self: flex-start">Yana koʻrsatish ({{ hLeft }} ta)</button></sc-if>
+          </sc-if>
+          <sc-if value="{{ hEmpty }}" hint-placeholder-val="{{ false }}"><div class="sn-empty" role="status">{{ hEmptyT }}</div></sc-if>
+          </sc-if>
+          <p class="hint" style="margin: 0">Faqat siz yuborgan SMSlar koʻrinadi (ROP — hammasini). Oxirgi 50 ta yozuv.</p>
+        </section>
+      </sc-if>
+    </main>
+
+    <sc-if value="{{ cf }}" hint-placeholder-val="{{ false }}"><div class="sn-dlg"><div role="dialog" aria-modal="true" aria-labelledby="cfH" class="box" style="width: 500px" data-cf="1" onKeyDown="{{ cfKey }}">
+      <h2 id="cfH">{{ cfV.q }}</h2>
+      <dl class="sn-dl"><dt>Auditoriya</dt><dd>{{ cfV.aud }}</dd><dt>Bir kishiga</dt><dd>{{ cfV.seg }}</dd><dt>Jami sarf</dt><dd>{{ cfV.tot }}</dd><dt>Balansda qoladi</dt><dd>{{ cfV.left }}</dd></dl>
+      <div class="qq-prev" style="white-space: pre-wrap; line-height: 1.45"><b style="display: block; font-size: 12px; color: #4B5563; margin-bottom: 4px">{{ cfV.pvWho }}</b>{{ cfV.pv }}</div>
+      <sc-if value="{{ cfV.miss }}" hint-placeholder-val="{{ false }}"><div class="sn-warn"><span aria-hidden="true">⚠</span><span><b>{{ cfV.missT }}</b>Sabab: ularga ustoz biriktirilmagan yoki ustozning guruh havolasi kiritilmagan. Ularga havolasiz SMS ketadi.</span></div></sc-if>
+      <sc-if value="{{ cfV.bad }}" hint-placeholder-val="{{ false }}"><div class="sn-bad2"><span aria-hidden="true">⚠</span><span><b>{{ cfV.badT }}</b></span></div></sc-if>
+      <sc-if value="{{ cfV.dupe }}" hint-placeholder-val="{{ false }}"><div class="sn-info"><span aria-hidden="true">ℹ</span><span>{{ cfV.dupeT }}</span></div></sc-if>
+      <p class="hint" style="margin: 0">SMS maktab hisobidan (Eskiz) yechiladi va qaytarib boʻlmaydi.</p>
+      <div style="display: flex; gap: 8px; justify-content: flex-end"><button type="button" class="btn2" onClick="{{ cfV.no }}">Bekor qilish</button><button type="button" class="btnp" onClick="{{ cfV.yes }}" data-yes="1">{{ cfV.yesT }}</button></div>
+    </div></div></sc-if>
+    <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}"><div role="status" class="sn-toast">{{ toastT }}</div></sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":960}}'>
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    // Demo soat: Dushanba 02.11.2026 01:43. Sotuv menejeri Kamola Shahobiddinova (KS) — faqat Rus tili, oʻz lid/oʻquvchilari.
+    this.DEF_TEXT = 'Assalomu alaykum, {ism}! Domwork rus tili kursiga joylar oz qoldi. Bugun yozilsangiz — birinchi dars sovgʻa.';
+    this.H0 = [
+      ['Shahzoda Ergasheva', '+998 90 123 45 67', 'Shahzoda Ergasheva, toʻlov muddati 20.10 edi. Qarz: 450 000 soʻm.', 'sent', '', '31.10.2026, 11:05', 'Kamola Shahobiddinova'],
+      ['Rustam Toshev', '+998 93 220 18 64', 'Assalomu alaykum, Rustam Toshev! Sinov darsi uchun qulay vaqtni yozib qoldiring.', 'sent', '', '30.10.2026, 15:30', 'Kamola Shahobiddinova'],
+      ['Shoira Nazirova', '+998 90 77 31 5', 'Assalomu alaykum, Shoira Nazirova! Sinov darsi uchun qulay vaqtni yozib qoldiring.', 'error', 'Notoʻgʻri telefon raqami: +998 90 77 31 5', '30.10.2026, 15:30', 'Kamola Shahobiddinova'],
+      ['Nilufar Saidova', '+998 91 377 40 12', 'Assalomu alaykum, Nilufar Saidova! Noyabr uchun 20% chegirma — bugun yozilsangiz.', 'sent', '', '29.10.2026, 16:20', 'Kamola Shahobiddinova'],
+      ['Madina Yusupova', '+998 99 841 27 63', 'Assalomu alaykum, Madina Yusupova! Noyabr uchun 20% chegirma — bugun yozilsangiz.', 'sent', '', '29.10.2026, 16:20', 'Kamola Shahobiddinova'],
+      ['Aziza Karimova', '+998 94 666 00 99', 'Aziza Karimova, ertangi dars 19:00 ga koʻchirildi.', 'sent', '', '28.10.2026, 09:12', 'Kamola Shahobiddinova']
+    ].map((h, i) => ({ id: 'h' + i, name: h[0], phone: h[1], msg: h[2], status: h[3], error: h[4], at: h[5], by: h[6] }));
+    this.state = this.fresh('ok');
+    this._t = null;
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && this.state.cf) this.setState({ cf: false }); });
+  }
+  fresh(demo) {
+    return { sb: true, demo, hRetried: false, aud: 'lidlar', q: '', f: 'all', sel: {}, text: this.DEF_TEXT, tErr: false, showWhy: false, pv: 0, cf: false, phase: '', res: null, lastText: '', timeout: null, done: {}, hist: demo === 'hEmpty' ? [] : this.H0.slice(), hf: 'all', hN: 8, bal: demo === 'low' ? 6 : 4820, toast: null };
+  }
+  focusSoon(sel) { setTimeout(() => { const el = document.querySelector(sel); if (el && el.focus) el.focus(); }, 30); }
+  renderVals() {
+    const s = this.state;
+    const IC = {
+      home: 'M3 10.5 12 4l9 6.5V20H3z', leads: 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 3a4 4 0 110 8 4 4 0 010-8z',
+      cal: 'M3 9.5h18M8 3v3M16 3v3M5 4.5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2v-12a2 2 0 012-2z', trial: 'M8.5 12l2.5 2.5 4.5-5M6 4h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2z',
+      check: 'M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11', clock: 'M12 3a9 9 0 110 18 9 9 0 010-18zM12 7v5l3 2', lock: 'M7 11V7a5 5 0 0110 0v4M5 11h14v10H5z', arch: 'M21 8v13H3V8M1 3h22v5H1zM10 12h4',
+      funnel: 'M3 4h18l-7 8v6l-4 2v-8z', rating: 'M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0z', plan: 'M12 3a9 9 0 110 18 9 9 0 010-18zM12 8a4 4 0 110 8 4 4 0 010-8z', debt: 'M2 6h20v13H2zM2 10h20',
+      script: 'M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9zM14 3v6h6M8 13h8M8 17h5', sms: 'M4 4h16v12H5l-1 4zM8 9h8M8 12h5', stu: 'M2 8l10-5 10 5-10 5zM6 10.5V16c0 1.5 2.7 3 6 3s6-1.5 6-3v-5.5', tg: 'M21 4L3 11l6 2 2 6 3-4 5 4z', book: 'M1 6h13v10H1zM14 9h4l3 3v4h-7zM5 19a2 2 0 100-4 2 2 0 000 4zM17 19a2 2 0 100-4 2 2 0 000 4z'
+    };
+    const I = (k, label, icon, o) => Object.assign({ item: true, grp: false, k, label, tip: label, icon: IC[icon], cur: 'false', badge: '', aria: '', pick: () => this.setState({ viaBadge: false }), pickBadge: () => {} }, o || {});
+    const G = l => ({ grp: true, item: false, label: l });
+
+    const mkNav = (badges) => { const B = badges || {}; return [
+      I('home', 'Bosh sahifa', 'home'), I('leads', 'Lidlar', 'leads', { badge: B.leads || '', aria: B.leads ? B.leads + ' ta lid qoʻngʻiroq kutmoqda' : '' }), I('cal', 'Dars jadvali', 'cal'), I('trial', 'Sinov darslari', 'trial'),
+      I('stu', 'Oʻquvchilar', 'stu'), I('debt', 'Qarzdorlar', 'debt', { badge: B.debt || '', aria: B.debt ? B.debt + ' ta muddati oʻtgan qarz' : '' }), I('plan', 'Sotuv rejasi', 'plan'), I('rating', 'Reyting', 'rating'), I('script', 'Skriptlar', 'script', { tip: 'Skriptlar va yoʻriqnomalar' }),
+      G('Boshqa'), I('funnel', 'Statistika', 'funnel', { tip: 'Statistika: mening voronkam' }), I('sms', 'SMS', 'sms', { tip: 'SMS rassilka (faqat oʻz lid va oʻquvchilarim)' }), I('book', 'Kitob yetkazish', 'book')
+    ]; };
+
+    // ---- production: app.js SMS_PLACEHOLDERS, _smsGetAudienceList (~13997), fillSmsPlaceholders; ropApp.js smsGroups/screenSms (~1100); eskiz.js normalizePhone/isValidUzPhone ----
+    const TEACH = { dk: ['Dilnoza Karimova', 't.me/+Dk_rus_sinov'], sq: ['Shahnoza Qodirova', 't.me/+Sq_rus_sinov'], na: ['Nodira Aliyeva', ''] };
+    const STAGES = { 'yangi-lidlar': 'Yangi lidlar', 'boglanishga-urinilmoqda': 'Bogʻlanishga urinilmoqda', 'boglanildi': 'Bogʻlanildi', 'sinov-darsida': 'Sinov darsida', 'qaror-jarayonida': 'Qaror jarayonida', 'keyin-sotib-olmoqchi': 'Keyin sotib olmoqchi', 'tolov-jarayonida': 'Toʻlov jarayonida', 'tolov-yopildi': 'Toʻlov yopildi', 'muvaffaqiyatsiz-sotuv': 'Muvaffaqiyatsiz sotuv', 'sifatsiz-lidlar': 'Sifatsiz lidlar' };
+    // KS ga biriktirilgan lidlar (server: sotuv menejeri faqat oʻz lidlarini oladi): 53 ta, shundan 52 tasida telefon bor (Voronka bilan bir xil bosqichlar).
+
+    const FN = ['Aziz', 'Barno', 'Dilshod', 'Elyor', 'Feruza', 'Hilola', 'Iroda', 'Jamshid', 'Kamila', 'Laylo', 'Muslima', 'Nodir', 'Oydin', 'Parvina', 'Ravshan', 'Sabina', 'Temur', 'Umida', 'Vohid', 'Xurshida'];
+    const LN = ['Abdurahmonov', 'Boboyeva', 'Valiyev', 'Gʻaniyeva', 'Doniyorov', 'Ermatova', 'Joʻrayev', 'Zokirova', 'Ikromov', 'Yoqubova', 'Karimjonov', 'Latipova', 'Mamatov', 'Nurmatova', 'Ochilov', 'Polvonova', 'Qurbonov', 'Rustamova', 'Sobirov', 'Toʻrayeva'];
+    const FILL = [['boglanishga-urinilmoqda', 9], ['boglanildi', 3], ['sinov-darsida', 1], ['keyin-sotib-olmoqchi', 3], ['tolov-yopildi', 11], ['muvaffaqiyatsiz-sotuv', 7], ['sifatsiz-lidlar', 3]];
+    const GEN = [['g0', 'Zarina Qosimova', '+998 93 501 88 44', 'tolov-yopildi', 'sq', ''], ['g1', 'Behruz Olimov', '+998 97 740 22 15', 'tolov-yopildi', 'dk', '']];
+    let gi = 0; FILL.forEach(fx => { for (let k = 0; k < fx[1]; k++, gi++) { const p = String(1000000 + gi * 7919 % 9000000).slice(-7); GEN.push(['g' + (gi + 2), FN[gi % 20] + ' ' + LN[(gi * 7 + 3 + Math.floor(gi / 20)) % 20], '+998 ' + ['90', '91', '93', '94', '97', '99'][gi % 6] + ' ' + p.slice(0, 3) + ' ' + p.slice(3, 5) + ' ' + p.slice(5, 7), fx[0], '', '']); } });
+    const LD = [
+      ['k1', 'Gulbahor Yusupova', '+998 91 640 22 17', 'qaror-jarayonida', 'dk', 'qaror'], ['k2', 'Doston Halimov', '+998 90 935 61 48', 'qaror-jarayonida', 'sq', 'qaror'],
+      ['k3', 'Mohinur Ismoilova', '+998 93 718 40 25', 'qaror-jarayonida', '', 'qaror'], ['k4', 'Shoira Nazirova', '+998 90 77 31 5', 'qaror-jarayonida', 'na', 'qaror'],
+      ['k5', 'Ozoda Rahimova', '+998 97 204 85 31', 'sinov-darsida', 'dk', 'noshow'], ['k6', 'Sardor Komilov', '+998 99 512 07 66', 'sinov-darsida', 'sq', 'noshow'],
+      ['k7', 'Nilufar Saidova', '+998 91 377 40 12', 'muvaffaqiyatsiz-sotuv', 'dk', 'price'], ['k8', 'Madina Yusupova', '+998 99 841 27 63', 'muvaffaqiyatsiz-sotuv', 'sq', 'price'],
+      ['k9', 'Shahnoza Aliyeva', '+998 90 112 45 07', 'boglanishga-urinilmoqda', '', ''], ['k10', 'Rustam Toshev', '+998 93 220 18 64', 'boglanishga-urinilmoqda', '', ''],
+      ['k11', 'Zilola Hamidova', '+998 94 310 72 09', 'boglanishga-urinilmoqda', '', ''], ['k12', 'Nigora Saidova', '+998 91 822 36 50', 'boglanildi', '', ''],
+      ['k13', 'Jasur Ergashev', '+998 97 145 93 02', 'boglanildi', 'dk', '']
+    ].concat(GEN).map(x => ({ key: 'lead:' + x[0], kind: 'lead', name: x[1], phone: x[2], sub: STAGES[x[3]], grp: x[3], t: x[4], tag: x[5] }));
+    // Oʻquvchilar = RopK_Debtors seed (Rus tili). [id, ism, telefon, guruh, ustoz, qarz, muddat]; s12 — telefoni yoʻq (roʻyxatga kirmaydi).
+    // Oʻz oʻquvchilari = SotK_Debtors seed (KS) + shu oy toʻlagan yangi oʻquvchilar (Rejam → Soʻnggi toʻlovlar)
+    const ST = [
+      ['s1', 'Shahzoda Ergasheva', '901234567', 'C31', 'sq', 450000, '20.10.2026'], ['s6', 'Aziza Karimova', '946660099', 'C38', 'na', 450000, '05.11.2026'],
+      ['s11', 'Nilufar Abdullayeva', '977778899', 'C29', 'dk', 790000, '10.12.2026'], ['s13', 'Diyora Usmonova', '901112233', 'C36', 'dk', 0, ''],
+      ['s20', 'Zarina Qosimova', '935018844', '', 'sq', 0, ''], ['s21', 'Behruz Olimov', '977402215', 'C42', 'dk', 0, '']
+    ].filter(x => x[2]);
+    const sum = n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    const ph = d => '+998 ' + d.slice(0, 2) + ' ' + d.slice(2, 5) + ' ' + d.slice(5, 7) + ' ' + d.slice(7);
+    const grpL = g => g || 'Guruhsiz';
+    const STU = ST.map(x => ({ key: 'student:' + x[0], kind: 'student', name: x[1], phone: ph(x[2]), sub: grpL(x[3]), grp: grpL(x[3]), t: x[4] }));
+    const DEB = ST.filter(x => x[5] > 0 || x[6]).map(x => ({ key: 'debtor:' + x[0], kind: 'student', name: x[1], phone: ph(x[2]), sub: x[5] > 0 ? sum(x[5]) + ' soʻm qarz' : 'Toʻlov muddati ' + x[6], grp: grpL(x[3]), t: x[4] }));
+    const AUD = { lidlar: ['Sotuv lidlari', LD], oquvchilar: ['Oʻquvchilar', STU], qarzdorlar: ['Qarzdorlar', DEB] };
+    const ALL = LD.concat(STU, DEB), byKey = k => ALL.find(r => r.key === k);
+    // eskiz.js: normalizePhone (9 raqam → 998 qoʻshiladi) + /^998\d{9}$/
+    const okPhone = p => { let d = String(p || '').replace(/\D/g, ''); if (d.length === 9) d = '998' + d; return /^998\d{9}$/.test(d); };
+    const PRE = [['qaror', 'Qaror jarayonida', 'Hali toʻlov qilmaganlar'], ['noshow', 'Sinovga kelmaganlar', 'Oxirgi 7 kun'], ['price', 'Muvaffaqiyatsiz · narx sababli', 'Shu oy']]
+      .map(p => { const all = LD.filter(l => l.tag === p[0]); return { k: p[0], t: p[1], s: p[2], keys: all.filter(l => okPhone(l.phone)).map(l => l.key), bad: all.filter(l => !okPhone(l.phone)).length }; });
+    const toast = t => { this.setState({ toast: t }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: null }), 3800); };
+    const loading = s.demo === 'load', histErr = s.demo === 'hErr' && !s.hRetried, balUnk = s.demo === 'balUnk';
+    // ---- matn ----
+    const ctx = r => { const t = r.t ? TEACH[r.t] : null; return { '{ism}': r.name, '{ustoz}': t ? t[0] : '', '{sinov_guruh}': t ? t[1] : '' }; };
+    const KEYS = ['{ism}', '{ustoz}', '{sinov_guruh}'];
+    const fill = (txt, r) => { const c = ctx(r); return KEYS.reduce((o, k) => o.split(k).join(c[k] || ''), String(txt || '')); };
+    const parts = (txt, r) => { const c = ctx(r), out = []; String(txt).split(/(\{ism\}|\{ustoz\}|\{sinov_guruh\})/).forEach(p => { if (!p) return; if (KEYS.indexOf(p) >= 0) out.push(c[p] ? { t: c[p], c: 'sn-fill' } : { t: p === '{sinov_guruh}' ? '[guruh havolasi yoʻq]' : '[' + p.slice(1, -1) + ' yoʻq]', c: 'sn-hole' }); else out.push({ t: p, c: '' }); }); return out; };
+    const isUni = t => /[^\x00-\x7F]/.test(t);
+    const segOf = t => { const n = t.length; return n ? Math.ceil(n / (isUni(t) ? 70 : 160)) : 0; };
+    // ---- roʻyxat ----
+    const list = AUD[s.aud][1];
+    const qq = s.q.trim().toLowerCase();
+    const fl = list.filter(r => (s.f === 'all' || r.grp === s.f) && (!qq || r.name.toLowerCase().includes(qq) || r.phone.replace(/\s/g, '').includes(qq.replace(/\s/g, ''))));
+    const selKeys = Object.keys(s.sel).filter(k => s.sel[k]);
+    const selR = selKeys.map(byKey).filter(Boolean);
+    const busy = s.phase === 'sending';
+    const needLink = s.text.indexOf('{sinov_guruh}') >= 0;
+    const noLink = r => !(r.t && TEACH[r.t][1]);
+    const setSel = o => this.setState({ sel: o, showWhy: false, pv: 0 });
+    const rows = fl.map(r => { const bad = !okPhone(r.phone), dn = !!s.done[r.phone + '|' + s.text]; return { key: r.key, name: r.name, sub: r.phone + (r.sub ? ' · ' + r.sub : ''), on: !!s.sel[r.key], cls: 'sn-r' + (s.sel[r.key] ? ' sn-on' : ''),
+      flag: needLink && noLink(r) && !bad, bad, dn, pick: e => { const o = Object.assign({}, s.sel); if (e.target.checked) o[r.key] = true; else delete o[r.key]; setSel(o); } }; });
+    const okFl = fl.filter(r => okPhone(r.phone) && !s.done[r.phone + '|' + s.text]);
+    const allOn = okFl.length > 0 && okFl.every(r => s.sel[r.key]);
+    const eqSet = keys => keys.length === selKeys.length && keys.every(k => s.sel[k]);
+    const curPre = s.aud === 'lidlar' ? (PRE.find(p => eqSet(p.keys)) || null) : null;
+    const presets = PRE.map(p => ({ k: p.k, t: p.t, s: p.s + (p.bad ? ' · ' + p.bad + ' ta notoʻgʻri raqam tanlanmaydi' : ''), n: String(p.keys.length), on: curPre === p ? 'true' : 'false',
+      pick: () => { const o = {}; p.keys.forEach(k => { o[k] = true; }); this.setState({ aud: 'lidlar', f: 'all', q: '', sel: o, showWhy: false, pv: 0 }); } }))
+      .concat([{ k: 'manual', t: 'Qoʻlda tanlash', s: 'Pastdagi roʻyxatdan belgilang', n: curPre ? '—' : String(selKeys.length), on: curPre ? 'false' : 'true', pick: () => { if (curPre) setSel({}); this.focusSoon('[data-q]'); } }]);
+    const auds = Object.keys(AUD).map(k => ({ k, t: AUD[k][0] + ' · ' + AUD[k][1].length, on: s.aud === k ? 'true' : 'false', pick: () => { if (s.aud === k) return; this.setState({ aud: k, sel: {}, f: 'all', q: '', pv: 0, showWhy: false }); if (selKeys.length) toast('Auditoriya almashtirildi — tanlov tozalandi'); } }));
+    const gKeys = s.aud === 'lidlar' ? Object.keys(STAGES).filter(k => list.some(r => r.grp === k)) : list.map(r => r.grp).filter((g, i, a) => a.indexOf(g) === i).sort();
+    const fOpts = [{ v: 'all', t: s.aud === 'lidlar' ? 'Barcha bosqichlar' : 'Barcha guruhlar' }].concat(gKeys.map(k => ({ v: k, t: (s.aud === 'lidlar' ? STAGES[k] : k) + ' · ' + list.filter(r => r.grp === k).length }))).map(o => Object.assign(o, { sel: s.f === o.v }));
+    // ---- hisob ----
+    const segs = selR.map(r => segOf(fill(s.text, r)));
+    const mx = segs.length ? Math.max.apply(null, segs) : segOf(fill(s.text, { name: 'Abdulloh Karimov', t: 'dk' })), mn = segs.length ? Math.min.apply(null, segs) : mx;
+    const total = segs.reduce((a, b) => a + b, 0);
+    const uniTpl = isUni(s.text), hasCyr = /[Ѐ-ӿ]/.test(s.text);
+    const lens = selR.map(r => fill(s.text, r).length);
+    const low = !loading && !balUnk && total > s.bal;
+    const miss = needLink ? selR.filter(r => noLink(r) && okPhone(r.phone)) : [];
+    const badSel = selR.filter(r => !okPhone(r.phone));
+    const doneSel = selR.filter(r => s.done[r.phone + '|' + s.text]);
+    const textEmpty = !s.text.trim();
+    const MAX = 500; // server/routes/sms.js MAX_RECIPIENTS_PER_REQUEST
+    const why = textEmpty ? 'Xabar matnini kiriting' : !selR.length ? 'Kamida bitta qabul qiluvchi tanlang' : selR.length > MAX ? 'Bir martada eng koʻpi bilan ' + MAX + ' ta qabul qiluvchi tanlanishi mumkin' : s.timeout ? 'Avval tarixni yangilang — SMSlar yuborilgan boʻlishi mumkin' : selR.length === doneSel.length ? 'Tanlanganlarning hammasiga bu matn allaqachon yuborilgan' : '';
+    const m = { len: String(s.text.length), lenS: lens.length ? 'ismlar bilan ' + Math.min.apply(null, lens) + (Math.max.apply(null, lens) !== Math.min.apply(null, lens) ? '–' + Math.max.apply(null, lens) : '') : 'shablon uzunligi',
+      seg: (mn !== mx ? mn + '–' + mx : String(mx)) + ' SMS', segS: (uniTpl ? 70 : 160) + ' belgi = 1 SMS', tot: String(total) + ' SMS', totS: selR.length ? selR.length + ' kishi · balans ' + (balUnk ? 'nomaʼlum' : loading ? '…' : sum(s.bal)) : 'hali hech kim tanlanmagan', totC: 'sn-m' + (low ? ' sn-mbad' : '') };
+    // ---- yuborish ----
+    const send = () => {
+      if (busy) return;
+      if (why) { this.setState({ showWhy: true, tErr: textEmpty }); if (textEmpty) this.focusSoon('#snText'); return; }
+      this.setState({ cf: true }); this.focusSoon('[data-cf] [data-yes]');
+    };
+    const doSend = () => {
+      const text = s.text, rec = selR.filter(r => !s.done[r.phone + '|' + s.text]), aud = s.aud;
+      this.setState({ cf: false, phase: 'sending', res: null });
+      setTimeout(() => {
+        const mk = r => { const bad = !okPhone(r.phone), prov = r.name === 'Doston Halimov', msg = fill(text, r);
+          return { key: r.key, kind: r.kind, name: r.name, phone: r.phone, msg, status: bad || prov ? 'error' : 'sent', error: bad ? 'Notoʻgʻri telefon raqami: ' + r.phone : prov ? 'Eskiz xatosi (HTTP 400)' : '', seg: segOf(msg) }; };
+        if (this.state.demo === 'timeout') {
+          // Brauzer kutishni toʻxtatdi, server esa navbatni davom ettirdi: tarixda keyin koʻrinadi.
+          this.setState({ phase: '', timeout: { rows: rec.map(mk), text } });
+          return;
+        }
+        const res = rec.map(mk);
+        const sent = res.filter(x => x.status === 'sent');
+        const h = res.map((x, i) => ({ id: 'n' + Date.now() + i, name: x.name, phone: x.phone, msg: x.msg, status: x.status, error: x.error, at: '02.11.2026, 01:44', by: 'Kamola Shahobiddinova' }));
+        const dn = Object.assign({}, this.state.done); sent.forEach(x => { dn[x.phone + '|' + text] = true; });
+        this.setState({ phase: 'done', res: { rows: res, aud }, lastText: text, text: '', sel: {}, done: dn, hist: h.concat(this.state.hist), bal: this.state.bal - sent.reduce((a, x) => a + x.seg, 0), hf: 'all', hN: 8, pv: 0 });
+      }, 1600);
+    };
+    const refreshHist = () => {
+      const T = s.timeout; if (!T) return;
+      // Server timeoutdan keyin ham yuborishni davom ettirgan: oxirgi 2 tasi hali navbatda — tarixda yoʻq.
+      const got = T.rows.slice(0, Math.max(0, T.rows.length - 2));
+      const h = got.map((x, i) => ({ id: 't' + i, name: x.name, phone: x.phone, msg: x.msg, status: x.status, error: x.error, at: '02.11.2026, 01:45', by: 'Kamola Shahobiddinova' }));
+      const dn = Object.assign({}, s.done); got.filter(x => x.status === 'sent').forEach(x => { dn[x.phone + '|' + T.text] = true; });
+      const o = {}; selKeys.forEach(k => { const r = byKey(k); if (r && !dn[r.phone + '|' + T.text]) o[k] = true; });
+      const nSent = got.filter(x => x.status === 'sent').length;
+      this.setState({ timeout: null, hist: h.concat(s.hist), done: dn, sel: o, hf: 'all', hN: 8, bal: s.bal - got.filter(x => x.status === 'sent').reduce((a, x) => a + x.seg, 0) });
+      toast('Tarix yangilandi: ' + nSent + ' ta raqamga allaqachon yuborilgan — tanlovdan olindi. Qolgan ' + Object.keys(o).length + ' tasiga qayta yuborish mumkin.');
+    };
+    // ---- koʻrinish ----
+    const pvList = selR.length ? selR : fl.slice(0, 1);
+    const pi = Math.min(s.pv, Math.max(0, pvList.length - 1)), pr = pvList[pi];
+    const pv = pr ? { has: true, none: false, who: (selR.length ? (pi + 1) + ' / ' + selR.length + ' · ' : 'Namuna · ') + pr.name, phone: pr.phone, parts: s.text ? parts(s.text, pr) : [{ t: 'Matn yozilmagan', c: 'sn-hole' }],
+      meta: (() => { const f = fill(s.text, pr); return f.length + ' belgi · ' + segOf(f) + ' SMS' + (isUni(f) ? ' · 70 belgilik (ʻ/kirill)' : ' · 160 belgilik'); })(),
+      noPrev: pi <= 0, noNext: pi >= pvList.length - 1, prev: () => this.setState({ pv: pi - 1 }), next: () => this.setState({ pv: pi + 1 }) } : { has: false, none: true };
+    // ---- natija ----
+    const R = s.res;
+    const res = R ? (() => { const f = R.rows.filter(x => x.status !== 'sent'); return { sent: String(R.rows.length - f.length), failed: String(f.length), hasFail: f.length > 0,
+      rows: f.concat(R.rows.filter(x => x.status === 'sent')).map(x => ({ name: x.name, i: x.status === 'sent' ? '✓' : '✕', ic: x.status === 'sent' ? 'sn-ok' : 'sn-no', d: x.status === 'sent' ? x.phone + ' · yuborildi · ' + x.seg + ' SMS' : x.phone + ' · ' + x.error,
+        fail: x.status !== 'sent', openT: x.kind === 'lead' ? 'Lidni ochish' : 'Oʻquvchini ochish', open: () => toast((x.kind === 'lead' ? 'Lid kartasi' : 'Oʻquvchi kartasi') + ' ochiladi — ' + x.name + ' raqamini tekshiring') })),
+      retry: () => { const o = {}; f.forEach(x => { o[x.key] = true; }); this.setState({ phase: '', aud: R.aud, f: 'all', q: '', sel: o, text: s.lastText, pv: 0 }); toast(f.length + ' ta xato qabul qiluvchi qayta tanlandi — raqamini tuzatib yuboring'); },
+      close: () => { this.setState({ phase: '', res: null }); this.focusSoon('#snText'); } }; })() : {};
+    // ---- tarix ----
+    const hAll = s.hist, hF = hAll.filter(h => s.hf === 'all' || (s.hf === 'sent' ? h.status === 'sent' : h.status !== 'sent'));
+    const hist = hF.slice(0, s.hN).map(h => ({ name: h.name || '—', phone: h.phone || '—', msg: h.msg, st: h.status === 'sent' ? 'Yuborildi' : 'Xato', sc: 'sn-st ' + (h.status === 'sent' ? 'sn-sok' : 'sn-sbad'), err: h.error, errT: h.status === 'sent' ? '—' : (h.error || 'Sabab qaytmadi'), errSt: h.status === 'sent' ? 'color:#64748B' : 'color:#B42318;font-weight:700', at: h.at, by: h.by === 'Kamola Shahobiddinova' ? 'Siz' : h.by }));
+    const nav = mkNav({}).map(n => Object.assign({}, n, { cur: n.k === 'sms' ? 'page' : 'false', pickBadge: () => {}, pick: () => { if (n.k === 'sms' || !n.item) return; toast(n.label + ' sahifasi ochiladi'); } }));
+    const dlgKey = close => e => { if (e.key === 'Escape') { e.preventDefault(); close(); return; } if (e.key === 'Tab') { const bs = Array.prototype.slice.call(e.currentTarget.querySelectorAll('button')); const ix = bs.indexOf(document.activeElement); e.preventDefault(); (e.shiftKey ? (bs[ix - 1] || bs[bs.length - 1]) : (bs[ix + 1] || bs[0])).focus(); } };
+    const pv0 = selR[0];
+    const sendN = selR.length - doneSel.length;
+    return {
+      crumb0: 'Boshqa', crumb: 'SMS', nav, sbCls: s.sb ? 'sb' : 'sb sb-min', sbExp: s.sb ? 'true' : 'false', sbLab: s.sb ? 'Menyuni yigʻish' : 'Menyuni ochish', sbIcon: s.sb ? 'M15 6l-6 6 6 6' : 'M9 6l6 6-6 6', toggleSb: () => this.setState({ sb: !s.sb }),
+      demo: [['ok', 'Oddiy', ''], ['load', 'Yuklanmoqda', ''], ['hErr', 'Xato', 'Tarixni yuklab boʻlmadi (tarix kartasi)'], ['hEmpty', 'Boʻsh', 'Hali SMS yuborilmagan'], ['balUnk', 'Balans ?', 'Balans aniqlanmadi'], ['low', 'Balans kam', 'Ogohlantirish, toʻsiq emas'], ['timeout', 'Javob kelmadi', 'Yuborishda server javobi kelmadi']].map(d => ({ t: d[1], tip: d[2] || d[1], on: s.demo === d[0] ? 'true' : 'false', pick: () => { clearTimeout(this._t); this.setState(this.fresh(d[0])); } })),
+      ready: true,
+      sub: 'Eskiz.uz orqali · faqat sizga biriktirilgan lidlar va oʻz oʻquvchilaringiz · telefoni yoʻqlar roʻyxatga kirmaydi',
+      balT: loading ? 'Balans: …' : balUnk ? 'Balans aniqlanmadi' : 'Balans: ' + sum(s.bal) + ' SMS', balCls: 'sn-bal' + (loading || balUnk ? ' sn-bunk' : s.bal < 100 ? ' sn-blow' : ''),
+      balNote: balUnk, presets, auds, q: s.q, qIn: e => this.setState({ q: e.target.value }), hasQ: !!s.q, clearQ: () => this.setState({ q: '' }),
+      fLab: s.aud === 'lidlar' ? 'Bosqich' : 'Guruh', fOpts, fIn: e => this.setState({ f: e.target.value }),
+      allOn, allPick: e => { const o = Object.assign({}, s.sel); okFl.forEach(r => { if (e.target.checked) o[r.key] = true; else delete o[r.key]; }); setSel(o); }, fCount: String(okFl.length),
+      anySel: selKeys.length > 0, clearSel: () => setSel({}), rows, noRows: fl.length === 0,
+      selNote: 'Auditoriya almashtirilsa tanlov tozalanadi. “Notoʻgʻri raqam”lar avtomatik tanlanmaydi (server 998XXXXXXXXX ni talab qiladi). Bir yuborishda eng koʻpi 500 kishi.',
+      text: s.text, textIn: e => this.setState({ text: e.target.value, tErr: false, showWhy: false }), taCls: 'sn-ta' + (s.tErr && textEmpty ? ' sn-bad' : ''), taInv: s.tErr && textEmpty ? 'true' : 'false', textErr: s.tErr && textEmpty,
+      chips: [['{ism}', 'Qabul qiluvchining ismi'], ['{ustoz}', 'Sinov darsi ustozining ismi'], ['{sinov_guruh}', 'Sinov darsi Telegram guruhi havolasi']].map(c => ({ k: c[0], l: c[1], aria: c[0] + ' qoʻshish — ' + c[1],
+        add: () => { const ta = document.getElementById('snText'); const v = s.text; const a = ta && ta.selectionStart != null && document.activeElement === ta ? ta.selectionStart : v.length, b = ta && document.activeElement === ta ? ta.selectionEnd : v.length; this.setState({ text: v.slice(0, a) + c[0] + v.slice(b), tErr: false, showWhy: false }); setTimeout(() => { const t = document.getElementById('snText'); if (t) { t.focus(); t.selectionStart = t.selectionEnd = a + c[0].length; } }, 30); } })),
+      m, uni: uniTpl && !textEmpty, uniT: hasCyr ? 'Matn kirillda — bitta SMS 70 belgi. Lotin harflarida 160 belgi boʻlardi.' : 'Matnda ʻ yoki “—” kabi belgi bor — bitta SMS 70 belgi. Faqat oddiy lotin harflari boʻlsa 160 belgi.', canAscii: uniTpl && !hasCyr,
+      toAscii: () => { this.setState({ text: s.text.replace(/[ʻʼ‘’`]/g, "'").replace(/[—–]/g, '-').replace(/[«»“”]/g, '"') }); toast('Belgilar almashtirildi — endi 160 belgilik SMS (ismda ʻ boʻlsa, oʻsha kishiga 70 qoladi)'); },
+      miss: miss.length > 0, missT: miss.length + ' ta qabul qiluvchining sinov darsi guruhi aniqlanmadi', missD: ' (' + miss.slice(0, 5).map(r => r.name).join(', ') + (miss.length > 5 ? ' va boshqalar' : '') + '). Ularga ustoz biriktirilmagan yoki ustozning guruh havolasi kiritilmagan — havolasiz SMS ketadi.',
+      bad: badSel.length > 0, badT: badSel.length + ' ta raqam notoʻgʻri — server rad etadi', badD: ' (' + badSel.map(r => r.name + ' ' + r.phone).join(', ') + '). Tanlovdan oling yoki kartasida raqamni tuzating.',
+      low, lowT: 'Balans yetmasligi mumkin: kerak ~' + total + ' SMS, hisobda ' + sum(s.bal), lowD: ' Eskiz “get-limit” qiymatining birligi (SMS yoki soʻm) tekshirilmagan — shuning uchun yuborish toʻsilmaydi. Yetmasa, qolganlari “Xato” boʻladi.',
+      tmo: !!s.timeout && !busy, tmoT: s.timeout ? s.timeout.rows.length : 0, refreshHist,
+      dupe: doneSel.length > 0 && !s.timeout, dupeT: doneSel.length + ' ta raqamga bu matn allaqachon yuborilgan (tarix) — qayta yuborilmaydi.',
+      selCount: selR.length + ' ta qabul qiluvchi tanlangan', send, sendDis: why || busy ? 'true' : 'false', sendT: busy ? 'Yuborilmoqda...' : !selR.length ? 'Yuborish' : low ? 'Baribir yuborish (' + sendN + ')' : sendN + ' kishiga yuborish', why: s.showWhy || s.timeout || selR.length > MAX || (selR.length && selR.length === doneSel.length) ? why : '',
+      showPv: !s.phase, sending: busy, done: s.phase === 'done', sendingT: sendN + ' ta raqamga · taxminan ' + Math.round(1.5 * Math.max(1, sendN)) + ' soniya', pv, res,
+      hfs: [['all', 'Hammasi · ' + hAll.length], ['sent', 'Yuborildi · ' + hAll.filter(h => h.status === 'sent').length], ['err', 'Xato · ' + hAll.filter(h => h.status !== 'sent').length]].map(f => ({ t: f[1], on: s.hf === f[0] ? 'true' : 'false', pick: () => this.setState({ hf: f[0], hN: 8 }) })),
+      hLoad: loading, hErr: histErr, hRetry: () => this.setState({ hRetried: true }), hOk: !loading && !histErr,
+      hHas: hF.length > 0, hist, hMore: hF.length > s.hN, hLeft: String(hF.length - s.hN), hMoreOn: () => this.setState({ hN: s.hN + 20 }), hEmpty: hF.length === 0, hEmptyT: hAll.length ? 'Bu holatda SMS yoʻq' : 'Hali SMS yuborilmagan',
+      cf: s.cf && !!pv0, cfKey: dlgKey(() => this.setState({ cf: false })),
+      cfV: pv0 ? { q: sendN + ' ta qabul qiluvchiga SMS yuborilsinmi?', aud: curPre ? AUD.lidlar[0] + ' · ' + curPre.t : AUD[s.aud][0], seg: m.seg + (uniTpl ? ' (70 belgilik)' : ' (160 belgilik)'), tot: total + ' SMS', left: balUnk ? 'nomaʼlum (balans aniqlanmadi)' : low ? 'yetmasligi mumkin (' + sum(s.bal) + ')' : sum(s.bal - total) + ' SMS',
+        pvWho: 'Masalan, ' + pv0.name + ' oladi:', pv: fill(s.text, pv0), miss: miss.length > 0, missT: miss.length + ' ta qabul qiluvchining sinov darsi guruhi aniqlanmadi (' + miss.slice(0, 5).map(r => r.name).join(', ') + ').',
+        bad: badSel.length > 0, badT: badSel.length + ' ta notoʻgʻri raqam: ' + badSel.map(r => r.name + ' ' + r.phone).join(', ') + ' — server “Xato” qaytaradi.', dupe: doneSel.length > 0, dupeT: doneSel.length + ' ta raqam tarixda “Yuborildi” — chiqarib tashlandi.',
+        no: () => { this.setState({ cf: false }); this.focusSoon('[data-send]'); }, yes: doSend, yesT: (low ? 'Ha, baribir yuborish (' : 'Ha, ') + sendN + (low ? ')' : ' kishiga yuborish') } : {},
+      toast: !!s.toast, toastT: s.toast || ''
+    };
+  }
+}
+</script>
+</body>
+</html>

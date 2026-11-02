@@ -1,0 +1,200 @@
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.H0 = [
+      { id: 'bh1', m: 'KS', b: 'obed', d: '2026-11-02', note: '', amt: '' },
+      { id: 'bh2', m: 'KS', b: 'kitob', d: '2026-11-01', note: '26-okt – 1-noy haftasi', amt: '' },
+      { id: 'bh3', m: 'HB', b: 'kino', d: '2026-11-01', note: '26-okt – 1-noy haftasi', amt: '' },
+      { id: 'bh4', m: 'GM', b: 'restoran', d: '2026-11-01', note: '26-okt – 1-noy haftasi', amt: '' },
+      { id: 'bh5', m: 'KS', b: 'rank2', d: '2026-11-01', note: 'Oktyabr · reja 112%', amt: '1260000' },
+      { id: 'bh6', m: 'HB', b: 'obed30', d: '2026-11-01', note: '', amt: '' },
+      { id: 'bh7', m: 'RU', b: 'obed', d: '2026-10-30', note: '', amt: '' }
+    ];
+    this.state = { sb: true, demo: 'ok', retried: false, busy: false, view: 'sales', tab: 'lb', per: 'kunlik', lbv: 'normal', hist: this.H0.slice(), del: '', modal: false, f: this.blank(), ferr: {}, saving: false, saveErr: '', detail: '', tType: 'asosiy', tMon: '2026-11', toast: '' };
+    this._t = null;
+    document.addEventListener('keydown', e => {
+      if (e.key !== 'Escape') return;
+      const s = this.state;
+      if (s.del) { this.setState({ del: '' }); this.focus('#rbHistH'); }
+      else if (s.detail) { const d = s.detail; this.setState({ detail: '' }); this.focus('[data-bk="' + d + '"]'); }
+      else if (s.modal && !s.saving) { this.setState({ modal: false }); this.focus('#rbAddBtn'); }
+    });
+  }
+  blank() { return { m: '', b: '', amt: '', date: '2026-11-02', note: '' }; }
+  focus(sel) { setTimeout(() => { const el = document.querySelector(sel); if (el && el.focus) el.focus(); }, 40); }
+  renderVals() {
+    const s = this.state;
+__NAVJS__
+__MKNAV__
+    const nav = mkNav(79, false).map(n => Object.assign({}, n, { cur: n.k === 'rating' ? 'page' : 'false', pickBadge: () => {}, pick: () => { if (n.k === 'rating' || !n.item) return; toast(n.label + ' sahifasi ochiladi'); } }));
+    const toast = t => { this.setState({ toast: t }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: '' }), 3200); };
+    const num = n => String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    const money = n => num(n) + ' soʻm';
+    const mln = n => { const v = (Number(n) || 0) / 1e6; return v ? String(Math.round(v * 10) / 10).replace('.', ',') + ' mln soʻm' : '0 soʻm'; };
+    const mln2 = n => (Math.round((Number(n) || 0) / 1e4) / 100).toFixed(2).replace('.', ',') + ' mln';
+    const first = n => n.split(' ')[0];
+    // ROP faqat oʻz tilidagi (Rus tili) faol sotuv menejerlari — renderLeaderboardSection
+    const MG = [['GM', 'Gulchehra Mamadaliyeva', '#0E7490', 39, 33000000], ['HB', 'Hamidaxon Boymirzayeva', '#C2410C', 40, 35000000], ['KS', 'Kamola Shahobiddinova', '#5B21B6', 53, 40000000], ['RU', 'Robiya Usmonova', '#166534', 41, 0]];
+    const mg = id => MG.find(m => m[0] === id);
+    // Voronka doskasi bilan bir xil toʻlovlar: bugun KS 1,9 mln; 1-noyabr KS 3,4 · HB 2,6 · GM 1,5 mln
+    const SALES = { kunlik: { KS: 1900000 }, haftalik: { KS: 1900000 }, oylik: { KS: 5300000, HB: 2600000, GM: 1500000 } };
+    const DEALS = { kunlik: { KS: 1 }, haftalik: { KS: 1 }, oylik: { KS: 2, HB: 1, GM: 1 } };
+    const KPI = { kunlik: { KS: 152000, HB: 0, GM: 0, RU: 0 }, haftalik: { KS: 152000, HB: 0, GM: 0, RU: 0 }, oylik: { KS: 424000, HB: 208000, GM: 120000, RU: 0 } };
+    const tgt = (t, per) => !t ? 0 : per === 'kunlik' ? Math.round(t * 1375000 / 33000000) : per === 'haftalik' ? Math.round(t * 6875000 / 33000000) : t;
+    const DAILY = [['obed', 'Obed', 1800000, '🍽️'], ['obed30', 'Obed + 30,000', 2500000, '🍽️'], ['obed60', 'Obed + 60,000', 3000000, '🍽️']];
+    const WEEKLY = [['kitob', 'Kitob', 1, '📚'], ['kino', 'Kinoga chipta', 2, '🎬'], ['restoran', 'Restoranga chek', 3, '🍷']];
+    const MONTHLY = [['iphone', 'iPhone 17 Pro', 120000000, '📱'], ['macbook', 'MacBook', 160000000, '💻'], ['pul2000', '$2,000 Pul mukofoti', 220000000, '💰'], ['umra', '2 kishilik Umra + $500', 300000000, '🕋']];
+    const RANK = [['rank1', '1-oʻrin', '$200', 37950000, 115, '🥇'], ['rank2', '2-oʻrin', '$100', 36300000, 110, '🥈'], ['rank3', '3-oʻrin', '$50', 36300000, 110, '🥉']];
+    const ALLB = [].concat(DAILY.map(b => ({ id: b[0], label: b[1], icon: b[3], per: 'Kunlik', th: b[2], desc: num(b[2]) + ' soʻmdan yuqori sotuv' })), WEEKLY.map(b => ({ id: b[0], label: b[1], icon: b[3], per: 'Haftalik', rank: b[2], desc: 'Haftalik ' + b[2] + '-oʻrin' })), MONTHLY.map(b => ({ id: b[0], label: b[1], icon: b[3], per: 'Oylik', th: b[2], desc: num(b[2]) + ' soʻmdan yuqori sotuv' })), RANK.map(b => ({ id: b[0], label: b[1], prize: b[2], icon: b[5], per: 'Oʻrinli', th: b[3], pct: b[4], desc: 'Oylik rejaning ' + b[4] + '%+ · ' + num(b[3]) + ' soʻm dan yuqori' })));
+    const bon = id => ALLB.find(b => b.id === id);
+    const per = s.per;
+    const PL = { kunlik: 'Bugun', haftalik: 'Shu hafta', oylik: 'Noyabr oyi' };
+
+    const loading = s.demo === 'load' || s.busy, loadErr = s.demo === 'err' && !s.retried && !s.busy, ready = !loading && !loadErr;
+    const ranked = MG.map(m => ({ id: m[0], name: m[1], col: m[2], leads: m[3], sales: SALES[per][m[0]] || 0, deals: DEALS[per][m[0]] || 0, target: tgt(m[4], per), mt: m[4] })).sort((a, b) => b.sales - a.sales);
+    const av = id => 'background:' + mg(id)[2] + ';color:#FFFFFF';
+    const MED = ['background:#F5B700;color:#3B2A00', 'background:#CBD5E1;color:#1F2937', 'background:#C2410C;color:#FFFFFF'];
+    const planTone = p => p <= 50 ? ['#EF4444', '#B42318'] : p < 80 ? ['#D97706', '#93370D'] : ['#16A34A', '#067647'];
+
+    // Motivatsiya (renderRatingMotivation)
+    const daysLeft = 29;
+    const leader = ranked[0], second = ranked[1];
+    const teamSales = ranked.reduce((a, m) => a + m.sales, 0), teamTarget = ranked.reduce((a, m) => a + m.target, 0);
+    const teamPct = teamTarget ? Math.min(100, Math.round(teamSales / teamTarget * 100)) : 0;
+    let eyebrow, title, sub;
+    if (per === 'oylik') { const nx = MONTHLY.find(b => leader.sales < b[2]); eyebrow = 'Oy poygasi · ' + daysLeft + ' kun qoldi'; if (nx) { title = first(leader.name) + ' ' + nx[1] + ' sovgʻasiga ' + mln(nx[2] - leader.sales) + ' qoldi'; sub = 'Sovgʻa uchun kuniga ' + mln(Math.ceil((nx[2] - leader.sales) / daysLeft)) + '.'; } else { title = first(leader.name) + ' barcha oylik sovgʻalarni oldi!'; sub = ''; } }
+    else if (per === 'kunlik') { const got = ranked.filter(m => m.sales >= DAILY[0][2]).length; eyebrow = 'Bugungi obed'; title = got ? 'Bugun ' + got + ' ta menejer obed oldi' : 'Bugun hali hech kim obed olmadi'; sub = 'Obed uchun ' + money(DAILY[0][2]) + ' sotish kifoya.'; }
+    else { eyebrow = 'Hafta poygasi'; title = 'Hafta lideri — ' + first(leader.name); sub = 'Hafta yakunida 1–3-oʻrinlar sovgʻa oladi.'; }
+    if (second) { const g = Math.max(0, leader.sales - second.sales); sub += g > 0 ? ' ' + first(second.name) + ' 2-oʻrinda, farq ' + mln(g) + '.' : ' ' + first(second.name) + ' bilan teng.'; }
+    const prizes = per === 'haftalik'
+      ? WEEKLY.map(b => { const h = ranked[b[2] - 1]; return { icon: b[3], th: b[2] + '-oʻrin', name: b[1], bar: false, pctW: '', pctN: '', chips: [], note: h && h.sales > 0 ? 'Hozir: ' + first(h.name) + ' · ' + money(h.sales) : 'Hali hech kim', cls: 'rb-prize' }; })
+      : (per === 'kunlik' ? DAILY : MONTHLY).map((b, i) => { const best = ranked[0]; const pct = Math.min(100, Math.round(best.sales / b[2] * 100)); const by = ranked.filter(m => m.sales >= b[2]); return { icon: b[3], th: money(b[2]), name: b[1], bar: true, pctW: 'width:' + pct + '%', pctN: String(pct), chips: ranked.map(m => ({ t: first(m.name), p: Math.min(100, Math.round(m.sales / b[2] * 100)) + '%', cls: 'rb-chip' + (m.sales >= b[2] ? ' rb-chip-ok' : '') })), note: by.length ? '✓ Oldi: ' + by.map(m => first(m.name)).join(', ') : first(best.name) + 'ga yana ' + money(b[2] - best.sales) + (per === 'oylik' ? ' · kuniga ' + money(Math.ceil((b[2] - best.sales) / daysLeft)) : ''), cls: 'rb-prize' + (i === 0 && !by.length ? ' rb-hot' : '') }; });
+    // Oylik: Oy liderlari (oʻrin puli sharti) va Bugungi obed (renderRatingMonthBlocks)
+    const pod3 = ranked.slice(0, 3).map((m, i) => { const b = RANK[i]; const need = m.mt ? Math.round(m.mt * b[4] / 100) : b[3]; const ok = m.sales >= need; const pp = m.mt ? Math.round(m.sales / m.mt * 100) : null; return { place: String(i + 1), ord: 'order:' + [1, 0, 2][i], h: 'height:' + [74, 58, 46][i] + 'px;' + MED[i], cls: 'rb-pod' + (i === 0 ? ' rb-pod1' : ''), ini: m.id, av: av(m.id), name: m.name, sum: mln2(m.sales), meta: m.deals + ' bitim' + (pp != null ? ' · reja ' + pp + '%' : ' · reja belgilanmagan'), prize: (ok ? '✓ ' : '') + b[2], prizeCls: 'rb-pz' + (ok ? ' rb-pz-ok' : ''), cond: ok ? 'Shart bajarildi' : 'Shart: reja ' + b[4] + '% (' + mln2(need) + ') · yana ' + mln2(need - m.sales) }; });
+    const day = MG.map(m => ({ id: m[0], name: m[1], d: SALES.kunlik[m[0]] || 0 })).sort((a, b) => b.d - a.d);
+    const obed = day.map(m => { const got = DAILY.filter(t => m.d >= t[2]).pop(); const nx = DAILY.find(t => m.d < t[2]); return { ini: m.id, av: av(m.id), n: first(m.name), sub: nx ? nx[1] + ' uchun yana ' + mln(nx[2] - m.d) : 'Eng yuqori obed olindi', v: mln(m.d), chip: got ? '✓ ' + got[1] : 'hali yoʻq', chipCls: 'rb-ochip' + (got ? ' rb-ochip-ok' : '') }; });
+    const wk = MG.map(m => ({ name: m[1], w: SALES.haftalik[m[0]] || 0 })).sort((a, b) => b.w - a.w);
+    const weekRow = WEEKLY.map(b => { const h = wk[b[2] - 1]; return { icon: b[3], eb: b[2] + '-oʻrin', n: b[1], t: h && h.w > 0 ? 'Hozir: ' + first(h.name) + ' · ' + money(h.w) : 'Hali hech kim' }; });
+
+    // Natijalar jadvali
+    const rows = ranked.map((m, i) => { const pct = Math.min(100, m.target > 0 ? Math.round(m.sales / m.target * 100) : 0); const tn = planTone(pct); return { rk: String(i + 1), rkSt: i < 3 ? MED[i] : 'background:#F1F5F9;color:#4B5563', rkLab: (i + 1) + '-oʻrin', ini: m.id, av: av(m.id), name: m.name, leads: m.leads + ' ta lid', deals: m.deals + ' ta', sales: money(m.sales), plan: m.target > 0 ? money(m.target) : 'belgilanmagan', planCls: m.target > 0 ? '' : 'rb-mut', kpi: KPI[per][m.id] == null ? '—' : money(KPI[per][m.id]), bar: 'width:' + pct + '%;background:' + tn[0], pctT: m.target > 0 ? '🚩 ' + pct + '%' : '—', pctSt: 'color:' + (m.target > 0 ? tn[1] : '#4B5563'), aria: m.target > 0 ? 'Rejaga yetish ' + pct + '%' : 'Reja belgilanmagan' }; });
+    const podium = ranked.slice(0, 3).map((m, i) => { const pct = m.target > 0 ? Math.min(100, Math.round(m.sales / m.target * 100)) : null; return { cls: 'rb-pc rb-pc' + (i + 1), place: (i + 1) + '-oʻrin', ini: m.id, name: m.name, sum: money(m.sales), meta: m.deals + ' ta bitim · ' + m.leads + ' lid', bar: 'width:' + (pct || 0) + '%', pct: pct == null ? 'reja belgilanmagan' : pct + '% maqsad' }; });
+    // Marralar
+    const marra = ranked.map((m, i) => ({ rk: String(i + 1), rkSt: i < 3 ? MED[i] : 'background:#F1F5F9;color:#4B5563', ini: m.id, av: av(m.id), name: m.name, meta: m.deals + ' bitim · ' + m.leads + ' lid', sum: money(m.sales),
+      pills: per === 'kunlik' ? DAILY.map(b => { const r = m.sales >= b[2]; return { icon: b[3], n: b[1], st: r ? '✓ Oldi' : money(b[2] - m.sales) + ' qoldi', cls: 'rb-pill' + (r ? ' rb-pill-ok' : ''), bar: false, w: '' }; })
+        : per === 'haftalik' ? WEEKLY.map(b => { const r = i + 1 === b[2] && m.sales > 0; return { icon: b[3], n: b[1], st: r ? '✓ Qoʻlga kiritdi' : b[2] + '-oʻrin kerak', cls: 'rb-pill' + (r ? ' rb-pill-ok' : ''), bar: false, w: '' }; })
+        : MONTHLY.map(b => { const r = m.sales >= b[2]; const p = Math.min(100, Math.round(m.sales / b[2] * 100)); return { icon: b[3], n: b[1], st: r ? '✓' : p + '%', cls: 'rb-pill rb-pill-w' + (r ? ' rb-pill-ok' : ''), bar: true, w: 'width:' + Math.max(p, 0) + '%' }; }) }));
+
+    // Olganlar (renderBonusHistorySection)
+    const histSrc = s.demo === 'nobon' ? [] : s.hist;
+    const inPer = d => per === 'kunlik' ? d === '2026-11-02' : per === 'haftalik' ? d >= '2026-11-02' && d <= '2026-11-02' : d.slice(0, 7) === '2026-11';
+    const fh = histSrc.filter(h => !h.d || inPer(h.d)).sort((a, b) => b.d.localeCompare(a.d));
+    const byP = { Kunlik: 0, Haftalik: 0, Oylik: 0, 'Oʻrinli': 0 }; const perM = {}; let moneyT = 0;
+    fh.forEach(h => { const b = bon(h.b); if (b) byP[b.per]++; perM[h.m] = (perM[h.m] || 0) + 1; moneyT += Number(h.amt) || 0; });
+    const top = Object.keys(perM).sort((a, b) => perM[b] - perM[a])[0];
+    const MON = ['yan', 'fev', 'mar', 'apr', 'may', 'iyn', 'iyl', 'avg', 'sen', 'okt', 'noy', 'dek'];
+    const fd = d => +d.slice(8) + '-' + MON[+d.slice(5, 7) - 1];
+    const PB = { Kunlik: 'rb-bd rb-bd-d', Haftalik: 'rb-bd rb-bd-w', Oylik: 'rb-bd rb-bd-m', 'Oʻrinli': 'rb-bd rb-bd-r' };
+    const delRec = s.del ? s.hist.find(h => h.id === s.del) : null;
+
+    // Bonus belgilash formasi
+    const f = s.f, fe = s.ferr;
+    const setF = (k, v) => { const nf = Object.assign({}, f); nf[k] = v; const ne = Object.assign({}, fe); delete ne[k]; this.setState({ f: nf, ferr: ne, saveErr: '' }); };
+    const amtTxt = String(f.amt || '').trim(), amtNum = Number(amtTxt.replace(/[\s, ]/g, ''));
+    const validate = () => { const e = {}; if (!f.m) e.m = 'Menejerni tanlang'; if (!f.b) e.b = 'Bonusni tanlang'; if (amtTxt && (!/^[\d\s, ]+$/.test(amtTxt) || !Number.isFinite(amtNum) || amtNum < 0)) e.amt = 'Bonus summasi notoʻgʻri — faqat raqam (soʻm)'; if (!f.date) e.date = 'Sanani kiriting'; return e; };
+    const save = () => {
+      if (s.saving) return;
+      const e = validate();
+      if (Object.keys(e).length) { this.setState({ ferr: e, saveErr: '' }); this.focus(e.m ? '[name=rbM]' : e.b ? '[name=rbB]' : e.amt ? '#rbAmt' : '#rbDate'); return; }
+      this.setState({ saving: true, saveErr: '' });
+      setTimeout(() => {
+        if (this.state.demo === 'saveErr') { this.setState({ saving: false, saveErr: 'Saqlab boʻlmadi — server javob bermadi. Kiritganlaringiz oʻchmadi, qayta bosing.' }); return; }
+        const rec = { id: 'bh_' + Date.now(), m: f.m, b: f.b, d: f.date, note: f.note.trim(), amt: amtTxt ? String(amtNum) : '' };
+        const b = bon(f.b);
+        this.setState({ saving: false, modal: false, hist: [rec].concat(this.state.hist), f: this.blank(), ferr: {}, demo: this.state.demo === 'nobon' ? 'ok' : this.state.demo });
+        toast('Bonus belgilandi · ' + first(mg(f.m)[1]) + ' — ' + (b.prize ? b.label + ' · ' + b.prize : b.label) + (inPer(f.date) ? '' : ' · ' + fd(f.date) + ' tanlangan davrga kirmaydi, roʻyxatda koʻrinmaydi'));
+        this.focus('#rbAddBtn');
+      }, 650);
+    };
+
+    // Ustozlar (reytingUI.js) — /api/state/teacher-rating, ROP tili
+    const TD = {
+      asosiy: {
+        '2026-11': [['Dilnoza Karimova', 46, 8, 8, 100, 82, 41, 88.4], ['Shahnoza Qodirova', 38, 7, 8, 88, 79, 35, 86.1], ['Nodira Aliyeva', 31, 6, 6, 100, null, 0, 79.0], ['Malika Yusupova', 27, 5, 6, 83, 74, 22, 81.2], ['Zarina Ergasheva', 19, 4, 6, 67, 70, 15, null]],
+        '2026-10': [['Dilnoza Karimova', 45, 52, 54, 96, 77, 40, 85.0], ['Shahnoza Qodirova', 37, 50, 52, 96, 72, 33, 87.9], ['Malika Yusupova', 26, 40, 44, 91, 69, 21, 74.5], ['Nodira Aliyeva', 30, 41, 52, 79, null, 0, 81.0]],
+        '2026-09': [['Shahnoza Qodirova', 35, 49, 50, 98, 74, 30, null], ['Dilnoza Karimova', 44, 47, 50, 94, 71, 38, null], ['Nodira Aliyeva', 29, 42, 52, 81, null, 0, null], ['Malika Yusupova', 25, 38, 44, 86, 58, 20, null]]
+      },
+      yordamchi: {
+        '2026-11': [['Sevara Toʻxtayeva', 22, 6, 6, 100, 76, 18, 84.9], ['Mohira Rasulova', 18, 5, 6, 83, 71, 14, 80.3], ['Gulnoza Hakimova', 15, 3, 6, 50, null, 0, 72.0]],
+        '2026-10': [['Mohira Rasulova', 18, 40, 42, 95, 70, 14, null], ['Sevara Toʻxtayeva', 21, 39, 42, 93, 72, 17, null], ['Gulnoza Hakimova', 14, 30, 42, 71, 64, 10, null]],
+        '2026-09': []
+      }
+    };
+    const MN = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentyabr', 'Oktyabr', 'Noyabr', 'Dekabr'];
+    const mLab = k => MN[+k.slice(5) - 1] + ' ' + k.slice(0, 4);
+    const prevK = k => k === '2026-11' ? '2026-10' : k === '2026-10' ? '2026-09' : '2026-08';
+    const tRows = (TD[s.tType][s.tMon] || []).map(r => { const sc = r[5] == null ? r[4] : r[4] * 0.6 + r[5] * 0.4; return { name: r[0], st: r[1], comp: r[2], exp: r[3], dav: r[4], learn: r[5], ls: r[6], prev: r[7], score: Math.round(sc * 10) / 10 }; }).sort((a, b) => b.score - a.score);
+    const prevSorted = tRows.filter(r => r.prev != null).sort((a, b) => b.prev - a.prev);
+    const f1 = v => (Number(v) || 0).toFixed(1);
+    const tIni = n => n.split(' ').map(w => w[0]).join('').slice(0, 2);
+    const TCOL = ['#0E7490', '#7C3AED', '#C2410C', '#166534', '#BE185D'];
+    const tAv = n => 'background:' + TCOL[n.length % 5] + ';color:#FFFFFF';
+    const delta = r => { if (r.prev == null) return { t: '—', cls: 'rb-dl', tip: 'Oʻtgan oyda maʼlumot yoʻq' }; const d = Math.round((r.score - r.prev) * 10) / 10; const tip = 'Oʻtgan oy: ' + (prevSorted.indexOf(r) + 1) + '-oʻrin, ' + f1(r.prev) + ' ball'; if (!d) return { t: '—', cls: 'rb-dl', tip }; return { t: (d > 0 ? '▲ ' : '▼ ') + f1(Math.abs(d)), cls: 'rb-dl ' + (d > 0 ? 'rb-up' : 'rb-dn'), tip }; };
+    const kind = s.tType === 'yordamchi' ? 'Yordamchi' : 'Asosiy';
+
+    return {
+      nav, sbCls: s.sb ? 'sb' : 'sb sb-min', sbExp: s.sb ? 'true' : 'false', sbLab: s.sb ? 'Menyuni yigʻish' : 'Menyuni ochish', sbIcon: s.sb ? 'M15 6l-6 6 6 6' : 'M9 6l6 6-6 6', toggleSb: () => this.setState({ sb: !s.sb }),
+      demo: [['ok', 'Oddiy'], ['load', 'Yuklanmoqda'], ['err', 'Xato'], ['nobon', 'Bonus yoʻq'], ['saveErr', 'Saqlash xatosi']].map(d => ({ t: d[1], on: s.demo === d[0] ? 'true' : 'false', pick: () => this.setState({ demo: d[0], retried: false, busy: false, saveErr: '', modal: false, del: '', detail: '' }) })),
+      loading, loadErr, ready, retry: () => { this.setState({ busy: true }); setTimeout(() => this.setState({ busy: false, retried: true }), 700); },
+      sub: (s.view === 'teachers' ? 'Ustozlar' : 'Sotuv menejerlari') + ' · Rus tili yoʻnalishi',
+      views: [['sales', 'Sotuv menejerlari'], ['teachers', 'Ustozlar']].map(v => ({ t: v[1], on: s.view === v[0] ? 'true' : 'false', pick: () => this.setState({ view: v[0] }) })),
+      isSales: s.view === 'sales', isTeach: s.view === 'teachers',
+      tabs: [['lb', 'Reyting'], ['bon', 'Bonuslar'], ['his', 'Olganlar']].map((t, i, a) => ({ t: t[1], id: 'rbt_' + t[0], sel: s.tab === t[0] ? 'true' : 'false', ti: s.tab === t[0] ? '0' : '-1', pick: () => this.setState({ tab: t[0] }), key: e => { if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return; e.preventDefault(); const n = a[(i + (e.key === 'ArrowRight' ? 1 : a.length - 1)) % a.length][0]; this.setState({ tab: n }); this.focus('#rbt_' + n); } })),
+      showPer: s.tab !== 'bon', pers: [['kunlik', 'Kunlik'], ['haftalik', 'Haftalik'], ['oylik', 'Oylik']].map(p => ({ t: p[1], on: per === p[0] ? 'true' : 'false', pick: () => this.setState({ per: p[0] }) })),
+      showAdd: s.tab === 'his', tLb: s.tab === 'lb', tBon: s.tab === 'bon', tHis: s.tab === 'his',
+      perHint: per === 'haftalik' ? 'Hafta dushanbadan sanaladi — bugun dushanba, 02.11 01:43' : per === 'kunlik' ? 'Bugun · 02.11.2026, 01:43 gacha' : 'Noyabr · 1–2-kun',
+      // Reyting
+      eyebrow, title, msub: sub, teamTxt: 'Jamoa rejasi', teamPct: String(teamPct), teamW: 'width:' + teamPct + '%', teamSum: mln(teamSales) + ' / ' + mln(teamTarget), hasTeam: teamTarget > 0,
+      prizeHead: per === 'kunlik' ? 'Kunlik obed bosqichlari' : per === 'haftalik' ? 'Hafta sovgʻalari' : 'Oylik sovgʻalar', prizes,
+      isMonth: per === 'oylik', notMonth: per !== 'oylik', pod3, obed, weekRow, normal: s.lbv === 'normal', marr: s.lbv === 'marralar',
+      lbvs: [['normal', 'Natijalar'], ['marralar', 'Marralar']].map(v => ({ t: v[1], on: s.lbv === v[0] ? 'true' : 'false', pick: () => this.setState({ lbv: v[0] }) })),
+      showPodium: s.lbv === 'normal' && per !== 'oylik', podium, rows, marra,
+      // Bonuslar
+      bgroups: [['Kunlik bonuslar', '', 'Kunlik'], ['Haftalik bonuslar', '1 hafta ichida 15,000,000 soʻmdan kam boʻlmagan sotuv qilgan sotuvchilar erisha oladi', 'Haftalik'], ['Oylik bonuslar', '', 'Oylik'], ['Oʻrinli mukofotlar', 'Oylik reja kamida 110% bajarilganda va oʻsha oyning eng yuqori sotuvchisi boʻlinganda beriladi', 'Oʻrinli']].map(g => ({ h: g[0], note: g[1], hasNote: !!g[1], cards: ALLB.filter(b => b.per === g[2]).map(b => ({ id: b.id, icon: b.icon, label: b.label, prize: b.prize || '', hasPrize: !!b.prize, desc: b.desc, open: () => { this.setState({ detail: b.id }); this.focus('#rbDetClose'); } })) })),
+      detail: !!s.detail, det: (() => { const b = bon(s.detail) || ALLB[0]; const when = { Kunlik: 'Har kunlik sotuv natijasiga qarab beriladi', Haftalik: 'Haftalik reyting yakunida eʼlon qilinadi', Oylik: 'Oy oxiridagi jami sotuv asosida beriladi', 'Oʻrinli': 'Oy yakunida top 3 ta sotuvchi oʻrtasida' }[b.per]; return { icon: b.icon, label: b.label, prize: b.prize || '', hasPrize: !!b.prize, cat: b.per + ' bonus', kv: [['Tavsif', b.desc], b.th ? ['Sotuv chegarasi', money(b.th) + ' dan yuqori'] : null, b.rank ? ['Shart', 'Haftalik reyting — ' + b.rank + '-oʻrin'] : null, b.pct ? ['Reja foizi', 'Kamida ' + b.pct + '%'] : null, ['Qachon', when]].filter(Boolean).map(x => ({ k: x[0], v: x[1] })) }; })(),
+      closeDet: () => { const d = s.detail; this.setState({ detail: '' }); this.focus('[data-bk="' + d + '"]'); },
+      // Olganlar
+      hTitle: 'Kim qaysi bonusni oldi · ' + PL[per],
+      heroEb: top ? PL[per] + ' · eng koʻp bonus' : PL[per], heroT: top ? first(mg(top)[1]) + ' — ' + perM[top] + ' ta bonus' : 'Hali hech kim bonus olmagan — birinchi boʻling!', heroS: top ? 'Navbatdagi sovgʻa sizni kutmoqda: reja va obed chegaralari Reyting → Bonuslar roʻyxatida.' : 'Kunlik 1,8 mln sotuv — bepul obed. Hafta oxirida eng yaxshi uchtalikka sovgʻa.',
+      htiles: [['Jami bonuslar', fh.length, PL[per].toLowerCase()], ['Obed (kunlik)', byP.Kunlik, '1,8 / 2,5 / 3,0 mln chegaralari'], ['Hafta sovgʻalari', byP.Haftalik, 'kitob · kino · restoran'], ['Oylik va oʻrinli', byP.Oylik + byP['Oʻrinli'], 'iPhone, MacBook, Umra, $']].concat(moneyT ? [['Pul bonuslari', money(moneyT), 'kiritilgan summalar']] : []).map(t => ({ k: t[0], v: String(t[1]), s: t[2] })),
+      htCls: 'rb-htiles' + (moneyT ? ' rb-ht5' : ''),
+      hasHist: fh.length > 0, noHist: fh.length === 0,
+      hrows: fh.map(h => { const b = bon(h.b); return { id: h.id, icon: b.icon, t: b.prize && b.per === 'Oʻrinli' ? b.label + ' · ' + b.prize : b.label, note: h.note, hasNote: !!h.note, amt: Number(h.amt) ? money(h.amt) : '', hasAmt: !!Number(h.amt), ini: h.m, av: av(h.m), mn: mg(h.m)[1], d: fd(h.d), per: b.per, pcls: PB[b.per], dlab: 'Oʻchirish: ' + b.label + ', ' + mg(h.m)[1] + ', ' + fd(h.d), ask: () => { this.setState({ del: h.id }); this.focus('#rbDelNo'); } }; }),
+      del: !!delRec, delTxt: delRec ? (bon(delRec.b).label + ' · ' + mg(delRec.m)[1] + ' · ' + fd(delRec.d)) : '',
+      noDel: () => { this.setState({ del: '' }); this.focus('#rbHistH'); },
+      yesDel: () => { const r = delRec; this.setState({ del: '', hist: s.hist.filter(h => h.id !== s.del) }); toast('Yozuv oʻchirildi · ' + bon(r.b).label + ', ' + first(mg(r.m)[1])); this.focus('#rbHistH'); },
+      dlgKey: e => { if (e.key !== 'Tab') return; const bs = Array.prototype.slice.call(e.currentTarget.querySelectorAll('button,input,textarea')).filter(x => !x.disabled); const ix = bs.indexOf(document.activeElement); if ((e.shiftKey && ix <= 0) || (!e.shiftKey && ix === bs.length - 1)) { e.preventDefault(); (e.shiftKey ? bs[bs.length - 1] : bs[0]).focus(); } },
+      // Modal
+      modal: s.modal, openAdd: () => { this.setState({ modal: true, f: this.blank(), ferr: {}, saveErr: '' }); this.focus('[name=rbM]'); },
+      closeAdd: () => { if (s.saving) return; this.setState({ modal: false }); this.focus('#rbAddBtn'); },
+      mOpts: MG.map(m => ({ id: m[0], n: m[1], ini: m[0], av: 'background:' + m[2] + ';color:#FFFFFF', on: f.m === m[0], cls: 'rb-opt' + (f.m === m[0] ? ' rb-opt-on' : ''), pick: () => setF('m', m[0]) })),
+      bOpts: ['Kunlik', 'Haftalik', 'Oylik', 'Oʻrinli'].map(g => ({ g, list: ALLB.filter(b => b.per === g).map(b => ({ id: 'rbb_' + b.id, v: b.id, t: b.icon + ' ' + (b.prize ? b.label + ' · ' + b.prize : b.label), on: f.b === b.id, cls: 'rb-bopt' + (f.b === b.id ? ' rb-opt-on' : ''), pick: () => setF('b', b.id) })) })),
+      eM: fe.m || '', eB: fe.b || '', eAmt: fe.amt || '', eDate: fe.date || '', mBad: fe.m ? 'rb-fs rb-bad' : 'rb-fs', bBad: fe.b ? 'rb-fs rb-bad' : 'rb-fs', amtCls: 'fld' + (fe.amt ? ' ferr' : ''), dateCls: 'fld' + (fe.date ? ' ferr' : ''),
+      amtInv: fe.amt ? 'true' : 'false', dateInv: fe.date ? 'true' : 'false',
+      fAmt: f.amt, fDate: f.date, fNote: f.note, onAmt: e => setF('amt', e.target.value), onDate: e => setF('date', e.target.value), onNote: e => setF('note', e.target.value),
+      amtPrev: amtTxt && Number.isFinite(amtNum) && amtNum > 0 && !fe.amt ? '= ' + money(amtNum) : '',
+      saveErr: s.saveErr, saving: s.saving, saveLab: s.saving ? 'Saqlanmoqda…' : 'Saqlash', busyA: s.saving ? 'true' : 'false', save,
+      // Ustozlar
+      tTypes: [['asosiy', 'Asosiy ustozlar'], ['yordamchi', 'Yordamchi ustozlar']].map(t => ({ t: t[1], on: s.tType === t[0] ? 'true' : 'false', pick: () => this.setState({ tType: t[0] }) })),
+      tMonLab: mLab(s.tMon), canPrev: s.tMon > '2026-09', canNext: s.tMon < '2026-11', prevDis: s.tMon > '2026-09' ? 'false' : 'true', nextDis: s.tMon < '2026-11' ? 'false' : 'true',
+      prevMon: () => { if (s.tMon > '2026-09') this.setState({ tMon: prevK(s.tMon) }); }, nextMon: () => { if (s.tMon < '2026-11') this.setState({ tMon: s.tMon === '2026-09' ? '2026-10' : '2026-11' }); },
+      tPod: tRows.slice(0, 3).map((r, i) => ({ cls: 'rb-tp' + (i === 0 ? ' rb-tp1' : ''), rk: String(i + 1), lab: (i + 1) + '-oʻrin', ini: tIni(r.name), av: tAv(r.name), n: r.name, mt: kind + ' · ' + r.st + ' oʻquvchi', sc: f1(r.score), dav: r.dav + '%', davW: 'width:' + r.dav + '%', ln: r.learn == null ? '—' : r.learn + '%', lnW: 'width:' + (r.learn || 0) + '%' })),
+      hasT: tRows.length > 0, noT: tRows.length === 0, tEmpty: mLab(s.tMon) + ' uchun reyting maʼlumoti yoʻq',
+      tRows: tRows.map((r, i) => { const d = delta(r); return { rk: String(i + 1), ini: tIni(r.name), av: tAv(r.name), n: r.name, sub: r.comp + ' / ' + r.exp + ' dars', st: String(r.st), dav: r.dav + '%', davW: 'width:' + r.dav + '%', ln: r.learn == null ? '—' : r.learn + '%', lnW: 'width:' + (r.learn || 0) + '%', only: r.learn == null, lnT: r.learn == null ? 'Ilova maʼlumoti yoʻq — ball faqat davomatdan' : r.ls + ' oʻquvchining ilova maʼlumoti', sc: f1(r.score), dt: d.t, dcls: d.cls, dtip: d.tip }; }),
+      tCmp: 'Ball · ' + MN[+prevK(s.tMon).slice(5) - 1].toLowerCase() + 'ga nisbatan',
+      excel: () => toast(tRows.length ? 'reyting-' + s.tType + '-' + s.tMon + '.xlsx yuklab olindi' : 'Maʼlumot yoʻq'), exDis: tRows.length ? 'false' : 'true',
+      stop: e => e.stopPropagation(),
+      toast: s.toast
+    };
+  }
+}

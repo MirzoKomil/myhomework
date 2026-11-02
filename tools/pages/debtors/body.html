@@ -1,0 +1,207 @@
+<div data-root="1" style="height: 960px; box-sizing: border-box; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #0B1220; background: #F5F7FB; display: flex; position: relative; overflow: hidden">
+<style>
+.db-info{margin:0;font-size:13px;color:#4B5563;max-width:900px;line-height:1.45}
+.db-tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.db-tile{background:#FFFFFF;border:1px solid #E6EAF2;border-radius:16px;padding:12px 16px;display:flex;flex-direction:column;gap:4px}
+.db-tile small{font-size:12px;font-weight:700;color:#4B5563}
+.db-tile b{font-size:22px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;white-space:nowrap}
+.db-tile span{font-size:12px;color:#4B5563}
+.db-tile.db-red{border-color:#FECDCA;background:#FFFBFA}.db-tile.db-red b{color:#B42318}
+.db-card{background:#FFFFFF;border:1px solid #E6EAF2;border-radius:16px;display:flex;flex-direction:column;min-height:0}
+.db-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px;border-bottom:1px solid #EEF2F6}
+.db-segs{display:flex;gap:4px;padding:3px;border-radius:12px;background:#EEF2F6}
+.db-segs button{height:32px;padding:0 12px;border-radius:9px;border:0;background:transparent;font-size:13px;font-weight:700;color:#3A4456;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.db-segs button:hover{background:#FFFFFF}
+.db-segs button[aria-pressed="true"]{background:#FFFFFF;color:#0057B8;font-weight:800;box-shadow:0 1px 3px rgba(16,24,40,.12)}
+.db-segs b{min-width:20px;height:20px;padding:0 6px;box-sizing:border-box;border-radius:999px;background:#E2E8F0;font-size:11px;display:inline-grid;place-items:center}
+.db-segs button[aria-pressed="true"] b{background:#0065D6;color:#FFFFFF}
+.db-segs .db-sred b{background:#FEE4E2;color:#B42318}
+.db-fl{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-left:auto}
+.db-sel{height:36px;border:1px solid #CBD5E1;border-radius:10px;padding:0 8px;font-size:13px;font-weight:600;color:#0B1220;background:#FFFFFF;max-width:190px}
+.db-sel.db-act{border-color:#0065D6;background:#EAF3FF;color:#0057B8}
+.db-dt{height:36px;border:1px solid #CBD5E1;border-radius:10px;padding:0 8px;font-size:13px;color:#0B1220;background:#FFFFFF;width:136px;box-sizing:border-box}
+.db-dl{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:#3A4456}
+.db-x{height:36px;padding:0 10px;border-radius:10px;border:0;background:transparent;color:#0057B8;font-size:13px;font-weight:800;cursor:pointer;text-decoration:underline}
+.db-t{display:flex;flex-direction:column;font-size:13px}
+.db-tr{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) minmax(0,1.25fr) minmax(0,1.5fr) minmax(0,1.1fr) 80px;gap:12px;align-items:start;padding:12px 14px;border-bottom:1px solid #EEF2F6;position:relative}
+.db-tr:hover{background:#FAFBFD}
+.db-th{position:sticky;top:0;z-index:2;background:#F8FAFC;font-size:12px;font-weight:800;color:#4B5563;padding:9px 14px;align-items:center}
+.db-th:hover{background:#F8FAFC}
+.db-num{text-align:right}
+.db-who{display:flex;gap:10px;min-width:0}
+.db-av{flex:none;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:800;color:#FFFFFF}
+.db-wt{display:flex;flex-direction:column;gap:2px;min-width:0}
+.db-nm{font-size:14px;font-weight:800;color:#0B1220;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.db-sub{font-size:12px;color:#4B5563;line-height:1.35}
+.db-main{font-size:13px;font-weight:700;color:#0B1220}
+.db-late{color:#B42318;font-weight:800}
+.db-debt{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+.db-c{display:flex;flex-direction:column;gap:2px;min-width:0}
+.db-c.db-num{align-items:flex-end}
+.db-badge{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:999px;font-size:11px;font-weight:800;white-space:nowrap;margin-top:3px}
+.db-b-over{background:#FEE4E2;color:#B42318}.db-b-frz{background:#E0F2FE;color:#075985}.db-b-wait{background:#F1F5F9;color:#3A4456}.db-b-unk{background:#FEF0C7;color:#93370D}
+.db-c.db-num .db-bar{align-self:flex-end}
+.db-paid{font-size:13px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.db-bar{width:100%;max-width:170px;height:6px;border-radius:999px;background:#EEF2F6;overflow:hidden;margin:3px 0 1px}
+.db-bar span{display:block;height:100%;background:#12B76A;border-radius:999px}
+.db-note{font-size:12px;color:#3A4456;line-height:1.4;white-space:pre-line}
+.db-acts{display:flex;gap:6px;justify-content:flex-end;position:relative}
+.db-ib{width:34px;height:34px;border-radius:10px;border:1px solid #E2E8F0;background:#FFFFFF;color:#3A4456;display:grid;place-items:center;cursor:pointer;font-size:18px;font-weight:800;line-height:1;text-decoration:none;box-sizing:border-box}
+.db-ib:hover{background:#F1F5F9;color:#0B1220}
+.db-ib[aria-expanded="true"]{background:#EAF3FF;border-color:#0065D6;color:#0057B8}
+.db-call{color:#067647;border-color:#ABEFC6;background:#ECFDF3}
+.db-mn{position:absolute;right:0;z-index:30;width:220px;background:#FFFFFF;border:1px solid #E6EAF2;border-radius:12px;box-shadow:0 16px 36px rgba(16,24,40,.18);padding:6px;display:flex;flex-direction:column}
+.db-mn button{min-height:36px;border:0;background:transparent;text-align:left;padding:0 10px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:#0B1220;display:flex;align-items:center;gap:10px}
+.db-mn button:hover,.db-mn button:focus-visible{background:#F1F5F9;outline:0;box-shadow:inset 0 0 0 2px #0065D6}
+.db-mn i{font-style:normal;width:18px;text-align:center;color:#4B5563}
+.db-mn hr{border:0;border-top:1px solid #EEF2F6;margin:4px 2px}
+.db-foot{margin:0;padding:10px 14px;font-size:12px;color:#4B5563}
+.db-empty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:56px 20px;color:#4B5563;font-size:13px;text-align:center}
+.db-empty b{font-size:15px;color:#0B1220}
+.db-ov{position:absolute;inset:0;background:rgba(11,18,32,.45);display:grid;place-items:center;z-index:90}
+.db-dlg{width:520px;max-height:900px;background:#FFFFFF;border-radius:18px;box-shadow:0 30px 80px rgba(11,18,32,.35);display:flex;flex-direction:column;overflow:hidden}
+.db-dh{display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid #EEF2F6}
+.db-dh h2{margin:0;flex:1;font-size:16px;font-weight:800}
+.db-db{padding:14px 20px;display:flex;flex-direction:column;gap:12px;overflow-y:auto}
+.db-df{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:12px 20px;border-top:1px solid #EEF2F6}
+.db-sum{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:12px;border-radius:12px;background:#F8FAFC;border:1px solid #EEF2F6}
+.db-sum div{display:flex;flex-direction:column;gap:2px}
+.db-sum span{font-size:12px;color:#4B5563;font-weight:600}
+.db-sum strong{font-size:16px;color:#B42318;font-variant-numeric:tabular-nums}
+.db-sum b{font-size:14px;font-variant-numeric:tabular-nums}
+.db-quick{display:flex;gap:6px;flex-wrap:wrap}
+.db-qb{height:30px;padding:0 10px;border-radius:999px;border:1px solid #CBD5E1;background:#FFFFFF;font-size:12px;font-weight:700;color:#0057B8;cursor:pointer}
+.db-qb:hover{background:#EAF3FF}
+.db-left{margin:0;font-size:13px;font-weight:700;color:#067647;min-height:18px}
+.db-left.db-bad{color:#B42318}
+.db-g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.db-ro input{background:#F8FAFC;color:#3A4456}
+.db-file{display:flex;align-items:center;gap:8px;min-height:40px;padding:0 10px;border:1px dashed #CBD5E1;border-radius:10px;font-size:13px;color:#3A4456;cursor:pointer;box-sizing:border-box}
+.db-file input{font-size:12px;max-width:100%}
+.db-file.db-fbad{border-color:#D92D20}
+.db-sus{padding:10px 12px;border-radius:12px;background:#FFFAEB;border:1px solid #FEC84B;color:#93370D;font-size:13px;display:flex;flex-direction:column;gap:8px}
+.db-sus div{display:flex;gap:8px}
+.db-lock{font-size:11px;font-weight:700;color:#4B5563}
+.db-diff{font-size:12px;color:#4B5563;background:#F5F3FF;border:1px dashed #A78BFA;border-radius:10px;padding:8px 12px;line-height:1.45}
+.db-diff b{color:#5B21B6}
+.db-skr{height:58px;border-radius:10px;margin:8px 14px;background:linear-gradient(90deg,#E9EEF5 0%,#F5F7FB 50%,#E9EEF5 100%);background-size:200% 100%;animation:sh 1.2s linear infinite}
+</style>
+__NAV__
+  <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative">
+    <header style="height: 56px; flex: none; padding: 0 24px; display: flex; align-items: center; gap: 14px; background: #FFFFFF; border-bottom: 1px solid #E6EAF2; box-sizing: border-box">
+      <span style="font-size: 13px; color: #4B5563">Sotuv · <b style="color: #0B1220">Qarzdorlar</b></span>
+      <span style="flex: 1"></span>
+      <div role="group" aria-label="Demo holat" style="display: flex; align-items: center; gap: 4px; padding: 4px; border: 1px dashed #A78BFA; border-radius: 12px; background: #F5F3FF">
+        <span style="font-size: 11px; font-weight: 800; color: #5B21B6; padding: 0 6px">HOLAT</span>
+        <sc-for list="{{ demo }}" as="d" hint-placeholder-count="5"><button type="button" aria-pressed="{{ d.on }}" onClick="{{ d.pick }}" class="dmb" title="{{ d.tip }}">{{ d.t }}</button></sc-for>
+      </div>
+      <span style="display: flex; align-items: center; gap: 10px"><span aria-hidden="true" style="width: 36px; height: 36px; border-radius: 50%; background: #0B1220; color: #FFFFFF; display: grid; place-items: center; font-size: 13px; font-weight: 800">IM</span><span style="display: flex; flex-direction: column; line-height: 1.2"><b style="font-size: 14px">Islom Mominov</b><span style="font-size: 12px; color: #4B5563">ROP · Rus tili</span></span></span>
+    </header>
+
+    <main id="dbMain" onClick="{{ outClick }}" style="flex: 1; min-height: 0; overflow: auto; padding: 18px 28px 28px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; align-items: flex-end; gap: 12px">
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 4px">
+          <div style="display: flex; align-items: center; gap: 10px"><h1 style="margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.02em">Qarzdorlar</h1><span class="tag">Rus tili</span></div>
+          <p class="db-info">Roʻyxatda qoldigʻi bor barcha oʻquvchilar. <b>Muddati oʻtgan</b> — sotuv menejeri bilan kelishilgan sana oʻtib, qoldiq toʻlanmagan. Siz faqat Rus tili oʻquvchilarini koʻrasiz.</p>
+        </div>
+        <span class="hint" style="margin: 0; white-space: nowrap">Bugun: Du, 02.11.2026</span>
+      </div>
+
+      <sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}"><div aria-busy="true" aria-label="Yuklanmoqda" style="display: flex; flex-direction: column; gap: 14px"><div class="db-tiles"><div class="db-skr" style="margin: 0; height: 84px"></div><div class="db-skr" style="margin: 0; height: 84px"></div><div class="db-skr" style="margin: 0; height: 84px"></div><div class="db-skr" style="margin: 0; height: 84px"></div></div><div class="db-card" style="padding: 8px 0"><div class="db-skr" style="height: 36px"></div><div class="db-skr"></div><div class="db-skr"></div><div class="db-skr"></div><div class="db-skr"></div></div></div></sc-if>
+      <sc-if value="{{ loadErr }}" hint-placeholder-val="{{ false }}"><div class="malert" role="alert"><span style="flex: 1">Qarzdorlarni yuklab boʻlmadi — server javob bermadi</span><button type="button" class="btn2" onClick="{{ retry }}">Qayta urinish</button></div></sc-if>
+
+      <sc-if value="{{ ready }}" hint-placeholder-val="{{ true }}">
+        <div class="db-tiles" role="group" aria-label="Qarz koʻrsatkichlari">
+          <div class="db-tile db-red"><small>Muddati oʻtgan qoldiq</small><b>{{ tl.over }}</b><span>{{ tl.overS }}</span></div>
+          <div class="db-tile"><small>Bu oy kutilayotgan</small><b>{{ tl.month }}</b><span>{{ tl.monthS }}</span></div>
+          <div class="db-tile"><small>Jami qoldiq</small><b>{{ tl.total }}</b><span>{{ tl.totalS }}</span></div>
+          <div class="db-tile"><small>Shu oʻquvchilardan toʻlangan</small><b>{{ tl.paid }}</b><span>{{ tl.paidS }}</span></div>
+        </div>
+
+        <section class="db-card" aria-label="Qarzdorlar roʻyxati">
+          <div class="db-head">
+            <div class="db-segs" role="group" aria-label="Tezkor filtr"><sc-for list="{{ quick }}" as="q" hint-placeholder-count="3"><button type="button" class="{{ q.cls }}" aria-pressed="{{ q.on }}" onClick="{{ q.pick }}">{{ q.l }} <b>{{ q.n }}</b></button></sc-for></div>
+            <div class="db-fl">
+              <select class="{{ fMgr.cls }}" aria-label="Menejer" onChange="{{ fMgr.on }}"><sc-for list="{{ fMgr.opts }}" as="o" hint-placeholder-count="4"><option value="{{ o.v }}" selected="{{ o.sel }}">{{ o.t }}</option></sc-for></select>
+              <select class="{{ fTch.cls }}" aria-label="Oʻqituvchi" onChange="{{ fTch.on }}"><sc-for list="{{ fTch.opts }}" as="o" hint-placeholder-count="4"><option value="{{ o.v }}" selected="{{ o.sel }}">{{ o.t }}</option></sc-for></select>
+              <select class="{{ fTar.cls }}" aria-label="Tarif" onChange="{{ fTar.on }}"><sc-for list="{{ fTar.opts }}" as="o" hint-placeholder-count="4"><option value="{{ o.v }}" selected="{{ o.sel }}">{{ o.t }}</option></sc-for></select>
+              <label class="db-dl">Sana <input type="date" lang="en-GB" class="db-dt" value="{{ dFrom }}" title="Dan" aria-label="Sanadan" onChange="{{ fromIn }}"></label>
+              <span style="color: #4B5563; font-size: 13px" aria-hidden="true">—</span>
+              <input type="date" lang="en-GB" class="db-dt" value="{{ dTo }}" title="Gacha" aria-label="Sanagacha" onChange="{{ toIn }}">
+              <sc-if value="{{ anyF }}" hint-placeholder-val="{{ false }}"><button type="button" class="db-x" onClick="{{ clearF }}">Tozalash</button></sc-if>
+            </div>
+          </div>
+          <sc-if value="{{ rangeBad }}" hint-placeholder-val="{{ false }}"><p class="err" role="alert" style="margin: 8px 14px 0">“Sanadan” “Sanagacha”dan keyin — oraliqda sana yoʻq, roʻyxat boʻsh chiqadi.</p></sc-if>
+
+          <div class="db-t" role="table" aria-label="Qarzdorlar" aria-rowcount="{{ rowCount }}">
+            <div class="db-tr db-th" role="row"><span role="columnheader">Oʻquvchi</span><span role="columnheader" class="db-num">Qoldiq · kelishilgan sana</span><span role="columnheader">Menejer · ustoz</span><span role="columnheader" class="db-num">Toʻlangan / shartnoma</span><span role="columnheader">Izoh</span><span role="columnheader"><span class="sr">Amallar</span></span></div>
+            <sc-for list="{{ rows }}" as="r" hint-placeholder-count="8"><div class="db-tr" role="row" style="{{ r.zst }}">
+              <div role="rowheader" class="db-who"><span class="db-av" aria-hidden="true" style="{{ r.avSt }}">{{ r.ini }}</span><span class="db-wt"><span class="db-nm">{{ r.name }}</span><span class="db-sub">#{{ r.serial }} · {{ r.phoneD }}</span><span class="db-sub">{{ r.line3 }}</span></span></div>
+              <div role="cell" class="db-c db-num"><span class="db-debt">{{ r.debtT }}</span><span class="{{ r.dueCls }}">{{ r.dueT }}</span><sc-if value="{{ r.dayT }}" hint-placeholder-val="{{ true }}"><span class="{{ r.dayCls }}">{{ r.dayT }}</span></sc-if><span class="{{ r.bCls }}">{{ r.bT }}</span></div>
+              <div role="cell" class="db-c"><span class="db-main">{{ r.mgr }}</span><span class="db-sub">{{ r.tline }}</span></div>
+              <div role="cell" class="db-c db-num"><span class="db-paid">{{ r.paidT }}</span><span class="db-bar" role="img" aria-label="{{ r.pctL }}"><span style="{{ r.barSt }}"></span></span><span class="db-sub">{{ r.payS }}</span></div>
+              <div role="cell" class="db-note">{{ r.notes }}</div>
+              <div role="cell" class="db-acts">
+                <sc-if value="{{ r.tel }}" hint-placeholder-val="{{ true }}"><a class="db-ib db-call" href="{{ r.tel }}" title="Qoʻngʻiroq qilish" aria-label="{{ r.callL }}"><span aria-hidden="true" style="font-size: 17px">☏</span></a></sc-if>
+                <button type="button" class="db-ib" data-menu="{{ r.id }}" title="Amallar" aria-label="{{ r.menuL }}" aria-haspopup="menu" aria-expanded="{{ r.open }}" onClick="{{ r.toggle }}">⋯</button>
+                <sc-if value="{{ r.menu }}" hint-placeholder-val="{{ false }}"><div class="db-mn" role="menu" aria-label="{{ r.menuL }}" style="{{ r.mnSt }}" onKeyDown="{{ menuKey }}">
+                  <button type="button" role="menuitem" onClick="{{ r.mCall }}"><i aria-hidden="true">☏</i>Qoʻngʻiroq qilish</button>
+                  <button type="button" role="menuitem" onClick="{{ r.mSms }}"><i aria-hidden="true">✉</i>SMS yuborish</button>
+                  <hr>
+                  <button type="button" role="menuitem" onClick="{{ r.mPay }}"><i aria-hidden="true">＋</i>Toʻlov qabul qilish</button>
+                  <button type="button" role="menuitem" onClick="{{ r.mEdit }}"><i aria-hidden="true">✎</i>Qarz tahrirlash</button>
+                </div></sc-if>
+              </div>
+            </div></sc-for>
+            <sc-if value="{{ noRows }}" hint-placeholder-val="{{ false }}"><div class="db-empty" role="row"><span role="cell" style="display: flex; flex-direction: column; align-items: center; gap: 8px"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="1.8" aria-hidden="true"><path d="M2 6h20v13H2zM2 10h20"></path></svg><b>Bu filtr boʻyicha qarzdor oʻquvchilar yoʻq</b><span>{{ emptyS }}</span><sc-if value="{{ anyF }}" hint-placeholder-val="{{ false }}"><button type="button" class="btn2" onClick="{{ clearF }}">Filtrlarni tozalash</button></sc-if></span></div></sc-if>
+          </div>
+          <p class="db-foot">⋯ menyusida: Toʻlov qabul qilish, Qarzni tahrirlash, SMS. Oʻquvchini oʻchirish — faqat oʻquvchi kartasidan (arxivga).</p>
+          <p class="db-diff" style="margin: 0 14px 12px"><b>Dizayn farqi:</b> tarif kodda xom qiymat (standard/premium/vip) — bu yerda “Standard / Premium / VIP”; “Tozalash” tugmasi, notoʻgʻri sana oraligʻi ogohlantirishi va ⋯ yonidagi qoʻngʻiroq tugmasi qoʻshildi; kichik summa tasdigʻi (window.confirm) oyna ichida koʻrsatiladi.</p>
+        </section>
+      </sc-if>
+    </main>
+
+    <sc-if value="{{ pay }}" hint-placeholder-val="{{ false }}"><div class="db-ov" onClick="{{ ovClick }}"><div class="db-dlg" role="dialog" aria-modal="true" aria-labelledby="payH" onKeyDown="{{ dlgKey }}" data-dlg="1">
+      <div class="db-dh"><h2 id="payH">{{ pay.title }}</h2><button type="button" class="ic" aria-label="Yopish" onClick="{{ closeDlg }}">✕</button></div>
+      <div class="db-db">
+        <div class="db-sum"><div><span>Joriy qarz</span><strong>{{ pay.debt }}</strong></div><div><span>Toʻlangan</span><b>{{ pay.paid }}</b></div><sc-if value="{{ pay.due }}" hint-placeholder-val="{{ true }}"><div><span>Kelishilgan sana</span><b>{{ pay.due }}</b></div></sc-if></div>
+        <label class="{{ pay.amCls }}">Qabul qilingan summa<input id="payAmt" type="text" inputmode="numeric" autocomplete="off" value="{{ pay.amV }}" onInput="{{ amIn }}" aria-describedby="payLeft" aria-invalid="{{ pay.amInv }}"></label>
+        <div class="db-quick"><sc-for list="{{ pay.quick }}" as="q" hint-placeholder-count="2"><button type="button" class="db-qb" onClick="{{ q.pick }}">{{ q.t }}</button></sc-for></div>
+        <p id="payLeft" class="{{ pay.leftCls }}" aria-live="polite">{{ pay.left }}</p>
+        <div class="db-g2">
+          <label class="{{ pay.dCls }}">Tushgan sana<input type="date" lang="en-GB" value="{{ pay.dateV }}" max="2026-11-02" onInput="{{ dateIn }}"></label>
+          <label class="fld">Vaqt (maʼlum boʻlsa)<input type="time" value="{{ pay.timeV }}" onInput="{{ timeIn }}"></label>
+        </div>
+        <div class="db-g2">
+          <label class="{{ pay.mCls }}">Toʻlov usuli<select onChange="{{ methIn }}"><sc-for list="{{ pay.methods }}" as="m" hint-placeholder-count="8"><option value="{{ m.v }}" selected="{{ m.sel }}">{{ m.t }}</option></sc-for></select></label>
+          <div class="fld">Chek (rasm yoki PDF)<label class="{{ pay.fCls }}"><input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" aria-label="Chek (rasm yoki PDF)" onChange="{{ fileIn }}"></label><sc-if value="{{ pay.fileN }}" hint-placeholder-val="{{ false }}"><small style="color: #067647; font-weight: 700">✓ {{ pay.fileN }}</small></sc-if></div>
+        </div>
+        <p class="hint" style="margin: 0">Faqat haqiqatan qabul qilingan tushum uchun majburiy. Kredit arizasi tushum emas.</p>
+        <sc-if value="{{ pay.sus }}" hint-placeholder-val="{{ false }}"><div class="db-sus" role="alertdialog" aria-label="Summani tekshiring"><span><b>Summa: {{ pay.sus }} — bu juda kichik.</b> Nollar tushib qolmaganmi (masalan, 300 oʻrniga 300 000)?</span><div><button type="button" class="btnp" onClick="{{ susOk }}">Summa toʻgʻri, saqlash</button><button type="button" class="btn2" onClick="{{ susNo }}">Orqaga qaytib tuzatish</button></div></div></sc-if>
+        <sc-if value="{{ pay.err }}" hint-placeholder-val="{{ false }}"><p class="err" role="alert" style="margin: 0; font-size: 13px">{{ pay.err }}</p></sc-if>
+      </div>
+      <div class="db-df"><button type="button" class="btn2" onClick="{{ closeDlg }}">Bekor qilish</button><button type="button" class="btnp" aria-disabled="{{ pay.busyA }}" onClick="{{ paySave }}">{{ pay.saveL }}</button></div>
+    </div></div></sc-if>
+
+    <sc-if value="{{ ed }}" hint-placeholder-val="{{ false }}"><div class="db-ov" onClick="{{ ovClick }}"><div class="db-dlg" role="dialog" aria-modal="true" aria-labelledby="edH" onKeyDown="{{ dlgKey }}" data-dlg="1">
+      <div class="db-dh"><h2 id="edH">{{ ed.title }}</h2><button type="button" class="ic" aria-label="Yopish" onClick="{{ closeDlg }}">✕</button></div>
+      <div class="db-db">
+        <p class="hint" style="margin: 0; font-size: 13px">Yangi tushumni kartochkadagi “Toʻlov qabul qilish” orqali kiriting. Summa va tarix reyestrdan olinadi.</p>
+        <div class="db-g2">
+          <label class="fld db-ro">Toʻlangan summa (soʻm)<input type="text" readonly value="{{ ed.paid }}"></label>
+          <label class="fld db-ro">Qarz miqdori (soʻm)<input type="text" readonly value="{{ ed.debt }}"></label>
+          <label class="fld">Toʻlov muddati<input id="edDue" type="date" lang="en-GB" value="{{ ed.due }}" onInput="{{ edDueIn }}"></label>
+          <label class="fld">Tarif<select onChange="{{ edTarIn }}"><sc-for list="{{ ed.tars }}" as="o" hint-placeholder-count="3"><option value="{{ o.v }}" selected="{{ o.sel }}">{{ o.t }}</option></sc-for></select></label>
+          <label class="fld db-ro">Oxirgi toʻlov sanasi<input type="text" readonly value="{{ ed.last }}"></label>
+          <label class="fld db-ro">Toʻlovlar soni<input type="text" readonly value="{{ ed.cnt }}"></label>
+        </div>
+        <p class="hint" style="margin: -4px 0 0">Toʻlangan summa, qarz, oxirgi toʻlov sanasi va toʻlovlar soni reyestrdan olinadi — bu yerda oʻzgarmaydi.</p>
+        <label class="fld">Izoh<textarea rows="2" onInput="{{ edComIn }}">{{ ed.comment }}</textarea></label>
+        <label class="fld">Eslatma<textarea rows="2" onInput="{{ edNoteIn }}">{{ ed.note }}</textarea></label>
+        <sc-if value="{{ ed.err }}" hint-placeholder-val="{{ false }}"><p class="err" role="alert" style="margin: 0; font-size: 13px">{{ ed.err }}</p></sc-if>
+      </div>
+      <div class="db-df"><button type="button" class="btn2" onClick="{{ closeDlg }}">Bekor qilish</button><button type="button" class="btnp" aria-disabled="{{ ed.busyA }}" onClick="{{ edSave }}">{{ ed.saveL }}</button></div>
+    </div></div></sc-if>
+    <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}"><div role="status" class="toast" style="bottom: 24px">{{ toast }}</div></sc-if>
+  </div>
+</div>

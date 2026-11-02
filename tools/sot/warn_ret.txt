@@ -1,0 +1,4 @@
+      wShow: !loading && !NOSTALE && stl.length > 0,
+      wT: stl.length + ' ta lid ' + RULE.warnDays + ' kundan beri olmayapti',
+      wS: lockL.length ? 'Baʼzilarini hoziroq “Sifatsiz”ga oʻtkazish shart' : Math.max(1, RULE.lockDays - (warnL[0] ? warnL[0].k.sd : RULE.lockDays)) + ' kundan keyin “Sifatsiz”ga oʻtkazish shart',
+      wGo: () => { const f = lockL[0] || warnL[0]; if (!f) return; this.setState({ shut: Object.assign({}, s.shut, { try: false }), risk: '' }); this.focusSoon('[data-card="' + f.key + '"]'); },

@@ -1,0 +1,209 @@
+<style>
+.tn-head{display:flex;align-items:flex-end;gap:12px}
+.tn-mon{display:flex;align-items:center;height:36px;border:1px solid #CBD5E1;border-radius:10px;background:#FFFFFF;overflow:hidden}
+.tn-mon button{width:36px;height:34px;border:0;background:transparent;font-size:18px;font-weight:800;color:#0B1220;cursor:pointer}
+.tn-mon button:hover{background:#F1F5F9}
+.tn-mon button[aria-disabled="true"]{color:#CBD5E1;cursor:not-allowed;background:transparent}
+.tn-mon span{min-width:118px;text-align:center;font-size:13px;font-weight:800}
+.tn-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+.tn-kpi{background:#FFFFFF;border:1px solid #E6EAF2;border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.tn-kpi small{font-size:12px;font-weight:700;color:#4B5563;display:flex;align-items:center;gap:6px}
+.tn-kpi b{font-size:26px;font-weight:800;letter-spacing:-.02em;line-height:1.15}
+.tn-kpi span{font-size:12px;color:#4B5563;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tn-kpi.tn-kw2{background:#FFFAEB;border-color:#FEC84B}.tn-kpi.tn-kw2 b{color:#93370D}
+.tn-dot{width:8px;height:8px;border-radius:50%;flex:none;display:inline-block}
+.tn-dok{background:#12B76A}.tn-dbad{background:#D92D20}.tn-dinfo{background:#0065D6}.tn-dwarn{background:#F79009}.tn-dmute{background:#94A3B8}
+.tn-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start}
+.tn-col{display:flex;flex-direction:column;gap:14px;min-width:0}
+.tn-sh{display:flex;align-items:center;gap:8px}.tn-sh h2{flex:1}
+.tn-li{display:grid;grid-template-columns:84px minmax(0,1fr);gap:4px 12px;padding:12px 0;border-top:1px solid #EEF2F6}
+.tn-li:first-of-type{border-top:0}
+.tn-tm{font-size:15px;font-weight:800;line-height:1.3;display:flex;flex-direction:column;gap:4px}
+.tn-tm.tn-tmw{color:#B42318}
+.tn-k{align-self:flex-start;font-size:11px;font-weight:800;border-radius:6px;padding:2px 6px;white-space:nowrap}
+.tn-kw{background:#FEE4E2;color:#B42318}.tn-ka{background:#FEF0C7;color:#93370D}.tn-kb{background:#FEE4E2;color:#912018}
+.tn-inf{display:flex;flex-direction:column;gap:3px;min-width:0}
+.tn-nm{font-size:14px;font-weight:800;display:flex;align-items:baseline;gap:4px;flex-wrap:wrap}
+.tn-nmb{border:0;background:none;padding:0;font:inherit;color:#0B1220;cursor:pointer;text-align:left}
+.tn-nmb:hover{color:#0057B8;text-decoration:underline}
+.tn-nm em{font-style:normal;font-weight:600;color:#4B5563;font-size:13px}
+.tn-mt{font-size:13px;color:#3A4456;line-height:1.4}
+.tn-herr{color:#B42318;font-weight:700}
+.tn-lnk{border:0;background:none;padding:0;color:#0057B8;font-weight:800;font-size:13px;text-decoration:underline;cursor:pointer}
+.tn-acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;align-items:center}
+.tn-b{height:32px;font-size:12px;padding:0 12px}
+.tn-pill{display:inline-flex;align-items:center;height:24px;border-radius:999px;padding:0 10px;font-size:12px;font-weight:800;white-space:nowrap}
+.tn-ok{background:#DCFAE6;color:#067647}.tn-warn{background:#FEF0C7;color:#93370D}.tn-bad{background:#FEE4E2;color:#B42318}.tn-info{background:#EAF3FF;color:#0057B8}.tn-mute{background:#EEF2F6;color:#3A4456}
+.tn-sp{font-weight:700}
+.tn-t{display:flex;flex-direction:column;font-size:13px}
+.tn-tr{display:grid;align-items:center;padding:9px 4px;border-bottom:1px solid #EEF2F6;gap:6px}
+.tn-t6 .tn-tr{grid-template-columns:minmax(0,3fr) repeat(4,minmax(0,.75fr)) minmax(0,.85fr)}
+.tn-t5 .tn-tr{grid-template-columns:minmax(0,2.6fr) repeat(3,minmax(0,.75fr)) minmax(0,1.15fr)}
+.tn-tr > span:not(:first-child){text-align:right}
+.tn-th{font-size:12px;color:#4B5563;font-weight:700}
+.tn-tf{font-weight:800;border-bottom:0;background:#F8FAFC;border-radius:8px}
+.tn-who{display:flex;align-items:center;gap:8px;font-weight:700;min-width:0}
+.tn-who b{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tn-av{width:26px;height:26px;border-radius:50%;display:inline-grid;place-items:center;font-size:10px;font-weight:800;flex:none}
+.tn-empty{display:flex;align-items:center;gap:12px;padding:14px;border-radius:12px;background:#ECFDF3;border:1px solid #ABEFC6;color:#067647;font-size:14px;font-weight:700}
+.tn-empty i{font-style:normal;width:28px;height:28px;border-radius:50%;background:#12B76A;color:#FFFFFF;display:grid;place-items:center;font-size:15px;flex:none}
+.tn-note{font-size:12px;color:#4B5563;margin:0}
+.tn-dnote{font-size:12px;color:#5B21B6;background:#F5F3FF;border:1px dashed #A78BFA;border-radius:10px;padding:8px 10px;margin:0}
+.tn-log{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.tn-log li{border-left:3px solid #0065D6;background:#F8FAFC;border-radius:0 10px 10px 0;padding:8px 10px;font-size:12px;color:#3A4456}
+.tn-log b{color:#0B1220;font-size:13px}
+.tn-log pre{margin:4px 0 0;font-family:inherit;white-space:pre-wrap;font-size:12px}
+.tn-scrim{position:absolute;inset:0;background:rgba(11,18,32,.38);z-index:80}
+.tn-drw{position:absolute;top:0;right:0;bottom:0;width:470px;background:#FFFFFF;z-index:85;box-shadow:-20px 0 50px rgba(11,18,32,.18);display:flex;flex-direction:column}
+.tn-dh{display:flex;align-items:flex-start;gap:10px;padding:18px 20px 12px;border-bottom:1px solid #E6EAF2}
+.tn-dh h2{margin:0;font-size:18px;font-weight:800}
+.tn-dh p{margin:2px 0 0;font-size:13px;color:#4B5563}
+.tn-x{width:36px;height:36px;border-radius:10px;border:1px solid #E6EAF2;background:#FFFFFF;font-size:18px;cursor:pointer;flex:none}
+.tn-db{flex:1;overflow:auto;padding:14px 20px;display:flex;flex-direction:column;gap:10px}
+.tn-info2{font-size:13px;color:#3A4456;background:#F8FAFC;border:1px solid #E6EAF2;border-radius:10px;padding:8px 10px;margin:0}
+.tn-chips{display:flex;flex-wrap:wrap;gap:6px}
+.tn-chip{height:32px;padding:0 12px;border-radius:999px;border:1px solid #CBD5E1;background:#FFFFFF;font-size:12px;font-weight:700;cursor:pointer;color:#0B1220}
+.tn-chip[aria-pressed="true"]{border-color:#0065D6;background:#EAF3FF;color:#0057B8}
+.tn-wn{margin:0;padding:8px 10px;border-radius:10px;background:#FFFAEB;border:1px solid #FEC84B;color:#93370D;font-size:12px;font-weight:700}
+.tn-opts{display:flex;flex-direction:column;gap:6px}
+.tn-opt{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;border:1px solid #E6EAF2;background:#FFFFFF;cursor:pointer;text-align:left;font:inherit;color:#0B1220;width:100%}
+.tn-opt.tn-on{border-color:#0065D6;background:#EAF3FF;box-shadow:inset 0 0 0 1px #0065D6}
+.tn-opt.tn-off{background:#F8FAFC;cursor:not-allowed}
+.tn-rad{width:16px;height:16px;border-radius:50%;border:2px solid #94A3B8;flex:none;box-sizing:border-box}
+.tn-on .tn-rad{border:5px solid #0065D6}
+.tn-off .tn-rad{border-color:#E2E8F0}
+.tn-ot{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}
+.tn-ot b{font-size:14px;display:flex;gap:6px;align-items:center}
+.tn-ot span{font-size:12px;color:#4B5563}
+.tn-off .tn-ot b{color:#64748B}
+.tn-fast{font-size:11px;font-weight:800;color:#5B21B6;background:#F5F3FF;border-radius:6px;padding:1px 6px}
+.tn-df{border-top:1px solid #E6EAF2;padding:12px 20px 16px;display:flex;flex-direction:column;gap:8px}
+.tn-df .btnp{height:42px;font-size:14px}
+.tn-df .btnp[aria-disabled="true"]{background:#94A3B8;cursor:not-allowed}
+.tn-two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tn-two .btn2[aria-disabled="true"]{color:#94A3B8;cursor:not-allowed}
+.tn-sk{height:58px;border-radius:12px;background:#E9EEF5}
+.tn-dlg{position:absolute;inset:0;background:rgba(11,18,32,.45);display:grid;place-items:center;z-index:90}
+</style>
+<div data-root="1" style="height: 960px; box-sizing: border-box; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #0B1220; background: #F5F7FB; display: flex; position: relative; overflow: hidden">
+__NAV__
+  <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative">
+    <header style="height: 56px; flex: none; padding: 0 24px; display: flex; align-items: center; gap: 14px; background: #FFFFFF; border-bottom: 1px solid #E6EAF2; box-sizing: border-box">
+      <span style="font-size: 13px; color: #4B5563; white-space: nowrap">Sotuv · <b style="color: #0B1220">Sinov nazorati</b></span>
+      <span style="flex: 1"></span>
+      <div role="group" aria-label="Demo holat" style="display: flex; align-items: center; gap: 2px; padding: 4px; border: 1px dashed #A78BFA; border-radius: 12px; background: #F5F3FF">
+        <span style="font-size: 11px; font-weight: 800; color: #5B21B6; padding: 0 6px">HOLAT</span>
+        <sc-for list="{{ demo }}" as="d" hint-placeholder-count="7"><button type="button" aria-pressed="{{ d.on }}" onClick="{{ d.pick }}" class="dmb" style="padding: 0 8px">{{ d.t }}</button></sc-for>
+      </div>
+      <span style="display: flex; align-items: center; gap: 10px"><span aria-hidden="true" style="width: 36px; height: 36px; border-radius: 50%; background: #0B1220; color: #FFFFFF; display: grid; place-items: center; font-size: 13px; font-weight: 800">IM</span><span style="display: flex; flex-direction: column; line-height: 1.2"><b style="font-size: 14px; white-space: nowrap">Islom Mominov</b><span style="font-size: 12px; color: #4B5563">ROP · Rus tili</span></span></span>
+    </header>
+
+    <main style="flex: 1; min-height: 0; overflow: auto; padding: 20px 28px 40px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px">
+      <div class="tn-head">
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0">
+          <h1 style="margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.02em">Sinov darslari · nazorat</h1>
+          <p style="margin: 0; font-size: 13px; color: #4B5563">{{ sub }}</p>
+        </div>
+        <div class="tn-mon" role="group" aria-label="Oy"><button type="button" onClick="{{ prevM }}" aria-label="{{ prevLab }}" title="Oldingi oy">‹</button><span aria-live="polite">{{ monLab }}</span><button type="button" onClick="{{ nextM }}" aria-label="{{ nextLab }}" title="{{ nextTip }}" aria-disabled="{{ nextDis }}">›</button></div>
+        <button type="button" class="btn2" onClick="{{ jadval }}">Dars jadvali</button>
+      </div>
+
+      <sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}">
+        <div aria-busy="true" aria-label="Yuklanmoqda" style="display: flex; flex-direction: column; gap: 14px">
+          <div class="tn-kpis"><div class="tn-kpi"><div class="sk" style="width: 50%"></div><div class="sk" style="width: 30%; height: 24px"></div></div><div class="tn-kpi"><div class="sk" style="width: 50%"></div><div class="sk" style="width: 30%; height: 24px"></div></div><div class="tn-kpi"><div class="sk" style="width: 50%"></div><div class="sk" style="width: 30%; height: 24px"></div></div><div class="tn-kpi"><div class="sk" style="width: 50%"></div><div class="sk" style="width: 30%; height: 24px"></div></div><div class="tn-kpi"><div class="sk" style="width: 50%"></div><div class="sk" style="width: 30%; height: 24px"></div></div></div>
+          <div class="tn-grid"><div class="box"><div class="sk" style="width: 40%"></div><div class="sk" style="width: 85%"></div><div class="sk" style="width: 70%"></div><div class="sk" style="width: 80%"></div><div class="sk" style="width: 60%"></div></div><div class="box"><div class="sk" style="width: 40%"></div><div class="sk" style="width: 90%"></div><div class="sk" style="width: 90%"></div><div class="sk" style="width: 90%"></div></div></div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ loadErr }}" hint-placeholder-val="{{ false }}"><div class="malert" role="alert"><span style="flex: 1">Sinov darslarini yuklab boʻlmadi — server javob bermadi</span><button type="button" class="btn2" onClick="{{ retry }}">Qayta urinish</button></div></sc-if>
+
+      <sc-if value="{{ ready }}" hint-placeholder-val="{{ true }}">
+        <section class="tn-kpis" aria-label="Oy koʻrsatkichlari">
+          <sc-for list="{{ kpi }}" as="k" hint-placeholder-count="5"><div class="{{ k.c }}"><small><i class="{{ k.dot }}" aria-hidden="true"></i>{{ k.l }}</small><b>{{ k.v }}</b><span title="{{ k.s }}">{{ k.s }}</span></div></sc-for>
+        </section>
+
+        <div class="tn-grid">
+          <div class="tn-col">
+            <section class="box" aria-labelledby="attH">
+              <div class="tn-sh"><h2 id="attH">Bugun eʼtibor kerak · {{ attN }}</h2><span class="hint" style="margin: 0">barcha oylar · bugun 01:43</span></div>
+              <sc-if value="{{ hasAtt }}" hint-placeholder-val="{{ true }}">
+                <div role="list" aria-labelledby="attH">
+                  <sc-for list="{{ att }}" as="a" hint-placeholder-count="6"><div class="tn-li" role="listitem" data-att="{{ a.id }}">
+                    <span class="{{ a.tmc }}">{{ a.tm }}<span class="{{ a.kc }}">{{ a.kind }}</span></span>
+                    <div class="tn-inf">
+                      <div class="tn-nm"><button type="button" class="tn-nmb" onClick="{{ a.open }}" title="{{ a.openLab }}">{{ a.name }}</button><em>{{ a.mg }}</em></div>
+                      <div class="tn-mt">{{ a.sub }}<sc-if value="{{ a.herr }}" hint-placeholder-val="{{ false }}"> · <span class="tn-herr">boʻsh vaqtlarni yuklab boʻlmadi</span> · <button type="button" class="tn-lnk" onClick="{{ hintRetry }}">Qayta urinish</button></sc-if></div>
+                      <div class="tn-acts"><sc-for list="{{ a.acts }}" as="b" hint-placeholder-count="2"><sc-if value="{{ b.btn }}" hint-placeholder-val="{{ true }}"><button type="button" class="{{ b.c }}" onClick="{{ b.on }}" title="{{ b.tip }}">{{ b.t }}</button></sc-if><sc-if value="{{ b.pill }}" hint-placeholder-val="{{ false }}"><span class="{{ b.c }}" title="{{ b.tip }}">{{ b.t }}</span></sc-if></sc-for></div>
+                    </div>
+                  </div></sc-for>
+                </div>
+              </sc-if>
+              <sc-if value="{{ noAtt }}" hint-placeholder-val="{{ false }}"><div class="tn-empty" role="status"><i aria-hidden="true">✓</i><span>Hammasi joyida — ustozsiz yoki natijasiz sinov yoʻq.</span></div></sc-if>
+              <p class="tn-dnote"><b>Dizayn farqi:</b> roʻyxatga mobil ROP qoidalari ham qoʻshilgan — ustoz 45 daqiqada tasdiqlamagan bugungi sinov va lid kelgan, lekin menejer natija kiritmagan sinov. Hozirgi desktopda faqat ustozsiz va natijasiz sinovlar.</p>
+            </section>
+            <sc-if value="{{ hasLog }}" hint-placeholder-val="{{ false }}">
+              <section class="box" aria-labelledby="logH">
+                <h2 id="logH">Lidlarga yozilgan izohlar · shu sessiya</h2>
+                <ul class="tn-log"><sc-for list="{{ log }}" as="g" hint-placeholder-count="2"><li><b>{{ g.lead }}</b> · {{ g.at }} · Islom Mominov<pre>{{ g.text }}</pre></li></sc-for></ul>
+              </section>
+            </sc-if>
+          </div>
+
+          <div class="tn-col">
+            <section class="box" aria-labelledby="mgH">
+              <div class="tn-sh"><h2 id="mgH">Menejerlar boʻyicha</h2><span class="hint" style="margin: 0">{{ monLab }}</span></div>
+              <div class="tn-t tn-t6" role="table" aria-labelledby="mgH">
+                <div class="tn-tr tn-th" role="row"><span role="columnheader">Menejer</span><span role="columnheader" title="Shu oyga qoʻyilgan barcha sinovlar">Qoʻydi</span><span role="columnheader">Oʻtdi</span><span role="columnheader">Kelmadi</span><span role="columnheader">Sotildi</span><span role="columnheader" title="Sotildi / oʻtkazildi">Konv.</span></div>
+                <sc-if value="{{ hasMgr }}" hint-placeholder-val="{{ true }}">
+                  <sc-for list="{{ mgrRows }}" as="r" hint-placeholder-count="4"><div class="tn-tr" role="row"><span role="rowheader" class="tn-who"><span class="tn-av" aria-hidden="true" style="{{ r.av }}">{{ r.ini }}</span><b title="{{ r.n }}">{{ r.n }}</b></span><span role="cell">{{ r.put }}</span><span role="cell">{{ r.done }}</span><span role="cell">{{ r.ns }}</span><span role="cell">{{ r.sold }}</span><span role="cell"><span class="{{ r.pc }}" title="{{ r.pl }}">{{ r.p }}</span></span></div></sc-for>
+                  <div class="tn-tr tn-tf" role="row"><span role="rowheader">Jami</span><span role="cell">{{ tot.put }}</span><span role="cell">{{ tot.done }}</span><span role="cell">{{ tot.ns }}</span><span role="cell">{{ tot.sold }}</span><span role="cell">{{ tot.p }}</span></div>
+                </sc-if>
+                <sc-if value="{{ noMgr }}" hint-placeholder-val="{{ false }}"><div role="row"><span role="cell" class="hint" style="display: block; padding: 12px 4px">Bu oyda sinov yoʻq</span></div></sc-if>
+              </div>
+            </section>
+            <section class="box" aria-labelledby="tcH">
+              <div class="tn-sh"><h2 id="tcH">Ustozlar boʻyicha</h2><span class="hint" style="margin: 0">sinovdan keyin sotilish</span></div>
+              <div class="tn-t tn-t5" role="table" aria-labelledby="tcH">
+                <div class="tn-tr tn-th" role="row"><span role="columnheader">Ustoz</span><span role="columnheader">Sinov</span><span role="columnheader">Oʻtkazdi</span><span role="columnheader">Sotildi</span><span role="columnheader" title="Soʻrovdan tasdiqqacha, median">Tasdiq tezligi</span></div>
+                <sc-for list="{{ tRows }}" as="r" hint-placeholder-count="5"><div class="tn-tr" role="row"><span role="rowheader" class="tn-who"><span class="tn-av" aria-hidden="true" style="{{ r.av }}">{{ r.ini }}</span><b title="{{ r.n }}">{{ r.n }}</b></span><span role="cell">{{ r.cnt }}</span><span role="cell">{{ r.done }}</span><span role="cell">{{ r.sold }}</span><span role="cell"><span class="{{ r.spc }}" title="{{ r.spl }}">{{ r.sp }}</span></span></div></sc-for>
+                <sc-if value="{{ none }}" hint-placeholder-val="{{ true }}"><div class="tn-tr" role="row"><span role="rowheader"><span class="tn-pill tn-warn">Ustoz biriktirilmagan</span></span><span role="cell">{{ noneN }}</span><span role="cell">—</span><span role="cell">—</span><span role="cell">—</span></div></sc-if>
+                <sc-if value="{{ noT }}" hint-placeholder-val="{{ false }}"><div role="row"><span role="cell" class="hint" style="display: block; padding: 12px 4px">Bu oyda sinov yoʻq</span></div></sc-if>
+              </div>
+              <p class="tn-note">Tasdiq tezligi — soʻrov yuborilgandan ustoz tasdiqlaguncha (median); 3 soatdan koʻp boʻlsa sariq.</p>
+            </section>
+            <p class="tn-note">“Qoʻydi” — shu oyga qoʻyilgan barcha sinovlar (qayta qoʻyilganlari ham). Konversiya = sotildi / oʻtkazildi.</p>
+          </div>
+        </div>
+      </sc-if>
+    </main>
+
+    <sc-if value="{{ as.open }}" hint-placeholder-val="{{ false }}">
+      <div class="tn-scrim" onClick="{{ as.close }}"></div>
+      <div class="tn-drw" role="dialog" aria-modal="true" aria-labelledby="asH" onKeyDown="{{ as.key }}">
+        <div class="tn-dh"><div style="flex: 1; min-width: 0"><h2 id="asH">{{ as.head }}</h2><p>{{ as.sub }}</p></div><button type="button" class="tn-x" onClick="{{ as.close }}" aria-label="Yopish">✕</button></div>
+        <div class="tn-db">
+          <p class="tn-info2">{{ as.intro }}</p>
+          <sc-if value="{{ as.hasTimes }}" hint-placeholder-val="{{ false }}"><div class="tn-chips" role="group" aria-label="Vaqt"><sc-for list="{{ as.times }}" as="c" hint-placeholder-count="2"><button type="button" class="tn-chip" aria-pressed="{{ c.on }}" onClick="{{ c.pick }}">{{ c.t }}</button></sc-for></div></sc-if>
+          <sc-if value="{{ as.diff }}" hint-placeholder-val="{{ false }}"><p class="tn-wn">{{ as.diffT }}</p></sc-if>
+          <sc-if value="{{ as.load }}" hint-placeholder-val="{{ false }}"><div aria-busy="true" aria-label="Ustozlar jadvali yuklanmoqda" style="display: flex; flex-direction: column; gap: 6px"><div class="tn-sk"></div><div class="tn-sk"></div><div class="tn-sk"></div></div></sc-if>
+          <sc-if value="{{ as.err }}" hint-placeholder-val="{{ false }}"><div class="malert" role="alert"><span style="flex: 1">Ustozlar jadvalini yuklab boʻlmadi</span><button type="button" class="btn2" onClick="{{ as.retry }}">Qayta urinish</button></div></sc-if>
+          <sc-if value="{{ as.ok }}" hint-placeholder-val="{{ true }}">
+            <div class="tn-opts" role="radiogroup" aria-label="Ustoz">
+              <sc-for list="{{ as.list }}" as="o" hint-placeholder-count="5"><button type="button" role="radio" class="{{ o.cls }}" aria-checked="{{ o.chk }}" aria-disabled="{{ o.dis }}" data-tid="{{ o.id }}" onClick="{{ o.on }}" onKeyDown="{{ o.key }}"><span class="tn-rad" aria-hidden="true"></span><span class="tn-av" aria-hidden="true" style="{{ o.avSt }}">{{ o.ini }}</span><span class="tn-ot"><b>{{ o.n }}<sc-if value="{{ o.fast }}" hint-placeholder-val="{{ false }}"><span class="tn-fast">Tez tasdiqlaydi</span></sc-if></b><span>{{ o.mt }}</span></span><span class="{{ o.pc }}">{{ o.pill }}</span></button></sc-for>
+            </div>
+            <sc-if value="{{ as.none }}" hint-placeholder-val="{{ false }}"><p class="tn-wn">Bu vaqtda sinovga ochiq ustoz yoʻq — boshqa vaqtni lid bilan kelishing yoki admin soat ochsin.</p></sc-if>
+          </sc-if>
+        </div>
+        <div class="tn-df">
+          <sc-if value="{{ as.errS }}" hint-placeholder-val="{{ false }}"><p class="err" role="alert" style="margin: 0">{{ as.errS }}</p></sc-if>
+          <button type="button" class="btnp" onClick="{{ as.save }}" aria-disabled="{{ as.saveDis }}">{{ as.saveLab }}</button>
+          <p class="hint" style="margin: 0">Ustoz qabul qilmaguncha uning ilovasi kutadi · 45 daqda javob boʻlmasa sizga xabar keladi</p>
+          <div class="tn-two"><button type="button" class="btn2" onClick="{{ as.resched }}">Boshqa vaqt kelishish</button><button type="button" class="btn2" onClick="{{ as.admin }}" aria-disabled="{{ as.adminDis }}">{{ as.adminLab }}</button></div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ ask }}" hint-placeholder-val="{{ false }}"><div class="tn-dlg"><div role="alertdialog" aria-modal="true" aria-labelledby="akH" aria-describedby="akD" class="box" style="width: 440px" data-ask="1" onKeyDown="{{ askKey }}"><h2 id="akH">Admin vaqt ochsinmi?</h2><p id="akD" style="margin: 0; font-size: 13px; color: #3A4456">{{ askV.q }}</p><p class="hint" style="margin: 0">Adminning bildirishnomalar panelida “ROP soʻradi” xabari chiqadi; admin biriktirgach soʻrov yopiladi.</p><div style="display: flex; gap: 8px; justify-content: flex-end"><button type="button" class="btn2" onClick="{{ askV.no }}">Bekor qilish</button><button type="button" class="btnp" onClick="{{ askV.yes }}">Adminga yuborish</button></div></div></div></sc-if>
+    <sc-if value="{{ agree }}" hint-placeholder-val="{{ false }}"><div class="tn-dlg"><div role="alertdialog" aria-modal="true" aria-labelledby="agH" aria-describedby="agD" class="box" style="width: 460px" data-agree="1" onKeyDown="{{ agKey }}"><h2 id="agH">{{ agV.q }}</h2><p id="agD" style="margin: 0; font-size: 13px; color: #3A4456">{{ agV.d }}</p><div style="display: flex; gap: 8px; justify-content: flex-end"><button type="button" class="btn2" onClick="{{ agV.no }}">Hali kelishilmadi</button><button type="button" class="btnp" onClick="{{ agV.yes }}">{{ agV.yesT }}</button></div></div></div></sc-if>
+    <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}"><div role="status" class="toast" style="bottom: 24px; right: auto; left: 28px; max-width: 560px">{{ toast }}</div></sc-if>
+  </div>
+</div>

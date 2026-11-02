@@ -1,0 +1,26 @@
+        <sc-if value="{{ shSif }}" hint-placeholder-val="{{ false }}">
+          <div class="sk-dh"><span class="sk-ib sk-ib-r"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M5.6 5.6l12.8 12.8"></path></svg></span><div><h2 id="shT">Sifatsizga oʻtkazish</h2><span class="sk-sub">{{ shName }} · {{ shDays }}</span></div></div>
+          <fieldset class="sk-fs"><legend>Sabab</legend>
+            <label class="sk-radio"><input type="radio" name="skR" checked="{{ shR1 }}" onChange="{{ shPickR1 }}"><span><strong>Telefonni olmadi</strong><em>{{ shDays }} · bir marta ham bogʻlanilmadi</em></span></label>
+            <label class="sk-radio"><input type="radio" name="skR" checked="{{ shR2 }}" onChange="{{ shPickR2 }}"><span><strong>Raqam notoʻgʻri / oʻchirilgan</strong></span></label>
+          </fieldset>
+          <div class="sk-hist"><span class="sk-cap">QOʻNGʻIROQLAR TARIXI · AVTOMATIK</span><sc-for list="{{ shHist }}" as="h" hint-placeholder-count="4"><div><span style="color: #D92D20; display: inline-flex"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3.1 19.5 19.5 0 01-6-6A19.8 19.8 0 012.1 4.2 2 2 0 014.1 2h3a2 2 0 012 1.7c.1.9.4 1.8.7 2.7a2 2 0 01-.5 2.1L8 9.8a16 16 0 006 6l1.3-1.3a2 2 0 012.1-.5c.9.3 1.8.6 2.7.7a2 2 0 011.7 2z"></path></svg></span><span>{{ h.t }}</span><em>{{ h.k }}</em></div></sc-for></div>
+          <sc-if value="{{ shErr }}" hint-placeholder-val="{{ false }}"><div class="malert" role="alert">Saqlanmadi — server bilan aloqa yoʻq. Qayta bosing.</div></sc-if>
+          <button type="button" class="sk-b sk-bred sk-bxl" onClick="{{ shSifOk }}" aria-disabled="{{ shBusyA }}">{{ shSifBtn }}</button>
+          <p class="sk-note">Rahmat! Bu lidlar sifatini toʻgʻri oʻlchashga yordam beradi</p>
+        </sc-if>
+        <sc-if value="{{ shBlocked }}" hint-placeholder-val="{{ false }}">
+          <div class="sk-center"><span class="sk-big sk-ib-r"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 018 0v4"></path></svg></span>
+            <h2 id="shT">Biroz kuting — avval {{ gN }} ta lid qoldi</h2>
+            <p>Toʻgʻri tushuning: bu lidlar uzoq vaqt “Urinilmoqda”da tursa, korxona lidlar sifatini notoʻgʻri oʻlchaydi va keyin reklamani yaxshilash qiyinlashadi. Ularga yana bir bor qoʻngʻiroq qiling, olmasa — “Sifatsiz”ga oʻtkazing.</p></div>
+          <button type="button" class="sk-b sk-bpri sk-bxl" onClick="{{ shClose }}">Lidlarga qaytish</button>
+          <p class="sk-note">Taxminan 2–3 daqiqalik ish</p>
+        </sc-if>
+        <sc-if value="{{ shGrace }}" hint-placeholder-val="{{ false }}">
+          <div class="sk-center"><span class="sk-big sk-ib-a"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2L3 14h9l-1 8 10-12h-9z"></path></svg></span>
+            <h2 id="shT">5 daqiqa erkin foydalanish</h2>
+            <p>Bu imkon kuniga <b>faqat bir marta</b> beriladi — masalan, mijoz oʻzi qoʻngʻiroq qilsa yoki zudlik bilan sinovga yozish kerak boʻlsa. Juda zarur boʻlmasa, avval lidlaringizni toʻgʻrilab oling.</p></div>
+          <button type="button" class="sk-b sk-bpri sk-bxl" onClick="{{ shClose }}">Avval lidlarni toʻgʻrilayman</button>
+          <button type="button" class="sk-b sk-bout sk-bxl" onClick="{{ shGraceOk }}">Ha, ishim zarur — 5 daqiqa</button>
+          <p class="sk-note">5 daqiqadan keyin oyna yana ochiladi</p>
+        </sc-if>

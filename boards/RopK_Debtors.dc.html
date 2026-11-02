@@ -1,0 +1,641 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<title>Qarzdorlar</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+sc-for,sc-if{display:contents}
+button,input,select,textarea{font-family:inherit}
+:focus-visible{outline:2px solid #0065D6;outline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.skip{position:absolute;left:12px;top:-60px;z-index:90;height:40px;padding:0 16px;border-radius:10px;border:0;background:#0B1220;color:#FFFFFF;font-size:14px;font-weight:800;cursor:pointer}
+.skip:focus{top:12px}
+/* sidebar */
+.sb{flex:none;width:248px;background:#FFFFFF;border-right:1px solid #E6EAF2;padding:10px 12px;box-sizing:border-box;display:flex;flex-direction:column;gap:1px;transition:width .2s ease;overflow:hidden}
+.nr{display:flex;align-items:center;gap:4px}
+.mi{flex:1;min-width:0;display:flex;align-items:center;gap:12px;min-height:38px;padding:0 10px;border-radius:12px;color:#3A4456;font-size:14px;font-weight:600;border:0;background:transparent;cursor:pointer;text-align:left}
+.mi:hover{background:#F1F5F9;color:#0B1220}
+.mi svg{width:18px;height:18px;flex:none}
+.mi[aria-current="page"]{background:#EAF3FF;color:#0057B8;font-weight:800}
+.lbl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.grp{font-size:12px;font-weight:800;color:#4B5563;letter-spacing:.06em;padding:12px 10px 4px;margin:0}
+.cnt{flex:none;min-width:28px;height:24px;padding:0 7px;box-sizing:border-box;border-radius:999px;background:#D92D20;color:#FFFFFF;font-size:12px;font-weight:800;display:grid;place-items:center;border:0;cursor:pointer}
+.cnt:hover{background:#B42318}
+.sb-min{width:76px;padding:10px 8px}
+.sb-min .lbl,.sb-min .grp,.sb-min .brand{display:none}
+.sb-min .nr{position:relative}
+.sb-min .mi{justify-content:center;padding:0}
+.sb-min .cnt{position:absolute;right:-2px;top:-4px;min-width:24px;height:24px;border:2px solid #FFFFFF}
+/* toolbar */
+.fbox{height:36px;display:flex;align-items:center;gap:6px;padding:0 10px 0 12px;border-radius:10px;border:1px solid #E2E8F0;background:#FFFFFF;font-size:13px;font-weight:600;color:#3A4456;box-sizing:border-box;white-space:nowrap;cursor:pointer}
+.fbox:hover{border-color:#94A3B8}
+.fbox.act{background:#EAF3FF;border-color:#0065D6;color:#0057B8;font-weight:800}
+.fbox.vb{background:#F1E8FF;border-color:#7C3AED;color:#5B21B6;font-weight:800}
+.dd{position:absolute;top:42px;left:0;z-index:40;background:#FFFFFF;border:1px solid #E6EAF2;border-radius:14px;box-shadow:0 16px 40px rgba(16,24,40,.16);padding:8px;display:flex;flex-direction:column;gap:2px;min-width:280px}
+.dd label,.dd .pr{display:flex;align-items:center;gap:8px;min-height:32px;padding:0 8px;border-radius:8px;font-size:13px;font-weight:600;color:#0B1220;cursor:pointer;border:0;background:transparent;text-align:left}
+.dd label:hover,.dd .pr:hover,.dd .pr:focus-visible{background:#F1F5F9}
+.dd .pr[aria-checked="true"]{background:#EAF3FF;color:#0057B8;font-weight:800}
+.dd input[type=checkbox]{width:16px;height:16px;margin:0;accent-color:#0065D6}
+.dd .ap{height:36px;margin-top:6px;border:0;border-radius:10px;background:#0065D6;color:#FFFFFF;font-size:13px;font-weight:800;cursor:pointer}
+.dd .ap[aria-disabled="true"]{background:#CBD5E1;color:#4B5563;cursor:not-allowed}
+.dh{font-size:12px;font-weight:800;color:#4B5563;padding:4px 8px}
+.kbd{display:inline-grid;place-items:center;min-width:22px;height:22px;padding:0 5px;box-sizing:border-box;border-radius:6px;border:1px solid #CBD5E1;border-bottom-width:2px;background:#FFFFFF;font-size:11px;font-weight:800;color:#3A4456}
+/* board */
+.col{flex:none;width:256px;min-height:0;max-height:100%;background:#F1F5F9;border-radius:16px;padding:0 8px 8px;box-sizing:border-box;display:flex;flex-direction:column;gap:6px;border-top:3px solid transparent;transition:background .15s ease}
+.col.drop{background:#EAF3FF;outline:2px dashed #0065D6;outline-offset:-2px}
+.ch{display:flex;flex-direction:column;gap:6px;padding:10px 4px 2px}
+.ch1{display:flex;align-items:center;gap:8px}
+.ct{margin:0;flex:1;min-width:0;font-size:14px;font-weight:800;line-height:1.25;color:#0B1220}
+.ch2{display:flex;align-items:center;gap:6px;min-height:26px;flex-wrap:wrap}
+.pk{flex:none;height:26px;padding:0 10px;border-radius:999px;border:0;background:#0065D6;color:#FFFFFF;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap}
+.pk:hover{background:#0057B8}
+.sum{font-size:12px;font-weight:600;color:#4B5563;white-space:nowrap}
+.rk{height:26px;display:inline-flex;align-items:center;gap:4px;padding:0 9px;border-radius:999px;border:0;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap}
+.rk[aria-pressed="true"]{box-shadow:inset 0 0 0 2px currentColor}
+.seg{display:grid;grid-template-columns:auto auto auto;gap:4px;padding:0 2px}
+.seg button{white-space:nowrap;display:flex;align-items:center;justify-content:center;gap:3px;height:28px;padding:0 7px;border-radius:999px;border:1px solid #E2E8F0;background:#FFFFFF;color:#3A4456;font-size:12px;font-weight:700;cursor:pointer}
+.seg button[aria-pressed="true"]{background:#0065D6;border-color:#0065D6;color:#FFFFFF}
+.lst{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin:0 -4px;padding:2px 4px 4px;scrollbar-width:thin;scrollbar-color:#CBD5E1 transparent}
+.lst>*{flex:none}
+.card{position:relative;flex:none;background:#FFFFFF;border:1px solid #E6EAF2;border-left-width:3px;border-radius:12px;padding:7px 8px 7px 8px;box-shadow:0 1px 2px rgba(16,24,40,.05);display:flex;flex-direction:column;gap:4px;transition:box-shadow .15s ease,border-color .15s ease,opacity .15s ease;cursor:grab}
+.card:hover{box-shadow:0 8px 20px rgba(16,24,40,.10);border-color:#CBD5E1}
+.card:focus-visible{outline:2px solid #0065D6;outline-offset:1px}
+.card.drag{opacity:.4;border-style:dashed;box-shadow:none}
+.card{user-select:none}
+.card.sel{background:#F5F9FF}
+.card.kin{box-shadow:0 0 0 2px #0065D6}
+.r1{display:flex;align-items:flex-start;gap:4px}
+.cbx{flex:none;width:24px;height:24px;display:grid;place-items:center;margin-left:-3px;cursor:pointer}
+.cbx input{width:16px;height:16px;margin:0;accent-color:#0065D6;cursor:pointer}
+.nm{flex:1;min-width:0;min-height:24px;border:0;background:none;padding:2px 0 0;font-size:14px;font-weight:800;line-height:1.25;color:#0B1220;text-align:left;cursor:pointer;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.nm:hover{color:#0057B8;text-decoration:underline}
+.ic{position:relative;flex:none;width:28px;height:28px;border-radius:8px;border:0;background:transparent;color:#4B5563;display:grid;place-items:center;cursor:pointer}
+.ic:hover{background:#F1F5F9;color:#0B1220}
+.att{flex:none;width:20px;height:20px;margin-top:2px;border-radius:50%;background:#ECFDF3;color:#067647;font-size:11px;font-weight:800;display:grid;place-items:center}
+.meta{display:flex;align-items:center;gap:6px;flex-wrap:nowrap;font-size:12px;color:#4B5563;min-height:22px;overflow:hidden}
+.chip{display:inline-flex;align-items:center;gap:4px;height:22px;font-size:12px;font-weight:800;border-radius:999px;padding:0 8px;white-space:nowrap;flex:none}
+.src{display:inline-flex;align-items:center;gap:5px;font-weight:700;color:#3A4456;white-space:nowrap}
+.src i{width:7px;height:7px;border-radius:50%}
+.ser{font-weight:800;color:#0B1220;background:#F1F5F9;border-radius:6px;padding:1px 6px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.r3{display:flex;align-items:center;gap:6px;min-height:24px;font-size:13px;color:#3A4456}
+.ph{display:inline-flex;align-items:center;gap:6px;min-height:24px;color:#3A4456;font-variant-numeric:tabular-nums;text-decoration:none;border-radius:6px;white-space:nowrap}
+.ph:hover{color:#0057B8}
+.ph svg{flex:none;color:#6B7280}
+.cp{width:24px;height:24px;border-radius:6px;border:0;background:transparent;color:#4B5563;display:none;place-items:center;cursor:pointer;font-size:12px;flex:none}
+.card:hover .cp,.card:focus-within .cp,.card.kin .cp{display:grid}
+.cp:hover{background:#F1F5F9}
+.p2{height:22px;padding:0 7px;border-radius:999px;border:0;background:#F1F5F9;color:#3A4456;font-size:12px;font-weight:800;cursor:pointer}
+.tm{margin-left:auto;font-size:12px;color:#4B5563;white-space:nowrap;font-variant-numeric:tabular-nums}
+.r4{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.dfr{display:flex;flex-direction:column;gap:2px;white-space:nowrap;font-size:12px;color:#3A4456;background:#EEF2FF;border-radius:8px;padding:4px 8px}
+.ft{display:flex;align-items:center;gap:4px}
+.fb{height:28px;min-width:28px;border-radius:999px;border:0;background:#F1F5F9;color:#3A4456;display:inline-flex;align-items:center;justify-content:center;gap:4px;font-size:12px;font-weight:700;cursor:pointer;padding:0 8px;box-sizing:border-box}
+.fb:hover{background:#E2E8F0}
+.fb.z{background:transparent;color:#6B7280;padding:0}
+.mg{max-width:118px}
+.mg b{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.av{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:10px;font-weight:800;flex:none;overflow:hidden}
+.more{flex:none;height:34px;border-radius:10px;border:1px dashed #CBD5E1;background:transparent;font-size:12px;font-weight:700;color:#3A4456;cursor:pointer}
+.more:hover{background:#FFFFFF}
+.empty{flex:none;display:flex;flex-direction:column;align-items:center;gap:6px;padding:22px 8px;border:1px dashed #CBD5E1;border-radius:12px;color:#4B5563;font-size:13px;font-weight:600;text-align:center}
+.sk{flex:none;height:112px;border-radius:12px;background:linear-gradient(90deg,#E9EEF5 0%,#F5F7FB 50%,#E9EEF5 100%);background-size:200% 100%;animation:sh 1.2s linear infinite}
+.skn{display:inline-block;width:26px;height:20px;border-radius:999px;background:linear-gradient(90deg,#E2E8F0 0%,#F5F7FB 50%,#E2E8F0 100%);background-size:200% 100%;animation:sh 1.2s linear infinite}
+.sv{position:absolute;inset:0;border-radius:11px;background:rgba(255,255,255,.75);display:flex;align-items:center;justify-content:center;gap:8px;font-size:12px;font-weight:800;color:#0057B8}
+.spin{width:16px;height:16px;border-radius:50%;border:2px solid #BFDBFE;border-top-color:#0065D6;animation:rot .8s linear infinite}
+/* popovers */
+.mn{position:absolute;z-index:60;width:256px;background:#FFFFFF;border:1px solid #E6EAF2;border-radius:12px;box-shadow:0 16px 36px rgba(16,24,40,.18);padding:6px;display:flex;flex-direction:column}
+.mn button{min-height:34px;border:0;background:transparent;text-align:left;padding:0 10px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:#0B1220;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.mn button:hover,.mn button:focus-visible{background:#F1F5F9;outline:0;box-shadow:inset 0 0 0 2px #0065D6}
+.mn .dg{color:#B42318}
+.mn [role=option]{min-height:36px;border:0;background:transparent;text-align:left;padding:0 10px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:#0B1220;display:flex;align-items:center;gap:8px}
+.mn [role=option]:hover,.mn [role=option]:focus-visible{background:#F1F5F9;outline:0;box-shadow:inset 0 0 0 2px #0065D6}
+.mn [role=option][aria-selected=true]{background:#EAF3FF;color:#0057B8;font-weight:800}
+.mn [role=option][aria-disabled=true]{color:#94A3B8;cursor:not-allowed}
+.fld{min-width:0;display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:700;color:#3A4456}
+.fld textarea{box-sizing:border-box;width:100%;min-width:0;border:1px solid #CBD5E1;border-radius:10px;padding:8px 10px;font-size:14px;color:#0B1220;resize:vertical}
+.fld input,.fld select{box-sizing:border-box;width:100%;min-width:0;height:40px;border:1px solid #CBD5E1;border-radius:10px;padding:0 10px;font-size:14px;color:#0B1220}
+.rad{display:flex;align-items:center;gap:10px;min-height:42px;padding:0 12px;border-radius:12px;border:1px solid #E6EAF2;font-size:14px;font-weight:600;cursor:pointer}
+.rad input{width:18px;height:18px;margin:0;accent-color:#0065D6}
+.mn .kb{font-size:11px;font-weight:700;color:#4B5563}
+.rp{background:#FFFFFF;border:1px solid #E6EAF2;border-radius:12px;box-shadow:0 12px 28px rgba(16,24,40,.12);padding:6px;display:flex;flex-direction:column;gap:2px;position:relative;z-index:40}
+.rp label{display:flex;align-items:center;gap:8px;min-height:30px;padding:0 6px;border-radius:8px;font-size:13px;font-weight:600;color:#0B1220;cursor:pointer}
+.rp label:hover{background:#F1F5F9}
+.rp b{margin-left:auto;font-size:12px;color:#4B5563}
+.mp input{height:34px;border:1px solid #CBD5E1;border-radius:8px;padding:0 10px;font-size:13px;margin:2px 2px 6px;outline:0}
+.mp input:focus{border-color:#0065D6;box-shadow:0 0 0 3px rgba(0,101,214,.18)}
+.load{margin-left:auto;font-size:12px;font-weight:700;color:#4B5563;white-space:nowrap}
+.vt{writing-mode:vertical-rl;transform:rotate(180deg);font-size:14px;font-weight:800;color:#0B1220;white-space:nowrap}
+.sch:focus-within{border-color:#0065D6!important;box-shadow:0 0 0 3px rgba(0,101,214,.2)}
+.drw{position:absolute;top:0;right:0;bottom:0;z-index:78;width:520px;background:#FFFFFF;border-left:1px solid #E6EAF2;box-shadow:-20px 0 50px rgba(11,18,32,.18);display:flex;flex-direction:column}
+.dtabs{display:flex;gap:2px;padding:0 20px;border-bottom:1px solid #E6EAF2}
+.dtabs button{height:42px;padding:0 12px;border:0;background:transparent;font-size:13px;font-weight:700;color:#3A4456;cursor:pointer;border-bottom:3px solid transparent;display:flex;align-items:center;gap:6px}
+.dtabs button[aria-selected=true]{color:#0057B8;border-bottom-color:#0065D6;font-weight:800}
+.dbody{flex:1;min-height:0;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:14px}
+.dsec{border:1px solid #E6EAF2;border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.dsec h4{margin:0;font-size:13px;font-weight:800;color:#0B1220}
+.kv{display:grid;grid-template-columns:120px 1fr;gap:6px 10px;font-size:13px}
+.kv span:nth-child(odd){color:#4B5563}
+.step{display:flex;gap:4px}
+.step i{flex:1;height:6px;border-radius:999px;background:#E2E8F0}
+.step i.on{background:#0065D6}
+.cm{display:flex;flex-direction:column;gap:4px;padding:10px 12px;border-radius:12px;background:#F8FAFC;font-size:13px;white-space:pre-line}
+.cm b{font-size:12px;color:#4B5563;font-weight:700}
+.btn2{height:36px;padding:0 14px;border-radius:10px;border:1px solid #CBD5E1;background:#FFFFFF;font-size:13px;font-weight:700;cursor:pointer;color:#0B1220}
+.btnp{height:36px;padding:0 14px;border-radius:10px;border:0;background:#0065D6;color:#FFFFFF;font-size:13px;font-weight:800;cursor:pointer}
+.skt{display:inline-block;width:36px;height:14px;border-radius:6px;vertical-align:middle;background:linear-gradient(90deg,#E2E8F0 0%,#F5F7FB 50%,#E2E8F0 100%);background-size:200% 100%;animation:sh 1.2s linear infinite}
+.mp{z-index:90}
+.seg2{display:flex;flex-wrap:wrap;gap:6px}
+.lvl4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.lvl4 label{min-width:0;padding:0 6px;white-space:nowrap}
+[data-modal] .btnp,[data-modal] .btn2{white-space:nowrap}
+.lvl4 label{justify-content:center;padding:0 6px;font-size:12px}
+.seg2.bad label{border-color:#D92D20}
+.err{font-size:12px;font-weight:700;color:#B42318}
+.ferr input,.ferr select,.ferr textarea{border-color:#D92D20 !important}
+.malert{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:#FEF3F2;border:1px solid #FDA29B;color:#7A271A;font-size:13px;font-weight:600}
+.seg2 label{display:flex;align-items:center;gap:6px;min-height:36px;padding:0 12px;border-radius:10px;border:1px solid #E6EAF2;font-size:13px;font-weight:600;cursor:pointer}
+.seg2 input{margin:0;accent-color:#0065D6}
+.demo{position:absolute;left:740px;top:10px;z-index:76;display:flex;align-items:center;gap:4px;padding:4px;border-radius:12px;background:#FFFFFF;border:1.5px dashed #7C3AED;box-shadow:0 6px 18px rgba(16,24,40,.12)}
+.demo span{font-size:11px;font-weight:800;color:#5B21B6;padding:0 6px;letter-spacing:.04em}
+.demo button{height:28px;padding:0 9px;border-radius:8px;border:0;background:transparent;font-size:12px;font-weight:700;color:#3A4456;cursor:pointer}
+.demo button[aria-pressed="true"]{background:#7C3AED;color:#FFFFFF}
+@keyframes up{from{transform:translateY(10px);opacity:0}to{transform:none;opacity:1}}
+@keyframes bar{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+@keyframes sh{from{background-position:200% 0}to{background-position:-200% 0}}
+@keyframes rot{to{transform:rotate(360deg)}}
+.up{animation:up .22s cubic-bezier(.2,.8,.2,1) both}
+.bar{animation:bar 10s linear both;transform-origin:left}
+.paused .bar{animation-play-state:paused}
+@media (prefers-reduced-motion:reduce){.up,.bar,.sk,.skn,.spin{animation:none}.card{transition:none}}
+button{transition:background .15s ease}
+.cvback{border:0;background:none;color:#0057B8;font-size:14px;font-weight:800;cursor:pointer;padding:6px 4px}
+.dmb{height:28px;padding:0 10px;border-radius:8px;border:0;background:transparent;font-size:12px;font-weight:700;color:#3A4456;cursor:pointer}
+.dmb[aria-pressed="true"]{background:#7C3AED;color:#FFFFFF}
+.dots{list-style:none;margin:0;padding:0;display:flex;gap:6px;flex-wrap:wrap}
+.dots li{display:flex;align-items:center;gap:6px;height:32px;padding:0 12px 0 6px;border-radius:999px;background:#FFFFFF;border:1px solid #E6EAF2;font-size:13px;font-weight:700;color:#4B5563}
+.dots li .dn{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:#E9EEF5;font-size:12px;font-weight:800}
+.dots li.ok{color:#067647}.dots li.ok .dn{background:#DCFAE6;color:#067647}
+.dots li.now{border-color:#0065D6;color:#0057B8;background:#EAF3FF}.dots li.now .dn{background:#0065D6;color:#FFFFFF}
+.box{background:#FFFFFF;border:1px solid #E6EAF2;border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.box h3{margin:0;font-size:14px;font-weight:800}
+.hint{font-size:12px;color:#4B5563;margin:4px 0 0}
+.st{margin:6px 0 0;font-size:12px;font-weight:800;color:#3A4456}
+.trial,.done{padding:10px 14px;border-radius:12px;background:#ECFDF3;border:1px solid #ABEFC6;font-size:13px;color:#067647}
+.trial b,.done b{margin-right:6px}
+.tar,.slots,.fd,.pat{display:flex;gap:8px;flex-wrap:wrap}
+.tar button,.slots button,.fd button,.pat button{min-height:40px;padding:6px 14px;border-radius:12px;border:1px solid #CBD5E1;background:#FFFFFF;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;gap:2px;font-size:13px;color:#0B1220}
+.tar button{min-width:170px}
+.slots button{width:112px}
+.tar small,.slots small{font-size:11px;color:#4B5563;font-weight:600}
+.pat button{flex-direction:row;align-items:center;font-weight:700}
+.tar button[aria-checked="true"],.slots button[aria-checked="true"],.fd button[aria-checked="true"],.pat button[aria-checked="true"]{border-color:#0065D6;background:#EAF3FF;box-shadow:inset 0 0 0 1px #0065D6}
+.slots button.busy{background:#F8FAFC;color:#94A3B8;cursor:not-allowed;border-style:dashed}
+.slots button.busy small{color:#B42318}
+.all summary{font-size:13px;font-weight:700;color:#0057B8;cursor:pointer}
+.opts{display:flex;flex-wrap:wrap;gap:8px}
+.op{display:flex;align-items:center;gap:8px;min-height:38px;padding:0 12px;border-radius:10px;border:1px solid #E6EAF2;font-size:13px;font-weight:600;cursor:pointer}
+.op.on{border-color:#0065D6;background:#EAF3FF}
+.op input,.yn input,.mem input{accent-color:#0065D6;margin:0}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.g1{gap:12px}
+.fld input,.fld select{box-sizing:border-box;width:100%;min-width:0;height:40px;border:1px solid #CBD5E1;border-radius:10px;padding:0 10px;font-size:14px;color:#0B1220}
+.fld small{font-weight:500;color:#4B5563}
+.row{display:flex;align-items:center;gap:8px}
+.okp{flex:none;font-size:12px;font-weight:800;color:#067647;background:#DCFAE6;border-radius:999px;padding:3px 10px}
+.sug{flex:none;font-size:12px;font-weight:700;color:#5B21B6;background:#F5F3FF;border-radius:999px;padding:3px 10px}
+.mem{border:0;margin:0;padding:0}.mem legend{font-size:12px;font-weight:800;color:#3A4456;margin-bottom:6px}
+.mem div{display:flex;flex-wrap:wrap;gap:8px}.mem label{display:flex;align-items:center;gap:6px;min-height:34px;padding:0 10px;border-radius:10px;border:1px solid #E6EAF2;font-size:13px;font-weight:600}
+.warn{margin:0;padding:8px 12px;border-radius:10px;background:#FFFAEB;border:1px solid #FEC84B;color:#93370D;font-size:13px;font-weight:600}
+.yn{display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:13px}.yn > span{min-width:200px;font-weight:700;color:#3A4456}.yn label{display:flex;align-items:center;gap:6px;font-weight:600}
+.aside{flex:none;width:300px;position:sticky;top:0;background:#FFFFFF;border:1px solid #E6EAF2;border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.aside h2{margin:0;font-size:15px;font-weight:800}
+.aside dl{margin:0;display:grid;grid-template-columns:96px 1fr;gap:8px 10px;font-size:13px}
+.aside dt{color:#4B5563;font-weight:600}.aside dd{margin:0;font-weight:700}.aside dd.mute{color:#94A3B8;font-weight:600}
+.toast{position:absolute;right:24px;bottom:84px;z-index:95;background:#0B1220;color:#FFFFFF;border-radius:14px;padding:12px 16px;font-size:13px;font-weight:700;box-shadow:0 20px 50px rgba(11,18,32,.35)}
+.box.bad{border-color:#D92D20;box-shadow:0 0 0 1px #D92D20}
+.chipb{height:28px;padding:0 10px;border-radius:999px;border:1px solid #CBD5E1;background:#FFFFFF;font-size:12px;font-weight:700;color:#0057B8;cursor:pointer}
+.lnk{border:0;background:none;padding:0;color:#0057B8;font-weight:800;font-size:12px;text-decoration:underline;cursor:pointer}
+.ctx{margin:0;display:grid;grid-template-columns:140px 1fr;gap:6px 10px;font-size:13px}.ctx dt{color:#4B5563;font-weight:600}.ctx dd{margin:0;font-weight:700}.ctx dd.mute{color:#94A3B8}
+.box h2{margin:0;font-size:15px;font-weight:800}
+.tag{font-size:12px;font-weight:800;color:#0057B8;background:#EAF3FF;border-radius:999px;padding:4px 10px}
+.qq-g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.qq-tl{display:flex;flex-direction:column;gap:6px}.qq-tlbar{display:flex;border-radius:10px;overflow:hidden;height:34px;font-size:12px;font-weight:700}
+.qq-seg{display:flex;align-items:center;padding:0 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qq-seg.qq-ok{background:#ECFDF3;color:#067647}.qq-seg.qq-warn{background:#FFFAEB;color:#93370D}.qq-seg.qq-lock{background:#FEF3F2;color:#B42318}
+.qq-prev{padding:10px 12px;border-radius:12px;background:#F8FAFC;border:1px solid #E6EAF2;font-size:13px}
+.qq-steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;font-size:13px;color:#3A4456}.qq-steps li{display:flex;gap:10px}
+.qq-dot{flex:none;width:10px;height:10px;border-radius:50%;margin-top:4px}.qq-dot.qq-ok{background:#12B76A}.qq-dot.qq-warn{background:#F79009}.qq-dot.qq-lock{background:#D92D20}.qq-dot.qq-mute{background:#94A3B8}
+.qq-t{display:flex;flex-direction:column;font-size:13px}.qq-tr{display:grid;grid-template-columns:2fr 1fr 1fr 1.4fr;align-items:center;padding:10px 8px;border-bottom:1px solid #EEF2F6}.qq-th{font-size:12px;color:#4B5563;font-weight:700}
+.qq-mn{font-weight:700;display:flex;align-items:center;gap:8px}.qq-av{width:26px;height:26px;border-radius:50%;display:inline-grid;place-items:center;font-size:11px;font-weight:800;flex:none}
+.qq-pill{display:inline-block;min-width:24px;text-align:center;border-radius:999px;padding:2px 8px;font-weight:800}.qq-pw{background:#FEF0C7;color:#93370D}.qq-pl{background:#FEE4E2;color:#B42318}.qq-pz{color:#64748B}.qq-prev.qq-bad{background:#FEF3F2;border-color:#FECDCA;color:#B42318;font-weight:700}
+.sk{height:14px;border-radius:7px;background:#E9EEF5;margin:6px 0}
+.malert{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:#FEF3F2;border:1px solid #FECDCA;color:#B42318;font-size:13px;font-weight:700}
+</style>
+</helmet>
+<div data-root="1" style="height: 960px; box-sizing: border-box; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #0B1220; background: #F5F7FB; display: flex; position: relative; overflow: hidden">
+<style>
+.db-info{margin:0;font-size:13px;color:#4B5563;max-width:900px;line-height:1.45}
+.db-tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.db-tile{background:#FFFFFF;border:1px solid #E6EAF2;border-radius:16px;padding:12px 16px;display:flex;flex-direction:column;gap:4px}
+.db-tile small{font-size:12px;font-weight:700;color:#4B5563}
+.db-tile b{font-size:22px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;white-space:nowrap}
+.db-tile span{font-size:12px;color:#4B5563}
+.db-tile.db-red{border-color:#FECDCA;background:#FFFBFA}.db-tile.db-red b{color:#B42318}
+.db-card{background:#FFFFFF;border:1px solid #E6EAF2;border-radius:16px;display:flex;flex-direction:column;min-height:0}
+.db-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px;border-bottom:1px solid #EEF2F6}
+.db-segs{display:flex;gap:4px;padding:3px;border-radius:12px;background:#EEF2F6}
+.db-segs button{height:32px;padding:0 12px;border-radius:9px;border:0;background:transparent;font-size:13px;font-weight:700;color:#3A4456;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.db-segs button:hover{background:#FFFFFF}
+.db-segs button[aria-pressed="true"]{background:#FFFFFF;color:#0057B8;font-weight:800;box-shadow:0 1px 3px rgba(16,24,40,.12)}
+.db-segs b{min-width:20px;height:20px;padding:0 6px;box-sizing:border-box;border-radius:999px;background:#E2E8F0;font-size:11px;display:inline-grid;place-items:center}
+.db-segs button[aria-pressed="true"] b{background:#0065D6;color:#FFFFFF}
+.db-segs .db-sred b{background:#FEE4E2;color:#B42318}
+.db-fl{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-left:auto}
+.db-sel{height:36px;border:1px solid #CBD5E1;border-radius:10px;padding:0 8px;font-size:13px;font-weight:600;color:#0B1220;background:#FFFFFF;max-width:190px}
+.db-sel.db-act{border-color:#0065D6;background:#EAF3FF;color:#0057B8}
+.db-dt{height:36px;border:1px solid #CBD5E1;border-radius:10px;padding:0 8px;font-size:13px;color:#0B1220;background:#FFFFFF;width:136px;box-sizing:border-box}
+.db-dl{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:#3A4456}
+.db-x{height:36px;padding:0 10px;border-radius:10px;border:0;background:transparent;color:#0057B8;font-size:13px;font-weight:800;cursor:pointer;text-decoration:underline}
+.db-t{display:flex;flex-direction:column;font-size:13px}
+.db-tr{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) minmax(0,1.25fr) minmax(0,1.5fr) minmax(0,1.1fr) 80px;gap:12px;align-items:start;padding:12px 14px;border-bottom:1px solid #EEF2F6;position:relative}
+.db-tr:hover{background:#FAFBFD}
+.db-th{position:sticky;top:0;z-index:2;background:#F8FAFC;font-size:12px;font-weight:800;color:#4B5563;padding:9px 14px;align-items:center}
+.db-th:hover{background:#F8FAFC}
+.db-num{text-align:right}
+.db-who{display:flex;gap:10px;min-width:0}
+.db-av{flex:none;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:800;color:#FFFFFF}
+.db-wt{display:flex;flex-direction:column;gap:2px;min-width:0}
+.db-nm{font-size:14px;font-weight:800;color:#0B1220;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.db-sub{font-size:12px;color:#4B5563;line-height:1.35}
+.db-main{font-size:13px;font-weight:700;color:#0B1220}
+.db-late{color:#B42318;font-weight:800}
+.db-debt{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+.db-c{display:flex;flex-direction:column;gap:2px;min-width:0}
+.db-c.db-num{align-items:flex-end}
+.db-badge{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:999px;font-size:11px;font-weight:800;white-space:nowrap;margin-top:3px}
+.db-b-over{background:#FEE4E2;color:#B42318}.db-b-frz{background:#E0F2FE;color:#075985}.db-b-wait{background:#F1F5F9;color:#3A4456}.db-b-unk{background:#FEF0C7;color:#93370D}
+.db-c.db-num .db-bar{align-self:flex-end}
+.db-paid{font-size:13px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.db-bar{width:100%;max-width:170px;height:6px;border-radius:999px;background:#EEF2F6;overflow:hidden;margin:3px 0 1px}
+.db-bar span{display:block;height:100%;background:#12B76A;border-radius:999px}
+.db-note{font-size:12px;color:#3A4456;line-height:1.4;white-space:pre-line}
+.db-acts{display:flex;gap:6px;justify-content:flex-end;position:relative}
+.db-ib{width:34px;height:34px;border-radius:10px;border:1px solid #E2E8F0;background:#FFFFFF;color:#3A4456;display:grid;place-items:center;cursor:pointer;font-size:18px;font-weight:800;line-height:1;text-decoration:none;box-sizing:border-box}
+.db-ib:hover{background:#F1F5F9;color:#0B1220}
+.db-ib[aria-expanded="true"]{background:#EAF3FF;border-color:#0065D6;color:#0057B8}
+.db-call{color:#067647;border-color:#ABEFC6;background:#ECFDF3}
+.db-mn{position:absolute;right:0;z-index:30;width:220px;background:#FFFFFF;border:1px solid #E6EAF2;border-radius:12px;box-shadow:0 16px 36px rgba(16,24,40,.18);padding:6px;display:flex;flex-direction:column}
+.db-mn button{min-height:36px;border:0;background:transparent;text-align:left;padding:0 10px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:#0B1220;display:flex;align-items:center;gap:10px}
+.db-mn button:hover,.db-mn button:focus-visible{background:#F1F5F9;outline:0;box-shadow:inset 0 0 0 2px #0065D6}
+.db-mn i{font-style:normal;width:18px;text-align:center;color:#4B5563}
+.db-mn hr{border:0;border-top:1px solid #EEF2F6;margin:4px 2px}
+.db-foot{margin:0;padding:10px 14px;font-size:12px;color:#4B5563}
+.db-empty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:56px 20px;color:#4B5563;font-size:13px;text-align:center}
+.db-empty b{font-size:15px;color:#0B1220}
+.db-ov{position:absolute;inset:0;background:rgba(11,18,32,.45);display:grid;place-items:center;z-index:90}
+.db-dlg{width:520px;max-height:900px;background:#FFFFFF;border-radius:18px;box-shadow:0 30px 80px rgba(11,18,32,.35);display:flex;flex-direction:column;overflow:hidden}
+.db-dh{display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid #EEF2F6}
+.db-dh h2{margin:0;flex:1;font-size:16px;font-weight:800}
+.db-db{padding:14px 20px;display:flex;flex-direction:column;gap:12px;overflow-y:auto}
+.db-df{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:12px 20px;border-top:1px solid #EEF2F6}
+.db-sum{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:12px;border-radius:12px;background:#F8FAFC;border:1px solid #EEF2F6}
+.db-sum div{display:flex;flex-direction:column;gap:2px}
+.db-sum span{font-size:12px;color:#4B5563;font-weight:600}
+.db-sum strong{font-size:16px;color:#B42318;font-variant-numeric:tabular-nums}
+.db-sum b{font-size:14px;font-variant-numeric:tabular-nums}
+.db-quick{display:flex;gap:6px;flex-wrap:wrap}
+.db-qb{height:30px;padding:0 10px;border-radius:999px;border:1px solid #CBD5E1;background:#FFFFFF;font-size:12px;font-weight:700;color:#0057B8;cursor:pointer}
+.db-qb:hover{background:#EAF3FF}
+.db-left{margin:0;font-size:13px;font-weight:700;color:#067647;min-height:18px}
+.db-left.db-bad{color:#B42318}
+.db-g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.db-ro input{background:#F8FAFC;color:#3A4456}
+.db-file{display:flex;align-items:center;gap:8px;min-height:40px;padding:0 10px;border:1px dashed #CBD5E1;border-radius:10px;font-size:13px;color:#3A4456;cursor:pointer;box-sizing:border-box}
+.db-file input{font-size:12px;max-width:100%}
+.db-file.db-fbad{border-color:#D92D20}
+.db-sus{padding:10px 12px;border-radius:12px;background:#FFFAEB;border:1px solid #FEC84B;color:#93370D;font-size:13px;display:flex;flex-direction:column;gap:8px}
+.db-sus div{display:flex;gap:8px}
+.db-lock{font-size:11px;font-weight:700;color:#4B5563}
+.db-diff{font-size:12px;color:#4B5563;background:#F5F3FF;border:1px dashed #A78BFA;border-radius:10px;padding:8px 12px;line-height:1.45}
+.db-diff b{color:#5B21B6}
+.db-skr{height:58px;border-radius:10px;margin:8px 14px;background:linear-gradient(90deg,#E9EEF5 0%,#F5F7FB 50%,#E9EEF5 100%);background-size:200% 100%;animation:sh 1.2s linear infinite}
+</style>
+  <nav aria-label="Asosiy menyu" class="{{ sbCls }}">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 4px 2px 8px"><span aria-hidden="true" style="flex: none; width: 34px; height: 34px; border-radius: 9px; background: #0065D6; color: #FFFFFF; display: grid; place-items: center; font-weight: 800; font-size: 17px">H</span><strong class="brand" style="font-size: 16px; letter-spacing: .02em; flex: 1">HOMEWORK</strong><button type="button" class="ic" onClick="{{ toggleSb }}" aria-label="{{ sbLab }}" title="{{ sbLab }}" aria-expanded="{{ sbExp }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ sbIcon }}"></path></svg></button></div>
+    <sc-for list="{{ nav }}" as="n" hint-placeholder-count="19">
+      <sc-if value="{{ n.grp }}" hint-placeholder-val="{{ false }}"><h2 class="grp">{{ n.label }}</h2></sc-if>
+      <sc-if value="{{ n.item }}" hint-placeholder-val="{{ true }}">
+        <div class="nr"><button type="button" class="mi" title="{{ n.tip }}" aria-current="{{ n.cur }}" onClick="{{ n.pick }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ n.icon }}"></path></svg><span class="lbl">{{ n.label }}</span></button><sc-if value="{{ n.badge }}" hint-placeholder-val="{{ false }}"><button type="button" class="cnt" title="{{ n.aria }}" aria-label="{{ n.aria }}" onClick="{{ n.pickBadge }}">{{ n.badge }}</button></sc-if></div>
+      </sc-if>
+    </sc-for>
+    <span style="flex: 1"></span>
+    <div class="nr"><button type="button" class="mi" title="Boshqa boʻlimlar: Oʻquvchini tekshirish, Mobil ilova, Target lidlar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="5" cy="12" r="1.5"></circle><circle cx="12" cy="12" r="1.5"></circle><circle cx="19" cy="12" r="1.5"></circle></svg><span class="lbl">Boshqa boʻlimlar</span></button></div>
+    <div class="nr"><button type="button" class="mi" title="Sozlamalar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"></path></svg><span class="lbl">Sozlamalar</span></button></div>
+  </nav>
+  <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative">
+    <header style="height: 56px; flex: none; padding: 0 24px; display: flex; align-items: center; gap: 14px; background: #FFFFFF; border-bottom: 1px solid #E6EAF2; box-sizing: border-box">
+      <span style="font-size: 13px; color: #4B5563">Sotuv · <b style="color: #0B1220">Qarzdorlar</b></span>
+      <span style="flex: 1"></span>
+      <div role="group" aria-label="Demo holat" style="display: flex; align-items: center; gap: 4px; padding: 4px; border: 1px dashed #A78BFA; border-radius: 12px; background: #F5F3FF">
+        <span style="font-size: 11px; font-weight: 800; color: #5B21B6; padding: 0 6px">HOLAT</span>
+        <sc-for list="{{ demo }}" as="d" hint-placeholder-count="5"><button type="button" aria-pressed="{{ d.on }}" onClick="{{ d.pick }}" class="dmb" title="{{ d.tip }}">{{ d.t }}</button></sc-for>
+      </div>
+      <span style="display: flex; align-items: center; gap: 10px"><span aria-hidden="true" style="width: 36px; height: 36px; border-radius: 50%; background: #0B1220; color: #FFFFFF; display: grid; place-items: center; font-size: 13px; font-weight: 800">IM</span><span style="display: flex; flex-direction: column; line-height: 1.2"><b style="font-size: 14px">Islom Mominov</b><span style="font-size: 12px; color: #4B5563">ROP · Rus tili</span></span></span>
+    </header>
+
+    <main id="dbMain" onClick="{{ outClick }}" style="flex: 1; min-height: 0; overflow: auto; padding: 18px 28px 28px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; align-items: flex-end; gap: 12px">
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 4px">
+          <div style="display: flex; align-items: center; gap: 10px"><h1 style="margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.02em">Qarzdorlar</h1><span class="tag">Rus tili</span></div>
+          <p class="db-info">Roʻyxatda qoldigʻi bor barcha oʻquvchilar. <b>Muddati oʻtgan</b> — sotuv menejeri bilan kelishilgan sana oʻtib, qoldiq toʻlanmagan. Siz faqat Rus tili oʻquvchilarini koʻrasiz.</p>
+        </div>
+        <span class="hint" style="margin: 0; white-space: nowrap">Bugun: Du, 02.11.2026</span>
+      </div>
+
+      <sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}"><div aria-busy="true" aria-label="Yuklanmoqda" style="display: flex; flex-direction: column; gap: 14px"><div class="db-tiles"><div class="db-skr" style="margin: 0; height: 84px"></div><div class="db-skr" style="margin: 0; height: 84px"></div><div class="db-skr" style="margin: 0; height: 84px"></div><div class="db-skr" style="margin: 0; height: 84px"></div></div><div class="db-card" style="padding: 8px 0"><div class="db-skr" style="height: 36px"></div><div class="db-skr"></div><div class="db-skr"></div><div class="db-skr"></div><div class="db-skr"></div></div></div></sc-if>
+      <sc-if value="{{ loadErr }}" hint-placeholder-val="{{ false }}"><div class="malert" role="alert"><span style="flex: 1">Qarzdorlarni yuklab boʻlmadi — server javob bermadi</span><button type="button" class="btn2" onClick="{{ retry }}">Qayta urinish</button></div></sc-if>
+
+      <sc-if value="{{ ready }}" hint-placeholder-val="{{ true }}">
+        <div class="db-tiles" role="group" aria-label="Qarz koʻrsatkichlari">
+          <div class="db-tile db-red"><small>Muddati oʻtgan qoldiq</small><b>{{ tl.over }}</b><span>{{ tl.overS }}</span></div>
+          <div class="db-tile"><small>Bu oy kutilayotgan</small><b>{{ tl.month }}</b><span>{{ tl.monthS }}</span></div>
+          <div class="db-tile"><small>Jami qoldiq</small><b>{{ tl.total }}</b><span>{{ tl.totalS }}</span></div>
+          <div class="db-tile"><small>Shu oʻquvchilardan toʻlangan</small><b>{{ tl.paid }}</b><span>{{ tl.paidS }}</span></div>
+        </div>
+
+        <section class="db-card" aria-label="Qarzdorlar roʻyxati">
+          <div class="db-head">
+            <div class="db-segs" role="group" aria-label="Tezkor filtr"><sc-for list="{{ quick }}" as="q" hint-placeholder-count="3"><button type="button" class="{{ q.cls }}" aria-pressed="{{ q.on }}" onClick="{{ q.pick }}">{{ q.l }} <b>{{ q.n }}</b></button></sc-for></div>
+            <div class="db-fl">
+              <select class="{{ fMgr.cls }}" aria-label="Menejer" onChange="{{ fMgr.on }}"><sc-for list="{{ fMgr.opts }}" as="o" hint-placeholder-count="4"><option value="{{ o.v }}" selected="{{ o.sel }}">{{ o.t }}</option></sc-for></select>
+              <select class="{{ fTch.cls }}" aria-label="Oʻqituvchi" onChange="{{ fTch.on }}"><sc-for list="{{ fTch.opts }}" as="o" hint-placeholder-count="4"><option value="{{ o.v }}" selected="{{ o.sel }}">{{ o.t }}</option></sc-for></select>
+              <select class="{{ fTar.cls }}" aria-label="Tarif" onChange="{{ fTar.on }}"><sc-for list="{{ fTar.opts }}" as="o" hint-placeholder-count="4"><option value="{{ o.v }}" selected="{{ o.sel }}">{{ o.t }}</option></sc-for></select>
+              <label class="db-dl">Sana <input type="date" lang="en-GB" class="db-dt" value="{{ dFrom }}" title="Dan" aria-label="Sanadan" onChange="{{ fromIn }}"></label>
+              <span style="color: #4B5563; font-size: 13px" aria-hidden="true">—</span>
+              <input type="date" lang="en-GB" class="db-dt" value="{{ dTo }}" title="Gacha" aria-label="Sanagacha" onChange="{{ toIn }}">
+              <sc-if value="{{ anyF }}" hint-placeholder-val="{{ false }}"><button type="button" class="db-x" onClick="{{ clearF }}">Tozalash</button></sc-if>
+            </div>
+          </div>
+          <sc-if value="{{ rangeBad }}" hint-placeholder-val="{{ false }}"><p class="err" role="alert" style="margin: 8px 14px 0">“Sanadan” “Sanagacha”dan keyin — oraliqda sana yoʻq, roʻyxat boʻsh chiqadi.</p></sc-if>
+
+          <div class="db-t" role="table" aria-label="Qarzdorlar" aria-rowcount="{{ rowCount }}">
+            <div class="db-tr db-th" role="row"><span role="columnheader">Oʻquvchi</span><span role="columnheader" class="db-num">Qoldiq · kelishilgan sana</span><span role="columnheader">Menejer · ustoz</span><span role="columnheader" class="db-num">Toʻlangan / shartnoma</span><span role="columnheader">Izoh</span><span role="columnheader"><span class="sr">Amallar</span></span></div>
+            <sc-for list="{{ rows }}" as="r" hint-placeholder-count="8"><div class="db-tr" role="row" style="{{ r.zst }}">
+              <div role="rowheader" class="db-who"><span class="db-av" aria-hidden="true" style="{{ r.avSt }}">{{ r.ini }}</span><span class="db-wt"><span class="db-nm">{{ r.name }}</span><span class="db-sub">#{{ r.serial }} · {{ r.phoneD }}</span><span class="db-sub">{{ r.line3 }}</span></span></div>
+              <div role="cell" class="db-c db-num"><span class="db-debt">{{ r.debtT }}</span><span class="{{ r.dueCls }}">{{ r.dueT }}</span><sc-if value="{{ r.dayT }}" hint-placeholder-val="{{ true }}"><span class="{{ r.dayCls }}">{{ r.dayT }}</span></sc-if><span class="{{ r.bCls }}">{{ r.bT }}</span></div>
+              <div role="cell" class="db-c"><span class="db-main">{{ r.mgr }}</span><span class="db-sub">{{ r.tline }}</span></div>
+              <div role="cell" class="db-c db-num"><span class="db-paid">{{ r.paidT }}</span><span class="db-bar" role="img" aria-label="{{ r.pctL }}"><span style="{{ r.barSt }}"></span></span><span class="db-sub">{{ r.payS }}</span></div>
+              <div role="cell" class="db-note">{{ r.notes }}</div>
+              <div role="cell" class="db-acts">
+                <sc-if value="{{ r.tel }}" hint-placeholder-val="{{ true }}"><a class="db-ib db-call" href="{{ r.tel }}" title="Qoʻngʻiroq qilish" aria-label="{{ r.callL }}"><span aria-hidden="true" style="font-size: 17px">☏</span></a></sc-if>
+                <button type="button" class="db-ib" data-menu="{{ r.id }}" title="Amallar" aria-label="{{ r.menuL }}" aria-haspopup="menu" aria-expanded="{{ r.open }}" onClick="{{ r.toggle }}">⋯</button>
+                <sc-if value="{{ r.menu }}" hint-placeholder-val="{{ false }}"><div class="db-mn" role="menu" aria-label="{{ r.menuL }}" style="{{ r.mnSt }}" onKeyDown="{{ menuKey }}">
+                  <button type="button" role="menuitem" onClick="{{ r.mCall }}"><i aria-hidden="true">☏</i>Qoʻngʻiroq qilish</button>
+                  <button type="button" role="menuitem" onClick="{{ r.mSms }}"><i aria-hidden="true">✉</i>SMS yuborish</button>
+                  <hr>
+                  <button type="button" role="menuitem" onClick="{{ r.mPay }}"><i aria-hidden="true">＋</i>Toʻlov qabul qilish</button>
+                  <button type="button" role="menuitem" onClick="{{ r.mEdit }}"><i aria-hidden="true">✎</i>Qarz tahrirlash</button>
+                </div></sc-if>
+              </div>
+            </div></sc-for>
+            <sc-if value="{{ noRows }}" hint-placeholder-val="{{ false }}"><div class="db-empty" role="row"><span role="cell" style="display: flex; flex-direction: column; align-items: center; gap: 8px"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="1.8" aria-hidden="true"><path d="M2 6h20v13H2zM2 10h20"></path></svg><b>Bu filtr boʻyicha qarzdor oʻquvchilar yoʻq</b><span>{{ emptyS }}</span><sc-if value="{{ anyF }}" hint-placeholder-val="{{ false }}"><button type="button" class="btn2" onClick="{{ clearF }}">Filtrlarni tozalash</button></sc-if></span></div></sc-if>
+          </div>
+          <p class="db-foot">⋯ menyusida: Toʻlov qabul qilish, Qarzni tahrirlash, SMS. Oʻquvchini oʻchirish — faqat oʻquvchi kartasidan (arxivga).</p>
+          <p class="db-diff" style="margin: 0 14px 12px"><b>Dizayn farqi:</b> tarif kodda xom qiymat (standard/premium/vip) — bu yerda “Standard / Premium / VIP”; “Tozalash” tugmasi, notoʻgʻri sana oraligʻi ogohlantirishi va ⋯ yonidagi qoʻngʻiroq tugmasi qoʻshildi; kichik summa tasdigʻi (window.confirm) oyna ichida koʻrsatiladi.</p>
+        </section>
+      </sc-if>
+    </main>
+
+    <sc-if value="{{ pay }}" hint-placeholder-val="{{ false }}"><div class="db-ov" onClick="{{ ovClick }}"><div class="db-dlg" role="dialog" aria-modal="true" aria-labelledby="payH" onKeyDown="{{ dlgKey }}" data-dlg="1">
+      <div class="db-dh"><h2 id="payH">{{ pay.title }}</h2><button type="button" class="ic" aria-label="Yopish" onClick="{{ closeDlg }}">✕</button></div>
+      <div class="db-db">
+        <div class="db-sum"><div><span>Joriy qarz</span><strong>{{ pay.debt }}</strong></div><div><span>Toʻlangan</span><b>{{ pay.paid }}</b></div><sc-if value="{{ pay.due }}" hint-placeholder-val="{{ true }}"><div><span>Kelishilgan sana</span><b>{{ pay.due }}</b></div></sc-if></div>
+        <label class="{{ pay.amCls }}">Qabul qilingan summa<input id="payAmt" type="text" inputmode="numeric" autocomplete="off" value="{{ pay.amV }}" onInput="{{ amIn }}" aria-describedby="payLeft" aria-invalid="{{ pay.amInv }}"></label>
+        <div class="db-quick"><sc-for list="{{ pay.quick }}" as="q" hint-placeholder-count="2"><button type="button" class="db-qb" onClick="{{ q.pick }}">{{ q.t }}</button></sc-for></div>
+        <p id="payLeft" class="{{ pay.leftCls }}" aria-live="polite">{{ pay.left }}</p>
+        <div class="db-g2">
+          <label class="{{ pay.dCls }}">Tushgan sana<input type="date" lang="en-GB" value="{{ pay.dateV }}" max="2026-11-02" onInput="{{ dateIn }}"></label>
+          <label class="fld">Vaqt (maʼlum boʻlsa)<input type="time" value="{{ pay.timeV }}" onInput="{{ timeIn }}"></label>
+        </div>
+        <div class="db-g2">
+          <label class="{{ pay.mCls }}">Toʻlov usuli<select onChange="{{ methIn }}"><sc-for list="{{ pay.methods }}" as="m" hint-placeholder-count="8"><option value="{{ m.v }}" selected="{{ m.sel }}">{{ m.t }}</option></sc-for></select></label>
+          <div class="fld">Chek (rasm yoki PDF)<label class="{{ pay.fCls }}"><input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" aria-label="Chek (rasm yoki PDF)" onChange="{{ fileIn }}"></label><sc-if value="{{ pay.fileN }}" hint-placeholder-val="{{ false }}"><small style="color: #067647; font-weight: 700">✓ {{ pay.fileN }}</small></sc-if></div>
+        </div>
+        <p class="hint" style="margin: 0">Faqat haqiqatan qabul qilingan tushum uchun majburiy. Kredit arizasi tushum emas.</p>
+        <sc-if value="{{ pay.sus }}" hint-placeholder-val="{{ false }}"><div class="db-sus" role="alertdialog" aria-label="Summani tekshiring"><span><b>Summa: {{ pay.sus }} — bu juda kichik.</b> Nollar tushib qolmaganmi (masalan, 300 oʻrniga 300 000)?</span><div><button type="button" class="btnp" onClick="{{ susOk }}">Summa toʻgʻri, saqlash</button><button type="button" class="btn2" onClick="{{ susNo }}">Orqaga qaytib tuzatish</button></div></div></sc-if>
+        <sc-if value="{{ pay.err }}" hint-placeholder-val="{{ false }}"><p class="err" role="alert" style="margin: 0; font-size: 13px">{{ pay.err }}</p></sc-if>
+      </div>
+      <div class="db-df"><button type="button" class="btn2" onClick="{{ closeDlg }}">Bekor qilish</button><button type="button" class="btnp" aria-disabled="{{ pay.busyA }}" onClick="{{ paySave }}">{{ pay.saveL }}</button></div>
+    </div></div></sc-if>
+
+    <sc-if value="{{ ed }}" hint-placeholder-val="{{ false }}"><div class="db-ov" onClick="{{ ovClick }}"><div class="db-dlg" role="dialog" aria-modal="true" aria-labelledby="edH" onKeyDown="{{ dlgKey }}" data-dlg="1">
+      <div class="db-dh"><h2 id="edH">{{ ed.title }}</h2><button type="button" class="ic" aria-label="Yopish" onClick="{{ closeDlg }}">✕</button></div>
+      <div class="db-db">
+        <p class="hint" style="margin: 0; font-size: 13px">Yangi tushumni kartochkadagi “Toʻlov qabul qilish” orqali kiriting. Summa va tarix reyestrdan olinadi.</p>
+        <div class="db-g2">
+          <label class="fld db-ro">Toʻlangan summa (soʻm)<input type="text" readonly value="{{ ed.paid }}"></label>
+          <label class="fld db-ro">Qarz miqdori (soʻm)<input type="text" readonly value="{{ ed.debt }}"></label>
+          <label class="fld">Toʻlov muddati<input id="edDue" type="date" lang="en-GB" value="{{ ed.due }}" onInput="{{ edDueIn }}"></label>
+          <label class="fld">Tarif<select onChange="{{ edTarIn }}"><sc-for list="{{ ed.tars }}" as="o" hint-placeholder-count="3"><option value="{{ o.v }}" selected="{{ o.sel }}">{{ o.t }}</option></sc-for></select></label>
+          <label class="fld db-ro">Oxirgi toʻlov sanasi<input type="text" readonly value="{{ ed.last }}"></label>
+          <label class="fld db-ro">Toʻlovlar soni<input type="text" readonly value="{{ ed.cnt }}"></label>
+        </div>
+        <p class="hint" style="margin: -4px 0 0">Toʻlangan summa, qarz, oxirgi toʻlov sanasi va toʻlovlar soni reyestrdan olinadi — bu yerda oʻzgarmaydi.</p>
+        <label class="fld">Izoh<textarea rows="2" onInput="{{ edComIn }}">{{ ed.comment }}</textarea></label>
+        <label class="fld">Eslatma<textarea rows="2" onInput="{{ edNoteIn }}">{{ ed.note }}</textarea></label>
+        <sc-if value="{{ ed.err }}" hint-placeholder-val="{{ false }}"><p class="err" role="alert" style="margin: 0; font-size: 13px">{{ ed.err }}</p></sc-if>
+      </div>
+      <div class="db-df"><button type="button" class="btn2" onClick="{{ closeDlg }}">Bekor qilish</button><button type="button" class="btnp" aria-disabled="{{ ed.busyA }}" onClick="{{ edSave }}">{{ ed.saveL }}</button></div>
+    </div></div></sc-if>
+    <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}"><div role="status" class="toast" style="bottom: 24px">{{ toast }}</div></sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":960}}'>
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.state = { sb: true, demo: 'ok', retried: false, st: this.seed(), quick: 'all', mgr: 'all', tch: 'all', tar: 'all', from: '', to: '', menu: '', pay: null, ed: null, toast: '' };
+    this._t = null;
+    // Esc: fokus sahifada yoʻqolgan boʻlsa ham (qayta chizishdan keyin) oyna/menyu yopiladi
+    if (typeof document !== 'undefined') document.addEventListener('keydown', e => { if (e.key !== 'Escape' || e.defaultPrevented) return; const st = this.state; if (st.pay || st.ed) { const id = (st.pay || st.ed).id; this.setState({ pay: null, ed: null }); this.focusSoon('[data-menu="' + id + '"]'); } else if (st.menu) { const id = st.menu; this.setState({ menu: '' }); this.focusSoon('[data-menu="' + id + '"]'); } });
+  }
+  // Demo bugun: Du 02.11.2026. O'quvchilar bazasi (renderDebtorsTable shu ro'yxatdan qarzdorlarni ajratadi).
+  seed() {
+    const S = (id, name, serial, phone, subject, group, pat, start, debt, due, paid, cnt, last, mgr, tch, dur, tariff, comment, note, frozen) => ({ id, name, serial, phone, subject, group, pat, start, debtAmount: debt, paymentDueDate: due, paidAmount: paid, paymentCount: cnt, lastPaymentDate: last, managerId: mgr, teacherId: tch, lessonDuration: dur, tariff, comment, note, frozen: !!frozen });
+    return [
+      S('s1', 'Shahzoda Ergasheva', 'R0412', '901234567', 'russian', 'C31', 'dcj', '2026-09-14', 450000, '2026-10-20', 450000, 1, '2026-09-14', 'ks', 't2', 30, 'standard', 'Oyligi 25-da tushadi — 1 haftaga surishni soʻradi', ''),
+      S('s2', 'Doniyor Mirzayev', 'R0398', '935557711', 'russian', 'C27', 'tts', '2026-09-01', 790000, '2026-10-28', 790000, 1, '2026-09-01', 'hb', 't1', 60, 'vip', 'Zaklad: yarmi toʻlangan', 'Otasi bilan gaplashish kerak'),
+      S('s3', 'Oybek Nazarov', 'R0377', '977001122', 'russian', 'C22', 'dcj', '2026-08-20', 225000, '2026-10-25', 675000, 3, '2026-10-01', 'gm', 't2', 15, 'premium', 'Kasal — 2 haftaga muzlatildi', '', true),
+      S('s4', 'Gulnoza Saidova', 'R0420', '998887766', 'russian', 'C33', 'tts', '2026-10-01', 300000, '2026-11-01', 600000, 2, '2026-10-15', 'ru', 't3', 30, 'standard', '', ''),
+      S('s5', 'Madina Rasulova', 'R0431', '903332211', 'russian', 'C41', 'dcj', '2026-10-05', 340000, '2026-11-02', 450000, 1, '2026-10-05', 'ru', 't2', 30, 'standard', 'Bugun kechqurun Click orqali', ''),
+      S('s6', 'Aziza Karimova', 'R0405', '946660099', 'russian', 'C38', 'tts', '2026-09-10', 450000, '2026-11-05', 900000, 2, '2026-10-10', 'ks', 't3', 30, 'standard', '', ''),
+      S('s7', 'Sardor Yoqubov', 'R0428', '911110022', 'russian', '', 'dcj', '2026-10-12', 200000, '2026-11-15', 250000, 1, '2026-10-12', 'gm', 't1', 30, 'standard', '', 'Ikki farzand — oilaviy chegirma soʻralgan'),
+      S('s8', 'Javohir Qodirov', 'R0433', '330004455', 'russian', 'C42', 'tts', '2026-10-20', null, '2026-11-20', 0, 0, '', 'hb', 't3', 15, 'standard', 'Shartnoma summasi kiritilmagan', ''),
+      S('s9', 'Kamron Aliyev', 'R0425', '887771100', 'russian', 'C40', 'dcj', '2026-10-08', 395000, '2026-11-28', 395000, 1, '2026-10-08', 'hb', 't2', 60, 'premium', '', ''),
+      S('s10', 'Malika Hasanova', 'R0415', '935550909', 'russian', 'C33', 'dcj', '2026-09-20', 600000, '2026-12-01', 980000, 2, '2026-10-20', 'gm', 't3', 60, 'vip', '', ''),
+      S('s11', 'Nilufar Abdullayeva', 'R0380', '977778899', 'russian', 'C29', 'dcj', '2026-08-25', 790000, '2026-12-10', 1580000, 2, '2026-10-25', 'ks', 't1', 60, 'vip', 'Uzum Nasiya — 3 oyga boʻlingan', ''),
+      S('s12', 'Bekzod Rahimov', 'R0435', '', 'russian', '', 'tts', '2026-10-28', 150000, '', 300000, 1, '2026-10-28', 'ru', 't2', 30, 'standard', 'Sana hali kelishilmagan', ''),
+      // Qarzdor emas: qoldiq aniq 0 · Ingliz tili (ROP koʻrmaydi)
+      S('s13', 'Diyora Usmonova', 'R0402', '901112233', 'russian', 'C36', 'dcj', '2026-09-05', 0, '', 900000, 2, '2026-10-05', 'ks', 't1', 30, 'standard', '', ''),
+      S('e1', 'Timur Saidov', 'E1120', '901119988', 'english', 'C12', 'dcj', '2026-09-01', 500000, '2026-10-15', 500000, 1, '2026-09-01', 'x1', 'e1', 30, 'standard', '', '')
+    ];
+  }
+  focusSoon(sel) { setTimeout(() => { const el = document.querySelector(sel); if (el && el.focus) el.focus(); }, 30); }
+  renderVals() {
+    const s = this.state;
+    const IC = {
+      home: 'M3 10.5 12 4l9 6.5V20H3z', leads: 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 3a4 4 0 110 8 4 4 0 010-8z',
+      cal: 'M3 9.5h18M8 3v3M16 3v3M5 4.5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2v-12a2 2 0 012-2z', trial: 'M8.5 12l2.5 2.5 4.5-5M6 4h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2z',
+      check: 'M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11', clock: 'M12 3a9 9 0 110 18 9 9 0 010-18zM12 7v5l3 2', lock: 'M7 11V7a5 5 0 0110 0v4M5 11h14v10H5z', arch: 'M21 8v13H3V8M1 3h22v5H1zM10 12h4',
+      funnel: 'M3 4h18l-7 8v6l-4 2v-8z', rating: 'M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0z', plan: 'M12 3a9 9 0 110 18 9 9 0 010-18zM12 8a4 4 0 110 8 4 4 0 010-8z', debt: 'M2 6h20v13H2zM2 10h20',
+      script: 'M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9zM14 3v6h6M8 13h8M8 17h5', sms: 'M4 4h16v12H5l-1 4zM8 9h8M8 12h5', stu: 'M2 8l10-5 10 5-10 5zM6 10.5V16c0 1.5 2.7 3 6 3s6-1.5 6-3v-5.5', tg: 'M21 4L3 11l6 2 2 6 3-4 5 4z'
+    };
+    const I = (k, label, icon, o) => Object.assign({ item: true, grp: false, k, label, tip: label, icon: IC[icon], cur: 'false', badge: '', aria: '', pick: () => this.setState({ viaBadge: false }), pickBadge: () => {} }, o || {});
+    const G = l => ({ grp: true, item: false, label: l });
+
+    const mkNav = (unN, loading) => [
+      I('home', 'Bosh sahifa', 'home'), I('leads', 'Lidlar', 'leads', { cur: 'page', badge: loading ? '…' : unN ? String(unN) : '', aria: unN + ' ta menejersiz ochiq lid — faqat ularni koʻrsatish', pickBadge: () => this.setState({ viaBadge: true, picked: {}, allNew: false, excl: {} }) }), I('cal', 'Dars jadvali', 'cal'), I('trial', 'Sinov nazorati', 'trial'),
+      G('NAZORAT'), I('check', 'Tasdiqlar', 'check', { badge: '3', aria: '3 ta tasdiq kutilmoqda' }), I('sla', 'SLA', 'clock', { badge: '19', aria: '19 ta SLA harakat kerak', tip: 'SLA — javob muddati nazorati' }), I('lock', 'Qotgan lidlar qoidasi', 'lock', { tip: 'Qotgan lidlar qoidasi (sozlama)' }), I('arch', 'Arxiv', 'arch', { tip: 'Arxiv (tarix)' }),
+      G('SOTUV'), I('funnel', 'Voronka', 'funnel', { tip: 'Voronka: statistika va menejerlar samaradorligi' }), I('rating', 'Reyting va bonus', 'rating'), I('plan', 'Sotuv rejasi', 'plan', { tip: 'Sotuv rejasi (koʻrish)' }), I('debt', 'Qarzdorlar', 'debt'), I('script', 'Skript va yoʻriqnoma', 'script'), I('sms', 'SMS yuborish', 'sms'),
+      G('OʻQUVCHILAR'), I('stu', 'Oʻquvchilar', 'stu'), I('tg', 'Telegram guruh', 'tg')
+    ];
+    const nav = mkNav(79, false).map(n => Object.assign({}, n, { cur: n.k === 'debt' ? 'page' : 'false', pickBadge: () => {}, pick: () => { if (n.k === 'debt' || !n.item) return; this.setState({ toast: n.label + ' sahifasi ochiladi' }); } }));
+    const MG = { gm: ['Gulchehra Mamadaliyeva', '#0E7490'], hb: ['Hamidaxon Boymirzayeva', '#C2410C'], ks: ['Kamola Shahobiddinova', '#5B21B6'], ru: ['Robiya Usmonova', '#166534'], x1: ['Sevara Nazarova', '#334155'] };
+    const TC = [['t1', 'Dilnoza Karimova'], ['t2', 'Shahnoza Qodirova'], ['t3', 'Nodira Aliyeva']];
+    const TAR = [['standard', 'Standard'], ['premium', 'Premium'], ['vip', 'VIP']];
+    const METHODS = { card: 'Karta', uzum: 'Uzum Nasiya', paylater: 'Paylater', bank: 'Bank hisobi', payme: 'Payme', click: 'Click', cash: 'Naqd', unknown: 'Aniqlanmagan' };
+    // storage.js formatMoney: bo'sh joy (nbsp) bilan guruhlash + " so'm"; inputda — vergul (formatMoneyDigits)
+    const money = a => { const n = Math.round(Number(a) || 0); return (n < 0 ? '−' : '') + String(Math.abs(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' soʻm'; };
+    const digits = raw => { const d = String(raw || '').replace(/\D/g, ''); return d ? d.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : ''; };
+    const lmoney = v => { if (v === '' || v == null) return null; const n = Number(String(v).replace(/[\s,]/g, '')); return Number.isFinite(n) ? n : null; };
+    const dShort = d => d ? d.slice(8, 10) + '.' + d.slice(5, 7) + '.' + d.slice(0, 4) : '—';
+    const phoneD = p => { let x = String(p || '').replace(/\D/g, ''); if (!x) return ''; if (x.length === 9) x = '998' + x; return '+' + x.slice(0, 3) + ' ' + x.slice(3, 5) + ' ' + x.slice(5, 8) + ' ' + x.slice(8, 10) + ' ' + x.slice(10, 12); };
+    const ini = n => String(n).split(' ').map(w => w[0] || '').join('').slice(0, 2).toUpperCase();
+    const TODAY = '2026-11-02', DAY = 86400000, dnum = d => Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10));
+    const toast = (t, ms) => { this.setState({ toast: t }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: '' }), ms || 3000); };
+    // ── renderDebtorsTable 1:1 ──
+    const all = s.demo === 'none' ? s.st.map(x => Object.assign({}, x, { debtAmount: x.subject === 'russian' ? 0 : x.debtAmount, paymentDueDate: '' })) : s.st;
+    const debtors = all.filter(x => { const debt = Number(x.debtAmount || 0); if ((x.subject || 'english') !== 'russian') return false; return debt > 0 || (x.debtAmount == null && !!x.paymentDueDate); });
+    const filtered = debtors.filter(x => {
+      if (s.mgr !== 'all' && x.managerId !== s.mgr) return false;
+      if (s.tch !== 'all' && x.teacherId !== s.tch) return false;
+      if (s.tar !== 'all' && (x.tariff || 'standard') !== s.tar) return false;
+      if (s.from || s.to) { if (!x.paymentDueDate) return false; if (s.from && x.paymentDueDate < s.from) return false; if (s.to && x.paymentDueDate > s.to) return false; }
+      return true; });
+    const isOver = x => !!x.paymentDueDate && x.paymentDueDate < TODAY && Number(x.debtAmount || 0) > 0;
+    const inMonth = x => !!x.paymentDueDate && x.paymentDueDate >= '2026-11-01' && x.paymentDueDate <= '2026-11-30';
+    const overdueList = filtered.filter(isOver), monthList = filtered.filter(x => inMonth(x) && !isOver(x));
+    const shown = (s.quick === 'overdue' ? overdueList : s.quick === 'month' ? monthList : filtered).slice().sort((a, b) => (a.paymentDueDate ? dnum(a.paymentDueDate) : Infinity) - (b.paymentDueDate ? dnum(b.paymentDueDate) : Infinity));
+    const sumDebt = l => l.reduce((a, x) => a + Number(x.debtAmount || 0), 0);
+    const totalDebt = sumDebt(filtered), totalPaid = filtered.reduce((a, x) => a + Number(x.paidAmount || 0), 0);
+    const usedMgr = new Set(debtors.map(x => x.managerId));
+    const loading = s.demo === 'load', loadErr = s.demo === 'err' && !s.retried, ready = !loading && !loadErr;
+    const anyF = s.mgr !== 'all' || s.tch !== 'all' || s.tar !== 'all' || !!s.from || !!s.to;
+    const byId = id => s.st.find(x => x.id === id);
+    const patch = (id, o) => s.st.map(x => x.id === id ? Object.assign({}, x, o) : x);
+    const openPay = id => { const x = byId(id); this.setState({ menu: '', pay: { id, am: '', date: TODAY, time: '', method: '', file: '', err: '', bad: '', sus: false, busy: false, pending: null, expected: Number(x.debtAmount || 0) } }); this.focusSoon('#payAmt'); };
+    const openEd = id => { const x = byId(id); this.setState({ menu: '', ed: { id, due: x.paymentDueDate || '', tariff: x.tariff || 'standard', comment: x.comment || '', note: x.note || '', err: '', busy: false } }); this.focusSoon('#edDue'); };
+    const closeDlg = () => { const id = (s.pay || s.ed || {}).id; this.setState({ pay: null, ed: null }); if (id) this.focusSoon('[data-menu="' + id + '"]'); };
+    const rows = shown.map((x, i) => {
+      const debt = Number(x.debtAmount || 0), paid = Number(x.paidAmount || 0), total = debt + paid, pct = total > 0 ? Math.round(paid / total * 100) : 0;
+      const over = isOver(x), days = x.paymentDueDate ? Math.round((dnum(x.paymentDueDate) - dnum(TODAY)) / DAY) : null;
+      const dayT = days === null ? '' : days < 0 ? (-days) + ' kun oʻtdi' : days === 0 ? 'bugun' : days + ' kun qoldi';
+      const b = x.frozen ? ['db-badge db-b-frz', 'Muzlatilgan'] : over ? ['db-badge db-b-over', 'Muddati oʻtgan'] : x.debtAmount == null ? ['db-badge db-b-unk', 'Qarz aniqlanmagan'] : x.paymentDueDate ? ['db-badge db-b-wait', 'Kutilmoqda'] : ['db-badge db-b-wait', 'Sana kelishilmagan'];
+      const tel = String(x.phone || '').replace(/[^\d+]/g, '');
+      const up = i >= shown.length - 2 && shown.length > 3;
+      return { id: x.id, name: x.name, ini: ini(x.name), avSt: 'background:' + (over ? '#B42318' : '#0E7490'), serial: x.serial, phoneD: phoneD(x.phone) || '—',
+        line3: 'Rus tili · ' + (x.group || 'guruh yoʻq') + ' · ' + (x.pat === 'tts' ? 'SSh' : 'DCJ') + (x.start ? ' · ' + dShort(x.start) + ' dan' : ''),
+        debtT: money(debt), dueT: x.paymentDueDate ? dShort(x.paymentDueDate) : '—', dueCls: over ? 'db-late' : 'db-main', dayT, dayCls: 'db-sub' + (over ? ' db-late' : ''), bCls: b[0], bT: b[1],
+        mgr: (MG[x.managerId] || ['—'])[0], tline: ((TC.find(t => t[0] === x.teacherId) || [0, '—'])[1]) + ' · ' + (x.lessonDuration || 15) + ' daq · ' + ((TAR.find(t => t[0] === x.tariff) || [0, 'Standard'])[1]),
+        paidT: money(paid) + ' / ' + money(total), pctL: pct + '% toʻlangan', barSt: 'width:' + pct + '%', payS: pct + '% · ' + (x.paymentCount || 0) + ' ta toʻlov' + (x.lastPaymentDate ? ' · oxirgi ' + dShort(x.lastPaymentDate) : ''),
+        notes: [x.comment, x.note].filter(Boolean).join('\n') || '—', tel: tel ? 'tel:+998' + tel.slice(-9) : '', callL: x.name + ' — qoʻngʻiroq',
+        menuL: x.name + ' — amallar', open: s.menu === x.id ? 'true' : 'false', menu: s.menu === x.id, zst: s.menu === x.id ? 'z-index:5' : '', mnSt: up ? 'bottom:40px' : 'top:40px',
+        toggle: () => { const opening = this.state.menu !== x.id; this.setState({ menu: opening ? x.id : '' }); if (opening) this.focusSoon('.db-mn [role=menuitem]'); },
+        mCall: () => { this.setState({ menu: '' }); toast(x.phone ? 'Qoʻngʻiroq: ' + phoneD(x.phone) : 'Telefon raqami yoʻq'); },
+        mSms: () => { this.setState({ menu: '' }); toast(x.phone ? 'SMS ilovasi ochiladi: ' + phoneD(x.phone) : 'Telefon raqami yoʻq'); },
+        mPay: () => openPay(x.id), mEdit: () => openEd(x.id) };
+    });
+    // ── inflowUI.openPayment ──
+    let pay = null; const P = s.pay; const px = P ? byId(P.id) : null;
+    const setP = o => this.setState({ pay: Object.assign({}, this.state.pay, o) });
+    if (P && px) {
+      const debtNow = Number(px.debtAmount || 0), paidSoFar = Number(px.paidAmount || 0), a = lmoney(P.am);
+      const quick = [{ t: 'Qarzni toʻliq: ' + money(debtNow), v: debtNow }].concat(debtNow >= 2 ? [{ t: 'Yarmi: ' + money(Math.round(debtNow / 2)), v: Math.round(debtNow / 2) }] : []);
+      pay = { title: px.name + ' — Toʻlov qabul qilish', debt: money(debtNow), paid: money(paidSoFar), due: px.paymentDueDate ? dShort(px.paymentDueDate) : '',
+        amV: P.am, amCls: 'fld' + (P.bad === 'am' ? ' ferr' : ''), amInv: P.bad === 'am' ? 'true' : 'false',
+        quick: quick.map(q => ({ t: q.t, pick: () => { setP({ am: digits(q.v), err: '', bad: '' }); this.focusSoon('#payAmt'); } })),
+        left: a ? (a > debtNow ? 'Summa qarzdan katta' : 'Toʻlovdan keyin qoldiq: ' + money(debtNow - a)) : '', leftCls: 'db-left' + (a > debtNow ? ' db-bad' : ''),
+        dateV: P.date, dCls: 'fld' + (P.bad === 'date' ? ' ferr' : ''), timeV: P.time,
+        methods: [{ v: '', t: 'Usulni tanlang', sel: !P.method }].concat(Object.keys(METHODS).filter(k => k !== 'unknown').map(k => ({ v: k, t: METHODS[k], sel: P.method === k }))), mCls: 'fld' + (P.bad === 'method' ? ' ferr' : ''),
+        fCls: 'db-file' + (P.bad === 'file' ? ' db-fbad' : ''), fileN: P.file, sus: P.sus ? money(a) : '', err: P.err, busyA: P.busy ? 'true' : 'false', saveL: P.busy ? 'Saqlanmoqda...' : 'Qabul qilish' };
+    }
+    const doPay = skipSus => {
+      const st = this.state, Q = st.pay; if (!Q || Q.busy) return; const x = byId(Q.id);
+      let pending = Q.pending;
+      if (!pending) {
+        const amount = lmoney(Q.am);
+        if (!amount || amount <= 0 || amount > Number(x.debtAmount)) { setP({ err: 'Summa musbat boʻlishi va qarzdan oshmasligi kerak', bad: 'am' }); this.focusSoon('#payAmt'); return; }
+        if (amount < 10000 && !skipSus) { setP({ sus: true, err: '', bad: '' }); return; }
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(Q.date) || Q.date > TODAY) { setP({ err: 'Tushum sanasini toʻgʻri tanlang', bad: 'date', sus: false }); return; }
+        if (!Q.method) { setP({ err: 'Toʻlov usulini tanlang', bad: 'method', sus: false }); return; }
+        if (!Q.file) { setP({ err: 'Chekni rasm yoki PDF shaklida yuklang', bad: 'file', sus: false }); return; }
+        pending = { amount, paidDate: Q.date, method: Q.method, expectedDebt: Q.expected };
+      }
+      setP({ busy: true, err: '', bad: '', sus: false, pending });
+      setTimeout(() => {
+        const st2 = this.state;
+        if (st2.demo === 'pay409') { setP({ busy: false, err: 'Qarz oʻzgargan. Sahifani yangilang. Qayta urinish shu toʻlovni takroran yozmaydi.' }); return; }
+        const x2 = st2.st.find(y => y.id === Q.id), debt = Number(x2.debtAmount), amt = pending.amount;
+        const o = { paidAmount: Number(x2.paidAmount || 0) + amt, debtAmount: debt - amt, lastPaymentDate: pending.paidDate, paymentCount: (Number(x2.paymentCount) || 0) + 1, frozen: false };
+        if (debt === amt) o.paymentDueDate = '';
+        this.setState({ st: st2.st.map(y => y.id === Q.id ? Object.assign({}, y, o) : y), pay: null });
+        toast('Toʻlov serverga saqlandi' + (debt === amt ? ' · ' + x2.name + ' qarzdorlar roʻyxatidan chiqdi' : ' · qoldiq ' + money(debt - amt)), 4000);
+      }, 800);
+    };
+    // ── openDebtorEditModal ──
+    let ed = null; const E = s.ed; const ex = E ? byId(E.id) : null;
+    const setE = o => this.setState({ ed: Object.assign({}, this.state.ed, o) });
+    if (E && ex) ed = { title: 'Qarz tahrirlash — ' + ex.name, paid: digits(ex.paidAmount || 0) || '0', debt: digits(ex.debtAmount || 0) || '0', due: E.due, tars: TAR.map(t => ({ v: t[0], t: t[1], sel: E.tariff === t[0] })),
+      last: ex.lastPaymentDate ? dShort(ex.lastPaymentDate) : '—', cnt: String(ex.paymentCount || 0), comment: E.comment, note: E.note, err: E.err, busyA: E.busy ? 'true' : 'false', saveL: E.busy ? 'Saqlanmoqda...' : 'Saqlash' };
+    const opt = (cur, list, allT) => [{ v: 'all', t: allT, sel: cur === 'all' }].concat(list.map(o => ({ v: o[0], t: o[1], sel: cur === o[0] })));
+    return {
+      nav, sbCls: s.sb ? 'sb' : 'sb sb-min', sbExp: s.sb ? 'true' : 'false', sbLab: s.sb ? 'Menyuni yigʻish' : 'Menyuni ochish', sbIcon: s.sb ? 'M15 6l-6 6 6 6' : 'M9 6l6 6-6 6', toggleSb: () => this.setState({ sb: !s.sb }),
+      demo: [['ok', 'Oddiy', ''], ['load', 'Yuklanmoqda', ''], ['err', 'Xato', 'Roʻyxatni yuklab boʻlmadi'], ['pay409', 'Toʻlov 409', 'Saqlashda server: qarz oʻzgargan'], ['none', 'Qarzdor yoʻq', 'Hamma toʻlagan']].map(d => ({ t: d[1], tip: d[2] || d[1], on: s.demo === d[0] ? 'true' : 'false', pick: () => { clearTimeout(this._t); this.setState({ demo: d[0], retried: false, st: this.seed(), quick: 'all', mgr: 'all', tch: 'all', tar: 'all', from: '', to: '', menu: '', pay: null, ed: null, toast: '' }); } })),
+      loading, loadErr, ready, retry: () => this.setState({ retried: true }),
+      tl: { over: money(sumDebt(overdueList)), overS: overdueList.length + ' ta oʻquvchi', month: money(sumDebt(monthList)), monthS: monthList.length + ' ta oʻquvchining navbatdagi qismi', total: money(totalDebt), totalS: filtered.length + ' ta oʻquvchi boʻlib toʻlamoqda', paid: money(totalPaid), paidS: 'jami shartnoma ' + money(totalPaid + totalDebt) },
+      quick: [['all', 'Barchasi', filtered.length, ''], ['overdue', 'Muddati oʻtgan', overdueList.length, 'db-sred'], ['month', 'Bu oy', monthList.length, '']].map(q => ({ l: q[1], n: String(q[2]), cls: q[3], on: s.quick === q[0] ? 'true' : 'false', pick: () => this.setState({ quick: q[0], menu: '' }) })),
+      fMgr: { cls: 'db-sel' + (s.mgr !== 'all' ? ' db-act' : ''), opts: opt(s.mgr, Object.keys(MG).filter(k => usedMgr.has(k) || k === s.mgr).map(k => [k, MG[k][0]]), 'Barcha menejerlar'), on: e => this.setState({ mgr: e.target.value, menu: '' }) },
+      fTch: { cls: 'db-sel' + (s.tch !== 'all' ? ' db-act' : ''), opts: opt(s.tch, TC, 'Barcha oʻqituvchilar'), on: e => this.setState({ tch: e.target.value, menu: '' }) },
+      fTar: { cls: 'db-sel' + (s.tar !== 'all' ? ' db-act' : ''), opts: opt(s.tar, TAR, 'Barcha tariflar'), on: e => this.setState({ tar: e.target.value, menu: '' }) },
+      dFrom: s.from, dTo: s.to, fromIn: e => this.setState({ from: e.target.value }), toIn: e => this.setState({ to: e.target.value }), rangeBad: !!(s.from && s.to && s.from > s.to),
+      anyF, clearF: () => this.setState({ mgr: 'all', tch: 'all', tar: 'all', from: '', to: '' }),
+      rows, noRows: rows.length === 0, rowCount: String(rows.length + 1),
+      emptyS: s.demo === 'none' ? 'Hamma Rus tili oʻquvchilari toʻliq toʻlagan.' : anyF || s.quick !== 'all' ? 'Filtrni oʻzgartiring yoki tozalang.' : '',
+      menuKey: e => { const its = Array.prototype.slice.call(e.currentTarget.querySelectorAll('[role=menuitem]')); const ix = its.indexOf(document.activeElement);
+        if (e.key === 'Escape') { e.preventDefault(); const id = this.state.menu; this.setState({ menu: '' }); this.focusSoon('[data-menu="' + id + '"]'); return; }
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); (its[(ix + (e.key === 'ArrowDown' ? 1 : -1) + its.length) % its.length] || its[0]).focus(); } },
+      outClick: e => { if (this.state.menu && !(e.target.closest && (e.target.closest('.db-mn') || e.target.closest('[data-menu]')))) this.setState({ menu: '' }); },
+      pay, ed,
+      ovClick: e => { if (e.target === e.currentTarget) closeDlg(); }, closeDlg,
+      dlgKey: e => { if (e.key === 'Escape') { e.preventDefault(); closeDlg(); return; } if (e.key === 'Tab') { const f = Array.prototype.slice.call(e.currentTarget.querySelectorAll('button,input,select,textarea')).filter(el => !el.disabled); const ix = f.indexOf(document.activeElement); if ((e.shiftKey && ix <= 0) || (!e.shiftKey && ix === f.length - 1)) { e.preventDefault(); (e.shiftKey ? f[f.length - 1] : f[0]).focus(); } } },
+      amIn: e => setP({ am: digits(e.target.value), err: '', bad: '', sus: false, pending: null }), dateIn: e => setP({ date: e.target.value, err: '', bad: '', pending: null }), timeIn: e => setP({ time: e.target.value, pending: null }),
+      methIn: e => setP({ method: e.target.value, err: '', bad: '', pending: null }),
+      fileIn: e => { const f = e.target.files && e.target.files[0]; if (f && ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'].indexOf(f.type) < 0) { setP({ file: '', err: 'Chekni rasm yoki PDF shaklida yuklang', bad: 'file' }); return; } setP({ file: f ? f.name : '', err: '', bad: '', pending: null }); },
+      paySave: () => doPay(false), susOk: () => doPay(true), susNo: () => { setP({ sus: false }); this.focusSoon('#payAmt'); },
+      edDueIn: e => setE({ due: e.target.value }), edTarIn: e => setE({ tariff: e.target.value }), edComIn: e => setE({ comment: e.target.value }), edNoteIn: e => setE({ note: e.target.value }),
+      edSave: () => { const Q = this.state.ed; if (!Q || Q.busy) return; setE({ busy: true, err: '' }); setTimeout(() => { const st = this.state; this.setState({ st: st.st.map(y => y.id === Q.id ? Object.assign({}, y, { paymentDueDate: Q.due, tariff: Q.tariff, comment: Q.comment, note: Q.note }) : y), ed: null }); toast('Saqlandi · ' + byId(Q.id).name); }, 500); },
+      toast: s.toast
+    };
+  }
+}
+</script>
+</body>
+</html>

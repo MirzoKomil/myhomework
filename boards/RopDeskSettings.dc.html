@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<title>ROP — Vositalar (kompyuter)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#0057B8;text-decoration:none}a:hover{color:#0B1220}
+input::placeholder,textarea::placeholder{color:#6B7280}
+.dk-nav a{display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:12px;color:#3A4456;font-size:14px;font-weight:600}
+.dk-nav a:hover{background:#F1F5F9;color:#0B1220}
+.dk-nav a[aria-current="page"]{background:#EAF3FF;color:#0057B8;font-weight:800}
+.dk-cnt{margin-left:auto;min-width:22px;height:22px;padding:0 6px;box-sizing:border-box;border-radius:999px;background:#D92D20;color:#FFFFFF;font-size:12px;font-weight:800;display:grid;place-items:center}
+.dk-grp{font-size:12px;font-weight:800;color:#4B5563;letter-spacing:.06em;padding:12px 12px 4px}
+.dk-card{background:#FFFFFF;border:1px solid #E6EAF2;border-radius:20px}
+.dk-row:hover{background:#F8FAFD}
+.dk-step{width:44px;height:44px;border-radius:12px;border:1px solid #CBD5E1;background:#FFFFFF;font:inherit;font-size:18px;font-weight:800;color:#0B1220;cursor:pointer}
+@keyframes dwToast{from{transform:translateY(16px);opacity:0}to{transform:none;opacity:1}}
+.dw-toast{animation:dwToast .35s cubic-bezier(.2,.8,.2,1) both}
+@media (prefers-reduced-motion:reduce){.dw-toast{animation:none}}
+a,button{transition:transform .2s ease,background .15s ease}a:active,button:active{transform:scale(.98)}
+.t-table{display:table}.t-hg{display:table-header-group}.t-rg{display:table-row-group}.t-row{display:table-row}.t-cell{display:table-cell;vertical-align:middle}sc-for,sc-if{display:contents}
+</style>
+</helmet>
+<div style="min-height: 960px; box-sizing: border-box; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #0B1220; background: #F5F7FB; display: flex; position: relative">
+
+  <aside aria-label="Asosiy menyu" style="flex: none; width: 256px; background: #FFFFFF; border-right: 1px solid #E6EAF2; display: flex; flex-direction: column; padding: 18px 14px; box-sizing: border-box">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 2px 8px 14px">
+      <span style="width: 36px; height: 36px; border-radius: 11px; background: #0065D6; color: #FFFFFF; display: grid; place-items: center; font-weight: 800; font-size: 15px">D</span>
+      <span style="display: flex; flex-direction: column"><strong style="font-size: 15px">Domwork Team</strong><span style="font-size: 12px; color: #4B5563; font-weight: 600">ROP kabineti</span></span>
+    </div>
+    <nav class="dk-nav" style="display: flex; flex-direction: column; gap: 2px">
+      <a href="RopDeskHome.dc.html"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5L12 3l9 7.5V20a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"></path></svg>Bosh</a>
+      <a href="RopDeskLeads.dc.html"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 00-3-3.9M16 3.1a4 4 0 010 7.8"></path></svg>Lidlar<span class="dk-cnt" aria-label="7 ta kutmoqda">7</span></a>
+      <a href="RopDeskTrials.dc.html"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16" rx="3"></rect><path d="M3 9.5h18M8 3v3M16 3v3"></path></svg>Jadval</a>
+      <a href="RopDeskTeam.dc.html"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V11M10 20V5M16 20v-7M21 20H3"></path></svg>Jamoa va voronka</a>
+      <a href="RopDeskControl.dc.html"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"></path></svg>Nazorat<span class="dk-cnt" aria-label="7 ta kutmoqda">7</span></a>
+      <span class="dk-grp">SOTUV</span>
+      <a href="Rating.dc.html"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0zM7 6H4a3 3 0 003 3M17 6h3a3 3 0 01-3 3"></path></svg>Reyting va bonus</a>
+      <a href="Debtors.dc.html"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="13" rx="3"></rect><path d="M2 10h20"></path></svg>Qarzdorlar</a>
+      <a href="Scripts.dc.html"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"></path></svg>Skript va yoʻriqnoma</a>
+      <span class="dk-grp">VOSITALAR</span>
+      <a href="RopDeskSettings.dc.html" aria-current="{{ cur.rule }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 018 0v4"></path></svg>Qotgan lidlar qoidasi</a>
+      <a href="RopDeskSettings.dc.html" aria-current="{{ cur.arch }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4"></path></svg>Arxiv</a>
+      <a href="RopDeskSettings.dc.html" aria-current="{{ cur.sms }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v12H5l-1 4z"></path><path d="M8 9h8M8 12h5"></path></svg>SMS yuborish</a>
+      <span class="dk-grp">OʻQUVCHILAR</span>
+      <a href="Students.dc.html"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 10L12 5 2 10l10 5 10-5z"></path><path d="M6 12v5c3 2 9 2 12 0v-5"></path></svg>Oʻquvchilar</a>
+      <a href="Students.dc.html"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 4L3 11l6 2 2 6 3-4 5 4z"></path></svg>Telegram guruh</a>
+    </nav>
+    <div style="margin-top: auto; display: flex; flex-direction: column; gap: 6px; padding-top: 12px">
+      <a href="Profile.dc.html" style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 14px; border: 1px solid #E6EAF2; color: #0B1220">
+        <span style="flex: none; width: 36px; height: 36px; border-radius: 50%; background: #0B1220; color: #FFFFFF; display: grid; place-items: center; font-size: 13px; font-weight: 800">DK</span>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column"><strong style="font-size: 14px">Dilnoza Karimova</strong><span style="font-size: 12px; color: #4B5563">ROP · Rus tili · Profil</span></span>
+      </a>
+      <a href="Main.dc.html" style="height: 44px; display: flex; align-items: center; gap: 10px; padding: 0 12px; border-radius: 12px; color: #B42318; font-size: 14px; font-weight: 700"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"></path></svg>Chiqish</a>
+    </div>
+  </aside>
+
+  <main style="flex: 1; min-width: 0; display: flex; flex-direction: column">
+    <header style="flex: none; padding: 16px 28px 0; background: #FFFFFF; border-bottom: 1px solid #E6EAF2; display: flex; flex-direction: column; gap: 8px">
+      <div style="display: flex; align-items: center; gap: 12px">
+        <h1 style="flex: 1; margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.02em">Vositalar</h1>
+        <a href="RopDeskNotif.dc.html" aria-label="Bildirishnomalar, 5 ta yangi" style="position: relative; width: 44px; height: 44px; border-radius: 14px; border: 1px solid #CBD5E1; background: #FFFFFF; display: grid; place-items: center; color: #3A4456; box-sizing: border-box"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 00-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0"></path></svg><span style="position: absolute; top: -5px; right: -5px; min-width: 20px; height: 20px; border-radius: 999px; background: #D92D20; color: #FFFFFF; font-size: 12px; font-weight: 800; display: grid; place-items: center; border: 2px solid #FFFFFF">5</span></a>
+      </div>
+      <div role="tablist" aria-label="Boʻlimlar" style="display: flex; gap: 4px">
+        <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="3">
+          <button type="button" role="tab" aria-selected="{{ t.on }}" onClick="{{ t.pick }}" style="{{ t.style }}">{{ t.label }}</button>
+        </sc-for>
+      </div>
+    </header>
+
+    <div style="flex: 1; padding: 22px 28px 28px; max-width: 1184px; margin: 0 auto; box-sizing: border-box; width: 100%">
+      <sc-if value="{{ isRule }}" hint-placeholder-val="{{ true }}">
+        <div style="display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 18px; align-items: start">
+          <section class="dk-card" style="padding: 20px; display: flex; flex-direction: column; gap: 14px">
+            <div style="display: flex; align-items: center; gap: 10px">
+              <h2 style="flex: 1; margin: 0; font-size: 17px; font-weight: 800">Qoida</h2>
+              <span style="font-size: 13px; font-weight: 800; color: #0057B8; background: #EAF3FF; border-radius: 999px; padding: 5px 12px">Rus tili</span>
+            </div>
+            <span style="font-size: 13px; color: #4B5563">“Urinilmoqda”da bir marta ham javob bermagan lid uchun. Hisob — lid menejerga biriktirilgan kundan.</span>
+            <sc-for list="{{ rules }}" as="r" hint-placeholder-count="3">
+              <div style="display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid #EEF2F8">
+                <span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><strong style="font-size: 15px">{{ r.k }}</strong><span style="font-size: 12px; color: #4B5563">{{ r.d }}</span></span>
+                <button type="button" class="dk-step" aria-label="{{ r.minus }}" onClick="{{ r.dec }}">−</button>
+                <strong aria-live="polite" style="width: 72px; text-align: center; font-size: 18px; font-variant-numeric: tabular-nums">{{ r.v }}</strong>
+                <button type="button" class="dk-step" aria-label="{{ r.plus }}" onClick="{{ r.inc }}">+</button>
+              </div>
+            </sc-for>
+            <button type="button" onClick="{{ save }}" style="height: 48px; border-radius: 14px; border: 0; background: #0065D6; color: #FFFFFF; font: inherit; font-size: 15px; font-weight: 800; cursor: pointer">Saqlash</button>
+            <span style="font-size: 12px; color: #4B5563">Qulf — menejer ilovani ochganda. Kuniga bir marta 5 daqiqalik imtiyoz. Qoʻngʻiroqsiz “Sifatsiz”ga oʻtkazib boʻlmaydi.</span>
+          </section>
+          <section class="dk-card" style="overflow: hidden">
+            <div style="padding: 16px 20px; border-bottom: 1px solid #EEF2F8; display: flex; align-items: center"><h2 style="flex: 1; margin: 0; font-size: 17px; font-weight: 800">Menejerlar hisoboti</h2><span style="font-size: 13px; font-weight: 700; color: #B42318">{{ staleTotal }} ta qotgan lid</span></div>
+            <div role="table" class="t-table" style="width: 100%; border-collapse: collapse; font-size: 14px">
+              <div role="rowgroup" class="t-hg"><div role="row" class="t-row" style="text-align: left; color: #4B5563; font-size: 12px; letter-spacing: .04em"><div role="columnheader" class="t-cell" style="padding: 10px 20px; font-weight: 700">MENEJER</div><div role="columnheader" class="t-cell" style="padding: 10px 12px; font-weight: 700; text-align: right">{{ wHead }}</div><div role="columnheader" class="t-cell" style="padding: 10px 12px; font-weight: 700; text-align: right">{{ lHead }}</div><div role="columnheader" class="t-cell" style="padding: 10px 20px; font-weight: 700; text-align: right">BU OY TOZALADI</div></div></div>
+              <div role="rowgroup" class="t-rg">
+                <sc-for list="{{ staleRep }}" as="s" hint-placeholder-count="6">
+                  <div role="row" class="t-row dk-row" style="border-top: 1px solid #EEF2F8"><div role="cell" class="t-cell" style="padding: 10px 20px"><span style="display: flex; align-items: center; gap: 10px"><img src="{{ s.av }}" alt="" style="width: 32px; height: 32px; border-radius: 50%"><strong>{{ s.name }}</strong></span></div><div role="cell" class="t-cell" style="padding: 10px 12px; text-align: right"><span style="{{ s.wStyle }}">{{ s.w }}</span></div><div role="cell" class="t-cell" style="padding: 10px 12px; text-align: right"><span style="{{ s.lStyle }}">{{ s.l }}</span></div><div role="cell" class="t-cell" style="padding: 10px 20px; text-align: right; font-variant-numeric: tabular-nums; font-weight: 700">{{ s.c }}</div></div>
+                </sc-for>
+              </div>
+            </div>
+            <span style="display: block; padding: 12px 20px; font-size: 12px; color: #4B5563; border-top: 1px solid #EEF2F8">Hisobot saqlangan qoida boʻyicha. Yangi kunlar saqlangach qayta hisoblanadi.</span>
+          </section>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isArch }}" hint-placeholder-val="{{ false }}">
+        <section class="dk-card" style="overflow: hidden">
+          <div style="padding: 14px 20px; border-bottom: 1px solid #EEF2F8; display: flex; align-items: center; gap: 8px; flex-wrap: wrap">
+            <sc-for list="{{ archF }}" as="f" hint-placeholder-count="4"><button type="button" aria-pressed="{{ f.on }}" onClick="{{ f.pick }}" style="{{ f.style }}">{{ f.label }}</button></sc-for>
+            <span style="margin-left: auto; font-size: 13px; color: #4B5563">Oʻchirilgan hech narsa yoʻqolmaydi. “Sifatsiz” lidlar bu yerda emas — ular Lidlarda qoladi.</span>
+          </div>
+          <div role="table" class="t-table" style="width: 100%; border-collapse: collapse; font-size: 14px">
+            <div role="rowgroup" class="t-hg"><div role="row" class="t-row" style="text-align: left; color: #4B5563; font-size: 12px; letter-spacing: .04em"><div role="columnheader" class="t-cell" style="padding: 10px 20px; font-weight: 700">NOMI</div><div role="columnheader" class="t-cell" style="padding: 10px 12px; font-weight: 700">TURI</div><div role="columnheader" class="t-cell" style="padding: 10px 12px; font-weight: 700">KIM OʻCHIRDI</div><div role="columnheader" class="t-cell" style="padding: 10px 12px; font-weight: 700">QACHON</div><div role="columnheader" class="t-cell" style="padding: 10px 20px"><span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Amal</span></div></div></div>
+            <div role="rowgroup" class="t-rg">
+              <sc-for list="{{ arch }}" as="a" hint-placeholder-count="6">
+                <div role="row" class="t-row dk-row" style="border-top: 1px solid #EEF2F8"><div role="cell" class="t-cell" style="padding: 10px 20px"><span style="display: flex; flex-direction: column; gap: 2px"><strong>{{ a.name }}</strong><span style="font-size: 12px; color: #4B5563">{{ a.why }}</span></span></div><div role="cell" class="t-cell" style="padding: 10px 12px"><span style="font-size: 12px; font-weight: 700; border-radius: 999px; padding: 3px 10px; background: #F1F5F9; color: #3A4456">{{ a.type }}</span></div><div role="cell" class="t-cell" style="padding: 10px 12px; color: #3A4456">{{ a.who }}</div><div role="cell" class="t-cell" style="padding: 10px 12px; color: #3A4456">{{ a.when }}</div><div role="cell" class="t-cell" style="padding: 10px 20px; text-align: right">
+                  <sc-if value="{{ a.can }}" hint-placeholder-val="{{ true }}"><button type="button" onClick="{{ a.restore }}" style="height: 44px; padding: 0 16px; border-radius: 12px; border: 1px solid #CBD5E1; background: #FFFFFF; font: inherit; font-size: 13px; font-weight: 800; color: #0057B8; cursor: pointer">Tiklash</button></sc-if>
+                  <sc-if value="{{ a.cannot }}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; font-weight: 700; color: #4B5563">Faqat HR yoki admin tiklaydi</span></sc-if>
+                </div></div>
+              </sc-for>
+            </div>
+          </div>
+        </section>
+      </sc-if>
+
+      <sc-if value="{{ isSms }}" hint-placeholder-val="{{ false }}">
+        <div style="display: grid; grid-template-columns: minmax(0, 6fr) minmax(0, 4fr); gap: 18px; align-items: start">
+          <section class="dk-card" style="padding: 20px; display: flex; flex-direction: column; gap: 16px">
+            <div style="display: flex; flex-direction: column; gap: 8px"><span style="font-size: 13px; font-weight: 700; color: #3A4456">Kimga</span>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap">
+                <sc-for list="{{ segs }}" as="s" hint-placeholder-count="4"><button type="button" aria-pressed="{{ s.on }}" onClick="{{ s.pick }}" style="{{ s.style }}">{{ s.label }} · {{ s.n }}</button></sc-for>
+              </div>
+            </div>
+            <label style="display: flex; flex-direction: column; gap: 8px; font-size: 13px; font-weight: 700; color: #3A4456">Matn
+              <textarea rows="5" onInput="{{ setText }}" style="font: inherit; font-size: 15px; border: 1px solid #CBD5E1; border-radius: 14px; padding: 12px 14px; resize: vertical; color: #0B1220">{{ smsText }}</textarea>
+            </label>
+            <div style="display: flex; justify-content: space-between; gap: 12px; font-size: 12px; color: #4B5563; font-weight: 600"><span>{ism} — odam ismi bilan almashadi</span><span style="{{ smsCountStyle }}">{{ smsCount }}</span></div>
+            <button type="button" onClick="{{ send }}" style="height: 48px; border-radius: 14px; border: 0; background: #0065D6; color: #FFFFFF; font: inherit; font-size: 15px; font-weight: 800; cursor: pointer">{{ smsBtn }}</button>
+          </section>
+          <section class="dk-card" style="padding: 20px; display: flex; flex-direction: column; gap: 12px">
+            <h2 style="margin: 0; font-size: 15px; font-weight: 800">Telefonda shunday koʻrinadi</h2>
+            <div style="background: #F1F5F9; border-radius: 18px; padding: 16px"><div style="background: #FFFFFF; border-radius: 16px 16px 16px 4px; padding: 12px 14px; font-size: 14px; line-height: 1.45; box-shadow: 0 1px 2px rgba(11,18,32,.06)">{{ smsPreview }}</div></div>
+            <h2 style="margin: 6px 0 0; font-size: 15px; font-weight: 800">Oxirgi yuborilganlar</h2>
+            <sc-for list="{{ hist }}" as="h" hint-placeholder-count="2"><span style="font-size: 13px; color: #3A4456; display: flex; justify-content: space-between"><span>{{ h.t }}</span><strong>{{ h.n }}</strong></span></sc-for>
+          </section>
+        </div>
+      </sc-if>
+    </div>
+  </main>
+
+  <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+    <div role="status" class="dw-toast" style="position: absolute; left: 50%; bottom: 28px; transform: translateX(-50%); background: #0B1220; color: #FFFFFF; border-radius: 16px; padding: 14px 20px; display: flex; align-items: center; gap: 12px; box-shadow: 0 16px 40px rgba(11,18,32,.3); font-size: 14px; font-weight: 700"><span style="width: 26px; height: 26px; border-radius: 50%; background: #12B76A; display: grid; place-items: center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"></path></svg></span>{{ toast }}</div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":960}}'>
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.state = { tab: 'rule', lang: 'ru', cfg: { ru: { warn: 3, lock: 5, calls: 30 }, en: { warn: 2, lock: 4, calls: 35 } }, saved: { ru: { warn: 3, lock: 5 }, en: { warn: 2, lock: 4 } }, af: 'all', seg: 'dec', restored: {}, toast: '',
+      text: 'Assalomu alaykum, {ism}! Domwork rus tili kursida bugun 20:00 gacha birinchi oyga 15% chegirma. Savollar boʻlsa, javob yozing.' };
+  }
+  renderVals() {
+    const AV = {
+      Zarina: '/_blob/b9aca71346c3fe5b85756b5797dc7cb1', Hamidaxon: '/_blob/1e371186761692420cffee7eacdd8f25',
+      Bekzod: '/_blob/23cdf5040205eab3e04eb749efde5db4', Gulnora: '/_blob/60cc5ea62670d39355a4ed1c2240bc78',
+      Sardor: '/_blob/591ff7093317a38b4deae224e025df54', Nodira: '/_blob/afdd3e8f963453ddcc22787871d42350'
+    };
+    const s = this.state;
+    const TABS = [['rule', 'Qotgan lidlar qoidasi'], ['arch', 'Arxiv'], ['sms', 'SMS yuborish']];
+    const tabs = TABS.map(t => {
+      const on = t[0] === s.tab;
+      return { label: t[1], on: on ? 'true' : 'false', pick: () => this.setState({ tab: t[0] }), style: 'height:46px;padding:0 14px;border:0;background:transparent;font:inherit;font-size:14px;cursor:pointer;border-bottom:3px solid ' + (on ? '#0065D6;color:#0057B8;font-weight:800' : 'transparent;color:#3A4456;font-weight:600') };
+    });
+    const LN = { ru: 'Rus tili', en: 'Ingliz tili' };
+    const c = s.cfg[s.lang];
+    const setC = (patch) => { const cfg = Object.assign({}, s.cfg); cfg[s.lang] = Object.assign({}, c, patch); this.setState({ cfg }); };
+    const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+    const langs = ['ru', 'en'].map(l => {
+      const on = l === s.lang;
+      return { label: LN[l], on: on ? 'true' : 'false', pick: () => this.setState({ lang: l }), style: 'height:40px;padding:0 12px;border:0;border-radius:9px;font:inherit;font-size:13px;cursor:pointer;' + (on ? 'background:#FFFFFF;color:#0B1220;font-weight:800;box-shadow:0 1px 3px rgba(11,18,32,.12)' : 'background:transparent;color:#3A4456;font-weight:600') };
+    });
+    const rules = [
+      { k: 'Ogohlantirish', d: 'Menejerga sariq eslatma chiqadi', v: c.warn + ' kun', dec: () => setC({ warn: clamp(c.warn - 1, 1, c.lock - 1) }), inc: () => setC({ warn: clamp(c.warn + 1, 1, c.lock - 1) }), minus: 'Ogohlantirish kunini kamaytirish', plus: 'Ogohlantirish kunini oshirish' },
+      { k: 'Majburiy oyna (qulf)', d: 'Boshqa harakatlar qulflanadi', v: c.lock + ' kun', dec: () => setC({ lock: clamp(c.lock - 1, c.warn + 1, 14) }), inc: () => setC({ lock: clamp(c.lock + 1, c.warn + 1, 14) }), minus: 'Qulf kunini kamaytirish', plus: 'Qulf kunini oshirish' },
+      { k: 'Kunlik qoʻngʻiroq maqsadi', d: 'Bosh sahifadagi maqsad', v: c.calls, dec: () => setC({ calls: clamp(c.calls - 5, 5, 200) }), inc: () => setC({ calls: clamp(c.calls + 5, 5, 200) }), minus: 'Maqsadni kamaytirish', plus: 'Maqsadni oshirish' }
+    ];
+    const sv = s.saved[s.lang];
+    const P = 'display:inline-block;font-size:12px;font-weight:800;border-radius:999px;padding:3px 10px;';
+    const R = { ru: [['Nodira', 1, 2, 4], ['Sardor', 1, 0, 6], ['Gulnora', 1, 0, 9], ['Bekzod', 1, 0, 7], ['Zarina', 1, 0, 11], ['Hamidaxon', 0, 0, 8]], en: [['Zarina', 0, 0, 3], ['Bekzod', 1, 0, 2]] }[s.lang];
+    const staleRep = R.map(r => ({ name: r[0], av: AV[r[0]], w: r[1] || '—', l: r[2] || '—', c: r[3], wStyle: r[1] ? P + 'color:#93370D;background:#FEF0C7' : 'color:#4B5563', lStyle: r[2] ? P + 'color:#B42318;background:#FEF3F2' : 'color:#4B5563' }));
+    const staleTotal = R.reduce((a, r) => a + r[1] + r[2], 0);
+    const A = [
+      ['Bobur Toʻxtayev', 'lead', 'Lid', 'Dublikat — bir xil raqam 2 marta kelgan', 'Dilnoza K. (ROP)', '18-noy', true],
+      ['Test lid', 'lead', 'Lid', 'Tekshirish uchun kiritilgan', 'Dilnoza K. (ROP)', '3-noy', true],
+      ['Shohruh Valiyev', 'student', 'Oʻquvchi', 'Kursni tark etdi', 'Admin', '12-noy', false],
+      ['Alisher Q.', 'student', 'Oʻquvchi', 'Toʻlov qaytarildi', 'Admin', '1-noy', false],
+      ['Kamron Bek', 'staff', 'Xodim', 'Ishdan ketdi · lidlari Zarinaga, sotuvlari unda qoldi', 'HR', '5-noy', false]
+    ];
+    const arch = A.filter((a, i) => (s.af === 'all' || a[1] === s.af) && !s.restored[i]).map(a => {
+      const i = A.indexOf(a);
+      return { name: a[0], type: a[2], why: a[3], who: a[4], when: a[5], can: a[6], cannot: !a[6], restore: () => { const r = Object.assign({}, s.restored); r[i] = 1; this.setState({ restored: r, toast: a[0] + ' tiklandi · Lidlarga qaytdi' }); } };
+    });
+    const archF = [['all', 'Hammasi'], ['lead', 'Lidlar'], ['student', 'Oʻquvchilar'], ['staff', 'Xodimlar']].map(f => {
+      const on = f[0] === s.af;
+      return { label: f[1], on: on ? 'true' : 'false', pick: () => this.setState({ af: f[0] }), style: 'height:44px;padding:0 16px;border-radius:999px;font:inherit;font-size:13px;cursor:pointer;' + (on ? 'border:0;background:#0B1220;color:#FFFFFF;font-weight:800' : 'border:1px solid #CBD5E1;background:#FFFFFF;color:#3A4456;font-weight:600') };
+    });
+    const SEG = [['dec', 'Qaror bosqichi', 15], ['trial', 'Sinovga kelgan, toʻlamagan', 23], ['lost', 'Muvaffaqiyatsiz · shu oy', 47], ['debt', 'Qarzdorlar', 9]];
+    const segs = SEG.map(g => {
+      const on = g[0] === s.seg;
+      return { label: g[1], n: g[2], on: on ? 'true' : 'false', pick: () => this.setState({ seg: g[0] }), style: 'height:44px;padding:0 14px;border-radius:12px;font:inherit;font-size:13px;cursor:pointer;' + (on ? 'border:2px solid #0065D6;background:#F2F7FF;color:#0057B8;font-weight:800' : 'border:1px solid #CBD5E1;background:#FFFFFF;color:#3A4456;font-weight:600') };
+    });
+    const segN = (SEG.find(g => g[0] === s.seg) || SEG[0])[2];
+    const t = s.text;
+    const sample = t.replace(/\{ism\}/g, 'Laylo');
+    const gsm = /^[A-Za-z0-9 \n\r.,!?:;'"()%+\-\/@#&*=<>_$£¥èéùìòÇØøÅå]*$/.test(sample);
+    const per = gsm ? (sample.length <= 160 ? 160 : 153) : (sample.length <= 70 ? 70 : 67);
+    const parts = Math.max(1, Math.ceil(sample.length / per));
+    return {
+      tabs, rules, langs, langName: LN[s.lang], staleRep, staleTotal,
+      wHead: sv.warn + '-KUN · OGOHLANTIRISH', lHead: sv.lock + '-KUN · QULF',
+      save: () => { const saved = Object.assign({}, s.saved); saved[s.lang] = { warn: c.warn, lock: c.lock, calls: c.calls }; this.setState({ saved, toast: LN[s.lang] + ' qoidasi saqlandi' }); },
+      arch, archF, segs,
+      smsText: t, smsPreview: sample,
+      setText: (e) => this.setState({ text: e && e.target ? e.target.value : t }),
+      smsCount: sample.length + ' belgi · ' + parts + ' SMS' + (gsm ? '' : ' (oʻ/gʻ belgisi — 70 belgidan)'),
+      smsCountStyle: parts > 1 ? 'color:#93370D;font-weight:800' : '',
+      smsBtn: s.confirm ? 'Tasdiqlang: ' + segN + ' ta odamga ' + segN * parts + ' SMS ketadi' : segN + ' ta odamga yuborish · ' + segN * parts + ' SMS',
+      send: () => { if (!s.confirm) { this.setState({ confirm: true }); return; } this.setState({ confirm: false, toast: segN + ' ta odamga SMS navbatga qoʻyildi' }); },
+      hist: [{ t: '17-noy · Qaror bosqichi', n: '12 ta' }, { t: '10-noy · Muvaffaqiyatsiz', n: '38 ta' }],
+      isRule: s.tab === 'rule', isArch: s.tab === 'arch', isSms: s.tab === 'sms',
+      cur: { rule: s.tab === 'rule' ? 'page' : 'false', arch: s.tab === 'arch' ? 'page' : 'false', sms: s.tab === 'sms' ? 'page' : 'false' },
+      toast: s.toast
+    };
+  }
+}
+</script>
+</body>
+</html>

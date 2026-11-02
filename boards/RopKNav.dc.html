@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<title>ROP kompyuter — Navigatsiya taklifi</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#0057B8;text-decoration:none}
+sc-for,sc-if{display:contents}
+.mi{display:flex;align-items:center;gap:12px;height:38px;padding:0 12px;border-radius:12px;color:#3A4456;font-size:14px;font-weight:600;border:0;background:transparent;font-family:inherit;width:100%;cursor:pointer;text-align:left}
+.mi:hover{background:#F1F5F9;color:#0B1220}
+.mi svg{width:18px;height:18px;flex:none}
+.mi[aria-current="page"]{background:#EAF3FF;color:#0057B8;font-weight:800}
+.grp{font-size:12px;font-weight:800;color:#4B5563;letter-spacing:.06em;padding:12px 12px 4px}
+.cnt{margin-left:auto;min-width:22px;height:20px;padding:0 6px;box-sizing:border-box;border-radius:999px;background:#D92D20;color:#FFFFFF;font-size:12px;font-weight:800;display:grid;place-items:center}
+.cnt.soft{background:#F1F5F9;color:#3A4456}
+.card{background:#FFFFFF;border:1px solid #E6EAF2;border-radius:20px}
+.tag{display:inline-block;font-size:12px;font-weight:800;border-radius:999px;padding:3px 9px;white-space:nowrap}
+.t-keep{color:#067647;background:#ECFDF3}.t-move{color:#0057B8;background:#EAF3FF}.t-new{color:#5B21B6;background:#F1E8FF}.t-hide{color:#3A4456;background:#F1F5F9}
+</style>
+</helmet>
+<div style="min-height: 1180px; box-sizing: border-box; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #0B1220; background: #F5F7FB; display: flex">
+
+  <aside aria-label="Asosiy menyu (taklif)" style="flex: none; width: 248px; background: #FFFFFF; border-right: 1px solid #E6EAF2; padding: 14px; box-sizing: border-box; display: flex; flex-direction: column; gap: 1px">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 4px 6px 12px"><span style="width: 34px; height: 34px; border-radius: 9px; background: #0065D6; color: #FFFFFF; display: grid; place-items: center; font-weight: 800; font-size: 17px">H</span><strong style="font-size: 16px; letter-spacing: .02em">HOMEWORK</strong></div>
+    <sc-for list="{{ nav }}" as="n" hint-placeholder-count="16">
+      <sc-if value="{{ n.isGrp }}" hint-placeholder-val="{{ false }}"><button type="button" class="grp" aria-expanded="true" style="border: 0; background: transparent; font-family: inherit; text-align: left; cursor: pointer; display: flex; align-items: center; gap: 6px; width: 100%">{{ n.label }}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button></sc-if>
+      <sc-if value="{{ n.isItem }}" hint-placeholder-val="{{ true }}">
+        <div style="position: relative; display: flex; align-items: center"><button type="button" class="mi" aria-current="{{ n.cur }}" onClick="{{ n.pick }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ n.icon }}"></path></svg>{{ n.label }}<sc-if value="{{ n.hint }}" hint-placeholder-val="{{ false }}"><span style="margin-left: auto; font-size: 12px; font-weight: 600; color: #4B5563">{{ n.hint }}</span></sc-if></button><sc-if value="{{ n.badge }}" hint-placeholder-val="{{ false }}"><button type="button" class="cnt" title="{{ n.badgeAria }}" aria-label="{{ n.badgeAria }}" onClick="{{ n.pickBadge }}" style="position: absolute; right: 8px; border: 0; cursor: pointer; font-family: inherit; min-width: 28px; height: 24px">{{ n.badge }}</button></sc-if></div>
+      </sc-if>
+    </sc-for>
+    <span style="flex: 1; min-height: 10px"></span>
+    <button type="button" class="mi" aria-expanded="{{ moreOpen }}" onClick="{{ toggleMore }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="5" cy="12" r="1.5"></circle><circle cx="12" cy="12" r="1.5"></circle><circle cx="19" cy="12" r="1.5"></circle></svg>Boshqa boʻlimlar</button>
+    <sc-if value="{{ moreOpen }}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 1px; padding-left: 30px">
+        <sc-for list="{{ more }}" as="m" hint-placeholder-count="4"><button type="button" class="mi" style="height: 36px; font-size: 13px">{{ m }}</button></sc-for>
+      </div>
+    </sc-if>
+    <button type="button" class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"></path></svg>Sozlamalar</button>
+  </aside>
+
+  <main style="flex: 1; min-width: 0; padding: 28px 32px 40px; display: flex; flex-direction: column; gap: 18px">
+    <div style="display: flex; flex-direction: column; gap: 4px">
+      <span style="font-size: 12px; font-weight: 800; color: #0057B8; letter-spacing: .06em">ROP · KOMPYUTER · NAVIGATSIYA TAKLIFI</span>
+      <h1 style="margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.02em">Sidebar = telefondagi Menyu guruhlari + asosiy ish joylari</h1>
+      <span style="font-size: 14px; color: #3A4456; max-width: 860px">Sahifalar, kanban ustunlari, Dars jadvali v3, filtrlar va tugmalar oʻzgarmaydi — faqat qaysi band qaysi mavjud sahifani ochishi va guruhlanishi oʻzgaradi. Chapdagi bandni bosing: oʻngda u ochadigan joy koʻrinadi.</span>
+    </div>
+
+    <section class="card" style="padding: 20px; display: flex; flex-direction: column; gap: 12px">
+      <div style="display: flex; align-items: center; gap: 10px"><span class="tag {{ sel.tagCls }}">{{ sel.tag }}</span><h2 style="margin: 0; font-size: 20px; font-weight: 800">{{ sel.label }}</h2></div>
+      <span style="font-size: 14px; color: #3A4456"><strong>Ochadi:</strong> {{ sel.opens }}</span><sc-if value="{{ badgeNote }}" hint-placeholder-val="{{ false }}"><span style="font-size: 14px; color: #5B21B6; background: #F1E8FF; border-radius: 12px; padding: 10px 12px"><strong>Badge bosildi:</strong> {{ badgeNote }}</span></sc-if>
+      <span style="font-size: 14px; color: #3A4456"><strong>Hozir:</strong> {{ sel.now }}</span>
+      <div style="border: 1px solid #E6EAF2; border-radius: 16px; overflow: hidden">
+        <div style="height: 44px; background: #F8FAFD; border-bottom: 1px solid #E6EAF2; display: flex; align-items: center; gap: 6px; padding: 0 14px">
+          <strong style="font-size: 15px; margin-right: 10px">{{ sel.page }}</strong>
+          <sc-for list="{{ sel.tabs }}" as="t" hint-placeholder-count="3"><span style="{{ t.st }}">{{ t.l }}</span></sc-for>
+        </div>
+        <div style="padding: 14px; font-size: 13px; color: #4B5563; min-height: 44px">{{ sel.body }}</div>
+      </div>
+    </section>
+
+    <section class="card" style="overflow: hidden">
+      <div style="padding: 14px 20px; border-bottom: 1px solid #EEF2F8; display: flex; align-items: center; gap: 12px"><h2 style="flex: 1; margin: 0; font-size: 18px; font-weight: 800">Hammasi qayerda — hozir va taklif <span style="display: block; font-size: 12px; font-weight: 600; color: #4B5563; margin-top: 2px">Kod hajmi (faqat role = rop): ropSotuvNav.js — sidebar, guruhlar, activeKey (Marketing SMS/Target, Arxiv, school-approvals/groups); 5 ta Sotuv paneli + SMS sarlavhasi, ratingView sarlavhasi “Reyting va bonus”; Lidlar vaqtinchalik filtri + Bosh “Taqsimlash” bilan yagona hisob; Oʻquvchilar ichidagi Tasdiqlar, Telegram, Qarzdorlar tugma/tablari va profildagi Arxiv punkti yashiriladi; staleLeads.js — ROPda tugma oʻrniga sahifa; 2 ta yangi sahifa (SLA, Qotgan qoida).</span></h2><span class="tag t-keep">oʻz joyida</span><span class="tag t-move">bandga chiqdi / nom</span><span class="tag t-new">yangi</span><span class="tag t-hide">ROPda yashirin</span></div>
+      <div style="display: grid; grid-template-columns: 1.3fr 2fr 2fr 1fr; padding: 10px 20px; background: #F8FAFD; font-size: 12px; font-weight: 700; color: #4B5563; letter-spacing: .03em"><span>BOʻLIM</span><span>HOZIR</span><span>TAKLIF</span><span>HOLAT</span></div>
+      <sc-for list="{{ map }}" as="r" hint-placeholder-count="14">
+        <div style="display: grid; grid-template-columns: 1.3fr 2fr 2fr 1fr; padding: 9px 20px; border-top: 1px solid #EEF2F8; font-size: 13px; align-items: center"><strong>{{ r.a }}</strong><span style="color: #3A4456">{{ r.b }}</span><span style="color: #0B1220">{{ r.c }}</span><span><span class="tag {{ r.cls }}">{{ r.t }}</span></span></div>
+      </sc-for>
+    </section>
+
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px">
+      <section class="card" style="padding: 18px; display: flex; flex-direction: column; gap: 8px"><h3 style="margin: 0; font-size: 15px; font-weight: 800">Faol band va qamrov</h3><span style="font-size: 13px; color: #3A4456; line-height: 1.5">Faqat role = rop (sotuv menejeri va admin sidebari oʻzgarmaydi). Sotuv tab qatori faqat Lidlar/Kitob yetkazishda (2 tab), Marketing tab qatori ROPda yashirin. Guruh sarlavhasi — tugma (aria-expanded), bosilsa yigʻiladi va eslab qolinadi; yigʻiq sarlavhada ichidagi badge'lar yigʻindisi koʻrinadi. Avtomatik yigʻish yoʻq — sidebar ichi skroll boʻladi. Har sahifada bitta band faol: Kitob yetkazish, lid kartasi → Lidlar; sinov qoʻyish → Dars jadvali; Yoʻriqnomalar → Skript va yoʻriqnoma; school-approvals → Tasdiqlar; school-groups → Telegram guruh; Arxiv boʻlimi → Arxiv, profilning boshqa boʻlimlari → Sozlamalar (profil ichki menyusida ROPda Arxiv punkti yoʻq); Sozlamalar sidebar pastida qotib turadi, skrollga kirmaydi; Oʻquvchini tekshirish, Mobil ilova, Target lidlar → “Boshqa boʻlimlar” (ochiq, ichki band belgilanadi). Boshlangʻich holat: barcha guruhlar ochiq.</span></section>
+      <section class="card" style="padding: 18px; display: flex; flex-direction: column; gap: 8px"><h3 style="margin: 0; font-size: 15px; font-weight: 800">Badge qoidasi</h3><span style="font-size: 13px; color: #3A4456; line-height: 1.5">Badge faqat 3 joyda va har biri harakatga chaqiradi: Lidlar — menejersiz ochiq lidlar (Bosh sahifadagi “Taqsimlanmagan lidlar” bilan bitta funksiya va bitta til qoidasi: joriy til tabi; ikki tilli ROPda Bosh ham til tabiga ergashadi); Tasdiqlar — kutilayotgan; SLA — adminga ketgan + 6 soat ichida ketadiganlar. Badge — alohida tugma, ekranda aynan shu son chiqadigan filtr bilan ochadi. Yigʻiq guruh sarlavhasida yigʻindi emas — faqat qizil nuqta. 99+ dan oshsa “99+”, toʻliq son tooltipda; 0 — chiqmaydi.</span></section>
+      <section class="card" style="padding: 18px; display: flex; flex-direction: column; gap: 8px"><h3 style="margin: 0; font-size: 15px; font-weight: 800">Telefon bilan moslik (1:1)</h3><span style="font-size: 13px; color: #3A4456; line-height: 1.5">NAZORAT → SOTUV → OʻQUVCHILAR guruhlari va bandlari telefon Menyusi bilan bir xil tartib va nomda (Voronka SOTUVning 1-bandi). Ongli farqlar: (1) telefondagi Jadval → Dars jadvali + Sinov nazorati; (2) telefondagi Jamoa tabi alohida band emas — menejerlar Bosh sahifada va Voronka ichidagi “Menejerlar samaradorligi”da; (3) Lidlar sahifasida “Kitob yetkazish” tabi (telefonda yoʻq); (4) SLA badge faqat shoshilinchlar.</span></section>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1180}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { sel: 'leads', more: false, viaBadge: false }; }
+  renderVals() {
+    const IC = {
+      funnel: 'M3 4h18l-7 8v6l-4 2v-8z',
+      clock: 'M12 3a9 9 0 110 18 9 9 0 010-18zM12 7v5l3 2', debt: 'M2 6h20v13H2zM2 10h20', sms: 'M4 4h16v12H5l-1 4zM8 9h8M8 12h5', tg: 'M21 4L3 11l6 2 2 6 3-4 5 4z',
+      home: 'M3 10.5 12 4l9 6.5V20H3z', leads: 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 3a4 4 0 110 8 4 4 0 010-8z',
+      team: 'M4 20V11M10 20V5M16 20v-7M21 20H3', rating: 'M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0z', plan: 'M12 3a9 9 0 110 18 9 9 0 010-18zM12 8a4 4 0 110 8 4 4 0 010-8z',
+      script: 'M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9zM14 3v6h6M8 13h8M8 17h5', cal: 'M3 9.5h18M8 3v3M16 3v3M5 4.5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2v-12a2 2 0 012-2z',
+      trial: 'M8.5 12l2.5 2.5 4.5-5M6 4h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2z', check: 'M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11',
+      lock: 'M7 11V7a5 5 0 0110 0v4M5 11h14v10H5z', arch: 'M21 8v13H3V8M1 3h22v5H1zM10 12h4', stu: 'M2 8l10-5 10 5-10 5zM6 10.5V16c0 1.5 2.7 3 6 3s6-1.5 6-3v-5.5'
+    };
+    const T = (on, l) => ({ l, st: 'font-size:13px;padding:4px 10px;border-radius:999px;' + (on ? 'background:#0065D6;color:#FFFFFF;font-weight:800' : 'color:#3A4456;font-weight:600;background:#FFFFFF;border:1px solid #E2E8F0') });
+    const IT = (k, label, icon, o) => Object.assign({ k, label, icon }, o);
+    const ITEMS = [
+      IT('home', 'Bosh sahifa', 'home', { tag: 'oʻz joyida', tagCls: 't-keep', opens: 'Bosh sahifa (RK01): reja, taqsimlanmagan lidlar, Tasdiq/Sinov plitalari, eskalatsiyalar, voronka, menejerlar (oy).', now: 'Oʻzgarmaydi + RK01 qoʻshimchalari. “Taqsimlash” = Lidlar badgeʻi bilan bir xil kirish; Eskalatsiyalardagi “Yana …” → SLA.', page: 'Bosh sahifa', tabs: [], body: 'Telefon: Bosh.' }),
+      IT('leads', 'Lidlar', 'leads', { badge: '80', badgeAria: '80 ta menejersiz ochiq lid (Rus tili) — koʻrsatish', tag: 'oʻz joyida', tagCls: 't-keep', opens: 'Sotuv → Lidlar paneli oddiy filtrlar bilan (Barcha menejerlar · Joriy oy) — filtrlar, “+ Lid qoʻshish”, kanban aynan hozirgidek.', badgeOpens: 'Lidlar paneli vaqtinchalik filtr bilan: Menejer = “Biriktirilmagan”, Sana = “Barcha vaqt”, Ustunlar = ochiq bosqichlar. Tepada “Biriktirilmagan lidlar ✕” chipi; ✕ bosilsa yoki sahifadan chiqilsa filtr oddiy holatga qaytadi (global filtrga yozilmaydi). Ekrandagi son = badge.', now: 'Sidebar “Lidlar” + Sotuv ichidagi Lidlar tabi.', page: 'Lidlar', tabs: [T(1, 'Lidlar'), T(0, 'Kitob yetkazish')], body: 'Badge alohida tugma. Hisob: joriy til tabidagi (Ingliz/Rus) menejersiz lidlar, faqat ochiq bosqichlar — kanban bilan bir xil manba; til almashsa badge ham almashadi. Telefon barcha tillarni sanaydi (u yerda til tabi yoʻq) — ongli farq.' }),
+      IT('cal', 'Dars jadvali', 'cal', { tag: 'oʻz joyida', tagCls: 't-keep', opens: 'Dars jadvali v3 — Sinov darsi / Darslar, Bugun / Ertaga. OʻZGARMAYDI.', now: 'Xuddi shunday.', page: 'Dars jadvali', tabs: [T(1, 'Sinov darsi'), T(0, 'Darslar')], body: 'Ongli farq: telefonda “Jadval” ekranidan ochiladi, kompyuterda toʻr kundalik ish — oʻz bandi.' }),
+      IT('trial', 'Sinov nazorati', 'trial', { tag: 'nom oʻzgardi', tagCls: 't-move', opens: 'Hozirgi “Sinov darslari · nazorat” sahifasi (sarlavha: “Sinov nazorati”): KPI, menejer/ustoz jadvali, “Bugun eʼtibor kerak”, “Dars jadvali” tugmasi.', now: '“Sinov darslari” — “Sinov darsi” tabi bilan adashtirilardi.', page: 'Sinov nazorati', tabs: [], body: 'Telefondagi “Jadval” ekranining (screenTrials) mosi. Badge yoʻq — telefonda ham yoʻq.' }),
+      { g: 'NAZORAT' },
+      IT('check', 'Tasdiqlar', 'check', { badge: '3', badgeAria: '3 ta tasdiq kutilmoqda — ochish', badgeOpens: 'Tasdiqlar sahifasi (badge va band bir xil joyga olib boradi).', tag: 'yangi band', tagCls: 't-new', opens: 'Hozirgi “Sotuv tahrirlari — tasdiq” sahifasi (school-approvals).', now: 'Oʻquvchilar ichidagi tugma (2 klik).', page: 'Tasdiqlar', tabs: [], body: 'Badge = telefon Menyusidagi Tasdiqlar soni (pendingAp). Oʻquvchilar ichidagi tugma ROPda yashiriladi.' }),
+      IT('sla', 'SLA', 'clock', { badge: '19', badgeAria: '19 ta harakat kerak: 7 tasi adminga ketdi, 12 tasi 6 soat ichida — koʻrsatish', badgeOpens: 'SLA sahifasi “Adminga ketdi” boʻlimidan boshlab ochiladi.', tag: 'yangi sahifa', tagCls: 't-new', opens: 'SLA roʻyxati — telefondagi screenSla kabi uch boʻlim: Adminga ketdi · Tez orada (6 soat ichida) · Qolganlar; Bosh sahifadagi eskalatsiya qator komponentidan (“Koʻrildi”, lidni ochish).', now: 'Faqat Bosh kartasi (6 ta).', page: 'SLA', tabs: [], body: 'Qizil badge = “Adminga ketdi” + “Tez orada” (ikkalasida ham Koʻrildi/Biriktirish kerak), umumiy son (1028) sahifa sarlavhasida kulrang. Telefon Menyusi plitasi umumiy sonni koʻrsatadi — kompyuterda signal sifatida aniqroq qilingan (ongli farq).' }),
+      IT('lock', 'Qotgan lidlar qoidasi', 'lock', { hint: 'sozlama', tag: 'yangi sahifa', tagCls: 't-new', opens: 'staleLeads.js qoida oynasi mazmuni sahifada: til boʻyicha kunlar, kunlik qoʻngʻiroq maqsadi, menejerlar hisoboti, Saqlash.', now: 'Oyna; tugmasi Lidlar sahifasining tepasida, Sotuvning har tabida koʻrinadi.', page: 'Qotgan lidlar qoidasi', tabs: [], body: 'Faqat ROPda sahifa va yagona kirish yoʻli. Admin/boshliqda oyna va tugma oʻzgarishsiz.' }),
+      IT('arch', 'Arxiv', 'arch', { hint: 'tarix', tag: 'yangi band', tagCls: 't-new', opens: 'Mavjud Arxiv boʻlimi (profil → archive).', now: 'Faqat Sozlamalar → profil ichida.', page: 'Arxiv', tabs: [], body: 'ROPda profil ichidagi Arxiv punkti yashiriladi.' }),
+      { g: 'SOTUV' },
+      IT('funnel', 'Voronka', 'funnel', { hint: '+ menejerlar', tag: 'nom oʻzgardi', tagCls: 't-move', opens: 'Hozirgi Statistika paneli (sarlavha: “Voronka”): davr va menejer filtri, konversiya, tushum, bosqichlar, chiqqanlar, “Menejerlar samaradorligi”.', now: '“Sotuv boʻlimi” bandi nomi bilan ochilardi.', page: 'Voronka', tabs: [], body: 'Telefon Menyusi → SOTUV → Voronka (1-band) bilan bir xil nom va joy.' }),
+      IT('rating', 'Reyting va bonus', 'rating', { tag: 'oʻz joyida', tagCls: 't-keep', opens: 'Hozirgi Reyting koʻrinishi (ratingView): Sotuv menejerlari / Ustozlar, Reyting · Bonuslar · Olganlar, Kunlik / Haftalik / Oylik.', now: 'Sidebar bandi + Sotuv tab qatoridagi takror tab.', page: 'Reyting va bonus', tabs: [T(1, 'Reyting'), T(0, 'Bonuslar'), T(0, 'Olganlar')], body: 'Koʻrinish oʻzgarmaydi.' }),
+      IT('plan', 'Sotuv rejasi', 'plan', { hint: 'koʻrish', tag: 'oʻz joyida', tagCls: 't-keep', opens: 'Sotuv rejasi paneli (faqat koʻrish), Jamoaviy / Individual.', now: 'Sidebar + Sotuv tabi.', page: 'Sotuv rejasi', tabs: [], body: 'Telefon: Sotuv rejasi · faqat koʻrish.' }),
+      IT('debt', 'Qarzdorlar', 'debt', { tag: 'bandga chiqdi', tagCls: 't-move', opens: 'Sotuv → Qarzdorlar paneli (renderDebtorsTable).', now: 'Sotuv tabi + Oʻquvchilar tabi (bir xil jadval).', page: 'Qarzdorlar', tabs: [], body: 'Telefondagi kabi SOTUVda. ROPda Oʻquvchilar → Qarzdorlar tabi yashiriladi.' }),
+      IT('script', 'Skript va yoʻriqnoma', 'script', { tag: 'bandga chiqdi', tagCls: 't-move', opens: 'Skriptlar paneli; sarlavha yonida “Yoʻriqnomalar” tugmasi (mavjud guides sahifasi).', now: 'Skriptlar — Sotuv tabi; Yoʻriqnomalar — Sotuv sahifasidagi chip.', page: 'Skriptlar', tabs: [], body: 'Ikkala sahifada shu band faol, sarlavha oʻz nomida.' }),
+      IT('sms', 'SMS yuborish', 'sms', { tag: 'bandga chiqdi', tagCls: 't-move', opens: 'Marketing → SMS paneli; ROPda Marketing tab qatori yashirin, sarlavha “SMS yuborish”.', now: '“Boshqa boʻlimlar” → Marketing (boshlangʻich tab Target).', page: 'SMS yuborish', tabs: [], body: 'Telefon: SOTUV → SMS yuborish. Target lidlar — “Boshqa boʻlimlar”da alohida (oʻzaro oʻtish sidebar orqali).' }),
+      { g: 'OʻQUVCHILAR' },
+      IT('stu', 'Oʻquvchilar', 'stu', { tag: 'oʻz joyida', tagCls: 't-keep', opens: 'Oʻquvchilar sahifasi: Faol oʻquvchilar · Muzlatilganlar (+ “Faol emas” tugmasi, agar bor boʻlsa).', now: 'Faol · Muzlatilganlar · Qarzdorlar · Sotuv tahrirlari · Telegram guruhlar.', page: 'Oʻquvchilar', tabs: [T(1, 'Faol oʻquvchilar'), T(0, 'Muzlatilganlar')], body: 'Tark etganlar / Tamomlaganlar ROPda hozir ham yashirin — oʻzgarmaydi.' }),
+      IT('tg', 'Telegram guruh', 'tg', { tag: 'bandga chiqdi', tagCls: 't-move', opens: 'Hozirgi school-groups sahifasi.', now: 'Oʻquvchilar ichidagi tugma.', page: 'Telegram guruhlar', tabs: [], body: 'Telefondagi nom bilan bir xil.' })
+    ];
+    const sel = this.state.sel;
+    const nav = ITEMS.map(it => !it.k ? { isGrp: true, isItem: false, label: it.g } : {
+      isGrp: false, isItem: true, label: it.label, icon: IC[it.icon], badge: it.badge || '', badgeAria: it.badgeAria || '', hint: it.hint || '',
+      popup: it.popup || 'false', st: '',
+      cur: it.k === sel ? 'page' : 'false', pick: () => this.setState({ sel: it.k, viaBadge: false }), pickBadge: () => this.setState({ sel: it.k, viaBadge: true })
+    });
+    const s = ITEMS.find(i => i.k === sel) || ITEMS[0];
+    const map = [
+      ['Lidlar (kanban)', 'Sidebar “Lidlar” va Sotuv → Lidlar tabi', 'Lidlar; badge → vaqtinchalik “Biriktirilmagan” filtri', 't-keep', 'oʻz joyida'],
+      ['Kitob yetkazish', 'Sotuv tabi', 'Lidlar sahifasidagi 2-tab', 't-keep', 'oʻz joyida'],
+      ['Dars jadvali v3', 'Sidebar', 'Dars jadvali — oʻzgarmaydi', 't-keep', 'oʻz joyida'],
+      ['Sinov darslari · nazorat', '“Sinov darslari” bandi', 'Sinov nazorati', 't-move', 'nom oʻzgardi'],
+      ['Tasdiqlar', 'Oʻquvchilar → tugma (2 klik)', 'NAZORAT → Tasdiqlar', 't-new', 'yangi band'],
+      ['SLA eskalatsiyalar', 'Faqat Bosh kartasi', 'NAZORAT → SLA (toʻliq, 3 boʻlim) + Bosh kartasi', 't-new', 'yangi sahifa'],
+      ['Qotgan lidlar qoidasi', 'Oyna; tugma Sotuvning har tabida', 'NAZORAT → sahifa (faqat ROP)', 't-new', 'yangi sahifa'],
+      ['Arxiv', 'Sozlamalar → profil', 'NAZORAT → Arxiv', 't-new', 'yangi band'],
+      ['Statistika', '“Sotuv boʻlimi” bandi', 'SOTUV → Voronka', 't-move', 'nom oʻzgardi'],
+      ['Reyting', 'Sidebar + Sotuv tabi', 'SOTUV → Reyting va bonus', 't-keep', 'oʻz joyida'],
+      ['Sotuv rejasi', 'Sidebar + Sotuv tabi', 'SOTUV → Sotuv rejasi · koʻrish', 't-keep', 'oʻz joyida'],
+      ['Qarzdorlar', 'Sotuv tabi + Oʻquvchilar tabi', 'SOTUV → Qarzdorlar', 't-move', 'bandga chiqdi'],
+      ['Skriptlar / Yoʻriqnomalar', 'Sotuv tabi / chip', 'SOTUV → Skript va yoʻriqnoma', 't-move', 'bandga chiqdi'],
+      ['SMS', '“Boshqa boʻlimlar” → Marketing', 'SOTUV → SMS yuborish', 't-move', 'bandga chiqdi'],
+      ['Telegram guruhlar', 'Oʻquvchilar → tugma', 'OʻQUVCHILAR → Telegram guruh', 't-move', 'bandga chiqdi'],
+      ['Sotuv sahifasi tab qatori', '7 ta tab', 'Faqat Lidlar / Kitob yetkazishda 2 tab', 't-hide', 'ROPda yashirin'],
+      ['Oʻquvchini tekshirish, Mobil ilova, Target lidlar', 'Sotuv sahifasidagi chiplar', 'Sidebar pastida “Boshqa boʻlimlar”', 't-move', 'bandga chiqdi']
+    ].map(r => ({ a: r[0], b: r[1], c: r[2], cls: r[3], t: r[4] }));
+    return {
+      nav, map, sel: s, badgeNote: this.state.viaBadge ? (s.badgeOpens || '') : '',
+      more: ['Oʻquvchini tekshirish', 'Mobil ilova', 'Target lidlar (Marketing)'],
+      moreOpen: this.state.more, toggleMore: () => this.setState({ more: !this.state.more })
+    };
+  }
+}
+</script>
+</body>
+</html>

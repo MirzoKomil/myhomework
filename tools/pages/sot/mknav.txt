@@ -1,0 +1,5 @@
+    const mkNav = (badges) => { const B = badges || {}; return [
+      I('home', 'Bosh sahifa', 'home'), I('leads', 'Lidlar', 'leads', { badge: B.leads || '', aria: B.leads ? B.leads + ' ta lid qoʻngʻiroq kutmoqda' : '' }), I('cal', 'Dars jadvali', 'cal'), I('trial', 'Sinov darslari', 'trial'),
+      I('stu', 'Oʻquvchilar', 'stu'), I('debt', 'Qarzdorlar', 'debt', { badge: B.debt || '', aria: B.debt ? B.debt + ' ta muddati oʻtgan qarz' : '' }), I('plan', 'Sotuv rejasi', 'plan'), I('rating', 'Reyting', 'rating'), I('script', 'Skriptlar', 'script', { tip: 'Skriptlar va yoʻriqnomalar' }),
+      G('Boshqa'), I('funnel', 'Statistika', 'funnel', { tip: 'Statistika: mening voronkam' }), I('sms', 'SMS', 'sms', { tip: 'SMS rassilka (faqat oʻz lid va oʻquvchilarim)' }), I('book', 'Kitob yetkazish', 'book')
+    ]; };

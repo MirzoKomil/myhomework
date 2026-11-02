@@ -1,0 +1,24 @@
+  <sc-if value="{{ gOpen }}" hint-placeholder-val="{{ false }}">
+    <div class="sk-ov" style="z-index: 70; background: transparent">
+      <button type="button" class="sk-dim" tabindex="-1" onClick="{{ gBlocked }}" aria-label="Boshqa boʻlimlar vaqtincha yopiq"></button>
+      <section role="dialog" aria-modal="true" aria-labelledby="slT" aria-describedby="slP" class="sk-gate up" data-gate="1" tabindex="-1" onKeyDown="{{ gKey }}">
+        <sc-if value="{{ gDone }}" hint-placeholder-val="{{ false }}"><div class="sk-done" role="status"><span class="sk-donei"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"></path></svg></span><h2 id="slT">Rahmat! Hammasi joyida</h2><p id="slP">Lidlar sifatini toʻgʻri oʻlchashga yordam berdingiz. Ishingizga omad!</p></div></sc-if>
+        <sc-if value="{{ gLive }}" hint-placeholder-val="{{ true }}">
+          <div class="sk-gh"><span class="sk-bell"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0"></path></svg></span>
+            <div><h2 id="slT">Avval shu {{ gN }} ta lidni hal qilaylik</h2><p id="slP">Ular {{ gLockDays }} kundan beri “Urinilmoqda”da turibdi va hali bir marta ham telefonni olmadi. Yana bir bor qoʻngʻiroq qiling — olmasa, “Sifatsiz”ga oʻtkazing.</p></div></div>
+          <div class="sk-prog"><div class="sk-bar" aria-hidden="true"><i style="{{ gBarSt }}"></i></div><span aria-live="polite">{{ gProg }}</span></div>
+          <ol class="sk-list">
+            <sc-for list="{{ gRows }}" as="r" hint-placeholder-count="2"><li class="sk-row" data-lock="{{ r.key }}">
+              <div class="sk-rh"><span class="sk-av" aria-hidden="true" style="{{ r.avSt }}">{{ r.ini }}</span><div class="sk-rt"><strong>{{ r.n }}</strong><span class="sk-bad">{{ r.age }}</span><span class="{{ r.metaCls }}">{{ r.meta }}</span></div></div>
+              <div class="sk-acts">
+                <a class="{{ r.callCls }}" href="{{ r.tel }}" onClick="{{ r.call }}" title="{{ r.telT }}" aria-label="{{ r.callLab }}" aria-haspopup="dialog" style="text-decoration: none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3.1 19.5 19.5 0 01-6-6A19.8 19.8 0 012.1 4.2 2 2 0 014.1 2h3a2 2 0 012 1.7c.1.9.4 1.8.7 2.7a2 2 0 01-.5 2.1L8 9.8a16 16 0 006 6l1.3-1.3a2 2 0 012.1-.5c.9.3 1.8.6 2.7.7a2 2 0 011.7 2z"></path></svg>{{ r.callT }}</a>
+                <button type="button" class="{{ r.sifCls }}" onClick="{{ r.sif }}" aria-haspopup="dialog" aria-label="{{ r.sifLab }}"><sc-if value="{{ r.lockIc }}" hint-placeholder-val="{{ true }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 018 0v4"></path></svg></sc-if>{{ r.sifT }}</button>
+                <button type="button" class="sk-b sk-bghost" onClick="{{ r.got }}" aria-haspopup="dialog" aria-label="{{ r.gotLab }}">Oldi</button>
+              </div></li></sc-for>
+            <sc-for list="{{ gSolved }}" as="r" hint-placeholder-count="0"><li class="sk-row sk-rdone"><span class="sk-av" aria-hidden="true" style="{{ r.avSt }}">{{ r.ini }}</span><div class="sk-rt"><strong>{{ r.n }}</strong><span class="{{ r.cls }}">{{ r.t }}</span></div><span class="sk-tick" aria-label="Hal qilindi"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"></path></svg></span></li></sc-for>
+          </ol>
+          <div class="sk-gf"><span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 018 0v4"></path></svg> Shu lidlar hal boʻlguncha boshqa boʻlimlar vaqtincha yopiq</span><sc-if value="{{ gGraceUsed }}" hint-placeholder-val="{{ false }}"><span class="sk-muted">Bugungi 5 daqiqalik imtiyoz ishlatilgan</span></sc-if><sc-if value="{{ gGraceCan }}" hint-placeholder-val="{{ true }}"><button type="button" class="sk-link" onClick="{{ gGrace }}" aria-haspopup="dialog">Juda zarur ishim bor (5 daqiqa)</button></sc-if></div>
+        </sc-if>
+      </section>
+    </div>
+  </sc-if>

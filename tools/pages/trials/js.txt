@@ -1,0 +1,260 @@
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    // Demo soat: Dushanba 02.11.2026 01:43. Vaqtlar — 2026-01-01 00:00 dan daqiqalarda.
+    const T = (md, hm) => { const a = md.split('-').map(Number), b = hm.split(':').map(Number); return Math.round((Date.UTC(2026, a[0] - 1, a[1]) - Date.UTC(2026, 0, 1)) / 60000) + b[0] * 60 + b[1]; };
+    this.T = T;
+    this.NOW = T('11-02', '01:43');
+    // Oktyabr: menejer → natijalar qatori (S sotildi, D oʻtkazildi, N lid kelmadi, R qayta qoʻyildi (arxiv), C sinovdan chiqarildi)
+    const OCT = [['KS', 'SSSSSSDDDDNNNR', 0], ['RU', 'SSSDDDDDNNC', 1], ['GM', 'SSSSDDDNNR', 2], ['HB', 'SSDDDDNNC', 3]];
+    const TCH = 'DSNMZ', WAIT = { D: [12, 18, 25, 35, 20], S: [40, 55, 70, 90], N: [150, 200, 240, 260, 300], M: [8, 15, 22], Z: [30, 45, 60, 50] };
+    const PH = { S: 'sold', D: 'done', N: 'noshow', R: 'rebooked', C: 'closed' };
+    const FN = ['Aziz', 'Barno', 'Diyor', 'Elyor', 'Farida', 'Gʻayrat', 'Hilola', 'Ilhom', 'Jamshid', 'Komila', 'Lola', 'Mansur', 'Nargiza', 'Oydin', 'Pulat', 'Rustam', 'Sevara', 'Temur', 'Umida', 'Vohid', 'Xurshida', 'Yulduz', 'Zafar'];
+    const LN = ['Tursunov', 'Qodirova', 'Ergashev', 'Nazarova', 'Sobirov', 'Aminova', 'Rasulov', 'Yoqubova', 'Mirzayev', 'Hakimova', 'Salimov'];
+    const rows = []; const wc = { D: 0, S: 0, N: 0, M: 0, Z: 0 }; let k = 0;
+    OCT.forEach(([m, codes, off]) => codes.split('').forEach((c, i) => {
+      const t = TCH[(i + off) % 5], w = WAIT[t][wc[t]++ % WAIT[t].length], day = 1 + ((k * 7 + 3) % 29), at = T('10-' + String(day).padStart(2, '0'), (10 + (k % 9)) + ':00');
+      rows.push({ id: 'o' + k, name: FN[k % FN.length] + ' ' + LN[(k * 3) % LN.length], m, t: 'T' + t, at, dur: 30, ph: PH[c], arch: c === 'R', req: at - 600, acc: at - 600 + w }); k++;
+    }));
+    const R = (id, name, m, t, md, hm, ph, o) => Object.assign({ id, name, m, t, at: T(md, hm), dur: 30, ph, arch: false, req: null, acc: null }, o || {});
+    rows.push(
+      R('jasur', 'Jasur Karimov', 'GM', 'TN', '10-31', '16:00', 'result', { req: T('10-30', '19:00'), acc: T('10-30', '22:30'), rem: T('11-02', '00:30') }),
+      R('dilshod', 'Dilshod Rasulov', 'HB', 'TM', '11-01', '15:00', 'done', { req: T('10-31', '18:00'), acc: T('10-31', '18:20'), inTrial: true }),
+      R('sardor', 'Sardor Aliyev', 'KS', 'TD', '11-01', '17:00', 'result', { req: T('10-31', '20:00'), acc: T('10-31', '20:15') }),
+      R('madina', 'Madina Yusupova', 'RU', 'TS', '11-01', '19:30', 'overdue', { req: T('11-01', '12:00') }),
+      R('laylo', 'Laylo Hasanova', 'KS', 'TS', '11-02', '10:00', 'pending', { req: T('11-01', '23:10') }),
+      R('aziza', 'Aziza Rahmonova', 'KS', '', '11-02', '15:00', 'unassigned', { hint: 'exact' }),
+      R('otabek', 'Otabek Sobirov', 'GM', 'TD', '11-02', '16:30', 'rejected', { req: T('11-01', '20:00'), reason: 'Shu vaqtda bandman', props: [T('11-02', '17:30'), T('11-03', '10:00')] }),
+      R('bekzod', 'Bekzod Nazarov', 'HB', '', '11-02', '18:00', 'unassigned', { hint: 'near' }),
+      R('kamila', 'Kamila Ergasheva', 'RU', '', '11-03', '11:00', 'unassigned', { hint: 'none' }),
+      R('nilufar', 'Nilufar Qosimova', 'GM', '', '11-05', '14:00', 'unassigned', { hint: 'none' }),
+      R('ziyoda', 'Ziyoda Karimova', 'KS', 'TD', '11-01', '10:00', 'sold', { req: T('10-30', '15:00'), acc: T('10-30', '15:18') }),
+      R('ulugbek', 'Ulugʻbek Tojiyev', 'RU', 'TZ', '11-01', '11:00', 'noshow', { req: T('10-30', '16:00'), acc: T('10-30', '16:35') }),
+      R('feruza', 'Feruza Aminova', 'GM', 'TM', '11-01', '12:00', 'done', { req: T('10-31', '11:00'), acc: T('10-31', '11:12') }),
+      R('sanjar', 'Sanjar Holmatov', 'HB', 'TN', '11-02', '12:00', 'accepted', { req: T('11-01', '14:00'), acc: T('11-01', '18:00') }),
+      R('mohira', 'Mohira Saidova', 'KS', 'TD', '11-02', '14:00', 'accepted', { req: T('11-01', '16:00'), acc: T('11-01', '16:22') }),
+      R('javohir', 'Javohir Ortiqov', 'RU', 'TZ', '11-03', '16:00', 'pending', { req: T('11-02', '01:20') }),
+      R('gulnoza', 'Gulnoza Rahimova', 'GM', 'TS', '11-04', '15:00', 'accepted', { req: T('11-02', '00:10'), acc: T('11-02', '01:15') })
+    );
+    this.rows0 = rows;
+    this.state = { sb: true, demo: 'ok', retried: false, month: '2026-11', rows: rows.map(r => Object.assign({}, r)), log: [], toast: '', as: null, ask: null, hintErr: true };
+    this._t = null;
+    // Esc har doim ochiq oynani yopadi (fokus qayta chizishda yoʻqolsa ham)
+    document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; const st = this.state; if (st.ask || st.agree) this.setState({ ask: null, agree: null }); else if (st.as) this.setState({ as: null }); });
+  }
+  focusSoon(sel) { setTimeout(() => { const el = document.querySelector(sel); if (el && el.focus) el.focus(); }, 30); }
+  renderVals() {
+    const s = this.state, T = this.T, NOW = this.NOW;
+__NAVJS__
+__MKNAV__
+    const nav = mkNav(79, false).map(n => Object.assign({}, n, { cur: n.k === 'trial' ? 'page' : 'false', pickBadge: () => {}, pick: () => { if (n.k === 'trial' || !n.item) return; this.setState({ toast: n.label + ' sahifasi ochiladi' }); } }));
+    const MG = { GM: ['Gulchehra Mamadaliyeva', '#0E7490'], HB: ['Hamidaxon Boymirzayeva', '#C2410C'], KS: ['Kamola Shahobiddinova', '#5B21B6'], RU: ['Robiya Usmonova', '#166534'] };
+    const TC = { TD: ['Dilnoza Karimova', '#BE185D'], TS: ['Shahnoza Qodirova', '#0369A1'], TN: ['Nodira Aliyeva', '#4D7C0F'], TM: ['Malika Rahimova', '#9333EA'], TZ: ['Zarina Tursunova', '#B45309'] };
+    const TG = { GM: '@gulchehra_m', KS: '@kamola_sh', RU: '@robiya_u' }; // HB — Telegram ulanmagan
+    const first = n => String(n || '').split(' ')[0];
+    const ini = n => String(n || '').split(' ').map(x => x[0]).join('').slice(0, 2).toUpperCase();
+    const DAY = ['Du', 'Se', 'Ch', 'Pa', 'Ju', 'Sh', 'Ya'], DAYF = ['Dushanba', 'Seshanba', 'Chorshanba', 'Payshanba', 'Juma', 'Shanba', 'Yakshanba'];
+    const MON = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentyabr', 'Oktyabr', 'Noyabr', 'Dekabr'];
+    const dt = m => { const d = new Date(Date.UTC(2026, 0, 1) + m * 60000); return { y: d.getUTCFullYear(), mo: d.getUTCMonth(), d: d.getUTCDate(), wd: (d.getUTCDay() + 6) % 7, day: Math.floor(m / 1440), min: m % 1440 }; };
+    const hm = m => String(Math.floor((m % 1440) / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+    const mkey = m => { const a = dt(m); return a.y + '-' + String(a.mo + 1).padStart(2, '0'); };
+    const today = Math.floor(NOW / 1440);
+    const rel = m => { const d = Math.floor(m / 1440) - today; return d === 0 ? 'Bugun' : d === 1 ? 'Ertaga' : d === -1 ? 'Kecha' : ''; };
+    const dShort = m => { const a = dt(m); return a.d + '-' + MON[a.mo].slice(0, 3).toLowerCase(); };
+    const dFull = m => { const a = dt(m); return String(a.d).padStart(2, '0') + '.' + String(a.mo + 1).padStart(2, '0') + '.' + a.y; };
+    const durTxt = ms => { const h = Math.floor(ms / 60), mm = ms % 60; return h >= 48 ? Math.floor(h / 24) + ' kun' : h >= 1 ? h + ' soat' + (mm ? ' ' + mm + ' daq' : '') : Math.max(1, mm) + ' daq'; };
+    const hoursAgo = m => { const h = (NOW - m) / 60; return h >= 48 ? Math.round(h / 24) + ' kun' : h < 1 ? Math.max(1, Math.round(h * 60)) + ' daq' : (Math.round(h * 2) / 2).toString().replace('.', ',') + ' soat'; };
+    const pct = (a, b) => (b ? Math.round(a / b * 100) : 0);
+    const needsTeacher = ph => ph === 'unassigned' || ph === 'rejected';
+    const PHL = { unassigned: ['Ustoz biriktirilmagan', 'warn'], rejected: ['Rad etildi', 'warn'], pending: ['Tasdiq kutilmoqda', 'mute'], overdue: ['Muddati oʻtdi · natija kerak', 'bad'], accepted: ['Tasdiqlandi', 'info'], result: ['Natija kutilmoqda', 'warn'], done: ['Oʻtkazildi', 'ok'], noshow: ['Lid kelmadi', 'bad'], sold: ['Sotildi', 'ok'], rebooked: ['Qayta qoʻyildi', 'mute'], closed: ['Sinovdan chiqarildi', 'mute'] };
+    const toast = t => { this.setState({ toast: t }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: '' }), 3600); };
+    const loading = s.demo === 'load', loadErr = s.demo === 'err' && !s.retried;
+    // "Hammasi joyida" demo: barcha eʼtibor talab qiladigan sinovlar hal qilingan maʼlumot.
+    const all = s.demo === 'calm' ? s.rows.map(r => { const x = Object.assign({}, r); if (needsTeacher(x.ph)) { x.t = x.ph === 'rejected' ? 'TS' : (x.t || 'TN'); x.ph = 'pending'; x.req = NOW - 20; } if (x.ph === 'result' || x.ph === 'overdue') x.ph = 'done'; if (x.ph === 'pending' && Math.floor(x.at / 1440) === today) { x.ph = 'accepted'; x.acc = (x.req || NOW) + 15; } x.inTrial = false; return x; }) : s.rows;
+    const month = s.month, curMonth = mkey(NOW);
+    const rows = all.filter(x => mkey(x.at) === month);
+    const n = f => rows.filter(f).length;
+    const done = n(x => x.ph === 'done' || x.ph === 'sold'), noshow = n(x => x.ph === 'noshow'), sold = n(x => x.ph === 'sold');
+    const waiting = n(x => x.ph === 'result' || x.ph === 'overdue'), upcoming = n(x => x.ph === 'pending' || x.ph === 'accepted');
+    const noTeacher = all.filter(x => !x.arch && needsTeacher(x.ph)).sort((a, b) => a.at - b.at);
+    const mgrs = {}, tch = {}, morder = [], torder = [];
+    rows.forEach(x => {
+      if (!mgrs[x.m]) { mgrs[x.m] = { put: 0, done: 0, noshow: 0, sold: 0 }; morder.push(x.m); }
+      const mm = mgrs[x.m]; mm.put++; if (x.ph === 'done' || x.ph === 'sold') mm.done++; if (x.ph === 'noshow') mm.noshow++; if (x.ph === 'sold') mm.sold++;
+      const key = needsTeacher(x.ph) && !x.arch ? '__none' : x.t;
+      if (!tch[key]) { tch[key] = { n: 0, done: 0, sold: 0, waits: [] }; torder.push(key); }
+      const tt = tch[key]; tt.n++; if (x.ph === 'done' || x.ph === 'sold') tt.done++; if (x.ph === 'sold') tt.sold++;
+      if (x.acc != null && x.req != null && x.acc >= x.req) tt.waits.push(x.acc - x.req);
+    });
+    const median = w => w.slice().sort((a, b) => a - b)[Math.floor(w.length / 2)];
+    const speed = w => { if (!w.length) return { t: '—', warn: false }; const v = median(w); const txt = v < 60 ? Math.max(1, Math.round(v)) + ' daq' : Math.round(v / 60) + ' soat'; return { t: (v > 180 ? '' : '~') + txt, warn: v > 180 }; };
+    const avSt = c => 'background:' + c + ';color:#FFFFFF';
+    const mgrRows = morder.map(id => [id, mgrs[id]]).sort((a, b) => b[1].put - a[1].put).map(([id, v]) => { const p = pct(v.sold, v.done); return { n: MG[id][0], ini: ini(MG[id][0]), av: avSt(MG[id][1]), put: String(v.put), done: String(v.done), ns: String(v.noshow), sold: String(v.sold), p: p + '%', pc: p >= 50 ? 'tn-pill tn-ok' : 'tn-pill tn-warn', pl: p >= 50 ? '' : 'Konversiya 50% dan past' }; });
+    const tRows = torder.filter(k => k !== '__none').map(id => [id, tch[id]]).sort((a, b) => b[1].n - a[1].n).map(([id, v]) => { const sp = speed(v.waits); return { n: TC[id][0], ini: ini(TC[id][0]), av: avSt(TC[id][1]), cnt: String(v.n), done: String(v.done), sold: String(v.sold), sp: sp.t, spc: sp.warn ? 'tn-pill tn-warn' : 'tn-sp', spl: sp.warn ? 'Median 3 soatdan koʻp' : '' }; });
+    const none = tch.__none;
+    // Tasdiq tezligi — "Kim boʻsh?" roʻyxati uchun barcha oylar boʻyicha (mobil teacherSpeed).
+    const allW = {}; all.forEach(x => { if (x.t && x.acc != null && x.req != null && x.acc >= x.req) (allW[x.t] = allW[x.t] || []).push(x.acc - x.req); });
+    const tSpeed = id => allW[id] ? median(allW[id]) : null;
+    const mgrFirst = x => first(MG[x.m] ? MG[x.m][0] : '');
+    // ---- Bugun eʼtibor kerak (desktop trialUI + mobil screenTrials qoidalari) ----
+    const att = [];
+    all.forEach(x => {
+      if (x.arch) return;
+      if (needsTeacher(x.ph)) { if (Math.floor(x.at / 1440) <= today + 1 || x.ph === 'rejected') att.push({ x, kind: 'teacher' }); }
+      else if (x.ph === 'result' || x.ph === 'overdue') att.push({ x, kind: 'result' });
+      else if (x.ph === 'pending' && Math.floor(x.at / 1440) === today && x.req != null && x.req < NOW - 45) att.push({ x, kind: 'wait' });
+      else if (x.ph === 'done' && x.inTrial) att.push({ x, kind: 'manager' });
+    });
+    att.sort((a, b) => a.x.at - b.x.at);
+    const hintOf = x => {
+      if (x.ph !== 'unassigned') return null;
+      if (s.demo === 'hintErr' && s.hintErr) return { err: true };
+      if (x.hint === 'exact') return { exact: true, best: { t: 'TD', min: x.at }, txt: first(TC.TD[0]) + ' ' + hm(x.at) + ' sinovga ochiq' };
+      if (x.hint === 'near') return { exact: false, best: { t: 'TM', min: x.at + 30 }, txt: hm(x.at) + ' da ochiq ustoz yoʻq · eng yaqini ' + hm(x.at + 30) + ' ' + first(TC.TM[0]) };
+      return { txt: 'shu kuni sinovga ochiq ustoz yoʻq' };
+    };
+    const tmOf = m => { const d = Math.floor(m / 1440) - today; return d === 0 ? hm(m) : Math.abs(d) <= 6 ? DAY[dt(m).wd] + ' ' + hm(m) : dShort(m) + ' ' + hm(m); };
+    const pick = (x, patch) => this.setState({ rows: s.rows.map(r => r.id === x.id ? Object.assign({}, r, patch) : r) });
+    const addLog = (x, text) => [{ lead: x.name, text, at: hm(NOW) }].concat(s.log).slice(0, 6);
+    const saveFail = () => s.demo === 'saveErr';
+    const remind = x => {
+      if (saveFail()) { toast('Saqlab boʻlmadi — sahifani yangilang'); return; }
+      const tn = TC[x.t][0];
+      const text = 'ROP Islom ustozga eslatdi: ' + tn + ' — ' + (x.ph === 'pending' ? 'sinov soʻrovini tasdiqlang' : 'sinov natijasini yozing') + ' (' + x.name + ').';
+      this.setState({ rows: s.rows.map(r => r.id === x.id ? Object.assign({}, r, { rem: NOW }) : r), log: addLog(x, text) });
+      toast(first(tn) + 'ga eslatma yuborildi · bildirishnomalar panelida chiqadi');
+    };
+    const attRows = att.map(({ x, kind }) => {
+      const mg = mgrFirst(x), tn = x.t ? first(TC[x.t][0]) : '';
+      const o = { id: x.id, name: x.name, mg: mg ? ' · ' + mg : '', tm: tmOf(x.at), tmc: 'tn-tm' + (kind === 'teacher' ? ' tn-tmw' : ''), acts: [], pills: [], open: () => toast(x.name + ' — lid kartasi ochiladi'), openLab: x.name + ' — lid kartasini ochish' };
+      if (kind === 'teacher') {
+        const h = hintOf(x);
+        o.kind = x.ph === 'rejected' ? 'Rad etildi' : 'Ustozsiz'; o.kc = 'tn-k tn-kw';
+        o.sub = x.ph === 'rejected' ? tn + ' rad etdi · ' + x.reason + (x.props && x.props.length ? ' · taklif: ' + x.props.map(p => DAY[dt(p).wd] + ' ' + hm(p)).join(', ') : '') : 'ustoz biriktirilmagan' + (h && !h.err && h.txt ? ' · ' + h.txt : '');
+        o.herr = !!(h && h.err);
+        const askB = () => x.adm ? { pill: true, t: 'Adminga yuborildi · ' + hm(x.adm), c: 'tn-pill tn-info' } : { t: 'Admin ochsin', c: 'btn2 tn-b', on: () => { this.setState({ ask: { id: x.id } }); this.focusSoon('[data-ask] .btnp'); } };
+        const asB = { t: 'Ustoz biriktirish', c: 'btnp tn-b', on: () => this.openAssign(x.id) };
+        if (x.ph !== 'rejected' && h && !h.err && h.best && !h.exact) o.acts = [{ t: 'Lid bilan ' + hm(h.best.min) + ' ni kelishish', c: 'btnp tn-b', on: () => { this.setState({ agree: { id: x.id, t: h.best.t, min: h.best.min } }); this.focusSoon('[data-agree] .btnp'); } }, askB()];
+        else o.acts = (x.ph !== 'rejected' && h && !h.err && !h.best ? [askB()] : []).concat([asB]);
+      } else if (kind === 'result' || kind === 'wait') {
+        o.kind = kind === 'wait' ? 'Tasdiq yoʻq' : x.ph === 'overdue' ? 'Muddati oʻtdi' : 'Natija yoʻq'; o.kc = 'tn-k ' + (x.ph === 'overdue' ? 'tn-kb' : 'tn-ka');
+        o.sub = kind === 'wait' ? 'ustoz ' + tn + ' ' + durTxt(NOW - x.req) + ' tasdiqlamadi · soʻrov ' + hm(x.req) + ' da yuborilgan' : (x.ph === 'overdue' ? 'ustoz tasdiqlamagan, vaqti oʻtdi · ' + tn + ' natijani yozmagan' : 'dars oʻtdi · ' + tn + ' natijani yozmagan') + ' (' + hoursAgo(x.at + x.dur) + ')';
+        const rem = x.rem != null && NOW - x.rem < 120;
+        o.acts = [rem ? { pill: true, t: 'Eslatildi · ' + hm(x.rem), c: 'tn-pill tn-info', tip: '2 soat ichida qayta eslatilmaydi' } : { t: 'Ustozga eslatish', c: 'btn2 tn-b', on: () => remind(x) }];
+      } else {
+        o.kind = 'Natija yoʻq'; o.kc = 'tn-k tn-ka';
+        o.sub = 'keldi · ' + (mg || 'menejer') + ' natija kiritmagan (lid hali “Sinov darsida”)';
+        o.acts = TG[x.m] ? [{ t: mg + 'ga yozish', c: 'btn2 tn-b', on: () => toast('Telegram’da ' + mg + ' bilan chat ochiladi · ' + TG[x.m]) }] : [{ t: 'Lidni ochish', c: 'btn2 tn-b', on: () => toast(x.name + ' — lid kartasi ochiladi'), tip: mg + ' Telegram’ni ulamagan' }];
+      }
+      o.acts = o.acts.map(a => Object.assign({ pill: false, on: () => {}, tip: '' }, a, { btn: !a.pill }));
+      return o;
+    });
+    // ---- "Kim boʻsh?" paneli ----
+    const AV = {
+      aziza: [{ min: T('11-02', '15:00'), src: 'lead', av: { TD: '', TS: '15:00 da darsi bor · band', TN: '', TM: 'ish vaqti emas', TZ: 'sinovga yopiq' } }],
+      bekzod: [{ min: T('11-02', '18:00'), src: 'lead', av: { TD: '18:00 da boshqa sinov bor · band', TS: 'ish vaqti emas', TN: '17:30 da darsi bor · band', TM: '17:30 da darsi bor · band', TZ: 'sinovga yopiq' } }, { min: T('11-02', '18:30'), src: 'near', av: { TD: '18:00 da boshqa sinov bor · band', TS: 'ish vaqti emas', TN: '18:00 da darsi bor · band', TM: '', TZ: 'sinovga yopiq' } }],
+      kamila: [{ min: T('11-03', '11:00'), src: 'lead', av: { TD: 'ish vaqti emas', TS: '11:00 da darsi bor · band', TN: '10:30 da darsi bor · band', TM: 'ish vaqti emas', TZ: 'sinovga yopiq' } }],
+      otabek: [{ min: T('11-02', '16:30'), src: 'lead', av: { TD: 'rad etgan', TS: '', TN: '', TM: '16:30 da boshqa sinov bor · band', TZ: '' } }, { min: T('11-02', '17:30'), src: 'teacher', av: { TD: '', TS: '17:00 da darsi bor · band', TN: '', TM: 'ish vaqti emas', TZ: '' } }, { min: T('11-03', '10:00'), src: 'teacher', av: { TD: '', TS: '', TN: 'ish vaqti emas', TM: '', TZ: 'sinovga yopiq' } }],
+      nilufar: [{ min: T('11-05', '14:00'), src: 'lead', av: { TD: '', TS: '14:00 da darsi bor · band', TN: 'ish vaqti emas', TM: '', TZ: '' } }]
+    };
+    const as = s.as, ax = as ? s.rows.find(r => r.id === as.id) : null;
+    let asV = { open: false };
+    if (ax) {
+      const times = AV[ax.id] || [{ min: ax.at, src: 'lead', av: {} }];
+      const ti = Math.min(as.ti || 0, times.length - 1), tm = times[ti];
+      const dayCnt = id => s.rows.filter(r => r.t === id && !needsTeacher(r.ph) && Math.floor(r.at / 1440) === Math.floor(tm.min / 1440)).length;
+      const list = Object.keys(TC).map(id => { const why = ax.ph === 'rejected' && id === ax.t ? 'rad etgan' : (tm.av[id] == null ? '' : tm.av[id]); return { id, ok: !why, why, trials: dayCnt(id), sp: tSpeed(id) }; })
+        .sort((p, q) => (q.ok - p.ok) || ((p.sp == null ? 9e9 : p.sp) - (q.sp == null ? 9e9 : q.sp)) || p.trials - q.trials);
+      const fast = list.filter(r => r.ok && r.sp != null).sort((p, q) => p.sp - q.sp)[0];
+      const pickId = as.pick && list.some(r => r.ok && r.id === as.pick) ? as.pick : ((list.find(r => r.ok) || {}).id || '');
+      const pt = list.find(r => r.id === pickId);
+      const relL = m => (rel(m) || dShort(m));
+      const busy = s.demo === 'schedErr' && !as.retried ? 'err' : as.loading ? 'load' : 'ok';
+      const save = () => {
+        if (!pt || as.busy || busy !== 'ok') return;
+        this.setState({ as: Object.assign({}, as, { busy: true, err: '' }) });
+        setTimeout(() => {
+          const st = this.state; if (!st.as) return;
+          if (st.demo === 'saveErr') { this.setState({ as: Object.assign({}, st.as, { busy: false, err: 'Saqlab boʻlmadi — server javob bermadi. Tanlov saqlanib qoldi, qayta bosing.' }) }); return; }
+          const tname = TC[pt.id][0];
+          const text = ['Ustoz biriktirildi (ROP):'].concat(ax.ph === 'rejected' ? ['• Avvalgi ustoz rad etgan: ' + (ax.reason || '—')] : [], ['• Oʻqituvchi: ' + tname, '• Kuni: ' + dFull(tm.min) + ', ' + DAYF[dt(tm.min).wd] + ', ' + hm(tm.min), '• Davomiyligi: 1 kun']).join('\n');
+          this.setState({ as: null, rows: st.rows.map(r => r.id === ax.id ? Object.assign({}, r, { t: pt.id, at: tm.min, ph: 'pending', req: NOW, acc: null, adm: null, reason: '', props: null }) : r), log: [{ lead: ax.name, text, at: hm(NOW) }].concat(st.log).slice(0, 6) });
+          toast(first(tname) + ' biriktirildi — ustoz tasdigʻi kutilmoqda');
+        }, 650);
+      };
+      asV = {
+        open: true, head: (Math.floor(tm.min / 1440) >= today ? relL(tm.min) + ' ' + hm(tm.min) + ' · ' : '') + 'kim boʻsh?',
+        sub: ax.name + ' · ' + ax.dur + ' daq · ' + (mgrFirst(ax) ? mgrFirst(ax) + ' qoʻygan' : 'menejersiz'),
+        times: times.length > 1 ? times.map((t, i) => ({ t: relL(t.min) + ' ' + hm(t.min) + (t.src === 'teacher' ? ' · ustoz taklifi' : t.src === 'near' ? ' · eng yaqin ochiq' : ' · lid tanlagan'), on: i === ti ? 'true' : 'false', pick: () => this.setState({ as: Object.assign({}, as, { ti: i, pick: '', err: '' }) }) })) : [],
+        hasTimes: times.length > 1,
+        diff: tm.src !== 'lead', diffT: 'Bu vaqt lid tanlagan vaqtdan (' + hm(times[0].min) + ') farq qiladi — biriktirishdan oldin lid bilan kelishing.',
+        intro: ax.ph === 'rejected' ? first(TC[ax.t][0]) + ' rad etgan (' + ax.reason + ') va boshqa vaqtlarni taklif qilgan. Bu vaqtda sinovga ochiq ustozlar tepada (umumiy jadvaldan).' : 'Bu vaqtda sinovga ochiq ustozlar tepada (umumiy jadvaldan).',
+        load: busy === 'load', err: busy === 'err', ok: busy === 'ok', retry: () => { this.setState({ as: Object.assign({}, as, { retried: true, loading: true }) }); setTimeout(() => this.state.as && this.setState({ as: Object.assign({}, this.state.as, { loading: false }) }), 600); },
+        list: list.map(r => ({ id: r.id, n: TC[r.id][0], ini: ini(TC[r.id][0]), avSt: avSt(TC[r.id][1]) + (r.ok ? '' : ';opacity:.45'), cls: 'tn-opt' + (pickId === r.id ? ' tn-on' : '') + (r.ok ? '' : ' tn-off'), chk: pickId === r.id ? 'true' : 'false', dis: r.ok ? 'false' : 'true', fast: !!(fast && fast.id === r.id),
+          mt: r.ok ? 'Boʻsh · ' + (rel(tm.min) ? rel(tm.min).toLowerCase() : 'shu kuni') + ' ' + r.trials + ' sinov' + (r.sp != null ? ' · oʻrtacha ' + durTxt(Math.round(r.sp)) + 'da javob' : '') : r.why, pill: r.why === 'rad etgan' ? 'Rad etgan' : r.ok ? hm(tm.min) + ' ochiq' : 'Band', pc: r.why === 'rad etgan' ? 'tn-pill tn-mute' : r.ok ? 'tn-pill tn-ok' : 'tn-pill tn-bad',
+          on: () => { if (r.ok) this.setState({ as: Object.assign({}, as, { pick: r.id, err: '' }) }); },
+          key: e => { if (!['ArrowDown', 'ArrowUp'].includes(e.key)) return; e.preventDefault(); const oks = list.filter(z => z.ok); const i = oks.findIndex(z => z.id === pickId); const nx = oks[(i + (e.key === 'ArrowDown' ? 1 : oks.length - 1)) % oks.length]; if (nx) { this.setState({ as: Object.assign({}, as, { pick: nx.id }) }); this.focusSoon('[data-tid="' + nx.id + '"]'); } } })),
+        none: !list.some(r => r.ok),
+        saveLab: as.busy ? 'Saqlanmoqda…' : pt ? first(TC[pt.id][0]) + 'ga biriktirish' : 'Boʻsh ustoz yoʻq', saveDis: !pt || as.busy || busy !== 'ok' ? 'true' : 'false', save, errS: as.err || '',
+        resched: () => { if (times.length > 1) { const ni = (ti + 1) % times.length; this.setState({ as: Object.assign({}, as, { ti: ni, pick: '' }) }); toast('Vaqt: ' + relL(times[ni].min) + ' ' + hm(times[ni].min) + ' — lid bilan kelishilgan boʻlsa biriktiring'); } else { this.setState({ as: null }); toast(ax.name + ' — sotuv oynasida “Boshqa vaqtga koʻchirish” ochiladi'); } },
+        adminLab: ax.adm ? 'Adminga yuborilgan · ' + hm(ax.adm) : 'Admin soat ochsin', adminDis: ax.adm ? 'true' : 'false',
+        admin: () => { if (ax.adm) return; this.setState({ as: null, ask: { id: ax.id } }); this.focusSoon('[data-ask] .btnp'); },
+        close: () => { this.setState({ as: null }); this.focusSoon('[data-att="' + ax.id + '"] .btnp'); },
+        key: e => { if (e.key === 'Escape') { e.preventDefault(); this.setState({ as: null }); return; } if (e.key === 'Tab') { const bs = Array.prototype.slice.call(e.currentTarget.querySelectorAll('button:not([aria-disabled="true"])')); const ix = bs.indexOf(document.activeElement); e.preventDefault(); (e.shiftKey ? (bs[ix - 1] || bs[bs.length - 1]) : (bs[ix + 1] || bs[0])).focus(); } }
+      };
+    }
+    // ---- Admin ochsin tasdig'i (production: confirm()) ----
+    const kx = s.ask ? s.rows.find(r => r.id === s.ask.id) : null;
+    const askV = kx ? { q: kx.name + ': ' + (rel(kx.at) || dShort(kx.at)).toLowerCase() + ' ' + hm(kx.at) + ' — adminga “shu vaqtni sinovga oching” soʻrovi yuborilsinmi?',
+      no: () => this.setState({ ask: null }),
+      yes: () => {
+        if (saveFail()) { this.setState({ ask: null }); toast('Saqlab boʻlmadi — sahifani yangilang'); return; }
+        const text = 'ROP Islom adminga soʻrov yubordi: ' + dFull(kx.at) + ' ' + hm(kx.at) + ' vaqtini sinovga ochish (lid istagi, ochiq ustoz yoʻq).';
+        this.setState({ ask: null, rows: s.rows.map(r => r.id === kx.id ? Object.assign({}, r, { adm: NOW }) : r), log: addLog(kx, text) }); toast('Adminga yuborildi · admin bildirishnomalarida chiqadi');
+      } } : null;
+    // ---- Lid bilan HH:MM ni kelishish (production: sotuvSinov reschedule, preset ustoz/vaqt) ----
+    const gx = s.agree ? s.rows.find(r => r.id === s.agree.id) : null;
+    const agV = gx ? { q: gx.name + ' bilan ' + hm(s.agree.min) + ' ni kelishdingizmi?', d: 'Sinov ' + (rel(gx.at) || dShort(gx.at)).toLowerCase() + ' ' + hm(gx.at) + ' → ' + hm(s.agree.min) + ' ga koʻchiriladi va ' + TC[s.agree.t][0] + 'ga biriktiriladi. Ustoz tasdiqlaguncha “Tasdiq kutilmoqda”.', yesT: hm(s.agree.min) + ' ga koʻchirish',
+      no: () => this.setState({ agree: null }),
+      yes: () => {
+        if (saveFail()) { this.setState({ agree: null }); toast('Saqlab boʻlmadi — sahifani yangilang'); return; }
+        const tname = TC[s.agree.t][0], text = 'Sinov vaqti koʻchirildi (ROP, lid bilan kelishildi): ' + hm(gx.at) + ' → ' + hm(s.agree.min) + '\n• Oʻqituvchi: ' + tname + '\n• Kuni: ' + dFull(s.agree.min) + ', ' + DAYF[dt(s.agree.min).wd] + ', ' + hm(s.agree.min);
+        this.setState({ agree: null, rows: s.rows.map(r => r.id === gx.id ? Object.assign({}, r, { t: s.agree.t, at: s.agree.min, ph: 'pending', req: NOW }) : r), log: addLog(gx, text) }); toast(first(tname) + ' biriktirildi — ustoz tasdigʻi kutilmoqda');
+      } } : null;
+    const dlgKey = close => e => { if (e.key === 'Escape') { e.preventDefault(); close(); return; } if (e.key === 'Tab') { const bs = Array.prototype.slice.call(e.currentTarget.querySelectorAll('button')); const ix = bs.indexOf(document.activeElement); e.preventDefault(); (e.shiftKey ? (bs[ix - 1] || bs[bs.length - 1]) : (bs[ix + 1] || bs[0])).focus(); } };
+    const shift = d => { const [y, m] = month.split('-').map(Number); const z = new Date(Date.UTC(y, m - 1 + d, 1)); return z.getUTCFullYear() + '-' + String(z.getUTCMonth() + 1).padStart(2, '0'); };
+    const mLab = mk => { const [y, m] = mk.split('-').map(Number); return MON[m - 1] + ' ' + y; };
+    const nextDis = month >= curMonth;
+    const kpiNt = noTeacher.slice(0, 2).map(x => (rel(x.at) || dShort(x.at)).toLowerCase() + ' ' + hm(x.at)).join(' · ') || 'hammasi biriktirilgan';
+    return {
+      nav, sbCls: s.sb ? 'sb' : 'sb sb-min', sbExp: s.sb ? 'true' : 'false', sbLab: s.sb ? 'Menyuni yigʻish' : 'Menyuni ochish', sbIcon: s.sb ? 'M15 6l-6 6 6 6' : 'M9 6l6 6-6 6', toggleSb: () => this.setState({ sb: !s.sb }),
+      demo: [['ok', 'Oddiy'], ['load', 'Yuklanmoqda'], ['err', 'Xato'], ['calm', 'Hammasi joyida'], ['hintErr', 'Vaqt xatosi'], ['schedErr', 'Jadval xatosi'], ['saveErr', 'Saqlash xatosi']].map(d => ({ t: d[1], on: s.demo === d[0] ? 'true' : 'false', pick: () => this.setState({ toast: '', demo: d[0], retried: false, hintErr: true, as: null, ask: null, agree: null, month: '2026-11', rows: this.rows0.map(r => Object.assign({}, r)), log: [] }) })),
+      loading, loadErr, ready: !loading && !loadErr, retry: () => this.setState({ retried: true }),
+      sub: 'Barcha menejerlar va ustozlar · ' + mLab(month).toLowerCase() + ' · Rus tili yoʻnalishi',
+      monLab: mLab(month), prevM: () => this.setState({ month: shift(-1) }), nextM: () => { if (!nextDis) this.setState({ month: shift(1) }); }, nextDis: nextDis ? 'true' : 'false', nextTip: nextDis ? 'Kelgusi oylar hali yoʻq' : 'Keyingi oy', prevLab: 'Oldingi oy: ' + mLab(shift(-1)), nextLab: nextDis ? 'Keyingi oy (mavjud emas)' : 'Keyingi oy: ' + mLab(shift(1)),
+      jadval: () => toast('Dars jadvali sahifasi ochiladi'),
+      kpi: [
+        { l: 'Sinovlar', v: String(rows.length), s: Object.keys(mgrs).length + ' menejer · ' + torder.filter(k => k !== '__none').length + ' ustoz · ' + upcoming + ' kelgusi', dot: 'tn-dot tn-dmute', c: 'tn-kpi' },
+        { l: 'Oʻtkazildi', v: String(done), s: waiting ? '+' + waiting + ' natija kutilmoqda' : 'natija yozilgan', dot: 'tn-dot tn-dok', c: 'tn-kpi' },
+        { l: 'Lid kelmadi', v: String(noshow), s: pct(noshow, done + noshow) + '% · ' + (done + noshow) + ' tadan ' + noshow + ' tasi', dot: 'tn-dot tn-dbad', c: 'tn-kpi' },
+        { l: 'Sotildi', v: String(sold), s: 'konversiya ' + pct(sold, done) + '% (' + sold + ' / ' + done + ')', dot: 'tn-dot tn-dinfo', c: 'tn-kpi' },
+        { l: 'Ustozsiz', v: String(noTeacher.length), s: kpiNt, dot: 'tn-dot tn-dwarn', c: 'tn-kpi' + (noTeacher.length ? ' tn-kw2' : '') }
+      ],
+      mgrRows, hasMgr: mgrRows.length > 0, noMgr: mgrRows.length === 0,
+      tot: { put: String(rows.length), done: String(done), ns: String(noshow), sold: String(sold), p: pct(sold, done) + '%' },
+      tRows, hasT: tRows.length > 0 || !!none, noT: tRows.length === 0 && !none, none: !!none, noneN: none ? String(none.n) : '',
+      attN: String(attRows.length), att: attRows, hasAtt: attRows.length > 0, noAtt: attRows.length === 0,
+      hintRetry: () => { this.setState({ hintErr: false }); toast('Boʻsh vaqtlar qayta yuklandi'); },
+      log: s.log, hasLog: s.log.length > 0,
+      as: asV,
+      ask: !!askV, askV: askV || {}, askKey: dlgKey(() => this.setState({ ask: null })),
+      agree: !!agV, agV: agV || {}, agKey: dlgKey(() => this.setState({ agree: null })),
+      toast: s.toast
+    };
+  }
+  openAssign(id) {
+    this.setState({ as: { id, ti: 0, pick: '', loading: true } });
+    setTimeout(() => { if (this.state.as && this.state.as.id === id) { this.setState({ as: Object.assign({}, this.state.as, { loading: false }) }); this.focusSoon('.tn-opt[aria-checked="true"], .tn-drw .tn-x'); } }, 450);
+    this.focusSoon('.tn-drw .tn-x');
+  }
+}

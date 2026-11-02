@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<title>ROP — Dars jadvali (kompyuter)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#0057B8;text-decoration:none}a:hover{color:#0B1220}
+.dk-nav a{display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:12px;color:#3A4456;font-size:14px;font-weight:600}
+.dk-nav a:hover{background:#F1F5F9;color:#0B1220}
+.dk-nav a[aria-current="page"]{background:#EAF3FF;color:#0057B8;font-weight:800}
+.dk-cnt{margin-left:auto;min-width:22px;height:22px;padding:0 6px;box-sizing:border-box;border-radius:999px;background:#D92D20;color:#FFFFFF;font-size:12px;font-weight:800;display:grid;place-items:center}
+.dk-grp{font-size:12px;font-weight:800;color:#4B5563;letter-spacing:.06em;padding:12px 12px 4px}
+.dk-slot{width:100%;height:44px;border-radius:10px;font:inherit;font-size:12px;font-weight:800;cursor:pointer;background:#ECFDF3;border:1.5px solid #75E0A7;color:#067647}
+.dk-slot:hover{background:#D1FADF;border-color:#12B76A}
+.dk-slot:focus-visible{outline:2px solid #0065D6;outline-offset:2px}
+.dk-slot[aria-pressed="true"]{background:#0065D6;border-color:#0065D6;color:#FFFFFF}
+a,button{transition:transform .2s ease,background .15s ease}a:active,button:active{transform:scale(.98)}
+.t-table{display:table}.t-hg{display:table-header-group}.t-rg{display:table-row-group}.t-row{display:table-row}.t-cell{display:table-cell;vertical-align:middle}sc-for,sc-if{display:contents}
+</style>
+</helmet>
+<div style="min-height: 960px; box-sizing: border-box; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #0B1220; background: #F5F7FB; display: flex">
+
+  <aside aria-label="Asosiy menyu" style="flex: none; width: 256px; background: #FFFFFF; border-right: 1px solid #E6EAF2; display: flex; flex-direction: column; padding: 18px 14px; box-sizing: border-box">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 2px 8px 14px">
+      <span style="width: 36px; height: 36px; border-radius: 11px; background: #0065D6; color: #FFFFFF; display: grid; place-items: center; font-weight: 800; font-size: 15px">D</span>
+      <span style="display: flex; flex-direction: column"><strong style="font-size: 15px">Domwork Team</strong><span style="font-size: 12px; color: #4B5563; font-weight: 600">ROP kabineti</span></span>
+    </div>
+    <nav class="dk-nav" style="display: flex; flex-direction: column; gap: 2px">
+      <a href="RopDeskHome.dc.html"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5L12 3l9 7.5V20a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"></path></svg>Bosh</a>
+      <a href="RopDeskLeads.dc.html"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 00-3-3.9M16 3.1a4 4 0 010 7.8"></path></svg>Lidlar<span class="dk-cnt" aria-label="7 ta kutmoqda">7</span></a>
+      <a href="RopDeskTrials.dc.html" aria-current="page"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16" rx="3"></rect><path d="M3 9.5h18M8 3v3M16 3v3"></path></svg>Jadval</a>
+      <a href="RopDeskTeam.dc.html"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V11M10 20V5M16 20v-7M21 20H3"></path></svg>Jamoa va voronka</a>
+      <a href="RopDeskControl.dc.html"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"></path></svg>Nazorat<span class="dk-cnt" aria-label="7 ta kutmoqda">7</span></a>
+      <span class="dk-grp">SOTUV</span>
+      <a href="Rating.dc.html"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0zM7 6H4a3 3 0 003 3M17 6h3a3 3 0 01-3 3"></path></svg>Reyting va bonus</a>
+      <a href="Debtors.dc.html"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="13" rx="3"></rect><path d="M2 10h20"></path></svg>Qarzdorlar</a>
+      <a href="Scripts.dc.html"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"></path></svg>Skript va yoʻriqnoma</a>
+      <span class="dk-grp">VOSITALAR</span>
+      <a href="RopDeskSettings.dc.html"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 018 0v4"></path></svg>Qotgan lidlar qoidasi</a>
+      <a href="RopDeskSettings.dc.html"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4"></path></svg>Arxiv</a>
+      <a href="RopDeskSettings.dc.html"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v12H5l-1 4z"></path><path d="M8 9h8M8 12h5"></path></svg>SMS yuborish</a>
+      <span class="dk-grp">OʻQUVCHILAR</span>
+      <a href="Students.dc.html"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 10L12 5 2 10l10 5 10-5z"></path><path d="M6 12v5c3 2 9 2 12 0v-5"></path></svg>Oʻquvchilar</a>
+      <a href="Students.dc.html"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 4L3 11l6 2 2 6 3-4 5 4z"></path></svg>Telegram guruh</a>
+    </nav>
+    <div style="margin-top: auto; display: flex; flex-direction: column; gap: 6px; padding-top: 12px">
+      <a href="Profile.dc.html" style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 14px; border: 1px solid #E6EAF2; color: #0B1220">
+        <span style="flex: none; width: 36px; height: 36px; border-radius: 50%; background: #0B1220; color: #FFFFFF; display: grid; place-items: center; font-size: 13px; font-weight: 800">DK</span>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column"><strong style="font-size: 14px">Dilnoza Karimova</strong><span style="font-size: 12px; color: #4B5563">ROP · Rus tili · Profil</span></span>
+      </a>
+      <a href="Main.dc.html" style="height: 44px; display: flex; align-items: center; gap: 10px; padding: 0 12px; border-radius: 12px; color: #B42318; font-size: 14px; font-weight: 700"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"></path></svg>Chiqish</a>
+    </div>
+  </aside>
+
+  <main style="flex: 1; min-width: 0; display: flex; flex-direction: column">
+    <header style="flex: none; padding: 16px 28px 0; background: #FFFFFF; border-bottom: 1px solid #E6EAF2; display: flex; flex-direction: column; gap: 8px">
+      <div style="display: flex; align-items: center; gap: 12px">
+        <h1 style="flex: 1; margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.02em">Dars jadvali</h1>
+        <div role="radiogroup" aria-label="Kun" style="display: flex; padding: 3px; border-radius: 14px; background: #F1F5F9; gap: 3px">
+          <sc-for list="{{ days }}" as="d" hint-placeholder-count="2">
+            <button type="button" role="radio" aria-checked="{{ d.on }}" onClick="{{ d.pick }}" style="{{ d.style }}">{{ d.label }}</button>
+          </sc-for>
+        </div>
+        <a href="RopDeskNotif.dc.html" aria-label="Bildirishnomalar, 5 ta yangi" style="position: relative; width: 44px; height: 44px; border-radius: 14px; border: 1px solid #CBD5E1; background: #FFFFFF; display: grid; place-items: center; color: #3A4456; box-sizing: border-box"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 00-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0"></path></svg><span style="position: absolute; top: -5px; right: -5px; min-width: 20px; height: 20px; border-radius: 999px; background: #D92D20; color: #FFFFFF; font-size: 12px; font-weight: 800; display: grid; place-items: center; border: 2px solid #FFFFFF">5</span></a>
+      </div>
+      <div role="tablist" aria-label="Jadval turi" style="display: flex; gap: 4px">
+        <sc-for list="{{ views }}" as="v" hint-placeholder-count="2">
+          <button type="button" role="tab" aria-selected="{{ v.on }}" onClick="{{ v.pick }}" style="{{ v.style }}">{{ v.label }}</button>
+        </sc-for>
+      </div>
+    </header>
+
+    <div style="flex: 1; padding: 16px 24px 28px 28px; display: flex; flex-direction: column; gap: 12px">
+      <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap; font-size: 13px; color: #3A4456; font-weight: 600">
+        <div role="radiogroup" aria-label="Soatlar oraligʻi" style="display: flex; padding: 3px; border-radius: 12px; background: #FFFFFF; border: 1px solid #E2E8F0; gap: 3px">
+          <sc-for list="{{ ranges }}" as="r" hint-placeholder-count="2">
+            <button type="button" role="radio" aria-checked="{{ r.on }}" onClick="{{ r.pick }}" style="{{ r.style }}">{{ r.label }}</button>
+          </sc-for>
+        </div>
+        <sc-for list="{{ legend }}" as="g" hint-placeholder-count="5">
+          <span style="display: flex; align-items: center; gap: 6px"><span aria-hidden="true" style="{{ g.sw }}"></span>{{ g.label }}</span>
+        </sc-for>
+      </div>
+
+      <div style="background: #FFFFFF; border: 1px solid #E6EAF2; border-radius: 20px; overflow-x: auto">
+        <div role="table" class="t-table" style="border-collapse: separate; border-spacing: 4px; width: 100%; font-size: 12px; padding: 6px; table-layout: fixed">
+          <div role="rowgroup" class="t-hg">
+            <div role="row" class="t-row">
+              <div role="columnheader" class="t-cell" style="text-align: left; padding: 6px 8px; font-size: 12px; color: #4B5563; font-weight: 700; width: 96px">USTOZ</div>
+              <sc-for list="{{ hours }}" as="h" hint-placeholder-count="12">
+                <div role="columnheader" class="t-cell" style="{{ h.style }}">{{ h.label }}</div>
+              </sc-for>
+            </div>
+          </div>
+          <div role="rowgroup" class="t-rg">
+            <sc-for list="{{ grid }}" as="g" hint-placeholder-count="7">
+              <div role="row" class="t-row">
+                <div role="rowheader" class="t-cell" style="text-align: left; padding: 4px 8px; font-size: 14px; font-weight: 800; white-space: nowrap">{{ g.name }}<span style="display: block; font-size: 12px; font-weight: 600; color: #4B5563">{{ g.sub }}</span></div>
+                <sc-for list="{{ g.cells }}" as="c" hint-placeholder-count="12">
+                  <div role="cell" class="t-cell" style="padding: 0">
+                    <sc-if value="{{ c.free }}" hint-placeholder-val="{{ true }}"><button type="button" class="dk-slot" aria-pressed="{{ c.pressed }}" aria-label="{{ c.label }}" onClick="{{ c.pick }}">{{ c.text }}</button></sc-if>
+                    <sc-if value="{{ c.busy }}" hint-placeholder-val="{{ false }}"><div role="img" aria-label="{{ c.label }}" style="{{ c.style }}">{{ c.text }}</div></sc-if>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+      <span style="font-size: 12px; color: #4B5563">{{ foot }}</span>
+    </div>
+  </main>
+
+  <aside aria-label="Sinovlar boshqaruvi" style="flex: none; width: 300px; background: #FFFFFF; border-left: 1px solid #E6EAF2; padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px">
+    <sc-if value="{{ hasPick }}" hint-placeholder-val="{{ false }}">
+      <div style="border: 2px solid #0065D6; background: #F2F7FF; border-radius: 18px; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+        <span style="font-size: 12px; font-weight: 800; color: #0057B8; letter-spacing: .05em">TANLANGAN VAQT</span>
+        <strong style="font-size: 18px">{{ pickText }}</strong>
+        <span style="font-size: 13px; color: #3A4456">30 daqiqalik sinov. Keyingi qadam — lidni tanlash.</span>
+        <a href="RopDeskModal.dc.html" style="height: 46px; border-radius: 14px; background: #0065D6; color: #FFFFFF; font-size: 14px; font-weight: 800; display: grid; place-items: center">Lid tanlash va sinov qoʻyish</a>
+        <button type="button" onClick="{{ clearPick }}" style="height: 44px; border-radius: 12px; border: 1px solid #CBD5E1; background: #FFFFFF; font: inherit; font-size: 13px; font-weight: 800; color: #0B1220; cursor: pointer">Bekor qilish</button>
+      </div>
+    </sc-if>
+    <sc-if value="{{ isToday }}" hint-placeholder-val="{{ true }}">
+      <h2 style="margin: 0; font-size: 17px; font-weight: 800">Ustoz kerak · 1</h2>
+      <div style="border: 1.5px solid #FDA29B; background: #FFFBFA; border-radius: 18px; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+        <div style="display: flex; align-items: center; gap: 10px"><strong style="font-size: 18px; font-variant-numeric: tabular-nums">15:00</strong><span style="font-size: 12px; font-weight: 800; color: #B42318; background: #FEF3F2; border-radius: 999px; padding: 3px 10px">Ustoz biriktirilmagan</span></div>
+        <div style="display: flex; flex-direction: column; gap: 2px"><strong style="font-size: 15px">Kamol Nazarov</strong><span style="font-size: 13px; color: #4B5563">Bekzod qoʻydi · Rus tili · 0 daraja</span></div>
+        <span style="font-size: 13px; font-weight: 700; color: #3A4456">15:00 da boʻsh: {{ freeAtKamol }}</span>
+        <a href="RopDeskModal.dc.html" style="height: 46px; border-radius: 14px; background: #0065D6; color: #FFFFFF; font-size: 14px; font-weight: 800; display: grid; place-items: center">Ustoz biriktirish</a>
+        <div style="display: flex; gap: 8px">
+          <button type="button" onClick="{{ remind }}" style="flex: 1; height: 44px; border-radius: 12px; border: 1px solid #CBD5E1; background: #FFFFFF; font: inherit; font-size: 13px; font-weight: 800; color: #0B1220; cursor: pointer">{{ remindLabel }}</button>
+          <a href="RopDeskModal.dc.html" style="flex: 1; height: 44px; border-radius: 12px; border: 1px solid #B42318; color: #B42318; font-size: 13px; font-weight: 800; display: grid; place-items: center; box-sizing: border-box">Bekor qilish</a>
+        </div>
+        <span style="font-size: 12px; color: #4B5563">Bekor qilinsa lidga SMS ketmaydi.</span>
+      </div>
+      <h2 style="margin: 4px 0 0; font-size: 15px; font-weight: 800">Ustoz javobi kutilmoqda · 1</h2>
+      <div style="border: 1px solid #E6EAF2; border-radius: 16px; padding: 12px; display: flex; gap: 10px">
+        <strong style="font-size: 15px; font-variant-numeric: tabular-nums">16:00</strong>
+        <span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><strong style="font-size: 14px">Rustam Komilov</strong><span style="font-size: 12px; color: #93370D; font-weight: 700">Mohinur hali javob bermadi · 25 daq</span></span>
+      </div>
+    </sc-if>
+    <h2 style="margin: 4px 0 0; font-size: 15px; font-weight: 800">Tanaffusda · {{ breakCount }}</h2>
+    <sc-for list="{{ breaks }}" as="b" hint-placeholder-count="1">
+      <div style="border: 1px solid #E6EAF2; border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 4px">
+        <strong style="font-size: 14px">{{ b.who }} · {{ b.when }}</strong>
+        <span style="font-size: 13px; color: #3A4456">Sabab: {{ b.why }}</span>
+      </div>
+    </sc-for>
+  </aside>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":960}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { day: 'today', range: 'pm', view: 'trial', pick: null }; }
+  renderVals() {
+    const s = this.state;
+    const H = {
+      am: ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30'],
+      pm: ['15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30']
+    };
+    const NOW = { range: 'am', idx: 11 };
+    const T = {
+      today: {
+        am: { Gulhayo: 'x x f f l l l l f f l l', Ezoza: 'f f l l l l f f x x f f', Mohinur: 'l l l l f f x x f f l l', Odina: 'x x x x f f l l l l x x', Dilfuza: 'f f f f l l l l f f f f', Malika: 'l l f f l l x x f f l l', 'Malika 2': 'x x x x x x x x f f l l' },
+        pm: { Gulhayo: 'f l l f l l l l f f l x', Ezoza: 'f f l l l f f t:Aziz l l f f', Mohinur: 'l l t?:Rustam f f l l l l f x x', Odina: 'x f f l l l l f t:Mohira l l l', Dilfuza: 'f f f f l l l l f f l l', Malika: 'l f f f b b b l l l l f', 'Malika 2': 'x x x l l l f f f l l l' }
+      },
+      tomorrow: {
+        am: { Gulhayo: 'f f l l l l f f x x f f', Ezoza: 'x x f f l l l l f f l l', Mohinur: 'l l f f f f l l x x f f', Odina: 'f f f f l l x x l l f f', Dilfuza: 'b b b b b b b b b b b b', Malika: 'x x l l f f l l f f l l', 'Malika 2': 'x x x x f f l l l l f f' },
+        pm: { Gulhayo: 'f f l l l l f f l l l x', Ezoza: 'l l f f f l l l f f l l', Mohinur: 'f l l l f f l l l l x x', Odina: 'x x l l l f f f l l l f', Dilfuza: 'b b b b b b b b b b b b', Malika: 'l l f f l l l f f l l l', 'Malika 2': 'x x x x f f l l l f f l' }
+      }
+    };
+    const SUB = { Gulhayo: '4 sinov · hafta', Ezoza: '6 sinov', Mohinur: '3 sinov', Odina: '5 sinov', Dilfuza: '2 sinov', Malika: '4 sinov', 'Malika 2': '1 sinov' };
+    const BRK = {
+      today: [{ who: 'Malika', when: '17:00–18:30', why: 'shifokor qabuli', from: 4, to: 6, range: 'pm' }],
+      tomorrow: [{ who: 'Dilfuza', when: 'butun kun', why: 'oilaviy tadbir', all: true }]
+    };
+    const LES = { Gulhayo: 'Guruh A3', Ezoza: 'Guruh B1', Mohinur: 'Guruh A1', Odina: 'Guruh C2', Dilfuza: 'Guruh A2', Malika: 'Guruh B2', 'Malika 2': 'Guruh C1' };
+    const hrs = H[s.range];
+    const isToday = s.day === 'today';
+    const hours = hrs.map((h, i) => {
+      const now = isToday && s.range === NOW.range && i === NOW.idx;
+      return { label: now ? h + ' · hozir' : h, style: 'padding:6px 0;font-size:12px;text-align:center;font-weight:' + (now ? '800;color:#B42318' : '700;color:#4B5563') };
+    });
+    const isPast = (i) => isToday && s.range === NOW.range && i <= NOW.idx;
+    const brkOf = (who) => (BRK[s.day] || []).find(b => b.who === who);
+    const base = 'height:44px;border-radius:10px;font-size:12px;font-weight:800;display:grid;place-items:center;padding:0 4px;box-sizing:border-box;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;';
+    const trialView = s.view === 'trial';
+    const data = T[s.day][s.range];
+    const grid = Object.keys(data).map(name => ({
+      name, sub: trialView ? SUB[name] : (isToday ? 'Juft kunlar · bugun' : 'Toq kunlar · ertaga'),
+      cells: data[name].split(' ').map((c, i) => {
+        const [k, who] = c.split(':');
+        const t = hrs[i], past = isPast(i);
+        const pressed = s.pick && s.pick.name === name && s.pick.t === t && s.pick.day === s.day;
+        if (k === 'f' && trialView && !past) return { free: true, busy: false, pressed: pressed ? 'true' : 'false', text: pressed ? 'Tanlandi' : 'Boʻsh', label: name + ', ' + t + ' boʻsh — sinov qoʻyish', pick: () => this.setState({ pick: { name, t, day: s.day } }), style: '' };
+        let txt = '', st = '', lab = '';
+        if (k === 'f') { txt = ''; st = past ? 'background:#F8FAFC;border:1px dashed #CBD5E1' : 'background:#FFFFFF;border:1px dashed #CBD5E1'; lab = name + ', ' + t + (past ? ' — vaqt oʻtgan' : ' — darssiz'); }
+        else if (k === 't') { txt = trialView ? who : ''; st = trialView ? 'background:#6D28D9;color:#FFFFFF' : 'background:#FFFFFF;border:1px dashed #CBD5E1'; lab = name + ', ' + t + ' — sinov, ' + who; }
+        else if (k === 't?' && !trialView) { txt = ''; st = 'background:#FFFFFF;border:1px dashed #CBD5E1'; lab = name + ', ' + t + ' — darssiz'; }
+        else if (k === 't?') { txt = who + ' ?'; st = 'background:#F1E8FF;color:#5B21B6;border:1.5px dashed #6D28D9'; lab = name + ', ' + t + ' — sinov, ustoz tasdiqlamagan'; }
+        else if (k === 'l') { txt = trialView ? 'Dars' : LES[name]; st = 'background:#0065D6;color:#FFFFFF'; lab = name + ', ' + t + ' — dars'; }
+        else if (k === 'b') { const b = brkOf(name); txt = 'Tanaffus'; st = 'background:repeating-linear-gradient(135deg,#E2E8F0 0 4px,#F8FAFC 4px 8px);border:1px solid #CBD5E1;color:#3A4456'; lab = name + ', ' + t + ' — tanaffus' + (b ? ': ' + b.why : ''); }
+        else { txt = ''; st = 'background:#F1F5F9'; lab = name + ', ' + t + ' — ish vaqti emas'; }
+        if (past && k === 'l') st = 'background:#94A3B8;color:#0B1220'; else if (past && k !== 'f') st += ';opacity:.7';
+        return { free: false, busy: true, text: txt, label: lab, style: base + st, pressed: 'false', pick: null };
+      })
+    }));
+    const kamolIdx = 0;
+    const freeAtKamol = Object.keys(T.today.pm).filter(n => T.today.pm[n].split(' ')[kamolIdx] === 'f').join(', ') || 'hech kim';
+    const brks = BRK[s.day] || [];
+    const days = [['today', 'Bugun · 19-noy'], ['tomorrow', 'Ertaga · 20-noy']].map(d => {
+      const on = d[0] === s.day;
+      return { label: d[1], on: on ? 'true' : 'false', pick: () => this.setState({ day: d[0], pick: null }), style: 'height:44px;padding:0 14px;border:0;border-radius:11px;font:inherit;font-size:13px;cursor:pointer;' + (on ? 'background:#FFFFFF;color:#0B1220;font-weight:800;box-shadow:0 1px 3px rgba(11,18,32,.12)' : 'background:transparent;color:#3A4456;font-weight:600') };
+    });
+    const ranges = [['am', '09:00–15:00'], ['pm', '15:00–21:00']].map(r => {
+      const on = r[0] === s.range;
+      return { label: r[1], on: on ? 'true' : 'false', pick: () => this.setState({ range: r[0] }), style: 'height:44px;padding:0 12px;border:0;border-radius:9px;font:inherit;font-size:13px;cursor:pointer;' + (on ? 'background:#0B1220;color:#FFFFFF;font-weight:800' : 'background:transparent;color:#3A4456;font-weight:600') };
+    });
+    const views = [['trial', 'Sinov darsi'], ['les', 'Darslar · toq / juft']].map(v => {
+      const on = v[0] === s.view;
+      return { label: v[1], on: on ? 'true' : 'false', pick: () => this.setState({ view: v[0], pick: null }), style: 'height:46px;padding:0 14px;border:0;background:transparent;font:inherit;font-size:14px;cursor:pointer;border-bottom:3px solid ' + (on ? '#0065D6;color:#0057B8;font-weight:800' : 'transparent;color:#3A4456;font-weight:600') };
+    });
+    const SW = 'width:16px;height:16px;border-radius:5px;box-sizing:border-box;';
+    const legend = (trialView ? [['background:#ECFDF3;border:1.5px solid #75E0A7', 'Boʻsh — bosing'], ['background:#6D28D9', 'Sinov'], ['background:#0065D6', 'Dars']] : [['background:#0065D6', 'Guruh darsi'], ['background:#FFFFFF;border:1px dashed #CBD5E1', 'Darssiz']])
+      .concat([['background:repeating-linear-gradient(135deg,#E2E8F0 0 4px,#F8FAFC 4px 8px);border:1px solid #CBD5E1', 'Tanaffus'], ['background:#F1F5F9', 'Ish vaqti emas']])
+      .map(g => ({ sw: SW + g[0], label: g[1] }));
+    return {
+      hours, grid, days, ranges, views, legend,
+      isToday, freeAtKamol,
+      breaks: brks.map(b => ({ who: b.who, when: b.when, why: b.why })), breakCount: brks.length,
+      hasPick: !!s.pick, pickText: s.pick ? s.pick.name + ' · ' + (s.pick.day === 'today' ? 'bugun ' : 'ertaga ') + s.pick.t : '',
+      clearPick: () => this.setState({ pick: null }),
+      remindLabel: s.reminded ? 'Eslatildi ✓' : 'Bekzodga eslatish', remind: () => this.setState({ reminded: true }),
+      foot: trialView ? 'Sinov 30 daqiqa, faqat bugun yoki ertaga. Oʻtgan vaqtga sinov qoʻyib boʻlmaydi. Ustozlar ismi bilan; bir xil ism boʻlsa keyin qoʻshilganiga “2” qoʻshiladi.' : 'Darslar koʻrinishi faqat koʻrish uchun: faol oʻquvchilar guruhlari. Koʻchirish — oʻquvchi kartasidan.'
+    };
+  }
+}
+</script>
+</body>
+</html>

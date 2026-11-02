@@ -1,0 +1,616 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<title>Tasdiqlar</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+sc-for,sc-if{display:contents}
+button,input,select,textarea{font-family:inherit}
+:focus-visible{outline:2px solid #0065D6;outline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.skip{position:absolute;left:12px;top:-60px;z-index:90;height:40px;padding:0 16px;border-radius:10px;border:0;background:#0B1220;color:#FFFFFF;font-size:14px;font-weight:800;cursor:pointer}
+.skip:focus{top:12px}
+/* sidebar */
+.sb{flex:none;width:248px;background:#FFFFFF;border-right:1px solid #E6EAF2;padding:10px 12px;box-sizing:border-box;display:flex;flex-direction:column;gap:1px;transition:width .2s ease;overflow:hidden}
+.nr{display:flex;align-items:center;gap:4px}
+.mi{flex:1;min-width:0;display:flex;align-items:center;gap:12px;min-height:38px;padding:0 10px;border-radius:12px;color:#3A4456;font-size:14px;font-weight:600;border:0;background:transparent;cursor:pointer;text-align:left}
+.mi:hover{background:#F1F5F9;color:#0B1220}
+.mi svg{width:18px;height:18px;flex:none}
+.mi[aria-current="page"]{background:#EAF3FF;color:#0057B8;font-weight:800}
+.lbl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.grp{font-size:12px;font-weight:800;color:#4B5563;letter-spacing:.06em;padding:12px 10px 4px;margin:0}
+.cnt{flex:none;min-width:28px;height:24px;padding:0 7px;box-sizing:border-box;border-radius:999px;background:#D92D20;color:#FFFFFF;font-size:12px;font-weight:800;display:grid;place-items:center;border:0;cursor:pointer}
+.cnt:hover{background:#B42318}
+.sb-min{width:76px;padding:10px 8px}
+.sb-min .lbl,.sb-min .grp,.sb-min .brand{display:none}
+.sb-min .nr{position:relative}
+.sb-min .mi{justify-content:center;padding:0}
+.sb-min .cnt{position:absolute;right:-2px;top:-4px;min-width:24px;height:24px;border:2px solid #FFFFFF}
+/* toolbar */
+.fbox{height:36px;display:flex;align-items:center;gap:6px;padding:0 10px 0 12px;border-radius:10px;border:1px solid #E2E8F0;background:#FFFFFF;font-size:13px;font-weight:600;color:#3A4456;box-sizing:border-box;white-space:nowrap;cursor:pointer}
+.fbox:hover{border-color:#94A3B8}
+.fbox.act{background:#EAF3FF;border-color:#0065D6;color:#0057B8;font-weight:800}
+.fbox.vb{background:#F1E8FF;border-color:#7C3AED;color:#5B21B6;font-weight:800}
+.dd{position:absolute;top:42px;left:0;z-index:40;background:#FFFFFF;border:1px solid #E6EAF2;border-radius:14px;box-shadow:0 16px 40px rgba(16,24,40,.16);padding:8px;display:flex;flex-direction:column;gap:2px;min-width:280px}
+.dd label,.dd .pr{display:flex;align-items:center;gap:8px;min-height:32px;padding:0 8px;border-radius:8px;font-size:13px;font-weight:600;color:#0B1220;cursor:pointer;border:0;background:transparent;text-align:left}
+.dd label:hover,.dd .pr:hover,.dd .pr:focus-visible{background:#F1F5F9}
+.dd .pr[aria-checked="true"]{background:#EAF3FF;color:#0057B8;font-weight:800}
+.dd input[type=checkbox]{width:16px;height:16px;margin:0;accent-color:#0065D6}
+.dd .ap{height:36px;margin-top:6px;border:0;border-radius:10px;background:#0065D6;color:#FFFFFF;font-size:13px;font-weight:800;cursor:pointer}
+.dd .ap[aria-disabled="true"]{background:#CBD5E1;color:#4B5563;cursor:not-allowed}
+.dh{font-size:12px;font-weight:800;color:#4B5563;padding:4px 8px}
+.kbd{display:inline-grid;place-items:center;min-width:22px;height:22px;padding:0 5px;box-sizing:border-box;border-radius:6px;border:1px solid #CBD5E1;border-bottom-width:2px;background:#FFFFFF;font-size:11px;font-weight:800;color:#3A4456}
+/* board */
+.col{flex:none;width:256px;min-height:0;max-height:100%;background:#F1F5F9;border-radius:16px;padding:0 8px 8px;box-sizing:border-box;display:flex;flex-direction:column;gap:6px;border-top:3px solid transparent;transition:background .15s ease}
+.col.drop{background:#EAF3FF;outline:2px dashed #0065D6;outline-offset:-2px}
+.ch{display:flex;flex-direction:column;gap:6px;padding:10px 4px 2px}
+.ch1{display:flex;align-items:center;gap:8px}
+.ct{margin:0;flex:1;min-width:0;font-size:14px;font-weight:800;line-height:1.25;color:#0B1220}
+.ch2{display:flex;align-items:center;gap:6px;min-height:26px;flex-wrap:wrap}
+.pk{flex:none;height:26px;padding:0 10px;border-radius:999px;border:0;background:#0065D6;color:#FFFFFF;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap}
+.pk:hover{background:#0057B8}
+.sum{font-size:12px;font-weight:600;color:#4B5563;white-space:nowrap}
+.rk{height:26px;display:inline-flex;align-items:center;gap:4px;padding:0 9px;border-radius:999px;border:0;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap}
+.rk[aria-pressed="true"]{box-shadow:inset 0 0 0 2px currentColor}
+.seg{display:grid;grid-template-columns:auto auto auto;gap:4px;padding:0 2px}
+.seg button{white-space:nowrap;display:flex;align-items:center;justify-content:center;gap:3px;height:28px;padding:0 7px;border-radius:999px;border:1px solid #E2E8F0;background:#FFFFFF;color:#3A4456;font-size:12px;font-weight:700;cursor:pointer}
+.seg button[aria-pressed="true"]{background:#0065D6;border-color:#0065D6;color:#FFFFFF}
+.lst{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin:0 -4px;padding:2px 4px 4px;scrollbar-width:thin;scrollbar-color:#CBD5E1 transparent}
+.lst>*{flex:none}
+.card{position:relative;flex:none;background:#FFFFFF;border:1px solid #E6EAF2;border-left-width:3px;border-radius:12px;padding:7px 8px 7px 8px;box-shadow:0 1px 2px rgba(16,24,40,.05);display:flex;flex-direction:column;gap:4px;transition:box-shadow .15s ease,border-color .15s ease,opacity .15s ease;cursor:grab}
+.card:hover{box-shadow:0 8px 20px rgba(16,24,40,.10);border-color:#CBD5E1}
+.card:focus-visible{outline:2px solid #0065D6;outline-offset:1px}
+.card.drag{opacity:.4;border-style:dashed;box-shadow:none}
+.card{user-select:none}
+.card.sel{background:#F5F9FF}
+.card.kin{box-shadow:0 0 0 2px #0065D6}
+.r1{display:flex;align-items:flex-start;gap:4px}
+.cbx{flex:none;width:24px;height:24px;display:grid;place-items:center;margin-left:-3px;cursor:pointer}
+.cbx input{width:16px;height:16px;margin:0;accent-color:#0065D6;cursor:pointer}
+.nm{flex:1;min-width:0;min-height:24px;border:0;background:none;padding:2px 0 0;font-size:14px;font-weight:800;line-height:1.25;color:#0B1220;text-align:left;cursor:pointer;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.nm:hover{color:#0057B8;text-decoration:underline}
+.ic{position:relative;flex:none;width:28px;height:28px;border-radius:8px;border:0;background:transparent;color:#4B5563;display:grid;place-items:center;cursor:pointer}
+.ic:hover{background:#F1F5F9;color:#0B1220}
+.att{flex:none;width:20px;height:20px;margin-top:2px;border-radius:50%;background:#ECFDF3;color:#067647;font-size:11px;font-weight:800;display:grid;place-items:center}
+.meta{display:flex;align-items:center;gap:6px;flex-wrap:nowrap;font-size:12px;color:#4B5563;min-height:22px;overflow:hidden}
+.chip{display:inline-flex;align-items:center;gap:4px;height:22px;font-size:12px;font-weight:800;border-radius:999px;padding:0 8px;white-space:nowrap;flex:none}
+.src{display:inline-flex;align-items:center;gap:5px;font-weight:700;color:#3A4456;white-space:nowrap}
+.src i{width:7px;height:7px;border-radius:50%}
+.ser{font-weight:800;color:#0B1220;background:#F1F5F9;border-radius:6px;padding:1px 6px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.r3{display:flex;align-items:center;gap:6px;min-height:24px;font-size:13px;color:#3A4456}
+.ph{display:inline-flex;align-items:center;gap:6px;min-height:24px;color:#3A4456;font-variant-numeric:tabular-nums;text-decoration:none;border-radius:6px;white-space:nowrap}
+.ph:hover{color:#0057B8}
+.ph svg{flex:none;color:#6B7280}
+.cp{width:24px;height:24px;border-radius:6px;border:0;background:transparent;color:#4B5563;display:none;place-items:center;cursor:pointer;font-size:12px;flex:none}
+.card:hover .cp,.card:focus-within .cp,.card.kin .cp{display:grid}
+.cp:hover{background:#F1F5F9}
+.p2{height:22px;padding:0 7px;border-radius:999px;border:0;background:#F1F5F9;color:#3A4456;font-size:12px;font-weight:800;cursor:pointer}
+.tm{margin-left:auto;font-size:12px;color:#4B5563;white-space:nowrap;font-variant-numeric:tabular-nums}
+.r4{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.dfr{display:flex;flex-direction:column;gap:2px;white-space:nowrap;font-size:12px;color:#3A4456;background:#EEF2FF;border-radius:8px;padding:4px 8px}
+.ft{display:flex;align-items:center;gap:4px}
+.fb{height:28px;min-width:28px;border-radius:999px;border:0;background:#F1F5F9;color:#3A4456;display:inline-flex;align-items:center;justify-content:center;gap:4px;font-size:12px;font-weight:700;cursor:pointer;padding:0 8px;box-sizing:border-box}
+.fb:hover{background:#E2E8F0}
+.fb.z{background:transparent;color:#6B7280;padding:0}
+.mg{max-width:118px}
+.mg b{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.av{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:10px;font-weight:800;flex:none;overflow:hidden}
+.more{flex:none;height:34px;border-radius:10px;border:1px dashed #CBD5E1;background:transparent;font-size:12px;font-weight:700;color:#3A4456;cursor:pointer}
+.more:hover{background:#FFFFFF}
+.empty{flex:none;display:flex;flex-direction:column;align-items:center;gap:6px;padding:22px 8px;border:1px dashed #CBD5E1;border-radius:12px;color:#4B5563;font-size:13px;font-weight:600;text-align:center}
+.sk{flex:none;height:112px;border-radius:12px;background:linear-gradient(90deg,#E9EEF5 0%,#F5F7FB 50%,#E9EEF5 100%);background-size:200% 100%;animation:sh 1.2s linear infinite}
+.skn{display:inline-block;width:26px;height:20px;border-radius:999px;background:linear-gradient(90deg,#E2E8F0 0%,#F5F7FB 50%,#E2E8F0 100%);background-size:200% 100%;animation:sh 1.2s linear infinite}
+.sv{position:absolute;inset:0;border-radius:11px;background:rgba(255,255,255,.75);display:flex;align-items:center;justify-content:center;gap:8px;font-size:12px;font-weight:800;color:#0057B8}
+.spin{width:16px;height:16px;border-radius:50%;border:2px solid #BFDBFE;border-top-color:#0065D6;animation:rot .8s linear infinite}
+/* popovers */
+.mn{position:absolute;z-index:60;width:256px;background:#FFFFFF;border:1px solid #E6EAF2;border-radius:12px;box-shadow:0 16px 36px rgba(16,24,40,.18);padding:6px;display:flex;flex-direction:column}
+.mn button{min-height:34px;border:0;background:transparent;text-align:left;padding:0 10px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:#0B1220;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.mn button:hover,.mn button:focus-visible{background:#F1F5F9;outline:0;box-shadow:inset 0 0 0 2px #0065D6}
+.mn .dg{color:#B42318}
+.mn [role=option]{min-height:36px;border:0;background:transparent;text-align:left;padding:0 10px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:#0B1220;display:flex;align-items:center;gap:8px}
+.mn [role=option]:hover,.mn [role=option]:focus-visible{background:#F1F5F9;outline:0;box-shadow:inset 0 0 0 2px #0065D6}
+.mn [role=option][aria-selected=true]{background:#EAF3FF;color:#0057B8;font-weight:800}
+.mn [role=option][aria-disabled=true]{color:#94A3B8;cursor:not-allowed}
+.fld{min-width:0;display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:700;color:#3A4456}
+.fld textarea{box-sizing:border-box;width:100%;min-width:0;border:1px solid #CBD5E1;border-radius:10px;padding:8px 10px;font-size:14px;color:#0B1220;resize:vertical}
+.fld input,.fld select{box-sizing:border-box;width:100%;min-width:0;height:40px;border:1px solid #CBD5E1;border-radius:10px;padding:0 10px;font-size:14px;color:#0B1220}
+.rad{display:flex;align-items:center;gap:10px;min-height:42px;padding:0 12px;border-radius:12px;border:1px solid #E6EAF2;font-size:14px;font-weight:600;cursor:pointer}
+.rad input{width:18px;height:18px;margin:0;accent-color:#0065D6}
+.mn .kb{font-size:11px;font-weight:700;color:#4B5563}
+.rp{background:#FFFFFF;border:1px solid #E6EAF2;border-radius:12px;box-shadow:0 12px 28px rgba(16,24,40,.12);padding:6px;display:flex;flex-direction:column;gap:2px;position:relative;z-index:40}
+.rp label{display:flex;align-items:center;gap:8px;min-height:30px;padding:0 6px;border-radius:8px;font-size:13px;font-weight:600;color:#0B1220;cursor:pointer}
+.rp label:hover{background:#F1F5F9}
+.rp b{margin-left:auto;font-size:12px;color:#4B5563}
+.mp input{height:34px;border:1px solid #CBD5E1;border-radius:8px;padding:0 10px;font-size:13px;margin:2px 2px 6px;outline:0}
+.mp input:focus{border-color:#0065D6;box-shadow:0 0 0 3px rgba(0,101,214,.18)}
+.load{margin-left:auto;font-size:12px;font-weight:700;color:#4B5563;white-space:nowrap}
+.vt{writing-mode:vertical-rl;transform:rotate(180deg);font-size:14px;font-weight:800;color:#0B1220;white-space:nowrap}
+.sch:focus-within{border-color:#0065D6!important;box-shadow:0 0 0 3px rgba(0,101,214,.2)}
+.drw{position:absolute;top:0;right:0;bottom:0;z-index:78;width:520px;background:#FFFFFF;border-left:1px solid #E6EAF2;box-shadow:-20px 0 50px rgba(11,18,32,.18);display:flex;flex-direction:column}
+.dtabs{display:flex;gap:2px;padding:0 20px;border-bottom:1px solid #E6EAF2}
+.dtabs button{height:42px;padding:0 12px;border:0;background:transparent;font-size:13px;font-weight:700;color:#3A4456;cursor:pointer;border-bottom:3px solid transparent;display:flex;align-items:center;gap:6px}
+.dtabs button[aria-selected=true]{color:#0057B8;border-bottom-color:#0065D6;font-weight:800}
+.dbody{flex:1;min-height:0;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:14px}
+.dsec{border:1px solid #E6EAF2;border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.dsec h4{margin:0;font-size:13px;font-weight:800;color:#0B1220}
+.kv{display:grid;grid-template-columns:120px 1fr;gap:6px 10px;font-size:13px}
+.kv span:nth-child(odd){color:#4B5563}
+.step{display:flex;gap:4px}
+.step i{flex:1;height:6px;border-radius:999px;background:#E2E8F0}
+.step i.on{background:#0065D6}
+.cm{display:flex;flex-direction:column;gap:4px;padding:10px 12px;border-radius:12px;background:#F8FAFC;font-size:13px;white-space:pre-line}
+.cm b{font-size:12px;color:#4B5563;font-weight:700}
+.btn2{height:36px;padding:0 14px;border-radius:10px;border:1px solid #CBD5E1;background:#FFFFFF;font-size:13px;font-weight:700;cursor:pointer;color:#0B1220}
+.btnp{height:36px;padding:0 14px;border-radius:10px;border:0;background:#0065D6;color:#FFFFFF;font-size:13px;font-weight:800;cursor:pointer}
+.skt{display:inline-block;width:36px;height:14px;border-radius:6px;vertical-align:middle;background:linear-gradient(90deg,#E2E8F0 0%,#F5F7FB 50%,#E2E8F0 100%);background-size:200% 100%;animation:sh 1.2s linear infinite}
+.mp{z-index:90}
+.seg2{display:flex;flex-wrap:wrap;gap:6px}
+.lvl4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.lvl4 label{min-width:0;padding:0 6px;white-space:nowrap}
+[data-modal] .btnp,[data-modal] .btn2{white-space:nowrap}
+.lvl4 label{justify-content:center;padding:0 6px;font-size:12px}
+.seg2.bad label{border-color:#D92D20}
+.err{font-size:12px;font-weight:700;color:#B42318}
+.ferr input,.ferr select,.ferr textarea{border-color:#D92D20 !important}
+.malert{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:#FEF3F2;border:1px solid #FDA29B;color:#7A271A;font-size:13px;font-weight:600}
+.seg2 label{display:flex;align-items:center;gap:6px;min-height:36px;padding:0 12px;border-radius:10px;border:1px solid #E6EAF2;font-size:13px;font-weight:600;cursor:pointer}
+.seg2 input{margin:0;accent-color:#0065D6}
+.demo{position:absolute;left:740px;top:10px;z-index:76;display:flex;align-items:center;gap:4px;padding:4px;border-radius:12px;background:#FFFFFF;border:1.5px dashed #7C3AED;box-shadow:0 6px 18px rgba(16,24,40,.12)}
+.demo span{font-size:11px;font-weight:800;color:#5B21B6;padding:0 6px;letter-spacing:.04em}
+.demo button{height:28px;padding:0 9px;border-radius:8px;border:0;background:transparent;font-size:12px;font-weight:700;color:#3A4456;cursor:pointer}
+.demo button[aria-pressed="true"]{background:#7C3AED;color:#FFFFFF}
+@keyframes up{from{transform:translateY(10px);opacity:0}to{transform:none;opacity:1}}
+@keyframes bar{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+@keyframes sh{from{background-position:200% 0}to{background-position:-200% 0}}
+@keyframes rot{to{transform:rotate(360deg)}}
+.up{animation:up .22s cubic-bezier(.2,.8,.2,1) both}
+.bar{animation:bar 10s linear both;transform-origin:left}
+.paused .bar{animation-play-state:paused}
+@media (prefers-reduced-motion:reduce){.up,.bar,.sk,.skn,.spin{animation:none}.card{transition:none}}
+button{transition:background .15s ease}
+.cvback{border:0;background:none;color:#0057B8;font-size:14px;font-weight:800;cursor:pointer;padding:6px 4px}
+.dmb{height:28px;padding:0 10px;border-radius:8px;border:0;background:transparent;font-size:12px;font-weight:700;color:#3A4456;cursor:pointer}
+.dmb[aria-pressed="true"]{background:#7C3AED;color:#FFFFFF}
+.dots{list-style:none;margin:0;padding:0;display:flex;gap:6px;flex-wrap:wrap}
+.dots li{display:flex;align-items:center;gap:6px;height:32px;padding:0 12px 0 6px;border-radius:999px;background:#FFFFFF;border:1px solid #E6EAF2;font-size:13px;font-weight:700;color:#4B5563}
+.dots li .dn{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:#E9EEF5;font-size:12px;font-weight:800}
+.dots li.ok{color:#067647}.dots li.ok .dn{background:#DCFAE6;color:#067647}
+.dots li.now{border-color:#0065D6;color:#0057B8;background:#EAF3FF}.dots li.now .dn{background:#0065D6;color:#FFFFFF}
+.box{background:#FFFFFF;border:1px solid #E6EAF2;border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.box h3{margin:0;font-size:14px;font-weight:800}
+.hint{font-size:12px;color:#4B5563;margin:4px 0 0}
+.st{margin:6px 0 0;font-size:12px;font-weight:800;color:#3A4456}
+.trial,.done{padding:10px 14px;border-radius:12px;background:#ECFDF3;border:1px solid #ABEFC6;font-size:13px;color:#067647}
+.trial b,.done b{margin-right:6px}
+.tar,.slots,.fd,.pat{display:flex;gap:8px;flex-wrap:wrap}
+.tar button,.slots button,.fd button,.pat button{min-height:40px;padding:6px 14px;border-radius:12px;border:1px solid #CBD5E1;background:#FFFFFF;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;gap:2px;font-size:13px;color:#0B1220}
+.tar button{min-width:170px}
+.slots button{width:112px}
+.tar small,.slots small{font-size:11px;color:#4B5563;font-weight:600}
+.pat button{flex-direction:row;align-items:center;font-weight:700}
+.tar button[aria-checked="true"],.slots button[aria-checked="true"],.fd button[aria-checked="true"],.pat button[aria-checked="true"]{border-color:#0065D6;background:#EAF3FF;box-shadow:inset 0 0 0 1px #0065D6}
+.slots button.busy{background:#F8FAFC;color:#94A3B8;cursor:not-allowed;border-style:dashed}
+.slots button.busy small{color:#B42318}
+.all summary{font-size:13px;font-weight:700;color:#0057B8;cursor:pointer}
+.opts{display:flex;flex-wrap:wrap;gap:8px}
+.op{display:flex;align-items:center;gap:8px;min-height:38px;padding:0 12px;border-radius:10px;border:1px solid #E6EAF2;font-size:13px;font-weight:600;cursor:pointer}
+.op.on{border-color:#0065D6;background:#EAF3FF}
+.op input,.yn input,.mem input{accent-color:#0065D6;margin:0}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.g1{gap:12px}
+.fld input,.fld select{box-sizing:border-box;width:100%;min-width:0;height:40px;border:1px solid #CBD5E1;border-radius:10px;padding:0 10px;font-size:14px;color:#0B1220}
+.fld small{font-weight:500;color:#4B5563}
+.row{display:flex;align-items:center;gap:8px}
+.okp{flex:none;font-size:12px;font-weight:800;color:#067647;background:#DCFAE6;border-radius:999px;padding:3px 10px}
+.sug{flex:none;font-size:12px;font-weight:700;color:#5B21B6;background:#F5F3FF;border-radius:999px;padding:3px 10px}
+.mem{border:0;margin:0;padding:0}.mem legend{font-size:12px;font-weight:800;color:#3A4456;margin-bottom:6px}
+.mem div{display:flex;flex-wrap:wrap;gap:8px}.mem label{display:flex;align-items:center;gap:6px;min-height:34px;padding:0 10px;border-radius:10px;border:1px solid #E6EAF2;font-size:13px;font-weight:600}
+.warn{margin:0;padding:8px 12px;border-radius:10px;background:#FFFAEB;border:1px solid #FEC84B;color:#93370D;font-size:13px;font-weight:600}
+.yn{display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:13px}.yn > span{min-width:200px;font-weight:700;color:#3A4456}.yn label{display:flex;align-items:center;gap:6px;font-weight:600}
+.aside{flex:none;width:300px;position:sticky;top:0;background:#FFFFFF;border:1px solid #E6EAF2;border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.aside h2{margin:0;font-size:15px;font-weight:800}
+.aside dl{margin:0;display:grid;grid-template-columns:96px 1fr;gap:8px 10px;font-size:13px}
+.aside dt{color:#4B5563;font-weight:600}.aside dd{margin:0;font-weight:700}.aside dd.mute{color:#94A3B8;font-weight:600}
+.toast{position:absolute;right:24px;bottom:84px;z-index:95;background:#0B1220;color:#FFFFFF;border-radius:14px;padding:12px 16px;font-size:13px;font-weight:700;box-shadow:0 20px 50px rgba(11,18,32,.35)}
+.box.bad{border-color:#D92D20;box-shadow:0 0 0 1px #D92D20}
+.chipb{height:28px;padding:0 10px;border-radius:999px;border:1px solid #CBD5E1;background:#FFFFFF;font-size:12px;font-weight:700;color:#0057B8;cursor:pointer}
+.lnk{border:0;background:none;padding:0;color:#0057B8;font-weight:800;font-size:12px;text-decoration:underline;cursor:pointer}
+.ctx{margin:0;display:grid;grid-template-columns:140px 1fr;gap:6px 10px;font-size:13px}.ctx dt{color:#4B5563;font-weight:600}.ctx dd{margin:0;font-weight:700}.ctx dd.mute{color:#94A3B8}
+.box h2{margin:0;font-size:15px;font-weight:800}
+.tag{font-size:12px;font-weight:800;color:#0057B8;background:#EAF3FF;border-radius:999px;padding:4px 10px}
+.qq-g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.qq-tl{display:flex;flex-direction:column;gap:6px}.qq-tlbar{display:flex;border-radius:10px;overflow:hidden;height:34px;font-size:12px;font-weight:700}
+.qq-seg{display:flex;align-items:center;padding:0 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qq-seg.qq-ok{background:#ECFDF3;color:#067647}.qq-seg.qq-warn{background:#FFFAEB;color:#93370D}.qq-seg.qq-lock{background:#FEF3F2;color:#B42318}
+.qq-prev{padding:10px 12px;border-radius:12px;background:#F8FAFC;border:1px solid #E6EAF2;font-size:13px}
+.qq-steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;font-size:13px;color:#3A4456}.qq-steps li{display:flex;gap:10px}
+.qq-dot{flex:none;width:10px;height:10px;border-radius:50%;margin-top:4px}.qq-dot.qq-ok{background:#12B76A}.qq-dot.qq-warn{background:#F79009}.qq-dot.qq-lock{background:#D92D20}.qq-dot.qq-mute{background:#94A3B8}
+.qq-t{display:flex;flex-direction:column;font-size:13px}.qq-tr{display:grid;grid-template-columns:2fr 1fr 1fr 1.4fr;align-items:center;padding:10px 8px;border-bottom:1px solid #EEF2F6}.qq-th{font-size:12px;color:#4B5563;font-weight:700}
+.qq-mn{font-weight:700;display:flex;align-items:center;gap:8px}.qq-av{width:26px;height:26px;border-radius:50%;display:inline-grid;place-items:center;font-size:11px;font-weight:800;flex:none}
+.qq-pill{display:inline-block;min-width:24px;text-align:center;border-radius:999px;padding:2px 8px;font-weight:800}.qq-pw{background:#FEF0C7;color:#93370D}.qq-pl{background:#FEE4E2;color:#B42318}.qq-pz{color:#64748B}.qq-prev.qq-bad{background:#FEF3F2;border-color:#FECDCA;color:#B42318;font-weight:700}
+.sk{height:14px;border-radius:7px;background:#E9EEF5;margin:6px 0}
+.malert{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:#FEF3F2;border:1px solid #FECDCA;color:#B42318;font-size:13px;font-weight:700}
+</style>
+</helmet>
+<div data-root="1" style="height: 960px; box-sizing: border-box; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #0B1220; background: #F5F7FB; display: flex; position: relative; overflow: hidden">
+<style>
+.ap-seg{display:flex;gap:4px;padding:4px;border-radius:12px;background:#EEF2F6}
+.ap-seg button{height:32px;padding:0 12px;border-radius:9px;border:0;background:transparent;font-size:13px;font-weight:700;color:#3A4456;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.ap-seg button:hover{background:#FFFFFF}
+.ap-seg button[aria-pressed="true"]{background:#FFFFFF;color:#0057B8;font-weight:800;box-shadow:0 1px 3px rgba(16,24,40,.12)}
+.ap-seg b{min-width:20px;height:20px;padding:0 6px;box-sizing:border-box;border-radius:999px;background:#E2E8F0;color:#3A4456;font-size:11px;display:inline-grid;place-items:center}
+.ap-seg button[aria-pressed="true"] b{background:#0065D6;color:#FFFFFF}
+.ap-note{display:flex;gap:10px;align-items:flex-start;padding:8px 14px;border-radius:12px;background:#FFFFFF;border:1px solid #E6EAF2;font-size:12px;color:#3A4456;line-height:1.45}
+.ap-note svg{flex:none;margin-top:1px;color:#0065D6}
+.ap-lay{flex:1;min-height:0;display:flex;gap:14px}
+.ap-inbox{flex:none;width:372px;display:flex;flex-direction:column;background:#FFFFFF;border:1px solid #E6EAF2;border-radius:16px;overflow:hidden}
+.ap-ih{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid #EEF2F6;font-size:12px;font-weight:700;color:#4B5563}
+.ap-list{flex:1;min-height:0;overflow-y:auto;padding:6px;display:flex;flex-direction:column;gap:4px}
+.ap-it{width:100%;display:flex;gap:10px;align-items:flex-start;text-align:left;padding:10px;border-radius:12px;border:1px solid transparent;background:transparent;cursor:pointer;font-family:inherit;color:#0B1220;position:relative}
+.ap-it:hover{background:#F8FAFC}
+.ap-it[aria-current="true"]{background:#EAF3FF;border-color:#B2D3FF}
+.ap-it[aria-current="true"]::before{content:"";position:absolute;left:-1px;top:10px;bottom:10px;width:3px;border-radius:3px;background:#0065D6}
+.ap-av{flex:none;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:800;color:#FFFFFF}
+.ap-itx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.ap-itx b{font-size:13px;font-weight:800}
+.ap-itx span{font-size:12px;color:#3A4456;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ap-itx small{font-size:12px;color:#4B5563}
+.ap-pill{flex:none;display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:999px;font-size:11px;font-weight:800;white-space:nowrap}
+.ap-p-warn{background:#FEF0C7;color:#93370D}.ap-p-ok{background:#DCFAE6;color:#067647}.ap-p-bad{background:#FEE4E2;color:#B42318}.ap-p-mute{background:#EEF2F6;color:#3A4456}
+.ap-flag{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:800;color:#B42318}
+.ap-det{flex:1;min-width:0;display:flex;flex-direction:column;background:#FFFFFF;border:1px solid #E6EAF2;border-radius:16px;overflow:hidden;position:relative}
+.ap-dh{display:flex;align-items:center;gap:10px;padding:14px 20px;border-bottom:1px solid #EEF2F6}
+.ap-dh h2{margin:0;font-size:17px;font-weight:800;flex:1;min-width:0}
+.ap-dh small{font-size:12px;color:#4B5563;white-space:nowrap}
+.ap-db{flex:1;min-height:0;overflow-y:auto;padding:16px 20px 20px;display:flex;flex-direction:column;gap:14px}
+.ap-who{display:flex;gap:12px}
+.ap-whob{flex:1;min-width:0;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:#F8FAFC;border:1px solid #EEF2F6}
+.ap-whob span{display:flex;flex-direction:column;gap:2px;min-width:0}
+.ap-whob b{font-size:14px}
+.ap-whob .ap-av{display:grid;place-items:center;flex-direction:row}
+.ap-whob small{font-size:12px;color:#4B5563}
+.ap-tg{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;color:#0057B8;text-decoration:none}
+.ap-tg:hover{text-decoration:underline}
+.ap-h3{margin:0;font-size:12px;font-weight:800;letter-spacing:.05em;color:#4B5563;text-transform:uppercase}
+.ap-sec{display:flex;flex-direction:column;gap:8px}
+.ap-dt{display:flex;flex-direction:column;border:1px solid #E6EAF2;border-radius:12px;overflow:hidden;font-size:13px}
+.ap-dr{display:grid;grid-template-columns:120px 1fr 28px 1fr;align-items:center;gap:8px;padding:9px 12px;border-top:1px solid #EEF2F6}
+.ap-dr:first-child{border-top:0}
+.ap-dth{background:#F8FAFC;font-size:12px;font-weight:800;color:#4B5563}
+.ap-dr .ap-lbl{color:#4B5563;font-weight:700}
+.ap-dr .ap-ar{text-align:center;font-weight:800;color:#0065D6}
+.ap-same{color:#64748B}
+.ap-same .ap-ar{color:#94A3B8}
+.ap-new{font-weight:800;color:#0B1220;background:#EAF3FF;border-radius:6px;padding:2px 6px;justify-self:start}
+.ap-quote{margin:0;padding:10px 14px;border-left:3px solid #CBD5E1;background:#F8FAFC;border-radius:0 10px 10px 0;font-size:14px;color:#0B1220}
+.ap-g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.ap-chk{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.ap-chk li{display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border-radius:10px;font-size:13px;line-height:1.4}
+.ap-chk i{flex:none;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:11px;font-weight:800;color:#FFFFFF;margin-top:0}
+.ap-ok{background:#ECFDF3;color:#05603A}.ap-ok i{background:#12B76A}
+.ap-warn{background:#FFFAEB;color:#93370D}.ap-warn i{background:#F79009}
+.ap-bad{background:#FEF3F2;color:#B42318;font-weight:700}.ap-bad i{background:#D92D20}
+.ap-imp{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.ap-imp li{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:#3A4456;line-height:1.4}
+.ap-imp svg{flex:none;width:16px;height:16px;margin-top:1px;color:#0065D6}
+.ap-dec{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.ap-dc{display:flex;gap:10px;align-items:flex-start;padding:8px 12px;border-radius:12px;border:1px solid #CBD5E1;cursor:pointer;background:#FFFFFF}
+.ap-dc input{margin:2px 0 0;width:18px;height:18px;accent-color:#0065D6;flex:none}
+.ap-dc span{display:flex;flex-direction:column;gap:2px}
+.ap-dc b{font-size:14px}
+.ap-dc small{font-size:12px;color:#4B5563}
+.ap-dc.ap-on{border-color:#0065D6;background:#EAF3FF;box-shadow:inset 0 0 0 1px #0065D6}
+.ap-dc.ap-on.ap-ok2{border-color:#12B76A;background:#ECFDF3;box-shadow:inset 0 0 0 1px #12B76A}
+.ap-dc.ap-on.ap-no{border-color:#D92D20;background:#FEF3F2;box-shadow:inset 0 0 0 1px #D92D20}
+.ap-dc.ap-dis{cursor:not-allowed;background:#F8FAFC;border-style:dashed}
+.ap-dc.ap-dis b{color:#94A3B8}
+.ap-dc.ap-dis small{color:#B42318;font-weight:700}
+.ap-chips{display:flex;flex-wrap:wrap;gap:6px}
+.ap-chip{height:30px;padding:0 12px;border-radius:999px;border:1px solid #CBD5E1;background:#FFFFFF;font-size:12px;font-weight:700;color:#3A4456;cursor:pointer}
+.ap-chip[aria-pressed="true"]{background:#0B1220;border-color:#0B1220;color:#FFFFFF}
+.ap-ta{box-sizing:border-box;width:100%;border:1px solid #CBD5E1;border-radius:10px;padding:8px 10px;font-size:14px;color:#0B1220;resize:vertical;font-family:inherit}
+.ap-ta.ap-terr{border-color:#D92D20;box-shadow:0 0 0 1px #D92D20}
+.ap-decw{flex:none;border:0;border-top:1px solid #E6EAF2;margin:0;padding:12px 20px 0;background:#FCFDFE}.ap-decw .ap-dec{clear:both}
+.ap-df{flex:none;display:flex;align-items:center;gap:10px;padding:10px 20px 14px;background:#FCFDFE}
+.ap-df p{margin:0;flex:1;min-width:0;font-size:12px;color:#4B5563;line-height:1.4}
+.ap-df .btnp[aria-disabled="true"]{background:#CBD5E1;color:#4B5563;cursor:not-allowed}
+.ap-decided{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-radius:12px;border:1px solid #E6EAF2;background:#F8FAFC;font-size:13px}
+.ap-decided div{display:flex;flex-direction:column;gap:4px}
+.ap-c409{display:flex;gap:10px;align-items:flex-start;padding:10px 14px;border-radius:12px;background:#FFFAEB;border:1px solid #FEC84B;color:#93370D;font-size:13px;font-weight:600}
+.ap-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:30px;text-align:center;color:#4B5563;font-size:13px}
+.ap-empty b{font-size:15px;color:#0B1220}
+.ap-sk{border-radius:10px;background:linear-gradient(90deg,#E9EEF5 0%,#F5F7FB 50%,#E9EEF5 100%);background-size:200% 100%;animation:sh 1.2s linear infinite}
+.ap-diff{font-size:12px;color:#4B5563;background:#F5F3FF;border:1px dashed #A78BFA;border-radius:10px;padding:8px 12px;line-height:1.45}
+.ap-diff b{color:#5B21B6}
+.ap-lnk{border:0;background:none;padding:0;color:#0057B8;font-weight:800;font-size:13px;text-decoration:underline;cursor:pointer;font-family:inherit}
+</style>
+  <nav aria-label="Asosiy menyu" class="{{ sbCls }}">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 4px 2px 8px"><span aria-hidden="true" style="flex: none; width: 34px; height: 34px; border-radius: 9px; background: #0065D6; color: #FFFFFF; display: grid; place-items: center; font-weight: 800; font-size: 17px">H</span><strong class="brand" style="font-size: 16px; letter-spacing: .02em; flex: 1">HOMEWORK</strong><button type="button" class="ic" onClick="{{ toggleSb }}" aria-label="{{ sbLab }}" title="{{ sbLab }}" aria-expanded="{{ sbExp }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ sbIcon }}"></path></svg></button></div>
+    <sc-for list="{{ nav }}" as="n" hint-placeholder-count="19">
+      <sc-if value="{{ n.grp }}" hint-placeholder-val="{{ false }}"><h2 class="grp">{{ n.label }}</h2></sc-if>
+      <sc-if value="{{ n.item }}" hint-placeholder-val="{{ true }}">
+        <div class="nr"><button type="button" class="mi" title="{{ n.tip }}" aria-current="{{ n.cur }}" onClick="{{ n.pick }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ n.icon }}"></path></svg><span class="lbl">{{ n.label }}</span></button><sc-if value="{{ n.badge }}" hint-placeholder-val="{{ false }}"><button type="button" class="cnt" title="{{ n.aria }}" aria-label="{{ n.aria }}" onClick="{{ n.pickBadge }}">{{ n.badge }}</button></sc-if></div>
+      </sc-if>
+    </sc-for>
+    <span style="flex: 1"></span>
+    <div class="nr"><button type="button" class="mi" title="Boshqa boʻlimlar: Oʻquvchini tekshirish, Mobil ilova, Target lidlar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="5" cy="12" r="1.5"></circle><circle cx="12" cy="12" r="1.5"></circle><circle cx="19" cy="12" r="1.5"></circle></svg><span class="lbl">Boshqa boʻlimlar</span></button></div>
+    <div class="nr"><button type="button" class="mi" title="Sozlamalar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"></path></svg><span class="lbl">Sozlamalar</span></button></div>
+  </nav>
+  <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative">
+    <header style="height: 56px; flex: none; padding: 0 24px; display: flex; align-items: center; gap: 14px; background: #FFFFFF; border-bottom: 1px solid #E6EAF2; box-sizing: border-box">
+      <span style="font-size: 13px; color: #4B5563">Nazorat · <b style="color: #0B1220">Tasdiqlar</b></span>
+      <span style="flex: 1"></span>
+      <div role="group" aria-label="Demo holat" style="display: flex; align-items: center; gap: 4px; padding: 4px; border: 1px dashed #A78BFA; border-radius: 12px; background: #F5F3FF">
+        <span style="font-size: 11px; font-weight: 800; color: #5B21B6; padding: 0 6px">HOLAT</span>
+        <sc-for list="{{ demo }}" as="d" hint-placeholder-count="6"><button type="button" aria-pressed="{{ d.on }}" onClick="{{ d.pick }}" class="dmb" title="{{ d.tip }}">{{ d.t }}</button></sc-for>
+      </div>
+      <span style="display: flex; align-items: center; gap: 10px"><span aria-hidden="true" style="width: 36px; height: 36px; border-radius: 50%; background: #0B1220; color: #FFFFFF; display: grid; place-items: center; font-size: 13px; font-weight: 800">IM</span><span style="display: flex; flex-direction: column; line-height: 1.2"><b style="font-size: 14px">Islom Mominov</b><span style="font-size: 12px; color: #4B5563">ROP · Rus tili</span></span></span>
+    </header>
+
+    <main style="flex: 1; min-height: 0; padding: 18px 28px 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px">
+      <div style="display: flex; align-items: flex-end; gap: 14px">
+        <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px">
+          <div style="display: flex; align-items: center; gap: 10px"><h1 style="margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.02em">Sotuv tahrirlari · tasdiq</h1><span class="tag">Rus tili</span></div>
+          <p style="margin: 0; font-size: 13px; color: #4B5563">Sotuv menejerlari soʻrovlari · admin va ROP koʻradi · tasdiqlansa butun tizimda yangilanadi</p>
+        </div>
+        <sc-if value="{{ ready }}" hint-placeholder-val="{{ true }}"><div class="ap-seg" role="group" aria-label="Holat boʻyicha filtr"><sc-for list="{{ tabs }}" as="t" hint-placeholder-count="5"><button type="button" aria-pressed="{{ t.on }}" onClick="{{ t.pick }}">{{ t.l }}<sc-if value="{{ t.n }}" hint-placeholder-val="{{ false }}"><b>{{ t.n }}</b></sc-if></button></sc-for></div></sc-if>
+      </div>
+      <div class="ap-note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v6M12 7.5v.5"></path></svg><span><b>Qaysi tahrir tasdiq soʻraydi:</b> tarif yoki narx · asosiy ustoz · jadval. Ism, telefon, ota-ona raqami, login va parolni menejer oʻzi tuzatadi — faqat tarixga yoziladi. Siz faqat Rus tili oʻquvchilari boʻyicha soʻrovlarni koʻrasiz.</span></div>
+
+      <sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}"><div class="ap-lay" aria-busy="true" aria-label="Yuklanmoqda"><div class="ap-inbox" style="padding: 10px; gap: 8px"><div class="ap-sk" style="height: 64px"></div><div class="ap-sk" style="height: 64px"></div><div class="ap-sk" style="height: 64px"></div><div class="ap-sk" style="height: 64px"></div></div><div class="ap-det" style="padding: 20px; gap: 12px"><div class="ap-sk" style="height: 24px; width: 50%"></div><div class="ap-sk" style="height: 58px"></div><div class="ap-sk" style="height: 150px"></div><div class="ap-sk" style="height: 120px"></div></div></div></sc-if>
+      <sc-if value="{{ loadErr }}" hint-placeholder-val="{{ false }}"><div class="malert" role="alert"><span style="flex: 1">Soʻrovlarni yuklab boʻlmadi — server javob bermadi</span><button type="button" class="btn2" onClick="{{ retry }}">Qayta urinish</button></div></sc-if>
+
+      <sc-if value="{{ ready }}" hint-placeholder-val="{{ true }}">
+        <div class="ap-lay">
+          <section class="ap-inbox" aria-label="Soʻrovlar">
+            <div class="ap-ih"><span style="flex: 1">{{ inboxHead }}</span><span>yangisi yuqorida</span></div>
+            <sc-if value="{{ hasList }}" hint-placeholder-val="{{ true }}">
+              <div class="ap-list" role="list" onKeyDown="{{ listKey }}">
+                <sc-for list="{{ items }}" as="r" hint-placeholder-count="7"><div role="listitem"><button type="button" class="ap-it" data-ap="{{ r.id }}" aria-current="{{ r.cur }}" onClick="{{ r.pick }}"><span class="ap-av" aria-hidden="true" style="{{ r.avSt }}">{{ r.ini }}</span><span class="ap-itx"><b>{{ r.t1 }}</b><span>{{ r.t2 }}</span><small>{{ r.t3 }}<sc-if value="{{ r.blocked }}" hint-placeholder-val="{{ false }}"> · <span class="ap-flag">ustoz band</span></sc-if></small></span><span class="{{ r.pc }}">{{ r.pl }}</span></button></div></sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{ noList }}" hint-placeholder-val="{{ false }}"><div class="ap-empty"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"></path></svg><b>{{ emptyT }}</b><span>{{ emptyS }}</span><sc-if value="{{ emptyAll }}" hint-placeholder-val="{{ false }}"><button type="button" class="ap-lnk" onClick="{{ showAll }}">Hammasini koʻrsatish</button></sc-if></div></sc-if>
+          </section>
+
+          <section class="ap-det" aria-live="polite" aria-label="Soʻrov tafsiloti">
+            <sc-if value="{{ noSel }}" hint-placeholder-val="{{ false }}"><div class="ap-empty"><b>{{ selT }}</b><span>{{ selS }}</span></div></sc-if>
+            <sc-if value="{{ d }}" hint-placeholder-val="{{ true }}">
+              <div class="ap-dh"><h2 id="apDetH">{{ d.title }}</h2><small>{{ d.sub }}</small><span class="{{ d.pc }}">{{ d.pl }}</span></div>
+              <div class="ap-db">
+                <sc-if value="{{ d.conflict }}" hint-placeholder-val="{{ false }}"><div class="ap-c409" role="alert"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true" style="flex: none"><path d="M12 3l10 18H2zM12 10v5M12 18v.5"></path></svg><span><b>Bu soʻrovni allaqachon boshqasi hal qildi.</b> {{ d.conflict }} Sizning qaroringiz saqlanmadi — roʻyxat yangilandi.</span></div></sc-if>
+                <div class="ap-who">
+                  <div class="ap-whob"><span class="ap-av" aria-hidden="true" style="{{ d.mAv }}">{{ d.mIni }}</span><span><b>{{ d.mName }}</b><small>soʻrov yubordi · oʻz sotgan oʻquvchisi</small></span></div>
+                  <div class="ap-whob"><span class="ap-av" aria-hidden="true" style="background: #0E7490">{{ d.sIni }}</span><span style="flex: 1"><b>{{ d.sName }}</b><sc-if value="{{ d.tg }}" hint-placeholder-val="{{ true }}"><a class="ap-tg" href="https://t.me/" target="_blank" rel="noopener" title="Telegram guruhni ochish"><svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M21.5 4.3 2.9 11.5c-1.3.5-1.2 1.3-.2 1.6l4.8 1.5 1.8 5.6c.2.6.4.8.9.8.4 0 .6-.2.9-.5l2.3-2.2 4.7 3.5c.9.5 1.5.2 1.7-.8l3.1-14.6c.3-1.3-.5-1.9-1.4-1.5Z"></path></svg>{{ d.tg }}</a></sc-if><sc-if value="{{ d.noTg }}" hint-placeholder-val="{{ false }}"><span class="ap-pill ap-p-mute" style="align-self: flex-start">Telegram guruh yoʻq</span></sc-if></span><button type="button" class="btn2" style="height: 32px" onClick="{{ openCard }}">Kartani ochish</button></div>
+                </div>
+
+                <div class="ap-sec"><h3 class="ap-h3">Nima oʻzgaradi</h3>
+                  <div class="ap-dt" role="table" aria-label="Nima oʻzgaradi">
+                    <div class="ap-dr ap-dth" role="row"><span role="columnheader"><span class="sr">Maydon</span></span><span role="columnheader">{{ d.colA }}</span><span role="columnheader" aria-hidden="true"></span><span role="columnheader">Soʻralgan</span></div>
+                    <sc-for list="{{ d.rows }}" as="w" hint-placeholder-count="4"><div class="{{ w.cls }}" role="row"><span role="rowheader" class="ap-lbl">{{ w.l }}</span><span role="cell">{{ w.a }}</span><span role="cell" class="ap-ar" aria-label="{{ w.arL }}">{{ w.ar }}</span><span role="cell"><span class="{{ w.bc }}">{{ w.b }}</span></span></div></sc-for>
+                  </div>
+                </div>
+
+                <div class="ap-sec"><h3 class="ap-h3">Menejer sababi</h3><blockquote class="ap-quote">“{{ d.reason }}”</blockquote></div>
+
+                <sc-if value="{{ d.pending }}" hint-placeholder-val="{{ true }}">
+                  <div class="ap-g2">
+                    <div class="ap-sec"><h3 class="ap-h3">Server tekshiruvi</h3>
+                      <sc-if value="{{ d.chkLoading }}" hint-placeholder-val="{{ false }}"><div aria-busy="true" style="display: flex; flex-direction: column; gap: 6px"><div class="ap-sk" style="height: 36px"></div><div class="ap-sk" style="height: 36px"></div><span class="hint" style="margin: 0">Bandlik va tarif tekshirilmoqda…</span></div></sc-if>
+                      <sc-if value="{{ d.chkErr }}" hint-placeholder-val="{{ false }}"><div class="malert" role="alert" style="flex-direction: column; align-items: flex-start; gap: 6px"><span><b>Server tekshiruvini bajarib boʻlmadi</b><br><span style="font-weight: 500">Tasdiqlashda server baribir qayta tekshiradi.</span></span><button type="button" class="btn2" style="height: 30px" onClick="{{ chkRetry }}">Qayta urinish</button></div></sc-if>
+                      <sc-if value="{{ d.chkOk }}" hint-placeholder-val="{{ true }}"><ul class="ap-chk"><sc-for list="{{ d.checks }}" as="c" hint-placeholder-count="3"><li class="{{ c.cls }}"><i aria-hidden="true">{{ c.ic }}</i><span><span class="sr">{{ c.lv }}: </span>{{ c.t }}</span></li></sc-for></ul>
+                        <sc-if value="{{ d.blocked }}" hint-placeholder-val="{{ false }}"><p class="hint" style="margin: 0">Tasdiqlash yopiq: yangi vaqt ustozda band. Rad eting yoki menejerga qaytaring — u boshqa vaqt tanlab qayta yuboradi.</p></sc-if>
+                      </sc-if>
+                    </div>
+                    <div class="ap-sec"><h3 class="ap-h3">Tasdiqlansa</h3>
+                      <ul class="ap-imp"><sc-for list="{{ d.impact }}" as="m" hint-placeholder-count="4"><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ m.ic }}"></path></svg><span>{{ m.t }}</span></li></sc-for></ul>
+                    </div>
+                  </div>
+
+                </sc-if>
+
+                <sc-if value="{{ d.decided }}" hint-placeholder-val="{{ false }}"><div class="ap-sec"><h3 class="ap-h3">Qaror</h3><div class="ap-decided"><span class="ap-av" aria-hidden="true" style="{{ d.dAv }}">{{ d.dIni }}</span><div><span><span class="{{ d.pc }}">{{ d.pl }}</span> <b>{{ d.dBy }}</b> · {{ d.dAt }}</span><span style="color: #3A4456">{{ d.dNote }}</span></div></div>
+                  <p class="ap-diff"><b>Dizayn farqi:</b> kodda hal qilingan soʻrovda “Hozir” ustuni oʻquvchining hozirgi kartasidan olinadi (tasdiqlangandan keyin hamma qator “=” boʻlib qoladi). Bu yerda soʻrov paytidagi qiymat “Oldin” deb koʻrsatiladi.</p></div></sc-if>
+              </div>
+              <sc-if value="{{ d.pending }}" hint-placeholder-val="{{ true }}">                  <fieldset class="ap-sec ap-decw"><legend class="ap-h3" style="padding: 0; float: left; margin-bottom: 8px">Qaror</legend>
+                    <div class="ap-dec" role="radiogroup" aria-label="Qaror">
+                      <sc-for list="{{ d.decs }}" as="o" hint-placeholder-count="3"><label class="{{ o.cls }}"><input type="radio" name="apdec" value="{{ o.k }}" checked="{{ o.on }}" disabled="{{ o.dis }}" onChange="{{ o.pick }}" aria-describedby="{{ o.hid }}"><span><b>{{ o.t }}</b><small id="{{ o.hid }}">{{ o.s }}</small></span></label></sc-for>
+                    </div>
+                    <sc-if value="{{ d.showChips }}" hint-placeholder-val="{{ false }}"><div class="ap-chips" role="group" aria-label="Tez sabab"><sc-for list="{{ d.chips }}" as="c" hint-placeholder-count="4"><button type="button" class="ap-chip" aria-pressed="{{ c.on }}" onClick="{{ c.pick }}">{{ c.t }}</button></sc-for></div></sc-if>
+                    <label for="apNote" class="sr">{{ d.noteLab }}</label>
+                    <textarea id="apNote" rows="2" class="{{ d.taCls }}" placeholder="{{ d.ph }}" aria-required="{{ d.req }}" aria-invalid="{{ d.inv }}" aria-describedby="apNoteErr" onInput="{{ noteIn }}">{{ d.note }}</textarea>
+                    <sc-if value="{{ d.err }}" hint-placeholder-val="{{ false }}"><p id="apNoteErr" class="err" role="alert" style="margin: 0">{{ d.err }}</p></sc-if>
+                  </fieldset>
+</sc-if>
+              <sc-if value="{{ d.pending }}" hint-placeholder-val="{{ true }}"><div class="ap-df"><p>{{ d.hint }}</p><button type="button" class="btn2" onClick="{{ cancel }}">Bekor</button><button type="button" class="btnp" aria-disabled="{{ d.saveDis }}" aria-describedby="apNoteErr" onClick="{{ save }}">{{ d.saveLab }}</button></div></sc-if>
+            </sc-if>
+          </section>
+        </div>
+      </sc-if>
+    </main>
+    <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}"><div role="status" class="toast" style="bottom: auto; top: 68px">{{ toast }}</div></sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":960}}'>
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.state = { sb: true, demo: 'ok', retried: false, filter: 'all', sel: '', reqs: this.seed(), chk: {}, dec: '', note: '', chip: '', err: '', busy: false, conflict: {}, toast: '' };
+    this._t = null; this._c = {};
+  }
+  // Demo soat: Du 02.11.2026 01:43. So'rovlar — faqat Rus tili o'quvchilari (server: ROP o'z til yo'nalishi, school.js ~945).
+  seed() {
+    const S = (name, ini, teacher, dur, price, day, time, asst, tg) => ({ name, ini, teacher, dur, price, day, time, asst, tg });
+    return [
+      { id: 'r148', number: 148, kind: 'tariff', status: 'pending', mgr: 'Robiya Usmonova', created: 'bugun 00:52', s: S('Madina Rasulova', 'MR', 'Shahnoza Qodirova', 30, 450000, 1, '18:00', '', 'C41 | onlayn rus tili'),
+        ch: { lessonDuration: 60, monthlyPrice: 790000 }, reason: 'Ota-onasi 60 daqiqalik tarifni xohlayapti, farqini shu oy toʻlaydi',
+        clash: '2026-11-02 (Du) 18:00 — band' },
+      { id: 'r147', number: 147, kind: 'teacher', status: 'pending', mgr: 'Kamola Shahobiddinova', created: 'kecha 18:20', s: S('Aziza Karimova', 'AK', 'Nodira Aliyeva', 30, 450000, 2, '17:30', 'Malika Tursunova', 'C38 | onlayn rus tili'),
+        ch: { teacherId: 'Dilnoza Karimova', from: '2026-11-09', lessonTime: '19:00' }, reason: 'Oʻquvchi ishdan kech qaytadi, 19:00 dan keyin qulay; Nodira opada bu vaqt band' },
+      { id: 'r146', number: 146, kind: 'tariff', status: 'pending', mgr: 'Gulchehra Mamadaliyeva', created: 'kecha 15:05', s: S('Sardor Yoqubov', 'SY', 'Dilnoza Karimova', 30, 450000, 1, '16:00', '', ''),
+        ch: { monthlyPrice: 400000, effectiveFrom: '2026-12-01' }, reason: 'Ikki farzandi oʻqiydi — oilaviy chegirma (direktor bilan kelishilgan)' },
+      { id: 'r145', number: 145, kind: 'tariff', status: 'approved', mgr: 'Robiya Usmonova', created: '31-oktyabr 11:40', s: S('Jasur Toshmatov', 'JT', 'Shahnoza Qodirova', 15, 300000, 2, '15:00', '', 'C35 | onlayn rus tili'),
+        ch: { lessonDuration: 30, monthlyPrice: 450000 }, reason: '15 daqiqa kamlik qilyapti, 30 daqiqaga oʻtmoqchi', by: 'Islom Mominov', role: 'rop', at: 'kecha 12:10', dnote: '' },
+      { id: 'r144', number: 144, kind: 'teacher', status: 'rejected', mgr: 'Hamidaxon Boymirzayeva', created: '30-oktyabr 17:05', s: S('Nilufar Abdullayeva', 'NA', 'Dilnoza Karimova', 60, 790000, 1, '19:00', '', 'C29 | onlayn rus tili'),
+        ch: { teacherId: 'Shahnoza Qodirova', from: '2026-11-02', lessonTime: '18:00' }, reason: 'Oʻquvchi ayol ustoz bilan qolishni, lekin erta vaqtni soʻradi', by: 'Malika Yusupova', role: 'admin', at: '31-oktyabr 09:30', dnote: 'Ustoz band — boshqa vaqt taklif qiling' },
+      { id: 'r143', number: 143, kind: 'tariff', status: 'returned', mgr: 'Kamola Shahobiddinova', created: '29-oktyabr 14:20', s: S('Bekzod Rahimov', 'BR', 'Shahnoza Qodirova', 30, 450000, 2, '20:00', '', ''),
+        ch: { lessonDuration: 60 }, reason: 'Imtihonga tayyorlanadi, darsni uzaytirish kerak', by: 'Islom Mominov', role: 'rop', at: '29-oktyabr 16:02', dnote: 'Narxni yozing — 60 daqiqalik tarif narxi koʻrsatilmagan' },
+      { id: 'r141', number: 141, kind: 'tariff', status: 'approved', mgr: 'Gulchehra Mamadaliyeva', created: '28-oktyabr 10:15', s: S('Malika Hasanova', 'MH', 'Nodira Aliyeva', 30, 450000, 1, '17:00', '', 'C33 | onlayn rus tili'),
+        ch: { lessonTime: '17:30' }, reason: 'Maktabdan kech chiqadi — 30 daqiqa keyinga', by: 'Malika Yusupova', role: 'admin', at: '28-oktyabr 12:44', dnote: 'Ustoz bilan gaplashildi' }
+    ];
+  }
+  focusSoon(sel) { setTimeout(() => { const el = document.querySelector(sel); if (el && el.focus) el.focus(); }, 30); }
+  renderVals() {
+    const s = this.state;
+    const IC = {
+      home: 'M3 10.5 12 4l9 6.5V20H3z', leads: 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 3a4 4 0 110 8 4 4 0 010-8z',
+      cal: 'M3 9.5h18M8 3v3M16 3v3M5 4.5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2v-12a2 2 0 012-2z', trial: 'M8.5 12l2.5 2.5 4.5-5M6 4h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2z',
+      check: 'M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11', clock: 'M12 3a9 9 0 110 18 9 9 0 010-18zM12 7v5l3 2', lock: 'M7 11V7a5 5 0 0110 0v4M5 11h14v10H5z', arch: 'M21 8v13H3V8M1 3h22v5H1zM10 12h4',
+      funnel: 'M3 4h18l-7 8v6l-4 2v-8z', rating: 'M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0z', plan: 'M12 3a9 9 0 110 18 9 9 0 010-18zM12 8a4 4 0 110 8 4 4 0 010-8z', debt: 'M2 6h20v13H2zM2 10h20',
+      script: 'M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9zM14 3v6h6M8 13h8M8 17h5', sms: 'M4 4h16v12H5l-1 4zM8 9h8M8 12h5', stu: 'M2 8l10-5 10 5-10 5zM6 10.5V16c0 1.5 2.7 3 6 3s6-1.5 6-3v-5.5', tg: 'M21 4L3 11l6 2 2 6 3-4 5 4z'
+    };
+    const I = (k, label, icon, o) => Object.assign({ item: true, grp: false, k, label, tip: label, icon: IC[icon], cur: 'false', badge: '', aria: '', pick: () => this.setState({ viaBadge: false }), pickBadge: () => {} }, o || {});
+    const G = l => ({ grp: true, item: false, label: l });
+
+    const mkNav = (unN, loading) => [
+      I('home', 'Bosh sahifa', 'home'), I('leads', 'Lidlar', 'leads', { cur: 'page', badge: loading ? '…' : unN ? String(unN) : '', aria: unN + ' ta menejersiz ochiq lid — faqat ularni koʻrsatish', pickBadge: () => this.setState({ viaBadge: true, picked: {}, allNew: false, excl: {} }) }), I('cal', 'Dars jadvali', 'cal'), I('trial', 'Sinov nazorati', 'trial'),
+      G('NAZORAT'), I('check', 'Tasdiqlar', 'check', { badge: '3', aria: '3 ta tasdiq kutilmoqda' }), I('sla', 'SLA', 'clock', { badge: '19', aria: '19 ta SLA harakat kerak', tip: 'SLA — javob muddati nazorati' }), I('lock', 'Qotgan lidlar qoidasi', 'lock', { tip: 'Qotgan lidlar qoidasi (sozlama)' }), I('arch', 'Arxiv', 'arch', { tip: 'Arxiv (tarix)' }),
+      G('SOTUV'), I('funnel', 'Voronka', 'funnel', { tip: 'Voronka: statistika va menejerlar samaradorligi' }), I('rating', 'Reyting va bonus', 'rating'), I('plan', 'Sotuv rejasi', 'plan', { tip: 'Sotuv rejasi (koʻrish)' }), I('debt', 'Qarzdorlar', 'debt'), I('script', 'Skript va yoʻriqnoma', 'script'), I('sms', 'SMS yuborish', 'sms'),
+      G('OʻQUVCHILAR'), I('stu', 'Oʻquvchilar', 'stu'), I('tg', 'Telegram guruh', 'tg')
+    ];
+    const MGR = { 'Robiya Usmonova': '#166534', 'Kamola Shahobiddinova': '#5B21B6', 'Gulchehra Mamadaliyeva': '#0E7490', 'Hamidaxon Boymirzayeva': '#C2410C', 'Islom Mominov': '#0B1220', 'Malika Yusupova': '#7A271A' };
+    const ini = n => String(n).split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+    // schoolUI.js helperlari (num, shortName, pattern, sched, fmtDate) — 1:1
+    const num = n => String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    const shortName = n => { const p = String(n || '').trim().split(/\s+/); return p[0] ? p[0] + (p[1] ? ' ' + p[1][0] + '.' : '') : '—'; };
+    const pattern = d => ([1, 3, 5].includes(Number(d)) ? 'Du·Ch·Ju' : [2, 4, 6].includes(Number(d)) ? 'Se·Pa·Sh' : '—');
+    const toMin = t => { const m = /^(\d{1,2}):(\d{2})$/.exec(String(t || '')); return m ? +m[1] * 60 + +m[2] : null; };
+    const hm = m => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+    const sched = (day, time, dur) => pattern(day) + (time ? ' ' + time : '') + (dur && toMin(time) != null ? '–' + hm(toMin(time) + Number(dur)) : '');
+    const MON = ['yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun', 'iyul', 'avgust', 'sentyabr', 'oktyabr', 'noyabr', 'dekabr'], DAY = ['Du', 'Se', 'Ch', 'Pa', 'Ju', 'Sh', 'Ya'];
+    const fmtDate = d => { const [y, m, dd] = d.split('-').map(Number); const w = new Date(Date.UTC(y, m - 1, dd)).getUTCDay(); return DAY[(w + 6) % 7] + ', ' + dd + '-' + MON[m - 1]; };
+    const KIND = { tariff: 'tarif', teacher: 'ustoz', payment: 'toʻlov' };
+    const PILL = { pending: ['ap-pill ap-p-warn', 'Kutilmoqda'], approved: ['ap-pill ap-p-ok', 'Tasdiqlandi'], rejected: ['ap-pill ap-p-bad', 'Rad etildi'], returned: ['ap-pill ap-p-mute', 'Qaytarildi'] };
+    const apSummary = r => { const ch = r.ch, st = r.s; if (r.kind === 'teacher') return shortName(st.teacher) + ' → ' + shortName(ch.teacherId); const p = [];
+      if ('lessonDuration' in ch && +ch.lessonDuration !== +st.dur) p.push((st.dur || '—') + ' → ' + ch.lessonDuration + ' daq');
+      if ('monthlyPrice' in ch) p.push((st.price ? num(st.price) : '—') + ' → ' + num(ch.monthlyPrice));
+      if ('lessonTime' in ch && ch.lessonTime !== st.time) p.push((st.time || '—') + ' → ' + ch.lessonTime); return p.join(' · ') || 'tarif'; };
+    const rowsOf = r => { const ch = r.ch, st = r.s;
+      const curT = st.dur + ' daq' + (st.price ? ' · ' + num(st.price) + ' soʻm/oy' : '');
+      const nd = 'lessonDuration' in ch ? ch.lessonDuration : st.dur, np = 'monthlyPrice' in ch ? ch.monthlyPrice : st.price;
+      const newT = nd + ' daq' + (np ? ' · ' + num(np) + ' soʻm/oy' : '');
+      const from = r.kind === 'teacher' ? ch.from : ch.effectiveFrom;
+      return [['Tarif', curT, newT], ['Dars vaqti', sched(st.day, st.time, st.dur), sched(ch.lessonDay != null ? ch.lessonDay : st.day, ch.lessonTime || st.time, nd)], ['Ustoz', st.teacher, r.kind === 'teacher' ? ch.teacherId : st.teacher], ['Qachondan', '—', from ? fmtDate(from) : 'tasdiqlangan kundan']]; };
+    const IMP = { cal: 'M3 9.5h18M8 3v3M16 3v3M5 4.5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2v-12a2 2 0 012-2z', fin: 'M2 6h20v13H2zM2 10h20', pay: 'M12 2v20M17 6H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6', app: 'M7 2h10a2 2 0 012 2v16a2 2 0 01-2 2H7a2 2 0 01-2-2V4a2 2 0 012-2zM11 18h2', asst: 'M12 3a9 9 0 110 18 9 9 0 010-18zM12 7v5l3 2', tg: 'M21 4L3 11l6 2 2 6 3-4 5 4z', log: 'M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z' };
+    const impactOf = r => { const ch = r.ch, st = r.s, out = []; const tN = shortName(r.kind === 'teacher' ? ch.teacherId : st.teacher);
+      const fr = r.kind === 'teacher' ? ch.from : ch.effectiveFrom; const from = fr ? fmtDate(fr) : 'tasdiqlangan kundan'; const nd = 'lessonDuration' in ch ? ch.lessonDuration : st.dur;
+      const sc = r.kind === 'teacher' || 'lessonTime' in ch || 'lessonDay' in ch || ('lessonDuration' in ch && +ch.lessonDuration !== +st.dur);
+      if (sc) out.push(['cal', tN + ' jadvali: ' + sched(ch.lessonDay != null ? ch.lessonDay : st.day, ch.lessonTime || st.time, nd) + ' band · sinov uchun yopiladi · ' + from]);
+      if ('monthlyPrice' in ch) out.push(['fin', 'Moliya: yangi narx ' + num(ch.monthlyPrice) + ' soʻm/oy · qarz shu narxdan hisoblanadi']);
+      if (r.kind === 'teacher') out.push(['pay', 'Maosh: ' + from + ' darslari ' + tN + 'ga, oldingilari ' + shortName(st.teacher) + 'ga']);
+      else if ('lessonDuration' in ch) out.push(['pay', tN + ' maoshi: ' + from + ' darslar ' + nd + ' daqiqalik stavka boʻyicha']);
+      if ('lessonDuration' in ch) out.push(['app', 'Ilova: dars davomiyligi ' + nd + ' daq · darslik progressi oʻzgarmaydi']);
+      if (st.asst) out.push(['asst', 'Yordamchi ' + shortName(st.asst) + ': oʻzgarish yoʻq · oyiga 13 aloqa']);
+      if (r.kind === 'teacher') out.push(['tg', 'Telegram guruh: yangi ustozni guruhga qoʻshish kerak']);
+      out.push(['log', 'Tarixga: soʻrov, qaror, kim va qachon · ' + shortName(r.mgr) + 'ga xabar']);
+      return out.map(x => ({ ic: IMP[x[0]], t: x[1] })); };
+    // studentOps.checkRequest — bandlik (checkWeekly) + tarif + to'lovga ta'sir; ok=false bo'lsa tasdiqlash xato beradi
+    const checksOf = r => { const ch = r.ch, st = r.s, out = []; let slot = null;
+      if (r.kind === 'teacher' && ch.teacherId) slot = { t: ch.teacherId, day: ch.lessonDay != null ? ch.lessonDay : st.day, time: ch.lessonTime || st.time, dur: st.dur };
+      else if (r.kind === 'tariff' && ('lessonDay' in ch || 'lessonTime' in ch || 'lessonDuration' in ch)) slot = { t: st.teacher, day: ch.lessonDay != null ? ch.lessonDay : st.day, time: ch.lessonTime || st.time, dur: 'lessonDuration' in ch ? ch.lessonDuration : st.dur };
+      if (slot) { const label = slot.t + ' · ' + pattern(slot.day) + ' ' + slot.time + '–' + hm(toMin(slot.time) + +slot.dur); out.push(r.clash ? { level: 'bad', text: label + ': ' + r.clash } : { level: 'ok', text: label + ' boʻsh (4 hafta) · tekshirildi 01:43' }); }
+      if ('lessonDuration' in ch || 'tariff' in ch || 'monthlyPrice' in ch) { const dur = 'lessonDuration' in ch ? +ch.lessonDuration : st.dur, price = 'monthlyPrice' in ch ? +ch.monthlyPrice : st.price, okDur = [15, 30, 60].includes(dur);
+        out.push({ level: okDur && price > 0 ? 'ok' : 'warn', text: okDur ? 'Tarif: ' + dur + ' daq' + (price ? ' · ' + num(price) + ' soʻm/oy' : ' · narx kiritilmagan') : 'Davomiylik ' + dur + ' daq — standart tariflar 15 / 30 / 60 daq' });
+        if ('monthlyPrice' in ch && +ch.monthlyPrice !== +st.price) { const from = ch.effectiveFrom || '2026-11-02'; out.push({ level: 'warn', text: from > '2026-11-02' ? 'Joriy oy toʻlovi oʻzgarmaydi — yangi narx ' + from + ' dan keyingi hisobga' : 'Joriy oy toʻlovi avtomatik qayta hisoblanmaydi — farqni Moliyada tekshiring' }); } }
+      if (!out.length) out.push({ level: 'ok', text: 'Tekshiradigan jadval yoki tarif oʻzgarishi yoʻq' });
+      return out; };
+    const reqs = s.demo === 'empty' ? s.reqs.filter(r => r.status !== 'pending') : s.reqs;
+    const counts = { all: reqs.length, pending: 0, approved: 0, rejected: 0, returned: 0 }; reqs.forEach(r => { counts[r.status]++; });
+    const nav = mkNav(79, false).map(n => Object.assign({}, n, { cur: n.k === 'check' ? 'page' : 'false', pickBadge: () => {}, pick: () => { if (n.k === 'check' || !n.item) return; this.setState({ toast: n.label + ' sahifasi ochiladi' }); } }, n.k === 'check' ? { badge: counts.pending ? String(counts.pending) : '', aria: counts.pending + ' ta tasdiq kutilmoqda' } : {}));
+    const toast = (t, ms) => { this.setState({ toast: t }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: '' }), ms || 3000); };
+    const loading = s.demo === 'load', loadErr = s.demo === 'err' && !s.retried, ready = !loading && !loadErr;
+    const list = reqs.filter(r => s.filter === 'all' || r.status === s.filter);
+    const selId = list.some(r => r.id === s.sel) ? s.sel : ((list.find(r => r.status === 'pending') || list[0] || {}).id || '');
+    const r = list.find(x => x.id === selId) || null;
+    // Server tekshiruvi: tanlanganda yuklanadi (GET /edit-requests/:id/check)
+    const chkState = r && r.status === 'pending' ? (s.chk[r.id] || 'loading') : '';
+    if (ready && r && r.status === 'pending' && !s.chk[r.id] && !this._c[r.id]) { this._c[r.id] = setTimeout(() => { this._c[r.id] = null; const c = Object.assign({}, this.state.chk); c[r.id] = this.state.demo === 'chkErr' && !this.state.chkRetried ? 'err' : 'ok'; this.setState({ chk: c }); }, 650); }
+    const pick = id => { if (id === selId) return; this.setState({ sel: id, dec: '', note: '', chip: '', err: '' }); };
+    const ord = list.map(x => x.id);
+    const checks = r && r.status === 'pending' ? checksOf(r) : [];
+    const blocked = !!(r && chkState === 'ok' && checks.some(c => c.level === 'bad'));
+    const dec = blocked && s.dec === 'approve' ? '' : s.dec;
+    const RS = r ? (r.kind === 'payment' ? ['Chek oʻqilmaydi', 'Summa mos emas', 'Boshqa oʻquvchiniki', 'Boshqa'] : r.kind === 'teacher' ? ['Vaqt mos emas', 'Ustoz band', 'Sabab yetarli emas', 'Boshqa'] : ['Narx notoʻgʻri', 'Vaqt mos emas', 'Sabab yetarli emas', 'Boshqa']) : [];
+    const who = r ? shortName(r.mgr) : '';
+    const hintOf = () => (dec === 'approve' ? 'Tasdiqlash · ' + who + 'ga xabar boradi' : dec === 'reject' ? 'Rad etish · soʻrov yopiladi, hech narsa oʻzgarmaydi' : dec === 'return' ? 'Qaytarish · ' + who + ' tuzatib qayta yuboradi' : 'Avval qarorni tanlang') + ' · Admin ham koʻryapti — kim birinchi qaror qilsa, ikkinchisida yopiladi';
+    const decide = () => {
+      if (s.busy || !r) return;
+      if (!dec) { this.setState({ err: 'Avval qarorni tanlang' }); return; }
+      if (dec !== 'approve' && s.note.trim().length < 3) { this.setState({ err: 'Sababni yozing — kamida 3 belgi (menejerga boradi)' }); this.focusSoon('#apNote'); toast('Sababni yozing'); return; }
+      if (dec === 'approve' && blocked) { this.setState({ err: 'Boʻsh vaqt yoʻq — avval vaqtni oʻzgartiring' }); return; }
+      clearTimeout(this._t); this.setState({ busy: true, err: '', toast: '' });
+      setTimeout(() => {
+        const st = this.state, id = r.id;
+        if (st.demo === 'c409') {
+          // decideRequest: status='pending' emas → 409 "So'rov allaqachon hal qilingan: <ism>"; ilova ro'yxatni qayta yuklaydi (ropApp.js decide)
+          const reqs2 = st.reqs.map(x => x.id === id ? Object.assign({}, x, { status: 'approved', by: 'Malika Yusupova', role: 'admin', at: 'bugun 01:42', dnote: '' }) : x);
+          const cf = Object.assign({}, st.conflict); cf[id] = 'Soʻrov allaqachon hal qilingan: Malika Yusupova (admin) · bugun 01:42 · tasdiqladi.';
+          this.setState({ busy: false, reqs: reqs2, conflict: cf, sel: id, filter: st.filter === 'pending' ? 'all' : st.filter, dec: '', note: '', chip: '' });
+          toast('Bu soʻrovni allaqachon boshqasi hal qildi', 4000); return;
+        }
+        const status = dec === 'approve' ? 'approved' : dec === 'reject' ? 'rejected' : 'returned';
+        const reqs2 = st.reqs.map(x => x.id === id ? Object.assign({}, x, { status, by: 'Islom Mominov', role: 'rop', at: 'bugun 01:43', dnote: st.note.trim() }) : x);
+        this.setState({ busy: false, reqs: reqs2, sel: '', dec: '', note: '', chip: '' });
+        toast('Qaror saqlandi');
+      }, 800);
+    };
+    let d = null;
+    if (r) {
+      const pending = r.status === 'pending';
+      const rows = rowsOf(r).map(w => { const same = String(w[1]) === String(w[2]); return { l: w[0], a: w[1], b: w[2], ar: same ? '=' : '→', arL: same ? 'oʻzgarmaydi' : 'oʻzgaradi', cls: 'ap-dr' + (same ? ' ap-same' : ''), bc: same ? '' : 'ap-new' }; });
+      const req = pending && dec && dec !== 'approve';
+      d = { title: r.s.name + ' · ' + (r.kind === 'teacher' ? 'ustozni almashtirish' : r.kind === 'payment' ? 'toʻlov tuzatish' : 'tarif oʻzgarishi'), sub: 'yuborildi ' + r.created + ' · №' + r.number,
+        pc: PILL[r.status][0], pl: PILL[r.status][1], conflict: s.conflict[r.id] || '',
+        mName: r.mgr, mIni: ini(r.mgr), mAv: 'background:' + (MGR[r.mgr] || '#334155'), sName: r.s.name, sIni: r.s.ini, tg: r.s.tg, noTg: !r.s.tg,
+        colA: pending ? 'Hozir' : 'Oldin', rows, reason: r.reason, pending, decided: !pending,
+        chkLoading: chkState === 'loading', chkErr: chkState === 'err', chkOk: chkState === 'ok', blocked,
+        checks: checks.map(c => ({ cls: 'ap-' + c.level, ic: { ok: '✓', warn: '!', bad: '✕' }[c.level], lv: { ok: 'Joyida', warn: 'Diqqat', bad: 'Toʻsiq' }[c.level], t: c.text })),
+        impact: pending ? impactOf(r) : [],
+        decs: [['approve', 'Tasdiqlash', blocked ? 'boʻsh vaqt yoʻq — avval vaqtni oʻzgartiring' : 'server boʻsh vaqtni qayta tekshiradi', 'ap-ok2'], ['reject', 'Rad etish', 'sabab majburiy · menejerga boradi', 'ap-no'], ['return', 'Qaytarish', 'menejer tuzatib qayta yuboradi', '']].map(o => ({ k: o[0], t: o[1], s: o[2], hid: 'aph_' + o[0], on: dec === o[0], dis: o[0] === 'approve' && blocked, cls: 'ap-dc' + (dec === o[0] ? ' ap-on ' + o[3] : '') + (o[0] === 'approve' && blocked ? ' ap-dis' : ''), pick: () => this.setState({ dec: o[0], err: '', chip: o[0] === 'approve' ? '' : s.chip }) })),
+        showChips: req, chips: RS.map(t => ({ t, on: s.chip === t ? 'true' : 'false', pick: () => { if (t === 'Boshqa') { this.setState({ chip: t, note: '', err: '' }); this.focusSoon('#apNote'); return; } this.setState({ chip: t, note: t, err: '' }); } })),
+        note: s.note, ph: dec && dec !== 'approve' ? 'Sabab (majburiy) — menejerga boradi' : 'Izoh (ixtiyoriy) — menejer va tarixda koʻrinadi', noteLab: dec && dec !== 'approve' ? 'Sabab (majburiy)' : 'Izoh (ixtiyoriy)',
+        req: req ? 'true' : 'false', inv: s.err && req ? 'true' : 'false', taCls: 'ap-ta' + (s.err && req ? ' ap-terr' : ''), err: s.err,
+        hint: hintOf(), saveDis: !dec || s.busy ? 'true' : 'false', saveLab: s.busy ? 'Saqlanmoqda...' : 'Qarorni saqlash',
+        dBy: r.by ? r.by + (r.role === 'rop' ? ' (ROP' + (r.by === 'Islom Mominov' ? ', siz' : '') + ')' : ' (admin)') : '', dAt: r.at || '', dNote: r.dnote ? '“' + r.dnote + '”' : 'Izohsiz', dIni: r.by ? ini(r.by) : '', dAv: 'background:' + (MGR[r.by] || '#334155') };
+    }
+    const TABS = [['all', 'Hammasi'], ['pending', 'Kutilmoqda'], ['approved', 'Tasdiqlangan'], ['rejected', 'Rad etilgan'], ['returned', 'Qaytarilgan']].filter(t => t[0] !== 'returned' || counts.returned);
+    return {
+      nav, sbCls: s.sb ? 'sb' : 'sb sb-min', sbExp: s.sb ? 'true' : 'false', sbLab: s.sb ? 'Menyuni yigʻish' : 'Menyuni ochish', sbIcon: s.sb ? 'M15 6l-6 6 6 6' : 'M9 6l6 6-6 6', toggleSb: () => this.setState({ sb: !s.sb }),
+      demo: [['ok', 'Oddiy', ''], ['load', 'Yuklanmoqda', ''], ['err', 'Xato', 'Roʻyxatni yuklab boʻlmadi'], ['chkErr', 'Tekshiruv xatosi', 'GET /edit-requests/:id/check xato'], ['c409', '409 · Admin oldin', 'Saqlashda admin allaqachon hal qilgan'], ['empty', 'Boʻsh', 'Kutilayotgan soʻrov yoʻq']].map(x => ({ t: x[1], tip: x[2] || x[1], on: s.demo === x[0] ? 'true' : 'false', pick: () => { Object.keys(this._c).forEach(k => clearTimeout(this._c[k])); this._c = {}; clearTimeout(this._t); this.setState({ toast: '', demo: x[0], retried: false, chkRetried: false, err: '', chk: {}, busy: false, conflict: {}, reqs: this.seed(), sel: '', dec: '', note: '', chip: '', filter: x[0] === 'empty' ? 'pending' : 'all' }); } })),
+      loading, loadErr, ready, retry: () => this.setState({ retried: true }),
+      tabs: TABS.map(t => ({ l: t[1], n: (t[0] === 'all' || t[0] === 'pending') && counts[t[0]] ? String(counts[t[0]]) : '', on: s.filter === t[0] ? 'true' : 'false', pick: () => this.setState({ filter: t[0], sel: '', dec: '', note: '', chip: '', err: '' }) })),
+      inboxHead: list.length + ' ta soʻrov' + (s.filter === 'all' ? '' : ' · ' + TABS.find(t => t[0] === s.filter)[1].toLowerCase()),
+      hasList: list.length > 0, noList: list.length === 0,
+      emptyT: s.filter === 'pending' ? 'Kutilayotgan soʻrov yoʻq' : 'Soʻrov yoʻq', emptyS: s.filter === 'pending' ? 'Menejer tahrir soʻraganda shu yerda chiqadi' : 'Bu holatda soʻrov topilmadi', emptyAll: s.filter !== 'all' && reqs.length > 0, showAll: () => this.setState({ filter: 'all', sel: '' }),
+      items: list.map(x => ({ id: x.id, cur: x.id === selId ? 'true' : 'false', pick: () => pick(x.id), ini: ini(x.mgr), avSt: 'background:' + (MGR[x.mgr] || '#334155'), t1: shortName(x.mgr) + ' · ' + KIND[x.kind], t2: x.s.name + ' · ' + apSummary(x), t3: x.created, pc: PILL[x.status][0], pl: PILL[x.status][1], blocked: x.status === 'pending' && !!x.clash && s.chk[x.id] === 'ok' })),
+      listKey: e => { if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return; e.preventDefault(); const i = ord.indexOf(selId), j = Math.max(0, Math.min(ord.length - 1, i + (e.key === 'ArrowDown' ? 1 : -1))); if (ord[j]) { pick(ord[j]); this.focusSoon('[data-ap="' + ord[j] + '"]'); } },
+      noSel: !r, selT: list.length ? 'Soʻrovni tanlang' : 'Ochiladigan soʻrov yoʻq', selS: list.length ? 'Chapdagi roʻyxatdan soʻrovni bosing — bu yerda nima oʻzgarishi va qaror chiqadi.' : (s.filter === 'pending' ? 'Hammasi hal qilingan. Yangi soʻrov kelsa, “Tasdiqlar” yonida son chiqadi.' : 'Boshqa holatni tanlang.'), d,
+      openCard: () => toast((r ? r.s.name : '') + ' — oʻquvchi kartasi ochiladi'),
+      chkRetry: () => { const c = Object.assign({}, s.chk); delete c[r.id]; this.setState({ chk: c, chkRetried: true }); },
+      noteIn: e => this.setState({ note: e.target.value, err: '', chip: s.chip === 'Boshqa' ? 'Boshqa' : (RS.indexOf(e.target.value) >= 0 ? e.target.value : '') }),
+      cancel: () => this.setState({ dec: '', note: '', chip: '', err: '' }),
+      save: decide,
+      toast: s.toast
+    };
+  }
+}
+</script>
+</body>
+</html>

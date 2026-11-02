@@ -1,0 +1,6 @@
+    // --- Qotgan lidlar hisobi (staleLeads.js DEFAULT warn 3 / lock 5, compute) ---
+    const RULE = { warnDays: 3, lockDays: 5 };
+    const NOSTALE = s.demo === 'empty';
+    // "Urinilmoqda"da turibdi va hech qachon "Bogʻlanildi"ga chiqmagan; kun — menejerga berilgan sanadan (sd)
+    const stl = NOSTALE || loading ? [] : BOARD.try.filter(x => !hasSurvey(x.key) && (x.k.sd || 0) >= RULE.warnDays).sort((a, b) => (b.k.sd || 0) - (a.k.sd || 0));
+    const lockL = stl.filter(x => x.k.sd >= RULE.lockDays), warnL = stl.filter(x => x.k.sd < RULE.lockDays);

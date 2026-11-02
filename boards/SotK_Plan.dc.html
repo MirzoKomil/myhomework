@@ -1,0 +1,654 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<title>Rejam</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+sc-for,sc-if{display:contents}
+button,input,select,textarea{font-family:inherit}
+:focus-visible{outline:2px solid #0065D6;outline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.skip{position:absolute;left:12px;top:-60px;z-index:90;height:40px;padding:0 16px;border-radius:10px;border:0;background:#0B1220;color:#FFFFFF;font-size:14px;font-weight:800;cursor:pointer}
+.skip:focus{top:12px}
+/* sidebar */
+.sb{flex:none;width:248px;background:#FFFFFF;border-right:1px solid #E6EAF2;padding:10px 12px;box-sizing:border-box;display:flex;flex-direction:column;gap:1px;transition:width .2s ease;overflow:hidden}
+.nr{display:flex;align-items:center;gap:4px}
+.mi{flex:1;min-width:0;display:flex;align-items:center;gap:12px;min-height:38px;padding:0 10px;border-radius:12px;color:#3A4456;font-size:14px;font-weight:600;border:0;background:transparent;cursor:pointer;text-align:left}
+.mi:hover{background:#F1F5F9;color:#0B1220}
+.mi svg{width:18px;height:18px;flex:none}
+.mi[aria-current="page"]{background:#EAF3FF;color:#0057B8;font-weight:800}
+.lbl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.grp{font-size:12px;font-weight:800;color:#4B5563;letter-spacing:.06em;padding:12px 10px 4px;margin:0}
+.cnt{flex:none;min-width:28px;height:24px;padding:0 7px;box-sizing:border-box;border-radius:999px;background:#D92D20;color:#FFFFFF;font-size:12px;font-weight:800;display:grid;place-items:center;border:0;cursor:pointer}
+.cnt:hover{background:#B42318}
+.sb-min{width:76px;padding:10px 8px}
+.sb-min .lbl,.sb-min .grp,.sb-min .brand{display:none}
+.sb-min .nr{position:relative}
+.sb-min .mi{justify-content:center;padding:0}
+.sb-min .cnt{position:absolute;right:-2px;top:-4px;min-width:24px;height:24px;border:2px solid #FFFFFF}
+/* toolbar */
+.fbox{height:36px;display:flex;align-items:center;gap:6px;padding:0 10px 0 12px;border-radius:10px;border:1px solid #E2E8F0;background:#FFFFFF;font-size:13px;font-weight:600;color:#3A4456;box-sizing:border-box;white-space:nowrap;cursor:pointer}
+.fbox:hover{border-color:#94A3B8}
+.fbox.act{background:#EAF3FF;border-color:#0065D6;color:#0057B8;font-weight:800}
+.fbox.vb{background:#F1E8FF;border-color:#7C3AED;color:#5B21B6;font-weight:800}
+.dd{position:absolute;top:42px;left:0;z-index:40;background:#FFFFFF;border:1px solid #E6EAF2;border-radius:14px;box-shadow:0 16px 40px rgba(16,24,40,.16);padding:8px;display:flex;flex-direction:column;gap:2px;min-width:280px}
+.dd label,.dd .pr{display:flex;align-items:center;gap:8px;min-height:32px;padding:0 8px;border-radius:8px;font-size:13px;font-weight:600;color:#0B1220;cursor:pointer;border:0;background:transparent;text-align:left}
+.dd label:hover,.dd .pr:hover,.dd .pr:focus-visible{background:#F1F5F9}
+.dd .pr[aria-checked="true"]{background:#EAF3FF;color:#0057B8;font-weight:800}
+.dd input[type=checkbox]{width:16px;height:16px;margin:0;accent-color:#0065D6}
+.dd .ap{height:36px;margin-top:6px;border:0;border-radius:10px;background:#0065D6;color:#FFFFFF;font-size:13px;font-weight:800;cursor:pointer}
+.dd .ap[aria-disabled="true"]{background:#CBD5E1;color:#4B5563;cursor:not-allowed}
+.dh{font-size:12px;font-weight:800;color:#4B5563;padding:4px 8px}
+.kbd{display:inline-grid;place-items:center;min-width:22px;height:22px;padding:0 5px;box-sizing:border-box;border-radius:6px;border:1px solid #CBD5E1;border-bottom-width:2px;background:#FFFFFF;font-size:11px;font-weight:800;color:#3A4456}
+/* board */
+.col{flex:none;width:256px;min-height:0;max-height:100%;background:#F1F5F9;border-radius:16px;padding:0 8px 8px;box-sizing:border-box;display:flex;flex-direction:column;gap:6px;border-top:3px solid transparent;transition:background .15s ease}
+.col.drop{background:#EAF3FF;outline:2px dashed #0065D6;outline-offset:-2px}
+.ch{display:flex;flex-direction:column;gap:6px;padding:10px 4px 2px}
+.ch1{display:flex;align-items:center;gap:8px}
+.ct{margin:0;flex:1;min-width:0;font-size:14px;font-weight:800;line-height:1.25;color:#0B1220}
+.ch2{display:flex;align-items:center;gap:6px;min-height:26px;flex-wrap:wrap}
+.pk{flex:none;height:26px;padding:0 10px;border-radius:999px;border:0;background:#0065D6;color:#FFFFFF;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap}
+.pk:hover{background:#0057B8}
+.sum{font-size:12px;font-weight:600;color:#4B5563;white-space:nowrap}
+.rk{height:26px;display:inline-flex;align-items:center;gap:4px;padding:0 9px;border-radius:999px;border:0;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap}
+.rk[aria-pressed="true"]{box-shadow:inset 0 0 0 2px currentColor}
+.seg{display:grid;grid-template-columns:auto auto auto;gap:4px;padding:0 2px}
+.seg button{white-space:nowrap;display:flex;align-items:center;justify-content:center;gap:3px;height:28px;padding:0 7px;border-radius:999px;border:1px solid #E2E8F0;background:#FFFFFF;color:#3A4456;font-size:12px;font-weight:700;cursor:pointer}
+.seg button[aria-pressed="true"]{background:#0065D6;border-color:#0065D6;color:#FFFFFF}
+.lst{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin:0 -4px;padding:2px 4px 4px;scrollbar-width:thin;scrollbar-color:#CBD5E1 transparent}
+.lst>*{flex:none}
+.card{position:relative;flex:none;background:#FFFFFF;border:1px solid #E6EAF2;border-left-width:3px;border-radius:12px;padding:7px 8px 7px 8px;box-shadow:0 1px 2px rgba(16,24,40,.05);display:flex;flex-direction:column;gap:4px;transition:box-shadow .15s ease,border-color .15s ease,opacity .15s ease;cursor:grab}
+.card:hover{box-shadow:0 8px 20px rgba(16,24,40,.10);border-color:#CBD5E1}
+.card:focus-visible{outline:2px solid #0065D6;outline-offset:1px}
+.card.drag{opacity:.4;border-style:dashed;box-shadow:none}
+.card{user-select:none}
+.card.sel{background:#F5F9FF}
+.card.kin{box-shadow:0 0 0 2px #0065D6}
+.r1{display:flex;align-items:flex-start;gap:4px}
+.cbx{flex:none;width:24px;height:24px;display:grid;place-items:center;margin-left:-3px;cursor:pointer}
+.cbx input{width:16px;height:16px;margin:0;accent-color:#0065D6;cursor:pointer}
+.nm{flex:1;min-width:0;min-height:24px;border:0;background:none;padding:2px 0 0;font-size:14px;font-weight:800;line-height:1.25;color:#0B1220;text-align:left;cursor:pointer;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.nm:hover{color:#0057B8;text-decoration:underline}
+.ic{position:relative;flex:none;width:28px;height:28px;border-radius:8px;border:0;background:transparent;color:#4B5563;display:grid;place-items:center;cursor:pointer}
+.ic:hover{background:#F1F5F9;color:#0B1220}
+.att{flex:none;width:20px;height:20px;margin-top:2px;border-radius:50%;background:#ECFDF3;color:#067647;font-size:11px;font-weight:800;display:grid;place-items:center}
+.meta{display:flex;align-items:center;gap:6px;flex-wrap:nowrap;font-size:12px;color:#4B5563;min-height:22px;overflow:hidden}
+.chip{display:inline-flex;align-items:center;gap:4px;height:22px;font-size:12px;font-weight:800;border-radius:999px;padding:0 8px;white-space:nowrap;flex:none}
+.src{display:inline-flex;align-items:center;gap:5px;font-weight:700;color:#3A4456;white-space:nowrap}
+.src i{width:7px;height:7px;border-radius:50%}
+.ser{font-weight:800;color:#0B1220;background:#F1F5F9;border-radius:6px;padding:1px 6px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.r3{display:flex;align-items:center;gap:6px;min-height:24px;font-size:13px;color:#3A4456}
+.ph{display:inline-flex;align-items:center;gap:6px;min-height:24px;color:#3A4456;font-variant-numeric:tabular-nums;text-decoration:none;border-radius:6px;white-space:nowrap}
+.ph:hover{color:#0057B8}
+.ph svg{flex:none;color:#6B7280}
+.cp{width:24px;height:24px;border-radius:6px;border:0;background:transparent;color:#4B5563;display:none;place-items:center;cursor:pointer;font-size:12px;flex:none}
+.card:hover .cp,.card:focus-within .cp,.card.kin .cp{display:grid}
+.cp:hover{background:#F1F5F9}
+.p2{height:22px;padding:0 7px;border-radius:999px;border:0;background:#F1F5F9;color:#3A4456;font-size:12px;font-weight:800;cursor:pointer}
+.tm{margin-left:auto;font-size:12px;color:#4B5563;white-space:nowrap;font-variant-numeric:tabular-nums}
+.r4{display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.dfr{display:flex;flex-direction:column;gap:2px;white-space:nowrap;font-size:12px;color:#3A4456;background:#EEF2FF;border-radius:8px;padding:4px 8px}
+.ft{display:flex;align-items:center;gap:4px}
+.fb{height:28px;min-width:28px;border-radius:999px;border:0;background:#F1F5F9;color:#3A4456;display:inline-flex;align-items:center;justify-content:center;gap:4px;font-size:12px;font-weight:700;cursor:pointer;padding:0 8px;box-sizing:border-box}
+.fb:hover{background:#E2E8F0}
+.fb.z{background:transparent;color:#6B7280;padding:0}
+.mg{max-width:118px}
+.mg b{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.av{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:10px;font-weight:800;flex:none;overflow:hidden}
+.more{flex:none;height:34px;border-radius:10px;border:1px dashed #CBD5E1;background:transparent;font-size:12px;font-weight:700;color:#3A4456;cursor:pointer}
+.more:hover{background:#FFFFFF}
+.empty{flex:none;display:flex;flex-direction:column;align-items:center;gap:6px;padding:22px 8px;border:1px dashed #CBD5E1;border-radius:12px;color:#4B5563;font-size:13px;font-weight:600;text-align:center}
+.sk{flex:none;height:112px;border-radius:12px;background:linear-gradient(90deg,#E9EEF5 0%,#F5F7FB 50%,#E9EEF5 100%);background-size:200% 100%;animation:sh 1.2s linear infinite}
+.skn{display:inline-block;width:26px;height:20px;border-radius:999px;background:linear-gradient(90deg,#E2E8F0 0%,#F5F7FB 50%,#E2E8F0 100%);background-size:200% 100%;animation:sh 1.2s linear infinite}
+.sv{position:absolute;inset:0;border-radius:11px;background:rgba(255,255,255,.75);display:flex;align-items:center;justify-content:center;gap:8px;font-size:12px;font-weight:800;color:#0057B8}
+.spin{width:16px;height:16px;border-radius:50%;border:2px solid #BFDBFE;border-top-color:#0065D6;animation:rot .8s linear infinite}
+/* popovers */
+.mn{position:absolute;z-index:60;width:256px;background:#FFFFFF;border:1px solid #E6EAF2;border-radius:12px;box-shadow:0 16px 36px rgba(16,24,40,.18);padding:6px;display:flex;flex-direction:column}
+.mn button{min-height:34px;border:0;background:transparent;text-align:left;padding:0 10px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:#0B1220;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.mn button:hover,.mn button:focus-visible{background:#F1F5F9;outline:0;box-shadow:inset 0 0 0 2px #0065D6}
+.mn .dg{color:#B42318}
+.mn [role=option]{min-height:36px;border:0;background:transparent;text-align:left;padding:0 10px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:#0B1220;display:flex;align-items:center;gap:8px}
+.mn [role=option]:hover,.mn [role=option]:focus-visible{background:#F1F5F9;outline:0;box-shadow:inset 0 0 0 2px #0065D6}
+.mn [role=option][aria-selected=true]{background:#EAF3FF;color:#0057B8;font-weight:800}
+.mn [role=option][aria-disabled=true]{color:#94A3B8;cursor:not-allowed}
+.fld{min-width:0;display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:700;color:#3A4456}
+.fld textarea{box-sizing:border-box;width:100%;min-width:0;border:1px solid #CBD5E1;border-radius:10px;padding:8px 10px;font-size:14px;color:#0B1220;resize:vertical}
+.fld input,.fld select{box-sizing:border-box;width:100%;min-width:0;height:40px;border:1px solid #CBD5E1;border-radius:10px;padding:0 10px;font-size:14px;color:#0B1220}
+.rad{display:flex;align-items:center;gap:10px;min-height:42px;padding:0 12px;border-radius:12px;border:1px solid #E6EAF2;font-size:14px;font-weight:600;cursor:pointer}
+.rad input{width:18px;height:18px;margin:0;accent-color:#0065D6}
+.mn .kb{font-size:11px;font-weight:700;color:#4B5563}
+.rp{background:#FFFFFF;border:1px solid #E6EAF2;border-radius:12px;box-shadow:0 12px 28px rgba(16,24,40,.12);padding:6px;display:flex;flex-direction:column;gap:2px;position:relative;z-index:40}
+.rp label{display:flex;align-items:center;gap:8px;min-height:30px;padding:0 6px;border-radius:8px;font-size:13px;font-weight:600;color:#0B1220;cursor:pointer}
+.rp label:hover{background:#F1F5F9}
+.rp b{margin-left:auto;font-size:12px;color:#4B5563}
+.mp input{height:34px;border:1px solid #CBD5E1;border-radius:8px;padding:0 10px;font-size:13px;margin:2px 2px 6px;outline:0}
+.mp input:focus{border-color:#0065D6;box-shadow:0 0 0 3px rgba(0,101,214,.18)}
+.load{margin-left:auto;font-size:12px;font-weight:700;color:#4B5563;white-space:nowrap}
+.vt{writing-mode:vertical-rl;transform:rotate(180deg);font-size:14px;font-weight:800;color:#0B1220;white-space:nowrap}
+.sch:focus-within{border-color:#0065D6!important;box-shadow:0 0 0 3px rgba(0,101,214,.2)}
+.drw{position:absolute;top:0;right:0;bottom:0;z-index:78;width:520px;background:#FFFFFF;border-left:1px solid #E6EAF2;box-shadow:-20px 0 50px rgba(11,18,32,.18);display:flex;flex-direction:column}
+.dtabs{display:flex;gap:2px;padding:0 20px;border-bottom:1px solid #E6EAF2}
+.dtabs button{height:42px;padding:0 12px;border:0;background:transparent;font-size:13px;font-weight:700;color:#3A4456;cursor:pointer;border-bottom:3px solid transparent;display:flex;align-items:center;gap:6px}
+.dtabs button[aria-selected=true]{color:#0057B8;border-bottom-color:#0065D6;font-weight:800}
+.dbody{flex:1;min-height:0;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:14px}
+.dsec{border:1px solid #E6EAF2;border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.dsec h4{margin:0;font-size:13px;font-weight:800;color:#0B1220}
+.kv{display:grid;grid-template-columns:120px 1fr;gap:6px 10px;font-size:13px}
+.kv span:nth-child(odd){color:#4B5563}
+.step{display:flex;gap:4px}
+.step i{flex:1;height:6px;border-radius:999px;background:#E2E8F0}
+.step i.on{background:#0065D6}
+.cm{display:flex;flex-direction:column;gap:4px;padding:10px 12px;border-radius:12px;background:#F8FAFC;font-size:13px;white-space:pre-line}
+.cm b{font-size:12px;color:#4B5563;font-weight:700}
+.btn2{height:36px;padding:0 14px;border-radius:10px;border:1px solid #CBD5E1;background:#FFFFFF;font-size:13px;font-weight:700;cursor:pointer;color:#0B1220}
+.btnp{height:36px;padding:0 14px;border-radius:10px;border:0;background:#0065D6;color:#FFFFFF;font-size:13px;font-weight:800;cursor:pointer}
+.skt{display:inline-block;width:36px;height:14px;border-radius:6px;vertical-align:middle;background:linear-gradient(90deg,#E2E8F0 0%,#F5F7FB 50%,#E2E8F0 100%);background-size:200% 100%;animation:sh 1.2s linear infinite}
+.mp{z-index:90}
+.seg2{display:flex;flex-wrap:wrap;gap:6px}
+.lvl4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.lvl4 label{min-width:0;padding:0 6px;white-space:nowrap}
+[data-modal] .btnp,[data-modal] .btn2{white-space:nowrap}
+.lvl4 label{justify-content:center;padding:0 6px;font-size:12px}
+.seg2.bad label{border-color:#D92D20}
+.err{font-size:12px;font-weight:700;color:#B42318}
+.ferr input,.ferr select,.ferr textarea{border-color:#D92D20 !important}
+.malert{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:#FEF3F2;border:1px solid #FDA29B;color:#7A271A;font-size:13px;font-weight:600}
+.seg2 label{display:flex;align-items:center;gap:6px;min-height:36px;padding:0 12px;border-radius:10px;border:1px solid #E6EAF2;font-size:13px;font-weight:600;cursor:pointer}
+.seg2 input{margin:0;accent-color:#0065D6}
+.demo{position:absolute;left:740px;top:10px;z-index:76;display:flex;align-items:center;gap:4px;padding:4px;border-radius:12px;background:#FFFFFF;border:1.5px dashed #7C3AED;box-shadow:0 6px 18px rgba(16,24,40,.12)}
+.demo span{font-size:11px;font-weight:800;color:#5B21B6;padding:0 6px;letter-spacing:.04em}
+.demo button{height:28px;padding:0 9px;border-radius:8px;border:0;background:transparent;font-size:12px;font-weight:700;color:#3A4456;cursor:pointer}
+.demo button[aria-pressed="true"]{background:#7C3AED;color:#FFFFFF}
+@keyframes up{from{transform:translateY(10px);opacity:0}to{transform:none;opacity:1}}
+@keyframes bar{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+@keyframes sh{from{background-position:200% 0}to{background-position:-200% 0}}
+@keyframes rot{to{transform:rotate(360deg)}}
+.up{animation:up .22s cubic-bezier(.2,.8,.2,1) both}
+.bar{animation:bar 10s linear both;transform-origin:left}
+.paused .bar{animation-play-state:paused}
+@media (prefers-reduced-motion:reduce){.up,.bar,.sk,.skn,.spin{animation:none}.card{transition:none}}
+button{transition:background .15s ease}
+.cvback{border:0;background:none;color:#0057B8;font-size:14px;font-weight:800;cursor:pointer;padding:6px 4px}
+.dmb{height:28px;padding:0 10px;border-radius:8px;border:0;background:transparent;font-size:12px;font-weight:700;color:#3A4456;cursor:pointer}
+.dmb[aria-pressed="true"]{background:#7C3AED;color:#FFFFFF}
+.dots{list-style:none;margin:0;padding:0;display:flex;gap:6px;flex-wrap:wrap}
+.dots li{display:flex;align-items:center;gap:6px;height:32px;padding:0 12px 0 6px;border-radius:999px;background:#FFFFFF;border:1px solid #E6EAF2;font-size:13px;font-weight:700;color:#4B5563}
+.dots li .dn{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:#E9EEF5;font-size:12px;font-weight:800}
+.dots li.ok{color:#067647}.dots li.ok .dn{background:#DCFAE6;color:#067647}
+.dots li.now{border-color:#0065D6;color:#0057B8;background:#EAF3FF}.dots li.now .dn{background:#0065D6;color:#FFFFFF}
+.box{background:#FFFFFF;border:1px solid #E6EAF2;border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.box h3{margin:0;font-size:14px;font-weight:800}
+.hint{font-size:12px;color:#4B5563;margin:4px 0 0}
+.st{margin:6px 0 0;font-size:12px;font-weight:800;color:#3A4456}
+.trial,.done{padding:10px 14px;border-radius:12px;background:#ECFDF3;border:1px solid #ABEFC6;font-size:13px;color:#067647}
+.trial b,.done b{margin-right:6px}
+.tar,.slots,.fd,.pat{display:flex;gap:8px;flex-wrap:wrap}
+.tar button,.slots button,.fd button,.pat button{min-height:40px;padding:6px 14px;border-radius:12px;border:1px solid #CBD5E1;background:#FFFFFF;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start;gap:2px;font-size:13px;color:#0B1220}
+.tar button{min-width:170px}
+.slots button{width:112px}
+.tar small,.slots small{font-size:11px;color:#4B5563;font-weight:600}
+.pat button{flex-direction:row;align-items:center;font-weight:700}
+.tar button[aria-checked="true"],.slots button[aria-checked="true"],.fd button[aria-checked="true"],.pat button[aria-checked="true"]{border-color:#0065D6;background:#EAF3FF;box-shadow:inset 0 0 0 1px #0065D6}
+.slots button.busy{background:#F8FAFC;color:#94A3B8;cursor:not-allowed;border-style:dashed}
+.slots button.busy small{color:#B42318}
+.all summary{font-size:13px;font-weight:700;color:#0057B8;cursor:pointer}
+.opts{display:flex;flex-wrap:wrap;gap:8px}
+.op{display:flex;align-items:center;gap:8px;min-height:38px;padding:0 12px;border-radius:10px;border:1px solid #E6EAF2;font-size:13px;font-weight:600;cursor:pointer}
+.op.on{border-color:#0065D6;background:#EAF3FF}
+.op input,.yn input,.mem input{accent-color:#0065D6;margin:0}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.g1{gap:12px}
+.fld input,.fld select{box-sizing:border-box;width:100%;min-width:0;height:40px;border:1px solid #CBD5E1;border-radius:10px;padding:0 10px;font-size:14px;color:#0B1220}
+.fld small{font-weight:500;color:#4B5563}
+.row{display:flex;align-items:center;gap:8px}
+.okp{flex:none;font-size:12px;font-weight:800;color:#067647;background:#DCFAE6;border-radius:999px;padding:3px 10px}
+.sug{flex:none;font-size:12px;font-weight:700;color:#5B21B6;background:#F5F3FF;border-radius:999px;padding:3px 10px}
+.mem{border:0;margin:0;padding:0}.mem legend{font-size:12px;font-weight:800;color:#3A4456;margin-bottom:6px}
+.mem div{display:flex;flex-wrap:wrap;gap:8px}.mem label{display:flex;align-items:center;gap:6px;min-height:34px;padding:0 10px;border-radius:10px;border:1px solid #E6EAF2;font-size:13px;font-weight:600}
+.warn{margin:0;padding:8px 12px;border-radius:10px;background:#FFFAEB;border:1px solid #FEC84B;color:#93370D;font-size:13px;font-weight:600}
+.yn{display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:13px}.yn > span{min-width:200px;font-weight:700;color:#3A4456}.yn label{display:flex;align-items:center;gap:6px;font-weight:600}
+.aside{flex:none;width:300px;position:sticky;top:0;background:#FFFFFF;border:1px solid #E6EAF2;border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.aside h2{margin:0;font-size:15px;font-weight:800}
+.aside dl{margin:0;display:grid;grid-template-columns:96px 1fr;gap:8px 10px;font-size:13px}
+.aside dt{color:#4B5563;font-weight:600}.aside dd{margin:0;font-weight:700}.aside dd.mute{color:#94A3B8;font-weight:600}
+.toast{position:absolute;right:24px;bottom:84px;z-index:95;background:#0B1220;color:#FFFFFF;border-radius:14px;padding:12px 16px;font-size:13px;font-weight:700;box-shadow:0 20px 50px rgba(11,18,32,.35)}
+.box.bad{border-color:#D92D20;box-shadow:0 0 0 1px #D92D20}
+.chipb{height:28px;padding:0 10px;border-radius:999px;border:1px solid #CBD5E1;background:#FFFFFF;font-size:12px;font-weight:700;color:#0057B8;cursor:pointer}
+.lnk{border:0;background:none;padding:0;color:#0057B8;font-weight:800;font-size:12px;text-decoration:underline;cursor:pointer}
+.ctx{margin:0;display:grid;grid-template-columns:140px 1fr;gap:6px 10px;font-size:13px}.ctx dt{color:#4B5563;font-weight:600}.ctx dd{margin:0;font-weight:700}.ctx dd.mute{color:#94A3B8}
+.box h2{margin:0;font-size:15px;font-weight:800}
+.tag{font-size:12px;font-weight:800;color:#0057B8;background:#EAF3FF;border-radius:999px;padding:4px 10px}
+.qq-g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.qq-tl{display:flex;flex-direction:column;gap:6px}.qq-tlbar{display:flex;border-radius:10px;overflow:hidden;height:34px;font-size:12px;font-weight:700}
+.qq-seg{display:flex;align-items:center;padding:0 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qq-seg.qq-ok{background:#ECFDF3;color:#067647}.qq-seg.qq-warn{background:#FFFAEB;color:#93370D}.qq-seg.qq-lock{background:#FEF3F2;color:#B42318}
+.qq-prev{padding:10px 12px;border-radius:12px;background:#F8FAFC;border:1px solid #E6EAF2;font-size:13px}
+.qq-steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;font-size:13px;color:#3A4456}.qq-steps li{display:flex;gap:10px}
+.qq-dot{flex:none;width:10px;height:10px;border-radius:50%;margin-top:4px}.qq-dot.qq-ok{background:#12B76A}.qq-dot.qq-warn{background:#F79009}.qq-dot.qq-lock{background:#D92D20}.qq-dot.qq-mute{background:#94A3B8}
+.qq-t{display:flex;flex-direction:column;font-size:13px}.qq-tr{display:grid;grid-template-columns:2fr 1fr 1fr 1.4fr;align-items:center;padding:10px 8px;border-bottom:1px solid #EEF2F6}.qq-th{font-size:12px;color:#4B5563;font-weight:700}
+.qq-mn{font-weight:700;display:flex;align-items:center;gap:8px}.qq-av{width:26px;height:26px;border-radius:50%;display:inline-grid;place-items:center;font-size:11px;font-weight:800;flex:none}
+.qq-pill{display:inline-block;min-width:24px;text-align:center;border-radius:999px;padding:2px 8px;font-weight:800}.qq-pw{background:#FEF0C7;color:#93370D}.qq-pl{background:#FEE4E2;color:#B42318}.qq-pz{color:#64748B}.qq-prev.qq-bad{background:#FEF3F2;border-color:#FECDCA;color:#B42318;font-weight:700}
+.sk{height:14px;border-radius:7px;background:#E9EEF5;margin:6px 0}
+.malert{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:#FEF3F2;border:1px solid #FECDCA;color:#B42318;font-size:13px;font-weight:700}
+</style>
+</helmet>
+<div data-root="1" style="height: 960px; box-sizing: border-box; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #0B1220; background: #F5F7FB; display: flex; position: relative; overflow: hidden">
+<style>
+.mp-ro{display:flex;align-items:center;gap:10px;margin:0;padding:10px 14px;border-radius:12px;background:#F1F5F9;border:1px solid #CBD5E1;font-size:13px;font-weight:700;color:#334155}
+.mp-tabs{display:flex;gap:4px;padding:4px;background:#EEF2F6;border-radius:12px;align-self:flex-start}
+.mp-tab{height:34px;padding:0 16px;border:0;border-radius:9px;background:transparent;font:inherit;font-size:13px;font-weight:700;color:#3A4456;cursor:pointer}
+.mp-tab[aria-selected="true"]{background:#FFFFFF;color:#0057B8;font-weight:800;box-shadow:0 1px 3px rgba(16,24,40,.12)}
+.mp-tab:focus-visible{outline:2px solid #0065D6;outline-offset:2px}
+.mp-grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:14px;align-items:start}
+.mp-col{display:flex;flex-direction:column;gap:14px;min-width:0}
+.mp-ch{display:flex;align-items:center;gap:10px}.mp-ch h2{flex:1}
+.mp-sel{height:36px;border:1px solid #CBD5E1;border-radius:10px;padding:0 8px;font:inherit;font-size:13px;font-weight:600;background:#FFFFFF;color:#0B1220}
+.mp-hero{display:flex;gap:16px;align-items:center;padding:18px 20px;border-radius:18px;background:linear-gradient(135deg,#0B1220,#1E2A4A);color:#FFFFFF}
+.mp-hero small{font-size:11px;font-weight:800;letter-spacing:.08em;color:#A5B4FC}
+.mp-big{display:flex;align-items:baseline;gap:8px}.mp-big b{font-size:34px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}.mp-big em{font-style:normal;font-size:16px;color:#CBD5E1;font-weight:700}
+.mp-hsub{font-size:13px;color:#CBD5E1}
+.mp-hbar{position:relative;height:10px;border-radius:999px;background:rgba(255,255,255,.16);margin-top:10px}
+.mp-hbar i{position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:#4ADE80}
+.mp-hbar em{position:absolute;top:-4px;width:3px;height:18px;border-radius:2px;background:#FFFFFF}
+.mp-hfoot{display:flex;justify-content:space-between;font-size:12px;color:#CBD5E1;margin-top:6px}.mp-hfoot b{color:#FFFFFF}
+.mp-pace{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:10px}
+.mp-pi{display:flex;flex-direction:column;gap:3px;padding:12px 14px;border:1px solid #E6EAF2;border-radius:14px;background:#FFFFFF}
+.mp-pi span{font-size:12px;font-weight:700;color:#4B5563}.mp-pi b{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums}.mp-pi b small{font-size:12px;color:#4B5563;font-weight:700}.mp-pi>small{font-size:12px;color:#4B5563}
+.mp-pi.mp-ph{background:#EAF3FF;border-color:#B2CCFF}.mp-pi.mp-ph b{color:#0057B8}
+.mp-ok{color:#067647!important;font-weight:800}.mp-bad{color:#B42318!important;font-weight:800}
+.mp-prize{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;background:#FFFAEB;border:1px solid #FEDF89;font-size:13px}
+.mp-prize i{font-style:normal;font-size:22px}.mp-prize small{display:block;font-size:11px;font-weight:800;color:#93370D}
+.mp-cmp{display:flex;flex-direction:column;font-size:13px}
+.mp-cr{display:grid;grid-template-columns:1.3fr 1fr 1fr 1.3fr;gap:10px;align-items:center;padding:10px 4px;border-bottom:1px solid #EEF2F6}
+.mp-cr span:not(:first-child){text-align:right}.mp-hd{font-size:12px;font-weight:800;color:#4B5563}
+.mp-cc{display:flex;align-items:center;justify-content:flex-end;gap:8px}.mp-cb{flex:1;max-width:110px;height:6px;border-radius:999px;background:#EEF2F6;overflow:hidden}.mp-cb i{display:block;height:100%;border-radius:999px}
+.mp-note{margin:0;padding:10px 12px;border-radius:12px;background:#EFF6FF;border:1px solid #B2CCFF;color:#1E3A8A;font-size:13px}
+.mp-empty{display:flex;flex-direction:column;align-items:center;gap:6px;padding:36px 16px;text-align:center;color:#4B5563;font-size:13px}.mp-empty b{font-size:15px;color:#0B1220}
+.mp-tiers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.mp-tier{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:12px;border:1px solid #E6EAF2;background:#F8FAFC;font-size:12px}
+.mp-tier strong{font-size:13px}.mp-tier span{color:#4B5563;font-variant-numeric:tabular-nums}.mp-tier em{font-style:normal;font-weight:800;color:#93370D}
+.mp-tier.mp-tok{background:#ECFDF3;border-color:#ABEFC6}.mp-tier.mp-tok em{color:#067647}
+.mp-bars{display:flex;align-items:flex-end;gap:5px;height:110px;padding-top:6px}
+.mp-bars span{flex:1;border-radius:5px 5px 2px 2px;background:#B2CCFF;min-height:3px;position:relative}
+.mp-bars span.mp-today{background:#0065D6}.mp-bars span.mp-best{background:#12B76A}
+.mp-bl{display:flex;justify-content:space-between;font-size:11px;color:#4B5563;font-weight:600}
+.mp-gifts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mp-gift{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:12px;border:1px solid #E6EAF2;font-size:12px;color:#4B5563}
+.mp-gift strong{font-size:13px;color:#0B1220}.mp-gift i{font-style:normal;font-size:20px}
+.mp-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #EEF2F6;font-size:13px}.mp-row:last-child{border-bottom:0}
+.mp-row .mp-ck{flex:none;width:26px;height:26px;border-radius:50%;background:#ECFDF3;color:#067647;display:grid;place-items:center;font-weight:800}
+.mp-row div{flex:1;display:flex;flex-direction:column;min-width:0}.mp-row div span{font-size:12px;color:#4B5563}.mp-row b{font-variant-numeric:tabular-nums}
+.mp-diff{margin:0;font-size:12px;color:#4B5563;background:#F5F3FF;border:1px dashed #A78BFA;border-radius:10px;padding:8px 12px;line-height:1.45}.mp-diff b{color:#5B21B6}
+.mp-dtag{display:inline-block;font-size:10px;font-weight:800;color:#5B21B6;border:1px dashed #A78BFA;border-radius:999px;padding:1px 7px;margin-left:6px;vertical-align:2px;background:#F5F3FF}
+.mp-skel{border-radius:14px;background:linear-gradient(90deg,#E9EEF5 0%,#F5F7FB 50%,#E9EEF5 100%);background-size:200% 100%;animation:sh 1.2s linear infinite}
+.mp-link{border:0;background:transparent;color:#0057B8;font:inherit;font-size:13px;font-weight:800;cursor:pointer;padding:0}
+
+.pl-ro{display:flex;align-items:center;gap:10px;margin:0;padding:10px 14px;border-radius:12px;background:#F1F5F9;border:1px solid #CBD5E1;font-size:13px;font-weight:700;color:#334155}
+.pl-ro svg{width:16px;height:16px;flex:none}
+.pl-tabs{display:flex;gap:4px;padding:4px;background:#EEF2F6;border-radius:12px;align-self:flex-start}
+.pl-tab{height:34px;padding:0 16px;border:0;border-radius:9px;background:transparent;font:inherit;font-size:13px;font-weight:700;color:#3A4456;cursor:pointer}
+.pl-tab[aria-selected="true"]{background:#FFFFFF;color:#0B1220;box-shadow:0 1px 3px rgba(11,18,32,.12)}
+.pl-tab:focus-visible,.pl-per:focus-visible,.pl-mrow:focus-visible{outline:2px solid #0065D6;outline-offset:2px}
+.pl-ph{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.pl-ph h2{margin:0;font-size:15px;font-weight:800}
+.pl-formula{margin:0;font-size:12px;color:#4B5563}
+.pl-pg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px 14px}
+.pl-pf{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:700;color:#3A4456}
+.pl-in{position:relative}
+.pl-in input{box-sizing:border-box;width:100%;height:38px;border:1px solid #E2E8F0;border-radius:10px;padding:0 32px 0 10px;font:inherit;font-size:14px;font-weight:700;color:#0B1220;background:#F8FAFC;cursor:default}
+.pl-in input:focus{outline:2px solid #94A3B8;outline-offset:1px}
+.pl-in svg{position:absolute;right:10px;top:11px;width:15px;height:15px;color:#94A3B8}
+.pl-pers{display:flex;gap:6px;align-items:center}
+.pl-pers span{font-size:12px;font-weight:700;color:#4B5563;margin-right:4px}
+.pl-per{height:32px;padding:0 14px;border-radius:999px;border:1px solid #CBD5E1;background:#FFFFFF;font:inherit;font-size:12px;font-weight:700;color:#0B1220;cursor:pointer}
+.pl-per[aria-pressed="true"]{border-color:#0065D6;background:#0065D6;color:#FFFFFF}
+.pl-tiers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.pl-tier{background:#FFFFFF;border:1px solid #E6EAF2;border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.pl-tier.pl-main{border-color:#0065D6;box-shadow:0 0 0 1px #0065D6}
+.pl-th{display:flex;align-items:center;gap:8px}
+.pl-th h3{margin:0;font-size:15px;font-weight:800;flex:1}
+.pl-chip{font-size:12px;font-weight:800;border-radius:999px;padding:3px 10px}
+.pl-cw{background:#FEF0C7;color:#93370D}.pl-cp{background:#EAF3FF;color:#0057B8}.pl-co{background:#DCFAE6;color:#067647}
+.pl-mn{font-size:11px;font-weight:800;color:#0057B8}
+.pl-unit{font-size:11px;color:#4B5563}
+.pl-tt{display:flex;flex-direction:column;font-size:13px}
+.pl-tr{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) minmax(0,.8fr);gap:6px;padding:6px 0;border-top:1px solid #EEF2F6;align-items:baseline}
+.pl-tr > span:not(:first-child){text-align:right;font-variant-numeric:tabular-nums}
+.pl-tr.pl-hd{border-top:0;font-size:11px;font-weight:700;color:#4B5563}
+.pl-tr.pl-st{font-weight:800}
+.pl-rl{color:#3A4456}
+.pl-pos{color:#067647;font-weight:800}.pl-neg{color:#B42318;font-weight:800}
+.pl-ft{display:flex;flex-direction:column;font-size:13px}
+.pl-fr{display:grid;grid-template-columns:minmax(0,1.6fr) repeat(2,minmax(0,1fr)) minmax(0,1.2fr);gap:10px;padding:9px 4px;border-top:1px solid #EEF2F6;align-items:center}
+.pl-fr > span:not(:first-child){text-align:right;font-variant-numeric:tabular-nums}
+.pl-fr.pl-hd{border-top:0;font-size:12px;font-weight:700;color:#4B5563}
+.pl-ok{color:#067647;font-weight:800}.pl-warn{color:#93370D;font-weight:800}.pl-bad{color:#B42318;font-weight:800}.pl-mut{color:#4B5563}
+.pl-badge{display:inline-block;border-radius:999px;padding:2px 9px;font-weight:800;font-size:12px}
+.pl-badge.pl-ok{background:#DCFAE6}.pl-badge.pl-warn{background:#FEF0C7}.pl-badge.pl-bad{background:#FEE4E2}
+.pl-wrap{display:flex;gap:14px;align-items:flex-start}
+.pl-col{flex:1;min-width:0;display:flex;flex-direction:column;gap:14px}
+.pl-aside{width:330px;flex:none;display:flex;flex-direction:column;gap:14px}
+.pl-sel{height:36px;border:1px solid #CBD5E1;border-radius:10px;padding:0 8px;font:inherit;font-size:13px;font-weight:700;color:#0B1220;background:#FFFFFF}
+.pl-ch{display:flex;align-items:center;gap:10px}
+.pl-ch h2{margin:0;font-size:16px;font-weight:800;flex:1}
+.pl-pace{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:10px}
+.pl-pi{border:1px solid #E6EAF2;border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:2px;background:#FFFFFF}
+.pl-pi > span{font-size:12px;font-weight:700;color:#4B5563}
+.pl-pi b{font-size:24px;font-weight:800;letter-spacing:-.02em;line-height:1.2}
+.pl-pi b small{font-size:13px;font-weight:700;color:#4B5563}
+.pl-pi > small{font-size:12px;color:#4B5563}
+.pl-pi.pl-hero{background:#0B1220;border-color:#0B1220;color:#FFFFFF}
+.pl-pi.pl-hero > span,.pl-pi.pl-hero > small,.pl-pi.pl-hero b small{color:#CBD5E1}
+.pl-gap{font-weight:800}.pl-gap.pl-gok{color:#067647}.pl-gap.pl-gbad{color:#B42318}
+.pl-prize{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:#F5F3FF;border:1px solid #DDD6FE;font-size:13px}
+.pl-prize i{font-style:normal;font-size:22px}
+.pl-prize small{display:block;font-size:11px;font-weight:700;color:#5B21B6}
+.pl-prog{display:flex;flex-direction:column;gap:6px}
+.pl-progh{display:flex;justify-content:space-between;font-size:13px;font-weight:700}
+.pl-bar{position:relative;height:12px;border-radius:999px;background:#EEF2F6}
+.pl-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:999px}
+.pl-bar em{position:absolute;top:-4px;width:3px;height:20px;border-radius:2px;background:#0B1220;margin-left:-1px}
+.pl-leg{display:flex;gap:14px;font-size:11px;color:#4B5563}
+.pl-leg span{display:flex;align-items:center;gap:5px}
+.pl-dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+.pl-cmp{display:flex;flex-direction:column;font-size:13px}
+.pl-cr{display:grid;grid-template-columns:minmax(0,1.3fr) repeat(2,minmax(0,1fr)) minmax(0,1.6fr);gap:10px;padding:9px 4px;border-top:1px solid #EEF2F6;align-items:center}
+.pl-cr.pl-hd{border-top:0;font-size:12px;font-weight:700;color:#4B5563}
+.pl-cr > span:nth-child(2),.pl-cr > span:nth-child(3){text-align:right;font-variant-numeric:tabular-nums}
+.pl-cc{display:flex;align-items:center;gap:8px;justify-content:flex-end}
+.pl-cb{width:110px;height:6px;border-radius:999px;background:#EEF2F6;overflow:hidden}
+.pl-cb i{display:block;height:100%;border-radius:999px}
+.pl-cc b{min-width:44px;text-align:right}
+.pl-note{margin:0;padding:10px 12px;border-radius:10px;font-size:13px;background:#EFF6FF;border:1px solid #BFDBFE;color:#1E3A8A}
+.pl-empty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:34px 16px;text-align:center}
+.pl-empty i{font-style:normal;width:52px;height:52px;border-radius:50%;background:#EEF2F6;display:grid;place-items:center}
+.pl-empty b{font-size:15px}
+.pl-empty span{font-size:13px;color:#4B5563}
+.pl-mrow{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:4px 10px;align-items:center;padding:9px 8px;border:0;border-radius:12px;background:transparent;font:inherit;text-align:left;cursor:pointer;color:#0B1220;width:100%}
+.pl-mrow:hover{background:#F1F5F9}
+.pl-mrow[aria-pressed="true"]{background:#EAF3FF;box-shadow:inset 0 0 0 1px #93C5FD}
+.pl-av{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;color:#FFFFFF;font-size:11px;font-weight:800}
+.pl-mn2{display:flex;flex-direction:column;min-width:0;font-size:13px}
+.pl-mn2 b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pl-mn2 small{font-size:12px;color:#4B5563}
+.pl-mbar{grid-column:2 / 4;height:5px;border-radius:999px;background:#EEF2F6;overflow:hidden}
+.pl-mbar i{display:block;height:100%}
+.pl-dnote{font-size:12px;color:#5B21B6;background:#F5F3FF;border:1px dashed #A78BFA;border-radius:10px;padding:8px 10px;margin:0}
+.pl-toast{position:absolute;left:28px;bottom:24px;z-index:95;background:#0B1220;color:#FFFFFF;border-radius:14px;padding:12px 16px;font-size:13px;font-weight:700;box-shadow:0 20px 50px rgba(11,18,32,.35);max-width:620px}
+</style>
+  <nav aria-label="Asosiy menyu" class="{{ sbCls }}">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 4px 2px 8px"><span aria-hidden="true" style="flex: none; width: 34px; height: 34px; border-radius: 9px; background: #0065D6; color: #FFFFFF; display: grid; place-items: center; font-weight: 800; font-size: 17px">H</span><strong class="brand" style="font-size: 16px; letter-spacing: .02em; flex: 1">HOMEWORK</strong><button type="button" class="ic" onClick="{{ toggleSb }}" aria-label="{{ sbLab }}" title="{{ sbLab }}" aria-expanded="{{ sbExp }}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ sbIcon }}"></path></svg></button></div>
+    <sc-for list="{{ nav }}" as="n" hint-placeholder-count="13">
+      <sc-if value="{{ n.grp }}" hint-placeholder-val="{{ false }}"><h2 class="grp">{{ n.label }}</h2></sc-if>
+      <sc-if value="{{ n.item }}" hint-placeholder-val="{{ true }}">
+        <div class="nr"><button type="button" class="mi" title="{{ n.tip }}" aria-current="{{ n.cur }}" onClick="{{ n.pick }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ n.icon }}"></path></svg><span class="lbl">{{ n.label }}</span></button><sc-if value="{{ n.badge }}" hint-placeholder-val="{{ false }}"><button type="button" class="cnt" title="{{ n.aria }}" aria-label="{{ n.aria }}" onClick="{{ n.pickBadge }}">{{ n.badge }}</button></sc-if></div>
+      </sc-if>
+    </sc-for>
+    <span style="flex: 1"></span>
+    <div class="nr"><button type="button" class="mi" title="Boshqa boʻlimlar: Analitika, Mobil ilova, Yoʻriqnomalar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="5" cy="12" r="1.5"></circle><circle cx="12" cy="12" r="1.5"></circle><circle cx="19" cy="12" r="1.5"></circle></svg><span class="lbl">Boshqa boʻlimlar</span></button></div>
+    <div class="nr"><button type="button" class="mi" title="Sozlamalar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"></path></svg><span class="lbl">Sozlamalar</span></button></div>
+  </nav>
+  <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative">
+    <header style="height: 56px; flex: none; padding: 0 24px; display: flex; align-items: center; gap: 14px; background: #FFFFFF; border-bottom: 1px solid #E6EAF2; box-sizing: border-box">
+      <span style="font-size: 13px; color: #4B5563">{{ crumb0 }} · <b style="color: #0B1220">{{ crumb }}</b></span>
+      <span style="flex: 1"></span>
+      <div role="group" aria-label="Demo holat" style="display: flex; align-items: center; gap: 4px; padding: 4px; border: 1px dashed #A78BFA; border-radius: 12px; background: #F5F3FF">
+        <span style="font-size: 11px; font-weight: 800; color: #5B21B6; padding: 0 6px">HOLAT</span>
+        <sc-for list="{{ demo }}" as="d" hint-placeholder-count="5"><button type="button" aria-pressed="{{ d.on }}" onClick="{{ d.pick }}" class="dmb" title="{{ d.tip }}">{{ d.t }}</button></sc-for>
+      </div>
+      <span style="display: flex; align-items: center; gap: 10px"><span aria-hidden="true" style="width: 36px; height: 36px; border-radius: 50%; background: #5B21B6; color: #FFFFFF; display: grid; place-items: center; font-size: 13px; font-weight: 800">KS</span><span style="display: flex; flex-direction: column; line-height: 1.2"><b style="font-size: 14px">Kamola Shahobiddinova</b><span style="font-size: 12px; color: #4B5563">Sotuv menejeri · Rus tili</span></span></span>
+    </header>
+
+    <main style="flex: 1; min-height: 0; overflow: auto; padding: 18px 28px 28px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; align-items: flex-end; gap: 12px">
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 4px">
+          <div style="display: flex; align-items: center; gap: 10px"><h1 style="margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.02em">Sotuv rejasi</h1><span class="tag">Rus tili</span></div>
+          <p style="margin: 0; font-size: 13px; color: #4B5563">{{ subT }}</p>
+        </div>
+        <div class="mp-tabs" role="tablist" aria-label="Reja turi" onKeyDown="{{ tabKey }}"><sc-for list="{{ tabs }}" as="t" hint-placeholder-count="2"><button type="button" role="tab" class="mp-tab" id="{{ t.id }}" aria-selected="{{ t.on }}" tabindex="{{ t.ti }}" onClick="{{ t.pick }}">{{ t.t }}</button></sc-for></div>
+      </div>
+      <p class="mp-ro" role="note"><span aria-hidden="true">🔒</span>Sotuv rejasini admin belgilaydi — bu yerda faqat koʻrish mumkin.</p>
+
+      <sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}"><div aria-busy="true" aria-label="Reja yuklanmoqda" class="mp-grid"><div class="mp-col"><div class="mp-skel" style="height: 150px"></div><div class="mp-skel" style="height: 90px"></div><div class="mp-skel" style="height: 180px"></div></div><div class="mp-col"><div class="mp-skel" style="height: 140px"></div><div class="mp-skel" style="height: 200px"></div></div></div></sc-if>
+      <sc-if value="{{ loadErr }}" hint-placeholder-val="{{ false }}"><div class="malert" role="alert"><span style="flex: 1">Rejani yuklab boʻlmadi — server javob bermadi. Raqamlar notoʻgʻri chiqmasligi uchun koʻrsatilmadi.</span><button type="button" class="btn2" onClick="{{ retry }}">Qayta urinish</button></div></sc-if>
+
+      <sc-if value="{{ showTeam }}" hint-placeholder-val="{{ true }}">
+        <div role="tabpanel" aria-labelledby="mpTabTeam" style="display: flex; flex-direction: column; gap: 14px">
+          <section class="box" aria-labelledby="plParH">
+            <div class="pl-ph"><h2 id="plParH">Parametrlar</h2><p class="pl-formula">Lidlar = menejerlar × kunlik lid × kun · sotuvlar = lidlar × konversiya · summa = sotuvlar × chek · byudjet = lidlar × lid narxi</p></div>
+            <div class="pl-pg"><sc-for list="{{ params }}" as="p" hint-placeholder-count="8"><label class="pl-pf" for="{{ p.id }}">{{ p.l }}<span class="pl-in"><input id="{{ p.id }}" type="text" value="{{ p.v }}" readonly aria-readonly="true" title="Rejani admin belgilaydi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M7 11V7a5 5 0 0110 0v4M5 11h14v10H5z"/></svg></span></label></sc-for></div>
+          </section>
+          <div class="pl-pers" role="group" aria-label="Davr"><span>Davr</span><sc-for list="{{ pers }}" as="p" hint-placeholder-count="4"><button type="button" class="pl-per" aria-pressed="{{ p.on }}" onClick="{{ p.pick }}">{{ p.t }}</button></sc-for></div>
+          <p class="pl-note" role="note" style="margin: 0">{{ indSumT }}</p>
+          <div class="pl-tiers"><sc-for list="{{ ttiers }}" as="c" hint-placeholder-count="3">
+            <section class="{{ c.cls }}" aria-label="{{ c.aria }}">
+              <div class="pl-th"><h3>{{ c.l }}</h3><span class="{{ c.chipC }}">{{ c.conv }}</span></div>
+              <sc-if value="{{ c.main }}" hint-placeholder-val="{{ false }}"><span class="pl-mn">Fakt shu reja bilan solishtiriladi</span></sc-if>
+              <span class="pl-unit">Summalar soʻmda</span>
+              <div class="pl-tt" role="table" aria-label="{{ c.aria }}">
+                <div class="pl-tr pl-hd" role="row"><span role="columnheader">Koʻrsatkich</span><span role="columnheader">{{ c.perH }}</span><span role="columnheader">Kun</span></div>
+                <sc-for list="{{ c.rows }}" as="r" hint-placeholder-count="6"><div class="{{ r.cls }}" role="row"><span class="pl-rl" role="rowheader">{{ r.l }}</span><span role="cell" class="{{ r.pc }}">{{ r.p }}</span><span role="cell">{{ r.d }}</span></div></sc-for>
+              </div>
+            </section>
+          </sc-for></div>
+          <section class="box" aria-labelledby="plFactH">
+            <div class="pl-ph"><h2 id="plFactH">{{ factH }}</h2><p class="pl-formula">Bugungacha reja = “Oʻrtacha” reja × {{ factDays }} kun</p></div>
+            <div class="pl-ft" role="table" aria-labelledby="plFactH">
+              <div class="pl-fr pl-hd" role="row"><span role="columnheader">Koʻrsatkich</span><span role="columnheader">Fakt</span><span role="columnheader">Bugungacha reja</span><span role="columnheader">Bajarilish</span></div>
+              <sc-for list="{{ factRows }}" as="r" hint-placeholder-count="7"><div class="pl-fr" role="row"><span role="rowheader">{{ r.l }}</span><span role="cell"><b class="{{ r.fc }}">{{ r.f }}</b></span><span role="cell" class="pl-mut">{{ r.p }}</span><span role="cell"><span class="{{ r.vc }}">{{ r.v }}</span></span></div></sc-for>
+            </div>
+            <p class="hint" style="margin: 0">Lid soni — shu oyda yaratilgan Rus tili lidlari (Sotuv bazasi). Sotuv — barcha Rus tili menejerlarining shu oydagi toʻlovlari. Byudjet = lid soni × lid narxi.</p>
+          </section>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ showTeamNote }}" hint-placeholder-val="{{ true }}"><p class="pl-dnote"><b>Dizayn farqi:</b> kodda parametrlar oddiy kiritish maydonlari, ROP va sotuv menejeri uchun <code>readonly</code> (ropSotuvNav.js lockPlan) qilinadi va “Reja belgilash/tahrirlash” tugmalari olib tashlanadi — bu yerda qulf belgisi bilan koʻrsatildi. “Plan / Fakt” almashtirgichi kodda yashirin (fakt jadvali reja ostida) — bu yerda ham yoʻq.</p></sc-if>
+
+      <sc-if value="{{ showInd }}" hint-placeholder-val="{{ true }}">
+        <div class="mp-grid" role="tabpanel" aria-labelledby="mpTabInd">
+          <div class="mp-col">
+            <section class="box" aria-labelledby="mpIndH" style="gap: 14px">
+              <div class="mp-ch"><h2 id="mpIndH">Oylik reja</h2><label for="mpMonth" style="font-size: 12px; font-weight: 700; color: #4B5563">Oy</label><select id="mpMonth" class="mp-sel" onChange="{{ setMonth }}"><sc-for list="{{ monthOpts }}" as="o" hint-placeholder-count="13"><option value="{{ o.v }}" selected="{{ o.sel }}">{{ o.t }}</option></sc-for></select></div>
+              <sc-if value="{{ ind.empty }}" hint-placeholder-val="{{ false }}"><div class="mp-empty" role="status"><span aria-hidden="true" style="font-size: 26px">◎</span><b>{{ ind.emptyT }}</b><sc-if value="{{ ind.factT }}" hint-placeholder-val="{{ false }}"><span style="font-size: 20px; font-weight: 800; color: #0B1220">{{ ind.factT }}</span></sc-if><span>Rejani admin belgilaydi — belgilangach shu yerda kunlik maqsadingiz chiqadi.</span></div></sc-if>
+              <sc-if value="{{ ind.has }}" hint-placeholder-val="{{ true }}">
+                <div class="mp-hero">
+                  <div style="flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0">
+                    <small>SHAXSIY REJA · {{ ind.monT }}</small>
+                    <div class="mp-big"><b>{{ ind.factM }}</b><em>/ {{ ind.planM }} mln soʻm</em></div>
+                    <span class="mp-hsub">{{ ind.dealsT }}</span>
+                    <div class="mp-hbar" role="progressbar" aria-label="{{ ind.barL }}" aria-valuenow="{{ ind.pct }}" aria-valuemin="0" aria-valuemax="100"><i style="{{ ind.barSt }}"></i><sc-if value="{{ ind.pace }}" hint-placeholder-val="{{ true }}"><em style="{{ ind.todaySt }}" title="Bugungacha shu yerda boʻlish kerak"></em></sc-if></div>
+                    <div class="mp-hfoot"><span><b>{{ ind.pctT }}</b> bajarildi</span><span>{{ ind.footR }}</span></div>
+                  </div>
+                </div>
+                <sc-if value="{{ ind.pace }}" hint-placeholder-val="{{ true }}">
+                  <div class="mp-pace">
+                    <div class="mp-pi mp-ph"><span>Bugungi maqsad · reja uchun</span><b title="{{ ind.perDayT }}">{{ ind.perDay }}<small> mln soʻm</small></b><small>{{ ind.perDayS }}</small></div>
+                    <div class="mp-pi"><span>Rejagacha qoldi</span><b title="{{ ind.leftT }}">{{ ind.left }}<small> mln soʻm</small></b><small>{{ ind.daysLeft }}</small></div>
+                    <div class="mp-pi"><span>Bugungacha kerak edi</span><b title="{{ ind.dueT }}">{{ ind.due }}<small> mln soʻm</small></b><small class="{{ ind.gapC }}">{{ ind.gap }}</small></div>
+                  </div>
+                  <div class="mp-prize"><i aria-hidden="true">📱</i><span><small>Qoʻshimcha maqsad</small>{{ ind.prizeT }}</span></div>
+                </sc-if>
+                <sc-if value="{{ ind.carried }}" hint-placeholder-val="{{ false }}"><p class="mp-note" role="note">{{ ind.carriedT }}</p></sc-if>
+                <div class="mp-cmp" role="table" aria-label="Reja va fakt">
+                  <div class="mp-cr mp-hd" role="row"><span role="columnheader">Koʻrsatkich</span><span role="columnheader">Reja</span><span role="columnheader">Fakt</span><span role="columnheader">Bajarildi</span></div>
+                  <sc-for list="{{ ind.rows }}" as="r" hint-placeholder-count="3"><div class="mp-cr" role="row"><span role="rowheader" style="font-weight: 700">{{ r.l }}</span><span role="cell">{{ r.p }}</span><span role="cell"><b>{{ r.f }}</b></span><span role="cell" class="mp-cc"><span class="mp-cb" aria-hidden="true"><i style="{{ r.bar }}"></i></span><b class="{{ r.vc }}">{{ r.v }}</b></span></div></sc-for>
+                </div>
+              </sc-if>
+            </section>
+            <section class="box" aria-labelledby="mpDayH" style="gap: 10px">
+              <div class="mp-ch"><h2 id="mpDayH">Kunlik tushum <span class="mp-dtag">Dizayn farqi · mobil</span></h2><span class="hint" style="margin: 0">soʻnggi 14 kun</span></div>
+              <div class="mp-bars" role="img" aria-label="{{ barsL }}"><sc-for list="{{ bars }}" as="x" hint-placeholder-count="14"><span class="{{ x.cls }}" style="{{ x.h }}" title="{{ x.t }}"></span></sc-for></div>
+              <div class="mp-bl"><span>{{ barsFrom }}</span><span>{{ barsBest }}</span><span>Bugun</span></div>
+            </section>
+          </div>
+          <aside class="mp-col">
+            <section class="box" aria-labelledby="mpBonH" style="gap: 10px">
+              <div class="mp-ch"><h2 id="mpBonH">Bugungi bonus <span class="mp-dtag">Dizayn farqi · mobil</span></h2><span class="hint" style="margin: 0">{{ todayT }}</span></div>
+              <div class="mp-tiers"><sc-for list="{{ tiers }}" as="t" hint-placeholder-count="3"><div class="{{ t.cls }}"><strong>{{ t.l }}</strong><span>{{ t.th }}</span><em>{{ t.st }}</em></div></sc-for></div>
+            </section>
+            <section class="box" aria-labelledby="mpPayH" style="gap: 4px">
+              <div class="mp-ch"><h2 id="mpPayH">Soʻnggi toʻlovlar <span class="mp-dtag">Dizayn farqi · mobil</span></h2></div>
+              <sc-if value="{{ hasPays }}" hint-placeholder-val="{{ true }}"><div role="list"><sc-for list="{{ pays }}" as="p" hint-placeholder-count="5"><div class="mp-row" role="listitem"><span class="mp-ck" aria-hidden="true">✓</span><div><strong>{{ p.n }}</strong><span>{{ p.w }}</span></div><b>{{ p.v }}</b></div></sc-for></div></sc-if>
+              <sc-if value="{{ noPays }}" hint-placeholder-val="{{ false }}"><p class="hint" style="margin: 8px 0">Shu oy hali toʻlov yoʻq</p></sc-if>
+            </section>
+            <section class="box" aria-labelledby="mpGiftH" style="gap: 10px">
+              <div class="mp-ch"><h2 id="mpGiftH">Oylik sovgʻalar <span class="mp-dtag">Dizayn farqi · mobil</span></h2></div>
+              <div class="mp-gifts"><sc-for list="{{ gifts }}" as="g" hint-placeholder-count="4"><div class="mp-gift"><i aria-hidden="true">{{ g.i }}</i><strong>{{ g.l }}</strong><span>{{ g.s }}</span></div></sc-for></div>
+            </section>
+            <p class="mp-diff"><b>Dizayn farqi:</b> qora “SHAXSIY REJA” kartasi (production’dagi oddiy progress satri oʻrnida, “Shu tempda …” — Bosh sahifa Kobalt bloki hisobi), “Bugungi bonus”, “Kunlik tushum”, “Soʻnggi toʻlovlar” va “Oylik sovgʻalar” — mobil ilovaning “Rejam” ekranidan (sotuvApp.js screenPlan) olindi; desktop’dagi renderSalesPlanIndividual’da ular yoʻq. Hisob bir xil: reyting manbai (getLeadStatsForRankings), DAILY_BONUSES / MONTHLY_BONUSES.</p>
+          </aside>
+        </div>
+      </sc-if>
+    </main>
+    <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}"><div role="status" class="toast" style="bottom: 24px">{{ toast }}</div></sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":960}}'>
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.state = { sb: true, demo: 'ok', retried: false, tab: 'ind', per: 'full', month: '2026-11', toast: '' };
+    this._t = null;
+  }
+  focusSoon(sel) { setTimeout(() => { const el = document.querySelector(sel); if (el && el.focus) el.focus(); }, 30); }
+  renderVals() {
+    const s = this.state;
+    const IC = {
+      home: 'M3 10.5 12 4l9 6.5V20H3z', leads: 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 3a4 4 0 110 8 4 4 0 010-8z',
+      cal: 'M3 9.5h18M8 3v3M16 3v3M5 4.5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2v-12a2 2 0 012-2z', trial: 'M8.5 12l2.5 2.5 4.5-5M6 4h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2z',
+      check: 'M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11', clock: 'M12 3a9 9 0 110 18 9 9 0 010-18zM12 7v5l3 2', lock: 'M7 11V7a5 5 0 0110 0v4M5 11h14v10H5z', arch: 'M21 8v13H3V8M1 3h22v5H1zM10 12h4',
+      funnel: 'M3 4h18l-7 8v6l-4 2v-8z', rating: 'M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0z', plan: 'M12 3a9 9 0 110 18 9 9 0 010-18zM12 8a4 4 0 110 8 4 4 0 010-8z', debt: 'M2 6h20v13H2zM2 10h20',
+      script: 'M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9zM14 3v6h6M8 13h8M8 17h5', sms: 'M4 4h16v12H5l-1 4zM8 9h8M8 12h5', stu: 'M2 8l10-5 10 5-10 5zM6 10.5V16c0 1.5 2.7 3 6 3s6-1.5 6-3v-5.5', tg: 'M21 4L3 11l6 2 2 6 3-4 5 4z', book: 'M1 6h13v10H1zM14 9h4l3 3v4h-7zM5 19a2 2 0 100-4 2 2 0 000 4zM17 19a2 2 0 100-4 2 2 0 000 4z'
+    };
+    const I = (k, label, icon, o) => Object.assign({ item: true, grp: false, k, label, tip: label, icon: IC[icon], cur: 'false', badge: '', aria: '', pick: () => this.setState({ viaBadge: false }), pickBadge: () => {} }, o || {});
+    const G = l => ({ grp: true, item: false, label: l });
+
+    const mkNav = (badges) => { const B = badges || {}; return [
+      I('home', 'Bosh sahifa', 'home'), I('leads', 'Lidlar', 'leads', { badge: B.leads || '', aria: B.leads ? B.leads + ' ta lid qoʻngʻiroq kutmoqda' : '' }), I('cal', 'Dars jadvali', 'cal'), I('trial', 'Sinov darslari', 'trial'),
+      I('stu', 'Oʻquvchilar', 'stu'), I('debt', 'Qarzdorlar', 'debt', { badge: B.debt || '', aria: B.debt ? B.debt + ' ta muddati oʻtgan qarz' : '' }), I('plan', 'Sotuv rejasi', 'plan'), I('rating', 'Reyting', 'rating'), I('script', 'Skriptlar', 'script', { tip: 'Skriptlar va yoʻriqnomalar' }),
+      G('Boshqa'), I('funnel', 'Statistika', 'funnel', { tip: 'Statistika: mening voronkam' }), I('sms', 'SMS', 'sms', { tip: 'SMS rassilka (faqat oʻz lid va oʻquvchilarim)' }), I('book', 'Kitob yetkazish', 'book')
+    ]; };
+
+    const toast = t => { this.setState({ toast: t }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: '' }), 3000); };
+    const nav = mkNav({}).map(n => Object.assign({}, n, { cur: n.k === 'plan' ? 'page' : 'false', pickBadge: () => {}, pick: () => { if (n.k === 'plan' || !n.item) return; toast(n.label + ' sahifasi ochiladi'); } }));
+    const grp = n => String(Math.abs(Math.round(Number(n) || 0))).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    const num = n => (n < 0 ? '−' : '') + grp(n);
+    const money = n => num(n) + ' soʻm';
+    const mlnN = n => String(Math.round((Number(n) || 0) / 1e5) / 10).replace('.', ',');
+    const mln = n => { const v = (Number(n) || 0) / 1e6; return v ? String(Math.round(v * 10) / 10).replace('.', ',') + ' mln soʻm' : '0 soʻm'; };
+    const loading = s.demo === 'load', loadErr = s.demo === 'err' && !s.retried, ready = !loading && !loadErr;
+    const noFact = s.demo === 'nofact', noPlan = s.demo === 'noplan';
+    const pct1 = n => (Math.round((Number(n) || 0) * 10) / 10).toFixed(1).replace('.', ',') + '%';
+    const spct = n => { const v = Math.round(Number(n) || 0); return (v > 0 ? '+' : v < 0 ? '−' : '') + grp(v) + '%'; };
+    // ---- Jamoaviy reja: getSalesPlan('russian') (SALES_PLAN_DEFAULTS ustiga admin kiritgan qiymatlar) ----
+    const plan = { managers: 4, leadsPerDay: 10, duration: 30, leadCost: 9500, avgCheck: 1900000, conversions: { min: 4.5, mid: 5.0, max: 5.5 } };
+    const metrics = (conv, days) => {
+      const lk = Math.round(plan.managers * plan.leadsPerDay), sk = Math.round(lk * conv / 100), sumK = sk * plan.avgCheck, bk = lk * plan.leadCost;
+      const ld = lk * days, sd = Math.round(ld * conv / 100), sumD = sd * plan.avgCheck, bd = ld * plan.leadCost;
+      return { kunlik: { lidSoni: lk, sotuvSoni: sk, sotuvSumma: sumK, budjet: bk, romi: bk > 0 ? (sumK - bk) / bk * 100 : 0 }, davr: { lidSoni: ld, konversiya: conv, sotuvSoni: sd, avgCheck: plan.avgCheck, sotuvSumma: sumD, budjet: bd, romi: bd > 0 ? (sumD - bd) / bd * 100 : 0, days } };
+    };
+    // getSalesPlanPeriods(30): Oylik jami, 1–10, 10–20, 20–30
+    const periods = [{ key: 'full', label: 'Oylik jami', days: plan.duration }];
+    for (let d = 0; d < plan.duration; d += 10) { const nx = Math.min(d + 10, plan.duration); periods.push({ key: 'seg-' + d, label: (d === 0 ? 1 : d) + '–' + nx, days: nx - d }); }
+    const ap = periods.find(p => p.key === s.per) || periods[0];
+    const TIER = [['min', 'Minimal', 'pl-chip pl-cw'], ['mid', 'Oʻrtacha', 'pl-chip pl-cp'], ['max', 'Zoʻr', 'pl-chip pl-co']];
+    const tiers = TIER.map(t => {
+      const conv = plan.conversions[t[0]], m = metrics(conv, ap.days), main = t[0] === 'mid';
+      const R = (l, p, d, strong, pc) => ({ l, p, d, cls: 'pl-tr' + (strong ? ' pl-st' : ''), pc: pc || '' });
+      return { l: t[1], chipC: t[2], conv: pct1(conv), main, cls: 'pl-tier' + (main ? ' pl-main' : ''), aria: t[1] + ' reja', perH: ap.label + ' · ' + m.davr.days + ' kun',
+        rows: [R('Lidlar', num(m.davr.lidSoni), num(m.kunlik.lidSoni)), R('Konversiya', pct1(conv), '—'), R('Sotuvlar', num(m.davr.sotuvSoni), num(m.kunlik.sotuvSoni)), R('Sotuv summasi', num(m.davr.sotuvSumma), num(m.kunlik.sotuvSumma), true), R('Reklama byudjeti', num(m.davr.budjet), num(m.kunlik.budjet)), R('ROMI', spct(m.davr.romi), '—', false, m.davr.romi >= 0 ? 'pl-pos' : 'pl-neg')] };
+    });
+    const params = [['spManagers', 'Menejer soni', num(plan.managers)], ['spLeadsPerDay', 'Lid (1 menejerga, kunlik)', num(plan.leadsPerDay)], ['spDuration', 'Muddat (kun)', num(plan.duration)], ['spLeadCost', 'Lid narxi (soʻm)', num(plan.leadCost)], ['spAvgCheck', 'Oʻrtacha chek (soʻm)', num(plan.avgCheck)], ['spConvMin', 'Konversiya — min (%)', '4,5'], ['spConvMid', 'Konversiya — oʻrtacha (%)', '5,0'], ['spConvMax', 'Konversiya — zoʻr (%)', '5,5']].map(p => ({ id: p[0], l: p[1], v: p[2] }));
+    // ---- Fakt: computeSalesPlanFactMetrics('russian') — 1–2 noyabr ----
+    const FD = 2; // now.getDate()
+    const fLid = noFact ? 0 : 13, fDeals = noFact ? 0 : 4, fSum = noFact ? 0 : 9400000; // Voronka: 1–2 noyabr 13 ta Rus tili lid; Reyting: KS 5,3 · HB 2,6 · GM 1,5 mln
+    const f = { lidSoni: fLid, sotuvSoni: fDeals, sotuvSumma: fSum, konversiya: fLid ? fDeals / fLid * 100 : 0, avgCheck: fDeals ? Math.round(fSum / fDeals) : 0, budjet: fLid * plan.leadCost };
+    f.romi = f.budjet > 0 ? (f.sotuvSumma - f.budjet) / f.budjet * 100 : 0;
+    const pd = metrics(plan.conversions.mid, Math.min(FD, plan.duration)).davr;
+    const pc = (a, b) => (b > 0 ? Math.round(a / b * 100) : null);
+    const vcls = v => 'pl-badge ' + (v === null ? '' : v >= 100 ? 'pl-ok' : v >= 80 ? 'pl-warn' : 'pl-bad');
+    const budgetDiff = pd.budjet - f.budjet;
+    const factRows = [['Lidlar', num(f.lidSoni), num(pd.lidSoni), pc(f.lidSoni, pd.lidSoni)], ['Sotuvlar', num(f.sotuvSoni), num(pd.sotuvSoni), pc(f.sotuvSoni, pd.sotuvSoni)], ['Sotuv summasi', money(f.sotuvSumma), money(pd.sotuvSumma), pc(f.sotuvSumma, pd.sotuvSumma)], ['Konversiya', pct1(f.konversiya), pct1(pd.konversiya), pc(f.konversiya, pd.konversiya)], ['Oʻrtacha chek', money(f.avgCheck), money(pd.avgCheck), pc(f.avgCheck, pd.avgCheck)]]
+      .map(r => ({ l: r[0], f: r[1], p: r[2], v: r[3] === null ? '—' : r[3] + '%', vc: vcls(r[3]), fc: '' }))
+      .concat([{ l: 'Reklama byudjeti · lid × lid narxi', f: money(f.budjet), p: money(pd.budjet), v: budgetDiff >= 0 ? 'rejadan ' + money(budgetDiff) + ' kam' : 'rejadan ' + money(-budgetDiff) + ' koʻp', vc: budgetDiff >= 0 ? 'pl-ok' : 'pl-bad', fc: '' },
+        { l: 'ROMI', f: spct(f.romi), p: spct(pd.romi), v: '—', vc: 'pl-mut', fc: f.romi >= 0 ? 'pl-pos' : 'pl-neg' }]);
+    // getIndividualSalesPlan('KS', oy) / getManagerSalesForMonth — RopK_Plan bilan bir xil raqamlar
+    const PLANS = { '2026-09': [38000000, 20, 1900000], '2026-10': [40000000, 21, 1900000], '2026-11': [40000000, 21, 1900000] };
+    const FACT = { '2026-09': [36100000, 19], '2026-10': [44800000, 23], '2026-11': [5300000, 2] };
+    const UZM = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentyabr', 'Oktyabr', 'Noyabr', 'Dekabr'];
+    const mLab = k => UZM[+k.slice(5) - 1] + ' ' + k.slice(0, 4);
+    const JORIY = '2026-11', daysIn = 30;
+    const getPlan = oy => { if (noPlan && oy === JORIY) return null; if (PLANS[oy]) return { a: PLANS[oy][0], d: PLANS[oy][1], c: PLANS[oy][2] }; const prior = Object.keys(PLANS).filter(k => k <= oy).sort().pop(); return prior && !noPlan ? { a: PLANS[prior][0], d: PLANS[prior][1], c: PLANS[prior][2], from: prior } : null; };
+    const getFact = oy => (noFact && oy === JORIY) ? [0, 0] : (FACT[oy] || [0, 0]);
+    const months = []; for (let i = 6; i >= -6; i--) { const d = new Date(2026, 10 + i, 1); months.push(d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0')); }
+    const oy = s.month;
+    const tone = p => (p >= 100 ? '#0F9D6B' : p >= 60 ? '#7C3AED' : '#E5484D');
+    const today = noFact ? 0 : 1900000;
+    let ind = { empty: false, has: false, rows: [] };
+    const p = getPlan(oy), fa = getFact(oy), act = fa[0], deals = fa[1], avgF = deals ? Math.round(act / deals) : 0;
+    if (!p) ind = { empty: true, emptyT: mLab(oy) + ' uchun reja belgilanmagan', factT: act ? mlnN(act) + ' mln · ' + deals + ' ta bitim' : '', has: false, rows: [] };
+    else {
+      const pct = p.a > 0 ? Math.min(100, Math.round(act / p.a * 100)) : 0, pctRaw = p.a > 0 ? Math.round(act / p.a * 100) : 0;
+      const isNow = oy === JORIY, daysLeft = Math.max(1, daysIn - FD + 1);
+      const left = Math.max(0, p.a - act), due = Math.round(p.a * FD / daysIn), diff = act - due, perDay = Math.ceil(left / daysLeft);
+      const forecast = Math.round(act / FD * daysIn);
+      const cmp = (l, pv, fv, fmt) => { const q = pv > 0 ? Math.round(fv / pv * 100) : 0; return { l, p: fmt(pv), f: fmt(fv), v: pv > 0 ? q + '%' : '—', vc: q >= 100 ? 'mp-ok' : q < 60 && pv > 0 ? 'mp-bad' : '', bar: 'width:' + Math.min(100, q) + '%;background:' + tone(q) }; };
+      const m1 = n => { const v = (Number(n) || 0) / 1e6; return v ? String(Math.round(v * 10) / 10).replace('.', ',') + ' mln' : '0'; };
+      const m2 = n => { const v = (Number(n) || 0) / 1e6; return v ? String(Math.round(v * 100) / 100).replace('.', ',') + ' mln' : '0'; };
+      const fut = oy > JORIY;
+      ind = { empty: false, has: true, pace: isNow && p.a > 0, monT: mLab(oy).toUpperCase(),
+        factM: mlnN(act), planM: mlnN(p.a), dealsT: deals + ' ta toʻlov' + (deals ? ' · oʻrtacha chek ' + num(avgF) + ' soʻm' : ''),
+        barL: pctRaw + '% bajarildi' + (isNow ? ', bugungacha ' + Math.round(due / p.a * 100) + '% kerak edi' : ''),
+        footR: isNow ? (forecast < p.a ? 'Shu tempda ' + mln(forecast).replace(' soʻm', '') + ' — rejaga ' + mln(p.a - forecast).replace(' soʻm', '') + ' yetmaydi' : 'Shu tempda ' + mln(forecast).replace(' soʻm', '') + ' — reja bajariladi') : fut ? 'Oy hali boshlanmagan' : (pctRaw >= 100 ? 'Reja bajarilgan' : 'Oy yopilgan'),
+        perDay: mlnN(perDay), perDayT: money(perDay), perDayS: 'Har kuni shuncha sotsangiz — rejaga yetasiz' + (today ? ' · bugun ' + mln(today) : ''),
+        left: mlnN(left), leftT: money(left), daysLeft: daysLeft + ' kun qoldi', due: mlnN(due), dueT: money(due),
+        gap: (diff >= 0 ? '+' : '−') + mln(Math.abs(diff)).replace(' soʻm', '') + ' ' + (diff >= 0 ? 'oldinda' : 'orqada'), gapC: diff >= 0 ? 'mp-ok' : 'mp-bad',
+        prizeT: 'iPhone 17 Pro sovgʻasigacha ' + mln(120000000 - act),
+        carried: !!p.from, carriedT: p.from ? 'Bu reja ' + mLab(p.from) + ' oyidan avtomatik koʻchirilgan. Admin ' + mLab(oy) + ' uchun alohida reja belgilasa, oʻsha qoʻllanadi.' : '',
+        pct: String(pct), pctT: pctRaw + '%', barSt: 'width:' + pct + '%;background:' + (pctRaw >= 100 ? '#4ADE80' : '#60A5FA'), todaySt: 'left:' + Math.round(FD / daysIn * 100) + '%',
+        rows: [cmp('Sotuv summasi', p.a, act, m1), cmp('Sotuvlar soni', p.d, deals, num), cmp('Oʻrtacha chek', p.c, avgF, m2)] };
+    }
+    // ---- Mobil "Rejam" qismlari (sotuvApp.js screenPlan) — joriy oy, reyting manbai ----
+    // Soʻnggi 14 kun: 20-okt … 2-noy. Okt oxiri — oktyabr 44,8 mln ichidan; 1-noy 3,4 mln, 2-noy 1,9 mln (Voronka/Reyting bilan bir xil).
+    const D14 = [['2026-10-20', 1900000], ['2026-10-21', 0], ['2026-10-22', 3400000], ['2026-10-23', 1900000], ['2026-10-24', 0], ['2026-10-25', 2600000], ['2026-10-26', 1450000], ['2026-10-27', 0], ['2026-10-28', 3800000], ['2026-10-29', 1900000], ['2026-10-30', 2600000], ['2026-10-31', 0], ['2026-11-01', 3400000], ['2026-11-02', 1900000]]
+      .map(x => [x[0], noFact && x[0] >= '2026-11-01' ? 0 : x[1]]);
+    const max = Math.max(1, ...D14.map(x => x[1]));
+    const best = D14.reduce((a, b) => (b[1] > a[1] ? b : a), D14[0]);
+    const MON3 = ['yan', 'fev', 'mar', 'apr', 'may', 'iyn', 'iyl', 'avg', 'sen', 'okt', 'noy', 'dek'];
+    const dd = k => +k.slice(8) + '-' + MON3[+k.slice(5, 7) - 1];
+    const DAILY = [['Obed', 1800000], ['Obed + 30,000', 2500000], ['Obed + 60,000', 3000000]];
+    const GIFTS = [['📱', 'iPhone 17 Pro', 120000000], ['💻', 'MacBook', 160000000], ['💰', '$2,000 Pul mukofoti', 220000000], ['🕋', '2 kishilik Umra + $500', 300000000]];
+    const monthSales = noFact ? 0 : 5300000;
+    const PAYS = noFact ? [] : [['Zarina Qosimova', 'Bugun, 00:58', 1900000], ['Behruz Olimov', 'Kecha, 18:20', 3400000], ['Lobar Tursunova', '30-okt, 16:05', 2600000], ['Akmal Rahmonov', '29-okt, 12:40', 1900000], ['Feruza Islomova', '28-okt, 19:10', 3800000]];
+    return {
+      crumb0: 'Sotuv', crumb: 'Sotuv rejasi', nav, sbCls: s.sb ? 'sb' : 'sb sb-min', sbExp: s.sb ? 'true' : 'false', sbLab: s.sb ? 'Menyuni yigʻish' : 'Menyuni ochish', sbIcon: s.sb ? 'M15 6l-6 6 6 6' : 'M9 6l6 6-6 6', toggleSb: () => this.setState({ sb: !s.sb }),
+      demo: [['ok', 'Oddiy', ''], ['load', 'Yuklanmoqda', ''], ['err', 'Xato', 'Reja yoki fakt yuklanmadi'], ['noplan', 'Boʻsh', 'Noyabr uchun reja belgilanmagan'], ['nofact', 'Fakt yoʻq', 'Shu oy hali toʻlov yoʻq']].map(d => ({ t: d[1], tip: d[2] || d[1], on: s.demo === d[0] ? 'true' : 'false', pick: () => this.setState({ demo: d[0], retried: false, toast: '', month: '2026-11', tab: 'ind' }) })),
+      loading, loadErr, retry: () => this.setState({ retried: true }), toast: s.toast,
+      tabs: [['ind', 'Mening rejam', 'mpTabInd'], ['team', 'Jamoaviy reja', 'mpTabTeam']].map(t => ({ t: t[1], id: t[2], on: s.tab === t[0] ? 'true' : 'false', ti: s.tab === t[0] ? '0' : '-1', pick: () => this.setState({ tab: t[0] }) })),
+      tabKey: e => { if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return; e.preventDefault(); const nx = s.tab === 'ind' ? 'team' : 'ind'; this.setState({ tab: nx }); this.focusSoon('#' + (nx === 'ind' ? 'mpTabInd' : 'mpTabTeam')); },
+      showInd: ready && s.tab === 'ind', showTeam: ready && s.tab === 'team', showTeamNote: ready && s.tab === 'team',
+      subT: s.tab === 'team' ? 'Jamoaviy reja · Rus tili yoʻnalishi · faqat koʻrish' : 'Shaxsiy oylik rejangiz va uning bajarilishi',
+      params, pers: periods.map(p => ({ t: p.label, on: p.key === ap.key ? 'true' : 'false', pick: () => this.setState({ per: p.key }) })), ttiers: tiers,
+      indSumT: 'Individual rejalar yigʻindisi (Noyabr 2026): 108 mln · 1 menejerda reja yoʻq — “Oʻrtacha” jamoaviy reja: ' + mln(metrics(plan.conversions.mid, plan.duration).davr.sotuvSumma).replace(' soʻm', ''),
+      factH: 'Fakt · 1–' + FD + ' noyabr', factDays: String(FD), factRows,
+      monthOpts: months.map(k => ({ v: k, t: mLab(k) + (k === JORIY ? ' (joriy)' : ''), sel: k === oy })), setMonth: e => this.setState({ month: e.target.value }), ind,
+      bars: D14.map((x, i) => ({ cls: i === 13 ? 'mp-today' : x === best && x[1] ? 'mp-best' : '', h: 'height:' + Math.round(x[1] / max * 100) + '%', t: dd(x[0]) + ': ' + (x[1] ? mln(x[1]) : '0') })),
+      barsL: 'Soʻnggi 14 kundagi tushum: ' + D14.map(x => dd(x[0]) + ' ' + (x[1] ? mlnN(x[1]) + ' mln' : '0')).join(', '),
+      barsFrom: dd(D14[0][0]), barsBest: best[1] ? 'eng yaxshi: ' + dd(best[0]) + ' · ' + mln(best[1]) : '',
+      todayT: 'bugun ' + mln(today), tiers: DAILY.map(b => { const ok = today >= b[1]; return { cls: 'mp-tier' + (ok ? ' mp-tok' : ''), l: b[0], th: mln(b[1]), st: ok ? '✓ olindi' : mln(b[1] - today) + ' qoldi' }; }),
+      pays: PAYS.map(x => ({ n: x[0], w: x[1], v: num(x[2]) })), hasPays: PAYS.length > 0, noPays: PAYS.length === 0,
+      gifts: GIFTS.map(g => ({ i: g[0], l: g[1], s: monthSales >= g[2] ? '✓ olindi' : mln(g[2] - monthSales) + ' qoldi' }))
+    };
+  }
+}
+</script>
+</body>
+</html>

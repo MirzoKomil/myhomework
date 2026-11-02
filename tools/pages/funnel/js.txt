@@ -1,0 +1,210 @@
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.state = { sb: true, demo: 'ok', retried: false, busy: false, aF: '', aT: '', cF: '', cT: '', showDates: false, mgr: null, dd: false, calc: false, toast: '' };
+    this._t = null;
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && this.state.dd) { this.setState({ dd: false }); setTimeout(() => { const el = document.getElementById('fvMgrBtn'); if (el) el.focus(); }, 30); } });
+    this.L = this.buildLeads();
+  }
+  // Demo maʼlumot: Rus tili yoʻnalishi, 266 lid (Lidlar doskasi bilan bir xil bosqich jami). Kod: renderSalesFunnel → filteredLeads.
+  buildLeads() {
+    let seed = 20261102;
+    const r = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+    const ri = (a, b) => a + Math.floor(r() * (b - a + 1));
+    const ST = ['yangi-lidlar', 'boglanishga-urinilmoqda', 'boglanildi', 'sinov-darsida', 'qaror-jarayonida', 'keyin-sotib-olmoqchi', 'tolov-jarayonida', 'tolov-yopildi', 'muvaffaqiyatsiz-sotuv', 'sifatsiz-lidlar'];
+    const ALLOC = { KS: [0, 12, 5, 3, 4, 3, 0, 13, 9, 4], HB: [0, 6, 5, 4, 5, 2, 0, 11, 5, 2], GM: [0, 7, 6, 3, 3, 2, 0, 9, 6, 3], RU: [0, 9, 5, 2, 3, 2, 0, 8, 7, 5], '': [93, 0, 0, 0, 0, 0, 0, 0, 0, 0] };
+    const RANGE = { 1: [1, 12], 2: [2, 20], 3: [2, 18], 4: [2, 30], 5: [10, 60], 7: [6, 88], 8: [2, 85], 9: [2, 80] };
+    const MED = { KS: 14, HB: 22, GM: 35, RU: 128 };
+    const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); const t = a[i]; a[i] = a[j]; a[j] = t; } return a; };
+    const expand = list => shuffle([].concat.apply([], list.map(x => Array.from({ length: x[1] }, () => [x[0], x[2]]))));
+    // FAILED_SALE_REASON_GROUPS (app.js ~15582) yorliqlari; 3-qiymat — tarixda qaysi bosqichgacha yetgani
+    const FAIL = expand([['Narx qimmat', 7, 2], ['Telefonini olmay qoʻydi', 5, 2], ['Kutilgan natijani koʻrmadi', 3, 3], ['Vaqti mos emas', 3, 2], ['Pul yoʻq / kechiktirdi', 3, 4], ['Ota-onasi ruxsat bermadi', 2, 2], ['Boshqa onlayn maktabni tanladi', 2, 2], ['Sabab koʻrsatilmagan', 2, 1]]);
+    // SIFATSIZ_LID_REASONS (app.js ~15655)
+    const SIF = expand([['Telefonni olmadi (bir marta ham bogʻlanilmadi)', 5, 1], ['Notoʻgʻri telefon raqami (mavjud emas)', 3, 1], ['Dublikat lid (bir odam bir necha marta qolgan)', 2, 0], ['Spam / Bot', 2, 0], ['Hazil yoki soxta murojaat', 1, 0], ['21 yoshdan kichik arizachi', 1, 1]]);
+    const TAR = [1450000, 1900000, 1900000, 2600000, 2600000, 3400000];
+    const FORCE_A = { 'KS:1:0': 5, 'KS:1:1': 4, 'RU:1:0': 3, 'RU:1:1': 2, 'GM:1:0': 1, 'RU:9:0': 1 };
+    const FORCE_PAY = { 'KS:7:0': [9, 1, 3400000], 'KS:7:1': [6, 0, 1900000], 'HB:7:0': [12, 1, 2600000], 'GM:7:0': [7, 1, 1500000] };
+    const L = []; let id = 0;
+    Object.keys(ALLOC).forEach(m => ALLOC[m].forEach((n, si) => {
+      for (let k = 0; k < n; k++) {
+        const key = m + ':' + si + ':' + k;
+        let a;
+        if (m === '') a = k < 4 ? 0 : k < 10 ? 1 : 2 + Math.floor(Math.pow(r(), 1.7) * 88);
+        else if (FORCE_A[key] != null) a = FORCE_A[key];
+        else if (FORCE_PAY[key]) a = FORCE_PAY[key][0];
+        else a = ri(RANGE[si][0], RANGE[si][1]);
+        const c = m === '' ? a : a + (r() < 0.6 ? 0 : ri(1, 2));
+        const st = ST[si];
+        const sr = r();
+        const src = si === 7 ? (sr < 0.45 ? 'Target' : sr < 0.75 ? 'Organik' : 'Tavsiya') : (sr < 0.66 ? 'Target' : sr < 0.9 ? 'Organik' : 'Tavsiya');
+        const l = { id: ++id, m, st, a, c, src, hist: a <= 12, reach: si === 5 ? 4 : si <= 7 ? (si === 7 ? 6 : si) : 0, pays: [], amt: 0, fc: null, reason: '' };
+        if (m) l.fc = Math.max(2, Math.round(MED[m] * (0.45 + r() * 1.1)));
+        if (si === 8) { const x = FAIL.pop(); l.reason = x[0]; l.reach = l.hist ? x[1] : 0; }
+        if (si === 9) { const x = SIF.pop(); l.reason = x[0]; l.reach = l.hist ? x[1] : 0; if (x[0] === 'Hazil yoki soxta murojaat') l.pays.push({ d: 5, amt: 50000, total: 50000 }); }
+        if (si === 7) {
+          if (FORCE_PAY[key]) { l.amt = FORCE_PAY[key][2]; l.pays.push({ d: FORCE_PAY[key][1], amt: l.amt, total: l.amt }); }
+          else {
+            l.amt = TAR[ri(0, TAR.length - 1)];
+            const p = ri(2, Math.max(2, a - 1));
+            if (r() < 0.25 && p + 1 <= a) { const dep = 500000; l.pays.push({ d: Math.min(a, p + ri(1, 3)), amt: dep, total: l.amt }); l.pays.push({ d: p, amt: l.amt - dep, total: l.amt }); }
+            else l.pays.push({ d: p, amt: l.amt, total: l.amt });
+          }
+        }
+        L.push(l);
+      }
+    }));
+    return L;
+  }
+  renderVals() {
+    const s = this.state;
+__NAVJS__
+__MKNAV__
+    const nav = mkNav(79, false).map(n => Object.assign({}, n, { cur: n.k === 'funnel' ? 'page' : 'false', pickBadge: () => {}, pick: () => { if (n.k === 'funnel' || !n.item) return; toast(n.label + ' sahifasi ochiladi'); } }));
+    const toast = t => { this.setState({ toast: t }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: '' }), 3000); };
+    const BASE = Date.UTC(2026, 10, 2);
+    const iso = d => new Date(BASE - d * 864e5).toISOString().slice(0, 10);
+    const dm = k => k ? k.slice(8) + '.' + k.slice(5, 7) : '';
+    const TODAY = iso(0);
+    const MG = [['GM', 'Gulchehra Mamadaliyeva', '#0E7490'], ['HB', 'Hamidaxon Boymirzayeva', '#C2410C'], ['KS', 'Kamola Shahobiddinova', '#5B21B6'], ['RU', 'Robiya Usmonova', '#166534']];
+    const mName = id => (MG.find(x => x[0] === id) || [])[1] || 'Biriktirilmagan';
+    const STAGES = [['yangi-lidlar', 'Yangi lidlar'], ['boglanishga-urinilmoqda', 'Bogʻlanishga urinilmoqda'], ['boglanildi', 'Bogʻlanildi'], ['sinov-darsida', 'Sinov darsida'], ['qaror-jarayonida', 'Qaror jarayonida'], ['keyin-sotib-olmoqchi', 'Keyin sotib olmoqchi'], ['tolov-jarayonida', 'Toʻlov jarayonida'], ['tolov-yopildi', 'Toʻlov yopildi']];
+    const RAMP = ['#9DC4F5', '#7DB2F2', '#5B9EF0', '#3B8BEE', '#1F7AE8', '#0065D6', '#0050AA'];
+    const ramp = i => i === 7 ? '#0F9D6B' : RAMP[Math.min(6, i)];
+    const PATH = ['Yangi lidlar', 'Bogʻlanishga urinilmoqda', 'Bogʻlanildi', 'Sinov darsida', 'Qaror jarayonida', 'Toʻlov jarayonida', 'Toʻlov yopildi'];
+    const num = n => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    const money = n => n ? num(n) : '—';
+    const fmtSum = n => n > 0 ? num(n) + ' soʻm' : '—';
+    const pc1 = n => n.toFixed(1).replace('.', ',') + '%';
+    const speed = m => m == null ? '—' : m < 60 ? Math.round(m) + ' daq' : m < 2880 ? (m / 60).toFixed(1).replace('.', ',') + ' soat' : Math.round(m / 1440) + ' kun';
+    const median = a => { const x = a.slice().sort((p, q) => p - q); if (!x.length) return null; const h = Math.floor(x.length / 2); return x.length % 2 ? x[h] : (x[h - 1] + x[h]) / 2; };
+
+    const loading = s.demo === 'load' || s.busy, loadErr = s.demo === 'err' && !s.retried && !s.busy;
+    const ALL = s.demo === 'empty' ? [] : this.L.map(l => Object.assign({}, l, { aD: iso(l.a), cD: iso(l.c) }));
+    const inR = (d, f, t) => { const F = f || t, T = t || f; return !F || (d >= F && d <= T); };
+    const allIds = MG.map(m => m[0]);
+    const mgrSet = s.mgr;
+    const byMgr = mgrSet === null ? ALL : ALL.filter(l => mgrSet.indexOf(l.m) >= 0);
+    const fl = byMgr.filter(l => inR(l.aD, s.aF, s.aT) && inR(l.cD, s.cF, s.cT));
+    const total = fl.length;
+    const cnt = id => fl.filter(l => l.st === id).length;
+    const share = n => total ? Math.round(n / total * 100) : 0;
+    const converted = cnt('tolov-yopildi'), partial = cnt('tolov-jarayonida');
+    const conv = total ? converted / total * 100 : 0;
+    const OPEN = ['yangi-lidlar', 'boglanishga-urinilmoqda', 'boglanildi', 'sinov-darsida', 'qaror-jarayonida'];
+    const inProgress = fl.filter(l => OPEN.indexOf(l.st) >= 0).length;
+    const later = cnt('keyin-sotib-olmoqchi'), failed = cnt('muvaffaqiyatsiz-sotuv'), lowq = cnt('sifatsiz-lidlar');
+    const sold = converted + partial;
+
+    // computeFunnelRevenue: ROP uchun Moliya reyestri ochilmaydi → lid maʼlumotidan, TOʻLANGAN SANA boʻyicha
+    const cF0 = s.cF || s.cT, cT0 = s.cT || s.cF, aF0 = s.aF || s.aT, aT0 = s.aT || s.aF;
+    const revFrom = cF0 || aF0 || '', revTo = cF0 ? cT0 : (aF0 ? aT0 : '');
+    const recs = [];
+    ALL.forEach(l => l.pays.forEach((p, i) => recs.push({ id: l.id + ':' + i, lead: l, m: l.m, amt: p.amt, total: p.total, d: iso(p.d) })));
+    const first = {};
+    recs.slice().sort((x, y) => x.d.localeCompare(y.d) || x.id.localeCompare(y.id)).forEach(x => { if (!first[x.lead.id]) first[x.lead.id] = x.id; });
+    let revenue = 0, excluded = 0, newSales = 0, repay = 0, contract = 0;
+    recs.forEach(x => {
+      if (revFrom && x.d < revFrom) return; if (revTo && x.d > revTo) return;
+      if (mgrSet !== null && mgrSet.indexOf(x.m) < 0) return;
+      if (x.lead.st === 'sifatsiz-lidlar') { excluded += x.amt; return; }
+      revenue += x.amt;
+      if (first[x.lead.id] === x.id) { newSales++; contract += x.total; } else repay++;
+    });
+    const avgCheck = newSales ? Math.round(contract / newSales) : 0;
+    const revPeriod = revFrom ? (revFrom === revTo ? dm(revFrom) : dm(revFrom) + '–' + dm(revTo)) : 'barcha vaqt';
+    const revSub = 'toʻlangan sana: ' + revPeriod + ' · ' + newSales + ' yangi sotuv + ' + repay + ' qarz toʻlovi' + (excluded > 0 ? ' · test/sifatsiz ' + num(excluded) + ' chiqarildi' : '');
+
+    // Menejerlar samaradorligi (computeManagerPerformance)
+    const groups = {};
+    fl.forEach(l => { (groups[l.m] = groups[l.m] || []).push(l); });
+    const rows = Object.keys(groups).map(id => {
+      const list = groups[id];
+      const closed = list.filter(l => l.st === 'tolov-yopildi');
+      const fail = list.filter(l => l.st === 'muvaffaqiyatsiz-sotuv');
+      const rev = closed.reduce((a, l) => a + l.amt, 0);
+      const sp = list.filter(l => l.fc != null).map(l => l.fc);
+      return { id, name: mName(id), total: list.length, closed: closed.length, paying: list.filter(l => l.st === 'tolov-jarayonida').length, conv: list.length ? closed.length / list.length * 100 : 0, rev, avg: closed.length ? Math.round(rev / closed.length) : 0, speed: median(sp), speedN: sp.length, waiting: list.filter(l => l.st === 'yangi-lidlar').length, failed: fail.length, noReason: fail.filter(l => l.reason === 'Sabab koʻrsatilmagan').length, lowq: list.filter(l => l.st === 'sifatsiz-lidlar').length };
+    }).sort((a, b) => ((a.id === '') - (b.id === '')) || (b.closed - a.closed) || (b.conv - a.conv));
+    const best = Math.max.apply(null, [0].concat(rows.filter(r => r.id && r.total >= 10).map(r => r.conv)));
+
+    // Qaysi bosqichgacha yetgan (buildReachedFunnel)
+    const reachIdx = l => l.st === 'keyin-sotib-olmoqchi' ? 4 : l.st === 'muvaffaqiyatsiz-sotuv' || l.st === 'sifatsiz-lidlar' ? l.reach : Math.max(0, STAGES.findIndex(x => x[0] === l.st) - (STAGES.findIndex(x => x[0] === l.st) >= 6 ? 1 : 0));
+    const rc = PATH.map((_, i) => fl.filter(l => reachIdx(l) >= i).length);
+    const steps = rc.map((n, i) => i && rc[i - 1] ? n / rc[i - 1] * 100 : null);
+    let low = -1; steps.forEach((v, i) => { if (v != null && v < 100 && (low < 0 || v < steps[low])) low = i; });
+    const withHist = fl.filter(l => l.hist).length;
+
+    // Manba boʻyicha (ropApp.js screenFunnel)
+    const src = {}; fl.forEach(l => { const o = src[l.src] || (src[l.src] = { n: 0, w: 0 }); o.n++; if (l.st === 'tolov-yopildi') o.w++; });
+    const srcRows = Object.keys(src).map(k => [k, src[k]]).sort((a, b) => b[1].n - a[1].n).slice(0, 6);
+    const bestSrc = srcRows.reduce((m, x) => Math.max(m, x[1].n ? x[1].w / x[1].n : 0), 0);
+
+    // Sabablar (buildReasonsChart)
+    const PAL = ['#DC2626', '#F97316', '#F59E0B', '#8B5CF6', '#0EA5E9', '#14B8A6', '#EC4899', '#64748B', '#84CC16'];
+    const reasons = (stage, title, empty, center) => {
+      const m = {}; fl.filter(l => l.st === stage).forEach(l => { m[l.reason] = (m[l.reason] || 0) + 1; });
+      const list = Object.keys(m).map(k => ({ label: k, count: m[k] })).sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'uz'));
+      const tot = list.reduce((a, x) => a + x.count, 0);
+      let acc = 0;
+      const stops = list.map((x, i) => { const a0 = acc / tot * 360, a1 = (acc + x.count) / tot * 360; acc += x.count; return PAL[i % PAL.length] + ' ' + (a0 + (i ? 1 : 0)).toFixed(1) + 'deg ' + a1.toFixed(1) + 'deg'; });
+      return { title, empty, center, tot: String(tot), has: tot > 0, none: tot === 0, aria: title + ': ' + list.map(x => x.label + ' ' + x.count).join(', '), ring: 'background:conic-gradient(' + (stops.join(',') || '#EEF2F7 0deg 360deg') + ')', hid: 'h_' + stage,
+        leg: list.map((x, i) => { const sh = x.count / tot * 100; return { c: 'background:' + PAL[i % PAL.length], tc: 'color:' + PAL[i % PAL.length], label: x.label, n: x.count + ' ta', p: (sh % 1 === 0 ? sh.toFixed(0) : sh.toFixed(1).replace('.', ',')) + '%' }; }) };
+    };
+
+    // davr chiplari (_sfxPresetRange)
+    const PRE = { all: ['', ''], today: [TODAY, TODAY], week: [iso(6), TODAY], month: [iso(1), TODAY] };
+    const noCreated = !s.cF && !s.cT;
+    const mgrAll = mgrSet === null || (mgrSet.length === allIds.length);
+    const mgrCount = mgrSet === null ? allIds.length : mgrSet.length;
+    const mgrLabel = mgrSet === null ? 'Barcha menejerlar' : mgrCount === allIds.length ? '4 ta menejer · biriktirilmaganlarsiz' : mgrCount === 0 ? 'Menejer tanlanmagan' : mgrCount === 1 ? mName(mgrSet[0]) : mgrCount + ' ta menejer';
+    const aTxt = aF0 ? (aF0 === aT0 ? dm(aF0) : dm(aF0) + '–' + dm(aT0)) : '';
+    const cTxt = cF0 ? (cF0 === cT0 ? dm(cF0) : dm(cF0) + '–' + dm(cT0)) : '';
+    const scope = [aTxt ? 'biriktirilgan: ' + aTxt + '.2026' : '', cTxt ? 'CRMga tushgan: ' + cTxt + '.2026' : ''].filter(Boolean).join(' · ') || 'barcha vaqt';
+    const dateRow = (k, label, f, t) => ({ label, fid: 'd_' + k + 'F', tid: 'd_' + k + 'T', f, t, has: !!(f || t), bad: !!(f && t && f > t),
+      onF: e => this.setState({ [k + 'F']: e.target.value }), onT: e => this.setState({ [k + 'T']: e.target.value }), clear: () => this.setState({ [k + 'F']: '', [k + 'T']: '' }) });
+    const ready = !loading && !loadErr;
+
+    return {
+      nav, sbCls: s.sb ? 'sb' : 'sb sb-min', sbExp: s.sb ? 'true' : 'false', sbLab: s.sb ? 'Menyuni yigʻish' : 'Menyuni ochish', sbIcon: s.sb ? 'M15 6l-6 6 6 6' : 'M9 6l6 6-6 6', toggleSb: () => this.setState({ sb: !s.sb }),
+      demo: [['ok', 'Oddiy'], ['load', 'Yuklanmoqda'], ['err', 'Xato'], ['empty', 'Lid yoʻq']].map(d => ({ t: d[1], on: s.demo === d[0] ? 'true' : 'false', pick: () => this.setState({ demo: d[0], retried: false, busy: false, dd: false, aF: '', aT: '', cF: '', cT: '', mgr: null, showDates: false, calc: false }) })),
+      loading, loadErr, ready, isEmptyDir: ready && ALL.length === 0,
+      retry: () => { this.setState({ busy: true }); setTimeout(() => this.setState({ busy: false, retried: true }), 700); },
+      chips: [['all', 'Hammasi'], ['today', 'Bugun'], ['week', '7 kun'], ['month', 'Shu oy']].map(c => ({ t: c[1], on: noCreated && PRE[c[0]][0] === (s.aF || '') && PRE[c[0]][1] === (s.aT || '') ? 'true' : 'false', pick: () => this.setState({ aF: PRE[c[0]][0], aT: PRE[c[0]][1], cF: '', cT: '' }) })),
+      datesExp: s.showDates ? 'true' : 'false', datesCls: 'fv-chip' + (s.showDates ? ' fv-chip-o' : ''), toggleDates: () => this.setState({ showDates: !s.showDates }),
+      showDates: s.showDates, dateRows: [dateRow('a', 'Lid biriktirilgan kun boʻyicha', s.aF, s.aT), dateRow('c', 'Lid CRMga kelib tushgan kun boʻyicha', s.cF, s.cT)],
+      scope, mgrLabel, mgrSel: mgrSet === null ? 'false' : 'true', mgrBtnCls: 'fv-mbtn' + (mgrSet === null ? '' : ' fv-mbtn-on'), dd: s.dd, ddExp: s.dd ? 'true' : 'false',
+      toggleDd: () => { this.setState({ dd: !s.dd }); if (!s.dd) setTimeout(() => { const el = document.getElementById('fvAll'); if (el) el.focus(); }, 30); },
+      closeDd: () => this.setState({ dd: false }),
+      ddKey: e => { if (e.key === 'Escape') { e.preventDefault(); this.setState({ dd: false }); setTimeout(() => { const b = document.getElementById('fvMgrBtn'); if (b) b.focus(); }, 30); } },
+      allOn: mgrAll && (mgrSet === null || mgrSet.length > 0), pickAll: e => this.setState({ mgr: e.target.checked ? null : [] }),
+      mopts: MG.map(m => ({ id: 'fvm_' + m[0], n: m[1], on: mgrSet === null || mgrSet.indexOf(m[0]) >= 0, av: 'background:' + m[2] + ';color:#FFFFFF', ini: m[0], pick: e => { const cur = mgrSet === null ? allIds.slice() : mgrSet.slice(); const i = cur.indexOf(m[0]); if (e.target.checked && i < 0) cur.push(m[0]); if (!e.target.checked && i >= 0) cur.splice(i, 1); this.setState({ mgr: cur }); } })),
+      tiles: [
+        { k: 'Konversiya (toʻlov yopildi)', v: total ? pc1(conv) : '0,0%', sub: converted + ' / ' + total + ' lid', note: '' },
+        { k: 'Tushum (kassa)', v: fmtSum(revenue), sub: revSub, note: 'Moliya reyestri ochilmadi — lid maʼlumotidan hisoblandi' },
+        { k: 'Hali jarayonda', v: String(inProgress), sub: 'ochiq bosqichlarda', note: '' },
+        { k: 'Oʻrtacha chek', v: fmtSum(avgCheck), sub: newSales > 0 ? newSales + ' ta yangi sotuv shartnomasi boʻyicha' : 'maʼlumot yoʻq', note: '' }
+      ].map(t => Object.assign(t, { hasNote: !!t.note })),
+      total: String(total), convTxt: total ? pc1(conv) : '0,0%',
+      bars: STAGES.map((x, i) => { const n = cnt(x[0]); return { n: x[1], c: 'background:' + ramp(i), w: 'width:' + Math.max(n ? 2 : 0, share(n)) + '%;background:' + ramp(i), v: String(n), p: share(n) + '%' }; }),
+      out: [['Hali jarayonda (ochiq bosqichlarda)', String(inProgress), '', ''], ['Keyin sotib olmoqchi', String(later), '', ''], ['Muvaffaqiyatsiz sotuv', String(failed), share(failed) + '%', '#DC2626'], ['Sifatsiz lidlar', String(lowq), share(lowq) + '%', '#64748B']].map(o => ({ k: o[0], v: o[1], p: o[2] ? '· ' + o[2] : '', dot: o[3] ? 'background:' + o[3] : 'display:none' })),
+      soldTxt: sold + ' ta', soldSub: '· ' + partial + ' yarim + ' + converted + ' toʻliq',
+      revLab: 'Tushum (kassa, ' + revPeriod + ')', revTxt: fmtSum(revenue), newSalesTxt: newSales + ' ta', repayTxt: repay + ' ta',
+      calc: s.calc, calcExp: s.calc ? 'true' : 'false', toggleCalc: () => this.setState({ calc: !s.calc }),
+      calcTxt: sold + ' sotildi (' + partial + ' yarim + ' + converted + ' toʻliq) + ' + (failed + lowq) + ' chiqdi + ' + (inProgress + later) + ' jarayonda = ' + (sold + failed + lowq + inProgress + later) + ' lid.',
+      hasRows: rows.length > 0, noRows: rows.length === 0,
+      mrows: rows.map(r => ({ name: r.name, un: r.id ? '' : 'fv-un', tr: 'fv-tr' + (r.id ? '' : ' fv-un'), av: r.id ? 'background:' + MG.find(m => m[0] === r.id)[2] + ';color:#FFFFFF' : 'background:#E2E8F0;color:#4B5563', ini: r.id || '—', total: String(r.total), closed: String(r.closed), conv: pc1(r.conv), convCls: r.id && r.total >= 10 && r.conv === best && best > 0 ? 'fv-best' : '', bestSr: r.id && r.total >= 10 && r.conv === best && best > 0 ? ' (eng yuqori)' : '', paying: String(r.paying), rev: money(r.rev), avg: money(r.avg), speed: speed(r.speed), speedT: r.speedN + ' ta lid boʻyicha', waiting: String(r.waiting), waitCls: r.waiting ? 'fv-warn' : '', failed: String(r.failed), noReason: r.noReason ? '(' + r.noReason + ' sababsiz)' : '', lowq: String(r.lowq) })),
+      reach: rc.map((n, i) => ({ n: PATH[i], v: String(n), step: i ? ' · ' + (steps[i] == null ? '0' : String(Math.round(steps[i] * 10) / 10).replace('.', ',')) + '% oldingidan' : '', w: 'width:' + (rc[0] ? Math.max(n ? 2 : 0, Math.round(n / rc[0] * 100)) : 0) + '%;background:' + (i === low ? '#F79009' : '#0065D6'), row: 'fv-row fv-row-w' + (i === low ? ' fv-low' : ''), low: i === low, lowTxt: '↓ eng past' })),
+      lowTxt: low > 0 ? 'Eng katta yoʻqotish: ' + PATH[low - 1].toLowerCase() + ' → ' + PATH[low].toLowerCase() + ' (' + Math.round(100 - steps[low]) + '% oʻtmaydi)' : '',
+      histTxt: 'Bosqichlar tarixi ' + withHist + ' / ' + total + ' ta lidda bor (server 21-oktabrdan yozmoqda). Tarixi yoʻq lidlar hozirgi bosqichi boʻyicha hisoblanadi — muvaffaqiyatsiz/sifatsizga oʻtganlarining oldingi bosqichlari hali koʻrinmaydi, shuning uchun bu raqamlar vaqt oʻtishi bilan aniqlashadi.',
+      hasSrc: srcRows.length > 0, noSrc: srcRows.length === 0,
+      srcRows: srcRows.map(x => { const p = x[1].n ? Math.round(x[1].w / x[1].n * 100) : 0; const b = x[1].n && x[1].w / x[1].n === bestSrc && bestSrc > 0; return { k: x[0], n: String(x[1].n), w: String(x[1].w), p: p + '%', cls: b ? 'fv-best' : '', sr: b ? ' (eng yuqori)' : '', w2: 'width:' + p + '%' }; }),
+      reasons: [reasons('muvaffaqiyatsiz-sotuv', 'Muvaffaqiyatsiz sotuv sabablari', 'Tanlangan filtrlar boʻyicha muvaffaqiyatsiz sotuvlar yoʻq.', 'muvaffaqiyatsiz sotuv'), reasons('sifatsiz-lidlar', 'Sifatsiz lid sabablari', 'Tanlangan filtrlar boʻyicha sifatsiz lidlar yoʻq.', 'sifatsiz lid')],
+      filtersOn: !!(s.aF || s.aT || s.cF || s.cT || mgrSet !== null),
+      resetAll: () => this.setState({ aF: '', aT: '', cF: '', cT: '', mgr: null, dd: false }),
+      resetLab: mgrSet !== null && mgrSet.length === 0 ? 'Barchasini tanlash' : 'Filtrlarni tozalash',
+      warn: !ALL.length ? '' : mgrSet !== null && mgrSet.length === 0 ? 'Menejer tanlanmagan — barcha raqamlar 0. Roʻyxatdan kamida bitta menejerni belgilang.' : (!total ? 'Tanlangan filtrlar boʻyicha lid yoʻq — raqamlar 0. Davr yoki menejer tanlovini kengaytiring.' : ''),
+      more: () => toast('Bu bloklar production sahifasida voronka ostida chiqadi — ushbu doskada koʻrsatilmagan'),
+      toast: s.toast
+    };
+  }
+}

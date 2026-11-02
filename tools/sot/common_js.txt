@@ -1,0 +1,18 @@
+    // --- Sotuv: qoʻngʻiroq dalili (staleLeads.js callsOf/hasRecentCall/logCall) ---
+    let gOpenNow = false;
+    const agoL = t => { const m = String(t || '').match(/^(Bugun|Kecha|(\d{1,2})-okt) (\d{1,2}):(\d{2})$/); if (!m) return 99999; const mins = +m[3] * 60 + +m[4]; const d = m[1] === 'Bugun' ? 0 : m[1] === 'Kecha' ? 1 : 2 + (31 - +m[2]); return d * 1440 + 103 - mins; };
+    // eng yangisi birinchi; "call-attempt" / "contact-fail" izohlari
+    // ism boʻyicha; SotKHome navbati bilan bir xil oxirgi qoʻngʻiroq vaqtlari
+    const CSEED = { 'Rustam Toshev': ['Kecha 17:58', '30-okt 12:10', '29-okt 18:30'], 'Shahnoza Aliyeva': ['31-okt 10:20', '30-okt 16:00', '29-okt 14:10', '29-okt 11:05'], 'Zilola Hamidova': ['31-okt 15:40'], 'Jahongir Sobirov': ['Kecha 10:40', '31-okt 11:30'], 'Feruza Mirzayeva': ['Kecha 11:00'], 'Asror Nurmatov': ['Kecha 12:15'], 'Zarina Qosimova': ['Kecha 14:20'], 'Shoira Nazarova': ['Kecha 15:00'], 'Otabek Yoʻldoshev': ['Kecha 17:30'], 'Gulnoza Ahmedova': ['Kecha 20:10'], 'Dilshoda Ergasheva': ['Kecha 22:30'], 'Behruz Sattorov': ['Bugun 00:55'], 'Gulbahor Yusupova': ['31-okt 12:40'], 'Doston Halimov': ['30-okt 17:00'] };
+    const callsOfK = key => ((s.calls || {})[key] ? ['Bugun 01:43'] : []).concat(EMPTY ? [] : (CSEED[cardOf(key).n] || []));
+    const callN = key => callsOfK(key).length;
+    const recentCall = key => callsOfK(key).some(t => agoL(t) <= 1440);
+    // prod: ketma-ket bosishlar (2 daqiqa ichida) bitta urinish
+    const logCall = (key, extra) => { const st = Object.assign({}, extra || {}); if (!(s.calls || {})[key]) { const c = Object.assign({}, s.calls || {}); c[key] = 1; st.calls = c; const cm = Object.assign({}, st.coms || s.coms || {}); cm[key] = [{ h: 'Hozir · Kamola S. · Qoʻngʻiroq', t: 'Qoʻngʻiroq qilindi' }].concat(cm[key] || []); st.coms = cm; } return st; };
+    const openDrw = (key, tab) => { const r = Object.assign({}, s.readRop || {}); if (tab === 'not') r[key] = true; this.setState({ drw: { key, tab: tab || 'main' }, menu: '', mp: '', fu: false, comTried: false, readRop: r }); this.focusSoon('.drw [role=tab][aria-selected=true]'); };
+    const trap = (e, onEsc) => { if (!e) return; const box = e.currentTarget; if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); onEsc(); return; } if (e.key !== 'Tab') return; e.stopPropagation(); const f = Array.prototype.slice.call(box.querySelectorAll('a[href],button,input,select,textarea,[tabindex]')).filter(x => !x.disabled && x.offsetParent !== null && x.getAttribute('tabindex') !== '-1'); if (!f.length) return; e.preventDefault(); const ix = f.indexOf(document.activeElement); (e.shiftKey ? (f[ix - 1] || f[f.length - 1]) : (f[ix + 1] || f[0])).focus(); };
+    const ini = n => String(n || '').trim().split(/\s+/).map(w => w[0] || '').slice(0, 2).join('').toUpperCase() || '?';
+    const AVC = [['#DCEBFF', '#0057B8'], ['#FEF0C7', '#93370D'], ['#ECFDF3', '#067647'], ['#F1E8FF', '#5B21B6'], ['#FFE4E8', '#9F1239'], ['#E0F2FE', '#075985']];
+    const avcOf = key => { let h = 0; String(key).split('').forEach(ch => { h = (h * 31 + ch.charCodeAt(0)) >>> 0; }); const c = AVC[h % AVC.length]; return 'background:' + c[0] + ';color:' + c[1]; };
+    const shK = s.sh ? s.sh.key : ''; const shC = shK ? cardOf(shK) : {};
+    const closeSh = () => { const k = shK; this.setState({ sh: null }); this.focusSoon(gOpenNow ? (k ? '[data-lock="' + k + '"] button' : '[data-gate]') : k ? back(k) : '[data-card]'); };

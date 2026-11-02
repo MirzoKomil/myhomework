@@ -1,0 +1,200 @@
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    // Demo soat: Dushanba 02.11.2026 01:43. ROP Islom Mominov — faqat Rus tili.
+    this.DEF_TEXT = 'Assalomu alaykum, {ism}! Domwork rus tili kursiga joylar oz qoldi. Bugun yozilsangiz — birinchi dars sovgʻa.';
+    this.H0 = [
+      ['Rustam Qodirov', '+998 97 718 02 33', 'Assalomu alaykum, Rustam Qodirov! Ertaga 18:00 da sinov darsi: t.me/+Dk_rus_sinov', 'sent', '', '01.11.2026, 19:42', 'Islom Mominov'],
+      ['Behruz Abdullayev', '+998 90 808 31 27', 'Assalomu alaykum, Behruz Abdullayev! Ertaga 18:00 da sinov darsi: t.me/+Sq_rus_sinov', 'sent', '', '01.11.2026, 19:42', 'Islom Mominov'],
+      ['Oybek Normatov', '+998 99 104 66 2', 'Assalomu alaykum, Oybek Normatov! Ertaga 18:00 da sinov darsi: ', 'error', 'Notoʻgʻri telefon raqami: +998 99 104 66 2', '01.11.2026, 19:42', 'Islom Mominov'],
+      ['Shahzoda Ergasheva', '+998 90 123 45 67', 'Shahzoda Ergasheva, toʻlov muddati 20.10 edi. Qarz: 450 000 soʻm.', 'sent', '', '31.10.2026, 11:05', 'Kamola Shahobiddinova'],
+      ['Doniyor Mirzayev', '+998 93 555 77 11', 'Doniyor Mirzayev, toʻlov muddati 28.10 edi. Qarz: 790 000 soʻm.', 'sent', '', '31.10.2026, 11:05', 'Hamidaxon Boymirzayeva'],
+      ['Kamron Aliyev', '+998 88 777 11 00', 'Kamron Aliyev, toʻlov muddati 28.11. Qarz: 395 000 soʻm.', 'error', 'Eskiz xatosi (HTTP 400)', '31.10.2026, 11:05', 'Hamidaxon Boymirzayeva'],
+      ['Nilufar Saidova', '+998 91 377 40 12', 'Assalomu alaykum, Nilufar Saidova! Noyabr uchun 20% chegirma — bugun yozilsangiz.', 'sent', '', '29.10.2026, 16:20', 'Kamola Shahobiddinova'],
+      ['Madina Yusupova', '+998 99 841 27 63', 'Assalomu alaykum, Madina Yusupova! Noyabr uchun 20% chegirma — bugun yozilsangiz.', 'sent', '', '29.10.2026, 16:20', 'Kamola Shahobiddinova'],
+      ['Gulnoza Saidova', '+998 99 888 77 66', 'Gulnoza Saidova, ertangi dars 19:00 ga koʻchirildi.', 'sent', '', '28.10.2026, 09:12', 'Islom Mominov'],
+      ['Malika Hasanova', '+998 93 555 09 09', 'Malika Hasanova, ertangi dars 19:00 ga koʻchirildi.', 'sent', '', '28.10.2026, 09:12', 'Islom Mominov'],
+      ['Aziza Karimova', '+998 94 666 00 99', 'Aziza Karimova, ertangi dars 19:00 ga koʻchirildi.', 'sent', '', '28.10.2026, 09:12', 'Islom Mominov']
+    ].map((h, i) => ({ id: 'h' + i, name: h[0], phone: h[1], msg: h[2], status: h[3], error: h[4], at: h[5], by: h[6] }));
+    this.state = this.fresh('ok');
+    this._t = null;
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && this.state.cf) this.setState({ cf: false }); });
+  }
+  fresh(demo) {
+    return { sb: true, demo, hRetried: false, aud: 'lidlar', q: '', f: 'all', sel: {}, text: this.DEF_TEXT, tErr: false, showWhy: false, pv: 0, cf: false, phase: '', res: null, lastText: '', timeout: null, done: {}, hist: demo === 'hEmpty' ? [] : this.H0.slice(), hf: 'all', hN: 8, bal: demo === 'low' ? 6 : 4820, toast: null };
+  }
+  focusSoon(sel) { setTimeout(() => { const el = document.querySelector(sel); if (el && el.focus) el.focus(); }, 30); }
+  renderVals() {
+    const s = this.state;
+__NAVJS__
+__MKNAV__
+    // ---- production: app.js SMS_PLACEHOLDERS, _smsGetAudienceList (~13997), fillSmsPlaceholders; ropApp.js smsGroups/screenSms (~1100); eskiz.js normalizePhone/isValidUzPhone ----
+    const TEACH = { dk: ['Dilnoza Karimova', 't.me/+Dk_rus_sinov'], sq: ['Shahnoza Qodirova', 't.me/+Sq_rus_sinov'], na: ['Nodira Aliyeva', ''] };
+    const STAGES = { 'yangi-lidlar': 'Yangi lidlar', 'boglanishga-urinilmoqda': 'Bogʻlanishga urinilmoqda', 'boglanildi': 'Bogʻlanildi', 'sinov-darsida': 'Sinov darsida', 'qaror-jarayonida': 'Qaror jarayonida', 'tolov-jarayonida': 'Toʻlov jarayonida', 'muvaffaqiyatsiz-sotuv': 'Muvaffaqiyatsiz sotuv' };
+    const LD = [
+      ['l1', 'Rustam Qodirov', '+998 97 718 02 33', 'qaror-jarayonida', 'dk', 'qaror'], ['l2', 'Behruz Abdullayev', '+998 90 808 31 27', 'qaror-jarayonida', 'sq', 'qaror'],
+      ['l3', 'Dildora Yoqubova', '+998 91 463 70 58', 'qaror-jarayonida', '', 'qaror'], ['l4', 'Sevinch Komilova', '+998 93 552 18 40', 'qaror-jarayonida', 'dk', 'qaror'],
+      ['l5', 'Oybek Normatov', '+998 99 104 66 2', 'qaror-jarayonida', 'na', 'qaror'], ['l6', 'Dilfuza Rahimova', '+998 90 118 94 52', 'sinov-darsida', 'dk', 'noshow'],
+      ['l7', 'Lobar Rasulova', '+998 97 590 14 63', 'sinov-darsida', 'sq', 'noshow'], ['l8', 'Javohir Toʻxtayev', '+998 94 230 71 05', 'sinov-darsida', 'na', 'noshow'],
+      ['l9', 'Nilufar Saidova', '+998 91 377 40 12', 'muvaffaqiyatsiz-sotuv', 'dk', 'price'], ['l10', 'Gʻayrat Ismoilov', '+998 93 615 02 88', 'muvaffaqiyatsiz-sotuv', '', 'price'],
+      ['l11', 'Madina Yusupova', '+998 99 841 27 63', 'muvaffaqiyatsiz-sotuv', 'sq', 'price'], ['l12', 'Shohruh Ergashev', '+998 90 412 18 07', 'yangi-lidlar', '', ''],
+      ['l13', 'Malika Tursunova', '+998 93 220 45 61', 'boglanishga-urinilmoqda', '', ''], ['l14', 'Nigora Aliyeva', '+998 91 505 77 19', 'boglanildi', '', ''],
+      ['l15', 'Javlon Mirzayev', '+998 99 341 60 08', 'tolov-jarayonida', 'dk', ''], ['l16', 'Farrux Tojiyev', '+998 99 237 85 14', 'tolov-jarayonida', 'sq', '']
+    ].map(x => ({ key: 'lead:' + x[0], kind: 'lead', name: x[1], phone: x[2], sub: STAGES[x[3]], grp: x[3], t: x[4], tag: x[5] }));
+    // Oʻquvchilar = RopK_Debtors seed (Rus tili). [id, ism, telefon, guruh, ustoz, qarz, muddat]; s12 — telefoni yoʻq (roʻyxatga kirmaydi).
+    const ST = [
+      ['s1', 'Shahzoda Ergasheva', '901234567', 'C31', 'sq', 450000, '20.10.2026'], ['s2', 'Doniyor Mirzayev', '935557711', 'C27', 'dk', 790000, '28.10.2026'],
+      ['s3', 'Oybek Nazarov', '977001122', 'C22', 'sq', 225000, '25.10.2026'], ['s4', 'Gulnoza Saidova', '998887766', 'C33', 'na', 300000, '01.11.2026'],
+      ['s5', 'Madina Rasulova', '903332211', 'C41', 'sq', 340000, '02.11.2026'], ['s6', 'Aziza Karimova', '946660099', 'C38', 'na', 450000, '05.11.2026'],
+      ['s7', 'Sardor Yoqubov', '911110022', '', 'dk', 200000, '15.11.2026'], ['s8', 'Javohir Qodirov', '330004455', 'C42', 'na', 0, '20.11.2026'],
+      ['s9', 'Kamron Aliyev', '887771100', 'C40', 'sq', 395000, '28.11.2026'], ['s10', 'Malika Hasanova', '935550909', 'C33', 'na', 600000, '01.12.2026'],
+      ['s11', 'Nilufar Abdullayeva', '977778899', 'C29', 'dk', 790000, '10.12.2026'], ['s12', 'Bekzod Rahimov', '', '', 'sq', 150000, ''],
+      ['s13', 'Diyora Usmonova', '901112233', 'C36', 'dk', 0, '']
+    ].filter(x => x[2]);
+    const sum = n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    const ph = d => '+998 ' + d.slice(0, 2) + ' ' + d.slice(2, 5) + ' ' + d.slice(5, 7) + ' ' + d.slice(7);
+    const grpL = g => g || 'Guruhsiz';
+    const STU = ST.map(x => ({ key: 'student:' + x[0], kind: 'student', name: x[1], phone: ph(x[2]), sub: grpL(x[3]), grp: grpL(x[3]), t: x[4] }));
+    const DEB = ST.filter(x => x[5] > 0 || x[6]).map(x => ({ key: 'debtor:' + x[0], kind: 'student', name: x[1], phone: ph(x[2]), sub: x[5] > 0 ? sum(x[5]) + ' soʻm qarz' : 'Toʻlov muddati ' + x[6], grp: grpL(x[3]), t: x[4] }));
+    const AUD = { lidlar: ['Sotuv lidlari', LD], oquvchilar: ['Oʻquvchilar', STU], qarzdorlar: ['Qarzdorlar', DEB] };
+    const ALL = LD.concat(STU, DEB), byKey = k => ALL.find(r => r.key === k);
+    // eskiz.js: normalizePhone (9 raqam → 998 qoʻshiladi) + /^998\d{9}$/
+    const okPhone = p => { let d = String(p || '').replace(/\D/g, ''); if (d.length === 9) d = '998' + d; return /^998\d{9}$/.test(d); };
+    const PRE = [['qaror', 'Qaror jarayonida', 'Hali toʻlov qilmaganlar'], ['noshow', 'Sinovga kelmaganlar', 'Shu hafta'], ['price', 'Muvaffaqiyatsiz · narx sababli', 'Shu oy']]
+      .map(p => { const all = LD.filter(l => l.tag === p[0]); return { k: p[0], t: p[1], s: p[2], keys: all.filter(l => okPhone(l.phone)).map(l => l.key), bad: all.filter(l => !okPhone(l.phone)).length }; });
+    const toast = t => { this.setState({ toast: t }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: null }), 3800); };
+    const loading = s.demo === 'load', histErr = s.demo === 'hErr' && !s.hRetried, balUnk = s.demo === 'balUnk';
+    // ---- matn ----
+    const ctx = r => { const t = r.t ? TEACH[r.t] : null; return { '{ism}': r.name, '{ustoz}': t ? t[0] : '', '{sinov_guruh}': t ? t[1] : '' }; };
+    const KEYS = ['{ism}', '{ustoz}', '{sinov_guruh}'];
+    const fill = (txt, r) => { const c = ctx(r); return KEYS.reduce((o, k) => o.split(k).join(c[k] || ''), String(txt || '')); };
+    const parts = (txt, r) => { const c = ctx(r), out = []; String(txt).split(/(\{ism\}|\{ustoz\}|\{sinov_guruh\})/).forEach(p => { if (!p) return; if (KEYS.indexOf(p) >= 0) out.push(c[p] ? { t: c[p], c: 'sn-fill' } : { t: p === '{sinov_guruh}' ? '[guruh havolasi yoʻq]' : '[' + p.slice(1, -1) + ' yoʻq]', c: 'sn-hole' }); else out.push({ t: p, c: '' }); }); return out; };
+    const isUni = t => /[^\x00-\x7F]/.test(t);
+    const segOf = t => { const n = t.length; return n ? Math.ceil(n / (isUni(t) ? 70 : 160)) : 0; };
+    // ---- roʻyxat ----
+    const list = AUD[s.aud][1];
+    const qq = s.q.trim().toLowerCase();
+    const fl = list.filter(r => (s.f === 'all' || r.grp === s.f) && (!qq || r.name.toLowerCase().includes(qq) || r.phone.replace(/\s/g, '').includes(qq.replace(/\s/g, ''))));
+    const selKeys = Object.keys(s.sel).filter(k => s.sel[k]);
+    const selR = selKeys.map(byKey).filter(Boolean);
+    const busy = s.phase === 'sending';
+    const needLink = s.text.indexOf('{sinov_guruh}') >= 0;
+    const noLink = r => !(r.t && TEACH[r.t][1]);
+    const setSel = o => this.setState({ sel: o, showWhy: false, pv: 0 });
+    const rows = fl.map(r => { const bad = !okPhone(r.phone), dn = !!s.done[r.phone + '|' + s.text]; return { key: r.key, name: r.name, sub: r.phone + (r.sub ? ' · ' + r.sub : ''), on: !!s.sel[r.key], cls: 'sn-r' + (s.sel[r.key] ? ' sn-on' : ''),
+      flag: needLink && noLink(r) && !bad, bad, dn, pick: e => { const o = Object.assign({}, s.sel); if (e.target.checked) o[r.key] = true; else delete o[r.key]; setSel(o); } }; });
+    const okFl = fl.filter(r => okPhone(r.phone) && !s.done[r.phone + '|' + s.text]);
+    const allOn = okFl.length > 0 && okFl.every(r => s.sel[r.key]);
+    const eqSet = keys => keys.length === selKeys.length && keys.every(k => s.sel[k]);
+    const curPre = s.aud === 'lidlar' ? (PRE.find(p => eqSet(p.keys)) || null) : null;
+    const presets = PRE.map(p => ({ k: p.k, t: p.t, s: p.s + (p.bad ? ' · ' + p.bad + ' ta notoʻgʻri raqam tanlanmaydi' : ''), n: String(p.keys.length), on: curPre === p ? 'true' : 'false',
+      pick: () => { const o = {}; p.keys.forEach(k => { o[k] = true; }); this.setState({ aud: 'lidlar', f: 'all', q: '', sel: o, showWhy: false, pv: 0 }); } }))
+      .concat([{ k: 'manual', t: 'Qoʻlda tanlash', s: 'Pastdagi roʻyxatdan belgilang', n: curPre ? '—' : String(selKeys.length), on: curPre ? 'false' : 'true', pick: () => { if (curPre) setSel({}); this.focusSoon('[data-q]'); } }]);
+    const auds = Object.keys(AUD).map(k => ({ k, t: AUD[k][0] + ' · ' + AUD[k][1].length, on: s.aud === k ? 'true' : 'false', pick: () => { if (s.aud === k) return; this.setState({ aud: k, sel: {}, f: 'all', q: '', pv: 0, showWhy: false }); if (selKeys.length) toast('Auditoriya almashtirildi — tanlov tozalandi'); } }));
+    const gKeys = s.aud === 'lidlar' ? Object.keys(STAGES).filter(k => list.some(r => r.grp === k)) : list.map(r => r.grp).filter((g, i, a) => a.indexOf(g) === i).sort();
+    const fOpts = [{ v: 'all', t: s.aud === 'lidlar' ? 'Barcha bosqichlar' : 'Barcha guruhlar' }].concat(gKeys.map(k => ({ v: k, t: (s.aud === 'lidlar' ? STAGES[k] : k) + ' · ' + list.filter(r => r.grp === k).length }))).map(o => Object.assign(o, { sel: s.f === o.v }));
+    // ---- hisob ----
+    const segs = selR.map(r => segOf(fill(s.text, r)));
+    const mx = segs.length ? Math.max.apply(null, segs) : segOf(fill(s.text, { name: 'Abdulloh Karimov', t: 'dk' })), mn = segs.length ? Math.min.apply(null, segs) : mx;
+    const total = segs.reduce((a, b) => a + b, 0);
+    const uniTpl = isUni(s.text), hasCyr = /[Ѐ-ӿ]/.test(s.text);
+    const lens = selR.map(r => fill(s.text, r).length);
+    const low = !loading && !balUnk && total > s.bal;
+    const miss = needLink ? selR.filter(r => noLink(r) && okPhone(r.phone)) : [];
+    const badSel = selR.filter(r => !okPhone(r.phone));
+    const doneSel = selR.filter(r => s.done[r.phone + '|' + s.text]);
+    const textEmpty = !s.text.trim();
+    const MAX = 500; // server/routes/sms.js MAX_RECIPIENTS_PER_REQUEST
+    const why = textEmpty ? 'Xabar matnini kiriting' : !selR.length ? 'Kamida bitta qabul qiluvchi tanlang' : selR.length > MAX ? 'Bir martada eng koʻpi bilan ' + MAX + ' ta qabul qiluvchi tanlanishi mumkin' : s.timeout ? 'Avval tarixni yangilang — SMSlar yuborilgan boʻlishi mumkin' : selR.length === doneSel.length ? 'Tanlanganlarning hammasiga bu matn allaqachon yuborilgan' : '';
+    const m = { len: String(s.text.length), lenS: lens.length ? 'ismlar bilan ' + Math.min.apply(null, lens) + (Math.max.apply(null, lens) !== Math.min.apply(null, lens) ? '–' + Math.max.apply(null, lens) : '') : 'shablon uzunligi',
+      seg: (mn !== mx ? mn + '–' + mx : String(mx)) + ' SMS', segS: (uniTpl ? 70 : 160) + ' belgi = 1 SMS', tot: String(total) + ' SMS', totS: selR.length ? selR.length + ' kishi · balans ' + (balUnk ? 'nomaʼlum' : loading ? '…' : sum(s.bal)) : 'hali hech kim tanlanmagan', totC: 'sn-m' + (low ? ' sn-mbad' : '') };
+    // ---- yuborish ----
+    const send = () => {
+      if (busy) return;
+      if (why) { this.setState({ showWhy: true, tErr: textEmpty }); if (textEmpty) this.focusSoon('#snText'); return; }
+      this.setState({ cf: true }); this.focusSoon('[data-cf] [data-yes]');
+    };
+    const doSend = () => {
+      const text = s.text, rec = selR.filter(r => !s.done[r.phone + '|' + s.text]), aud = s.aud;
+      this.setState({ cf: false, phase: 'sending', res: null });
+      setTimeout(() => {
+        const mk = r => { const bad = !okPhone(r.phone), prov = r.name === 'Kamron Aliyev', msg = fill(text, r);
+          return { key: r.key, kind: r.kind, name: r.name, phone: r.phone, msg, status: bad || prov ? 'error' : 'sent', error: bad ? 'Notoʻgʻri telefon raqami: ' + r.phone : prov ? 'Eskiz xatosi (HTTP 400)' : '', seg: segOf(msg) }; };
+        if (this.state.demo === 'timeout') {
+          // Brauzer kutishni toʻxtatdi, server esa navbatni davom ettirdi: tarixda keyin koʻrinadi.
+          this.setState({ phase: '', timeout: { rows: rec.map(mk), text } });
+          return;
+        }
+        const res = rec.map(mk);
+        const sent = res.filter(x => x.status === 'sent');
+        const h = res.map((x, i) => ({ id: 'n' + Date.now() + i, name: x.name, phone: x.phone, msg: x.msg, status: x.status, error: x.error, at: '02.11.2026, 01:44', by: 'Islom Mominov' }));
+        const dn = Object.assign({}, this.state.done); sent.forEach(x => { dn[x.phone + '|' + text] = true; });
+        this.setState({ phase: 'done', res: { rows: res, aud }, lastText: text, text: '', sel: {}, done: dn, hist: h.concat(this.state.hist), bal: this.state.bal - sent.reduce((a, x) => a + x.seg, 0), hf: 'all', hN: 8, pv: 0 });
+      }, 1600);
+    };
+    const refreshHist = () => {
+      const T = s.timeout; if (!T) return;
+      // Server timeoutdan keyin ham yuborishni davom ettirgan: oxirgi 2 tasi hali navbatda — tarixda yoʻq.
+      const got = T.rows.slice(0, Math.max(0, T.rows.length - 2));
+      const h = got.map((x, i) => ({ id: 't' + i, name: x.name, phone: x.phone, msg: x.msg, status: x.status, error: x.error, at: '02.11.2026, 01:45', by: 'Islom Mominov' }));
+      const dn = Object.assign({}, s.done); got.filter(x => x.status === 'sent').forEach(x => { dn[x.phone + '|' + T.text] = true; });
+      const o = {}; selKeys.forEach(k => { const r = byKey(k); if (r && !dn[r.phone + '|' + T.text]) o[k] = true; });
+      const nSent = got.filter(x => x.status === 'sent').length;
+      this.setState({ timeout: null, hist: h.concat(s.hist), done: dn, sel: o, hf: 'all', hN: 8, bal: s.bal - got.filter(x => x.status === 'sent').reduce((a, x) => a + x.seg, 0) });
+      toast('Tarix yangilandi: ' + nSent + ' ta raqamga allaqachon yuborilgan — tanlovdan olindi. Qolgan ' + Object.keys(o).length + ' tasiga qayta yuborish mumkin.');
+    };
+    // ---- koʻrinish ----
+    const pvList = selR.length ? selR : fl.slice(0, 1);
+    const pi = Math.min(s.pv, Math.max(0, pvList.length - 1)), pr = pvList[pi];
+    const pv = pr ? { has: true, none: false, who: (selR.length ? (pi + 1) + ' / ' + selR.length + ' · ' : 'Namuna · ') + pr.name, phone: pr.phone, parts: s.text ? parts(s.text, pr) : [{ t: 'Matn yozilmagan', c: 'sn-hole' }],
+      meta: (() => { const f = fill(s.text, pr); return f.length + ' belgi · ' + segOf(f) + ' SMS' + (isUni(f) ? ' · 70 belgilik (ʻ/kirill)' : ' · 160 belgilik'); })(),
+      noPrev: pi <= 0, noNext: pi >= pvList.length - 1, prev: () => this.setState({ pv: pi - 1 }), next: () => this.setState({ pv: pi + 1 }) } : { has: false, none: true };
+    // ---- natija ----
+    const R = s.res;
+    const res = R ? (() => { const f = R.rows.filter(x => x.status !== 'sent'); return { sent: String(R.rows.length - f.length), failed: String(f.length), hasFail: f.length > 0,
+      rows: f.concat(R.rows.filter(x => x.status === 'sent')).map(x => ({ name: x.name, i: x.status === 'sent' ? '✓' : '✕', ic: x.status === 'sent' ? 'sn-ok' : 'sn-no', d: x.status === 'sent' ? x.phone + ' · yuborildi · ' + x.seg + ' SMS' : x.phone + ' · ' + x.error,
+        fail: x.status !== 'sent', openT: x.kind === 'lead' ? 'Lidni ochish' : 'Oʻquvchini ochish', open: () => toast((x.kind === 'lead' ? 'Lid kartasi' : 'Oʻquvchi kartasi') + ' ochiladi — ' + x.name + ' raqamini tekshiring') })),
+      retry: () => { const o = {}; f.forEach(x => { o[x.key] = true; }); this.setState({ phase: '', aud: R.aud, f: 'all', q: '', sel: o, text: s.lastText, pv: 0 }); toast(f.length + ' ta xato qabul qiluvchi qayta tanlandi — raqamini tuzatib yuboring'); },
+      close: () => { this.setState({ phase: '', res: null }); this.focusSoon('#snText'); } }; })() : {};
+    // ---- tarix ----
+    const hAll = s.hist, hF = hAll.filter(h => s.hf === 'all' || (s.hf === 'sent' ? h.status === 'sent' : h.status !== 'sent'));
+    const hist = hF.slice(0, s.hN).map(h => ({ name: h.name || '—', phone: h.phone || '—', msg: h.msg, st: h.status === 'sent' ? 'Yuborildi' : 'Xato', sc: 'sn-st ' + (h.status === 'sent' ? 'sn-sok' : 'sn-sbad'), err: h.error, errT: h.status === 'sent' ? '—' : (h.error || 'Sabab qaytmadi'), errSt: h.status === 'sent' ? 'color:#64748B' : 'color:#B42318;font-weight:700', at: h.at, by: h.by === 'Islom Mominov' ? 'Siz' : h.by }));
+    const nav = mkNav(79, false).map(n => Object.assign({}, n, { cur: n.k === 'sms' ? 'page' : 'false', pickBadge: () => {}, pick: () => { if (n.k === 'sms' || !n.item) return; toast(n.label + ' sahifasi ochiladi'); } }));
+    const dlgKey = close => e => { if (e.key === 'Escape') { e.preventDefault(); close(); return; } if (e.key === 'Tab') { const bs = Array.prototype.slice.call(e.currentTarget.querySelectorAll('button')); const ix = bs.indexOf(document.activeElement); e.preventDefault(); (e.shiftKey ? (bs[ix - 1] || bs[bs.length - 1]) : (bs[ix + 1] || bs[0])).focus(); } };
+    const pv0 = selR[0];
+    const sendN = selR.length - doneSel.length;
+    return {
+      nav, sbCls: s.sb ? 'sb' : 'sb sb-min', sbExp: s.sb ? 'true' : 'false', sbLab: s.sb ? 'Menyuni yigʻish' : 'Menyuni ochish', sbIcon: s.sb ? 'M15 6l-6 6 6 6' : 'M9 6l6 6-6 6', toggleSb: () => this.setState({ sb: !s.sb }),
+      demo: [['ok', 'Oddiy'], ['load', 'Yuklanmoqda'], ['hErr', 'Tarix xatosi'], ['balUnk', 'Balans ?'], ['low', 'Balans kam'], ['timeout', 'Javob kelmadi'], ['hEmpty', 'Tarix boʻsh']].map(d => ({ t: d[1], on: s.demo === d[0] ? 'true' : 'false', pick: () => { clearTimeout(this._t); this.setState(this.fresh(d[0])); } })),
+      ready: true,
+      sub: 'Eskiz.uz orqali · Rus tili lidlari va oʻquvchilari · telefoni yoʻqlar roʻyxatga kirmaydi',
+      balT: loading ? 'Balans: …' : balUnk ? 'Balans aniqlanmadi' : 'Balans: ' + sum(s.bal) + ' SMS', balCls: 'sn-bal' + (loading || balUnk ? ' sn-bunk' : s.bal < 100 ? ' sn-blow' : ''),
+      balNote: balUnk, presets, auds, q: s.q, qIn: e => this.setState({ q: e.target.value }), hasQ: !!s.q, clearQ: () => this.setState({ q: '' }),
+      fLab: s.aud === 'lidlar' ? 'Bosqich' : 'Guruh', fOpts, fIn: e => this.setState({ f: e.target.value }),
+      allOn, allPick: e => { const o = Object.assign({}, s.sel); okFl.forEach(r => { if (e.target.checked) o[r.key] = true; else delete o[r.key]; }); setSel(o); }, fCount: String(okFl.length),
+      anySel: selKeys.length > 0, clearSel: () => setSel({}), rows, noRows: fl.length === 0,
+      selNote: 'Auditoriya almashtirilsa tanlov tozalanadi. “Notoʻgʻri raqam”lar avtomatik tanlanmaydi (server 998XXXXXXXXX ni talab qiladi). Bir yuborishda eng koʻpi 500 kishi.',
+      text: s.text, textIn: e => this.setState({ text: e.target.value, tErr: false, showWhy: false }), taCls: 'sn-ta' + (s.tErr && textEmpty ? ' sn-bad' : ''), taInv: s.tErr && textEmpty ? 'true' : 'false', textErr: s.tErr && textEmpty,
+      chips: [['{ism}', 'Qabul qiluvchining ismi'], ['{ustoz}', 'Sinov darsi ustozining ismi'], ['{sinov_guruh}', 'Sinov darsi Telegram guruhi havolasi']].map(c => ({ k: c[0], l: c[1], aria: c[0] + ' qoʻshish — ' + c[1],
+        add: () => { const ta = document.getElementById('snText'); const v = s.text; const a = ta && ta.selectionStart != null && document.activeElement === ta ? ta.selectionStart : v.length, b = ta && document.activeElement === ta ? ta.selectionEnd : v.length; this.setState({ text: v.slice(0, a) + c[0] + v.slice(b), tErr: false, showWhy: false }); setTimeout(() => { const t = document.getElementById('snText'); if (t) { t.focus(); t.selectionStart = t.selectionEnd = a + c[0].length; } }, 30); } })),
+      m, uni: uniTpl && !textEmpty, uniT: hasCyr ? 'Matn kirillda — bitta SMS 70 belgi. Lotin harflarida 160 belgi boʻlardi.' : 'Matnda ʻ yoki “—” kabi belgi bor — bitta SMS 70 belgi. Faqat oddiy lotin harflari boʻlsa 160 belgi.', canAscii: uniTpl && !hasCyr,
+      toAscii: () => { this.setState({ text: s.text.replace(/[ʻʼ‘’`]/g, "'").replace(/[—–]/g, '-').replace(/[«»“”]/g, '"') }); toast('Belgilar almashtirildi — endi 160 belgilik SMS (ismda ʻ boʻlsa, oʻsha kishiga 70 qoladi)'); },
+      miss: miss.length > 0, missT: miss.length + ' ta qabul qiluvchining sinov darsi guruhi aniqlanmadi', missD: ' (' + miss.slice(0, 5).map(r => r.name).join(', ') + (miss.length > 5 ? ' va boshqalar' : '') + '). Ularga ustoz biriktirilmagan yoki ustozning guruh havolasi kiritilmagan — havolasiz SMS ketadi.',
+      bad: badSel.length > 0, badT: badSel.length + ' ta raqam notoʻgʻri — server rad etadi', badD: ' (' + badSel.map(r => r.name + ' ' + r.phone).join(', ') + '). Tanlovdan oling yoki kartasida raqamni tuzating.',
+      low, lowT: 'Balans yetmasligi mumkin: kerak ~' + total + ' SMS, hisobda ' + sum(s.bal), lowD: ' Eskiz “get-limit” qiymatining birligi (SMS yoki soʻm) tekshirilmagan — shuning uchun yuborish toʻsilmaydi. Yetmasa, qolganlari “Xato” boʻladi.',
+      tmo: !!s.timeout && !busy, tmoT: s.timeout ? s.timeout.rows.length : 0, refreshHist,
+      dupe: doneSel.length > 0 && !s.timeout, dupeT: doneSel.length + ' ta raqamga bu matn allaqachon yuborilgan (tarix) — qayta yuborilmaydi.',
+      selCount: selR.length + ' ta qabul qiluvchi tanlangan', send, sendDis: why || busy ? 'true' : 'false', sendT: busy ? 'Yuborilmoqda...' : !selR.length ? 'Yuborish' : low ? 'Baribir yuborish (' + sendN + ')' : sendN + ' kishiga yuborish', why: s.showWhy || s.timeout || selR.length > MAX || (selR.length && selR.length === doneSel.length) ? why : '',
+      showPv: !s.phase, sending: busy, done: s.phase === 'done', sendingT: sendN + ' ta raqamga · taxminan ' + Math.round(1.5 * Math.max(1, sendN)) + ' soniya', pv, res,
+      hfs: [['all', 'Hammasi · ' + hAll.length], ['sent', 'Yuborildi · ' + hAll.filter(h => h.status === 'sent').length], ['err', 'Xato · ' + hAll.filter(h => h.status !== 'sent').length]].map(f => ({ t: f[1], on: s.hf === f[0] ? 'true' : 'false', pick: () => this.setState({ hf: f[0], hN: 8 }) })),
+      hLoad: loading, hErr: histErr, hRetry: () => this.setState({ hRetried: true }), hOk: !loading && !histErr,
+      hHas: hF.length > 0, hist, hMore: hF.length > s.hN, hLeft: String(hF.length - s.hN), hMoreOn: () => this.setState({ hN: s.hN + 20 }), hEmpty: hF.length === 0, hEmptyT: hAll.length ? 'Bu holatda SMS yoʻq' : 'Hali SMS yuborilmagan',
+      cf: s.cf && !!pv0, cfKey: dlgKey(() => this.setState({ cf: false })),
+      cfV: pv0 ? { q: sendN + ' ta qabul qiluvchiga SMS yuborilsinmi?', aud: curPre ? AUD.lidlar[0] + ' · ' + curPre.t : AUD[s.aud][0], seg: m.seg + (uniTpl ? ' (70 belgilik)' : ' (160 belgilik)'), tot: total + ' SMS', left: balUnk ? 'nomaʼlum (balans aniqlanmadi)' : low ? 'yetmasligi mumkin (' + sum(s.bal) + ')' : sum(s.bal - total) + ' SMS',
+        pvWho: 'Masalan, ' + pv0.name + ' oladi:', pv: fill(s.text, pv0), miss: miss.length > 0, missT: miss.length + ' ta qabul qiluvchining sinov darsi guruhi aniqlanmadi (' + miss.slice(0, 5).map(r => r.name).join(', ') + ').',
+        bad: badSel.length > 0, badT: badSel.length + ' ta notoʻgʻri raqam: ' + badSel.map(r => r.name + ' ' + r.phone).join(', ') + ' — server “Xato” qaytaradi.', dupe: doneSel.length > 0, dupeT: doneSel.length + ' ta raqam tarixda “Yuborildi” — chiqarib tashlandi.',
+        no: () => { this.setState({ cf: false }); this.focusSoon('[data-send]'); }, yes: doSend, yesT: (low ? 'Ha, baribir yuborish (' : 'Ha, ') + sendN + (low ? ')' : ' kishiga yuborish') } : {},
+      toast: !!s.toast, toastT: s.toast || ''
+    };
+  }
+}

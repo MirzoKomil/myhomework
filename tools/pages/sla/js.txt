@@ -1,0 +1,128 @@
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    // Demo soat: Dushanba 02.11.2026 01:43. T — bosqichda (sinovda: sinov vaqtidan) turgan daqiqalar.
+    const L = (id, name, st, m, T, phone) => ({ id, name, st, m, T, phone });
+    this.L0 = [
+      L('shohruh', 'Shohruh Ergashev', 'yangi-lidlar', '', 1670, '+998 90 412 18 07'),
+      L('malika', 'Malika Tursunova', 'boglanishga-urinilmoqda', 'HB', 3180, '+998 93 220 45 61'),
+      L('rustam', 'Rustam Qodirov', 'qaror-jarayonida', 'KS', 4380, '+998 97 718 02 33'),
+      L('nigora', 'Nigora Aliyeva', 'boglanildi', 'RU', 2520, '+998 91 505 77 19'),
+      L('javlon', 'Javlon Mirzayev', 'tolov-jarayonida', 'GM', 2910, '+998 99 341 60 08'),
+      L('dilfuza', 'Dilfuza Rahimova', 'sinov-darsida', 'KS', 2020, '+998 90 118 94 52'),
+      L('aziz', 'Aziz Hamidov', 'yangi-lidlar', '', 1230, '+998 94 660 13 70'),
+      L('sevara', 'Sevara Nazarova', 'boglanildi', 'GM', 1460, '+998 93 774 25 16'),
+      L('bobur', 'Bobur Sattorov', 'boglanishga-urinilmoqda', 'HB', 2820, '+998 97 402 81 49'),
+      L('kamron', 'Kamron Yusupov', 'yangi-lidlar', 'KS', 75, '+998 90 255 36 84'),
+      L('mohinur', 'Mohinur Saidova', 'yangi-lidlar', 'RU', 330, '+998 91 830 47 21'),
+      L('ilyos', 'Ilyos Karimov', 'boglanishga-urinilmoqda', 'GM', 2040, '+998 99 612 09 35'),
+      L('zarina', 'Zarina Holmatova', 'boglanildi', 'KS', 560, '+998 94 377 58 02'),
+      L('sherzod', 'Sherzod Usmonov', 'boglanildi', 'HB', 1260, '+998 93 145 62 90'),
+      L('lobar', 'Lobar Rasulova', 'sinov-darsida', 'RU', 1220, '+998 97 590 14 63'),
+      L('behruz', 'Behruz Abdullayev', 'qaror-jarayonida', 'GM', 3680, '+998 90 808 31 27'),
+      L('dildora', 'Dildora Yoqubova', 'qaror-jarayonida', 'HB', 3000, '+998 91 463 70 58'),
+      L('farrux', 'Farrux Tojiyev', 'tolov-jarayonida', 'RU', 1840, '+998 99 237 85 14'),
+      L('gulnora', 'Gulnora Ismoilova', 'tolov-jarayonida', 'KS', 2440, '+998 94 921 06 38')
+    ];
+    this.state = { sb: true, demo: 'ok', retried: false, leads: this.L0.map(x => Object.assign({}, x)), ack: {}, fm: 'all', fs: 'all', toast: null, open: '', asg: '', busy: '' };
+    this._t = null;
+    document.addEventListener('keydown', e => { if (e.key !== 'Escape') return; const st = this.state; if (st.asg) this.setState({ asg: '' }); else if (st.open) this.setState({ open: '' }); });
+  }
+  focusSoon(sel) { setTimeout(() => { const el = document.querySelector(sel); if (el && el.focus) el.focus(); }, 30); }
+  renderVals() {
+    const s = this.state;
+__NAVJS__
+__MKNAV__
+    // ---- production: LEAD_SLA_RULES (app.js ~19238), ropApp.js screenSla (~485) ----
+    const RULES = {
+      'yangi-lidlar': [30, 'Yangi lid', 'Yangi', '⚠️ Eskalatsiya: Yangi lid 30 daqiqadan beri koʻrib chiqilmadi! Menejer: {manager}.'],
+      'boglanishga-urinilmoqda': [1440, 'Urinilmoqda', 'Urinilmoqda', '⚠️ Lid muzlayapti: {name} bilan 24 soat ichida bogʻlanib boʻlinmadi. Menejer lidni yoʻqotyapti.'],
+      'boglanildi': [360, 'Bogʻlanildi', 'Bogʻlanildi', '⚠️ Harakat yoʻq: “Bogʻlanildi” etapida lid 6 soatdan beri turibdi, keyingi qadam belgilanmadi.'],
+      'sinov-darsida': [720, 'Sinovdan keyin', 'Sinovda', '⚠️ Issiq lid yoʻqotilmoqda: Sinov darsi oʻtdi, lekin menejer toʻlov boʻyicha feedback olmadi.'],
+      'qaror-jarayonida': [2880, 'Qaror', 'Qaror', '⚠️ Xavfli zona: Mijoz 2 kundan beri qaror qabul qilmayapti. ROP aralashuvi yoki menejerni almashtirish tavsiya etiladi.'],
+      'tolov-jarayonida': [1440, 'Toʻlov', 'Toʻlovda', '⚠️ Toʻlov ushlanmoqda: Lid toʻlov bosqichida 24 soatdan ortiq qolib ketdi!']
+    };
+    const MG = { GM: ['Gulchehra Mamadaliyeva', '#0E7490', '@gulchehra_m'], HB: ['Hamidaxon Boymirzayeva', '#C2410C', ''], KS: ['Kamola Shahobiddinova', '#5B21B6', '@kamola_sh'], RU: ['Robiya Usmonova', '#166534', '@robiya_u'] };
+    const first = n => String(n || '').split(' ')[0];
+    const ini = n => String(n || '').split(' ').map(x => x[0]).join('').slice(0, 2).toUpperCase();
+    const ruleTxt = m => (m >= 60 ? Math.round(m / 60) + ' soat' : m + ' daq');
+    const dur = ms => { ms = Math.abs(ms); const h = Math.floor(ms / 60); if (h >= 48) return Math.floor(h / 24) + ' kun'; if (h >= 1) { const m = ms % 60; return h + ' soat' + (m ? ' ' + m + ' daq' : ''); } return Math.max(1, Math.round(ms)) + ' daq'; };
+    const durLong = ms => { ms = Math.abs(ms); const d = Math.floor(ms / 1440), h = Math.floor((ms % 1440) / 60); if (d) return d + ' kun' + (h ? ' ' + h + ' soat' : ''); if (h) return h + ' soat'; return Math.max(1, Math.round(ms)) + ' daq'; };
+    const NOWM = 1 * 1440 + 103; // 02.11 01:43 (01.11 00:00 dan)
+    const clock = m => { const d = Math.floor(m / 1440), mm = m - d * 1440; const t = String(Math.floor(mm / 60)).padStart(2, '0') + ':' + String(mm % 60).padStart(2, '0'); return (d === 1 ? 'bugun ' : d === 0 ? 'kecha ' : d === 2 ? 'ertaga ' : d < 0 ? (32 + d) + '-okt ' : (d + 1) + '-noy ') + t; };
+    const toast = (t, undo) => { this.setState({ toast: { t, undo: undo || null } }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: null }), undo ? 6000 : 3500); };
+    const loading = s.demo === 'load', loadErr = s.demo === 'err' && !s.retried;
+    const src = s.demo === 'empty' ? [] : s.leads.filter(x => !s.ack[x.id]);
+    const items = src.map(x => { const r = RULES[x.st], E = x.T - r[0], left = 1440 - E; return Object.assign({}, x, { r, E, left, grp: left <= 0 ? 'gone' : left < 360 ? 'soon' : 'rest' }); }).sort((a, b) => a.left - b.left);
+    const openN = items.length;
+    const nav = mkNav(79, false).map(n => Object.assign({}, n, n.k === 'sla' ? { badge: loading ? '…' : openN ? String(openN) : '', aria: openN + ' ta SLA harakat kerak' } : {}, { cur: n.k === 'sla' ? 'page' : 'false', pickBadge: () => this.setState({ fm: 'all', fs: 'all' }), pick: () => { if (n.k === 'sla' || !n.item) return; toast(n.label + ' sahifasi ochiladi'); } }));
+    const fItems = items.filter(x => (s.fm === 'all' || (s.fm === 'none' ? !x.m : x.m === s.fm)) && (s.fs === 'all' || x.st === s.fs));
+    const filtered = s.fm !== 'all' || s.fs !== 'all';
+    const gone = items.filter(x => x.grp === 'gone').length, soon = items.filter(x => x.grp === 'soon').length;
+    const ack = x => {
+      if (s.busy) return;
+      this.setState({ busy: x.id });
+      setTimeout(() => {
+        if (this.state.demo === 'saveErr') { this.setState({ busy: '' }); toast('Saqlab boʻlmadi — “Koʻrildi” belgilanmadi, qayta bosing'); return; }
+        const a = Object.assign({}, this.state.ack); a[x.id] = true;
+        this.setState({ busy: '', ack: a, open: this.state.open === x.id ? '' : this.state.open });
+        toast(x.name + ' — koʻrildi, ' + (x.grp === 'gone' ? 'admindagi ogohlantirish yopildi' : 'adminga oʻtmaydi'), () => { const b = Object.assign({}, this.state.ack); delete b[x.id]; this.setState({ ack: b, toast: null }); });
+      }, 450);
+    };
+    const tgWrite = x => toast('Telegram’da ' + first(MG[x.m][0]) + ' bilan chat ochiladi · ' + MG[x.m][2]);
+    const card = x => {
+      const m = x.m ? MG[x.m] : null, since = x.T;
+      const msg = x.r[3].replace('{name}', x.name).replace('{manager}', m ? m[0] : 'biriktirilmagan menejer');
+      const pctE = Math.max(0, Math.min(100, Math.round(x.E / 1440 * 100)));
+      return {
+        id: x.id, name: x.name, ini: m ? ini(m[0]) : '—', avSt: m ? 'background:' + m[1] + ';color:#FFFFFF' : 'background:#EEF2F6;color:#64748B;border:1px dashed #94A3B8',
+        sub: (m ? first(m[0]) : 'Menejersiz') + ' · ' + x.r[2], subC: m ? 'sl-sub' : 'sl-sub sl-subw',
+        rule: 'Qoida: ' + ruleTxt(x.r[0]) + (x.st === 'sinov-darsida' ? ' sinovdan keyin' : ''), stay: 'Turibdi: ' + durLong(since), msg,
+        lt: x.left > 0 ? dur(x.left) + ' qoldi' : 'adminga ketdi', ltc: 'sl-pill ' + (x.left <= 0 ? 'sl-pbad' : x.left < 360 ? 'sl-pbad' : 'sl-pamb'),
+        ltd: x.left > 0 ? 'Adminga ' + clock(NOWM + x.left) + ' da oʻtadi' : 'Adminga ' + clock(NOWM + x.left) + ' da oʻtdi · ' + dur(-x.left) + ' oldin',
+        bar: 'width:' + pctE + '%;background:' + (x.left < 360 ? '#D92D20' : '#F79009'), barL: '24 soatlik muddatning ' + pctE + '% oʻtdi',
+        cls: 'sl-row' + (x.grp === 'gone' ? ' sl-gone' : x.grp === 'soon' ? ' sl-hot' : ''),
+        tg: !!(m && m[2]), tgT: m ? first(m[0]) + 'ga yozish' : '', tgOn: () => tgWrite(x), noTg: !!(m && !m[2]), noTgT: m ? first(m[0]) + ' Telegram’ni ulamagan' : '',
+        canAck: !!m, ackT: s.busy === x.id ? 'Saqlanmoqda…' : 'Koʻrildi', ackBusy: s.busy === x.id ? 'true' : 'false', ackOn: () => ack(x), ackLab: x.name + ' — koʻrildi deb belgilash',
+        needAsg: !m, asgOn: () => { this.setState({ asg: x.id }); this.focusSoon('[data-asg] [role=radio]'); },
+        openOn: () => { this.setState({ open: x.id }); this.focusSoon('.sl-drw .sl-x'); }, openLab: x.name + ' — lidni ochish'
+      };
+    };
+    const GR = [['gone', 'ADMINGA OʻTGAN', '24 soatda “Koʻrildi” bosilmadi — admin xabar oldi', 'sl-gh sl-ghr'], ['soon', 'ADMINGA OʻTISHIGA OZ QOLDI', '6 soatdan kam qoldi', 'sl-gh sl-ghr'], ['rest', 'BOSHQALAR', 'adminga 6 soatdan koʻp', 'sl-gh']]
+      .map(g => { const l = fItems.filter(x => x.grp === g[0]); return { k: g[0], t: g[1] + ' · ' + l.length, d: g[2], c: g[3], rows: l.map(card), has: l.length > 0 }; }).filter(g => g.has);
+    // ---- filtrlar ----
+    const mCount = k => items.filter(x => (k === 'none' ? !x.m : x.m === k)).length;
+    const mf = [['all', 'Hammasi', items.length]].concat(Object.keys(MG).map(k => [k, first(MG[k][0]), mCount(k)]), [['none', 'Menejersiz', mCount('none')]]).filter(f => f[0] === 'all' || f[2] > 0 || s.fm === f[0])
+      .map(f => ({ t: f[1], n: String(f[2]), on: s.fm === f[0] ? 'true' : 'false', pick: () => this.setState({ fm: f[0] }) }));
+    const stOpts = [{ v: 'all', t: 'Barcha bosqichlar' }].concat(Object.keys(RULES).map(k => ({ v: k, t: RULES[k][1] + ' · ' + items.filter(x => x.st === k).length }))).map(o => Object.assign(o, { sel: s.fs === o.v }));
+    // ---- menejerlar boʻyicha ----
+    const mrows = Object.keys(MG).concat(['none']).map(k => { const l = items.filter(x => (k === 'none' ? !x.m : x.m === k)); const g = l.filter(x => x.grp === 'gone').length; return { k, n: k === 'none' ? 'Menejersiz' : MG[k][0], ini: k === 'none' ? '—' : ini(MG[k][0]), avSt: k === 'none' ? 'background:#EEF2F6;color:#64748B;border:1px dashed #94A3B8' : 'background:' + MG[k][1] + ';color:#FFFFFF', c: String(l.length), g: String(g), gc: g ? 'sl-pill sl-pbad' : 'sl-zero', cnt: l.length, on: s.fm === k ? 'true' : 'false', pick: () => this.setState({ fm: s.fm === k ? 'all' : k }), lab: (k === 'none' ? 'Menejersiz' : MG[k][0]) + ': ' + l.length + ' ta ochiq, ' + g + ' tasi adminga oʻtgan — filtrlash' }; }).filter(r => r.cnt > 0).sort((a, b) => b.cnt - a.cnt);
+    const rules = Object.keys(RULES).map(k => ({ t: RULES[k][1], v: ruleTxt(RULES[k][0]), d: k === 'sinov-darsida' ? 'sinov darsi vaqtidan' : 'bosqichga kirgandan' }));
+    // ---- lid drawer (openLeadNotifyModal oʻrniga) ----
+    const ox = s.open ? items.find(x => x.id === s.open) : null;
+    const od = ox ? (() => { const c = card(ox), m = ox.m ? MG[ox.m] : null; return Object.assign(c, { phone: ox.phone, stage: RULES[ox.st][1] === 'Sinovdan keyin' ? 'Sinov darsida' : ox.r[2] === 'Toʻlovda' ? 'Toʻlov jarayonida' : ox.r[2] === 'Qaror' ? 'Qaror jarayonida' : ox.r[2] === 'Urinilmoqda' ? 'Bogʻlanishga urinilmoqda' : ox.r[2] === 'Yangi' ? 'Yangi lidlar' : ox.r[2], mgr: m ? m[0] : 'Biriktirilmagan', stayR: durLong(ox.T) + (ox.st === 'sinov-darsida' ? ' (sinov darsidan beri)' : ' (shu bosqichda)'), esc: clock(NOWM - ox.E), close: () => this.setState({ open: '' }), full: () => toast(ox.name + ' — toʻliq lid kartasi (Lidlar) ochiladi') }); })() : null;
+    // ---- biriktirish ----
+    const ax = s.asg ? items.find(x => x.id === s.asg) : null;
+    const load = { GM: 34, HB: 41, KS: 38, RU: 29 };
+    const av = ax ? Object.keys(MG).map(k => ({ k, n: MG[k][0], ini: ini(MG[k][0]), avSt: 'background:' + MG[k][1] + ';color:#FFFFFF', mt: load[k] + ' ta ochiq lid · ' + mCount(k) + ' ta SLA', chk: (s.asgPick || 'RU') === k ? 'true' : 'false', cls: 'sl-opt' + ((s.asgPick || 'RU') === k ? ' sl-on' : ''), best: k === 'RU', pick: () => this.setState({ asgPick: k }) })) : [];
+    const asgV = ax ? { q: ax.name + ' — kimga biriktirasiz?', list: av, no: () => this.setState({ asg: '', asgPick: '' }),
+      yes: () => { const k = s.asgPick || 'RU'; if (s.demo === 'saveErr') { toast('Saqlab boʻlmadi — lid biriktirilmadi'); return; } this.setState({ asg: '', asgPick: '', leads: s.leads.map(l => l.id === ax.id ? Object.assign({}, l, { m: k }) : l) }); toast(ax.name + ' → ' + first(MG[k][0]) + ' · lid menejerga berildi, SLA endi uning nomida'); },
+      yesT: first(MG[s.asgPick || 'RU'][0]) + 'ga biriktirish' } : null;
+    const dlgKey = close => e => { if (e.key === 'Escape') { e.preventDefault(); close(); return; } if (e.key === 'Tab') { const bs = Array.prototype.slice.call(e.currentTarget.querySelectorAll('button')); const ix = bs.indexOf(document.activeElement); e.preventDefault(); (e.shiftKey ? (bs[ix - 1] || bs[bs.length - 1]) : (bs[ix + 1] || bs[0])).focus(); } };
+    return {
+      nav, sbCls: s.sb ? 'sb' : 'sb sb-min', sbExp: s.sb ? 'true' : 'false', sbLab: s.sb ? 'Menyuni yigʻish' : 'Menyuni ochish', sbIcon: s.sb ? 'M15 6l-6 6 6 6' : 'M9 6l6 6-6 6', toggleSb: () => this.setState({ sb: !s.sb }),
+      demo: [['ok', 'Oddiy'], ['load', 'Yuklanmoqda'], ['err', 'Xato'], ['empty', 'Boʻsh'], ['saveErr', 'Saqlash xatosi']].map(d => ({ t: d[1], on: s.demo === d[0] ? 'true' : 'false', pick: () => this.setState({ demo: d[0], retried: false, ack: {}, leads: this.L0.map(x => Object.assign({}, x)), fm: 'all', fs: 'all', toast: null, open: '', asg: '' }) })),
+      loading, loadErr, ready: !loading && !loadErr, retry: () => this.setState({ retried: true }),
+      sub: loading ? 'Yuklanmoqda…' : loadErr ? 'Maʼlumot yuklanmadi' : (openN ? openN + ' ta ochiq' : 'Ochiq eskalatsiya yoʻq') + ' · “Koʻrildi” bosilmasa 24 soatda adminga oʻtadi',
+      kpi: [{ l: 'Ochiq', v: String(openN), s: 'Rus tili · 4 menejer', c: 'sl-kpi' }, { l: 'Adminga oʻtgan', v: String(gone), s: gone ? '24 soatdan oshdi' : 'yoʻq', c: 'sl-kpi' + (gone ? ' sl-kbad' : '') }, { l: 'Oz qoldi', v: String(soon), s: '6 soatdan kam', c: 'sl-kpi' + (soon ? ' sl-kwarn' : '') }, { l: 'Menejersiz', v: String(mCount('none')), s: mCount('none') ? 'avval biriktiring' : 'hammasi biriktirilgan', c: 'sl-kpi' }],
+      mf, stOpts, setStage: e => this.setState({ fs: e.target.value }), filtered, clear: () => this.setState({ fm: 'all', fs: 'all' }), shown: fItems.length + ' / ' + openN + ' ta koʻrsatilmoqda',
+      groups: GR, hasAny: openN > 0, none: openN === 0, fEmpty: openN > 0 && fItems.length === 0,
+      mrows, hasM: mrows.length > 0, rules,
+      od: od || {}, odOpen: !!od,
+      asg: !!asgV, asgV: asgV || {}, asgKey: dlgKey(() => this.setState({ asg: '' })),
+      radKey: e => { if (!['ArrowDown', 'ArrowUp'].includes(e.key)) return; e.preventDefault(); const ks = Object.keys(MG); const i = ks.indexOf(s.asgPick || 'RU'); const nx = ks[(i + (e.key === 'ArrowDown' ? 1 : ks.length - 1)) % ks.length]; this.setState({ asgPick: nx }); this.focusSoon('[data-k="' + nx + '"]'); },
+      drwKey: dlgKey(() => this.setState({ open: '' })),
+      toast: !!s.toast, toastT: s.toast ? s.toast.t : '', hasUndo: !!(s.toast && s.toast.undo), undo: () => s.toast && s.toast.undo && s.toast.undo()
+    };
+  }
+}

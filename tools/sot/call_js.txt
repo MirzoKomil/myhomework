@@ -1,0 +1,36 @@
+    // --- Qoʻngʻiroq navbati (mobil sotuvApp.js callQueue :201 + computeManagerHome app.js:8500) ---
+    const fmtDur = m => { m = Math.max(0, Math.round(m)); const h = Math.floor(m / 60), mm = m % 60; return h ? h + ' soat' + (mm ? ' ' + mm + ' daq' : '') : mm + ' daq'; };
+    const dueOf = x => { const fs = (s.fuSet || {})[x.key]; const nx = fs || ((s.fuDone || {})[x.key] ? '' : x.k.next); if (!nx) return null; const m = String(nx).match(/^(kecha|bugun) (\d{1,2}):(\d{2})$/i); if (!m) return null; const at = (m[1].toLowerCase() === 'kecha' ? -1440 : 0) + (+m[2]) * 60 + +m[3]; return { late: at < 103 ? 1 : 0, at, lab: m[2].padStart(2, '0') + ':' + m[3] }; };
+    const qAll = []; if (!loading) OPEN_ST.forEach(cid => BOARD[cid].forEach(x => { if (!x.k.gen) qAll.push({ x, cid }); }));
+    const qTasks = qAll.map(o => Object.assign({}, o, { d: dueOf(o.x) })).filter(o => o.d).sort((a, b) => (b.d.late - a.d.late) || (a.d.at - b.d.at));
+    const qSeen = {}; qTasks.forEach(o => { qSeen[o.x.key] = 1; });
+    const lastAt = key => { const c = callsOfK(key); return c.length ? -Math.min.apply(null, c.map(agoL)) : -Infinity; };
+    const qExtra = qAll.filter(o => !qSeen[o.x.key] && (o.cid === 'try' || o.cid === 'new') && o.x.k.phones.length).sort((a, b) => (lastAt(a.x.key) - lastAt(b.x.key)) || (agoOf(b.x.k.time) - agoOf(a.x.k.time)));
+    const qList = qTasks.concat(qExtra);
+    const qIdx = qList.length ? (s.qSkip || 0) % qList.length : 0; const qCur = qList[qIdx] || null;
+    const qChip0 = !qCur ? null : qCur.d ? (qCur.d.late ? ['Kechikdi · ' + qCur.d.lab, 'color:#FFFFFF;background:#D92D20'] : [qCur.d.lab + ' · ' + fmtDur(qCur.d.at - 103) + ' qoldi', 'color:#7A2E0E;background:#FEC84B']) : qCur.cid === 'try' ? [(qCur.x.k.sd || 0) + ' kun · ' + callN(qCur.x.key) + ' urinish', 'color:#E2E8F0;background:#334155'] : null;
+    const qUpL = qList.length > 1 ? qList.slice(qIdx + 1).concat(qList.slice(0, qIdx)) : [];
+    // --- Qoʻngʻiroq natijasi (mobil openCallResult :643, outcome :686) ---
+    const openCr = (key, from, extra) => { const st = logCall(key, Object.assign({ cr: { key, pick: '', note: '', chips: {}, fu: '', from: from || '' }, menu: '', sub: false }, extra || {})); this.setState(st); this.focusSoon('[data-cr] [role=radio]'); };
+    const crS = s.cr || null; const crK = crS ? crS.key : ''; const crC = crK ? cardOf(crK) : {}; const crCol = crK ? colOf(crK) : '';
+    const crBefore = crCol === 'new' || crCol === 'try'; const crLocked = crBefore && !hasSurvey(crK);
+    const setCr = p => this.setState({ cr: Object.assign({}, crS, p) });
+    const OIC = { talked: 'M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z', noanswer: 'M12 3a9 9 0 110 18 9 9 0 010-18zM5.6 5.6l12.8 12.8', later: 'M12 3a9 9 0 110 18 9 9 0 010-18zM12 7v5l3 2', trial: 'M8.5 12l2.5 2.5 4.5-5M6 4h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2z', pay: 'M2 6h20v13H2zM2 10h20', fail: 'M6 6l12 12M18 6L6 18' };
+    const OUTS = [['talked', 'Gaplashdik', crBefore ? 'anketa ochiladi' : '', '#0057B8;background:#EAF3FF'], ['noanswer', 'Javob bermadi', 'urinishlar: ' + (crK ? callN(crK) : 0), '#B42318;background:#FEF3F2'], ['later', 'Keyin oladi', 'sana soʻraladi', '#B54708;background:#FFFAEB'], ['trial', 'Sinovga yozildi', crLocked ? 'anketadan keyin' : 'vaqt tanlanadi', '#067647;background:#ECFDF3', crLocked], ['pay', 'Toʻlov qiladi', crLocked ? 'anketadan keyin' : 'toʻlov qadamlari', '#0057B8;background:#EAF3FF', crLocked], ['fail', 'Qiziqmaydi', 'sabab soʻraladi', '#3A4456;background:#F1F5F9']];
+    const CRL = { talked: crBefore ? 'Saqlash va anketaga oʻtish' : 'Saqlash', noanswer: 'Saqlash', later: 'Saqlash va sanani tanlash', trial: 'Saqlash va vaqt tanlash', pay: 'Saqlash va toʻlovga oʻtish', fail: 'Saqlash va sabab' };
+    const fuLab = v => { const d0 = v.slice(0, 10); return (d0 === '2026-11-02' ? 'bugun ' : d0 === '2026-11-03' ? 'ertaga ' : (+v.slice(8, 10)) + '-' + ['yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun', 'iyul', 'avgust', 'sentabr', 'oktabr', 'noyabr', 'dekabr'][+v.slice(5, 7) - 1] + ' ') + v.slice(11, 16); };
+    const crLater = () => { const from = crS && crS.from; const k = crK; this.setState({ cr: null }); if (k) this.focusSoon(from || back(k)); };
+    const doOut = k => {
+      if (!crS) return; if (s.demo === 'err') { setCr({ err: true }); return; }
+      const key = crK, note = (crS.note || '').trim(), fu = crS.fu || '';
+      const coms = Object.assign({}, s.coms || {}); const addC = (t, h) => { coms[key] = [{ h: 'Hozir · Kamola S.' + (h ? ' · ' + h : ''), t }].concat(coms[key] || []); };
+      // Izoh — qoʻngʻiroq haqidagi fakt: keyingi oyna bekor qilinsa ham tarixda qoladi (prod: ataylab)
+      if (note) addC(note);
+      const st = { cr: null, coms };
+      const applyFu = () => { if (!fu) return ''; const lbl = fuLab(fu); const f2 = Object.assign({}, s.fuSet || {}); f2[key] = lbl; const ac = Object.assign({}, s.ack || {}); ac[key + ':late'] = '01:43'; st.fuSet = f2; st.ack = ac; addC('Bogʻlanish uchun eslatma: ' + fu.slice(8, 10) + '.' + fu.slice(5, 7) + '.' + fu.slice(0, 4) + ' ' + fu.slice(11, 16), 'Bogʻlanish eslatmasi'); return lbl; };
+      const back0 = crS.from || back(key);
+      if (k === 'talked' && !crBefore) { if (!note) addC('Qoʻngʻiroq: gaplashildi'); const l = applyFu(); st.toast = { text: 'Tarixga yozildi', sub: (crC.n || '') + (l ? ' · keyingi qoʻngʻiroq: ' + l : ''), kind: 'ok' }; this.setState(st); this.armToast(); this.focusSoon(back0); return; }
+      if (k === 'noanswer' && crCol !== 'new') { addC('Qoʻngʻiroq qilindi, lekin: Javob bermadi', 'Bogʻlanish sababi'); const l = applyFu(); st.toast = { text: '“Javob bermadi” yozildi · ' + callN(key) + '-urinish', sub: l ? 'Keyingi qoʻngʻiroq: ' + l : 'Eslatma qoʻyilmadi — lid kartasidagi “Bogʻlanish eslatmasi”dan qoʻyish mumkin', kind: 'ok' }; this.setState(st); this.armToast(); this.focusSoon(back0); return; }
+      const MAPO = { talked: 'con', noanswer: 'try', later: 'defer', trial: 'trial', pay: 'pay', fail: 'fail', junk: 'junk' };
+      this.setState(st); requestMove(key, MAPO[k]);
+    };

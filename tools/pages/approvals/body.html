@@ -1,0 +1,187 @@
+<div data-root="1" style="height: 960px; box-sizing: border-box; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #0B1220; background: #F5F7FB; display: flex; position: relative; overflow: hidden">
+<style>
+.ap-seg{display:flex;gap:4px;padding:4px;border-radius:12px;background:#EEF2F6}
+.ap-seg button{height:32px;padding:0 12px;border-radius:9px;border:0;background:transparent;font-size:13px;font-weight:700;color:#3A4456;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.ap-seg button:hover{background:#FFFFFF}
+.ap-seg button[aria-pressed="true"]{background:#FFFFFF;color:#0057B8;font-weight:800;box-shadow:0 1px 3px rgba(16,24,40,.12)}
+.ap-seg b{min-width:20px;height:20px;padding:0 6px;box-sizing:border-box;border-radius:999px;background:#E2E8F0;color:#3A4456;font-size:11px;display:inline-grid;place-items:center}
+.ap-seg button[aria-pressed="true"] b{background:#0065D6;color:#FFFFFF}
+.ap-note{display:flex;gap:10px;align-items:flex-start;padding:8px 14px;border-radius:12px;background:#FFFFFF;border:1px solid #E6EAF2;font-size:12px;color:#3A4456;line-height:1.45}
+.ap-note svg{flex:none;margin-top:1px;color:#0065D6}
+.ap-lay{flex:1;min-height:0;display:flex;gap:14px}
+.ap-inbox{flex:none;width:372px;display:flex;flex-direction:column;background:#FFFFFF;border:1px solid #E6EAF2;border-radius:16px;overflow:hidden}
+.ap-ih{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid #EEF2F6;font-size:12px;font-weight:700;color:#4B5563}
+.ap-list{flex:1;min-height:0;overflow-y:auto;padding:6px;display:flex;flex-direction:column;gap:4px}
+.ap-it{width:100%;display:flex;gap:10px;align-items:flex-start;text-align:left;padding:10px;border-radius:12px;border:1px solid transparent;background:transparent;cursor:pointer;font-family:inherit;color:#0B1220;position:relative}
+.ap-it:hover{background:#F8FAFC}
+.ap-it[aria-current="true"]{background:#EAF3FF;border-color:#B2D3FF}
+.ap-it[aria-current="true"]::before{content:"";position:absolute;left:-1px;top:10px;bottom:10px;width:3px;border-radius:3px;background:#0065D6}
+.ap-av{flex:none;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:800;color:#FFFFFF}
+.ap-itx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.ap-itx b{font-size:13px;font-weight:800}
+.ap-itx span{font-size:12px;color:#3A4456;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ap-itx small{font-size:12px;color:#4B5563}
+.ap-pill{flex:none;display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:999px;font-size:11px;font-weight:800;white-space:nowrap}
+.ap-p-warn{background:#FEF0C7;color:#93370D}.ap-p-ok{background:#DCFAE6;color:#067647}.ap-p-bad{background:#FEE4E2;color:#B42318}.ap-p-mute{background:#EEF2F6;color:#3A4456}
+.ap-flag{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:800;color:#B42318}
+.ap-det{flex:1;min-width:0;display:flex;flex-direction:column;background:#FFFFFF;border:1px solid #E6EAF2;border-radius:16px;overflow:hidden;position:relative}
+.ap-dh{display:flex;align-items:center;gap:10px;padding:14px 20px;border-bottom:1px solid #EEF2F6}
+.ap-dh h2{margin:0;font-size:17px;font-weight:800;flex:1;min-width:0}
+.ap-dh small{font-size:12px;color:#4B5563;white-space:nowrap}
+.ap-db{flex:1;min-height:0;overflow-y:auto;padding:16px 20px 20px;display:flex;flex-direction:column;gap:14px}
+.ap-who{display:flex;gap:12px}
+.ap-whob{flex:1;min-width:0;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:#F8FAFC;border:1px solid #EEF2F6}
+.ap-whob span{display:flex;flex-direction:column;gap:2px;min-width:0}
+.ap-whob b{font-size:14px}
+.ap-whob .ap-av{display:grid;place-items:center;flex-direction:row}
+.ap-whob small{font-size:12px;color:#4B5563}
+.ap-tg{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;color:#0057B8;text-decoration:none}
+.ap-tg:hover{text-decoration:underline}
+.ap-h3{margin:0;font-size:12px;font-weight:800;letter-spacing:.05em;color:#4B5563;text-transform:uppercase}
+.ap-sec{display:flex;flex-direction:column;gap:8px}
+.ap-dt{display:flex;flex-direction:column;border:1px solid #E6EAF2;border-radius:12px;overflow:hidden;font-size:13px}
+.ap-dr{display:grid;grid-template-columns:120px 1fr 28px 1fr;align-items:center;gap:8px;padding:9px 12px;border-top:1px solid #EEF2F6}
+.ap-dr:first-child{border-top:0}
+.ap-dth{background:#F8FAFC;font-size:12px;font-weight:800;color:#4B5563}
+.ap-dr .ap-lbl{color:#4B5563;font-weight:700}
+.ap-dr .ap-ar{text-align:center;font-weight:800;color:#0065D6}
+.ap-same{color:#64748B}
+.ap-same .ap-ar{color:#94A3B8}
+.ap-new{font-weight:800;color:#0B1220;background:#EAF3FF;border-radius:6px;padding:2px 6px;justify-self:start}
+.ap-quote{margin:0;padding:10px 14px;border-left:3px solid #CBD5E1;background:#F8FAFC;border-radius:0 10px 10px 0;font-size:14px;color:#0B1220}
+.ap-g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.ap-chk{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.ap-chk li{display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border-radius:10px;font-size:13px;line-height:1.4}
+.ap-chk i{flex:none;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:11px;font-weight:800;color:#FFFFFF;margin-top:0}
+.ap-ok{background:#ECFDF3;color:#05603A}.ap-ok i{background:#12B76A}
+.ap-warn{background:#FFFAEB;color:#93370D}.ap-warn i{background:#F79009}
+.ap-bad{background:#FEF3F2;color:#B42318;font-weight:700}.ap-bad i{background:#D92D20}
+.ap-imp{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.ap-imp li{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:#3A4456;line-height:1.4}
+.ap-imp svg{flex:none;width:16px;height:16px;margin-top:1px;color:#0065D6}
+.ap-dec{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.ap-dc{display:flex;gap:10px;align-items:flex-start;padding:8px 12px;border-radius:12px;border:1px solid #CBD5E1;cursor:pointer;background:#FFFFFF}
+.ap-dc input{margin:2px 0 0;width:18px;height:18px;accent-color:#0065D6;flex:none}
+.ap-dc span{display:flex;flex-direction:column;gap:2px}
+.ap-dc b{font-size:14px}
+.ap-dc small{font-size:12px;color:#4B5563}
+.ap-dc.ap-on{border-color:#0065D6;background:#EAF3FF;box-shadow:inset 0 0 0 1px #0065D6}
+.ap-dc.ap-on.ap-ok2{border-color:#12B76A;background:#ECFDF3;box-shadow:inset 0 0 0 1px #12B76A}
+.ap-dc.ap-on.ap-no{border-color:#D92D20;background:#FEF3F2;box-shadow:inset 0 0 0 1px #D92D20}
+.ap-dc.ap-dis{cursor:not-allowed;background:#F8FAFC;border-style:dashed}
+.ap-dc.ap-dis b{color:#94A3B8}
+.ap-dc.ap-dis small{color:#B42318;font-weight:700}
+.ap-chips{display:flex;flex-wrap:wrap;gap:6px}
+.ap-chip{height:30px;padding:0 12px;border-radius:999px;border:1px solid #CBD5E1;background:#FFFFFF;font-size:12px;font-weight:700;color:#3A4456;cursor:pointer}
+.ap-chip[aria-pressed="true"]{background:#0B1220;border-color:#0B1220;color:#FFFFFF}
+.ap-ta{box-sizing:border-box;width:100%;border:1px solid #CBD5E1;border-radius:10px;padding:8px 10px;font-size:14px;color:#0B1220;resize:vertical;font-family:inherit}
+.ap-ta.ap-terr{border-color:#D92D20;box-shadow:0 0 0 1px #D92D20}
+.ap-decw{flex:none;border:0;border-top:1px solid #E6EAF2;margin:0;padding:12px 20px 0;background:#FCFDFE}.ap-decw .ap-dec{clear:both}
+.ap-df{flex:none;display:flex;align-items:center;gap:10px;padding:10px 20px 14px;background:#FCFDFE}
+.ap-df p{margin:0;flex:1;min-width:0;font-size:12px;color:#4B5563;line-height:1.4}
+.ap-df .btnp[aria-disabled="true"]{background:#CBD5E1;color:#4B5563;cursor:not-allowed}
+.ap-decided{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-radius:12px;border:1px solid #E6EAF2;background:#F8FAFC;font-size:13px}
+.ap-decided div{display:flex;flex-direction:column;gap:4px}
+.ap-c409{display:flex;gap:10px;align-items:flex-start;padding:10px 14px;border-radius:12px;background:#FFFAEB;border:1px solid #FEC84B;color:#93370D;font-size:13px;font-weight:600}
+.ap-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:30px;text-align:center;color:#4B5563;font-size:13px}
+.ap-empty b{font-size:15px;color:#0B1220}
+.ap-sk{border-radius:10px;background:linear-gradient(90deg,#E9EEF5 0%,#F5F7FB 50%,#E9EEF5 100%);background-size:200% 100%;animation:sh 1.2s linear infinite}
+.ap-diff{font-size:12px;color:#4B5563;background:#F5F3FF;border:1px dashed #A78BFA;border-radius:10px;padding:8px 12px;line-height:1.45}
+.ap-diff b{color:#5B21B6}
+.ap-lnk{border:0;background:none;padding:0;color:#0057B8;font-weight:800;font-size:13px;text-decoration:underline;cursor:pointer;font-family:inherit}
+</style>
+__NAV__
+  <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative">
+    <header style="height: 56px; flex: none; padding: 0 24px; display: flex; align-items: center; gap: 14px; background: #FFFFFF; border-bottom: 1px solid #E6EAF2; box-sizing: border-box">
+      <span style="font-size: 13px; color: #4B5563">Nazorat · <b style="color: #0B1220">Tasdiqlar</b></span>
+      <span style="flex: 1"></span>
+      <div role="group" aria-label="Demo holat" style="display: flex; align-items: center; gap: 4px; padding: 4px; border: 1px dashed #A78BFA; border-radius: 12px; background: #F5F3FF">
+        <span style="font-size: 11px; font-weight: 800; color: #5B21B6; padding: 0 6px">HOLAT</span>
+        <sc-for list="{{ demo }}" as="d" hint-placeholder-count="6"><button type="button" aria-pressed="{{ d.on }}" onClick="{{ d.pick }}" class="dmb" title="{{ d.tip }}">{{ d.t }}</button></sc-for>
+      </div>
+      <span style="display: flex; align-items: center; gap: 10px"><span aria-hidden="true" style="width: 36px; height: 36px; border-radius: 50%; background: #0B1220; color: #FFFFFF; display: grid; place-items: center; font-size: 13px; font-weight: 800">IM</span><span style="display: flex; flex-direction: column; line-height: 1.2"><b style="font-size: 14px">Islom Mominov</b><span style="font-size: 12px; color: #4B5563">ROP · Rus tili</span></span></span>
+    </header>
+
+    <main style="flex: 1; min-height: 0; padding: 18px 28px 20px; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px">
+      <div style="display: flex; align-items: flex-end; gap: 14px">
+        <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px">
+          <div style="display: flex; align-items: center; gap: 10px"><h1 style="margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.02em">Sotuv tahrirlari · tasdiq</h1><span class="tag">Rus tili</span></div>
+          <p style="margin: 0; font-size: 13px; color: #4B5563">Sotuv menejerlari soʻrovlari · admin va ROP koʻradi · tasdiqlansa butun tizimda yangilanadi</p>
+        </div>
+        <sc-if value="{{ ready }}" hint-placeholder-val="{{ true }}"><div class="ap-seg" role="group" aria-label="Holat boʻyicha filtr"><sc-for list="{{ tabs }}" as="t" hint-placeholder-count="5"><button type="button" aria-pressed="{{ t.on }}" onClick="{{ t.pick }}">{{ t.l }}<sc-if value="{{ t.n }}" hint-placeholder-val="{{ false }}"><b>{{ t.n }}</b></sc-if></button></sc-for></div></sc-if>
+      </div>
+      <div class="ap-note"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v6M12 7.5v.5"></path></svg><span><b>Qaysi tahrir tasdiq soʻraydi:</b> tarif yoki narx · asosiy ustoz · jadval. Ism, telefon, ota-ona raqami, login va parolni menejer oʻzi tuzatadi — faqat tarixga yoziladi. Siz faqat Rus tili oʻquvchilari boʻyicha soʻrovlarni koʻrasiz.</span></div>
+
+      <sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}"><div class="ap-lay" aria-busy="true" aria-label="Yuklanmoqda"><div class="ap-inbox" style="padding: 10px; gap: 8px"><div class="ap-sk" style="height: 64px"></div><div class="ap-sk" style="height: 64px"></div><div class="ap-sk" style="height: 64px"></div><div class="ap-sk" style="height: 64px"></div></div><div class="ap-det" style="padding: 20px; gap: 12px"><div class="ap-sk" style="height: 24px; width: 50%"></div><div class="ap-sk" style="height: 58px"></div><div class="ap-sk" style="height: 150px"></div><div class="ap-sk" style="height: 120px"></div></div></div></sc-if>
+      <sc-if value="{{ loadErr }}" hint-placeholder-val="{{ false }}"><div class="malert" role="alert"><span style="flex: 1">Soʻrovlarni yuklab boʻlmadi — server javob bermadi</span><button type="button" class="btn2" onClick="{{ retry }}">Qayta urinish</button></div></sc-if>
+
+      <sc-if value="{{ ready }}" hint-placeholder-val="{{ true }}">
+        <div class="ap-lay">
+          <section class="ap-inbox" aria-label="Soʻrovlar">
+            <div class="ap-ih"><span style="flex: 1">{{ inboxHead }}</span><span>yangisi yuqorida</span></div>
+            <sc-if value="{{ hasList }}" hint-placeholder-val="{{ true }}">
+              <div class="ap-list" role="list" onKeyDown="{{ listKey }}">
+                <sc-for list="{{ items }}" as="r" hint-placeholder-count="7"><div role="listitem"><button type="button" class="ap-it" data-ap="{{ r.id }}" aria-current="{{ r.cur }}" onClick="{{ r.pick }}"><span class="ap-av" aria-hidden="true" style="{{ r.avSt }}">{{ r.ini }}</span><span class="ap-itx"><b>{{ r.t1 }}</b><span>{{ r.t2 }}</span><small>{{ r.t3 }}<sc-if value="{{ r.blocked }}" hint-placeholder-val="{{ false }}"> · <span class="ap-flag">ustoz band</span></sc-if></small></span><span class="{{ r.pc }}">{{ r.pl }}</span></button></div></sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{ noList }}" hint-placeholder-val="{{ false }}"><div class="ap-empty"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"></path></svg><b>{{ emptyT }}</b><span>{{ emptyS }}</span><sc-if value="{{ emptyAll }}" hint-placeholder-val="{{ false }}"><button type="button" class="ap-lnk" onClick="{{ showAll }}">Hammasini koʻrsatish</button></sc-if></div></sc-if>
+          </section>
+
+          <section class="ap-det" aria-live="polite" aria-label="Soʻrov tafsiloti">
+            <sc-if value="{{ noSel }}" hint-placeholder-val="{{ false }}"><div class="ap-empty"><b>{{ selT }}</b><span>{{ selS }}</span></div></sc-if>
+            <sc-if value="{{ d }}" hint-placeholder-val="{{ true }}">
+              <div class="ap-dh"><h2 id="apDetH">{{ d.title }}</h2><small>{{ d.sub }}</small><span class="{{ d.pc }}">{{ d.pl }}</span></div>
+              <div class="ap-db">
+                <sc-if value="{{ d.conflict }}" hint-placeholder-val="{{ false }}"><div class="ap-c409" role="alert"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true" style="flex: none"><path d="M12 3l10 18H2zM12 10v5M12 18v.5"></path></svg><span><b>Bu soʻrovni allaqachon boshqasi hal qildi.</b> {{ d.conflict }} Sizning qaroringiz saqlanmadi — roʻyxat yangilandi.</span></div></sc-if>
+                <div class="ap-who">
+                  <div class="ap-whob"><span class="ap-av" aria-hidden="true" style="{{ d.mAv }}">{{ d.mIni }}</span><span><b>{{ d.mName }}</b><small>soʻrov yubordi · oʻz sotgan oʻquvchisi</small></span></div>
+                  <div class="ap-whob"><span class="ap-av" aria-hidden="true" style="background: #0E7490">{{ d.sIni }}</span><span style="flex: 1"><b>{{ d.sName }}</b><sc-if value="{{ d.tg }}" hint-placeholder-val="{{ true }}"><a class="ap-tg" href="https://t.me/" target="_blank" rel="noopener" title="Telegram guruhni ochish"><svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M21.5 4.3 2.9 11.5c-1.3.5-1.2 1.3-.2 1.6l4.8 1.5 1.8 5.6c.2.6.4.8.9.8.4 0 .6-.2.9-.5l2.3-2.2 4.7 3.5c.9.5 1.5.2 1.7-.8l3.1-14.6c.3-1.3-.5-1.9-1.4-1.5Z"></path></svg>{{ d.tg }}</a></sc-if><sc-if value="{{ d.noTg }}" hint-placeholder-val="{{ false }}"><span class="ap-pill ap-p-mute" style="align-self: flex-start">Telegram guruh yoʻq</span></sc-if></span><button type="button" class="btn2" style="height: 32px" onClick="{{ openCard }}">Kartani ochish</button></div>
+                </div>
+
+                <div class="ap-sec"><h3 class="ap-h3">Nima oʻzgaradi</h3>
+                  <div class="ap-dt" role="table" aria-label="Nima oʻzgaradi">
+                    <div class="ap-dr ap-dth" role="row"><span role="columnheader"><span class="sr">Maydon</span></span><span role="columnheader">{{ d.colA }}</span><span role="columnheader" aria-hidden="true"></span><span role="columnheader">Soʻralgan</span></div>
+                    <sc-for list="{{ d.rows }}" as="w" hint-placeholder-count="4"><div class="{{ w.cls }}" role="row"><span role="rowheader" class="ap-lbl">{{ w.l }}</span><span role="cell">{{ w.a }}</span><span role="cell" class="ap-ar" aria-label="{{ w.arL }}">{{ w.ar }}</span><span role="cell"><span class="{{ w.bc }}">{{ w.b }}</span></span></div></sc-for>
+                  </div>
+                </div>
+
+                <div class="ap-sec"><h3 class="ap-h3">Menejer sababi</h3><blockquote class="ap-quote">“{{ d.reason }}”</blockquote></div>
+
+                <sc-if value="{{ d.pending }}" hint-placeholder-val="{{ true }}">
+                  <div class="ap-g2">
+                    <div class="ap-sec"><h3 class="ap-h3">Server tekshiruvi</h3>
+                      <sc-if value="{{ d.chkLoading }}" hint-placeholder-val="{{ false }}"><div aria-busy="true" style="display: flex; flex-direction: column; gap: 6px"><div class="ap-sk" style="height: 36px"></div><div class="ap-sk" style="height: 36px"></div><span class="hint" style="margin: 0">Bandlik va tarif tekshirilmoqda…</span></div></sc-if>
+                      <sc-if value="{{ d.chkErr }}" hint-placeholder-val="{{ false }}"><div class="malert" role="alert" style="flex-direction: column; align-items: flex-start; gap: 6px"><span><b>Server tekshiruvini bajarib boʻlmadi</b><br><span style="font-weight: 500">Tasdiqlashda server baribir qayta tekshiradi.</span></span><button type="button" class="btn2" style="height: 30px" onClick="{{ chkRetry }}">Qayta urinish</button></div></sc-if>
+                      <sc-if value="{{ d.chkOk }}" hint-placeholder-val="{{ true }}"><ul class="ap-chk"><sc-for list="{{ d.checks }}" as="c" hint-placeholder-count="3"><li class="{{ c.cls }}"><i aria-hidden="true">{{ c.ic }}</i><span><span class="sr">{{ c.lv }}: </span>{{ c.t }}</span></li></sc-for></ul>
+                        <sc-if value="{{ d.blocked }}" hint-placeholder-val="{{ false }}"><p class="hint" style="margin: 0">Tasdiqlash yopiq: yangi vaqt ustozda band. Rad eting yoki menejerga qaytaring — u boshqa vaqt tanlab qayta yuboradi.</p></sc-if>
+                      </sc-if>
+                    </div>
+                    <div class="ap-sec"><h3 class="ap-h3">Tasdiqlansa</h3>
+                      <ul class="ap-imp"><sc-for list="{{ d.impact }}" as="m" hint-placeholder-count="4"><li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ m.ic }}"></path></svg><span>{{ m.t }}</span></li></sc-for></ul>
+                    </div>
+                  </div>
+
+                </sc-if>
+
+                <sc-if value="{{ d.decided }}" hint-placeholder-val="{{ false }}"><div class="ap-sec"><h3 class="ap-h3">Qaror</h3><div class="ap-decided"><span class="ap-av" aria-hidden="true" style="{{ d.dAv }}">{{ d.dIni }}</span><div><span><span class="{{ d.pc }}">{{ d.pl }}</span> <b>{{ d.dBy }}</b> · {{ d.dAt }}</span><span style="color: #3A4456">{{ d.dNote }}</span></div></div>
+                  <p class="ap-diff"><b>Dizayn farqi:</b> kodda hal qilingan soʻrovda “Hozir” ustuni oʻquvchining hozirgi kartasidan olinadi (tasdiqlangandan keyin hamma qator “=” boʻlib qoladi). Bu yerda soʻrov paytidagi qiymat “Oldin” deb koʻrsatiladi.</p></div></sc-if>
+              </div>
+              <sc-if value="{{ d.pending }}" hint-placeholder-val="{{ true }}">                  <fieldset class="ap-sec ap-decw"><legend class="ap-h3" style="padding: 0; float: left; margin-bottom: 8px">Qaror</legend>
+                    <div class="ap-dec" role="radiogroup" aria-label="Qaror">
+                      <sc-for list="{{ d.decs }}" as="o" hint-placeholder-count="3"><label class="{{ o.cls }}"><input type="radio" name="apdec" value="{{ o.k }}" checked="{{ o.on }}" disabled="{{ o.dis }}" onChange="{{ o.pick }}" aria-describedby="{{ o.hid }}"><span><b>{{ o.t }}</b><small id="{{ o.hid }}">{{ o.s }}</small></span></label></sc-for>
+                    </div>
+                    <sc-if value="{{ d.showChips }}" hint-placeholder-val="{{ false }}"><div class="ap-chips" role="group" aria-label="Tez sabab"><sc-for list="{{ d.chips }}" as="c" hint-placeholder-count="4"><button type="button" class="ap-chip" aria-pressed="{{ c.on }}" onClick="{{ c.pick }}">{{ c.t }}</button></sc-for></div></sc-if>
+                    <label for="apNote" class="sr">{{ d.noteLab }}</label>
+                    <textarea id="apNote" rows="2" class="{{ d.taCls }}" placeholder="{{ d.ph }}" aria-required="{{ d.req }}" aria-invalid="{{ d.inv }}" aria-describedby="apNoteErr" onInput="{{ noteIn }}">{{ d.note }}</textarea>
+                    <sc-if value="{{ d.err }}" hint-placeholder-val="{{ false }}"><p id="apNoteErr" class="err" role="alert" style="margin: 0">{{ d.err }}</p></sc-if>
+                  </fieldset>
+</sc-if>
+              <sc-if value="{{ d.pending }}" hint-placeholder-val="{{ true }}"><div class="ap-df"><p>{{ d.hint }}</p><button type="button" class="btn2" onClick="{{ cancel }}">Bekor</button><button type="button" class="btnp" aria-disabled="{{ d.saveDis }}" aria-describedby="apNoteErr" onClick="{{ save }}">{{ d.saveLab }}</button></div></sc-if>
+            </sc-if>
+          </section>
+        </div>
+      </sc-if>
+    </main>
+    <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}"><div role="status" class="toast" style="bottom: auto; top: 68px">{{ toast }}</div></sc-if>
+  </div>
+</div>

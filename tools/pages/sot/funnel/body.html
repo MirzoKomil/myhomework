@@ -1,0 +1,196 @@
+<style>
+.fv-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.fv-chips{display:flex;gap:4px;padding:3px;border-radius:12px;background:#FFFFFF;border:1px solid #E6EAF2}
+.fv-chip{height:32px;padding:0 14px;border-radius:9px;border:0;background:transparent;font-size:13px;font-weight:700;color:#3A4456;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.fv-chip:hover{background:#F1F5F9}
+.fv-chip[aria-pressed="true"]{background:#0065D6;color:#FFFFFF}
+.fv-chip-o{background:#EAF3FF;color:#0057B8}
+.fv-sep{width:1px;height:22px;background:#E6EAF2;margin:0 2px}
+.fv-mwrap{position:relative;z-index:50}
+.fv-mbtn{height:38px;display:inline-flex;align-items:center;gap:8px;padding:0 12px;border-radius:10px;border:1px solid #CBD5E1;background:#FFFFFF;font-size:13px;font-weight:700;color:#0B1220;cursor:pointer}
+.fv-mbtn-on{background:#EAF3FF;border-color:#0065D6;color:#0057B8}
+.fv-dd{position:absolute;top:44px;left:0;z-index:50;width:300px;background:#FFFFFF;border:1px solid #E6EAF2;border-radius:14px;box-shadow:0 16px 40px rgba(16,24,40,.16);padding:8px;display:flex;flex-direction:column;gap:2px}
+.fv-dd label{display:flex;align-items:center;gap:10px;min-height:38px;padding:0 8px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer}
+.fv-dd label:hover{background:#F1F5F9}
+.fv-dd input{width:16px;height:16px;margin:0;accent-color:#0065D6}
+.fv-dd .fv-allr{font-weight:800;border-bottom:1px solid #E6EAF2;border-radius:8px 8px 0 0;margin-bottom:4px}
+.fv-ddn{font-size:12px;color:#4B5563;padding:6px 8px 2px;margin:0}
+.fv-scope{font-size:12px;color:#4B5563;margin-left:auto}
+.fv-dates{display:flex;gap:18px;flex-wrap:wrap;padding:12px 14px;background:#FFFFFF;border:1px solid #E6EAF2;border-radius:14px}
+.fv-drow{display:flex;align-items:center;gap:6px;font-size:13px}
+.fv-drow > span:first-child{font-weight:700;color:#3A4456}
+.fv-drow input{height:34px;border:1px solid #CBD5E1;border-radius:8px;padding:0 8px;font-size:13px;font-family:inherit;color:#0B1220}
+.fv-drow input[aria-invalid="true"]{border-color:#D92D20}
+.fv-lnk{border:0;background:none;color:#0057B8;font-weight:800;font-size:12px;cursor:pointer;text-decoration:underline;padding:4px}
+.fv-tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.fv-tile{background:#FFFFFF;border:1px solid #E6EAF2;border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.fv-tile small{font-size:12px;font-weight:700;color:#4B5563}
+.fv-tile b{font-size:22px;font-weight:800;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+.fv-tile span{font-size:12px;color:#4B5563;line-height:1.35}
+.fv-tnote{margin-top:4px;font-size:11px!important;font-weight:700;color:#93370D!important;background:#FFFAEB;border-radius:8px;padding:4px 8px}
+.fv-g2{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:14px;align-items:start}
+.fv-g2e{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start}
+.fv-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.fv-head h2{flex:1}
+.fv-head > span{font-size:12px;color:#4B5563}
+.fv-rows{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.fv-row{display:grid;grid-template-columns:200px minmax(0,1fr) 92px;align-items:center;gap:10px;font-size:13px}
+.fv-row-w{grid-template-columns:180px minmax(0,1fr) 236px}
+.fv-nm{display:flex;align-items:center;gap:8px;font-weight:600;color:#0B1220;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fv-nm i{flex:none;width:10px;height:10px;border-radius:3px}
+.fv-trk{height:14px;border-radius:999px;background:#EEF2F7;overflow:hidden}
+.fv-trk span{display:block;height:100%;border-radius:999px}
+.fv-val{text-align:right;color:#4B5563;font-variant-numeric:tabular-nums;white-space:nowrap}
+.fv-val b{color:#0B1220;font-size:14px}
+.fv-low{background:#FFFAEB;border-radius:6px;box-shadow:0 0 0 5px #FFFAEB}
+.fv-low .fv-nm{color:#93370D;font-weight:800}
+.fv-lowb{display:inline-block;margin-left:6px;font-size:11px;font-weight:800;color:#93370D;background:#FEF0C7;border-radius:999px;padding:1px 7px}
+.fv-out{margin:0;display:flex;flex-direction:column}
+.fv-out > div{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid #EEF2F6;font-size:13px}
+.fv-out dt{display:flex;align-items:center;gap:8px;color:#3A4456}
+.fv-out dt i{width:10px;height:10px;border-radius:3px}
+.fv-out dd{margin:0;font-weight:800;font-variant-numeric:tabular-nums}
+.fv-out dd small{font-weight:600;color:#4B5563}
+.fv-out .fv-tot{background:#ECFDF3;border-radius:10px;padding:8px 10px;border:0;margin:6px 0}
+.fv-out .fv-tot dt{color:#067647;font-weight:800}
+.fv-out .fv-sub{padding:5px 0 5px 12px;border-left:2px solid #E6EAF2;border-bottom:0;font-size:12px}
+.fv-src{font-size:12px;font-weight:700;color:#93370D;background:#FFFAEB;border:1px solid #FEDF89;border-radius:10px;padding:6px 10px;margin:6px 0 0}
+.fv-note{margin:0;font-size:12px;color:#4B5563;line-height:1.45}
+.fv-calc{border:0;background:none;padding:0;font-size:12px;font-weight:800;color:#0057B8;cursor:pointer;text-align:left}
+.fv-t{display:flex;flex-direction:column;font-size:13px;overflow-x:auto}
+.fv-tr{display:grid;grid-template-columns:minmax(190px,1.9fr) 58px 62px 92px 66px 116px 108px 92px 82px 118px 66px;align-items:center;padding:9px 6px;border-bottom:1px solid #EEF2F6;font-variant-numeric:tabular-nums}
+.fv-tr > span:not(:first-child){text-align:right}
+.fv-th{font-size:12px;color:#4B5563;font-weight:700;line-height:1.25;align-items:end}
+.fv-un{background:#F8FAFC;color:#4B5563}
+.fv-mn{display:flex;align-items:center;gap:8px;font-weight:700;min-width:0}
+.fv-mn span:last-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fv-av{flex:none;width:26px;height:26px;border-radius:50%;display:inline-grid;place-items:center;font-size:11px;font-weight:800}
+.fv-best{color:#0F7A55;font-weight:800}
+.fv-best::before{content:"▲ ";font-size:10px}
+.fv-warn{color:#B45309;font-weight:800}
+.fv-small{margin-left:4px;font-size:11px;color:#B45309;font-weight:700}
+.fv-st{display:flex;flex-direction:column;font-size:13px}
+.fv-sr{display:grid;grid-template-columns:minmax(0,1fr) 54px 60px 120px;gap:8px;align-items:center;padding:9px 4px;border-bottom:1px solid #EEF2F6;font-variant-numeric:tabular-nums}
+.fv-sr > span:not(:first-child){text-align:right}
+.fv-pc{display:flex;align-items:center;gap:6px;justify-content:flex-end}
+.fv-pc i{display:block;width:56px;height:6px;border-radius:999px;background:#EEF2F7;overflow:hidden}
+.fv-pc i b{display:block;height:100%;background:#0065D6}
+.fv-don{display:flex;align-items:center;gap:22px}
+.fv-ring{position:relative;flex:none;width:168px;height:168px;border-radius:50%}
+.fv-hole{position:absolute;inset:26px;border-radius:50%;background:#FFFFFF;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.fv-hole b{font-size:28px;font-weight:800;line-height:1}
+.fv-hole span{font-size:11px;color:#4B5563;margin-top:4px;max-width:90px}
+.fv-leg{flex:1;min-width:0;list-style:none;margin:0;padding:0}
+.fv-leg li{display:grid;grid-template-columns:10px minmax(0,1fr) auto;gap:9px;align-items:center;padding:6px 0;border-bottom:1px solid #EEF2F6;font-size:13px}
+.fv-leg li i{width:10px;height:10px;border-radius:50%}
+.fv-leg li > span:nth-child(2){font-weight:600;line-height:1.3}
+.fv-leg li > span:last-child{white-space:nowrap;color:#4B5563;font-size:12px}
+.fv-empty{display:flex;flex-direction:column;align-items:center;gap:6px;padding:26px 10px;border:1px dashed #CBD5E1;border-radius:14px;text-align:center;font-size:13px;color:#4B5563}
+.fv-empty b{font-size:15px;color:#0B1220}
+.fv-more{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;border:1px dashed #CBD5E1;font-size:12px;color:#4B5563}
+.fv-skg{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.fv-skt{height:96px;border-radius:16px;background:linear-gradient(90deg,#E9EEF5 0%,#F5F7FB 50%,#E9EEF5 100%);background-size:200% 100%;animation:sh 1.2s linear infinite}
+.fv-wbar{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:#FFFAEB;border:1px solid #FEC84B;color:#93370D;font-size:13px;font-weight:700}
+.fv-ovl{position:absolute;inset:0;z-index:45}
+@media (prefers-reduced-motion:reduce){.fv-skt{animation:none}}
+</style>
+<div data-root="1" style="height: 960px; box-sizing: border-box; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #0B1220; background: #F5F7FB; display: flex; position: relative; overflow: hidden">
+__NAV__
+  <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative">
+__HDR__
+
+    <main style="flex: 1; min-height: 0; overflow: auto; padding: 20px 28px 32px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; align-items: flex-end; gap: 12px">
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 4px">
+          <h1 style="margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.02em">Mening voronkam</h1>
+          <p style="margin: 0; font-size: 13px; color: #4B5563">Statistika · faqat sizga biriktirilgan lidlar hozir qaysi bosqichda turgani</p>
+        </div>
+        <span class="tag">Rus tili</span>
+      </div>
+
+      <div class="fv-bar">
+        <div class="fv-chips" role="group" aria-label="Davr (lid biriktirilgan kun boʻyicha)">
+          <sc-for list="{{ chips }}" as="c" hint-placeholder-count="4"><button type="button" class="fv-chip" aria-pressed="{{ c.on }}" onClick="{{ c.pick }}">{{ c.t }}</button></sc-for>
+          <span class="fv-sep" aria-hidden="true"></span>
+          <button type="button" class="{{ datesCls }}" aria-expanded="{{ datesExp }}" aria-controls="fvDates" onClick="{{ toggleDates }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M3 9.5h18M8 3v3M16 3v3M5 4.5h14v16H5z"></path></svg>Sana</button>
+        </div>
+        <span class="fv-scope" aria-live="polite">Filtr: {{ scope }}<sc-if value="{{ filtersOn }}" hint-placeholder-val="{{ false }}"> · <button type="button" class="fv-lnk" onClick="{{ resetAll }}">Filtrlarni tozalash</button></sc-if></span>
+      </div>
+
+      <sc-if value="{{ showDates }}" hint-placeholder-val="{{ false }}">
+        <div id="fvDates" class="fv-dates" role="group" aria-label="Sana filtrlari">
+          <sc-for list="{{ dateRows }}" as="r" hint-placeholder-count="2"><div class="fv-drow"><span>{{ r.label }}:</span><input id="{{ r.fid }}" type="date" min="2026-08-01" max="2026-11-02" value="{{ r.f }}" aria-label="{{ r.label }} — dan" aria-invalid="{{ r.bad }}" onChange="{{ r.onF }}"><span aria-hidden="true" style="color: #4B5563">—</span><input id="{{ r.tid }}" type="date" min="2026-08-01" max="2026-11-02" value="{{ r.t }}" aria-label="{{ r.label }} — gacha" aria-invalid="{{ r.bad }}" onChange="{{ r.onT }}"><sc-if value="{{ r.has }}" hint-placeholder-val="{{ false }}"><button type="button" class="fv-lnk" onClick="{{ r.clear }}">Tozalash</button></sc-if><sc-if value="{{ r.bad }}" hint-placeholder-val="{{ false }}"><span class="err" role="alert">“Dan” “Gacha”dan keyin — oraliqda lid yoʻq</span></sc-if></div></sc-for>
+          <p class="hint" style="margin: 0; flex-basis: 100%">Faqat “Dan” toʻldirilsa — bitta kun. Ikkala filtr bir-biridan mustaqil, ikkalasi yoqilsa birgalikda qoʻllanadi. Davr chiplari faqat “biriktirilgan kun”ni oʻzgartiradi va “CRMga tushgan kun”ni tozalaydi.</p>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}"><div aria-busy="true" aria-label="Voronka yuklanmoqda" style="display: flex; flex-direction: column; gap: 14px"><div class="fv-skg"><div class="fv-skt"></div><div class="fv-skt"></div><div class="fv-skt"></div><div class="fv-skt"></div></div><div class="box"><div class="sk" style="width: 30%"></div><div class="sk" style="width: 90%"></div><div class="sk" style="width: 75%"></div><div class="sk" style="width: 60%"></div><div class="sk" style="width: 45%"></div></div><p class="sr" role="status">Voronka yuklanmoqda…</p></div></sc-if>
+      <sc-if value="{{ loadErr }}" hint-placeholder-val="{{ false }}"><div class="malert" role="alert"><span style="flex: 1">Lidlarni yuklab boʻlmadi. Server javob bermadi — birozdan soʻng qayta urining. Raqamlar toʻliq boʻlmasligi mumkin, shuning uchun koʻrsatilmadi.</span><button type="button" class="btn2" onClick="{{ retry }}">Qayta urinish</button></div></sc-if>
+
+      <sc-if value="{{ ready }}" hint-placeholder-val="{{ true }}">
+        <sc-if value="{{ isEmptyDir }}" hint-placeholder-val="{{ false }}"><div class="fv-empty" role="status"><b>Sizga hali lid biriktirilmagan</b>ROP lid biriktirgach voronka shu yerda hisoblanadi. Barcha raqamlar 0.</div></sc-if>
+        <sc-if value="{{ warn }}" hint-placeholder-val="{{ false }}"><div class="fv-wbar" role="status"><span style="flex: 1">{{ warn }}</span><button type="button" class="btn2" onClick="{{ resetAll }}">{{ resetLab }}</button></div></sc-if>
+        <div class="fv-tiles">
+          <sc-for list="{{ tiles }}" as="t" hint-placeholder-count="4"><div class="fv-tile"><small>{{ t.k }}</small><b>{{ t.v }}</b><span>{{ t.sub }}</span><sc-if value="{{ t.hasNote }}" hint-placeholder-val="{{ false }}"><span class="fv-tnote">{{ t.note }}</span></sc-if></div></sc-for>
+        </div>
+
+        <div class="fv-g2">
+          <section class="box" aria-labelledby="fvStH">
+            <div class="fv-head"><h2 id="fvStH">Bosqichlar</h2><span>Jami <b>{{ total }}</b> lid · konversiya <b>{{ convTxt }}</b></span></div>
+            <ol class="fv-rows">
+              <sc-for list="{{ bars }}" as="b" hint-placeholder-count="8"><li class="fv-row"><span class="fv-nm"><i style="{{ b.c }}" aria-hidden="true"></i>{{ b.n }}</span><span class="fv-trk" aria-hidden="true"><span style="{{ b.w }}"></span></span><span class="fv-val"><b>{{ b.v }}</b> · {{ b.p }}</span></li></sc-for>
+            </ol>
+            <p class="fv-note">Har bosqich — hozir aynan shu ustunda turgan lidlar (Lidlar doskasidagi ustunlar bilan bir xil hisob). Foiz — tanlangan lidlar ichidagi ulush.</p>
+          </section>
+          <section class="box" aria-labelledby="fvOutH">
+            <h2 id="fvOutH">Voronkadan chiqqanlar</h2>
+            <dl class="fv-out">
+              <sc-for list="{{ out }}" as="o" hint-placeholder-count="4"><div><dt><i style="{{ o.dot }}" aria-hidden="true"></i>{{ o.k }}</dt><dd>{{ o.v }} <small>{{ o.p }}</small></dd></div></sc-for>
+              <div class="fv-tot"><dt>Sotildi (lidlar)</dt><dd>{{ soldTxt }} <small>{{ soldSub }}</small></dd></div>
+              <div><dt>{{ revLab }}</dt><dd>{{ revTxt }}</dd></div>
+              <div class="fv-sub"><dt>— Yangi sotuvlar</dt><dd>{{ newSalesTxt }}</dd></div>
+              <div class="fv-sub"><dt>— Qarz toʻlovlari</dt><dd>{{ repayTxt }}</dd></div>
+            </dl>
+            <p class="fv-src">Moliya reyestri ochilmadi — lid maʼlumotidan hisoblandi</p>
+            <button type="button" class="fv-calc" aria-expanded="{{ calcExp }}" aria-controls="fvCalc" onClick="{{ toggleCalc }}">Qanday hisoblandi?</button>
+            <sc-if value="{{ calc }}" hint-placeholder-val="{{ false }}"><p id="fvCalc" class="fv-note">{{ calcTxt }} Tushum — toʻlangan sana boʻyicha (lid biriktirilgan/CRMga tushgan sana oraligʻi), sifatsiz (test) lidlarning toʻlovi chiqariladi.</p></sc-if>
+          </section>
+        </div>
+
+        <p class="fv-note" style="margin: 0; padding: 8px 12px; border: 1px dashed #A78BFA; border-radius: 10px; background: #F5F3FF"><b style="color: #5B21B6">Dizayn farqi:</b> ROP doskasidagi menejer tanlovi va “Menejerlar samaradorligi” jadvali bu yerda yoʻq — production’da sotuv menejeri uchun menejer filtri majburan oʻziga qoʻyiladi (renderSalesFunnel: _salesFunnelMgrIds = [oʻzi]), boshqa menejerlar natijasi koʻrinmaydi.</p>
+        <div class="fv-g2">
+          <section class="box" aria-labelledby="fvReachH">
+            <div class="fv-head"><h2 id="fvReachH">Qaysi bosqichgacha yetgan</h2><span>har bosqich — shu yerga yoki undan keyingiga yetgan lidlar</span></div>
+            <ol class="fv-rows">
+              <sc-for list="{{ reach }}" as="r" hint-placeholder-count="7"><li class="{{ r.row }}"><span class="fv-nm">{{ r.n }}</span><span class="fv-trk" aria-hidden="true"><span style="{{ r.w }}"></span></span><span class="fv-val"><b>{{ r.v }}</b>{{ r.step }}<sc-if value="{{ r.low }}" hint-placeholder-val="{{ false }}"><span class="fv-lowb">{{ r.lowTxt }}</span></sc-if></span></li></sc-for>
+            </ol>
+            <sc-if value="{{ lowTxt }}" hint-placeholder-val="{{ false }}"><p class="fv-note" style="color: #93370D; font-weight: 700">{{ lowTxt }}</p></sc-if>
+            <p class="fv-note">{{ histTxt }}</p>
+          </section>
+          <section class="box" aria-labelledby="fvSrcH">
+            <div class="fv-head"><h2 id="fvSrcH">Manba boʻyicha</h2><span>lid → toʻlov yopildi</span></div>
+            <sc-if value="{{ hasSrc }}" hint-placeholder-val="{{ true }}">
+              <div class="fv-st" role="table" aria-label="Manba boʻyicha">
+                <div class="fv-sr fv-th" role="row"><span role="columnheader">Manba</span><span role="columnheader">Lid</span><span role="columnheader">Toʻlov</span><span role="columnheader">Konv.</span></div>
+                <sc-for list="{{ srcRows }}" as="x" hint-placeholder-count="3"><div class="fv-sr" role="row"><span role="rowheader" style="font-weight: 700">{{ x.k }}</span><span role="cell">{{ x.n }}</span><span role="cell">{{ x.w }}</span><span role="cell" class="fv-pc"><i aria-hidden="true"><b style="{{ x.w2 }}"></b></i><b class="{{ x.cls }}">{{ x.p }}</b><span class="sr">{{ x.sr }}</span></span></div></sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{ noSrc }}" hint-placeholder-val="{{ false }}"><p class="hint" style="margin: 0">Tanlangan filtrlar boʻyicha lid yoʻq</p></sc-if>
+            <p class="fv-note">Yashil — eng yuqori konversiyali manba. Mobil ROP ilovasidagi “Manba boʻyicha” jadvali bilan bir xil hisob.</p>
+          </section>
+        </div>
+
+        <div class="fv-g2e">
+          <sc-for list="{{ reasons }}" as="g" hint-placeholder-count="2"><section class="box" aria-labelledby="{{ g.hid }}">
+            <div class="fv-head"><h2 id="{{ g.hid }}">{{ g.title }}</h2><span>Tanlangan filtrlar boʻyicha sabablar taqsimoti</span></div>
+            <sc-if value="{{ g.has }}" hint-placeholder-val="{{ true }}"><div class="fv-don"><div class="fv-ring" role="img" aria-label="{{ g.aria }}" style="{{ g.ring }}"><div class="fv-hole"><b>{{ g.tot }}</b><span>{{ g.center }}</span></div></div><ul class="fv-leg"><sc-for list="{{ g.leg }}" as="x" hint-placeholder-count="6"><li><i style="{{ x.c }}" aria-hidden="true"></i><span>{{ x.label }}</span><span>{{ x.n }} · <b style="color: #0B1220">{{ x.p }}</b></span></li></sc-for></ul></div></sc-if>
+            <sc-if value="{{ g.none }}" hint-placeholder-val="{{ false }}"><p class="hint" style="margin: 0">{{ g.empty }}</p></sc-if>
+          </section></sc-for>
+        </div>
+
+        <div class="fv-more"><span style="flex: 1">Voronka ostida productionda yana: Sifatli lidlar statistikasi, sifat→toʻlov foizlari, demografiya va kurs xaridorlari bloklari — bu doska ularni oʻzgartirmaydi.</span><button type="button" class="btn2" onClick="{{ more }}">Batafsil</button></div>
+      </sc-if>
+    </main>
+    <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}"><div role="status" class="toast" style="bottom: 24px">{{ toast }}</div></sc-if>
+  </div>
+</div>

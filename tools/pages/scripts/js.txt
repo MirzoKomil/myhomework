@@ -1,0 +1,178 @@
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    const S = (id, title, subtitle, color, sticker, d, upd, content) => ({ id, title, subtitle, color, sticker, lang: 'russian', createdAt: d, updatedAt: upd, content });
+    this.S0 = [
+      S('s1', 'Birinchi qoʻngʻiroq', 'Lid bilan ilk suhbat — 5 qadam', '#3b82f6', '🗣️', '2026-10-12', '2026-10-28',
+        '<b>1. Salomlashish</b><br>«Assalomu alaykum, {ism}! Men Domwork rus tili maktabidan Kamolaman. Rus tili kursi boʻyicha ariza qoldirgan edingiz — 2 daqiqa gaplasha olamizmi?»<br><b>2. Ehtiyojni aniqlash</b><ul><li>Rus tili nima uchun kerak: ish, oʻqish, koʻchib ketish yoki farzand uchunmi?</li><li>Hozirgi daraja: umuman bilmaydi yoki tushunadi, lekin gapira olmaydi?</li><li>Natija qachongacha kerak?</li></ul><b>3. Yechim</b><br>«Bizda darslar <b>100% individual</b> — ustoz faqat siz bilan ishlaydi. Video dars va jonli Zoom dars navbatma-navbat boradi.»<br><b>4. Sinov darsiga taklif</b><br>«Darajangizni aniqlash uchun sinov darsiga yozib qoʻyay — ertaga 19:00 yoki 20:00, qaysi biri qulay?»<br><b>5. Yakun</b><ul><li>Vaqtni takrorlang va Telegram’ga eslatma yuboring.</li><li>CRM’da lidni <span style="color:#3b82f6">“Bogʻlanildi”</span> bosqichiga oʻtkazing.</li></ul>'),
+      S('s2', 'Eʼtiroz: «Qimmat»', 'Narxni qiymat bilan solishtirish', '#ef4444', '💬', '2026-10-12', '2026-10-30',
+        '<b>Qoida</b><ul><li>Bahslashmang — avval mijozning fikriga qoʻshiling.</li><li><span style="color:#ef4444"><b>Oylik narxni oʻzingiz aytmang</b></span> — 3 oylik paketni taklif qiling.</li></ul><b>Javob</b><br>«Tushunaman, pul — muhim savol. Aytingchi, “qimmat” deganda nima bilan solishtiryapsiz?»<br>«Guruhda ustoz vaqtini 10–15 kishiga boʻladi. Bizda butun dars faqat sizga — shuning uchun natija tezroq.»<br><b>Baribir qimmat desa</b><br>«Toʻlovni boʻlib toʻlash mumkin — <u>Uzum Nasiya</u> yoki <u>Paylater</u> orqali. Oyiga qancha toʻlash sizga qulay?»<ul><li>Chegirmani faqat tasdiqlangan chegirma zinapoyasi boʻyicha bering.</li></ul>'),
+      S('s3', 'Sinov darsiga taklif', 'Yozish, tasdiqlash va eslatma', '#22c55e', '🎯', '2026-10-14', '',
+        '<b>Taklif</b><br>«Sinov darsida ustoz darajangizni aniqlaydi va siz uchun shaxsiy reja tuzadi. 30 daqiqa, Zoom orqali.»<br><b>Tasdiqlash</b><ul><li>Kun va soatni aniq kelishing — ikki variant bering.</li><li>Sinov darsini CRM’da belgilang: ustoz biriktiriladi, eslatma ketadi.</li></ul><b>Eslatma (dars kuni)</b><br><i>«{ism}, bugun soat 19:00 da sinov darsingiz bor. Havolani 10 daqiqa oldin yuboraman 🙂»</i><ul><li><span style="color:#f97316">Dars oʻtgach 12 soat ichida feedback oling</span> — aks holda SLA eskalatsiyasi.</li></ul>'),
+      S('s4', 'Eʼtiroz: «Oʻylab koʻraman»', 'Sababni ochish va keyingi qadamni belgilash', '#8b5cf6', '🧠', '2026-10-20', '',
+        '«Albatta, oʻylab koʻring. Faqat aytingchi — nimani oʻylab koʻrmoqchisiz: <b>narxnimi, vaqtnimi yoki natijanimi?</b>»<ul><li>Javobga qarab tegishli eʼtiroz skriptiga oʻting.</li><li>Keyingi qoʻngʻiroq vaqtini shu zahoti kelishing va CRM’ga yozing.</li></ul>'),
+      S('s5', 'Kurs haqida: asosiy faktlar', 'Format, jadval, ilova', '#6366f1', '📘', '2026-09-30', '2026-10-25',
+        '<ul><li><b>72 dars</b>: video dars va jonli Zoom dars navbatma-navbat.</li><li>Haftada 6 kun jadval, mobil ilova va sertifikat.</li><li>Bosma darslik uyga yetkazib beriladi.</li><li>Darslar faqat individual — guruh yoʻq.</li></ul><b>Vaʼda qilinmaydi</b><br><span style="color:#ef4444">“90 kunda erkin gapirasiz” demang</span> — natija har kimda har xil.')
+    ];
+    const G = (id, title, subtitle, roles, by, d, content) => ({ id, title, subtitle, targetRoles: roles, createdBy: by, d, content });
+    this.G0 = [
+      G('g2', 'Toʻlovni tasdiqlash tartibi', '', ['sales_manager', 'rop'], 'Admin (admin)', '2026-10-31', 'Menejer toʻlov chekini lid kartasiga yuklaydi — ROP uni <b>“Tasdiqlar”</b> boʻlimida tekshiradi.<ul><li>Summa va sana chekdagi bilan bir xil boʻlishi shart.</li><li>Rad etilsa, sababini yozing — menejerga bildirishnoma ketadi.</li></ul>'),
+      G('g3', 'Kechikish jarimasi', 'HR qoidasi', ['sales_manager', 'rop', 'teacher_main'], 'Admin (admin)', '2026-10-27', 'Ish <b>09:00</b> da boshlanadi. Face ID orqali kelish vaqti avtomatik yoziladi.<ul><li>10 daqiqagacha — ogohlantirish.</li><li><span style="color:#ef4444">10 daqiqadan ortiq — jarima</span>, oy oxirida maoshdan ushlanadi.</li><li>Sababli kechikishni oldindan ROP yoki HR’ga yozing.</li></ul>'),
+      G('g1', 'SLA: lidga javob berish muddatlari', '', ['sales_manager', 'rop'], 'Admin (admin)', '2026-10-15', 'Har bosqichda lid belgilangan vaqtdan ortiq tursa, eskalatsiya ROP’ga keladi.<ul><li>Yangi lid — <b>30 daqiqa</b>.</li><li>Bogʻlanildi — 6 soat; Urinilmoqda va Toʻlov — 24 soat; Qaror — 48 soat.</li><li>Sinov darsidan keyin — 12 soat ichida feedback.</li></ul>“Koʻrildi” 24 soat ichida bosilmasa, adminga xabar ketadi.'),
+      G('g4', 'Qotgan lidlar: qulf qoidasi', '', ['sales_manager', 'rop'], 'Admin (admin)', '2026-10-08', '“Urinilmoqda”da telefonni olmagan lidlar kuzatiladi.<ul><li>3 kun — menejer Bosh sahifasida ogohlantirish.</li><li>5 kun — menejer ilovasi shu lidlar bilan qulflanadi.</li></ul>Muddatlarni ROP “Qotgan lidlar qoidasi” sahifasida oʻzgartiradi.')
+    ];
+    this.A0 = { g1: '2026-10-16', g4: '2026-10-09' };
+    this.state = { sb: true, demo: 'ok', retried: false, ackRetried: false, tab: 'scr', q: '', gq: '', cur: 's1', gcur: '', scripts: this.S0.map(x => Object.assign({}, x)), acks: Object.assign({}, this.A0), ackBusy: '', ed: null, del: '', toast: '' };
+    this._t = null;
+    document.addEventListener('keydown', e => { if (e.key !== 'Escape' || e.defaultPrevented) return; if (this.state.ed && this.state.ed.pop) { this.setState({ ed: Object.assign({}, this.state.ed, { pop: '' }) }); return; } if (this.state.del) this.setState({ del: '' }); else if (this.state.ed) this.setState({ ed: null }); });
+  }
+  focusSoon(sel) { setTimeout(() => { const el = document.querySelector(sel); if (el && el.focus) el.focus(); }, 30); }
+  renderVals() {
+    const s = this.state;
+__NAVJS__
+__MKNAV__
+    const toast = t => { this.setState({ toast: t }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: '' }), 3500); };
+    const nav = mkNav(79, false).map(n => Object.assign({}, n, { cur: n.k === 'script' ? 'page' : 'false', pickBadge: () => {}, pick: () => { if (n.k === 'script' || !n.item) return; toast(n.label + ' sahifasi ochiladi'); } }));
+    const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#ef4444', '#f97316', '#eab308', '#22c55e', '#14b8a6', '#3b82f6', '#06b6d4', '#a855f7', '#64748b'];
+    const STK = ['📘', '📗', '📙', '📕', '📚', '🎯', '💡', '🔑', '⭐', '🚀', '💬', '🗣️', '📋', '✅', '🧠', '💎', '🔥', '🎓'];
+    const tint = c => { const h = String(c || '#6366f1').replace('#', ''); const r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16); return 'rgba(' + r + ',' + g + ',' + b + ',.14)'; };
+    const ddmm = d => d ? d.slice(8, 10) + '.' + d.slice(5, 7) : '';
+    const dmy = d => d ? d.slice(8, 10) + '.' + d.slice(5, 7) + '.' + d.slice(0, 4) : '';
+    const OKT = ['yan', 'fev', 'mar', 'apr', 'may', 'iyn', 'iyl', 'avg', 'sen', 'okt', 'noy', 'dek'];
+    const dShort = d => +d.slice(8, 10) + '-' + OKT[+d.slice(5, 7) - 1];
+    // sanitizeScriptHtml / renderScriptContentHtml: ruxsat etilgan teglar va style xossalari (app.js SCRIPT_ALLOWED_*)
+    const TAGS = { B: 1, STRONG: 1, I: 1, EM: 1, U: 1, S: 1, STRIKE: 1, SPAN: 1, DIV: 1, BR: 1, P: 1, UL: 1, OL: 1, LI: 1, FONT: 1 };
+    const PROPS = ['color', 'background-color', 'font-weight', 'font-style', 'text-decoration'];
+    const toEditable = c => (!c ? '' : /<[a-z][\s\S]*>/i.test(c) ? c : String(c).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/\n/g, '<br>'));
+    const sanitize = html => { const root = new DOMParser().parseFromString('<div id="r">' + toEditable(html) + '</div>', 'text/html').getElementById('r'); const walk = n => { Array.prototype.slice.call(n.childNodes).forEach(ch => { if (ch.nodeType === 1) { walk(ch); if (!TAGS[ch.tagName]) { while (ch.firstChild) n.insertBefore(ch.firstChild, ch); ch.remove(); return; } Array.prototype.slice.call(ch.attributes).forEach(a => { if (a.name === 'style') { const keep = String(a.value).split(';').map(x => x.trim()).filter(x => PROPS.includes(x.split(':')[0].trim().toLowerCase())); if (keep.length) ch.setAttribute('style', keep.join(';')); else ch.removeAttribute('style'); } else if (!(ch.tagName === 'FONT' && a.name === 'color')) ch.removeAttribute(a.name); }); } else if (ch.nodeType !== 3) ch.remove(); }); }; walk(root); return root.innerHTML; };
+    const strip = h => { const d = new DOMParser().parseFromString(String(h || ''), 'text/html'); return (d.body.textContent || '').replace(/\s+/g, ' ').trim(); };
+    // HTML → bloklar (paragraf / roʻyxat bandi) → uslubli boʻlaklar; shablon faqat matn chiqaradi
+    const blocks = html => {
+      const root = new DOMParser().parseFromString('<div id="r">' + sanitize(html) + '</div>', 'text/html').getElementById('r');
+      const out = []; let cur = null;
+      const nb = c => { cur = { c, runs: [] }; out.push(cur); };
+      const css = st => [st.b ? 'font-weight:800' : '', st.i ? 'font-style:italic' : '', st.u || st.s ? 'text-decoration:' + [st.u ? 'underline' : '', st.s ? 'line-through' : ''].join(' ').trim() : '', st.c ? 'color:' + st.c : '', st.bg ? 'background-color:' + st.bg : ''].filter(Boolean).join(';');
+      const walk = (n, st) => Array.prototype.slice.call(n.childNodes).forEach(ch => {
+        if (ch.nodeType === 3) { if (!ch.nodeValue) return; if (!cur) { if (!ch.nodeValue.trim()) return; nb('sc-p'); } cur.runs.push({ x: ch.nodeValue, st: css(st) }); return; }
+        const t = ch.tagName, s2 = Object.assign({}, st), sty = ch.getAttribute('style') || '';
+        if (t === 'B' || t === 'STRONG' || /font-weight:\s*(bold|[6-9]00)/.test(sty)) s2.b = 1;
+        if (t === 'I' || t === 'EM' || /font-style:\s*italic/.test(sty)) s2.i = 1;
+        if (t === 'U' || /underline/.test(sty)) s2.u = 1;
+        if (t === 'S' || t === 'STRIKE' || /line-through/.test(sty)) s2.s = 1;
+        const cm = sty.match(/(?:^|;)\s*color:\s*([^;]+)/); if (cm) s2.c = cm[1].trim(); if (t === 'FONT' && ch.getAttribute('color')) s2.c = ch.getAttribute('color');
+        const bm = sty.match(/background-color:\s*([^;]+)/); if (bm) s2.bg = bm[1].trim();
+        if (t === 'BR') { cur = null; return; }
+        if (t === 'LI') { nb('sc-li'); walk(ch, s2); cur = null; return; }
+        if (t === 'P' || t === 'DIV' || t === 'UL' || t === 'OL') { cur = null; walk(ch, s2); cur = null; return; }
+        walk(ch, s2);
+      });
+      walk(root, {});
+      return out.filter(b => b.runs.some(r => r.x.trim()));
+    };
+    const norm = t => String(t || '').toLowerCase().replace(/[ʻʼ‘’'`]/g, '');
+    const loading = s.demo === 'load', loadErr = s.demo === 'err' && !s.retried, ready = !loading && !loadErr;
+    const ackErr = s.demo === 'ackErr' && !s.ackRetried, ackLoad = s.demo === 'ackLoad';
+    const isS = s.tab === 'scr', isG = s.tab === 'gd';
+    const all = s.demo === 'empty' ? [] : s.scripts.filter(x => x.lang === 'russian');
+    const guides = s.demo === 'empty' ? [] : this.G0;
+    const known = !ackErr && !ackLoad;
+    const newN = known ? guides.filter(g => !s.acks[g.id]).length : 0;
+    // ---- Skriptlar (renderScripts) ----
+    let items = [], art = {}, none = false;
+    const q = norm(isS ? s.q : s.gq);
+    if (isS && all.length) {
+      const list = q ? all.filter(x => norm(x.title + ' ' + x.subtitle + ' ' + strip(x.content)).includes(q)) : all;
+      const curId = all.some(x => x.id === s.cur) ? s.cur : (list[0] || all[0]).id;
+      items = list.map(x => ({ id: x.id, t: x.title || 'Nomsiz', hasPv: true, pv: x.subtitle || strip(x.content).slice(0, 90), dt: (x.updatedAt ? 'Yangilangan ' : 'Qoʻshilgan ') + ddmm(x.updatedAt || x.createdAt), ico: x.sticker || '📘', icoSt: 'background:' + tint(x.color), on: x.id === curId ? 'true' : 'false', isNew: false, pick: () => this.setState({ cur: x.id }) }));
+      none = !list.length;
+      const c = all.find(x => x.id === curId);
+      art = { t: c.title || 'Nomsiz', sub: c.subtitle, hasSub: !!c.subtitle, ico: c.sticker || '📘', hSt: 'background:' + tint(c.color) + ';box-shadow:inset 0 4px 0 ' + c.color, meta: 'Rus tili · ' + (c.updatedAt ? 'yangilangan ' + dmy(c.updatedAt) : 'qoʻshilgan ' + dmy(c.createdAt)), edit: true, guide: false, blocks: blocks(c.content),
+        onEdit: () => this.openEd(c), onDel: () => { this.setState({ del: c.id }); this.focusSoon('[data-del] .btn2'); } };
+    }
+    // ---- Yoʻriqnomalar (renderMyGuides → staffGuides: roʻyxat + maqola + “Tanishib chiqdim”) ----
+    const CAT = r => (r.some(t => t === 'sales_manager' || t === 'rop') && !r.includes('teacher_main') ? ['Sotuv', 'Sotuv boʻlimi'] : ['HR', 'HR boʻlimi']);
+    const readMin = g => Math.max(1, Math.ceil(strip(g.content).split(/\s+/).length / 180));
+    if (isG && guides.length) {
+      const list = q ? guides.filter(g => norm(g.title + ' ' + g.subtitle + ' ' + strip(g.content)).includes(q)) : guides;
+      const gid = guides.some(g => g.id === s.gcur) ? s.gcur : ((known && guides.find(g => !s.acks[g.id])) || guides[0]).id;
+      items = list.map(g => { const done = known && s.acks[g.id]; return { id: g.id, t: g.title, hasPv: false, pv: '', dt: [g.subtitle || CAT(g.targetRoles)[0], dShort(g.d), done ? 'oʻqilgan' : readMin(g) + ' daq oʻqish'].join(' · '), ico: '📄', icoSt: 'background:#EEF2F6', on: g.id === gid ? 'true' : 'false', isNew: known && !done, pick: () => this.setState({ gcur: g.id }) }; });
+      none = !list.length;
+      const g = guides.find(x => x.id === gid), acked = known && s.acks[g.id], busy = s.ackBusy === g.id;
+      art = { t: g.title, sub: '', hasSub: false, ico: '📋', hSt: 'background:#F8FAFC', meta: [g.subtitle || CAT(g.targetRoles)[1], g.createdBy, dmy(g.d)].join(' · '), edit: false, guide: true, blocks: blocks(g.content),
+        ackT: ackLoad ? 'Holat yuklanmoqda…' : !known ? 'Tanishganlik holati yuklanmadi' : acked ? 'Tanishib chiqdingiz · ' + dmy(acked) : 'Oʻqib chiqqaningizni tasdiqlang — admin koʻradi',
+        canAck: known && !acked, acked: !!acked, ackBtn: busy ? 'Saqlanmoqda…' : 'Tanishib chiqdim', ackBusy: busy ? 'true' : 'false',
+        onAck: () => { if (s.ackBusy) return; this.setState({ ackBusy: g.id }); setTimeout(() => { if (this.state.demo === 'saveErr') { this.setState({ ackBusy: '' }); toast('Saqlab boʻlmadi — “Tanishib chiqdim” belgilanmadi, qayta bosing'); return; } const a = Object.assign({}, this.state.acks); a[g.id] = '2026-11-02'; this.setState({ acks: a, ackBusy: '' }); toast('“' + g.title + '” — tanishib chiqdingiz. Admin buni koʻradi.'); }, 450); } };
+    }
+    // ---- Muharrir (_openScriptModal / saveScriptFromModal) ----
+    const ed = s.ed;
+    const upd = patch => this.setState({ ed: Object.assign({}, this.state.ed, patch) });
+    const TCOL = ['#1a1d2e', '#ef4444', '#f97316', '#eab308', '#22c55e', '#14b8a6', '#3b82f6', '#6366f1', '#a855f7', '#ec4899', '#64748b', '#ffffff'];
+    const EMO = ['😀', '😊', '😉', '😍', '🤔', '😅', '😎', '🙌', '👍', '👏', '🙏', '💪', '✅', '❌', '⭐', '🔥', '💡', '📌', '📚', '🎯', '🚀', '💰', '📞', '💬', '❤️', '🎉', '⚠️', '➡️'];
+    const sel = () => { const e1 = this.state.ed || {}, el = document.getElementById('scBody'), v = e1.body || ''; if (e1.pop && e1.sr) return { el, v, a: e1.sr[0], b: e1.sr[1] }; return { el, v, a: el ? el.selectionStart : v.length, b: el ? el.selectionEnd : v.length }; };
+    const keepSel = () => { const el = document.getElementById('scBody'); return el ? [el.selectionStart, el.selectionEnd] : null; };
+    const put = (nv, a, b, hint) => { upd({ body: nv, pop: '', sr: null, hint: hint || '' }); setTimeout(() => { const el = document.getElementById('scBody'); if (el) { el.focus(); try { el.setSelectionRange(a, b); } catch (e) { /* */ } } }, 30); };
+    const wrap = (o, c) => { const x = sel(); if (x.a === x.b) { put(x.v, x.a, x.a, 'Avval matnni belgilang — tugma tanlangan matnga qoʻllanadi'); return; } put(x.v.slice(0, x.a) + o + x.v.slice(x.a, x.b) + c + x.v.slice(x.b), x.a + o.length, x.b + o.length); };
+    const list = () => { const x = sel(); const t = x.v.slice(x.a, x.b); const items = (t || 'Band').split(/\n|<br\s*\/?>/i).filter(l => l.trim()).map(l => '<li>' + l.trim() + '</li>').join(''); const ins = '<ul>' + items + '</ul>'; put(x.v.slice(0, x.a) + ins + x.v.slice(x.b), x.a, x.a + ins.length); };
+    const clearF = () => { const x = sel(); if (x.a === x.b) { put(x.v, x.a, x.a, 'Avval matnni belgilang — format shu qismdan olib tashlanadi'); return; } const t = x.v.slice(x.a, x.b).replace(/<(?!\/?(ul|ol|li|br)\b)[^>]*>/gi, ''); put(x.v.slice(0, x.a) + t + x.v.slice(x.b), x.a, x.a + t.length); };
+    const emoji = e => { const x = sel(); put(x.v.slice(0, x.a) + e + x.v.slice(x.b), x.a + e.length, x.a + e.length); };
+    const edV = ed ? {
+      h: ed.id ? 'Artikl tahrirlash' : 'Yangi artikl qoʻshish', saveT: ed.busy ? 'Saqlanmoqda…' : ed.id ? 'Saqlash' : 'Qoʻshish', busy: ed.busy ? 'true' : 'false', saveErr: !!ed.saveErr,
+      title: ed.title, sub: ed.sub, body: ed.body, tErr: !!ed.tErr, tInv: ed.tErr ? 'true' : 'false', tCls: 'sc-in' + (ed.tErr ? ' sc-bad' : ''), langWarn: ed.lang === 'english',
+      colors: COLORS.map((c, i) => ({ st: 'background:' + c, on: ed.color === c ? 'true' : 'false', lab: 'Rang ' + (i + 1), pick: () => upd({ color: c }) })),
+      stickers: STK.map(k => ({ t: k, on: ed.sticker === k ? 'true' : 'false', lab: 'Stiker ' + k, pick: () => upd({ sticker: k }) })),
+      langs: [['english', '🇬🇧 Ingliz tili'], ['russian', '🇷🇺 Rus tili']].map(o => ({ v: o[0], t: o[1], sel: ed.lang === o[0] })),
+      setLang: e => upd({ lang: e.target.value }), setTitle: e => upd({ title: e.target.value, tErr: false }), setSub: e => upd({ sub: e.target.value }), setBody: e => upd({ body: e.target.value, hint: '' }),
+      fB: () => wrap('<b>', '</b>'), fI: () => wrap('<i>', '</i>'), fU: () => wrap('<u>', '</u>'), fL: list, fX: clearF,
+      popC: ed.pop === 'c' ? 'true' : 'false', popE: ed.pop === 'e' ? 'true' : 'false', showC: ed.pop === 'c', showE: ed.pop === 'e',
+      tC: () => upd({ pop: this.state.ed.pop === 'c' ? '' : 'c', sr: this.state.ed.pop ? this.state.ed.sr : keepSel() }), tE: () => upd({ pop: this.state.ed.pop === 'e' ? '' : 'e', sr: this.state.ed.pop ? this.state.ed.sr : keepSel() }),
+      tcols: TCOL.map(c => ({ st: 'background:' + c, lab: 'Matn rangi ' + c, pick: () => wrap('<span style="color:' + c + '">', '</span>') })),
+      emojis: EMO.map(e => ({ t: e, pick: () => emoji(e) })),
+      fmtHint: ed.hint || 'Matnni belgilang va tugmani bosing — natija pastdagi “Koʻrinishi”da chiqadi.',
+      prev: blocks(ed.body), prevEmpty: !blocks(ed.body).length,
+      close: () => this.setState({ ed: null }),
+      save: () => {
+        const e0 = this.state.ed; if (e0.busy) return;
+        const title = String(e0.title || '').trim();
+        if (!title) { upd({ tErr: true }); this.focusSoon('#scTitle'); return; }
+        upd({ busy: true, saveErr: false });
+        setTimeout(() => {
+          if (this.state.demo === 'saveErr') { upd({ busy: false, saveErr: true }); return; }
+          const today = '2026-11-02';
+          const rec = { title, subtitle: String(e0.sub || '').trim(), color: e0.color, sticker: e0.sticker, lang: e0.lang, content: sanitize(e0.body) };
+          let arr = this.state.scripts.slice(), cur = this.state.cur;
+          if (e0.id) arr = arr.map(x => x.id === e0.id ? Object.assign({}, x, rec, { updatedAt: today }) : x);
+          else { const id = 'sc_' + Date.now(); arr.unshift(Object.assign({ id, createdAt: today, updatedAt: '' }, rec)); cur = id; }
+          this.setState({ scripts: arr, ed: null, cur, q: '' });
+          toast(e0.lang === 'english' ? '“' + title + '” Ingliz tili yoʻnalishiga saqlandi — Rus tili roʻyxatida koʻrinmaydi' : e0.id ? '“' + title + '” saqlandi' : '“' + title + '” qoʻshildi');
+        }, 500);
+      }
+    } : {};
+    const dx = s.del ? s.scripts.find(x => x.id === s.del) : null;
+    const trap = close => e => { if (e.key === 'Escape') { e.preventDefault(); close(); return; } if (e.key === 'Tab') { const bs = Array.prototype.slice.call(e.currentTarget.querySelectorAll('button,input,select,textarea')); const ix = bs.indexOf(document.activeElement); if ((e.shiftKey && ix <= 0) || (!e.shiftKey && ix === bs.length - 1)) { e.preventDefault(); (e.shiftKey ? bs[bs.length - 1] : bs[0]).focus(); } } };
+    const TABS = [['scr', 'Skriptlar', 'scTabS', String(all.length), ''], ['gd', 'Yoʻriqnomalar', 'scTabG', known ? (newN ? newN + ' yangi' : String(guides.length)) : String(guides.length), newN ? 'sc-new' : '']];
+    const showList = ready && (isS ? all.length > 0 : guides.length > 0);
+    return {
+      nav, sbCls: s.sb ? 'sb' : 'sb sb-min', sbExp: s.sb ? 'true' : 'false', sbLab: s.sb ? 'Menyuni yigʻish' : 'Menyuni ochish', sbIcon: s.sb ? 'M15 6l-6 6 6 6' : 'M9 6l6 6-6 6', toggleSb: () => this.setState({ sb: !s.sb }),
+      demo: [['ok', 'Oddiy'], ['load', 'Yuklanmoqda'], ['err', 'Xato'], ['empty', 'Boʻsh'], ['saveErr', 'Saqlash xatosi'], ['ackLoad', 'Holat yuklanmoqda'], ['ackErr', 'Holat xatosi']].map(d => ({ t: d[1], on: s.demo === d[0] ? 'true' : 'false', pick: () => this.setState({ demo: d[0], retried: false, ackRetried: false, scripts: this.S0.map(x => Object.assign({}, x)), acks: Object.assign({}, this.A0), q: '', gq: '', cur: 's1', gcur: '', ed: null, del: '', toast: '', ackBusy: '', tab: d[0] === 'ackErr' || d[0] === 'ackLoad' ? 'gd' : s.tab }) })),
+      loading, loadErr, retry: () => this.setState({ retried: true }), errT: isS ? 'Skriptlarni yuklab boʻlmadi — server javob bermadi' : 'Yoʻriqnomalarni yuklab boʻlmadi — server javob bermadi',
+      h1: isS ? 'Skriptlar' : 'Yoʻriqnomalar',
+      sub: loading ? 'Yuklanmoqda…' : isS ? 'Rus tili yoʻnalishi · ' + all.length + ' ta maqola · sotuvchilar uchun kurs maʼlumotlari ensiklopediyasi' : 'Lavozimingizga tegishli qoidalar · yangilari tepada',
+      canAdd: ready && isS, add: () => this.openEd(null),
+      tabs: TABS.map(t => ({ t: t[1], id: t[2], n: t[3], bc: t[4], on: s.tab === t[0] ? 'true' : 'false', ti: s.tab === t[0] ? '0' : '-1', lab: t[1] + ' · ' + t[3], pick: () => this.setState({ tab: t[0] }) })),
+      tabKey: e => { if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return; e.preventDefault(); const nx = isS ? 'gd' : 'scr'; this.setState({ tab: nx }); this.focusSoon(nx === 'scr' ? '#scTabS' : '#scTabG'); },
+      sEmpty: ready && isS && !all.length, gEmpty: ready && isG && !guides.length, showList, isG: ready && isG,
+      panelBy: isS ? 'scTabS' : 'scTabG', listLab: isS ? 'Skriptlar roʻyxati' : 'Yoʻriqnomalar roʻyxati',
+      q: isS ? s.q : s.gq, setQ: e => this.setState(isS ? { q: e.target.value } : { gq: e.target.value }), clearQ: () => { this.setState(isS ? { q: '' } : { gq: '' }); this.focusSoon('.sc-search input'); },
+      qPh: isS ? 'Maqola yoki iboradan qidirish' : 'Qidirish…', qLab: isS ? 'Skriptlardan qidirish' : 'Yoʻriqnomalardan qidirish',
+      qInfo: !!q && !none, qInfoT: items.length + ' ta topildi', items, none, art, ackErr: ready && isG && ackErr, retryAck: () => this.setState({ ackRetried: true }),
+      edOpen: !!ed, ed: edV, edKey: trap(() => { if (this.state.ed && this.state.ed.pop) upd({ pop: '' }); else this.setState({ ed: null }); }),
+      delOpen: !!dx, delT: dx ? dx.title : '', delNo: () => this.setState({ del: '' }), delKey: trap(() => this.setState({ del: '' })),
+      delYes: () => { if (s.demo === 'saveErr') { this.setState({ del: '' }); toast('Oʻchirib boʻlmadi — server javob bermadi'); return; } const t = dx.title; this.setState({ scripts: s.scripts.filter(x => x.id !== dx.id), del: '', cur: '' }); toast('“' + t + '” oʻchirildi'); },
+      toast: !!s.toast, toastT: s.toast
+    };
+  }
+  openEd(c) {
+    this.setState({ ed: c ? { id: c.id, title: c.title, sub: c.subtitle, color: c.color, sticker: c.sticker, lang: c.lang, body: c.content, tErr: false, busy: false, saveErr: false, pop: '', hint: '' } : { id: '', title: '', sub: '', color: '#6366f1', sticker: '📘', lang: 'russian', body: '', tErr: false, busy: false, saveErr: false, pop: '', hint: '' } });
+    this.focusSoon('#scTitle');
+  }
+}

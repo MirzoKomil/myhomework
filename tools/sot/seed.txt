@@ -1,0 +1,62 @@
+    // Kamola Shahobiddinova (KS) — faqat oʻz lidlari (prod: filterLeadsByManager app.js:19862, server/routes/leads.js:285). Bu oy jami 53 ta.
+    const ALLCOLS = [
+      ['new', 'Yangi lidlar', '#2563EB', 0], ['try', 'Urinilmoqda', '#7C3AED', 12], ['con', 'Bogʻlanildi', '#0891B2', 5],
+      ['trial', 'Sinov darsida', '#16A34A', 3], ['dec', 'Qaror jarayonida', '#EA580C', 4], ['defer', 'Keyin sotib olmoqchi', '#4F46E5', 3],
+      ['pay', 'Toʻlov jarayonida', '#D97706', 0], ['paid', 'Toʻlov yopildi', '#059669', 13], ['fail', 'Muvaffaqiyatsiz sotuv', '#DC2626', 9], ['junk', 'Sifatsiz lidlar', '#64748B', 4]
+    ];
+    const DEF_ON = { new: 1, try: 1, con: 1, trial: 1, dec: 1, defer: 1, pay: 1, paid: 1 };
+    const colsOn = s.colsOn || DEF_ON;
+    const ql = s.q.trim().toLowerCase();
+    const COLS = ALLCOLS.filter(c => colsOn[c[0]] || (ql && (c[0] === 'fail' || c[0] === 'junk')));
+    const L = (n, time, age, lvl, src, phones, mgr, o) => Object.assign({ n, time, age, lvl, src, phones: (phones || []).map(p => { const d = String(p).replace(/\D/g, ''); return d.indexOf('998') === 0 ? p : '+' + d; }), mgr, stale: '', notif: 0, com: 0, rec: 0 }, o || {});
+    // sd — menejerga berilganidan beri kun (staleLeads ageDays)
+    // SotK_Funnel ALLOC.KS / SotKHome FUN bilan bir xil: 0/12/5/3/4/3/0 = 27 ochiq; 13/9/4 yopilgan → 53
+    const CARDS = {
+      new: [],
+      try: [
+        L('Rustam Toshev', '29-okt', '4 kun', 'late', 'Organik', ['+998 93 220 18 64'], 'Kamola', { stale: 'ogoh.', sk: 'warn', sd: 4, reason: 'Ishda — kechqurun 18:00 dan keyin', rk: 'later', notif: 1, com: 3, rec: 1, next: 'kecha 18:00', late: true }),
+        L('Shahnoza Aliyeva', '29-okt', '4 kun', 'late', 'Target', ['+998 90 112 45 07'], 'Kamola', { stale: 'ogoh.', sk: 'warn', sd: 4, reason: 'Javob bermadi', rk: 'no', com: 4, rec: 2 }),
+        L('Zilola Hamidova', '31-okt', '2 kun', 'warn', 'Target', ['+998 94 310 72 09'], 'Kamola', { sd: 2, reason: 'Javob bermadi', rk: 'no', com: 1 }),
+        L('Jahongir Sobirov', '31-okt', '2 kun', 'warn', 'Target', ['+998 99 318 52 04'], 'Kamola', { sd: 2, reason: 'Band boʻldi', rk: 'busy', com: 2 }),
+        L('Zarina Qosimova', '31-okt', '2 kun', 'warn', 'Target', ['+998 94 120 77 35'], 'Kamola', { sd: 2, reason: 'Band boʻldi', rk: 'busy', com: 1, next: 'ertaga 11:00' }),
+        L('Feruza Mirzayeva', 'Kecha 09:10', '1 kun', 'warn', 'Organik', ['+998 91 233 08 71'], 'Kamola', { sd: 1, reason: 'Telefoni oʻchiq', rk: 'off', com: 1 }),
+        L('Asror Nurmatov', 'Kecha 10:30', '1 kun', 'warn', 'Organik', ['+998 90 507 13 26'], 'Kamola', { sd: 1, reason: 'Keyinroq gaplashishni soʻradi', rk: 'later', com: 1, next: 'ertaga 10:00' }),
+        L('Shoira Nazarova', 'Kecha 13:40', '12 soat', 'ok', 'Target', ['+998 97 402 66 19'], 'Kamola', { sd: 0, reason: 'Javob bermadi', rk: 'no', com: 1 }),
+        L('Otabek Yoʻldoshev', 'Kecha 16:05', '9 soat', 'ok', 'Organik', ['+998 93 744 10 58'], 'Kamola', { sd: 0, reason: 'Telefoni oʻchiq', rk: 'off', com: 1 }),
+        L('Gulnoza Ahmedova', 'Kecha 19:20', '6 soat', 'ok', 'Target', ['+998 90 615 27 43'], 'Kamola', { sd: 0, reason: 'Javob bermadi', rk: 'no', com: 1 }),
+        L('Dilshoda Ergasheva', 'Kecha 21:15', '4 soat', 'ok', 'Target', ['+998 99 260 41 75'], 'Kamola', { sd: 0, reason: 'Band boʻldi', rk: 'busy', com: 1 }),
+        L('Behruz Sattorov', '00:40', '1 soat', 'ok', 'Organik', ['+998 91 588 03 62'], 'Kamola', { sd: 0, reason: 'Javob bermadi', rk: 'no', com: 1 })
+      ],
+      con: [
+        L('Nilufar Saidova', 'Kecha 15:10', '10 soat', 'ok', 'Organik', ['+998 95 310 62 48'], 'Kamola', { com: 3, rec: 1, next: 'ertaga 16:30' }),
+        L('Sardor Rahimov', 'Kecha 19:30', '6 soat', 'ok', 'Target', ['+998 88 471 20 93'], 'Kamola', { com: 2 }),
+        L('Kamron Ergashev', '31-okt', '1 kun', 'warn', 'Target', ['+998 90 455 21 08'], 'Kamola', { com: 2, rec: 1 }),
+        L('Madina Yusupova', '31-okt', '1 kun', 'warn', 'Organik', ['+998 97 515 38 02'], 'Kamola', { com: 2 }),
+        L('Nodir Saidov', '30-okt', '2 kun', 'warn', 'Target', ['+998 93 660 47 11'], 'Kamola', { com: 3, rec: 1, next: 'ertaga 12:00' })
+      ],
+      trial: [
+        L('Ozoda Rahimova', '31-okt', '1 kun', 'warn', 'Target', ['+998 90 284 63 70'], 'Kamola', { trial: 'Tasdiqlandi', thint: 'Bugun 19:00 · Dilnoza Karimova · Zoom', tone: 'info', ta: 'pending', com: 2, rec: 1 }),
+        L('Sardor Komilov', 'Kecha 12:00', '13 soat', 'ok', 'Organik', ['+998 99 731 08 24'], 'Kamola', { trial: 'Tasdiqlandi', thint: 'Bugun 20:00 · Shahnoza Qodirova · Zoom', tone: 'info', ta: 'pending', com: 2 }),
+        L('Ulugʻbek Rasulov', '30-okt', '2 kun', 'warn', 'Target', ['+998 93 118 40 52'], 'Kamola', { trial: 'Muddati oʻtdi · natija kerak', tone: 'bad', ta: 'over', com: 1 })
+      ],
+      dec: [
+        L('Gulbahor Yusupova', '30-okt', '2 kun', 'warn', 'Target', ['+998 91 640 22 17'], 'Kamola', { com: 4, rec: 1, next: 'bugun 11:00' }),
+        L('Doston Halimov', '29-okt', '3 kun', 'late', 'Target', ['+998 90 935 61 48'], 'Kamola', { com: 4, rec: 2, next: 'bugun 15:30' }),
+        L('Mohira Tojiyeva', '30-okt', '2 kun', 'warn', 'Target', ['+998 97 640 33 18'], 'Kamola', { com: 3, next: 'ertaga 15:00' }),
+        L('Aziza Yoqubova', '31-okt', '1 kun', 'warn', 'Organik', ['+998 95 402 19 63'], 'Kamola', { com: 2 })
+      ],
+      defer: [
+        L('Laylo Karimova', '24-okt', '', '', 'Organik', ['+998 90 731 52 60'], 'Kamola', { defer: true, dp: '20.11.2026', dc: '15.11.2026', com: 3 }),
+        L('Bekzod Umarov', '26-okt', '', '', 'Target', ['+998 93 507 81 44'], 'Kamola', { defer: true, dp: '01.12.2026', dc: '25.11.2026', com: 2 }),
+        L('Malika Tursunova', '27-okt', '', '', 'Target', ['+998 94 718 26 30'], 'Kamola', { defer: true, dp: '10.12.2026', dc: '05.12.2026', com: 2 })
+      ],
+      pay: [],
+      paid: [L('Temur Nazarov', '30-okt', '', '', 'Target', ['+998 90 990 31 45'], 'Kamola', { serial: 'RU041', com: 6, rec: 3 })],
+      fail: [L('Bahrom Ergashev', '22-okt', '', '', 'Target', ['+998 93 270 66 41'], 'Kamola', { com: 3, rec: 1 })],
+      junk: []
+    };
+    // Faqat SotKL_Stale: Shahnoza va Rustam 5-kunga yetgan (qulf). Asosiy bordlarda ≤4 kun — faqat ogohlantirish.
+    if (MODE === 'stale' && s.demo !== 'warn') CARDS.try.slice(0, 2).forEach(k => Object.assign(k, { sd: 5, age: '5 kun', stale: 'qulf', sk: 'lock' }));
+    const EMPTY = s.demo === 'empty' && MODE !== 'stale';
+    if (EMPTY) { Object.keys(CARDS).forEach(k => { CARDS[k] = []; }); ALLCOLS.forEach(c => { c[3] = 0; }); }
+    const SUM = { con: 'oʻrtacha 7 soat', trial: 'bugun 2 ta sinov · 19:00, 20:00', defer: 'xabarlashish 15-noy', paid: 'joriy oy' };

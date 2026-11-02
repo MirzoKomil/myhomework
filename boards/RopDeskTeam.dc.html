@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<title>ROP — Jamoa va voronka (kompyuter)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#0057B8;text-decoration:none}a:hover{color:#0B1220}
+.dk-nav a{display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:12px;color:#3A4456;font-size:14px;font-weight:600}
+.dk-nav a:hover{background:#F1F5F9;color:#0B1220}
+.dk-nav a[aria-current="page"]{background:#EAF3FF;color:#0057B8;font-weight:800}
+.dk-cnt{margin-left:auto;min-width:22px;height:22px;padding:0 6px;box-sizing:border-box;border-radius:999px;background:#D92D20;color:#FFFFFF;font-size:12px;font-weight:800;display:grid;place-items:center}
+.dk-grp{font-size:12px;font-weight:800;color:#4B5563;letter-spacing:.06em;padding:12px 12px 4px}
+.dk-row:hover{background:#F8FAFD}
+@keyframes dwBar{from{transform:scaleX(0)}to{transform:none}}
+.dw-bar{transform-origin:left;animation:dwBar .8s cubic-bezier(.2,.8,.2,1) both}
+@media (prefers-reduced-motion:reduce){.dw-bar{animation:none}}
+a,button{transition:transform .2s ease,background .15s ease}a:active,button:active{transform:scale(.98)}
+.t-table{display:table}.t-hg{display:table-header-group}.t-rg{display:table-row-group}.t-row{display:table-row}.t-cell{display:table-cell;vertical-align:middle}sc-for,sc-if{display:contents}
+</style>
+</helmet>
+<div style="min-height: 960px; box-sizing: border-box; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #0B1220; background: #F5F7FB; display: flex">
+
+  <aside aria-label="Asosiy menyu" style="flex: none; width: 256px; background: #FFFFFF; border-right: 1px solid #E6EAF2; display: flex; flex-direction: column; padding: 18px 14px; box-sizing: border-box">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 2px 8px 14px">
+      <span style="width: 36px; height: 36px; border-radius: 11px; background: #0065D6; color: #FFFFFF; display: grid; place-items: center; font-weight: 800; font-size: 15px">D</span>
+      <span style="display: flex; flex-direction: column"><strong style="font-size: 15px">Domwork Team</strong><span style="font-size: 12px; color: #4B5563; font-weight: 600">ROP kabineti</span></span>
+    </div>
+    <nav class="dk-nav" style="display: flex; flex-direction: column; gap: 2px">
+      <a href="RopDeskHome.dc.html"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5L12 3l9 7.5V20a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"></path></svg>Bosh</a>
+      <a href="RopDeskLeads.dc.html"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 00-3-3.9M16 3.1a4 4 0 010 7.8"></path></svg>Lidlar<span class="dk-cnt" aria-label="7 ta kutmoqda">7</span></a>
+      <a href="RopDeskTrials.dc.html"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16" rx="3"></rect><path d="M3 9.5h18M8 3v3M16 3v3"></path></svg>Jadval</a>
+      <a href="RopDeskTeam.dc.html" aria-current="page"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V11M10 20V5M16 20v-7M21 20H3"></path></svg>Jamoa va voronka</a>
+      <a href="RopDeskControl.dc.html"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"></path></svg>Nazorat<span class="dk-cnt" aria-label="7 ta kutmoqda">7</span></a>
+      <span class="dk-grp">SOTUV</span>
+      <a href="Rating.dc.html"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0zM7 6H4a3 3 0 003 3M17 6h3a3 3 0 01-3 3"></path></svg>Reyting va bonus</a>
+      <a href="Debtors.dc.html"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="13" rx="3"></rect><path d="M2 10h20"></path></svg>Qarzdorlar</a>
+      <a href="Scripts.dc.html"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"></path></svg>Skript va yoʻriqnoma</a>
+      <span class="dk-grp">VOSITALAR</span>
+      <a href="RopDeskSettings.dc.html"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 018 0v4"></path></svg>Qotgan lidlar qoidasi</a>
+      <a href="RopDeskSettings.dc.html"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4"></path></svg>Arxiv</a>
+      <a href="RopDeskSettings.dc.html"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v12H5l-1 4z"></path><path d="M8 9h8M8 12h5"></path></svg>SMS yuborish</a>
+      <span class="dk-grp">OʻQUVCHILAR</span>
+      <a href="Students.dc.html"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 10L12 5 2 10l10 5 10-5z"></path><path d="M6 12v5c3 2 9 2 12 0v-5"></path></svg>Oʻquvchilar</a>
+      <a href="Students.dc.html"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 4L3 11l6 2 2 6 3-4 5 4z"></path></svg>Telegram guruh</a>
+    </nav>
+    <div style="margin-top: auto; display: flex; flex-direction: column; gap: 6px; padding-top: 12px">
+      <a href="Profile.dc.html" style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 14px; border: 1px solid #E6EAF2; color: #0B1220">
+        <span style="flex: none; width: 36px; height: 36px; border-radius: 50%; background: #0B1220; color: #FFFFFF; display: grid; place-items: center; font-size: 13px; font-weight: 800">DK</span>
+        <span style="flex: 1; min-width: 0; display: flex; flex-direction: column"><strong style="font-size: 14px">Dilnoza Karimova</strong><span style="font-size: 12px; color: #4B5563">ROP · Rus tili · Profil</span></span>
+      </a>
+      <a href="Main.dc.html" style="height: 44px; display: flex; align-items: center; gap: 10px; padding: 0 12px; border-radius: 12px; color: #B42318; font-size: 14px; font-weight: 700"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"></path></svg>Chiqish</a>
+    </div>
+  </aside>
+
+  <main style="flex: 1; min-width: 0; display: flex; flex-direction: column">
+    <header style="height: 76px; flex: none; padding: 0 28px; display: flex; align-items: center; gap: 14px; background: #FFFFFF; border-bottom: 1px solid #E6EAF2; box-sizing: border-box">
+      <h1 style="flex: 1; margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.02em">Jamoa va voronka</h1>
+      <div role="radiogroup" aria-label="Davr" style="display: flex; padding: 3px; border-radius: 14px; background: #F1F5F9; gap: 3px">
+        <sc-for list="{{ periods }}" as="p" hint-placeholder-count="3">
+          <button type="button" role="radio" aria-checked="{{ p.on }}" onClick="{{ p.pick }}" style="{{ p.style }}">{{ p.label }}</button>
+        </sc-for>
+      </div>
+      <a href="RopDeskNotif.dc.html" aria-label="Bildirishnomalar, 5 ta yangi" style="position: relative; width: 44px; height: 44px; border-radius: 14px; border: 1px solid #CBD5E1; background: #FFFFFF; display: grid; place-items: center; color: #3A4456; box-sizing: border-box"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 00-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0"></path></svg><span style="position: absolute; top: -5px; right: -5px; min-width: 20px; height: 20px; border-radius: 999px; background: #D92D20; color: #FFFFFF; font-size: 12px; font-weight: 800; display: grid; place-items: center; border: 2px solid #FFFFFF">5</span></a>
+    </header>
+
+    <div style="flex: 1; padding: 22px 28px 28px; display: flex; flex-direction: column; gap: 18px; max-width: 1184px; margin: 0 auto; box-sizing: border-box; width: 100%">
+      <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px">
+        <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
+          <div style="background: #FFFFFF; border: 1px solid #E6EAF2; border-radius: 20px; padding: 16px 18px; display: flex; flex-direction: column; gap: 4px">
+            <span style="font-size: 13px; color: #4B5563; font-weight: 600">{{ k.k }}</span>
+            <strong style="font-size: 28px; font-weight: 800; letter-spacing: -0.02em">{{ k.v }}</strong>
+            <span style="{{ k.dStyle }}">{{ k.d }}</span>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 18px">
+        <section style="background: #FFFFFF; border: 1px solid #E6EAF2; border-radius: 20px; padding: 18px 20px; display: flex; flex-direction: column; gap: 12px">
+          <h2 style="margin: 0; font-size: 17px; font-weight: 800">Voronka · {{ pLabel }}</h2>
+          <sc-for list="{{ funnel }}" as="f" hint-placeholder-count="6">
+            <div style="display: grid; grid-template-columns: 130px minmax(0, 1fr) 64px 70px; align-items: center; gap: 12px">
+              <span style="font-size: 14px; font-weight: 700; color: #3A4456">{{ f.label }}</span>
+              <span aria-hidden="true" style="height: 26px; border-radius: 8px; background: #F1F5F9; overflow: hidden"><span class="dw-bar" style="{{ f.bar }}"></span></span>
+              <strong style="font-size: 15px; text-align: right; font-variant-numeric: tabular-nums">{{ f.v }}</strong>
+              <span style="{{ f.convStyle }}">{{ f.conv }}</span>
+            </div>
+          </sc-for>
+          <span style="font-size: 12px; color: #4B5563">Oʻngdagi foiz — oldingi bosqichdan oʻtish. Eng katta yoʻqotish: Bogʻlanildi → Sinov.</span>
+        </section>
+
+        <section style="background: #FFFFFF; border: 1px solid #E6EAF2; border-radius: 20px; padding: 18px 20px; display: flex; flex-direction: column; gap: 12px">
+          <h2 style="margin: 0; font-size: 17px; font-weight: 800">Manba boʻyicha</h2>
+          <sc-for list="{{ sources }}" as="s" hint-placeholder-count="4">
+            <div style="display: flex; flex-direction: column; gap: 6px; padding: 8px 0; border-bottom: 1px solid #EEF2F8">
+              <span style="display: flex; justify-content: space-between; font-size: 14px"><strong>{{ s.k }}</strong><span style="color: #3A4456; font-weight: 600">{{ s.leads }} lid · <strong style="color: #0B1220">{{ s.pay }} toʻlov</strong></span></span>
+              <span aria-hidden="true" style="height: 8px; border-radius: 999px; background: #F1F5F9"><span style="{{ s.bar }}"></span></span>
+              <span style="font-size: 12px; color: #4B5563">Konversiya {{ s.conv }} · chiziq eng yaxshi manbaga nisbatan</span>
+            </div>
+          </sc-for>
+        </section>
+      </div>
+
+      <section style="background: #FFFFFF; border: 1px solid #E6EAF2; border-radius: 20px; overflow: hidden">
+        <div style="padding: 16px 20px; display: flex; align-items: center; border-bottom: 1px solid #EEF2F8"><h2 style="flex: 1; margin: 0; font-size: 17px; font-weight: 800">Menejerlar · {{ pLabel }}</h2><a href="Rating.dc.html" style="font-size: 14px; font-weight: 700; min-height: 44px; display: flex; align-items: center">Reyting va bonus</a></div>
+        <div role="table" class="t-table" style="width: 100%; border-collapse: collapse; font-size: 14px">
+          <div role="rowgroup" class="t-hg">
+            <div role="row" class="t-row" style="text-align: left; color: #4B5563; font-size: 12px; letter-spacing: .04em">
+              <div role="columnheader" class="t-cell" style="padding: 10px 20px; font-weight: 700">#</div>
+              <div role="columnheader" class="t-cell" style="padding: 10px 12px; font-weight: 700">MENEJER</div>
+              <div role="columnheader" class="t-cell" style="padding: 10px 12px; font-weight: 700; width: 28%">REJA · TOʻLOVLAR SONI</div>
+              <div role="columnheader" class="t-cell" style="padding: 10px 12px; font-weight: 700; text-align: right">LID</div>
+              <div role="columnheader" class="t-cell" style="padding: 10px 12px; font-weight: 700; text-align: right">SINOV</div>
+              <div role="columnheader" class="t-cell" style="padding: 10px 12px; font-weight: 700; text-align: right">TOʻLOV</div>
+              <div role="columnheader" class="t-cell" style="padding: 10px 20px; font-weight: 700; text-align: right">KONVERSIYA</div>
+            </div>
+          </div>
+          <div role="rowgroup" class="t-rg">
+            <sc-for list="{{ mans }}" as="m" hint-placeholder-count="6">
+              <div role="row" class="t-row dk-row" style="border-top: 1px solid #EEF2F8">
+                <div role="cell" class="t-cell" style="padding: 10px 20px"><span style="{{ m.rankStyle }}">{{ m.rank }}</span></div>
+                <div role="cell" class="t-cell" style="padding: 6px 12px"><a href="RopDeskModal.dc.html" style="display: flex; align-items: center; gap: 10px; color: #0B1220; min-height: 44px"><img src="{{ m.av }}" alt="" style="width: 36px; height: 36px; border-radius: 50%"><strong>{{ m.name }}</strong></a></div>
+                <div role="cell" class="t-cell" style="padding: 10px 12px"><span style="display: flex; align-items: center; gap: 10px"><span aria-hidden="true" style="flex: 1; height: 8px; border-radius: 999px; background: #E2E8F0"><span style="{{ m.bar }}"></span></span><span style="font-size: 13px; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums">{{ m.plan }}</span></span></div>
+                <div role="cell" class="t-cell" style="padding: 10px 12px; text-align: right; font-variant-numeric: tabular-nums">{{ m.leads }}</div>
+                <div role="cell" class="t-cell" style="padding: 10px 12px; text-align: right; font-variant-numeric: tabular-nums">{{ m.trials }}</div>
+                <div role="cell" class="t-cell" style="padding: 10px 12px; text-align: right; font-weight: 800; font-variant-numeric: tabular-nums">{{ m.pays }}</div>
+                <div role="cell" class="t-cell" style="padding: 10px 20px; text-align: right; font-weight: 800; font-variant-numeric: tabular-nums">{{ m.conv }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":960}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { per: 'month' }; }
+  renderVals() {
+    const PER = {
+      day: { label: 'bugun', k: [['Lidlar', '23', '16 biriktirildi · 7 kutmoqda', 1], ['Toʻlovlar', '4', '3,2 mln', 1], ['Sinovga kelish', '67%', '4 / 6', 1], ['Birinchi qoʻngʻiroq', '19 daq', 'SLA 30 daq ichida', 1]], F: [23, 14, 6, 4, 4, 4], S: [[11, 1], [7, 1], [3, 0], [2, 0]], M: [[2, 1, 3, 2], [1, 1, 4, 1], [1, 1, 2, 1], [0, 1, 4, 0], [0, 1, 0, 0], [0, 1, 3, 0]] },
+      week: { label: 'shu hafta', k: [['Lidlar', '241', '+8% oʻtgan haftaga', 1], ['Konversiya', '7,1%', '−0,3 punkt', 0], ['Sinovga kelish', '70%', '+2 punkt', 1], ['Birinchi qoʻngʻiroq', '15 daq', 'SLA 30 daq ichida', 1]], F: [241, 140, 47, 33, 24, 17], S: [[113, 8], [66, 5], [43, 2], [19, 2]], M: [[5, 6, 46, 5], [4, 6, 44, 4], [3, 6, 41, 3], [2, 6, 47, 2], [2, 6, 31, 2], [1, 6, 32, 1]] },
+      month: { label: 'noyabr', k: [['Lidlar', '1 094', '+12% oktyabrga nisbatan', 1], ['Konversiya', '7,4%', '−0,6 punkt', 0], ['Sinovga kelish', '68%', '+4 punkt', 1], ['Birinchi qoʻngʻiroq', '14 daq', 'SLA 30 daq ichida', 1]], F: [1094, 642, 213, 145, 112, 81], S: [[512, 36], [298, 27], [196, 9], [88, 9]], M: [[19, 25, 205, 19], [16, 25, 198, 16], [14, 25, 187, 14], [12, 25, 212, 12], [11, 25, 141, 11], [9, 25, 151, 9]] }
+    };
+    const P = PER[this.state.per];
+    const periods = [['day', 'Bugun'], ['week', 'Hafta'], ['month', 'Noyabr']].map(x => {
+      const on = x[0] === this.state.per;
+      return { label: x[1], on: on ? 'true' : 'false', pick: () => this.setState({ per: x[0] }), style: 'height:44px;padding:0 14px;border:0;border-radius:11px;font:inherit;font-size:13px;cursor:pointer;' + (on ? 'background:#FFFFFF;color:#0B1220;font-weight:800;box-shadow:0 1px 3px rgba(11,18,32,.12)' : 'background:transparent;color:#3A4456;font-weight:600') };
+    });
+    const AV = {
+      Zarina: '/_blob/b9aca71346c3fe5b85756b5797dc7cb1', Hamidaxon: '/_blob/1e371186761692420cffee7eacdd8f25',
+      Bekzod: '/_blob/23cdf5040205eab3e04eb749efde5db4', Gulnora: '/_blob/60cc5ea62670d39355a4ed1c2240bc78',
+      Sardor: '/_blob/591ff7093317a38b4deae224e025df54', Nodira: '/_blob/afdd3e8f963453ddcc22787871d42350'
+    };
+    const up = 'font-size:12px;font-weight:700;color:#067647', dn = 'font-size:12px;font-weight:700;color:#B42318';
+    const kpis = P.k.map(k => ({ k: k[0], v: k[1], d: k[2], dStyle: k[3] ? up : dn }));
+    const FL = ['Yangi lid', 'Bogʻlanildi', 'Sinov qoʻyildi', 'Sinovga keldi', 'Qaror', 'Toʻlov'];
+    const F = FL.map((l, i) => [l, P.F[i]]);
+    const funnel = F.map((f, i) => {
+      const conv = i ? Math.round(f[1] / F[i - 1][1] * 100) : null;
+      return {
+        label: f[0], v: f[1].toLocaleString('ru-RU').replace(/ /g, ' '),
+        bar: 'display:block;height:26px;border-radius:8px;width:' + (f[1] / F[0][1] * 100) + '%;background:' + (i === 2 ? '#F79009' : '#0065D6') + ';animation-delay:' + (i * 0.08) + 's',
+        conv: conv === null ? '' : conv + '%',
+        convStyle: 'justify-self:end;font-size:12px;font-weight:800;border-radius:999px;padding:3px 9px;' + (conv === null ? '' : conv < 40 ? 'color:#93370D;background:#FEF0C7' : 'color:#3A4456;background:#F1F5F9')
+      };
+    });
+    const SN = ['Target · Instagram', 'Organik · domwork.uz', 'Target · Facebook', 'Tavsiya'];
+    const S = SN.map((n, i) => [n, P.S[i][0], P.S[i][1]]);
+    const best = Math.max.apply(null, S.map(s => s[2] / s[1]));
+    const sources = S.map(s => ({ k: s[0], leads: s[1], pay: s[2], conv: (s[2] / s[1] * 100).toFixed(1).replace('.', ',') + '%', bar: 'display:block;height:8px;border-radius:999px;background:#0065D6;width:' + (best ? Math.round(s[2] / s[1] / best * 100) : 0) + '%' }));
+    const MN = ['Zarina', 'Hamidaxon', 'Bekzod', 'Gulnora', 'Sardor', 'Nodira'];
+    const TR = { day: [2, 1, 1, 1, 0, 1], week: [11, 10, 8, 8, 5, 5], month: [52, 44, 39, 35, 26, 17] }[this.state.per];
+    const M = MN.map((n, i) => [n, P.M[i][0], P.M[i][1], P.M[i][2], TR[i], P.M[i][3]]);
+    const mans = M.map((m, i) => ({
+      rank: i + 1, name: m[0], av: AV[m[0]], plan: m[1] + ' / ' + m[2], leads: m[3], trials: m[4], pays: m[5],
+      conv: (m[5] / m[3] * 100).toFixed(1).replace('.', ',') + '%',
+      bar: 'display:block;height:8px;border-radius:999px;width:' + Math.min(100, m[1] / m[2] * 100) + '%;background:' + (m[1] >= m[2] ? '#12B76A' : m[1] / m[2] < 0.5 ? '#F79009' : '#0065D6'),
+      rankStyle: 'display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;font-size:13px;font-weight:800;' + (i === 0 ? 'background:#FDE68A;color:#713F12' : i < 3 ? 'background:#EAF3FF;color:#0057B8' : 'background:#F1F5F9;color:#3A4456')
+    }));
+    return { kpis, funnel, sources, mans, periods, pLabel: P.label };
+  }
+}
+</script>
+</body>
+</html>

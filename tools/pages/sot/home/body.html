@@ -1,0 +1,189 @@
+<div data-root="1" style="height: 960px; box-sizing: border-box; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #0B1220; background: #F5F7FB; display: flex; position: relative; overflow: hidden">
+<style>
+.hm-top{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:14px}
+.hm-card{background:#FFFFFF;border:1px solid #E6EAF2;border-radius:18px;padding:16px 18px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.hm-card h2{margin:0;font-size:16px;font-weight:800}.hm-card h3{margin:0;font-size:15px;font-weight:800}
+.hm-ph{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.hm-pill{display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:999px;font-size:12px;font-weight:800;white-space:nowrap}
+.hm-ok{background:#ECFDF3;color:#067647}.hm-warn{background:#FFFAEB;color:#93370D}.hm-red{background:#FEF3F2;color:#B42318}.hm-gray{background:#F1F5F9;color:#3A4456}.hm-blue{background:#EAF3FF;color:#0057B8}
+.hm-pnum{display:flex;align-items:baseline;gap:8px}.hm-pnum b{font-size:30px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}.hm-pnum span{font-size:14px;color:#4B5563;font-weight:700}
+.hm-sub{font-size:12px;color:#4B5563;line-height:1.4}
+.hm-ptop{display:flex;gap:14px;align-items:flex-start}
+.hm-gift{flex:none;width:210px;display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:14px;background:#FFFAEB;border:1px solid #FEDF89}
+.hm-gift i{font-style:normal;font-size:30px}.hm-gift div{display:flex;flex-direction:column;gap:1px;min-width:0}.hm-gift span{font-size:11px;font-weight:800;color:#93370D;text-transform:uppercase;letter-spacing:.04em}.hm-gift b{font-size:14px}.hm-gift small{font-size:12px;color:#4B5563}
+.hm-bar{position:relative;height:10px;border-radius:999px;background:#EEF2F6}
+.hm-bar i{position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:#12B76A}
+.hm-bar em{position:absolute;top:-4px;width:3px;height:18px;border-radius:2px;background:#0B1220}
+.hm-bfoot{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:#4B5563}.hm-bfoot strong{color:#0B1220}
+.hm-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.hm-tile{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:12px;background:#F8FAFC;border:1px solid #EEF2F6;min-width:0}
+.hm-tile span{font-size:12px;font-weight:700;color:#4B5563}.hm-tile b{font-size:17px;font-weight:800;font-variant-numeric:tabular-nums}.hm-tile small{font-size:11px;color:#4B5563}
+.hm-next{background:linear-gradient(160deg,#0B1220,#1D2B4F);color:#FFFFFF;border-radius:18px;padding:16px 18px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.hm-eb{font-size:11px;font-weight:800;letter-spacing:.08em;color:#A5B4FC}
+.hm-next h2{margin:0;font-size:22px;font-weight:800}
+.hm-dsub{font-size:13px;color:#CBD5E1}
+.hm-chips{display:flex;gap:6px;flex-wrap:wrap}
+.hm-dchip{display:inline-flex;align-items:center;height:24px;padding:0 9px;border-radius:999px;font-size:12px;font-weight:800;background:rgba(255,255,255,.12);color:#E2E8F0}
+.hm-dchip.hm-dred{background:#B42318;color:#FFFFFF}.hm-dchip.hm-damb{background:#F79009;color:#1F1300}
+.hm-nnote{margin:0;font-size:12px;color:#CBD5E1;line-height:1.45}
+.hm-nact{display:flex;gap:8px;align-items:center;margin-top:auto;padding-top:4px}
+.hm-call{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 16px;border-radius:12px;background:#12B76A;color:#FFFFFF;font-weight:800;font-size:14px;text-decoration:none;border:0;cursor:pointer}
+.hm-call:focus-visible,.hm-ghost:focus-visible,.hm-skip:focus-visible,.hm-q button:focus-visible{outline:2px solid #FFFFFF;outline-offset:2px}
+.hm-ghost{height:40px;padding:0 14px;border-radius:12px;border:1px solid rgba(255,255,255,.35);background:transparent;color:#FFFFFF;font:inherit;font-size:13px;font-weight:800;cursor:pointer}
+.hm-skip{width:40px;height:40px;border-radius:12px;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.08);color:#FFFFFF;font-size:16px;font-weight:800;cursor:pointer}
+.hm-q{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.hm-q button{height:28px;padding:0 10px;border-radius:999px;border:1px solid rgba(255,255,255,.25);background:transparent;color:#E2E8F0;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+.hm-q span{font-size:12px;color:#94A3B8;font-weight:700}
+.hm-dtag{display:inline-block;font-size:10px;font-weight:800;color:#5B21B6;border:1px dashed #A78BFA;border-radius:999px;padding:1px 7px;background:#F5F3FF;vertical-align:2px;white-space:nowrap}
+.hm-next .hm-dtag{background:rgba(167,139,250,.18);color:#DDD6FE;border-color:#A78BFA}
+.hm-today{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.hm-tt{display:flex;flex-direction:column;gap:3px;padding:12px 14px;border-radius:14px;background:#FFFFFF;border:1px solid #E6EAF2;text-align:left;font:inherit;color:#0B1220;cursor:pointer}
+.hm-tt:hover{border-color:#B2CCFF}.hm-tt:focus-visible{outline:2px solid #0065D6;outline-offset:2px}
+.hm-tt span{font-size:12px;font-weight:700;color:#4B5563}.hm-tt strong{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums}.hm-tt strong small{font-size:13px;color:#4B5563}.hm-tt em{font-style:normal;font-size:12px;font-weight:700;color:#4B5563}.hm-tt em.hm-g{color:#067647}
+.hm-tbar{display:block;height:6px;border-radius:999px;background:#EEF2F6;overflow:hidden}.hm-tbar b{display:block;height:100%;background:#0065D6;border-radius:999px}
+.hm-grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:14px;align-items:start}
+.hm-col{display:flex;flex-direction:column;gap:14px;min-width:0}
+.hm-tasks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.hm-task{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #EEF2F6}
+.hm-task:last-child{border-bottom:0}
+.hm-task>div{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}
+.hm-task strong{font-size:14px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.hm-task.hm-late{box-shadow:inset 3px 0 0 #D92D20;padding-left:10px}
+.hm-task.hm-soon{box-shadow:inset 3px 0 0 #F79009;padding-left:10px}
+.hm-h4{margin:6px 0 0;font-size:13px;font-weight:800;color:#3A4456}
+.hm-stats{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.hm-stats li{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:12px;background:#F8FAFC;border:1px solid #EEF2F6}
+.hm-stats b{font-size:20px;font-weight:800}.hm-stats b.hm-bad{color:#B42318}.hm-stats span{font-size:12px;color:#4B5563}
+.hm-link{border:0;background:transparent;color:#0057B8;font:inherit;font-size:13px;font-weight:800;cursor:pointer;padding:0;text-align:left}
+.hm-link:hover{text-decoration:underline}
+.hm-fun{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+.hm-fun button{width:100%;display:grid;grid-template-columns:150px 1fr 34px;gap:10px;align-items:center;padding:6px 4px;border:0;border-radius:8px;background:transparent;font:inherit;font-size:13px;color:#0B1220;cursor:pointer;text-align:left}
+.hm-fun button:hover{background:#F8FAFC}.hm-fun button:focus-visible{outline:2px solid #0065D6}
+.hm-fun i{display:block;height:10px;border-radius:999px;background:#EEF2F6;overflow:hidden}.hm-fun em{display:block;height:100%;border-radius:999px}
+.hm-fun b{text-align:right;font-variant-numeric:tabular-nums}
+.hm-board{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.hm-board li{display:flex;align-items:center;gap:10px;padding:8px 6px;border-radius:10px;font-size:14px}
+.hm-board li.hm-me{background:#F5F3FF;box-shadow:inset 3px 0 0 #5B21B6}
+.hm-rk{flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:800;background:#F1F5F9;color:#4B5563}
+.hm-board span.hm-bn{flex:1;font-weight:700}.hm-board b{font-variant-numeric:tabular-nums}
+.hm-obed{display:flex;gap:12px;align-items:center}
+.hm-obed>i{font-style:normal;font-size:34px}
+.hm-trial{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #EEF2F6;font-size:13px}.hm-trial:last-child{border-bottom:0}
+.hm-trial time{flex:none;width:52px;font-weight:800;font-variant-numeric:tabular-nums;color:#0057B8}
+.hm-trial div{flex:1;display:flex;flex-direction:column;min-width:0}.hm-trial span{font-size:12px;color:#4B5563}
+.hm-stale{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:14px;background:#FFFAEB;border:1px solid #FEC84B;color:#93370D;font-size:13px}
+.hm-empty{display:flex;align-items:center;gap:12px;padding:14px;border-radius:14px;background:#F8FAFC;border:1px dashed #CBD5E1;font-size:13px}
+.hm-empty div{flex:1;display:flex;flex-direction:column;gap:2px}.hm-empty span.hm-sub{font-size:12px}
+.hm-diff{margin:0;font-size:12px;color:#4B5563;background:#F5F3FF;border:1px dashed #A78BFA;border-radius:10px;padding:8px 12px;line-height:1.45}.hm-diff b{color:#5B21B6}
+.hm-sk{border-radius:16px;background:linear-gradient(90deg,#E9EEF5 0%,#F5F7FB 50%,#E9EEF5 100%);background-size:200% 100%;animation:sh 1.2s linear infinite}
+</style>
+__NAV__
+  <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative">
+__HDR__
+    <main style="flex: 1; min-height: 0; overflow: auto; padding: 18px 28px 28px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; align-items: flex-end; gap: 12px">
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 4px">
+          <h1 style="margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.02em">{{ greet }}</h1>
+          <p style="margin: 0; font-size: 13px; color: #4B5563">{{ dateT }}</p>
+        </div>
+        <span class="hint" style="margin: 0">soat {{ clock }} holatiga</span>
+      </div>
+
+      <sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}"><div aria-busy="true" aria-label="Bosh sahifa yuklanmoqda" style="display: flex; flex-direction: column; gap: 14px"><div class="hm-top"><div class="hm-sk" style="height: 250px"></div><div class="hm-sk" style="height: 250px"></div></div><div class="hm-today"><div class="hm-sk" style="height: 96px"></div><div class="hm-sk" style="height: 96px"></div><div class="hm-sk" style="height: 96px"></div><div class="hm-sk" style="height: 96px"></div></div><div class="hm-grid"><div class="hm-sk" style="height: 300px"></div><div class="hm-sk" style="height: 300px"></div></div></div></sc-if>
+      <sc-if value="{{ loadErr }}" hint-placeholder-val="{{ false }}"><div class="malert" role="alert"><span style="flex: 1">Lid va oʻquvchilar maʼlumotini yuklab boʻlmadi — raqamlar notoʻgʻri chiqmasligi uchun bosh sahifa koʻrsatilmadi.</span><button type="button" class="btn2" onClick="{{ retry }}">Qayta urinish</button></div></sc-if>
+
+      <sc-if value="{{ ready }}" hint-placeholder-val="{{ true }}">
+        <div class="hm-top">
+          <section class="hm-card" aria-labelledby="hmPlanH">
+            <sc-if value="{{ hasTarget }}" hint-placeholder-val="{{ true }}">
+              <div class="hm-ptop">
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0">
+                  <div class="hm-ph"><h2 id="hmPlanH">{{ plan.title }}</h2><span class="{{ plan.pillC }}">{{ plan.pill }}</span></div>
+                  <div class="hm-pnum"><b>{{ plan.sales }} mln</b><span>/ {{ plan.target }} mln soʻm</span></div>
+                  <span class="hm-sub">{{ plan.sub }}</span>
+                </div>
+                <div class="hm-gift"><i aria-hidden="true">💰</i><div><span>{{ gift.eb }}</span><b>{{ gift.t }}</b><small>{{ gift.s }}</small></div></div>
+              </div>
+              <div class="hm-bar" role="img" aria-label="{{ plan.barL }}"><i style="{{ plan.barW }}"></i><em style="{{ plan.dueL }}"></em></div>
+              <div class="hm-bfoot"><span><strong>{{ plan.pct }}%</strong> bajarildi</span><span>Shu tempda <strong>{{ plan.fc }} mln</strong>{{ plan.fcGap }}</span></div>
+              <div class="hm-tiles">
+                <div class="hm-tile"><span>Kunlik kerak</span><b>{{ plan.perDay }}</b></div>
+                <div class="hm-tile"><span>Konversiya</span><b>{{ plan.conv }}</b><small>{{ plan.convS }}</small></div>
+                <div class="hm-tile"><span>Maoshim · taxminiy</span><b>{{ sal.v }}</b><small>{{ sal.s }}</small></div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ noTarget }}" hint-placeholder-val="{{ false }}">
+              <div class="hm-ptop"><div style="flex: 1; display: flex; flex-direction: column; gap: 6px"><h2 id="hmPlanH">Oylik reja</h2><span class="hm-sub">Reja belgilanmagan — rejani admin belgilaydi. 0 ta bitim</span></div><div class="hm-gift"><i aria-hidden="true">💰</i><div><span>{{ gift.eb }}</span><b>{{ gift.t }}</b><small>{{ gift.s }}</small></div></div></div>
+              <div class="hm-tiles"><div class="hm-tile"><span>Maoshim · taxminiy</span><b>{{ sal.v }}</b><small>{{ sal.s }}</small></div></div>
+            </sc-if>
+          </section>
+
+          <sc-if value="{{ hasNext }}" hint-placeholder-val="{{ true }}">
+            <section class="hm-next" aria-labelledby="hmNextH">
+              <span class="hm-eb">KEYINGI QOʻNGʻIROQ · {{ nx.pos }} <span class="hm-dtag">Dizayn farqi · mobil navbat</span></span>
+              <h2 id="hmNextH">{{ nx.name }}</h2>
+              <span class="hm-dsub">{{ nx.meta }}</span>
+              <div class="hm-chips"><span class="{{ nx.chipC }}">{{ nx.chip }}</span><span class="hm-dchip">{{ nx.src }}</span></div>
+              <sc-if value="{{ nx.hasNote }}" hint-placeholder-val="{{ true }}"><p class="hm-nnote">Oxirgi izoh: «{{ nx.note }}»</p></sc-if>
+              <div class="hm-q" aria-label="Navbatdagilar"><sc-for list="{{ nx.rest }}" as="r" hint-placeholder-count="3"><button type="button" onClick="{{ r.open }}">{{ r.t }}</button></sc-for><sc-if value="{{ nx.more }}" hint-placeholder-val="{{ true }}"><span>{{ nx.more }}</span></sc-if></div>
+              <div class="hm-nact">
+                <a class="hm-call" href="{{ nx.tel }}" onClick="{{ nx.call }}"><span aria-hidden="true">☏</span>Qoʻngʻiroq qilish</a>
+                <button type="button" class="hm-ghost" onClick="{{ nx.open }}">Lidni ochish</button>
+                <button type="button" class="hm-skip" aria-label="Keyingi lidga oʻtish" title="Keyingi lidga oʻtish" onClick="{{ nx.skip }}">⏭</button>
+              </div>
+            </section>
+          </sc-if>
+          <sc-if value="{{ noNext }}" hint-placeholder-val="{{ false }}">
+            <section class="hm-next" aria-labelledby="hmNextH"><span class="hm-eb">NAVBAT BOʻSH</span><h2 id="hmNextH">Bugungi qoʻngʻiroqlar tugadi</h2><p class="hm-nnote">Yangi lid biriktirilishi bilan shu yerda chiqadi.</p></section>
+          </sc-if>
+        </div>
+
+        <sc-if value="{{ stale }}" hint-placeholder-val="{{ true }}"><div class="hm-stale" role="status"><span aria-hidden="true">⏳</span><span style="flex: 1"><b>{{ staleT }}</b><span>&nbsp;{{ staleD }}</span></span><span class="hm-dtag">Dizayn farqi · mobil</span><button type="button" class="btn2" onClick="{{ goLeads }}">Lidlarga</button></div></sc-if>
+
+        <section aria-labelledby="hmTodayH" style="display: flex; flex-direction: column; gap: 8px">
+          <div class="hm-ph"><h2 id="hmTodayH" style="margin: 0; font-size: 16px; font-weight: 800">Bugun</h2><span class="hm-dtag">Dizayn farqi · mobil</span><span class="hint" style="margin: 0">qoʻngʻiroq tugmasi va natija izohlaridan (todayCalls)</span></div>
+          <div class="hm-today">
+            <button type="button" class="hm-tt" onClick="{{ goLeads }}"><span>Qoʻngʻiroq</span><strong>{{ tc.calls }}<small> / {{ tc.goal }}</small></strong><i class="hm-tbar" aria-hidden="true"><b style="{{ tc.w }}"></b></i><em>{{ tc.callS }}</em></button>
+            <button type="button" class="hm-tt" onClick="{{ goLeads }}"><span>Lidlar · javob oldi</span><strong>{{ tc.leads }}<small> · {{ tc.got }}</small></strong><em class="{{ tc.gotC }}">{{ tc.gotS }}</em></button>
+            <button type="button" class="hm-tt" onClick="{{ goCal }}"><span>Bugungi sinov</span><strong>{{ trialsN }}</strong><em class="hm-g">{{ trialS }}</em></button>
+            <button type="button" class="hm-tt" onClick="{{ goPay }}"><span>Toʻlov jarayonida</span><strong>{{ payN }}<small> ta lid</small></strong><em>{{ payS }}</em></button>
+          </div>
+        </section>
+
+        <div class="hm-grid">
+          <div class="hm-col">
+            <section class="hm-card" aria-labelledby="hmTaskH">
+              <div class="hm-ph"><h3 id="hmTaskH" style="flex: 1">Bugun qilish kerak <small style="color: #4B5563">· {{ taskN }}</small></h3><sc-if value="{{ lateN }}" hint-placeholder-val="{{ true }}"><span class="hm-pill hm-red">{{ lateN }} tasi kechikkan</span></sc-if></div>
+              <sc-if value="{{ hasTasks }}" hint-placeholder-val="{{ true }}"><ul class="hm-tasks"><sc-for list="{{ tasks }}" as="t" hint-placeholder-count="4"><li class="{{ t.cls }}"><div><strong>{{ t.title }}<sc-if value="{{ t.late }}" hint-placeholder-val="{{ false }}"><span class="hm-pill hm-red">kechikdi</span></sc-if></strong><span class="hm-sub">{{ t.sub }}</span></div><button type="button" class="btn2" onClick="{{ t.open }}">{{ t.btn }}</button></li></sc-for></ul></sc-if>
+              <sc-if value="{{ noTasks }}" hint-placeholder-val="{{ false }}"><div class="hm-empty"><span aria-hidden="true" style="font-size: 22px">✓</span><div><strong>Bugungi ishlar bajarilgan</strong><span class="hm-sub">Yangi lidlar kelishi bilan shu yerda chiqadi</span></div></div></sc-if>
+              <sc-if value="{{ hasUp }}" hint-placeholder-val="{{ true }}"><h4 class="hm-h4">Yaqinlashayotgan · kelishilgan toʻlov sanalari</h4><ul class="hm-tasks"><sc-for list="{{ up }}" as="t" hint-placeholder-count="1"><li class="hm-task hm-soon"><div><strong>{{ t.title }}</strong><span class="hm-sub">{{ t.sub }}</span></div><button type="button" class="btn2" onClick="{{ t.open }}">Oʻquvchini ochish</button></li></sc-for></ul></sc-if>
+              <h4 class="hm-h4">Mening oʻquvchilarim</h4>
+              <ul class="hm-stats"><li><b>{{ st.active }}</b><span>{{ st.activeS }}</span></li><li><b>{{ st.inst }}</b><span>Boʻlib toʻlamoqda</span></li><li><b class="{{ st.overC }}">{{ st.over }}</b><span>Qarzdor</span></li></ul>
+              <sc-if value="{{ st.link }}" hint-placeholder-val="{{ true }}"><button type="button" class="hm-link" onClick="{{ goDebt }}">{{ st.link }}</button></sc-if>
+            </section>
+            <section class="hm-card" aria-labelledby="hmTrH">
+              <div class="hm-ph"><h3 id="hmTrH" style="flex: 1">Bugungi sinov darslari</h3><span class="hm-dtag">Dizayn farqi · mobil</span></div>
+              <sc-if value="{{ hasTrials }}" hint-placeholder-val="{{ true }}"><div role="list"><sc-for list="{{ trials }}" as="t" hint-placeholder-count="2"><div class="hm-trial" role="listitem"><time>{{ t.at }}</time><div><strong>{{ t.n }}</strong><span>{{ t.s }}</span></div><button type="button" class="btn2" onClick="{{ t.open }}">Lidni ochish</button></div></sc-for></div></sc-if>
+              <sc-if value="{{ noTrials }}" hint-placeholder-val="{{ false }}"><p class="hint" style="margin: 0">Bugun sinov darsi yoʻq</p></sc-if>
+            </section>
+          </div>
+          <div class="hm-col">
+            <section class="hm-card" aria-labelledby="hmFunH">
+              <div class="hm-ph"><h3 id="hmFunH" style="flex: 1">Mening voronkam <small style="color: #4B5563">· {{ openLeads }} ochiq lid</small></h3><button type="button" class="hm-link" onClick="{{ goLeads }}">Lidlar →</button></div>
+              <ul class="hm-fun"><sc-for list="{{ fun }}" as="f" hint-placeholder-count="7"><li><button type="button" onClick="{{ f.pick }}" aria-label="{{ f.aria }}"><span>{{ f.l }}</span><i aria-hidden="true"><em style="{{ f.w }}"></em></i><b>{{ f.n }}</b></button></li></sc-for></ul>
+            </section>
+            <section class="hm-card" aria-labelledby="hmObH">
+              <div class="hm-obed"><i aria-hidden="true">🍽️</i><div style="flex: 1; display: flex; flex-direction: column; gap: 3px"><h3 id="hmObH">Bugungi obed</h3><b style="font-size: 20px">{{ ob.v }}</b><span class="hm-sub">{{ ob.next }}</span></div><sc-if value="{{ ob.got }}" hint-placeholder-val="{{ true }}"><span class="hm-pill hm-ok">✓ {{ ob.got }}</span></sc-if></div>
+            </section>
+            <sc-if value="{{ hasBoard }}" hint-placeholder-val="{{ true }}"><section class="hm-card" aria-labelledby="hmBdH">
+              <div class="hm-ph"><h3 id="hmBdH" style="flex: 1">Oy reytingi</h3><button type="button" class="hm-link" onClick="{{ goRating }}">Reyting →</button></div>
+              <ol class="hm-board"><sc-for list="{{ board }}" as="m" hint-placeholder-count="3"><li class="{{ m.cls }}" aria-current="{{ m.cur }}"><span class="hm-rk" style="{{ m.rkSt }}">{{ m.rk }}</span><span class="hm-bn">{{ m.n }}</span><b>{{ m.v }}</b></li></sc-for></ol>
+            </section></sc-if>
+            <p class="hm-diff"><b>Dizayn farqi:</b> production desktop bosh sahifasi — reja (Kobalt), keyingi qoʻngʻiroq, Bugungi obed, “Bugun qilish kerak”, “Mening voronkam”, “Oy reytingi”. Mobil ilovadan qoʻshildi: navbat (⏭ “keyingi lid”, “Keyin: …”, urinishlar soni), “Bugun” plitkalari (qoʻngʻiroq / javob / sinov / toʻlov jarayonida), bugungi sinovlar roʻyxati va qotgan lidlar ogohlantirishi (staleLeads).</p>
+          </div>
+        </div>
+      </sc-if>
+    </main>
+    <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}"><div role="status" class="toast" style="bottom: 24px">{{ toast }}</div></sc-if>
+  </div>
+</div>

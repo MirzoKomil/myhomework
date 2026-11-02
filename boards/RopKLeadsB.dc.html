@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<title>ROP kompyuter — Lidlar (B)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#0057B8;text-decoration:none}
+input::placeholder{color:#6B7280}
+sc-for,sc-if{display:contents}
+.mi{display:flex;align-items:center;gap:12px;height:38px;padding:0 12px;border-radius:12px;color:#3A4456;font-size:14px;font-weight:600;border:0;background:transparent;font-family:inherit;width:100%;cursor:pointer;text-align:left}
+.mi:hover{background:#F1F5F9;color:#0B1220}
+.mi svg{width:18px;height:18px;flex:none}
+.mi[aria-current="page"]{background:#EAF3FF;color:#0057B8;font-weight:800}
+.grp{font-size:12px;font-weight:800;color:#4B5563;letter-spacing:.06em;padding:10px 12px 3px;border:0;background:transparent;font-family:inherit;text-align:left;width:100%;display:flex;align-items:center;gap:6px}
+.cnt{position:absolute;right:8px;min-width:28px;height:22px;padding:0 6px;box-sizing:border-box;border-radius:999px;background:#D92D20;color:#FFFFFF;font-size:12px;font-weight:800;display:grid;place-items:center;border:0;font-family:inherit;cursor:pointer}
+.hint{margin-left:auto;font-size:12px;font-weight:600;color:#4B5563}
+.new{position:relative}
+.new::before{content:"YANGI";position:absolute;top:-10px;left:12px;z-index:3;font-size:11px;font-weight:800;letter-spacing:.06em;color:#FFFFFF;background:#7C3AED;border-radius:999px;padding:3px 9px}
+.ring{box-shadow:0 0 0 2px #7C3AED}
+.fbox{height:38px;display:flex;align-items:center;gap:8px;padding:0 12px;border-radius:12px;border:1px solid #E2E8F0;background:#FFFFFF;font-size:13px;font-weight:600;color:#3A4456;box-sizing:border-box;white-space:nowrap}
+.col{flex:none;width:262px;background:#F7F9FC;border:1px solid #E6EAF2;border-radius:18px;padding:0 10px 10px;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;overflow:hidden}
+.ch{display:flex;align-items:center;gap:8px;padding:12px 4px 6px;margin:0 -10px;padding-left:14px;padding-right:12px}
+.card{background:#FFFFFF;border:1px solid #E6EAF2;border-radius:14px;padding:12px;box-shadow:0 1px 2px rgba(16,24,40,.05);display:flex;flex-direction:column;gap:10px;transition:transform .15s ease,box-shadow .15s ease}.card:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(16,24,40,.08)}
+.ib{height:30px;border-radius:999px;border:0;background:#F1F5F9;color:#3A4456;display:inline-flex;align-items:center;justify-content:center;gap:5px;font:inherit;font-size:12px;font-weight:700;cursor:pointer;padding:0 10px}
+@keyframes pop{0%{transform:scale(.88);opacity:0}60%{transform:scale(1.03);opacity:1}100%{transform:none}}
+@keyframes conf{to{transform:translateY(130px) rotate(320deg);opacity:0}}
+@keyframes up{from{transform:translateY(10px);opacity:0}to{transform:none;opacity:1}}
+.pop{animation:pop .45s cubic-bezier(.2,.8,.2,1) both}
+.conf span{position:absolute;top:-12px;width:8px;height:12px;border-radius:2px;animation:conf 1.4s ease-in both}
+.up{animation:up .3s cubic-bezier(.2,.8,.2,1) both}
+@media (prefers-reduced-motion:reduce){.pop,.conf span,.up{animation:none}}
+button{transition:transform .2s ease,background .15s ease}button:active{transform:scale(.97)}
+.v-c .card .ib{height:26px;padding:0 8px;font-size:11px}
+</style>
+</helmet>
+<div class="{{ vcls }}" style="height: 960px; box-sizing: border-box; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #0B1220; background: #F5F7FB; display: flex; position: relative; overflow: hidden">
+
+  <aside aria-label="Asosiy menyu" style="flex: none; width: 248px; background: #FFFFFF; border-right: 1px solid #E6EAF2; padding: 12px 14px; box-sizing: border-box; display: flex; flex-direction: column; gap: 1px">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 4px 6px 10px"><span style="width: 34px; height: 34px; border-radius: 9px; background: #0065D6; color: #FFFFFF; display: grid; place-items: center; font-weight: 800; font-size: 17px">H</span><strong style="font-size: 16px; letter-spacing: .02em">HOMEWORK</strong></div>
+    <sc-for list="{{ nav }}" as="n" hint-placeholder-count="19">
+      <sc-if value="{{ n.grp }}" hint-placeholder-val="{{ false }}"><button type="button" class="grp" aria-expanded="true">{{ n.label }}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button></sc-if>
+      <sc-if value="{{ n.item }}" hint-placeholder-val="{{ true }}">
+        <div style="position: relative; display: flex; align-items: center"><button type="button" class="mi" aria-current="{{ n.cur }}" onClick="{{ n.pick }}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{ n.icon }}"></path></svg>{{ n.label }}<sc-if value="{{ n.hint }}" hint-placeholder-val="{{ false }}"><span class="hint">{{ n.hint }}</span></sc-if></button><sc-if value="{{ n.badge }}" hint-placeholder-val="{{ false }}"><button type="button" class="cnt" title="{{ n.aria }}" aria-label="{{ n.aria }}" onClick="{{ n.pickBadge }}">{{ n.badge }}</button></sc-if></div>
+      </sc-if>
+    </sc-for>
+    <span style="flex: 1"></span>
+    <button type="button" class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="5" cy="12" r="1.5"></circle><circle cx="12" cy="12" r="1.5"></circle><circle cx="19" cy="12" r="1.5"></circle></svg>Boshqa boʻlimlar</button>
+    <button type="button" class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"></path></svg>Sozlamalar</button>
+  </aside>
+
+  <div style="flex: 1; min-width: 0; display: flex; flex-direction: column">
+    <header style="height: 64px; flex: none; padding: 0 32px; display: flex; align-items: center; gap: 14px; background: #FFFFFF; border-bottom: 1px solid #E6EAF2; box-sizing: border-box">
+      <label style="width: 480px; height: 40px; display: flex; align-items: center; gap: 8px; padding: 0 14px; border-radius: 12px; border: 1px solid #E2E8F0; color: #6B7280; box-sizing: border-box"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg><span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Qidirish</span><input type="search" placeholder="Lid: ism yoki telefon" style="border: 0; outline: 0; font: inherit; font-size: 14px; flex: 1; background: transparent"></label>
+      <span style="flex: 1"></span>
+      <button type="button" aria-label="Bildirishnomalar, 9 dan ortiq" style="position: relative; width: 40px; height: 40px; border-radius: 50%; border: 1px solid #E2E8F0; background: #FFFFFF; display: grid; place-items: center; color: #3A4456; cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 00-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0"></path></svg><span style="position: absolute; top: -4px; right: -4px; min-width: 20px; height: 18px; padding: 0 4px; box-sizing: border-box; border-radius: 999px; background: #D92D20; color: #FFFFFF; font-size: 11px; font-weight: 800; display: grid; place-items: center; border: 2px solid #FFFFFF">9+</span></button>
+      <span style="display: flex; align-items: center; gap: 10px"><span style="width: 38px; height: 38px; border-radius: 50%; background: #0B1220; color: #FFFFFF; display: grid; place-items: center; font-size: 13px; font-weight: 800">IM</span><span style="display: flex; flex-direction: column"><strong style="font-size: 14px">Islom Mominov</strong><span style="font-size: 12px; color: #4B5563">ROP</span></span></span>
+    </header>
+
+    <div style="padding: 20px 32px 0; display: flex; flex-direction: column; gap: 12px">
+      <div style="display: flex; align-items: flex-end; gap: 16px">
+        <div style="flex: 1; display: flex; flex-direction: column"><h1 style="margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.02em">Lidlar</h1><span style="font-size: 13px; color: #4B5563; font-weight: 600">Rus tili yoʻnalishi</span></div>
+        <div role="tablist" aria-label="Til" style="display: flex; gap: 6px"><button type="button" role="tab" aria-selected="false" style="height: 36px; padding: 0 12px; border-radius: 10px; border: 1px solid #E2E8F0; background: #FFFFFF; font: inherit; font-size: 13px; font-weight: 600; color: #3A4456; cursor: pointer">Ingliz tili</button><button type="button" role="tab" aria-selected="true" style="height: 36px; padding: 0 12px; border-radius: 10px; border: 0; background: #0065D6; color: #FFFFFF; font: inherit; font-size: 13px; font-weight: 800; cursor: pointer">Rus tili</button></div>
+      </div>
+      <div class="new" role="tablist" aria-label="Lidlar boʻlimi" style="display: flex; gap: 22px; border-bottom: 1px solid #E6EAF2">
+        <button type="button" role="tab" aria-selected="true" style="height: 40px; padding: 0; border: 0; background: transparent; font: inherit; font-size: 14px; font-weight: 800; color: #0057B8; border-bottom: 3px solid #0065D6; cursor: pointer">Lidlar</button>
+        <button type="button" role="tab" aria-selected="false" style="height: 40px; padding: 0; border: 0; background: transparent; font: inherit; font-size: 14px; font-weight: 600; color: #3A4456; border-bottom: 3px solid transparent; cursor: pointer">Kitob yetkazish</button>
+        <span style="align-self: center; font-size: 12px; color: #5B21B6; font-weight: 700">7 ta tab o'rniga 2 ta — qolganlari sidebar'da</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap">
+        <span class="fbox" style="{{ fMan.st }}">{{ fMan.t }}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></span>
+        <span class="fbox" style="{{ fCol.st }}">{{ fCol.t }}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></span>
+        <span class="fbox" style="{{ fDate.st }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"></rect><path d="M3 10h18M8 3v4M16 3v4"></path></svg>{{ fDate.t }}<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></span>
+        <span class="fbox">Manba: Hammasi<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></span>
+        <sc-if value="{{ viaBadge }}" hint-placeholder-val="{{ false }}"><span class="new up" style="display: inline-flex"><button type="button" onClick="{{ clearChip }}" class="ring" style="height: 38px; padding: 0 8px 0 14px; border-radius: 999px; border: 0; background: #F1E8FF; color: #5B21B6; font: inherit; font-size: 13px; font-weight: 800; display: flex; align-items: center; gap: 8px; cursor: pointer">Biriktirilmagan lidlar · 80<span aria-label="Filtrni olib tashlash" style="width: 24px; height: 24px; border-radius: 50%; background: #FFFFFF; display: grid; place-items: center">✕</span></button></span></sc-if>
+        <span style="flex: 1"></span>
+        <button type="button" style="height: 40px; padding: 0 16px; border-radius: 12px; border: 0; background: #0065D6; color: #FFFFFF; font: inherit; font-size: 14px; font-weight: 800; cursor: pointer">+ Lid qoʻshish</button>
+      </div>
+      <sc-if value="{{ hasPick }}" hint-placeholder-val="{{ false }}">
+        <div class="up" style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: #FFFFFF; border: 1px solid #E6EAF2; border-radius: 12px">
+          <strong style="font-size: 14px">{{ pickN }} ta lid tanlandi</strong>
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #3A4456"><span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Menejer</span><select onChange="{{ setMan }}" style="height: 36px; min-width: 200px; border: 1px solid #CBD5E1; border-radius: 10px; padding: 0 10px; font: inherit; font-size: 13px"><option value="">— Menejerni tanlang —</option><option value="Gulchehra">Gulchehra Mamadaliyeva</option><option value="Hamidaxon">Hamidaxon Boymirzayeva</option><option value="Kamola">Kamola Shahobiddinova</option><option value="Robiya">Robiya Usmonova</option></select></label>
+          <button type="button" onClick="{{ assign }}" style="height: 36px; padding: 0 16px; border-radius: 10px; border: 0; background: #0065D6; color: #FFFFFF; font: inherit; font-size: 13px; font-weight: 800; cursor: pointer">Biriktirish</button>
+          <button type="button" onClick="{{ split }}" style="height: 36px; padding: 0 14px; border-radius: 10px; border: 1px solid #CBD5E1; background: #FFFFFF; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer">Teng taqsimlash</button>
+          <button type="button" onClick="{{ clearPick }}" style="height: 36px; padding: 0 12px; border-radius: 10px; border: 1px solid #E2E8F0; background: #FFFFFF; font: inherit; font-size: 13px; font-weight: 600; color: #3A4456; cursor: pointer">Bekor qilish</button>
+          <span style="margin-left: auto; font-size: 12px; color: #4B5563">“Oʻchirish” ROPda yoʻq (hozir ham)</span>
+        </div>
+      </sc-if>
+    </div>
+
+    <div class="new" style="flex: 1; min-height: 0; padding: 16px 32px 20px; display: flex; gap: 12px; overflow-x: auto; align-items: flex-start">
+      <sc-for list="{{ cols }}" as="c" hint-placeholder-count="5">
+        <section class="col" aria-label="{{ c.t }}" style="{{ c.colSt }}">
+          <div class="ch" style="{{ c.hst }}"><span aria-hidden="true" style="{{ c.dot }}"></span><h3 style="{{ c.titleSt }}">{{ c.t }}</h3><span style="{{ c.nst }}">{{ c.n }}</span><button type="button" aria-label="Ustunni yigʻish" style="flex: none; width: 24px; height: 24px; border: 0; border-radius: 6px; background: transparent; color: #4B5563; cursor: pointer; display: grid; place-items: center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button><sc-if value="{{ c.pickBtn }}" hint-placeholder-val="{{ false }}"><button type="button" onClick="{{ c.pickAll }}" style="margin-left: auto; height: 26px; padding: 0 9px; border-radius: 999px; border: 0; background: #0065D6; color: #FFFFFF; font: inherit; font-size: 11px; font-weight: 800; cursor: pointer; white-space: nowrap">{{ c.pickBtn }}</button></sc-if></div>
+          <sc-if value="{{ c.sum }}" hint-placeholder-val="{{ false }}"><div style="{{ c.sumSt }}">{{ c.sum }}</div></sc-if>
+          <sc-if value="{{ c.sub }}" hint-placeholder-val="{{ false }}"><div style="display: flex; gap: 4px; flex-wrap: wrap"><sc-for list="{{ c.sub }}" as="s" hint-placeholder-count="4"><span style="{{ s.st }}">{{ s.t }}</span></sc-for></div></sc-if>
+          <sc-for list="{{ c.cards }}" as="k" hint-placeholder-count="3">
+            <article class="card" draggable="true" style="{{ k.st }}">
+              <div style="display: flex; align-items: center; gap: 10px">
+                <span aria-hidden="true" style="{{ k.avSt }}">{{ k.ini }}</span>
+                <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+                  <button type="button" title="Lid kartasini ochish" style="border: 0; background: none; padding: 0; font: inherit; font-size: 14px; font-weight: 800; color: #0B1220; text-align: left; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ k.n }}</button>
+                  <span style="font-size: 12px; color: #4B5563">{{ k.time }}</span>
+                </div>
+                <sc-if value="{{ k.notif }}" hint-placeholder-val="{{ false }}"><button type="button" class="ib" aria-label="{{ k.notifLab }}" title="{{ k.notifLab }}" style="width: 30px; padding: 0; position: relative; background: #FEF3F2; color: #B42318"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 00-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0"></path></svg><span style="position: absolute; top: -4px; right: -4px; min-width: 16px; height: 16px; border-radius: 999px; background: #D92D20; color: #FFFFFF; font-size: 10px; font-weight: 800; display: grid; place-items: center">{{ k.notif }}</span></button></sc-if>
+                <button type="button" class="ib" aria-label="Boshqa amallar" aria-haspopup="true" aria-expanded="{{ k.menuOpen }}" onClick="{{ k.toggleMenu }}" style="width: 28px; padding: 0; background: transparent; font-size: 16px">⋮</button>
+                <input type="checkbox" checked="{{ k.on }}" onChange="{{ k.toggle }}" aria-label="{{ k.lab }}" style="width: 18px; height: 18px; accent-color: #0065D6; flex: none">
+              </div>
+              <sc-if value="{{ k.menu }}" hint-placeholder-val="{{ false }}">
+                <div role="menu" style="background: #FFFFFF; border: 1px solid #E6EAF2; border-radius: 12px; box-shadow: 0 12px 28px rgba(16,24,40,.14); padding: 6px; display: flex; flex-direction: column">
+                  <button type="button" role="menuitem" style="height: 34px; border: 0; background: transparent; text-align: left; padding: 0 10px; border-radius: 8px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer">Menejer biriktirish</button>
+                  <button type="button" role="menuitem" style="height: 34px; border: 0; background: #F1F5F9; text-align: left; padding: 0 10px; border-radius: 8px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; justify-content: space-between">Boshqa bosqichga oʻtkazish<span aria-hidden="true">›</span></button>
+                  <button type="button" role="menuitem" style="height: 34px; border: 0; background: transparent; text-align: left; padding: 0 10px; border-radius: 8px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer">SMS xabar yuborish</button>
+                  <button type="button" role="menuitem" style="height: 34px; border: 0; background: transparent; text-align: left; padding: 0 10px; border-radius: 8px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer">Telegramdan xabar yozish</button>
+                </div>
+              </sc-if>
+              <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap">
+                <span style="{{ k.srcSt }}">{{ k.src }}</span><span style="{{ k.ageSt }}">⏱ {{ k.age }}</span>
+                <sc-if value="{{ k.stale }}" hint-placeholder-val="{{ false }}"><span style="{{ k.staleSt }}">{{ k.stale }}</span></sc-if>
+              </div>
+              <sc-if value="{{ k.full }}" hint-placeholder-val="{{ true }}">
+                <div style="display: flex; flex-direction: column; gap: 3px">
+                  <sc-for list="{{ k.phones }}" as="p" hint-placeholder-count="1"><span style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: #3A4456; font-variant-numeric: tabular-nums"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3.1 19.5 19.5 0 01-6-6A19.8 19.8 0 012.1 4.2 2 2 0 014.1 2h3a2 2 0 012 1.7c.1.9.4 1.8.7 2.7a2 2 0 01-.5 2.1L8 9.8a16 16 0 006 6l1.3-1.3a2 2 0 012.1-.5c.9.3 1.8.6 2.7.7a2 2 0 011.7 2z"></path></svg>{{ p }}</span></sc-for>
+                </div>
+              </sc-if>
+              <sc-if value="{{ k.compact }}" hint-placeholder-val="{{ false }}"><span style="font-size: 12px; color: #3A4456; font-variant-numeric: tabular-nums">{{ k.phoneLine }}</span></sc-if>
+              <div style="{{ k.footSt }}">
+                <button type="button" class="ib" title="{{ k.mgrT }}" style="{{ k.mgrSt }}"><span aria-hidden="true" style="{{ k.mgrDot }}">{{ k.mgrIni }}</span>{{ k.mgr }}</button>
+                <button type="button" class="ib" title="Izohlar" aria-label="{{ k.comLab }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"></path></svg>{{ k.com }}</button>
+                <button type="button" class="ib" title="Zapis — suhbatlar yozib olinadi" aria-label="{{ k.recLab }}" style="{{ k.recSt }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"></rect><path d="M5 10a7 7 0 0014 0M12 17v5"></path></svg>{{ k.rec }}</button>
+              </div>
+            </article>
+          </sc-for>
+          <sc-if value="{{ c.more }}" hint-placeholder-val="{{ false }}"><button type="button" style="height: 36px; border-radius: 10px; border: 1px dashed #CBD5E1; background: transparent; font: inherit; font-size: 12px; font-weight: 700; color: #3A4456; cursor: pointer">{{ c.more }}</button></sc-if>
+        </section>
+      </sc-for>
+    </div>
+  </div>
+
+  <sc-if value="{{ pop }}" hint-placeholder-val="{{ false }}">
+    <div class="new" style="position: absolute; inset: 0; background: rgba(11,18,32,.45); display: grid; place-items: center; z-index: 5">
+      <div role="dialog" aria-modal="true" aria-labelledby="tqT" class="pop" style="position: relative; width: 440px; background: #FFFFFF; border-radius: 28px; padding: 32px 28px 24px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; overflow: hidden; box-shadow: 0 30px 80px rgba(11,18,32,.35)">
+        <div class="conf" aria-hidden="true" style="position: absolute; inset: 0; pointer-events: none"><span style="left: 12%; background: #0065D6"></span><span style="left: 30%; background: #FDE68A; animation-delay: .1s"></span><span style="left: 52%; background: #12B76A; animation-delay: .2s"></span><span style="left: 70%; background: #F79009; animation-delay: .05s"></span><span style="left: 86%; background: #7C3AED; animation-delay: .15s"></span></div>
+        <span style="width: 72px; height: 72px; border-radius: 50%; background: #ECFDF3; color: #067647; display: grid; place-items: center"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"></path></svg></span>
+        <h2 id="tqT" style="margin: 6px 0 0; font-size: 22px; font-weight: 800">Taqsimlandi!</h2>
+        <span style="font-size: 15px; color: #3A4456">{{ popText }}</span>
+        <span style="font-size: 13px; color: #4B5563">Menejerlarga bot orqali xabar ketdi · SLA soati boshlandi</span>
+        <div style="display: flex; gap: 10px; width: 100%; margin-top: 12px">
+          <button type="button" onClick="{{ undo }}" style="flex: 1; height: 48px; border-radius: 14px; border: 1px solid #CBD5E1; background: #FFFFFF; font: inherit; font-size: 15px; font-weight: 800; color: #0B1220; cursor: pointer">Qaytarish</button>
+          <button type="button" onClick="{{ closePop }}" style="flex: 1; height: 48px; border-radius: 14px; border: 0; background: #0065D6; color: #FFFFFF; font: inherit; font-size: 15px; font-weight: 800; cursor: pointer">Yaxshi</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":960}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { viaBadge: false, picked: {}, man: '', pop: '', done: {}, menu: 'new0' }; }
+  renderVals() {
+    const s = this.state;
+    const V = 'b';
+    const IC = {
+      home: 'M3 10.5 12 4l9 6.5V20H3z', leads: 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 3a4 4 0 110 8 4 4 0 010-8z',
+      cal: 'M3 9.5h18M8 3v3M16 3v3M5 4.5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2v-12a2 2 0 012-2z', trial: 'M8.5 12l2.5 2.5 4.5-5M6 4h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2z',
+      check: 'M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11', clock: 'M12 3a9 9 0 110 18 9 9 0 010-18zM12 7v5l3 2', lock: 'M7 11V7a5 5 0 0110 0v4M5 11h14v10H5z', arch: 'M21 8v13H3V8M1 3h22v5H1zM10 12h4',
+      funnel: 'M3 4h18l-7 8v6l-4 2v-8z', rating: 'M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0z', plan: 'M12 3a9 9 0 110 18 9 9 0 010-18zM12 8a4 4 0 110 8 4 4 0 010-8z', debt: 'M2 6h20v13H2zM2 10h20',
+      script: 'M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9zM14 3v6h6M8 13h8M8 17h5', sms: 'M4 4h16v12H5l-1 4zM8 9h8M8 12h5', stu: 'M2 8l10-5 10 5-10 5zM6 10.5V16c0 1.5 2.7 3 6 3s6-1.5 6-3v-5.5', tg: 'M21 4L3 11l6 2 2 6 3-4 5 4z'
+    };
+    const I = (k, label, icon, o) => Object.assign({ item: true, grp: false, k, label, icon: IC[icon], cur: 'false', hint: '', badge: '', aria: '', pick: () => this.setState({ viaBadge: false }), pickBadge: () => {} }, o || {});
+    const G = l => ({ grp: true, item: false, label: l });
+    const nav = [
+      I('home', 'Bosh sahifa', 'home'), I('leads', 'Lidlar', 'leads', { cur: 'page', badge: '80', aria: '80 ta menejersiz ochiq lid (Rus tili) — koʻrsatish', pickBadge: () => this.setState({ viaBadge: true }) }), I('cal', 'Dars jadvali', 'cal'), I('trial', 'Sinov nazorati', 'trial'),
+      G('NAZORAT'), I('check', 'Tasdiqlar', 'check', { badge: '3', aria: '3 ta tasdiq kutilmoqda' }), I('sla', 'SLA', 'clock', { badge: '19', aria: '19 ta SLA harakat kerak' }), I('lock', 'Qotgan lidlar qoidasi', 'lock', { hint: 'sozlama' }), I('arch', 'Arxiv', 'arch', { hint: 'tarix' }),
+      G('SOTUV'), I('funnel', 'Voronka', 'funnel', { hint: '+ menejerlar' }), I('rating', 'Reyting va bonus', 'rating'), I('plan', 'Sotuv rejasi', 'plan', { hint: 'koʻrish' }), I('debt', 'Qarzdorlar', 'debt'), I('script', 'Skript va yoʻriqnoma', 'script'), I('sms', 'SMS yuborish', 'sms'),
+      G('OʻQUVCHILAR'), I('stu', 'Oʻquvchilar', 'stu'), I('tg', 'Telegram guruh', 'tg')
+    ];
+    const vb = s.viaBadge;
+    const SEL = 'background:#F1E8FF;border-color:#7C3AED;color:#5B21B6;font-weight:800';
+    const fMan = { t: vb ? 'Biriktirilmagan' : 'Sotuv menejerlari', st: vb ? SEL : '' };
+    const fCol = { t: vb ? 'Ustunlar: ochiq bosqichlar' : 'Ustunlar filtri', st: vb ? SEL : '' };
+    const fDate = { t: vb ? 'Barcha vaqt' : 'Joriy oy', st: vb ? SEL : '' };
+    const COLS = [
+      ['new', 'Yangi lidlar', 'rgba(59,130,246,.14)', '#1D4ED8', 93],
+      ['try', 'Bogʻlanishga urinilmoqda', 'rgba(124,58,237,.12)', '#5B21B6', 34],
+      ['con', 'Bogʻlanildi', 'rgba(6,182,212,.12)', '#0E7490', 21],
+      ['trial', 'Sinov darsida', 'rgba(22,163,74,.12)', '#166534', 12],
+      ['dec', 'Qaror jarayonida', 'rgba(234,88,12,.12)', '#C2410C', 15]
+    ];
+    const CARDS = {
+      new: [['Mirumar', 'Bugun 01:38', '33 daq', 'Target', '+998 50 179 96 52', '', ''], ['Saydulla', 'Bugun 01:07', '4 daq', 'Target', '+998 94 444 91 16', '', ''], ['Babajanov Shohrat', 'Bugun 01:04', '7 daq', 'Target', '+7 968 875 33 10', '', ''], ['Medet', 'Bugun 01:00', '10 daq', 'Target', '+7 928 421 43 37', '', '']],
+      try: [['Shahnoza Aliyeva', '28-okt', '5 kun', 'Target', '+998 90 112 45 07', 'Kamola', 'lock'], ['Rustam Toshev', '29-okt', '4 kun', 'Organik', '+998 93 220 18 64', 'Kamola', 'lock4'], ['Sanjar Sobirov', '30-okt', '3 kun', 'Target', '+998 97 301 77 12', 'Robiya', 'warn']],
+      con: [['Nargiza Alimova', 'Kecha 18:20', '7 soat', 'Organik', '+998 99 845 10 33', 'Gulchehra', '']],
+      trial: [['Aziz Aliyev', 'Bugun 18:30', 'Ezoza', 'Target', '+998 91 204 66 81', 'Hamidaxon', '']],
+      dec: [['Nilufar Hamidova', 'Kecha', '1 kun', 'Target', '+998 88 610 42 19', 'Hamidaxon', '']]
+    };
+    const STALE = { lock: ['5-kun · qulf', 'color:#B42318;background:#FEF3F2'], lock4: ['4-kun · ertaga qulf', 'color:#93370D;background:#FEF0C7'], warn: ['3-kun · ogohlantirildi', 'color:#93370D;background:#FEF0C7'] };
+    const SRC = { Target: { chip: 'color:#0057B8;background:#EAF3FF', av: 'color:#0057B8;background:#DCEBFF' }, Organik: { chip: 'color:#067647;background:#ECFDF3', av: 'color:#067647;background:#D1FADF' }, Tavsiya: { chip: 'color:#5B21B6;background:#F1E8FF', av: 'color:#5B21B6;background:#E9DDFF' } };
+    const SUM = { new: '93 ta menejersiz · eng eskisi 33 daq', try: '1 qulf · 2 ogohlantirish', con: 'Oʻrtacha 7 soat', trial: 'Bugun 1 ta sinov', dec: '1 ta 24 soatdan oshdi' };
+    if (V === 'c') { CARDS.new = CARDS.new.concat([['Dilnoza Rahimova', 'Bugun 00:52', '18 daq', 'Organik', '+998 90 301 22 14', '', ''], ['Jahongir', 'Bugun 00:41', '29 daq', 'Target', '+998 91 774 05 63', '', ''], ['Oydin Karimova', 'Bugun 00:30', '40 daq', 'Tavsiya', '+998 93 510 88 21', '', '']]); CARDS.try = CARDS.try.concat([['Lola Yusupova', '31-okt', '2 kun', 'Target', '+998 97 112 34 56', 'Robiya', ''], ['Bekzod Qodirov', '1-noy', '1 kun', 'Organik', '+998 99 400 11 90', 'Gulchehra', '']]); }
+    const XTRA = { 'Mirumar': [1, 1, 0, ['+998 50 179 96 52']], 'Saydulla': [0, 1, 0, ['+998 94 444 91 16', '+998 94 874 88 87']], 'Shahnoza Aliyeva': [2, 3, 2, ['+998 90 112 45 07']], 'Aziz Aliyev': [0, 2, 4, ['+998 91 204 66 81']], 'Nargiza Alimova': [0, 4, 3, ['+998 99 845 10 33']] };
+    const picked = s.picked, done = s.done;
+    const pickKeys = Object.keys(picked);
+    const cols = COLS.map(c => {
+      const id = c[0];
+      const list = (CARDS[id] || []).map((k, i) => ({ k, key: id + i })).filter(x => !(vb && x.k[5]) && !done[x.key]);
+      const unassigned = (CARDS[id] || []).filter((k, i) => !k[5] && !done[id + i]).length;
+      return {
+        t: c[1], n: vb && id !== 'new' ? 0 : (id === 'new' ? 93 - Object.keys(done).length : c[4]),
+        hst: V === 'b' ? 'background:' + c[3] + ';border-radius:12px;margin:0;padding:10px 12px' : V === 'c' ? 'padding:12px 4px 4px;margin:0' : 'border-top:4px solid ' + c[3],
+        dot: V === 'b' ? 'display:none' : 'flex:none;width:9px;height:9px;border-radius:50%;background:' + c[3],
+        titleSt: 'margin:0;font-size:14px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:' + (V === 'b' ? '#FFFFFF' : '#0B1220'),
+        nst: 'flex:none;font-size:12px;font-weight:800;border-radius:999px;padding:2px 8px;' + (V === 'b' ? 'color:' + c[3] + ';background:#FFFFFF' : 'color:' + c[3] + ';background:' + c[2]),
+        colSt: V === 'b' ? 'background:#FFFFFF;padding:10px;gap:10px' : V === 'c' ? 'background:#F1F5F9;border-color:transparent;gap:6px' : '',
+        sum: V === 'a' ? '' : (SUM[id] || ''), sumSt: 'font-size:12px;font-weight:700;color:#3A4456;padding:0 4px',
+        more: id === 'new' ? 'Yana ' + Math.max(0, 93 - Object.keys(done).length - list.length) + ' ta lid' : '',
+        pickBtn: unassigned ? 'Biriktirilmagan: ' + (id === 'new' ? 93 - Object.keys(done).length : unassigned) : '',
+        pickAll: () => { const n = Object.assign({}, picked); (CARDS[id] || []).forEach((k, i) => { if (!k[5] && !done[id + i]) n[id + i] = 1; }); this.setState({ picked: n }); },
+        sub: id === 'try' ? [['Barchasi', 1], ['Javob bermadi', 0], ['Band', 0], ['Oʻchiq', 0], ['Keyinroq', 0]].map(x => ({ t: x[0], st: 'font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;' + (x[1] ? 'background:#0065D6;color:#FFFFFF' : 'background:#FFFFFF;color:#3A4456') })) : id === 'trial' ? [['Kelmagan', 0], ['Hamma', 1], ['Kelgan', 0]].map(x => ({ t: x[0], st: 'font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;' + (x[1] ? 'background:#0065D6;color:#FFFFFF' : 'background:#FFFFFF;color:#3A4456') })) : '',
+        cards: list.map(({ k, key }) => {
+          const st = STALE[k[6]];
+          return {
+            n: k[0], time: k[1], age: k[2], src: k[3], ph: k[4], on: !!picked[key], lab: k[0] + ' — belgilash',
+            notif: (XTRA[k[0]] || [0])[0] || '', notifLab: ((XTRA[k[0]] || [0])[0] || 0) + ' ta oʻqilmagan bildirishnoma',
+            com: (XTRA[k[0]] || [0, 1])[1], comLab: 'Izohlar: ' + (XTRA[k[0]] || [0, 1])[1],
+            rec: (XTRA[k[0]] || [0, 1, 0])[2], recLab: 'Zapis: ' + (XTRA[k[0]] || [0, 1, 0])[2] + ' ta yozuv',
+            recSt: (XTRA[k[0]] || [0, 1, 0])[2] ? 'color:#067647;background:#ECFDF3' : '',
+            phones: (XTRA[k[0]] || [0, 0, 0, [k[4]]])[3], phoneLine: k[4],
+            menu: s.menu === key, menuOpen: s.menu === key ? 'true' : 'false', toggleMenu: () => this.setState({ menu: s.menu === key ? '' : key }),
+            footSt: 'display:flex;align-items:center;gap:6px;' + (V === 'c' ? 'margin-top:6px' : 'border-top:1px solid #EEF2F8;padding-top:10px'),
+            ini: k[0].split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase(),
+            avSt: (V === 'c' ? 'display:none;' : '') + 'flex:none;width:36px;height:36px;border-radius:' + (V === 'b' ? '10px' : '50%') + ';display:grid;place-items:center;font-size:13px;font-weight:800;' + (SRC[k[3]] || SRC.Target).av,
+            srcSt: 'font-size:11px;font-weight:800;border-radius:999px;padding:3px 9px;' + (SRC[k[3]] || SRC.Target).chip,
+            mgrIni: k[5] ? k[5][0] : '+', mgrDot: 'width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:800;' + (k[5] ? 'background:#0B1220;color:#FFFFFF' : 'border:1.5px dashed #94A3B8;color:#4B5563'),
+            toggle: () => { const n = Object.assign({}, picked); if (n[key]) delete n[key]; else n[key] = 1; this.setState({ picked: n }); },
+            ageSt: (V === 'b' ? 'font-size:13px;font-weight:800;border-radius:8px;padding:3px 9px;font-variant-numeric:tabular-nums;' : 'font-size:11px;font-weight:800;border-radius:999px;padding:3px 9px;') + (st ? 'color:#B42318;background:#FEF3F2' : (V === 'b' ? 'color:#067647;background:#ECFDF3' : 'color:#3A4456;background:#F1F5F9')),
+            mgr: k[5] || 'Biriktirish', mgrT: k[5] ? 'Menejer: ' + k[5] : 'Menejer biriktirilmagan', mgrSt: k[5] ? 'padding-left:5px' : 'padding-left:5px;color:#0057B8;background:#EAF3FF',
+            stale: st ? st[0] : '', staleSt: st ? 'display:inline-block;font-size:11px;font-weight:800;border-radius:999px;padding:3px 9px;' + st[1] : '',
+            full: V !== 'c', compact: V === 'c',
+            st: (V === 'b' ? 'border-top:3px solid ' + (st ? (k[6] === 'lock' ? '#F04438' : '#F79009') : '#12B76A') + ';' : V === 'c' ? 'padding:9px 10px;gap:6px;border-radius:12px;' : '') + (picked[key] ? 'border-color:#0065D6;box-shadow:0 0 0 2px #93C5FD' : '')
+          };
+        })
+      };
+    });
+    const doAssign = (label) => { const d = Object.assign({}, done); pickKeys.forEach(k => d[k] = 1); this.setState({ done: d, picked: {}, pop: label, last: done }); };
+    return {
+      nav, fMan, fCol, fDate, cols, viaBadge: vb, vcls: 'v-' + V,
+      clearChip: () => this.setState({ viaBadge: false }),
+      hasPick: pickKeys.length > 0, pickN: pickKeys.length,
+      setMan: e => this.setState({ man: e && e.target ? e.target.value : '' }),
+      assign: () => { if (!s.man) return; doAssign(pickKeys.length + ' ta lid → ' + s.man); },
+      split: () => doAssign(pickKeys.length + ' ta lid 4 menejerga teng boʻlindi'),
+      clearPick: () => this.setState({ picked: {} }),
+      pop: !!s.pop, popText: s.pop,
+      closePop: () => this.setState({ pop: '' }),
+      undo: () => this.setState({ pop: '', done: s.last || {} })
+    };
+  }
+}
+</script>
+</body>
+</html>

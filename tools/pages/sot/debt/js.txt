@@ -1,0 +1,162 @@
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.state = { sb: true, demo: 'ok', retried: false, st: this.seed(), quick: 'all', tch: 'all', tar: 'all', from: '', to: '', menu: '', pay: null, ed: null, toast: '' };
+    this._t = null;
+    // Esc: fokus sahifada yoʻqolgan boʻlsa ham (qayta chizishdan keyin) oyna/menyu yopiladi
+    if (typeof document !== 'undefined') document.addEventListener('keydown', e => { if (e.key !== 'Escape' || e.defaultPrevented) return; const st = this.state; if (st.pay || st.ed) { const id = (st.pay || st.ed).id; this.setState({ pay: null, ed: null }); this.focusSoon('[data-menu="' + id + '"]'); } else if (st.menu) { const id = st.menu; this.setState({ menu: '' }); this.focusSoon('[data-menu="' + id + '"]'); } });
+  }
+  // Demo bugun: Du 02.11.2026. O'quvchilar bazasi (renderDebtorsTable shu ro'yxatdan qarzdorlarni ajratadi).
+  seed() {
+    const S = (id, name, serial, phone, subject, group, pat, start, debt, due, paid, cnt, last, mgr, tch, dur, tariff, comment, note, frozen) => ({ id, name, serial, phone, subject, group, pat, start, debtAmount: debt, paymentDueDate: due, paidAmount: paid, paymentCount: cnt, lastPaymentDate: last, managerId: mgr, teacherId: tch, lessonDuration: dur, tariff, comment, note, frozen: !!frozen });
+    return [
+      S('s1', 'Shahzoda Ergasheva', 'R0412', '901234567', 'russian', 'C31', 'dcj', '2026-09-14', 450000, '2026-10-20', 450000, 1, '2026-09-14', 'ks', 't2', 30, 'standard', 'Oyligi 25-da tushadi — 1 haftaga surishni soʻradi', ''),
+      S('s2', 'Doniyor Mirzayev', 'R0398', '935557711', 'russian', 'C27', 'tts', '2026-09-01', 790000, '2026-10-28', 790000, 1, '2026-09-01', 'hb', 't1', 60, 'vip', 'Zaklad: yarmi toʻlangan', 'Otasi bilan gaplashish kerak'),
+      S('s3', 'Oybek Nazarov', 'R0377', '977001122', 'russian', 'C22', 'dcj', '2026-08-20', 225000, '2026-10-25', 675000, 3, '2026-10-01', 'gm', 't2', 15, 'premium', 'Kasal — 2 haftaga muzlatildi', '', true),
+      S('s4', 'Gulnoza Saidova', 'R0420', '998887766', 'russian', 'C33', 'tts', '2026-10-01', 300000, '2026-11-01', 600000, 2, '2026-10-15', 'ru', 't3', 30, 'standard', '', ''),
+      S('s5', 'Madina Rasulova', 'R0431', '903332211', 'russian', 'C41', 'dcj', '2026-10-05', 340000, '2026-11-02', 450000, 1, '2026-10-05', 'ru', 't2', 30, 'standard', 'Bugun kechqurun Click orqali', ''),
+      S('s6', 'Aziza Karimova', 'R0405', '946660099', 'russian', 'C38', 'tts', '2026-09-10', 450000, '2026-11-05', 900000, 2, '2026-10-10', 'ks', 't3', 30, 'standard', '', ''),
+      S('s7', 'Sardor Yoqubov', 'R0428', '911110022', 'russian', '', 'dcj', '2026-10-12', 200000, '2026-11-15', 250000, 1, '2026-10-12', 'gm', 't1', 30, 'standard', '', 'Ikki farzand — oilaviy chegirma soʻralgan'),
+      S('s8', 'Javohir Qodirov', 'R0433', '330004455', 'russian', 'C42', 'tts', '2026-10-20', null, '2026-11-20', 0, 0, '', 'hb', 't3', 15, 'standard', 'Shartnoma summasi kiritilmagan', ''),
+      S('s9', 'Kamron Aliyev', 'R0425', '887771100', 'russian', 'C40', 'dcj', '2026-10-08', 395000, '2026-11-28', 395000, 1, '2026-10-08', 'hb', 't2', 60, 'premium', '', ''),
+      S('s10', 'Malika Hasanova', 'R0415', '935550909', 'russian', 'C33', 'dcj', '2026-09-20', 600000, '2026-12-01', 980000, 2, '2026-10-20', 'gm', 't3', 60, 'vip', '', ''),
+      S('s11', 'Nilufar Abdullayeva', 'R0380', '977778899', 'russian', 'C29', 'dcj', '2026-08-25', 790000, '2026-12-10', 1580000, 2, '2026-10-25', 'ks', 't1', 60, 'vip', 'Uzum Nasiya — 3 oyga boʻlingan', ''),
+      S('s12', 'Bekzod Rahimov', 'R0435', '', 'russian', '', 'tts', '2026-10-28', 150000, '', 300000, 1, '2026-10-28', 'ru', 't2', 30, 'standard', 'Sana hali kelishilmagan', ''),
+      // Qarzdor emas: qoldiq aniq 0 · Ingliz tili (ROP koʻrmaydi)
+      S('s13', 'Diyora Usmonova', 'R0402', '901112233', 'russian', 'C36', 'dcj', '2026-09-05', 0, '', 900000, 2, '2026-10-05', 'ks', 't1', 30, 'standard', '', ''),
+      S('e1', 'Timur Saidov', 'E1120', '901119988', 'english', 'C12', 'dcj', '2026-09-01', 500000, '2026-10-15', 500000, 1, '2026-09-01', 'x1', 'e1', 30, 'standard', '', '')
+    ];
+  }
+  focusSoon(sel) { setTimeout(() => { const el = document.querySelector(sel); if (el && el.focus) el.focus(); }, 30); }
+  renderVals() {
+    const s = this.state;
+__NAVJS__
+__MKNAV__
+    const nav = mkNav({}).map(n => Object.assign({}, n, { cur: n.k === 'debt' ? 'page' : 'false', pickBadge: () => {}, pick: () => { if (n.k === 'debt' || !n.item) return; this.setState({ toast: n.label + ' sahifasi ochiladi' }); } }));
+    const MG = { gm: ['Gulchehra Mamadaliyeva', '#0E7490'], hb: ['Hamidaxon Boymirzayeva', '#C2410C'], ks: ['Kamola Shahobiddinova', '#5B21B6'], ru: ['Robiya Usmonova', '#166534'], x1: ['Sevara Nazarova', '#334155'] };
+    const TC = [['t1', 'Dilnoza Karimova'], ['t2', 'Shahnoza Qodirova'], ['t3', 'Nodira Aliyeva']];
+    const TAR = [['standard', 'Standard'], ['premium', 'Premium'], ['vip', 'VIP']];
+    const METHODS = { card: 'Karta', uzum: 'Uzum Nasiya', paylater: 'Paylater', bank: 'Bank hisobi', payme: 'Payme', click: 'Click', cash: 'Naqd', unknown: 'Aniqlanmagan' };
+    // storage.js formatMoney: bo'sh joy (nbsp) bilan guruhlash + " so'm"; inputda — vergul (formatMoneyDigits)
+    const money = a => { const n = Math.round(Number(a) || 0); return (n < 0 ? '−' : '') + String(Math.abs(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' soʻm'; };
+    const digits = raw => { const d = String(raw || '').replace(/\D/g, ''); return d ? d.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : ''; };
+    const lmoney = v => { if (v === '' || v == null) return null; const n = Number(String(v).replace(/[\s,]/g, '')); return Number.isFinite(n) ? n : null; };
+    const dShort = d => d ? d.slice(8, 10) + '.' + d.slice(5, 7) + '.' + d.slice(0, 4) : '—';
+    const phoneD = p => { let x = String(p || '').replace(/\D/g, ''); if (!x) return ''; if (x.length === 9) x = '998' + x; return '+' + x.slice(0, 3) + ' ' + x.slice(3, 5) + ' ' + x.slice(5, 8) + ' ' + x.slice(8, 10) + ' ' + x.slice(10, 12); };
+    const ini = n => String(n).split(' ').map(w => w[0] || '').join('').slice(0, 2).toUpperCase();
+    const TODAY = '2026-11-02', DAY = 86400000, dnum = d => Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10));
+    const toast = (t, ms) => { this.setState({ toast: t }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: '' }), ms || 3000); };
+    // ── renderDebtorsTable 1:1 ──
+    const all = s.demo === 'none' ? s.st.map(x => Object.assign({}, x, { debtAmount: x.subject === 'russian' ? 0 : x.debtAmount, paymentDueDate: '' })) : s.st;
+    const debtors = all.filter(x => { const debt = Number(x.debtAmount || 0); if ((x.subject || 'english') !== 'russian') return false; if (x.managerId !== 'ks') return false; /* filterStudentsForSalesManager */ return debt > 0 || (x.debtAmount == null && !!x.paymentDueDate); });
+    const filtered = debtors.filter(x => {
+      if (s.tch !== 'all' && x.teacherId !== s.tch) return false;
+      if (s.tar !== 'all' && (x.tariff || 'standard') !== s.tar) return false;
+      if (s.from || s.to) { if (!x.paymentDueDate) return false; if (s.from && x.paymentDueDate < s.from) return false; if (s.to && x.paymentDueDate > s.to) return false; }
+      return true; });
+    const isOver = x => !!x.paymentDueDate && x.paymentDueDate < TODAY && Number(x.debtAmount || 0) > 0;
+    const inMonth = x => !!x.paymentDueDate && x.paymentDueDate >= '2026-11-01' && x.paymentDueDate <= '2026-11-30';
+    const overdueList = filtered.filter(isOver), monthList = filtered.filter(x => inMonth(x) && !isOver(x));
+    const shown = (s.quick === 'overdue' ? overdueList : s.quick === 'month' ? monthList : filtered).slice().sort((a, b) => (a.paymentDueDate ? dnum(a.paymentDueDate) : Infinity) - (b.paymentDueDate ? dnum(b.paymentDueDate) : Infinity));
+    const sumDebt = l => l.reduce((a, x) => a + Number(x.debtAmount || 0), 0);
+    const totalDebt = sumDebt(filtered), totalPaid = filtered.reduce((a, x) => a + Number(x.paidAmount || 0), 0);
+    const usedMgr = new Set(debtors.map(x => x.managerId));
+    const loading = s.demo === 'load', loadErr = s.demo === 'err' && !s.retried, ready = !loading && !loadErr;
+    const anyF = s.tch !== 'all' || s.tar !== 'all' || !!s.from || !!s.to;
+    const byId = id => s.st.find(x => x.id === id);
+    const patch = (id, o) => s.st.map(x => x.id === id ? Object.assign({}, x, o) : x);
+    const openPay = id => { const x = byId(id); this.setState({ menu: '', pay: { id, am: '', date: TODAY, time: '', method: '', file: '', err: '', bad: '', sus: false, busy: false, pending: null, expected: Number(x.debtAmount || 0) } }); this.focusSoon('#payAmt'); };
+    const openEd = id => { const x = byId(id); this.setState({ menu: '', ed: { id, due: x.paymentDueDate || '', tariff: x.tariff || 'standard', comment: x.comment || '', note: x.note || '', err: '', busy: false } }); this.focusSoon('#edDue'); };
+    const closeDlg = () => { const id = (s.pay || s.ed || {}).id; this.setState({ pay: null, ed: null }); if (id) this.focusSoon('[data-menu="' + id + '"]'); };
+    const rows = shown.map((x, i) => {
+      const debt = Number(x.debtAmount || 0), paid = Number(x.paidAmount || 0), total = debt + paid, pct = total > 0 ? Math.round(paid / total * 100) : 0;
+      const over = isOver(x), days = x.paymentDueDate ? Math.round((dnum(x.paymentDueDate) - dnum(TODAY)) / DAY) : null;
+      const dayT = days === null ? '' : days < 0 ? (-days) + ' kun oʻtdi' : days === 0 ? 'bugun' : days + ' kun qoldi';
+      const b = x.frozen ? ['db-badge db-b-frz', 'Muzlatilgan'] : over ? ['db-badge db-b-over', 'Muddati oʻtgan'] : x.debtAmount == null ? ['db-badge db-b-unk', 'Qarz aniqlanmagan'] : x.paymentDueDate ? ['db-badge db-b-wait', 'Kutilmoqda'] : ['db-badge db-b-wait', 'Sana kelishilmagan'];
+      const tel = String(x.phone || '').replace(/[^\d+]/g, '');
+      const up = i >= shown.length - 2 && shown.length > 3;
+      return { id: x.id, name: x.name, ini: ini(x.name), avSt: 'background:' + (over ? '#B42318' : '#0E7490'), serial: x.serial, phoneD: phoneD(x.phone) || '—',
+        line3: 'Rus tili · ' + (x.group || 'guruh yoʻq') + ' · ' + (x.pat === 'tts' ? 'SSh' : 'DCJ') + (x.start ? ' · ' + dShort(x.start) + ' dan' : ''),
+        debtT: money(debt), dueT: x.paymentDueDate ? dShort(x.paymentDueDate) : '—', dueCls: over ? 'db-late' : 'db-main', dayT, dayCls: 'db-sub' + (over ? ' db-late' : ''), bCls: (s.pend || {})[x.id] !== undefined ? 'db-badge db-b-unk' : b[0], bT: (s.pend || {})[x.id] !== undefined ? 'Surish soʻrovi kutilmoqda' : b[1],
+        tch: ((TC.find(t => t[0] === x.teacherId) || [0, '—'])[1]), tline: (x.lessonDuration || 15) + ' daq · ' + ((TAR.find(t => t[0] === x.tariff) || [0, 'Standard'])[1]),
+        paidT: money(paid) + ' / ' + money(total), pctL: pct + '% toʻlangan', barSt: 'width:' + pct + '%', payS: pct + '% · ' + (x.paymentCount || 0) + ' ta toʻlov' + (x.lastPaymentDate ? ' · oxirgi ' + dShort(x.lastPaymentDate) : ''),
+        notes: [x.comment, x.note].filter(Boolean).join('\n') || '—', tel: tel ? 'tel:+998' + tel.slice(-9) : '', callL: x.name + ' — qoʻngʻiroq',
+        menuL: x.name + ' — amallar', open: s.menu === x.id ? 'true' : 'false', menu: s.menu === x.id, zst: s.menu === x.id ? 'z-index:5' : '', mnSt: up ? 'bottom:40px' : 'top:40px',
+        toggle: () => { const opening = this.state.menu !== x.id; this.setState({ menu: opening ? x.id : '' }); if (opening) this.focusSoon('.db-mn [role=menuitem]'); },
+        mCall: () => { this.setState({ menu: '' }); toast(x.phone ? 'Qoʻngʻiroq: ' + phoneD(x.phone) : 'Telefon raqami yoʻq'); },
+        mSms: () => { this.setState({ menu: '' }); toast(x.phone ? 'SMS ilovasi ochiladi: ' + phoneD(x.phone) : 'Telefon raqami yoʻq'); },
+        mPay: () => openPay(x.id), mEdit: () => openEd(x.id) };
+    });
+    // ── inflowUI.openPayment ──
+    let pay = null; const P = s.pay; const px = P ? byId(P.id) : null;
+    const setP = o => this.setState({ pay: Object.assign({}, this.state.pay, o) });
+    if (P && px) {
+      const debtNow = Number(px.debtAmount || 0), paidSoFar = Number(px.paidAmount || 0), a = lmoney(P.am);
+      const quick = [{ t: 'Qarzni toʻliq: ' + money(debtNow), v: debtNow }].concat(debtNow >= 2 ? [{ t: 'Yarmi: ' + money(Math.round(debtNow / 2)), v: Math.round(debtNow / 2) }] : []);
+      pay = { title: px.name + ' — Toʻlov qabul qilish', debt: money(debtNow), paid: money(paidSoFar), due: px.paymentDueDate ? dShort(px.paymentDueDate) : '',
+        amV: P.am, amCls: 'fld' + (P.bad === 'am' ? ' ferr' : ''), amInv: P.bad === 'am' ? 'true' : 'false',
+        quick: quick.map(q => ({ t: q.t, pick: () => { setP({ am: digits(q.v), err: '', bad: '' }); this.focusSoon('#payAmt'); } })),
+        left: a ? (a > debtNow ? 'Summa qarzdan katta' : 'Toʻlovdan keyin qoldiq: ' + money(debtNow - a)) : '', leftCls: 'db-left' + (a > debtNow ? ' db-bad' : ''),
+        dateV: P.date, dCls: 'fld' + (P.bad === 'date' ? ' ferr' : ''), timeV: P.time,
+        methods: [{ v: '', t: 'Usulni tanlang', sel: !P.method }].concat(Object.keys(METHODS).filter(k => k !== 'unknown').map(k => ({ v: k, t: METHODS[k], sel: P.method === k }))), mCls: 'fld' + (P.bad === 'method' ? ' ferr' : ''),
+        fCls: 'db-file' + (P.bad === 'file' ? ' db-fbad' : ''), fileN: P.file, sus: P.sus ? money(a) : '', err: P.err, busyA: P.busy ? 'true' : 'false', saveL: P.busy ? 'Saqlanmoqda...' : 'Qabul qilish' };
+    }
+    const doPay = skipSus => {
+      const st = this.state, Q = st.pay; if (!Q || Q.busy) return; const x = byId(Q.id);
+      let pending = Q.pending;
+      if (!pending) {
+        const amount = lmoney(Q.am);
+        if (!amount || amount <= 0 || amount > Number(x.debtAmount)) { setP({ err: 'Summa musbat boʻlishi va qarzdan oshmasligi kerak', bad: 'am' }); this.focusSoon('#payAmt'); return; }
+        if (amount < 10000 && !skipSus) { setP({ sus: true, err: '', bad: '' }); return; }
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(Q.date) || Q.date > TODAY) { setP({ err: 'Tushum sanasini toʻgʻri tanlang', bad: 'date', sus: false }); return; }
+        if (!Q.method) { setP({ err: 'Toʻlov usulini tanlang', bad: 'method', sus: false }); return; }
+        if (!Q.file) { setP({ err: 'Chekni rasm yoki PDF shaklida yuklang', bad: 'file', sus: false }); return; }
+        pending = { amount, paidDate: Q.date, method: Q.method, expectedDebt: Q.expected };
+      }
+      setP({ busy: true, err: '', bad: '', sus: false, pending });
+      setTimeout(() => {
+        const st2 = this.state;
+        if (st2.demo === 'pay409') { setP({ busy: false, err: 'Qarz oʻzgargan. Sahifani yangilang. Qayta urinish shu toʻlovni takroran yozmaydi.' }); return; }
+        if (st2.demo === 'pay403') { setP({ busy: false, err: 'Bu oʻquvchining toʻloviga ruxsat yoʻq — oʻquvchi boshqa menejerga oʻtkazilgan. Roʻyxatni yangilang.' }); return; }
+        const x2 = st2.st.find(y => y.id === Q.id), debt = Number(x2.debtAmount), amt = pending.amount;
+        const o = { paidAmount: Number(x2.paidAmount || 0) + amt, debtAmount: debt - amt, lastPaymentDate: pending.paidDate, paymentCount: (Number(x2.paymentCount) || 0) + 1, frozen: false };
+        if (debt === amt) o.paymentDueDate = '';
+        this.setState({ st: st2.st.map(y => y.id === Q.id ? Object.assign({}, y, o) : y), pay: null });
+        toast('Toʻlov serverga saqlandi' + (debt === amt ? ' · ' + x2.name + ' qarzdorlar roʻyxatidan chiqdi' : ' · qoldiq ' + money(debt - amt)), 4000);
+      }, 800);
+    };
+    // ── openDebtorEditModal ──
+    let ed = null; const E = s.ed; const ex = E ? byId(E.id) : null;
+    const setE = o => this.setState({ ed: Object.assign({}, this.state.ed, o) });
+    if (E && ex) ed = { title: 'Muddatni surish soʻrovi — ' + ex.name, tarT: ((TAR.find(t => t[0] === E.tariff) || [0, 'Standard'])[1]), paid: digits(ex.paidAmount || 0) || '0', debt: digits(ex.debtAmount || 0) || '0', due: E.due, tars: TAR.map(t => ({ v: t[0], t: t[1], sel: E.tariff === t[0] })),
+      last: ex.lastPaymentDate ? dShort(ex.lastPaymentDate) : '—', cnt: String(ex.paymentCount || 0), comment: E.comment, note: E.note, err: E.err, busyA: E.busy ? 'true' : 'false', saveL: E.busy ? 'Yuborilmoqda...' : 'Soʻrovni ROP’ga yuborish' };
+    const opt = (cur, list, allT) => [{ v: 'all', t: allT, sel: cur === 'all' }].concat(list.map(o => ({ v: o[0], t: o[1], sel: cur === o[0] })));
+    return {
+      crumb0: 'Sotuv', crumb: 'Qarzdorlar', nav, sbCls: s.sb ? 'sb' : 'sb sb-min', sbExp: s.sb ? 'true' : 'false', sbLab: s.sb ? 'Menyuni yigʻish' : 'Menyuni ochish', sbIcon: s.sb ? 'M15 6l-6 6 6 6' : 'M9 6l6 6-6 6', toggleSb: () => this.setState({ sb: !s.sb }),
+      demo: [['ok', 'Oddiy', ''], ['load', 'Yuklanmoqda', ''], ['err', 'Xato', 'Roʻyxatni yuklab boʻlmadi'], ['none', 'Boʻsh', 'Qarzdor oʻquvchingiz yoʻq'], ['pay409', 'Toʻlov 409', 'Saqlashda server: qarz oʻzgargan'], ['pay403', 'Toʻlov 403', 'Server: bu oʻquvchining toʻloviga ruxsat yoʻq (inflow.js)']].map(d => ({ t: d[1], tip: d[2] || d[1], on: s.demo === d[0] ? 'true' : 'false', pick: () => { clearTimeout(this._t); this.setState({ demo: d[0], retried: false, st: this.seed(), pend: {}, quick: 'all', tch: 'all', tar: 'all', from: '', to: '', menu: '', pay: null, ed: null, toast: '' }); } })),
+      loading, loadErr, ready, retry: () => this.setState({ retried: true }),
+      tl: { over: money(sumDebt(overdueList)), overS: overdueList.length + ' ta oʻquvchi', month: money(sumDebt(monthList)), monthS: monthList.length + ' ta oʻquvchining navbatdagi qismi', total: money(totalDebt), totalS: filtered.length + ' ta oʻquvchi boʻlib toʻlamoqda', paid: money(totalPaid), paidS: 'jami shartnoma ' + money(totalPaid + totalDebt) },
+      quick: [['all', 'Barchasi', filtered.length, ''], ['overdue', 'Muddati oʻtgan', overdueList.length, 'db-sred'], ['month', 'Bu oy', monthList.length, '']].map(q => ({ l: q[1], n: String(q[2]), cls: q[3], on: s.quick === q[0] ? 'true' : 'false', pick: () => this.setState({ quick: q[0], menu: '' }) })),
+      fTch: { cls: 'db-sel' + (s.tch !== 'all' ? ' db-act' : ''), opts: opt(s.tch, TC, 'Barcha oʻqituvchilar'), on: e => this.setState({ tch: e.target.value, menu: '' }) },
+      fTar: { cls: 'db-sel' + (s.tar !== 'all' ? ' db-act' : ''), opts: opt(s.tar, TAR, 'Barcha tariflar'), on: e => this.setState({ tar: e.target.value, menu: '' }) },
+      dFrom: s.from, dTo: s.to, fromIn: e => this.setState({ from: e.target.value }), toIn: e => this.setState({ to: e.target.value }), rangeBad: !!(s.from && s.to && s.from > s.to),
+      anyF, clearF: () => this.setState({ tch: 'all', tar: 'all', from: '', to: '' }),
+      rows, noRows: rows.length === 0, rowCount: String(rows.length + 1),
+      emptyS: s.demo === 'none' ? 'Hamma oʻquvchilaringiz toʻlovni oʻz vaqtida qilgan.' : anyF || s.quick !== 'all' ? 'Filtrni oʻzgartiring yoki tozalang.' : '',
+      menuKey: e => { const its = Array.prototype.slice.call(e.currentTarget.querySelectorAll('[role=menuitem]')); const ix = its.indexOf(document.activeElement);
+        if (e.key === 'Escape') { e.preventDefault(); const id = this.state.menu; this.setState({ menu: '' }); this.focusSoon('[data-menu="' + id + '"]'); return; }
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); (its[(ix + (e.key === 'ArrowDown' ? 1 : -1) + its.length) % its.length] || its[0]).focus(); } },
+      outClick: e => { if (this.state.menu && !(e.target.closest && (e.target.closest('.db-mn') || e.target.closest('[data-menu]')))) this.setState({ menu: '' }); },
+      pay, ed,
+      ovClick: e => { if (e.target === e.currentTarget) closeDlg(); }, closeDlg,
+      dlgKey: e => { if (e.key === 'Escape') { e.preventDefault(); closeDlg(); return; } if (e.key === 'Tab') { const f = Array.prototype.slice.call(e.currentTarget.querySelectorAll('button,input,select,textarea')).filter(el => !el.disabled); const ix = f.indexOf(document.activeElement); if ((e.shiftKey && ix <= 0) || (!e.shiftKey && ix === f.length - 1)) { e.preventDefault(); (e.shiftKey ? f[f.length - 1] : f[0]).focus(); } } },
+      amIn: e => setP({ am: digits(e.target.value), err: '', bad: '', sus: false, pending: null }), dateIn: e => setP({ date: e.target.value, err: '', bad: '', pending: null }), timeIn: e => setP({ time: e.target.value, pending: null }),
+      methIn: e => setP({ method: e.target.value, err: '', bad: '', pending: null }),
+      fileIn: e => { const f = e.target.files && e.target.files[0]; if (f && ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'].indexOf(f.type) < 0) { setP({ file: '', err: 'Chekni rasm yoki PDF shaklida yuklang', bad: 'file' }); return; } setP({ file: f ? f.name : '', err: '', bad: '', pending: null }); },
+      paySave: () => doPay(false), susOk: () => doPay(true), susNo: () => { setP({ sus: false }); this.focusSoon('#payAmt'); },
+      edDueIn: e => setE({ due: e.target.value }), edTarIn: e => setE({ tariff: e.target.value }), edComIn: e => setE({ comment: e.target.value }), edNoteIn: e => setE({ note: e.target.value }),
+      edSave: () => { const Q = this.state.ed; if (!Q || Q.busy) return; const x = byId(Q.id); if (Q.due === (x.paymentDueDate || '') && Q.comment === (x.comment || '') && Q.note === (x.note || '')) { setE({ err: 'Oʻzgarish yoʻq — yangi muddat yoki izoh kiriting' }); this.focusSoon('#edDue'); return; } setE({ busy: true, err: '' }); setTimeout(() => { const pend = Object.assign({}, this.state.pend || {}); pend[Q.id] = Q.due; this.setState({ ed: null, pend }); toast('Soʻrov ROP’ga yuborildi · ' + x.name + (Q.due && Q.due !== x.paymentDueDate ? ' — yangi muddat ' + dShort(Q.due) : '') + '. Tasdiqlangach muddat oʻzgaradi.', 4200); this.focusSoon('[data-menu="' + Q.id + '"]'); }, 500); },
+      toast: s.toast
+    };
+  }
+}

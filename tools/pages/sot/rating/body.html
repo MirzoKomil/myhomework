@@ -1,0 +1,275 @@
+<style>
+.rb-seg{display:inline-flex;gap:4px;padding:3px;border-radius:12px;background:#FFFFFF;border:1px solid #E6EAF2}
+.rb-seg button{height:32px;padding:0 14px;border-radius:9px;border:0;background:transparent;font-size:13px;font-weight:700;color:#3A4456;cursor:pointer}
+.rb-seg button:hover{background:#F1F5F9}
+.rb-seg button[aria-pressed="true"]{background:#0065D6;color:#FFFFFF}
+.rb-seg.rb-dark button[aria-pressed="true"]{background:#0B1220}
+.rb-tabs{display:flex;gap:2px;border-bottom:1px solid #E6EAF2;flex:1}
+.rb-tabs button{height:42px;padding:0 14px;border:0;background:transparent;font-size:14px;font-weight:700;color:#3A4456;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1px}
+.rb-tabs button[aria-selected="true"]{color:#0057B8;border-bottom-color:#0065D6;font-weight:800}
+.rb-hero{display:flex;gap:18px;align-items:center;padding:18px 22px;border-radius:18px;background:linear-gradient(120deg,#0B1220 0%,#123A73 100%);color:#FFFFFF}
+.rb-hero .rb-eb{font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#93C5FD}
+.rb-hero h2{margin:4px 0 0;font-size:20px;font-weight:800;letter-spacing:-.01em}
+.rb-hero p{margin:4px 0 0;font-size:13px;color:#CBD5E1}
+.rb-team{display:flex;align-items:center;gap:10px;margin-top:10px;font-size:12px;color:#E2E8F0}
+.rb-tbar{flex:1;max-width:320px;height:8px;border-radius:999px;background:rgba(255,255,255,.18);overflow:hidden}
+.rb-tbar span{display:block;height:100%;background:#60A5FA;border-radius:999px}
+.rb-h3{margin:0;font-size:15px;font-weight:800}
+.rb-prizes{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.rb-prize{background:#FFFFFF;border:1px solid #E6EAF2;border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.rb-hot{border-color:#F79009;box-shadow:0 0 0 1px #F79009}
+.rb-pi{display:flex;align-items:center;gap:10px}
+.rb-pi > span:first-child{font-size:26px;line-height:1}
+.rb-th{font-size:12px;font-weight:700;color:#4B5563}
+.rb-pn{font-size:14px;font-weight:800}
+.rb-pbar{height:6px;border-radius:999px;background:#EEF2F7;overflow:hidden}
+.rb-pbar span{display:block;height:100%;background:#0065D6;border-radius:999px}
+.rb-chips{display:flex;flex-wrap:wrap;gap:4px}
+.rb-chip{font-size:11px;font-weight:700;color:#3A4456;background:#F1F5F9;border-radius:999px;padding:2px 7px}
+.rb-chip-ok{background:#DCFAE6;color:#067647}
+.rb-pnote{font-size:12px;color:#3A4456}
+.rb-mg{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:14px}
+.rb-pods{list-style:none;margin:0;padding:8px 0 0;display:flex;align-items:flex-end;gap:10px}
+.rb-pod{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center}
+.rb-pod .rb-av{width:40px;height:40px;font-size:13px}
+.rb-pod1 .rb-av{width:48px;height:48px;box-shadow:0 0 0 3px #F5B700}
+.rb-pod strong{font-size:13px;line-height:1.25}
+.rb-pod b{font-size:15px;font-variant-numeric:tabular-nums}
+.rb-pod small{font-size:11px;color:#4B5563}
+.rb-step{width:100%;border-radius:10px 10px 0 0;display:grid;place-items:start center;padding-top:8px;font-size:22px;font-weight:900;margin-top:4px}
+.rb-pz{font-size:12px;font-weight:800;color:#93370D;background:#FEF0C7;border-radius:999px;padding:2px 9px}
+.rb-pz-ok{color:#067647;background:#DCFAE6}
+.rb-cond{font-size:11px;color:#4B5563;min-height:28px}
+.rb-tiers{display:flex;gap:6px;flex-wrap:wrap;font-size:12px}
+.rb-tiers span{background:#FFF4ED;color:#9A3412;border-radius:999px;padding:2px 9px;font-weight:700}
+.rb-ob{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.rb-ob li{display:grid;grid-template-columns:32px minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid #EEF2F6}
+.rb-ob li div{display:flex;flex-direction:column;font-size:13px;min-width:0}
+.rb-ob li div span{font-size:12px;color:#4B5563}
+.rb-ob li > b{font-size:13px;font-variant-numeric:tabular-nums}
+.rb-ochip{font-size:12px;font-weight:800;color:#4B5563;background:#F1F5F9;border-radius:999px;padding:3px 9px;white-space:nowrap}
+.rb-ochip-ok{color:#067647;background:#DCFAE6}
+.rb-wk{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.rb-wk li{display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:12px;background:#F8FAFC;border:1px solid #EEF2F6}
+.rb-wk li > span{font-size:28px}
+.rb-wk div{display:flex;flex-direction:column;font-size:12px;color:#4B5563}
+.rb-wk div em{font-style:normal;font-size:11px;font-weight:800;color:#5B21B6;text-transform:uppercase;letter-spacing:.05em}
+.rb-wk div strong{font-size:14px;color:#0B1220}
+.rb-av{flex:none;width:30px;height:30px;border-radius:50%;display:inline-grid;place-items:center;font-size:11px;font-weight:800}
+.rb-pcs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.rb-pc{border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:4px;color:#0B1220;border:1px solid transparent}
+.rb-pc1{background:#FFF7DB;border-color:#F5D46B}.rb-pc2{background:#F1F5F9;border-color:#CBD5E1}.rb-pc3{background:#FFF1E7;border-color:#F4B98A}
+.rb-pc .rb-pl{font-size:12px;font-weight:800;color:#4B5563}
+.rb-pc strong{font-size:14px}
+.rb-pc b{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums}
+.rb-pc small{font-size:12px;color:#3A4456}
+.rb-pcbar{height:6px;border-radius:999px;background:rgba(11,18,32,.1);overflow:hidden;margin-top:4px}
+.rb-pcbar span{display:block;height:100%;background:#0B1220}
+.rb-t{display:flex;flex-direction:column;font-size:13px}
+.rb-tr{display:grid;grid-template-columns:52px minmax(220px,1.6fr) 90px 140px 140px 140px 190px;gap:8px;align-items:center;padding:10px 8px;border-bottom:1px solid #EEF2F6;font-variant-numeric:tabular-nums}
+.rb-tr > span:nth-child(n+3):nth-child(-n+6){text-align:right}
+.rb-tr > span:last-child{padding-left:14px}
+.rb-th{font-size:12px;color:#4B5563;font-weight:700}
+.rb-rk{width:28px;height:28px;border-radius:50%;display:inline-grid;place-items:center;font-size:13px;font-weight:900}
+.rb-mn{display:flex;align-items:center;gap:10px;min-width:0}
+.rb-mn div{display:flex;flex-direction:column;min-width:0}
+.rb-mn div small{font-size:11px;color:#4B5563}
+.rb-mut{color:#4B5563}
+.rb-prog{display:flex;align-items:center;gap:8px}
+.rb-prog i{flex:1;height:8px;border-radius:999px;background:#EEF2F7;overflow:hidden}
+.rb-prog i b{display:block;height:100%;border-radius:999px}
+.rb-prog span{font-size:12px;font-weight:800;white-space:nowrap;min-width:54px;text-align:right}
+.rb-mc{background:#FFFFFF;border:1px solid #E6EAF2;border-radius:14px;padding:12px 16px;display:flex;flex-direction:column;gap:10px}
+.rb-mch{display:flex;align-items:center;gap:12px}
+.rb-pills{display:flex;gap:8px;flex-wrap:wrap}
+.rb-pill{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:10px;border:1px solid #E6EAF2;font-size:12px;font-weight:700;color:#3A4456;background:#FFFFFF}
+.rb-pill em{font-style:normal;font-weight:600;color:#4B5563}
+.rb-pill-w{min-width:230px}
+.rb-pill-ok{background:#ECFDF3;border-color:#ABEFC6;color:#067647}
+.rb-pill-ok em{color:#067647;font-weight:800}
+.rb-pill i{flex:1;min-width:50px;height:5px;border-radius:999px;background:#EEF2F7;overflow:hidden}
+.rb-pill i b{display:block;height:100%;background:#7C3AED}
+.rb-bg{display:flex;flex-direction:column;gap:8px}
+.rb-bcards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.rb-bc{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:14px;border-radius:16px;border:1px solid #E6EAF2;background:#FFFFFF;cursor:pointer;text-align:left;font-family:inherit;color:#0B1220}
+.rb-bc:hover{border-color:#0065D6;box-shadow:0 8px 20px rgba(16,24,40,.08)}
+.rb-bc > span:first-child{font-size:28px;line-height:1}
+.rb-bc strong{font-size:15px}
+.rb-bc b{font-size:20px;color:#0057B8}
+.rb-bc small{font-size:12px;color:#4B5563}
+.rb-bh{display:flex;align-items:center;gap:16px;padding:16px 20px;border-radius:18px;background:#FFF7DB;border:1px solid #F5D46B}
+.rb-bh > span{font-size:44px}
+.rb-bh em{font-style:normal;font-size:12px;font-weight:800;color:#93370D;text-transform:uppercase;letter-spacing:.05em}
+.rb-bh h2{margin:2px 0 0;font-size:18px}
+.rb-bh p{margin:2px 0 0;font-size:13px;color:#3A4456}
+.rb-htiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.rb-ht5{grid-template-columns:repeat(5,minmax(0,1fr))}
+.rb-tile{background:#FFFFFF;border:1px solid #E6EAF2;border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:3px}
+.rb-tile small{font-size:12px;font-weight:700;color:#4B5563}
+.rb-tile b{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}
+.rb-tile span{font-size:12px;color:#4B5563}
+.rb-hr{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1.3fr) 100px 110px 92px;gap:8px;align-items:center;padding:10px 8px;border-bottom:1px solid #EEF2F6;font-size:13px}
+.rb-bp{display:flex;align-items:center;gap:10px;min-width:0}
+.rb-bp > span:first-child{font-size:24px}
+.rb-bp div{display:flex;flex-direction:column;min-width:0}
+.rb-bp small{font-size:12px;color:#4B5563}
+.rb-bd{display:inline-block;font-size:12px;font-weight:800;border-radius:999px;padding:3px 10px}
+.rb-bd-d{background:#FFF4ED;color:#9A3412}.rb-bd-w{background:#F4F3FF;color:#5925DC}.rb-bd-m{background:#EAF3FF;color:#0057B8}.rb-bd-r{background:#FEF0C7;color:#93370D}
+.rb-del{height:30px;padding:0 10px;border-radius:8px;border:1px solid #FECDCA;background:#FFFFFF;color:#B42318;font-size:12px;font-weight:800;cursor:pointer}
+.rb-del:hover{background:#FEF3F2}
+.rb-empty{display:flex;flex-direction:column;align-items:center;gap:6px;padding:30px 10px;text-align:center;font-size:13px;color:#4B5563}
+.rb-empty > span{font-size:40px}
+.rb-empty b{font-size:15px;color:#0B1220}
+.rb-ov{position:absolute;inset:0;background:rgba(11,18,32,.45);display:grid;place-items:center;z-index:90}
+.rb-dlg{width:560px;max-height:880px;overflow:auto;background:#FFFFFF;border-radius:18px;box-shadow:0 30px 60px rgba(11,18,32,.3);display:flex;flex-direction:column}
+.rb-dh{display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid #E6EAF2}
+.rb-dh h2{margin:0;flex:1;font-size:17px;font-weight:800}
+.rb-x{width:34px;height:34px;border-radius:8px;border:0;background:transparent;font-size:18px;color:#4B5563;cursor:pointer}
+.rb-x:hover{background:#F1F5F9}
+.rb-db{padding:16px 20px;display:flex;flex-direction:column;gap:14px}
+.rb-df{padding:14px 20px;border-top:1px solid #E6EAF2;display:flex;align-items:center;gap:10px}
+.rb-fs{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;min-width:0}
+.rb-fs legend{font-size:12px;font-weight:700;color:#3A4456;padding:0;margin-bottom:6px}
+.rb-ops{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.rb-opt,.rb-bopt{display:flex;align-items:center;gap:8px;min-height:40px;padding:0 10px;border-radius:10px;border:1px solid #E6EAF2;font-size:13px;font-weight:600;cursor:pointer}
+.rb-opt input,.rb-bopt input{margin:0;width:16px;height:16px;accent-color:#0065D6}
+.rb-opt-on{border-color:#0065D6;background:#EAF3FF;box-shadow:inset 0 0 0 1px #0065D6}
+.rb-bad .rb-opt,.rb-bad .rb-bopt{border-color:#FDA29B}
+.rb-bgrp{display:grid;grid-template-columns:72px minmax(0,1fr);gap:8px;align-items:start}
+.rb-bgrp > span{font-size:12px;font-weight:800;color:#4B5563;padding-top:12px}
+.rb-bgrp > div{display:flex;flex-wrap:wrap;gap:6px}
+.rb-bopt{min-height:36px}
+.rb-ferr{font-size:12px;font-weight:700;color:#B42318;margin:0}
+.rb-tp{background:#FFFFFF;border:1px solid #E6EAF2;border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.rb-tp1{background:#0065D6;border-color:#0065D6;color:#FFFFFF}
+.rb-tp1 .rb-tmt,.rb-tp1 .rb-ml{color:#DCEBFF}
+.rb-tp1 .rb-trk{background:rgba(255,255,255,.25)}.rb-tp1 .rb-trk span{background:#FFFFFF}
+.rb-tmt{font-size:12px;color:#4B5563}
+.rb-score{font-size:30px;font-weight:800;letter-spacing:-.02em}
+.rb-score small{font-size:13px;font-weight:700;margin-left:4px}
+.rb-ml{display:flex;justify-content:space-between;font-size:12px;color:#4B5563;font-weight:700}
+.rb-trk{height:6px;border-radius:999px;background:#EEF2F7;overflow:hidden}
+.rb-trk span{display:block;height:100%;background:#0065D6;border-radius:999px}
+.rb-trow{display:grid;grid-template-columns:44px minmax(220px,1.6fr) 100px minmax(150px,1fr) minmax(150px,1fr) 170px;gap:10px;align-items:center;padding:10px 8px;border-bottom:1px solid #EEF2F6;font-size:13px;font-variant-numeric:tabular-nums}
+.rb-mini{display:flex;align-items:center;gap:8px}.rb-mini .rb-trk{flex:1}
+.rb-dl{font-size:12px;font-weight:800;color:#4B5563;margin-left:8px}
+.rb-up{color:#067647}.rb-dn{color:#B42318}
+.rb-mon{display:inline-flex;align-items:center;gap:4px;padding:3px;border-radius:12px;background:#FFFFFF;border:1px solid #E6EAF2;font-size:13px;font-weight:800}
+.rb-mon button{width:32px;height:32px;border-radius:9px;border:0;background:transparent;cursor:pointer;display:grid;place-items:center;color:#0B1220;font-size:22px;font-weight:700;line-height:1}
+.rb-mon button:hover{background:#F1F5F9}
+.rb-mon button[aria-disabled="true"]{color:#CBD5E1;cursor:not-allowed}
+.rb-mon > span{min-width:116px;text-align:center}
+.rb-fx{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px}
+.rb-fx span{padding:8px 12px;border-radius:10px;background:#F1F5F9}
+.rb-fx span.rb-res{background:#0B1220;color:#FFFFFF}
+.rb-fx i{font-style:normal;font-weight:800;color:#4B5563}
+.rb-sk{height:84px;border-radius:16px;background:linear-gradient(90deg,#E9EEF5 0%,#F5F7FB 50%,#E9EEF5 100%);background-size:200% 100%;animation:sh 1.2s linear infinite}
+.rb-note{font-size:12px;color:#5B21B6;background:#F5F3FF;border:1px dashed #A78BFA;border-radius:10px;padding:6px 10px;margin:0}
+@media (prefers-reduced-motion:reduce){.rb-sk{animation:none}}
+.sk-me{display:inline-block;margin-left:6px;padding:1px 8px;border-radius:999px;background:#5B21B6;color:#FFFFFF;font-size:11px;font-weight:800;vertical-align:1px}
+.rb-tr.sk-merow{background:#F5F3FF;box-shadow:inset 3px 0 0 #5B21B6}
+.sk-mecard{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:16px;background:#FFFFFF;border:1px solid #DDD6FE}
+.sk-mecard strong{font-size:15px}.sk-mecard small{font-size:12px;color:#4B5563}
+.sk-merk{flex:none;width:56px;height:56px;border-radius:14px;background:#5B21B6;color:#FFFFFF;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1}
+.sk-merk b{font-size:22px}.sk-merk small{font-size:11px;color:#EDE9FE}
+.sk-mebar{display:block;height:8px;border-radius:999px;background:#EDE9FE;overflow:hidden}.sk-mebar i{display:block;height:100%;background:#5B21B6;border-radius:999px}
+.sk-mine{font-size:11px;font-weight:800;color:#5B21B6}
+</style>
+<div data-root="1" style="height: 960px; box-sizing: border-box; font-family: 'Plus Jakarta Sans', system-ui, sans-serif; color: #0B1220; background: #F5F7FB; display: flex; position: relative; overflow: hidden">
+__NAV__
+  <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative">
+__HDR__
+
+    <main style="flex: 1; min-height: 0; overflow: auto; padding: 20px 28px 32px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; align-items: flex-end; gap: 12px">
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 4px">
+          <h1 style="margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.02em">Reyting</h1>
+          <p style="margin: 0; font-size: 13px; color: #4B5563">{{ sub }}</p>
+        </div>
+      </div>
+
+      <sc-if value="{{ isSales }}" hint-placeholder-val="{{ true }}">
+        <div style="display: flex; align-items: flex-end; gap: 12px">
+          <div class="rb-tabs" role="tablist" aria-label="Reyting boʻlimlari"><sc-for list="{{ tabs }}" as="t" hint-placeholder-count="3"><button type="button" role="tab" id="{{ t.id }}" aria-selected="{{ t.sel }}" tabindex="{{ t.ti }}" aria-controls="rbPanel" onClick="{{ t.pick }}" onKeyDown="{{ t.key }}">{{ t.t }}</button></sc-for></div>
+          <sc-if value="{{ showPer }}" hint-placeholder-val="{{ true }}"><div class="rb-seg" role="group" aria-label="Davr"><sc-for list="{{ pers }}" as="p" hint-placeholder-count="3"><button type="button" aria-pressed="{{ p.on }}" onClick="{{ p.pick }}">{{ p.t }}</button></sc-for></div></sc-if>
+        </div>
+        <sc-if value="{{ showPer }}" hint-placeholder-val="{{ true }}"><p class="hint" style="margin: -6px 0 0">{{ perHint }}</p></sc-if>
+
+        <div id="rbPanel" role="tabpanel" style="display: flex; flex-direction: column; gap: 14px">
+        <sc-if value="{{ tLb }}" hint-placeholder-val="{{ true }}">
+          <sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}"><div aria-busy="true" style="display: flex; flex-direction: column; gap: 12px"><p role="status" class="hint" style="margin: 0">Reyting yuklanmoqda…</p><div class="rb-sk" style="height: 110px"></div><div class="rb-sk"></div><div class="rb-sk" style="height: 220px"></div></div></sc-if>
+          <sc-if value="{{ loadErr }}" hint-placeholder-val="{{ false }}"><div class="malert" role="alert"><span style="flex: 1"><b>Reytingni yuklab boʻlmadi.</b> Server xatosi — birozdan soʻng qayta urining. Natijalar toʻliq boʻlmasligi mumkin, shuning uchun koʻrsatilmadi.</span><button type="button" class="btn2" onClick="{{ retry }}">Qayta urinish</button></div></sc-if>
+          <sc-if value="{{ ready }}" hint-placeholder-val="{{ true }}">
+            <sc-if value="{{ normal }}" hint-placeholder-val="{{ true }}">
+              <section class="rb-hero" aria-label="Motivatsiya"><div style="flex: 1"><span class="rb-eb">{{ eyebrow }}</span><h2>{{ title }}</h2><p>{{ msub }}</p><sc-if value="{{ heroMe }}" hint-placeholder-val="{{ false }}"><div class="rb-team"><span>Sizning yoʻlingiz <b>{{ heroMeP }}%</b></span><span class="rb-tbar" role="progressbar" aria-label="Sovgʻagacha" aria-valuenow="{{ heroMeP }}" aria-valuemin="0" aria-valuemax="100"><span style="{{ heroMeW }}"></span></span><span>Jamoa rejasi {{ teamPct }}%</span></div></sc-if><sc-if value="{{ teamOnly }}" hint-placeholder-val="{{ true }}"><div class="rb-team"><span>Jamoa rejasi <b>{{ teamPct }}%</b></span><span class="rb-tbar" role="progressbar" aria-label="Jamoa rejasi" aria-valuenow="{{ teamPct }}" aria-valuemin="0" aria-valuemax="100"><span style="{{ teamW }}"></span></span><span>{{ teamSum }}</span></div></sc-if></div></section>
+              <sc-if value="{{ meOn }}" hint-placeholder-val="{{ true }}"><section class="sk-mecard" aria-label="Mening oʻrnim"><span class="sk-merk"><b>{{ meRk }}</b><small>oʻrin</small></span><div style="flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0"><strong>{{ meT }}</strong><span class="sk-mebar" role="progressbar" aria-label="Oldingi oʻringacha" aria-valuenow="{{ mePct }}" aria-valuemin="0" aria-valuemax="100"><i style="{{ meW }}"></i></span><small>{{ meS }}</small></div><button type="button" class="btn2" onClick="{{ goLeads }}">Lidlarga</button></section></sc-if>
+              <sc-if value="{{ isMonth }}" hint-placeholder-val="{{ false }}">
+                <div class="rb-mg">
+                  <section class="box" aria-labelledby="rbLeadH"><div><h2 id="rbLeadH">Oy liderlari</h2><p class="hint" style="margin: 2px 0 0">Oʻrin puli faqat reja sharti bajarilganda beriladi</p></div>
+                    <ol class="rb-pods"><sc-for list="{{ pod3 }}" as="p" hint-placeholder-count="3"><li class="{{ p.cls }}" style="{{ p.ord }}" aria-label="{{ p.place }}-oʻrin"><span class="rb-av" aria-hidden="true" style="{{ p.av }}">{{ p.ini }}</span><strong>{{ p.name }}</strong><b>{{ p.sum }}</b><small>{{ p.meta }}</small><span class="{{ p.prizeCls }}">{{ p.prize }}</span><span class="rb-cond">{{ p.cond }}</span><span class="rb-step" aria-hidden="true" style="{{ p.h }}">{{ p.place }}</span></li></sc-for></ol>
+                  </section>
+                  <section class="box" aria-labelledby="rbObH"><div><h2 id="rbObH">Bugungi obed · 2-noyabr</h2><p class="hint" style="margin: 2px 0 6px">Kunlik sotuv boʻyicha</p><div class="rb-tiers"><span><b>Obed</b> 1 800 000+</span><span><b>Obed + 30,000</b> 2 500 000+</span><span><b>Obed + 60,000</b> 3 000 000+</span></div></div>
+                    <ul class="rb-ob"><sc-for list="{{ obed }}" as="o" hint-placeholder-count="4"><li><span class="rb-av" aria-hidden="true" style="{{ o.av }}">{{ o.ini }}</span><div><strong>{{ o.n }}</strong><span>{{ o.sub }}</span></div><b>{{ o.v }}</b><span class="{{ o.chipCls }}">{{ o.chip }}</span></li></sc-for></ul>
+                  </section>
+                </div>
+              </sc-if>
+              <section aria-labelledby="rbPrH" style="display: flex; flex-direction: column; gap: 10px"><h3 id="rbPrH" class="rb-h3">{{ prizeHead }}</h3>
+                <ol class="rb-prizes"><sc-for list="{{ prizes }}" as="z" hint-placeholder-count="4"><li class="{{ z.cls }}"><div class="rb-pi"><span aria-hidden="true">{{ z.icon }}</span><div style="display: flex; flex-direction: column"><span class="rb-th">{{ z.th }}</span><strong class="rb-pn">{{ z.name }}</strong></div></div><sc-if value="{{ z.bar }}" hint-placeholder-val="{{ true }}"><span class="rb-pbar" role="progressbar" aria-label="{{ z.name }} — lider" aria-valuenow="{{ z.pctN }}" aria-valuemin="0" aria-valuemax="100"><span style="{{ z.pctW }}"></span></span><span class="rb-chips"><sc-for list="{{ z.chips }}" as="c" hint-placeholder-count="4"><span class="{{ c.cls }}">{{ c.t }} {{ c.p }}</span></sc-for></span></sc-if><span class="rb-pnote">{{ z.note }}</span></li></sc-for></ol>
+              </section>
+              <sc-if value="{{ isMonth }}" hint-placeholder-val="{{ false }}"><section class="box" aria-labelledby="rbWkH"><div class="row"><h2 id="rbWkH" style="flex: 1">Hafta sovgʻalari</h2><span class="hint" style="margin: 0">Yakshanba kuni yakunlanadi</span></div><ol class="rb-wk"><sc-for list="{{ weekRow }}" as="w" hint-placeholder-count="3"><li><span aria-hidden="true">{{ w.icon }}</span><div><em>{{ w.eb }}</em><strong>{{ w.n }}</strong><span>{{ w.t }}</span></div></li></sc-for></ol></section></sc-if>
+            </sc-if>
+
+            <div style="display: flex; align-items: center; gap: 12px"><div class="rb-seg" role="group" aria-label="Koʻrinish"><sc-for list="{{ lbvs }}" as="v" hint-placeholder-count="2"><button type="button" aria-pressed="{{ v.on }}" onClick="{{ v.pick }}">{{ v.t }}</button></sc-for></div><span class="hint" style="margin: 0">Faqat Rus tili sotuv menejerlari · tartib — davrdagi sotuv summasi boʻyicha</span></div>
+
+            <sc-if value="{{ showPodium }}" hint-placeholder-val="{{ true }}"><div class="rb-pcs"><sc-for list="{{ podium }}" as="p" hint-placeholder-count="3"><div class="{{ p.cls }}"><span class="rb-pl">{{ p.place }}</span><div class="rb-mn"><span class="rb-av" aria-hidden="true" style="background: #0B1220; color: #FFFFFF">{{ p.ini }}</span><strong>{{ p.name }}</strong></div><b>{{ p.sum }}</b><small>{{ p.meta }}</small><span class="rb-pcbar" aria-hidden="true"><span style="{{ p.bar }}"></span></span><small>{{ p.pct }}</small></div></sc-for></div></sc-if>
+
+            <sc-if value="{{ normal }}" hint-placeholder-val="{{ true }}">
+              <section class="box" style="padding: 6px 12px" aria-label="Natijalar jadvali">
+                <div class="rb-t" role="table" aria-label="Menejerlar reytingi">
+                  <div class="rb-tr rb-th" role="row"><span role="columnheader">#</span><span role="columnheader">Menejer</span><span role="columnheader">Bitimlar</span><span role="columnheader">Bajarildi</span><span role="columnheader">Reja</span><span role="columnheader">Daromad (KPI)</span><span role="columnheader">Rejaga yetish</span></div>
+                  <sc-for list="{{ rows }}" as="r" hint-placeholder-count="4"><div class="{{ r.cls }}" role="row" aria-current="{{ r.cur }}"><span role="cell"><span class="rb-rk" style="{{ r.rkSt }}" aria-label="{{ r.rkLab }}">{{ r.rk }}</span></span><span role="rowheader" class="rb-mn"><span class="rb-av" aria-hidden="true" style="{{ r.av }}">{{ r.ini }}</span><div><strong>{{ r.name }}<sc-if value="{{ r.me }}" hint-placeholder-val="{{ false }}"> <span class="sk-me">Siz</span></sc-if></strong><small>{{ r.leads }}</small></div></span><span role="cell" style="font-weight: 800; color: #067647">{{ r.deals }}</span><span role="cell" style="font-weight: 800; color: #4338CA">{{ r.sales }}</span><span role="cell" class="{{ r.planCls }}">{{ r.plan }}</span><span role="cell" style="font-weight: 700; color: #067647">{{ r.kpi }}</span><span role="cell" class="rb-prog" aria-label="{{ r.aria }}"><i aria-hidden="true"><b style="{{ r.bar }}"></b></i><span style="{{ r.pctSt }}" aria-hidden="true">{{ r.pctT }}</span></span></div></sc-for>
+                </div>
+                <p class="hint" style="margin: 6px 0 4px">Bajarildi — yopilgan toʻlovlar + yarim toʻlovda haqiqatda toʻlangan qism (bitimlar soniga faqat yopilganlar). Reja — Sotuv rejasi → Individual reja (kunlik/haftalik oylikdan mutanosib). Daromad (KPI) — Moliya → oylik hisob-kitobdan.</p>
+              </section>
+            </sc-if>
+            <sc-if value="{{ marr }}" hint-placeholder-val="{{ false }}">
+              <div style="display: flex; flex-direction: column; gap: 10px"><sc-for list="{{ marra }}" as="m" hint-placeholder-count="4"><section class="rb-mc" aria-label="{{ m.name }}"><div class="rb-mch"><span class="rb-rk" style="{{ m.rkSt }}">{{ m.rk }}</span><span class="rb-av" aria-hidden="true" style="{{ m.av }}">{{ m.ini }}</span><div style="display: flex; flex-direction: column; flex: 1"><strong>{{ m.name }}</strong><small style="color: #4B5563; font-size: 12px">{{ m.meta }}</small></div><b style="color: #4338CA">{{ m.sum }}</b></div><div class="rb-pills"><sc-for list="{{ m.pills }}" as="p" hint-placeholder-count="3"><span class="{{ p.cls }}"><span aria-hidden="true">{{ p.icon }}</span>{{ p.n }}<sc-if value="{{ p.bar }}" hint-placeholder-val="{{ false }}"><i aria-hidden="true"><b style="{{ p.w }}"></b></i></sc-if><em>{{ p.st }}</em></span></sc-for></div></section></sc-for></div>
+              <p class="rb-note">Dizayn farqi: haftalik marrada “Qoʻlga kiritdi” faqat shu hafta sotuvi 0 dan katta boʻlsa (productionda 0 soʻmli menejer ham oʻrin boʻyicha “kiritdi” chiqadi). Hafta sovgʻalari blokidagi “Hali hech kim” qoidasi bilan bir xil.</p>
+            </sc-if>
+          </sc-if>
+        </sc-if>
+
+        <sc-if value="{{ tBon }}" hint-placeholder-val="{{ false }}">
+          <div><h2 style="margin: 0; font-size: 17px">Bonuslar roʻyxati</h2><p class="hint" style="margin: 2px 0 0">Barcha mavjud mukofotlar · kartani bosib batafsil koʻring. Bonuslarni faqat admin tahrirlaydi.</p></div>
+          <sc-for list="{{ bgroups }}" as="g" hint-placeholder-count="4"><section class="rb-bg" aria-label="{{ g.h }}"><h3 class="rb-h3">{{ g.h }}</h3><sc-if value="{{ g.hasNote }}" hint-placeholder-val="{{ false }}"><p class="hint" style="margin: 0">{{ g.note }}</p></sc-if><div class="rb-bcards"><sc-for list="{{ g.cards }}" as="c" hint-placeholder-count="3"><button type="button" class="rb-bc" data-bk="{{ c.id }}" aria-haspopup="dialog" onClick="{{ c.open }}"><span aria-hidden="true">{{ c.icon }}</span><strong>{{ c.label }}</strong><sc-if value="{{ c.hasPrize }}" hint-placeholder-val="{{ false }}"><b>{{ c.prize }}</b></sc-if><small>{{ c.desc }}</small></button></sc-for></div></section></sc-for>
+          <p class="rb-note">Davr tugmalari bu tabda yashirilgan — roʻyxat davrga bogʻliq emas (productionda tugmalar koʻrinadi, lekin bu tabga taʼsir qilmaydi).</p>
+        </sc-if>
+
+        <sc-if value="{{ tHis }}" hint-placeholder-val="{{ false }}">
+          <div><h2 id="rbHistH" tabindex="-1" style="margin: 0; font-size: 17px">Bonus olganlar</h2><p class="hint" style="margin: 2px 0 0">{{ hTitle }}</p></div>
+          <sc-if value="{{ loading }}" hint-placeholder-val="{{ false }}"><div aria-busy="true" style="display: flex; flex-direction: column; gap: 12px"><div class="rb-sk"></div><div class="rb-sk" style="height: 200px"></div></div></sc-if>
+          <sc-if value="{{ loadErr }}" hint-placeholder-val="{{ false }}"><div class="malert" role="alert"><span style="flex: 1"><b>Bonuslar tarixini yuklab boʻlmadi.</b> Server xatosi — birozdan soʻng qayta urining.</span><button type="button" class="btn2" onClick="{{ retry }}">Qayta urinish</button></div></sc-if>
+          <sc-if value="{{ ready }}" hint-placeholder-val="{{ true }}">
+            <section class="rb-bh" aria-label="Eng koʻp bonus olgan menejer"><span aria-hidden="true">🏆</span><div><em>{{ heroEb }}</em><h2>{{ heroT }}</h2><p>{{ heroS }}</p></div></section>
+            <div class="{{ htCls }}"><sc-for list="{{ htiles }}" as="t" hint-placeholder-count="4"><div class="rb-tile"><small>{{ t.k }}</small><b>{{ t.v }}</b><span>{{ t.s }}</span></div></sc-for></div>
+            <section class="box" style="padding: 6px 12px" aria-label="Bonus olganlar roʻyxati">
+              <sc-if value="{{ hasHist }}" hint-placeholder-val="{{ true }}">
+                <div role="table" aria-label="Bonus olganlar"><div class="rb-hr rb-th" role="row"><span role="columnheader">Bonus</span><span role="columnheader">Menejer</span><span role="columnheader">Sana</span><span role="columnheader">Davr</span><span role="columnheader"><span class="sr">Men</span></span></div>
+                  <sc-for list="{{ hrows }}" as="h" hint-placeholder-count="5"><div class="rb-hr" role="row"><span role="rowheader" class="rb-bp"><span aria-hidden="true">{{ h.icon }}</span><div><strong>{{ h.t }}</strong><sc-if value="{{ h.hasNote }}" hint-placeholder-val="{{ false }}"><small>{{ h.note }}</small></sc-if><sc-if value="{{ h.hasAmt }}" hint-placeholder-val="{{ false }}"><small>{{ h.amt }}</small></sc-if></div></span><span role="cell" class="rb-mn"><span class="rb-av" aria-hidden="true" style="{{ h.av }}">{{ h.ini }}</span>{{ h.mn }}</span><span role="cell">{{ h.d }}</span><span role="cell"><span class="{{ h.pcls }}">{{ h.per }}</span></span><span role="cell">{{ h.mine }}</span></div></sc-for>
+                </div>
+              </sc-if>
+              <sc-if value="{{ noHist }}" hint-placeholder-val="{{ false }}"><div class="rb-empty"><span aria-hidden="true">🍽️</span><b>Bu davrda bonus belgilanmagan</b>Bonuslarni admin yoki ROP belgilaydi. Boshqa davrni tanlang.</div></sc-if>
+            </section>
+          </sc-if>
+        </sc-if>
+        </div>
+      </sc-if>
+
+      <p class="rb-note">Dizayn farqi: sotuv menejerida “Sotuv menejerlari / Ustozlar” almashtirgichi, “+ Bonus belgilash” va Olganlar roʻyxatidagi “Oʻchirish” yoʻq — production’da ham bular faqat admin/ROP uchun (canAssignBonus, canEdit). “Siz” qatori ajratib koʻrsatilgan.</p>
+    </main>
+
+    <sc-if value="{{ detail }}" hint-placeholder-val="{{ false }}"><div class="rb-ov" onClick="{{ closeDet }}"><div class="rb-dlg" role="dialog" aria-modal="true" aria-labelledby="rbDetH" style="width: 440px" onClick="{{ stop }}" onKeyDown="{{ dlgKey }}"><div style="background: linear-gradient(135deg,#0065D6,#003F87); color: #FFFFFF; padding: 24px; text-align: center; border-radius: 18px 18px 0 0"><div style="font-size: 52px; line-height: 1" aria-hidden="true">{{ det.icon }}</div><h2 id="rbDetH" style="margin: 8px 0 0; font-size: 21px">{{ det.label }}</h2><sc-if value="{{ det.hasPrize }}" hint-placeholder-val="{{ false }}"><div style="font-size: 28px; font-weight: 900">{{ det.prize }}</div></sc-if><div style="font-size: 12px; opacity: .8; text-transform: uppercase; letter-spacing: .06em; margin-top: 4px">{{ det.cat }}</div></div><dl class="ctx" style="padding: 16px 20px; grid-template-columns: 130px 1fr"><sc-for list="{{ det.kv }}" as="k" hint-placeholder-count="3"><dt>{{ k.k }}:</dt><dd>{{ k.v }}</dd></sc-for></dl><div class="rb-df" style="justify-content: flex-end"><button type="button" id="rbDetClose" class="btnp" onClick="{{ closeDet }}">Yopish</button></div></div></div></sc-if>
+
+    <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}"><div role="status" class="toast" style="bottom: 24px">{{ toast }}</div></sc-if>
+  </div>
+</div>
