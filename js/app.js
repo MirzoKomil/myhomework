@@ -18246,11 +18246,13 @@ function paymentStepsHtml(active) {
 }
 
 function openPaymentTeacherScheduleModal(lang, leadId, options = {}) {
-    const { chainTo = null } = options;
+    // edit: true — jadval saqlangan bo'lsa ham shu oyna ochiladi (konversiyada "Orqaga" / "O'zgartirish"),
+    // aks holda saqlangan jadvalda darhol keyingi qadamga o'tib ketardi.
+    const { chainTo = null, edit = false } = options;
     const lead = getLeadById(lang, leadId);
     if (!lead) return;
 
-    if (leadHasTeacherSchedule(lead)) {
+    if (!edit && leadHasTeacherSchedule(lead)) {
         // Status ni BU YERDA o'zgartirmaymiz — openPaymentOnboardingModal tasdiqlanganda o'zgaradi
         openPaymentProcessModal(lang, leadId, { chainTo });
         return;
@@ -18496,7 +18498,7 @@ function openPaymentOnboardingModal(lang, leadId, options = {}) {
     if (window.convertUI && !options.groupDone && !lead.paymentSurvey) { openPaymentProcessModal(lang, leadId, { chainTo }); return; }
     // 5-qadam: Telegram guruh (js/convertUI.js) — guruh hali kiritilmagan bo'lsa, avval o'sha.
     if (window.convertUI && !lead.paymentOnboarding?.telegramGroupLink && !options.groupDone) {
-        window.convertUI.openGroupStep(lang, leadId, () => openPaymentOnboardingModal(lang, leadId, { ...options, groupDone: true }));
+        window.convertUI.openGroupStep(lang, leadId, () => openPaymentOnboardingModal(lang, leadId, { ...options, groupDone: true }), { chainTo });
         return;
     }
 
