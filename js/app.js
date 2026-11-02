@@ -15757,7 +15757,7 @@ function openSifatsizLidFlow(lang, leadId) {
     };
 }
 
-function openMuvaffaqiyatsizSotuvFlow(lang, leadId, fromStatus) {
+function openMuvaffaqiyatsizSotuvFlow(lang, leadId, fromStatus, opts = {}) {
     const lead = getLeadById(lang, leadId);
     if (!lead) return;
 
@@ -15803,23 +15803,35 @@ function openMuvaffaqiyatsizSotuvFlow(lang, leadId, fromStatus) {
         const reason = group?.reasons.find(r => r.id === selected.value);
         if (!reason) return;
 
-        const user = getCurrentUser();
-        const author = user?.name || 'Admin';
-        const updated = updateLeadInStorage(lang, leadId, l => ({
-            ...normalizeLeadExtras(l),
-            status: 'muvaffaqiyatsiz-sotuv',
-            failedSaleReason: { groupId, reasonId: reason.id, label: reason.label },
-            comments: [...normalizeLeadExtras(l).comments, createLeadComment({
-                type: 'failed-sale',
-                text: `Muvaffaqiyatsiz sotuv: ${reason.label}`,
-                reason: reason.label,
-                author
-            })]
-        }));
-        if (!updated) { alert('Lid topilmadi'); return; }
-        closeModal();
-        renderLeads();
+        // Sabab birinchi so'raladigan yo'l (startMvCascade): anketa kerak bo'lsa — avval anketa, keyin saqlash.
+        if (typeof opts.onReason === 'function') {
+            closeModal();
+            if (opts.onReason(groupId, reason.id)) return;
+        }
+        saveFailedSaleReason(lang, leadId, groupId, reason.id);
     };
+}
+
+function saveFailedSaleReason(lang, leadId, groupId, reasonId) {
+    const group = FAILED_SALE_REASON_GROUPS.find(g => g.id === groupId);
+    const reason = group?.reasons.find(r => r.id === reasonId);
+    if (!reason) return;
+    const user = getCurrentUser();
+    const author = user?.name || 'Admin';
+    const updated = updateLeadInStorage(lang, leadId, l => ({
+        ...normalizeLeadExtras(l),
+        status: 'muvaffaqiyatsiz-sotuv',
+        failedSaleReason: { groupId, reasonId: reason.id, label: reason.label },
+        comments: [...normalizeLeadExtras(l).comments, createLeadComment({
+            type: 'failed-sale',
+            text: `Muvaffaqiyatsiz sotuv: ${reason.label}`,
+            reason: reason.label,
+            author
+        })]
+    }));
+    if (!updated) { alert('Lid topilmadi'); return; }
+    closeModal();
+    renderLeads();
 }
 
 function needsContactFailPrompt(fromStatus, toStatus) {
@@ -16146,20 +16158,39 @@ function getSkippedSurveySteps(fromStatus, toStatus, lead) {
     return steps;
 }
 
+// Egasi qarori (A, 2026-11-02): Yangi / Urinilmoqda → Muvaffaqiyatsiz sotuvda avval sabab so'raladi.
+// Sabab "bog'lanib bo'lmadi" turidan bo'lsa (Javob bermadi 6+, Ko'tarmadi 6+, Noto'g'ri raqam) — lid bilan
+// hech gaplashilmagan, Bog'lanildi anketasi so'ralmaydi. Boshqa sabablarda anketa so'raladi, keyin tanlangan
+// sabab qayta so'ralmay saqlanadi. Barcha rollar uchun.
+const FAILED_SALE_NO_CONTACT_REASON_IDS = new Set(['no-pickup-6', 'no-response-6', 'wrong-number']);
+const FAILED_SALE_REASON_FIRST_FROM = new Set(['yangi-lidlar', 'boglanishga-urinilmoqda']);
+
 function startMvCascade(lang, leadId, fromStatus, finalStatus) {
+    if (finalStatus === 'muvaffaqiyatsiz-sotuv' && FAILED_SALE_REASON_FIRST_FROM.has(normalizeLeadStatus(fromStatus))) {
+        openMuvaffaqiyatsizSotuvFlow(lang, leadId, fromStatus, {
+            onReason: (groupId, reasonId) => {
+                if (FAILED_SALE_NO_CONTACT_REASON_IDS.has(reasonId)) return false; // darhol saqlanadi
+                _mvCascade = { lang, leadId, fromStatus, finalStatus, failPreset: { groupId, reasonId } };
+                continueMvCascade();
+                return true;
+            }
+        });
+        return;
+    }
     _mvCascade = { lang, leadId, fromStatus, finalStatus };
     continueMvCascade();
 }
 
 function continueMvCascade() {
     if (!_mvCascade) return;
-    const { lang, leadId, fromStatus, finalStatus } = _mvCascade;
+    const { lang, leadId, fromStatus, finalStatus, failPreset } = _mvCascade;
     const lead = getLeadById(lang, leadId);
     if (!lead) { _mvCascade = null; return; }
 
     const steps = getSkippedSurveySteps(fromStatus, finalStatus, lead);
     if (!steps.length) {
         _mvCascade = null;
+        if (failPreset && finalStatus === 'muvaffaqiyatsiz-sotuv') { saveFailedSaleReason(lang, leadId, failPreset.groupId, failPreset.reasonId); return; }
         dispatchLeadTargetFlow(lang, leadId, fromStatus, finalStatus);
         return;
     }
