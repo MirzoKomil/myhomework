@@ -67,6 +67,7 @@ const TARIFF_FIELDS = ['tariff', 'monthlyPrice', 'lessonDuration'];
 // Qarzdorlar: kelishilgan to'lov sanasi, izoh, eslatma. Sotuv menejeri — "Muddatni surish so'rovi" (kind='due',
 // ROP/admin tasdiqlaydi); admin/ROP — darhol. To'langan/qarz summalari bu yerda o'zgarmaydi (Moliya reyestri).
 const DUE_FIELDS = ['paymentDueDate', 'comment', 'note'];
+const dmy = d => (T.isDate(String(d || '')) ? `${d.slice(8, 10)}.${d.slice(5, 7)}.${d.slice(0, 4)}` : '—');
 const dueVal = (k, v) => String(v ?? '').trim().slice(0, k === 'paymentDueDate' ? 10 : 500);
 
 function cleanPhone(p) {
@@ -284,9 +285,9 @@ async function checkRequest(db, requestId, now = new Date()) {
         if (!nd) checks.push({ level: 'warn', text: 'Kelishilgan sana olib tashlanadi — qarzdor "Sana kelishilmagan" bo\'ladi' });
         else {
             const days = T.isDate(cur) ? T.daysBetween(cur, nd) : null;
-            checks.push({ level: nd < at.date ? 'warn' : 'ok', text: `To'lov sanasi: ${cur || '—'} → ${nd}${days != null ? ` (${days > 0 ? '+' : ''}${days} kun)` : ''}${nd < at.date ? ' · bu sana o\'tib ketgan' : ''}` });
+            checks.push({ level: nd < at.date ? 'warn' : 'ok', text: `To'lov sanasi: ${dmy(cur)} → ${dmy(nd)}${days != null ? ` (${days > 0 ? '+' : ''}${days} kun)` : ''}${nd < at.date ? ' · bu sana o\'tib ketgan' : ''}` });
         }
-        if (ch.prevDueDate != null && String(ch.prevDueDate) !== cur) checks.push({ level: 'warn', text: `So'rovdan keyin sana o'zgargan: ${ch.prevDueDate || '—'} → ${cur || '—'}` });
+        if (ch.prevDueDate != null && String(ch.prevDueDate) !== cur) checks.push({ level: 'warn', text: `So'rovdan keyin sana o'zgargan: ${dmy(ch.prevDueDate)} → ${dmy(cur)}` });
         if (!(Number(extra.debtAmount || 0) > 0)) checks.push({ level: 'warn', text: 'O\'quvchida hozir qoldiq yo\'q — surish kerak bo\'lmasligi mumkin' });
     }
     if (!checks.length) checks.push({ level: 'ok', text: 'Tekshiradigan jadval yoki tarif o\'zgarishi yo\'q' });
