@@ -162,7 +162,7 @@
         const reached = id => week.filter(c => !REJECT.includes(c.stage) && order.indexOf(c.stage) >= order.indexOf(id)).length;
         const fun = [['Ariza', week.length], ['Suhbat', reached('suhbat-belgilandi')], ['Yakuniy', reached('yakuniy-suhbat')], ['Ishga', reached('ishga-olindi')]];
         const max = Math.max(1, week.length);
-        return `${langSeg()}
+        return `${window.davomat ? davomat.homeCard() : ''}${langSeg()}
             ${next ? `<section class="hra-hero"><div class="hra-hero-h"><span>KEYINGI SUHBAT</span><span>Bugun ${ints.length} ta</span></div>
                 <div class="hra-hero-p">${ava(next.fullName, 48)}<div><strong>${hm(next.interviewAt)} · ${esc(next.fullName)}</strong><small>${esc(vacOf(next)?.label || '')}${next.interviewLocation ? ' · ' + esc(next.interviewLocation) : ''}</small></div></div>
                 <div class="hra-two"><button type="button" class="hra-btn hra-btn-primary" data-h-cand="${esc(next.id)}">${ic('user', 18, 2.3)}Kartani ochish</button><button type="button" class="hra-btn hra-btn-glass" data-h-nav="ints">${ic('cal', 18, 2.2)}Barcha suhbatlar</button></div></section>`
@@ -335,7 +335,7 @@
         const row = (icn, t, attr) => `<button type="button" class="hra-mrow" ${attr}><span class="hra-qi hra-blue">${ic(icn, 18)}</span><span>${t}</span>${ic('chev', 18)}</button>`;
         return `<div class="hra-tabhead"><div class="hra-th"><h1>Menyu</h1></div></div><div class="hra-body">
             <section class="hra-card hra-person-s">${ava(u.name, 54)}<div><strong>${esc(u.name || '')}</strong><span>HR menejer · ${myLangs().map(langLabel).join(' va ')} tili</span></div></section>
-            <section class="hra-card hra-mlist">${row('brief', 'Vakansiyalar', 'data-h-nav="vacs"')}${row('face', 'Davomat va yuz tasdiqlash', 'data-h-nav="att"')}${row('desk', 'Kompyuter versiyasi (HR boʻlimi)', 'data-h-crm')}</section>
+            <section class="hra-card hra-mlist">${row('brief', 'Vakansiyalar', 'data-h-nav="vacs"')}${row('face', 'Davomat va yuz tasdiqlash', 'data-h-nav="att"')}${window.davomat?.menuInfo().tracked ? row('cal', 'Mening davomatim', 'data-dv-go="my"') : ''}${row('desk', 'Kompyuter versiyasi (HR boʻlimi)', 'data-h-crm')}</section>
             <section class="hra-card hra-mlist">${row('user', 'Profil, parol va bildirishnomalar', 'data-h-profile')}</section>
             <button type="button" class="hra-logout" data-h-logout>${ic('out', 18, 2.2)}Chiqish</button></div>`;
     }
