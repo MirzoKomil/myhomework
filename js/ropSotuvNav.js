@@ -199,6 +199,9 @@
     }
     wrap('renderSalesPlan', lockPlan);
     wrap('renderSalesPlanIndividual', lockPlan);
+    // Oy almashtirilganda faqat reja kartochkasi qayta chiziladi (spIndPlanMonthSelect.onchange) — u ham o'raladi,
+    // aks holda ROP/sotuvda ✏️ / "+ Reja belgilash" qaytib chiqadi va saqlash 403 beradi.
+    wrap('renderSalesPlanIndividualPlanCard', lockPlan);
     wrap('applyRoleBasedAccess', apply);
     wrap('switchTab', () => mark());
     wrap('switchSalesSection', () => mark());
