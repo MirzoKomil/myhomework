@@ -316,6 +316,7 @@
         if ('jrIssue' in d) { e?.preventDefault(); return issueSend(t); }
         if ('jrWok' in d) {
             const amt = root.querySelector(`[data-jr-taskamt="${d.jrWok}"]`);
+            if (amt && !(Number(String(amt.value).replace(/\D/g, '')) > 0)) { amt.focus(); return toast('Vazifa uchun yuviladigan summani kiriting', true); }
             t.disabled = true;
             return api(`/washes/${encodeURIComponent(d.jrWok)}/decide`, { decision: 'approve', ...(amt ? { amount: Number(String(amt.value).replace(/\D/g, '')) || 0 } : {}) })
                 .then(r => { invalidate('washinbox'); toast(`Yuvildi: ${num(r.washed)} soʻm`); rerender(); }).catch(err => { t.disabled = false; toast(err.message, true); });

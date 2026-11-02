@@ -121,3 +121,12 @@ test('sozlama tozalanadi: manfiy summa, chegaradan tashqari foiz, takroriy kod',
     assert.deepEqual(c.roles.sales.map(r => [r.code, r.amount]), [['late_1', 10000], ['yangiqoida', 5000]]);
     assert.deepEqual([c.soft.capPercent, c.soft.graceMinutes], [10, 5]);
 });
+
+test('oy chegarasi: dekabr oxiri va yanvar boshidagi birinchi kechikishlar — ikkalasi ham ogohlantirish; seriya oy orqali davom etadi', () => {
+    const f = R.attendanceFines([day('2026-12-30', 'late', { lateMinutes: 10 }), day('2026-12-31', 'late', { lateMinutes: 10 }), day('2027-01-01', 'late', { lateMinutes: 10 })], cfg, 'sales');
+    assert.deepEqual(f.filter(x => x.code !== 'late_streak3').map(x => [x.date, x.warning]), [['2026-12-30', true], ['2026-12-31', false], ['2027-01-01', true]]);
+    assert.equal(f.find(x => x.code === 'late_streak3')?.date, '2027-01-01');
+    // xom kechikish (rawLateMinutes) ustun: davomat imtiyozi ichida, jarima imtiyozidan tashqari
+    const g = R.attendanceFines([day('2026-10-01', 'on_time', { rawLateMinutes: 8 }), day('2026-10-02', 'on_time', { rawLateMinutes: 8 })], cfg, 'sales');
+    assert.deepEqual(g.map(x => [x.amount, x.warning]), [[0, true], [10000, false]]);
+});

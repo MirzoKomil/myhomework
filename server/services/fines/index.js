@@ -35,6 +35,10 @@ CREATE TABLE IF NOT EXISTS staff_fine_washes (
  ref TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE UNIQUE INDEX IF NOT EXISTS staff_fine_washes_ref ON staff_fine_washes(employee_id, ref) WHERE ref IS NOT NULL;
+-- Bir kun uchun bitta qo'shimcha soat / yakshanba so'rovi (rad etilgani hisobga olinmaydi).
+CREATE UNIQUE INDEX IF NOT EXISTS staff_fine_washes_day ON staff_fine_washes(employee_id, kind, (evidence->>'date'))
+ WHERE kind IN ('hours','sunday') AND state IN ('pending','approved');
+ALTER TABLE staff_fines ADD COLUMN IF NOT EXISTS note TEXT NOT NULL DEFAULT '';
 CREATE INDEX IF NOT EXISTS staff_fine_washes_inbox ON staff_fine_washes(state, created_at);
 `;
 
@@ -110,11 +114,13 @@ async function syncAttendance(db, now = new Date()) {
         // Har oy o'z sozlamasi bilan (kuchga kirish sanasi).
         const byMonth = {};
         for (const d of days) (byMonth[d.date.slice(0, 7)] ||= []).push(d);
+        const produced = new Set();
         for (const [month, mdays] of Object.entries(byMonth)) {
             const cfg = R.configFor(vers, month + '-01');
             // Seriya oy chegarasidan o'tadi — oldingi kunlar bilan hisoblanadi, faqat shu oy jarimalari olinadi.
             const fines = R.attendanceFines(days.filter(d => d.date <= mdays[mdays.length - 1].date), cfg, role).filter(f => f.date.startsWith(month));
             for (const f of fines) {
+                produced.add(f.ref);
                 // "Oyning 1-kechikishi" butun oy bo'yicha — oy boshidan beri hisoblangan
                 const id = randomUUID();
                 const ins = await db.query(`INSERT INTO staff_fines(id,employee_id,user_id,role,work_date,month,code,label,amount,warning,source,ref,evidence)
@@ -123,6 +129,12 @@ async function syncAttendance(db, now = new Date()) {
                 if (ins.rowCount) created.push({ id, employeeId: e.id, name: e.name, userId: e.user_id, ...f });
             }
         }
+        // Endi chiqmaydigan jarima (HR tuzatdi, so'rov tasdiqlandi, sozlama…) — yuvilmagan bo'lsa avtomatik bekor.
+        // Bugun hali yakunlanmagan: faqat kechikish ko'riladi, shuning uchun bugungi boshqa turdagi jarimalar tegilmaydi.
+        const existing = (await db.query(`SELECT id,ref,TO_CHAR(work_date,'YYYY-MM-DD') AS d FROM staff_fines WHERE employee_id=$1 AND source='attendance'
+            AND state='active' AND washed=0 AND work_date BETWEEN $2 AND $3`, [e.id, start, today])).rows;
+        const stale = existing.filter(f => !produced.has(f.ref) && (f.d < today || /:late$|:streak3$/.test(f.ref)));
+        if (stale.length) await db.query(`UPDATE staff_fines SET state='cancelled',note='auto' WHERE id=ANY($1::text[]) AND state='active' AND washed=0`, [stale.map(f => f.id)]);
         // 10 ish kuni ketma-ket vaqtida — eng kichik jarima o'zi yuviladi (oy ichidagi seriyalar).
         const cfgNow = R.configFor(vers, today);
         const sw = R.streakWashes(days.filter(d => d.date >= from && d.date < today), cfgNow);
@@ -143,10 +155,10 @@ async function autoStreakWash(db, e, date, i, cfg, today) {
     const target = fines.filter(f => !f.warning && R.washable(f, cfg) > 0).sort((a, b) => R.washable(a, cfg) - R.washable(b, cfg))[0];
     if (!target) return; // yuviladigan jarima yo'q — seriya keyingi jarimaga saqlanmaydi (sodda qoida)
     const amount = R.washable(target, cfg);
-    await db.query(`INSERT INTO staff_fine_washes(id,employee_id,user_id,kind,month,fine_id,value,state,parts,ref,note,decided_at)
-        VALUES($1,$2,$3,'streak',$4,$5,$6,'approved',$7,$8,'10 ish kuni ketma-ket vaqtida',NOW()) ON CONFLICT DO NOTHING`,
+    const ins = await db.query(`INSERT INTO staff_fine_washes(id,employee_id,user_id,kind,month,fine_id,value,state,parts,ref,note,decided_at)
+        VALUES($1,$2,$3,'streak',$4,$5,$6,'approved',$7,$8,'10 ish kuni ketma-ket vaqtida',NOW()) ON CONFLICT DO NOTHING RETURNING id`,
         [randomUUID(), e.id, e.user_id || null, month, target.id, amount, JSON.stringify([{ id: target.id, amount }]), ref]);
-    await db.query('UPDATE staff_fines SET washed=washed+$2 WHERE id=$1', [target.id, amount]);
+    if (ins.rowCount) await db.query('UPDATE staff_fines SET washed=washed+$2 WHERE id=$1', [target.id, amount]); // parallel tick ikki marta yuvmaydi
 }
 
 // ── Xabar (bot + push) ───────────────────────────────────────────────────────
@@ -154,18 +166,24 @@ const money = n => String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\
 const escH = v => String(v ?? '').replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
 async function notifyFine(db, f) {
     if (!f.userId || f.warning) return 0;
+    const days = f.appealDays || (await configAt(db, t.tashkentDate())).soft.appealDays;
     const ok = (await db.query("SELECT to_regclass('public.domwork_bot_links') AS a, to_regclass('public.domwork_bot_outbox') AS b")).rows[0];
     if (!ok?.a || !ok?.b) return 0;
     const link = (await db.query("SELECT telegram_id FROM domwork_bot_links WHERE account_kind='user' AND NOT paused AND account_id=$1", [String(f.userId)])).rows[0];
     if (!link) return 0;
-    const text = `🧾 <b>Jarima yozildi: ${money(f.amount)} soʻm</b>\n${escH(f.label)}${f.reason ? `\nSabab: ${escH(f.reason)}` : ''}\n\nHammasi tuzatsa boʻladigan narsa: qoʻshimcha soat, yakshanba navbatchiligi yoki 10 kun ketma-ket vaqtida kelish bilan yuvish mumkin. Eʼtiroz — 3 kun ichida, ilovada.`;
+    const text = `🧾 <b>Jarima yozildi: ${money(f.amount)} soʻm</b>\n${escH(f.label)}${f.reason ? `\nSabab: ${escH(f.reason)}` : ''}\n\nHammasi tuzatsa boʻladigan narsa: qoʻshimcha soat, yakshanba navbatchiligi yoki 10 kun ketma-ket vaqtida kelish bilan yuvish mumkin. Eʼtiroz — ${days} kun ichida, ilovada.`;
     await require('../domworkBot/store').enqueue(db, { key: `fine:${f.id}`, targetId: link.telegram_id,
         payload: { chat_id: link.telegram_id, text, parse_mode: 'HTML', disable_web_page_preview: true,
             reply_markup: { inline_keyboard: [[{ text: '📱 Ilovada ochish', url: 'https://myhomework.uz/?tab=jarimalar' }]] } } });
     return 1;
 }
-async function tick(db, now = new Date()) {
-    const { created } = await syncAttendance(db, now);
+// Bir nechta server nusxasi yoki ustma-ust tick — bitta tranzaksiya va advisory lock ostida (ikkinchisi kutadi).
+async function tick(pool, now = new Date()) {
+    const { created } = await att().transaction(pool, async db => {
+        await db.query("SELECT pg_advisory_xact_lock(hashtext('staff_fines_tick'))");
+        return syncAttendance(db, now);
+    });
+    const db = pool;
     for (const f of created) await notifyFine(db, f).catch(e => console.error('[fines] xabar:', e.message));
     return { created: created.length };
 }
@@ -189,8 +207,9 @@ const FINE_SELECT = `SELECT f.*,TO_CHAR(f.work_date,'YYYY-MM-DD') AS work_date,u
 async function salaryFor(db, employeeId, month) {
     // Hisoblangan maosh: avval shakllantirilgan hisob (salary_transactions), bo'lmasa — null (chegara ko'rsatilmaydi).
     try {
-        const r = (await db.query(`SELECT amount FROM salary_transactions WHERE employee_id=$1 AND TO_CHAR(period_start,'YYYY-MM')=$2 ORDER BY period_start DESC LIMIT 1`, [employeeId, month])).rows[0];
-        return r ? Number(r.amount) : null;
+        // Bir xodim ikki til bo'yicha alohida hisoblanishi mumkin — oy bo'yicha yig'indi (chegara uchun).
+        const r = (await db.query(`SELECT SUM(amount) AS s, COUNT(*)::int AS n FROM salary_transactions WHERE employee_id=$1 AND TO_CHAR(period_start,'YYYY-MM')=$2`, [employeeId, month])).rows[0];
+        return r && r.n ? Number(r.s) : null;
     } catch (e) { return null; }
 }
 
@@ -288,7 +307,8 @@ async function answerAppeal(db, user, id, { accept, answer } = {}) {
     if (f.state !== 'appeal') throw error(409, 'Eʼtiroz yoʻq yoki allaqachon javob berilgan');
     const text = String(answer || '').trim().slice(0, 300);
     if (!accept && !text) throw error(400, 'Rad etish sababini yozing');
-    await db.query(`UPDATE staff_fines SET state=$2,appeal_by=$3,appeal_answer=$4 WHERE id=$1 AND state='appeal'`, [f.id, accept ? 'cancelled' : 'active', v.id, text]);
+    const u = await db.query(`UPDATE staff_fines SET state=$2,appeal_by=$3,appeal_answer=$4 WHERE id=$1 AND state='appeal' RETURNING id`, [f.id, accept ? 'cancelled' : 'active', v.id, text]);
+    if (!u.rowCount) throw error(409, 'Eʼtirozga allaqachon javob berilgan');
     return { state: accept ? 'cancelled' : 'active' };
 }
 
@@ -309,8 +329,12 @@ async function issue(db, user, body = {}, now = new Date()) {
     const v = await viewer(db, user);
     const o = await owner(db, body.employeeId);
     if (!o.role || o.employeeId === v.employeeId || !R.canManage(v, o)) throw error(403, 'Faqat oʻz xodimingizga jarima yozasiz');
-    const date = t.isDate(body.date) ? body.date : t.tashkentDate(now);
-    if (date > t.tashkentDate(now)) throw error(400, 'Kelajakdagi sana uchun jarima yozilmaydi');
+    const today = t.tashkentDate(now);
+    const date = t.isDate(body.date) ? body.date : today;
+    if (date > today) throw error(400, 'Kelajakdagi sana uchun jarima yozilmaydi');
+    // Joriy oy; o'tgan oy — faqat keyingi oyning 4-sanasigacha (maosh 5-sanada yopiladi).
+    if (date.slice(0, 7) !== today.slice(0, 7) && !(R.nextMonthStart(date).slice(0, 7) === today.slice(0, 7) && R.canWash(date, today)))
+        throw error(400, 'Faqat joriy oy (va oy boshida 4-sanagacha — oʻtgan oy) uchun jarima yoziladi');
     const cfg = await configAt(db, date);
     const rule = (cfg.roles[o.role] || []).find(r => r.code === body.code && r.active && (!r.kind || r.kind === 'work'));
     if (!rule) throw error(400, 'Qoidani tanlang');
@@ -342,34 +366,56 @@ async function requestWash(db, user, body = {}, now = new Date()) {
         if (n) throw error(409, 'Oʻrganish orqali yuvish oyiga 1 marta');
     }
     let minutes = 0, evidence = {};
-    if (kind === 'hours') {
-        // Yuz bilan belgilangan kelish/ketish: grafikdan tashqari vaqt (ish oxiridan keyin) — shu kun.
+    if (kind === 'hours' || kind === 'sunday') {
+        // Sana: shu oy ichida va bugundan kech emas; vaqt — yuz bilan belgilangan kelish/ketish (ofisda, ok).
         const date = t.isDate(body.date) ? body.date : today;
-        const ev = await att().priorEvents(db, v.employeeId, date);
-        const sched = (await db.query('SELECT days FROM staff_att_schedules WHERE employee_id=$1', [v.employeeId])).rows[0]?.days || {};
-        const day = sched[String(t.weekday(date))];
-        const outs = ev.filter(e => e.ok && e.kind === 'out'), ins = ev.filter(e => e.ok && e.kind === 'in');
+        if (date.slice(0, 7) !== month || date > today) throw error(400, 'Sana shu oy ichida va bugundan kech boʻlmasin');
+        const ev = (await att().priorEvents(db, v.employeeId, date)).filter(e => e.ok && e.location_method !== 'outside');
+        const outs = ev.filter(e => e.kind === 'out'), ins = ev.filter(e => e.kind === 'in');
         const lastOut = outs.length ? t.tashkentMinutes(outs[outs.length - 1].occurred_at) : null;
         const firstIn = ins.length ? t.tashkentMinutes(ins[0].occurred_at) : null;
-        if (lastOut == null) throw error(409, 'Avval ketishni yuz bilan belgilang — qoʻshimcha vaqt shundan hisoblanadi');
-        minutes = day ? Math.max(0, lastOut - t.parseClock(day.end)) : firstIn != null ? Math.max(0, lastOut - firstIn) : 0;
-        if (minutes < 15) throw error(409, 'Qoʻshimcha vaqt 15 daqiqadan kam');
-        evidence = { date, from: day ? day.end : t.clock(firstIn), to: t.clock(lastOut) };
+        if (kind === 'sunday') {
+            if (t.weekday(date) !== 7) throw error(400, 'Yakshanba navbatchiligi faqat yakshanba kuni');
+            if (firstIn == null) throw error(409, 'Yakshanba kuni ofisga kelishni yuz bilan belgilang — soʻng yuboring');
+            evidence = { date, from: t.clock(firstIn), to: lastOut != null ? t.clock(lastOut) : '' };
+        } else {
+            const sched = (await db.query('SELECT days FROM staff_att_schedules WHERE employee_id=$1', [v.employeeId])).rows[0]?.days || {};
+            const day = sched[String(t.weekday(date))];
+            if (lastOut == null) throw error(409, 'Avval ketishni yuz bilan belgilang — qoʻshimcha vaqt shundan hisoblanadi');
+            if (!day) throw error(409, 'Dam olish kuni — “Yakshanba navbatchiligi” orqali yuboring');
+            // Faqat grafik tugaganidan keyingi vaqt (ketish yuz bilan belgilangan) hisoblanadi.
+            minutes = Math.max(0, lastOut - t.parseClock(day.end));
+            if (minutes < 15) throw error(409, 'Ish tugaganidan keyin 15 daqiqadan kam qolgansiz');
+            evidence = { date, from: day.end, to: t.clock(lastOut) };
+        }
     }
-    if (kind === 'sunday') evidence = { date: t.isDate(body.date) ? body.date : today };
     const value = R.washValue(kind, { minutes, amount: body.amount }, cfg);
     const id = randomUUID();
-    await db.query(`INSERT INTO staff_fine_washes(id,employee_id,user_id,kind,month,fine_id,minutes,value,note,evidence)
-        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`, [id, v.employeeId, v.id, kind, month, body.fineId ? String(body.fineId) : null, minutes, value,
+    const ins = await db.query(`INSERT INTO staff_fine_washes(id,employee_id,user_id,kind,month,fine_id,minutes,value,note,evidence)
+        VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) ON CONFLICT DO NOTHING RETURNING id`, [id, v.employeeId, v.id, kind, month, body.fineId ? String(body.fineId) : null, minutes, value,
         String(body.note || '').trim().slice(0, 300), JSON.stringify(evidence)]);
+    if (!ins.rowCount) throw error(409, 'Bu kun uchun soʻrov allaqachon yuborilgan');
     return { id, value, minutes };
 }
-async function washInbox(db, user, tab = 'pending') {
-    const v = await viewer(db, user);
+// Rahbar doirasi SQL'da (LIMIT dan oldin): R.canManage bilan bir xil — ROP: sotuv, akademik: ustoz/yordamchi, o'z tilida.
+// Til: rus/ingliz-oqituvchi lavozimidan, aks holda he.lang ('both' — har ikkisi). JS'dagi canManage ikkinchi himoya sifatida qoladi.
+function scopeSql(v, he = 'he', from = 1) {
+    if (v.kind === 'admin') return { sql: 'TRUE', params: [] };
+    const roles = v.kind === 'rop' ? ['sotuv-menejeri', 'sotuv_menejeri', 'sotuv menejeri', 'sales_manager'] : ['yordamchi', 'oqituvchi', 'ingliz-oqituvchi', 'rus-oqituvchi', 'asosiy'];
+    const lang = `(CASE ${he}.role WHEN 'rus-oqituvchi' THEN 'russian' WHEN 'ingliz-oqituvchi' THEN 'english' ELSE COALESCE(NULLIF(LOWER(${he}.lang),''),'') END)`;
+    const params = [roles];
+    let sql = `${he}.role=ANY($${from}::text[])`;
+    if (v.langs) { params.push(v.langs); sql += ` AND (${lang} IN ('','both') OR ${lang}=ANY($${from + 1}::text[]))`; }
+    if (v.employeeId) { params.push(v.employeeId); sql += ` AND ${he}.id<>$${from + params.length - 1}`; }
+    return { sql, params };
+}
+async function washInbox(db, user, tab = 'pending', v = null) {
+    v = v || await viewer(db, user);
     if (!['admin', 'rop', 'academic'].includes(v.kind)) throw error(403, 'Yuvish soʻrovlarini rahbar tasdiqlaydi');
+    const sc = scopeSql(v);
     const rows = (await db.query(`SELECT w.*,he.name,he.role AS emp_role,he.lang,u.role AS user_role FROM staff_fine_washes w JOIN hr_employees he ON he.id=w.employee_id
-        LEFT JOIN users u ON u.id=w.user_id WHERE ${tab === 'history' ? "w.state IN ('approved','rejected') AND w.kind<>'streak'" : "w.state='pending'"}
-        ORDER BY w.created_at ${tab === 'history' ? 'DESC' : ''} LIMIT 100`)).rows;
+        LEFT JOIN users u ON u.id=w.user_id WHERE ${tab === 'history' ? "w.state IN ('approved','rejected') AND w.kind<>'streak'" : "w.state='pending'"} AND ${sc.sql}
+        ORDER BY w.created_at ${tab === 'history' ? 'DESC' : ''} LIMIT 100`, sc.params)).rows;
     const out = rows.filter(w => R.canManage(v, { employeeId: w.employee_id, role: fineRole(w.user_role, w.emp_role), lang: att().empLang({ role: w.emp_role, lang: w.lang }) }) && w.employee_id !== v.employeeId)
         .map(w => ({ id: w.id, employeeId: w.employee_id, name: w.name, kind: w.kind, minutes: w.minutes, value: Number(w.value), note: w.note, evidence: w.evidence, state: w.state, reason: w.decision_reason, createdAt: w.created_at }));
     return { rows: out, pending: out.filter(w => w.state === 'pending').length };
@@ -393,7 +439,8 @@ async function decideWash(db, user, id, body = {}, now = new Date()) {
     const today = t.tashkentDate(now);
     if (!R.canWash(w.month + '-01', today)) throw error(409, 'Yuvish muddati tugagan');
     const cfg = await configAt(db, w.month + '-01');
-    const value = w.kind === 'task' ? Math.max(0, Math.round(Number(body.amount ?? w.value) || 0)) : Number(w.value);
+    if (w.kind === 'task' && !(Number(body.amount) > 0)) throw error(400, 'Vazifa uchun yuviladigan summani kiriting');
+    const value = w.kind === 'task' ? Math.round(Number(body.amount)) : Number(w.value);
     const fines = (await db.query(`SELECT id,code,amount,washed,state,warning FROM staff_fines WHERE employee_id=$1 AND month=$2 AND state='active' FOR UPDATE`, [w.employee_id, w.month])).rows
         .map(f => ({ ...f, amount: Number(f.amount), washed: Number(f.washed) }));
     const { parts } = R.allocateWash(fines, value, cfg, w.fine_id || null);
@@ -476,8 +523,9 @@ async function counts(db, user) {
     const v = await viewer(db, user);
     const out = { kind: v.kind, canIssue: ['admin', 'rop', 'academic'].includes(v.kind), washPending: 0, appeals: 0, exempt: v.kind === 'admin' || v.kind === 'other' };
     if (out.canIssue) {
-        out.washPending = (await washInbox(db, user)).pending;
-        const ap = (await db.query(`SELECT f.employee_id,f.role,he.lang,he.role AS emp_role FROM staff_fines f JOIN hr_employees he ON he.id=f.employee_id WHERE f.state='appeal'`)).rows;
+        out.washPending = (await washInbox(db, user, 'pending', v)).pending;
+        const sc = scopeSql(v);
+        const ap = (await db.query(`SELECT f.employee_id,f.role,he.lang,he.role AS emp_role FROM staff_fines f JOIN hr_employees he ON he.id=f.employee_id WHERE f.state='appeal' AND ${sc.sql}`, sc.params)).rows;
         out.appeals = ap.filter(r => R.canManage(v, { employeeId: r.employee_id, role: r.role, lang: att().empLang({ role: r.emp_role, lang: r.lang }) })).length;
     }
     return out;
@@ -492,6 +540,7 @@ async function appeals(db, user) {
     return { rows: out };
 }
 
+const pushPass = { key: 0, inbox: new Map() };
 // Push (staffNotify → Jamoa APK): yangi jarima (ogohlantirishsiz), yuvish va e'tiroz javobi; rahbarga — yangi yuvish so'rovi.
 async function pushEvents(db, userId, now = new Date()) {
     if (!(await db.query("SELECT to_regclass('public.staff_fines') AS t")).rows[0]?.t) return [];
@@ -507,7 +556,11 @@ async function pushEvents(db, userId, now = new Date()) {
             title: w.state === 'approved' ? `Jarima yuvildi: ${money(w.value)} soʻm` : 'Yuvish soʻrovi rad etildi', sub: 'Mening jarimalarim', at: new Date(w.decided_at).toISOString(), go: { tab: 'jarimalar' } });
     }
     if (['admin', 'rop', 'academic'].includes(v.kind)) {
-        const inbox = await washInbox(db, { id: userId }).catch(() => ({ rows: [] }));
+        // Bir push o'tishida (30 s) bir xil doiradagi rahbarlar uchun navbat bir marta o'qiladi.
+        const key = Math.floor(now.getTime() / 30000), sk = v.kind + '|' + (v.langs || []).join(',');
+        if (pushPass.key !== key) { pushPass.key = key; pushPass.inbox = new Map(); }
+        if (!pushPass.inbox.has(sk)) pushPass.inbox.set(sk, washInbox(db, { id: userId }, 'pending', { ...v, employeeId: null }).catch(() => ({ rows: [] })));
+        const inbox = { rows: (await pushPass.inbox.get(sk)).rows.filter(w => w.employeeId !== v.employeeId) };
         for (const w of inbox.rows.filter(x => Date.now() - new Date(x.createdAt) < 86400000)) ev.push({ id: `finewashreq:${w.id}`, type: 'fine_new', cat: 'tasdiq', tone: 'info', pushOnly: true,
             title: `Yuvish soʻrovi: ${String(w.name || '').split(/\s+/)[0]}`, sub: `${money(w.value)} soʻm`, at: new Date(w.createdAt).toISOString(), go: { tab: 'jarimalar' } });
     }

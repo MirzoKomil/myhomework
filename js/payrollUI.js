@@ -103,14 +103,20 @@
         const month = String(result?.period?.start || '').slice(0, 7);
         const cells = [...root.querySelectorAll('[data-fine-emp]')].filter(td => td.dataset.fineEmp);
         if (!/^\d{4}-\d{2}$/.test(month) || !cells.length || typeof apiFetch !== 'function') return;
-        const salaries = Object.fromEntries(cells.map(td => [td.dataset.fineEmp, Number(td.dataset.fineTotal) || 0]));
+        // Bir xodim ikki til qatorida bo'lishi mumkin: chegara uchun maosh qatorlar yig'indisi, jarima faqat birinchi qatorda.
+        const salaries = {};
+        for (const td of cells) salaries[td.dataset.fineEmp] = (salaries[td.dataset.fineEmp] || 0) + (Number(td.dataset.fineTotal) || 0);
         apiFetch('/api/fines/admin/totals', { method: 'POST', body: JSON.stringify({ month, salaries }) }).then(r => {
+            const seen = new Set();
             for (const td of cells) {
                 td.querySelector('.payroll-fine')?.remove();
-                const f = r?.totals?.[td.dataset.fineEmp];
+                const id = td.dataset.fineEmp;
+                if (seen.has(id)) continue;
+                seen.add(id);
+                const f = r?.totals?.[id], multi = cells.filter(c => c.dataset.fineEmp === id).length > 1;
                 const el = document.createElement('small');
                 el.className = 'payroll-fine' + (f?.deducted ? '' : ' is-zero');
-                el.textContent = f?.deducted ? `Jarima: −${money(f.deducted)}${f.washed ? ` (yuvildi ${money(f.washed)})` : ''} → qoʻlga ${money(Math.max(0, Number(td.dataset.fineTotal) - f.deducted))}`
+                el.textContent = f?.deducted ? `Jarima: −${money(f.deducted)}${f.washed ? ` (yuvildi ${money(f.washed)})` : ''} → qoʻlga ${money(Math.max(0, salaries[id] - f.deducted))}${multi ? ' (ikkala til jami)' : ''}`
                     : f?.count === 0 || !f ? (r.cleanBonus ? `Jarima yoʻq · “Toza oy” +${money(r.cleanBonus)}` : 'Jarima yoʻq') : 'Jarima yuvilgan';
                 td.appendChild(el);
             }

@@ -93,7 +93,12 @@ test('jarimalar — PostgreSQL', { skip: !url }, async t => {
       await assert.rejects(fines.issue(pool, user('rop-ru'), body), { status: 403 });
       await assert.rejects(fines.issue(pool, user('rop-en'), { ...body, reason: 'qisqa' }), /Sabab/);
       await assert.rejects(fines.issue(pool, user('rop-en'), { ...body, code: 'absent' }), /Qoida/);
-      const r = await fines.issue(pool, user('rop-en'), body, at('2026-10-20', '12:00'));
+      // faqat joriy oy; o'tgan oy — 4-sanagacha
+      await assert.rejects(fines.issue(pool, user('rop-en'), { ...body, date: '2026-09-28' }, at('2026-10-20', '12:00')), /joriy oy/);
+      await assert.rejects(fines.issue(pool, user('rop-en'), { ...body, date: '2026-09-28' }, at('2026-10-05', '12:00')), /joriy oy/);
+      const prev = await fines.issue(pool, user('rop-en'), { ...body, date: '2026-09-29' }, at('2026-10-04', '12:00'));
+      await pool.query('DELETE FROM staff_fines WHERE id=$1', [prev.id]);
+      const r = await fines.issue(pool, user('rop-en'), { ...body, date: '2026-10-20' }, at('2026-10-20', '12:00'));
       assert.equal(r.amount, 20000);
       assert.deepEqual((await fines.team(pool, user('ak'))).rows.map(x => x.id).sort(), ['e-ust', 'e-yor']);
       await assert.rejects(fines.issue(pool, user('ak'), body), { status: 403 });
@@ -109,6 +114,7 @@ test('jarimalar — PostgreSQL', { skip: !url }, async t => {
       await assert.rejects(fines.answerAppeal(pool, user('rop-ru'), f.id, { accept: true }), { status: 403 });
       await assert.rejects(fines.answerAppeal(pool, user('rop-en'), f.id, { accept: false }), /sabab/);
       await fines.answerAppeal(pool, user('rop-en'), f.id, { accept: true });
+      await assert.rejects(fines.answerAppeal(pool, user('rop-en'), f.id, { accept: false, answer: 'x' }), { status: 409 });
       assert.equal((await pool.query('SELECT state FROM staff_fines WHERE id=$1', [f.id])).rows[0].state, 'cancelled');
     });
 
@@ -116,19 +122,30 @@ test('jarimalar — PostgreSQL', { skip: !url }, async t => {
       await ev('e-ali', '2026-10-20', 'in', '08:50'); await ev('e-ali', '2026-10-20', 'out', '19:30');
       const w = await fines.requestWash(pool, user('ali'), { kind: 'hours', date: '2026-10-20', month: '2026-10' }, at('2026-10-20', '19:40'));
       assert.deepEqual([w.minutes, w.value], [90, 37500]);
+      // takroriy yuborish — 409 (bir kun uchun bitta)
+      await assert.rejects(fines.requestWash(pool, user('ali'), { kind: 'hours', date: '2026-10-20', month: '2026-10' }, at('2026-10-20', '19:45')), { status: 409 });
+      await assert.rejects(fines.requestWash(pool, user('ali'), { kind: 'hours', date: '2026-10-21', month: '2026-10' }, at('2026-10-20', '19:45')), /bugundan kech/);
+      await assert.rejects(fines.requestWash(pool, user('ali'), { kind: 'hours', date: '2026-09-30', month: '2026-10' }, at('2026-10-20', '19:45')), /shu oy/);
+      // grafik tugaguncha ketgan kun — qo'shimcha vaqt yo'q
+      await assert.rejects(fines.requestWash(pool, user('ali'), { kind: 'hours', date: '2026-10-06', month: '2026-10' }, at('2026-10-20', '19:45')), /15 daqiqadan kam/);
       await assert.rejects(fines.decideWash(pool, user('rop-ru'), w.id, { decision: 'approve' }), { status: 403 });
       await assert.rejects(fines.decideWash(pool, user('rop-en'), w.id, { decision: 'reject' }), /sabab/);
       const ok = await fines.decideWash(pool, user('rop-en'), w.id, { decision: 'approve' }, at('2026-10-21', '10:00'));
       assert.equal(ok.washed, 37500);
       const wf = (await pool.query("SELECT code,washed FROM staff_fines WHERE employee_id='e-ali' AND NOT warning AND state='active' ORDER BY amount")).rows;
       assert.deepEqual(wf.map(r => [r.code, Number(r.washed)]), [['late_1', 10000], ['early_leave', 25000], ['absent', 2500]]);
-      const s = await fines.requestWash(pool, user('ali'), { kind: 'sunday', month: '2026-10' }, at('2026-10-25', '13:00'));
+      await assert.rejects(fines.requestWash(pool, user('ali'), { kind: 'sunday', date: '2026-10-24', month: '2026-10' }, at('2026-10-25', '13:00')), /yakshanba kuni/);
+      await assert.rejects(fines.requestWash(pool, user('ali'), { kind: 'sunday', date: '2026-10-25', month: '2026-10' }, at('2026-10-25', '13:00')), /kelishni yuz bilan/);
+      await ev('e-ali', '2026-10-25', 'in', '10:00'); await ev('e-ali', '2026-10-25', 'out', '14:05');
+      const s = await fines.requestWash(pool, user('ali'), { kind: 'sunday', date: '2026-10-25', month: '2026-10' }, at('2026-10-25', '14:10'));
+      await assert.rejects(fines.requestWash(pool, user('ali'), { kind: 'sunday', date: '2026-10-25', month: '2026-10' }, at('2026-10-25', '14:12')), { status: 409 });
       await fines.decideWash(pool, user('boss'), s.id, { decision: 'approve' }, at('2026-10-26', '10:00'));
       assert.equal(Number((await pool.query("SELECT washed FROM staff_fines WHERE employee_id='e-ali' AND code='absent'")).rows[0].washed), 75000, 'kelmaslik ko‘pi bilan 50%');
       const l = await fines.requestWash(pool, user('ali'), { kind: 'learning', month: '2026-10' }, at('2026-10-27', '13:00'));
       await assert.rejects(fines.requestWash(pool, user('ali'), { kind: 'learning', month: '2026-10' }, at('2026-10-27', '13:05')), /oyiga 1 marta/);
       await assert.rejects(fines.decideWash(pool, user('rop-en'), l.id, { decision: 'approve' }, at('2026-11-05', '10:00')), /muddati/);
-      assert.ok(await fines.requestWash(pool, user('ali'), { kind: 'task', month: '2026-10', note: '20 ta eski lid' }, at('2026-11-04', '10:00')));
+      const tk = await fines.requestWash(pool, user('ali'), { kind: 'task', month: '2026-10', note: '20 ta eski lid' }, at('2026-11-04', '10:00'));
+      await assert.rejects(fines.decideWash(pool, user('rop-en'), tk.id, { decision: 'approve' }, at('2026-11-04', '11:00')), /summani/);
       await assert.rejects(fines.requestWash(pool, user('ali'), { kind: 'task', month: '2026-10' }, at('2026-11-05', '10:00')), /muddati/);
     });
 
@@ -175,6 +192,69 @@ test('jarimalar — PostgreSQL', { skip: !url }, async t => {
       // push: egasiga yangi jarima, rahbarga yuvish so'rovi
       const pe = await fines.pushEvents(pool, 'bek', new Date());
       assert.ok(pe.some(e => e.type === 'fine_new' && /Jarima: 30 000/.test(e.title)));
+    });
+
+    await t.test('HR tuzatishi va tasdiqlangan so‘rov — yozilgan jarima avtomatik bekor; yuvilgani tegilmaydi', async () => {
+      await ev('e-ali', '2026-12-07', 'in', '09:40'); await ev('e-ali', '2026-12-07', 'out', '18:00');   // dekabr 1-kechikish — ogohlantirish
+      await ev('e-ali', '2026-12-08', 'in', '09:40'); await ev('e-ali', '2026-12-08', 'out', '18:00');   // 2-kechikish — jarima
+      await fines.tick(pool, at('2026-12-09', '12:00'));
+      const f = (await pool.query("SELECT id,amount,state FROM staff_fines WHERE employee_id='e-ali' AND work_date='2026-12-08' AND code LIKE 'late_%'")).rows[0];
+      assert.ok(f && f.amount > 0 && f.state === 'active');
+      // qisman yuvilgan jarima (oktyabr, kelmaslik) — HR tuzatsa ham avtomatik bekor qilinmaydi (pul hisobi buzilmasin)
+      const washedBefore = (await pool.query("SELECT id,state FROM staff_fines WHERE employee_id='e-ali' AND code='absent' AND washed>0")).rows[0];
+      await att.setOverride(pool, user('boss'), { employeeId: 'e-ali', date: '2026-12-08', status: 'excused', note: 'shifokorda edi' });
+      await fines.tick(pool, at('2026-12-09', '12:05'));
+      const after = (await pool.query("SELECT state,note FROM staff_fines WHERE id=$1", [f.id])).rows[0];
+      assert.deepEqual([after.state, after.note], ['cancelled', 'auto']);
+      if (washedBefore) assert.equal((await pool.query('SELECT state FROM staff_fines WHERE id=$1', [washedBefore.id])).rows[0].state, washedBefore.state);
+      // qayta tuzatish olib tashlansa — yangi jarima yoziladi (ref takrorlanmaydi, eski bekor qolganicha)
+      assert.equal((await fines.mine(pool, user('ali'), '2026-12', at('2026-12-09', '12:10'))).fines.filter(x => x.date === '2026-12-08' && x.status !== 'cancelled' && x.amount > 0).length, 0);
+    });
+
+    await t.test('tasdiqlangan "kech qolaman": ruxsat vaqtidan hisoblanadi (jarima yo‘q yoki kamroq)', async () => {
+      await pool.query(`INSERT INTO staff_att_requests(id,employee_id,user_id,type,work_date,at_time,reason,approver_kind,state) VALUES
+        ('rq-l1','e-ali','ali','late','2026-12-10','11:00','Shifokor','rop','approved'),('rq-l2','e-ali','ali','late','2026-12-11','11:00','Shifokor','rop','approved')`);
+      await ev('e-ali', '2026-12-10', 'in', '10:58'); await ev('e-ali', '2026-12-10', 'out', '18:00'); // ruxsat ichida — jarima yo'q
+      await ev('e-ali', '2026-12-11', 'in', '11:20'); await ev('e-ali', '2026-12-11', 'out', '18:00'); // 20 daq kech — 16–30 pog'ona
+      await fines.tick(pool, at('2026-12-12', '12:00'));
+      const rows = (await pool.query("SELECT TO_CHAR(work_date,'YYYY-MM-DD') d,code,label FROM staff_fines WHERE employee_id='e-ali' AND work_date IN ('2026-12-10','2026-12-11') AND state='active'")).rows;
+      assert.deepEqual(rows.map(r => [r.d, r.code, r.label]), [['2026-12-11', 'late_2', 'Kechikish 20 daq']]);
+    });
+
+    await t.test('ustma-ust tick — jarima va avtomatik yuvish ikki marta yozilmaydi', async () => {
+      const before = Number((await pool.query('SELECT COUNT(*)::int n FROM staff_fines')).rows[0].n);
+      await Promise.all([fines.tick(pool, at('2026-12-12', '12:30')), fines.tick(pool, at('2026-12-12', '12:30')), fines.tick(pool, at('2026-12-12', '12:31'))]);
+      assert.equal(Number((await pool.query('SELECT COUNT(*)::int n FROM staff_fines')).rows[0].n), before);
+      const dup = (await pool.query("SELECT employee_id,ref,COUNT(*) n FROM staff_fine_washes WHERE ref IS NOT NULL GROUP BY 1,2 HAVING COUNT(*)>1")).rows;
+      assert.equal(dup.length, 0);
+      const bek = (await pool.query("SELECT SUM(washed)::int w FROM staff_fines WHERE employee_id='e-bek' AND month='2026-11'")).rows[0].w;
+      assert.equal(bek, 25000, 'avtomatik yuvish bir marta');
+    });
+
+    await t.test('oy chegarasi: har oyning birinchi kechikishi alohida ogohlantirish', async () => {
+      await pool.query("INSERT INTO hr_employees(id,name,role,lang,login,status) VALUES('e-zed','Zed','sotuv-menejeri','english','zed','active')");
+      await pool.query("INSERT INTO users(id,name,email,role) VALUES('zed','Zed','zed','sales_manager')");
+      await att.saveSchedule(pool, user('boss'), 'e-zed', { days: DAYS });
+      await pool.query("INSERT INTO staff_att_faces(employee_id,descriptors,state,submitted_by,first_approved_at) VALUES('e-zed','[]','approved','boss','2026-12-01')");
+      await pool.query("UPDATE staff_att_schedules SET tracked_since='2026-12-28' WHERE employee_id='e-zed'");
+      await ev('e-zed', '2026-12-29', 'in', '09:20'); await ev('e-zed', '2026-12-29', 'out', '18:00');
+      await ev('e-zed', '2026-12-30', 'in', '09:20'); await ev('e-zed', '2026-12-30', 'out', '18:00');
+      await ev('e-zed', '2026-12-31', 'in', '08:50'); await ev('e-zed', '2026-12-31', 'out', '18:00');
+      await ev('e-zed', '2027-01-01', 'in', '08:55'); await ev('e-zed', '2027-01-01', 'out', '18:00');
+      await ev('e-zed', '2027-01-02', 'in', '09:20'); await ev('e-zed', '2027-01-02', 'out', '18:00');
+      await fines.tick(pool, at('2027-01-03', '12:00'));
+      const z = (await pool.query("SELECT TO_CHAR(work_date,'YYYY-MM-DD') d,amount,warning FROM staff_fines WHERE employee_id='e-zed' ORDER BY work_date")).rows;
+      assert.deepEqual(z.map(r => [r.d, r.warning]), [['2026-12-29', true], ['2026-12-30', false], ['2027-01-02', true]]);
+    });
+
+    await t.test('moliya: ikki til qatori — chegara maosh yig‘indisidan, jarima bir marta', async () => {
+      await pool.query("INSERT INTO salary_transactions VALUES('s2','e-ali','2026-10-01','2026-10-31',1800000,'unpaid')");
+      const m = await fines.mine(pool, user('ali'), '2026-10', at('2026-10-31', '12:00'));
+      assert.equal(m.salary, 8000000);
+      assert.equal(m.summary.cap, 800000);
+      const tot = await fines.monthTotals(pool, user('boss'), '2026-10', { 'e-ali': 8000000 });
+      assert.equal(tot.totals['e-ali'].cap, 800000);
+      assert.equal(Object.keys(tot.totals).filter(k => k === 'e-ali').length, 1);
     });
   } finally { await pool.end(); }
 });
