@@ -151,8 +151,8 @@
     const p = L.phrases(S.name, ageN(), S.field);
     const learn = [['Как вас зову́т? — Меня́ зову́т…', 'Ismingiz nima? — Mening ismim…'], ['Мне 32 го́да. / Мне 30 лет.', 'Men 32 / 30 yoshdaman.'], [p[2].ru, p[2].uz]];
     el.innerHTML = `<div class="body">
-      <div class="row">${domik('wave', 96, 'Domik salomlashmoqda')}<div class="grow"><div class="kicker b">72 DARSDAN 1-DARS</div><p class="h1">Assalomu alaykum${S.name ? ', ' + firstName() : ''}!</p></div></div>
-      <p class="lead">Rus tilida oʻzingizni tanishtiring · <b>≈13 daqiqa</b></p>
+      <div class="row">${domik('wave', 96, 'Domik salomlashmoqda')}<div class="grow"><div class="kicker b">72 DARSLIK KURSDAN NAMUNA DARS</div><p class="h1">Assalomu alaykum${S.name ? ', ' + firstName() : ''}!</p></div></div>
+      <p class="lead">Rus tilida oʻzingizni tanishtiring · <b>≈15 daqiqa</b></p>
       <div class="card"><div class="kicker">BUGUN OʻRGANASIZ</div>${learn.map(([r, u]) => `<div><div lang="ru" class="ru">${r}</div><div class="sub">${esc(u)}</div></div>`).join('')}</div>
       <div class="card" style="background:var(--yellowl)"><div class="row">${domik('talk', 48)}<p class="lead" style="color:var(--ink)">Oxirida shu 3 gapni <b>oʻz ovozingiz bilan</b> aytasiz — birinchi ruscha tanishuvingiz!</p></div></div>
     </div>${bar('<button class="btn" data-start>Darsni boshlash</button>')}`;
@@ -168,7 +168,7 @@
     };
     const finished = S.finished;
     el.innerHTML = `<div class="body">
-      <div class="row" style="justify-content:space-between"><div><div class="kicker b">${finished ? '1-DARS TUGATILDI' : '72 DARSDAN 1-DARS'}</div><p class="h2">${finished ? 'Xush kelibsiz' + (S.name ? ', ' + firstName() : '') + '!' : 'Oʻzingizni tanishtiring'}</p></div><span class="chip ${finished ? 'green' : ''}">${done}/4</span></div>
+      <div class="row" style="justify-content:space-between"><div><div class="kicker b">${finished ? 'NAMUNA DARS TUGATILDI' : '72 DARSLIK KURSDAN NAMUNA DARS'}</div><p class="h2">${finished ? 'Xush kelibsiz' + (S.name ? ', ' + firstName() : '') + '!' : 'Oʻzingizni tanishtiring'}</p></div><span class="chip ${finished ? 'green' : ''}">${done}/4</span></div>
       ${S.requested ? `<div class="card" style="background:var(--greenl)"><div class="row">${ICON.phone('#087A4A')}<span class="sub" style="color:var(--greend)">Soʻrovingiz qabul qilindi · ${advisor()} bogʻlanadi</span></div></div>` : ''}
       ${row('video', 1, 'Video dars', st.video ? `Koʻrildi${a.videoPercent ? ' ' + a.videoPercent + '%' : ''}` : 'Ustoz bilan tanishuv', ICON.video(), 'var(--bluel)')}
       ${row('homework', 2, 'Uy vazifasi', st.homework ? `${hw.correct ?? 5} / ${hw.total ?? 5}` : '5 ta mashq · ≈3 daq', ICON.hw(), 'var(--bluel)')}
@@ -189,43 +189,69 @@
     });
   };
 
-  SCREENS.video = el => {
-    const hasVideo = !!S.videoUrl;
-    const yt = (/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([A-Za-z0-9_-]{11})/.exec(S.videoUrl || '') || [])[1] || '';
+  // Video — namuna dars, 2 qism (YouTube). Har qism uchun ko'rilgan foiz alohida; jami foiz — o'rtachasi.
+  const ytId = u => (/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([A-Za-z0-9_-]{11})/.exec(u || '') || [])[1] || '';
+  SCREENS.video = (el, { part = null }) => {
+    const parts = (S.videos || []).filter(v => v && v.url);
+    const seen = (local.videoSeen = (local.videoSeen || []).slice(0, parts.length));
+    parts.forEach((_, i) => { seen[i] = seen[i] || 0; });
+    const total = () => parts.length ? Math.round(seen.reduce((a, b) => a + b, 0) / parts.length) : 0;
+    let cur = part ?? (seen[0] >= 95 && parts.length > 1 ? 1 : 0), sent = S.steps.video;
+    const tabs = () => parts.length > 1 ? `<div class="row" role="tablist" style="gap:8px">${parts.map((p, i) => `<button role="tab" aria-selected="${i === cur}" class="step ${i === cur ? 'now' : ''}" style="padding:8px 10px;gap:8px" data-part="${i}"><span class="ic" style="width:36px;height:36px;border-radius:12px;background:${seen[i] >= 80 ? 'var(--greenl)' : 'var(--bluel)'}">${seen[i] >= 80 ? ICON.check('#087A4A', 18) : ICON.play('#2F5BFF', 14)}</span><span class="grow"><span class="t" style="display:block;font-size:14px">${i + 1}-qism${p.dur ? ' · ' + esc(p.dur) : ''}</span><span class="s">${esc(p.title || '')}${seen[i] ? ' · ' + seen[i] + '%' : ''}</span></span></button>`).join('')}</div>` : '';
+    const player = () => {
+      const p = parts[cur], yt = p && ytId(p.url);
+      if (!p) return `<div class="placeholder">${domik('teacher', 72)}<b>Video tez orada joylanadi</b><span class="sub" style="color:#C8CFDC">Hozircha quyidagi konspektni oʻqib, iboralarni tinglang</span></div>`;
+      return yt ? `<iframe src="https://www.youtube-nocookie.com/embed/${yt}?enablejsapi=1&playsinline=1&rel=0&modestbranding=1&origin=${encodeURIComponent(location.origin)}" title="Namuna dars, ${cur + 1}-qism" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen style="width:100%;height:100%;border:0;display:block"></iframe>`
+        : `<video src="${esc(p.url)}" controls playsinline preload="metadata"></video>`;
+    };
+    const note = () => !parts.length || S.steps.video || sent ? '' : cur === 0 && seen[0] >= 95 && parts.length > 1 ? '1-qism tugadi — endi 2-qismni koʻring 👆' : 'Videoni oxirigacha koʻring — mashqlar shunga tayanadi';
     el.innerHTML = `<div class="body">${backLink()}
-      <div class="row" style="justify-content:space-between"><div><div class="kicker b">1-DARS · VIDEO</div><p class="h2" lang="ru">Меня́ зову́т…</p></div><span class="chip">${S.steps.video ? 'Koʻrildi ✓' : 'Video'}</span></div>
-      <div class="video">${yt ? `<iframe src="https://www.youtube-nocookie.com/embed/${yt}?enablejsapi=1&playsinline=1&rel=0&modestbranding=1&origin=${encodeURIComponent(location.origin)}" title="1-dars videosi" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen style="width:100%;height:100%;border:0;display:block"></iframe>` : hasVideo ? `<video src="${esc(S.videoUrl)}" controls playsinline preload="metadata"></video>` : `<div class="placeholder">${domik('teacher', 72)}<b>Video tez orada joylanadi</b><span class="sub" style="color:#C8CFDC">Hozircha quyidagi konspektni oʻqib, iboralarni tinglang</span></div>`}</div>
+      <div class="row" style="justify-content:space-between"><div><div class="kicker b">NAMUNA DARS · VIDEO</div><p class="h2" lang="ru">Меня́ зову́т…</p></div><span class="chip ${S.steps.video ? 'green' : ''}">${S.steps.video ? 'Koʻrildi ✓' : parts.length > 1 ? parts.length + ' qism' : 'Video'}</span></div>
+      <div class="video" data-player>${player()}</div>
+      <div data-tabs>${tabs()}</div>
       <div class="card konspekt"><div class="row" style="justify-content:space-between"><b>Konspekt</b><span class="sub">4 ibora${canSpeak() ? ' · audio' : ''}</span></div>
         ${L.KONSPEKT.map(k => `<div class="item"><div class="grow"><div lang="ru" style="font-size:16px;font-weight:800">${k.ru}</div><div class="sub">${esc(k.uz)}</div></div>${spkBtn(k.ru)}</div>`).join('')}</div>
       <div class="card"><div class="kicker">SOʻZLAR · BOSING — TINGLANG</div><div class="words">${L.VOCAB.map(([r, u]) => `<button class="word" style="font-size:15px;min-height:44px;display:flex;flex-direction:column;justify-content:center" data-say="${esc(r)}"><span lang="ru">${r}</span><span class="sub" style="font-size:12px">${esc(u)}</span></button>`).join('')}</div></div>
-    </div>${bar(`${hasVideo && !S.steps.video ? '<div class="note" data-vnote>Videoni oxirigacha koʻring — mashqlar shunga tayanadi</div>' : ''}<button class="btn" data-next>Vazifaga oʻtish</button>`)}`;
+    </div>${bar(`<div class="note" data-vnote>${note()}</div><button class="btn" data-next>Vazifaga oʻtish</button>`)}`;
     wireSay(el); wire(el, {});
-    const v = el.querySelector('video'), frame = el.querySelector('iframe');
-    let maxSeen = S.answers?.videoPercent || 0, sent = S.steps.video, ytDur = 0;
-    const progress = (cur, dur) => {
-      if (!dur) return;
-      const p = Math.round(cur / dur * 100);
-      if (p > maxSeen && p - maxSeen < 15) maxSeen = p; // oldinga sakrash hisoblanmaydi
-      if (!sent && maxSeen >= 80) { sent = true; track('video', { percent: maxSeen }); haptic('ok'); const n = el.querySelector('[data-vnote]'); if (n) n.textContent = 'Video koʻrildi ✓'; }
+    const redrawTabs = () => {
+      el.querySelector('[data-tabs]').innerHTML = tabs();
+      el.querySelectorAll('[data-part]').forEach(b => b.onclick = () => { const i = Number(b.dataset.part); if (i === cur) return; cur = i; haptic(); el.querySelector('[data-player]').innerHTML = player(); hook(); redrawTabs(); });
+      const n = el.querySelector('[data-vnote]'); if (n) n.textContent = sent || S.steps.video ? 'Video koʻrildi ✓' : note();
     };
-    if (v) v.addEventListener('timeupdate', () => progress(v.currentTime, v.duration));
-    if (frame) {
-      // YouTube pleyeri postMessage orqali vaqtni yuboradi (iframe_api skriptisiz).
-      const listen = () => { try { frame.contentWindow.postMessage(JSON.stringify({ event: 'listening', id: 1, channel: 'widget' }), '*'); } catch { /* */ } };
-      frame.addEventListener('load', listen); every(listen, 3000);
-      const onMsg = e => {
-        if (!/^https:\/\/www\.youtube(-nocookie)?\.com$/.test(e.origin)) return;
-        let d; try { d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; } catch { return; }
-        const info = d && d.info; if (!info) return;
-        if (info.duration) ytDur = info.duration;
-        if (typeof info.currentTime === 'number') progress(info.currentTime, ytDur);
-      };
-      window.addEventListener('message', onMsg);
-      timers.push({ off: () => window.removeEventListener('message', onMsg) });
+    let lastSave = 0, ytDur = 0;
+    const progress = (t, dur) => {
+      if (!dur) return;
+      const p = Math.min(100, Math.round(t / dur * 100)), before = seen[cur];
+      if (p > seen[cur] && p - seen[cur] < 15) seen[cur] = p; // oldinga sakrash hisoblanmaydi
+      if (seen[cur] !== before && (Date.now() - lastSave > 3000 || seen[cur] >= 95)) { lastSave = Date.now(); save(); redrawTabs(); }
+      if (!sent && total() >= 80) { sent = true; save(); track('video', { percent: total() }); haptic('ok'); redrawTabs(); }
+    };
+    let unhook = null;
+    function hook() {
+      if (unhook) unhook(); ytDur = 0;
+      const v = el.querySelector('[data-player] video'), frame = el.querySelector('[data-player] iframe');
+      if (v) { const f = () => progress(v.currentTime, v.duration); v.addEventListener('timeupdate', f); unhook = () => v.removeEventListener('timeupdate', f); }
+      if (frame) {
+        // YouTube pleyeri postMessage orqali vaqtni yuboradi (iframe_api skriptisiz).
+        const listen = () => { try { frame.contentWindow.postMessage(JSON.stringify({ event: 'listening', id: 1, channel: 'widget' }), '*'); } catch { /* */ } };
+        frame.addEventListener('load', listen); const iv = setInterval(listen, 3000);
+        const onMsg = e => {
+          if (e.source !== frame.contentWindow || !/^https:\/\/www\.youtube(-nocookie)?\.com$/.test(e.origin)) return;
+          let d; try { d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; } catch { return; }
+          const info = d && d.info; if (!info) return;
+          if (info.duration) ytDur = info.duration;
+          if (typeof info.currentTime === 'number') progress(info.currentTime, ytDur);
+        };
+        window.addEventListener('message', onMsg);
+        unhook = () => { clearInterval(iv); window.removeEventListener('message', onMsg); };
+      }
     }
+    hook(); redrawTabs();
+    timers.push({ off: () => unhook && unhook() });
     el.querySelector('[data-next]').onclick = async () => {
-      if (!hasVideo && !S.steps.video) await track('video', { percent: 100, noVideo: true });
-      else if (hasVideo && !sent && maxSeen > 0) track('video', { percent: maxSeen });
+      if (!parts.length && !S.steps.video) await track('video', { percent: 100, noVideo: true });
+      else if (parts.length && !sent && total() > 0) track('video', { percent: total() });
       go('hw', {}, { replace: true });
     };
   };
@@ -499,7 +525,7 @@
     const strong = ['ism va yosh'];
     const work = (vr?.words || []).filter(w => !w.ok).map(w => '«<span lang="ru">' + w.word + '</span>»');
     const discount = S.discount ? `<div class="chip orange" style="align-self:center">${ICON.star('#B34700', 14)} Bot orqali kelganlarga −${S.discount.percent}% · ${new Date(S.discount.until).toLocaleDateString('uz-UZ', { day: 'numeric', month: 'long' })}gacha</div>` : '';
-    el.innerHTML = `<div class="body">${backLink()}<div class="row">${domik('trophy', 84, 'Domik kubok bilan')}<div class="grow"><p class="h1">${S.name ? firstName() + ', ' : ''}1-dars tugadi!</p></div></div>
+    el.innerHTML = `<div class="body">${backLink()}<div class="row">${domik('trophy', 84, 'Domik kubok bilan')}<div class="grow"><p class="h1">${S.name ? firstName() + ', ' : ''}namuna dars tugadi!</p></div></div>
       <p class="lead">${S.steps.voice ? '3 ta gapni ovoz bilan aytdingiz' + (vr?.score != null ? ` — ${vr.score}% aniq` : '') : 'Ovozli mashq hali qoldi — xohlasangiz qayta urinib koʻring'}</p>
       <div class="tiles"><div class="stat"><b>${hw.correct ?? '—'}/${hw.total ?? 5}</b><span class="sub">vazifa</span></div><div class="stat"><b>${local.dialog ?? (S.steps.game ? '✓' : '—')}${local.dialog != null ? '/4' : ''}</b><span class="sub">ish suhbati</span></div><div class="stat"><b>${pr ? pr.pairs + '/' + pr.total : (S.steps.game ? '✓' : '—')}</b><span class="sub">juftlar${pr ? ' · ' + pr.time + ' s' : ''}</span></div></div>
       ${voiceUrl ? `<div class="card"><b>Sizning birinchi ruscha tanishuvingiz</b>${playerHtml('Sizning ovozingiz', 'my')}</div>` : ''}
@@ -584,7 +610,7 @@
       <div class="kicker b">72 DARSDAN ${t.n}-DARS</div><p class="h2">${esc(t.title)}</p>${t.result ? `<p class="lead">Natija: ${esc(t.result)}</p>` : ''}
       ${t.items ? `<div class="card"><div class="kicker">BU DARSDA</div>${t.items.map(x => `<div class="row">${ICON.check('#087A4A', 18)}<b>${esc(x)}</b></div>`).join('')}</div>` : ''}
       <div class="card"><span class="sub">Kurs: 72 dars, taxminan 3 oy — video darslar, shaxsiy ustoz bilan jonli darslar va har kuni ilovada mashq.</span></div></div>
-      ${bar(`${S.requested ? '' : '<button class="btn" data-contact>Kurs haqida menejerdan bilish</button>'}<button class="btn sec" data-home>1-darsga qaytish</button>`)}`;
+      ${bar(`${S.requested ? '' : '<button class="btn" data-contact>Kurs haqida menejerdan bilish</button>'}<button class="btn sec" data-home>Darsga qaytish</button>`)}`;
     wire(el, { '[data-contact]': () => go('contact'), '[data-home]': home });
   };
 

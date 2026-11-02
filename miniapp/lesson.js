@@ -61,10 +61,10 @@
 
   // Video konspekti (4 ibora).
   const KONSPEKT = [
-    { ru: 'Как вас зову́т? — Меня́ зову́т Анва́р.', uz: 'Ismingiz nima? — Mening ismim Anvar.' },
-    { ru: 'Ско́лько вам лет? — Мне 32 (три́дцать два) го́да.', uz: '…1 → год · …2–4 → го́да · boshqa → лет (21 год, 32 го́да, 25 лет)' },
-    { ru: 'Где вы рабо́таете? — Я рабо́таю в ба́нке.', uz: 'Qayerda ishlaysiz? «Qayerda?» → -е: в больни́це' },
-    { ru: 'Вы рабо́таете в ба́нке? — Да.', uz: 'Bankda ishlaysizmi? — Ha. (savol — ohang bilan)' }
+    { ru: 'Как вас зову́т? — Меня́ зову́т Тиму́р.', uz: 'Ismingiz nima? — Mening ismim Timur. (вас — «sizni», hurmat bilan)' },
+    { ru: 'Ско́лько вам лет? — Мне три́дцать пять лет.', uz: '«Я 35 лет» emas — Мне («menga»). 21 год · 22–24 го́да · 25–30 лет' },
+    { ru: 'Где вы рабо́таете? — Я рабо́таю в ба́нке.', uz: 'банк → в ба́нке (≈ -da): в о́фисе, в магази́не, в больни́це' },
+    { ru: 'Я врач. Я бухга́лтер. Я води́тель.', uz: 'Men shifokorman / buxgalterman / haydovchiman — «-man» shart emas' }
   ];
   const VOCAB = [['Здра́вствуйте!', 'Assalomu alaykum!'], ['да · нет', 'ha · yoʻq'], ['клие́нт', 'mijoz'], ['ка́сса', 'kassa'], ['бухга́лтер', 'buxgalter'], ['спаси́бо', 'rahmat'], ['в о́фисе', 'ofisda'], ['в ба́нке', 'bankda']];
 

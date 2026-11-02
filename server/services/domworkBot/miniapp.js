@@ -9,8 +9,12 @@ const funnel = require('./funnel');
 // Ball jadvali (UX hujjati bilan bir xil). Qo'ng'iroq so'rovi balli funnel.finishRequest orqali emas, shu yerda beriladi.
 const POINTS = { open: 2, video: 3, homework: 2, game: 2, voice: 3, locked: 1, request: 5 };
 const STEPS = ['video', 'homework', 'game', 'voice'];
-// Kursning 1-dars videosi (platformadagi 1-dars, YouTube). Bot boshqaruvida miniappVideoUrl bilan almashtiriladi.
-const DEFAULT_VIDEO = 'https://youtu.be/yTRiBmSrdh4';
+// Namuna dars videosi — 2 qism (probniy_dars_video/namuna_dars_ssenariy.md). Bot boshqaruvida miniappVideos (2 ta https havola) bilan almashtiriladi.
+const DEFAULT_VIDEOS = [
+    { url: 'https://youtu.be/ee_5dITGHEc', title: 'Ism va yosh', dur: '2:31' },
+    { url: 'https://youtu.be/6ypCbAyz2MU', title: 'Ish va suhbat', dur: '2:55' }
+];
+const httpsUrl = u => /^https:\/\/[^\s"'<>]{8,500}$/.test(u || '');
 const MAX_VOICE_BYTES = 1024 * 1024;
 const VOICE_MIME = /^audio\/(ogg|webm|mp4|mpeg|wav|x-m4a|aac)(;.*)?$/;
 
@@ -150,7 +154,8 @@ function view(v, p, mgr, s, now = new Date()) {
         hasPhone: !!v.phone,
         phoneMasked: v.phone ? funnel.mask(v.phone) : '',
         // 1-dars videosi — veb pleyer uchun https manzil (Bot boshqaruvi sozlamasi). Yo'q bo'lsa — konspekt rejimi.
-        videoUrl: /^https:\/\/[^\s"'<>]{8,500}$/.test(s.miniappVideoUrl || '') ? s.miniappVideoUrl : DEFAULT_VIDEO,
+        videos: Array.isArray(s.miniappVideos) && s.miniappVideos.length && s.miniappVideos.every(httpsUrl)
+            ? s.miniappVideos.slice(0, 3).map((url, i) => ({ url, title: DEFAULT_VIDEOS[i]?.title || `${i + 1}-qism`, dur: DEFAULT_VIDEOS[i]?.dur || '' })) : DEFAULT_VIDEOS,
         sales: { open: funnel.inHours(s, now), slaMinutes: funnel.sla(s) },
         discount
     };
@@ -327,8 +332,8 @@ async function nudge(db, now = new Date()) {
         const left = STEPS.filter(k => !r.steps[k]), mins = left.reduce((a, k) => a + STEP_MIN[k], 0);
         const name = String(r.first_name || '').split(' ')[0] || 'Assalomu alaykum';
         const text = left.length === STEPS.length
-            ? `${name}, 1-dars sizni kutyapti — ≈${mins} daqiqa. Eng qiziq joyi: ish suhbati o‘yini va o‘zingiz rus tilida gapirasiz!`
-            : `${name}, 1-darsning yarmidasiz — <b>${left.length} qadam qoldi (≈${mins} daqiqa)</b>. ` + (left.includes('game') ? 'Eng qiziq joyi oldinda: ish suhbati o‘yini!' : 'Oxirgisi — o‘zingiz rus tilida gapirasiz!');
+            ? `${name}, namuna dars sizni kutyapti — ≈${mins} daqiqa. Eng qiziq joyi: ish suhbati o‘yini va o‘zingiz rus tilida gapirasiz!`
+            : `${name}, namuna darsning yarmidasiz — <b>${left.length} qadam qoldi (≈${mins} daqiqa)</b>. ` + (left.includes('game') ? 'Eng qiziq joyi oldinda: ish suhbati o‘yini!' : 'Oxirgisi — o‘zingiz rus tilida gapirasiz!');
         await funnel.say({ db, tid: r.telegram_id, key: () => `ma:${r.telegram_id}:nudge` }, text,
             funnel.inline([[['▶️ Davom ettirish', 'webapp:' + funnel.MINIAPP_URL + '?next=1']]]), { html: true, automation: true });
         await funnel.event(db, r.telegram_id, 'miniapp_nudge', { left: left.length });

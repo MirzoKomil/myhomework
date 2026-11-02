@@ -48,7 +48,8 @@ test('1-dars mini app: open, steps scored once, voice, request → CRM — synth
   });
   await t.test('first open creates visitor + progress and scores +2 once; reopen does not re-score',async()=>{
    const a=await call('/open');assert.equal(a.status,200);
-   assert.equal(a.body.name,'Dilshod');assert.equal(a.body.points,2);assert.equal(a.body.manager,null);assert.equal(a.body.sales.slaMinutes,10);
+   assert.equal(a.body.name,'Dilshod');assert.equal(a.body.points,2);assert.equal(a.body.manager,null);
+   assert.deepEqual(a.body.videos.map(v=>v.url),['https://youtu.be/ee_5dITGHEc','https://youtu.be/6ypCbAyz2MU']);assert.equal(a.body.sales.slaMinutes,10);
    assert.equal((await visitor(801)).source,'miniapp:tg_target1');
    await call('/open');
    assert.equal((await visitor(801)).score,2);
@@ -139,8 +140,8 @@ test('1-dars mini app: open, steps scored once, voice, request → CRM — synth
    await run({update_id:++uid,message:{message_id:uid,from:from(811),chat:{id:811,type:'private'},text:'/start'}});
    const rows=(await pool.query("SELECT payload FROM domwork_bot_outbox WHERE target_id='811' AND method<>'answerCallbackQuery' ORDER BY created_at,unique_key")).rows;
    const btn=rows.flatMap(r=>r.payload.reply_markup?.inline_keyboard||[]).flat().find(b=>b.web_app);
-   assert.ok(btn,'web_app tugmasi yo‘q');assert.equal(btn.web_app.url,'https://myhomework.uz/miniapp/');assert.match(btn.text,/1-darsni ochish/);
-   assert.ok(rows.some(r=>/1-dars siz uchun ochildi/.test(r.payload.caption||r.payload.text||'')));
+   assert.ok(btn,'web_app tugmasi yo‘q');assert.equal(btn.web_app.url,'https://myhomework.uz/miniapp/');assert.match(btn.text,/Namuna darsni ochish/);
+   assert.ok(rows.some(r=>/namuna dars siz uchun ochildi/.test(r.payload.caption||r.payload.text||'')));
    await run({update_id:++uid,callback_query:{id:'cq'+uid,from:from(811),data:'f:les',message:{chat:{id:811,type:'private'}}}});
    const last=(await pool.query("SELECT payload FROM domwork_bot_outbox WHERE target_id='811' AND method='sendMessage' ORDER BY created_at DESC,unique_key DESC LIMIT 1")).rows[0];
    assert.equal(last.payload.reply_markup.inline_keyboard[0][0].web_app.url,'https://myhomework.uz/miniapp/');
