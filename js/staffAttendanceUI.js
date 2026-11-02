@@ -571,11 +571,132 @@
         };
     }
 
+    // ── Xodim qo'shish: Davomat (yuz + joylashuv) bo'limi (HrAddStaff / HrAdminAdd) ─────────
+    // Ofisda ishlaydiganlar: sotuv, ROP, HR, akademik rahbar, yordamchi ustoz. Xodim saqlangach:
+    // grafik -> PUT /employees/:id/schedule, 3x4 rasm -> POST /employees/:id/face (HR tasdiqlagan namuna).
+    const TRACKED_ROLES = new Set(['sotuv-menejeri', 'sotuv_menejeri', 'rop', 'hr', 'head-of-teachers', 'yordamchi']);
+    const addState = { frames: null, days: null, office: null };
+    const defaultDays = () => ({ 1: { start: '09:00', end: '18:00' }, 2: { start: '09:00', end: '18:00' }, 3: { start: '09:00', end: '18:00' }, 4: { start: '09:00', end: '18:00' }, 5: { start: '09:00', end: '18:00' }, 6: { start: '10:00', end: '15:00' } });
+    function daysText(days) {
+        const g = {};
+        for (const [k, l] of DAYS) if (days[k]) (g[`${days[k].start}–${days[k].end}`] ||= []).push(l);
+        return Object.entries(g).map(([v, ds]) => `${ds.length > 2 ? ds[0] + '–' + ds[ds.length - 1] : ds.join(', ')} ${v}`).join(' · ') || 'kiritilmagan';
+    }
+    function addEmployeeField() {
+        if (!canManage()) return '';
+        addState.frames = null; addState.days = defaultDays();
+        return `<div class="satt-add" id="sattAddWrap" hidden>
+            <div class="satt-add-h"><div><b>Davomat (yuz + joylashuv)</b><span class="satt-muted satt-small">Ofisda ishlaydiganlar: sotuv, ROP, HR, akademik rahbar, yordamchi ustoz</span></div>
+              <label class="satt-switch"><input type="checkbox" id="sattAddTracked" checked> Davomat kuzatiladi</label></div>
+            <div class="satt-add-body" id="sattAddBody">
+              <div class="satt-add-photo"><div class="satt-add-thumb" id="sattAddThumb" role="img" aria-label="3×4 rasm hali yoʻq">3×4</div>
+                <div class="satt-add-btns"><span class="satt-small"><b>3×4 yuz rasmi *</b></span>
+                  <button type="button" class="btn-primary-sm" id="sattAddCam">Kamerada olish</button>
+                  <label class="btn-secondary-sm satt-file">Fayldan yuklash<input type="file" accept="image/*" id="sattAddFile" hidden></label></div></div>
+              <p class="satt-muted satt-small">Yuz toʻgʻridan, yorugʻ joyda, koʻzoynaksiz. Har kungi selfie shu rasm bilan solishtiriladi.</p>
+              <button type="button" class="satt-add-row" id="sattAddSched"><span><span class="satt-small"><b>Ish grafigi *</b></span><b id="sattAddSchedTxt">${esc(daysText(addState.days))}</b></span><span class="satt-link">Oʻzgartirish</span></button>
+              <label class="satt-small"><b>Ofis *</b><select class="form-control" id="sattAddOffice"><option>Asosiy ofis</option></select></label>
+              <p class="satt-muted satt-small">Ofis manzili va radiusini admin belgilaydi</p>
+            </div></div>`;
+    }
+    function setThumb(dataUrl) {
+        const t = document.getElementById('sattAddThumb'); if (!t) return;
+        t.innerHTML = dataUrl ? `<img src="${dataUrl}" alt="3×4 yuz rasmi">` : '3×4';
+    }
+    function fileToFrame(file) {
+        return new Promise((resolve, reject) => {
+            const img = new Image(), url = URL.createObjectURL(file);
+            img.onload = () => {
+                const c = document.createElement('canvas'); c.width = CAPTURE_W; c.height = CAPTURE_H;
+                const ratio = CAPTURE_W / CAPTURE_H, iw = img.naturalWidth, ih = img.naturalHeight;
+                let sw = iw, sh = ih, sx = 0, sy = 0;
+                if (iw / ih > ratio) { sw = ih * ratio; sx = (iw - sw) / 2; } else { sh = iw / ratio; sy = (ih - sh) / 2; }
+                c.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, CAPTURE_W, CAPTURE_H);
+                URL.revokeObjectURL(url); resolve(c.toDataURL('image/png'));
+            };
+            img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Rasmni ochib boʻlmadi')); };
+            img.src = url;
+        });
+    }
+    function bindAddEmployee(roleSelectId) {
+        const wrap = document.getElementById('sattAddWrap'), role = document.getElementById(roleSelectId);
+        if (!wrap || !role) return;
+        const sync = () => { wrap.hidden = !TRACKED_ROLES.has(role.value); };
+        role.addEventListener('change', sync); sync();
+        const tr = document.getElementById('sattAddTracked');
+        tr.onchange = () => { document.getElementById('sattAddBody').hidden = !tr.checked; };
+        api('/settings').then(s => { const sel = document.getElementById('sattAddOffice'); if (sel) sel.innerHTML = `<option>${esc(s.office.name || 'Asosiy ofis')} · ${s.office.radius} m</option>`; }).catch(() => {});
+        document.getElementById('sattAddFile').onchange = async e => {
+            const f = e.target.files?.[0]; if (!f) return;
+            try { const fr = await fileToFrame(f); addState.frames = [fr, fr]; setThumb(fr); } catch (err) { alert(err.message); }
+        };
+        document.getElementById('sattAddCam').onclick = () => {
+            // Alohida qatlam: asosiy "Xodim qo'shish" modali yopilmaydi.
+            const ov = document.createElement('div'); ov.className = 'satt-overlay satt-overlay-top';
+            ov.innerHTML = `<div class="satt-sheet" role="dialog" aria-modal="true" aria-label="3×4 rasm"><header class="satt-sheet-head"><h3>3×4 yuz rasmi</h3><button type="button" class="satt-close" aria-label="Yopish">&times;</button></header><div class="satt-sheet-body">${cameraStage('Yuzni ramka ichiga joylang')}</div></div>`;
+            document.body.appendChild(ov);
+            let cam = null, dead = false;
+            const close = () => { dead = true; cam?.stop(); ov.remove(); };
+            ov.querySelector('.satt-close').onclick = close;
+            (async () => {
+                try {
+                    const body = ov.querySelector('.satt-sheet-body');
+                    cam = await startCamera(body); if (dead) return cam.stop();
+                    await countdown(body, 3, 'Kameraga toʻgʻri qarasin'); if (dead) return;
+                    const a = grab(cam.video);
+                    await countdown(body, 2, 'Yana bir marta, qimirlamasin'); if (dead) return;
+                    const b = grab(cam.video);
+                    addState.frames = [a, b]; setThumb(a); close();
+                } catch (err) { if (!dead) { alert(err.message); close(); } }
+            })();
+        };
+        document.getElementById('sattAddSched').onclick = () => {
+            const days = addState.days;
+            const ov = document.createElement('div'); ov.className = 'satt-overlay satt-overlay-top';
+            ov.innerHTML = `<div class="satt-sheet" role="dialog" aria-modal="true" aria-label="Ish grafigi"><header class="satt-sheet-head"><h3>Ish grafigi</h3><button type="button" class="satt-close" aria-label="Yopish">&times;</button></header>
+                <div class="satt-sheet-body"><form class="satt-schedule"><div class="satt-days">${DAYS.map(([k, label]) => `<div class="satt-day"><label><input type="checkbox" name="on${k}" ${days[k] ? 'checked' : ''}> ${label}</label>
+                <input type="time" class="form-control-sm" name="s${k}" value="${esc(days[k]?.start || '09:00')}" aria-label="${label} boshlanishi"><span>–</span><input type="time" class="form-control-sm" name="e${k}" value="${esc(days[k]?.end || '18:00')}" aria-label="${label} tugashi"></div>`).join('')}</div>
+                <p class="satt-muted satt-small">10 daqiqadan ortiq kechiksa — direktor va rahbariga Telegram xabar</p>
+                <div class="satt-row satt-end"><button type="submit" class="btn-primary-sm">Saqlash</button></div></form></div></div>`;
+            document.body.appendChild(ov);
+            ov.querySelector('.satt-close').onclick = () => ov.remove();
+            ov.querySelector('form').onsubmit = e => {
+                e.preventDefault(); const f = e.target, out = {};
+                DAYS.forEach(([k]) => { if (f['on' + k].checked) out[k] = { start: f['s' + k].value, end: f['e' + k].value }; });
+                if (!Object.keys(out).length) { alert('Kamida bitta ish kuni kiriting'); return; }
+                addState.days = out; document.getElementById('sattAddSchedTxt').textContent = daysText(out); ov.remove();
+            };
+        };
+    }
+    // Saqlashdan oldin: xato matni yoki ''.
+    function validateAddEmployee(role) {
+        if (!canManage() || !TRACKED_ROLES.has(role) || !document.getElementById('sattAddTracked')?.checked) return '';
+        if (!addState.frames) return '3×4 yuz rasmini oling yoki yuklang (Davomat boʻlimi)';
+        return '';
+    }
+    // Xodim va login yaratilgach: grafik va yuz namunasi. Xato bo'lsa xodim saqlangan qoladi — HR keyin "Davomat" bo'limida to'ldiradi.
+    async function afterCreateEmployee(empId, role) {
+        if (!canManage() || !TRACKED_ROLES.has(role) || !document.getElementById('sattAddTracked')) return '';
+        const tracked = document.getElementById('sattAddTracked').checked;
+        const errors = [];
+        await new Promise(r => setTimeout(r, 1200)); // hr_employees serverga yozilishini kutamiz (state sinxroni)
+        for (let i = 0; i < 3; i++) {
+            try { await api(`/employees/${encodeURIComponent(empId)}/schedule`, { tracked, days: addState.days || defaultDays() }, 'PUT'); break; }
+            catch (e) { if (e.status !== 404 || i === 2) { errors.push('grafik: ' + e.message); break; } await new Promise(r => setTimeout(r, 1500)); }
+        }
+        if (tracked && addState.frames) {
+            try { await api(`/employees/${encodeURIComponent(empId)}/face`, { frames: addState.frames }); }
+            catch (e) { errors.push('yuz rasmi: ' + e.message); }
+        }
+        addState.frames = null;
+        return errors.length ? `Davomat toʻliq saqlanmadi (${errors.join('; ')}). HR → Davomat → Xodimlar va grafik boʻlimida toʻldiring.` : '';
+    }
+
     function init() {
         refreshMe();
         // Kun davomida holat yangilanib tursin (masalan, ertalab ochib qo'yilgan sahifa).
         setInterval(() => { if (document.visibilityState === 'visible' && !overlay) refreshMe(); }, 10 * 60 * 1000);
     }
 
-    window.staffAttendanceUI = { init, renderHr, openCheckSheet, refreshMe };
+    window.staffAttendanceUI = { init, renderHr, openCheckSheet, refreshMe, addEmployeeField, bindAddEmployee, validateAddEmployee, afterCreateEmployee };
 })();

@@ -287,7 +287,8 @@
                 : a ? `<div class="hra-kv"><div><span>Holat</span><b>${chip((ATT[a.status] || [a.status])[0], (ATT[a.status] || [0, 'gray'])[1])}</b></div>${a.inClock ? `<div><span>Keldi</span><b>${esc(a.inClock)}</b></div>` : ''}${a.outClock ? `<div><span>Ketdi</span><b>${esc(a.outClock)}</b></div>` : ''}</div>
                     ${['late', 'absent'].includes(a.status) || a.overridden ? `<button type="button" class="hra-btn hra-btn-soft" data-h-fix="${esc(e.id)}">${ic('note', 18)}Sabab bilan tuzatish</button>` : ''}`
                 : '<p class="hra-muted">Davomat kuzatilmaydi.</p>'}
-                ${sched ? `<div class="hra-kv"><div><span>Grafik</span><b>${esc(sched)}</b></div></div>` : ''}</section>
+                ${sched ? `<div class="hra-kv"><div><span>Grafik</span><b>${esc(sched)}</b></div></div>` : ''}
+                ${se && !se.isTeacher && window.davomat ? `<button type="button" class="hra-btn hra-btn-soft" data-h-sched="${esc(e.id)}">${ic('cal', 18)}Ish grafigi va davomat</button>` : ''}</section>
             <section class="hra-card hra-kv"><div class="hra-h2"><h2>Maʼlumotlar</h2></div>
                 ${e.phone ? `<div><span>Telefon</span><b><a href="tel:${esc(String(e.phone).replace(/[^\d+]/g, ''))}">${esc(e.phone)}</a></b></div>` : ''}
                 ${e.login ? `<div><span>Login</span><b>${esc(e.login)}</b></div>` : ''}
@@ -577,10 +578,16 @@
 
     // ---------- hodisalar ----------
     function onClick(e) {
-        const t = e.target.closest('[data-h-nav],[data-h-back],[data-h-lang],[data-h-stage],[data-h-cand],[data-h-pass],[data-h-reject],[data-h-go],[data-h-day],[data-h-role],[data-h-emp],[data-h-stagesheet],[data-h-schedule],[data-h-came],[data-h-noshow],[data-h-result],[data-h-setstage],[data-h-restore],[data-h-call],[data-h-fix],[data-h-face],[data-h-vac],[data-h-crm],[data-h-profile],[data-h-logout],[data-h-reload]');
+        const t = e.target.closest('[data-h-nav],[data-h-back],[data-h-lang],[data-h-stage],[data-h-cand],[data-h-pass],[data-h-reject],[data-h-go],[data-h-day],[data-h-role],[data-h-emp],[data-h-stagesheet],[data-h-schedule],[data-h-came],[data-h-noshow],[data-h-result],[data-h-setstage],[data-h-restore],[data-h-call],[data-h-fix],[data-h-face],[data-h-vac],[data-h-crm],[data-h-profile],[data-h-logout],[data-h-reload],[data-h-sched]');
         if (!t) return;
         const d = t.dataset;
         if ('hNav' in d) { go(d.hNav); return; }
+        if ('hSched' in d) { // HrSchedule2: grafik va "Davomat kuzatiladi" (js/davomatApp.js)
+            const se = (D.emps || []).find(x => String(x.id) === String(d.hSched)); if (!se) return;
+            const roleName = (window.HR_ROLE_MAP && HR_ROLE_MAP[se.role]) || se.role;
+            window.davomat.openSchedule({ id: se.id, name: se.name, roleLabel: roleName, tracked: se.tracked || !Object.keys(se.days || {}).length, days: se.days || {} }, () => loadAtt());
+            return;
+        }
         if ('hBack' in d) { history.back(); return; }
         if ('hLang' in d) { S.lang = d.hLang; render(false); return; }
         if ('hStage' in d) { S.stage = d.hStage; render(false); return; }
