@@ -27206,8 +27206,8 @@ function openDebtorEditModal(studentId) {
     const students = getItem(STORAGE_KEYS.students, []);
     const s = students.find(s => s.id === studentId);
     if (!s) return;
-    const fld = 'width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font-size:14px;box-sizing:border-box';
-    const lab = 'font-size:12px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:4px';
+    const fld = 'width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:10px;background:var(--card-bg);color:var(--text-primary);font-size:14px;font-family:inherit;box-sizing:border-box';
+    const lab ='font-size:12px;color:var(--text-muted);font-weight:600;display:block;margin-bottom:4px';
     const ro = (label, value) => `<div><span style="${lab}">${label}</span><div class="de-ro" style="${fld};background:var(--bg-soft,#F5F7FB)">${escapeHtml(value)}</div></div>`;
     const history = Array.isArray(s.paymentDueHistory) ? s.paymentDueHistory.slice(-5).reverse() : [];
     const histHtml = history.length ? `<div class="de-hist"><span style="${lab}">Sana oʻzgarishlari</span><ul style="margin:0;padding-left:18px;font-size:13px;color:var(--text-muted)">${history.map(h =>
