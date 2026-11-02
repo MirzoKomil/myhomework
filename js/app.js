@@ -15092,17 +15092,27 @@ function buildReachedFunnel(leads) {
     const withHistory = reached.filter(r => r.hasHistory).length;
     const labels = SALES_MAIN_PATH.map(id => (FUNNEL_STAGES.find(f => f.id === id) || {}).label || id);
     const counts = SALES_MAIN_PATH.map((_, i) => reached.filter(r => r.idx >= i).length);
+    // ROP kompyuter (js/ropDesk): "Eng katta yo'qotish" — faqat bosqichdan CHIQQAN lidlar bo'yicha (hali shu bosqichda
+    // turganlar, jumladan biriktirilmagan yangi lidlar navbati, yo'qotish hisoblanmaydi). Boshqa rollarda o'zgarish yo'q.
+    let low = -1, lowTxt = '';
+    if (window.ropDeskPages?.isRopDesk?.()) {
+        const cur = leads.map(l => salesPathIndex(l?.status));
+        const pass = counts.map((n, i) => { if (!i) return null; const left = counts[i - 1] - cur.filter(c => c === i - 1).length; return left > 0 ? n / left : null; });
+        pass.forEach((v, i) => { if (v != null && v < 1 && (low < 0 || v < pass[low])) low = i; });
+        if (low > 0) lowTxt = `Eng katta yoʻqotish: ${labels[low - 1].toLowerCase()} → ${labels[low].toLowerCase()} (bosqichdan chiqqanlarning ${Math.round((1 - pass[low]) * 100)}% oʻtmadi)`;
+    }
     const rows = counts.map((n, i) => {
         const prev = i ? counts[i - 1] : n;
         const step = i && prev ? Math.round(n / prev * 1000) / 10 : 100;
-        return `<li class="sfx-row"><span class="sfx-name">${escapeHtml(labels[i])}</span>
-            <span class="sfx-track" aria-hidden="true"><span style="width:${counts[0] ? Math.max(n ? 2 : 0, Math.round(n / counts[0] * 100)) : 0}%;background:#0065D6"></span></span>
-            <span class="sfx-val"><b>${n}</b>${i ? ` · ${String(step).replace('.', ',')}% oldingidan` : ''}</span></li>`;
+        return `<li class="sfx-row${i === low ? ' sfx-row--low' : ''}"><span class="sfx-name">${escapeHtml(labels[i])}</span>
+            <span class="sfx-track" aria-hidden="true"><span style="width:${counts[0] ? Math.max(n ? 2 : 0, Math.round(n / counts[0] * 100)) : 0}%;background:${i === low ? '#F79009' : '#0065D6'}"></span></span>
+            <span class="sfx-val"><b>${n}</b>${i ? ` · ${String(step).replace('.', ',')}% oldingidan` : ''}${i === low ? ' <span class="sfx-lowb">↓ eng past</span>' : ''}</span></li>`;
     }).join('');
     return `
     <section class="sfx-card" aria-labelledby="sfxReachH">
         <div class="sfx-card-head"><h2 id="sfxReachH">Qaysi bosqichgacha yetgan</h2><span>har bosqich — shu yerga yoki undan keyingiga yetgan lidlar</span></div>
         <ol class="sfx-rows sfx-rows--wide">${rows}</ol>
+        ${lowTxt ? `<p class="sfx-note sfx-note--low">${escapeHtml(lowTxt)}</p>` : ''}
         <p class="sfx-note">Bosqichlar tarixi ${withHistory} / ${leads.length} ta lidda bor (server 21-oktabrdan yozmoqda). Tarixi yoʻq lidlar hozirgi bosqichi boʻyicha hisoblanadi — muvaffaqiyatsiz/sifatsizga oʻtganlarining oldingi bosqichlari hali koʻrinmaydi, shuning uchun bu raqamlar vaqt oʻtishi bilan aniqlashadi.</p>
     </section>`;
 }

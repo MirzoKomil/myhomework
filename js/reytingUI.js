@@ -12,6 +12,7 @@
         dl: '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>'
     };
     const S = { type: 'asosiy', month: null, data: null, seq: 0 };
+    const RATING_START = '2026-10'; // server/services/teacherRating.js bilan bir xil
     const shift = (key, n) => { const [y, m] = key.split('-').map(Number); const d = new Date(Date.UTC(y, m - 1 + n, 1)); return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`; };
     const label = key => { const [y, m] = String(key || '').split('-').map(Number); return m ? `${MON[m - 1]} ${y}` : ''; };
     const hrList = () => (typeof getItem === 'function' && typeof STORAGE_KEYS !== 'undefined' ? getItem(STORAGE_KEYS.hrEmployees, []) : []);
@@ -47,7 +48,9 @@
         const rows = rowsFor(data, lang);
         const kind = S.type === 'yordamchi' ? 'Yordamchi' : 'Asosiy';
         const key = data.month, cur = data.currentMonth || key;
-        const canPrev = !data.firstMonth || key > data.firstMonth;
+        // Reyting 2026-10 dan boshlangan (server RATING_START) — firstMonth kelmasa ham undan oldinga o'tilmaydi.
+        const minMonth = data.firstMonth && data.firstMonth > RATING_START ? data.firstMonth : RATING_START;
+        const canPrev = key > minMonth;
         const canNext = key < cur;
         const prevName = (MON[Number(String(data.prevMonth || '').slice(5, 7)) - 1] || '').toLowerCase();
         const podium = rows.slice(0, 3).map((r, i) => `<section class="rtg-card rtg-pd${i === 0 ? ' is-first' : ''}" aria-label="${r.rank}-o'rin">

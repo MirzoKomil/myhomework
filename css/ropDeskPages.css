@@ -165,3 +165,56 @@ body.rop-desk-v2 .rdp-arch .arx-row { background: var(--rdp-card); }
     body.rop-desk-v2 .rdp-cols, body.rop-desk-v2 .rdp-cols--st { grid-template-columns: 1fr; }
     body.rop-desk-v2 .rdp-kpis { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ======== Sotuv guruhi (Sotuv bo'limi ichida, body[data-rdp]) ======== */
+body.rop-desk-v2[data-rdp] #rdpSalesHead { padding: 0 0 2px !important; }
+body.rop-desk-v2[data-rdp] #tab-sales > .sales-body { padding-top: 0; }
+body.rop-desk-v2 .rdp-seg { display: inline-flex; padding: 3px; border-radius: 11px; background: var(--rdp-card); border: 1px solid var(--rdp-bd); gap: 2px; }
+body.rop-desk-v2 .rdp-seg button { height: 32px; padding: 0 12px; border: 0; border-radius: 8px; background: none; color: var(--rdp-tx); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+body.rop-desk-v2 .rdp-seg button[aria-pressed="true"] { background: var(--rdp-pri); color: #fff; }
+body.rop-desk-v2 .rdp-seg--dark button[aria-pressed="true"] { background: #0B1220; }
+
+/* Qarzdorlar */
+body.rop-desk-v2[data-rdp="debt"] .dbx-info { display: none; }
+body.rop-desk-v2[data-rdp="debt"] .sfx-tiles { margin-top: 0; }
+body.rop-desk-v2[data-rdp="debt"] .sfx-tiles > .sfx-tile:first-child { background: var(--rdp-red-50); border-color: var(--rdp-red-bd); }
+body.rop-desk-v2[data-rdp="debt"] .dbx-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+body.rop-desk-v2[data-rdp="debt"] .debtors-filters { margin-left: auto; }
+body.rop-desk-v2[data-rdp="debt"] .dbx-seg b { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; margin-left: 4px; border-radius: 999px; background: var(--rdp-bd); font-size: 11.5px; }
+body.rop-desk-v2[data-rdp="debt"] .dbx-seg.is-on b { background: var(--rdp-pri); color: #fff; }
+body.rop-desk-v2[data-rdp="debt"] .dbx-seg[data-debt-quick="overdue"] b { background: var(--rdp-red-50); color: var(--rdp-red); }
+body.rop-desk-v2[data-rdp="debt"] .dbx-acts { white-space: nowrap; }
+body.rop-desk-v2[data-rdp="debt"] .dbx-call, body.rop-desk-v2[data-rdp="debt"] .debtors-dot-menu-btn { display: inline-grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--rdp-bd); background: var(--rdp-card); vertical-align: middle; }
+body.rop-desk-v2[data-rdp="debt"] .dbx-call { background: var(--rdp-grn-50); border-color: #ABEFC6; color: var(--rdp-grn); margin-right: 6px; }
+body.rop-desk-v2[data-rdp="debt"] .dbx-call svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; }
+
+/* Sotuv rejasi */
+body.rop-desk-v2[data-rdp="plan"] .rs-ro { background: var(--rdp-bg); border: 1px solid var(--rdp-bd); border-radius: 12px; padding: 12px 16px; color: var(--rdp-tx); font-weight: 700; margin: 0 0 12px; }
+body.rop-desk-v2[data-rdp="plan"] .sp-params-card { padding: 16px; }
+body.rop-desk-v2[data-rdp="plan"] .sp-params-card .card-header { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; }
+body.rop-desk-v2[data-rdp="plan"] .sp-params-grid { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 10px 14px; }
+body.rop-desk-v2[data-rdp="plan"] .sp-params-grid input[readonly] { background: var(--rdp-bg); border-color: var(--rdp-bd); height: 40px; font-weight: 700; }
+body.rop-desk-v2[data-rdp="plan"] .sp-period-tabs { display: inline-flex; gap: 8px; background: none; padding: 0; }
+body.rop-desk-v2[data-rdp="plan"] .sp-period-tab { border: 1px solid var(--rdp-bd); border-radius: 999px; background: var(--rdp-card); height: 34px; padding: 0 14px; font-weight: 700; }
+body.rop-desk-v2[data-rdp="plan"] .sp-period-tab.active { background: var(--rdp-pri); border-color: var(--rdp-pri); color: #fff; }
+
+/* Reyting */
+body.rop-desk-v2[data-rdp="rating"] #rsRatingBar { display: none !important; }
+body.rop-desk-v2[data-rdp="rating"] .rating-main-tabs-left { background: none; padding: 0; gap: 4px; border-bottom: 1px solid var(--rdp-bd); border-radius: 0; }
+body.rop-desk-v2[data-rdp="rating"] .rating-main-tab { background: none !important; box-shadow: none !important; border-radius: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; color: var(--rdp-mt); }
+body.rop-desk-v2[data-rdp="rating"] .rating-main-tab.active { color: var(--rdp-pri); border-bottom-color: var(--rdp-pri); }
+body.rop-desk-v2[data-rdp="rating"] .rating-main-tab .rmt-ic { display: none; }
+body.rop-desk-v2[data-rdp="rating"] #ratingPeriodFilter { background: var(--rdp-card); border: 1px solid var(--rdp-bd); border-radius: 11px; padding: 3px; }
+body.rop-desk-v2[data-rdp="rating"] #ratingPeriodFilter .lang-btn--active { background: var(--rdp-pri); color: #fff; }
+body.rop-desk-v2[data-rdp="rating"] .mot-hero { background: linear-gradient(100deg, #0B1B3A, #0E2A5C 70%, #13336E); }
+body.rop-desk-v2[data-rdp="rating"] .mot-hero .mot-prize-img, body.rop-desk-v2[data-rdp="rating"] .rtx-card-h > img { display: none; }
+
+/* Voronka (sales-stats) */
+body.rop-desk-v2[data-rdp="funnel"] .sfx-row--low .sfx-name { color: #93370D; font-weight: 800; }
+body.rop-desk-v2 .sfx-lowb { margin-left: 6px; padding: 1px 6px; border-radius: 6px; background: var(--rdp-amb-50); color: #93370D; font-size: 11.5px; font-weight: 800; }
+body.rop-desk-v2 .sfx-note--low { color: #93370D !important; font-weight: 700; }
+body.rop-desk-v2[data-rdp="plan"] .sp-params-grid > * { min-width: 0; }
+body.rop-desk-v2[data-rdp="plan"] .sp-params-grid input { width: 100%; box-sizing: border-box; }
+body.rop-desk-v2[data-rdp="funnel"] .sfx-rows { gap: 0; }
+body.rop-desk-v2[data-rdp="funnel"] .sfx-row { padding-top: 5px; padding-bottom: 5px; min-height: 0; }
+body.rop-desk-v2[data-rdp="funnel"] .sfx-track { height: 12px; }
