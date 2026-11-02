@@ -148,6 +148,13 @@ DO $$ BEGIN
   ALTER TABLE school_requests ADD CONSTRAINT school_requests_type_check CHECK (type IN ('leave','close','open','assist_late','student','assist_finance'));
  END IF;
 END $$;
+-- Sotuv menejerining "Muddatni surish so'rovi" (Qarzdorlar): 'due' turi — to'lov sanasi/izoh/eslatma, ROP yoki admin tasdiqlaydi.
+DO $$ BEGIN
+ IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='school_edit_requests_kind_check' AND pg_get_constraintdef(oid) LIKE '%due%') THEN
+  ALTER TABLE school_edit_requests DROP CONSTRAINT IF EXISTS school_edit_requests_kind_check;
+  ALTER TABLE school_edit_requests ADD CONSTRAINT school_edit_requests_kind_check CHECK (kind IN ('tariff','teacher','payment','due'));
+ END IF;
+END $$;
 -- Ilgari qabul qilingan qoplash qarorlari o'quvchi "O'zgarishlar tarixi"ga bir marta ko'chiriladi (qayta ishga tushirilsa xavfsiz).
 INSERT INTO school_student_audit (student_id,action,changes,reason,actor_id,actor_name,actor_role,created_at)
  SELECT m.student_id, CASE WHEN m.status='approved' THEN 'makeup-approved' ELSE 'makeup-rejected' END,

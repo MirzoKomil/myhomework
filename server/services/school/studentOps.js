@@ -41,7 +41,8 @@ async function bumpRev(db, id) {
 }
 // db.saveStudents chaqiradi: CRM nusxasi eski bo'lsa (schoolRev kichik), server boshqaradigan maydonlar saqlanib qoladi.
 const SCHOOL_EXTRA = ['frozen', 'frozenAt', 'status', 'inactiveAt', 'paymentDueDate', 'pendingTeacherChange', 'passwordHash', 'mustChangePassword',
-    'login', 'parentPhone', 'tariff', 'monthlyPrice', 'freezeShiftDays', 'progressArchivedAt', 'pendingScheduleChange', 'schoolRev'];
+    'login', 'parentPhone', 'tariff', 'monthlyPrice', 'freezeShiftDays', 'progressArchivedAt', 'pendingScheduleChange', 'schoolRev',
+    'paymentDueHistory', 'comment', 'note'];
 function protectSchoolFields(incoming, extra, existing) {
     if (!existing) return;
     const have = Number(existing.schoolRev || 0), sent = Number(incoming.schoolRev || 0);
@@ -63,6 +64,10 @@ function soldBy(student, managerId) {
 const DIRECT_FIELDS = ['name', 'phone', 'parentPhone', 'login', 'newPassword', 'telegram'];
 const SCHEDULE_FIELDS = ['lessonDay', 'lessonTime', 'lessonDuration'];
 const TARIFF_FIELDS = ['tariff', 'monthlyPrice', 'lessonDuration'];
+// Qarzdorlar: kelishilgan to'lov sanasi, izoh, eslatma. Sotuv menejeri — "Muddatni surish so'rovi" (kind='due',
+// ROP/admin tasdiqlaydi); admin/ROP — darhol. To'langan/qarz summalari bu yerda o'zgarmaydi (Moliya reyestri).
+const DUE_FIELDS = ['paymentDueDate', 'comment', 'note'];
+const dueVal = (k, v) => String(v ?? '').trim().slice(0, k === 'paymentDueDate' ? 10 : 500);
 
 function cleanPhone(p) {
     const d = String(p || '').replace(/\D/g, '');
@@ -126,6 +131,22 @@ async function applyEdit(db, actor, studentId, changes, reason, { requestId = nu
         if (!Number.isInteger(m) || m < 0 || m > 50000000) throw fail(400, 'Narx noto\'g\'ri');
         if (m !== Number(extra.monthlyPrice || 0)) { diff.monthlyPrice = [extra.monthlyPrice || 0, m]; extra.monthlyPrice = m; }
     }
+    if ('paymentDueDate' in changes) {
+        const d = dueVal('paymentDueDate', changes.paymentDueDate);
+        if (d && !T.isDate(d)) throw fail(400, 'To\'lov sanasi noto\'g\'ri');
+        const prev = dueVal('paymentDueDate', extra.paymentDueDate);
+        if (d !== prev) {
+            diff.paymentDueDate = [prev, d];
+            extra.paymentDueDate = d;
+            extra.paymentDueHistory = [...(Array.isArray(extra.paymentDueHistory) ? extra.paymentDueHistory : []),
+                { from: prev, to: d, reason, by: actor.name || '', byId: actor.id || '', at: now.toISOString(), ...(requestId ? { requestId } : {}) }].slice(-50);
+        }
+    }
+    for (const k of ['comment', 'note']) {
+        if (!(k in changes)) continue;
+        const v = dueVal(k, changes[k]);
+        if (v !== String(extra[k] || '')) { diff[k] = [extra[k] || '', v]; extra[k] = v; }
+    }
     const day = 'lessonDay' in changes ? Number(changes.lessonDay) : st.day;
     const time = 'lessonTime' in changes ? String(changes.lessonTime) : st.time;
     const dur = 'lessonDuration' in changes ? Number(changes.lessonDuration) : st.duration;
@@ -158,6 +179,9 @@ async function edit(db, actor, studentId, body, { managerId = null, now = new Da
     const row = await lockStudent(db, studentId);
     if (!soldBy(extraOf(row), managerId)) throw fail(403, 'Faqat o\'zingiz sotgan o\'quvchini tahrirlaysiz');
     const direct = Object.fromEntries(Object.entries(changes).filter(([k]) => DIRECT_FIELDS.includes(k)));
+    const exd = extraOf(row).extra;
+    const due = Object.fromEntries(Object.entries(changes).filter(([k, v]) => DUE_FIELDS.includes(k) && dueVal(k, v) !== dueVal(k, exd[k])).map(([k, v]) => [k, dueVal(k, v)]));
+    if (due.paymentDueDate && !T.isDate(due.paymentDueDate)) throw fail(400, 'To\'lov sanasi noto\'g\'ri');
     // O'zgarishsiz qiymatlar so'rovga kirmaydi (60 → 60 kabi "bo'sh" so'rov ROP navbatiga tushmasin).
     const { extra: ex0, ...st0 } = extraOf(row);
     const cur = { lessonDay: st0.day, lessonTime: st0.time, lessonDuration: st0.duration, tariff: ex0.tariff || '', monthlyPrice: Number(ex0.monthlyPrice || 0) };
@@ -166,11 +190,13 @@ async function edit(db, actor, studentId, body, { managerId = null, now = new Da
     if (Object.keys(tariff).length && changes.effectiveFrom) tariff.effectiveFrom = changes.effectiveFrom;
     const teacherSame = changes.teacherId && String(changes.teacherId) === String(st0.teacherId || '')
         && (changes.lessonDay == null || Number(changes.lessonDay) === Number(st0.day)) && (changes.lessonTime == null || String(changes.lessonTime) === String(st0.time));
-    if (!Object.keys(direct).length && !Object.keys(tariff).length && (!changes.teacherId || teacherSame))
+    if (!Object.keys(direct).length && !Object.keys(tariff).length && !Object.keys(due).length && (!changes.teacherId || teacherSame))
         throw fail(400, 'O\'zgarish yo\'q — yangi qiymatlar hozirgisi bilan bir xil');
     const out = { applied: null, request: null };
     if (Object.keys(direct).length) out.applied = await applyEdit(db, actor, studentId, direct, reason, { now });
     if (Object.keys(tariff).length) out.request = await createRequest(db, actor, studentId, 'tariff', tariff, reason);
+    if (Object.keys(due).length) out.request = await createRequest(db, actor, studentId, 'due',
+        { ...due, ...('paymentDueDate' in due ? { prevDueDate: dueVal('paymentDueDate', exd.paymentDueDate) } : {}) }, reason);
     if (changes.teacherId && !teacherSame) out.request = await createRequest(db, actor, studentId, 'teacher',
         { teacherId: changes.teacherId, from: changes.teacherFrom, lessonDay: changes.lessonDay, lessonTime: changes.lessonTime }, reason);
     return out;
@@ -197,6 +223,8 @@ async function decideRequest(db, actor, requestId, { decision, note = '' }, hook
     if (status === 'approved') {
         const ch = req.changes || {};
         if (req.kind === 'tariff') await applyEdit(db, actor, req.student_id, ch, `So'rov №${req.number}: ${req.reason}`, { requestId });
+        else if (req.kind === 'due') await applyEdit(db, actor, req.student_id, Object.fromEntries(Object.entries(ch).filter(([k]) => DUE_FIELDS.includes(k))),
+            `So'rov №${req.number}: ${req.reason}`, { requestId });
         else if (req.kind === 'teacher') await changeTeacher(db, actor, req.student_id, { teacherId: ch.teacherId, from: ch.from, lessonDay: ch.lessonDay, lessonTime: ch.lessonTime,
             reason: `So'rov №${req.number}: ${req.reason}` }, { requestId });
         else if (req.kind === 'payment') {
@@ -250,6 +278,16 @@ async function checkRequest(db, requestId, now = new Date()) {
             const from = ch.effectiveFrom && T.isDate(ch.effectiveFrom) ? ch.effectiveFrom : at.date;
             checks.push({ level: 'warn', text: from > at.date ? `Joriy oy to'lovi o'zgarmaydi — yangi narx ${from} dan keyingi hisobga` : 'Joriy oy to\'lovi avtomatik qayta hisoblanmaydi — farqni Moliyada tekshiring' });
         }
+    }
+    if (req.kind === 'due' && 'paymentDueDate' in ch) {
+        const cur = dueVal('paymentDueDate', extra.paymentDueDate), nd = dueVal('paymentDueDate', ch.paymentDueDate);
+        if (!nd) checks.push({ level: 'warn', text: 'Kelishilgan sana olib tashlanadi — qarzdor "Sana kelishilmagan" bo\'ladi' });
+        else {
+            const days = T.isDate(cur) ? T.daysBetween(cur, nd) : null;
+            checks.push({ level: nd < at.date ? 'warn' : 'ok', text: `To'lov sanasi: ${cur || '—'} → ${nd}${days != null ? ` (${days > 0 ? '+' : ''}${days} kun)` : ''}${nd < at.date ? ' · bu sana o\'tib ketgan' : ''}` });
+        }
+        if (ch.prevDueDate != null && String(ch.prevDueDate) !== cur) checks.push({ level: 'warn', text: `So'rovdan keyin sana o'zgargan: ${ch.prevDueDate || '—'} → ${cur || '—'}` });
+        if (!(Number(extra.debtAmount || 0) > 0)) checks.push({ level: 'warn', text: 'O\'quvchida hozir qoldiq yo\'q — surish kerak bo\'lmasligi mumkin' });
     }
     if (!checks.length) checks.push({ level: 'ok', text: 'Tekshiradigan jadval yoki tarif o\'zgarishi yo\'q' });
     return { checks, ok: !checks.some(c => c.level === 'bad'), checkedAt: now.toISOString() };
