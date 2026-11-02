@@ -47,4 +47,15 @@ test('STT: no key → null; Gemini preferred; provider error → null; ElevenLab
   assert.equal(o.headers['xi-api-key'],'k');assert.equal(o.body.get('language_code'),'rus');return {ok:true,json:async()=>({text:'Меня зовут'})};}});
  assert.equal(e.text,'Меня зовут');
 });
+test('TTS: missing model (404) → next model; PCM wrapped as WAV; no key → null',async()=>{
+ assert.equal(await miniapp.synthesize('Привет',{env:{}}),null);
+ const seen=[];
+ const r=await miniapp.synthesize('Меня зовут Тимур',{env:{GEMINI_API_KEY:'g',GEMINI_TTS_VOICE:'Kore'},fetchImpl:async(url,o)=>{
+  seen.push(url.split('/models/')[1].split(':')[0]);
+  if(seen.length===1)return {ok:false,status:404};
+  const body=JSON.parse(o.body);assert.deepEqual(body.generationConfig.responseModalities,['AUDIO']);
+  assert.equal(body.generationConfig.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName,'Kore');assert.match(body.contents[0].parts[0].text,/Меня зовут Тимур$/);
+  return {ok:true,json:async()=>({candidates:[{content:{parts:[{inlineData:{mimeType:'audio/L16;codec=pcm;rate=24000',data:Buffer.alloc(480).toString('base64')}}]}}]})};}});
+ assert.equal(seen.length,2);assert.equal(r.mime,'audio/wav');assert.equal(r.bytes.length,44+480);assert.equal(r.bytes.toString('ascii',0,4),'RIFF');
+});
 module.exports={sign,TOKEN};

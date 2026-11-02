@@ -13,9 +13,9 @@ if(url){const u=new URL(url);if(u.hostname!=='127.0.0.1'||!/^\/payroll_test_[a-z
 test('1-dars mini app: open, steps scored once, voice, request → CRM — synthetic data, no Telegram calls',{skip:!url},async t=>{
  const pool=new Pool({connectionString:url});
  const initData=id=>sign({auth_date:String(Math.floor(Date.now()/1000)),user:JSON.stringify({id,first_name:'Dilshod',last_name:'K'}),start_param:'tg_target1'});
- let heard='меня зовут дилшод мне 32 года я работаю в банке';
+ let heard='меня зовут дилшод мне 32 года я работаю в банке';const ttsCalls=[];
  const app=express();app.use(express.json());
- app.use('/api/miniapp',require('../server/routes/miniapp')({pool,token:TOKEN,transcribe:async()=>heard===null?null:{text:heard},
+ app.use('/api/miniapp',require('../server/routes/miniapp')({pool,token:TOKEN,transcribe:async()=>heard===null?null:{text:heard},synthesize:async t=>{ttsCalls.push(t);return {mime:'audio/wav',bytes:Buffer.from('RIFF-'+t)};},
   authRequired:(req,res,next)=>{req.user=JSON.parse(req.get('X-Test-User')||'null');req.user?next():res.status(401).end();},
   getSalesManagerIdForUser:async id=>id==='u-sardor'?'m-sardor':null}));
  const server=app.listen(0);const base=`http://127.0.0.1:${server.address().port}/api/miniapp`;
@@ -45,6 +45,16 @@ test('1-dars mini app: open, steps scored once, voice, request → CRM — synth
    const r=await fetch(base+'/open',{method:'POST'});assert.equal(r.status,401);
    const forged=await fetch(base+'/open',{method:'POST',headers:{'X-Telegram-Init-Data':initData(801).replace('Dilshod','X')}});assert.equal(forged.status,401);
    assert.equal((await pool.query('SELECT COUNT(*) FROM domwork_miniapp_progress')).rows[0].count,'0');
+  });
+  await t.test('teacher voice (TTS): generated once and cached; stress marks ignored; non-Russian text refused; needs Telegram signature',async()=>{
+   const tts=async(text,id=801)=>fetch(base+'/tts',{method:'POST',headers:{'X-Telegram-Init-Data':initData(id),'Content-Type':'application/json'},body:JSON.stringify({text})});
+   assert.equal((await fetch(base+'/tts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:'Привет'})})).status,401);
+   let r=await tts('Меня́ зову́т Тиму́р.');assert.equal(r.status,200);assert.equal(r.headers.get('content-type'),'audio/wav');
+   assert.equal(Buffer.from(await r.arrayBuffer()).toString(),'RIFF-Меня зовут Тимур.');
+   r=await tts('Меня зовут Тимур.',802);assert.equal(r.status,200);
+   assert.deepEqual(ttsCalls,['Меня зовут Тимур.']); // ikkinchi lidga — keshdan
+   assert.equal((await tts('Hello <script>')).status,400);
+   assert.equal((await tts('я'.repeat(200))).status,400);
   });
   await t.test('first open creates visitor + progress and scores +2 once; reopen does not re-score',async()=>{
    const a=await call('/open');assert.equal(a.status,200);

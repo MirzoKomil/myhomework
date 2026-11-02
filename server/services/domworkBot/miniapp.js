@@ -38,7 +38,14 @@ CREATE TABLE IF NOT EXISTS domwork_miniapp_voice (
     stt JSONB,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
-CREATE INDEX IF NOT EXISTS domwork_miniapp_voice_tid ON domwork_miniapp_voice(telegram_id, created_at DESC);`;
+CREATE INDEX IF NOT EXISTS domwork_miniapp_voice_tid ON domwork_miniapp_voice(telegram_id, created_at DESC);
+CREATE TABLE IF NOT EXISTS domwork_miniapp_tts (
+    hash TEXT PRIMARY KEY,
+    text TEXT NOT NULL,
+    mime TEXT NOT NULL,
+    bytes BYTEA NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);`;
 async function init(db) {
     await db.query(SCHEMA);
     await db.query('ALTER TABLE domwork_bot_visitors ADD COLUMN IF NOT EXISTS sla_alert_at TIMESTAMPTZ');
@@ -125,6 +132,58 @@ async function elevenlabs(buffer, mime, env, fetchImpl, signal) {
     if (!res.ok) return null;
     const body = await res.json();
     return { text: String(body.text || '').slice(0, 500), provider: 'elevenlabs' };
+}
+
+// ── Ustoz ovozi (Gemini TTS) ───────────────────────────────────────────────
+// Ruscha gap bir marta yaratiladi va bazada saqlanadi — keyingi lidlarga tayyor holda beriladi.
+// Model nomlari o'zgarib turadi: GEMINI_TTS_MODEL, keyin ro'yxatdagilar ketma-ket sinab ko'riladi.
+const TTS_MODELS = ['gemini-3.8-flash-tts', 'gemini-3.1-flash-tts-preview', 'gemini-2.5-flash-preview-tts'];
+const TTS_STYLE = 'Read in clear, natural Russian like a warm, friendly language teacher speaking to an adult beginner — calm pace, precise pronunciation:';
+const ttsText = t => String(t || '').normalize('NFC').replace(/\u0301/g, '').replace(/[«»"]/g, '').replace(/\s+/g, ' ').trim();
+function wav(pcm, rate = 24000) {
+    const h = Buffer.alloc(44);
+    h.write('RIFF', 0); h.writeUInt32LE(36 + pcm.length, 4); h.write('WAVE', 8); h.write('fmt ', 12);
+    h.writeUInt32LE(16, 16); h.writeUInt16LE(1, 20); h.writeUInt16LE(1, 22); h.writeUInt32LE(rate, 24); h.writeUInt32LE(rate * 2, 28);
+    h.writeUInt16LE(2, 32); h.writeUInt16LE(16, 34); h.write('data', 36); h.writeUInt32LE(pcm.length, 40);
+    return Buffer.concat([h, pcm]);
+}
+let ttsModelOk = null;
+async function synthesize(text, { env = process.env, fetchImpl = globalThis.fetch } = {}) {
+    if (!env.GEMINI_API_KEY) return null;
+    const voice = /^[A-Za-z]{2,20}$/.test(env.GEMINI_TTS_VOICE || '') ? env.GEMINI_TTS_VOICE : 'Kore';
+    const models = [...new Set([env.GEMINI_TTS_MODEL, ttsModelOk, ...TTS_MODELS].filter(m => /^[a-z0-9.-]{3,60}$/.test(m || '')))];
+    for (const model of models) {
+        const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 25000);
+        try {
+            const res = await fetchImpl(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+                method: 'POST', signal: controller.signal, headers: { 'Content-Type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY },
+                body: JSON.stringify({ contents: [{ parts: [{ text: `${TTS_STYLE} ${text}` }] }],
+                    generationConfig: { responseModalities: ['AUDIO'], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } } } })
+            });
+            if (res.status === 404 || res.status === 400) continue; // bu model yo'q — keyingisi
+            if (!res.ok) { console.error('[miniapp] tts status', res.status); return null; }
+            const part = ((await res.json()).candidates?.[0]?.content?.parts || []).find(p => p.inlineData?.data);
+            if (!part) continue;
+            ttsModelOk = model;
+            const mime = String(part.inlineData.mimeType || '');
+            const raw = Buffer.from(part.inlineData.data, 'base64');
+            if (/wav|mpeg|mp3|ogg/.test(mime)) return { mime: mime.split(';')[0], bytes: raw };
+            const rate = Number((/rate=(\d+)/.exec(mime) || [])[1]) || 24000;
+            return { mime: 'audio/wav', bytes: wav(raw, rate) };
+        } catch { return null; } finally { clearTimeout(timer); }
+    }
+    return null;
+}
+// Faqat kirill matn (ruscha gap), 2–160 belgi. Yangi gap yaratish — kuniga cheklangan (keshdagilar cheksiz).
+async function ttsCached(db, text) {
+    const t = ttsText(text);
+    if (t.length < 2 || t.length > 160 || !/[а-яё]/i.test(t) || /[^а-яёА-ЯЁ0-9\s.,!?:;—–\-()…'’]/.test(t)) throw httpError(400, 'Matn noto‘g‘ri');
+    const hash = require('node:crypto').createHash('sha256').update(t).digest('hex').slice(0, 40);
+    return { hash, text: t, row: (await db.query('SELECT mime,bytes FROM domwork_miniapp_tts WHERE hash=$1', [hash])).rows[0] || null };
+}
+async function ttsDailyCount(db) { return (await db.query("SELECT COUNT(*)::int AS n FROM domwork_miniapp_tts WHERE created_at>NOW()-INTERVAL '1 day'")).rows[0].n; }
+async function ttsStore(db, hash, text, audio) {
+    await db.query('INSERT INTO domwork_miniapp_tts(hash,text,mime,bytes) VALUES($1,$2,$3,$4) ON CONFLICT(hash) DO NOTHING', [hash, text, audio.mime, audio.bytes]);
 }
 
 // ── Holat ─────────────────────────────────────────────────────────────────
@@ -365,4 +424,4 @@ async function salesSla(db, now = new Date()) {
     return rows.length;
 }
 
-module.exports = { init, nudge, salesSla, SCHEMA, POINTS, STEPS, verifyInitData, matchSpeech, transcribe, open, state, track, saveVoice, scoreVoice, voiceForStaff, request };
+module.exports = { synthesize, ttsCached, ttsDailyCount, ttsStore, wav, init, nudge, salesSla, SCHEMA, POINTS, STEPS, verifyInitData, matchSpeech, transcribe, open, state, track, saveVoice, scoreVoice, voiceForStaff, request };

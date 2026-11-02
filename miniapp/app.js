@@ -44,20 +44,29 @@
   let ruVoice = null;
   function pickVoice() { try { ruVoice = speechSynthesis.getVoices().find(v => /^ru/i.test(v.lang)) || null; } catch { ruVoice = null; } }
   try { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; } catch { /* yo'q */ }
-  function say(text, key) {
+  // Ustoz ovozi: server (Gemini TTS, keshlangan) → bo'lmasa brauzer ovozi. Bir vaqtda bitta audio.
+  const audioCache = new Map(); let playing = null;
+  async function teacherAudio(text) {
+    const key = noStress(text);
+    if (audioCache.has(key)) return audioCache.get(key);
+    const p = fetch('/api/miniapp/tts', { method: 'POST', headers: { 'X-Telegram-Init-Data': initData, 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) })
+      .then(r => r.ok ? r.blob() : Promise.reject(r.status)).then(b => URL.createObjectURL(b));
+    audioCache.set(key, p); p.catch(() => audioCache.delete(key));
+    return p;
+  }
+  async function say(text, key, btn) {
+    try { playing?.pause(); speechSynthesis.cancel(); } catch { /* */ }
     const file = key && L.AUDIO[key];
-    if (file) { new Audio('audio/' + file).play().catch(() => tts(text)); return; }
-    tts(text);
+    if (file) { playing = new Audio('audio/' + file); return playing.play().catch(() => tts(text)); }
+    if (!initData) return tts(text);
+    btn?.classList.add('loading');
+    try { playing = new Audio(await teacherAudio(text)); await playing.play(); }
+    catch { tts(text); }
+    finally { btn?.classList.remove('loading'); }
   }
-  function tts(text) {
-    try {
-      speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(noStress(text));
-      u.lang = 'ru-RU'; u.rate = 0.85; if (ruVoice) u.voice = ruVoice;
-      speechSynthesis.speak(u);
-    } catch { /* ovoz yo'q — matn baribir ko'rinib turadi */ }
-  }
-  const canSpeak = () => { try { return 'speechSynthesis' in window && (!!ruVoice || Object.keys(L.AUDIO).length > 0 || speechSynthesis.getVoices().length === 0); } catch { return false; } };
+  // Ekrandagi gaplarni oldindan tayyorlab qo'yish (birinchi bosishda kutish bo'lmasin).
+  function prefetch(texts) { texts.slice(0, 8).reduce((chain, t) => chain.then(() => teacherAudio(t).catch(() => null)), Promise.resolve()); }
+  const canSpeak = () => !!initData || (() => { try { return 'speechSynthesis' in window; } catch { return false; } })();
 
   // ── Navigatsiya (Telegram BackButton) ──────────────────────────────────
   const stack = [];
@@ -73,7 +82,7 @@
   let timers = [];
   const later = (fn, ms) => timers.push(setTimeout(fn, ms));
   const every = (fn, ms) => timers.push(setInterval(fn, ms));
-  function stopTimers() { timers.forEach(t => { if (t && t.off) return t.off(); clearTimeout(t); clearInterval(t); }); timers = []; recorder.stop(true); try { speechSynthesis.cancel(); } catch { /* */ } }
+  function stopTimers() { timers.forEach(t => { if (t && t.off) return t.off(); clearTimeout(t); clearInterval(t); }); timers = []; recorder.stop(true); try { playing?.pause(); speechSynthesis.cancel(); } catch { /* */ } }
 
   function render() {
     const cur = stack[stack.length - 1];
@@ -114,7 +123,11 @@
   const bar = (inner) => `<div class="bar">${inner}</div>`;
   const top = (label, cur, tot) => `<div class="top"><div class="row"><span>${esc(label)}</span><span>${cur} / ${tot}</span></div><div class="prog" role="progressbar" aria-label="${esc(label)}" aria-valuenow="${cur}" aria-valuemin="0" aria-valuemax="${tot}"><i style="width:${Math.round(cur * 100 / tot)}%"></i></div></div>`;
   const spkBtn = (text, label = '') => canSpeak() ? `<button class="spk" data-say="${esc(text)}" aria-label="Tinglash: ${esc(noStress(text))}">${ICON.spk()}${label}</button>` : '';
-  function wireSay(el) { el.querySelectorAll('[data-say]').forEach(b => b.onclick = e => { e.stopPropagation(); haptic(); say(b.dataset.say); }); }
+  function wireSay(el) {
+    const all = [...el.querySelectorAll('[data-say]')];
+    all.forEach(b => b.onclick = e => { e.stopPropagation(); haptic(); say(b.dataset.say, null, b); });
+    if (initData) prefetch(all.map(b => b.dataset.say));
+  }
   function confetti(el) {
     const box = document.createElement('div'); box.className = 'confetti'; box.setAttribute('aria-hidden', 'true');
     const colors = ['#2F5BFF', '#087A4A', '#F5B70A', '#5A2FD6', '#D0342C'];

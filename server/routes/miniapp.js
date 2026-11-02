@@ -6,7 +6,7 @@ const queue = require('../services/domworkBot/queue');
 const miniapp = require('../services/domworkBot/miniapp');
 const { configuration } = require('../services/domworkBot/config');
 
-module.exports = function createRouter({ pool, authRequired, getSalesManagerIdForUser, token = configuration().token, transcribe = miniapp.transcribe }) {
+module.exports = function createRouter({ pool, authRequired, getSalesManagerIdForUser, token = configuration().token, transcribe = miniapp.transcribe, synthesize = miniapp.synthesize }) {
     const router = express.Router();
     router.use((req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
     const handle = fn => async (req, res) => {
@@ -29,6 +29,22 @@ module.exports = function createRouter({ pool, authRequired, getSalesManagerIdFo
         const stt = await transcribe(req.body, mime.split(';')[0]); // tranzaksiyadan tashqarida — tarmoq kutilishi qulfni ushlamaydi
         return queue.transaction(pool, db => miniapp.scoreVoice(db, a, saved.id, stt, { skip: [].concat(req.query.skip || []).slice(0, 3), practice: req.query.practice === '1' }));
     }));
+
+    // Ustoz ovozi: ruscha gap → audio (keshdan yoki Gemini TTS). Yangi gaplar kuniga 400 tagacha.
+    router.post('/tts', async (req, res) => {
+        try {
+            auth(req);
+            const c = await queue.transaction(pool, db => miniapp.ttsCached(db, req.body?.text));
+            let audio = c.row;
+            if (!audio) {
+                if ((await queue.transaction(pool, db => miniapp.ttsDailyCount(db))) >= 400) throw Object.assign(Error('Bugungi limit'), { status: 429 });
+                audio = await synthesize(c.text);
+                if (!audio) throw Object.assign(Error('Ovoz hozircha yo‘q'), { status: 503 });
+                await queue.transaction(pool, db => miniapp.ttsStore(db, c.hash, c.text, audio));
+            }
+            res.set('Content-Type', audio.mime).set('Cache-Control', 'private, max-age=86400').send(audio.bytes);
+        } catch (error) { res.status(error.status || 500).json({ error: error.status ? error.message : 'Xatolik' }); }
+    });
 
     // CRM: lid kartasida ovozni tinglash.
     router.get('/voice/:id', authRequired, async (req, res) => {
