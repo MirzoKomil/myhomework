@@ -43,6 +43,11 @@
         else switchTab(t, ctx || {});
         mark();
     };
+    // B qismi (js/ropDesk/pages-common.js): window.ropDeskPages.open(key) — check, sla, lock, arch, funnel, rating,
+    // plan, debt, script, sms, stu, tg. Bo'lmasa (B fayllari yuklanmagan) — quyidagi mavjud joylar ochiladi.
+    const B_KEYS = new Set(['check', 'sla', 'lock', 'arch', 'funnel', 'rating', 'plan', 'debt', 'script', 'sms', 'stu', 'tg']);
+    const viaB = k => { if (!B_KEYS.has(k) || typeof window.ropDeskPages?.open !== 'function') return false; activePage = null; let ok = false; try { ok = window.ropDeskPages.open(k) !== false; } catch (e) { console.warn('[ropDesk] ropDeskPages.open', e.message); } if (ok) mark(); return ok; };
+    const go = k => viaB(k) || GO[k]?.();
     const GO = {
         home: () => tab('dashboard'),
         leads: () => { RD.leads?.clearBadgeFilter?.({ silent: true }); tab('sales', { salesSection: 'leads' }); },
@@ -76,6 +81,7 @@
         if (activePage) return activePage === 'approvals' ? 'check' : activePage === 'stale' ? 'lock' : activePage === 'archive' ? 'arch' : activePage === 'debtors' ? 'debt' : activePage === 'scripts' ? 'script' : activePage === 'groups' ? 'tg' : activePage;
         // Sinov qo'yish / Dars jadvali v3 ustidagi sahifa — "Dars jadvali".
         if (document.body.classList.contains('ss-page-open') || document.body.classList.contains('jv3-open')) return 'cal';
+        try { const bk = window.ropDeskPages?.activeKey?.(); if (bk) return bk; } catch (e) { /* B qismi yo'q */ }
         const t = document.querySelector('.tab-content.active')?.id?.replace(/^tab-/, '') || '';
         const c = typeof _tabContext !== 'undefined' ? _tabContext : {};
         const S = { leads: 'leads', 'book-roadmap': 'leads', 'sales-stats': 'funnel', rating: 'rating', 'sales-plan': 'plan', debtors: 'debt', scripts: 'script' };
@@ -141,7 +147,7 @@
             const a = e.target.closest('[data-rk]');
             if (a) {
                 e.preventDefault();
-                GO[a.dataset.rk]?.();
+                go(a.dataset.rk);
                 return;
             }
             const b = e.target.closest('[data-rk-badge]');
@@ -149,8 +155,7 @@
                 e.preventDefault();
                 const k = b.dataset.rkBadge;
                 if (k === 'leads') { closeOverlays(); activePage = null; RD.leads?.openUnassigned?.(); mark(); }
-                else if (k === 'sla') { if (!page('sla')) GO.sla(); RD.pages.sla?.focus?.('admin'); }
-                else GO[k]?.();
+                else go(k);
                 return;
             }
             const gb = e.target.closest('[data-rk-grp]');
@@ -304,7 +309,7 @@
         const when = x => `${x.at.date === t0 ? 'bugun' : `${Number(x.at.date.slice(8))}-${MONS[Number(x.at.date.slice(5, 7)) - 1]}`} ${String(Math.floor(x.at.min / 60)).padStart(2, '0')}:${String(x.at.min % 60).padStart(2, '0')}`;
         box.innerHTML = `<button type="button" class="card rk-tile" data-rk-go="check"><span class="rk-tile-i rk-tone-blue">${SVG(IC.check, 22)}</span><span class="rk-tile-t"><strong>Tasdiq kutmoqda</strong><span>${apErr ? 'Yuklab boʻlmadi — qayta urinib koʻring' : 'Toʻlov, tarif, ustoz almashtirish → Oʻquvchilar · Sotuv tahrirlari'}</span></span><strong class="rk-tile-n">${apCount == null ? (apErr ? '—' : '…') : apCount}</strong></button>
             <button type="button" class="card rk-tile" data-rk-go="trial"><span class="rk-tile-i rk-tone-purple">${SVG(IC.cal, 22)}</span><span class="rk-tile-t"><strong>Sinov ustozsiz</strong><span>${tr.length ? esc(tr.slice(0, 2).map(when).join(' · ')) + ' → Sinov darslari · nazorat' : 'Hammasiga ustoz biriktirilgan'}</span></span><strong class="rk-tile-n">${tr.length}</strong></button>`;
-        box.querySelectorAll('[data-rk-go]').forEach(b => b.addEventListener('click', () => GO[b.dataset.rkGo]?.()));
+        box.querySelectorAll('[data-rk-go]').forEach(b => b.addEventListener('click', () => go(b.dataset.rkGo)));
     }
     // Menejerlar · Bugun: holat (bugungi davomat), qo'ng'iroq / maqsad, sotuv, qotgan lid, ochiq SLA.
     function dayRows(langs) {
@@ -369,7 +374,7 @@
         loadApprovalsCount(root);
         managersPeriod(root);
         // "Yana N ta — Lidlarda" → SLA sahifasi (B qismi bo'lsa).
-        root.querySelectorAll('.ahx-link[data-rpx-go="leads"]').forEach(a => { if (/^Yana/.test(a.textContent) && RD.pages.sla) { const c = a.cloneNode(true); c.textContent = a.textContent.replace('Lidlarda', 'SLA'); c.removeAttribute('data-rpx-go'); c.addEventListener('click', () => GO.sla()); a.replaceWith(c); } });
+        root.querySelectorAll('.ahx-link[data-rpx-go="leads"]').forEach(a => { if (/^Yana/.test(a.textContent) && (RD.pages.sla || window.ropDeskPages)) { const c = a.cloneNode(true); c.textContent = a.textContent.replace('Lidlarda', 'SLA'); c.removeAttribute('data-rpx-go'); c.addEventListener('click', () => go('sla')); a.replaceWith(c); } });
     }
     RD.enhanceHome = enhanceHome;
 
