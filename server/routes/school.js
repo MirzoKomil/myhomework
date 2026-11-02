@@ -37,14 +37,16 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
     });
     // ROP faqat o'z til yo'nalishi (HR'dagi til) o'quvchilarini ko'radi va o'zgartiradi:
     // /students/:id/* (karta, to'lov, tarix, tahrir, muzlatish, ustoz…) — boshqa til → 403.
-    const ropLangs = req => (req.user.role === 'rop' ? ropScope.ropLangsFor(pool, req.user) : Promise.resolve(null));
+    // Akademik rahbar (role=akademik) ham xuddi shunday — HR'dagi til yo'nalish(lar)i (services/academicHead.langsFor).
+    const ropLangs = req => (req.user.role === 'rop' ? ropScope.ropLangsFor(pool, req.user)
+        : req.user.role === 'akademik' ? require('../services/academicHead').langsFor(pool, req.user) : Promise.resolve(null));
     const subjectOk = (langs, subject) => !langs || langs.includes(ropScope.langOfStudent({ subject }));
     router.use('/students/:id', async (req, res, next) => {
         try {
             const langs = await ropLangs(req);
             if (langs) {
                 const row = (await pool.query('SELECT subject FROM students WHERE id=$1', [req.params.id])).rows[0];
-                if (row && !subjectOk(langs, row.subject)) return res.status(403).json({ error: 'Bu o\'quvchi boshqa til yo\'nalishida — ROP faqat o\'z yo\'nalishini ko\'radi' });
+                if (row && !subjectOk(langs, row.subject)) return res.status(403).json({ error: req.user.role === 'akademik' ? 'Bu oʻquvchi boshqa til yoʻnalishida' : 'Bu o\'quvchi boshqa til yo\'nalishida — ROP faqat o\'z yo\'nalishini ko\'radi' });
             }
             next();
         } catch (err) { console.error('[school] rop til', err.message); res.status(503).json({ error: 'Ruxsatni tekshirib bo\'lmadi' }); }
@@ -88,6 +90,12 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         if (req.user.role === 'rop') {
             const own = await ropLang(req);
             if (own) return own;
+        }
+        // Akademik rahbar: bitta til — o'shasi; ikkalasi — ?lang= (bo'lmasa ikkalasi).
+        if (req.user.role === 'akademik') {
+            const own = await ropLangs(req) || [];
+            if (own.length === 1) return own[0];
+            if (!own.length) return '__none__';
         }
         return LANGS.has(req.query.lang) ? req.query.lang : null;
     }
@@ -134,7 +142,7 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         const lang = await reqLang(req);
         if (FULL.has(role)) return { views: await views(req, from, to, teacherId ? [teacherId] : null, lang), scope: 'full', lang };
         // ROP: hamma ustoz, o'quvchi ismlari va bugungi holat (o'z tilida) — "Kim bo'sh?" (mode=free) esa sotuvdagidek.
-        if (role === 'rop' && req.query.mode !== 'free') return { views: await views(req, from, to, teacherId ? [teacherId] : null, lang), scope: 'manage', lang };
+        if ((role === 'rop' || role === 'akademik') && req.query.mode !== 'free') return { views: await views(req, from, to, teacherId ? [teacherId] : null, lang), scope: 'manage', lang };
         if (SALES.has(role)) {
             const v = await views(req, from, to, teacherId ? [teacherId] : null, lang);
             const mid = await managerId(req);
@@ -302,9 +310,40 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
     })));
     // Bo'sh vaqtni boshqarish (JadvalQoidalar: "Ish vaqti shabloni" va "Sanaga ochish / yopish" — faqat admin;
     // ustoz va yordamchi so'rov yuboradi, sotuv faqat bo'sh/band ko'radi). Ruxsat shu yerda tekshiriladi.
-    router.post('/overrides', handle(req => { need(req, FULL); return write(req, c => S.addOverride(c, req.user, req.body || {}).then(o => ({ override: o }))); }));
-    router.put('/overrides/:id', handle(req => { need(req, FULL); return write(req, c => S.updateOverride(c, req.user, req.params.id, req.body || {}).then(o => ({ override: o }))); }));
-    router.delete('/overrides/:id', handle(req => { need(req, FULL); return write(req, c => S.removeOverride(c, req.user, req.params.id).then(o => ({ override: o }))); }));
+    // Akademik rahbar: faqat o'z tilidagi ustozlar; yopishda (va o'chirishda) sabab majburiy.
+    const OVERRIDE_ROLES = new Set([...FULL, 'akademik']);
+    async function overrideScope(req, c, teacherId) {
+        need(req, OVERRIDE_ROLES);
+        if (req.user.role !== 'akademik') return;
+        const langs = await ropLangs(req) || [];
+        const t = (await c.query('SELECT role, lang FROM hr_employees WHERE id=$1', [String(teacherId || '')])).rows[0];
+        const tl = t ? langOf(t) : null;
+        if (!t || !(tl === 'both' ? langs.length : langs.includes(tl))) throw T.fail(403, 'Faqat oʻz til yoʻnalishingiz ustozlari');
+    }
+    const overrideRow = async (c, id) => {
+        const o = (await c.query('SELECT * FROM school_overrides WHERE id=$1 AND removed_at IS NULL', [id])).rows[0];
+        if (!o) throw T.fail(404, 'Topilmadi');
+        return o;
+    };
+    router.post('/overrides', handle(req => write(req, async c => {
+        await overrideScope(req, c, req.body?.teacherId);
+        return { override: await S.addOverride(c, req.user, req.body || {}) };
+    })));
+    router.put('/overrides/:id', handle(req => write(req, async c => {
+        if (req.user.role === 'akademik') await overrideScope(req, c, (await overrideRow(c, req.params.id)).teacher_id); else need(req, FULL);
+        return { override: await S.updateOverride(c, req.user, req.params.id, req.body || {}) };
+    })));
+    router.delete('/overrides/:id', handle(req => write(req, async c => {
+        if (req.user.role === 'akademik') {
+            const o = await overrideRow(c, req.params.id);
+            await overrideScope(req, c, o.teacher_id);
+            // Ochilgan sinov vaqtini olib tashlash = yopish — sabab yoziladi (school_hours_log/changes uchun override.reason ga qo'shiladi).
+            const reason = String(req.body?.reason || req.query.reason || '').trim();
+            if (o.kind === 'open' && reason.length < 3) throw T.fail(400, 'Yopish sababini yozing');
+            if (reason) await c.query('UPDATE school_overrides SET reason = LEFT(reason || $2, 300) WHERE id=$1', [o.id, ` · olib tashlandi: ${reason}`]);
+        } else need(req, FULL);
+        return { override: await S.removeOverride(c, req.user, req.params.id) };
+    })));
     // Ustoz ilovasi v2 — "Sinovga tanaffus": ustoz o'zi oladi / bekor qiladi; admin ustoz nomidan bekor qila oladi.
     // Admin va ROP ga bildirishnoma (staffNotify: trial_break) — Telegram bot orqali ham.
     router.post('/breaks', handle(req => write(req, async c => {
@@ -325,8 +364,9 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
     router.put('/teachers/:id/hours', handle(req => { need(req, FULL); return write(req, c => S.setHours(c, req.user, req.params.id, req.body?.slots, { confirm: req.body?.confirm === true }).then(h => ({ hours: h }))); }));
     // "O'zgarishlar tarixi": admin/boshliq — hamma ustoz; ROP — faqat o'z tilidagi ustoz.
     router.get('/teachers/:id/changes', handle(async req => {
-        need(req, MANAGE);
+        need(req, new Set([...MANAGE, 'akademik']));
         const t = await S.assertTeacher(pool, req.params.id);
+        if (req.user.role === 'akademik') await overrideScope(req, pool, t.id);
         if (req.user.role === 'rop') {
             const own = await ropLang(req), tl = (await teacherLangs()).get(t.id);
             if (own && !fits(tl, own)) throw T.fail(403, 'Faqat o\'z tilingiz ustozlari');
@@ -539,10 +579,11 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         const CAME = `EXISTS (SELECT 1 FROM main_attendance a WHERE LEFT(a.att_key, 7) = TO_CHAR(m.missed_date, 'YYYY-MM') AND a.student_id = m.student_id
             AND a.day = EXTRACT(DAY FROM m.missed_date)::int AND a.present = 1) AS missed_came`;
         if (req.user.role === 'teacher') { const me = await teacherOf(req); return { makeups: (await pool.query(`SELECT m.*, ${CAME} FROM school_makeups m WHERE m.teacher_id=$1 ORDER BY m.created_at DESC LIMIT 200`, [me.id])).rows }; }
-        need(req, MANAGE);
+        need(req, new Set([...MANAGE, 'akademik']));
         const month = /^\d{4}-\d{2}$/.test(req.query.month || '') ? req.query.month : '';
         let lang = '';
-        if (req.user.role === 'rop') {
+        if (req.user.role === 'akademik') lang = (await reqLang(req)) || ((await ropLangs(req)) || [])[0] || '__none__';
+        else if (req.user.role === 'rop') {
             const e = (await pool.query(`SELECT he.role, he.lang FROM users u JOIN hr_employees he ON LOWER(TRIM(he.login))=LOWER(TRIM(u.email)) WHERE u.id=$1 LIMIT 1`, [req.user.id])).rows[0];
             const own = e ? langOf(e) : null;
             lang = own === 'both' || !own ? (LANGS.has(req.query.lang) ? req.query.lang : 'english') : own;
@@ -587,9 +628,13 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
     router.get('/attendance/absences', handle(async req => {
         const month = /^\d{4}-\d{2}$/.test(req.query.month || '') ? req.query.month : T.nowLocal().date.slice(0, 7);
         let teacherId = req.query.teacherId ? String(req.query.teacherId) : '';
-        if (req.user.role === 'teacher') teacherId = (await teacherOf(req)).id; else need(req, MANAGE);
+        if (req.user.role === 'teacher') teacherId = (await teacherOf(req)).id; else need(req, new Set([...MANAGE, 'akademik']));
         const { from, to } = T.monthBounds(month);
-        return { month, absences: await S.teacherAbsences(pool, { from, to, teacherId }) };
+        const abs = await S.teacherAbsences(pool, { from, to, teacherId });
+        if (req.user.role !== 'akademik') return { month, absences: abs };
+        const langs = await ropLangs(req) || [];
+        const ok = new Set((await pool.query(`SELECT id FROM students WHERE COALESCE(NULLIF(subject,''),'english') = ANY($1::text[])`, [langs])).rows.map(r => r.id));
+        return { month, absences: abs.filter(a => ok.has(a.studentId)) };
     }));
 
     // Qoplanmagan (qoplash mumkin) darslar — bitta manba: S.missedLessons ("Keldi" ustun, faqat dars kuni, kurs boshlangandan keyin,
@@ -602,8 +647,8 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         let ids, lang = null;
         if (req.user.role === 'teacher') ids = [(await teacherOf(req)).id];
         else {
-            need(req, MANAGE);
-            lang = req.user.role === 'rop' ? await reqLang(req) : null;
+            need(req, new Set([...MANAGE, 'akademik']));
+            lang = ['rop', 'akademik'].includes(req.user.role) ? await reqLang(req) : null;
             ids = req.query.teacherId ? [String(req.query.teacherId)]
                 : (await pool.query(`SELECT DISTINCT teacher_id FROM students WHERE teacher_id IS NOT NULL
                     AND ($1::text IS NULL OR COALESCE(NULLIF(subject,''),'english')=$1)`, [lang])).rows.map(r => r.teacher_id);
@@ -619,6 +664,9 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
     async function canSee(req, row) {
         const role = req.user.role;
         if (MANAGE.has(role)) return 'full';
+        // Akademik rahbar: karta, davomat, o'zlashtirish, aloqalar (o'quvchiga qo'ng'iroq qiladi — telefon bor); pul va sotuv yo'q.
+        // Til — /students/:id oldidagi tekshiruv (ropLangs).
+        if (role === 'akademik') return 'academic';
         if (role === 'sales_manager') { const mid = await managerId(req); return O.soldBy(S.studentRow(row), mid) ? 'sales' : null; }
         if (role === 'teacher') {
             const me = await teacherOf(req);
@@ -655,6 +703,7 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         // Yordamchi (faqat shu o'quvchining HOZIRGI yordamchisi — canSee 'assistant'): "Asosiy ustozga yozish" uchun hamkasb Telegram'i.
         // Telefon berilmaydi — faqat profildagi @username (Sozlamalar → Profil, staff_profile_extra.telegram).
         if (scope === 'assistant') card.mainTeacher = await mainTeacherContact(pool, row.teacher_id);
+        if (scope === 'academic') card.phone = row.phone || '';
         for (const k of Object.keys(card)) if (scope !== 'full' && scope !== 'sales' && MONEY_KEYS.test(k)) delete card[k];
         return { card };
     }));
@@ -755,8 +804,11 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
     // "Kursni tugatdi" (admin/ROP): 'left' + reason_code='finished' — /inactive da "Tugatgan".
     router.post('/students/:id/finish', handle(req => write(req, c => O.finish(c, req.user, req.params.id, req.body || {}).then(r => ({ status: r, finished: true })))));
     router.post('/students/:id/restore', handle(req => write(req, c => O.restore(c, req.user, req.params.id, req.body || {}))));
+    // Akademik rahbar ham almashtiradi (o'z tilida — /students/:id tekshiruvi va checkLeadTeacherLang). effectiveFrom (yoki from) bo'lmasa — bugundan.
     router.post('/students/:id/teacher', handle(req => write(req, async c => {
         const st = (await c.query('SELECT subject FROM students WHERE id=$1', [req.params.id])).rows[0];
+        if (req.body && req.body.effectiveFrom && !req.body.from) req.body.from = req.body.effectiveFrom;
+        if (req.user.role === 'akademik' && req.body?.teacherId) await overrideScope(req, c, req.body.teacherId);
         if (st && req.body?.teacherId) await checkLeadTeacherLang(c, st.subject, String(req.body.teacherId)).catch(e => { throw T.fail(400, e.message.replace('Lid ', 'O\'quvchi ')); });
         return O.changeTeacher(c, req.user, req.params.id, req.body || {});
     })));

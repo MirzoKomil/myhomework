@@ -28,7 +28,7 @@ module.exports = function createAcademicRouter({ pool, authRequired, studentAuth
     router.get('/students/:id/presence', handle(req => hub.studentPresence(pool, req.user, req.params.id)));
     router.get('/materials', handle(async req => {
         const access = await hub.resolveAccess(pool, req.user);
-        const lang = access.lang || (req.query.lang === 'russian' ? 'russian' : 'english');
+        const lang = Array.isArray(access.langs) ? hub.pickLang(access, req.query.lang) : access.lang || (req.query.lang === 'russian' ? 'russian' : 'english');
         return { materials: hub.visibleMaterials(await hub.listMaterials(pool, lang), access) };
     }));
     router.post('/materials', handle(async req => ({ material: await hub.saveMaterial(pool, req.user, null, req.body) })));

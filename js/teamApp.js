@@ -49,6 +49,11 @@
         hr: [
             { id: 'home', label: 'Bosh', icon: 'home', tab: 'hr' }
         ],
+        // Akademik rahbar: telefonda js/akademikApp.js o'z pastki panelini chizadi (bu faqat zaxira, has-team-nav uchun).
+        // Oddiy "dashboard" bandi akademik sidebar'ida yashirin — koʻrinib turgan kabinet bandi (data-akd="home") bilan tekshiriladi.
+        akademik: [
+            { id: 'home', label: 'Bosh', icon: 'home', tab: 'akademik' }
+        ],
         _default: [
             { id: 'home', label: 'Bosh', icon: 'home', tab: 'dashboard' },
             { id: 'sales', label: 'Sotuv', icon: 'sales', tab: 'sales', sales: 'leads' },
@@ -157,7 +162,7 @@
         const brand = side?.querySelector('.sidebar-brand');
         if (!brand || document.getElementById('teamDrawerProfile')) return;
         const u = currentUser() || {};
-        const roles = { admin: 'Administrator', boshliq: 'Rahbar', rop: 'ROP', sales_manager: 'Sotuv menejeri', teacher: 'Ustoz', targetolog: 'Targetolog', hr: 'HR menejer' };
+        const roles = { admin: 'Administrator', boshliq: 'Rahbar', rop: 'ROP', sales_manager: 'Sotuv menejeri', teacher: 'Ustoz', targetolog: 'Targetolog', hr: 'HR menejer', akademik: 'Akademik rahbar' };
         const initials = String(u.name || '').trim().split(/\s+/).map(w => w[0] || '').slice(0, 2).join('').toUpperCase();
         const el = document.createElement('button');
         el.type = 'button';

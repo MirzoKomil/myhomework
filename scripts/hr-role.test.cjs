@@ -28,8 +28,8 @@ test('nomzod tili vakansiyadan; umumiy vakansiya ikkala yo‘nalishga ko‘rinad
 
 test('hr roli server va mijozda ro‘yxatdan o‘tgan', () => {
     const auth = read('server/routes/auth.js');
-    assert.strictEqual((auth.match(/'targetolog', 'hr'\]/g) || []).length, 2);
-    assert.match(read('server/routes/state.js'), /'employee', 'targetolog', 'hr'\]\.includes\(req\.user\?\.role\)/);
+    assert.strictEqual((auth.match(/'targetolog', 'hr'(, '[a-z_]+')*\]/g) || []).length, 2);
+    assert.match(read('server/routes/state.js'), /'employee', 'targetolog', 'hr'(, '[a-z_]+')*\]\.includes\(req\.user\?\.role\)/);
     assert.match(read('js/teamLogin.js'), /hr: 'HR menejer'/);
     const app = read('js/app.js');
     assert.ok((app.match(/=== 'hr' \? 'hr'/g) || []).length >= 3, 'uchta rol xaritasida hr');

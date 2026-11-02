@@ -217,6 +217,8 @@ app.use('/api/trial-lessons', trialLessonsRoutes);
 app.use('/api/payroll', payrollRoutes);
 app.use('/api/inflow', inflowRoutes);
 app.use('/api/finance', financeRoutes);
+// Akademik rahbar kabineti (/api/academic/head/*, /api/academic/problems*) — Darslik markazidan oldin.
+app.use('/api/academic', require('./routes/academicHead')({ db: crmDb, authRequired: require('./middleware/auth').authRequired }));
 app.use('/api/academic', require('./routes/academicHub')({ pool: crmDb.pool,
     authRequired: require('./middleware/auth').authRequired, studentAuthOptional: require('./middleware/auth').studentAuthOptional }));
 // Yagona dars jadvali, o'quvchi holati/tahriri, sotuv so'rovlari, Telegram guruh, yordamchi aloqalari.
@@ -376,6 +378,14 @@ init().then(async () => {
         setInterval(run, 60 * 60 * 1000).unref();
         setTimeout(run, 90 * 1000).unref();
     }).catch(err => console.error('[school] Jadval yaratilmadi:', err.code || err.message));
+    // Akademik rahbar: muammo kartalari va qoplash tekshiruvi ustunlari (school_makeups dan keyin).
+    await require('./services/academicHead').initSchema(crmDb.pool).then(() => {
+        // Muddati o'tgan muammolar: kuniga bir marta (09:00 dan keyin) eslatma hisobi — har 30 daqiqada tekshiriladi, takrorlanmaydi.
+        const run = () => crmDb.tx(c => require('./services/academicHead').remindOverdue(c), { id: 'system' })
+            .catch(err => console.error('[akademik] eslatma xatosi:', err.code || err.message));
+        setInterval(run, 30 * 60 * 1000).unref();
+        setTimeout(run, 2 * 60 * 1000).unref();
+    }).catch(err => console.error('[akademik] Jadval yaratilmadi:', err.code || err.message));
     await require('./services/staffSettings').initSchema(crmDb.pool).catch(err =>
         console.error('[staff] Jadval yaratilmadi:', err.code || err.message));
     // Avatarsiz xodimlarga jinsiga mos 3D personaj (yangi qo'shilganlarga ham — har 10 daqiqada).

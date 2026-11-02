@@ -227,7 +227,10 @@ const ROLE_TABS = {
     // (yopilgan oy — o'sha oy tanlangan holda; havolalar schoolTeacher.goDavomat orqali); ilova ko'rinishi — Darslik → "O'quvchi ko'rinishida ochish".
     teacher:       ['dashboard', 'students', 'timetable', 'teachers-section', 'trial-lessons', 'guides'],
     employee:      ['student-app', 'guides'],
-    hr:            ['dashboard', 'hr', 'guides']
+    hr:            ['dashboard', 'hr', 'guides'],
+    // Akademik rahbar (Head of Teachers): telefonda o'z kabineti (js/akademikApp.js); kompyuterda — Bosh, o'quvchilar,
+    // Akademik bo'lim (davomat, progress), dars jadvali (o'qish) va yo'riqnomalar. Ma'lumot serverda tili bo'yicha kesiladi.
+    akademik:      ['dashboard', 'students', 'teachers-section', 'timetable', 'guides']
 };
 
 // 8-vazifa: Sotuv bo'limida hech qanday amal (o'chirish, menejer/bosqich
@@ -304,6 +307,8 @@ function applyRoleBasedAccess(user) {
         && ['moliya', 'finance'].includes(String(e.department || '').toLowerCase()));
     const allowed = financeEmployee ? ['finance', 'student-app', 'guides'] : (ROLE_TABS[role] ?? ROLE_TABS.employee);
     const allowedSet = new Set(allowed);
+    // Akademik rahbar kompyuter kabineti (js/akademikDesk.js) — alohida tab; sidebar bandlari applyDesignSidebar orqali.
+    if (role === 'akademik') allowedSet.add('akademik');
 
     // Barcha elementlarni yashir (Sozlamalar guruhi bundan mustasno)
     sidebar.querySelectorAll('.menu-item, .menu-sub-item, .menu-group').forEach(el => {
@@ -350,6 +355,8 @@ function applyRoleBasedAccess(user) {
         setTimeout(() => switchTab(restoreTab || 'marketing', restoreCtx), 50);
     } else if (role === 'hr') {
         setTimeout(() => switchTab(restoreTab || 'hr', restoreCtx), 50);
+    } else if (role === 'akademik') {
+        setTimeout(() => switchTab(restoreTab || 'dashboard', restoreCtx), 50);
     } else {
         // employee yoki noma'lum rol — mobil ilovaga o'tkazish
         setTimeout(() => switchTab(restoreTab || 'student-app', restoreCtx), 50);
@@ -385,6 +392,7 @@ async function syncHrLoginRoles(currentUser) {
             : (e.role === 'oqituvchi' || e.role === 'ingliz-oqituvchi' || e.role === 'rus-oqituvchi' || e.role === 'yordamchi') ? 'teacher'
             : e.role === 'targetolog' ? 'targetolog'
             : e.role === 'hr' ? 'hr'
+            : e.role === 'head-of-teachers' ? 'akademik'
             : 'employee',
         salesManagerId: (e.role === 'sotuv-menejeri' || e.role === 'sotuv_menejeri') ? e.id : ''
     }));
@@ -650,8 +658,8 @@ async function bootApp() {
         if (langs.length && !langs.includes(_marketingLang)) _marketingLang = langs[0];
     }
 
-    // HR menejer: HR'da berilgan til yo'nalish(lar)i — targetolog bilan bir xil qoida.
-    if (currentUser.role === 'hr') {
+    // HR menejer va akademik rahbar: HR'da berilgan til yo'nalish(lar)i — targetolog bilan bir xil qoida.
+    if (currentUser.role === 'hr' || currentUser.role === 'akademik') {
         const hrEmployees = getItem(STORAGE_KEYS.hrEmployees, []);
         const login = String(currentUser.email || '').trim().toLowerCase();
         const linked = hrEmployees.find(e => login && String(e.login || '').trim().toLowerCase() === login);
@@ -831,6 +839,9 @@ function startCoreDataPolling() {
 }
 
 function isMenuItemActive(el, tab, ctx) {
+    // Akademik rahbar: kabinet bandi (data-akd) — ochiq bo'lim; mavjud sahifaga olib boruvchi band (Sinov vaqtlari, Darslik va doska) — ctx.akdNav.
+    if (el.dataset.akd) return tab === 'akademik' ? el.dataset.akd === (ctx.akd || 'home') : !!ctx.akdNav && el.dataset.akd === ctx.akdNav;
+    if (ctx.akdNav && tab !== 'akademik') return false;
     // Dizayn sidebar'i: ichki sahifa ochilganda o'z bo'limi faol (Tasdiqlar → O'quvchilar; Guruhlar, Aloqalar → Akademik bo'lim).
     if (DESIGN_TAB_PARENT[tab] && el.dataset.tab === DESIGN_TAB_PARENT[tab] && !el.dataset.navSales) return true;
     // Sidebar'dan olingan band (yashirin) — o'zi faol bo'lmaydi, ota band faol.
@@ -861,23 +872,41 @@ const DESIGN_SIDEBAR = {
     sales_manager: { main: ['dashboard', 'nav:leads', 'timetable', 'students', 'nav:debtors', 'nav:sales-plan', 'nav:rating', 'nav:scripts', 'nav:trials'], extra: ['marketing', 'analitika', 'student-app', 'guides'] }
 };
 DESIGN_SIDEBAR.boshliq = DESIGN_SIDEBAR.admin;
+// Akademik rahbar (dizayn: AkdHome/AkdProblems/AkdMakeups/AkdTeachers) — "akd:<bo'lim>" bandlari js/akademikDesk.js sahifalari;
+// O'quvchilar va Dars jadvali — umumiy sahifalar. Guruhlar sarlavha bilan; dizaynda yo'q Yo'riqnomalar "Boshqa" oxirida qoladi.
+// DAVOMAT bandlari — js/davomatApp.js (davomat.open); ko'rinishi davomat.menuInfo() bo'yicha (akademikDesk.updateBadges).
+DESIGN_SIDEBAR.akademik = {
+    main: ['akd:home', 'akd:problems', 'students', 'akd:teachers', 'timetable'], extra: [],
+    groups: [['Nazorat', ['akd:makeups', 'akd:risk', 'akd:late', 'akd:slots']], ['Davomat', ['akd:att', 'akd:attreq', 'akd:myatt']], ['Boshqa', ['akd:book', 'akd:archive', 'guides']]]
+};
 function applyDesignSidebar(role) {
     const sidebar = document.getElementById('sidebarMenu');
     if (!sidebar) return;
     syncDesignGoButtons(role);
     const cfg = DESIGN_SIDEBAR[role];
     const navItems = [...sidebar.querySelectorAll('.menu-item[data-nav-sales]')];
-    sidebar.querySelector('.menu-sep[data-design-sep]')?.remove();
-    if (!cfg) { navItems.forEach(el => { el.style.display = 'none'; }); return; }
-    const find = key => key.startsWith('nav:') ? sidebar.querySelector(`.menu-item[data-nav-sales="${key.slice(4)}"]`) : sidebar.querySelector(`.menu-item[data-tab="${key}"]:not([data-nav-sales])`);
-    const keep = new Set([...cfg.main, ...cfg.extra]);
+    sidebar.querySelectorAll('.menu-sep[data-design-sep]').forEach(el => el.remove());
+    if (!cfg) { navItems.forEach(el => { el.style.display = 'none'; }); sidebar.querySelectorAll('.menu-item[data-akd]').forEach(el => { el.style.display = 'none'; }); return; }
+    const find = key => key.startsWith('nav:') ? sidebar.querySelector(`.menu-item[data-nav-sales="${key.slice(4)}"]`)
+        : key.startsWith('akd:') ? sidebar.querySelector(`.menu-item[data-akd="${key.slice(4)}"]`)
+        : sidebar.querySelector(`.menu-item[data-tab="${key}"]:not([data-nav-sales]):not([data-akd])`);
+    const groups = cfg.groups || [];
+    const keep = new Set([...cfg.main, ...cfg.extra, ...groups.flatMap(gr => gr[1])]);
     // Ro'yxatda yo'q bandlar yashiriladi (Tasdiqlar, Telegram guruhlar, Yordamchi aloqalari — O'quvchilar va Akademik bo'lim ichida).
     sidebar.querySelectorAll(':scope > .menu-item').forEach(el => {
-        const key = el.dataset.navSales ? 'nav:' + el.dataset.navSales : el.dataset.tab;
+        const key = el.dataset.navSales ? 'nav:' + el.dataset.navSales : el.dataset.akd ? 'akd:' + el.dataset.akd : el.dataset.tab;
         if (!keep.has(key)) el.style.display = 'none';
-        else if (el.dataset.navSales) el.style.display = '';
+        else if (el.dataset.navSales || el.dataset.akd) el.style.display = '';
     });
     cfg.main.forEach(k => { const el = find(k); if (el) sidebar.appendChild(el); });
+    groups.forEach(([label, keys]) => {
+        const els = keys.map(find).filter(el => el && el.style.display !== 'none');
+        if (!els.length) return;
+        const sep = document.createElement('div');
+        sep.className = 'menu-sep menu-sep--group'; sep.dataset.designSep = '1'; sep.setAttribute('role', 'presentation'); sep.textContent = label;
+        sidebar.appendChild(sep);
+        els.forEach(el => sidebar.appendChild(el));
+    });
     const extras = cfg.extra.map(find).filter(el => el && el.style.display !== 'none');
     if (extras.length) {
         const sep = document.createElement('div');
@@ -907,6 +936,14 @@ document.addEventListener('click', e => {
     switchTab(tab, go.dataset.backSection ? { teachersSection: go.dataset.backSection } : {});
 });
 function openDesignNav(item) {
+    // Akademik rahbar: kabinet bo'limlari va mavjud sahifalarga havolalar (js/akademikDesk.js).
+    // Telefonda (≤900px) kabinet bandlari — telefon kabinetining ekranlari (umumiy sahifa rejimidan chiqib), sahifa bandlari (Sinov vaqtlari, Darslik) — o'sha sahifa.
+    if (item.dataset.akd) {
+        const desk = !window.akademikDesk || window.akademikDesk.isDesk();
+        if (!desk && window.akademikApp?.openScreen?.(item.dataset.akd)) return true;
+        window.akademikDesk ? window.akademikDesk.nav(item.dataset.akd) : switchTab('akademik', { akd: item.dataset.akd });
+        return true;
+    }
     const v = item.dataset.navSales;
     if (v) {
         switchTab('sales', { salesSection: v === 'trials' ? 'leads' : v, navSales: v });
@@ -929,6 +966,8 @@ function updateSidebarActiveState(tab, ctx) {
 }
 
 function switchTab(tab, ctx = {}) {
+    // Akademik rahbar kompyuterda: "Bosh sahifa" — kabinet bosh sahifasi (AkdHome), umumiy dashboard emas.
+    if (tab === 'dashboard' && getCurrentUser()?.role === 'akademik' && window.akademikDesk?.isDesk()) { tab = 'akademik'; ctx = { ...ctx, akd: ctx.akd || 'home' }; }
     window.schoolUI?.closeStudent?.();
     window.sotuvSinov?.close?.({ silent: true });
     window.jadvalV3?.close?.({ silent: true });
@@ -948,6 +987,8 @@ function switchTab(tab, ctx = {}) {
         salesSection: tab === 'sales' ? (ctx.salesSection || 'leads') : (ctx.salesSection || null),
         navSales: tab === 'sales' ? (ctx.navSales || null) : null,
         teachersSection: ctx.teachersSection || null,
+        akd: tab === 'akademik' ? (ctx.akd || 'home') : null,
+        akdNav: tab !== 'akademik' ? (ctx.akdNav || null) : null,
         studentsSection: tab === 'students' ? (ctx.studentsSection || 'faol') : (_tabContext.studentsSection || 'faol'),
         hrSection: tab === 'hr' ? (ctx.hrSection || 'xodimlar') : (_tabContext.hrSection || 'xodimlar'),
         financeSection: tab === 'finance' ? (ctx.financeSection || 'umumiy') : (_tabContext.financeSection || 'umumiy'),
@@ -1323,6 +1364,7 @@ function renderTab(tab) {
         case 'hr': renderHr(); break;
         case 'finance': renderFinance(); break;
         case 'guides': renderMyGuides(); break;
+        case 'akademik': window.akademikDesk?.render(document.getElementById('akademikDeskRoot'), _tabContext); break;
         case 'school-approvals': window.schoolUI?.renderApprovals(document.getElementById('schoolApprovalsRoot')); break;
         case 'school-groups': window.schoolUI?.renderGroups(document.getElementById('schoolGroupsRoot')); break;
         case 'school-assist': (window.adminNazorat ? window.adminNazorat.renderAssist : window.schoolUI?.renderAssistAdmin)?.(document.getElementById('schoolAssistRoot')); break;
@@ -22359,7 +22401,7 @@ const HR_ROLE_MAP = {
     'marketolog': 'Marketolog',
     'targetolog': 'Targetolog',
     'hr': 'HR menejer',
-    'head-of-teachers': 'Head of Teachers'
+    'head-of-teachers': 'Akademik rahbar (Head of Teachers)'
 };
 
 // Modal dropdown uchun (ingliz/rus — separate sub-field orqali belgilanadi)
@@ -22371,7 +22413,7 @@ const HR_ROLE_MAP_MODAL = {
     'marketolog': 'Marketolog',
     'targetolog': 'Targetolog',
     'hr': 'HR menejer',
-    'head-of-teachers': 'Head of Teachers',
+    'head-of-teachers': 'Akademik rahbar (Head of Teachers)',
     'buxgalter': 'Buxgalter (Moliya)'
 };
 
@@ -22492,6 +22534,7 @@ function resolveGuideAudienceTags(user) {
     if (role === 'sales_manager') return ['sales_manager'];
     if (role === 'rop') return ['rop'];
     if (role === 'hr') return ['hr'];
+    if (role === 'akademik') return ['head_of_teachers'];
 
     const findLinkedEmployee = () => {
         const hrEmployees = getItem(STORAGE_KEYS.hrEmployees, []);
@@ -22541,12 +22584,14 @@ function bindTargetLangToggle(roleSelectId) {
     const wrap = document.getElementById('empTargetLangWrap');
     if (!roleEl || !wrap) return;
     const toggle = () => {
-        const isHr = roleEl.value === 'hr';
-        wrap.style.display = (roleEl.value === 'targetolog' || isHr) ? '' : 'none';
+        const isHr = roleEl.value === 'hr', isAk = roleEl.value === 'head-of-teachers';
+        wrap.style.display = (roleEl.value === 'targetolog' || isHr || isAk) ? '' : 'none';
         const lbl = document.getElementById('empTargetLangLabel');
         const hint = document.getElementById('empTargetLangHint');
-        if (lbl) lbl.textContent = isHr ? "Til yo'nalishi (HR kabineti)" : "Til yo'nalishi (targetolog kabineti)";
-        if (hint) hint.textContent = isHr
+        if (lbl) lbl.textContent = isAk ? "Til yo'nalishi (akademik rahbar)" : isHr ? "Til yo'nalishi (HR kabineti)" : "Til yo'nalishi (targetolog kabineti)";
+        if (hint) hint.textContent = isAk
+            ? "Akademik rahbar faqat shu yo'nalish(lar)ning ustoz, yordamchi va o'quvchilarini ko'radi."
+            : isHr
             ? "HR faqat shu yo'nalish(lar)ning nomzod va xodimlarini ko'radi. Umumiy vakansiyalar (Sotuv, ROP, Metodist, Brend yuzi) — ikkala tilga."
             : "Targetolog faqat shu yo'nalish(lar)ning Sotuv bo'limini ko'radi va Marketing → Target lidlar'ga maʼlumot kiritadi.";
     };
@@ -23001,7 +23046,7 @@ function openEditEmployeeModal(empId) {
         ${trialGroupLinkHtml(emp.trialGroupLink || '')}
         ${managerLangHtml(emp.lang || 'english')}
         ${ropLangHtml(emp.lang || 'english')}
-        ${targetLangHtml((emp.role === 'targetolog' || emp.role === 'hr') ? (emp.lang || 'english') : 'english')}
+        ${targetLangHtml((emp.role === 'targetolog' || emp.role === 'hr' || emp.role === 'head-of-teachers') ? (emp.lang || 'english') : 'english')}
         <div class="form-group">
             <label>Telefon raqam</label>
             <input type="tel" id="editEmpPhone" class="form-control" value="${escapeHtml(emp.phone || '')}" placeholder="+998 90 123 45 67">
@@ -23142,7 +23187,7 @@ function openEditEmployeeModal(empId) {
             email: document.getElementById('editEmpEmail').value.trim(),
             department: document.getElementById('editEmpDepartment').value,
             status: document.getElementById('editEmpStatus').value,
-            lang: isMgrEdit ? resolveManagerLang() : isRopEdit ? resolveRopLang() : resolvedRole === 'yordamchi' ? resolveTeacherLang() : (resolvedRole === 'targetolog' || resolvedRole === 'hr') ? resolveTargetLang() : (emp.lang || 'english'),
+            lang: isMgrEdit ? resolveManagerLang() : isRopEdit ? resolveRopLang() : resolvedRole === 'yordamchi' ? resolveTeacherLang() : (resolvedRole === 'targetolog' || resolvedRole === 'hr' || resolvedRole === 'head-of-teachers') ? resolveTargetLang() : (emp.lang || 'english'),
             cardNumber: document.getElementById('editEmpCardNumber').value.trim(),
             passportSeries: document.getElementById('editEmpPassportSeries').value.trim(),
             address: document.getElementById('editEmpAddress').value.trim(),
@@ -23173,6 +23218,7 @@ function openEditEmployeeModal(empId) {
             : (resolvedRole === 'oqituvchi' || resolvedRole === 'ingliz-oqituvchi' || resolvedRole === 'rus-oqituvchi' || resolvedRole === 'yordamchi') ? 'teacher'
             : resolvedRole === 'targetolog' ? 'targetolog'
             : resolvedRole === 'hr' ? 'hr'
+            : resolvedRole === 'head-of-teachers' ? 'akademik'
             : 'employee';
         if (newPassword) {
             try {
@@ -23405,13 +23451,14 @@ function openAddEmployeeModal() {
             kpiTemplateId: document.getElementById('employeeKpiTemplate')?.value || '',
             cardNumber, passportSeries, address, trialGroupLink,
             joinDate: startDate || new Date().toISOString().slice(0, 10),
-            lang: isMgr ? resolveManagerLang() : isRop ? resolveRopLang() : role === 'yordamchi' ? resolveTeacherLang() : (role === 'targetolog' || role === 'hr') ? resolveTargetLang() : 'english'
+            lang: isMgr ? resolveManagerLang() : isRop ? resolveRopLang() : role === 'yordamchi' ? resolveTeacherLang() : (role === 'targetolog' || role === 'hr' || role === 'head-of-teachers') ? resolveTargetLang() : 'english'
         };
         const hrUserRole = role === 'rop' ? 'rop'
             : (role === 'sotuv-menejeri' || role === 'sotuv_menejeri') ? 'sales_manager'
             : (role === 'oqituvchi' || role === 'ingliz-oqituvchi' || role === 'rus-oqituvchi' || role === 'yordamchi') ? 'teacher'
             : role === 'targetolog' ? 'targetolog'
             : role === 'hr' ? 'hr'
+            : role === 'head-of-teachers' ? 'akademik'
             : 'employee';
         const saveBtn = document.getElementById('saveAddEmployee');
         if (saveBtn) saveBtn.disabled = true;

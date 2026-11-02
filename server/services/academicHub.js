@@ -17,7 +17,7 @@ const RULES = require('../../js/academicRules');
 const { TOTAL_LESSONS, MONTH_SIZE, PASS_PERCENT, UNLOCK_PERCENT, LESSONS_PER_WEEK, BEHIND_LESSONS } = RULES;
 const TEACHER_GRADED = new Set(RULES.TEACHER_GRADED);
 const EDIT_ROLES = new Set(['admin', 'boshliq']);
-const VIEW_ROLES = new Set(['admin', 'boshliq', 'rop', 'teacher']);
+const VIEW_ROLES = new Set(['admin', 'boshliq', 'rop', 'teacher', 'akademik']);
 const LANGS = new Set(['english', 'russian']);
 const TZ = 'Asia/Tashkent';
 const DAILY_CAP_SECONDS = 8 * 3600;
@@ -128,6 +128,11 @@ async function resolveAccess(pool, actor) {
     const { rows } = await pool.query('SELECT id, role FROM users WHERE id=$1', [actor?.id]);
     const role = rows[0]?.role;
     if (!role || !VIEW_ROLES.has(role)) throw error(403, "Darslik markaziga ruxsat yo'q");
+    // Akademik rahbar: faqat HR'dagi o'z til yo'nalish(lar)i (langs); boshqa til — 403 (pickLang, assertStudentAccess).
+    if (role === 'akademik') {
+        const langs = await require('./academicHead').langsFor(pool, { ...actor, role, email: actor.email || (await pool.query('SELECT email FROM users WHERE id=$1', [actor.id])).rows[0]?.email });
+        return { role, canEdit: false, teacher: null, lang: langs.length === 1 ? langs[0] : null, langs };
+    }
     if (role !== 'teacher') return { role, canEdit: EDIT_ROLES.has(role), teacher: null, lang: null };
     const teacherDuties = require('./teacherDuties');
     const teacher = await teacherDuties.teacherForActor(pool, { id: actor.id, role });
@@ -135,6 +140,11 @@ async function resolveAccess(pool, actor) {
 }
 
 function pickLang(access, requested) {
+    if (Array.isArray(access.langs)) {
+        if (!access.langs.length) throw error(403, "Til yo'nalishingiz HR'da belgilanmagan");
+        if (LANGS.has(requested) && !access.langs.includes(requested)) throw error(403, "Bu til yo'nalishi sizga biriktirilmagan");
+        return LANGS.has(requested) ? requested : access.langs[0];
+    }
     if (access.lang) return access.lang;
     return LANGS.has(requested) ? requested : 'english';
 }
@@ -199,6 +209,7 @@ async function assertStudentAccess(pool, access, studentId) {
     const { rows } = await pool.query("SELECT id, COALESCE(subject,'english') AS subject FROM students WHERE id=$1", [studentId]);
     if (!rows[0]) throw error(404, "O'quvchi topilmadi");
     const lang = rows[0].subject === 'russian' ? 'russian' : 'english';
+    if (Array.isArray(access.langs) && !access.langs.includes(lang)) throw error(403, "Bu o'quvchi boshqa til yo'nalishida");
     const list = await accessibleStudents(pool, access, lang);
     const student = list.find(s => s.id === studentId);
     if (!student) throw error(403, "Bu o'quvchi sizga biriktirilmagan");
@@ -1235,7 +1246,7 @@ async function nextLessons(pool, actor, ids) {
     const access = await resolveAccess(pool, actor);
     const wanted = new Set((Array.isArray(ids) ? ids : String(ids || '').split(',')).map(s => String(s).trim()).filter(Boolean).slice(0, 60));
     if (!wanted.size) return { lessons: {} };
-    const langs = access.lang ? [access.lang] : ['english', 'russian'];
+    const langs = Array.isArray(access.langs) ? access.langs : access.lang ? [access.lang] : ['english', 'russian'];
     const students = (await Promise.all(langs.map(l => accessibleStudents(pool, access, l)))).flat().filter(s => wanted.has(s.id));
     if (!students.length) return { lessons: {} };
     const pick = require('./liveLessonPick');
@@ -1259,7 +1270,7 @@ async function nextLessons(pool, actor, ids) {
 
 module.exports = { visibleMaterials, isTeacherOnlyMaterial,
     TOTAL_LESSONS, LESSON_KINDS, COURSE_KINDS, PASS_PERCENT,
-    initSchema, resolveAccess, getHub, getLesson, saveMaterial, archiveMaterial, listMaterials, nextLessons, accessibleStudents,
+    initSchema, resolveAccess, pickLang, getHub, getLesson, saveMaterial, archiveMaterial, listMaterials, nextLessons, accessibleStudents,
     studentsOverview, studentDetail, studentDetailById, studentPresence, recordTracking, progressForIds,
     // test uchun
     buildTeacherPlan, konspektRules, allocateMinutes, expectedLiveLessons, lessonPercent, cleanPageMap, cleanMaterial, expectedLesson, summarizeStudent, mergeMistakes, tzDay,
