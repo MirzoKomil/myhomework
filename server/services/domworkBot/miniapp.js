@@ -2,7 +2,7 @@
 // @Domworkuz_bot ichidagi "1-dars" mini ilovasi (Telegram WebApp) — server qismi.
 // Dizayn: Design canvas "Domwork 1-dars mini app" + loyiha hujjati claude/miniapp_1dars_ux.md.
 // Qoidalar: ball bitta qadam uchun bir marta beriladi; mehmon ma'lumoti faqat Telegram imzosi (initData) bilan;
-// ovoz CRMda saqlanadi (≤1 MB), talaffuz baholanmaydi — faqat so'zlar mosligi (ElevenLabs Scribe).
+// ovoz CRMda saqlanadi (≤1 MB), talaffuz baholanmaydi — faqat so'zlar mosligi (Gemini; zaxira ElevenLabs).
 const { createHmac, timingSafeEqual } = require('node:crypto');
 const funnel = require('./funnel');
 
@@ -83,19 +83,39 @@ function matchSpeech(expected, heard, { skip = [] } = {}) {
     return { score, level: score >= 80 ? 'ok' : score >= 50 ? 'warn' : 'retry', words };
 }
 
-async function transcribe(buffer, mime, { apiKey = process.env.ELEVENLABS_API_KEY, fetchImpl = globalThis.fetch } = {}) {
-    if (!apiKey) return null; // kalit yo'q — "baholanmadi" holati (SpeakDoneNoScore ekrani)
+// Ovoz → matn. Asosiy: Gemini (GEMINI_API_KEY, model GEMINI_STT_MODEL). Zaxira: ElevenLabs Scribe (ELEVENLABS_API_KEY).
+// Kalit yo'q yoki xizmat javob bermasa — null ("baholanmadi" ekrani, lid aybdor bo'lmaydi).
+async function transcribe(buffer, mime, { env = process.env, fetchImpl = globalThis.fetch, timeoutMs = 20000 } = {}) {
+    const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+        if (env.GEMINI_API_KEY) return await gemini(buffer, mime, env, fetchImpl, controller.signal);
+        if (env.ELEVENLABS_API_KEY) return await elevenlabs(buffer, mime, env, fetchImpl, controller.signal);
+        return null;
+    } catch { return null; } finally { clearTimeout(timer); }
+}
+const GEMINI_PROMPT = 'Transcribe this Russian speech exactly as spoken, in Cyrillic. Do not correct grammar or word endings. '
+    + 'Output only the transcript text. If there is no speech, output nothing.';
+async function gemini(buffer, mime, env, fetchImpl, signal) {
+    const model = /^[a-z0-9.-]{3,60}$/.test(env.GEMINI_STT_MODEL || '') ? env.GEMINI_STT_MODEL : 'gemini-3.5-flash-lite';
+    const res = await fetchImpl(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+        method: 'POST', signal, headers: { 'Content-Type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY },
+        body: JSON.stringify({ contents: [{ parts: [{ text: GEMINI_PROMPT }, { inline_data: { mime_type: mime, data: Buffer.from(buffer).toString('base64') } }] }],
+            generationConfig: { temperature: 0, maxOutputTokens: 200 } })
+    });
+    if (!res.ok) { console.error('[miniapp] gemini stt status', res.status); return null; }
+    const body = await res.json();
+    const text = (body.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join(' ').trim();
+    return { text: text.slice(0, 500), provider: 'gemini' };
+}
+async function elevenlabs(buffer, mime, env, fetchImpl, signal) {
     const form = new FormData();
     form.append('model_id', 'scribe_v1');
     form.append('language_code', 'rus');
     form.append('file', new Blob([buffer], { type: mime }), 'voice.' + (mime.split('/')[1] || 'ogg').split(';')[0]);
-    const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 20000);
-    try {
-        const res = await fetchImpl('https://api.elevenlabs.io/v1/speech-to-text', { method: 'POST', headers: { 'xi-api-key': apiKey }, body: form, signal: controller.signal });
-        if (!res.ok) return null;
-        const body = await res.json();
-        return { text: String(body.text || '').slice(0, 500) };
-    } catch { return null; } finally { clearTimeout(timer); }
+    const res = await fetchImpl('https://api.elevenlabs.io/v1/speech-to-text', { method: 'POST', headers: { 'xi-api-key': env.ELEVENLABS_API_KEY }, body: form, signal });
+    if (!res.ok) return null;
+    const body = await res.json();
+    return { text: String(body.text || '').slice(0, 500), provider: 'elevenlabs' };
 }
 
 // ── Holat ─────────────────────────────────────────────────────────────────
