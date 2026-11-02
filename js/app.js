@@ -630,11 +630,19 @@ async function bootApp() {
 
     // 14-ish: ROP uchun til yo'nalishini HR xodim yozuvidan aniqlash
     if (currentUser.role === 'rop') {
+        // Server (ropScope.ropLangsFor) bilan bir xil: avval login, keyin ism. Ilgari faqat ism bo'yicha
+        // qidirilardi — HR'dagi ism boshqacha yozilgan bo'lsa (masalan "Familiya Ism") til "english" bo'lib
+        // qolardi, server esa rus lidlarini berardi → kanban bo'sh ("Jami 0").
         const hrEmployees = getItem(STORAGE_KEYS.hrEmployees, []);
-        const linked = hrEmployees.find(e =>
-            e.name.trim().toLowerCase() === currentUser.name.trim().toLowerCase()
-        );
-        const detectedLang = linked?.lang || 'english';
+        const norm = v => String(v || '').trim().toLowerCase();
+        const login = norm(currentUser.email), uname = norm(currentUser.name);
+        const linked = (login && hrEmployees.find(e => norm(e.login) === login))
+            || (uname && hrEmployees.find(e => norm(e.name) === uname));
+        const hrLang = ['english', 'russian', 'both'].includes(linked?.lang) ? linked.lang : null;
+        // HR'da til topilmasa — server qaysi til lidlarini berganiga qaraladi (u ham shu yozuvdan cheklaydi).
+        const leadsAll = getItem(STORAGE_KEYS.leads, { english: [], russian: [] }) || {};
+        const hasRu = (leadsAll.russian || []).length > 0, hasEn = (leadsAll.english || []).length > 0;
+        const detectedLang = hrLang || (hasRu && !hasEn ? 'russian' : 'english');
         if (currentUser.linkedRopLang !== detectedLang) {
             currentUser.linkedRopLang = detectedLang;
             setCurrentUser(currentUser);

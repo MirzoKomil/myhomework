@@ -545,7 +545,7 @@
             if (!on()) return;
             const shut = e.target.closest('[data-rk-shut]');
             if (shut) { e.stopPropagation(); const s = shutSet(), id = shut.dataset.rkShut; if (s.has(id)) s.delete(id); else s.add(id); saveShut(s); renderLeads(); return; }
-            const rk = e.target.closest('[data-rk-risk]');
+            const rk = e.target.closest('button[data-rk-risk]');
             if (rk) { e.stopPropagation(); const v = rk.dataset.rkRisk; R.risk = R.risk === v ? '' : v; if (R.risk && typeof _leadColumnLimits !== 'undefined') _leadColumnLimits[v.split(':')[0]] = 100000; renderLeads(); return; }
             const cp = e.target.closest('[data-rk-copy]');
             if (cp) { e.stopPropagation(); try { navigator.clipboard?.writeText(cp.dataset.rkCopy); } catch (er) { /* ruxsat yo'q */ } g('showMiniToast') && showMiniToast('Raqam nusxalandi'); return; }
