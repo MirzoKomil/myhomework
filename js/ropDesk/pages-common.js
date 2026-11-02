@@ -12,26 +12,40 @@
     const g = n => (typeof window[n] === 'function' ? window[n] : null);
     const user = () => (g('getCurrentUser') ? getCurrentUser() : null) || {};
     const isRopDesk = () => user().role === 'rop' && !MQ.matches;
+    // Sotuv menejeri kompyuter kabineti (dizayn "Sotuv · Kompyuter", SotK*): role = sales_manager, ekran > 900px.
+    const isSotDesk = () => user().role === 'sales_manager' && !MQ.matches;
+    const isDesk = () => isRopDesk() || isSotDesk();
     const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     // ROP faqat o'z tilida ishlaydi (server ropScope ham shu bo'yicha cheklaydi).
-    const lang = () => { const l = user().linkedRopLang || 'russian'; return l === 'english' ? 'english' : 'russian'; };
+    const lang = () => { const u = user(); const l = (u.role === 'sales_manager' ? u.linkedManagerLang : u.linkedRopLang) || 'russian'; return l === 'english' ? 'english' : 'russian'; };
     const langLabel = (lg = lang()) => (lg === 'english' ? 'Ingliz tili' : 'Rus tili');
 
     // Sidebar kaliti → mavjud marshrut. [tab, ctx] — switchTab; rdp-* — shu fayl yaratgan ROP bo'limi.
-    const ROUTES = {
+    const ROUTES_ROP = {
         check: ['school-approvals'], sla: ['rdp-sla'], lock: ['rdp-stale'], arch: ['rdp-archive'],
         funnel: ['sales', { salesSection: 'sales-stats' }], rating: ['sales', { salesSection: 'rating' }],
         plan: ['sales', { salesSection: 'sales-plan' }], debt: ['sales', { salesSection: 'debtors' }],
         script: ['sales', { salesSection: 'scripts' }], sms: ['rdp-sms'], stu: ['students'], tg: ['school-groups']
     };
+    // Sotuv menejeri (window.sotDeskPages): debt, plan, rating, script, funnel (Statistika), sms, stu, book.
+    // SMS — o'z bo'limi (tab-rdp-sms, ROP bilan bitta konteyner; chizuvchi rolga qarab tanlanadi).
+    const ROUTES_SOT = {
+        debt: ['sales', { salesSection: 'debtors' }], plan: ['sales', { salesSection: 'sales-plan' }], rating: ['sales', { salesSection: 'rating' }],
+        script: ['sales', { salesSection: 'scripts' }], funnel: ['sales', { salesSection: 'sales-stats' }], sms: ['rdp-sms'],
+        stu: ['students'], book: ['sales', { salesSection: 'book-roadmap' }]
+    };
+    const ROUTES = ROUTES_ROP; // eski nom (pages-*.js)
+    const routes = () => (isSotDesk() ? ROUTES_SOT : ROUTES_ROP);
     const OWN_TABS = ['rdp-sla', 'rdp-stale', 'rdp-sms', 'rdp-archive'];
-    const PAGES = {}; // key → { tab, section?, title, sub?, head?, render?(host), after?() }
+    const PAGES = {}; // ROP: key → { tab, section?, title, sub?, head?, render?(host), after?() }
+    const SOT_PAGES = {}; // sotuv menejeri: xuddi shu shakl (registerSot)
+    const pages = () => (isSotDesk() ? SOT_PAGES : PAGES);
 
     function activeKey() {
         const tab = document.querySelector('.tab-content.active')?.id?.replace(/^tab-/, '') || '';
         const sec = typeof _tabContext !== 'undefined' ? _tabContext.salesSection : '';
         if (document.body.classList.contains('ss-page-open')) return '';
-        for (const [k, [t, ctx]] of Object.entries(ROUTES)) {
+        for (const [k, [t, ctx]] of Object.entries(routes())) {
             if (t !== tab) continue;
             if (t === 'sales' && ctx?.salesSection !== sec) continue;
             return k;
@@ -39,7 +53,7 @@
         return '';
     }
     function open(key) {
-        const r = ROUTES[key]; if (!r) return false;
+        const r = routes()[key]; if (!r) return false;
         const [tab, ctx] = r;
         window.sotuvSinov?.close?.({ silent: true }); window.jadvalV3?.close?.({ silent: true });
         if (tab === 'sales' && document.getElementById('tab-sales')?.classList.contains('active') && g('switchSalesSection')) switchSalesSection(ctx.salesSection);
@@ -85,15 +99,16 @@
         if (syncing) return;
         syncing = true;
         try {
-            const on = isRopDesk();
-            document.body.classList.toggle('rop-desk-v2', on);
+            const on = isDesk();
+            document.body.classList.toggle('rop-desk-v2', isRopDesk());
+            document.body.classList.toggle('sot-desk-v2', isSotDesk());
             const key = on ? activeKey() : '';
-            const page = key && PAGES[key];
+            const page = key && pages()[key];
             if (page) document.body.dataset.rdp = key; else delete document.body.dataset.rdp;
             if (!page) return;
             if (page.tab === 'sales' && page.head) salesHead(page);
-            if (page.render && page.tab === ROUTES[key][0]) {
-                const host = document.getElementById(ROUTES[key][0] + 'Root');
+            if (page.render && page.tab === routes()[key][0]) {
+                const host = document.getElementById(routes()[key][0] + 'Root');
                 if (host && host.dataset.rdpDrawn !== String(syncSeq)) { host.dataset.rdpDrawn = String(syncSeq); page.render(host); }
             }
             page.after?.();
@@ -122,7 +137,7 @@
 
     // Kichik umumiy yordamchilar (pages-*.js uchun).
     const U = {
-        esc, lang, langLabel, user, isRopDesk, g,
+        esc, lang, langLabel, user, isRopDesk, isSotDesk, isDesk, g,
         num: n => String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ' '),
         initials: n => String(n || '').trim().split(/\s+/).map(w => w[0] || '').slice(0, 2).join('').toUpperCase() || '?',
         shortName: n => { const p = String(n || '').trim().split(/\s+/); return p[0] ? p[0] + (p[1] ? ' ' + p[1][0] + '.' : '') : ''; },
@@ -136,6 +151,8 @@
         headHtml, salesHead, wrap, sync
     };
 
-    window.ropDeskPages = { ROUTES, PAGES, open, activeKey, isRopDesk, sync, U, register: (key, def) => { PAGES[key] = def; } };
+    window.ropDeskPages = { ROUTES, ROUTES_SOT, PAGES, SOT_PAGES, open, activeKey, isRopDesk, isSotDesk, isDesk, sync, U, register: (key, def) => { PAGES[key] = def; }, registerSot: (key, def) => { SOT_PAGES[key] = def; } };
+    // Sotuv menejeri sidebari (js/ropDesk/shell.js) uchun kontrakt — bir xil funksiyalar, rolga qarab marshrut.
+    window.sotDeskPages = { open: k => (isSotDesk() ? open(k) : false), activeKey: () => (isSotDesk() ? activeKey() : ''), register: (key, def) => { SOT_PAGES[key] = def; }, PAGES: SOT_PAGES, ROUTES: ROUTES_SOT, U };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();
