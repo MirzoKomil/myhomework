@@ -1006,7 +1006,7 @@
             ${field(`Yordamchi ustoz${sales ? ' ' + lock : ''}`, `<select name="assistantTeacherId"${sales ? ' disabled' : ''}>${opt(assts, c.assistantId, '— yo\'q —')}</select>`, sales ? 'faqat admin va ROP' : '')}
             ${field(`Dars kunlari ${was('day', c.schedule?.days)}`, `<select name="lessonDay"><option value="1"${curDay === 1 ? ' selected' : ''}>Du·Ch·Ju</option><option value="2"${curDay === 2 ? ' selected' : ''}>Se·Pa·Sh</option></select>`)}
             ${field(`Dars vaqti ${was('time', c.schedule?.time)}`, `<select name="lessonTime">${timeOpts(c.schedule?.time)}</select>`)}
-            ${field('Qaysi sanadan', `<input name="effectiveFrom" type="date" value="${addDays(today(), 1)}" min="${today()}">`)}
+            ${field('Qaysi sanadan', `<input name="effectiveFrom" type="date" value="${addDays(today(), 1)}" min="${sales ? today() : addDays(today(), -1)}">`, sales ? '' : 'Ustoz almashsa — kechagi sana ham mumkin')}
             ${field(`Kurs ${lock}`, `<input value="${esc(course)}" disabled aria-label="Kurs">`)}
           </div><div data-live aria-live="polite"></div>
           <details class="ad-more"${c.tariff && c.tariff !== `${dur} daq` ? ' open' : ''}><summary>Narx va tarif nomi</summary><div class="sc-g2">
@@ -1251,7 +1251,7 @@
         const lastWith = f => { const days = [1, 3, 5].includes(Number(c.schedule?.day)) ? [1, 3, 5] : [2, 4, 6]; let d = addDays(f, -1); for (let k = 0; k < 7 && !days.includes(wd(d)); k++) d = addDays(d, -1); return d; };
         const hist = (c.teachers || []).slice().sort((a, b) => String(b.from).localeCompare(String(a.from)));
         ab.innerHTML = `<div class="sc-sec"><h3>Yangi ustoz</h3><p class="sc-mt">${esc(c.schedule?.days || '')} ${esc(c.schedule?.time || '')} · ${esc(c.schedule?.duration || '')} daq bo'yicha tekshiriladi</p><div class="sc-tch" data-tch><span class="sc-mt">Tekshirilmoqda…</span></div></div>
-          <div class="sc-sec"><h3>Sana</h3><div class="sc-g2">${field('Yangi ustoz bilan birinchi dars', `<input type="date" name="from" value="${from}" min="${today()}">`, 'Shu kungacha eski ustoz dars o\'tadi va qoplaydi')}
+          <div class="sc-sec"><h3>Sana</h3><div class="sc-g2">${field('Yangi ustoz bilan birinchi dars', `<input type="date" name="from" value="${from}" min="${addDays(today(), -1)}">`, 'Shu kungacha eski ustoz dars o\'tadi va qoplaydi')}
             ${field(`${esc(oldT)} bilan oxirgi dars`, `<input data-lastwith value="${esc(fmtDate(lastWith(from)))}" disabled>`)}</div></div>
           ${reasonBlock([['Ota-ona so\'radi', 'Ota-ona so\'radi'], ['Ustoz yuklamasi', 'Ustoz yuklamasi'], ['Ustoz ketmoqda', 'Ustoz ketmoqda'], ['Boshqa', 'Boshqa']], 'Ota-ona so\'radi')}
           <div class="sc-sec"><h3>Saqlansa nima bo'ladi</h3>${impact([['▦', `${esc(oldT)} jadvalida vaqt bo'shaydi → sinovga ochiladi · yangi ustozda band`],

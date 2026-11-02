@@ -428,8 +428,11 @@ async function restore(db, actor, studentId, body, now = new Date()) {
 
 // ── Ustozni almashtirish (sanadan boshlab, tarix saqlanadi) ───────────────────
 async function openTeacherPeriod(db, actor, studentId, teacherId, from, reason, prevTeacherId) {
-    const prev = (await db.query('SELECT * FROM school_teacher_history WHERE student_id=$1 AND to_date IS NULL ORDER BY from_date DESC LIMIT 1', [studentId])).rows[0];
-    if (prev) await db.query('UPDATE school_teacher_history SET to_date=$2 WHERE id=$1', [prev.id, T.addDays(from, -1)]);
+    const any = (await db.query('SELECT 1 FROM school_teacher_history WHERE student_id=$1 LIMIT 1', [studentId])).rows.length;
+    // Yangi davr `from`dan boshlanadi: shu sanani qoplaydigan yoki undan keyin boshlanadigan barcha davrlar
+    // `from - 1` da yopiladi (kechagi sana bilan almashtirilganda bugun ochilgan davr ham, ertaga rejalashtirilgani ham
+    // bo'sh oraliqqa aylanadi — o'chirilmaydi, tarixda qoladi). Shunda bir kunga ikki ustoz to'g'ri kelmaydi.
+    if (any) await db.query('UPDATE school_teacher_history SET to_date=$2 WHERE student_id=$1 AND (to_date IS NULL OR to_date >= $3)', [studentId, T.addDays(from, -1), from]);
     else if (prevTeacherId) await db.query(`INSERT INTO school_teacher_history (id,student_id,teacher_id,from_date,to_date,reason,actor_id)
         VALUES ($1,$2,$3,'2000-01-01',$4,'boshlang''ich',$5)`, [randomUUID(), studentId, prevTeacherId, T.addDays(from, -1), actor.id]);
     await db.query(`INSERT INTO school_teacher_history (id,student_id,teacher_id,from_date,reason,actor_id) VALUES ($1,$2,$3,$4,$5,$6)`,
@@ -442,7 +445,9 @@ async function changeTeacher(db, actor, studentId, body, { requestId = null, now
     const from = T.assertDate(body.from || body.effectiveFrom || today, 'Yangi ustoz bilan birinchi dars');
     // To'g'ridan-to'g'ri almashtirish o'tgan sanadan bo'lmaydi (o'tgan darslar va maosh eski ustozda qoladi).
     // Tasdiqlangan sotuv so'rovi (requestId) — so'rovdagi sana bilan, avvalgidek.
-    if (!requestId && from < today) throw fail(400, 'Oʻtgan sanadan oʻtkazib boʻlmaydi');
+    // Kechagi sana mumkin: ustoz amalda dars o'tishni boshlagach CRM'ga kechikib kiritilganda (direktor qarori, 2-noyabr).
+    // Undan oldingi sana — faqat tasdiqlangan sotuv so'rovi orqali.
+    if (!requestId && from < T.addDays(today, -1)) throw fail(400, 'Ko\'pi bilan kechagi sanadan o\'tkazish mumkin');
     const row = await lockStudent(db, studentId);
     const st = extraOf(row);
     const teacherId = String(body.teacherId || '');
@@ -453,7 +458,10 @@ async function changeTeacher(db, actor, studentId, body, { requestId = null, now
     const reason = reasonText(body.reason, 3);
     await openTeacherPeriod(db, actor, studentId, teacherId, from, reason, st.teacherId);
     // students.teacher_id sana kelganda almashtiriladi (applyDue) — bugungi sana bo'lsa darhol.
-    if (from <= T.nowLocal(now).date) await db.query('UPDATE students SET teacher_id=$2, lesson_day_of_week=$3, lesson_time=$4 WHERE id=$1', [studentId, teacherId, day, time]);
+    // Darhol kuchga kiradigan almashtirish eski rejalashtirilgan almashtirishni bekor qiladi — aks holda
+    // u o'z sanasi kelganda o'quvchini eski ustozga qaytarib qo'yardi (Xusniddin, 2-noyabr).
+    if (from <= T.nowLocal(now).date) await db.query(`UPDATE students SET teacher_id=$2, lesson_day_of_week=$3, lesson_time=$4,
+        extra_data = COALESCE(extra_data, '{}'::jsonb) - 'pendingTeacherChange' WHERE id=$1`, [studentId, teacherId, day, time]);
     else await db.query('UPDATE students SET extra_data = extra_data || $2::jsonb WHERE id=$1',
         [studentId, JSON.stringify({ pendingTeacherChange: { teacherId, from, day, time } })]);
     // Qoplanmagan darslar: eski ustoz oxirgi kungacha qoplaydi, keyin yangisiga o'tadi.
