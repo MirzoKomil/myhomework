@@ -206,7 +206,7 @@ test('real PostgreSQL staff attendance', { skip: !url }, async t => {
       await assert.rejects(service.createRequest(pool, user('ali'), { type: 'late', date: tue, time: '10:30' }, at(tue, '07:00')), /Sabab/);
       const r1 = await service.createRequest(pool, user('ali'), { type: 'late', date: tue, time: '11:30', reason: 'Shifokor', comment: 'bola' }, at(tue, '07:00'));
       assert.equal(r1.approver.kind, 'rop');
-      await assert.rejects(service.createRequest(pool, user('ali'), { type: 'late', date: tue, time: '10:00', reason: 'Shifokor' }, at(tue, '07:01')), { status: 409 });
+      await assert.rejects(service.createRequest(pool, user('ali'), { type: 'late', date: tue, time: '10:45', reason: 'Shifokor' }, at(tue, '07:01')), { status: 409 });
       // tasdiqlovchiga Telegram tugmalari (ROP + o'z tilidagi)
       assert.ok((await outbox()).some(r => r.unique_key === `attreq:${r1.id}:222`));
       // marketolog/sotuv bo'lmagan xodim tasdiqlay olmaydi; ROP navbatida ko'rinadi

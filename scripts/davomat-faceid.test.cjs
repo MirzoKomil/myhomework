@@ -131,3 +131,43 @@ test('ketma-ket vaqtida kunlar: dam olish kunlari o‘tkaziladi, kechikish seriy
     assert.equal(rules.onTimeStreak(days), 3);
     assert.equal(rules.onTimeStreak([]), 0);
 });
+
+test('so‘rov chegaralari: 60 kundan uzoq, dam olish kuni, ish vaqtidan tashqari vaqt, allaqachon belgilangan', () => {
+    const today = monday;
+    const base = { today, day };
+    assert.throws(() => rules.normalizeRequest({ type: 'absent', date: '2027-01-05', reason: 'x' }, base), /60 kun/);
+    assert.equal(rules.normalizeRequest({ type: 'absent', date: '2027-01-01', reason: 'x' }, base).date, '2027-01-01', '60-kun — mumkin');
+    assert.throws(() => rules.normalizeRequest({ type: 'absent', date: '2026-11-08', reason: 'x' }, { today, day: null }), /dam olish/);
+    assert.throws(() => rules.normalizeRequest({ type: 'late', date: today, time: '08:30', reason: 'x' }, base), /ish vaqti ichida/);
+    assert.throws(() => rules.normalizeRequest({ type: 'late', date: today, time: '18:30', reason: 'x' }, base), /ish vaqti ichida/);
+    assert.throws(() => rules.normalizeRequest({ type: 'early_leave', date: today, time: '19:00', reason: 'x' }, base), /ish vaqti ichida/);
+    assert.equal(rules.normalizeRequest({ type: 'early_leave', date: today, time: '16:00', reason: 'x' }, base).time, '16:00');
+    assert.throws(() => rules.normalizeRequest({ type: 'late', date: today, time: '10:00', reason: 'x' }, { ...base, inOk: true }), e => e.status === 409);
+    assert.throws(() => rules.normalizeRequest({ type: 'early_leave', date: today, time: '16:00', reason: 'x' }, { ...base, outOk: true }), e => e.status === 409);
+    // ertangi kun uchun bugungi belgi ta'sir qilmaydi
+    assert.equal(rules.normalizeRequest({ type: 'late', date: '2026-11-03', time: '10:00', reason: 'x' }, { ...base, inOk: true }).type, 'late');
+});
+
+test('kutilayotgan "Ofisda emasman" keyingi ofisdagi odatdagi belgini yashirmaydi', () => {
+    const s = rules.dayStatus({ date: monday, today: monday, nowMinutes: time.parseClock('12:00'), day, settings,
+        events: [{ kind: 'in', occurred_at: at(monday, '09:20') }, { kind: 'in', occurred_at: at(monday, '11:00') }] });
+    const pend = [{ type: 'outside', reason: 'Mijoz', state: 'pending' }];
+    assert.equal(rules.applyRequests(s, pend, settings).status, 'pending', 'faqat "ofisda emasman" bo‘lsa — kutilmoqda');
+    const r = rules.applyRequests(s, pend, settings, null, { officeIn: true });
+    assert.deepEqual([r.status, r.lateMinutes], ['late', 20], 'ofisga kelgan — odatdagi qoida');
+});
+
+test('Toshkent yarim tun chegarasi: UTC 18:59 / 19:00 — boshqa kun; tun yarmidagi belgi erta kelish', () => {
+    assert.equal(time.tashkentDate(new Date('2026-11-01T18:59:59Z')), '2026-11-01');
+    assert.equal(time.tashkentDate(new Date('2026-11-01T19:00:00Z')), '2026-11-02');
+    assert.equal(time.tashkentMinutes(new Date('2026-11-01T19:00:00Z')), 0);
+    assert.equal(at(monday, '00:00').toISOString(), '2026-11-01T19:00:00.000Z');
+    // Dushanba 00:05 — ish vaqtidan tashqari, belgilansa vaqtida (erta)
+    assert.equal(rules.phase({ nowMinutes: 5, day }).phase, 'before');
+    const s = rules.dayStatus({ date: monday, today: monday, nowMinutes: 10, day, settings, events: [{ kind: 'in', occurred_at: at(monday, '00:05') }] });
+    assert.deepEqual([s.status, s.inClock], ['on_time', '00:05']);
+    // Yakshanba 23:59 dagi belgi yakshanbaga (dam olish) tegishli — dushanba qulfi shu bilan ochilmaydi
+    assert.equal(time.tashkentDate(at('2026-11-01', '23:59')), '2026-11-01');
+    // 60 kunlik chegara oy oxiri/yil o'tishida ham to'g'ri
+    assert.equal(rules.normalizeRequest({ type: 'absent', date: '2027-01-30', reason: 'x' }, { today: '2026-12-01', day }).date, '2027-01-30');
+});
