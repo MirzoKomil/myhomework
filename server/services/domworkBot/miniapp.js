@@ -138,7 +138,9 @@ async function elevenlabs(buffer, mime, env, fetchImpl, signal) {
 // Ruscha gap bir marta yaratiladi va bazada saqlanadi — keyingi lidlarga tayyor holda beriladi.
 // Model nomlari o'zgarib turadi: GEMINI_TTS_MODEL, keyin ro'yxatdagilar ketma-ket sinab ko'riladi.
 const TTS_MODELS = ['gemini-3.8-flash-tts', 'gemini-3.1-flash-tts-preview', 'gemini-2.5-flash-preview-tts'];
-const TTS_STYLE = 'Read in clear, natural Russian like a warm, friendly language teacher speaking to an adult beginner — calm pace, precise pronunciation:';
+// Faqat ruscha gapning o'zi yuboriladi: matnga qo'shilgan har qanday yo'riqnomani model ovoz chiqarib o'qib yuboradi.
+// Keshdagi eski yozuvlar (yo'riqnoma bilan yozilganlar) TTS_VERSION orqali yaroqsiz qilinadi.
+const TTS_VERSION = 'v2';
 const ttsText = t => String(t || '').normalize('NFC').replace(/\u0301/g, '').replace(/[«»"]/g, '').replace(/\s+/g, ' ').trim();
 function wav(pcm, rate = 24000) {
     const h = Buffer.alloc(44);
@@ -157,7 +159,7 @@ async function synthesize(text, { env = process.env, fetchImpl = globalThis.fetc
         try {
             const res = await fetchImpl(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
                 method: 'POST', signal: controller.signal, headers: { 'Content-Type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY },
-                body: JSON.stringify({ contents: [{ parts: [{ text: `${TTS_STYLE} ${text}` }] }],
+                body: JSON.stringify({ contents: [{ parts: [{ text }] }],
                     generationConfig: { responseModalities: ['AUDIO'], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } } } })
             });
             if (res.status === 404 || res.status === 400) continue; // bu model yo'q — keyingisi
@@ -178,7 +180,7 @@ async function synthesize(text, { env = process.env, fetchImpl = globalThis.fetc
 async function ttsCached(db, text) {
     const t = ttsText(text);
     if (t.length < 2 || t.length > 160 || !/[а-яё]/i.test(t) || /[^а-яёА-ЯЁ0-9\s.,!?:;—–\-()…'’]/.test(t)) throw httpError(400, 'Matn noto‘g‘ri');
-    const hash = require('node:crypto').createHash('sha256').update(t).digest('hex').slice(0, 40);
+    const hash = require('node:crypto').createHash('sha256').update(TTS_VERSION + '|' + t).digest('hex').slice(0, 40);
     return { hash, text: t, row: (await db.query('SELECT mime,bytes FROM domwork_miniapp_tts WHERE hash=$1', [hash])).rows[0] || null };
 }
 async function ttsDailyCount(db) { return (await db.query("SELECT COUNT(*)::int AS n FROM domwork_miniapp_tts WHERE created_at>NOW()-INTERVAL '1 day'")).rows[0].n; }
