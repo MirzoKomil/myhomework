@@ -141,7 +141,9 @@ async function syncAttendance(db, now = new Date()) {
                     [id, e.id, e.user_id || null, role, f.date, month, f.code, f.label, f.amount, f.warning, f.ref, JSON.stringify({ date: f.date, minutes: f.minutes || null })]);
                 const row = ins.rows[0];
                 if (row && row.inserted) created.push({ id, employeeId: e.id, name: e.name, userId: e.user_id, ...f });
-                else if (row && f.amount > 0 && !f.warning) {
+                // Qayta faollashgan jarimadan yaratilgan kredit endi kerak emas (ikki marta foyda bo'lmasin).
+                if (row && !row.inserted) await db.query('UPDATE staff_fine_credits SET resolved=TRUE WHERE fine_id=$1 AND NOT resolved', [row.id]);
+                if (row && !row.inserted && f.amount > 0 && !f.warning) {
                     // qayta faollashgan yoki summasi oshgan — egasi yana ko'rsin (popup), xabar takrorlanmaydi (outbox kaliti)
                     await db.query('UPDATE staff_fines SET seen_at=NULL WHERE id=$1', [row.id]);
                 }
@@ -160,7 +162,8 @@ async function syncAttendance(db, now = new Date()) {
             const cfgM = R.configFor(vers, f.month + '-01');
             const others = (await db.query(`SELECT id,code,amount,washed,state,warning FROM staff_fines WHERE employee_id=$1 AND month=$2 AND state='active' AND id<>$3`, [e.id, f.month, f.id])).rows
                 .map(x => ({ ...x, amount: Number(x.amount), washed: Number(x.washed) }));
-            const { parts, unused } = R.allocateWash(others, f.washed, cfgM);
+            // Yuvish muddati (keyingi oyning 4-sanasi) o'tgan bo'lsa — ko'chirilmaydi, butunlay kredit.
+            const { parts, unused } = R.canWash(f.month + '-01', today) ? R.allocateWash(others, f.washed, cfgM) : { parts: [], unused: f.washed };
             for (const p of parts) await db.query('UPDATE staff_fines SET washed=washed+$2 WHERE id=$1', [p.id, p.amount]);
             if (unused > 0) await db.query(`INSERT INTO staff_fine_credits(id,employee_id,month,fine_id,amount,note) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT (fine_id) DO NOTHING`,
                 [randomUUID(), e.id, f.month, f.id, unused, 'Yuvilgan jarima keyin sababli boʻldi — summa joylashtirilmadi']);

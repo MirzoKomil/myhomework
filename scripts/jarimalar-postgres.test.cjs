@@ -307,6 +307,28 @@ test('jarimalar — PostgreSQL', { skip: !url }, async t => {
       assert.equal(tot.totals['e-qa'].credit, 5000);
       await fines.tick(pool, at('2027-02-12', '12:10'));
       assert.equal((await pool.query("SELECT COUNT(*)::int n FROM staff_fine_credits WHERE employee_id='e-qa'")).rows[0].n, 1, 'takrorlanmaydi');
+      // tuzatish olib tashlansa — jarima qayta faol, uning krediti hal qilingan (ikki marta foyda yo'q)
+      await att.setOverride(pool, user('boss'), { employeeId: 'e-qa', date: '2027-02-10', status: null });
+      await fines.tick(pool, at('2027-02-12', '12:15'));
+      assert.equal((await pool.query('SELECT state FROM staff_fines WHERE id=$1', [late.id])).rows[0].state, 'active');
+      assert.equal((await pool.query("SELECT resolved FROM staff_fine_credits WHERE employee_id='e-qa'")).rows[0].resolved, true);
+      assert.equal((await fines.monthTotals(pool, user('boss'), '2027-02', { 'e-qa': 5000000 })).totals['e-qa'].credit, undefined);
+    });
+
+    await t.test('yuvish muddati o‘tgach sababli bo‘lsa — yuvilgan summa ko‘chirilmaydi, to‘liq kredit', async () => {
+      await ev('e-qa', '2027-02-26', 'in', '09:40'); await ev('e-qa', '2027-02-26', 'out', '18:00');   // kechikish
+      await ev('e-qa', '2027-02-27', 'in', '08:55'); await ev('e-qa', '2027-02-27', 'out', '16:00');   // erta ketish
+      await fines.tick(pool, at('2027-02-28', '12:00'));
+      const f = (await pool.query("SELECT id FROM staff_fines WHERE employee_id='e-qa' AND work_date='2027-02-26' AND code LIKE 'late_%'")).rows[0];
+      const other = (await pool.query("SELECT id,washed FROM staff_fines WHERE employee_id='e-qa' AND work_date='2027-02-27' AND code='early_leave'")).rows[0];
+      await pool.query('UPDATE staff_fines SET washed=20000 WHERE id=$1', [f.id]);
+      // 5-mart: fevral yuvish muddati (4-mart) o'tgan; HR 26-fevralni sababli qiladi (sync oralig'i 26-fevraldan)
+      await att.setOverride(pool, user('boss'), { employeeId: 'e-qa', date: '2027-02-26', status: 'excused', note: 'HR kech tuzatdi' });
+      await fines.tick(pool, at('2027-03-05', '12:00'));
+      assert.equal((await pool.query('SELECT state FROM staff_fines WHERE id=$1', [f.id])).rows[0].state, 'cancelled');
+      assert.equal(Number((await pool.query('SELECT washed FROM staff_fines WHERE id=$1', [other.id])).rows[0].washed), Number(other.washed), 'boshqa jarimaga ko‘chirilmadi');
+      const cr = (await pool.query('SELECT amount,resolved FROM staff_fine_credits WHERE fine_id=$1', [f.id])).rows[0];
+      assert.deepEqual([Number(cr.amount), cr.resolved], [20000, false], 'to‘liq kredit');
     });
   } finally { await pool.end(); }
 });
