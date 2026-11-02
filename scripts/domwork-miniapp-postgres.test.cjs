@@ -1,0 +1,125 @@
+const {test}=require('node:test');
+const assert=require('node:assert/strict');
+const {Pool}=require('pg');
+const express=require('express');
+const store=require('../server/services/domworkBot/store');
+const queue=require('../server/services/domworkBot/queue');
+const groups=require('../server/services/domworkGroups');
+const miniapp=require('../server/services/domworkBot/miniapp');
+const {sign,TOKEN}=require('./domwork-miniapp.test.cjs');
+const url=process.env.PAYROLL_TEST_DATABASE_URL;
+if(url){const u=new URL(url);if(u.hostname!=='127.0.0.1'||!/^\/payroll_test_[a-z0-9]+$/.test(u.pathname))throw Error('Only disposable loopback DBs');}
+test('1-dars mini app: open, steps scored once, voice, request → CRM — synthetic data, no Telegram calls',{skip:!url},async t=>{
+ const pool=new Pool({connectionString:url});
+ const initData=id=>sign({auth_date:String(Math.floor(Date.now()/1000)),user:JSON.stringify({id,first_name:'Dilshod',last_name:'K'}),start_param:'tg_target1'});
+ let heard='меня зовут дилшод мне 32 года я работаю в банке';
+ const app=express();app.use(express.json());
+ app.use('/api/miniapp',require('../server/routes/miniapp')({pool,token:TOKEN,transcribe:async()=>heard===null?null:{text:heard},
+  authRequired:(req,res,next)=>{req.user=JSON.parse(req.get('X-Test-User')||'null');req.user?next():res.status(401).end();},
+  getSalesManagerIdForUser:async id=>id==='u-sardor'?'m-sardor':null}));
+ const server=app.listen(0);const base=`http://127.0.0.1:${server.address().port}/api/miniapp`;
+ const call=async(path,body,{id=801,headers={},raw}={})=>{
+  const r=await fetch(base+path,{method:'POST',headers:{'X-Telegram-Init-Data':initData(id),...(raw?{}:{'Content-Type':'application/json'}),...headers},body:raw??JSON.stringify(body||{})});
+  return {status:r.status,body:await r.json()};
+ };
+ const visitor=async id=>(await pool.query('SELECT * FROM domwork_bot_visitors WHERE telegram_id=$1',[String(id)])).rows[0];
+ const outbox=async()=>(await pool.query("SELECT target_id,payload FROM domwork_bot_outbox WHERE method='sendMessage' ORDER BY created_at,unique_key")).rows;
+ try{
+  await pool.query(`CREATE TABLE users(id TEXT PRIMARY KEY,name TEXT,email TEXT,role TEXT,phone TEXT,disabled_at TIMESTAMPTZ);
+   CREATE TABLE hr_employees(id TEXT PRIMARY KEY,name TEXT,login TEXT,role TEXT,status TEXT,lang TEXT,dual_role BOOLEAN,phone TEXT);
+   CREATE TABLE user_sales_manager_links(user_id TEXT PRIMARY KEY,manager_id TEXT);
+   CREATE TABLE students(id TEXT PRIMARY KEY,name TEXT,phone TEXT,subject TEXT,extra_data JSONB,teacher_id TEXT);
+   CREATE TABLE leads(id TEXT PRIMARY KEY,name TEXT NOT NULL,phone TEXT DEFAULT '',phone2 TEXT DEFAULT '',email TEXT DEFAULT '',manager_id TEXT DEFAULT '',
+    source TEXT,language TEXT NOT NULL,date TEXT,external_id TEXT,status TEXT,lead_type TEXT,comments TEXT DEFAULT '[]',attachments TEXT DEFAULT '[]',
+    created_at TIMESTAMPTZ DEFAULT NOW(),updated_at TIMESTAMPTZ DEFAULT NOW(),deleted_at TIMESTAMPTZ,extra_data JSONB DEFAULT '{}');
+   CREATE TABLE lead_audit(id BIGSERIAL PRIMARY KEY,lead_id TEXT,action TEXT,actor_id TEXT,actor_name TEXT,snapshot JSONB,created_at TIMESTAMPTZ DEFAULT NOW());
+   CREATE TABLE sessions(user_id TEXT,jti TEXT PRIMARY KEY);
+   INSERT INTO users VALUES('admin','Admin','admin@x','admin','+998901111111',NULL);
+   INSERT INTO hr_employees(id,name,role,status) VALUES('m-sardor','Sardor Aliyev','sales_manager','active');`);
+  await groups.initSchema(pool);await store.initSchema(pool);
+  await pool.query("INSERT INTO domwork_bot_groups(id,type,scope,chat_id,active,created_by) VALUES('g-sales','sales','','-1001234567890',true,'admin')");
+  await pool.query(`UPDATE domwork_bot_settings SET data=data||'{"funnelEnabled":true,"salesHours":"00:00-23:59","salesSlaMinutes":10}'::jsonb WHERE singleton=1`);
+
+  await t.test('unsigned / forged requests are rejected before touching the DB',async()=>{
+   const r=await fetch(base+'/open',{method:'POST'});assert.equal(r.status,401);
+   const forged=await fetch(base+'/open',{method:'POST',headers:{'X-Telegram-Init-Data':initData(801).replace('Dilshod','X')}});assert.equal(forged.status,401);
+   assert.equal((await pool.query('SELECT COUNT(*) FROM domwork_miniapp_progress')).rows[0].count,'0');
+  });
+  await t.test('first open creates visitor + progress and scores +2 once; reopen does not re-score',async()=>{
+   const a=await call('/open');assert.equal(a.status,200);
+   assert.equal(a.body.name,'Dilshod');assert.equal(a.body.points,2);assert.equal(a.body.manager,null);assert.equal(a.body.sales.slaMinutes,10);
+   assert.equal((await visitor(801)).source,'miniapp:tg_target1');
+   await call('/open');
+   assert.equal((await visitor(801)).score,2);
+   assert.equal((await pool.query("SELECT opens FROM domwork_miniapp_progress WHERE telegram_id='801'")).rows[0].opens,2);
+  });
+  await t.test('video counts only at ≥80%, homework/game once; unknown events refused',async()=>{
+   let r=await call('/event',{type:'video',data:{percent:40}});assert.equal(r.body.steps.video,false);
+   r=await call('/event',{type:'video',data:{percent:85}});assert.equal(r.body.steps.video,true);
+   await call('/event',{type:'video',data:{percent:100}});
+   r=await call('/event',{type:'homework',data:{done:true,correct:4,total:5,age:32,work:'bank <script>',name:'Dilshod'}});
+   assert.equal(r.body.answers.homework.work,'bank  script');
+   await call('/event',{type:'homework',data:{done:true,correct:5,total:5}});
+   r=await call('/event',{type:'game',data:{done:true,score:9,time:41,won:true}});
+   assert.equal(r.body.points,2+3+2+2);assert.equal((await visitor(801)).score,9);
+   assert.equal((await call('/event',{type:'drop_table',data:{}})).status,400);
+   assert.equal((await call('/event',{type:'game',data:[]})).status,400);
+  });
+  await t.test('existing bot hot-lead alert fires once when score crosses 6',async()=>{
+   const hot=(await outbox()).filter(r=>/Issiq lid/.test(r.payload.text||''));assert.equal(hot.length,1);
+   assert.match(hot[0].payload.text,/Mini ilova/);
+  });
+  await t.test('voice: wrong type / too big refused; low match asks retry and gives no points; good match finishes lesson',async()=>{
+   const q='?expected='+encodeURIComponent('Меня́ зову́т Дилшо́д. Мне 32 го́да. Я рабо́таю в ба́нке.')+'&skip=Дилшод';
+   assert.equal((await call('/voice'+q,null,{raw:Buffer.from('x'),headers:{'Content-Type':'text/plain'}})).status,415);
+   assert.equal((await call('/voice'+q,null,{raw:Buffer.alloc(1024*1024+10),headers:{'Content-Type':'audio/ogg'}})).status,413);
+   heard='привет';
+   let r=await call('/voice'+q,null,{raw:Buffer.from('OggS-fake'),headers:{'Content-Type':'audio/ogg'}});
+   assert.equal(r.body.level,'retry');assert.equal(r.body.state.steps.voice,false);
+   heard='меня зовут дилшод мне 32 года я работаю в банк';
+   r=await call('/voice'+q,null,{raw:Buffer.from('OggS-fake2'),headers:{'Content-Type':'audio/ogg; codecs=opus'}});
+   assert.equal(r.body.level,'ok');assert.ok(r.body.score>=90);assert.equal(r.body.state.finished,true);assert.equal(r.body.state.points,12);
+   assert.equal((await visitor(801)).score,12);
+  });
+  await t.test('STT unavailable → step still done as "unscored" (lead is not blamed)',async()=>{
+   await call('/open',{}, {id:802});heard=null;
+   const r=await call('/voice?expected=x',null,{id:802,raw:Buffer.from('OggS'),headers:{'Content-Type':'audio/webm'}});
+   assert.equal(r.body.level,'unscored');assert.equal(r.body.state.steps.voice,true);
+  });
+  await t.test('call request without phone → needPhone + bot asks contact; with phone → CRM lead, comment, sales alert, +5 once',async()=>{
+   let r=await call('/request',{method:'call',when:'now'});
+   assert.equal(r.body.needPhone,true);
+   assert.ok((await outbox()).some(m=>m.target_id==='801'&&m.payload.reply_markup?.keyboard?.[0]?.[0]?.request_contact));
+   assert.equal((await visitor(801)).awaiting,'call');
+   assert.equal((await call('/request',{method:'fax',when:'now'})).status,400);
+   await pool.query("UPDATE domwork_bot_visitors SET phone='998907770011',awaiting='' WHERE telegram_id='801'");
+   r=await call('/request',{method:'call',when:'now'});
+   assert.equal(r.body.needPhone,false);assert.equal(r.body.state.requested,true);assert.equal(r.body.state.points,17);
+   await call('/request',{method:'call',when:'now'});
+   const v=await visitor(801);assert.equal(v.score,17);assert.ok(v.lead_id);
+   const lead=(await pool.query('SELECT * FROM leads WHERE id=$1',[v.lead_id])).rows[0];
+   assert.match(lead.comments,/bog‘lanishni so‘radi/);
+   assert.equal((await outbox()).filter(m=>/Botdan so‘rov/.test(m.payload.text||'')).length,1);
+  });
+  await t.test('finished summary lands in CRM when lead exists; assigned manager shows on screen',async()=>{
+   // 803: avval lid (telefon) bor, keyin darsni tugatadi.
+   await call('/open',{}, {id:803});
+   await pool.query("UPDATE domwork_bot_visitors SET phone='998901112233' WHERE telegram_id='803'");
+   heard='меня зовут мне 32 года я работаю в банке';
+   await call('/request',{method:'telegram',when:'eve'},{id:803});
+   const v=await visitor(803);
+   await pool.query("UPDATE leads SET manager_id='m-sardor' WHERE id=$1",[v.lead_id]);
+   for(const e of [{type:'video',data:{percent:90}},{type:'homework',data:{done:true,correct:5,total:5,work:'bank',age:32}},{type:'game',data:{done:true,score:7}}])await call('/event',e,{id:803});
+   const r=await call('/voice?expected='+encodeURIComponent('Меня зовут Дилшод. Мне 32 года. Я работаю в банке.')+'&skip=Дилшод',null,{id:803,raw:Buffer.from('OggS3'),headers:{'Content-Type':'audio/ogg'}});
+   assert.equal(r.body.state.manager.name,'Sardor');assert.equal(r.body.state.finished,true);
+   const lead=(await pool.query('SELECT comments,extra_data FROM leads WHERE id=$1',[v.lead_id])).rows[0];
+   assert.match(lead.comments,/1-darsni to‘liq o‘tdi.*Video 90%.*vazifa 5\/5.*ovoz 100%/);
+   assert.equal(lead.extra_data.miniapp.homework.work,'bank');
+   // Ovozni faqat biriktirilgan menejer yoki rahbar tinglaydi.
+   const vid=r.body.id,get=u=>fetch(base+'/voice/'+vid,{headers:{'X-Test-User':JSON.stringify(u)}});
+   assert.equal((await get({id:'u-sardor',role:'sales_manager'})).status,200);
+   assert.equal((await get({id:'u-other',role:'sales_manager'})).status,403);
+   const boss=await get({id:'r',role:'rop'});assert.equal(boss.status,200);assert.equal(Buffer.from(await boss.arrayBuffer()).toString(),'OggS3');
+  });
+ }finally{server.close();await pool.end();}
+});

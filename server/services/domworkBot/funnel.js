@@ -838,4 +838,6 @@ async function drip(db, now = new Date()) {
     return n;
 }
 
-module.exports = { bundledFile, BUNDLED_NAMES, bonus, relayFromGroup, managerAction, drip, nextItem, SCHEMA, MEDIA_KEYS, init, enabled, start, message, contact, callback, deliverable, adminMedia, pause, blocked, report, track, mask, inHours };
+// Mini ilova (miniapp.js) shu voronka yordamchilaridan foydalanadi — bitta ball va bitta CRM oqimi.
+const WHEN_KEYS = Object.keys(copy.WHEN);
+module.exports = { visitor, upsertVisitor, patch, event, settings, addScore, finishRequest, leadComment, sla, WHEN_KEYS, bundledFile, BUNDLED_NAMES, bonus, relayFromGroup, managerAction, drip, nextItem, SCHEMA, MEDIA_KEYS, init, enabled, start, message, contact, callback, deliverable, adminMedia, pause, blocked, report, track, mask, inHours };

@@ -232,6 +232,8 @@ app.use('/api/domwork/staff-telegram', require('./routes/staffTelegram')({pool:c
     authRequired:require('./middleware/auth').authRequired}));
 app.use('/api/domwork/student-telegram', require('./routes/studentTelegram')({pool:crmDb.pool,runtime:domworkBot,
     authRequired:require('./middleware/auth').authRequired}));
+app.use('/api/miniapp', require('./routes/miniapp')({ pool: crmDb.pool, authRequired: require('./middleware/auth').authRequired,
+    getSalesManagerIdForUser: crmDb.getSalesManagerIdForUser }));
 app.use('/api/domwork/bot', domworkBotRouter({ pool: crmDb.pool, runtime: domworkBot,
     authRequired: require('./middleware/auth').authRequired }));
 // Xodimlar davomati (Face ID + lokatsiya) va ustozlar dars nazorati
