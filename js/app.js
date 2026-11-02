@@ -14231,11 +14231,13 @@ async function _smsHandleSend() {
     btn.textContent = 'Yuborilmoqda...';
     resultEl.textContent = '';
     try {
-        const res = await apiSendSms(recipients, message, _smsAudience);
+        // skipAlreadySent: oldingi urinish timeout bo'lib, server baribir yuborgan bo'lsa — qayta pul yechilmaydi.
+        const res = await apiSendSms(recipients, message, _smsAudience, { skipAlreadySent: true });
         const errors = (res.results || []).filter(item => item.status === 'error')
             .map(item => item.error).filter(Boolean);
         resultEl.innerHTML = `<span style="color:#059669">${res.sent} ta yuborildi</span>` +
             (res.failed ? `, <span style="color:#DC2626">${res.failed} ta xato</span>` : '') +
+            (res.skipped ? `, <span style="color:var(--text-muted)">${res.skipped} ta oʻtkazildi (shu matn allaqachon yuborilgan)</span>` : '') +
             (errors.length ? `<div style="margin-top:6px;color:#DC2626">Sabab: ${escapeHtml(errors.slice(0, 3).join('; '))}</div>` : '');
         document.getElementById('smsMessage').value = '';
         _smsUpdateCharCount();
@@ -14244,7 +14246,17 @@ async function _smsHandleSend() {
         _smsFetchHistory();
         _smsFetchBalance();
     } catch (err) {
-        resultEl.innerHTML = `<span style="color:#DC2626">Xatolik: ${escapeHtml(err.message || 'nomalum')}</span>`;
+        if (err && err.timeout) {
+            // Server kutishni to'xtatmaydi — SMSlar ketgan bo'lishi mumkin. Ko'r-ko'rona qayta yuborish taklif qilinmaydi:
+            // avval tarix tekshiriladi; qayta bosilsa server shu matn ketgan raqamlarni o'tkazib yuboradi.
+            resultEl.innerHTML = `<div class="sms-timeout" role="alert"><b>Javob kelmadi — SMSlar yuborilgan boʻlishi mumkin. Tarixni tekshiring.</b>
+                <div style="margin-top:4px;color:var(--text-muted)">Qayta yuborsangiz, shu matn allaqachon ketgan raqamlar oʻtkazib yuboriladi.</div>
+                <button type="button" class="btn-secondary-sm" id="smsTimeoutRefresh" style="margin-top:8px">Tarixni yangilash</button></div>`;
+            document.getElementById('smsTimeoutRefresh')?.addEventListener('click', () => { _smsFetchHistory(); _smsFetchBalance(); });
+            _smsFetchHistory();
+        } else {
+            resultEl.innerHTML = `<span style="color:#DC2626">Xatolik: ${escapeHtml(err.message || 'nomalum')}</span>`;
+        }
     } finally {
         btn.disabled = false;
         btn.textContent = 'Yuborish';
@@ -20202,6 +20214,12 @@ function openLeadSmsTemplateModal(lang, leadId) {
             closeModal();
             showMiniToast('SMS yuborildi');
         } catch (err) {
+            if (err && err.timeout) {
+                // Server yuborishda davom etgan bo'lishi mumkin — ikkinchi marta bosib ikki SMS ketmasin.
+                closeModal();
+                showMiniToast('Javob kelmadi — SMS yuborilgan boʻlishi mumkin. Tarixni tekshiring.', 6000);
+                return;
+            }
             showMiniToast(`SMS yuborilmadi: ${err.message || "noma'lum xatolik"}`);
             sendBtn.disabled = false;
             sendBtn.textContent = 'SMS yuborish';

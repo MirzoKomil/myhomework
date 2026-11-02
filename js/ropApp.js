@@ -1135,8 +1135,8 @@
         const recipients = cur.list.map(l => { const r = { id: l.id, type: 'lead', name: l.name || '', phone: l.phone, teacherId: l.trialRequest?.teacherId || l.paymentOnboarding?.teacherId || '' };
             const msg = g('fillSmsPlaceholders') && g('_smsRecipientContext') ? fillSmsPlaceholders(text, _smsRecipientContext(r)) : text.split('{ism}').join(r.name);
             return { id: r.id, type: r.type, name: r.name, phone: r.phone, message: msg }; });
-        try { const res = await apiSendSms(recipients, text, 'lidlar'); toast(`${res.sent || 0} ta yuborildi${res.failed ? `, ${res.failed} ta xato` : ''}`, res.failed ? 'warn' : 'ok'); }
-        catch (e) { toast(e.message || 'Yuborib boʻlmadi', 'warn'); }
+        try { const res = await apiSendSms(recipients, text, 'lidlar', { skipAlreadySent: true }); toast(`${res.sent || 0} ta yuborildi${res.failed ? `, ${res.failed} ta xato` : ''}${res.skipped ? `, ${res.skipped} ta allaqachon yuborilgan` : ''}`, res.failed ? 'warn' : 'ok'); }
+        catch (e) { toast(e && e.timeout ? 'Javob kelmadi — SMSlar yuborilgan boʻlishi mumkin. Tarixni tekshiring.' : (e.message || 'Yuborib boʻlmadi'), 'warn'); }
         render(false);
     }
 
