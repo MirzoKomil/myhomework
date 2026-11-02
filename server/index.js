@@ -232,6 +232,8 @@ app.use('/api/domwork/staff-telegram', require('./routes/staffTelegram')({pool:c
     authRequired:require('./middleware/auth').authRequired}));
 app.use('/api/domwork/student-telegram', require('./routes/studentTelegram')({pool:crmDb.pool,runtime:domworkBot,
     authRequired:require('./middleware/auth').authRequired}));
+app.use('/api/miniapp', require('./routes/miniapp')({ pool: crmDb.pool, authRequired: require('./middleware/auth').authRequired,
+    getSalesManagerIdForUser: crmDb.getSalesManagerIdForUser }));
 app.use('/api/domwork/bot', domworkBotRouter({ pool: crmDb.pool, runtime: domworkBot,
     authRequired: require('./middleware/auth').authRequired }));
 // Xodimlar davomati (Face ID + lokatsiya) va ustozlar dars nazorati
@@ -285,6 +287,18 @@ app.get(['/teacher', '/teacher/'], (req, res) => {
     if (req.path === '/teacher') return res.redirect(301, '/teacher/');
     res.setHeader('Cache-Control', 'no-cache');
     res.sendFile(path.join(ROOT, 'teacher', 'index.html'));
+});
+
+// @Domworkuz_bot ichidagi "1-dars" mini ilovasi (Telegram WebApp). Telegram skripti va Telegram Web (iframe) uchun alohida CSP.
+app.get(['/miniapp', '/miniapp/'], (req, res) => {
+    if (req.path === '/miniapp') return res.redirect(301, '/miniapp/');
+    res.removeHeader('X-Frame-Options');
+    res.setHeader('Content-Security-Policy', ["default-src 'self'", "script-src 'self' https://telegram.org", "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+        "font-src 'self' data: https://fonts.gstatic.com", "img-src 'self' data: blob:", "media-src 'self' blob: https:", "connect-src 'self'",
+        "frame-src https://www.youtube-nocookie.com https://www.youtube.com",
+        "frame-ancestors 'self' https://web.telegram.org https://*.telegram.org", "base-uri 'none'", "form-action 'none'", "object-src 'none'"].join('; '));
+    res.setHeader('Cache-Control', 'no-cache');
+    res.sendFile(path.join(ROOT, 'miniapp', 'index.html'));
 });
 
 // Kitobdagi audio dialog QR-kodlari: /audio/L05-1 → /audio/L05_d1.mp3
