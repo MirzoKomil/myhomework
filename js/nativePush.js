@@ -8,7 +8,7 @@
     'use strict';
     const N = window.DomworkNative;
     if (!N) return;
-    const REG = 'dw_push_reg', SNOOZE = 'dw_push_snooze', AUTO = 'dw_push_autostart';
+    const REG = 'dw_push_reg', SNOOZE = 'dw_push_snooze', AUTO = 'dw_push_autostart', BAT = 'dw_push_battery', SHOWN = 'dw_push_shown';
     const ls = {
         get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } },
         set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* xotira yopiq */ } }
@@ -77,7 +77,7 @@
     function steps() {
         const list = [
             { id: 'notif', ok: safe(() => N.notifGranted(), true), title: 'Bildirishnomalar', sub: 'Yangi lid, sinov darsi va eslatmalar telefonga keladi', btn: 'Yoqish', act: () => N.requestNotif() },
-            { id: 'battery', ok: !safe(() => N.batteryRestricted(), false), title: 'Batareya: cheklovsiz', sub: 'Ilova yopiq bo\'lsa ham xabar kechikmasin', btn: 'Sozlash', act: () => N.openBattery() }
+            { id: 'battery', ok: ls.get(BAT) === '1' || !safe(() => N.batteryRestricted(), false), title: 'Batareya: cheklovsiz', sub: 'Ilova yopiq bo\'lsa ham xabar kechikmasin', btn: 'Sozlash', act: () => { ls.set(BAT, '1'); N.openBattery(); } }
         ];
         if (needsAutostart()) list.push({ id: 'auto', ok: ls.get(AUTO) === '1', title: 'Avtozapusk', sub: 'Ochilgan oynada "Jamoa"ni yoqing, so\'ng qaytib "Bajarildi"ni bosing',
             btn: 'Ochish', act: () => { N.openAutostart(); autoOpened = true; } });
@@ -137,9 +137,20 @@
         requestAnimationFrame(() => ov && ov.classList.add('on'));
     }
     const allOk = () => steps().every(s => s.ok);
+    // Boshqa oyna (qulf, anketa, davomat va h.k.) ochiq bo'lsa — ustiga chiqmaymiz.
+    const otherModal = () => safe(() => [...document.querySelectorAll('[aria-modal="true"],[role="dialog"]')]
+        .some(el => !el.closest('.dwp-ov') && el.offsetParent !== null), false);
+    let pendingOpen = false;
+    // O'zi ochilishi: faqat bildirishnoma ruxsati yo'q bo'lsa yoki boshqa qadam hali bosilmagan bo'lsa,
+    // qurilmada sutkasiga ko'pi bilan 1 marta va "Keyinroq"dan keyin 3 kun tinch.
     function maybeOpen() {
-        if (!staff() || allOk()) return;
-        if (Date.now() - Number(ls.get(SNOOZE) || 0) < 12 * 3600000) return;
+        pendingOpen = false;
+        if (!staff() || allOk() || ov) return;
+        const now = Date.now();
+        if (now - Number(ls.get(SNOOZE) || 0) < 3 * 86400000) return;
+        if (now - Number(ls.get(SHOWN) || 0) < 86400000) return;
+        if (otherModal()) { pendingOpen = true; return; }
+        ls.set(SHOWN, String(now));
         open();
     }
 
@@ -175,6 +186,7 @@
             const now = staff();
             if (now && !was) { register(); setTimeout(maybeOpen, 2000); }
             if (now) register();
+            if (now && pendingOpen) maybeOpen();
             was = now;
         }, 15000);
     }
