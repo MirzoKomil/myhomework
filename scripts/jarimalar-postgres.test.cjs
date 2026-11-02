@@ -172,6 +172,9 @@ test('jarimalar — PostgreSQL', { skip: !url }, async t => {
       assert.equal(tot.totals['e-ali'].cap, 620000);
       assert.ok(tot.totals['e-ali'].deducted > 0 && tot.totals['e-ali'].washed > 0);
       await assert.rejects(fines.monthTotals(pool, user('rop-en'), '2026-10'), { status: 403 });
+      // push: egasiga yangi jarima, rahbarga yuvish so'rovi
+      const pe = await fines.pushEvents(pool, 'bek', new Date());
+      assert.ok(pe.some(e => e.type === 'fine_new' && /Jarima: 30 000/.test(e.title)));
     });
   } finally { await pool.end(); }
 });

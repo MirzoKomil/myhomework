@@ -80,7 +80,7 @@
                 if (section === 'kpi') renderSettings(root, config);
                 else {
                     const fingerprint = JSON.stringify(result);
-                    if (force || root.dataset.payrollFingerprint !== fingerprint) renderPayroll(root, result);
+                    if (force || root.dataset.payrollFingerprint !== fingerprint) { renderPayroll(root, result); finesUnder(root, result); }
                     root.dataset.payrollFingerprint = fingerprint;
                 }
             }
@@ -96,6 +96,25 @@
         if (!N?.monthStudentCount || !state.month) return `${row.studentCount || 0} o‘quvchi`;
         const main = isMain ? N.monthStudentCount(row.employeeId, _financeLang, state.month) : 0;
         return [main ? `${main} o‘quvchi · shu oy` : '', asst ? `${asst} o‘quvchi yordamchi sifatida` : ''].filter(Boolean).join(' + ') || '0 o‘quvchi';
+    }
+    // Jarimalar (server/services/fines): har xodim ostida shu oy jarimasi (oylik chegara bilan) va qo'lga tegadigan summa.
+    // Maosh hisobi (engine, salary_transactions) o'zgarmaydi — ayirish to'lov paytida admin tomonidan (PR izohiga qarang).
+    function finesUnder(root, result) {
+        const month = String(result?.period?.start || '').slice(0, 7);
+        const cells = [...root.querySelectorAll('[data-fine-emp]')].filter(td => td.dataset.fineEmp);
+        if (!/^\d{4}-\d{2}$/.test(month) || !cells.length || typeof apiFetch !== 'function') return;
+        const salaries = Object.fromEntries(cells.map(td => [td.dataset.fineEmp, Number(td.dataset.fineTotal) || 0]));
+        apiFetch('/api/fines/admin/totals', { method: 'POST', body: JSON.stringify({ month, salaries }) }).then(r => {
+            for (const td of cells) {
+                td.querySelector('.payroll-fine')?.remove();
+                const f = r?.totals?.[td.dataset.fineEmp];
+                const el = document.createElement('small');
+                el.className = 'payroll-fine' + (f?.deducted ? '' : ' is-zero');
+                el.textContent = f?.deducted ? `Jarima: −${money(f.deducted)}${f.washed ? ` (yuvildi ${money(f.washed)})` : ''} → qoʻlga ${money(Math.max(0, Number(td.dataset.fineTotal) - f.deducted))}`
+                    : f?.count === 0 || !f ? (r.cleanBonus ? `Jarima yoʻq · “Toza oy” +${money(r.cleanBonus)}` : 'Jarima yoʻq') : 'Jarima yuvilgan';
+                td.appendChild(el);
+            }
+        }).catch(() => { /* jarimalar moduli yo'q yoki ruxsat yo'q — maosh jadvali o'zgarmaydi */ });
     }
     function renderPayroll(root, result) {
         root.dataset.manualDirty = '';
@@ -113,7 +132,7 @@
                     ${row.role === 'rop' ? `<br>Toza aylanma: ${money(row.cleanTurnover)}<br>Reja: ${Number(row.completion).toFixed(1)}% · ulush ${row.rate}%${row.blocked ? '<p class="payroll-alert">Reja tasdiqlanmagan</p>' : ''}` : ''}
                     ${row.mainTotal !== undefined ? `<p>Asosiy: ${money(row.mainTotal)} · ${row.mainLessons} dars<br>Yordamchi: ${money(row.assistantTotal)} · ${row.assistantLessons} dars</p>` : ''}
                     ${row.breakdown?.length ? `<details><summary>O‘quvchilar bo‘yicha</summary>${row.breakdown.map(b => `<p>${esc(b.name)} · ${b.dutyRole === 'assistant' ? 'Yordamchi · ' : b.dutyRole === 'main' ? 'Asosiy · ' : ''}${esc(b.month)}: ${b.lessons}/${b.expected} dars → ${money(b.earned)}</p>`).join('')}</details>` : ''}</td>
-                <td data-label="Bonus">${money(row.bonus)}${row.adjustments?.length ? `<details><summary>Tuzatish: ${money(row.adjustmentTotal)}</summary>${row.adjustments.map(a => `<p>${esc(a.sourceStart)} – ${esc(a.sourceEnd)}: ${money(a.amount)}</p>`).join('')}</details>` : ''}</td><td data-label="Jami"><strong>${money(row.total)}</strong>${row.unpaidDebt ? `<small>Keyingi davrga qarzdorlik: ${money(row.unpaidDebt)} (hisob yopilgach tekshiriladi)</small>` : ''}${row.frozen ? '<small>To‘langan hisob saqlangan</small>' : ''}</td>
+                <td data-label="Bonus">${money(row.bonus)}${row.adjustments?.length ? `<details><summary>Tuzatish: ${money(row.adjustmentTotal)}</summary>${row.adjustments.map(a => `<p>${esc(a.sourceStart)} – ${esc(a.sourceEnd)}: ${money(a.amount)}</p>`).join('')}</details>` : ''}</td><td data-label="Jami" data-fine-emp="${esc(row.employeeId || '')}" data-fine-total="${Number(row.total) || 0}"><strong>${money(row.total)}</strong>${row.unpaidDebt ? `<small>Keyingi davrga qarzdorlik: ${money(row.unpaidDebt)} (hisob yopilgach tekshiriladi)</small>` : ''}${row.frozen ? '<small>To‘langan hisob saqlangan</small>' : ''}</td>
                 <td data-label="Holat"><span class="badge ${row.status === 'paid' ? 'badge-success' : ''}">${row.status === 'paid' ? 'Berildi' : 'Berilmadi'}</span>
                     ${row.status !== 'paid' ? `<button class="btn-secondary-sm" data-payroll-paid="${esc(row.transactionId || '')}" data-zero-payment="${row.total === 0}" ${!row.transactionId || row.stale || row.blocked ? 'disabled' : ''}>${row.total === 0 ? '0 so‘mlik hisobni yopish' : 'Berildi deb belgilash'}</button>${row.stale ? '<small>Qayta shakllantirish kerak</small>' : ''}` : ''}</td></tr>`).join('') || '<tr><td colspan="6">Mos xodimlar topilmadi</td></tr>'}
             </tbody></table></div>

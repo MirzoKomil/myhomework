@@ -492,5 +492,27 @@ async function appeals(db, user) {
     return { rows: out };
 }
 
-module.exports = { SCHEMA, initSchema, tick, syncAttendance, mine, unseen, markSeen, detail, appeal, answerAppeal, team, issue, requestWash, washInbox, decideWash,
+// Push (staffNotify → Jamoa APK): yangi jarima (ogohlantirishsiz), yuvish va e'tiroz javobi; rahbarga — yangi yuvish so'rovi.
+async function pushEvents(db, userId, now = new Date()) {
+    if (!(await db.query("SELECT to_regclass('public.staff_fines') AS t")).rows[0]?.t) return [];
+    const v = await viewer(db, { id: userId }).catch(() => null);
+    if (!v) return [];
+    const ev = [];
+    if (v.employeeId) {
+        const rows = (await db.query(`SELECT id,label,amount,state,appeal_answer,created_at,appeal_at FROM staff_fines WHERE employee_id=$1 AND NOT warning AND created_at>NOW()-INTERVAL '2 days'`, [v.employeeId])).rows;
+        for (const f of rows) ev.push({ id: `fine:${f.id}`, type: 'fine_new', cat: 'boshqa', tone: 'warn', pushOnly: true, title: `Jarima: ${money(f.amount)} soʻm`,
+            sub: `${f.label} · yuvish yoʻllari ilovada`, at: new Date(f.created_at).toISOString(), go: { tab: 'jarimalar' } });
+        const ws = (await db.query(`SELECT id,state,value,decided_at FROM staff_fine_washes WHERE employee_id=$1 AND kind<>'streak' AND state IN ('approved','rejected') AND decided_at>NOW()-INTERVAL '2 days'`, [v.employeeId])).rows;
+        for (const w of ws) ev.push({ id: `finewash:${w.id}:${w.state}`, type: 'fine_new', cat: 'boshqa', tone: w.state === 'approved' ? 'ok' : 'warn', pushOnly: true,
+            title: w.state === 'approved' ? `Jarima yuvildi: ${money(w.value)} soʻm` : 'Yuvish soʻrovi rad etildi', sub: 'Mening jarimalarim', at: new Date(w.decided_at).toISOString(), go: { tab: 'jarimalar' } });
+    }
+    if (['admin', 'rop', 'academic'].includes(v.kind)) {
+        const inbox = await washInbox(db, { id: userId }).catch(() => ({ rows: [] }));
+        for (const w of inbox.rows.filter(x => Date.now() - new Date(x.createdAt) < 86400000)) ev.push({ id: `finewashreq:${w.id}`, type: 'fine_new', cat: 'tasdiq', tone: 'info', pushOnly: true,
+            title: `Yuvish soʻrovi: ${String(w.name || '').split(/\s+/)[0]}`, sub: `${money(w.value)} soʻm`, at: new Date(w.createdAt).toISOString(), go: { tab: 'jarimalar' } });
+    }
+    return ev;
+}
+
+module.exports = { SCHEMA, initSchema, tick, pushEvents, syncAttendance, mine, unseen, markSeen, detail, appeal, answerAppeal, team, issue, requestWash, washInbox, decideWash,
     getConfig, saveConfig, monthTotals, counts, appeals, fineRole, viewer };

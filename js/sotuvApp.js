@@ -545,6 +545,7 @@
             ${tile('data-sa-crm="marketing"', 'sms', 'gray', 'SMS xabarlar', 'shablonlar')}
             ${tile('data-sa-crm="guides"', 'book', 'gray', 'Yoʻriqnomalar', 'qoidalar')}
             ${window.davomat?.menuInfo().tracked ? tile('data-dv-go="my"', 'clock', 'blue', 'Mening davomatim', 'kalendar · soʻrovlar') : ''}
+            ${window.jarima && !jarima.counts()?.exempt ? tile('data-jr-go="my"', 'debt', 'amber', 'Mening jarimalarim', 'maosh va yuvish') : ''}
           </nav>
           <div class="sa-card sa-list">
             <button type="button" class="sa-row sa-row-btn" data-sa-crm="profile">${ic('gear', 20)}<span class="sa-row-t"><strong>Sozlamalar</strong><span>Parol, bildirishnomalar, Telegram bot</span></span>${ic('chev', 18, 2.2)}</button>

@@ -336,7 +336,7 @@
         const row = (icn, t, attr) => `<button type="button" class="hra-mrow" ${attr}><span class="hra-qi hra-blue">${ic(icn, 18)}</span><span>${t}</span>${ic('chev', 18)}</button>`;
         return `<div class="hra-tabhead"><div class="hra-th"><h1>Menyu</h1></div></div><div class="hra-body">
             <section class="hra-card hra-person-s">${ava(u.name, 54)}<div><strong>${esc(u.name || '')}</strong><span>HR menejer · ${myLangs().map(langLabel).join(' va ')} tili</span></div></section>
-            <section class="hra-card hra-mlist">${row('brief', 'Vakansiyalar', 'data-h-nav="vacs"')}${row('face', 'Davomat va yuz tasdiqlash', 'data-h-nav="att"')}${window.davomat?.menuInfo().tracked ? row('cal', 'Mening davomatim', 'data-dv-go="my"') : ''}${row('desk', 'Kompyuter versiyasi (HR boʻlimi)', 'data-h-crm')}</section>
+            <section class="hra-card hra-mlist">${row('brief', 'Vakansiyalar', 'data-h-nav="vacs"')}${row('face', 'Davomat va yuz tasdiqlash', 'data-h-nav="att"')}${window.davomat?.menuInfo().tracked ? row('cal', 'Mening davomatim', 'data-dv-go="my"') : ''}${window.jarima && !jarima.counts()?.exempt ? row('note', 'Mening jarimalarim', 'data-jr-go="my"') : ''}${row('desk', 'Kompyuter versiyasi (HR boʻlimi)', 'data-h-crm')}</section>
             <section class="hra-card hra-mlist">${row('user', 'Profil, parol va bildirishnomalar', 'data-h-profile')}</section>
             <button type="button" class="hra-logout" data-h-logout>${ic('out', 18, 2.2)}Chiqish</button></div>`;
     }

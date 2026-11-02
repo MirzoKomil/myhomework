@@ -739,6 +739,7 @@ async function collect(db, actor, now) {
     await run('guides', guideEvents);
     // Davomat (Face ID): ish boshlanishi/tugashi eslatmasi, so'rov qarori, tasdiqlovchiga yangi so'rov — faqat telefon push (pushOnly).
     await run('attendance', async (d, m, n, list) => list.push(...await require('./staffAttendance').pushEvents(d, m.user.id, n)));
+    await run('fines', async (d, m, n, list) => list.push(...await require('./fines').pushEvents(d, m.user.id, n)));
     return { me, row, prefs, ev, errors };
 }
 async function feed(db, actor, now = new Date()) {
