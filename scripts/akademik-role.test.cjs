@@ -176,7 +176,7 @@ test('kompyuter kabineti: ustozlar jadvali ustunlari, sidebar va modul ulanishi'
     assert.match(html, /<script src="js\/akademikApp\.js\?v=[^"]+"><\/script>\s*<script src="js\/akademikDesk\.js\?v=[^"]+"><\/script>/, 'desk telefondagi kit dan keyin yuklanadi');
     assert.match(html, /css\/akademikDesk\.css\?v=/);
     assert.match(html, /<section id="tab-akademik" class="tab-content"><div id="akademikDeskRoot"/);
-    for (const k of ['home', 'problems', 'teachers', 'makeups', 'risk', 'late', 'slots', 'att', 'attreq', 'myatt', 'book', 'archive'])
+    for (const k of ['home', 'problems', 'teachers', 'makeups', 'risk', 'late', 'slots', 'myatt', 'book', 'archive'])
         assert.match(html, new RegExp(`data-tab="akademik" data-akd="${k}" style="display:none"`), k);
     const app = read('js/app.js');
     assert.match(app, /DESIGN_SIDEBAR\.akademik = \{/);

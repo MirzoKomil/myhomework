@@ -1,11 +1,14 @@
 /* Jamoa — Akademik rahbar kompyuter kabineti (js/akademikDesk.js), ≥901px. Dizayn: "Akademik" kanvasi AkdHome, AkdProblems,
    AkdMakeups, AkdTeachers (1440px). Telefon oynalari (css/akademikApp.css .aka-sheet) kompyuterda markazdagi oyna boʻladi. */
-body.akd-on {
-    --a-ink: #0B1220; --a-ink2: #3A4456; --a-mut: #4B5563; --a-bg: #F5F7FB; --a-line: #E6EAF2; --a-line2: #CBD5E1; --a-sep: #EEF2F8; --a-track: #E2E8F0;
-    --a-blue: #0065D6; --a-blue-d: #0057B8; --a-blue-t: #EAF3FF;
-    --a-red: #B42318; --a-red-t: #FEF3F2; --a-red-s: #D92D20; --a-red-l: #FDA29B;
-    --a-amb: #93370D; --a-amb-t: #FEF0C7; --a-grn: #067647; --a-grn-t: #ECFDF3; --a-pur: #5B21B6; --a-pur-t: #F1E8FF; --a-gry-t: #EEF2F8;
-    --a-nav: 0px; --a-ease: cubic-bezier(.2, .8, .2, 1);
+/* Tokenlar faqat kompyuterda (telefonda --a-nav va boshqalar css/akademikApp.css body.aka-on dan keladi). */
+@media (min-width: 901px) {
+    body.akd-on {
+        --a-ink: #0B1220; --a-ink2: #3A4456; --a-mut: #4B5563; --a-bg: #F5F7FB; --a-line: #E6EAF2; --a-line2: #CBD5E1; --a-sep: #EEF2F8; --a-track: #E2E8F0;
+        --a-blue: #0065D6; --a-blue-d: #0057B8; --a-blue-t: #EAF3FF;
+        --a-red: #B42318; --a-red-t: #FEF3F2; --a-red-s: #D92D20; --a-red-l: #FDA29B;
+        --a-amb: #93370D; --a-amb-t: #FEF0C7; --a-grn: #067647; --a-grn-t: #ECFDF3; --a-pur: #5B21B6; --a-pur-t: #F1E8FF; --a-gry-t: #EEF2F8;
+        --a-nav: 0px; --a-ease: cubic-bezier(.2, .8, .2, 1);
+    }
 }
 
 /* ---------- sidebar (akademik) ---------- */
@@ -98,7 +101,7 @@ body.akd-on {
 .akd-table--t .akd-tt { gap: 3px; }
 .akd-unset { color: #93370D; font-weight: 800; }
 .akd-grp th { font-size: 12px; font-weight: 800; color: #3A4456; background: #F8FAFD; padding: 8px 14px; text-align: left; border-bottom: 1px solid #EEF2F8; }
-.akd-grp.is-red th { color: #B42318; background: #FFFBFA; }
+.akd .akd-table .akd-grp.is-red th { color: #B42318; background: #FFFBFA; }
 .akd-more-td { padding: 0 !important; }
 .akd-more { width: 100%; min-height: 48px; padding: 0 14px; border: 0; background: transparent; color: #0057B8; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: space-between; text-align: left; }
 .akd-more:hover { background: #F8FAFD; }
@@ -257,6 +260,8 @@ body.akd-on {
 }
 @keyframes akdPop { from { opacity: 0; transform: translate(-50%, calc(-50% + 12px)); } to { opacity: 1; transform: translate(-50%, -50%); } }
 .akd-nf { display: flex; flex-direction: column; gap: 14px; }
+/* "Muammo yozish": amallar qatori oynaning pastida doim koʻrinadi (1000px balandlikda ham). */
+.akd-nf > .akd-acts { position: sticky; bottom: -24px; z-index: 1; margin: 0 -24px -24px; padding: 12px 24px 24px; background: #FFFFFF; border-top: 1px solid #EEF2F8; }
 
 /* ---------- harakat ---------- */
 @keyframes akdUp { from { transform: translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }

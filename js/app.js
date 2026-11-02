@@ -874,9 +874,10 @@ const DESIGN_SIDEBAR = {
 DESIGN_SIDEBAR.boshliq = DESIGN_SIDEBAR.admin;
 // Akademik rahbar (dizayn: AkdHome/AkdProblems/AkdMakeups/AkdTeachers) — "akd:<bo'lim>" bandlari js/akademikDesk.js sahifalari;
 // O'quvchilar va Dars jadvali — umumiy sahifalar. Guruhlar sarlavha bilan; dizaynda yo'q Yo'riqnomalar "Boshqa" oxirida qoladi.
+// "Yordamchilar davomati" / "Davomat so'rovlari" — Face ID (xodimlar davomati) ishi tugaguncha yo'q (HR sahifasi akademikka 403).
 DESIGN_SIDEBAR.akademik = {
     main: ['akd:home', 'akd:problems', 'students', 'akd:teachers', 'timetable'], extra: [],
-    groups: [['Nazorat', ['akd:makeups', 'akd:risk', 'akd:late', 'akd:slots']], ['Davomat', ['akd:att', 'akd:attreq', 'akd:myatt']], ['Boshqa', ['akd:book', 'akd:archive', 'guides']]]
+    groups: [['Nazorat', ['akd:makeups', 'akd:risk', 'akd:late', 'akd:slots']], ['Davomat', ['akd:myatt']], ['Boshqa', ['akd:book', 'akd:archive', 'guides']]]
 };
 function applyDesignSidebar(role) {
     const sidebar = document.getElementById('sidebarMenu');

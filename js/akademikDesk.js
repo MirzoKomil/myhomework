@@ -18,7 +18,9 @@
         mtab: 'pending', mteacher: '', mAll: false, ttab: 'teachers', tid: null, aid: null, tauto: true,
         rtab: 'all', rteacher: '', sid: null, rAll: false, ltab: 'pending',
     };
-    let root = null, inited = false, unsub = null, draft = null;
+    let root = null, inited = false, draft = null, opener = '';
+    // Yuborilayotgan soʻrovlar (ikki marta bosilmasin): 'stage:<pid>', 'm:<makeupId>', 'l:<lateId>'.
+    const pending = new Set();
 
     const DESK_VIEWS = new Set(['home', 'problems', 'archive', 'teachers', 'makeups', 'risk', 'late']);
     const activeTab = () => document.getElementById('tab-akademik')?.classList.contains('active');
@@ -29,12 +31,10 @@
         if (typeof switchTab !== 'function') return;
         if (key === 'slots') { switchTab('timetable', { akdNav: 'slots' }); return; }
         if (key === 'book') { switchTab('teachers-section', { teachersSection: 'textbook', akdNav: 'book' }); return; }
-        if (key === 'att' || key === 'attreq') { switchTab('hr', { hrSection: 'davomat', akdNav: key }); return; }
         if (key === 'myatt') {
-            if (window.staffAttendanceUI?.openCheckSheet) { window.staffAttendanceUI.openCheckSheet(); return; }
+            if (window.staffAttendanceUI?.openCheckSheet) { window.staffAttendanceUI.openCheckSheet(); markWhileOpen('myatt', '.satt-overlay'); return; }
             switchTab('profile', { akdNav: 'myatt' }); return;
         }
-        if (key === 'trials') { switchTab('trial-lessons'); return; }
         if (!DESK_VIEWS.has(key)) key = 'home';
         if (key === 'problems' || key === 'archive') {
             V.ptab = key === 'archive' ? 'closed' : (extra.ptab || (V.ptab === 'closed' ? 'open' : V.ptab));
@@ -48,10 +48,20 @@
         switchTab('akademik', { akd: key });
     }
 
+    // Oyna bilan ochiladigan band (Mening davomatim): oyna ochiq turganda sidebar'da shu band faol, yopilgach avvalgisi qaytadi.
+    function markWhileOpen(key, sel) {
+        const item = document.querySelector(`#sidebarMenu .menu-item[data-akd="${key}"]`); if (!item) return;
+        const prev = [...document.querySelectorAll('#sidebarMenu .menu-item.active')].filter(x => x !== item);
+        prev.forEach(x => x.classList.remove('active')); item.classList.add('active'); item.setAttribute('aria-current', 'true');
+        const mo = new MutationObserver(() => { if (!document.querySelector(sel)) done(); });
+        const done = () => { mo.disconnect(); item.classList.remove('active'); item.removeAttribute('aria-current'); prev.forEach(x => x.classList.add('active')); };
+        if (!document.querySelector(sel)) { done(); return; }
+        mo.observe(document.body, { childList: true });
+    }
+
     // ---------- yordamchilar ----------
     const nameKey = n => String(n || '').trim().split(/\s+/)[0] || '';
     const maskPhone = p => { const d = String(p || '').replace(/\D/g, ''); if (d.length < 9) return p || ''; const n = d.length === 9 ? '998' + d : d; return `+${n.slice(0, 3)} ${n.slice(3, 5)} *** ** ${n.slice(-2)}`; };
-    const monthName = ym => { const k = K(); const m = /^(\d{4})-(\d{2})/.exec(String(ym || '')); return m ? k.MON[Number(m[2]) - 1] : ''; };
     const monLoc = name => (name ? name + 'da' : '');
     function h1(title, sub, right = '') {
         return `<div class="akd-h1row"><div class="akd-h1"><h1>${K().esc(title)}</h1>${sub ? `<p>${sub}</p>` : ''}</div>${right}</div>`;
@@ -81,8 +91,14 @@
     // =====================================================================================
     // AkdHome · Bosh sahifa
     // =====================================================================================
-    const NLOOK = { acad_problem_overdue: ['alert', 'red'], acad_teacher_locked: ['lock', 'purple'], acad_trial_rejected: ['cal', 'amber'], acad_break: ['cal', 'grey'], acad_makeup_new: ['phone', 'blue'], acad_late_contact: ['clock', 'blue'], acad_risk_new: ['trend', 'amber'], acad_problem_followup: ['alert', 'blue'] };
-    const NVIEW = { acad_problem_overdue: 'problems', acad_problem_followup: 'archive', acad_teacher_locked: 'teachers', acad_trial_rejected: 'teachers', acad_break: 'teachers', acad_makeup_new: 'makeups', acad_late_contact: 'late', acad_risk_new: 'risk' };
+    // Bildirishnoma koʻrinishi va manzili — telefondagi (kit.notifs) bilan bir; faqat AkdHome dizayni farq qiladigan ikonkalar ustiga yoziladi.
+    const nLook = () => ({ ...K().notifs.NLOOK, acad_makeup_new: ['phone', 'blue'], acad_risk_new: ['trend', 'amber'] });
+    const nView = etype => (etype === 'acad_problem_followup' ? 'archive' : K().notifs.NGO[etype]?.[0] || null);
+    // "Sinov qabul qilinmagan" — oʻsha ustozning paneli (ism roʻyxatda topilsa), aks holda Sinov vaqtlari (Dars jadvali v3).
+    function trialGo(nt) {
+        const k = K(), t = nt && (k.need(k.API.teachers).d?.items || []).find(x => k.first(x.name) === k.first(nt.teacher));
+        return t ? `data-k-teacher="${k.esc(t.id)}"` : 'data-k-go="slots"';
+    }
     function viewHome() {
         const k = K(), { esc, ic, num, pct, MON, WD } = k;
         const u = cu(), d = new Date(), nm = k.first(u.name || k.myName());
@@ -102,7 +118,7 @@
             { k: 'overdue', n: num(t.overdueProblems), icon: 'alert', tone: 'red', title: 'Muammo muddati oʻtdi', sub: num(t.overdueProblems) ? `Eng eskisi ${num(t.oldestOverdueDays)} kun${num(t.oldestOverdueReminds) ? ` · bot ${num(t.oldestOverdueReminds)} marta eslatdi` : ''}` : 'Muddati oʻtgan yoʻq', subTone: num(t.overdueProblems) ? 'red' : '', go: 'data-k-go="problems" data-k-ptab="open"' },
             { k: 'makeups', n: num(t.makeupsPending), icon: 'phone', tone: 'blue', title: 'Qoplashni tekshirish', sub: 'Oʻquvchiga qoʻngʻiroq', go: 'data-k-go="makeups"' },
             { k: 'risk', n: num(t.risk), icon: 'trend', tone: 'amber', title: 'Ketish xavfi', sub: num(t.riskNoApp) ? `${num(t.riskNoApp)} tasi appga kirmayapti` : 'Xavf roʻyxati', subTone: num(t.riskNoApp) ? 'amber' : '', go: 'data-k-go="risk" data-k-rtab="all"' },
-            { k: 'trial', n: num(t.trialsUnaccepted), icon: 'cal', tone: 'purple', title: 'Sinov qabul qilinmagan', sub: nt ? `${k.relDT(nt.time).replace(/ 00:00$/, '')} · ${k.first(nt.teacher)}` : 'Hammasi qabul qilingan', go: 'data-k-go="trials"' },
+            { k: 'trial', n: num(t.trialsUnaccepted), icon: 'cal', tone: 'purple', title: 'Sinov qabul qilinmagan', sub: nt ? `${k.relDT(nt.time).replace(/ 00:00$/, '')} · ${k.first(nt.teacher)}` : 'Hammasi qabul qilingan', go: trialGo(nt) },
         ];
         const cats = tiles.filter(x => x.n > 0), sum = cats.reduce((a, x) => a + x.n, 0);
         const tile = x => `<a href="#" class="akd-tile${x.k === 'overdue' && x.n ? ' is-hot akd-pulse' : ''}" ${x.go}><span class="akd-tile-h"><span class="aka-qi akd-qi t-${x.tone}">${ic(x.icon, 20)}</span><strong>${x.n}</strong></span><strong>${esc(x.title)}</strong><small class="${x.subTone ? 'c-' + x.subTone : ''}">${esc(x.sub)}</small></a>`;
@@ -114,7 +130,7 @@
         const today = new Date().toDateString(), yest = k.addDays(new Date(), -1).toDateString();
         const nTime = n => { const x = Number(n.time) || Date.parse(n.time || ''); return Number.isFinite(x) ? x : 0; };
         const when = n => { const x = nTime(n); if (!x) return ''; const ds = new Date(x).toDateString(); return ds === today ? k.hm(x) : ds === yest ? `Kecha ${k.hm(x)}` : k.dShort(x); };
-        const nRow = n => { const [icn, tone] = NLOOK[n.etype] || (/davomat|attendance|face/i.test(String(n.etype || '')) ? ['face', 'amber'] : n.type === 'danger' ? ['alert', 'red'] : ['bell', 'grey']);
+        const nRow = n => { const [icn, tone] = nLook()[n.etype] || (/davomat|attendance|face/i.test(String(n.etype || '')) ? ['face', 'amber'] : n.type === 'danger' ? ['alert', 'red'] : ['bell', 'grey']);
             return `<a href="#" class="akd-nrow${n.read ? '' : ' is-new'}" data-k-notif="${esc(n.id)}"><span class="aka-qi t-${tone}">${ic(icn, 16)}</span><span class="akd-nrow-t"><strong>${esc(n.title || 'Bildirishnoma')}</strong>${n.message ? `<small>${esc(n.message)}</small>` : ''}</span><small class="akd-nrow-time">${esc(when(n))}</small></a>`; };
         return head + `<div class="akd-homeTop">${hero}
             <section class="akd-s2 akd-now"><div class="akd-sh"><h2>Hozir hal qiling</h2><span class="${sum ? 'c-red' : 'c-green'}">${sum ? `${cats.length} toifa · ${sum} ta` : 'Hammasi hal qilingan'}</span></div>
@@ -188,7 +204,7 @@
             const done = i < idx || closed, cur = i === idx && !closed, nextBtn = !closed && i === idx + 1 && key !== 'closed';
             const dot = done ? `<span class="aka-st-d is-done">${ic('check', 14, 3)}</span>` : cur ? '<span class="aka-st-d is-cur"><i></i></span>' : '<span class="aka-st-d"></span>';
             const inner = `${i < 3 ? `<span class="aka-st-l${done ? ' is-done' : ''}" aria-hidden="true"></span>` : ''}${dot}${esc(l)}`;
-            return `<li class="${cur ? 'is-cur' : done ? 'is-done' : ''}"${cur ? ' aria-current="step"' : ''}>${nextBtn ? `<button type="button" class="aka-st-b" data-k-stage="${key}" aria-label="Bosqichni “${esc(l)}”ga oʻtkazish">${inner}</button>` : inner}</li>`;
+            return `<li class="${cur ? 'is-cur' : done ? 'is-done' : ''}"${cur ? ' aria-current="step"' : ''}>${nextBtn ? `<button type="button" class="aka-st-b" data-k-stage="${key}"${pending.has('stage:' + p.id) ? ' disabled aria-busy="true"' : ''} aria-label="Bosqichni “${esc(l)}”ga oʻtkazish">${inner}</button>` : inner}</li>`;
         }).join('');
         const owner = p.ownerName ? (k.isMe(p.ownerName) ? 'Siz' : p.ownerName) : '';
         const typeL = (k.TYPES.find(t => t[0] === p.type) || [, 'Boshqa'])[1];
@@ -239,7 +255,8 @@
                 const dcell = !pend ? (m.checkedAt ? `<span class="akd-mut">${esc(k.dShort(m.checkedAt))}${m.checkedByName ? ' · ' + esc(k.isMe(m.checkedByName) ? 'Siz' : k.first(m.checkedByName)) : ''}</span>` : '—')
                     : m.canReject === false ? k.chip('Rad etish muddati oʻtdi', 'grey') : m.deadline ? (dl != null && dl <= 6 ? `<span class="akd-due t-red">${esc(k.dShort(m.deadline))} gacha</span>` : `<span class="akd-mut">${esc(k.dShort(m.deadline))} gacha</span>`) : '—';
                 const call = m.studentPhone ? `<a class="akd-call" href="${esc(k.telHref(m.studentPhone))}" aria-label="${esc(nm)}ga qoʻngʻiroq">${ic('phone', 16)}</a>` : `<span class="akd-call is-off" role="img" aria-label="${esc(nm)}: telefon kiritilmagan" title="Telefon kiritilmagan">${ic('phone', 16)}</span>`;
-                const acts = pend ? `${call}<span class="akd-res" role="group" aria-label="${esc(nm)}: natija"><button type="button" class="akd-rb akd-rb--ok" data-k-mres="held" data-k-mid="${esc(m.id)}">Oʻtildi</button><button type="button" class="akd-rb akd-rb--no" data-k-mres="not_held" data-k-mid="${esc(m.id)}"${m.canReject === false ? ' disabled title="Rad etish muddati oʻtgan (keyingi oyning 4-sanasi)"' : ''}>Dars boʻlmagan…</button><button type="button" class="akd-rb" data-k-mres="no_answer" data-k-mid="${esc(m.id)}">Javob yoʻq</button></span>`
+                const busy = pending.has('m:' + m.id) ? ' disabled aria-busy="true"' : '';
+                const acts = pend ? `${call}<span class="akd-res" role="group" aria-label="${esc(nm)}: natija"><button type="button" class="akd-rb akd-rb--ok" data-k-mres="held" data-k-mid="${esc(m.id)}"${busy}>Oʻtildi</button><button type="button" class="akd-rb akd-rb--no" data-k-mres="not_held" data-k-mid="${esc(m.id)}"${m.canReject === false ? ' disabled title="Rad etish muddati oʻtgan (keyingi oyning 4-sanasi)"' : busy}>Dars boʻlmagan…</button><button type="button" class="akd-rb" data-k-mres="no_answer" data-k-mid="${esc(m.id)}"${busy}>Javob yoʻq</button></span>`
                     : `${call}${V.mtab === 'held' ? k.chip('Oʻtildi', 'green') : k.chip('Rad etildi', 'red')}`;
                 return `<tr class="akd-row"><td><strong>${esc(nm)}</strong>${m.checkStatus === 'no_answer' ? ' ' + k.chip('Javob bermadi', 'amber') : ''}<small>${esc(maskPhone(m.studentPhone) || '—')}</small>${!pend && m.checkNote ? `<small>«${esc(m.checkNote)}»</small>` : ''}</td>
                     <td>${esc(k.first(m.teacherName) || '—')}</td><td class="akd-nw">${esc(m.heldAt ? k.dtComma(m.heldAt) : '—')}${m.lessonNo ? `<small>${esc(m.lessonNo)}-dars</small>` : ''}</td>
@@ -253,12 +270,14 @@
     async function makeupResult(id, result, btn) {
         const k = K();
         if (result === 'not_held') { syncState(); k.dlg.makeup(id, 'not_held'); return; }
-        btn.disabled = true;
+        if (pending.has('m:' + id)) return;
+        pending.add('m:' + id); btn.disabled = true; draw();
         try {
             await k.send(`/api/academic/head/makeups/${encodeURIComponent(id)}/check`, 'POST', { result, note: '', openProblem: false });
             k.toast(result === 'held' ? 'Tekshirildi · maoshda qoladi' : 'Navbatda qoldi — keyinroq qayta qoʻngʻiroq qiling', result === 'held' ? 'win' : 'ok');
             k.invalidate('/api/academic/head/makeups', k.API.ov);
-        } catch (e) { btn.disabled = false; k.toast(e.status === 409 ? 'Allaqachon tekshirilgan' : e.message || 'Saqlab boʻlmadi', 'bad'); if (e.status === 409) k.invalidate('/api/academic/head/makeups'); }
+        } catch (e) { k.toast(e.status === 409 ? 'Allaqachon tekshirilgan' : e.message || 'Saqlab boʻlmadi', 'bad'); if (e.status === 409) k.invalidate('/api/academic/head/makeups'); }
+        finally { pending.delete('m:' + id); draw(); }
     }
 
     // =====================================================================================
@@ -310,9 +329,11 @@
         const close = `<button type="button" class="akd-ib" data-k-tclose aria-label="Panelni yopish">${ic('x', 16, 2.2)}</button>`;
         if (!c.d) return `<aside class="akd-panel akd-card" aria-label="Ustoz"><div class="akd-ph"><span class="akd-sp"></span>${close}</div>${c.e ? k.errBox(c.e, url).replace('data-a-retry', 'data-k-retry') : sk(1, 56) + sk(2, 72) + sk(1, 300)}</aside>`;
         const t = c.d, tr = t.trials30 || {}, mk = t.makeups30 || {}, sal = t.salary || {}, pr = t.problems || {};
-        const now = new Date(), prevMon = MON[(now.getMonth() + 11) % 12], nextMon = MON[(now.getMonth() + 1) % 12];
+        const now = new Date(), prevMon = MON[(now.getMonth() + 11) % 12];
+        // Ish haqi oyi — salary.month ('YYYY-MM'); toʻlov 5-, qoplashni rad etish 4-sanagacha — undan keyingi oyda.
+        const salM = /^\d{4}-(\d{2})/.exec(String(sal.month || '')), salIdx = salM ? Number(salM[1]) - 1 : (now.getMonth() + 11) % 12, afterMon = MON[(salIdx + 1) % 12];
         const onPlan = num(t.studentsCount) ? num(t.onPlanCount) / num(t.studentsCount) * 100 : 0;
-        const nm = k.first(t.name), tg = k.tgHref(t.phone), salMon = monthName(sal.month) || prevMon;
+        const nm = k.first(t.name), tg = k.tgHref(t.phone), salMon = MON[salIdx];
         const reasons = (tr.rejectReasons || []).map(r => (typeof r === 'string' ? r : r.reason || r.text || '')).filter(Boolean);
         const lockTxt = t.lock ? (/qulf ochiladi/i.test(t.lock.reason || '') ? t.lock.reason : `${t.lock.reason || ''}${t.lock.reason ? '. ' : ''}Davomat belgilansa qulf ochiladi.`) : '';
         return `<aside class="akd-panel akd-card akd-s2" aria-label="${esc(nm)}">
@@ -327,8 +348,8 @@
               ${lr('Qoplash (30 kun)', `<a href="#" data-k-go="makeups" data-k-mteacher="${esc(nm)}">${num(mk.total)} ta${num(mk.inReview) ? ` · ${num(mk.inReview)} tasi tekshiruvda` : ''}</a>`)}
               ${lr('Sinov vaqtlari', '<a href="#" data-k-go="slots">Dars jadvalida ›</a>')}
               ${lr(`Ish haqi · ${esc(salMon)} (faqat koʻrish)`, sal.lessons == null ? 'Hisob hali yoʻq' : `${num(sal.lessons)}${num(sal.makeups) ? ` + ${num(sal.makeups)} qoplash` : ''}${sal.amount != null ? ' · ' + esc(k.money(sal.amount)) : ''}`)}
-              ${lr('Holat', sal.status === 'paid' ? 'Toʻlangan' : sal.status === 'unpaid' ? `Admin tekshiryapti · 5-${esc(MON[now.getMonth()])} toʻlanadi` : 'Hisob hali yoʻq')}
-              ${lr('Eslatma', `Qoplash rad etilsa 4-${esc(nextMon)}gacha oʻzgarishi mumkin`)}
+              ${lr('Holat', sal.status === 'paid' ? 'Toʻlangan' : sal.status === 'unpaid' ? `Admin tekshiryapti · 5-${esc(afterMon)} toʻlanadi` : 'Hisob hali yoʻq')}
+              ${lr('Eslatma', `Qoplash rad etilsa 4-${esc(afterMon)}gacha oʻzgarishi mumkin`)}
               ${lr(`Oʻquvchilari · ${num(t.studentsCount)}`, `<a href="#" data-k-go="risk" data-k-rteacher="${esc(nm)}">roʻyxat ›</a>`)}
               ${lr('Muammolar', `<a href="#" data-k-go="problems" data-k-pteacher="${esc(nm)}">${num(pr.open) ? `${num(pr.open)} ochiq${num(pr.overdue) ? ` · ${num(pr.overdue)} muddati oʻtgan` : ''}` : 'Ochiq muammo yoʻq'} ›</a>`)}
             </div>
@@ -348,7 +369,7 @@
             ${sil.length ? `<div class="akd-hist"><h3>Aloqasiz qolganlar</h3><ul class="akd-sil">${sil.slice(0, 5).map(x => `<li><a href="#" data-k-student="${esc(x.studentId)}">${esc(k.shortName(x.name))}</a><small>ustoz ${esc(k.first(x.teacherName))}</small>${k.chip(`${num(x.days)} kun`, num(x.days) >= 6 ? 'red' : 'amber')}</li>`).join('')}</ul></div>` : ''}
             <div class="akd-lrs">
               ${lr('Bugun', esc(at.today || '—'))}
-              ${lr(`Davomat · ${esc(mon)}`, `<a href="#" data-k-go="att">${esc(at.monthText || 'Koʻrish')} ›</a>`)}
+              ${lr(`Davomat · ${esc(mon)}`, esc(at.monthText || '—'))}
               ${lr('Kechikkan aloqalar', `<a href="#" data-k-go="late">${num(a.lateContactsPending) ? `${num(a.lateContactsPending)} ta kutmoqda` : 'Yoʻq'} ›</a>`)}
               ${lr(`Maosh · ${esc(mon)} (faqat koʻrish)`, `${num(sal.counted)} aloqa · ≈ ${esc(k.money(sal.amount))}`)}
               ${lr('Hisob', '40 000 soʻm × aloqa ÷ 13, oʻquvchi boʻyicha')}
@@ -422,7 +443,7 @@
                     <td class="akd-nw">${esc(x.at ? k.dtComma(x.at) : '—')}<small>${esc(x.kind === 'call' ? `qoʻngʻiroq ${num(x.minutes)} daqiqa` : 'yozishma')}</small></td>
                     <td class="akd-norm">${x.reason ? '«' + esc(x.reason) + '»' : '—'}</td><td>${rc.text ? `<span class="c-${rc.ok ? 'green' : 'red'} akd-b13">${rc.ok ? '✓' : '✕'} ${esc(rc.text)}</span>` : '—'}</td>
                     <td class="akd-mut">${esc(x.enteredAt ? k.relDT(x.enteredAt) : '—')}</td>
-                    <td class="akd-acts-td">${V.ltab === 'pending' ? `<button type="button" class="akd-btn akd-btn--ghost akd-btn--sm" data-k-lrej="${esc(x.id)}">Rad etish…</button><button type="button" class="akd-btn akd-btn--green akd-btn--sm" data-k-lok="${esc(x.id)}">${ic('check', 14, 2.8)}Tasdiqlash</button>`
+                    <td class="akd-acts-td">${V.ltab === 'pending' ? `<button type="button" class="akd-btn akd-btn--ghost akd-btn--sm" data-k-lrej="${esc(x.id)}"${pending.has('l:' + x.id) ? ' disabled' : ''}>Rad etish…</button><button type="button" class="akd-btn akd-btn--green akd-btn--sm" data-k-lok="${esc(x.id)}"${pending.has('l:' + x.id) ? ' disabled aria-busy="true"' : ''}>${ic('check', 14, 2.8)}Tasdiqlash</button>`
                         : `${st}${who ? `<small>${esc(who)}${x.decisionNote ? ' · «' + esc(x.decisionNote) + '»' : ''}</small>` : ''}`}</td></tr>`; };
             return `<section class="akd-card akd-tcard"><table class="akd-table"><thead><tr><th scope="col">Oʻquvchi</th><th scope="col">Yordamchi</th><th scope="col">Aloqa</th><th scope="col">Sabab</th><th scope="col">Qoida</th><th scope="col">Kiritildi</th><th scope="col"><span class="aka-sr">Amallar</span></th></tr></thead><tbody>${items.map(row).join('')}</tbody></table></section>`;
         }, `<section class="akd-card akd-tcard">${sk(3, 64)}</section>`);
@@ -545,8 +566,9 @@
     }
     // Qayta chizishda fokus o'z joyida qolsin (jadval qatori, tab, filtr).
     function focusSel(el) {
-        const attrs = ['data-k-p', 'data-k-t', 'data-k-a', 'data-k-s', 'data-k-ptab', 'data-k-mtab', 'data-k-ttab', 'data-k-rtab', 'data-k-ltab', 'data-k-ptype', 'data-k-pteacher', 'data-k-mteacher', 'data-k-rteacher', 'data-k-stage'];
+        const attrs = ['data-k-p', 'data-k-t', 'data-k-a', 'data-k-s', 'data-k-ptab', 'data-k-mtab', 'data-k-ttab', 'data-k-rtab', 'data-k-ltab', 'data-k-ptype', 'data-k-pteacher', 'data-k-mteacher', 'data-k-rteacher', 'data-k-stage', 'data-k-postpone', 'data-k-close', 'data-k-owner', 'data-k-transfer', 'data-k-thist', 'data-k-lrej', 'data-k-lok', 'data-k-trow', 'data-k-prow', 'data-k-srow', 'data-k-arow'];
         for (const a of attrs) if (el.hasAttribute(a)) return `[${a}="${CSS.escape(el.getAttribute(a))}"]`;
+        if ('kNew' in el.dataset) return el.dataset.kNewfor ? `[data-k-newfor="${el.dataset.kNewfor}"]` : '.akd-h1row [data-k-new]';
         if (el.dataset.kMres) return `[data-k-mres="${el.dataset.kMres}"][data-k-mid="${CSS.escape(el.dataset.kMid)}"]`;
         return '';
     }
@@ -557,8 +579,6 @@
             problems: k.peek(k.API.problems('open'))?.counts?.open,
             makeups: t.makeupsPending,
             late: k.peek(k.API.late('pending')) ? (k.peek(k.API.late('pending')).items || []).length : null,
-            // Davomat so'rovlari — Face ID funksiyasi; server son bersagina ko'rinadi.
-            attreq: t.attendanceRequests,
         };
         document.querySelectorAll('[data-akd-badge]').forEach(b => {
             const n = Number(vals[b.dataset.akdBadge]) || 0;
@@ -591,7 +611,15 @@
         el.addEventListener('click', onClick);
         el.addEventListener('change', onChange);
         el.addEventListener('submit', onSubmit);
-        el.addEventListener('keydown', e => { if (e.key === 'Escape' && !document.querySelector('.aka-sheet-wrap')) { if (V.pid != null && ['problems', 'archive'].includes(V.view)) { V.pid = null; draw(); } else if (V.view === 'teachers' && (V.tid != null || V.aid != null)) { V.tid = null; V.aid = null; draw(); } else if (V.view === 'risk' && V.sid != null) { V.sid = null; draw(); } } });
+    }
+    // Esc oʻng panelni yopadi (fokus body'da boʻlsa ham); ochiq oyna boʻlsa — oynaning oʻzi yopiladi.
+    function onEsc(e) {
+        if (e.key !== 'Escape' || e.defaultPrevented || !root || !isDesk() || !activeTab() || document.querySelector('.aka-sheet-wrap, .satt-overlay, [role="dialog"][aria-modal="true"]:not([hidden])')) return;
+        const a = document.activeElement;
+        if (a && a !== document.body && !root.contains(a)) return;
+        if (V.pid != null && ['problems', 'archive'].includes(V.view)) { const id = V.pid; V.pid = null; V.pauto = false; draw(); root.querySelector(`[data-k-p="${CSS.escape(String(id))}"]`)?.focus(); }
+        else if (V.view === 'teachers' && (V.tid != null || V.aid != null)) { const sel = V.tid != null ? `[data-k-t="${CSS.escape(String(V.tid))}"]` : `[data-k-a="${CSS.escape(String(V.aid))}"]`; V.tid = null; V.aid = null; V.tauto = false; draw(); root.querySelector(sel)?.focus(); }
+        else if (V.view === 'risk' && V.sid != null) { const sel = `[data-k-s="${CSS.escape(String(V.sid))}"]`; V.sid = null; draw(); root.querySelector(sel)?.focus(); }
     }
     function onClick(e) {
         const k = K(); if (!k) return;
@@ -601,10 +629,12 @@
         if (t.tagName === 'A' && /^(tel:|https?:)/.test(t.getAttribute('href') || '')) return;
         if (t.tagName === 'A') e.preventDefault();
         if ('kRetry' in d) { const c = k.need(d.kRetry); c.e = null; c.at = 0; k.need(d.kRetry, true); draw(); return; }
+        // Oyna yopilgach fokus shu tugmaga qaytadi (sahifa oraliqda qayta chizilgan boʻlsa ham).
+        if (['kNew', 'kOwner', 'kPostpone', 'kClose', 'kTransfer', 'kThist', 'kLrej', 'kMres'].some(x => x in d)) opener = focusSel(t);
         if ('kNew' in d) { if (d.kNewfor) newFor(d.kNewfor); else openNew(); return; }
         if ('kGo' in d) {
             const view = d.kGo;
-            if (['slots', 'att', 'attreq', 'myatt', 'trials', 'book'].includes(view)) { nav(view); return; }
+            if (['slots', 'myatt', 'book'].includes(view)) { nav(view); return; }
             nav(view, { ptab: d.kPtab, pq: d.kPq, pteacher: d.kPteacher, mteacher: d.kMteacher, rtab: d.kRtab, rteacher: d.kRteacher });
             return;
         }
@@ -612,7 +642,7 @@
         if ('kNotif' in d) {
             const n = (k.notifs.list() || []).find(x => String(x.id) === String(d.kNotif));
             k.notifs.open(d.kNotif);
-            const v = n && NVIEW[n.etype];
+            const v = n && nView(n.etype);
             if (v) nav(v); else if (n?.tab && n.tab !== 'dashboard') switchTab(n.tab); else draw();
             return;
         }
@@ -621,7 +651,12 @@
         if ('kLater' in d) { V.later = true; draw(); return; }
         if ('kP' in d || 'kProw' in d) { const id = d.kP || d.kProw; if (String(V.pid) !== String(id)) { V.pid = id; V.pauto = false; draw(); } return; }
         if ('kPclose' in d) { const id = V.pid; V.pid = null; draw(); root.querySelector(`[data-k-p="${CSS.escape(String(id))}"]`)?.focus(); return; }
-        if ('kStage' in d) { syncState(); k.patchProblem({ stage: d.kStage }, `Bosqich: ${k.stageOf(d.kStage)[1]}`); return; }
+        if ('kStage' in d) {
+            const key = 'stage:' + V.pid; if (pending.has(key)) return;
+            pending.add(key); t.disabled = true; syncState();
+            k.patchProblem({ stage: d.kStage }, `Bosqich: ${k.stageOf(d.kStage)[1]}`).finally(() => { pending.delete(key); draw(); });
+            return;
+        }
         if ('kOwner' in d) { syncState(); k.dlg.owner(); return; }
         if ('kPostpone' in d) { syncState(); k.dlg.postpone(); return; }
         if ('kClose' in d) { syncState(); k.dlg.close(); return; }
@@ -642,7 +677,12 @@
         if ('kS' in d || 'kSrow' in d) { V.sid = d.kS || d.kSrow; draw(); return; }
         if ('kSclose' in d) { V.sid = null; draw(); return; }
         if ('kLtab' in d) { V.ltab = d.kLtab; draw(); return; }
-        if ('kLok' in d) { syncState(); k.decideLate(d.kLok, true, '', t); return; }
+        if ('kLok' in d) {
+            const key = 'l:' + d.kLok; if (pending.has(key)) return;
+            pending.add(key); syncState(); draw();
+            k.decideLate(d.kLok, true, '', null).finally(() => { pending.delete(key); draw(); });
+            return;
+        }
         if ('kLrej' in d) { syncState(); k.dlg.lateReject(d.kLrej); return; }
     }
     function onChange(e) {
@@ -675,11 +715,20 @@
     function init() {
         if (inited || !isAk() || !K()) return;
         inited = true;
-        document.body.classList.add('akd-on');
-        unsub = K().on(onData);
+        // Belgi faqat kompyuterda: telefonda css/akademikApp.css tokenlari (--a-nav) oʻzgarmasin.
+        const syncCls = () => document.body.classList.toggle('akd-on', isDesk());
+        syncCls();
+        K().on(onData);
+        K().onSheetClose(() => setTimeout(() => {
+            if (!opener || !root || !activeTab() || document.querySelector('.aka-sheet-wrap')) return;
+            const a = document.activeElement;
+            if (!a || a === document.body || !document.body.contains(a)) root.querySelector(opener)?.focus({ preventScroll: true });
+            opener = '';
+        }, 0));
+        document.addEventListener('keydown', onEsc);
         const k = K();
         k.need(k.API.ov); k.need(k.API.problems('open')); k.need(k.API.late('pending'));
-        MQ.addEventListener?.('change', () => { if (activeTab()) { if (isDesk()) draw(); else if (root) root.innerHTML = ''; } });
+        MQ.addEventListener?.('change', () => { syncCls(); if (activeTab()) { if (isDesk()) draw(); else if (root) root.innerHTML = ''; } });
         window.addEventListener('staff:feed', () => { if (isDesk() && activeTab() && V.view === 'home' && !document.querySelector('.aka-sheet-wrap')) draw(); });
         setInterval(() => {
             if (!isDesk() || document.visibilityState !== 'visible') return;
@@ -692,5 +741,5 @@
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(boot, 120));
     else setTimeout(boot, 120);
 
-    window.akademikDesk = { render, nav, isDesk, openNew, state: V, _test: { maskPhone, monthName, draw: () => draw() } };
+    window.akademikDesk = { render, nav, isDesk, openNew, state: V, _test: { maskPhone, draw: () => draw() } };
 })();

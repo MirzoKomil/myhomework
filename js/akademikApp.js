@@ -95,7 +95,7 @@
     }
     const peek = url => C.get(url)?.d || null;
     // Kompyuter kabineti (js/akademikDesk.js) shu keshni ishlatadi: maʼlumot kelganda yoki eskirganda qayta chizadi.
-    const listeners = new Set();
+    const listeners = new Set(), sheetHooks = new Set();
     let emitQ = false;
     function emit() { if (emitQ || !listeners.size) return; emitQ = true; Promise.resolve().then(() => { emitQ = false; listeners.forEach(fn => { try { fn(); } catch (e) { console.error('[akademikApp] listener', e); } }); }); }
     function invalidate(...prefixes) { for (const k of [...C.keys()]) if (prefixes.some(p => k.startsWith(p))) C.get(k).at = 0; emit(); }
@@ -657,7 +657,9 @@
         const url = API.teacher(S.tid), c = need(url);
         if (!c.d) return top('Ustoz', { sub: myLangLabel() }) + `<div class="aka-body">${c.e ? errBox(c.e, url) : skIn(1, 72) + skIn(1, 200) + skIn(2, 140)}</div>`;
         const t = c.d, tr = t.trials30 || {}, mk = t.makeups30 || {}, sal = t.salary || {}, pr = t.problems || {};
-        const now = new Date(), prevMon = MON[(now.getMonth() + 11) % 12], nextMon = MON[(now.getMonth() + 1) % 12];
+        const now = new Date(), prevMon = MON[(now.getMonth() + 11) % 12];
+        // Ish haqi oyi — server salary.month ('YYYY-MM'); toʻlov 5-, rad etish oynasi 4-sanagacha — undan keyingi oyda.
+        const salM = /^\d{4}-(\d{2})/.exec(String(sal.month || '')), salIdx = salM ? Number(salM[1]) - 1 : (now.getMonth() + 11) % 12, salMon = MON[salIdx], afterMon = MON[(salIdx + 1) % 12];
         const onPlanPct = num(t.studentsCount) ? num(t.onPlanCount) / num(t.studentsCount) * 100 : 0;
         const tile = (l, v, s, tone) => `<div class="aka-tile"><span>${esc(l)}</span><strong class="${tone ? 'c-' + tone : ''}">${esc(v)}</strong><small>${esc(s)}</small></div>`;
         const head = top(first(t.name) || 'Ustoz', { sub: ['Ustoz', myLangLabel(), t.rank ? t.rank + '-oʻrin' : ''].filter(Boolean).join(' · '), right: t.phone ? `<a class="aka-ib aka-ib--dark" href="${esc(telHref(t.phone))}" aria-label="${esc(first(t.name))}ga qoʻngʻiroq">${ic('phone', 18)}</a>` : '' });
@@ -668,7 +670,7 @@
                 <div class="aka-grid2">${tile('Davomat · 60%', pct(t.attendancePct) + '%', 'oʻquvchilar darsga kelishi', pctTone(t.attendancePct, 85, 60))}${tile('Oʻzlashtirish · 40%', pct(t.masteryPct) + '%', 'birinchi urinish natijasi', pctTone(t.masteryPct, 70, 45))}${tile('Rejada oʻqiyapti', pct(onPlanPct) + '%', `${num(t.studentsCount)} dan ${num(t.onPlanCount)} tasi`, pctTone(onPlanPct, 75, 60))}${tile('Ketgan oʻquvchi', String(num(t.left30)), 'oxirgi 30 kun', num(t.left30) ? 'red' : '')}</div></section>
             <section class="aka-card aka-kvbox aka-s2"><h2>Sinov darslari · 30 kun</h2>${kv('Qabul qildi', String(num(tr.accepted)))}${num(tr.rejected) ? kv('Rad etdi · sabablari', `${num(tr.rejected)} ›`, { link: 'data-a-rejects' }) : kv('Rad etdi', '0')}${kv('Oʻquvchi boʻldi', String(num(tr.converted)))}</section>
             <section class="aka-card aka-kvbox aka-s2"><h2>Vaqtlar va qoplash</h2>${kv('Darsni vaqtida boshlash', `${pct(t.onTimePct)}%${num(t.lateLessons30) ? ` · 30 kunda ${num(t.lateLessons30)} dars kech` : ''}`)}${kv('Sinov vaqtlari', 'Dars jadvalida ›', { link: 'data-a-crm="timetable"' })}${kv('Qoplash · 30 kun', `${num(mk.total)} ta${num(mk.inReview) ? ` · ${num(mk.inReview)} tasi tekshiruvda` : ''} ›`, { link: 'data-a-go="makeups"' })}</section>
-            <section class="aka-card aka-kvbox aka-s3"><div class="aka-sb aka-mt10"><h2>Ish haqi · ${esc(sal.month || prevMon)}</h2>${chip('Faqat koʻrish')}</div>${kv('Oʻtilgan darslar', sal.lessons == null ? '—' : `${num(sal.lessons)}${num(sal.makeups) ? ` + ${num(sal.makeups)} qoplash` : ''}`)}${kv('Hisoblangan', sal.amount == null ? '—' : money(sal.amount))}${kv('Holat', sal.status === 'paid' ? 'Toʻlangan' : sal.status === 'unpaid' ? `Admin tekshiryapti · 5-${MON[now.getMonth()]} toʻlanadi` : sal.status && sal.status !== 'unknown' ? sal.status : 'Hisob hali yoʻq')}${kv('Eslatma', `Qoplash rad etilsa 4-${nextMon}gacha oʻzgarishi mumkin`)}</section>
+            <section class="aka-card aka-kvbox aka-s3"><div class="aka-sb aka-mt10"><h2>Ish haqi · ${esc(salMon)}</h2>${chip('Faqat koʻrish')}</div>${kv('Oʻtilgan darslar', sal.lessons == null ? '—' : `${num(sal.lessons)}${num(sal.makeups) ? ` + ${num(sal.makeups)} qoplash` : ''}`)}${kv('Hisoblangan', sal.amount == null ? '—' : money(sal.amount))}${kv('Holat', sal.status === 'paid' ? 'Toʻlangan' : sal.status === 'unpaid' ? `Admin tekshiryapti · 5-${afterMon} toʻlanadi` : sal.status && sal.status !== 'unknown' ? sal.status : 'Hisob hali yoʻq')}${kv('Eslatma', `Qoplash rad etilsa 4-${afterMon}gacha oʻzgarishi mumkin`)}</section>
             <section class="aka-card aka-list aka-s3">${navRow(`Oʻquvchilari · ${num(t.studentsCount)}`, num(t.riskStudents) ? `${num(t.riskStudents)} tasi xavf roʻyxatida` : 'Xavf roʻyxatida yoʻq', `data-a-triskof="${esc(t.name || '')}"`)}${navRow('Muammolar', num(pr.open) ? `${num(pr.open)} ochiq${num(pr.overdue) ? ` · ${num(pr.overdue)} tasi muddati oʻtgan` : ''}` : 'Ochiq muammo yoʻq', `data-a-tprob="${esc(t.name || '')}"`)}</section></div>
             ${bbar(`${tg ? `<a class="aka-btn aka-btn--out" href="${esc(tg)}" target="_blank" rel="noopener">${ic('send', 18)}Telegramda yozish</a>` : `<span class="aka-btn aka-btn--off">${ic('send', 18)}Telegram yoʻq</span>`}<button type="button" class="aka-btn aka-btn--pri aka-btn--14" data-a-newfor="teacher">${ic('plus', 18, 2.6)}Muammo yozish</button>`)}`;
     }
@@ -900,6 +902,7 @@
         if (!sheetEl) return;
         const op = sheetEl._opener; sheetEl.remove(); sheetEl = null;
         if (!quiet && op && document.body.contains(op)) { try { op.focus({ preventScroll: true }); } catch (e) { /* */ } }
+        sheetHooks.forEach(fn => { try { fn(); } catch (e) { /* */ } });
     }
     function sheetHowScore() {
         openSheet('Ball qanday hisoblanadi?', 'Server formulasi — hamma joyda bir xil', `<div class="aka-card aka-kvbox">${kv('Davomat', '60%')}${kv('Oʻzlashtirish (birinchi urinish)', '40%')}${kv('Darsni vaqtida boshlash', 'reytingga kirmaydi')}</div>
@@ -1088,12 +1091,12 @@
 
     // Kompyuter kabineti uchun umumiy toʻplam: oynalar telefondagi bilan bir xil boʻlishi uchun shu yerdagi funksiyalar ishlatiladi.
     const kit = {
-        API, need, peek, invalidate, send, on: fn => { listeners.add(fn); return () => listeners.delete(fn); },
-        esc, ic, ava, chip, bar, chips, fs, rcards, note, emptyBox, errBox, initials, first, shortName, num, pct, money, telHref, tgHref,
-        toDate, localDate, dayDiff, hm, dShort, dLong, dtShort, dtComma, relDT, overdueTxt, addDays, greet, MON, MON3, WD,
-        STAGES, stageOf, TYPES, SOURCES, SRC_LOW, SRC_CHIP, RESULTS, RISK, EV_IC, EV_T, TONE_BAR, normP, f, isMe, myName, myLangLabel, langLabel, scoreTone, pctTone, riskTone, minTxt,
+        API, need, peek, invalidate, send, on: fn => { listeners.add(fn); return () => listeners.delete(fn); }, onSheetClose: fn => { sheetHooks.add(fn); return () => sheetHooks.delete(fn); },
+        esc, ic, ava, chip, chips, fs, note, emptyBox, errBox, initials, first, shortName, num, pct, money, telHref, tgHref,
+        toDate, localDate, dayDiff, hm, dShort, dLong, dtShort, dtComma, relDT, overdueTxt, addDays, greet, MON, WD,
+        STAGES, stageOf, TYPES, SOURCES, SRC_LOW, SRC_CHIP, RESULTS, RISK, EV_T, normP, f, isMe, myName, scoreTone, riskTone, minTxt,
         dueOptions, newDraft, localStudents, staffList, openSheet, closeSheet, toast, patchProblem, decideLate,
-        dlg: { owner: sheetOwner, postpone: sheetPostpone, close: sheetClose, makeup: sheetMakeup, transfer: sheetTransfer, lateReject: sheetLateReject, howScore: sheetHowScore, rejects: sheetRejects, teacherHistory: sheetTeacherHistory, staffPick: sheetStaffPick },
+        dlg: { owner: sheetOwner, postpone: sheetPostpone, close: sheetClose, makeup: sheetMakeup, transfer: sheetTransfer, lateReject: sheetLateReject, teacherHistory: sheetTeacherHistory },
         notifs: { list: notifList, NLOOK, NGO, open: id => { if (g('markNotificationRead')) { try { markNotificationRead(id); } catch (e) { /* */ } } } },
     };
     window.akademikApp = { init, go, back, render: () => render(false), state: S, ownLang, langs: myLangs, kit, _test: { normP, riskTone, dueOptions, cache: C } };
