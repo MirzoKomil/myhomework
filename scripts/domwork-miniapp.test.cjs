@@ -54,7 +54,7 @@ test('TTS: missing model (404) → next model; PCM wrapped as WAV; no key → nu
   seen.push(url.split('/models/')[1].split(':')[0]);
   if(seen.length===1)return {ok:false,status:404};
   const body=JSON.parse(o.body);assert.deepEqual(body.generationConfig.responseModalities,['AUDIO']);
-  assert.equal(body.generationConfig.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName,'Kore');assert.match(body.contents[0].parts[0].text,/Меня зовут Тимур$/);
+  assert.equal(body.generationConfig.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName,'Kore');assert.equal(body.contents[0].parts[0].text,'Меня зовут Тимур'); // faqat gapning o'zi — yo'riqnoma yo'q
   return {ok:true,json:async()=>({candidates:[{content:{parts:[{inlineData:{mimeType:'audio/L16;codec=pcm;rate=24000',data:Buffer.alloc(480).toString('base64')}}]}}]})};}});
  assert.equal(seen.length,2);assert.equal(r.mime,'audio/wav');assert.equal(r.bytes.length,44+480);assert.equal(r.bytes.toString('ascii',0,4),'RIFF');
 });
