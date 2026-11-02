@@ -27,7 +27,7 @@ module.exports = function createRouter({ pool, authRequired, getSalesManagerIdFo
         const a = auth(req), mime = req.get('Content-Type') || '';
         const saved = await queue.transaction(pool, db => miniapp.saveVoice(db, a, req.body, mime, req.query.expected));
         const stt = await transcribe(req.body, mime.split(';')[0]); // tranzaksiyadan tashqarida — tarmoq kutilishi qulfni ushlamaydi
-        return queue.transaction(pool, db => miniapp.scoreVoice(db, a, saved.id, stt, { skip: [].concat(req.query.skip || []).slice(0, 3) }));
+        return queue.transaction(pool, db => miniapp.scoreVoice(db, a, saved.id, stt, { skip: [].concat(req.query.skip || []).slice(0, 3), practice: req.query.practice === '1' }));
     }));
 
     // CRM: lid kartasida ovozni tinglash.

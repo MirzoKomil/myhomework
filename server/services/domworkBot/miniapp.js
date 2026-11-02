@@ -146,6 +146,9 @@ function view(v, p, mgr, s, now = new Date()) {
         manager: mgr,
         requested: !!v.requested_at,
         hasPhone: !!v.phone,
+        phoneMasked: v.phone ? funnel.mask(v.phone) : '',
+        // 1-dars videosi — veb pleyer uchun https manzil (Bot boshqaruvi sozlamasi). Yo'q bo'lsa — konspekt rejimi.
+        videoUrl: /^https:\/\/[^\s"'<>]{8,500}$/.test(s.miniappVideoUrl || '') ? s.miniappVideoUrl : null,
         sales: { open: funnel.inHours(s, now), slaMinutes: funnel.sla(s) },
         discount
     };
@@ -183,12 +186,13 @@ async function award(db, v, key, reason) {
 
 const EVENTS = {
     // Video: mijoz ≥80% ko'rganda ball (pleyer progressini mijoz yuboradi).
-    video: (d) => ({ done: Number(d.percent) >= 80, save: { videoPercent: Math.max(0, Math.min(100, Math.round(Number(d.percent) || 0))) }, reason: 'videoni ko‘rdi' }),
+    // Video hali joylanmagan bo'lsa (videoUrl yo'q) mijoz konspektni o'qiydi — noVideo belgisi bilan.
+    video: (d) => ({ done: Number(d.percent) >= 80, save: { videoPercent: Math.max(0, Math.min(100, Math.round(Number(d.percent) || 0))), ...(d.noVideo === true ? { videoMode: 'konspekt' } : {}) }, reason: d.noVideo === true ? 'dars konspektini o‘qidi' : 'videoni ko‘rdi' }),
     // Uy vazifasi: 5 mashq; javoblar menejer suhbati uchun saqlanadi (ism, yosh, ish joyi).
     homework: (d) => ({ done: d.done === true, save: { homework: pick(d, ['correct', 'total', 'age', 'work', 'name']) }, reason: 'uy vazifasini bajardi' }),
     game: (d) => ({ done: d.done === true, save: { game: pick(d, ['score', 'time', 'won']) }, reason: 'o‘yinni o‘ynadi' }),
     locked: () => ({ done: true, save: {}, reason: 'yopiq 2-darsga qiziqdi', key: 'locked' }),
-    resource: (d) => ({ done: false, save: {}, log: { id: String(d.id || '').slice(0, 40) } })
+    resource: (d) => ({ done: false, save: {}, log: { id: String(d.id || '').slice(0, 40) }, send: ['sovga', 'qollanma'].includes(d.id) && d.send === true ? d.id : '' })
 };
 function pick(d, keys) {
     const out = {};
@@ -209,9 +213,11 @@ async function track(db, auth, { type, data = {} } = {}) {
         if (STEPS.includes(key)) await db.query('UPDATE domwork_miniapp_progress SET steps=steps||$2::jsonb WHERE telegram_id=$1', [tid, JSON.stringify({ [key]: true })]);
         await award(db, v, key, r.reason);
     }
+    let sent = null;
+    if (r.send) sent = await funnel.sendMaterial(db, tid, r.send, v.field || '');
     await funnel.event(db, tid, 'miniapp_' + type, r.log || r.save);
     await maybeFinish(db, v);
-    return state(db, auth);
+    return { ...(await state(db, auth)), ...(sent === null ? {} : { sent }) };
 }
 
 // Hamma 4 qadam tugasa — CRM lidiga bitta xulosa izohi (lid bo'lsa) va extra_data.miniapp.
@@ -220,7 +226,13 @@ async function maybeFinish(db, v) {
     if (!p || p.finished_at || !STEPS.every(k => p.steps[k])) return;
     await db.query('UPDATE domwork_miniapp_progress SET finished_at=NOW() WHERE telegram_id=$1', [v.telegram_id]);
     await funnel.event(db, v.telegram_id, 'miniapp_finished', { points: p.points });
-    if (!v.lead_id) return;
+    await summarize(db, v);
+}
+// CRM lidiga xulosa — lid bo'lsa darhol, bo'lmasa lid paydo bo'lganda (so'rov paytida). Bir marta.
+async function summarize(db, v) {
+    const p = await progress(db, v.telegram_id);
+    if (!p?.finished_at || p.steps.pt_summary || !v.lead_id) return;
+    await db.query('UPDATE domwork_miniapp_progress SET steps=steps||$2::jsonb WHERE telegram_id=$1', [v.telegram_id, JSON.stringify({ pt_summary: new Date().toISOString() })]);
     const a = p.answers || {};
     const hw = a.homework || {}, voice = a.voice || {};
     await funnel.leadComment(db, v.lead_id, `🎓 Mini ilova: 1-darsni to‘liq o‘tdi. Video ${a.videoPercent ?? '—'}% · vazifa ${hw.correct ?? '—'}/${hw.total ?? 5}`
@@ -244,14 +256,15 @@ async function saveVoice(db, auth, buffer, mime, expected) {
     const row = (await db.query('INSERT INTO domwork_miniapp_voice(telegram_id,mime,bytes,expected) VALUES($1,$2,$3,$4) RETURNING id', [tid, String(mime).split(';')[0], buffer, text])).rows[0];
     return { id: row.id, expected: text };
 }
-async function scoreVoice(db, auth, id, stt, { skip = [] } = {}) {
+// practice=true — o'yindagi ovozli javob: faqat baho, qadam/ball yo'q.
+async function scoreVoice(db, auth, id, stt, { skip = [], practice = false } = {}) {
     const tid = String(auth.user.id);
     const row = (await db.query('SELECT id,expected FROM domwork_miniapp_voice WHERE id=$1 AND telegram_id=$2 FOR UPDATE', [id, tid])).rows[0];
     if (!row) throw httpError(404, 'Ovoz topilmadi');
     const result = stt ? { heard: stt.text, ...matchSpeech(row.expected, stt.text, { skip }) } : { heard: null, score: null, level: 'unscored', words: [] };
     await db.query('UPDATE domwork_miniapp_voice SET stt=$2 WHERE id=$1', [id, JSON.stringify(result)]);
     // Qadam "bajarildi" — baholanmagan bo'lsa ham (mijoz aybi emas); "retry" bo'lsa mijoz qayta yozadi.
-    if (result.level !== 'retry') {
+    if (!practice && result.level !== 'retry') {
         const v = await funnel.visitor(db, tid);
         await db.query('UPDATE domwork_miniapp_progress SET steps=steps||$2::jsonb,answers=answers||$3::jsonb WHERE telegram_id=$1',
             [tid, JSON.stringify({ voice: true }), JSON.stringify({ voice: { id, score: result.score, level: result.level } })]);
@@ -286,6 +299,7 @@ async function request(db, auth, { method = 'call', when = 'now' } = {}) {
     if (method === 'call' && !v.phone) { await funnel.finishRequest(c, v, when); return { needPhone: true, state: await state(db, auth) }; }
     await funnel.finishRequest(c, v, when);
     await award(db, v, 'request', 'menejer bilan bog‘lanishni so‘radi');
+    await summarize(db, await funnel.visitor(db, tid));
     await funnel.event(db, tid, 'miniapp_request', { method, when });
     return { needPhone: false, state: await state(db, auth) };
 }

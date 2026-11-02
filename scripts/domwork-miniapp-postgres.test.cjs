@@ -99,7 +99,17 @@ test('1-dars mini app: open, steps scored once, voice, request → CRM — synth
    const v=await visitor(801);assert.equal(v.score,17);assert.ok(v.lead_id);
    const lead=(await pool.query('SELECT * FROM leads WHERE id=$1',[v.lead_id])).rows[0];
    assert.match(lead.comments,/bog‘lanishni so‘radi/);
+   // Dars lid paydo bo'lishidan oldin tugagan — xulosa so'rov paytida bir marta yoziladi.
+   assert.equal((lead.comments.match(/1-darsni to‘liq o‘tdi/g)||[]).length,1);
+   assert.equal(r.body.state.phoneMasked,'+99890 *** ** 11');
    assert.equal((await outbox()).filter(m=>/Botdan so‘rov/.test(m.payload.text||'')).length,1);
+  });
+  await t.test('resources: gift PDF goes to the bot once a day; unknown material is not sent',async()=>{
+   await pool.query(`UPDATE domwork_bot_settings SET data=data||'{"funnelMedia":{"sovga":{"method":"sendDocument","fileId":"GIFT_FILE_ID_123"}}}'::jsonb WHERE singleton=1`);
+   let r=await call('/event',{type:'resource',data:{id:'sovga',send:true}});assert.equal(r.body.sent,true);
+   await call('/event',{type:'resource',data:{id:'sovga',send:true}});
+   assert.equal((await pool.query("SELECT COUNT(*) FROM domwork_bot_outbox WHERE target_id='801' AND payload->>'document'='GIFT_FILE_ID_123'")).rows[0].count,'1');
+   r=await call('/event',{type:'resource',data:{id:'../etc',send:true}});assert.equal(r.body.sent,undefined);
   });
   await t.test('finished summary lands in CRM when lead exists; assigned manager shows on screen',async()=>{
    // 803: avval lid (telefon) bor, keyin darsni tugatadi.

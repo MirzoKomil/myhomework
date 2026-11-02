@@ -289,6 +289,17 @@ app.get(['/teacher', '/teacher/'], (req, res) => {
     res.sendFile(path.join(ROOT, 'teacher', 'index.html'));
 });
 
+// @Domworkuz_bot ichidagi "1-dars" mini ilovasi (Telegram WebApp). Telegram skripti va Telegram Web (iframe) uchun alohida CSP.
+app.get(['/miniapp', '/miniapp/'], (req, res) => {
+    if (req.path === '/miniapp') return res.redirect(301, '/miniapp/');
+    res.removeHeader('X-Frame-Options');
+    res.setHeader('Content-Security-Policy', ["default-src 'self'", "script-src 'self' https://telegram.org", "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+        "font-src 'self' data: https://fonts.gstatic.com", "img-src 'self' data: blob:", "media-src 'self' blob: https:", "connect-src 'self'",
+        "frame-ancestors 'self' https://web.telegram.org https://*.telegram.org", "base-uri 'none'", "form-action 'none'", "object-src 'none'"].join('; '));
+    res.setHeader('Cache-Control', 'no-cache');
+    res.sendFile(path.join(ROOT, 'miniapp', 'index.html'));
+});
+
 // Kitobdagi audio dialog QR-kodlari: /audio/L05-1 → /audio/L05_d1.mp3
 app.get(/^\/audio\/L\d{1,2}-[1-3]\/?$/i, require('./routes/bookAudio').bookAudioHandler(ROOT));
 
