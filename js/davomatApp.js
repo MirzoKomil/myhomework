@@ -141,6 +141,9 @@
                 <button type="button" class="dv-btn dv-btn-primary" data-dv-checkin>${ic('cam', 18)}Ofisdaman — belgilash</button>
                 <span class="dv-note-s">${esc(m.unlockAt)} gacha ilova ochiq va kechikish yozilmaydi. ${esc(m.unlockAt)} dan keyin belgilash majburiy boʻladi.</span></section>`;
         }
+        if (ph === 'lock') return `<section class="dv-card dv-s1"><div class="dv-card-h"><span class="dv-card-t">Bugungi ish kuni</span>${pill(lateNow() > 0 ? `Kechikyapsiz · ${lateNow()} daq` : 'Ish boshlandi', lateNow() > 0 ? 'red' : 'amber')}</div>
+            <p class="dv-p">Ish ${esc(m.unlockAt || m.start)} da boshlandi. Ofisda ekaningizni yuz va joylashuv bilan tasdiqlang.</p>
+            <button type="button" class="dv-btn dv-btn-primary" data-dv-checkin>${ic('cam', 18)}Keldim — kamerani ochish</button></section>`;
         if (ph === 'outside') return `<section class="dv-card dv-s1" data-dv-go="my" role="button" tabindex="0"><div class="dv-card-h"><span class="dv-card-t">Bugungi ish kuni</span>${pill('Kutilmoqda', 'blue')}</div>
             <p class="dv-p">“Ofisda emasman” yuborildi — ${esc(approverRole())} tasdiqlaydi. Kechikish yozilmaydi.</p></section>`;
         if (ph === 'excused') return `<section class="dv-card dv-s1" data-dv-go="my" role="button" tabindex="0"><div class="dv-card-h"><span class="dv-card-t">Bugungi ish kuni</span>${pill('Sababli', 'blue')}</div>
