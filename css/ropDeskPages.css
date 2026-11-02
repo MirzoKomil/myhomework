@@ -12,7 +12,7 @@ body:is(.rop-desk-v2, .sot-desk-v2) {
 
 /* ---- ROP bo'limlari (tab-rdp-*) faqat ROP'da ---- */
 .rdp-tab { display: none; }
-body:not(.rop-desk-v2) .rdp-tab { display: none !important; }
+body:not(.rop-desk-v2):not(.sot-desk-v2) .rdp-tab { display: none !important; }
 body:is(.rop-desk-v2, .sot-desk-v2) .rdp-tab.active { display: block; }
 body:is(.rop-desk-v2, .sot-desk-v2) .rdp-root { padding: 0 0 96px; color: var(--rdp-tx); max-width: 1440px; }
 
