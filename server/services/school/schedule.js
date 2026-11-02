@@ -200,9 +200,19 @@ async function book(db, actor, input, now = new Date()) {
     if (kind === 'trial' && input.leadId) ctx.excludeLeads.add(String(input.leadId));
     for (const d of dates) checkSlot(dayView(ctx, teacherId, d), kind, start, start + duration);
     if (kind === 'trial') {
-        const dup = await db.query(`SELECT 1 FROM school_bookings WHERE lead_id=$1 AND kind='trial' AND status IN ('hold','pending','confirmed')
-            AND NOT (status='hold' AND hold_until < $2)`, [input.leadId, now]);
-        if (dup.rows.length) throw fail(409, 'Bu lid uchun sinov allaqachon band qilingan');
+        // Vaqti o'tib ketgan, natijasi yozilmagan sinov (lid kelmagan, ustoz belgilamagan) yangi sinovni to'smaydi:
+        // u "Kelmadi" deb yopiladi. Sotuv natija yoza olmaydi (natijani ustoz yozadi), shuning uchun bu yerda yopiladi.
+        const stale = await db.query(`UPDATE school_bookings SET status='no_show', updated_at=NOW(),
+                note=LEFT(TRIM(COALESCE(note,'') || ' [avto: qayta sinov qo''yilganda natijasiz yopildi]'), 500)
+            WHERE lead_id=$1 AND kind='trial' AND status IN ('pending','confirmed')
+            AND (date < $2::date OR (date = $2::date AND end_min <= $3)) RETURNING id, date, start_min`, [input.leadId, today.date, today.min]);
+        if (stale.rows.length) console.log('[sinov-avto-kelmadi]', input.leadId, stale.rows.map(r => `${dateStr(r.date)} ${T.fromMin(r.start_min)}`).join(', '));
+        const dup = await db.query(`SELECT date, start_min FROM school_bookings WHERE lead_id=$1 AND kind='trial' AND status IN ('hold','pending','confirmed')
+            AND NOT (status='hold' AND hold_until < $2) ORDER BY date, start_min LIMIT 1`, [input.leadId, now]);
+        if (dup.rows.length) {
+            const d = dup.rows[0];
+            throw fail(409, `Bu lid uchun sinov allaqachon band qilingan: ${dateStr(d.date).split('-').reverse().join('.')} ${T.fromMin(d.start_min)}. Avval uni "Sinov darslari"da bekor qiling`);
+        }
     }
     const group = randomUUID();
     const status = kind === 'trial' ? (input.hold === false ? 'pending' : 'hold') : kind === 'makeup' ? 'confirmed' : 'confirmed';
