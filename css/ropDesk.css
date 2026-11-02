@@ -1,323 +1,323 @@
-/* ROP kompyuter kabineti (dizayn "ROP · Kompyuter (B)") — FAQAT body.rop-desk-v2 (role = rop, ekran > 900px).
+/* ROP kompyuter kabineti (dizayn "ROP · Kompyuter (B)") — FAQAT body:is(.rop-desk-v2, .sot-desk-v2) (role = rop, ekran > 900px).
    js/ropDesk/shell.js (sidebar, yuqori panel, Bosh sahifa) va js/ropDesk/leads.js (Lidlar, ichki oynalar). */
-body.rop-desk-v2 {
+body:is(.rop-desk-v2, .sot-desk-v2) {
     --rk-ink: #0B1220; --rk-ink2: #3A4456; --rk-mut: #4B5563; --rk-line: #E6EAF2; --rk-line2: #E2E8F0; --rk-bg: #F5F7FB; --rk-card: #FFFFFF;
     --rk-blue: #0065D6; --rk-blue2: #0057B8; --rk-blue-l: #EAF3FF; --rk-soft: #F1F5F9; --rk-red: #D92D20; --rk-red2: #B42318; --rk-red-l: #FEF3F2;
     --rk-amber: #93370D; --rk-amber-l: #FEF0C7; --rk-green: #067647; --rk-green-l: #ECFDF3; --rk-purple: #5B21B6; --rk-purple-l: #F1E8FF;
 }
-html[data-theme="dark"] body.rop-desk-v2 {
+html[data-theme="dark"] body:is(.rop-desk-v2, .sot-desk-v2) {
     --rk-ink: #E6EDF7; --rk-ink2: #C3CDDB; --rk-mut: #9AA6B8; --rk-line: #26324A; --rk-line2: #2C3A55; --rk-bg: #0E1626; --rk-card: #131D30;
     --rk-blue-l: #13294A; --rk-soft: #1A253A; --rk-red-l: #3A1A1A; --rk-amber-l: #3A2A12; --rk-green-l: #12301F; --rk-purple-l: #2A1D45;
     --rk-amber: #FEC84B; --rk-green: #6CE9A6; --rk-red2: #FDA29B; --rk-blue2: #84B6F7; --rk-purple: #C4A8FF;
 }
-body.rop-desk-v2 .rk-mut { color: var(--rk-mut); }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-mut { color: var(--rk-mut); }
 
 /* ---------- Sidebar (RK00) ---------- */
-body.rop-desk-v2 .sidebar { padding: 10px 12px 12px; transition: width .2s ease, min-width .2s ease; }
-body.rop-desk-v2 .sidebar-brand { margin-bottom: 8px; padding: 4px 2px 8px; gap: 10px; justify-content: space-between; }
-body.rop-desk-v2 .sidebar-brand .brand-logo { height: 34px; }
-body.rop-desk-v2 .rk-sb-toggle { flex: none; width: 28px; height: 28px; border-radius: 8px; border: 0; background: transparent; color: var(--rk-mut); display: grid; place-items: center; cursor: pointer; }
-body.rop-desk-v2 .rk-sb-toggle:hover { background: var(--rk-soft); color: var(--rk-ink); }
-body.rop-desk-v2 .sidebar-menu { display: flex; flex-direction: column; }
-body.rop-desk-v2 .rk-nav { display: flex; flex-direction: column; gap: 1px; flex: 1; min-height: 100%; }
-body.rop-desk-v2 .rk-nr { display: flex; align-items: center; gap: 4px; position: relative; }
-body.rop-desk-v2 .rk-nr[hidden] { display: none; }
-body.rop-desk-v2 .sidebar-menu .rk-mi { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; min-height: 38px; margin: 0; padding: 0 10px; border-radius: 12px; border: 0; background: transparent; color: var(--rk-ink2); font: inherit; font-size: 14px; font-weight: 600; text-align: left; cursor: pointer; text-decoration: none; }
-body.rop-desk-v2 .sidebar-menu .rk-mi:hover { background: var(--rk-soft); color: var(--rk-ink); }
-body.rop-desk-v2 .sidebar-menu .rk-mi svg { width: 18px; height: 18px; flex: none; }
-body.rop-desk-v2 .sidebar-menu .rk-mi.active, body.rop-desk-v2 .sidebar-menu .rk-mi[aria-current="page"] { background: var(--rk-blue-l); color: var(--rk-blue2); font-weight: 800; }
-body.rop-desk-v2 .sidebar-menu .rk-mi.active::before { display: none; }
-body.rop-desk-v2 .rk-lbl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-body.rop-desk-v2 .rk-mi--sub { padding-left: 40px !important; min-height: 36px !important; font-size: 13px !important; }
-body.rop-desk-v2 .rk-grp { display: flex; align-items: center; gap: 6px; width: 100%; margin: 0; padding: 12px 10px 4px; border: 0; background: transparent; font: inherit; font-size: 12px; font-weight: 800; color: var(--rk-mut); letter-spacing: .06em; text-align: left; cursor: pointer; }
-body.rop-desk-v2 .rk-grp svg { transition: transform .15s ease; }
-body.rop-desk-v2 .rk-grp[aria-expanded="false"] svg { transform: rotate(-90deg); }
-body.rop-desk-v2 .rk-grp-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--rk-red); }
-body.rop-desk-v2 .rk-cnt { flex: none; min-width: 28px; height: 24px; padding: 0 7px; box-sizing: border-box; border-radius: 999px; border: 0; background: var(--rk-red); color: #FFFFFF; font: inherit; font-size: 12px; font-weight: 800; display: grid; place-items: center; cursor: pointer; }
-body.rop-desk-v2 .rk-cnt:hover { background: #B42318; }
-body.rop-desk-v2 .rk-cnt[hidden] { display: none; }
-body.rop-desk-v2 .rk-fill { flex: 1; min-height: 10px; }
-body.rop-desk-v2 .rk-more-l { display: flex; flex-direction: column; gap: 1px; }
-body.rop-desk-v2 .rk-more-l[hidden] { display: none; }
+body:is(.rop-desk-v2, .sot-desk-v2) .sidebar { padding: 10px 12px 12px; transition: width .2s ease, min-width .2s ease; }
+body:is(.rop-desk-v2, .sot-desk-v2) .sidebar-brand { margin-bottom: 8px; padding: 4px 2px 8px; gap: 10px; justify-content: space-between; }
+body:is(.rop-desk-v2, .sot-desk-v2) .sidebar-brand .brand-logo { height: 34px; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-sb-toggle { flex: none; width: 28px; height: 28px; border-radius: 8px; border: 0; background: transparent; color: var(--rk-mut); display: grid; place-items: center; cursor: pointer; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-sb-toggle:hover { background: var(--rk-soft); color: var(--rk-ink); }
+body:is(.rop-desk-v2, .sot-desk-v2) .sidebar-menu { display: flex; flex-direction: column; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-nav { display: flex; flex-direction: column; gap: 1px; flex: 1; min-height: 100%; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-nr { display: flex; align-items: center; gap: 4px; position: relative; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-nr[hidden] { display: none; }
+body:is(.rop-desk-v2, .sot-desk-v2) .sidebar-menu .rk-mi { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; min-height: 38px; margin: 0; padding: 0 10px; border-radius: 12px; border: 0; background: transparent; color: var(--rk-ink2); font: inherit; font-size: 14px; font-weight: 600; text-align: left; cursor: pointer; text-decoration: none; }
+body:is(.rop-desk-v2, .sot-desk-v2) .sidebar-menu .rk-mi:hover { background: var(--rk-soft); color: var(--rk-ink); }
+body:is(.rop-desk-v2, .sot-desk-v2) .sidebar-menu .rk-mi svg { width: 18px; height: 18px; flex: none; }
+body:is(.rop-desk-v2, .sot-desk-v2) .sidebar-menu .rk-mi.active, body:is(.rop-desk-v2, .sot-desk-v2) .sidebar-menu .rk-mi[aria-current="page"] { background: var(--rk-blue-l); color: var(--rk-blue2); font-weight: 800; }
+body:is(.rop-desk-v2, .sot-desk-v2) .sidebar-menu .rk-mi.active::before { display: none; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-lbl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-mi--sub { padding-left: 40px !important; min-height: 36px !important; font-size: 13px !important; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-grp { display: flex; align-items: center; gap: 6px; width: 100%; margin: 0; padding: 12px 10px 4px; border: 0; background: transparent; font: inherit; font-size: 12px; font-weight: 800; color: var(--rk-mut); letter-spacing: .06em; text-align: left; cursor: pointer; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-grp svg { transition: transform .15s ease; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-grp[aria-expanded="false"] svg { transform: rotate(-90deg); }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-grp-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--rk-red); }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-cnt { flex: none; min-width: 28px; height: 24px; padding: 0 7px; box-sizing: border-box; border-radius: 999px; border: 0; background: var(--rk-red); color: #FFFFFF; font: inherit; font-size: 12px; font-weight: 800; display: grid; place-items: center; cursor: pointer; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-cnt:hover { background: #B42318; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-cnt[hidden] { display: none; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-fill { flex: 1; min-height: 10px; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-more-l { display: flex; flex-direction: column; gap: 1px; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-more-l[hidden] { display: none; }
 /* yig'iq (76px) */
-body.rop-desk-v2.rk-sb-min .sidebar { width: 76px !important; min-width: 76px !important; padding: 10px 8px; }
-body.rop-desk-v2.rk-sb-min .sidebar-brand { justify-content: center; }
-body.rop-desk-v2.rk-sb-min .sidebar-brand .brand-logo, body.rop-desk-v2.rk-sb-min .rk-lbl, body.rop-desk-v2.rk-sb-min .rk-grp, body.rop-desk-v2.rk-sb-min .rk-more-l, body.rop-desk-v2.rk-sb-min .sidebar-footer .label { display: none; }
-body.rop-desk-v2.rk-sb-min .rk-nr[hidden] { display: flex; }
-body.rop-desk-v2.rk-sb-min .sidebar-menu .rk-mi { justify-content: center; padding: 0; }
-body.rop-desk-v2.rk-sb-min .rk-cnt { position: absolute; right: -2px; top: -4px; min-width: 24px; height: 24px; border: 2px solid var(--rk-card); }
-body.rop-desk-v2.rk-sb-min .sidebar-footer .menu-group-toggle { justify-content: center; }
+body:is(.rop-desk-v2, .sot-desk-v2).rk-sb-min .sidebar { width: 76px !important; min-width: 76px !important; padding: 10px 8px; }
+body:is(.rop-desk-v2, .sot-desk-v2).rk-sb-min .sidebar-brand { justify-content: center; }
+body:is(.rop-desk-v2, .sot-desk-v2).rk-sb-min .sidebar-brand .brand-logo, body:is(.rop-desk-v2, .sot-desk-v2).rk-sb-min .rk-lbl, body:is(.rop-desk-v2, .sot-desk-v2).rk-sb-min .rk-grp, body:is(.rop-desk-v2, .sot-desk-v2).rk-sb-min .rk-more-l, body:is(.rop-desk-v2, .sot-desk-v2).rk-sb-min .sidebar-footer .label { display: none; }
+body:is(.rop-desk-v2, .sot-desk-v2).rk-sb-min .rk-nr[hidden] { display: flex; }
+body:is(.rop-desk-v2, .sot-desk-v2).rk-sb-min .sidebar-menu .rk-mi { justify-content: center; padding: 0; }
+body:is(.rop-desk-v2, .sot-desk-v2).rk-sb-min .rk-cnt { position: absolute; right: -2px; top: -4px; min-width: 24px; height: 24px; border: 2px solid var(--rk-card); }
+body:is(.rop-desk-v2, .sot-desk-v2).rk-sb-min .sidebar-footer .menu-group-toggle { justify-content: center; }
 /* "Boshqa bo'limlar" qatori sahifa ichida emas — sidebar pastida */
-body.rop-desk-v2 #rsMoreSales, body.rop-desk-v2 #rsMoreStudents { display: none !important; }
+body:is(.rop-desk-v2, .sot-desk-v2) #rsMoreSales, body:is(.rop-desk-v2, .sot-desk-v2) #rsMoreStudents { display: none !important; }
 
 /* ---------- Yuqori panel ---------- */
-body.rop-desk-v2 .top-header { min-height: 56px; padding: 0 24px; gap: 14px; }
-body.rop-desk-v2 .top-header .live-badge { display: none; }
-body.rop-desk-v2 .lead-search-box { width: 420px; max-width: 42vw; position: relative; }
-body.rop-desk-v2 .lead-search-box input { height: 38px; border-radius: 12px !important; padding-right: 40px; }
-body.rop-desk-v2 .lead-search-box .rk-kbd { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); }
-body.rop-desk-v2 .rk-kbd { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 5px; box-sizing: border-box; border-radius: 6px; border: 1px solid #CBD5E1; border-bottom-width: 2px; background: var(--rk-card); font-size: 11px; font-weight: 800; color: var(--rk-ink2); white-space: nowrap; }
-body.rop-desk-v2 .rk-keys { position: relative; display: inline-flex; }
-body.rop-desk-v2 .rk-keys-b { width: 38px; height: 38px; border-radius: 10px; font-size: 15px; font-weight: 800; }
-body.rop-desk-v2 .rk-dd { position: absolute; top: 46px; right: 0; z-index: 60; min-width: 320px; background: var(--rk-card); border: 1px solid var(--rk-line); border-radius: 14px; box-shadow: 0 16px 40px rgba(16, 24, 40, .16); padding: 8px; display: flex; flex-direction: column; gap: 2px; }
-body.rop-desk-v2 .rk-dd[hidden] { display: none; }
-body.rop-desk-v2 .rk-dh { font-size: 12px; font-weight: 800; color: var(--rk-mut); padding: 4px 8px; }
-body.rop-desk-v2 .rk-key-r { display: flex; align-items: center; gap: 10px; min-height: 30px; padding: 0 8px; font-size: 13px; color: var(--rk-ink); }
+body:is(.rop-desk-v2, .sot-desk-v2) .top-header { min-height: 56px; padding: 0 24px; gap: 14px; }
+body:is(.rop-desk-v2, .sot-desk-v2) .top-header .live-badge { display: none; }
+body:is(.rop-desk-v2, .sot-desk-v2) .lead-search-box { width: 420px; max-width: 42vw; position: relative; }
+body:is(.rop-desk-v2, .sot-desk-v2) .lead-search-box input { height: 38px; border-radius: 12px !important; padding-right: 40px; }
+body:is(.rop-desk-v2, .sot-desk-v2) .lead-search-box .rk-kbd { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-kbd { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 5px; box-sizing: border-box; border-radius: 6px; border: 1px solid #CBD5E1; border-bottom-width: 2px; background: var(--rk-card); font-size: 11px; font-weight: 800; color: var(--rk-ink2); white-space: nowrap; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-keys { position: relative; display: inline-flex; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-keys-b { width: 38px; height: 38px; border-radius: 10px; font-size: 15px; font-weight: 800; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-dd { position: absolute; top: 46px; right: 0; z-index: 60; min-width: 320px; background: var(--rk-card); border: 1px solid var(--rk-line); border-radius: 14px; box-shadow: 0 16px 40px rgba(16, 24, 40, .16); padding: 8px; display: flex; flex-direction: column; gap: 2px; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-dd[hidden] { display: none; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-dh { font-size: 12px; font-weight: 800; color: var(--rk-mut); padding: 4px 8px; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-key-r { display: flex; align-items: center; gap: 10px; min-height: 30px; padding: 0 8px; font-size: 13px; color: var(--rk-ink); }
 
 /* ---------- Bosh sahifa (RK01) ---------- */
-body.rop-desk-v2 #ropHome { max-width: 1177px; }
-body.rop-desk-v2 .rk-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; margin: 20px 0; }
-body.rop-desk-v2 .rk-tile { display: flex; align-items: center; gap: 16px; padding: 18px 20px; border: 1px solid var(--rk-line); border-radius: 20px; background: var(--rk-card); color: var(--rk-ink); font: inherit; text-align: left; cursor: pointer; transition: box-shadow .15s ease, transform .2s ease; }
-body.rop-desk-v2 .rk-tile:hover { box-shadow: 0 8px 20px rgba(16, 24, 40, .08); }
-body.rop-desk-v2 .rk-tile:active { transform: scale(.99); }
-body.rop-desk-v2 .rk-tile-i { flex: none; width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center; }
-body.rop-desk-v2 .rk-tone-blue { background: var(--rk-blue-l); color: var(--rk-blue2); }
-body.rop-desk-v2 .rk-tone-purple { background: var(--rk-purple-l); color: var(--rk-purple); }
-body.rop-desk-v2 .rk-tile-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-body.rop-desk-v2 .rk-tile-t strong { font-size: 16px; font-weight: 800; }
-body.rop-desk-v2 .rk-tile-t span { font-size: 13px; font-weight: 600; color: var(--rk-mut); }
-body.rop-desk-v2 .rk-tile-n { font-size: 34px; font-weight: 800; font-variant-numeric: tabular-nums; }
-body.rop-desk-v2 .rk-seg { display: flex; gap: 3px; padding: 3px; border-radius: 12px; background: var(--rk-soft); margin-left: auto; margin-right: 12px; }
-body.rop-desk-v2 .rk-seg button { height: 38px; padding: 0 14px; border: 0; border-radius: 10px; background: transparent; color: var(--rk-ink2); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
-body.rop-desk-v2 .rk-seg button[aria-checked="true"] { background: var(--rk-card); color: var(--rk-ink); font-weight: 800; box-shadow: 0 1px 3px rgba(11, 18, 32, .12); }
-body.rop-desk-v2 .rpx-mgrs .ahx-card-h { align-items: center; }
-body.rop-desk-v2 .rk-pill { display: inline-block; font-size: 12px; font-weight: 800; border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
-body.rop-desk-v2 .rk-pill--ok { color: var(--rk-green); background: var(--rk-green-l); }
-body.rop-desk-v2 .rk-pill--warn { color: var(--rk-amber); background: var(--rk-amber-l); }
-body.rop-desk-v2 .rk-pill--bad, body.rop-desk-v2 .rk-pill--late { color: var(--rk-red2); background: var(--rk-red-l); }
-body.rop-desk-v2 .rk-pill--off { color: var(--rk-ink2); background: var(--rk-soft); }
-body.rop-desk-v2 .rk-calls { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
-body.rop-desk-v2 .rk-bar { display: block; height: 6px; max-width: 150px; margin-top: 4px; border-radius: 999px; background: var(--rk-line2); overflow: hidden; }
-body.rop-desk-v2 .rk-bar i { display: block; height: 100%; border-radius: 999px; background: var(--rk-blue); }
-body.rop-desk-v2 .rk-day[hidden], body.rop-desk-v2 .rpx-mgrs .ahx-tbl-wrap[hidden] { display: none; }
+body:is(.rop-desk-v2, .sot-desk-v2) #ropHome { max-width: 1177px; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; margin: 20px 0; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-tile { display: flex; align-items: center; gap: 16px; padding: 18px 20px; border: 1px solid var(--rk-line); border-radius: 20px; background: var(--rk-card); color: var(--rk-ink); font: inherit; text-align: left; cursor: pointer; transition: box-shadow .15s ease, transform .2s ease; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-tile:hover { box-shadow: 0 8px 20px rgba(16, 24, 40, .08); }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-tile:active { transform: scale(.99); }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-tile-i { flex: none; width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-tone-blue { background: var(--rk-blue-l); color: var(--rk-blue2); }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-tone-purple { background: var(--rk-purple-l); color: var(--rk-purple); }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-tile-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-tile-t strong { font-size: 16px; font-weight: 800; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-tile-t span { font-size: 13px; font-weight: 600; color: var(--rk-mut); }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-tile-n { font-size: 34px; font-weight: 800; font-variant-numeric: tabular-nums; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-seg { display: flex; gap: 3px; padding: 3px; border-radius: 12px; background: var(--rk-soft); margin-left: auto; margin-right: 12px; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-seg button { height: 38px; padding: 0 14px; border: 0; border-radius: 10px; background: transparent; color: var(--rk-ink2); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-seg button[aria-checked="true"] { background: var(--rk-card); color: var(--rk-ink); font-weight: 800; box-shadow: 0 1px 3px rgba(11, 18, 32, .12); }
+body:is(.rop-desk-v2, .sot-desk-v2) .rpx-mgrs .ahx-card-h { align-items: center; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-pill { display: inline-block; font-size: 12px; font-weight: 800; border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-pill--ok { color: var(--rk-green); background: var(--rk-green-l); }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-pill--warn { color: var(--rk-amber); background: var(--rk-amber-l); }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-pill--bad, body:is(.rop-desk-v2, .sot-desk-v2) .rk-pill--late { color: var(--rk-red2); background: var(--rk-red-l); }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-pill--off { color: var(--rk-ink2); background: var(--rk-soft); }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-calls { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-bar { display: block; height: 6px; max-width: 150px; margin-top: 4px; border-radius: 999px; background: var(--rk-line2); overflow: hidden; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-bar i { display: block; height: 100%; border-radius: 999px; background: var(--rk-blue); }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-day[hidden], body:is(.rop-desk-v2, .sot-desk-v2) .rpx-mgrs .ahx-tbl-wrap[hidden] { display: none; }
 
 /* ---------- Lidlar (RK02) — sahifa tepasi ---------- */
-body.rop-desk-v2.rk-sales-lead #tab-sales .rd-page-head { display: none !important; }
-body.rop-desk-v2 #tab-sales .rk-h1 { display: none; }
-body.rop-desk-v2.rk-sales-lead #tab-sales .rk-h1 { display: block; margin: 0 6px 0 0; font-size: 22px; font-weight: 800; letter-spacing: -0.02em; color: var(--rk-ink); white-space: nowrap; }
-body.rop-desk-v2.rk-sales-lead #tab-sales .sales-header-layout { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-body.rop-desk-v2 #salesSectionNav { display: none !important; }
-body.rop-desk-v2.rk-sales-lead #salesSectionNav { display: flex !important; flex: none; gap: 2px; padding: 3px; margin: 0; border: 0; border-radius: 11px; background: #E9EEF5; }
-html[data-theme="dark"] body.rop-desk-v2.rk-sales-lead #salesSectionNav { background: var(--rk-soft); }
-body.rop-desk-v2.rk-sales-lead #salesSectionNav .section-nav-item { display: none; }
-body.rop-desk-v2.rk-sales-lead #salesSectionNav .section-nav-item[data-sales-section="leads"], body.rop-desk-v2.rk-sales-lead #salesSectionNav .section-nav-item[data-sales-section="book-roadmap"] { display: block; height: 30px; padding: 0 12px; border: 0; border-radius: 8px; background: transparent; font-size: 13px; font-weight: 700; color: var(--rk-ink2); }
-body.rop-desk-v2.rk-sales-lead #salesSectionNav .section-nav-item.active { background: var(--rk-card); color: var(--rk-ink); font-weight: 800; box-shadow: 0 1px 2px rgba(16, 24, 40, .08); }
-body.rop-desk-v2.rk-sales-lead #salesSectionNav .section-nav-item::after { display: none !important; }
-body.rop-desk-v2.rk-sales-lead #leadsFiltersBar { display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; margin: 0; padding-left: 12px; border-left: 1px solid var(--rk-line2); }
-body.rop-desk-v2.rk-sales-lead #leadsFiltersBar .leads-filter-box { height: 36px; min-width: 0; width: auto; flex: none; border-radius: 10px; border: 1px solid var(--rk-line2); background: var(--rk-card); font-size: 13px; font-weight: 600; color: var(--rk-ink2); box-sizing: border-box; }
-body.rop-desk-v2.rk-sales-lead #leadsFiltersBar .leads-filter-box:hover { border-color: #94A3B8; }
-body.rop-desk-v2.rk-sales-lead #leadsFiltersBar .leads-filter-display { font-size: 13px; font-weight: 600; white-space: nowrap; }
-body.rop-desk-v2.rk-sales-lead #leadsFiltersBar .leads-filter-box.rk-act { background: var(--rk-blue-l); border-color: var(--rk-blue); }
-body.rop-desk-v2.rk-sales-lead #leadsFiltersBar .leads-filter-box.rk-act .leads-filter-display { color: var(--rk-blue2); font-weight: 800; }
-body.rop-desk-v2.rk-sales-lead #leadsFiltersBar .leads-filter-box.rk-vb { background: var(--rk-purple-l); border-color: #7C3AED; }
-body.rop-desk-v2.rk-sales-lead #leadsFiltersBar .leads-filter-box.rk-vb .leads-filter-display { color: var(--rk-purple); font-weight: 800; }
-body.rop-desk-v2.rk-vb-on #leadsFiltersBar .leads-columns-filter-wrap, body.rop-desk-v2.rk-vb-on #leadsFiltersBar .leads-date-filter-wrap { display: none; }
-body.rop-desk-v2 .rk-vb-x { width: 28px; height: 28px; border-radius: 50%; border: 0; background: var(--rk-purple-l); color: var(--rk-purple); font-weight: 800; cursor: pointer; flex: none; }
-body.rop-desk-v2 .rk-clear { height: 36px; padding: 0 10px; border: 0; background: transparent; color: var(--rk-blue2); font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; white-space: nowrap; }
-body.rop-desk-v2 #slRuleBtn { display: none !important; }
-body.rop-desk-v2.rk-sales-lead #tab-sales .rk-hid { display: inline-flex; }
-body.rop-desk-v2 #tab-sales .rk-hid[hidden], body.rop-desk-v2:not(.rk-sales-lead) #tab-sales .rk-hid, body.rop-desk-v2:not(.rk-sales-lead) #tab-sales .rk-total { display: none; }
-body.rop-desk-v2 .rk-hid button { height: 32px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--rk-line2); background: var(--rk-card); font: inherit; font-size: 12px; font-weight: 800; color: var(--rk-ink); cursor: pointer; white-space: nowrap; }
-body.rop-desk-v2 .rk-total { font-size: 12px; font-weight: 600; color: var(--rk-mut); white-space: nowrap; margin-left: auto; }
-body.rop-desk-v2 .rk-total strong { color: var(--rk-ink); }
-body.rop-desk-v2 .rk-hid:not([hidden]) ~ .rk-total { margin-left: 0; }
-body.rop-desk-v2.rk-sales-lead #tab-sales .rk-hid-l:not([hidden]) { margin-left: auto; }
-body.rop-desk-v2.rk-sales-lead #tab-sales .rk-hid-l[hidden] + .rk-hid-r:not([hidden]) { margin-left: auto; }
-body.rop-desk-v2.rk-sales-lead #addLeadBtn { height: 36px; padding: 0 14px; border-radius: 10px; font-size: 13px; font-weight: 800; white-space: nowrap; }
+body:is(.rop-desk-v2, .sot-desk-v2).rk-sales-lead #tab-sales .rd-page-head { display: none !important; }
+body:is(.rop-desk-v2, .sot-desk-v2) #tab-sales .rk-h1 { display: none; }
+body:is(.rop-desk-v2, .sot-desk-v2).rk-sales-lead #tab-sales .rk-h1 { display: block; margin: 0 6px 0 0; font-size: 22px; font-weight: 800; letter-spacing: -0.02em; color: var(--rk-ink); white-space: nowrap; }
+body:is(.rop-desk-v2, .sot-desk-v2).rk-sales-lead #tab-sales .sales-header-layout { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+body:is(.rop-desk-v2, .sot-desk-v2) #salesSectionNav { display: none !important; }
+body:is(.rop-desk-v2, .sot-desk-v2).rk-sales-lead #salesSectionNav { display: flex !important; flex: none; gap: 2px; padding: 3px; margin: 0; border: 0; border-radius: 11px; background: #E9EEF5; }
+html[data-theme="dark"] body:is(.rop-desk-v2, .sot-desk-v2).rk-sales-lead #salesSectionNav { background: var(--rk-soft); }
+body:is(.rop-desk-v2, .sot-desk-v2).rk-sales-lead #salesSectionNav .section-nav-item { display: none; }
+body:is(.rop-desk-v2, .sot-desk-v2).rk-sales-lead #salesSectionNav .section-nav-item[data-sales-section="leads"], body:is(.rop-desk-v2, .sot-desk-v2).rk-sales-lead #salesSectionNav .section-nav-item[data-sales-section="book-roadmap"] { display: block; height: 30px; padding: 0 12px; border: 0; border-radius: 8px; background: transparent; font-size: 13px; font-weight: 700; color: var(--rk-ink2); }
+body:is(.rop-desk-v2, .sot-desk-v2).rk-sales-lead #salesSectionNav .section-nav-item.active { background: var(--rk-card); color: var(--rk-ink); font-weight: 800; box-shadow: 0 1px 2px rgba(16, 24, 40, .08); }
+body:is(.rop-desk-v2, .sot-desk-v2).rk-sales-lead #salesSectionNav .section-nav-item::after { display: none !important; }
+body:is(.rop-desk-v2, .sot-desk-v2).rk-sales-lead #leadsFiltersBar { display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; margin: 0; padding-left: 12px; border-left: 1px solid var(--rk-line2); }
+body:is(.rop-desk-v2, .sot-desk-v2).rk-sales-lead #leadsFiltersBar .leads-filter-box { height: 36px; min-width: 0; width: auto; flex: none; border-radius: 10px; border: 1px solid var(--rk-line2); background: var(--rk-card); font-size: 13px; font-weight: 600; color: var(--rk-ink2); box-sizing: border-box; }
+body:is(.rop-desk-v2, .sot-desk-v2).rk-sales-lead #leadsFiltersBar .leads-filter-box:hover { border-color: #94A3B8; }
+body:is(.rop-desk-v2, .sot-desk-v2).rk-sales-lead #leadsFiltersBar .leads-filter-display { font-size: 13px; font-weight: 600; white-space: nowrap; }
+body:is(.rop-desk-v2, .sot-desk-v2).rk-sales-lead #leadsFiltersBar .leads-filter-box.rk-act { background: var(--rk-blue-l); border-color: var(--rk-blue); }
+body:is(.rop-desk-v2, .sot-desk-v2).rk-sales-lead #leadsFiltersBar .leads-filter-box.rk-act .leads-filter-display { color: var(--rk-blue2); font-weight: 800; }
+body:is(.rop-desk-v2, .sot-desk-v2).rk-sales-lead #leadsFiltersBar .leads-filter-box.rk-vb { background: var(--rk-purple-l); border-color: #7C3AED; }
+body:is(.rop-desk-v2, .sot-desk-v2).rk-sales-lead #leadsFiltersBar .leads-filter-box.rk-vb .leads-filter-display { color: var(--rk-purple); font-weight: 800; }
+body:is(.rop-desk-v2, .sot-desk-v2).rk-vb-on #leadsFiltersBar .leads-columns-filter-wrap, body:is(.rop-desk-v2, .sot-desk-v2).rk-vb-on #leadsFiltersBar .leads-date-filter-wrap { display: none; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-vb-x { width: 28px; height: 28px; border-radius: 50%; border: 0; background: var(--rk-purple-l); color: var(--rk-purple); font-weight: 800; cursor: pointer; flex: none; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-clear { height: 36px; padding: 0 10px; border: 0; background: transparent; color: var(--rk-blue2); font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; white-space: nowrap; }
+body:is(.rop-desk-v2, .sot-desk-v2) #slRuleBtn { display: none !important; }
+body:is(.rop-desk-v2, .sot-desk-v2).rk-sales-lead #tab-sales .rk-hid { display: inline-flex; }
+body:is(.rop-desk-v2, .sot-desk-v2) #tab-sales .rk-hid[hidden], body:is(.rop-desk-v2, .sot-desk-v2):not(.rk-sales-lead) #tab-sales .rk-hid, body:is(.rop-desk-v2, .sot-desk-v2):not(.rk-sales-lead) #tab-sales .rk-total { display: none; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-hid button { height: 32px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--rk-line2); background: var(--rk-card); font: inherit; font-size: 12px; font-weight: 800; color: var(--rk-ink); cursor: pointer; white-space: nowrap; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-total { font-size: 12px; font-weight: 600; color: var(--rk-mut); white-space: nowrap; margin-left: auto; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-total strong { color: var(--rk-ink); }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-hid:not([hidden]) ~ .rk-total { margin-left: 0; }
+body:is(.rop-desk-v2, .sot-desk-v2).rk-sales-lead #tab-sales .rk-hid-l:not([hidden]) { margin-left: auto; }
+body:is(.rop-desk-v2, .sot-desk-v2).rk-sales-lead #tab-sales .rk-hid-l[hidden] + .rk-hid-r:not([hidden]) { margin-left: auto; }
+body:is(.rop-desk-v2, .sot-desk-v2).rk-sales-lead #addLeadBtn { height: 36px; padding: 0 14px; border-radius: 10px; font-size: 13px; font-weight: 800; white-space: nowrap; }
 
 /* ---------- Lidlar — doska ---------- */
-body.rop-desk-v2 #leadsKanban.rk-board { gap: 10px; align-items: stretch; padding: 12px 0 16px; overflow-x: auto; overflow-y: hidden; position: relative; }
-body.rop-desk-v2 #leadsKanban .lead-column.rk-col { flex: none; width: 256px; min-width: 0; max-height: 100%; align-self: stretch; padding: 0 8px 8px; box-sizing: border-box; border: 0; border-top: 3px solid var(--rk-col); border-radius: 16px; background: var(--rk-soft) !important; display: flex; flex-direction: column; gap: 6px; position: relative; }
-body.rop-desk-v2 #leadsKanban .lead-column-header.rk-ch { position: static; display: flex; flex-direction: column; flex-wrap: nowrap; height: auto; align-items: stretch; gap: 6px; padding: 10px 4px 2px; margin: 0; background: transparent !important; border: 0; box-shadow: none; }
-body.rop-desk-v2 .rk-ch1 { display: flex; align-items: center; gap: 8px; }
-body.rop-desk-v2 .rk-dot { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--rk-col); }
-body.rop-desk-v2 #leadsKanban .rk-ch1 .lead-column-title { margin: 0; flex: 1; min-width: 0; font-size: 14px; font-weight: 800; line-height: 1.25; color: var(--rk-ink) !important; }
-body.rop-desk-v2 #leadsKanban .lead-column-count { flex: none; font-size: 12px; font-weight: 800; border-radius: 999px; padding: 2px 8px; color: var(--rk-ink) !important; background: var(--rk-card); box-shadow: inset 0 0 0 1px var(--rk-line2); font-variant-numeric: tabular-nums; white-space: nowrap; }
-body.rop-desk-v2 .rk-ic { position: relative; flex: none; width: 28px; height: 28px; border-radius: 8px; border: 0; background: transparent; color: var(--rk-mut); display: grid; place-items: center; cursor: pointer; padding: 0; }
-body.rop-desk-v2 .rk-ic:hover { background: var(--rk-card); color: var(--rk-ink); }
-body.rop-desk-v2 .rk-colx { width: 26px; height: 26px; }
-body.rop-desk-v2 .rk-ch2 { display: flex; align-items: center; gap: 6px; min-height: 26px; flex-wrap: wrap; position: relative; }
-body.rop-desk-v2 .rk-ch2:empty { display: none; }
-body.rop-desk-v2 #leadsKanban .rk-ch2 .lead-col-pick { flex: none; height: 26px; padding: 0 10px; margin: 0; border-radius: 999px; border: 0; background: var(--rk-blue); color: #FFFFFF; font-size: 12px; font-weight: 800; cursor: pointer; white-space: nowrap; }
-body.rop-desk-v2 #leadsKanban .rk-ch2 .lead-col-pick:hover { background: var(--rk-blue2); }
-body.rop-desk-v2 .rk-rk { height: 26px; display: inline-flex; align-items: center; gap: 4px; padding: 0 9px; border-radius: 999px; border: 0; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; white-space: nowrap; }
-body.rop-desk-v2 .rk-rk-bad { color: var(--rk-red2); background: var(--rk-red-l); }
-body.rop-desk-v2 .rk-rk-warn { color: var(--rk-amber); background: var(--rk-amber-l); }
-body.rop-desk-v2 .rk-rk[aria-pressed="true"] { box-shadow: inset 0 0 0 2px currentColor; }
-body.rop-desk-v2 .rk-sum { font-size: 12px; font-weight: 600; color: var(--rk-mut); white-space: nowrap; }
-body.rop-desk-v2 #leadsKanban .lead-column-cards { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; margin: 0 -4px; padding: 2px 4px 4px; scrollbar-width: thin; scrollbar-color: #CBD5E1 transparent; }
-body.rop-desk-v2 #leadsKanban .lead-column-cards > * { flex: none; }
-body.rop-desk-v2 #leadsKanban .lead-column-cards.drag-over { background: var(--rk-blue-l); outline: 2px dashed var(--rk-blue); outline-offset: -2px; border-radius: 12px; }
-body.rop-desk-v2 #leadsKanban .rk-empty { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 22px 8px; border: 1px dashed #CBD5E1; border-radius: 12px; background: transparent; color: var(--rk-mut); font-size: 13px; font-weight: 600; text-align: center; }
-body.rop-desk-v2 .rk-btn2 { height: 30px; padding: 0 12px; border-radius: 10px; border: 1px solid #CBD5E1; background: var(--rk-card); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; color: var(--rk-ink); }
-body.rop-desk-v2 .rk-btnp { height: 38px; padding: 0 16px; border-radius: 10px; border: 0; background: var(--rk-blue); color: #FFFFFF; font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; }
-body.rop-desk-v2 #leadsKanban .lead-col-more { flex: none; height: 34px; border-radius: 10px; border: 1px dashed #CBD5E1; background: transparent; font-size: 12px; font-weight: 700; color: var(--rk-ink2); cursor: pointer; }
-body.rop-desk-v2 #leadsKanban .lead-col-more:hover { background: var(--rk-card); }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban.rk-board { gap: 10px; align-items: stretch; padding: 12px 0 16px; overflow-x: auto; overflow-y: hidden; position: relative; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .lead-column.rk-col { flex: none; width: 256px; min-width: 0; max-height: 100%; align-self: stretch; padding: 0 8px 8px; box-sizing: border-box; border: 0; border-top: 3px solid var(--rk-col); border-radius: 16px; background: var(--rk-soft) !important; display: flex; flex-direction: column; gap: 6px; position: relative; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .lead-column-header.rk-ch { position: static; display: flex; flex-direction: column; flex-wrap: nowrap; height: auto; align-items: stretch; gap: 6px; padding: 10px 4px 2px; margin: 0; background: transparent !important; border: 0; box-shadow: none; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-ch1 { display: flex; align-items: center; gap: 8px; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-dot { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--rk-col); }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-ch1 .lead-column-title { margin: 0; flex: 1; min-width: 0; font-size: 14px; font-weight: 800; line-height: 1.25; color: var(--rk-ink) !important; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .lead-column-count { flex: none; font-size: 12px; font-weight: 800; border-radius: 999px; padding: 2px 8px; color: var(--rk-ink) !important; background: var(--rk-card); box-shadow: inset 0 0 0 1px var(--rk-line2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-ic { position: relative; flex: none; width: 28px; height: 28px; border-radius: 8px; border: 0; background: transparent; color: var(--rk-mut); display: grid; place-items: center; cursor: pointer; padding: 0; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-ic:hover { background: var(--rk-card); color: var(--rk-ink); }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-colx { width: 26px; height: 26px; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-ch2 { display: flex; align-items: center; gap: 6px; min-height: 26px; flex-wrap: wrap; position: relative; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-ch2:empty { display: none; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-ch2 .lead-col-pick { flex: none; height: 26px; padding: 0 10px; margin: 0; border-radius: 999px; border: 0; background: var(--rk-blue); color: #FFFFFF; font-size: 12px; font-weight: 800; cursor: pointer; white-space: nowrap; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-ch2 .lead-col-pick:hover { background: var(--rk-blue2); }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-rk { height: 26px; display: inline-flex; align-items: center; gap: 4px; padding: 0 9px; border-radius: 999px; border: 0; font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; white-space: nowrap; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-rk-bad { color: var(--rk-red2); background: var(--rk-red-l); }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-rk-warn { color: var(--rk-amber); background: var(--rk-amber-l); }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-rk[aria-pressed="true"] { box-shadow: inset 0 0 0 2px currentColor; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-sum { font-size: 12px; font-weight: 600; color: var(--rk-mut); white-space: nowrap; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .lead-column-cards { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; margin: 0 -4px; padding: 2px 4px 4px; scrollbar-width: thin; scrollbar-color: #CBD5E1 transparent; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .lead-column-cards > * { flex: none; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .lead-column-cards.drag-over { background: var(--rk-blue-l); outline: 2px dashed var(--rk-blue); outline-offset: -2px; border-radius: 12px; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-empty { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 22px 8px; border: 1px dashed #CBD5E1; border-radius: 12px; background: transparent; color: var(--rk-mut); font-size: 13px; font-weight: 600; text-align: center; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-btn2 { height: 30px; padding: 0 12px; border-radius: 10px; border: 1px solid #CBD5E1; background: var(--rk-card); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; color: var(--rk-ink); }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-btnp { height: 38px; padding: 0 16px; border-radius: 10px; border: 0; background: var(--rk-blue); color: #FFFFFF; font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .lead-col-more { flex: none; height: 34px; border-radius: 10px; border: 1px dashed #CBD5E1; background: transparent; font-size: 12px; font-weight: 700; color: var(--rk-ink2); cursor: pointer; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .lead-col-more:hover { background: var(--rk-card); }
 /* yig'ilgan ustun */
-body.rop-desk-v2 #leadsKanban .lead-column.rk-shut { width: 52px; padding: 0; max-height: 560px; align-self: flex-start; height: 100%; }
-body.rop-desk-v2 #leadsKanban .lead-column.rk-shut > :not(.rk-mini):not(.lead-column-cards) { display: none !important; }
-body.rop-desk-v2 #leadsKanban .lead-column.rk-shut > .lead-column-cards { position: absolute; inset: 0; opacity: 0; overflow: hidden; margin: 0; padding: 0; pointer-events: none; }
-body.rop-desk-v2.rk-dragging #leadsKanban .lead-column.rk-shut > .lead-column-cards { pointer-events: auto; z-index: 2; }
-body.rop-desk-v2 #leadsKanban .lead-column.rk-shut > .lead-column-cards.drag-over { opacity: 1; background: rgba(0, 101, 214, .08); }
-body.rop-desk-v2 .rk-mini { position: relative; z-index: 1; width: 100%; height: 100%; border: 0; background: transparent; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 14px 0; cursor: pointer; font: inherit; }
-body.rop-desk-v2 .rk-vt { writing-mode: vertical-rl; transform: rotate(180deg); font-size: 14px; font-weight: 800; color: var(--rk-ink); white-space: nowrap; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .lead-column.rk-shut { width: 52px; padding: 0; max-height: 560px; align-self: flex-start; height: 100%; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .lead-column.rk-shut > :not(.rk-mini):not(.lead-column-cards) { display: none !important; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .lead-column.rk-shut > .lead-column-cards { position: absolute; inset: 0; opacity: 0; overflow: hidden; margin: 0; padding: 0; pointer-events: none; }
+body:is(.rop-desk-v2, .sot-desk-v2).rk-dragging #leadsKanban .lead-column.rk-shut > .lead-column-cards { pointer-events: auto; z-index: 2; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .lead-column.rk-shut > .lead-column-cards.drag-over { opacity: 1; background: rgba(0, 101, 214, .08); }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-mini { position: relative; z-index: 1; width: 100%; height: 100%; border: 0; background: transparent; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 14px 0; cursor: pointer; font: inherit; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-vt { writing-mode: vertical-rl; transform: rotate(180deg); font-size: 14px; font-weight: 800; color: var(--rk-ink); white-space: nowrap; }
 
 /* ---------- Lidlar — karta ---------- */
-body.rop-desk-v2 #leadsKanban .lead-card.rk-card { position: relative; display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 7px 8px; background: var(--rk-card); border: 1px solid var(--rk-line); border-left: 3px solid var(--rk-stripe, #CBD5E1); border-radius: 12px; box-shadow: 0 1px 2px rgba(16, 24, 40, .05); cursor: grab; user-select: none; transition: box-shadow .15s ease, border-color .15s ease, opacity .15s ease; }
-body.rop-desk-v2 #leadsKanban .lead-card.rk-card:hover { box-shadow: 0 8px 20px rgba(16, 24, 40, .10); border-color: #CBD5E1; border-left-color: var(--rk-stripe, #CBD5E1); transform: none; }
-body.rop-desk-v2 #leadsKanban .lead-card.rk-card:focus-visible { outline: 2px solid var(--rk-blue); outline-offset: 1px; }
-body.rop-desk-v2 #leadsKanban .lead-card.rk-card.lead-card--dragging { opacity: .4; border-style: dashed; box-shadow: none; }
-body.rop-desk-v2 #leadsKanban .lead-card.rk-card.is-sel { background: #F5F9FF; border-color: var(--rk-blue); border-left-color: var(--rk-blue); box-shadow: 0 0 0 2px #93C5FD; }
-html[data-theme="dark"] body.rop-desk-v2 #leadsKanban .lead-card.rk-card.is-sel { background: #142846; }
-body.rop-desk-v2 #leadsKanban .lead-card.rk-card.rk-kin { box-shadow: 0 0 0 2px var(--rk-blue); }
-body.rop-desk-v2 #leadsKanban .lead-card[hidden] { display: none !important; }
-body.rop-desk-v2 .rk-r1 { display: flex; align-items: flex-start; gap: 4px; }
-body.rop-desk-v2 .rk-cbx { flex: none; width: 24px; height: 24px; display: grid; place-items: center; margin-left: -3px; cursor: pointer; }
-body.rop-desk-v2 #leadsKanban .rk-cbx input { width: 16px; height: 16px; margin: 0; accent-color: var(--rk-blue); cursor: pointer; position: static; opacity: 1; }
-body.rop-desk-v2 #leadsKanban .rk-nm { flex: 1; min-width: 0; min-height: 24px; border: 0; background: none; padding: 2px 0 0; margin: 0; font: inherit; font-size: 14px; font-weight: 800; line-height: 1.25; color: var(--rk-ink); text-align: left; cursor: pointer; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-body.rop-desk-v2 #leadsKanban .rk-nm:hover { color: var(--rk-blue2); text-decoration: underline; }
-body.rop-desk-v2 .rk-att { flex: none; width: 20px; height: 20px; margin-top: 2px; border-radius: 50%; background: var(--rk-green-l); color: var(--rk-green); font-size: 11px; font-weight: 800; display: grid; place-items: center; }
-body.rop-desk-v2 #leadsKanban .rk-r1 .lead-card-menu-wrap { position: relative; flex: none; }
-body.rop-desk-v2 #leadsKanban .rk-r1 .lead-card-menu-btn { width: 28px; height: 28px; border-radius: 8px; border: 0; background: transparent; color: var(--rk-mut); display: grid; place-items: center; padding: 0; }
-body.rop-desk-v2 #leadsKanban .rk-r1 .lead-card-menu-btn:hover { background: var(--rk-soft); color: var(--rk-ink); }
-body.rop-desk-v2 #leadsKanban .rk-r1 .lead-card-menu-btn svg { width: 16px; height: 16px; fill: currentColor; stroke: none; }
-body.rop-desk-v2 .rk-meta { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; font-size: 12px; color: var(--rk-mut); min-height: 22px; overflow: hidden; }
-body.rop-desk-v2 .rk-chip { display: inline-flex; align-items: center; gap: 4px; height: 22px; font-size: 12px; font-weight: 800; border-radius: 999px; padding: 0 8px; white-space: nowrap; flex: none; max-width: 100%; overflow: hidden; text-overflow: ellipsis; box-sizing: border-box; margin: 0; }
-body.rop-desk-v2 .rk-lvl-ok { color: var(--rk-green); background: var(--rk-green-l); }
-body.rop-desk-v2 .rk-lvl-warn { color: var(--rk-amber); background: var(--rk-amber-l); }
-body.rop-desk-v2 .rk-lvl-late { color: var(--rk-red2); background: var(--rk-red-l); }
-body.rop-desk-v2 .rk-stale-lock { color: #FFFFFF; background: var(--rk-red); }
-body.rop-desk-v2 .rk-stale-warn { color: var(--rk-amber); background: var(--rk-amber-l); }
-body.rop-desk-v2 .rk-mute, body.rop-desk-v2 .rk-tone-mute { color: var(--rk-ink2); background: var(--rk-soft); }
-body.rop-desk-v2 .rk-tone-warn { color: var(--rk-amber); background: var(--rk-amber-l); }
-body.rop-desk-v2 .rk-tone-info { color: var(--rk-blue2); background: var(--rk-blue-l); }
-body.rop-desk-v2 .rk-tone-ok { color: var(--rk-green); background: var(--rk-green-l); }
-body.rop-desk-v2 .rk-tone-bad { color: var(--rk-red2); background: var(--rk-red-l); }
-body.rop-desk-v2 .rk-next { color: var(--rk-blue2); background: var(--rk-blue-l); }
-body.rop-desk-v2 .rk-next-late { color: var(--rk-red2); background: var(--rk-red-l); }
-body.rop-desk-v2 .rk-src { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; color: var(--rk-ink2); white-space: nowrap; }
-body.rop-desk-v2 .rk-src i { width: 7px; height: 7px; border-radius: 50%; }
-body.rop-desk-v2 .rk-ser { font-weight: 800; color: var(--rk-ink); background: var(--rk-soft); border-radius: 6px; padding: 1px 6px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-body.rop-desk-v2 .rk-r3 { display: flex; align-items: center; gap: 6px; min-height: 24px; font-size: 13px; color: var(--rk-ink2); }
-body.rop-desk-v2 .rk-r3[hidden] { display: none; }
-body.rop-desk-v2 .rk-ph { display: inline-flex; align-items: center; gap: 6px; min-height: 24px; color: var(--rk-ink2); font-variant-numeric: tabular-nums; text-decoration: none; border-radius: 6px; white-space: nowrap; }
-body.rop-desk-v2 .rk-ph:hover { color: var(--rk-blue2); }
-body.rop-desk-v2 .rk-ph svg { flex: none; color: #6B7280; }
-body.rop-desk-v2 .rk-cp { width: 24px; height: 24px; border-radius: 6px; border: 0; background: transparent; color: var(--rk-mut); display: none; place-items: center; cursor: pointer; font-size: 12px; flex: none; padding: 0; }
-body.rop-desk-v2 .lead-card:hover .rk-cp, body.rop-desk-v2 .lead-card:focus-within .rk-cp, body.rop-desk-v2 .lead-card.rk-kin .rk-cp { display: grid; }
-body.rop-desk-v2 .rk-cp:hover { background: var(--rk-soft); }
-body.rop-desk-v2 .rk-p2 { height: 22px; padding: 0 7px; border-radius: 999px; border: 0; background: var(--rk-soft); color: var(--rk-ink2); font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
-body.rop-desk-v2 .rk-tm { margin-left: auto; font-size: 12px; color: var(--rk-mut); white-space: nowrap; font-variant-numeric: tabular-nums; }
-body.rop-desk-v2 .rk-r4 { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
-body.rop-desk-v2 #leadsKanban .rk-dfr { display: flex; flex-direction: column; gap: 2px; margin: 0; white-space: nowrap; font-size: 12px; color: var(--rk-ink2); background: #EEF2FF; border: 0; border-radius: 8px; padding: 4px 8px; }
-html[data-theme="dark"] body.rop-desk-v2 #leadsKanban .rk-dfr { background: var(--rk-soft); }
-body.rop-desk-v2 .rk-ft { display: flex; align-items: center; gap: 4px; }
-body.rop-desk-v2 .rk-sp { flex: 1; }
-body.rop-desk-v2 #leadsKanban .rk-fb { height: 28px; min-width: 28px; margin: 0; border-radius: 999px; border: 0; background: var(--rk-soft); color: var(--rk-ink2); display: inline-flex; align-items: center; justify-content: center; gap: 4px; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; padding: 0 8px; box-sizing: border-box; box-shadow: none; }
-body.rop-desk-v2 #leadsKanban .rk-fb:hover { background: var(--rk-line2); }
-body.rop-desk-v2 #leadsKanban .rk-fb.z { background: transparent; color: #6B7280; padding: 0; }
-body.rop-desk-v2 #leadsKanban .rk-fb svg { width: 13px; height: 13px; flex: none; }
-body.rop-desk-v2 #leadsKanban .rk-bell-on { color: #FFFFFF; background: var(--rk-red); }
-body.rop-desk-v2 #leadsKanban .rk-rec .lead-recording-count { display: none; }
-body.rop-desk-v2 #leadsKanban .rk-rec.rk-rec-on { color: var(--rk-green); background: var(--rk-green-l); padding: 0 8px; }
-body.rop-desk-v2 #leadsKanban .rk-rec.rk-rec-on .lead-recording-count { display: inline; }
-body.rop-desk-v2 #leadsKanban .rk-mg { max-width: 118px; padding-left: 3px; }
-body.rop-desk-v2 #leadsKanban .rk-mg b { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-body.rop-desk-v2 #leadsKanban .rk-mg.is-empty { color: var(--rk-blue2); background: var(--rk-blue-l); }
-body.rop-desk-v2 .rk-av { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; font-weight: 800; flex: none; overflow: hidden; color: #FFFFFF; }
-body.rop-desk-v2 .rk-av img { width: 100%; height: 100%; object-fit: cover; }
-body.rop-desk-v2 .rk-mg.is-empty .rk-av { border: 1.5px dashed #94A3B8; color: var(--rk-blue2); box-sizing: border-box; }
-body.rop-desk-v2 .rk-alldone { position: absolute; left: 50%; top: 120px; transform: translateX(-50%); z-index: 4; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 24px 28px; border-radius: 20px; background: var(--rk-card); border: 1px solid var(--rk-line); box-shadow: 0 12px 30px rgba(16, 24, 40, .10); text-align: center; }
-body.rop-desk-v2 .rk-alldone > span:first-child { width: 48px; height: 48px; border-radius: 50%; background: var(--rk-green-l); color: var(--rk-green); display: grid; place-items: center; font-size: 22px; font-weight: 800; }
-body.rop-desk-v2 .rk-alldone strong { font-size: 17px; }
-body.rop-desk-v2 .rk-alldone > span:nth-child(3) { font-size: 13px; color: var(--rk-mut); }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .lead-card.rk-card { position: relative; display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 7px 8px; background: var(--rk-card); border: 1px solid var(--rk-line); border-left: 3px solid var(--rk-stripe, #CBD5E1); border-radius: 12px; box-shadow: 0 1px 2px rgba(16, 24, 40, .05); cursor: grab; user-select: none; transition: box-shadow .15s ease, border-color .15s ease, opacity .15s ease; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .lead-card.rk-card:hover { box-shadow: 0 8px 20px rgba(16, 24, 40, .10); border-color: #CBD5E1; border-left-color: var(--rk-stripe, #CBD5E1); transform: none; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .lead-card.rk-card:focus-visible { outline: 2px solid var(--rk-blue); outline-offset: 1px; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .lead-card.rk-card.lead-card--dragging { opacity: .4; border-style: dashed; box-shadow: none; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .lead-card.rk-card.is-sel { background: #F5F9FF; border-color: var(--rk-blue); border-left-color: var(--rk-blue); box-shadow: 0 0 0 2px #93C5FD; }
+html[data-theme="dark"] body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .lead-card.rk-card.is-sel { background: #142846; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .lead-card.rk-card.rk-kin { box-shadow: 0 0 0 2px var(--rk-blue); }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .lead-card[hidden] { display: none !important; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-r1 { display: flex; align-items: flex-start; gap: 4px; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-cbx { flex: none; width: 24px; height: 24px; display: grid; place-items: center; margin-left: -3px; cursor: pointer; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-cbx input { width: 16px; height: 16px; margin: 0; accent-color: var(--rk-blue); cursor: pointer; position: static; opacity: 1; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-nm { flex: 1; min-width: 0; min-height: 24px; border: 0; background: none; padding: 2px 0 0; margin: 0; font: inherit; font-size: 14px; font-weight: 800; line-height: 1.25; color: var(--rk-ink); text-align: left; cursor: pointer; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-nm:hover { color: var(--rk-blue2); text-decoration: underline; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-att { flex: none; width: 20px; height: 20px; margin-top: 2px; border-radius: 50%; background: var(--rk-green-l); color: var(--rk-green); font-size: 11px; font-weight: 800; display: grid; place-items: center; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-r1 .lead-card-menu-wrap { position: relative; flex: none; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-r1 .lead-card-menu-btn { width: 28px; height: 28px; border-radius: 8px; border: 0; background: transparent; color: var(--rk-mut); display: grid; place-items: center; padding: 0; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-r1 .lead-card-menu-btn:hover { background: var(--rk-soft); color: var(--rk-ink); }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-r1 .lead-card-menu-btn svg { width: 16px; height: 16px; fill: currentColor; stroke: none; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-meta { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; font-size: 12px; color: var(--rk-mut); min-height: 22px; overflow: hidden; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-chip { display: inline-flex; align-items: center; gap: 4px; height: 22px; font-size: 12px; font-weight: 800; border-radius: 999px; padding: 0 8px; white-space: nowrap; flex: none; max-width: 100%; overflow: hidden; text-overflow: ellipsis; box-sizing: border-box; margin: 0; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-lvl-ok { color: var(--rk-green); background: var(--rk-green-l); }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-lvl-warn { color: var(--rk-amber); background: var(--rk-amber-l); }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-lvl-late { color: var(--rk-red2); background: var(--rk-red-l); }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-stale-lock { color: #FFFFFF; background: var(--rk-red); }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-stale-warn { color: var(--rk-amber); background: var(--rk-amber-l); }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-mute, body:is(.rop-desk-v2, .sot-desk-v2) .rk-tone-mute { color: var(--rk-ink2); background: var(--rk-soft); }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-tone-warn { color: var(--rk-amber); background: var(--rk-amber-l); }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-tone-info { color: var(--rk-blue2); background: var(--rk-blue-l); }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-tone-ok { color: var(--rk-green); background: var(--rk-green-l); }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-tone-bad { color: var(--rk-red2); background: var(--rk-red-l); }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-next { color: var(--rk-blue2); background: var(--rk-blue-l); }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-next-late { color: var(--rk-red2); background: var(--rk-red-l); }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-src { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; color: var(--rk-ink2); white-space: nowrap; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-src i { width: 7px; height: 7px; border-radius: 50%; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-ser { font-weight: 800; color: var(--rk-ink); background: var(--rk-soft); border-radius: 6px; padding: 1px 6px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-r3 { display: flex; align-items: center; gap: 6px; min-height: 24px; font-size: 13px; color: var(--rk-ink2); }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-r3[hidden] { display: none; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-ph { display: inline-flex; align-items: center; gap: 6px; min-height: 24px; color: var(--rk-ink2); font-variant-numeric: tabular-nums; text-decoration: none; border-radius: 6px; white-space: nowrap; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-ph:hover { color: var(--rk-blue2); }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-ph svg { flex: none; color: #6B7280; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-cp { width: 24px; height: 24px; border-radius: 6px; border: 0; background: transparent; color: var(--rk-mut); display: none; place-items: center; cursor: pointer; font-size: 12px; flex: none; padding: 0; }
+body:is(.rop-desk-v2, .sot-desk-v2) .lead-card:hover .rk-cp, body:is(.rop-desk-v2, .sot-desk-v2) .lead-card:focus-within .rk-cp, body:is(.rop-desk-v2, .sot-desk-v2) .lead-card.rk-kin .rk-cp { display: grid; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-cp:hover { background: var(--rk-soft); }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-p2 { height: 22px; padding: 0 7px; border-radius: 999px; border: 0; background: var(--rk-soft); color: var(--rk-ink2); font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-tm { margin-left: auto; font-size: 12px; color: var(--rk-mut); white-space: nowrap; font-variant-numeric: tabular-nums; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-r4 { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-dfr { display: flex; flex-direction: column; gap: 2px; margin: 0; white-space: nowrap; font-size: 12px; color: var(--rk-ink2); background: #EEF2FF; border: 0; border-radius: 8px; padding: 4px 8px; }
+html[data-theme="dark"] body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-dfr { background: var(--rk-soft); }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-ft { display: flex; align-items: center; gap: 4px; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-sp { flex: 1; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-fb { height: 28px; min-width: 28px; margin: 0; border-radius: 999px; border: 0; background: var(--rk-soft); color: var(--rk-ink2); display: inline-flex; align-items: center; justify-content: center; gap: 4px; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; padding: 0 8px; box-sizing: border-box; box-shadow: none; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-fb:hover { background: var(--rk-line2); }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-fb.z { background: transparent; color: #6B7280; padding: 0; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-fb svg { width: 13px; height: 13px; flex: none; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-bell-on { color: #FFFFFF; background: var(--rk-red); }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-rec .lead-recording-count { display: none; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-rec.rk-rec-on { color: var(--rk-green); background: var(--rk-green-l); padding: 0 8px; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-rec.rk-rec-on .lead-recording-count { display: inline; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-mg { max-width: 118px; padding-left: 3px; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-mg b { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-mg.is-empty { color: var(--rk-blue2); background: var(--rk-blue-l); }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-av { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; font-weight: 800; flex: none; overflow: hidden; color: #FFFFFF; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-av img { width: 100%; height: 100%; object-fit: cover; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-mg.is-empty .rk-av { border: 1.5px dashed #94A3B8; color: var(--rk-blue2); box-sizing: border-box; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-alldone { position: absolute; left: 50%; top: 120px; transform: translateX(-50%); z-index: 4; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 24px 28px; border-radius: 20px; background: var(--rk-card); border: 1px solid var(--rk-line); box-shadow: 0 12px 30px rgba(16, 24, 40, .10); text-align: center; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-alldone > span:first-child { width: 48px; height: 48px; border-radius: 50%; background: var(--rk-green-l); color: var(--rk-green); display: grid; place-items: center; font-size: 22px; font-weight: 800; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-alldone strong { font-size: 17px; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-alldone > span:nth-child(3) { font-size: 13px; color: var(--rk-mut); }
 /* karta menyusi */
-body.rop-desk-v2 .lead-card-menu-dropdown, body.rop-desk-v2 .lead-card-menu-submenu { width: 256px; min-width: 256px; padding: 6px; border: 1px solid var(--rk-line); border-radius: 12px; background: var(--rk-card); box-shadow: 0 16px 36px rgba(16, 24, 40, .18); }
-body.rop-desk-v2 .lead-card-menu-item { min-height: 34px; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 10px; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--rk-ink); }
-body.rop-desk-v2 .lead-card-menu-item:hover, body.rop-desk-v2 .lead-card-menu-item:focus-visible { background: var(--rk-soft); outline: 0; box-shadow: inset 0 0 0 2px var(--rk-blue); }
-body.rop-desk-v2 .lead-card-menu-item--danger { color: var(--rk-red2); }
-body.rop-desk-v2 .lead-card-menu-item[aria-disabled="true"] { color: #94A3B8; cursor: not-allowed; box-shadow: none; background: transparent; }
-body.rop-desk-v2 .rk-kb { font-size: 11px; font-weight: 700; color: var(--rk-mut); margin-left: auto; }
+body:is(.rop-desk-v2, .sot-desk-v2) .lead-card-menu-dropdown, body:is(.rop-desk-v2, .sot-desk-v2) .lead-card-menu-submenu { width: 256px; min-width: 256px; padding: 6px; border: 1px solid var(--rk-line); border-radius: 12px; background: var(--rk-card); box-shadow: 0 16px 36px rgba(16, 24, 40, .18); }
+body:is(.rop-desk-v2, .sot-desk-v2) .lead-card-menu-item { min-height: 34px; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 10px; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--rk-ink); }
+body:is(.rop-desk-v2, .sot-desk-v2) .lead-card-menu-item:hover, body:is(.rop-desk-v2, .sot-desk-v2) .lead-card-menu-item:focus-visible { background: var(--rk-soft); outline: 0; box-shadow: inset 0 0 0 2px var(--rk-blue); }
+body:is(.rop-desk-v2, .sot-desk-v2) .lead-card-menu-item--danger { color: var(--rk-red2); }
+body:is(.rop-desk-v2, .sot-desk-v2) .lead-card-menu-item[aria-disabled="true"] { color: #94A3B8; cursor: not-allowed; box-shadow: none; background: transparent; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-kb { font-size: 11px; font-weight: 700; color: var(--rk-mut); margin-left: auto; }
 
 /* ---------- ommaviy panel (pastda, qora) ---------- */
-body.rop-desk-v2 #bulkActionsBar.rk-bulk { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 25; width: auto; max-width: calc(100vw - 340px); margin: 0 0 0 124px; padding: 10px 12px 10px 18px !important; gap: 10px !important; background: #0B1220 !important; color: #FFFFFF; border: 0 !important; border-radius: 16px !important; box-shadow: 0 20px 50px rgba(11, 18, 32, .35); white-space: nowrap; }
-body.rop-desk-v2.rk-sb-min #bulkActionsBar.rk-bulk { margin-left: 38px; }
-body.rop-desk-v2 #bulkActionsBar.rk-bulk #bulkSelectedCount { color: #FFFFFF !important; font-size: 14px !important; font-weight: 800 !important; }
-body.rop-desk-v2 #bulkActionsBar.rk-bulk #bulkManagerSelect { height: 36px; min-width: 180px !important; max-width: 240px; border: 0; border-radius: 10px; padding: 0 10px; font-size: 13px; color: #0B1220; background: #FFFFFF; }
-body.rop-desk-v2 #bulkActionsBar.rk-bulk #bulkAssignBtn { height: 36px; padding: 0 16px; border-radius: 10px; border: 0; font-size: 13px; font-weight: 800; background: var(--rk-blue); color: #FFFFFF; }
-body.rop-desk-v2 #bulkActionsBar.rk-bulk #bulkSplitBtn { height: 36px; padding: 0 14px; border-radius: 10px; border: 1px solid #3A4456; background: transparent; color: #FFFFFF; font-size: 13px; font-weight: 700; }
-body.rop-desk-v2 #bulkActionsBar.rk-bulk #bulkCancelBtn { height: 36px; padding: 0 12px !important; border-radius: 10px !important; border: 0 !important; background: #1F2937 !important; color: #FFFFFF !important; font-size: 13px; font-weight: 600; }
+body:is(.rop-desk-v2, .sot-desk-v2) #bulkActionsBar.rk-bulk { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 25; width: auto; max-width: calc(100vw - 340px); margin: 0 0 0 124px; padding: 10px 12px 10px 18px !important; gap: 10px !important; background: #0B1220 !important; color: #FFFFFF; border: 0 !important; border-radius: 16px !important; box-shadow: 0 20px 50px rgba(11, 18, 32, .35); white-space: nowrap; }
+body:is(.rop-desk-v2, .sot-desk-v2).rk-sb-min #bulkActionsBar.rk-bulk { margin-left: 38px; }
+body:is(.rop-desk-v2, .sot-desk-v2) #bulkActionsBar.rk-bulk #bulkSelectedCount { color: #FFFFFF !important; font-size: 14px !important; font-weight: 800 !important; }
+body:is(.rop-desk-v2, .sot-desk-v2) #bulkActionsBar.rk-bulk #bulkManagerSelect { height: 36px; min-width: 180px !important; max-width: 240px; border: 0; border-radius: 10px; padding: 0 10px; font-size: 13px; color: #0B1220; background: #FFFFFF; }
+body:is(.rop-desk-v2, .sot-desk-v2) #bulkActionsBar.rk-bulk #bulkAssignBtn { height: 36px; padding: 0 16px; border-radius: 10px; border: 0; font-size: 13px; font-weight: 800; background: var(--rk-blue); color: #FFFFFF; }
+body:is(.rop-desk-v2, .sot-desk-v2) #bulkActionsBar.rk-bulk #bulkSplitBtn { height: 36px; padding: 0 14px; border-radius: 10px; border: 1px solid #3A4456; background: transparent; color: #FFFFFF; font-size: 13px; font-weight: 700; }
+body:is(.rop-desk-v2, .sot-desk-v2) #bulkActionsBar.rk-bulk #bulkCancelBtn { height: 36px; padding: 0 12px !important; border-radius: 10px !important; border: 0 !important; background: #1F2937 !important; color: #FFFFFF !important; font-size: 13px; font-weight: 600; }
 
 /* ---------- ichki oynalar (RK02.*) — umumiy oyna ko'rinishi ---------- */
-body.rop-desk-v2 #modalOverlay { background: rgba(11, 18, 32, .40); backdrop-filter: none; }
-body.rop-desk-v2 #modalOverlay .modal { border-radius: 20px; box-shadow: 0 30px 80px rgba(11, 18, 32, .35); max-width: 500px; }
-body.rop-desk-v2 #modalOverlay .modal.modal--wide { max-width: 640px; }
-body.rop-desk-v2 #modalOverlay .modal-header { padding: 20px 20px 12px; border-bottom: 0; gap: 10px; align-items: flex-start; }
-body.rop-desk-v2 #modalOverlay .modal-header h3 { margin: 0; font-size: 18px; font-weight: 800; color: var(--rk-ink); }
-body.rop-desk-v2 #modalOverlay .modal-close { width: 36px; height: 36px; border-radius: 8px; background: transparent; color: var(--rk-mut); font-size: 22px; flex: none; }
-body.rop-desk-v2 #modalOverlay .modal-close:hover { background: var(--rk-soft); color: var(--rk-ink); }
-body.rop-desk-v2 #modalOverlay .modal-body { padding: 0 20px 12px; font-size: 14px; }
-body.rop-desk-v2 #modalOverlay .modal-footer { padding: 4px 20px 20px; gap: 8px; }
-body.rop-desk-v2 #modalOverlay .modal-footer .btn-primary-sm, body.rop-desk-v2 #modalOverlay .modal-footer .btn-danger-sm, body.rop-desk-v2 #modalOverlay .modal-footer .btn-outline-sm, body.rop-desk-v2 #modalOverlay .modal-footer .btn-secondary-sm, body.rop-desk-v2 #modalOverlay .modal-footer .lov-btn { height: 40px; padding: 0 16px; border-radius: 12px; font-size: 14px; font-weight: 800; white-space: nowrap; }
-body.rop-desk-v2 #modalOverlay .modal-footer .btn-danger-sm { background: var(--rk-card); color: var(--rk-ink); border: 1px solid #CBD5E1; font-weight: 700; }
-body.rop-desk-v2 #modalOverlay .modal-footer .btn-primary-sm { background: var(--rk-blue); border: 0; color: #FFFFFF; }
-body.rop-desk-v2 #modalOverlay .lead-reason-subtitle { margin: -4px 0 12px; font-size: 13px; color: var(--rk-mut); }
-body.rop-desk-v2 #modalOverlay .lead-reason-list { display: flex; flex-direction: column; gap: 6px; }
-body.rop-desk-v2 #modalOverlay .lead-reason-option { display: flex; align-items: center; gap: 10px; min-height: 42px; margin: 0; padding: 0 12px; border-radius: 12px; border: 1px solid var(--rk-line); background: var(--rk-card); font-size: 14px; font-weight: 600; color: var(--rk-ink); cursor: pointer; }
-body.rop-desk-v2 #modalOverlay .lead-reason-option:has(input:checked) { border-color: var(--rk-blue); background: var(--rk-blue-l); }
-body.rop-desk-v2 #modalOverlay .lead-reason-option input { width: 18px; height: 18px; margin: 0; accent-color: var(--rk-blue); flex: none; }
-body.rop-desk-v2 #modalOverlay .failed-sale-group-label { margin: 6px 0; font-size: 12px; font-weight: 800; color: var(--rk-ink2); }
-body.rop-desk-v2 #modalOverlay .lead-survey-title, body.rop-desk-v2 #modalOverlay .lead-survey-label, body.rop-desk-v2 #modalOverlay .lead-survey-field > label { font-size: 12px; font-weight: 700; color: var(--rk-ink2); }
-body.rop-desk-v2 #modalOverlay .form-control, body.rop-desk-v2 #modalOverlay .form-select, body.rop-desk-v2 #modalOverlay .modal-body input[type="text"], body.rop-desk-v2 #modalOverlay .modal-body input[type="tel"], body.rop-desk-v2 #modalOverlay .modal-body input[type="number"], body.rop-desk-v2 #modalOverlay .modal-body input[type="date"], body.rop-desk-v2 #modalOverlay .modal-body input[type="datetime-local"], body.rop-desk-v2 #modalOverlay .modal-body select { min-height: 40px; border: 1px solid #CBD5E1; border-radius: 10px; font-size: 14px; }
-body.rop-desk-v2 #modalOverlay .modal-body textarea { border: 1px solid #CBD5E1; border-radius: 10px; font-size: 14px; }
+body:is(.rop-desk-v2, .sot-desk-v2) #modalOverlay { background: rgba(11, 18, 32, .40); backdrop-filter: none; }
+body:is(.rop-desk-v2, .sot-desk-v2) #modalOverlay .modal { border-radius: 20px; box-shadow: 0 30px 80px rgba(11, 18, 32, .35); max-width: 500px; }
+body:is(.rop-desk-v2, .sot-desk-v2) #modalOverlay .modal.modal--wide { max-width: 640px; }
+body:is(.rop-desk-v2, .sot-desk-v2) #modalOverlay .modal-header { padding: 20px 20px 12px; border-bottom: 0; gap: 10px; align-items: flex-start; }
+body:is(.rop-desk-v2, .sot-desk-v2) #modalOverlay .modal-header h3 { margin: 0; font-size: 18px; font-weight: 800; color: var(--rk-ink); }
+body:is(.rop-desk-v2, .sot-desk-v2) #modalOverlay .modal-close { width: 36px; height: 36px; border-radius: 8px; background: transparent; color: var(--rk-mut); font-size: 22px; flex: none; }
+body:is(.rop-desk-v2, .sot-desk-v2) #modalOverlay .modal-close:hover { background: var(--rk-soft); color: var(--rk-ink); }
+body:is(.rop-desk-v2, .sot-desk-v2) #modalOverlay .modal-body { padding: 0 20px 12px; font-size: 14px; }
+body:is(.rop-desk-v2, .sot-desk-v2) #modalOverlay .modal-footer { padding: 4px 20px 20px; gap: 8px; }
+body:is(.rop-desk-v2, .sot-desk-v2) #modalOverlay .modal-footer .btn-primary-sm, body:is(.rop-desk-v2, .sot-desk-v2) #modalOverlay .modal-footer .btn-danger-sm, body:is(.rop-desk-v2, .sot-desk-v2) #modalOverlay .modal-footer .btn-outline-sm, body:is(.rop-desk-v2, .sot-desk-v2) #modalOverlay .modal-footer .btn-secondary-sm, body:is(.rop-desk-v2, .sot-desk-v2) #modalOverlay .modal-footer .lov-btn { height: 40px; padding: 0 16px; border-radius: 12px; font-size: 14px; font-weight: 800; white-space: nowrap; }
+body:is(.rop-desk-v2, .sot-desk-v2) #modalOverlay .modal-footer .btn-danger-sm { background: var(--rk-card); color: var(--rk-ink); border: 1px solid #CBD5E1; font-weight: 700; }
+body:is(.rop-desk-v2, .sot-desk-v2) #modalOverlay .modal-footer .btn-primary-sm { background: var(--rk-blue); border: 0; color: #FFFFFF; }
+body:is(.rop-desk-v2, .sot-desk-v2) #modalOverlay .lead-reason-subtitle { margin: -4px 0 12px; font-size: 13px; color: var(--rk-mut); }
+body:is(.rop-desk-v2, .sot-desk-v2) #modalOverlay .lead-reason-list { display: flex; flex-direction: column; gap: 6px; }
+body:is(.rop-desk-v2, .sot-desk-v2) #modalOverlay .lead-reason-option { display: flex; align-items: center; gap: 10px; min-height: 42px; margin: 0; padding: 0 12px; border-radius: 12px; border: 1px solid var(--rk-line); background: var(--rk-card); font-size: 14px; font-weight: 600; color: var(--rk-ink); cursor: pointer; }
+body:is(.rop-desk-v2, .sot-desk-v2) #modalOverlay .lead-reason-option:has(input:checked) { border-color: var(--rk-blue); background: var(--rk-blue-l); }
+body:is(.rop-desk-v2, .sot-desk-v2) #modalOverlay .lead-reason-option input { width: 18px; height: 18px; margin: 0; accent-color: var(--rk-blue); flex: none; }
+body:is(.rop-desk-v2, .sot-desk-v2) #modalOverlay .failed-sale-group-label { margin: 6px 0; font-size: 12px; font-weight: 800; color: var(--rk-ink2); }
+body:is(.rop-desk-v2, .sot-desk-v2) #modalOverlay .lead-survey-title, body:is(.rop-desk-v2, .sot-desk-v2) #modalOverlay .lead-survey-label, body:is(.rop-desk-v2, .sot-desk-v2) #modalOverlay .lead-survey-field > label { font-size: 12px; font-weight: 700; color: var(--rk-ink2); }
+body:is(.rop-desk-v2, .sot-desk-v2) #modalOverlay .form-control, body:is(.rop-desk-v2, .sot-desk-v2) #modalOverlay .form-select, body:is(.rop-desk-v2, .sot-desk-v2) #modalOverlay .modal-body input[type="text"], body:is(.rop-desk-v2, .sot-desk-v2) #modalOverlay .modal-body input[type="tel"], body:is(.rop-desk-v2, .sot-desk-v2) #modalOverlay .modal-body input[type="number"], body:is(.rop-desk-v2, .sot-desk-v2) #modalOverlay .modal-body input[type="date"], body:is(.rop-desk-v2, .sot-desk-v2) #modalOverlay .modal-body input[type="datetime-local"], body:is(.rop-desk-v2, .sot-desk-v2) #modalOverlay .modal-body select { min-height: 40px; border: 1px solid #CBD5E1; border-radius: 10px; font-size: 14px; }
+body:is(.rop-desk-v2, .sot-desk-v2) #modalOverlay .modal-body textarea { border: 1px solid #CBD5E1; border-radius: 10px; font-size: 14px; }
 
 /* ---------- lid kartasi drawer'i (A3 · C1/C2 · D1 · F1) ---------- */
-body.rop-desk-v2 #modalOverlay.rk-drw-on { justify-content: flex-end; align-items: stretch; background: rgba(11, 18, 32, .25); }
-body.rop-desk-v2 #modalOverlay .modal.rk-drw { width: 520px; max-width: 520px; height: 100%; max-height: 100dvh; border-radius: 0; border-left: 1px solid var(--rk-line); box-shadow: -20px 0 50px rgba(11, 18, 32, .18); animation: rk-in .22s cubic-bezier(.2, .8, .2, 1) both; }
+body:is(.rop-desk-v2, .sot-desk-v2) #modalOverlay.rk-drw-on { justify-content: flex-end; align-items: stretch; background: rgba(11, 18, 32, .25); }
+body:is(.rop-desk-v2, .sot-desk-v2) #modalOverlay .modal.rk-drw { width: 520px; max-width: 520px; height: 100%; max-height: 100dvh; border-radius: 0; border-left: 1px solid var(--rk-line); box-shadow: -20px 0 50px rgba(11, 18, 32, .18); animation: rk-in .22s cubic-bezier(.2, .8, .2, 1) both; }
 @keyframes rk-in { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { body.rop-desk-v2 #modalOverlay .modal.rk-drw { animation: none; } }
-body.rop-desk-v2 .modal.rk-drw .modal-header { flex-wrap: wrap; padding: 18px 20px 12px; }
-body.rop-desk-v2 .modal.rk-drw .modal-header h3 { order: 2; flex: 1 0 70%; margin: 0; font-size: 20px; }
-body.rop-desk-v2 .modal.rk-drw .modal-close { order: 3; }
-body.rop-desk-v2 .rk-drw-h { order: 1; flex: 1 0 100%; display: flex; flex-direction: column; gap: 2px; }
-body.rop-desk-v2 .rk-stage { align-self: flex-start; display: inline-block; font-size: 12px; font-weight: 800; padding: 3px 10px; border-radius: 999px; background: var(--rk-blue-l); color: var(--rk-blue2); }
-body.rop-desk-v2 .rk-drw-sub { order: 4; font-size: 12px; color: var(--rk-mut); }
-body.rop-desk-v2 .rk-dtabs { display: flex; gap: 2px; padding: 0 20px; border-bottom: 1px solid var(--rk-line); flex: none; }
-body.rop-desk-v2 .rk-dtabs button { height: 42px; padding: 0 12px; border: 0; background: transparent; font: inherit; font-size: 13px; font-weight: 700; color: var(--rk-ink2); cursor: pointer; border-bottom: 3px solid transparent; display: flex; align-items: center; gap: 6px; }
-body.rop-desk-v2 .rk-dtabs button[aria-selected="true"] { color: var(--rk-blue2); border-bottom-color: var(--rk-blue); font-weight: 800; }
-body.rop-desk-v2 .rk-tn { font-size: 11px; font-weight: 800; padding: 1px 6px; border-radius: 999px; background: #EEF2F8; color: var(--rk-ink2); }
-body.rop-desk-v2 .rk-tn.is-red { background: var(--rk-red); color: #FFFFFF; }
-body.rop-desk-v2 .modal.rk-drw .modal-body { padding: 16px 20px; }
-body.rop-desk-v2 .modal.rk-drw .modal-footer { padding: 12px 20px 16px; border-top: 1px solid var(--rk-line); justify-content: flex-start; flex-wrap: wrap; }
-body.rop-desk-v2.rk-sales-lead #leadsKanban.rk-board { height: calc(100dvh - var(--rk-top, 180px)); min-height: 420px; box-sizing: border-box; grid-template-rows: minmax(0, 1fr); grid-auto-rows: minmax(0, 1fr); }
-body.rop-desk-v2.rk-sales-lead #leadsKanban.rk-board > .lead-column.rk-col:not(.rk-shut) { height: 100%; }
-body.rop-desk-v2 .rk-rf { display: flex; flex-direction: column; gap: 6px; padding: 0 2px; position: relative; }
-body.rop-desk-v2 #leadsKanban #leadContactFilterButton { width: 100%; height: 28px; padding: 0 10px; margin: 0; border-radius: 8px; border: 1px solid var(--rk-line2); background: var(--rk-card); font: inherit; font-size: 12px; font-weight: 700; color: var(--rk-ink2); display: flex; align-items: center; gap: 6px; cursor: pointer; transform: none; }
-body.rop-desk-v2 #leadsKanban #leadContactFilterButton svg { width: 13px; height: 13px; transform: none !important; fill: none; stroke: currentColor; }
-body.rop-desk-v2 #leadsKanban #leadContactFilterButton .rk-rf-n { margin-left: auto; color: var(--rk-mut); }
-body.rop-desk-v2 #leadsKanban #leadContactFilterPanel { position: relative; z-index: 40; margin: 0; padding: 6px; display: flex; flex-direction: column; gap: 2px; background: var(--rk-card); border: 1px solid var(--rk-line); border-radius: 12px; box-shadow: 0 12px 28px rgba(16, 24, 40, .12); }
-body.rop-desk-v2 #leadsKanban #leadContactFilterPanel[hidden] { display: none; }
-body.rop-desk-v2 #leadsKanban .lead-contact-filter-option { display: flex; align-items: center; gap: 8px; min-height: 30px; padding: 0 6px; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--rk-ink); cursor: pointer; }
-body.rop-desk-v2 #leadsKanban .lead-contact-filter-option:hover { background: var(--rk-soft); }
-body.rop-desk-v2 #leadsKanban .lead-contact-filter-option input { width: 16px; height: 16px; margin: 0; accent-color: var(--rk-blue); }
-body.rop-desk-v2 #leadsKanban .lead-contact-filter-option b { margin-left: auto; font-size: 12px; color: var(--rk-mut); }
-body.rop-desk-v2 #leadsKanban .lead-contact-filter-summary { font-size: 12px; color: var(--rk-mut); padding: 4px 6px 2px; }
-body.rop-desk-v2 #leadsKanban .trial-attendance-filter.rk-seg3 { display: grid; grid-template-columns: auto auto auto; gap: 4px; padding: 0 2px; margin: 0; background: transparent; border: 0; box-shadow: none; }
-body.rop-desk-v2 #leadsKanban .rk-seg3 button { white-space: nowrap; display: flex; align-items: center; justify-content: center; gap: 3px; height: 28px; padding: 0 7px; border-radius: 999px; border: 1px solid var(--rk-line2); background: var(--rk-card); color: var(--rk-ink2); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; box-shadow: none; }
-body.rop-desk-v2 #leadsKanban .rk-seg3 button[aria-pressed="true"] { background: var(--rk-blue); border-color: var(--rk-blue); color: #FFFFFF; }
-body.rop-desk-v2 #bulkActionsBar.rk-bulk { height: auto !important; min-height: 0 !important; flex-wrap: nowrap !important; align-items: center !important; align-content: center !important; justify-content: flex-start !important; }
-body.rop-desk-v2 #bulkActionsBar.rk-bulk > * { flex: none; margin: 0 !important; }
-body.rop-desk-v2 .rk-r3 { overflow: hidden; }
-body.rop-desk-v2 .rk-tm { min-width: 0; overflow: hidden; text-overflow: ellipsis; flex-shrink: 1; }
-body.rop-desk-v2 #bulkActionsBar.rk-bulk { top: auto !important; }
+@media (prefers-reduced-motion: reduce) { body:is(.rop-desk-v2, .sot-desk-v2) #modalOverlay .modal.rk-drw { animation: none; } }
+body:is(.rop-desk-v2, .sot-desk-v2) .modal.rk-drw .modal-header { flex-wrap: wrap; padding: 18px 20px 12px; }
+body:is(.rop-desk-v2, .sot-desk-v2) .modal.rk-drw .modal-header h3 { order: 2; flex: 1 0 70%; margin: 0; font-size: 20px; }
+body:is(.rop-desk-v2, .sot-desk-v2) .modal.rk-drw .modal-close { order: 3; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-drw-h { order: 1; flex: 1 0 100%; display: flex; flex-direction: column; gap: 2px; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-stage { align-self: flex-start; display: inline-block; font-size: 12px; font-weight: 800; padding: 3px 10px; border-radius: 999px; background: var(--rk-blue-l); color: var(--rk-blue2); }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-drw-sub { order: 4; font-size: 12px; color: var(--rk-mut); }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-dtabs { display: flex; gap: 2px; padding: 0 20px; border-bottom: 1px solid var(--rk-line); flex: none; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-dtabs button { height: 42px; padding: 0 12px; border: 0; background: transparent; font: inherit; font-size: 13px; font-weight: 700; color: var(--rk-ink2); cursor: pointer; border-bottom: 3px solid transparent; display: flex; align-items: center; gap: 6px; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-dtabs button[aria-selected="true"] { color: var(--rk-blue2); border-bottom-color: var(--rk-blue); font-weight: 800; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-tn { font-size: 11px; font-weight: 800; padding: 1px 6px; border-radius: 999px; background: #EEF2F8; color: var(--rk-ink2); }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-tn.is-red { background: var(--rk-red); color: #FFFFFF; }
+body:is(.rop-desk-v2, .sot-desk-v2) .modal.rk-drw .modal-body { padding: 16px 20px; }
+body:is(.rop-desk-v2, .sot-desk-v2) .modal.rk-drw .modal-footer { padding: 12px 20px 16px; border-top: 1px solid var(--rk-line); justify-content: flex-start; flex-wrap: wrap; }
+body:is(.rop-desk-v2, .sot-desk-v2).rk-sales-lead #leadsKanban.rk-board { height: calc(100dvh - var(--rk-top, 180px)); min-height: 420px; box-sizing: border-box; grid-template-rows: minmax(0, 1fr); grid-auto-rows: minmax(0, 1fr); }
+body:is(.rop-desk-v2, .sot-desk-v2).rk-sales-lead #leadsKanban.rk-board > .lead-column.rk-col:not(.rk-shut) { height: 100%; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-rf { display: flex; flex-direction: column; gap: 6px; padding: 0 2px; position: relative; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban #leadContactFilterButton { width: 100%; height: 28px; padding: 0 10px; margin: 0; border-radius: 8px; border: 1px solid var(--rk-line2); background: var(--rk-card); font: inherit; font-size: 12px; font-weight: 700; color: var(--rk-ink2); display: flex; align-items: center; gap: 6px; cursor: pointer; transform: none; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban #leadContactFilterButton svg { width: 13px; height: 13px; transform: none !important; fill: none; stroke: currentColor; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban #leadContactFilterButton .rk-rf-n { margin-left: auto; color: var(--rk-mut); }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban #leadContactFilterPanel { position: relative; z-index: 40; margin: 0; padding: 6px; display: flex; flex-direction: column; gap: 2px; background: var(--rk-card); border: 1px solid var(--rk-line); border-radius: 12px; box-shadow: 0 12px 28px rgba(16, 24, 40, .12); }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban #leadContactFilterPanel[hidden] { display: none; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .lead-contact-filter-option { display: flex; align-items: center; gap: 8px; min-height: 30px; padding: 0 6px; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--rk-ink); cursor: pointer; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .lead-contact-filter-option:hover { background: var(--rk-soft); }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .lead-contact-filter-option input { width: 16px; height: 16px; margin: 0; accent-color: var(--rk-blue); }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .lead-contact-filter-option b { margin-left: auto; font-size: 12px; color: var(--rk-mut); }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .lead-contact-filter-summary { font-size: 12px; color: var(--rk-mut); padding: 4px 6px 2px; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .trial-attendance-filter.rk-seg3 { display: grid; grid-template-columns: auto auto auto; gap: 4px; padding: 0 2px; margin: 0; background: transparent; border: 0; box-shadow: none; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-seg3 button { white-space: nowrap; display: flex; align-items: center; justify-content: center; gap: 3px; height: 28px; padding: 0 7px; border-radius: 999px; border: 1px solid var(--rk-line2); background: var(--rk-card); color: var(--rk-ink2); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; box-shadow: none; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-seg3 button[aria-pressed="true"] { background: var(--rk-blue); border-color: var(--rk-blue); color: #FFFFFF; }
+body:is(.rop-desk-v2, .sot-desk-v2) #bulkActionsBar.rk-bulk { height: auto !important; min-height: 0 !important; flex-wrap: nowrap !important; align-items: center !important; align-content: center !important; justify-content: flex-start !important; }
+body:is(.rop-desk-v2, .sot-desk-v2) #bulkActionsBar.rk-bulk > * { flex: none; margin: 0 !important; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-r3 { overflow: hidden; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-tm { min-width: 0; overflow: hidden; text-overflow: ellipsis; flex-shrink: 1; }
+body:is(.rop-desk-v2, .sot-desk-v2) #bulkActionsBar.rk-bulk { top: auto !important; }
 /* A3: lid kartasi drawer'da bitta ustun — dizayn tartibi: amallar · voronka · kimning lidi · ma'lumot · izohlar */
-body.rop-desk-v2 #modalOverlay .modal.rk-drw.modal--wide { width: 520px !important; max-width: 520px !important; }
-body.rop-desk-v2 .modal.rk-drw .lov-head { display: none; }
-body.rop-desk-v2 .modal.rk-drw .lov-grid { display: flex !important; flex-direction: column-reverse; gap: 14px; }
-body.rop-desk-v2 .modal.rk-drw .lov-card { border-color: var(--rk-line); padding: 12px 14px; }
-body.rop-desk-v2 .modal.rk-drw .lov-h { font-size: 13px; font-weight: 800; color: var(--rk-ink); }
-body.rop-desk-v2 .modal.rk-drw .lov-history { max-height: none; }
-body.rop-desk-v2 .modal.rk-drw .lov-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-body.rop-desk-v2 .modal.rk-drw .lov-btn { height: 36px; padding: 0 14px; border-radius: 10px; border: 1px solid #CBD5E1; background: var(--rk-card); font-size: 13px; font-weight: 700; color: var(--rk-ink); }
-body.rop-desk-v2 .modal.rk-drw .lov-stage-pick, body.rop-desk-v2 .modal.rk-drw .lov-actions select { height: 36px; border-radius: 10px; font-size: 13px; }
-body.rop-desk-v2 .modal.rk-drw .lov-step-bar { height: 6px; }
+body:is(.rop-desk-v2, .sot-desk-v2) #modalOverlay .modal.rk-drw.modal--wide { width: 520px !important; max-width: 520px !important; }
+body:is(.rop-desk-v2, .sot-desk-v2) .modal.rk-drw .lov-head { display: none; }
+body:is(.rop-desk-v2, .sot-desk-v2) .modal.rk-drw .lov-grid { display: flex !important; flex-direction: column-reverse; gap: 14px; }
+body:is(.rop-desk-v2, .sot-desk-v2) .modal.rk-drw .lov-card { border-color: var(--rk-line); padding: 12px 14px; }
+body:is(.rop-desk-v2, .sot-desk-v2) .modal.rk-drw .lov-h { font-size: 13px; font-weight: 800; color: var(--rk-ink); }
+body:is(.rop-desk-v2, .sot-desk-v2) .modal.rk-drw .lov-history { max-height: none; }
+body:is(.rop-desk-v2, .sot-desk-v2) .modal.rk-drw .lov-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+body:is(.rop-desk-v2, .sot-desk-v2) .modal.rk-drw .lov-btn { height: 36px; padding: 0 14px; border-radius: 10px; border: 1px solid #CBD5E1; background: var(--rk-card); font-size: 13px; font-weight: 700; color: var(--rk-ink); }
+body:is(.rop-desk-v2, .sot-desk-v2) .modal.rk-drw .lov-stage-pick, body:is(.rop-desk-v2, .sot-desk-v2) .modal.rk-drw .lov-actions select { height: 36px; border-radius: 10px; font-size: 13px; }
+body:is(.rop-desk-v2, .sot-desk-v2) .modal.rk-drw .lov-step-bar { height: 6px; }

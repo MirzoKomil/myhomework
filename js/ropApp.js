@@ -141,7 +141,8 @@
     const assignedAt = l => parseT(l.managerAssignedAt) || parseT(l.createdAt) || (g('parseLeadSlaTime') ? parseLeadSlaTime(l.date) : null);
     const createdAt = l => parseT(l.createdAt) || (g('parseLeadSlaTime') ? parseLeadSlaTime(l.date) : null);
     const comments = l => (Array.isArray(l.comments) ? l.comments : []).filter(Boolean);
-    const callsOf = l => comments(l).filter(c => c.type === 'call-attempt' || c.type === 'contact-fail');
+    // Urinishlar ro'yxati: bitta qo'ng'iroq = bitta urinish (staleLeads.attempts; "Javob bermadi" natijasi alohida sanalmaydi).
+    const callsOf = l => (window.staleLeads?.attempts ? window.staleLeads.attempts(l) : comments(l).filter(c => c.type === 'call-attempt'));
     const srcLabel = l => (g('leadSourceName') ? leadSourceName(l.source) : l.source) || 'Organik';
     const kindLabel = l => (l.leadType === 'target' ? 'Target' : 'Organik');
     const loadOf = (id, all) => (all || ALL()).filter(l => String(l.managerId) === String(id) && OPEN.has(st(l))).length;
@@ -531,7 +532,7 @@
     }
 
     // ---------- Tasdiqlar ----------
-    const KIND = { payment: ['TOʻLOV', 'green', 'card'], tariff: ['TARIF', 'blue', 'tag'], teacher: ['USTOZ ALMASHTIRISH', 'purple', 'swap'] };
+    const KIND = { payment: ['TOʻLOV', 'green', 'card'], tariff: ['TARIF', 'blue', 'tag'], teacher: ['USTOZ ALMASHTIRISH', 'purple', 'swap'], due: ['MUDDATNI SURISH', 'amber', 'clock'] };
     const DOW = ['', 'Du', 'Se', 'Ch', 'Pa', 'Ju', 'Sh', 'Ya'];
     const studentOf = r => (window.schoolUI?.studentById ? window.schoolUI.studentById(r.student_id) : null) || {};
     const tName = id => (window.schoolUI?.teacherName ? window.schoolUI.teacherName(id) : person(id)?.name) || '—';
@@ -543,6 +544,12 @@
             out.push(['Ustoz', shortName(tName(s.teacherId)), shortName(tName(ch.teacherId))]);
             if (ch.lessonTime || ch.lessonDay != null) out.push(['Dars vaqti', sched(s.lessonDayOfWeek, s.lessonTime), sched(ch.lessonDay ?? s.lessonDayOfWeek, ch.lessonTime || s.lessonTime)]);
             if (ch.from) out.push(['Qachondan', '', fmtD(ch.from)]);
+        } else if (r.kind === 'due') {
+            // Qarzdorlar · "Muddatni surish so'rovi": eski sana — so'rov paytidagi (prevDueDate), qarz o'zgarmaydi.
+            if ('paymentDueDate' in ch) out.push(['Toʻlov sanasi', fmtD('prevDueDate' in ch ? ch.prevDueDate : s.paymentDueDate) || '—', ch.paymentDueDate ? fmtD(ch.paymentDueDate) : 'sana olib tashlanadi']);
+            out.push(['Qoldiq qarz', '', s.debtAmount == null ? 'aniqlanmagan' : num(Number(s.debtAmount) || 0) + ' soʻm']);
+            if ('comment' in ch) out.push(['Izoh', '', ch.comment || '—']);
+            if ('note' in ch) out.push(['Eslatma', '', ch.note || '—']);
         } else if (r.kind === 'tariff') {
             if ('monthlyPrice' in ch) out.push(['Narx', s.monthlyPrice ? num(s.monthlyPrice) : '—', num(ch.monthlyPrice)]);
             if ('lessonDuration' in ch) out.push(['Davomiylik', s.lessonDuration ? s.lessonDuration + ' daq' : '—', ch.lessonDuration + ' daq']);
@@ -560,7 +567,7 @@
         return out;
     }
     const apSummary = r => { const rows = apRows(r); const x = rows.find(x => x[1]) || rows[0]; return x ? { old: x[1], neu: rows.filter(y => y[2]).slice(0, 2).map(y => y[2]).join(' · ') } : { old: '', neu: REQ_TXT[r.kind] || '' }; };
-    const REQ_TXT = { payment: 'toʻlov tuzatish', tariff: 'tarif oʻzgarishi', teacher: 'ustoz almashtirish' };
+    const REQ_TXT = { payment: 'toʻlov tuzatish', tariff: 'tarif oʻzgarishi', teacher: 'ustoz almashtirish', due: 'toʻlov muddatini surish' };
     const reqMgr = r => ({ id: (hr().find(e => e.name === r.requester_name) || {}).id || r.requested_by, name: r.requester_name || 'Menejer' });
     const ago = t => { const ms = Date.now() - (parseT(t) || Date.now()); return ms < DAY ? dur(ms) : shortDate(parseT(t)); };
     const receiptOf = r => { const ch = r.changes || {}; return ch.receiptUrl || ch.receipt || ch.fileUrl || ch.attachmentUrl || ''; };
@@ -660,7 +667,7 @@
         const done = S.apDone, total = done + pend.length;
         if (!pend.length) S.apDone = 0;
         const next = pend[0];
-        const T = { payment: 'Toʻlov tasdiqlandi', tariff: 'Tarif tasdiqlandi', teacher: 'Ustoz almashtirildi' }[r.kind] || 'Tasdiqlandi';
+        const T = { payment: 'Toʻlov tasdiqlandi', tariff: 'Tarif tasdiqlandi', teacher: 'Ustoz almashtirildi', due: 'Muddat surildi' }[r.kind] || 'Tasdiqlandi';
         const sm = apSummary(r);
         overlay(`<section class="ra-pop" role="dialog" aria-modal="true" aria-labelledby="raPopT">
             <span class="ra-okc ra-okc--dark">${ic('check', 30, 3)}</span>
@@ -670,7 +677,7 @@
     }
     function openRejectSheet(kind) {
         const r = (S.ap?.list || []).find(x => x.id === S.apId); if (!r) return;
-        const RS = r.kind === 'payment' ? ['Chek oʻqilmaydi', 'Summa mos emas', 'Boshqa oʻquvchiniki', 'Boshqa'] : r.kind === 'teacher' ? ['Vaqt mos emas', 'Ustoz band', 'Sabab yetarli emas', 'Boshqa'] : ['Narx notoʻgʻri', 'Vaqt mos emas', 'Sabab yetarli emas', 'Boshqa'];
+        const RS = r.kind === 'payment' ? ['Chek oʻqilmaydi', 'Summa mos emas', 'Boshqa oʻquvchiniki', 'Boshqa'] : r.kind === 'due' ? ['Muddat juda uzoq', 'Sabab yetarli emas', 'Avval qisman toʻlasin', 'Boshqa'] : r.kind === 'teacher' ? ['Vaqt mos emas', 'Ustoz band', 'Sabab yetarli emas', 'Boshqa'] : ['Narx notoʻgʻri', 'Vaqt mos emas', 'Sabab yetarli emas', 'Boshqa'];
         S.rj = { kind, reason: '' };
         openSheet(`<div class="sa-sh-h"><div><h2>Nima qilamiz?</h2></div><button type="button" class="sa-icon-btn ra-x" data-ra-sheetclose aria-label="Yopish">${ic('close', 18, 2.4)}</button></div>
           <div class="ra-rjk" role="radiogroup" aria-label="Qaror">

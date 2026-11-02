@@ -67,7 +67,8 @@
     }
     function mark() {
         if (!on()) return;
-        if (window.ropDesk?.isRop?.()) { window.ropDesk.mark(); decorate(); return; }
+        // Kompyuter kabineti (ROP yoki sotuv menejeri, >900px) — guruhlangan sidebar js/ropDesk/shell.js da.
+        if (window.ropDesk?.isDesk?.() ?? window.ropDesk?.isRop?.()) { window.ropDesk.mark(); decorate(); return; }
         const k = activeKey();
         document.querySelectorAll('#sidebarMenu .rs-item').forEach(a => {
             const is = a.dataset.rs === k;
@@ -109,7 +110,7 @@
             el.style.display = 'none'; el.dataset.rsHidden = '1';
         });
         // ROP kompyuter kabineti (js/ropDesk/shell.js): guruhlangan sidebar — faqat role = rop, ekran > 900px.
-        if (r === 'rop' && window.ropDesk?.isRop?.()) { window.ropDesk.apply(); window.ropDesk.buildNav(menu); mark(); return; }
+        if ((r === 'rop' || r === 'sales_manager') && (window.ropDesk?.isDesk?.() ?? window.ropDesk?.isRop?.())) { window.ropDesk.apply(); window.ropDesk.buildNav(menu); mark(); return; }
         document.querySelectorAll('#sidebarMenu .rk-nav').forEach(x => x.remove());
         const frag = document.createDocumentFragment();
         for (const k of ORDER[r]) {

@@ -1,0 +1,180 @@
+/* Sotuv menejeri kompyuter kabineti — Lidlar (SotKLeads), qo'ng'iroq navbati va natija oynasi (SotKL_Call),
+   qotgan lidlar banneri (SotKL_Stale), Bosh sahifa (SotKHome). Hammasi body.sot-desk-v2 (role=sales_manager, >900px). */
+
+/* ---------- Lidlar: ROPga xos qismlar yo'q ---------- */
+body.sot-desk-v2 #bulkActionsBar, body.sot-desk-v2 #addLeadBtn { display: none !important; }
+/* Belgilash katakchasi — karta ustida, fokusda, tanlanganda yoki belgilash rejimida ko'rinadi (dizayn: opacity). */
+body.sot-desk-v2 #leadsKanban .rk-cbx { opacity: 0; transition: opacity .12s ease; }
+body.sot-desk-v2 #leadsKanban .lead-card.rk-card:hover .rk-cbx, body.sot-desk-v2 #leadsKanban .lead-card.rk-card:focus-within .rk-cbx,
+body.sot-desk-v2 #leadsKanban .lead-card.rk-card.is-sel .rk-cbx, body.sot-desk-v2 #leadsKanban[data-picking] .rk-cbx { opacity: 1; }
+body.sot-desk-v2 #leadsKanban .lead-card.rk-card { cursor: pointer; }
+body.sot-desk-v2 #leadsKanban .rk-ph { text-decoration: none; }
+body.sot-desk-v2 #leadsKanban .rk-ph:hover { color: var(--rk-blue, #0065D6); text-decoration: underline; }
+
+/* ---------- doska tepasi: navbat + qotgan lidlar ---------- */
+body.sot-desk-v2.rk-sales-lead #tab-sales .rk-h1.team-dup-tab { display: block !important; }
+body.sot-desk-v2 .sd-ltop { position: relative; z-index: 3; display: flex; flex-direction: column; gap: 10px; margin: 2px 0 6px; }
+body.sot-desk-v2 .sd-ltop[hidden] { display: none; }
+body.sot-desk-v2 .sdq { display: flex; align-items: center; gap: 12px; min-height: 58px; padding: 8px 12px 8px 14px; border-radius: 14px; background: #0B1220; color: #FFFFFF; box-sizing: border-box; font-family: inherit; }
+body.sot-desk-v2 .sdq-h { flex: none; display: flex; flex-direction: column; gap: 4px; min-width: 150px; }
+body.sot-desk-v2 .sdq-k { font-size: 11px; font-weight: 800; letter-spacing: .06em; color: #94A3B8; white-space: nowrap; }
+body.sot-desk-v2 .sdq-chip { align-self: flex-start; display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 6px; font-size: 12px; font-weight: 800; white-space: nowrap; }
+body.sot-desk-v2 .sdq-chip--red { background: #D92D20; color: #FFFFFF; }
+body.sot-desk-v2 .sdq-chip--amber { background: #FEC84B; color: #7A2E0E; }
+body.sot-desk-v2 .sdq-chip--gray { background: #334155; color: #E2E8F0; }
+body.sot-desk-v2 .sdq-chip--blue { background: #1D4ED8; color: #FFFFFF; }
+body.sot-desk-v2 .sdq-n { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; border: 0; background: none; padding: 2px 4px; border-radius: 8px; color: #FFFFFF; font: inherit; text-align: left; cursor: pointer; }
+body.sot-desk-v2 .sdq-n:hover strong { text-decoration: underline; }
+body.sot-desk-v2 .sdq-n strong { font-size: 15px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+body.sot-desk-v2 .sdq-n span { font-size: 12px; color: #CBD5E1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+body.sot-desk-v2 .sdq-call { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 16px; border-radius: 10px; border: 0; background: #12B76A; color: #FFFFFF; font: inherit; font-size: 14px; font-weight: 800; text-decoration: none; cursor: pointer; white-space: nowrap; }
+body.sot-desk-v2 .sdq-call:hover { background: #039855; color: #FFFFFF; }
+body.sot-desk-v2 .sdq-skip { flex: none; width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid #334155; border-radius: 10px; background: transparent; color: #FFFFFF; cursor: pointer; }
+body.sot-desk-v2 .sdq-skip:hover { background: #1F2937; }
+body.sot-desk-v2 .sdq-next { flex: none; display: flex; align-items: center; gap: 4px; max-width: 330px; overflow: hidden; }
+body.sot-desk-v2 .sdq-next button { height: 28px; padding: 0 10px; border-radius: 999px; border: 0; background: #1F2937; color: #E2E8F0; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+body.sot-desk-v2 .sdq-next button:hover { background: #334155; }
+body.sot-desk-v2 .sdq-next span { font-size: 12px; color: #94A3B8; padding: 0 4px; }
+body.sot-desk-v2 .sdq--calm { gap: 10px; }
+body.sot-desk-v2 .sdq--calm strong { display: block; font-size: 14px; }
+body.sot-desk-v2 .sdq--calm em { font-style: normal; font-size: 12px; color: #CBD5E1; }
+body.sot-desk-v2 .sdq-ok { width: 30px; height: 30px; border-radius: 50%; background: #12B76A; display: grid; place-items: center; font-weight: 800; }
+body.sot-desk-v2 .sdq :focus-visible { outline: 2px solid #FFFFFF; outline-offset: 2px; }
+
+body.sot-desk-v2 .sd-warn { display: flex; align-items: center; gap: 12px; padding: 10px 12px 10px 14px; border-radius: 14px; background: #FFFAEB; border: 1px solid #FEC84B; color: #7A2E0E; }
+body.sot-desk-v2 .sd-warn-i { flex: none; width: 34px; height: 34px; border-radius: 10px; background: #FEF0C7; color: #B54708; display: grid; place-items: center; }
+body.sot-desk-v2 .sd-warn-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+body.sot-desk-v2 .sd-warn-t strong { font-size: 14px; color: #93370D; }
+body.sot-desk-v2 .sd-warn-t span { font-size: 12px; font-weight: 600; }
+body.sot-desk-v2 .sd-btn2 { flex: none; height: 36px; padding: 0 14px; border-radius: 10px; border: 1px solid #CBD5E1; background: #FFFFFF; color: #0B1220; font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; white-space: nowrap; }
+body.sot-desk-v2 .sd-btn2:hover { border-color: #94A3B8; background: #F8FAFC; }
+body.sot-desk-v2 .sd-btn2:focus-visible { outline: 2px solid #0065D6; outline-offset: 2px; }
+
+@keyframes sdFlash { 0%, 100% { box-shadow: 0 0 0 0 rgba(0, 101, 214, 0); } 30% { box-shadow: 0 0 0 4px rgba(0, 101, 214, .45); } }
+body.sot-desk-v2 .sd-flash { animation: sdFlash 1.4s ease 1; }
+
+/* ---------- ommaviy panel (sotuv): SMS ---------- */
+body.sot-desk-v2 .sd-bulk { position: fixed; left: calc(50% + 124px); bottom: 20px; transform: translateX(-50%); z-index: 40; display: flex; align-items: center; gap: 10px; padding: 10px 12px 10px 18px; background: #0B1220; color: #FFFFFF; border-radius: 16px; box-shadow: 0 20px 50px rgba(11, 18, 32, .35); white-space: nowrap; font-family: inherit; }
+body.sot-desk-v2.rk-sb-min .sd-bulk { left: calc(50% + 38px); }
+body.sot-desk-v2:not(.rk-sales-lead) .sd-bulk { display: none; }
+body.sot-desk-v2 .sd-bulk strong { font-size: 14px; font-weight: 800; }
+body.sot-desk-v2 .sd-bulk button { height: 36px; padding: 0 14px; border-radius: 10px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; color: #FFFFFF; }
+body.sot-desk-v2 .sd-bulk-sms { border: 1px solid #3A4456; background: transparent; }
+body.sot-desk-v2 .sd-bulk-sms:hover { background: #1F2937; }
+body.sot-desk-v2 .sd-bulk-x { border: 0; background: #1F2937; }
+body.sot-desk-v2 .sd-bulk button:focus-visible { outline: 2px solid #FFFFFF; outline-offset: 2px; }
+body.sot-desk-v2 .sd-sms { display: flex; flex-direction: column; gap: 10px; }
+body.sot-desk-v2 .sd-sms-to { margin: 0; font-size: 13px; color: #4B5563; }
+body.sot-desk-v2 .sd-sms-t { display: flex; flex-direction: column; gap: 6px; }
+body.sot-desk-v2 .sd-rad { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1px solid #E2E8F0; border-radius: 12px; cursor: pointer; font-size: 14px; line-height: 1.45; }
+body.sot-desk-v2 .sd-rad:has(input:checked) { border-color: #0065D6; background: #F5F9FF; }
+body.sot-desk-v2 .sd-rad input { margin-top: 3px; accent-color: #0065D6; }
+body.sot-desk-v2 .sd-sms-seg { margin: 0; font-size: 12px; font-weight: 700; color: #4B5563; }
+body.sot-desk-v2 .sd-alert { padding: 10px 12px; border-radius: 12px; background: #FEF3F2; border: 1px solid #FECDCA; color: #B42318; font-size: 13px; font-weight: 700; }
+
+/* ---------- "Qoʻngʻiroq qanday oʻtdi?" (qulf .sl-wrap 1120 ustida, CRM oynasi 1150 ostida) ---------- */
+body.sdc-open { overflow: hidden; }
+.sdc-wrap { position: fixed; inset: 0; z-index: 1140; display: grid; place-items: center; padding: 24px; font-family: inherit; color: #0B1220; }
+.sdc-dim { position: absolute; inset: 0; background: rgba(11, 18, 32, .40); }
+.sdc { position: relative; width: 600px; max-width: 100%; max-height: calc(100vh - 48px); overflow: auto; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px; padding: 20px; border-radius: 20px; background: #FFFFFF; box-shadow: 0 30px 80px rgba(11, 18, 32, .35); outline: none; animation: sdcUp .18s ease-out both; }
+@keyframes sdcUp { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
+.sdc-h { display: flex; align-items: flex-start; gap: 12px; }
+.sdc-ib { flex: none; width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: #ECFDF3; color: #067647; }
+.sdc-ht { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.sdc-ht h2 { margin: 0; font-size: 19px; font-weight: 800; letter-spacing: -.01em; }
+.sdc-ht span { font-size: 13px; color: #4B5563; }
+.sdc-link { border: 0; background: none; padding: 4px 2px; color: #0057B8; font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; text-align: left; }
+.sdc-link:hover { text-decoration: underline; }
+.sdc-junk { align-self: flex-start; }
+.sdc-cnt { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 12px; border-radius: 10px; background: #F8FAFC; border: 1px solid #E6EAF2; font-size: 13px; color: #3A4456; }
+.sdc-cnt b { color: #0B1220; }
+.sdc-opts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.sdc-opt { min-height: 78px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 10px 12px; border-radius: 14px; border: 1.5px solid #E2E8F0; background: #FFFFFF; text-align: left; cursor: pointer; font: inherit; color: #0B1220; }
+.sdc-opt:hover { border-color: #94A3B8; }
+.sdc-opt strong { font-size: 14px; font-weight: 800; }
+.sdc-opt em { font-style: normal; font-size: 12px; font-weight: 600; color: #4B5563; display: inline-flex; align-items: center; gap: 4px; }
+.sdc-opt.is-locked em { color: #93370D; }
+.sdc-opt[aria-checked="true"] { border-color: #0065D6; background: #F5F9FF; box-shadow: 0 0 0 2px #93C5FD; }
+.sdc-oi { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; }
+.sdc-tone-blue .sdc-oi { color: #0057B8; background: #EAF3FF; }
+.sdc-tone-red .sdc-oi { color: #B42318; background: #FEF3F2; }
+.sdc-tone-amber .sdc-oi { color: #B54708; background: #FFFAEB; }
+.sdc-tone-green .sdc-oi { color: #067647; background: #ECFDF3; }
+.sdc-tone-gray .sdc-oi { color: #3A4456; background: #F1F5F9; }
+.sdc-hint6 { margin: 0; padding: 8px 12px; border-radius: 10px; background: #FFFAEB; border: 1px solid #FEDF89; color: #93370D; font-size: 12px; font-weight: 600; }
+.sdc-fld { display: flex; flex-direction: column; gap: 6px; }
+.sdc-fld[hidden] { display: none; }
+.sdc-fld > span { font-size: 13px; font-weight: 700; color: #3A4456; }
+.sdc-fld > span em { font-style: normal; font-weight: 600; color: #4B5563; }
+.sdc-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.sdc-chips button { height: 30px; padding: 0 10px; border-radius: 999px; border: 1px solid #E2E8F0; background: #FFFFFF; font: inherit; font-size: 13px; font-weight: 600; color: #3A4456; cursor: pointer; }
+.sdc-chips button:hover { border-color: #94A3B8; }
+.sdc-chips button[aria-pressed="true"] { border-color: #0065D6; background: #EAF3FF; color: #0057B8; }
+.sdc textarea, .sdc input[type="datetime-local"] { width: 100%; box-sizing: border-box; border: 1px solid #CBD5E1; border-radius: 12px; padding: 10px 12px; font: inherit; font-size: 14px; color: #0B1220; background: #FFFFFF; resize: vertical; }
+.sdc input[type="datetime-local"] { height: 40px; padding: 0 12px; }
+.sdc textarea:focus, .sdc input:focus { outline: 2px solid #0065D6; outline-offset: 0; border-color: #0065D6; }
+.sdc-err { font-size: 12px; font-weight: 700; color: #B42318; }
+.sdc-err[hidden] { display: none; }
+.sdc-ft { display: flex; align-items: center; gap: 10px; }
+.sdc-sp { flex: 1; }
+.sdc-muted { font-size: 12px; color: #4B5563; }
+.sdc-save { height: 40px; padding: 0 16px; border-radius: 12px; border: 0; background: #0065D6; color: #FFFFFF; font: inherit; font-size: 14px; font-weight: 800; cursor: pointer; }
+.sdc-save:hover { background: #0057B8; }
+.sdc-save[aria-disabled="true"] { background: #CBD5E1; color: #4B5563; cursor: not-allowed; }
+.sdc button:focus-visible, .sdc a:focus-visible { outline: 2px solid #0065D6; outline-offset: 2px; }
+
+/* ---------- Bosh sahifa (SotKHome) ---------- */
+body.sot-desk-v2 #managerHome.sdh .mhx-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+body.sot-desk-v2 .sdh-asof { font-size: 12px; color: #4B5563; white-space: nowrap; padding-bottom: 4px; }
+body.sot-desk-v2 .sdh-next { background: linear-gradient(160deg, #0B1220, #1D2B4F); color: #FFFFFF; border-radius: 18px; padding: 18px 20px; display: flex; flex-direction: column; gap: 8px; min-width: 0; box-sizing: border-box; }
+body.sot-desk-v2 .sdh-eb { font-size: 11px; font-weight: 800; letter-spacing: .08em; color: #A5B4FC; }
+body.sot-desk-v2 .sdh-next h2 { margin: 0; font-size: 22px; font-weight: 800; color: #FFFFFF; }
+body.sot-desk-v2 .sdh-dsub { font-size: 13px; color: #CBD5E1; line-height: 1.4; }
+body.sot-desk-v2 .sdh-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+body.sot-desk-v2 .sdh-dchip { display: inline-flex; align-items: center; height: 24px; padding: 0 9px; border-radius: 999px; font-size: 12px; font-weight: 800; background: rgba(255, 255, 255, .12); color: #E2E8F0; }
+body.sot-desk-v2 .sdh-dchip--red { background: #B42318; color: #FFFFFF; }
+body.sot-desk-v2 .sdh-dchip--amber { background: #F79009; color: #1F1300; }
+body.sot-desk-v2 .sdh-dchip--blue { background: #1D4ED8; color: #FFFFFF; }
+body.sot-desk-v2 .sdh-nnote { margin: 0; font-size: 12px; color: #CBD5E1; line-height: 1.45; }
+body.sot-desk-v2 .sdh-q { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+body.sot-desk-v2 .sdh-q button { height: 28px; padding: 0 10px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, .25); background: transparent; color: #E2E8F0; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+body.sot-desk-v2 .sdh-q span { font-size: 12px; color: #94A3B8; font-weight: 700; }
+body.sot-desk-v2 .sdh-nact { display: flex; gap: 8px; align-items: center; margin-top: auto; padding-top: 4px; }
+body.sot-desk-v2 .sdh-nact > * { flex: none; white-space: nowrap; }
+body.sot-desk-v2 .sdh-call { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px; border-radius: 12px; background: #12B76A; color: #FFFFFF; font-weight: 800; font-size: 14px; text-decoration: none; border: 0; cursor: pointer; }
+body.sot-desk-v2 .sdh-call:hover { background: #039855; color: #FFFFFF; }
+body.sot-desk-v2 .sdh-ghost { height: 40px; padding: 0 12px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, .35); background: transparent; color: #FFFFFF; font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; }
+body.sot-desk-v2 .sdh-skip { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 12px; border: 1px solid rgba(255, 255, 255, .35); background: rgba(255, 255, 255, .08); color: #FFFFFF; cursor: pointer; }
+body.sot-desk-v2 .sdh-next :focus-visible { outline: 2px solid #FFFFFF; outline-offset: 2px; }
+body.sot-desk-v2 .sdh-stale { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 14px; background: #FFFAEB; border: 1px solid #FEC84B; color: #93370D; font-size: 13px; margin: 14px 0 0; }
+body.sot-desk-v2 .sdh-stale-t { flex: 1; min-width: 0; line-height: 1.45; }
+body.sot-desk-v2 .sdh-today-s { display: flex; flex-direction: column; gap: 8px; margin: 14px 0 0; }
+body.sot-desk-v2 .sdh-ph { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+body.sot-desk-v2 .sdh-ph h2 { margin: 0; font-size: 16px; font-weight: 800; }
+body.sot-desk-v2 .sdh-hint { font-size: 12px; color: #4B5563; }
+body.sot-desk-v2 .sdh-today { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+body.sot-desk-v2 .sdh-tt { display: flex; flex-direction: column; gap: 3px; padding: 12px 14px; border-radius: 14px; background: var(--rk-card, #FFFFFF); border: 1px solid var(--rk-line, #E6EAF2); text-align: left; font: inherit; color: var(--rk-ink, #0B1220); cursor: pointer; min-width: 0; }
+body.sot-desk-v2 .sdh-tt:hover { border-color: #B2CCFF; }
+body.sot-desk-v2 .sdh-tt:focus-visible { outline: 2px solid #0065D6; outline-offset: 2px; }
+body.sot-desk-v2 .sdh-tt span { font-size: 12px; font-weight: 700; color: #4B5563; }
+body.sot-desk-v2 .sdh-tt strong { font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; }
+body.sot-desk-v2 .sdh-tt strong small { font-size: 13px; color: #4B5563; }
+body.sot-desk-v2 .sdh-tt em { font-style: normal; font-size: 12px; font-weight: 700; color: #4B5563; }
+body.sot-desk-v2 .sdh-tt em.is-g { color: #067647; }
+body.sot-desk-v2 .sdh-tbar { display: block; height: 6px; border-radius: 999px; background: #EEF2F6; overflow: hidden; }
+body.sot-desk-v2 .sdh-tbar b { display: block; height: 100%; background: #0065D6; border-radius: 999px; }
+body.sot-desk-v2 #managerHome.sdh .mhx-grid { margin-top: 14px; }
+body.sot-desk-v2 #managerHome.sdh .mhx-side { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+body.sot-desk-v2 #managerHome.sdh .mhx-side > .mot-home, body.sot-desk-v2 #managerHome.sdh .mhx-side > .mhx-board { margin: 0; }
+body.sot-desk-v2 .sdh-trial { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #EEF2F6; font-size: 13px; }
+body.sot-desk-v2 .sdh-trial:last-child { border-bottom: 0; }
+body.sot-desk-v2 .sdh-trial time { flex: none; width: 52px; font-weight: 800; font-variant-numeric: tabular-nums; color: #0057B8; }
+body.sot-desk-v2 .sdh-trial div { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+body.sot-desk-v2 .sdh-trial span { font-size: 12px; color: #4B5563; }
+/* "Oy reytingi" o'ng ustunda — vertikal ro'yxat (dizayn hm-board), "Siz" qatori ajralib turadi. */
+body.sot-desk-v2 #managerHome.sdh .mhx-side .mhx-board .mhx-board-list { display: flex; flex-direction: column; gap: 0; }
+body.sot-desk-v2 #managerHome.sdh .mhx-side .mhx-board .mhx-board-list li { margin: 0; padding: 8px 6px; border: 0; }
+body.sot-desk-v2 #managerHome.sdh .mhx-side .mhx-board .mhx-board-list li.is-me { background: #F5F3FF; box-shadow: inset 3px 0 0 #5B21B6; }
+body.sot-desk-v2 #managerHome.sdh .mhx-grid { align-items: start; }
+/* Doska grid qatori ekran balandligidan oshmasin — ustun ichida skroll (ko'p karta ochilganda ham, masalan "Lidlarni ko'rsatish"). */
+body.sot-desk-v2.rk-sales-lead #leadsKanban.rk-board { grid-template-rows: minmax(0, 1fr); grid-auto-rows: minmax(0, 1fr); }

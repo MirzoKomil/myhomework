@@ -703,7 +703,7 @@
             swap('[data-salecard]', `<ul class="scc-tl">${ev.map(([d, t]) => `<li><b>${esc(dShort(String(d).slice(0, 10)))}</b> · ${t}</li>`).join('')}</ul>`);
         }).catch(fail('[data-salecard]', 'Sotuv tarixini yuklab bo\'lmadi'));
     }
-    const REQ_KIND = { tariff: 'tarif', teacher: 'ustoz', payment: 'to\'lov' };
+    const REQ_KIND = { tariff: 'tarif', teacher: 'ustoz', payment: 'to\'lov', due: 'to\'lov muddati' };
 
     // Oy bo'yicha davomat hisobi — AttendanceRules.monthTotals bilan bir xil qoida (Davomat, O'quvchilar ro'yxati, maosh):
     // hisobga o'tgan = dars kunidagi "Keldi" + tasdiqlangan qoplash (rejadan oshmaydi); qoldirilgan kunida "Keldi" bor qoplash
@@ -896,7 +896,8 @@
         tariff: 'Moliya · qarzdorlar', monthlyPrice: 'Moliya · qarzdorlar', schedule: 'Ustoz jadvali · yordamchi tavsiya jadvali', assistant: 'Yordamchi aloqalari · tavsiya jadvali (o\'tgan aloqalar avvalgi xodimda qoladi)',
         freeze: 'Ustoz jadvali · yordamchi aloqalari · to\'lov sanasi', 'unfreeze-early': 'Ustoz jadvali · yordamchi aloqalari', 'freeze-cancelled': 'Ustoz jadvali',
         stop: 'Jadvaldan chiqdi · sotuv "Faol emas" · guruh arxivi', finish: 'Jadvaldan chiqdi · "Tugatgan" bo\'limi · guruh arxivi', restore: 'Ustoz jadvali · yordamchi · guruh qaytdi', 'teacher-change': 'Ustoz kabineti · jadval · guruh',
-        group: 'CRM · student app · ustoz kabineti', 'request-tariff': 'Admin va ROP tasdig\'iga', 'request-teacher': 'Admin va ROP tasdig\'iga', 'request-payment': 'Admin va ROP tasdig\'iga',
+        group: 'CRM · student app · ustoz kabineti', 'request-tariff': 'Admin va ROP tasdig\'iga', 'request-teacher': 'Admin va ROP tasdig\'iga', 'request-payment': 'Admin va ROP tasdig\'iga', 'request-due': 'Admin va ROP tasdig\'iga',
+        paymentDueDate: 'Qarzdorlar · muddat tarixi', comment: 'Qarzdorlar', note: 'Qarzdorlar',
         'request-approved': 'Menejerga xabar', 'request-rejected': 'Menejerga xabar', 'request-returned': 'Menejerga xabar',
         'makeup-approved': 'Ustoz maoshi · davomat', 'assist-correct': 'Yordamchi aloqalari · yordamchi maoshi' };
     const CH_UZ = { phone: 'Telefon', zoom: 'Zoom', meet: 'Google Meet', tg_video: 'Telegram video', tg_group: 'Telegram guruh videodars', tg_text: 'Telegram yozishma' };
@@ -933,6 +934,7 @@
         }
         return out;
     }
+    const dueShort = d => (d ? dShort(String(d).slice(0, 10)) : '—');
     const tshort = iso => { const d = new Date(iso); if (Number.isNaN(d.getTime())) return '—'; const l = new Date(d.getTime() + 5 * 3600000).toISOString(); return `${dShort(l.slice(0, 10))} ${l.slice(11, 16)}`; };
     // onlyNew — tarix uchun: faqat so'ralgan qiymat (o'quvchining hozirgi qiymati keyin o'zgargan bo'lishi mumkin).
     function reqSummary(r, onlyNew = false) {
@@ -942,6 +944,12 @@
         if ('monthlyPrice' in ch) parts.push(`narx: ${was(s.monthlyPrice ? num(s.monthlyPrice) : '—')}${num(ch.monthlyPrice)}`);
         if ('lessonTime' in ch || 'lessonDuration' in ch) parts.push(`jadval: ${pattern(ch.lessonDay ?? s.lessonDayOfWeek)} ${ch.lessonTime || s.lessonTime || ''} · ${ch.lessonDuration || s.lessonDuration || ''} daq`);
         if (ch.effectiveFrom && r.kind !== 'teacher') parts.push(dShort(ch.effectiveFrom) + ' dan');
+        // 'due' (Qarzdorlar · muddatni surish): eski sana so'rov paytidagi (prevDueDate) — o'quvchida keyin o'zgargan bo'lishi mumkin.
+        if (r.kind === 'due') {
+            if ('paymentDueDate' in ch) parts.push(`to'lov sanasi: ${was(dueShort('prevDueDate' in ch ? ch.prevDueDate : s.paymentDueDate))}${dueShort(ch.paymentDueDate)}`);
+            if ('comment' in ch) parts.push(`izoh: ${ch.comment ? `"${ch.comment}"` : 'o\'chiriladi'}`);
+            if ('note' in ch) parts.push(`eslatma: ${ch.note ? `"${ch.note}"` : 'o\'chiriladi'}`);
+        }
         return parts.join(' · ');
     }
     function historyTab(body, c) {
@@ -1290,10 +1298,11 @@
         });
     }
     const ACTION_LABEL = { edit: 'Tahrir', freeze: 'Muzlatildi', stop: 'Kurs to\'xtatildi', finish: 'Kursni tugatdi', restore: 'Qayta tiklandi', 'unfreeze-early': 'Muzlatishdan erta qaytdi',
-        'teacher-change': 'Ustoz almashtirildi', group: 'Telegram guruh', 'request-tariff': 'So\'rov: tarif', 'request-teacher': 'So\'rov: ustoz',
+        'teacher-change': 'Ustoz almashtirildi', group: 'Telegram guruh', 'request-tariff': 'So\'rov: tarif', 'request-teacher': 'So\'rov: ustoz', 'request-due': 'So\'rov: to\'lov muddati',
         'request-approved': 'So\'rov tasdiqlandi', 'request-rejected': 'So\'rov rad etildi', 'request-returned': 'So\'rov qaytarildi',
         'makeup-approved': 'Qoplash darsi', 'makeup-rejected': 'Qoplash darsi', 'assist-correct': 'Yordamchi aloqasi', 'assistant-assign': 'Yordamchi ustoz' };
-    const FIELD_LABEL = { name: 'Ism', phone: 'Telefon', parentPhone: 'Ota-ona', login: 'Login', password: 'Parol', tariff: 'Tarif', monthlyPrice: 'Narx', schedule: 'Jadval', assistant: 'Yordamchi ustoz' };
+    const FIELD_LABEL = { name: 'Ism', phone: 'Telefon', parentPhone: 'Ota-ona', login: 'Login', password: 'Parol', tariff: 'Tarif', monthlyPrice: 'Narx', schedule: 'Jadval', assistant: 'Yordamchi ustoz',
+        paymentDueDate: 'To\'lov sanasi', comment: 'Izoh', note: 'Eslatma' };
     function historyList(c) {
         if (!c.history?.length) return '<p class="sc-mt">Hali o\'zgarish yo\'q</p>';
         return `<ol class="sc-tl">${c.history.map(h => {
@@ -1320,6 +1329,7 @@
         const ch = r.changes || {};
         if (r.kind === 'teacher') return `${esc(shortName(teacherName(s.teacherId)))} → ${esc(shortName(teacherName(ch.teacherId)))}`;
         if (r.kind === 'payment') return esc(ch.method || ch.summary || 'to\'lov tuzatish');
+        if (r.kind === 'due') return esc('paymentDueDate' in ch ? `${dueShort('prevDueDate' in ch ? ch.prevDueDate : s.paymentDueDate)} → ${dueShort(ch.paymentDueDate)}` : 'izoh / eslatma');
         const parts = [];
         if ('lessonDuration' in ch && Number(ch.lessonDuration) !== Number(s.lessonDuration)) parts.push(`${s.lessonDuration || '—'} → ${ch.lessonDuration} daq`);
         if ('monthlyPrice' in ch) parts.push(`${s.monthlyPrice ? num(s.monthlyPrice) : '—'} → ${num(ch.monthlyPrice)}`);
@@ -1354,7 +1364,7 @@
             return `<button type="button" class="sc-it ad-ri${r.id === selId ? ' sel' : ''}" data-id="${esc(r.id)}"${r.id === selId ? ' aria-current="true"' : ''}>${staffAvatar(mgr, 36)}<span class="sc-grow"><b>${esc(shortName(r.requester_name))} · ${esc(REQ_KIND[r.kind] || r.kind)}</b><small>${esc(r.student_name || s.name || '')} · ${apSummary(r, s)}</small><small>${esc(whenShort(r.created_at))}</small></span>${reqPill(r)}</button>`; };
         root.innerHTML = `${backLink('students', 'O\'quvchilar')}<div class="sc-head"><div><h1>Sotuv tahrirlari · tasdiq</h1><p class="sc-sub">Sotuv menejerlari so'rovlari · admin va ROP ko'radi · tasdiqlansa butun tizimda yangilanadi</p></div>
             <div class="sc-seg" role="group" aria-label="Holat">${tabs.map(([k, l]) => `<button type="button" data-f="${k}" aria-pressed="${k === filter}">${l}${(k === 'all' || k === 'pending') && counts[k] ? ' ' + counts[k] : ''}</button>`).join('')}</div></div>
-          <div class="sc-note"><b>Qaysi tahrir tasdiq so'raydi:</b> tarif yoki narx · asosiy ustoz · jadval. Ism, telefon, ota-ona raqami, login va parolni menejer o'zi tuzatadi — faqat tarixga yoziladi.</div>
+          <div class="sc-note"><b>Qaysi tahrir tasdiq so'raydi:</b> tarif yoki narx · asosiy ustoz · jadval · to'lov muddatini surish (Qarzdorlar). Ism, telefon, ota-ona raqami, login va parolni menejer o'zi tuzatadi — faqat tarixga yoziladi.</div>
           <div class="sc-lay2 ad-ap"><section class="sc-card sc-inbox" aria-label="So'rovlar">${list.map(item).join('') || `<p class="sc-mt sc-pad">${filter === 'pending' ? 'Kutilayotgan so\'rov yo\'q' : 'So\'rov yo\'q'}</p>`}</section>
           <section class="sc-card" data-detail aria-live="polite">${list.length ? '<div class="sc-skel"></div>' : '<p class="sc-mt sc-pad">So\'rovni tanlang</p>'}</section></div>`;
         root.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { root.dataset.filter = b.dataset.f; root.dataset.sel = ''; renderApprovals(root); });
@@ -1366,6 +1376,16 @@
     // "Nima o'zgaradi": o'zgarmagan qatorlar ham (Dars vaqti, Tarif, Ustoz, Qachondan) — dizayndagidek to'liq jadval.
     function approvalRows(r, s) {
         const ch = r.changes || {};
+        if (r.kind === 'due') {
+            // Hozir — o'quvchining joriy qiymati; so'ralgan — yangi sana/izoh/eslatma. Qarz bu so'rovda o'zgarmaydi.
+            const debt = s.debtAmount == null ? 'aniqlanmagan' : num(Number(s.debtAmount) || 0) + ' so\'m';
+            const was = r.status !== 'pending' && 'prevDueDate' in ch ? ch.prevDueDate : s.paymentDueDate; // hal qilinganda — so'rov paytidagi sana
+            const rows = [['To\'lov sanasi', dueShort(was), 'paymentDueDate' in ch ? dueShort(ch.paymentDueDate) : dueShort(s.paymentDueDate)],
+                ['Qoldiq qarz', debt, debt]];
+            if ('comment' in ch) rows.push(['Izoh', s.comment || '—', ch.comment || '—']);
+            if ('note' in ch) rows.push(['Eslatma', s.note || '—', ch.note || '—']);
+            return rows;
+        }
         const curT = s.lessonDuration ? `${s.lessonDuration} daq${s.monthlyPrice ? ' · ' + num(s.monthlyPrice) + ' so\'m/oy' : ''}` : (s.tariff || '—');
         const newDur = 'lessonDuration' in ch ? ch.lessonDuration : s.lessonDuration, newPrice = 'monthlyPrice' in ch ? ch.monthlyPrice : s.monthlyPrice;
         const newT = newDur ? `${newDur} daq${newPrice ? ' · ' + num(newPrice) + ' so\'m/oy' : ''}` : (ch.tariff || s.tariff || '—');
@@ -1378,6 +1398,14 @@
     // "Tasdiqlansa" — qaysi joylar yangilanadi (bitta manba: jadval, moliya, maosh, ilova, yordamchi, tarix).
     function approvalImpact(r, s) {
         const ch = r.changes || {}, out = [];
+        if (r.kind === 'due') {
+            const nd = String(ch.paymentDueDate || '');
+            if ('paymentDueDate' in ch) out.push(['fin', nd ? `Qarzdorlar: kelishilgan sana ${dueShort(nd)}${nd >= today() ? ' · "Muddati o\'tgan"dan chiqadi' : ''}` : 'Qarzdorlar: "Sana kelishilmagan" bo\'ladi']);
+            if ('paymentDueDate' in ch) out.push(['log', 'Sana oʻzgarishlari tarixiga: eski → yangi sana, sabab, kim tasdiqladi']);
+            if ('comment' in ch || 'note' in ch) out.push(['app', 'Qarzdorlar ro\'yxatidagi izoh / eslatma yangilanadi']);
+            out.push(['log', `Tarixga: so'rov, qaror, kim va qachon · ${shortName(r.requester_name)}ga xabar`]);
+            return out;
+        }
         const tName = shortName(teacherName(r.kind === 'teacher' ? ch.teacherId : s.teacherId));
         const from = (r.kind === 'teacher' ? ch.from : ch.effectiveFrom) ? fmtDate(r.kind === 'teacher' ? ch.from : ch.effectiveFrom) : 'tasdiqlangan kundan';
         const newDur = 'lessonDuration' in ch ? ch.lessonDuration : s.lessonDuration;
@@ -1411,7 +1439,7 @@
         const checksHtml = !pending ? '' : !chk.ok ? window.LoadErr.html({ title: 'Server tekshiruvini bajarib bo\'lmadi', err: chk.err, note: 'Tasdiqlashda server baribir qayta tekshiradi.', compact: true })
             : `<ul class="ad-chk">${chk.value.checks.map(c => `<li class="is-${c.level}"><i aria-hidden="true">${ICON[c.level] || '·'}</i><span>${esc(c.text)}</span></li>`).join('')}</ul>`;
         const blocked = pending && chk?.ok && chk.value.ok === false;
-        el.innerHTML = `<header class="sc-ch"><h2>${esc(r.student_name || s.name || '')} · ${r.kind === 'teacher' ? 'ustozni almashtirish' : r.kind === 'payment' ? 'to\'lov tuzatish' : 'tarif o\'zgarishi'}</h2><span class="sc-mt">yuborildi ${esc(whenShort(r.created_at))} · №${esc(r.number)}</span></header>
+        el.innerHTML = `<header class="sc-ch"><h2>${esc(r.student_name || s.name || '')} · ${r.kind === 'teacher' ? 'ustozni almashtirish' : r.kind === 'payment' ? 'to\'lov tuzatish' : r.kind === 'due' ? 'to\'lov muddatini surish' : 'tarif o\'zgarishi'}</h2><span class="sc-mt">yuborildi ${esc(whenShort(r.created_at))} · №${esc(r.number)}</span></header>
           <div class="sc-pad ad-apd">
             <div class="ad-who"><span class="ad-whom">${staffAvatar(mgr, 36)}<span><b>${esc(r.requester_name)}</b><small>so'rov yubordi · o'z sotgan o'quvchisi</small></span></span>
               <span class="ad-whos">${studentAvatar(s, 36)}<span><b>${esc(r.student_name || s.name || '')}</b>${tgPill(group)}</span><button type="button" class="sc-btn sc-btn--sm" data-card>Kartani ochish</button></span></div>
@@ -1422,7 +1450,7 @@
             ${pending ? `<h3>Server tekshiruvi</h3>${checksHtml}
               <h3>Tasdiqlansa</h3><ul class="ad-imp">${approvalImpact(r, s).map(([k, t]) => `<li><i aria-hidden="true">${IMP_ICON[k]}</i><span>${esc(t)}</span></li>`).join('')}</ul>
               <h3>Qaror</h3><div class="sc-dec" role="radiogroup" aria-label="Qaror">
-              <label class="sc-dc sc-dc--ok"><input type="radio" name="dec" value="approve"${blocked ? ' disabled' : ''}><b>Tasdiqlash</b><small>${blocked ? 'bo\'sh vaqt yo\'q — avval vaqtni o\'zgartiring' : 'server bo\'sh vaqtni qayta tekshiradi'}</small></label>
+              <label class="sc-dc sc-dc--ok"><input type="radio" name="dec" value="approve"${blocked ? ' disabled' : ''}><b>Tasdiqlash</b><small>${blocked ? 'bo\'sh vaqt yo\'q — avval vaqtni o\'zgartiring' : r.kind === 'due' ? 'yangi sana qarzdorlarda va sana tarixida' : 'server bo\'sh vaqtni qayta tekshiradi'}</small></label>
               <label class="sc-dc sc-dc--no"><input type="radio" name="dec" value="reject"><b>Rad etish</b><small>sabab majburiy · menejerga boradi</small></label>
               <label class="sc-dc"><input type="radio" name="dec" value="return"><b>Qaytarish</b><small>menejer tuzatib qayta yuboradi</small></label></div>
               <textarea name="note" rows="2" class="sc-mtop" placeholder="Izoh (ixtiyoriy) — menejer va tarixda ko'rinadi" aria-label="Izoh"></textarea>`

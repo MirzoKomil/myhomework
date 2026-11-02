@@ -1,0 +1,183 @@
+/* Sotuv menejeri kompyuter kabineti — Sotuv rejasi, Reyting, Statistika (mening voronkam), Skriptlar, SMS.
+   Dizayn: SotK_Plan, SotK_Rating, SotK_Funnel, SotK_Scripts, SotK_Sms. Hammasi body.sot-desk-v2 (role=sales_manager, >900px)
+   ostida — ROP desktopi (body.rop-desk-v2), admin va telefon ko'rinishi o'zgarmaydi. Umumiy bazaviy qoidalar
+   css/ropDeskPages.css (body:is(.rop-desk-v2,.sot-desk-v2)) da; bu yerda faqat sotuvga xos qismlar. */
+
+/* ---------- Umumiy: segment (oq aktiv), hisoblagich ---------- */
+body.sot-desk-v2 .sot-seg { background: #EEF2F6; border: 0; padding: 4px; border-radius: 11px; gap: 2px; }
+body.sot-desk-v2 .sot-seg button { background: none; border: 0; color: var(--rdp-tx); }
+body.sot-desk-v2 .sot-seg button[aria-pressed="true"] { background: var(--rdp-card); color: var(--rdp-pri); box-shadow: 0 1px 2px rgba(15, 23, 42, .1); }
+body.sot-desk-v2 .sot-cnt { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: #EEF2F6; color: var(--rdp-tx); font-style: normal; font-size: 11.5px; font-weight: 800; margin-left: 6px; }
+body.sot-desk-v2 .sot-cnt--red { background: #D92D20; color: #fff; }
+body.sot-desk-v2 .sot-pc { padding: 16px; }
+body.sot-desk-v2 .sot-pc-h { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 12px; }
+body.sot-desk-v2 .sot-pc-h h2 { margin: 0; font-size: 16px; font-weight: 800; color: var(--rdp-tx); }
+body.sot-desk-v2 .sot-pc-h > span { color: var(--rdp-mt); font-size: 12.5px; }
+body.sot-desk-v2 .sot-num { font-variant-numeric: tabular-nums; }
+
+/* ---------- Sotuv rejasi ---------- */
+body.sot-desk-v2[data-rdp="plan"] #spMainNav { display: none !important; }
+body.sot-desk-v2[data-rdp="plan"] #rdpSalesHead .rdp-head { align-items: center; }
+body.sot-desk-v2[data-rdp="plan"] .rs-ro { display: flex; align-items: center; gap: 8px; background: #F1F5F9; border-color: var(--rdp-bd); font-size: 13.5px; padding: 11px 16px; margin-bottom: 14px; }
+body.sot-desk-v2[data-rdp="plan"] .rs-ro svg { color: #B45309; flex-shrink: 0; }
+body.sot-desk-v2 .sot-plan-grid { display: grid !important; grid-template-columns: minmax(0, 1fr) 440px; grid-template-rows: auto 1fr; gap: 14px 16px; align-items: start; }
+body.sot-desk-v2 .sot-plan-grid > #spIndPlanCard { grid-column: 1; grid-row: 1; margin: 0; padding: 16px; border-radius: var(--rdp-r); border: 1px solid var(--rdp-bd); box-shadow: none; }
+body.sot-desk-v2 .sot-plan-grid > .sot-daily { grid-column: 1; grid-row: 2; margin: 0; }
+body.sot-desk-v2 .sot-plan-side { grid-column: 2; grid-row: 1 / span 2; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+body.sot-desk-v2 .sot-plan-side .rdp-card { margin: 0; }
+body.sot-desk-v2[data-rdp="plan"] #spIndPlanCard .sp-card-h { margin-bottom: 12px; padding: 0; border: 0; }
+body.sot-desk-v2[data-rdp="plan"] #spIndPlanCard .sp-card-h h3 { font-size: 16px; font-weight: 800; }
+body.sot-desk-v2[data-rdp="plan"] #spIndPlanCard.sot-has-ph .sp-progress { display: none; }
+/* qora "SHAXSIY REJA" kartasi */
+body.sot-desk-v2 .sot-ph { background: linear-gradient(120deg, #0B1220, #111C33 70%, #14213D); color: #fff; border-radius: 14px; padding: 20px 20px 16px; margin-bottom: 14px; }
+body.sot-desk-v2 .sot-ph-k { display: block; font-size: 11.5px; font-weight: 800; letter-spacing: .08em; color: #93C5FD; }
+body.sot-desk-v2 .sot-ph-big { display: flex; align-items: baseline; gap: 8px; margin-top: 8px; }
+body.sot-desk-v2 .sot-ph-big b { font-size: 34px; line-height: 1.05; font-weight: 800; letter-spacing: -.02em; }
+body.sot-desk-v2 .sot-ph-big span { font-size: 18px; font-weight: 600; color: #CBD5E1; }
+body.sot-desk-v2 .sot-ph-sub { margin: 6px 0 0; font-size: 13.5px; color: #CBD5E1; }
+body.sot-desk-v2 .sot-ph-bar { position: relative; height: 10px; border-radius: 999px; background: rgba(255, 255, 255, .16); margin-top: 18px; }
+body.sot-desk-v2 .sot-ph-bar i { display: block; height: 100%; border-radius: inherit; }
+body.sot-desk-v2 .sot-ph-bar em { position: absolute; top: -5px; width: 3px; height: 20px; border-radius: 2px; background: #fff; transform: translateX(-1px); }
+body.sot-desk-v2 .sot-ph-foot { display: flex; justify-content: space-between; gap: 12px; margin-top: 10px; font-size: 12.5px; color: #CBD5E1; }
+body.sot-desk-v2 .sot-ph-foot b { color: #fff; }
+/* tempo kartalari, qo'shimcha maqsad, jadval */
+body.sot-desk-v2[data-rdp="plan"] .sp-pace { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 0 0 12px; }
+body.sot-desk-v2[data-rdp="plan"] .sp-pace-i { background: var(--rdp-card); border: 1px solid var(--rdp-bd); border-radius: 12px; padding: 12px 14px; color: var(--rdp-tx); }
+body.sot-desk-v2[data-rdp="plan"] .sp-pace-i span { color: var(--rdp-mt); font-size: 12.5px; font-weight: 700; }
+body.sot-desk-v2[data-rdp="plan"] .sp-pace-i b { color: var(--rdp-tx); font-size: 26px; }
+body.sot-desk-v2[data-rdp="plan"] .sp-pace-i small { color: var(--rdp-mt); }
+body.sot-desk-v2[data-rdp="plan"] .sp-pace-i--hero { background: var(--rdp-pri-50); border-color: #BFD3FB; }
+body.sot-desk-v2[data-rdp="plan"] .sp-pace-i--hero b, body.sot-desk-v2[data-rdp="plan"] .sp-pace-i--hero b small { color: var(--rdp-pri); }
+body.sot-desk-v2[data-rdp="plan"] .sp-pace-i--hero span, body.sot-desk-v2[data-rdp="plan"] .sp-pace-i--hero small { color: #334155; }
+body.sot-desk-v2[data-rdp="plan"] .sp-pace-i small.sp-gap { background: none; padding: 0; font-weight: 800; }
+body.sot-desk-v2[data-rdp="plan"] .sp-prize { background: #FFFBEB; border: 1px solid #FDE68A; border-radius: 12px; margin-bottom: 12px; }
+body.sot-desk-v2[data-rdp="plan"] .sp-cmp th, body.sot-desk-v2[data-rdp="plan"] .sp-cmp td { font-size: 13.5px; }
+body.sot-desk-v2[data-rdp="plan"] .sp-cmp tbody th { font-weight: 800; color: var(--rdp-tx); }
+/* o'ng ustun */
+body.sot-desk-v2 .sot-tiers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+body.sot-desk-v2 .sot-tier { border: 1px solid var(--rdp-bd); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+body.sot-desk-v2 .sot-tier b { font-size: 13.5px; font-weight: 800; color: var(--rdp-tx); }
+body.sot-desk-v2 .sot-tier span { font-size: 12.5px; color: var(--rdp-mt); }
+body.sot-desk-v2 .sot-tier em { font-style: normal; font-size: 12.5px; font-weight: 800; color: #B42318; display: inline-flex; align-items: center; gap: 3px; }
+body.sot-desk-v2 .sot-tier.is-ok { background: var(--rdp-grn-50); border-color: #86EFAC; }
+body.sot-desk-v2 .sot-tier.is-ok em { color: #067647; }
+body.sot-desk-v2 .sot-pays { list-style: none; margin: 0; padding: 0; }
+body.sot-desk-v2 .sot-pays li { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--rdp-bd); }
+body.sot-desk-v2 .sot-pays li:first-child { border-top: 0; padding-top: 0; }
+body.sot-desk-v2 .sot-ok { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--rdp-grn-50); color: #067647; flex-shrink: 0; }
+body.sot-desk-v2 .sot-pays-t { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+body.sot-desk-v2 .sot-pays-t b { font-size: 13.5px; color: var(--rdp-tx); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+body.sot-desk-v2 .sot-pays-t small { font-size: 12px; color: var(--rdp-mt); }
+body.sot-desk-v2 .sot-pays > li > b { font-size: 14px; font-weight: 800; color: var(--rdp-tx); }
+body.sot-desk-v2 .sot-none { margin: 0; }
+body.sot-desk-v2 .sot-gifts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+body.sot-desk-v2 .sot-gift { border: 1px solid var(--rdp-bd); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+body.sot-desk-v2 .sot-gift img { width: 36px; height: 36px; object-fit: contain; margin-bottom: 4px; }
+body.sot-desk-v2 .sot-gift-e { font-size: 24px; line-height: 1; margin-bottom: 4px; }
+body.sot-desk-v2 .sot-gift b { font-size: 13.5px; color: var(--rdp-tx); }
+body.sot-desk-v2 .sot-gift span { font-size: 12.5px; color: var(--rdp-mt); }
+body.sot-desk-v2 .sot-gift.is-ok { background: var(--rdp-grn-50); border-color: #86EFAC; }
+/* kunlik tushum */
+body.sot-desk-v2 .sot-bars { display: flex; align-items: flex-end; gap: 6px; height: 120px; padding-top: 6px; }
+body.sot-desk-v2 .sot-bars span { flex: 1; background: #BFD3FB; border-radius: 5px 5px 2px 2px; min-height: 2px; }
+body.sot-desk-v2 .sot-bars span.is-best { background: #12B76A; }
+body.sot-desk-v2 .sot-bars span.is-today { background: var(--rdp-pri); }
+body.sot-desk-v2 .sot-bars-l { display: flex; justify-content: space-between; gap: 10px; margin-top: 8px; font-size: 12px; color: var(--rdp-mt); }
+
+/* ---------- Reyting ---------- */
+body.sot-desk-v2[data-rdp="rating"] #rdpSalesHead .rdp-chip { display: none; }
+body.sot-desk-v2[data-rdp="rating"] .rating-main-tabs { margin-bottom: 4px; }
+body.sot-desk-v2 .sot-rt-per { margin: 6px 0 12px; font-size: 12.5px; color: var(--rdp-mt); }
+html.rd body.sot-desk-v2[data-rdp="rating"] .mot-hero { background: linear-gradient(100deg, #0B1220 0%, #0E1F44 60%, #13336E 100%) !important; min-height: 0; border-radius: 16px; }
+html.rd body.sot-desk-v2[data-rdp="rating"] .mot-hero::after, body.sot-desk-v2[data-rdp="rating"] .mot-hero::before { display: none; }
+body.sot-desk-v2[data-rdp="rating"] .mot-hero .mot-prize-img { display: none; }
+body.sot-desk-v2[data-rdp="rating"] .mot-hero .mot-eyebrow { color: #93C5FD; }
+body.sot-desk-v2[data-rdp="rating"] .mot-me { background: var(--rdp-card); border: 1px solid var(--rdp-bd); align-items: center; }
+body.sot-desk-v2[data-rdp="rating"] .mot-me .mot-me-rank { background: #5B21B6; color: #fff; border-radius: 12px; }
+body.sot-desk-v2[data-rdp="rating"] .mot-me .mot-me-rank b, body.sot-desk-v2[data-rdp="rating"] .mot-me .mot-me-rank small { color: #fff; }
+body.sot-desk-v2[data-rdp="rating"] .mot-me .mot-bar > span { background: #5B21B6; }
+body.sot-desk-v2 .sot-rt-go { flex-shrink: 0; margin-left: 12px; }
+body.sot-desk-v2[data-rdp="rating"] .rtx-pod--1 .rtx-step { background: #F2B705; }
+body.sot-desk-v2[data-rdp="rating"] .rtx-pod--2 .rtx-step { background: #CBD5E1; }
+body.sot-desk-v2[data-rdp="rating"] .rtx-pod--3 .rtx-step { background: #C2410C; }
+body.sot-desk-v2[data-rdp="rating"] tr.sot-rt-me > td { background: #F5F3FF; }
+body.sot-desk-v2[data-rdp="rating"] tr.sot-rt-me > td:first-child { box-shadow: inset 3px 0 0 #6D28D9; }
+body.sot-desk-v2 .sot-me-chip { display: inline-flex; align-items: center; height: 18px; padding: 0 7px; margin-left: 6px; border-radius: 999px; background: #6D28D9; color: #fff; font-size: 11px; font-weight: 800; vertical-align: 1px; }
+:root[data-theme="dark"] body.sot-desk-v2[data-rdp="rating"] tr.sot-rt-me > td { background: #241B3D; }
+
+/* ---------- Statistika (mening voronkam) ---------- */
+body.sot-desk-v2[data-rdp="funnel"] .sfx-chip.active { background: var(--rdp-pri); color: #fff; }
+body.sot-desk-v2[data-rdp="funnel"] .sfx-tile { padding: 14px 16px; }
+
+/* ---------- Skriptlar (faqat o'qish) + Yo'riqnomalar ---------- */
+body.sot-desk-v2[data-rdp="script"] #scriptsListView > .page-title-bar,
+body.sot-desk-v2[data-rdp="script"] #addScriptBtn,
+body.sot-desk-v2[data-rdp="script"] .scr-read-acts,
+body.sot-desk-v2[data-rdp="script"] #scriptEditBtn,
+body.sot-desk-v2[data-rdp="script"] #scriptDeleteBtn { display: none !important; }
+body.sot-desk-v2[data-rdp="script"] #rdpSalesHead .rdp-chip { display: none; }
+body.sot-desk-v2 .sot-sc-tabs { display: inline-flex; gap: 2px; padding: 4px; background: #EEF2F6; border-radius: 11px; margin: 0 0 14px; }
+body.sot-desk-v2 .sot-sc-tabs button { display: inline-flex; align-items: center; height: 34px; padding: 0 14px; border: 0; border-radius: 8px; background: none; color: var(--rdp-tx); font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer; }
+body.sot-desk-v2 .sot-sc-tabs button[aria-selected="true"] { background: var(--rdp-card); box-shadow: 0 1px 2px rgba(15, 23, 42, .1); }
+body.sot-desk-v2 .sot-sc-tabs button:focus-visible { outline: 2px solid var(--rdp-pri); outline-offset: 2px; }
+body.sot-desk-v2[data-rdp="script"] [data-sales-panel="scripts"].sot-sc-gd > #scriptsListView,
+body.sot-desk-v2[data-rdp="script"] [data-sales-panel="scripts"].sot-sc-gd > #scriptArticleView { display: none !important; }
+body.sot-desk-v2 .sot-guides .sg-head { display: none; }
+body.sot-desk-v2 .sot-guides .sg-root { padding: 0; }
+
+:root[data-theme="dark"] body.sot-desk-v2 .sot-seg, :root[data-theme="dark"] body.sot-desk-v2 .sot-sc-tabs, :root[data-theme="dark"] body.sot-desk-v2 .sot-cnt { background: #1E293B; }
+:root[data-theme="dark"] body.sot-desk-v2[data-rdp="plan"] .rs-ro { background: #1E293B; }
+:root[data-theme="dark"] body.sot-desk-v2[data-rdp="plan"] .sp-prize { background: #33240D; border-color: #5C4210; }
+
+/* ---------- SMS (tab-rdp-sms; asosiy uslub ropDeskPages.css .rdp-sms-*) ---------- */
+/* ropDeskPages.css `body:not(.rop-desk-v2) .rdp-tab {display:none !important}` sotuvda SMS bo'limini ham yashiradi. */
+body.sot-desk-v2 #tab-rdp-sms.active { display: block !important; }
+body.sot-desk-v2 .sot-sms { grid-template-columns: minmax(0, 360px) minmax(0, 1fr) 296px; }
+body.sot-desk-v2 .sot-sms-note { margin: 10px 0 0; }
+body.sot-desk-v2 .sot-sms .rdp-sms-ta.is-err { border-color: var(--rdp-red); box-shadow: 0 0 0 3px var(--rdp-red-50); }
+body.sot-desk-v2 .sot-sms [data-sms-send][aria-disabled="true"] { opacity: .5; cursor: not-allowed; }
+body.sot-desk-v2 .sot-pill--amb { background: var(--rdp-amb-50); color: #93370D; }
+body.sot-desk-v2 .sot-sms .rdp-sms-note.sot-sms-low { border-color: #FEC84B; background: var(--rdp-amb-50); color: #93370D; }
+/* natija */
+body.sot-desk-v2 .sot-res h2 { margin-bottom: 12px; }
+body.sot-desk-v2 .sot-res-t { display: flex; gap: 8px; margin-bottom: 10px; }
+body.sot-desk-v2 .sot-res-t > div { flex: 1; border-radius: 12px; padding: 10px 12px; background: var(--rdp-bg); display: flex; flex-direction: column; }
+body.sot-desk-v2 .sot-res-t b { font-size: 22px; font-weight: 800; line-height: 1.1; color: var(--rdp-tx); }
+body.sot-desk-v2 .sot-res-t span { font-size: 12.5px; font-weight: 700; color: var(--rdp-mt); }
+body.sot-desk-v2 .sot-res-t .is-ok { background: var(--rdp-grn-50); }
+body.sot-desk-v2 .sot-res-t .is-ok b, body.sot-desk-v2 .sot-res-t .is-ok span { color: #067647; }
+body.sot-desk-v2 .sot-res-t .is-bad { background: var(--rdp-red-50); }
+body.sot-desk-v2 .sot-res-t .is-bad b, body.sot-desk-v2 .sot-res-t .is-bad span { color: var(--rdp-red); }
+body.sot-desk-v2 .sot-res-l { list-style: none; margin: 0 0 10px; padding: 0; border: 1px solid var(--rdp-bd); border-radius: 12px; max-height: 320px; overflow: auto; }
+body.sot-desk-v2 .sot-res-l li { display: flex; gap: 10px; padding: 9px 12px; border-top: 1px solid var(--rdp-bd); font-size: 13px; }
+body.sot-desk-v2 .sot-res-l li:first-child { border-top: 0; }
+body.sot-desk-v2 .sot-res-l i { font-style: normal; font-weight: 800; width: 14px; flex-shrink: 0; }
+body.sot-desk-v2 .sot-res-l span { display: flex; flex-direction: column; min-width: 0; }
+body.sot-desk-v2 .sot-res-l small { color: var(--rdp-mt); font-size: 12px; }
+body.sot-desk-v2 .sot-r-ok { color: #067647; } body.sot-desk-v2 .sot-r-no { color: var(--rdp-red); } body.sot-desk-v2 .sot-r-sk { color: var(--rdp-mt); }
+body.sot-desk-v2 .sot-res-act { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+/* tarix */
+body.sot-desk-v2 .sot-hist { margin-top: 14px; }
+body.sot-desk-v2 .sot-hist .rdp-card-h { align-items: center; margin-bottom: 8px; }
+body.sot-desk-v2 .sot-hist .rdp-card-h h2 { margin: 0; }
+body.sot-desk-v2 .sot-hf { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+body.sot-desk-v2 .sot-hf button[data-sms-hf] { height: 30px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--rdp-bd); background: var(--rdp-card); color: var(--rdp-tx); font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; }
+body.sot-desk-v2 .sot-hf button[aria-pressed="true"] { background: var(--rdp-pri-50); border-color: var(--rdp-pri); color: var(--rdp-pri); }
+body.sot-desk-v2 .sot-hist-t .rdp-hist-r { grid-template-columns: 1.2fr 1fr 2.2fr .8fr 1.3fr 1fr .5fr; }
+body.sot-desk-v2 .sot-err { color: var(--rdp-red); font-weight: 700; }
+body.sot-desk-v2 .sot-more { margin-top: 10px; }
+/* tasdiq oynasi */
+body.sot-desk-v2 .sot-dlg-bg { position: fixed; inset: 0; z-index: 1200; background: rgba(15, 23, 42, .45); display: grid; place-items: center; padding: 24px; }
+body.sot-desk-v2 .sot-dlg { width: min(520px, 100%); background: var(--rdp-card); color: var(--rdp-tx); border-radius: 16px; padding: 18px 18px 16px; box-shadow: 0 24px 48px rgba(15, 23, 42, .25); }
+body.sot-desk-v2 .sot-dlg h2 { margin: 0 0 12px; font-size: 17px; font-weight: 800; }
+body.sot-desk-v2 .sot-dlg-kv { display: grid; grid-template-columns: 160px 1fr; gap: 6px 10px; margin: 0 0 12px; font-size: 13.5px; }
+body.sot-desk-v2 .sot-dlg-kv dt { color: var(--rdp-mt); }
+body.sot-desk-v2 .sot-dlg-kv dd { margin: 0; font-weight: 800; }
+body.sot-desk-v2 .sot-dlg-ex { background: var(--rdp-bg); border: 1px solid var(--rdp-bd); border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; }
+body.sot-desk-v2 .sot-dlg-ex small { font-weight: 800; color: var(--rdp-mt); }
+body.sot-desk-v2 .sot-dlg-ex p { margin: 4px 0 0; font-size: 13.5px; line-height: 1.5; }
+body.sot-desk-v2 .sot-dlg-warn { margin: 0 0 8px; padding: 8px 10px; border-radius: 10px; background: var(--rdp-amb-50); color: #93370D; font-size: 13px; font-weight: 700; }
+body.sot-desk-v2 .sot-dlg-act { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+@media (max-width: 1280px) { body.sot-desk-v2 .sot-sms { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } body.sot-desk-v2 .sot-plan-grid { grid-template-columns: minmax(0, 1fr) 360px; } }
+/* Ekran torayib sotuv kabineti o'chsa (yoki boshqa rol) — qo'shilgan bloklar ko'rinmaydi. */
+body:not(.sot-desk-v2) :is(#sotPlanSide, #sotPlanDaily, .sot-ph, #sotRtPer, .sot-rt-go, .sot-me-chip, .sot-sc-tabs, #sotGuidesBox) { display: none !important; }
