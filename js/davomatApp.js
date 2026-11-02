@@ -151,7 +151,8 @@
         const inM = pm(t.inClock), outM = pm(t.outClock), start = pm(m.start), end = pm(m.leaveAt || m.end);
         const worked = inM == null ? 0 : (outM != null ? outM : now) - inM;
         const statusPill = t.status === 'late' ? pill(`Keldingiz ${t.inClock} · kechikdi ${t.lateMinutes} daq`, 'amber')
-            : t.status === 'excused' ? pill(`Keldingiz ${t.inClock} · sababli`, 'blue') : pill(`Keldingiz ${t.inClock} · oʻz vaqtida`, 'green');
+            : t.status === 'excused' ? pill(`Keldingiz ${t.inClock} · sababli`, 'blue')
+            : t.status === 'pending' ? pill(`${t.inClock} · ofisda emas · kutilmoqda`, 'blue') : pill(`Keldingiz ${t.inClock} · oʻz vaqtida`, 'green');
         const pct = start != null && end != null && end > start ? Math.max(0, Math.min(100, Math.round(((outM != null ? outM : now) - start) / (end - start) * 100))) : 0;
         const foot = outM != null ? `<span>Ketdingiz ${esc(t.outClock)}</span><span>Jami ${durS(worked)}</span>`
             : end != null ? `<span>${esc(m.start || '')}</span><span>${now >= end ? `Ketish ${hm(end)} · vaqti boʻldi` : `Ketish ${hm(end)} · ${durL(end - now)} qoldi`}</span>` : `<span>Dam olish kunida ishlayapsiz</span>`;

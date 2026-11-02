@@ -401,7 +401,7 @@ async function me(db, user, now = new Date()) {
         office: { name: settings.office.name, radius: settings.office.radius, lat: settings.office.lat, lng: settings.office.lng }, attemptsLeft, photoDays: settings.photoRetentionDays,
         nextAction: today.inAt ? 'out' : 'in', ...ph, requests: requests.map(({ decided_by, ...r }) => r),
         lateApproval: lateReq ? { time: lateReq.time, reason: lateReq.reason, by: decider || '' } : null,
-        approverName: await approverLabel(db, routeFor(a)) };
+        approverName: await approverLabel(db, await effectiveRoute(db, a)) };
 }
 
 // Har urinishdan oldin server tasodifiy yo'nalish beradi (chapga/o'ngga) — bir martalik, 2 daqiqa.
@@ -547,7 +547,7 @@ async function checkLocked(pool, analyzer, a, kind, body, meta) {
         }
         if (outside) {
             const requestId = randomUUID();
-            const route = routeFor(a);
+            const route = await effectiveRoute(db, a);
             await db.query(`INSERT INTO staff_att_requests(id,employee_id,user_id,type,work_date,at_time,reason,comment,approver_kind,lang,event_id,distance_m)
                 VALUES($1,$2,$3,'outside',$4,$5,$6,$7,$8,$9,$10,$11)`, [requestId, a.employee_id, a.id, date, t.tashkentClock(now),
                 String(body.outside.reason).trim().slice(0, 80), String(body.outside.comment || '').trim().slice(0, 500), route.kind, route.lang, id, record.distance]);
@@ -632,6 +632,12 @@ async function approverUsers(db, route) {
     const seen = new Set();
     return rows.filter(r => !seen.has(r.id) && seen.add(r.id) && rules.langCovers(r.lang || 'both', route.lang));
 }
+// Shu til bo'limida ROP / akademik rahbar yo'q bo'lsa — so'rov yetim qolmasin, direktorga boradi.
+async function effectiveRoute(db, a) {
+    const route = routeFor(a);
+    if (route.kind === 'admin' || (await approverUsers(db, route)).length) return route;
+    return { kind: 'admin', lang: null };
+}
 async function approverLabel(db, route) {
     const first = (await approverUsers(db, route))[0];
     return { kind: route.kind, role: APPROVER_TEXT[route.kind], name: first?.name || '' };
@@ -661,7 +667,7 @@ async function createRequest(pool, user, body, now = new Date()) {
     if (!(await scheduleFor(pool, a.employee_id))?.tracked) throw error(403, 'Sizga davomat belgilash yoqilmagan');
     const today = t.tashkentDate(now);
     const input = rules.normalizeRequest(body, { today });
-    const route = routeFor(a);
+    const route = await effectiveRoute(pool, a);
     const id = randomUUID();
     await transaction(pool, async db => {
         await db.query('SELECT pg_advisory_xact_lock(hashtext($1))', ['staff_att_req:' + a.employee_id]);
@@ -690,7 +696,7 @@ async function cancelRequest(pool, user, id) {
 async function myRequests(db, user, now = new Date()) {
     const a = await actor(db, user); requireEmployee(a);
     const rows = (await db.query(`${REQ_SELECT} WHERE r.employee_id=$1 AND r.state<>'cancelled' ORDER BY r.created_at DESC LIMIT 30`, [a.employee_id])).rows;
-    return { rows: rows.map(r => requestView(r, t.tashkentDate(now))), approver: await approverLabel(db, routeFor(a)) };
+    return { rows: rows.map(r => requestView(r, t.tashkentDate(now))), approver: await approverLabel(db, await effectiveRoute(db, a)) };
 }
 
 async function requireScope(db, user) {

@@ -194,7 +194,56 @@ test('real PostgreSQL staff attendance', { skip: !url }, async t => {
       assert.ok((await service.photo(pool, user('ali'), id)).data.length > 100);
       assert.ok(await service.photo(pool, user('hr'), id));
       await assert.rejects(service.photo(pool, user('vali'), id), { status: 403 });
-      await assert.rejects(service.photo(pool, user('rop'), id), { status: 403 });
+      // Davomat v2 (DavRecord): ROP o'z sotuv menejerlarining selfiesini ko'radi; boshqa lavozimdagilarnikini — yo'q.
+      assert.ok(await service.photo(pool, user('rop'), id));
+      const valiPhoto = (await pool.query("SELECT photo_id FROM staff_att_events WHERE employee_id='e-vali' AND photo_id IS NOT NULL LIMIT 1")).rows[0]?.photo_id;
+      if (valiPhoto) await assert.rejects(service.photo(pool, user('rop'), valiPhoto), { status: 403 });
+    });
+
+    await t.test('davomat v2: javob so‘rash, ROP tasdiqlaydi, rad etish sababi, ruxsat bilan kech kelish', async () => {
+      const tue = '2026-11-09'; // dushanba (grafik: Du 10:00–18:00)
+      await pool.query("UPDATE hr_employees SET lang='english' WHERE id='e-ali'");
+      await assert.rejects(service.createRequest(pool, user('ali'), { type: 'late', date: tue, time: '10:30' }, at(tue, '07:00')), /Sabab/);
+      const r1 = await service.createRequest(pool, user('ali'), { type: 'late', date: tue, time: '11:30', reason: 'Shifokor', comment: 'bola' }, at(tue, '07:00'));
+      assert.equal(r1.approver.kind, 'rop');
+      await assert.rejects(service.createRequest(pool, user('ali'), { type: 'late', date: tue, time: '10:00', reason: 'Shifokor' }, at(tue, '07:01')), { status: 409 });
+      // tasdiqlovchiga Telegram tugmalari (ROP + o'z tilidagi)
+      assert.ok((await outbox()).some(r => r.unique_key === `attreq:${r1.id}:222`));
+      // marketolog/sotuv bo'lmagan xodim tasdiqlay olmaydi; ROP navbatida ko'rinadi
+      await assert.rejects(service.decideRequest(pool, user('ali'), r1.id, { decision: 'approve' }), { status: 403 });
+      const inbox = await service.inbox(pool, user('rop'));
+      assert.deepEqual(inbox.rows.map(r => [r.name, r.type, r.time]), [['Ali Valiyev', 'late', '11:30']]);
+      await assert.rejects(service.decideRequest(pool, user('rop'), r1.id, { decision: 'reject' }), /sabab/i);
+      await service.decideRequest(pool, user('rop'), r1.id, { decision: 'approve' });
+      assert.ok((await outbox()).some(r => r.unique_key === `attreq:${r1.id}:approved` && r.target_id === '333'), 'xodimga javob');
+      // 10:20 da keldi — kechikish yozilmaydi, kun "Sababli"
+      const day = await service.computeDay(pool, 'e-ali', tue, await service.getSettings(pool), at(tue, '11:00'));
+      const ev = { id: 'ev-tue', employee_id: 'e-ali', user_id: 'ali', kind: 'in', work_date: tue, occurred_at: at(tue, '11:20'), ok: true };
+      assert.equal(day.status, 'waiting');
+      await pool.query(`INSERT INTO staff_att_events(id,employee_id,user_id,kind,work_date,occurred_at,ok) VALUES($1,$2,$3,$4,$5,$6,$7)`, Object.values(ev));
+      const d2 = await service.computeDay(pool, 'e-ali', tue, await service.getSettings(pool), at(tue, '12:00'));
+      assert.deepEqual([d2.status, d2.lateMinutes], ['excused', 0]);
+      // /me: ruxsat vaqtigacha qulf yo'q
+      const me = await service.me(pool, user('ali'), at(tue, '12:00'));
+      assert.deepEqual([me.tracked, me.phase, me.today.status], [true, 'working', 'excused']);
+      // ruxsat vaqtigacha qulf yo'q (rules.phase alohida sinalgan)
+      // rad etish: sabab bilan, kun odatdagi qoida
+      const r2 = await service.createRequest(pool, user('ali'), { type: 'early_leave', date: '2026-11-16', time: '16:00', reason: 'Oilaviy' }, at('2026-11-02', '08:00'));
+      await service.decideRequest(pool, user('rop'), r2.id, { decision: 'reject', reason: 'Bugun ish koʻp', note: '17:00 da yigʻilish' });
+      const mine = await service.myRequests(pool, user('ali'), at('2026-11-02', '08:05'));
+      assert.deepEqual(mine.rows.find(r => r.id === r2.id).state, 'rejected');
+      assert.ok((await outbox()).some(r => r.unique_key === `attreq:${r2.id}:rejected` && /Bugun ish koʻp/.test(r.payload.text)));
+      // bekor qilish faqat kutilayotganda
+      await assert.rejects(service.cancelRequest(pool, user('ali'), r2.id), { status: 409 });
+      // jamoa: ROP faqat sotuv menejerlarini ko'radi (marketolog yo'q)
+      const team = await service.team(pool, user('rop'), tue, at(tue, '12:00'));
+      assert.deepEqual(team.rows.map(r => r.employeeId), ['e-ali']);
+      // HR xodim, direktor emas — so'rovlar ekrani yopiq
+      await assert.rejects(service.inbox(pool, user('hr')), { status: 403 });
+      // direktor ROP navbatidagini ko'rmaydi (admin navbati alohida), lekin hal qila oladi
+      assert.equal((await service.inbox(pool, user('boss'))).rows.length, 0);
+      // asosiy ustoz uchun so'rov va belgilash yo'q
+      await assert.rejects(service.createRequest(pool, user('teacher'), { type: 'absent', date: tue, reason: 'Kasallik' }, at(tue, '07:00')), { status: 403 });
     });
 
     await t.test('ustoz darslari: Telegram video chat, bog‘lanmagan guruh, davomat vaqti', async () => {
