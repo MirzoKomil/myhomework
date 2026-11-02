@@ -216,3 +216,19 @@
     .satt-header-btn:is([data-state="in"], [data-state="done"]) span { display: none; }
     .satt-header-btn:is([data-state="in"], [data-state="done"]) { padding: 0 8px; }
 }
+
+/* Xodim qo'shish: Davomat bo'limi (HrAddStaff / HrAdminAdd) */
+.satt-add { border: 1px solid var(--border, #E6EAF2); border-radius: 16px; padding: 14px; margin: 12px 0; display: flex; flex-direction: column; gap: 10px; }
+.satt-add[hidden], .satt-add-body[hidden] { display: none; }
+.satt-add-h { display: flex; align-items: center; gap: 12px; justify-content: space-between; }
+.satt-add-h > div { display: flex; flex-direction: column; gap: 2px; }
+.satt-add-body { display: flex; flex-direction: column; gap: 10px; }
+.satt-add-photo { display: flex; gap: 12px; align-items: center; }
+.satt-add-thumb { flex: none; width: 72px; height: 96px; border-radius: 12px; border: 1.5px dashed #94A3B8; background: var(--bg-secondary, #F5F7FB); color: var(--text-muted, #4B5563); display: grid; place-items: center; font-weight: 700; overflow: hidden; }
+.satt-add-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.satt-add-btns { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+.satt-file { text-align: center; cursor: pointer; }
+.satt-add-row { min-height: 56px; border-radius: 14px; border: 1px solid var(--kb-input-border, #CBD5E1); background: var(--surface, #FFFFFF); padding: 0 12px; display: flex; align-items: center; gap: 10px; text-align: left; color: var(--text, #0B1220); cursor: pointer; font: inherit; }
+.satt-add-row > span:first-child { flex: 1; display: flex; flex-direction: column; }
+.satt-link { font-size: 13px; font-weight: 800; color: var(--kb-primary, #0057B8); }
+.satt-overlay-top { z-index: 12000; }

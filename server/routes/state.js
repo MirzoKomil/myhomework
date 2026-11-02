@@ -1027,6 +1027,8 @@ router.patch('/', authRequired, crmStateIdentity, crmStateMutationRequired, asyn
         // Admin/boshliq: kitob kartasini jo'natish bosqichiga o'tkazish ham to'lov shartiga bo'ysunadi.
         if (toSave.bookRoadmap !== undefined) await bookRoadmapLead.assertSnapshotTransitions(pool, toSave.bookRoadmap);
         await patchState(toSave, req.user);
+        // Davomat: tasdiqlovchilar keshi (lavozim/til/login o'zgargan bo'lishi mumkin)
+        if (toSave.hrEmployees !== undefined) require('../services/staffAttendance').clearApproverCache();
         res.json({ ok: true, state: await getStateForUser(req.user) });
     } catch (err) {
         console.error('PATCH /api/state', err);

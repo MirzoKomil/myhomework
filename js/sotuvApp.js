@@ -256,6 +256,7 @@
           ${bell()}
         </header>
         <div class="sa-body sa-stagger">
+          ${window.davomat ? davomat.homeCard() : ''}
           ${next ? `
           <section class="sa-next" aria-label="Keyingi qoʻngʻiroq">
             <div class="sa-next-h"><span>KEYINGI QOʻNGʻIROQ · ${idx + 1} / ${pool.length}</span>${nextChip}</div>
@@ -543,6 +544,7 @@
             ${tile('data-sa-trials', 'trial', 'blue', 'Sinov darslari', 'tarix va holat')}
             ${tile('data-sa-crm="marketing"', 'sms', 'gray', 'SMS xabarlar', 'shablonlar')}
             ${tile('data-sa-crm="guides"', 'book', 'gray', 'Yoʻriqnomalar', 'qoidalar')}
+            ${window.davomat?.menuInfo().tracked ? tile('data-dv-go="my"', 'clock', 'blue', 'Mening davomatim', 'kalendar · soʻrovlar') : ''}
           </nav>
           <div class="sa-card sa-list">
             <button type="button" class="sa-row sa-row-btn" data-sa-crm="profile">${ic('gear', 20)}<span class="sa-row-t"><strong>Sozlamalar</strong><span>Parol, bildirishnomalar, Telegram bot</span></span>${ic('chev', 18, 2.2)}</button>
@@ -679,6 +681,7 @@
     }
     function move(id, to) {
         if (!g('requestLeadStageChange')) return;
+        if (window.davomat?.guardLead()) return; // ish kuni tugagan, ketish belgilanmagan — yangi lid harakati yopiq (DavLeave)
         closeSheet(true);
         toastEl?.remove();
         requestLeadStageChange(lang(), id, to);
@@ -686,6 +689,7 @@
     function outcome(id, k) {
         const l = leadById(id);
         if (!l) return;
+        if (window.davomat?.guardLead()) return;
         const note = document.getElementById('saCrNote')?.value.trim();
         const s = st(l);
         // Izoh qo'ng'iroq haqidagi fakt — keyingi CRM oynasi bekor qilinsa ham tarixda qoladi (ataylab).

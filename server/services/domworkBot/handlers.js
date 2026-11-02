@@ -183,6 +183,14 @@ function createHandler({ crm }) {
                 await store.setSession(db, sender, null);
                 pending = null;
             }
+            if (pending?.type === 'attreq-reject') {
+                const reason = String(message.text || '').trim();
+                if (reason.length < 3) return await reply('Sababni matn bilan yozing (kamida 3 ta belgi). Bekor qilish: /cancel');
+                try { await require('../staffAttendance').decideRequest(db, { id: identity.id }, pending.id, { decision: 'reject', reason: reason.slice(0, 120), note: reason.length > 120 ? reason.slice(0, 500) : '' }); }
+                catch (error) { await store.setSession(db, sender, null); if (!error.status || error.status >= 500) throw error; return await reply(error.message); }
+                await store.setSession(db, sender, null);
+                return await reply('Soʻrov rad etildi. Javob xodimga yuborildi.');
+            }
             if (pending?.type === 'leave') {
                 policy.requireAction(identity, 'leave');
                 const match = /^(\d{4}-\d{2}-\d{2})\s+(\d{4}-\d{2}-\d{2})\s+([\s\S]{5,1000})$/.exec(command);

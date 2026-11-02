@@ -21,7 +21,12 @@ router.post('/register', (req, res) => {
     res.status(403).json({ error: 'Ro\'yxatdan o\'tish yopilgan. Admin bilan bog\'laning.' });
 });
 
-router.post('/create-user', authRequired, async (req, res) => {
+// Login rolini yaratish/o'zgartirish — davomat tasdiqlovchilar keshi tozalanadi (ROP/akademik rahbar o'zgargan bo'lishi mumkin).
+function clearAttendanceApprovers(_req, res, next) {
+    res.on('finish', () => { if (res.statusCode < 400) { try { require('../services/staffAttendance').clearApproverCache(); } catch (e) { /* modul yo'q */ } } });
+    next();
+}
+router.post('/create-user', authRequired, clearAttendanceApprovers, async (req, res) => {
     try {
         if (req.user.role !== 'admin')
             return res.status(403).json({ error: 'Faqat admin foydalanuvchi yarata oladi' });
@@ -114,7 +119,7 @@ router.post('/create-user', authRequired, async (req, res) => {
 // yangilanadi — aks holda ustoz/menejer/ROP kabinetini HR yozuvi bilan
 // ism bo'yicha bog'lash (bootApp) eski ismga qarab ishlab, hech qachon
 // topa olmay qolardi.
-router.post('/sync-roles', authRequired, async (req, res) => {
+router.post('/sync-roles', authRequired, clearAttendanceApprovers, async (req, res) => {
     try {
         if (req.user.role !== 'admin')
             return res.status(403).json({ error: 'Faqat admin' });

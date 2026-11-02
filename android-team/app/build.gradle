@@ -14,8 +14,9 @@ android {
         applicationId 'uz.domwork.team'
         minSdk 23
         targetSdk 34
-        versionCode Integer.parseInt(System.getenv('DWT_VERSION_CODE') ?: '1')
-        versionName System.getenv('DWT_VERSION_NAME') ?: '1.0'
+        // 1.1 — davomat: kamera va joylashuv ruxsatlari (Face ID + GPS)
+        versionCode Integer.parseInt(System.getenv('DWT_VERSION_CODE') ?: '2')
+        versionName System.getenv('DWT_VERSION_NAME') ?: '1.1'
         buildConfigField 'String', 'APP_URL', '"https://myhomework.uz/"'
     }
 
