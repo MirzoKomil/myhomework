@@ -102,6 +102,8 @@ async function run(db,now=new Date()) {
     }
     // Isitish alohida savepoint ichida: xatosi eslatma va hisobotlarni orqaga qaytarmasin.
     await guarded(db,'funnel_drip',async()=>{ await require('./funnel').drip(db,now); });
+    // 1-dars mini ilovasini yarmida qoldirganlarga bitta qaytarish xabari.
+    await guarded(db,'miniapp_nudge',async()=>{ await require('./miniapp').nudge(db,now); });
     const expires=()=>new Date(now.getTime()+3*60000).toISOString();
     await guarded(db,'reminders',async()=>{ if(settings.remindersEnabled) {
         const students=(await db.query("SELECT * FROM students WHERE subject='russian'")).rows.filter(policy.activeStudent);

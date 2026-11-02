@@ -93,6 +93,9 @@ const text = {
     matchAskRu: 'Formadagi arizangiz bilan bog‘lab qo‘yishim uchun raqamni bir bosishda tasdiqlang (ixtiyoriy) — yoki «Keyinroq»ni bosing, savollarga o‘tamiz 👇',
     matchNew: 'Rahmat, raqamingiz saqlandi ✅ Menejerimiz siz bilan bog‘lanadi.',
     giftNext: 'Endi rus tilida o‘zingizni tanishtirishni o‘rganamiz 👇',
+    // Mini ilova (1-dars): dizayn — BotEntry ekrani.
+    giftNextApp: '<b>Kursimizdan 1-dars siz uchun ochildi.</b>\n≈13 daqiqa: video dars, mashqlar va 2 ta o‘yin. Oxirida rus tilida o‘zingizni tanishtirib, ovozingizni yozib olasiz 👇',
+    lessonOpen: '📘 1-darsni ochish',
     segment: '<b>Rus tili sizga nima uchun kerak?</b>',
     field: '<b>Qaysi soha bo‘yicha qo‘llanma yuboray?</b>\nIshda eng ko‘p kerak bo‘ladigan iboralar va namuna dialoglar bilan 📘',
     later: 'Keyinroq',
@@ -175,6 +178,7 @@ const POLL = { speak: ['🗣 Gapirish', 'Gapirish — eng ko‘p uchraydigan to�
 
 const drip = {
     lessonNudge: name => `${name}, 1-dars atigi 5 daqiqa: ish suhbatida o‘zingizni tanishtirishni o‘rganasiz 👇`,
+    lessonNudgeApp: name => `${name}, 1-dars sizni kutyapti: 13 daqiqada rus tilida o‘zingizni tanishtirasiz va birinchi ish suhbati o‘yinidan o‘tasiz 👇`,
     phrases: key => { const [title, list] = PHRASES[key]; return `${title}\n\n${list.map(([ru, uz], i) => `${i + 1}. ${ru}\n   ${uz}`).join('\n')}\n\nOvoz chiqarib 2 marta ayting — shunda esda qoladi.`; },
     testimonial: url => `O‘quvchimiz natijasi 👇${url ? '\n' + url : ''}\n\nBoshqa natijalar: @domwork_natijalari`,
     bonus: channel => `🎁 Bonus: «Ishda kerak 50 ibora» qo‘llanmasi — yig‘ilish, rahbar, mijoz, telefon.\nOlish uchun ${channel} kanaliga obuna bo‘ling, keyin «Obuna bo‘ldim»ni bosing.`,

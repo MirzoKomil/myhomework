@@ -88,7 +88,13 @@ function media(s, key) {
     const file = bundledFile(key);
     return file ? { method: file.audio ? 'sendAudio' : file.image ? 'sendPhoto' : 'sendDocument', bundled: key } : null;
 }
-const inline = rows => ({ inline_keyboard: rows.map(r => r.map(([text, data]) => (/^https:\/\//.test(data) ? { text, url: data } : { text, callback_data: data }))) });
+const inline = rows => ({ inline_keyboard: rows.map(r => r.map(([text, data]) => (/^webapp:https:\/\//.test(data) ? { text, web_app: { url: data.slice(7) } }
+    : /^https:\/\//.test(data) ? { text, url: data } : { text, callback_data: data }))) });
+// 1-dars mini ilovasi (miniapp/, server/services/domworkBot/miniapp.js). Bot boshqaruvida miniappEnabled=false — eski video oqimi.
+const MINIAPP_URL = (process.env.DOMWORK_BOT_PUBLIC_URL || 'https://myhomework.uz').replace(/\/$/, '') + '/miniapp/';
+const miniappOn = s => s.miniappEnabled !== false && /^https:\/\//.test(MINIAPP_URL);
+const lessonBtn = (s, query = '') => miniappOn(s) ? [copy.text.lessonOpen, 'webapp:' + MINIAPP_URL + query] : [copy.text.lessonWatch, 'f:les'];
+const lessonReady = s => miniappOn(s) || !!media(s, 'dars1');
 const replyKeyboard = () => ({ keyboard: [[{ text: copy.KEYBOARD.contact }], [{ text: copy.KEYBOARD.guides }, { text: copy.KEYBOARD.faq }]], resize_keyboard: true });
 const track = v => ['russia', 'abroad'].includes(v.segment) ? 'A' : v.segment ? 'B' : String(v.phone).startsWith('7') ? 'A' : 'B';
 function mask(phone) { const d = String(phone || ''); return d.length < 7 ? d : '+' + d.slice(0, d.length - 7) + ' *** ** ' + d.slice(-2); }
@@ -115,6 +121,10 @@ async function answer(db, update, text = '') {
     const q = update.callback_query;
     await store.enqueue(db, { key: `u:${update.update_id}:callback`, targetId: String(q.from.id), method: 'answerCallbackQuery',
         payload: { callback_query_id: q.id, ...(text ? { text: text.slice(0, 180) } : {}) } });
+}
+async function miniappStarted(db, tid) {
+    return !!(await db.query("SELECT 1 FROM information_schema.tables WHERE table_name='domwork_miniapp_progress'")).rows[0]
+        && !!(await db.query('SELECT 1 FROM domwork_miniapp_progress WHERE telegram_id=$1', [tid])).rows[0];
 }
 async function event(db, tid, name, data = {}) {
     await db.query('INSERT INTO domwork_bot_funnel_events(telegram_id,event,data) VALUES($1,$2,$3)', [tid, name, JSON.stringify(data)]);
@@ -254,13 +264,14 @@ async function start(db, update, message, { lead = null, payload = '' } = {}) {
     const hello = media(s, 'salom');
     if (hello) await sendMedia(c, hello, copy.text.greeting(T.esc(name), !!lead), replyKeyboard(), { html: true });
     else await say(c, copy.text.greeting(T.esc(name), !!lead), replyKeyboard(), { html: true });
-    const gift = media(s, 'sovga'), hasLesson = !!media(s, 'dars1');
-    const next = inline([hasLesson ? [[copy.text.lessonWatch, 'f:les']] : [[copy.KEYBOARD.contact, 'f:cta']]]);
+    const gift = media(s, 'sovga'), hasLesson = lessonReady(s);
+    const next = inline([hasLesson ? [lessonBtn(s)] : [[copy.KEYBOARD.contact, 'f:cta']]]);
     // 1-dars bo'lsa — sovg'a ostida «1-darsni ko'rish»; bo'lmasa sovg'a tugmasiz (keyingi qadam — joylashuv savoli).
-    if (gift) { await sendMedia(c, gift, copy.text.gift + (hasLesson ? '\n\n' + copy.text.giftNext : ''), hasLesson ? next : undefined, { html: true }); await event(db, c.tid, 'gift'); }
+    const giftNext = miniappOn(s) ? copy.text.giftNextApp : copy.text.giftNext;
+    if (gift) { await sendMedia(c, gift, copy.text.gift + (hasLesson ? '\n\n' + giftNext : ''), hasLesson ? next : undefined, { html: true }); await event(db, c.tid, 'gift'); }
     const giftAudio = media(s, 'audio_sovga');
     if (gift && giftAudio) await sendMedia(c, giftAudio, copy.text.audio, undefined, { html: true });
-    else if (hasLesson) await say(c, copy.text.giftNext, next);
+    else if (hasLesson) await say(c, giftNext, next, { html: true });
     // Meta lid-formasidan kelgan (fb_/ads_) va hali CRM lidiga ulanmagan — arizasini topish uchun bir bosishda raqam.
     // Segment savoli 2 daqiqadan keyin (shu orada tanlangan bo'lsa yuborilmaydi).
     // Qayta /start bosilsa ham bitta kechiktirilgan savol (barqaror kalit).
@@ -270,6 +281,8 @@ async function start(db, update, message, { lead = null, payload = '' } = {}) {
 }
 async function lesson(c, v, part = 1) {
     const s = await settings(c.db), m = media(s, 'dars' + part);
+    // Eski xabarlardagi «1-darsni ko'rish» tugmasi ham endi mini ilovani ochadi (raqam shart emas — so'rov paytida so'raladi).
+    if (part === 1 && miniappOn(s)) { await say(c, copy.text.giftNextApp, inline([[lessonBtn(s)]]), { html: true }); return event(c.db, c.tid, 'miniapp_link'); }
     if (!m) { if (part === 1) await say(c, copy.text.lessonMissing, inline([[[copy.KEYBOARD.contact, 'f:cta']]])); return; }
     if (part === 1 && !v.phone) {
         await patch(c.db, c.tid, { awaiting: 'lesson' });
@@ -332,15 +345,15 @@ async function finishRequest(c, v, whenKey) {
     const now = new Date(), open = inHours(s, now);
     let reply = whenKey === 'now' ? (open ? copy.text.done.nowIn(sla(s)) : copy.text.done.offHours(salesHours(s).label)) : copy.text.done.later(whenText);
     if (method === 'telegram') reply += copy.text.done.telegram;
-    const showLesson = !v.lesson_parts && media(s, 'dars1');
-    await say(c, reply + (showLesson ? copy.text.done.andLesson : ''), showLesson ? inline([[[copy.text.lessonWatch, 'f:les']]]) : replyKeyboard());
+    const showLesson = !v.lesson_parts && lessonReady(s) && !(await miniappStarted(c.db, c.tid));
+    await say(c, reply + (showLesson ? copy.text.done.andLesson : ''), showLesson ? inline([[lessonBtn(s)]]) : replyKeyboard());
     if (first) await event(c.db, c.tid, 'request', { method, when: whenKey });
 }
 async function guide(c, v, fieldKey) {
     const s = await settings(c.db), f = copy.FIELDS[fieldKey];
     if (f) await patch(c.db, c.tid, { field: fieldKey });
     const m = media(s, 'qollanma_' + fieldKey) || media(s, 'qollanma_umumiy');
-    const buttons = [[[copy.KEYBOARD.contact, 'f:cta']], ...(!v.lesson_parts && media(s, 'dars1') ? [[[copy.text.lessonWatch, 'f:les']]] : [])];
+    const buttons = [[[copy.KEYBOARD.contact, 'f:cta']], ...(!v.lesson_parts && lessonReady(s) ? [[lessonBtn(s)]] : [])];
     if (m) {
         if (f) await say(c, copy.text.promise(f), undefined, { html: true });
         const sound = media(s, 'audio_' + (m.bundled || ('qollanma_' + fieldKey)));
@@ -532,6 +545,7 @@ async function typedPhone(c, v, phone) {
     await leadComment(db, v.lead_id, `🤖 Bot: mijoz raqamni qo‘lda yozdi: +${phone} (Telegram orqali tasdiqlanmagan).`);
     await event(db, c.tid, 'contact', { purpose: v.awaiting, typed: true });
     await say(c, copy.text.contactSaved, replyKeyboard());
+    if (v.awaiting === 'miniapp') return;
     if (v.awaiting === 'lesson') return lesson(c, v, 1);
     if (v.awaiting === 'match') {
         await notifySales(db, 'match-typed:' + c.tid, '🔗 Arizachi raqamini yozib yubordi — CRMdagi arizasini tekshiring (dublikat bo‘lishi mumkin)', v);
@@ -553,6 +567,7 @@ async function contact(db, update, m) {
     if (purpose === 'lesson') await leadComment(db, v.lead_id, '🤖 Bot: raqamni 1-darsni ko‘rish uchun berdi — qo‘ng‘iroq SHART EMAS. Faqat ball yig‘ilsa Telegramda yumshoq yozing.');
     await event(db, own.telegramId, 'contact', { purpose });
     await say(c, copy.text.contactSaved, replyKeyboard());
+    if (purpose === 'miniapp') return; // mini ilova so'rovni o'zi yakunlaydi (vaqt u yerda tanlangan)
     if (purpose === 'lesson') return lesson(c, v, 1);
     if (purpose === 'call') return askWhen(c, 'call');
     await db.query("UPDATE leads SET phone=CASE WHEN COALESCE(phone,'')='' THEN $2 ELSE phone END WHERE id=$1", [v.lead_id, '+' + own.phone]);
@@ -725,7 +740,7 @@ const DAY = 86400000;
 function preItems(v, t) {
     // [kalit, kun, quruvchi]
     return [
-        ['d1', 1, s => !v.lesson_parts && media(s, 'dars1') ? { text: copy.drip.lessonNudge(v.first_name.split(' ')[0] || 'Assalomu alaykum'), btn: [[copy.text.lessonWatch, 'f:les']] }
+        ['d1', 1, s => !v.lesson_parts && !v.miniapp_opened && lessonReady(s) ? { text: (miniappOn(s) ? copy.drip.lessonNudgeApp : copy.drip.lessonNudge)(v.first_name.split(' ')[0] || 'Assalomu alaykum'), btn: [lessonBtn(s)] }
             : { text: copy.drip.phrases(t === 'A' ? 'smena' : 'meeting'), btn: [[copy.KEYBOARD.contact, 'f:cta']] }],
         ['d2', 2, s => ({ text: copy.drip.testimonial(s.funnelTestimonials?.[t]), btn: [[copy.KEYBOARD.contact, 'f:cta']] })],
         ['d3', 3, s => s.bonusChannel && media(s, 'bonus') && !v.bonus_at
@@ -808,7 +823,7 @@ async function drip(db, now = new Date()) {
     // Menejer ishlayotganlar (so'rov/qaror, rad sababidan tashqari) va lidi ishlanayotgan/sotilganlar chiqariladi.
     // Ko'rib chiqilgan har qator drip_checked_at oladi — navbat "tiqilib" qolmaydi.
     const started = s.dripStartedAt ? new Date(s.dripStartedAt) : now;
-    const rows = (await db.query(`SELECT v.* FROM domwork_bot_visitors v WHERE NOT v.paused AND v.blocked_at IS NULL AND NOT v.holdout AND NOT v.drip_stopped
+    const rows = (await db.query(`SELECT v.*,EXISTS(SELECT 1 FROM domwork_miniapp_progress p WHERE p.telegram_id=v.telegram_id) AS miniapp_opened FROM domwork_bot_visitors v WHERE NOT v.paused AND v.blocked_at IS NULL AND NOT v.holdout AND NOT v.drip_stopped
         AND v.created_at>=$2 AND v.created_at>$1::timestamptz-INTERVAL '180 days' AND v.created_at<$1::timestamptz-INTERVAL '24 hours'
         AND (v.drip_last_at IS NULL OR v.drip_last_at<$1::timestamptz-INTERVAL '20 hours')
         AND (v.drip_checked_at IS NULL OR v.drip_checked_at<$1::timestamptz-INTERVAL '50 minutes')
@@ -849,4 +864,4 @@ async function sendMaterial(db, tid, key, field = '') {
     return true;
 }
 const WHEN_KEYS = Object.keys(copy.WHEN);
-module.exports = { sendMaterial, visitor, upsertVisitor, patch, event, settings, addScore, finishRequest, leadComment, sla, WHEN_KEYS, bundledFile, BUNDLED_NAMES, bonus, relayFromGroup, managerAction, drip, nextItem, SCHEMA, MEDIA_KEYS, init, enabled, start, message, contact, callback, deliverable, adminMedia, pause, blocked, report, track, mask, inHours };
+module.exports = { MINIAPP_URL, miniappOn, inline, say, sendMaterial, visitor, upsertVisitor, patch, event, settings, addScore, finishRequest, leadComment, sla, WHEN_KEYS, bundledFile, BUNDLED_NAMES, bonus, relayFromGroup, managerAction, drip, nextItem, SCHEMA, MEDIA_KEYS, init, enabled, start, message, contact, callback, deliverable, adminMedia, pause, blocked, report, track, mask, inHours };
