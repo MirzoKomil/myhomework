@@ -34,7 +34,7 @@ test('isitish, menejer tugmalari, relay va kanal bonusi — synthetic data, no T
     ('h-t','Ustoz','u@x','rus-oqituvchi','active','russian',false,'+998907000002');
    INSERT INTO leads(id,name,phone,source,language,status) VALUES('L1','Ali','+998901112233','Telegram bot','russian','yangi-lidlar');`);
   await groups.initSchema(pool);await store.initSchema(pool);
-  await pool.query("UPDATE domwork_bot_settings SET data=data||$1::jsonb",[JSON.stringify({funnelEnabled:true,dripEnabled:true,dripStartedAt:'2026-01-01T00:00:00Z',discountPercent:15,
+  await pool.query("UPDATE domwork_bot_settings SET data=data||$1::jsonb",[JSON.stringify({funnelEnabled:true,miniappEnabled:false,dripEnabled:true,dripStartedAt:'2026-01-01T00:00:00Z',discountPercent:15,
    bonusChannel:'@domwork',funnelMedia:{bonus:{method:'sendAudio',fileId:'BONUS_AUDIO_FILE'},dars1:{method:'sendVideo',fileId:'LESSON1_FILE_ID'}},
    funnelTestimonials:{B:'https://t.me/domwork_natijalari/12'}})]);
   await pool.query("INSERT INTO domwork_bot_groups(id,type,scope,chat_id,active,created_by) VALUES('g-sales','sales','','-1009876543210',true,'admin')");

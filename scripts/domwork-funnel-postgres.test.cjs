@@ -44,7 +44,7 @@ test('lead funnel for unknown Telegram visitors — synthetic data, no Telegram 
    assert.equal(await leadLink.issueIfEnabled(pool,'land-1'),null);
    assert.equal((await pool.query('SELECT COUNT(*) FROM domwork_bot_visitors')).rows[0].count,'0');
   });
-  await setSettings({funnelEnabled:true,discountPercent:15,discountHours:72,salesSlaMinutes:30,salesHours:'00:00-23:59',
+  await setSettings({funnelEnabled:true,miniappEnabled:false,discountPercent:15,discountHours:72,salesSlaMinutes:30,salesHours:'00:00-23:59',
    funnelMedia:{sovga:{method:'sendDocument',fileId:'GIFT_FILE_ID_123'},dars1:{method:'sendVideo',fileId:'LESSON1_FILE_ID'},dars2:{method:'sendVideo',fileId:'LESSON2_FILE_ID'},qollanma_bank:{method:'sendDocument',fileId:'BANK_GUIDE_FILE'}}});
 
   await t.test('organic start: greeting + gift without phone, delayed segment question cancelled once answered',async()=>{

@@ -298,7 +298,11 @@ async function request(db, auth, { method = 'call', when = 'now' } = {}) {
     v.request = { ...(v.request || {}), method };
     await funnel.patch(db, tid, { request: { ...(v.request || {}), method, when } });
     // Telefon yo'q → bot raqam so'raydi (askContact); mini ilova Telegram.WebApp.requestContact() ni ochadi.
-    if (method === 'call' && !v.phone) { await funnel.finishRequest(c, v, when); return { needPhone: true, state: await state(db, auth) }; }
+    if (method === 'call' && !v.phone) {
+        await funnel.finishRequest(c, v, when); // bot raqam so'raydi (zaxira: mini ilova yopilsa ham botda tugma qoladi)
+        await funnel.patch(db, tid, { awaiting: 'miniapp' });
+        return { needPhone: true, state: await state(db, auth) };
+    }
     await funnel.finishRequest(c, v, when);
     await award(db, v, 'request', 'menejer bilan bog‘lanishni so‘radi');
     await summarize(db, await funnel.visitor(db, tid));
@@ -306,4 +310,30 @@ async function request(db, auth, { method = 'call', when = 'now' } = {}) {
     return { needPhone: false, state: await state(db, auth) };
 }
 
-module.exports = { init, SCHEMA, POINTS, STEPS, verifyInitData, matchSpeech, transcribe, open, state, track, saveVoice, scoreVoice, voiceForStaff, request };
+// ── Qaytarish xabari (dizayn: BotReturn) ──────────────────────────────────
+// Darsni ochib, 2 soatdan beri qaytmagan lidga — bitta eslatma (10:00–20:00, nazorat guruhi va so'rov qoldirganlarga yo'q).
+const STEP_MIN = { video: 5, homework: 3, game: 3, voice: 2 };
+async function nudge(db, now = new Date()) {
+    const s = await funnel.settings(db);
+    if (s.funnelEnabled !== true || !funnel.miniappOn(s)) return 0;
+    const local = new Date(now.getTime() + 5 * 3600000).getUTCHours();
+    if (local < 10 || local >= 20) return 0;
+    const rows = (await db.query(`SELECT p.telegram_id,p.steps,v.first_name FROM domwork_miniapp_progress p JOIN domwork_bot_visitors v USING(telegram_id)
+        WHERE p.finished_at IS NULL AND NOT (p.steps ? 'pt_nudge') AND p.last_seen_at<$1::timestamptz-INTERVAL '2 hours' AND p.last_seen_at>$1::timestamptz-INTERVAL '48 hours'
+          AND NOT v.paused AND v.blocked_at IS NULL AND NOT v.holdout AND v.requested_at IS NULL
+        ORDER BY p.last_seen_at LIMIT 30 FOR UPDATE OF p SKIP LOCKED`, [now])).rows;
+    for (const r of rows) {
+        await db.query('UPDATE domwork_miniapp_progress SET steps=steps||$2::jsonb WHERE telegram_id=$1', [r.telegram_id, JSON.stringify({ pt_nudge: now.toISOString() })]);
+        const left = STEPS.filter(k => !r.steps[k]), mins = left.reduce((a, k) => a + STEP_MIN[k], 0);
+        const name = String(r.first_name || '').split(' ')[0] || 'Assalomu alaykum';
+        const text = left.length === STEPS.length
+            ? `${name}, 1-dars sizni kutyapti — ≈${mins} daqiqa. Eng qiziq joyi: ish suhbati o‘yini va o‘zingiz rus tilida gapirasiz!`
+            : `${name}, 1-darsning yarmidasiz — <b>${left.length} qadam qoldi (≈${mins} daqiqa)</b>. ` + (left.includes('game') ? 'Eng qiziq joyi oldinda: ish suhbati o‘yini!' : 'Oxirgisi — o‘zingiz rus tilida gapirasiz!');
+        await funnel.say({ db, tid: r.telegram_id, key: () => `ma:${r.telegram_id}:nudge` }, text,
+            funnel.inline([[['▶️ Davom ettirish', 'webapp:' + funnel.MINIAPP_URL + '?next=1']]]), { html: true, automation: true });
+        await funnel.event(db, r.telegram_id, 'miniapp_nudge', { left: left.length });
+    }
+    return rows.length;
+}
+
+module.exports = { init, nudge, SCHEMA, POINTS, STEPS, verifyInitData, matchSpeech, transcribe, open, state, track, saveVoice, scoreVoice, voiceForStaff, request };

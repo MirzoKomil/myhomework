@@ -663,7 +663,7 @@
       stack.push({ name: first ? 'main' : 'hub', args: {} });
       // Botdagi "Davom ettirish" tugmasi: start_param=next → to'g'ridan-to'g'ri keyingi qadam.
       const sp = tg?.initDataUnsafe?.start_param || '';
-      if (!first && /next/.test(sp) && nextStep()) stack.push({ name: STEP_SCREEN[nextStep()], args: {} });
+      if (!first && (/next/.test(sp) || new URLSearchParams(location.search).has('next')) && nextStep()) stack.push({ name: STEP_SCREEN[nextStep()], args: {} });
       render();
     } catch (e) {
       go('error', { offline: !!e.offline, message: e.message, retry: start }, { replace: true });
