@@ -226,17 +226,30 @@ function langCovers(approverLang, lang) {
 
 const REQUEST_TYPES = { late: 'Kech qolaman', absent: 'Kelmayman', early_leave: 'Erta ketaman', outside: 'Ofisda emasman' };
 
-function normalizeRequest(body, { today }) {
+// ctx (ixtiyoriy): { day: {start,end}|null (o'sha kun grafigi), inOk, outOk (bugun belgilangan), maxDays }
+const MAX_REQUEST_DAYS = 60;
+function normalizeRequest(body, { today, day, inOk = false, outOk = false, maxDays = MAX_REQUEST_DAYS } = {}) {
     const type = String(body?.type || '');
     if (!['late', 'absent', 'early_leave'].includes(type)) throw Object.assign(new Error('So‘rov turini tanlang'), { status: 400 });
     const date = String(body?.date || '');
     if (!t.isDate(date)) throw Object.assign(new Error('Kunni tanlang'), { status: 400 });
     if (date < today) throw Object.assign(new Error('O‘tgan kun uchun so‘rov yuborib bo‘lmaydi'), { status: 400 });
+    const ahead = Math.round((Date.parse(date + 'T00:00:00Z') - Date.parse(today + 'T00:00:00Z')) / 86400000);
+    if (ahead > maxDays) throw Object.assign(new Error(`So‘rovni ko‘pi bilan ${maxDays} kun oldindan yuborish mumkin`), { status: 400 });
+    if (day === null) throw Object.assign(new Error('Bu kun grafigingizda dam olish kuni — so‘rov kerak emas'), { status: 400 });
+    if (date === today && type === 'late' && inOk) throw Object.assign(new Error('Bugun kelish allaqachon belgilangan'), { status: 409 });
+    if (date === today && type === 'early_leave' && outOk) throw Object.assign(new Error('Bugun ketish allaqachon belgilangan'), { status: 409 });
+    if (date === today && type === 'absent' && inOk) throw Object.assign(new Error('Bugun kelish allaqachon belgilangan'), { status: 409 });
     let time = '';
     if (type !== 'absent') {
         const m = t.parseClock(body?.time);
         if (m == null) throw Object.assign(new Error(type === 'late' ? 'Qachon kelishingizni yozing' : 'Qachon ketishingizni yozing'), { status: 400 });
         time = t.clock(m);
+        if (day) {
+            const s = t.parseClock(day.start), e = t.parseClock(day.end);
+            if (type === 'late' && !(m > s && m < e)) throw Object.assign(new Error(`Kelish vaqti ish vaqti ichida bo‘lsin (${day.start} dan keyin, ${day.end} dan oldin)`), { status: 400 });
+            if (type === 'early_leave' && !(m > s && m < e)) throw Object.assign(new Error(`Ketish vaqti ish vaqti ichida bo‘lsin (${day.start} dan keyin, ${day.end} dan oldin)`), { status: 400 });
+        }
     }
     const reason = String(body?.reason || '').trim().slice(0, 80);
     if (!reason) throw Object.assign(new Error('Sababni tanlang'), { status: 400 });
@@ -247,8 +260,9 @@ function normalizeRequest(body, { today }) {
 //  • kutilayotgan so'rov — "Kutilmoqda", kechikish/kelmaslik yozilmaydi;
 //  • tasdiqlangan — "Sababli" (kech qolaman: ruxsat vaqtigacha kelsa; erta ketaman: ruxsat vaqtidan keyin ketsa);
 //  • rad etilgan — odatdagi qoida.
-function applyRequests(base, requests, settings, clockNow = null) {
-    const list = (requests || []).filter(r => r.state === 'pending' || r.state === 'approved');
+function applyRequests(base, requests, settings, clockNow = null, { officeIn = false } = {}) {
+    // Ofisga kelib odatdagidek belgilagan bo'lsa — kutilayotgan "Ofisda emasman" kunni yashirmaydi.
+    const list = (requests || []).filter(r => (r.state === 'pending' || r.state === 'approved') && !(officeIn && r.type === 'outside' && r.state === 'pending'));
     if (!list.length || !base.scheduled) return base;
     const out = { ...base };
     const inMin = t.parseClock(out.inClock), outMin = t.parseClock(out.outClock);
@@ -320,4 +334,4 @@ function onTimeStreak(days) {
 module.exports = { DEFAULT_SETTINGS, normalizeSettings, normalizeDays, haversineMeters, checkLocation, checkLiveness,
     dayStatus, reasonText, REASONS, STATUS_LABELS, MIN_YAW_DELTA, DAY_KEYS,
     staffKind, roleTracked, approverKind, approverScope, canDecide, langCovers, REQUEST_TYPES, normalizeRequest, applyRequests, phase, onTimeStreak,
-    ACADEMIC_HEAD_ROLE, SALES_EMP_ROLES };
+    ACADEMIC_HEAD_ROLE, SALES_EMP_ROLES, MAX_REQUEST_DAYS };

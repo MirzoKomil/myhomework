@@ -180,13 +180,22 @@ public class MainActivity extends Activity {
                 || checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
     }
 
-    /** Ruxsat so'rash; ilgari "boshqa so'ramang" bilan rad etilgan bo'lsa — ilova sozlamalari ochiladi. */
-    private void askRuntime(String perm, String[] perms, int code) {
-        if (Build.VERSION.SDK_INT < 23) { notifyPage(); return; }
-        if (checkSelfPermission(perm) == PackageManager.PERMISSION_GRANTED) { notifyPage(); return; }
+    /**
+     * Ruxsat so'rash. Allaqachon berilgan bo'lsa (joylashuv uchun — taxminiy COARSE ham yetadi) faqat sahifaga xabar beriladi.
+     * Ilgari "boshqa so'ramang" bilan rad etilgan bo'lsa — sozlamalar faqat bir marta avtomatik ochiladi; keyingi bosishlarda
+     * sahifa o'z "Sozlamalarni ochish" tugmasini ko'rsatadi (openAppSettings).
+     */
+    private void askRuntime(String[] perms, int code, boolean granted) {
+        if (Build.VERSION.SDK_INT < 23 || granted) { notifyPage(); return; }
         SharedPreferences p = prefs();
-        String key = "asked_" + code;
-        if (p.getBoolean(key, false) && !shouldShowRequestPermissionRationale(perm)) { openAppSettings(); return; }
+        String key = "asked_" + code, sent = "settings_" + code;
+        boolean rationale = false;
+        for (String perm : perms) rationale |= shouldShowRequestPermissionRationale(perm);
+        if (p.getBoolean(key, false) && !rationale) {
+            if (!p.getBoolean(sent, false)) { p.edit().putBoolean(sent, true).apply(); openAppSettings(); }
+            notifyPage();
+            return;
+        }
         p.edit().putBoolean(key, true).apply();
         requestPermissions(perms, code);
     }
@@ -367,9 +376,9 @@ public class MainActivity extends Activity {
         // Davomat (D00 · ruxsatlar ekrani)
         @JavascriptInterface public boolean cameraGranted() { return MainActivity.this.cameraGranted(); }
         @JavascriptInterface public boolean locationGranted() { return MainActivity.this.locationGranted(); }
-        @JavascriptInterface public void requestCamera() { runOnUiThread(() -> askRuntime(Manifest.permission.CAMERA, new String[]{Manifest.permission.CAMERA}, CAMERA_REQUEST)); }
-        @JavascriptInterface public void requestLocation() { runOnUiThread(() -> askRuntime(Manifest.permission.ACCESS_FINE_LOCATION,
-                new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION}, LOCATION_REQUEST)); }
+        @JavascriptInterface public void requestCamera() { runOnUiThread(() -> askRuntime(new String[]{Manifest.permission.CAMERA}, CAMERA_REQUEST, MainActivity.this.cameraGranted())); }
+        @JavascriptInterface public void requestLocation() { runOnUiThread(() -> askRuntime(
+                new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION}, LOCATION_REQUEST, MainActivity.this.locationGranted())); }
         @JavascriptInterface public void openAppSettings() { runOnUiThread(MainActivity.this::openAppSettings); }
         @JavascriptInterface public void testLocal() {
             PushService.show(MainActivity.this, "Bildirishnoma sinovi", "Shu ko'rinishda xabarlar keladi.", null, "local-test", "local-test");
