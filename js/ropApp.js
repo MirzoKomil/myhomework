@@ -141,7 +141,8 @@
     const assignedAt = l => parseT(l.managerAssignedAt) || parseT(l.createdAt) || (g('parseLeadSlaTime') ? parseLeadSlaTime(l.date) : null);
     const createdAt = l => parseT(l.createdAt) || (g('parseLeadSlaTime') ? parseLeadSlaTime(l.date) : null);
     const comments = l => (Array.isArray(l.comments) ? l.comments : []).filter(Boolean);
-    const callsOf = l => comments(l).filter(c => c.type === 'call-attempt' || c.type === 'contact-fail');
+    // Urinishlar ro'yxati: bitta qo'ng'iroq = bitta urinish (staleLeads.attempts; "Javob bermadi" natijasi alohida sanalmaydi).
+    const callsOf = l => (window.staleLeads?.attempts ? window.staleLeads.attempts(l) : comments(l).filter(c => c.type === 'call-attempt'));
     const srcLabel = l => (g('leadSourceName') ? leadSourceName(l.source) : l.source) || 'Organik';
     const kindLabel = l => (l.leadType === 'target' ? 'Target' : 'Organik');
     const loadOf = (id, all) => (all || ALL()).filter(l => String(l.managerId) === String(id) && OPEN.has(st(l))).length;

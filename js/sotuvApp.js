@@ -195,7 +195,8 @@
         return out;
     }
     const lastCallAt = l => (Array.isArray(l.comments) ? l.comments : []).filter(c => c && (c.type === 'call-attempt' || c.type === 'contact-fail')).reduce((m, c) => Math.max(m, parseT(c.createdAt) || 0), 0);
-    const attemptsOf = l => (Array.isArray(l.comments) ? l.comments : []).filter(c => c && (c.type === 'call-attempt' || c.type === 'contact-fail')).length;
+    // Urinishlar: bitta qo'ng'iroq = bitta urinish (staleLeads.attempts — "Javob bermadi" natijasi alohida sanalmaydi).
+    const attemptsOf = l => (window.staleLeads?.attempts ? window.staleLeads.attempts(l).length : (Array.isArray(l.comments) ? l.comments : []).filter(c => c && c.type === 'call-attempt').length);
     // Navbat hech qachon bo'sh emas: avval eslatma/SLA navbati (computeManagerHome), keyin "Urinilmoqda" va "Yangi" —
     // eng uzoq vaqt qo'ng'iroq qilinmagani birinchi.
     function callQueue(d, leads) {

@@ -11,7 +11,12 @@
     const CLOSED = new Set(['tolov-yopildi', 'muvaffaqiyatsiz-sotuv', 'sifatsiz-lidlar']);
     const PRE = new Set(['yangi-lidlar', 'boglanishga-urinilmoqda']);
     const AFTER = new Set(['boglanildi', 'malumot-berildi', 'sinov-darsida', 'qaror-jarayonida', 'keyin-sotib-olmoqchi', 'tolov-jarayonida', 'tolov-yopildi']);
+    // Qo'ng'iroq DALILI (Sifatsizdan oldingi 24 soatlik tekshiruv, server CALL_EVIDENCE_TYPES bilan bir xil): ikkala tur.
     const CALL_TYPES = new Set(['call-attempt', 'contact-fail']);
+    // URINISHLAR SONI: bitta qo'ng'iroq bitta urinish. tel: bosilganda "call-attempt" yoziladi (2 daqiqa ichidagi takror
+    // bosish — bitta), "Javob bermadi" natijasi "contact-fail" bo'lib tarixga tushadi — u alohida urinish emas.
+    // Faqat oldidan (PAIR_MS ichida) "call-attempt" bo'lmagan "contact-fail" (qo'lda belgilangan / eski yozuv) urinish sanaladi.
+    const PAIR_MS = 2 * 3600000;
     const AV = [['#DCEBFF', '#0057B8'], ['#FEF0C7', '#93370D'], ['#ECFDF3', '#067647'], ['#F1E8FF', '#5B21B6'], ['#FFE4E8', '#9F1239'], ['#E0F2FE', '#075985']];
     const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const user = () => (g('getCurrentUser') ? getCurrentUser() : null) || {};
@@ -55,6 +60,18 @@
 
     // ---------- lidlar ----------
     const callsOf = l => (Array.isArray(l.comments) ? l.comments : []).filter(c => c && CALL_TYPES.has(c.type)).map(c => ({ t: ts(c.createdAt), type: c.type })).filter(c => c.t).sort((a, b) => a.t - b.t);
+    // Urinish deb sanaladigan izohlar (vaqt bo'yicha): { t, type, failed } — failed: shu urinishdan keyin "javob yo'q" yozilgan.
+    function attemptsOf(l) {
+        const all = (Array.isArray(l?.comments) ? l.comments : []).filter(c => c && CALL_TYPES.has(c.type)).map(c => ({ t: ts(c.createdAt), type: c.type })).filter(c => c.t).sort((a, b) => a.t - b.t);
+        const out = [];
+        for (const c of all) {
+            if (c.type === 'call-attempt') { out.push({ t: c.t, type: c.type, failed: false }); continue; }
+            const prev = out[out.length - 1];
+            if (prev && prev.type === 'call-attempt' && c.t - prev.t <= PAIR_MS && c.t >= prev.t) { prev.failed = true; continue; }
+            out.push({ t: c.t, type: c.type, failed: true });
+        }
+        return out;
+    }
     const hasRecentCall = (l, now = Date.now()) => callsOf(l).some(c => now - c.t <= CALL_WINDOW && c.t <= now + 60000);
     const neverConnected = l => !(Array.isArray(l.stageHistory) && l.stageHistory.some(h => h && AFTER.has(h.to)))
         && !(l.connectedSurvey && Object.keys(l.connectedSurvey).length);
@@ -164,7 +181,7 @@
         const total = S.initial.length, solved = total - lock.length, pct = total ? Math.round(solved / total * 100) : 0;
         const r = ruleFor(lang());
         const rows = lock.map(l => {
-            const called = hasRecentCall(l), calls = callsOf(l), last = calls[calls.length - 1], [bg, fg] = avc(l.id), ph = telOf(l.phone);
+            const called = hasRecentCall(l), calls = attemptsOf(l), last = callsOf(l).pop(), [bg, fg] = avc(l.id), ph = telOf(l.phone);
             const meta = called
                 ? `<span class="sl-ok">${when(last.t)} qoʻngʻiroq qilindi — javob yoʻq</span>`
                 : `<span>Urinishlar: ${calls.length} · bugun qoʻngʻiroq yoʻq</span>`;
@@ -225,13 +242,13 @@
           <p class="sl-note">Qoʻngʻiroqdan qaytganingizda natijani belgilaysiz</p>`);
     }
     function sheetSifatsiz(l) {
-        const calls = callsOf(l).slice(-4);
+        const calls = attemptsOf(l).slice(-4);
         openSheet(`<div class="sl-sh-h"><span class="sl-ib sl-ib--red">${ic(I.nope, 22)}</span><div><h2>Sifatsizga oʻtkazish</h2><span>${esc(l.name || '')} · ${ageDays(l)} kun</span></div></div>
           <fieldset class="sl-fs"><legend>Sabab</legend>
             <label class="sl-radio"><input type="radio" name="slR" value="no-answer" checked><span><strong>Telefonni olmadi</strong><em>${ageDays(l)} kun · bir marta ham bogʻlanilmadi</em></span></label>
             <label class="sl-radio"><input type="radio" name="slR" value="wrong-phone"><span><strong>Raqam notoʻgʻri / oʻchirilgan</strong></span></label>
           </fieldset>
-          <div class="sl-hist"><span class="sl-cap">QOʻNGʻIROQLAR TARIXI · AVTOMATIK</span>${calls.map(c => `<div><span class="sl-red">${ic(I.phone, 14, 2.4)}</span><span>${when(c.t)}</span><em>${c.type === 'contact-fail' ? 'javob yoʻq' : 'qoʻngʻiroq'}</em></div>`).join('') || '<div><em>—</em></div>'}</div>
+          <div class="sl-hist"><span class="sl-cap">QOʻNGʻIROQLAR TARIXI · AVTOMATIK</span>${calls.map(c => `<div><span class="sl-red">${ic(I.phone, 14, 2.4)}</span><span>${when(c.t)}</span><em>${c.failed ? 'javob yoʻq' : 'qoʻngʻiroq'}</em></div>`).join('') || '<div><em>—</em></div>'}</div>
           <button type="button" class="sl-b sl-b--red sl-b--xl" data-sl-sifok="${esc(l.id)}">Sifatsizga oʻtkazish</button>
           <p class="sl-note">Rahmat! Bu lidlar sifatini toʻgʻri oʻlchashga yordam beradi</p>`);
     }
@@ -454,5 +471,5 @@
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => tryBoot());
     else tryBoot();
 
-    window.staleLeads = { compute, check, logCall, hasRecentCall, homeCardHtml, openRuleModal, loadRules, rules: () => rules, rule: () => ruleFor(lang()), _state: S };
+    window.staleLeads = { compute, check, logCall, hasRecentCall, attempts: attemptsOf, ageDays, homeCardHtml, openRuleModal, loadRules, rules: () => rules, rule: () => ruleFor(lang()), _state: S };
 })();

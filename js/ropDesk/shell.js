@@ -323,7 +323,8 @@
         const isStale = l => { if (!l.managerId || normalizeLeadStatus(l.status) !== 'boglanishga-urinilmoqda') return false; if ((Array.isArray(l.stageHistory) && l.stageHistory.some(h => h && AFTER.has(h.to))) || (l.connectedSurvey && Object.keys(l.connectedSurvey).length)) return false; const r = rules?.[l._lang] || { warnDays: 3 }; const t = Date.parse(l.managerAssignedAt || l.createdAt || ''); return Number.isFinite(t) && Math.floor((Date.now() - t) / DAY) >= r.warnDays; };
         return langs.flatMap(lg => getActiveSalesManagers(lg).map(m => ({ m, lg }))).map(({ m, lg }) => {
             const mine = list.filter(l => String(l.managerId) === String(m.id));
-            const calls = mine.reduce((a, l) => a + (Array.isArray(l.comments) ? l.comments : []).filter(c => c && (c.type === 'call-attempt' || c.type === 'contact-fail') && c.createdAt && dk(new Date(c.createdAt)) === k0).length, 0);
+            // Bitta qo'ng'iroq = bitta urinish ("Javob bermadi" natijasi alohida sanalmaydi — staleLeads.attempts).
+            const calls = mine.reduce((a, l) => a + (window.staleLeads?.attempts ? window.staleLeads.attempts(l).map(c => c.t) : (Array.isArray(l.comments) ? l.comments : []).filter(c => c && c.type === 'call-attempt').map(c => Date.parse(c.createdAt))).filter(t => Number.isFinite(t) && dk(new Date(t)) === k0).length, 0);
             return { m, calls, goal: (rules?.[lg]?.callsPerDay) || 30, deals: g('getManagerDealsCount') ? getManagerDealsCount(m.id, 'kunlik') : 0, stale: mine.filter(isStale).length, sla: sla.filter(id => String(id) === String(m.id)).length, att: attOf(m) };
         }).sort((a, b) => b.deals - a.deals || b.calls - a.calls);
     }
