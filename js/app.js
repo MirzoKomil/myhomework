@@ -12106,6 +12106,7 @@ function switchFinanceSection(section) {
     if (section === 'cashflow') { renderCashFlow(); inflowUI.refreshCash(); }
     if (section === 'tolovlar') inflowUI.render();
     if (section === 'maoshlar' || section === 'kpi') payrollUI.render(section);
+    if (section === 'jarimalar') window.jarimaAdmin?.render();
     if (window.financeUI?.handles(section)) financeUI.render(section);
     persistCurrentTab();
 }

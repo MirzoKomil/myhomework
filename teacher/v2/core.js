@@ -177,7 +177,7 @@
     window.addEventListener('online', () => { if (started) { D().flushOutbox(); U.render(); } });
     window.addEventListener('offline', () => { if (started) U.render(); });
 
-    const V = '20261101y';
+    const V = '20261102j1';
     window.UstozV2 = {
         css: ['ustoz', 'bosh', 'jadval', 'davomat', 'boshqa', 'yordamchi'].map(n => `/teacher/v2/${n}.css?v=${V}`),
         start() {

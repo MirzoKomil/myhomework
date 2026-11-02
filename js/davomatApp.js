@@ -714,6 +714,9 @@
     // ---------- hodisalar ----------
     function onDocClick(e) {
         // Host ilova ichidagi karta va menyu tugmalari
+        const fa = e.target.closest('[data-dv-fines-admin]');
+        if (fa) { e.preventDefault(); if (document.body.classList.contains('sidebar-open')) document.getElementById('sidebarToggle')?.click();
+            if (typeof switchTab === 'function') { switchTab('finance'); if (typeof switchFinanceSection === 'function') switchFinanceSection('jarimalar'); } return; }
         const t = e.target.closest('[data-dv-go],[data-dv-checkin],[data-dv-checkout],[data-dv-enroll]');
         if (!t || (root && root.contains(t))) return;
         e.preventDefault(); e.stopPropagation();
@@ -840,8 +843,11 @@
         // ROP / sotuv / HR / yordamchi o'z ilovasining menyusidan foydalanadi
         if (['rop', 'sales_manager', 'hr', 'teacher'].includes(user().role)) items.length = 0;
         let box = nav.querySelector('.dv-drawer');
-        if (!items.length) { box?.remove(); return; }
-        const html = `<div class="dv-drawer-h">DAVOMAT</div>${items.map(([id, l, n]) => `<a href="#" class="menu-item dv-drawer-a" data-dv-go="${id}">${ic(id === 'office' ? 'office' : id === 'team' ? 'users' : id === 'approvals' ? 'clock' : 'cal', 20)}<span class="label">${esc(l)}</span>${n ? `<b class="dv-badge">${n}</b>` : ''}</a>`).join('')}`;
+        // Jarimalar (js/jarimaApp.js): admin — sozlamalar (Moliya → Jarimalar) va yuvish so'rovlari; akademik — o'zi + ustozlari.
+        const jr = (window.jarima && !['rop', 'sales_manager', 'hr', 'teacher', 'targetolog'].includes(user().role)) ? jarima.menuItems() : [];
+        if (!items.length && !jr.length) { box?.remove(); return; }
+        const html = (items.length ? `<div class="dv-drawer-h">DAVOMAT</div>${items.map(([id, l, n]) => `<a href="#" class="menu-item dv-drawer-a" data-dv-go="${id}">${ic(id === 'office' ? 'office' : id === 'team' ? 'users' : id === 'approvals' ? 'clock' : 'cal', 20)}<span class="label">${esc(l)}</span>${n ? `<b class="dv-badge">${n}</b>` : ''}</a>`).join('')}` : '')
+            + (jr.length || mi.approver === 'admin' ? `<div class="dv-drawer-h">JARIMALAR</div>${mi.approver === 'admin' ? `<a href="#" class="menu-item dv-drawer-a" data-dv-fines-admin>${ic('info', 20)}<span class="label">Jarima va ragʻbat sozlamalari</span></a>` : ''}${jr.map(x => `<a href="#" class="menu-item dv-drawer-a" data-jr-go="${x.go}">${ic(x.go === 'washok' ? 'check' : x.go === 'issue' ? 'info' : 'cal', 20)}<span class="label">${esc(x.title)}</span>${x.badge ? `<b class="dv-badge">${x.badge}</b>` : ''}</a>`).join('')}` : '');
         if (!box) { box = document.createElement('div'); box.className = 'dv-drawer'; nav.prepend(box); }
         if (box.innerHTML !== html) box.innerHTML = html;
         if (!document.querySelector('#tab-dashboard [data-dv-home]') && mi.tracked) {
@@ -878,6 +884,7 @@
         const prevNative = window.dwNativeChanged;
         window.dwNativeChanged = function () { try { prevNative && prevNative.apply(this, arguments); } catch (e) { /* */ } window.dwNativeChangedDv(); };
         refresh(true).then(() => { drawerLinks(); handleDeepLink(); });
+        setTimeout(() => window.jarima?.refresh?.().then(drawerLinks), 2500); // jarima nishonlari
         timer = setInterval(() => {
             if (document.visibilityState !== 'visible') return;
             if (Date.now() - S.loadedAt > 60000) refresh(true).then(drawerLinks); else { evaluate(); paintHome(); }
@@ -891,7 +898,7 @@
     MQ.addEventListener?.('change', () => { if (on()) boot(); });
 
     window.davomat = {
-        homeCard, refresh: () => refresh(true), guardLead, leadLocked, open: openPage, menuInfo, state: () => S.me,
+        homeCard, refresh: () => refresh(true), guardLead, record: (empId, date) => showRecord(empId || null, date), leadLocked, open: openPage, menuInfo, state: () => S.me,
         openSchedule: (emp, onSaved) => { S.onScheduleSaved = onSaved || null; openPage('schedule', emp); }, toast
     };
 })();
