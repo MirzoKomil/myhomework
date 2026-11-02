@@ -106,6 +106,24 @@ test('yagona jadval va o\'quvchi amallari — haqiqiy PostgreSQL', { skip: !url 
             await assert.rejects(tx(c => O.changeTeacher(c, admin, 'jasur', { teacherId: 'kamola', from: '2026-11-04', reason: 'test' }, { now })), /ish vaqtidan tashqarida|band/);
         });
 
+        await t.test('ustoz kechagi sanadan almashadi; eski rejalashtirilgan almashtirish qaytarib qo\'ymaydi', async () => {
+            await pool.query("INSERT INTO hr_employees VALUES ('odina','Odina','odina@x.uz','ingliz-oqituvchi','active','english')");
+            await tx(c => S.setHours(c, admin, 'odina', [1, 2, 3, 4, 5, 6].map(w => ({ weekday: w, from: '07:00', to: '23:00' }))));
+            await pool.query("INSERT INTO students VALUES ('xusniddin','Xusniddin','','','english','dilnoza','sanjar',1,'08:00',30,'{}')");
+            await tx(c => O.changeTeacher(c, admin, 'xusniddin', { teacherId: 'kamola', lessonDay: 2, lessonTime: '12:00', from: '2026-10-30', reason: 'reja' }, { now }));
+            await assert.rejects(tx(c => O.changeTeacher(c, admin, 'xusniddin', { teacherId: 'odina', from: '2026-10-25', reason: 'kech' }, { now })), /kechagi/);
+            await tx(c => O.changeTeacher(c, admin, 'xusniddin', { teacherId: 'odina', lessonDay: 2, lessonTime: '19:30', from: '2026-10-26', reason: 'kech kiritildi' }, { now }));
+            const row = (await pool.query("SELECT teacher_id, extra_data FROM students WHERE id='xusniddin'")).rows[0];
+            assert.equal(row.teacher_id, 'odina');
+            assert.equal(row.extra_data.pendingTeacherChange, undefined, 'eski reja bekor');
+            await tx(c => O.applyDue(c, new Date('2026-10-31T03:00:00Z')));
+            assert.equal((await pool.query("SELECT teacher_id FROM students WHERE id='xusniddin'")).rows[0].teacher_id, 'odina', 'Jumagulga qaytmaydi');
+            const on = d => pool.query(`SELECT teacher_id FROM school_teacher_history WHERE student_id='xusniddin' AND from_date <= $1 AND (to_date IS NULL OR to_date >= $1)`, [d]).then(r => r.rows.map(x => x.teacher_id));
+            assert.deepEqual(await on('2026-10-26'), ['odina']);
+            assert.deepEqual(await on('2026-10-30'), ['odina'], 'rejalashtirilgan davr bo\'sh oraliqqa aylandi');
+            assert.deepEqual(await on('2026-10-25'), ['dilnoza']);
+        });
+
         await t.test('to\'xtatish va qayta tiklash: eski vaqt band bo\'lsa yangi vaqt', async () => {
             await tx(c => O.stop(c, admin, 'jasur', { lastLesson: '2026-10-30', reason: 'Vaqti yo\'q' }, now));
             await tx(c => O.applyDue(c, new Date('2026-11-01T03:00:00Z')));
