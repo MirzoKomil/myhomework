@@ -42,6 +42,10 @@ body:is(.rop-desk-v2, .sot-desk-v2) .rk-more-l[hidden] { display: none; }
 /* yig'iq (76px) */
 body:is(.rop-desk-v2, .sot-desk-v2).rk-sb-min .sidebar { width: 76px !important; min-width: 76px !important; padding: 10px 8px; }
 body:is(.rop-desk-v2, .sot-desk-v2).rk-sb-min .sidebar-brand { justify-content: center; }
+/* Yig'iq holatda "HOMEWORK" yozuvi (.ud-brand) 76px ga sig'maydi va "Menyuni ochish" tugmasini chetga surib yashirardi — faqat tugma qoladi. */
+body:is(.rop-desk-v2, .sot-desk-v2).rk-sb-min .sidebar-brand .ud-brand { display: none !important; }
+html.rd body:is(.rop-desk-v2, .sot-desk-v2).rk-sb-min .sidebar-brand { padding: 1px 0 0; justify-content: center; }
+body:is(.rop-desk-v2, .sot-desk-v2).rk-sb-min .rk-sb-toggle { width: 36px; height: 36px; color: var(--rk-ink); }
 body:is(.rop-desk-v2, .sot-desk-v2).rk-sb-min .sidebar-brand .brand-logo, body:is(.rop-desk-v2, .sot-desk-v2).rk-sb-min .rk-lbl, body:is(.rop-desk-v2, .sot-desk-v2).rk-sb-min .rk-grp, body:is(.rop-desk-v2, .sot-desk-v2).rk-sb-min .rk-more-l, body:is(.rop-desk-v2, .sot-desk-v2).rk-sb-min .sidebar-footer .label { display: none; }
 body:is(.rop-desk-v2, .sot-desk-v2).rk-sb-min .rk-nr[hidden] { display: flex; }
 body:is(.rop-desk-v2, .sot-desk-v2).rk-sb-min .sidebar-menu .rk-mi { justify-content: center; padding: 0; }
