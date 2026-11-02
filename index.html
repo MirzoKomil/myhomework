@@ -33,7 +33,7 @@
     <link rel="stylesheet" href="css/archive.css?v=20261026arx1">
     <link rel="stylesheet" href="css/lessonHub.css?v=20261029a5">
     <link rel="stylesheet" href="css/whiteboard.css?v=20261029b4">
-    <link rel="stylesheet" href="css/staffAttendance.css?v=20261026k2">
+    <link rel="stylesheet" href="css/staffAttendance.css?v=20261102d1">
     <link rel="stylesheet" href="css/kobalt.css?v=20261030g">
     <link rel="stylesheet" href="css/school.css?v=20261101t">
     <link rel="stylesheet" href="css/ustozToliq.css?v=20261029ust">
@@ -59,6 +59,8 @@
     <link rel="stylesheet" href="css/sotuvApp.css?v=20261101k">
     <link rel="stylesheet" href="css/ropApp.css?v=20261101r">
     <link rel="stylesheet" href="css/hrApp.css?v=20261101a">
+    <link rel="stylesheet" href="css/davomatApp.css?v=20261102j1">
+    <link rel="stylesheet" href="css/jarimaApp.css?v=20261102j1">
     <link rel="stylesheet" href="css/akademikApp.css?v=20261102a">
     <link rel="stylesheet" href="css/akademikDesk.css?v=20261102e">
     <link rel="stylesheet" href="css/staleLeads.css?v=20261101e">
@@ -1014,6 +1016,7 @@
                                     <button type="button" class="section-nav-item" data-finance-section="solishtirish">Solishtirish va audit</button>
                                     <button type="button" class="section-nav-item" data-finance-section="maoshlar">Maoshlar</button>
                                     <button type="button" class="section-nav-item" data-finance-section="kpi">KPI</button>
+                                    <button type="button" class="section-nav-item" data-finance-section="jarimalar">Jarimalar</button>
                                     <button type="button" class="section-nav-item" data-finance-section="moliya-sozlamalar">Sozlamalar</button>
                                 </nav>
                                 <div class="sales-header-lang" id="financeLangFilter">
@@ -1045,6 +1048,8 @@
                         <!-- Maoshlar / KPI: server-side payroll -->
                         <div class="finance-panel" data-finance-panel="maoshlar" id="financePanel-maoshlar"><div id="payrollRoot"></div></div>
                         <div class="finance-panel" data-finance-panel="kpi" id="financePanel-kpi"><div id="payrollKpiRoot"></div></div>
+                        <!-- Jarima va rag'bat sozlamalari (js/jarimaAdmin.js, dizayn J05) -->
+                        <div class="finance-panel" data-finance-panel="jarimalar" id="financePanel-jarimalar"><div id="jarimaAdminRoot"></div></div>
 
 
                         <!-- Cash Flow -->
@@ -1673,7 +1678,7 @@
     <script src="js/financeEngine.js?v=20261026m"></script>
     <script src="js/financeUI.js?v=20261026m"></script>
     <script src="js/payrollEngine.js?v=20261030a"></script>
-    <script src="js/payrollUI.js?v=20261030k"></script>
+    <script src="js/payrollUI.js?v=20261102j3"></script>
     <script src="js/teacherAttendanceCalendar.js?v=20261008a"></script>
     <script src="js/attendanceRules.js?v=20261030g"></script>
     <script src="js/teacherDutyUI.js?v=20261029a5"></script>
@@ -1695,7 +1700,7 @@
     <script src="js/targetMonitorUI.js?v=20261026a"></script>
     <script src="js/archiveCenter.js?v=20261026arx1"></script>
     <script src="js/staffOffboardingUI.js?v=20261026arx1"></script>
-    <script src="js/staffAttendanceUI.js?v=20261026a"></script>
+    <script src="js/staffAttendanceUI.js?v=20261102d1"></script>
     <script src="js/workHours.js?v=20261029b3"></script>
     <script src="js/schoolUI.js?v=20261031a"></script>
     <script src="js/schoolSchedule.js?v=20261101t"></script>
@@ -1714,15 +1719,18 @@
     <script src="js/staffActivation.js?v=20261029st"></script>
     <script src="js/staffSessions.js?v=20261029b4"></script>
     <script src="js/staffNavBadges.js?v=20261029a5"></script>
-    <script src="js/app.js?v=20261102akd3"></script>
+    <script src="js/app.js?v=20261102akm"></script>
     <script src="js/ropSotuvNav.js?v=20261101b"></script>
-    <script src="js/teamApp.js?v=20261102akd3"></script>
-    <script src="js/sotuvApp.js?v=20261102j"></script>
-    <script src="js/ropApp.js?v=20261101r"></script>
-    <script src="js/hrApp.js?v=20261101a"></script>
-    <script src="js/akademikApp.js?v=20261102f"></script>
-    <script src="js/akademikDesk.js?v=20261102f"></script>
-    <script src="js/targetologApp.js?v=20261101c"></script>
+    <script src="js/davomatApp.js?v=20261102j1"></script>
+    <script src="js/jarimaApp.js?v=20261102j2"></script>
+    <script src="js/jarimaAdmin.js?v=20261102j1"></script>
+    <script src="js/teamApp.js?v=20261102akm"></script>
+    <script src="js/sotuvApp.js?v=20261102j1"></script>
+    <script src="js/ropApp.js?v=20261102j1"></script>
+    <script src="js/hrApp.js?v=20261102j1"></script>
+    <script src="js/akademikApp.js?v=20261102m"></script>
+    <script src="js/akademikDesk.js?v=20261102m"></script>
+    <script src="js/targetologApp.js?v=20261102j1"></script>
     <script src="js/statusBand.js?v=20261101a"></script>
     <script src="js/staleLeads.js?v=20261101d"></script>
     <script src="js/trialPopup.js?v=20261101a"></script>

@@ -55,7 +55,7 @@ jobs:
           DWT_KEY_PASSWORD: ${{ secrets.DWT_KEYSTORE_PASSWORD }}
           DWT_KEY_ALIAS: domworkteacher
           DWT_VERSION_CODE: ${{ github.run_number }}
-          DWT_VERSION_NAME: 1.0.${{ github.run_number }}
+          DWT_VERSION_NAME: 1.1.${{ github.run_number }}
         run: |
           if [ "$DWT_SIGNED" = "1" ]; then export DWT_KEYSTORE="$DWT_KS_PATH"; fi
           gradle -p android-team assembleRelease --no-daemon
@@ -64,7 +64,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Jamoa-1.0.${{ github.run_number }}
+          name: Jamoa-1.1.${{ github.run_number }}
           path: Jamoa.apk
 
       - name: Release
@@ -72,10 +72,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG="team-v1.0.${{ github.run_number }}"
-          NOTE="Jamoa — xodimlar ilovasi (sotuv, ROP, ustoz, HR, targetolog). Telefonga Jamoa.apk ni yuklab o'rnating. Birinchi ochilishda bildirishnomalarga ruxsat bering."
+          TAG="team-v1.1.${{ github.run_number }}"
+          NOTE="Jamoa — xodimlar ilovasi (sotuv, ROP, ustoz, HR, targetolog). Telefonga Jamoa.apk ni yuklab o'rnating. Birinchi ochilishda kamera, joylashuv va bildirishnomalarga ruxsat bering (davomat uchun)."
           if [ "$DWT_SIGNED" = "1" ]; then
-            gh release create "$TAG" Jamoa.apk --title "Jamoa 1.0.${{ github.run_number }}" --notes "$NOTE" --latest
+            gh release create "$TAG" Jamoa.apk --title "Jamoa 1.1.${{ github.run_number }}" --notes "$NOTE" --latest
           else
-            gh release create "$TAG" Jamoa.apk --title "Jamoa 1.0.${{ github.run_number }} (test imzo)" --notes "$NOTE" --prerelease
+            gh release create "$TAG" Jamoa.apk --title "Jamoa 1.1.${{ github.run_number }} (test imzo)" --notes "$NOTE" --prerelease
           fi

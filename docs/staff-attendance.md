@@ -22,6 +22,32 @@
 **Telegram xabarlari** (@Domworkuz_bot orqali, direktor va ROP'ga): kechikdi, kelmadi, erta ketdi,
 yuz mos kelmadi, yangi yuz namunasi. Buning uchun ular botga o'z akkauntini ulagan bo'lishi kerak.
 
+## Davomat v2 — Jamoa ilovasi (2026-11, dizayn "Davomat" D00–D18)
+- **Kim belgilaydi:** sotuv menejeri, ROP, HR, akademik rahbar (`head-of-teachers`), yordamchi ustoz.
+  Asosiy ustoz, targetolog, admin — yo'q (`rules.roleTracked`). Xodimdagi "Davomat kuzatiladi" + grafik baribir shart.
+- **Ish vaqtidan tashqari** ilova erkin; bosh kartada "Ofisdaman — hozir belgilash" (erta kelish yoziladi, keyin so'ralmaydi).
+- **Ish boshlanganda** to'liq qulf (D02) → kamera (D01) → tabrik (D03, ketma-ket vaqtida kunlar). Holat: `rules.phase`.
+- **Ruxsat bilan kech kelish** (tasdiqlangan "Kech qolaman"): ruxsat vaqtigacha qulf yo'q, kechikish yozilmaydi (kun "Sababli").
+- **Ofisda emasman** (D05): sabab + selfie, aniq koordinata saqlanmaydi (faqat masofa), holat "Kutilmoqda".
+  Rad etilsa — o'sha belgi hisobga olinmaydi, odatdagi qoida (ofisga kelib qayta belgilaydi).
+- **Ish tugaganda** ketish oynasi (D06), "Hali ishlayapman" — 30 daqiqa; sotuvda faqat yangi lid harakatlari yopiladi.
+- **Javob so'rash** (`staff_att_requests`): kech qolaman / kelmayman / erta ketaman, sabab majburiy.
+  Kim tasdiqlaydi: sotuv → o'z tilidagi ROP, yordamchi → o'z tilidagi akademik rahbar, ROP/HR/akademik → direktor.
+  Shu tilda ROP / akademik rahbar bo'lmasa — direktorga. Rad etish — sabab majburiy.
+  Telegram: tasdiqlovchiga "Tasdiqlash / Rad etish" tugmalari (rad → bot sabab so'raydi), xodimga javob.
+- **Push** (Jamoa APK): ishdan 10 daq oldin, boshlanganda belgilanmagan bo'lsa, tugaganda, so'rov javobi; dam olish kunida yo'q.
+  Imtiyoz (10 daq) o'tib ham belgilanmasa — o'z rahbariga va direktorga Telegram (`att:notyet`).
+- **Ekranlar:** Mening davomatim (D07), Xodimlar / Yordamchilar davomati (D08), kun yozuvi (D09), So'rovlar (D12/D13),
+  Ofis joylashuvi (D15, admin). Fayllar: `js/davomatApp.js`, `css/davomatApp.css`.
+- **APK 1.1:** kamera va joylashuv ruxsatlari faqat myhomework.uz uchun; birinchi ochilishda ruxsatlar ekrani (D00).
+- API: `/me/month`, `/me/day`, `/me/requests` (+ `/:id/cancel`), `/requests`, `/requests/:id/decide`, `/team`, `/team/:id/day`, `/settings/office`.
+- Testlar: `node --test scripts/davomat-faceid.test.cjs` (sof qoidalar).
+- Tasdiqlovchilar ro'yxati (kim ROP / akademik rahbar, qaysi tilda) `/me` uchun 60 soniya keshlanadi: HR lavozim yoki tilni
+  o'zgartirsa, ilovadagi "So'rov boradi" yozuvi ko'pi bilan 1 daqiqa eski ko'rinishi mumkin. Telegram xabari va so'rov
+  yo'nalishi saqlash paytida keshsiz hisoblanadi; HR xodimlar ro'yxatini saqlaganda va login roli yaratilganda/o'zgarganda
+  (`/api/auth/create-user`, `/sync-roles`) kesh tozalanadi (`clearApproverCache`). Bazada qo'lda o'zgartirilsa — 60 s ichida.
+- Javob so'rash va kelish/ketish bitta xodim qulfi ostida (`staff_att:<id>`) — bugungi "kech qolaman" kelish bilan poygaga kirmaydi.
+
 ## Qarorlar
 - Ofis: Mavr School, Andijon — 40.789035, 72.346787, radius 150 m (HR → Davomat → Sozlamalar).
 - Kechikishga imtiyoz 10 daq; ish boshlanib 2 soat o'tib belgilamasa — "kelmadi"; erta ketish imtiyozi 10 daq.

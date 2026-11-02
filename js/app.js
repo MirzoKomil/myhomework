@@ -12148,6 +12148,7 @@ function switchFinanceSection(section) {
     if (section === 'cashflow') { renderCashFlow(); inflowUI.refreshCash(); }
     if (section === 'tolovlar') inflowUI.render();
     if (section === 'maoshlar' || section === 'kpi') payrollUI.render(section);
+    if (section === 'jarimalar') window.jarimaAdmin?.render();
     if (window.financeUI?.handles(section)) financeUI.render(section);
     persistCurrentTab();
 }
@@ -23344,6 +23345,7 @@ function openAddEmployeeModal() {
             <label>Yashash manzili</label>
             <input type="text" id="empAddress" class="form-control" placeholder="Shahar, tuman, ko'cha">
         </div>
+        ${window.staffAttendanceUI?.addEmployeeField ? staffAttendanceUI.addEmployeeField() : ''}
         <hr style="margin:12px 0;border-color:var(--border)">
         <p style="font-weight:600;margin-bottom:8px;color:var(--text)">Kirish ma'lumotlari</p>
         <div class="form-group">
@@ -23395,6 +23397,7 @@ function openAddEmployeeModal() {
     bindTargetLangToggle('empRole');
     payrollUI.bindEmployee('empRole');
     teacherDutyUI.bindEmployee('empRole');
+    window.staffAttendanceUI?.bindAddEmployee?.('empRole'); // Davomat: 3×4 rasm, grafik, ofis
     document.getElementById('empRole').dispatchEvent(new Event('change'));
 
     document.getElementById('cancelAddEmployee').onclick = () => closeModal();
@@ -23428,6 +23431,8 @@ function openAddEmployeeModal() {
         if (trialGroupErrorAdd) { alert(trialGroupErrorAdd); return; }
         if (!login) { alert('Login kiritilishi shart'); return; }
         if (password.length < 4) { alert('Parol kamida 4 ta belgi bo\'lishi kerak'); return; }
+        const attError = window.staffAttendanceUI?.validateAddEmployee?.(role) || '';
+        if (attError) { alert(attError); return; }
 
         const employees = getHrEmployees() || [];
         if (employees.find(e => normalizeEmployeePhoneLogin(e.phone) === login || e.login === login)) {
@@ -23476,10 +23481,13 @@ function openAddEmployeeModal() {
 
         employees.push(newEmp);
         saveHrEmployees(employees);
+        // Davomat: grafik va 3×4 yuz namunasi (modal yopilishidan oldin — maydonlar shu yerda)
+        const attPromise = window.staffAttendanceUI?.afterCreateEmployee ? staffAttendanceUI.afterCreateEmployee(newEmp.id, role) : Promise.resolve('');
 
         closeModal();
         renderHrEmployees();
         showMiniToast(`${name} xodimi va kirish hisobi yaratildi`);
+        attPromise.then(msg => { if (msg) alert(msg); }).catch(() => {});
     };
 }
 
