@@ -186,6 +186,7 @@
             <a class="icb" href="#" data-u-push="bildirish" aria-label="Bildirishnomalar${unread() ? `, ${unread()} ta yangi` : ''}">${svg(P.bell)}${unread() ? `<span class="n">${unread() > 99 ? '99+' : unread()}</span>` : ''}</a>
           </header>
           <div class="bd">${U.offline()}
+            ${window.davomat ? davomat.homeCard() : ''}
             ${hero}
             <div class="kp a2">
               <div class="k"><span>Bugun</span><strong>${done}<span class="yd-ks"> / ${list.length} bo'ldi</span></strong><div class="prog" aria-hidden="true"><i class="g" style="width: ${list.length ? Math.round(done / list.length * 100) : 0}%"></i></div></div>
@@ -701,6 +702,7 @@
                 ${tile('data-u-push="sorov"', 'mu', P.msg, "Adminga so'rov", 'yangi yozish')}
                 ${tile('data-yd-rules', 'inf', P.rules, 'Aloqa qoidalari', 'nima hisoblanadi')}
                 ${tile('data-u-push="yoriq"', 'inf', P.help, "Yo'riqnomalar", newG ? `${newG} ta yangi` : 'qoidalar', newG ? 'color: #0057B8; font-weight: 700' : '')}
+                ${window.davomat?.menuInfo().tracked ? tile('data-dv-go="my"', 'inf', P.clock, 'Mening davomatim', 'kalendar · soʻrovlar') : ''}
                 ${tile('data-u-push="bildirish"', 'mu', P.bell, 'Xabarlar', unread() ? `${unread()} ta yangi` : 'bildirishnomalar', unread() ? 'color: #0057B8; font-weight: 700' : '')}
               </nav>
               <div class="card l a3">

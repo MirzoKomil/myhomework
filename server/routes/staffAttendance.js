@@ -21,6 +21,19 @@ module.exports = function staffAttendanceRouter({ pool, authRequired, analyzer =
     router.post('/me/challenge', handle(req => service.challenge(pool, req.user)));
     router.post('/me/face', handle(req => service.submitOwnFace(pool, analyzer, req.user, req.body)));
     router.post('/me/check', handle(req => service.check(pool, analyzer, req.user, req.body, meta(req))));
+    router.get('/me/month', handle(req => service.myMonth(pool, req.user, String(req.query.month || ''))));
+    router.get('/me/day', handle(req => service.teamRecord(pool, req.user, null, String(req.query.date || ''))));
+    // Javob so'rash (DavRequest) va o'z so'rovlari (DavMy → Soʻrovlarim)
+    router.get('/me/requests', handle(req => service.myRequests(pool, req.user)));
+    router.post('/me/requests', handle(req => service.createRequest(pool, req.user, req.body)));
+    router.post('/me/requests/:id/cancel', handle(req => service.cancelRequest(pool, req.user, req.params.id)));
+
+    // Tasdiqlovchi: ROP (sotuv), akademik rahbar (yordamchilar), direktor (ROP, HR, akademik) — DavApprovals / DavRop / DavAkad
+    router.get('/requests', handle(req => service.inbox(pool, req.user, req.query.tab === 'history' ? 'history' : 'pending')));
+    router.post('/requests/:id/decide', handle(req => service.decideRequest(pool, req.user, req.params.id, req.body)));
+    router.get('/team', handle(req => service.team(pool, req.user, String(req.query.date || ''))));
+    router.get('/team/:id/day', handle(req => service.teamRecord(pool, req.user, req.params.id, String(req.query.date || ''))));
+    router.put('/settings/office', handle(req => service.saveOffice(pool, req.user, req.body)));
 
     // HR / rahbar
     router.get('/settings', handle(async req => { const a = await service.actor(pool, req.user); if (!a.canView) throw Object.assign(new Error('Ruxsat yo‘q'), { status: 403 }); return { ...(await service.getSettings(pool)), yourIp: String(req.ip || '').replace(/^::ffff:/, '') }; }));

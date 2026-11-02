@@ -10,16 +10,17 @@ const RECIPIENT_ROLES = ['admin', 'boshliq', 'rop'];
 const MANAGERS = ['admin', 'boshliq']; // HR bo'limiga havola beruvchi xabarlar — ROP u yerga kira olmaydi
 const esc = v => String(v ?? '').replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c])).slice(0, 120);
 
-async function recipients(db) {
+async function recipients(db, userIds = null) {
     const ok = (await db.query("SELECT to_regclass('public.domwork_bot_links') AS a, to_regclass('public.domwork_bot_outbox') AS b")).rows[0];
     if (!ok?.a || !ok?.b) return [];
     return (await db.query(`SELECT l.telegram_id,u.id AS user_id,u.role FROM domwork_bot_links l JOIN users u ON u.id=l.account_id
-        WHERE l.account_kind='user' AND NOT l.paused AND u.role=ANY($1::text[])`, [RECIPIENT_ROLES])).rows;
+        WHERE l.account_kind='user' AND NOT l.paused AND (u.role=ANY($1::text[]) OR u.id::text=ANY($2::text[]))`, [RECIPIENT_ROLES, userIds || []])).rows;
 }
 
-async function send(db, key, text, settings, roles = RECIPIENT_ROLES) {
+// userIds berilsa — direktor (admin/boshliq) + aynan shu xodimning tasdiqlovchilari (o'z ROP'i yoki akademik rahbari).
+async function send(db, key, text, settings, roles = RECIPIENT_ROLES, userIds = null) {
     if (settings && settings.notifyTelegram === false) return 0;
-    const list = (await recipients(db)).filter(r => roles.includes(r.role));
+    const list = (await recipients(db, userIds)).filter(r => (userIds ? MANAGERS.includes(r.role) || userIds.includes(String(r.user_id)) : roles.includes(r.role)));
     if (!list.length) return 0;
     const store = require('../domworkBot/store');
     let sent = 0;
@@ -35,14 +36,18 @@ async function send(db, key, text, settings, roles = RECIPIENT_ROLES) {
     return sent;
 }
 
-async function late(db, { employeeId, name, date, status, settings }) {
+async function late(db, { employeeId, name, date, status, settings, userIds = null }) {
     // "Kelmadi" xabari allaqachon ketgan bo'lsa — buni tuzatish sifatida yozamiz.
     const prior = (await db.query("SELECT to_regclass('public.domwork_bot_outbox') AS t")).rows[0]?.t
         && (await db.query('SELECT 1 FROM domwork_bot_outbox WHERE unique_key LIKE $1 LIMIT 1', [`att:absent:${employeeId}:${date}:%`])).rows[0];
     const head = prior ? `✅ <b>${esc(name)}</b> keldi (avval “kelmadi” deb xabar berilgan edi)` : `⏰ <b>${esc(name)}</b> kechikdi`;
     return send(db, `att:late:${employeeId}:${date}`,
-        `${head}\nKeldi: ${status.inClock} (ish ${status.start} da boshlanadi)\nKechikish: <b>${status.lateMinutes} daqiqa</b>`, settings);
+        `${head}\nKeldi: ${status.inClock} (ish ${status.start} da boshlanadi)\nKechikish: <b>${status.lateMinutes} daqiqa</b>`, settings, RECIPIENT_ROLES, userIds);
 }
+
+// Ish boshlanib imtiyoz (10 daq) o'tdi, hali belgilanmagan — o'z rahbariga va direktorga, bir marta.
+const notYet = (db, { employeeId, name, date, status, settings, userIds }) => send(db, `att:notyet:${employeeId}:${date}`,
+    `⏳ <b>${esc(name)}</b> hali ishga kelganini belgilamadi\nIsh ${status.start} da boshlangan · ${settings?.graceMinutes ?? 10} daqiqadan oshdi`, settings, RECIPIENT_ROLES, userIds);
 
 const absent = (db, { employeeId, name, date, status, settings }) => send(db, `att:absent:${employeeId}:${date}`,
     `❌ <b>${esc(name)}</b> bugun ishga kelganini belgilamadi\nIsh boshlanishi: ${status.start}\nSana: ${date}`, settings);
@@ -59,4 +64,4 @@ const replay = (db, { employeeId, name, date, at, settings }) => send(db, `att:r
 const facePending = (db, { employeeId, name }) => send(db, `att:face:${employeeId}:${t.tashkentDate()}`,
     `🙂 <b>${esc(name)}</b> yuz namunasini yubordi. CRM → HR → Davomat bo‘limida tasdiqlang.`, null, MANAGERS);
 
-module.exports = { late, absent, earlyLeave, mismatch, replay, facePending, recipients, RECIPIENT_ROLES };
+module.exports = { late, notYet, absent, earlyLeave, mismatch, replay, facePending, recipients, RECIPIENT_ROLES };

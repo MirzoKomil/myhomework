@@ -277,6 +277,7 @@
           ${bell()}
         </header>
         <div class="sa-body sa-stagger">
+          ${window.davomat ? davomat.homeCard() : ''}
           <button type="button" class="ra-hero" data-ra-nav="team">
             <span class="ra-hero-r">
               <span class="ra-ring"><svg width="84" height="84" viewBox="0 0 84 84" role="img" aria-label="Jamoa rejasi ${pct ?? 0}% bajarildi"><circle cx="42" cy="42" r="36" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="9"/><circle class="sa-ring-v" cx="42" cy="42" r="36" fill="none" stroke="#3B8BEE" stroke-width="9" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${Math.round(C - C * Math.min(100, pct || 0) / 100)}" transform="rotate(-90 42 42)" style="--off:${Math.round(C - C * Math.min(100, pct || 0) / 100)};--c:${C}"/></svg><span><strong>${pct == null ? '—' : pct + '%'}</strong><em>reja</em></span></span>
@@ -1176,6 +1177,13 @@
     }
 
     // ---------- Menyu ----------
+    // Davomat (RopMenu): Xodimlar davomati · Davomat so'rovlari (soni bilan) · Mening davomatim — js/davomatApp.js
+    function davTiles() {
+        const mi = window.davomat?.menuInfo(); if (!mi) return '';
+        const t = (go, icon, tone, title, sub, badge) => `<button type="button" class="ra-mt" ${go}><span class="ra-mt-i sa-tone-${tone}">${ic(icon, 20, 2)}</span><span class="ra-mt-t"><strong>${title}</strong>${sub ? `<em>${sub}</em>` : ''}</span>${badge ? `<b class="ra-badge">${badge}</b>` : ''}</button>`;
+        return (mi.approver ? t('data-dv-go="team"', 'students', 'green', 'Xodimlar davomati', '') + t('data-dv-go="approvals"', 'clock', 'blue', 'Davomat soʻrovlari', '', mi.pending) : '')
+            + (mi.tracked ? t('data-dv-go="my"', 'check', 'gray', 'Mening davomatim', '') : '');
+    }
     function screenMenu() {
         const u = user(), d = ropHome();
         const apN = pendingAp().length, slaN = d?.open?.length || 0;
@@ -1184,7 +1192,7 @@
         <header class="sa-top ra-menu-top">${staffImg(u.linkedEmployeeId || u.id, u.name, 52, 'ra-av-dark')}<div class="sa-top-t"><h1>${esc(u.name || '')}</h1><span>Sotuv boʻlimi boshligʻi · ${esc(langsTxt())}</span></div><button type="button" class="sa-icon-btn" data-ra-crm="profile" aria-label="Sozlamalar">${ic('gear')}</button></header>
         <div class="sa-body sa-stagger">
           <h3 class="sa-h3">NAZORAT</h3>
-          <div class="ra-mgrid">${t('data-ra-go="approvals"', 'approve', 'blue', 'Tasdiqlar', '', apN)}${t('data-ra-go="sla"', 'clock', 'amber', 'SLA', '', slaN)}${t('data-ra-go="stale"', 'lock', 'red', 'Qotgan lidlar qoidasi', '')}${t('data-ra-go="archive"', 'archive', 'gray', 'Arxiv', '')}</div>
+          <div class="ra-mgrid">${t('data-ra-go="approvals"', 'approve', 'blue', 'Toʻlov tasdiqlari', '', apN)}${davTiles()}${t('data-ra-go="sla"', 'clock', 'amber', 'SLA', '', slaN)}${t('data-ra-go="stale"', 'lock', 'red', 'Qotgan lidlar qoidasi', '')}${t('data-ra-go="archive"', 'archive', 'gray', 'Arxiv', '')}</div>
           <h3 class="sa-h3">SOTUV</h3>
           <div class="ra-mgrid">${t('data-ra-go="funnel"', 'funnel', 'blue', 'Voronka', '')}${t('data-ra-crm="sales:rating"', 'trophy', 'amber', 'Reyting va bonus', '')}${t('data-ra-crm="sales:sales-plan"', 'target', 'gray', 'Sotuv rejasi', 'faqat koʻrish')}${t('data-ra-crm="sales:debtors"', 'debt', 'red', 'Qarzdorlar', '')}${t('data-ra-crm="sales:scripts"', 'script', 'purple', 'Skript va yoʻriqnoma', '')}${t('data-ra-go="sms"', 'smsl', 'green', 'SMS yuborish', '')}</div>
           <h3 class="sa-h3">OʻQUVCHILAR</h3>
