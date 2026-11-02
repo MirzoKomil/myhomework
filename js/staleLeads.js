@@ -39,12 +39,16 @@
 
     // ---------- qoida ----------
     let rules = { english: { ...DEFAULT }, russian: { ...DEFAULT } }, rulesAt = 0;
+    const setRules = r => { rules = { english: { ...DEFAULT, ...(r.english || {}) }, russian: { ...DEFAULT, ...(r.russian || {}) } }; rulesAt = Date.now(); };
+    // force=true (qoida sahifasi/oynasi): serverdan o'qib bo'lmasa xato tashlanadi — standart 3/5/30 ko'rsatilib,
+    // keyin haqiqiy qoida ustiga saqlanib ketmasin. Fon tekshiruvi (force=false) eski/standart qoida bilan davom etadi.
     async function loadRules(force) {
         if (!force && Date.now() - rulesAt < 10 * 60000) return rules;
         try {
             const r = g('apiFetch') ? await apiFetch('/api/leads/stale-rule', { fresh: true }) : null;
-            if (r?.rules) { rules = { english: { ...DEFAULT, ...r.rules.english }, russian: { ...DEFAULT, ...r.rules.russian } }; rulesAt = Date.now(); }
-        } catch (e) { /* standart qoida bilan davom etiladi */ }
+            if (r?.rules) setRules(r.rules);
+            else if (force) throw new Error('Qoida javobi boʻsh');
+        } catch (e) { if (force) throw e; }
         return rules;
     }
     const ruleFor = lg => rules[lg === 'english' ? 'english' : 'russian'] || DEFAULT;
@@ -96,7 +100,7 @@
 
     async function check(reason) {
         if (!isSales()) return;
-        await loadRules(reason === 'load');
+        try { await loadRules(reason === 'load'); } catch (e) { /* oldingi qoida bilan tekshiriladi */ }
         const { lock } = compute();
         if (!lock.length) { if (S.open && !S.done) finish(); return; }
         if (inGrace()) { showPill(); return; }
@@ -377,7 +381,13 @@
     }
     async function openRuleModal() {
         if (!g('openModal')) return;
-        await loadRules(true);
+        try { await loadRules(true); } catch (e) {
+            openModal('Qotib qolgan lidlar qoidasi', `<p class="sl-rule-err" role="alert">Qoidani serverdan yuklab boʻlmadi: ${esc(e.message || 'aloqa yoʻq')}. Saqlash oʻchirildi — notoʻgʻri qiymat yozilib ketmasin.</p>`,
+                `<button type="button" class="btn-outline-sm" id="slRuleCancel">Yopish</button><button type="button" class="btn-primary-sm" id="slRuleRetry">Qayta urinish</button>`);
+            document.getElementById('slRuleCancel')?.addEventListener('click', () => closeModal());
+            document.getElementById('slRuleRetry')?.addEventListener('click', () => openRuleModal());
+            return;
+        }
         const langs = [['russian', 'Rus tili'], ['english', 'Ingliz tili']];
         const all = g('getItem') ? getItem(STORAGE_KEYS.leads, { english: [], russian: [] }) : {};
         const mgrs = g('getSalesManagers') ? getSalesManagers() : [];
@@ -406,7 +416,7 @@
             document.querySelectorAll('[data-sl-rule]').forEach(i => { const [lg, k] = i.dataset.slRule.split(':'); (patch[lg] = patch[lg] || {})[k] = Number(i.value); });
             try {
                 const r = await apiFetch('/api/leads/stale-rule', { method: 'PUT', body: JSON.stringify({ rules: patch }) });
-                if (r?.rules) { rules = r.rules; rulesAt = Date.now(); }
+                if (r?.rules) setRules(r.rules); // serverning tozalangan (cleanRule) qiymatlari
                 closeModal();
                 if (g('showMiniToast')) showMiniToast('Qoida saqlandi');
             } catch (e) { if (g('showSaveError')) showSaveError(e.message || 'Saqlab boʻlmadi'); }
@@ -444,5 +454,5 @@
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => tryBoot());
     else tryBoot();
 
-    window.staleLeads = { compute, check, logCall, hasRecentCall, homeCardHtml, openRuleModal, rule: () => ruleFor(lang()), _state: S };
+    window.staleLeads = { compute, check, logCall, hasRecentCall, homeCardHtml, openRuleModal, loadRules, rules: () => rules, rule: () => ruleFor(lang()), _state: S };
 })();
