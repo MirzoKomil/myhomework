@@ -297,9 +297,21 @@ app.get(['/miniapp', '/miniapp/'], (req, res) => {
         "font-src 'self' data: https://fonts.gstatic.com", "img-src 'self' data: blob:", "media-src 'self' blob: https:", "connect-src 'self'",
         "frame-src https://www.youtube-nocookie.com https://www.youtube.com",
         "frame-ancestors 'self' https://web.telegram.org https://*.telegram.org", "base-uri 'none'", "form-action 'none'", "object-src 'none'"].join('; '));
-    res.setHeader('Cache-Control', 'no-cache');
-    res.sendFile(path.join(ROOT, 'miniapp', 'index.html'));
+    // Telegram WebView JS/CSS ni qattiq keshlaydi — har deployda fayllar mazmunidan versiya (?v=) qo'yiladi.
+    res.setHeader('Cache-Control', 'no-store');
+    res.type('html').send(miniappHtml());
 });
+const fs = require('fs');
+let miniappCache = null;
+function miniappHtml() {
+    const dir = path.join(ROOT, 'miniapp'), files = ['app.css', 'lesson.js', 'app.js'];
+    const stamp = files.map(f => { try { return fs.statSync(path.join(dir, f)).mtimeMs + ':' + fs.statSync(path.join(dir, f)).size; } catch { return f; } }).join('|');
+    if (miniappCache?.stamp === stamp) return miniappCache.html;
+    const v = require('crypto').createHash('sha1').update(files.map(f => { try { return fs.readFileSync(path.join(dir, f)); } catch { return ''; } }).join('')).digest('hex').slice(0, 10);
+    const html = fs.readFileSync(path.join(dir, 'index.html'), 'utf8').replace(/(href|src)="(app\.css|lesson\.js|app\.js)"/g, `$1="$2?v=${v}"`);
+    miniappCache = { stamp, html };
+    return html;
+}
 
 // Kitobdagi audio dialog QR-kodlari: /audio/L05-1 → /audio/L05_d1.mp3
 app.get(/^\/audio\/L\d{1,2}-[1-3]\/?$/i, require('./routes/bookAudio').bookAudioHandler(ROOT));
