@@ -33,6 +33,7 @@ import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
 import { BONUS_CATEGORIES, getResolvedLessonContent } from '@/data/lessonContent';
 import {
+  liveGradeScore,
   fetchDemoGrades,
   fetchDemoSchedule,
   fetchDemoStudentPayments,
@@ -66,7 +67,7 @@ function weekLabel(mon: Date) {
     ? `${mon.getDate()}–${sun.getDate()} ${MONTHS_LOWER[sun.getMonth()]}`
     : `${mon.getDate()} ${MONTHS_LOWER[mon.getMonth()]} – ${sun.getDate()} ${MONTHS_LOWER[sun.getMonth()]}`;
 }
-const gradeOf = (g: LiveGradeEntry) => (g.scores.attendance + g.scores.activity + g.scores.speaking + g.scores.understanding + g.scores.discipline) / 5;
+const gradeOf = (g: LiveGradeEntry) => liveGradeScore(g);
 
 type VideoState = { watched: boolean; hwDone: boolean };
 
@@ -285,10 +286,10 @@ export function DSchedule() {
                       const g = gradeByDate.get(key);
                       if (cd.isPast && g) {
                         badge =
-                          key === latestGrade ? (
-                            <View accessibilityLabel={`bajarildi, baho ${fmtGrade(gradeOf(g))}`} style={[s.badge, s.gradePill]}>
+                          key === latestGrade && gradeOf(g) !== null ? (
+                            <View accessibilityLabel={`bajarildi, baho ${fmtGrade(gradeOf(g) ?? 0)}`} style={[s.badge, s.gradePill]}>
                               <T size={12} color="#075E3A">
-                                {fmtGrade(gradeOf(g))}
+                                {fmtGrade(gradeOf(g) ?? 0)}
                               </T>
                             </View>
                           ) : (

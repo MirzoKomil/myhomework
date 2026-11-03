@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { fonts } from '@/constants/v2/tokens';
 import { CERTIFICATES } from '@/data/certificates';
 import type { V2LevelProgress } from '@/constants/v2/levels';
-import type { DemoScheduleResponse, LiveGradeEntry } from '@/services/contentApi';
+import { liveGradeScore, type DemoScheduleResponse, type LiveGradeEntry } from '@/services/contentApi';
 import type { ExamResult } from '@/services/examStore';
 
 import { BackIcon, BackIcon2 } from './icons';
@@ -170,12 +170,10 @@ export function addMinutes(time: string, minutes: number) {
 
 /** O'quvchining jonli dars baholari o'rtachasi (eski profile/grades.tsx hisobi). */
 export function gradeAverage(grades: LiveGradeEntry[]) {
-  if (!grades.length) return 0;
-  const per = (g: LiveGradeEntry) => {
-    const s = g.scores;
-    return (s.attendance + s.activity + s.speaking + s.understanding + s.discipline) / 5;
-  };
-  return grades.reduce((sum, g) => sum + per(g), 0) / grades.length;
+  // Faqat baho qo'yilgan yozuvlar (bahosiz davomat yozuvlarida scores yo'q).
+  const vals = grades.map(liveGradeScore).filter((n): n is number => n !== null);
+  if (!vals.length) return 0;
+  return vals.reduce((sum, n) => sum + n, 0) / vals.length;
 }
 
 export const fmtGrade = (n: number) => (n > 0 ? n.toFixed(1) : '0');
