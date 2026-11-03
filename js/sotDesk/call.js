@@ -41,6 +41,7 @@
         later: 'M12 3a9 9 0 110 18 9 9 0 010-18zM12 7v5l3 2', trial: 'M8.5 12l2.5 2.5 4.5-5M6 4h12a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2z',
         pay: 'M2 6h20v13H2zM2 10h20', fail: 'M6 6l12 12M18 6L6 18'
     };
+    P.callback = P.later;
 
     // ---------- ma'lumot ----------
     const LEADS = () => {
@@ -170,13 +171,13 @@
         return { before, list: [
             ['talked', 'Gaplashdik', before ? 'anketa ochiladi' : '', 'blue'],
             ['noanswer', 'Javob bermadi', 'urinishlar: ' + attempts(l).length, 'red'],
-            ['later', 'Keyin oladi', 'sana soʻraladi', 'amber'],
+            before ? ['callback', 'Keyinroq gaplashamiz', 'vaqt soʻraladi', 'amber'] : ['later', 'Keyin oladi', 'sana soʻraladi', 'amber'],
             ['trial', 'Sinovga yozildi', locked ? 'anketadan keyin' : 'vaqt tanlanadi', 'green', locked],
             ['pay', 'Toʻlov qiladi', locked ? 'anketadan keyin' : 'toʻlov qadamlari', 'blue', locked],
             ['fail', 'Qiziqmaydi', 'sabab soʻraladi', 'gray']
         ] };
     };
-    const BTN = before => ({ talked: before ? 'Saqlash va anketaga oʻtish' : 'Saqlash', noanswer: 'Saqlash', later: 'Saqlash va sanani tanlash', trial: 'Saqlash va vaqt tanlash', pay: 'Saqlash va toʻlovga oʻtish', fail: 'Saqlash va sabab' });
+    const BTN = before => ({ talked: before ? 'Saqlash va anketaga oʻtish' : 'Saqlash', noanswer: 'Saqlash', callback: 'Saqlash va vaqt tanlash', later: 'Saqlash va sanani tanlash', trial: 'Saqlash va vaqt tanlash', pay: 'Saqlash va toʻlovga oʻtish', fail: 'Saqlash va sabab' });
     const CHIPS = ['Narxni soʻradi', 'Oila bilan maslahatlashadi', 'Kechqurun qulay', 'Ish uchun', 'Farzandi uchun'];
     const localIso = t => { const d = new Date(t); const p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; };
     function quickTimes() {
@@ -327,7 +328,8 @@
             });
         }
         closeResult(!!moveTo);
-        if (moveTo) { if (g('requestLeadStageChange')) requestLeadStageChange(lang(), id, moveTo); invalidate(); setTimeout(() => RD().refreshBadges?.(), 0); return; }
+        if (k === 'callback') { if (window.staleLeads?.openCallback) window.staleLeads.openCallback(id, lang()); refresh(); return; }
+        if (moveTo) { if (g('requestLeadStageChange')) requestLeadStageChange(lang(), id, moveTo, k === 'talked' ? { talked: true } : {}); invalidate(); setTimeout(() => RD().refreshBadges?.(), 0); return; }
         refresh();
         if (toastT && g('showMiniToast')) showMiniToast(toastT + (fuAt ? ` · keyingi qoʻngʻiroq: ${g('formatLeadFollowUpWhen') ? formatLeadFollowUpWhen(fuAt.getTime()) : fuV}` : (k === 'noanswer' ? ' · eslatma qoʻyilmadi' : '')), 5000);
     }

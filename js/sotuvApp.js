@@ -656,7 +656,7 @@
           <div class="sa-opts" role="radiogroup" aria-label="Natija" data-sa-lead-id="${esc(id)}">
             ${opt('talked', 'sms', 'blue', 'Gaplashdik', before ? 'anketa ochiladi' : '')}
             ${opt('noanswer', 'nope', 'red', 'Javob bermadi', '')}
-            ${opt('later', 'clock', 'amber', 'Keyin oladi', 'sana soʻraladi')}
+            ${before ? opt('callback', 'clock', 'amber', 'Keyinroq gaplashamiz', 'vaqt soʻraladi') : opt('later', 'clock', 'amber', 'Keyin oladi', 'sana soʻraladi')}
             ${opt('trial', 'trial', 'green', 'Sinovga yozildi', locked ? 'anketadan keyin' : 'vaqt tanlanadi', locked)}
             ${opt('pay', 'debt', 'blue', 'Toʻlov qiladi', locked ? 'anketadan keyin' : 'toʻlov qadamlari', locked)}
             ${opt('fail', 'x', 'gray', 'Qiziqmaydi', 'sabab soʻraladi')}
@@ -681,12 +681,12 @@
             return { ...b, comments: [...(b.comments || []), c] };
         });
     }
-    function move(id, to) {
+    function move(id, to, opts) {
         if (!g('requestLeadStageChange')) return;
         if (window.davomat?.guardLead()) return; // ish kuni tugagan, ketish belgilanmagan — yangi lid harakati yopiq (DavLeave)
         closeSheet(true);
         toastEl?.remove();
-        requestLeadStageChange(lang(), id, to);
+        requestLeadStageChange(lang(), id, to, opts || {});
     }
     function outcome(id, k) {
         const l = leadById(id);
@@ -699,7 +699,7 @@
         if (k === 'talked') {
             const before = PATH.indexOf(s) >= 0 && PATH.indexOf(s) < PATH.indexOf('boglanildi');
             closeSheet();
-            if (before) move(id, 'boglanildi');
+            if (before) move(id, 'boglanildi', { talked: true });
             else { if (!note) addComment(id, 'Qoʻngʻiroq: gaplashildi'); toast('Tarixga yozildi', 'ok'); }
             render();
             return;
@@ -710,6 +710,13 @@
             addComment(id, `Qo'ng'iroq qilindi, lekin: ${r?.label || 'Javob bermadi'}`, 'contact-fail', { reason: r?.label || 'Javob bermadi', reasonId: 'no-answer' });
             closeSheet();
             toast('“Javob bermadi” yozildi. Eslatma qoʻyasizmi?', 'ok', { label: 'Eslatma', fn: () => followUpFor(id) });
+            render();
+            return;
+        }
+        if (k === 'callback') {
+            // Telefonni oldi, lekin hozir gaplasha olmaydi — anketa emas, faqat qayta qo'ng'iroq vaqti (staleLeads).
+            closeSheet(true);
+            if (window.staleLeads?.openCallback) window.staleLeads.openCallback(id, lang());
             render();
             return;
         }
@@ -964,7 +971,7 @@
         if ('saSurvey' in d) {
             const l = leadById(d.saSurvey); if (!l) return;
             const s = st(l);
-            if (PATH.indexOf(s) >= 0 && PATH.indexOf(s) < PATH.indexOf('boglanildi')) move(l.id, 'boglanildi');
+            if (PATH.indexOf(s) >= 0 && PATH.indexOf(s) < PATH.indexOf('boglanildi')) move(l.id, 'boglanildi', { talked: true });
             else if (g('openConnectedSurveyModal')) openConnectedSurveyModal(lang(), l.id, s, {});
             return;
         }
@@ -975,7 +982,7 @@
             sheetEl?.querySelectorAll('[data-sa-pick]').forEach(b => { const on = b === t; b.classList.toggle('is-on', on); b.setAttribute('aria-checked', on ? 'true' : 'false'); });
             const sv = sheetEl?.querySelector('[data-sa-crsave]');
             if (sv) {
-                const L = { talked: openCallResult._before ? 'Saqlash va anketaga oʻtish' : 'Saqlash', noanswer: 'Saqlash', later: 'Saqlash va sanani tanlash', trial: 'Saqlash va vaqt tanlash', pay: 'Saqlash va toʻlovga oʻtish', fail: 'Saqlash va sabab' };
+                const L = { talked: openCallResult._before ? 'Saqlash va anketaga oʻtish' : 'Saqlash', noanswer: 'Saqlash', callback: 'Saqlash va vaqt tanlash', later: 'Saqlash va sanani tanlash', trial: 'Saqlash va vaqt tanlash', pay: 'Saqlash va toʻlovga oʻtish', fail: 'Saqlash va sabab' };
                 sv.disabled = false; sv.dataset.k = d.saPick; sv.textContent = L[d.saPick] || 'Saqlash';
             }
             return;

@@ -171,7 +171,11 @@
     const neverConnected = l => !(Array.isArray(l.stageHistory) && l.stageHistory.some(h => h && AFTER.has(h.to))) && !(l.connectedSurvey && Object.keys(l.connectedSurvey).length);
     const ageDays = l => { const t = assignedAt(l); return t ? Math.floor((Date.now() - t) / DAY) : 0; };
     function staleOf(l) {
-        if (!l.managerId || st(l) !== 'boglanishga-urinilmoqda' || !neverConnected(l)) return null;
+        if (!l.managerId) return null;
+        // Telefonni olib, keyinroq gaplashishni so'ragan lid (staleLeads.js): kelishilgan vaqtdan 2 soat o'tsa — qulf.
+        const cbs = window.staleLeads?.callbacks ? window.staleLeads.callbacks(l) : [];
+        if (cbs.length && (st(l) === 'yangi-lidlar' || st(l) === 'boglanishga-urinilmoqda')) return Date.now() - cbs[cbs.length - 1].at >= 2 * 3600000 ? { d: ageDays(l), lock: true, r: ruleFor(l._lang) } : null;
+        if (st(l) !== 'boglanishga-urinilmoqda' || !neverConnected(l)) return null;
         const r = ruleFor(l._lang), d = ageDays(l);
         if (d >= r.lockDays) return { d, lock: true, r };
         if (d >= r.warnDays) return { d, lock: false, r };

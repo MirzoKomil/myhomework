@@ -241,6 +241,9 @@ router.patch('/:id', authRequired, leadMutationRequired, leadOwnershipRequired, 
         } else if (req.user.role === 'sales_manager' && lead.status === 'sifatsiz-lidlar') {
             staleLeads.assertCallBeforeSifatsiz(await getLeadById(req.params.id), lead, req.user.role);
         }
+        if (req.user.role === 'sales_manager' && Array.isArray(lead.comments) && lead.comments.some(c => c && c.type === 'follow-up-reminder' && c.callback)) {
+            staleLeads.assertCallbackRules(await getLeadById(req.params.id), lead, req.user.role);
+        }
         const { lead: saved, platformAccess } = await upsertLead({ ...lead, id: req.params.id }, language, req.user);
         res.json({ ok: true, lead: saved, platformAccess });
         // Har bir saqlashda yuboriladi (faqat status o'zgarganda emas) —
