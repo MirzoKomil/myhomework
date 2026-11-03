@@ -3,10 +3,15 @@
 // Kun — menejerga berilgan sanadan (managerAssignedAt). warnDays — ogohlantirish, lockDays — ilova ochilganda qulf oynasi.
 // "Sifatsiz"ga o'tkazishdan oldin oxirgi 24 soatda qo'ng'iroq qilingan bo'lishi shart (server ham tekshiradi: CALL_FIRST).
 // Kuniga bir marta 5 daqiqalik "zarur ish" imtiyozi. Qoida (kunlar) ROP sozlamasida: /api/leads/stale-rule.
+// "Oldi" (telefonni oldi) → "Suhbat qanday bo'ldi?": Gaplashdik → anketa; Keyinroq gaplashishni so'radi → faqat qayta
+// qo'ng'iroq vaqti ("follow-up-reminder" + callback: true, 3 kungacha, ko'pi bilan 2 marta); Qiziqmaydi → Sifatsiz (sabab bilan).
+// Kelishilgan vaqtdan 2 soat o'tib ham lid bog'lanishdan oldingi bosqichda tursa — yana shu qulf ro'yxatiga qaytadi.
 (function () {
     'use strict';
     const g = n => typeof window[n] === 'function';
     const DAY = 86400000, CALL_WINDOW = DAY, GRACE_MS = 5 * 60000;
+    // "Keyinroq gaplashamiz": ko'pi bilan CB_MAX marta, CB_MAX_DAYS kun ichidagi vaqtga; vaqt o'tib CB_GRACE ichida hal qilinmasa — qulf.
+    const CB_MAX = 2, CB_MAX_DAYS = 3, CB_GRACE = 2 * 3600000;
     const DEFAULT = { warnDays: 3, lockDays: 5, callsPerDay: 30 };
     const CLOSED = new Set(['tolov-yopildi', 'muvaffaqiyatsiz-sotuv', 'sifatsiz-lidlar']);
     const PRE = new Set(['yangi-lidlar', 'boglanishga-urinilmoqda']);
@@ -39,6 +44,7 @@
         lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/>',
         bell: '<path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0"/>',
         check: '<path d="M5 12l5 5L20 7"/>', nope: '<circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/>',
+        chat: '<path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>',
         clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', bolt: '<path d="M13 2L3 14h9l-1 8 10-12h-9z"/>'
     };
 
@@ -73,6 +79,10 @@
         return out;
     }
     const hasRecentCall = (l, now = Date.now()) => callsOf(l).some(c => now - c.t <= CALL_WINDOW && c.t <= now + 60000);
+    // "Keyinroq gaplashishni so'radi" yozuvlari (vaqt bo'yicha): { t — yozilgan, at — kelishilgan vaqt }.
+    const callbacksOf = l => (Array.isArray(l?.comments) ? l.comments : []).filter(c => c && c.type === 'follow-up-reminder' && c.callback && ts(c.reminderAt))
+        .map(c => ({ t: ts(c.createdAt), at: ts(c.reminderAt) })).sort((a, b) => a.t - b.t);
+    const lastCallback = l => { const a = callbacksOf(l); return a.length ? a[a.length - 1] : null; };
     const neverConnected = l => !(Array.isArray(l.stageHistory) && l.stageHistory.some(h => h && AFTER.has(h.to)))
         && !(l.connectedSurvey && Object.keys(l.connectedSurvey).length);
     const ageDays = (l, now = Date.now()) => { const t = ts(l.managerAssignedAt) || ts(l.createdAt); return t ? Math.floor((now - t) / DAY) : 0; };
@@ -84,7 +94,13 @@
     function compute(now = Date.now()) {
         const r = ruleFor(lang()), warn = [], lock = [];
         for (const l of myLeads()) {
-            if (st(l) !== 'boglanishga-urinilmoqda' || !neverConnected(l)) continue;
+            const s = st(l);
+            if (!PRE.has(s)) continue;
+            // Telefonni olgan, keyinroq gaplashishni so'ragan: "olmadi" kunlari endi sanalmaydi. Kelishilgan vaqtdan
+            // CB_GRACE o'tib ham natija yozilmagan bo'lsa (lid hali bog'lanishdan oldingi bosqichda) — qulf.
+            const cb = lastCallback(l);
+            if (cb) { if (now - cb.at >= CB_GRACE) lock.push(l); continue; }
+            if (s !== 'boglanishga-urinilmoqda' || !neverConnected(l)) continue;
             const d = ageDays(l, now);
             if (d >= r.lockDays) lock.push(l); else if (d >= r.warnDays) warn.push(l);
         }
@@ -174,13 +190,16 @@
         if (!S.el || S.done) return;
         const { lock } = compute();
         if (!lock.length) { finish(); return; }
-        const sig = lock.map(l => `${l.id}:${callsOf(l).length}:${hasRecentCall(l) ? 1 : 0}`).join('|') + '|' + graceUsed();
+        const sig = lock.map(l => `${l.id}:${callsOf(l).length}:${callbacksOf(l).length}:${hasRecentCall(l) ? 1 : 0}`).join('|') + '|' + graceUsed()
+            + '|' + S.initial.map(id => { const x = g('getLeadById') ? getLeadById(lang(), id) : null; return x ? `${st(x)}:${callbacksOf(x).length}` : ''; }).join(',');
         if (sig === S.sig) return;
         S.sig = sig;
         S.initial = [...new Set([...S.initial, ...lock.map(l => l.id)])];
         const total = S.initial.length, solved = total - lock.length, pct = total ? Math.round(solved / total * 100) : 0;
         const r = ruleFor(lang());
         const rows = lock.map(l => {
+            const cb = lastCallback(l);
+            if (cb) return cbRow(l, cb);
             const called = hasRecentCall(l), calls = attemptsOf(l), last = callsOf(l).pop(), [bg, fg] = avc(l.id), ph = telOf(l.phone);
             const meta = called
                 ? `<span class="sl-ok">${when(last.t)} qoʻngʻiroq qilindi — javob yoʻq</span>`
@@ -198,8 +217,9 @@
         const solvedRows = S.initial.filter(id => !lock.some(l => l.id === id)).map(id => {
             const l = g('getLeadById') ? getLeadById(lang(), id) : null;
             if (!l) return '';
-            const s = st(l), ok = AFTER.has(s);
-            return `<li class="sl-row sl-row--done"><span class="sl-av" style="background:${ok ? '#D1FADF' : '#F1F5F9'};color:${ok ? '#067647' : '#3A4456'}" aria-hidden="true">${esc(initials(l.name))}</span><div class="sl-row-t"><strong>${esc(l.name || '')}</strong><span class="${ok ? 'sl-ok' : ''}">${ok ? 'Telefonni oldi — keyingi bosqichga oʻtdi' : s === 'sifatsiz-lidlar' ? 'Sifatsizga oʻtkazildi' : 'Hal qilindi'}</span></div><span class="sl-tick">${ic(I.check, 20, 3)}</span></li>`;
+            const s = st(l), cb = PRE.has(s) ? lastCallback(l) : null, ok = AFTER.has(s) || !!cb;
+            const txt = AFTER.has(s) ? 'Telefonni oldi — keyingi bosqichga oʻtdi' : cb ? `Keyinroq gaplashadi — ${when(cb.at)}` : s === 'sifatsiz-lidlar' ? 'Sifatsizga oʻtkazildi' : 'Hal qilindi';
+            return `<li class="sl-row sl-row--done"><span class="sl-av" style="background:${ok ? '#D1FADF' : '#F1F5F9'};color:${ok ? '#067647' : '#3A4456'}" aria-hidden="true">${esc(initials(l.name))}</span><div class="sl-row-t"><strong>${esc(l.name || '')}</strong><span class="${ok ? 'sl-ok' : ''}">${esc(txt)}</span></div><span class="sl-tick">${ic(I.check, 20, 3)}</span></li>`;
         }).join('');
         const gate = S.el.querySelector('.sl-gate');
         const keepScroll = gate.querySelector('.sl-list')?.scrollTop || 0;
@@ -208,13 +228,31 @@
           <span class="sl-handle" aria-hidden="true"></span>
           <div class="sl-head"><span class="sl-bell">${ic(I.bell, 26)}</span>
             <div><h2 id="slT">Avval shu ${lock.length} ta lidni hal qilaylik</h2>
-            <p>Ular ${r.lockDays} kundan beri “Urinilmoqda”da turibdi va hali bir marta ham telefonni olmadi. Yana bir bor qoʻngʻiroq qiling — olmasa, “Sifatsiz”ga oʻtkazing.</p></div></div>
+            <p>${headText(lock, r)}</p></div></div>
           <div class="sl-prog"><div class="sl-bar" aria-hidden="true"><i style="width:${pct}%"></i></div><span>${solved} / ${total} hal qilindi</span></div>
           <ol class="sl-list">${rows}${solvedRows}</ol>
           <div class="sl-foot"><span>${ic(I.lock, 12, 2.6)} Shu lidlar hal boʻlguncha boshqa boʻlimlar vaqtincha yopiq</span>
             ${graceUsed() ? '<span class="sl-muted">Bugungi 5 daqiqalik imtiyoz ishlatilgan</span>' : '<button type="button" class="sl-link" data-sl-grace>Juda zarur ishim bor (5 daqiqa)</button>'}</div>`;
         const list = gate.querySelector('.sl-list'); if (list) list.scrollTop = keepScroll;
         if (!S.sheet) { const f = focusKey && gate.querySelector(focusKey); (f || gate).focus({ preventScroll: true }); }
+    }
+
+    function headText(lock, r) {
+        const nCb = lock.filter(l => lastCallback(l)).length, nOld = lock.length - nCb;
+        const a = nOld ? `${nCb ? `${nOld} tasi` : 'Ular'} ${r.lockDays} kundan beri “Urinilmoqda”da turibdi va hali bir marta ham telefonni olmadi. Yana bir bor qoʻngʻiroq qiling — olmasa, “Sifatsiz”ga oʻtkazing.` : '';
+        const b = nCb ? `${nOld ? `${nCb} tasi bilan` : 'Bu mijozlar bilan'} qayta gaplashish vaqtini kelishgansiz, vaqt oʻtdi. Qoʻngʻiroq qilib, natijasini yozing.` : '';
+        return [a, b].filter(Boolean).join(' ');
+    }
+    // Kelishilgan vaqti o'tgan lid qatori: qo'ng'iroq + "Natija" (Suhbat qanday bo'ldi? oynasi).
+    function cbRow(l, cb) {
+        const called = hasRecentCall(l) && callsOf(l).pop().t > cb.t, [bg, fg] = avc(l.id), ph = telOf(l.phone), n = callbacksOf(l).length;
+        return `<li class="sl-row">
+              <div class="sl-row-h"><span class="sl-av" style="background:${bg};color:${fg}" aria-hidden="true">${esc(initials(l.name))}</span>
+                <div class="sl-row-t"><strong>${esc(l.name || 'Nomaʼlum')}</strong><span class="sl-bad">${esc(when(cb.at))} ga kelishgan edingiz · natija yozilmadi</span><span>${called ? `<span class="sl-ok">${esc(when(callsOf(l).pop().t))} qoʻngʻiroq qilindi</span>` : `Keyinga surilgan: ${n} / ${CB_MAX}`}</span></div></div>
+              <div class="sl-acts${called ? ' is-called' : ''}">
+                ${ph ? `<a class="sl-b ${called ? 'sl-b--out' : 'sl-b--pri sl-ring'}" href="tel:${esc(ph)}" data-sl-call="${esc(l.id)}">${ic(I.phone, called ? 16 : 18)}${called ? 'Yana' : 'Qoʻngʻiroq'}</a>` : `<span class="sl-b sl-b--off">Telefon raqami yoʻq</span>`}
+                <button type="button" class="sl-b ${called ? 'sl-b--pri' : 'sl-b--ghost'}" data-sl-got="${esc(l.id)}">Natija</button>
+              </div></li>`;
     }
 
     // ---------- ichki oynalar ----------
@@ -269,6 +307,103 @@
           <p class="sl-note">5 daqiqadan keyin oyna yana ochiladi</p>`, 'sl-sheet--pop');
     }
 
+    // ---------- "Oldi": Suhbat qanday bo'ldi? ----------
+    const leadIn = (lg, id) => (g('getLeadById') ? getLeadById(lg, id) : null);
+    function openPickedUp(id, lg = lang()) {
+        const l = leadIn(lg, id);
+        if (!l) return;
+        const left = Math.max(0, CB_MAX - callbacksOf(l).length);
+        S.pu = { id: String(l.id), lg };
+        openSheet(`<div class="sl-sh-h"><span class="sl-ib sl-ib--green">${ic(I.chat, 22)}</span><div><h2 id="slPuT">Suhbat qanday boʻldi?</h2><span>${esc(l.name || 'Lid')}</span></div></div>
+          <fieldset class="sl-fs" aria-labelledby="slPuT">
+            <label class="sl-radio"><input type="radio" name="slPu" value="talked" checked><span><strong>Gaplashdik</strong><em>Anketa ochiladi — hudud, maqsad, kurs haqida</em></span></label>
+            <label class="sl-radio${left ? '' : ' is-off'}"><input type="radio" name="slPu" value="later"${left ? '' : ' disabled'}><span><strong>Keyinroq gaplashishni soʻradi</strong><em>${left ? `Faqat qayta qoʻngʻiroq vaqti soʻraladi · yana ${left} marta mumkin` : `${CB_MAX} marta keyinga surilgan — endi “Gaplashdik” yoki “Qiziqmaydi”`}</em></span></label>
+            <label class="sl-radio"><input type="radio" name="slPu" value="junk"><span><strong>Qiziqmaydi yoki notoʻgʻri odam</strong><em>Sabab bilan “Sifatsiz”ga oʻtadi</em></span></label>
+          </fieldset>
+          <button type="button" class="sl-b sl-b--pri sl-b--xl" data-sl-puok>Davom etish</button>
+          <p class="sl-note">Mijoz telefonni oldi — “olmadi” kunlari endi sanalmaydi</p>`);
+        S.sheet?.querySelector('section')?.setAttribute('aria-labelledby', 'slPuT');
+    }
+    function puNext() {
+        const pu = S.pu; if (!pu) return;
+        const v = S.sheet?.querySelector('input[name="slPu"]:checked')?.value;
+        if (v === 'later') { openCallback(pu.id, pu.lg); return; }
+        closeSheet(); S.pu = null;
+        if (v === 'junk') { if (g('openSifatsizLidFlow')) openSifatsizLidFlow(pu.lg, pu.id); }
+        else if (g('requestLeadStageChange')) requestLeadStageChange(pu.lg, pu.id, 'boglanildi', { talked: true });
+        setTimeout(() => { S.sig = ''; render(); }, 600);
+    }
+
+    const localIso = t => { const d = new Date(t), p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; };
+    function cbQuick(now = Date.now()) {
+        const n = new Date(now), at = (dd, h) => new Date(n.getFullYear(), n.getMonth(), n.getDate() + dd, h, 0).getTime();
+        const out = [['1 soatdan keyin', now + 3600000]];
+        if (at(0, 18) > now + 30 * 60000) out.push(['Bugun 18:00', at(0, 18)]);
+        out.push(['Ertaga 10:00', at(1, 10)], ['Ertaga 18:00', at(1, 18)]);
+        return out;
+    }
+    // Qayta qo'ng'iroq vaqti (anketa so'ralmaydi). Qo'ng'iroq natijasi oynalaridan ("Keyinroq gaplashamiz") ham chaqiriladi.
+    function openCallback(id, lg = lang()) {
+        const l = leadIn(lg, id);
+        if (!l) return;
+        const n = callbacksOf(l).length;
+        if (n >= CB_MAX) {
+            openSheet(`<div class="sl-center"><span class="sl-lockbox sl-lockbox--amber">${ic(I.clock, 32, 2.2)}</span>
+                <h2>${CB_MAX} marta keyinga surilgan</h2>
+                <p>${esc(l.name || 'Bu mijoz')} bilan suhbat ${CB_MAX} marta keyinga qoldirildi. Endi natijani yozing: gaplashgan boʻlsangiz — anketa, qiziqmasa — “Sifatsiz”.</p></div>
+              <button type="button" class="sl-b sl-b--pri sl-b--xl" data-sl-sclose>Tushunarli</button>`, 'sl-sheet--pop');
+            return;
+        }
+        S.cb = { id: String(l.id), lg };
+        const now = Date.now();
+        openSheet(`<div class="sl-sh-h"><span class="sl-ib sl-ib--amber">${ic(I.clock, 22)}</span><div><h2 id="slCbT">Qachon qayta qoʻngʻiroq qilasiz?</h2><span>${esc(l.name || 'Lid')} · ${n + 1} / ${CB_MAX}-marta keyinga surish</span></div></div>
+          <div class="sl-chips" role="group" aria-label="Tez vaqtlar">${cbQuick(now).map(q => `<button type="button" aria-pressed="false" data-sl-cbq="${localIso(q[1])}">${q[0]}</button>`).join('')}</div>
+          <label class="sl-fld"><span>Yoki aniq kun va vaqt</span><input type="datetime-local" id="slCbAt" min="${localIso(now + 5 * 60000)}" max="${localIso(now + CB_MAX_DAYS * DAY)}"></label>
+          <span class="sl-err" data-sl-cberr role="alert" hidden></span>
+          <button type="button" class="sl-b sl-b--pri sl-b--xl" data-sl-cbok>Saqlash</button>
+          <p class="sl-note">Shu vaqtda eslatma keladi. Vaqt oʻtib ${CB_GRACE / 3600000} soat ichida natija yozilmasa, lid yana roʻyxatga qaytadi.</p>`);
+        S.sheet?.querySelector('section')?.setAttribute('aria-labelledby', 'slCbT');
+        S.sheet?.querySelector('#slCbAt')?.addEventListener('input', e => {
+            S.sheet.querySelectorAll('[data-sl-cbq]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.slCbq === e.target.value)));
+            const er = S.sheet.querySelector('[data-sl-cberr]'); if (er) er.hidden = true;
+        });
+    }
+    // Tekshiruv (test ham ishlatadi): xato matni yoki ''.
+    function callbackError(l, at, now = Date.now()) {
+        if (!Number.isFinite(at)) return 'Kun va vaqtni tanlang';
+        if (at < now + 60000) return 'Vaqt hozirdan keyin boʻlsin';
+        if (at > now + CB_MAX_DAYS * DAY + 60000) return `Eng koʻpi ${CB_MAX_DAYS} kun ichidagi vaqt`;
+        if (callbacksOf(l).length >= CB_MAX) return `${CB_MAX} marta keyinga surilgan`;
+        return '';
+    }
+    function saveCallback() {
+        const cbs = S.cb; if (!cbs || !S.sheet) return;
+        const l = leadIn(cbs.lg, cbs.id); if (!l) { closeSheet(); return; }
+        const v = S.sheet.querySelector('#slCbAt')?.value || '';
+        const at = v ? new Date(v).getTime() : NaN;
+        const err = callbackError(l, at);
+        const box = S.sheet.querySelector('[data-sl-cberr]');
+        if (err) { if (box) { box.textContent = err; box.hidden = false; } S.sheet.querySelector('#slCbAt')?.focus(); return; }
+        const whenTxt = g('formatCommentTime') ? formatCommentTime(new Date(at).toISOString()) : when(at);
+        const u = user();
+        if (g('updateLeadInStorage') && g('createLeadComment')) {
+            updateLeadInStorage(cbs.lg, cbs.id, x => {
+                const b = g('normalizeLeadExtras') ? normalizeLeadExtras(x) : x;
+                const c = { ...createLeadComment({ text: `Telefonni oldi — keyinroq gaplashishni soʻradi. Qayta qoʻngʻiroq: ${whenTxt}`, author: u.name, type: 'follow-up-reminder' }),
+                    reminderAt: new Date(at).toISOString(), callback: true };
+                if ((b.comments || []).some(o => o && o.id === c.id)) c.id += '_' + Math.random().toString(36).slice(2, 6);
+                return { ...b, comments: [...(b.comments || []), c] };
+            });
+        }
+        S.cb = null; S.pu = null;
+        closeSheet();
+        S.sig = ''; render();
+        try { if (g('renderLeads') && document.getElementById('leadsKanban')) renderLeads(); } catch (e) { /* keyin yangilanadi */ }
+        try { window.sotuvApp?.render?.(); } catch (e) { /* ilova yo'q */ }
+        try { window.sotDesk?.refreshQueue?.(); } catch (e) { /* kompyuter ko'rinishi yo'q */ }
+        if (g('showMiniToast')) showMiniToast(`Eslatma qoʻyildi · ${g('formatLeadFollowUpWhen') ? formatLeadFollowUpWhen(at) : when(at)}`);
+    }
+
     function applySifatsiz(id, reasonId) {
         const l = g('getLeadById') ? getLeadById(lang(), id) : null;
         if (!l || !g('updateLeadInStorage')) return;
@@ -315,7 +450,7 @@
 
     // ---------- hodisalar ----------
     function onClick(e) {
-        const t = e.target.closest('[data-sl-call],[data-sl-sif],[data-sl-sifok],[data-sl-got],[data-sl-grace],[data-sl-graceok],[data-sl-sclose],[data-sl-blocked]');
+        const t = e.target.closest('[data-sl-call],[data-sl-sif],[data-sl-sifok],[data-sl-got],[data-sl-puok],[data-sl-cbq],[data-sl-cbok],[data-sl-grace],[data-sl-graceok],[data-sl-sclose],[data-sl-blocked]');
         if (!t) return;
         const d = t.dataset;
         if ('slCall' in d) {
@@ -329,7 +464,10 @@
         const lead = id => (g('getLeadById') ? getLeadById(lang(), id) : null);
         if ('slSif' in d) { const l = lead(d.slSif); if (l) (hasRecentCall(l) ? sheetSifatsiz(l) : sheetCallFirst(l)); return; }
         if ('slSifok' in d) { const r = S.sheet?.querySelector('input[name="slR"]:checked')?.value; applySifatsiz(d.slSifok, r); return; }
-        if ('slGot' in d) { if (g('requestLeadStageChange')) requestLeadStageChange(lang(), d.slGot, 'boglanildi'); setTimeout(() => { S.sig = ''; render(); }, 600); return; }
+        if ('slGot' in d) { openPickedUp(d.slGot, lang()); return; }
+        if ('slPuok' in d) { puNext(); return; }
+        if ('slCbq' in d) { const i = S.sheet?.querySelector('#slCbAt'); if (i) { i.value = d.slCbq; i.dispatchEvent(new Event('input')); } return; }
+        if ('slCbok' in d) { saveCallback(); return; }
         if ('slGrace' in d) { if (!graceUsed()) sheetGrace(); return; }
         if ('slGraceok' in d) { closeSheet(); startGrace(); return; }
         if ('slBlocked' in d) { sheetBlocked(); return; }
@@ -471,5 +609,6 @@
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => tryBoot());
     else tryBoot();
 
-    window.staleLeads = { compute, check, logCall, hasRecentCall, attempts: attemptsOf, ageDays, homeCardHtml, openRuleModal, loadRules, rules: () => rules, rule: () => ruleFor(lang()), _state: S };
+    window.staleLeads = { compute, check, logCall, hasRecentCall, attempts: attemptsOf, ageDays, homeCardHtml, openRuleModal, loadRules, rules: () => rules, rule: () => ruleFor(lang()),
+        openPickedUp, openCallback, callbacks: callbacksOf, callbackError, CB_MAX, CB_MAX_DAYS, _state: S };
 })();

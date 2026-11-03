@@ -21372,13 +21372,21 @@ function renderLeadOverviewHtml(lead, lang, user = getCurrentUser(), opts = {}) 
 
 // Lidni boshqa bosqichga o'tkazish: kanban menyusi va lid kartasi bir xil yo'ldan
 // o'tadi (kerakli so'rovnoma/oyna ochiladi, keyin moveLeadToStatus).
-function requestLeadStageChange(lang, leadId, toStatus) {
+function requestLeadStageChange(lang, leadId, toStatus, opts = {}) {
     const lead = getLeadById(lang, leadId);
     if (!lead) return;
     const from = normalizeLeadStatus(lead.status);
     if (from === toStatus) return;
 
     if (toStatus === leadWorkflow.DEFERRED_STATUS) { openDeferredPurchaseModal(lang, leadId); return; }
+    // "Bog'lanildi"ga (telefonni oldi) — avval "Suhbat qanday bo'ldi?" so'raladi (js/staleLeads.js openPickedUp):
+    // gaplashilgan bo'lsa anketa, "keyinroq gaplashishni so'radi" bo'lsa faqat qayta qo'ng'iroq vaqti, qiziqmasa — Sifatsiz.
+    // opts.talked — chaqiruvchi "Gaplashdik"ni allaqachon tanlagan (qo'ng'iroq natijasi oynasi), qayta so'ralmaydi.
+    if (toStatus === 'boglanildi' && !opts.talked && (from === 'yangi-lidlar' || from === 'boglanishga-urinilmoqda')
+        && !(lead.connectedSurvey && Object.keys(lead.connectedSurvey).length) && typeof window.staleLeads?.openPickedUp === 'function') {
+        window.staleLeads.openPickedUp(leadId, lang);
+        return;
+    }
 
     if (needsContactFailPrompt(from, toStatus)) { openContactFailModal(lang, leadId, toStatus); return; }
     // Sifatsiz lid cascade'dan oldin tekshiriladi — cascade survey ko'rsatilmasin

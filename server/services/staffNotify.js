@@ -506,6 +506,9 @@ async function salesLeadEvents(db, me, now, ev) {
                 sub: `${String(r.name || 'Mijoz').trim()} · qo'ng'iroq qiling va natijani izohga yozing`, at: iso(at), go: { tab: 'sales', leadId: r.id } });
         }
         // 3) Qotib qolgan lidlar (bir marta ham bog'lanilmagan, "Bog'lanishga urinilmoqda"da)
+        // Telefonni olib, keyinroq gaplashishni so'ragan: kunlar sanalmaydi; kelishilgan vaqt o'tib ketgan bo'lsa — qulf.
+        const cbState = (status === 'yangi-lidlar' || status === 'boglanishga-urinilmoqda') ? require('./staleLeads').callbackState({ comments }, t0) : null;
+        if (cbState) { if (cbState === 'overdue') stale.lock++; continue; }
         if (status !== 'boglanishga-urinilmoqda') continue;
         const hist = Array.isArray(x.stageHistory) ? x.stageHistory : [];
         if (hist.some(h => h && STALE_AFTER.has(h.to)) || (x.connectedSurvey && Object.keys(x.connectedSurvey).length)) continue;

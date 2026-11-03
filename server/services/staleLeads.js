@@ -67,4 +67,32 @@ function assertCallBeforeSifatsiz(existing, incoming, role) {
     throw Object.assign(new Error('Avval shu lidga qoʻngʻiroq qilib koʻring — olmasa, keyin “Sifatsiz”ga oʻtkazasiz.'), { status: 409, code: 'CALL_FIRST' });
 }
 
-module.exports = { DEFAULT_RULE, cleanRule, getRules, saveRules, hasRecentCall, stampCallEvidence, assertCallBeforeSifatsiz };
+// "Keyinroq gaplashishni so'radi" (telefonni oldi): "follow-up-reminder" + callback: true (js/staleLeads.js bilan bir xil).
+// Ko'pi bilan CALLBACK_MAX marta, CALLBACK_MAX_DAYS kun ichidagi vaqtga. Kelishilgan vaqtdan CALLBACK_GRACE_MS o'tib
+// ham lid bog'lanishdan oldingi bosqichda tursa — u yana "qotgan" (qulf) hisoblanadi.
+const CALLBACK_MAX = 2, CALLBACK_MAX_DAYS = 3, CALLBACK_GRACE_MS = 2 * 60 * 60 * 1000, DAY_MS = 24 * 60 * 60 * 1000;
+const callbacksOf = lead => (Array.isArray(lead?.comments) ? lead.comments : [])
+    .filter(c => c && c.type === 'follow-up-reminder' && c.callback && ts(c.reminderAt))
+    .map(c => ({ id: c.id, t: ts(c.createdAt), at: ts(c.reminderAt) })).sort((a, b) => a.t - b.t);
+// Qotgan lid holati: null — kelishuv yo'q (eski "kun" qoidasi), 'waiting' — vaqt hali kelmagan/imtiyozda, 'overdue' — qulf.
+function callbackState(lead, now = Date.now()) {
+    const a = callbacksOf(lead);
+    if (!a.length) return null;
+    return now - a[a.length - 1].at >= CALLBACK_GRACE_MS ? 'overdue' : 'waiting';
+}
+// Sotuv menejeri yangi "keyinroq" yozuvini qo'shmoqda — limit va muddat server vaqtida tekshiriladi.
+function assertCallbackRules(existing, incoming, role, now = Date.now()) {
+    if (role !== 'sales_manager' || !incoming || !Array.isArray(incoming.comments)) return;
+    const had = new Set((Array.isArray(existing?.comments) ? existing.comments : []).map(c => c && c.id).filter(Boolean));
+    const fresh = callbacksOf(incoming).filter(c => !had.has(c.id));
+    if (!fresh.length) return;
+    if (callbacksOf(incoming).length > CALLBACK_MAX)
+        throw Object.assign(new Error(`Suhbat ${CALLBACK_MAX} martadan koʻp keyinga surilmaydi — natijani yozing (anketa yoki “Sifatsiz”).`), { status: 409, code: 'CALLBACK_LIMIT' });
+    for (const c of fresh) {
+        if (c.at > now + CALLBACK_MAX_DAYS * DAY_MS + 60 * 60 * 1000 || c.at < now - DAY_MS)
+            throw Object.assign(new Error(`Qayta qoʻngʻiroq vaqti ${CALLBACK_MAX_DAYS} kun ichida boʻlsin.`), { status: 400, code: 'CALLBACK_RANGE' });
+    }
+}
+
+module.exports = { DEFAULT_RULE, cleanRule, getRules, saveRules, hasRecentCall, stampCallEvidence, assertCallBeforeSifatsiz,
+    CALLBACK_MAX, CALLBACK_MAX_DAYS, CALLBACK_GRACE_MS, callbacksOf, callbackState, assertCallbackRules };
