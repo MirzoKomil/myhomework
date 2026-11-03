@@ -8,12 +8,10 @@ const funnel = require('./funnel');
 
 // Ball jadvali (UX hujjati bilan bir xil). Qo'ng'iroq so'rovi balli funnel.finishRequest orqali emas, shu yerda beriladi.
 const POINTS = { open: 2, video: 3, homework: 2, game: 2, voice: 3, locked: 1, request: 5 };
-const STEPS = ['video', 'homework', 'game', 'voice'];
+// 3 qadam (2026-11-03, mutaxassis tavsiyasi bilan qisqartirildi): ovoz — ish suhbatining oxirgi savoli (qo'shimcha ball, majburiy emas).
+const STEPS = ['video', 'homework', 'game'];
 // Namuna dars videosi — 2 qism (probniy_dars_video/namuna_dars_ssenariy.md). Bot boshqaruvida miniappVideos (2 ta https havola) bilan almashtiriladi.
-const DEFAULT_VIDEOS = [
-    { url: 'https://youtu.be/ee_5dITGHEc', title: 'Ism va yosh', dur: '2:31' },
-    { url: 'https://youtu.be/6ypCbAyz2MU', title: 'Ish va suhbat', dur: '2:55' }
-];
+const DEFAULT_VIDEOS = [{ url: 'https://youtu.be/_Og0fZEwwDo', title: 'Namuna dars', dur: '' }]; // 2 qism bitta videoga birlashtirildi
 const httpsUrl = u => /^https:\/\/[^\s"'<>]{8,500}$/.test(u || '');
 const MAX_VOICE_BYTES = 1024 * 1024;
 const VOICE_MIME = /^audio\/(ogg|webm|mp4|mpeg|wav|x-m4a|aac)(;.*)?$/;
@@ -141,7 +139,7 @@ const TTS_MODELS = ['gemini-3.8-flash-tts', 'gemini-3.1-flash-tts-preview', 'gem
 // Faqat ruscha gapning o'zi yuboriladi: matnga qo'shilgan har qanday yo'riqnomani model ovoz chiqarib o'qib yuboradi.
 // Keshdagi eski yozuvlar (yo'riqnoma bilan yozilganlar) TTS_VERSION orqali yaroqsiz qilinadi.
 const TTS_VERSION = 'v2';
-const ttsText = t => String(t || '').normalize('NFC').replace(/\u0301/g, '').replace(/[«»"]/g, '').replace(/\s+/g, ' ').trim();
+const ttsText = t => String(t || '').normalize('NFC').replace(/\u0301/g, '').replace(/[·•]/g, ',').replace(/[«»"]/g, '').replace(/\s+/g, ' ').trim();
 function wav(pcm, rate = 24000) {
     const h = Buffer.alloc(44);
     h.write('RIFF', 0); h.writeUInt32LE(36 + pcm.length, 4); h.write('WAVE', 8); h.write('fmt ', 12);
@@ -209,7 +207,7 @@ function view(v, p, mgr, s, now = new Date()) {
     return {
         name: String(v.first_name || '').split(' ')[0],
         field: v.field || '',
-        steps: Object.fromEntries(STEPS.map(k => [k, !!p?.steps?.[k]])),
+        steps: Object.fromEntries([...STEPS, 'voice'].map(k => [k, !!p?.steps?.[k]])),
         answers: p?.answers || {},
         finished: !!p?.finished_at,
         points: p?.points || 0,
@@ -306,8 +304,8 @@ async function summarize(db, v) {
     await db.query('UPDATE domwork_miniapp_progress SET steps=steps||$2::jsonb WHERE telegram_id=$1', [v.telegram_id, JSON.stringify({ pt_summary: new Date().toISOString() })]);
     const a = p.answers || {};
     const hw = a.homework || {}, voice = a.voice || {};
-    await funnel.leadComment(db, v.lead_id, `🎓 Mini ilova: 1-darsni to‘liq o‘tdi. Video ${a.videoPercent ?? '—'}% · vazifa ${hw.correct ?? '—'}/${hw.total ?? 5}`
-        + ` · o‘yin ${a.game?.score ?? '—'} · ovoz ${voice.score != null ? voice.score + '%' : 'baholanmadi'}. Ball ${v.score}.`
+    await funnel.leadComment(db, v.lead_id, `🎓 Mini ilova: namuna darsni to‘liq o‘tdi. Video ${a.videoPercent ?? '—'}% · vazifa ${hw.correct ?? '—'}/${hw.total ?? 3}`
+        + ` · ish suhbati ${a.game?.score ?? '—'}/4 · ovoz ${voice.score != null ? voice.score + '%' : 'baholanmadi'}. Ball ${v.score}.`
         + (hw.work ? ` Ish joyi: ${hw.work}.` : '') + (hw.age ? ` Yoshi: ${hw.age}.` : ''));
     await db.query(`UPDATE leads SET extra_data=COALESCE(extra_data,'{}'::jsonb)||jsonb_build_object('miniapp',$2::jsonb),updated_at=NOW() WHERE id=$1`,
         [v.lead_id, JSON.stringify({ finishedAt: new Date().toISOString(), points: p.points, ...a })]);
@@ -381,7 +379,7 @@ async function request(db, auth, { method = 'call', when = 'now' } = {}) {
 
 // ── Qaytarish xabari (dizayn: BotReturn) ──────────────────────────────────
 // Darsni ochib, 2 soatdan beri qaytmagan lidga — bitta eslatma (10:00–20:00, nazorat guruhi va so'rov qoldirganlarga yo'q).
-const STEP_MIN = { video: 5, homework: 3, game: 3, voice: 2 };
+const STEP_MIN = { video: 6, homework: 1, game: 2 };
 async function nudge(db, now = new Date()) {
     const s = await funnel.settings(db);
     if (s.funnelEnabled !== true || !funnel.miniappOn(s)) return 0;
@@ -396,8 +394,8 @@ async function nudge(db, now = new Date()) {
         const left = STEPS.filter(k => !r.steps[k]), mins = left.reduce((a, k) => a + STEP_MIN[k], 0);
         const name = String(r.first_name || '').split(' ')[0] || 'Assalomu alaykum';
         const text = left.length === STEPS.length
-            ? `${name}, namuna dars sizni kutyapti — ≈${mins} daqiqa. Eng qiziq joyi: ish suhbati o‘yini va o‘zingiz rus tilida gapirasiz!`
-            : `${name}, namuna darsning yarmidasiz — <b>${left.length} qadam qoldi (≈${mins} daqiqa)</b>. ` + (left.includes('game') ? 'Eng qiziq joyi oldinda: ish suhbati o‘yini!' : 'Oxirgisi — o‘zingiz rus tilida gapirasiz!');
+            ? `${name}, namuna dars sizni kutyapti — ≈${mins} daqiqa. Oxirida ish suhbatida rus tilida o‘zingiz javob berasiz!`
+            : `${name}, namuna darsning yarmidasiz — <b>${left.length} qadam qoldi (≈${mins} daqiqa)</b>. ` + 'Eng qiziq joyi oldinda: ish suhbati — HR savoliga o‘z ovozingiz bilan javob berasiz!';
         await funnel.say({ db, tid: r.telegram_id, key: () => `ma:${r.telegram_id}:nudge` }, text,
             funnel.inline([[['▶️ Davom ettirish', 'webapp:' + funnel.MINIAPP_URL + '?next=1']]]), { html: true, automation: true });
         await funnel.event(db, r.telegram_id, 'miniapp_nudge', { left: left.length });

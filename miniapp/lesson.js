@@ -71,28 +71,20 @@
   // Uy vazifasi — 5 mashq. kind: pick (variant), gap (bo'sh joy), build (gap tuzish).
   function homework(field) {
     const w = work(field);
+    // Qisqa: 3 mashq (≈1 daqiqa) — videodagi uchta gapning har biriga bittadan.
     return [
-      { kind: 'pick', title: 'Tarjimasini tanlang', prompt: { ru: 'Меня́ зову́т Анва́р.' }, ruOptions: false,
-        options: ['Mening ismim Anvar.', 'Men Anvarni chaqiraman.', 'Anvar meni chaqiradi.'], answer: 0,
+      { kind: 'pick', title: 'Tarjimasini tanlang', prompt: { ru: 'Меня́ зову́т Тиму́р.' }, ruOptions: false,
+        options: ['Mening ismim Timur.', 'Men Timurni chaqiraman.', 'Timur meni chaqiradi.'], answer: 0,
         ok: ['Barakalla!', '«Меня́ зову́т» — soʻzma-soʻz «meni chaqirishadi», maʼnosi «mening ismim».'],
-        bad: ['Hech qisi yoʻq!', '«Меня́ зову́т Анва́р» — «Mening ismim Anvar». Rus tilida ism shunday aytiladi.'] },
-      { kind: 'gap', title: 'Gapni toʻldiring', before: '', after: ' 32 го́да.', uz: 'Men 32 yoshdaman.',
+        bad: ['Hech qisi yoʻq!', '«Меня́ зову́т Тиму́р» — «Mening ismim Timur». Rus tilida ism shunday aytiladi.'] },
+      { kind: 'gap', title: 'Gapni toʻldiring', before: '', after: ' 35 лет.', uz: 'Men 35 yoshdaman.',
         options: ['Я', 'Мне', 'Меня́'], answer: 1,
-        ok: ['Barakalla!', 'Yosh — <b lang="ru">Мне</b> bilan: soʻzma-soʻz «menga 32 yil».'],
-        bad: ['Hech qisi yoʻq!', 'Yosh har doim <b lang="ru">Мне</b> bilan aytiladi: <span lang="ru">Мне 32 го́да</span>.'] },
-      { kind: 'pick', title: 'Ruschasini tanlang', prompt: { uz: 'Men kasalxonada ishlayman.' }, ruOptions: true,
-        options: ['Я рабо́таю в больни́ца.', 'Я рабо́таю в больни́це.', 'Я рабо́таю на больни́ца.'], answer: 1,
-        ok: ['Qoyil!', '«Qayerda?» maʼnosida soʻz oxiri koʻpincha <b lang="ru">-е</b>: <span lang="ru">в больни́це</span>.'],
-        bad: ['Hech qisi yoʻq!', 'Koʻpchilik aynan shu yerda adashadi. «Qayerda?» maʼnosida soʻz oxiri koʻpincha <b lang="ru">-е</b> boʻladi: <span lang="ru">банк → в ба́нке, больни́ца → в больни́це</span>. Ustoz bilan bu tez oʻrganiladi.'],
-        topic: 'в больни́це', skill: 'oʻrin-payt kelishigi' },
+        ok: ['Barakalla!', 'Yosh — <b lang="ru">Мне</b> bilan: soʻzma-soʻz «menga 35 yil».'],
+        bad: ['Hech qisi yoʻq!', 'Yosh har doim <b lang="ru">Мне</b> bilan aytiladi: <span lang="ru">Мне 35 лет</span>.'], topic: 'Мне 35 лет', skill: 'yoshni aytish' },
       { kind: 'gap', title: 'Gapni toʻldiring', before: 'Я рабо́таю ', after: '.', uz: `Men ${w.uz} ishlayman.`,
         options: [w.ru, w.wrong, 'на ' + w.base], answer: 0,
         ok: ['Zoʻr!', `«Qayerda?» → <b lang="ru">-е</b>: <span lang="ru">${w.ru}</span>.`],
-        bad: ['Deyarli!', `Toʻgʻrisi — <span lang="ru">${w.ru}</span>. «Qayerda?» savolida oxiri <b lang="ru">-е</b>.`], topic: w.ru, skill: 'oʻrin-payt kelishigi' },
-      { kind: 'build', title: 'Soʻzlardan savol tuzing', uz: 'Ish suhbatida: «Ismingiz nima?»',
-        words: ['Как', 'вас', 'зову́т?', 'меня́', 'лет'], answer: ['Как', 'вас', 'зову́т?'],
-        ok: ['Qoyil!', 'Rasmiy suhbatda «siz» — <b lang="ru">вас</b>. Doʻstga: <span lang="ru">Как тебя́ зову́т?</span>'],
-        bad: ['Hech qisi yoʻq!', 'Toʻgʻrisi: <span lang="ru">Как вас зову́т?</span> — «Ismingiz nima?»'], topic: 'Как вас зову́т?', skill: 'rasmiy savol' }
+        bad: ['Deyarli!', `Toʻgʻrisi — <span lang="ru">${w.ru}</span>. «Qayerda?» savolida oxiri <b lang="ru">-е</b>.`], topic: w.ru, skill: 'oʻrin-payt kelishigi' }
     ];
   }
 

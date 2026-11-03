@@ -59,7 +59,7 @@ test('1-dars mini app: open, steps scored once, voice, request → CRM — synth
   await t.test('first open creates visitor + progress and scores +2 once; reopen does not re-score',async()=>{
    const a=await call('/open');assert.equal(a.status,200);
    assert.equal(a.body.name,'Dilshod');assert.equal(a.body.points,2);assert.equal(a.body.manager,null);
-   assert.deepEqual(a.body.videos.map(v=>v.url),['https://youtu.be/ee_5dITGHEc','https://youtu.be/6ypCbAyz2MU']);assert.equal(a.body.sales.slaMinutes,10);
+   assert.deepEqual(a.body.videos.map(v=>v.url),['https://youtu.be/_Og0fZEwwDo']);assert.equal(a.body.sales.slaMinutes,10);
    assert.equal((await visitor(801)).source,'miniapp:tg_target1');
    await call('/open');
    assert.equal((await visitor(801)).score,2);
@@ -111,7 +111,7 @@ test('1-dars mini app: open, steps scored once, voice, request → CRM — synth
    const lead=(await pool.query('SELECT * FROM leads WHERE id=$1',[v.lead_id])).rows[0];
    assert.match(lead.comments,/bog‘lanishni so‘radi/);
    // Dars lid paydo bo'lishidan oldin tugagan — xulosa so'rov paytida bir marta yoziladi.
-   assert.equal((lead.comments.match(/1-darsni to‘liq o‘tdi/g)||[]).length,1);
+   assert.equal((lead.comments.match(/namuna darsni to‘liq o‘tdi/g)||[]).length,1);
    assert.equal(r.body.state.phoneMasked,'+99890 *** ** 11');
    const req=(await outbox()).filter(m=>/Botdan so‘rov/.test(m.payload.text||''));assert.equal(req.length,1);
    // Menejer qo'ng'iroqdan oldin mini ilova natijasi va va'da vaqtini ko'radi.
@@ -140,11 +140,13 @@ test('1-dars mini app: open, steps scored once, voice, request → CRM — synth
    await call('/request',{method:'telegram',when:'eve'},{id:803});
    const v=await visitor(803);
    await pool.query("UPDATE leads SET manager_id='m-sardor' WHERE id=$1",[v.lead_id]);
-   for(const e of [{type:'video',data:{percent:90}},{type:'homework',data:{done:true,correct:5,total:5,work:'bank',age:32}},{type:'game',data:{done:true,score:7}}])await call('/event',e,{id:803});
+   for(const e of [{type:'video',data:{percent:90}},{type:'homework',data:{done:true,correct:3,total:3,work:'bank',age:32}}])await call('/event',e,{id:803});
+   // Ish suhbatining oxirgi savoli — ovoz (o'yin tugashidan oldin), keyin o'yin tugadi → dars tugadi.
    const r=await call('/voice?expected='+encodeURIComponent('Меня зовут Дилшод. Мне 32 года. Я работаю в банке.')+'&skip=Дилшод',null,{id:803,raw:Buffer.from('OggS3'),headers:{'Content-Type':'audio/ogg'}});
-   assert.equal(r.body.state.manager.name,'Sardor');assert.equal(r.body.state.finished,true);
+   assert.equal(r.body.state.manager.name,'Sardor');assert.equal(r.body.state.finished,false);
+   const g=await call('/event',{type:'game',data:{done:true,score:4}},{id:803});assert.equal(g.body.finished,true);
    const lead=(await pool.query('SELECT comments,extra_data FROM leads WHERE id=$1',[v.lead_id])).rows[0];
-   assert.match(lead.comments,/1-darsni to‘liq o‘tdi.*Video 90%.*vazifa 5\/5.*ovoz 100%/);
+   assert.match(lead.comments,/namuna darsni to‘liq o‘tdi.*Video 90%.*vazifa 3\/3 · ish suhbati 4\/4 · ovoz 100%/);
    assert.equal(lead.extra_data.miniapp.homework.work,'bank');
    // Ovozni faqat biriktirilgan menejer yoki rahbar tinglaydi.
    const vid=r.body.id,get=u=>fetch(base+'/voice/'+vid,{headers:{'X-Test-User':JSON.stringify(u)}});
@@ -182,7 +184,7 @@ test('1-dars mini app: open, steps scored once, voice, request → CRM — synth
    const ids=sent.map(r=>r.target_id);
    assert.ok(ids.includes('812'));for(const no of ['813','801','803'])assert.ok(!ids.includes(no),no); // nazorat guruhi, tugatgan, so'rov qoldirgan
    const m=sent.find(r=>r.target_id==='812').payload;
-   assert.match(m.text,/yarmidasiz — <b>3 qadam qoldi/);
+   assert.match(m.text,/yarmidasiz — <b>2 qadam qoldi \(≈3 daqiqa\)/);
    assert.equal(m.reply_markup.inline_keyboard[0][0].web_app.url,'https://myhomework.uz/miniapp/?next=1');
    await queue.transaction(pool,db=>miniapp.nudge(db,t15));
    assert.equal((await pool.query("SELECT COUNT(*) FROM domwork_bot_outbox WHERE unique_key LIKE 'ma:%:nudge'")).rows[0].count,String(ids.length));

@@ -139,10 +139,11 @@
   const firstName = () => esc(S?.name || '');
   function nextStep() {
     const st = S?.steps || {};
-    return ['video', 'homework', 'game', 'voice'].find(k => !st[k]) || null;
+    return ['video', 'homework', 'game'].find(k => !st[k]) || null;
   }
-  const STEP_SCREEN = { video: 'video', homework: 'hw', game: 'dialog', voice: 'speak' };
-  const STEP_TITLE = { video: 'Video dars', homework: 'Uy vazifasi', game: 'Oʻyinlar', voice: 'Oʻzingiz gapiring' };
+  // 3 qadam (≈10 daqiqa): video → 3 mashq → ish suhbati (oxirgi savol — o'z ovozi bilan). Keyin natija va 2-dars (kurs) taklifi.
+  const STEP_SCREEN = { video: 'video', homework: 'hw', game: 'dialog' };
+  const STEP_TITLE = { video: 'Video dars', homework: 'Mashqlar', game: 'Ish suhbati' };
 
   // ── Ekranlar ───────────────────────────────────────────────────────────
   const SCREENS = {};
@@ -152,7 +153,7 @@
   };
 
   SCREENS.outside = el => {
-    el.innerHTML = `<div class="body center">${domik('phones', 150)}<p class="h2">Telegram orqali oching</p><p class="lead">1-dars @Domworkuz_bot ichida ochiladi.</p><a class="btn" href="https://t.me/Domworkuz_bot">Botni ochish</a></div>`;
+    el.innerHTML = `<div class="body center">${domik('phones', 150)}<p class="h2">Telegram orqali oching</p><p class="lead">Namuna dars @Domworkuz_bot ichida ochiladi.</p><a class="btn" href="https://t.me/Domworkuz_bot">Botni ochish</a></div>`;
   };
 
   SCREENS.error = (el, { retry, offline = true, message = '' }) => {
@@ -165,39 +166,37 @@
     const learn = [['Как вас зову́т? — Меня́ зову́т…', 'Ismingiz nima? — Mening ismim…'], ['Мне 32 го́да. / Мне 30 лет.', 'Men 32 / 30 yoshdaman.'], [p[2].ru, p[2].uz]];
     el.innerHTML = `<div class="body">
       <div class="row">${domik('wave', 96, 'Domik salomlashmoqda')}<div class="grow"><div class="kicker b">72 DARSLIK KURSDAN NAMUNA DARS</div><p class="h1">Assalomu alaykum${S.name ? ', ' + firstName() : ''}!</p></div></div>
-      <p class="lead">Rus tilida oʻzingizni tanishtiring · <b>≈15 daqiqa</b></p>
+      <p class="lead">Rus tilida oʻzingizni tanishtiring · <b>≈10 daqiqa · 3 qadam</b></p>
       <div class="card"><div class="kicker">BUGUN OʻRGANASIZ</div>${learn.map(([r, u]) => `<div><div lang="ru" class="ru">${r}</div><div class="sub">${esc(u)}</div></div>`).join('')}</div>
-      <div class="card" style="background:var(--yellowl)"><div class="row">${domik('talk', 48)}<p class="lead" style="color:var(--ink)">Oxirida shu 3 gapni <b>oʻz ovozingiz bilan</b> aytasiz — birinchi ruscha tanishuvingiz!</p></div></div>
+      <div class="card" style="background:var(--yellowl)"><div class="row">${domik('talk', 48)}<p class="lead" style="color:var(--ink)">Oxirida ish suhbatida HR savoliga <b>oʻz ovozingiz bilan</b> ruscha javob berasiz!</p></div></div>
     </div>${bar('<button class="btn" data-start>Darsni boshlash</button>')}`;
     wire(el, { '[data-start]': () => { local.seenMain = true; save(); go('video', {}, { replace: true }); } });
   };
 
   SCREENS.hub = el => {
-    const st = S.steps, next = nextStep(), done = Object.values(st).filter(Boolean).length;
+    const st = S.steps, next = nextStep(), done = ['video', 'homework', 'game'].filter(k => st[k]).length;
     const a = S.answers || {}, hw = a.homework || {}, g = a.game || {};
     const row = (k, n, title, sub, ic, bg) => {
       const state = st[k] ? 'done' : next === k ? 'now' : '';
       return `<button class="step ${state}" data-step="${k}"><span class="n">${n}</span><span class="ic" style="background:${st[k] ? 'var(--greenl)' : bg}">${st[k] ? ICON.check('#087A4A', 22) : ic}</span><span class="grow"><span class="t" style="display:block">${title}</span><span class="s">${esc(sub)}</span></span>${state === 'now' ? '<span class="chip">Hozir</span>' : ICON.chev()}</button>`;
     };
-    const finished = S.finished;
+    const finished = S.finished || !!st.game; // natija ish suhbatidan keyin ochiladi (video ixtiyoriy)
     el.innerHTML = `<div class="body">
-      <div class="row" style="justify-content:space-between"><div><div class="kicker b">${finished ? 'NAMUNA DARS TUGATILDI' : '72 DARSLIK KURSDAN NAMUNA DARS'}</div><p class="h2">${finished ? 'Xush kelibsiz' + (S.name ? ', ' + firstName() : '') + '!' : 'Oʻzingizni tanishtiring'}</p></div><span class="chip ${finished ? 'green' : ''}">${done}/4</span></div>
+      <div class="row" style="justify-content:space-between"><div><div class="kicker b">${finished ? 'NAMUNA DARS TUGATILDI' : '72 DARSLIK KURSDAN NAMUNA DARS'}</div><p class="h2">${finished ? 'Xush kelibsiz' + (S.name ? ', ' + firstName() : '') + '!' : 'Oʻzingizni tanishtiring'}</p></div><span class="chip ${finished ? 'green' : ''}">${done}/3</span></div>
       ${S.requested ? `<div class="card" style="background:var(--greenl)"><div class="row">${ICON.phone('#087A4A')}<span class="sub" style="color:var(--greend)">Soʻrovingiz qabul qilindi · ${advisor()} bogʻlanadi</span></div></div>` : ''}
       ${row('video', 1, 'Video dars', st.video ? `Koʻrildi${a.videoPercent ? ' ' + a.videoPercent + '%' : ''}` : 'Ustoz bilan tanishuv', ICON.video(), 'var(--bluel)')}
-      ${row('homework', 2, 'Uy vazifasi', st.homework ? `${hw.correct ?? 5} / ${hw.total ?? 5}` : '5 ta mashq · ≈3 daq', ICON.hw(), 'var(--bluel)')}
-      ${row('game', 3, '2 ta oʻyin', st.game ? `Ish suhbati ${g.dialog ?? 4}/4 · juftlar ${g.pairs ?? 6}/6` : 'Ish suhbati + juftlar · ≈3 daq', ICON.game(), 'var(--violetl)')}
-      ${row('voice', 4, st.voice ? 'Oʻzingiz gapirdingiz' : 'Oʻzingiz gapiring', st.voice ? (a.voice?.score != null ? a.voice.score + '% aniq' : 'ovoz yozildi') : 'Ovozingizni yozasiz · ≈1 daq', ICON.mic('#B34700', 22), 'var(--orangel)')}
-      <button class="step ${finished ? '' : 'lock'}" data-result><span class="n">★</span><span class="ic" style="background:${finished ? 'var(--yellowl)' : '#EEF1F7'}">${finished ? ICON.star() : ICON.lock()}</span><span class="grow"><span class="t" style="display:block">Natija va ovozingiz</span><span class="s">${finished ? 'Ochiq · natijangizni koʻring' : '4 qadamdan keyin ochiladi'}</span></span>${finished ? ICON.chev() : ''}</button>
+      ${row('homework', 2, 'Mashqlar', st.homework ? `${hw.correct ?? 3} / ${hw.total ?? 3}` : '3 ta qisqa mashq · ≈1 daq', ICON.hw(), 'var(--bluel)')}
+      ${row('game', 3, 'Ish suhbati', st.game ? `${g.score ?? 4}/4${st.voice ? ' · ovoz bilan javob berdingiz' : ''}` : 'HR savollari · oxirgisiga ovoz bilan · ≈2 daq', ICON.game(), 'var(--violetl)')}
+      <button class="step ${finished ? '' : 'lock'}" data-result><span class="n">★</span><span class="ic" style="background:${finished ? 'var(--yellowl)' : '#EEF1F7'}">${finished ? ICON.star() : ICON.lock()}</span><span class="grow"><span class="t" style="display:block">Natija</span><span class="s">${finished ? 'Ochiq · natijangizni koʻring' : '3 qadamdan keyin ochiladi'}</span></span>${finished ? ICON.chev() : ''}</button>
+      <button class="step lock" data-kurs><span class="n"></span><span class="ic" style="background:#EEF1F7">${ICON.lock()}</span><span class="grow"><span class="t" style="display:block">2-dars · <span lang="ru">Кем вы рабо́таете?</span></span><span class="s">Domwork oʻquvchilari uchun ochiq</span></span>${ICON.chev()}</button>
       <button class="step" data-res><span class="n"></span><span class="ic" style="background:var(--yellowl)">${domik('read', 40)}</span><span class="grow"><span class="t" style="display:block">Foydali materiallar</span><span class="s">40 gap audio, qoʻllanmalar</span></span>${ICON.chev()}</button>
-      <div class="kicker" style="margin-top:4px">KURSDA SIZNI KUTMOQDA · YANA 71 DARS</div>
-      <div class="teasers">${L.TEASERS.map(t => `<button class="teaser" data-lock="${t.n}"><span class="row" style="gap:6px">${ICON.lock('#5B6478', 14)}<span class="sub">${t.n}-dars</span></span><span style="font-size:14px;font-weight:800">${esc(t.title)}</span></button>`).join('')}</div>
-    </div>${bar((next ? `<button class="btn" data-next>Davom etish: ${STEP_TITLE[next]}</button>` : `<button class="btn" data-result>Natijamni koʻrish</button>`) + (S.requested ? '' : '<button class="btn sec" data-contact>Menejer bilan bogʻlanish</button>'))}`;
+    </div>${bar((next ? `<button class="btn" data-next>Davom etish: ${STEP_TITLE[next]}</button>` : `<button class="btn" data-kurs>Keyingi darsni ochish</button>`) + (S.requested ? '' : '<button class="btn sec" data-contact>Menejer bilan bogʻlanish</button>'))}`;
     wire(el, {
       '[data-step]': (e, b) => go(STEP_SCREEN[b.dataset.step]),
       '[data-next]': () => go(STEP_SCREEN[next]),
       '[data-result]': () => finished || !next ? go('result') : haptic(),
       '[data-res]': () => go('resources'),
-      '[data-lock]': (e, b) => go('locked', { n: Number(b.dataset.lock) }),
+      '[data-kurs]': () => go('kurs'),
       '[data-contact]': () => go('contact')
     });
   };
@@ -289,7 +288,7 @@
           <div class="words">${pool}</div>`;
       }
       const ok = chosen !== null && isRight();
-      el.innerHTML = `${top('Uy vazifasi · ' + ['test', 'boʻsh joy', 'test', 'boʻsh joy', 'gap tuzish'][i], i + 1, list.length)}<div class="body">${backLink()}<p class="h2">${esc(ex.title)}</p>${task}</div>
+      el.innerHTML = `${top('Mashqlar · ' + (ex.kind === 'pick' ? 'test' : ex.kind === 'gap' ? 'boʻsh joy' : 'gap tuzish'), i + 1, list.length)}<div class="body">${backLink()}<p class="h2">${esc(ex.title)}</p>${task}</div>
         ${chosen === null ? (ex.kind === 'build' ? bar(`<button class="btn" data-check ${built.length ? '' : 'disabled'}>Tekshirish</button>`) : '') : sheet(ok, ok ? ex.ok : ex.bad, ok ? 'Davom etish' : 'Tushundim, davom etish')}`;
       wireSay(el); wire(el, {
         '[data-opt]': (e, b) => { if (chosen !== null) return; chosen = Number(b.dataset.opt); answered(); },
@@ -325,11 +324,11 @@
     go('hwDone', { correct, total: results.length, wrong }, { replace: true });
   }
   SCREENS.hwDone = (el, { correct, total, wrong }) => {
-    el.innerHTML = `<div class="body center">${domik(correct >= 4 ? 'trophy' : 'check', 150, 'Domik')}<p class="h1">Uy vazifasi bajarildi!</p>
+    el.innerHTML = `<div class="body center">${domik(correct >= total ? 'trophy' : 'check', 150, 'Domik')}<p class="h1">Mashqlar bajarildi!</p>
       <p class="lead">${total} ta mashqdan <b style="color:var(--greend)">${correct} tasi toʻgʻri</b></p>
       ${wrong.length ? `<div class="card" style="text-align:left"><span class="sub">${wrong.length} ta xato: ${wrong.map(w => `<b lang="ru">${w.topic}</b>`).join(', ')} — natijada eslatamiz</span></div>` : ''}
-      <p class="lead">Keyingisi — oʻyinlar! Birinchisida haqiqiy ish suhbatidan oʻtasiz.</p></div>${bar('<button class="btn" data-next>Oʻyinlarga oʻtish</button>')}`;
-    if (correct >= 4) confetti(el);
+      <p class="lead">Oxirgi qadam — <b>ish suhbati</b>: HR savollariga javob berasiz, oxirgisiga oʻz ovozingiz bilan.</p></div>${bar('<button class="btn" data-next>Ish suhbatiga oʻtish</button>')}`;
+    if (correct >= total) confetti(el);
     wire(el, { '[data-next]': () => go('dialog', {}, { replace: true }) });
   };
 
@@ -351,7 +350,7 @@
       let footer = '';
       if (outcome === 'near' || outcome === 'bad') footer = sheet(false, [outcome === 'near' ? 'Deyarli!' : 'Hech qisi yoʻq!', (outcome === 'near' ? 'HR sizni tushundi, lekin bitta harf yetmadi. ' : '') + q.why], 'Qayta javob berish');
       else if (outcome === 'timeout') footer = sheet(false, ['Vaqt tugadi', 'Toʻgʻri javob belgilandi: <span lang="ru">' + q.options[q.answer] + '</span>'], 'Davom etish');
-      el.innerHTML = `<div class="top"><div class="kicker v">OʻYIN 1 · ISH SUHBATI</div><div class="row" style="justify-content:space-between"><span class="sub">Savol ${i + 1}/4${voiceQ ? ' · endi ovoz bilan!' : ''}</span>${voiceQ ? '' : `<span class="timer ${left <= 8 ? 'low' : ''}" role="timer" aria-label="${left} soniya qoldi">${ICON.clock(left <= 8 ? '#8A3600' : '#5A2FD6')}${left} s</span>`}</div></div>
+      el.innerHTML = `<div class="top"><div class="kicker v">3-QADAM · ISH SUHBATI</div><div class="row" style="justify-content:space-between"><span class="sub">Savol ${i + 1}/4${voiceQ ? ' · endi ovoz bilan!' : ''}</span>${voiceQ ? '' : `<span class="timer ${left <= 8 ? 'low' : ''}" role="timer" aria-label="${left} soniya qoldi">${ICON.clock(left <= 8 ? '#8A3600' : '#5A2FD6')}${left} s</span>`}</div></div>
         <div class="body">${backLink()}<div class="sub">HR-menejer · ${esc(D.hr)}</div><div class="chat">${hist}
           <div class="hr"><div class="av">${domik('brief', 30)}</div><div class="bub"><span lang="ru" style="font-size:16px;font-weight:800">${q.q}</span><span class="sub" style="font-weight:600">${esc(q.uz)}</span></div>${spkBtn(q.q)}</div></div>
           ${voiceBox}${opts}</div>${footer}`;
@@ -370,7 +369,7 @@
     function advance(answer, first) {
       const nlog = [...log, { q: q.q, a: answer }], nfirst = firstTry + (first ? 1 : 0);
       if (i + 1 < D.questions.length) go('dialog', { i: i + 1, log: nlog, firstTry: nfirst }, { replace: true });
-      else { local.dialog = nfirst; save(); go('pairs', {}, { replace: true }); }
+      else finishDialog(nfirst);
     }
     async function recordAnswer() {
       if (!recorder.active) {
@@ -380,8 +379,9 @@
       }
       const blob = await recorder.stop();
       el.innerHTML = `<div class="body center">${domik('think', 120)}<p class="h2">Domik tinglayapti…</p></div>`;
-      const res = await sendVoice(blob, q.voice.ru, { practice: true });
-      if (res && res.level !== 'retry') { haptic('ok'); advance(q.voice.ru, true); }
+      // Oxirgi javob — lidning haqiqiy ovozi: CRMda saqlanadi, menejer eshitadi, natijada lid o'zi tinglaydi.
+      const res = await sendVoice(blob, q.voice.ru);
+      if (res && res.level !== 'retry') { haptic('ok'); try { if (voiceUrl) URL.revokeObjectURL(voiceUrl); } catch { /* */ } voiceUrl = URL.createObjectURL(blob); local.voiceResult = { score: res.score, level: res.level, words: res.words }; save(); advance(q.voice.ru, true); }
       else go('voiceFail', { retry: () => go('dialog', { i, log, firstTry }, { replace: true }), text: () => go('dialog', { i, log, firstTry, textMode: true }, { replace: true }), phrase: q.voice });
     }
     if (!voiceQ) every(() => {
@@ -390,165 +390,60 @@
     }, 1000);
     draw();
   };
+  async function finishDialog(score) {
+    local.dialog = score; save();
+    await track('game', { done: true, score, won: score >= 3 });
+    go('result', { celebrate: true }, { replace: true });
+  }
   SCREENS.voiceFail = (el, { retry, text, phrase }) => {
     el.innerHTML = `<div class="body center">${domik('sad', 130, 'Domik')}<p class="h2">Ovozingiz eshitilmadi</p><p class="lead">Mikrofon yopiq yoki juda past. Muammo yoʻq — javobni tanlab ham berishingiz mumkin, ball saqlanadi.</p>
       <div class="card"><div lang="ru" class="ru">${phrase.ru}</div><div class="sub" style="color:var(--blued)">${esc(phrase.lat)}</div></div></div>${bar('<button class="btn" data-text>Matn bilan javob berish</button><button class="btn sec" data-retry>Qayta gapirish</button>')}`;
     wire(el, { '[data-text]': text, '[data-retry]': retry });
   };
 
-  // O'yin 2 — juftlar (60 s)
-  SCREENS.pairs = (el, { untimed = false }) => {
-    const LIMIT = 60, pairs = L.PAIRS;
-    const tiles = shuffle(pairs.flatMap((p, k) => [{ k, side: 'ru', text: p.ru, audio: !!p.audio }, { k, side: 'uz', text: p.uz }]));
-    let sel = null, found = new Set(), just = null, combo = 0, best = 0, left = LIMIT, startedAt = Date.now(), over = false, feedback = '';
-    const draw = () => {
-      el.innerHTML = `<div class="top"><div class="kicker v">OʻYIN 2 · ${untimed ? 'VAQTSIZ' : '1 DAQIQA'}</div><div class="row" style="gap:12px"><div class="prog green grow" role="progressbar" aria-label="${pairs.length} juftlikdan ${found.size} tasi topildi" aria-valuenow="${found.size}" aria-valuemin="0" aria-valuemax="${pairs.length}" style="height:12px"><i style="width:${Math.round(found.size * 100 / pairs.length)}%"></i></div>${untimed ? '' : `<span class="timer ${left <= 10 ? 'low' : ''}" role="timer">${ICON.clock(left <= 10 ? '#8A3600' : '#5A2FD6')}0:${String(left).padStart(2, '0')}</span>`}</div></div>
-        <div class="body">${backLink()}<div class="row" style="justify-content:space-between"><p class="h2">Juftlarini toping</p>${combo > 1 ? `<span class="chip violet">kombo ×${combo}</span>` : ''}</div>
-        <div class="grid">${tiles.map((t, idx) => {
-          const st = found.has(t.k) ? (just === t.k ? 'just' : 'done') : sel === idx ? 'sel' : '';
-          if (t.audio && !found.has(t.k)) return `<button class="tile audio ${st}" data-t="${idx}" aria-label="Audio karta: tinglang va tarjimasini toping">${ICON.spk()}tinglang</button>`;
-          return `<button class="tile ${st}" data-t="${idx}" ${t.side === 'ru' ? 'lang="ru"' : ''} ${found.has(t.k) ? 'disabled' : ''}>${t.side === 'ru' ? t.text : esc(t.text)}${found.has(t.k) ? ' ✓' : ''}</button>`;
-        }).join('')}</div>
-        ${feedback ? `<div class="card" style="background:var(--greenl)"><span class="sub" style="color:var(--greend)">${feedback}</span></div>` : '<div class="sub" style="text-align:center">Koʻk karta — faqat ovoz: tinglab, tarjimasini toping.</div>'}
-        </div>${bar('<button class="btn ghost" data-skip>Oʻtkazib yuborish</button>')}`;
-      wire(el, { '[data-t]': (e, b) => tap(Number(b.dataset.t), b), '[data-skip]': () => end(false) });
-    };
-    function tap(idx, b) {
-      if (over) return;
-      const t = tiles[idx]; if (found.has(t.k)) return;
-      if (t.audio) say(t.text);
-      if (sel === null || tiles[sel].side === t.side) { sel = idx; haptic(); draw(); return; }
-      const a = tiles[sel];
-      if (a.k === t.k) {
-        found.add(t.k); just = t.k; combo++; best = Math.max(best, combo); sel = null; haptic('ok');
-        const p = pairs[t.k]; feedback = `«${['Zoʻr!', 'Qoyil!', 'Barakalla!'][found.size % 3]}» <span lang="ru">${p.ru}</span> — ${esc(p.uz)}`;
-        if (!p.audio) say(p.ru);
-        draw(); if (found.size === pairs.length) later(() => end(true), 700);
-      } else {
-        combo = 0; sel = null; haptic('bad'); b.classList.add('shake'); later(draw, 360);
-      }
-    }
-    function end(won) {
-      if (over) return; over = true; stopTimers();
-      const time = Math.round((Date.now() - startedAt) / 1000);
-      const result = { pairs: found.size, total: pairs.length, time, combo: best, won };
-      local.pairs = result; save();
-      track('game', { done: true, score: (local.dialog ?? 0) + found.size, time, won });
-      if (won || untimed) go('gameWin', result, { replace: true });
-      else go('gameTimeout', { ...result, missing: pairs.filter((p, k) => !found.has(k)) }, { replace: true });
-    }
-    if (!untimed) every(() => { left--; if (left <= 0) end(false); else draw(); }, 1000);
-    draw();
-  };
-  SCREENS.gameWin = (el, r) => {
-    el.innerHTML = `<div class="body center">${domik('party', 150, 'Domik bayram qilmoqda')}<p class="h1">Qoyil!</p><p class="lead">Ikkala oʻyin ham bajarildi</p>
-      <div class="tiles" style="grid-template-columns:1fr 1fr;width:100%"><div class="stat"><span class="sub">Ish suhbati</span><b>${local.dialog ?? 0} / 4</b><span class="sub">birinchi urinishda</span></div><div class="stat"><span class="sub">Juftlar</span><b>${r.pairs} / ${r.total}</b><span class="sub">${r.time} soniyada${r.combo > 1 ? ' · kombo ×' + r.combo : ''}</span></div></div></div>
-      ${bar('<button class="btn" data-next>Endi oʻzingiz gapiring</button><button class="btn sec" data-again>Qayta oʻynash</button>')}`;
-    confetti(el); say('Отли́чно! Молоде́ц!');
-    wire(el, { '[data-next]': () => go('speak', {}, { replace: true }), '[data-again]': () => go('dialog', {}, { replace: true }) });
-  };
-  SCREENS.gameTimeout = (el, r) => {
-    el.innerHTML = `<div class="body center">${domik('think', 140, 'Domik')}<p class="h1">Vaqt tugadi</p><p class="lead">${r.total} juftlikdan <b>${r.pairs} tasini</b> topdingiz — yomon emas!</p>
-      <div class="card" style="text-align:left;width:100%"><div class="kicker">TOPILMAGANLAR</div>${r.missing.map(p => `<div class="row"><span lang="ru" class="ru grow">${p.ru}</span><span class="sub">— ${esc(p.uz)}</span>${spkBtn(p.ru)}</div>`).join('')}</div></div>
-      ${bar('<button class="btn" data-next>Keyingi qadam</button><button class="btn sec" data-again>Vaqtsiz qayta oʻynash</button>')}`;
-    wireSay(el); wire(el, { '[data-next]': () => go('speak', {}, { replace: true }), '[data-again]': () => go('pairs', { untimed: true }, { replace: true }) });
-  };
-
-  // O'zingiz gapiring
-  SCREENS.speak = el => {
-    const draw = () => {
-      const p = L.phrases(S.name, ageN(), S.field);
-      el.innerHTML = `<div class="body">${backLink()}<div class="row">${domik('talk', 64)}<div class="grow"><p class="h2">Endi oʻzingiz ayting!</p><p class="lead">${recorder.active ? 'Ekrandagi 3 gapni ovoz chiqarib oʻqing' : 'Avval ustozni tinglang, keyin 3 gapni ayting'}</p></div></div>
-        ${spkBtn(p.map(x => x.ru).join(' '), 'Ustoz namunasi') ? `<div>${spkBtn(p.map(x => x.ru).join(' '), 'Ustoz namunasi')}</div>` : ''}
-        ${p.map(x => `<div class="phr"><span lang="ru" style="font-size:19px;font-weight:800">${x.ru}</span><span class="lat">${esc(x.lat)}</span><span class="uz">${esc(x.uz)}</span></div>`).join('')}
-        ${recorder.active ? '' : `<div class="row" style="justify-content:center;gap:8px"><span class="sub">Yoshingiz:</span><button class="spk" data-age="-1" aria-label="Yoshni kamaytirish">−</button><b style="min-width:28px;text-align:center">${ageN()}</b><button class="spk" data-age="1" aria-label="Yoshni oshirish">+</button></div>`}
-        <button class="mic ${recorder.active ? 'rec' : ''}" data-rec aria-label="${recorder.active ? 'Toʻxtatish' : 'Bosing va gapiring'}">${recorder.active ? ICON.stop() : ICON.mic()}</button>
-        <div class="note">${recorder.active ? `Yozilmoqda · <span data-sec>0:00</span> · yana bosib toʻxtating` : 'Bosing, gapiring, yana bosib toʻxtating.'}<br>Yozuv sizga va menejeringizga eshitiladi.</div>
-      </div>`;
-      wireSay(el); wire(el, {
-        '[data-age]': (e, b) => { local.age = Math.max(16, Math.min(80, ageN() + Number(b.dataset.age))); save(); haptic(); draw(); },
-        '[data-rec]': toggle
-      });
-    };
-    async function toggle() {
-      if (!recorder.active) {
-        const r = await recorder.start(25000, () => toggle());
-        if (r === 'denied' || r === 'unsupported') return go('micDenied', { reason: r }, { replace: true });
-        const t0 = Date.now(); every(() => { const s = Math.floor((Date.now() - t0) / 1000); const n = el.querySelector('[data-sec]'); if (n) n.textContent = `0:${String(s).padStart(2, '0')}`; }, 500);
-        return draw();
-      }
-      const blob = await recorder.stop();
-      if (!blob || !blob.size) return go('speakRetry', {}, { replace: true });
-      go('speakCheck', { blob }, { replace: true });
-    }
-    draw();
-  };
-  SCREENS.speakCheck = async (el, { blob }) => {
-    el.innerHTML = `<div class="body center">${domik('think', 140, 'Domik tinglayapti')}<p class="h2 listen">Domik tinglayapti…</p><p class="lead">3 ta gapingiz tekshirilmoqda. Odatda 2–5 soniya.</p></div>`;
-    const p = L.phrases(S.name, ageN(), S.field);
-    const res = await sendVoice(blob, p.map(x => x.ru).join(' '), { skip: [L.cyr(S.name)] });
-    if (!res) return go('error', { retry: () => go('speakCheck', { blob }, { replace: true }) }, { replace: true });
-    if (res.level === 'retry') return go('speakRetry', {}, { replace: true });
-    try { if (voiceUrl) URL.revokeObjectURL(voiceUrl); } catch { /* */ }
-    voiceUrl = URL.createObjectURL(blob); local.voiceResult = { score: res.score, level: res.level, words: res.words }; save();
-    go('speakDone', { res, phrases: p }, { replace: true });
-  };
   let voiceUrl = null; // o'z ovozi — faqat shu sessiyada (blob URL saqlanmaydi)
   async function sendVoice(blob, expected, { practice = false, skip = [] } = {}) {
     const q = '?expected=' + encodeURIComponent(expected) + skip.filter(Boolean).map(s => '&skip=' + encodeURIComponent(s)).join('') + (practice ? '&practice=1' : '');
     try { const r = await api('/voice', null, { raw: blob, query: q }); if (r.state) S = { ...S, ...r.state }; return r; }
     catch { return null; }
   }
-  SCREENS.speakRetry = el => {
-    el.innerHTML = `<div class="body center">${domik('sad', 140, 'Domik')}<p class="h2">Ovozingiz eshitilmadi</p><p class="lead">Telefonni ogʻzingizga yaqinroq tuting va 3 gapni balandroq, shoshilmasdan ayting.</p><div class="card"><span class="sub">Maslahat: avval «Ustoz namunasi»ni tinglang, keyin takrorlang.</span></div></div>${bar('<button class="btn" data-again>Qayta yozish</button>')}`;
-    wire(el, { '[data-again]': () => go('speak', {}, { replace: true }) });
-  };
-  SCREENS.speakDone = (el, { res, phrases }) => {
-    const scored = res.level !== 'unscored';
-    const words = res.words || [], norm = s => noStress(s).toLowerCase().replace(/ё/g, 'е').replace(/[^а-яa-z0-9\s-]/g, ' ').split(/\s+/).filter(Boolean);
-    const status = phrases.map(ph => {
-      const ws = norm(ph.ru).map(w => words.find(x => x.word === w)).filter(Boolean);
-      const miss = ws.filter(x => !x.ok);
-      return { ph, ok: miss.length === 0, miss: miss.map(m => m.word) };
-    });
-    const okCount = status.filter(s => s.ok).length;
-    el.innerHTML = `<div class="body center">${domik('party', 130, 'Domik bayram qilmoqda')}<p class="h1">Siz rus tilida gapirdingiz!</p>
-      <p class="lead">${scored ? (okCount === 3 ? 'Uchala gap ham aniq eshitildi!' : `${okCount} tasi aniq, ${3 - okCount} tasida soʻz aniq eshitilmadi`) : 'Ovozingiz saqlandi — tinglab koʻring'}</p>
-      ${scored ? status.map(s => `<div class="phr ${s.ok ? 'ok' : 'warn'}" style="width:100%;text-align:left"><span class="row"><span lang="ru" class="ru grow">${s.ph.ru}</span>${s.ok ? ICON.check('#087A4A', 18) : '!'}</span>${s.ok ? '' : `<span class="sub" style="color:#7A5300">«<span lang="ru">${s.miss.join(', ')}</span>» aniq eshitilmadi — sekinroq qayta ayting</span>`}</div>`).join('') : ''}
-      ${playerHtml('Sizning ovozingiz', 'my')}</div>
-      ${bar('<button class="btn" data-next>Natijamni koʻrish</button><button class="btn sec" data-again>Qayta yozish</button>')}`;
-    confetti(el); haptic('ok');
-    wirePlayer(el, 'my', voiceUrl);
-    wire(el, { '[data-next]': () => go('result', {}, { replace: true }), '[data-again]': () => go('speak', {}, { replace: true }) });
-  };
-  SCREENS.micDenied = (el, { reason }) => {
-    const p = L.phrases(S.name, ageN(), S.field);
-    el.innerHTML = `<div class="body">${domik('shield', 110)}<p class="h2">${reason === 'unsupported' ? 'Bu qurilmada yozib boʻlmadi' : 'Mikrofon yopiq'}</p>
-      <p class="lead">${reason === 'unsupported' ? 'Telegram ilovasini yangilang yoki' : 'Telegram mikrofonga ruxsat soʻradi, lekin ruxsat berilmadi. Muammo yoʻq —'} 3 gapni botga <b>ovozli xabar</b> qilib yuboring, menejer tinglaydi.</p>
-      <div class="card"><div class="kicker">AYTADIGAN GAPLARINGIZ</div><div lang="ru" style="font-size:16px;font-weight:800;line-height:1.6">${p.map(x => x.ru).join('<br>')}</div></div>
-      <p class="sub">iPhone: Sozlamalar → Telegram → Mikrofon · Android: Sozlamalar → Ilovalar → Telegram → Ruxsatlar.</p></div>
-      ${bar('<button class="btn" data-bot>Botga ovozli xabar yuborish</button><button class="btn sec" data-again>Qayta urinish</button><button class="btn ghost" data-result>Natijaga oʻtish</button>')}`;
-    wire(el, { '[data-bot]': () => { try { tg.close(); } catch { location.href = 'https://t.me/Domworkuz_bot'; } }, '[data-again]': () => go('speak', {}, { replace: true }), '[data-result]': () => go('result', {}, { replace: true }) });
-  };
-
   // Natija
-  SCREENS.result = el => {
-    const a = S.answers || {}, hw = a.homework || {}, pr = local.pairs, vr = local.voiceResult || a.voice;
+  SCREENS.result = (el, { celebrate = false } = {}) => {
+    const a = S.answers || {}, hw = a.homework || {}, vr = local.voiceResult || a.voice;
     const wrong = local.hwWrong || [];
-    const strong = ['ism va yosh'];
     const work = (vr?.words || []).filter(w => !w.ok).map(w => '«<span lang="ru">' + w.word + '</span>»');
-    const discount = S.discount ? `<div class="chip orange" style="align-self:center">${ICON.star('#B34700', 14)} Bot orqali kelganlarga −${S.discount.percent}% · ${new Date(S.discount.until).toLocaleDateString('uz-UZ', { day: 'numeric', month: 'long' })}gacha</div>` : '';
+    const dlg = local.dialog ?? a.game?.score;
     el.innerHTML = `<div class="body">${backLink()}<div class="row">${domik('trophy', 84, 'Domik kubok bilan')}<div class="grow"><p class="h1">${S.name ? firstName() + ', ' : ''}namuna dars tugadi!</p></div></div>
-      <p class="lead">${S.steps.voice ? '3 ta gapni ovoz bilan aytdingiz' + (vr?.score != null ? ` — ${vr.score}% aniq` : '') : 'Ovozli mashq hali qoldi — xohlasangiz qayta urinib koʻring'}</p>
-      <div class="tiles"><div class="stat"><b>${hw.correct ?? '—'}/${hw.total ?? 5}</b><span class="sub">vazifa</span></div><div class="stat"><b>${local.dialog ?? (S.steps.game ? '✓' : '—')}${local.dialog != null ? '/4' : ''}</b><span class="sub">ish suhbati</span></div><div class="stat"><b>${pr ? pr.pairs + '/' + pr.total : (S.steps.game ? '✓' : '—')}</b><span class="sub">juftlar${pr ? ' · ' + pr.time + ' s' : ''}</span></div></div>
-      ${voiceUrl ? `<div class="card"><b>Sizning birinchi ruscha tanishuvingiz</b>${playerHtml('Sizning ovozingiz', 'my')}</div>` : ''}
-      <div class="card"><span style="font-size:14px;font-weight:600;line-height:1.5"><b style="color:var(--greend)">Kuchli tomonlaringiz:</b> ${strong.join(', ')} — xatosiz.<br>
+      <p class="lead">${S.steps.voice ? 'Ish suhbatida HR savoliga rus tilida oʻz ovozingiz bilan javob berdingiz' + (vr?.score != null ? ` — ${vr.score}% aniq` : '') + ' 🎉' : 'Ish suhbatidan oʻtdingiz 🎉'}</p>
+      <div class="tiles"><div class="stat"><b>${S.steps.video ? '✓' : '—'}</b><span class="sub">video</span></div><div class="stat"><b>${hw.correct ?? '—'}/${hw.total ?? 3}</b><span class="sub">mashqlar</span></div><div class="stat"><b>${dlg != null ? dlg + '/4' : (S.steps.game ? '✓' : '—')}</b><span class="sub">ish suhbati</span></div></div>
+      ${voiceUrl ? `<div class="card"><b>Sizning birinchi ruscha javobingiz</b>${playerHtml('Sizning ovozingiz', 'my')}</div>` : ''}
+      <div class="card"><span style="font-size:14px;font-weight:600;line-height:1.5"><b style="color:var(--greend)">Kuchli tomonlaringiz:</b> ism va yosh — xatosiz.<br>
         ${wrong.length || work.length ? `<b style="color:var(--oranged)">Ustoz bilan ishlaymiz:</b> ${[...[...new Map(wrong.map(w => [w.skill, w])).values()].map(w => esc(w.skill) + ' (<span lang="ru">' + w.topic + '</span>)'), ...(work.length ? [work.slice(0, 2).join(', ') + 'ni aniq aytish'] : [])].join(' va ')}.` : '<b style="color:var(--greend)">Ajoyib boshlanish!</b> Keyingi darslarda tezroq gapirishni oʻrganasiz.'}</span>
         <span class="sub">Aniq darajangizni menejer suhbatda aytadi.</span></div>
-      <div class="card" style="background:var(--bluel)"><div class="row">${domik('teacher', 56)}<div class="grow"><b>Keyingi qadam — jonli suhbat</b><div class="sub">Shaxsiy ustoz bilan shu suhbatni jonli gapirasiz — talaffuzni oʻsha zahoti tuzatadi.</div></div></div></div>
-      ${discount}
-    </div>${bar(S.requested ? '<button class="btn" data-home>Dars yoʻliga qaytish</button>' : `<button class="btn" data-call>${ICON.phone()}Menejer qoʻngʻiroq qilsin</button><button class="btn sec" data-tg>Telegramda yozishaylik</button>`)}`;
+      <button class="step lock" data-kurs style="border:2px dashed #C8CFDC"><span class="ic" style="background:#EEF1F7">${ICON.lock()}</span><span class="grow"><span class="kicker">KEYINGI DARS</span><span class="t" style="display:block">2-dars · <span lang="ru">Кем вы рабо́таете?</span></span><span class="s">Kasbingiz haqida gapirasiz · Domwork oʻquvchilari uchun</span></span>${ICON.chev()}</button>
+    </div>${bar(`<button class="btn" data-kurs>${ICON.lock('#fff', 18)}2-darsni ochish</button>`)}`;
     if (voiceUrl) wirePlayer(el, 'my', voiceUrl);
+    if (celebrate) { confetti(el); haptic('ok'); say('Отли́чно! Молоде́ц!'); }
+    wire(el, { '[data-kurs]': () => go('kurs') });
+  };
+
+  // 2-dars qulflangan → kurs taklifi → menejer (mutaxassis tavsiyasi: oxirida kursga yozilishni tushuntirib, keyin menejerga chaqirish).
+  SCREENS.kurs = el => {
+    track('locked', {});
+    const discount = S.discount ? `<div class="chip orange" style="align-self:flex-start">${ICON.star('#B34700', 14)} Bot orqali kelganlarga −${S.discount.percent}% · ${new Date(S.discount.until).toLocaleDateString('uz-UZ', { day: 'numeric', month: 'long' })}gacha</div>` : '';
+    const items = [['teacher', 'Shaxsiy ustoz bilan jonli darslar', 'Yakkama-yakka, guruh yoʻq. Vaqtni oʻzingiz tanlaysiz.'],
+      ['read', 'Video darslar — bugungidek', '72 dars, ≈3 oy: tanishuvdan erkin suhbatgacha.'],
+      ['phones', 'Ilovada har kuni mashq', 'Soʻz oʻyinlari, mashqlar va uyga vazifa.'],
+      ['box', 'Rangli kitob uyingizga', 'Kurs kitobi uyingizga yetkaziladi.'],
+      ['diploma', 'Yordamchi ustoz', 'Har jonli darsdan keyin takrorlash va savollar.']];
+    el.innerHTML = `<div class="body">${backLink()}
+      <div class="card" style="align-items:center;text-align:center;background:#0B1220;color:#fff">${ICON.lock('#fff', 30)}<span class="kicker" style="color:#C8CFDC">2-DARS · <span lang="ru">КЕМ ВЫ РАБО́ТАЕТЕ?</span></span><p class="h2" style="color:#fff">Keyingi darslar Domwork oʻquvchilari uchun</p><span class="sub" style="color:#C8CFDC">Bugun namuna darsni oʻtdingiz. Davomi — kursda.</span></div>
+      <div class="kicker">KURSDA SIZNI NIMA KUTADI</div>
+      ${items.map(([ic, t, d]) => `<div class="card" style="padding:10px 14px"><div class="row">${domik(ic, 44)}<div class="grow"><b>${t}</b><div class="sub">${d}</div></div></div></div>`).join('')}
+      <div class="card" style="background:var(--bluel)"><div class="kicker b">QANDAY OʻQUVCHI BOʻLASIZ</div>
+        ${['Menejer bilan 5–10 daqiqa gaplashasiz — darajangiz va maqsadingiz', 'Sizga mos tarif va dars vaqti tanlanadi', 'Toʻlovdan keyin kurs va keyingi darslar ochiladi'].map((t, i) => `<div class="row"><span class="chip" style="min-width:28px;justify-content:center">${i + 1}</span><span style="font-weight:700">${t}</span></div>`).join('')}</div>
+      ${discount}
+    </div>${bar(S.requested ? `<div class="note">Soʻrovingiz qabul qilindi — ${advisor()} bogʻlanadi</div><button class="btn sec" data-home>Dars yoʻliga qaytish</button>` : `<div class="note">Menejer qoʻngʻiroq qilib, sizga mos tarif va vaqtni aytadi</div><button class="btn green" data-call>${ICON.phone()}Kursga yozilish</button><button class="btn sec" data-tg>Telegramda savol berish</button>`)}`;
     wire(el, { '[data-call]': () => go('contact'), '[data-tg]': () => sendRequest('telegram', 'now'), '[data-home]': home });
   };
 
