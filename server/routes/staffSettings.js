@@ -50,6 +50,9 @@ module.exports = function createStaffRouter({ pool, authRequired, findUserById }
     router.post('/push/unregister', ph(req => P.unregister(pool, req.user, req.body || {})));
     router.get('/push/mine', ph(req => P.mine(pool, req.user)));
     router.post('/push/test', ph(req => P.test(pool, req.user)));
+    // Admin: ilova ulangan xodimlar, yuborish natijalari va bitta xodimga sinov xabari.
+    router.get('/push/admin', ph(req => P.overview(pool, req.user)));
+    router.post('/push/admin/test', ph(req => P.adminTest(pool, req.user, req.body || {})));
     router.get('/guides/acks/mine', handle(async req => ({ acks: await ST.myAcks(pool, req.user) })));
     router.get('/guides/acks', handle(async req => ({ acks: await ST.allAcks(pool, req.user, req.query.guideId ? String(req.query.guideId) : null) })));
     router.post('/guides/:id/ack', handle(req => ST.ackGuide(pool, req.user, req.params.id)));

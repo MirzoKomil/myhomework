@@ -12,7 +12,14 @@ CREATE TABLE IF NOT EXISTS staff_push_tokens (token TEXT PRIMARY KEY, user_id TE
     app_version TEXT NOT NULL DEFAULT '', device TEXT NOT NULL DEFAULT '', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
 CREATE INDEX IF NOT EXISTS staff_push_tokens_user ON staff_push_tokens(user_id);
 CREATE TABLE IF NOT EXISTS staff_push_state (user_id TEXT PRIMARY KEY, baseline_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), last_push_at TIMESTAMPTZ);
-CREATE TABLE IF NOT EXISTS staff_push_sent (user_id TEXT NOT NULL, event_id TEXT NOT NULL, sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), PRIMARY KEY(user_id, event_id));`;
+CREATE TABLE IF NOT EXISTS staff_push_sent (user_id TEXT NOT NULL, event_id TEXT NOT NULL, sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), PRIMARY KEY(user_id, event_id));
+ALTER TABLE staff_push_tokens ADD COLUMN IF NOT EXISTS last_ok_at TIMESTAMPTZ;
+ALTER TABLE staff_push_tokens ADD COLUMN IF NOT EXISTS ok_count INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE staff_push_tokens ADD COLUMN IF NOT EXISTS last_error TEXT NOT NULL DEFAULT '';
+ALTER TABLE staff_push_tokens ADD COLUMN IF NOT EXISTS last_error_at TIMESTAMPTZ;`;
+// Uzilish deb hisoblanadigan oraliq: shundan uzoq tekshirilmagan xodimning eski voqealari yuborilmaydi (to'planib kelmasin).
+// 10 daqiqa edi — xodimlar ko'p yoki tekshiruv sekin bo'lsa, navbat aylanib chiqquncha hamma "uzilgan" bo'lib, hech kimga yuborilmay qolardi.
+const GAP_MS = 30 * 60000;
 const state = { ready: false };
 const LOCK = 731205; // pg advisory lock — bir nechta server nusxasi bir xabarni ikki marta yubormasin
 
@@ -26,10 +33,11 @@ async function register(pool, actor, body = {}) {
     const token = clean(body.token, 4096);
     if (token.length < 20) throw Object.assign(new Error('Token noto\'g\'ri'), { status: 400 });
     // Bitta telefon — bitta token: boshqa xodim shu telefondan kirsa, token unga o'tadi.
-    await pool.query(`INSERT INTO staff_push_tokens (token, user_id, platform, app_version, device) VALUES ($1,$2,$3,$4,$5)
+    const r = await pool.query(`INSERT INTO staff_push_tokens (token, user_id, platform, app_version, device) VALUES ($1,$2,$3,$4,$5)
         ON CONFLICT (token) DO UPDATE SET user_id=EXCLUDED.user_id, platform=EXCLUDED.platform, app_version=EXCLUDED.app_version,
-        device=EXCLUDED.device, last_seen_at=NOW()`,
+        device=EXCLUDED.device, last_seen_at=NOW() RETURNING (xmax = 0) AS fresh`,
         [token, String(actor.id), clean(body.platform, 20) || 'android', clean(body.appVersion, 40), clean(body.device, 120)]);
+    if (r.rows[0]?.fresh) console.log(`[push] telefon ulandi: ${actor.name || actor.id} (${actor.role || '?'}) · ${clean(body.device, 120) || 'qurilma'} · ${clean(body.appVersion, 40)}`);
     return { ok: true, configured: fcm.configured() };
 }
 async function unregister(pool, actor, body = {}) {
@@ -38,7 +46,7 @@ async function unregister(pool, actor, body = {}) {
     return { ok: true };
 }
 async function mine(pool, actor) {
-    const rows = (await pool.query('SELECT platform, app_version, device, last_seen_at FROM staff_push_tokens WHERE user_id=$1 ORDER BY last_seen_at DESC', [String(actor.id)])).rows;
+    const rows = (await pool.query('SELECT platform, app_version, device, last_seen_at, last_ok_at, last_error, last_error_at FROM staff_push_tokens WHERE user_id=$1 ORDER BY last_seen_at DESC', [String(actor.id)])).rows;
     return { configured: fcm.configured(), devices: rows };
 }
 
@@ -48,14 +56,15 @@ const urlFor = (role, e) => {
 };
 async function deliver(pool, userId, role, msg) {
     const tokens = (await pool.query('SELECT token FROM staff_push_tokens WHERE user_id=$1', [userId])).rows.map(r => r.token);
-    let ok = 0;
+    let ok = 0; const errors = [];
     for (const t of tokens) {
         const r = await fcm.send(t, msg);
-        if (r.ok) ok++;
-        else if (r.gone) await pool.query('DELETE FROM staff_push_tokens WHERE token=$1', [t]);
-        else console.error('[push] yuborilmadi:', r.error);
+        if (r.ok) { ok++; await pool.query('UPDATE staff_push_tokens SET last_ok_at=NOW(), ok_count=ok_count+1 WHERE token=$1', [t]); }
+        else if (r.gone) { console.warn(`[push] eskirgan token o'chirildi (xodim ${userId}): ${r.error}`); await pool.query('DELETE FROM staff_push_tokens WHERE token=$1', [t]); errors.push(r.error); }
+        else { console.error(`[push] yuborilmadi (xodim ${userId}):`, r.error); errors.push(r.error);
+            await pool.query('UPDATE staff_push_tokens SET last_error=$2, last_error_at=NOW() WHERE token=$1', [t, String(r.error || 'xato').slice(0, 300)]); }
     }
-    return { ok, devices: tokens.length };
+    return { ok, devices: tokens.length, errors };
 }
 
 async function test(pool, actor) {
@@ -63,7 +72,43 @@ async function test(pool, actor) {
     const u = (await pool.query('SELECT role FROM users WHERE id=$1', [actor.id])).rows[0] || {};
     const r = await deliver(pool, String(actor.id), u.role, { title: 'Bildirishnomalar ishlayapti ✅', body: 'Jamoa xabarlari endi shu telefonga keladi.', tag: 'test', id: `test:${Date.now()}`,
         url: u.role === 'teacher' ? 'https://myhomework.uz/teacher/' : 'https://myhomework.uz/' });
-    if (!r.devices) throw Object.assign(new Error('Bu akkauntda ilova o\'rnatilgan telefon topilmadi'), { status: 404 });
+    if (!r.devices) throw Object.assign(new Error('Bu akkauntda ilova o\'rnatilgan telefon topilmadi — Jamoa ilovasini oching va shu akkaunt bilan kiring'), { status: 404 });
+    if (!r.ok) throw Object.assign(new Error('Firebase xabarni qabul qilmadi: ' + (r.errors.join(', ') || 'noma\'lum xato')), { status: 502 });
+    return { ok: true, ...r };
+}
+
+// Admin uchun: kimda ilova ulangan, oxirgi yuborish natijasi, kim ilovaga kirgan-u telefoni ro'yxatdan o'tmagan.
+const ADMIN = new Set(['admin', 'boshliq']);
+async function adminGuard(pool, actor) {
+    const role = (await pool.query('SELECT role FROM users WHERE id=$1', [actor.id])).rows[0]?.role;
+    if (!ADMIN.has(role)) throw Object.assign(new Error('Faqat admin uchun'), { status: 403 });
+}
+async function overview(pool, actor) {
+    await adminGuard(pool, actor);
+    const devices = (await pool.query(`SELECT t.user_id, u.name, u.role, t.device, t.app_version, t.created_at, t.last_seen_at, t.last_ok_at, t.ok_count,
+            t.last_error, t.last_error_at, s.last_push_at,
+            (SELECT COUNT(*)::int FROM staff_push_sent x WHERE x.user_id=t.user_id AND x.sent_at > NOW() - INTERVAL '24 hours') AS events_24h
+        FROM staff_push_tokens t LEFT JOIN users u ON u.id::text = t.user_id LEFT JOIN staff_push_state s ON s.user_id = t.user_id
+        ORDER BY u.name NULLS LAST`)).rows;
+    // Jamoa ilovasi orqali kirgan (user_agent'da DomworkTeam), lekin telefoni ro'yxatdan o'tmagan xodimlar.
+    let missing = [];
+    try {
+        missing = (await pool.query(`SELECT u.id, u.name, u.role, MAX(se.last_seen) AS last_seen FROM sessions se JOIN users u ON u.id::text = se.user_id::text
+            WHERE se.user_agent LIKE '%DomworkTeam/%' AND u.role <> 'student'
+              AND NOT EXISTS (SELECT 1 FROM staff_push_tokens t WHERE t.user_id = u.id::text)
+            GROUP BY u.id, u.name, u.role ORDER BY MAX(se.last_seen) DESC LIMIT 100`)).rows;
+    } catch (e) { console.error('[push] sessiyalar o\'qilmadi:', e.code || e.message); }
+    return { fcm: fcm.status(), devices, missing };
+}
+async function adminTest(pool, actor, body = {}) {
+    await adminGuard(pool, actor);
+    if (!fcm.configured()) throw Object.assign(new Error('Serverda FCM kaliti yo\'q'), { status: 503 });
+    const userId = clean(body.userId, 80);
+    const u = (await pool.query('SELECT name, role FROM users WHERE id=$1', [userId])).rows[0];
+    if (!u) throw Object.assign(new Error('Xodim topilmadi'), { status: 404 });
+    const r = await deliver(pool, userId, u.role, { title: 'Sinov xabari 🔔', body: 'Admin bildirishnomalarni tekshiryapti. Shu xabar keldimi — demak hammasi joyida.', tag: 'test', id: `admintest:${Date.now()}`,
+        url: u.role === 'teacher' ? 'https://myhomework.uz/teacher/' : 'https://myhomework.uz/' });
+    if (!r.devices) throw Object.assign(new Error(`${u.name}: ilova ulangan telefon yo'q`), { status: 404 });
     return { ok: r.ok > 0, ...r };
 }
 
@@ -78,12 +123,11 @@ async function pushUser(pool, userId, role, now) {
         await c.query('INSERT INTO staff_push_state(user_id) VALUES($1) ON CONFLICT DO NOTHING', [userId]);
         const st = (await c.query('SELECT last_push_at FROM staff_push_state WHERE user_id=$1 FOR UPDATE', [userId])).rows[0];
         const ids = [...new Set(ev.map(e => e.id))];
-        const gap = !st?.last_push_at || now - new Date(st.last_push_at) > 10 * 60000;
+        const gap = !st?.last_push_at || now - new Date(st.last_push_at) > GAP_MS;
         if (gap) {
-            if (!errors.length) {
-                await c.query('UPDATE staff_push_state SET baseline_at=NOW(), last_push_at=$2 WHERE user_id=$1', [userId, now]);
-                if (ids.length) await c.query('INSERT INTO staff_push_sent(user_id,event_id) SELECT $1,unnest($2::text[]) ON CONFLICT DO NOTHING', [userId, ids]);
-            }
+            // Bitta bo'lim xato bersa ham boshlang'ich nuqta qo'yiladi — aks holda bu xodim abadiy "uzilgan" holatda qolib, hech qachon xabar olmasdi.
+            await c.query('UPDATE staff_push_state SET baseline_at=NOW(), last_push_at=$2 WHERE user_id=$1', [userId, now]);
+            if (ids.length) await c.query('INSERT INTO staff_push_sent(user_id,event_id) SELECT $1,unnest($2::text[]) ON CONFLICT DO NOTHING', [userId, ids]);
             await c.query('COMMIT');
             return 0;
         }
@@ -132,9 +176,11 @@ async function tick(pool, now = new Date(), { budgetMs = 45000 } = {}) {
                 try { sent += await pushUser(pool, u.user_id, u.role, now); }
                 catch (e) { console.error('[push] xodim tekshiruvi xatosi:', e.code || e.message); }
             }
+            if (sent) console.log(`[push] ${sent} ta xabar yuborildi (${users.length} xodim tekshirildi, ${Math.round((Date.now() - started) / 1000)} s)`);
+            if (!state.reported) { state.reported = true; console.log(`[push] ilova ulangan xodimlar: ${users.length}`); }
             return sent;
         } finally { await lock.query('SELECT pg_advisory_unlock($1)', [LOCK]).catch(() => {}); }
     } finally { lock.release(); running = false; }
 }
 
-module.exports = { state, initSchema, register, unregister, mine, test, tick };
+module.exports = { state, initSchema, register, unregister, mine, test, overview, adminTest, tick };
