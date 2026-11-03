@@ -337,7 +337,7 @@ async function initStorage() {
 
 function generateTimeSlots() {
     const slots = [];
-    for (let h = 8; h <= 23; h++) {
+    for (let h = 7; h <= 23; h++) { // 07:00 dan — ustoz ish vaqti shabloni 07:00 dan ochilishi mumkin
         for (let m = 0; m < 60; m += 15) {
             if (h === 23 && m > 45) break;
             slots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
