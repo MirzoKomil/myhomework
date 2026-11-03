@@ -37,6 +37,7 @@ import { R } from '@/constants/v2/routes';
 import { fonts } from '@/constants/v2/tokens';
 import { BONUS_CATEGORIES, getResolvedLessonContent } from '@/data/lessonContent';
 import {
+  liveGradeScore,
   fetchDemoGrades,
   fetchDemoSchedule,
   fetchDemoStudentPayments,
@@ -64,7 +65,7 @@ function weekLabel(mon: Date) {
     : `${mon.getDate()} ${MONTHS_LOWER[mon.getMonth()]} – ${sun.getDate()} ${MONTHS_LOWER[sun.getMonth()]}`;
 }
 
-const gradeOf = (g: LiveGradeEntry) => (g.scores.attendance + g.scores.activity + g.scores.speaking + g.scores.understanding + g.scores.discipline) / 5;
+const gradeOf = (g: LiveGradeEntry) => liveGradeScore(g);
 
 // Kompyuterda (keng web oyna) — Schedule kompyuter dizayni; telefonda mobil ekran o'zgarmagan.
 export default function V2Schedule() {
@@ -239,7 +240,8 @@ function V2ScheduleMobile() {
               const g = gradeByDate.get(key);
               if (d.isToday || !d.isPast) sub = [time, 'Telegram guruhda'].filter(Boolean).join(' · ');
               else if (g) {
-                sub = [time, 'qatnashdingiz'].filter(Boolean).join(' · ') + ` · baho ${fmtGrade(gradeOf(g))}`;
+                const gv = gradeOf(g);
+                sub = [time, 'qatnashdingiz'].filter(Boolean).join(' · ') + (gv !== null ? ` · baho ${fmtGrade(gv)}` : '');
                 status = 'done';
               } else {
                 sub = [time, 'qatnashmadingiz'].filter(Boolean).join(' · ');

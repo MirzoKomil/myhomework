@@ -39,7 +39,7 @@ import { LessonLockedPopup } from '@/components/v2/popups/LessonLocked';
 import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
 import { getResolvedExams, type Exam } from '@/data/exams';
-import { fetchDemoGrades, fetchDemoSchedule, type LiveGradeEntry } from '@/services/contentApi';
+import { fetchDemoGrades, fetchDemoSchedule, liveGradeScore, type LiveGradeEntry } from '@/services/contentApi';
 import { useLessonCoins } from '@/services/coinsStore';
 import { useExamResults } from '@/services/examStore';
 import { useCachedState } from '@/services/v2Cache';
@@ -359,7 +359,7 @@ function LessonRow({
       .filter(Boolean)
       .join(' · ');
   } else {
-    const avg = grade ? Object.values(grade.scores).reduce((a, b) => a + b, 0) / Object.values(grade.scores).length : null;
+    const avg = liveGradeScore(grade);
     sub = [lesson.attendanceTaken ? 'Qatnashdingiz' : `${lesson.percent}% bajarildi`, avg !== null ? `baho ${avg.toFixed(1)} / 5` : ''].filter(Boolean).join(' · ');
   }
   return (

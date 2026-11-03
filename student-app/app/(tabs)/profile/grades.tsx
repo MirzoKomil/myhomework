@@ -18,10 +18,11 @@ import {
 } from '@/data/lessonGrades';
 import { UZ_MONTHS } from '@/data/scheduleCalendar';
 import {
+  isGraded,
   AssistantRatingValues,
   fetchAssistantRatings,
   fetchDemoGrades,
-  LiveGradeEntry,
+  GradedLiveEntry,
   StudentRatingOfTeacher,
   submitAssistantRating as submitAssistantRatingApi,
   submitTeacherRating,
@@ -89,10 +90,10 @@ export default function GradesScreen() {
 
   // Ustoz CRM'da davomat qilib "qatnashdi" deb belgilagach majburiy kiritgan
   // haqiqiy jonli dars baholari — endi soxta generatsiya o'rniga shu yerdan keladi.
-  const [liveLessons, setLiveLessons] = useState<LiveGradeEntry[] | null>(null);
+  const [liveLessons, setLiveLessons] = useState<GradedLiveEntry[] | null>(null);
   useEffect(() => {
     fetchDemoGrades()
-      .then(({ grades }) => setLiveLessons([...grades].sort((a, b) => (a.date < b.date ? 1 : -1))))
+      .then(({ grades }) => setLiveLessons(grades.filter(isGraded).sort((a, b) => (a.date < b.date ? 1 : -1))))
       .catch(() => setLiveLessons([]));
   }, []);
 

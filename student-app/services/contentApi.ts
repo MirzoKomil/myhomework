@@ -395,9 +395,25 @@ export type LiveGradeEntry = {
   teacherId: string;
   lessonId: string;
   lessonName: string;
-  scores: { attendance: number; activity: number; speaking: number; understanding: number; discipline: number };
+  // Ustoz endi "Keldi" bosganda baho qo'ymaydi — yangi yozuvlarda scores bo'lmaydi
+  // (server/services/liveLessonPick.js). Shuning uchun ixtiyoriy.
+  scores?: { attendance: number; activity: number; speaking: number; understanding: number; discipline: number };
   studentRatingOfTeacher?: StudentRatingOfTeacher;
 };
+
+export type GradedLiveEntry = LiveGradeEntry & { scores: NonNullable<LiveGradeEntry['scores']> };
+
+/** Baho qo'yilgan yozuvmi (eski yozuvlar) — bahosiz davomat yozuvlarida scores yo'q. */
+export function isGraded(g: LiveGradeEntry | null | undefined): g is GradedLiveEntry {
+  return !!g && !!g.scores && typeof g.scores === 'object';
+}
+
+/** Bitta jonli dars bahosi (5 mezon o'rtachasi) yoki baho bo'lmasa null. */
+export function liveGradeScore(g: LiveGradeEntry | null | undefined): number | null {
+  if (!isGraded(g)) return null;
+  const vals = Object.values(g.scores).map(Number).filter((n) => Number.isFinite(n));
+  return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+}
 
 export type DemoGradesResponse = {
   grades: LiveGradeEntry[];

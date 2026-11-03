@@ -14,6 +14,7 @@ import { TEACHER_GRADE_CRITERIA } from '@/data/lessonGrades';
 import { generateRealScheduleDays, ScheduleDay } from '@/data/scheduleCalendar';
 import { getCourseOverallProgress } from '@/data/lessonContent';
 import {
+  isGraded,
   DemoActivityEntry,
   fetchDemoActivity,
   fetchDemoGrades,
@@ -124,8 +125,9 @@ export default function ResultsScreen() {
   const categoryAverages = useMemo(
     () =>
       TEACHER_GRADE_CRITERIA.map((c) => {
-        if (grades.length === 0) return { ...c, avg: 0 };
-        return { ...c, avg: grades.reduce((s, g) => s + g.scores[c.key], 0) / grades.length };
+        const graded = grades.filter(isGraded);
+        if (graded.length === 0) return { ...c, avg: 0 };
+        return { ...c, avg: graded.reduce((s, g) => s + g.scores[c.key], 0) / graded.length };
       }),
     [grades]
   );
