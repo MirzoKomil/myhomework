@@ -432,13 +432,14 @@
                 ? `<small>@Domworkuz_bot · CRM akkauntingizga ulangan</small><i class="ss-pill ok">${ICON.check} Ulangan</i><button type="button" class="ss-btn ss-btn--sm ss-btn--ghost" data-tg-unlink>Uzish</button>`
                 : `<small>@Domworkuz_bot · telefon raqami mos kelishi shart emas</small><button type="button" class="ss-btn ss-btn--sm ss-btn--pri" data-tg-link aria-expanded="${TGL.open}">${TGL.open ? 'Yopish' : 'Ulash'}</button>`}</div>
               <div class="ss-chan"><b>Brauzer</b><small>${browserName()} · shu qurilma</small><i class="ss-pill ok">${ICON.check} Faol</i></div>
+              <div class="ss-chan" id="ssPush"><b>Jamoa ilovasi (telefon)</b><small>Tekshirilmoqda…</small></div>
               <div class="ss-chan"><b>Tinch soatlar</b>${NP.editQuiet ? `<div class="ss-qt"><input type="time" id="ssQf" value="${esc(q.from)}" aria-label="Boshlanishi"> – <input type="time" id="ssQt" value="${esc(q.to)}" aria-label="Tugashi"></div>
                 <div class="ss-acts"><button type="button" class="ss-btn ss-btn--sm" data-q-cancel>Bekor</button><button type="button" class="ss-btn ss-btn--sm ss-btn--pri" data-q-save>Saqlash</button></div>`
                 : `<small>${esc(q.from)} – ${esc(q.to)} · faqat shoshilinch</small><button type="button" class="ss-btn ss-btn--sm" data-q-edit>O'zgartirish</button>`}</div>
             </div>${TGL.open && !tg.botLinked ? '<div class="ss-pad ss-tgl" id="ssTgl" aria-live="polite"></div>' : ''}</section>
           <section class="ss-card" aria-labelledby="ssNH"><header class="ss-ch"><h3 id="ssNH">Nimalar haqida xabar beriladi</h3><button type="button" class="ss-btn ss-btn--sm" data-reset>Standartga qaytarish</button></header>
             <div class="ss-tw"><table class="ss-tbl ss-tbl--np"><thead><tr><th scope="col">Hodisa</th><th scope="col">Telegram</th><th scope="col">Brauzer</th></tr></thead><tbody>${groups}</tbody></table></div>
-            <p class="ss-note ss-mt">O'zgarish darhol saqlanadi. ${esc(note)} ${tg.connected ? 'Telegram belgilangan xabarlar @Domworkuz_bot\'ga keladi (tinch soatlarda faqat shoshilinchlari, ovozsiz).' : tg.botLinked ? 'Bot ulangan. Telegramga yuborishni admin yoqqach, belgilangan xabarlar botga keladi — ungacha panelda.' : 'Telegram tanlovi va tinch soatlar saqlanadi — botni ulang, xabarlar Telegramga keladi.'}${hasSoon ? ' «Tez orada» — bu hodisalar haqida xabar hali yuborilmaydi; manba ulanganda kalitlar shu yerda paydo bo\'ladi.' : ''}</p></section></div>`;
+            <p class="ss-note ss-mt">O'zgarish darhol saqlanadi. ${esc(note)} ${tg.connected ? 'Telegram belgilangan xabarlar @Domworkuz_bot\'ga keladi (tinch soatlarda faqat shoshilinchlari, ovozsiz).' : tg.botLinked ? 'Bot ulangan. Telegramga yuborishni admin yoqqach, belgilangan xabarlar botga keladi — ungacha panelda.' : 'Telegram tanlovi va tinch soatlar saqlanadi — botni ulang, xabarlar Telegramga keladi.'}${hasSoon ? ' «Tez orada» — bu hodisalar haqida xabar hali yuborilmaydi; manba ulanganda kalitlar shu yerda paydo bo\'ladi.' : ''}</p></section>${isAdmin(me()) ? '<section class="ss-card" id="ssPushAdm" aria-labelledby="ssPAH"><header class="ss-ch"><h3 id="ssPAH">Jamoa ilovasi · xodimlar telefonlari</h3><button type="button" class="ss-btn ss-btn--sm" data-padm-reload>Yangilash</button></header><div class="ss-pad ss-muted">Yuklanmoqda…</div></section>' : ''}</div>`;
         body.querySelectorAll('[data-pref]').forEach(inp => inp.addEventListener('change', async () => {
             const k = inp.dataset.pref, ch = inp.dataset.ch;
             try { NP.data = await api('/notify/prefs', { method: 'PUT', body: { types: { [k]: { [ch]: inp.checked } } } }); window.staffNotify?.refresh(); }
@@ -453,12 +454,70 @@
             try { await tgApi('/unlink', {}); NP.data = await api('/notify/prefs'); drawNotif(body); toast('Telegram uzildi'); } catch (e) { toast(e.message, 4000); }
         });
         if (TGL.open && !tg.botLinked) tgStart(body);
+        loadPush(body);
+        if (isAdmin(me())) loadPushAdmin(body);
         body.querySelector('[data-q-edit]')?.addEventListener('click', () => { NP.editQuiet = true; drawNotif(body); });
         body.querySelector('[data-q-cancel]')?.addEventListener('click', () => { NP.editQuiet = false; drawNotif(body); });
         body.querySelector('[data-q-save]')?.addEventListener('click', async () => {
             try { NP.data = await api('/notify/prefs', { method: 'PUT', body: { quiet: { from: body.querySelector('#ssQf').value, to: body.querySelector('#ssQt').value } } }); NP.editQuiet = false; drawNotif(body); }
             catch (e) { toast(e.message, 4000); }
         });
+    }
+
+
+    // ── Jamoa ilovasi (Android) — push holati, sinov xabari; admin uchun xodimlar ro'yxati ──
+    const tAgo = v => { if (!v) return ''; const m = Math.round((Date.now() - Date.parse(v)) / 60000); return m < 1 ? 'hozirgina' : m < 60 ? `${m} daq oldin` : m < 1440 ? `${Math.round(m / 60)} soat oldin` : ago(v); };
+    async function loadPush(body) {
+        const box = body.querySelector('#ssPush'); if (!box) return;
+        const native = !!window.DomworkNative;
+        let d;
+        try { d = await api('/push/mine'); } catch (e) { if (box.isConnected) box.querySelector('small').textContent = 'Holatni olib bo\'lmadi: ' + e.message; return; }
+        if (!box.isConnected) return;
+        const dev = (d.devices || [])[0];
+        const sub = !d.configured ? 'Serverda hali sozlanmagan'
+            : dev ? [dev.device || 'Telefon', dev.app_version ? 'v' + dev.app_version : '', dev.last_error && (!dev.last_ok_at || Date.parse(dev.last_error_at) > Date.parse(dev.last_ok_at)) ? 'oxirgi yuborishda xato: ' + dev.last_error : dev.last_ok_at ? 'oxirgi xabar ' + tAgo(dev.last_ok_at) : 'hali xabar yuborilmagan'].filter(Boolean).join(' · ')
+            : native ? 'Bu telefon hali ro\'yxatdan o\'tmagan — «Sozlash»ni bosing' : 'Ulanmagan — telefonga Jamoa ilovasini o\'rnatib, shu akkaunt bilan kiring';
+        box.innerHTML = `<b>Jamoa ilovasi (telefon)</b><small>${esc(sub)}</small>${dev ? `<i class="ss-pill ok">${ICON.check} Ulangan</i>` : ''}`
+            + (native ? '<button type="button" class="ss-btn ss-btn--sm" data-push-setup>Sozlash</button>' : '')
+            + (dev || native ? '<button type="button" class="ss-btn ss-btn--sm ss-btn--pri" data-push-test>Sinov xabari</button>' : '');
+        box.querySelector('[data-push-setup]')?.addEventListener('click', () => window.dwPushSetup?.());
+        box.querySelector('[data-push-test]')?.addEventListener('click', async e => {
+            const b = e.currentTarget; b.disabled = true;
+            try {
+                if (native && typeof window.dwNativeChanged === 'function') { try { localStorage.setItem('dw_push_reg', ''); } catch (er) { /* */ } window.dwNativeChanged(); await new Promise(r => setTimeout(r, 1500)); }
+                await api('/push/test', { method: 'POST', body: {} });
+                toast('Yuborildi — bir necha soniyada telefonga kelishi kerak', 5000);
+            } catch (er) { toast(er.message, 6000); }
+            finally { b.disabled = false; loadPush(body); }
+        });
+    }
+    async function loadPushAdmin(body) {
+        const sec = body.querySelector('#ssPushAdm'); if (!sec) return;
+        const pad = sec.querySelector('.ss-pad, .ss-tw');
+        let d;
+        try { d = await api('/push/admin'); } catch (e) { if (sec.isConnected && pad) pad.textContent = 'Yuklab bo\'lmadi: ' + e.message; return; }
+        if (!sec.isConnected) return;
+        const role = r => ({ teacher: 'Ustoz', assistant: 'Yordamchi', sales: 'Sotuv', rop: 'ROP', admin: 'Admin', boshliq: 'Boshliq' }[r] || r || '');
+        const rows = d.devices.map(x => {
+            const bad = x.last_error && (!x.last_ok_at || Date.parse(x.last_error_at) > Date.parse(x.last_ok_at));
+            const st = bad ? `<i class="ss-pill warn">Xato: ${esc(x.last_error)}</i>` : x.last_ok_at ? `<i class="ss-pill ok">${ICON.check} ${esc(tAgo(x.last_ok_at))}</i>` : '<i class="ss-pill warn">Hali yuborilmagan</i>';
+            return `<tr><th scope="row"><b>${esc(x.name || x.user_id)}</b><small>${esc(role(x.role))} · ${esc(x.device || 'telefon')}${x.app_version ? ' · v' + esc(x.app_version) : ''} · ulangan ${esc(tAgo(x.created_at))}</small></th>
+              <td>${st}<small class="ss-muted" style="display:block">yuborilgan: ${Number(x.ok_count) || 0} · 24 soatda voqea: ${Number(x.events_24h) || 0}</small></td>
+              <td><button type="button" class="ss-btn ss-btn--sm" data-padm-test="${esc(x.user_id)}">Sinov</button></td></tr>`;
+        }).join('');
+        const miss = d.missing.length ? `<p class="ss-note ss-mt"><b>Ilovaga kirgan, lekin telefoni ro'yxatdan o'tmagan (${d.missing.length}):</b> ${d.missing.map(m => esc(m.name) + ' (' + esc(role(m.role)) + ')').join(', ')}. Ular ilovada Sozlamalar → Bildirishnomalar → «Sozlash»ni bosishi kerak.</p>` : '';
+        const fcmLine = d.fcm.configured ? `Firebase: ulangan (${esc(d.fcm.project)})` : `Firebase: SOZLANMAGAN${d.fcm.error ? ' — ' + esc(d.fcm.error) : ''}`;
+        sec.innerHTML = `<header class="ss-ch"><h3 id="ssPAH">Jamoa ilovasi · xodimlar telefonlari</h3><button type="button" class="ss-btn ss-btn--sm" data-padm-reload>Yangilash</button></header>
+            <p class="ss-pad ss-note">${fcmLine} · ulangan telefonlar: <b>${d.devices.length}</b></p>
+            ${rows ? `<div class="ss-tw"><table class="ss-tbl"><thead><tr><th scope="col">Xodim</th><th scope="col">Holat</th><th scope="col"></th></tr></thead><tbody>${rows}</tbody></table></div>` : '<p class="ss-pad ss-muted">Hali hech kimning telefoni ro\'yxatdan o\'tmagan.</p>'}
+            <div class="ss-pad">${miss}</div>`;
+        sec.querySelector('[data-padm-reload]')?.addEventListener('click', () => loadPushAdmin(body));
+        sec.querySelectorAll('[data-padm-test]').forEach(b => b.addEventListener('click', async () => {
+            b.disabled = true;
+            try { const r = await api('/push/admin/test', { method: 'POST', body: { userId: b.dataset.padmTest } }); toast(r.ok ? 'Yuborildi — xodimdan keldimi deb so\'rang' : 'Yuborilmadi: ' + (r.errors || []).join(', '), 6000); }
+            catch (e) { toast(e.message, 6000); }
+            finally { b.disabled = false; loadPushAdmin(body); }
+        }));
     }
 
     // ── Yo'riqnomalar ────────────────────────────────────────────────────────
