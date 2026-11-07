@@ -102,6 +102,8 @@ function createHandler({ crm }) {
                 payload: { chat_id: sender, text: part, ...(identity ? { reply_markup: keyboard(identity) } : {}), ...extra } });
         }
         try {
+            // Targetolog landingi (domwork_lp_…): kodni saqlab, Meta'ga fonda xabar beradi; oqimni o'zgartirmaydi.
+            await require('./lpStart').track(db, message);
             if(message._studentLinkHash || require('./studentLink').startHash(message.text)){
                 // Start ulanishni darhol yakunlaydi; xush kelibsiz xabari va menyuni studentLink.finalize yuboradi.
                 await require('./studentLink').claim(db,message);
