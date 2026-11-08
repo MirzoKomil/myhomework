@@ -39,6 +39,8 @@
     const relDT = v => { const k = dayDiff(v); return k === 0 ? `Bugun ${hm(v)}` : k === -1 ? `Kecha ${hm(v)}` : k === 1 ? `Ertaga ${hm(v)}` : dtComma(v); };
     const overdueTxt = v => { const ms = Date.now() - (toDate(v)?.getTime() || Date.now()); const h = Math.floor(ms / 3600000); return h >= 24 ? `${Math.floor(h / 24)} kun oʻtdi` : `${Math.max(1, h)} soat oʻtdi`; };
     const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+    // Ustozni o'tgan sanadan almashtirish chegarasi — o'tgan oyning 1-sanasi (server studentOps.backdateMin).
+    const backMinA = () => { const t = new Date(); return localDate(new Date(t.getFullYear(), t.getMonth() - 1, 1)); };
     const atTime = (d, h, m = 0) => { const x = new Date(d); x.setHours(h, m, 0, 0); return x; };
     const greet = () => { const h = new Date().getHours(); return h < 11 ? 'Xayrli tong' : h < 17 ? 'Xayrli kun' : 'Xayrli kech'; };
 
@@ -599,9 +601,9 @@
             ? `<label class="aka-rc aka-rc--t"><input type="radio" name="tt" value="${esc(t.id)}"${firstFree && t.id === firstFree.id ? ' checked' : ''}>${ava(first(t.name), 36, 'blue')}<span><strong>${esc(first(t.name))}</strong><small>${esc([`${num(t.students)} oʻquvchi`, `${pct(t.onPlanPct)}% rejada`, num(t.openProblems) ? `${num(t.openProblems)} ochiq muammo` : ''].filter(Boolean).join(' · '))}</small></span>${chip('Boʻsh', 'green')}</label>`
             : `<label class="aka-rc aka-rc--t is-off"><input type="radio" name="tt" value="${esc(t.id)}" disabled>${ava(first(t.name), 36, 'grey')}<span><strong>${esc(first(t.name))}</strong><small>Bu vaqtda darsi bor</small></span>${chip('Band')}</label>`).join('');
         wrap.querySelector('[data-tb]').outerHTML = `${fs(`Yangi ustoz${slot ? ' · ' + slot + ' da' : ''}`, true, ts.length ? `<div class="aka-rcs">${rows}</div>` : '<p class="aka-muted">Bu tilda boshqa ustoz yoʻq</p>')}
-            ${fs('Qachondan', true, chips('from', [['next', `Keyingi darsdan · ${dShort(nextD)}`], ['custom', 'Sana tanlash']], 'next') + `<label class="aka-fld" data-cust hidden><span class="aka-sr">Sana</span><input class="aka-inp" type="date" data-d min="${localDate()}" value="${localDate(nextD)}"></label>`)}
+            ${fs('Qachondan', true, chips('from', [['next', `Keyingi darsdan · ${dShort(nextD)}`], ['custom', 'Sana tanlash']], 'next') + `<label class="aka-fld" data-cust hidden><span class="aka-sr">Sana</span><input class="aka-inp" type="date" data-d min="${backMinA()}" value="${localDate(nextD)}"></label>`)}
             <label class="aka-fld"><span class="aka-lbl">Sabab <i>*</i></span><input class="aka-inp" type="text" maxlength="300" data-why placeholder="Masalan: oʻquvchi iltimosi"></label>
-            ${note(`Bot ikkala ustozga xabar beradi. Oʻtilgan darslar va oylik hisob eski ustozda qoladi. Tekshiruvdagi qoplashlar ham ${first(st?.teacher?.name) || 'eski ustoz'}da qoladi.`)}
+            ${note(`Bot ikkala ustozga xabar beradi. Tanlangan sanagacha oʻtilgan darslar eski ustozda qoladi; oʻtgan sana tanlansa — oʻsha kundan beri darslar va davomat yangi ustozga oʻtadi. Tekshiruvdagi qoplashlar ham ${first(st?.teacher?.name) || 'eski ustoz'}da qoladi.`)}
             <button type="button" class="aka-btn aka-btn--pri aka-btn--54" data-ok${firstFree ? '' : ' disabled'}>${firstFree ? esc(first(firstFree.name)) + 'ga oʻtkazish' : 'Boʻsh ustoz yoʻq'}</button>`;
         const okB = wrap.querySelector('[data-ok]');
         wrap.addEventListener('change', e => {
@@ -612,7 +614,7 @@
             const tid = wrap.querySelector('input[name="tt"]:checked')?.value, why = wrap.querySelector('[data-why]').value.trim();
             const from = wrap.querySelector('input[name="from"]:checked')?.value === 'custom' ? wrap.querySelector('[data-d]').value : localDate(nextD);
             if (!tid) { toast('Yangi ustozni tanlang', 'bad'); return; }
-            if (!from || from < localDate()) { toast('Bugun yoki keyingi sanani tanlang', 'bad'); return; }
+            if (!from || from < backMinA()) { toast(`Sana ${backMinA()} dan oldin boʻlmasin`, 'bad'); return; }
             if (why.length < 3) { toast('Sababni yozing (kamida 3 belgi)', 'bad'); wrap.querySelector('[data-why]').focus(); return; }
             okB.disabled = true;
             try {
