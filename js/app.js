@@ -22416,10 +22416,14 @@ function openAddLeadModal() {
          <fieldset class="alx-set"><legend>Lid turi <b class="alx-req">*</b> — qayerdan keldi?</legend><div class="alx-row">
             ${radio('mLeadType', 'organic', 'Organik', false)}${radio('mLeadType', 'target', 'Target (reklama)', false)}
          </div><p class="alx-err" id="mLeadTypeErr" hidden></p></fieldset>
+         <fieldset class="alx-set" id="mLeadChannelSet" hidden><legend>Qayerdan keldi? <b class="alx-req">*</b></legend><div class="alx-row">
+            ${radio('mLeadChannel', 'telegram', 'Telegram', false)}${radio('mLeadChannel', 'instagram', 'Instagram', false)}${radio('mLeadChannel', 'youtube', 'YouTube', false)}${radio('mLeadChannel', 'boshqa', 'Boshqa', false)}
+         </div><p class="alx-err" id="mLeadChannelErr" hidden></p></fieldset>
          <div class="form-group" style="margin-bottom:0"><label for="mLeadNote">Izoh <span class="alx-opt-l">(ixtiyoriy)</span></label><textarea id="mLeadNote" class="form-control" rows="2" placeholder="Masalan: IELTS kerak, kechqurun qoʻngʻiroq qilish"></textarea></div>`,
         `<button type="button" class="btn-ghost" id="cancelLead">Bekor qilish</button><button type="button" class="btn-primary-sm" id="saveLead">Lidni saqlash</button>`
     );
     document.getElementById('cancelLead').onclick = closeModal;
+    document.querySelectorAll('input[name="mLeadType"]').forEach(r => r.addEventListener('change', () => { document.getElementById('mLeadChannelSet').hidden = r.value !== 'organic'; }));
     document.querySelectorAll('input[name="mLeadLang"]').forEach(r => r.addEventListener('change', () => {
         const sel = document.getElementById('mLeadManagerId');
         if (sel && !_isSmModal) { const keep = sel.value; sel.innerHTML = managerOptions(r.value); if ([...sel.options].some(o => o.value === keep)) sel.value = keep; }
@@ -22445,7 +22449,12 @@ function openAddLeadModal() {
         setErr('mLeadPhone2', phone2 === null ? 'Raqam notoʻgʻri: +998 va 9 ta raqam kerak' : '');
         const typeErr = document.getElementById('mLeadTypeErr');
         if (typeErr) { typeErr.hidden = !!leadType; typeErr.textContent = leadType ? '' : 'Lid qayerdan kelganini tanlang'; }
-        if (!name || phone === null || phone2 === null || !leadType) {
+        // Organik lid qayerdan kelgani statistikada kerak (direktor, 9-noyabr).
+        const organicChannel = leadType === 'organic' ? (document.querySelector('input[name="mLeadChannel"]:checked')?.value || '') : '';
+        const channelErr = document.getElementById('mLeadChannelErr');
+        const channelMissing = leadType === 'organic' && !organicChannel;
+        if (channelErr) { channelErr.hidden = !channelMissing; channelErr.textContent = channelMissing ? 'Lid qayerdan kelganini tanlang' : ''; }
+        if (!name || phone === null || phone2 === null || !leadType || channelMissing) {
             (document.querySelector('#modalBody .is-invalid') || document.querySelector('input[name="mLeadType"]'))?.focus();
             return;
         }
@@ -22472,6 +22481,7 @@ function openAddLeadModal() {
             managerId: _newLeadManagerId,
             source: sourceLabel,
             leadType,
+            ...(organicChannel ? { organicChannel } : {}),
             status: 'yangi-lidlar',
             comments: note ? [createLeadComment({ text: note, author: _cuModal?.name || 'Admin', type: 'manual' })] : [],
             managerPhoto: null,
