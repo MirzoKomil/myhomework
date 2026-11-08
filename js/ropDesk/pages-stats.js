@@ -20,7 +20,12 @@
     const pct = (a, b, d = 1) => b > 0 ? (a / b * 100).toFixed(d).replace('.', ',') + '%' : '0%';
     const money = n => { n = Math.round(n || 0); if (Math.abs(n) >= 1e6) return (n / 1e6).toFixed(1).replace('.', ',').replace(',0', '') + ' mln'; if (Math.abs(n) >= 1000) return Math.round(n / 1000) + ' ming'; return num(n); };
     const som = n => num(n) + ' soʻm';
-    const lk = l => leadTashkentDayKey(l.createdAt || l.date) || '';
+    // 6 000 lidda har sana uchun yangi Intl formatlovchi sekin edi: natija xotirada saqlanadi.
+    const dayC = new Map();
+    const dayKey = raw => { if (raw === null || raw === undefined || raw === '') return null; let v = dayC.get(raw); if (v === undefined) { v = leadTashkentDayKey(raw); dayC.set(raw, v); } return v; };
+    let leadsC = null;
+    const L = () => leadsC || (leadsC = U.leads());
+    const lk = l => dayKey(l.createdAt || l.date) || '';
     const st = l => normalizeLeadStatus(l.status);
     const isSale = l => ['tolov-jarayonida', 'tolov-yopildi'].includes(st(l));
     const received = l => { const ps = l.paymentSurvey || {}; if (st(l) === 'tolov-jarayonida' && ps.paymentType === 'partial') return Number(ps.paidAmount) || 0; return Number(l.paymentClosedSurvey?.actualAmount || l.paymentClosedSurvey?.totalAmount || ps.totalAmount || ps.paidAmount) || 0; };
@@ -43,8 +48,8 @@
     const srcOk = l => S.src === 'all' || (S.src === 'target' ? getLeadKind(l) === 'target' : getLeadKind(l) !== 'target');
     const mgrLead = l => S.mgrs === null || S.mgrs.includes(l.managerId);
     const mgrSale = l => S.mgrs === null || S.mgrs.includes(staffStatus.saleOwner(l));
-    const assigned = l => { if (!S.aFrom && !S.aTo) return true; const f = S.aFrom || S.aTo, e = S.aTo || S.aFrom, k = leadTashkentDayKey(l.managerAssignedAt || l.createdAt || l.date); return !!k && k >= f && k <= e; };
-    const saleKey = l => leadTashkentDayKey(_getSaleDate(l)) || '';
+    const assigned = l => { if (!S.aFrom && !S.aTo) return true; const f = S.aFrom || S.aTo, e = S.aTo || S.aFrom, k = dayKey(l.managerAssignedAt || l.createdAt || l.date); return !!k && k >= f && k <= e; };
+    const saleKey = l => dayKey(_getSaleDate(l)) || '';
 
     function adsNeeded() {
         const mk = todayKey().slice(0, 7), key = U.lang() + mk;
@@ -62,7 +67,7 @@
     }
 
     function calc() {
-        const r = range(), all = U.leads().filter(srcOk);
+        const r = range(), all = L().filter(srcOk);
         const leads = all.filter(l => inR(lk(l), r) && mgrLead(l) && assigned(l));
         const sales = all.filter(l => isSale(l) && inR(saleKey(l), r) && mgrSale(l));
         const bad = leads.filter(l => isSifatsizLeadForQualityStats(l)), good = leads.length - bad.length;
@@ -82,7 +87,7 @@
         const mr = { from: mk + '-01', to: mk + '-' + pad(days) };
         const leads = c.all.filter(l => inR(lk(l), mr)), sales = c.all.filter(l => isSale(l) && inR(saleKey(l), mr));
         const sum = sales.reduce((s, l) => s + received(l), 0), rec = sales.map(received);
-        const sp = spend(mr), tgt = U.leads().filter(l => getLeadKind(l) === 'target' && inR(lk(l), mr)).length;
+        const sp = spend(mr), tgt = L().filter(l => getLeadKind(l) === 'target' && inR(lk(l), mr)).length;
         const cpl = sp && tgt ? sp.som / tgt : 0, romi = sp && sp.som ? (sum - sp.som) / sp.som * 100 : null, cv = leads.length ? sales.length / leads.length * 100 : 0, chk = midCheck(rec);
         const dp = (f, pl) => pl ? f / (pl * share) * 100 : 0;
         const ring = (lab, f, pl, ft) => { const pc = Math.min(100, pl ? f / pl * 100 : 0), C = 2 * Math.PI * 54; return '<div class="st2-ring"><svg viewBox="0 0 128 128" aria-hidden="true"><circle cx="64" cy="64" r="54"/><circle class="v" cx="64" cy="64" r="54" style="--c:' + C + ';stroke-dasharray:' + C + ';stroke-dashoffset:' + (C * (1 - pc / 100)) + '"/></svg><div><b>' + Math.round(pc) + '%</b><span>' + esc(lab) + '</span><em>' + esc(ft) + '</em></div></div>'; };
@@ -158,6 +163,7 @@
 
     function funnels(c) {
         const rank = new Map(REACH.map((s, i) => [s, i])), reach = REACH.map(() => 0), lost = c.leads.length;
+        rank.set('keyin-sotib-olmoqchi', 4); // qaror bosqichidan keyingi, lekin alohida bosqich sifatida ko'rsatilmaydi
         c.leads.forEach(l => { let m = rank.has(st(l)) ? rank.get(st(l)) : 0; (l.stageHistory || []).forEach(h => { [h.to, h.from].forEach(x => { const v = rank.get(normalizeLeadStatus(x)); if (v > m) m = v; }); }); for (let i = 0; i <= m; i++) reach[i]++; });
         let worst = -1, worstV = -1;
         const lab = id => FUNNEL_STAGES.find(s => s.id === id).label;
@@ -216,7 +222,7 @@
     }
 
     function toolbar(c) {
-        const cnt = k => U.leads().filter(l => (k === 'all' || (k === 'target' ? getLeadKind(l) === 'target' : getLeadKind(l) !== 'target')) && inR(lk(l), c.r) && mgrLead(l) && assigned(l)).length;
+        const cnt = k => L().filter(l => (k === 'all' || (k === 'target' ? getLeadKind(l) === 'target' : getLeadKind(l) !== 'target')) && inR(lk(l), c.r) && mgrLead(l) && assigned(l)).length;
         const tabs = [['target','Target'],['organic','Organik'],['all','Umumiy']].map(([k, t]) => '<button type="button" data-st-src="' + k + '" aria-pressed="' + (S.src === k) + '">' + t + ' · ' + num(cnt(k)) + '</button>').join('');
         const t = todayKey(), dd = dim(+t.slice(0, 4), +t.slice(5, 7));
         const per = [['today','Bugun'],['7','7 kun'],['d1','1–10'],['d2','11–20'],['d3','21–' + dd],['month','Shu oy'],['all','Hammasi'],['custom','Sana']].map(([k, l]) => '<button type="button" data-st-per="' + k + '" aria-pressed="' + (S.per === k) + '">' + l + '</button>').join('');
@@ -234,6 +240,7 @@
 
     function draw() {
         if (!active()) return;
+        leadsC = null;
         const panel = document.querySelector('[data-sales-panel="sales-stats"]');
         adsNeeded();
         const y = panel.closest('.main-content, main')?.scrollTop, c = calc();
