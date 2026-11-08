@@ -106,7 +106,7 @@
     // ROP menyusi admin kabi sodda: 6 ta bo'lim. Qolgan sahifalar yo'qolmagan — bo'lim ichidagi tablarda (SUB).
     const NAV = [['home', 'Bosh sahifa', 'home'], ['leads', 'Sotuv boʻlimi', 'leads'], ['m-target', 'Marketing', 'sms'], ['stu', 'Oʻquvchilar', 'stu'], ['cal', 'Dars jadvali', 'cal'], ['trial', 'Sinov nazorati', 'trial']];
     const SUB = [
-        { nav: 'leads', items: [['leads', 'Lidlar'], ['funnel', 'Voronka'], ['rating', 'Reyting va bonus'], ['plan', 'Sotuv rejasi'], ['debt', 'Qarzdorlar'], ['script', 'Skript va yoʻriqnoma'], ['book', 'Kitob yetkazish'], ['sla', 'SLA'], ['lock', 'Qotgan lidlar qoidasi'], ['arch', 'Arxiv']] },
+        { nav: 'leads', items: [['leads', 'Lidlar'], ['funnel', 'Statistika'], ['rating', 'Reyting va bonus'], ['plan', 'Sotuv rejasi'], ['debt', 'Qarzdorlar'], ['script', 'Skript va yoʻriqnoma'], ['book', 'Kitob yetkazish'], ['sla', 'SLA'], ['lock', 'Qotgan lidlar qoidasi'], ['arch', 'Arxiv']] },
         { nav: 'm-target', items: [['m-target', 'Target lidlar'], ['sms', 'SMS yuborish']] },
         { nav: 'stu', items: [['stu', 'Oʻquvchilar'], ['check', 'Tasdiqlar'], ['tg', 'Telegram guruh'], ['m-check', 'Oʻquvchini tekshirish'], ['m-app', 'Mobil ilova']] }
     ];
