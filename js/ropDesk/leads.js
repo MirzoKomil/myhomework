@@ -316,7 +316,7 @@
         const defCols = g('getDefaultVisibleColumnIds') ? getDefaultVisibleColumnIds() : [];
         const colsDef = typeof _leadsVisibleColumns !== 'undefined' && _leadsVisibleColumns.size === defCols.length && defCols.every(c => _leadsVisibleColumns.has(c));
         const mAct = typeof _leadsManagerFilter !== 'undefined' && _leadsManagerFilter !== 'all';
-        const dAct = typeof _leadsDateFilter !== 'undefined' && _leadsDateFilter.preset !== 'month';
+        const dAct = typeof _leadsDateFilter !== 'undefined' && _leadsDateFilter.preset !== (RD.isRop?.() ? 'all' : 'month');
         const sAct = typeof _leadsSourceFilter !== 'undefined' && _leadsSourceFilter !== 'all';
         [[boxM, mAct], [boxC, !colsDef], [boxD, dAct], [boxS, sAct]].forEach(([b, a]) => { if (!b) return; b.classList.toggle('rk-act', !vb && a); b.classList.toggle('rk-vb', vb && b !== boxS); });
         const disp = document.getElementById('leadsManagerFilterDisplay');
@@ -360,7 +360,7 @@
     function resetFilters() {
         if (typeof _leadsManagerFilter !== 'undefined') _leadsManagerFilter = 'all';
         if (typeof _leadsSourceFilter !== 'undefined') _leadsSourceFilter = 'all';
-        if (typeof _leadsDateFilter !== 'undefined' && g('_leadsMonthRange')) _leadsDateFilter = { preset: 'month', ..._leadsMonthRange(0) };
+        if (typeof _leadsDateFilter !== 'undefined' && g('_leadsMonthRange')) _leadsDateFilter = RD.isRop?.() ? { preset: 'all', from: '', to: '' } : { preset: 'month', ..._leadsMonthRange(0) };
         if (typeof _leadsVisibleColumns !== 'undefined' && g('getDefaultVisibleColumnIds')) { _leadsVisibleColumns = new Set(getDefaultVisibleColumnIds()); g('saveVisibleColumns') && saveVisibleColumns(); }
         const src = document.getElementById('leadsSourceFilter'); if (src) src.value = 'all';
         const sd = document.getElementById('leadsSourceFilterDisplay'); if (sd) sd.textContent = 'Manba: Hammasi';

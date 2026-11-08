@@ -98,17 +98,20 @@
         sms: () => page('sms') || (typeof _tabContext !== 'undefined' && (_tabContext.marketingSection = 'sms'), tab('marketing'), g('switchMarketingSection') && switchMarketingSection('sms'), mark()),
         stu: () => tab('students'),
         tg: () => page('groups') || tab('school-groups'),
+        book: () => tab('sales', { salesSection: 'book-roadmap' }),
         'm-check': () => tab('teachers-section'),
         'm-app': () => tab('student-app'),
         'm-target': () => { if (typeof _tabContext !== 'undefined') _tabContext.marketingSection = 'target'; tab('marketing'); g('switchMarketingSection') && switchMarketingSection('target'); mark(); }
     };
-    const NAV = [
-        ['home', 'Bosh sahifa', 'home'], ['leads', 'Lidlar', 'leads'], ['cal', 'Dars jadvali', 'cal'], ['trial', 'Sinov nazorati', 'trial'],
-        ['NAZORAT'], ['check', 'Tasdiqlar', 'check'], ['sla', 'SLA', 'clock', 'SLA — javob muddati nazorati'], ['lock', 'Qotgan lidlar qoidasi', 'lock', 'Qotgan lidlar qoidasi (sozlama)'], ['arch', 'Arxiv', 'arch', 'Arxiv (tarix)'],
-        ['SOTUV'], ['funnel', 'Voronka', 'funnel', 'Voronka: statistika va menejerlar samaradorligi'], ['rating', 'Reyting va bonus', 'rating'], ['plan', 'Sotuv rejasi', 'plan', 'Sotuv rejasi (koʻrish)'], ['debt', 'Qarzdorlar', 'debt'], ['script', 'Skript va yoʻriqnoma', 'script'], ['sms', 'SMS yuborish', 'sms'],
-        ['OʻQUVCHILAR'], ['stu', 'Oʻquvchilar', 'stu'], ['tg', 'Telegram guruh', 'tg']
+    // ROP menyusi admin kabi sodda: 6 ta bo'lim. Qolgan sahifalar yo'qolmagan — bo'lim ichidagi tablarda (SUB).
+    const NAV = [['home', 'Bosh sahifa', 'home'], ['leads', 'Sotuv boʻlimi', 'leads'], ['m-target', 'Marketing', 'sms'], ['stu', 'Oʻquvchilar', 'stu'], ['cal', 'Dars jadvali', 'cal'], ['trial', 'Sinov nazorati', 'trial']];
+    const SUB = [
+        { nav: 'leads', items: [['leads', 'Lidlar'], ['funnel', 'Voronka'], ['rating', 'Reyting va bonus'], ['plan', 'Sotuv rejasi'], ['debt', 'Qarzdorlar'], ['script', 'Skript va yoʻriqnoma'], ['book', 'Kitob yetkazish'], ['sla', 'SLA'], ['lock', 'Qotgan lidlar qoidasi'], ['arch', 'Arxiv']] },
+        { nav: 'm-target', items: [['m-target', 'Target lidlar'], ['sms', 'SMS yuborish']] },
+        { nav: 'stu', items: [['stu', 'Oʻquvchilar'], ['check', 'Tasdiqlar'], ['tg', 'Telegram guruh'], ['m-check', 'Oʻquvchini tekshirish'], ['m-app', 'Mobil ilova']] }
     ];
-    const MORE = [['m-check', 'Oʻquvchini tekshirish'], ['m-app', 'Mobil ilova'], ['m-target', 'Target lidlar (Marketing)']];
+    const subOf = k => SUB.find(g => g.items.some(i => i[0] === k)) || null;
+    const MORE = [];
     // Sotuv menejeri (SotK* bordlari): Lidlar badge'i — qo'ng'iroq navbati, Qarzdorlar — muddati o'tgan qarz.
     const NAV_SOT = [
         ['home', 'Bosh sahifa', 'home'], ['leads', 'Lidlar', 'leads'], ['cal', 'Dars jadvali', 'cal'], ['trial', 'Sinov darslari', 'trial'],
@@ -138,7 +141,7 @@
         try { const bk = window.ropDeskPages?.activeKey?.(); if (bk) return bk; } catch (e) { /* B qismi yo'q */ }
         const t = document.querySelector('.tab-content.active')?.id?.replace(/^tab-/, '') || '';
         const c = typeof _tabContext !== 'undefined' ? _tabContext : {};
-        const S = { leads: 'leads', 'book-roadmap': 'leads', 'sales-stats': 'funnel', rating: 'rating', 'sales-plan': 'plan', debtors: 'debt', scripts: 'script' };
+        const S = { leads: 'leads', 'book-roadmap': 'book', 'sales-stats': 'funnel', rating: 'rating', 'sales-plan': 'plan', debtors: 'debt', scripts: 'script' };
         if (t === 'sales') return S[c.salesSection] || 'leads';
         if (t === 'marketing') return c.marketingSection === 'sms' ? 'sms' : 'm-target';
         if (t === 'profile') return typeof _profileSection !== 'undefined' && _profileSection === 'archive' ? 'arch' : '';
@@ -190,11 +193,10 @@
             const [k, label, icon, tip] = it;
             const badge = sot ? (k === 'leads' || k === 'debt' ? `<button type="button" class="rk-cnt" data-rk-badge="${k}" hidden></button>` : '')
                 : k === 'leads' ? `<button type="button" class="rk-cnt" data-rk-badge="leads" hidden></button>`
-                : k === 'check' ? `<button type="button" class="rk-cnt" data-rk-badge="check" data-approvals-n hidden></button>`
-                    : k === 'sla' ? `<button type="button" class="rk-cnt" data-rk-badge="sla" hidden></button>` : '';
+                : k === 'stu' ? `<button type="button" class="rk-cnt" data-rk-badge="check" data-approvals-n hidden></button>` : '';
             html += `<div class="rk-nr"${grp ? ` data-rk-in="${esc(grp)}"` : ''}${grp && shut[grp] ? ' hidden' : ''}><a href="#" class="menu-item rk-mi" data-rk="${k}" title="${esc(tip || label)}">${SVG(IC[icon])}<span class="label rk-lbl">${esc(label)}</span></a>${badge}</div>`;
         }
-        html += `<span class="rk-fill" aria-hidden="true"></span>
+        if (sot) html += `<span class="rk-fill" aria-hidden="true"></span>
             <div class="rk-nr"><button type="button" class="menu-item rk-mi rk-more-t" aria-expanded="${ls.get('rk_nav_more') === '1'}" title="Boshqa boʻlimlar: ${sot ? 'Analitika, Mobil ilova, Yoʻriqnomalar' : 'Oʻquvchini tekshirish, Mobil ilova, Target lidlar'}">${SVG(IC.more)}<span class="label rk-lbl">Boshqa boʻlimlar</span></button></div>
             <div class="rk-more-l"${ls.get('rk_nav_more') === '1' ? '' : ' hidden'}>${(sot ? MORE_SOT : MORE).map(([k, l]) => `<a href="#" class="menu-item rk-mi rk-mi--sub" data-rk="${k}"><span class="label rk-lbl">${esc(l)}</span></a>`).join('')}</div>`;
         wrap.innerHTML = html;
@@ -293,11 +295,33 @@
         b.innerHTML = SVG(min ? IC.chevR : IC.chevL, 16); b.title = lab; b.setAttribute('aria-label', lab); b.setAttribute('aria-expanded', String(!min));
         document.querySelectorAll('#sidebarMenu .rk-mi').forEach(a => { if (min) a.setAttribute('aria-label', a.querySelector('.rk-lbl')?.textContent || ''); else a.removeAttribute('aria-label'); });
     }
+    // Bo'lim ichidagi tablar (faqat ROP kompyuter): faol sahifa ustida bitta qator.
+    function subnav(sub, k) {
+        let el = document.getElementById('rkSubnav');
+        if (!sub) { if (el) el.hidden = true; return; }
+        const host = document.querySelector('.tab-content.active')?.parentNode; if (!host) return;
+        if (!el) {
+            el = document.createElement('nav'); el.id = 'rkSubnav'; el.className = 'rk-sub'; el.setAttribute('aria-label', 'Boʻlim sahifalari');
+            el.addEventListener('click', e => { const b = e.target.closest('[data-rk-sub]'); if (b) go(b.dataset.rkSub); });
+        }
+        if (el.parentNode !== host || host.firstElementChild !== el) host.prepend(el);
+        if (el.dataset.nav !== sub.nav) {
+            el.dataset.nav = sub.nav;
+            el.innerHTML = sub.items.map(([key, l]) => `<button type="button" data-rk-sub="${key}">${esc(l)}<i class="rk-sub-n" hidden></i></button>`).join('');
+        }
+        el.hidden = false;
+        el.querySelectorAll('[data-rk-sub]').forEach(b => { const on = b.dataset.rkSub === k; b.classList.toggle('active', on); if (on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
+        const n = el.querySelector('[data-rk-sub="sla"] .rk-sub-n');
+        if (n) { const u = slaUrgent().urgent; n.hidden = !u; n.textContent = u ? fmtN(u) : ''; }
+    }
     function mark() {
-        if (!isDesk()) return;
+        if (!isDesk()) { const sn = document.getElementById('rkSubnav'); if (sn) sn.hidden = true; return; }
         const k = activeKey();
+        const sub = isRop() ? subOf(k) : null;
+        subnav(sub, k);
+        const navK = sub ? sub.nav : k;
         document.querySelectorAll('#sidebarMenu .rk-mi[data-rk]').forEach(a => {
-            const on = a.dataset.rk === k;
+            const on = a.dataset.rk === navK;
             a.classList.toggle('active', on);
             if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
         });

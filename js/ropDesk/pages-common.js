@@ -17,7 +17,7 @@
     const isDesk = () => isRopDesk() || isSotDesk();
     const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     // ROP faqat o'z tilida ishlaydi (server ropScope ham shu bo'yicha cheklaydi).
-    const lang = () => { const u = user(); const l = (u.role === 'sales_manager' ? u.linkedManagerLang : u.linkedRopLang) || 'russian'; return l === 'english' ? 'english' : 'russian'; };
+    const lang = () => { const u = user(); if (u.role === 'rop' && u.linkedRopLang === 'both') return typeof _leadsLangFilter !== 'undefined' && _leadsLangFilter === 'english' ? 'english' : 'russian'; const l = (u.role === 'sales_manager' ? u.linkedManagerLang : u.linkedRopLang) || 'russian'; return l === 'english' ? 'english' : 'russian'; };
     const langLabel = (lg = lang()) => (lg === 'english' ? 'Ingliz tili' : 'Rus tili');
 
     // Sidebar kaliti → mavjud marshrut. [tab, ctx] — switchTab; rdp-* — shu fayl yaratgan ROP bo'limi.
@@ -52,8 +52,19 @@
         }
         return '';
     }
+    // ROP Lidlarga kirmasdan Reyting/Rejani ochsa til inglizligicha qolib, sahifalar bo'sh chiqardi.
+    function syncRopLang() {
+        const u = user();
+        if (u.role !== 'rop' || typeof _leadsLangFilter === 'undefined') return;
+        if (u.linkedRopLang === 'russian' || u.linkedRopLang === 'english') { _leadsLangFilter = u.linkedRopLang; return; }
+        if (u.linkedRopLang === 'both' && _leadsLangFilter !== 'russian' && g('getItem')) {
+            const all = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
+            if (!(all.english || []).length && (all.russian || []).length) _leadsLangFilter = 'russian';
+        }
+    }
     function open(key) {
         const r = routes()[key]; if (!r) return false;
+        syncRopLang();
         const [tab, ctx] = r;
         window.sotuvSinov?.close?.({ silent: true }); window.jadvalV3?.close?.({ silent: true });
         if (tab === 'sales' && document.getElementById('tab-sales')?.classList.contains('active') && g('switchSalesSection')) switchSalesSection(ctx.salesSection);

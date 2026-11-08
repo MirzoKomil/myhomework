@@ -940,7 +940,9 @@ async function getStateForUser(user) {
             } : null,
             paymentSurvey: lead.paymentSurvey ? {
                 paidAmount: lead.paymentSurvey.paidAmount,
-                totalAmount: lead.paymentSurvey.totalAmount
+                totalAmount: lead.paymentSurvey.totalAmount,
+                paymentType: lead.paymentSurvey.paymentType,
+                lastPaymentDate: lead.paymentSurvey.lastPaymentDate
             } : null
         }));
         managerId = await getSalesManagerIdForUser(user.id);

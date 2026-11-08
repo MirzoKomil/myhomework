@@ -9195,7 +9195,7 @@ function renderDashboardOverview(args) {
     const closedLeads = allLeads.filter(lead => normalizeLeadStatus(lead.status) === 'tolov-yopildi');
     const leadRevenue = getDashboardLeadRevenue;
     const totalRevenue = closedLeads.reduce((sum, lead) => sum + leadRevenue(lead), 0);
-    const targetLeads = allLeads.filter(lead => (lead.source || 'Organik') === 'Target');
+    const targetLeads = allLeads.filter(lead => getLeadKind(lead) === 'target');
     const targetClosed = targetLeads.filter(lead => normalizeLeadStatus(lead.status) === 'tolov-yopildi');
     const targetRevenue = targetClosed.reduce((sum, lead) => sum + leadRevenue(lead), 0);
     const managers = getSalesManagers();
@@ -13173,7 +13173,7 @@ function renderAnalitikaMoliyaviy() {
     const cac = newCustomers > 0 && marketingSpend > 0 ? Math.round(marketingSpend / newCustomers) : null;
 
     const targetRevenue = _getClosedLeadsInPeriod('all', period)
-        .filter(l => (l.source || 'Organik') === 'Target')
+        .filter(l => getLeadKind(l) === 'target')
         .reduce((s, l) => s + anLeadRevenue(l), 0);
     const romi = marketingSpend > 0 ? ((targetRevenue - marketingSpend) / marketingSpend * 100) : null;
 
@@ -13483,15 +13483,15 @@ function hbMarketolog(period) {
         cards += hbCard('📥', 'purple', 'Jami lidlar soni', periodLeads.length);
         cards += hbCard('🎯', 'green', "Bitta lidning tannarxi (CPL)", cpl !== null ? fmtMoney(cpl) : "Ma'lumot yo'q");
     } else if (period === 'haftalik') {
-        const targetLeads = periodLeads.filter(l => (l.source || 'Organik') === 'Target').length;
+        const targetLeads = periodLeads.filter(l => getLeadKind(l) === 'target').length;
         const qualityRate = periodLeads.length ? (targetLeads / periodLeads.length * 100) : 0;
         cards += hbCard('📋', 'purple', 'Jami lidlar (davr fakti)', periodLeads.length);
-        cards += hbCard('✅', 'green', '"Maqsadli" deb tasdiqlangan arizalar foizi', qualityRate.toFixed(1).replace('.', ',') + '%');
+        cards += hbCard('✅', 'green', 'Target lidlar ulushi', qualityRate.toFixed(1).replace('.', ',') + '%');
     } else {
         const newCustomers = _getClosedLeadsInPeriod('all', period).length;
         const cac = newCustomers > 0 ? Math.round(spend / newCustomers) : null;
         const targetRevenue = _getClosedLeadsInPeriod('all', period)
-            .filter(l => (l.source || 'Organik') === 'Target')
+            .filter(l => getLeadKind(l) === 'target')
             .reduce((s, l) => s + anLeadRevenue(l), 0);
         const romi = spend > 0 ? ((targetRevenue - spend) / spend * 100) : null;
         cards += hbCard('🎯', 'blue', 'CAC', cac !== null ? fmtMoney(cac) : "Ma'lumot yo'q");
@@ -21676,9 +21676,14 @@ function renderLeads() {
     const _isRopRender = _cuRender && _cuRender.role === 'rop';
     if (_isSalesManagerRender || _isRopRender) {
         // 14-ish: ROP / sotuv menejeri faqat o'z tiliga tegishli lidlarni ko'radi
-        _leadsLangFilter = _cuRender.linkedManagerLang || _cuRender.linkedRopLang || 'english';
+        // Ikki tilli ROP ('both') til almashtirgichdan tanlaydi — aks holda rus lidlari kompyuterda umuman chiqmasdi.
+        const _ropBothLang = _isRopRender && _cuRender.linkedRopLang === 'both';
+        if (_ropBothLang) { if (_leadsLangFilter !== 'english' && _leadsLangFilter !== 'russian') _leadsLangFilter = 'russian'; }
+        else _leadsLangFilter = _cuRender.linkedManagerLang || _cuRender.linkedRopLang || 'english';
+        // ROP: telefon bilan bir xil — boshlanishda sana cheklovi yo'q (faqat birinchi ochilishda; keyin tanlangan filtr qoladi).
+        if (_isRopRender && !window._ropLeadsDateInit) { window._ropLeadsDateInit = true; _leadsDateFilter = { preset: 'all', from: '', to: '' }; if (typeof updateLeadsDateFilterLabel === 'function') updateLeadsDateFilterLabel(); }
         const langTabsEl = document.getElementById('leadsLangTabs');
-        if (langTabsEl) langTabsEl.style.display = 'none';
+        if (langTabsEl) langTabsEl.style.display = _ropBothLang ? '' : 'none';
         // ROP lidlarni ommaviy biriktira oladi (taqsimlash) — panel faqat sotuv menejeriga yashiriladi;
         // ROP uchun belgilanganda ko'rinadi (updateBulkBar).
         const bulkBarEl = document.getElementById('bulkActionsBar');
@@ -25274,12 +25279,12 @@ const DAILY_BONUSES = [
     { id: 'obed60',  label: 'Obed + 60,000',   threshold: 3_000_000, icon: '🍽️', color: '#dc2626', desc: '3,000,000 so\'mdan yuqori sotuv' },
 ];
 const WEEKLY_BONUSES = [
-    { id: 'kitob',    label: 'Kitob',           rank: 1, icon: '📚', color: '#8b5cf6', desc: 'Haftalik 1-o\'rin' },
+    { id: 'restoran', label: 'Restoranga chek', rank: 1, icon: '🍷', color: '#0891b2', desc: 'Haftalik 1-o\'rin' },
     { id: 'kino',     label: 'Kinoga chipta',   rank: 2, icon: '🎬', color: '#6366f1', desc: 'Haftalik 2-o\'rin' },
-    { id: 'restoran', label: 'Restoranga chek', rank: 3, icon: '🍷', color: '#0891b2', desc: 'Haftalik 3-o\'rin' },
+    { id: 'kitob',    label: 'Kitob',           rank: 3, icon: '📚', color: '#8b5cf6', desc: 'Haftalik 3-o\'rin' },
 ];
 const MONTHLY_BONUSES = [
-    { id: 'iphone',  label: 'iPhone 17 Pro',            threshold: 120_000_000, icon: '📱', color: '#6366f1', desc: '120,000,000 so\'mdan yuqori sotuv' },
+    { id: 'iphone',  label: 'iPhone 18 Pro',            threshold: 120_000_000, icon: '📱', color: '#6366f1', desc: '120,000,000 so\'mdan yuqori sotuv' },
     { id: 'macbook', label: 'MacBook',                  threshold: 160_000_000, icon: '💻', color: '#8b5cf6', desc: '160,000,000 so\'mdan yuqori sotuv' },
     { id: 'pul2000', label: '$2,000 Pul mukofoti',      threshold: 220_000_000, icon: '💰', color: '#059669', desc: '220,000,000 so\'mdan yuqori sotuv' },
     { id: 'umra',    label: '2 kishilik Umra + $500',   threshold: 300_000_000, icon: '🕋', color: '#d97706', desc: '300,000,000 so\'mdan yuqori sotuv' },
@@ -25401,8 +25406,32 @@ function getManagerSalesForPeriod(managerId, period) {
     return _getRankingLeadsInPeriod(managerId, period).reduce((sum, l) => sum + _getLeadRankingAmount(l), 0);
 }
 
+// Direktor qarori (9-noyabr): sotuv = "To'lov jarayonida" + "To'lov yopildi". Bitimlar soni noyabrdan shu qoida bilan.
+// Oldingi oylar tarixi o'zgarmaydi. CAC va marketing hisobotlari _getClosedLeadsInPeriod'da qoladi.
+const SALE_RULE_FROM = '2026-11-01';
+function _getSaleDate(l) {
+    if (normalizeLeadStatus(l.status) === 'tolov-jarayonida') return l.paymentSurvey?.lastPaymentDate || l.createdAt;
+    return l.paymentClosedSurvey?.closedDate || l.closedDate || l.createdAt;
+}
+function _getSaleLeads(managerId, inRange) {
+    return getLeadStatsForRankings().filter(l => {
+        const st = normalizeLeadStatus(l.status);
+        if (st !== 'tolov-yopildi' && st !== 'tolov-jarayonida') return false;
+        if (managerId !== 'all' && staffStatus.saleOwner(l) !== managerId) return false;
+        const raw = _getSaleDate(l);
+        const key = raw ? leadTashkentDayKey(raw) : null;
+        if (!key) return false;
+        if (st === 'tolov-jarayonida' && key < SALE_RULE_FROM) return false;
+        return inRange(key);
+    });
+}
+function _saleLocalKey(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
 function getManagerDealsCount(managerId, period) {
-    return _getClosedLeadsInPeriod(managerId, period).length;
+    const now = new Date(), today = _saleLocalKey(now);
+    let from = today.slice(0, 8) + '01';
+    if (period === 'kunlik') from = today;
+    if (period === 'haftalik') { const w = new Date(now); w.setDate(now.getDate() - (now.getDay() === 0 ? 6 : now.getDay() - 1)); from = _saleLocalKey(w); }
+    return _getSaleLeads(managerId, k => k >= from && k <= today).length;
 }
 
 // 41-vazifa: individual reja endi tanlangan oyga tegishli, shuning uchun
@@ -25442,7 +25471,8 @@ function getManagerSalesForMonth(managerId, monthKey) {
 }
 
 function getManagerDealsCountForMonth(managerId, monthKey) {
-    return _getClosedLeadsInMonth(managerId, monthKey).length;
+    if (!MONTH_KEY_RE.test(String(monthKey || ''))) return 0;
+    return _getSaleLeads(managerId, k => k.slice(0, 7) === monthKey).length;
 }
 
 function getManagerTotalLeads(managerId) {
@@ -25748,7 +25778,7 @@ function renderSalesPlan() {
     const _isRopSp = _cuSp?.role === 'rop';
     const langTabsEl = document.getElementById('leadsLangTabs');
     if (_isSalesManagerSp || _isRopSp) {
-        _leadsLangFilter = _cuSp.linkedManagerLang || _cuSp.linkedRopLang || 'english';
+        if (_cuSp.linkedRopLang !== 'both') _leadsLangFilter = _cuSp.linkedManagerLang || _cuSp.linkedRopLang || 'english';
         if (langTabsEl) langTabsEl.style.display = 'none';
     } else if (langTabsEl) {
         langTabsEl.style.display = '';
@@ -25874,10 +25904,9 @@ function computeSalesPlanFactMetrics(lang) {
     const now = new Date();
     const leadsData = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
     const langLeads = leadsData[lang] || [];
-    const lidSoni = langLeads.filter(l => {
-        const d = new Date(l.date || l.createdAt);
-        return !isNaN(d.getTime()) && d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
-    }).length;
+    // "kun/oy/yil" sanani new Date noto'g'ri o'qirdi (noyabr: 145 o'rniga 457) — Toshkent kuni bo'yicha.
+    const monthKeyNow = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const lidSoni = langLeads.filter(l => (leadTashkentDayKey(l.createdAt || l.date) || '').slice(0, 7) === monthKeyNow).length;
 
     const managers = getSalesManagers(lang);
     let sotuvSoni = 0, sotuvSumma = 0;
@@ -26424,7 +26453,7 @@ function renderLeaderboardSection() {
         return;
     }
     const managers = _cuRating && _cuRating.role === 'rop'
-        ? allSalesManagers.filter(m => (m.lang || 'english') === (_cuRating.linkedRopLang || 'english'))
+        ? (_cuRating.linkedRopLang === 'both' ? allSalesManagers : allSalesManagers.filter(m => (m.lang || 'english') === (_cuRating.linkedRopLang || 'english')))
         : allSalesManagers;
 
     // 34-vazifa: har bir menejerning "Reja"/"Rejaga yetish" ko'rsatkichi
