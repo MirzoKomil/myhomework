@@ -5,9 +5,6 @@ body:is(.rop-desk-v2, .sot-desk-v2) {
     --rdp-red: #D92D20; --rdp-red-50: #FEF3F2; --rdp-red-bd: #FECDCA; --rdp-amb: #B54708; --rdp-amb-50: #FFFAEB; --rdp-amb-bd: #FEDF89;
     --rdp-grn: #067647; --rdp-grn-50: #ECFDF3; --rdp-card: #fff; --rdp-r: 14px;
 }
-@media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) body:is(.rop-desk-v2, .sot-desk-v2) { --rdp-tx: #E6EAF2; --rdp-mt: #9AA4B2; --rdp-bd: #273244; --rdp-bg: #0F1623; --rdp-card: #151E2E; --rdp-pri-50: #12284A; --rdp-red-50: #3A1614; --rdp-amb-50: #33240D; --rdp-grn-50: #0F2A1E; }
-}
 :root[data-theme="dark"] body:is(.rop-desk-v2, .sot-desk-v2) { --rdp-tx: #E6EAF2; --rdp-mt: #9AA4B2; --rdp-bd: #273244; --rdp-bg: #0F1623; --rdp-card: #151E2E; --rdp-pri-50: #12284A; --rdp-red-50: #3A1614; --rdp-amb-50: #33240D; --rdp-grn-50: #0F2A1E; }
 
 /* ---- ROP bo'limlari (tab-rdp-*) faqat ROP'da ---- */
