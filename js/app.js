@@ -21676,9 +21676,14 @@ function renderLeads() {
     const _isRopRender = _cuRender && _cuRender.role === 'rop';
     if (_isSalesManagerRender || _isRopRender) {
         // 14-ish: ROP / sotuv menejeri faqat o'z tiliga tegishli lidlarni ko'radi
-        _leadsLangFilter = _cuRender.linkedManagerLang || _cuRender.linkedRopLang || 'english';
+        // Ikki tilli ROP ('both') til almashtirgichdan tanlaydi — aks holda rus lidlari kompyuterda umuman chiqmasdi.
+        const _ropBothLang = _isRopRender && _cuRender.linkedRopLang === 'both';
+        if (_ropBothLang) { if (_leadsLangFilter !== 'english' && _leadsLangFilter !== 'russian') _leadsLangFilter = 'russian'; }
+        else _leadsLangFilter = _cuRender.linkedManagerLang || _cuRender.linkedRopLang || 'english';
+        // ROP: telefon bilan bir xil — boshlanishda sana cheklovi yo'q (faqat birinchi ochilishda; keyin tanlangan filtr qoladi).
+        if (_isRopRender && !window._ropLeadsDateInit) { window._ropLeadsDateInit = true; _leadsDateFilter = { preset: 'all', from: '', to: '' }; if (typeof updateLeadsDateFilterLabel === 'function') updateLeadsDateFilterLabel(); }
         const langTabsEl = document.getElementById('leadsLangTabs');
-        if (langTabsEl) langTabsEl.style.display = 'none';
+        if (langTabsEl) langTabsEl.style.display = _ropBothLang ? '' : 'none';
         // ROP lidlarni ommaviy biriktira oladi (taqsimlash) — panel faqat sotuv menejeriga yashiriladi;
         // ROP uchun belgilanganda ko'rinadi (updateBulkBar).
         const bulkBarEl = document.getElementById('bulkActionsBar');
@@ -25748,7 +25753,7 @@ function renderSalesPlan() {
     const _isRopSp = _cuSp?.role === 'rop';
     const langTabsEl = document.getElementById('leadsLangTabs');
     if (_isSalesManagerSp || _isRopSp) {
-        _leadsLangFilter = _cuSp.linkedManagerLang || _cuSp.linkedRopLang || 'english';
+        if (_cuSp.linkedRopLang !== 'both') _leadsLangFilter = _cuSp.linkedManagerLang || _cuSp.linkedRopLang || 'english';
         if (langTabsEl) langTabsEl.style.display = 'none';
     } else if (langTabsEl) {
         langTabsEl.style.display = '';
