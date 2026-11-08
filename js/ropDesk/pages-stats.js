@@ -55,8 +55,9 @@
         apiFetch('/api/target-ads?language=' + U.lang() + '&month=' + mk).then(d => { ads = d; if (active()) draw(); window.__st2.onAds && window.__st2.onAds(); }).catch(() => { ads = { failed: true }; if (active()) draw(); });
     }
     const isSM = () => U.user().role === 'sales_manager';
+    const isAdminDesk = () => ['admin', 'boshliq'].includes(U.user().role) && innerWidth > 900;
     const phoneHost = () => document.getElementById('st2PhHost');
-    const active = () => phoneHost() || ((P.isRopDesk() || isSM()) && document.querySelector('[data-sales-panel="sales-stats"].active'));
+    const active = () => phoneHost() || ((P.isRopDesk() || isSM() || isAdminDesk()) && document.querySelector('[data-sales-panel="sales-stats"].active'));
     function spend(r) {
         if (!ads || ads.failed) return null;
         const rate = Number(ads.plan && ads.plan.usdRate) || 12000;
@@ -96,7 +97,7 @@
         const srcL = { target: 'Target', organic: 'Organik', all: 'Umumiy' }[S.src];
         const projL = Math.round(leads.length / share), projS = sum / share;
         const noSp = S.src === 'organic';
-        return '<section class="st2-plan"><div class="st2-pt"><div class="st2-ph"><div><h3>Sotuv rejasi va bajarilishi</h3><p>' + srcL + ' · 1–' + day + ' ' + MONTHS[+t.slice(5, 7) - 1] + ' · oy oʻtdi ' + Math.round(share * 100) + '% · “Oʻrtacha” reja · reja umumiy, fakt shu manba boʻyicha</p></div><span class="st2-rate">Kurs ' + num(sp ? sp.rate : 12000) + ' soʻm</span></div><div class="st2-rings">' +
+        return '<section class="st2-plan"><div class="st2-pt"><div class="st2-ph"><div><h3>Sotuv rejasi va bajarilishi</h3><p>' + srcL + ' · 1–' + day + ' ' + MONTHS[+t.slice(5, 7) - 1] + ' · oy oʻtdi ' + Math.round(share * 100) + '% · “Oʻrtacha” reja · reja umumiy, fakt shu manba boʻyicha</p></div><span class="st2-rate">Kurs ' + num(sp ? sp.rate : 12000) + ' soʻm' + (ads && ads.permissions && ads.permissions.canEditPlan ? ' <button type="button" data-st="rate">Oʻzgartirish</button>' : '') + '</span></div><div class="st2-rings">' +
             ring('Lidlar', leads.length, m.lidSoni, num(leads.length) + ' / ' + num(m.lidSoni)) + ring('Sotuvlar', sales.length, m.sotuvSoni, num(sales.length) + ' / ' + num(m.sotuvSoni)) + ring('Sotuv summasi', sum, m.sotuvSumma, money(sum) + ' / ' + money(m.sotuvSumma)) +
             '<div class="st2-proj"><span>Shu surʼat bilan oy oxirida</span><b>' + num(projL) + '</b> / ' + num(m.lidSoni) + ' lid<br><b>' + money(projS) + '</b> / ' + money(m.sotuvSumma) + '</div></div></div>' +
             '<div class="st2-tw"><table class="st2-t"><thead><tr><th>Koʻrsatkich</th><th>Oylik reja</th><th>Bugungacha</th><th>Fakt</th><th>%</th><th>Holat</th><th>Kunlik reja</th><th>Kunlik fakt</th></tr></thead><tbody>' +
@@ -307,6 +308,7 @@
             else if (d.stSide) { S.side = d.stSide; redraw(); }
             else if (d.stGone) { S.gone = d.stGone === '1'; redraw(); }
             else if (d.st === 'openplan') P.open('plan');
+            else if (d.st === 'rate') switchTab('marketing');
             else if (d.st === 'clear') { S.gender = S.age = S.region = S.goal = ''; redraw(); }
             else if (d.st === 'moreM') { S.showAllM = !S.showAllM; redraw(); }
             else if (d.st === 'allM') { S.mgrs = null; redraw(); }
@@ -342,6 +344,7 @@
     '.st2-anim .st2-bt i{animation:st2g .7s ease-out both}.st2-anim .st2-cs i{animation:st2r .6s ease-out both}.st2-anim .st2-ring circle.v{animation:st2d .9s ease-out both}.st2-anim>*{animation:st2f .4s ease-out both}',
     '@keyframes st2g{from{transform:scaleX(0)}}@keyframes st2r{from{transform:scaleY(0)}}@keyframes st2d{from{stroke-dashoffset:var(--c)}}@keyframes st2f{from{opacity:0;transform:translateY(8px)}}',
     '.st2-map{width:100%;display:block}.st2-map polygon{transition:opacity .15s}.st2-map polygon:hover{opacity:.75}.st2-ext{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:10px;font-size:13px;color:#4B5563}.st2-ext em{font-style:normal;font-weight:700}.st2-ext b{color:#0B1220}.st2-g4{margin-bottom:14px}.st2-card .st2-tile{border-radius:16px}',
+    '.st2-rate button{border:0;background:none;color:#fff;font:inherit;font-weight:800;text-decoration:underline;cursor:pointer;padding:0 0 0 6px}',
     '.st2-sm{min-width:96px}.st2-sm span{display:block;font-size:12.5px;color:#D8E8FB}.st2-sm b{font-size:22px;font-weight:800}.st2-sm em{display:block;font-style:normal;font-size:12px;color:#D8E8FB}',
     '@media(max-width:600px){.st2{gap:10px}.st2-bar{flex-direction:column;gap:8px}.st2-seg{flex-wrap:nowrap;overflow-x:auto;max-width:100%}.st2-seg button{white-space:nowrap;flex:none}.st2-big{display:flex}.st2-big button{flex:1;padding:0 8px;font-size:13px}.st2-grid{gap:8px}.st2-tile{padding:12px 14px;border-radius:18px}.st2-tv{font-size:22px}.st2-card{padding:14px;border-radius:18px}.st2-pt{padding:16px}.st2-ph{flex-direction:column;gap:8px}.st2-rate{align-self:flex-start}.st2-rings{gap:8px;justify-content:space-between}.st2-ring,.st2-ring svg{width:96px;height:96px}.st2-ring b{font-size:17px}.st2-ring span{font-size:10px}.st2-ring em{display:none}.st2-proj{margin:0;width:100%}.st2-plan thead{display:none}.st2-plan tr{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:10px 14px;border-bottom:1px solid #F1F5F9}.st2-plan tr:last-child{border-bottom:0}.st2-plan td{display:block;border:0;padding:0;text-align:left;white-space:normal}.st2-plan td:nth-child(1){grid-area:1/1;font-weight:700}.st2-plan td:nth-child(6){grid-area:1/2;text-align:right}.st2-plan td:nth-child(4){grid-area:2/1}.st2-plan td:nth-child(3){grid-area:2/2;text-align:right;color:#4B5563;font-size:12.5px}.st2-plan td:nth-child(3)::before{content:"bugungacha "}.st2-plan td:nth-child(8){grid-area:3/1/3/3;color:#4B5563;font-size:12.5px}.st2-plan td:nth-child(8)::before{content:"kunlik fakt "}.st2-plan td:nth-child(2),.st2-plan td:nth-child(5),.st2-plan td:nth-child(7){display:none}.st2-plan footer button{display:none}.st2-b{grid-template-columns:minmax(84px,118px) 1fr auto;gap:8px;font-size:13px}.st2-bn{font-size:11.5px}.st2-tr{height:150px}.st2-dd{position:static}.st2-dd>div{left:16px;right:16px;top:auto;min-width:0}.st2-dd>.st2-dr{flex-wrap:wrap}.st2-ptr select{flex:1 1 40%;min-width:0}}',
     '@media(max-width:1180px){.st2-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.st2-2,.st2-3{grid-template-columns:minmax(0,1fr)}.st2-proj{margin-left:0}}'
@@ -352,10 +355,10 @@
     const open0 = P.open;
     P.open = k => { if (k === 'funnel') { S = fresh(); animate = true; } return open0(k); };
     function hook() {
-        U.wrap('renderSalesFunnel', () => { if (P.isRopDesk() || isSM()) { draw(); if (P.isRopDesk()) U.salesHead(P.PAGES.funnel); } });
+        U.wrap('renderSalesFunnel', () => { if (P.isRopDesk() || isSM() || isAdminDesk()) { draw(); if (P.isRopDesk()) U.salesHead(P.PAGES.funnel); } });
         if (active()) { draw(); if (P.isRopDesk()) U.salesHead(P.PAGES.funnel); }
     }
-    document.addEventListener('click', e => { if (e.target.closest && e.target.closest('[data-ra-go="funnel"],[data-sa-crm="sales:sales-stats"]')) { S = fresh(); animate = true; } }, true);
+    document.addEventListener('click', e => { if (!e.target.closest) return; const b = e.target.closest('button,a'); if (e.target.closest('[data-ra-go="funnel"],[data-sa-crm="sales:sales-stats"]') || (isAdminDesk() && b && !b.closest('#st2Root') && b.textContent.trim() === 'Statistika')) { S = fresh(); animate = true; } }, true);
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', hook); else hook();
     window.__st2 = { calc, draw, planHtml() { adsNeeded(); const s = S.src; S.src = 'all'; leadsC = null; const h = planCard(calc()); S.src = s; return h; } };
 })();
