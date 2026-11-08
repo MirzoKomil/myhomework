@@ -9,10 +9,12 @@ CREATE TABLE IF NOT EXISTS domwork_lp_starts (
  reported_at TIMESTAMPTZ, report_status INTEGER
 );
 CREATE INDEX IF NOT EXISTS domwork_lp_starts_tid ON domwork_lp_starts(telegram_id);`;
-const RE = /^\/start(?:@Domworkuz_bot)?\s+(domwork_lp_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
+// Kod: domwork_lp_ + 1..53 belgi (harf, raqam, _ -). Telegram start parametri jami 64 belgigacha. Avval faqat UUID qabul qilinardi —
+// targetologning test kodlari (domwork_lp_sinov-...) jim o'tkazib yuborilardi. Kod o'zgarishsiz yuboriladi (Pixel bilan bir xil bo'lsin).
+const RE = /^\/start(?:@Domworkuz_bot)?\s+(domwork_lp_[A-Za-z0-9_-]{1,53})$/i;
 
 async function init(db) { await db.query(SCHEMA); }
-const codeOf = text => (RE.exec(String(text || '').trim()) || [])[1]?.toLowerCase() || null;
+const codeOf = text => (RE.exec(String(text || '').trim()) || [])[1] || null;
 
 async function send(pool, code, telegramId) {
     const url = process.env.LESSON_API_URL, secret = process.env.BOT_SHARED_SECRET;
