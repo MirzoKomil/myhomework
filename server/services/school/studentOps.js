@@ -438,6 +438,8 @@ async function openTeacherPeriod(db, actor, studentId, teacherId, from, reason, 
     await db.query(`INSERT INTO school_teacher_history (id,student_id,teacher_id,from_date,reason,actor_id) VALUES ($1,$2,$3,$4,$5,$6)`,
         [randomUUID(), studentId, teacherId, from, reason, actor.id]);
 }
+// Ustozni o'tgan sanadan almashtirish chegarasi: o'tgan oyning 1-sanasi ('YYYY-MM-DD').
+function backdateMin(today) { return T.addDays(today.slice(0, 7) + '-01', -1).slice(0, 7) + '-01'; }
 async function changeTeacher(db, actor, studentId, body, { requestId = null, now = new Date() } = {}) {
     // Akademik rahbar ham (til tekshiruvi — routes/school.js). Sana: from yoki effectiveFrom; bo'lmasa bugundan.
     if (!TEACHER_CHANGE_ROLES.has(actor.role)) throw fail(403, 'Ustozni admin, ROP yoki akademik rahbar almashtiradi');
@@ -447,14 +449,18 @@ async function changeTeacher(db, actor, studentId, body, { requestId = null, now
     // Tasdiqlangan sotuv so'rovi (requestId) — so'rovdagi sana bilan, avvalgidek.
     // Kechagi sana mumkin: ustoz amalda dars o'tishni boshlagach CRM'ga kechikib kiritilganda (direktor qarori, 2-noyabr).
     // Undan oldingi sana — faqat tasdiqlangan sotuv so'rovi orqali.
-    if (!requestId && from < T.addDays(today, -1)) throw fail(400, 'Ko\'pi bilan kechagi sanadan o\'tkazish mumkin');
+    // 8-noyabr (direktor): admin / ROP / akademik rahbar o'tgan sanadan ham o'tkaza oladi — o'quvchi amalda boshqa ustozda
+    // o'qigan bo'lsa. O'sha kundan beri darslar (davomat, maosh) yangi ustozga yoziladi (AttendanceRules.taughtOn — tarix bo'yicha).
+    // Chegara: o'tgan oyning 1-sanasi (undan eskisi maosh hisoblangan oylarni buzadi). Sabab majburiy (reasonText).
+    if (!requestId && from < backdateMin(today)) throw fail(400, `Ko'pi bilan ${backdateMin(today)} sanadan o'tkazish mumkin`);
     const row = await lockStudent(db, studentId);
     const st = extraOf(row);
     const teacherId = String(body.teacherId || '');
     if (!teacherId || teacherId === st.teacherId) throw fail(400, 'Yangi ustozni tanlang');
     if (teacherId === st.assistantId) throw fail(400, 'Yordamchi ustoz asosiy ustoz bo\'la olmaydi');
     const day = body.lessonDay ?? st.day, time = body.lessonTime ?? st.time;
-    await S.checkWeekly(db, { teacherId, day, time, duration: st.duration, fromDate: from, excludeStudentId: studentId, now });
+    // O'tgan sanadan bo'lsa — o'tgan kunlar band tekshirilmaydi (dars allaqachon o'tilgan), faqat bugundan keyingi jadval.
+    await S.checkWeekly(db, { teacherId, day, time, duration: st.duration, fromDate: from < today ? today : from, excludeStudentId: studentId, now });
     const reason = reasonText(body.reason, 3);
     await openTeacherPeriod(db, actor, studentId, teacherId, from, reason, st.teacherId);
     // students.teacher_id sana kelganda almashtiriladi (applyDue) — bugungi sana bo'lsa darhol.
