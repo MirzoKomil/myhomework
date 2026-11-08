@@ -14624,20 +14624,64 @@ function getLeadCrmAgeInDays(lead, today = new Date()) {
     return Number.isFinite(diff) ? Math.max(0, diff) : null;
 }
 
-function isSifatsizLeadForQualityStats(lead, today = new Date()) {
+// Lid nega sifatsiz sanalgani (null — sifatli). Sotuv statistikasi va "Sifat qanday hisoblandi" jadvali shu bitta qoidadan.
+//  'age'        — yoshi 21 va undan kichik: qaysi ustunda tursa ham (muvaffaqiyatsiz sotuv, sinov va h.k.) — direktor qarori, 8-noyabr.
+//  'column'     — "Sifatsiz lidlar" ustunida (yoshi 21 dan katta yoki noma'lum).
+// "Muvaffaqiyatsiz sotuv"ning o'zi sifatsiz EMAS — faqat yoshi 21 va undan kichik bo'lsa.
+// To'lov jarayonida / To'lov yopildi — har doim sifatli (to'lagan mijoz).
+const LEAD_UNDERAGE_MAX = 21;
+function leadLowQualityReason(lead, today = new Date()) {
     const status = normalizeLeadStatus(lead?.status);
-    // To'lov jarayoniga o'tgan yoki to'lovi yopilgan mijoz yoshidan va
-    // avvalgi sifatsiz belgisidan qat'i nazar sifatli lid hisoblanadi.
-    if (status === 'tolov-jarayonida' || status === 'tolov-yopildi') return false;
-    if (status === 'sifatsiz-lidlar') return true;
-    if (getLeadSurveyAge(lead) !== null && getLeadSurveyAge(lead) < 21) return true;
-    // "Bog'lanishga urinilmoqda"dagi lid faqat CRMga tushgan kunidan beri
-    // hali 4 kun o'tmagan bo'lsa sifatsiz lid sanog'iga kiradi.
-    if (status === 'boglanishga-urinilmoqda') {
-        const crmAgeInDays = getLeadCrmAgeInDays(lead, today);
-        return crmAgeInDays !== null && crmAgeInDays < 4;
-    }
-    return false;
+    if (status === 'tolov-jarayonida' || status === 'tolov-yopildi') return null;
+    const age = getLeadSurveyAge(lead);
+    if (age !== null && age <= LEAD_UNDERAGE_MAX) return 'age';
+    if (status === 'sifatsiz-lidlar') return 'column';
+    // Eski "Bog'lanishga urinilmoqda, 4 kundan kam — sifatsiz" qoidasi olib tashlandi (8-noyabr): telefonni olmagan lid
+    // 3 kundan keyin "Qotgan lidlar qoidasi" bilan qulflanadi va menejer uni Sifatsizga o'tkazadi — shunda sanaladi.
+    return null;
+}
+function isSifatsizLeadForQualityStats(lead, today = new Date()) {
+    return leadLowQualityReason(lead, today) !== null;
+}
+
+// "Sifat qanday hisoblandi": sifatsiz — sababi bo'yicha, yoshi 21 va undan kichiklar — qaysi ustunda turgani,
+// sifatli — qaysi ustunda turgani. Raqamlar yuqoridagi kartalar bilan bir xil (bitta leadLowQualityReason).
+function buildLeadQualityBreakdown(leads) {
+    const today = new Date();
+    const label = id => (LEAD_COLUMNS.find(c => c.id === id) || {}).label || id;
+    const order = LEAD_COLUMNS.map(c => c.id);
+    const byCol = () => new Map();
+    const add = (m, k) => m.set(k, (m.get(k) || 0) + 1);
+    const ageCols = byCol(), goodCols = byCol();
+    let col = 0, age = 0, good = 0, failedGood = 0, failedAge = 0;
+    leads.forEach(lead => {
+        const st = normalizeLeadStatus(lead.status), r = leadLowQualityReason(lead, today);
+        if (r === 'age') { age++; add(ageCols, st); if (st === 'muvaffaqiyatsiz-sotuv') failedAge++; }
+        else if (r === 'column') col++;
+        else { good++; add(goodCols, st); if (st === 'muvaffaqiyatsiz-sotuv') failedGood++; }
+    });
+    const bad = col + age;
+    const rowsOf = m => [...m.entries()].sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0]))
+        .map(([k, n]) => `<tr><td>${escapeHtml(label(k))}</td><td style="text-align:right;font-weight:700">${n}</td></tr>`).join('')
+        || '<tr><td colspan="2" style="color:var(--text-muted)">Yoʻq</td></tr>';
+    const line = (t, n, c) => `<tr><td>${t}</td><td style="text-align:right;font-weight:700;color:${c}">${n}</td></tr>`;
+    return `
+    <div class="card" style="padding:24px;margin-top:16px;flex-shrink:0">
+        <h2 style="font-size:18px;margin:0 0 5px">Sifat qanday hisoblandi</h2>
+        <p style="margin:0 0 16px;color:var(--text-muted);font-size:14px">Tanlangan filtrlar boʻyicha ${leads.length} ta lid: ${bad} sifatsiz + ${good} sifatli. Muvaffaqiyatsiz sotuv oʻzi sifatsiz emas — faqat yoshi ${LEAD_UNDERAGE_MAX} va undan kichik boʻlsa.</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px">
+            <div><h3 style="font-size:14px;margin:0 0 8px;color:#B91C1C">Sifatsiz — ${bad} ta</h3>
+                <table class="sdp-table"><tbody>
+                    ${line(`Yoshi ${LEAD_UNDERAGE_MAX} va undan kichik (har qanday ustunda)`, age, '#B91C1C')}
+                    ${line('«Sifatsiz lidlar» ustuni', col, '#B91C1C')}
+                </tbody></table></div>
+            <div><h3 style="font-size:14px;margin:0 0 8px;color:#B91C1C">Yoshi ${LEAD_UNDERAGE_MAX} va undan kichik — qaysi ustunda turibdi (${age} ta)</h3>
+                <table class="sdp-table"><tbody>${rowsOf(ageCols)}</tbody></table></div>
+            <div><h3 style="font-size:14px;margin:0 0 8px;color:#15803D">Sifatli — ${good} ta, qaysi ustunda turibdi</h3>
+                <table class="sdp-table"><tbody>${rowsOf(goodCols)}</tbody></table></div>
+        </div>
+        <p style="margin:12px 0 0;color:var(--text-muted);font-size:13px">Muvaffaqiyatsiz sotuv: ${failedGood} ta sifatli${failedAge ? `, ${failedAge} ta yoshi ${LEAD_UNDERAGE_MAX} va undan kichik boʻlgani uchun sifatsiz` : ''}. Toʻlov jarayonida va Toʻlov yopildi — har doim sifatli. Yoshi koʻrsatilmagan lid yosh boʻyicha tekshirilmaydi.</p>
+    </div>`;
 }
 
 function formatQualityPercent(value, total) {
@@ -15570,6 +15614,7 @@ function renderSalesFunnel() {
     </div>
     ${buildLeadQualityChart(filteredLeads)}
     ${buildLeadQualityConversionStats(filteredLeads)}
+    ${buildLeadQualityBreakdown(filteredLeads)}
     ${buildLeadDemographicsStats(filteredLeads)}
     ${buildCourseBuyersStats(filteredLeads)}`;
 

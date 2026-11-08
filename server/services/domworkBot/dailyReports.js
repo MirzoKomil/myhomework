@@ -107,8 +107,8 @@ function salesText(r, { group = false } = {}) {
     return lines.join('\n');
 }
 // Lid sifati — CRM "Sifatli lidlar statistikasi" (js/app.js isSifatsizLeadForQualityStats) bilan bir xil qoida:
-// to'lovga o'tgan — sifatli; "Sifatsiz lidlar" ustuni yoki 21 yoshdan kichik — sifatsiz;
-// "Bog'lanishga urinilmoqda"da 4 kundan kam turgan — sifatsiz; qolganlari sifatli.
+// to'lovga o'tgan — sifatli; yoshi 21 va undan kichik (har qanday ustunda) yoki "Sifatsiz lidlar" ustuni — sifatsiz;
+// qolganlari sifatli (8-noyabr: 4 kunlik "Urinilmoqda" qoidasi olib tashlandi).
 function leadAge(x) {
     for (const v of [x?.connectedSurvey?.age, x?.survey?.age, x?.leadSurvey?.age, x?.age]) { const n = Number(v); if (Number.isFinite(n) && n > 0) return n; }
     return null;
@@ -118,8 +118,7 @@ function lowQuality(lead, today) {
     if (st === 'tolov-jarayonida' || st === 'tolov-yopildi') return false;
     if (st === 'sifatsiz-lidlar') return true;
     const age = leadAge(lead.extra);
-    if (age !== null && age < 21) return true;
-    if (st === 'boglanishga-urinilmoqda') { const days = Math.round((Date.parse(today) - Date.parse(lead.day)) / 86400000); return days < 4; }
+    if (age !== null && age <= 21) return true;
     return false;
 }
 const isTarget = l => l.lead_type === 'target' || /target|reklama|ads/i.test(l.source || '');
