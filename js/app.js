@@ -26639,6 +26639,8 @@ function _allBonusList() {
 function getMergedBonus(base) {
     const stored = getItem(STORAGE_KEYS.bonusData, {});
     const ov = stored[base.id] || {};
+    // Saqlangan eski nom: oylik sovg'a iPhone 18 Pro bo'ldi (direktor, 9-noyabr).
+    if (ov.label === 'iPhone 17 Pro') return { ...base, ...ov, label: 'iPhone 18 Pro' };
     return { ...base, ...ov };
 }
 
