@@ -4,6 +4,9 @@
 (function(){
     'use strict';
     const P = window.ropDeskPages; if (!P) return;
+    // Sinov rejimi: to'liq tekshirilguncha faqat localStorage st2=1 bo'lgan brauzerda yoqiladi.
+    let enabled = false; try { enabled = localStorage.getItem('st2') === '1'; } catch (e) {}
+    if (!enabled) return;
     const U = P.U, esc = U.esc, num = U.num;
     const MONTHS = ['yanvar','fevral','mart','aprel','may','iyun','iyul','avgust','sentyabr','oktyabr','noyabr','dekabr'];
     const fresh = () => ({ src: 'target', per: 'month', from: '', to: '', aFrom: '', aTo: '', mgrs: null, gone: false, side: 'leads', gender: '', age: '', region: '', goal: '', showAllM: false });
