@@ -1390,7 +1390,7 @@
           <label class="ra-f"><span>Ism</span><input id="raLaName" class="ra-in" autocomplete="off" placeholder="Ism-familiya"></label>
           <label class="ra-f"><span>Telefon</span><span class="ra-in ra-in--ph" data-ra-phbox><b>+998</b><input id="raLaPhone" inputmode="tel" autocomplete="off" placeholder="90 123 45 67"></span></label>
           <div class="ra-dup" data-ra-dup hidden></div>
-          <div class="ra-f"><span>Manba</span><div class="sa-qchips">${['Target', 'Organik', 'Tavsiya', 'Telegram bot', 'Qoʻngʻiroq'].map(t => `<button type="button" class="sa-qchip ra-qchip" aria-pressed="false" data-ra-lasrc="${esc(t)}">${esc(t)}</button>`).join('')}</div></div>
+          <div class="ra-f"><span>Manba</span><div class="sa-qchips">${['Target', 'Organik', 'Telegram bot', 'Instagram', 'YouTube', 'Tavsiya', 'Qoʻngʻiroq'].map(t => `<button type="button" class="sa-qchip ra-qchip" aria-pressed="false" data-ra-lasrc="${esc(t)}">${esc(t)}</button>`).join('')}</div></div>
           <div class="ra-f2"><div class="ra-f"><span>Til</span>${langs.length > 1 ? `<select id="raLaLang" class="ra-in">${langs.map(L => `<option value="${L}">${langLabel(L)}</option>`).join('')}</select>` : `<span class="ra-in ra-in--lock">${ic('lock', 16, 2.4)}${langLabel(langs[0])}</span>`}</div>
             <label class="ra-f"><span>Darhol berish</span><select id="raLaMgr" class="ra-in">${mopts(langs[0])}</select></label></div>
           <p class="ra-err" data-ra-laerr hidden></p>
