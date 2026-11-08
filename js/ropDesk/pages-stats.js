@@ -4,9 +4,6 @@
 (function(){
     'use strict';
     const P = window.ropDeskPages; if (!P) return;
-    // Sinov rejimi: to'liq tekshirilguncha faqat localStorage st2=1 bo'lgan brauzerda yoqiladi.
-    let enabled = false; try { enabled = localStorage.getItem('st2') === '1'; } catch (e) {}
-    if (!enabled) return;
     const U = P.U, esc = U.esc, num = U.num;
     const MONTHS = ['yanvar','fevral','mart','aprel','may','iyun','iyul','avgust','sentyabr','oktyabr','noyabr','dekabr'];
     const fresh = () => ({ src: 'target', per: 'month', from: '', to: '', aFrom: '', aTo: '', mgrs: null, gone: false, side: 'leads', gender: '', age: '', region: '', goal: '', showAllM: false });
@@ -206,9 +203,11 @@
     }
 
     function managers(c) {
-        const all = getSalesManagers(U.lang());
+        // getSalesManagers faqat ishlayotganlarni beradi; ketganlar sotuvlaridan topiladi (ism HR yozuvidan, oʻchirilgan boʻlsa Nomaʼlum).
+        const all = getSalesManagers(U.lang()).slice(), known = new Set(all.map(m => m.id)), hr = getItem(STORAGE_KEYS.hrEmployees, []);
+        if (S.gone) new Set(c.sales.map(l => staffStatus.saleOwner(l))).forEach(id => { if (id && !known.has(id)) { known.add(id); const e = hr.find(x => x.id === id); all.push({ id, name: (e && e.name) || 'Nomaʼlum menejer', gone: true }); } });
         const rows = all.filter(m => S.gone || staffStatus.isActive(m)).map(m => {
-            const active_ = staffStatus.isActive(m), ls = active_ ? c.leads.filter(l => l.managerId === m.id) : [], ss = c.sales.filter(l => staffStatus.saleOwner(l) === m.id);
+            const active_ = !m.gone && staffStatus.isActive(m), ls = active_ ? c.leads.filter(l => l.managerId === m.id) : [], ss = c.sales.filter(l => staffStatus.saleOwner(l) === m.id);
             const rec = ss.map(received), sp = ls.filter(l => l.firstContactAt).map(l => (Number(l.firstContactAt) - leadCreatedMs(l)) / 36e5).filter(h => h >= 0).sort((a, b) => a - b), bad = ls.filter(l => isSifatsizLeadForQualityStats(l)).length;
             const inP = ss.filter(l => st(l) === 'tolov-jarayonida').length;
             return { m, active_, n: ls.length, good: ls.length - bad, s: ss.length, inP, cash: rec.reduce((a, b) => a + b, 0), chk: midCheck(rec), sp: sp.length ? sp[Math.floor(sp.length / 2)] : null, nw: ls.filter(l => st(l) === 'yangi-lidlar').length, f: ls.filter(l => st(l) === 'muvaffaqiyatsiz-sotuv').length, bad, noR: ls.filter(l => st(l) === 'muvaffaqiyatsiz-sotuv' && !l.failedSaleReason).length };
