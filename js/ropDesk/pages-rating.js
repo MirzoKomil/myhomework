@@ -13,7 +13,7 @@
     }
     let obedAll = false;
     function rating() {
-        const box = document.getElementById('ratingLeaderboard'); if (!box || !P.isRopDesk() || box.querySelector('.st3-done')) return;
+        const box = document.getElementById('ratingLeaderboard'); if (!box || U.user().role !== 'rop' || box.querySelector('.st3-done')) return;
         const mark = document.createElement('i'); mark.className = 'st3-done'; mark.hidden = true; box.appendChild(mark);
         const team = box.querySelector('.mot-team'); if (team) { const s = team.querySelector('span'); if (s && s.firstChild && s.firstChild.nodeType === 3) s.firstChild.nodeValue = 'Shaxsiy rejalar yigʻindisi '; }
         box.querySelectorAll('.rtx-pod .rtx-place').forEach(e => { if (/^\d$/.test(e.textContent.trim())) e.textContent = e.textContent.trim() + '-oʻrin'; });
@@ -37,7 +37,7 @@
         tidyNumbers(box);
     }
     function plan() {
-        const panel = document.querySelector('[data-sales-panel="sales-plan"]'); if (!panel || !P.isRopDesk()) return;
+        const panel = document.querySelector('[data-sales-panel="sales-plan"]'); if (!panel || U.user().role !== 'rop') return;
         const fact = panel.querySelector('.spx-fact');
         panel.querySelectorAll('.sp-period-tab').forEach(b => { const t = b.textContent.trim(); if (t === '10–20') b.textContent = '11–20'; else if (t === '20–30') b.textContent = '21–30'; });
         tidyNumbers(panel);

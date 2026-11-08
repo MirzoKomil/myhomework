@@ -1004,6 +1004,8 @@
         </div>`;
     }
     function screenFunnel() {
+        // Yangi Statistika (js/ropDesk/pages-stats.js); fayl yuklanmagan bo'lsa eski ekran qoladi.
+        if (window.__st2 && window.__st2.draw) { setTimeout(window.__st2.draw, 0); return `${topBack('Statistika', langsTxt())}<div class="sa-body"><div id="st2PhHost"></div></div>`; }
         const now = new Date(), per = S.funPer;
         const from = per === 'oylik' ? monthStart() : per === 'haftalik' ? (() => { const d = new Date(now); d.setDate(now.getDate() - ((now.getDay() || 7) - 1)); d.setHours(0, 0, 0, 0); return d.getTime(); })() : new Date(now.toDateString()).getTime();
         const leads = ALL().filter(l => (createdAt(l) || 0) >= from);
@@ -1206,7 +1208,7 @@
           <h3 class="sa-h3">NAZORAT</h3>
           <div class="ra-mgrid">${t('data-ra-go="approvals"', 'approve', 'blue', 'Toʻlov tasdiqlari', '', apN)}${davTiles()}${t('data-ra-go="sla"', 'clock', 'amber', 'SLA', '', slaN)}${t('data-ra-go="stale"', 'lock', 'red', 'Qotgan lidlar qoidasi', '')}${t('data-ra-go="archive"', 'archive', 'gray', 'Arxiv', '')}</div>
           <h3 class="sa-h3">SOTUV</h3>
-          <div class="ra-mgrid">${t('data-ra-go="funnel"', 'funnel', 'blue', 'Voronka', '')}${t('data-ra-crm="sales:rating"', 'trophy', 'amber', 'Reyting va bonus', '')}${t('data-ra-crm="sales:sales-plan"', 'target', 'gray', 'Sotuv rejasi', 'faqat koʻrish')}${t('data-ra-crm="sales:debtors"', 'debt', 'red', 'Qarzdorlar', '')}${t('data-ra-crm="sales:scripts"', 'script', 'purple', 'Skript va yoʻriqnoma', '')}${t('data-ra-go="sms"', 'smsl', 'green', 'SMS yuborish', '')}</div>
+          <div class="ra-mgrid">${t('data-ra-go="funnel"', 'funnel', 'blue', 'Statistika', '')}${t('data-ra-crm="sales:rating"', 'trophy', 'amber', 'Reyting va bonus', '')}${t('data-ra-crm="sales:sales-plan"', 'target', 'gray', 'Sotuv rejasi', 'faqat koʻrish')}${t('data-ra-crm="sales:debtors"', 'debt', 'red', 'Qarzdorlar', '')}${t('data-ra-crm="sales:scripts"', 'script', 'purple', 'Skript va yoʻriqnoma', '')}${t('data-ra-go="sms"', 'smsl', 'green', 'SMS yuborish', '')}</div>
           <h3 class="sa-h3">OʻQUVCHILAR</h3>
           <div class="ra-mgrid">${t('data-ra-crm="students"', 'students', 'blue', 'Oʻquvchilar', '')}${t('data-ra-crm="school-groups"', 'tg', 'sky', 'Telegram guruh', '')}</div>
           <button type="button" class="ra-logout" data-ra-logout>${ic('logout', 20, 2.2)}Chiqish</button>
