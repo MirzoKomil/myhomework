@@ -2,8 +2,6 @@
 (function(){
     'use strict';
     const P = window.ropDeskPages; if (!P) return;
-    let enabled = false; try { enabled = localStorage.getItem('st3') === '1'; } catch (e) {}
-    if (!enabled) return;
     const U = P.U, esc = U.esc;
     const SOM = /so['ʻʼ‘’`]m/i;
     const mln = v => (v / 1e6).toFixed(1).replace('.', ',').replace(/,0$/, '') + ' mln';
@@ -34,7 +32,7 @@
             prizes.querySelectorAll('.mot-chips').forEach(c => { const a = [...c.children]; if (a.length > 4) { a.slice(4).forEach(x => { x.hidden = true; x.style.display = 'none'; }); const m = document.createElement('span'); m.className = 'mot-chip st3-plus'; m.textContent = '+' + (a.length - 4); c.appendChild(m); } });
         }
         box.querySelectorAll('.sdp-table td, .sdp-table td *').forEach(e => { if (e.children.length) return; const t = e.textContent.trim(); const med = { '🥇': '1', '🥈': '2', '🥉': '3' }[t]; if (med) e.textContent = med; else if (t.includes('🚩')) e.textContent = t.replace('🚩', '').trim(); });
-        box.querySelectorAll('.rating-view-btn').forEach(b => { const n = [...b.childNodes].find(x => x.nodeType === 3 && /[📊🎯]/u.test(x.nodeValue)); if (n) n.nodeValue = n.nodeValue.replace(/[📊🎯]\s*/u, ''); });
+        box.querySelectorAll('.rating-view-btn .team-ico-wrap').forEach(e => e.remove());
         box.querySelectorAll('.rtx-tiers *').forEach(e => { if (!e.children.length) e.textContent = e.textContent.replace(/(Obed(?: \+ [\d,]+)?)\s+(?=\d)/, '$1 · '); });
         tidyNumbers(box);
     }
@@ -54,6 +52,9 @@
     const st = document.createElement('style'); st.textContent = '.st3-more{margin-top:8px;border:0;background:none;color:#0065D6;font:inherit;font-size:13px;font-weight:700;cursor:pointer}.st3-sub{margin:2px 0 10px;font-size:13px;color:#4B5563}#st3Plan{margin:12px 0}'; document.head.appendChild(st);
     function hook() {
         U.wrap('renderRating', rating); U.wrap('renderSalesPlan', plan);
+        // Reyting sahifasi bir necha yo'l bilan qayta chiziladi: chizilgandan keyin har safar moslanadi (st3-done takrorlanishni to'xtatadi).
+        const salesTab = document.getElementById('tab-sales');
+        if (salesTab) { let timer; new MutationObserver(() => { clearTimeout(timer); timer = setTimeout(rating, 30); }).observe(salesTab, { childList: true, subtree: true }); }
         P.PAGES.rating && (P.PAGES.rating.head = (h => () => { const r = h(); r.title = 'Reyting va bonus'; r.sub = esc(U.langLabel()) + ' · bitim = toʻlov jarayonida + yopildi, summa — qabul qilingan pul'; return r; })(P.PAGES.rating.head));
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', hook); else hook();
