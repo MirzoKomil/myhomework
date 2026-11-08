@@ -54,7 +54,8 @@
         adsKey = key;
         apiFetch('/api/target-ads?language=' + U.lang() + '&month=' + mk).then(d => { ads = d; if (active()) draw(); window.__st2.onAds && window.__st2.onAds(); }).catch(() => { ads = { failed: true }; if (active()) draw(); });
     }
-    const active = () => P.isRopDesk() && document.querySelector('[data-sales-panel="sales-stats"].active');
+    const phoneHost = () => document.getElementById('st2PhHost');
+    const active = () => phoneHost() || (P.isRopDesk() && document.querySelector('[data-sales-panel="sales-stats"].active'));
     function spend(r) {
         if (!ads || ads.failed) return null;
         const rate = Number(ads.plan && ads.plan.usdRate) || 12000;
@@ -240,7 +241,7 @@
     function draw() {
         if (!active()) return;
         leadsC = null;
-        const panel = document.querySelector('[data-sales-panel="sales-stats"]');
+        const panel = phoneHost() || document.querySelector('[data-sales-panel="sales-stats"]');
         adsNeeded();
         const y = panel.closest('.main-content, main')?.scrollTop, c = calc();
         const openD = [...panel.querySelectorAll('details.st2-dd')].map(d => d.open);
@@ -293,6 +294,7 @@
     '.st2-mn{display:flex;align-items:center;gap:8px;font-weight:600}.st2-mn em{font-style:normal;font-size:11px;color:#B54708}.st2-up{color:#067647}',
     '.st2-anim .st2-bt i{animation:st2g .7s ease-out both}.st2-anim .st2-cs i{animation:st2r .6s ease-out both}.st2-anim .st2-ring circle.v{animation:st2d .9s ease-out both}.st2-anim>*{animation:st2f .4s ease-out both}',
     '@keyframes st2g{from{transform:scaleX(0)}}@keyframes st2r{from{transform:scaleY(0)}}@keyframes st2d{from{stroke-dashoffset:var(--c)}}@keyframes st2f{from{opacity:0;transform:translateY(8px)}}',
+    '@media(max-width:600px){.st2{gap:10px}.st2-bar{flex-direction:column;gap:8px}.st2-seg{flex-wrap:nowrap;overflow-x:auto;max-width:100%}.st2-seg button{white-space:nowrap;flex:none}.st2-big{display:flex}.st2-big button{flex:1;padding:0 8px;font-size:13px}.st2-grid{gap:8px}.st2-tile{padding:12px 14px;border-radius:18px}.st2-tv{font-size:22px}.st2-card{padding:14px;border-radius:18px}.st2-pt{padding:16px}.st2-ph{flex-direction:column;gap:8px}.st2-rate{align-self:flex-start}.st2-rings{gap:8px;justify-content:space-between}.st2-ring,.st2-ring svg{width:96px;height:96px}.st2-ring b{font-size:17px}.st2-ring span{font-size:10px}.st2-ring em{display:none}.st2-proj{margin:0;width:100%}.st2-plan thead{display:none}.st2-plan tr{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:10px 14px;border-bottom:1px solid #F1F5F9}.st2-plan tr:last-child{border-bottom:0}.st2-plan td{display:block;border:0;padding:0;text-align:left;white-space:normal}.st2-plan td:nth-child(1){grid-area:1/1;font-weight:700}.st2-plan td:nth-child(6){grid-area:1/2;text-align:right}.st2-plan td:nth-child(4){grid-area:2/1}.st2-plan td:nth-child(3){grid-area:2/2;text-align:right;color:#4B5563;font-size:12.5px}.st2-plan td:nth-child(3)::before{content:"bugungacha "}.st2-plan td:nth-child(8){grid-area:3/1/3/3;color:#4B5563;font-size:12.5px}.st2-plan td:nth-child(8)::before{content:"kunlik fakt "}.st2-plan td:nth-child(2),.st2-plan td:nth-child(5),.st2-plan td:nth-child(7){display:none}.st2-plan footer button{display:none}.st2-b{grid-template-columns:minmax(84px,118px) 1fr auto;gap:8px;font-size:13px}.st2-bn{font-size:11.5px}.st2-tr{height:150px}.st2-dd{position:static}.st2-dd>div{left:16px;right:16px;top:auto;min-width:0}.st2-dd>.st2-dr{flex-wrap:wrap}.st2-ptr select{flex:1 1 40%;min-width:0}}',
     '@media(max-width:1180px){.st2-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.st2-2,.st2-3{grid-template-columns:minmax(0,1fr)}.st2-proj{margin-left:0}}'
     ].join('\n');
     const st_ = document.createElement('style'); st_.id = 'st2Css'; st_.textContent = css; document.head.appendChild(st_);
@@ -304,6 +306,7 @@
         U.wrap('renderSalesFunnel', () => { if (P.isRopDesk()) { draw(); U.salesHead(P.PAGES.funnel); } });
         if (active()) { draw(); U.salesHead(P.PAGES.funnel); }
     }
+    document.addEventListener('click', e => { if (e.target.closest && e.target.closest('[data-ra-go="funnel"]')) { S = fresh(); animate = true; } }, true);
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', hook); else hook();
     window.__st2 = { calc, draw, planHtml() { adsNeeded(); const s = S.src; S.src = 'all'; leadsC = null; const h = planCard(calc()); S.src = s; return h; } };
 })();
