@@ -6437,18 +6437,46 @@ function initProfileNav() {
     });
     const logoutBtn = document.getElementById('profileLogoutBtn');
     if (logoutBtn) {
-        logoutBtn.addEventListener('click', async () => {
-            if (confirm('Tizimdan chiqasizmi?')) {
-                await apiLogout();
-                // 7-vazifa: umumiy kompyuterda keyingi xodim oldingisining
-                // demo o'quvchi sessiyasini (Mobil ilova iframe'i uchun
-                // yozilgan) meros qilib olmasligi uchun tozalanadi.
-                localStorage.removeItem('mh_student_token');
-                localStorage.removeItem('mh_student_info');
-                window.location.href = 'login.html';
-            }
-        });
+        // Brauzerning confirm() oynasi ilova ichidagi brauzerlar/WebView'da ko'rinmaydi va jim "yo'q" qaytaradi —
+        // natijada "Chiqish" hech narsa qilmasdi. O'rniga o'z tasdiq oynamiz (ROP/Sotuv/HR ilovalari ustida ham ko'rinadi).
+        logoutBtn.addEventListener('click', () => askLogout());
     }
+}
+
+async function doLogout() {
+    await apiLogout();
+    // 7-vazifa: umumiy kompyuterda keyingi xodim oldingisining
+    // demo o'quvchi sessiyasini (Mobil ilova iframe'i uchun
+    // yozilgan) meros qilib olmasligi uchun tozalanadi.
+    localStorage.removeItem('mh_student_token');
+    localStorage.removeItem('mh_student_info');
+    window.location.href = 'login.html';
+}
+
+function askLogout() {
+    if (document.getElementById('mhLogoutAsk')) return;
+    const box = document.createElement('div');
+    box.id = 'mhLogoutAsk';
+    box.setAttribute('role', 'dialog');
+    box.setAttribute('aria-modal', 'true');
+    box.style.cssText = 'position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(15,23,42,.45)';
+    box.innerHTML = `<div style="background:#fff;color:#111827;border-radius:16px;padding:20px;width:100%;max-width:320px;box-shadow:0 20px 40px rgba(0,0,0,.2);font-family:inherit">
+        <div style="font-size:17px;font-weight:700;margin-bottom:6px">Tizimdan chiqasizmi?</div>
+        <div style="font-size:14px;color:#4B5563;margin-bottom:18px">Qayta kirish uchun login va parol kerak bo‘ladi.</div>
+        <div style="display:flex;gap:10px">
+          <button type="button" data-no style="flex:1;min-height:44px;border-radius:10px;border:1px solid #D1D5DB;background:#fff;color:#111827;font-weight:600;font-size:15px;cursor:pointer">Bekor qilish</button>
+          <button type="button" data-yes style="flex:1;min-height:44px;border-radius:10px;border:0;background:#B42318;color:#fff;font-weight:700;font-size:15px;cursor:pointer">Chiqish</button>
+        </div></div>`;
+    const close = () => { box.remove(); document.removeEventListener('keydown', onKey); };
+    const onKey = e => { if (e.key === 'Escape') close(); };
+    box.addEventListener('click', e => {
+        if (e.target === box || e.target.closest('[data-no]')) return close();
+        const yes = e.target.closest('[data-yes]');
+        if (yes) { yes.disabled = true; yes.textContent = 'Chiqilmoqda…'; doLogout(); }
+    });
+    document.addEventListener('keydown', onKey);
+    document.body.appendChild(box);
+    box.querySelector('[data-yes]').focus();
 }
 
 initProfileNav();
