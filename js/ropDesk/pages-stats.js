@@ -52,7 +52,7 @@
         const mk = todayKey().slice(0, 7), key = U.lang() + mk;
         if (adsKey === key) return;
         adsKey = key;
-        apiFetch('/api/target-ads?language=' + U.lang() + '&month=' + mk).then(d => { ads = d; if (active()) draw(); }).catch(() => { ads = { failed: true }; if (active()) draw(); });
+        apiFetch('/api/target-ads?language=' + U.lang() + '&month=' + mk).then(d => { ads = d; if (active()) draw(); window.__st2.onAds && window.__st2.onAds(); }).catch(() => { ads = { failed: true }; if (active()) draw(); });
     }
     const active = () => P.isRopDesk() && document.querySelector('[data-sales-panel="sales-stats"].active');
     function spend(r) {
@@ -305,5 +305,5 @@
         if (active()) { draw(); U.salesHead(P.PAGES.funnel); }
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', hook); else hook();
-    window.__st2 = { calc, draw };
+    window.__st2 = { calc, draw, planHtml() { adsNeeded(); const s = S.src; S.src = 'all'; leadsC = null; const h = planCard(calc()); S.src = s; return h; } };
 })();
