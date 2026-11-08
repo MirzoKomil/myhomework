@@ -14627,7 +14627,6 @@ function getLeadCrmAgeInDays(lead, today = new Date()) {
 // Lid nega sifatsiz sanalgani (null — sifatli). Sotuv statistikasi va "Sifat qanday hisoblandi" jadvali shu bitta qoidadan.
 //  'age'        — yoshi 21 va undan kichik: qaysi ustunda tursa ham (muvaffaqiyatsiz sotuv, sinov va h.k.) — direktor qarori, 8-noyabr.
 //  'column'     — "Sifatsiz lidlar" ustunida (yoshi 21 dan katta yoki noma'lum).
-//  'attempting' — "Bog'lanishga urinilmoqda"da, CRMga tushganiga 4 kun to'lmagan (eski qoida, o'zgarmagan).
 // "Muvaffaqiyatsiz sotuv"ning o'zi sifatsiz EMAS — faqat yoshi 21 va undan kichik bo'lsa.
 // To'lov jarayonida / To'lov yopildi — har doim sifatli (to'lagan mijoz).
 const LEAD_UNDERAGE_MAX = 21;
@@ -14637,10 +14636,8 @@ function leadLowQualityReason(lead, today = new Date()) {
     const age = getLeadSurveyAge(lead);
     if (age !== null && age <= LEAD_UNDERAGE_MAX) return 'age';
     if (status === 'sifatsiz-lidlar') return 'column';
-    if (status === 'boglanishga-urinilmoqda') {
-        const crmAgeInDays = getLeadCrmAgeInDays(lead, today);
-        if (crmAgeInDays !== null && crmAgeInDays < 4) return 'attempting';
-    }
+    // Eski "Bog'lanishga urinilmoqda, 4 kundan kam — sifatsiz" qoidasi olib tashlandi (8-noyabr): telefonni olmagan lid
+    // 3 kundan keyin "Qotgan lidlar qoidasi" bilan qulflanadi va menejer uni Sifatsizga o'tkazadi — shunda sanaladi.
     return null;
 }
 function isSifatsizLeadForQualityStats(lead, today = new Date()) {
@@ -14656,15 +14653,14 @@ function buildLeadQualityBreakdown(leads) {
     const byCol = () => new Map();
     const add = (m, k) => m.set(k, (m.get(k) || 0) + 1);
     const ageCols = byCol(), goodCols = byCol();
-    let col = 0, att = 0, age = 0, good = 0, failedGood = 0, failedAge = 0;
+    let col = 0, age = 0, good = 0, failedGood = 0, failedAge = 0;
     leads.forEach(lead => {
         const st = normalizeLeadStatus(lead.status), r = leadLowQualityReason(lead, today);
         if (r === 'age') { age++; add(ageCols, st); if (st === 'muvaffaqiyatsiz-sotuv') failedAge++; }
         else if (r === 'column') col++;
-        else if (r === 'attempting') att++;
         else { good++; add(goodCols, st); if (st === 'muvaffaqiyatsiz-sotuv') failedGood++; }
     });
-    const bad = col + att + age;
+    const bad = col + age;
     const rowsOf = m => [...m.entries()].sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0]))
         .map(([k, n]) => `<tr><td>${escapeHtml(label(k))}</td><td style="text-align:right;font-weight:700">${n}</td></tr>`).join('')
         || '<tr><td colspan="2" style="color:var(--text-muted)">Yoʻq</td></tr>';
@@ -14678,7 +14674,6 @@ function buildLeadQualityBreakdown(leads) {
                 <table class="sdp-table"><tbody>
                     ${line(`Yoshi ${LEAD_UNDERAGE_MAX} va undan kichik (har qanday ustunda)`, age, '#B91C1C')}
                     ${line('«Sifatsiz lidlar» ustuni', col, '#B91C1C')}
-                    ${line('«Bogʻlanishga urinilmoqda», CRMga tushganiga 4 kun toʻlmagan', att, '#B91C1C')}
                 </tbody></table></div>
             <div><h3 style="font-size:14px;margin:0 0 8px;color:#B91C1C">Yoshi ${LEAD_UNDERAGE_MAX} va undan kichik — qaysi ustunda turibdi (${age} ta)</h3>
                 <table class="sdp-table"><tbody>${rowsOf(ageCols)}</tbody></table></div>
