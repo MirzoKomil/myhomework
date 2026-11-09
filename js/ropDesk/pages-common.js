@@ -17,7 +17,7 @@
     const isDesk = () => isRopDesk() || isSotDesk();
     const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     // ROP faqat o'z tilida ishlaydi (server ropScope ham shu bo'yicha cheklaydi).
-    const lang = () => { const u = user(); if (['admin', 'boshliq'].includes(u.role)) return typeof _leadsLangFilter !== 'undefined' && _leadsLangFilter === 'english' ? 'english' : 'russian'; if (u.role === 'rop' && u.linkedRopLang === 'both') return typeof _leadsLangFilter !== 'undefined' && _leadsLangFilter === 'english' ? 'english' : 'russian'; const l = (u.role === 'sales_manager' ? u.linkedManagerLang : u.linkedRopLang) || 'russian'; return l === 'english' ? 'english' : 'russian'; };
+    const lang = () => { const u = user(); if (['admin', 'boshliq', 'targetolog'].includes(u.role)) return typeof _leadsLangFilter !== 'undefined' && _leadsLangFilter === 'english' ? 'english' : 'russian'; if (u.role === 'rop' && u.linkedRopLang === 'both') return typeof _leadsLangFilter !== 'undefined' && _leadsLangFilter === 'english' ? 'english' : 'russian'; const l = (u.role === 'sales_manager' ? u.linkedManagerLang : u.linkedRopLang) || 'russian'; return l === 'english' ? 'english' : 'russian'; };
     const langLabel = (lg = lang()) => (lg === 'english' ? 'Ingliz tili' : 'Rus tili');
 
     // Sidebar kaliti → mavjud marshrut. [tab, ctx] — switchTab; rdp-* — shu fayl yaratgan ROP bo'limi.

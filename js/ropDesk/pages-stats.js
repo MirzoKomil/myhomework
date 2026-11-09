@@ -55,9 +55,10 @@
         apiFetch('/api/target-ads?language=' + U.lang() + '&month=' + mk).then(d => { ads = d; if (active()) draw(); window.__st2.onAds && window.__st2.onAds(); }).catch(() => { ads = { failed: true }; if (active()) draw(); });
     }
     const isSM = () => U.user().role === 'sales_manager';
+    const isTg = () => U.user().role === 'targetolog' && innerWidth > 900;
     const isAdminDesk = () => ['admin', 'boshliq'].includes(U.user().role) && innerWidth > 900;
     const phoneHost = () => document.getElementById('st2PhHost');
-    const active = () => phoneHost() || ((P.isRopDesk() || isSM() || isAdminDesk()) && document.querySelector('[data-sales-panel="sales-stats"].active'));
+    const active = () => phoneHost() || ((P.isRopDesk() || isSM() || isAdminDesk() || isTg()) && document.querySelector('[data-sales-panel="sales-stats"].active'));
     function spend(r) {
         if (!ads || ads.failed) return null;
         const rate = Number(ads.plan && ads.plan.usdRate) || 12000;
@@ -68,6 +69,7 @@
 
     function calc() {
         if (isSM()) S.mgrs = [U.user().linkedManagerId];
+        if (isTg()) S.src = 'target';
         const r = range(), all = L().filter(srcOk);
         const leads = all.filter(l => inR(lk(l), r) && mgrLead(l) && assigned(l));
         const sales = all.filter(l => isSale(l) && inR(saleKey(l), r) && mgrSale(l));
@@ -236,13 +238,13 @@
 
     function toolbar(c) {
         const cnt = k => L().filter(l => (k === 'all' || (k === 'target' ? getLeadKind(l) === 'target' : getLeadKind(l) !== 'target')) && inR(lk(l), c.r) && mgrLead(l) && assigned(l)).length;
-        const tabs = [['target','Target'],['organic','Organik'],['all','Umumiy']].map(([k, t]) => '<button type="button" data-st-src="' + k + '" aria-pressed="' + (S.src === k) + '">' + t + ' · ' + num(cnt(k)) + '</button>').join('');
+        const tabs = (isTg() ? [['target','Target']] : [['target','Target'],['organic','Organik'],['all','Umumiy']]).map(([k, t]) => '<button type="button" data-st-src="' + k + '" aria-pressed="' + (S.src === k) + '">' + t + ' · ' + num(cnt(k)) + '</button>').join('');
         const t = todayKey(), dd = dim(+t.slice(0, 4), +t.slice(5, 7));
         const per = [['today','Bugun'],['7','7 kun'],['d1','1–10'],['d2','11–20'],['d3','21–' + dd],['month','Shu oy'],['all','Hammasi'],['custom','Sana']].map(([k, l]) => '<button type="button" data-st-per="' + k + '" aria-pressed="' + (S.per === k) + '">' + l + '</button>').join('');
         const ms = getSalesManagers(U.lang()).filter(m => staffStatus.isActive(m));
         const mLab = S.mgrs === null ? 'Barcha menejerlar' : S.mgrs.length + ' ta menejer';
         const mList = ms.map(m => '<label><input type="checkbox" data-st-m="' + esc(m.id) + '"' + (S.mgrs === null || S.mgrs.includes(m.id) ? ' checked' : '') + '> ' + esc(m.name) + '</label>').join('');
-        return '<div class="st2-bar"><div class="st2-seg st2-big" role="group" aria-label="Manba">' + tabs + '</div><div class="st2-seg" role="group" aria-label="Davr">' + per + '</div></div><div class="st2-bar2">' + (isSM() ? '' : '<details class="st2-dd"><summary>' + esc(mLab) + ' ▾</summary><div><button type="button" data-st="allM">Hammasi</button>' + mList + '</div></details>') + '<details class="st2-dd"' + (S.aFrom || S.aTo ? ' open' : '') + '><summary>Biriktirilgan sana ▾</summary><div class="st2-dr"><input type="date" data-st-d="aFrom" value="' + S.aFrom + '" aria-label="Dan"><input type="date" data-st-d="aTo" value="' + S.aTo + '" aria-label="Gacha"></div></details>' + (S.per === 'custom' ? '<span class="st2-dr"><b>CRMga tushgan sana</b><input type="date" data-st-d="from" value="' + S.from + '" aria-label="Dan"><input type="date" data-st-d="to" value="' + S.to + '" aria-label="Gacha"></span>' : '') + '</div>';
+        return '<div class="st2-bar"><div class="st2-seg st2-big" role="group" aria-label="Manba">' + tabs + '</div><div class="st2-seg" role="group" aria-label="Davr">' + per + '</div></div><div class="st2-bar2">' + (isSM() || isTg() ? '' : '<details class="st2-dd"><summary>' + esc(mLab) + ' ▾</summary><div><button type="button" data-st="allM">Hammasi</button>' + mList + '</div></details>') + '<details class="st2-dd"' + (S.aFrom || S.aTo ? ' open' : '') + '><summary>Biriktirilgan sana ▾</summary><div class="st2-dr"><input type="date" data-st-d="aFrom" value="' + S.aFrom + '" aria-label="Dan"><input type="date" data-st-d="aTo" value="' + S.aTo + '" aria-label="Gacha"></div></details>' + (S.per === 'custom' ? '<span class="st2-dr"><b>CRMga tushgan sana</b><input type="date" data-st-d="from" value="' + S.from + '" aria-label="Dan"><input type="date" data-st-d="to" value="' + S.to + '" aria-label="Gacha"></span>' : '') + '</div>';
     }
 
     // Xarita: @svg-maps/uzbekistan (CC-BY-4.0, Victor Cazanave), koordinatalar soddalashtirilgan.
@@ -293,7 +295,7 @@
         adsNeeded();
         const y = panel.closest('.main-content, main')?.scrollTop, c = calc();
         const openD = [...panel.querySelectorAll('details.st2-dd')].map(d => d.open);
-        panel.innerHTML = '<div class="st2" id="st2Root">' + toolbar(c) + (isSM() ? smPlan(c) + tiles(c) + debtPay(c) + funnels(c) + portrait(c) + reasons(c) : planCard(c) + tiles(c) + debtPay(c) + trend(c) + funnels(c) + botCard(c) + orgCard(c) + portrait(c) + reasons(c) + managers(c)) + '</div>';
+        panel.innerHTML = '<div class="st2" id="st2Root">' + toolbar(c) + (isTg() ? '<div class="st2-tgp">' + planCard(c) + '</div>' + tiles(c) + trend(c) + funnels(c) + botCard(c) + portrait(c) + reasons(c) : isSM() ? smPlan(c) + tiles(c) + debtPay(c) + funnels(c) + portrait(c) + reasons(c) : planCard(c) + tiles(c) + debtPay(c) + trend(c) + funnels(c) + botCard(c) + orgCard(c) + portrait(c) + reasons(c) + managers(c)) + '</div>';
         panel.querySelectorAll('details.st2-dd').forEach((d, i) => { if (openD[i]) d.open = true; });
         const root = panel.querySelector('#st2Root');
         bind(root); animateIn(root); animate = false;
@@ -345,6 +347,7 @@
     '@keyframes st2g{from{transform:scaleX(0)}}@keyframes st2r{from{transform:scaleY(0)}}@keyframes st2d{from{stroke-dashoffset:var(--c)}}@keyframes st2f{from{opacity:0;transform:translateY(8px)}}',
     '.st2-map{width:100%;display:block}.st2-map polygon{transition:opacity .15s}.st2-map polygon:hover{opacity:.75}.st2-ext{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:10px;font-size:13px;color:#4B5563}.st2-ext em{font-style:normal;font-weight:700}.st2-ext b{color:#0B1220}.st2-g4{margin-bottom:14px}.st2-card .st2-tile{border-radius:16px}',
     '.st2-rate button{border:0;background:none;color:#fff;font:inherit;font-weight:800;text-decoration:underline;cursor:pointer;padding:0 0 0 6px}',
+    '.st2-tgp .st2-t tbody tr:nth-child(2),.st2-tgp .st2-t tbody tr:nth-child(3),.st2-tgp .st2-t tbody tr:nth-child(4),.st2-tgp .st2-t tbody tr:nth-child(5),.st2-tgp .st2-t tbody tr:nth-child(8){display:none}.st2-tgp .st2-ring:nth-child(n+2){display:none}.st2-tgp footer button{display:none}',
     '.st2-sm{min-width:96px}.st2-sm span{display:block;font-size:12.5px;color:#D8E8FB}.st2-sm b{font-size:22px;font-weight:800}.st2-sm em{display:block;font-style:normal;font-size:12px;color:#D8E8FB}',
     '@media(max-width:600px){.st2{gap:10px}.st2-bar{flex-direction:column;gap:8px}.st2-seg{flex-wrap:nowrap;overflow-x:auto;max-width:100%}.st2-seg button{white-space:nowrap;flex:none}.st2-big{display:flex}.st2-big button{flex:1;padding:0 8px;font-size:13px}.st2-grid{gap:8px}.st2-tile{padding:12px 14px;border-radius:18px}.st2-tv{font-size:22px}.st2-card{padding:14px;border-radius:18px}.st2-pt{padding:16px}.st2-ph{flex-direction:column;gap:8px}.st2-rate{align-self:flex-start}.st2-rings{gap:8px;justify-content:space-between}.st2-ring,.st2-ring svg{width:96px;height:96px}.st2-ring b{font-size:17px}.st2-ring span{font-size:10px}.st2-ring em{display:none}.st2-proj{margin:0;width:100%}.st2-plan thead{display:none}.st2-plan tr{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:10px 14px;border-bottom:1px solid #F1F5F9}.st2-plan tr:last-child{border-bottom:0}.st2-plan td{display:block;border:0;padding:0;text-align:left;white-space:normal}.st2-plan td:nth-child(1){grid-area:1/1;font-weight:700}.st2-plan td:nth-child(6){grid-area:1/2;text-align:right}.st2-plan td:nth-child(4){grid-area:2/1}.st2-plan td:nth-child(3){grid-area:2/2;text-align:right;color:#4B5563;font-size:12.5px}.st2-plan td:nth-child(3)::before{content:"bugungacha "}.st2-plan td:nth-child(8){grid-area:3/1/3/3;color:#4B5563;font-size:12.5px}.st2-plan td:nth-child(8)::before{content:"kunlik fakt "}.st2-plan td:nth-child(2),.st2-plan td:nth-child(5),.st2-plan td:nth-child(7){display:none}.st2-plan footer button{display:none}.st2-b{grid-template-columns:minmax(84px,118px) 1fr auto;gap:8px;font-size:13px}.st2-bn{font-size:11.5px}.st2-tr{height:150px}.st2-dd{position:static}.st2-dd>div{left:16px;right:16px;top:auto;min-width:0}.st2-dd>.st2-dr{flex-wrap:wrap}.st2-ptr select{flex:1 1 40%;min-width:0}}',
     '@media(max-width:1180px){.st2-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.st2-2,.st2-3{grid-template-columns:minmax(0,1fr)}.st2-proj{margin-left:0}}'
@@ -355,7 +358,7 @@
     const open0 = P.open;
     P.open = k => { if (k === 'funnel') { S = fresh(); animate = true; } return open0(k); };
     function hook() {
-        U.wrap('renderSalesFunnel', () => { if (P.isRopDesk() || isSM() || isAdminDesk()) { draw(); if (P.isRopDesk()) U.salesHead(P.PAGES.funnel); } });
+        U.wrap('renderSalesFunnel', () => { if (P.isRopDesk() || isSM() || isAdminDesk() || isTg()) { draw(); if (P.isRopDesk()) U.salesHead(P.PAGES.funnel); } });
         if (active()) { draw(); if (P.isRopDesk()) U.salesHead(P.PAGES.funnel); }
     }
     document.addEventListener('click', e => { if (!e.target.closest) return; const b = e.target.closest('button,a'); if (e.target.closest('[data-ra-go="funnel"],[data-sa-crm="sales:sales-stats"]') || (isAdminDesk() && b && !b.closest('#st2Root') && b.textContent.trim() === 'Statistika')) { S = fresh(); animate = true; } }, true);
