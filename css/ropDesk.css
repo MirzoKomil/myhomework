@@ -340,3 +340,14 @@ body.rop-desk-v2.rk-sales-lead #salesSectionNav { display: none !important; }
 body.rop-desk-v2 #tab-students .section-nav-go { display: none !important; }
 body.rop-desk-v2 #marketingSectionNav { display: none !important; }
 body.rop-desk-v2 #leadsLangTabs { flex: none; }
+
+/* Lidlar yuqori qismi va ustunlar tasdiqlangan doska bo'yicha (kartalar ixcham qoladi, direktor 9-noyabr). */
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-sub { align-self: flex-start; width: fit-content; max-width: 100%; gap: 2px; padding: 5px; margin: 0 0 14px; background: var(--rk-card, #fff); border: 1px solid var(--rk-line, #E6EAF2); border-radius: 16px; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-sub button { height: 40px; padding: 0 14px; border: 0; margin: 0; border-radius: 12px; font-size: 14px; font-weight: 600; color: var(--rk-ink2, #3A4456); }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-sub button.active { background: #0065D6; color: #fff; font-weight: 800; border: 0; }
+body:is(.rop-desk-v2, .sot-desk-v2).rk-sales-lead #tab-sales .rk-h1 { font-size: 28px; }
+body:is(.rop-desk-v2, .sot-desk-v2).rk-sales-lead #leadsFiltersBar { border-left: 0; padding-left: 0; }
+body:is(.rop-desk-v2, .sot-desk-v2).rk-sales-lead #leadsFiltersBar .leads-filter-box { height: 44px; border-radius: 12px; font-size: 14px; }
+body:is(.rop-desk-v2, .sot-desk-v2).rk-sales-lead #addLeadBtn { height: 44px; border-radius: 12px; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .lead-column.rk-col { width: 264px; padding: 12px 10px 0; border: 1px solid color-mix(in srgb, var(--rk-col) 20%, transparent); border-bottom: 0; border-radius: 20px 20px 0 0; background: color-mix(in srgb, var(--rk-col) 8%, transparent); }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .lead-card.rk-card { padding: 10px 12px; border-radius: 20px; border-top-color: color-mix(in srgb, var(--rk-col) 40%, transparent); border-right-color: color-mix(in srgb, var(--rk-col) 40%, transparent); border-bottom-color: color-mix(in srgb, var(--rk-col) 40%, transparent); }
