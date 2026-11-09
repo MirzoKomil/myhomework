@@ -4153,7 +4153,7 @@ async function recordTeacherAttendance({ actor, teacherId, studentId, date, pres
         throw new Error("Davomat sanasi noto'g'ri");
     }
 
-    const isStaffWithFullAccess = ['admin', 'rop', 'boshliq'].includes(actor?.role);
+    const isStaffWithFullAccess = ['admin', 'rop', 'boshliq', 'akademik'].includes(actor?.role);
     let savedGrade = null;
     let result = null;
     await tx(async (client) => {
@@ -4206,7 +4206,7 @@ async function recordTeacherAttendance({ actor, teacherId, studentId, date, pres
         // Xodim tuzatishi: yopilgan oy va kelajak — faqat admin/boshliq (ROP — joriy oy, bugungacha); ROP — faqat o'z til yo'nalishi.
         if (isStaffWithFullAccess) {
             assertStaffAttendanceWindow({ actor, date: String(date), present });
-            if (actor?.role === 'rop') {
+            if (actor?.role === 'rop' || actor?.role === 'akademik') {
                 const lr = (await client.query(`SELECT h.lang FROM users u JOIN hr_employees h ON LOWER(TRIM(h.login)) = LOWER(TRIM(u.email))
                     WHERE u.id = $1 AND COALESCE(h.status,'active') <> 'inactive' LIMIT 2`, [actor.id])).rows;
                 const lang = lr.length === 1 ? lr[0].lang : null;
