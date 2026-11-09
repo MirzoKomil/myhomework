@@ -211,7 +211,7 @@
     // renderSalesFunnel sotuv menejeri uchun allaqachon o'z lidlariga cheklaydi (_salesFunnelMgrIds = [linkedManagerId]).
     SP.register('funnel', {
         tab: 'sales',
-        head: () => ({ title: 'Mening voronkam', sub: 'Statistika · faqat sizga biriktirilgan lidlar hozir qaysi bosqichda turgani', chipRight: true })
+        head: () => ({ title: 'Statistika', sub: 'Faqat sizning lidlaringiz va sotuvlaringiz', chipRight: true })
     });
 
     // ==================== Skriptlar (faqat o'qish) + Yo'riqnomalar ====================
