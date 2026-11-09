@@ -369,7 +369,7 @@
         const langSeg = !J.lead && canPickLang() ? `<div class="jv-seg jv-seg--sm" role="group" aria-label="Yoʻnalish"><button type="button" data-lang="english" aria-pressed="${L === 'english'}">Ingliz</button><button type="button" data-lang="russian" aria-pressed="${L === 'russian'}">Rus</button></div>` : '';
         const modes = J.page ? '' : `<div class="jv-seg" role="group" aria-label="Jadval">${[['sinov', 'Sinov darsi'], ['darslar', 'Darslar']].map(([k, l]) =>
             `<button type="button" data-mode="${k}" aria-pressed="${J.mode === k}">${l}</button>`).join('')}</div>`;
-        const extra = !J.page && isFull() ? `<button type="button" class="jv-link" data-admin-week>Ustoz ish vaqti →</button>` : '';
+        const extra = !J.page && isFull() ? `<button type="button" class="jv-link" data-admin-week>Ustoz ish vaqti →</button>` : !J.page && isAcad() ? `<button type="button" class="jv-link" data-ac-hours>Ustoz ish vaqti →</button>` : '';
         return `<div class="jv-head">${back}<div class="jv-title"><h1>${J.page ? 'Sinov darsini qoʻyish' : 'Dars jadvali'}</h1><p>${esc(sub)}</p></div>
             <div class="jv-headr">${extra}${langSeg}${modes}</div></div>`;
     }
@@ -628,6 +628,7 @@
         root.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => { if (J.mode === b.dataset.mode) return; J.mode = b.dataset.mode; J.sel = null; J.brk = null; J.mobT = null; J.data = null; draw(); load(); });
         root.querySelectorAll('[data-lang]').forEach(b => b.onclick = () => { const st = SS()?.state; if (!st || st.lang === b.dataset.lang) return; st.lang = b.dataset.lang; st.teacherId = null; J.sel = null; J.brk = null; J.tf = 'all'; load(); });
         root.querySelector('[data-close-page]')?.addEventListener('click', () => closePage());
+        root.querySelector('[data-ac-hours]')?.addEventListener('click', acHoursPick);
         root.querySelector('[data-admin-week]')?.addEventListener('click', () => { const st = SS()?.state; if (!st) return; st.view = 'week'; J.timers.forEach(clearInterval); J.timers = []; SS().render(J.root); });
     }
     function bind(root) {
@@ -876,6 +877,12 @@
     // Bo'sh katak → sinovga yopish (sabab majburiy); "Band" (shablonda sinovga yopiq) → qo'shimcha ochish;
     // "Yopiq" (yopish yozuvi bor) → yozuvni bekor qilib qayta ochish. "Faqat shu sana" yoki "Har <hafta kuni>".
     const acSlotAble = k => isAcad() && J.mode === 'sinov' && (k === 'free' || k === 'notrial' || k === 'closed');
+    // Akademik rahbar: ustozni tanlab, admindagi ish vaqti oynasini ochadi (faqat o'z tilidagi ustozlar — server tekshiradi).
+    function acHoursPick() {
+        const ts = J.data?.teachers || [];
+        const box = overlay('jv-sheet jv-acs', `<header class="jv-mh"><div class="jv-mh-r"><h2>Ustoz ish vaqti</h2><button type="button" class="jv-x" data-x aria-label="Yopish">✕</button></div><p class="jv-mt">Ustozni tanlang</p></header><div class="jv-opts">${ts.map(t => `<button type="button" class="jv-btn" data-ht="${esc(t.id)}">${esc(tName(t))}</button>`).join('')}</div>`);
+        box.querySelectorAll('[data-ht]').forEach(b => { b.onclick = () => { const id = b.dataset.ht; closeOverlay(); SS()?._.hoursDrawer(id, () => load()); }; });
+    }
     async function acSlotSheet(tid, m) {
         const t = J.data?.teachers.find(x => x.id === tid), v = J.data?.views.get(tid); if (!t || !v) return;
         const st = slotState(v, m), date = J.data.date, wdN = U().wd(date), e = m + TRIAL;

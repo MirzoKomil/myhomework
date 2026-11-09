@@ -8,7 +8,7 @@
     const U = () => window.schoolUI;
     const st = { sel: '', filter: 'all', q: '', more: false, ctx: 'main', staff: '' };
     const role = () => (typeof getCurrentUser === 'function' ? getCurrentUser()?.role : '') || '';
-    const isLead = () => ['admin', 'boshliq', 'rop'].includes(role());
+    const isLead = () => ['admin', 'boshliq', 'rop', 'akademik'].includes(role());
     const PASS = 65;
     const MONTHS = ['yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun', 'iyul', 'avgust', 'sentyabr', 'oktyabr', 'noyabr', 'dekabr'];
     const ICON_SEARCH = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>';
