@@ -209,6 +209,7 @@ async function apiMe() {
         let prev = null;
         try { prev = JSON.parse(localStorage.getItem('mh_currentUser') || 'null'); } catch { prev = null; }
         if (prev && prev.id === data.user.id && prev.linkedTeacherId !== undefined && data.user.linkedTeacherId === undefined) data.user.linkedTeacherId = prev.linkedTeacherId;
+        if (prev && prev.id === data.user.id) Object.keys(prev).forEach(k => { if (/^linked/.test(k) && data.user[k] === undefined) data.user[k] = prev[k]; }); // ROP/menejer tili Sozlamalarda yo'qolmasin
         setSession(getToken(), data.user);
     }
     return data.user;
