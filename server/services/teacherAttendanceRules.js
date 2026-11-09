@@ -67,6 +67,7 @@ async function assertTeacherOwnsDay(client, { student, teacherId, date }) {
 // ROP (va kelajakda boshqa "to'liq ruxsatli" xodim) — joriy oy, bugungacha: yopilgan oy 409, kelajak 400 (olib tashlash — faqat yopilgan oy cheklovi).
 const CLOSED_MONTH_EDITORS = ['admin', 'boshliq', 'akademik']; // Akademik rahbar — direktor qarori (2026-11-09), o'z tilida
 function assertStaffAttendanceWindow({ actor, date, present, now = new Date() }) {
+    if (actor?.role === 'akademik' && present !== null && date > require('./school/time').nowLocal(now).date) throw Object.assign(new Error('Kelajakdagi sanaga davomat qo\'yib bo\'lmaydi'), { status: 400 });
     if (CLOSED_MONTH_EDITORS.includes(actor?.role)) return;
     const T = require('./school/time');
     const local = T.nowLocal(now), month = String(date).slice(0, 7);
