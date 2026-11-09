@@ -227,6 +227,7 @@ app.use('/api/domwork/groups', domworkGroupsRouter(require('./db').pool, require
 app.use('/api/domwork/marketing', require('./routes/domworkMarketing')({pool:crmDb.pool,authRequired:require('./middleware/auth').authRequired}));
 app.use('/api/target-ads', require('./routes/targetAds'));
 app.use('/api/bot-funnel', require('./routes/botFunnel'));
+app.use('/api/sales-cash', require('./routes/salesCash'));
 app.use('/api/archive', require('./routes/archive'));
 app.use('/api/staff-lifecycle', require('./routes/staffLifecycle'));
 app.use('/api/domwork/staff-telegram', require('./routes/staffTelegram')({pool:crmDb.pool,runtime:domworkBot,
