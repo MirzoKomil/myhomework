@@ -351,3 +351,49 @@ body:is(.rop-desk-v2, .sot-desk-v2).rk-sales-lead #leadsFiltersBar .leads-filter
 body:is(.rop-desk-v2, .sot-desk-v2).rk-sales-lead #addLeadBtn { height: 44px; border-radius: 12px; }
 body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .lead-column.rk-col { width: 264px; padding: 12px 10px 0; border: 1px solid color-mix(in srgb, var(--rk-col) 20%, transparent); border-bottom: 0; border-radius: 20px 20px 0 0; background: color-mix(in srgb, var(--rk-col) 8%, transparent); }
 body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .lead-card.rk-card { padding: 10px 12px; border-radius: 20px; border-top-color: color-mix(in srgb, var(--rk-col) 40%, transparent); border-right-color: color-mix(in srgb, var(--rk-col) 40%, transparent); border-bottom-color: color-mix(in srgb, var(--rk-col) 40%, transparent); }
+
+/* Lidlar: mustaqil baho bo'yicha ixchamlik va doskaga moslik (faqat ko'rinish, 9-noyabr). */
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban.rk-board { grid-auto-columns: max-content; gap: 12px; padding-bottom: 4px; scrollbar-width: auto !important; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban.rk-board::-webkit-scrollbar { height: 8px; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban.rk-board::-webkit-scrollbar-button { display: none; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban.rk-board::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .lead-column.rk-col { flex: 0 0 264px; margin: 0; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .lead-column-cards { scrollbar-width: auto !important; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .lead-column-cards::-webkit-scrollbar { width: 6px; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .lead-column-cards::-webkit-scrollbar-button { display: none; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .lead-column-cards::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 3px; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .lead-column-header.rk-ch { min-height: 0; padding: 0 4px; gap: 4px; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-ch2 { gap: 4px; min-height: 24px; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-ch2:empty { display: none; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-rk, body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .lead-col-pick, body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-seg3 button { height: 24px; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .lead-col-pick { order: -1; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-sum { order: 9; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .lead-column-count { background: transparent; box-shadow: none; padding: 0; font-size: 14px; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .lead-card.rk-card { border-left-width: 4px; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-chip svg { flex: none; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-r4 .rk-chip { padding: 0 6px; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-next, body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-next-late { display: block; line-height: 22px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-next svg, body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-next-late svg { vertical-align: -1px; margin-right: 4px; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-next-late { white-space: normal; height: auto; line-height: 16px; padding: 3px 8px; border-radius: 10px; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-sp { display: none; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-mg { flex: 1 1 0; min-width: 0; max-width: none; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-fb { padding: 0 5px; gap: 3px; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-ft { gap: 2px; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-nm { font-weight: 700; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-hid button { height: 44px; padding: 0 14px; border-radius: 12px; font-size: 14px; font-weight: 700; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-total { font-size: 14px; color: var(--rk-ink2); }
+body:is(.rop-desk-v2, .sot-desk-v2).rk-sales-lead #leadsFiltersBar .leads-filter-box--select { position: relative; padding-right: 30px; }
+body:is(.rop-desk-v2, .sot-desk-v2).rk-sales-lead #leadsFiltersBar .leads-filter-box--select::after { content: ''; position: absolute; right: 14px; top: 50%; width: 5px; height: 5px; margin-top: -5px; border-right: 1.4px solid var(--rk-mut); border-bottom: 1.4px solid var(--rk-mut); transform: rotate(45deg); pointer-events: none; }
+@media (max-height: 800px) {
+    body:is(.rop-desk-v2, .sot-desk-v2).rk-sales-lead .content-layout { padding-top: 8px; }
+    body:is(.rop-desk-v2, .sot-desk-v2) .rk-sub { padding: 3px; margin-bottom: 6px; }
+    body:is(.rop-desk-v2, .sot-desk-v2) .rk-sub button { height: 32px; font-size: 13.5px; }
+    body:is(.rop-desk-v2, .sot-desk-v2).rk-sales-lead #tab-sales .rk-h1 { font-size: 22px; }
+    body:is(.rop-desk-v2, .sot-desk-v2).rk-sales-lead #leadsFiltersBar .leads-filter-box, body:is(.rop-desk-v2, .sot-desk-v2).rk-sales-lead #addLeadBtn, body:is(.rop-desk-v2, .sot-desk-v2) .rk-hid button { height: 36px; }
+    body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban.rk-board { padding-top: 8px; }
+    body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .lead-column.rk-col { padding-top: 8px; }
+    body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .lead-card.rk-card { padding: 8px 12px; gap: 2px; }
+    body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-r1 .lead-card-menu-btn { width: 24px; height: 24px; }
+    body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-r3, body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-ph { min-height: 22px; }
+    body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-r4 { gap: 2px; }
+}
