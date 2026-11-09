@@ -10032,6 +10032,7 @@ function applyLangPickerPolicy(user = getCurrentUser()) {
             const active = btns.find(b => b.classList.contains('active') || b.getAttribute('aria-pressed') === 'true' || b.getAttribute('aria-selected') === 'true');
             if (!mine) return;
             if (active === mine) { if (!fixed) group._langDone = true; return; }
+            if (!mine.offsetParent) return; // yashirin sahifa tablari bosilmasin: ochiq menyularni yopib yuborardi
             const now = Date.now(), log = (group._langClicks || []).filter(x => now - x < 10000);
             if (log.length >= 3) return;
             group._langClicks = [...log, now];
@@ -27326,7 +27327,7 @@ function openDebtorMenu(studentId, triggerBtn) {
 
     const menu = document.createElement('div');
     menu.id = 'debtorCtxMenu';
-    menu.style.cssText = 'position:fixed;z-index:9999;background:var(--card-bg);border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.15);padding:6px 0;min-width:180px';
+    menu.style.cssText = 'position:fixed;z-index:9999;background:var(--surface,#fff);border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.15);padding:6px 0;min-width:180px';
     menu.innerHTML = `
         <div class="ctx-item" data-action="call" style="padding:10px 18px;cursor:pointer;font-size:14px;display:flex;gap:10px;align-items:center">📞 Qo'ng'iroq qilish</div>
         <div class="ctx-item" data-action="sms"  style="padding:10px 18px;cursor:pointer;font-size:14px;display:flex;gap:10px;align-items:center">💬 SMS yuborish</div>
@@ -27343,7 +27344,9 @@ function openDebtorMenu(studentId, triggerBtn) {
         const menuW = 180;
         let left = rect.right - menuW;
         if (left < 8) left = 8;
-        menu.style.top = (rect.bottom + 6) + 'px';
+        const menuH = menu.offsetHeight;
+        const below = rect.bottom + 6 + menuH <= window.innerHeight - 8;
+        menu.style.top = (below ? rect.bottom + 6 : Math.max(8, rect.top - 6 - menuH)) + 'px';
         menu.style.left = left + 'px';
     }
 
