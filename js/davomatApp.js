@@ -827,6 +827,8 @@
 
     // ---------- menyu bandlari (host ilovalar uchun) ----------
     // kind: 'my' | 'team' | 'approvals' | 'office'
+    // Kompyuter menyusi uchun: holatni jim oladi (qulf va oynalar faqat telefonda ishlaydi).
+    async function peekMe() { if (S.me) return S.me; try { S.me = await api('/me'); S.loadedAt = Date.now(); } catch (e) { /* menyu ochilmay qoladi */ } return S.me; }
     function menuInfo() {
         const m = S.me || {};
         return { tracked: tracked(), approver: m.approver?.kind || null, pending: m.approver?.pending || 0, kind: m.kind || null };
@@ -898,7 +900,7 @@
     MQ.addEventListener?.('change', () => { if (on()) boot(); });
 
     window.davomat = {
-        homeCard, refresh: () => refresh(true), guardLead, record: (empId, date) => showRecord(empId || null, date), leadLocked, open: openPage, menuInfo, state: () => S.me,
+        homeCard, refresh: () => refresh(true), guardLead, record: (empId, date) => showRecord(empId || null, date), leadLocked, open: openPage, menuInfo, peekMe, state: () => S.me,
         openSchedule: (emp, onSaved) => { S.onScheduleSaved = onSaved || null; openPage('schedule', emp); }, toast
     };
 })();

@@ -142,7 +142,8 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         const lang = await reqLang(req);
         if (FULL.has(role)) return { views: await views(req, from, to, teacherId ? [teacherId] : null, lang), scope: 'full', lang };
         // ROP: hamma ustoz, o'quvchi ismlari va bugungi holat (o'z tilida) — "Kim bo'sh?" (mode=free) esa sotuvdagidek.
-        if ((role === 'rop' || role === 'akademik') && req.query.mode !== 'free') return { views: await views(req, from, to, teacherId ? [teacherId] : null, lang), scope: 'manage', lang };
+        // Akademik rahbar sinov vaqtlarini admin kabi ochadi/yopadi (overrideId kerak), shuning uchun "Kim bo'sh?" da ham to'liq ko'rinish.
+        if (role === 'akademik' || (role === 'rop' && req.query.mode !== 'free')) return { views: await views(req, from, to, teacherId ? [teacherId] : null, lang), scope: 'manage', lang };
         if (SALES.has(role)) {
             const v = await views(req, from, to, teacherId ? [teacherId] : null, lang);
             const mid = await managerId(req);
