@@ -404,3 +404,6 @@ body:is(.rop-desk-v2, .sot-desk-v2):has(#bulkActionsBar[style*="display: flex"])
 body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .lead-card.rk-card.is-sel { background: #EAF3FF; border-color: #0065D6; border-left-color: var(--rk-stripe, #0065D6); box-shadow: 0 0 0 1px #0065D6; }
 html[data-theme="dark"] body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .lead-card.rk-card.is-sel { background: #142846; }
 body:is(.rop-desk-v2, .sot-desk-v2) .rk-nb { white-space: nowrap; }
+
+/* Karta menyusida 2 px farq uchun keraksiz skroll chizig'i chiqmasin (past ekranda skroll ishlayveradi). */
+body:is(.rop-desk-v2, .sot-desk-v2) .lead-card-menu-dropdown { scrollbar-width: none; }
