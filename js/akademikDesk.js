@@ -596,7 +596,7 @@
         // DAVOMAT bandlari faqat davomat.menuInfo() mos kelsa (davomatApp telefonda yuklanadi; kompyuterda — "Mening davomatim" zaxira oynasi bilan).
         ['att', 'attreq'].forEach(key => { const a = document.querySelector(`#sidebarMenu .menu-item[data-akd="${key}"]`); if (a) a.style.display = dvApplies(key) ? '' : 'none'; });
         const myA = document.querySelector('#sidebarMenu .menu-item[data-akd="myatt"]');
-        if (myA) myA.style.display = dvApplies('myatt') || (isDesk() && window.staffAttendanceUI?.openCheckSheet) ? '' : 'none';
+        if (myA) myA.style.display = dvApplies('myatt') || (isDesk() && !window.davomat?.state?.() && window.staffAttendanceUI?.openCheckSheet) ? '' : 'none';
         const dvSep = [...document.querySelectorAll('#sidebarMenu .menu-sep--group')].find(x => x.textContent.trim() === 'Davomat');
         if (dvSep) dvSep.style.display = ['att', 'attreq', 'myatt'].some(key => document.querySelector(`#sidebarMenu .menu-item[data-akd="${key}"]`)?.style.display !== 'none') ? '' : 'none';
         document.querySelectorAll('[data-akd-badge]').forEach(b => {
@@ -757,6 +757,7 @@
         updateBadges();
         // davomatApp /me ni oʻzi yuklaydi (telefonda) — kelgach DAVOMAT bandlari koʻrinishi yangilanadi.
         let dvTries = 0;
+        if (isDesk()) window.davomat?.peekMe?.().then(updateBadges);
         const dvPoll = setInterval(() => { updateBadges(); if (window.davomat?.state?.() || ++dvTries > 20) clearInterval(dvPoll); }, 1500);
     }
     function boot() { if (isAk()) init(); }

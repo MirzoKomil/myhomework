@@ -10051,7 +10051,9 @@ function applyLangPickerPolicy(user = getCurrentUser()) {
 }
 
 function getUserOwnLang(user = getCurrentUser()) {
-    const v = user?.linkedRopLang || user?.linkedManagerLang || user?.linkedTeacherLang || user?.subject || user?.language;
+    // Akademik rahbar: HR'da bitta til berilgan bo'lsa — o'sha til (ikkala til bo'lsa, tanlaydi).
+    const akLangs = user?.role === 'akademik' && Array.isArray(user.linkedHrLangs) ? user.linkedHrLangs : [];
+    const v = akLangs.length === 1 ? akLangs[0] : user?.linkedRopLang || user?.linkedManagerLang || user?.linkedTeacherLang || user?.subject || user?.language;
     return v === 'russian' || v === 'english' ? v : null;
 }
 
