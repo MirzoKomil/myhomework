@@ -10032,7 +10032,6 @@ function applyLangPickerPolicy(user = getCurrentUser()) {
             const active = btns.find(b => b.classList.contains('active') || b.getAttribute('aria-pressed') === 'true' || b.getAttribute('aria-selected') === 'true');
             if (!mine) return;
             if (active === mine) { if (!fixed) group._langDone = true; return; }
-            if (!mine.offsetParent) return; // yashirin sahifa tablari bosilmasin: ochiq menyularni yopib yuborardi
             const now = Date.now(), log = (group._langClicks || []).filter(x => now - x < 10000);
             if (log.length >= 3) return;
             group._langClicks = [...log, now];
@@ -27368,7 +27367,7 @@ function openDebtorMenu(studentId, triggerBtn) {
         };
     });
 
-    const close = e => { if (!menu.contains(e.target)) { menu.remove(); document.removeEventListener('click', close, true); } };
+    const close = e => { if (e.isTrusted && !menu.contains(e.target)) { menu.remove(); document.removeEventListener('click', close, true); } };
     setTimeout(() => document.addEventListener('click', close, true), 0);
 }
 
