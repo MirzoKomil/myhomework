@@ -155,7 +155,7 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
     // Joy bo'yicha topiladi (ustoz + sana + vaqt) — jadval javobiga telefon/ID qo'shilmaydi.
     // Admin/ROP: darslar va sinovlar; sotuv menejeri: faqat sinovlar (barcha menejerlarniki); ustoz — yo'q.
     router.get('/schedule/cell', handle(async req => {
-        const role = req.user.role, manage = MANAGE.has(role);
+        const role = req.user.role, manage = MANAGE.has(role) || role === 'akademik';
         if (!manage && !SALES.has(role)) throw T.fail(403, 'Ruxsat yo\'q');
         const teacherId = String(req.query.teacherId || '');
         const date = T.assertDate(req.query.date);

@@ -958,8 +958,13 @@ async function getStateForUser(user) {
     } else if (!['admin', 'rop', 'boshliq'].includes(user.role)) {
         // Ustoz/xodim kabinetiga Sotuv lidlarining PII ma'lumoti kerak emas. Akademik rahbar — faqat sinov bosqichidagi lidlar (Sinov darslari nazorati).
         const trialOnly = l => l && !l.deletedAt && (l.status === 'sinov-darsida' || l.trialRequest?.id);
+        // Faqat sinov nazoratiga kerakli maydonlar (izohlar, to'lov va sotuv ma'lumotlari yuborilmaydi).
+        const trialView = l => ({ id: l.id, name: l.name, phone: l.phone, status: l.status, language: l.language, managerId: l.managerId, managerName: l.managerName,
+            trialRequest: l.trialRequest, trialHistory: l.trialHistory, trialLessonAt: l.trialLessonAt, trialCancelled: l.trialCancelled, trialScheduleRevision: l.trialScheduleRevision,
+            durationMin: l.durationMin, paymentOnboarding: l.paymentOnboarding?.lessonDuration ? { lessonDuration: l.paymentOnboarding.lessonDuration } : undefined,
+            paymentSurvey: l.paymentSurvey?.tariff ? { tariff: l.paymentSurvey.tariff } : undefined });
         state.leads = user.role === 'akademik'
-            ? { english: (state.leads?.english || []).filter(trialOnly), russian: (state.leads?.russian || []).filter(trialOnly) }
+            ? { english: (state.leads?.english || []).filter(trialOnly).map(trialView), russian: (state.leads?.russian || []).filter(trialOnly).map(trialView) }
             : { english: [], russian: [] };
         state.archive = [];
     }
