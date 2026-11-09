@@ -79,7 +79,7 @@
     const TONE_BAR = { red: '#D92D20', amber: '#F79009', blue: '#0065D6', green: '#079455' };
 
     // ---------- holat ----------
-    const S = { screen: 'home', stack: [], ptab: 'open', pq: '', later: false, mtab: 'pending', mAll: false, rtab: 'all', rAll: false, rTeacher: '', ttab: 'teachers', ltab: 'pending', ntab: 'all', silentAll: false, pid: null, sid: null, tid: null, aid: null, draft: null };
+    const S = { screen: 'home', stack: [], ptab: 'open', pq: '', later: false, mtab: 'pending', mAll: false, rtab: 'all', rAll: false, rTeacher: '', stab: 'all', sTeacher: '', sq: '', ttab: 'teachers', ltab: 'pending', ntab: 'all', silentAll: false, pid: null, sid: null, tid: null, aid: null, draft: null };
     const C = new Map(); // url -> { d, e, p, at }
     let root, nav, sheetEl, toastEl, toastTimer, inited = false, qTimer = null;
 
@@ -527,6 +527,30 @@
         const n = num((String(r.reasonText || '').match(/\d+/) || [0])[0]);
         return (r.reason === 'noapp' && n >= 5) || (r.reason === 'absent' && n >= 3) || (r.reason === 'behind' && n >= 8) ? 'red' : 'amber';
     }
+    // Oʻquvchilar — toʻliq roʻyxat (ustoz ilovasi "Oʻquvchilarim" namunasi): qidiruv, xavf sabablari, ustoz filtri, avatar.
+    const studentsUrl = () => `/api/academic/students?lang=${ownLang() || myLangs()[0] || 'english'}`;
+    function scrStudents() {
+        const url = studentsUrl(), risk = need(API.risk('all')).d || {}, riskBy = new Map((risk.items || []).map(r => [String(r.id), r])), counts = risk.counts || {};
+        const local = new Map((typeof getItem === 'function' ? getItem(STORAGE_KEYS.students, []) : []).map(s => [String(s.id), s]));
+        const hr = new Map((typeof getItem === 'function' ? getItem(STORAGE_KEYS.hrEmployees, []) : []).map(e => [String(e.id), e]));
+        let total = 0;
+        const body = withData(url, d => {
+            const all = (d.students || []).map(s => { const l = local.get(String(s.id)) || {}, r = riskBy.get(String(s.id)); return { ...s, avatarUrl: l.avatarUrl, teacher: first(hr.get(String(s.teacherId || l.teacherId))?.name || r?.teacherName || ''), phone: l.phone || '', risk: r }; }).sort((a, b) => String(a.name).localeCompare(String(b.name)));
+            total = all.length;
+            const items = all.filter(s => (S.stab === 'all' || s.risk?.reason === S.stab) && (!S.sTeacher || s.teacher === S.sTeacher));
+            const teachers = [...new Set(all.map(s => s.teacher).filter(Boolean))].sort();
+            const tag = s => { if (s.frozen) return chip('Muzlatilgan', 'grey'); if (s.risk) return chip(s.risk.reasonText || 'Xavf', riskTone(s.risk)); const b = num(s.expected) - num(s.reached); return b > 3 ? chip('Orqada', 'amber') : b < 0 ? chip('Oldinda', 'blue') : chip('Rejada', 'green'); };
+            const row = s => `<button type="button" class="aka-rrow" data-a-student="${esc(s.id)}" data-q="${esc(`${s.name} ${s.phone} ${s.id} ${s.teacher}`.toLowerCase())}">${window.schoolUI?.studentAvatar ? window.schoolUI.studentAvatar(s, 44) : ava(s.name, 44)}<span class="aka-arow-t"><span><strong>${esc(s.name)}</strong>${tag(s)}</span><small>${esc([s.teacher && 'ustoz ' + s.teacher, `${num(s.reached)} / 72`].filter(Boolean).join(' · '))}</small></span></button>`;
+            return `<label class="aka-fld aka-s1"><span class="aka-sr">Ustoz</span><select class="aka-inp" data-a-steach><option value="">Ustoz: hammasi</option>${teachers.map(t => `<option value="${esc(t)}"${t === S.sTeacher ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select></label>
+                ${items.length ? `<section class="aka-card aka-list aka-s2" data-a-slist>${items.map(row).join('')}</section>` : emptyBox('check', 'Oʻquvchi topilmadi', 'Filtrni oʻzgartiring')}`;
+        }, skIn(6, 64));
+        const cnt = k => (counts[k] != null ? ' · ' + counts[k] : '');
+        return top('Oʻquvchilar', { back: false, sub: [myLangLabel(), total ? total + ' ta' : ''].filter(Boolean).join(' · ') }) + `<div class="aka-body">
+            <label class="aka-search aka-s1">${ic('search', 18)}<span class="aka-sr">Qidirish</span><input type="search" data-a-sq placeholder="Ism, telefon yoki ustoz" autocomplete="off"></label>
+            <div class="aka-tabs aka-scroll aka-s1" role="tablist" aria-label="Filtr">${RISK.map(([k, t]) => `<button type="button" role="tab" class="aka-tab" aria-selected="${k === S.stab}" data-a-stab="${k}">${esc(k === 'all' ? t : t + cnt(k))}</button>`).join('')}</div>
+            ${body}</div>`;
+    }
+
     function scrRisk() {
         const url = API.risk(S.rtab);
         const counts = (need(url).d || peek(API.risk('all')) || {}).counts || {};
@@ -822,9 +846,9 @@
     // =====================================================================================
     // Chizish, navigatsiya
     // =====================================================================================
-    const SCR = { home: scrHome, problems: scrProblems, pnew: scrNew, problem: scrProblem, makeups: scrMakeups, risk: scrRisk, student: scrStudent, teachers: scrTeachers, teacher: scrTeacher, assistant: scrAssistant, late: scrLate, menu: scrMenu, notifs: scrNotifs };
-    const TABS = ['home', 'risk', 'teachers', 'problems', 'menu'];
-    const TAB_OF = { home: 'home', notifs: 'home', pnew: 'problems', problems: 'problems', problem: 'problems', risk: 'risk', student: 'risk', teachers: 'teachers', teacher: 'teachers', assistant: 'teachers', makeups: 'teachers', late: 'teachers', menu: 'menu' };
+    const SCR = { home: scrHome, problems: scrProblems, pnew: scrNew, problem: scrProblem, makeups: scrMakeups, risk: scrRisk, students: scrStudents, student: scrStudent, teachers: scrTeachers, teacher: scrTeacher, assistant: scrAssistant, late: scrLate, menu: scrMenu, notifs: scrNotifs };
+    const TABS = ['home', 'students', 'teachers', 'problems', 'menu'];
+    const TAB_OF = { home: 'home', notifs: 'home', pnew: 'problems', problems: 'problems', problem: 'problems', risk: 'menu', students: 'students', student: 'students', teachers: 'teachers', teacher: 'teachers', assistant: 'teachers', makeups: 'teachers', late: 'teachers', menu: 'menu' };
     const NONAV = new Set(['pnew', 'problem', 'student', 'teacher', 'assistant', 'late', 'notifs']);
     function render(anim) {
         if (!root || !isOn()) return;
@@ -856,7 +880,7 @@
         if (!nav) return;
         const active = S.screen === 'crm' ? null : TAB_OF[S.screen] || 'home';
         const open = num(peek(API.problems('open'))?.counts?.open);
-        const items = [['home', 'home', 'Bosh'], ['risk', 'cap', 'Oʻquvchilar'], ['teachers', 'team', 'Ustozlar'], ['problems', 'alert', 'Muammolar'], ['menu', 'menu', 'Menyu']];
+        const items = [['home', 'home', 'Bosh'], ['students', 'cap', 'Oʻquvchilar'], ['teachers', 'team', 'Ustozlar'], ['problems', 'alert', 'Muammolar'], ['menu', 'menu', 'Menyu']];
         nav.innerHTML = items.map(([id, icn, l]) => `<button type="button" data-a-nav="${id}"${active === id ? ' aria-current="page"' : ''}${id === 'problems' && open ? ` aria-label="Muammolar, ${open} ta ochiq"` : ''}><span>${ic(icn, 20, active === id ? 2.2 : 1.9)}${id === 'problems' && open ? `<b>${open > 99 ? '99+' : open}</b>` : ''}</span>${l}</button>`).join('');
         nav.hidden = !isOn() || S.screen === 'crm' || NONAV.has(S.screen);
     }
@@ -982,7 +1006,7 @@
 
     // ---------- hodisalar ----------
     function onClick(e) {
-        const t = e.target.closest('[data-a-back],[data-a-go],[data-a-nav],[data-a-retry],[data-a-ptab],[data-a-later],[data-a-problem],[data-a-mtab],[data-a-makeup],[data-a-mall],[data-a-rtab],[data-a-rall],[data-a-student],[data-a-teacher],[data-a-assistant],[data-a-ttab],[data-a-howscore],[data-a-ltab],[data-a-lok],[data-a-lrej],[data-a-ntab],[data-a-nread],[data-a-nitem],[data-a-nretry],[data-a-crm],[data-a-att],[data-a-profile],[data-a-spick],[data-a-newsave],[data-a-stage],[data-a-owner],[data-a-postpone],[data-a-close],[data-a-transfer],[data-a-thist],[data-a-sprob],[data-a-newfor],[data-a-rejects],[data-a-triskof],[data-a-tprob],[data-a-silentall]');
+        const t = e.target.closest('[data-a-back],[data-a-go],[data-a-nav],[data-a-retry],[data-a-ptab],[data-a-later],[data-a-problem],[data-a-mtab],[data-a-makeup],[data-a-mall],[data-a-rtab],[data-a-rall],[data-a-stab],[data-a-student],[data-a-teacher],[data-a-assistant],[data-a-ttab],[data-a-howscore],[data-a-ltab],[data-a-lok],[data-a-lrej],[data-a-ntab],[data-a-nread],[data-a-nitem],[data-a-nretry],[data-a-crm],[data-a-att],[data-a-profile],[data-a-spick],[data-a-newsave],[data-a-stage],[data-a-owner],[data-a-postpone],[data-a-close],[data-a-transfer],[data-a-thist],[data-a-sprob],[data-a-newfor],[data-a-rejects],[data-a-triskof],[data-a-tprob],[data-a-silentall]');
         if (!t || (t.tagName === 'A' && t.getAttribute('href'))) return;
         const d = t.dataset;
         if ('aBack' in d) { history.back(); return; }
@@ -999,6 +1023,7 @@
         if ('aMtab' in d) { S.mtab = d.aMtab; S.mAll = false; render(false); return; }
         if ('aMakeup' in d) { sheetMakeup(d.aMakeup); return; }
         if ('aMall' in d) { S.mAll = true; render(false); return; }
+        if ('aStab' in d) { S.stab = d.aStab; render(false); return; }
         if ('aRtab' in d) { S.rtab = d.aRtab; S.rAll = false; render(false); return; }
         if ('aRall' in d) { S.rAll = true; render(false); return; }
         if ('aStudent' in d) { go('student', { sid: d.aStudent }); return; }
@@ -1039,6 +1064,7 @@
     }
     function onChange(e) {
         const el = e.target;
+        if (el.matches('[data-a-steach]')) { S.sTeacher = el.value; render(false); return; }
         if (S.screen === 'pnew' && S.draft && el.type === 'radio') {
             const D = S.draft;
             if (el.name === 'owner' && el.value === 'staff') { sheetStaffPick(); return; }
@@ -1048,6 +1074,7 @@
     function onInput(e) {
         const el = e.target;
         if (el.matches('[data-a-draft]') && S.draft) { S.draft[el.dataset.aDraft] = el.value; return; }
+        if (el.matches('[data-a-sq]')) { const q = el.value.trim().toLowerCase(); root.querySelectorAll('[data-a-slist] [data-q]').forEach(b => { b.hidden = !!q && !b.dataset.q.includes(q); }); return; }
         if (el.matches('[data-a-q]')) {
             clearTimeout(qTimer);
             qTimer = setTimeout(() => { S.pq = el.value; S.later = true; render(false); }, 300);
