@@ -65,7 +65,7 @@ async function assertTeacherOwnsDay(client, { student, teacherId, date }) {
 
 // Xodim tuzatishi (BAHO-5 #7): yopilgan oyni va kelajak sanani FAQAT admin/boshliq o'zgartiradi (29-okt qarori).
 // ROP (va kelajakda boshqa "to'liq ruxsatli" xodim) — joriy oy, bugungacha: yopilgan oy 409, kelajak 400 (olib tashlash — faqat yopilgan oy cheklovi).
-const CLOSED_MONTH_EDITORS = ['admin', 'boshliq'];
+const CLOSED_MONTH_EDITORS = ['admin', 'boshliq', 'akademik']; // Akademik rahbar — direktor qarori (2026-11-09), o'z tilida
 function assertStaffAttendanceWindow({ actor, date, present, now = new Date() }) {
     if (CLOSED_MONTH_EDITORS.includes(actor?.role)) return;
     const T = require('./school/time');
