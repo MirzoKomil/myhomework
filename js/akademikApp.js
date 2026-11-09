@@ -540,7 +540,7 @@
             const items = all.filter(s => (S.stab === 'all' || s.risk?.reason === S.stab) && (!S.sTeacher || s.teacher === S.sTeacher));
             const teachers = [...new Set(all.map(s => s.teacher).filter(Boolean))].sort();
             const tag = s => { if (s.frozen) return chip('Muzlatilgan', 'grey'); if (s.risk) return chip(s.risk.reasonText || 'Xavf', riskTone(s.risk)); const b = num(s.expected) - num(s.reached); return b > 3 ? chip('Orqada', 'amber') : b < 0 ? chip('Oldinda', 'blue') : chip('Rejada', 'green'); };
-            const row = s => `<button type="button" class="aka-rrow" data-a-student="${esc(s.id)}" data-q="${esc(`${s.name} ${s.phone} ${s.id} ${s.teacher}`.toLowerCase())}">${window.schoolUI?.studentAvatar ? window.schoolUI.studentAvatar(s, 44) : ava(s.name, 44)}<span class="aka-arow-t"><span><strong>${esc(s.name)}</strong>${tag(s)}</span><small>${esc([s.teacher && 'ustoz ' + s.teacher, `${num(s.reached)} / 72`].filter(Boolean).join(' · '))}</small></span></button>`;
+            const row = s => `<button type="button" class="aka-rrow" data-a-student="${esc(s.id)}" data-q="${esc(`${s.name} ${s.phone} ${s.id} ${s.teacher}`.toLowerCase())}">${window.schoolUI?.studentAvatar ? window.schoolUI.studentAvatar(s, 44) : ava(s.name, 44)}<span class="aka-arow-t"><span><strong>${esc(s.name)}</strong></span><span class="aka-stag">${tag(s)}</span><small>${esc([s.teacher && 'ustoz ' + s.teacher, `${num(s.reached)} / 72`].filter(Boolean).join(' · '))}</small></span></button>`;
             return `<label class="aka-fld aka-s1"><span class="aka-sr">Ustoz</span><select class="aka-inp" data-a-steach><option value="">Ustoz: hammasi</option>${teachers.map(t => `<option value="${esc(t)}"${t === S.sTeacher ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select></label>
                 ${items.length ? `<section class="aka-card aka-list aka-s2" data-a-slist>${items.map(row).join('')}</section>` : emptyBox('check', 'Oʻquvchi topilmadi', 'Filtrni oʻzgartiring')}`;
         }, skIn(6, 64));
@@ -788,7 +788,7 @@
         const u = user(), o = peek(API.ov) || need(API.ov).d || {}, t = o.tiles || {};
         const lateN = (need(API.late('pending')).d?.items || []).length;
         const badge = n => (n ? `<b class="aka-badge">${n > 99 ? '99+' : n}</b>` : '');
-        const row = (icon, tone, title, right, attr) => `<button type="button" class="aka-mrow" ${attr}><span class="aka-qi t-${tone}">${ic(icon, 18)}</span><strong>${esc(title)}</strong>${right}${ic('chev', 18)}</button>`;
+        const row = (icon, tone, title, right, attr) => `<button type="button" class="aka-mrow" ${attr}><span class="aka-qi t-${tone}">${ic(icon, 18)}</span><strong>${esc(title)}</strong>${right}</button>`;
         const meta = s => `<span class="aka-mmeta">${esc(s)}</span>`;
         // DAVOMAT — davomatApp (Face ID): akademik rahbar yordamchilarning tasdiqlovchisi; oʻz davomati — kuzatilsa.
         dvEnsure();
@@ -800,9 +800,9 @@
         return `<div class="aka-body aka-body--menu">
             <button type="button" class="aka-card aka-prof aka-s1" data-a-profile>${ava(u.name || myName(), 52, 'dark')}<span><strong>${esc(u.name || myName())}</strong><small>Akademik rahbar${myLangLabel() ? ' · ' + esc(myLangLabel()) : ''}</small></span>${ic('chev', 18)}</button>
             <div class="aka-mgroups aka-s2">
-              <section class="aka-mg"><h2 class="aka-cap">NAZORAT</h2><div class="aka-card aka-list">${row('clock', 'blue', 'Qoplash tekshiruvi', badge(num(t.makeupsPending)), 'data-a-go="makeups"')}${row('alert', 'amber', 'Xavfdagi oʻquvchilar', meta(String(num(t.risk))), 'data-a-go="risk"')}${row('clock', 'blue', 'Kechikkan aloqalar', badge(lateN), 'data-a-go="late"')}${row('cap', 'purple', 'Sinov vaqtlari', meta('Dars jadvali'), 'data-a-crm="timetable"')}</div></section>
-              ${dav ? `<section class="aka-mg"><h2 class="aka-cap">DAVOMAT</h2><div class="aka-card aka-list">${dav}</div></section>` : ''}
-              <section class="aka-mg"><h2 class="aka-cap">BOSHQA</h2><div class="aka-card aka-list">${row('archive', 'grey', 'Arxiv · yopilgan muammolar', '', 'data-a-go="problems" data-a-ptab="closed"')}${fines}${row('bell', 'grey', 'Bildirishnoma sozlamalari', '', 'data-a-crm="profile:notifications"')}${row('gear', 'grey', 'Parolni oʻzgartirish', '', 'data-a-crm="profile:security"')}</div></section>
+              <section class="aka-mg"><h2 class="aka-cap">NAZORAT</h2><div class="aka-mgrid">${row('cal', 'purple', 'Sinov darslari', badge(num(t.trialsUnaccepted)), 'data-a-crm="teachers-section:trial"')}${row('check', 'green', 'Oʻquvchini tekshirish', '', 'data-a-crm="teachers-section:cabinet"')}${row('clock', 'blue', 'Qoplash tekshiruvi', badge(num(t.makeupsPending)), 'data-a-go="makeups"')}${row('alert', 'amber', 'Xavfdagi oʻquvchilar', meta(String(num(t.risk))), 'data-a-go="risk"')}${row('clock', 'blue', 'Kechikkan aloqalar', badge(lateN), 'data-a-go="late"')}${row('cap', 'purple', 'Sinov vaqtlari', meta('Dars jadvali'), 'data-a-crm="timetable"')}</div></section>
+              <section class="aka-mg"><h2 class="aka-cap">DAVOMAT</h2><div class="aka-mgrid">${row('check', 'green', 'Ustozlar davomati', '', 'data-a-crm="teachers-section:attendance"')}${dav}</div></section>
+              <section class="aka-mg"><h2 class="aka-cap">BOSHQA</h2><div class="aka-mgrid">${row('note', 'blue', 'Darslik', '', 'data-a-crm="teachers-section:textbook"')}${row('archive', 'grey', 'Arxiv · yopilgan muammolar', '', 'data-a-go="problems" data-a-ptab="closed"')}${fines}${row('bell', 'grey', 'Bildirishnoma sozlamalari', '', 'data-a-crm="profile:notifications"')}${row('gear', 'grey', 'Parolni oʻzgartirish', '', 'data-a-crm="profile:security"')}</div></section>
             </div></div>`;
     }
 
