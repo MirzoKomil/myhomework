@@ -275,7 +275,7 @@
         const key = c.r.from + '|' + c.r.to;
         if (botKey !== key) { botKey = key; bot = null; apiFetch('/api/bot-funnel?from=' + c.r.from + '&to=' + c.r.to).then(d => { bot = d; if (active()) draw(); }).catch(() => { bot = { failed: true }; if (active()) draw(); }); }
         const d = bot && !bot.failed ? bot : {}, ids = new Set(d.leadIds || []), sold = L().filter(l => ids.has(l.id) && isSale(l)), cash = sold.reduce((s, l) => s + received(l), 0);
-        const steps = [['Start bosdi', d.start], ['Dars koʻrdi', d.lesson], ['Test yechdi', d.quiz], ['Qoʻllanma oldi', d.guide], ['Narxni koʻrdi', d.price], ['Telefon qoldirdi', d.phone], ['Ariza berdi', d.request], ['CRMda lid boʻldi', d.lead], ['Sotuv', sold.length]].map(([a, b]) => [a, b || 0]);
+        const steps = [['Start bosdi', d.start], ['Dars koʻrdi', d.lesson], ['Test yechdi', d.quiz], ['Qoʻllanma oldi', d.guide], ['Narxni soʻradi', d.price], ['Telefon qoldirdi', d.phone], ['Ariza berdi', d.request], ['CRMda lid boʻldi', d.lead], ['Sotuv', sold.length]].map(([a, b]) => [a, b || 0]);
         let wi = -1, wv = -1;
         const rows = steps.map(([a, b], i) => { const p = i ? steps[i - 1][1] : 0, pc = p ? Math.round(b / p * 100) : 0; if (i && p >= 5 && 100 - pc > wv) { wv = 100 - pc; wi = i; } return bar(a, b, steps[0][1], '#0065D6', i ? pc + '% oldingidan' : ''); }).join('');
         const start = steps[0][1];

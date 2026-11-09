@@ -18,11 +18,16 @@ router.get('/', authRequired, async (req, res) => {
         }
         if (!(await pool.query("SELECT to_regclass('domwork_bot_visitors') AS t")).rows[0]?.t) return res.json({ leadIds: [] });
         const params = [day(req.query.from), day(req.query.to)];
-        const row = (await pool.query(`SELECT COUNT(*)::int AS start, COUNT(lesson_seen_at)::int AS lesson, COUNT(quiz_done_at)::int AS quiz,
+        // Dars va vazifa endi mini ilovada: video qadami "dars ko'rdi", uy vazifasi "test yechdi" sanaladi.
+        const hasApp = !!(await pool.query("SELECT to_regclass('domwork_miniapp_progress') AS t")).rows[0]?.t;
+        const lesson = hasApp ? "COUNT(*) FILTER (WHERE lesson_seen_at IS NOT NULL OR p.steps ? 'video')::int" : 'COUNT(lesson_seen_at)::int';
+        const quiz = hasApp ? "COUNT(*) FILTER (WHERE quiz_done_at IS NOT NULL OR p.steps ? 'homework')::int" : 'COUNT(quiz_done_at)::int';
+        const join = hasApp ? 'LEFT JOIN domwork_miniapp_progress p ON p.telegram_id = domwork_bot_visitors.telegram_id' : '';
+        const row = (await pool.query(`SELECT COUNT(*)::int AS start, ${lesson} AS lesson, ${quiz} AS quiz,
             COUNT(guide_at)::int AS guide, COUNT(price_at)::int AS price, COUNT(*) FILTER (WHERE phone <> '')::int AS phone,
             COUNT(requested_at)::int AS request, COUNT(lead_id)::int AS lead, COUNT(*) FILTER (WHERE source <> 'organic')::int AS target,
             COUNT(*) FILTER (WHERE source = 'organic')::int AS organic, COUNT(*) FILTER (WHERE paused)::int AS paused,
-            COUNT(blocked_at)::int AS blocked FROM domwork_bot_visitors WHERE ${WHERE}`, params)).rows[0];
+            COUNT(blocked_at)::int AS blocked FROM domwork_bot_visitors ${join} WHERE ${WHERE}`, params)).rows[0];
         const ids = (await pool.query(`SELECT lead_id FROM domwork_bot_visitors WHERE lead_id IS NOT NULL AND ${WHERE}`, params)).rows.map(r => r.lead_id);
         res.json({ ...row, leadIds: ids });
     } catch (e) {
