@@ -210,7 +210,7 @@
             { k: 'overdue', n: num(t.overdueProblems), icon: 'alert', tone: 'red', title: 'Muammo muddati oʻtdi', sub: num(t.overdueProblems) ? `Eng eskisi ${num(t.oldestOverdueDays)} kun${num(t.oldestOverdueReminds) ? ` · bot ${num(t.oldestOverdueReminds)} marta eslatdi` : ''}` : 'Muddati oʻtgan yoʻq', subTone: num(t.overdueProblems) ? 'red' : '', go: 'data-a-go="problems" data-a-ptab="open"' },
             { k: 'makeups', n: num(t.makeupsPending), icon: 'phone', tone: 'blue', title: 'Qoplashni tekshirish', sub: 'Oʻquvchiga qoʻngʻiroq', go: 'data-a-go="makeups"' },
             { k: 'risk', n: num(t.risk), icon: 'trend', tone: 'amber', title: 'Ketish xavfi', sub: num(t.riskNoApp) ? `${num(t.riskNoApp)} tasi appga kirmayapti` : 'Xavf roʻyxati', subTone: num(t.riskNoApp) ? 'amber' : '', go: 'data-a-go="risk" data-a-rtab="all"' },
-            { k: 'trial', n: num(t.trialsUnaccepted), icon: 'cal', tone: 'purple', title: 'Sinov qabul qilinmagan', sub: nt ? `${relDT(nt.time).replace(/ 00:00$/, '')} · ${first(nt.teacher)}` : 'Hammasi qabul qilingan', go: 'data-a-crm="trial-lessons"' },
+            { k: 'trial', n: num(t.trialsUnaccepted), icon: 'cal', tone: 'purple', title: 'Sinov qabul qilinmagan', sub: nt ? `${relDT(nt.time).replace(/ 00:00$/, '')} · ${first(nt.teacher)}` : 'Hammasi qabul qilingan', go: 'data-a-crm="teachers-section:trial"' },
         ];
         const cats = tiles.filter(x => x.n > 0), sum = cats.reduce((a, x) => a + x.n, 0);
         const tileHtml = x => `<button type="button" class="aka-tile4${x.k === 'overdue' && x.n ? ' is-hot aka-pulse' : ''}" ${x.go}><span class="aka-tile4-h"><span class="aka-qi t-${x.tone}">${ic(x.icon, 18)}</span><strong>${x.n}</strong></span><strong>${esc(x.title)}</strong><small class="${x.subTone ? 'c-' + x.subTone : ''}">${esc(x.sub)}</small></button>`;
@@ -935,6 +935,7 @@
         if (g('switchTab')) {
             try {
                 if (tab === 'hr') switchTab('hr', { hrSection: section || 'xodimlar' });
+                else if (tab === 'teachers-section') switchTab(tab, { teachersSection: section || 'attendance' });
                 else switchTab(tab || 'profile');
                 if (tab === 'profile' && section && g('switchProfileSection')) switchProfileSection(section);
             } catch (e) { console.error('[akademikApp] openCrm', e); }

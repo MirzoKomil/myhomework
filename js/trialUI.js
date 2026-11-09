@@ -277,6 +277,8 @@
     }
     const OPEN = new Set(['unassigned', 'rejected', 'pending', 'overdue', 'accepted', 'result']);
     const needsTeacher = ph => ph === 'unassigned' || ph === 'rejected';
+    // Akademik rahbar kuzatadi: ustozni admin va ROP biriktiradi.
+    const canAssign = () => getCurrentUser()?.role !== 'akademik';
     const mgrName = l => person(l.managerId)?.name || '';
     function timeCell(x) {
         const at = local(x.req.scheduledAt);
@@ -304,7 +306,7 @@
                 ${row('Ustoz', req.teacherId ? `<span class="tl-who">${staffAv(req.teacherId, 24)}${esc(person(req.teacherId)?.name || '—')}</span>` : 'biriktirilmagan')}
                 ${row('Menejer', esc(mgrName(l) || '—'))}</dl></div>
               <div class="sc-sec"><h3>Oxirgi izohlar</h3>${notes.length ? `<ul class="tl-notes">${notes.map(c => `<li><b>${esc(c.author || '')}</b>${c.createdAt || c.date ? ` <span class="sc-mt">${esc(String(c.createdAt || c.date).slice(0, 10).split('-').reverse().join('.'))}</span>` : ''}<p>${esc(c.text)}</p></li>`).join('')}</ul>` : '<p class="sc-mt">Izoh yo\'q</p>'}</div>`,
-            foot: `<button type="button" class="sc-btn" data-lrec>Qo'ng'iroq yozuvlari</button><span class="sc-row"><button type="button" class="sc-btn" data-lnote>Izohlar</button>${needsTeacher(ph) ? `<button type="button" class="sc-btn sc-btn--pri" data-lassign>Ustoz biriktirish</button>` : ''}</span>` });
+            foot: !canAssign() ? '' : `<button type="button" class="sc-btn" data-lrec>Qo'ng'iroq yozuvlari</button><span class="sc-row"><button type="button" class="sc-btn" data-lnote>Izohlar</button>${needsTeacher(ph) && canAssign() ? `<button type="button" class="sc-btn sc-btn--pri" data-lassign>Ustoz biriktirish</button>` : ''}</span>` });
         const go = fn => () => { U().closeDrawer?.(); fn(); };
         box.querySelector('[data-lrec]')?.addEventListener('click', go(() => typeof openLeadRecordingModal === 'function' && openLeadRecordingModal(lang, l.id)));
         box.querySelector('[data-lnote]')?.addEventListener('click', go(() => typeof openLeadCommentsModal === 'function' && openLeadCommentsModal(lang, l.id)));
@@ -351,7 +353,7 @@
         const tr = x => {
             const l = x.lead, tId = x.req.teacherId;
             const teacherCell = needsTeacher(x.ph)
-                ? `${x.ph === 'rejected' && tId ? `<div class="sc-mt">rad etdi: ${esc(shortName(person(tId)?.name))}</div>` : ''}<button type="button" class="sc-btn sc-btn--pri sc-btn--sm" data-a-assign="${esc(l.id)}">Ustoz biriktirish</button>`
+                ? `${x.ph === 'rejected' && tId ? `<div class="sc-mt">rad etdi: ${esc(shortName(person(tId)?.name))}</div>` : ''}${canAssign() ? `<button type="button" class="sc-btn sc-btn--pri sc-btn--sm" data-a-assign="${esc(l.id)}">Ustoz biriktirish</button>` : '<div class="sc-mt">ustoz biriktirilmagan</div>'}`
                 : `<span class="tl-who">${staffAv(tId, 28)}${esc(person(tId)?.name || '—')}</span>`;
             return `<tr><td><div class="tl-who">${leadAv(l, 36)}<div><button type="button" class="tl-namebtn" data-a-open="${esc(l.id)}">${esc(l.name || '—')}</button><div class="sc-mt">${esc(l.phone ? (typeof formatPhoneDisplay === 'function' ? formatPhoneDisplay(l.phone) : l.phone) : '')}${mgrName(l) ? `<br>menejer ${esc(firstName(mgrName(l)))}` : ''}</div></div></div></td>
                 <td>${teacherCell}</td><td>${timeCell(x)}</td><td>${pill(x.ph, null, true)}</td></tr>`;
@@ -361,7 +363,7 @@
             const nowOn = at && !['done', 'noshow', 'sold', 'result', 'overdue'].includes(x.ph) && at.min >= nowMin();
             return `<div class="tl-slot"><span class="tl-tm${nowOn ? ' now' : ''}"><b>${hm(at.min)}</b></span><div class="tl-inf"><div class="tl-nm">${esc(x.lead.name)}</div>
                 <div class="sc-mt"${needsTeacher(x.ph) ? ' style="color:var(--kb-warn-fg);font-weight:700"' : ''}>${needsTeacher(x.ph) ? esc(phaseInfo(x.ph).label) : esc(person(x.req.teacherId)?.name || '—')}</div></div>
-                ${needsTeacher(x.ph) ? `<button type="button" class="sc-btn sc-btn--pri sc-btn--sm" data-a-assign="${esc(x.lead.id)}">Biriktirish</button>` : pill(x.ph)}</div>`;
+                ${needsTeacher(x.ph) && canAssign() ? `<button type="button" class="sc-btn sc-btn--pri sc-btn--sm" data-a-assign="${esc(x.lead.id)}">Biriktirish</button>` : pill(x.ph)}</div>`;
         }).join('') : '<p class="sc-mt sc-pad">Bugun sinov darsi yo\'q.</p>';
         const d = new Date(Date.now() + TZ);
         root.innerHTML = `<div class="sc-root tl-root tl-admin">
