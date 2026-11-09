@@ -465,3 +465,12 @@ body.aka-nonav .aka-toast { bottom: calc(96px + env(safe-area-inset-bottom)); }
 }
 
 .aka-call.is-off { background: #E6EAF2; color: #667085 !important; cursor: not-allowed; }
+
+/* Menyu — ustoz ilovasidagi kabi katakchalar; o'quvchi qatorida ism to'liq */
+.aka-mgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.aka-mgrid .aka-mrow { position: relative; min-height: 92px; flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 6px; padding: 10px; background: #FFFFFF; border: 1px solid var(--a-line); border-radius: 16px; text-align: left; }
+.aka-mgrid .aka-mrow > strong { flex: none; font-size: 13px; line-height: 1.2; }
+.aka-mgrid .aka-badge { position: absolute; top: 8px; right: 8px; }
+.aka-card.aka-prof { background: #0057B8; border-color: #0057B8; color: #FFFFFF; }
+.aka-card.aka-prof small, .aka-card.aka-prof > svg { color: #FFFFFF; }
+.aka-stag { display: flex; }
