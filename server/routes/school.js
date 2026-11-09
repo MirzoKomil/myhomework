@@ -362,7 +362,7 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         if (req.user.role === 'teacher' && (await teacherOf(req)).id !== req.params.id) throw T.fail(403, 'Faqat o\'z ish vaqtingiz');
         return { hours: (await pool.query('SELECT * FROM school_teacher_hours WHERE teacher_id=$1 ORDER BY weekday,start_min', [req.params.id])).rows };
     }));
-    router.put('/teachers/:id/hours', handle(req => { need(req, FULL); return write(req, c => S.setHours(c, req.user, req.params.id, req.body?.slots, { confirm: req.body?.confirm === true }).then(h => ({ hours: h }))); }));
+    router.put('/teachers/:id/hours', handle(async req => { if (req.user.role === 'akademik') await overrideScope(req, pool, req.params.id); else need(req, FULL); return write(req, c => S.setHours(c, req.user, req.params.id, req.body?.slots, { confirm: req.body?.confirm === true }).then(h => ({ hours: h }))); }));
     // "O'zgarishlar tarixi": admin/boshliq — hamma ustoz; ROP — faqat o'z tilidagi ustoz.
     router.get('/teachers/:id/changes', handle(async req => {
         need(req, new Set([...MANAGE, 'akademik']));
@@ -1120,7 +1120,7 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
         const month = req.query.month || T.nowLocal().date.slice(0, 7);
         let assistantId = req.query.assistantId, duty = true;
         if (req.user.role === 'teacher') { const own = await teacherOf(req); assistantId = own.id; duty = !!assistOf(own); }
-        else need(req, MANAGE);
+        else need(req, new Set([...MANAGE, 'akademik']));
         if (!assistantId) throw T.fail(400, 'Yordamchini tanlang');
         const rep = await A.monthReport(pool, assistantId, month);
         // Joriy oy: "oy oxirigacha ko'pi bilan" va har o'quvchida qolgan tavsiya kunlari — Mening maoshim bilan bitta hisob.

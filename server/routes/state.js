@@ -956,8 +956,11 @@ async function getStateForUser(user) {
         state.leads = require('../services/targetAds').redactLeadsForTargetolog(Object.fromEntries(['english', 'russian'].map(l => [l, langs.includes(l) ? (state.leads?.[l] || []) : []])));
         state.archive = [];
     } else if (!['admin', 'rop', 'boshliq'].includes(user.role)) {
-        // Ustoz/xodim kabinetiga Sotuv lidlarining PII ma'lumoti kerak emas.
-        state.leads = { english: [], russian: [] };
+        // Ustoz/xodim kabinetiga Sotuv lidlarining PII ma'lumoti kerak emas. Akademik rahbar — faqat sinov bosqichidagi lidlar (Sinov darslari nazorati).
+        const trialOnly = l => l && !l.deletedAt && (l.status === 'sinov-darsida' || l.trialRequest?.id);
+        state.leads = user.role === 'akademik'
+            ? { english: (state.leads?.english || []).filter(trialOnly), russian: (state.leads?.russian || []).filter(trialOnly) }
+            : { english: [], russian: [] };
         state.archive = [];
     }
     // Maxfiy maydonlarni (xodimlar HR ma'lumoti, boshqalarning o'quvchi
@@ -1083,7 +1086,7 @@ router.patch('/book-roadmap/:id', authRequired, crmStateIdentity, bookRoadmapRou
 
 router.post('/teacher-attendance', authRequired, crmStateIdentity, async (req, res) => {
     try {
-        if (!['admin', 'rop', 'boshliq', 'teacher'].includes(req.user?.role)) {
+        if (!['admin', 'rop', 'boshliq', 'teacher', 'akademik'].includes(req.user?.role)) {
             return res.status(403).json({ error: 'Davomat belgilashga ruxsat yo\'q' });
         }
         const result = await recordTeacherAttendance({ ...(req.body || {}), actor: req.user });
