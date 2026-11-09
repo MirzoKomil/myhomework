@@ -417,3 +417,10 @@ body:is(.rop-desk-v2,.sot-desk-v2) #leadsKanban .lead-column-cards::-webkit-scro
 
 /* 1440 kenglikda oxirgi tab kesilmasin */
 @media (max-width:1500px){#rkSubnav>*{padding-inline:11px!important}}
+
+/* Lid oynasi va bosqich menyusi */
+body:is(.rop-desk-v2,.sot-desk-v2) .lead-card-menu-submenu{width:320px!important;max-width:none!important}
+body:is(.rop-desk-v2,.sot-desk-v2) .lead-card-menu-submenu .lead-card-menu-item,body:is(.rop-desk-v2,.sot-desk-v2) .lead-card-menu-submenu .rk-kb{white-space:nowrap}
+body:is(.rop-desk-v2,.sot-desk-v2) .rk-drw .lov{padding-top:12px}
+body:is(.rop-desk-v2,.sot-desk-v2) .rk-drw .lov-side{flex:1 1 100%;max-width:none;width:100%}
+@media (max-height:800px){body:is(.rop-desk-v2,.sot-desk-v2) .rk-drw textarea{min-height:56px;height:56px}}
