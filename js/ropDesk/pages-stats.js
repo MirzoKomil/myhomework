@@ -127,7 +127,7 @@
     function tiles(c) {
         const n = c.leads.length, badP = n ? c.bad.length / n * 100 : 0, sp = spend(c.r), mk = todayKey().slice(0, 7);
         const inProg = c.leads.filter(l => !['tolov-jarayonida','tolov-yopildi','muvaffaqiyatsiz-sotuv','sifatsiz-lidlar','keyin-sotib-olmoqchi'].includes(st(l))).length, later = c.leads.filter(l => st(l) === 'keyin-sotib-olmoqchi').length;
-        const nP = c.sales.filter(l => st(l) === 'tolov-jarayonida').length, fresh_ = c.sales.filter(l => inR(lk(l), c.r)).length;
+        const old_ = oldCash(c); const nP = c.sales.filter(l => st(l) === 'tolov-jarayonida').length, fresh_ = c.sales.filter(l => inR(lk(l), c.r)).length;
         const tl = c.all.filter(l => getLeadKind(l) === 'target' && inR(lk(l), c.r)), tq = tl.filter(l => !isSifatsizLeadForQualityStats(l)).length;
         const sp_ = sp && sp.usd > 0, spLab = c.r.from && c.r.from.slice(0, 7) === mk ? c.r.label : MONTHS[+mk.slice(5) - 1];
         const speeds = c.leads.filter(l => l.firstContactAt).map(l => (Number(l.firstContactAt) - leadCreatedMs(l)) / 36e5).filter(h => h >= 0).sort((a, b) => a - b);
@@ -138,7 +138,7 @@
             tile('Sifatsiz lidlar ulushi', badP.toFixed(1).replace('.', ',') + '%', num(c.bad.length) + ' ta · meʼyor 20% gacha' + (badP > 20 ? ' · ⚠ yuqori' : ''), badP > 20 ? 'bad' : '') +
             tile('Umumiy konversiya', pct(c.sales.length, n), c.sales.length + ' sotuv ÷ ' + num(n) + ' lid · sifatli liddan ' + pct(c.sales.length, c.good)) +
             tile('Sotuvlar', num(c.sales.length), 'Toʻlov jarayonida ' + nP + ' + yopildi ' + (c.sales.length - nP) + ' · ' + fresh_ + ' tasi shu davr lidlari, ' + (c.sales.length - fresh_) + ' tasi oldingi', 'hl', c.sales.length) +
-            tile('Tushum (kassa)', money(c.cash), c.sales.length + ' ta sotuvdan qabul qilingan pul') +
+            tile('Tushum (kassa)', money(c.cash + old_), c.sales.length + ' ta sotuvdan qabul qilingan pul' + (old_ ? ' + ' + money(old_) + ' eski qarz toʻlovlari' : '')) +
             tile('Oʻrtacha chek', money(c.chk), c.rec.length ? 'eng kam ' + money(c.min) + ' va eng koʻp ' + money(c.max) + ' oʻrtasi · qarz kirmaydi' : 'sotuv yoʻq') +
             tile('Hali jarayonda', num(inProg), 'yana ' + later + ' — keyin sotib olmoqchi', '', inProg);
         if (S.src !== 'organic' && !isSM()) {
@@ -288,6 +288,14 @@
         root.querySelectorAll('[data-n]').forEach(e => { const v = +e.dataset.n, t0 = performance.now(), T = 800; if (!v) return; (function f(t) { const p = Math.min(1, (t - t0) / T); e.textContent = num(Math.round(v * (1 - Math.pow(1 - p, 3)))); if (p < 1 && e.isConnected) requestAnimationFrame(f); else if (e.isConnected) e.textContent = e.dataset.t; })(t0); });
     }
 
+    let oc = null, ocKey = '';
+    function oldCash(c) {
+        const key = c.r.from + '|' + c.r.to;
+        if (ocKey !== key) { ocKey = key; oc = null; apiFetch('/api/sales-cash?from=' + c.r.from + '&to=' + c.r.to).then(d => { oc = d.rows || []; if (active()) draw(); }).catch(() => { oc = []; }); }
+        if (!oc) return 0;
+        const sold = new Set(c.sales.map(l => String(l.id))), byId = new Map(c.all.map(l => [String(l.id), l]));
+        return oc.reduce((sum, x) => { const id = String(x.leadId), l = byId.get(id); return l && !sold.has(id) && mgrSale(l) ? sum + x.amount : sum; }, 0);
+    }
     function draw() {
         if (!active()) return;
         leadsC = null;
