@@ -4191,7 +4191,7 @@ async function recordTeacherAttendance({ actor, teacherId, studentId, date, pres
         const assignmentColumn = selectedType === 'assistant' ? 'assistant_teacher_id' : 'teacher_id';
         // Asosiy ustoz (o'zi yozganda): o'quvchi hozir boshqa ustozda bo'lishi mumkin — kun kimniki ekanini ustozlar tarixi hal qiladi
         // (assertTeacherOwnsDay: eski ustoz o'z davrini tuzatadi, yangi ustoz eski davrga yozolmaydi). Boshqa hollarda — hozirgi biriktirish.
-        const byHistory = selectedType === 'main' && !isStaffWithFullAccess;
+        const byHistory = selectedType === 'main' && (!isStaffWithFullAccess || actor?.role === 'akademik');
         const studentResult = byHistory
             ? await client.query('SELECT * FROM students WHERE id = $1 FOR UPDATE', [safeStudentId])
             : await client.query(`SELECT * FROM students WHERE id = $1 AND ${assignmentColumn} = $2 FOR UPDATE`, [safeStudentId, safeTeacherId]);
@@ -4206,7 +4206,12 @@ async function recordTeacherAttendance({ actor, teacherId, studentId, date, pres
         // Xodim tuzatishi: yopilgan oy va kelajak — faqat admin/boshliq (ROP — joriy oy, bugungacha); ROP — faqat o'z til yo'nalishi.
         if (isStaffWithFullAccess) {
             assertStaffAttendanceWindow({ actor, date: String(date), present });
-            if (actor?.role === 'rop' || actor?.role === 'akademik') {
+            if (actor?.role === 'akademik') {
+                const langs = await require('./services/academicHead').langsFor(client, actor);
+                if (!langs || !langs.includes(student.subject || 'english')) throw Object.assign(new Error('Bu til yo‘nalishidagi o‘quvchi davomatiga ruxsat yo‘q'), { status: 403 });
+                await payroll.audit(client, actor, 'attendance-akademik', safeStudentId, null, { teacherId: safeTeacherId, date: String(date), present, duty: selectedType });
+            }
+            if (actor?.role === 'rop') {
                 const lr = (await client.query(`SELECT h.lang FROM users u JOIN hr_employees h ON LOWER(TRIM(h.login)) = LOWER(TRIM(u.email))
                     WHERE u.id = $1 AND COALESCE(h.status,'active') <> 'inactive' LIMIT 2`, [actor.id])).rows;
                 const lang = lr.length === 1 ? lr[0].lang : null;
