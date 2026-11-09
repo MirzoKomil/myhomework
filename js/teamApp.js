@@ -496,7 +496,8 @@
             }
             // Tugma bog'langandan keyingina bosamiz (aks holda bosish behuda ketadi)
             const btn = box.querySelector(`.subject-tab[data-subject="${own}"]:not(.active)`);
-            if (btn && btn.dataset.bound) btn.click();
+            // Yuqoriga ko'tarilmaydi: aks holda document'dagi click ochiq menyu va filtrlarni har soniyada yopardi.
+            if (btn && btn.dataset.bound) btn.dispatchEvent(new MouseEvent('click', { bubbles: false }));
         });
     }
 
