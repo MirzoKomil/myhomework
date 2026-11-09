@@ -22556,7 +22556,8 @@ document.querySelectorAll('[data-lead-lang-filter]').forEach(btn => {
     });
 });
 
-document.addEventListener('click', () => {
+document.addEventListener('click', e => {
+    if (!e.isTrusted) return; // skriptdagi .click() (til tablari) ochiq menyuni yopmasin
     closeLeadCardMenus();
     closeLeadsColumnsDropdown();
     closeBrColumnsDropdown();
