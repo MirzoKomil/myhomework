@@ -397,3 +397,10 @@ body:is(.rop-desk-v2, .sot-desk-v2).rk-sales-lead #leadsFiltersBar .leads-filter
     body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-r3, body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-ph { min-height: 22px; }
     body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .rk-r4 { gap: 2px; }
 }
+
+/* Lidlar: tanlash paneli oxirgi kartalarni yopmasin, belgilangan karta doskadagidek. */
+body:is(.rop-desk-v2, .sot-desk-v2) #bulkActionsBar.rk-bulk { bottom: 8px; }
+body:is(.rop-desk-v2, .sot-desk-v2):has(#bulkActionsBar[style*="display: flex"]) #leadsKanban .lead-column-cards { padding-bottom: 80px; }
+body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .lead-card.rk-card.is-sel { background: #EAF3FF; border-color: #0065D6; border-left-color: var(--rk-stripe, #0065D6); box-shadow: 0 0 0 1px #0065D6; }
+html[data-theme="dark"] body:is(.rop-desk-v2, .sot-desk-v2) #leadsKanban .lead-card.rk-card.is-sel { background: #142846; }
+body:is(.rop-desk-v2, .sot-desk-v2) .rk-nb { white-space: nowrap; }
