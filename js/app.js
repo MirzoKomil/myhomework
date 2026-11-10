@@ -22967,6 +22967,7 @@ function renderHrEmployeeCard(emp) {
                 <span class="employee-footer-value">${joinFormatted}</span>
             </div>
         </div>
+        ${isActive && window.kabinetKirish ? window.kabinetKirish.buttonHtml({ email: emp.login || emp.email, name: emp.name, roleLabel, offboardedAt: emp.offboardedAt }) : ''}
     </div>`;
 }
 
