@@ -740,10 +740,11 @@ function reachedLesson(progress, idToNo) {
     return max;
 }
 
-function expectedLesson(startDate, now = new Date()) {
+// pausedDays — muzlatilgan kunlar (direktor qarori 2026-11-09: reja muzlatish davrisiz hisoblanadi).
+function expectedLesson(startDate, now = new Date(), pausedDays = 0) {
     const start = startDate ? new Date(startDate) : null;
     if (!start || Number.isNaN(start.getTime()) || start > now) return null;
-    const weeks = (now - start) / (7 * 86400000);
+    const weeks = Math.max(0, (now - start) - (Number(pausedDays) || 0) * 86400000) / (7 * 86400000);
     return Math.max(1, Math.min(TOTAL_LESSONS, Math.floor(weeks * LESSONS_PER_WEEK) + 1));
 }
 
