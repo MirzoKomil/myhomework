@@ -239,6 +239,7 @@ function database() {
     employees: [{ id: 'sales', name: 'Sales', role: 'sotuv-menejeri', lang: 'english', start_date: '2026-09-01' }],
     leads: [{ id: 'lead', manager_id: 'sales', status: 'tolov-yopildi', language: 'english', extra_data: deal(20000000) }]
   };
+  const settlements = [];
   const db = { release() { calls.push(['release']); }, async query(sql, params = []) {
     calls.push([sql, params]);
     if (sql.startsWith('SELECT to_regclass')) return { rows: [{ ledger: null }] };
@@ -252,6 +253,9 @@ function database() {
     if (sql.startsWith('SELECT * FROM salary_plan_confirmations')) return { rows: confirmations };
     if (sql.startsWith('SELECT * FROM salary_transactions WHERE language=')) return { rows: records };
     if (sql.startsWith('SELECT calculation FROM salary_transactions')) return { rows: records.filter(r => r.employee_id === params[0]).map(r => ({ calculation: r.calculation })) };
+    // Qo'lga (takeHome): boshqa til bo'yicha shu oy hisoblari.
+    if (sql.startsWith('SELECT id,language,amount,status FROM salary_transactions')) return { rows: records.filter(r => r.employee_id === params[0] && r.language !== params[1]) };
+    if (sql.startsWith('INSERT INTO salary_fine_settlements')) { settlements.push({ salary_id: params[0], salary: params[3], fine_deducted: params[4], bonus: params[5], take_home: params[6] }); return { rows: [] }; }
     if (sql.startsWith('SELECT id FROM salary_transactions')) return { rows: records.filter(r => r.employee_id === params[0] && r.status === 'paid') };
     if (sql.startsWith('INSERT INTO salary_transactions')) {
       const row = { id: params[0], employee_id: params[1], language: params[2], start_key: params[3], end_key: params[4], amount: params[5], calculation: JSON.parse(params[6]), source_hash: params[7], status: 'unpaid' };
@@ -269,7 +273,7 @@ function database() {
     if (sql.startsWith("SELECT 1 FROM salary_audit WHERE action='accrue'")) return { rows: audits.filter(a => a.action === 'accrue' && a.actor === params[1]).map(() => ({ '?column?': 1 })) };
     throw Error('Unhandled SQL: ' + sql);
   } };
-  return { pool: { connect: async () => db }, calls, records, audits, sourceRows, db };
+  return { pool: { connect: async () => db }, calls, records, audits, sourceRows, db, settlements };
 }
 const actor = { id: 'admin', role: 'admin' }, input = { start: oct.start, end: oct.end, language: 'english' };
 test('preview is read-only, checks persisted role, and does not trust client-side totals', async () => {
@@ -420,4 +424,49 @@ test('serialization failures retry with a fresh transaction and release every co
   assert.equal(events.filter(e => e === 'ROLLBACK').length, 1);
   assert.equal(events.filter(e => e === 'COMMIT').length, 1);
   assert.equal(events.filter(e => e === 'release').length, 2);
+});
+
+// ── 11-noyabr direktor qarori: jarima maoshdan ayiriladi; admin == xodim; kassaga qo'lga summa ──
+const finesRules = require('../server/services/fines/rules');
+function withFines(f, fines) {
+  const base = f.db.query;
+  f.db.query = async (sql, params = []) => {
+    if (sql.startsWith('SELECT to_regclass') && /staff_fines|salary_fine_settlements/.test(sql)) return { rows: [{ t: 'x' }] };
+    if (sql.startsWith('SELECT he.id,he.name,he.role,he.lang,u.id AS user_id')) return { rows: [{ id: 'sales', name: 'Sales', role: 'sotuv-menejeri', lang: 'english', user_id: 'u-sales', user_role: 'sales_manager' }] };
+    if (sql.startsWith('SELECT seq,TO_CHAR(effective')) return { rows: [{ seq: 1, effective: '2000-01-01', data: finesRules.defaultConfig() }] };
+    if (sql.startsWith('SELECT amount,washed,state,warning FROM staff_fines')) return { rows: params[0] === 'sales' && params[1] === '2026-10' ? fines : [] };
+    if (sql.startsWith('SELECT * FROM salary_fine_settlements')) return { rows: f.settlements.filter(s => params[0].includes(s.salary_id)) };
+    if (sql.startsWith('SELECT he.id, he.name, he.role, he.lang FROM users')) return { rows: [{ id: 'sales', name: 'Sales', role: 'sotuv-menejeri', lang: 'english' }] };
+    if (sql.startsWith('SELECT id, TO_CHAR(period_start')) return { rows: [] };
+    if (sql.startsWith('BEGIN ISOLATION')) return { rows: [] };
+    return base(sql, params);
+  };
+  return f;
+}
+test('qo‘lga = maosh − jarima (chegara bilan) serverda; admin Maoshlar va xodim "Mening maoshim" AYNAN bir xil', async () => {
+  const f = withFines(database(), [{ amount: 150000, washed: 0, state: 'active', warning: false }]);
+  const admin = (await service.preview(f.pool, actor, input)).rows[0];
+  assert.equal(admin.total, 2000000); assert.equal(admin.fineDeducted, 150000); assert.equal(admin.cleanBonus, 0); assert.equal(admin.takeHome, 1850000);
+  const me = await service.mySalary(f.pool, { id: 'u-sales' }, new Date('2026-10-20T10:00:00Z'));
+  assert.equal(me.current.takeHome, admin.takeHome); assert.equal(me.current.total, admin.total); assert.equal(me.current.fineDeducted, admin.fineDeducted);
+  // Chegara: 10% (200 000) dan ortig'i ayirilmaydi.
+  const capped = withFines(database(), [{ amount: 500000, washed: 0, state: 'active', warning: false }]);
+  assert.equal((await service.preview(capped.pool, actor, input)).rows[0].takeHome, 1800000);
+});
+test('"Toza oy" bonusi admin qo‘lga summasiga ham qo‘shiladi (xodim bilan bir xil)', async () => {
+  const f = withFines(database(), []);
+  const admin = (await service.preview(f.pool, actor, input)).rows[0];
+  const me = await service.mySalary(f.pool, { id: 'u-sales' }, new Date('2026-10-20T10:00:00Z'));
+  assert.equal(admin.takeHome, 2100000); assert.equal(me.current.takeHome, 2100000);
+});
+test('"Berildi" qo‘lga summani muzlatadi (kassa chiqimi shundan); keyin jarima o‘zgarsa ham muzlatilgani qoladi', async () => {
+  const fines = [{ amount: 150000, washed: 0, state: 'active', warning: false }];
+  const f = withFines(database(), fines); const result = await service.preview(f.pool, actor, input);
+  await service.accrue(f.pool, actor, { ...input, sourceHash: result.sourceHash });
+  await service.markPaid(f.pool, actor, f.records[0].id);
+  assert.deepEqual(f.settlements.map(s => [s.salary, s.fine_deducted, s.bonus, s.take_home]), [[2000000, 150000, 0, 1850000]]);
+  fines.push({ amount: 50000, washed: 0, state: 'active', warning: false });
+  const after = (await service.preview(f.pool, actor, input)).rows[0];
+  assert.equal(after.takeHome, 1850000); assert.equal(after.settlementFrozen, true);
+  assert.ok(f.audits.find(a => a.action === 'mark-paid').after.includes('1850000'));
 });
