@@ -190,6 +190,8 @@ async function progressForIds(pool, ids, { perLesson = false } = {}) {
     const [mc, progress, parts, timeRows, totals, lastSeen] = await Promise.all([
         loadMobileContent(pool), loadProgress(pool, ids), loadParts(pool, ids), loadTime(pool, ids, 30), loadTotals(pool, ids), loadLastSeen(pool, ids)]);
     const partsBy = groupBy(parts), timeBy = groupBy(timeRows);
+    const paused = await loadPausedDays(pool, students);
+    for (const st of students) st.pausedDays = paused[st.id] || 0;
     return Object.fromEntries(students.map(st => {
         const x = summarizeStudent(st, mc, progress[st.id] || {}, partsBy[st.id] || [], timeBy[st.id] || [], totals[st.id], lastSeen[st.id]);
         const base = { reached: x.reached, firstTryAvg: x.firstTryAvg, daysIdle: x.daysIdle, flags: x.flags };
@@ -770,6 +772,20 @@ async function loadParts(pool, ids) {
     return rows;
 }
 
+// Muzlatish davrlari (bekor qilinmagan) — "rejada" hisobidan chiqariladi (academicHead.scopeData bilan bitta qoida).
+async function loadPausedDays(pool, students, now = new Date()) {
+    const ids = students.map(s => s.id), out = {};
+    if (!ids.length) return out;
+    const rows = await pool.query("SELECT student_id, from_date, to_date FROM school_student_status WHERE status='frozen' AND cancelled_at IS NULL AND student_id = ANY($1::text[])", [ids])
+        .then(r => r.rows).catch(e => { if (e.code === '42P01') return []; throw e; });
+    const start = new Map(students.map(s => [s.id, s.startDate ? new Date(s.startDate) : null]));
+    for (const r of rows) {
+        const sd = start.get(r.student_id), a = new Date(r.from_date), b = r.to_date ? new Date(r.to_date) : now;
+        const from = sd && sd > a ? sd : a, to = b < now ? b : now;
+        out[r.student_id] = (out[r.student_id] || 0) + Math.max(0, Math.round((to - from) / 86400000));
+    }
+    return out;
+}
 async function loadLastSeen(pool, ids) {
     if (!ids.length) return {};
     const { rows } = await pool.query(`SELECT user_id, MAX(last_seen) AS last_seen FROM sessions
@@ -804,7 +820,7 @@ function summarizeStudent(student, mc, progress, parts, timeRows, totals, lastSe
     const activeDays7 = Array.from({ length: 7 }, (_, i) => (daySecs[shiftDay(today, -i)] || 0) > 0).filter(Boolean).length;
     const lastActive = maxDate(lastSeen, totals?.lastAt, ...parts.map(p => p.updated_at));
     const daysIdle = lastActive ? Math.floor((now - lastActive) / 86400000) : null;
-    const expected = student.frozen ? null : expectedLesson(student.startDate, now);
+    const expected = student.frozen ? null : expectedLesson(student.startDate, now, Number(student.pausedDays) || 0);
     const flags = [];
     if (student.frozen) flags.push({ key: 'frozen', label: 'Muzlatilgan' });
     else {
@@ -834,6 +850,8 @@ async function studentsOverview(pool, actor, { lang: requested } = {}) {
         loadTime(pool, ids, 30), loadTotals(pool, ids), loadLastSeen(pool, ids),
     ]);
     const partsBy = groupBy(parts), timeBy = groupBy(timeRows);
+    const paused = await loadPausedDays(pool, students);
+    for (const s of students) s.pausedDays = paused[s.id] || 0;
     const list = students.map(s => {
         const sum = summarizeStudent(s, mc, progress[s.id] || {}, partsBy[s.id] || [], timeBy[s.id] || [], totals[s.id], lastSeen[s.id]);
         delete sum.perLesson;
@@ -924,6 +942,7 @@ async function buildStudentDetail(pool, student) {
         loadAttendance(pool, student.id),
         pool.query(`SELECT lesson_id, SUM(seconds)::bigint AS s FROM student_learning_time WHERE student_id=$1 AND lesson_id<>'' GROUP BY lesson_id`, [student.id]).then(r => r.rows),
     ]);
+    if (student.pausedDays == null) student.pausedDays = (await loadPausedDays(pool, [student]))[student.id] || 0;
     const summary = summarizeStudent(student, mc, progress[student.id] || {}, parts, timeRows, totals[student.id], lastSeen[student.id]);
     const lessons = studentCourseLessons(mc, student);
     const idToNo = idToNoMap(lessons);

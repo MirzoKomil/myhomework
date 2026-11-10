@@ -608,10 +608,11 @@
             ${bbar(`<button type="button" class="aka-btn aka-btn--out" data-a-transfer="${esc(s.id)}">${ic('team', 18)}Ustozni almashtirish</button><button type="button" class="aka-btn aka-btn--pri aka-btn--14" data-a-newfor="student">${ic('plus', 18, 2.6)}Muammo yozish</button>`)}`;
     }
     // Yordamchi ustoz aloqalari — yordamchi kartasidagi "Aloqalar" bilan bir xil ma'lumot (school_assist_contacts).
-    function assistBlock(s) {
+    // desk=true — kompyuter kabineti (akademikDesk): yordamchi ismi Ustozlar → Yordamchilar paneliga olib boradi.
+    function assistBlock(s, desk = false) {
         const ac = s.assistContacts; if (!ac) return '';
         const mon = MON[Number(String(ac.month).slice(5, 7)) - 1] || '';
-        const who = s.assistant?.id ? `<button type="button" class="aka-a aka-a--b" data-a-assistant="${esc(s.assistant.id)}">${esc(first(s.assistant.name))}</button>` : '<b class="c-red">biriktirilmagan</b>';
+        const who = s.assistant?.id ? `<button type="button" class="aka-a aka-a--b" ${desk ? `data-k-go="teachers" data-k-ttab="assistants" data-k-aid="${esc(s.assistant.id)}"` : `data-a-assistant="${esc(s.assistant.id)}"`}>${esc(first(s.assistant.name))}</button>` : '<b class="c-red">biriktirilmagan</b>';
         const rows = (ac.items || []).map(c => `<li class="aka-ac"><span class="aka-ac-d">${esc(dShort(c.day))}${c.at ? `<small>${esc(c.at)}</small>` : ''}</span><span class="aka-ac-t"><strong>${c.outcome === 'contacted' ? esc(c.channel) + (c.minutes ? ` · ${c.minutes} daq` : '') : 'Javob bermadi'}</strong>${c.note || c.by ? `<small>${esc([c.by ? 'yordamchi ' + first(c.by) : '', c.note].filter(Boolean).join(' · '))}</small>` : ''}</span>${chip(c.outcome === 'contacted' ? 'Aloqa' : 'Javobsiz', c.outcome === 'contacted' ? 'green' : 'amber')}</li>`).join('');
         return `<section class="aka-card aka-s2"><div class="aka-sb"><h2 class="aka-h2">Yordamchi aloqalari · ${esc(mon)}</h2><span class="aka-b13 aka-ink2">${num(ac.contacted)} ta aloqa${num(ac.noAnswer) ? ` · ${num(ac.noAnswer)} javobsiz` : ''}</span></div>
             <div class="aka-sm">Yordamchi ${who}</div>
@@ -1173,7 +1174,7 @@
         esc, ic, ava, chip, chips, fs, note, emptyBox, errBox, initials, first, shortName, num, pct, money, telHref, tgHref,
         toDate, localDate, dayDiff, hm, dShort, dLong, dtShort, dtComma, relDT, overdueTxt, addDays, greet, MON, WD,
         STAGES, stageOf, TYPES, SOURCES, SRC_LOW, SRC_CHIP, RESULTS, RISK, EV_T, normP, f, isMe, myName, scoreTone, riskTone, minTxt,
-        dueOptions, newDraft, localStudents, staffList, openSheet, closeSheet, toast, patchProblem, decideLate,
+        dueOptions, newDraft, localStudents, assistBlock, staffList, openSheet, closeSheet, toast, patchProblem, decideLate,
         dlg: { owner: sheetOwner, postpone: sheetPostpone, close: sheetClose, makeup: sheetMakeup, transfer: sheetTransfer, lateReject: sheetLateReject, teacherHistory: sheetTeacherHistory },
         notifs: { list: notifList, NLOOK, NGO, open: id => { if (g('markNotificationRead')) { try { markNotificationRead(id); } catch (e) { /* */ } } } },
     };

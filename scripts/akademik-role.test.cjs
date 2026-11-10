@@ -110,14 +110,15 @@ test('yangi oʻquvchi (3 kundan kam) "ilovaga kirmagan" deb belgilanmaydi', () =
     assert.strictEqual(H.riskReason({ daysIdle: null, startedDays: 1, streak: 2 }).reason, 'absent');
 });
 
-test('ustoz almashtirish: oʻtgan sanadan — 400 (soʻrov orqali emas)', async () => {
+// 8-noyabr direktor qarori: o'tgan sanadan ham o'tkaziladi, lekin o'tgan oyning 1-sanasidan eski emas (maosh hisoblangan oylar).
+test('ustoz almashtirish: oʻtgan oydan eski sana — 400 (soʻrov orqali emas)', async () => {
     // bcryptjs (studentOps vaqtinchalik parol uchun) — node_modules o'rnatilmagan muhitda ham sof tekshiruv ishlasin.
     try { require.resolve('bcryptjs'); } catch { require('node:module').prototype.require = (orig => function (id) { return id === 'bcryptjs' ? {} : orig.apply(this, arguments); })(require('node:module').prototype.require); }
     const O = require('../server/services/school/studentOps');
     const db = fakeDb(() => { throw new Error('bazaga yetib bormasligi kerak'); });
     const now = new Date('2026-11-02T07:00:00Z');
-    await assert.rejects(O.changeTeacher(db, { id: 'u', role: 'akademik' }, 's1', { teacherId: 't2', effectiveFrom: '2026-11-01', reason: 'test' }, { now }),
-        e => e.status === 400 && /Oʻtgan sanadan/.test(e.message));
+    await assert.rejects(O.changeTeacher(db, { id: 'u', role: 'akademik' }, 's1', { teacherId: 't2', effectiveFrom: '2026-09-30', reason: 'test' }, { now }),
+        e => e.status === 400 && /2026-10-01 sanadan/.test(e.message));
     await assert.rejects(O.changeTeacher(db, { id: 'u', role: 'sales_manager' }, 's1', { teacherId: 't2', reason: 'test' }, { now }), e => e.status === 403);
 });
 
