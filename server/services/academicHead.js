@@ -219,7 +219,14 @@ async function buildScope(db, langs, now) {
         const p = progress[s.id] || null;
         s.reached = p ? Number(p.reached) || 0 : 0;
         s.daysIdle = p ? p.daysIdle : null;
-        s.expected = s.frozen ? null : hub.expectedLesson(s.startDate, now);
+        // Muzlatish davrlari (bekor qilinmagan) — rejadan chiqariladi.
+        const sd = s.startDate ? new Date(s.startDate) : null;
+        const paused = (s.statusRows || []).filter(r => r.status === 'frozen').reduce((n, r) => {
+            const a = new Date(r.from_date), b = r.to_date ? new Date(r.to_date) : now;
+            const from = sd && sd > a ? sd : a, to = b < now ? b : now;
+            return n + Math.max(0, Math.round((to - from) / 86400000));
+        }, 0);
+        s.expected = s.frozen ? null : hub.expectedLesson(s.startDate, now, paused);
         s.behind = behindBy(s.expected, s.reached);
         s.onPlan = isOnPlan(s.expected, s.reached);
         s.lessons = lessons.get(s.id) || [];
