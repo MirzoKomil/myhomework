@@ -484,3 +484,9 @@ body.aka-nonav .aka-toast { bottom: calc(96px + env(safe-area-inset-bottom)); }
 .aka-qas { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 8px; }
 .aka-qa { min-height: 62px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; background: #FFFFFF; border: 1px solid var(--a-line); border-radius: 14px; color: var(--a-ink); font-size: 12px; font-weight: 700; text-decoration: none; }
 .aka-qa svg { color: #0057B8; }
+
+/* Telefonda Davomat oynasi ixcham: uzun izoh yashirin, filtrlar ikki ustunda */
+@media (max-width: 600px) {
+  body.aka-crm #anDavRoot .an-info { display: none; }
+  body.aka-crm #anDavRoot .sc-row.sc-wrap { gap: 8px; }
+}
