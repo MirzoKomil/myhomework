@@ -1562,6 +1562,9 @@ async function voidPayable(pool, actor, id, body) {
 async function recordSalaryPayment(pool, actor, salaryId, body) {
     return transaction(pool, async db => {
         const user = await access(db, actor);
+        // 11-noyabr (audit): ikki parallel so'rov bir maoshni ikki marta chiqim qilmasin — qator qulflanadi,
+        // ikkinchi so'rov birinchisi tugashini kutadi va "allaqachon to'langan" deb qaytadi.
+        await db.query('SELECT id FROM salary_transactions WHERE id=$1 FOR UPDATE', [salaryId]);
         const s = (await db.query(`SELECT s.*,he.name,COALESCE(sr.role,he.role) AS role FROM salary_transactions s LEFT JOIN hr_employees he ON he.id=s.employee_id LEFT JOIN fin_salary_roles sr ON sr.salary_id=s.id WHERE s.id=$1`, [salaryId])).rows[0];
         if (!s) throw error(404, 'Maosh hisobi topilmadi');
         if (s.status !== 'paid') throw error(409, 'Avval Maoshlar bo‘limida hisobni tasdiqlab, “To‘landi” deb belgilang');
