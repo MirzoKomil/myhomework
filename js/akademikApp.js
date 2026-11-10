@@ -642,16 +642,18 @@
         wrap.querySelector('.aka-sheet-h span').textContent = `${shortName(st?.name)} · hozir ustoz ${first(st?.teacher?.name)}${slot ? ' · ' + slot : ''}`;
         const rows = ts.map(t => t.free
             ? `<label class="aka-rc aka-rc--t"><input type="radio" name="tt" value="${esc(t.id)}"${firstFree && t.id === firstFree.id ? ' checked' : ''}>${ava(first(t.name), 36, 'blue')}<span><strong>${esc(first(t.name))}</strong><small>${esc([`${num(t.students)} oʻquvchi`, `${pct(t.onPlanPct)}% rejada`, num(t.openProblems) ? `${num(t.openProblems)} ochiq muammo` : ''].filter(Boolean).join(' · '))}</small></span>${chip('Boʻsh', 'green')}</label>`
-            : `<label class="aka-rc aka-rc--t is-off"><input type="radio" name="tt" value="${esc(t.id)}" disabled>${ava(first(t.name), 36, 'grey')}<span><strong>${esc(first(t.name))}</strong><small>Bu vaqtda darsi bor</small></span>${chip('Band')}</label>`).join('');
+            // Band ustoz ham tanlanadi (server ruxsat beradi) — o'quvchi vaqtini keyin "Dars jadvali"da kelishib o'zgartirish kerak.
+            : `<label class="aka-rc aka-rc--t"><input type="radio" name="tt" value="${esc(t.id)}">${ava(first(t.name), 36, 'grey')}<span><strong>${esc(first(t.name))}</strong><small>Bu vaqtda darsi bor · vaqtni keyin oʻzgartirasiz</small></span>${chip('Band', 'amber')}</label>`).join('');
         wrap.querySelector('[data-tb]').outerHTML = `${fs(`Yangi ustoz${slot ? ' · ' + slot + ' da' : ''}`, true, ts.length ? `<div class="aka-rcs">${rows}</div>` : '<p class="aka-muted">Bu tilda boshqa ustoz yoʻq</p>')}
             ${fs('Qachondan', true, chips('from', [['next', `Keyingi darsdan · ${dShort(nextD)}`], ['custom', 'Sana tanlash']], 'next') + `<label class="aka-fld" data-cust hidden><span class="aka-sr">Sana</span><input class="aka-inp" type="date" data-d min="${backMinA()}" value="${localDate(nextD)}"></label>`)}
             <label class="aka-fld"><span class="aka-lbl">Sabab <i>*</i></span><input class="aka-inp" type="text" maxlength="300" data-why placeholder="Masalan: oʻquvchi iltimosi"></label>
             ${note(`Bot ikkala ustozga xabar beradi. Tanlangan sanagacha oʻtilgan darslar eski ustozda qoladi; oʻtgan sana tanlansa — oʻsha kundan beri darslar va davomat yangi ustozga oʻtadi. Tekshiruvdagi qoplashlar ham ${first(st?.teacher?.name) || 'eski ustoz'}da qoladi.`)}
-            <button type="button" class="aka-btn aka-btn--pri aka-btn--54" data-ok${firstFree ? '' : ' disabled'}>${firstFree ? esc(first(firstFree.name)) + 'ga oʻtkazish' : 'Boʻsh ustoz yoʻq'}</button>`;
+            <button type="button" class="aka-btn aka-btn--pri aka-btn--54" data-ok${firstFree ? '' : ' disabled'}>${firstFree ? esc(first(firstFree.name)) + 'ga oʻtkazish' : 'Ustozni tanlang'}</button>
+            <p class="aka-muted" data-busy hidden>Bu ustozning ${esc(slot || 'shu vaqt')}da darsi bor. Oʻtkazgach, oʻquvchi vaqtini Dars jadvalida oʻzgartiring — aks holda ikki dars ustma-ust tushadi.</p>`;
         const okB = wrap.querySelector('[data-ok]');
         wrap.addEventListener('change', e => {
             if (e.target.name === 'from') wrap.querySelector('[data-cust]').hidden = e.target.value !== 'custom';
-            if (e.target.name === 'tt') { const t = ts.find(x => String(x.id) === e.target.value); okB.textContent = `${first(t?.name)}ga oʻtkazish`; okB.disabled = false; }
+            if (e.target.name === 'tt') { const t = ts.find(x => String(x.id) === e.target.value); okB.textContent = `${first(t?.name)}ga oʻtkazish${t?.free ? '' : ' (vaqti band)'}`; okB.disabled = false; wrap.querySelector('[data-busy]').hidden = !!t?.free; }
         });
         okB.onclick = async () => {
             const tid = wrap.querySelector('input[name="tt"]:checked')?.value, why = wrap.querySelector('[data-why]').value.trim();

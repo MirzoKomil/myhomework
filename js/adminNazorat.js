@@ -332,7 +332,8 @@
         ${isFull() ? makeupPanel(mks, lang, all, pay) : ''}`;
     }
     function cellHtml(r, c, td) {
-        const editable = canManage() && c.date <= td;
+        // Yopilgan oy (o'tgan oy) — server faqat admin, boshliq va akademikka ruxsat beradi (teacherAttendanceRules.CLOSED_MONTH_EDITORS); ROP'da katak bosilmaydi.
+        const editable = canManage() && c.date <= td && (role() !== 'rop' || c.date.slice(0, 7) >= td.slice(0, 7));
         const m = c.mk;
         let cls = 'off', txt = '', label = 'Dars kuni emas';
         if (c.state === 'present') { const dbl = r.mine.some(x => x.kind === 'double' && dkey(x.held_date) === c.date && x.status !== 'planned'); cls = 'ok' + (c.sched ? '' : ' is-extra'); txt = dbl ? '✓<sub>2</sub>' : '✓'; label = dbl ? 'Keldi · 2 dars' : 'Keldi'; }
