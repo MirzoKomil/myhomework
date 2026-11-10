@@ -511,8 +511,10 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
     // nomidan kiritadi — admin o'zi tasdiqlovchi bo'lgani uchun darhol "Tasdiqlandi" (kim kiritgani yoziladi).
     async function makeupOwner(req, c) {
         const st = (await c.query('SELECT teacher_id FROM students WHERE id=$1', [req.body?.studentId])).rows[0];
-        if (FULL.has(req.user.role)) {
+        // Akademik rahbar ham admin kabi (Davomat → "qaysi qoldirilgan dars o'rniga"), faqat o'z til yo'nalishi ustozlari.
+        if (FULL.has(req.user.role) || req.user.role === 'akademik') {
             if (!st?.teacher_id) throw T.fail(400, 'O\'quvchida asosiy ustoz yo\'q');
+            if (req.user.role === 'akademik') await overrideScope(req, c, st.teacher_id);
             return { teacherId: st.teacher_id, admin: true };
         }
         const me = await teacherOf(req);

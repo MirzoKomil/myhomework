@@ -76,7 +76,7 @@
     const SRC_CHIP = { student: 'Oʻquvchi xabar berdi', teacher: 'Ustoz xabar berdi', assistant: 'Yordamchi xabar berdi', sales: 'Sotuv xabar berdi', self: 'Oʻzim aniqladim' };
     const RESULTS = [['solved', 'Hal qilindi', 'Oʻquvchi rozi, dars joyiga tushdi'], ['teacher_changed', 'Ustoz almashtirildi', 'Oʻquvchini oʻtkazish oynasi ochiladi'], ['unsolved', 'Hal boʻlmadi', 'Oʻquvchi ketdi yoki muzlatdi']];
     const RISK = [['all', 'Hammasi'], ['noapp', 'Appga kirmayapti'], ['absent', 'Darsga kelmayapti'], ['behind', 'Orqada']];
-    const TONE_BAR = { red: '#D92D20', amber: '#F79009', blue: '#0065D6', green: '#079455' };
+    const TONE_BAR = { red: '#D92D20', amber: '#F79009', blue: '#0057B8', green: '#079455' };
 
     // ---------- holat ----------
     const S = { screen: 'home', stack: [], ptab: 'open', pq: '', later: false, mtab: 'pending', mAll: false, rtab: 'all', rAll: false, rTeacher: '', stab: 'all', sTeacher: '', sq: '', ttab: 'teachers', ltab: 'pending', ntab: 'all', silentAll: false, pid: null, sid: null, tid: null, aid: null, draft: null };
@@ -927,7 +927,7 @@
         toastEl?.remove(); clearTimeout(toastTimer);
         toastEl = document.createElement('div');
         toastEl.className = `aka-toast aka-toast--${kind}`; toastEl.setAttribute('role', kind === 'bad' ? 'alert' : 'status');
-        const colors = ['#0065D6', '#F79009', '#079455', '#7A5AF8', '#EE46BC', '#FDB022'];
+        const colors = ['#0057B8', '#F79009', '#079455', '#7A5AF8', '#EE46BC', '#FDB022'];
         toastEl.innerHTML = `${confetti ? Array.from({ length: 14 }, (_, i) => `<i class="aka-conf" style="left:${8 + (i * 61) % 84}%;background:${colors[i % 6]};animation-delay:${(i % 5) * 0.06}s"></i>`).join('') : ''}<span>${kind === 'bad' ? ic('alert', 18) : ic('check', 18, 2.8)}</span><span>${esc(msg)}</span>`;
         document.body.appendChild(toastEl);
         toastTimer = setTimeout(() => { toastEl?.remove(); toastEl = null; }, kind === 'bad' ? 4500 : 3200);
