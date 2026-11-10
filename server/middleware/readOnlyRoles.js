@@ -27,6 +27,13 @@ function readOnlyRoles({ findUserById }) {
         let payload;
         try { payload = jwt.verify(header.slice(7), JWT_SECRET); } catch { return next(); } // yaroqsiz token — authRequired 401 qaytaradi
         if (!payload?.id || payload.studentId) return next();
+        // 11-noyabr (audit): "Kabinetiga kirish" — faqat ko'rish va tekshirish. Admin xodim nomidan SMS yubora,
+        // lid/davomat/to'lovni o'zgartira olmasin. Faqat chiqish (Admin'ga qaytish) ruxsat.
+        if (payload.imp) {
+            const full = req.originalUrl.split('?')[0];
+            if (req.method === 'POST' && /^\/api\/auth\/logout\/?$/.test(full)) return next();
+            return res.status(403).json({ error: 'Kabinetga kirish rejimi faqat ko‘rish uchun — o‘zgartirish uchun Admin‘ga qayting' });
+        }
         let role;
         try { role = (await findUserById(payload.id))?.role || payload.role; }
         catch { return res.status(503).json({ error: 'Ruxsatni tekshirib boʻlmadi, birozdan keyin qayta urinib koʻring' }); } // tokendagi eski rolga ishonilmaydi
