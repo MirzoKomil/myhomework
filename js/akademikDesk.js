@@ -432,6 +432,7 @@
                 <div class="aka-pbar" aria-hidden="true"><i style="width:${pct(lesson / total * 100)}%;background:${TB[tone]}"></i>${plan ? `<b style="left:${pct(plan / total * 100)}%"></b>` : ''}</div>${plan ? `<small class="akd-mut">Chiziq — reja boʻyicha bugun ${plan}-darsda boʻlishi kerak edi</small>` : ''}</div>
             <div class="akd-kvs">${kvt('Vazifa bajarish', a.completionPct != null ? pct(a.completionPct) + '%' : '—')}${kvt('Haftasiga vaqt', a.weeklyMinutes != null ? esc(k.minTxt(a.weeklyMinutes)) : '—')}${kvt('Koʻp xato', esc(a.topMistake || '—'))}${kvt('Darsga kelish', a.attendancePct != null ? pct(a.attendancePct) + '%' : '—')}</div>
             <div class="akd-hist"><h3>Darslar · oxirgi 4 hafta <small>${came} / ${held} keldi</small></h3>${lessons.length ? `<ol class="aka-days" aria-label="Dars kunlari">${lessons.map(l => { const d = k.toDate(l.date); return `<li class="is-${esc(l.status)}" aria-label="${esc(k.dShort(l.date))}: ${l.status === 'came' ? 'keldi' : l.status === 'missed' ? 'kelmadi' : l.status === 'unmarked' ? 'belgilanmagan' : 'keyingi'}">${d ? d.getDate() : ''}</li>`; }).join('')}</ol>` : '<p class="akd-mut">Oxirgi 4 haftada dars yoʻq</p>'}</div>
+            ${k.assistBlock ? k.assistBlock(s, true) : ''}
             <div class="akd-lrs">${lr('Muammolar', `<a href="#" data-k-go="problems" data-k-pq="${esc(s.name || '')}" data-k-ptab="${num(pr.open) ? 'open' : 'closed'}">${num(pr.open) ? `${num(pr.open)} ta ochiq` : 'ochigʻi yoʻq'}${num(pr.closed) ? ` · ${num(pr.closed)} ta yopilgan` : ''} ›</a>`)}${lr('Ustozlar tarixi', `<a href="#" data-k-thist>${esc(th.length ? th.map(t => `${k.first(t.name)} · ${k.dLong(t.from)}dan`).slice(-1)[0] : '—')} ›</a>`)}</div>
             <div class="akd-acts"><button type="button" class="akd-btn akd-btn--ghost" data-k-transfer="${esc(s.id)}">${ic('team', 16)}Ustozni almashtirish</button><button type="button" class="akd-btn akd-btn--pri akd-grow" data-k-new data-k-newfor="student">${ic('plus', 16, 2.6)}Muammo yozish</button></div>
         </aside>`;
@@ -654,7 +655,7 @@
         if ('kGo' in d) {
             const view = d.kGo;
             if (['slots', 'att', 'attreq', 'myatt', 'book'].includes(view)) { nav(view); return; }
-            nav(view, { ptab: d.kPtab, pq: d.kPq, pteacher: d.kPteacher, mteacher: d.kMteacher, rtab: d.kRtab, rteacher: d.kRteacher });
+            nav(view, { ttab: d.kTtab, aid: d.kAid, ptab: d.kPtab, pq: d.kPq, pteacher: d.kPteacher, mteacher: d.kMteacher, rtab: d.kRtab, rteacher: d.kRteacher });
             return;
         }
         if ('kAllnotifs' in d) { document.getElementById('notifToggle')?.click(); return; }
