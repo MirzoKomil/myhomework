@@ -762,6 +762,7 @@ function startLeadsPolling() {
             // Lokal PATCH navbati tugamasdan server snapshoti optimistik
             // o'zgarishni bosib yubormasin.
             if (hasPendingLeadChanges()) return;
+            if (document.hidden) return; // yashirin tabda serverni bekorga yuklamaymiz (tab ochilgach keyingi 30 s ichida yangilanadi)
             const mutationGeneration = getLeadMutationGeneration();
             const prev = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
             const prevFingerprint = getLeadPollFingerprint(prev);
@@ -819,18 +820,26 @@ function startCoreDataPolling() {
     if (_coreDataPollTimer) return;
     _coreDataPollTimer = setInterval(async () => {
         try {
+            if (document.hidden) return; // yashirin tabda butun holatni har 30 s yuklamaymiz
+            if (typeof hasPendingRowPatches === 'function' && hasPendingRowPatches()) return;
+            const rowGen = typeof rowPatchGeneration === 'function' ? rowPatchGeneration() : 0;
             const prevStudents = getItem(STORAGE_KEYS.students, []);
             const prevTeachers = getItem(STORAGE_KEYS.teachers, []);
-            const prevStudentsFp = getStudentsPollFingerprint(prevStudents);
-            const prevTeachersFp = getTeachersPollFingerprint(prevTeachers);
+            // 11-noyabr: ism/telefon/vaqt o'zgarishi ham ko'rinsin — to'liq taqqoslash (avval 6 maydon edi).
+            const fullFp = list => { try { return JSON.stringify((list || []).slice().sort((a, b) => String(a?.id).localeCompare(String(b?.id)))); } catch { return ''; } };
+            const prevStudentsFp = fullFp(prevStudents);
+            const prevTeachersFp = fullFp(prevTeachers);
             const state = await apiLoadState();
-            const studentsChanged = prevStudentsFp !== getStudentsPollFingerprint(state.students);
-            const teachersChanged = prevTeachersFp !== getTeachersPollFingerprint(state.teachers);
+            if (!Array.isArray(state?.students) || !Array.isArray(state?.teachers)) return;
+            // So'rov ketayotganda shu tabda saqlash boshlangan bo'lsa — kelgan javob eskirgan, tashlab yuboriladi.
+            if (typeof hasPendingRowPatches === 'function' && (hasPendingRowPatches() || rowGen !== rowPatchGeneration())) return;
+            const studentsChanged = prevStudentsFp !== fullFp(state.students);
+            const teachersChanged = prevTeachersFp !== fullFp(state.teachers);
             if (!studentsChanged && !teachersChanged) return;
             // Faqat mahalliy keshni yangilaymiz — setItem() ishlatilmaydi,
             // chunki u serverga PATCH yuborar edi (bu yerda faqat O'QISH kerak).
-            if (studentsChanged) _cache.students = state.students;
-            if (teachersChanged) _cache.teachers = state.teachers;
+            if (studentsChanged) { _cache.students = state.students; if (typeof resetRowShadow === 'function') resetRowShadow('students', state.students); }
+            if (teachersChanged) { _cache.teachers = state.teachers; if (typeof resetRowShadow === 'function') resetRowShadow('teachers', state.teachers); }
 
             if (document.getElementById('tab-teachers-section')?.classList.contains('active')) {
                 const activeSection = _tabContext.teachersSection;
@@ -8417,11 +8426,11 @@ function computeAdminHome({ students, leads, now = new Date() }) {
     const leadsYesterday = allLeads.filter(l => dayOf(l) === yesterdayKey).length;
     const leadsMonth = allLeads.filter(l => String(dayOf(l) || '').startsWith(monthKey)).length;
 
-    const todayStart = new Date(now.toDateString());
     const withDebt = active.filter(s => Number(s.debtAmount || 0) > 0);
+    // Muddati o'tgan: to'lov sanasi (YYYY-MM-DD) Toshkent bo'yicha bugundan oldin.
     const overdue = withDebt.filter(s => {
-        const d = s.paymentDueDate ? new Date(s.paymentDueDate) : null;
-        return d && !Number.isNaN(d.getTime()) && d < todayStart;
+        const d = String(s.paymentDueDate || '').slice(0, 10);
+        return /^\d{4}-\d{2}-\d{2}$/.test(d) && d < todayKey;
     });
 
     const funnel = FUNNEL_STAGES.filter(s => s.id !== 'tolov-yopildi').map(s => ({ ...s, count: allLeads.filter(l => st(l) === s.id).length }));
@@ -8429,8 +8438,10 @@ function computeAdminHome({ students, leads, now = new Date() }) {
     const OPEN = new Set(['tolov-yopildi', 'muvaffaqiyatsiz-sotuv', 'sifatsiz-lidlar']);
     const unassigned = allLeads.filter(l => !l.managerId && !OPEN.has(st(l))).length;
 
-    const dow = now.getDay() || 7;
-    const nowMin = now.getHours() * 60 + now.getMinutes();
+    // 11-noyabr (audit): hafta kuni va soat — Toshkent vaqti bo'yicha (qurilma vaqt zonasidan qat'i nazar).
+    const _tk = new Date(now.getTime() + 5 * 3600000);
+    const dow = _tk.getUTCDay() || 7;
+    const nowMin = _tk.getUTCHours() * 60 + _tk.getUTCMinutes();
     const toMin = t => { const [h, m] = String(t || '').split(':').map(Number); return Number.isFinite(h) ? h * 60 + (m || 0) : null; };
     const slots = new Map();
     active.filter(s => s.lessonDayOfWeek != null && s.lessonTime && expandLessonPatternDays(s.lessonDayOfWeek).includes(dow)
@@ -10587,7 +10598,9 @@ function renderStudents() {
     const searchEl = document.getElementById('studentsSearch');
     if (searchEl && !searchEl.dataset.bound) {
         searchEl.dataset.bound = '1';
-        searchEl.addEventListener('input', () => renderStudents());
+        // 11-noyabr (audit): har harfda butun ro'yxat qayta chizilib qotardi — yozib bo'lgach 180 ms kutib chiziladi.
+        let _stSearchT = null;
+        searchEl.addEventListener('input', () => { clearTimeout(_stSearchT); _stSearchT = setTimeout(() => renderStudents(), 180); });
     }
 }
 
@@ -11414,7 +11427,7 @@ async function renderTeacherTrialLessons(refresh = false) {
         if (role !== 'teacher') return;
         await window.trialUI.renderTeacher(container, { refresh });
         if (!_teacherTrialPollTimer && document.getElementById('tab-trial-lessons')?.classList.contains('active')) {
-            _teacherTrialPollTimer = setInterval(() => renderTeacherTrialLessons(true), 30000);
+            _teacherTrialPollTimer = setInterval(() => { if (!document.hidden) renderTeacherTrialLessons(true); }, 30000);
         }
         return;
     }
@@ -11440,7 +11453,7 @@ async function renderTeacherTrialLessons(refresh = false) {
         container.querySelector('#retryTeacherTrials').onclick = () => renderTeacherTrialLessons();
     }
     if (!_teacherTrialPollTimer && document.getElementById('tab-trial-lessons')?.classList.contains('active')) {
-        _teacherTrialPollTimer = setInterval(() => renderTeacherTrialLessons(true), 30000);
+        _teacherTrialPollTimer = setInterval(() => { if (!document.hidden) renderTeacherTrialLessons(true); }, 30000);
     }
 }
 
@@ -16619,6 +16632,7 @@ async function backfillAllTeacherSubjectsFromHr() {
     try {
         await apiPatchState({ teachers: updated });
         _cache.teachers = updated;
+        if (typeof resetRowShadow === 'function') resetRowShadow('teachers', updated);
     } catch (err) {
         console.error('backfillAllTeacherSubjectsFromHr:', err.message);
     }

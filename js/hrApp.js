@@ -28,7 +28,8 @@
         const ms = Date.now() - new Date(t).getTime(); const h = Math.floor(ms / 3600000);
         if (h >= 24) return Math.floor(h / 24) + ' kun'; if (h >= 1) return h + ' soat'; return Math.max(1, Math.round(ms / 60000)) + ' daq';
     };
-    const localDate = (d = new Date()) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    // 11-noyabr (audit): davomat sanasi — Toshkent vaqti bo'yicha (xodim ilovasi va server bilan bir xil).
+    const localDate = (d = new Date()) => new Date(d.getTime() + 5 * 3600000).toISOString().slice(0, 10);
     const AV = [['#DCEBFF', '#0057B8'], ['#FEF0C7', '#93370D'], ['#ECFDF3', '#067647'], ['#F1E8FF', '#5B21B6'], ['#FFE4E8', '#9F1239'], ['#E0F2FE', '#075985']];
     const avIdx = s => { let h = 0; for (const c of String(s || '')) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h % AV.length; };
     const ava = (name, size = 42) => { const [b, f] = AV[avIdx(name)]; return `<span class="hra-ava" aria-hidden="true" style="width:${size}px;height:${size}px;background:${b};color:${f};font-size:${Math.round(size / 3)}px">${esc(initials(name))}</span>`; };

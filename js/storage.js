@@ -133,6 +133,36 @@ function getItem(key, fallback) {
 
 const SNAPSHOT_TABLE_KEYS = new Set(['students', 'hrEmployees', 'teachers', 'bookRoadmap']);
 
+// 11-noyabr (audit): eski ochiq tab butun ro'yxatni yuborib, boshqa kabinetda o'zgargan qatorlarni eski
+// qiymatga qaytarardi. Endi serverdan oxirgi kelgan holat nusxasi (id → JSON) saqlanadi va PATCH'ga faqat
+// shu tabda haqiqatan o'zgargan qatorlar yuboriladi. Server faqat kelgan qatorlarni yozadi (replaceSnapshotRows).
+const ROW_DIFF_KEYS = new Set(['students', 'teachers', 'hrEmployees']);
+const _rowShadow = {};
+function _rowJson(x) { try { return JSON.stringify(x); } catch { return ''; } }
+function resetRowShadow(key, list) {
+    if (!ROW_DIFF_KEYS.has(key)) return;
+    _rowShadow[key] = Array.isArray(list) ? new Map(list.filter(x => x && x.id != null).map(x => [String(x.id), _rowJson(x)])) : null;
+}
+function resetAllRowShadows(state) {
+    ROW_DIFF_KEYS.forEach(k => { if (state && Array.isArray(state[k])) resetRowShadow(k, state[k]); });
+}
+function changedRowsOnly(key, list) {
+    const shadow = _rowShadow[key];
+    if (!shadow || !Array.isArray(list)) return list;
+    return list.filter(x => !x || x.id == null || shadow.get(String(x.id)) !== _rowJson(x));
+}
+// sentJson — yuborish paytidagi JSON (javob kelguncha obyekt joyida o'zgarsa, yuborilmagan qiymat "saqlangan" deb belgilanmasin).
+function markRowsSaved(key, rows, removedIds, sentJson) {
+    const shadow = _rowShadow[key];
+    if (!shadow) return;
+    (rows || []).forEach((x, i) => { if (x && x.id != null) shadow.set(String(x.id), sentJson ? sentJson[i] : _rowJson(x)); });
+    (removedIds || []).forEach(id => shadow.delete(String(id)));
+}
+// Saqlash ketayotganda polling eski server holatini keshga/nusxaga qo'ymasin (poyga).
+let _rowPatchPending = 0, _rowPatchGen = 0;
+function hasPendingRowPatches() { return _rowPatchPending > 0; }
+function rowPatchGeneration() { return _rowPatchGen; }
+
 function setItem(key, value) {
     const cacheKey = CACHE_KEY_MAP[key];
     if (cacheKey) {
@@ -176,9 +206,17 @@ function setItem(key, value) {
             // "poyga" qilib, oxirgisi emas, tasodifan tezroq kelgani
             // g'olib chiqishi (eski qiymat yangisini bosib qo'yishi) mumkin
             // edi.
-            return apiPatchState({ [cacheKey]: value, ...(key === STORAGE_KEYS.students ? { removedStudentIds } : {}),
+            const allRemoved = [...new Set([...(removedStudentIds || []), ...removedIds])];
+            const sendRows = ROW_DIFF_KEYS.has(cacheKey) ? changedRowsOnly(cacheKey, value) : value;
+            if (ROW_DIFF_KEYS.has(cacheKey) && Array.isArray(sendRows) && !sendRows.length && !allRemoved.length) return Promise.resolve({ ok: true, unchanged: true });
+            const sentJson = ROW_DIFF_KEYS.has(cacheKey) && Array.isArray(sendRows) ? sendRows.map(_rowJson) : null;
+            if (sentJson) { _rowPatchPending++; _rowPatchGen++; }
+            return apiPatchState({ [cacheKey]: sendRows, ...(key === STORAGE_KEYS.students ? { removedStudentIds } : {}),
                 ...(SNAPSHOT_TABLE_KEYS.has(cacheKey) ? { removedIds: { [cacheKey]: removedIds } } : {}),
-                ...(cacheKey === 'hrEmployees' ? { changedStatusIds: { hrEmployees: changedStatusIds } } : {}) }).catch(err => {
+                ...(cacheKey === 'hrEmployees' ? { changedStatusIds: { hrEmployees: changedStatusIds } } : {}) }).then(r => {
+                if (ROW_DIFF_KEYS.has(cacheKey)) markRowsSaved(cacheKey, sendRows, allRemoved, sentJson);
+                return r;
+            }).finally(() => { if (sentJson) _rowPatchPending = Math.max(0, _rowPatchPending - 1); }).catch(err => {
                 console.error('Saqlash xatoligi:', err.message);
                 showSaveError(err.message);
             });
@@ -252,6 +290,8 @@ function setCachedItem(key, value) {
     const cacheKey = CACHE_KEY_MAP[key];
     if (cacheKey) {
         _cache[cacheKey] = value;
+        // Maxsus endpoint javobi — server holati: nusxa ham yangilanadi (keyingi saqlashda ortiqcha qator ketmasin).
+        if (ROW_DIFF_KEYS.has(cacheKey)) resetRowShadow(cacheKey, value);
         return;
     }
     if (key === STORAGE_KEYS.currentUser) {
@@ -301,6 +341,7 @@ async function reloadStateFromApi() {
     const state = await apiLoadState();
     _cache = { ..._cache, ...state };
     resetBookRoadmapShadow(_cache.bookRoadmap);
+    resetAllRowShadows(state);
     return state;
 }
 
@@ -309,6 +350,7 @@ async function initStorage() {
         const state = await apiLoadState();
         _cache = { ...state };
         resetBookRoadmapShadow(_cache.bookRoadmap);
+        resetAllRowShadows(state);
         _apiReady = true;
         // Ketma-ket await qilinadi — bir nechtasi bir vaqtda "teachers" (yoki
         // boshqa) kalitiga PATCH yuborsa, tarmoqda poyga bo'lib, birining
