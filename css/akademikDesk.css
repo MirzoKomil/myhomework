@@ -4,7 +4,7 @@
 @media (min-width: 901px) {
     body.akd-on {
         --a-ink: #0B1220; --a-ink2: #3A4456; --a-mut: #4B5563; --a-bg: #F5F7FB; --a-line: #E6EAF2; --a-line2: #CBD5E1; --a-sep: #EEF2F8; --a-track: #E2E8F0;
-        --a-blue: #0065D6; --a-blue-d: #0057B8; --a-blue-t: #EAF3FF;
+        --a-blue: #0057B8; --a-blue-d: #0057B8; --a-blue-t: #EAF3FF;
         --a-red: #B42318; --a-red-t: #FEF3F2; --a-red-s: #D92D20; --a-red-l: #FDA29B;
         --a-amb: #93370D; --a-amb-t: #FEF0C7; --a-grn: #067647; --a-grn-t: #ECFDF3; --a-pur: #5B21B6; --a-pur-t: #F1E8FF; --a-gry-t: #EEF2F8;
         --a-nav: 0px; --a-ease: cubic-bezier(.2, .8, .2, 1);
@@ -29,7 +29,7 @@
 .akd :where(button) { cursor: pointer; }
 .akd a { color: #0057B8; text-decoration: none; }
 .akd a:hover { color: #0B1220; }
-.akd :focus-visible { outline: 3px solid #0065D6; outline-offset: 2px; }
+.akd :focus-visible { outline: 3px solid #0057B8; outline-offset: 2px; }
 .akd [hidden] { display: none !important; }
 /* Qobiq (.main-area) oʻzi ~25px yuqori va 32px yon boʻshliq beradi — dizayndagi 28px/32px shunga moslangan. */
 .akd-page { padding: 3px 0 40px; display: flex; flex-direction: column; gap: 20px; }
@@ -52,7 +52,7 @@
 .akd-btn:active { transform: scale(.97); }
 .akd-btn > svg, .akd-ib > svg, .akd-call > svg { flex: none; }
 .akd-btn:disabled { opacity: .55; cursor: not-allowed; }
-.akd-btn--pri { border: 0; background: #0065D6; color: #FFFFFF !important; font-weight: 800; padding: 0 18px; }
+.akd-btn--pri { border: 0; background: #0057B8; color: #FFFFFF !important; font-weight: 800; padding: 0 18px; }
 .akd-btn--pri:hover { background: #0057B8; }
 .akd-btn--green { border: 0; background: #067647; color: #FFFFFF !important; font-weight: 800; }
 .akd-btn--dark { border: 0; background: #0B1220; color: #FFFFFF !important; font-weight: 800; }
@@ -72,8 +72,8 @@
 .akd-tab[aria-selected="true"] { background: #0B1220; color: #FFFFFF; border-color: #0B1220; }
 .akd-sel { position: relative; display: inline-flex; }
 .akd .akd-sel select { appearance: none; -webkit-appearance: none; background-image: none !important; height: 44px; padding: 0 16px; text-align: center; text-align-last: center; border-radius: 12px; border: 1px solid #CBD5E1; background: #FFFFFF; color: #3A4456; font-size: 14px; font-weight: 700; cursor: pointer; max-width: 240px; }
-.akd .akd-sel select:focus-visible { outline: 3px solid #0065D6; outline-offset: 2px; }
-.akd-qchip { height: 40px; border-radius: 999px; border: 1px solid #0065D6; background: #EAF3FF; color: #0057B8; font-size: 13px; font-weight: 700; padding: 0 12px; display: inline-flex; align-items: center; gap: 6px; }
+.akd .akd-sel select:focus-visible { outline: 3px solid #0057B8; outline-offset: 2px; }
+.akd-qchip { height: 40px; border-radius: 999px; border: 1px solid #0057B8; background: #EAF3FF; color: #0057B8; font-size: 13px; font-weight: 700; padding: 0 12px; display: inline-flex; align-items: center; gap: 6px; }
 .akd-sum { font-size: 13px; color: #4B5563; }
 .akd-sum strong { color: #0B1220; }
 .akd-sum strong.c-amber { color: #93370D; }
@@ -93,7 +93,7 @@
 .akd-row { transition: background .15s ease; }
 .akd-row[data-k-prow], .akd-row[data-k-trow], .akd-row[data-k-arow], .akd-row[data-k-srow] { cursor: pointer; }
 .akd-row:hover { background: #F8FAFD; }
-.akd-row.is-sel { background: #F8FAFD; box-shadow: inset 4px 0 0 #0065D6; }
+.akd-row.is-sel { background: #F8FAFD; box-shadow: inset 4px 0 0 #0057B8; }
 .akd-tt { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
 .akd-tt a { color: #0B1220; font-weight: 800; }
 .akd-tt a:hover { color: #0057B8; text-decoration: underline; }
@@ -223,7 +223,7 @@
 .akd-sil li a { font-weight: 700; }
 .akd-sil li small { flex: 1; font-size: 12px; color: #4B5563; }
 .akd-cmt { min-height: 44px; border-radius: 12px; border: 1px solid #CBD5E1; display: flex; align-items: center; padding: 0 2px 0 12px; gap: 6px; }
-.akd-cmt:focus-within { border-color: #0065D6; box-shadow: 0 0 0 3px rgba(0, 101, 214, .18); }
+.akd-cmt:focus-within { border-color: #0057B8; box-shadow: 0 0 0 3px rgba(0, 101, 214, .18); }
 .akd-cmt input { flex: 1; min-width: 0; border: 0; outline: 0; font-size: 14px; background: transparent; min-height: 40px; }
 .akd-cmt button { width: 40px; height: 40px; border-radius: 10px; border: 0; background: #EAF3FF; color: #0057B8; display: grid; place-items: center; }
 .akd-acts { display: flex; gap: 8px; }
