@@ -290,9 +290,10 @@ test('CRM only caches server-confirmed students and sends no SMS before a succes
 
 test('CRM deletion sends explicit IDs, while an ordinary edit does not claim deletion of unseen accounts', async () => {
   const payloads = [];
-  const context = loadFunctions('js/storage.js', ['setItem'], {
+  const context = loadFunctions('js/storage.js', ['setItem', 'changedRowsOnly', 'markRowsSaved', '_rowJson'], {
     CACHE_KEY_MAP: { students: 'students' }, STORAGE_KEYS: { students: 'students', leads: 'leads' },
     SNAPSHOT_TABLE_KEYS: new Set(['students', 'hrEmployees', 'teachers', 'bookRoadmap']),
+    ROW_DIFF_KEYS: new Set(['students', 'teachers', 'hrEmployees']), _rowShadow: {},
     _cache: { students: [{ id: 'one' }, { id: 'two' }] }, _apiReady: true,
     apiPatchState: async payload => { payloads.push(payload); }, console
   });
@@ -302,4 +303,25 @@ test('CRM deletion sends explicit IDs, while an ordinary edit does not claim del
   await context.setItem('students', [{ id: 'two' }]);
   assert.deepEqual(Array.from(payloads[1].removedStudentIds), ['one']);
   assert.deepEqual(Array.from(payloads[1].removedIds.students), ['one']);
+});
+
+// 11-noyabr (audit): eski tab boshqa kabinetda o'zgargan qatorni eski qiymat bilan qayta yozmasin —
+// serverdan kelgan nusxaga nisbatan faqat shu tabda o'zgargan qatorlar yuboriladi.
+test('CRM state PATCH sends only rows changed in this tab', async () => {
+  const payloads = [];
+  const shadow = new Map([['one', JSON.stringify({ id: 'one', name: 'A' })], ['two', JSON.stringify({ id: 'two', name: 'B' })]]);
+  const context = loadFunctions('js/storage.js', ['setItem', 'changedRowsOnly', 'markRowsSaved', '_rowJson'], {
+    CACHE_KEY_MAP: { students: 'students' }, STORAGE_KEYS: { students: 'students', leads: 'leads' },
+    SNAPSHOT_TABLE_KEYS: new Set(['students', 'hrEmployees', 'teachers', 'bookRoadmap']),
+    ROW_DIFF_KEYS: new Set(['students', 'teachers', 'hrEmployees']), _rowShadow: { students: shadow },
+    _cache: { students: [{ id: 'one', name: 'A' }, { id: 'two', name: 'B' }] }, _apiReady: true,
+    apiPatchState: async payload => { payloads.push(payload); return { ok: true }; }, console
+  });
+  await context.setItem('students', [{ id: 'one', name: 'A2' }, { id: 'two', name: 'B' }]);
+  assert.deepEqual(payloads[0].students.map(x => x.id), ['one']);
+  await context.setItem('students', [{ id: 'one', name: 'A2' }, { id: 'two', name: 'B' }]);
+  assert.equal(payloads.length, 1, 'o\'zgarmagan ro\'yxat qayta yuborilmaydi');
+  await context.setItem('students', [{ id: 'two', name: 'B' }]);
+  assert.deepEqual(payloads[1].students, []);
+  assert.deepEqual(Array.from(payloads[1].removedStudentIds), ['one']);
 });
