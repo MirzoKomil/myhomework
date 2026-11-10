@@ -9728,7 +9728,7 @@ function attIsToday(year, month, d) {
 function renderMainAttendance() {
     if (getCurrentUser()?.role === 'teacher') return teacherDutyUI.render();
     // Admin / boshliq / ROP — yangi "Akademik → Davomat" (js/adminNazorat.js).
-    if (window.adminNazorat && ['admin', 'boshliq', 'rop'].includes(getCurrentUser()?.role)) return window.adminNazorat.renderDavomat();
+    if (window.adminNazorat && ['admin', 'boshliq', 'rop', 'akademik'].includes(getCurrentUser()?.role)) return window.adminNazorat.renderDavomat();
     initMainAttControls();
     _populateDemoStudentSelect();
     const currentUser = getCurrentUser();

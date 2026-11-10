@@ -20,7 +20,7 @@
     const kpiRate = (lang, d) => { const r = getC('payrollRates', {})?.[lang || 'english']?.teacher?.rates; const v = Number(r?.[d]); return Number.isFinite(v) && v > 0 ? v : null; };
     const role = () => (typeof getCurrentUser === 'function' ? getCurrentUser()?.role : '') || '';
     const isFull = () => ['admin', 'boshliq'].includes(role());
-    const canManage = () => ['admin', 'boshliq', 'rop'].includes(role());
+    const canManage = () => ['admin', 'boshliq', 'rop', 'akademik'].includes(role());
     const canSeePayroll = () => ['admin', 'boshliq'].includes(role());
     const getC = (k, d) => (typeof getItem === 'function' && typeof STORAGE_KEYS !== 'undefined' && STORAGE_KEYS[k] ? getItem(STORAGE_KEYS[k], d) : d);
     const pad = n => String(n).padStart(2, '0');
