@@ -584,7 +584,15 @@
         const pr = s.problems || {}, th = s.teacherHistory || [];
         const tile = (l, v, t = '') => `<div class="aka-tile aka-tile--sm"><span>${esc(l)}</span><strong class="${t ? 'c-' + t : ''}">${esc(v)}</strong></div>`;
         const head = top(s.name || 'Oʻquvchi', { sub: `Oʻquvchi${myLangLabel() ? ' · ' + myLangLabel() : ''}`, right: s.phone ? `<a class="aka-ib aka-ib--dark" href="${esc(telHref(s.phone))}" aria-label="Qoʻngʻiroq">${ic('phone', 18)}</a>` : '' });
+        // Ustoz ilovasidagi o'quvchi kartasi boshi: avatar, ID va jadval, tezkor tugmalar.
+        const loc = (typeof getItem === 'function' ? getItem(STORAGE_KEYS.students, []) : []).find(x => String(x.id) === String(s.id)) || {};
+        const av = window.schoolUI?.studentAvatar ? window.schoolUI.studentAvatar({ ...loc, id: s.id, name: s.name }, 64) : ava(s.name, 64);
+        const tg = loc.telegramGroupLink || '';
+        const qa = (icon, label, attr) => `<${attr.startsWith('href') ? 'a' : 'button type="button"'} class="aka-qa" ${attr}>${ic(icon, 20)}<span>${esc(label)}</span></${attr.startsWith('href') ? 'a' : 'button'}>`;
+        const hero = `<section class="aka-shero aka-s1">${av}<span><strong>${esc(s.name || '')}</strong><small>${esc(['ID ' + s.id, s.schedule].filter(Boolean).join(' · '))}</small></span></section>
+            <div class="aka-qas aka-s1">${s.phone ? qa('phone', 'Qoʻngʻiroq', `href="${esc(telHref(s.phone))}"`) : ''}${tg ? qa('send', 'Dars guruhi', `href="${esc(tg)}" target="_blank" rel="noopener"`) : ''}${qa('check', 'Davomat', 'data-a-crm="teachers-section:attendance"')}</div>`;
         return head + `<div class="aka-body aka-body--bar">
+            ${hero}
             <section class="aka-card aka-s1"><div class="aka-sb"><span class="aka-sm">Ustoz ${s.teacher?.id ? `<button type="button" class="aka-a aka-a--b" data-a-teacher="${esc(s.teacher.id)}">${esc(first(s.teacher.name))}</button>` : `<b>${esc(first(s.teacher?.name) || '—')}</b>`}${s.schedule ? ' · ' + esc(s.schedule) : ''}</span>${s.risk?.reasonText ? chip(s.risk.reasonText, 'red') : ''}</div>
                 <div class="aka-prog"><div class="aka-sb aka-sb--base"><strong class="aka-big">${lesson} <small>/ ${total}-dars</small></strong><span class="${behind ? 'c-' + (tone === 'blue' ? 'amber' : tone) : 'c-green'} aka-b13">${behind ? `Rejadan ${behind} dars orqada` : 'Reja boʻyicha'}</span></div>
                     <div class="aka-pbar" aria-hidden="true"><i style="width:${pct(lesson / total * 100)}%;background:${TONE_BAR[tone]}"></i>${plan ? `<b style="left:${pct(plan / total * 100)}%"></b>` : ''}</div>
