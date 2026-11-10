@@ -1010,7 +1010,7 @@
         const s = state.overview.quality.paidSalaryWithoutCash.find(x => x.id === id);
         if (!s) { toast('Maosh topilmadi — sahifani yangilang'); return; }
         const accounts = state.overview.accountsList.filter(a => a.active !== false && F.EQUIVALENT_KINDS.has(a.kind));
-        openModal('Maoshni kassadan chiqim qilish', `<div class="fin-form"><p><b>${esc(s.employeeName)}</b> · ${dateText(s.periodStart)} — ${dateText(s.periodEnd)} · <b>${money(s.amount)}</b></p>
+        openModal('Maoshni kassadan chiqim qilish', `<div class="fin-form"><p><b>${esc(s.employeeName)}</b> · ${dateText(s.periodStart)} — ${dateText(s.periodEnd)} · <b>${money(s.amount)}</b>${s.fineDeducted || s.cleanBonus ? `<br><small>Maosh ${money(s.grossAmount)}${s.fineDeducted ? ` · jarima −${money(s.fineDeducted)}` : ''}${s.cleanBonus ? ` · “Toza oy” +${money(s.cleanBonus)}` : ''} → qoʻlga ${money(s.amount)}</small>` : ''}</p>
             ${field('To‘langan sana', `<input type="date" lang="en-GB" class="form-control" name="date" value="${s.paidAt || F.today()}" max="${F.today()}">`)}
             ${field('Qaysi hisobdan', `<select class="form-control" name="accountId">${accounts.map(a => `<option value="${esc(a.id)}">${esc(a.name)}</option>`).join('')}</select>`)}
             ${field('Imzolangan to‘lov qaydnomasi yoki bank o‘tkazmasi', '<input type="file" class="form-control" name="evidence" accept=".pdf,.png,.jpg,.jpeg,.webp">', `${money(state.overview.settings?.evidenceMin ?? 1000000)} va undan katta to‘lovda majburiy`)}

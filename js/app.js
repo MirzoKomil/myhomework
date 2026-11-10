@@ -1143,7 +1143,8 @@ function renderFrozenStudents() {
     // ko'rishi kerak.
     const _cuFrozen = getCurrentUser();
     const allStudents = getItem(STORAGE_KEYS.students, []);
-    let frozen = allStudents.filter(s => s.frozen && !isStaffDemoStudent(s));
+    // 11-noyabr: holat belgisi bo'yicha (muzlatish yozuvi bo'lsa — u, bo'lmasa eski frozen flag).
+    let frozen = allStudents.filter(s => !isStaffDemoStudent(s) && (window.AttendanceRules?.studentStateNow ? window.AttendanceRules.studentStateNow(s) === 'frozen' : s.frozen));
     if (_cuFrozen?.role === 'sales_manager') {
         frozen = filterStudentsForSalesManager(frozen, _cuFrozen);
     }
@@ -8421,10 +8422,14 @@ function computeAdminHome({ students, leads, now = new Date() }) {
     const revenue = mgrRows.reduce((s, m) => s + m.sales, 0);
     const target = mgrRows.reduce((s, m) => s + (m.target || 0), 0);
     const dealsMonth = mgrRows.reduce((s, m) => s + m.deals, 0);
+    const missingAmount = getMissingAmountDealsCount(mgrRows.map(m => m.id));
 
     const leadsToday = allLeads.filter(l => dayOf(l) === todayKey).length;
     const leadsYesterday = allLeads.filter(l => dayOf(l) === yesterdayKey).length;
-    const leadsMonth = allLeads.filter(l => String(dayOf(l) || '').startsWith(monthKey)).length;
+    const _monthLeads = allLeads.filter(l => String(dayOf(l) || '').startsWith(monthKey));
+    const leadsMonth = _monthLeads.length;
+    // Lid konversiyasi: shu oy kelgan lidlardan to'lov yopilganlar (direktor qarori, 11-noyabr).
+    const cohortClosed = _monthLeads.filter(l => st(l) === 'tolov-yopildi').length;
 
     const withDebt = active.filter(s => Number(s.debtAmount || 0) > 0);
     // Muddati o'tgan: to'lov sanasi (YYYY-MM-DD) Toshkent bo'yicha bugundan oldin.
@@ -8459,8 +8464,8 @@ function computeAdminHome({ students, leads, now = new Date() }) {
     const lessonCount = lessons.reduce((n, l) => n + l.count, 0);
 
     return {
-        todayKey, active: active.length, newThisMonth, revenue, target, dealsMonth,
-        leadsToday, leadsYesterday, leadsMonth, debtors: withDebt.length,
+        todayKey, active: active.length, newThisMonth, revenue, target, dealsMonth, missingAmount,
+        leadsToday, leadsYesterday, leadsMonth, cohortClosed, debtors: withDebt.length,
         overdueCount: overdue.length, overdueSum: overdue.reduce((s, x) => s + Number(x.debtAmount || 0), 0),
         funnel, unanswered, unassigned, lessons, lessonCount, mgrRows
     };
@@ -8519,6 +8524,7 @@ function renderAdminHome(user, students, leads, now = new Date()) {
     const diff = d.leadsToday - d.leadsYesterday;
     const maxFunnel = Math.max(1, ...d.funnel.map(f => f.count));
     const conv = d.leadsMonth ? Math.round(d.dealsMonth / d.leadsMonth * 1000) / 10 : 0;
+    const convLead = d.leadsMonth ? Math.round(d.cohortClosed / d.leadsMonth * 1000) / 10 : 0;
     const teacherName = id => {
         const t = typeof resolveTeacherWithVirtual === 'function' ? resolveTeacherWithVirtual(id) : null;
         return t?.name || 'Ustoz biriktirilmagan';
@@ -8531,7 +8537,8 @@ function renderAdminHome(user, students, leads, now = new Date()) {
     const attention = [
         d.unanswered ? { n: d.unanswered, cls: 'ahx-att--danger', t: 'Javobsiz lidlar', s: '24 soatdan ortiq "Yangi lidlar"da turibdi', go: 'leads' } : null,
         d.overdueCount ? { n: d.overdueCount, cls: 'ahx-att--warn', t: 'Muddati oʻtgan toʻlovlar', s: `${adminHomeMoneyShort(d.overdueSum)} · kelishilgan sana oʻtgan`, go: 'debtors' } : null,
-        d.unassigned ? { n: d.unassigned, cls: 'ahx-att--info', t: 'Menejer biriktirilmagan lidlar', s: 'Ochiq bosqichlarda turibdi', go: 'leads' } : null
+        d.unassigned ? { n: d.unassigned, cls: 'ahx-att--info', t: 'Menejer biriktirilmagan lidlar', s: 'Ochiq bosqichlarda turibdi', go: 'leads' } : null,
+        d.missingAmount ? { n: d.missingAmount, cls: 'ahx-att--danger', t: 'Summa kiritilmagan bitimlar', s: 'Bu oy toʻlov yopilgan, lekin summasi yoʻq — tushumga 0 boʻlib kirdi', go: 'leads' } : null
     ].filter(Boolean);
 
     return `<div class="ahx" id="adminHome">
@@ -8567,7 +8574,7 @@ function renderAdminHome(user, students, leads, now = new Date()) {
         <div class="ahx-grid">
             <section class="card ahx-card"><div class="ahx-card-h"><h3>Lidlar bosqichlar boʻyicha <small>· hozir</small></h3><button type="button" class="ahx-link" data-ahx-go="leads">Lidlarga oʻtish</button></div>
                 <ul class="ahx-funnel">${d.funnel.map(f => `<li><span>${escapeHtml(f.label)}</span><i aria-hidden="true"><em style="width:${f.count ? Math.max(3, f.count / maxFunnel * 100) : 0}%"></em></i><b>${f.count}</b></li>`).join('')}</ul>
-                <div class="ahx-closed"><b>${d.dealsMonth}</b><div><strong>${escapeHtml(monthName[0].toUpperCase() + monthName.slice(1))}da toʻlov yopildi</strong><span>bu oy ${d.leadsMonth} ta yangi lid · nisbat ${String(conv).replace('.', ',')}%</span></div></div>
+                <div class="ahx-closed"><b>${d.dealsMonth}</b><div><strong>${escapeHtml(monthName[0].toUpperCase() + monthName.slice(1))}da toʻlov yopildi</strong><span>bu oy ${d.leadsMonth} ta yangi lid · oy sotuvi ${String(conv).replace('.', ',')}% · lid konversiyasi ${String(convLead).replace('.', ',')}%</span></div></div>
             </section>
             <section class="card ahx-card"><div class="ahx-card-h"><h3>Bugungi darslar <small>· ${d.lessonCount} ta${shownLessons.length < d.lessons.length ? `, ${shownLessons.reduce((n, l) => n + l.count, 0)} tasi koʻrsatilgan` : ''}</small></h3><button type="button" class="ahx-link" data-ahx-go="timetable">Dars jadvali</button></div>
                 ${shownLessons.length ? `<ul class="ahx-lessons">${shownLessons.map(l => `<li><b>${escapeHtml(l.time)}</b><div><strong>${escapeHtml(l.group || (l.count === 1 ? l.names[0] : `${l.names[0]} va yana ${l.count - 1} ta`) || 'Dars')}</strong><span>${escapeHtml(teacherName(l.teacherId))}${l.group || l.count > 1 ? ` · ${l.count} oʻquvchi` : ''} · ${l.dur} daq</span></div><span class="ahx-pill ${stateLabel[l.state][1]}">${stateLabel[l.state][0]}</span></li>`).join('')}</ul>` : '<p class="dashboard-empty">Bugun dars yoʻq</p>'}
@@ -8815,7 +8822,7 @@ function bindManagerHome(container) {
         apiFetch('/api/payroll/me').then(data => {
             if (!document.body.contains(salEl)) return;
             if (!data?.linked || !data.current) { salEl.textContent = '—'; return; }
-            salEl.textContent = formatMoney(data.current.total || 0);
+            salEl.textContent = formatMoney(data.current.takeHome ?? data.current.total ?? 0); // qo'lga (jarima/bonus bilan)
             const c = data.current;
             const note = container.querySelector('#mhxSalaryNote');
             if (note) note.textContent = [c.fixed ? `fiksa ${formatMoney(c.fixed)}` : '', c.commission ? `ulush ${formatMoney(c.commission)}` : '', c.bonus ? `bonus ${formatMoney(c.bonus)}` : ''].filter(Boolean).join(' + ') || 'oy yopilganda aniqlanadi';
@@ -8858,11 +8865,12 @@ function computeRopHome({ user, students, leads, now = new Date() }) {
     const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
     const forecast = now.getDate() ? Math.round(teamSales / now.getDate() * daysInMonth) : teamSales;
     const todayStart = new Date(now.toDateString());
-    const overdue = students.filter(s => !s.frozen && !s.isStaffDemo && langs.includes(s.subject || 'english') && Number(s.debtAmount || 0) > 0)
+    const overdue = students.filter(s => !s.isStaffDemo && langs.includes(s.subject || 'english') && (window.AttendanceRules?.isDebtor ? window.AttendanceRules.isDebtor(s) : Number(s.debtAmount || 0) > 0))
         .filter(s => { const d = s.paymentDueDate ? new Date(s.paymentDueDate) : null; return d && !Number.isNaN(d.getTime()) && d < todayStart; });
     const funnel = FUNNEL_STAGES.filter(s => s.id !== 'tolov-yopildi').map(s => ({ ...s, count: list.filter(l => st(l) === s.id).length }));
     return {
         lang, langs, list, managers, open, lateCount, unassigned, newCount, rows, teamSales, teamTarget, forecast,
+        missingAmount: getMissingAmountDealsCount(rows.map(r => r.id)),
         overdueCount: overdue.length, overdueSum: overdue.reduce((a, s) => a + Number(s.debtAmount || 0), 0),
         funnel, openLeads: funnel.reduce((a, f) => a + f.count, 0)
     };
@@ -8902,7 +8910,7 @@ function renderRopHome(user, students, leads, now = new Date()) {
                 id: 'kbxRopPlan', title: `Jamoa rejasi · ${UZ_MONTHS_GEN[now.getMonth()]}`,
                 pill: d.teamTarget > 0 ? (pc.gap >= 0 ? { cls: 'ok', text: `Rejadan ${_kbxMln(pc.gap)} mln oldinda` } : { cls: 'warn', text: `${_kbxMln(-pc.gap)} mln ortda` }) : null,
                 big: `${_kbxMln(d.teamSales)} mln`, of: d.teamTarget > 0 ? `/ ${_kbxMln(d.teamTarget)} mln soʻm` : 'soʻm · reja belgilanmagan',
-                sub: `${pc.daysLeft} kun qoldi${d.teamTarget > 0 ? ` · bugungacha ${_kbxMln(pc.due)} mln boʻlishi kerak edi` : ''} · ${d.managers.length} menejer`,
+                sub: `${pc.daysLeft} kun qoldi${d.teamTarget > 0 ? ` · bugungacha ${_kbxMln(pc.due)} mln boʻlishi kerak edi` : ''} · ${d.managers.length} menejer${d.missingAmount ? ` · <b class="rpx-late">${d.missingAmount} ta bitim summasiz (0 deb olindi)</b>` : ''}`,
                 bar: d.teamTarget > 0 ? { pct: pc.pct, due: pc.duePct, ok: pc.gap >= 0, label: `${pc.pct}% bajarildi, bugungacha ${pc.duePct}% kerak` } : null,
                 foot: d.teamTarget > 0 ? [`<strong>${pc.pct}%</strong> bajarildi`, `Shu tempda <strong>${_kbxMln(pc.forecast)} mln</strong>${pc.forecast < d.teamTarget ? ` — rejaga <strong>${_kbxMln(d.teamTarget - pc.forecast)} mln</strong> yetmaydi` : ''}`] : null,
                 tiles: [
@@ -10285,40 +10293,8 @@ function renderStudents() {
     // ROP ham, admin/boshliq ham shu ta'rifni ko'radi; ustoz kabineti o'z biriktirishlari bo'yicha qoladi.
     if (!isTeacherRole && window.AttendanceRules?.isActiveStudent) students = students.filter(s => window.AttendanceRules.isActiveStudent(s));
 
-    // 8-vazifa (qayta ish 4): O'quvchilar bo'limi Sotuv bo'limi bilan to'liq
-    // integratsiya qilingan — "Faol o'quvchilar" ro'yxatida FAQAT sotuv
-    // bo'limida "To'lov jarayonida" yoki "To'lov yopildi" bosqichida turgan
-    // lidga (leadRef orqali) bog'langan o'quvchilar ko'rinadi. Bu ikki
-    // bo'lim ro'yxati doim bir-biriga mos kelishini kafolatlaydi — Sotuv
-    // bo'limida yo'q o'quvchi bu yerda ham ko'rinmaydi.
-    const _leadsForActiveFilter = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
-    const _allLeadIdSet = new Set();
-    const _activeLeadIdSet = new Set();
-    ['english', 'russian'].forEach(lang => {
-        (_leadsForActiveFilter[lang] || []).forEach(l => {
-            _allLeadIdSet.add(l.id);
-            if (LEAD_STATUSES_NEED_SERIAL.has(normalizeLeadStatus(l.status))) _activeLeadIdSet.add(l.id);
-        });
-    });
-    // Ustoz kabinetida ro'yxat faqat haqiqiy biriktirishga bog'liq. Lid
-    // arxivga o'tishi yoki boshqa CRM bosqichida bo'lishi o'quvchini
-    // ustozdan yashirib qo'ymasligi kerak.
-    if (!isTeacherRole) {
-        // 4-vazifa: yuqoridagi qoida faqat lid HAQIQATAN topilib, uning
-        // bosqichi noto'g'ri bo'lganda ishlashi kerak edi — lekin
-        // `leadRef.id` bazadagi HECH QANDAY lidga to'g'ri kelmasa (masalan
-        // leadRef umuman yo'q eski/qo'lda yaratilgan yozuv, yoki unga
-        // bog'langan lid biror sabab bilan — 2026-08-01'dagi ma'lumot
-        // yo'qolish hodisasi kabi — bazadan yo'qolgan bo'lsa) o'quvchi
-        // shartsiz butunlay ko'rinmas bo'lib qolardi, garchi ilovada haqiqiy
-        // dostupi bo'lsa ham. Endi FAQAT lid haqiqatan topilib, aniq boshqa
-        // (to'lovga aloqasiz) bosqichda turgan holatdagina yashiriladi.
-        students = students.filter(s => {
-            const refId = s.leadRef?.id;
-            if (!refId || !_allLeadIdSet.has(refId)) return true;
-            return _activeLeadIdSet.has(refId);
-        });
-    }
+    // 11-noyabr (direktor): "Faol" — faqat holat belgisi (isActiveStudent). Avvalgi lid bosqichi bo'yicha qo'shimcha
+    // kesish olib tashlandi: Bosh sahifadagi "Faol o'quvchilar" soni bilan ro'yxat endi doim bir xil.
 
     // Search filter
     const searchVal = (document.getElementById('studentsSearch')?.value || '').trim().toLowerCase();
@@ -13021,7 +12997,15 @@ function renderAnalitikaSotuvMarketing() {
     const periodLeads = anLeadsInPeriod(_anMktPeriod);
     const total = periodLeads.length;
     const closed = periodLeads.filter(l => normalizeLeadStatus(l.status) === 'tolov-yopildi');
+    // 11-noyabr (direktor): ikki konversiya alohida. "Lid konversiyasi" — shu davr lidlaridan to'laganlar;
+    // "Davr sotuvi" — davrda to'lov yopilgan bitimlar (lid qachon kelganidan qat'i nazar) ÷ davr lidlari.
     const convRate = total > 0 ? (closed.length / total * 100) : 0;
+    const periodSales = anGetAllLeadsFlat().filter(l => {
+        if (normalizeLeadStatus(l.status) !== 'tolov-yopildi') return false;
+        const d = _getLeadRankingDate(l); const k = d ? leadTashkentDayKey(d) : '';
+        return k && cfDateInPeriod(k, _anMktPeriod);
+    });
+    const salesRate = total > 0 ? (periodSales.length / total * 100) : 0;
     const totalRevenue = closed.reduce((sum, l) => sum + anLeadRevenue(l), 0);
 
     const sources = ['Organik', 'Target'];
@@ -13086,7 +13070,7 @@ function renderAnalitikaSotuvMarketing() {
 
     <div class="cf-kpi-grid" style="margin-bottom:16px">
         <div class="stat-card"><div class="stat-icon purple">📥</div><div class="stat-info"><div class="stat-label">Jami lidlar</div><div class="stat-value" style="font-size:20px">${total}</div></div></div>
-        <div class="stat-card"><div class="stat-icon green">✅</div><div class="stat-info"><div class="stat-label">Konversiya</div><div class="stat-value" style="font-size:20px">${convRate.toFixed(1).replace(".", ",")}%</div></div></div>
+        <div class="stat-card"><div class="stat-icon green">✅</div><div class="stat-info"><div class="stat-label">Lid konversiyasi</div><div class="stat-value" style="font-size:20px">${convRate.toFixed(1).replace(".", ",")}%</div><div class="stat-label" title="Davrda toʻlov yopilgan bitimlar ÷ davr lidlari">Davr sotuvi: <b>${salesRate.toFixed(1).replace(".", ",")}%</b> · ${periodSales.length} ta</div></div></div>
         <div class="stat-card"><div class="stat-icon blue">💰</div><div class="stat-info"><div class="stat-label">Yopilgan savdo summasi</div><div class="stat-value" style="font-size:20px">${fmtMoney(totalRevenue)}</div></div></div>
         <div class="stat-card"><div class="stat-icon yellow">⏱️</div><div class="stat-info"><div class="stat-label">Aloqaga chiqish tezligi</div><div class="stat-value" style="font-size:18px">${avgSpeedHours !== null ? avgSpeedHours.toFixed(1) + ' soat' : "To'planmoqda"}</div></div></div>
     </div>
@@ -25300,7 +25284,7 @@ function closeMyGuideArticle() {
 // ===== Reyting / Leaderboard =====
 
 const MONTHLY_TARGET = 33_000_000;
-const AVG_CHECK = 1_500_000;
+// AVG_CHECK olib tashlandi (11-noyabr): summasiz bitim taxminiy summa olmaydi.
 const DAILY_TARGET = 1_375_000;
 const WEEKLY_TARGET = DAILY_TARGET * 5;
 
@@ -25397,11 +25381,19 @@ function _isPartialInProgressLead(l) {
 
 function _getLeadRankingAmount(l) {
     if (_isPartialInProgressLead(l)) return Number(l.paymentSurvey.paidAmount) || 0;
-    const amount = l.paymentClosedSurvey?.actualAmount
-        || l.paymentClosedSurvey?.totalAmount
-        || l.paymentSurvey?.totalAmount
-        || AVG_CHECK;
-    return Number(amount) || AVG_CHECK;
+    // 11-noyabr (direktor): summa kiritilmagan bitim tushumga 0 bo'lib kiradi (avval 1 500 000 taxminiy qo'shilardi —
+    // ROP statistikasi esa 0 olardi). Bunday bitimlar _leadAmountMissing bilan sanalib, ogohlantirish ko'rsatiladi.
+    return Number(l.paymentClosedSurvey?.actualAmount || l.paymentClosedSurvey?.totalAmount || l.paymentSurvey?.totalAmount) || 0;
+}
+// Shu oy summasi kiritilmagan bitimlar soni (menejerlar ro'yxati bo'yicha) — Bosh sahifa ogohlantirishi.
+function getMissingAmountDealsCount(managerIds) {
+    let n = 0;
+    (managerIds || []).forEach(id => { try { n += _getRankingLeadsInPeriod(id, 'oylik').filter(_leadAmountMissing).length; } catch { /* hisob bo'lmasa — 0 */ } });
+    return n;
+}
+function _leadAmountMissing(l) {
+    if (_isPartialInProgressLead(l)) return false;
+    return !(Number(l.paymentClosedSurvey?.actualAmount || l.paymentClosedSurvey?.totalAmount || l.paymentSurvey?.totalAmount) > 0);
 }
 
 function _getLeadRankingDate(l) {
@@ -25946,7 +25938,10 @@ function computeSalesPlanFactMetrics(lang) {
         sotuvSumma += getManagerSalesForPeriod(m.id, 'oylik');
     });
 
-    const konversiya = lidSoni > 0 ? (sotuvSoni / lidSoni * 100) : 0;
+    const konversiya = lidSoni > 0 ? (sotuvSoni / lidSoni * 100) : 0; // "Oy sotuvi": oyda yopilgan bitimlar ÷ oy lidlari
+    // "Lid konversiyasi": shu oy kelgan lidlardan to'lov yopilganlar (direktor qarori, 11-noyabr).
+    const lidKonv = lidSoni > 0 ? (langLeads.filter(l => (leadTashkentDayKey(l.createdAt || l.date) || '').slice(0, 7) === monthKeyNow
+        && normalizeLeadStatus(l.status) === 'tolov-yopildi').length / lidSoni * 100) : 0;
     const avgCheck = sotuvSoni > 0 ? Math.round(sotuvSumma / sotuvSoni) : 0;
     const leadCost = getSalesPlan(lang).leadCost;
     const budjet = lidSoni * leadCost;
@@ -25962,7 +25957,7 @@ function computeSalesPlanFactMetrics(lang) {
             budjet: Math.round(budjet / elapsedDays),
             romi
         },
-        davr: { lidSoni, leadCost, konversiya, sotuvSoni, avgCheck, sotuvSumma, budjet, romi, days: elapsedDays }
+        davr: { lidSoni, leadCost, konversiya, lidKonv, sotuvSoni, avgCheck, sotuvSumma, budjet, romi, days: elapsedDays }
     };
 }
 
@@ -25974,7 +25969,7 @@ function renderSalesPlanFactCard(lang) {
         <div class="sp-plan-block">
             <div class="sp-plan-block-title">Kunlik o'rtacha</div>
             <div class="sp-row"><span>Lid soni</span><b>${m.kunlik.lidSoni.toLocaleString('uz-UZ')}</b></div>
-            <div class="sp-row"><span>Sotuv konversiyasi</span><b>${fmtPct1(m.kunlik.konversiya)}</b></div>
+            <div class="sp-row"><span title="Oyda toʻlov yopilgan bitimlar ÷ oy lidlari">Oy sotuvi</span><b>${fmtPct1(m.kunlik.konversiya)}</b></div>
             <div class="sp-row"><span>Sotuv soni</span><b>${m.kunlik.sotuvSoni.toLocaleString('uz-UZ')}</b></div>
             <div class="sp-row sp-row-strong"><span>Sotuv summasi</span><b>${fmtMoney(m.kunlik.sotuvSumma)}</b></div>
             <div class="sp-row"><span>Target budjet</span><b>${fmtMoney(m.kunlik.budjet)}</b></div>
@@ -25984,7 +25979,8 @@ function renderSalesPlanFactCard(lang) {
             <div class="sp-plan-block-title">Oylik jami <span class="text-muted" style="font-weight:500">(${m.davr.days} kun)</span></div>
             <div class="sp-row"><span>Lid soni</span><b>${m.davr.lidSoni.toLocaleString('uz-UZ')}</b></div>
             <div class="sp-row"><span>Lid narxi</span><b>${fmtMoney(m.davr.leadCost)}</b></div>
-            <div class="sp-row"><span>Sotuv konversiyasi</span><b>${fmtPct1(m.davr.konversiya)}</b></div>
+            <div class="sp-row"><span title="Oyda toʻlov yopilgan bitimlar ÷ oy lidlari">Oy sotuvi</span><b>${fmtPct1(m.davr.konversiya)}</b></div>
+            <div class="sp-row"><span title="Shu oy kelgan lidlardan toʻlov yopilganlar">Lid konversiyasi</span><b>${fmtPct1(m.davr.lidKonv || 0)}</b></div>
             <div class="sp-row"><span>Sotuv soni</span><b>${m.davr.sotuvSoni.toLocaleString('uz-UZ')}</b></div>
             <div class="sp-row"><span>O'rtacha chek</span><b>${fmtMoney(m.davr.avgCheck)}</b></div>
             <div class="sp-row sp-row-strong"><span>Sotuv summasi</span><b>${fmtMoney(m.davr.sotuvSumma)}</b></div>
@@ -27141,22 +27137,27 @@ function renderDebtorsTable(containerId) {
     // filtr ro'yxatida esa faqat shu qarzdorlarda uchraydigan menejerlar.
     const managers = getItem(STORAGE_KEYS.salesManagers, []);
 
-    let debtors = allStudents.filter(s => {
+    // 11-noyabr (direktor): Qarzdor = faol o'quvchi (holat belgisi) + qarz summasi > 0 — Bosh sahifa va ROP bilan bitta qoida.
+    // Muzlatilgan va ketganlarning qarzi alohida "Ketganlar qarzi" tugmasida.
+    const _R = window.AttendanceRules;
+    const _stateNow = st => (_R?.studentStateNow ? _R.studentStateNow(st) : (st.frozen ? 'frozen' : 'active'));
+    let withDebtAll = allStudents.filter(s => {
         if (s.isStaffDemo) return false;
-        const debt = Number(s.debtAmount || 0);
         if (_debtorsRopLang && (s.subject || 'english') !== _debtorsRopLang) return false;
         if (_debtorsSalesManagerLang && (s.subject || 'english') !== _debtorsSalesManagerLang) return false;
-        // To'liq to'lagan (qoldiq aniq 0) o'quvchi qarzdorlar ro'yxatiga kirmaydi.
-        return debt > 0 || (s.debtAmount == null && s.paymentDueDate);
+        // To'liq to'lagan (qoldiq aniq 0) yoki qarz summasi kiritilmagan o'quvchi qarzdor emas.
+        return Number(s.debtAmount || 0) > 0;
     });
     if (_isDebtorsSalesManager) {
-        debtors = filterStudentsForSalesManager(debtors, _cuDebtors);
+        withDebtAll = filterStudentsForSalesManager(withDebtAll, _cuDebtors);
     }
+    const debtors = withDebtAll.filter(st => _stateNow(st) === 'active');
+    const inactiveDebtors = withDebtAll.filter(st => _stateNow(st) !== 'active');
 
     const dateFrom = _debtorsDateFrom ? new Date(_debtorsDateFrom) : null;
     const dateTo = _debtorsDateTo ? new Date(_debtorsDateTo) : null;
 
-    const filtered = debtors.filter(s => {
+    const passFilters = s => {
         if (!_isDebtorsSalesManager && _debtorsMgrFilter !== 'all' && s.managerId !== _debtorsMgrFilter) return false;
         if (_debtorsTeacherFilter !== 'all' && s.teacherId !== _debtorsTeacherFilter) return false;
         if (_debtorsTariffFilter !== 'all' && (s.tariff || 'standard') !== _debtorsTariffFilter) return false;
@@ -27170,7 +27171,9 @@ function renderDebtorsTable(containerId) {
             }
         }
         return true;
-    });
+    };
+    const filtered = debtors.filter(passFilters);
+    const filteredLeft = inactiveDebtors.filter(passFilters);
 
     const todayStart = new Date(new Date().toDateString());
     const dueOf = st => { const d = st.paymentDueDate ? new Date(st.paymentDueDate) : null; return d && !Number.isNaN(d.getTime()) ? d : null; };
@@ -27182,7 +27185,7 @@ function renderDebtorsTable(containerId) {
 
     const overdueList = filtered.filter(isOverdueSt);
     const monthList = filtered.filter(st => inMonth(st) && !isOverdueSt(st));
-    const shown = _debtorsQuick === 'overdue' ? overdueList : _debtorsQuick === 'month' ? monthList : filtered;
+    const shown = _debtorsQuick === 'overdue' ? overdueList : _debtorsQuick === 'month' ? monthList : _debtorsQuick === 'left' ? filteredLeft : filtered;
     shown.sort((x, y) => (dueOf(x)?.getTime() ?? Infinity) - (dueOf(y)?.getTime() ?? Infinity));
 
     const sumDebt = list => list.reduce((sum, st) => sum + Number(st.debtAmount || 0), 0);
@@ -27199,7 +27202,7 @@ function renderDebtorsTable(containerId) {
         const m = managers.find(m => m.id === id);
         return m ? m.name : '—';
     }
-    const usedMgrIds = new Set(debtors.map(st => st.managerId).filter(Boolean));
+    const usedMgrIds = new Set(withDebtAll.map(st => st.managerId).filter(Boolean));
     const mgrOptions = `<option value="all">Barcha menejerlar</option>` +
         managers.filter(m => usedMgrIds.has(m.id) || m.id === _debtorsMgrFilter).map(m => `<option value="${escapeHtml(m.id)}" ${_debtorsMgrFilter === m.id ? 'selected' : ''}>${escapeHtml(m.name)}</option>`).join('');
 
@@ -27223,7 +27226,9 @@ function renderDebtorsTable(containerId) {
         const overdue = isOverdueSt(st);
         const days = due ? Math.round((new Date(due.toDateString()) - todayStart) / dayMs) : null;
         const dayTxt = days === null ? '' : days < 0 ? `${-days} kun oʻtdi` : days === 0 ? 'bugun' : `${days} kun qoldi`;
-        const badge = st.frozen ? '<span class="debtor-badge frozen">Muzlatilgan</span>'
+        const _stNow = _stateNow(st);
+        const badge = _stNow === 'left' ? '<span class="debtor-badge frozen">Ketgan</span>'
+            : _stNow === 'frozen' ? '<span class="debtor-badge frozen">Muzlatilgan</span>'
             : overdue ? '<span class="debtor-badge overdue">Muddati oʻtgan</span>'
             : st.debtAmount == null ? '<span class="dbx-wait">Qarz aniqlanmagan</span>'
             : due ? '<span class="dbx-wait">Kutilmoqda</span>' : '<span class="dbx-wait">Sana kelishilmagan</span>';
@@ -27267,11 +27272,11 @@ function renderDebtorsTable(containerId) {
     const emptyRow = shown.length === 0
         ? `<tr><td colspan="6" style="text-align:center;padding:60px 20px;color:var(--text-muted)">Bu filtr boʻyicha qarzdor oʻquvchilar yoʻq</td></tr>`
         : '';
-    const quick = [['all', 'Barchasi', filtered.length], ['overdue', 'Muddati oʻtgan', overdueList.length], ['month', 'Bu oy', monthList.length]]
+    const quick = [['all', 'Barchasi', filtered.length], ['overdue', 'Muddati oʻtgan', overdueList.length], ['month', 'Bu oy', monthList.length], ['left', 'Ketganlar qarzi', filteredLeft.length]]
         .map(([k, l, c]) => `<button type="button" class="dbx-seg${_debtorsQuick === k ? ' is-on' : ''}" data-debt-quick="${k}" aria-pressed="${_debtorsQuick === k}">${l} <b>${c}</b></button>`).join('');
 
     container.innerHTML = `<div class="debtors-wrap">
-        <p class="dbx-info">Roʻyxatda qoldigʻi bor barcha oʻquvchilar. <b>Muddati oʻtgan</b> — sotuv menejeri bilan kelishilgan sana oʻtib, qoldiq toʻlanmagan.${_isDebtorsSalesManager ? ' Siz faqat oʻz oʻquvchilaringizni koʻrasiz.' : ''}</p>
+        <p class="dbx-info">Qarzdor — oʻqiyotgan (faol) va qoldigʻi bor oʻquvchi. Muzlatilgan va ketganlar qarzi — <b>Ketganlar qarzi</b> tugmasida (${filteredLeft.length} ta · ${escapeHtml(formatMoney(sumDebt(filteredLeft)))}). <b>Muddati oʻtgan</b> — sotuv menejeri bilan kelishilgan sana oʻtib, qoldiq toʻlanmagan.${_isDebtorsSalesManager ? ' Siz faqat oʻz oʻquvchilaringizni koʻrasiz.' : ''}</p>
         <div class="sfx-tiles">
             <div class="sfx-tile"><small>Muddati oʻtgan qoldiq</small><b class="dbx-red">${escapeHtml(formatMoney(overdueDebt))}</b><span>${overdueList.length} ta oʻquvchi</span></div>
             <div class="sfx-tile"><small>Bu oy kutilayotgan</small><b>${escapeHtml(formatMoney(thisMonthExpected))}</b><span>${monthList.length} ta oʻquvchining navbatdagi qismi</span></div>

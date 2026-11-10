@@ -62,7 +62,8 @@ function buildRoleNotifications(user, now = new Date()) {
             const d = s.paymentDueDate ? new Date(s.paymentDueDate) : null;
             return d && !Number.isNaN(d.getTime()) ? notifTashkentDay(d) : null;
         };
-        const withDebt = own.filter(s => Number(s.debtAmount || 0) > 0);
+        const _AR = typeof window !== 'undefined' ? window.AttendanceRules : (typeof AttendanceRules !== 'undefined' ? AttendanceRules : null);
+        const withDebt = own.filter(s => (_AR?.isDebtor ? _AR.isDebtor(s) : Number(s.debtAmount || 0) > 0));
         const overdue = withDebt.filter(s => { const k = dueKey(s); return k && k < todayKey; })
             .sort((a, b) => Number(b.debtAmount || 0) - Number(a.debtAmount || 0));
         const dueToday = withDebt.filter(s => dueKey(s) === todayKey);

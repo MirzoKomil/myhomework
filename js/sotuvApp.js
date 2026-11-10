@@ -526,7 +526,7 @@
     function screenMenu() {
         const u = user();
         const students = g('filterStudentsForSalesManager') ? filterStudentsForSalesManager(getItem(STORAGE_KEYS.students, []) || [], u) : [];
-        const debt = students.filter(s => Number(s.debtAmount) > 0 && !s.isStaffDemo);
+        const debt = students.filter(s => !s.isStaffDemo && (window.AttendanceRules?.isDebtor ? window.AttendanceRules.isDebtor(s) : Number(s.debtAmount || 0) > 0));
         const debtSum = debt.reduce((a, s) => a + Number(s.debtAmount || 0), 0);
         let place = '';
         try { const rows = getActiveSalesManagers(lang()).map(m => ({ id: m.id, s: getManagerSalesForPeriod(m.id, 'oylik') })).sort((a, b) => b.s - a.s); const i = rows.findIndex(r => String(r.id) === String(mid())); if (i >= 0) place = (i + 1) + '-oʻrin'; } catch (e) { /* reyting hisobi bo'lmasa — bo'sh */ }
@@ -559,7 +559,7 @@
         const u = user();
         const students = g('filterStudentsForSalesManager') ? filterStudentsForSalesManager(getItem(STORAGE_KEYS.students, []) || [], u) : [];
         const today = new Date(new Date().toDateString()).getTime();
-        const list = students.filter(s => !s.isStaffDemo && Number(s.debtAmount) > 0)
+        const list = students.filter(s => !s.isStaffDemo && (window.AttendanceRules?.isDebtor ? window.AttendanceRules.isDebtor(s) : Number(s.debtAmount || 0) > 0))
             .map(s => ({ s, due: localDay(s.paymentDueDate) })).sort((a, b) => (a.due || 9e15) - (b.due || 9e15));
         const over = list.filter(x => x.due && x.due < today), soon = list.filter(x => !x.due || x.due >= today);
         const total = list.reduce((a, x) => a + Number(x.s.debtAmount || 0), 0);

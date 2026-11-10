@@ -24,14 +24,32 @@
         try { return JSON.parse(s.extra_data); } catch { return {}; }
     };
     // s — state'dagi o'quvchi ({frozen, status, isStaffDemo}) yoki students jadvali qatori ({extra_data}).
+    // 11-noyabr (direktor): "Faol o'quvchi" — holat belgisi (o'qiyapti / muzlatilgan / ketdi, school_student_status)
+    // bo'yicha, hamma kabinetda bitta qoida. /api/state o'quvchisida statusHistory bo'lsa — bugungi (Toshkent) holat
+    // hal qiladi; yozuv yo'q eski o'quvchida — flaglar (frozen / status) avvalgidek.
     function isActiveStudent(s) {
         if (!s) return false;
         const x = extraOf(s) || s;
-        if (x.frozen === true || s.legacyFrozen === true) return false;
         if (x.isStaffDemo === true || s.staffDemo === true) return false;
         if (s.legacyInactive === true) return false;
+        const hist = Array.isArray(s.statusHistory) ? s.statusHistory.filter(r => r && !r.cancelled_at) : [];
+        if (hist.length) return statusOn(hist, todayTk()) === 'active';
+        if (x.frozen === true || s.legacyFrozen === true) return false;
         return !INACTIVE.includes(String(x.status || '').toLowerCase());
     }
+    // Hozirgi holat: 'active' | 'frozen' | 'left' — "Muzlatilganlar" / "Tark etganlar" ro'yxatlari shu bilan.
+    function studentStateNow(s) {
+        if (!s) return 'left';
+        const x = extraOf(s) || s;
+        if (x.isStaffDemo === true || s.staffDemo === true || s.legacyInactive === true) return 'left';
+        const hist = Array.isArray(s.statusHistory) ? s.statusHistory.filter(r => r && !r.cancelled_at) : [];
+        if (hist.length) return statusOn(hist, todayTk());
+        if (x.frozen === true || s.legacyFrozen === true) return 'frozen';
+        return INACTIVE.includes(String(x.status || '').toLowerCase()) ? 'left' : 'active';
+    }
+    // 11-noyabr (direktor): Qarzdor = faol o'quvchi + qarz summasi > 0 (summasi kiritilmagan yoki muzlatilgan/ketgan — yo'q).
+    function isDebtor(s) { return !!s && Number(s.debtAmount || 0) > 0 && isActiveStudent(s); }
+    function todayTk() { return new Date(Date.now() + 5 * 3600000).toISOString().slice(0, 10); }
     function calendar() {
         if (typeof module === 'object' && module.exports) return require('./teacherAttendanceCalendar');
         return root.teacherAttendanceCalendar;
@@ -262,6 +280,6 @@
         const r = rate == null || !isFinite(Number(rate)) ? null : Number(rate);
         return { ids: ok.map(m => m.id), count: ok.length, sum: r == null ? null : ok.length * r, over: over.map(m => m.id) };
     }
-    return Object.freeze({ INACTIVE, isActiveStudent, statusOn, activeOn, lessonCountsOn, inMonth, weekPlanSlots, weekPlanCount, monthTotals, assistPossible,
+    return Object.freeze({ INACTIVE, isActiveStudent, studentStateNow, isDebtor, statusOn, activeOn, lessonCountsOn, inMonth, weekPlanSlots, weekPlanCount, monthTotals, assistPossible,
         teacherOn, taughtOn, missedCame, reviewMakeups, pendingMakeupPay, withPast, assistMonthPlan, assistAmount, assistDayState, ASSIST_CAP, ASSIST_MONTHLY });
 });
