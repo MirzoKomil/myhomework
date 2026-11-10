@@ -27,7 +27,7 @@
         const lg = U.lang();
         const students = (g('getItem') ? getItem(STORAGE_KEYS.students, []) : []).filter(s => !s.isStaffDemo && (s.subject || 'english') === lg && s.phone);
         if (aud === 'oquvchilar') return students.map(s => ({ id: s.id, type: 'student', name: s.name || '(ismsiz)', phone: s.phone, sub: s.group || '', teacherId: s.teacherId || '' }));
-        if (aud === 'qarzdorlar') return students.filter(s => Number(s.debtAmount || 0) > 0 || s.paymentDueDate).map(s => ({ id: s.id, type: 'debtor', name: s.name || '(ismsiz)', phone: s.phone,
+        if (aud === 'qarzdorlar') return students.filter(s => (window.AttendanceRules?.isDebtor ? window.AttendanceRules.isDebtor(s) : Number(s.debtAmount || 0) > 0)).map(s => ({ id: s.id, type: 'debtor', name: s.name || '(ismsiz)', phone: s.phone,
             sub: Number(s.debtAmount || 0) > 0 ? `${U.num(s.debtAmount)} soʻm qarz` : (s.paymentDueDate || ''), teacherId: s.teacherId || '' }));
         return U.leads().filter(l => l.phone).map(l => ({ id: l.id, type: 'lead', name: l.name || '(ismsiz)', phone: l.phone, sub: stageLabel(st(l)), stage: st(l), lead: l,
             teacherId: l.paymentOnboarding?.teacherId || l.trialRequest?.teacherId || '' }));
