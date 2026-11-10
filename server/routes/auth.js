@@ -9,7 +9,7 @@ const {
     findStudentByLogin, findDemoStudentByEmployeeId, getStudentPublicId, setSalesManagerUserLink,
     getHrEmployeeById, getHrEmployeeByLogin, setHrEmployeeLogin
 } = require('../db');
-const { signToken, authRequired } = require('../middleware/auth');
+const { signToken, authRequired, JWT_SECRET } = require('../middleware/auth');
 const security = require('../services/authSecurity');
 const dbPool = () => require('../db').pool;
 const clientIp = req => (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket?.remoteAddress || '';
@@ -277,7 +277,7 @@ router.get('/staff-directory', authRequired, async (req, res) => {
     }
 });
 
-router.patch('/me', authRequired, async (req, res) => {
+router.patch('/me', authRequired, (req, res, next) => notImpersonated(req, res, next), async (req, res) => {
     try {
         const { name, email, phone, bio, location, avatar } = req.body || {};
         const user = await findUserById(req.user.id);
@@ -313,7 +313,7 @@ router.patch('/me', authRequired, async (req, res) => {
     }
 });
 
-router.post('/change-password', authRequired, async (req, res) => {
+router.post('/change-password', authRequired, (req, res, next) => notImpersonated(req, res, next), async (req, res) => {
     try {
         const { currentPassword, newPassword, logoutOthers } = req.body || {};
         if (!currentPassword || !newPassword)
@@ -354,7 +354,7 @@ router.get('/sessions', authRequired, async (req, res) => {
     } catch (err) { res.status(500).json({ error: 'Server xatoligi' }); }
 });
 
-router.delete('/sessions/others', authRequired, async (req, res) => {
+router.delete('/sessions/others', authRequired, (req, res, next) => notImpersonated(req, res, next), async (req, res) => {
     try {
         if (!req.user.jti) return res.status(400).json({ error: 'Joriy token eski formatda' });
         await deleteOtherSessions(req.user.id, req.user.jti);
@@ -362,7 +362,7 @@ router.delete('/sessions/others', authRequired, async (req, res) => {
     } catch (err) { res.status(500).json({ error: 'Server xatoligi' }); }
 });
 
-router.delete('/sessions/:id', authRequired, async (req, res) => {
+router.delete('/sessions/:id', authRequired, (req, res, next) => notImpersonated(req, res, next), async (req, res) => {
     try {
         const session = await getSessionById(req.params.id);
         if (!session || session.user_id !== req.user.id)
@@ -380,6 +380,45 @@ router.post('/logout', authRequired, async (req, res) => {
         res.json({ ok: true });
     } catch (err) { res.status(500).json({ error: 'Server xatoligi' }); }
 });
+
+// ── Kabinetga kirish (admin/boshliq xodim kabinetini parolsiz ochadi) ──────────
+// 11-noyabr (direktor): tekshirish uchun har safar parol so'ramaslik. Token ichida `imp` — kim kirgani;
+// sessiya 4 soat; har kirish login_events jurnaliga yoziladi. Bu rejimda parol, profil va sessiyalar o'zgarmaydi.
+const IMPERSONATORS = new Set(['admin', 'boshliq']);
+const IMP_FORBIDDEN_TARGETS = new Set(['admin', 'boshliq', 'student']);
+const IMP_HOURS = 4;
+router.post('/impersonate', authRequired, async (req, res) => {
+    try {
+        if (req.user.imp) return res.status(400).json({ error: 'Avval admin akkauntiga qayting' });
+        if (!IMPERSONATORS.has(req.user.role)) return res.status(403).json({ error: 'Kabinetga faqat admin yoki boshliq kira oladi' });
+        const login = String(req.body?.login || '').trim();
+        if (!login) return res.status(400).json({ error: 'Xodim loginini yuboring' });
+        const target = await findUserByEmail(login);
+        if (!target) return res.status(404).json({ error: 'Bu xodimning CRM akkaunti yoʻq' });
+        if (target.id === req.user.id) return res.status(400).json({ error: 'Bu sizning akkauntingiz' });
+        if (IMP_FORBIDDEN_TARGETS.has(target.role)) return res.status(403).json({ error: 'Admin va boshliq kabinetiga bu yoʻl bilan kirilmaydi' });
+        if (target.disabled_at) return res.status(403).json({ error: 'Bu akkaunt bloklangan (xodim ishdan boʻshatilgan)' });
+        const actor = await findUserById(req.user.id);
+        const jwt = require('jsonwebtoken');
+        const { randomUUID } = require('crypto');
+        const jti = randomUUID();
+        const imp = { id: req.user.id, name: actor?.name || '' };
+        const token = jwt.sign({ id: target.id, email: target.email, role: target.role, jti, imp }, JWT_SECRET, { expiresIn: `${IMP_HOURS}h` });
+        const ip = clientIp(req), userAgent = `[kabinetga kirish: ${imp.name || imp.id}] ` + (req.headers['user-agent'] || '');
+        await createSession({ userId: target.id, jti, userAgent, ip });
+        await security.record(dbPool(), { userId: target.id, login: target.email, ok: true, reason: `impersonate:${req.user.id}`, ip, userAgent }).catch(() => {});
+        res.json({ token, user: publicUser(target), imp: { by: imp, hours: IMP_HOURS } });
+    } catch (err) {
+        console.error('POST /impersonate', err);
+        if (err.code === 'AMBIGUOUS_LOGIN') return res.status(409).json({ error: err.message });
+        res.status(500).json({ error: 'Server xatoligi' });
+    }
+});
+// Kabinetga kirish rejimida o'zgartirib bo'lmaydigan joylar (faqat ko'rish va tekshirish).
+function notImpersonated(req, res, next) {
+    if (req.user?.imp) return res.status(403).json({ error: 'Kabinetga kirish rejimida bu amal yopiq' });
+    next();
+}
 
 // ── Avatar ────────────────────────────────────────────────────────────────────
 
