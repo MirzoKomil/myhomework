@@ -133,7 +133,8 @@
             } else if (!c) { sal.textContent = '—'; if (sub) sub.textContent = 'maosh hisobi bog\'lanmagan · oy yopilganda Moliya tasdiqlaydi'; }
             else {
                 const main = Number(c.mainTotal ?? c.total) || 0, extra = Number(c.assistantTotal) || 0;
-                sal.textContent = num(Number(c.total) || 0);
+                // 11-noyabr: qo'lga (jarima/"Toza oy" bilan) — Moliya → Maoshlar bilan bitta raqam.
+                sal.textContent = num(Number(c.takeHome ?? c.total) || 0);
                 if (sub) sub.innerHTML = `${extra ? `asosiy ${num(main)} + o'tgan yordamchi aloqalari ${num(extra)} · ` : ''}${reviewing ? `<b>+${reviewing} qoplash tekshiruvda</b> (admin tasdiqlasa qo'shiladi) · ` : ''}oy yopilganda Moliya tasdiqlaydi`;
             }
         };

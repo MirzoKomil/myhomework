@@ -145,6 +145,31 @@ function monthSummary(fines, salary, config) {
         takeHome: salary == null ? null : Math.max(0, salary - deducted + bonus) };
 }
 
+// ── Qo'lga summa (direktor qarori, 11-noyabr) ────────────────────────────────
+// qo'lga = maosh + "Toza oy" bonusi − jarimalar (chegara bilan), 0 dan kam emas.
+// Bitta qoida: admin Maoshlar, xodim kabineti va kassa chiqimi shu funksiyadan oladi.
+// eligible=false (admin/jarimasiz rol) — jarima ham, bonus ham yo'q. Maosh 0 bo'lsa bonus berilmaydi.
+function settle(fines, salary, config, { eligible = true } = {}) {
+    const pay = Math.max(0, Math.round(Number(salary) || 0));
+    if (!eligible) return { gross: 0, washed: 0, net: 0, cap: null, deducted: 0, overCap: 0, bonus: 0, salary: pay, takeHome: pay, eligible: false };
+    const s = monthSummary(fines, pay, config);
+    const bonus = pay > 0 ? s.bonus : 0;
+    return { ...s, bonus, salary: pay, takeHome: Math.max(0, pay - s.deducted + bonus), eligible: true };
+}
+// Bir oyda bir nechta maosh hisobi (masalan ikki til) bo'lsa — oylik ayirma/bonus hisoblarga barqaror tartibda taqsimlanadi:
+// bonus birinchisiga, jarima navbat bilan (har hisob 0 dan pastga tushmaydi). parts: [{id, amount}] (tartib — chaqiruvchidan).
+function splitTakeHome(parts, s) {
+    let bonus = Number(s.bonus) || 0, left = Number(s.deducted) || 0;
+    const out = {};
+    for (const p of parts) {
+        const amount = Math.max(0, Math.round(Number(p.amount) || 0));
+        const b = bonus; bonus = 0;
+        const d = Math.min(left, amount + b); left -= d;
+        out[p.id] = { amount, bonus: b, deducted: d, takeHome: amount + b - d };
+    }
+    return out;
+}
+
 // Bitta jarimani qancha yuvish mumkin (sababsiz kelmaslik — limit %).
 function washable(fine, config) {
     const amount = Number(fine.amount || 0), done = Number(fine.washed || 0);
@@ -212,4 +237,4 @@ function canManage(viewer, owner) {
 }
 
 module.exports = { ROLES, ROLE_LABELS, ATT, WORK, ATT_ROLES, DEFAULT_SOFT, defaultConfig, normalizeConfig, nextMonthStart, configFor,
-    attendanceFines, monthSummary, washable, washValue, allocateWash, washDeadline, canWash, appealUntil, streakWashes, canSee, canManage };
+    attendanceFines, monthSummary, settle, splitTakeHome, washable, washValue, allocateWash, washDeadline, canWash, appealUntil, streakWashes, canSee, canManage };

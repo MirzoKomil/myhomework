@@ -33,6 +33,6 @@ module.exports = function finesRouter({ pool, authRequired }) {
     router.post('/washes/:id/decide', handle(tx((db, req) => service.decideWash(db, req.user, req.params.id, req.body || {}))));
     router.get('/admin/config', handle(req => service.getConfig(pool, req.user)));
     router.put('/admin/config', handle(tx((db, req) => service.saveConfig(db, req.user, req.body || {}))));
-    router.post('/admin/totals', handle(req => service.monthTotals(pool, req.user, String(req.body?.month || ''), req.body?.salaries || {})));
+    router.post('/admin/totals', handle(req => service.monthTotals(pool, req.user, String(req.body?.month || ''))));
     return router;
 };

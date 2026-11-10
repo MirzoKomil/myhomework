@@ -270,7 +270,7 @@
         try { leads = Number(window.sotDesk?.queueCount?.() || 0); } catch (e) { leads = 0; }
         try {
             const u = user(), lang = u.linkedManagerLang || 'english', today = tToday();
-            let list = (getItem(STORAGE_KEYS.students, []) || []).filter(s => !s.isStaffDemo && (s.subject || 'english') === lang && Number(s.debtAmount || 0) > 0);
+            let list = (getItem(STORAGE_KEYS.students, []) || []).filter(s => !s.isStaffDemo && (s.subject || 'english') === lang && (window.AttendanceRules?.isDebtor ? window.AttendanceRules.isDebtor(s) : Number(s.debtAmount || 0) > 0));
             if (g('filterStudentsForSalesManager')) list = filterStudentsForSalesManager(list, u);
             debt = list.filter(s => s.paymentDueDate && String(s.paymentDueDate).slice(0, 10) < today).length;
         } catch (e) { debt = 0; }

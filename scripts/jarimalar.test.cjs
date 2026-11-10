@@ -130,3 +130,29 @@ test('oy chegarasi: dekabr oxiri va yanvar boshidagi birinchi kechikishlar — i
     const g = R.attendanceFines([day('2026-10-01', 'on_time', { rawLateMinutes: 8 }), day('2026-10-02', 'on_time', { rawLateMinutes: 8 })], cfg, 'sales');
     assert.deepEqual(g.map(x => [x.amount, x.warning]), [[0, true], [10000, false]]);
 });
+
+// ── 11-noyabr direktor qarori: jarima maoshdan ayiriladi (yagona qo'lga hisobi) ──
+test('qo‘lga: 4 000 000 − 200 000 jarima = 3 800 000 (Toza oy yo‘q, chegara ichida)', () => {
+    const s = R.settle([{ amount: 200000, washed: 0, state: 'active', warning: false }], 4000000, cfg);
+    assert.equal(s.deducted, 200000); assert.equal(s.bonus, 0); assert.equal(s.cap, 400000); assert.equal(s.takeHome, 3800000);
+});
+test('qo‘lga: oylik chegara (10%) — 600 000 jarimadan faqat 400 000 ayiriladi; yuvilgani hisobga olinadi', () => {
+    assert.equal(R.settle([{ amount: 600000, washed: 0, state: 'active' }], 4000000, cfg).takeHome, 3600000);
+    assert.equal(R.settle([{ amount: 300000, washed: 250000, state: 'active' }], 4000000, cfg).takeHome, 3950000);
+});
+test('qo‘lga: "Toza oy" bonusi qo‘shiladi; ogohlantirish va bekor qilingan jarima tozalikni buzmaydi; maosh 0 — bonus yo‘q', () => {
+    assert.equal(R.settle([], 4000000, cfg).takeHome, 4100000);
+    assert.equal(R.settle([{ amount: 0, warning: true, state: 'active' }, { amount: 50000, state: 'cancelled' }], 4000000, cfg).takeHome, 4100000);
+    assert.equal(R.settle([], 0, cfg).takeHome, 0);
+    assert.equal(R.settle([], 4000000, cfg, { eligible: false }).takeHome, 4000000);
+});
+test('qo‘lga 0 dan kam bo‘lmaydi (chegara 100%, jarima maoshdan katta)', () => {
+    const c = R.normalizeConfig({ soft: { capPercent: 100 } });
+    assert.equal(R.settle([{ amount: 900000, state: 'active' }], 500000, c).takeHome, 0);
+});
+test('ikki til hisobi: bonus birinchisiga, jarima navbat bilan, jami = oylik qo‘lga', () => {
+    const s = R.settle([{ amount: 300000, state: 'active' }], 3000000, cfg);
+    const sp = R.splitTakeHome([{ id: 'en', amount: 100000 }, { id: 'ru', amount: 2900000 }], s);
+    assert.deepEqual([sp.en.takeHome, sp.ru.takeHome], [0, 2700000]);
+    assert.equal(sp.en.takeHome + sp.ru.takeHome, s.takeHome);
+});

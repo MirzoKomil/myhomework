@@ -237,13 +237,23 @@ function fineView(f, cfg, today) {
 const FINE_SELECT = `SELECT f.*,TO_CHAR(f.work_date,'YYYY-MM-DD') AS work_date,u.name AS issued_by_name,he.name AS employee_name FROM staff_fines f
     LEFT JOIN users u ON u.id=f.issued_by LEFT JOIN hr_employees he ON he.id=f.employee_id`;
 
-async function salaryFor(db, employeeId, month) {
-    // Hisoblangan maosh: avval shakllantirilgan hisob (salary_transactions), bo'lmasa — null (chegara ko'rsatilmaydi).
-    try {
-        // Bir xodim ikki til bo'yicha alohida hisoblanishi mumkin — oy bo'yicha yig'indi (chegara uchun).
-        const r = (await db.query(`SELECT SUM(amount) AS s, COUNT(*)::int AS n FROM salary_transactions WHERE employee_id=$1 AND TO_CHAR(period_start,'YYYY-MM')=$2`, [employeeId, month])).rows[0];
-        return r && r.n ? Number(r.s) : null;
-    } catch (e) { return null; }
+// Chegara uchun maosh — payroll serverdagi yagona hisob (payroll.monthSalary): admin Maoshlar, "Mening maoshim"
+// va kassa chiqimi bilan bir xil. Brauzer yuborgan summa ishlatilmaydi.
+async function salaryFor(db, employeeId, month, cache) {
+    try { return await require('../payroll').monthSalary(db, employeeId, month, cache); }
+    catch (e) { console.error('[fines] maosh hisoblanmadi:', e.message); return null; }
+}
+// Yagona qo'lga hisobi: qo'lga = maosh + "Toza oy" − jarimalar (chegara bilan). salary — server hisoblagan oy maoshi.
+async function settlement(db, employeeId, month, salary) {
+    const empty = R.settle([], salary, R.defaultConfig(), { eligible: false });
+    if (!(await db.query("SELECT to_regclass('staff_fines') AS t")).rows[0].t) return empty;
+    let o;
+    try { o = await owner(db, employeeId); } catch (e) { return empty; }
+    const cfg = await configAt(db, month + '-01');
+    const rows = (await db.query('SELECT amount,washed,state,warning FROM staff_fines WHERE employee_id=$1 AND month=$2', [employeeId, month])).rows
+        .map(f => ({ ...f, amount: Number(f.amount), washed: Number(f.washed) }));
+    const s = R.settle(rows, salary, cfg, { eligible: !!o.role });
+    return { ...s, count: rows.filter(f => !f.warning && f.state !== 'cancelled').length };
 }
 
 async function mine(db, user, month, now = new Date(), opts = {}) {
@@ -260,9 +270,16 @@ async function mine(db, user, month, now = new Date(), opts = {}) {
     const cfg = await configAt(db, m + '-01');
     const rows = (await db.query(`${FINE_SELECT} WHERE f.employee_id=$1 AND f.month=$2 ORDER BY f.work_date DESC, f.created_at DESC`, [empId, m])).rows;
     const fines = rows.map(f => fineView(f, cfg, today));
-    let salary = opts.salary !== undefined ? opts.salary : await salaryFor(db, empId, m);
+    // Qo'lga — payroll.takeHome (admin Maoshlar, "Mening maoshim" va kassa chiqimi bilan AYNAN bir raqam; "Berildi" bo'lsa muzlatilgani).
+    const list = rows.map(f => ({ ...f, amount: Number(f.amount), washed: Number(f.washed) }));
+    let salary = opts.salary !== undefined ? opts.salary : null, th = null;
+    if (opts.salary === undefined) {
+        try { th = await require('../payroll').takeHome(db, empId, m); salary = th.salary; }
+        catch (e) { console.error('[fines] qo‘lga hisoblanmadi:', e.message); }
+    }
     if (salary == null && opts.salaryLookup) salary = await opts.salaryLookup(m).catch(() => null);
-    const sum = R.monthSummary(rows.map(f => ({ ...f, amount: Number(f.amount), washed: Number(f.washed) })), salary, cfg);
+    let sum = salary == null ? R.monthSummary(list, null, cfg) : R.settle(list, salary, cfg);
+    if (th) sum = { ...sum, deducted: th.fineDeducted, bonus: th.cleanBonus, takeHome: th.takeHome };
     // Seriya: shu oy ish kunlari (vaqtida kelish) — avtomatik yuvishgacha qolgan kunlar
     let streak = { progress: 0, need: 10 };
     if (R.ATT_ROLES.has(o.role)) {
@@ -536,7 +553,7 @@ async function saveConfig(db, user, raw, now = new Date()) {
 
 // ── Moliya: xodim bo'yicha oy jami (Maoshlar sahifasi) ───────────────────────
 // salaries: { employeeId: hisoblangan summa } — chegara uchun. Javob: { employeeId: {gross, washed, net, cap, deducted, bonus} }
-async function monthTotals(db, user, month, salaries = {}) {
+async function monthTotals(db, user, month) {
     await requireAdmin(db, user);
     if (!t.isMonth(month)) throw error(400, 'Oy notoʻgʻri');
     const cfg = await configAt(db, month + '-01');
@@ -544,9 +561,11 @@ async function monthTotals(db, user, month, salaries = {}) {
     const by = {};
     for (const r of rows) (by[r.employee_id] ||= []).push({ ...r, amount: Number(r.amount), washed: Number(r.washed) });
     const out = {};
+    // Chegara uchun maosh brauzerdan olinmaydi (11-noyabr) — server hisobi (payroll.monthSalary).
+    const salCache = new Map(); // bitta til hisobi har xodim uchun qayta bajarilmasin
     for (const [id, list] of Object.entries(by)) {
-        const s = R.monthSummary(list, salaries[id] != null ? Number(salaries[id]) : null, cfg);
-        out[id] = { gross: s.gross, washed: s.washed, net: s.net, cap: s.cap, deducted: s.deducted, bonus: s.bonus, count: list.filter(f => !f.warning && f.state !== 'cancelled').length };
+        const s = R.settle(list, await salaryFor(db, id, month, salCache), cfg);
+        out[id] = { gross: s.gross, washed: s.washed, net: s.net, cap: s.cap, deducted: s.deducted, bonus: s.bonus, takeHome: s.takeHome, count: list.filter(f => !f.warning && f.state !== 'cancelled').length };
     }
     // Kredit: yuvilgan jarima keyin sababli bo'ldi va summani boshqa jarimaga o'tkazib bo'lmadi — admin hal qiladi.
     for (const c of (await db.query('SELECT employee_id,SUM(amount)::int AS s FROM staff_fine_credits WHERE month=$1 AND NOT resolved GROUP BY 1', [month])).rows) {
@@ -606,4 +625,4 @@ async function pushEvents(db, userId, now = new Date()) {
 }
 
 module.exports = { SCHEMA, initSchema, tick, pushEvents, syncAttendance, mine, unseen, markSeen, detail, appeal, answerAppeal, team, issue, requestWash, washInbox, decideWash,
-    getConfig, saveConfig, monthTotals, counts, appeals, fineRole, viewer };
+    getConfig, saveConfig, monthTotals, settlement, counts, appeals, fineRole, viewer };

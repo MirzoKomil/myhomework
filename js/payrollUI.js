@@ -97,31 +97,25 @@
         const main = isMain ? N.monthStudentCount(row.employeeId, _financeLang, state.month) : 0;
         return [main ? `${main} o‘quvchi · shu oy` : '', asst ? `${asst} o‘quvchi yordamchi sifatida` : ''].filter(Boolean).join(' + ') || '0 o‘quvchi';
     }
-    // Jarimalar (server/services/fines): har xodim ostida shu oy jarimasi (oylik chegara bilan) va qo'lga tegadigan summa.
-    // Maosh hisobi (engine, salary_transactions) o'zgarmaydi — ayirish to'lov paytida admin tomonidan (PR izohiga qarang).
+    // Jarimalar: qo'lga summa SERVERDA hisoblanadi (payroll.takeHome — xodim kabineti va kassa chiqimi bilan bitta qoida):
+    // qo'lga = maosh + "Toza oy" − jarimalar (oylik chegara bilan). Brauzer hech narsa hisoblamaydi va yubormaydi.
     function finesUnder(root, result) {
-        const month = String(result?.period?.start || '').slice(0, 7);
         const cells = [...root.querySelectorAll('[data-fine-emp]')].filter(td => td.dataset.fineEmp);
-        if (!/^\d{4}-\d{2}$/.test(month) || !cells.length || typeof apiFetch !== 'function') return;
-        // Bir xodim ikki til qatorida bo'lishi mumkin: chegara uchun maosh qatorlar yig'indisi, jarima faqat birinchi qatorda.
-        const salaries = {};
-        for (const td of cells) salaries[td.dataset.fineEmp] = (salaries[td.dataset.fineEmp] || 0) + (Number(td.dataset.fineTotal) || 0);
-        apiFetch('/api/fines/admin/totals', { method: 'POST', body: JSON.stringify({ month, salaries }) }).then(r => {
-            const seen = new Set();
-            for (const td of cells) {
-                td.querySelector('.payroll-fine')?.remove();
-                const id = td.dataset.fineEmp;
-                if (seen.has(id)) continue;
-                seen.add(id);
-                const f = r?.totals?.[id], multi = cells.filter(c => c.dataset.fineEmp === id).length > 1;
-                const el = document.createElement('small');
-                el.className = 'payroll-fine' + (f?.deducted ? '' : ' is-zero');
-                el.textContent = f?.deducted ? `Jarima: −${money(f.deducted)}${f.washed ? ` (yuvildi ${money(f.washed)})` : ''} → qoʻlga ${money(Math.max(0, salaries[id] - f.deducted))}${multi ? ' (ikkala til jami)' : ''}`
-                    : f?.count === 0 || !f ? (r.cleanBonus ? `Jarima yoʻq · “Toza oy” +${money(r.cleanBonus)}` : 'Jarima yoʻq') : 'Jarima yuvilgan';
-                if (f?.credit) el.textContent += ` · ⚠ kredit ${money(f.credit)} (yuvilgan jarima keyin sababli boʻldi — tekshiring)`;
-                td.appendChild(el);
-            }
-        }).catch(() => { /* jarimalar moduli yo'q yoki ruxsat yo'q — maosh jadvali o'zgarmaydi */ });
+        const rows = result?.rows || [];
+        cells.forEach((td, i) => {
+            td.querySelector('.payroll-fine')?.remove();
+            const row = rows.find(r => r.employeeId === td.dataset.fineEmp && String(r.transactionId || '') === (td.dataset.fineTx || '')) || rows[i];
+            if (!row || row.takeHome == null) return;
+            const el = document.createElement('small');
+            el.className = 'payroll-fine' + (row.fineDeducted ? '' : ' is-zero');
+            const multi = row.multiLang ? ' (ikkala til jami)' : '';
+            if (row.settlementLegacy) el.textContent = 'Qoʻlga: ' + money(row.takeHome) + multi + ' · yangi qoidadan oldin berilgan (jarima ayirilmagan)';
+            else if (row.fineEligible === false) el.textContent = 'Jarima qoʻllanmaydi';
+            else el.textContent = [row.fineDeducted ? `Jarima: −${money(row.fineDeducted)}${row.fineWashed ? ` (yuvildi ${money(row.fineWashed)})` : ''}${row.fineCap != null && row.fineGross - row.fineWashed > row.fineCap ? ` · chegara ${money(row.fineCap)}` : ''}` : (row.fineCount ? 'Jarima yuvilgan' : 'Jarima yoʻq'),
+                row.cleanBonus ? `“Toza oy” +${money(row.cleanBonus)}` : '', `→ qoʻlga ${money(row.takeHome)}${multi}`].filter(Boolean).join(' · ');
+            if (row.settlementFrozen) el.textContent += ' · kassaga shu summa';
+            td.appendChild(el);
+        });
     }
     function renderPayroll(root, result) {
         root.dataset.manualDirty = '';
@@ -129,7 +123,7 @@
         body.innerHTML = `<div class="payroll-heading"><h3>Maoshlar <small>· ${esc(typeof formatDateShort === 'function' ? formatDateShort(result.period.start) : result.period.start)} – ${esc(typeof formatDateShort === 'function' ? formatDateShort(result.period.end) : result.period.end)}</small></h3>
             <button class="btn-primary-sm" data-payroll-accrue>Maoshlarni shakllantirish</button></div>
             ${(() => { const rows = result.rows || [], paid = rows.filter(r => r.status === 'paid'), unpaid = rows.filter(r => r.status !== 'paid'), sum = list => list.reduce((a, r) => a + Number(r.total || 0), 0);
-                return `<div class="pfx-tiles"><div class="pfx-tile"><small>Jami hisoblangan</small><b>${money(result.total)}</b><span>${rows.length} xodim</span></div><div class="pfx-tile"><small>Berildi</small><b class="pfx-ok">${money(sum(paid))}</b><span>${paid.length} xodim</span></div><div class="pfx-tile"><small>Berilmagan</small><b>${money(sum(unpaid))}</b><span>${unpaid.length} xodim</span></div>${(result.corrections || []).filter(c => c.status !== 'approved' && c.status !== 'dismissed').length ? `<div class="pfx-tile"><small>Tuzatishlar</small><b class="pfx-warn">${(result.corrections || []).filter(c => c.status !== 'approved' && c.status !== 'dismissed').length} ta kutmoqda</b><span>pastda koʻrib chiqing</span></div>` : ''}</div>`; })()}
+                return `<div class="pfx-tiles"><div class="pfx-tile"><small>Jami hisoblangan</small><b>${money(result.total)}</b><span>${rows.length} xodim</span></div>${result.takeHomeTotal != null ? `<div class="pfx-tile"><small>Qoʻlga (jarima/bonus bilan)</small><b>${money(result.takeHomeTotal)}</b><span>kassadan chiqadigan</span></div>` : ''}<div class="pfx-tile"><small>Berildi</small><b class="pfx-ok">${money(sum(paid))}</b><span>${paid.length} xodim</span></div><div class="pfx-tile"><small>Berilmagan</small><b>${money(sum(unpaid))}</b><span>${unpaid.length} xodim</span></div>${(result.corrections || []).filter(c => c.status !== 'approved' && c.status !== 'dismissed').length ? `<div class="pfx-tile"><small>Tuzatishlar</small><b class="pfx-warn">${(result.corrections || []).filter(c => c.status !== 'approved' && c.status !== 'dismissed').length} ta kutmoqda</b><span>pastda koʻrib chiqing</span></div>` : ''}</div>`; })()}
             <p class="payroll-note">Jami: <strong>${money(result.total)}</strong>. “Berildi” faqat pul haqiqatan berilgach belgilanadi. Bu tugma kassadan avtomatik pul yechmaydi.</p>
             <div class="payroll-table-wrap"><table class="payroll-table"><thead><tr><th>Xodim</th><th>Davr</th><th>Asosiy parametrlar</th><th>Bonus / qo‘shimcha</th><th>Jami</th><th>Holat</th></tr></thead><tbody>
             ${result.rows.map(row => `<tr>
@@ -139,7 +133,7 @@
                     ${row.role === 'rop' ? `<br>Toza aylanma: ${money(row.cleanTurnover)}<br>Reja: ${Number(row.completion).toFixed(1)}% · ulush ${row.rate}%${row.blocked ? '<p class="payroll-alert">Reja tasdiqlanmagan</p>' : ''}` : ''}
                     ${row.mainTotal !== undefined ? `<p>Asosiy: ${money(row.mainTotal)} · ${row.mainLessons} dars<br>Yordamchi: ${money(row.assistantTotal)} · ${row.assistantLessons} dars</p>` : ''}
                     ${row.breakdown?.length ? `<details><summary>O‘quvchilar bo‘yicha</summary>${row.breakdown.map(b => `<p>${esc(b.name)} · ${b.dutyRole === 'assistant' ? 'Yordamchi · ' : b.dutyRole === 'main' ? 'Asosiy · ' : ''}${esc(b.month)}: ${b.lessons}/${b.expected} dars → ${money(b.earned)}</p>`).join('')}</details>` : ''}</td>
-                <td data-label="Bonus">${money(row.bonus)}${row.adjustments?.length ? `<details><summary>Tuzatish: ${money(row.adjustmentTotal)}</summary>${row.adjustments.map(a => `<p>${esc(a.sourceStart)} – ${esc(a.sourceEnd)}: ${money(a.amount)}</p>`).join('')}</details>` : ''}</td><td data-label="Jami" data-fine-emp="${esc(row.employeeId || '')}" data-fine-total="${Number(row.total) || 0}"><strong>${money(row.total)}</strong>${row.unpaidDebt ? `<small>Keyingi davrga qarzdorlik: ${money(row.unpaidDebt)} (hisob yopilgach tekshiriladi)</small>` : ''}${row.frozen ? '<small>To‘langan hisob saqlangan</small>' : ''}</td>
+                <td data-label="Bonus">${money(row.bonus)}${row.adjustments?.length ? `<details><summary>Tuzatish: ${money(row.adjustmentTotal)}</summary>${row.adjustments.map(a => `<p>${esc(a.sourceStart)} – ${esc(a.sourceEnd)}: ${money(a.amount)}</p>`).join('')}</details>` : ''}</td><td data-label="Jami" data-fine-emp="${esc(row.employeeId || '')}" data-fine-tx="${esc(row.transactionId || '')}"><strong>${money(row.total)}</strong>${row.unpaidDebt ? `<small>Keyingi davrga qarzdorlik: ${money(row.unpaidDebt)} (hisob yopilgach tekshiriladi)</small>` : ''}${row.frozen ? '<small>To‘langan hisob saqlangan</small>' : ''}</td>
                 <td data-label="Holat"><span class="badge ${row.status === 'paid' ? 'badge-success' : ''}">${row.status === 'paid' ? 'Berildi' : 'Berilmadi'}</span>
                     ${row.status !== 'paid' ? `<button class="btn-secondary-sm" data-payroll-paid="${esc(row.transactionId || '')}" data-zero-payment="${row.total === 0}" ${!row.transactionId || row.stale || row.blocked ? 'disabled' : ''}>${row.total === 0 ? '0 so‘mlik hisobni yopish' : 'Berildi deb belgilash'}</button>${row.stale ? '<small>Qayta shakllantirish kerak</small>' : ''}` : ''}</td></tr>`).join('') || '<tr><td colspan="6">Mos xodimlar topilmadi</td></tr>'}
             </tbody></table></div>
@@ -162,7 +156,7 @@
         body.querySelectorAll('[data-payroll-paid]').forEach(button => { button.onclick = () => {
             if (!confirm(button.dataset.zeroPayment === 'true'
                 ? '0 so‘mlik davr hisobini yopasizmi? Qarzdorlik keyingi davr uchun tuzatish sifatida tekshiriladi. Kassadan pul yechilmaydi.'
-                : 'Pul xodimga haqiqatan berildimi? Hisob bundan keyin o‘zgarmaydi. Kassadan pul yechilmaydi.')) return;
+                : 'Pul xodimga haqiqatan berildimi? Hisob va qoʻlga summa (jarima ayirilgan, “Toza oy” qoʻshilgan) shu paytda muzlatiladi — kassa chiqimi shu summada yoziladi. Kassadan pul avtomatik yechilmaydi.')) return;
             action(root, button, async () => { await api('transactions/' + encodeURIComponent(button.dataset.payrollPaid) + '/paid', {}); await load('maoshlar', true); });
         }; });
         body.querySelectorAll('[data-adjustment-source]').forEach(button => { button.onclick = () => {

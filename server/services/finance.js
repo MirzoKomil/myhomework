@@ -1123,8 +1123,11 @@ async function load(db) {
         .map(e => ({ id: e.id, assetId: e.asset_id, kind: e.kind, date: e.d, amount: Number(e.amount), reason: e.reason, actorName: e.actor_name }));
     const salaryRows = (await db.query(`SELECT s.id,s.employee_id,s.language,s.amount,s.status,TO_CHAR(s.period_start,'YYYY-MM-DD') AS ps,TO_CHAR(s.period_end,'YYYY-MM-DD') AS pe,
         s.paid_at,he.name,COALESCE(sr.role,he.role) AS role FROM salary_transactions s LEFT JOIN hr_employees he ON he.id=s.employee_id LEFT JOIN fin_salary_roles sr ON sr.salary_id=s.id ORDER BY s.period_end`).catch(() => ({ rows: [] }))).rows;
+    // 11-noyabr: jarima ayirilgan (muzlatilgan) qo'lga summa — foyda-zarar va maosh majburiyati shundan. Yozuvi yo'q eski hisob — to'liq summa.
+    const settled = await salarySettlements(db);
     const salaries = salaryRows.map(s => ({ id: s.id, entity: s.language, employeeId: s.employee_id, employeeName: s.name || s.employee_id, role: s.role || '',
-        amount: Number(s.amount), status: s.status, periodStart: s.ps, periodEnd: s.pe, accrualDate: s.pe, categoryCode: salaryCategory(s.role),
+        amount: settled.has(s.id) ? Number(settled.get(s.id).take_home) : Number(s.amount), grossAmount: Number(s.amount),
+        fineDeducted: settled.has(s.id) ? Number(settled.get(s.id).fine_deducted) : 0, cleanBonus: settled.has(s.id) ? Number(settled.get(s.id).bonus) : 0, status: s.status, periodStart: s.ps, periodEnd: s.pe, accrualDate: s.pe, categoryCode: salaryCategory(s.role),
         paidAt: s.paid_at ? new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tashkent' }).format(new Date(s.paid_at)) : '' }));
     const receivables = [], studentStatus = [], studentDebts = [], studentFreezes = [];
     // Holat jurnalidan (baza triggeri yozadi, CRM brauzeri emas): muzlatish oraliqlari, tashlab ketish va o'chirish sanalari.
@@ -1559,6 +1562,12 @@ async function voidPayable(pool, actor, id, body) {
         return { ok: true };
     });
 }
+// Maoshlar "Berildi" belgilaganda muzlatilgan qo'lga summa (payroll.markPaid → salary_fine_settlements).
+async function salarySettlements(db, salaryId = null) {
+    if (!(await db.query("SELECT to_regclass('salary_fine_settlements') AS t")).rows[0].t) return new Map();
+    const rows = (await db.query(`SELECT salary_id,salary,fine_deducted,bonus,take_home FROM salary_fine_settlements${salaryId ? ' WHERE salary_id=$1' : ''}`, salaryId ? [salaryId] : [])).rows;
+    return new Map(rows.map(r => [r.salary_id, r]));
+}
 async function recordSalaryPayment(pool, actor, salaryId, body) {
     return transaction(pool, async db => {
         const user = await access(db, actor);
@@ -1568,9 +1577,13 @@ async function recordSalaryPayment(pool, actor, salaryId, body) {
         const s = (await db.query(`SELECT s.*,he.name,COALESCE(sr.role,he.role) AS role FROM salary_transactions s LEFT JOIN hr_employees he ON he.id=s.employee_id LEFT JOIN fin_salary_roles sr ON sr.salary_id=s.id WHERE s.id=$1`, [salaryId])).rows[0];
         if (!s) throw error(404, 'Maosh hisobi topilmadi');
         if (s.status !== 'paid') throw error(409, 'Avval Maoshlar bo‘limida hisobni tasdiqlab, “To‘landi” deb belgilang');
+        // Qo'lga summa (jarima ayirilgan, "Toza oy" qo'shilgan) — Maoshlar sahifasi va xodim ko'rgan raqam. Eski hisob — to'liq summa.
+        const st = (await salarySettlements(db, salaryId)).get(salaryId) || null;
+        const target = st ? Number(st.take_home) : Number(s.amount);
         if (Number(s.amount) <= 0) throw error(400, 'Nol yoki manfiy maosh uchun chiqim yozilmaydi');
+        if (target <= 0) throw error(400, 'Jarimalar ayirilgach qo‘lga summa 0 — kassadan chiqim yozilmaydi');
         const already = await sumPaid(db, 'salary_id=$1', [salaryId]);
-        if (already >= Number(s.amount)) {
+        if (already >= target) {
             const prior = (await db.query('SELECT id FROM fin_transactions WHERE salary_id=$1 AND reverses_id IS NULL ORDER BY created_at DESC LIMIT 1', [salaryId])).rows[0];
             return { id: prior?.id, duplicate: true };
         }
@@ -1584,18 +1597,25 @@ async function recordSalaryPayment(pool, actor, salaryId, body) {
         const accruedBy = hasAudit ? (await db.query("SELECT 1 FROM salary_audit WHERE action='accrue' AND entity_id=$1 AND actor_id=$2 LIMIT 1", [salaryId, user.id])).rows.length > 0 : false;
         if (!user.director && accruedBy) throw error(403, 'Maoshni hisoblagan xodim kassadan chiqimni o‘zi yoza olmaydi — boshqa moliya xodimi yoki rahbar');
         if (!user.director && s.paid_by && s.paid_by === user.id) throw error(403, 'Maoshni tasdiqlagan xodim kassadan chiqimni o‘zi yoza olmaydi — boshqa moliya xodimi yoki rahbar');
-        const pay = Number(s.amount) - already, settings = (await settingsRow(db)).data;
+        const pay = target - already, settings = (await settingsRow(db)).data;
         await requireOutflowApproval(db, user, settings, pay, 'Maosh to‘lovi');
         await assertNoOverdraft(db, user, account.id, day, pay);
         // Imzolangan to'lov qaydnomasi / bank o'tkazmasi — "soxta xodim" xavfiga qarshi.
         const receiptUrl = await requireEvidence(db, body.receiptUrl, { required: pay >= (Number(settings.evidenceMin) || 1000000), label: 'To‘lov qaydnomasi yoki bank o‘tkazmasi' });
         const id = randomUUID();
         await db.query(`INSERT INTO fin_transactions(id,entity,txn_date,type,category_code,account_id,amount,counterparty,description,salary_id,receipt_url,actor_id,actor_name)
-            VALUES($1,$2,$3,'expense',$4,$5,$6,$7,$8,$9,$10,$11,$12)`, [id, s.language, day, salaryCategory(s.role), account.id, Number(s.amount) - already, s.name || s.employee_id,
-            `Maosh ${toKey(s.period_start)} — ${toKey(s.period_end)}`, salaryId, receiptUrl, user.id, user.name]);
-        await audit(db, user, 'salary-cash-out', id, null, { salaryId, amount: pay, date: day, account: account.id, outflowAmount: user.director ? undefined : pay });
+            VALUES($1,$2,$3,'expense',$4,$5,$6,$7,$8,$9,$10,$11,$12)`, [id, s.language, day, salaryCategory(s.role), account.id, pay, s.name || s.employee_id,
+            `Maosh ${toKey(s.period_start)} — ${toKey(s.period_end)}${settlementNote(st)}`, salaryId, receiptUrl, user.id, user.name]);
+        await audit(db, user, 'salary-cash-out', id, null, { salaryId, amount: pay, gross: Number(s.amount), fineDeducted: st ? Number(st.fine_deducted) : 0, cleanBonus: st ? Number(st.bonus) : 0, date: day, account: account.id, outflowAmount: user.director ? undefined : pay });
         return { id, duplicate: false };
     });
+}
+
+function settlementNote(st) {
+    if (!st) return '';
+    const f = n => Math.round(Number(n) || 0).toLocaleString('en-US').replaceAll(',', ' ');
+    const bits = [Number(st.fine_deducted) > 0 ? `jarima −${f(st.fine_deducted)}` : '', Number(st.bonus) > 0 ? `Toza oy +${f(st.bonus)}` : ''].filter(Boolean);
+    return bits.length ? ` (maosh ${f(st.salary)}, ${bits.join(', ')})` : '';
 }
 
 // ---------- Tushumlar reyestrini hujjat asosida tuzatish ----------
