@@ -20,6 +20,8 @@
     const kpiRate = (lang, d) => { const r = getC('payrollRates', {})?.[lang || 'english']?.teacher?.rates; const v = Number(r?.[d]); return Number.isFinite(v) && v > 0 ? v : null; };
     const role = () => (typeof getCurrentUser === 'function' ? getCurrentUser()?.role : '') || '';
     const isFull = () => ['admin', 'boshliq'].includes(role());
+    // Qoldirilgan dars bilan bog'lash (qoplash / "Keldi · 2 dars") — akademik rahbar ham admin kabi (server: makeupOwner).
+    const canLink = () => isFull() || role() === 'akademik';
     const canManage = () => ['admin', 'boshliq', 'rop', 'akademik'].includes(role());
     const canSeePayroll = () => ['admin', 'boshliq'].includes(role());
     const getC = (k, d) => (typeof getItem === 'function' && typeof STORAGE_KEYS !== 'undefined' && STORAGE_KEYS[k] ? getItem(STORAGE_KEYS[k], d) : d);
@@ -338,7 +340,7 @@
         else if (c.state === 'mk') { cls = 'mk' + (m.status === 'review' ? ' is-review' : m.status === 'planned' ? ' is-plan' : ''); txt = 'Q'; label = m.status === 'review' ? 'Qoplash · tekshiruvda' : m.status === 'planned' ? 'Qoplash rejada' : 'Qoplash darsi'; }
         else if (c.state === 'unmarked') { cls = 'warn'; txt = '!'; label = 'Vaqti o\'tdi, belgilanmagan'; }
         else if (c.state === 'planned') { cls = 'plan'; txt = String(c.d); label = 'Rejadagi dars'; }
-        const click = editable && (c.state !== 'off' || (isFull() && r.openMissed.length)) && c.state !== 'planned';
+        const click = editable && (c.state !== 'off' || (canLink() && r.openMissed.length)) && c.state !== 'planned';
         const today = c.date === td ? ' is-today' : '';
         return click ? `<td class="an-td${today}"><button type="button" class="an-c an-c--${cls}" data-cell="${esc(r.s.id)}" data-date="${c.date}" aria-label="${esc(r.s.name)}, ${dW(c.date)}: ${label}">${txt}</button></td>`
             : `<td class="an-td${today}"><span class="an-c an-c--${cls}" title="${label}">${txt}</span></td>`;
@@ -452,7 +454,7 @@
     function cellPopover(anchor, r, t, date, done) {
         closePop();
         const s = r.s, c = r.cells.find(x => x.date === date);
-        const missed = isFull() && date.slice(0, 7) >= '2026-10' && !(c.mk) ? r.openMissed.filter(d => d !== date) : [];
+        const missed = canLink() && date.slice(0, 7) >= '2026-10' && !(c.mk) ? r.openMissed.filter(d => d !== date) : [];
         const pick = missed.length ? `<label class="an-pick">Qaysi qoldirilgan dars o'rniga? <select data-missed>${missed.map(d => `<option value="${d}">${dW(d)}</option>`).join('')}</select></label>` : '';
         const btns = [];
         if (c.sched) {
