@@ -589,7 +589,7 @@
         const av = window.schoolUI?.studentAvatar ? window.schoolUI.studentAvatar({ ...loc, id: s.id, name: s.name }, 64) : ava(s.name, 64);
         const tg = loc.telegramGroupLink || '';
         const qa = (icon, label, attr) => `<${attr.startsWith('href') ? 'a' : 'button type="button"'} class="aka-qa" ${attr}>${ic(icon, 20)}<span>${esc(label)}</span></${attr.startsWith('href') ? 'a' : 'button'}>`;
-        const hero = `<section class="aka-shero aka-s1">${av}<span><strong>${esc(s.name || '')}</strong><small>${esc(['ID ' + s.id, s.schedule].filter(Boolean).join(' · '))}</small></span></section>
+        const hero = `<section class="aka-shero aka-s1">${av}<span><strong>${esc(s.name || '')}</strong><small>${esc(s.schedule || '')}</small></span></section>
             <div class="aka-qas aka-s1">${s.phone ? qa('phone', 'Qoʻngʻiroq', `href="${esc(telHref(s.phone))}"`) : ''}${tg ? qa('send', 'Dars guruhi', `href="${esc(tg)}" target="_blank" rel="noopener"`) : ''}${qa('check', 'Davomat', 'data-a-crm="teachers-section:attendance"')}</div>`;
         return head + `<div class="aka-body aka-body--bar">
             ${hero}
