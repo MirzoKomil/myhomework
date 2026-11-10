@@ -54,6 +54,14 @@ CREATE TABLE IF NOT EXISTS salary_adjustment_applications (
     PRIMARY KEY(adjustment_id,salary_transaction_id)
 );
 ALTER TABLE hr_employees ADD COLUMN IF NOT EXISTS kpi_template_id TEXT NOT NULL DEFAULT '';
+-- 11-noyabr (direktor qarori): jarima maoshdan ayiriladi. "Berildi" belgilanganda qo'lga summa muzlatiladi;
+-- kassa chiqimi va foyda-zarar shu yozuvdan oladi. Yozuvi yo'q eski to'langan hisoblar — to'liq summa (eski qoida).
+CREATE TABLE IF NOT EXISTS salary_fine_settlements (
+    salary_id TEXT PRIMARY KEY REFERENCES salary_transactions(id), employee_id TEXT NOT NULL, month TEXT NOT NULL,
+    salary BIGINT NOT NULL, fine_deducted BIGINT NOT NULL DEFAULT 0 CHECK(fine_deducted >= 0), bonus BIGINT NOT NULL DEFAULT 0 CHECK(bonus >= 0),
+    take_home BIGINT NOT NULL CHECK(take_home >= 0), detail JSONB NOT NULL DEFAULT '{}',
+    actor_id TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 `;
 function error(status, message) { return Object.assign(new Error(message), { status }); }
 function stableJson(value) {
@@ -364,11 +372,78 @@ async function calculate(db, p, lang, withCorrections = true) {
         total: rows.reduce((sum, r) => sum + r.total, 0), revision: config.revision,
         sourceHash: hash({ result, revision: config.revision }), _bases: bases };
 }
+// ── Qo'lga summa: YAGONA hisob (direktor qarori, 11-noyabr) ─────────────────
+// qo'lga = maosh (server hisobi, tasdiqlangan tuzatishlar bilan) + "Toza oy" − jarimalar (chegara bilan), 0 dan kam emas.
+// Admin Maoshlar (preview), xodim "Mening maoshim" (mySalary), jarima kabineti (fines.mine) va kassa chiqimi
+// (markPaid muzlatadi → finance.recordSalaryPayment) shu yerdan oladi. Brauzer yuborgan summa ishlatilmaydi.
+function monthPeriod(month) {
+    const [y, m] = month.split('-').map(Number);
+    return engine.period(month + '-01', new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10));
+}
+// Xodimning shu oydagi maosh qismlari: jonli hisob (o'z tili) + boshqa til bo'yicha shakllantirilgan hisoblar (bo'lsa).
+// live: { lang, row } — chaqiruvchi allaqachon calculate() qilgan bo'lsa (bir xil raqam kafolati).
+async function salaryParts(db, employeeId, month, live = null, cache = new Map()) {
+    let lang = live?.lang, row = live?.row;
+    if (!live) {
+        const emp = (await db.query('SELECT id,role,lang FROM hr_employees WHERE id=$1', [employeeId])).rows[0];
+        const saved = (await db.query("SELECT language FROM salary_transactions WHERE employee_id=$1 AND TO_CHAR(period_start,'YYYY-MM')=$2 ORDER BY language LIMIT 1", [employeeId, month])).rows[0];
+        lang = emp ? engine.language(emp) : saved?.language || 'english';
+        if (!cache.has(lang)) cache.set(lang, calculate(db, monthPeriod(month), lang));
+        row = (await cache.get(lang)).rows.find(r => r.employeeId === employeeId) || null;
+    }
+    const parts = row ? [{ id: row.transactionId || 'live:' + lang, lang, amount: Math.max(0, Number(row.total) || 0), status: row.status || 'unpaid', live: !row.transactionId }] : [];
+    const other = (await db.query(`SELECT id,language,amount,status FROM salary_transactions WHERE employee_id=$1 AND language<>$2
+        AND TO_CHAR(period_start,'YYYY-MM')=$3 ORDER BY language,id`, [employeeId, lang, month])).rows;
+    for (const t of other) parts.push({ id: t.id, lang: t.language, amount: Math.max(0, Number(t.amount) || 0), status: t.status });
+    return parts.sort((a, b) => (a.lang === b.lang ? 0 : a.lang === 'english' ? -1 : 1));
+}
+async function monthSalary(db, employeeId, month, cache) {
+    return (await salaryParts(db, employeeId, month, null, cache)).reduce((n, p) => n + p.amount, 0);
+}
+async function frozenSettlements(db, ids) {
+    if (!ids.length || !(await db.query("SELECT to_regclass('salary_fine_settlements') AS t")).rows[0].t) return new Map();
+    return new Map((await db.query('SELECT * FROM salary_fine_settlements WHERE salary_id=ANY($1::text[])', [ids])).rows.map(r => [r.salary_id, r]));
+}
+async function takeHome(db, employeeId, month, live = null, cache) {
+    const fines = require('./fines'), rules = require('./fines/rules');
+    const parts = await salaryParts(db, employeeId, month, live, cache);
+    const salary = parts.reduce((n, p) => n + p.amount, 0);
+    const s = await fines.settlement(db, employeeId, month, salary);
+    const shares = rules.splitTakeHome(parts, s), frozen = await frozenSettlements(db, parts.map(p => p.id));
+    for (const p of parts) {
+        const f = frozen.get(p.id);
+        if (f) shares[p.id] = { amount: Number(f.salary), bonus: Number(f.bonus), deducted: Number(f.fine_deducted), takeHome: Number(f.take_home), frozen: true };
+        // Yangi qoidadan oldin "Berildi" bo'lgan hisob — to'liq summa (eski oylar qayta hisoblanmaydi).
+        else if (p.status === 'paid') shares[p.id] = { amount: p.amount, bonus: 0, deducted: 0, takeHome: p.amount, legacy: true };
+    }
+    const list = parts.map(p => ({ ...shares[p.id], id: p.id, lang: p.lang }));
+    return { month, salary, takeHome: list.reduce((n, x) => n + x.takeHome, 0), fineDeducted: list.reduce((n, x) => n + x.deducted, 0),
+        cleanBonus: list.reduce((n, x) => n + x.bonus, 0), fineGross: s.gross, fineWashed: s.washed, fineNet: s.net, fineCap: s.cap,
+        fineCount: s.count || 0, eligible: s.eligible !== false, parts: list };
+}
+// Qatorga qo'lga maydonlarini qo'shish (calculate() natijasi o'zgarmaydi — stale tekshiruviga ta'sir qilmaydi).
+async function withTakeHome(db, p, lang, rows) {
+    const month = String(p.start).slice(0, 7), out = [];
+    for (const row of rows) {
+        if (!row.employeeId) { out.push(row); continue; }
+        try {
+            const th = await takeHome(db, row.employeeId, month, { lang, row });
+            const own = th.parts.find(x => x.lang === lang) || {};
+            out.push({ ...row, takeHome: th.takeHome, fineDeducted: th.fineDeducted, cleanBonus: th.cleanBonus, fineGross: th.fineGross,
+                fineWashed: th.fineWashed, fineCap: th.fineCap, fineCount: th.fineCount, fineEligible: th.eligible,
+                salaryMonthTotal: th.salary, multiLang: th.parts.length > 1, langTakeHome: own.takeHome ?? row.total, settlementFrozen: !!own.frozen, settlementLegacy: !!own.legacy });
+        } catch (e) { console.error('[payroll/takeHome]', e.message); out.push(row); }
+    }
+    return out;
+}
 async function preview(pool, actor, input) {
     const p = engine.period(input.start, input.end), lang = language(input.language);
     return transaction(pool, async db => {
         await access(db, actor);
         const { _bases, ...result } = await calculate(db, p, lang);
+        result.rows = await withTakeHome(db, p, lang, result.rows);
+        // Plitka — faqat shu til ulushi (ikki tilli xodimning boshqa tildagi maoshi bu yerga qo'shilmaydi).
+        result.takeHomeTotal = result.rows.reduce((n, r) => n + (r.langTakeHome ?? r.takeHome ?? r.total), 0);
         return result;
     });
 }
@@ -454,8 +529,24 @@ async function markPaid(pool, actor, id) {
             if (remaining === adjustment.amount) await db.query("UPDATE salary_adjustments SET status='settled' WHERE id=$1", [adjustment.id]);
             await audit(db, user, 'adjustment-apply', adjustment.id, { remaining }, { salaryTransactionId: id, amount: adjustment.amount, remaining: remaining - adjustment.amount });
         }
+        // Qo'lga summani muzlatish (jarima ayirildi, "Toza oy" qo'shildi) — kassa chiqimi va foyda-zarar shundan oladi.
+        // Moliya yopgan oyga tushsa — muzlatilmaydi (yopilgan hisobot o'zgarmasin), eski qoida: to'liq summa.
+        const month = p.start.slice(0, 7);
+        const locked = (await db.query("SELECT to_regclass('fin_period_locks') AS t")).rows[0].t
+            ? (await db.query('SELECT MAX(month) AS m FROM fin_period_locks')).rows[0].m : null;
+        let settlement = null;
+        if (!locked || p.end.slice(0, 7) > locked) {
+            const th = await takeHome(db, row.employee_id, month, { lang: row.language, row: { transactionId: id, total: Number(row.amount), status: 'unpaid' } });
+            const own = th.parts.find(x => x.id === id);
+            if (own && !own.frozen) {
+                settlement = { salary: own.amount, fineDeducted: own.deducted, bonus: own.bonus, takeHome: own.takeHome };
+                await db.query(`INSERT INTO salary_fine_settlements(salary_id,employee_id,month,salary,fine_deducted,bonus,take_home,detail,actor_id)
+                    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT(salary_id) DO NOTHING`, [id, row.employee_id, month, own.amount, own.deducted, own.bonus, own.takeHome,
+                    JSON.stringify({ monthSalary: th.salary, fineGross: th.fineGross, fineWashed: th.fineWashed, fineCap: th.fineCap, fineCount: th.fineCount }), user.id]);
+            }
+        }
         await db.query("UPDATE salary_transactions SET status='paid',paid_at=NOW(),paid_by=$2,updated_at=NOW() WHERE id=$1", [id, user.id]);
-        await audit(db, user, 'mark-paid', id, { status: 'unpaid' }, { status: 'paid', amount: row.amount });
+        await audit(db, user, 'mark-paid', id, { status: 'unpaid' }, { status: 'paid', amount: row.amount, settlement });
         // No cash withdrawal here. A future expense transaction links its ID to cash_expense_id.
         return { ok: true };
     });
@@ -464,7 +555,8 @@ async function markPaid(pool, actor, id) {
 // ↔ hr_employees.login orqali aniqlanadi; boshqa xodimlar ma'lumoti qaytmaydi.
 // Faqat o'qish — maosh qulfi (advisory lock) olinmaydi, hech narsa yozilmaydi.
 const OWN_FIELDS = ['roleLabel', 'role', 'fixed', 'turnover', 'commission', 'bonus', 'total', 'lessons', 'studentCount',
-    'mainTotal', 'mainLessons', 'assistantTotal', 'assistantLessons', 'completion', 'rate', 'adjustmentTotal', 'blocked', 'status', 'paidAt'];
+    'mainTotal', 'mainLessons', 'assistantTotal', 'assistantLessons', 'completion', 'rate', 'adjustmentTotal', 'blocked', 'status', 'paidAt',
+    'takeHome', 'fineDeducted', 'cleanBonus', 'fineGross', 'fineCap', 'fineCount', 'salaryMonthTotal', 'multiLang'];
 function ownView(row) {
     if (!row) return null;
     return Object.fromEntries(OWN_FIELDS.filter(k => row[k] !== undefined).map(k => [k, row[k]]));
@@ -484,14 +576,19 @@ async function mySalary(pool, actor, now = new Date()) {
         const emp = (await db.query(`SELECT he.id, he.name, he.role, he.lang FROM users u
             JOIN hr_employees he ON LOWER(TRIM(he.login))=LOWER(TRIM(u.email)) WHERE u.id=$1 LIMIT 1`, [actor.id])).rows[0];
         if (!emp) { await db.query('COMMIT'); return { linked: false, current: null, history: [] }; }
-        const history = (await db.query(`SELECT TO_CHAR(period_start,'YYYY-MM-DD') AS start, TO_CHAR(period_end,'YYYY-MM-DD') AS "end",
-            amount, status, paid_at FROM salary_transactions WHERE employee_id=$1 ORDER BY period_start DESC LIMIT 12`, [emp.id])).rows
-            .map(r => ({ start: r.start, end: r.end, amount: Number(r.amount), status: r.status, paidAt: r.paid_at }));
+        let history = (await db.query(`SELECT id, TO_CHAR(period_start,'YYYY-MM-DD') AS start, TO_CHAR(period_end,'YYYY-MM-DD') AS "end",
+            amount, status, paid_at FROM salary_transactions WHERE employee_id=$1 ORDER BY period_start DESC LIMIT 12`, [emp.id])).rows;
+        let frozen = new Map();
+        try { frozen = await frozenSettlements(db, history.map(r => r.id).filter(Boolean)); } catch (e) { console.error('[payroll/me] qo‘lga tarixi:', e.message); }
+        history = history.map(r => { const f = frozen.get(r.id); return { start: r.start, end: r.end, amount: Number(r.amount), status: r.status, paidAt: r.paid_at,
+                ...(f ? { takeHome: Number(f.take_home), fineDeducted: Number(f.fine_deducted), cleanBonus: Number(f.bonus) } : {}) }; });
         const p = currentMonthPeriod(now), lang = engine.language(emp);
         let current = null;
         try {
-            const result = await calculate(db, p, lang, false);
-            current = ownView(result.rows.find(r => r.employeeId === emp.id));
+            // Admin Maoshlar bilan AYNAN bir xil: tasdiqlangan tuzatishlar bilan, qo'lga — yagona takeHome() dan.
+            const result = await calculate(db, p, lang);
+            const row = result.rows.find(r => r.employeeId === emp.id);
+            current = ownView(row ? (await withTakeHome(db, p, lang, [row]))[0] : null);
         } catch (e) { console.error('[payroll/me]', e.message); }
         await db.query('COMMIT');
         return { linked: true, name: emp.name, period: p, current, history };
@@ -501,5 +598,5 @@ async function mySalary(pool, actor, now = new Date()) {
     } finally { db.release(); }
 }
 
-module.exports = { mySalary, ownView, currentMonthPeriod, SCHEMA, initSchema, audit, access, language, transaction, sources, settings, calculate, preview,
+module.exports = { mySalary, ownView, takeHome, withTakeHome, monthSalary, salaryParts, monthPeriod, currentMonthPeriod, SCHEMA, initSchema, audit, access, language, transaction, sources, settings, calculate, preview,
     createBasis, correctionProposals, reviewAdjustment, reviewManualAdjustment, saveSettings, confirmPlan, accrue, markPaid };
