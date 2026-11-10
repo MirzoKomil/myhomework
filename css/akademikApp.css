@@ -474,3 +474,13 @@ body.aka-nonav .aka-toast { bottom: calc(96px + env(safe-area-inset-bottom)); }
 .aka-card.aka-prof { background: #0057B8; border-color: #0057B8; color: #FFFFFF; }
 .aka-card.aka-prof small, .aka-card.aka-prof > svg { color: #FFFFFF; }
 .aka-stag { display: flex; }
+
+/* O'quvchi kartasi boshi — ustoz ilovasidagi kabi */
+.aka-shero { display: flex; align-items: center; gap: 14px; }
+.aka-shero > span { display: flex; flex-direction: column; min-width: 0; }
+.aka-shero strong { font-size: 20px; font-weight: 800; }
+.aka-shero small { font-size: 13px; color: var(--a-mut); }
+.aka-shero img, .aka-shero .aka-av { border-radius: 50%; flex: none; }
+.aka-qas { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 8px; }
+.aka-qa { min-height: 62px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; background: #FFFFFF; border: 1px solid var(--a-line); border-radius: 14px; color: var(--a-ink); font-size: 12px; font-weight: 700; text-decoration: none; }
+.aka-qa svg { color: #0057B8; }
