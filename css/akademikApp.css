@@ -500,3 +500,12 @@ body.aka-nonav .aka-toast { bottom: calc(96px + env(safe-area-inset-bottom)); }
   body.aka-crm .tl-table:not(.tl-rt) td:first-child { grid-column: 1 / -1; }
   body.aka-crm .tl-scroll { overflow-x: visible; }
 }
+
+/* Yordamchi aloqalari — o'quvchi kartasi */
+.aka-acs{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column}
+.aka-ac{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid #EEF2F8}
+.aka-ac-d{width:52px;flex:none;font-size:13px;font-weight:700;color:#0B1220;display:flex;flex-direction:column}
+.aka-ac-d small{font-size:12px;font-weight:500;color:#4B5563}
+.aka-ac-t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.aka-ac-t strong{font-size:14px;font-weight:700}
+.aka-ac-t small{font-size:12px;font-weight:500;color:#4B5563;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
