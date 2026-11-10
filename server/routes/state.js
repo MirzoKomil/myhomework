@@ -1,3 +1,5 @@
+// Kechiktirilgan: testlar state.js'ni cheklangan require bilan yuklaydi.
+const requireRoles = (...r) => (req, res, next) => require('../middleware/roles').requireRoles(...r)(req, res, next);
 const express = require('express');
 const { getFullState, getLeads, getSalesManagerIdForUser, patchState, recordTeacherAttendance, getMobileContentData, getDemoStudentGrades, submitDemoStudentTeacherRating, getDemoStudentSchedule, getDemoStudentProfile, setDemoStudentAvatarUrl, getDemoStudentPayments, resolveStudentSubjectLang,
 getDemoStudentAssistantRatings, submitDemoStudentAssistantRating, getDemoStudentMessages, sendDemoStudentMessage, getDemoStudentPeerMessages, sendDemoStudentPeerMessage, getDemoStudentPersonaMessages, sendDemoStudentPersonaMessage, getNotificationRules, saveNotificationRules, getManualNotifications, addManualNotification, deleteManualNotification, submitAbsenceReason, getComputedDemoNotifications, addSystemNotification, markNotificationsRead, getPushSubscriptions, addPushSubscription, removePushSubscription, VAPID_PUBLIC_KEY, getHomeworkRadioSchedule, saveHomeworkRadioDay, getContentComments, addContentComment, addAdminContentReply, deleteContentComment, getDemoStudentBookDelivery, getNextContractNumber, getOrCreateStudentContract, getStudentContractPdf, getDemoStudentActivity, addDemoStudentActivity, syncStudentProgress, getStudentProgress, getRealLeaderboard, getStudentLessonProgress, mergeStudentLessonProgress, joinBattleQueue, leaveBattleQueue, getBattleStatus, submitBattleAnswer, abandonBattleMatch, getDemoCreativeSubmissions, submitDemoCreativeSubmission, gradeDemoCreativeSubmission, getCommunityPosts, addCommunityPost, toggleCommunityPostLike, addCommunityComment, toggleCommunityCommentLike, deleteCommunityPost, deleteCommunityComment, addDemoShopOrder, getDemoShopOrders, getCallRecordings, getCallRecordingCounts, addCallRecording, deleteCallRecording } = require('../db');
@@ -246,7 +248,9 @@ router.get('/notification-rules', async (req, res) => {
     }
 });
 
-router.post('/notification-rules', authRequired, async (req, res) => {
+// 11-noyabr (audit): bildirishnoma qoidalari va qo'lda push — faqat "Mobil ilova" bo'limi ochiq rollar (ustoz, HR, targetolog emas).
+const MOBILE_EDITOR_ROLES = ['admin', 'boshliq', 'rop', 'sales_manager', 'employee'];
+router.post('/notification-rules', authRequired, requireRoles(MOBILE_EDITOR_ROLES), async (req, res) => {
     try {
         const data = await saveNotificationRules(req.body || {});
         res.json(data);
@@ -345,7 +349,7 @@ router.get('/push/subscriptions-count', authRequired, async (req, res) => {
 });
 
 // Faqat CRM admin — namuna o'quvchiga darhol xabar yuboradi/o'chiradi.
-router.post('/notifications/manual', authRequired, async (req, res) => {
+router.post('/notifications/manual', authRequired, requireRoles(MOBILE_EDITOR_ROLES), async (req, res) => {
     try {
         const { title, message } = req.body || {};
         const notification = await addManualNotification(title, message, req.user?.email || 'Admin');
@@ -356,7 +360,7 @@ router.post('/notifications/manual', authRequired, async (req, res) => {
     }
 });
 
-router.delete('/notifications/manual/:id', authRequired, async (req, res) => {
+router.delete('/notifications/manual/:id', authRequired, requireRoles(MOBILE_EDITOR_ROLES), async (req, res) => {
     try {
         await deleteManualNotification(req.params.id);
         res.json({ ok: true });
