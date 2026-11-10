@@ -490,3 +490,13 @@ body.aka-nonav .aka-toast { bottom: calc(96px + env(safe-area-inset-bottom)); }
   body.aka-crm #anDavRoot .an-info { display: none; }
   body.aka-crm #anDavRoot .sc-row.sc-wrap { gap: 8px; }
 }
+
+/* Telefonda sinov ro'yxati: jadval qatorlari karta ko'rinishida (Vaqt va Holat ham ko'rinadi) */
+@media (max-width: 600px) {
+  body.aka-crm .tl-table:not(.tl-rt) thead { display: none; }
+  body.aka-crm .tl-table:not(.tl-rt), body.aka-crm .tl-table:not(.tl-rt) tbody { display: block; }
+  body.aka-crm .tl-table:not(.tl-rt) tr { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; padding: 12px 14px; border-bottom: 1px solid #EEF1F6; }
+  body.aka-crm .tl-table:not(.tl-rt) td { display: block; padding: 0; border: 0; }
+  body.aka-crm .tl-table:not(.tl-rt) td:first-child { grid-column: 1 / -1; }
+  body.aka-crm .tl-scroll { overflow-x: visible; }
+}
