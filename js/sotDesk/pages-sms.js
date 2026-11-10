@@ -41,7 +41,7 @@
     function audience(aud) {
         if (!mid()) return [];
         if (aud === 'oquvchilar') return myStudents().map(s => ({ id: s.id, type: 'student', name: s.name || '(ismsiz)', phone: s.phone, sub: s.group || '', grp: s.group || 'Guruhsiz', teacherId: s.teacherId || '' }));
-        if (aud === 'qarzdorlar') return myStudents().filter(s => Number(s.debtAmount || 0) > 0 || (s.debtAmount == null && s.paymentDueDate)).map(s => ({ id: s.id, type: 'debtor', name: s.name || '(ismsiz)', phone: s.phone,
+        if (aud === 'qarzdorlar') return myStudents().filter(s => (window.AttendanceRules?.isDebtor ? window.AttendanceRules.isDebtor(s) : Number(s.debtAmount || 0) > 0)).map(s => ({ id: s.id, type: 'debtor', name: s.name || '(ismsiz)', phone: s.phone,
             sub: Number(s.debtAmount || 0) > 0 ? `${U.num(s.debtAmount)} soʻm qarz` : `Toʻlov muddati ${s.paymentDueDate || ''}`, grp: s.group || 'Guruhsiz', teacherId: s.teacherId || '' }));
         return U.leads().filter(l => l.phone && String(l.managerId || '') === mid()).map(l => ({ id: l.id, type: 'lead', name: l.name || '(ismsiz)', phone: l.phone, sub: stageLabel(st(l)), grp: st(l), lead: l,
             teacherId: l.paymentOnboarding?.teacherId || l.trialRequest?.teacherId || '' }));
