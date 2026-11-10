@@ -639,6 +639,13 @@ async function studentCard(db, user, id, now = new Date()) {
     const hist = (await db.query(`SELECT h.teacher_id, TO_CHAR(h.from_date,'YYYY-MM-DD') AS from_date, he.name FROM school_teacher_history h LEFT JOIN hr_employees he ON he.id=h.teacher_id
         WHERE h.student_id=$1 ORDER BY h.from_date`, [r.id])).rows;
     const st = detail?.student || {};
+    // Yordamchi ustoz va shu oy aloqalari — rahbar xizmat sifatini o'quvchi kartasidan ko'radi (yordamchi kartasidagi "Aloqalar" bilan bitta jadval).
+    const month = T.nowLocal(now).date.slice(0, 7), mb = T.monthBounds(month);
+    const asgId = r.assistant_teacher_id || null;
+    const ac = (await db.query(`SELECT c.assistant_id, TO_CHAR(c.day,'YYYY-MM-DD') AS day, c.at_min, c.channel, c.minutes, c.outcome, c.note, he.name
+        FROM school_assist_contacts c LEFT JOIN hr_employees he ON he.id=c.assistant_id
+        WHERE c.student_id=$1 AND c.removed_at IS NULL AND c.day BETWEEN $2 AND $3 ORDER BY c.day DESC, c.at_min DESC NULLS LAST`, [r.id, mb.from, mb.to]).catch(e => { if (e.code === '42P01') return { rows: [] }; throw e; })).rows;
+    const asgName = asgId ? ((await db.query('SELECT name FROM hr_employees WHERE id=$1', [asgId])).rows[0]?.name || '') : '';
     return {
         id: r.id, name: r.name, phone: r.phone || '', teacher: r.teacher_id ? { id: r.teacher_id, name: sc.names.get(r.teacher_id) || '' } : null,
         schedule: scheduleText(r.lesson_day_of_week, r.lesson_time), totalLessons: hub.TOTAL_LESSONS || 72, lessonNo: s?.reached ?? st.reached ?? null, planLessonNo: s?.expected ?? st.expected ?? null,
@@ -647,6 +654,10 @@ async function studentCard(db, user, id, now = new Date()) {
         lessons, problems: { open: Number(pc.open) || 0, closed: Number(pc.closed) || 0 },
         teacherHistory: hist.filter(h => h.from_date > '2000-01-01').map(h => ({ name: h.name || '', from: h.from_date })),
         risk: s?.risk ? { reasonText: s.risk.reasonText } : null, state: s?.state || 'left',
+        assistant: asgId ? { id: asgId, name: asgName } : null,
+        assistContacts: { month, contacted: ac.filter(c => c.outcome === 'contacted').length, noAnswer: ac.filter(c => c.outcome === 'no_answer').length,
+            items: ac.slice(0, 20).map(c => ({ day: c.day, at: c.at_min != null ? T.fromMin(c.at_min) : '', channel: A.CHANNELS[c.channel] || c.channel, minutes: Number(c.minutes) || 0,
+                outcome: c.outcome, note: c.note || '', by: c.assistant_id !== asgId ? (c.name || '') : '' })) },
     };
 }
 async function transferOptions(db, user, id, now = new Date()) {

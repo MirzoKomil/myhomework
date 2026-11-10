@@ -602,9 +602,20 @@
             <section class="aka-card aka-s2"><div class="aka-sb"><h2 class="aka-h2">Darslar · oxirgi 4 hafta</h2><span class="aka-b13 aka-ink2">${came} / ${held} keldi</span></div>
                 ${lessons.length ? `<ol class="aka-days" aria-label="Dars kunlari">${lessons.map(l => { const d = toDate(l.date); return `<li class="is-${esc(l.status)}" aria-label="${esc(dShort(l.date))}: ${l.status === 'came' ? 'keldi' : l.status === 'missed' ? 'kelmadi' : l.status === 'unmarked' ? 'belgilanmagan' : 'keyingi'}">${d ? d.getDate() : ''}</li>`; }).join('')}</ol>` : '<p class="aka-muted">Oxirgi 4 haftada dars yoʻq</p>'}
                 <small class="aka-hint">Qoplash darslari ham shu yerda oddiy dars kabi koʻrinadi</small></section>
+            ${assistBlock(s)}
             <section class="aka-card aka-list aka-s3">${navRow('Muammolar', num(pr.open) || num(pr.closed) ? [num(pr.open) ? `${num(pr.open)} ta ochiq` : 'ochigʻi yoʻq', num(pr.closed) ? `${num(pr.closed)} ta yopilgan` : ''].filter(Boolean).reverse().join(' · ') : 'Hali yozilmagan', `data-a-sprob="${esc(s.name || '')}" data-a-sprobopen="${num(pr.open) ? 1 : 0}"`)}
                 ${navRow('Ustozlar tarixi', th.length ? th.map(t => `${first(t.name)} · ${dLong(t.from)}dan`).slice(-1)[0] + (th.length > 1 ? ` · jami ${th.length}` : '') : '—', 'data-a-thist')}</section></div>
             ${bbar(`<button type="button" class="aka-btn aka-btn--out" data-a-transfer="${esc(s.id)}">${ic('team', 18)}Ustozni almashtirish</button><button type="button" class="aka-btn aka-btn--pri aka-btn--14" data-a-newfor="student">${ic('plus', 18, 2.6)}Muammo yozish</button>`)}`;
+    }
+    // Yordamchi ustoz aloqalari — yordamchi kartasidagi "Aloqalar" bilan bir xil ma'lumot (school_assist_contacts).
+    function assistBlock(s) {
+        const ac = s.assistContacts; if (!ac) return '';
+        const mon = MON[Number(String(ac.month).slice(5, 7)) - 1] || '';
+        const who = s.assistant?.id ? `<button type="button" class="aka-a aka-a--b" data-a-assistant="${esc(s.assistant.id)}">${esc(first(s.assistant.name))}</button>` : '<b class="c-red">biriktirilmagan</b>';
+        const rows = (ac.items || []).map(c => `<li class="aka-ac"><span class="aka-ac-d">${esc(dShort(c.day))}${c.at ? `<small>${esc(c.at)}</small>` : ''}</span><span class="aka-ac-t"><strong>${c.outcome === 'contacted' ? esc(c.channel) + (c.minutes ? ` · ${c.minutes} daq` : '') : 'Javob bermadi'}</strong>${c.note || c.by ? `<small>${esc([c.by ? 'yordamchi ' + first(c.by) : '', c.note].filter(Boolean).join(' · '))}</small>` : ''}</span>${chip(c.outcome === 'contacted' ? 'Aloqa' : 'Javobsiz', c.outcome === 'contacted' ? 'green' : 'amber')}</li>`).join('');
+        return `<section class="aka-card aka-s2"><div class="aka-sb"><h2 class="aka-h2">Yordamchi aloqalari · ${esc(mon)}</h2><span class="aka-b13 aka-ink2">${num(ac.contacted)} ta aloqa${num(ac.noAnswer) ? ` · ${num(ac.noAnswer)} javobsiz` : ''}</span></div>
+            <div class="aka-sm">Yordamchi ${who}</div>
+            ${rows ? `<ul class="aka-acs">${rows}</ul>` : `<p class="aka-muted">${esc(mon)}da hali aloqa yoʻq</p>`}</section>`;
     }
     function sheetTeacherHistory() {
         const s = peek(API.student(S.sid)); if (!s) return;
