@@ -63,7 +63,8 @@ async function assertTeacherOwnsDay(client, { student, teacherId, date }) {
     deny(`${date} kuni o'quvchi sizga biriktirilmagan edi — davomatni faqat o'z davringizdagi kunlarga qo'yasiz`);
 }
 
-// Xodim tuzatishi (BAHO-5 #7): yopilgan oyni va kelajak sanani FAQAT admin/boshliq o'zgartiradi (29-okt qarori).
+// Xodim tuzatishi (BAHO-5 #7): yopilgan oyni admin, boshliq va akademik rahbar o'zgartiradi (29-okt; akademik — 9-noy qarori).
+// Kelajak sana: admin/boshliq mumkin, akademik rahbar — yo'q (pastda alohida 400).
 // ROP (va kelajakda boshqa "to'liq ruxsatli" xodim) — joriy oy, bugungacha: yopilgan oy 409, kelajak 400 (olib tashlash — faqat yopilgan oy cheklovi).
 const CLOSED_MONTH_EDITORS = ['admin', 'boshliq', 'akademik']; // Akademik rahbar — direktor qarori (2026-11-09), o'z tilida
 function assertStaffAttendanceWindow({ actor, date, present, now = new Date() }) {
@@ -72,8 +73,8 @@ function assertStaffAttendanceWindow({ actor, date, present, now = new Date() })
     const T = require('./school/time');
     const local = T.nowLocal(now), month = String(date).slice(0, 7);
     const bad = (status, message) => { throw Object.assign(new Error(message), { status }); };
-    if (month < local.date.slice(0, 7)) bad(409, `${month} oyi yopilgan — yopilgan oy davomatini faqat admin yoki boshliq o'zgartiradi`);
-    if (present !== null && date > local.date) bad(400, 'Kelajakdagi sanaga davomat qo\'yib bo\'lmaydi — faqat admin yoki boshliq');
+    if (month < local.date.slice(0, 7)) bad(409, `${month} oyi yopilgan — yopilgan oy davomatini faqat admin, boshliq yoki akademik rahbar o'zgartiradi`);
+    if (present !== null && date > local.date) bad(400, 'Kelajakdagi sanaga davomat qo\'yib bo\'lmaydi — faqat admin yoki boshliq qo\'yadi');
 }
 
 module.exports = { assertTeacherAttendanceWindow, assertTeacherOwnsDay, assertStaffAttendanceWindow, CLOSED_MONTH_EDITORS, TEACHER_MARK_BEFORE_MIN };
