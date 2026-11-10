@@ -77,7 +77,7 @@ test('tarix: hech qachon biriktirilmagan ustoz — 403; tarixsiz hozirgi ustoz �
 // BAHO-5 #7: yopilgan oy va kelajak — faqat admin/boshliq.
 test('xodim tuzatishi: ROP yopilgan oyni va kelajakni o\'zgartirmaydi; admin/boshliq — ruxsat', () => {
     const rop = { role: 'rop' };
-    assert.throws(() => staffWin({ actor: rop, date: '2026-09-29', present: true, now }), e => e.status === 409 && /admin yoki boshliq/.test(e.message));
+    assert.throws(() => staffWin({ actor: rop, date: '2026-09-29', present: true, now }), e => e.status === 409 && /admin, boshliq yoki akademik rahbar/.test(e.message));
     assert.throws(() => staffWin({ actor: rop, date: '2026-09-29', present: null, now }), e => e.status === 409);
     assert.throws(() => staffWin({ actor: rop, date: '2026-10-29', present: true, now }), e => e.status === 400);
     staffWin({ actor: rop, date: '2026-10-29', present: null, now }); // kelajakdagi xato belgini olib tashlash — mumkin

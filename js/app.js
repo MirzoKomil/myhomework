@@ -22974,13 +22974,16 @@ function renderHrEmployeeCard(emp) {
 const TEACHER_ROLES = ['oqituvchi', 'ingliz-oqituvchi', 'rus-oqituvchi'];
 
 function getHrFiltered(employees) {
-    // Language filter (faqat o'qituvchilar uchun)
-    if (_hrLangFilter === 'ingliz') return employees.filter(e => e.role === 'ingliz-oqituvchi');
-    if (_hrLangFilter === 'rus')    return employees.filter(e => e.role === 'rus-oqituvchi');
+    // Til filtri (yuqori o'ngdagi Ingliz/Rus) — endi barcha xodimlarga: o'qituvchi rolidagi til yoki xodimning `lang` maydoni.
+    // 11-noyabr: avval faqat o'qituvchilarni qoldirardi — ROP, sotuv, akademik rahbar, yordamchi "Barchasi"da ko'rinmasdi.
+    const langOf = e => e.role === 'rus-oqituvchi' ? 'rus' : e.role === 'ingliz-oqituvchi' ? 'ingliz'
+        : e.lang === 'both' ? 'both' : e.lang === 'russian' ? 'rus' : e.lang === 'english' ? 'ingliz' : '';
+    let list = employees;
+    if (_hrLangFilter === 'ingliz' || _hrLangFilter === 'rus') list = list.filter(e => { const l = langOf(e); return !l || l === 'both' || l === _hrLangFilter; });
     // Role filter
-    if (_hrRoleFilter === 'all')        return employees;
-    if (_hrRoleFilter === 'oqituvchi')  return employees.filter(e => TEACHER_ROLES.includes(e.role));
-    return employees.filter(e => e.role === _hrRoleFilter);
+    if (_hrRoleFilter === 'all')        return list;
+    if (_hrRoleFilter === 'oqituvchi')  return list.filter(e => TEACHER_ROLES.includes(e.role));
+    return list.filter(e => e.role === _hrRoleFilter);
 }
 
 let _hrSelectedEmpId = null;
