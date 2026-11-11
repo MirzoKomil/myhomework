@@ -14,7 +14,8 @@ export const SPEAKING_LEVEL_COLORS: Record<SpeakingLevel, string> = {
 
 export const SPEAKING_LEVELS_ORDER: SpeakingLevel[] = ['easy', 'medium', 'hard'];
 
-export type DialogueLine = { speaker: string; en: string; uz: string };
+/** start — replikaning audiodagi boshlanishi (soniya), faqat audioUrl bo'lsa. */
+export type DialogueLine = { speaker: string; en: string; uz: string; start?: number };
 export type SpeakingTopic = {
   id: string;
   level: SpeakingLevel;
@@ -23,6 +24,9 @@ export type SpeakingTopic = {
   emoji: string;
   colors: [string, string];
   lines: DialogueLine[];
+  /** Ikki ovozda yozilgan dialog audiosi (bo'lmasa — expo-speech). */
+  audioUrl?: string;
+  durationSec?: number;
 };
 
 function slug(title: string): string {
