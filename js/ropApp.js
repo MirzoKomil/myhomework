@@ -15,8 +15,10 @@
     const user = () => (g('getCurrentUser') ? getCurrentUser() : null) || {};
     // 11-noyabr: admin/direktor telefonda Sotuv bo'limini ROP ilovasi orqali ko'radi ("mehmon" rejimi, js/adminApp.js).
     let guest = false;
+    // Admin "mehmon" rejimi: ingliz va rus lidlari/menejerlari aralashmasin — bitta til tanlanadi (direktor, 11-noyabr).
+    let gLang = (() => { try { return localStorage.getItem('adm_rop_lang') === 'english' ? 'english' : 'russian'; } catch (e) { return 'russian'; } })();
     const isOn = () => (user().role === 'rop' || guest) && MQ.matches;
-    const LANGS = () => { if (guest) return ['english', 'russian']; const l = user().linkedRopLang || 'english'; return l === 'both' ? ['english', 'russian'] : [l === 'russian' ? 'russian' : 'english']; };
+    const LANGS = () => { if (guest) return [gLang]; const l = user().linkedRopLang || 'english'; return l === 'both' ? ['english', 'russian'] : [l === 'russian' ? 'russian' : 'english']; };
     const langLabel = lg => (lg === 'russian' ? 'Rus tili' : 'Ingliz tili');
     const langsTxt = () => (LANGS().length > 1 ? 'Ingliz va rus' : langLabel(LANGS()[0]));
     const st = l => (g('normalizeLeadStatus') ? normalizeLeadStatus(l.status) : (l.status || 'yangi-lidlar'));
@@ -189,7 +191,7 @@
 
     // SLA eskalatsiyalari — computeRopHome (bitta manba).
     function ropHome() {
-        try { return g('computeRopHome') ? computeRopHome({ user: guest ? { ...user(), linkedRopLang: 'both' } : user(), students: getItem(STORAGE_KEYS.students, []) || [], leads: leadsAll(), now: new Date() }) : null; } catch (e) { return null; }
+        try { return g('computeRopHome') ? computeRopHome({ user: guest ? { ...user(), linkedRopLang: gLang } : user(), students: getItem(STORAGE_KEYS.students, []) || [], leads: leadsAll(), now: new Date() }) : null; } catch (e) { return null; }
     }
     const slaRule = l => (typeof LEAD_SLA_RULES !== 'undefined' ? LEAD_SLA_RULES[st(l)]?.rop : null);
 
@@ -359,6 +361,7 @@
         if (LANGS().length > 1) parts.push(l._lang === 'russian' ? 'RU' : 'EN');
         return parts.filter(Boolean).join(' · ');
     }
+    const glangSeg = () => guest ? `<div class="ra-seg ra-glang" role="radiogroup" aria-label="Til">${[['english', 'Ingliz tili'], ['russian', 'Rus tili']].map(([k, t]) => `<button type="button" role="radio" aria-checked="${gLang === k}" class="${gLang === k ? 'is-on' : ''}" data-ra-glang="${k}">${t}</button>`).join('')}</div>` : '';
     function screenLeads() {
         const all = ALL();
         const un = all.filter(l => !l.managerId && OPEN.has(st(l)));
@@ -382,6 +385,7 @@
             <button type="button" class="ra-dist-btn" data-ra-go="distribute">Taqsimlash${un.length ? `<b>${un.length > 99 ? '99+' : un.length}</b>` : ''}</button>
             <button type="button" class="sa-icon-btn ra-add" data-ra-leadadd aria-haspopup="dialog" aria-label="Lid qoʻshish">${ic('plus', 20, 2.6)}</button></div>
           <label class="sa-search">${ic('search', 18)}<span class="sa-sr">Lid qidirish</span><input type="search" id="raLeadSearch" placeholder="Ism, telefon yoki ID" value="${esc(S.q)}" autocomplete="off">${S.q ? `<button type="button" class="sa-icon-btn sa-ghost sa-sm" data-ra-clearq aria-label="Qidiruvni tozalash">${ic('close', 16, 2.4)}</button>` : ''}</label>
+          ${glangSeg()}
           <div class="sa-chips ra-mans" role="radiogroup" aria-label="Menejer">
             <button type="button" role="radio" aria-checked="${S.man === 'all'}" class="ra-man${S.man === 'all' ? ' is-on' : ''}" data-ra-man="all">Hammasi</button>
             ${un.length ? `<button type="button" role="radio" aria-checked="${S.man === 'none'}" class="ra-man${S.man === 'none' ? ' is-on' : ''}" data-ra-man="none">Biriktirilmagan</button>` : ''}
@@ -944,6 +948,7 @@
           <div class="sa-top-row"><h1>Jamoa</h1>${seg([['kunlik', 'Bugun'], ['haftalik', 'Hafta'], ['oylik', 'Oy']], per, 'ra-tper', 'Davr')}</div>
           <div class="ra-tsum"><div class="ra-tsum-h"><span><strong>${mlnF(sales)}</strong><em>${target ? `/ ${mln(target)} · ${pct}%` : '· reja belgilanmagan'}</em></span><span class="ra-lockt">${ic('lock', 14, 2.4)}Reja — direktordan</span></div>
             ${bar(pct || 0, 'blue', due)}${due != null ? `<span class="ra-tsum-s">Qora chiziq — bugungacha boʻlishi kerak edi (${due}%)</span>` : ''}</div>
+          ${glangSeg()}
         </header>
         <div class="sa-body">
           ${rows.length ? rows.map((r, i) => {
@@ -1616,7 +1621,7 @@
 
     // ---------- hodisalar ----------
     function onClick(e) {
-        const t = e.target.closest('[data-ra-go],[data-ra-nav],[data-ra-back],[data-ra-lead],[data-ra-man],[data-ra-stage],[data-ra-clearq],[data-ra-leadadd],[data-ra-reassign],[data-ra-hist],[data-ra-tglead],[data-ra-notify],[data-ra-stagesheet],[data-ra-move],[data-ra-sheetclose],[data-ra-selall],[data-ra-pick],[data-ra-even],[data-ra-assignsheet],[data-ra-mpick],[data-ra-assigngo],[data-ra-rsr],[data-ra-rsgo],[data-ra-ack],[data-ra-aptab],[data-ra-ap],[data-ra-apreload],[data-ra-approve],[data-ra-reject],[data-ra-rjk],[data-ra-rjr],[data-ra-rjsave],[data-ra-apnext],[data-ra-ovgo],[data-ra-ovclose],[data-ra-trday],[data-ra-trseg],[data-ra-tassign],[data-ra-tapick],[data-ra-tasave],[data-ra-tremind],[data-ra-tadmin],[data-ra-tresched],[data-ra-tmore],[data-ra-tcancel],[data-ra-tcr],[data-ra-tcsave],[data-ra-trialnew],[data-ra-tper],[data-ra-mgr],[data-ra-mleads],[data-ra-funper],[data-ra-stlang],[data-ra-step],[data-ra-stsave],[data-ra-artab],[data-ra-arreload],[data-ra-restore],[data-ra-smsg],[data-ra-smssend],[data-ra-ncat],[data-ra-nread],[data-ra-nitem],[data-ra-crm],[data-ra-logout],[data-ra-lasrc],[data-ra-lasave],[data-ra-cardmore],[data-ra-cm-sms],[data-ra-cm-follow],[data-ra-cm-rec],[data-ra-cm-full]');
+        const t = e.target.closest('[data-ra-go],[data-ra-nav],[data-ra-back],[data-ra-lead],[data-ra-man],[data-ra-glang],[data-ra-stage],[data-ra-clearq],[data-ra-leadadd],[data-ra-reassign],[data-ra-hist],[data-ra-tglead],[data-ra-notify],[data-ra-stagesheet],[data-ra-move],[data-ra-sheetclose],[data-ra-selall],[data-ra-pick],[data-ra-even],[data-ra-assignsheet],[data-ra-mpick],[data-ra-assigngo],[data-ra-rsr],[data-ra-rsgo],[data-ra-ack],[data-ra-aptab],[data-ra-ap],[data-ra-apreload],[data-ra-approve],[data-ra-reject],[data-ra-rjk],[data-ra-rjr],[data-ra-rjsave],[data-ra-apnext],[data-ra-ovgo],[data-ra-ovclose],[data-ra-trday],[data-ra-trseg],[data-ra-tassign],[data-ra-tapick],[data-ra-tasave],[data-ra-tremind],[data-ra-tadmin],[data-ra-tresched],[data-ra-tmore],[data-ra-tcancel],[data-ra-tcr],[data-ra-tcsave],[data-ra-trialnew],[data-ra-tper],[data-ra-mgr],[data-ra-mleads],[data-ra-funper],[data-ra-stlang],[data-ra-step],[data-ra-stsave],[data-ra-artab],[data-ra-arreload],[data-ra-restore],[data-ra-smsg],[data-ra-smssend],[data-ra-ncat],[data-ra-nread],[data-ra-nitem],[data-ra-crm],[data-ra-logout],[data-ra-lasrc],[data-ra-lasave],[data-ra-cardmore],[data-ra-cm-sms],[data-ra-cm-follow],[data-ra-cm-rec],[data-ra-cm-full]');
         if (!t) return;
         const d = t.dataset;
         if (t.tagName === 'A' && t.getAttribute('href')) return; // tel:, t.me — o'zi ochiladi
@@ -1633,6 +1638,7 @@
         if ('raNav' in d) return go(d.raNav, { reset: true });
         if ('raBack' in d) { if (!back()) go('home', { reset: true }); return; }
         if ('raLead' in d) return openLead(d.raLead, d.ll);
+        if ('raGlang' in d) { gLang = d.raGlang === 'english' ? 'english' : 'russian'; try { localStorage.setItem('adm_rop_lang', gLang); } catch (e) {} S.man = 'all'; S.sel.clear(); render(true); return; }
         if ('raMan' in d) { S.man = d.raMan; render(true); return; }
         if ('raStage' in d) { S.stage = d.raStage; render(true); root.querySelector('.sa-chip.is-on')?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: reduceMotion() ? 'auto' : 'smooth' }); return; }
         if ('raClearq' in d) { S.q = ''; render(true); return; }
