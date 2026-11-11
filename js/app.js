@@ -766,6 +766,12 @@ function startLeadsPolling() {
             // o'zgarishni bosib yubormasin.
             if (hasPendingLeadChanges()) return;
             if (document.hidden) return; // yashirin tabda serverni bekorga yuklamaymiz (tab ochilgach keyingi 30 s ichida yangilanadi)
+            // 11-noyabr: admin telefon kabinetida (lidlar ochiq bo'lmasa) lidlar 5 daqiqada bir tekshiriladi — telefon qotmasin.
+            const bc = document.body.classList;
+            if (bc.contains('adm-on') && !bc.contains('adm-rop') && !bc.contains('adm-crm')) {
+                if (Date.now() - (startLeadsPolling._admAt || 0) < 300000) return;
+                startLeadsPolling._admAt = Date.now();
+            }
             const mutationGeneration = getLeadMutationGeneration();
             const prev = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
             const prevFingerprint = getLeadPollFingerprint(prev);

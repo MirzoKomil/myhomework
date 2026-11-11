@@ -7,7 +7,7 @@ body.adm-on {
     --m-nav: calc(64px + env(safe-area-inset-bottom));
 }
 body.adm-on #teamBottomNav { display: none !important; }
-body.adm-on:not(.adm-crm) .top-header, body.adm-on:not(.adm-crm) .sidebar { visibility: hidden; }
+body.adm-on:not(.adm-crm):not(.adm-rop) .top-header, body.adm-on:not(.adm-crm):not(.adm-rop) .sidebar { visibility: hidden; }
 body.adm-on.adm-crm .tab-content, body.adm-on.adm-crm .main-content { padding-bottom: calc(var(--m-nav) + 70px) !important; }
 
 .adm-app, .adm-nav, .adm-toast, .adm-backbar {
@@ -143,3 +143,7 @@ body.adm-desk #tab-students .table-responsive { background: #fff; border: 1px so
 body.adm-desk #tab-students .students-table thead th { background: #F8FAFD; color: #4B5563; font-size: 12px; font-weight: 700; text-transform: none; letter-spacing: 0; padding: 12px 14px; border-bottom: 1px solid #E6EAF2; }
 body.adm-desk #tab-students .students-table tbody td { padding: 12px 14px; border-bottom: 1px solid #EEF2F8; font-size: 14px; }
 body.adm-desk #tab-students .students-table tbody tr:hover td { background: #F8FAFD; }
+/* Sotuv — ROP ilovasi "mehmon" rejimida: tepada admin kabinetga qaytish */
+.adm-ropbar { position: fixed; bottom: calc(68px + env(safe-area-inset-bottom) + 10px); left: 12px; z-index: 270; height: 36px; padding: 0 12px; border-radius: 999px; border: 0; background: #0B1220; color: #fff; font: 700 13px/1 'DW Jakarta', 'Plus Jakarta Sans', system-ui, sans-serif; display: flex; align-items: center; gap: 6px; box-shadow: 0 6px 18px rgba(11, 18, 32, .25); cursor: pointer; }
+body:not(.adm-rop) .adm-ropbar { display: none; }
+body.ra-full .adm-ropbar { bottom: calc(84px + env(safe-area-inset-bottom)); }
