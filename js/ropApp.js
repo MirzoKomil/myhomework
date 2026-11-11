@@ -13,8 +13,10 @@
     const g = name => (typeof window[name] === 'function' ? window[name] : null);
     const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const user = () => (g('getCurrentUser') ? getCurrentUser() : null) || {};
-    const isOn = () => user().role === 'rop' && MQ.matches;
-    const LANGS = () => { const l = user().linkedRopLang || 'english'; return l === 'both' ? ['english', 'russian'] : [l === 'russian' ? 'russian' : 'english']; };
+    // 11-noyabr: admin/direktor telefonda Sotuv bo'limini ROP ilovasi orqali ko'radi ("mehmon" rejimi, js/adminApp.js).
+    let guest = false;
+    const isOn = () => (user().role === 'rop' || guest) && MQ.matches;
+    const LANGS = () => { if (guest) return ['english', 'russian']; const l = user().linkedRopLang || 'english'; return l === 'both' ? ['english', 'russian'] : [l === 'russian' ? 'russian' : 'english']; };
     const langLabel = lg => (lg === 'russian' ? 'Rus tili' : 'Ingliz tili');
     const langsTxt = () => (LANGS().length > 1 ? 'Ingliz va rus' : langLabel(LANGS()[0]));
     const st = l => (g('normalizeLeadStatus') ? normalizeLeadStatus(l.status) : (l.status || 'yangi-lidlar'));
@@ -187,7 +189,7 @@
 
     // SLA eskalatsiyalari — computeRopHome (bitta manba).
     function ropHome() {
-        try { return g('computeRopHome') ? computeRopHome({ user: user(), students: getItem(STORAGE_KEYS.students, []) || [], leads: leadsAll(), now: new Date() }) : null; } catch (e) { return null; }
+        try { return g('computeRopHome') ? computeRopHome({ user: guest ? { ...user(), linkedRopLang: 'both' } : user(), students: getItem(STORAGE_KEYS.students, []) || [], leads: leadsAll(), now: new Date() }) : null; } catch (e) { return null; }
     }
     const slaRule = l => (typeof LEAD_SLA_RULES !== 'undefined' ? LEAD_SLA_RULES[st(l)]?.rop : null);
 
@@ -1764,7 +1766,7 @@
 
     function init() {
         if (inited) return;
-        if (user().role !== 'rop') return;
+        if (user().role !== 'rop' && !guest) return;
         inited = true;
         hookRenders();
         window.addEventListener('popstate', () => {
@@ -1776,6 +1778,7 @@
             else if (sheetEl) { closeSheet(false, true); handled = true; }
             else handled = back();
             if (handled) armGuard();
+            else if (guest) { armGuard(); window.adminApp?.closeRopGuest?.(); }
             else if (S.screen === 'home') toast('Chiqish uchun yana bir marta “Orqaga” bosing', 'info');
         });
         MQ.addEventListener?.('change', sync);
@@ -1813,7 +1816,17 @@
         wait();
     }
 
-    window.ropApp = { open: go, openLead, back, render: () => render(false), state: S, closeSheet: () => closeSheet(true) };
+    // Admin "mehmon" rejimi: on=true — ROP ilovasi (Lidlar ekrani) ochiladi; on=false — yopiladi.
+    function setGuest(on, screen) {
+        const r = user().role;
+        if (!['admin', 'boshliq'].includes(r)) return false;
+        guest = !!on;
+        if (guest) { if (!inited) { S.screen = screen || 'leads'; S.stack = [{ screen: 'home' }]; init(); } else { sync(); if (isOn()) go(screen || 'leads', { reset: true }); } }
+        else { closeCrmPages(); S.pageMode = false; disable(); if (nav) nav.hidden = true; }
+        if (nav && guest) nav.hidden = false;
+        return true;
+    }
+    window.ropApp = { open: go, openLead, back, render: () => render(false), state: S, closeSheet: () => closeSheet(true), setGuest, isGuest: () => guest };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(init, 60));
     else setTimeout(init, 60);
 })();

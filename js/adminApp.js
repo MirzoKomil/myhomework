@@ -55,10 +55,12 @@
         if (c.p || (!force && c.at && Date.now() - c.at < 60000)) return c.v;
         const fetcher = g('apiFetch');
         if (!fetcher) return c.v;
-        c.p = fetcher(url).then(v => { c.v = v; c.e = null; }).catch(e => { c.e = e; }).finally(() => { c.p = null; c.at = Date.now(); C.set(url, c); if (isOn() && S.screen !== 'crm') render(false); });
+        c.p = fetcher(url).then(v => { c.v = v; c.e = null; }).catch(e => { c.e = e; }).finally(() => { c.p = null; c.at = Date.now(); C.set(url, c); if (isOn() && !['crm', 'jadval', 'rop'].includes(S.screen)) queueRender(); });
         C.set(url, c);
         return c.v;
     }
+    let _rq = 0;
+    const queueRender = () => { if (_rq) return; _rq = requestAnimationFrame(() => { _rq = 0; render(false); }); };
     const peek = url => C.get(url)?.v;
     const errOf = url => C.get(url)?.e;
 
@@ -72,8 +74,10 @@
     const isActive = s => (AR().isActiveStudent ? AR().isActiveStudent(s) : !s.frozen);
     const isDebtor = s => (AR().isDebtor ? AR().isDebtor(s) : isActive(s) && num(s.debtAmount) > 0);
     const stateNow = s => (AR().studentStateNow ? AR().studentStateNow(s) : isActive(s) ? 'active' : 'left');
+    let _hc = null;
     function home() {
         if (!g('computeAdminHome')) return null;
+        if (_hc && _hc.lang === S.lang && Date.now() - _hc.at < 8000) return _hc.h;
         let h;
         try { h = computeAdminHome({ students: students().filter(s => inLang(langOf(s))), leads: scopedLeads() }); } catch (e) { console.warn('[adminApp] computeAdminHome', e.message); return null; }
         // Menejerlar (sotuv, reja) — tanlangan til bo'yicha qayta yig'iladi (computeAdminHome hammasini beradi).
@@ -81,6 +85,7 @@
             const rows = h.mgrRows.filter(m => (m.lang === 'russian' ? 'russian' : 'english') === S.lang);
             h = { ...h, mgrRows: rows, revenue: rows.reduce((n, m) => n + m.sales, 0), target: rows.reduce((n, m) => n + (m.target || 0), 0), dealsMonth: rows.reduce((n, m) => n + m.deals, 0) };
         }
+        _hc = { lang: S.lang, at: Date.now(), h };
         return h;
     }
     const monthStart = () => todayKey().slice(0, 8) + '01';
@@ -241,6 +246,7 @@
     const TAB_OF = { home: 'home', students: 'menu', sales: 'sales', finance: 'finance', menu: 'menu', jadval: 'jadval' };
     function render(anim) {
         if (!root || !isOn()) return;
+        if (S.screen === 'rop') return;
         if (S.screen === 'crm' || S.screen === 'jadval') { syncNav(); return; }
         const act = document.activeElement, focusId = act && root.contains(act) ? act.id : '', caret = focusId && typeof act.selectionStart === 'number' ? act.selectionStart : null;
         const prev = root.querySelector('.adm-body')?.scrollTop || 0;
@@ -263,7 +269,7 @@
         const active = S.screen === 'crm' ? S.crmTab || null : TAB_OF[S.screen] || 'home';
         const items = [['home', 'home', 'Bosh'], ['jadval', 'cal', 'Dars jadvali'], ['sales', 'trend', 'Sotuv'], ['finance', 'card', 'Moliya'], ['menu', 'menu', 'Menyu']];
         nav.innerHTML = items.map(([id, icn, l]) => `<button type="button" data-m-nav="${id}"${active === id ? ' aria-current="page"' : ''}>${ic(icn, 21, active === id ? 2.3 : 1.9)}<span>${l}</span></button>`).join('');
-        nav.hidden = !isOn();
+        nav.hidden = !isOn() || S.screen === 'rop';
     }
     function leaveCrm() {
         if (S.screen !== 'crm' && S.screen !== 'jadval') return;
@@ -277,12 +283,13 @@
         S.stack = [];
         S.tabbed = true;
         if (screen === 'jadval') { openCrm('timetable', { asTab: 'jadval' }); return; }
+        if (screen === 'sales' && window.ropApp?.setGuest) { openRopGuest(); return; }
         S.screen = screen;
         try { history.replaceState({ adm: 1 }, ''); } catch (e) { /* */ }
         render(true);
     }
     function go(screen, extra = {}) {
-        if (screen === 'jadval') { tabTo('jadval'); return; }
+        if (screen === 'jadval' || screen === 'sales') { tabTo(screen); return; }
         leaveCrm();
         S.stack.push({ screen: S.screen });
         Object.assign(S, extra, { screen });
@@ -324,6 +331,30 @@
             document.body.appendChild(b);
         }
     }
+    // Sotuv — ROP telefon ilovasi (lidlar, kanban, taqsimlash) xuddi ROP/sotuv menejeridagidek; tepada "Admin kabinetga qaytish".
+    function openRopGuest(screen) {
+        leaveCrm();
+        S.screen = 'rop';
+        if (root) root.hidden = true;
+        if (nav) nav.hidden = true;
+        document.body.classList.add('adm-rop');
+        window.ropApp.setGuest(true, screen || 'leads');
+        document.querySelector('.adm-ropbar')?.remove();
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'adm-ropbar'; b.innerHTML = `${ic('back', 16, 2.4)}Admin kabinet`;
+        b.onclick = closeRopGuest;
+        document.body.appendChild(b);
+    }
+    function closeRopGuest() {
+        document.querySelector('.adm-ropbar')?.remove();
+        document.body.classList.remove('adm-rop');
+        S._skipPop = true;
+        try { window.ropApp?.setGuest(false); } catch (e) { /* */ }
+        setTimeout(() => { S._skipPop = false; }, 600);
+        S.screen = 'home'; S.stack = [];
+        if (root) root.hidden = false;
+        render(true);
+    }
     function closeCrm() {
         const wasJadval = S.screen === 'jadval';
         leaveCrm();
@@ -347,7 +378,7 @@
         const d = t.dataset;
         if ('mBack' in d) { history.back(); return; }
         if ('mGo' in d) { go(d.mGo); return; }
-        if ('mCrm' in d) { openCrm(d.mCrm); return; }
+        if ('mCrm' in d) { if (/^sales:(leads|rating)$/.test(d.mCrm) && window.ropApp?.setGuest) { openRopGuest(d.mCrm === 'sales:rating' ? 'team' : 'leads'); return; } openCrm(d.mCrm); return; }
         if ('mStu' in d) { go('students', { sec: d.mStu, q: '' }); return; }
         if ('mSec' in d) { S.sec = d.mSec; render(false); return; }
         if ('mLang' in d) { S.lang = d.mLang; render(false); return; }
@@ -375,11 +406,12 @@
             root.addEventListener('click', onClick);
             root.addEventListener('input', onInput);
         }
-        root.hidden = S.screen === 'crm' || S.screen === 'jadval';
+        root.hidden = ['crm', 'jadval', 'rop'].includes(S.screen);
         if (!nav) buildNav();
         render(true);
     }
     function disable() {
+        if (S.screen === 'rop') closeRopGuest();
         document.body.classList.remove('adm-on', 'adm-crm');
         document.querySelector('.adm-backbar')?.remove();
         if (root) root.hidden = true;
@@ -389,14 +421,14 @@
     function init() {
         if (inited || !isAdmin()) return;
         inited = true;
-        window.addEventListener('popstate', () => { if (isOn() && !back() && S.screen === 'home') toast('Chiqish uchun yana bir marta “Orqaga” bosing'); });
+        window.addEventListener('popstate', () => { if (S._skipPop) { S._skipPop = false; return; } if (S.screen === 'rop') return; if (isOn() && !back() && S.screen === 'home') toast('Chiqish uchun yana bir marta “Orqaga” bosing'); });
         document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && isOn()) { for (const c of C.values()) c.at = 0; render(false); } });
         MQ.addEventListener?.('change', sync);
         // Kesh (holat) kech yuklansa ham ekran yangilansin.
-        let tries = 0; const wait = setInterval(() => { tries++; if (isOn() && S.screen !== 'crm' && S.screen !== 'jadval' && document.activeElement?.id !== 'admQ') render(false); if (tries > 10) clearInterval(wait); }, 1500);
+        let tries = 0; const wait = setInterval(() => { tries++; const ready = g('getItem') && getItem(STORAGE_KEYS.leads, null); if (ready || tries > 30) { clearInterval(wait); _hc = null; if (isOn() && S.screen !== 'crm' && S.screen !== 'jadval' && S.screen !== 'rop') render(false); } }, 700);
         sync();
     }
-    window.adminApp = { init, go, back, openCrm, render: () => render(false), state: S, _test: { home, scrHome, scrStudents, scrSales, scrFinance, scrMenu, isOn } };
+    window.adminApp = { init, go, back, openCrm, closeRopGuest, render: () => render(false), state: S, _test: { home, scrHome, scrStudents, scrSales, scrFinance, scrMenu, isOn } };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(init, 120));
     else setTimeout(init, 120);
 })();
