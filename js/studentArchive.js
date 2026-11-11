@@ -134,6 +134,7 @@
         else body = inN || chg.length ? sec('Muzlatilgan', by('frozen')) + sec('Boshqa ustozga o\'tgan', by('moved')) + sec('Ustozi almashgan · faol, ma\'lumot uchun', chg) + sec('Chiqib ketgan', by('left')) + sec('Kursni tugatgan', by('finished'))
             : '<p class="sc-mt ar-empty">Faol bo\'lmagan o\'quvchi yo\'q</p>';
         const segBtn = (k, label) => `<button type="button" data-artab="${k}" aria-pressed="${tab === k}">${label}</button>`;
+        if (opts.page === 'admin') return drawAdmin(root, opts, data);
         if (opts.page === 'teacher' || opts.page === 'assistant') {
             // UstozOquvchiArxiv / YordamchiOquvchiArxiv — sahifa sarlavhasi bilan (css/oquvchilar.css, .oq-*).
             const asg = opts.page === 'assistant';
@@ -165,6 +166,67 @@
         root.querySelectorAll('[data-artab]').forEach(b => b.onclick = () => draw(root, { ...opts, tab: b.dataset.artab }, data));
         root.querySelectorAll('[data-st]').forEach(b => b.onclick = () => u.openStudent(b.dataset.st));
         bindFollowups(root, opts, tab);
+    }
+
+    // ── Admin / ROP: O'quvchilar → "Tark etganlar" va "Tamomlaganlar" (11-noyabr, direktor tasdiqlagan) ──
+    // Muzlatilganlar bu yerda takrorlanmaydi (o'z bo'limida). Har kartada: ustoz, o'qigan davr, sabab, kim belgilagan,
+    // qarz qoldig'i va "Qayta tiklash" (o'quvchi kartasidagi holat oynasi). Tepada: bu oy, jami, qarz, eng ko'p sabablar.
+    function drawAdmin(root, opts, data) {
+        const u = U();
+        const { esc, studentAvatar, addDays, today, dShort, shortName } = u;
+        const td = today(), month = td.slice(0, 7);
+        const fin = opts.mode === 'finished';
+        const all = (data.students || []).filter(s => (fin ? s.state === 'finished' : s.state === 'left'));
+        const q = String(opts.q || '').trim().toLowerCase();
+        const list = q ? all.filter(s => String(s.name || '').toLowerCase().includes(q) || String(s.teacherName || '').toLowerCase().includes(q)) : all;
+        const lastDay = s => (s.from ? addDays(s.from, -1) : null);
+        const money = n => `${Math.round(Number(n) || 0).toLocaleString('en-US').replace(/,/g, ' ')} soʻm`;
+        const sched = s => `${s.schedule?.days || ''} ${s.schedule?.time || ''}`.trim();
+        const finNote = s => String(s.reason || '').replace(/^Kursni tugatdi:?\s*/i, '').trim();
+        const ROLE = { admin: 'admin', boshliq: 'direktor', rop: 'ROP', academic_head: 'akademik', teacher: 'ustoz', sales_manager: 'sotuv' };
+        const byTxt = s => s.by?.name ? `${esc(s.by.name)}${ROLE[s.by.role] ? ' · ' + ROLE[s.by.role] : ''}` : '—';
+        const thisMonth = all.filter(s => String(s.from || '').startsWith(month)).length;
+        const debtors = all.filter(s => Number(s.debtAmount) > 0), debtSum = debtors.reduce((n, s) => n + Number(s.debtAmount), 0);
+        // Sabablar — formada tanlangan sabab turi bo'yicha (erkin matn emas); tanlanmaganlar hisoblanmaydi.
+        const reasons = {}; if (!fin) all.forEach(s => { const r = String(s.reasonCode || '').trim(); if (r && r !== 'finished') reasons[r] = (reasons[r] || 0) + 1; });
+        const top = Object.entries(reasons).sort((a, b) => b[1] - a[1]).slice(0, 3);
+        const tiles = fin
+            ? [['Bu oy tugatdi', thisMonth, 'oxirgi dars shu oyda'], ['Jami tugatgan', all.length, 'kursni oxirigacha oʻqigan'],
+               ['Ilovada oʻrtacha', all.filter(s => s.reached != null).length ? Math.round(all.reduce((n, s) => n + (Number(s.reached) || 0), 0) / all.filter(s => s.reached != null).length) + ` / ${COURSE}` : '—', 'oʻtilgan dars (ilova)']]
+            : [['Bu oy ketdi', thisMonth, `${MON[Number(month.slice(5)) - 1]} oyida chiqib ketgan`], ['Jami chiqib ketgan', all.length, 'faol oʻquvchilar soniga kirmaydi'],
+               ['Qarz qoldigʻi', debtSum ? money(debtSum) : '0 soʻm', `${debtors.length} ta oʻquvchida · Qarzdorlar → Ketganlar qarzi`]];
+        const tile = ([k, v, h], red) => `<div class="sfx-tile"><small>${esc(k)}</small><b${red ? ' class="dbx-red"' : ''}>${esc(String(v))}</b><span>${esc(h)}</span></div>`;
+        const rows = s => {
+            const start = s.startDate, r = [];
+            r.push(['Ustoz', s.teacherName ? `${esc(shortName(s.teacherName))}${sched(s) ? ' · ' + esc(sched(s)) : ''}` : '—']);
+            r.push([fin ? 'Kurs' : 'Oʻqigan', [`${start ? ddmm(start) + ' ' : ''}→ ${ddmm(lastDay(s))}`, `${s.lessons || 0} dars`, s.reached != null ? `ilovada ${s.reached} / ${COURSE}` : ''].filter(Boolean).join(' · ')]);
+            if (fin) { if (finNote(s)) r.push(['Izoh', esc(finNote(s))]); }
+            else r.push(['Sabab', s.reason ? esc(s.reason) : '<span class="ar-mute">yozilmagan</span>']);
+            r.push(['Belgilagan', `${byTxt(s)}${s.from ? ' · ' + esc(dShort(s.from)) : ''}`]);
+            if (!fin && Number(s.debtAmount) > 0) r.push(['Qarz', `<b class="dbx-red">${esc(money(s.debtAmount))}</b>${s.paymentDueDate ? ' · muddat ' + esc(dShort(String(s.paymentDueDate).slice(0, 10))) : ''}`]);
+            if (s.subject) r.push(['Til', s.subject === 'russian' ? 'Rus tili' : 'Ingliz tili']);
+            return r;
+        };
+        const pill = s => fin ? `<span class="sc-pill sc-pill--ok">Kursni tugatgan · ${esc(dShort(lastDay(s)))}</span>`
+            : `<span class="sc-pill sc-pill--bad">Chiqib ketgan · ${esc(dShort(s.from))}</span>`;
+        const card = s => `<article class="ar-card" data-card="${esc(s.id)}"><div class="ar-top">${studentAvatar(s, 40)}<span><button type="button" class="sc-link ar-name" data-st="${esc(s.id)}">${esc(s.name)}</button>${pill(s)}</span></div>
+            <dl class="ar-dl">${rows(s).map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>
+            <div class="ar-acts"><button type="button" class="sc-btn" data-st="${esc(s.id)}">Kartani ochish</button>${fin ? '' : `<button type="button" class="sc-btn sc-btn--pri" data-restore="${esc(s.id)}">Qayta tiklash</button>`}</div></article>`;
+        const groups = {}; [...list].sort((a, b) => String(b.from || '').localeCompare(String(a.from || ''))).forEach(s => { const k = String(s.from || '').slice(0, 7) || '—'; (groups[k] ||= []).push(s); });
+        const monTitle = k => k === '—' ? 'Sanasiz' : `${MON[Number(k.slice(5)) - 1][0].toUpperCase()}${MON[Number(k.slice(5)) - 1].slice(1)} ${k.slice(0, 4)}`;
+        const body = list.length ? Object.entries(groups).map(([k, items]) => `<h3 class="ar-sec">${esc(monTitle(k))} · ${items.length} ta</h3><div class="ar-grid">${items.map(card).join('')}</div>`).join('')
+            : `<p class="sc-mt ar-empty">${q ? 'Qidiruv boʻyicha topilmadi' : fin ? 'Kursni tugatgan oʻquvchi hali yoʻq' : 'Chiqib ketgan oʻquvchi yoʻq'}</p>`;
+        root.innerHTML = `<div class="debtors-wrap ar-admin">
+            <p class="dbx-info">${fin ? 'Kursni oxirigacha oʻqiganlar (oʻquvchi kartasida <b>Holat → Kursni tugatdi</b>). Ular faol oʻquvchilar, bugungi darslar va reytingga qoʻshilmaydi.'
+                : 'Chiqib ketgan oʻquvchilar (oʻquvchi kartasida <b>Holat → Kursni toʻxtatish</b>). Muzlatilganlar — <b>Muzlatilganlar</b> boʻlimida. <b>Qayta tiklash</b> oʻquvchini yana faol qiladi.'}</p>
+            <div class="sfx-tiles">${tiles.map((t, i) => tile(t, !fin && i === 2 && debtSum > 0)).join('')}${top.length ? `<div class="sfx-tile"><small>Eng koʻp sabab</small><b style="font-size:15px">${esc(top[0][0])}</b><span>${top.map(([k, n]) => `${esc(k)} — ${n}`).join(' · ')}</span></div>` : ''}</div>
+            <section class="sc-card"><header class="ar-head"><h2>${fin ? 'Tamomlaganlar' : 'Tark etganlar'} <small class="ar-mute">· ${list.length} ta</small></h2>
+              <input type="search" class="form-control ar-q" data-arq placeholder="Ism yoki ustoz boʻyicha qidirish" value="${esc(opts.q || '')}" style="max-width:280px"></header>
+              <div class="ar-body">${body}</div></section></div>`;
+        const qi = root.querySelector('[data-arq]'); let t = null;
+        qi.oninput = () => { clearTimeout(t); t = setTimeout(() => { draw(root, { ...opts, q: qi.value }, data); const n = root.querySelector('[data-arq]'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); }, 180); };
+        root.querySelectorAll('[data-st]').forEach(b => b.onclick = () => u.openStudent(b.dataset.st));
+        root.querySelectorAll('[data-restore]').forEach(b => b.onclick = () => u.openCardForm(b.dataset.restore, 'holat', () => render(root, opts), { act: 'restore' }));
     }
 
     // ── Eslatma / qo'ng'iroq: karta ichida kichik forma ─────────────────────

@@ -302,6 +302,8 @@ function applyRoleBasedAccess(user) {
     // "Faol emas" (muzlatilgan / chiqib ketgan / boshqa ustozga o'tgan) — ustoz va sotuv menejeri uchun alohida ro'yxat.
     const inactiveBtn = document.getElementById('btnSchoolInactive');
     if (inactiveBtn) inactiveBtn.hidden = !['teacher', 'sales_manager'].includes(role);
+    // 11-noyabr: Tark etganlar / Tamomlaganlar — admin, direktor, ROP (server /api/school/inactive MANAGE).
+    document.querySelectorAll('[data-students-section="tark-etgan"], [data-students-section="tamomlaganlar"]').forEach(b => { b.hidden = !['admin', 'boshliq', 'rop'].includes(role); });
     const financeEmployee = role === 'employee' && getItem(STORAGE_KEYS.hrEmployees, []).some(e =>
         String(e.login || '').trim().toLowerCase() === String(user.email || '').trim().toLowerCase()
         && ['moliya', 'finance'].includes(String(e.department || '').toLowerCase()));
@@ -1123,6 +1125,8 @@ function switchStudentsSection(section) {
     if (langTabs) langTabs.style.display = section === 'faol' ? '' : 'none';
     const addBtn = document.getElementById('addStudentBtn');
     if (addBtn) addBtn.style.display = section === 'faol' ? '' : 'none';
+    const fBar = document.getElementById('studentsFiltersBar');
+    if (fBar) fBar.style.display = section === 'tark-etgan' || section === 'tamomlaganlar' ? 'none' : '';
     // Sotuv menejerining yangi "Faol o'quvchilar" sahifasi boshqa bo'limlarda yashiriladi.
     const soldRoot = document.getElementById('schoolMyStudents');
     if (soldRoot && getCurrentUser()?.role === 'sales_manager' && section !== 'faol') {
@@ -1132,6 +1136,11 @@ function switchStudentsSection(section) {
     if (section === 'faol') renderStudents();
     if (section === 'muzlatilgan') renderFrozenStudents();
     if (section === 'qarzdorlar') renderDebtors();
+    // 11-noyabr: Tark etganlar / Tamomlaganlar — holat belgisi bo'yicha (studentArchive admin ko'rinishi).
+    if (section === 'tark-etgan' || section === 'tamomlaganlar') {
+        const panel = document.querySelector(`[data-students-panel="${section}"]`);
+        if (panel && window.studentArchive?.render) window.studentArchive.render(panel, { page: 'admin', mode: section === 'tamomlaganlar' ? 'finished' : 'left' });
+    }
     persistCurrentTab();
 }
 
@@ -10216,6 +10225,11 @@ function renderStudents() {
     });
 
     // Faol bo'lim "faol" bo'lmasa, faqat panel almashtirish
+    if (activeSection === 'tark-etgan' || activeSection === 'tamomlaganlar') {
+        const fBar = document.getElementById('studentsFiltersBar'); if (fBar) fBar.style.display = 'none';
+        const panel = document.querySelector(`[data-students-panel="${activeSection}"]`);
+        if (panel && window.studentArchive?.render) { window.studentArchive.render(panel, { page: 'admin', mode: activeSection === 'tamomlaganlar' ? 'finished' : 'left' }); }
+    }
     if (activeSection !== 'faol') return;
 
     // 30-ish: .leads-lang-tabs CSS qoidasi (display:flex) [hidden]
