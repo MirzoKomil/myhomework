@@ -106,6 +106,7 @@ for (const lang of ['english', 'russian']) {
         backfillMissingLeadSerials() {}, renderLeadsManagerFilter() {}, renderLeadsColumnsFilter() {},
         _leadsLangFilter: lang, _leadSearchQuery: '', STORAGE_KEYS: { leads: 'leads' },
         getItem: () => ({ [lang]: [] }), filterLeadsByManager: rows => rows,
+        initLeadsDateSourceFilters() {}, filterLeadsByDateAndSource: rows => rows,
         getVisibleLeadColumns: () => [{ id: 'yangi-lidlar', label: 'Yangi lidlar' }],
         updateLeadSearchStatus() {}, initLeadDragDrop() {}, wireLeadContactReasonFilter() {},
         refreshLeadRecordingCounts() {}, closeLeadCardMenus() {}

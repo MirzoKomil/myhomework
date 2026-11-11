@@ -20,7 +20,7 @@ test('ma’lumot yo‘q bo‘lsa foiz "—", "Churn" endi muzlatilganlar ulushi 
     const ctx = {}; vm.createContext(ctx);
     vm.runInContext(app.match(/function anPct[\s\S]*?\n\}/)[0], ctx);
     assert.equal(ctx.anPct(null), '—');
-    assert.equal(ctx.anPct(12.345), '12.3%');
+    assert.equal(ctx.anPct(12.345), '12,3%'); // o'zbekcha o'nlik vergul (admin audit 2)
     assert.doesNotMatch(app, /'Churn Rate', \(100 - retention\)/);
     assert.doesNotMatch(app, /\$\{churnRate\.toFixed/);
     assert.match(app, /const cac = newCustomers > 0 && marketingSpend > 0/);

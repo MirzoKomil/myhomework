@@ -99,7 +99,7 @@ test('markup is a readonly search field, not a username; board composes search w
   assert.match(field, /type="search"/); assert.match(field, /readonly/); assert.match(field, /autocomplete="off"/);
   assert.doesNotMatch(field, /\bname=|\bvalue=/);
   assert.match(source, /\.filter\(l => leadMatchesSearch\(l\)\)/);
-  assert.match(source, /LEAD_COLUMNS\.filter\(col => _leadsVisibleColumns\.has\(col.id\) \|\| tagged.some/);
+  assert.match(source, /LEAD_COLUMNS\.filter\(col => effectiveVisibleLeadIds\(\)\.has\(col.id\) \|\| tagged.some/);
 });
 
 test('actual kanban search preserves language, manager and stage visibility without writing lead data', () => {
@@ -117,7 +117,10 @@ test('actual kanban search preserves language, manager and stage visibility with
     backfillMissingLeadSerials() {}, renderLeadsManagerFilter() {}, renderLeadsColumnsFilter() {},
     getVisibleLeadColumns: () => [{ id: 'yangi-lidlar', label: 'Yangi lidlar' }],
     renderLeadCard: l => `<article data-match="${l.id}"></article>`,
-    initLeadDragDrop() {}, wireLeadContactReasonFilter() {}, refreshLeadRecordingCounts() {}
+    initLeadDragDrop() {}, wireLeadContactReasonFilter() {}, refreshLeadRecordingCounts() {},
+    // Keyinchalik qo'shilgan sana/manba va bosqich filtrlari — bu testda neytral (hammasini o'tkazadi).
+    initLeadsDateSourceFilters() {}, filterLeadsByDateAndSource: list => list,
+    effectiveVisibleLeadIds: () => visible
   });
   c.renderLeads(); assert.match(board.innerHTML, /data-match="closed"/);
   assert.doesNotMatch(board.innerHTML, /other-manager|other-language/);

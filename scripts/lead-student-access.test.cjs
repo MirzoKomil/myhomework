@@ -181,6 +181,7 @@ test('stale CRM snapshots keep newly provisioned accounts; explicit deletion wor
     STUDENT_PROVISION_LOCK, rowToStudent: fromRow, isUsableList: Array.isArray, teacherDuties: require('../server/services/teacherDuties'),
     require: name => { if(name==='./services/domworkBot/events') return require('../server/services/domworkBot/events'); throw Error(name); },
     guardBulkDelete: async () => {}, BCRYPT_HASH_RE: /^\$2[aby]\$\d{2}\$/, bcrypt,
+    staffDemoCleanup: require('../server/services/staffDemoCleanup'),
     // Faqat kelgan va aniq o'chirilgan qatorlar almashtiriladi (arxiv bu testning mavzusi emas).
     replaceSnapshotRows: async (client, table, label, incoming, removed) => {
       const ids = new Set([...incoming.map(i => i.id), ...(removed || [])]);
@@ -223,7 +224,8 @@ for (const lang of ['english', 'russian']) {
           createSession: async data => { session = data; } };
         if (id === '../middleware/auth') return { signToken: claims => ({ token: 'test-token', jti: 'test-jti', claims }),
           authRequired: () => {} };
-        return require(id);
+        // Boshqa nisbiy modullar (masalan ../services/authSecurity) auth.js joylashgan papkadan topiladi.
+        return require(id.startsWith('.') ? path.join(root, 'server/routes', id) : id);
       }
     };
     vm.runInNewContext(fs.readFileSync(path.join(root, 'server/routes/auth.js'), 'utf8'), context);
@@ -254,7 +256,7 @@ test('CRM only caches server-confirmed students and sends no SMS before a succes
   const pending = new Promise(resolve => { resolveSave = resolve; });
   const cache = { students: [], leads: { english: [leadFixture('english', 'sinov-darsida')], russian: [] } };
   const sent = [];
-  const context = loadFunctions('js/app.js', ['persistLeadChange', 'updateLeadInStorage', 'cacheProvisionedStudent', 'ensureStudentLoginForLead'], {
+  const context = loadFunctions('js/app.js', ['persistLeadChange', 'rememberServerLeadSerial', 'updateLeadInStorage', 'cacheProvisionedStudent', 'ensureStudentLoginForLead'], {
     studentAccess: access, STORAGE_KEYS: { leads: 'leads', students: 'students' },
     getItem: key => cache[key], setItem: (key, value) => { assert.equal(key, 'leads'); cache[key] = value; },
     setCachedItem: (key, value) => { cache[key] = value; },
@@ -263,7 +265,8 @@ test('CRM only caches server-confirmed students and sends no SMS before a succes
     newestLeadVersion: () => null, updateCachedLeadVersion: () => {},
     maybeSendAutoStageSms: (...args) => sent.push(args), LEAD_STATUSES_NEED_SERIAL: access.PAYMENT_STAGES,
     autoSyncLeadToBookRoadmap: () => {}, syncLeadManagerToBookRoadmap: () => {},
-    document: { getElementById: () => null }, console, showSaveError: () => {}, refreshSingleLeadFromApi: async () => false
+    document: { getElementById: () => null }, console, showSaveError: () => {}, refreshSingleLeadFromApi: async () => false,
+    getCurrentUser: () => ({ role: 'admin' }), isLeadsReadOnly: () => false
   });
   context.updateLeadInStorage('english', 'test-lead', l => ({ ...l, status: 'tolov-jarayonida' }));
   assert.equal(cache.students.length, 0);

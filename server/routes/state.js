@@ -9,6 +9,7 @@ const router = express.Router();
 const { getTeacherScopedState, findUserById, pool } = require('../db');
 const { scopeState } = require('../services/stateScope');
 const ropScope = require('../services/ropScope');
+const bonusImages = require('../services/bonusImages');
 const teacherDuties = require('../services/teacherDuties');
 const { loadLearningByStudent, ratingResponse } = require('../services/teacherRating');
 
@@ -997,9 +998,23 @@ async function getStateForUser(user) {
     return scoped;
 }
 
+// Bonus rasmlari (MacBook, iPhone…) — holat ichida base64 (~2,3 MB) emas, alohida keshlanadigan rasm sifatida.
+router.get('/bonus-image/:id', async (req, res) => {
+    try {
+        const img = await bonusImages.read(pool, req.params.id);
+        if (!img) return res.status(404).end();
+        res.set({ 'Content-Type': img.type, 'Cache-Control': 'public, max-age=31536000, immutable', 'X-Content-Type-Options': 'nosniff' }).send(img.buf);
+    } catch { res.status(500).end(); }
+});
+
 router.get('/', authRequired, crmStateIdentity, crmStateRequired, async (req, res) => {
     try {
-        res.json(await getStateForUser(req.user));
+        const state = await getStateForUser(req.user);
+        if (state.bonusData) state.bonusData = bonusImages.toUrls(state.bonusData);
+        // 11-noyabr (tezlik): ?only=students,teachers — polling butun holatni (~20 MB) emas, faqat shu kalitlarni oladi.
+        // Rol bo'yicha kesish yuqorida to'liq bajarilgan, bu yerda faqat tanlanadi.
+        const only = String(req.query?.only || '').split(',').map(k => k.trim()).filter(k => /^[A-Za-z]+$/.test(k));
+        res.json(only.length ? Object.fromEntries(only.filter(k => Object.prototype.hasOwnProperty.call(state, k)).map(k => [k, state[k]])) : state);
     } catch (err) {
         console.error('GET /api/state', err);
         res.status(err.status || 500).json({ error: err.status ? err.message : 'Ma\'lumotlarni yuklashda xatolik' });
@@ -1041,14 +1056,16 @@ router.patch('/', authRequired, crmStateIdentity, crmStateMutationRequired, asyn
             const needsExisting = langs && ['students', 'teachers', 'mainAttendance', 'assistantAttendance', 'removedStudentIds'].some(k => partial[k] !== undefined);
             toSave = ropScope.guardRopPatch(partial, langs, needsExisting ? await getFullState() : {});
             // Faqat boshqa til ustozlari kelgan bo'lsa — saqlanadigan narsa qolmaydi (xato emas).
-            if (!Object.keys(toSave).length) return res.json({ ok: true, state: await getStateForUser(req.user) });
+            if (!Object.keys(toSave).length) return res.json({ ok: true });
         }
         // Admin/boshliq: kitob kartasini jo'natish bosqichiga o'tkazish ham to'lov shartiga bo'ysunadi.
         if (toSave.bookRoadmap !== undefined) await bookRoadmapLead.assertSnapshotTransitions(pool, toSave.bookRoadmap);
+        if (toSave.bonusData !== undefined) toSave = { ...toSave, bonusData: await bonusImages.restore(pool, toSave.bonusData) };
         await patchState(toSave, req.user);
         // Davomat: tasdiqlovchilar keshi (lavozim/til/login o'zgargan bo'lishi mumkin)
         if (toSave.hrEmployees !== undefined) require('../services/staffAttendance').clearApproverCache();
-        res.json({ ok: true, state: await getStateForUser(req.user) });
+        // 11-noyabr (tezlik): har saqlashda butun holat (~20 MB) qaytarilardi — klient uni ishlatmaydi.
+        res.json({ ok: true });
     } catch (err) {
         console.error('PATCH /api/state', err);
         res.status(err.status || 500).json({ error: err.status ? err.message : 'Saqlashda xatolik' });

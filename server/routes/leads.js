@@ -285,6 +285,30 @@ router.post('/:id/restore', authRequired, leadArchiveRequired, async (req, res) 
     }
 });
 
+// 11-noyabr (tezlik): har 30 s to'liq lidlar (~15 MB) o'rniga avval shu yengil "versiya" so'raladi;
+// o'zgarmagan bo'lsa ro'yxat qayta yuklanmaydi. Barcha UPDATE'lar (updated_at'ni oshirmaydiganlari ham)
+// qator matni xeshiga ta'sir qiladi, shu sabab kesh hech qachon eskirib qolmaydi.
+router.get('/version', authRequired, leadReadRequired, async (req, res) => {
+    try {
+        const db = require('../db').pool;
+        let where = 'deleted_at IS NULL', args = [];
+        if (req.user.role === 'sales_manager') {
+            const managerId = await getSalesManagerIdForUser(req.user.id);
+            if (!managerId) return res.json({ v: 'none' });
+            where += ' AND manager_id = $1'; args = [managerId];
+        } else {
+            const langs = req.user.role === 'targetolog' ? await require('../services/targetAds').targetologLangs(db, req.user)
+                : req.user.role === 'rop' ? await ropLangs(req) : null;
+            if (langs) { where += " AND (CASE WHEN language = 'russian' THEN 'russian' ELSE 'english' END) = ANY($1::text[])"; args = [langs]; }
+        }
+        const r = (await db.query(`SELECT COUNT(*)::int AS n, md5(COALESCE(string_agg(md5(l::text), '' ORDER BY id), '')) AS h FROM leads l WHERE ${where}`, args)).rows[0];
+        res.set('Cache-Control', 'no-store').json({ v: r.n + ':' + r.h });
+    } catch (err) {
+        console.error('GET /api/leads/version', err);
+        res.status(500).json({ error: 'Versiyani olib bo\'lmadi' });
+    }
+});
+
 router.get('/', authRequired, leadReadRequired, async (req, res) => {
     try {
         if (req.user.role === 'sales_manager') {

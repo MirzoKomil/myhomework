@@ -1,7 +1,20 @@
 // Telegram lid xabarlarini o'qish (server/routes/telegram.js) — ikkala format.
 // Ishga tushirish: node scripts/telegram-lead-parse.test.cjs
 const assert = require('assert');
-const { parseTelegramLeadMessage } = require('../server/routes/telegram');
+// server/db.js DATABASE_URL'siz jarayonni to'xtatadi, capiWebhook esa taymer ochadi —
+// parser ularga bog'liq emas, shuning uchun faqat shu marshrut uchun o'rinbosar beramiz.
+const Module = require('module');
+const routePath = require.resolve('../server/routes/telegram');
+const originalLoad = Module._load;
+let parseTelegramLeadMessage;
+try {
+  Module._load = function (request, parent, ...args) {
+    if (parent?.filename === routePath && request === '../db') return { insertLead() { throw new Error('db stub'); } };
+    if (parent?.filename === routePath && request === '../services/capiWebhook') return { sendLeadToCapi() {} };
+    return originalLoad.call(this, request, parent, ...args);
+  };
+  ({ parseTelegramLeadMessage } = require(routePath));
+} finally { Module._load = originalLoad; }
 
 // 1-format (eski guruh)
 const oldMsg = `#telegram

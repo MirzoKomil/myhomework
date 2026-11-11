@@ -749,6 +749,7 @@ function getLeadPollFingerprint(leads) {
     ].join('|'))).sort().join('\n');
 }
 
+let _leadsPollVersion = null;
 let _leadFollowUpSeen = new Set();
 let _leadFollowUpPrimed = false;
 function getDueFollowUpIdsForCurrentUser() {
@@ -768,14 +769,21 @@ function startLeadsPolling() {
             const mutationGeneration = getLeadMutationGeneration();
             const prev = getItem(STORAGE_KEYS.leads, { english: [], russian: [] });
             const prevFingerprint = getLeadPollFingerprint(prev);
-            const leads = await apiFetchLeads();
+            // 11-noyabr (tezlik): avval yengil versiya — o'zgarmagan bo'lsa ~15 MB ro'yxat yuklanmaydi va qayta ishlanmaydi.
+            let ver = null;
+            try { ver = (await apiFetch('/api/leads/version'))?.v || null; } catch { ver = null; }
+            const same = !!ver && ver === _leadsPollVersion;
+            const leads = same ? prev : await apiFetchLeads();
             // Telefon uyqudan uyg'onganda yoki aloqa uzilganda server bo'sh/chala javob qaytarishi mumkin —
             // bunday javob jimgina o'tkazib yuboriladi (keyingi so'rovda yangilanadi), "Saqlash xatoligi" chiqmaydi.
             if (!isValidLeadsShape(leads)) return;
             if (hasPendingLeadChanges() || mutationGeneration !== getLeadMutationGeneration()) return;
-            const changed = prevFingerprint !== getLeadPollFingerprint(leads);
-            setItem(STORAGE_KEYS.leads, leads);
-            syncLeadServerVersions(leads);
+            const changed = !same && prevFingerprint !== getLeadPollFingerprint(leads);
+            if (!same) {
+                _leadsPollVersion = ver;
+                setItem(STORAGE_KEYS.leads, leads);
+                syncLeadServerVersions(leads);
+            }
             const newCount = leads.english.length + leads.russian.length;
             const dueFollowUps = getDueFollowUpIdsForCurrentUser();
             const newlyDue = dueFollowUps.filter(id => !_leadFollowUpSeen.has(id));
@@ -831,7 +839,8 @@ function startCoreDataPolling() {
             const fullFp = list => { try { return JSON.stringify((list || []).slice().sort((a, b) => String(a?.id).localeCompare(String(b?.id)))); } catch { return ''; } };
             const prevStudentsFp = fullFp(prevStudents);
             const prevTeachersFp = fullFp(prevTeachers);
-            const state = await apiLoadState();
+            // 11-noyabr (tezlik): butun holat (~20 MB) emas — faqat o'quvchilar va ustozlar.
+            const state = await apiLoadState(['students', 'teachers']);
             if (!Array.isArray(state?.students) || !Array.isArray(state?.teachers)) return;
             // So'rov ketayotganda shu tabda saqlash boshlangan bo'lsa — kelgan javob eskirgan, tashlab yuboriladi.
             if (typeof hasPendingRowPatches === 'function' && (hasPendingRowPatches() || rowGen !== rowPatchGeneration())) return;
@@ -9526,7 +9535,7 @@ async function renderCommunicationHubList() {
     // Xodimlar chatida boshqa akkaunt yuborgan oxirgi xabar ham darhol
     // ko'rinishi uchun dialog ochilganida serverdagi umumiy tarixni yangilaymiz.
     try {
-        const state = await apiLoadState();
+        const state = await apiLoadState(['studentMessages']);
         _cache.studentMessages = state.studentMessages || {};
     } catch (err) {
         console.warn('Chat tarixini yangilab bo\'lmadi:', err.message);

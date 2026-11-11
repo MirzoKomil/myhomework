@@ -11,7 +11,12 @@ const app = fs.readFileSync(path.join(root, 'js/app.js'), 'utf8');
 test('yangi ko‘rinish html.rd bilan yoqiladi va oxirgi stil bo‘lib ulanadi', () => {
     assert.match(html, /<html lang="uz" class="rd">/);
     const links = [...html.matchAll(/<link rel="stylesheet" href="([^"]+)"/g)].map(m => m[1]);
-    assert.match(links.at(-1), /^css\/shell\.css\?v=/);
+    // shell.css asosiy styles.css'dan keyin ulanadi (uni ustidan yozadi); undan keyingi rol-ish stollari
+    // (sotDesk, ropDesk, …) o'z body sinflari bilan cheklangan, shell qoidalarini bekor qilmaydi.
+    const shell = links.findIndex(h => /^css\/shell\.css\?v=/.test(h));
+    const base = links.findIndex(h => /^css\/styles\.css\?v=/.test(h));
+    assert.ok(shell >= 0, 'shell.css ulangan');
+    assert.ok(base >= 0 && shell > base, 'shell.css styles.css dan keyin');
 });
 
 test('shell.css dagi har bir qoida html.rd ostida (olib tashlansa eski ko‘rinish qaytadi)', () => {
@@ -70,8 +75,10 @@ test('sotuv menejeri bosh sahifasi: faqat o‘z lidlari, maosh o‘z endpointida
 test('ROP bosh sahifasi: faqat o‘z til yo‘nalishi', () => {
     const fn = app.slice(app.indexOf('function computeRopHome('), app.indexOf('function renderRopHome('));
     assert.match(fn, /const lang = user\?\.linkedRopLang \|\| 'english'/);
-    assert.match(fn, /\(leads\[lang\] \|\| \[\]\)/);
-    assert.match(fn, /\(s\.subject \|\| 'english'\) === lang/);
+    // 'both' — ikkala til birlashtiriladi; aks holda faqat o'z tili.
+    assert.match(fn, /const langs = lang === 'both' \? \['english', 'russian'\] : \[lang\];/);
+    assert.match(fn, /langs\.flatMap\(lg => \(leads\[lg\] \|\| \[\]\)/);
+    assert.match(fn, /langs\.includes\(s\.subject \|\| 'english'\)/);
 });
 
 test('ustoz bosh sahifasi: telefon/to‘lov ko‘rsatilmaydi, faqat o‘z o‘quvchilari', () => {
@@ -81,7 +88,7 @@ test('ustoz bosh sahifasi: telefon/to‘lov ko‘rsatilmaydi, faqat o‘z o‘qu
 });
 
 test('lid kartasi: bosqich o‘zgartirish kanban bilan bir xil yo‘ldan (so‘rovnomalar o‘tkazib yuborilmaydi)', () => {
-    assert.match(app, /function requestLeadStageChange\(lang, leadId, toStatus\)/);
+    assert.match(app, /function requestLeadStageChange\(lang, leadId, toStatus, opts = \{\}\)/);
     assert.match(app, /requestLeadStageChange\(btn\.dataset\.leadMenuMove, btn\.dataset\.leadId, btn\.dataset\.moveTo\)/);
     assert.match(app, /if \(to\) requestLeadStageChange\(lang, leadId, to\);/);
     const fn = app.slice(app.indexOf('function requestLeadStageChange('), app.indexOf('function openLeadOverview('));

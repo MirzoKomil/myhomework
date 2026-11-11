@@ -107,8 +107,9 @@ async function apiRegister(payload) {
     });
 }
 
-async function apiLoadState() {
-    return apiFetch('/api/state');
+// only: faqat kerakli kalitlar (masalan ['students','teachers']) — polling uchun yengil javob.
+async function apiLoadState(only) {
+    return apiFetch('/api/state' + (Array.isArray(only) && only.length ? '?only=' + encodeURIComponent(only.join(',')) : ''));
 }
 
 // Admin paneldagi darslar ro'yxatini umumiy CRM snapshotidan mustaqil

@@ -18,9 +18,10 @@ function ctx(now) {
         escapeHtml: s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]),
         fmtMoney: n => new Intl.NumberFormat('uz-UZ').format(n) + " so'm",
         getMergedBonus: b => b,
+        getCurrentUser: () => null, // admin/ROP ko'rinishi (sotuv menejerining "Sizga…" varianti emas)
     });
     vm.runInContext(['DAILY_BONUSES', 'WEEKLY_BONUSES', 'MONTHLY_BONUSES'].map(constBlock).join('\n') + '\n' + prizeMap + '\n'
-        + ['_prizeImg', '_monthDaysLeft', '_firstName', 'renderRatingMotivation'].map(n => functionSource('js/app.js', n)).join('\n')
+        + ['fmtMln', '_prizeImg', '_monthDaysLeft', '_firstName', 'renderRatingMotivation'].map(n => functionSource('js/app.js', n)).join('\n')
         + '\nthis.render = renderRatingMotivation;', context);
     return context;
 }
@@ -33,7 +34,8 @@ const ranked = [
 test('monthly: leader gap to the next prize and per-day pace', () => {
     const html = ctx('2026-10-21T10:00:00+05:00').render(ranked, 'oylik');
     assert.match(html, /Oy poygasi · 11 kun qoldi/);
-    assert.match(html, /Aziza iPhone 17 Pro sovgʻasiga/);
+    assert.match(html, /Aziza iPhone 18 Pro sovgʻasiga 47,2 mln soʻm qoldi/);
+    assert.match(html, /Sovgʻa uchun kuniga 4,3 mln soʻm\./);
     assert.match(html, /images\/prizes\/prize-phone\.png/);
     assert.match(html, /images\/prizes\/prize-umra\.png/);
     assert.ok(!html.includes('<b>X</b>'), 'names are escaped');
@@ -66,10 +68,11 @@ test('manager home: gap to the next monthly prize, rank and today obed', () => {
     c.getActiveSalesManagers = c.getSalesManagers;
     vm.runInContext(functionSource('js/app.js', 'renderManagerGoalBlock') + '\nthis.goal = renderManagerGoalBlock;', c);
     const html = c.goal('b', 'english');
-    assert.match(html, /iPhone 17 Pro uchun yana 64\s750\s000/);
-    assert.match(html, /reytingda 2-oʻrin, Azizadan 17\s550\s000/);
+    // Summalar endi qisqa "mln soʻm" ko'rinishida (fmtMln).
+    assert.match(html, /iPhone 18 Pro<span class="mot-goal-sep">:<\/span> <span class="mot-goal-gap">yana 64,8 mln soʻm/);
+    assert.match(html, /2-oʻrin<span class="mot-sub-x">, Azizadan 17,6 mln soʻm orqada/);
     assert.match(html, /✓ Obed/);
-    assert.match(html, /uchun yana 550\s000/);
+    assert.match(html, /uchun yana 0,6 mln soʻm/);
     assert.equal(c.goal('', 'english'), '');
 });
 

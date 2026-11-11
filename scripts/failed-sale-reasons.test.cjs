@@ -12,7 +12,11 @@ function constant(name) {
 }
 const start = source.indexOf('function openMuvaffaqiyatsizSotuvFlow(');
 const end = source.indexOf('\nfunction ', start + 1);
-const code = constant('FAILED_SALE_REASON_GROUPS') + '\n' + constant('FAILED_SALE_FROM_COLUMN_MAP') + '\n' + source.slice(start, end);
+// Saqlash alohida saveFailedSaleReason()'ga ko'chirilgan (startMvCascade ham ishlatadi).
+const saveStart = source.indexOf('function saveFailedSaleReason(');
+const saveEnd = source.indexOf('\nfunction ', saveStart + 1);
+const code = constant('FAILED_SALE_REASON_GROUPS') + '\n' + constant('FAILED_SALE_FROM_COLUMN_MAP') + '\n' + source.slice(start, end)
+  + '\n' + source.slice(saveStart, saveEnd);
 
 function fixture(lang, status, selected = true) {
   let lead = { id: 'fixture-lead', status, comments: [{ id: 'old-comment', text: 'Existing' }] };
