@@ -409,13 +409,18 @@ async function takeHome(db, employeeId, month, live = null, cache) {
     const parts = await salaryParts(db, employeeId, month, live, cache);
     const salary = parts.reduce((n, p) => n + p.amount, 0);
     const s = await fines.settlement(db, employeeId, month, salary);
-    const shares = rules.splitTakeHome(parts, s), frozen = await frozenSettlements(db, parts.map(p => p.id));
+    const frozen = await frozenSettlements(db, parts.map(p => p.id));
+    // 11-noyabr (sharh): avval yopilgan qismlar (muzlatilgan yoki yangi qoidadan oldin "Berildi") o'z ulushini saqlaydi;
+    // oylik jarima/bonusning QOLGANI faqat ochiq qismlarga taqsimlanadi (ikki marta ham, kam ham ayirilmaydi).
+    const shares = {}, open = [];
+    let usedDed = 0, usedBonus = 0;
     for (const p of parts) {
         const f = frozen.get(p.id);
-        if (f) shares[p.id] = { amount: Number(f.salary), bonus: Number(f.bonus), deducted: Number(f.fine_deducted), takeHome: Number(f.take_home), frozen: true };
-        // Yangi qoidadan oldin "Berildi" bo'lgan hisob — to'liq summa (eski oylar qayta hisoblanmaydi).
+        if (f) { shares[p.id] = { amount: Number(f.salary), bonus: Number(f.bonus), deducted: Number(f.fine_deducted), takeHome: Number(f.take_home), frozen: true }; usedDed += Number(f.fine_deducted); usedBonus += Number(f.bonus); }
         else if (p.status === 'paid') shares[p.id] = { amount: p.amount, bonus: 0, deducted: 0, takeHome: p.amount, legacy: true };
+        else open.push(p);
     }
+    Object.assign(shares, rules.splitTakeHome(open, { deducted: Math.max(0, (Number(s.deducted) || 0) - usedDed), bonus: Math.max(0, (Number(s.bonus) || 0) - usedBonus) }));
     const list = parts.map(p => ({ ...shares[p.id], id: p.id, lang: p.lang }));
     return { month, salary, takeHome: list.reduce((n, x) => n + x.takeHome, 0), fineDeducted: list.reduce((n, x) => n + x.deducted, 0),
         cleanBonus: list.reduce((n, x) => n + x.bonus, 0), fineGross: s.gross, fineWashed: s.washed, fineNet: s.net, fineCap: s.cap,
@@ -444,6 +449,11 @@ async function preview(pool, actor, input) {
         result.rows = await withTakeHome(db, p, lang, result.rows);
         // Plitka — faqat shu til ulushi (ikki tilli xodimning boshqa tildagi maoshi bu yerga qo'shilmaydi).
         result.takeHomeTotal = result.rows.reduce((n, r) => n + (r.langTakeHome ?? r.takeHome ?? r.total), 0);
+        // Moliya yopgan oy: "Berildi"da qo'lga summa muzlatilmaydi — kassaga to'liq summa yoziladi (ogohlantirish uchun).
+        try {
+            const lk = (await db.query("SELECT to_regclass('fin_period_locks') AS t")).rows[0].t ? (await db.query('SELECT MAX(month) AS m FROM fin_period_locks')).rows[0].m : null;
+            result.monthLocked = !!lk && String(p.end).slice(0, 7) <= (lk instanceof Date ? lk.toISOString() : String(lk)).slice(0, 7);
+        } catch { result.monthLocked = false; }
         return result;
     });
 }
