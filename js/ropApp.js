@@ -946,7 +946,7 @@
         return `
         <header class="sa-top sa-top--leads">
           <div class="sa-top-row"><h1>Jamoa</h1>${seg([['kunlik', 'Bugun'], ['haftalik', 'Hafta'], ['oylik', 'Oy']], per, 'ra-tper', 'Davr')}</div>
-          <div class="ra-tsum"><div class="ra-tsum-h"><span><strong>${mlnF(sales)}</strong><em>${target ? `/ ${mln(target)} · ${pct}%` : '· reja belgilanmagan'}</em></span><span class="ra-lockt">${ic('lock', 14, 2.4)}Reja — direktordan</span></div>
+          <div class="ra-tsum"><div class="ra-tsum-h"><span><strong>${mlnF(sales)}</strong><em>${target ? `/ ${mln(target)} · ${pct}%` : '· reja belgilanmagan'}</em></span>${guest ? '' : `<span class="ra-lockt">${ic('lock', 14, 2.4)}Reja — direktordan</span>`}</div>
             ${bar(pct || 0, 'blue', due)}${due != null ? `<span class="ra-tsum-s">Qora chiziq — bugungacha boʻlishi kerak edi (${due}%)</span>` : ''}</div>
           ${glangSeg()}
         </header>
@@ -1539,7 +1539,8 @@
         if (pageOpen && S.screen !== 'crm') { closeCrmPages(); return true; }
         closeCrmPages();
         const prev = S.stack.pop();
-        if (!prev) { if (S.screen !== 'home') { go('home', { reset: true }); return true; } return false; }
+        // Admin ichida (mehmon): ROP bosh ekrani yo'q — orqaga admin kabinetiga qaytadi.
+        if (!prev) { if (guest) return false; if (S.screen !== 'home') { go('home', { reset: true }); return true; } return false; }
         Object.assign(S, { screen: prev.screen, lead: prev.lead, leadLang: prev.leadLang, apId: prev.apId, mgr: prev.mgr });
         if (S.screen === 'crm') { go('home', { reset: true }); return true; }
         showApp(true);
@@ -1636,7 +1637,7 @@
         if ('raOvgo' in d) { closeOverlay(); const v = d.raOvgo; if (v.startsWith('ap:')) { S.apId = v.slice(3); S.apChk = {}; S.screen = 'approval'; render(true); return; } if (v === 'approvals') { S.apTab = 'pending'; S.stack = [{ screen: 'home' }]; S.screen = 'approvals'; render(true); return; } return go(v, { reset: v === 'home' }); }
         if ('raGo' in d) { if (d.raGo === 'approvals') S.apTab = 'pending'; return go(d.raGo); }
         if ('raNav' in d) return go(d.raNav, { reset: true });
-        if ('raBack' in d) { if (!back()) go('home', { reset: true }); return; }
+        if ('raBack' in d) { if (!back()) { if (guest) window.adminApp?.closeRopGuest?.(); else go('home', { reset: true }); } return; }
         if ('raLead' in d) return openLead(d.raLead, d.ll);
         if ('raGlang' in d) { gLang = d.raGlang === 'english' ? 'english' : 'russian'; try { localStorage.setItem('adm_rop_lang', gLang); } catch (e) {} S.man = 'all'; S.sel.clear(); render(true); return; }
         if ('raMan' in d) { S.man = d.raMan; render(true); return; }
@@ -1824,7 +1825,8 @@
     }
 
     // Admin "mehmon" rejimi: on=true — ROP ilovasi (Lidlar ekrani) ochiladi; on=false — yopiladi.
-    function setGuest(on, screen) {
+    function setGuest(on, screen, lang) {
+        if (lang === 'english' || lang === 'russian') gLang = lang; // admin tanlagan til (Hammasi bo'lsa — oxirgi tanlov)
         const r = user().role;
         if (!['admin', 'boshliq'].includes(r)) return false;
         guest = !!on;
