@@ -128,7 +128,7 @@ function migrationDb(rows, failAudit = false) {
     db.calls.push(sql);
     if (sql === 'BEGIN') { backup = { rows: structuredClone(db.rows), audit: structuredClone(db.audit) }; return { rows: [] }; }
     if (sql === 'ROLLBACK') { db.rows = backup.rows; db.audit = backup.audit; return { rows: [] }; }
-    if (sql === 'COMMIT' || sql.startsWith('SELECT pg_advisory')) return { rows: [] };
+    if (sql === 'COMMIT' || sql.startsWith('SELECT pg_advisory') || sql.startsWith('SELECT set_config(')) return { rows: [] };
     if (sql.startsWith('SELECT * FROM leads')) return { rows: structuredClone(db.rows.filter(r => r.status === 'malumot-berildi' && !r.deleted_at)) };
     if (sql.startsWith('UPDATE leads')) {
       const item = db.rows.find(r => r.id === params[0]);
@@ -143,7 +143,10 @@ function migrationDb(rows, failAudit = false) {
     throw new Error('Unexpected query: ' + sql);
   };
   db.release = () => { db.released++; };
-  const context = vm.createContext({ pool: { connect: async () => db } });
+  // tx() moliya jurnali belgilari uchun ./services/finCtx'ni chaqiradi — bu test uchun neytral o'rinbosar.
+  const finCtx = { track: () => () => {}, token: () => 'fixture', signTx: async () => {}, commitHead() {} };
+  const context = vm.createContext({ pool: { connect: async () => db },
+    require: id => { if (id === './services/finCtx') return finCtx; throw new Error('Unexpected require: ' + id); } });
   vm.runInContext(functionSource('server/db.js', 'tx'), context);
   db.tx = context.tx;
   return db;
