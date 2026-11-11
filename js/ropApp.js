@@ -1507,6 +1507,7 @@
         if (!nav) return;
         const active = S.screen === 'crm' ? S.crmTab : TAB_OF[S.screen];
         const n = ALL().filter(l => !l.managerId && OPEN.has(st(l))).length;
+        nav.hidden = guest; // admin "mehmon": pastki menyu — admin kabinetiniki
         nav.innerHTML = TABS.map(t => `<button type="button" data-ra-tab-nav="${t.id}" class="${active === t.id ? 'is-on' : ''}" ${active === t.id ? 'aria-current="page"' : ''}${t.id === 'leads' && n ? ` aria-label="Lidlar, ${n} ta biriktirilmagan"` : ''}><span class="sa-nav-i">${ic(t.icon, 22, active === t.id ? 2.2 : 1.9)}${t.id === 'leads' && n ? `<b class="ra-nav-red">${n > 99 ? '99+' : n}</b>` : ''}</span>${t.label}</button>`).join('');
     }
     function closeCrmPages() {
@@ -1821,9 +1822,8 @@
         const r = user().role;
         if (!['admin', 'boshliq'].includes(r)) return false;
         guest = !!on;
-        if (guest) { if (!inited) { S.screen = screen || 'leads'; S.stack = [{ screen: 'home' }]; init(); } else { sync(); if (isOn()) go(screen || 'leads', { reset: true }); } }
+        if (guest) { if (!inited) { S.screen = screen || 'leads'; S.stack = []; init(); } else { sync(); if (isOn()) { go(screen || 'leads', { reset: true }); S.stack = []; } } }
         else { closeCrmPages(); S.pageMode = false; disable(); if (nav) nav.hidden = true; }
-        if (nav && guest) nav.hidden = false;
         return true;
     }
     window.ropApp = { open: go, openLead, back, render: () => render(false), state: S, closeSheet: () => closeSheet(true), setGuest, isGuest: () => guest };

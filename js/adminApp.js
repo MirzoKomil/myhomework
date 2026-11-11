@@ -266,10 +266,10 @@
     }
     function syncNav() {
         if (!nav) return;
-        const active = S.screen === 'crm' ? S.crmTab || null : TAB_OF[S.screen] || 'home';
+        const active = S.screen === 'rop' ? 'sales' : S.screen === 'crm' ? S.crmTab || null : TAB_OF[S.screen] || 'home';
         const items = [['home', 'home', 'Bosh'], ['jadval', 'cal', 'Dars jadvali'], ['sales', 'trend', 'Sotuv'], ['finance', 'card', 'Moliya'], ['menu', 'menu', 'Menyu']];
         nav.innerHTML = items.map(([id, icn, l]) => `<button type="button" data-m-nav="${id}"${active === id ? ' aria-current="page"' : ''}>${ic(icn, 21, active === id ? 2.3 : 1.9)}<span>${l}</span></button>`).join('');
-        nav.hidden = !isOn() || S.screen === 'rop';
+        nav.hidden = !isOn();
     }
     function leaveCrm() {
         if (S.screen !== 'crm' && S.screen !== 'jadval') return;
@@ -279,6 +279,7 @@
         if (root) root.hidden = false;
     }
     function tabTo(screen) {
+        if (S.screen === 'rop') { if (screen === 'sales') { window.ropApp?.open?.('leads', { reset: true }); if (window.ropApp?.state) window.ropApp.state.stack = []; return; } closeRopGuest(true); }
         leaveCrm();
         S.stack = [];
         S.tabbed = true;
@@ -336,16 +337,11 @@
         leaveCrm();
         S.screen = 'rop';
         if (root) root.hidden = true;
-        if (nav) nav.hidden = true;
         document.body.classList.add('adm-rop');
         window.ropApp.setGuest(true, screen || 'leads');
-        document.querySelector('.adm-ropbar')?.remove();
-        const b = document.createElement('button');
-        b.type = 'button'; b.className = 'adm-ropbar'; b.innerHTML = `${ic('back', 16, 2.4)}Admin kabinet`;
-        b.onclick = closeRopGuest;
-        document.body.appendChild(b);
+        syncNav();
     }
-    function closeRopGuest() {
+    function closeRopGuest(quiet) {
         document.querySelector('.adm-ropbar')?.remove();
         document.body.classList.remove('adm-rop');
         S._skipPop = true;
@@ -353,7 +349,7 @@
         setTimeout(() => { S._skipPop = false; }, 600);
         S.screen = 'home'; S.stack = [];
         if (root) root.hidden = false;
-        render(true);
+        if (quiet !== true) render(true);
     }
     function closeCrm() {
         const wasJadval = S.screen === 'jadval';
