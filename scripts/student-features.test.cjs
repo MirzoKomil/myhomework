@@ -131,6 +131,7 @@ test('Russian course is selected before the first authenticated provider render'
   const provider = load('student-app/i18n/LanguageContext.tsx', {
     '@react-native-async-storage/async-storage': {}, react,
     'react-native': { Platform: { OS: 'web' } },
+    'expo-router': { usePathname: () => '/' },
     '@/services/contentApi': { fetchDemoStudentProfile() {} },
     '@/services/studentAuthStore': { useAuth: () => ({ token: 'fixture-token', student: { lang: 'russian' } }), getToken: () => 'fixture-token' },
     './translations': { translations },

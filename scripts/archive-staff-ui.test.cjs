@@ -50,8 +50,10 @@ function rankingCtx(leads, employees) {
     });
     vm.runInContext([block('const LEAD_COLUMNS = [', '];'), 'const LEAD_STATUS_IDS = new Set(LEAD_COLUMNS.map(c => c.id));',
         ...['normalizeLeadStatus', 'getSalesManagers', 'getActiveSalesManagers', '_isPartialInProgressLead', '_getLeadRankingAmount',
-            '_getLeadRankingDate', '_getRankingLeadsInMonth', '_getClosedLeadsInMonth', 'getManagerSalesForMonth', 'getManagerDealsCountForMonth']
+            '_getLeadRankingDate', '_getRankingLeadsInMonth', '_getClosedLeadsInMonth', 'getManagerSalesForMonth', 'getManagerDealsCountForMonth',
+            'leadTashkentDayKey', '_getSaleDate', '_getSaleLeads']
             .map(n => functionSource('js/app.js', n)),
+        block('const SALE_RULE_FROM', ';'),
         'this.f = { getSalesManagers, getActiveSalesManagers, getManagerSalesForMonth, getManagerDealsCountForMonth };'].join('\n'), c);
     return c.f;
 }

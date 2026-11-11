@@ -147,6 +147,7 @@ test('actual state router blocks teacher bulk writes, scopes reads and ignores f
     if (name === 'express') return require('express');
     if (name === '../services/stateScope') return require('../server/services/stateScope');
     if (name === '../services/ropScope') return require('../server/services/ropScope');
+    if (name === '../services/bonusImages') return require('../server/services/bonusImages');
     if (name === '../services/teacherDuties') return require('../server/services/teacherDuties');
     if (name === '../services/teacherRating') return require('../server/services/teacherRating');
     if (name === '../middleware/auth') return { studentAuthOptional: (_req, _res, next) => next(),

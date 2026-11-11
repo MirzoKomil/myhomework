@@ -158,9 +158,12 @@ test('bildirishnomalar: "ilovada faol emas" va "yangi o\'quvchi biriktirildi" ma
 test('Doska: bir o\'quvchiga bir kunda bitta yorliq; kech so\'rov oynasi sana chegarasi server qoidasi bilan bir xil', () => {
     const wb = read('js/whiteboard.js'), y = read('js/yordamchi.js');
     assert.match(wb, /const byStudent = new Map\(\);[\s\S]*?const uniq = \[\.\.\.byStudent\.values\(\)\]/);
-    assert.match(y, /let monthStart = prevMonth \+ '-01';/);
-    assert.match(y, /\/assist\/month\?month=\$\{prevMonth\}[\s\S]{0,120}final_at/);
-    assert.match(read('server/routes/school.js'), /T\.addDays\(today\.slice\(0, 7\) \+ '-01', -1\)\.slice\(0, 7\)/);
+    // Server (1-noy): kechikkan aloqa faqat joriy oy kunlari uchun — mijoz oynasi ham joriy oy boshidan.
+    assert.match(read('server/routes/school.js'), /if \(day\.slice\(0, 7\) !== today\.slice\(0, 7\)\) throw T\.fail\(409/);
+    const late = y.slice(y.indexOf('function lateDrawer'), y.indexOf('function lateDrawer') + 2500);
+    assert.match(late, /curStart = td\.slice\(0, 7\) \+ '-01'/);
+    assert.match(late, /const monthStart = curStart;/);
+    assert.doesNotMatch(late, /prevMonth/, 'o\'tgan oy kunlari tanlanmaydi');
 });
 
 test('GET /api/trial-lessons: ustozga lid telefoni berilmaydi', () => {
