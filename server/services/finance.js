@@ -1235,6 +1235,8 @@ async function overview(pool, actor, q) {
     return read(pool, async db => {
         const user = await access(db, actor);
         const data = await load(db), p = period(q);
+        // Telefon (admin bosh/moliya): faqat P&L va hisoblar — audit zanjiri, muhrlar, 6 oylik hisobot va jurnallarsiz.
+        if (q && (q.lite === '1' || q.lite === true)) return { period: p, user: { role: user.role, director: user.director }, accounts: F.accountBalances(data, p.end, p.scope), pnl: F.profitAndLoss(data, p) };
         const monthsStart = F.monthOf(F.addMonths(p.end, -5)) + '-01';
         const quality = F.dataQuality(data.receipts, data.settings, data.transactions.filter(t => t.date >= p.start && t.date <= p.end && (p.scope === 'all' || t.entity === p.scope)));
         const scoped = r => p.scope === 'all' || r.entity === p.scope;
