@@ -120,6 +120,8 @@ body.ra-on .modal-overlay > .modal .modal-footer .btn { min-height: 48px; }
 .ra-dist-btn b { min-width: 22px; height: 22px; padding: 0 5px; border-radius: 999px; background: #D92D20; color: #FFFFFF; font-size: 12px; display: grid; place-items: center; }
 .ra-add { background: var(--sa-blue); border-color: var(--sa-blue); color: #FFFFFF; }
 .ra-mans { gap: 6px; }
+.ra-glang { margin: 2px 0 8px; }
+.ra-glang button { min-height: 40px; }
 .ra-man { flex: 0 0 auto; height: 44px; padding: 0 12px; border-radius: 999px; border: 1px solid #E2E8F0; background: var(--sa-bg); color: var(--sa-ink2) !important; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; scroll-snap-align: center; }
 .ra-man.has-img { padding-left: 6px; }
 .ra-man.is-on { border: 2px solid #0B1220; background: #0B1220; color: #FFFFFF !important; font-weight: 800; }
