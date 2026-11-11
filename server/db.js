@@ -1253,6 +1253,7 @@ async function guardBulkDelete(client, table, label, incoming) {
             `o'chib ketishi mumkin edi — amal rad etildi. Sahifani yangilab, qaytadan urinib ko'ring.`
         );
         err.code = 'BULK_DELETE_BLOCKED';
+        err.status = 409; // 11-noyabr: "Saqlashda xatolik" emas — aniq sabab ko'rinsin
         throw err;
     }
 }
@@ -1276,6 +1277,7 @@ async function replaceSnapshotRows(client, table, label, incoming, removedIds) {
             `o'chib ketishi mumkin edi — amal rad etildi. Sahifani yangilab, qaytadan urinib ko'ring.`
         );
         err.code = 'BULK_DELETE_BLOCKED';
+        err.status = 409; // 11-noyabr: "Saqlashda xatolik" emas — aniq sabab ko'rinsin
         throw err;
     }
     if (removed.length) {
@@ -1395,6 +1397,7 @@ async function guardTotalWipe(client, table, label, incomingCount) {
             `o'chib ketishi mumkin edi — amal rad etildi. Sahifani yangilab, qaytadan urinib ko'ring.`
         );
         err.code = 'BULK_DELETE_BLOCKED';
+        err.status = 409; // 11-noyabr: "Saqlashda xatolik" emas — aniq sabab ko'rinsin
         throw err;
     }
 }

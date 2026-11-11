@@ -917,6 +917,9 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
             out.push({ id: r.id, name: r.name, avatarUrl: st.avatarUrl, state: shown, status: shown, finished,
                 from: mv ? S.dateStr(past.to_date) : last ? S.dateStr(last.from_date) : past ? S.dateStr(past.to_date) : null,
                 to: !mv && last?.to_date ? S.dateStr(last.to_date) : null, reason: mv ? past.reason || '' : last?.reason || '',
+                // 11-noyabr: admin "Tark etganlar" — kim belgilagan (ustoz/yordamchiga ham zararsiz: faqat ism va rol).
+                by: !mv && last ? { name: last.actor_name || '', role: last.actor_role || '' } : null, subject: r.subject || 'english',
+                reasonCode: !mv && last ? last.reason_code || '' : '',
                 role: me ? (r.teacher_id === me || (moved && myPast.length) ? 'main' : 'assistant') : null,
                 withMe: me && myPast.length ? { from: S.dateStr(myPast[0].from_date), to: S.dateStr(myPast.slice(-1)[0].to_date) } : null });
         }
@@ -945,7 +948,8 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
                     first: mineCon.map(c => c.first).sort()[0] || null, last: mineCon.map(c => c.last).sort().pop() || null };
                 x.reached = prog[id]?.reached ?? null;
                 if (!me || r.teacher_id === me || (meA && r.assistant_teacher_id === meA)) { const g = grp.get(id); x.group = g ? { name: g.name, link: g.tg_link || '' } : null; }
-                if (money) { const ex = typeof r.extra_data === 'object' && r.extra_data ? r.extra_data : JSON.parse(r.extra_data || '{}'); x.paymentDueDate = ex.paymentDueDate || null; }
+                if (money) { const ex = typeof r.extra_data === 'object' && r.extra_data ? r.extra_data : JSON.parse(r.extra_data || '{}'); x.paymentDueDate = ex.paymentDueDate || null;
+                    x.debtAmount = ex.debtAmount == null ? null : Number(ex.debtAmount) || 0; }
                 return x;
             };
             for (const s of out) Object.assign(s, detail(s.id));

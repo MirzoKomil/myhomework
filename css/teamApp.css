@@ -4639,10 +4639,10 @@ html.rd #spFaktView > .card:first-child {
 /* ==========================================================================
    R5: bo'sh holatlar, tugmalar, telefon toshib ketishlari
    ========================================================================== */
-html.rd [data-students-section="tark-etgan"],
-html.rd [data-students-section="tamomlaganlar"] {
-    display: none !important;
-}
+/* Tark etganlar / Tamomlaganlar — 11-noyabrdan ishlaydi (admin/direktor/ROP; boshqa rollarda JS hidden qiladi). */
+.ar-admin .ar-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.ar-admin .ar-mute { color: var(--text-muted, #667085); font-weight: 500; }
+@media (max-width: 768px) { .ar-admin .ar-q { max-width: none !important; width: 100%; } }
 
 /* Umumiy ikkinchi darajali tugma */
 html.rd .btn-secondary-sm {

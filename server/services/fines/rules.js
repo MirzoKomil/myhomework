@@ -83,7 +83,17 @@ function nextMonthStart(date) {
 }
 function configFor(versions, date) {
     const ok = (versions || []).filter(v => v.effective <= date).sort((a, b) => (a.effective < b.effective ? 1 : a.effective > b.effective ? -1 : (b.seq || 0) - (a.seq || 0)));
-    return normalizeConfig(ok[0]?.data || null);
+    const cfg = normalizeConfig(ok[0]?.data || null);
+    // 11-noyabr (direktor): "Toza oy" bonusini O'CHIRISH saqlangan oyning o'zidan amal qiladi (keyingi oy 1-sanasidan
+    // kuchga kiradigan versiya cleanMonthOn=false bo'lsa — shu oy ham bonussiz). Yoqish — avvalgidek keyingi oydan.
+    // "Berildi" bosilgan oylar muzlatilgan (salary_fine_settlements) — ularga ta'sir qilmaydi.
+    const d = String(date || '').slice(0, 10);
+    const next = /^\d{4}-\d{2}-\d{2}$/.test(d) ? nextMonthStart(d) : null;
+    const nextV = next ? (versions || []).filter(v => v.effective === next).sort((a, b) => (b.seq || 0) - (a.seq || 0))[0] : null; // shu kunning eng oxirgi saqlanishi
+    if (cfg.soft.cleanMonthOn && nextV?.data?.soft && nextV.data.soft.cleanMonthOn === false) {
+        return { ...cfg, soft: { ...cfg.soft, cleanMonthOn: false } };
+    }
+    return cfg;
 }
 
 // ── Davomat jarimalarini hisoblash ───────────────────────────────────────────
