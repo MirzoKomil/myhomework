@@ -57,7 +57,7 @@
         if (c.p || (!force && c.at && Date.now() - c.at < 60000)) return c.v;
         const fetcher = g('apiFetch');
         if (!fetcher) return c.v;
-        c.p = fetcher(url).then(v => { c.v = v; c.e = null; }).catch(e => { c.e = e; }).finally(() => { c.p = null; c.at = Date.now(); C.set(url, c); if (isOn() && !['crm', 'jadval', 'rop'].includes(S.screen)) queueRender(); });
+        c.p = fetcher(url).then(v => { c.v = v; c.e = null; }).catch(e => { c.e = e; }).finally(() => { c.p = null; c.at = Date.now(); C.set(url, c); if (isOn() && !['crm', 'jadval', 'rop', 'hr'].includes(S.screen)) queueRender(); });
         C.set(url, c);
         return c.v;
     }
@@ -233,8 +233,8 @@
             <button type="button" class="adm-me" data-m-crm="profile"><span class="adm-av av0" aria-hidden="true">${meAv(u) ? `<img src="${esc(meAv(u))}" alt="">` : esc(initials(u.name))}</span><span class="adm-row-t"><b>${esc(u.name || '')}</b><small>${u.role === 'boshliq' ? 'Rahbar' : 'Administrator'}</small></span>${ic('chev', 20)}</button>
             ${grp('OʻQUV', [t('stu', 'Oʻquvchilar', `${act} faol`, 'blue', 'users', 'data-m-go="students"'), t('jad', 'Dars jadvali', 'sinov, darslar', 'blue', 'cal', 'data-m-go="jadval"'), t('akd', 'Akademik boʻlim', 'ustoz, davomat', 'purple', 'book', 'data-m-crm="teachers-section"'),
                 t('ap', 'Tasdiqlar', ap ? `${apCount(ap)} ta` : '—', 'amber', 'check', 'data-m-crm="school-approvals"', ap && apCount(ap)), t('left', 'Tark etganlar', 'sabab bilan', 'gray', 'box', 'data-m-crm="students:tark-etgan"'), t('fin', 'Bitirganlar', 'kursni tamomlagan', 'green', 'check', 'data-m-crm="students:tamomlaganlar"')])}
-            ${grp('SOTUV VA MARKETING', [t('l', 'Lidlar', 'kanban', 'blue', 'users', 'data-m-crm="sales:leads"'), t('mk', 'Marketing', 'target, SMS', 'amber', 'meg', 'data-m-crm="marketing"'), t('an', 'Analitika', 'oylik hisobot', 'green', 'chart', 'data-m-crm="analitika"')])}
-            ${grp('JAMOA', [t('hr', 'HR · Xodimlar', 'kabinetga kirish', 'blue', 'key', 'data-m-crm="hr:xodimlar"'), t('fn', 'Moliya', 'kassa, maosh', 'green', 'card', 'data-m-go="finance"'), t('jr', 'Jarimalar', 'qoida, yuvish', 'red', 'alert', 'data-m-crm="finance:jarimalar"')])}
+            ${grp('SOTUV VA MARKETING', [t('st', 'Statistika', 'lid, sotuv, reja', 'blue', 'trend', 'data-m-rop="funnel"'), t('mk', 'Marketing', 'target, SMS', 'amber', 'meg', 'data-m-crm="marketing"'), t('an', 'Analitika', 'akademik, xodimlar', 'green', 'chart', 'data-m-crm="analitika"')])}
+            ${grp('JAMOA', [t('hr', 'HR', 'nomzod, xodim, davomat', 'blue', 'key', 'data-m-hr'), t('fn', 'Moliya', 'kassa, maosh', 'green', 'card', 'data-m-go="finance"'), t('jr', 'Jarimalar', 'qoida, yuvish', 'red', 'alert', 'data-m-crm="finance:jarimalar"')])}
             ${grp('TIZIM', [t('mob', 'Mobil ilova', 'darslar, doʻkon', 'blue', 'phone', 'data-m-crm="student-app"'), t('set', 'Sozlamalar', 'parol, sessiya', 'gray', 'gear', 'data-m-crm="profile"'), t('out', 'Chiqish', 'akkauntdan', 'red', 'exit', 'data-m-logout')])}
             <button type="button" class="adm-link" data-m-desk>Kompyuter koʻrinishi (eski menyu)</button></div>`;
     }
@@ -244,7 +244,7 @@
     const TAB_OF = { home: 'home', students: 'menu', sales: 'sales', finance: 'finance', menu: 'menu', jadval: 'jadval' };
     function render(anim) {
         if (!root || !isOn()) return;
-        if (S.screen === 'rop') return;
+        if (S.screen === 'rop' || S.screen === 'hr') return;
         if (S.screen === 'crm' || S.screen === 'jadval') { syncNav(); return; }
         const act = document.activeElement, focusId = act && root.contains(act) ? act.id : '', caret = focusId && typeof act.selectionStart === 'number' ? act.selectionStart : null;
         const prev = root.querySelector('.adm-body')?.scrollTop || 0;
@@ -264,7 +264,7 @@
     }
     function syncNav() {
         if (!nav) return;
-        const active = S.screen === 'rop' ? 'sales' : S.screen === 'crm' ? S.crmTab || 'menu' : TAB_OF[S.screen] || 'home';
+        const active = S.screen === 'rop' ? 'sales' : S.screen === 'hr' ? 'menu' : S.screen === 'crm' ? S.crmTab || 'menu' : TAB_OF[S.screen] || 'home';
         const items = [['home', 'home', 'Bosh'], ['jadval', 'cal', 'Dars jadvali'], ['sales', 'trend', 'Sotuv'], ['finance', 'card', 'Moliya'], ['menu', 'menu', 'Menyu']];
         nav.innerHTML = items.map(([id, icn, l]) => `<button type="button" data-m-nav="${id}"${active === id ? ' aria-current="page"' : ''}><span class="adm-nav-i">${ic(icn, 21, active === id ? 2.3 : 1.9)}</span><span>${l}</span></button>`).join('');
         nav.hidden = !isOn();
@@ -280,6 +280,7 @@
     function armGuard() { try { if (window.history?.pushState && !history.state?.admGuard && !history.state?.raGuard) history.pushState({ admGuard: 1 }, ''); } catch (e) { /* tarix yo'q */ } }
     function tabTo(screen) {
         armGuard();
+        if (S.screen === 'hr') { document.body.classList.remove('adm-hr'); try { window.hrApp?.setGuest(false); } catch (e) { /* */ } S.screen = 'home'; if (root) root.hidden = false; }
         if (S.screen === 'rop') { if (screen === 'sales') { window.ropApp?.open?.('leads', { reset: true }); if (window.ropApp?.state) window.ropApp.state.stack = []; return; } closeRopGuest(true); }
         leaveCrm();
         S.stack = [];
@@ -336,11 +337,33 @@
     function openRopGuest(screen) {
         armGuard();
         leaveCrm();
+        S._ropFrom = ['home', 'menu', 'finance', 'students'].includes(S.screen) ? S.screen : 'home';
         S.screen = 'rop';
         if (root) root.hidden = true;
         document.body.classList.add('adm-rop');
         window.ropApp.setGuest(true, screen || 'leads', S.lang);
         syncNav();
+    }
+    // HR — HR menejer telefon ilovasi (tasdiqlangan dizayn) admin ichida, o'z pastki menyusi bilan; chiqish: Orqaga yoki Menyu → "Admin kabinetiga qaytish".
+    function openHrGuest() {
+        armGuard();
+        leaveCrm();
+        S.stack.push({ screen: S.screen });
+        S.screen = 'hr';
+        if (root) root.hidden = true;
+        document.body.classList.add('adm-hr');
+        window.hrApp.setGuest(true, S.lang);
+        syncNav();
+    }
+    function closeHrGuest() {
+        if (S.screen !== 'hr') return;
+        document.body.classList.remove('adm-hr');
+        try { window.hrApp?.setGuest(false); } catch (e) { /* */ }
+        const p = S.stack.pop();
+        S.screen = (p && p.screen && p.screen !== 'hr') ? p.screen : 'menu';
+        if (root) root.hidden = false;
+        armGuard();
+        render(true);
     }
     function closeRopGuest(quiet) {
         document.querySelector('.adm-ropbar')?.remove();
@@ -348,7 +371,8 @@
         // ROP o'z qo'riqchi yozuvini history.back() bilan olib tashlaydi — o'sha popstate admin "Orqaga"si emas.
         if (history.state?.raGuard) { S._skipNext = true; setTimeout(() => { S._skipNext = false; }, 3000); }
         try { window.ropApp?.setGuest(false); } catch (e) { /* */ }
-        S.screen = 'home'; S.stack = [];
+        // Qaytish — Sotuv ochilgan joyga (Menyu → Statistika bo'lsa Menyuga), tab almashganda tabTo o'zi belgilaydi.
+        S.screen = S._ropFrom || 'home'; S._ropFrom = null; S.stack = [];
         if (root) root.hidden = false;
         if (quiet !== true) render(true);
     }
@@ -370,11 +394,12 @@
 
     // ---------- hodisalar ----------
     function onClick(e) {
-        const t = e.target.closest('[data-m-back],[data-m-go],[data-m-rop],[data-m-crm],[data-m-stu],[data-m-sec],[data-m-lang],[data-m-student],[data-m-ftab],[data-m-retry],[data-m-add],[data-m-notif],[data-m-logout],[data-m-desk]');
+        const t = e.target.closest('[data-m-back],[data-m-go],[data-m-hr],[data-m-rop],[data-m-crm],[data-m-stu],[data-m-sec],[data-m-lang],[data-m-student],[data-m-ftab],[data-m-retry],[data-m-add],[data-m-notif],[data-m-logout],[data-m-desk]');
         if (!t) return;
         const d = t.dataset;
         if ('mBack' in d) { history.back(); return; }
         if ('mGo' in d) { go(d.mGo); return; }
+        if ('mHr' in d) { if (window.hrApp?.setGuest) openHrGuest(); else openCrm('hr:xodimlar'); return; }
         if ('mRop' in d) { if (window.ropApp?.setGuest) openRopGuest(d.mRop); else openCrm('sales:leads'); return; }
         if ('mCrm' in d) { if (/^sales:(leads|rating)$/.test(d.mCrm) && window.ropApp?.setGuest) { openRopGuest(d.mCrm === 'sales:rating' ? 'team' : 'leads'); return; } openCrm(d.mCrm); return; }
         if ('mStu' in d) { go('students', { sec: d.mStu, q: '' }); return; }
@@ -404,13 +429,14 @@
             root.addEventListener('click', onClick);
             root.addEventListener('input', onInput);
         }
-        root.hidden = ['crm', 'jadval', 'rop'].includes(S.screen);
+        root.hidden = ['crm', 'jadval', 'rop', 'hr'].includes(S.screen);
         if (!nav) buildNav();
         armGuard();
         render(true);
     }
     function disable() {
         if (S.screen === 'rop') closeRopGuest(true);
+        if (S.screen === 'hr') { document.body.classList.remove('adm-hr'); try { window.hrApp?.setGuest(false); } catch (e) { /* */ } S.screen = 'home'; S.stack = []; }
         // Kompyuter kengligiga o'tilsa — kompyuter sahifasi o'z holicha qoladi, telefonga qaytganda Bosh ekrandan.
         if (S.screen === 'crm' || S.screen === 'jadval') { leaveCrm(); S.screen = 'home'; S.stack = []; S.crmTab = null; }
         document.body.classList.remove('adm-on', 'adm-crm');
@@ -424,7 +450,7 @@
         inited = true;
         window.addEventListener('popstate', () => {
             if (S._skipNext) { S._skipNext = false; return; }
-            if (S.screen === 'rop' || !isOn()) return;
+            if (S.screen === 'rop' || S.screen === 'hr' || !isOn()) return;
             const ov = document.getElementById('modalOverlay');
             let handled;
             if (ov && ov.style.display && ov.style.display !== 'none' && getComputedStyle(ov).display !== 'none' && g('closeModal')) { closeModal(); handled = true; } else handled = back();
@@ -437,16 +463,16 @@
             if (document.visibilityState === 'hidden') { hiddenAt = Date.now(); return; }
             if (!isOn() || Date.now() - hiddenAt < 30000) return;
             for (const c of C.values()) c.at = 0;
-            _hc = null; if (!['crm', 'jadval', 'rop'].includes(S.screen)) render(false);
+            _hc = null; if (!['crm', 'jadval', 'rop', 'hr'].includes(S.screen)) render(false);
         });
         // Bosh ekran ochiq turganda har daqiqada yangilanadi (lidlar, bildirishnoma soni); yashirin bo'lsa — yo'q.
         setInterval(() => { if (isOn() && document.visibilityState === 'visible' && S.screen === 'home' && !document.activeElement?.matches?.('input')) { _hc = null; render(false); } }, 60000);
         MQ.addEventListener?.('change', sync);
         // Kesh (holat) kech yuklansa ham ekran yangilansin.
-        let tries = 0; const wait = setInterval(() => { tries++; const ready = g('getItem') && getItem(STORAGE_KEYS.leads, null); if (ready || tries > 30) { clearInterval(wait); _hc = null; if (isOn() && S.screen !== 'crm' && S.screen !== 'jadval' && S.screen !== 'rop') render(false); } }, 700);
+        let tries = 0; const wait = setInterval(() => { tries++; const ready = g('getItem') && getItem(STORAGE_KEYS.leads, null); if (ready || tries > 30) { clearInterval(wait); _hc = null; if (isOn() && !['crm', 'jadval', 'rop', 'hr'].includes(S.screen)) render(false); } }, 700);
         sync();
     }
-    window.adminApp = { init, go, back, openCrm, closeRopGuest, render: () => render(false), state: S, _test: { home, scrHome, scrStudents, scrFinance, scrMenu, isOn } };
+    window.adminApp = { init, go, back, openCrm, closeRopGuest, closeHrGuest, render: () => render(false), state: S, _test: { home, scrHome, scrStudents, scrFinance, scrMenu, isOn } };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(init, 120));
     else setTimeout(init, 120);
 })();

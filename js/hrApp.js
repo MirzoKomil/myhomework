@@ -11,7 +11,9 @@
     const g = name => (typeof window[name] === 'function' ? window[name] : null);
     const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const user = () => (g('getCurrentUser') ? getCurrentUser() : null) || {};
-    const isOn = () => user().role === 'hr' && MQ.matches;
+    // 11-noyabr: admin/direktor telefonda HR bo'limini shu ilova orqali ko'radi ("mehmon" rejimi, js/adminApp.js).
+    let guest = false, guestLang = 'all';
+    const isOn = () => (user().role === 'hr' || guest) && MQ.matches;
     const initials = n => String(n || '').trim().split(/\s+/).map(w => w[0] || '').slice(0, 2).join('').toUpperCase() || '?';
     const pad = n => String(n).padStart(2, '0');
     const hm = t => { const d = new Date(t); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
@@ -72,7 +74,7 @@
     const TONE = { 'kandidatlar': 'gray', 'birinchi-filtr': 'blue', 'javob-bermadi': 'amber', 'qayta-aloqa': 'amber', 'suhbat-belgilandi': 'purple', 'suhbatga-keldi': 'blue', 'test': 'blue', 'yakuniy-suhbat': 'purple', 'ishga-olindi': 'green', 'rad-javobi': 'gray', 'filtrdan-otmagan': 'gray' };
     const chip = (t, tone = 'gray') => `<span class="hra-chip hra-${tone}">${esc(t)}</span>`;
 
-    const myLangs = () => { const l = user().linkedHrLangs; return Array.isArray(l) && l.length ? l : ['english', 'russian']; };
+    const myLangs = () => { if (guest) return ['english', 'russian']; const l = user().linkedHrLangs; return Array.isArray(l) && l.length ? l : ['english', 'russian']; };
     const both = () => myLangs().length > 1;
     const vacOf = c => (D.meta?.vacancies || []).find(v => v.id === c.vacancyId);
     const langOf = c => vacOf(c)?.lang || null;
@@ -336,10 +338,11 @@
         const u = user();
         const row = (icn, t, attr) => `<button type="button" class="hra-mrow" ${attr}><span class="hra-qi hra-blue">${ic(icn, 18)}</span><span>${t}</span>${ic('chev', 18)}</button>`;
         return `<div class="hra-tabhead"><div class="hra-th"><h1>Menyu</h1></div></div><div class="hra-body">
-            <section class="hra-card hra-person-s">${ava(u.name, 54)}<div><strong>${esc(u.name || '')}</strong><span>HR menejer · ${myLangs().map(langLabel).join(' va ')} tili</span></div></section>
-            <section class="hra-card hra-mlist">${row('brief', 'Vakansiyalar', 'data-h-nav="vacs"')}${row('face', 'Davomat va yuz tasdiqlash', 'data-h-nav="att"')}${window.davomat?.menuInfo().tracked ? row('cal', 'Mening davomatim', 'data-dv-go="my"') : ''}${window.jarima && !jarima.counts()?.exempt ? row('note', 'Mening jarimalarim', 'data-jr-go="my"') : ''}${row('desk', 'Kompyuter versiyasi (HR boʻlimi)', 'data-h-crm')}</section>
-            <section class="hra-card hra-mlist">${row('user', 'Profil, parol va bildirishnomalar', 'data-h-profile')}</section>
-            <button type="button" class="hra-logout" data-h-logout>${ic('out', 18, 2.2)}Chiqish</button></div>`;
+            <section class="hra-card hra-person-s">${ava(u.name, 54)}<div><strong>${esc(u.name || '')}</strong><span>${guest ? 'Administrator · HR boʻlimi' : `HR menejer · ${myLangs().map(langLabel).join(' va ')} tili`}</span></div></section>
+            <section class="hra-card hra-mlist">${row('brief', 'Vakansiyalar', 'data-h-nav="vacs"')}${row('face', 'Davomat va yuz tasdiqlash', 'data-h-nav="att"')}${!guest && window.davomat?.menuInfo().tracked ? row('cal', 'Mening davomatim', 'data-dv-go="my"') : ''}${!guest && window.jarima && !jarima.counts()?.exempt ? row('note', 'Mening jarimalarim', 'data-jr-go="my"') : ''}${row('desk', guest ? 'Xodim qoʻshish, tahrir, kabinetiga kirish' : 'Kompyuter versiyasi (HR boʻlimi)', 'data-h-crm')}</section>
+            ${guest ? `<section class="hra-card hra-mlist">${row('back', 'Admin kabinetiga qaytish', 'data-h-exit')}</section></div>`
+                : `<section class="hra-card hra-mlist">${row('user', 'Profil, parol va bildirishnomalar', 'data-h-profile')}</section>
+            <button type="button" class="hra-logout" data-h-logout>${ic('out', 18, 2.2)}Chiqish</button></div>`}`;
     }
 
     // ---------- chizish ----------
@@ -398,7 +401,7 @@
     }
     function back() {
         if (sheetEl) { closeSheet(); return true; }
-        const p = S.stack.pop(); if (!p) { if (S.screen !== 'home') { S.screen = 'home'; render(true); return true; } return false; }
+        const p = S.stack.pop(); if (!p) { if (S.screen !== 'home') { S.screen = 'home'; render(true); return true; } return false; } // mehmon: false → admin kabinetiga qaytadi
         Object.assign(S, p); render(true); return true;
     }
     function toast(msg, kind = 'ok', undo) {
@@ -579,7 +582,7 @@
 
     // ---------- hodisalar ----------
     function onClick(e) {
-        const t = e.target.closest('[data-h-nav],[data-h-back],[data-h-lang],[data-h-stage],[data-h-cand],[data-h-pass],[data-h-reject],[data-h-go],[data-h-day],[data-h-role],[data-h-emp],[data-h-stagesheet],[data-h-schedule],[data-h-came],[data-h-noshow],[data-h-result],[data-h-setstage],[data-h-restore],[data-h-call],[data-h-fix],[data-h-face],[data-h-vac],[data-h-crm],[data-h-profile],[data-h-logout],[data-h-reload],[data-h-sched]');
+        const t = e.target.closest('[data-h-exit],[data-h-nav],[data-h-back],[data-h-lang],[data-h-stage],[data-h-cand],[data-h-pass],[data-h-reject],[data-h-go],[data-h-day],[data-h-role],[data-h-emp],[data-h-stagesheet],[data-h-schedule],[data-h-came],[data-h-noshow],[data-h-result],[data-h-setstage],[data-h-restore],[data-h-call],[data-h-fix],[data-h-face],[data-h-vac],[data-h-crm],[data-h-profile],[data-h-logout],[data-h-reload],[data-h-sched]');
         if (!t) return;
         const d = t.dataset;
         if ('hNav' in d) { go(d.hNav); return; }
@@ -614,6 +617,7 @@
         }
         if ('hCrm' in d) { openCrm(); return; }
         if ('hProfile' in d) { openCrm('profile'); return; }
+        if ('hExit' in d) { window.adminApp?.closeHrGuest?.(); return; }
         if ('hLogout' in d) { document.getElementById('profileLogoutBtn')?.click(); return; }
         const c = curCand(); if (!c && !('hCame' in d && d.hCame) && !('hNoshow' in d)) return;
         if ('hCall' in d) { callPending = { id: d.hCall, at: Date.now() }; return; } // tel: havolasi o'zi ochiladi
@@ -703,14 +707,16 @@
     function sync() { if (isOn()) enable(); else disable(); }
 
     function init() {
-        if (inited || user().role !== 'hr') return;
+        if (inited || (user().role !== 'hr' && !guest)) return;
         inited = true;
         document.addEventListener('visibilitychange', onVisible);
         window.addEventListener('focus', onVisible);
         window.addEventListener('popstate', () => {
             if (!isOn()) return;
             if (S.screen === 'crm') { closeCrm(); return; }
-            if (!back() && S.screen === 'home') toast('Chiqish uchun yana bir marta “Orqaga” bosing', 'ok');
+            if (back()) { if (guest && !history.state?.hra && !history.state?.admGuard) { try { history.pushState({ hra: 1 }, ''); } catch (e) { /* */ } } return; }
+            if (guest) { window.adminApp?.closeHrGuest?.(); return; }
+            if (S.screen === 'home') toast('Chiqish uchun yana bir marta “Orqaga” bosing', 'ok');
         });
         MQ.addEventListener?.('change', sync);
         sync();
@@ -718,7 +724,18 @@
         setInterval(() => { if (isOn() && document.visibilityState === 'visible' && !sheetEl) load(true); }, 60000);
     }
 
-    window.hrApp = { go, back, render: () => render(false), state: S, data: D };
+    // Admin "mehmon" rejimi: on=true — HR ilovasi (o'z pastki menyusi bilan) admin ichida; on=false — yopiladi.
+    function setGuest(on, lang) {
+        if (!['admin', 'boshliq'].includes(user().role)) return false;
+        guest = !!on;
+        if (guest) {
+            guestLang = ['english', 'russian'].includes(lang) ? lang : 'all';
+            S.lang = guestLang; S.screen = 'home'; S.stack = [];
+            if (!inited) init(); else { sync(); load(true); }
+        } else { closeSheet(true); clearTimeout(undoTimer); toastEl?.remove(); toastEl = null; document.querySelectorAll('.hra-win').forEach(x => x.remove()); if (S.screen === 'crm') { document.querySelector('.hra-backbar')?.remove(); document.body.classList.remove('hra-crm'); } S.screen = 'home'; S.stack = []; disable(); }
+        return true;
+    }
+    window.hrApp = { go, back, render: () => render(false), state: S, data: D, setGuest, isGuest: () => guest };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(init, 80));
     else setTimeout(init, 80);
 })();
