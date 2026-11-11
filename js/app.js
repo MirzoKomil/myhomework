@@ -13004,8 +13004,8 @@ function anGetAllLeadsFlat() {
 // saqlangan — ilgari bunday lidlar analitikada umuman hisoblanmasdi.
 function anLeadDateKey(lead) {
     const iso = lead?.createdAt ? new Date(lead.createdAt) : null;
-    if (iso && !Number.isNaN(iso.getTime())) {
-        return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tashkent', year: 'numeric', month: '2-digit', day: '2-digit' }).format(iso);
+    if (iso && !Number.isNaN(iso.getTime()) && Math.abs(iso.getTime()) < 8.64e15 - 18e6) {
+        return new Date(iso.getTime() + 5 * 3600000).toISOString().slice(0, 10); // Toshkent = UTC+5 (tezlik)
     }
     const raw = String(lead?.date || '').trim().replace(/^(\d{1,2})[/.](\d{1,2})[/.](\d{4})$/, (m, d, mo, y) => `${d.padStart(2, '0')}.${mo.padStart(2, '0')}.${y}`);
     return raw;
@@ -14623,9 +14623,11 @@ function leadTashkentDayKey(raw) {
     if (/^\d{4}-\d{2}-\d{2}$/.test(rawText)) return rawText;
     const dm = rawText.match(/^(\d{1,2})[./](\d{1,2})[./](\d{4})$/);
     if (dm) return `${dm[3]}-${dm[2].padStart(2, '0')}-${dm[1].padStart(2, '0')}`;
-    const parsed = new Date(typeof raw === 'number' ? raw : rawText);
-    if (Number.isNaN(parsed.getTime())) return null;
-    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tashkent', year: 'numeric', month: '2-digit', day: '2-digit' }).format(parsed);
+    const ms = typeof raw === 'number' ? raw : Date.parse(rawText);
+    if (!Number.isFinite(ms) || Math.abs(ms) > 8.64e15 - 18e6) return null;
+    // Tezlik (11-noyabr): Toshkent doimiy UTC+5 (yozgi vaqt yo'q) — har chaqiruvda yangi Intl.DateTimeFormat
+    // yaratish 6 500 lidda telefonda 5–10 soniya qotirardi.
+    return new Date(ms + 5 * 3600000).toISOString().slice(0, 10);
 }
 
 function getLeadSurveyAge(lead) {
