@@ -147,3 +147,8 @@ body.adm-desk #tab-students .students-table tbody tr:hover td { background: #F8F
 .adm-ropbar { position: fixed; bottom: calc(68px + env(safe-area-inset-bottom) + 10px); left: 12px; z-index: 270; height: 36px; padding: 0 12px; border-radius: 999px; border: 0; background: #0B1220; color: #fff; font: 700 13px/1 'DW Jakarta', 'Plus Jakarta Sans', system-ui, sans-serif; display: flex; align-items: center; gap: 6px; box-shadow: 0 6px 18px rgba(11, 18, 32, .25); cursor: pointer; }
 body:not(.adm-rop) .adm-ropbar { display: none; }
 body.ra-full .adm-ropbar { bottom: calc(84px + env(safe-area-inset-bottom)); }
+/* Sotuv admin kabinetining o'zida (ROP ekranlari, admin pastki menyusi bilan) */
+body.adm-rop .ra-nav { display: none !important; }
+body.adm-rop.ra-full .adm-nav { display: none; }
+body.adm-rop .sa-app { bottom: var(--m-nav) !important; }
+body.adm-rop.ra-full .sa-app { bottom: 0 !important; }
