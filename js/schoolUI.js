@@ -1672,7 +1672,7 @@
         api, post, esc, today, addDays, wd, weekStart, fmtDate, hm, toMin, pattern, DAY, DAY_FULL,
         studentAvatar, staffAvatar, staffAvatarUrl, tgPill, teacherName, studentById, teachersForSubject,
         openDrawer, openDialog, closeDrawer, errBox, busy, field, impact, toast, refreshCache, nowMin,
-        openStudent, openCardForm, closeStudent, renderApprovals, renderGroups, renderAssistAdmin, loadStaffAvatars, staffAvatarOf: id => staffAvatarUrl(_avatars[id]), acad, dShort, whenTxt, shortName, num,
+        openStudent, openCardForm, closeStudent, renderApprovals, renderGroups, renderAssistAdmin, loadStaffAvatars, staffAvatarOf: id => staffAvatarUrl(_avatars[id]) || presetAvatar(staffList().find(x => String(x.id) === String(id)) || { id }), acad, dShort, whenTxt, shortName, num,
         bulkDrawer, correctionDrawer, CHN, CST, assistPayNote, assistPayRule, assistStudentsLabel, assistPossibleNote, MISSED_CAME, missedCamePill, studentRequestDrawer
     });
 })();
