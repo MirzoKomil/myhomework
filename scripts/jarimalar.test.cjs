@@ -156,3 +156,17 @@ test('ikki til hisobi: bonus birinchisiga, jarima navbat bilan, jami = oylik qo�
     assert.deepEqual([sp.en.takeHome, sp.ru.takeHome], [0, 2700000]);
     assert.equal(sp.en.takeHome + sp.ru.takeHome, s.takeHome);
 });
+
+// ── 11-noyabr direktor qarori: "Toza oy"ni o'chirish saqlangan oyning o'zidan amal qiladi ──
+test('Toza oy: o‘chirish keyingi oy versiyasida bo‘lsa — joriy oy ham bonussiz; oldingi oylar va yoqish o‘zgarmaydi', () => {
+    const on = R.defaultConfig(), off = { ...on, soft: { ...on.soft, cleanMonthOn: false } };
+    const v = [{ effective: '2026-01-01', seq: 1, data: on }, { effective: '2026-12-01', seq: 2, data: off }];
+    assert.equal(R.configFor(v, '2026-11-01').soft.cleanMonthOn, false);
+    assert.equal(R.configFor(v, '2026-10-01').soft.cleanMonthOn, true);
+    assert.equal(R.configFor(v, '2026-12-01').soft.cleanMonthOn, false);
+    const reOn = [{ effective: '2026-01-01', seq: 1, data: off }, { effective: '2026-12-01', seq: 2, data: on }];
+    assert.equal(R.configFor(reOn, '2026-11-01').soft.cleanMonthOn, false, 'yoqish — faqat keyingi oydan');
+    assert.equal(R.settle([], 4000000, R.configFor(v, '2026-11-01')).takeHome, 4000000);
+    const sameDay = [...v, { effective: '2026-12-01', seq: 3, data: on }];
+    assert.equal(R.configFor(sameDay, '2026-11-01').soft.cleanMonthOn, true, 'shu kuni qayta yoqilsa — oxirgi saqlanish hal qiladi');
+});
