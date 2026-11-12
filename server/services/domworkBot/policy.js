@@ -1,6 +1,6 @@
 'use strict';
 const { timingSafeEqual } = require('node:crypto');
-const ROLES = ['admin', 'rop', 'sales', 'marketing', 'teacher', 'assistant', 'student', 'trial'];
+const ROLES = ['admin', 'rop', 'sales', 'marketing', 'teacher', 'assistant', 'akademik', 'student', 'trial'];
 const GROUP_TYPES = ['trial', 'classroom', 'sales', 'marketing', 'teachers', 'family', 'beacon'];
 const MENUS = {
     trial: [['trial-group','👥 Sinov darsi guruhi'],['course','📚 Kurs haqida ma’lumot'],['platform','💻 Platforma haqida ma’lumot'],['contact','📞 Bog‘lanish'],['results','🏆 Natijalar']],
@@ -10,6 +10,8 @@ const MENUS = {
     assistant: [['students','👥 O‘quvchilarim ro‘yxati'],['salary','💵 Maoshim'],['ranking','⭐️ Reyting'],['schedule','🕒 Bo‘sh vaqtlar'],['work','⏰ Face ID'],['leave','📝 Ruxsat so‘rash']],
     rop: [['salary','💼 Maosh & Reja'],['managers','👥 Menejerlar ro‘yxati'],['reports','📊 Har bir menejer hisoboti'],['debtors','📉 Qarzdorlar umumiy ro‘yxati'],['income','💰 Umumiy tushum — Qarz balansi'],['trial-lessons','🧪 Sinov darslari monitoringi'],['bonuses','🎁 Bonuslar ro‘yxati'],['work','⏰ Face ID']],
     marketing: [['funnel','🌪 Sotuv voronkasi'],['daily','📈 Kunlik statistika'],['history','📅 Tarix (Haftalik / Oylik)'],['budget','💵 Byudjet va Sarf']],
+    // Akademik rahbar (12-noy, direktor): o'z tilidagi nazorat ro'yxatlari; avtomatik xabarlar — staffNotify.telegramPush.
+    akademik: [['acad-problems','📋 Ochiq muammolar'],['acad-risk','⚠️ Xavfdagi o‘quvchilar'],['acad-makeups','🔁 Qoplash tekshiruvi'],['acad-trials','🧪 Bugungi sinov darslari'],['acad-locked','🔒 Appi qulfdagi ustozlar']],
     admin: [['broadcast','📣 Xabar tarqatish'],['bindings','🔗 Guruhlarni bog‘lash'],['leave-review','📝 Ruxsat arizalari'],['digest','📊 Umumiy hisobot'],['configuration','⚙️ Bot sozlamalari']]
 };
 function error(status, message) { return Object.assign(new Error(message), { status }); }
@@ -40,6 +42,7 @@ function staffRole(row) {
     if (row.role === 'rop') return 'rop';
     if (row.role === 'sales_manager') return 'sales';
     if (row.role === 'targetolog') return 'marketing';
+    if (row.role === 'akademik') return 'akademik';
     if (row.role === 'teacher') return row.employee_role === 'yordamchi' ? 'assistant'
         : ['oqituvchi', 'ingliz-oqituvchi', 'rus-oqituvchi'].includes(row.employee_role) ? 'teacher' : null;
     return null;

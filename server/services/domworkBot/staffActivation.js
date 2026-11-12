@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS domwork_staff_activation (
 ALTER TABLE domwork_staff_activation ADD COLUMN IF NOT EXISTS exempted_by TEXT;`;
 const CALLBACK = /^a:ok(?::(\d{1,9}))?$/; // a:ok:<kampaniya>
 async function init(db) { await db.query(SCHEMA); }
-const ROLE_LABEL = { admin: 'administrator', rop: 'ROP', sales: 'sotuv menejeri', marketing: 'marketing', teacher: 'ustoz', assistant: 'yordamchi ustoz' };
+const ROLE_LABEL = { admin: 'administrator', rop: 'ROP', sales: 'sotuv menejeri', marketing: 'marketing', teacher: 'ustoz', assistant: 'yordamchi ustoz', akademik: 'akademik rahbar' };
 
 async function campaign(db) {
     const data = (await require('./store').settings(db))?.data || {};
