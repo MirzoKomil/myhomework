@@ -48,8 +48,59 @@ function personalPlan(raw,id,month) {
     const prior=Object.keys(item).filter(k=>/^\d{4}-\d{2}$/.test(k) && k<=month).sort().pop();
     return prior?item[prior]:null;
 }
+// Akademik rahbar menyusi (12-noy): CRM'dagi akademik kabinet bilan bitta manba (services/academicHead), faqat o'z til yo'nalishi.
+async function academic(db, identity, actionId, now) {
+    const H = require('../academicHead');
+    const user = { id: identity.id, role: 'akademik' };
+    const langs = await H.langsFor(db, user);
+    if (!langs || !langs.length) return 'HR profilingizda til yo‘nalishi belgilanmagan — HR bilan bog‘laning.';
+    const first = n => safe(String(n || '').trim().split(/\s+/)[0] || '');
+    const dm = d => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(d || '')); return m ? `${Number(m[3])}.${m[2]}` : ''; };
+    const crm = '\n\nBatafsil: myhomework.uz → Akademik kabinet';
+    if (actionId === 'acad-problems') {
+        const r = await H.listProblems(db, user, { status: 'open' }, now);
+        const items = r.items.slice().sort((a, b) => Number(b.overdue) - Number(a.overdue) || String(a.dueAt).localeCompare(String(b.dueAt)));
+        if (!items.length) return 'Ochiq muammo yo‘q ✅';
+        return `📋 Ochiq muammolar: ${r.counts.open} ta${r.counts.overdue ? ` · ⏰ muddati o‘tgan: ${r.counts.overdue}` : ''}\n\n`
+            + items.slice(0, 15).map(p => `${p.overdue ? '⏰' : '▫️'} ${safe(p.title)}\n   ${[first(p.studentName), p.teacherName ? 'ustoz ' + first(p.teacherName) : '', p.ownerName ? 'mas’ul ' + first(p.ownerName) : 'mas’ul yo‘q', 'muddat ' + dm(p.dueAt)].filter(Boolean).join(' · ')}`).join('\n')
+            + (items.length > 15 ? `\n… va yana ${items.length - 15} ta` : '') + crm;
+    }
+    if (actionId === 'acad-risk') {
+        const sc = await H.scopeData(db, langs, now);
+        const list = sc.active.filter(s => s.risk);
+        if (!list.length) return 'Xavfdagi o‘quvchi yo‘q ✅';
+        return `⚠️ Xavfdagi o‘quvchilar: ${list.length} ta\n\n` + list.slice(0, 20).map(s => `▫️ ${safe(s.name)} — ${safe(s.risk.reasonText)}${s.teacherName ? ' · ustoz ' + first(s.teacherName) : ''}`).join('\n')
+            + (list.length > 20 ? `\n… va yana ${list.length - 20} ta` : '') + crm;
+    }
+    if (actionId === 'acad-makeups') {
+        const r = await H.listMakeups(db, user, { status: 'pending' }, now);
+        if (!r.items.length) return 'Tekshiriladigan qoplash darsi yo‘q ✅';
+        return `🔁 Qoplash tekshiruvi: ${r.items.length} ta${r.counts.noAnswer ? ` · javob bermagan: ${r.counts.noAnswer}` : ''}\n\n`
+            + r.items.slice(0, 20).map(m => `▫️ ${safe(m.studentName)} · ustoz ${first(m.teacherName)} · ${dm(m.heldDate)}${m.studentPhone ? ' · ' + safe(m.studentPhone) : ''}`).join('\n')
+            + (r.items.length > 20 ? `\n… va yana ${r.items.length - 20} ta` : '') + '\n\nO‘quvchiga qo‘ng‘iroq qilib, natijani CRM’da belgilang.';
+    }
+    const sc = await H.scopeData(db, langs, now);
+    const tName = new Map(sc.teachers.map(t => [t.id, t.name]));
+    if (actionId === 'acad-trials') {
+        const today = policy.today(now);
+        const T = require('./tone');
+        const rows = (await H.trialsOf(db, sc.teachers.map(t => t.id))).map(t => ({ t, r: t.lead.trialRequest || {} }))
+            .filter(x => x.r.scheduledAt && policy.today(new Date(x.r.scheduledAt)) === today && x.r.state !== 'cancelled')
+            .sort((a, b) => String(a.r.scheduledAt).localeCompare(String(b.r.scheduledAt)));
+        if (!rows.length) return 'Bugun sinov darsi yo‘q.';
+        const st = s => ({ pending: '⏳ qabul qilinmagan', accepted: '✅ qabul qilindi', rejected: '❌ rad etildi', completed: '✔️ o‘tdi' })[s] || safe(s);
+        return `🧪 Bugungi sinov darslari: ${rows.length} ta\n\n` + rows.map(({ t, r }) => `▫️ ${safe(T.when(r.scheduledAt))} · ${safe(t.name)} · ustoz ${first(tName.get(r.teacherId))} · ${st(r.state)}`).join('\n') + crm;
+    }
+    if (actionId === 'acad-locked') {
+        const locks = await H.teacherLocks(db, sc.teachers.map(t => t.id), now);
+        if (!locks.size) return 'Appi qulfdagi ustoz yo‘q ✅';
+        return `🔒 Appi qulfdagi ustozlar: ${locks.size} ta\n\n` + [...locks].map(([id, l]) => `▫️ ${first(tName.get(id))} — ${l.count} ta dars davomati belgilanmagan${l.date ? ' (' + dm(l.date) + ' dan)' : ''}`).join('\n') + crm;
+    }
+    return none;
+}
 async function action(db, identity, actionId, options={}) {
     policy.requireAction(identity, actionId);
+    if (identity.role === 'akademik') return academic(db, identity, actionId, options.now || new Date());
     if (identity.role==='marketing' && actionId==='history') return reports.marketingHistory(db,options.now);
     if(actionId==='ranking' && ['teacher','assistant'].includes(identity.role)) {
         if(identity.role==='assistant') return require('./insights').assistantRanking(db,identity.employeeId);
