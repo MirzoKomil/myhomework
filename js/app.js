@@ -13394,12 +13394,34 @@ function hbHeadcountByRole() {
     return byRole;
 }
 
+// Jamoa rejasi — Sotuv rejasi kalkulyatoridan ("O'rtacha" konversiya), Ingliz + Rus yig'indisi.
+// Statistika "Sotuv rejasi va bajarilishi" bilan bir xil manba (avval: 33 mln × barcha faol menejerlar).
+// Faqat saqlangan til rejalari qo'shiladi (saqlanmagan til standart 405 mln bilan rejani shishirmasin);
+// eski bitta (tilsiz) reja bir marta sanaladi. Kunlik = oylik / kunlar (Statistika "Kunlik reja" kabi).
+function hbTeamTarget(period) {
+    const raw = getItem(STORAGE_KEYS.salesPlan, null) || {};
+    const legacyFlat = typeof raw.managers === 'number' && !raw.english && !raw.russian;
+    const langs = legacyFlat ? ['english'] : ['english', 'russian'].filter(l => raw[l] && typeof raw[l] === 'object' && Object.keys(raw[l]).length);
+    let day = 0, month = 0;
+    langs.forEach(lang => {
+        try {
+            const p = getSalesPlan(lang);
+            const m = computeSalesPlanMetrics(p, p.conversions.mid, p.duration);
+            const sum = Number(m.davr.sotuvSumma) || 0;
+            month += sum;
+            day += sum / (Number(p.duration) || 30);
+        } catch (e) { /* reja yo'q — 0 */ }
+    });
+    if (period === 'kunlik') return Math.round(day);
+    if (period === 'haftalik') return Math.round(day * 7);
+    return month;
+}
+
 function hbSotuvMenejeri(period) {
     const periodLeads = anLeadsInPeriod(period);
     const closed = periodLeads.filter(l => normalizeLeadStatus(l.status) === 'tolov-yopildi');
     // Tushum — yopilgan sana bo'yicha va qisman to'lovlar bilan (Statistika/reyting bilan bir xil manba).
     const revenue = _getRankingLeadsInPeriod('all', period).reduce((s, l) => s + _getLeadRankingAmount(l), 0);
-    const managers = getActiveSalesManagers();
 
     let cards = '';
     if (period === 'kunlik') {
@@ -13411,13 +13433,13 @@ function hbSotuvMenejeri(period) {
         cards += hbManualCard('sotuv-menejeri', { key: 'call-minutes', label: 'Gaplashilgan daqiqalar', unit: 'daqiqa', agg: 'sum' }, period, '⏱️');
         cards += hbCard('⚡', 'yellow', "Yangi lidlar bilan bog'lanish tezligi", avgSpeed !== null ? avgSpeed.toFixed(1) + ' soat' : "To'planmoqda");
     } else if (period === 'haftalik') {
-        const target = getPeriodTarget(period) * (managers.length || 1);
+        const target = hbTeamTarget(period);
         const planPct = target > 0 ? (revenue / target * 100) : 0;
         const convRate = periodLeads.length ? (closed.length / periodLeads.length * 100) : 0;
         cards += hbCard('📈', 'green', 'Shaxsiy rejaning bajarilishi', planPct.toFixed(0) + '%');
         cards += hbCard('🔻', 'purple', 'Voronka konversiyasi', convRate.toFixed(1).replace('.', ',') + '%');
     } else {
-        const target = getPeriodTarget(period) * (managers.length || 1);
+        const target = hbTeamTarget(period);
         const planPct = target > 0 ? (revenue / target * 100) : 0;
         cards += hbCard('💵', 'blue', 'Jami olib kelingan sof tushum', fmtMoney(revenue));
         cards += hbCard('🏆', 'green', 'Oylik shaxsiy KPI yakuni', planPct.toFixed(0) + '%');
@@ -13429,7 +13451,7 @@ function hbRop(period) {
     const periodLeads = anLeadsInPeriod(period);
     const revenue = _getRankingLeadsInPeriod('all', period).reduce((s, l) => s + _getLeadRankingAmount(l), 0);
     const managers = getActiveSalesManagers();
-    const target = getPeriodTarget(period) * (managers.length || 1);
+    const target = hbTeamTarget(period);
 
     let cards = '';
     if (period === 'kunlik') {
