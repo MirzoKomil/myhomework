@@ -516,7 +516,8 @@
     let msMonth = '';
     const salMonths = () => {
         const sal = S().salary; if (!sal) return [];
-        if (Array.isArray(sal.months)) return sal.months;
+        // Hisobga hech narsa o'tmagan va yozilmagan o'tgan oy (masalan, ish boshlanmagan) ko'rsatilmaydi.
+        if (Array.isArray(sal.months)) return sal.months.filter(m => m.status === 'live' || m.saved || (m.takeHome ?? m.total) > 0);
         // Eski server javobi (deploy oralig'i): joriy oy + tarix.
         const out = sal.current ? [{ month: D().now().month, current: true, status: 'live', total: sal.current.total, takeHome: sal.current.takeHome ?? sal.current.total, cleanBonus: sal.current.cleanBonus || 0, fineDeducted: sal.current.fineDeducted || 0, lessons: sal.current.lessons, studentCount: sal.current.studentCount, breakdown: [] }] : [];
         for (const h of sal.history || []) out.push({ month: String(h.start).slice(0, 7), status: h.status === 'paid' ? 'paid' : 'unpaid', paidAt: h.paidAt, total: h.amount, takeHome: h.takeHome ?? h.amount, cleanBonus: h.cleanBonus || 0, fineDeducted: h.fineDeducted || 0, breakdown: [] });
@@ -576,7 +577,7 @@
                 <div class="li"><span>Jarimalar</span><b${m.fineDeducted ? ' style="color: #B42318"' : ''}>${m.fineDeducted ? '−' + D().money(m.fineDeducted) : '0'}</b></div>
                 <div class="li"><span><b>Qo'lga</b></span><b style="font-size: 16px">${D().money(m.takeHome ?? m.total)} so'm</b></div>
               </section>
-              ${rows.length ? `<section class="card l a3" aria-label="O'quvchilar bo'yicha">${rows.map(b => `<div class="li"><div class="col g1" style="min-width: 0"><span class="nm">${esc(b.name || "O'quvchi")}</span><span class="s">${durOf(b) ? durOf(b) + ' daq · ' : ''}${b.lessons} / ${b.plan ?? b.expected} ${b.unit === 'contact' ? 'aloqa' : 'dars'}${b.role === 'assistant' ? ' · yordamchi' : ''}${b.makeups ? ` · ${b.makeups} qoplash` : ''}</span></div><b style="font-size: 15px">${D().money(b.earned)}</b></div>`).join('')}</section>` : ''}
+              ${rows.length ? `<section class="card l a3" aria-label="O'quvchilar bo'yicha">${rows.map(b => `<div class="li"><div class="col g1" style="min-width: 0"><span class="nm">${esc(b.name || "O'quvchi")}</span><span class="s">${durOf(b) ? durOf(b) + ' daq · ' : ''}${b.lessons} / ${b.expected} ${b.unit === 'contact' ? 'aloqa' : 'dars'}${b.plan != null && b.plan < b.expected ? ` · sizda ${b.plan} kun` : ''}${b.role === 'assistant' ? ' · yordamchi' : ''}${b.makeups ? ` · ${b.makeups} qoplash` : ''}</span></div><b style="font-size: 15px">${D().money(b.earned)}</b></div>`).join('')}</section>` : ''}
               <div class="note i a4">${svg(P.info, 18, 2).replace('<svg', '<svg style="flex: none; margin-top: 1px"')}<span>Har o'quvchi uchun: oylik stavka ÷ oydagi darslari × o'tilgan darslar.${m.status === 'paid' ? ' Bu oy berilgan, raqam o\'zgarmaydi.' : ' Davomat tuzatilsa, to\'langunga qadar raqam yangilanadi.'}</span></div>
               <button type="button" class="btn" data-ms="" style="width: 100%">Barcha oylar</button>
             </div>`;
