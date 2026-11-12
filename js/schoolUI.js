@@ -385,7 +385,7 @@
         closeDrawer();
         const el = pageEl();
         el.innerHTML = `<button type="button" class="scc-back" data-back>← O'quvchilar</button><div class="sc-skel"></div>`;
-        el.querySelector('[data-back]').onclick = closeStudent;
+        el.querySelector('[data-back]').onclick = () => { if (!window.adminApp?.cardBack?.()) closeStudent(); };
         el.scrollTop = 0;
         let card;
         try { card = (await api(`/students/${encodeURIComponent(studentId)}/card`)).card; }
@@ -497,6 +497,10 @@
         if (canEdit) acts.push(['edit', '✎ Tahrirlash', 'pri']);
         if (isManager()) acts.push(['status', 'Holatni o\'zgartirish', '']);
         if (money && typeof inflowUI !== 'undefined' && typeof inflowUI?.openPayment === 'function') acts.push(['pay', '+ To\'lov qabul qilish', '']);
+        // Admin telefon ilovasi (kanvas "7 · O'quvchi kartasi"): ko'k sarlavha, amal plitkalari, qarz chizig'i, tablar — chip.
+        // Tablar va ularning mazmuni o'zgarmaydi (bir xil karta, faqat sarlavha telefon uchun).
+        const mob = document.body.classList.contains('adm-on') && !!window.matchMedia?.('(max-width: 900px)').matches;
+        if (mob) { renderStudentMob(el, c, tab, { tabs, acts, lock, serial, money }); return; }
         el.innerHTML = `<button type="button" class="scc-back" data-back>← ${sc === 'assistant' ? 'O\'quvchilarim' : 'O\'quvchilar'}</button>
           <section class="sc-card scc-head${sc === 'full' ? ' scc-head--stack' : ''}">
             <div class="scc-hrow">${studentAvatar(c, 44)}<div class="scc-hmain">
@@ -532,6 +536,73 @@
                 }
                 metaTitle();
             }
+            el.querySelectorAll('.scc-tab').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === k)));
+            if (k === 'umumiy') summaryTab(body, c);
+            else if (k === 'davomat') attendanceTab(body, c);
+            else if (k === 'oz') progressTab(body, c);
+            else if (k === 'tolov') paymentsTab(body, c);
+            else if (k === 'sotuv') salesTab(body, c);
+            else if (k === 'tarix') historyTab(body, c);
+        };
+        el.querySelectorAll('.scc-tab').forEach(b => b.onclick = () => show(b.dataset.tab));
+        show(tabs.some(t => t[0] === tab) ? tab : 'umumiy');
+    }
+    const MIC = {
+        back: 'M15 6l-6 6 6 6',
+        call: 'M22 16.9v3a2 2 0 01-2.2 2A19.8 19.8 0 013 5.2 2 2 0 015 3h3a2 2 0 012 1.7c.1 1 .4 1.9.7 2.8a2 2 0 01-.5 2.1L9 10.8a16 16 0 006 6l1.3-1.2a2 2 0 012.1-.5c.9.3 1.8.6 2.8.7a2 2 0 011.7 2z',
+        edit: 'M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z',
+        status: 'M6 4h4v16H6zM14 4h4v16h-4z',
+        pay: 'M3 6h18v12H3zM3 10h18M7 15h3',
+        req: 'M4 4h16v12H5.2L4 17.2zM8 9h8M8 12h5',
+        makeup: 'M3 9.5h18M5 4.5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2v-12a2 2 0 012-2z'
+    };
+    const mic = (k, sz = 20) => `<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${MIC[k] || MIC.edit}"/></svg>`;
+    function renderStudentMob(el, c, tab, { tabs, acts, lock, serial, money }) {
+        const sc = c.scope, month = today().slice(0, 7);
+        const stTxt = { active: 'Faol', frozen: 'Muzlatilgan', left: c.finished ? 'Kursni tugatgan' : 'Chiqib ketgan' }[c.status] || '';
+        const sub = [c.subject === 'russian' ? 'Rus tili' : 'Ingliz tili', serial && '#' + serial, money && c.phone, stTxt].filter(Boolean).map(esc).join(' · ');
+        const SHORT = { edit: 'Tahrir', status: 'Holat', pay: 'To\'lov', req: 'So\'rov', makeup: 'Qoplash' };
+        const digits = String(c.phone || '').replace(/[^\d+]/g, '');
+        const tiles = [];
+        if (money && digits.replace(/\D/g, '').length >= 9) tiles.push(`<a class="scm-tile is-call" href="tel:${esc(digits)}">${mic('call')}Qo'ng'iroq</a>`);
+        acts.forEach(([k, l]) => tiles.push(`<button type="button" class="scm-tile${k === 'pay' ? ' is-pay' : ''}" data-act="${k}">${mic(k)}${esc(SHORT[k] || l.replace(/^[✎+]\s*/, ''))}</button>`));
+        el.innerHTML = `<div class="scm-top"><button type="button" class="scm-ib" data-back aria-label="Orqaga">${mic('back')}</button><strong>O'quvchi</strong></div>
+          <section class="scm-hero">
+            <div class="scm-hrow">${studentAvatar(c, 56)}<div class="scm-hmain"><h1>${esc(c.name)}</h1><p>${sub}</p></div></div>
+            ${sc === 'past' ? '' : `<div class="scm-stats"><span><small>Dars</small><b data-h-reach>…</b></span><span><small>Davomat · ${esc(MON_SHORT[Number(month.slice(5)) - 1])}</small><b data-h-att>…</b></span><span><small>Ilova</small><b data-h-app>…</b></span></div>`}
+          </section>
+          <div class="scm-pills">${sc === 'past' ? '' : tgPill(c.group)} ${statusPill(c)}<span data-flag></span></div>
+          ${tiles.length ? `<div class="scm-acts" style="--n:${Math.min(4, tiles.length)}">${tiles.join('')}</div>` : ''}
+          <div data-h-debt></div>
+          <div class="scm-tabs" role="tablist" aria-label="Karta bo'limlari">${tabs.map(([k, l]) => `<button type="button" role="tab" class="scc-tab scm-tab" data-tab="${k}" aria-selected="${k === tab}">${esc(l)}</button>`).join('')}</div>
+          ${lock ? `<p class="scm-lock">${LOCK}${esc(lock)}</p>` : ''}
+          <div class="scc-body scm-body" data-body></div>`;
+        el.querySelector('[data-back]').onclick = () => { if (!window.adminApp?.cardBack?.()) closeStudent(); };
+        const body = el.querySelector('[data-body]');
+        const set = (sel, v) => { const x = el.querySelector(sel); if (x) x.textContent = v; };
+        const wire = root => root.querySelectorAll('[data-act]').forEach(b => b.onclick = () => cardAction(b.dataset.act, c, b));
+        wire(el);
+        if (sc !== 'past') {
+            getProg(c).then(r => {
+                set('[data-h-reach]', `${r.progress?.reached ?? 0} / 72`);
+                set('[data-h-app]', r.progress?.lastActive ? whenTxt(r.progress.lastActive) : 'kirmagan');
+                const fp = r.detail && acad.flagPill(r.detail); const f = el.querySelector('[data-flag]');
+                if (fp && f && !money) f.outerHTML = `<span class="sc-pill ${fp[1]}">${fp[0]}</span>`;
+            }).catch(() => { set('[data-h-reach]', '—'); set('[data-h-app]', '—'); });
+            getAtt(c, month).then(a => { const x = attStats(a, c); set('[data-h-att]', x.passed ? `${Math.round(Math.min(x.counted, x.passed) / x.passed * 100)}%` : '—'); }).catch(() => set('[data-h-att]', '—'));
+        }
+        if (money) getPay(c).then(p => {
+            const due = p.paymentDueDate ? String(p.paymentDueDate).slice(0, 10) : '';
+            const debt = Number(p.debtAmount) || 0, late = due && due < today();
+            // Qarz/muddat chizig'i chiqsa — xuddi shu pill takrorlanmaydi; aks holda "Noyabr to'langan" pill.
+            const f = el.querySelector('[data-flag]'); const pp = payPill(p); if (f && pp && !debt && !late) f.outerHTML = pp;
+            const box = el.querySelector('[data-h-debt]'); if (!box || (!debt && !late)) return;
+            const canPay = acts.some(a => a[0] === 'pay');
+            box.innerHTML = `<div class="scm-debt${debt ? '' : ' is-warn'}"><span><b>${debt ? `Qarz: ${esc(num(debt))} so'm` : 'To\'lov muddati o\'tdi'}</b><small>${due ? `${late ? 'Muddati o\'tgan' : 'To\'lov muddati'} · ${esc(dShort(due))}` : 'muddat kiritilmagan'}</small></span>${canPay ? '<button type="button" class="scm-debt-btn" data-act="pay">To\'lov qabul</button>' : ''}</div>`;
+            wire(box);
+        }).catch(() => {});
+        const show = k => {
+            if (_page) _page.tab = k;
             el.querySelectorAll('.scc-tab').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === k)));
             if (k === 'umumiy') summaryTab(body, c);
             else if (k === 'davomat') attendanceTab(body, c);
