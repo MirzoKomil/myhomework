@@ -648,7 +648,7 @@ async function studentCard(db, user, id, now = new Date()) {
     const asgName = asgId ? ((await db.query('SELECT name FROM hr_employees WHERE id=$1', [asgId])).rows[0]?.name || '') : '';
     return {
         id: r.id, name: r.name, phone: r.phone || '', teacher: r.teacher_id ? { id: r.teacher_id, name: sc.names.get(r.teacher_id) || '' } : null,
-        schedule: scheduleText(r.lesson_day_of_week, r.lesson_time), totalLessons: hub.TOTAL_LESSONS || 72, lessonNo: s?.reached ?? st.reached ?? null, planLessonNo: s?.expected ?? st.expected ?? null,
+        schedule: scheduleText(r.lesson_day_of_week, r.lesson_time), lesson: { day: r.lesson_day_of_week == null ? null : Number(r.lesson_day_of_week), time: r.lesson_time || '', duration: Number(r.lesson_duration) || 30 }, totalLessons: hub.TOTAL_LESSONS || 72, lessonNo: s?.reached ?? st.reached ?? null, planLessonNo: s?.expected ?? st.expected ?? null,
         activity: { completionPct: st.avgPercent ?? null, weeklyMinutes: st.time ? Math.round((st.time.week || 0) / 60) : null, topMistake,
             attendancePct: detail?.attendance?.rate ?? null },
         lessons, problems: { open: Number(pc.open) || 0, closed: Number(pc.closed) || 0 },
