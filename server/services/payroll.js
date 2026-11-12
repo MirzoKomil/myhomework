@@ -579,6 +579,19 @@ function currentMonthPeriod(now = new Date()) {
     const end = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
     return engine.period(`${today.slice(0, 7)}-01`, end);
 }
+function shiftMonth(month, d) {
+    const [y, m] = month.split('-').map(Number), t = new Date(Date.UTC(y, m - 1 + d, 1));
+    return t.toISOString().slice(0, 7);
+}
+// Ustozga ko'rinadigan bitta oy: summa, bonus, jarima, qo'lga, holat va o'quvchilar bo'yicha qatorlar (faqat o'ziniki).
+function monthView(month, current, v, hist) {
+    const paid = v.status === 'paid' || hist?.status === 'paid';
+    return { month, current, status: current ? 'live' : paid ? 'paid' : 'unpaid', saved: !!(v.transactionId || hist), paidAt: v.paidAt || hist?.paidAt || null,
+        total: Number(v.total) || 0, takeHome: Number(v.takeHome ?? v.total) || 0, cleanBonus: Number(v.cleanBonus) || 0, fineDeducted: Number(v.fineDeducted) || 0,
+        adjustmentTotal: Number(v.adjustmentTotal) || 0, lessons: Number(v.lessons) || 0, studentCount: Number(v.studentCount) || 0,
+        breakdown: (v.breakdown || []).map(b => ({ name: b.name, lessons: b.lessons, plan: b.plan ?? b.expected, expected: b.expected, tariff: b.tariff, earned: b.earned,
+            role: b.dutyRole || 'main', makeups: b.makeups || 0, unit: b.unit || null })).sort((a, b) => b.earned - a.earned) };
+}
 async function mySalary(pool, actor, now = new Date()) {
     const db = await pool.connect();
     try {
@@ -600,8 +613,29 @@ async function mySalary(pool, actor, now = new Date()) {
             const row = result.rows.find(r => r.employeeId === emp.id);
             current = ownView(row ? (await withTakeHome(db, p, lang, [row]))[0] : null);
         } catch (e) { console.error('[payroll/me]', e.message); }
+        // Har oy alohida (12-noy, direktor: "oylar qo'shilib ketmasin"): joriy + 2 ta o'tgan oy jonli hisobdan
+        // (admin Maoshlar bilan aynan bir xil formula va holat), undan eskilari — yozilgan tarixdan.
+        const months = [];
+        for (let i = 0; i < 3; i++) {
+            const month = shiftMonth(p.start.slice(0, 7), -i);
+            try {
+                const mp = i === 0 ? p : monthPeriod(month);
+                const result = await calculate(db, mp, lang);
+                const row = result.rows.find(r => r.employeeId === emp.id);
+                if (!row) continue;
+                const v = (await withTakeHome(db, mp, lang, [row]))[0];
+                months.push(monthView(month, i === 0, v, history.find(h => String(h.start).slice(0, 7) === month)));
+            } catch (e) { console.error('[payroll/me] oy', month, e.message); }
+        }
+        for (const h of history) {
+            const month = String(h.start).slice(0, 7);
+            if (months.some(m => m.month === month)) continue;
+            months.push({ month, current: false, status: h.status === 'paid' ? 'paid' : 'unpaid', saved: true, paidAt: h.paidAt || null,
+                total: h.amount, takeHome: h.takeHome ?? h.amount, cleanBonus: h.cleanBonus || 0, fineDeducted: h.fineDeducted || 0, breakdown: [] });
+        }
+        months.sort((a, b) => b.month.localeCompare(a.month));
         await db.query('COMMIT');
-        return { linked: true, name: emp.name, period: p, current, history };
+        return { linked: true, name: emp.name, period: p, current, history, months };
     } catch (e) {
         await db.query('ROLLBACK').catch(() => {});
         throw e;
