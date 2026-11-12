@@ -181,3 +181,7 @@
 .bq-art{font-size:14.5px;line-height:1.55;gap:8px}
 .bq-art p,.bq-art ul,.bq-art ol{margin:0}
 .bq-art ul,.bq-art ol{padding-left:20px}
+/* Maosh: har oy alohida karta (12-noy) */
+.bq-msc{display:flex;flex-direction:column;gap:6px;text-decoration:none;color:inherit}
+.bq-msa{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.bq-msa span{font-size:14px;font-weight:700;color:#4B5563}

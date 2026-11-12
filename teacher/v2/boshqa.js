@@ -511,81 +511,82 @@
     // Maosh — /api/payroll/me. Qoida: stavka ÷ o'quvchining oylik darslari × o'tilgan darslar;
     // oy 1-sanada yopiladi, e'tiroz 4-sanagacha, 5-sanada to'lanadi.
     // ─────────────────────────────────────────────────────────────────────
-    const RATE = { 15: 75000, 30: 150000, 60: 300000 };
+    // 12-noy (direktor): har oy ALOHIDA, faqat server raqami (admin Maoshlar bilan bir xil). Ilova o'zi hisoblamaydi.
+    // /api/payroll/me → months[]: {month, status: live|unpaid|paid, total, cleanBonus, fineDeducted, takeHome, paidAt, breakdown[]}.
     let msMonth = '';
-    function payGroups(month) {
-        const g = {};
-        for (const s of S().main || []) {
-            const m = D().monthStats(s, month); if (!m.plan) continue;
-            const d = dur(s), x = g[d] ||= { d, n: 0, c: 0, p: 0, sum: 0 };
-            x.n++; x.c += m.counted; x.p += m.plan; x.sum += Math.round((RATE[d] || 0) * m.counted / m.plan);
-        }
-        return Object.values(g).sort((a, b) => b.d - a.d);
+    const salMonths = () => {
+        const sal = S().salary; if (!sal) return [];
+        if (Array.isArray(sal.months)) return sal.months;
+        // Eski server javobi (deploy oralig'i): joriy oy + tarix.
+        const out = sal.current ? [{ month: D().now().month, current: true, status: 'live', total: sal.current.total, takeHome: sal.current.takeHome ?? sal.current.total, cleanBonus: sal.current.cleanBonus || 0, fineDeducted: sal.current.fineDeducted || 0, lessons: sal.current.lessons, studentCount: sal.current.studentCount, breakdown: [] }] : [];
+        for (const h of sal.history || []) out.push({ month: String(h.start).slice(0, 7), status: h.status === 'paid' ? 'paid' : 'unpaid', paidAt: h.paidAt, total: h.amount, takeHome: h.takeHome ?? h.amount, cleanBonus: h.cleanBonus || 0, fineDeducted: h.fineDeducted || 0, breakdown: [] });
+        return out;
+    };
+    const payDay = m => `${D().shiftMonth(m, 1)}-05`;
+    // Holat: joriy — hisoblanmoqda; o'tgan, to'lov sanasigacha — 5-sanada to'lanadi; undan keyin "Berildi" bosilmagan — tasdiqlanmagan.
+    function msState(m) {
+        const t = D().now().date, nm = monName(D().shiftMonth(m.month, 1));
+        if (m.status === 'live') return { cls: 'inf', pill: 'hisoblanmoqda', sub: `oy 1-${nm}da yopiladi` };
+        if (m.status === 'paid') return { cls: 'ok', pill: `berildi${m.paidAt ? ' · ' + fmtDM(m.paidAt) : ''}`, sub: "to'langan" };
+        if (t <= payDay(m.month)) return { cls: 'inf', pill: t === payDay(m.month) ? "bugun to'lanadi" : `5-${nm}da to'lanadi`, sub: `e'tiroz 4-${nm}gacha` };
+        return { cls: 'wa', pill: "to'lov tasdiqlanmagan", sub: '', warn: `To'lov muddati 5-${nm} edi. Ma'muriyat hali maosh o'tkazilganini tasdiqlamagan bo'lishi mumkin. Pul kelmagan bo'lsa, akademik rahbarga yozing.` };
     }
-    const histOf = month => (S().salary?.history || []).find(h => String(h.start || '').slice(0, 7) === month) || null;
-    function histSheet() {
-        const h = S().salary?.history || [];
-        sheet(`${sheetHead("Maosh tarixi", "So'nggi 12 oy")}<div class="card l" style="border: 0; padding: 0">${h.map(x => { const m = String(x.start).slice(0, 7), paid = x.paidAt || x.status === 'paid'; return `<div class="li"><div class="col g1"><span class="nm">${cap1(monName(m))} ${m.slice(0, 4)}</span><span class="s">${paid ? `to'langan${x.paidAt ? ' · ' + D().fmtDate(D().tz(x.paidAt).date) : ''}` : 'hisoblangan · to\'lov kutilmoqda'}</span></div><b style="font-size: 15px">${D().money(x.amount)}</b></div>`; }).join('') || '<div class="li"><span class="s">Hali to\'langan oy yo\'q</span></div>'}</div>`, null, { label: 'Maosh tarixi' });
-    }
+    const fmtDM = iso => { const d = D().tz(iso).date; return `${+d.slice(8)}-${D().MON_S[+d.slice(5, 7) - 1]}`; };
+    const durOf = b => b.tariff >= 300000 ? 60 : b.tariff >= 150000 ? 30 : b.tariff >= 75000 ? 15 : null;
     U.page('maosh', {
         render() {
-            const sal = S().salary, n = D().now(), cur = n.month, prev = D().shiftMonth(cur, -1);
-            if (!msMonth) msMonth = n.day <= 5 ? prev : cur;
-            const isCur = msMonth === cur, next = D().shiftMonth(msMonth, 1), nm = monName(next);
-            const h = histOf(msMonth), paid = !!(h && (h.paidAt || h.status === 'paid'));
-            const groups = payGroups(msMonth), tot = groups.reduce((a, g) => ({ c: a.c + g.c, p: a.p + g.p, sum: a.sum + g.sum }), { c: 0, p: 0, sum: 0 });
-            // Bitta manba: guruhlar yig'indisi server summasiga (joriy oy — mainTotal/total, yopilgan oy — tarix) moslanadi;
-            // ilova faqat taqsimotni (ulushni) qoidadan hisoblaydi.
-            const base = isCur ? Number(sal?.current?.mainTotal ?? sal?.current?.total) : h ? Number(h.amount) : NaN;
-            if (Number.isFinite(base) && base > 0 && tot.sum > 0) {
-                const f = base / tot.sum; let acc = 0;
-                groups.forEach((g, i) => { g.sum = i === groups.length - 1 ? Math.round(base) - acc : Math.round(g.sum * f); acc += g.sum; });
-                tot.sum = Math.round(base);
+            const sal = S().salary, list = salMonths();
+            const sel = msMonth && list.find(m => m.month === msMonth);
+            const head = `${bar()}<div class="bd nb bq" style="padding-top: 0; gap: 12px">${U.offline()}`;
+            if (!sal) return `${head}<h1 class="ttl">Maosh</h1><div class="note w" role="alert"><span>Maosh ma'lumoti yuklanmadi.</span><button type="button" class="btn sm" data-bq-reload style="margin-left: auto">Qayta urinish</button></div></div>`;
+            if (sal.linked === false) return `${head}<h1 class="ttl">Maosh</h1><div class="note w"><span>Akkauntingiz HR profiliga biriktirilmagan — maosh ko'rinmaydi. Administratorga murojaat qiling.</span></div></div>`;
+            if (!sel) {
+                const unc = (S().main || []).reduce((a, s) => a + D().uncovered(s).length, 0);
+                return `${head}<h1 class="ttl">Maosh</h1>
+                  ${list.length ? list.map((m, i) => { const st = msState(m); return `<a href="#" class="card bq-msc a${Math.min(i + 1, 4)}" data-ms="${m.month}">
+                    <div class="row" style="justify-content: space-between; gap: 8px"><span class="nm" style="font-size: 15px; font-weight: 800">${cap1(monName(m.month))}${m.status === 'live' ? ' · joriy oy' : ''}</span><span class="pill ${st.cls}">${esc(st.pill)}</span></div>
+                    <strong class="bq-msa">${D().money(m.takeHome ?? m.total)} <span>so'm</span></strong>
+                    <span class="s">${m.status === 'live' ? 'hozirgacha' : "qo'lga"}${m.lessons ? ` · ${m.lessons} dars` : ''}${m.studentCount ? ` · ${m.studentCount} o'quvchi` : ''}${st.sub ? ` · ${esc(st.sub)}` : ''}</span>
+                    ${st.warn ? `<div class="note w" style="margin-top: 4px"><span>${esc(st.warn)}</span></div>` : ''}
+                  </a>`; }).join('') : empty(P.money, "Hali maosh yo'q", "Darslar belgilangach shu yerda har oy alohida ko'rinadi.")}
+                  ${unc ? `<div class="note w"><span><b>${unc} dars qoplanmagan.</b> Oy oxirigacha qoplasangiz maoshga qo'shiladi.</span><button type="button" class="btn sm" data-u-go="davomat" style="margin-left: auto">Davomat</button></div>` : ''}
+                  <div class="note i">${svg(P.info, 18, 2).replace('<svg', '<svg style="flex: none; margin-top: 1px"')}<span>Har oy alohida hisoblanadi, oylar qo'shilmaydi. Raqamlar ma'muriyatning maosh hisobi bilan bir xil.</span></div>
+                </div>`;
             }
-            const amount = isCur ? sal?.current?.total ?? null : h ? h.amount : tot.sum;
-            const estimate = !isCur && !h;
-            const prevAmt = isCur ? histOf(prev)?.amount : histOf(D().shiftMonth(msMonth, -1))?.amount;
-            const delta = amount && prevAmt ? Math.round((amount - prevAmt) / prevAmt * 100) : null;
-            const d1 = `${next}-01`, d4 = `${next}-04`, d5 = `${next}-05`, t = n.date;
-            const pill = isCur ? `Oy yopilishiga ${Math.max(0, dayDiff(t, d1))} kun` : paid ? `To'landi${h.paidAt ? ' · ' + D().fmtDate(D().tz(h.paidAt).date) : ''}` : t < d5 ? `${dayDiff(t, d5)} kun qoldi` : t === d5 ? "Bugun to'lanadi" : 'Kutilmoqda';
-            const st1 = t >= d1 ? 'd' : '', st2 = t > d4 ? 'd' : t >= d1 ? 'n' : '', st3 = paid ? 'd' : t >= d5 ? 'n' : '';
-            const hist = (sal?.history || []).filter(x => String(x.start || '').slice(0, 7) < cur).slice(0, 5).reverse().map(x => ({ m: String(x.start).slice(0, 7), v: Number(x.amount) || 0 }));
-            const pts = [...hist, ...(sal?.current?.total != null ? [{ m: cur, v: sal.current.total, cur: true }] : [])];
-            const maxV = Math.max(...pts.map(p => p.v), 1), sel = pts.some(p => p.m === msMonth) ? msMonth : pts[pts.length - 1]?.m;
-            const unc = isCur ? (S().main || []).reduce((a, s) => a + D().uncovered(s).length, 0) : 0;
-            return `${bar()}
-            <div class="bd nb bq" style="padding-top: 0; gap: 12px">
-              ${U.offline()}
-              <h1 class="ttl">Maosh</h1>
-              <div class="seg bq-seg44" role="tablist"><button type="button" role="tab" data-ms="${prev}" class="${!isCur ? 'on' : ''}" aria-selected="${!isCur}">${cap1(monName(prev))} · ${histOf(prev)?.paidAt || histOf(prev)?.status === 'paid' ? "to'landi" : t >= `${cur}-01` ? 'yopildi' : 'joriy'}</button><button type="button" role="tab" data-ms="${cur}" class="${isCur ? 'on' : ''}" aria-selected="${isCur}">${cap1(monName(cur))} · joriy</button></div>
-              ${!sal ? `<div class="note w" role="alert"><span>Maosh ma'lumoti yuklanmadi.</span><button type="button" class="btn sm" data-bq-reload style="margin-left: auto">Qayta urinish</button></div>`
-                : sal.linked === false ? `<div class="note w"><span>Akkauntingiz HR profiliga biriktirilmagan — maosh ko'rinmaydi. Administratorga murojaat qiling.</span></div>` : `
+            const m = sel, st = msState(m), nm = monName(D().shiftMonth(m.month, 1)), t = D().now().date, d1 = `${D().shiftMonth(m.month, 1)}-01`;
+            const st1 = t >= d1 ? 'd' : '', st2 = m.status === 'paid' ? 'd' : t >= d1 ? 'n' : '', st3 = m.status === 'paid' ? 'd' : '';
+            const rows = (m.breakdown || []);
+            return `${head}
+              <div class="row" style="justify-content: space-between"><h1 class="ttl">${cap1(monName(m.month))}</h1><span class="pill ${st.cls}">${esc(st.pill)}</span></div>
+              ${st.warn ? `<div class="note w" role="status"><span>${esc(st.warn)}</span></div>` : ''}
               <section class="blue a1">
                 <span class="bq-shn" aria-hidden="true"></span>${U.HEX('bqMsHex').replace('class="hex"', 'class="hex bq-hex12"')}
-                <div class="bq-rel row" style="justify-content: space-between"><span class="bq-eb">${monName(msMonth).toUpperCase()} · ${isCur ? 'HOZIRGACHA' : estimate ? 'TAXMINIY' : 'YAKUNIY'}</span><span class="pill" style="background: rgba(255,255,255,.2); color: #FFFFFF">${pill}</span></div>
-                <div class="bq-rel row" style="align-items: baseline; gap: 6px"><strong class="bq-amt">${amount != null ? D().money(amount) : '—'}</strong><span style="font-size: 15px; font-weight: 700; color: #DCEBFF">so'm</span></div>
-                <span class="bq-rel" style="font-size: 13px; color: #DCEBFF">${tot.c} / ${tot.p} dars ${isCur ? "hisobga o'tdi" : "o'tildi"}${delta != null ? ` · ${monName(isCur ? prev : D().shiftMonth(msMonth, -1))}dan ${delta >= 0 ? '+' : ''}${delta}%` : ''}</span>
+                <div class="bq-rel"><span class="bq-eb">${m.status === 'live' ? 'HOZIRGACHA' : "QO'LGA"}</span></div>
+                <div class="bq-rel row" style="align-items: baseline; gap: 6px"><strong class="bq-amt">${D().money(m.takeHome ?? m.total)}</strong><span style="font-size: 15px; font-weight: 700; color: #DCEBFF">so'm</span></div>
                 <div class="bq-stp" style="margin-top: 4px">
                   <div><i class="${st1}"></i><b>${t >= d1 ? 'Oy yopildi' : 'Oy yopiladi'}</b>1-${nm}</div>
                   <div><i class="${st2}"></i><b>E'tiroz</b>4-${nm}gacha</div>
-                  <div><i class="${st3}"></i><b>To'lov</b>5-${nm}</div>
+                  <div><i class="${st3}"></i><b>${m.status === 'paid' ? 'Berildi' : "To'lov"}</b>${m.paidAt ? fmtDM(m.paidAt) : `5-${nm}`}</div>
                 </div>
               </section>
-              ${groups.length ? `<section class="card l a2">${groups.map(g => `<div class="li"><span class="pill inf bq-dpill">${g.d} daq</span><div class="col g1"><span class="nm">${g.n} o'quvchi</span><span class="s">${g.c} / ${g.p} dars</span></div><b style="font-size: 15px">${D().money(g.sum)}</b></div>`).join('')}</section>` : empty(P.money, "Bu oy dars yo'q", "Darslar belgilangach shu yerda hisob ko'rinadi.")}
-              <div class="note i a3">${svg(P.info, 18, 2).replace('<svg', '<svg style="flex: none; margin-top: 1px"')}<span>Har o'quvchi uchun: oylik stavka ÷ oydagi darslari × o'tilgan darslar. Stavka: 15 daq — 75 000, 30 daq — 150 000, 60 daq — 300 000.${isCur ? " Qoplash darslari tasdiqsiz hisobga o'tadi." : ''}</span></div>
-              ${unc ? `<div class="note w"><span><b>${unc} dars qoplanmagan.</b> Oy oxirigacha qoplasangiz maoshga qo'shiladi.</span><button type="button" class="btn sm" data-u-go="davomat" style="margin-left: auto">Davomat</button></div>` : ''}
-              ${pts.length >= 2 ? `<section class="card a4" aria-labelledby="bq-ch">
-                <div class="sh" style="padding: 0"><h3 id="bq-ch" class="bq-h3">So'nggi ${pts.length} oy · mln so'm</h3><a href="#" data-bq-hist class="bq-lnk">Tarix</a></div>
-                <div role="img" aria-label="${pts.map(p => `${monName(p.m)} ${mln(p.v)}`).join(', ')} mln" class="bq-chart">${pts.map((p, i) => `<div class="col"><span class="xs b"${p.m === sel ? ' style="color: #0057B8"' : ''}>${mln(p.v)}</span><span class="bq-cb" style="height: ${Math.max(4, Math.round(p.v / maxV * 69))}px; ${p.m === sel ? 'background: #0065D6; ' : ''}animation-delay: ${(i + 1) * 0.05}s"></span><span class="xs${p.m === sel ? ' b' : ''}">${D().MON_S[+p.m.slice(5) - 1]}</span></div>`).join('')}</div>
-              </section>` : ''}`}
+              <section class="card l a2">
+                <div class="li"><span>Darslar uchun maosh</span><b>${D().money(m.total)}</b></div>
+                ${m.adjustmentTotal ? `<div class="li"><span class="s">shundan tuzatish</span><b>${m.adjustmentTotal > 0 ? '+' : ''}${D().money(m.adjustmentTotal)}</b></div>` : ''}
+                <div class="li"><span>"Toza oy" bonusi</span><b style="color: #067647">${m.cleanBonus ? '+' + D().money(m.cleanBonus) : '0'}</b></div>
+                <div class="li"><span>Jarimalar</span><b${m.fineDeducted ? ' style="color: #B42318"' : ''}>${m.fineDeducted ? '−' + D().money(m.fineDeducted) : '0'}</b></div>
+                <div class="li"><span><b>Qo'lga</b></span><b style="font-size: 16px">${D().money(m.takeHome ?? m.total)} so'm</b></div>
+              </section>
+              ${rows.length ? `<section class="card l a3" aria-label="O'quvchilar bo'yicha">${rows.map(b => `<div class="li"><div class="col g1" style="min-width: 0"><span class="nm">${esc(b.name || "O'quvchi")}</span><span class="s">${durOf(b) ? durOf(b) + ' daq · ' : ''}${b.lessons} / ${b.plan ?? b.expected} ${b.unit === 'contact' ? 'aloqa' : 'dars'}${b.role === 'assistant' ? ' · yordamchi' : ''}${b.makeups ? ` · ${b.makeups} qoplash` : ''}</span></div><b style="font-size: 15px">${D().money(b.earned)}</b></div>`).join('')}</section>` : ''}
+              <div class="note i a4">${svg(P.info, 18, 2).replace('<svg', '<svg style="flex: none; margin-top: 1px"')}<span>Har o'quvchi uchun: oylik stavka ÷ oydagi darslari × o'tilgan darslar.${m.status === 'paid' ? ' Bu oy berilgan, raqam o\'zgarmaydi.' : ' Davomat tuzatilsa, to\'langunga qadar raqam yangilanadi.'}</span></div>
+              <button type="button" class="btn" data-ms="" style="width: 100%">Barcha oylar</button>
             </div>`;
         },
         bind(root) {
-            root.querySelectorAll('[data-ms]').forEach(b => b.onclick = () => { msMonth = b.dataset.ms; U.render(); });
-            root.querySelector('[data-bq-hist]')?.addEventListener('click', e => { e.preventDefault(); histSheet(); });
+            root.querySelectorAll('[data-ms]').forEach(b => b.onclick = e => { e.preventDefault(); msMonth = b.dataset.ms; U.render(); window.scrollTo(0, 0); });
             root.querySelector('[data-bq-reload]')?.addEventListener('click', () => U.reload());
         }
     });
+    window.dwtSalary = { months: salMonths, state: msState };
 
     // ─────────────────────────────────────────────────────────────────────
     // Reyting — /api/state/teacher-rating[?month=YYYY-MM]
@@ -659,7 +660,7 @@
             const s = S(), n = D().now(), me = s.me || {}, user = s.user || {};
             const rk = ratingOf(s.rating);
             const trialsToday = (s.trials || []).filter(l => { const a = D().tAt(l); return a && a.date === n.date && D().trialPhase(l) !== 'past'; }).length;
-            const total = s.salary?.current?.total;
+            const total = s.salary?.current?.total; const lastM = salMonths().find(m => m.status !== 'live'), lastSt = lastM && msState(lastM);
             const newG = D().myGuides().filter(D().guideIsNew).length;
             const wait = waiting().length;
             const tile = (attr, cls, icon, title, sub, subStyle = '') => `<a class="bq-tile" href="#" ${attr}><span class="bq-ic40 ${cls}">${svg(icon, 20, 2)}</span><span class="col"><strong>${title}</strong><span class="xs"${subStyle ? ` style="${subStyle}"` : ''}>${sub}</span></span></a>`;
@@ -674,7 +675,7 @@
               <nav aria-label="Bo'limlar" class="a2 bq-tiles">
                 ${tile('data-u-push="darslik"', 'inf', P.book, 'Darslik', '72 dars')}
                 ${tile('data-u-go="jadval"', 'wa', P.trial, 'Sinov darslari', trialsToday ? `Bugun ${trialsToday} ta` : "bugun yo'q")}
-                ${tile('data-u-push="maosh"', 'ok', P.money, 'Maosh', total != null ? `${mln(total)} mln · ${D().MON[+D().now().month.slice(5) - 1]}` : 'hisob', total != null ? 'color: #067647; font-weight: 700' : '')}
+                ${tile('data-u-push="maosh"', lastSt?.cls === 'wa' ? 'wa' : 'ok', P.money, 'Maosh', total != null ? `${D().MON[+D().now().month.slice(5) - 1]} · ${mln(total)} mln` + (lastM ? `<br>${D().MON[+lastM.month.slice(5) - 1]} · ${mln(lastM.takeHome ?? lastM.total)} mln` : '') : 'hisob', lastSt?.cls === 'wa' ? 'color: #93370D; font-weight: 700' : total != null ? 'color: #067647; font-weight: 700' : '')}
                 ${tile('data-u-push="reyting"', 'wa', P.cup, 'Reyting', rk ? `${rk.rank}-o'rin` : 'ustozlar')}
                 ${tile('data-bq-break', 'bq-or', P.coffee, 'Tanaffus', 'sinovga tanaffus olish')}
                 ${tile('data-bq-inactive', 'mu', P.box, 'Faol emas', `${s.inactive?.length ?? 0} o'quvchi`)}
