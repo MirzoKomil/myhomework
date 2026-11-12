@@ -13168,103 +13168,83 @@ function renderAnalitikaSotuvMarketing() {
 
 let _anFinPeriod = 'oylik';
 
-function anGetPaymentsByStudent() {
-    const payments = getItem(STORAGE_KEYS.payments, []);
-    const byStudent = {};
-    payments.forEach(p => {
-        if (!p.studentId) return;
-        (byStudent[p.studentId] = byStudent[p.studentId] || []).push(p);
-    });
-    return byStudent;
-}
 
-function renderAnalitikaMoliyaviy() {
+// 12-noyabr (direktor qarori): Moliyaviy ko'rsatkichlar Moliya bo'limi hisobidan (/api/finance/overview) — eski
+// mahalliy cashFlow/to'lov keshi (LTV 0, birinchi xarid 0 ko'rsatardi) endi ishlatilmaydi. Raqamlar Moliya → Umumiy bilan bir xil.
+let _anFinSeq = 0;
+function _anFinRange(period) {
+    const t = new Date(Date.now() + 5 * 3600000), today = t.toISOString().slice(0, 10);
+    if (period === 'kunlik') return [today, today];
+    if (period === 'haftalik') { const dow = (t.getUTCDay() + 6) % 7; return [new Date(t.getTime() - dow * 864e5).toISOString().slice(0, 10), today]; }
+    return [today.slice(0, 8) + '01', today];
+}
+async function renderAnalitikaMoliyaviy() {
     const panel = document.getElementById('analitikaPanel-moliyaviy');
     if (!panel) return;
-
-    const cfTx = getCashFlowTx();
     const period = _anFinPeriod;
-
-    const byStudent = anGetPaymentsByStudent();
-    const studentTotals = Object.values(byStudent)
-        .map(list => list.reduce((s, p) => s + (Number(p.paid) || 0), 0))
-        .filter(v => v > 0);
-    const ltv = studentTotals.length ? Math.round(studentTotals.reduce((a, b) => a + b, 0) / studentTotals.length) : 0;
-
-    let firstPurchaseSum = 0, repeatPurchaseSum = 0;
-    Object.values(byStudent).forEach(list => {
-        const sorted = list.slice().sort((a, b) => new Date(a.date) - new Date(b.date));
-        sorted.forEach((p, i) => {
-            if (i === 0) firstPurchaseSum += Number(p.paid) || 0;
-            else repeatPurchaseSum += Number(p.paid) || 0;
-        });
-    });
-
-    const marketingSpend = cfTx
-        .filter(t => t.type === 'chiqim' && t.purpose === 'Marketing' && cfDateInPeriod(t.date, period))
-        .reduce((s, t) => s + (Number(t.amount) || 0), 0);
-    const newCustomers = _getClosedLeadsInPeriod('all', period).length;
-    const cac = newCustomers > 0 && marketingSpend > 0 ? Math.round(marketingSpend / newCustomers) : null;
-
-    const targetRevenue = _getClosedLeadsInPeriod('all', period)
-        .filter(l => getLeadKind(l) === 'target')
-        .reduce((s, l) => s + anLeadRevenue(l), 0);
-    const romi = marketingSpend > 0 ? ((targetRevenue - marketingSpend) / marketingSpend * 100) : null;
-
-    const refundTx = cfTx.filter(t => t.type === 'chiqim' && t.purpose === CASH_FLOW_REFUND_PURPOSE && cfDateInPeriod(t.date, period));
-    const refundCount = refundTx.length;
-    const refundAmount = refundTx.reduce((s, t) => s + (Number(t.amount) || 0), 0);
-    // Qaytarishlar ulushi davrda yopilgan sotuvlarga nisbatan (Cash Flow'da sotuv kirimi
-    // har doim ham yozilmaydi — u bazada 0 bo'lib, foiz "0%" chiqardi).
-    const refundRate = newCustomers > 0 ? (refundCount / newCustomers * 100) : null;
-
-    const upsellTotal = firstPurchaseSum + repeatPurchaseSum;
-
-    panel.innerHTML = `
-    <div class="page-title-bar">
-        <div><h1>Moliyaviy ko'rsatkichlar</h1><p class="text-muted" style="margin:2px 0 0;font-size:13px">LTV, CAC, ROMI va boshqa moliyaviy samaradorlik metrikalari</p></div>
+    const [start, end] = _anFinRange(period);
+    const seq = ++_anFinSeq;
+    const fmt = v => (v == null ? '—' : fmtMoney(v));
+    const head = `<div class="page-title-bar">
+        <div><h1>Moliyaviy koʻrsatkichlar</h1><p class="text-muted" style="margin:2px 0 0;font-size:13px">Moliya boʻlimi hisobidan · ikkala maktab va umumiy xarajatlar · ${start.split('-').reverse().join('.')} — ${end.split('-').reverse().join('.')}</p></div>
         <div class="sp-period-tabs" id="anFinPeriodTabs">
             <button type="button" class="sp-period-tab${period === 'kunlik' ? ' active' : ''}" data-an-fin-period="kunlik">Kunlik</button>
             <button type="button" class="sp-period-tab${period === 'haftalik' ? ' active' : ''}" data-an-fin-period="haftalik">Haftalik</button>
             <button type="button" class="sp-period-tab${period === 'oylik' ? ' active' : ''}" data-an-fin-period="oylik">Oylik</button>
         </div>
-    </div>
-
+    </div>`;
+    const bind = () => panel.querySelectorAll('[data-an-fin-period]').forEach(btn => { btn.onclick = () => { _anFinPeriod = btn.dataset.anFinPeriod; renderAnalitikaMoliyaviy(); }; });
+    panel.innerHTML = head + '<div class="card" role="status" style="padding:24px;text-align:center">Hisob-kitob qilinmoqda…</div>';
+    bind();
+    let o;
+    try { o = await apiFetch(`/api/finance/overview?scope=all&start=${start}&end=${end}&basis=cash`); }
+    catch (e) {
+        if (seq !== _anFinSeq) return;
+        panel.innerHTML = head + `<div class="card" role="alert" style="padding:20px">Moliya maʼlumotini olib boʻlmadi: ${escapeHtml(e.message || '')}</div>`;
+        bind(); return;
+    }
+    if (seq !== _anFinSeq || !panel.isConnected) return;
+    const k = o.kpis || {}, p = o.pnl || {};
+    const marketing = (p.marketing || 0) + (p.allocation?.marketing || 0);
+    const romi = marketing > 0 ? ((p.net_revenue - marketing) / marketing * 100) : null;
+    const refunds = Number(p.refunds) || 0;
+    const refundShare = (p.net_revenue + refunds) > 0 ? refunds / (p.net_revenue + refunds) * 100 : 0;
+    const firstSum = (k.averageFirstPayment || 0) * (k.newSales || 0);
+    const total = firstSum + (k.collections || 0);
+    const card = (ic, tone, label, val, sub) => `<div class="stat-card"><div class="stat-icon ${tone}">${ic}</div><div class="stat-info"><div class="stat-label">${label}</div><div class="stat-value" style="font-size:20px">${val}</div>${sub ? `<div class="text-muted" style="font-size:12px;margin-top:2px">${sub}</div>` : ''}</div></div>`;
+    panel.innerHTML = head + `
     <div class="cf-kpi-grid" style="margin-bottom:16px">
-        <div class="stat-card"><div class="stat-icon purple">💎</div><div class="stat-info"><div class="stat-label">LTV (o'rtacha)</div><div class="stat-value" style="font-size:20px">${fmtMoney(ltv)}</div></div></div>
-        <div class="stat-card"><div class="stat-icon blue">🎯</div><div class="stat-info"><div class="stat-label">CAC</div><div class="stat-value" style="font-size:20px">${cac !== null ? fmtMoney(cac) : (marketingSpend > 0 ? "Sotuv yo'q" : 'Kiritilmagan')}</div></div></div>
-        <div class="stat-card"><div class="stat-icon green">📈</div><div class="stat-info"><div class="stat-label">ROMI</div><div class="stat-value" style="font-size:20px${romi !== null && romi < 0 ? ';color:var(--danger)' : ''}">${romi !== null ? (romi >= 0 ? '+' : '') + romi.toFixed(0) + '%' : "Ma'lumot yo'q"}</div></div></div>
-        <div class="stat-card"><div class="stat-icon yellow">↩️</div><div class="stat-info"><div class="stat-label">Qaytarilgan toʻlovlar ulushi</div><div class="stat-value" style="font-size:20px">${anPct(refundRate)}</div></div></div>
+        ${card('💰', 'green', 'Sof tushum', fmt(p.net_revenue), `${k.receiptCount || 0} ta toʻlov · qaytarishlar ${fmt(refunds)}`)}
+        ${card('💎', 'purple', 'Oʻrtacha shartnoma', fmt(k.averageContract), `oʻrtacha birinchi toʻlov: ${fmt(k.averageFirstPayment)}`)}
+        ${card('🎯', 'blue', 'CAC', k.cac != null ? fmt(k.cac) : 'Kiritilmagan', k.cac != null ? `sotuv maoshi bilan: ${fmt(k.fullCac)}` : 'Moliyaga marketing xarajati kiritilmagan')}
+        ${card('📈', 'green', 'ROMI', romi != null ? romi.toFixed(1).replace('.', ',') + '%' : 'Maʼlumot yoʻq', marketing ? `barcha sof tushumdan · marketing: ${fmt(marketing)}` : 'marketing xarajati yoʻq')}
+        ${card('↩️', 'yellow', 'Qaytarilgan toʻlovlar ulushi', refundShare.toFixed(1).replace('.', ',') + '%', fmt(refunds))}
     </div>
-
     <div class="grid-2 cf-grid-2" style="gap:16px;align-items:stretch">
         <div class="card">
-            <div class="card-header"><h3>Birinchi xarid vs Takroriy xarid (Up-sell)</h3></div>
+            <div class="card-header"><h3>Yangi oʻquvchilar va qayta toʻlovlar</h3></div>
+            <div class="cf-invest-row"><span>Yangi oʻquvchilar (birinchi shartnoma)</span><b>${k.newClients || 0} ta</b></div>
+            <div class="cf-invest-row"><span>Kursni uzaytirganlar</span><b>${k.renewals || 0} ta</b></div>
             <div class="cf-mgr-row">
-                <div class="cf-mgr-name">Birinchi xarid</div>
-                <div class="cf-mgr-bar-track"><div class="cf-mgr-bar-fill" style="width:${upsellTotal > 0 ? Math.round(firstPurchaseSum / upsellTotal * 100) : 0}%"></div></div>
-                <div class="cf-mgr-value">${fmtMoney(firstPurchaseSum)}</div>
+                <div class="cf-mgr-name">Birinchi toʻlovlar</div>
+                <div class="cf-mgr-bar-track"><div class="cf-mgr-bar-fill" style="width:${total > 0 ? Math.round(firstSum / total * 100) : 0}%"></div></div>
+                <div class="cf-mgr-value">${fmt(firstSum)}</div>
             </div>
             <div class="cf-mgr-row">
-                <div class="cf-mgr-name">Takroriy (Up-sell)</div>
-                <div class="cf-mgr-bar-track"><div class="cf-mgr-bar-fill" style="width:${upsellTotal > 0 ? Math.round(repeatPurchaseSum / upsellTotal * 100) : 0}%;background:#34D399"></div></div>
-                <div class="cf-mgr-value">${fmtMoney(repeatPurchaseSum)}</div>
+                <div class="cf-mgr-name">Keyingi toʻlovlar</div>
+                <div class="cf-mgr-bar-track"><div class="cf-mgr-bar-fill" style="width:${total > 0 ? Math.round((k.collections || 0) / total * 100) : 0}%;background:#34D399"></div></div>
+                <div class="cf-mgr-value">${fmt(k.collections)}</div>
             </div>
         </div>
         <div class="card">
-            <div class="card-header"><h3>Pul qaytarish (Refund) tafsiloti</h3></div>
-            <div class="cf-invest-row"><span>Qaytarilgan operatsiyalar</span><b>${refundCount} ta</b></div>
-            <div class="cf-invest-row"><span>Qaytarilgan summa</span><b class="sp-neg">${fmtMoney(refundAmount)}</b></div>
-            <div class="cf-invest-row cf-invest-row-total"><span>Sotuvlarga nisbatan (shu davr)</span><b>${refundRate.toFixed(1).replace(".", ",")}%</b></div>
+            <div class="card-header"><h3>Foyda va xarajat</h3></div>
+            <div class="cf-invest-row"><span>Marketing xarajati</span><b class="sp-neg">${fmt(marketing)}</b></div>
+            <div class="cf-invest-row"><span>Sof tushum − sof foyda (jami xarajat)</span><b class="sp-neg">${fmt((p.net_revenue || 0) - (p.net_profit || 0))}</b></div>
+            <div class="cf-invest-row cf-invest-row-total"><span>Sof foyda · marja ${p.margins?.net == null ? '—' : String(p.margins.net).replace('.', ',') + '%'}</span><b>${fmt(p.net_profit)}</b></div>
+            <p class="text-muted" style="font-size:12px;margin:8px 0 0">Batafsil — Moliya → Hisobotlar. Xarajatlar Moliyaga kiritilmasa foyda tushumga teng koʻrinadi.</p>
         </div>
     </div>`;
-
-    document.querySelectorAll('[data-an-fin-period]').forEach(btn => {
-        btn.onclick = () => {
-            _anFinPeriod = btn.dataset.anFinPeriod;
-            renderAnalitikaMoliyaviy();
-        };
-    });
+    bind();
 }
 
 // --- Analitika: Hisobotlar (rol bo'yicha davriy hisobotlar) ---
@@ -13767,7 +13747,7 @@ function renderAnalitikaAkademik() {
 
     <div class="cf-kpi-grid" style="margin-bottom:16px">
         ${hbManualCard(AA_MANUAL_ROLE, hwDef, period, '📝')}
-        <div class="stat-card"><div class="stat-icon green">✅</div><div class="stat-info"><div class="stat-label">Jonli darslar davomati (Attendance Rate)</div><div class="stat-value" style="font-size:18px">${anPct(attStats.rate)}</div></div></div>
+        <div class="stat-card"><div class="stat-icon green">✅</div><div class="stat-info"><div class="stat-label">Jonli darslar davomati (Attendance Rate)</div><div class="stat-value" style="font-size:18px" data-aa-att>${anPct(attStats.rate)}</div></div></div>
         ${hbManualCard(AA_MANUAL_ROLE, videoDef, period, '🎬')}
         <div class="stat-card"><div class="stat-icon yellow">❄️</div><div class="stat-info"><div class="stat-label">Muzlatilganlar ulushi</div><div class="stat-value" style="font-size:18px">${anPct(hbFrozenShare())}</div></div></div>
         ${hbManualCard(AA_MANUAL_ROLE, levelUpDef, period, '🚀')}
@@ -13775,13 +13755,13 @@ function renderAnalitikaAkademik() {
 
     <div class="grid-2 cf-grid-2" style="gap:16px;align-items:stretch">
         <div class="card">
-            <div class="card-header"><h3>Surunkali dars qoldirayotgan talabalar (ogohlantirish)</h3></div>
-            ${atRisk.length ? atRisk.map(s => `
+            <div class="card-header"><h3>Xavf ostidagi oʻquvchilar (ogohlantirish)</h3></div>
+            <div data-aa-risk>${atRisk.length ? atRisk.map(s => `
                 <div class="cf-mgr-row">
                     <div class="cf-mgr-name">${escapeHtml(s.name)}</div>
                     <div class="cf-mgr-bar-track"><div class="cf-mgr-bar-fill" style="width:${Math.max(4, Math.round(s.rate))}%;background:#F87171"></div></div>
                     <div class="cf-mgr-value">${s.rate.toFixed(0)}%</div>
-                </div>`).join('') : `<div class="mac-empty" style="padding:20px 0"><div style="font-size:13px;color:var(--text-muted)">Hozircha xavf ostidagi o'quvchi yo'q</div></div>`}
+                </div>`).join('') : `<div class="mac-empty" style="padding:20px 0"><div style="font-size:13px;color:var(--text-muted)">Hozircha xavf ostidagi o'quvchi yo'q</div></div>`}</div>
         </div>
         <div class="card">
             <div class="card-header"><h3>Churn — qaysi haftada tashlab ketishmoqda</h3></div>
@@ -13807,6 +13787,23 @@ function renderAnalitikaAkademik() {
             openManualMetricModal(AA_MANUAL_ROLE, metricDef, _aaPeriod, renderAnalitikaAkademik);
         };
     });
+    _aaLiveFill(panel);
+}
+// 12-noyabr (direktor qarori): davomat va xavf ro'yxati akademik rahbar kabinetidagi bilan bir xil manbadan
+// (/api/academic/head/overview, /risk) — eski mahalliy davomat keshi 100% ko'rsatardi.
+async function _aaLiveFill(panel) {
+    if (!['admin', 'boshliq', 'akademik'].includes(getCurrentUser()?.role)) return;
+    try {
+        const [ov, rk] = await Promise.all([apiFetch('/api/academic/head/overview'), apiFetch('/api/academic/head/risk')]);
+        if (!panel.isConnected) return;
+        const att = panel.querySelector('[data-aa-att]');
+        if (att) att.innerHTML = ov.attendancePct == null ? '—' : `${String(ov.attendancePct).replace('.', ',')}%<div class="text-muted" style="font-size:12px;font-weight:500;margin-top:2px">shu oy · rejadagi darslardan</div>`;
+        const box = panel.querySelector('[data-aa-risk]');
+        const items = rk?.items || [];
+        if (box) box.innerHTML = items.length ? `<p class="text-muted" style="font-size:12px;margin:0 0 6px">Jami ${rk.counts.all} ta · appga kirmagan ${rk.counts.noapp} · dars qoldirgan ${rk.counts.absent} · rejadan orqada ${rk.counts.behind}</p>`
+            + items.slice(0, 12).map(x => `<div class="cf-invest-row"><span>${escapeHtml(x.name || '—')}${x.teacherName ? ` <span class="text-muted" style="font-size:12px">· ${escapeHtml(x.teacherName)}</span>` : ''}</span><b style="font-weight:600;font-size:12px">${escapeHtml(x.reasonText || '')}</b></div>`).join('')
+            : `<div class="mac-empty" style="padding:20px 0"><div style="font-size:13px;color:var(--text-muted)">Hozircha xavf ostidagi oʻquvchi yoʻq</div></div>`;
+    } catch (e) { console.warn('[analitika akademik]', e.message); }
 }
 
 // --- Analitika: Xodimlar analitikasi ---
