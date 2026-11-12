@@ -23,5 +23,7 @@ test('ma’lumot yo‘q bo‘lsa foiz "—", "Churn" endi muzlatilganlar ulushi 
     assert.equal(ctx.anPct(12.345), '12,3%'); // o'zbekcha o'nlik vergul (admin audit 2)
     assert.doesNotMatch(app, /'Churn Rate', \(100 - retention\)/);
     assert.doesNotMatch(app, /\$\{churnRate\.toFixed/);
-    assert.match(app, /const cac = newCustomers > 0 && marketingSpend > 0/);
+    // 12-noyabr: Moliyaviy ko'rsatkichlar Moliya hisobidan (CAC — FinanceEngine kpis.cac, marketing kiritilmasa "Kiritilmagan").
+    assert.match(app, /\/api\/finance\/overview\?scope=all&start=\$\{start\}&end=\$\{end\}/);
+    assert.match(app, /k\.cac != null \? fmt\(k\.cac\) : 'Kiritilmagan'/);
 });
