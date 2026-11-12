@@ -176,6 +176,13 @@ async function edit(db, actor, studentId, body, { managerId = null, now = new Da
     const reason = reasonText(body.reason);
     const changes = body.changes || {};
     if (APPROVER_ROLES.has(actor.role)) return applyEdit(db, actor, studentId, changes, reason, { now });
+    // Akademik rahbar (12-noy, direktor): faqat dars kuni va vaqti (+ qachondan), to'g'ridan-to'g'ri; til tekshiruvi — routes/school.js '/students/:id'.
+    if (actor.role === 'akademik') {
+        const sched = Object.fromEntries(Object.entries(changes).filter(([k]) => ['lessonDay', 'lessonTime', 'effectiveFrom'].includes(k)));
+        if (Object.keys(changes).some(k => !(k in sched))) throw fail(403, 'Akademik rahbar faqat dars kuni va vaqtini oʻzgartiradi');
+        if (!('lessonDay' in sched) && !('lessonTime' in sched)) throw fail(400, 'Yangi kun yoki vaqtni tanlang');
+        return applyEdit(db, actor, studentId, sched, reason, { now });
+    }
     if (actor.role !== 'sales_manager') throw fail(403, 'Tahrirlashga ruxsat yo\'q');
     const row = await lockStudent(db, studentId);
     if (!soldBy(extraOf(row), managerId)) throw fail(403, 'Faqat o\'zingiz sotgan o\'quvchini tahrirlaysiz');
