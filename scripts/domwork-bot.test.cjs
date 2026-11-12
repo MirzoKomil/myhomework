@@ -42,8 +42,12 @@ test('only actual paid, active Russian students get student menu', () => {
         assert.equal(store.student({...row,extra_data:{...row.extra_data,...extra}},'1'),null);
     assert.equal(store.student({...row,subject:'english'},'1'),null);
 });
-test('all eight menus are scoped; main teacher has no assistant duty (29-okt)', () => {
-    assert.equal(Object.keys(policy.MENUS).length,8);
+test('all nine menus are scoped; main teacher has no assistant duty (29-okt)', () => {
+    // 12-noy: akademik rahbar menyusi qo'shildi (9-chi).
+    assert.equal(Object.keys(policy.MENUS).length,9);
+    assert.equal(policy.staffRole({role:'akademik',employee_role:'head-of-teachers'}),'akademik');
+    assert.throws(()=>policy.requireAction({role:'akademik'},'broadcast'),e=>e.status===403);
+    policy.requireAction({role:'akademik'},'acad-problems');
     assert.throws(()=>policy.requireAction({role:'student'},'broadcast'),e=>e.status===403);
     assert.throws(()=>policy.requireAction({role:'teacher'},'assistant-duty'),e=>e.status===403);
     // 29-okt: asosiy ustoz yordamchi bo'la olmaydi — ikkilamchi rol (dualRole) ham "Yordamchi ustozlik" menyusini ochmaydi.
