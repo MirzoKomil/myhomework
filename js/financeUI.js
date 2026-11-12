@@ -10,6 +10,7 @@
         overview: null, loadingKey: '', error: '', cashAccount: '', cashbook: null, txns: null, txFilter: { type: '', category: '', search: '' },
         recon: null, auditRows: null, auditChain: null, auditFilter: '', busy: false
     };
+    const quick = { day: null, dayKey: '', pay: null, payKey: '' }; // Umumiy tezkor ko'rinish keshi
     const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
     const num = n => String(Math.abs(Math.round(Number(n) || 0))).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
     // Buxgalteriya uslubi: manfiy summa qavs ichida (ustun sarlavhasida "so'm").
@@ -90,7 +91,7 @@
         } catch (e) { state.error = e.message; state.overview = null; }
         return state.overview;
     }
-    function invalidate() { state.overview = null; state.cashbook = null; state.txns = null; state.auditRows = null; state.loadingKey = ''; }
+    function invalidate() { quick.dayKey = ''; quick.payKey = ''; state.overview = null; state.cashbook = null; state.txns = null; state.auditRows = null; state.loadingKey = ''; }
 
     // ---------- Umumiy elementlar ----------
     function toolbar(opts = {}) {
@@ -213,11 +214,67 @@
             <details class="fin-details"><summary>Jadval ko‘rinishida</summary>${table(['Oy', { label: 'Sof tushum', num: true }, { label: 'Xarajatlar', num: true }, { label: 'Sof foyda', num: true }],
                 rows.map(r => `<tr><td>${monthName(r.month)}${r.closed ? ' (yopilgan)' : ''}</td><td class="num">${acc(r.net_revenue)}</td><td class="num">${acc(expenses(r))}</td><td class="num">${acc(r.net_profit)}</td></tr>`))}</details>`;
     }
+    // ---------- Umumiy: tezkor ko'rinish (12-noyabr, "KompMoliya" dizayni) ----------
+    // Yuqorida: 4 asosiy raqam, bugungi kassa harakati va maoshlar; ogohlantirishlar yig'ma blokda; batafsil ko'rsatkichlar pastda (hech biri olib tashlanmagan).
+    function quickCash() {
+        const d = quick.day;
+        if (!d) return '<div class="fin-loading" role="status">Yuklanmoqda…</div>';
+        if (d.error) return `<p class="fin-empty">${esc(d.error)}</p>`;
+        const rows = (d.days || []).flatMap(x => (x.entries || []).map(m => ({ ...m, date: x.date }))).reverse().slice(0, 12);
+        if (!rows.length) return '<p class="fin-empty">Bugun kassa harakati yoʻq</p>';
+        const kind = m => m.source === 'receipt' ? (m.isReversal ? 'Bekor qilindi' : 'Toʻlov') : m.transferLeg ? 'Oʻtkazma' : (m.sign > 0 ? 'Kirim' : catName(m.category));
+        const who = m => m.source === 'receipt' ? (m.name || '—') : ([m.counterparty, m.description].filter(Boolean).join(' · ') || catName(m.category));
+        return `<div class="fin-qops" role="table" aria-label="Bugungi kassa harakati"><div class="fin-qops-h" role="row"><span role="columnheader">Hisob</span><span role="columnheader">Kimdan / nima</span><span role="columnheader">Turi</span><span role="columnheader" class="num">Summa</span></div>
+            ${rows.map(m => `<div class="fin-qops-r" role="row"><span role="cell" class="fin-muted">${esc(accountName(m.account))}</span><strong role="cell">${esc(who(m))}${m.managerName ? `<small>${esc(m.managerName)}</small>` : ''}</strong><span role="cell"><span class="fin-pill ${m.sign < 0 ? 'out' : 'in'}">${esc(kind(m))}</span></span><strong role="cell" class="num ${m.sign < 0 ? 'neg' : 'pos'}">${m.sign < 0 ? '−' : '+'}${num(m.amount)}</strong></div>`).join('')}</div>`;
+    }
+    function quickPay() {
+        const r = quick.pay;
+        if (!r) return '<div class="fin-loading" role="status">Yuklanmoqda…</div>';
+        if (r.error) return `<p class="fin-empty">${esc(r.error)}</p>`;
+        const rows = r.rows.slice().sort((a, b) => (b.amt || 0) - (a.amt || 0)).slice(0, 8);
+        if (!rows.length) return '<p class="fin-empty">Maosh hisoblari yoʻq</p>';
+        return `<ul class="fin-qpay">${rows.map(x => `<li><span><strong>${esc(x.name || '—')}</strong><small>${esc([x.roleLabel, x.fine ? 'jarima −' + num(x.fine) : ''].filter(Boolean).join(' · '))}</small></span>
+            <span class="num"><strong>${num(x.amt)}</strong><span class="fin-pill ${x.paid ? 'in' : 'wait'}">${x.paid ? 'Berildi' : 'Berilmagan'}</span></span></li>`).join('')}</ul>`;
+    }
+    async function loadQuick(root) {
+        const today = F.today(), dk = [scope(), today].join('|'), pk = [scope(), state.start, state.end].join('|');
+        const jobs = [];
+        if (quick.dayKey !== dk) {
+            quick.dayKey = dk; quick.day = null;
+            jobs.push(api(`/cashbook?scope=${scope()}&start=${today}&end=${today}&account=`).then(d => { if (quick.dayKey === dk) quick.day = d; }).catch(e => { if (quick.dayKey === dk) quick.day = { error: e.message }; }));
+        }
+        if (quick.payKey !== pk) {
+            quick.payKey = pk; quick.pay = null;
+            const langs = scope() === 'all' ? ['english', 'russian'] : [scope()];
+            jobs.push(Promise.all(langs.map(l => apiFetch(`/api/payroll/preview?start=${state.start}&end=${state.end}&language=${l}`)))
+                .then(rs => { if (quick.payKey !== pk) return; quick.pay = { rows: rs.flatMap(x => (x?.rows || []).map(y => ({ name: y.name || y.employeeName, roleLabel: y.roleLabel || y.role, amt: Number(y.langTakeHome ?? y.takeHome ?? y.total) || 0, fine: Number(y.fineDeducted) || 0, paid: y.status === 'paid' || !!y.paid }))) }; })
+                .catch(e => { if (quick.payKey === pk) quick.pay = { error: e.message }; }));
+        }
+        if (!jobs.length) return;
+        await Promise.all(jobs);
+        if (!root.isConnected || currentSection() !== 'umumiy') return;
+        const c = root.querySelector('[data-fin-qcash]'); if (c) c.innerHTML = quickCash();
+        const pp = root.querySelector('[data-fin-qpay]'); if (pp) pp.innerHTML = quickPay();
+    }
     function renderOverview(root) {
         const o = state.overview, k = o.kpis, p = o.pnl, b = o.balance;
         const cashNote = scope() === 'all' ? `naqd + karta + bank · ${dateText(o.period.end)}` : 'yo‘nalish ulushi (umumiy hisoblardagi oqim)';
-        root.innerHTML = `<div class="fin-wrap">${toolbar({ basis: true })}
-            ${qualityAlerts(o)}
+        const out = (p.net_revenue || 0) - (p.net_profit || 0);
+        const alertsHtml = qualityAlerts(o);
+        const nAlerts = (alertsHtml.match(/fin-alert--(danger|warning)/g) || []).length, hasDanger = /fin-alert--danger/.test(alertsHtml);
+        root.innerHTML = `<div class="fin-wrap"><div class="fin-qhead"><button type="button" class="fin-qbtn" data-fin-qexp>Xarajat yozish</button><button type="button" class="fin-qbtn fin-qbtn--pri" data-fin-go="tolovlar">Toʻlov qabul qilish</button></div>${toolbar({ basis: true })}
+            <div class="fin-kpi4">
+                <button type="button" class="fin-kpi" data-fin-go="hisobotlar" data-fin-report="pnl"><span>Kirim</span><strong class="pos">${money(p.net_revenue)}</strong><small>sof tushum · qaytarishlar ${money(p.refunds || 0)}</small></button>
+                <button type="button" class="fin-kpi" data-fin-go="operatsiyalar"><span>Chiqim</span><strong class="neg">${money(out)}</strong><small>maosh, reklama, ijara va boshqalar</small></button>
+                <button type="button" class="fin-kpi" data-fin-go="hisobotlar" data-fin-report="pnl"><span>${scope() === 'all' ? 'Sof foyda' : 'Sof foyda (ulush bilan)'}</span><strong class="${p.net_profit < 0 ? 'neg' : ''}">${money(p.net_profit)}</strong><small>kirim − chiqim · marja ${pctText(p.margins.net)}</small></button>
+                <button type="button" class="fin-kpi" data-fin-go="qarzlar"><span>Qarzlar</span><strong class="neg">${money(o.receivables.total)}</strong><small>muddati oʻtgan: ${money(o.receivables.overdue)}</small></button>
+            </div>
+            <div class="fin-qgrid">
+                <section class="fin-card" aria-labelledby="finQcH"><header><h3 id="finQcH">Bugungi kassa · ${dateText(F.today())}</h3><button type="button" class="fin-link" data-fin-go="kassa">Kassa →</button></header><div data-fin-qcash>${quickCash()}</div></section>
+                <section class="fin-card" aria-labelledby="finQpH"><header><h3 id="finQpH">Maoshlar · davr</h3><button type="button" class="fin-link" data-fin-go="maoshlar">Hammasi →</button></header><div data-fin-qpay>${quickPay()}</div></section>
+            </div>
+            <details class="fin-alerts-box"${hasDanger ? ' open' : ''}><summary>${nAlerts ? `Diqqat talab qiladi · ${nAlerts}` : 'Maʼlumot sifati'}${hasDanger ? ' <span class="fin-badge fin-badge--danger">muhim</span>' : ''}</summary>${alertsHtml}</details>
+            <h3 class="fin-sub-h">Batafsil koʻrsatkichlar</h3>
             <div class="fin-stats">
                 ${stat('Erkin pul mablag‘i', money(scope() === 'all' ? b.cashEquivalents : k.freeCash), cashNote, '', 'Naqd, karta va bank hisoblari. Uzum’dan olinadigan va “Aniqlanmagan” summalar bunga kirmaydi')}
                 ${stat('Sof tushum', money(p.net_revenue), `qaytarishlar: ${money(p.refunds || 0)} · ${state.basis === 'cash' ? 'kassa usuli' : 'hisoblash usuli'}`, '', 'Kurs to‘lovlari minus qaytarilgan to‘lovlar')}
@@ -250,6 +307,8 @@
         </div>`;
         bindToolbar(root, () => render('umumiy'));
         bindGo(root);
+        root.querySelector('[data-fin-qexp]')?.addEventListener('click', () => openTxnModal({ type: 'expense' }));
+        loadQuick(root);
     }
 
     // ---------- Kassa va hisoblar ----------
