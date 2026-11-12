@@ -273,6 +273,7 @@
         if (S.screen !== 'crm' && S.screen !== 'jadval') return;
         document.querySelector('.adm-backbar')?.remove();
         document.body.classList.remove('adm-crm');
+        if (S.card) { S.card = false; document.body.classList.remove('adm-card'); try { window.schoolUI?.closeDrawer?.(); window.schoolUI?.closeStudent?.(); } catch (e) { /* */ } }
         try { window.jadvalV3?.close?.({ silent: true }); } catch (e) { /* */ }
         if (root) root.hidden = false;
     }
@@ -311,7 +312,9 @@
         if (S.screen !== 'crm' && S.screen !== 'jadval') S.stack.push({ screen: S.screen });
         S.screen = opts.asTab === 'jadval' ? 'jadval' : 'crm';
         S.crmTab = opts.asTab || null;
+        S.card = !!opts.card;
         document.body.classList.add('adm-crm');
+        document.body.classList.toggle('adm-card', S.card);
         if (root) root.hidden = true;
         syncNav();
         if (g('switchTab')) {
@@ -326,7 +329,7 @@
         }
         window.scrollTo?.(0, 0);
         document.querySelector('.adm-backbar')?.remove();
-        if (S.screen === 'crm') {
+        if (S.screen === 'crm' && !S.card) {
             const b = document.createElement('button');
             b.type = 'button'; b.className = 'adm-backbar'; b.innerHTML = `${ic('back', 18, 2.4)}Admin kabinetga qaytish`;
             b.onclick = () => history.back();
@@ -406,7 +409,7 @@
         if ('mSec' in d) { S.sec = d.mSec; render(false); return; }
         if ('mLang' in d) { S.lang = d.mLang; _hc = null; render(false); return; }
         if ('mFtab' in d) { S.ftab = d.mFtab; render(false); return; }
-        if ('mStudent' in d) { openCrm('students'); const ui = window.schoolUI; if (ui?.openStudent) setTimeout(() => ui.openStudent(d.mStudent), 60); return; }
+        if ('mStudent' in d) { openCrm('students', { card: true }); const ui = window.schoolUI; if (ui?.openStudent) setTimeout(() => ui.openStudent(d.mStudent), 60); return; }
         if ('mRetry' in d) { const c = C.get(d.mRetry); if (c) { c.at = 0; c.e = null; } need(d.mRetry, true); render(false); return; }
         if ('mAdd' in d) { openCrm('students'); setTimeout(() => document.getElementById('addStudentBtn')?.click(), 250); return; }
         if ('mNotif' in d) { openCrm('dashboard'); setTimeout(() => document.getElementById('notifToggle')?.click(), 200); return; }
@@ -453,7 +456,8 @@
             if (S.screen === 'rop' || S.screen === 'hr' || !isOn()) return;
             const ov = document.getElementById('modalOverlay');
             let handled;
-            if (ov && ov.style.display && ov.style.display !== 'none' && getComputedStyle(ov).display !== 'none' && g('closeModal')) { closeModal(); handled = true; } else handled = back();
+            // O'quvchi kartasidagi oyna (tahrir, holat, so'rov) — avval o'sha yopiladi.
+            if (document.querySelector('.sc-dim') && window.schoolUI?.closeDrawer) { window.schoolUI.closeDrawer(); handled = true; } else if (ov && ov.style.display && ov.style.display !== 'none' && getComputedStyle(ov).display !== 'none' && g('closeModal')) { closeModal(); handled = true; } else handled = back();
             if (handled) armGuard();
             else if (S.screen === 'home') toast('Chiqish uchun yana bir marta “Orqaga” bosing');
         });
@@ -472,7 +476,9 @@
         let tries = 0; const wait = setInterval(() => { tries++; const ready = g('getItem') && getItem(STORAGE_KEYS.leads, null); if (ready || tries > 30) { clearInterval(wait); _hc = null; if (isOn() && !['crm', 'jadval', 'rop', 'hr'].includes(S.screen)) render(false); } }, 700);
         sync();
     }
-    window.adminApp = { init, go, back, openCrm, closeRopGuest, closeHrGuest, render: () => render(false), state: S, _test: { home, scrHome, scrStudents, scrFinance, scrMenu, isOn } };
+    // O'quvchi kartasi (telefon, Bosh/O'quvchilar ro'yxatidan ochilgan): kartadagi "‹" — Orqaga bilan bir xil.
+    function cardBack() { if (S.screen === 'crm' && S.card) { history.back(); return true; } return false; }
+    window.adminApp = { init, go, back, cardBack, openCrm, closeRopGuest, closeHrGuest, render: () => render(false), state: S, _test: { home, scrHome, scrStudents, scrFinance, scrMenu, isOn } };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(init, 120));
     else setTimeout(init, 120);
 })();
