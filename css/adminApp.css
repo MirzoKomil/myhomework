@@ -7,7 +7,7 @@ body.adm-on {
     --m-nav: calc(68px + env(safe-area-inset-bottom));
 }
 body.adm-on #teamBottomNav { display: none !important; }
-body.adm-on:not(.adm-crm):not(.adm-rop) .top-header, body.adm-on:not(.adm-crm):not(.adm-rop) .sidebar { visibility: hidden; }
+body.adm-on:not(.adm-crm):not(.adm-rop):not(.hra-crm) .top-header, body.adm-on:not(.adm-crm):not(.adm-rop):not(.hra-crm) .sidebar { visibility: hidden; }
 body.adm-on.adm-crm .tab-content, body.adm-on.adm-crm .main-content { padding-bottom: calc(var(--m-nav) + 70px) !important; }
 
 .adm-app, .adm-nav, .adm-toast, .adm-backbar {
@@ -152,6 +152,8 @@ body.adm-desk #tab-students .students-table tbody td { padding: 12px 14px; borde
 body.adm-desk #tab-students .students-table tbody tr:hover td { background: #F8FAFD; }
 /* Sotuv admin kabinetining o'zida (ROP ekranlari, admin pastki menyusi bilan) */
 body.adm-rop .ra-nav { display: none !important; }
+/* HR admin ichida — HR ilovasining o'z pastki menyusi */
+body.adm-hr .adm-nav { display: none !important; }
 body.adm-rop.ra-full .adm-nav { display: none; }
 body.adm-rop .sa-app { bottom: var(--m-nav) !important; }
 body.adm-rop.ra-full .sa-app { bottom: 0 !important; }

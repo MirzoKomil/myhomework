@@ -12956,8 +12956,11 @@ function renderHr() {
 // bermaydi (server/services/stateScope.js).
 const ANALITIKA_HIDDEN_FOR_ROLE = { sales_manager: new Set(['moliyaviy', 'xodimlar']) };
 
+// Direktor qarori (11-noyabr): admin uchun "Sotuv va Marketing" o'rniga yangi Statistika (Sotuv → Statistika, ROP bilan bir xil hisob).
+const _anAdminStats = () => ['admin', 'boshliq'].includes(getCurrentUser()?.role) && window.innerWidth > 900;
 function switchAnalitikaSection(section) {
     if ((ANALITIKA_HIDDEN_FOR_ROLE[getCurrentUser()?.role] || new Set()).has(section)) section = 'hisobotlar';
+    if (section === 'sotuv-marketing' && _anAdminStats()) { switchTab('sales', { salesSection: 'sales-stats' }); return; }
     _tabContext.analitikaSection = section;
     document.querySelectorAll('[data-analitika-section]').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.analitikaSection === section);
@@ -12979,6 +12982,9 @@ function renderAnalitika() {
         btn.style.display = hidden.has(btn.dataset.analitikaSection) ? 'none' : '';
     });
     if (hidden.has(_tabContext.analitikaSection)) _tabContext.analitikaSection = 'hisobotlar';
+    const smBtn = document.querySelector('[data-analitika-section="sotuv-marketing"]');
+    if (smBtn) smBtn.textContent = _anAdminStats() ? 'Sotuv statistikasi ↗' : 'Sotuv va Marketing';
+    if (_anAdminStats() && _tabContext.analitikaSection === 'sotuv-marketing') _tabContext.analitikaSection = 'hisobotlar';
     document.querySelectorAll('[data-analitika-section]').forEach(btn => {
         if (btn.dataset.analitikaBound) return;
         btn.dataset.analitikaBound = '1';
