@@ -13397,7 +13397,8 @@ function hbHeadcountByRole() {
 function hbSotuvMenejeri(period) {
     const periodLeads = anLeadsInPeriod(period);
     const closed = periodLeads.filter(l => normalizeLeadStatus(l.status) === 'tolov-yopildi');
-    const revenue = closed.reduce((s, l) => s + anLeadRevenue(l), 0);
+    // Tushum — yopilgan sana bo'yicha va qisman to'lovlar bilan (Statistika/reyting bilan bir xil manba).
+    const revenue = _getRankingLeadsInPeriod('all', period).reduce((s, l) => s + _getLeadRankingAmount(l), 0);
     const managers = getActiveSalesManagers();
 
     let cards = '';
@@ -13426,8 +13427,7 @@ function hbSotuvMenejeri(period) {
 
 function hbRop(period) {
     const periodLeads = anLeadsInPeriod(period);
-    const closed = periodLeads.filter(l => normalizeLeadStatus(l.status) === 'tolov-yopildi');
-    const revenue = closed.reduce((s, l) => s + anLeadRevenue(l), 0);
+    const revenue = _getRankingLeadsInPeriod('all', period).reduce((s, l) => s + _getLeadRankingAmount(l), 0);
     const managers = getActiveSalesManagers();
     const target = getPeriodTarget(period) * (managers.length || 1);
 
@@ -13445,10 +13445,10 @@ function hbRop(period) {
         cards += hbCard('⚖️', 'green', 'Lidlar taqsimlanishi (max/min)', `${maxLeads} / ${minLeads}`);
         cards += hbCard('❌', 'yellow', "Eng ko'p uchragan rad sababi", topReason ? `${escapeHtml(topReason[0])} (${topReason[1]})` : "Yo'q");
     } else if (period === 'haftalik') {
-        const mgrPerf = getSalesManagers().filter(m => staffStatus.isActive(m) || periodLeads.some(l => staffStatus.saleOwner(l) === m.id)).map(m => {
-            const mgrClosed = periodLeads.filter(l => staffStatus.saleOwner(l) === m.id && normalizeLeadStatus(l.status) === 'tolov-yopildi');
-            return { name: staffStatus.label(m), revenue: mgrClosed.reduce((s, l) => s + anLeadRevenue(l), 0) };
-        }).sort((a, b) => b.revenue - a.revenue);
+        const mgrPerf = getSalesManagers().map(m => {
+            const mgrSales = _getRankingLeadsInPeriod(m.id, period);
+            return { m, name: staffStatus.label(m), revenue: mgrSales.reduce((s, l) => s + _getLeadRankingAmount(l), 0), n: mgrSales.length };
+        }).filter(x => staffStatus.isActive(x.m) || x.n > 0 || periodLeads.some(l => staffStatus.saleOwner(l) === x.m.id)).sort((a, b) => b.revenue - a.revenue);
         const stageCounts = FUNNEL_STAGES.map(s => ({ ...s, count: periodLeads.filter(l => normalizeLeadStatus(l.status) === s.id).length }));
         const cum = new Array(FUNNEL_STAGES.length).fill(0);
         let running = 0;
