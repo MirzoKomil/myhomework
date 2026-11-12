@@ -85,6 +85,8 @@ button.dv-cw{cursor:pointer}
 .dv-lk.dv-pop{animation:dvPop .55s cubic-bezier(.2,.8,.2,1) .2s both}
 /* 12-noy: modal ichidagi bloklar siqilmasin (qulf belgisi 2-qoida matnini yopib qo'ymasin) */
 .dv-mdl > *{flex-shrink:0}
+/* css/davomatApp.css dagi .dv-pop (boshqa oyna) qulf belgisini absolyut joylashtirardi — bu yerda bekor qilinadi */
+.dv-mdl .dv-lk.dv-pop{position:static;left:auto;right:auto;top:auto;transform:none;width:76px;height:76px;max-width:none;margin:0;padding:0;gap:0;box-shadow:none;border-radius:24px;display:grid;place-items:center;align-self:center}
 .dv-stp{display:flex;gap:12px;align-items:flex-start;text-align:left}
 .dv-stp i{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-weight:800;flex:none}
 .dv-mk{display:flex;align-items:center;gap:10px;padding:10px;border-radius:18px;background:#FFFAEB;border:1.5px solid #FEDF89;flex:none}
