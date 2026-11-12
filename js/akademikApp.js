@@ -590,7 +590,7 @@
         const tg = loc.telegramGroupLink || '';
         const qa = (icon, label, attr) => `<${attr.startsWith('href') ? 'a' : 'button type="button"'} class="aka-qa" ${attr}>${ic(icon, 20)}<span>${esc(label)}</span></${attr.startsWith('href') ? 'a' : 'button'}>`;
         const hero = `<section class="aka-shero aka-s1">${av}<span><strong>${esc(s.name || '')}</strong><small>${esc(s.schedule || '')}</small></span></section>
-            <div class="aka-qas aka-s1">${s.phone ? qa('phone', 'Qoʻngʻiroq', `href="${esc(telHref(s.phone))}"`) : ''}${tg ? qa('send', 'Dars guruhi', `href="${esc(tg)}" target="_blank" rel="noopener"`) : ''}${qa('check', 'Davomat', 'data-a-crm="teachers-section:attendance"')}</div>`;
+            <div class="aka-qas aka-s1">${s.phone ? qa('phone', 'Qoʻngʻiroq', `href="${esc(telHref(s.phone))}"`) : ''}${tg ? qa('send', 'Dars guruhi', `href="${esc(tg)}" target="_blank" rel="noopener"`) : ''}${qa('check', 'Davomat', 'data-a-crm="teachers-section:attendance"')}${qa('clock', 'Dars vaqti', `data-a-sched="${esc(s.id)}"`)}</div>`;
         return head + `<div class="aka-body aka-body--bar">
             ${hero}
             <section class="aka-card aka-s1"><div class="aka-sb"><span class="aka-sm">Ustoz ${s.teacher?.id ? `<button type="button" class="aka-a aka-a--b" data-a-teacher="${esc(s.teacher.id)}">${esc(first(s.teacher.name))}</button>` : `<b>${esc(first(s.teacher?.name) || '—')}</b>`}${s.schedule ? ' · ' + esc(s.schedule) : ''}</span>${s.risk?.reasonText ? chip(s.risk.reasonText, 'red') : ''}</div>
@@ -624,6 +624,79 @@
         openSheet('Ustozlar tarixi', s.name, `<div class="aka-card aka-list">${th.length ? th.map((t, i) => `<div class="aka-srow aka-srow--static">${ava(t.name, 36)}<span><strong>${esc(t.name)}</strong><small>${esc(dLong(t.from))}dan${i === 0 ? ' · hozirgi' : ''}</small></span></div>`).join('') : '<p class="aka-muted">Tarix yoʻq</p>'}</div>
             ${note('Oʻtilgan darslar, oylik va tekshiruvdagi qoplashlar eski ustozda qoladi.', 'bot')}`);
     }
+    // ---- Dars kuni va vaqti (12-noy, direktor): admin oynasidagi qoida — Du·Ch·Ju / Se·Pa·Sh, ustozning 2 haftalik bo'sh oralig'i (5+ dars) ----
+    const patOf = d => ([2, 4, 6].includes(Number(d)) ? 2 : 1);
+    const patLbl = d => (patOf(d) === 2 ? 'Se·Pa·Sh' : 'Du·Ch·Ju');
+    async function freeTimes(teacherId, day, dur, from, excl) {
+        const f = from || localDate(addDays(new Date(), 1)), t = localDate(addDays(toDate(f), 13));
+        const r = await apiFetch(`/api/school/schedule/free?purpose=lesson&teacherId=${encodeURIComponent(teacherId)}&from=${f}&to=${t}&duration=${num(dur) || 30}${excl ? '&excludeStudentId=' + encodeURIComponent(excl) : ''}`, { fresh: true });
+        const days = patOf(day) === 2 ? [2, 4, 6] : [1, 3, 5], by = new Map();
+        for (const x of r.slots || []) { if (!days.includes(toDate(x.date).getDay())) continue; by.set(x.time, (by.get(x.time) || new Set()).add(x.date)); }
+        return { times: [...by.entries()].filter(([, v]) => v.size >= 5).map(([k]) => k).sort(), noHours: (r.noHours || []).includes(String(teacherId)) };
+    }
+    // Kun + bo'sh vaqt tanlagichi; get() → { day, time } yoki null. onPick — tanlov o'zgarganda.
+    function timePicker(box, { teacherId, teacherName, day, dur, from, excl, cur, onPick }) {
+        let st = { day: patOf(day), time: '' }, seq = 0;
+        const draw = async () => {
+            const my = ++seq;
+            box.innerHTML = `${fs('Dars kunlari', true, chips('tpd', [['1', 'Du·Ch·Ju'], ['2', 'Se·Pa·Sh']], String(st.day)))}
+                ${fs(`${first(typeof teacherName === 'function' ? teacherName() : teacherName) || 'Ustoz'}ning boʻsh vaqtlari`, true, `<div data-tl>${skIn(1, 44)}</div>`)}`;
+            let res;
+            try { res = await freeTimes(teacherId(), st.day, dur, from(), excl); } catch (e) { if (my === seq) box.querySelector('[data-tl]').innerHTML = errBox(e); return; }
+            if (my !== seq) return;
+            const list = res.times.filter(t => !(cur && cur.day === st.day && cur.time === t));
+            box.querySelector('[data-tl]').innerHTML = (list.length ? `<div class="aka-chips aka-tms">${list.map(t => `<label class="aka-ch"><input type="radio" name="tpt" value="${esc(t)}"${t === st.time ? ' checked' : ''}>${esc(t)}</label>`).join('')}</div>`
+                : `<p class="aka-muted">Bu kunlarda boʻsh vaqt topilmadi${res.noHours ? ' — ustozning ish vaqti kiritilmagan' : ''}</p>`);
+            if (!list.includes(st.time)) st.time = '';
+            onPick && onPick(st.time ? st : null);
+        };
+        box.addEventListener('change', e => {
+            if (e.target.name === 'tpd') { st = { day: Number(e.target.value), time: '' }; draw(); }
+            if (e.target.name === 'tpt') { st.time = e.target.value; onPick && onPick(st); }
+        });
+        draw();
+        return { get: () => (st.time ? { day: st.day, time: st.time } : null), redraw: () => { st.time = ''; draw(); } };
+    }
+    async function sheetSchedule(studentId) {
+        const s0 = peek(API.student(studentId));
+        openSheet('Dars vaqtini oʻzgartirish', s0 ? `Hozir: ${first(s0.teacher?.name)} · ${s0.schedule || '—'}` : 'Yuklanmoqda…', `<div data-tb>${skIn(3, 60)}</div>`);
+        const wrap = sheetEl;
+        let st = s0;
+        try { if (!st || !st.lesson) st = await apiFetch(API.student(studentId), { fresh: true }); } catch (e) { if (sheetEl === wrap) wrap.querySelector('[data-tb]').innerHTML = errBox(e, API.student(studentId)); return; }
+        if (sheetEl !== wrap) return;
+        const L = st.lesson || {}, tId = String(st.teacher?.id || '');
+        wrap.querySelector('.aka-sheet-h span').textContent = `Hozir: ${first(st.teacher?.name)} · ${st.schedule || '—'}`;
+        if (!tId) { wrap.querySelector('[data-tb]').outerHTML = '<p class="aka-muted">Oʻquvchiga asosiy ustoz biriktirilmagan — avval ustoz biriktiring</p>'; return; }
+        const nextL = (st.lessons || []).find(l => l.status === 'next');
+        const today0 = new Date(new Date().toDateString());
+        let nextD = nextL ? toDate(nextL.date) : null;
+        if (!nextD || nextD < today0) nextD = addDays(today0, 1);
+        wrap.querySelector('[data-tb]').outerHTML = `<div data-tp></div>
+            ${fs('Qachondan', true, chips('from', [['next', `Keyingi darsdan · ${dShort(nextD)}`], ['custom', 'Sana tanlash']], 'next') + `<label class="aka-fld" data-cust hidden><span class="aka-sr">Sana</span><input class="aka-inp" type="date" data-d min="${localDate(today0)}"></label>`)}
+            <label class="aka-fld"><span class="aka-lbl">Sabab <i>*</i></span><input class="aka-inp" type="text" maxlength="300" data-why placeholder="Masalan: oʻquvchi ishga kirdi"></label>
+            ${note('Tanlangan sanagacha darslar eski vaqtda qoladi. Oʻzgarish oʻquvchi tarixiga yoziladi; server ustozning shu vaqtdagi bandligini yana tekshiradi.')}
+            <button type="button" class="aka-btn aka-btn--pri aka-btn--54" data-ok disabled>Vaqtni tanlang</button>`;
+        const okB = wrap.querySelector('[data-ok]');
+        const fromVal = () => (wrap.querySelector('input[name="from"]:checked')?.value === 'custom' ? wrap.querySelector('[data-d]').value : localDate(nextD));
+        const tp = timePicker(wrap.querySelector('[data-tp]'), { teacherId: () => tId, teacherName: st.teacher?.name, day: L.day, dur: L.duration, from: fromVal, excl: studentId,
+            cur: { day: patOf(L.day), time: L.time },
+            onPick: v => { okB.disabled = !v; okB.textContent = v ? `${patLbl(v.day)} ${v.time} ga oʻtkazish` : 'Vaqtni tanlang'; } });
+        wrap.addEventListener('change', e => { if (e.target.name === 'from') { wrap.querySelector('[data-cust]').hidden = e.target.value !== 'custom'; } if (e.target.matches('[data-d]')) tp.redraw(); });
+        okB.onclick = async () => {
+            const v = tp.get(), why = wrap.querySelector('[data-why]').value.trim(), from = fromVal();
+            if (!v) { toast('Yangi vaqtni tanlang', 'bad'); return; }
+            if (!from) { toast('Sanani tanlang', 'bad'); return; }
+            if (why.length < 5) { toast('Sababni yozing (kamida 5 belgi)', 'bad'); wrap.querySelector('[data-why]').focus(); return; }
+            okB.disabled = true;
+            try {
+                await send(`/api/school/students/${encodeURIComponent(studentId)}/edit`, 'POST', { changes: { lessonDay: v.day, lessonTime: v.time, effectiveFrom: from }, reason: why });
+                invalidate('/api/academic/head/');
+                closeSheet();
+                toast(`${shortName(st.name)} → ${patLbl(v.day)} ${v.time} · ${dShort(from)} dan`, 'win');
+                render(false);
+            } catch (e) { okB.disabled = false; toast(e.message || 'Oʻzgartirib boʻlmadi', 'bad'); }
+        };
+    }
     async function sheetTransfer(studentId) {
         const s = peek(API.student(studentId));
         openSheet('Ustozni almashtirish', s ? `${shortName(s.name)} · hozir ustoz ${first(s.teacher?.name)}${s.schedule ? ' · ' + s.schedule : ''}` : 'Yuklanmoqda…', `<div data-tb>${skIn(3, 60)}</div>`);
@@ -643,32 +716,55 @@
         wrap.querySelector('.aka-sheet-h span').textContent = `${shortName(st?.name)} · hozir ustoz ${first(st?.teacher?.name)}${slot ? ' · ' + slot : ''}`;
         const rows = ts.map(t => t.free
             ? `<label class="aka-rc aka-rc--t"><input type="radio" name="tt" value="${esc(t.id)}"${firstFree && t.id === firstFree.id ? ' checked' : ''}>${ava(first(t.name), 36, 'blue')}<span><strong>${esc(first(t.name))}</strong><small>${esc([`${num(t.students)} oʻquvchi`, `${pct(t.onPlanPct)}% rejada`, num(t.openProblems) ? `${num(t.openProblems)} ochiq muammo` : ''].filter(Boolean).join(' · '))}</small></span>${chip('Boʻsh', 'green')}</label>`
-            // Band ustoz ham tanlanadi (server ruxsat beradi) — o'quvchi vaqtini keyin "Dars jadvali"da kelishib o'zgartirish kerak.
-            : `<label class="aka-rc aka-rc--t"><input type="radio" name="tt" value="${esc(t.id)}">${ava(first(t.name), 36, 'grey')}<span><strong>${esc(first(t.name))}</strong><small>Bu vaqtda darsi bor · vaqtni keyin oʻzgartirasiz</small></span>${chip('Band', 'amber')}</label>`).join('');
+            // Band ustoz ham tanlanadi — "Kun va vaqt → Boshqa vaqt" o'zi yoqiladi va faqat bo'sh vaqt tanlanadi (12-noy).
+            : `<label class="aka-rc aka-rc--t"><input type="radio" name="tt" value="${esc(t.id)}">${ava(first(t.name), 36, 'grey')}<span><strong>${esc(first(t.name))}</strong><small>Bu vaqtda darsi bor · boshqa vaqt tanlanadi</small></span>${chip('Band', 'amber')}</label>`).join('');
         wrap.querySelector('[data-tb]').outerHTML = `${fs(`Yangi ustoz${slot ? ' · ' + slot + ' da' : ''}`, true, ts.length ? `<div class="aka-rcs">${rows}</div>` : '<p class="aka-muted">Bu tilda boshqa ustoz yoʻq</p>')}
+            ${fs('Kun va vaqt', true, chips('kv', [['keep', `Hozirgisi${slot ? ' · ' + slot : ''}`], ['new', 'Boshqa vaqt']], 'keep'))}<div data-tp hidden></div>
             ${fs('Qachondan', true, chips('from', [['next', `Keyingi darsdan · ${dShort(nextD)}`], ['custom', 'Sana tanlash']], 'next') + `<label class="aka-fld" data-cust hidden><span class="aka-sr">Sana</span><input class="aka-inp" type="date" data-d min="${backMinA()}" value="${localDate(nextD)}"></label>`)}
             <label class="aka-fld"><span class="aka-lbl">Sabab <i>*</i></span><input class="aka-inp" type="text" maxlength="300" data-why placeholder="Masalan: oʻquvchi iltimosi"></label>
             ${note(`Bot ikkala ustozga xabar beradi. Tanlangan sanagacha oʻtilgan darslar eski ustozda qoladi; oʻtgan sana tanlansa — oʻsha kundan beri darslar va davomat yangi ustozga oʻtadi. Tekshiruvdagi qoplashlar ham ${first(st?.teacher?.name) || 'eski ustoz'}da qoladi.`)}
-            <button type="button" class="aka-btn aka-btn--pri aka-btn--54" data-ok${firstFree ? '' : ' disabled'}>${firstFree ? esc(first(firstFree.name)) + 'ga oʻtkazish' : 'Ustozni tanlang'}</button>
-            <p class="aka-muted" data-busy hidden>Bu ustozning ${esc(slot || 'shu vaqt')}da darsi bor. Oʻtkazgach, oʻquvchi vaqtini Dars jadvalida oʻzgartiring — aks holda ikki dars ustma-ust tushadi.</p>`;
+            <button type="button" class="aka-btn aka-btn--pri aka-btn--54" data-ok${firstFree ? '' : ' disabled'}>${firstFree ? esc(first(firstFree.name)) + 'ga oʻtkazish' : 'Ustozni tanlang'}</button>`;
         const okB = wrap.querySelector('[data-ok]');
+        const L = st?.lesson || {}, tpBox = wrap.querySelector('[data-tp]');
+        const curT = () => ts.find(x => String(x.id) === wrap.querySelector('input[name="tt"]:checked')?.value);
+        const fromVal = () => (wrap.querySelector('input[name="from"]:checked')?.value === 'custom' ? wrap.querySelector('[data-d]').value : localDate(nextD));
+        const isNew = () => wrap.querySelector('input[name="kv"]:checked')?.value === 'new';
+        let tp = null;
+        const label = () => {
+            const t = curT(); if (!t) { okB.disabled = true; okB.textContent = 'Ustozni tanlang'; return; }
+            const v = tp && isNew() ? tp.get() : null;
+            if (isNew() && !v) { okB.disabled = true; okB.textContent = 'Yangi vaqtni tanlang'; return; }
+            okB.disabled = false; okB.textContent = `${first(t.name)}ga${v ? ` · ${patLbl(v.day)} ${v.time} da` : ''} oʻtkazish`;
+        };
+        const setNew = on => {
+            wrap.querySelectorAll('input[name="kv"]').forEach(r => { r.checked = r.value === (on ? 'new' : 'keep'); });
+            const keep = wrap.querySelector('input[name="kv"][value="keep"]'); const t = curT();
+            keep.disabled = !!(t && !t.free); keep.closest('.aka-ch').classList.toggle('is-off', keep.disabled);
+            tpBox.hidden = !on;
+            if (on && curT()) { if (!tp) tp = timePicker(tpBox, { teacherId: () => curT()?.id, teacherName: () => curT()?.name, day: L.day, dur: L.duration, from: fromVal, excl: studentId, onPick: label }); else tp.redraw(); }
+            label();
+        };
         wrap.addEventListener('change', e => {
-            if (e.target.name === 'from') wrap.querySelector('[data-cust]').hidden = e.target.value !== 'custom';
-            if (e.target.name === 'tt') { const t = ts.find(x => String(x.id) === e.target.value); okB.textContent = `${first(t?.name)}ga oʻtkazish${t?.free ? '' : ' (vaqti band)'}`; okB.disabled = false; wrap.querySelector('[data-busy]').hidden = !!t?.free; }
+            if (e.target.name === 'from') { wrap.querySelector('[data-cust]').hidden = e.target.value !== 'custom'; if (tp && isNew()) tp.redraw(); }
+            if (e.target.matches('[data-d]') && tp && isNew()) tp.redraw();
+            if (e.target.name === 'kv') setNew(e.target.value === 'new');
+            if (e.target.name === 'tt') { const t = curT(); setNew(isNew() || !t?.free); }
         });
+        if (curT() && !curT().free) setNew(true); else label();
         okB.onclick = async () => {
             const tid = wrap.querySelector('input[name="tt"]:checked')?.value, why = wrap.querySelector('[data-why]').value.trim();
-            const from = wrap.querySelector('input[name="from"]:checked')?.value === 'custom' ? wrap.querySelector('[data-d]').value : localDate(nextD);
+            const from = fromVal(), v = isNew() ? tp?.get() : null;
+            if (isNew() && !v) { toast('Yangi kun va vaqtni tanlang', 'bad'); return; }
             if (!tid) { toast('Yangi ustozni tanlang', 'bad'); return; }
             if (!from || from < backMinA()) { toast(`Sana ${backMinA()} dan oldin boʻlmasin`, 'bad'); return; }
             if (why.length < 3) { toast('Sababni yozing (kamida 3 belgi)', 'bad'); wrap.querySelector('[data-why]').focus(); return; }
             okB.disabled = true;
             try {
-                await send(`/api/school/students/${encodeURIComponent(studentId)}/teacher`, 'POST', { teacherId: tid, effectiveFrom: from, from, reason: why });
+                await send(`/api/school/students/${encodeURIComponent(studentId)}/teacher`, 'POST', { teacherId: tid, effectiveFrom: from, from, reason: why, ...(v ? { lessonDay: v.day, lessonTime: v.time } : {}) });
                 invalidate('/api/academic/head/', '/api/academic/problems');
                 closeSheet();
                 const t = ts.find(x => String(x.id) === String(tid));
-                toast(`${shortName(st?.name)} → ${first(t?.name)} · ${dShort(from)} dan · ikkala ustozga xabar ketdi`, 'win');
+                toast(`${shortName(st?.name)} → ${first(t?.name)}${v ? ` · ${patLbl(v.day)} ${v.time}` : ''} · ${dShort(from)} dan · ikkala ustozga xabar ketdi`, 'win');
                 render(false);
             } catch (e) { okB.disabled = false; toast(e.message || 'Oʻtkazib boʻlmadi', 'bad'); }
         };
@@ -1028,7 +1124,7 @@
 
     // ---------- hodisalar ----------
     function onClick(e) {
-        const t = e.target.closest('[data-a-back],[data-a-go],[data-a-nav],[data-a-retry],[data-a-ptab],[data-a-later],[data-a-problem],[data-a-mtab],[data-a-makeup],[data-a-mall],[data-a-rtab],[data-a-rall],[data-a-stab],[data-a-student],[data-a-teacher],[data-a-assistant],[data-a-ttab],[data-a-howscore],[data-a-ltab],[data-a-lok],[data-a-lrej],[data-a-ntab],[data-a-nread],[data-a-nitem],[data-a-nretry],[data-a-crm],[data-a-att],[data-a-profile],[data-a-spick],[data-a-newsave],[data-a-stage],[data-a-owner],[data-a-postpone],[data-a-close],[data-a-transfer],[data-a-thist],[data-a-sprob],[data-a-newfor],[data-a-rejects],[data-a-triskof],[data-a-tprob],[data-a-silentall]');
+        const t = e.target.closest('[data-a-back],[data-a-go],[data-a-nav],[data-a-retry],[data-a-ptab],[data-a-later],[data-a-problem],[data-a-mtab],[data-a-makeup],[data-a-mall],[data-a-rtab],[data-a-rall],[data-a-stab],[data-a-student],[data-a-teacher],[data-a-assistant],[data-a-ttab],[data-a-howscore],[data-a-ltab],[data-a-lok],[data-a-lrej],[data-a-ntab],[data-a-nread],[data-a-nitem],[data-a-nretry],[data-a-crm],[data-a-att],[data-a-profile],[data-a-spick],[data-a-newsave],[data-a-stage],[data-a-owner],[data-a-postpone],[data-a-close],[data-a-transfer],[data-a-sched],[data-a-thist],[data-a-sprob],[data-a-newfor],[data-a-rejects],[data-a-triskof],[data-a-tprob],[data-a-silentall]');
         if (!t || (t.tagName === 'A' && t.getAttribute('href'))) return;
         const d = t.dataset;
         if ('aBack' in d) { history.back(); return; }
@@ -1070,6 +1166,7 @@
         if ('aPostpone' in d) { sheetPostpone(); return; }
         if ('aClose' in d) { sheetClose(); return; }
         if ('aTransfer' in d) { sheetTransfer(d.aTransfer); return; }
+        if ('aSched' in d) { sheetSchedule(d.aSched); return; }
         if ('aThist' in d) { sheetTeacherHistory(); return; }
         if ('aSprob' in d) { go('problems', { pq: d.aSprob, ptab: d.aSprobopen === '1' ? 'open' : 'closed' }); return; }
         if ('aTprob' in d) { go('problems', { pq: first(d.aTprob), ptab: 'open' }); return; }
@@ -1175,7 +1272,7 @@
         toDate, localDate, dayDiff, hm, dShort, dLong, dtShort, dtComma, relDT, overdueTxt, addDays, greet, MON, WD,
         STAGES, stageOf, TYPES, SOURCES, SRC_LOW, SRC_CHIP, RESULTS, RISK, EV_T, normP, f, isMe, myName, scoreTone, riskTone, minTxt,
         dueOptions, newDraft, localStudents, assistBlock, staffList, openSheet, closeSheet, toast, patchProblem, decideLate,
-        dlg: { owner: sheetOwner, postpone: sheetPostpone, close: sheetClose, makeup: sheetMakeup, transfer: sheetTransfer, lateReject: sheetLateReject, teacherHistory: sheetTeacherHistory },
+        dlg: { owner: sheetOwner, postpone: sheetPostpone, close: sheetClose, makeup: sheetMakeup, transfer: sheetTransfer, lateReject: sheetLateReject, teacherHistory: sheetTeacherHistory, schedule: sheetSchedule },
         notifs: { list: notifList, NLOOK, NGO, open: id => { if (g('markNotificationRead')) { try { markNotificationRead(id); } catch (e) { /* */ } } } },
     };
     window.akademikApp = { init, go, back, openScreen, openAttendance, render: () => render(false), state: S, ownLang, langs: myLangs, kit, _test: { normP, riskTone, dueOptions, cache: C } };
