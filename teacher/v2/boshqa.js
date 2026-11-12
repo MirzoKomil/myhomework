@@ -646,6 +646,13 @@
     // Menyu
     // ─────────────────────────────────────────────────────────────────────
     const prefsE = () => U.load('bq:prefs', () => api('/api/staff/notify/prefs'), { ttl: 300000 });
+    // 12-noy: Telegram botni telefondan ulash/uzish — umumiy oyna (js/tgLinkSheet.js), kompyuterdagi bilan bir xil API.
+    document.addEventListener('click', e => {
+        const b = e.target.closest?.('[data-tglink]'); if (!b) return;
+        e.preventDefault();
+        if (!window.tgLink) { U.toast('Sahifani yangilang'); return; }
+        window.tgLink.open({ onChange: () => { U.drop('bq:prefs'); U.render(); } });
+    });
     const tgPill = () => { const p = prefsE(); if (!p.data) return p.err ? '' : '<span class="pill mu">…</span>'; const t = p.data.channels?.telegram || {}; return t.botLinked ? '<span class="pill ok">Ulangan</span>' : '<span class="pill wa">Ulanmagan</span>'; };
     U.tab('menyu', {
         render() {
@@ -759,9 +766,9 @@
               <div class="card l a2">
                 <div class="bq-rw"><span class="bq-kk">Telefon</span><span class="bq-v">${maskPhone(pf?.user?.phone || user.email || s.me?.login)}</span></div>
                 <div class="bq-rw"><span class="bq-kk">Ish vaqti</span><span class="bq-v">${pf ? esc(work['Ish vaqti'] || 'admin belgilaydi') : pe.err ? '—' : '…'}</span></div>
-                <div class="bq-rw"><span class="bq-kk">Telegram bot</span>${tgPill()}</div>
+                <a href="#" class="bq-rw" data-tglink style="text-decoration: none; color: inherit"><span class="bq-kk">Telegram bot</span><span style="display: flex; align-items: center; gap: 6px">${tgPill()}<span aria-hidden="true" style="color: #94A3B8; font-size: 18px">›</span></span></a>
               </div>
-              ${t && !t.botLinked ? `<span class="xs bq-foot">Telegram botni ulash: kompyuterda CRM → Sozlamalar → Bildirishnomalar → "Ulash".</span>` : ''}
+              ${t && !t.botLinked ? `<span class="xs bq-foot">Telegram botni ulash: "Telegram bot" qatorini bosing.</span>` : ''}
               <span class="bq-gh">BILDIRISHNOMALAR</span>
               <div class="card l a3">${pr.err && !pr.data ? `<div class="bq-rw">${U.err(pr, 'bq:prefs')}</div>` : NOTIF.map(([k, l]) => sw(k, l)).join('')}</div>
               <span class="bq-gh">XAVFSIZLIK</span>
