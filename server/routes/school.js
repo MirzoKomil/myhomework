@@ -219,13 +219,18 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
     }));
     // "Kim bo'sh?" — sotuv/ROP uchun: sinovga ochiq bo'sh oraliqlar, 30 daqiqa qadam bilan.
     router.get('/schedule/free', handle(async req => {
-        need(req, new Set([...SALES, ...FULL]));
+        need(req, new Set([...SALES, ...FULL, 'akademik']));
+        // Akademik rahbar (12-noy): o'quvchi dars vaqtini o'zgartirish uchun — faqat bitta ustoz, o'z til yo'nalishida.
+        if (req.user.role === 'akademik') {
+            if (!req.query.teacherId) throw T.fail(400, 'Ustozni tanlang');
+            await overrideScope(req, pool, req.query.teacherId);
+        }
         const from = T.assertDate(req.query.from), to = T.assertDate(req.query.to || from);
         const duration = Math.min(120, Math.max(15, Number(req.query.duration) || 30));
         const purpose = req.query.purpose === 'lesson' ? 'lesson' : 'trial';
         // excludeStudentId — faqat admin/ROP (o'quvchi tahriri); sotuv menejeriga ta'sir qilmaydi.
         let excl = String(req.query.excludeStudentId || '') || null;
-        if (excl && !(FULL.has(req.user.role) || req.user.role === 'rop')) {
+        if (excl && !(FULL.has(req.user.role) || req.user.role === 'rop' || req.user.role === 'akademik')) {
             // Sotuv menejeri — faqat o'zi sotgan o'quvchi uchun.
             const mid = req.user.role === 'sales_manager' ? await managerId(req) : null;
             const row = mid ? (await pool.query("SELECT 1 FROM students WHERE id=$1 AND extra_data->>'managerId'=$2", [excl, mid])).rows[0] : null;
