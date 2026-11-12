@@ -255,14 +255,16 @@
         const prevM = d.shiftMonth(n.month, -1), hist = (S0.salary?.history || []).find(h => String(h.start || '').slice(0, 7) === prevM);
         const cur = S0.salary?.current, curTotal = cur ? (cur.total ?? cur.amount ?? null) : (S0.salary?.total ?? null);
         let mv;
-        if (hist) { const m = mln(hist.amount); mv = [hist.paidAt ? `${fmtShort(d.tz(hist.paidAt).date)} · to'landi` : `5-${d.MON[+n.month.slice(5) - 1]}`, m, `${d.MON[+prevM.slice(5) - 1]} maoshi`]; }
-        else if (curTotal != null) { const m = mln(curTotal); mv = [`${d.MON[+n.month.slice(5) - 1]} · hozirgacha`, m, 'belgilangan darslar']; }
+        // 12-noy: Menyu bilan bir xil — katta raqam joriy oy (server), pastda oxirgi yopilgan oy va uning holati.
+        const ms = window.dwtSalary?.months?.() || [], last = ms.find(x => x.status !== 'live'), lst = last && window.dwtSalary.state(last);
+        if (curTotal != null) { const m = mln(curTotal); mv = [`${d.MON[+n.month.slice(5) - 1]} · hozirgacha`, m, last ? `${d.MON_S[+last.month.slice(5) - 1]} · ${mln(last.takeHome ?? last.total).v}${mln(last.takeHome ?? last.total).u} · ${lst.cls === 'wa' ? 'tasdiqlanmagan' : lst.pill}` : 'belgilangan darslar', lst?.cls === 'wa']; }
+        else if (hist) { const m = mln(hist.amount); mv = [hist.paidAt ? `${fmtShort(d.tz(hist.paidAt).date)} · to'landi` : `5-${d.MON[+n.month.slice(5) - 1]}`, m, `${d.MON[+prevM.slice(5) - 1]} maoshi`]; }
         else mv = ['Maosh', { v: '—', u: '' }, 'batafsil'];
         const sm = 'font-size: 13px; color: #4B5563; font-weight: 600';
         return `<div class="kp a2">
       <div class="k"><span>Bugun</span><strong>${st.done}<span style="${sm}"> / ${st.total} o'tdi</span></strong><div class="prog" aria-hidden="true"><i class="g" style="width: ${pct}%"></i></div></div>
       <a class="k" href="#" data-u-go="jadval" style="border-color: #E9D7FE" aria-label="Sinov darslari"><span>${sv[0]}</span><strong style="color: #6941C6">${sv[1]}</strong><span style="color: #6941C6">${sv[2]}</span></a>
-      <a class="k" href="#" data-u-push="maosh" aria-label="Maosh"><span>${esc(mv[0])}</span><strong>${mv[1].v}<span style="${sm}">${mv[1].u}</span></strong><span style="color: #067647">${esc(mv[2])}</span></a>
+      <a class="k" href="#" data-u-push="maosh" aria-label="Maosh"><span>${esc(mv[0])}</span><strong>${mv[1].v}<span style="${sm}">${mv[1].u}</span></strong><span style="color: ${mv[3] ? '#93370D' : '#067647'}">${esc(mv[2])}</span></a>
     </div>`;
     }
     function rowOf(i, st) {
