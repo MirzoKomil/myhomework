@@ -77,12 +77,12 @@ function stateForTeacher(state, own, opts = {}) {
         'statusHistory',
         // isStaffDemo — UI demo akkauntni ro'yxat va hisoblardan chiqaradi (yordamchi.js, AttendanceRules).
         'isStaffDemo'];
-    // Telefon faqat asosiy ustozga o'z o'quvchisi uchun (JadvalQoidalar: "Telefon raqamini ko'rish — Ustoz ✓, Yordamchi:
-    // yashirin · ☎ tugmasi"). Yordamchiga o'quvchi telefoni yuborilmaydi — qo'ng'iroq Telegram guruh orqali.
+    // Telefon — asosiy ustozga o'z o'quvchisi, yordamchiga o'zi yordamchi bo'lib turgan o'quvchisi uchun (13-noy, direktor:
+    // "ustoz asosan telda gaplashadi" — kartada Qo'ng'iroq tugmasi). Sobiq o'quvchilarga (pastStudents) raqam berilmaydi.
     // serialCode (#ID) — ustoz/yordamchi ro'yxatida ko'rinadi va ID bo'yicha qidiriladi (to'lov ma'lumoti emas).
     const PHONE_FIELDS = new Set(['phone', 'phone2']);
     const students = state.students.filter(s => assignedIds.has(s.id)).map(s =>
-        Object.fromEntries(safeFields.filter(key => s[key] !== undefined && !(PHONE_FIELDS.has(key) && !mainIds.has(s.id))).map(key => [key, s[key]])));
+        Object.fromEntries(safeFields.filter(key => s[key] !== undefined && !(PHONE_FIELDS.has(key) && !assignedIds.has(s.id))).map(key => [key, s[key]])));
     for (const s of students) if (mainIds.has(s.id) && histBy.has(s.id)) s.teacherHistory = histBy.get(s.id);
     // Telefonsiz, faqat jadval va holat (Davomat/Reyting hisobi) — o'quvchi kartasi esa "past" doirada (routes/school.js canSee).
     const pastStudents = state.students.filter(s => pastIds.has(s.id)).map(s => ({ ...Object.fromEntries(safeFields
