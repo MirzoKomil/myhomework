@@ -256,10 +256,16 @@
         for (const t of J.data.teachers) if (slotState(J.data.views.get(t.id), m).k === 'free') out.push(t);
         return out.sort((a, b) => lessonsOf(J.data.views.get(a.id)) - lessonsOf(J.data.views.get(b.id)) || a.name.localeCompare(b.name));
     }
+    // Kun boshi: odatda 07:00, lekin biror ustozning ish vaqti ertaroq boshlansa (masalan 06:00) — o'sha soatdan (13-noy, direktor).
+    function dayStart() {
+        let lo = 7 * 60;
+        for (const v of J.data?.views?.values?.() || []) for (const dv of (v?.days || [v])) for (const w of dv?.work || []) if (!w.assumed && Number.isFinite(w.start)) lo = Math.min(lo, Math.floor(w.start / 60) * 60);
+        return Math.max(0, lo);
+    }
     function rangeMins() {
         const r = J.range || 'eve';
         // Sinov: 30 daqiqalik oxirgi qator 23:00 (ish vaqti 23:59 gacha — 23:30–24:00 sig'maydi). Darslar: 24:00 gacha.
-        const [a, b] = r === 'morn' ? [7 * 60, 14 * 60] : [14 * 60, J.mode === 'sinov' ? 23 * 60 + 30 : 24 * 60];
+        const [a, b] = r === 'morn' ? [dayStart(), 14 * 60] : [14 * 60, J.mode === 'sinov' ? 23 * 60 + 30 : 24 * 60];
         return { a, b };
     }
 
@@ -387,7 +393,7 @@
             ? chip(J.day === 'today', 'data-day="today"', 'Bugun', dayLabel(today())) + chip(J.day === 'next', 'data-day="next"', nextName(), dayLabel(nextWork(today())))
             : chip(J.pat === 'toq', 'data-pat="toq"', 'Toq kunlar', 'Du · Ch · Ju') + chip(J.pat === 'juft', 'data-pat="juft"', 'Juft kunlar', 'Se · Pa · Sh');
         const r = J.range || 'eve';
-        const ranges = MOBILE.matches ? '' : `<div class="jv-tb-g"><span class="jv-tb-l">Vaqt:</span>${chip(r === 'morn', 'data-range="morn"', '07:00 – 14:00')}${chip(r === 'eve', 'data-range="eve"', '14:00 – 24:00')}</div>`;
+        const ranges = MOBILE.matches ? '' : `<div class="jv-tb-g"><span class="jv-tb-l">Vaqt:</span>${chip(r === 'morn', 'data-range="morn"', `${hm(J.data ? dayStart() : 7 * 60)} – 14:00`)}${chip(r === 'eve', 'data-range="eve"', '14:00 – 24:00')}</div>`;
         const hint = MOBILE.matches ? '' : `<span class="jv-pill">${J.mode === 'sinov' ? 'Har bir sinov 30 daqiqa' : 'Har qator 15 daqiqa'}</span>`;
         return `<div class="jv-tb"><div class="jv-tb-g">${days}</div>${ranges ? `<i class="jv-tb-sep"></i>${ranges}` : ''}${hint}</div>`;
     }
@@ -498,7 +504,7 @@
     // ── Sinov darsi · telefon ────────────────────────────────────────────────
     function sinovMobile() {
         const now = U().nowMin(), isToday = J.data.date === today();
-        const start = isToday ? Math.max(7 * 60, Math.ceil((now + 1) / 30) * 30) : 7 * 60;
+        const start = isToday ? Math.max(dayStart(), Math.ceil((now + 1) / 30) * 30) : dayStart();
         const hours = [];
         for (let m = start; m < 23 * 60 + 30; m += 30) hours.push(m);
         if (!hours.length) return `<div class="jv-mb"><div class="jv-empty">Bugun boʻsh vaqt qolmadi.<br><button type="button" class="jv-btn jv-btn--soft jv-inl" data-day="next">${esc(nextName())}ni koʻrish</button></div></div>`;
