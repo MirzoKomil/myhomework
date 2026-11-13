@@ -39,7 +39,7 @@ async function create(pool,actor){
         const student=await owner(db,actor);
         if(await existing(db,student.id))throw policy.error(409,'O‘quvchi Telegramga allaqachon bog‘langan. Almashtirish uchun admin bilan bog‘laning');
         const recent=(await db.query("SELECT COUNT(*)::int AS total,COUNT(*) FILTER(WHERE created_at>NOW()-INTERVAL '10 seconds')::int AS fast FROM domwork_student_telegram_requests WHERE student_id=$1 AND created_at>NOW()-INTERVAL '1 hour'",[student.id])).rows[0];
-        if(recent.fast||recent.total>=20)throw policy.error(429,'Biroz kutib qayta urinib ko‘ring');
+        if(recent.fast||recent.total>=60)throw policy.error(429,'Biroz kutib qayta urinib ko‘ring');
         await db.query("UPDATE domwork_student_telegram_requests SET state='cancelled' WHERE student_id=$1 AND state IN ('pending','claimed')",[student.id]);
         const raw=randomBytes(32).toString('base64url'),id=randomUUID();
         const row=(await db.query("INSERT INTO domwork_student_telegram_requests(id,student_id,session_jti,token_hash,expires_at) VALUES($1,$2,$3,$4,NOW()+INTERVAL '15 minutes') RETURNING *",[id,student.id,actor.jti,hash(raw)])).rows[0];

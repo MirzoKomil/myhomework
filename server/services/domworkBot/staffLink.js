@@ -76,7 +76,7 @@ async function create(pool, actor) {
         }
         const recent = (await db.query(`SELECT COUNT(*)::int AS total,COUNT(*) FILTER(WHERE created_at>NOW()-INTERVAL '10 seconds')::int AS fast
             FROM domwork_staff_telegram_requests WHERE user_id=$1 AND created_at>NOW()-INTERVAL '1 hour'`, [me.id])).rows[0];
-        if (recent.fast || recent.total >= 20) throw policy.error(429, 'Biroz kutib qayta urinib ko‘ring');
+        if (recent.fast || recent.total >= 60) throw policy.error(429, 'Biroz kutib qayta urinib ko‘ring');
         await db.query("UPDATE domwork_staff_telegram_requests SET state='cancelled' WHERE user_id=$1 AND state IN ('pending','claimed')", [me.id]);
         const raw = randomBytes(32).toString('base64url'), id = randomUUID();
         const row = (await db.query(`INSERT INTO domwork_staff_telegram_requests(id,user_id,session_jti,token_hash,expires_at)
