@@ -59,6 +59,8 @@
     const money = v => D().money(v);
     const thousand = v => `${Math.round((Number(v) || 0) / 1000)}`;
     // 13-noy: yordamchi o'ziga biriktirilgan o'quvchining raqamini ko'radi va kartadan qo'ng'iroq qiladi (server teacherDuties).
+    // Ro'yxat qatoridagi qo'ng'iroq belgisi (13-noy, direktor: "tayyor ro'yxatdan turib telefon qilsa"). Raqam yo'q bo'lsa — chiqmaydi.
+    const callBtn = s => { const t = s && U.phonesOf(s)[0]; return t ? `<a href="${U.telHref(t)}" class="yd-call" data-yd-call="${esc(s.id)}" aria-label="${esc(D().first(s.name))}ga qo'ng'iroq">${svg(P.phone, 18, 2)}</a>` : ''; };
     const groupsE = () => U.load('yd:grp', () => U.api('/api/school/my-groups').then(r => r.groups || []), { ttl: 600000 });
     const groupLink = s => { const g = (groupsE().data || []).find(x => x.student_id === s.id); return g?.tg_link && /^https:\/\//.test(g.tg_link) ? g.tg_link : ''; };
     // Asosiy ustoz ismi — state.teachers (server faqat o'z o'quvchilarining ustozlarini beradi).
@@ -166,6 +168,7 @@
               <div style="display: flex; gap: 6px; flex-wrap: wrap"><span class="pill yd-pw">${monName(n.month)} ${sr.counted} / ${capOf(n.month)}</span><span class="pill yd-pw">bu hafta ${weekCount(s.id)} / 3</span>${pr ? `<span class="pill yd-pw">ilovada ${pr}-darsda</span>` : ''}</div>
               <div style="display: flex; gap: 8px">
                 <button type="button" class="btn p pulse" data-yd-mark="${esc(s.id)}" style="flex: 1">${svg(P.tick, 18, 2.6)}Aloqani belgilash</button>
+                ${U.phonesOf(s).length ? `<a href="${U.telHref(U.phonesOf(s)[0])}" data-yd-call="${esc(s.id)}" class="btn gh" aria-label="${esc(D().first(s.name))}ga qo'ng'iroq" style="width: 48px; padding: 0">${svg(P.phone, 20, 2)}</a>` : ''}
                 ${g ? `<a href="${esc(g)}" target="_blank" rel="noopener" class="btn gh" aria-label="${esc(D().first(s.name))} dars guruhini ochish (Telegram)" style="width: 48px; padding: 0">${svg(P.tg)}</a>` : ''}
               </div></section>`;
         } else if (list.length) {
@@ -178,7 +181,7 @@
             const sub = st.k === 'ok' || st.k === 'n' ? `${esc(CH_FULL[st.c.channel] || '')}${st.c.minutes && st.c.channel !== 'tg_text' ? ` · ${st.c.minutes} daq` : ''}` : st.k === 'r' ? "qayta urinib ko'ring" : [teacherOf(s) ? `ustoz ${esc(teacherOf(s))}` : '', isNext ? 'keyingi' : ''].filter(Boolean).join(' · ') || esc(D().patternLabel(s.lessonDayOfWeek)) + ' darslari';
             const pill = st.k === 'ok' ? '<span class="pill ok">Hisoblandi</span>' : st.k === 'n' ? '<span class="pill mu">Hisoblanmadi</span>' : st.k === 'r' ? '<span class="pill wa">Javob bermadi</span>' : isNext ? '<span class="pill inf">Keyingi</span>' : '<span class="pill mu">Kutilmoqda</span>';
             const attr = st.k === 'ok' ? `data-u-push="y-karta" data-arg="${esc(s.id)}"` : `data-yd-mark="${esc(s.id)}"`;
-            return `<a class="li" href="#" ${attr}><span class="tm${st.k === 'ok' || st.k === 'n' || st.k === 'r' ? ' mut' : ''}"${isNext ? ' style="color: #0057B8"' : ''}>${D().hm(x.t)}</span>${ava(s, 36)}<div class="col g1"><span class="nm">${esc(D().short(s.name))}</span><span class="s">${sub}</span></div>${pill}</a>`;
+            return `<div class="li yd-cr"><a class="yd-cl" href="#" ${attr}><span class="tm${st.k === 'ok' || st.k === 'n' || st.k === 'r' ? ' mut' : ''}"${isNext ? ' style="color: #0057B8"' : ''}>${D().hm(x.t)}</span>${ava(s, 36)}<div class="col g1" style="min-width: 0"><span class="nm">${esc(D().short(s.name))}</span><span class="s">${sub}</span></div>${pill}</a>${st.k === 'ok' || s.frozen ? '' : callBtn(s)}</div>`;
         };
         return `<header class="hd">
             <a href="#" data-u-push="profil" aria-label="Profil" style="position: relative; flex: none">${meAvatar(46, 'border: 2px solid #FFFFFF; box-shadow: 0 0 0 1px #CBD5E1')}<span aria-hidden="true" style="position: absolute; right: 0; bottom: 0; width: 12px; height: 12px; border-radius: 50%; background: #12B76A; border: 2px solid #F5F7FB"></span></a>
@@ -201,6 +204,13 @@
           </div>`;
     }
     function bindCommon(root) {
+        // Qo'ng'iroqdan qaytgach "Belgilash" oynasi o'zi ochiladi (usul — Telefon, standart). Yopilsa hech narsa yozilmaydi.
+        root.querySelectorAll('[data-yd-call]').forEach(a => a.addEventListener('click', e => {
+            e.stopPropagation();
+            const sid = a.dataset.ydCall;
+            const back = () => { if (document.visibilityState !== 'visible') return; document.removeEventListener('visibilitychange', back); setTimeout(() => openMark(sid), 300); };
+            document.addEventListener('visibilitychange', back);
+        }));
         root.querySelectorAll('[data-yd-mark]').forEach(b => b.onclick = e => { e.preventDefault(); openMark(b.dataset.ydMark); });
         root.querySelectorAll('[data-yd-reload]').forEach(b => b.onclick = async () => { b.disabled = true; try { await U.reload(); } catch (err) { U.toast(err.message); b.disabled = false; } });
     }
@@ -228,7 +238,7 @@
             const s = D().stuOf(i.studentId), { c, o, na } = st(i), isNext = i.studentId === nextId, tn = teacherOf(s);
             const pill = c ? '<span class="pill ok">Hisoblandi</span>' : o ? '<span class="pill mu">Hisoblanmadi</span>' : na ? '<span class="pill wa">Javob bermadi</span>' : `<span class="pill ${isNext ? 'inf' : 'mu'}">${stuRep(M, i.studentId).counted}/${capOf(M)}</span>`;
             const attr = jDay === n.date && !c ? `data-yd-mark="${esc(i.studentId)}"` : `data-u-push="y-karta" data-arg="${esc(i.studentId)}"`;
-            return `<a class="li" href="#" ${attr}><span class="tm${c || na ? ' mut' : ''}"${isNext ? ' style="color: #0057B8"' : ''}>${D().hm(i.start)}</span>${s ? ava(s, 36) : ''}<div class="col g1"><span class="nm">${esc(s?.name || i.studentName || '')}</span><span class="s">${s ? `dars ${esc(D().patternLabel(s.lessonDayOfWeek))} ${esc(s.lessonTime || '')}${tn ? ' · ' + esc(tn) : ''}` : ''}</span></div>${pill}</a>`;
+            return `<div class="li yd-cr"><a class="yd-cl" href="#" ${attr}><span class="tm${c || na ? ' mut' : ''}"${isNext ? ' style="color: #0057B8"' : ''}>${D().hm(i.start)}</span>${s ? ava(s, 36) : ''}<div class="col g1" style="min-width: 0"><span class="nm">${esc(s?.name || i.studentName || '')}</span><span class="s">${s ? `dars ${esc(D().patternLabel(s.lessonDayOfWeek))} ${esc(s.lessonTime || '')}${tn ? ' · ' + esc(tn) : ''}` : ''}</span></div>${pill}</a>${c || s?.frozen ? '' : callBtn(s)}</div>`;
         });
         return `<header class="hd" style="padding-bottom: 4px"><div class="t"><span class="date">Aloqa tavsiyalari · ${+ds[0].slice(8)}–${+ds[5].slice(8)}-${monName(ds[5].slice(0, 7))}</span><h1 style="font-size: 26px">Jadval</h1></div></header>
           <div class="bd" style="gap: 10px">${U.offline()}
@@ -629,12 +639,6 @@
         bind(root) {
             bindCommon(root);
             root.querySelectorAll('[data-yd-kt]').forEach(b => b.onclick = () => { kTab = b.dataset.ydKt; U.render(); });
-            // Qo'ng'iroqdan qaytgach "Belgilash" oynasi o'zi ochiladi (usul — Telefon, standart). Yopilsa hech narsa yozilmaydi.
-            root.querySelectorAll('[data-yd-call]').forEach(a => a.addEventListener('click', () => {
-                const sid = a.dataset.ydCall;
-                const back = () => { if (document.visibilityState !== 'visible') return; document.removeEventListener('visibilitychange', back); setTimeout(() => openMark(sid), 300); };
-                document.addEventListener('visibilitychange', back);
-            }));
         }
     });
 

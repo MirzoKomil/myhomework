@@ -85,3 +85,8 @@
 .yd-sel.av select{padding-left:52px}
 .yd-sel .yd-sav{position:absolute;left:10px;top:10px;pointer-events:none}
 .yd-b2 .btn{padding:0 10px}
+/* Ro'yxat qatorida qo'ng'iroq (13-noy) */
+.li.yd-cr{gap:8px}
+.yd-cl{display:flex;align-items:center;gap:12px;flex:1;min-width:0;color:#0B1220;text-decoration:none;align-self:stretch}
+.yd-call{width:40px;height:40px;border-radius:12px;background:#EAF3FF;color:#0065D6;display:grid;place-items:center;flex:none}
+.yd-call:active{background:#D6E8FF}
