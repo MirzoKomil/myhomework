@@ -259,6 +259,26 @@ app.use('/uploads', express.static(UPLOADS_DIR, {
 }));
 
 const studentWebDist = path.join(ROOT, 'student-app', 'dist');
+// HTML'dagi bundle havolasiga ?v= qo'shiladi (13-noy): bundle fayl nomi o'zgarmay yamalsa ham telefonlar
+// 4 soatlik keshdagi eskisini emas, yangisini oladi. Yangi tuzatishda shu raqamni oshiring.
+const STUDENT_JS_VER = '20261113b';
+function sendStudentHtml(res, file, onMissing) {
+    require('fs').readFile(file, 'utf8', (err, html) => {
+        if (err) return onMissing();
+        res.setHeader('Cache-Control', 'no-cache');
+        res.type('html').send(html.replace(/(\/_expo\/static\/js\/web\/entry-[a-f0-9]+\.js)(?!\?)/g, `$1?v=${STUDENT_JS_VER}`));
+    });
+}
+app.use('/student', (req, res, next) => {
+    if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+    let rel; try { rel = decodeURIComponent(req.path); } catch { return next(); }
+    let file = path.join(studentWebDist, rel);
+    if (!file.startsWith(studentWebDist)) return next();
+    const fsm = require('fs');
+    try { if (fsm.statSync(file).isDirectory()) file = path.join(file, 'index.html'); } catch { if (!path.extname(file)) file += '.html'; }
+    if (!file.endsWith('.html') || !fsm.existsSync(file)) return next();
+    sendStudentHtml(res, file, next);
+});
 app.use('/student', express.static(studentWebDist, {
     extensions: ['html'], index: 'index.html', redirect: false,
     setHeaders: (res, filePath) => {
@@ -278,10 +298,7 @@ app.get(['/student', '/student/*'], (req, res, next) => {
     // borishi kerak — aks holda iPhone'da "Bosh ekranga qo'shish" eski
     // ilovani ochadi. Dinamik yo'llar (/student/v2/dars/...) ham shunga.
     const isV2 = /^\/student\/v2(\/|$)/.test(req.path);
-    res.setHeader('Cache-Control', 'no-cache');
-    res.sendFile(path.join(studentWebDist, isV2 ? 'v2/index.html' : 'index.html'), err => {
-        if (err) res.status(404).send('O\'quvchi ilovasi topilmadi.');
-    });
+    sendStudentHtml(res, path.join(studentWebDist, isV2 ? 'v2/index.html' : 'index.html'), () => res.status(404).send('O\'quvchi ilovasi topilmadi.'));
 });
 
 // Domwork Teacher — ustoz/yordamchi telefon ilovasi (Android qobig'i shu sahifani ochadi).
