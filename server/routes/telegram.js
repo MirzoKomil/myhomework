@@ -79,6 +79,9 @@ function parseTelegramLeadMessage(text) {
     let secondaryPhone = '';
     let bulletPhone1 = '';
     let bulletPhone2 = '';
+    let externalLeadId = '';
+    let lastIconField = '';
+    const iconPhones = [];
     const extras = [];
 
     for (const rawLine of lines) {
@@ -87,7 +90,21 @@ function parseTelegramLeadMessage(text) {
         let m;
         if ((m = /^🧾\s*Nomi:\s*(.+)$/u.exec(line))) { formName = m[1].trim(); continue; }
         if ((m = /^ℹ️\s*Manba:\s*(.+)$/u.exec(line))) { sourceLabel = m[1].trim(); continue; }
-        if ((m = /Yangi lid\s*[—–-]\s*(.+)$/u.exec(line))) { if (!formName) formName = m[1].trim(); continue; }
+        if ((m = /Yangi (?:lid|ariza)\s*[—–-]\s*(.+)$/u.exec(line))) { if (!formName) formName = m[1].trim(); lastIconField = ''; continue; }
+
+        // 3-format (domwork landing): "👤 Ism", "📞 +998...", "📊 ig / paid / ...", "🆔 domwork_lp_..."
+        if ((m = /^👤\s*(.+)$/u.exec(line))) { if (!name) name = m[1].trim(); lastIconField = ''; continue; }
+        if ((m = /^(?:📞|☎️?|📱)\s*(.+)$/u.exec(line))) {
+            const phone = normalizeLeadPhone(m[1].replace(/[^\d+]/g, ' ').trim());
+            if (phone) iconPhones.push(phone);
+            lastIconField = '';
+            continue;
+        }
+        if ((m = /^📊\s*(.+)$/u.exec(line))) { adName = m[1].trim(); lastIconField = 'ad'; continue; }
+        if ((m = /^🆔\s*(\S+)/u.exec(line))) { externalLeadId = m[1].trim(); lastIconField = ''; continue; }
+        if (lastIconField === 'ad' && /^[\w\s\/.-]+$/u.test(line) && !/:/.test(line)) { adName += ` ${line}`; continue; }
+        lastIconField = '';
+
         if ((m = /^🎯\s*(.+)$/u.exec(line))) { adName = m[1].trim(); continue; }
         if ((m = /\d{1,2}[/.]\d{1,2}[/.]\d{4}[^·]*·\s*(.+)$/u.exec(line))) {
             if (!sourceLabel) sourceLabel = m[1].trim();
@@ -133,6 +150,10 @@ function parseTelegramLeadMessage(text) {
         if (!primaryPhone) primaryPhone = bulletPhone1 || bulletPhone2;
         if (!secondaryPhone) secondaryPhone = bulletPhone1 ? bulletPhone2 : '';
     }
+    if (iconPhones.length) {
+        if (!primaryPhone) primaryPhone = iconPhones[0];
+        if (!secondaryPhone) secondaryPhone = iconPhones.find(p => p !== primaryPhone) || '';
+    }
     if (secondaryPhone && secondaryPhone === primaryPhone) secondaryPhone = '';
 
     // "Phone number" maydoni (Meta avtomatik aniqlagan, E.164 formatidagi)
@@ -153,6 +174,7 @@ function parseTelegramLeadMessage(text) {
         formName,
         sourceLabel,
         adName,
+        externalLeadId,
         extras,
     };
 }
@@ -219,7 +241,7 @@ router.post('/lead-webhook', async (req, res) => {
             source: 'Target',
             leadType: 'target',
             status: 'yangi-lidlar',
-            externalId: `tg_${chatId}_${message.message_id}`,
+            externalId: parsed.externalLeadId || `tg_${chatId}_${message.message_id}`,
             note: noteParts.join(' | '),
         });
 

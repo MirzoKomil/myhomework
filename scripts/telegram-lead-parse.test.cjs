@@ -65,6 +65,32 @@ assert.strictEqual(c.name, 'Шойим');
 assert.strictEqual(c.phone, '+998991678476');
 assert.strictEqual(c.phone2, '');
 
+// 3-format: domwork landing (👤/📞/📊/🆔)
+const d = parseTelegramLeadMessage(`🔔 Yangi ariza — Domwork
+
+👤 Amangeldi
+📞 +998995726620
+📞 +998995726620 qo'shimcha
+
+📊 ig / paid / 120251636963050124
+   120251637747080124
+
+🆔 domwork_lp_b7be024a-9498-40e8-be04-96ce2d459f18`);
+assert.strictEqual(d.name, 'Amangeldi');
+assert.strictEqual(d.phone, '+998995726620');
+assert.strictEqual(d.phone2, '');
+assert.strictEqual(d.formName, 'Domwork');
+assert.strictEqual(d.adName, 'ig / paid / 120251636963050124 120251637747080124');
+assert.strictEqual(d.externalLeadId, 'domwork_lp_b7be024a-9498-40e8-be04-96ce2d459f18');
+const e = parseTelegramLeadMessage(`🔔 Yangi ariza — Domwork
+👤 Ойбек
+📞 +998916839540
+📞 +998901112233 qo'shimcha
+🆔 domwork_lp_479579b1-050f-4734-a16f-cc1ceff610d9`);
+assert.strictEqual(e.name, 'Ойбек');
+assert.strictEqual(e.phone, '+998916839540');
+assert.strictEqual(e.phone2, '+998901112233');
+
 // Lid bo'lmagan oddiy xabar
 assert.strictEqual(parseTelegramLeadMessage('Salom hammaga'), null);
 
