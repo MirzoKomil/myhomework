@@ -58,7 +58,7 @@
     const helped = () => (S().helped || []).slice().sort((a, b) => String(a.name).localeCompare(String(b.name)));
     const money = v => D().money(v);
     const thousand = v => `${Math.round((Number(v) || 0) / 1000)}`;
-    // Yordamchiga o'quvchi telefoni berilmaydi (server teacherDuties: "qo'ng'iroq Telegram guruh orqali") — bog'lanish dars guruhi orqali.
+    // 13-noy: yordamchi o'ziga biriktirilgan o'quvchining raqamini ko'radi va kartadan qo'ng'iroq qiladi (server teacherDuties).
     const groupsE = () => U.load('yd:grp', () => U.api('/api/school/my-groups').then(r => r.groups || []), { ttl: 600000 });
     const groupLink = s => { const g = (groupsE().data || []).find(x => x.student_id === s.id); return g?.tg_link && /^https:\/\//.test(g.tg_link) ? g.tg_link : ''; };
     // Asosiy ustoz ismi — state.teachers (server faqat o'z o'quvchilarining ustozlarini beradi).
@@ -608,6 +608,7 @@
                     <span class="xs">Batafsil o'zlashtirishni asosiy ustoz kuzatadi. Aloqada shu darslar ustida ishlang.</span></section>`;
             } else {
                 content = `<section class="card l a3">
+                    ${U.phoneRows(s)}
                     <div class="li"><span class="s g1">Darslari</span><b style="font-size: 14px">${esc(D().patternLabel(s.lessonDayOfWeek))} ${esc(s.lessonTime || '')}</b></div>
                     ${tn ? `<div class="li"><span class="s g1">Asosiy ustoz</span><b style="font-size: 14px">${esc(tn)}</b></div>` : ''}
                     ${startOf(s) ? `<div class="li"><span class="s g1">Kursni boshlagan</span><b style="font-size: 14px">${D().fmtDate(startOf(s))}</b></div>` : ''}
@@ -615,10 +616,11 @@
             }
             return `${bar}<div class="bd nb" style="padding-top: 4px; gap: 12px">
                 <div class="row a1">${ava(s, 64).replace('style="', 'style="border: 3px solid #FFFFFF; box-shadow: 0 0 0 1px #CBD5E1; ')}<div class="col g1"><strong style="font-size: 21px; font-weight: 800">${esc(s.name)}</strong><span class="s">${s.serialCode ? `ID ${esc(s.serialCode)} · ` : ''}dars ${esc(D().patternLabel(s.lessonDayOfWeek))} ${esc(s.lessonTime || '')}</span><span class="xs" style="margin-top: 2px">${tn ? `Asosiy ustoz: ${esc(tn)} · ` : ''}${pr.reached ? `${pr.reached}-dars` : 'hali boshlanmagan'}</span></div></div>
-                <div class="yd-act a2">
+                <div class="yd-act a2" style="grid-template-columns: repeat(4, minmax(0, 1fr))">
+                  ${U.phonesOf(s).length ? `<a href="${U.telHref(U.phonesOf(s)[0])}" class="pr" data-yd-call="${esc(sid)}">${svg(P.phone, 20, 2)}Qo'ng'iroq</a>` : `<span class="yd-dis" aria-disabled="true" title="Raqam kiritilmagan">${svg(P.phone, 20, 2)}Raqam yo'q</span>`}
                   ${g ? `<a href="${esc(g)}" target="_blank" rel="noopener">${svg(P.tg)}Dars guruhi</a>` : `<span class="yd-dis" aria-disabled="true">${svg(P.tg)}Guruh yo'q</span>`}
                   <a href="#" data-u-push="sorov" data-arg="${esc(sid)}">${svg(P.msg)}Adminga so'rov</a>
-                  ${s.frozen ? `<span class="yd-dis" aria-disabled="true">${svg(P.tick, 20, 2.4)}Muzlagan</span>` : `<a href="#" class="pr" data-yd-mark="${esc(sid)}">${svg(P.tick, 20, 2.4)}${todayOk ? 'Yana belgilash' : 'Belgilash'}</a>`}
+                  ${s.frozen ? `<span class="yd-dis" aria-disabled="true">${svg(P.tick, 20, 2.4)}Muzlagan</span>` : `<a href="#" data-yd-mark="${esc(sid)}">${svg(P.tick, 20, 2.4)}${todayOk ? 'Yana belgilash' : 'Belgilash'}</a>`}
                 </div>
                 <div class="seg bq-seg44" role="tablist">${[['gen', 'Umumiy'], ['aloqa', 'Aloqalar'], ['oz', "O'zlashtirish"]].map(([k, l]) => `<button type="button" role="tab" data-yd-kt="${k}" class="${kTab === k ? 'on' : ''}" aria-selected="${kTab === k}">${l}</button>`).join('')}</div>
                 ${content}
@@ -627,6 +629,12 @@
         bind(root) {
             bindCommon(root);
             root.querySelectorAll('[data-yd-kt]').forEach(b => b.onclick = () => { kTab = b.dataset.ydKt; U.render(); });
+            // Qo'ng'iroqdan qaytgach "Belgilash" oynasi o'zi ochiladi (usul — Telefon, standart). Yopilsa hech narsa yozilmaydi.
+            root.querySelectorAll('[data-yd-call]').forEach(a => a.addEventListener('click', () => {
+                const sid = a.dataset.ydCall;
+                const back = () => { if (document.visibilityState !== 'visible') return; document.removeEventListener('visibilitychange', back); setTimeout(() => openMark(sid), 300); };
+                document.addEventListener('visibilitychange', back);
+            }));
         }
     });
 

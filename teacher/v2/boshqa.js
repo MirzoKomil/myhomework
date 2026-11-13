@@ -13,6 +13,7 @@
     const api = (p, o) => D().api(p, o);
     const svg = U.svg;
     const P = {
+        phone: '<path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3.1 19.5 19.5 0 01-6-6A19.8 19.8 0 012.1 4.2 2 2 0 014.1 2h3a2 2 0 012 1.7c.1.9.4 1.8.7 2.7a2 2 0 01-.5 2.1L8 9.8a16 16 0 006 6l1.3-1.3a2 2 0 012.1-.4c.9.3 1.8.6 2.7.7a2 2 0 011.7 2z"></path>',
         back: '<path d="M15 6l-6 6 6 6"></path>', chev: '<path d="M9 6l6 6-6 6"></path>', x: '<path d="M6 6l12 12M18 6L6 18"></path>',
         search: '<circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path>',
         tg: '<path d="M21 4L3 11l6 2 2 6 3-4 5 4z"></path>',
@@ -207,6 +208,7 @@
           <div class="row" style="gap: 10px"><div class="prog g1"><i class="g" style="width: ${pc}%"></i></div><b style="font-size: 14px">${ms.counted} / ${ms.plan}</b></div>
           <span class="s">${ms.keldi} keldi · ${ms.kelmadi} kelmadi · ${ms.approved} qoplandi${ms.review ? ' · ' + ms.review + ' tekshiruvda' : ''}${ms.empty.length ? ' · ' + ms.empty.length + ' belgilanmagan' : ''}</span></section>
         <section class="card l">
+          ${U.phoneRows(s)}
           <div class="li"><span class="s g1">Jadval</span><b style="font-size: 14px">${esc(sched(s))}</b></div>
           ${g?.name || s.group ? `<div class="li"><span class="s g1">Guruh</span><b style="font-size: 14px">${esc(g?.name || s.group)}</b></div>` : ''}
           ${s.startDate ? `<div class="li"><span class="s g1">Boshlagan</span><b style="font-size: 14px">${D().fmtDate(String(s.startDate).slice(0, 10))}</b></div>` : ''}
@@ -248,7 +250,8 @@
             <div class="bd nb bq" style="padding-top: 4px; gap: 12px">
               ${U.offline()}
               <div class="row a1">${D().avatar(s, 'av bq-a64')}<div class="col g1"><strong class="bq-name">${esc(s.name)}</strong><span class="s">${s.serialCode ? `ID ${esc(s.serialCode)} · ` : ''}${esc(sched(s))}</span><span class="xs" style="margin-top: 2px">Kurs: ${kun ? `${kun}-kun · ` : ''}${reached ? `${reached}-dars` : 'hali boshlanmagan'}</span></div></div>
-              <div class="bq-act a2">
+              <div class="bq-act a2" style="grid-template-columns: repeat(4, minmax(0, 1fr))">
+                ${U.phonesOf(s).length ? `<a href="${U.telHref(U.phonesOf(s)[0])}">${svg(P.phone, 20, 2)}Qo'ng'iroq</a>` : `<a href="#" class="bq-off" aria-disabled="true" data-bq-nophone>${svg(P.phone, 20, 2)}Raqam yo'q</a>`}
                 ${tgOk ? `<a href="${esc(g.tg_link)}" target="_blank" rel="noopener">${svg(P.tg, 20, 2)}Dars guruhi</a>` : `<a href="#" data-bq-nogroup aria-disabled="true" class="bq-off">${svg(P.tg, 20, 2)}Dars guruhi</a>`}
                 <a href="#" data-u-push="sorov" data-arg="${esc(s.id)}">${svg(P.msg, 20, 2)}Adminga so'rov</a>
                 <a href="#" data-u-push="dv-oy" data-arg="${esc(s.id)}">${svg(P.check, 20, 2)}Davomat</a>
@@ -259,6 +262,7 @@
         },
         bind(root, id) {
             root.querySelectorAll('[data-ct]').forEach(b => b.onclick = () => { cardTab[id] = b.dataset.ct; U.render(); });
+            root.querySelector('[data-bq-nophone]')?.addEventListener('click', e => { e.preventDefault(); U.toast("O'quvchi raqami kiritilmagan — adminga yozing"); });
             root.querySelector('[data-bq-nogroup]')?.addEventListener('click', e => { e.preventDefault(); U.toast(groupsE().loading ? 'Yuklanmoqda…' : "Guruh havolasi hali kiritilmagan — adminga yozing"); });
         }
     });

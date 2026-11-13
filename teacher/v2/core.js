@@ -172,12 +172,22 @@
         ? `<div class="u-off" role="status"><span style="color: #FDB022; display: inline-flex">${U.svg('<path d="M1 1l22 22M16.7 11.1A10.9 10.9 0 0119 12.6M5 12.6a10.9 10.9 0 015.2-2.5M10.7 5A16 16 0 0122.6 9M1.4 9a16 16 0 014.3-2.7M8.5 16.1a5 5 0 016.9 0M12 20h.01"></path>', 20)}</span><div class="col g1"><b style="font-size: 14px">Internet yo'q</b><span style="font-size: 12px; color: #C7D2E3">${(D().outbox() || []).length ? `${D().outbox().length} ta davomat belgisi saqlandi · ulanganda o'zi yuboriladi` : 'Oxirgi yuklangan ma\'lumot ko\'rsatilmoqda'}</span></div></div>` : '';
     // Sana yozuvlari: "Dushanba, 16-noyabr"
     U.dateLong = date => { const d = D(); const [, m, dd] = date.split('-'); return `${d.DAY_FULL[d.wdOf(date) - 1]}, ${+dd}-${d.MON[+m - 1]}`; };
+    // O'quvchiga qo'ng'iroq (13-noy): tel: havolasi va o'qiladigan ko'rinish. Raqam faqat server bergan (o'ziga biriktirilgan) o'quvchida bor.
+    U.telHref = p => { const d = String(p || '').replace(/\D/g, ''); if (d.length < 9) return ''; return 'tel:+' + (d.length === 9 ? '998' + d : d); };
+    U.fmtPhone = p => { const h = U.telHref(p); if (!h) return ''; const d = h.slice(5); return d.length === 12 ? `+${d.slice(0, 3)} ${d.slice(3, 5)} ${d.slice(5, 8)} ${d.slice(8, 10)} ${d.slice(10)}` : '+' + d; };
+    U.phonesOf = s => [s?.phone, s?.phone2].filter((p, i, a) => U.telHref(p) && a.findIndex(x => U.telHref(x) === U.telHref(p)) === i);
+    U.phoneRows = (s, cls = 'li', k = 's g1') => U.phonesOf(s).map((p, i) => `<div class="${cls}"><span class="${k}">${i ? 'Qo\'shimcha telefon' : 'Telefon'}</span><span style="display: inline-flex; align-items: center; gap: 8px"><a href="${U.telHref(p)}" style="font-weight: 700; font-size: 14px; color: inherit; text-decoration: none; font-variant-numeric: tabular-nums">${U.fmtPhone(p)}</a><button type="button" class="btn sm" data-copy-phone="${U.fmtPhone(p)}" style="min-height: 34px">Nusxa</button></span></div>`).join('');
+    document.addEventListener('click', e => {
+        const b = e.target.closest && e.target.closest('[data-copy-phone]'); if (!b) return;
+        e.preventDefault(); const v = b.dataset.copyPhone;
+        (navigator.clipboard?.writeText(v) || Promise.reject()).then(() => U.toast('Raqam nusxalandi', { ok: true })).catch(() => U.toast(v));
+    });
     U.addDays = (date, n) => { const t = new Date(`${date}T00:00:00Z`); t.setUTCDate(t.getUTCDate() + n); return t.toISOString().slice(0, 10); };
 
     window.addEventListener('online', () => { if (started) { D().flushOutbox(); U.render(); } });
     window.addEventListener('offline', () => { if (started) U.render(); });
 
-    const V = '20261112d';
+    const V = '20261113a';
     window.UstozV2 = {
         css: ['ustoz', 'bosh', 'jadval', 'davomat', 'boshqa', 'yordamchi'].map(n => `/teacher/v2/${n}.css?v=${V}`),
         start() {
