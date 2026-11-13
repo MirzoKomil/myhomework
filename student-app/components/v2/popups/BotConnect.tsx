@@ -18,6 +18,7 @@ import { BOT_URL } from '@/components/v2/home/shared';
 import { designImages } from '@/constants/v2/designImages';
 import { fonts } from '@/constants/v2/tokens';
 import { fetchDemoSchedule } from '@/services/contentApi';
+import { openLater } from '@/services/openLater';
 import { useAuth } from '@/services/studentAuthStore';
 import {
   confirmTelegramLink,
@@ -93,8 +94,11 @@ function BotConnectPopupMobile({ visible, onClose, mandatory = false }: { visibl
   const openBot = () =>
     run(async () => {
       if (!token) { await Linking.openURL(BOT_URL); return; }
-      const r = await createTelegramLink();
-      await Linking.openURL(r.url);
+      const tab = openLater();
+      try {
+        const r = await createTelegramLink();
+        await tab.go(r.url);
+      } catch (e) { tab.cancel(); throw e; }
       await load();
     });
 
