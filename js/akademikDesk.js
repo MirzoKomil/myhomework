@@ -427,6 +427,7 @@
         return `<aside class="akd-panel akd-card akd-s2" aria-label="${esc(s.name || 'Oʻquvchi')}">
             <div class="akd-ph akd-ph--who">${av(s.name, 48, s.risk ? 'red' : 'blue')}<span class="akd-who-t"><strong>${esc(s.name || '—')}</strong><small>Ustoz ${s.teacher?.id ? `<a href="#" data-k-teacher="${esc(s.teacher.id)}">${esc(k.first(s.teacher.name))}</a>` : esc(k.first(s.teacher?.name) || '—')}${s.schedule ? ' · ' + esc(s.schedule) : ''}</small></span>
                 ${s.phone ? `<a class="akd-ib akd-ib--dark" href="${esc(k.telHref(s.phone))}" aria-label="Qoʻngʻiroq">${ic('phone', 18)}</a>` : ''}${close}</div>
+            ${s.freeze?.current || s.freeze?.future ? `<div class="akd-lock akd-lock--ice">${ic('snow', 18)}<span><strong>${s.freeze.current ? 'Muzlatilgan' : 'Muzlatiladi'}</strong> · ${esc(k.dShort ? k.dShort((s.freeze.current || s.freeze.future).from) : (s.freeze.current || s.freeze.future).from)}${(s.freeze.current || s.freeze.future).to ? '–' + esc(k.dShort ? k.dShort((s.freeze.current || s.freeze.future).to) : (s.freeze.current || s.freeze.future).to) : ''}${(s.freeze.current || s.freeze.future).reason ? ' · ' + esc((s.freeze.current || s.freeze.future).reason) : ''}</span></div>` : ''}
             ${s.risk?.reasonText ? `<div class="akd-lock akd-lock--amber">${ic('trend', 18)}<span><strong>Xavf</strong> · ${esc(s.risk.reasonText)}</span></div>` : ''}
             <div class="akd-prog"><div class="akd-lr akd-lr--flat"><span><strong class="akd-big">${lesson}</strong> / ${total}-dars</span><strong class="${behind ? 'c-' + (tone === 'blue' ? 'amber' : tone) : 'c-green'}">${behind ? `Rejadan ${behind} dars orqada` : 'Reja boʻyicha'}</strong></div>
                 <div class="aka-pbar" aria-hidden="true"><i style="width:${pct(lesson / total * 100)}%;background:${TB[tone]}"></i>${plan ? `<b style="left:${pct(plan / total * 100)}%"></b>` : ''}</div>${plan ? `<small class="akd-mut">Chiziq — reja boʻyicha bugun ${plan}-darsda boʻlishi kerak edi</small>` : ''}</div>
@@ -434,7 +435,7 @@
             <div class="akd-hist"><h3>Darslar · oxirgi 4 hafta <small>${came} / ${held} keldi</small></h3>${lessons.length ? `<ol class="aka-days" aria-label="Dars kunlari">${lessons.map(l => { const d = k.toDate(l.date); return `<li class="is-${esc(l.status)}" aria-label="${esc(k.dShort(l.date))}: ${l.status === 'came' ? 'keldi' : l.status === 'missed' ? 'kelmadi' : l.status === 'unmarked' ? 'belgilanmagan' : 'keyingi'}">${d ? d.getDate() : ''}</li>`; }).join('')}</ol>` : '<p class="akd-mut">Oxirgi 4 haftada dars yoʻq</p>'}</div>
             ${k.assistBlock ? k.assistBlock(s, true) : ''}
             <div class="akd-lrs">${lr('Muammolar', `<a href="#" data-k-go="problems" data-k-pq="${esc(s.name || '')}" data-k-ptab="${num(pr.open) ? 'open' : 'closed'}">${num(pr.open) ? `${num(pr.open)} ta ochiq` : 'ochigʻi yoʻq'}${num(pr.closed) ? ` · ${num(pr.closed)} ta yopilgan` : ''} ›</a>`)}${lr('Ustozlar tarixi', `<a href="#" data-k-thist>${esc(th.length ? th.map(t => `${k.first(t.name)} · ${k.dLong(t.from)}dan`).slice(-1)[0] : '—')} ›</a>`)}</div>
-            <div class="akd-acts"><button type="button" class="akd-btn akd-btn--ghost" data-k-transfer="${esc(s.id)}">${ic('team', 16)}Ustozni almashtirish</button><button type="button" class="akd-btn akd-btn--ghost" data-k-sched="${esc(s.id)}">${ic('clock', 16)}Dars vaqti</button><button type="button" class="akd-btn akd-btn--pri akd-grow" data-k-new data-k-newfor="student">${ic('plus', 16, 2.6)}Muammo yozish</button></div>
+            <div class="akd-acts"><button type="button" class="akd-btn akd-btn--ghost" data-k-transfer="${esc(s.id)}">${ic('team', 16)}Ustozni almashtirish</button><button type="button" class="akd-btn akd-btn--ghost" data-k-sched="${esc(s.id)}">${ic('clock', 16)}Dars vaqti</button>${s.freeze && (s.freeze.canFreeze || s.freeze.canUnfreeze || s.freeze.canCancel) ? `<button type="button" class="akd-btn akd-btn--ghost akd-btn--ice" data-k-freeze="${esc(s.id)}">${ic('snow', 16)}${s.freeze.canUnfreeze ? 'Eritish' : s.freeze.canCancel ? 'Muzlatishni bekor qilish' : 'Muzlatish'}</button>` : ''}<button type="button" class="akd-btn akd-btn--pri akd-grow" data-k-new data-k-newfor="student">${ic('plus', 16, 2.6)}Muammo yozish</button></div>
         </aside>`;
     }
 
@@ -579,7 +580,7 @@
     }
     // Qayta chizishda fokus o'z joyida qolsin (jadval qatori, tab, filtr).
     function focusSel(el) {
-        const attrs = ['data-k-p', 'data-k-t', 'data-k-a', 'data-k-s', 'data-k-ptab', 'data-k-mtab', 'data-k-ttab', 'data-k-rtab', 'data-k-ltab', 'data-k-ptype', 'data-k-pteacher', 'data-k-mteacher', 'data-k-rteacher', 'data-k-stage', 'data-k-postpone', 'data-k-close', 'data-k-owner', 'data-k-transfer', 'data-k-sched', 'data-k-thist', 'data-k-lrej', 'data-k-lok', 'data-k-trow', 'data-k-prow', 'data-k-srow', 'data-k-arow'];
+        const attrs = ['data-k-p', 'data-k-t', 'data-k-a', 'data-k-s', 'data-k-ptab', 'data-k-mtab', 'data-k-ttab', 'data-k-rtab', 'data-k-ltab', 'data-k-ptype', 'data-k-pteacher', 'data-k-mteacher', 'data-k-rteacher', 'data-k-stage', 'data-k-postpone', 'data-k-close', 'data-k-owner', 'data-k-transfer', 'data-k-sched', 'data-k-freeze', 'data-k-thist', 'data-k-lrej', 'data-k-lok', 'data-k-trow', 'data-k-prow', 'data-k-srow', 'data-k-arow'];
         for (const a of attrs) if (el.hasAttribute(a)) return `[${a}="${CSS.escape(el.getAttribute(a))}"]`;
         if ('kNew' in el.dataset) return el.dataset.kNewfor ? `[data-k-newfor="${el.dataset.kNewfor}"]` : '.akd-h1row [data-k-new]';
         if (el.dataset.kMres) return `[data-k-mres="${el.dataset.kMres}"][data-k-mid="${CSS.escape(el.dataset.kMid)}"]`;
@@ -682,6 +683,7 @@
         if ('kClose' in d) { syncState(); k.dlg.close(); return; }
         if ('kTransfer' in d) { syncState(); k.dlg.transfer(d.kTransfer); return; }
         if ('kSched' in d) { syncState(); k.dlg.schedule(d.kSched); return; }
+        if ('kFreeze' in d) { syncState(); k.dlg.freeze(d.kFreeze); return; }
         if ('kThist' in d) { syncState(); k.dlg.teacherHistory(); return; }
         if ('kStudent' in d) { nav('risk', { sid: d.kStudent }); return; }
         if ('kTeacher' in d) { nav('teachers', { tid: d.kTeacher }); return; }

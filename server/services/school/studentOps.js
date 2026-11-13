@@ -311,7 +311,8 @@ function courseFreezes(rows, since) {
 function currentStatus(rows, date) { return S.statusOn(rows, date); }
 
 async function freeze(db, actor, studentId, body, now = new Date()) {
-    if (!APPROVER_ROLES.has(actor.role)) throw fail(403, 'Muzlatishni admin yoki ROP qiladi');
+    // 13-noy (direktor): akademik rahbar ham muzlatadi (o'z tili — routes/school.js '/students/:id' tekshiradi), admin qoidalari bilan.
+    if (!APPROVER_ROLES.has(actor.role) && actor.role !== 'akademik') throw fail(403, 'Muzlatishni admin, ROP yoki akademik rahbar qiladi');
     const from = T.assertDate(body.from, 'Boshlanish'), to = T.assertDate(body.to, 'Tugash');
     const days = T.daysBetween(from, to) + 1;
     if (days < 1) throw fail(400, 'Oraliq noto\'g\'ri');
@@ -377,7 +378,7 @@ async function stop(db, actor, studentId, body, now = new Date(), action = 'stop
 // Qayta tiklash: muzlatilgan (oldin qaytarish) yoki chiqib ketgan o'quvchi.
 // Chiqib ketgan o'quvchining eski vaqti band bo'lsa — yangi vaqt (va ustoz) beriladi.
 async function restore(db, actor, studentId, body, now = new Date()) {
-    if (!APPROVER_ROLES.has(actor.role)) throw fail(403, 'Qayta tiklashni admin yoki ROP qiladi');
+    if (!APPROVER_ROLES.has(actor.role) && actor.role !== 'akademik') throw fail(403, 'Qayta tiklashni admin yoki ROP qiladi');
     const from = T.assertDate(body.from, 'Birinchi dars');
     const row = await lockStudent(db, studentId);
     const rows = await statusRows(db, studentId);
@@ -397,6 +398,8 @@ async function restore(db, actor, studentId, body, now = new Date()) {
         return { ok: true, cancelledFreeze: true };
     }
     if (state === 'active') throw fail(409, 'O\'quvchi faol — qayta tiklash kerak emas');
+    // Akademik rahbar faqat muzlatilganni eritadi; kursni to'xtatganni qayta tiklash — admin/ROP.
+    if (actor.role === 'akademik' && state !== 'frozen') throw fail(403, 'Kursni toʻxtatgan oʻquvchini admin yoki ROP qayta tiklaydi');
     if (state === 'frozen') {
         const fr = rows.filter(r => r.status === 'frozen').pop();
         const used = T.daysBetween(S.dateStr(fr.from_date), from);

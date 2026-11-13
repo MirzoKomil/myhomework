@@ -281,3 +281,8 @@
     .akd-split { flex-direction: column; }
     .akd-panel { width: 100%; position: static; max-height: none; }
 }
+/* Muzlatish / Eritish (13-noy) */
+.akd-lock--ice { border-color: #A5F3FC; background: #ECFEFF; }
+.akd-lock--ice > svg { color: #0E7490; }
+.akd-btn--ice { color: #0E7490; border-color: #A5F3FC; background: #ECFEFF; }
+.akd-btn--ice svg { color: #0E7490; }

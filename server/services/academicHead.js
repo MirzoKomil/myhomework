@@ -619,6 +619,19 @@ async function studentRowChecked(db, user, id) {
     if (!inLangs(langs, r.subject)) throw fail(403, 'Bu oʻquvchi boshqa til yoʻnalishida');
     return { r, langs };
 }
+// Muzlatish holati (13-noy): akademik kartasida "Muzlatish" / "Eritish" / "Muzlatishni bekor qilish". Qoidalar studentOps.freeze bilan bir xil.
+function freezeInfo(s, now = new Date()) {
+    if (!s) return null;
+    const today = T.nowLocal(now).date, rows = s.statusRows || [];
+    const fz = rows.filter(r => r.status === 'frozen').map(r => ({ from: S.dateStr(r.from_date), to: r.to_date ? S.dateStr(r.to_date) : null, days: Number(r.payload?.days) || null, reason: r.reason || '', code: r.reason_code || '' }));
+    const restart = rows.filter(r => r.status === 'restored' && r.payload?.continueFrom === 'restart').map(r => S.dateStr(r.from_date)).sort().pop();
+    const courseStart = restart || (s.startDate ? String(s.startDate).slice(0, 10) : null);
+    const current = fz.find(f => f.from <= today && (!f.to || f.to >= today)) || null;
+    const future = fz.find(f => f.from > today) || null;
+    const used = fz.some(f => !courseStart || f.from >= courseStart);
+    return { state: s.state, current, future, used, maxDays: 30,
+        canFreeze: s.state === 'active' && !future && !used, canUnfreeze: s.state === 'frozen' && !!current, canCancel: s.state === 'active' && !!future };
+}
 async function studentCard(db, user, id, now = new Date()) {
     const { r, langs } = await studentRowChecked(db, user, id);
     const sc = await scopeData(db, langs, now);
@@ -654,6 +667,7 @@ async function studentCard(db, user, id, now = new Date()) {
         lessons, problems: { open: Number(pc.open) || 0, closed: Number(pc.closed) || 0 },
         teacherHistory: hist.filter(h => h.from_date > '2000-01-01').map(h => ({ name: h.name || '', from: h.from_date })),
         risk: s?.risk ? { reasonText: s.risk.reasonText } : null, state: s?.state || 'left',
+        freeze: freezeInfo(s, now),
         assistant: asgId ? { id: asgId, name: asgName } : null,
         assistContacts: { month, contacted: ac.filter(c => c.outcome === 'contacted').length, noAnswer: ac.filter(c => c.outcome === 'no_answer').length,
             items: ac.slice(0, 20).map(c => ({ day: c.day, at: c.at_min != null ? T.fromMin(c.at_min) : '', channel: A.CHANNELS[c.channel] || c.channel, minutes: Number(c.minutes) || 0,
