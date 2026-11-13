@@ -125,6 +125,14 @@
         for (const L of (lg ? [lg] : LANGS())) { const l = (all[L] || []).find(x => x && x.id === id); if (l) return Object.assign({}, l, { _lang: L }); }
         return null;
     };
+    // 13-noyabr (tezlik): ko'p lidni id bo'yicha topish uchun bir martalik indeks (leadById bilan bir xil natija:
+    // til berilsa shu tilda, aks holda LANGS() tartibida birinchi uchragani). SLA va Jamoa ekranlarida har ogohlantirish
+    // uchun butun ro'yxat qayta qidirilardi (850 × 6000 × menejerlar) — telefon qotardi.
+    const leadFinder = () => {
+        const all = leadsAll(), idx = {};
+        for (const L of ['english', 'russian']) { const m = idx[L] = new Map(); for (const x of (all[L] || [])) if (x && !m.has(x.id)) m.set(x.id, x); }
+        return (id, lg) => { for (const L of (lg ? [lg] : LANGS())) { const l = idx[L]?.get(id); if (l) return Object.assign({}, l, { _lang: L }); } return null; };
+    };
     const COLS = () => (typeof LEAD_COLUMNS !== 'undefined' ? LEAD_COLUMNS : []);
     const SHORT = {
         'yangi-lidlar': 'Yangi', 'boglanishga-urinilmoqda': 'Urinilmoqda', 'boglanildi': 'Bogʻlanildi', 'sinov-darsida': 'Sinovda',
@@ -192,8 +200,25 @@
     const callsToday = (leads, mid) => { const k = dayKey(Date.now()); return leads.filter(l => String(l.managerId) === String(mid)).reduce((a, l) => a + comments(l).filter(c => c.type === 'call-attempt' && parseT(c.createdAt) && dayKey(parseT(c.createdAt)) === k).length, 0); };
 
     // SLA eskalatsiyalari — computeRopHome (bitta manba).
+    // 13-noyabr (tezlik): bosh sahifa ochilishda ketma-ket bir necha marta chiziladi (avatarlar, tasdiqlar, qoida yuklanganda) —
+    // hisob 2 soniya ichida, lidlar va o'quvchilar o'zgarmagan bo'lsa qayta ishlatiladi; keyin albatta yangidan hisoblanib chiziladi.
+    let _rh = null;
     function ropHome() {
-        try { return g('computeRopHome') ? computeRopHome({ user: guest ? { ...user(), linkedRopLang: gLang } : user(), students: getItem(STORAGE_KEYS.students, []) || [], leads: leadsAll(), now: new Date() }) : null; } catch (e) { return null; }
+        try {
+            if (!g('computeRopHome')) return null;
+            const leads = leadsAll(), students = getItem(STORAGE_KEYS.students, []) || [];
+            const gen = g('getLeadMutationGeneration') ? getLeadMutationGeneration() : 0, k = `${guest ? gLang : ''}|${gen}`;
+            const age = _rh ? Date.now() - _rh.at : Infinity;
+            if (_rh && _rh.leads === leads && _rh.students === students && _rh.k === k && age < 2000) {
+                // Keshdan berildi — muddati tugagach bir marta qayta chiziladi (shu oraliqda boshqa joyda o'zgargan bo'lsa ko'rinsin).
+                if (!_rh.later) _rh.later = setTimeout(() => { if (_rh) _rh.at = 0; queueRender(); }, 2050 - age);
+                return _rh.d;
+            }
+            const d = computeRopHome({ user: guest ? { ...user(), linkedRopLang: gLang } : user(), students, leads, now: new Date() });
+            if (_rh?.later) clearTimeout(_rh.later);
+            _rh = { leads, students, k, at: Date.now(), d };
+            return d;
+        } catch (e) { return null; }
     }
     const slaRule = l => (typeof LEAD_SLA_RULES !== 'undefined' ? LEAD_SLA_RULES[st(l)]?.rop : null);
 
@@ -641,7 +666,8 @@
     // ---------- SLA ----------
     function screenSla() {
         const d = ropHome();
-        const list = (d?.open || []).map(a => { const l = leadById(a.leadId, a.leadLang); return l ? { a, l, left: a.time + DAY - Date.now() } : null; }).filter(Boolean).sort((x, y) => x.left - y.left);
+        const find = leadFinder();
+        const list = (d?.open || []).map(a => { const l = find(a.leadId, a.leadLang); return l ? { a, l, left: a.time + DAY - Date.now() } : null; }).filter(Boolean).sort((x, y) => x.left - y.left);
         const gone = list.filter(x => x.left <= 0), soon = list.filter(x => x.left > 0 && x.left < 6 * 3600000), rest = list.filter(x => x.left >= 6 * 3600000);
         const R = typeof LEAD_SLA_RULES !== 'undefined' ? LEAD_SLA_RULES : {};
         const ruleLine = [['yangi-lidlar', 'Yangi lid'], ['boglanishga-urinilmoqda', 'Urinilmoqda'], ['boglanildi', 'Bogʻlanildi'], ['sinov-darsida', 'Sinovdan keyin'], ['qaror-jarayonida', 'Qaror'], ['tolov-jarayonida', 'Toʻlov']]
@@ -650,9 +676,11 @@
         const ackBtn = (a, l, small) => (!l.managerId
             ? `<button type="button" class="sa-btn ${small ? 'sa-btn--outline sa-btn--sm' : 'sa-btn--primary'}" data-ra-go="distribute">Biriktirish</button>`
             : `<button type="button" class="sa-btn ${small ? 'sa-btn--outline sa-btn--sm' : 'sa-btn--primary'}" data-ra-ack="${esc(a.leadId)}" data-ll="${a.leadLang}">Koʻrildi</button>`);
+        // Bir menejer ko'p kartada takrorlanadi — ism va Telegram havolasi bir marta topiladi (tezlik, 13-noyabr).
+        const mm = new Map(), mOf = id => { const k = String(id ?? ''); if (!mm.has(k)) mm.set(k, { n: mgrName(id), tg: id ? mgrTg(id) : '' }); return mm.get(k); };
         const card = ({ a, l, left }, big) => {
-            const m = mgrName(l.managerId), r = slaRule(l), since = Date.now() - (a.time - (r?.after || 0) * MIN);
-            const tg = l.managerId ? mgrTg(l.managerId) : '';
+            const mo = mOf(l.managerId), m = mo.n, r = slaRule(l), since = Date.now() - (a.time - (r?.after || 0) * MIN);
+            const tg = mo.tg;
             const sub = `${firstName(m) || 'Menejersiz'} · ${SHORT[st(l)] || colLabel(st(l))}`;
             const lt = left > 0 ? dur(left) : 'adminga ketdi';
             if (!big) return `<article class="sa-card ra-sla ra-sla--s">${staffImg(l.managerId, m, 40)}<span class="sa-row-t"><button type="button" class="ra-link-t" data-ra-lead="${esc(l.id)}" data-ll="${l._lang}"><strong>${esc(l.name)}</strong></button><span>${esc(sub)}</span><em class="is-red">${esc(durLong(since))} · qoida ${esc(ruleTxt(r?.after || 0))}</em></span>${ackBtn(a, l, true)}</article>`;
@@ -1072,11 +1100,14 @@
     function teamRows(per) {
         const leads = ALL();
         const d = ropHome();
+        // Menejer bo'yicha SLA soni — bir marta sanaladi (avval har menejer uchun har ogohlantirishda lid qayta qidirilardi).
+        const find = leadFinder(), slaBy = new Map();
+        for (const a of (d?.open || [])) { const k = String(find(a.leadId, a.leadLang)?.managerId); slaBy.set(k, (slaBy.get(k) || 0) + 1); }
         return MGRS().map(m => {
             const sales = g('getManagerSalesForPeriod') ? getManagerSalesForPeriod(m.id, per) : 0;
             const target = g('getManagerPeriodTarget') ? getManagerPeriodTarget(m.id, per) : 0;
             const deals = g('getManagerDealsCount') ? getManagerDealsCount(m.id, per) : 0;
-            const sla = (d?.open || []).filter(a => String(leadById(a.leadId, a.leadLang)?.managerId) === String(m.id)).length;
+            const sla = slaBy.get(String(m.id)) || 0;
             const stale = leads.filter(l => String(l.managerId) === String(m.id) && staleOf(l)).length;
             return { ...m, sales, target, deals, pct: target > 0 ? Math.round(sales / target * 100) : null, conv: convOf(leads, m.id), sla, stale };
         }).sort((a, b) => b.sales - a.sales);
@@ -1922,11 +1953,20 @@
     }
 
     // Mavjud renderlar ishlaganda (30 soniyalik so'rov, saqlash, modal yopilishi) ekranimiz ham yangilanadi.
+    // 13-noyabr (tezlik): telefon ilovasi ochiq turganda orqadagi YASHIRIN kompyuter sahifasi (lidlar kanbani ~20 000 element,
+    // ROP bosh sahifasi) har lid o'zgarishida qayta chizilmaydi — telefon qotardi. Faqat "eskirdi" deb belgilanadi;
+    // CRM sahifasi ochilganda switchTab uni baribir yangidan chizadi, kompyuter kengligiga o'tilganda disable() chizadi.
+    const DESK = new Set(['renderDashboard', 'renderLeads', 'renderSales']);
+    let deskOk = 0;
+    const deskHidden = () => isOn() && S.screen !== 'crm' && !S.pageMode && !deskOk && !!root && !root.hidden;
     function hookRenders() {
         ['renderDashboard', 'renderLeads', 'renderSales', 'renderNotificationPanel'].forEach(name => {
             const orig = window[name];
             if (typeof orig !== 'function' || orig._ra) return;
-            const w = function () { const r = orig.apply(this, arguments); if (isOn() && S.screen !== 'crm') queueRender(); return r; };
+            const w = function () {
+                if (DESK.has(name) && deskHidden()) { S.deskDirty = true; queueRender(); return; }
+                const r = orig.apply(this, arguments); if (isOn() && S.screen !== 'crm') queueRender(); return r;
+            };
             w._ra = true; if (orig._sa) w._sa = true;
             window[name] = w;
             try { if (name === 'renderLeads') renderLeads = w; else if (name === 'renderDashboard') renderDashboard = w; else if (name === 'renderSales') renderSales = w; else if (name === 'renderNotificationPanel') renderNotificationPanel = w; } catch (e) { /* global binding */ }
@@ -1969,6 +2009,15 @@
         document.body.classList.remove('ra-on', 'ra-app-hidden', 'ra-crm-page', 'ra-full');
         closeSheet(true, true); closeOverlay();
         if (root) root.hidden = true;
+        // Kompyuter kengligiga o'tildi — telefon ochiq turganda o'tkazib yuborilgan sahifa endi chiziladi.
+        // (Admin telefonda mehmon rejimi yopilsa — CRM sahifasi ochilganda switchTab chizadi.)
+        if (S.deskDirty && !MQ.matches) {
+            S.deskDirty = false;
+            try {
+                if (document.getElementById('tab-sales')?.classList.contains('active') && g('renderSales')) renderSales();
+                else if (document.getElementById('tab-dashboard')?.classList.contains('active') && g('renderDashboard')) renderDashboard();
+            } catch (e) { /* keyingi ochilishda chiziladi */ }
+        }
         try { if (history.state?.raGuard) history.back(); } catch (e) { /* tarix yo'q */ }
     }
     function sync() { if (isOn()) enable(); else disable(); }
@@ -2002,7 +2051,10 @@
         const orig = window.switchTab;
         if (typeof orig === 'function' && !orig._ra) {
             const w = function (tab, ctx) {
-                const r = orig.apply(this, arguments);
+                let r;
+                deskOk++;
+                try { r = orig.apply(this, arguments); } finally { deskOk--; }
+                if (tab === 'sales' || tab === 'dashboard') S.deskDirty = false;
                 if (isOn() && !openCrm._busy) {
                     if (S.screen === 'crm' && tab === 'dashboard') { S.screen = 'home'; showApp(true); render(true); }
                     else if (S.screen !== 'crm' && tab !== 'dashboard' && booted) {

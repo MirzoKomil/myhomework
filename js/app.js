@@ -8866,22 +8866,30 @@ function computeRopHome({ user, students, leads, now = new Date() }) {
     const managers = langs.flatMap(lg => getActiveSalesManagers(lg));
     let alerts = [];
     try { alerts = getLeadSlaNotificationsForCurrentUser().filter(a => a.audience === 'rop' && langs.includes(a.leadLang)); } catch (e) { alerts = []; }
+    // 13-noyabr (tezlik): lid id bo'yicha bitta Map — avval har SLA ogohlantirish uchun butun ro'yxat qayta qidirilardi
+    // (850 ogohlantirish × ~6000 lid × har menejer) va telefonda bosh sahifa bir necha soniya qotardi. Natija o'zgarmaydi:
+    // list.find kabi id bo'yicha BIRINCHI uchragan lid olinadi.
+    const byId = new Map();
+    for (const l of list) if (!byId.has(l.id)) byId.set(l.id, l);
     const open = alerts.filter(a => {
-        const lead = list.find(l => l.id === a.leadId);
+        const lead = byId.get(a.leadId);
         return lead && !parseLeadSlaTime(lead.slaRopAcknowledged?.[a.stageKey]);
     }).sort((a, b) => a.time - b.time);
     const lateCount = open.filter(a => now.getTime() - a.time >= 24 * 60 * LEAD_SLA_MINUTE).length;
     const CLOSED = new Set(['tolov-yopildi', 'muvaffaqiyatsiz-sotuv', 'sifatsiz-lidlar']);
     const unassigned = list.filter(l => !l.managerId && !CLOSED.has(st(l))).length;
     const newCount = list.filter(l => st(l) === 'yangi-lidlar').length;
+    const leadsPerMgr = new Map(), slaPerMgr = new Map();
+    for (const l of list) leadsPerMgr.set(l.managerId, (leadsPerMgr.get(l.managerId) || 0) + 1);
+    for (const a of open) { const mid = byId.get(a.leadId)?.managerId; slaPerMgr.set(mid, (slaPerMgr.get(mid) || 0) + 1); }
     const rows = managers.map(m => {
         const sales = getManagerSalesForPeriod(m.id, 'oylik');
         const target = getManagerPeriodTarget(m.id, 'oylik') || 0;
         return {
             id: m.id, name: m.name || 'Nomaʼlum', sales, target, pct: target > 0 ? Math.round(sales / target * 100) : null,
-            leads: list.filter(l => l.managerId === m.id).length,
+            leads: leadsPerMgr.get(m.id) || 0,
             deals: getManagerDealsCount(m.id, 'oylik'),
-            sla: open.filter(a => list.find(l => l.id === a.leadId)?.managerId === m.id).length
+            sla: slaPerMgr.get(m.id) || 0
         };
     }).sort((a, b) => b.sales - a.sales);
     const teamSales = rows.reduce((a, r) => a + r.sales, 0);
