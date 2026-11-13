@@ -43,7 +43,7 @@
         TOTAL_LESSONS: 72,
         MONTH_SIZE: 24,
         EXAM_INTERVAL: 12,
-        EXAM_PASS_PERCENT: 70,
+        EXAM_PASS_PERCENT: 65,
         PASS_PERCENT: 65,
         UNLOCK_PERCENT: 50,
         LIVE_AUTO_UNLOCK: 60,

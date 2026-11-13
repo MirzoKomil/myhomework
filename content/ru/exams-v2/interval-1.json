@@ -1,0 +1,2675 @@
+{
+ "id": "interval-1",
+ "lessons": [
+  1,
+  12
+ ],
+ "sections": [
+  {
+   "key": "vocab",
+   "count": 8
+  },
+  {
+   "key": "grammar",
+   "count": 14
+  },
+  {
+   "key": "reading",
+   "count": 8
+  },
+  {
+   "key": "build",
+   "count": 10
+  },
+  {
+   "key": "listen",
+   "count": 6
+  }
+ ],
+ "totalQuestions": 46,
+ "durationSec": 2100,
+ "passPercent": 65,
+ "sectionMinPercent": 50,
+ "variants": 3,
+ "cooldownHours": 24,
+ "bank": [
+  {
+   "kind": "vocabImage",
+   "image": "/media/ru/L09/w_v-9-8.jpg",
+   "imageAlt": "1-rasm",
+   "question": "Rasmda nima?",
+   "options": [
+    "люби́ть",
+    "в о́фисе",
+    "па́па",
+    "звони́ть"
+   ],
+   "correctIndex": 3,
+   "section": "vocab",
+   "lessonRef": 9,
+   "slot": 0,
+   "variant": 0,
+   "id": "interval-1-vocab-00-v0"
+  },
+  {
+   "kind": "multipleChoice",
+   "question": "«дыша́ть» so'zining tarjimasi qaysi?",
+   "options": [
+    "kollej",
+    "qayerdan",
+    "nafas olmoq",
+    "tanishmoq"
+   ],
+   "correctIndex": 2,
+   "section": "vocab",
+   "lessonRef": 9,
+   "slot": 0,
+   "variant": 1,
+   "id": "interval-1-vocab-00-v1"
+  },
+  {
+   "kind": "vocabImage",
+   "image": "/media/ru/L10/w_v-10-14.jpg",
+   "imageAlt": "1-rasm",
+   "question": "Rasmda nima?",
+   "options": [
+    "сериа́л",
+    "он / она́ / оно́",
+    "заво́д",
+    "игра́"
+   ],
+   "correctIndex": 0,
+   "section": "vocab",
+   "lessonRef": 10,
+   "slot": 0,
+   "variant": 2,
+   "id": "interval-1-vocab-00-v2"
+  },
+  {
+   "kind": "multipleChoice",
+   "question": "«гость / го́сти» so'zining tarjimasi qaysi?",
+   "options": [
+    "quti",
+    "siz / sizlar",
+    "serial",
+    "mehmon / mehmonlar"
+   ],
+   "correctIndex": 3,
+   "section": "vocab",
+   "lessonRef": 4,
+   "slot": 1,
+   "variant": 0,
+   "id": "interval-1-vocab-01-v0"
+  },
+  {
+   "kind": "vocabImage",
+   "image": "/media/ru/L03/w_v-3-1.jpg",
+   "imageAlt": "1-rasm",
+   "question": "Rasmda nima?",
+   "options": [
+    "стол / стул",
+    "торт",
+    "полива́ть",
+    "я"
+   ],
+   "correctIndex": 3,
+   "section": "vocab",
+   "lessonRef": 3,
+   "slot": 1,
+   "variant": 1,
+   "id": "interval-1-vocab-01-v1"
+  },
+  {
+   "kind": "multipleChoice",
+   "question": "«понима́ть» so'zining tarjimasi qaysi?",
+   "options": [
+    "ko'rmoq",
+    "tushunmoq",
+    "o'rganmoq",
+    "gullar"
+   ],
+   "correctIndex": 1,
+   "section": "vocab",
+   "lessonRef": 5,
+   "slot": 1,
+   "variant": 2,
+   "id": "interval-1-vocab-01-v2"
+  },
+  {
+   "kind": "multipleChoice",
+   "question": "«где» so'zining tarjimasi qaysi?",
+   "options": [
+    "planshet",
+    "qayerda",
+    "men",
+    "kurtka"
+   ],
+   "correctIndex": 1,
+   "section": "vocab",
+   "lessonRef": 11,
+   "slot": 2,
+   "variant": 1,
+   "id": "interval-1-vocab-02-v1"
+  },
+  {
+   "kind": "vocabImage",
+   "image": "/media/ru/L12/w_v-12-13.jpg",
+   "imageAlt": "1-rasm",
+   "question": "Rasmda nima?",
+   "options": [
+    "по-узбе́кски",
+    "приро́да",
+    "на рабо́те",
+    "ве́чер"
+   ],
+   "correctIndex": 1,
+   "section": "vocab",
+   "lessonRef": 12,
+   "slot": 2,
+   "variant": 2,
+   "id": "interval-1-vocab-02-v2"
+  },
+  {
+   "kind": "multipleChoice",
+   "question": "«мы» so'zining tarjimasi qaysi?",
+   "options": [
+    "pasport",
+    "biz",
+    "tanishmoq",
+    "sevmoq, yaxshi ko'rmoq"
+   ],
+   "correctIndex": 1,
+   "section": "vocab",
+   "lessonRef": 3,
+   "slot": 3,
+   "variant": 0,
+   "id": "interval-1-vocab-03-v0"
+  },
+  {
+   "kind": "vocabImage",
+   "image": "/media/ru/L07/w_v-7-22.jpg",
+   "imageAlt": "1-rasm",
+   "question": "Rasmda nima?",
+   "options": [
+    "соль",
+    "в университе́те",
+    "му́зыка",
+    "чья"
+   ],
+   "correctIndex": 0,
+   "section": "vocab",
+   "lessonRef": 7,
+   "slot": 3,
+   "variant": 1,
+   "id": "interval-1-vocab-03-v1"
+  },
+  {
+   "kind": "multipleChoice",
+   "question": "«ду́мать» so'zining tarjimasi qaysi?",
+   "options": [
+    "choy / sharbat",
+    "yozmoq",
+    "yomon",
+    "o'ylamoq"
+   ],
+   "correctIndex": 3,
+   "section": "vocab",
+   "lessonRef": 5,
+   "slot": 3,
+   "variant": 2,
+   "id": "interval-1-vocab-03-v2"
+  },
+  {
+   "kind": "vocabImage",
+   "image": "/media/ru/L05/w_v-5-11.jpg",
+   "imageAlt": "1-rasm",
+   "question": "Rasmda nima?",
+   "options": [
+    "торт",
+    "обе́дать",
+    "учи́тельница",
+    "чита́ть"
+   ],
+   "correctIndex": 1,
+   "section": "vocab",
+   "lessonRef": 5,
+   "slot": 4,
+   "variant": 0,
+   "id": "interval-1-vocab-04-v0"
+  },
+  {
+   "kind": "multipleChoice",
+   "question": "«отку́да» so'zining tarjimasi qaysi?",
+   "options": [
+    "qayerdan",
+    "surat, foto",
+    "kechirasiz",
+    "bizning"
+   ],
+   "correctIndex": 0,
+   "section": "vocab",
+   "lessonRef": 2,
+   "slot": 4,
+   "variant": 1,
+   "id": "interval-1-vocab-04-v1"
+  },
+  {
+   "kind": "vocabImage",
+   "image": "/media/ru/L06/w_v-6-1.jpg",
+   "imageAlt": "1-rasm",
+   "question": "Rasmda nima?",
+   "options": [
+    "гото́вить",
+    "до́брый день",
+    "кре́сло",
+    "петь"
+   ],
+   "correctIndex": 0,
+   "section": "vocab",
+   "lessonRef": 6,
+   "slot": 4,
+   "variant": 2,
+   "id": "interval-1-vocab-04-v2"
+  },
+  {
+   "kind": "multipleChoice",
+   "question": "«учи́ться» so'zining tarjimasi qaysi?",
+   "options": [
+    "ha / yo'q",
+    "kimning",
+    "o'qituvchi",
+    "o'qimoq"
+   ],
+   "correctIndex": 3,
+   "section": "vocab",
+   "lessonRef": 1,
+   "slot": 5,
+   "variant": 0,
+   "id": "interval-1-vocab-05-v0"
+  },
+  {
+   "kind": "vocabImage",
+   "image": "/media/ru/L09/w_v-9-18.jpg",
+   "imageAlt": "1-rasm",
+   "question": "Rasmda nima?",
+   "options": [
+    "институ́т",
+    "чья",
+    "мультфи́льм",
+    "знать"
+   ],
+   "correctIndex": 2,
+   "section": "vocab",
+   "lessonRef": 9,
+   "slot": 5,
+   "variant": 1,
+   "id": "interval-1-vocab-05-v1"
+  },
+  {
+   "kind": "multipleChoice",
+   "question": "«сотру́дник» so'zining tarjimasi qaysi?",
+   "options": [
+    "kreslo",
+    "bu, shu",
+    "xodim",
+    "o'qimoq"
+   ],
+   "correctIndex": 2,
+   "section": "vocab",
+   "lessonRef": 2,
+   "slot": 5,
+   "variant": 2,
+   "id": "interval-1-vocab-05-v2"
+  },
+  {
+   "kind": "vocabImage",
+   "image": "/media/ru/L09/w_v-9-21.jpg",
+   "imageAlt": "1-rasm",
+   "question": "Rasmda nima?",
+   "options": [
+    "прости́те / извини́те",
+    "ненави́деть",
+    "музыка́нт",
+    "ме́неджер"
+   ],
+   "correctIndex": 1,
+   "section": "vocab",
+   "lessonRef": 9,
+   "slot": 6,
+   "variant": 0,
+   "id": "interval-1-vocab-06-v0"
+  },
+  {
+   "kind": "multipleChoice",
+   "question": "«институ́т» so'zining tarjimasi qaysi?",
+   "options": [
+    "tanishganimdan xursandman",
+    "tanish",
+    "stol / stul",
+    "institut"
+   ],
+   "correctIndex": 3,
+   "section": "vocab",
+   "lessonRef": 10,
+   "slot": 6,
+   "variant": 1,
+   "id": "interval-1-vocab-06-v1"
+  },
+  {
+   "kind": "vocabImage",
+   "image": "/media/ru/L10/w_v-10-4.jpg",
+   "imageAlt": "1-rasm",
+   "question": "Rasmda nima?",
+   "options": [
+    "ко́фе",
+    "гость / го́сти",
+    "э́тот / э́та / э́то / э́ти",
+    "но́вости"
+   ],
+   "correctIndex": 3,
+   "section": "vocab",
+   "lessonRef": 10,
+   "slot": 6,
+   "variant": 2,
+   "id": "interval-1-vocab-06-v2"
+  },
+  {
+   "kind": "multipleChoice",
+   "question": "«ме́неджер» so'zining tarjimasi qaysi?",
+   "options": [
+    "eshitmoq",
+    "tuz",
+    "menejer",
+    "tez-tez"
+   ],
+   "correctIndex": 2,
+   "section": "vocab",
+   "lessonRef": 2,
+   "slot": 7,
+   "variant": 0,
+   "id": "interval-1-vocab-07-v0"
+  },
+  {
+   "kind": "vocabImage",
+   "image": "/media/ru/L05/w_v-5-1.jpg",
+   "imageAlt": "1-rasm",
+   "question": "Rasmda nima?",
+   "options": [
+    "ме́сяц",
+    "чита́ть",
+    "кре́сло",
+    "спеши́ть"
+   ],
+   "correctIndex": 1,
+   "section": "vocab",
+   "lessonRef": 5,
+   "slot": 7,
+   "variant": 1,
+   "id": "interval-1-vocab-07-v1"
+  },
+  {
+   "kind": "multipleChoice",
+   "question": "«рабо́тать» so'zining tarjimasi qaysi?",
+   "options": [
+    "u yerda / bu yerda",
+    "qilmoq",
+    "o'zbekcha",
+    "ishlamoq"
+   ],
+   "correctIndex": 3,
+   "section": "vocab",
+   "lessonRef": 1,
+   "slot": 7,
+   "variant": 2,
+   "id": "interval-1-vocab-07-v2"
+  },
+  {
+   "kind": "multipleChoice",
+   "options": [
+    "[малако]",
+    "[молако]",
+    "[малоко]",
+    "[молоко]"
+   ],
+   "question": "«Молоко́» so'zi qanday o'qiladi?",
+   "correctIndex": 0,
+   "lessonRef": 1,
+   "section": "grammar",
+   "slot": 1,
+   "variant": 0,
+   "id": "interval-1-grammar-01-v0"
+  },
+  {
+   "kind": "fillBlank",
+   "answer": "моя́",
+   "options": [
+    "мой",
+    "моё",
+    "моя́"
+   ],
+   "sentence": "Э́то ___ су́мка.",
+   "lessonRef": 7,
+   "section": "grammar",
+   "slot": 2,
+   "variant": 0,
+   "id": "interval-1-grammar-02-v0"
+  },
+  {
+   "kind": "fillBlank",
+   "answer": "тебя́",
+   "options": [
+    "тебя́",
+    "твой",
+    "ты"
+   ],
+   "sentence": "У ___ есть маши́на? — Да, у меня́ есть маши́на.",
+   "lessonRef": 2,
+   "section": "grammar",
+   "slot": 3,
+   "variant": 0,
+   "id": "interval-1-grammar-03-v0"
+  },
+  {
+   "kind": "multipleChoice",
+   "options": [
+    "па́спорт",
+    "су́мка",
+    "ко́мната",
+    "окно́"
+   ],
+   "question": "Qaysi so'z сре́дний род (o'rta jins)?",
+   "correctIndex": 3,
+   "lessonRef": 7,
+   "section": "grammar",
+   "slot": 4,
+   "variant": 0,
+   "id": "interval-1-grammar-04-v0"
+  },
+  {
+   "kind": "multipleChoice",
+   "options": [
+    "Чья",
+    "Чьё",
+    "Чьи",
+    "Чей"
+   ],
+   "question": "Mos so'roq so'zini tanlang: «… э́то фо́то?»",
+   "correctIndex": 1,
+   "lessonRef": 7,
+   "section": "grammar",
+   "slot": 5,
+   "variant": 0,
+   "id": "interval-1-grammar-05-v0"
+  },
+  {
+   "kind": "multipleChoice",
+   "options": [
+    "vaqt",
+    "bu yerda",
+    "u yerda",
+    "mana, ana"
+   ],
+   "question": "«Вот» so'zining ma'nosi qaysi?",
+   "correctIndex": 3,
+   "lessonRef": 3,
+   "section": "grammar",
+   "slot": 6,
+   "variant": 0,
+   "id": "interval-1-grammar-06-v0"
+  },
+  {
+   "kind": "multipleChoice",
+   "options": [
+    "Я люби́ть чита́ть.",
+    "Я лю́бит чита́ть.",
+    "Я люблю́ чита́ть.",
+    "Я люблю́ чита́ю."
+   ],
+   "question": "«Что ты лю́бишь де́лать?» savoliga to'g'ri javobni tanlang.",
+   "correctIndex": 2,
+   "lessonRef": 10,
+   "section": "grammar",
+   "slot": 7,
+   "variant": 0,
+   "id": "interval-1-grammar-07-v0"
+  },
+  {
+   "kind": "multipleChoice",
+   "options": [
+    "У тебя́ есть ру́чка?",
+    "Где твоя́ су́мка?",
+    "У меня́ есть ру́чка.",
+    "Чья э́то кни́га?"
+   ],
+   "question": "🗣 Vaziyat: Darsda ruchkangiz yo'q. Sinfdoshingizdan so'raysiz.\n\nTo'g'ri ruscha javobni tanlang.",
+   "correctIndex": 0,
+   "lessonRef": 4,
+   "section": "grammar",
+   "slot": 8,
+   "variant": 0,
+   "id": "interval-1-grammar-08-v0"
+  },
+  {
+   "kind": "multipleChoice",
+   "options": [
+    "Чей э́то?",
+    "Кто ты?",
+    "Как ты?",
+    "Где ты?"
+   ],
+   "question": "🗣 Vaziyat: Do'stingizga qo'ng'iroq qildingiz. U hozir qayerda ekanini bilmoqchisiz.\n\nTo'g'ri ruscha javobni tanlang.",
+   "correctIndex": 3,
+   "lessonRef": 1,
+   "section": "grammar",
+   "slot": 9,
+   "variant": 0,
+   "id": "interval-1-grammar-09-v0"
+  },
+  {
+   "kind": "fillBlank",
+   "answer": "дела́",
+   "options": [
+    "дела́",
+    "де́ло",
+    "де́лать"
+   ],
+   "sentence": "Как ___? — Хорошо́!",
+   "lessonRef": 2,
+   "section": "grammar",
+   "slot": 10,
+   "variant": 0,
+   "id": "interval-1-grammar-10-v0"
+  },
+  {
+   "kind": "fillBlank",
+   "answer": "их",
+   "options": [
+    "его́",
+    "её",
+    "их"
+   ],
+   "sentence": "Э́то А́нна и Бобу́р. Э́то ___ докуме́нты.",
+   "lessonRef": 7,
+   "section": "grammar",
+   "slot": 11,
+   "variant": 0,
+   "id": "interval-1-grammar-11-v0"
+  },
+  {
+   "kind": "multipleChoice",
+   "options": [
+    "у",
+    "на",
+    "в",
+    "из"
+   ],
+   "question": "Mos predlogni tanlang: «Я гуля́ю … у́лице.»",
+   "correctIndex": 1,
+   "lessonRef": 11,
+   "section": "grammar",
+   "slot": 12,
+   "variant": 0,
+   "id": "interval-1-grammar-12-v0"
+  },
+  {
+   "kind": "multipleChoice",
+   "options": [
+    "де́лают",
+    "де́лает",
+    "де́лаете",
+    "де́лаем"
+   ],
+   "question": "To'g'ri shaklni tanlang: «Что вы … сейча́с?»",
+   "correctIndex": 2,
+   "lessonRef": 6,
+   "section": "grammar",
+   "slot": 13,
+   "variant": 0,
+   "id": "interval-1-grammar-13-v0"
+  },
+  {
+   "kind": "fillBlank",
+   "answer": "пьём",
+   "options": [
+    "пьём",
+    "пьют",
+    "пью"
+   ],
+   "sentence": "Мы ___ чай.",
+   "lessonRef": 9,
+   "section": "grammar",
+   "slot": 0,
+   "variant": 1,
+   "id": "interval-1-grammar-00-v1"
+  },
+  {
+   "kind": "multipleChoice",
+   "options": [
+    "У неё есть кни́га.",
+    "У её есть кни́га.",
+    "У него́ есть кни́га.",
+    "У она́ есть кни́га."
+   ],
+   "question": "«Unda (ayolda) kitob bor» — to'g'ri tarjimani tanlang.",
+   "correctIndex": 0,
+   "lessonRef": 3,
+   "section": "grammar",
+   "slot": 1,
+   "variant": 1,
+   "id": "interval-1-grammar-01-v1"
+  },
+  {
+   "kind": "multipleChoice",
+   "options": [
+    "О́чень прия́тно!",
+    "Повтори́те, пожа́луйста.",
+    "До свида́ния!",
+    "Как дела́?"
+   ],
+   "question": "Siz gapni tushunmadingiz. Suhbatdoshga nima deysiz?",
+   "correctIndex": 1,
+   "lessonRef": 2,
+   "section": "grammar",
+   "slot": 2,
+   "variant": 1,
+   "id": "interval-1-grammar-02-v1"
+  },
+  {
+   "kind": "multipleChoice",
+   "options": [
+    "писа́ть",
+    "петь",
+    "полива́ть",
+    "пить"
+   ],
+   "question": "«Он поёт» — bu qaysi fe'lning shakli?",
+   "correctIndex": 1,
+   "lessonRef": 6,
+   "section": "grammar",
+   "slot": 3,
+   "variant": 1,
+   "id": "interval-1-grammar-03-v1"
+  },
+  {
+   "kind": "fillBlank",
+   "answer": "рабо́таю",
+   "options": [
+    "рабо́таю",
+    "рабо́тает",
+    "рабо́тать"
+   ],
+   "sentence": "Я не ___, я отдыха́ю.",
+   "lessonRef": 5,
+   "section": "grammar",
+   "slot": 4,
+   "variant": 1,
+   "id": "interval-1-grammar-04-v1"
+  },
+  {
+   "kind": "multipleChoice",
+   "options": [
+    "До свида́ния!",
+    "Пло́хо.",
+    "Прости́те!",
+    "О́чень прия́тно!"
+   ],
+   "question": "🗣 Vaziyat: Yangi odam bilan tanishdingiz, u o'z ismini aytdi. Nima deysiz?\n\nTo'g'ri ruscha javobni tanlang.",
+   "correctIndex": 3,
+   "lessonRef": 2,
+   "section": "grammar",
+   "slot": 5,
+   "variant": 1,
+   "id": "interval-1-grammar-05-v1"
+  },
+  {
+   "kind": "multipleChoice",
+   "options": [
+    "Я на остано́вке.",
+    "Я остано́вке.",
+    "Я в остано́вке.",
+    "Я на остано́вка."
+   ],
+   "question": "«Где ты?» savoliga to'g'ri javobni tanlang.",
+   "correctIndex": 0,
+   "lessonRef": 12,
+   "section": "grammar",
+   "slot": 6,
+   "variant": 1,
+   "id": "interval-1-grammar-06-v1"
+  },
+  {
+   "kind": "fillBlank",
+   "answer": "университе́те",
+   "options": [
+    "университе́т",
+    "университе́те",
+    "университе́та"
+   ],
+   "sentence": "Мы у́чимся в ___.",
+   "lessonRef": 9,
+   "section": "grammar",
+   "slot": 7,
+   "variant": 1,
+   "id": "interval-1-grammar-07-v1"
+  },
+  {
+   "kind": "multipleChoice",
+   "options": [
+    "Спаси́бо!",
+    "Пока́!",
+    "До свида́ния!",
+    "До́брое у́тро!"
+   ],
+   "question": "🗣 Vaziyat: Ertalab ishxonaga keldingiz. Hamkasbingiz bilan salomlashasiz.\n\nTo'g'ri ruscha javobni tanlang.",
+   "correctIndex": 3,
+   "lessonRef": 1,
+   "section": "grammar",
+   "slot": 8,
+   "variant": 1,
+   "id": "interval-1-grammar-08-v1"
+  },
+  {
+   "kind": "fillBlank",
+   "answer": "го́да",
+   "options": [
+    "го́да",
+    "лет",
+    "год"
+   ],
+   "sentence": "Мне 23 ___.",
+   "lessonRef": 1,
+   "section": "grammar",
+   "slot": 9,
+   "variant": 1,
+   "id": "interval-1-grammar-09-v1"
+  },
+  {
+   "kind": "fillBlank",
+   "answer": "кафе́",
+   "options": [
+    "ка́фу",
+    "кафы",
+    "кафе́"
+   ],
+   "sentence": "Днём я обе́даю в ___.",
+   "lessonRef": 11,
+   "section": "grammar",
+   "slot": 10,
+   "variant": 1,
+   "id": "interval-1-grammar-10-v1"
+  },
+  {
+   "kind": "fillBlank",
+   "answer": "игра́ют",
+   "options": [
+    "игра́ет",
+    "игра́ют",
+    "игра́ешь"
+   ],
+   "sentence": "Они́ ___ в футбо́л.",
+   "lessonRef": 5,
+   "section": "grammar",
+   "slot": 11,
+   "variant": 1,
+   "id": "interval-1-grammar-11-v1"
+  },
+  {
+   "kind": "fillBlank",
+   "sentence": "Мы ___ музыку. (Biz musiqa tinglayapmiz.)",
+   "options": [
+    "слу́шаю",
+    "слу́шаем",
+    "слу́шают"
+   ],
+   "answer": "слу́шаем",
+   "lessonRef": 6,
+   "section": "grammar",
+   "slot": 12,
+   "variant": 1,
+   "id": "interval-1-grammar-12-v1"
+  },
+  {
+   "kind": "multipleChoice",
+   "question": "— Чей это телефон?\n— Это ___ телефон.",
+   "options": [
+    "моя́",
+    "мой",
+    "моё"
+   ],
+   "correctIndex": 1,
+   "lessonRef": 7,
+   "section": "grammar",
+   "slot": 13,
+   "variant": 1,
+   "id": "interval-1-grammar-13-v1"
+  },
+  {
+   "kind": "multipleChoice",
+   "question": "«Ko'chada» ruschasi:",
+   "options": [
+    "в у́лице",
+    "на у́лице",
+    "у́лицей"
+   ],
+   "correctIndex": 1,
+   "lessonRef": 11,
+   "section": "grammar",
+   "slot": 0,
+   "variant": 2,
+   "id": "interval-1-grammar-00-v2"
+  },
+  {
+   "kind": "multipleChoice",
+   "question": "«Что вы делаете?» — javob:",
+   "options": [
+    "Они́ игра́ют.",
+    "Мы отдыха́ем.",
+    "Он чита́ет."
+   ],
+   "correctIndex": 1,
+   "lessonRef": 5,
+   "section": "grammar",
+   "slot": 1,
+   "variant": 2,
+   "id": "interval-1-grammar-01-v2"
+  },
+  {
+   "kind": "fillBlank",
+   "sentence": "Мне 24 ___.",
+   "options": [
+    "лет",
+    "год",
+    "го́да"
+   ],
+   "answer": "го́да",
+   "lessonRef": 2,
+   "section": "grammar",
+   "slot": 2,
+   "variant": 2,
+   "id": "interval-1-grammar-02-v2"
+  },
+  {
+   "kind": "multipleChoice",
+   "question": "— Где отель туристов?\n— Вот ___ отель.",
+   "options": [
+    "его́",
+    "её",
+    "их"
+   ],
+   "correctIndex": 2,
+   "lessonRef": 8,
+   "section": "grammar",
+   "slot": 3,
+   "variant": 2,
+   "id": "interval-1-grammar-03-v2"
+  },
+  {
+   "kind": "fillBlank",
+   "sentence": "Это телефон Антона. Это ___ телефон.",
+   "options": [
+    "их",
+    "его́",
+    "её"
+   ],
+   "answer": "его́",
+   "lessonRef": 8,
+   "section": "grammar",
+   "slot": 4,
+   "variant": 2,
+   "id": "interval-1-grammar-04-v2"
+  },
+  {
+   "kind": "fillBlank",
+   "sentence": "___ есть машина. (Unda (erkak) mashina bor.)",
+   "options": [
+    "У неё",
+    "У него́",
+    "У них"
+   ],
+   "answer": "У него́",
+   "lessonRef": 3,
+   "section": "grammar",
+   "slot": 5,
+   "variant": 2,
+   "id": "interval-1-grammar-05-v2"
+  },
+  {
+   "kind": "fillBlank",
+   "sentence": "Я ___ телефон. (Men telefonni ushlab turibman.)",
+   "options": [
+    "держу́",
+    "де́ржит",
+    "держю"
+   ],
+   "answer": "держу́",
+   "lessonRef": 9,
+   "section": "grammar",
+   "slot": 6,
+   "variant": 2,
+   "id": "interval-1-grammar-06-v2"
+  },
+  {
+   "kind": "fillBlank",
+   "sentence": "О чём вы ___? — Мы думаем о проекте.",
+   "options": [
+    "ду́мают",
+    "ду́маете",
+    "ду́маешь"
+   ],
+   "answer": "ду́маете",
+   "lessonRef": 6,
+   "section": "grammar",
+   "slot": 7,
+   "variant": 2,
+   "id": "interval-1-grammar-07-v2"
+  },
+  {
+   "kind": "fillBlank",
+   "sentence": "Они ___ в футбол во дворе. (Ular hovlida futbol o'ynashyapti.)",
+   "options": [
+    "игра́ем",
+    "игра́ют",
+    "игра́ет"
+   ],
+   "answer": "игра́ют",
+   "lessonRef": 5,
+   "section": "grammar",
+   "slot": 8,
+   "variant": 2,
+   "id": "interval-1-grammar-08-v2"
+  },
+  {
+   "kind": "fillBlank",
+   "sentence": "___ вы? — Я из Андижана.",
+   "options": [
+    "Как",
+    "Где",
+    "Отку́да"
+   ],
+   "answer": "Отку́да",
+   "lessonRef": 2,
+   "section": "grammar",
+   "slot": 9,
+   "variant": 2,
+   "id": "interval-1-grammar-09-v2"
+  },
+  {
+   "kind": "multipleChoice",
+   "question": "Qaysi so'z женский род?",
+   "options": [
+    "ку́ртка",
+    "ме́сто",
+    "го́род"
+   ],
+   "correctIndex": 0,
+   "lessonRef": 7,
+   "section": "grammar",
+   "slot": 10,
+   "variant": 2,
+   "id": "interval-1-grammar-10-v2"
+  },
+  {
+   "kind": "multipleChoice",
+   "question": "«Кто это?» — to'g'ri javob:",
+   "options": [
+    "Э́то Бобу́р.",
+    "Э́то стол.",
+    "Э́то кни́га."
+   ],
+   "correctIndex": 0,
+   "lessonRef": 3,
+   "section": "grammar",
+   "slot": 11,
+   "variant": 2,
+   "id": "interval-1-grammar-11-v2"
+  },
+  {
+   "kind": "fillBlank",
+   "sentence": "___ живёте в Ташкенте. (Siz Toshkentda yashaysiz.)",
+   "options": [
+    "Мы",
+    "Он",
+    "Вы"
+   ],
+   "answer": "Вы",
+   "lessonRef": 3,
+   "section": "grammar",
+   "slot": 12,
+   "variant": 2,
+   "id": "interval-1-grammar-12-v2"
+  },
+  {
+   "kind": "multipleChoice",
+   "question": "Qaysi so'z средний род?",
+   "options": [
+    "па́спорт",
+    "су́мка",
+    "письмо́"
+   ],
+   "correctIndex": 2,
+   "lessonRef": 7,
+   "section": "grammar",
+   "slot": 13,
+   "variant": 2,
+   "id": "interval-1-grammar-13-v2"
+  },
+  {
+   "kind": "reading",
+   "passageId": "interval-1-p0",
+   "passage": "Здравствуйте! Меня зовут Абдулазиз. Мне 28 лет. Я живу в Андижане. Андижан — мой город. Я работаю в офисе. Моя жена Нигора работает в больнице. Мой друг Бобур живёт в Москве. Он работает и учится. Моё хобби — футбол и книги. А какое у вас хобби?",
+   "question": "Где живёт Абдулазиз?",
+   "options": [
+    "В Ташке́нте",
+    "В Москве́",
+    "В Андижа́не"
+   ],
+   "correctIndex": 2,
+   "section": "reading",
+   "lessonRef": 1,
+   "slot": 0,
+   "variant": 0,
+   "id": "interval-1-reading-00-v0"
+  },
+  {
+   "kind": "reading",
+   "passageId": "interval-1-p0",
+   "passage": "Здравствуйте! Меня зовут Абдулазиз. Мне 28 лет. Я живу в Андижане. Андижан — мой город. Я работаю в офисе. Моя жена Нигора работает в больнице. Мой друг Бобур живёт в Москве. Он работает и учится. Моё хобби — футбол и книги. А какое у вас хобби?",
+   "question": "Сколько лет Абдулазизу?",
+   "options": [
+    "38 лет",
+    "28 лет",
+    "18 лет"
+   ],
+   "correctIndex": 1,
+   "section": "reading",
+   "lessonRef": 1,
+   "slot": 1,
+   "variant": 0,
+   "id": "interval-1-reading-01-v0"
+  },
+  {
+   "kind": "reading",
+   "passageId": "interval-1-p0",
+   "passage": "Здравствуйте! Меня зовут Абдулазиз. Мне 28 лет. Я живу в Андижане. Андижан — мой город. Я работаю в офисе. Моя жена Нигора работает в больнице. Мой друг Бобур живёт в Москве. Он работает и учится. Моё хобби — футбол и книги. А какое у вас хобби?",
+   "question": "Какое хобби у Абдулазиза?",
+   "options": [
+    "Футбо́л и кни́ги",
+    "Му́зыка",
+    "Рисова́ть"
+   ],
+   "correctIndex": 0,
+   "section": "reading",
+   "lessonRef": 1,
+   "slot": 2,
+   "variant": 0,
+   "id": "interval-1-reading-02-v0"
+  },
+  {
+   "kind": "reading",
+   "passageId": "interval-1-p0",
+   "passage": "Здравствуйте! Меня зовут Абдулазиз. Мне 28 лет. Я живу в Андижане. Андижан — мой город. Я работаю в офисе. Моя жена Нигора работает в больнице. Мой друг Бобур живёт в Москве. Он работает и учится. Моё хобби — футбол и книги. А какое у вас хобби?",
+   "question": "Где работает Нигора?",
+   "options": [
+    "В шко́ле",
+    "В больни́це",
+    "В о́фисе"
+   ],
+   "correctIndex": 1,
+   "section": "reading",
+   "lessonRef": 1,
+   "slot": 3,
+   "variant": 0,
+   "id": "interval-1-reading-03-v0"
+  },
+  {
+   "kind": "reading",
+   "passageId": "interval-1-p1",
+   "passage": "Меня зовут Абдулазиз. Я живу в Андижане. У меня есть семья: жена Нигора, сын Сардор и дочь Маржона. У нас есть дом. Моя жена — учитель. Она читает книги и пишет письма. Мой сын любит спорт. Он смотрит футбол и делает зарядку. Моя дочь любит музыку и хорошо поёт. У меня есть друг. Его зовут Бобур. Он часто звонит мне. Мы смотрим футбол, слушаем музыку и много говорим.",
+   "question": "Кто жена Абдулазиза по профессии?",
+   "options": [
+    "Музыка́нт",
+    "Учи́тель",
+    "Врач"
+   ],
+   "correctIndex": 1,
+   "section": "reading",
+   "lessonRef": 9,
+   "slot": 4,
+   "variant": 0,
+   "id": "interval-1-reading-04-v0"
+  },
+  {
+   "kind": "reading",
+   "passageId": "interval-1-p1",
+   "passage": "Меня зовут Абдулазиз. Я живу в Андижане. У меня есть семья: жена Нигора, сын Сардор и дочь Маржона. У нас есть дом. Моя жена — учитель. Она читает книги и пишет письма. Мой сын любит спорт. Он смотрит футбол и делает зарядку. Моя дочь любит музыку и хорошо поёт. У меня есть друг. Его зовут Бобур. Он часто звонит мне. Мы смотрим футбол, слушаем музыку и много говорим.",
+   "question": "Что делает друг Бобур?",
+   "options": [
+    "Ча́сто звони́т",
+    "Гото́вит",
+    "Пи́шет кни́ги"
+   ],
+   "correctIndex": 0,
+   "section": "reading",
+   "lessonRef": 9,
+   "slot": 5,
+   "variant": 0,
+   "id": "interval-1-reading-05-v0"
+  },
+  {
+   "kind": "reading",
+   "passageId": "interval-1-p1",
+   "passage": "Меня зовут Абдулазиз. Я живу в Андижане. У меня есть семья: жена Нигора, сын Сардор и дочь Маржона. У нас есть дом. Моя жена — учитель. Она читает книги и пишет письма. Мой сын любит спорт. Он смотрит футбол и делает зарядку. Моя дочь любит музыку и хорошо поёт. У меня есть друг. Его зовут Бобур. Он часто звонит мне. Мы смотрим футбол, слушаем музыку и много говорим.",
+   "question": "Что любит сын?",
+   "options": [
+    "Спорт",
+    "Кни́ги",
+    "Му́зыку"
+   ],
+   "correctIndex": 0,
+   "section": "reading",
+   "lessonRef": 9,
+   "slot": 6,
+   "variant": 0,
+   "id": "interval-1-reading-06-v0"
+  },
+  {
+   "kind": "reading",
+   "passageId": "interval-1-p1",
+   "passage": "Меня зовут Абдулазиз. Я живу в Андижане. У меня есть семья: жена Нигора, сын Сардор и дочь Маржона. У нас есть дом. Моя жена — учитель. Она читает книги и пишет письма. Мой сын любит спорт. Он смотрит футбол и делает зарядку. Моя дочь любит музыку и хорошо поёт. У меня есть друг. Его зовут Бобур. Он часто звонит мне. Мы смотрим футбол, слушаем музыку и много говорим.",
+   "question": "Что друзья делают вместе?",
+   "options": [
+    "Спят",
+    "Смо́трят футбо́л и говоря́т",
+    "Рабо́тают"
+   ],
+   "correctIndex": 1,
+   "section": "reading",
+   "lessonRef": 9,
+   "slot": 7,
+   "variant": 0,
+   "id": "interval-1-reading-07-v0"
+  },
+  {
+   "kind": "reading",
+   "passageId": "interval-1-p2",
+   "passage": "Меня зовут Абдулазиз. Я живу в Андижане. Утром я делаю зарядку и пью чай. Потом я работаю в офисе. Моя жена Нигора работает в больнице. Наш сын учится в школе. Днём я обедаю в кафе. Вечером мы гуляем в парке или смотрим фильм дома. Мой друг Бобур живёт в Москве. Он работает в магазине. Ночью мы спим. Ключи и телефон лежат на столе.",
+   "question": "Где работает Нигора?",
+   "options": [
+    "В шко́ле",
+    "В больни́це",
+    "В кафе́"
+   ],
+   "correctIndex": 1,
+   "section": "reading",
+   "lessonRef": 11,
+   "slot": 0,
+   "variant": 1,
+   "id": "interval-1-reading-00-v1"
+  },
+  {
+   "kind": "reading",
+   "passageId": "interval-1-p2",
+   "passage": "Меня зовут Абдулазиз. Я живу в Андижане. Утром я делаю зарядку и пью чай. Потом я работаю в офисе. Моя жена Нигора работает в больнице. Наш сын учится в школе. Днём я обедаю в кафе. Вечером мы гуляем в парке или смотрим фильм дома. Мой друг Бобур живёт в Москве. Он работает в магазине. Ночью мы спим. Ключи и телефон лежат на столе.",
+   "question": "Где живёт Бобур?",
+   "options": [
+    "В Андижа́не",
+    "В Ташке́нте",
+    "В Москве́"
+   ],
+   "correctIndex": 2,
+   "section": "reading",
+   "lessonRef": 11,
+   "slot": 1,
+   "variant": 1,
+   "id": "interval-1-reading-01-v1"
+  },
+  {
+   "kind": "reading",
+   "passageId": "interval-1-p2",
+   "passage": "Меня зовут Абдулазиз. Я живу в Андижане. Утром я делаю зарядку и пью чай. Потом я работаю в офисе. Моя жена Нигора работает в больнице. Наш сын учится в школе. Днём я обедаю в кафе. Вечером мы гуляем в парке или смотрим фильм дома. Мой друг Бобур живёт в Москве. Он работает в магазине. Ночью мы спим. Ключи и телефон лежат на столе.",
+   "question": "Где работает Абдулазиз?",
+   "options": [
+    "В о́фисе",
+    "В больни́це",
+    "На заво́де"
+   ],
+   "correctIndex": 0,
+   "section": "reading",
+   "lessonRef": 11,
+   "slot": 2,
+   "variant": 1,
+   "id": "interval-1-reading-02-v1"
+  },
+  {
+   "kind": "reading",
+   "passageId": "interval-1-p2",
+   "passage": "Меня зовут Абдулазиз. Я живу в Андижане. Утром я делаю зарядку и пью чай. Потом я работаю в офисе. Моя жена Нигора работает в больнице. Наш сын учится в школе. Днём я обедаю в кафе. Вечером мы гуляем в парке или смотрим фильм дома. Мой друг Бобур живёт в Москве. Он работает в магазине. Ночью мы спим. Ключи и телефон лежат на столе.",
+   "question": "Что они делают вечером?",
+   "options": [
+    "Спят",
+    "Рабо́тают",
+    "Гуля́ют в па́рке и́ли смо́трят фильм"
+   ],
+   "correctIndex": 2,
+   "section": "reading",
+   "lessonRef": 11,
+   "slot": 3,
+   "variant": 1,
+   "id": "interval-1-reading-03-v1"
+  },
+  {
+   "kind": "reading",
+   "passageId": "interval-1-p3",
+   "passage": "Я — Абдулазиз. Вот Бобур. Он — мой друг. У него есть машина и телефон. Вот Нигора. Она — моя жена. У неё есть книга, тетрадь и ручка. Мы — друзья. У нас есть стол, стул и компьютер. Вы — гости. У вас есть чай и сок. А вот они. У них есть собака и кот.",
+   "question": "Кто «вы» в тексте?",
+   "options": [
+    "Студе́нты",
+    "Го́сти",
+    "Друзья́"
+   ],
+   "correctIndex": 1,
+   "section": "reading",
+   "lessonRef": 3,
+   "slot": 4,
+   "variant": 1,
+   "id": "interval-1-reading-04-v1"
+  },
+  {
+   "kind": "reading",
+   "passageId": "interval-1-p3",
+   "passage": "Я — Абдулазиз. Вот Бобур. Он — мой друг. У него есть машина и телефон. Вот Нигора. Она — моя жена. У неё есть книга, тетрадь и ручка. Мы — друзья. У нас есть стол, стул и компьютер. Вы — гости. У вас есть чай и сок. А вот они. У них есть собака и кот.",
+   "question": "Что есть у них?",
+   "options": [
+    "Чай и сок",
+    "Стол и стул",
+    "Соба́ка и кот"
+   ],
+   "correctIndex": 2,
+   "section": "reading",
+   "lessonRef": 3,
+   "slot": 5,
+   "variant": 1,
+   "id": "interval-1-reading-05-v1"
+  },
+  {
+   "kind": "reading",
+   "passageId": "interval-1-p3",
+   "passage": "Я — Абдулазиз. Вот Бобур. Он — мой друг. У него есть машина и телефон. Вот Нигора. Она — моя жена. У неё есть книга, тетрадь и ручка. Мы — друзья. У нас есть стол, стул и компьютер. Вы — гости. У вас есть чай и сок. А вот они. У них есть собака и кот.",
+   "question": "Что есть у Бобура (у него)?",
+   "options": [
+    "Кни́га и тетра́дь",
+    "Маши́на и телефо́н",
+    "Соба́ка и кот"
+   ],
+   "correctIndex": 1,
+   "section": "reading",
+   "lessonRef": 3,
+   "slot": 6,
+   "variant": 1,
+   "id": "interval-1-reading-06-v1"
+  },
+  {
+   "kind": "reading",
+   "passageId": "interval-1-p3",
+   "passage": "Я — Абдулазиз. Вот Бобур. Он — мой друг. У него есть машина и телефон. Вот Нигора. Она — моя жена. У неё есть книга, тетрадь и ручка. Мы — друзья. У нас есть стол, стул и компьютер. Вы — гости. У вас есть чай и сок. А вот они. У них есть собака и кот.",
+   "question": "Какое местоимение подходит для Нигоры?",
+   "options": [
+    "Оно́",
+    "Она́",
+    "Он"
+   ],
+   "correctIndex": 1,
+   "section": "reading",
+   "lessonRef": 3,
+   "slot": 7,
+   "variant": 1,
+   "id": "interval-1-reading-07-v1"
+  },
+  {
+   "kind": "reading",
+   "passageId": "interval-1-p4",
+   "passage": "Меня зовут Абдулазиз. Это мой дом. Это моя комната: моё окно, мой стол и мой стул. Это моя жена. Её зовут Нигора. Это её сумка и её телефон. Это наш сын. Его зовут Сардор. Это его книга и его ручка. Это наша дочь. Её зовут Маржона. Это её фото. Это наши ключи и наша машина. Наш город — Андижан.",
+   "question": "Чей это город?",
+   "options": [
+    "Наш го́род",
+    "Их го́род",
+    "Твой го́род"
+   ],
+   "correctIndex": 0,
+   "section": "reading",
+   "lessonRef": 7,
+   "slot": 0,
+   "variant": 2,
+   "id": "interval-1-reading-00-v2"
+  },
+  {
+   "kind": "reading",
+   "passageId": "interval-1-p4",
+   "passage": "Меня зовут Абдулазиз. Это мой дом. Это моя комната: моё окно, мой стол и мой стул. Это моя жена. Её зовут Нигора. Это её сумка и её телефон. Это наш сын. Его зовут Сардор. Это его книга и его ручка. Это наша дочь. Её зовут Маржона. Это её фото. Это наши ключи и наша машина. Наш город — Андижан.",
+   "question": "Чья это сумка?",
+   "options": [
+    "Её су́мка (Нигоры́)",
+    "Его́ су́мка",
+    "На́ша су́мка"
+   ],
+   "correctIndex": 0,
+   "section": "reading",
+   "lessonRef": 7,
+   "slot": 1,
+   "variant": 2,
+   "id": "interval-1-reading-01-v2"
+  },
+  {
+   "kind": "reading",
+   "passageId": "interval-1-p4",
+   "passage": "Меня зовут Абдулазиз. Это мой дом. Это моя комната: моё окно, мой стол и мой стул. Это моя жена. Её зовут Нигора. Это её сумка и её телефон. Это наш сын. Его зовут Сардор. Это его книга и его ручка. Это наша дочь. Её зовут Маржона. Это её фото. Это наши ключи и наша машина. Наш город — Андижан.",
+   "question": "Чьё это фото?",
+   "options": [
+    "Её фо́то (Маржоны́)",
+    "Ва́ше фо́то",
+    "Его́ фо́то"
+   ],
+   "correctIndex": 0,
+   "section": "reading",
+   "lessonRef": 7,
+   "slot": 2,
+   "variant": 2,
+   "id": "interval-1-reading-02-v2"
+  },
+  {
+   "kind": "reading",
+   "passageId": "interval-1-p4",
+   "passage": "Меня зовут Абдулазиз. Это мой дом. Это моя комната: моё окно, мой стол и мой стул. Это моя жена. Её зовут Нигора. Это её сумка и её телефон. Это наш сын. Его зовут Сардор. Это его книга и его ручка. Это наша дочь. Её зовут Маржона. Это её фото. Это наши ключи и наша машина. Наш город — Андижан.",
+   "question": "Чей это дом?",
+   "options": [
+    "Их дом (сосе́дей)",
+    "Его́ дом (Абдулази́за)",
+    "Её дом (Нигоры́)"
+   ],
+   "correctIndex": 1,
+   "section": "reading",
+   "lessonRef": 7,
+   "slot": 3,
+   "variant": 2,
+   "id": "interval-1-reading-03-v2"
+  },
+  {
+   "kind": "reading",
+   "passageId": "interval-1-p5",
+   "passage": "Меня зовут Абдулазиз. Я учу русский язык. У меня есть жена. Её зовут Нигора. У нас есть книга и тетрадь. Я знаю текст и делаю задания. Нигора читает правила и пишет слова. Мы хорошо понимаем русский язык. У нас есть друг. Его зовут Бобур. Он работает. Днём мы отдыхаем, а он работает. Вечером мы вместе ужинаем, слушаем музыку и гуляем.",
+   "question": "Что делает Нигора?",
+   "options": [
+    "Рабо́тает",
+    "Де́лает зада́ния",
+    "Чита́ет пра́вила и пи́шет слова́"
+   ],
+   "correctIndex": 2,
+   "section": "reading",
+   "lessonRef": 5,
+   "slot": 4,
+   "variant": 2,
+   "id": "interval-1-reading-04-v2"
+  },
+  {
+   "kind": "reading",
+   "passageId": "interval-1-p5",
+   "passage": "Меня зовут Абдулазиз. Я учу русский язык. У меня есть жена. Её зовут Нигора. У нас есть книга и тетрадь. Я знаю текст и делаю задания. Нигора читает правила и пишет слова. Мы хорошо понимаем русский язык. У нас есть друг. Его зовут Бобур. Он работает. Днём мы отдыхаем, а он работает. Вечером мы вместе ужинаем, слушаем музыку и гуляем.",
+   "question": "Что они делают вечером вместе?",
+   "options": [
+    "Пи́шут слова́",
+    "Рабо́тают",
+    "У́жинают, слу́шают му́зыку и гуля́ют"
+   ],
+   "correctIndex": 2,
+   "section": "reading",
+   "lessonRef": 5,
+   "slot": 5,
+   "variant": 2,
+   "id": "interval-1-reading-05-v2"
+  },
+  {
+   "kind": "reading",
+   "passageId": "interval-1-p5",
+   "passage": "Меня зовут Абдулазиз. Я учу русский язык. У меня есть жена. Её зовут Нигора. У нас есть книга и тетрадь. Я знаю текст и делаю задания. Нигора читает правила и пишет слова. Мы хорошо понимаем русский язык. У нас есть друг. Его зовут Бобур. Он работает. Днём мы отдыхаем, а он работает. Вечером мы вместе ужинаем, слушаем музыку и гуляем.",
+   "question": "Что делает Бобур?",
+   "options": [
+    "Рабо́тает",
+    "Гуля́ет",
+    "Отдыха́ет"
+   ],
+   "correctIndex": 0,
+   "section": "reading",
+   "lessonRef": 5,
+   "slot": 7,
+   "variant": 2,
+   "id": "interval-1-reading-07-v2"
+  },
+  {
+   "kind": "sentenceBuild",
+   "words": [
+    "смотрю́",
+    "Я",
+    "люблю́",
+    "фи́льмы",
+    "смотре́ть"
+   ],
+   "answer": [
+    "Я",
+    "люблю́",
+    "смотре́ть",
+    "фи́льмы"
+   ],
+   "translation": "Men film ko'rishni yaxshi ko'raman.",
+   "lessonRef": 10,
+   "punct": ".",
+   "accepted": [
+    [
+     "Я",
+     "люблю́",
+     "смотре́ть",
+     "фи́льмы"
+    ]
+   ],
+   "section": "build",
+   "slot": 0,
+   "variant": 0,
+   "id": "interval-1-build-00-v0"
+  },
+  {
+   "kind": "sentenceBuild",
+   "words": [
+    "Я",
+    "Андижа́на",
+    "из",
+    "в"
+   ],
+   "answer": [
+    "Я",
+    "из",
+    "Андижа́на"
+   ],
+   "translation": "Men Andijondanman.",
+   "lessonRef": 2,
+   "punct": ".",
+   "accepted": [
+    [
+     "Я",
+     "из",
+     "Андижа́на"
+    ]
+   ],
+   "section": "build",
+   "slot": 1,
+   "variant": 0,
+   "id": "interval-1-build-01-v0"
+  },
+  {
+   "kind": "sentenceBuild",
+   "words": [
+    "Мне",
+    "Меня́",
+    "зову́т",
+    "Ази́з"
+   ],
+   "answer": [
+    "Меня́",
+    "зову́т",
+    "Ази́з"
+   ],
+   "translation": "Mening ismim Aziz.",
+   "lessonRef": 1,
+   "punct": ".",
+   "accepted": [
+    [
+     "Меня́",
+     "зову́т",
+     "Ази́з"
+    ]
+   ],
+   "section": "build",
+   "slot": 2,
+   "variant": 0,
+   "id": "interval-1-build-02-v0"
+  },
+  {
+   "kind": "sentenceBuild",
+   "words": [
+    "де́лает",
+    "Что",
+    "де́лаешь",
+    "ты"
+   ],
+   "answer": [
+    "Что",
+    "ты",
+    "де́лаешь"
+   ],
+   "translation": "Sen nima qilyapsan?",
+   "lessonRef": 5,
+   "punct": "?",
+   "accepted": [
+    [
+     "Что",
+     "ты",
+     "де́лаешь"
+    ],
+    [
+     "ты",
+     "Что",
+     "де́лаешь"
+    ]
+   ],
+   "section": "build",
+   "slot": 3,
+   "variant": 0,
+   "id": "interval-1-build-03-v0"
+  },
+  {
+   "kind": "sentenceBuild",
+   "words": [
+    "на",
+    "Я",
+    "в",
+    "рабо́таю",
+    "о́фисе"
+   ],
+   "answer": [
+    "Я",
+    "рабо́таю",
+    "в",
+    "о́фисе"
+   ],
+   "translation": "Men ofisda ishlayman.",
+   "lessonRef": 1,
+   "punct": ".",
+   "accepted": [
+    [
+     "Я",
+     "рабо́таю",
+     "в",
+     "о́фисе"
+    ]
+   ],
+   "section": "build",
+   "slot": 4,
+   "variant": 0,
+   "id": "interval-1-build-04-v0"
+  },
+  {
+   "kind": "sentenceBuild",
+   "words": [
+    "чай",
+    "пьёт",
+    "пью",
+    "я",
+    "У́тром"
+   ],
+   "answer": [
+    "У́тром",
+    "я",
+    "пью",
+    "чай"
+   ],
+   "translation": "Ertalab men choy ichaman.",
+   "lessonRef": 9,
+   "punct": ".",
+   "accepted": [
+    [
+     "У́тром",
+     "я",
+     "пью",
+     "чай"
+    ],
+    [
+     "я",
+     "У́тром",
+     "пью",
+     "чай"
+    ]
+   ],
+   "section": "build",
+   "slot": 5,
+   "variant": 0,
+   "id": "interval-1-build-05-v0"
+  },
+  {
+   "kind": "sentenceBuild",
+   "words": [
+    "вре́мя",
+    "вы",
+    "вас",
+    "есть",
+    "У"
+   ],
+   "answer": [
+    "У",
+    "вас",
+    "есть",
+    "вре́мя"
+   ],
+   "translation": "Sizda vaqt bormi?",
+   "lessonRef": 3,
+   "punct": "?",
+   "accepted": [
+    [
+     "У",
+     "вас",
+     "есть",
+     "вре́мя"
+    ]
+   ],
+   "section": "build",
+   "slot": 6,
+   "variant": 0,
+   "id": "interval-1-build-06-v0"
+  },
+  {
+   "kind": "sentenceBuild",
+   "words": [
+    "мои́",
+    "Э́то",
+    "ключи́",
+    "мой"
+   ],
+   "answer": [
+    "Э́то",
+    "мои́",
+    "ключи́"
+   ],
+   "translation": "Bu mening kalitlarim.",
+   "lessonRef": 4,
+   "punct": ".",
+   "accepted": [
+    [
+     "Э́то",
+     "мои́",
+     "ключи́"
+    ]
+   ],
+   "section": "build",
+   "slot": 7,
+   "variant": 0,
+   "id": "interval-1-build-07-v0"
+  },
+  {
+   "kind": "sentenceBuild",
+   "words": [
+    "Повтори́те",
+    "пожа́луйста"
+   ],
+   "answer": [
+    "Повтори́те",
+    "пожа́луйста"
+   ],
+   "translation": "Iltimos, qaytaring",
+   "lessonRef": 2,
+   "punct": ".",
+   "accepted": [
+    [
+     "Повтори́те",
+     "пожа́луйста"
+    ],
+    [
+     "пожа́луйста",
+     "Повтори́те"
+    ]
+   ],
+   "section": "build",
+   "slot": 8,
+   "variant": 0,
+   "id": "interval-1-build-08-v0"
+  },
+  {
+   "kind": "sentenceBuild",
+   "words": [
+    "в",
+    "Мы",
+    "па́рке",
+    "гуля́ем"
+   ],
+   "answer": [
+    "Мы",
+    "гуля́ем",
+    "в",
+    "па́рке"
+   ],
+   "translation": "Biz parkda sayr qilyapmiz",
+   "lessonRef": 5,
+   "punct": ".",
+   "accepted": [
+    [
+     "Мы",
+     "гуля́ем",
+     "в",
+     "па́рке"
+    ]
+   ],
+   "section": "build",
+   "slot": 9,
+   "variant": 0,
+   "id": "interval-1-build-09-v0"
+  },
+  {
+   "kind": "sentenceBuild",
+   "words": [
+    "у́чите",
+    "Вы",
+    "слова́"
+   ],
+   "answer": [
+    "Вы",
+    "у́чите",
+    "слова́"
+   ],
+   "translation": "Siz so'zlarni o'rganyapsiz",
+   "lessonRef": 9,
+   "punct": ".",
+   "accepted": [
+    [
+     "Вы",
+     "у́чите",
+     "слова́"
+    ]
+   ],
+   "section": "build",
+   "slot": 0,
+   "variant": 1,
+   "id": "interval-1-build-00-v1"
+  },
+  {
+   "kind": "sentenceBuild",
+   "words": [
+    "смо́трит",
+    "Он",
+    "фильм"
+   ],
+   "answer": [
+    "Он",
+    "смо́трит",
+    "фильм"
+   ],
+   "translation": "U film ko'ryapti",
+   "lessonRef": 9,
+   "punct": ".",
+   "accepted": [
+    [
+     "Он",
+     "смо́трит",
+     "фильм"
+    ]
+   ],
+   "section": "build",
+   "slot": 1,
+   "variant": 1,
+   "id": "interval-1-build-01-v1"
+  },
+  {
+   "kind": "sentenceBuild",
+   "words": [
+    "му́зыку",
+    "Они́",
+    "слу́шают"
+   ],
+   "answer": [
+    "Они́",
+    "слу́шают",
+    "му́зыку"
+   ],
+   "translation": "Ular musiqa tinglashyapti",
+   "lessonRef": 5,
+   "punct": ".",
+   "accepted": [
+    [
+     "Они́",
+     "слу́шают",
+     "му́зыку"
+    ]
+   ],
+   "section": "build",
+   "slot": 2,
+   "variant": 1,
+   "id": "interval-1-build-02-v1"
+  },
+  {
+   "kind": "sentenceBuild",
+   "words": [
+    "есть",
+    "вас",
+    "У",
+    "ру́чка"
+   ],
+   "answer": [
+    "У",
+    "вас",
+    "есть",
+    "ру́чка"
+   ],
+   "translation": "Sizda ruchka bormi?",
+   "lessonRef": 3,
+   "punct": "?",
+   "accepted": [
+    [
+     "У",
+     "вас",
+     "есть",
+     "ру́чка"
+    ]
+   ],
+   "section": "build",
+   "slot": 3,
+   "variant": 1,
+   "id": "interval-1-build-03-v1"
+  },
+  {
+   "kind": "sentenceBuild",
+   "words": [
+    "живу́т",
+    "Они́",
+    "в",
+    "Узбекиста́не"
+   ],
+   "answer": [
+    "Они́",
+    "живу́т",
+    "в",
+    "Узбекиста́не"
+   ],
+   "translation": "Ular O'zbekistonda yashaydi",
+   "lessonRef": 11,
+   "punct": ".",
+   "accepted": [
+    [
+     "Они́",
+     "живу́т",
+     "в",
+     "Узбекиста́не"
+    ]
+   ],
+   "section": "build",
+   "slot": 4,
+   "variant": 1,
+   "id": "interval-1-build-04-v1"
+  },
+  {
+   "kind": "sentenceBuild",
+   "words": [
+    "лежа́т",
+    "Ключи́",
+    "на",
+    "столе́"
+   ],
+   "answer": [
+    "Ключи́",
+    "лежа́т",
+    "на",
+    "столе́"
+   ],
+   "translation": "Kalitlar stolda yotibdi",
+   "lessonRef": 11,
+   "punct": ".",
+   "accepted": [
+    [
+     "Ключи́",
+     "лежа́т",
+     "на",
+     "столе́"
+    ],
+    [
+     "на",
+     "столе́",
+     "лежа́т",
+     "Ключи́"
+    ]
+   ],
+   "section": "build",
+   "slot": 5,
+   "variant": 1,
+   "id": "interval-1-build-05-v1"
+  },
+  {
+   "kind": "sentenceBuild",
+   "words": [
+    "мы",
+    "Ве́чером",
+    "смо́трим",
+    "фильм"
+   ],
+   "answer": [
+    "Ве́чером",
+    "мы",
+    "смо́трим",
+    "фильм"
+   ],
+   "translation": "Kechqurun biz film ko'ramiz",
+   "lessonRef": 11,
+   "punct": ".",
+   "accepted": [
+    [
+     "Ве́чером",
+     "мы",
+     "смо́трим",
+     "фильм"
+    ],
+    [
+     "мы",
+     "Ве́чером",
+     "смо́трим",
+     "фильм"
+    ]
+   ],
+   "section": "build",
+   "slot": 6,
+   "variant": 1,
+   "id": "interval-1-build-06-v1"
+  },
+  {
+   "kind": "sentenceBuild",
+   "words": [
+    "э́то",
+    "Чья",
+    "ку́ртка"
+   ],
+   "answer": [
+    "Чья",
+    "э́то",
+    "ку́ртка"
+   ],
+   "translation": "Bu kimning kurtkasi?",
+   "lessonRef": 7,
+   "punct": "?",
+   "accepted": [
+    [
+     "Чья",
+     "э́то",
+     "ку́ртка"
+    ]
+   ],
+   "section": "build",
+   "slot": 7,
+   "variant": 1,
+   "id": "interval-1-build-07-v1"
+  },
+  {
+   "kind": "sentenceBuild",
+   "words": [
+    "вас",
+    "Как",
+    "зову́т"
+   ],
+   "answer": [
+    "Как",
+    "вас",
+    "зову́т"
+   ],
+   "translation": "Ismingiz nima?",
+   "lessonRef": 1,
+   "punct": "?",
+   "accepted": [
+    [
+     "Как",
+     "вас",
+     "зову́т"
+    ]
+   ],
+   "section": "build",
+   "slot": 8,
+   "variant": 1,
+   "id": "interval-1-build-08-v1"
+  },
+  {
+   "kind": "sentenceBuild",
+   "words": [
+    "него́",
+    "У",
+    "есть",
+    "маши́на"
+   ],
+   "answer": [
+    "У",
+    "него́",
+    "есть",
+    "маши́на"
+   ],
+   "translation": "Unda mashina bor",
+   "lessonRef": 3,
+   "punct": ".",
+   "accepted": [
+    [
+     "У",
+     "него́",
+     "есть",
+     "маши́на"
+    ]
+   ],
+   "section": "build",
+   "slot": 9,
+   "variant": 1,
+   "id": "interval-1-build-09-v1"
+  },
+  {
+   "kind": "sentenceBuild",
+   "words": [
+    "говорю́",
+    "Я",
+    "по-ру́сски"
+   ],
+   "answer": [
+    "Я",
+    "говорю́",
+    "по-ру́сски"
+   ],
+   "translation": "Men ruscha gapiraman",
+   "lessonRef": 9,
+   "punct": ".",
+   "accepted": [
+    [
+     "Я",
+     "говорю́",
+     "по-ру́сски"
+    ]
+   ],
+   "section": "build",
+   "slot": 0,
+   "variant": 2,
+   "id": "interval-1-build-00-v2"
+  },
+  {
+   "kind": "sentenceBuild",
+   "words": [
+    "пьют",
+    "Они́",
+    "ко́фе"
+   ],
+   "answer": [
+    "Они́",
+    "пьют",
+    "ко́фе"
+   ],
+   "translation": "Ular kofe ichishyapti",
+   "lessonRef": 9,
+   "punct": ".",
+   "accepted": [
+    [
+     "Они́",
+     "пьют",
+     "ко́фе"
+    ]
+   ],
+   "section": "build",
+   "slot": 1,
+   "variant": 2,
+   "id": "interval-1-build-01-v2"
+  },
+  {
+   "kind": "sentenceBuild",
+   "words": [
+    "окно́",
+    "на́ше",
+    "Э́то"
+   ],
+   "answer": [
+    "Э́то",
+    "на́ше",
+    "окно́"
+   ],
+   "translation": "Bu bizning derazamiz.",
+   "lessonRef": 7,
+   "punct": ".",
+   "accepted": [
+    [
+     "Э́то",
+     "на́ше",
+     "окно́"
+    ]
+   ],
+   "section": "build",
+   "slot": 2,
+   "variant": 2,
+   "id": "interval-1-build-02-v2"
+  },
+  {
+   "kind": "sentenceBuild",
+   "words": [
+    "есть",
+    "меня́",
+    "У",
+    "кни́га"
+   ],
+   "answer": [
+    "У",
+    "меня́",
+    "есть",
+    "кни́га"
+   ],
+   "translation": "Menda kitob bor",
+   "lessonRef": 3,
+   "punct": ".",
+   "accepted": [
+    [
+     "У",
+     "меня́",
+     "есть",
+     "кни́га"
+    ]
+   ],
+   "section": "build",
+   "slot": 3,
+   "variant": 2,
+   "id": "interval-1-build-03-v2"
+  },
+  {
+   "kind": "sentenceBuild",
+   "words": [
+    "есть",
+    "кого́",
+    "У",
+    "слова́рь"
+   ],
+   "answer": [
+    "У",
+    "кого́",
+    "есть",
+    "слова́рь"
+   ],
+   "translation": "Kimda lug'at bor?",
+   "lessonRef": 3,
+   "punct": "?",
+   "accepted": [
+    [
+     "У",
+     "кого́",
+     "есть",
+     "слова́рь"
+    ]
+   ],
+   "section": "build",
+   "slot": 4,
+   "variant": 2,
+   "id": "interval-1-build-04-v2"
+  },
+  {
+   "kind": "sentenceBuild",
+   "words": [
+    "в",
+    "Я",
+    "Ташке́нте",
+    "живу́"
+   ],
+   "answer": [
+    "Я",
+    "живу́",
+    "в",
+    "Ташке́нте"
+   ],
+   "translation": "Men Toshkentda yashayman.",
+   "lessonRef": 1,
+   "punct": ".",
+   "accepted": [
+    [
+     "Я",
+     "живу́",
+     "в",
+     "Ташке́нте"
+    ]
+   ],
+   "section": "build",
+   "slot": 5,
+   "variant": 2,
+   "id": "interval-1-build-05-v2"
+  },
+  {
+   "kind": "sentenceBuild",
+   "words": [
+    "хо́бби",
+    "Моё",
+    "—",
+    "футбо́л"
+   ],
+   "answer": [
+    "Моё",
+    "хо́бби",
+    "—",
+    "футбо́л"
+   ],
+   "translation": "Mening hobbim — futbol.",
+   "lessonRef": 1,
+   "punct": ".",
+   "accepted": [
+    [
+     "Моё",
+     "хо́бби",
+     "—",
+     "футбо́л"
+    ]
+   ],
+   "section": "build",
+   "slot": 6,
+   "variant": 2,
+   "id": "interval-1-build-06-v2"
+  },
+  {
+   "kind": "sentenceBuild",
+   "words": [
+    "рабо́тает",
+    "Он",
+    "в",
+    "о́фисе"
+   ],
+   "answer": [
+    "Он",
+    "рабо́тает",
+    "в",
+    "о́фисе"
+   ],
+   "translation": "U ofisda ishlaydi",
+   "lessonRef": 5,
+   "punct": ".",
+   "accepted": [
+    [
+     "Он",
+     "рабо́тает",
+     "в",
+     "о́фисе"
+    ]
+   ],
+   "section": "build",
+   "slot": 7,
+   "variant": 2,
+   "id": "interval-1-build-07-v2"
+  },
+  {
+   "kind": "sentenceBuild",
+   "words": [
+    "её",
+    "Э́то",
+    "фо́то"
+   ],
+   "answer": [
+    "Э́то",
+    "её",
+    "фо́то"
+   ],
+   "translation": "Bu uning surati.",
+   "lessonRef": 7,
+   "punct": ".",
+   "accepted": [
+    [
+     "Э́то",
+     "её",
+     "фо́то"
+    ]
+   ],
+   "section": "build",
+   "slot": 8,
+   "variant": 2,
+   "id": "interval-1-build-08-v2"
+  },
+  {
+   "kind": "sentenceBuild",
+   "words": [
+    "не",
+    "Я",
+    "чита́ю"
+   ],
+   "answer": [
+    "Я",
+    "не",
+    "чита́ю"
+   ],
+   "translation": "Men o'qimayapman",
+   "lessonRef": 5,
+   "punct": ".",
+   "accepted": [
+    [
+     "Я",
+     "не",
+     "чита́ю"
+    ]
+   ],
+   "section": "build",
+   "slot": 9,
+   "variant": 2,
+   "id": "interval-1-build-09-v2"
+  },
+  {
+   "kind": "listening",
+   "audioUrl": "https://raw.githubusercontent.com/MirzoKomil/myhomework/audio/l07-l12/audio/L12_d3.mp3",
+   "durationSec": 57,
+   "playUntil": 22.63,
+   "dialogId": "bk-L12-d3",
+   "maxPlays": 2,
+   "section": "listen",
+   "lessonRef": 12,
+   "variant": 0,
+   "question": "«Odatda ha. Kechqurun dam olaman.» — buni kim aytdi?",
+   "options": [
+    "Анто́н",
+    "Абдулази́з",
+    "Нигора́"
+   ],
+   "correctIndex": 2,
+   "slot": 1,
+   "id": "interval-1-listen-01-v0"
+  },
+  {
+   "kind": "listening",
+   "audioUrl": "https://raw.githubusercontent.com/MirzoKomil/myhomework/audio/l07-l12/audio/L12_d3.mp3",
+   "durationSec": 57,
+   "playUntil": 22.63,
+   "dialogId": "bk-L12-d3",
+   "maxPlays": 2,
+   "section": "listen",
+   "lessonRef": 12,
+   "variant": 0,
+   "question": "Dialogda qaysi gap eshitildi?",
+   "options": [
+    "Men ham sayr qilyapman. Siz rus tilini o'rganyapsizmi?",
+    "Ertalab ishdaman, kasalxonada.",
+    "Yaxshi! Xayr!"
+   ],
+   "correctIndex": 1,
+   "slot": 2,
+   "id": "interval-1-listen-02-v0"
+  },
+  {
+   "kind": "listening",
+   "audioUrl": "https://raw.githubusercontent.com/MirzoKomil/myhomework/audio/l04-l06/audio/L02_d1.mp3",
+   "durationSec": 68,
+   "playUntil": 26.36,
+   "dialogId": "bk-L02-d1",
+   "maxPlays": 2,
+   "section": "listen",
+   "lessonRef": 2,
+   "variant": 0,
+   "question": "Dialog nima haqida?",
+   "options": [
+    "Qayerdansiz?",
+    "Darsda",
+    "Yangi xodim"
+   ],
+   "correctIndex": 0,
+   "slot": 3,
+   "id": "interval-1-listen-03-v0"
+  },
+  {
+   "kind": "listening",
+   "audioUrl": "https://raw.githubusercontent.com/MirzoKomil/myhomework/audio/l04-l06/audio/L02_d1.mp3",
+   "durationSec": 68,
+   "playUntil": 26.36,
+   "dialogId": "bk-L02-d1",
+   "maxPlays": 2,
+   "section": "listen",
+   "lessonRef": 2,
+   "variant": 0,
+   "question": "«Men esa ham ishlayman. Bankda.» — buni kim aytdi?",
+   "options": [
+    "Анто́н",
+    "Нигора́",
+    "Абдулази́з"
+   ],
+   "correctIndex": 0,
+   "slot": 4,
+   "id": "interval-1-listen-04-v0"
+  },
+  {
+   "kind": "listening",
+   "audioUrl": "https://raw.githubusercontent.com/MirzoKomil/myhomework/audio/l04-l06/audio/L02_d1.mp3",
+   "durationSec": 68,
+   "playUntil": 26.36,
+   "dialogId": "bk-L02-d1",
+   "maxPlays": 2,
+   "section": "listen",
+   "lessonRef": 2,
+   "variant": 0,
+   "question": "Dialogda qaysi gap eshitildi?",
+   "options": [
+    "Tanishganimdan xursandman! Men Nigoraman. Qayerdansiz?",
+    "Ha, uning mashinasi bor.",
+    "Kafedaman, markazda."
+   ],
+   "correctIndex": 0,
+   "slot": 5,
+   "id": "interval-1-listen-05-v0"
+  },
+  {
+   "kind": "listening",
+   "audioUrl": "https://raw.githubusercontent.com/MirzoKomil/myhomework/audio/l04-l06/audio/L01_d2.mp3",
+   "durationSec": 49,
+   "playUntil": 20.61,
+   "dialogId": "bk-L01-d2",
+   "maxPlays": 2,
+   "section": "listen",
+   "lessonRef": 1,
+   "variant": 1,
+   "question": "Dialog nima haqida?",
+   "options": [
+    "Bizda mehmonlar!",
+    "Kursda",
+    "Do'konda"
+   ],
+   "correctIndex": 1,
+   "slot": 0,
+   "id": "interval-1-listen-00-v1"
+  },
+  {
+   "kind": "listening",
+   "audioUrl": "https://raw.githubusercontent.com/MirzoKomil/myhomework/audio/l04-l06/audio/L01_d2.mp3",
+   "durationSec": 49,
+   "playUntil": 20.61,
+   "dialogId": "bk-L01-d2",
+   "maxPlays": 2,
+   "section": "listen",
+   "lessonRef": 1,
+   "variant": 1,
+   "question": "«Bobur, yoshingiz nechada?» — buni kim aytdi?",
+   "options": [
+    "Учи́тельница",
+    "Бобу́р",
+    "Абдулази́з"
+   ],
+   "correctIndex": 0,
+   "slot": 1,
+   "id": "interval-1-listen-01-v1"
+  },
+  {
+   "kind": "listening",
+   "audioUrl": "https://raw.githubusercontent.com/MirzoKomil/myhomework/audio/l04-l06/audio/L01_d2.mp3",
+   "durationSec": 49,
+   "playUntil": 20.61,
+   "dialogId": "bk-L01-d2",
+   "maxPlays": 2,
+   "section": "listen",
+   "lessonRef": 1,
+   "variant": 1,
+   "question": "Dialogda qaysi gap eshitildi?",
+   "options": [
+    "Yaxshi! Xayr!",
+    "Men o'qiyman. Mening hobbim — futbol.",
+    "Menda savol bor. Bu nima?"
+   ],
+   "correctIndex": 1,
+   "slot": 2,
+   "id": "interval-1-listen-02-v1"
+  },
+  {
+   "kind": "listening",
+   "audioUrl": "https://raw.githubusercontent.com/MirzoKomil/myhomework/audio/l04-l06/audio/L05_d1.mp3",
+   "durationSec": 48,
+   "playUntil": 19.09,
+   "dialogId": "bk-L05-d1",
+   "maxPlays": 2,
+   "section": "listen",
+   "lessonRef": 5,
+   "variant": 1,
+   "question": "Dialog nima haqida?",
+   "options": [
+    "Mehmonxonada",
+    "Qayerdansiz?",
+    "Telefonda"
+   ],
+   "correctIndex": 2,
+   "slot": 3,
+   "id": "interval-1-listen-03-v1"
+  },
+  {
+   "kind": "listening",
+   "audioUrl": "https://raw.githubusercontent.com/MirzoKomil/myhomework/audio/l04-l06/audio/L05_d1.mp3",
+   "durationSec": 48,
+   "playUntil": 19.09,
+   "dialogId": "bk-L05-d1",
+   "maxPlays": 2,
+   "section": "listen",
+   "lessonRef": 5,
+   "variant": 1,
+   "question": "«Yaxshi! Xayr!» — buni kim aytdi?",
+   "options": [
+    "Тиму́р",
+    "Нигора́",
+    "Абдулази́з"
+   ],
+   "correctIndex": 2,
+   "slot": 4,
+   "id": "interval-1-listen-04-v1"
+  },
+  {
+   "kind": "listening",
+   "audioUrl": "https://raw.githubusercontent.com/MirzoKomil/myhomework/audio/l04-l06/audio/L05_d1.mp3",
+   "durationSec": 48,
+   "playUntil": 19.09,
+   "dialogId": "bk-L05-d1",
+   "maxPlays": 2,
+   "section": "listen",
+   "lessonRef": 5,
+   "variant": 1,
+   "question": "Dialogda qaysi gap eshitildi?",
+   "options": [
+    "Rahmat! So'z yodlayman va kino ko'raman.",
+    "Telefoning stol ustida.",
+    "Dam olyapman va musiqa tinglayapman."
+   ],
+   "correctIndex": 2,
+   "slot": 5,
+   "id": "interval-1-listen-05-v1"
+  },
+  {
+   "kind": "listening",
+   "audioUrl": "https://raw.githubusercontent.com/MirzoKomil/myhomework/audio/l07-l12/audio/L10_d3.mp3",
+   "durationSec": 61,
+   "playUntil": 24.16,
+   "dialogId": "bk-L10-d3",
+   "maxPlays": 2,
+   "section": "listen",
+   "lessonRef": 10,
+   "variant": 2,
+   "question": "Dialog nima haqida?",
+   "options": [
+    "Uyda",
+    "Musiqani yaxshi ko'rasizmi?",
+    "Otelda"
+   ],
+   "correctIndex": 1,
+   "slot": 0,
+   "id": "interval-1-listen-00-v2"
+  },
+  {
+   "kind": "listening",
+   "audioUrl": "https://raw.githubusercontent.com/MirzoKomil/myhomework/audio/l07-l12/audio/L10_d3.mp3",
+   "durationSec": 61,
+   "playUntil": 24.16,
+   "dialogId": "bk-L10-d3",
+   "maxPlays": 2,
+   "section": "listen",
+   "lessonRef": 10,
+   "variant": 2,
+   "question": "«Dilnoza, musiqani yaxshi ko'rasizmi?» — buni kim aytdi?",
+   "options": [
+    "Анто́н",
+    "Дильно́за",
+    "Абдулази́з"
+   ],
+   "correctIndex": 0,
+   "slot": 1,
+   "id": "interval-1-listen-01-v2"
+  },
+  {
+   "kind": "listening",
+   "audioUrl": "https://raw.githubusercontent.com/MirzoKomil/myhomework/audio/l07-l12/audio/L10_d3.mp3",
+   "durationSec": 61,
+   "playUntil": 24.16,
+   "dialogId": "bk-L10-d3",
+   "maxPlays": 2,
+   "section": "listen",
+   "lessonRef": 10,
+   "variant": 2,
+   "question": "Dialogda qaysi gap eshitildi?",
+   "options": [
+    "Qahva, iltimos. Men qahvani yaxshi ko'raman.",
+    "Aytaman, lekin yomon!",
+    "Ha, unda daftar va kitob bor."
+   ],
+   "correctIndex": 1,
+   "slot": 2,
+   "id": "interval-1-listen-02-v2"
+  },
+  {
+   "kind": "listening",
+   "audioUrl": "https://raw.githubusercontent.com/MirzoKomil/myhomework/audio/l04-l06/audio/L02_d2.mp3",
+   "durationSec": 54,
+   "playUntil": 21.03,
+   "dialogId": "bk-L02-d2",
+   "maxPlays": 2,
+   "section": "listen",
+   "lessonRef": 2,
+   "variant": 2,
+   "question": "Dialog nima haqida?",
+   "options": [
+    "Ishlar qalay?",
+    "Bizda mehmonlar!",
+    "Qayerdasan?"
+   ],
+   "correctIndex": 0,
+   "slot": 3,
+   "id": "interval-1-listen-03-v2"
+  },
+  {
+   "kind": "listening",
+   "audioUrl": "https://raw.githubusercontent.com/MirzoKomil/myhomework/audio/l04-l06/audio/L02_d2.mp3",
+   "durationSec": 54,
+   "playUntil": 21.03,
+   "dialogId": "bk-L02-d2",
+   "maxPlays": 2,
+   "section": "listen",
+   "lessonRef": 2,
+   "variant": 2,
+   "question": "«Yomon emas. Hobbing nima?» — buni kim aytdi?",
+   "options": [
+    "Тиму́р",
+    "Дильно́за",
+    "Абдулази́з"
+   ],
+   "correctIndex": 0,
+   "slot": 4,
+   "id": "interval-1-listen-04-v2"
+  },
+  {
+   "kind": "listening",
+   "audioUrl": "https://raw.githubusercontent.com/MirzoKomil/myhomework/audio/l04-l06/audio/L02_d2.mp3",
+   "durationSec": 54,
+   "playUntil": 21.03,
+   "dialogId": "bk-L02-d2",
+   "maxPlays": 2,
+   "section": "listen",
+   "lessonRef": 2,
+   "variant": 2,
+   "question": "Dialogda qaysi gap eshitildi?",
+   "options": [
+    "Mening ismim Ulug'bek.",
+    "Ha, unda daftar va kitob bor.",
+    "Mening hobbim — futbol."
+   ],
+   "correctIndex": 2,
+   "slot": 5,
+   "id": "interval-1-listen-05-v2"
+  }
+ ]
+}

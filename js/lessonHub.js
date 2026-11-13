@@ -13,7 +13,7 @@
     const toast = m => (typeof showMiniToast === 'function' ? showMiniToast(m, 2600) : alert(m));
     const plain = s => String(s ?? '').replace(/́/g, '');
     const LANG_LABEL = { english: 'Ingliz tili', russian: 'Rus tili' };
-    const RULES = window.AcademicRules || { allocateMinutes: null, PASS_PERCENT: 65, UNLOCK_PERCENT: 50, LIVE_AUTO_UNLOCK: 60, EXAM_INTERVAL: 12, EXAM_PASS_PERCENT: 70, LESSONS_PER_WEEK: 6, BEHIND_LESSONS: 4, SECTIONS: {} };
+    const RULES = window.AcademicRules || { allocateMinutes: null, PASS_PERCENT: 65, UNLOCK_PERCENT: 50, LIVE_AUTO_UNLOCK: 60, EXAM_INTERVAL: 12, EXAM_PASS_PERCENT: 65, LESSONS_PER_WEEK: 6, BEHIND_LESSONS: 4, SECTIONS: {} };
     const CACHE_MS = 3 * 60000;
     // Faqat o'z serverimizdagi yoki https havolalar href/src'ga tushadi.
     const safeUrl = u => (/^(https:\/\/|\/(?!\/))/i.test(String(u || '').trim()) ? String(u).trim() : '');

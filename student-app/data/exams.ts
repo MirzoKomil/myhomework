@@ -17,6 +17,8 @@ export type Exam = {
   durationSeconds: number;
   breakAfterIndex: number | null; // shu savoldan keyin tanaffus (0-based), null bo'lsa tanaffus yo'q
   breakSeconds: number;
+  /** v2 bank bo'lsa — haqiqiy savollar soni (46/60). */
+  questionCount?: number;
 };
 
 const INTERVAL_COUNT = COURSE_TOTAL_LESSONS / INTERVAL_SIZE;
@@ -98,7 +100,7 @@ function buildExams(): Exam[] {
 }
 
 export const EXAMS: Exam[] = buildExams();
-export const EXAM_PASS_PERCENT = 60;
+export const EXAM_PASS_PERCENT = 65;
 
 export function getExam(examId: string): Exam | undefined {
   return EXAMS.find((e) => e.id === examId);
@@ -108,6 +110,10 @@ export function getExam(examId: string): Exam | undefined {
 // ro'yxat o'rniga ishlatiladi — davomiylik va tanaffus ham savollar soniga
 // qarab qayta hisoblanadi.
 export function mergeExamContent(base: Exam, admin?: AdminExamContent): { exam: Exam; passPercent: number } {
+  const v2 = admin?.bankV2;
+  if (v2?.totalQuestions) {
+    return { exam: { ...base, questionCount: v2.totalQuestions, durationSeconds: v2.durationSec }, passPercent: v2.passPercent };
+  }
   const passPercent = admin?.passPercent ?? EXAM_PASS_PERCENT;
   if (!admin?.questions || !admin.questions.length) {
     return { exam: base, passPercent };
@@ -129,3 +135,6 @@ export async function getResolvedExams(): Promise<{ exam: Exam; passPercent: num
   const mc = await fetchMobileContent();
   return EXAMS.map((base) => mergeExamContent(base, mc.examContents[base.id]));
 }
+
+/** Ro'yxatlarda ko'rsatiladigan savollar soni. */
+export const examQuestionCount = (e: Exam) => e.questionCount ?? e.questions.length;

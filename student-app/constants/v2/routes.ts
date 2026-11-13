@@ -28,6 +28,7 @@ export const R = {
   mistakes: (id: string) => `/v2/dars/${id}/xatolar`, // 83 MistakeReview
 
   exams: '/v2/imtihonlar', // 20 Exams
+  exam: (id: string) => `/v2/imtihon/${id}`, // Imtihon topshirish (v2)
   bonus: '/v2/bonus', // 23 Bonus
   bonusPlayer: (id: string) => `/v2/bonus/${id}`, // 27 BonusPlayer
   certificates: '/v2/sertifikatlar', // 24 Certificates
