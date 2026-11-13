@@ -50,6 +50,7 @@
         phone: '<path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3.1 19.5 19.5 0 01-6-6A19.8 19.8 0 012.1 4.2 2 2 0 014.1 2h3a2 2 0 012 1.7c.1 1 .4 1.9.7 2.8a2 2 0 01-.5 2.1L8 9.9a16 16 0 006 6l1.3-1.3a2 2 0 012.1-.4c.9.3 1.8.6 2.8.7a2 2 0 011.7 2z"/>',
         send: '<path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/>', check: '<path d="M20 6L9 17l-5-5"/>', x: '<path d="M18 6L6 18M6 6l12 12"/>',
         clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+        snow: '<path d="M12 2v20M4.9 6l14.2 12M4.9 18L19.1 6M9 3.5l3 2.5 3-2.5M9 20.5l3-2.5 3 2.5"/>',
         alert: '<path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0zM12 9v4M12 17h.01"/>',
         lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/>',
         cal: '<rect x="3" y="4.5" width="18" height="16" rx="3"/><path d="M3 9.5h18M8 3v3M16 3v3"/>',
@@ -533,11 +534,12 @@
         const url = studentsUrl(), risk = need(API.risk('all')).d || {}, riskBy = new Map((risk.items || []).map(r => [String(r.id), r])), counts = risk.counts || {};
         const local = new Map((typeof getItem === 'function' ? getItem(STORAGE_KEYS.students, []) : []).map(s => [String(s.id), s]));
         const hr = new Map((typeof getItem === 'function' ? getItem(STORAGE_KEYS.hrEmployees, []) : []).map(e => [String(e.id), e]));
-        let total = 0;
+        let total = 0, frozenN = 0;
         const body = withData(url, d => {
             const all = (d.students || []).map(s => { const l = local.get(String(s.id)) || {}, r = riskBy.get(String(s.id)); return { ...s, avatarUrl: l.avatarUrl, teacher: first(hr.get(String(s.teacherId || l.teacherId))?.name || r?.teacherName || ''), phone: l.phone || '', risk: r }; }).sort((a, b) => String(a.name).localeCompare(String(b.name)));
             total = all.length;
-            const items = all.filter(s => (S.stab === 'all' || s.risk?.reason === S.stab) && (!S.sTeacher || s.teacher === S.sTeacher));
+            const items = all.filter(s => (S.stab === 'all' || (S.stab === 'frozen' ? s.frozen : s.risk?.reason === S.stab)) && (!S.sTeacher || s.teacher === S.sTeacher));
+            frozenN = all.filter(s => s.frozen).length;
             const teachers = [...new Set(all.map(s => s.teacher).filter(Boolean))].sort();
             const tag = s => { if (s.frozen) return chip('Muzlatilgan', 'grey'); if (s.risk) return chip(s.risk.reasonText || 'Xavf', riskTone(s.risk)); const b = num(s.expected) - num(s.reached); return b > 3 ? chip('Orqada', 'amber') : b < 0 ? chip('Oldinda', 'blue') : chip('Rejada', 'green'); };
             const row = s => `<button type="button" class="aka-rrow" data-a-student="${esc(s.id)}" data-q="${esc(`${s.name} ${s.phone} ${s.id} ${s.teacher}`.toLowerCase())}">${window.schoolUI?.studentAvatar ? window.schoolUI.studentAvatar(s, 44) : ava(s.name, 44)}<span class="aka-arow-t"><span><strong>${esc(s.name)}</strong></span><span class="aka-stag">${tag(s)}</span><small>${esc([s.teacher && 'ustoz ' + s.teacher, `${num(s.reached)} / 72`].filter(Boolean).join(' · '))}</small></span></button>`;
@@ -547,7 +549,7 @@
         const cnt = k => (counts[k] != null ? ' · ' + counts[k] : '');
         return top('Oʻquvchilar', { back: false, sub: [myLangLabel(), total ? total + ' ta' : ''].filter(Boolean).join(' · ') }) + `<div class="aka-body">
             <label class="aka-search aka-s1">${ic('search', 18)}<span class="aka-sr">Qidirish</span><input type="search" data-a-sq placeholder="Ism, telefon yoki ustoz" autocomplete="off"></label>
-            <div class="aka-tabs aka-scroll aka-s1" role="tablist" aria-label="Filtr">${RISK.map(([k, t]) => `<button type="button" role="tab" class="aka-tab" aria-selected="${k === S.stab}" data-a-stab="${k}">${esc(k === 'all' ? t : t + cnt(k))}</button>`).join('')}</div>
+            <div class="aka-tabs aka-scroll aka-s1" role="tablist" aria-label="Filtr">${[...RISK, ['frozen', 'Muzlatilgan']].map(([k, t]) => `<button type="button" role="tab" class="aka-tab" aria-selected="${k === S.stab}" data-a-stab="${k}">${esc(k === 'all' ? t : k === 'frozen' ? t + (frozenN ? ' · ' + frozenN : '') : t + cnt(k))}</button>`).join('')}</div>
             ${body}</div>`;
     }
 
@@ -590,7 +592,7 @@
         const tg = loc.telegramGroupLink || '';
         const qa = (icon, label, attr) => `<${attr.startsWith('href') ? 'a' : 'button type="button"'} class="aka-qa" ${attr}>${ic(icon, 20)}<span>${esc(label)}</span></${attr.startsWith('href') ? 'a' : 'button'}>`;
         const hero = `<section class="aka-shero aka-s1">${av}<span><strong>${esc(s.name || '')}</strong><small>${esc(s.schedule || '')}</small></span></section>
-            <div class="aka-qas aka-s1">${s.phone ? qa('phone', 'Qoʻngʻiroq', `href="${esc(telHref(s.phone))}"`) : ''}${tg ? qa('send', 'Dars guruhi', `href="${esc(tg)}" target="_blank" rel="noopener"`) : ''}${qa('check', 'Davomat', 'data-a-crm="teachers-section:attendance"')}${qa('clock', 'Dars vaqti', `data-a-sched="${esc(s.id)}"`)}</div>`;
+            <div class="aka-qas aka-s1">${s.phone ? qa('phone', 'Qoʻngʻiroq', `href="${esc(telHref(s.phone))}"`) : ''}${tg ? qa('send', 'Dars guruhi', `href="${esc(tg)}" target="_blank" rel="noopener"`) : ''}${qa('check', 'Davomat', 'data-a-crm="teachers-section:attendance"')}${qa('clock', 'Dars vaqti', `data-a-sched="${esc(s.id)}"`)}${freezeQa(s, qa)}</div>${freezeBand(s)}`;
         return head + `<div class="aka-body aka-body--bar">
             ${hero}
             <section class="aka-card aka-s1"><div class="aka-sb"><span class="aka-sm">Ustoz ${s.teacher?.id ? `<button type="button" class="aka-a aka-a--b" data-a-teacher="${esc(s.teacher.id)}">${esc(first(s.teacher.name))}</button>` : `<b>${esc(first(s.teacher?.name) || '—')}</b>`}${s.schedule ? ' · ' + esc(s.schedule) : ''}</span>${s.risk?.reasonText ? chip(s.risk.reasonText, 'red') : ''}</div>
@@ -656,6 +658,98 @@
         });
         draw();
         return { get: () => (st.time ? { day: st.day, time: st.time } : null), redraw: () => { st.time = ''; draw(); } };
+    }
+    // =====================================================================================
+    // Muzlatish / Eritish (13-noy, direktor: akademik rahbar ham qiladi; "Faollashtirish" o'rniga "Eritish").
+    // Server: /api/school/students/:id/freeze {from,to,reasonCode,reason} va /restore {from,reason} — admin qoidalari bilan.
+    // =====================================================================================
+    const FZ_REASONS = [['sick', 'Kasal'], ['travel', 'Safar'], ['exams', 'Imtihonlar'], ['money', 'Moliyaviy'], ['other', 'Boshqa']];
+    const UF_REASONS = [['back', 'Qaytib keldi'], ['healthy', 'Sogʻaydi'], ['other', 'Boshqa']];
+    const fzLeft = f => f?.to ? Math.max(0, Math.round((toDate(f.to) - new Date(new Date().toDateString())) / 86400000)) : null;
+    function freezeQa(s, qa) {
+        const f = s.freeze; if (!f) return '';
+        if (f.canUnfreeze) return qa('snow', 'Eritish', `data-a-freeze="${esc(s.id)}"`).replace('class="aka-qa"', 'class="aka-qa aka-qa--ice"');
+        if (f.canCancel) return qa('snow', 'Bekor qilish', `data-a-freeze="${esc(s.id)}"`).replace('class="aka-qa"', 'class="aka-qa aka-qa--ice"');
+        if (f.canFreeze) return qa('snow', 'Muzlatish', `data-a-freeze="${esc(s.id)}"`).replace('class="aka-qa"', 'class="aka-qa aka-qa--ice"');
+        return '';
+    }
+    function freezeBand(s) {
+        const f = s.freeze; if (!f) return '';
+        const one = (x, title, btn) => `<div class="aka-ice aka-s1"><span class="aka-ice-i">${ic('snow', 20, 2)}</span><span class="aka-ice-t"><strong>${esc(title)} · ${esc(dShort(x.from))}${x.to ? '–' + esc(dShort(x.to)) : ''}</strong><small>${esc([FZ_REASONS.find(r => r[0] === x.code)?.[1] || x.reason, x === f.current && fzLeft(x) != null ? `${fzLeft(x)} kun qoldi` : x === f.future ? 'hali boshlanmagan' : ''].filter(Boolean).join(' · '))}</small></span><button type="button" class="aka-ice-b" data-a-freeze="${esc(s.id)}">${esc(btn)}</button></div>`;
+        if (f.current) return one(f.current, 'Muzlatilgan', 'Eritish');
+        if (f.future) return one(f.future, 'Muzlatiladi', 'Bekor qilish');
+        return '';
+    }
+    async function sheetFreeze(studentId) {
+        openSheet('Muzlatish', 'Yuklanmoqda…', `<div data-tb>${skIn(3, 60)}</div>`);
+        const wrap = sheetEl;
+        let st;
+        try { st = await apiFetch(API.student(studentId), { fresh: true }); } catch (e) { if (sheetEl === wrap) wrap.querySelector('[data-tb]').innerHTML = errBox(e, API.student(studentId)); return; }
+        if (sheetEl !== wrap) return;
+        const f = st.freeze || {}, nm = first(st.name) || shortName(st.name), today0 = new Date(new Date().toDateString());
+        const setHead = (t, sub) => { wrap.querySelector('.aka-sheet-h strong, .aka-sheet-h h2, .aka-sheet-h b')?.replaceChildren(t); wrap.querySelector('.aka-sheet-h span').textContent = sub; };
+        const why = (ph) => `<label class="aka-fld"><span class="aka-lbl">Izoh</span><input class="aka-inp" type="text" maxlength="300" data-why placeholder="${esc(ph)}"></label>`;
+        const done = (msg) => { invalidate('/api/academic/', '/api/school/'); closeSheet(); toast(msg, 'win'); render(false); };
+        const reasonOf = (list) => { const c = wrap.querySelector('input[name="rs"]:checked')?.value || ''; const t = wrap.querySelector('[data-why]').value.trim(); const lbl = list.find(r => r[0] === c)?.[1] || ''; return { code: c, text: c === 'other' ? t : [lbl, t].filter(Boolean).join(' — ') }; };
+        if (f.canFreeze) {
+            setHead(`${nm}ni muzlatish`, 'Darslar toʻxtaydi, kurs va toʻlov sanasi shu kunlarga suriladi');
+            const tm = addDays(today0, 1);
+            wrap.querySelector('[data-tb]').outerHTML = `
+                ${fs('Qachondan', true, chips('from', [['today', `Bugun · ${dShort(today0)}`], ['tomorrow', `Ertaga · ${dShort(tm)}`], ['custom', 'Sana']], 'tomorrow') + `<label class="aka-fld" data-cust hidden><span class="aka-sr">Sana</span><input class="aka-inp" type="date" data-d min="${localDate(today0)}"></label>`)}
+                ${fs('Necha kun', true, chips('days', [['7', '7 kun'], ['14', '14 kun'], ['21', '21 kun'], ['30', '30 kun']], '14'))}
+                ${fs('Sabab', true, chips('rs', FZ_REASONS, ''))}
+                ${why('Masalan: operatsiya, 2 hafta kasalxonada')}
+                <div class="aka-ice-sum" data-sum></div>
+                <button type="button" class="aka-btn aka-btn--ice aka-btn--54" data-ok disabled>Sababni tanlang</button>`;
+            const okB = wrap.querySelector('[data-ok]'), sum = wrap.querySelector('[data-sum]');
+            const range = () => { const m = wrap.querySelector('input[name="from"]:checked')?.value; const fd = m === 'today' ? today0 : m === 'tomorrow' ? tm : toDate(wrap.querySelector('[data-d]').value); const n = num(wrap.querySelector('input[name="days"]:checked')?.value); return fd ? { from: localDate(fd), to: localDate(addDays(fd, n - 1)), n } : null; };
+            const upd = () => {
+                const r = range(), rs = reasonOf(FZ_REASONS);
+                sum.innerHTML = r ? `<b>${esc(dShort(r.from))}–${esc(dShort(r.to))} · ${r.n} kun</b><br>Darslar shu kunlarda boʻlmaydi, kurs oxiri va toʻlov sanasi ${r.n} kunga suriladi. Kurs davomida faqat bir marta muzlatiladi.` : 'Sanani tanlang';
+                const ok = r && rs.code && (rs.code !== 'other' || rs.text.length >= 3);
+                okB.disabled = !ok; okB.textContent = !r ? 'Sanani tanlang' : !rs.code ? 'Sababni tanlang' : rs.code === 'other' && rs.text.length < 3 ? 'Izohni yozing' : `${r.n} kunga muzlatish`;
+            };
+            wrap.addEventListener('change', e => { if (e.target.name === 'from') wrap.querySelector('[data-cust]').hidden = e.target.value !== 'custom'; upd(); });
+            wrap.addEventListener('input', upd); upd();
+            okB.onclick = async () => {
+                const r = range(), rs = reasonOf(FZ_REASONS); if (!r || okB.disabled) return;
+                okB.disabled = true;
+                try { await send(`/api/school/students/${encodeURIComponent(studentId)}/freeze`, 'POST', { from: r.from, to: r.to, reasonCode: rs.code, reason: rs.text }); done(`${nm} muzlatildi · ${dShort(r.from)}–${dShort(r.to)}`); }
+                catch (e) { okB.disabled = false; toast(e.message || 'Muzlatib boʻlmadi', 'bad'); }
+            };
+            return;
+        }
+        if (f.canUnfreeze || f.canCancel) {
+            const cancel = !f.canUnfreeze, x = cancel ? f.future : f.current;
+            setHead(cancel ? 'Muzlatishni bekor qilish' : `${nm}ni eritish`, `${cancel ? 'Rejadagi muzlatish' : 'Muzlatilgan'}: ${dShort(x.from)}${x.to ? '–' + dShort(x.to) : ''}`);
+            const nextL = (st.lessons || []).find(l => l.status === 'next');
+            let nextD = nextL ? toDate(nextL.date) : null; if (!nextD || nextD < today0) nextD = today0;
+            wrap.querySelector('[data-tb]').outerHTML = `
+                ${cancel ? '' : fs('Qaysi kundan darsga qaytadi', true, chips('from', [['today', `Bugundan · ${dShort(today0)}`], ['custom', 'Sana']], 'today') + `<label class="aka-fld" data-cust hidden><span class="aka-sr">Sana</span><input class="aka-inp" type="date" data-d min="${localDate(today0)}"${x.to ? ` max="${esc(x.to)}"` : ''}></label>`)}
+                ${fs('Sabab', true, chips('rs', cancel ? [['plan', 'Rejasi oʻzgardi'], ['other', 'Boshqa']] : UF_REASONS, ''))}
+                ${why(cancel ? 'Masalan: safar bekor boʻldi' : 'Masalan: kasaldan tuzaldi')}
+                <div class="aka-ice-sum" data-sum></div>
+                <button type="button" class="aka-btn aka-btn--pri aka-btn--54" data-ok disabled>Sababni tanlang</button>`;
+            const okB = wrap.querySelector('[data-ok]'), sum = wrap.querySelector('[data-sum]'), RS = cancel ? [['plan', 'Rejasi oʻzgardi'], ['other', 'Boshqa']] : UF_REASONS;
+            const fromV = () => cancel ? localDate(today0) : (wrap.querySelector('input[name="from"]:checked')?.value === 'custom' ? wrap.querySelector('[data-d]').value : localDate(today0));
+            const upd = () => {
+                const fr = fromV(), rs = reasonOf(RS), unused = !cancel && x.to && fr ? Math.max(0, Math.round((toDate(x.to) - toDate(fr)) / 86400000) + 1) : 0;
+                sum.innerHTML = cancel ? `<b>Muzlatish bekor qilinadi</b><br>Darslar odatdagidek davom etadi, toʻlov sanasi oldingi holatiga qaytadi.` : fr ? `<b>${esc(dShort(fr))} dan darsda</b>${unused ? `<br>Ishlatilmagan ${unused} kun qaytariladi: kurs oxiri va toʻlov sanasi shuncha kunga oldinga keladi.` : ''}` : 'Sanani tanlang';
+                const ok = fr && rs.code && (rs.code !== 'other' || rs.text.length >= 3);
+                okB.disabled = !ok; okB.textContent = !rs.code ? 'Sababni tanlang' : rs.code === 'other' && rs.text.length < 3 ? 'Izohni yozing' : cancel ? 'Muzlatishni bekor qilish' : 'Eritish';
+            };
+            wrap.addEventListener('change', e => { if (e.target.name === 'from') wrap.querySelector('[data-cust]').hidden = e.target.value !== 'custom'; upd(); });
+            wrap.addEventListener('input', upd); upd();
+            okB.onclick = async () => {
+                const fr = fromV(), rs = reasonOf(RS); if (!fr || okB.disabled) return;
+                okB.disabled = true;
+                try { await send(`/api/school/students/${encodeURIComponent(studentId)}/restore`, 'POST', { from: fr, reason: rs.text }); done(cancel ? `${nm}: muzlatish bekor qilindi` : `${nm} eritildi · ${dShort(fr)} dan darsda`); }
+                catch (e) { okB.disabled = false; toast(e.message || 'Eritib boʻlmadi', 'bad'); }
+            };
+            return;
+        }
+        setHead('Muzlatish', nm);
+        wrap.querySelector('[data-tb]').outerHTML = `<p class="aka-muted">${f.used ? 'Bu kurs davomida muzlatish allaqachon ishlatilgan. Kurs davomida faqat bir marta muzlatiladi.' : 'Bu oʻquvchini hozir muzlatib boʻlmaydi — u faol emas. Kursni toʻxtatganni admin yoki ROP qayta tiklaydi.'}</p>`;
     }
     async function sheetSchedule(studentId) {
         const s0 = peek(API.student(studentId));
@@ -1124,7 +1218,7 @@
 
     // ---------- hodisalar ----------
     function onClick(e) {
-        const t = e.target.closest('[data-a-back],[data-a-go],[data-a-nav],[data-a-retry],[data-a-ptab],[data-a-later],[data-a-problem],[data-a-mtab],[data-a-makeup],[data-a-mall],[data-a-rtab],[data-a-rall],[data-a-stab],[data-a-student],[data-a-teacher],[data-a-assistant],[data-a-ttab],[data-a-howscore],[data-a-ltab],[data-a-lok],[data-a-lrej],[data-a-ntab],[data-a-nread],[data-a-nitem],[data-a-nretry],[data-a-crm],[data-a-att],[data-a-profile],[data-a-spick],[data-a-newsave],[data-a-stage],[data-a-owner],[data-a-postpone],[data-a-close],[data-a-transfer],[data-a-sched],[data-a-thist],[data-a-sprob],[data-a-newfor],[data-a-rejects],[data-a-triskof],[data-a-tprob],[data-a-silentall]');
+        const t = e.target.closest('[data-a-back],[data-a-go],[data-a-nav],[data-a-retry],[data-a-ptab],[data-a-later],[data-a-problem],[data-a-mtab],[data-a-makeup],[data-a-mall],[data-a-rtab],[data-a-rall],[data-a-stab],[data-a-student],[data-a-teacher],[data-a-assistant],[data-a-ttab],[data-a-howscore],[data-a-ltab],[data-a-lok],[data-a-lrej],[data-a-ntab],[data-a-nread],[data-a-nitem],[data-a-nretry],[data-a-crm],[data-a-att],[data-a-profile],[data-a-spick],[data-a-newsave],[data-a-stage],[data-a-owner],[data-a-postpone],[data-a-close],[data-a-transfer],[data-a-sched],[data-a-freeze],[data-a-thist],[data-a-sprob],[data-a-newfor],[data-a-rejects],[data-a-triskof],[data-a-tprob],[data-a-silentall]');
         if (!t || (t.tagName === 'A' && t.getAttribute('href'))) return;
         const d = t.dataset;
         if ('aBack' in d) { history.back(); return; }
@@ -1167,6 +1261,7 @@
         if ('aClose' in d) { sheetClose(); return; }
         if ('aTransfer' in d) { sheetTransfer(d.aTransfer); return; }
         if ('aSched' in d) { sheetSchedule(d.aSched); return; }
+        if ('aFreeze' in d) { sheetFreeze(d.aFreeze); return; }
         if ('aThist' in d) { sheetTeacherHistory(); return; }
         if ('aSprob' in d) { go('problems', { pq: d.aSprob, ptab: d.aSprobopen === '1' ? 'open' : 'closed' }); return; }
         if ('aTprob' in d) { go('problems', { pq: first(d.aTprob), ptab: 'open' }); return; }
@@ -1272,7 +1367,7 @@
         toDate, localDate, dayDiff, hm, dShort, dLong, dtShort, dtComma, relDT, overdueTxt, addDays, greet, MON, WD,
         STAGES, stageOf, TYPES, SOURCES, SRC_LOW, SRC_CHIP, RESULTS, RISK, EV_T, normP, f, isMe, myName, scoreTone, riskTone, minTxt,
         dueOptions, newDraft, localStudents, assistBlock, staffList, openSheet, closeSheet, toast, patchProblem, decideLate,
-        dlg: { owner: sheetOwner, postpone: sheetPostpone, close: sheetClose, makeup: sheetMakeup, transfer: sheetTransfer, lateReject: sheetLateReject, teacherHistory: sheetTeacherHistory, schedule: sheetSchedule },
+        dlg: { owner: sheetOwner, postpone: sheetPostpone, close: sheetClose, makeup: sheetMakeup, transfer: sheetTransfer, lateReject: sheetLateReject, teacherHistory: sheetTeacherHistory, schedule: sheetSchedule, freeze: sheetFreeze },
         notifs: { list: notifList, NLOOK, NGO, open: id => { if (g('markNotificationRead')) { try { markNotificationRead(id); } catch (e) { /* */ } } } },
     };
     window.akademikApp = { init, go, back, openScreen, openAttendance, render: () => render(false), state: S, ownLang, langs: myLangs, kit, _test: { normP, riskTone, dueOptions, cache: C } };

@@ -1173,7 +1173,8 @@
         const acts = [
             ['freeze', 'Muzlatish', 'vaqtincha · kursda 1 marta, 30 kungacha', st !== 'active' || c.statuses.some(s => s.status === 'frozen')],
             ['teacher', 'Ustozni almashtirish', 'yangi ustoz va sana · tarix saqlanadi', st === 'left'],
-            ['restore', 'Qayta tiklash', 'faqat muzlatilgan yoki chiqib ketgan o\'quvchi uchun', st === 'active'],
+            // 13-noy (direktor): muzlatilgan o'quvchi uchun "Eritish".
+            ['restore', st === 'frozen' ? 'Eritish' : 'Qayta tiklash', st === 'frozen' ? 'muzlatishni erta tugatib, darsga qaytarish' : 'chiqib ketgan o\'quvchini qaytarish', st === 'active'],
             ['stop', 'Kursni to\'xtatish', 'o\'quvchi chiqib ketadi', st === 'left'],
             ['finish', 'Kursni tugatdi', 'kurs oxirigacha o\'qidi · "Tugatgan" bo\'limiga o\'tadi', st === 'left']
         ];
@@ -1286,7 +1287,7 @@
     function restoreForm(box, ab, c) {
         const frozen = c.status === 'frozen';
         const from = addDays(today(), 1);
-        ab.innerHTML = frozen ? `<div class="sc-sec"><h3>Muzlatishdan oldin qaytarish</h3>${field('Birinchi dars', `<input type="date" name="from" value="${from}" min="${today()}">`, 'Ishlatilmagan kunlar to\'lov sanasidan qaytarib olinadi')}</div>${reasonBlock([['Erta qaytdi', 'Erta qaytdi'], ['Boshqa', 'Boshqa']], 'Erta qaytdi')}`
+        ab.innerHTML = frozen ? `<div class="sc-sec"><h3>Eritish</h3>${field('Birinchi dars', `<input type="date" name="from" value="${from}" min="${today()}">`, 'Ishlatilmagan kunlar to\'lov sanasidan qaytarib olinadi')}</div>${reasonBlock([['Erta qaytdi', 'Erta qaytdi'], ['Boshqa', 'Boshqa']], 'Erta qaytdi')}`
             : `<div class="sc-sec"><h3>Qachondan</h3><div class="sc-g2">${field('Birinchi dars', `<input type="date" name="from" value="${from}" min="${today()}">`)}${field('Kurs', `<select name="cont"><option value="next">To'xtagan joyidan davom</option><option value="restart">Boshidan (progress arxivga)</option></select>`)}</div></div>
               <div class="sc-sec"><h3>Ustoz va vaqt</h3><div class="sc-g2">${field('Ustoz', `<select name="teacher">${teachersForSubject(c.subject).map(t => `<option value="${esc(t.id)}"${t.id === c.teacherId ? ' selected' : ''}>${esc(t.name)}</option>`).join('')}</select>`)}
                 ${field('Dars kunlari', `<select name="day"><option value="1"${[1, 3, 5].includes(Number(c.schedule?.day)) ? ' selected' : ''}>Du·Ch·Ju</option><option value="2"${[2, 4, 6].includes(Number(c.schedule?.day)) ? ' selected' : ''}>Se·Pa·Sh</option></select>`)}</div>
@@ -1309,7 +1310,7 @@
             } catch (e) { slotsEl.innerHTML = window.LoadErr.html({ title: 'Bo\'sh vaqtlarni yuklab bo\'lmadi', err: e, note: '', compact: true }); window.LoadErr.bind(slotsEl, load); }
         };
         ab.querySelectorAll('select[name=teacher],select[name=day],input[name=from]').forEach(i => i.onchange = load); load();
-        footer(box, 'Qayta tiklash', false, async () => {
+        footer(box, frozen ? 'Eritish' : 'Qayta tiklash', false, async () => {
             if (!frozen && !pick) throw new Error('Bo\'sh vaqtni tanlang');
             await post(`/students/${encodeURIComponent(c.id)}/restore`, frozen ? { from: val(ab, 'from'), reason: fullReason(ab) }
                 : { from: val(ab, 'from'), teacherId: val(ab, 'teacher'), lessonDay: Number(val(ab, 'day')), lessonTime: pick, continueFrom: val(ab, 'cont'), reasonCode: radio(ab, 'rcode'), reason: fullReason(ab) });
@@ -1370,7 +1371,7 @@
             toast('Ustoz almashtirildi'); saved(c);
         });
     }
-    const ACTION_LABEL = { edit: 'Tahrir', freeze: 'Muzlatildi', stop: 'Kurs to\'xtatildi', finish: 'Kursni tugatdi', restore: 'Qayta tiklandi', 'unfreeze-early': 'Muzlatishdan erta qaytdi',
+    const ACTION_LABEL = { edit: 'Tahrir', freeze: 'Muzlatildi', stop: 'Kurs to\'xtatildi', finish: 'Kursni tugatdi', restore: 'Qayta tiklandi', 'unfreeze-early': 'Eritildi',
         'teacher-change': 'Ustoz almashtirildi', group: 'Telegram guruh', 'request-tariff': 'So\'rov: tarif', 'request-teacher': 'So\'rov: ustoz', 'request-due': 'So\'rov: to\'lov muddati',
         'request-approved': 'So\'rov tasdiqlandi', 'request-rejected': 'So\'rov rad etildi', 'request-returned': 'So\'rov qaytarildi',
         'makeup-approved': 'Qoplash darsi', 'makeup-rejected': 'Qoplash darsi', 'assist-correct': 'Yordamchi aloqasi', 'assistant-assign': 'Yordamchi ustoz' };
