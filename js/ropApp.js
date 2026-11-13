@@ -1545,6 +1545,8 @@
         if (S.screen === 'crm') { go('home', { reset: true }); return true; }
         showApp(true);
         render(true);
+        // Lid kartasidan qaytganda tanlangan menejer/bosqich chipi ko'rinsin (qator boshiga qaytib qolmasin).
+        ['.ra-man.is-on', '.sa-chips .sa-chip.is-on'].forEach(sel => root.querySelector(sel)?.scrollIntoView({ inline: 'nearest', block: 'nearest' }));
         return true;
     }
     function openLead(id, lg) { S.lead = id; S.leadLang = lg || null; closeSheet(true); go('card'); }
@@ -1596,16 +1598,26 @@
         const focusSearch = document.activeElement?.id === 'raLeadSearch';
         const caret = focusSearch ? document.activeElement.selectionStart : 0;
         const prevScroll = root.querySelector('.sa-body')?.scrollTop || 0;
+        // Gorizontal chip qatorlari (menejerlar, bosqichlar) — qayta chizilganda boshiga qaytib "oynamasin".
+        const sameScreen = root.dataset.screen === S.screen;
+        const chipScroll = sameScreen ? [...root.querySelectorAll('.sa-chips')].map(c => c.scrollLeft) : [];
+        // Kirish animatsiyasi faqat yangi ekranda; aks holda har belgilashda ro'yxat qayta "paydo bo'lib" o'ynaydi.
+        if (!scrollTop) root.classList.remove('sa-enter');
         root.dataset.screen = S.screen;
         root.innerHTML = html;
         const body = root.querySelector('.sa-body');
         if (body && !scrollTop) body.scrollTop = prevScroll;
+        if (chipScroll.length) root.querySelectorAll('.sa-chips').forEach((c, i) => { if (chipScroll[i]) c.scrollLeft = chipScroll[i]; });
         if (scrollTop) { root.classList.remove('sa-enter'); void root.offsetWidth; root.classList.add('sa-enter'); }
         Object.keys(keep).forEach(id => { const el = document.getElementById(id); if (el && !el.value) el.value = keep[id]; });
         if (focusId && focusId !== 'raLeadSearch') document.getElementById(focusId)?.focus({ preventScroll: true });
         if (focusSearch) { const i = document.getElementById('raLeadSearch'); if (i) { i.focus(); try { i.setSelectionRange(caret, caret); } catch (e) { /* type=search */ } } }
         syncNav();
         if (S.screen === 'home') setTimeout(checkWin, 600);
+    }
+    function chipTo(sel) {
+        const body = root.querySelector('.sa-body'); if (body) body.scrollTop = 0;
+        if (sel) root.querySelector(sel)?.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: reduceMotion() ? 'auto' : 'smooth' });
     }
     function queueRender() {
         if (renderQueued) return;
@@ -1639,10 +1651,11 @@
         if ('raNav' in d) return go(d.raNav, { reset: true });
         if ('raBack' in d) { if (!back()) { if (guest) window.adminApp?.closeRopGuest?.(); else go('home', { reset: true }); } return; }
         if ('raLead' in d) return openLead(d.raLead, d.ll);
-        if ('raGlang' in d) { gLang = d.raGlang === 'english' ? 'english' : 'russian'; try { localStorage.setItem('adm_rop_lang', gLang); } catch (e) {} S.man = 'all'; S.sel.clear(); render(true); return; }
-        if ('raMan' in d) { S.man = d.raMan; render(true); return; }
-        if ('raStage' in d) { S.stage = d.raStage; render(true); root.querySelector('.sa-chip.is-on')?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: reduceMotion() ? 'auto' : 'smooth' }); return; }
-        if ('raClearq' in d) { S.q = ''; render(true); return; }
+        if ('raGlang' in d) { gLang = d.raGlang === 'english' ? 'english' : 'russian'; try { localStorage.setItem('adm_rop_lang', gLang); } catch (e) {} S.man = 'all'; S.sel.clear(); render(false); chipTo(); return; }
+        // Filtr chiplari: ekran qayta "kirmaydi" (animatsiyasiz), chip qatori joyida qoladi, ro'yxat boshidan.
+        if ('raMan' in d) { S.man = d.raMan; render(false); chipTo('.ra-man.is-on'); return; }
+        if ('raStage' in d) { S.stage = d.raStage; render(false); chipTo('.sa-chip.is-on'); return; }
+        if ('raClearq' in d) { S.q = ''; render(false); chipTo(); return; }
         if ('raLeadadd' in d) return openLeadAdd();
         if ('raLasrc' in d) { S.la.src = d.raLasrc; sheetEl.querySelectorAll('[data-ra-lasrc]').forEach(b => { const on = b === t; b.classList.toggle('is-on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); }); return; }
         if ('raLasave' in d) return saveLeadAdd();
@@ -1676,7 +1689,7 @@
         if ('raRsr' in d) { S.rs.reason = S.rs.reason === d.raRsr ? '' : d.raRsr; sheetEl.querySelectorAll('[data-ra-rsr]').forEach(b => { const on = b.dataset.raRsr === S.rs.reason; b.classList.toggle('is-on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); }); return; }
         if ('raRsgo' in d) return doReassign();
         if ('raAck' in d) return ackSla(d.raAck, d.ll);
-        if ('raAptab' in d) { S.apTab = d.raAptab; render(true); return; }
+        if ('raAptab' in d) { S.apTab = d.raAptab; render(false); chipTo(); return; }
         if ('raAp' in d) { S.apId = d.raAp; S.apDone = 0; return go('approval'); }
         if ('raApreload' in d) { loadApprovals(true); return; }
         if ('raApprove' in d) { t.disabled = true; return decide(S.apId, 'approve', ''); }
@@ -1685,7 +1698,7 @@
         if ('raRjr' in d) { S.rj.reason = d.raRjr; syncReject(); if (d.raRjr === 'Boshqa') document.getElementById('raRjNote')?.focus(); return; }
         if ('raRjsave' in d) { const note = document.getElementById('raRjNote')?.value.trim() || ''; t.disabled = true; return decide(S.apId, S.rj.kind, [S.rj.reason === 'Boshqa' ? '' : S.rj.reason, note].filter(Boolean).join(' — ')); }
         if ('raApnext' in d) { S.apTab = 'pending'; S.stack.pop(); S.screen = 'approvals'; render(true); return; }
-        if ('raTrday' in d) { S.trDay = d.raTrday; render(true); return; }
+        if ('raTrday' in d) { S.trDay = d.raTrday; render(false); chipTo('[data-ra-trday].is-on'); return; }
         if ('raTrseg' in d) { if (d.raTrseg === 'trial') return openTrialPage({ lang: LANGS()[0] }); if (d.raTrseg === 'lessons') return openCrm('timetable'); return; }
         if ('raTrialnew' in d) return openTrialPage({ lang: LANGS()[0] });
         if ('raTassign' in d) return openTrialAssign(d.raTassign, d.ll);
@@ -1698,10 +1711,10 @@
         if ('raTcancel' in d) return openTrialCancel(d.raTcancel, d.ll);
         if ('raTcr' in d) { S.tc.reason = d.raTcr; syncTc(); if (/^Boshqa/.test(d.raTcr)) document.getElementById('raTcNote')?.focus(); return; }
         if ('raTcsave' in d) return saveTrialCancel();
-        if ('raTper' in d) { S.teamPer = d.raTper; render(true); return; }
+        if ('raTper' in d) { S.teamPer = d.raTper; render(false); chipTo(); return; }
         if ('raMgr' in d) { S.mgr = d.raMgr; return go('manager'); }
         if ('raMleads' in d) { S.man = d.raMleads; S.q = ''; return go('leads', { reset: true }); }
-        if ('raFunper' in d) { S.funPer = S.funPer === 'oylik' ? 'haftalik' : S.funPer === 'haftalik' ? 'kunlik' : 'oylik'; render(true); return; }
+        if ('raFunper' in d) { S.funPer = S.funPer === 'oylik' ? 'haftalik' : S.funPer === 'haftalik' ? 'kunlik' : 'oylik'; render(false); chipTo(); return; }
         if ('raStlang' in d) { S.staleLang = d.raStlang; render(false); return; }
         if ('raStep' in d) {
             const [k, dv] = d.raStep.split(':'); const lg = S.staleLang && LANGS().includes(S.staleLang) ? S.staleLang : LANGS()[0];
@@ -1712,12 +1725,12 @@
             render(false); return;
         }
         if ('raStsave' in d) return saveStale();
-        if ('raArtab' in d) { S.arTab = d.raArtab; render(true); return; }
+        if ('raArtab' in d) { S.arTab = d.raArtab; render(false); chipTo(); return; }
         if ('raArreload' in d) { loadArchive(S.arTab, true); return; }
         if ('raRestore' in d) return restoreItem(t);
         if ('raSmsg' in d) { S.sms = d.raSmsg; render(false); return; }
         if ('raSmssend' in d) return sendSms();
-        if ('raNcat' in d) { S.notifCat = d.raNcat; render(true); return; }
+        if ('raNcat' in d) { S.notifCat = d.raNcat; render(false); chipTo('[data-ra-ncat].is-on'); return; }
         if ('raNread' in d) { if (g('markAllNotificationsRead')) markAllNotificationsRead(); render(false); return; }
         if ('raNitem' in d) return openNotifItem(d.raNitem);
         if ('raCrm' in d) return openCrm(d.raCrm);
@@ -1725,7 +1738,7 @@
     }
     function onInput(e) {
         const id = e.target.id;
-        if (id === 'raLeadSearch') { S.q = e.target.value; clearTimeout(onInput._t); onInput._t = setTimeout(() => render(true), 160); return; }
+        if (id === 'raLeadSearch') { S.q = e.target.value; clearTimeout(onInput._t); onInput._t = setTimeout(() => { render(false); chipTo(); }, 160); return; }
         if (id === 'raSmsText') { S.smsText = e.target.value; clearTimeout(onInput._s); onInput._s = setTimeout(() => { const n = root.querySelector('.ra-smsn'); if (n) render(false); }, 400); return; }
         if (id === 'raRjNote') return syncReject();
         if (id === 'raTcNote') return syncTc();

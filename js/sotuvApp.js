@@ -925,10 +925,16 @@
         const focusSearch = document.activeElement?.id === 'saLeadSearch';
         const caret = focusSearch ? document.activeElement.selectionStart : 0;
         const prevScroll = root.querySelector('.sa-body')?.scrollTop || 0;
+        // Gorizontal chip qatorlari (menejerlar, bosqichlar) — qayta chizilganda boshiga qaytib "oynamasin".
+        const sameScreen = root.dataset.screen === S.screen;
+        const chipScroll = sameScreen ? [...root.querySelectorAll('.sa-chips')].map(c => c.scrollLeft) : [];
+        // Kirish animatsiyasi faqat yangi ekranda; aks holda har belgilashda ro'yxat qayta "paydo bo'lib" o'ynaydi.
+        if (!scrollTop) root.classList.remove('sa-enter');
         root.dataset.screen = S.screen;
         root.innerHTML = html;
         const body = root.querySelector('.sa-body');
         if (body && !scrollTop) body.scrollTop = prevScroll;
+        if (chipScroll.length) root.querySelectorAll('.sa-chips').forEach((c, i) => { if (chipScroll[i]) c.scrollLeft = chipScroll[i]; });
         if (scrollTop) { root.classList.remove('sa-enter'); void root.offsetWidth; root.classList.add('sa-enter'); }
         Object.keys(keep).forEach(id => { const el = document.getElementById(id); if (el && !el.value) el.value = keep[id]; });
         if (focusId && focusId !== 'saLeadSearch') document.getElementById(focusId)?.focus({ preventScroll: true });
@@ -937,6 +943,8 @@
         if (!isStandalone()) root.querySelectorAll('[data-sa-install]').forEach(b => { b.hidden = false; });
         syncNav();
     }
+    // Shu ekrandagi filtr/qidiruv: animatsiyasiz qayta chizish, ro'yxat boshidan (chip qatori joyida qoladi).
+    function refilter() { render(false); const bd = root.querySelector('.sa-body'); if (bd) bd.scrollTop = 0; }
     function queueRender() {
         if (renderQueued) return;
         renderQueued = true;
@@ -961,7 +969,7 @@
         if ('saNav' in d) { if (d.saNav === 'jadval') return openJadval(); return go(d.saNav, { reset: true }); }
         if ('saGo' in d) return go(d.saGo);
         if ('saBack' in d) { if (!back()) go('home', { reset: true }); return; }
-        if ('saStage' in d) { S.stage = d.saStage; render(true); const c = root.querySelector('.sa-chip.is-on'); c?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }); return; }
+        if ('saStage' in d) { S.stage = d.saStage; render(false); const bd = root.querySelector('.sa-body'); if (bd) bd.scrollTop = 0; root.querySelector('.sa-chip.is-on')?.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: 'smooth' }); return; }
         if ('saStalewarn' in d) { S.stage = 'boglanishga-urinilmoqda'; S.q = ''; return go('leads', { reset: true }); }
         if ('saStagego' in d) { S.stage = d.saStagego; S.q = ''; return go('leads', { reset: true }); }
         if ('saTg' in d) { if (g('openLeadTelegramProfile')) openLeadTelegramProfile(lang(), d.saTg); return; }
@@ -1000,11 +1008,11 @@
         if ('saNread' in d) { if (g('markAllNotificationsRead')) markAllNotificationsRead(); openNotifSheet(); refreshBell(); syncNav(); return; }
         if ('saNitem' in d) return openNotifItem(d.saNitem);
         if ('saFilter' in d) return openFilterSheet();
-        if ('saSrc' in d) { S.src = d.saSrc; closeSheet(); render(true); return; }
-        if ('saClearq' in d) { S.q = ''; render(true); return; }
+        if ('saSrc' in d) { S.src = d.saSrc; closeSheet(); refilter(); return; }
+        if ('saClearq' in d) { S.q = ''; refilter(); return; }
         if ('saRper' in d) { S.ratingPeriod = d.saRper; render(false); return; }
         if ('saPay' in d) { window.inflowUI?.openPayment?.(d.saPay); return; }
-        if ('saSort' in d) { S.sortNew = !S.sortNew; render(true); toast(S.sortNew ? 'Eng yangilari birinchi' : 'Muhimlari birinchi', 'ok'); return; }
+        if ('saSort' in d) { S.sortNew = !S.sortNew; refilter(); toast(S.sortNew ? 'Eng yangilari birinchi' : 'Muhimlari birinchi', 'ok'); return; }
         if ('saSkip' in d) { S.skip = (S.skip || 0) + 1; render(false); return; }
         if ('saLogout' in d) { document.getElementById('profileLogoutBtn')?.click(); return; }
         if ('saInstall' in d) { if (deferredInstall) { deferredInstall.prompt(); deferredInstall = null; render(false); } else installHelp(); return; }
@@ -1022,7 +1030,7 @@
         if (e.target.id !== 'saLeadSearch') return;
         S.q = e.target.value;
         clearTimeout(onInput._t);
-        onInput._t = setTimeout(() => render(true), 160);
+        onInput._t = setTimeout(refilter, 160);
     }
 
     // Qo'ng'iroqdan qaytganda natija oynasi o'zi ochiladi (tel: ilovasi yopilib, CRM ko'ringanda).
