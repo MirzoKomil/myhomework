@@ -89,8 +89,8 @@ test('teacher state: asosiy ustozga faqat o\'z o\'quvchilari va asosiy davomati;
   assert.equal(safe.teacherDuty.hasAssistantStudents, false);
   const asst = duties.stateForTeacher(state, { id: 'y', name: 'Y', role: 'yordamchi', lang: 'english', status: 'active' });
   assert.deepEqual(asst.students.map(s => s.id), ['main', 'other']);
-  // Yordamchiga o'quvchi telefoni va asosiy ustoz baholari berilmaydi.
-  assert.equal(asst.students.some(s => s.phone), false);
+  // 13-noy: yordamchi o'z o'quvchilariga qo'ng'iroq qiladi — telefon faqat o'ziga biriktirilganlarda; asosiy ustoz baholari berilmaydi.
+  assert.deepEqual(asst.students.map(s => s.phone), ['111', 'private']);
   assert.deepEqual(asst.liveGrades, {});
   assert.deepEqual(asst.assistantAttendance, { '2026-10_y': { other: { 3: 1 } } });
   assert.deepEqual(asst.mainAttendance, {});
