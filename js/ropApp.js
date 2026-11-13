@@ -106,13 +106,15 @@
         receipt: '<path d="M6 2h12v20l-3-2-3 2-3-2-3 2z"/><path d="M9 7h6M9 11h6M9 15h4"/>',
         pause: '<path d="M9 5v14M15 5v14"/>',
         arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>',
-        minus: '<path d="M5 12h14"/>'
+        minus: '<path d="M5 12h14"/>',
+        checksq: '<rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M8 12.5l3 3 5-6"/>'
     };
     const ic = (n, s = 20, w = 2) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n] || ''}</svg>`;
 
     // ---------- holat ----------
     const S = { screen: 'home', stack: [], stage: 'yangi-lidlar', man: 'all', q: '', lead: null, leadLang: null, sel: new Set(), apTab: 'pending', ap: null, apId: null,
-        trDay: 'today', teamPer: 'oylik', funPer: 'oylik', mgr: null, notifCat: 'all', arTab: 'lead', ar: null, sms: 'qaror', smsText: null, rules: null, staleDraft: null, staleLang: null, sched: {} };
+        trDay: 'today', teamPer: 'oylik', funPer: 'oylik', mgr: null, notifCat: 'all', arTab: 'lead', ar: null, sms: 'qaror', smsText: null, rules: null, staleDraft: null, staleLang: null, sched: {},
+        pickMode: false, pick: new Set(), bulk: null };
     let root, nav, sheetEl, toastEl, overlayEl, inited = false, renderQueued = false, booted = false;
 
     // ---------- ma'lumot ----------
@@ -376,14 +378,20 @@
         const rows = (q ? pool : pool.filter(l => st(l) === S.stage)).map(l => ({ l, b: badge(l) })).sort((a, b) => a.b.sort - b.b.sort || (a.b.t || 0) - (b.b.t || 0));
         const red = rows.filter(r => r.b.tone === 'red').length;
         const mans = MGRS();
+        const pick = S.pickMode;
+        // Tanlov faqat ko'rinib turgan lidlar orasida (bosqich/menejer chipi almashsa, ko'rinmaganlar tanlovdan chiqadi).
+        if (pick) { const vis = new Set(rows.map(r => pkey(r.l))); S.pick.forEach(k => { if (!vis.has(k)) S.pick.delete(k); }); S._vis = vis; }
         let hint = STAGE_HINT[S.stage] || '';
         if (S.stage === 'tolov-jarayonida') hint += ' · ' + mln(rows.reduce((a, r) => a + (Number(r.l.paymentSurvey?.debtAmount || r.l.paymentSurvey?.amount || 0) || 0), 0));
         if (S.stage === 'tolov-yopildi') hint += ' · ' + mln(rows.reduce((a, r) => a + (Number(r.l.paymentClosedSurvey?.actualAmount || r.l.paymentSurvey?.totalAmount || 0) || 0), 0));
         return `
         <header class="sa-top sa-top--leads">
-          <div class="sa-top-row"><h1>Lidlar <em>${all.length}</em></h1>
+          ${pick ? `<div class="sa-top-row ra-pick-top"><button type="button" class="sa-icon-btn ra-pickx" data-ra-pickx aria-label="Tanlashni bekor qilish">${ic('close', 20, 2.4)}</button><h1 aria-live="polite">${S.pick.size} ta tanlandi</h1>
+            <button type="button" class="ra-pickall" data-ra-pickall ${rows.length ? '' : 'disabled'}>${rows.length && rows.every(r => S.pick.has(pkey(r.l))) ? 'Bekor · ' : 'Hammasi · '}${rows.length}</button></div>`
+          : `<div class="sa-top-row"><h1>Lidlar <em>${all.length}</em></h1>
+            <button type="button" class="sa-icon-btn ra-pickon" data-ra-pickon aria-label="Lidlarni tanlash">${ic('checksq', 20, 2.2)}</button>
             <button type="button" class="ra-dist-btn" data-ra-go="distribute">Taqsimlash${un.length ? `<b>${un.length > 99 ? '99+' : un.length}</b>` : ''}</button>
-            <button type="button" class="sa-icon-btn ra-add" data-ra-leadadd aria-haspopup="dialog" aria-label="Lid qoʻshish">${ic('plus', 20, 2.6)}</button></div>
+            <button type="button" class="sa-icon-btn ra-add" data-ra-leadadd aria-haspopup="dialog" aria-label="Lid qoʻshish">${ic('plus', 20, 2.6)}</button></div>`}
           <label class="sa-search">${ic('search', 18)}<span class="sa-sr">Lid qidirish</span><input type="search" id="raLeadSearch" placeholder="Ism, telefon yoki ID" value="${esc(S.q)}" autocomplete="off">${S.q ? `<button type="button" class="sa-icon-btn sa-ghost sa-sm" data-ra-clearq aria-label="Qidiruvni tozalash">${ic('close', 16, 2.4)}</button>` : ''}</label>
           ${glangSeg()}
           <div class="sa-chips ra-mans" role="radiogroup" aria-label="Menejer">
@@ -394,14 +402,151 @@
           ${q ? `<div class="sa-q-info">${rows.length ? `${rows.length} ta lid topildi` : 'Hech narsa topilmadi'}</div>` : `<div class="sa-chips" role="tablist" aria-label="Bosqichlar">${ids.map(id => `<button type="button" role="tab" aria-selected="${id === S.stage}" class="sa-chip${id === S.stage ? ' is-on' : ''}" data-ra-stage="${id}">${esc(SHORT[id] || colLabel(id))}<b>${counts[id] || 0}</b></button>`).join('')}</div>`}
         </header>
         ${q ? '' : `<div class="sa-hint"><span>${rows.length ? esc(hint) : 'Bu menejerda shu bosqichda lid yoʻq'}</span><span>${red ? `<b>${red} tasi</b> kechikkan` : ''}</span></div>`}
-        <div class="sa-body sa-rows">
-          ${rows.length ? rows.map(({ l, b }, i) => `
-            <button type="button" class="sa-lrow ra-lrow" style="--i:${Math.min(i, 10)}" data-ra-lead="${esc(l.id)}" data-ll="${l._lang}">
-              <span class="sa-row-t"><strong>${esc(l.name || 'Nomaʼlum')}</strong><span>${q ? esc(SHORT[st(l)] || '') + ' · ' : ''}${esc(metaLine(l))}</span>${pill(b.text, b.tone)}</span>
+        <div class="sa-body sa-rows${pick ? ' ra-pickpad' : ''}">
+          ${rows.length ? rows.map(({ l, b }, i) => { const on = pick && S.pick.has(pkey(l)); return `
+            <button type="button" class="sa-lrow ra-lrow${pick ? ' is-pick' : ''}${on ? ' is-on' : ''}" style="--i:${Math.min(i, 10)}" data-ra-lead="${esc(l.id)}" data-ll="${l._lang}"${pick ? ` aria-pressed="${on}"` : ''}>
+              ${pick ? `<span class="ra-chk-b" aria-hidden="true">${ic('check', 16, 3)}</span>` : ''}<span class="sa-row-t"><strong>${esc(l.name || 'Nomaʼlum')}</strong><span>${q ? esc(SHORT[st(l)] || '') + ' · ' : ''}${esc(metaLine(l))}</span>${pill(b.text, b.tone)}</span>
               <span class="ra-lrow-m">${l.managerId ? staffImg(l.managerId, mgrName(l.managerId), 34) : `<span class="ra-noman">${ic('userplus', 16, 2.2)}</span>`}<em>${esc(l.managerId ? firstName(mgrName(l.managerId)) || 'Menejer' : 'yoʻq')}</em></span>
-            </button>`).join('') : empty('board', q ? 'Topilmadi' : `“${SHORT[S.stage] || colLabel(S.stage)}” bosqichi boʻsh`, q ? 'Ism yoki raqamni tekshirib koʻring' : 'Bu bosqichda hozircha lid yoʻq')}
-          <p class="sa-foot">Kartani oching → menejerni almashtirish yoki bosqichni tuzatish</p>
-        </div>`;
+            </button>`; }).join('') : empty('board', q ? 'Topilmadi' : `“${SHORT[S.stage] || colLabel(S.stage)}” bosqichi boʻsh`, q ? 'Ism yoki raqamni tekshirib koʻring' : 'Bu bosqichda hozircha lid yoʻq')}
+          <p class="sa-foot">${pick ? 'Belgilang — pastdagi tugma bilan hammasini bir yoʻla oʻtkazing' : 'Lidni bosib turing — bir nechtasini tanlab, bir yoʻla oʻtkazish'}</p>
+        </div>
+        ${pick ? `<div class="sa-bar ra-pick-bar"><button type="button" class="sa-btn sa-btn--outline" data-ra-bulkmgr ${S.pick.size ? '' : 'disabled'}>${ic('userplus', 18, 2.2)}Menejerga</button><button type="button" class="sa-btn sa-btn--primary" data-ra-bulkstage ${S.pick.size ? '' : 'disabled'}>${ic('arrow', 18, 2.4)}Bosqichga · ${S.pick.size}</button></div>` : ''}`;
+    }
+
+    // ---------- Ommaviy: tanlash va bosqichga o'tkazish (direktor, 13-noy) ----------
+    // Bitta sabab/sana hammasiga: mavjud oynalar (Sifatsiz, Muvaffaqiyatsiz, Yangi→Urinilmoqda, Keyin sotib olmoqchi)
+    // o'z kodi bilan ochiladi va tanlangan sabab avtomatik qo'yiladi — saqlash mantiqi bitta joyda qoladi.
+    // Anketa kerak bo'lgan bosqichlar — har lid uchun o'sha oyna navbat bilan ochiladi (2/5…).
+    const pkey = l => `${l._lang}|${l.id}`;
+    function pickOn(l) { S.pickMode = true; S.pick.clear(); if (l) S.pick.add(pkey(l)); try { navigator.vibrate?.(12); } catch (e) {} render(false); }
+    function pickOff() { S.pickMode = false; S.pick.clear(); render(false); }
+    const pickedLeads = () => ALL().filter(l => S.pick.has(pkey(l)));
+    const BULK_FORM = {
+        'boglanishga-urinilmoqda': { list: () => (typeof LEAD_CONTACT_FAIL_REASONS !== 'undefined' ? LEAD_CONTACT_FAIL_REASONS : []), radio: 'contactFailReason', ok: 'confirmContactFail', only: l => st(l) === 'yangi-lidlar', title: 'Nega bogʻlana olmadingiz?' },
+        'keyin-sotib-olmoqchi': { list: () => (window.leadWorkflow?.DEFERRED_REASONS || []).filter(r => r.id !== 'other'), radio: 'deferredReason', ok: 'confirmDeferredPurchase', dates: true, title: 'Nega kechiktirdi?' },
+        'sifatsiz-lidlar': { list: () => (typeof SIFATSIZ_LID_REASONS !== 'undefined' ? SIFATSIZ_LID_REASONS : []), radio: 'sifatsizReason', ok: 'confirmSifatsiz', title: 'Sifatsiz sababi' },
+        // Sabablar tanlangan lidlar turgan bosqichlarga ruxsat etilgan guruhlardan (mavjud oynadagidek, FAILED_SALE_FROM_COLUMN_MAP).
+        'muvaffaqiyatsiz-sotuv': { list: leads => {
+            if (typeof FAILED_SALE_REASON_GROUPS === 'undefined') return [];
+            const map = typeof FAILED_SALE_FROM_COLUMN_MAP !== 'undefined' ? FAILED_SALE_FROM_COLUMN_MAP : {};
+            const allowed = new Set(); let any = false;
+            leads.forEach(l => { const a = map[st(l)]; if (a) a.forEach(x => allowed.add(x)); else any = true; });
+            return FAILED_SALE_REASON_GROUPS.filter(gr => any || allowed.has(gr.id)).flatMap(gr => gr.reasons.map(r => ({ id: r.id, label: r.label, group: gr.label, gid: gr.id })));
+        }, radio: 'failedSaleReason', ok: 'confirmFailedSale', title: 'Muvaffaqiyatsiz sababi' }
+    };
+    const BULK_QUEUE = new Set(['boglanildi', 'sinov-darsida', 'qaror-jarayonida', 'tolov-jarayonida', 'tolov-yopildi']);
+    function openBulkStageSheet() {
+        const leads = pickedLeads(); if (!leads.length) return;
+        const by = {}; leads.forEach(l => { by[st(l)] = (by[st(l)] || 0) + 1; });
+        const now = Object.entries(by).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${SHORT[k] || colLabel(k)} ${n}`).join(' · ');
+        const dot = x => `<span class="sa-dot" style="background:${(COLS().find(c => c.id === x) || {}).border || '#9DC4F5'}"></span>`;
+        const ordered = COLS().map(c => c.id).filter(x => PATH.includes(x) || x === 'keyin-sotib-olmoqchi');
+        const quick = ordered.filter(x => !BULK_QUEUE.has(x)), queue = ordered.filter(x => BULK_QUEUE.has(x));
+        const all = x => leads.every(l => st(l) === x);
+        const qd = x => x === 'yangi-lidlar' ? 'qaytarish · soʻrovsiz' : x === 'boglanishga-urinilmoqda' ? 'Yangidan boʻlsa — bitta sabab hammasiga' : x === 'keyin-sotib-olmoqchi' ? 'bitta sabab va sanalar hammasiga' : '';
+        const btn = (x, sub, extra = '') => `<li><button type="button" class="sa-stage" ${all(x) ? 'disabled' : `data-ra-bulkto="${x}"`}>${dot(x)}<span class="sa-row-t"><strong>${esc(colLabel(x))}</strong>${sub ? `<span>${esc(sub)}</span>` : ''}</span>${extra || ic('chev', 16, 2.4)}</button></li>`;
+        openSheet(`<div class="sa-sh-h"><div><h2>${leads.length} ta lidni oʻtkazish</h2><span>Hozir: ${esc(now)}</span></div><button type="button" class="sa-icon-btn ra-x" data-ra-sheetclose aria-label="Yopish">${ic('close', 18, 2.4)}</button></div>
+          <div class="ra-bk-h">BIR YOʻLA · bitta sabab yoki sana hammasiga</div>
+          <ol class="sa-stages">${quick.map(x => btn(x, qd(x))).join('')}</ol>
+          <div class="ra-bk-h">ANKETA KERAK · navbat bilan, har lid oʻz oynasida</div>
+          <ol class="sa-stages">${queue.map(x => btn(x, '', `<span class="ra-bk-n">${leads.filter(l => st(l) !== x).length} ta oyna</span>`)).join('')}</ol>
+          <div class="sa-close-h">YOPISH · SABAB MAJBURIY</div>
+          <div class="sa-close2"><button type="button" class="sa-btn sa-btn--danger" data-ra-bulkto="muvaffaqiyatsiz-sotuv" ${all('muvaffaqiyatsiz-sotuv') ? 'disabled' : ''}>Muvaffaqiyatsiz<em>bitta sabab · hammasiga</em></button><button type="button" class="sa-btn sa-btn--outline" data-ra-bulkto="sifatsiz-lidlar" ${all('sifatsiz-lidlar') ? 'disabled' : ''}>Sifatsiz<em>bitta sabab · hammasiga</em></button></div>`, 'sa-sheet--stages');
+    }
+    function bulkTo(x) {
+        const leads = pickedLeads().filter(l => st(l) !== x); if (!leads.length) { closeSheet(); return; }
+        const f = BULK_FORM[x];
+        if (!f || (f.only && !leads.some(f.only))) return bulkStart(x, leads, null);
+        const list = f.list(leads);
+        if (!list.length) return bulkStart(x, leads, null);
+        S.bulkForm = { x, keys: leads.map(pkey), reason: '' };
+        const names = leads.slice(0, 4).map(l => `<span>${esc(shortName(l.name || 'Lid'))}</span>`).join('') + (leads.length > 4 ? `<span>+${leads.length - 4}</span>` : '');
+        let lastGroup = '';
+        const opts = list.map(r => { const gh = r.group && r.group !== lastGroup ? `<span class="ra-bk-g">${esc(r.group)}</span>` : ''; lastGroup = r.group || lastGroup; return `${gh}<button type="button" class="sa-opt2 ra-bk-r" role="radio" aria-checked="false" data-ra-bkr="${esc(r.id)}" data-ra-bkg="${esc(r.gid || '')}">${esc(r.label)}</button>`; }).join('');
+        const t0 = (d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`)(new Date());
+        openSheet(`<div class="sa-sh-h"><button type="button" class="sa-icon-btn ra-x" data-ra-bulkstage aria-label="Orqaga">${ic('back', 18, 2.4)}</button><div><h2>${esc(colLabel(x))} · ${leads.length} ta</h2><span>${esc(f.title)} — bitta sabab hammasiga</span></div></div>
+          <div class="ra-bk-who">${names}</div>
+          ${f.only ? `<p class="ra-bk-note">Sabab faqat “Yangi”dan oʻtayotgan ${leads.filter(f.only).length} ta lidga yoziladi, qolganlari toʻgʻridan-toʻgʻri oʻtadi.</p>` : ''}
+          <div class="ra-bk-list" role="radiogroup" aria-label="Sabab">${opts}</div>
+          ${f.dates ? `<div class="ra-f2"><label class="ra-f"><span>Sotib olish sanasi</span><input type="date" id="raBkBuy" class="ra-in" min="${t0}"></label><label class="ra-f"><span>Xabarlashish sanasi</span><input type="date" id="raBkCall" class="ra-in" min="${t0}"></label></div>` : ''}
+          ${x === 'muvaffaqiyatsiz-sotuv' ? '<p class="ra-bk-note">Sabab “bogʻlanib boʻlmadi” turidan boʻlmasa, Bogʻlanildi anketasi yoʻq lidlar uchun anketa navbat bilan ochiladi. Tanlangan sabab lid bosqichiga toʻgʻri kelmasa — oʻsha lid oynasida sababni oʻzingiz tanlaysiz.</p>' : ''}
+          <p class="ra-err" data-ra-bkerr hidden></p>
+          <button type="button" class="sa-btn sa-btn--primary sa-cr-save" data-ra-bkgo>${leads.length} tasini ${esc(SHORT[x] || colLabel(x))}ga oʻtkazish</button>`, 'ra-sheet');
+    }
+    function bulkGo() {
+        const bf = S.bulkForm; if (!bf || !sheetEl) return;
+        const err = m => { const e = sheetEl.querySelector('[data-ra-bkerr]'); if (e) { e.hidden = false; e.textContent = m; } };
+        if (!bf.reason) return err('Bitta sabab tanlang');
+        let dates = null;
+        if (BULK_FORM[bf.x].dates) {
+            const b = document.getElementById('raBkBuy')?.value, c = document.getElementById('raBkCall')?.value;
+            if (!b || !c) return err('Ikkala sanani kiriting');
+            dates = { buy: b, call: c };
+        }
+        const leads = ALL().filter(l => bf.keys.includes(pkey(l)));
+        bulkStart(bf.x, leads, { reason: bf.reason, group: bf.group, dates });
+    }
+    const modalOpen = () => { const ov = document.getElementById('modalOverlay'); return !!ov && ov.style.display !== 'none' && getComputedStyle(ov).display !== 'none'; };
+    // Sinov darsi oynasi to'liq sahifa (jadvalV3 #jvPage yoki sotuvSinov #ssPage) — saqlanmaguncha kutiladi.
+    const busyUi = () => modalOpen() || !!document.querySelector('.sl-sheet-wrap, .sc-dim, #jvPage, #ssPage') || document.body.classList.contains('jv-page-open') || document.body.classList.contains('ss-page-open');
+    function bulkStart(x, leads, preset) {
+        closeSheet(true);
+        if (S.bulk) { clearTimeout(S.bulk.t); S.bulk = null; }
+        S.bulkForm = null;
+        S.bulk = { x, items: leads.map(l => ({ id: l.id, lg: l._lang, name: l.name })), i: 0, done: 0, skip: 0, preset, idle: 0 };
+        document.body.classList.add('ra-bulk-on');
+        S.pickMode = false; S.pick.clear();
+        render(false);
+        bulkNext();
+    }
+    function bulkBanner() {
+        const b = S.bulk; let el = document.getElementById('raBulkBar');
+        if (!b) { el?.remove(); return; }
+        if (!el) { el = document.createElement('div'); el.id = 'raBulkBar'; el.className = 'ra-bulkbar'; el.setAttribute('role', 'status'); document.body.appendChild(el); el.addEventListener('click', e => { if (e.target.closest('[data-ra-bkstop]')) bulkStop(); }); }
+        const n = b.items.length, cur = b.items[b.i];
+        el.innerHTML = `<div class="ra-bulkbar-r"><strong>${esc(SHORT[b.x] || colLabel(b.x))} · ${Math.min(b.i + 1, n)} / ${n}</strong><button type="button" data-ra-bkstop>Toʻxtatish</button></div>
+          <span class="ra-bulkbar-p" aria-hidden="true"><i style="width:${Math.round(b.i / n * 100)}%"></i></span><em>${b.done} ta oʻtdi${cur ? ` · hozir: ${esc(shortName(cur.name || 'Lid'))}` : ''}</em>`;
+    }
+    function bulkNext() {
+        const b = S.bulk; if (!b) return;
+        if (b.i >= b.items.length) return bulkFinish();
+        const it = b.items[b.i], l = leadById(it.id, it.lg);
+        if (!l || st(l) === b.x) { if (l) b.done++; b.i++; return bulkNext(); }
+        bulkBanner();
+        it.tried = false; b.idle = 0;
+        try { if (g('requestLeadStageChange')) requestLeadStageChange(l._lang, l.id, b.x); } catch (e) { console.warn('[ropApp] bulk', e); }
+        clearTimeout(b.t); b.t = setTimeout(bulkWatch, 120);
+    }
+    function applyPreset(b) {
+        const f = BULK_FORM[b.x], mb = document.getElementById('modalBody'); if (!f || !mb || !b.preset) return false;
+        const sel = `input[name="${f.radio}"][value="${CSS.escape(b.preset.reason)}"]`;
+        const r = (b.preset.group && mb.querySelector(`${sel}[data-group="${CSS.escape(b.preset.group)}"]`)) || mb.querySelector(sel); if (!r) return false;
+        r.checked = true; r.dispatchEvent(new Event('change', { bubbles: true }));
+        if (f.dates && b.preset.dates) {
+            const set = (id, v) => { const i = document.getElementById(id); if (i) { i.value = v; i.dispatchEvent(new Event('input', { bubbles: true })); i.dispatchEvent(new Event('change', { bubbles: true })); } };
+            set('deferredPurchaseDate', b.preset.dates.buy); set('deferredContactDate', b.preset.dates.call);
+        }
+        const ok = document.getElementById(f.ok); if (!ok) return false;
+        ok.click(); return true;
+    }
+    function bulkWatch() {
+        const b = S.bulk; if (!b) return;
+        const it = b.items[b.i]; if (!it) return bulkFinish();
+        const l = leadById(it.id, it.lg);
+        const moved = l && st(l) === b.x;
+        if (modalOpen() && b.preset && !it.tried) { it.tried = true; if (applyPreset(b)) { b.t = setTimeout(bulkWatch, 160); return; } }
+        if (busyUi()) { b.idle = 0; b.t = setTimeout(bulkWatch, 400); return; }
+        // Oynalar orasida (bir oyna yopilib, keyingisi ochilguncha) — ikki marta tekshiriladi.
+        if (++b.idle < 2 && !moved) { b.t = setTimeout(bulkWatch, 350); return; }
+        if (moved) b.done++; else b.skip++;
+        b.i++; bulkNext();
+    }
+    function bulkStop() { const b = S.bulk; if (!b) return; clearTimeout(b.t); b.i = b.items.length; bulkFinish(true); }
+    function bulkFinish(stopped) {
+        const b = S.bulk; if (!b) return; clearTimeout(b.t);
+        S.bulk = null; bulkBanner(); document.body.classList.remove('ra-bulk-on'); render(false);
+        const left = b.items.length - b.done;
+        toast(`${b.done} ta lid → ${SHORT[b.x] || colLabel(b.x)}${left ? ` · ${left} tasi oʻtmadi` : ''}${stopped ? ' (toʻxtatildi)' : ''}`, b.done ? 'ok' : 'warn');
     }
 
     // ---------- Lid kartasi ----------
@@ -1300,15 +1445,15 @@
         return `<button type="button" role="radio" aria-checked="${on}" class="ra-mopt${on ? ' is-on' : ''}${r.stale ? ' is-warn' : ''}" data-ra-mpick="${esc(r.m.id)}"><i class="ra-radio"></i>${staffImg(r.m.id, r.m.name, 40)}
           <span class="sa-row-t"><strong>${esc(firstName(r.m.name))}${least ? ' <b class="ra-tagg">Eng kam yuklangan</b>' : r.stale ? ` <b class="ra-taga">${r.stale} qotgan lid</b>` : ''}</strong><span>${r.load} ochiq lid${showToday ? ` · bugun ${r.today} ta berildi` : ''}${r.plan != null ? ` · reja ${r.plan}%` : ''}</span></span></button>`;
     }
-    function openAssignSheet() {
-        const leads = ALL().filter(l => S.sel.has(l.id));
+    function openAssignSheet(override) {
+        const leads = override || ALL().filter(l => S.sel.has(l.id));
         if (!leads.length) return;
         const langs = [...new Set(leads.map(l => l._lang))];
         if (langs.length > 1) { toast('Bir tildagi lidlarni tanlang — menejerlar til boʻyicha', 'warn'); return; }
         const list = mgrOptions(langs[0]);
         if (!list.length) { toast('Bu yoʻnalishda faol sotuv menejeri yoʻq', 'warn'); return; }
         list[0].least = true;
-        S.as = { pick: list[0].m.id, lg: langs[0], ids: leads.map(l => l.id) };
+        S.as = { pick: list[0].m.id, lg: langs[0], ids: leads.map(l => l.id), bulk: !!override };
         const names = leads.slice(0, 3).map(l => shortName(l.name)).join(', ') + (leads.length > 3 ? ` va yana ${leads.length - 3}` : '');
         const sv = list[0].m;
         openSheet(`<div class="sa-sh-h"><div><h2>${leads.length} ta lidni kimga berasiz?</h2><span>${esc(names)}</span></div><button type="button" class="sa-icon-btn ra-x" data-ra-sheetclose aria-label="Yopish">${ic('close', 18, 2.4)}</button></div>
@@ -1316,8 +1461,9 @@
           <button type="button" class="sa-btn sa-btn--primary sa-cr-save" data-ra-assigngo>${esc(firstName(sv.name))}ga berish · ${leads.length} ta lid</button>
           <p class="sa-sh-foot" data-ra-asfoot>${esc(firstName(sv.name))}ga darhol bildirishnoma boradi · 30 daqiqada qoʻngʻiroq qilishi kerak</p>`, 'ra-sheet');
     }
-    function doAssign(items) {
+    function doAssign(items, bulk) {
         if (!items.length || !once('assign')) return;
+        if (bulk) return doBulkAssign(items);
         document.querySelectorAll('[data-ra-assigngo], [data-ra-even]').forEach(b => { b.disabled = true; });
         const before = ALL().filter(l => !l.managerId && OPEN.has(st(l))).length;
         if (g('applyBulkLeadAssignment')) applyBulkLeadAssignment(items.map(x => ({ lang: x.lang, id: x.id, managerId: x.managerId })));
@@ -1327,6 +1473,22 @@
         const done = Math.max(0, before - left);
         S.sel.clear();
         showAssigned(items, done || items.length, left);
+    }
+    // Tanlangan lidlarni menejerga (ommaviy): biriktirilmaganlar — oddiy biriktirish; boshqa menejerdagilarga
+    // bittalab o'tkazishdagidek tarix izohi yoziladi.
+    function doBulkAssign(items) {
+        const me = user(); let n = 0;
+        items.forEach(x => {
+            const l = leadById(x.id, x.lang); if (!l || String(l.managerId || '') === String(x.managerId)) return;
+            const from = l.managerId ? mgrName(l.managerId) : '', to = mgrName(x.managerId);
+            const ok = updateLeadInStorage(x.lang, x.id, y => ({ ...y, managerId: x.managerId, comments: from ? [...(Array.isArray(y.comments) ? y.comments : []), createLeadComment({ text: `ROP ${firstName(me.name)} lidni ${firstName(from) || from} → ${firstName(to)}ga oʻtkazdi (ommaviy)`, author: me.name || 'ROP', type: 'manual' })] : y.comments }));
+            if (ok) n++;
+        });
+        closeSheet(true);
+        if (g('renderLeads')) try { renderLeads(); } catch (e) { /* CRM sahifasi yopiq */ }
+        S.pickMode = false; S.pick.clear(); S.as = null;
+        render(false);
+        toast(n ? `${n} ta lid ${firstName(mgrName(items[0].managerId))}ga berildi` : 'Oʻzgarish yoʻq — hammasi shu menejerda', n ? 'ok' : 'warn');
     }
     function showAssigned(items, n, left) {
         const all = ALL();
@@ -1525,6 +1687,7 @@
         else if (S.screen !== screen) S.stack.push({ screen: S.screen, lead: S.lead, leadLang: S.leadLang, apId: S.apId, mgr: S.mgr });
         if (opts.reset && screen !== 'home') S.stack = [{ screen: 'home' }];
         armGuard();
+        if (screen !== S.screen) { S.pickMode = false; S.pick.clear(); }
         S.screen = screen;
         if (screen === 'approvals' || screen === 'home' || screen === 'menu') loadApprovals();
         if (screen === 'stale' || screen === 'leads' || screen === 'home') loadRules().then(r => { if (r && !go._r) { go._r = 1; queueRender(); } });
@@ -1634,7 +1797,7 @@
 
     // ---------- hodisalar ----------
     function onClick(e) {
-        const t = e.target.closest('[data-ra-go],[data-ra-nav],[data-ra-back],[data-ra-lead],[data-ra-man],[data-ra-glang],[data-ra-stage],[data-ra-clearq],[data-ra-leadadd],[data-ra-reassign],[data-ra-hist],[data-ra-tglead],[data-ra-notify],[data-ra-stagesheet],[data-ra-move],[data-ra-sheetclose],[data-ra-selall],[data-ra-pick],[data-ra-even],[data-ra-assignsheet],[data-ra-mpick],[data-ra-assigngo],[data-ra-rsr],[data-ra-rsgo],[data-ra-ack],[data-ra-aptab],[data-ra-ap],[data-ra-apreload],[data-ra-approve],[data-ra-reject],[data-ra-rjk],[data-ra-rjr],[data-ra-rjsave],[data-ra-apnext],[data-ra-ovgo],[data-ra-ovclose],[data-ra-trday],[data-ra-trseg],[data-ra-tassign],[data-ra-tapick],[data-ra-tasave],[data-ra-tremind],[data-ra-tadmin],[data-ra-tresched],[data-ra-tmore],[data-ra-tcancel],[data-ra-tcr],[data-ra-tcsave],[data-ra-trialnew],[data-ra-tper],[data-ra-mgr],[data-ra-mleads],[data-ra-funper],[data-ra-stlang],[data-ra-step],[data-ra-stsave],[data-ra-artab],[data-ra-arreload],[data-ra-restore],[data-ra-smsg],[data-ra-smssend],[data-ra-ncat],[data-ra-nread],[data-ra-nitem],[data-ra-crm],[data-ra-logout],[data-ra-lasrc],[data-ra-lasave],[data-ra-cardmore],[data-ra-cm-sms],[data-ra-cm-follow],[data-ra-cm-rec],[data-ra-cm-full]');
+        const t = e.target.closest('[data-ra-go],[data-ra-nav],[data-ra-back],[data-ra-lead],[data-ra-man],[data-ra-glang],[data-ra-stage],[data-ra-clearq],[data-ra-leadadd],[data-ra-reassign],[data-ra-hist],[data-ra-tglead],[data-ra-notify],[data-ra-stagesheet],[data-ra-move],[data-ra-sheetclose],[data-ra-selall],[data-ra-pick],[data-ra-even],[data-ra-assignsheet],[data-ra-mpick],[data-ra-assigngo],[data-ra-rsr],[data-ra-rsgo],[data-ra-ack],[data-ra-aptab],[data-ra-ap],[data-ra-apreload],[data-ra-approve],[data-ra-reject],[data-ra-rjk],[data-ra-rjr],[data-ra-rjsave],[data-ra-apnext],[data-ra-ovgo],[data-ra-ovclose],[data-ra-trday],[data-ra-trseg],[data-ra-tassign],[data-ra-tapick],[data-ra-tasave],[data-ra-tremind],[data-ra-tadmin],[data-ra-tresched],[data-ra-tmore],[data-ra-tcancel],[data-ra-tcr],[data-ra-tcsave],[data-ra-trialnew],[data-ra-tper],[data-ra-mgr],[data-ra-mleads],[data-ra-funper],[data-ra-stlang],[data-ra-step],[data-ra-stsave],[data-ra-artab],[data-ra-arreload],[data-ra-restore],[data-ra-smsg],[data-ra-smssend],[data-ra-ncat],[data-ra-nread],[data-ra-nitem],[data-ra-crm],[data-ra-logout],[data-ra-lasrc],[data-ra-lasave],[data-ra-cardmore],[data-ra-cm-sms],[data-ra-cm-follow],[data-ra-cm-rec],[data-ra-cm-full],[data-ra-pickon],[data-ra-pickx],[data-ra-pickall],[data-ra-bulkstage],[data-ra-bulkto],[data-ra-bkr],[data-ra-bkgo],[data-ra-bulkmgr]');
         if (!t) return;
         const d = t.dataset;
         if (t.tagName === 'A' && t.getAttribute('href')) return; // tel:, t.me — o'zi ochiladi
@@ -1650,7 +1813,19 @@
         if ('raGo' in d) { if (d.raGo === 'approvals') S.apTab = 'pending'; return go(d.raGo); }
         if ('raNav' in d) return go(d.raNav, { reset: true });
         if ('raBack' in d) { if (!back()) { if (guest) window.adminApp?.closeRopGuest?.(); else go('home', { reset: true }); } return; }
-        if ('raLead' in d) return openLead(d.raLead, d.ll);
+        if ('raLead' in d) {
+            if (S._lpFired) { S._lpFired = false; return; }
+            if (S.pickMode && S.screen === 'leads') { const k = `${d.ll}|${d.raLead}`; if (S.pick.has(k)) S.pick.delete(k); else S.pick.add(k); render(false); return; }
+            return openLead(d.raLead, d.ll);
+        }
+        if ('raPickon' in d) return pickOn(null);
+        if ('raPickx' in d) return pickOff();
+        if ('raPickall' in d) { const vis = [...(S._vis || [])]; const allOn = vis.length && vis.every(k => S.pick.has(k)); vis.forEach(k => allOn ? S.pick.delete(k) : S.pick.add(k)); render(false); return; }
+        if ('raBulkstage' in d) return openBulkStageSheet();
+        if ('raBulkto' in d) return bulkTo(d.raBulkto);
+        if ('raBkr' in d) { if (S.bulkForm) { S.bulkForm.reason = d.raBkr; S.bulkForm.group = d.raBkg || ''; } sheetEl?.querySelectorAll('[data-ra-bkr]').forEach(b => { const on = b === t; b.classList.toggle('is-on', on); b.setAttribute('aria-checked', String(on)); }); const e = sheetEl?.querySelector('[data-ra-bkerr]'); if (e) e.hidden = true; return; }
+        if ('raBkgo' in d) return bulkGo();
+        if ('raBulkmgr' in d) { const ls = pickedLeads(); if (ls.length) openAssignSheet(ls); return; }
         if ('raGlang' in d) { gLang = d.raGlang === 'english' ? 'english' : 'russian'; try { localStorage.setItem('adm_rop_lang', gLang); } catch (e) {} S.man = 'all'; S.sel.clear(); render(false); chipTo(); return; }
         // Filtr chiplari: ekran qayta "kirmaydi" (animatsiyasiz), chip qatori joyida qoladi, ro'yxat boshidan.
         if ('raMan' in d) { S.man = d.raMan; render(false); chipTo('.ra-man.is-on'); return; }
@@ -1685,7 +1860,7 @@
             const rs = sheetEl.querySelector('[data-ra-rsgo]'); if (rs) { rs.textContent = `${nm}ga oʻtkazish`; const f = sheetEl.querySelector('[data-ra-rsfoot]'); if (f) f.textContent = f.textContent.replace(/ · [^·]+da qotish/, ` · ${nm}da qotish`).replace(/^[^·]+da qotish/, `${nm}da qotish`); }
             return;
         }
-        if ('raAssigngo' in d) { const as = S.as; if (!as) return; return doAssign(as.ids.map(id => ({ lang: as.lg, id, managerId: as.pick }))); }
+        if ('raAssigngo' in d) { const as = S.as; if (!as) return; return doAssign(as.ids.map(id => ({ lang: as.lg, id, managerId: as.pick })), as.bulk); }
         if ('raRsr' in d) { S.rs.reason = S.rs.reason === d.raRsr ? '' : d.raRsr; sheetEl.querySelectorAll('[data-ra-rsr]').forEach(b => { const on = b.dataset.raRsr === S.rs.reason; b.classList.toggle('is-on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); }); return; }
         if ('raRsgo' in d) return doReassign();
         if ('raAck' in d) return ackSla(d.raAck, d.ll);
@@ -1770,6 +1945,17 @@
             document.body.appendChild(root);
             root.addEventListener('click', onClick);
             root.addEventListener('input', onInput);
+            // Lidni bosib turish (≈0,5 s) — tanlash rejimi shu lid bilan ochiladi.
+            let lp = null;
+            const lpClear = () => { if (lp) { clearTimeout(lp.t); lp = null; } };
+            root.addEventListener('pointerdown', e => {
+                S._lpFired = false;
+                const row = e.target.closest?.('.ra-lrow[data-ra-lead]'); if (!row || S.screen !== 'leads' || S.pickMode || (e.button && e.button !== 0)) return;
+                lp = { x: e.clientX, y: e.clientY, t: setTimeout(() => { const l = leadById(row.dataset.raLead, row.dataset.ll); lp = null; if (!l) return; S._lpFired = true; pickOn(l); }, 480) };
+            });
+            root.addEventListener('pointermove', e => { if (lp && (Math.abs(e.clientX - lp.x) > 10 || Math.abs(e.clientY - lp.y) > 10)) lpClear(); });
+            ['pointerup', 'pointercancel', 'scroll'].forEach(ev => root.addEventListener(ev, lpClear, true));
+            root.addEventListener('contextmenu', e => { if (e.target.closest?.('.ra-lrow')) e.preventDefault(); });
         }
         if (!nav) buildNav();
         if (window.schoolUI?.loadStaffAvatars && !enable._av) { enable._av = true; Promise.resolve(window.schoolUI.loadStaffAvatars()).then(() => queueRender()).catch(() => {}); }
@@ -1778,6 +1964,8 @@
         render(true);
     }
     function disable() {
+        if (S.bulk) bulkStop();
+        S.pickMode = false; S.pick.clear();
         document.body.classList.remove('ra-on', 'ra-app-hidden', 'ra-crm-page', 'ra-full');
         closeSheet(true, true); closeOverlay();
         if (root) root.hidden = true;
@@ -1792,6 +1980,7 @@
         hookRenders();
         window.addEventListener('popstate', () => {
             if (!isOn()) return;
+            if (S.bulk) bulkStop();
             let handled = false;
             const ov = document.getElementById('modalOverlay');
             if (ov && ov.style.display !== 'none' && g('closeModal')) { closeModal(); handled = true; }
