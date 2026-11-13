@@ -238,6 +238,8 @@ export type AdminExamQuestion =
 
 export type AdminExamContent = {
   passPercent?: number;
+  /** Imtihon v2 banki (services/examV2.ts). */
+  bankV2?: { totalQuestions: number; passPercent: number; durationSec: number; [k: string]: unknown };
   questions?: AdminExamQuestion[];
   updatedAt?: string;
 };

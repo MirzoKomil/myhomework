@@ -5,7 +5,7 @@
  * soni — getResolvedExams, natijalar — examStore, tugagan darslar va
  * bugungi dars — loadCourseData. "bugun N ta takrorlash" — WordReview
  * seansining o'zi (buildSession), Darslar yo'lidagi kabi.
- * Imtihonni topshirish — eski /homework/exams/[id] (mobil ekrandagi kabi).
+ * Imtihonni topshirish — v2 /v2/imtihon/[id].
  */
 import { router, useFocusEffect, type Href } from 'expo-router';
 import { Children, useCallback, useState } from 'react';
@@ -15,7 +15,7 @@ import { buildSession, loadReviews } from '@/components/v2/home/reviewStore';
 import { EXAM_INTERVAL, loadCourseData } from '@/components/v2/lessons/data';
 import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
-import { getResolvedExams, type Exam } from '@/data/exams';
+import { examQuestionCount, getResolvedExams, type Exam } from '@/data/exams';
 import { useExamResults } from '@/services/examStore';
 import { getAccumulatedVocabulary } from '@/services/vocabProgress';
 
@@ -79,7 +79,7 @@ export function DExams() {
   const first = intervals[0];
   const passedCount = list.filter((e) => results[e.exam.id]?.passed).length;
 
-  const openExam = (e: Exam) => router.push(`/homework/exams/${e.id}` as Href);
+  const openExam = (e: Exam) => router.push(R.exam(e.id) as Href);
   const indexOf = (e: Exam) => intervals.findIndex((x) => x.exam.id === e.id);
 
   return (
@@ -90,7 +90,7 @@ export function DExams() {
           <View style={s.intro}>
             <Image source={designImages.f07a026d5685a2824d81ed41d407bb3f} style={{ width: 54, height: 54 }} resizeMode="contain" />
             <T f="body" size={16} color="#34405A" style={{ flexShrink: 1 }}>
-              Har {first.exam.requiredLessons} darsdan keyin oraliq imtihon: <T size={16}>{first.exam.questions.length} savol</T>, oʻtish bali{' '}
+              Har {first.exam.requiredLessons} darsdan keyin oraliq imtihon: <T size={16}>{examQuestionCount(first.exam)} savol</T>, oʻtish bali{' '}
               <T size={16}>{first.passPercent}%</T>.
             </T>
           </View>
@@ -185,7 +185,7 @@ export function DExams() {
             <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
               <T size={18}>Yakuniy imtihon</T>
               <T f="body" size={14} color="#6B4800">
-                {final.exam.questions.length} savol · {final.exam.requiredLessons}-darsdan keyin
+                {examQuestionCount(final.exam)} savol · {final.exam.requiredLessons}-darsdan keyin
               </T>
             </View>
             {results.final ? (
@@ -237,7 +237,7 @@ function NextCard({ r, no, done, today, open, onOpen }: { r: Resolved; no: numbe
             {no}-oraliq imtihon
           </T>
           <T f="bodyBold" size={16} color="#B8C1D6">
-            {e.rangeLabel} · {e.questions.length} savol
+            {e.rangeLabel} · {examQuestionCount(e)} savol
           </T>
         </View>
         <T size={22} color="#FFC93C">
@@ -245,7 +245,7 @@ function NextCard({ r, no, done, today, open, onOpen }: { r: Resolved; no: numbe
         </T>
       </View>
       <View style={{ flexDirection: 'row', gap: 10 }}>
-        {[`${e.questions.length} savol`, `Oʻtish bali ${r.passPercent}%`, 'Sertifikat'].map((c) => (
+        {[`${examQuestionCount(e)} savol`, `Oʻtish bali ${r.passPercent}%`, 'Sertifikat'].map((c) => (
           <View key={c} style={s.chip}>
             <T f="bodyBold" size={14} color="#DCE2EE">
               {c}

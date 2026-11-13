@@ -5,7 +5,7 @@
  * va savollar soni — getResolvedExams (CRM'dagi savollar bilan
  * birlashtirilgan), natijalar — examStore. Tugagan darslar soni va bugungi
  * dars — Darslar yo'li bilan bir xil manba (loadCourseData).
- * Imtihonni topshirish ekrani v2'da yo'q — eski /homework/exams/[id] ochiladi.
+ * Imtihonni topshirish — /v2/imtihon/[id] (services/examV2.ts).
  */
 import { router, useFocusEffect, type Href } from 'expo-router';
 import { useCallback, useState } from 'react';
@@ -17,7 +17,7 @@ import { LessonsNav, Txt } from '@/components/v2/homework/ui';
 import { loadCourseData } from '@/components/v2/lessons/data';
 import { designImages } from '@/constants/v2/designImages';
 import { R } from '@/constants/v2/routes';
-import { getResolvedExams, type Exam } from '@/data/exams';
+import { examQuestionCount, getResolvedExams, type Exam } from '@/data/exams';
 import { useExamResults } from '@/services/examStore';
 import { DExams } from '@/components/v2/desktop/course/DExams';
 import { useIsDesktop } from '@/components/v2/desktop/useDesktop';
@@ -84,7 +84,7 @@ function ExamsScreenMobile() {
   const later = rest.slice(1);
   const first = intervals[0];
 
-  const openExam = (e: Exam) => router.push(`/homework/exams/${e.id}` as Href);
+  const openExam = (e: Exam) => router.push(R.exam(e.id) as Href);
   const indexOf = (e: Exam) => intervals.findIndex((x) => x.exam.id === e.id);
   const rangeOf = (e: Exam) => e.rangeLabel;
 
@@ -100,7 +100,7 @@ function ExamsScreenMobile() {
               <Txt f="body" size={14} color="#4A5468" lh={19.6} style={{ flex: 1 }}>
                 Har {first.exam.requiredLessons} darsdan keyin oraliq imtihon:{' '}
                 <Txt f="bodyHeavy" size={14}>
-                  {first.exam.questions.length} savol
+                  {examQuestionCount(first.exam)} savol
                 </Txt>
                 , oʻtish bali{' '}
                 <Txt f="bodyHeavy" size={14}>
@@ -163,7 +163,7 @@ function ExamsScreenMobile() {
                         {i + 1}-oraliq imtihon
                       </Txt>
                       <Txt f="body" size={13} color="#B8C1D6">
-                        {rangeOf(e)} · {e.questions.length} savol
+                        {rangeOf(e)} · {examQuestionCount(e)} savol
                       </Txt>
                     </View>
                     <Txt f="bodyHeavy" size={14} color="#FFC93C">
@@ -247,7 +247,7 @@ function ExamsScreenMobile() {
                   Yakuniy imtihon
                 </Txt>
                 <Txt f="body" size={13} color="#5C4300">
-                  {final.exam.questions.length} savol · {final.exam.requiredLessons}-darsdan keyin
+                  {examQuestionCount(final.exam)} savol · {final.exam.requiredLessons}-darsdan keyin
                 </Txt>
               </View>
               {results.final ? (
