@@ -6,6 +6,7 @@
  * QR — server bergan shaxsiy bir martalik havola (telefon raqami mos kelishi shart emas);
  * oyna ochilganda yaratiladi, muddati tugasa yangilanadi. Kirmagan bo'lsa — botning oddiy manzili.
  */
+import { openLater } from '@/services/openLater';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Image, Linking, Pressable, StyleSheet, Text, View, type TextStyle } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
@@ -94,9 +95,11 @@ export function DBotConnect({ visible, onClose, mandatory = false }: { visible: 
         await Linking.openURL(BOT_URL);
         return;
       }
-      const r = linkLive && link ? link : await createTelegramLink();
+      if (linkLive && link) { await Linking.openURL(link.url); await load(); return; }
+      const tab = openLater();
+      let r;
+      try { r = await createTelegramLink(); await tab.go(r.url); } catch (e) { tab.cancel(); throw e; }
       setLink(r);
-      await Linking.openURL(r.url);
       await load();
     });
   const confirm = () =>
