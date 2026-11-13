@@ -90,3 +90,6 @@
 .yd-cl{display:flex;align-items:center;gap:12px;flex:1;min-width:0;color:#0B1220;text-decoration:none;align-self:stretch}
 .yd-call{width:40px;height:40px;border-radius:12px;background:#EAF3FF;color:#0065D6;display:grid;place-items:center;flex:none}
 .yd-call:active{background:#D6E8FF}
+.ph .yd-cl,.ph .yd-cl .nm{color:#0B1220}
+.yd-cl .nm,.yd-cl .s{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.yd-cl .pill{flex:none}
