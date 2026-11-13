@@ -493,3 +493,34 @@ select.ra-in { background: #FFFFFF; }
     .ra-app *, .ra-ov, .ra-ov *, .ra-act.is-hot::after { animation: none !important; transition: none !important; }
     .ra-win > .ra-c { display: none; }
 }
+
+/* Ommaviy tanlash va bosqichga o'tkazish (kanvas R08b–R08e). */
+.ra-pickon { color: var(--sa-ink2); }
+.ra-pick-top h1 { flex: 1; font-size: 22px; }
+.ra-pickx { background: var(--sa-bg); }
+.ra-pickall { height: 44px; padding: 0 14px; border: 0; border-radius: 14px; background: var(--sa-blue-t, #EAF3FF); color: #0057B8; font: inherit; font-size: 13px; font-weight: 800; white-space: nowrap; }
+.ra-pickall:disabled { opacity: .5; }
+.ra-lrow.is-pick { gap: 12px; }
+.ra-lrow.is-pick.is-on { border-color: var(--sa-blue); background: #F5F9FF; }
+.ra-lrow.is-on .ra-chk-b { background: var(--sa-blue); border-color: var(--sa-blue); color: #FFFFFF; }
+.ra-lrow { -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
+.sa-body.ra-pickpad { padding-bottom: 96px; }
+.ra-pick-bar { display: grid; grid-template-columns: 1fr 1.35fr; gap: 8px; }
+.ra-pick-bar .sa-btn { min-height: 52px; border-radius: 16px; }
+.ra-bk-h { font-size: 11px; font-weight: 800; letter-spacing: .06em; color: var(--sa-ink2); padding: 4px 4px 0; }
+.ra-bk-n { flex: none; font-size: 12px; font-weight: 700; color: #93370D; background: #FEF0C7; border-radius: 999px; padding: 3px 9px; }
+.ra-bk-who { display: flex; flex-wrap: wrap; gap: 6px; }
+.ra-bk-who span { font-size: 12px; font-weight: 700; background: #F1F5F9; color: var(--sa-ink2); border-radius: 999px; padding: 5px 10px; }
+.ra-bk-list { display: flex; flex-direction: column; gap: 6px; max-height: 42vh; overflow-y: auto; }
+.ra-bk-g { font-size: 12px; font-weight: 800; color: var(--sa-ink2); padding: 6px 4px 0; }
+.ra-bk-r { min-height: 48px; text-align: left; }
+.ra-bk-r.is-on { border-color: var(--sa-blue); background: #F5F9FF; color: #0057B8; font-weight: 800; }
+.ra-bk-note { margin: 0; font-size: 13px; font-weight: 600; color: #0B3B75; background: #EAF3FF; border-radius: 14px; padding: 10px 12px; }
+.ra-bulkbar { position: fixed; left: 12px; right: 12px; top: calc(env(safe-area-inset-top, 0px) + 8px); z-index: 1160; background: #0B1220; color: #FFFFFF; border-radius: 18px; padding: 10px 14px; display: flex; flex-direction: column; gap: 6px; font-family: 'DW Jakarta', 'Plus Jakarta Sans', system-ui, sans-serif; box-shadow: 0 10px 30px rgba(11, 18, 32, .25); }
+.ra-bulkbar-r { display: flex; align-items: center; gap: 10px; }
+.ra-bulkbar-r strong { flex: 1; font-size: 14px; }
+.ra-bulkbar-r button { min-height: 36px; padding: 0 10px; border: 0; border-radius: 10px; background: rgba(255, 255, 255, .14); color: #FFFFFF; font: inherit; font-size: 13px; font-weight: 700; }
+.ra-bulkbar-p { height: 6px; border-radius: 99px; background: rgba(255, 255, 255, .2); overflow: hidden; }
+.ra-bulkbar-p i { display: block; height: 100%; border-radius: 99px; background: #3B82F6; transition: width .3s ease; }
+.ra-bulkbar em { font-style: normal; font-size: 12px; font-weight: 600; color: #FFFFFF; }
+body.ra-bulk-on .modal-overlay > .modal { max-height: calc(100dvh - 110px - env(safe-area-inset-top, 0px)) !important; }
