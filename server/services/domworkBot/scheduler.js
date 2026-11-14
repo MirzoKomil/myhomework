@@ -177,11 +177,14 @@ async function run(db,now=new Date()) {
                 `⚠️ ${T.b(T.dateOnly(yday))} uchun reklama sarfi hali kiritilmagan${people.length?': '+people.map(p=>T.who(p.name,p.telegramId)).join(', '):''}.\nIltimos, bugun kiritib qo‘ying — oy hisobotidagi narxlar shunga bog‘liq 📊`,opts);
         });
     }});
+    // 14-noy: kun yakuni hisobotlari 23:30 da, ROP taqqoslamasi 23:35 da (pastda). Hisobotdan keyin o'sha kunga (yoki oldingi
+    // 7 kunga) to'lov kiritilsa/bekor qilinsa yoki sinov natijasi o'zgarsa — o'sha kun hisoboti «yangilandi» belgisi bilan qayta yuboriladi.
+    if(settings.reportsEnabled && clock.minute%5===0) await guarded(db,'report_refresh',()=>refreshReports(db,now));
     // 29-okt: kun yakuni hisobotlari 23:00 da, ROP taqqoslamasi 23:05 da. 30-okt: 23:00–23:59 oralig'ida qayta urinadi
     // (bir martalik xato yoki server qayta ishga tushishi hisobotni yo'qotmasin) — once() takrorlanishni to'xtatadi.
-    if(settings.reportsEnabled && clock.hour===23) {
+    if(settings.reportsEnabled && clock.hour===23 && clock.minute>=30) {
         await guarded(db,'report_daily',()=>once(db,'report:'+clock.date+':daily',()=>dailyReport(db,clock.date,now)));
-        if(clock.minute>=5) await guarded(db,'report_comparison',()=>once(db,'report:'+clock.date+':comparison',()=>comparisonReport(db,clock.date,now)));
+        if(clock.minute>=35) await guarded(db,'report_comparison',()=>once(db,'report:'+clock.date+':comparison',()=>comparisonReport(db,clock.date,now)));
     }
     await guarded(db,'family',async()=>{
     if(settings.groupNotificationsEnabled && reached(settings.familyTime || '10:00')) {
@@ -204,7 +207,34 @@ async function dailyReport(db,date,now=new Date(),suffix='') {
     for(const identity of people) await events.privateMessage(db,'report:'+tag+':'+identity.telegramId,identity,text[identity.role],opts);
     await events.groupMessage(db,'department-report:'+tag+':sales','sales',D.salesText(sales,{group:true}),opts);
     await events.groupMessage(db,'department-report:'+tag+':marketing','marketing',text.marketing,opts);
-    return {recipients:people.length};
+    // Sinov darslari — akademik rahbarga alohida (ustozlar kesimida).
+    const akademik=await roles(db,['akademik']);
+    for(const identity of akademik) await events.privateMessage(db,'report:'+tag+':trial:'+identity.telegramId,identity,D.trialText(sales.trials,date),opts);
+    await markReport(db,date);
+    return {recipients:people.length+akademik.length};
+}
+async function markReport(db,date) {
+    const D=require('./dailyReports');
+    await db.query('CREATE TABLE IF NOT EXISTS domwork_bot_report_marks(date DATE PRIMARY KEY, sales TEXT NOT NULL, trials TEXT NOT NULL, updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())');
+    await db.query(`INSERT INTO domwork_bot_report_marks VALUES($1,$2,$3,NOW()) ON CONFLICT(date) DO UPDATE SET sales=EXCLUDED.sales,trials=EXCLUDED.trials,updated_at=NOW()`,
+        [date,await D.salesPrint(db,date),await D.trialPrint(db,date)]);
+}
+async function refreshReports(db,now) {
+    if(!(await db.query("SELECT to_regclass('domwork_bot_report_marks') AS t")).rows[0]?.t) return;
+    const D=require('./dailyReports'), from=policy.today(new Date(now.getTime()-7*86400000));
+    const marks=(await db.query("SELECT TO_CHAR(date,'YYYY-MM-DD') AS date,sales,trials FROM domwork_bot_report_marks WHERE date>=$1::date ORDER BY date",[from])).rows;
+    for(const m of marks) {
+        const salesNow=await D.salesPrint(db,m.date), trialsNow=await D.trialPrint(db,m.date);
+        if(salesNow===m.sales && trialsNow===m.trials) continue;
+        const opts={...T.HTML,_setting:'reportsEnabled',_expiresAt:new Date(now.getTime()+3600000).toISOString()}, tag=m.date+':upd:'+now.getTime();
+        const sales=await D.salesDay(db,m.date);
+        if(salesNow!==m.sales) {
+            for(const identity of await roles(db,['admin','rop'])) await events.privateMessage(db,'report:'+tag+':'+identity.telegramId,identity,D.salesText(sales,{updated:true}),opts);
+            await events.groupMessage(db,'department-report:'+tag+':sales','sales',D.salesText(sales,{group:true,updated:true}),opts);
+        }
+        if(trialsNow!==m.trials) for(const identity of await roles(db,['akademik'])) await events.privateMessage(db,'report:'+tag+':trial:'+identity.telegramId,identity,D.trialText(sales.trials,m.date,true),opts);
+        await db.query('UPDATE domwork_bot_report_marks SET sales=$2,trials=$3,updated_at=NOW() WHERE date=$1::date',[m.date,salesNow,trialsNow]);
+    }
 }
 async function comparisonReport(db,date,now=new Date(),suffix='') {
     const opts={...T.HTML,_setting:'reportsEnabled',_expiresAt:new Date(now.getTime()+3600000).toISOString()};

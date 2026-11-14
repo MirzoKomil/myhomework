@@ -50,7 +50,7 @@ async function transitions(db, date, managerId = null) {
 async function salesDay(db, date) {
     const ok = await validReceipt(db), month = date.slice(0, 7) + '-01';
     const mgrs = await managers(db);
-    const pay = (await db.query(`SELECT p.id,p.manager_id,p.amount,p.source_key,
+    const pay = (await db.query(`SELECT p.id,p.manager_id,p.amount,p.source_key,p.student_id,p.lead_id,
             (p.source_key LIKE 'lead:%' AND NOT EXISTS (SELECT 1 FROM payment_records q WHERE q.id<>p.id AND q.lead_id=p.lead_id AND q.source_key LIKE 'lead:%'
                 AND NOT q.legacy_review AND (q.created_at<p.created_at OR (q.created_at=p.created_at AND q.id<p.id)))) AS is_sale,
             TO_CHAR(p.paid_date,'YYYY-MM-DD') AS d
@@ -78,24 +78,75 @@ async function salesDay(db, date) {
     const students = (await db.query(`SELECT extra_data FROM students WHERE subject='russian' AND COALESCE(extra_data->>'isStaffDemo','false')<>'true'`)).rows
         .filter(r => R.isActiveStudent(r));
     const overdue = students.filter(r => Number(r.extra_data?.debtAmount) > 0 && /^\d{4}-\d{2}-\d{2}/.test(r.extra_data?.paymentDueDate || '') && String(r.extra_data.paymentDueDate).slice(0, 10) < date);
-    return { date, day: today.reduce((s, p) => s + Number(p.amount), 0), payments: today.length, sales: today.filter(p => p.is_sale).length,
+    const fresh = today.filter(p => p.is_sale), debt = today.filter(p => !p.is_sale), add = l => l.reduce((s, p) => s + Number(p.amount), 0);
+    return { date, day: add(today), payments: today.length, sales: fresh.length, saleSum: add(fresh), debtPays: debt.length, debtSum: add(debt),
+        debtStudents: new Set(debt.map(p => p.student_id || p.lead_id || p.id)).size, trials: await trialDay(db, date),
         monthSum, plan, left: workdaysLeft(date), people, leads: { fresh: newLeads, contacted: tr['boglanildi'] || 0, trial: tr['sinov-darsida'] || 0,
             trialDone: trialsDone.filter(r => r.t.attended === true).length, trialMissed: trialsDone.filter(r => r.t.attended === false).length, won: tr['tolov-yopildi'] || 0 },
         overdue: { count: overdue.length, sum: overdue.reduce((s, r) => s + Number(r.extra_data.debtAmount), 0) } };
 }
+// 14-noy: sinov darslari kesimi — shu kunga belgilangan sinovlar (joriy va tarixdagi so'rovlar), bugun qo'yilganlar,
+// o'tildi/kelmadi/belgilanmagan va o'tilish koeffitsiyenti (o'tildi ÷ belgilangan; ustoz rad etib, qayta qo'yilganlar hisobga kirmaydi).
+async function trialDay(db, date) {
+    const rows = (await db.query(`SELECT id,name,manager_id,extra_data->'trialRequest' AS r,extra_data->'trialHistory' AS h FROM leads
+        WHERE language='russian' AND deleted_at IS NULL AND (extra_data ? 'trialRequest' OR extra_data ? 'trialHistory')`)).rows;
+    const day = v => { const t = Date.parse(v || ''); return Number.isFinite(t) ? policy.today(new Date(t)) : ''; };
+    const seen = new Set(), list = [], booked = new Set();
+    for (const r of rows) for (const q of [r.r, ...(Array.isArray(r.h) ? r.h : [])]) {
+        if (!q || typeof q !== 'object' || !q.id || seen.has(q.id)) continue;
+        seen.add(q.id);
+        if (day(q.requestedAt) === date) booked.add(r.id);
+        if (day(q.scheduledAt) === date && q.state !== 'rejected') list.push({ lead: r.name || 'Nomsiz', teacherId: q.teacherId || '', at: q.scheduledAt,
+            result: q.attended === true ? 'ok' : q.state === 'completed' ? 'miss' : 'open', reason: q.reasonLabel || '' });
+    }
+    const names = new Map((await db.query('SELECT id,name FROM hr_employees')).rows.map(r => [r.id, r.name]));
+    const teachers = new Map();
+    for (const t of list) { const k = t.teacherId; if (!teachers.has(k)) teachers.set(k, { name: names.get(k) || 'Ustoz biriktirilmagan', items: [] }); teachers.get(k).items.push(t); }
+    const ok = list.filter(t => t.result === 'ok').length;
+    return { booked: booked.size, scheduled: list.length, ok, miss: list.filter(t => t.result === 'miss').length, open: list.filter(t => t.result === 'open').length,
+        rate: list.length ? Math.round(ok / list.length * 100) : null, teachers: [...teachers.values()].sort((a, b) => b.items.length - a.items.length) };
+}
+const trialLines = t => [`🧪 <b>Sinov darslari</b>`, `Bugun qo‘yildi: ${T.b(t.booked)} · bugunga belgilangan: ${T.b(t.scheduled)}`,
+    `✅ O‘tildi ${T.b(t.ok)} · ❌ Kelmadi ${t.miss}${t.open ? ` · ⏳ Natija belgilanmagan ${t.open}` : ''}`,
+    `📈 O‘tilish koeffitsiyenti: ${T.b(t.rate == null ? '—' : t.rate + '%')}${t.scheduled ? ` (${t.ok}/${t.scheduled})` : ''}`];
+// Akademik rahbar uchun alohida: ustozlar kesimida.
+function trialText(t, date, updated = false) {
+    const lines = [`🧪 <b>Sinov darslari — kun yakuni</b>`, `📅 ${T.when(date)}`];
+    if (updated) lines.push(`<i>♻️ Hisobot yangilandi: sinov natijalari o‘zgardi</i>`);
+    lines.push('', ...trialLines(t).slice(1));
+    if (t.teachers.length) {
+        lines.push('', '👩‍🏫 <b>Ustozlar kesimida</b>');
+        for (const x of t.teachers) {
+            const ok = x.items.filter(i => i.result === 'ok').length;
+            lines.push(`• ${T.b(x.name)} — ${ok}/${x.items.length} o‘tildi (${Math.round(ok / x.items.length * 100)}%)`);
+            for (const i of x.items.filter(i => i.result !== 'ok')) lines.push(`   ${i.result === 'miss' ? '❌' : '⏳'} ${T.esc(i.lead)}${i.reason ? ' — ' + T.esc(i.reason) : i.result === 'open' ? ' — natija yozilmagan' : ''}`);
+        }
+    }
+    if (t.open) lines.push('', T.i('Natija belgilanmagan sinovlar bo‘yicha ustozlardan bugun so‘rab qo‘ying 🙏'));
+    return lines.join('\n');
+}
+// Kun hisobotining «izi»: shu kungi haqiqiy tushumlar soni+summasi. Hisobotdan keyin o'zgarsa — qayta yuboriladi.
+async function salesPrint(db, date) {
+    const r = (await db.query(`SELECT COUNT(*)::int AS n,COALESCE(SUM(amount),0)::bigint AS s FROM payment_records p
+        WHERE p.language='russian' AND ${await validReceipt(db)} AND p.paid_date=$1::date`, [date])).rows[0];
+    return `${r.n}:${r.s}`;
+}
+async function trialPrint(db, date) { const t = await trialDay(db, date); return `${t.scheduled}:${t.ok}:${t.miss}:${t.open}`; }
 const MEDALS = ['🥇', '🥈', '🥉'];
 const short = name => { const [a, b] = String(name || '').trim().split(/\s+/); return b ? `${a} ${b[0]}.` : (a || '—'); };
 const pct = (a, b) => b > 0 ? Math.floor(a / b * 100) + '%' : '—';
-function salesText(r, { group = false } = {}) {
-    const lines = [`📊 <b>Sotuv bo‘limi — kun yakuni</b>`, `📅 ${T.when(r.date)}`, ''];
-    lines.push(r.payments ? `💰 <b>Bugun: ${T.esc(T.sum(r.day))}</b> · ${r.payments} ta to‘lov` : '💰 <b>Bugun to‘lov bo‘lmadi</b>');
-    if (r.payments) lines.push(`🆕 Yangi sotuv: ${T.b(r.sales)} · 💳 Bo‘lib to‘lash va qarz: ${r.payments - r.sales}`);
+function salesText(r, { group = false, updated = false } = {}) {
+    const lines = [`📊 <b>Sotuv bo‘limi — kun yakuni</b>`, `📅 ${T.when(r.date)}`];
+    if (updated) lines.push(`<i>♻️ Hisobot yangilandi: shu kunga yangi to‘lovlar kiritildi</i>`);
+    lines.push('');
+    lines.push(r.payments ? `💰 <b>Jami tushum: ${T.esc(T.sum(r.day))}</b> · ${r.payments} ta to‘lov` : '💰 <b>Bu kuni to‘lov bo‘lmadi</b>');
+    if (r.payments) lines.push(`🆕 Yangi sotuvlar: ${T.b(r.sales + ' ta')} · ${T.esc(T.sum(r.saleSum))}`,
+        `💳 Qarzdorlardan: ${T.b(r.debtStudents + ' o‘quvchi')}${r.debtPays !== r.debtStudents ? ` (${r.debtPays} to‘lov)` : ''} · ${T.esc(T.sum(r.debtSum))}`);
     lines.push(`📆 Oy: ${T.b(T.sum(r.monthSum))}${r.plan > 0 ? ` · reja ${T.b(pct(r.monthSum, r.plan))}` : ''}`);
     if (r.plan > r.monthSum) lines.push(`🎯 Qoldi ${T.esc(T.sum(r.plan - r.monthSum))}${r.left ? ` · kuniga ~${T.esc(T.sum(Math.ceil((r.plan - r.monthSum) / r.left / 1000) * 1000))} kerak (${r.left} ish kuni)` : ''}`);
     else if (r.plan > 0) lines.push('🎉 <b>Oylik reja bajarildi!</b>');
     const L = r.leads;
-    lines.push('', `👥 <b>Lidlar bugun</b>`, `Yangi ${T.b(L.fresh)} · bog‘lanildi ${L.contacted} · sinovga yozildi ${L.trial}`,
-        `Sinov o‘tdi ${L.trialDone}${L.trialMissed ? ` · kelmadi ${L.trialMissed}` : ''} · yopildi ${T.b(L.won)}`);
+    lines.push('', `👥 <b>Lidlar bugun</b>`, `Yangi ${T.b(L.fresh)} · bog‘lanildi ${L.contacted} · yopildi ${T.b(L.won)}`, '', ...trialLines(r.trials));
     if (r.people.length) {
         lines.push('', '🏆 <b>Menejerlar</b>');
         r.people.forEach((p, n) => lines.push(`${p.day > 0 ? (MEDALS[n] || `${n + 1}.`) : '▫️'} ${T.b(short(p.name))} — `
@@ -190,4 +241,4 @@ async function adminText(db, date) {
     if (best) lines.push('', `🏆 Kun yetakchisi: ${T.b(best.name)} — ${T.esc(T.sum(best.day))}`);
     return lines.join('\n');
 }
-module.exports = { validReceipt, workdaysLeft, salesDay, salesText, marketingDay, marketingText, adminText, transitions, lowQuality, qualityOf };
+module.exports = { trialDay, trialText, salesPrint, trialPrint, validReceipt, workdaysLeft, salesDay, salesText, marketingDay, marketingText, adminText, transitions, lowQuality, qualityOf };
