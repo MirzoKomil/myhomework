@@ -710,6 +710,19 @@ async function bonus(c, v) {
 
 // ── Menejer Sotuv guruhida bot xabariga "reply" qiladi → javob lidga bot orqali ──
 const SALES_ROLES = ['sales', 'rop', 'admin'];
+// Sotuv menejeri guruhdagi lid bilan ishlay boshladi (tugma yoki reply): lid hali hech kimga biriktirilmagan bo'lsa — unga o'tadi,
+// «Yangi lidlar»da tursa «Bog'lanildi»ga. ROP keyin kabinetida ro'yxatni ko'radi (extra_data.botClaim).
+async function claimLead(db, v, staff, how) {
+    if (!v?.lead_id || staff.role !== 'sales' || !staff.employeeId) return;
+    const l = (await db.query('SELECT id,status,manager_id,extra_data FROM leads WHERE id=$1 AND deleted_at IS NULL FOR UPDATE', [v.lead_id])).rows[0];
+    if (!l || l.manager_id) return;
+    const stage = require('../leadStages').normalizeLeadStatus(l.status), move = stage === 'yangi-lidlar' && how !== 'na';
+    const extra = { ...(l.extra_data || {}), botClaim: { by: staff.employeeId, name: clean(staff.name), how, at: new Date().toISOString(), from: stage, seen: false } };
+    await db.query(`UPDATE leads SET manager_id=$2, status=$3, extra_data=$4, updated_at=NOW() WHERE id=$1`, [l.id, staff.employeeId, move ? 'boglanildi' : l.status, JSON.stringify(extra)]);
+    await db.query("INSERT INTO lead_audit(lead_id,action,actor_id,actor_name,snapshot) VALUES($1,'bot-claim',$2,$3,$4)",
+        [l.id, staff.employeeId, clean(staff.name), JSON.stringify({ manager_id: staff.employeeId, status: move ? 'boglanildi' : l.status, how })]);
+    await leadComment(db, l.id, `🤖 Telegram guruhidan ${clean(staff.name)}ga avtomatik biriktirildi${move ? ' · «Bog‘lanildi»ga o‘tdi' : ''}`);
+}
 async function relayFromGroup(db, update) {
     const m = update.message, chatId = String(m.chat.id), replyTo = m.reply_to_message;
     if (!replyTo?.from?.is_bot || m.from?.is_bot) return false;
@@ -730,6 +743,7 @@ async function relayFromGroup(db, update) {
     else { await send(c, 'sendMessage', { text: header, _relayOut: true }); await send(c, 'copyMessage', { from_chat_id: chatId, message_id: m.message_id, _relayOut: true }); }
     const v = await visitor(db, tid);
     if (v?.lead_id) await leadComment(db, v.lead_id, `🤖 ${clean(staff.name)} bot orqali yozdi: ${m.text ? String(m.text).slice(0, 300) : '[media]'}`);
+    await claimLead(db, v, staff, 'reply');
     await event(db, tid, 'relay_out', { by: staff.id });
     return true;
 }
@@ -776,6 +790,7 @@ async function managerAction(db, update) {
                 _guest: { tid }, _automation: true } });
         await patch(db, tid, { noans_at: new Date(), ...(v.request?.method ? {} : { request: { method: 'call' } }) });
     }
+    if (action !== 'phone') await claimLead(db, v, staff, action.startsWith('r:') ? 'rej' : action);
     await event(db, tid, 'outcome', { action, by: staff.id });
     return ack('Saqlandi');
 }
