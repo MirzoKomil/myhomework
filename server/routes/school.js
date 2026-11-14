@@ -1068,6 +1068,21 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
     }));
 
     // ── Yordamchi aloqalari ──────────────────────────────────────────────────
+    // 14-noy: yangi o'quvchi bilan tanishuv aloqasi (davomat/maoshga kirmaydi) — services/school/assistIntro.js
+    router.get('/assist/intros', handle(async req => {
+        if (req.user.role !== 'teacher') return { intros: [] };
+        const own = await teacherOf(req);
+        return require('../services/school/assistIntro').mine(pool, own.id);
+    }));
+    router.get('/assist/intros/board', handle(req => {
+        need(req, new Set([...MANAGE, 'akademik']));
+        return require('../services/school/assistIntro').board(pool);
+    }));
+    router.post('/assist/intros/:studentId', handle(req => write(req, async c => {
+        if (req.user.role !== 'teacher') throw T.fail(403, 'Faqat yordamchi ustoz');
+        const own = await teacherOf(req);
+        return require('../services/school/assistIntro').save(c, own.id, req.params.studentId, req.body || {});
+    })));
     router.post('/assist/contacts', handle(req => write(req, c => A.mark(c, req.user, req.body || {}).then(x => ({ contact: x })))));
     router.delete('/assist/contacts/:id', handle(req => write(req, c => A.removeOwnToday(c, req.user, req.params.id).then(x => ({ contact: x })))));
     router.post('/assist/corrections', handle(req => write(req, c => A.adminCorrect(c, req.user, req.body || {}).then(x => ({ contact: x })))));
