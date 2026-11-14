@@ -38,6 +38,8 @@ async function init(db) {
     // Sotuv guruhidagi bot xabari → qaysi mehmonga tegishli (menejer "reply" qilib javob yozadi).
     await db.query(`CREATE TABLE IF NOT EXISTS domwork_bot_relay (chat_id TEXT NOT NULL, message_id BIGINT NOT NULL, telegram_id TEXT NOT NULL,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), PRIMARY KEY(chat_id,message_id))`);
+    // 15-noy: xabar matni va tugmalari — raqam kelganda eski xabarni tahrirlash uchun (editMessageText tugmalarni ham qayta talab qiladi).
+    await db.query("ALTER TABLE domwork_bot_relay ADD COLUMN IF NOT EXISTS text TEXT NOT NULL DEFAULT '', ADD COLUMN IF NOT EXISTS markup JSONB");
     await db.query("DELETE FROM domwork_bot_relay WHERE created_at<NOW()-INTERVAL '90 days'");
     // 30-okt: voronkani ishga tushirish (bir marta). Keyin Bot boshqaruvidan o'chirilsa — o'chiq qoladi.
     await db.query(`UPDATE domwork_bot_settings SET data=data||'{"funnelEnabled":true,"dripEnabled":true,"funnelLaunch20261030":true}'::jsonb
@@ -572,6 +574,7 @@ async function notifyShort(db, key, v, text) {
 async function typedPhone(c, v, phone) {
     const db = c.db;
     await patch(db, c.tid, { phone, phone_purpose: (v.awaiting || 'contact') + ':typed', awaiting: '' }); v.phone = phone;
+    await fillPhone(db, c.tid, phone);
     await ensureLead(db, v, { phone: '', intent: v.awaiting === 'lesson' ? 'lesson' : 'call' });
     await db.query("UPDATE leads SET phone=CASE WHEN COALESCE(phone,'')='' THEN $2 ELSE phone END,updated_at=NOW() WHERE id=$1", [v.lead_id, '+' + phone]);
     await leadComment(db, v.lead_id, `🤖 Bot: mijoz raqamni qo‘lda yozdi: +${phone} (Telegram orqali tasdiqlanmagan).`);
@@ -595,6 +598,7 @@ async function contact(db, update, m) {
     const v = (await visitor(db, own.telegramId)) || await upsertVisitor(db, m.from);
     const purpose = v.awaiting || 'contact';
     await patch(db, own.telegramId, { phone: own.phone, phone_purpose: purpose === 'lesson' ? 'lesson' : purpose, awaiting: '' });
+    await fillPhone(db, own.telegramId, own.phone);
     v.phone = own.phone;
     await ensureLead(db, v, { phone: own.phone, intent: purpose === 'lesson' ? 'lesson' : 'call' });
     if (purpose === 'lesson') await leadComment(db, v.lead_id, '🤖 Bot: raqamni 1-darsni ko‘rish uchun berdi — qo‘ng‘iroq SHART EMAS. Faqat ball yig‘ilsa Telegramda yumshoq yozing.');
@@ -614,6 +618,22 @@ async function contact(db, update, m) {
         return say(c, found ? copy.text.matched(lead.manager ? String(lead.manager).split(' ')[0] : '') : copy.text.matchNew, replyKeyboard());
     }
     return cta(c, v);
+}
+// Raqam keldi: Sotuv guruhidagi shu lidning «raqam yo'q» yozilgan xabarlari (oxirgi 7 kun) raqam bilan tahrirlanadi.
+const NO_PHONE = '📞 raqam yo‘q — bot raqamini so‘raydi';
+async function fillPhone(db, tid, phone) {
+    const group = await salesGroup(db);
+    if (!group) return;
+    const ph = '+' + String(phone).replace(/\D/g, '');
+    const rows = (await db.query(`SELECT message_id,text,markup FROM domwork_bot_relay WHERE chat_id=$1 AND telegram_id=$2 AND position($3 in text)>0
+        AND created_at>NOW()-INTERVAL '7 days' ORDER BY created_at DESC LIMIT 5`, [group.chat_id, tid, NO_PHONE])).rows;
+    for (const r of rows) {
+        const text = r.text.replace(NO_PHONE, `📞 ${ph} · Telegram: t.me/${ph} ✅ (raqamni keyin qoldirdi)`);
+        await db.query('UPDATE domwork_bot_relay SET text=$3 WHERE chat_id=$1 AND message_id=$2', [group.chat_id, r.message_id, text]);
+        await store.enqueue(db, { key: `fillphone:${group.chat_id}:${r.message_id}`, targetKind: 'group', targetId: group.chat_id, method: 'editMessageText',
+            payload: { chat_id: group.chat_id, message_id: Number(r.message_id), text, ...(r.markup ? { reply_markup: r.markup } : {}),
+                _automation: true, _binding: group.id, _funnel: true } });
+    }
 }
 // Menejer so'ragan raqam keldi: CRMga yoziladi, Sotuv guruhiga — raqam va Telegram havolasi.
 async function phoneArrived(c, v, phone) {
