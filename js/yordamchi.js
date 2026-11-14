@@ -726,6 +726,49 @@
 
     // ── Yordamchi bosh sahifasi (YordamchiBosh + YordamchiOyYopildi) ─────────
     let homeMode = null; // 'closed' | 'now' — foydalanuvchi tanlovi (sessiya ichida)
+    // ── 14-noy · Tanishuv aloqasi (dizayn: "Yordamchi ustoz: tanishuv aloqasi", 5-qadam — kompyuter) ──
+    function introBlock(intros, allMine, esc, studentAvatar, teacherName) {
+        const items = (intros || []).map(x => ({ ...x, s: allMine.find(s => s.id === x.studentId) })).filter(x => x.s);
+        if (!items.length) return '';
+        const pill = x => x.late ? '<span class="sc-pill" style="background:#FEE4E2;color:#B42318">Kechikdi</span>' : `<span class="sc-pill" style="background:#FEF0C7;color:#93370D">${x.hoursLeft} soat</span>`;
+        return `<section class="card" style="border:1.5px solid #FDA29B;margin-bottom:16px;padding:16px 18px" aria-labelledby="ydIntro">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px"><h2 id="ydIntro" style="margin:0;font-size:12px;font-weight:800;letter-spacing:.05em;color:#B42318">YANGI O'QUVCHILAR · TANISHUV <span class="sc-pill" style="background:#FEE4E2;color:#B42318;margin-left:6px">${items.length} ta</span></h2><span class="sc-mt">Darsdan tashqari qo'ng'iroq · davomatga kirmaydi · 24 soat ichida</span></div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:10px">${items.map(x => `<div style="display:flex;align-items:center;gap:10px;border:1px solid #EEF1F6;border-radius:14px;padding:10px 12px">${studentAvatar(x.s, 36)}<div style="flex:1;min-width:0"><b style="display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(x.s.name)}</b><span class="sc-mt">${esc(teacherName(x.s.teacherId, true))} · ${esc(x.s.lessonTime || '')}${x.noAnswer ? ` · ${x.noAnswer} marta olmadi` : ''}</span></div>${pill(x)}<button type="button" class="sc-btn sc-btn--pri sc-btn--sm" data-intro="${esc(x.s.id)}">Tanishdim</button></div>`).join('')}</div></section>`;
+    }
+    function introDrawer(s, done) {
+        const { openDrawer, esc } = U();
+        const box = openDrawer({ title: `Tanishuv aloqasi · ${s.name}`, sub: '<span class="sc-pill sc-pill--info">Davomatga va maoshga kirmaydi</span>', body: `
+            <div class="yd-mark">
+              <p class="yd-cap">Natija</p>
+              <div class="yd-chg-b" role="radiogroup" aria-label="Natija"><label class="yd-opt"><input type="radio" name="res" value="done" checked><span>✓ Tanishdik</span></label><label class="yd-opt"><input type="radio" name="res" value="no_answer"><span>✕ Javob bermadi</span></label></div>
+              <div data-done>
+                <p class="yd-cap">Qanday bog'lanildi?</p>
+                <div class="yd-chg-b" role="radiogroup" aria-label="Usul">${[['phone', '☎ Telefon'], ['tg_video', 'Telegram video'], ['tg_text', '✉ Yozishma']].map(([v, l], i) => `<label class="yd-opt"><input type="radio" name="ch" value="${v}"${i ? '' : ' checked'}><span>${l}</span></label>`).join('')}</div>
+                <p class="yd-cap">Nimalarni qildingiz?</p>
+                ${[['introduced', "O'zimni yordamchi ustoz deb tanishtirdim", 1], ['number', "Raqamimni qoldirdim, saqlashini so'radim", 1], ['schedule', "Qachon bog'lanishimizni kelishdik", 0]].map(([k, l, on]) => `<label style="display:flex;gap:10px;align-items:center;min-height:36px;font-size:14px"><input type="checkbox" name="ck" value="${k}"${on ? ' checked' : ''}>${l}</label>`).join('')}
+              </div>
+              <p class="yd-cap">Izoh (ixtiyoriy)</p>
+              <textarea name="note" rows="2" placeholder="Masalan: kechqurun qulay, Telegramda yozish ma'qul"></textarea>
+              <div class="sc-note" data-hint>Saqlangach sotuv menejeri va Sotuv guruhi xabardor bo'ladi: «O'quvchingiz ishonchli qo'llarda».</div>
+            </div>`,
+            foot: `<span class="sc-grow"></span><button type="button" class="sc-btn" data-close>Bekor</button><button type="button" class="sc-btn sc-btn--pri" data-save>Saqlash</button>` });
+        const res = () => box.querySelector('[name=res]:checked')?.value || 'done';
+        const sync = () => { const d = res() === 'done'; box.querySelector('[data-done]').hidden = !d; box.querySelector('[data-hint]').textContent = d ? "Saqlangach sotuv menejeri va Sotuv guruhi xabardor bo'ladi: «O'quvchingiz ishonchli qo'llarda»." : "3 soatdan keyin yana eslatamiz — o'quvchi ro'yxatda qoladi."; };
+        box.querySelectorAll('[name=res]').forEach(r => r.onchange = sync);
+        box.querySelector('[data-close]').onclick = () => U().closeDrawer();
+        box.querySelector('[data-save]').onclick = async e => {
+            const checks = [...box.querySelectorAll('[name=ck]:checked')].map(c => c.value);
+            if (res() === 'done' && !checks.includes('introduced')) { toast("O'zingizni tanishtirganingizni belgilang"); return; }
+            const b = e.currentTarget; b.disabled = true;
+            try {
+                await U().api('/assist/intros/' + encodeURIComponent(s.id), { method: 'POST', body: JSON.stringify({ result: res(), channel: box.querySelector('[name=ch]:checked')?.value || 'phone', checks, note: box.querySelector('[name=note]').value.trim() }) });
+                U().closeDrawer();
+                toast(res() === 'done' ? `${first(s.name)} bilan tanishdingiz — sotuv bo'limi xabardor` : 'Javob bermadi — 3 soatdan keyin eslatamiz');
+                done?.();
+            } catch (err) { toast(err.message || 'Saqlanmadi'); b.disabled = false; }
+        };
+    }
+    const toast = t => (typeof showMiniToast === 'function' ? showMiniToast(t, 3000) : U()?.toast?.(t));
     async function assistantHome(container, user) {
         const u = U(); if (!u || !container) return;
         const { api, esc, today, weekStart, wd, DAY, DAY_FULL, studentAvatar, teacherName, pattern, addDays } = u;
@@ -749,6 +792,9 @@
             // Har o'quvchining shu haftadagi rejasi ("bu hafta N / reja") — Davomat bilan bitta hisob (AttendanceRules.weekPlanSlots).
             api(`/assist/plan?from=${ws}&to=${addDays(ws, 6)}`).catch(() => null)
         ]);
+        if (!container.isConnected) return;
+        // 14-noy: yangi o'quvchilar bilan tanishuv (davomatga kirmaydi) — /api/school/assist/intros.
+        const intros = await api('/assist/intros').then(r => r.intros || []).catch(() => []);
         if (!container.isConnected) return;
         const rep = repR.value, repErr = repR.ok ? null : repR.err;
         const prev = prevR?.ok ? prevR.value : null, prevErr = prevR && !prevR.ok ? prevR.err : null;
@@ -796,6 +842,7 @@
         const find = id => allMine.find(x => x.id === id);
         const bind = () => {
             container.querySelectorAll('[data-mark]').forEach(b => b.onclick = () => { const s = find(b.dataset.mark); if (s) markDrawer(s, refresh); });
+            container.querySelectorAll('[data-intro]').forEach(b => b.onclick = () => { const s = find(b.dataset.intro); if (s) introDrawer(s, refresh); });
             container.querySelectorAll('[data-call]').forEach(b => b.onclick = () => callStudent(find(b.dataset.call), refresh));
             container.querySelectorAll('[data-card]').forEach(b => b.onclick = () => u.openStudent(b.dataset.card));
             container.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => { homeMode = b.dataset.mode; refresh(); });
@@ -882,6 +929,7 @@
               <span class="mot-prize-note">${sub}</span></div><span class="ya-acts">${callIcon(s.id)}${st}</span></li>`;
         };
         container.innerHTML = `<div class="ahx-head mhx-head yd-hh"><div><h1>${greet}, ${esc(first(user.name))}</h1><p>${headSub}</p></div>${sw}</div>
+          ${introBlock(intros, allMine, esc, studentAvatar, teacherName)}
           ${prevBlock}
           ${repErr ? `<section class="card kbx-plan yd-plan-err" aria-labelledby="yaPlan"><div class="kbx-plan-h"><h2 id="yaPlan">Hisoblangan maosh · ${esc(mName(month))}</h2><button type="button" class="ahx-link" data-go-contacts="${month}">Aloqalar →</button></div>
             ${LE.html({ title: 'Aloqalar va maosh hisobini yuklab bo\'lmadi', err: repErr, note: 'Summa, aloqalar soni va bugungi holat ko\'rsatilmadi — ma\'lumot yo\'qolmagan.' })}</section>`
