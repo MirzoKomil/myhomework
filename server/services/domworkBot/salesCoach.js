@@ -320,6 +320,12 @@ async function bonus(db, now, clock, once) {
         for (const b of got) await once(db, `coach-bonus:${clock.date}:${p.id}:${b.id}`, () => dm(db, `bonus:${clock.date}:${p.id}:${b.id}`, p.id,
             `🍽🎉 <b>${name}, «${T.esc(b.label)}» bonusi sizniki!</b>\nBugungi sotuv: ${T.b(T.sum(p.day))}\n\n`
             + (next ? `Keyingisi — «${T.esc(next.label)}»: yana ${T.b(T.sum(next.threshold - p.day))}. To‘xtamang! 🚀` : `Bugungi eng yuqori bonus olindi — siz bugun yulduz! ⭐`), now, 4));
+        // 14-noy: bonusga loyiq bo'lgani sotuv guruhiga ham (faqat eng yuqori olingan pog'ona, bir marta).
+        const top = got[got.length - 1];
+        if (top) await once(db, `coach-bonus-group:${clock.date}:${p.id}:${top.id}`, () => require('./events').groupMessage(db, `coach-bonus-group:${clock.date}:${p.id}:${top.id}`, 'sales',
+            `🍽🎉 <b>BONUSGA LOYIQ!</b>\n\n💼 ${T.b(p.name)} bugun ${T.b(T.sum(p.day))} tushirdi\n🏆 «${T.esc(top.label)}» bonusi qo‘lga kiritildi!`
+            + (next ? `\nKeyingisi — «${T.esc(next.label)}»: yana ${T.b(T.sum(next.threshold - p.day))} 🚀` : `\n⭐ Bugungi eng yuqori bonus!`),
+            { ...T.HTML, _expiresAt: new Date(now.getTime() + 4 * HOUR).toISOString() }));
         if (!slot || !next) continue;
         await once(db, `coach-bonus-push:${clock.date}:${p.id}:${slot}`, () => dm(db, `bonus-push:${clock.date}:${p.id}:${slot}`, p.id,
             (slot === '09:30'

@@ -50,6 +50,42 @@ async function saleStats(db,payment) {
     const managerName=(await db.query('SELECT name FROM hr_employees WHERE id=$1',[payment.manager_id])).rows[0]?.name || '';
     return {isSale:!prior,sales:Math.max(1,Number(m.sales)||0),monthSum:Number(m.total)||0,plan,managerName};
 }
+// 14-noy: guruh xabarlari — haqiqiy to'lov sanasi, CRMga kiritilgan kun, qarz va kelishilgan sana, kechikish.
+const ymd=v=>{const m=/^(\d{4}-\d{2}-\d{2})/.exec(v instanceof Date?v.toISOString():String(v||''));return m?m[1]:'';};
+const days=(a,b)=>Math.round((Date.parse(a+'T00:00:00Z')-Date.parse(b+'T00:00:00Z'))/86400000);
+async function debtContext(db,payment) {
+    const paid=ymd(payment.paid_date), entered=policy.today(new Date(payment.created_at||Date.now()));
+    const left=Number(payment.debt_snapshot)||0, before=left+Number(payment.amount||0);
+    // Bu to'lovdan oldin kelishilgan sana — shu o'quvchi/lidning avvalgi tushumida yozilgan «keyingi to'lov» sanasi.
+    const prev=(await db.query(`SELECT snapshot->>'nextPaymentDate' AS due FROM payment_records WHERE id<>$1 AND NOT legacy_review
+        AND ((student_id IS NOT NULL AND student_id=$2) OR (lead_id IS NOT NULL AND lead_id=$3))
+        AND (created_at<$4 OR (created_at=$4 AND id<$1)) ORDER BY created_at DESC,id DESC LIMIT 1`,
+        [payment.id,payment.student_id,payment.lead_id,payment.created_at])).rows[0];
+    const agreed=ymd(prev?.due);
+    let next='';
+    if(left>0) {
+        const st=payment.student_id?(await db.query("SELECT extra_data->>'paymentDueDate' AS d FROM students WHERE id=$1",[payment.student_id])).rows[0]:null;
+        const ld=!st?.d&&payment.lead_id?(await db.query("SELECT extra_data->'paymentSurvey'->>'nextPaymentDate' AS d FROM leads WHERE id=$1",[payment.lead_id])).rows[0]:null;
+        next=[ymd(st?.d),ymd(ld?.d),ymd(payment.snapshot?.nextPaymentDate)].find(d=>d&&d>=paid)||'';
+    }
+    return {paid,entered,late:entered>paid?entered:'',left,before,agreed,lateDays:agreed&&paid>agreed?days(paid,agreed):0,next};
+}
+const paidLine=d=>`📅 To‘lov sanasi: ${T.b(T.dateOnly(d.paid))}`+(d.late?`\n📝 CRMga ${T.esc(T.dateOnly(d.late))} kuni kiritildi (to‘lov ${T.esc(T.dateOnly(d.paid))}da tushgan)`:'');
+const nextLine=d=>d.next?` → ${T.b(T.dateOnly(d.next))}gacha to‘lashga kelishildi`:' · keyingi to‘lov sanasi kiritilmagan';
+function saleText(payment,mgrName,mgr,stats,d,tariff) {
+    const month=T.MONTHS[Number(d.paid.slice(5,7))-1]||'';
+    return `🎉🔥 <b>YANGI SOTUV!</b>\n\n💼 Menejer: ${T.who(mgrName,mgr?.telegramId)}\n👤 O‘quvchi: ${T.b(payment.snapshot?.name)}\n💳 To‘ladi: ${T.b(T.sum(payment.amount))}${tariff}\n`
+        +(d.left>0?`⏳ Qarz qoldi: ${T.b(T.sum(d.left))}${nextLine(d)}`:'✅ Kurs to‘liq to‘landi')
+        +`\n${paidLine(d)}\n🏁 Bu ${T.esc(T.first(mgrName))}ning ${T.esc(month)}dagi ${T.b(stats.sales+'-sotuvi')}\n\n👏 Tabriklaymiz, ${T.esc(T.first(mgrName))}!\n${T.i(T.pick(T.CHEERS.sale,payment.id))}`;
+}
+function debtText(payment,mgrName,mgr,d) {
+    const timing=d.agreed?(d.lateDays>0?`⏰ Kelishilgan sana ${T.esc(T.dateOnly(d.agreed))} edi — ${T.b(d.lateDays+' kun kechikdi')}`
+        :`✅ Kelishilgan kunda (${T.esc(T.dateOnly(d.agreed))}gacha) to‘ladi`):'';
+    return `💳 <b>QARZDOR O‘QUVCHIDAN TO‘LOV</b>\n<i>(o‘qiyotgan o‘quvchi — bu yangi sotuv emas)</i>\n\n💼 Menejer: ${T.who(mgrName,mgr?.telegramId)}\n👤 O‘quvchi: ${T.b(payment.snapshot?.name)}\n💰 To‘ladi: ${T.b(T.sum(payment.amount))}\n${paidLine(d)}`
+        +(timing?`\n${timing}`:'')
+        +`\n\nQarz: ${T.esc(T.sum(d.before))} → `+(d.left>0?`endi ${T.b(T.sum(d.left))}\n🗓 `+(d.next?`Qolganini ${T.b(T.dateOnly(d.next))}gacha to‘lashga kelishildi`:'Qolgani uchun keyingi to‘lov sanasi kiritilmagan'):`🎉 <b>Qarz to‘liq yopildi!</b>`)
+        +`\n\n${T.i('Barakalla! To‘lovlarni vaqtida so‘rashda davom eting — o‘z vaqtida yig‘ilgan pul, bu jamoaning mehnati 🤝')}`;
+}
 async function privateMessage(db,key,identity,text,extra={}) {
     if(!identity || identity.paused) return;
     ({text,extra}=T.fit(text,extra));
@@ -132,15 +168,14 @@ async function processOne(db) {
             }
         }
         if(row.type==='payment') {
-            const payment=(await db.query("SELECT * FROM payment_records WHERE id=$1 AND language='russian' AND NOT legacy_review",[row.reference_id])).rows[0];
+            const payment=(await db.query("SELECT *,TO_CHAR(paid_date,'YYYY-MM-DD') AS paid_date FROM payment_records WHERE id=$1 AND language='russian' AND NOT legacy_review",[row.reference_id])).rows[0];
             if(payment) {
                 const mgr=await employee(db,payment.manager_id), stats=await saleStats(db,payment);
                 const mgrName=payment.snapshot?.managerName || stats.managerName || 'Menejer';
                 const month=`📈 Bu oy: ${T.b(stats.sales+'-sotuv')} · ${T.esc(T.sum(stats.monthSum))}${stats.plan>0?` · reja ${T.b(Math.floor(stats.monthSum/stats.plan*100)+'%')}`:''}`;
                 const tariff=payment.tariff?` · 📦 ${T.esc(payment.tariff)} daqiqalik tarif`:'';
-                const group=stats.isSale
-                    ?`🎉🔥 <b>YANGI SOTUV!</b>\n\n👏 ${T.who(mgrName,mgr?.telegramId)} — tabriklaymiz!\n👤 O‘quvchi: ${T.b(payment.snapshot?.name)}\n💳 Summa: ${T.b(T.sum(payment.amount))}${tariff}\n${month}\n\n${T.i(T.pick(T.CHEERS.sale,payment.id))}`
-                    :`💳 <b>To‘lov tushdi</b>\n\n💼 ${T.who(mgrName,mgr?.telegramId)}\n👤 O‘quvchi: ${T.b(payment.snapshot?.name)}\n💰 Summa: ${T.b(T.sum(payment.amount))}${Number(payment.debt_snapshot)>0?`\n⏳ Qolgan qarz: ${T.esc(T.sum(payment.debt_snapshot))}`:''}\n\n${T.i(T.pick(T.CHEERS.pay,payment.id))}`;
+                const debtInfo=await debtContext(db,payment);
+                const group=stats.isSale?saleText(payment,mgrName,mgr,stats,debtInfo,tariff):debtText(payment,mgrName,mgr,debtInfo);
                 const personal=stats.isSale
                     ?`🎉 Tabriklaymiz, ${T.esc(T.first(mgrName))}!\n\nYangi sotuv: ${T.b(payment.snapshot?.name)} — ${T.b(T.sum(payment.amount))}\n${month}${stats.plan>0&&stats.plan>stats.monthSum?`\n🎯 Rejagacha: ${T.b(T.sum(stats.plan-stats.monthSum))}`:''}\n\n${T.i(T.pick(T.CHEERS.sale,payment.id+':p'))}`
                     :`💳 To‘lov qabul qilindi: ${T.b(payment.snapshot?.name)} — ${T.b(T.sum(payment.amount))}${Number(payment.debt_snapshot)>0?`\n⏳ Qolgan qarz: ${T.esc(T.sum(payment.debt_snapshot))}`:'\n✅ Qarz to‘liq yopildi!'}`;
