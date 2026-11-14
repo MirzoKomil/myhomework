@@ -10,9 +10,10 @@ async function run(db) {
     await intro.enroll(db);
     const events = require('./events');
     const rows = (await db.query(`SELECT i.*, s.name AS sname, s.subject, s.extra_data->>'managerId' AS manager_id,
-            a.name AS aname, t.name AS tname
+            a.name AS aname, t.name AS tname, m.name AS mname
         FROM school_assist_intros i JOIN students s ON s.id=i.student_id
         LEFT JOIN hr_employees a ON a.id=i.assistant_id LEFT JOIN hr_employees t ON t.id=s.teacher_id
+        LEFT JOIN hr_employees m ON m.id::text=s.extra_data->>'managerId'
         WHERE i.state IN ('pending','done') AND (NOT i.notified_new OR (i.state='done' AND NOT i.notified_done)
             OR (i.state='pending' AND NOT i.notified_late AND i.assigned_at < NOW() - INTERVAL '24 hours')) LIMIT 20`)).rows;
     for (const r of rows) {
@@ -25,8 +26,11 @@ async function run(db) {
         }
         if (r.state === 'done' && !r.notified_done) {
             if (ru) {
-                const text = `🤝 <b>${T.esc(r.sname)} yordamchi ustozi bilan tanishdi!</b>\n\nYordamchi ustoz ${T.esc(aFirst)} bog‘lanib, o‘zini tanishtirdi va raqamini qoldirdi.\n\n<i>O‘quvchingiz ishonchli qo‘llarda 💙</i>`;
-                if (r.manager_id) await events.privateMessage(db, 'intro-done:m:' + r.id, await events.employee(db, r.manager_id), text, opts);
+                // Sotuv guruhida xabar kimga tegishli ekani ko'rinsin: o'quvchini sotgan menejer belgilanadi (ulangan bo'lsa — mention).
+                const mgr = r.manager_id ? await events.employee(db, r.manager_id) : null;
+                const tag = r.mname ? T.who(r.mname, mgr?.telegramId) + ', o‘quvchingiz' : 'O‘quvchingiz';
+                const text = `🤝 <b>Yordamchi ustoz yangi o‘quvchi ${T.esc(r.sname)} bilan tanishdi!</b>\n\nYordamchi ustoz ${T.esc(aFirst)} bog‘lanib, o‘zini tanishtirdi va raqamini qoldirdi.\n\n${tag} ishonchli qo‘llarda 💙`;
+                if (mgr) await events.privateMessage(db, 'intro-done:m:' + r.id, mgr, text, opts);
                 await events.groupMessage(db, 'intro-done:g:' + r.id, 'sales', text, opts);
             }
             await db.query('UPDATE school_assist_intros SET notified_done=TRUE WHERE id=$1', [r.id]);
