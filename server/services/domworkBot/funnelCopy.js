@@ -141,6 +141,7 @@ const text = {
     askManager: 'Savollaringiz bo‘lsa — menejerimiz 5–10 daqiqada hammasini tushuntiradi 👇',
     paused: 'Avtomatik xabarlar to‘xtatildi. Qaytish uchun /start bosing.',
     contactSaved: 'Rahmat, raqamingiz tasdiqlandi ✅',
+    phoneForManager: 'Sotuv menejerimiz siz bilan Telegramda bog‘lanmoqchi, lekin username’ingiz yo‘qligi sababli yoza olmayapti 🙈\n\nPastdagi «📱 Raqamni tasdiqlash» tugmasini bosing — menejer sizga shu raqam orqali Telegramda yozadi.',
     commandHint: 'Pastdagi tugmalardan foydalaning 👇 Savolingiz bo‘lsa — oddiy matn bilan yozing, menejer javob beradi.',
     afterGuide: t => t === 'A'
         ? 'Qo‘llanma foydali bo‘ldimi? 🙂\nSizga mos reja kerak bo‘lsa — menejerimiz shu yerda, Telegramda yozadi: darajangiz va qaysi vaqtda dars qilish qulayligini aniqlaymiz.'

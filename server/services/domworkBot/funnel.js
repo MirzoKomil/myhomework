@@ -198,8 +198,10 @@ async function ensureLead(db, v, { phone = '', intent = '' } = {}) {
 function profile(v, lead, { mini = false } = {}) {
     const seg = copy.SEGMENTS[v.segment]?.label || 'segment tanlanmagan', field = copy.FIELDS[v.field]?.label || '';
     const quiz = v.quiz_done_at ? `test ${Object.values(v.quiz || {}).filter(x => x.ok).length}/3` : 'test yo‘q';
-    return [`👤 ${lead?.name || v.first_name || 'Mehmon'}${v.username ? ' · @' + v.username : ''} · tg://user?id=${v.telegram_id}`,
-        `📞 ${lead?.phone || (v.phone ? '+' + v.phone : 'raqam yo‘q — faqat Telegram')}`,
+    // tg://user?id havolasi menejer bilan avval yozishmagan odamda ochilmaydi — username yo'q bo'lsa faqat bot orqali.
+    const ph = String(lead?.phone || (v.phone ? '+' + v.phone : '')).replace(/[^\d+]/g, '');
+    return [`👤 ${lead?.name || v.first_name || 'Mehmon'}${v.username ? ' · @' + v.username : ' · username yo‘q — Telegramda faqat bot orqali (reply)'}`,
+        ph ? `📞 ${ph} · Telegram: t.me/${ph.startsWith('+') ? ph : '+' + ph}` : '📞 raqam yo‘q — bot raqamini so‘raydi',
         `🎯 ${seg}${field ? ' · ' + field : ''}${v.location === 'ru' ? ' · 🇷🇺 ROSSIYADA — qo‘ng‘iroq ishlamaydi, reply bilan yozing' : v.location === 'other' ? ' · 🌍 chet elda — Telegramda yozing' : ''}`,
         `📈 Ball ${v.score}${mini ? '' : ` · 1-dars: ${v.lesson_seen_at || v.lesson_parts >= 2 ? 'ko‘rdi' : v.lesson_parts ? 'ochdi' : 'yo‘q'} · ${quiz}`} · manba: ${v.source}`].join('\n');
 }
@@ -216,7 +218,17 @@ async function miniappLine(db, tid) {
 }
 async function salesGroup(db) { return (await db.query("SELECT id,chat_id FROM domwork_bot_groups WHERE type='sales' AND scope='' AND active")).rows[0] || null; }
 const managerButtons = tid => ({ inline_keyboard: [[{ text: '📞 Gaplashdim', callback_data: `m:${tid}:talk` }, { text: '🔕 Javob yo‘q', callback_data: `m:${tid}:na` }],
-    [{ text: '⏰ Keyinroq', callback_data: `m:${tid}:later` }, { text: '✅ Sinovga yozdim', callback_data: `m:${tid}:trial` }], [{ text: '❌ Rad etdi', callback_data: `m:${tid}:rej` }]] });
+    [{ text: '⏰ Keyinroq', callback_data: `m:${tid}:later` }, { text: '✅ Sinovga yozdim', callback_data: `m:${tid}:trial` }], [{ text: '❌ Rad etdi', callback_data: `m:${tid}:rej` }, { text: '📱 Raqam so‘rash', callback_data: `m:${tid}:phone` }]] });
+// Username ham, raqam ham yo'q lid: menejer unga yoza olmaydi — bot raqam so'raydi (kuniga bir marta).
+async function askPhone(db, v, day = new Date().toISOString().slice(0, 10)) {
+    if (v.phone) return false;
+    await patch(db, v.telegram_id, { awaiting: 'tgcontact' });
+    await store.enqueue(db, { key: `askphone:${v.telegram_id}:${day}`, targetId: v.telegram_id,
+        payload: { chat_id: v.telegram_id, text: copy.text.phoneForManager,
+            reply_markup: { keyboard: [[{ text: copy.text.contactButton, request_contact: true }], [{ text: copy.text.cancel }]], resize_keyboard: true, one_time_keyboard: true },
+            _guest: { tid: v.telegram_id }, _automation: true } });
+    return true;
+}
 async function notifySales(db, key, title, v, extra = '', { buttons = false } = {}) {
     const lead = v.lead_id ? (await db.query('SELECT name,phone,manager_id FROM leads WHERE id=$1', [v.lead_id])).rows[0] : null;
     const mini = await miniappLine(db, v.telegram_id);
@@ -230,6 +242,7 @@ async function notifySales(db, key, title, v, extra = '', { buttons = false } = 
         payload: { chat_id: group.chat_id, text: groupText.slice(0, 3500), ...(buttons ? { reply_markup: managerButtons(v.telegram_id) } : {}),
             _automation: true, _binding: group.id, _funnel: true, _relay: v.telegram_id } });
     if (lead?.manager_id) await events.privateMessage(db, 'funnel:' + key + ':m', await events.employee(db, lead.manager_id), dmText);
+    if (buttons && !v.username && !v.phone && !lead?.phone) await askPhone(db, v);
 }
 async function addScore(db, v, n, reason) {
     const before = v.score; v.score = before + n;
@@ -531,7 +544,7 @@ async function message(db, update) {
     if (/^\//.test(text)) return say(c, copy.text.commandHint, replyKeyboard()); // /menu, /help va h.k. — menejerga «savol» bo'lib ketmasin
     // Raqamni tugma o'rniga yozib yuborgan (kattalar ko'pincha shunday qiladi).
     const typed = /^\+?[\d\s()-]{9,18}$/.test(text) && text.replace(/\D/g, '').length >= 9 ? text.replace(/\D/g, '') : '';
-    if (typed && ['call', 'lesson', 'match', 'contact'].includes(v.awaiting)) return typedPhone(c, v, typed.length === 9 ? '998' + typed : typed);
+    if (typed && ['call', 'lesson', 'match', 'contact', 'tgcontact'].includes(v.awaiting)) return typedPhone(c, v, typed.length === 9 ? '998' + typed : typed);
     if (v.paused) await patch(db, tid, { paused: false }); // o'zi yozdi — suhbat davom etadi
     // Erkin matn yoki ovoz → menejerga. 10 daqiqa ichida qayta yozsa — to'liq kartochka emas, qisqa xabar.
     const s = await settings(db);
@@ -566,6 +579,7 @@ async function typedPhone(c, v, phone) {
     await say(c, copy.text.contactSaved, replyKeyboard());
     if (v.awaiting === 'miniapp') return;
     if (v.awaiting === 'lesson') return lesson(c, v, 1);
+    if (v.awaiting === 'tgcontact') return phoneArrived(c, v, '+' + phone);
     if (v.awaiting === 'match') {
         await notifySales(db, 'match-typed:' + c.tid, '🔗 Arizachi raqamini yozib yubordi — CRMdagi arizasini tekshiring (dublikat bo‘lishi mumkin)', v);
         await say(c, copy.text.matchNew, replyKeyboard());
@@ -589,6 +603,7 @@ async function contact(db, update, m) {
     if (purpose === 'miniapp') return; // mini ilova so'rovni o'zi yakunlaydi (vaqt u yerda tanlangan)
     if (purpose === 'lesson') return lesson(c, v, 1);
     if (purpose === 'call') return askWhen(c, 'call');
+    if (purpose === 'tgcontact') return phoneArrived(c, v, '+' + own.phone);
     await db.query("UPDATE leads SET phone=CASE WHEN COALESCE(phone,'')='' THEN $2 ELSE phone END WHERE id=$1", [v.lead_id, '+' + own.phone]);
     if (purpose === 'match' && v.location === 'ru' && !v.ru_form?.done) await ruQuestion(c, 0, { delayMs: 2500 });
     if (purpose === 'match') {
@@ -599,6 +614,11 @@ async function contact(db, update, m) {
         return say(c, found ? copy.text.matched(lead.manager ? String(lead.manager).split(' ')[0] : '') : copy.text.matchNew, replyKeyboard());
     }
     return cta(c, v);
+}
+// Menejer so'ragan raqam keldi: CRMga yoziladi, Sotuv guruhiga — raqam va Telegram havolasi.
+async function phoneArrived(c, v, phone) {
+    await c.db.query("UPDATE leads SET phone=CASE WHEN COALESCE(phone,'')='' THEN $2 ELSE phone END,updated_at=NOW() WHERE id=$1", [v.lead_id, phone]);
+    await notifyShort(c.db, 'phone:' + c.tid, v, `📱 ${v.first_name || 'Lid'} raqam qoldirdi: ${phone} · Telegram: t.me/${phone}`);
 }
 async function pause(db, tid) { await db.query('UPDATE domwork_bot_visitors SET paused=true,updated_at=NOW() WHERE telegram_id=$1', [tid]); }
 async function blocked(db, tid) { await db.query('UPDATE domwork_bot_visitors SET blocked_at=NOW() WHERE telegram_id=$1', [tid]); }
@@ -718,7 +738,7 @@ async function relayFromGroup(db, update) {
 const OUTCOMES = { talk: '📞 Gaplashdi', na: '🔕 Javob yo‘q', later: '⏰ Keyinroq', trial: '✅ Sinovga yozildi',
     'r:price': '❌ Rad — narx', 'r:time': '❌ Rad — vaqt', 'r:think': '❌ O‘ylab ko‘radi', 'r:no': '❌ Qiziqmaydi' };
 async function managerAction(db, update) {
-    const q = update.callback_query, data = String(q.data || ''), m = /^m:(\d{1,16}):(talk|na|later|trial|rej|r:(?:price|time|think|no))$/.exec(data);
+    const q = update.callback_query, data = String(q.data || ''), m = /^m:(\d{1,16}):(talk|na|later|trial|rej|phone|r:(?:price|time|think|no))$/.exec(data);
     const ack = text => store.enqueue(db, { key: `u:${update.update_id}:callback`, targetId: String(q.from.id), method: 'answerCallbackQuery',
         payload: { callback_query_id: q.id, ...(text ? { text: text.slice(0, 180), show_alert: false } : {}) } });
     if (!m) return ack();
@@ -733,6 +753,12 @@ async function managerAction(db, update) {
     if (!v) return ack('Lid topilmadi');
     const edit = markup => store.enqueue(db, { key: `u:${update.update_id}:mk`, targetKind: 'group', targetId: chatId, method: 'editMessageReplyMarkup',
         payload: { chat_id: chatId, message_id: q.message.message_id, reply_markup: markup, _automation: true, _binding: group.id, _funnel: true } });
+    if (action === 'phone') {
+        if (v.phone) return ack('Raqami bor: +' + v.phone);
+        await askPhone(db, v);
+        if (v.lead_id) await leadComment(db, v.lead_id, `🤖 ${clean(staff.name)} bot orqali raqam so‘radi`);
+        return ack('Botdan raqam so‘raldi — yuborsa guruhga xabar keladi');
+    }
     if (action === 'rej') {
         await edit({ inline_keyboard: [[{ text: 'Narx', callback_data: `m:${tid}:r:price` }, { text: 'Vaqt', callback_data: `m:${tid}:r:time` }],
             [{ text: 'O‘ylab ko‘radi', callback_data: `m:${tid}:r:think` }, { text: 'Qiziqmaydi', callback_data: `m:${tid}:r:no` }]] });
