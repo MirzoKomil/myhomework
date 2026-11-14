@@ -333,10 +333,12 @@
             ${sub ? `<p class="cv-sub">${sub}</p>` : ''}${steps(5, lead)}
             <label class="cv-f"><span>Guruh havolasi *</span><span class="cv-field"><input type="url" id="cvGroupLink" class="form-control" placeholder="https://t.me/+..." value="${esc(ob.telegramGroupLink || '')}" autocomplete="off"><span class="sc-pill sc-pill--ok cv-ok" data-okpill hidden>✓ to'g'ri havola</span></span></label>
             <label class="cv-f"><span>Guruh nomi *</span><span class="cv-field"><input type="text" id="cvGroupName" class="form-control" maxlength="80" value="${esc(ob.telegramGroupName || '')}" placeholder="C40 | onlayn ${lang === 'russian' ? 'rus' : 'ingliz'} tili"><span class="cv-sug" data-sug hidden>tizim taklifi · keyingi bo'sh raqam</span></span>
-              <small>Telegram'dagi nom bilan bir xil yozing · takrorlanmasligi tekshiriladi</small></label>
+              <small>Telegram'dagi nom bilan bir xil yozing · takrorlanmasligi tekshiriladi</small>
+              ${lang === 'russian' ? `<small style="display:block;margin-top:6px;padding:8px 10px;border-radius:8px;background:#FCEBEB;color:#A32D2D;font-weight:600">⚠️ Guruh nomini Telegramdagi nom bilan harfma-harf bir xil yozing. Bot guruhni aynan shu nom bo'yicha taniydi — bitta harf, probel yoki belgi farq qilsa, guruh topilmaydi va xato tuzatilmaguncha akkauntingiz bloklanib turadi. Nomni qisqartirmang.</small>` : ''}</label>
             ${asstList.length ? `<label class="cv-f"><span>Yordamchi ustoz *</span><select id="cvAssistant" class="form-control"><option value="">— Yordamchi ustozni tanlang —</option>${asstList.map(t => `<option value="${esc(t.id)}"${t.id === asstId ? ' selected' : ''}>${esc(t.name)}</option>`).join('')}</select>
               <small>Guruhga shu ustoz qo'shiladi · 6-qadamda qayta so'ralmaydi</small></label>` : ''}
-            <fieldset class="cv-f"><legend>Guruhga qo'shilganini belgilang</legend><div class="cv-mem">${members.map(([k, l]) => `<label><input type="checkbox" data-mem="${k}"${saved[k] ? ' checked' : ''}>${esc(l)}</label>`).join('')}</div></fieldset>
+            ${lang === 'russian' ? `<p class="cv-warn" style="background:#E6F1FB;color:#0C447C">🤖 Guruhga @domworkuz_bot ni to'liq admin qilib qo'shing. Bot guruhni o'zi tekshiradi: rahbar, akademik rahbar va yordamchi ustoz qo'shilganini ko'radi va ularni o'zi admin qiladi. Guruh tayyor bo'lmaguncha kabinet qulflanadi.</p>`
+              : `<fieldset class="cv-f"><legend>Guruhga qo'shilganini belgilang</legend><div class="cv-mem">${members.map(([k, l]) => `<label><input type="checkbox" data-mem="${k}"${saved[k] ? ' checked' : ''}>${esc(l)}</label>`).join('')}</div></fieldset>`}
             <p class="cv-warn" data-warn hidden></p>
             <p class="cv-hint">Saqlangach: student appda "Telegram guruh" tugmasi shu havola bilan ochiladi · ustoz va yordamchi ro'yxatida guruh nomi chiqadi.</p>
             <p class="cv-err" role="alert" data-err hidden></p></div>`,
@@ -347,7 +349,7 @@
         const warn = body.querySelector('[data-warn]'), err = body.querySelector('[data-err]');
         const check = () => {
             okp.hidden = !LINK_RE.test(link.value.trim());
-            const miss = members.filter(([k]) => !body.querySelector(`[data-mem="${k}"]`).checked).map(([, l]) => l.split(' · ')[0]);
+            const miss = members.filter(([k]) => { const c = body.querySelector(`[data-mem="${k}"]`); return c && !c.checked; }).map(([, l]) => l.split(' · ')[0]);
             warn.hidden = !miss.length;
             warn.textContent = miss.length ? `${miss.join(', ')} hali qo'shilmagan — guruhga qo'shishni unutmang.` : '';
         };
@@ -376,7 +378,7 @@
             if (!LINK_RE.test(l)) return fail('Havola https://t.me/... ko\'rinishida bo\'lsin', link);
             if (n.length < 2) return fail('Telegram guruh nomini kiriting', name);
             if (asstSel && !asstSel.value) return fail('Yordamchi ustozni tanlang', asstSel);
-            const mem = Object.fromEntries(members.map(([k]) => [k, body.querySelector(`[data-mem="${k}"]`).checked]));
+            const mem = Object.fromEntries(members.map(([k]) => [k, !!body.querySelector(`[data-mem="${k}"]`)?.checked]));
             const upd = updateLeadInStorage(lang, leadId, x => ({ ...x, paymentOnboarding: { ...(x.paymentOnboarding || {}), telegramGroupLink: l, telegramGroupName: n, telegramMembers: mem,
                 ...(asstSel ? { assistantTeacherId: asstSel.value } : {}) } }));
             if (!upd) return fail('Lid topilmadi');
