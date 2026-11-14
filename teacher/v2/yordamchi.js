@@ -152,6 +152,61 @@
         return `<span class="av yd-ini${light ? ' l' : ''}" style="width: ${n}px; height: ${n}px; font-size: ${Math.round(n * 0.36)}px; ${style}">${esc(ini)}</span>`;
     }
     const unread = () => { try { return U.bs?.unreadCount?.() || 0; } catch { return 0; } };
+    // ── 14-noy · Yangi o'quvchi bilan tanishuv (dizayn: "Yordamchi ustoz: tanishuv aloqasi") ──
+    // Davomatga va maoshga kirmaydi; server: /api/school/assist/intros (services/school/assistIntro.js).
+    const introsE = () => U.load('yd:intro', () => U.api('/api/school/assist/intros').then(r => r.intros || []), { ttl: 60000 });
+    function introCard() {
+        const items = (introsE().data || []).map(x => ({ ...x, s: D().stuOf(x.studentId) })).filter(x => x.s);
+        if (!items.length) return '';
+        const pill = x => x.late ? '<span class="pill" style="background: #FEE4E2; color: #B42318">Kechikdi</span>' : `<span class="pill wa">${x.hoursLeft} soat</span>`;
+        const row = x => { const s = x.s, g = groupLink(s);
+            return `<div class="li" style="padding: 10px 0">${ava(s, 40)}<div class="col g1" style="min-width: 0"><span class="nm" style="font-weight: 800">${esc(D().short(s.name))}</span><span class="s">${teacherOf(s) ? esc(teacherOf(s)) + ' · ' : ''}${esc(D().patternLabel(s.lessonDayOfWeek))} ${esc(s.lessonTime || '')}${x.noAnswer ? ` · ${x.noAnswer} marta olmadi` : ''}</span></div>${pill(x)}</div>
+              <div style="display: grid; grid-template-columns: 1fr 48px 48px; gap: 8px; padding-bottom: 6px"><button type="button" class="btn p" data-yd-intro="${esc(s.id)}">${svg(P.tick, 18, 2.6)}Tanishdim</button>
+              ${U.phonesOf(s).length ? `<a href="${U.telHref(U.phonesOf(s)[0])}" class="btn" aria-label="${esc(D().first(s.name))}ga qo'ng'iroq" style="padding: 0">${svg(P.phone, 20, 2)}</a>` : '<span></span>'}
+              ${g ? `<a href="${esc(g)}" target="_blank" rel="noopener" class="btn" aria-label="Telegram guruh" style="padding: 0">${svg(P.tg)}</a>` : '<span></span>'}</div>`; };
+        return `<section class="card a1" style="border: 1.5px solid #FDA29B; display: flex; flex-direction: column; gap: 6px" aria-label="Yangi o'quvchilar bilan tanishuv">
+            <div style="display: flex; align-items: center; justify-content: space-between"><span class="eb" style="color: #B42318">YANGI O'QUVCHILAR · TANISHUV</span><span class="pill" style="background: #FEE4E2; color: #B42318">${items.length} ta</span></div>
+            <span class="s">Darsdan tashqari qo'ng'iroq qilib o'zingizni tanishtiring va raqamingizni qoldiring. Davomatga kirmaydi.</span>
+            ${items.map(row).join('')}</section>`;
+    }
+    function openIntro(sid) {
+        const s = D().stuOf(sid); if (!s) return;
+        const st = { out: 'done', ch: 'phone', ck: new Set(['introduced', 'number']) };
+        const CK = [['introduced', "O'zimni yordamchi ustoz deb tanishtirdim"], ['number', "Raqamimni qoldirdim, saqlashini so'radim"], ['schedule', "Qachon bog'lanishimizni kelishdik"]];
+        const html = () => `<div class="row">${ava(s, 44)}<div class="col g1"><h2 style="font-size: 19px; font-weight: 800">${esc(D().first(s.name))}</h2><span class="s">Tanishuv aloqasi · davomatga kirmaydi</span></div><button type="button" class="yd-x" data-u-close aria-label="Yopish">${svg(P.x, 18, 2.4)}</button></div>
+            <div class="dv-bg2"><button type="button" data-o="done" class="${st.out === 'done' ? 'og' : ''}" aria-pressed="${st.out === 'done'}">${svg(P.tick, 18, 3.5)}Tanishdik</button><button type="button" data-o="no_answer" class="${st.out === 'no_answer' ? 'orr' : ''}" aria-pressed="${st.out === 'no_answer'}">${svg(P.x, 18, 3.5)}Javob bermadi</button></div>
+            ${st.out === 'done' ? `<span class="dv-st">QANDAY?</span>
+            <div class="yd-ug" role="radiogroup" aria-label="Usul">${[['phone', 'Telefon', P.phone], ['tg_video', 'TG video', P.video], ['tg_text', 'Yozishma', P.msg]].map(([k, l, ic]) => `<button type="button" role="radio" aria-checked="${st.ch === k}" data-ch="${k}" class="${st.ch === k ? 'on' : ''}">${svg(ic, 18, 2)}${l}</button>`).join('')}</div>
+            <span class="dv-st">NIMALARNI QILDINGIZ?</span>
+            <div style="display: flex; flex-direction: column">${CK.map(([k, l]) => `<label style="display: flex; gap: 10px; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600"><input type="checkbox" data-ck="${k}" ${st.ck.has(k) ? 'checked' : ''} style="width: 20px; height: 20px">${l}</label>`).join('')}</div>`
+            : `<div class="note i" style="padding: 10px 12px"><span>3 soatdan keyin yana eslatamiz. O'quvchi ro'yxatda qoladi.</span></div>`}
+            <div class="fl"><label for="yd-int">Izoh <span class="yd-opt">· ixtiyoriy</span></label><textarea id="yd-int" placeholder="Masalan: kechqurun qulay, Telegramda yozish ma'qul"></textarea></div>
+            <button type="button" class="btn p w yd-save" data-save>Saqlash</button>
+            ${st.out === 'done' ? '<span class="xs" style="text-align: center">Saqlangach sotuv menejeri xabardor bo\'ladi: «O\'quvchingiz ishonchli qo\'llarda»</span>' : ''}`;
+        U.sheet(`<div class="yd-mk">${html()}</div>`, (el, close) => {
+            const box = el.querySelector('.yd-mk');
+            const draw = () => { const note = box.querySelector('#yd-int')?.value || ''; box.innerHTML = html(); box.querySelector('#yd-int').value = note; wire(); };
+            const wire = () => {
+                box.querySelectorAll('[data-u-close]').forEach(b => b.onclick = close);
+                box.querySelectorAll('[data-o]').forEach(b => b.onclick = () => { st.out = b.dataset.o; draw(); });
+                box.querySelectorAll('[data-ch]').forEach(b => b.onclick = () => { st.ch = b.dataset.ch; draw(); });
+                box.querySelectorAll('[data-ck]').forEach(c => c.onchange = () => { c.checked ? st.ck.add(c.dataset.ck) : st.ck.delete(c.dataset.ck); });
+                box.querySelector('[data-save]').onclick = async e => {
+                    const btn = e.currentTarget;
+                    if (st.out === 'done' && !st.ck.has('introduced')) return U.toast("O'zingizni tanishtirganingizni belgilang");
+                    btn.disabled = true;
+                    try {
+                        await U.api('/api/school/assist/intros/' + encodeURIComponent(s.id), { method: 'POST', body: { result: st.out, channel: st.ch, checks: [...st.ck], note: box.querySelector('#yd-int').value.trim() } });
+                        U.drop('yd:intro'); close();
+                        U.toast(st.out === 'done' ? `${D().first(s.name)} bilan tanishdingiz — sotuv bo'limi xabardor` : 'Javob bermadi — 3 soatdan keyin eslatamiz', { ok: st.out === 'done' });
+                        if (st.out === 'done') U.confetti?.();
+                        U.render();
+                    } catch (err) { U.toast(err.message); btn.disabled = false; }
+                };
+            };
+            wire();
+        });
+    }
     function homeRender() {
         const n = now(), s0 = S(), user = s0.user || {}, rep = s0.assist;
         const list = todayList(), done = doneToday(list);
@@ -190,6 +245,7 @@
           </header>
           <div class="bd">${U.offline()}
             ${window.davomat ? davomat.homeCard() : ''}
+            ${introCard()}
             ${hero}
             <div class="kp a2">
               <div class="k"><span>Bugun</span><strong>${done}<span class="yd-ks"> / ${list.length} bo'ldi</span></strong><div class="prog" aria-hidden="true"><i class="g" style="width: ${list.length ? Math.round(done / list.length * 100) : 0}%"></i></div></div>
@@ -212,6 +268,7 @@
             document.addEventListener('visibilitychange', back);
         }));
         root.querySelectorAll('[data-yd-mark]').forEach(b => b.onclick = e => { e.preventDefault(); openMark(b.dataset.ydMark); });
+        root.querySelectorAll('[data-yd-intro]').forEach(b => b.onclick = e => { e.preventDefault(); openIntro(b.dataset.ydIntro); });
         root.querySelectorAll('[data-yd-reload]').forEach(b => b.onclick = async () => { b.disabled = true; try { await U.reload(); } catch (err) { U.toast(err.message); b.disabled = false; } });
     }
     U.tab('home', { render: homeRender, bind: bindCommon }, Y);
@@ -537,7 +594,7 @@
                 <span class="s">${teacherOf(s) ? `Asosiy ustoz ${esc(teacherOf(s))} · ` : ''}${lang}${S().progress?.[s.id]?.reached ? ` · ilovada ${S().progress[s.id].reached}-darsda` : ' · noldan boshlaydi'}</span>
               </div>
               <div class="${a('bs-v2')}" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; text-align: left">
-                <div class="bs-fc"><span class="xs b">Birinchi aloqa</span><div style="font-size: 15px; font-weight: 800">${first === n.date ? 'Bugun' : esc(firstTxt)}</div><span class="xs">odatdagi vaqti ${esc(s.lessonTime || '—')}</span></div>
+                <div class="bs-fc"><span class="xs b">Tanishuv qo'ng'irog'i</span><div style="font-size: 15px; font-weight: 800">24 soat ichida</div><span class="xs">davomatga kirmaydi</span></div>
                 <div class="bs-fc"><span class="xs b">Darslari</span><div style="font-size: 15px; font-weight: 800">${esc(D().patternLabel(s.lessonDayOfWeek) || '—')}</div><span class="xs">${esc(s.lessonTime || '')} · aloqa ${esc(adviceLabel(s))}</span></div>
               </div>
               <div class="${a('bs-v3')}" style="display: flex; align-items: center; justify-content: center; gap: 10px; background: #EAF3FF; border-radius: 18px; padding: 12px 14px; flex-wrap: wrap">
@@ -547,12 +604,14 @@
                 ${monthly ? `<span class="xs" style="width: 100%; color: #0B3A73">oyiga yana ${money(monthly)} so'mgacha</span>` : ''}
               </div>
               <div style="display: grid; grid-template-columns: 1fr 1.3fr; gap: 8px">
-                <button type="button" class="btn bs-btn" data-ov-x style="color: #0057B8">Yopish</button>
-                <button type="button" class="btn bs-btn p" data-ov-open>Kartani ochish</button>
+                <button type="button" class="btn bs-btn" data-ov-open style="color: #0057B8">Kartani ochish</button>
+                <button type="button" class="btn bs-btn p" data-ov-intro>Hozir tanishaman</button>
               </div>
+              <button type="button" class="btn bs-btn" data-ov-x style="color: #4B5563">Yopish</button>
             </div>
           </section>`, () => setTimeout(() => after?.(), 250));
         ov.querySelector('[data-ov-open]').onclick = () => { close(null); U.push('y-karta', s.id); };
+        ov.querySelector('[data-ov-intro]').onclick = () => { close(null); U.drop('yd:intro'); setTimeout(() => openIntro(s.id), 300); };
     }
     U.onStart.push(() => setTimeout(() => { try { checkNew(); } catch (err) { console.error('[yordamchi]', err); } }, 500));
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') setTimeout(() => { try { checkNew(); } catch { /* */ } }, 3000); });
