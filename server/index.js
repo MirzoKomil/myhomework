@@ -245,6 +245,8 @@ app.use('/api/staff-attendance', require('./routes/staffAttendance')({ pool: crm
     authRequired: require('./middleware/auth').authRequired }));
 // Jarimalar va rag'bat (davomat avtomatik + rahbar yozadigan, yuvish, e'tiroz, admin sozlamalari)
 app.use('/api/fines', require('./routes/fines')({ pool: crmDb.pool, authRequired: require('./middleware/auth').authRequired }));
+// Jonli ofis: xodimlar, ustozlar, o'quvchilar holati (faqat o'qish, rolga qarab).
+app.use('/api/office', require('./routes/office')({ pool: crmDb.pool, authRequired: require('./middleware/auth').authRequired }));
 // Xodim sozlamalari: profil qo'shimchalari, maosh tafsiloti, bildirishnomalar, yo'riqnoma bilan tanishish.
 app.use('/api/staff', require('./routes/staffSettings')({ pool: crmDb.pool,
     authRequired: require('./middleware/auth').authRequired, findUserById: crmDb.findUserById }));
@@ -308,6 +310,12 @@ app.get(['/teacher', '/teacher/'], (req, res) => {
     if (req.path === '/teacher') return res.redirect(301, '/teacher/');
     res.setHeader('Cache-Control', 'no-cache');
     res.sendFile(path.join(ROOT, 'teacher', 'index.html'));
+});
+
+// Jonli ofis (alohida ilova, PWA): /ofis — rasm va skript /ofis/ papkasida.
+app.get(['/ofis', '/ofis/'], (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache');
+    res.sendFile(path.join(ROOT, 'ofis.html'));
 });
 
 // @Domworkuz_bot ichidagi "1-dars" mini ilovasi (Telegram WebApp). Telegram skripti va Telegram Web (iframe) uchun alohida CSP.
