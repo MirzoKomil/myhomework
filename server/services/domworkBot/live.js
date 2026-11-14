@@ -153,13 +153,15 @@ async function hourly(db, clock, once) {
     if (clock.minute > 1) return; // har soatda, kecha-kunduz
     await once(db, `live-hourly:${clock.date}:${clock.hour}`, async () => {
         const who = await names(db);
-        const rows = (await db.query(`SELECT COALESCE(manager_id,'') AS manager, COUNT(*)::int AS n, MIN(created_at) AS oldest
+        const rows = (await db.query(`SELECT COALESCE(manager_id,'') AS manager, COUNT(*)::int AS n, COUNT(*) FILTER (WHERE (lead_type='target' OR COALESCE(source,'') ~* '(target|reklama|ads)'))::int AS t, MIN(created_at) AS oldest
             FROM leads WHERE language='russian' AND deleted_at IS NULL AND COALESCE(status,'') = ANY($1) GROUP BY 1 ORDER BY 2 DESC`, [FRESH])).rows;
-        const lastHour = (await db.query(`SELECT COUNT(*)::int AS n FROM leads WHERE language='russian' AND deleted_at IS NULL AND created_at>NOW()-INTERVAL '1 hour'`)).rows[0].n;
-        const total = rows.reduce((s, r) => s + r.n, 0);
+        const lastHour = (await db.query(`SELECT COUNT(*)::int AS n, COUNT(*) FILTER (WHERE (lead_type='target' OR COALESCE(source,'') ~* '(target|reklama|ads)'))::int AS t FROM leads WHERE language='russian' AND deleted_at IS NULL AND created_at>NOW()-INTERVAL '1 hour'`)).rows[0];
+        const total = rows.reduce((s, r) => s + r.n, 0), totalT = rows.reduce((s, r) => s + r.t, 0);
+        // Target / organik bo'linmasi (dailyReports.isTarget qoidasi).
+        const split = (n, t) => n ? ` (🎯 target ${t} · 🌱 organik ${n - t})` : '';
         const age = d => { const h = Math.floor((Date.now() - new Date(d).getTime()) / 3600000); return h >= 48 ? Math.floor(h / 24) + ' kun' : h >= 1 ? h + ' soat' : '1 soatdan kam'; };
-        const text = `🕐 <b>Soat ${String(clock.hour).padStart(2, '0')}:00 · lidlar holati</b>\n\n📥 So‘nggi 1 soatda tushgan: ${T.b(lastHour + ' ta')}\n`
-            + (total ? `⚠️ Ishlatilmay turgan (Yangi lidlar bosqichida): ${T.b(total + ' ta')}\n` + list(rows.map(r => `${T.esc(who(r.manager))} — ${T.b(r.n + ' ta')} (eng eskisi ${age(r.oldest)})`))
+        const text = `🕐 <b>Soat ${String(clock.hour).padStart(2, '0')}:00 · lidlar holati</b>\n\n📥 So‘nggi 1 soatda tushgan: ${T.b(lastHour.n + ' ta')}${split(lastHour.n, lastHour.t)}\n`
+            + (total ? `⚠️ Ishlatilmay turgan (Yangi lidlar bosqichida): ${T.b(total + ' ta')}${split(total, totalT)}\n` + list(rows.map(r => `${T.esc(who(r.manager))} — ${T.b(r.n + ' ta')} (🎯 ${r.t} · 🌱 ${r.n - r.t}) · eng eskisi ${age(r.oldest)}`))
                 : '✅ Ishlatilmay turgan yangi lid yo‘q — zo‘r!');
         await send(db, `hourly:${clock.date}:${clock.hour}`, text, { silent: true });
     });
