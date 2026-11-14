@@ -102,6 +102,7 @@ async function run(db,now=new Date()) {
     }
     // Isitish alohida savepoint ichida: xatosi eslatma va hisobotlarni orqaga qaytarmasin.
     await guarded(db,'funnel_drip',async()=>{ await require('./funnel').drip(db,now); });
+    await guarded(db,'sales_ping',async()=>{ await require('./funnel').salesPing(db,now); });
     // 1-dars mini ilovasini yarmida qoldirganlarga bitta qaytarish xabari.
     await guarded(db,'miniapp_nudge',async()=>{ await require('./miniapp').nudge(db,now); });
     // «Hozir qo'ng'iroq» so'rovi va'da vaqtida natijasiz — sotuv guruhi va menejerga eslatma.

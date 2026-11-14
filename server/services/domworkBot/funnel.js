@@ -41,6 +41,9 @@ async function init(db) {
     // 15-noy: xabar matni va tugmalari — raqam kelganda eski xabarni tahrirlash uchun (editMessageText tugmalarni ham qayta talab qiladi).
     await db.query("ALTER TABLE domwork_bot_relay ADD COLUMN IF NOT EXISTS text TEXT NOT NULL DEFAULT '', ADD COLUMN IF NOT EXISTS markup JSONB");
     await db.query("DELETE FROM domwork_bot_relay WHERE created_at<NOW()-INTERVAL '90 days'");
+    // 15-noy: aloqa qoldirgan lid bilan hech kim bog'lanmasa — 5/10/15 daqiqada guruhga chaqiruv; kimdir olsa chaqiruvlar o'chiriladi.
+    await db.query(`CREATE TABLE IF NOT EXISTS domwork_bot_sales_ping (telegram_id TEXT PRIMARY KEY, since TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        step INTEGER NOT NULL DEFAULT 0, done BOOLEAN NOT NULL DEFAULT FALSE)`);
     // 30-okt: voronkani ishga tushirish (bir marta). Keyin Bot boshqaruvidan o'chirilsa — o'chiq qoladi.
     await db.query(`UPDATE domwork_bot_settings SET data=data||'{"funnelEnabled":true,"dripEnabled":true,"funnelLaunch20261030":true}'::jsonb
         ||(CASE WHEN data ? 'discountPercent' THEN '{}'::jsonb ELSE '{"discountPercent":15,"discountHours":72}'::jsonb END)
@@ -245,6 +248,51 @@ async function notifySales(db, key, title, v, extra = '', { buttons = false } = 
             _automation: true, _binding: group.id, _funnel: true, _relay: v.telegram_id } });
     if (lead?.manager_id) await events.privateMessage(db, 'funnel:' + key + ':m', await events.employee(db, lead.manager_id), dmText);
     if (buttons && !v.username && !v.phone && !lead?.phone) await askPhone(db, v);
+    else if (buttons) await startPing(db, v.telegram_id);
+}
+// ── Chaqiruv: aloqa (username yoki raqam) bor, lekin hech kim bog'lanmadi ──
+const PING_TAG = '⏰ CHAQIRUV';
+const PINGS = [
+    n => `${PING_TAG} · ${n} 5 daqiqadan beri kutyapti!\n\nQani, sotuv menejerlari, kim birinchi? Lid hali qaynoq 🔥 Qancha tez gaplashsangiz — shuncha tez sotuv!`,
+    n => `${PING_TAG} · ${n} 10 daqiqadan beri javobsiz 😟\n\nUxlamayotganlar bormi? 👀 Lid sovib qolmasin — hozir yozing yoki qo‘ng‘iroq qiling 📞`,
+    n => `${PING_TAG} · ${n} 15 daqiqadan beri kutyapti! 🚨\n\nJamoa, bu pul turibdi! 💸 Birinchi yozgan — sotuvni oladi. Kim oladi? 💪`,
+];
+async function startPing(db, tid) {
+    await db.query(`INSERT INTO domwork_bot_sales_ping(telegram_id) VALUES($1) ON CONFLICT(telegram_id) DO UPDATE SET since=NOW(),step=0,done=FALSE
+        WHERE domwork_bot_sales_ping.done OR domwork_bot_sales_ping.since<NOW()-INTERVAL '1 hour'`, [String(tid)]);
+}
+// Kimdir oldi (tugma yoki reply) — chaqiruvlar to'xtaydi va guruhdan o'chiriladi.
+async function stopPing(db, tid) {
+    const r = await db.query('UPDATE domwork_bot_sales_ping SET done=TRUE WHERE telegram_id=$1 AND NOT done RETURNING 1', [String(tid)]);
+    // Navbatda turgan (hali yuborilmagan) chaqiruv ham bekor qilinadi.
+    await db.query("UPDATE domwork_bot_outbox SET state='cancelled',last_error='ping-handled' WHERE state='pending' AND unique_key LIKE $1", ['ping:' + String(tid) + ':%']);
+    const group = await salesGroup(db);
+    if (!group) return;
+    for (const m of (await db.query(`SELECT message_id FROM domwork_bot_relay WHERE chat_id=$1 AND telegram_id=$2 AND text LIKE $3 AND created_at>NOW()-INTERVAL '2 days'`,
+        [group.chat_id, String(tid), PING_TAG + '%'])).rows) {
+        await store.enqueue(db, { key: `pingdel:${group.chat_id}:${m.message_id}`, targetKind: 'group', targetId: group.chat_id, method: 'deleteMessage',
+            payload: { chat_id: group.chat_id, message_id: Number(m.message_id), _automation: true, _binding: group.id, _funnel: true } });
+        await db.query("UPDATE domwork_bot_relay SET text='' WHERE chat_id=$1 AND message_id=$2", [group.chat_id, m.message_id]);
+    }
+    return r.rows.length > 0;
+}
+// Scheduler har 30 soniyada.
+async function salesPing(db, now = new Date()) {
+    const s = await settings(db);
+    if (s.funnelEnabled !== true) return;
+    const group = await salesGroup(db);
+    if (!group) return;
+    for (const p of (await db.query(`SELECT * FROM domwork_bot_sales_ping WHERE NOT done AND step<3 AND since + (step+1) * INTERVAL '5 minutes' <= $1 LIMIT 20`, [now])).rows) {
+        const handled = (await db.query(`SELECT 1 FROM domwork_bot_funnel_events WHERE telegram_id=$1 AND event IN ('outcome','relay_out') AND created_at>=$2 LIMIT 1`, [p.telegram_id, p.since])).rows.length;
+        if (handled) { await stopPing(db, p.telegram_id); continue; }
+        const v = await visitor(db, p.telegram_id);
+        if (!v || v.blocked_at) { await db.query('UPDATE domwork_bot_sales_ping SET done=TRUE WHERE telegram_id=$1', [p.telegram_id]); continue; }
+        const name = clean(v.first_name) || 'Lid', contactLine = [v.username ? '@' + v.username : '', v.phone ? '+' + v.phone : ''].filter(Boolean).join(' · ');
+        const text = PINGS[p.step](name) + (contactLine ? `\n👤 ${contactLine}` : '') + '\n↩️ Shu xabarga reply qilsangiz ham lidga boradi.';
+        await store.enqueue(db, { key: `ping:${p.telegram_id}:${new Date(p.since).getTime()}:${p.step}`, targetKind: 'group', targetId: group.chat_id,
+            payload: { chat_id: group.chat_id, text, reply_markup: managerButtons(p.telegram_id), _automation: true, _binding: group.id, _funnel: true, _relay: p.telegram_id } });
+        await db.query('UPDATE domwork_bot_sales_ping SET step=step+1 WHERE telegram_id=$1', [p.telegram_id]);
+    }
 }
 async function addScore(db, v, n, reason) {
     const before = v.score; v.score = before + n;
@@ -639,6 +687,7 @@ async function fillPhone(db, tid, phone) {
 async function phoneArrived(c, v, phone) {
     await c.db.query("UPDATE leads SET phone=CASE WHEN COALESCE(phone,'')='' THEN $2 ELSE phone END,updated_at=NOW() WHERE id=$1", [v.lead_id, phone]);
     await notifyShort(c.db, 'phone:' + c.tid, v, `📱 ${v.first_name || 'Lid'} raqam qoldirdi: ${phone} · Telegram: t.me/${phone}`);
+    await startPing(c.db, c.tid);
 }
 async function pause(db, tid) { await db.query('UPDATE domwork_bot_visitors SET paused=true,updated_at=NOW() WHERE telegram_id=$1', [tid]); }
 async function blocked(db, tid) { await db.query('UPDATE domwork_bot_visitors SET blocked_at=NOW() WHERE telegram_id=$1', [tid]); }
@@ -764,6 +813,7 @@ async function relayFromGroup(db, update) {
     const v = await visitor(db, tid);
     if (v?.lead_id) await leadComment(db, v.lead_id, `🤖 ${clean(staff.name)} bot orqali yozdi: ${m.text ? String(m.text).slice(0, 300) : '[media]'}`);
     await claimLead(db, v, staff, 'reply');
+    await stopPing(db, tid);
     await event(db, tid, 'relay_out', { by: staff.id });
     return true;
 }
@@ -810,7 +860,7 @@ async function managerAction(db, update) {
                 _guest: { tid }, _automation: true } });
         await patch(db, tid, { noans_at: new Date(), ...(v.request?.method ? {} : { request: { method: 'call' } }) });
     }
-    if (action !== 'phone') await claimLead(db, v, staff, action.startsWith('r:') ? 'rej' : action);
+    if (action !== 'phone') { await claimLead(db, v, staff, action.startsWith('r:') ? 'rej' : action); await stopPing(db, tid); }
     await event(db, tid, 'outcome', { action, by: staff.id });
     return ack('Saqlandi');
 }
@@ -944,4 +994,4 @@ async function sendMaterial(db, tid, key, field = '') {
     return true;
 }
 const WHEN_KEYS = Object.keys(copy.WHEN);
-module.exports = { hhmm, notifySales, promiseMinutes, miniappLine, MINIAPP_URL, miniappOn, inline, say, sendMaterial, visitor, upsertVisitor, patch, event, settings, addScore, finishRequest, leadComment, sla, WHEN_KEYS, bundledFile, BUNDLED_NAMES, bonus, relayFromGroup, managerAction, drip, nextItem, SCHEMA, MEDIA_KEYS, init, enabled, start, message, contact, callback, deliverable, adminMedia, pause, blocked, report, track, mask, inHours };
+module.exports = { salesPing, hhmm, notifySales, promiseMinutes, miniappLine, MINIAPP_URL, miniappOn, inline, say, sendMaterial, visitor, upsertVisitor, patch, event, settings, addScore, finishRequest, leadComment, sla, WHEN_KEYS, bundledFile, BUNDLED_NAMES, bonus, relayFromGroup, managerAction, drip, nextItem, SCHEMA, MEDIA_KEYS, init, enabled, start, message, contact, callback, deliverable, adminMedia, pause, blocked, report, track, mask, inHours };
