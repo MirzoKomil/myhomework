@@ -142,16 +142,17 @@ function salesText(r, { group = false, updated = false } = {}) {
     lines.push(r.payments ? `💰 <b>Jami tushum: ${T.esc(T.sum(r.day))}</b> · ${r.payments} ta to‘lov` : '💰 <b>Bu kuni to‘lov bo‘lmadi</b>');
     if (r.payments) lines.push(`🆕 Yangi sotuvlar: ${T.b(r.sales + ' ta')} · ${T.esc(T.sum(r.saleSum))}`,
         `💳 Qarzdorlardan: ${T.b(r.debtStudents + ' o‘quvchi')}${r.debtPays !== r.debtStudents ? ` (${r.debtPays} to‘lov)` : ''} · ${T.esc(T.sum(r.debtSum))}`);
-    lines.push(`📆 Oy: ${T.b(T.sum(r.monthSum))}${r.plan > 0 ? ` · reja ${T.b(pct(r.monthSum, r.plan))}` : ''}`);
-    if (r.plan > r.monthSum) lines.push(`🎯 Qoldi ${T.esc(T.sum(r.plan - r.monthSum))}${r.left ? ` · kuniga ~${T.esc(T.sum(Math.ceil((r.plan - r.monthSum) / r.left / 1000) * 1000))} kerak (${r.left} ish kuni)` : ''}`);
-    else if (r.plan > 0) lines.push('🎉 <b>Oylik reja bajarildi!</b>');
+    // Sotuv guruhida (jamoa) oylik summa va reja foizi aytilmaydi — faqat rahbarlarga.
+    if (!group) lines.push(`📆 Oy: ${T.b(T.sum(r.monthSum))}${r.plan > 0 ? ` · reja ${T.b(pct(r.monthSum, r.plan))}` : ''}`);
+    if (!group && r.plan > r.monthSum) lines.push(`🎯 Qoldi ${T.esc(T.sum(r.plan - r.monthSum))}${r.left ? ` · kuniga ~${T.esc(T.sum(Math.ceil((r.plan - r.monthSum) / r.left / 1000) * 1000))} kerak (${r.left} ish kuni)` : ''}`);
+    else if (!group && r.plan > 0) lines.push('🎉 <b>Oylik reja bajarildi!</b>');
     const L = r.leads;
     lines.push('', `👥 <b>Lidlar bugun</b>`, `Yangi ${T.b(L.fresh)} · bog‘lanildi ${L.contacted} · yopildi ${T.b(L.won)}`, '', ...trialLines(r.trials));
     if (r.people.length) {
         lines.push('', '🏆 <b>Menejerlar</b>');
         r.people.forEach((p, n) => lines.push(`${p.day > 0 ? (MEDALS[n] || `${n + 1}.`) : '▫️'} ${T.b(short(p.name))} — `
             + (p.day > 0 ? `${T.esc(T.sum(p.day))}${p.sales ? ` (${p.sales} sotuv)` : ''}` : '0')
-            + (p.processed ? ` · ${p.processed} lid` : '') + (p.plan > 0 ? ` · oy ${pct(p.month, p.plan)}` : '')));
+            + (p.processed ? ` · ${p.processed} lid` : '') + (!group && p.plan > 0 ? ` · oy ${pct(p.month, p.plan)}` : '')));
     }
     if (r.overdue.count) lines.push('', `⏳ Muddati o‘tgan qarz: ${T.b(r.overdue.count + ' o‘quvchi')}${group ? '' : ` · ${T.esc(T.sum(r.overdue.sum))}`}`);
     lines.push('', T.i(r.day > 0 ? 'Bugungi mehnat uchun rahmat! Ertaga yanada kuchliroq 💪' : 'Ertaga yangi imkoniyat — birinchi qo‘ng‘iroqni ertalab qilamiz 📞'));
