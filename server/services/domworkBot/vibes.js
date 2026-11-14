@@ -224,7 +224,7 @@ async function run(db, settings, clock, now, once) {
     // Dushanba starti — o'tgan hafta natijasi bilan.
     if (clock.day === 1 && at(9, 30)) await once(db, 'vibe-monday:' + clock.date, async () => {
         const w = await lastWeek(db, clock.date);
-        await events.groupMessage(db, 'vibe-monday:' + clock.date, 'sales', `☀️ <b>Yangi hafta — yangi imkoniyatlar!</b>\n\n📊 O‘tgan hafta: ${T.b(w.sales + ' ta yangi sotuv')} · ${T.b(T.sum(w.sum))}`
+        await events.groupMessage(db, 'vibe-monday:' + clock.date, 'sales', `☀️ <b>Yangi hafta — yangi imkoniyatlar!</b>\n\n📊 O‘tgan hafta: ${T.b(w.sales + ' ta yangi sotuv')}`
             + (w.top ? `\n🏆 Hafta yetakchisi: ${T.b(w.top)} — qoyil!` : '') + `\n\nBu hafta o‘tganidan kuchliroq bo‘ladi. Har kim o‘ziga bitta maqsad qo‘ysin 🎯\nOmad, jamoa! 💪`, opts);
     });
     // Ertalabki motivatsiya (dushanbadan tashqari — dushanba o'z starti bor).
@@ -235,10 +235,8 @@ async function run(db, settings, clock, now, once) {
     const end = new Date(Date.UTC(Number(clock.date.slice(0, 4)), Number(clock.date.slice(5, 7)), 0)).getUTCDate();
     const left = end - Number(clock.date.slice(8));
     if (left <= 2 && left >= 0 && at(11, 0)) await once(db, 'vibe-monthend:' + clock.date, async () => {
-        const m = await teamMonth(db, clock.date);
-        const pct = m.plan > 0 ? Math.floor(m.sum / m.plan * 100) : null;
-        await events.groupMessage(db, 'vibe-monthend:' + clock.date, 'sales', `⏳ <b>Oy tugashiga ${left === 0 ? 'bugun oxirgi kun' : left + ' kun'} qoldi!</b>\n\n💰 Jamoa tushumi: ${T.b(T.sum(m.sum))}`
-            + (pct != null ? `\n🎯 Reja: ${T.b(pct + '%')}${m.plan > m.sum ? ` · qoldi ${T.b(T.sum(m.plan - m.sum))}` : ' — BAJARILDI! 🎉'}` : '')
+        // 15-noy: Sotuv guruhida jamoa summasi va reja foizi aytilmaydi.
+        await events.groupMessage(db, 'vibe-monthend:' + clock.date, 'sales', `⏳ <b>Oy tugashiga ${left === 0 ? 'bugun oxirgi kun' : left + ' kun'} qoldi!</b>`
             + `\n\n${left === 0 ? 'Oxirgi kun — oxirgi imkoniyat. Hamma “o‘ylab ko‘raman”larga bugun qo‘ng‘iroq! 📞🔥' : 'Har bir to‘lov hisobda. Qarzdorlar va “keyinroq”larni hozir eslaymiz 📞'}`, opts);
     });
     // 18:00 — qaynoq soat.
