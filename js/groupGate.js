@@ -104,6 +104,39 @@
         timer = setInterval(poll, 60000);
         setTimeout(poll, 4000);
     }
+    // ── 15-noy: ROP/admin — Telegramdan avtomatik biriktirilgan lidlar (kabinetga kirganda bir marta) ──
+    let claimsShown = false;
+    async function claims() {
+        if (claimsShown || !['rop', 'admin'].includes(role()) || document.getElementById('ggOverlay')) return;
+        let data; try { data = await apiFetch(API + '/claims', { fresh: true }); } catch { return; }
+        const items = data?.items || [];
+        if (!items.length) return;
+        claimsShown = true; css();
+        const by = {}; for (const i of items) (by[i.manager || '—'] ||= []).push(i);
+        const cnt = {}; for (const i of items) cnt[i.how] = (cnt[i.how] || 0) + 1;
+        const ini = n => String(n).split(/\s+/).map(w => w[0] || '').join('').slice(0, 2).toUpperCase();
+        const t = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tashkent' }); };
+        const tag = (txt, bg, fg) => `<span style="font-size:11px;font-weight:700;border-radius:999px;padding:3px 8px;background:${bg};color:${fg};white-space:nowrap">${esc(txt)}</span>`;
+        const ov = document.createElement('div'); ov.className = 'gg-ov'; ov.id = 'ggClaims';
+        ov.innerHTML = `<div class="gg-box" role="dialog" aria-modal="true" style="max-width:560px">
+            <div class="gg-h"><div class="gg-ic" style="background:#E6F1FB;color:#1E5EFF">🤖</div><div><p class="gg-t">Telegramdan ${items.length} ta lid avtomatik biriktirildi</p>
+            <p class="gg-p" style="margin:2px 0 0">Oxirgi kirganingizdan beri · menejerlar Sotuv guruhida o‘zi bog‘langan</p></div></div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin:10px 0">${Object.entries(cnt).map(([k, n]) => `<span style="background:#F5F7FB;border-radius:999px;padding:6px 12px;font-size:12px;font-weight:700">${esc(k)} — ${n}</span>`).join('')}</div>
+            ${Object.entries(by).map(([m, list]) => `<div style="display:flex;align-items:center;gap:10px;padding:10px 0 6px"><div style="width:30px;height:30px;border-radius:50%;background:#DBE7FF;color:#1E5EFF;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center">${esc(ini(m))}</div>
+                <div style="font-weight:800;font-size:14px;flex:1">${esc(m)}</div><div style="font-size:12px;color:#64748B;font-weight:700">${list.length} ta lid</div></div>
+                ${list.map(i => `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px;border-radius:12px;background:#F8FAFC;margin-bottom:6px;font-size:13px">
+                    <span style="font-weight:700;flex:1;min-width:120px">${esc(i.name)}<br><span style="font-size:11px;color:#64748B;font-weight:500">${esc([i.target ? 'Target' : 'Organik', i.source, t(i.at), i.ru ? '🇷🇺 Rossiyada' : ''].filter(Boolean).join(' · '))}</span></span>
+                    ${tag(i.how, '#E1F5EE', '#0F6E56')}${i.moved ? tag('Yangi → Bog‘lanildi', '#EEEDFE', '#3C3489') : tag('Bosqich o‘zgarmadi', '#F1F5F9', '#475569')}
+                    <a href="#" data-claim-open="${esc(i.id)}" style="color:#1E5EFF;font-weight:700;font-size:12px;text-decoration:none">Ochish</a></div>`).join('')}`).join('')}
+            <div class="gg-btns"><button type="button" class="gg-btn" data-claim-leads>Lidlar sahifasida ko‘rish</button><button type="button" class="gg-btn gg-btn--p" data-claim-ok>Tushundim</button></div></div>`;
+        document.body.appendChild(ov);
+        const done = async () => { ov.remove(); try { await apiFetch(API + '/claims/seen', { method: 'POST', body: '{}' }); } catch {} };
+        ov.querySelector('[data-claim-ok]').onclick = done;
+        ov.querySelector('[data-claim-leads]').onclick = () => { done(); document.querySelector('#sidebarMenu .menu-item[data-tab="sales"]:not([data-nav-sales])')?.click(); };
+        ov.querySelectorAll('[data-claim-open]').forEach(a => a.onclick = e => { e.preventDefault(); done(); if (typeof openLeadCommentsModal === 'function') openLeadCommentsModal('russian', a.dataset.claimOpen); });
+    }
+    const startClaims = () => setTimeout(claims, 6000);
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startClaims); else startClaims();
     window.groupGate = { poll };
 })();
