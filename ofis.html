@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Ofis — jonli</title>
+<link rel="manifest" href="/ofis/manifest.webmanifest">
+<meta name="theme-color" content="#B45309">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Ofis">
+<link rel="apple-touch-icon" href="/ofis/icon-192.png">
+<link rel="icon" href="/ofis/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{--acc:#B45309;--acc2:#FDECD3;--ink:#14213D;--mut:#6B7385;--bg:#F7EFE3;--card:#fff;--line:#EADFCC;--soft:#F3E7D6;--green:#16A34A;--red:#E11D48}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Nunito,system-ui,sans-serif}
+.app{max-width:1280px;margin:0 auto;padding:12px;padding-top:max(12px,env(safe-area-inset-top))}
+header{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.logo{width:36px;height:36px;border-radius:10px;background:var(--acc);color:#fff;display:grid;place-items:center;font-weight:900;font-size:18px}
+h1{font-size:18px;margin:0;font-weight:900;line-height:1.1}
+.sub{font-size:12px;color:var(--mut);font-weight:700}
+.live{margin-left:auto;display:flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-weight:800;font-size:13px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--red);animation:pulse 1.2s infinite}.dot.off{background:#94A3B8;animation:none}
+@keyframes pulse{50%{opacity:.25}}
+.kpis{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:10px;scrollbar-width:none}.kpis::-webkit-scrollbar{display:none}
+.kpi{flex:0 0 auto;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:8px 12px;min-width:92px}
+.kpi b{display:block;font-size:20px;font-weight:900;font-variant-numeric:tabular-nums}.kpi span{font-size:11px;color:var(--mut);font-weight:800;text-transform:uppercase;letter-spacing:.03em}
+.kpi.money b{color:var(--green)}
+.main{display:grid;grid-template-columns:1fr;gap:12px}@media(min-width:960px){.main{grid-template-columns:1fr 340px}}
+.ctrl{display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:7px 12px;font:800 13px Nunito,sans-serif;color:var(--ink);cursor:pointer}
+.btn.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+#back{display:none}
+.stage{position:relative;background:#E9DCC7;border:1px solid var(--line);border-radius:18px;overflow:hidden}
+canvas{display:block;width:100%;touch-action:manipulation;cursor:pointer}
+.hint{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);background:rgba(20,33,61,.82);color:#fff;font-size:12px;font-weight:800;padding:6px 12px;border-radius:999px;pointer-events:none;transition:opacity .4s;white-space:nowrap}
+.side{display:flex;flex-direction:column;gap:12px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:12px}
+.panel h3{margin:0 0 8px;font-size:14px;font-weight:900}
+.feed{list-style:none;margin:0;padding:0;max-height:330px;overflow:auto}
+.feed li{display:flex;gap:8px;padding:7px 0;border-top:1px solid #F0EADF;font-size:13px;font-weight:700;line-height:1.3;animation:fin .35s ease}.feed li:first-child{border-top:0}
+@keyframes fin{from{opacity:0;transform:translateY(-6px)}}
+.feed .t{color:var(--mut);font-size:11px;font-variant-numeric:tabular-nums;min-width:36px;padding-top:1px}.feed .i{width:22px;text-align:center}
+.empty{color:var(--mut);font-size:13px;font-weight:700;padding:8px 0}
+.team{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.mem{display:flex;align-items:center;gap:7px;padding:6px;border-radius:10px;background:var(--soft);font-size:12px;font-weight:800;min-width:0}
+.mem .av{width:24px;height:24px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;color:#fff;font-size:11px}
+.mem .st{font-size:10.5px;color:var(--mut);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mem div{min-width:0}
+.mem.off{opacity:.55}
+.tsep{grid-column:1/-1;font-size:12px;font-weight:900;color:var(--mut);margin-top:6px}
+.note{font-size:11px;color:var(--mut);font-weight:700;margin-top:8px;line-height:1.4}
+.toast{position:fixed;left:50%;top:14px;transform:translate(-50%,-200%);visibility:hidden;background:#fff;border:2px solid var(--green);border-radius:16px;padding:10px 16px;font-weight:900;font-size:15px;box-shadow:0 10px 30px rgba(20,33,61,.18);transition:transform .35s cubic-bezier(.2,1.4,.4,1);z-index:70;text-align:center;max-width:92vw}
+.toast.show{transform:translate(-50%,0);visibility:visible}.toast small{display:block;font-size:12px;color:var(--mut);font-weight:800}
+/* Kirish */
+#login{display:none;max-width:360px;margin:12vh auto 0;background:var(--card);border:1px solid var(--line);border-radius:22px;padding:22px}
+#login h2{margin:0 0 4px;font-weight:900}#login p{margin:0 0 14px;color:var(--mut);font-weight:700;font-size:13px}
+#login input{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px;font:700 15px Nunito,sans-serif;margin-bottom:10px;background:#fff}
+#login button{width:100%;padding:12px;border:0;border-radius:12px;background:var(--acc);color:#fff;font:900 15px Nunito,sans-serif;cursor:pointer}
+#loginErr{color:var(--red);font-weight:800;font-size:13px;min-height:18px}
+/* TV */
+#tvbar,#tvTicker{display:none}
+body.tv{overflow:hidden}
+body.tv .app>header,body.tv .kpis,body.tv .side,body.tv .ctrl{display:none!important}
+body.tv .stage{position:fixed;inset:0;border-radius:0;border:0;z-index:40}
+body.tv #tvbar{display:flex;position:fixed;left:0;right:0;top:0;z-index:45;gap:12px;align-items:center;padding:10px 16px;background:linear-gradient(rgba(20,33,61,.85),rgba(20,33,61,0));color:#fff;pointer-events:none}
+body.tv #tvbar .btn{pointer-events:auto;margin-left:auto}
+.tvt{font-weight:800;font-size:18px;white-space:nowrap}.tvt b{font-weight:900;letter-spacing:.05em}#tvclock{margin-left:10px;font-variant-numeric:tabular-nums;opacity:.85}
+.tvk{display:flex;gap:16px;overflow:hidden}.tvk div{font-size:12px;font-weight:800;opacity:.85;text-transform:uppercase;white-space:nowrap}.tvk b{display:block;font-size:22px;font-weight:900;opacity:1}
+body.tv #tvTicker{display:block;position:fixed;left:16px;right:16px;bottom:14px;z-index:45;pointer-events:none}
+#tvTicker div{display:inline-block;margin:4px 6px 0 0;background:rgba(255,255,255,.95);color:#14213D;border-radius:999px;padding:7px 14px;font-weight:800;font-size:15px;box-shadow:0 6px 18px rgba(0,0,0,.15);animation:fin .4s ease}
+#big{position:fixed;left:50%;top:50%;z-index:60;transform:translate(-50%,-50%) scale(.3);opacity:0;pointer-events:none;text-align:center;background:#fff;border:4px solid #16A34A;border-radius:28px;padding:22px 44px;box-shadow:0 30px 80px rgba(0,0,0,.35);transition:all .45s cubic-bezier(.2,1.5,.4,1)}
+#big.show{transform:translate(-50%,-50%) scale(1);opacity:1}
+#big .bi{font-size:64px;line-height:1}#big .bt{font-size:46px;font-weight:900;color:#16A34A;letter-spacing:.04em}#big .bs{font-size:20px;font-weight:800;color:#14213D;margin-top:4px}
+.sheet{position:fixed;inset:0;background:rgba(20,33,61,.35);display:none;align-items:flex-end;justify-content:center;z-index:80}.sheet.show{display:flex}
+.card{background:#fff;width:100%;max-width:420px;border-radius:22px 22px 0 0;padding:18px 18px 26px;animation:up .3s ease}
+@media(min-width:600px){.sheet{align-items:center}.card{border-radius:22px}}
+@keyframes up{from{transform:translateY(40px);opacity:0}}
+.card .hd{display:flex;gap:12px;align-items:center;margin-bottom:12px}.card .big{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:22px;font-weight:900}
+.card h2{margin:0;font-size:19px;font-weight:900}.card .role{color:var(--mut);font-size:13px;font-weight:800}
+.pill{display:inline-flex;gap:6px;padding:5px 10px;border-radius:999px;font-weight:800;font-size:13px;background:var(--acc2);color:var(--acc);margin-bottom:12px}
+.slist div{display:flex;justify-content:space-between;padding:6px 2px;border-top:1px solid #F0EADF;font-size:13.5px;font-weight:800}
+.close{margin-top:14px;width:100%;padding:12px;border:0;border-radius:12px;background:var(--ink);color:#fff;font:900 15px Nunito,sans-serif;cursor:pointer}
+</style>
+</head>
+<body>
+<div id="login">
+  <h2>Ofis</h2><p>CRM login va parolingiz bilan kiring</p>
+  <form id="loginForm"><input id="lu" autocomplete="username" placeholder="Login"><input id="lp" type="password" autocomplete="current-password" placeholder="Parol">
+  <div id="loginErr"></div><button id="lb">Kirish</button></form>
+</div>
+<div class="app" id="app" style="display:none">
+  <header>
+    <div class="logo">O</div>
+    <div><h1>Jonli ofis</h1><div class="sub" id="who">—</div></div>
+    <div class="live"><span class="dot" id="dot"></span><span id="clock">--:--</span></div>
+  </header>
+  <div class="kpis" id="kpis"></div>
+  <div class="main">
+    <div>
+      <div class="ctrl"><button class="btn" id="back">← Butun ofis</button><button class="btn" id="tvBtn">📺 TV</button><button class="btn" id="sndBtn">🔇 Ovoz</button><button class="btn" id="langBtn" style="display:none"></button></div>
+      <div class="stage" id="stage"><canvas id="cv"></canvas><div class="hint" id="hint">Ekranga teging — ovoz yoqiladi · xonani bosing — yaqinlashadi</div></div>
+    </div>
+    <div class="side">
+      <div class="panel"><h3>⚡ Jonli voqealar</h3><ul class="feed" id="feed"></ul></div>
+      <div class="panel"><h3>👥 Jamoa holati</h3><div class="team" id="team"></div><div class="note" id="note"></div></div>
+    </div>
+  </div>
+</div>
+<div id="tvbar"><div class="tvt"><b>DOMWORK</b> · Jonli ofis <span id="tvclock"></span></div><div class="tvk" id="tvk"></div><button class="btn" id="tvExit">✕ Chiqish</button></div>
+<div id="tvTicker"></div>
+<div id="big"><div class="bi">💰</div><div class="bt">SOTUV!</div><div class="bs" id="bigS"></div></div>
+<div class="toast" id="toast"></div>
+<div class="sheet" id="sheet"><div class="card" id="card"></div></div>
+<script src="/ofis/ofis.js?v=20261115a"></script>
+</body>
+</html>
