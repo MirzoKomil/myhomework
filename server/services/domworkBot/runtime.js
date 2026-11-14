@@ -199,6 +199,9 @@ function createRuntime({ pool, crm, env = process.env, redisFactory, telegramFac
         // Yangi o'quvchi guruhi qulfi: bot guruhni nomi bo'yicha topadi, huquqlarni tekshiradi, kerakli odamlarni admin qiladi.
         try {await require('./groupGate').processOne(pool,(method,payload)=>telegram.callApi(method,payload,{signal:AbortSignal.timeout(5000)}),botId);}
         catch(error){console.error('[domwork-bot] group gate failed:',error.code || error.name);}
+        // Yordamchi ustoz tanishuv aloqasi: yangi o'quvchi, "Tanishdik", 24 soat kechikish xabarlari.
+        try {await require('./assistIntroBot').processOne(pool);}
+        catch(error){console.error('[domwork-bot] assist intro failed:',error.code || error.name);}
         finally{offboardBusy=false;}
     }
     async function tickDiscovery() {
