@@ -103,10 +103,10 @@ function createRuntime({ pool, crm, env = process.env, redisFactory, telegramFac
             const found = (await db.query(`SELECT id,chat_id,type,teacher_id FROM domwork_learning_groups WHERE chat_id=$1 AND NOT archived AND verified_at IS NOT NULL
                 UNION ALL SELECT id,chat_id,type,NULL FROM domwork_bot_groups WHERE chat_id=$1 AND active`, [row.target_id])).rows;
             if (found.length !== 1 || (row.payload._binding && row.payload._binding!==found[0].id)
-                || !['sendMessage','sendPhoto','sendVideo','sendVoice','sendDocument','unbanChatMember','copyMessage','editMessageReplyMarkup','editMessageText'].includes(row.method)) return false;
+                || !['sendMessage','sendPhoto','sendVideo','sendVoice','sendDocument','unbanChatMember','copyMessage','editMessageReplyMarkup','editMessageText','deleteMessage'].includes(row.method)) return false;
             // Voronka (Sotuv guruhi) — faqat sendMessage/copyMessage/editMessageReplyMarkup/editMessageText.
-            if (row.payload._funnel && !['sendMessage','copyMessage','editMessageReplyMarkup','editMessageText'].includes(row.method)) return false;
-            if (!row.payload._funnel && ['copyMessage','editMessageReplyMarkup','editMessageText'].includes(row.method)) return false;
+            if (row.payload._funnel && !['sendMessage','copyMessage','editMessageReplyMarkup','editMessageText','deleteMessage'].includes(row.method)) return false;
+            if (!row.payload._funnel && ['copyMessage','editMessageReplyMarkup','editMessageText','deleteMessage'].includes(row.method)) return false;
             // Live Telegram permission check; stale verification never grants rights.
             const member = await call('getChatMember', { chat_id: row.target_id, user_id: botId });
             if(member.status!=='administrator') return false;
