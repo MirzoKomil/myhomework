@@ -148,7 +148,7 @@
             host.insertBefore(btn, host.firstChild);
         }
         const today = me.today || {};
-        let label = 'Keldim', state = 'todo';
+        let label = 'Davomat', state = 'todo';
         if (me.face !== 'approved') { label = 'Davomat'; state = 'setup'; }
         else if (today.outClock) { label = `Ketdi ${today.outClock}`; state = 'done'; }
         else if (today.inClock) { label = `Keldi ${today.inClock}`; state = 'in'; }
@@ -174,19 +174,17 @@
         const data = await refreshMe();
         if (!overlay) return;
         if (!data?.tracked) { body.innerHTML = '<p>Sizga davomat belgilash yoqilmagan. Savollar bo‘lsa HR’ga murojaat qiling.</p>'; return; }
-        if (['none', 'rejected', 'reset'].includes(data.face)) return enrollView(body, data);
-        if (data.face === 'pending') {
-            body.innerHTML = `${todaySummary(data.today)}<div class="satt-note">Yuz namunangiz HR’ga yuborilgan. Tasdiqlangach shu yerda “Keldim” tugmasi chiqadi.</div>`;
-            return;
-        }
-        const kind = data.nextAction;
-        const done = !!data.today?.outClock;
+        // 15-noy qarori: kelish-ketish va yuz namunasi FAQAT telefonda (Jamoa ilovasi, bitta selfie + GPS).
+        // Kompyuterda kamera ochilmaydi — bugungi holat va telefonga yo'naltirish ko'rsatiladi.
+        const needFace = ['none', 'rejected', 'reset'].includes(data.face);
+        const how = needFace
+            ? 'Jamoa ilovasini oching va bosh sahifadagi <b>“Yuz namunasini yuborish”</b> tugmasini bosing. Rasmni HR (yoki direktor) tasdiqlaydi.'
+            : data.face === 'pending'
+                ? 'Yuz namunangiz tasdiqlash uchun yuborilgan. Tasdiqlangach Jamoa ilovasida “Keldim” bilan belgilaysiz.'
+                : 'Jamoa ilovasini oching — bosh sahifadagi <b>“Bugungi ish kuni”</b> kartasidan selfie bilan belgilang.';
         body.innerHTML = `${todaySummary(data.today)}
-            <ul class="satt-steps"><li>Ofis hududida bo‘ling (${esc(data.office?.name || 'ofis')}, ${data.office?.radius || ''} m)</li>
-            <li>Yuzingizni ramkaga joylang — 3 soniyada rasm olinadi</li><li>So‘ng boshingizni sekin yonga buring</li></ul>
-            <button type="button" class="satt-cta" data-kind="${kind}">${kind === 'in' ? 'Kelishni belgilash' : done ? 'Ketishni qayta belgilash' : 'Ketishni belgilash'}</button>
-            <p class="satt-muted satt-small">Bugun yana ${data.attemptsLeft} ta urinish qoldi. Rasm faqat davomat uchun, ${data.photoDays || 90} kun saqlanadi; ofisdan tashqaridagi joylashuvingiz saqlanmaydi.</p>`;
-        body.querySelector('.satt-cta').onclick = () => checkFlow(body, kind);
+            <div class="satt-note"><b>Kelish va ketish faqat telefonda belgilanadi.</b><br>${how}</div>
+            <p class="satt-muted satt-small">Kompyuterda belgilab boʻlmaydi. Javob soʻrash (kech qolaman, kelmayman, erta ketaman) ham Jamoa ilovasida.</p>`;
     }
 
     // Bekor qilish: oyna yopilsa jarayon to'xtaydi, kamera o'chadi va serverga hech narsa yuborilmaydi.
