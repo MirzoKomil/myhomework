@@ -13,7 +13,7 @@ function createRuntime({ pool, crm, env = process.env, redisFactory, telegramFac
     let config, invalid = false;
     try { config = configuration(env); }
     catch { config = configuration({ ...env, DOMWORK_BOT_ENABLED: 'false' }); invalid = true; }
-    let redis, telegram, botId, timer, discoveryTimer, pushTimer, busy = false, discoveryBusy = false, pushBusy = false, stopped = false, lastSchedule=0;
+    let redis, telegram, botId, timer, discoveryTimer, pushTimer, offboardTimer, offboardBusy = false, busy = false, discoveryBusy = false, pushBusy = false, stopped = false, lastSchedule=0;
     let health = null;
     let state = invalid ? 'failed' : config.enabled ? 'starting' : 'disabled';
     const handler = createHandler({ crm });
@@ -190,6 +190,14 @@ function createRuntime({ pool, crm, env = process.env, redisFactory, telegramFac
         catch(error){console.error('[domwork-bot] staff push failed:',error.code || error.name);}
         finally{pushBusy=false;}
     }
+    // 14-noy: ishdan bo'shatilgan xodimni guruhlardan chiqarish (alohida taymer, daqiqada bir marta).
+    async function tickOffboard() {
+        if(offboardBusy || stopped || !redis?.ready) return;
+        offboardBusy=true;
+        try {await require('./offboard').processOne(pool,(method,payload)=>telegram.callApi(method,payload,{signal:AbortSignal.timeout(5000)}),botId);}
+        catch(error){console.error('[domwork-bot] offboard failed:',error.code || error.name);}
+        finally{offboardBusy=false;}
+    }
     async function tickDiscovery() {
         if(discoveryBusy || stopped || !redis?.ready) return;
         discoveryBusy=true;
@@ -216,13 +224,14 @@ function createRuntime({ pool, crm, env = process.env, redisFactory, telegramFac
                     timer = setInterval(tick, 500); timer.unref();
                     discoveryTimer = setInterval(tickDiscovery, 1000); discoveryTimer.unref();
                     pushTimer = setInterval(tickStaffPush, 120000); pushTimer.unref();
+                    offboardTimer = setInterval(tickOffboard, 60000); offboardTimer.unref();
                 }
             } catch (error) {
                 state = 'failed'; await redis?.close().catch(() => {});
                 console.error('[domwork-bot] startup failed:', error.code || error.name);
             }
         },
-        async stop() { stopped = true; clearInterval(timer); clearInterval(discoveryTimer); clearInterval(pushTimer); await redis?.close(); state = 'stopped'; },
+        async stop() { stopped = true; clearInterval(timer); clearInterval(discoveryTimer); clearInterval(pushTimer); clearInterval(offboardTimer); await redis?.close(); state = 'stopped'; },
         status() { return { enabled: config.enabled, state, redisReady: !!redis?.ready, webhookPath: '/api/domwork/bot/webhook' }; },
         // Bot haqiqatan xabar qabul qilib, qayta ishlayaptimi (majburiy oyna faqat shunda chiqadi).
         // Webhook bizning manzilda, so'nggi 10 daqiqada xatosiz, Telegramda navbat tiqilmagan, bizda inbox tiqilmagan.

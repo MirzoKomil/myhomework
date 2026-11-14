@@ -77,6 +77,8 @@ function createHandler({ crm }) {
             return;
         }
         const message = update.message;
+        // 14-noy: ishdan bo'shatilgan xodim chiqarilgani haqidagi xizmat xabari — o'chirish navbatiga (offboard.js).
+        if (message?.left_chat_member && ['group','supergroup'].includes(message.chat?.type) && await require('./offboard').notice(db, message)) return;
         // Ustoz dars nazorati: guruhdagi video chat boshlandi/tugadi xizmat xabarlari (javob yuborilmaydi).
         if (message && ['group','supergroup'].includes(message.chat?.type)
             && (message.video_chat_started || message.video_chat_ended || message.voice_chat_started || message.voice_chat_ended)) {
