@@ -190,7 +190,7 @@ async function processOne(db) {
                     if(!require('./recognition').MILESTONES.includes(threshold))continue;
                     const month=policy.today().slice(0,7), milestoneKey=`milestone:${payment.manager_id}:${month}:${threshold}`;
                     await require('./scheduler').once(db,milestoneKey,()=>groupMessage(db,milestoneKey,'sales',
-                        `🚀 <b>YANGI POG‘ONA!</b>\n\n${T.who(mgrName,mgr?.telegramId)} bu oy sof tushumda ${T.b(T.sum(threshold))}dan oshdi! 🏅\n\nButun jamoa nomidan tabriklaymiz 👏👏👏`,
+                        `🚀 <b>YANGI POG‘ONA!</b>\n\n${T.who(mgrName,mgr?.telegramId)} bu oy yangi pog‘onaga chiqdi! 🏅\n\nButun jamoa nomidan tabriklaymiz 👏👏👏`,
                         {...T.HTML,_setting:'milestonesEnabled',_settings:['eventsEnabled'],_milestone:{managerId:payment.manager_id,month,threshold},_expiresAt:new Date(Date.now()+3600000).toISOString()}));
                 }
             }
