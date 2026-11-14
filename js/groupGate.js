@@ -30,8 +30,16 @@
     function ropView(items) {
         return items.map(g => `<div class="gg-card"><b>${esc(g.leadName)}</b> to'lov qildi${g.managerName ? ` · menejer ${esc(g.managerName)}` : ''}<br>
             <span style="color:#475569">Guruh: ${esc(g.groupName)}</span>${g.groupLink ? ` · <a href="${esc(g.groupLink)}" target="_blank" rel="noopener">ochish</a>` : ''}
-            <div style="margin-top:8px">${(g.items?.length ? g.items : [{ ok: false, text: 'Bot hali tekshirmadi — bir daqiqa kuting' }]).map(i =>
-                `<div class="gg-row"><span>${i.ok ? '✅' : '❌'}</span><span>${esc(i.text)}</span></div>`).join('')}</div></div>`).join('');
+            ${ropSteps(g.items)}</div>`).join('');
+    }
+    // Qadamlar: 1) bot va guruh nomi, 2) kimlarni qo'shish kerak — har biri holati bilan.
+    function ropSteps(list) {
+        if (!list?.length) return `<div style="margin-top:8px" class="gg-row"><span>⏳</span><span>Bot hali tekshirmadi — bir daqiqa kuting</span></div>`;
+        const row = i => `<div class="gg-row"><span>${i.ok ? '✅' : '❌'}</span><span>${esc(i.text)}</span></div>`;
+        const bot = list.filter(i => i.kind !== 'person'), ppl = list.filter(i => i.kind === 'person');
+        const head = (n, t, ok) => `<div style="margin-top:10px;font-weight:800;font-size:12px;color:${ok ? '#0F6E56' : '#0f172a'}">${n}. ${t}</div>`;
+        return head(1, 'Botni guruhga admin qiling', bot.every(i => i.ok)) + bot.map(row).join('')
+            + (ppl.length ? head(2, `Guruhga qo'shing (${ppl.filter(i => i.ok).length}/${ppl.length} tayyor)`, ppl.every(i => i.ok)) + ppl.map(row).join('') : '');
     }
     function render(items) {
         css();
@@ -43,7 +51,7 @@
         ov.innerHTML = `<div class="gg-box" role="dialog" aria-modal="true">
             <div class="gg-h"><div class="gg-ic">🔒</div><p class="gg-t">${isRop ? 'Guruhni tayyorlang' : 'Kabinet vaqtincha qulflangan'}</p></div>
             ${isRop
-                ? `<p class="gg-p">Tizim mustahkam ishlashi uchun yangi o'quvchi guruhi tayyor bo'lmaguncha kabinet qulflangan. Odamlarni guruhga qo'shing — bot ularni o'zi admin qiladi. Har daqiqada avtomatik tekshiriladi.</p>${ropView(items)}`
+                ? `<p class="gg-p">Tizim mustahkam ishlashi uchun yangi o'quvchi guruhi tayyor bo'lmaguncha kabinet qulflangan. Quyidagi qadamlarni bajaring — odamlarni qo'shsangiz, bot ularni o'zi admin qiladi. Har daqiqada avtomatik tekshiriladi.</p>${ropView(items)}`
                 : `<p class="gg-p">Tizim mustahkam ishlashi uchun yangi o'quvchingizning Telegram guruhi to'liq tayyor bo'lishi kerak. Guruh tayyor bo'lgach, kabinet o'zi ochiladi.</p>
                    ${items.map(g => `<div class="gg-card"><b>${esc(g.leadName)}</b><br><span style="color:#475569">Guruh: ${esc(g.groupName)}</span></div>`).join('')}
                    <p class="gg-p" style="font-weight:700;color:#0f172a">👉 Bu bo'yicha sotuv bo'limi rahbari (ROP)ga murojaat qiling. Guruh sozlamalarini o'zingiz o'zgartirmang.</p>
