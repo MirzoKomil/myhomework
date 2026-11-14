@@ -56,6 +56,9 @@ async function people(db, assistantId) {
 
 async function checkOne(db, call, botId, g) {
     const items = [];
+    // Bot hali guruhda bo'lmasa ham ROP kimni qo'shish kerakligini oldindan ko'rsin.
+    const pendingPeople = async () => { for (const p of await people(db, g.assistant_id)) items.push({ ok: false, kind: 'person',
+        text: p.tid ? `${p.label} — guruhga qo‘shing (bot o‘zi admin qiladi)` : `${p.label} — guruhga qo‘shing; avval @domworkuz_bot ga /start bossin` }); };
     let chatId = g.chat_id;
     if (!chatId) {
         const found = (await db.query('SELECT chat_id,title FROM domwork_bot_seen_chats ORDER BY observed_at DESC')).rows.filter(r => norm(r.title) === g.group_name);
@@ -69,14 +72,17 @@ async function checkOne(db, call, botId, g) {
         }
     }
     if (!chatId) {
-        items.push({ ok: false, kind: 'bot', text: `@domworkuz_bot «${g.group_name}» nomli guruhga qo‘shilmagan yoki guruh nomi CRMdagidan farq qiladi` });
+        items.push({ ok: false, kind: 'bot', text: `@domworkuz_bot ni «${g.group_name}» guruhiga qo‘shing va to‘liq admin qiling (guruh nomi CRMdagi bilan harfma-harf bir xil bo‘lsin)` });
+        await pendingPeople();
     } else {
         let bot = null, chat = null;
         try { chat = await call('getChat', { chat_id: chatId }); bot = await call('getChatMember', { chat_id: chatId, user_id: botId }); } catch { bot = null; }
         if (chat && norm(chat.title) !== g.group_name) {
             items.push({ ok: false, kind: 'name', text: `Guruh nomi o‘zgargan: Telegramda «${norm(chat.title)}», CRMda «${g.group_name}» — harfma-harf bir xil qiling` });
+            await pendingPeople();
         } else if (!bot || bot.status !== 'administrator') {
-            items.push({ ok: false, kind: 'bot', text: 'Bot guruhda admin emas — @domworkuz_bot ni admin qiling' });
+            items.push({ ok: false, kind: 'bot', text: 'Bot guruhda admin emas — @domworkuz_bot ni to‘liq admin qiling' });
+            await pendingPeople();
         } else {
             const miss = BOT_RIGHTS.filter(([k]) => bot[k] !== true).map(([, l]) => l);
             if (bot.is_anonymous) miss.push('anonim bo‘lmasin');
