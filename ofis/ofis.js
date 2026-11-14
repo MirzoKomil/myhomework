@@ -221,6 +221,8 @@ function resize(){const tv=document.body.classList.contains('tv'),wide=innerWidt
 addEventListener('resize',resize);
 function zoomTo(k){zoomRoom=k;Object.assign(camT,k?fitRoom(k):fitAll());document.getElementById('back').style.display=k?'':'none';hint.style.opacity=0}
 document.getElementById('back').onclick=()=>zoomTo(null);
+// Kabinetga qaytish: CRM'dan kelgan bo'lsa orqaga, aks holda rolga mos bosh sahifa.
+document.getElementById('toCrm').onclick=()=>{try{if(document.referrer&&new URL(document.referrer).origin===location.origin&&history.length>1){history.back();return}}catch(e){}location.href=user?.role==='teacher'?'/teacher/':'/index.html'};
 cv.addEventListener('click',e=>{const b=cv.getBoundingClientRect();const X=(e.clientX-b.left)/cam.s+cam.x,Y=(e.clientY-b.top)/cam.s+cam.y;
  let best=null,bd=1e9;const tol=Math.max(20,26/cam.s);for(const p of people.values()){if(!p.visible)continue;const q=ill(p.x,p.y);const d=Math.hypot(q.x-X,q.y-22-Y);if(d<tol&&d<bd){bd=d;best=p}}
  if(best&&(zoomRoom||cam.s>.62)){openCard(best);return}
