@@ -103,10 +103,10 @@ function createRuntime({ pool, crm, env = process.env, redisFactory, telegramFac
             const found = (await db.query(`SELECT id,chat_id,type,teacher_id FROM domwork_learning_groups WHERE chat_id=$1 AND NOT archived AND verified_at IS NOT NULL
                 UNION ALL SELECT id,chat_id,type,NULL FROM domwork_bot_groups WHERE chat_id=$1 AND active`, [row.target_id])).rows;
             if (found.length !== 1 || (row.payload._binding && row.payload._binding!==found[0].id)
-                || !['sendMessage','sendPhoto','sendVideo','sendVoice','sendDocument','unbanChatMember','copyMessage','editMessageReplyMarkup'].includes(row.method)) return false;
-            // Voronka (Sotuv guruhi) — faqat sendMessage/copyMessage/editMessageReplyMarkup.
-            if (row.payload._funnel && !['sendMessage','copyMessage','editMessageReplyMarkup'].includes(row.method)) return false;
-            if (!row.payload._funnel && ['copyMessage','editMessageReplyMarkup'].includes(row.method)) return false;
+                || !['sendMessage','sendPhoto','sendVideo','sendVoice','sendDocument','unbanChatMember','copyMessage','editMessageReplyMarkup','editMessageText'].includes(row.method)) return false;
+            // Voronka (Sotuv guruhi) — faqat sendMessage/copyMessage/editMessageReplyMarkup/editMessageText.
+            if (row.payload._funnel && !['sendMessage','copyMessage','editMessageReplyMarkup','editMessageText'].includes(row.method)) return false;
+            if (!row.payload._funnel && ['copyMessage','editMessageReplyMarkup','editMessageText'].includes(row.method)) return false;
             // Live Telegram permission check; stale verification never grants rights.
             const member = await call('getChatMember', { chat_id: row.target_id, user_id: botId });
             if(member.status!=='administrator') return false;
@@ -147,10 +147,13 @@ function createRuntime({ pool, crm, env = process.env, redisFactory, telegramFac
             }
             const result = await call(row.method, payload);
             await queue.settle(pool, row.id, 'sent');
+            // Tugmalar o'zgardi (menejer bosdi) — keyingi matn tahririda eski tugmalar qaytib chiqmasin.
+            if (row.method === 'editMessageReplyMarkup' && row.payload._funnel)
+                await pool.query('UPDATE domwork_bot_relay SET markup=$3 WHERE chat_id=$1 AND message_id=$2', [row.target_id, payload.message_id, JSON.stringify(payload.reply_markup || null)]).catch(() => {});
             // Sotuv guruhidagi voronka xabari → mehmon (menejer shu xabarga reply qilsa, javob mehmonga boradi).
             if (row.payload._relay && row.target_kind === 'group' && result?.message_id)
-                await pool.query('INSERT INTO domwork_bot_relay(chat_id,message_id,telegram_id) VALUES($1,$2,$3) ON CONFLICT DO NOTHING',
-                    [row.target_id, result.message_id, row.payload._relay]).catch(error => console.error('[domwork-bot] relay map failed:', error.code || error.name));
+                await pool.query('INSERT INTO domwork_bot_relay(chat_id,message_id,telegram_id,text,markup) VALUES($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING',
+                    [row.target_id, result.message_id, row.payload._relay, row.method === 'sendMessage' ? String(row.payload.text || '') : '', row.payload.reply_markup ? JSON.stringify(row.payload.reply_markup) : null]).catch(error => console.error('[domwork-bot] relay map failed:', error.code || error.name));
         } catch (error) {
             // Mehmon botni bloklagan bo'lsa — keyingi voronka xabarlari to'xtaydi.
             if (row.payload._guest && Number(error?.response?.error_code) === 403) {
