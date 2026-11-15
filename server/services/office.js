@@ -473,6 +473,12 @@ async function live(db, user, query = {}, now = new Date()) {
     const monthStart = date.slice(0, 8) + '01';
     const bmap = await safe(() => badges(db, staff.map(s => s.id), date, monthStart), new Map());
     for (const s of staff) s.badges = bmap.get(s.id) || [];
+    // Platformadagi faollik: hozir onlayn soni, sotuvda eng faol top-5, akademik yetakchi, xodim kartasida "onlayn" (services/staffActivity).
+    const act = await safe(() => require('./staffActivity').officeSummary(db, now), null);
+    if (act) {
+        kpi.platformOnline = act.online; kpi.activeTop = act.salesTop; kpi.activeAcademic = act.academicTop;
+        for (const s of staff) { const x = act.byEmp[s.id]; if (x) s.platform = x; }
+    }
     // Oylik reja termometri — faqat summani ko'radiganlarga (jamoaga oylik reja % aytilmaydi).
     if (v.money) kpi.plan = await safe(() => teamPlan(db, date, v.langs), null);
 
