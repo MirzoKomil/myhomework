@@ -88,17 +88,27 @@ const trialTables=new Map();
 function assignTrialTables(){const used=new Set();for(const t of data.teachers)if(t.status==='trial'&&trialTables.has(t.id))used.add(trialTables.get(t.id));
  for(const t of data.teachers){if(t.status!=='trial'){trialTables.delete(t.id);continue}if(!trialTables.has(t.id)){let k=[0,1,2].find(x=>!used.has(x));if(k==null)k=0;trialTables.set(t.id,k);used.add(k)}}}
 
+const AV=new Map();   // id -> {src,img} — avatar faqat birinchi yuklashda keladi, keyin shu yerda saqlanadi
+function avatarImg(id,src){if(!src)return AV.get(id)?.img||null;let a=AV.get(id);if(!a||a.src!==src){const img=new Image();img.src=src;a={src,img};AV.set(id,a)}return a.img}
+const greeted=new Set();
 function applySnapshot(d,animate){
  const prevT=new Map((data?.teachers||[]).map(t=>[t.id,t]));
+ const prevS=new Map((data?.staff||[]).map(s=>[s.id,s]));
  data=d;assignTrialTables();
  const idx={mgr:0,ak:0,x:0};
  for(const s of d.staff){const [room,x,y]=seatFor(s,idx);const p=mkPerson('s:'+s.id,{name:s.name,kind:s.kind,staff:s,seat:[room,x,y]});
+  if(s.female!=null)p.female=s.female;p.av=avatarImg('s:'+s.id,s.avatar);p.crown=!!s.crown;p.fire=!!s.fire;p.birthday=!!s.birthday;
+  const ps=prevS.get(s.id);
+  if(animate&&ps&&!ps.fire&&s.fire){say(p,'🔥','Olovda! '+s.salesToday+' ta sotuv',10,'#EA580C');feed('🔥',`${esc(s.name)} olovda — bugun ${s.salesToday} ta sotuv!`,'#EA580C')}
+  if(animate&&ps&&!ps.crown&&s.crown&&s.salesToday>0){feed('👑',`${esc(s.name)} — kun qahramoni (${s.salesToday} ta sotuv)`,'#B45309');setTimeout(()=>SND.voice('qahramon'),5000)}
+  if(s.birthday&&!greeted.has(s.id)){greeted.add(s.id);feed('🎂',`Bugun ${esc(s.name)}ning tug'ilgan kuni! Tabriklaymiz!`,'#DB2777')}
   if(s.inOffice){if(!p.visible||p.room==='outside'){if(animate){p.visible=true;p.x=400;p.y=-30;p.room='outside';p.lateFlash=!!s.late;moveTo(p,room,x,y)}else place(p,room,x,y)}
    else if(!p.path.length&&(p.room!==room||Math.hypot(p.x-x,p.y-y)>4)&&!p.away)moveTo(p,room,x,y)}
   else if(p.visible&&p.room!=='outside'){if(animate)leave(p);else{p.visible=false;p.room='outside'}}
   else if(!s.inOffice){p.visible=false;p.room='outside'}}
  for(const [id,p] of people)if(id.startsWith('s:')&&!d.staff.some(s=>'s:'+s.id===id)){people.delete(id)}
- d.teachers.forEach((t,i)=>{const [room,x,y]=teacherSpot(t,i);const p=mkPerson('t:'+t.id,{name:t.name,kind:'teacher',teacher:t,ti:i});
+ d.teachers.forEach((t,i)=>{const [room,x,y]=teacherSpot(t,i);const p=mkPerson('t:'+t.id,{name:t.name,kind:'teacher',teacher:t,ti:i});if(t.female!=null)p.female=t.female;p.av=avatarImg('t:'+t.id,t.avatar);p.birthday=!!t.birthday;
+  if(t.birthday&&!greeted.has('t'+t.id)){greeted.add('t'+t.id);feed('🎂',`Bugun ustoz ${esc(t.name)}ning tug'ilgan kuni! Tabriklaymiz!`,'#DB2777')}
   const prev=prevT.get(t.id);
   if(!animate||!prev){place(p,room,x,y)}else if(prev.status!==t.status){moveTo(p,room,x,y);
    if(t.status==='live'){say(p,'🎥','Darsda',8,'#DC2626');feed('🎥',`Ustoz ${esc(t.name)} darsni boshladi`,'#B45309');SND.ev('🎥')}
@@ -112,7 +122,7 @@ function applySnapshot(d,animate){
  const used=new Set([...people.values()].filter(p=>p.bag!=null).map(p=>p.bag));
  for(const o of online){const id='st:'+o.id;if(people.has(id))continue;let b=BAGS.findIndex((_,i)=>!used.has(i));if(b<0)break;used.add(b);
   const p=mkPerson(id,{name:o.name,kind:'stud',bag:b,shirt:'#38BDF8'});place(p,'oquv',BAGS[b][0],BAGS[b][1]);if(animate)say(p,'📱','Ilovada',4)}
- ui();
+ alerts(d,animate);plan(d,animate);ui();
 }
 
 // ── Voqealar ──
@@ -186,13 +196,19 @@ function ui(){if(!data)return;const k=data.kpi;document.getElementById('clock').
  const v=data.viewer;document.getElementById('who').textContent=(user?.name?user.name+' · ':'')+({full:'toʻliq koʻrinish',sales:'sotuv koʻrinishi',academic:'akademik koʻrinish',team:'jamoa koʻrinishi'}[v.scope]||'');
  const items=[['Ofisda',k.inOffice+'/'+k.staff],['Lidlar',k.leads],["Qo'ng'iroq",k.calls],['Sinov',k.trials],['Sotuv',k.sales]];
  if(v.money)items.push(['Tushum',money(k.money),'money']);
+ if(k.plan)items.push(['Oylik reja',k.plan.pct+'%','money']);
  items.push(['Jonli dars',k.live],['Sinovda',k.trialNow],["Bo'sh ustoz",k.freeTeachers],['Ilovada',k.online+" o'q."]);
  document.getElementById('kpis').innerHTML=items.map(([a,b,c])=>`<div class="kpi ${c||''}"><span>${a}</span><b>${b}</b></div>`).join('');
  const st=s=>s.inOffice?(people.get('s:'+s.id)?.bubble?.text||'💻 ishda'):s.outAt?'ketdi '+hm(s.outAt):'hali kelmagan';
  const tt=t=>t.status==='live'?`🎥 Darsda · ${t.nowStudents.length} o'q.`:t.status==='trial'?'🎧 Sinov darsida':t.dav==='pending'?'⏳ davomat kutilmoqda':"Bo'sh";
- document.getElementById('team').innerHTML=data.staff.map(s=>`<div class="mem ${s.inOffice?'':'off'}" data-p="s:${esc(s.id)}"><span class="av" style="background:${people.get('s:'+s.id)?.shirt||'#94A3B8'}">${esc(s.name[0]||'?')}</span><div><div>${esc(s.name)}${s.late?' <span style="color:#B45309">⚠️</span>':''}</div><div class="st">${esc(st(s))}</div></div></div>`).join('')
+ document.getElementById('team').innerHTML=data.staff.map(s=>`<div class="mem ${s.inOffice?'':'off'}" data-p="s:${esc(s.id)}"><span class="av" style="background:${people.get('s:'+s.id)?.shirt||'#94A3B8'}">${esc(s.name[0]||'?')}</span><div><div>${s.crown?'👑 ':''}${s.fire?'🔥 ':''}${s.birthday?'🎂 ':''}${esc(s.name)}${s.late?' <span style="color:#B45309">⚠️</span>':''}${(s.badges||[]).map(b=>' <span title="'+esc(b.t)+'">'+b.t.split(' ')[0]+'</span>').join('')}</div><div class="st">${esc(st(s))}</div></div></div>`).join('')
   +(data.teachers.length?'<div class="tsep">Ustozlar (masofadan)</div>'+data.teachers.map(t=>`<div class="mem" data-p="t:${esc(t.id)}"><span class="av" style="background:#F59E0B">${esc(t.name[0]||'?')}</span><div><div>${esc(t.name)}</div><div class="st">${esc(tt(t))}</div></div></div>`).join(''):'');
  document.getElementById('note').textContent=v.money?'':"Summalar, maosh va kechikishlar bu ko'rinishda chiqmaydi.";
+ const hh=k.hourly||[],mx=Math.max(1,...hh),pk=hh.indexOf(Math.max(...hh));
+ document.getElementById('hours').innerHTML=hh.slice(7,24).map((n,i)=>`<div class="hb${i+7===pk&&n?' pk':''}" title="${i+7}:00 — ${n} lid"><i style="height:${Math.round(n/mx*100)}%"></i><span>${(i+7)%3===0?i+7:''}</span></div>`).join('')
+  +`<div class="hnote">${Math.max(...hh)?`Eng ko'p: ${pk}:00 — ${hh[pk]} lid`:'Bugun hali lid yoʻq'}</div>`;
+ const w=k.waiting||[];document.getElementById('waitBox').style.display=w.length?'':'none';
+ document.getElementById('wait').innerHTML=w.map(x=>`<div><span>⏰ ${esc(x.name)}</span><b>${x.min} daq</b></div>`).join('');
  tvUi()}
 document.addEventListener('click',e=>{const m=e.target.closest('.mem');if(m)openCard(people.get(m.dataset.p))});
 function openCard(p){if(!p)return;const card=document.getElementById('card');
@@ -202,7 +218,7 @@ function openCard(p){if(!p)return;const card=document.getElementById('card');
  else if(p.kind==='stud'){card.innerHTML=`<div class="hd"><div class="big" style="background:#38BDF8">${esc(p.name[0]||'?')}</div><div><h2>${esc(p.name)}</h2><div class="role">O'quvchi · ilovada</div></div></div><button class="close">Yopish</button>`}
  else if(p.kind==='lead'){card.innerHTML=`<div class="hd"><div class="big" style="background:${p.src==='target'?'#1F4FD8':'#16A34A'}">${esc(p.name[0]||'?')}</div><div><h2>${esc(p.name)}</h2><div class="role">Lid · ${p.src==='target'?'Target':'Organik'}</div></div></div><button class="close">Yopish</button>`}
  else{const s=p.staff;if(!s)return;card.innerHTML=`<div class="hd"><div class="big" style="background:${p.shirt}">${esc(s.name[0]||'?')}</div><div><h2>${esc(s.name)}</h2><div class="role">${KIND_LABEL[s.kind]||''}</div></div></div>
-  <div class="pill">${s.inOffice?'🏢 Ofisda':'🏠 Ofisda emas'}</div><div class="slist"><div><span>Keldi (Face ID)</span><b>${s.inAt?hm(s.inAt):'—'}</b></div><div><span>Ketdi</span><b>${s.outAt?hm(s.outAt):'—'}</b></div>${s.late?`<div><span>Kechikish</span><b style="color:#B45309">${s.late} daq</b></div>`:''}</div><button class="close">Yopish</button>`}
+  <div class="pill">${s.inOffice?'🏢 Ofisda':'🏠 Ofisda emas'}</div><div class="slist"><div><span>Keldi (Face ID)</span><b>${s.inAt?hm(s.inAt):'—'}</b></div><div><span>Ketdi</span><b>${s.outAt?hm(s.outAt):'—'}</b></div>${s.late?`<div><span>Kechikish</span><b style="color:#B45309">${s.late} daq</b></div>`:''}${s.salesToday?`<div><span>Bugungi sotuv</span><b>${s.crown?'👑 ':''}${s.salesToday}</b></div>`:''}</div>${(s.badges||[]).length?`<div class="badges">${s.badges.map(b=>`<span>${esc(b.t)}</span>`).join('')}</div>`:''}<button class="close">Yopish</button>`}
  document.getElementById('sheet').classList.add('show')}
 document.getElementById('sheet').addEventListener('click',e=>{if(e.target.id==='sheet'||e.target.classList.contains('close'))e.currentTarget.classList.remove('show')});
 function toast(h,s){const el=document.getElementById('toast');el.innerHTML=h+(s?`<small>${s}</small>`:'');el.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('show'),3500)}
@@ -234,13 +250,17 @@ function rr(x,y,w,h,r){ctx.beginPath();ctx.roundRect(x,y,w,h,r)}
 function face(x,y,t,r=13){const k=r/13;ctx.fillStyle=t.skin;ctx.beginPath();ctx.arc(x,y,r,0,7);ctx.fill();ctx.fillStyle=t.hair;ctx.beginPath();ctx.arc(x,y-3*k,r+.5,Math.PI,0);ctx.fill();
  if(t.female){ctx.fillRect(x-r-.5,y-3*k,5*k,15*k);ctx.fillRect(x+r-4.5*k,y-3*k,5*k,15*k)}ctx.fillStyle='#14213D';ctx.beginPath();ctx.arc(x-4.5*k,y+2*k,1.6*k,0,7);ctx.arc(x+4.5*k,y+2*k,1.6*k,0,7);ctx.fill()}
 function drawPerson(p){const moving=p.path.length>0,bob=moving?Math.abs(Math.sin(p.walk*11))*2:0,x=p.x,y=p.y-bob;
+ if(p.crown||p.fire){const t=performance.now()/400;ctx.save();ctx.globalAlpha=.35+.15*Math.sin(t);ctx.fillStyle=p.fire?'#F97316':'#FBBF24';ctx.beginPath();ctx.ellipse(p.x,p.y,18,7,0,0,7);ctx.fill();ctx.restore()}
  ctx.fillStyle='rgba(20,33,61,.18)';ctx.beginPath();ctx.ellipse(p.x,p.y+1,9,3.5,0,0,7);ctx.fill();
  const l=moving?Math.sin(p.walk*11)*3:0;ctx.fillStyle='#2B3A55';rr(x-5,y-6+l*.3,4,7,2);ctx.fill();rr(x+1,y-6-l*.3,4,7,2);ctx.fill();
  ctx.fillStyle=p.shirt;rr(x-8,y-20,16,15,6);ctx.fill();
  if(p.kind==='lead'){ctx.fillStyle=p.src==='target'?'#1F4FD8':'#16A34A';rr(x-8,y-20,16,4,2);ctx.fill()}
- ctx.fillStyle=p.skin;ctx.beginPath();ctx.arc(x,y-27,8,0,7);ctx.fill();ctx.fillStyle=p.hair;ctx.beginPath();ctx.arc(x,y-29,8.4,Math.PI,0);ctx.fill();
+ if(p.av&&p.av.complete&&p.av.naturalWidth){ctx.save();ctx.beginPath();ctx.arc(x,y-28,9.5,0,7);ctx.closePath();ctx.fillStyle='#fff';ctx.fill();ctx.clip();
+  const iw=p.av.naturalWidth,ih=p.av.naturalHeight,sc=Math.max(19/iw,19/ih);ctx.drawImage(p.av,x-iw*sc/2,y-28-ih*sc*.42,iw*sc,ih*sc);ctx.restore();
+  ctx.strokeStyle='#fff';ctx.lineWidth=1.6;ctx.beginPath();ctx.arc(x,y-28,9.5,0,7);ctx.stroke()}
+ else{ctx.fillStyle=p.skin;ctx.beginPath();ctx.arc(x,y-27,8,0,7);ctx.fill();ctx.fillStyle=p.hair;ctx.beginPath();ctx.arc(x,y-29,8.4,Math.PI,0);ctx.fill();
  if(p.female){ctx.fillRect(x-8.4,y-29,3.4,11);ctx.fillRect(x+5,y-29,3.4,11)}
- ctx.fillStyle='#14213D';ctx.beginPath();ctx.arc(x-3,y-26,1.2,0,7);ctx.arc(x+3,y-26,1.2,0,7);ctx.fill();
+ ctx.fillStyle='#14213D';ctx.beginPath();ctx.arc(x-3,y-26,1.2,0,7);ctx.arc(x+3,y-26,1.2,0,7);ctx.fill()}
  if(p.bubble&&p.bubble.icon==='📞'){ctx.fillStyle='#14213D';rr(x+6,y-30,4,9,2);ctx.fill()}
  if(p.kind==='stud'){ctx.fillStyle='#14213D';rr(x-4,y-17,8,11,2);ctx.fill();ctx.fillStyle='#60A5FA';rr(x-3,y-16,6,8,1);ctx.fill()}}
 function chip(x,y,t,bg,fg){ctx.font='900 15px Nunito';const w=ctx.measureText(t).width+20;ctx.fillStyle=bg;rr(x,y,w,26,13);ctx.fill();ctx.fillStyle=fg;ctx.textAlign='left';ctx.fillText(t,x+10,y+18)}
@@ -275,17 +295,86 @@ function render(){
  }
  const list=[...people.values()].filter(p=>p.visible).map(p=>({p,q:ill(p.x,p.y)})).sort((a,b)=>a.q.y-b.q.y);
  for(const {p,q} of list){ctx.save();ctx.translate(q.x,q.y);ctx.scale(1.4,1.4);ctx.translate(-p.x,-p.y);drawPerson(p);ctx.restore()}
- for(const f of fx){const q=ill(f.x,f.y);ctx.globalAlpha=Math.max(0,Math.min(1,f.life));ctx.fillStyle=f.c;ctx.fillRect(q.x,q.y,f.r*1.5,f.r*2.4)}ctx.globalAlpha=1;
- ctx.restore();overlay(list)}
+ for(const f of fx){const q=f.img?f:ill(f.x,f.y);ctx.globalAlpha=Math.max(0,Math.min(1,f.life));ctx.fillStyle=f.c;ctx.fillRect(q.x,q.y,f.r*1.5,f.r*2.4)}ctx.globalAlpha=1;
+ drawExtras();
+ ctx.restore();sky();overlay(list);overlayExtras(list)}
 function overlay(list){const small=cw<600&&!zoomRoom;ctx.textAlign='left';ctx.font=small?'900 10px Nunito':'900 12px Nunito';
  for(const k in R){const r=R[k],q=ill(r.x+1,r.y+1),X=(q.x-cam.x)*cam.s+(small?5:8),Y=(q.y-cam.y)*cam.s+(small?5:8),w=ctx.measureText(r.label).width+(small?12:16);
   if(X>cw||Y>ch||X+w<0||Y+20<0)continue;ctx.fillStyle='rgba(255,255,255,.92)';rr(X,Y,w,small?17:22,9);ctx.fill();ctx.fillStyle='#14213D';ctx.fillText(r.label,X+(small?6:8),Y+(small?12:15))}
  const names=cam.s>.62,now=performance.now();
  for(const {p,q} of list){const X=(q.x-cam.x)*cam.s,Y=(q.y-cam.y)*cam.s-52*cam.s;
+  const ic=(p.crown?'👑':'')+(p.fire?'🔥':'')+(p.birthday?'🎂':'');if(ic){ctx.font=(names?18:13)+'px sans-serif';ctx.textAlign='center';ctx.fillText(ic,X,Y-(names?12:4)-(p.bubble&&now<p.bubble.until?(names?26:18):0))}
   if(names&&p.kind!=='lead'&&p.kind!=='stud'){ctx.font='800 11px Nunito';const w=ctx.measureText(p.name).width+10;ctx.fillStyle='rgba(20,33,61,.82)';rr(X-w/2,Y-8,w,16,8);ctx.fill();ctx.fillStyle='#fff';ctx.textAlign='center';ctx.fillText(p.name,X,Y+4)}
   const b=p.bubble;if(b&&now<b.until){const txt=names?b.icon+' '+b.text:b.icon;ctx.font='800 12px Nunito';const w=ctx.measureText(txt).width+14,by=Y-(names?30:20);
    ctx.fillStyle='#fff';ctx.strokeStyle=b.color||'#C7D0E0';ctx.lineWidth=1.5;rr(X-w/2,by-10,w,22,11);ctx.fill();ctx.stroke();ctx.beginPath();ctx.moveTo(X-4,by+12);ctx.lineTo(X,by+17);ctx.lineTo(X+4,by+12);ctx.fill();
    ctx.fillStyle=b.color||'#14213D';ctx.textAlign='center';ctx.fillText(txt,X,by+5)}else if(b)p.bubble=null}}
+
+// ── Qo'shimchalar: termometr, ogohlantirish, kun-tun, ob-havo, bayramlar ──
+const ROPSCR={x:1072,y:312,w:44,h:170};   // rasmdagi ROP xonasi devor ekrani
+const PODB=[[141,1468],[352,1468],[562,1468],[141,1777],[352,1777],[562,1777]];
+let planCelebrated=false,alerted=new Set();
+function plan(d,animate){const p=d.kpi.plan;if(!p)return;if(p.pct>=100&&!planCelebrated){planCelebrated=true;if(animate){feed('🏆',"Oylik reja bajarildi! Butun jamoaga rahmat!",'#16A34A');
+ toast('🏆 Oylik reja bajarildi!',p.pct+'%');for(let i=0;i<8;i++)setTimeout(()=>confetti(rnd(40,760),rnd(200,1300),50),i*300);SND.ev('💰');setTimeout(()=>SND.voice('reja'),6500)}}}
+function alerts(d,animate){for(const w of d.kpi.waiting||[]){if(alerted.has(w.id))continue;alerted.add(w.id);if(animate)feed('⏰',`${esc(w.name)} ${w.min} daqiqadan beri taqsimlanmay kutyapti!`,'#DC2626')}}
+function holiday(){const t=new Date(Date.now()+5*3600e3),m=t.getUTCMonth()+1,d=t.getUTCDate();
+ if((m===12&&d>=20)||(m===1&&d<=5))return{k:'ny',t:'🎄 Yangi yil muborak!',e:['🎄','🎁','⛄']};
+ if(m===3&&d>=18&&d<=25)return{k:'navruz',t:"🌷 Navro'z muborak!",e:['🌷','🍲','🌸']};
+ if(m===3&&d===8)return{k:'8m',t:'🌷 8-mart muborak!',e:['🌷','💐','🌹']};
+ if((m===8&&d>=30)||(m===9&&d<=2))return{k:'mus',t:'🇺🇿 Mustaqillik kuni muborak!',e:['🇺🇿','🎆','🇺🇿']};
+ if(m===10&&d===1)return{k:'ust',t:"💐 O'qituvchilar kuni muborak!",e:['💐','📚','🍎']};
+ return null}
+function drawExtras(){if(!data)return;const k=data.kpi,now=performance.now();
+ // Reja termometri (faqat summani ko'radiganlarga keladi)
+ if(k.plan){const r=ROPSCR,pc=Math.min(1,k.plan.pct/100);ctx.fillStyle='#14213D';rr(r.x-6,r.y-6,r.w+12,r.h+40,8);ctx.fill();
+  ctx.fillStyle='#334155';rr(r.x+12,r.y+6,20,r.h-22,10);ctx.fill();
+  const g=ctx.createLinearGradient(0,r.y+r.h,0,r.y);g.addColorStop(0,'#16A34A');g.addColorStop(1,k.plan.pct>=100?'#FBBF24':'#4ADE80');
+  const hh=(r.h-26)*pc;ctx.fillStyle=g;rr(r.x+14,r.y+4+(r.h-26)-hh+2,16,hh,8);ctx.fill();ctx.beginPath();ctx.arc(r.x+22,r.y+r.h-8,12,0,7);ctx.fill();
+  ctx.fillStyle='#fff';ctx.font='900 13px Nunito';ctx.textAlign='center';ctx.fillText(k.plan.pct+'%',r.x+22,r.y+r.h+20);ctx.font='800 8px Nunito';ctx.fillStyle='#93C5FD';ctx.fillText('OYLIK REJA',r.x+22,r.y-12+0)}
+ // Davomat kutilayotgan guruh xonasi miltillaydi
+ data.teachers.slice(0,6).forEach((t,i)=>{if(t.dav!=='pending')return;const [bx,by]=PODB[i];ctx.save();ctx.globalAlpha=.25+.25*Math.sin(now/250);ctx.strokeStyle='#DC2626';ctx.lineWidth=6;rr(bx-100,by-60,200,190,10);ctx.stroke();ctx.restore()});
+ // Kutib qolgan lidlar: skameyka ustida qizil soat
+ const w=k.waiting||[];if(w.length){const q=ill(120,206);ctx.save();ctx.globalAlpha=.6+.4*Math.sin(now/220);ctx.font='26px sans-serif';ctx.textAlign='center';ctx.fillText('⏰',q.x-60,q.y+18);ctx.restore();
+  ctx.fillStyle='#DC2626';rr(q.x-40,q.y-2,170,24,12);ctx.fill();ctx.fillStyle='#fff';ctx.font='900 12px Nunito';ctx.textAlign='left';ctx.fillText(`${w.length} ta lid 30+ daq kutyapti`,q.x-30,q.y+15)}
+ // Bayram bezaklari
+ const h=holiday();if(h){ctx.font='40px sans-serif';ctx.textAlign='center';[[95,175],[1110,90],[560,40]].forEach(([x,y],i)=>ctx.fillText(h.e[i%h.e.length],x,y));
+  [[300,1300],[860,1350],[300,1985]].forEach(([x,y],i)=>{ctx.font='30px sans-serif';ctx.fillText(h.e[(i+1)%h.e.length],x,y)})}
+ // Tug'ilgan kun: stol yonida sharlar
+ for(const p of people.values())if(p.birthday&&p.visible&&!p.path.length){const q=ill(p.x,p.y);const b=Math.sin(now/600+q.x)*4;ctx.font='22px sans-serif';ctx.textAlign='center';ctx.fillText('🎈',q.x+26,q.y-48+b);ctx.fillText('🎈',q.x+38,q.y-40-b)}
+}
+// Kun-tun va ob-havo (ekran koordinatalarida)
+const drops=[];
+function sky(){const t=new Date(Date.now()+5*3600e3),hr=t.getUTCHours()+t.getUTCMinutes()/60,w=data?.kpi?.weather;
+ let a=0,c='20,30,70';if(hr<6||hr>=20)a=.42;else if(hr<7)a=.42*(7-hr);else if(hr>=18.5)a=.42*(hr-18.5)/1.5;
+ if(hr>=17&&hr<19.5){ctx.fillStyle=`rgba(255,140,60,${.12*(1-Math.abs(hr-18.2)/1.3)})`;ctx.fillRect(0,0,cw,ch)}
+ if(w&&[45,48,51,53,55,61,63,65,80,81,82,95,96,99,71,73,75,85,86].includes(w.code))a=Math.max(a,.12);
+ if(a>0){ctx.fillStyle=`rgba(${c},${a})`;ctx.fillRect(0,0,cw,ch);
+  if(a>.25){ctx.save();ctx.globalCompositeOperation='lighter';for(const p of people.values()){if(!p.visible||p.kind==='lead'||p.kind==='stud')continue;const q=ill(p.x,p.y);const X=(q.x-cam.x)*cam.s,Y=(q.y-cam.y)*cam.s-40*cam.s;
+   const g=ctx.createRadialGradient(X,Y,0,X,Y,60*cam.s);g.addColorStop(0,'rgba(255,214,140,.35)');g.addColorStop(1,'rgba(255,214,140,0)');ctx.fillStyle=g;ctx.fillRect(X-60*cam.s,Y-60*cam.s,120*cam.s,120*cam.s)}ctx.restore()}}
+ const snow=w&&[71,73,75,77,85,86].includes(w.code),rain=w&&[51,53,55,61,63,65,80,81,82,95,96,99].includes(w.code),ny=holiday()?.k==='ny';
+ if(rain||snow||ny){const n=snow||ny?70:110;while(drops.length<n)drops.push({x:Math.random()*cw,y:Math.random()*ch,v:rnd(.6,1)});
+  ctx.save();ctx.strokeStyle='rgba(180,200,255,.45)';ctx.fillStyle='rgba(255,255,255,.85)';ctx.lineWidth=1.2;
+  for(const d of drops){if(snow||(ny&&!rain)){d.y+=0.7*d.v;d.x+=Math.sin(d.y/30)*.3;ctx.beginPath();ctx.arc(d.x,d.y,1.6*d.v,0,7);ctx.fill()}else{d.y+=9*d.v;d.x-=1.5;ctx.beginPath();ctx.moveTo(d.x,d.y);ctx.lineTo(d.x+3,d.y-12);ctx.stroke()}
+   if(d.y>ch){d.y=-10;d.x=Math.random()*cw}if(d.x<0)d.x=cw}ctx.restore()}else drops.length=0}
+const WX={0:'☀️',1:'🌤',2:'⛅',3:'☁️',45:'🌫',48:'🌫',51:'🌦',53:'🌦',55:'🌧',61:'🌧',63:'🌧',65:'🌧',71:'🌨',73:'🌨',75:'❄️',80:'🌦',81:'🌧',82:'⛈',95:'⛈',96:'⛈',99:'⛈'};
+function overlayExtras(){if(!data)return;const h=holiday(),w=data.kpi.weather;let y=ch-46;
+ if(w){const hr=new Date().getHours(),nt=hr>=19||hr<6;const t=(nt&&w.code<=2?'🌙':(WX[w.code]||'🌡'))+' Andijon '+w.temp+'°';ctx.font='800 13px Nunito';const ww=ctx.measureText(t).width+20;ctx.fillStyle='rgba(255,255,255,.92)';rr(cw-ww-10,10,ww,26,13);ctx.fill();ctx.fillStyle='#14213D';ctx.textAlign='left';ctx.fillText(t,cw-ww,28)}
+ if(h){ctx.font='900 14px Nunito';const ww=ctx.measureText(h.t).width+24;ctx.fillStyle='rgba(219,39,119,.92)';rr(cw/2-ww/2,10,ww,28,14);ctx.fill();ctx.fillStyle='#fff';ctx.textAlign='center';ctx.fillText(h.t,cw/2,29)}
+ if(replay.on){const t='⏪ Kun takrori · '+replay.clock;ctx.font='900 15px Nunito';const ww=ctx.measureText(t).width+28;ctx.fillStyle='rgba(20,33,61,.9)';rr(cw/2-ww/2,46,ww,30,15);ctx.fill();ctx.fillStyle='#fff';ctx.textAlign='center';ctx.fillText(t,cw/2,66)}}
+
+// ── Kun takrori: bugungi voqealar 60 soniyada ──
+const replay={on:false,clock:'',timers:[]};
+async function startReplay(){if(replay.on)return;const q=new URLSearchParams({all:'1'});if(TV)q.set('tv','1');if(langSel)q.set('lang',langSel);
+ const r=await fetch(API+'?'+q,{headers:{Authorization:'Bearer '+token}});if(!r.ok)return;const d=await r.json();const ev=d.events.filter(e=>e.at);if(!ev.length){toast('Bugun hali voqea yoʻq');return}
+ replay.on=true;clearInterval(pollT);const btn=document.getElementById('replayBtn');if(btn)btn.textContent='⏹ To\'xtatish';
+ for(const [id,p] of people){if(id.startsWith('s:')){p.visible=false;p.room='outside';p.path=[]}if(id.startsWith('l:'))people.delete(id)}
+ feedEl().innerHTML='';const t0=new Date(ev[0].at).getTime(),t1=new Date(ev[ev.length-1].at).getTime(),span=Math.max(1,t1-t0),DUR=60000;
+ ev.forEach(e=>{const at=(new Date(e.at).getTime()-t0)/span*DUR;replay.timers.push(setTimeout(()=>{replay.clock=hm(e.at);
+  if(e.type==='checkin'){const p=people.get('s:'+e.staffId);if(p){p.visible=true;p.x=400;p.y=-30;p.room='outside';moveTo(p,...p.seat)}}
+  if(e.type==='checkout'){const p=people.get('s:'+e.staffId);if(p&&p.visible)leave(p)}
+  const [t,c]=evText(e);feed(ICON[e.type]||'•',t,c,e.at);SND.ev(e.type==='sale'?'💰':ICON[e.type]);animateEvent(e)},at))});
+ replay.timers.push(setTimeout(stopReplay,DUR+6000))}
+function stopReplay(){replay.timers.forEach(clearTimeout);replay.timers=[];replay.on=false;const btn=document.getElementById('replayBtn');if(btn)btn.textContent='⏪ Kun takrori';
+ for(const k of [...people.keys()])if(k.startsWith('l:'))people.delete(k);cursor=null;firstLoad=true;startPoll()}
 
 // ── Ovoz (Web Audio, fayl yuklanmaydi) ──
 const SND=(()=>{let ac=null,on=false,master,amb=null;
@@ -315,11 +404,19 @@ const SND=(()=>{let ac=null,on=false,master,amb=null;
    if(Math.random()<.04){tone(1400,t+.5,.25,.025);tone(1400,t+.85,.25,.025)}},900);
   amb={s,g,tick}}
  function ambStop(){if(!amb)return;amb.s.stop();clearInterval(amb.tick);amb=null}
+ // Ovozli e'lon (ElevenLabs, o'zbekcha): fetch + WebAudio — CSP media-src ga bog'liq emas
+ const VB={};let VT=0;
+ async function voice(n,delay=0){if(!on||!ac)return;const now=performance.now();if(now-VT<4000)return;VT=now;
+  try{if(!VB[n]){const r=await fetch('/ofis/voice/'+n+'.mp3');if(!r.ok)return;const buf=await r.arrayBuffer();VB[n]=await new Promise((ok,no)=>ac.decodeAudioData(buf,ok,no))}
+   const s=ac.createBufferSource(),g=ac.createGain();g.gain.value=1.4;s.buffer=VB[n];s.connect(g);g.connect(master);
+   if(amb){const t=ac.currentTime+delay;amb.g.gain.setTargetAtTime(.012,t,.1);amb.g.gain.setTargetAtTime(.05,t+VB[n].duration,.4)}
+   s.start(ac.currentTime+delay)}catch(e){}}
  const MAP={'🟢':'ding','📅':'chime','✅':'beep','⚠️':'warn','🎉':'pop','🎓':'pop','👋':'pop','🎥':'beep'};
  let last={};
  return{get on(){return on},
   toggle(v){init();ac.resume&&ac.resume();on=v==null?!on:v;if(on)ambStart();else ambStop();document.getElementById('sndBtn').textContent=on?'🔊 Ovoz':'🔇 Ovoz';return on},
-  ev(icon){if(!on||!ac)return;if(icon==='💰'){S.kaching();setTimeout(()=>{S.applause();S.cheer()},350);return}const k=MAP[icon];if(!k)return;const now=performance.now();if(now-(last[k]||0)<700)return;last[k]=now;S[k]()}}
+  voice,
+  ev(icon){if(!on||!ac)return;if(icon==='💰'){S.kaching();setTimeout(()=>{S.applause();S.cheer()},350);voice('sotuv',1.4);return}const k=MAP[icon];if(!k)return;const now=performance.now();if(now-(last[k]||0)<700)return;last[k]=now;S[k]()}}
 })();
 document.getElementById('sndBtn').onclick=e=>{e.stopPropagation();SND.toggle();try{localStorage.setItem('ofisSnd',SND.on?'1':'0')}catch(err){}};
 (()=>{let pref='1';try{pref=localStorage.getItem('ofisSnd')||'1'}catch(e){}if(pref!=='1')return;
@@ -330,7 +427,7 @@ const tvTk=document.getElementById('tvTicker'),bigEl=document.getElementById('bi
 function tvTick(icon,text){if(!document.body.classList.contains('tv'))return;const d=document.createElement('div');d.textContent=icon+' '+text;tvTk.prepend(d);while(tvTk.children.length>3)tvTk.lastChild.remove()}
 function bigShow(h,s){document.getElementById('bigS').innerHTML=h.replace(/^💰\s*Sotuv!\s*/,'')+(s?' · '+s:'');bigEl.classList.add('show');clearTimeout(bigT);bigT=setTimeout(()=>bigEl.classList.remove('show'),4000)}
 const TOUR=['sotuv',null,'jonli','sinov','oquv',null,'kassa','rop',null,'bosh'];
-function tvSet(on){document.body.classList.toggle('tv',on);if(on){try{const el=document.documentElement;(el.requestFullscreen||el.webkitRequestFullscreen||(()=>{})).call(el)}catch(e){}
+function tvSet(on){document.body.classList.toggle('tv',on);tvTimersOn(on);if(on){try{const el=document.documentElement;const fr=(el.requestFullscreen||el.webkitRequestFullscreen||(()=>{})).call(el);if(fr&&fr.catch)fr.catch(()=>{})}catch(e){}
   if(!SND.on)SND.toggle(true);clearInterval(tvTour);tvTour=setInterval(()=>{tvIdx=(tvIdx+1)%TOUR.length;zoomTo(TOUR[tvIdx])},12000);hint.style.opacity=0}
  else{clearInterval(tvTour);try{document.fullscreenElement&&document.exitFullscreen()}catch(e){}zoomTo(null)}setTimeout(resize,60)}
 document.getElementById('tvBtn').onclick=()=>{if(TV){tvSet(true);return}
@@ -338,8 +435,22 @@ document.getElementById('tvBtn').onclick=()=>{if(TV){tvSet(true);return}
  location.href='/ofis?tv=1'};
 document.getElementById('tvExit').onclick=()=>{tvSet(false);if(TV)location.href='/ofis'};
 document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&document.body.classList.contains('tv')&&!TV)tvSet(false)});
+// TV: har 10 daqiqada "Bugungi top-3", har 5 daqiqada kun vaqtiga mos jumla.
+const MOTTO={tong:["Xayrli tong, jamoa! Bugun ham zo'r kun bo'ladi 💪","Har bir qo'ng'iroq — yangi imkoniyat ☎️","Bugungi birinchi sotuv kimdan bo'ladi? 🏁"],
+ kun:["Yarim kun o'tdi — davom etamiz! 🚀","Sinov darsiga kelgan har bir o'quvchi — kelajakdagi do'stimiz 🤝","Tabassum bilan gaplashing — mijoz buni sezadi 😊"],
+ kech:["Kun yakuniga yaqin — oxirgi zarbani beramiz! ⚡","Bugun qilgan ishingiz ertangi natija 🌱"]};
+function tvShow(html,sec){const el=document.getElementById('tvMsg');el.innerHTML=html;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),sec*1000)}
+function tvTop(){if(!data)return;const t=data.kpi.top||[];if(!t.length)return;
+ tvShow(`<div class="tt">🏆 Bugungi top</div>${t.map((x,i)=>`<div class="tr"><b>${['🥇','🥈','🥉'][i]}</b><span>${esc(x.name)}</span><em>${x.sales} ta sotuv</em></div>`).join('')}`,12)}
+function tvMotto(){if(!data)return;const hr=new Date(Date.now()+5*3600e3).getUTCHours(),k=data.kpi;
+ if(hr>=18){tvShow(`<div class="tt">🌙 Bugungi kun</div><div class="tm">${k.leads} lid · ${k.trials} sinov darsi · ${k.sales} sotuv</div><div class="tm">Rahmat, jamoa! 🙏</div>`,12);return}
+ const arr=hr<12?MOTTO.tong:hr<16?MOTTO.kun:MOTTO.kech;tvShow(`<div class="tm big">${pick(arr)}</div>`,10)}
+let tvTimers=[];
+function tvTimersOn(on){tvTimers.forEach(clearInterval);tvTimers=[];if(on){tvTimers.push(setInterval(tvTop,10*60000),setInterval(tvMotto,5*60000));setTimeout(tvMotto,8000)}}
 function tvUi(){if(!document.body.classList.contains('tv')||!data)return;document.getElementById('tvclock').textContent=hm(Date.now());const k=data.kpi;
  document.getElementById('tvk').innerHTML=[['Ofisda',k.inOffice+'/'+k.staff],['Lid',k.leads],['Sinov',k.trials],['Sotuv',k.sales],['Darsda',k.live],['Ilovada',k.online]].map(([a,b])=>`<div>${a}<b>${b}</b></div>`).join('')}
+
+document.getElementById('replayBtn').onclick=()=>replay.on?stopReplay():startReplay();
 
 // ── Kirish ──
 function showLogin(msg){document.getElementById('app').style.display='none';document.getElementById('login').style.display='block';document.getElementById('loginErr').textContent=msg||'';clearInterval(pollT)}

@@ -39,8 +39,10 @@ async function viewerFor(db, user, { tv = false, lang = null } = {}) {
 }
 
 async function staffList(db) {
-    return (await db.query(`SELECT id, name, first_name, role, COALESCE(lang,'english') AS lang FROM hr_employees
-        WHERE COALESCE(status,'active') NOT IN ('inactive','fired','left','archived') ORDER BY name`)).rows;
+    return (await db.query(`SELECT he.id, he.name, he.first_name, he.role, COALESCE(he.lang,'english') AS lang, COALESCE(he.gender,'') AS gender,
+        COALESCE(he.birth_date,'') AS birth_date, COALESCE(u.avatar,'') AS avatar FROM hr_employees he
+        LEFT JOIN users u ON LOWER(TRIM(u.email)) = LOWER(TRIM(he.login))
+        WHERE COALESCE(he.status,'active') NOT IN ('inactive','fired','left','archived') ORDER BY he.name`)).rows;
 }
 
 async function attendanceToday(db, list, date, now) {
@@ -150,6 +152,57 @@ async function payments(db, date, langs) {
         managerId: r.manager_id || '', lead: first(r.who), amount: Number(r.amount) || 0, lang: r.language }));
 }
 
+// ── Qo'shimchalar (2026-11-15): toj/olov, nishonlar, reja termometri, ob-havo, tug'ilgan kun, kutayotgan lidlar, soatlar ──
+const femaleOf = e => /^(ayol|female|f|woman|женский|ж)$/i.test(e.gender || '') ? true : /^(erkak|male|m|man|мужской|м)$/i.test(e.gender || '') ? false : null;
+// Avatar: faqat xodim o'zi tanlagan profil rasmi/personaji (yuz-ID rasmi ISHLATILMAYDI). Juda katta data: rasm — tashlab yuboriladi.
+const avatarOf = e => { const a = String(e.avatar || ''); return a.startsWith('/') ? a : (a.startsWith('data:image') && a.length < 120000 ? a : ''); };
+function birthdayToday(e, date) {
+    const b = String(e.birth_date || '').trim(); if (!b) return false;
+    let m = b.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return `${m[2]}-${m[3]}` === date.slice(5);
+    m = b.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/); if (m) return `${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` === date.slice(5);
+    return false;
+}
+let weatherCache = { t: 0, v: null };
+async function weather() {
+    if (Date.now() - weatherCache.t < 30 * 60000) return weatherCache.v;
+    weatherCache.t = Date.now();
+    try {
+        const ctl = new AbortController(); const tm = setTimeout(() => ctl.abort(), 4000);
+        const r = await fetch('https://api.open-meteo.com/v1/forecast?latitude=40.78&longitude=72.34&current=temperature_2m,weather_code,is_day&timezone=Asia%2FTashkent', { signal: ctl.signal });
+        clearTimeout(tm);
+        const c = (await r.json()).current || {};
+        weatherCache.v = { temp: Math.round(c.temperature_2m), code: Number(c.weather_code) || 0, isDay: c.is_day === 1 };
+    } catch { /* ob-havo bo'lmasa — oddiy ko'rinish */ }
+    return weatherCache.v;
+}
+async function badges(db, staffIds, date, monthStart) {
+    const out = new Map(staffIds.map(id => [id, []]));
+    if (!staffIds.length) return out;
+    const add = (id, b) => { if (out.has(id)) out.get(id).push(b); };
+    const sales = (await safe(() => db.query(`SELECT manager_id, COUNT(*)::int AS all_n, COUNT(*) FILTER (WHERE paid_date >= $2)::int AS month_n
+        FROM payment_records p WHERE manager_id = ANY($1::text[]) AND lead_id IS NOT NULL
+        AND NOT EXISTS (SELECT 1 FROM payment_record_voids v WHERE v.record_id = p.id) GROUP BY manager_id`, [staffIds, monthStart]), { rows: [] })).rows;
+    for (const r of sales) { if (r.all_n >= 1) add(r.manager_id, { k: 'first', t: '🥇 Birinchi sotuv' }); if (r.month_n >= 10) add(r.manager_id, { k: 'ten', t: '💯 Oyda 10+ sotuv' }); }
+    const trials = (await safe(() => db.query(`SELECT snapshot->'after'->>'managerId' AS m, COUNT(*)::int AS n FROM lead_audit
+        WHERE action='updated' AND created_at >= $1 AND snapshot->'after'->>'status'='sinov-darsida' AND COALESCE(snapshot->'before'->>'status','')<>'sinov-darsida'
+        GROUP BY 1`, [monthStart]), { rows: [] })).rows;
+    for (const r of trials) if (r.n >= 10) add(r.m, { k: 'trials', t: '📅 Oyda 10+ sinov darsi' });
+    const att = (await safe(() => db.query(`SELECT employee_id, COUNT(*)::int AS n, COUNT(*) FILTER (WHERE data->>'status'='late')::int AS late
+        FROM staff_att_day_results WHERE employee_id = ANY($1::text[]) AND work_date > $2::date - 8 AND work_date < $2::date GROUP BY employee_id`, [staffIds, date]), { rows: [] })).rows;
+    for (const r of att) if (r.n >= 4 && r.late === 0) add(r.employee_id, { k: 'ontime', t: '⏰ Bir hafta kechikmadi' });
+    return out;
+}
+async function teamPlan(db, date, langs) {
+    if (langs && !langs.includes('russian')) return null;
+    const policy = require('./domworkBot/policy');
+    const period = policy.monthPeriod(new Date(date + 'T12:00:00Z'));
+    const row = (await db.query(`SELECT amount FROM salary_plan_confirmations WHERE language='russian' AND period_start=$1::date AND period_end=$2::date`, [period.start, period.end])).rows[0];
+    const target = Number(row?.amount) || 0; if (!target) return null;
+    const done = Number((await db.query(`SELECT COALESCE(SUM(amount),0) AS s FROM payment_records p WHERE language='russian' AND paid_date BETWEEN $1 AND $2
+        AND NOT EXISTS (SELECT 1 FROM payment_record_voids v WHERE v.record_id = p.id)`, [period.start, date])).rows[0].s) || 0;
+    return { target, done, pct: Math.round(done / target * 100) };
+}
+
 async function live(db, user, query = {}, now = new Date()) {
     const v = await viewerFor(db, user, { tv: query.tv === '1' || query.tv === 'true', lang: query.lang });
     const { date, min: minutes } = T.nowLocal(now);
@@ -165,12 +218,14 @@ async function live(db, user, query = {}, now = new Date()) {
     const staff = office.map(e => {
         const a = att.map.get(e.id) || {}, k = KIND(e.role);
         return { id: e.id, name: first(e.first_name || e.name), kind: k, lang: e.lang, inOffice: !!a.inOffice, inAt: a.inAt || null, outAt: a.outAt || null,
-            late: lateVisible(k) && a.lateMin > 0 ? a.lateMin : null };
+            late: lateVisible(k) && a.lateMin > 0 ? a.lateMin : null, female: femaleOf(e), birthday: birthdayToday(e, date),
+            avatar: query.since ? undefined : avatarOf(e) };
     });
     const names = new Map(all.map(e => [e.id, first(e.first_name || e.name)]));
 
     const students = await safe(() => activeStudents(db, v.langs, date), []);
     const board = await safe(() => teacherBoard(db, teachers, students, date, minutes), teachers.map(t => ({ id: t.id, name: first(t.name), status: 'free', nowStudents: [], todayStudents: 0, lessonsDone: 0, dav: null })));
+    for (const t of board) { const e = teachers.find(x => x.id === t.id); if (e) { t.female = femaleOf(e); t.birthday = birthdayToday(e, date); if (!query.since) t.avatar = avatarOf(e); } }
     const app = await safe(() => appActivity(db, students.map(s => s.id), dayStart), { online: [], lessons: 0, exams: [] });
     const sName = new Map(students.map(s => [s.id, s]));
 
@@ -202,7 +257,7 @@ async function live(db, user, query = {}, now = new Date()) {
     }
     events.sort((a, b) => String(a.at).localeCompare(String(b.at)) || String(a.id).localeCompare(String(b.id)));
     const sinceAt = query.since ? new Date(query.since) : null;
-    const outEvents = sinceAt && !Number.isNaN(sinceAt.getTime()) ? events.filter(e => new Date(e.at) > sinceAt) : events.slice(-60);
+    const outEvents = sinceAt && !Number.isNaN(sinceAt.getTime()) ? events.filter(e => new Date(e.at) > sinceAt) : query.all === '1' ? events : events.slice(-60);
 
     const sales = payEv.filter(p => p.type === 'sale');
     const kpi = {
@@ -216,6 +271,26 @@ async function live(db, user, query = {}, now = new Date()) {
         students: students.length, online: app.online.length, appLessons: app.lessons, exams: app.exams.length
     };
     if (v.money) { kpi.money = sales.reduce((s, p) => s + p.amount, 0); kpi.debtMoney = payEv.filter(p => p.type === 'debt_payment').reduce((s, p) => s + p.amount, 0); }
+    // Bugungi sotuvlar menejer bo'yicha (toj va olov uchun) — faqat son, summa emas.
+    const byMgr = {}; for (const p of sales) if (p.managerId) byMgr[p.managerId] = (byMgr[p.managerId] || 0) + 1;
+    for (const s of staff) s.salesToday = byMgr[s.id] || 0;
+    const top = staff.filter(s => s.salesToday > 0).sort((a, b) => b.salesToday - a.salesToday);
+    kpi.top = top.slice(0, 3).map(s => ({ id: s.id, name: s.name, sales: s.salesToday }));
+    if (top[0]) { const best = top[0].salesToday; for (const s of staff) s.crown = s.salesToday === best; }
+    for (const s of staff) s.fire = s.salesToday >= 3;
+    // Soatlar bo'yicha yangi lidlar (0–23, Toshkent vaqti).
+    kpi.hourly = Array(24).fill(0);
+    for (const e of leadEv) if (e.type === 'lead_new') kpi.hourly[new Date(new Date(e.at).getTime() + T.TZ_OFFSET_MIN * 60000).getUTCHours()]++;
+    // Taqsimlanmay kutib qolgan yangi lidlar (30 daqiqadan ko'p).
+    kpi.waiting = (await safe(() => db.query(`SELECT id, name, language, EXTRACT(EPOCH FROM (NOW() - created_at))::int / 60 AS min FROM leads
+        WHERE deleted_at IS NULL AND status='yangi-lidlar' AND COALESCE(manager_id,'')='' AND created_at >= $1 AND created_at < NOW() - INTERVAL '30 minutes'
+        ORDER BY created_at LIMIT 20`, [dayStart]), { rows: [] })).rows.filter(r => langOk(v.langs, r.language)).map(r => ({ id: r.id, name: first(r.name), min: r.min }));
+    kpi.weather = await weather();
+    const monthStart = date.slice(0, 8) + '01';
+    const bmap = await safe(() => badges(db, staff.map(s => s.id), date, monthStart), new Map());
+    for (const s of staff) s.badges = bmap.get(s.id) || [];
+    // Oylik reja termometri — faqat summani ko'radiganlarga (jamoaga oylik reja % aytilmaydi).
+    if (v.money) kpi.plan = await safe(() => teamPlan(db, date, v.langs), null);
 
     return {
         now: now.toISOString(), date, minutes,
@@ -229,7 +304,7 @@ async function live(db, user, query = {}, now = new Date()) {
 // Bir xil so'rovlar ko'p ekrandan kelsa (TV + telefonlar), bazani 8 soniyada bir marta so'raymiz.
 const cache = new Map();
 async function liveCached(db, user, query = {}) {
-    const key = [user?.role, user?.id, query.tv, query.lang, query.since ? 's' : ''].join('|');
+    const key = [user?.role, user?.id, query.tv, query.lang, query.since ? 's' : '', query.all].join('|');
     const hit = cache.get(key);
     if (hit && Date.now() - hit.t < 8000 && !query.since) return hit.v;
     const v = await live(db, user, query);

@@ -82,6 +82,15 @@ body.tv #tvTicker{display:block;position:fixed;left:16px;right:16px;bottom:14px;
 .pill{display:inline-flex;gap:6px;padding:5px 10px;border-radius:999px;font-weight:800;font-size:13px;background:var(--acc2);color:var(--acc);margin-bottom:12px}
 .slist div{display:flex;justify-content:space-between;padding:6px 2px;border-top:1px solid #F0EADF;font-size:13.5px;font-weight:800}
 .close{margin-top:14px;width:100%;padding:12px;border:0;border-radius:12px;background:var(--ink);color:#fff;font:900 15px Nunito,sans-serif;cursor:pointer}
+.hours{display:flex;align-items:flex-end;gap:3px;height:90px;flex-wrap:wrap}
+.hb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:74px}
+.hb i{display:block;width:100%;background:#F5C892;border-radius:4px 4px 0 0;min-height:2px}.hb.pk i{background:var(--acc)}
+.hb span{font-size:9px;color:var(--mut);font-weight:800;height:12px}.hnote{width:100%;font-size:12px;font-weight:800;color:var(--mut);margin-top:4px}
+.badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.badges span{background:var(--acc2);color:var(--acc);border-radius:999px;padding:4px 10px;font-size:12px;font-weight:800}
+#tvMsg{position:fixed;left:50%;bottom:70px;transform:translate(-50%,40px);opacity:0;z-index:55;background:rgba(255,255,255,.97);border-radius:24px;padding:18px 34px;box-shadow:0 20px 60px rgba(0,0,0,.3);transition:all .5s;pointer-events:none;min-width:320px;text-align:center}
+#tvMsg.show{opacity:1;transform:translate(-50%,0)}
+#tvMsg .tt{font-size:22px;font-weight:900;margin-bottom:8px}#tvMsg .tr{display:flex;gap:14px;align-items:center;font-size:22px;font-weight:800;padding:4px 0}#tvMsg .tr em{margin-left:auto;font-style:normal;color:var(--green)}
+#tvMsg .tm{font-size:20px;font-weight:800}#tvMsg .tm.big{font-size:26px}
 </style>
 </head>
 <body>
@@ -99,20 +108,23 @@ body.tv #tvTicker{display:block;position:fixed;left:16px;right:16px;bottom:14px;
   <div class="kpis" id="kpis"></div>
   <div class="main">
     <div>
-      <div class="ctrl"><button class="btn" id="toCrm">← Kabinet</button><button class="btn" id="back">← Butun ofis</button><button class="btn" id="tvBtn">📺 TV</button><button class="btn" id="sndBtn">🔇 Ovoz</button><button class="btn" id="langBtn" style="display:none"></button></div>
+      <div class="ctrl"><button class="btn" id="toCrm">← Kabinet</button><button class="btn" id="back">← Butun ofis</button><button class="btn" id="tvBtn">📺 TV</button><button class="btn" id="sndBtn">🔇 Ovoz</button><button class="btn" id="replayBtn">⏪ Kun takrori</button><button class="btn" id="langBtn" style="display:none"></button></div>
       <div class="stage" id="stage"><canvas id="cv"></canvas><div class="hint" id="hint">Ekranga teging — ovoz yoqiladi · xonani bosing — yaqinlashadi</div></div>
     </div>
     <div class="side">
       <div class="panel"><h3>⚡ Jonli voqealar</h3><ul class="feed" id="feed"></ul></div>
+      <div class="panel" id="waitBox" style="display:none;border-color:#FCA5A5"><h3>⏰ Taqsimlanmay kutayotgan lidlar</h3><div class="slist" id="wait"></div></div>
+      <div class="panel"><h3>📈 Soatlar bo'yicha lidlar</h3><div class="hours" id="hours"></div></div>
       <div class="panel"><h3>👥 Jamoa holati</h3><div class="team" id="team"></div><div class="note" id="note"></div></div>
     </div>
   </div>
 </div>
 <div id="tvbar"><div class="tvt"><b>DOMWORK</b> · Jonli ofis <span id="tvclock"></span></div><div class="tvk" id="tvk"></div><button class="btn" id="tvExit">✕ Chiqish</button></div>
 <div id="tvTicker"></div>
+<div id="tvMsg"></div>
 <div id="big"><div class="bi">💰</div><div class="bt">SOTUV!</div><div class="bs" id="bigS"></div></div>
 <div class="toast" id="toast"></div>
 <div class="sheet" id="sheet"><div class="card" id="card"></div></div>
-<script src="/ofis/ofis.js?v=20261115b"></script>
+<script src="/ofis/ofis.js?v=20261115d"></script>
 </body>
 </html>
