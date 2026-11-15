@@ -5,7 +5,6 @@
     const money = value => (typeof formatMoney === 'function' ? formatMoney(value) : Number(value || 0).toLocaleString('en-US').replaceAll(',', ' ') + " so'm");
     const opts = (items, all) => `<option value="">${all}</option>` + items.map(([v, label]) => `<option value="${esc(v)}">${esc(label)}</option>`).join('');
     const dateText = value => L.displayDate(value);
-    const methodBadge = r => `<span class="inflow-method" title="${esc(L.METHODS[r.method] || 'Aniqlanmagan')}">${esc(r.method==='unknown' ? 'Noma’lum' : L.METHODS[r.method] || 'Aniqlanmagan')}</span>`;
     function monthDates(month) {
         if (!/^\d{4}-\d{2}$/.test(month)) return null;
         const [y, m] = month.split('-').map(Number);
@@ -26,8 +25,15 @@
         root.querySelectorAll('[data-inflow="start"],[data-inflow="end"]').forEach(e => e.setAttribute('aria-invalid', String(!!invalid)));
         if (invalid) { root.querySelector('[data-inflow-kpis]').innerHTML = ''; root.querySelector('[data-inflow-issues]').innerHTML=''; content.innerHTML = '<p class="inflow-empty">Hisobni ko‘rish uchun sana oralig‘ini to‘g‘rilang.</p>'; return; }
         const list = rows(root), summary = L.summary(list);
-        root.querySelector('[data-inflow-filter-count]').textContent = ['manager','teacher','tariff','method','form','review'].filter(k=>f[k]).length ? '· '+['manager','teacher','tariff','method','form','review'].filter(k=>f[k]).length+' faol' : '';
-        root.querySelector('[data-inflow-kpis]').innerHTML = [['Jami tushum (fakt)', money(summary.amount)], ['Kutilayotgan qoldiq qarz', money(summary.debt)], ['Tranzaksiyalar soni', summary.count]]
+        loadPeriodDebt(root);
+        // Faol filtrlar soni (davr ham — doim tanlangan): "Filtrlar (n)".
+        const nf = ['manager','teacher','tariff','method','form','review'].filter(k=>f[k]).length + (f.start && f.end ? 1 : 0);
+        root.querySelector('[data-inflow-filter-count]').textContent = nf ? '(' + nf + ')' : '';
+        const n0 = v => v == null || v === '' ? '—' : Number(v).toLocaleString('en-US').replaceAll(',', ' ');
+        // Moliya xodimi: davr sotuvlaridan qolgan qarz (Umumiy bilan bir xil). Ruxsat bo'lmasa — ro'yxatdagi o'quvchilar qarzi, nomi aniq.
+        const debtLabel = debtState.failed ? 'Ro‘yxatdagi o‘quvchilar qarzi' : 'Kutilayotgan qoldiq qarz', debtValue = debtState.failed ? summary.debt : debtState.value;
+        root.querySelector('[data-inflow-sumline]').innerHTML = `Jami tushum (fakt) <b class="pos">${n0(summary.amount)}</b> · ${summary.count} ta · qoldiq qarz ${debtValue == null ? '…' : n0(debtValue)}`;
+        root.querySelector('[data-inflow-kpis]').innerHTML = [['Jami tushum (fakt)', n0(summary.amount)], ['To‘lovlar soni', summary.count], [debtLabel, debtValue == null ? '…' : n0(debtValue)]]
             .map(([label, v]) => `<div class="inflow-stat"><span>${label}</span><strong>${v}</strong></div>`).join('');
         root.querySelector('[data-inflow-note]').textContent = 'Qoldiq qarz har bir o‘quvchi bo‘yicha bir marta sanaladi. Eski asl yozuvlar o‘zgartirilmaydi.';
         const issues = L.filterIssues(state.issueLists[_financeLang], _financeLang, f);
@@ -38,26 +44,33 @@
             ${legacy.length ? '<p>Eski cheki/usuli yetishmayotgan tushumlarni «Qo‘shimcha filtrlar → Tekshirish» orqali ajrating.</p>' : ''}
             <ul>${issues.slice(0,100).map(r => `<li><strong>${esc(r.name || 'Nomi aniqlanmagan')}</strong> ${esc(r.phone)} · ${r.date ? dateText(r.date)+' (manba sanasi, tushum tasdiqlanmagan)' : 'Sana aniqlanmagan'} — ${esc(r.reason)}<small>${esc(r.source_key)}</small></li>`).join('')}</ul>
             ${issues.length>100 ? `<p>${issues.length} ta manbadan birinchi 100 tasi ko‘rsatildi.</p>` : ''}${state.unscoped ? `<p>Tilini aniqlab bo‘lmagan ${state.unscoped} ta manba bor; ular tilga taxmin bilan qo‘shilmadi.</p>` : ''}</details>` : '';
-        const cell = (r,compact=false) => {
-            const proof = r.receiptUrl ? `<a href="${esc(r.receiptUrl)}" target="_blank" rel="noopener" title="Chekni ko‘rish">${compact?'Ko‘rish':'Chekni ko‘rish'}</a>` : compact ? '<span title="Chek yo‘q">—</span>' : 'Chek yo‘q';
-            return proof + (r.legacyReview ? `<small class="inflow-review" title="Eski ma’lumot — chek yoki usulni tekshirish kerak">${compact?'Tekshir':'Tekshirish kerak'}</small>` : '');
-        };
         const phoneText = p => esc(typeof formatPhoneDisplay === 'function' ? (formatPhoneDisplay(p) || p) : p);
-        const formBadge = r => r.form === 'full' ? '<span class="ifx-badge ifx-badge--ok">To‘liq</span>' : '<span class="ifx-badge ifx-badge--warn">Yarim (Zaklad)</span>';
-        const tr = list.map((r, i) => `<tr><td class="ifx-n">${i + 1}</td><td><b>${dateText(r.paidDate)}</b><small>${esc(r.paidTime || 'Vaqt noma’lum')}</small></td><td><b>${esc(r.name)}</b><small>${phoneText(r.phone)}</small></td><td><span class="ifx-pay">${formBadge(r)}${methodBadge(r)}</span><small>${esc(L.TARIFFS[r.tariff] || 'Tarif aniqlanmagan')}</small></td><td class="ifx-num inflow-amount">${money(r.amount)}</td><td class="ifx-num${r.debt > 0 ? ' ifx-debt' : ''}">${money(r.debt)}</td><td>${dateText(L.nextDate(r.debt,r.nextPaymentDate))}</td><td><b>${esc(r.managerName || 'Biriktirilmagan')}</b><small>${esc(r.teacherName || 'Ustoz aniqlanmagan')}</small></td><td>${cell(r,true)}</td></tr>`).join('');
-        const headings = ['№','Sana / vaqt','O‘quvchi','To‘lov','Summa','Qoldiq qarz','Keyingi to‘lov','Menejer · ustoz','Chek'];
-        const focusFilters={2:'search',3:'form',7:'manager',8:'review'};
-        const sortCols = {1:'date',4:'amount'};
+        // Jadval (K_tolovlar): Sana/vaqt · O'quvchi · Telefon · Tarif · Summa · To'lov usuli · Qoldiq qarz · Menejer·ustoz · Chek · Holat.
+        const kindChip = r => r.saleKind ? ` <span class="fin-dchip ${r.saleKind === 'new' ? 'fin-dchip--ok' : 'fin-dchip--muted'}">${r.saleKind === 'new' ? 'Yangi' : 'Qarzdor'}</span>` : '';
+        const clip = r => r.receiptUrl ? `<a class="ifd-clip" href="${esc(r.receiptUrl)}" target="_blank" rel="noopener" title="Chekni ko‘rish" aria-label="Chekni ko‘rish"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m21 12-8.5 8.5a6 6 0 0 1-8.5-8.5l9-9a4 4 0 0 1 5.7 5.7l-9 9a2 2 0 0 1-2.8-2.8L15 7"/></svg></a>` : '<span class="ifd-clip is-none" title="Chek yo‘q">—</span>';
+        const holat = r => r.legacyReview ? '<span class="ifx-badge ifx-badge--warn">Tekshirish kerak</span>' : r.form === 'full' ? '<span class="ifx-badge ifx-badge--ok">To‘liq</span>' : '<span class="ifx-badge ifx-badge--warn">Yarim (Zaklad)</span>';
+        // Ustoz: yozuvdagi nom, bo'lmasa CRM'dagi ustoz/xodim ro'yxatidan (teacherId bo'yicha).
+        const people = new Map([...(getItem(STORAGE_KEYS.teachers, []) || []), ...(getItem(STORAGE_KEYS.hrEmployees, []) || [])].map(x => [x.id, x.name]));
+        const teacherOf = r => r.teacherName || (r.teacherId && people.get(r.teacherId)) || '';
+        const who = r => `${esc(r.managerName || 'Biriktirilmagan')} · ${esc(teacherOf(r) || 'biriktirilmagan')}`;
+        const nameBtn = r => r.studentId ? `<button type="button" class="ifd-name" data-inflow-hist="${esc(r.studentId)}">${esc(r.name)}</button>` : `<b>${esc(r.name)}</b>`;
+        const tr = list.map(r => `<tr><td class="ifd-nowrap">${dateText(r.paidDate)} · ${esc(r.paidTime || '—')}</td><td>${nameBtn(r)}${kindChip(r)}</td><td>${phoneText(r.phone)}</td><td>${esc(L.TARIFFS[r.tariff] || '—')}</td>
+            <td class="ifx-num">${n0(r.amount)}</td><td>${esc(r.method === 'unknown' ? 'Noma’lum' : L.METHODS[r.method] || '—')}</td><td class="ifx-num">${n0(r.debt)}</td><td class="ifd-who" title="${who(r)}">${who(r)}</td><td>${clip(r)}</td><td>${holat(r)}</td></tr>`).join('');
+        const headings = ['Sana / vaqt', 'O‘quvchi', 'Telefon', 'Tarif', 'Summa', 'To‘lov usuli', 'Qoldiq qarz', 'Menejer · ustoz', 'Chek', 'Holat'];
+        const sortCols = { 0: 'date', 4: 'amount' };
         const sortable = (label, key) => `<button type="button" data-inflow-sort="${key}" title="${label} bo‘yicha saralash">${label} <span aria-hidden="true">${f.sort.startsWith(key+'-') ? f.sort.endsWith('up') ? '↑' : '↓' : '↕'}</span></button>`;
-        content.innerHTML = `<div class="inflow-table-wrap"><table class="inflow-table inflow-ledger-table ifx-table"><colgroup>${[4,10,19,15,12,11,9,14,6].map(n=>`<col style="width:${n}%">`).join('')}</colgroup><thead><tr>${headings.map((h,i)=>`<th${i===4||i===5 ? ' class="ifx-num"' : ''}${sortCols[i] ? ` aria-sort="${f.sort.startsWith(sortCols[i]+'-') ? f.sort.endsWith('up')?'ascending':'descending':'none'}"` : ''}>${sortCols[i] ? sortable(h,sortCols[i]) : focusFilters[i] ? `<button type="button" data-inflow-focus="${focusFilters[i]}" title="${h} bo‘yicha filtrlash">${h} <span aria-hidden="true">⌄</span></button>` : h}</th>`).join('')}</tr></thead><tbody>${tr || '<tr><td colspan="9">Tanlangan filtrlar bo‘yicha to‘lov yo‘q</td></tr>'}</tbody><tfoot><tr><td colspan="4">Jami: ${summary.count} ta</td><td class="ifx-num">${money(summary.amount)}</td><td class="ifx-num">${money(summary.debt)}</td><td colspan="3">Qarz o‘quvchi bo‘yicha bir marta</td></tr></tfoot></table></div>
-            <div class="inflow-mobile">${list.map(r => `<article class="inflow-payment"><header><strong>${esc(r.name)}</strong><span>${dateText(r.paidDate)} ${esc(r.paidTime || 'Vaqt noma’lum')}</span></header><p>${phoneText(r.phone)}</p><div class="inflow-payment-total"><strong class="inflow-amount">${money(r.amount)}</strong>${methodBadge(r)}</div><dl><dt>Menejer</dt><dd>${esc(r.managerName || 'Biriktirilmagan')}</dd><dt>Ustoz</dt><dd>${esc(r.teacherName || '—')}</dd><dt>Tarif</dt><dd>${esc(L.TARIFFS[r.tariff] || '—')}</dd><dt>To‘lov</dt><dd>${r.form === 'full' ? 'To‘liq' : 'Yarim (Zaklad)'}</dd><dt>Qoldiq qarz</dt><dd>${money(r.debt)}</dd>${r.debt>0 ? `<dt>Keyingi to‘lov</dt><dd>${dateText(r.nextPaymentDate)}</dd>` : ''}</dl>${cell(r)}</article>`).join('') || '<p class="inflow-empty">To‘lovlar topilmadi</p>'}<div class="inflow-mobile-summary"><span>${summary.count} ta · Jami: <strong>${money(summary.amount)}</strong></span><span>Qarz: ${money(summary.debt)}</span></div></div>`;
+        content.innerHTML = `<div class="inflow-table-wrap ifd-table"><table class="inflow-table ifx-table"><thead><tr>${headings.map((h, i) => `<th${i === 4 || i === 6 ? ' class="ifx-num"' : ''}${sortCols[i] ? ` aria-sort="${f.sort.startsWith(sortCols[i]+'-') ? f.sort.endsWith('up') ? 'ascending' : 'descending' : 'none'}"` : ''}>${sortCols[i] ? sortable(h, sortCols[i]) : h}</th>`).join('')}</tr></thead>
+            <tbody>${tr || '<tr><td colspan="10">Tanlangan filtrlar bo‘yicha to‘lov yo‘q</td></tr>'}</tbody><tfoot><tr><td colspan="4">Jami: ${summary.count} ta</td><td class="ifx-num">${n0(summary.amount)}</td><td></td><td class="ifx-num">${debtValue == null ? '…' : n0(debtValue)}</td><td colspan="3">${esc(debtLabel)}</td></tr></tfoot></table></div>
+            <div class="inflow-mobile ifd-cards">${list.map(r => `<article class="ifd-card"><span class="ifd-card-l"><span class="ifd-card-n">${nameBtn(r)}</span><small class="ifd-1l">${kindChip(r)} ${dateText(r.paidDate).slice(0, 5)} · ${who(r)}</small></span><span class="ifd-card-r"><b>${n0(r.amount)}</b><small>qoldiq ${n0(r.debt)}</small></span>${clip(r)}</article>`).join('') || '<p class="inflow-empty">To‘lov yo‘q</p>'}</div>`;
         content.querySelectorAll('[data-inflow-sort]').forEach(button => button.onclick = () => {
             root.querySelector('[data-inflow="sort"]').value = button.dataset.inflowSort + (f.sort === button.dataset.inflowSort+'-down' ? '-up' : '-down'); draw(root);
         });
-        content.querySelectorAll('[data-inflow-focus]').forEach(button=>button.onclick=()=>{
-            if(button.dataset.inflowFocus!=='search')root.querySelector('.inflow-filter-panel').open=true;
-            root.querySelector(`[data-inflow="${button.dataset.inflowFocus}"]`).focus();
-        });
+        content.querySelectorAll('[data-inflow-hist]').forEach(b => b.onclick = () => openHistory(b.dataset.inflowHist, b.textContent));
+    }
+    // O'quvchi to'lov tarixi: Sana · Tushum · Usul · Chek · O'sha paytdagi qarz (renderHistory).
+    function openHistory(id, name) {
+        openModal(String(name || '') + ' — to‘lov tarixi', `<div data-inflow-history="${esc(id)}">Yuklanmoqda…</div>`, '<button type="button" class="btn-secondary-sm" onclick="closeModal()">Yopish</button>', { wide: true });
+        const el = document.querySelector('#modalBody [data-inflow-history]'); el.dataset.inflowHistory = id; renderHistory(el, id);
     }
     function fillPeople(root) {
         for (const kind of ['manager', 'teacher']) {
@@ -90,16 +103,32 @@
         if (root.dataset.inflowMounted) return;
         root.dataset.inflowMounted = '1';
         const month = L.today().slice(0, 7), period = monthDates(month);
-        root.innerHTML = `<div class="inflow-toolbar"><h2>To‘lovlar</h2><button type="button" class="btn-secondary-sm" data-inflow-refresh>Yangilash</button><button type="button" class="btn-primary-sm" data-inflow-export aria-label="Excelga yuklash (.xlsx)"><span class="inflow-export-full">Excelga yuklash (.xlsx)</span><span class="inflow-export-mobile">Excel (.xlsx)</span></button></div>
-            <div class="inflow-kpis" data-inflow-kpis></div><div class="inflow-filters inflow-basic-filters">
-            <label>Hisoblash oyi<div class="inflow-month-control"><button type="button" data-inflow-month-step="-1" aria-label="Oldingi oy">‹</button><input type="month" aria-label="Hisoblash oyi" data-inflow="month" value="${month}"><button type="button" data-inflow-month-step="1" aria-label="Keyingi oy">›</button></div></label>
-            <div class="inflow-quick">${[['today', 'Bugun'], ['yesterday', 'Kecha'], ['month', 'Joriy oy']].map(([v, t]) => `<button type="button" class="btn-secondary-sm" data-inflow-quick="${v}">${t}</button>`).join('')}</div>
-            <label class="inflow-search"><span>Ism yoki telefon</span><input type="search" aria-label="Ism yoki telefon" data-inflow="search" placeholder="Ism yoki telefon raqami" autocomplete="off" data-lpignore="true" data-1p-ignore="true"></label></div>
-            <details class="inflow-filter-panel"><summary>Qo‘shimcha filtrlar <span data-inflow-filter-count></span></summary><div class="inflow-filters inflow-filter-fields"><label>Boshlanish<input type="date" data-inflow="start" value="${period.start}"></label><label>Tugash<input type="date" data-inflow="end" value="${period.end}"></label>
-            <label>Menejer<select data-inflow="manager"></select></label><label>Ustoz<select data-inflow="teacher"></select></label><label>Tarif<select data-inflow="tariff">${opts(Object.entries(L.TARIFFS), 'Barcha tariflar')}</select></label><label>Usul<select data-inflow="method">${opts(Object.entries(L.METHODS), 'Barcha usullar')}</select></label>
-            <label>To‘lov shakli<select data-inflow="form">${opts([['full', 'To‘liq'], ['partial', 'Yarim (Zaklad)']], 'Barchasi')}</select></label><label>Saralash<select data-inflow="sort">${[['date-down', 'Sana: yangi → eski'], ['date-up', 'Sana: eski → yangi'], ['amount-down', 'Summa: katta → kichik'], ['amount-up', 'Summa: kichik → katta']].map(([v, t]) => `<option value="${v}">${t}</option>`).join('')}</select></label>
-            <label>Tekshirish<select data-inflow="review">${opts([['legacy','Chek/usulni tekshirish'],['missing-manager','Menejer biriktirilmagan']], 'Barcha yozuvlar')}</select></label><button type="button" class="btn-secondary-sm" data-inflow-reset>Filtrlarni tozalash</button></div></details>
-            <p class="text-muted" data-inflow-note></p><div data-inflow-issues></div><div data-inflow-cash-review></div><p role="status" data-inflow-message></p><p role="alert" data-inflow-validation hidden></p><div data-inflow-content></div>`;
+        // D dizayn (K_/T_tolovlar): amallar qatori, bitta qatorda qidiruv + Filtrlar + saralash; filtrlar — ochiluvchi oyna (telefonda pastki varaq).
+        root.innerHTML = `<div class="ifd-period" data-inflow-periodrow></div><div class="inflow-toolbar ifd-actions"><button type="button" class="fin-qbtn fin-qbtn--pri" data-inflow-receive><span>+ Reyestrga to‘lov<span class="ifd-full"> qabul qilish</span></span></button>
+                <span class="ifd-desk"><button type="button" class="fin-qbtn" data-inflow-recon>Solishtirish</button><button type="button" class="fin-qbtn" data-inflow-export aria-label="Excelga yuklash (.xlsx)">⤓ Excelga yuklash (.xlsx)</button><button type="button" class="fin-qbtn" data-inflow-refresh>↻ Yangilash</button></span>
+                <button type="button" class="fin-qbtn ifd-phone" data-inflow-more aria-haspopup="dialog" aria-label="Amallar">⋯</button></div>
+            <div class="ifd-search"><label class="inflow-search"><span class="sr-only">Ism yoki telefon</span><input type="search" class="form-control" aria-label="Ism yoki telefon" data-inflow="search" placeholder="Ism yoki telefon raqami" autocomplete="off" data-lpignore="true" data-1p-ignore="true"></label>
+                <button type="button" class="fin-qbtn" data-inflow-filters aria-haspopup="dialog"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h18l-7 8v6l-4 2v-8z"/></svg><span class="ifd-full"> Filtrlar</span> <span data-inflow-filter-count></span></button>
+                <label class="ifd-desk"><span class="sr-only">Saralash</span><select class="form-control" data-inflow="sort">${[['date-down', 'Sana: yangi → eski'], ['date-up', 'Sana: eski → yangi'], ['amount-down', 'Summa: katta → kichik'], ['amount-up', 'Summa: kichik → katta']].map(([v, t]) => `<option value="${v}">${t}</option>`).join('')}</select></label></div>
+            <p class="ifd-sumline" data-inflow-sumline></p>
+            <div class="inflow-kpis" data-inflow-kpis></div>
+            <div class="fin-psheet ifd-filter" data-inflow-filter-sheet hidden role="dialog" aria-label="Filtrlar"><div>
+                <span class="fin-sheet-h" style="justify-content:space-between;align-items:center"><b>Filtrlar</b><button type="button" class="fin-sheet-x" data-inflow-filter-close aria-label="Yopish">×</button></span>
+                <b class="ifd-lbl">Davr</b><div class="fin-pseg">${[['month', 'Joriy oy'], ['today', 'Bugun'], ['yesterday', 'Kecha']].map(([v, t]) => `<button type="button" data-inflow-quick="${v}">${t}</button>`).join('')}</div>
+                <div class="inflow-filters"><label>Hisoblash oyi<div class="inflow-month-control"><button type="button" data-inflow-month-step="-1" aria-label="Oldingi oy">‹</button><input type="month" aria-label="Hisoblash oyi" data-inflow="month" value="${month}"><button type="button" data-inflow-month-step="1" aria-label="Keyingi oy">›</button></div></label>
+                <label>Boshlanish<input type="date" class="form-control" data-inflow="start" value="${period.start}"></label><label>Tugash<input type="date" class="form-control" data-inflow="end" value="${period.end}"></label>
+                <label>Menejer<select class="form-control" data-inflow="manager"></select></label><label>Tarif<select class="form-control" data-inflow="tariff">${opts(Object.entries(L.TARIFFS), 'Barcha tariflar')}</select></label>
+                <label>Ustoz<select class="form-control" data-inflow="teacher"></select></label><label>To‘lov usuli<select class="form-control" data-inflow="method">${opts(Object.entries(L.METHODS), 'Barcha usullar')}</select></label>
+                <label>To‘lov turi<select class="form-control" data-inflow="form">${opts([['full', 'To‘liq'], ['partial', 'Yarim (Zaklad)']], 'Barchasi')}</select></label>
+                <label>Tekshirish<select class="form-control" data-inflow="review">${opts([['legacy','Chek/usulni tekshirish'],['missing-manager','Menejer biriktirilmagan']], 'Barcha yozuvlar')}</select></label></div>
+                <div class="fin-actions"><button type="button" class="fin-qbtn" data-inflow-reset>Filtrlarni tozalash</button><button type="button" class="fin-qbtn fin-qbtn--pri" data-inflow-filter-close>Qo‘llash</button></div></div></div>
+            <div class="fin-psheet" data-inflow-more-sheet hidden role="dialog" aria-label="Amallar"><div><span class="fin-sheet-h" style="justify-content:space-between;align-items:center"><b>Amallar</b><button type="button" class="fin-sheet-x" data-inflow-more-close aria-label="Yopish">×</button></span>
+                <div class="fin-dlist ifd-menu"><button type="button" data-inflow-recon>☑ Solishtirish <span>›</span></button><button type="button" data-inflow-export2>⤓ Excelga yuklash (.xlsx) <span>›</span></button><button type="button" data-inflow-refresh2>↻ Yangilash <span>›</span></button></div></div></div>
+            <p role="status" data-inflow-message></p><p role="alert" data-inflow-validation hidden></p><div data-inflow-content></div>
+            <section class="fin-card ifd-check" aria-labelledby="ifdCheckH"><header><h3 id="ifdCheckH">Tekshiruv</h3></header>
+                <b>Chek/usulni tekshirish</b><p class="fin-dnote">Chek yo‘q yoki usul mos emas — “Tekshirish kerak”. Moliya xodimi “Moliya tasdiqlaydi” tugmasi bilan tasdiqlaydi. Cash Flow kirimini tekshirish — Solishtirish oynasida (Reyestr tushumi · Joriy qarz · O‘sha paytdagi qarz).</p>
+                <div class="fin-actions"><button type="button" class="fin-qbtn" data-inflow-review-legacy>Tekshirish</button></div>
+                <p class="text-muted" data-inflow-note></p><div data-inflow-issues></div><div data-inflow-cash-review></div></section>`;
         root.querySelector('[data-inflow="month"]').onchange = e => { const p = monthDates(e.target.value); if (!p) return; root.querySelector('[data-inflow="start"]').value = p.start; root.querySelector('[data-inflow="end"]').value = p.end; draw(root); };
         root.querySelectorAll('[data-inflow]').forEach(el => { if (el.dataset.inflow !== 'month') el.addEventListener(el.type === 'search' ? 'input' : 'change', () => draw(root)); });
         root.querySelectorAll('[data-inflow="start"],[data-inflow="end"]').forEach(el=>el.addEventListener('change',()=>{root.querySelector('[data-inflow="month"]').value='';}));
@@ -120,6 +149,24 @@
             root.querySelector('[data-inflow="start"]').value = p.start; root.querySelector('[data-inflow="end"]').value = p.end; draw(root);
         }; });
         root.querySelector('[data-inflow-refresh]').onclick = () => refresh(root);
+        const sheet = sel => root.querySelector(sel);
+        const toggle = (sel, open) => { sheet(sel).hidden = !open; };
+        root.querySelector('[data-inflow-filters]').onclick = () => toggle('[data-inflow-filter-sheet]', true);
+        root.querySelectorAll('[data-inflow-filter-close]').forEach(b => b.onclick = () => toggle('[data-inflow-filter-sheet]', false));
+        root.querySelector('[data-inflow-more]').onclick = () => toggle('[data-inflow-more-sheet]', true);
+        root.querySelector('[data-inflow-more-close]').onclick = () => toggle('[data-inflow-more-sheet]', false);
+        root.querySelectorAll('[data-inflow-filter-sheet], [data-inflow-more-sheet]').forEach(el => el.addEventListener('click', e => { if (e.target === el) el.hidden = true; }));
+        root.querySelector('[data-inflow-refresh2]').onclick = () => { toggle('[data-inflow-more-sheet]', false); refresh(root); };
+        root.querySelector('[data-inflow-export2]').onclick = () => { toggle('[data-inflow-more-sheet]', false); root.querySelector('[data-inflow-export]').click(); };
+        // Solishtirish: Cash Flow kirimini tekshirish oynasi (Reyestr tushumi · Joriy qarz · O'sha paytdagi qarz).
+        root.querySelectorAll('[data-inflow-recon]').forEach(b => b.onclick = () => {
+            toggle('[data-inflow-more-sheet]', false);
+            const start = root.querySelector('[data-inflow-cash-review] button');
+            if (start) { start.scrollIntoView({ block: 'center' }); start.click(); } else if (typeof switchFinanceSection === 'function') switchFinanceSection('solishtirish');
+        });
+        root.querySelector('[data-inflow-receive]').onclick = () => openStudentPayment();
+        // "Tekshirish" — chek/usuli tekshirilishi kerak bo'lgan tushumlarni filtrlaydi.
+        root.querySelector('[data-inflow-review-legacy]').onclick = () => { root.querySelector('[data-inflow="review"]').value = 'legacy'; draw(root); root.querySelector('[data-inflow-content]').scrollIntoView({ block: 'start' }); };
         root.querySelector('[data-inflow-export]').onclick = async () => {
             try {
                 if (L.rangeError(filters(root))) throw Error(L.rangeError(filters(root)));
@@ -135,9 +182,30 @@
             } catch (e) { root.querySelector('[data-inflow-message]').textContent = e.message; }
         };
     }
+    // Moliyaning umumiy davr qatori: davr tanlansa, ro'yxat shu davrga filtrlanadi.
+    function applyPeriod(root, p) {
+        if (!p?.start || !p?.end) return;
+        root.querySelector('[data-inflow="start"]').value = p.start; root.querySelector('[data-inflow="end"]').value = p.end;
+        root.querySelector('[data-inflow="month"]').value = p.preset === 'month' || p.preset === 'prev' ? p.start.slice(0, 7) : '';
+    }
+    // "Kutilayotgan qoldiq qarz" — davr sotuvlaridan qolgan qarz (Umumiy bilan bitta server funksiyasi).
+    const debtState = { key: '', value: null, failed: false };
+    async function loadPeriodDebt(root) {
+        const f = filters(root), key = [_financeLang, f.start, f.end].join('|');
+        if (!f.start || !f.end || debtState.key === key) return;
+        debtState.key = key; debtState.value = null;
+        try { const d = await apiFetch(`/api/finance/period-debt?scope=${_financeLang}&start=${f.start}&end=${f.end}`); if (debtState.key === key) { debtState.value = d.periodSales?.total ?? 0; debtState.failed = false; } }
+        catch { debtState.failed = true; }
+        if (root.isConnected) draw(root);
+    }
     function render() {
         const root = document.getElementById('inflowRoot'); if (!root) return;
-        mount(root); fillPeople(root); draw(root); refresh(root);
+        mount(root);
+        if (window.financeUI?.mountPeriodRow) {
+            applyPeriod(root, window.financeUI.period());
+            window.financeUI.mountPeriodRow(root.querySelector('[data-inflow-periodrow]'), p => { applyPeriod(root, p); draw(root); loadPeriodDebt(root); });
+        }
+        fillPeople(root); draw(root); refresh(root); loadPeriodDebt(root);
     }
     function ensureTimer() {
         if (!state.timer) state.timer = setInterval(() => {
@@ -159,30 +227,48 @@
         if (!input._uploaded || input._uploaded.file !== file) input._uploaded = { file, url: (await apiUploadFile(file)).url };
         return { paymentMethod, receiptUrl: input._uploaded.url };
     }
-    async function openPayment(id) {
+    // Reyestrga to'lov qabul qilish (K_tolovQabul → K_tolovQabul2): 1) o'quvchi, summa, usul, chek; 2) tasdiqlash.
+    function debtors() { return getItem(STORAGE_KEYS.students, []).filter(s => Number(s.debtAmount) > 0 && (!s.subject || s.subject === _financeLang)); }
+    async function openPayment(id, o = {}) {
+        const picker = o.picker ? `<label>O‘quvchi<select class="form-control" id="ledgerPaymentStudent">${opts(debtors().map(x => [x.id, x.name + (x.phone ? ' · ' + x.phone : '')]), 'O‘quvchini tanlang')}</select></label>` : '';
+        if (!id) {
+            openModal('Reyestrga to‘lov qabul qilish', `<div class="inflow-proof">${picker}<p class="text-muted">Qarzi mavjud o‘quvchini tanlang. Kurs narxi yoki kitob narxini bu yerda tushum deb kiritmang.</p></div>`, '<button type="button" class="btn-secondary-sm" onclick="closeModal()">Bekor qilish</button><button type="button" class="btn-primary-sm" disabled>Davom etish</button>');
+            document.getElementById('ledgerPaymentStudent').onchange = e => { if (e.target.value) openPayment(e.target.value, o); };
+            return;
+        }
         try {
             const { student: s } = await apiFetch('/api/inflow/students/' + encodeURIComponent(id)); cacheProvisionedStudent(s);
             const requestKey = crypto.randomUUID();
-            // Sarlavha textContent orqali chiqadi — escape kerak emas (aks holda "O'g'il" &#39; bo'lib ko'rinardi).
             const paidSoFar = Number(s.paidAmount || 0), debtNow = Number(s.debtAmount || 0);
-            openModal(String(s.name || '') + ' — To‘lov qabul qilish', `<div class="inflow-proof"><div class="ifx-pay-sum"><div><span>Joriy qarz</span><strong>${money(debtNow)}</strong></div><div><span>To‘langan</span><b>${money(paidSoFar)}</b></div>${s.paymentDueDate ? `<div><span>Kelishilgan sana</span><b>${dateText(s.paymentDueDate)}</b></div>` : ''}</div><label>Qabul qilingan summa<input type="text" inputmode="numeric" class="form-control" id="inflowAmount" data-money-input></label><div class="ifx-pay-quick"><button type="button" class="btn-secondary-sm" data-pay-fill="${debtNow}">Qarzni to‘liq: ${money(debtNow)}</button>${debtNow >= 2 ? `<button type="button" class="btn-secondary-sm" data-pay-fill="${Math.round(debtNow / 2)}">Yarmi: ${money(Math.round(debtNow / 2))}</button>` : ''}</div><p class="ifx-pay-left" id="inflowLeft" aria-live="polite"></p><label>Tushgan sana<input type="date" class="form-control" id="inflowDate" value="${L.today()}" max="${L.today()}"></label><label>Vaqt (ma’lum bo‘lsa)<input type="time" class="form-control" id="inflowTime"></label>${paymentFields('debtInflow')}<p role="alert" id="inflowError"></p></div>`, '<button type="button" class="btn-secondary-sm" id="inflowCancel">Bekor qilish</button><button type="button" class="btn-primary-sm" id="inflowSave">Qabul qilish</button>');
+            // Sarlavha textContent orqali chiqadi — escape kerak emas.
+            openModal(o.picker ? 'Reyestrga to‘lov qabul qilish' : String(s.name || '') + ' — To‘lov qabul qilish', `<div class="inflow-proof" data-pay-step="1">${picker}<div class="ifx-pay-sum"><div><span>Joriy qarz</span><strong>${money(debtNow)}</strong></div><div><span>To‘langan</span><b>${money(paidSoFar)}</b></div>${s.paymentDueDate ? `<div><span>Kelishilgan sana</span><b>${dateText(s.paymentDueDate)}</b></div>` : ''}</div><div class="ifx-pay-quick"><button type="button" class="btn-secondary-sm" data-pay-fill="${debtNow}">Qarzni to‘liq: ${money(debtNow)}</button>${debtNow >= 2 ? `<button type="button" class="btn-secondary-sm" data-pay-fill="${Math.round(debtNow / 2)}">Yarmi: ${money(Math.round(debtNow / 2))}</button>` : ''}</div><label>To‘lov summasi (UZS)<input type="text" inputmode="numeric" class="form-control" id="inflowAmount" data-money-input></label><p class="ifx-pay-left" id="inflowLeft" aria-live="polite"></p><label>Tushgan sana<input type="date" class="form-control" id="inflowDate" value="${L.today()}" max="${L.today()}"></label><label>Vaqt (ma’lum bo‘lsa)<input type="time" class="form-control" id="inflowTime"></label>${paymentFields('debtInflow')}</div>
+                <div class="inflow-proof" data-pay-step="2" hidden></div><p role="alert" id="inflowError"></p>`,
+                '<button type="button" class="btn-secondary-sm" id="inflowCancel">Bekor qilish</button><button type="button" class="btn-primary-sm" id="inflowSave">Davom etish</button>');
             const body = document.getElementById('modalBody'); wireMoneyInputs(body);
+            const sel = body.querySelector('#ledgerPaymentStudent'); if (sel) { sel.value = id; sel.onchange = e => { if (e.target.value) openPayment(e.target.value, o); }; }
             const amountInput = body.querySelector('#inflowAmount'), leftEl = body.querySelector('#inflowLeft');
             const showLeft = () => { const a = L.money(amountInput.value); leftEl.textContent = a ? (a > debtNow ? 'Summa qarzdan katta' : 'To‘lovdan keyin qoldiq: ' + money(debtNow - a)) : ''; leftEl.classList.toggle('is-bad', a > debtNow); };
             amountInput.addEventListener('input', showLeft);
             body.querySelectorAll('[data-pay-fill]').forEach(b => b.onclick = () => { amountInput.value = String(b.dataset.payFill); amountInput.dispatchEvent(new Event('input', { bubbles: true })); showLeft(); amountInput.focus(); });
-            document.getElementById('inflowCancel').onclick = closeModal;
+            const step1 = body.querySelector('[data-pay-step="1"]'), step2 = body.querySelector('[data-pay-step="2"]'), saveBtn = document.getElementById('inflowSave'), cancelBtn = document.getElementById('inflowCancel');
             let pending = null;
-            document.getElementById('inflowSave').onclick = async e => {
+            const back = () => { step1.hidden = false; step2.hidden = true; saveBtn.textContent = 'Davom etish'; cancelBtn.textContent = 'Bekor qilish'; };
+            cancelBtn.onclick = () => (step2.hidden ? closeModal() : back());
+            saveBtn.onclick = async e => {
                 const btn = e.currentTarget; btn.disabled = true;
+                const err = body.querySelector('#inflowError'); err.textContent = '';
                 try {
-                    if (!pending) {
-                        const amount = L.money(body.querySelector('#inflowAmount').value), paidDate = body.querySelector('#inflowDate').value;
+                    if (step2.hidden) {
+                        const amount = L.money(amountInput.value), paidDate = body.querySelector('#inflowDate').value;
                         if (!amount || amount > Number(s.debtAmount)) throw Error('Summa musbat bo‘lishi va qarzdan oshmasligi kerak');
                         if (typeof confirmSuspiciousPaymentAmount === 'function' && !confirmSuspiciousPaymentAmount(amount)) throw Error('Summani tekshiring');
                         if (!L.date(paidDate) || paidDate > L.today()) throw Error('Tushum sanasini to‘g‘ri tanlang');
                         const proof = await collectProof(body, 'debtInflow');
-                        pending = { studentId: id, requestKey, amount, paidDate, paidTime: body.querySelector('#inflowTime').value, method: proof.paymentMethod, receiptUrl: proof.receiptUrl, expectedDebt: Number(s.debtAmount) };
+                        if (!pending || pending.amount !== amount || pending.paidDate !== paidDate || pending.receiptUrl !== proof.receiptUrl || pending.method !== proof.paymentMethod)
+                            pending = { studentId: id, requestKey, amount, paidDate, paidTime: body.querySelector('#inflowTime').value, method: proof.paymentMethod, receiptUrl: proof.receiptUrl, expectedDebt: Number(s.debtAmount) };
+                        step2.innerHTML = `<div class="ifx-pay-sum ifd-confirm"><div><span>O‘quvchi</span><b>${esc(s.name)}</b></div><div><span>Summa</span><b>${money(pending.amount)}</b></div><div><span>Usul</span><b>${esc(L.METHODS[pending.method] || '')}</b></div><div><span>To‘lovdan keyin qoldiq</span><b>${money(debtNow - pending.amount)}</b></div><div><span>Chek</span><b>biriktirilgan</b></div></div>`;
+                        step1.hidden = true; step2.hidden = false; saveBtn.textContent = 'Qabul qilish'; cancelBtn.textContent = 'Orqaga'; btn.disabled = false;
+                        return;
                     }
                     const result = await apiFetch('/api/inflow', { method: 'POST', body: JSON.stringify(pending) });
                     cacheProvisionedStudent(result.student); closeModal(); refreshAllDebtorViews();
@@ -190,7 +276,8 @@
                     apiFetch('/api/leads').then(leads => setCachedItem(STORAGE_KEYS.leads, leads)).catch(() => {});
                     showMiniToast('To‘lov serverga saqlandi');
                     if (document.querySelector('[data-finance-panel="tolovlar"].active')) render();
-                } catch (err) { body.querySelector('#inflowError').textContent = err.message + (pending ? ' Qayta urinish shu to‘lovni takroran yozmaydi.' : ''); btn.disabled = false; }
+                    window.financeUI?.invalidate?.();
+                } catch (er) { err.textContent = er.message + (pending && !step2.hidden ? ' Qayta urinish shu to‘lovni takroran yozmaydi.' : ''); btn.disabled = false; }
             };
         } catch (e) { alert(e.message); }
     }
@@ -243,11 +330,7 @@
                 ${data.legacyHistory.length ? `<details class="inflow-review-box"><summary>Tekshirilmagan eski arxiv: ${data.legacyHistory.length} ta</summary><p>Quyidagi yozuvlar yuqoridagi jami summaga qo‘shilmagan; takrorlanishi yoki sana/summasi aniqlashtirilishi mumkin.</p>${data.legacyHistory.map(r => `<p>${esc(r.date || 'Sana yo‘q')} · ${r.paid == null ? 'Summa yo‘q' : money(r.paid)} · ${esc(r.id)}</p>`).join('')}</details>` : ''}`;
         } catch (err) { if (root.isConnected) root.textContent = 'To‘lov tarixini yuklashda xatolik: ' + err.message; }
     }
-    function openStudentPayment() {
-        const students = getItem(STORAGE_KEYS.students, []).filter(s => Number(s.debtAmount) > 0);
-        openModal('Reyestrga to‘lov qabul qilish', `<p>Qarzi mavjud o‘quvchini tanlang. Kurs narxi yoki kitob narxini bu yerda tushum deb kiritmang.</p><select id="ledgerPaymentStudent" class="form-control">${opts(students.map(s => [s.id, s.name]), 'O‘quvchini tanlang')}</select>`, '<button type="button" class="btn-primary-sm" id="ledgerPaymentContinue">Davom etish</button>');
-        document.getElementById('ledgerPaymentContinue').onclick = () => { const id = document.getElementById('ledgerPaymentStudent').value; if (id) openPayment(id); };
-    }
+    function openStudentPayment() { openPayment(null, { picker: true }); }
     window.inflowUI = { render, refreshCash: () => refresh(null), paymentFields, collectProof, openPayment,
         renderHistory, openStudentPayment, cashProjection, renderReconciliation,
         isCashLocked: id => state.decisions.some(d => d.cashId === id),

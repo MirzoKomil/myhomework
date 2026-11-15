@@ -4,7 +4,7 @@
 // Yangi chizilmagan joylar mavjud dizaynlardan: Dars jadvali — js/jadvalV3.js, o'quvchi kartasi — schoolUI.openStudent,
 // qolgan bo'limlar — mavjud sahifalar (switchTab) "Admin kabinetga qaytish" chizig'i bilan.
 // Ma'lumot: mahalliy kesh (getItem) + computeAdminHome (kompyuter bosh sahifasi bilan bir xil hisob),
-// /api/finance/overview, /api/finance/cashbook, /api/payroll/preview, /api/school/edit-requests.
+// /api/finance/overview (Bosh sahifa); Moliya — kompyuterdagi Moliya bo'limi (financeUI) telefon ko'rinishida, /api/school/edit-requests.
 // Uslublar: css/adminApp.css (adm- prefiksi).
 (function () {
     'use strict';
@@ -49,7 +49,7 @@
     const ic = (n, s = 18, w = 2.1) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n] || ''}</svg>`;
 
     // ---------- holat ----------
-    const S = { screen: 'home', stack: [], lang: 'all', sec: 'faol', q: '', ftab: 'kassa' };
+    const S = { screen: 'home', stack: [], lang: 'all', sec: 'faol', q: '' };
     let root = null, nav = null, inited = false, toastEl = null, qTimer = null;
     const C = new Map(); // url -> { v, at, p, e }
     function need(url, force) {
@@ -92,9 +92,7 @@
     }
     const monthStart = () => todayKey().slice(0, 8) + '01';
     const finUrl = () => `/api/finance/overview?start=${monthStart()}&end=${todayKey()}&scope=${S.lang}&lite=1`;
-    const cashUrl = () => `/api/finance/cashbook?start=${todayKey()}&end=${todayKey()}&scope=${S.lang}`;
     const APPROVALS = '/api/school/edit-requests?status=pending';
-    const payUrl = lang => `/api/payroll/preview?start=${monthStart()}&end=${todayKey()}&language=${lang}`;
     const teacherName = id => teachers().find(t => String(t.id) === String(id))?.name || '';
     const shortName = n => { const p = String(n || '').trim().split(/\s+/); return p.length > 1 ? `${p[0]} ${p[1][0]}.` : (p[0] || ''); };
 
@@ -191,38 +189,6 @@
             + `<div class="adm-body"><label class="adm-search">${ic('search', 18)}<input id="admQ" type="search" aria-label="Oʻquvchi qidirish" placeholder="Ism, telefon yoki ID" value="${esc(S.q)}" data-m-q autocomplete="off"></label>${langSeg()}${chips}${body}</div>`;
     }
 
-    function scrFinance() {
-        const fin = need(finUrl()), cb = need(cashUrl());
-        const nr = fin?.pnl ? num(fin.pnl.net_revenue ?? fin.pnl.revenue) : 0;
-        // Kompyuter Moliya bilan bir xil: sof tushum (qaytarishlar ayrilgan), chiqim = sof tushum − sof foyda.
-        const sum = fin?.pnl ? `<div class="adm-card adm-tri"><span><small>Sof tushum</small><b class="is-green">${mln(nr)}</b></span><span><small>Chiqim</small><b class="is-red">${mln(nr - num(fin.pnl.net_profit))}</b></span><span><small>Sof foyda</small><b>${mln(fin.pnl.net_profit)}</b></span></div>${S.lang !== 'all' ? '<p class="adm-note">Foyda umumiy xarajat ulushi bilan hisoblangan.</p>' : ''}`
-            : errOf(finUrl()) ? errBox(finUrl()) : sk(1);
-        const tabs = `<div class="adm-chips">${[['kassa', 'Kassa'], ['maosh', 'Maoshlar']].map(([k, l]) => `<button type="button" class="adm-chip${S.ftab === k ? ' is-on' : ''}" data-m-ftab="${k}">${l}</button>`).join('')}
-            <button type="button" class="adm-chip" data-m-crm="finance:tolovlar">Toʻlovlar</button><button type="button" class="adm-chip" data-m-stu="qarzdorlar">Qarzdorlar</button><button type="button" class="adm-chip" data-m-crm="finance:jarimalar">Jarimalar</button></div>`;
-        let body;
-        if (S.ftab === 'kassa') {
-            const entries = (cb?.days || []).flatMap(d => d.entries || []);
-            body = label(`Bugungi kassa${cb ? ` · +${mln(cb.inflow)} / −${mln(cb.outflow)}` : ''}`) + (cb ? (entries.length ? `<div class="adm-list">${entries.slice(0, 60).map(e => {
-                const inn = num(e.sign) > 0;
-                return `<div class="adm-row"><span class="adm-ico is-${inn ? 'green' : 'red'}">${ic(inn ? 'in' : 'out', 18)}</span><span class="adm-row-t"><b>${esc(e.name || e.counterparty || e.description || window.FinanceEngine?.CATEGORY?.[e.category]?.name || e.category || '—')}</b><small>${esc([e.transferLeg ? 'Oʻtkazma' : e.type === 'receipt' ? (inn ? 'Toʻlov' : 'Bekor qilingan toʻlov') : inn ? 'Kirim' : 'Chiqim', e.managerName, (fin?.accounts || []).find(a => a.id === e.account)?.name].filter(Boolean).join(' · '))}</small></span><b class="is-${inn ? 'green' : 'red'}">${inn ? '+' : '−'}${fmt(Math.abs(num(e.amount)))}</b></div>`;
-            }).join('')}</div>` : empty('Bugun kassa harakati yoʻq')) : errOf(cashUrl()) ? errBox(cashUrl()) : sk(3));
-        } else {
-            const langs = S.lang === 'all' ? ['english', 'russian'] : [S.lang];
-            const res = langs.map(l => need(payUrl(l)));
-            const rows = res.filter(Boolean).flatMap((r, i) => (r.rows || []).map(x => ({ ...x, _lang: langs[i] })));
-            const loading = res.some(r => !r) && !langs.some(l => errOf(payUrl(l)));
-            body = label('Maoshlar · oy boshidan bugungacha') + (loading ? sk(3) : rows.length ? `<div class="adm-list">${rows.slice(0, 80).map(r => {
-                const amt = r.langTakeHome ?? r.takeHome ?? r.total;
-                const paid = r.status === 'paid' || r.paid;
-                const av = window.schoolUI?.staffAvatarOf ? window.schoolUI.staffAvatarOf(r.employeeId) : '';
-                return `<div class="adm-row">${av ? `<span class="adm-av"><img src="${esc(av)}" alt=""></span>` : ''}<span class="adm-row-t"><b>${esc(r.name || r.employeeName || '—')}</b><small>${esc([r.roleLabel || r.role, LANG[r._lang]].filter(Boolean).join(' · '))}${num(r.fineDeducted) ? ` · jarima −${fmt(r.fineDeducted)}` : ''}</small></span><span class="adm-row-r"><b>${fmt(amt)}</b>${tag(paid ? 'Berildi' : 'Berilmagan', paid ? 'green' : 'amber')}</span></div>`;
-            }).join('')}</div>` : langs.some(l => errOf(payUrl(l))) ? errBox(payUrl(langs.find(l => errOf(payUrl(l))) || langs[0]), 'Maoshlarni olib boʻlmadi') : empty('Maosh hisoblari yoʻq'));
-        }
-        const right = `<button type="button" class="adm-btn adm-btn--pri" data-m-crm="finance:tolovlar">Toʻlovlar</button>`;
-        return top('Moliya', `${MON[tk().getUTCMonth()][0].toUpperCase() + MON[tk().getUTCMonth()].slice(1)} ${tk().getUTCFullYear()}`, { right })
-            + `<div class="adm-body">${langSeg()}${sum}${tabs}${body}</div>`;
-    }
-
     const meAv = u => (u.avatar && /^(\/|https:)/.test(u.avatar) ? u.avatar : window.schoolUI?.staffAvatarOf && u.employeeId ? window.schoolUI.staffAvatarOf(u.employeeId) : '');
     function scrMenu() {
         const u = user(), ap = peek(APPROVALS);
@@ -240,7 +206,7 @@
     }
 
     // ---------- chizish, navigatsiya ----------
-    const SCR = { home: scrHome, students: scrStudents, finance: scrFinance, menu: scrMenu };
+    const SCR = { home: scrHome, students: scrStudents, menu: scrMenu };
     const TAB_OF = { home: 'home', students: 'menu', sales: 'sales', finance: 'finance', menu: 'menu', jadval: 'jadval' };
     function render(anim) {
         if (!root || !isOn()) return;
@@ -287,13 +253,15 @@
         S.stack = [];
         S.tabbed = true;
         if (screen === 'jadval') { openCrm('timetable', { asTab: 'jadval' }); return; }
+        // Moliya (15-noyabr, D dizayn T_*): kompyuterdagi yangi Moliya bo'limi telefon ko'rinishida, pastki menyu bilan.
+        if (screen === 'finance') { openCrm('finance:umumiy', { asTab: 'finance' }); return; }
         if (screen === 'sales' && window.ropApp?.setGuest) { openRopGuest(); return; }
         S.screen = screen;
         render(true);
     }
     function go(screen, extra = {}) {
         armGuard();
-        if (screen === 'jadval' || screen === 'sales') { tabTo(screen); return; }
+        if (screen === 'jadval' || screen === 'sales' || screen === 'finance') { tabTo(screen); return; }
         leaveCrm();
         S.stack.push({ screen: S.screen });
         Object.assign(S, extra, { screen });
@@ -329,7 +297,7 @@
         }
         window.scrollTo?.(0, 0);
         document.querySelector('.adm-backbar')?.remove();
-        if (S.screen === 'crm' && !S.card) {
+        if (S.screen === 'crm' && !S.card && !S.crmTab) {
             const b = document.createElement('button');
             b.type = 'button'; b.className = 'adm-backbar'; b.innerHTML = `${ic('back', 18, 2.4)}Admin kabinetga qaytish`;
             b.onclick = () => history.back();
@@ -397,7 +365,7 @@
 
     // ---------- hodisalar ----------
     function onClick(e) {
-        const t = e.target.closest('[data-m-back],[data-m-go],[data-m-hr],[data-m-rop],[data-m-crm],[data-m-stu],[data-m-sec],[data-m-lang],[data-m-student],[data-m-ftab],[data-m-retry],[data-m-add],[data-m-notif],[data-m-logout],[data-m-desk]');
+        const t = e.target.closest('[data-m-back],[data-m-go],[data-m-hr],[data-m-rop],[data-m-crm],[data-m-stu],[data-m-sec],[data-m-lang],[data-m-student],[data-m-retry],[data-m-add],[data-m-notif],[data-m-logout],[data-m-desk]');
         if (!t) return;
         const d = t.dataset;
         if ('mBack' in d) { history.back(); return; }
@@ -408,7 +376,6 @@
         if ('mStu' in d) { go('students', { sec: d.mStu, q: '' }); return; }
         if ('mSec' in d) { S.sec = d.mSec; render(false); return; }
         if ('mLang' in d) { S.lang = d.mLang; _hc = null; render(false); return; }
-        if ('mFtab' in d) { S.ftab = d.mFtab; render(false); return; }
         if ('mStudent' in d) { openCrm('students', { card: true }); const ui = window.schoolUI; if (ui?.openStudent) setTimeout(() => ui.openStudent(d.mStudent), 60); return; }
         if ('mRetry' in d) { const c = C.get(d.mRetry); if (c) { c.at = 0; c.e = null; } need(d.mRetry, true); render(false); return; }
         if ('mAdd' in d) { openCrm('students'); setTimeout(() => document.getElementById('addStudentBtn')?.click(), 250); return; }
@@ -478,7 +445,7 @@
     }
     // O'quvchi kartasi (telefon, Bosh/O'quvchilar ro'yxatidan ochilgan): kartadagi "‹" — Orqaga bilan bir xil.
     function cardBack() { if (S.screen === 'crm' && S.card) { history.back(); return true; } return false; }
-    window.adminApp = { init, go, back, cardBack, openCrm, closeRopGuest, closeHrGuest, render: () => render(false), state: S, _test: { home, scrHome, scrStudents, scrFinance, scrMenu, isOn } };
+    window.adminApp = { init, go, back, cardBack, openCrm, closeRopGuest, closeHrGuest, render: () => render(false), state: S, _test: { home, scrHome, scrStudents, scrMenu, isOn } };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(init, 120));
     else setTimeout(init, 120);
 })();

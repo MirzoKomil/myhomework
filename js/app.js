@@ -230,7 +230,9 @@ const ROLE_TABS = {
     hr:            ['dashboard', 'hr', 'guides'],
     // Akademik rahbar (Head of Teachers): telefonda o'z kabineti (js/akademikApp.js); kompyuterda — Bosh, o'quvchilar,
     // Akademik bo'lim (davomat, progress), dars jadvali (o'qish) va yo'riqnomalar. Ma'lumot serverda tili bo'yicha kesiladi.
-    akademik:      ['dashboard', 'students', 'teachers-section', 'timetable', 'guides']
+    akademik:      ['dashboard', 'students', 'teachers-section', 'timetable', 'guides'],
+    // Investor (15-noyabr): faqat Moliya › Investor kabineti (faqat ko'rish). CRM ma'lumoti server tomonda ham yopiq.
+    investor:      ['finance']
 };
 
 // 8-vazifa: Sotuv bo'limida hech qanday amal (o'chirish, menejer/bosqich
@@ -359,6 +361,8 @@ function applyRoleBasedAccess(user) {
         setTimeout(() => switchTab(restoreTab || 'hr', restoreCtx), 50);
     } else if (role === 'akademik') {
         setTimeout(() => switchTab(restoreTab || 'dashboard', restoreCtx), 50);
+    } else if (role === 'investor') {
+        setTimeout(() => switchTab('finance', { financeSection: 'investor' }), 50);
     } else {
         // employee yoki noma'lum rol — mobil ilovaga o'tkazish
         setTimeout(() => switchTab(restoreTab || 'student-app', restoreCtx), 50);
@@ -1072,7 +1076,14 @@ function updateRdPageHead(tab = _rdCurrentTab) {
     // Bitta tildagi xodimda almashtirgich yashirin — sarlavhada uning o'z tili.
     const own = document.body.classList.contains('lang-fixed') && typeof getUserOwnLang === 'function' ? getUserOwnLang() : null;
     const langLabel = own ? (own === 'russian' ? 'Rus tili' : 'Ingliz tili') : lang ? lang.textContent.trim() : '';
-    const parts = [active && !active.hidden ? active.textContent.trim() : '', langLabel ? langLabel + ' yoʻnalishi' : ''].filter(Boolean);
+    // Tab ichidagi son belgisi (Moliya › Muammolar) sarlavhaga qo'shilmaydi.
+    const activeText = active ? [...active.childNodes].filter(n => !(n.classList && n.classList.contains('fin-nav-cnt'))).map(n => n.textContent).join('').trim() : '';
+    // Moliya: sarlavha ostida tanlangan davr ham ("To'lovlar · Rus tili yo'nalishi · 1–15 noyabr 2026").
+    const investorView = getCurrentUser()?.role === 'investor' && pinned.closest?.('#tab-finance');
+    const finPeriod = pinned.closest?.('#tab-finance') && !investorView && window.financeUI?.periodLabel ? window.financeUI.periodLabel() : '';
+    // Investor kabineti: til tanlagich yo'q — sarlavhada investorga biriktirilgan maktab.
+    const schoolText = investorView ? (window.investorUI?.schoolLabel?.() || '') : langLabel;
+    const parts = [active && !active.hidden ? activeText : '', schoolText ? schoolText + ' yoʻnalishi' : '', finPeriod].filter(Boolean);
     // Bo'lim o'z izohini bersa (Darslik ichki bo'limi, yordamchi ustoz) — js/lessonHub.js, js/whiteboard.js.
     const sec = active && !active.hidden ? active.dataset.teachersSection : '';
     let custom = null;
@@ -12187,7 +12198,8 @@ function renderMarketingTargetPanel() {
 }
 
 // --- Moliya Bo'limi ---
-let _financeLang = 'english';
+// Tanlangan til qayta yuklashdan keyin ham saqlanadi (boshqa bo'limlar bilan umumiy 'mh_lastLang').
+let _financeLang = (() => { try { const v = localStorage.getItem('mh_lastLang'); return v === 'russian' || v === 'english' ? v : 'english'; } catch (_) { return 'english'; } })();
 
 function applyFinanceLang() {
     const panel = document.querySelector('.finance-panel.active');
@@ -12199,12 +12211,18 @@ function applyFinanceLang() {
 
 // Eski bo'limlar (Cash Flow, Moliyaviy reja, Xarajatlar) yangi Moliya bo'limlariga ko'chdi.
 const FINANCE_SECTION_ALIASES = { cashflow: 'hisobotlar', 'moliyaviy-reja': 'umumiy', xarajatlar: 'operatsiyalar' };
+// D dizayn (15-noyabr): eski bo'limlar Batafsil ichida — data-finance-section qiymatlari o'zgarmagan, tab tugmasi "Batafsil" yonadi.
+const FINANCE_BATAFSIL_SECTIONS = ['kassa', 'operatsiyalar', 'qarzlar', 'hisobotlar', 'solishtirish', 'moliya-sozlamalar', 'kengaytirilgan'];
 function switchFinanceSection(section) {
     section = FINANCE_SECTION_ALIASES[section] || section;
+    // Investor roli: faqat o'z kabineti.
+    if (getCurrentUser()?.role === 'investor') section = 'investor';
     _tabContext.financeSection = section;
+    const navKey = FINANCE_BATAFSIL_SECTIONS.includes(section) ? 'batafsil' : section;
     document.querySelectorAll('[data-finance-section]').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.financeSection === section);
+        btn.classList.toggle('active', btn.dataset.financeSection === navKey);
     });
+    document.querySelector('[data-fin-more-toggle]')?.classList.toggle('active', ['investor', 'maoshlar', 'kpi', 'jarimalar', 'batafsil', ...FINANCE_BATAFSIL_SECTIONS].includes(section));
     document.querySelectorAll('.finance-panel').forEach(panel => {
         panel.classList.toggle('active', panel.dataset.financePanel === section);
     });
@@ -12213,11 +12231,42 @@ function switchFinanceSection(section) {
     if (section === 'tolovlar') inflowUI.render();
     if (section === 'maoshlar' || section === 'kpi') payrollUI.render(section);
     if (section === 'jarimalar') window.jarimaAdmin?.render();
+    if (typeof updateRdPageHead === 'function') requestAnimationFrame(() => updateRdPageHead('finance'));
+    if (section === 'investor') window.investorUI?.render();
     if (window.financeUI?.handles(section)) financeUI.render(section);
     persistCurrentTab();
 }
 
 function renderFinance() {
+    const investorRole = getCurrentUser()?.role === 'investor';
+    // Til hali tanlanmagan bo'lsa (yangi brauzer): o'quvchilari ko'p bo'lgan yo'nalish ochiladi — bo'sh (0 so'm) maktab emas.
+    if (!renderFinance._langChecked) {
+        renderFinance._langChecked = true;
+        let stored = null; try { stored = localStorage.getItem('mh_lastLang'); } catch (_) { /* yo'q */ }
+        if (stored !== 'english' && stored !== 'russian' && typeof getItem === 'function') {
+            const count = { english: 0, russian: 0 };
+            for (const st of getItem(STORAGE_KEYS.students, []) || []) if (count[st.subject] != null && st.status !== 'inactive') count[st.subject]++;
+            if (count.russian > count.english) _financeLang = 'russian';
+        }
+    }
+    // Investor kabineti: boshqa tablar va til tanlagich ko'rinmaydi.
+    if (investorRole) {
+        document.querySelectorAll('#financeSectionNav > *').forEach(el => { el.style.display = el.dataset?.financeSection === 'investor' ? '' : 'none'; });
+        document.querySelector('[data-finance-section="investor"]').hidden = false;
+        const lf = document.getElementById('financeLangFilter'); if (lf) lf.style.display = 'none';
+        // Telefon sarlavhasi: "+ To'lov" va davr/maktab tanlagichi investorga kerak emas.
+        document.querySelectorAll('[data-fin-ptolov], [data-fin-period-open]').forEach(el => { el.style.display = 'none'; });
+    }
+    const moreBtn = document.querySelector('[data-fin-more-toggle]'), moreMenu = document.querySelector('[data-fin-more-menu]');
+    if (moreBtn && !moreBtn.dataset.financeBound) {
+        moreBtn.dataset.financeBound = '1';
+        // Telefon varag'i: sarlavha qatlami (sticky/blur) ichida fixed ishlamasligi uchun body'ga ko'chiriladi.
+        document.body.appendChild(moreMenu);
+        moreBtn.addEventListener('click', e => { e.stopPropagation(); moreMenu.hidden = !moreMenu.hidden; moreBtn.setAttribute('aria-expanded', String(!moreMenu.hidden)); });
+        moreMenu.querySelector('[data-fin-more-close]')?.addEventListener('click', () => { moreMenu.hidden = true; moreBtn.setAttribute('aria-expanded', 'false'); });
+        moreMenu.querySelectorAll('[data-fin-more-go]').forEach(b => b.addEventListener('click', () => { moreMenu.hidden = true; moreBtn.setAttribute('aria-expanded', 'false'); switchFinanceSection(b.dataset.finMoreGo); }));
+        document.addEventListener('click', e => { if (!moreMenu.hidden && (!e.target.closest('.fin-nav-more, [data-fin-more-menu]'))) { moreMenu.hidden = true; moreBtn.setAttribute('aria-expanded', 'false'); } });
+    }
     document.querySelectorAll('[data-finance-section]').forEach(btn => {
         if (btn.dataset.financeBound) return;
         btn.dataset.financeBound = '1';
@@ -12228,6 +12277,7 @@ function renderFinance() {
         btn.dataset.financeLangBound = '1';
         btn.addEventListener('click', () => {
             _financeLang = btn.dataset.financeLang;
+            try { localStorage.setItem('mh_lastLang', _financeLang); } catch (_) { /* saqlash shart emas */ }
             document.querySelectorAll('[data-finance-lang]').forEach(b =>
                 b.classList.toggle('active', b.dataset.financeLang === _financeLang)
             );
@@ -12235,6 +12285,7 @@ function renderFinance() {
             if (_tabContext.financeSection === 'tolovlar') inflowUI.render();
             if (['maoshlar', 'kpi'].includes(_tabContext.financeSection)) payrollUI.render(_tabContext.financeSection);
             if (window.financeUI?.handles(_tabContext.financeSection)) financeUI.onLangChange();
+            if (_tabContext.financeSection === 'muammolar' || _tabContext.financeSection === 'umumiy') window.financeUI?.refreshProblemCount?.();
         });
     });
     document.querySelectorAll('[data-finance-lang]').forEach(b =>

@@ -4,7 +4,7 @@
 (function () {
     'use strict';
     const F = FinanceEngine;
-    const SECTIONS = ['umumiy', 'kassa', 'operatsiyalar', 'qarzlar', 'hisobotlar', 'solishtirish', 'moliya-sozlamalar'];
+    const SECTIONS = ['umumiy', 'batafsil', 'muammolar', 'kengaytirilgan', 'kassa', 'operatsiyalar', 'qarzlar', 'hisobotlar', 'solishtirish', 'moliya-sozlamalar'];
     const state = {
         start: '', end: '', preset: 'month', consolidated: false, basis: 'cash', report: 'pnl', debtTab: 'receivables',
         overview: null, loadingKey: '', error: '', cashAccount: '', cashbook: null, txns: null, txFilter: { type: '', category: '', search: '' },
@@ -16,6 +16,13 @@
     // Buxgalteriya uslubi: manfiy summa qavs ichida (ustun sarlavhasida "so'm").
     const acc = n => (Number(n) < 0 ? '(' + num(n) + ')' : num(n));
     const money = n => (Number(n) < 0 ? '−' : '') + num(n) + ' so‘m';
+    // Telefon (≤480px): KPI raqamlari qisqa — "17,5 mln so'm", qatorga sig'adi.
+    const narrow = () => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(max-width: 480px)').matches;
+    const moneyShort = n => {
+        const v = Math.abs(Number(n) || 0), sg = Number(n) < 0 ? '−' : '';
+        const f = (x, u) => sg + String(Math.round(x * 10) / 10).replace('.', ',') + ' ' + u + ' so‘m';
+        return v >= 1e9 ? f(v / 1e9, 'mlrd') : v >= 1e6 ? f(v / 1e6, 'mln') : v >= 1e4 ? f(v / 1e3, 'ming') : money(n);
+    };
     const pctText = v => (v == null ? '—' : String(v).replace('.', ',') + '%');
     const dateText = d => (d ? d.slice(8, 10) + '.' + d.slice(5, 7) + '.' + d.slice(0, 4) : '—');
     const MONTHS = ['Yan', 'Fev', 'Mar', 'Apr', 'May', 'Iyun', 'Iyul', 'Avg', 'Sen', 'Okt', 'Noy', 'Dek'];
@@ -91,24 +98,24 @@
         } catch (e) { state.error = e.message; state.overview = null; }
         return state.overview;
     }
-    function invalidate() { quick.dayKey = ''; quick.payKey = ''; state.overview = null; state.cashbook = null; state.txns = null; state.auditRows = null; state.loadingKey = ''; }
+    function invalidate() { state.negAccounts = null; state.investorDue = null; state.resolved = null; state.summary = null; state.summaryKey = ''; quick.dayKey = ''; quick.payKey = ''; state.overview = null; state.cashbook = null; state.txns = null; state.auditRows = null; state.loadingKey = ''; }
 
     // ---------- Umumiy elementlar ----------
     function toolbar(opts = {}) {
         const presets = [['month', 'Bu oy'], ['prev', 'O‘tgan oy'], ['quarter', 'Oxirgi 3 oy'], ['ytd', 'Yil boshidan'], ['all', 'Hammasi']];
-        return `<div class="fin-toolbar">
+        return `<div class="fin-toolbar${opts.compact ? ' fin-toolbar--inline' : ''}">
             <div class="fin-presets" role="group" aria-label="Davr">${presets.map(([k, l]) => `<button type="button" class="fin-chip ${state.preset === k ? 'active' : ''}" aria-pressed="${state.preset === k}" data-fin-preset="${k}">${l}</button>`).join('')}</div>
             <div class="fin-dates">
                 <label class="fin-field"><span>Dan</span><input type="date" lang="en-GB" class="form-control" data-fin-start value="${state.start}" max="${F.today()}"></label>
                 <label class="fin-field"><span>Gacha</span><input type="date" lang="en-GB" class="form-control" data-fin-end value="${state.end}" max="${F.today()}"></label>
             </div>
-            <label class="fin-switch" title="Ikkala maktab va umumiy xarajatlar birga"><input type="checkbox" data-fin-consolidated ${state.consolidated ? 'checked' : ''}><span>Konsolidatsiya</span></label>
+            ${opts.compact ? '' : `<label class="fin-switch" title="Ikkala maktab va umumiy xarajatlar birga"><input type="checkbox" data-fin-consolidated ${state.consolidated ? 'checked' : ''}><span>Konsolidatsiya</span></label>`}
             ${opts.basis ? `<div class="fin-seg" role="group" aria-label="Hisob usuli">
                 <button type="button" class="${state.basis === 'cash' ? 'active' : ''}" aria-pressed="${state.basis === 'cash'}" data-fin-basis="cash" title="Pul kirgan va chiqqan kunida tan olinadi">Kassa usuli</button>
                 <button type="button" class="${state.basis === 'accrual' ? 'active' : ''}" aria-pressed="${state.basis === 'accrual'}" data-fin-basis="accrual" title="Tushum kurs davomida, maosh hisoblangan oyida, xarajat hujjat sanasida (IFRS 15)">Hisoblash usuli</button></div>` : ''}
             ${opts.actions ? `<div class="fin-toolbar-actions">${opts.actions}</div>` : ''}
         </div>
-        <p class="fin-scope">Ko‘rinish: <strong>${esc(scopeLabel())}</strong> · <strong>${dateText(state.start)} — ${dateText(state.end)}</strong>${state.overview?.closedThrough ? ` · <span class="fin-badge fin-badge--muted" title="Shu oygacha bo‘lgan davr yopilgan va muzlatilgan">${esc(state.overview.closedThrough)} gacha yopilgan</span>` : ''}</p>`;
+        ${opts.compact ? '' : `<p class="fin-scope">Ko‘rinish: <strong>${esc(scopeLabel())}</strong> · <strong>${dateText(state.start)} — ${dateText(state.end)}</strong>${state.overview?.closedThrough ? ` · <span class="fin-badge fin-badge--muted" title="Shu oygacha bo‘lgan davr yopilgan va muzlatilgan">${esc(state.overview.closedThrough)} gacha yopilgan</span>` : ''}</p>`}`;
     }
     function bindToolbar(root, rerender) {
         root.querySelectorAll('[data-fin-preset]').forEach(b => b.addEventListener('click', () => {
@@ -166,20 +173,21 @@
     }
 
     // ---------- Umumiy ko'rinish ----------
-    function qualityAlerts(o) {
+    function qualityAlerts(o) { const items = alertItems(o); if (!items.length) items.push(['ok', 'Ma’lumot sifati tekshiruvidan o‘tdi', null]); return alertsHtml(items); }
+    function alertItems(o) {
         const q = o.quality, items = [];
         if (o.seals && !o.seals.ok && !o.seals.badSnapshots?.length) items.push(['danger', `Ma’lumot yaxlitligi buzilgan: ${esc(o.seals.table || '')} — ${esc(o.seals.reason || '')}. Bazada yashirin o‘zgartirish bo‘lgan, oy yopish bloklangan${o.seals.latched && isDirector() ? ' <button type="button" class="fin-link" data-fin-alarm-ack>Ko‘rib chiqdim — yopish</button>' : ''}`, 'solishtirish']);
         if (o.contractDebtMismatches?.length) items.push(['warning', `${o.contractDebtMismatches.length} ta o‘quvchida shartnoma aktivi CRM’dagi qarzdan katta — tekshirish kerak`, 'solishtirish']);
         if (o.seals?.badSnapshots?.length) items.push(['danger', `Yopilgan oy nusxasi bazada o‘zgartirilgan (${o.seals.badSnapshots.join(', ')}) — u ishlatilmayapti, hisobot joriy ma’lumotdan tuzildi. Oy yopish bloklangan`, 'solishtirish']);
         if (!o.auditChain.ok) items.push(['danger', `Audit jurnali zanjiri ${o.auditChain.brokenAt}-yozuvda uzilgan — jurnal bazada to‘g‘ridan-to‘g‘ri o‘zgartirilgan`, 'solishtirish']);
-        if (!o.balance.balanced) items.push(['danger', `Balans tenglamasi ${money(o.balance.imbalance)} ga mos kelmayapti`, 'hisobotlar', 'balance']);
+        if (o.balance && !o.balance.balanced) items.push(['danger', `Balans tenglamasi ${money(o.balance.imbalance)} ga mos kelmayapti`, 'hisobotlar', 'balance']);
         if (!o.cashflow.reconciled) items.push(['danger', `Pul oqimi hisob qoldiqlari bilan ${money(o.cashflow.difference)} farq qiladi`, 'hisobotlar', 'cashflow']);
         if (q.suspicious.length) items.push(['danger', `${q.suspicious.length} ta shubhali tushum (${money(q.suspicious.reduce((n, r) => n + r.amount, 0))}) reyestrda turibdi — test yoki xato yozuvga o‘xshaydi (barcha davrlar)`, 'solishtirish']);
         const diff = o.accounts.filter(a => a.check && a.check.difference !== 0);
         if (diff.length) items.push(['danger', `${diff.length} ta hisobda kitobdagi va haqiqiy qoldiq farq qiladi: ${diff.map(a => esc(a.name) + ' ' + money(a.check.difference)).join('; ')}`, 'kassa']);
         const unchecked = o.accounts.filter(a => a.active && a.equivalent && (a.inflow || a.outflow) && !a.check);
         if (unchecked.length) items.push(['warning', `${unchecked.length} ta hisob qoldig‘i haqiqiy bank/karta/kassa qoldig‘i bilan hali solishtirilmagan`, 'kassa']);
-        if (o.balance.suspense) items.push(['warning', `${money(o.balance.suspense)} to‘lov usuli aniqlanmagan tushum “Aniqlanmagan” hisobida turibdi — qaysi hisobga tushganini aniqlash kerak`, 'kassa']);
+        // Egasi qarori (15-noyabr): "Aniqlanmagan" hisob muammo sifatida chiqmaydi — Batafsil › Kassa'da ko'rinadi.
         if (o.balance.uzumReceivable) items.push(['warning', `Uzum Nasiya’dan ${money(o.balance.uzumReceivable)} hali olinmagan — bu pul emas, olinadigan summa`, 'kassa']);
         if (o.sealKeyConfigured === false) items.push(['danger', 'Serverda FIN_SEAL_KEY (yoki JWT_SECRET) o‘rnatilmagan — ilova belgilari ochiq kalit bilan imzolanmoqda, soxtalashtirishdan himoya yo‘q', 'sozlamalar']);
         if (o.forfeitedButActive?.length) items.push(['warning', `${o.forfeitedButActive.length} ta pulsiz tugatilgan shartnoma o‘quvchisi yana faol — tugatishni qayta ko‘rib chiqing`, 'solishtirish']);
@@ -188,11 +196,12 @@
         if (o.dropouts?.length) items.push(['warning', `${o.dropouts.length} ta ketgan o‘quvchida ${money(o.dropouts.reduce((n, d) => n + d.liability, 0))} majburiyat qolgan — qaytaring yoki pulsiz tugating`, 'solishtirish']);
         if (o.cashflowSegments && !o.cashflowSegments.reconciled) items.push(['danger', 'Segmentlar bo‘yicha pul oqimi konsolidatsiyaga teng emas', 'hisobotlar', 'cashflow']);
         if (q.paidSalaryWithoutCash.length) items.push(['warning', `${q.paidSalaryWithoutCash.length} ta “to‘landi” deb belgilangan maosh kassadan chiqim sifatida yozilmagan`, 'solishtirish']);
-        const noExpenses = !['cost_of_services', 'marketing', 'sales_payroll', 'admin_payroll', 'rent', 'software', 'admin'].some(k => o.pnl[k]);
-        if (noExpenses && o.pnl.net_revenue > 0) items.push(['warning', 'Bu davr uchun birorta ham xarajat kiritilmagan — foyda tushumga teng ko‘rinadi va haqiqatni aks ettirmaydi', 'operatsiyalar']);
-        if (o.pnl.prior_adjustments) items.push(['warning', `Yopilgan oylardan keyin aniqlangan tuzatishlar: ${money(o.pnl.prior_adjustments)} (shu davr natijasiga kiritildi)`, 'hisobotlar', 'pnl']);
+        // "Xarajat kiritilmagan" — muammo emas, Umumiy kartasidagi "to'liq emas" belgisi.
+        if (o.pnl?.prior_adjustments) items.push(['warning', `Yopilgan oylardan keyin aniqlangan tuzatishlar: ${money(o.pnl.prior_adjustments)} (shu davr natijasiga kiritildi)`, 'hisobotlar', 'pnl']);
         if (o.closeCandidate?.issues && !o.closeCandidate.issues.length) items.push(['ok', `${o.closeCandidate.month} oyini yopishga tayyor`, 'moliya-sozlamalar']);
-        if (!items.length) items.push(['ok', 'Ma’lumot sifati tekshiruvidan o‘tdi: balans, pul oqimi va qoldiqlar mos, shubhali yozuv yo‘q', null]);
+        return items;
+    }
+    function alertsHtml(items) {
         return `<div class="fin-alerts" role="list">${items.map(([tone, msg, go, report]) => `<div role="listitem" class="fin-alert fin-alert--${tone}">${ICON[tone]}<span>${msg}</span>${go ? `<button type="button" class="fin-link" data-fin-go="${go}" ${report ? `data-fin-report="${report}"` : ''}>Ko‘rish →</button>` : ''}</div>`).join('')}</div>`;
     }
     function trendChart(rows) {
@@ -252,7 +261,7 @@
         }
         if (!jobs.length) return;
         await Promise.all(jobs);
-        if (!root.isConnected || currentSection() !== 'umumiy') return;
+        if (!root.isConnected || currentSection() !== 'kengaytirilgan') return;
         const c = root.querySelector('[data-fin-qcash]'); if (c) c.innerHTML = quickCash();
         const pp = root.querySelector('[data-fin-qpay]'); if (pp) pp.innerHTML = quickPay();
     }
@@ -260,26 +269,34 @@
         const o = state.overview, k = o.kpis, p = o.pnl, b = o.balance;
         const cashNote = scope() === 'all' ? `naqd + karta + bank · ${dateText(o.period.end)}` : 'yo‘nalish ulushi (umumiy hisoblardagi oqim)';
         const out = (p.net_revenue || 0) - (p.net_profit || 0);
-        const alertsHtml = qualityAlerts(o);
-        const nAlerts = (alertsHtml.match(/fin-alert--(danger|warning)/g) || []).length, hasDanger = /fin-alert--danger/.test(alertsHtml);
+        const sm = narrow(), km = sm ? moneyShort : money, cash = state.basis === 'cash';
+        const resTitle = cash ? (scope() === 'all' ? 'Kassa bo‘yicha qoldiq' : 'Kassa bo‘yicha qoldiq (ulush bilan)') : 'Sof foyda (hisoblash usuli)';
+        const resSmall = cash ? 'Hisoblangan oyliklarsiz · asosiy natija Umumiy’da' : 'Tushum va xarajat o‘z davrida · oyliklar bilan';
+        const goUm = '<button type="button" class="fin-link" data-fin-go="umumiy">Umumiy’ga o‘tish →</button>';
+        const resNote = cash
+            ? (sm ? `“Kassa bo‘yicha qoldiq” — faqat haqiqatda kirgan va chiqqan pul (hisoblangan oyliklarsiz). ${goUm}`
+                : `“Kassa bo‘yicha qoldiq” — faqat haqiqatda kirgan va chiqqan pul (kirim − chiqim, marja ${pctText(p.margins.net)}); hisoblangan, lekin hali to‘lanmagan oyliklar kirmaydi. Hisoblangan oyliklar bilan asosiy natija — “Qolgan pul”: ${goUm}`)
+            : (sm ? `“Sof foyda” — tushum va xarajat (hisoblangan oyliklar bilan) o‘z davrida tan olinadi. ${goUm}`
+                : `“Sof foyda (hisoblash usuli)” — tushum kurs davomida, maosh hisoblangan oyida, xarajat hujjat sanasida tan olinadi (marja ${pctText(p.margins.net)}). Pul harakati uchun — “Kassa usuli”: ${goUm}`);
+        const hasCogs = Math.round(Number(p.gross_profit) || 0) !== Math.round(Number(p.net_revenue) || 0);
         root.innerHTML = `<div class="fin-wrap"><div class="fin-qhead"><button type="button" class="fin-qbtn" data-fin-qexp>Xarajat yozish</button><button type="button" class="fin-qbtn fin-qbtn--pri" data-fin-go="tolovlar">Toʻlov qabul qilish</button></div>${toolbar({ basis: true })}
             <div class="fin-kpi4">
-                <button type="button" class="fin-kpi" data-fin-go="hisobotlar" data-fin-report="pnl"><span>Kirim</span><strong class="pos">${money(p.net_revenue)}</strong><small>sof tushum · qaytarishlar ${money(p.refunds || 0)}</small></button>
-                <button type="button" class="fin-kpi" data-fin-go="operatsiyalar"><span>Chiqim</span><strong class="neg">${money(out)}</strong><small>maosh, reklama, ijara va boshqalar</small></button>
-                <button type="button" class="fin-kpi" data-fin-go="hisobotlar" data-fin-report="pnl"><span>${scope() === 'all' ? 'Sof foyda' : 'Sof foyda (ulush bilan)'}</span><strong class="${p.net_profit < 0 ? 'neg' : ''}">${money(p.net_profit)}</strong><small>kirim − chiqim · marja ${pctText(p.margins.net)}</small></button>
-                <button type="button" class="fin-kpi" data-fin-go="qarzlar"><span>Qarzlar</span><strong class="neg">${money(o.receivables.total)}</strong><small>muddati oʻtgan: ${money(o.receivables.overdue)}</small></button>
+                <button type="button" class="fin-kpi" data-fin-go="hisobotlar" data-fin-report="pnl"><span>Kirim</span><strong class="pos">${km(p.net_revenue)}</strong><small>sof tushum · qaytarishlar ${km(p.refunds || 0)}</small></button>
+                <button type="button" class="fin-kpi" data-fin-go="operatsiyalar"><span>Chiqim</span><strong class="neg">${km(out)}</strong><small>maosh, reklama, ijara va boshqalar</small></button>
+                <button type="button" class="fin-kpi" data-fin-go="hisobotlar" data-fin-report="pnl"><span>${resTitle}</span><strong class="${p.net_profit < 0 ? 'neg' : ''}">${km(p.net_profit)}</strong><small>${resSmall}</small></button>
+                <button type="button" class="fin-kpi" data-fin-go="qarzlar"><span>Qarzlar</span><strong class="neg">${km(o.receivables.total)}</strong><small>muddati oʻtgan: ${km(o.receivables.overdue)}</small></button>
             </div>
+            <p class="fin-muted fin-basis-note" data-fin-cash-note>${resNote}</p>
             <div class="fin-qgrid">
                 <section class="fin-card" aria-labelledby="finQcH"><header><h3 id="finQcH">Bugungi kassa · ${dateText(F.today())}</h3><button type="button" class="fin-link" data-fin-go="kassa">Kassa →</button></header><div data-fin-qcash>${quickCash()}</div></section>
                 <section class="fin-card" aria-labelledby="finQpH"><header><h3 id="finQpH">Maoshlar · davr</h3><button type="button" class="fin-link" data-fin-go="maoshlar">Hammasi →</button></header><div data-fin-qpay>${quickPay()}</div></section>
             </div>
-            <details class="fin-alerts-box"${hasDanger ? ' open' : ''}><summary>${nAlerts ? `Diqqat talab qiladi · ${nAlerts}` : 'Maʼlumot sifati'}${hasDanger ? ' <span class="fin-badge fin-badge--danger">muhim</span>' : ''}</summary>${alertsHtml}</details>
             <h3 class="fin-sub-h">Batafsil koʻrsatkichlar</h3>
             <div class="fin-stats">
                 ${stat('Erkin pul mablag‘i', money(scope() === 'all' ? b.cashEquivalents : k.freeCash), cashNote, '', 'Naqd, karta va bank hisoblari. Uzum’dan olinadigan va “Aniqlanmagan” summalar bunga kirmaydi')}
                 ${stat('Sof tushum', money(p.net_revenue), `qaytarishlar: ${money(p.refunds || 0)} · ${state.basis === 'cash' ? 'kassa usuli' : 'hisoblash usuli'}`, '', 'Kurs to‘lovlari minus qaytarilgan to‘lovlar')}
-                ${stat('Yalpi foyda', money(p.gross_profit), 'marja ' + pctText(p.margins.gross), p.gross_profit < 0 ? 'danger' : '')}
-                ${stat(scope() === 'all' ? 'Sof foyda' : 'Sof foyda (umumiy xarajat ulushi bilan)', money(p.net_profit), 'marja ' + pctText(p.margins.net), p.net_profit < 0 ? 'danger' : 'success', p.allocation ? `Umumiy moddalarning ${pctText(p.allocation.share)} i (har oy yalpi kurs tushumi ulushi bo‘yicha) shu maktabga yuklangan` : '')}
+                ${hasCogs ? stat('Yalpi foyda', money(p.gross_profit), 'marja ' + pctText(p.margins.gross), p.gross_profit < 0 ? 'danger' : '') : ''}
+                ${stat(cash ? (scope() === 'all' ? 'Kassa bo‘yicha qoldiq' : 'Kassa bo‘yicha qoldiq (umumiy xarajat ulushi bilan)') : 'Sof foyda (hisoblash usuli)', money(p.net_profit), 'marja ' + pctText(p.margins.net) + (cash ? ' · hisoblangan oyliklarsiz' : ' · hisoblangan oyliklar bilan'), p.net_profit < 0 ? 'danger' : 'success', p.allocation ? `Umumiy moddalarning ${pctText(p.allocation.share)} i (har oy yalpi kurs tushumi ulushi bo‘yicha) shu maktabga yuklangan` : '')}
                 ${stat('O‘quvchilar to‘lashi kerak', money(o.receivables.total), `muddati o‘tgan: ${money(o.receivables.overdue)} · bugungi holat`, o.receivables.overdue ? 'warning' : '', 'O‘quvchi kartalaridagi joriy qarz (to‘lov jadvali). Balansga faqat o‘tilgan darslar uchun to‘lanmagan qism kiradi')}
                 ${stat('Korxona qarzlari', money(o.payables.total), `maosh: ${money(o.payables.salaries)} · qarz: ${money(o.payables.loans)}`, o.payables.overdue ? 'warning' : '')}
                 ${stat('Yangi o‘quvchilar', `${k.newClients} ta`, `kursni uzaytirgan: ${k.renewals} ta`, '', 'Davrda birinchi shartnomasi boshlangan o‘quvchilar va keyingi shartnomaga o‘tganlar')}
@@ -305,10 +322,372 @@
             </div>
             <p class="fin-note">Tushum — Moliya reyestridan (to‘langan sana bo‘yicha), bekor qilingan yozuvlarsiz. Xarajatlar — “Operatsiyalar”da kiritilganlar va “Maoshlar” bo‘limi. Hisoblash usulida kurs ${o.settings.courseMonths.english} oy (ingliz) / ${o.settings.courseMonths.russian} oy (rus) davomida teng tan olinadi — bu sozlamadagi taxmin.</p>
         </div>`;
-        bindToolbar(root, () => render('umumiy'));
+        bindToolbar(root, () => render('kengaytirilgan'));
         bindGo(root);
-        root.querySelector('[data-fin-qexp]')?.addEventListener('click', () => openTxnModal({ type: 'expense' }));
+        root.querySelector('[data-fin-qexp]')?.addEventListener('click', () => openTxnModal({ type: 'expense', simple: true }));
         loadQuick(root);
+    }
+
+    // ---------- D dizayn (15-noyabr): Umumiy — 5 ta raqam oddiy tilda ----------
+    // Manba: /api/finance/summary (server). Tushum = Yangi sotuvlar (o'quvchining birinchi to'lovi) + Qarzdorlardan (keyingi to'lovlar),
+    // qaytarishlar ayiriladi. Qolgan pul = tushum − hisoblangan oylik − xarajat. Muammolar faqat "Muammolar" tabida.
+    const GROUP_ROLE = { sales: 'Sotuv menejeri', rop: 'ROP', teacher: 'Ustoz', assistant: 'Yordamchi ustoz', 'head-of-teachers': 'Akademik rahbar', akademik: 'Akademik rahbar', hr: 'HR xodimi', targetolog: 'Targetolog', 'sotuv-menejeri': 'Sotuv menejeri', oqituvchi: 'Ustoz', 'rus-oqituvchi': 'Ustoz', 'ingliz-oqituvchi': 'Ustoz', yordamchi: 'Yordamchi ustoz' };
+    async function loadSummary(force) {
+        const all = state.preset === 'all';
+        const key = [scope(), state.start, state.end, all].join('|');
+        if (!force && state.summary && state.summaryKey === key) return state.summary;
+        state.summaryKey = key; state.summaryError = '';
+        try {
+            const d = await api(`/summary?scope=${scope()}&start=${state.start}&end=${state.end}${all ? '&all=1' : ''}`);
+            if (state.summaryKey === key) state.summary = d;
+        } catch (e) { state.summaryError = e.message; state.summary = null; }
+        return state.summary;
+    }
+    // Davr dizayndagidek: "1–15 noyabr", "28 okt – 3 noy 2026"; yil joriy bo'lmasa qo'shiladi.
+    const MON_LOW = ['yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun', 'iyul', 'avgust', 'sentyabr', 'oktabr', 'noyabr', 'dekabr'];
+    function rangeText(a, b, withYear) {
+        const d = x => Number(x.slice(8, 10)), m = x => MON_LOW[Number(x.slice(5, 7)) - 1], y = x => x.slice(0, 4);
+        const yr = withYear || y(b) !== F.today().slice(0, 4) ? ' ' + y(b) : '';
+        if (a === b) return `${d(a)} ${m(a)}${yr}`;
+        if (a.slice(0, 7) === b.slice(0, 7)) return `${d(a)}–${d(b)} ${m(a)}${yr}`;
+        return `${d(a)} ${m(a).slice(0, 3)}${y(a) !== y(b) ? ' ' + y(a) : ''} – ${d(b)} ${m(b).slice(0, 3)}${yr}`;
+    }
+    const periodText = () => state.preset === 'all' ? 'Hammasi' : rangeText(state.start, state.end);
+    const so = n => `${num(n)} <small>so‘m</small>`;
+    function dHead(title, sub) {
+        return `<div class="fin-dhead"><button type="button" class="fin-dback" data-fin-dview="">← Umumiy</button><div class="fin-dtitle" role="heading" aria-level="2">${title}</div>${sub ? `<span class="fin-dnote">${sub}</span>` : ''}</div>`;
+    }
+    function summaryCards(s) {
+        const sp = s.split, rem = s.remaining, rc = s.receivables, pay = s.payroll, ex = s.expenses;
+        const net = sp.net ?? sp.total;
+        const expNote = ex.byCategory.slice(0, 2).map(c => c.name.split(/[ ,(]/)[0].toLowerCase()).join(', ') || 'bu davrda yozilmagan';
+        const remChip = (!rem.complete ? `<span class="fin-dchip">to‘liq emas${rem.monthOpen ? ' · oy tugamagan' : rem.noExpenses ? ' · xarajat yo‘q' : ''}</span>` : '<span class="fin-dchip fin-dchip--ok">yakuniy</span>');
+        const tiles = [
+            `<button type="button" class="fin-dtile" data-fin-dview="tushum"><span class="fin-dlbl">Jami tushum</span><span class="fin-dbig pos">${so(net)}</span><span class="fin-dnote">${esc(periodText())}${sp.refunds ? ` · qaytarishlar −${num(sp.refunds)}` : ''}</span></button>`,
+            `<button type="button" class="fin-dtile" data-fin-dview="oylik"><span class="fin-dlbl">Oyliklar (hisoblangan)</span><span class="fin-dbig">${so(pay.accrued)}</span><span class="fin-dnote">berilgan ${num(pay.paid)}${rem.monthOpen ? ' · oy tugamagan' : ''}</span></button>`,
+            `<button type="button" class="fin-dtile" data-fin-dview="xarajat"><span class="fin-dlbl">Xarajatlar</span><span class="fin-dbig">${so(ex.total)}</span><span class="fin-dnote">${esc(expNote)}</span></button>`,
+            `<button type="button" class="fin-dtile" data-fin-dview="formula"><span class="fin-dlbl">Qolgan pul (sof foyda)</span><span class="fin-dbig ${rem.amount < 0 ? 'neg' : ''}">${rem.amount < 0 ? '−' : ''}${so(rem.amount)}</span><span class="fin-dnote">${remChip}</span></button>`,
+            `<button type="button" class="fin-dtile" data-fin-dview="qarz"><span class="fin-dlbl">Jami ochiq qarz</span><span class="fin-dbig neg">${so(rc.total)}</span><span class="fin-dnote">muddati o‘tgan ${num(rc.overdue)}</span></button>`
+        ].filter(Boolean);
+        const pctNew = sp.total && sp.newSales ? Math.round(sp.newSales.amount / sp.total * 100) : 0;
+        const tarkib = sp.hidden ? `<div class="fin-dcard" role="group" aria-label="Tushum tarkibi"><span class="fin-dlbl">Tushum tarkibi</span><p class="fin-dnote">“Hammasi” davrida bo‘linma yo‘q — Yangi / Qarzdorlardan faqat aniq davr uchun hisoblanadi.</p>${sp.refunds ? `<div class="fin-dkv"><span>Qaytarishlar</span><strong class="neg">−${num(sp.refunds)}</strong></div>` : ''}</div>`
+            : `<button type="button" class="fin-dcard" data-fin-dview="tushum"><span class="fin-dlbl">Tushum tarkibi</span>
+                <div class="fin-dbar" aria-hidden="true"><span style="width:${pctNew}%"></span><span style="flex-grow:1"></span></div>
+                <div class="fin-dlegend"><span><i style="background:#0057B8"></i>Yangi sotuvlar</span><span><i style="background:#7FB2EA"></i>Qarzdorlardan</span></div>
+                <div class="fin-dkv first"><span>Yangi sotuvlar · ${sp.newSales.count} ta</span><strong>${num(sp.newSales.amount)}</strong></div>
+                <div class="fin-dkv"><span>Qarzdorlardan · ${sp.debtors.count} ta</span><strong>${num(sp.debtors.amount)}</strong></div>
+                ${sp.other?.amount ? `<div class="fin-dkv"><span>Boshqa · ${sp.other.count} ta</span><strong>${num(sp.other.amount)}</strong></div>` : ''}
+                ${sp.refunds ? `<div class="fin-dkv"><span>Qaytarishlar (ayirildi)</span><strong class="neg">−${num(sp.refunds)}</strong></div>` : ''}</button>`;
+        const xar = `<button type="button" class="fin-dcard" data-fin-dview="xarajat"><span class="fin-dlbl">Xarajatlar</span><span class="fin-dmid">${num(ex.total)} so‘m</span>
+            ${ex.byCategory.length ? ex.byCategory.slice(0, 5).map((c, i) => `<div class="fin-dkv ${i ? '' : 'first'}"><span>${esc(c.name)}</span><strong>${num(c.amount)}</strong></div>`).join('') : '<span class="fin-dnote">Bu davrda xarajat yozilmagan</span><span class="fin-link" data-fin-qexp>+ Xarajat qo‘shish</span>'}</button>`;
+        const oy = `<button type="button" class="fin-dcard" data-fin-dview="oylik"><span style="display:flex;justify-content:space-between;align-items:center"><span class="fin-dlbl">Oyliklar</span>${rem.monthOpen ? '<span class="fin-dchip fin-dchip--muted">oy tugamagan</span>' : ''}</span>
+            <span class="fin-dmid">${num(pay.accrued)} so‘m</span>
+            <div class="fin-dkv first"><span class="fin-dnote">Guruh</span><span class="fin-dnote w96">Hisoblangan</span><span class="fin-dnote w64">Berilgan</span></div>
+            ${pay.groups.map(g => `<div class="fin-dkv"><span>${esc(g.label)}</span><strong class="w96">${num(g.accrued)}</strong><strong class="w64 ${g.paid ? '' : 'zero'}">${num(g.paid)}</strong></div>`).join('')}
+            <span class="fin-dnote">${pay.count} xodim</span></button>`;
+        const qarz = `<button type="button" class="fin-dcard" data-fin-dview="qarz"><span class="fin-dlbl">Qarzlar</span>
+            <div class="fin-dkv first"><span>Jami ochiq qarz</span><strong class="fin-dmid neg">${num(rc.total)}</strong></div>
+            <div class="fin-dkv"><span class="sub">└ muddati o‘tgan <span class="fin-dnote">· jami ichida</span></span><strong class="neg">${num(rc.overdue)}</strong></div>
+            ${rc.periodSales ? `<div class="fin-dkv"><span class="sub">└ davr sotuvlaridan <span class="fin-dnote">· jami ichida</span></span><strong>${num(rc.periodSales.total)}</strong></div>` : ''}
+</button>`;
+        // Telefon (T_* artboardlari): kartalar ustma-ust — Jami tushum (katta raqam + tarkib), Oyliklar, Xarajatlar, Qolgan pul, Qarzlar.
+        const tushumP = sp.hidden ? tarkib : tarkib.replace('<span class="fin-dlbl">Tushum tarkibi</span>', `<span class="fin-dlbl">Jami tushum</span><span class="fin-dbig pos">${num(net)} so‘m</span>`);
+        const qolgan = `<button type="button" class="fin-dcard" data-fin-dview="formula"><span class="fin-dlbl">Qolgan pul (sof foyda)</span><span class="fin-dmid ${rem.amount < 0 ? 'neg' : ''}">${rem.amount < 0 ? '−' : ''}${num(rem.amount)} so‘m</span><span class="fin-dnote">tushum − hisoblangan oylik − xarajat</span>${remChip}</button>`;
+        return `<div class="fin-donly"><div class="fin-d5" style="grid-template-columns:repeat(${tiles.length},minmax(0,1fr))">${tiles.join('')}</div>
+            <div class="fin-d2"><div class="fin-dcol">${tarkib}${xar}</div><div class="fin-dcol">${oy}${qarz}</div></div></div>
+            <div class="fin-ponly">${tushumP}${oy}${xar}${qolgan}${qarz}</div>`;
+    }
+    function summaryTushum(s) {
+        const sp = s.split, f = state.dFilter || 'all', q = (state.dSearch || '').toLowerCase();
+        const KIND = { new: 'Yangi', debtor: 'Qarzdor', other: 'Boshqa' };
+        const rows = (sp.rows || []).filter(r => (f === 'all' || r.kind === f) && (!q || (r.name + ' ' + r.phone + ' ' + (r.managerName || '')).toLowerCase().includes(q)));
+        const tabsHtml = sp.hidden ? '' : `<div class="fin-dtabs" role="group" aria-label="Turi">${[['all', `Hammasi · ${num(sp.total)}`], ['new', `Yangi sotuvlar · ${num(sp.newSales.amount)}`], ['debtor', `Qarzdorlardan · ${num(sp.debtors.amount)}`]].map(([k, l]) => `<button type="button" class="${f === k ? 'active' : ''}" aria-pressed="${f === k}" data-fin-dfilter="${k}">${l}</button>`).join('')}</div>`;
+        return `${dHead('Jami tushum · ' + num(sp.net ?? sp.total) + ' so‘m', `Jami: ${(sp.rows || []).length} ta${sp.hidden ? '' : ` · Yangi ${sp.newSales.count} · Qarzdor ${sp.debtors.count}`} · ${esc(periodText())}`)}
+            ${tabsHtml}<label class="sr-only" for="finDSearch">Ism yoki telefon</label><input id="finDSearch" class="form-control" style="max-width:320px" placeholder="Ism yoki telefon" value="${esc(state.dSearch || '')}" data-fin-dsearch>
+            ${table(['Sana', 'Ism', 'Turi', 'To‘lov usuli', { label: 'Summa', num: true }, { label: 'Qoldiq', num: true }, 'Menejer'], rows.slice(0, 500).map(r => `<tr><td>${dateText(r.date)}</td><td>${esc(r.name)}<small>${esc(r.phone || '')}</small></td><td><span class="fin-dchip ${r.kind === 'new' ? 'fin-dchip--ok' : 'fin-dchip--muted'}">${KIND[r.kind]}</span></td><td>${esc(r.method || '—')}</td><td class="num">${num(r.amount)}</td><td class="num">${r.debtAfter == null ? '—' : num(r.debtAfter)}</td><td>${esc(r.managerName || '—')}</td></tr>`), { label: 'Tushum ro‘yxati', foot: `<tr><td colspan="4">Jami: ${rows.length} ta</td><td class="num">${num(rows.reduce((n, r) => n + r.amount, 0))}</td><td colspan="2"></td></tr>` })}
+            ${sp.refunds ? `<p class="fin-note">Qaytarishlar: −${num(sp.refunds)} so‘m — jami tushumdan ayirilgan.</p>` : ''}
+            <p class="fin-note">To‘lovni bekor qilish yoki tuzatish — “To‘lovlar” bo‘limida yoki Batafsil › Solishtirish (sabab va hujjat bilan; asl yozuv o‘chmaydi).</p>`;
+    }
+    function summaryOylik(s) {
+        const pay = s.payroll, g = state.dFilter && state.dFilter !== 'all' ? state.dFilter : 'sales';
+        const people = pay.people.filter(p => p.group === g);
+        return `${dHead('Oyliklar', `${esc(periodText())}${s.remaining.monthOpen ? ' · <span class="fin-dchip fin-dchip--muted">oy tugamagan</span>' : ''}`)}
+            <div class="fin-ponly"><div class="fin-dcard" style="cursor:default"><div class="fin-dkv first"><span>Hisoblangan</span><strong class="fin-dmid">${num(pay.accrued)}</strong></div><div class="fin-dkv"><span>Berilgan</span><strong class="fin-dmid">${num(pay.paid)}</strong></div>
+                <span class="fin-dnote">${esc(periodText())} uchun shu kungacha hisoblangan (davomat/darslar bo‘yicha)${s.remaining.monthOpen ? ' · oy tugamagan' : ''}</span></div></div>
+            <div class="fin-d5 fin-donly" style="grid-template-columns:repeat(2,minmax(0,1fr))"><div class="fin-dtile"><span class="fin-dlbl">Hisoblangan</span><span class="fin-dbig">${so(pay.accrued)}</span></div><div class="fin-dtile"><span class="fin-dlbl">Berilgan</span><span class="fin-dbig">${so(pay.paid)}</span></div></div>
+            <div class="fin-dtabs" role="group" aria-label="Guruh">${pay.groups.map(x => `<button type="button" class="${g === x.key ? 'active' : ''}" aria-pressed="${g === x.key}" data-fin-dfilter="${x.key}">${esc(x.label)} · ${num(x.accrued)}</button>`).join('')}</div>
+            ${s.user && !s.user.director ? '<p class="fin-note">Faqat guruh yig‘indisi — xodimlar ro‘yxati rahbarga ko‘rinadi.</p>'
+                : `<div class="fin-ponly"><div class="fin-dcard" style="cursor:default"><div class="fin-dkv first"><span><b>${esc(pay.groups.find(x => x.key === g)?.label || '')}</b></span><span class="fin-dnote">Hisoblangan · Berilgan</span></div>
+                    ${people.map(p => `<button type="button" class="fin-drow fin-prow" data-fin-person="${esc(p.employeeId + '|' + p.lang)}"><span><b>${esc(p.name)}</b><small>${esc(GROUP_ROLE[p.role] || p.roleLabel || '—')}${p.fine ? ` · ${num(p.amount + p.fine)} − jarima ${num(p.fine)} = ${num(p.amount)}` : ''}</small></span><span><strong>${num(p.amount)}</strong><small>${num(p.paid ? p.amount : 0)} · ${p.paid ? 'berilgan' : 'berilmagan'}</small></span></button>`).join('') || '<p class="fin-dnote">Bu guruhda hisob yo‘q</p>'}</div></div>`
+                + table(['Xodim', 'Rol', { label: 'Hisoblangan', num: true }, { label: 'Jarima', num: true }, 'Holat'], people.map(p => `<tr><td><button type="button" class="fin-link" data-fin-person="${esc(p.employeeId + '|' + p.lang)}">${esc(p.name)}</button></td><td>${esc(GROUP_ROLE[p.role] || p.roleLabel || '—')}</td><td class="num">${num(p.amount)}</td><td class="num">${p.fine ? '−' + num(p.fine) : '0'}</td><td><span class="fin-dchip ${p.paid ? 'fin-dchip--ok' : 'fin-dchip--muted'}">${p.paid ? 'berilgan' : 'berilmagan'}</span></td></tr>`), { label: 'Xodimlar oyligi', empty: 'Bu guruhda hisob yo‘q', cls: 'fin-donly' })}
+            ${pay.warnings?.length ? `<p class="fin-note">${esc(pay.warnings.join(' · '))}</p>` : ''}
+            <p class="fin-note">Guruhlar: Sotuv bo‘limi = menejerlar + ROP; Akademik = ustozlar + yordamchilar + akademik rahbar; Boshqalar = HR, targetolog, admin. To‘lash (pul berish) — “Maoshlar” bo‘limida. <button type="button" class="fin-link" data-fin-go="maoshlar">Maoshlarda ochish →</button></p>`;
+    }
+    function summaryXarajat(s) {
+        const ex = s.expenses;
+        return `${dHead('Xarajatlar · ' + num(ex.total) + ' so‘m', esc(periodText()))}<div class="fin-actions"><button type="button" class="btn-primary-sm" data-fin-qexp>+ Qo‘shish</button></div>
+            <div class="fin-ponly">${ex.byCategory.map(c => `<div class="fin-dcard" style="cursor:default"><span class="fin-dlbl">${esc(c.name)} · ${num(c.amount)}</span>
+                ${ex.rows.filter(r => r.categoryCode === c.code).map(r => `<button type="button" class="fin-drow fin-prow" data-fin-xrow="${esc(r.id)}"><span><b>${esc(r.counterparty || r.description || r.category)}</b><small>${dateText(r.date).slice(0, 5)} · ${esc(accountName(r.accountId).split(' (')[0])} · ${esc((F.ENTITIES[r.entity] || r.entity).split(' (')[0])}</small></span><span><strong>${num(r.amount)}</strong></span></button>`).join('')}</div>`).join('') || '<div class="fin-dcard" style="cursor:default"><span class="fin-dnote">Bu davrda xarajat yozilmagan</span></div>'}</div>
+            ${table(['Sana', 'Toifa', 'Kimga / izoh', 'Yo‘nalish', { label: 'Summa', num: true }, ''], ex.rows.map(r => `<tr><td>${dateText(r.date)}</td><td>${esc(r.category)}</td><td>${esc([r.counterparty, r.description].filter(Boolean).join(' · ') || '—')}</td><td>${esc(F.ENTITIES[r.entity] || r.entity)}${r.allocated ? ` <span class="fin-dnote">(ulush ${pctText(s.commonShare)} · ${num(r.fullAmount)} dan)</span>` : ''}</td><td class="num">${num(r.amount)}</td>
+                <td><span class="fin-actions"><button type="button" class="fin-link" data-fin-xfix="${esc(r.id)}">Tuzatish</button><button type="button" class="fin-link neg" data-fin-xcancel="${esc(r.id)}">Bekor qilish</button></span></td></tr>`), { label: 'Xarajatlar', empty: 'Bu davrda xarajat yozilmagan', cls: 'fin-donly' })}
+            <p class="fin-note fin-ponly-i">Qatorni bosing → tuzatish yoki bekor qilish (sabab bilan; asl yozuv o‘chmaydi).</p>
+            <p class="fin-note fin-donly-i">Yozuv o‘chirilmaydi — teskari yozuv qo‘shiladi va tarixda qoladi. Tuzatish = bekor qilish + to‘g‘ri summa bilan yangi yozuv. Maosh va uskuna xaridlari bu yerga kirmaydi.</p>`;
+    }
+    function summaryFormula(s) {
+        const r = s.remaining, sp = s.split;
+        return `${dHead('Qolgan pul (sof foyda)', esc(periodText()))}
+            <div class="fin-dcard" role="group" aria-label="Formula" style="cursor:default;max-width:560px">
+                <div class="fin-dkv first"><span>Jami tushum</span><strong>${num(sp.total)}</strong></div>
+                ${sp.refunds ? `<div class="fin-dkv"><span>− Qaytarishlar</span><strong>${num(sp.refunds)}</strong></div>` : ''}
+                <div class="fin-dkv"><span>− Hisoblangan oylik</span><strong>${num(s.payroll.accrued)}</strong></div>
+                <div class="fin-dkv"><span>− Xarajatlar</span><strong>${num(s.expenses.total)}</strong></div>
+                <div class="fin-dkv"><span><b>= Qolgan pul</b></span><strong class="fin-dmid ${r.amount < 0 ? 'neg' : ''}">${r.amount < 0 ? '−' : ''}${num(r.amount)}</strong></div>
+                ${!r.complete ? `<span class="fin-dchip">to‘liq emas${r.monthOpen ? ' · oy tugamagan' : ''}${r.noExpenses ? ' · xarajat kiritilmagan' : ''}</span>` : ''}</div>
+            <p class="fin-note">Buxgalteriya foyda-zarari (hisoblash usuli, amortizatsiya, IFRS 15) — Batafsil › Hisobotlar.</p>`;
+    }
+    function summaryQarz(s) {
+        const rc = s.receivables, f = state.dFilter && state.dFilter !== 'all' ? state.dFilter : 'barcha';
+        const tabsDef = [['barcha', `Barcha davr · ${num(rc.total)}`], ['muddat', `Muddati o‘tgan · ${num(rc.overdue)}`], ...(rc.periodSales ? [['davr', `Davr sotuvlaridan · ${num(rc.periodSales.total)}`]] : []), ['ketgan', `Ketgan / muzlatilgan · ${num(rc.inactive.total)}`]];
+        const body = f === 'ketgan' ? table(['O‘quvchi', 'Holat', 'Menejer', { label: 'Qarz', num: true }], rc.inactive.rows.map(r => `<tr><td>${esc(r.name)}<small>${esc(r.phone || '')}</small></td><td>${r.frozen ? 'muzlatilgan' : 'ketgan'}</td><td>${esc(r.managerName || '—')}</td><td class="num">${num(r.debt)}</td></tr>`), { label: 'Ketgan va muzlatilganlar qarzi', empty: 'Yo‘q' })
+            : `<div class="fin-dcard" style="cursor:default;max-width:560px"><div class="fin-dkv first"><span>${esc(tabsDef.find(t => t[0] === f)?.[1].split(' · ')[0] || '')}</span><strong class="fin-dmid neg">${num(f === 'muddat' ? rc.overdue : f === 'davr' ? rc.periodSales.total : rc.total)}</strong></div>
+                ${rc.buckets.map(b => `<div class="fin-dkv"><span>${esc(b.label)} · ${b.count} ta</span><strong>${num(b.amount)}</strong></div>`).join('')}</div>
+                <p class="fin-note">Faqat faol o‘quvchilar. O‘quvchilar ro‘yxati va korxona qarzlari — <button type="button" class="fin-link" data-fin-go="qarzlar">Batafsil › Qarzlar →</button></p>`;
+        return `${dHead('Qarzlar', 'bugungi holat')}<div class="fin-dtabs" role="group" aria-label="Qarz turi">${tabsDef.map(([k, l]) => `<button type="button" class="${f === k ? 'active' : ''}" aria-pressed="${f === k}" data-fin-dfilter="${k}">${l}</button>`).join('')}</div>${body}`;
+    }
+    async function renderSummary(root) {
+        if (!state.summary || state.summaryKey !== [scope(), state.start, state.end, state.preset === 'all'].join('|')) {
+            root.innerHTML = `<div class="fin-wrap">${toolbar({ compact: true })}<div class="fin-loading" role="status" aria-live="polite">Hisob-kitob qilinmoqda…</div></div>`;
+            bindToolbar(root, () => render('umumiy'));
+            await loadSummary();
+            if (currentSection() !== 'umumiy') return;
+        }
+        const s = state.summary;
+        if (!s) { root.innerHTML = `<div class="fin-wrap"><div class="fin-alert fin-alert--danger" role="alert">${ICON.danger}<span>${esc(state.summaryError || 'Ma’lumot yuklanmadi')}</span><button type="button" class="btn-ghost" data-fin-retry>Qayta urinish</button></div></div>`; root.querySelector('[data-fin-retry]').addEventListener('click', () => { invalidate(); render('umumiy'); }); return; }
+        const v = state.dView || '';
+        const views = { tushum: summaryTushum, oylik: summaryOylik, xarajat: summaryXarajat, formula: summaryFormula, qarz: summaryQarz };
+        root.innerHTML = `<div class="fin-wrap">${toolbar({ compact: true, actions: v ? '' : '<button type="button" class="fin-qbtn" data-fin-qexp>Xarajat yozish</button><button type="button" class="fin-qbtn fin-qbtn--pri" data-fin-pay>+ Toʻlov qabul qilish</button>' })}
+            ${(views[v] || summaryCards)(s)}</div>`;
+        bindToolbar(root, () => { state.dView = ''; render('umumiy'); });
+        bindGo(root);
+        root.querySelectorAll('[data-fin-dview]').forEach(b => b.addEventListener('click', e => {
+            if (e.target.closest('[data-fin-qexp]')) return;
+            state.dView = b.dataset.finDview; state.dFilter = ''; state.dSearch = ''; render('umumiy'); root.scrollIntoView?.({ block: 'start' });
+        }));
+        root.querySelectorAll('[data-fin-dfilter]').forEach(b => b.addEventListener('click', () => { state.dFilter = b.dataset.finDfilter; render('umumiy'); }));
+        const srch = root.querySelector('[data-fin-dsearch]');
+        srch?.addEventListener('input', () => { state.dSearch = srch.value; clearTimeout(srch._t); srch._t = setTimeout(() => { render('umumiy'); const n = panelRoot('umumiy').querySelector('[data-fin-dsearch]'); n?.focus(); n?.setSelectionRange(n.value.length, n.value.length); }, 250); });
+        root.querySelectorAll('[data-fin-qexp]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); openTxnModal({ type: 'expense', simple: true }); }));
+        root.querySelectorAll('[data-fin-person]').forEach(b => b.addEventListener('click', () => openPayslip(b.dataset.finPerson)));
+        root.querySelectorAll('[data-fin-xrow]').forEach(b => b.addEventListener('click', () => {
+            const id = b.dataset.finXrow, r = state.summary?.expenses.rows.find(x => x.id === id);
+            openModal(`${r?.counterparty || r?.category || 'Xarajat'} · ${num(r?.amount)}`, `<p class="fin-dnote">${dateText(r?.date)} · ${esc(r?.category || '')}</p>`,
+                '<button type="button" class="btn-secondary-sm" data-x-fix>Tuzatish</button><button type="button" class="btn-primary-sm" data-x-cancel>Bekor qilish</button>');
+            const f = document.getElementById('modalFooter');
+            f.querySelector('[data-x-fix]').onclick = () => { closeModal(); cancelExpense(id, true); };
+            f.querySelector('[data-x-cancel]').onclick = () => { closeModal(); cancelExpense(id, false); };
+        }));
+        root.querySelectorAll('[data-fin-xcancel], [data-fin-xfix]').forEach(b => b.addEventListener('click', () => cancelExpense(b.dataset.finXcancel || b.dataset.finXfix, !!b.dataset.finXfix)));
+        // Muammolar soni (tab belgisi) — to'liq tekshiruv fon rejimida yuklanadi.
+        refreshProblemCount();
+    }
+
+    // Xodim oyligi tafsiloti (T_xodim / K_xodim): payroll qatoridagi mavjud qismlar; yo'q qism ko'rsatilmaydi.
+    function openPayslip(key) {
+        const [emp, lng] = key.split('|');
+        const p = state.summary?.payroll.people.find(x => x.employeeId === emp && x.lang === lng);
+        if (!p) return;
+        const q = p.parts || {}, kv = (l, v, cls = '') => `<div class="fin-dkv"><span>${l}</span><strong class="${cls}">${v}</strong></div>`;
+        // T_xodim / K_xodim: to'rtta qism doim ko'rinadi (0 bo'lsa ham).
+        openModal(p.name, `<div class="fin-form fin-payslip"><p class="fin-dnote">${esc(GROUP_ROLE[p.role] || p.roleLabel || '—')} · ${esc(periodText())}</p>
+            ${kv('Asosiy oylik / darslar uchun', num((q.fixed || 0) + (q.lessons || 0)))}${kv('Sotuvdan ulush / KPI', num(q.commission || 0))}${kv('Bonus / qo‘shimcha', num(q.bonus || 0))}
+            ${kv('Jarima', p.fine ? '−' + num(p.fine) : '0', p.fine ? 'neg' : '')}
+            ${kv('<b>Hisoblangan</b>', num(p.amount))}${kv('Berilgan', num(p.paid ? p.amount : 0))}
+            <p class="fin-note">Pul berish — faqat “Maoshlar” bo‘limida (“Berildi deb belgilash”).</p></div>`,
+            '<button type="button" class="btn-primary-sm" data-fin-ps-go style="width:100%">“Maoshlar”da ochish</button>');
+        const f = document.getElementById('modalFooter');
+        f.querySelector('[data-fin-ps-go]').addEventListener('click', () => { closeModal(); switchFinanceSection('maoshlar'); });
+    }
+    // Xarajatni bekor qilish / tuzatish (K_xarBekor): teskari yozuv; tuzatishda — keyin to'g'ri summa bilan yangi xarajat oynasi.
+    function cancelExpense(id, fix) {
+        const r = state.summary?.expenses.rows.find(x => x.id === id);
+        if (!r) return;
+        openReasonModal(fix ? `Tuzatish: ${r.counterparty || r.category} · ${num(r.fullAmount)}` : 'Xarajatni bekor qilasizmi?', fix ? 'Bekor qilish va qayta kiritish' : 'Bekor qilish',
+            async (reason, _e, date) => { await api('/transactions/' + encodeURIComponent(id) + '/reverse', { reason, date }); if (fix) setTimeout(() => openTxnModal({ type: 'expense', simple: true, entity: r.entity }), 400); },
+            { date: true, note: 'Yozuv o‘chirilmaydi — teskari yozuv qo‘shiladi va tarixda qoladi. Tuzatish = bekor qilish + to‘g‘ri summa bilan yangi yozuv.', placeholder: 'Masalan: summa xato kiritilgan'});
+    }
+
+    // ---------- Muammolar: barcha ogohlantirishlar faqat shu yerda (boshqa sahifalarda sariq qator yo'q) ----------
+    // Muammo turlari (K_muammo / T_muammo): sarlavha, summa, izoh va "Hal qilish".
+    const PROBLEM_TYPES = ['Muhr buzilishi', 'Shubhali / takroriy tushum', 'Hisob qoldig‘i', 'Ketgan o‘quvchi', 'Orqaga sana', 'Investor ulushi (30 kun)'];
+    function problemTitle(msg, go) {
+        if (/yaxlitlig|muhr|zanjir|nusxa|FIN_SEAL/i.test(msg)) return 'Muhr buzilishi';
+        if (/shubhali|takroriy/i.test(msg)) return 'Shubhali / takroriy tushum';
+        if (go === 'kassa') return 'Hisob qoldig‘i';
+        if (/ketgan|pulsiz tugatilgan|majburiyat/i.test(msg)) return 'Ketgan o‘quvchi';
+        if (/qayta tiklangan|orqaga/i.test(msg)) return 'Orqaga sana';
+        if (/balans|pul oqimi|segment/i.test(msg)) return 'Hisobot mosligi';
+        if (/maosh/i.test(msg)) return 'Maosh kassaga yozilmagan';
+        return 'Tekshiruv';
+    }
+    function problemItems() {
+        const items = [];
+        const r = state.recon?.result;
+        if (r) {
+            const missing = r.results.filter((x, i) => x.status === 'missing_in_crm' && !state.recon.done[i]);
+            if (r.difference || missing.length) items.push({ tone: 'danger', title: 'Jadval bilan farq', amount: Math.abs(r.difference), desc: `Google Sheet’da bor, CRM’da yo‘q to‘lovlar · ${missing.length} ta`, go: 'recon' });
+        }
+        for (const p of state.summary?.problems || []) if (p.key === 'list_mismatch') items.push({ tone: 'danger', title: 'To‘lovlar ro‘yxati bilan farq', amount: Math.abs(p.amount), desc: `Ro‘yxat ${num(p.listTotal)} · Umumiy ${num(p.total)}`, go: 'solishtirish' });
+        for (const a of state.negAccounts || []) items.push({ tone: 'danger', title: 'Hisob manfiy', amount: Math.abs(a.balance), desc: `${esc(a.name)}: qoldiq ${a.balance < 0 ? '−' : ''}${num(a.balance)} so‘m — chiqim kirimdan ko‘p yozilgan (masalan, investorga to‘lov). Kirimni yoki hisobni tekshiring`, go: 'kassa' });
+        for (const m of state.investorOver || []) items.push({ tone: 'danger', title: 'Investorga ortiqcha to‘langan', amount: m.overpaid, desc: `${monthName(m.month)}: oy qayta yopilganda ulush ${num(m.share)} bo‘ldi, to‘langan ${num(m.paid)} — tuzatish yoki keyingi oydan ushlab qolish kerak`, go: 'investor' });
+        for (const m of state.investorDue || []) items.push({ tone: 'warning', title: 'Investor ulushi (30 kun)', amount: m.due, desc: `${monthName(m.month)} ulushi oy yopilganidan beri 30 kundan ortiq to‘lanmagan`, go: 'investor' });
+        if (state.overview) for (const [tone, msg, go, report] of alertItems(state.overview)) if (tone !== 'ok') items.push({ tone, title: problemTitle(msg, go), desc: msg, go, report });
+        return items;
+    }
+    function updateProblemCount() {
+        // To'liq ma'lumot (umumiy tekshiruv + Umumiy) bo'lmasa — son 0 deb ko'rsatilmaydi, fon rejimida qayta hisoblanadi.
+        if (!state.overview || !state.summary) { refreshProblemCount(); return; }
+        const n = problemItems().length;
+        document.querySelectorAll('[data-fin-problem-count]').forEach(el => { el.textContent = n; el.hidden = !n; });
+    }
+    // Saqlangan oxirgi solishtirish (shu til) — xotirada natija bo'lmasa serverdan tiklanadi.
+    async function loadSavedRecon() {
+        const ent = scope() === 'all' ? 'russian' : scope();
+        if (state.recon && !(state.recon.persisted && state.recon.entity !== ent)) return;
+        try {
+            const d = (await api('/problems/recon?entity=' + ent)).recon;
+            state.recon = d ? { result: d.result, entity: ent, parsed: [], fileName: d.fileName, tolerance: 3, picked: new Set(), done: {}, links: {}, persisted: true, savedId: d.id } : null;
+        } catch { /* ko'rsatilmaydi */ }
+    }
+    // Butun korxona bo'yicha haqiqiy qoldiq (til bo'yicha emas) — manfiy pul hisoblari.
+    async function loadNegAccounts() {
+        try { state.negAccounts = ((await api('/overview?lite=1&scope=all')).accounts || []).filter(a => a.equivalent && a.balance < 0); } catch { state.negAccounts = []; }
+    }
+    async function loadInvestorDue() {
+        try {
+            const d = await apiFetch('/api/investor');
+            const limit = F.addDays(F.today(), -30);
+            state.investorDue = (d.rows || []).filter(r => r.status === 'final' && r.due > 0 && (r.closedOn || F.monthEnd(r.month)) < limit);
+            // Oy qayta yopilib ulush kamaygan: investorga ortiqcha to'langan.
+            state.investorOver = (d.rows || []).filter(r => r.status === 'final' && r.overpaid > 0);
+        } catch { state.investorDue = []; }
+    }
+    let counting = null;
+    async function refreshProblemCount() {
+        if (counting) return counting;
+        counting = (async () => {
+            if (!state.overview) await loadOverview();
+            if (!state.summary) await loadSummary();
+            if (!state.investorDue) await loadInvestorDue();
+            if (!state.negAccounts) await loadNegAccounts();
+            await loadSavedRecon();
+            if (state.overview && state.summary) { const n = problemItems().length; document.querySelectorAll('[data-fin-problem-count]').forEach(el => { el.textContent = n; el.hidden = !n; }); }
+        })().finally(() => { counting = null; });
+        return counting;
+    }
+    // 7b · Jadval bilan farq: jadval (Google Sheet) asosiy manba — CRM'da yo'q yozuvlar CRM'ga qo'shiladi yoki "Jadval xatosi" deb belgilanadi.
+    function reconScreen() {
+        const r = state.recon, res = r.result, sp = state.summary?.split;
+        const kindOf = id => { const l = r.links[id]; return l && (sp?.rows || []).some(x => (l.studentId && x.studentId === l.studentId) || (l.leadId && x.leadId === l.leadId)) ? 'debtor' : 'new'; };
+        const missing = res.results.map((x, i) => ({ x, i })).filter(({ x }) => x.status === 'missing_in_crm');
+        const open = missing.filter(({ i }) => !r.done[i]);
+        const add = { new: 0, debtor: 0 };
+        for (const { x, i } of open) add[kindOf(i)] += x.external.amount;
+        const crmNew = sp?.newSales?.amount || 0, crmDeb = sp?.debtors?.amount || 0;
+        const row = (l, a, b) => `<tr><td>${l}</td><td class="num">${num(a)}</td><td class="num">${num(b)}</td><td class="num ${a - b ? 'neg' : ''}">${num(a - b)}</td></tr>`;
+        const sumOpen = open.reduce((n, { x }) => n + x.external.amount, 0);
+        const needDoc = !(r.sourceFile && /\.pdf$/i.test(r.fileName)) && !r.evidenceUrl;
+        return `<div class="fin-dhead"><button type="button" class="fin-dback" data-fin-prob-back>← Muammolar</button><div class="fin-dtitle" role="heading" aria-level="2">Jadval bilan farq</div></div>
+            ${table(['', { label: 'Jadval', num: true }, { label: 'CRM', num: true }, { label: 'Farq', num: true }], [row('Yangi sotuvlar', crmNew + add.new, crmNew), row('Qarzdorlardan', crmDeb + add.debtor, crmDeb), row('<b>Jami</b>', crmNew + crmDeb + add.new + add.debtor, crmNew + crmDeb)], { label: 'Jadval va CRM', cls: 'fin-recon-tbl' })}
+            <section class="fin-card"><header><h3>CRM’da yo‘q yozuvlar (${open.length})${open.length ? ' · ' + open.map(({ x }) => num(x.external.amount)).join(' + ') + ' = ' + num(sumOpen) : ''}</h3></header>
+                <div class="fin-dlist">${missing.map(({ x, i }) => { const e = x.external, done = r.done[i], link = r.links[i];
+                    return `<div class="fin-drow fin-drow--inline"><span><b>${esc(e.name || '—')}</b><small>Jadvalda bor · CRM’da yo‘q · ${dateText(e.date)}${link ? ' · → ' + esc(link.name) : ''}</small></span><span><strong>${num(e.amount)}</strong>
+                    ${done ? `<span class="fin-dchip ${done === 'saqlandi' ? 'fin-dchip--ok' : 'fin-dchip--muted'}">${esc(done)}</span>` : `<span class="fin-actions"><button type="button" class="btn-ghost btn-sm" data-fin-rc-err="${i}">Jadval xatosi</button><button type="button" class="btn-primary-sm" data-fin-link="${i}">${link ? 'O‘zgartirish' : 'CRM’ga qo‘shish'}</button></span>`}</span></div>`; }).join('') || '<p class="fin-dnote">Yo‘q</p>'}</div></section>
+            <label class="fin-field"><span>Tuzatish sababi (kamida 5 belgi)</span><input class="form-control" data-fin-rc-reason value="${esc(r.reason || '')}"></label>
+            ${needDoc ? '<label class="fin-field"><span>Asos hujjat (PDF yoki rasm)</span><input type="file" class="form-control" accept=".pdf,.png,.jpg,.jpeg,.webp" data-fin-rc-doc></label>' : ''}
+            <div class="fin-actions"><button type="button" class="btn-primary-sm" data-fin-rc-save ${open.some(({ i }) => r.links[i]) || open.length === 0 ? '' : 'disabled'}>Saqlash va yopish</button></div>
+            <p class="fin-note">Saqlangach: muammo “Hal qilingan”ga o‘tadi, Umumiy tushum yangilanadi. Tuzatishlar hammasi birga saqlanadi yoki hech biri. “Jadval xatosi” — jadvaldagi yozuv noto‘g‘ri, CRM o‘zgarmaydi.</p>`;
+    }
+    function bindRecon(root) {
+        const r = state.recon;
+        root.querySelector('[data-fin-prob-back]')?.addEventListener('click', () => { state.probView = ''; render('muammolar'); });
+        root.querySelectorAll('[data-fin-link]').forEach(b => b.addEventListener('click', () => openLinkModal(Number(b.dataset.finLink))));
+        root.querySelectorAll('[data-fin-rc-err]').forEach(b => b.addEventListener('click', () => { r.done[Number(b.dataset.finRcErr)] = 'jadval xatosi'; r.picked.delete(Number(b.dataset.finRcErr)); render('muammolar'); }));
+        root.querySelector('[data-fin-rc-reason]')?.addEventListener('input', e => { r.reason = e.target.value; });
+        root.querySelector('[data-fin-rc-save]')?.addEventListener('click', async () => {
+            if (state.busy) return;
+            try {
+                state.busy = true;
+                const ids = Object.keys(r.links).map(Number).filter(i => !r.done[i] && r.result.results[i].status === 'missing_in_crm');
+                if (ids.length) {
+                    if ((r.reason || '').trim().length < 5) throw new Error('Tuzatish sababini yozing (kamida 5 belgi)');
+                    const input = root.querySelector('[data-fin-rc-doc]');
+                    if (input?.files?.[0]) r.evidenceUrl = await upload(input);
+                    if (!r.evidenceUrl && r.sourceFile && /\.pdf$/i.test(r.fileName)) r.evidenceUrl = await uploadEvidenceFile(r.sourceFile);
+                    if (!r.evidenceUrl) throw new Error('Asos hujjatni (PDF yoki rasm) yuklang');
+                    const ops = ids.map(i => { const { text: _t, ...op } = proposal(r, i); return op; });
+                    await api('/receipts/batch', { requestKey: r.batchKey || (r.batchKey = reqKey()), entity: r.entity, reason: r.reason.trim(), evidenceUrl: r.evidenceUrl, operations: ops });
+                    for (const i of ids) { r.done[i] = 'saqlandi'; r.picked.delete(i); }
+                    r.batchKey = null;
+                }
+                // Hal qilingan muammo serverda (faqat qo'shiladigan jurnal) saqlanadi.
+                await api('/problems/resolved', { kind: 'recon', title: 'Jadval bilan farq', amount: Math.abs(r.result.difference), scope: r.entity,
+                    detail: { added: ids.length, sheetErrors: Object.values(r.done).filter(x => x === 'jadval xatosi').length, reason: (r.reason || '').trim() } });
+                state.resolved = null;
+                state.recon = null; state.probView = '';
+                invalidate(); toast('Tuzatishlar saqlandi');
+            } catch (err) { toast(err.message); } finally { state.busy = false; render('muammolar'); }
+        });
+    }
+    async function renderProblems(root) {
+        if (!state.summary) await loadSummary();
+        await loadSavedRecon();
+        if (!state.resolved) { try { state.resolved = (await api(`/problems/resolved?scope=${scope()}`)).rows; } catch { state.resolved = []; } }
+        if (!state.investorDue) await loadInvestorDue();
+        if (!state.negAccounts) await loadNegAccounts();
+        if (state.probView === 'recon' && state.recon?.result) {
+            root.innerHTML = `<div class="fin-wrap">${reconScreen()}</div>`;
+            bindRecon(root);
+            return;
+        }
+        const items = problemItems();
+        root.innerHTML = `<div class="fin-wrap"><div data-fin-prow></div>
+            ${items.length ? `<div class="fin-dcol fin-probs" role="list">${items.map(x => `<div role="listitem" class="fin-prob ${x.tone === 'danger' ? 'fin-prob--danger' : ''}"><span class="fin-prob-h"><b>${esc(x.title)}</b>${x.amount != null ? `<b class="neg">${num(x.amount)} so‘m</b>` : ''}</span><span class="fin-dnote">${x.desc}</span>${x.go ? `<button type="button" class="fin-qbtn fin-probbtn" data-fin-go="${x.go}" ${x.report ? `data-fin-report="${x.report}"` : ''}>Hal qilish</button>` : ''}</div>`).join('')}</div>`
+                : '<div class="fin-dcard" style="cursor:default"><b>Muammo yo‘q</b><span class="fin-dnote">Hal qilingach Umumiy raqamlari o‘zi yangilanadi.</span></div>'}
+            ${(() => { const rest = PROBLEM_TYPES.filter(t => !items.some(x => x.title === t)); return rest.length ? `<div class="fin-dcard" style="cursor:default"><span class="fin-dlbl">Boshqa turlar · 0</span><span class="fin-dchips">${rest.map(t => `<span class="fin-dchip fin-dchip--muted">${esc(t)}</span>`).join('')}</span></div>` : ''; })()}
+            <details class="fin-dcard fin-resolved"><summary><span>Hal qilingan · ${(state.resolved || []).length}</span></summary>${(state.resolved || []).length ? `<div class="fin-dlist">${state.resolved.map(x => `<div class="fin-drow"><span><b>${esc(x.title)}</b><small>${dateText(String(new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tashkent' }).format(new Date(x.created_at))))} · ${esc(x.actor_name || '')}</small></span><span>${x.amount == null ? '' : num(x.amount)}</span></div>`).join('')}</div>` : '<p class="fin-dnote"><b>Hal qilingan muammo yo‘q</b><br>Hal qilinganlari shu yerda saqlanadi</p>'}</details></div>`;
+        mountPeriodRow(root.querySelector('[data-fin-prow]'), () => render('muammolar'));
+        root.querySelectorAll('[data-fin-go="recon"]').forEach(b => { b.removeAttribute('data-fin-go'); b.addEventListener('click', () => { state.probView = 'recon'; render('muammolar'); }); });
+        bindGo(root);
+        updateProblemCount();
+    }
+
+    // ---------- Batafsil markazi ----------
+    const HUB = [['kassa', 'Kassa', 'Hisoblar qoldig‘i, kunlik kassa, Uzum, haqiqiy qoldiq'], ['operatsiyalar', 'Operatsiyalar', 'Barcha kirim-chiqim, yangi operatsiya, asosiy vositalar'],
+        ['qarzlar', 'Qarzlar (to‘liq)', 'O‘quvchilar qarzi va korxona qarzlari'], ['hisobotlar', 'Hisobotlar', 'Foyda-zarar, pul oqimi, balans, oylik taqqoslash'],
+        ['solishtirish', 'Solishtirish va audit', 'Jadval, shubhali/takroriy tushum, jurnal'], ['kengaytirilgan', 'Kengaytirilgan ko‘rinish', 'Ko‘rsatkichlar, grafik, Pul qayerda, Konsolidatsiya'],
+        ['moliya-sozlamalar', 'Sozlamalar', 'Oy yopish, limitlar, hisoblar — faqat rahbar o‘zgartiradi']];
+    // K_batafsil / T_batafsil: davr qatori + belgili ro'yxat (chevron bilan).
+    const HUB_ICON = { kassa: '<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18"/>', operatsiyalar: '<path d="M7 7h11l-3-3M17 17H6l3 3"/>',
+        qarzlar: '<path d="M12 3v18M16 7H10a3 3 0 0 0 0 6h4a3 3 0 0 1 0 6H8"/>', hisobotlar: '<path d="M6 20V10M12 20V4M18 20v-6"/>', solishtirish: '<rect x="4" y="4" width="16" height="16" rx="3"/><path d="m8 12 3 3 5-6"/>',
+        kengaytirilgan: '<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>', 'moliya-sozlamalar': '<circle cx="12" cy="12" r="2"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/>', rollar: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>' };
+    function renderHub(root) {
+        const rows = [...HUB, ['rollar', 'Kim nimani ko‘radi', 'Rollar: admin, moliya xodimi, sotuv, investor']];
+        root.innerHTML = `<div class="fin-wrap"><div data-fin-prow></div><div class="fin-hublist" role="list">${rows.map(([k, t, d]) => `<button type="button" role="listitem" class="fin-hubrow" ${k === 'rollar' ? 'data-fin-roles' : `data-fin-go="${k}"`}>
+            <span class="fin-hubic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${HUB_ICON[k]}</svg></span>
+            <span class="fin-hubt"><b>${t}</b><small>${d}</small></span><span class="fin-hubchev" aria-hidden="true">›</span></button>`).join('')}</div></div>`;
+        mountPeriodRow(root.querySelector('[data-fin-prow]'), () => render('batafsil'));
+        bindGo(root);
+        root.querySelector('[data-fin-roles]').addEventListener('click', () => openModal('Kim nimani ko‘radi', `<div class="fin-form">
+            <div class="fin-dkv first"><span>Rahbar (admin, boshliq)</span><strong>hammasi + sozlamalar, oy yopish, investor</strong></div>
+            <div class="fin-dkv"><span>Moliya xodimi</span><strong>hammasi (ko‘rish va kiritish); oy yopish va sozlamalar — rahbar</strong></div>
+            <div class="fin-dkv"><span>Sotuv menejeri, ROP</span><strong>faqat o‘z o‘quvchilari to‘lovi (o‘z tilida)</strong></div>
+            <div class="fin-dkv"><span>Investor</span><strong>faqat o‘z kabineti (faqat ko‘rish)</strong></div></div>`, '<button type="button" class="btn-secondary-sm" onclick="closeModal()">Yopish</button>'));
+    }
+    function crumb(root, section) {
+        const t = HUB.find(h => h[0] === section)?.[1];
+        if (!t) return;
+        root.insertAdjacentHTML('afterbegin', `<nav class="fin-crumb" aria-label="Yo‘l"><button type="button" class="fin-dback" data-fin-go="batafsil">← Batafsil</button><span>Batafsil › ${t}</span></nav>`);
+        root.querySelector('.fin-crumb [data-fin-go]').addEventListener('click', () => switchFinanceSection('batafsil'));
     }
 
     // ---------- Kassa va hisoblar ----------
@@ -591,8 +970,8 @@
         </tbody></table></div><p class="fin-note">• — yopilgan (muzlatilgan) oy.</p>`;
     }
     function renderReports(root) {
-        const o = state.overview, r = state.report;
-        const items = [['pnl', 'Foyda va zarar'], ['cashflow', 'Pul oqimlari'], ['balance', 'Balans'], ['monthly', 'Oylik taqqoslash']];
+        const o = state.overview;
+        const items = [['pnl', 'Foyda va zarar'], ['cashflow', 'Pul oqimlari'], ['balance', 'Balans'], ['monthly', 'Oylik taqqoslash']], r = state.report;
         const body = r === 'cashflow' ? cashflowTable(o.cashflow) : r === 'balance' ? balanceTable(o.balance) : r === 'monthly' ? monthlyTable(o.monthly) : pnlTable(o.pnl, o.pnlOther);
         root.innerHTML = `<div class="fin-wrap">${toolbar({ basis: r === 'pnl' || r === 'monthly', actions: `<button type="button" class="btn-ghost" data-fin-export>Excel</button><button type="button" class="btn-ghost" data-fin-print>PDF / chop etish</button>` })}
             ${tabs('Hisobot turi', items, r, 'report')}
@@ -817,7 +1196,12 @@
         root.querySelector('[data-fin-recon-run]')?.addEventListener('click', async () => {
             const r = state.recon;
             const rows = r.parsed.map(x => ({ date: x.date, name: x.name, phone: x.phone, amount: r.column === -1 ? x.amounts.at(-1) : x.amounts[r.column] })).filter(x => x.amount);
-            try { r.result = await api('/reconcile', { entity: r.entity, rows, tolerance: r.tolerance }); r.filter = 'problems'; render('solishtirish'); }
+            try {
+                r.result = await api('/reconcile', { entity: r.entity, rows, tolerance: r.tolerance }); r.filter = 'problems';
+                // Natija serverda saqlanadi — sahifa qayta yuklansa ham Muammolar › Jadval bilan farq qoladi.
+                api('/problems/recon', { entity: r.entity, result: r.result, fileName: r.fileName || '' }).catch(e => toast('Solishtirish natijasi saqlanmadi: ' + e.message));
+                render('solishtirish');
+            }
             catch (e) { toast(e.message); }
         });
         root.querySelectorAll('[data-fin-recon-filter]').forEach(b => b.addEventListener('click', () => { state.recon.filter = b.dataset.finReconFilter; render('solishtirish'); }));
@@ -961,7 +1345,10 @@
         const type = preset.type || 'expense';
         const accounts = o.accountsList.filter(a => a.active !== false && a.kind !== 'suspense' && a.kind !== 'clearing');
         const ent = preset.entity || (scope() === 'all' ? 'common' : scope());
-        const cats = F.CATEGORIES.filter(c => c.type === type);
+        // "Xarajat qo'shish" (K_xarAdd): faqat qo'lda kiritiladigan xarajat toifalari — maosh va uskuna (kapital) bu yerda emas.
+        const simple = !!preset.simple && type === 'expense';
+        const cats = F.CATEGORIES.filter(c => c.type === type && (!simple || (!c.payroll && c.code !== 'CAPEX')));
+        if (simple && !preset.categoryCode) preset = { ...preset, categoryCode: 'MKT_ADS' };
         const loans = (o.payables.rows || []).filter(p => p.kind === 'loan');
         let receipts = [];
         const refundLang = ent === 'common' ? 'russian' : ent;
@@ -971,7 +1358,7 @@
         const isIn = ['income', 'capital', 'loan_in'].includes(type);
         const fromAccounts = type === 'transfer' ? o.accountsList.filter(a => a.active !== false) : accounts;
         const body = `<div class="fin-form" data-fin-txn>
-            ${field('Operatsiya turi', `<select class="form-control" name="type">${Object.entries(F.TYPES).map(([k, l]) => `<option value="${k}" ${k === type ? 'selected' : ''}>${l}</option>`).join('')}</select>`)}
+            ${simple ? '<input type="hidden" name="type" value="expense">' : ''}${simple ? '' : field('Operatsiya turi', `<select class="form-control" name="type">${Object.entries(F.TYPES).map(([k, l]) => `<option value="${k}" ${k === type ? 'selected' : ''}>${l}</option>`).join('')}</select>`)}
             <div class="fin-form-row">${field('Sana', `<input type="date" lang="en-GB" class="form-control" name="date" value="${F.today()}" max="${F.today()}">`)}
                 ${field(preset.settlement ? 'Uzum o‘tkazgan summa (so‘m)' : 'Summa (so‘m)', moneyInput('amount', preset.amount))}</div>
             ${type === 'refund' ? field('Maktab', `<select class="form-control" name="refundEntity">${['english', 'russian'].map(k => `<option value="${k}" ${k === refundLang ? 'selected' : ''}>${esc(F.ENTITIES[k])}</option>`).join('')}</select>`) : ''}
@@ -996,7 +1383,20 @@
             ${type !== 'transfer' ? field('Chek / hujjat', '<input type="file" class="form-control" name="receipt" accept=".pdf,.png,.jpg,.jpeg,.webp">', ['refund', 'drawing'].includes(type) ? 'Majburiy' : type === 'expense' ? '1 000 000 so‘mdan katta xarajat uchun majburiy' : '') : ''}
             ${preset.payableId && type === 'expense' ? `<p class="fin-note">Bu to‘lov “${esc(preset.counterparty)}” hisob-fakturasini yopadi.</p>` : ''}
             <p class="fin-error" data-fin-error role="alert"></p></div>`;
-        openModal(F.TYPES[type], body, footerButtons('Saqlash'));
+        // K_xarAdd tartibi: Sana · Summa / Toifa / Qaysi hisobdan · Yo'nalish / Kimga / Izoh / Chek / oldindan to'lov.
+        const simpleBody = () => {
+            const tmp = document.createElement('div'); tmp.innerHTML = body;
+            const f = tmp.querySelector('[data-fin-txn]'), pick = n => f.querySelector(`[name="${n}"]`)?.closest('.fin-field');
+            const rowOf = (...els) => { const r = document.createElement('div'); r.className = 'fin-form-row'; els.filter(Boolean).forEach(e => r.appendChild(e)); return r; };
+            const sana = pick('date'), summa = pick('amount'), toifa = pick('categoryCode'), hisob = pick('accountId'), yon = pick('entity'), kimga = pick('counterparty'), izoh = pick('description'), chek = pick('receipt');
+            const svc = f.querySelector('[data-fin-service]'), flag = f.querySelector('[data-fin-payroll-flag]'), cap = f.querySelector('[data-fin-capex]'), err = f.querySelector('[data-fin-error]'), hidden = f.querySelector('input[name="type"]');
+            if (sana) sana.querySelector('span').textContent = 'Sana (bugundan keyin emas)';
+            yon?.querySelector('small')?.remove();
+            f.innerHTML = '';
+            [hidden, rowOf(sana, summa), toifa, rowOf(hisob, yon), kimga, izoh, chek, svc, flag, cap, err].filter(Boolean).forEach(e => f.appendChild(e));
+            return tmp.innerHTML;
+        };
+        openModal(simple ? 'Xarajat qo‘shish' : F.TYPES[type], simple ? simpleBody() : body, footerButtons('Saqlash'));
         const root = document.querySelector('[data-fin-txn]');
         wireMoney(root);
         const catSel = root.querySelector('select[name="categoryCode"]');
@@ -1007,7 +1407,7 @@
             if (svc) { svc.hidden = !F.serviceAllowed(c); if (svc.hidden) svc.querySelectorAll('input').forEach(i => { i.value = ''; }); }
         };
         catSel?.addEventListener('change', syncCat); syncCat();
-        root.querySelector('[name="type"]').addEventListener('change', e => { closeModal(); openTxnModal({ ...preset, type: e.target.value, settlement: false }); });
+        root.querySelector('select[name="type"]')?.addEventListener('change', e => { closeModal(); openTxnModal({ ...preset, type: e.target.value, settlement: false }); });
         root.querySelector('[name="refundEntity"]')?.addEventListener('change', e => { closeModal(); openTxnModal({ ...preset, type, entity: e.target.value }); });
         const rs = root.querySelector('[data-fin-receipt-search]');
         rs?.addEventListener('input', () => { const q = rs.value.trim().toLowerCase(), d = q.replace(/\D/g, ''); root.querySelectorAll('[name="paymentRecordId"] option').forEach(op => { op.hidden = !!q && !op.dataset.search.includes(q) && !(d.length >= 3 && op.dataset.search.includes(d)); }); });
@@ -1138,12 +1538,74 @@
         footer.querySelector('[data-fin-submit]').addEventListener('click', () => {
             if (!chosen) { body.querySelector('[data-fin-error]').textContent = 'O‘quvchi yoki lidni tanlang'; return; }
             r.links[id] = { ...chosen, method: body.querySelector('[name="method"]').value };
-            r.picked.add(id); closeModal(); render('solishtirish');
+            r.picked.add(id); closeModal(); render(currentSection());
         });
+    }
+
+    // ---------- Telefon sarlavhasi: davr va til varag'i (T_davr) ----------
+    const PRESETS = [['month', 'Bu oy'], ['prev', 'O‘tgan oy'], ['quarter', 'Oxirgi 3 oy'], ['ytd', 'Yil boshidan'], ['all', 'Hammasi']];
+    const MONTHS_FULL = ['Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun', 'Iyul', 'Avgust', 'Sentyabr', 'Oktabr', 'Noyabr', 'Dekabr'];
+    function syncPhoneHead() {
+        const pl = document.querySelector('[data-fin-period-label]'), ll = document.querySelector('[data-fin-lang-label]');
+        if (pl) pl.textContent = state.preset === 'month' ? MONTHS_FULL[Number(state.start.slice(5, 7)) - 1] + ' ' + state.start.slice(0, 4)
+            : state.preset === 'custom' ? rangeText(state.start, state.end) : PRESETS.find(p => p[0] === state.preset)?.[1] || '';
+        if (ll) ll.textContent = scope() === 'all' ? 'EN+RU' : scope() === 'russian' ? 'RU' : 'EN';
+    }
+    function openPeriodSheet() {
+        const draft = { preset: state.preset, start: state.start, end: state.end, lang: lang() };
+        const el = document.createElement('div');
+        el.className = 'fin-psheet'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Davr va maktab');
+        const paint = () => {
+            el.innerHTML = `<div><span class="fin-sheet-h" style="justify-content:space-between;align-items:center"><b>Davr va maktab</b><button type="button" class="fin-sheet-x" data-x aria-label="Yopish">×</button></span>
+                <div class="fin-pseg">${PRESETS.map(([k, l]) => `<button type="button" class="${draft.preset === k ? 'active' : ''}" data-p="${k}">${l}</button>`).join('')}</div>
+                <div class="fin-psheet-dates"><label class="fin-field"><span>Dan</span><input type="date" class="form-control" data-s value="${draft.start}" max="${F.today()}"></label><label class="fin-field"><span>Gacha</span><input type="date" class="form-control" data-e value="${draft.end}" max="${F.today()}"></label></div>
+                <p class="fin-error" role="alert" data-err></p>
+                <b>Maktab</b><div class="fin-pseg">${[['english', 'EN · Ingliz tili'], ['russian', 'RU · Rus tili']].map(([k, l]) => `<button type="button" class="${draft.lang === k ? 'active' : ''}" data-l="${k}">${l}</button>`).join('')}</div>
+                <button type="button" class="fin-pbtn" style="justify-content:center;width:100%" data-ok>Qo‘llash</button>
+                <p class="fin-note">Konsolidatsiya (ikkala maktab birga) va Kassa / Hisoblash usuli — <button type="button" class="fin-link" data-kengay>Batafsil › Kengaytirilgan</button>.</p></div>`;
+            // "Dan" > "Gacha" bo'lsa — darhol xato matni (T_davr).
+            const chk = () => { const a = el.querySelector('[data-s]').value, b = el.querySelector('[data-e]').value; el.querySelector('[data-err]').textContent = a && b && a > b ? 'Sana oralig‘ini to‘g‘ri kiriting' : ''; };
+            el.querySelectorAll('[data-s],[data-e]').forEach(i => i.addEventListener('change', chk));
+        };
+        paint();
+        el.addEventListener('click', e => {
+            if (e.target === el || e.target.closest('[data-x]')) { el.remove(); return; }
+            if (e.target.closest('[data-kengay]')) { el.remove(); switchFinanceSection('kengaytirilgan'); return; }
+            const p = e.target.closest('[data-p]'), l = e.target.closest('[data-l]');
+            if (p) { draft.preset = p.dataset.p; [draft.start, draft.end] = presetRange(draft.preset); paint(); return; }
+            if (l) { draft.lang = l.dataset.l; paint(); return; }
+            if (e.target.closest('[data-ok]')) {
+                const a = el.querySelector('[data-s]').value, b = el.querySelector('[data-e]').value;
+                if (a !== draft.start || b !== draft.end) { draft.start = a; draft.end = b; draft.preset = 'custom'; }
+                if (!F.date(draft.start) || !F.date(draft.end) || draft.start > draft.end) { el.querySelector('[data-err]').textContent = 'Sana oralig‘ini to‘g‘ri kiriting'; return; }
+                state.preset = draft.preset; state.start = draft.start; state.end = draft.end;
+                el.remove();
+                if (draft.lang !== lang()) document.querySelector(`[data-finance-lang="${draft.lang}"]`)?.click();
+                else { invalidate(); render(currentSection()); }
+                syncPhoneHead();
+            }
+        });
+        document.body.appendChild(el);
+        el.querySelector('[data-p].active, [data-p]')?.focus();
+    }
+    document.addEventListener('click', e => {
+        if (e.target.closest('[data-fin-period-open]')) openPeriodSheet();
+        // "+ To'lov" (telefon sarlavhasi) va "To'lov qabul qilish": To'lovlar bo'limi + qabul oynasi (K_tolovQabul).
+        if (e.target.closest('[data-fin-ptolov], [data-fin-pay]') && typeof switchFinanceSection === 'function') { switchFinanceSection('tolovlar'); setTimeout(() => window.inflowUI?.openStudentPayment(), 150); }
+    });
+
+    // Umumiy davr qatori (K_tolovlar / K_investor dizaynida ham): davr tugmalari, Dan/Gacha, "Xarajat yozish", "+ To'lov qabul qilish".
+    function mountPeriodRow(el, onChange) {
+        if (!el) return;
+        el.innerHTML = toolbar({ compact: true, actions: '<button type="button" class="fin-qbtn" data-fin-qexp>Xarajat yozish</button><button type="button" class="fin-qbtn fin-qbtn--pri" data-fin-pay>+ Toʻlov qabul qilish</button>' });
+        bindToolbar(el, () => { mountPeriodRow(el, onChange); syncPhoneHead(); if (typeof updateRdPageHead === 'function') updateRdPageHead('finance'); onChange?.({ start: state.start, end: state.end, preset: state.preset }); });
+        el.querySelector('[data-fin-qexp]')?.addEventListener('click', () => openTxnModal({ type: 'expense', simple: true }));
     }
 
     // ---------- Kirish nuqtasi ----------
     async function render(section) {
+        syncPhoneHead();
+        if (typeof updateRdPageHead === 'function') updateRdPageHead('finance');
         if (!SECTIONS.includes(section)) return;
         const root = panelRoot(section);
         if (!root) return;
@@ -1151,15 +1613,20 @@
         if (currentSection() !== section) return;
         if (!state.overview) { failed(root); return; }
         try {
-            if (section === 'umumiy') renderOverview(root);
+            if (section === 'umumiy') await renderSummary(root);
+            else if (section === 'kengaytirilgan') renderOverview(root);
+            else if (section === 'batafsil') renderHub(root);
+            else if (section === 'muammolar') await renderProblems(root);
             else if (section === 'kassa') await renderCash(root);
             else if (section === 'operatsiyalar') await renderOperations(root);
             else if (section === 'qarzlar') renderDebts(root);
             else if (section === 'hisobotlar') renderReports(root);
             else if (section === 'solishtirish') await renderAudit(root);
             else if (section === 'moliya-sozlamalar') renderSettings(root);
+            crumb(root, section);
+            if (section !== 'umumiy' && section !== 'muammolar') updateProblemCount();
         } catch (e) { console.error('[financeUI]', e); state.error = e.message; failed(root); }
     }
     function onLangChange() { if (!state.consolidated) invalidate(); render(currentSection()); }
-    window.financeUI = { render, handles: s => SECTIONS.includes(s), onLangChange, invalidate };
+    window.financeUI = { render, handles: s => SECTIONS.includes(s), onLangChange, invalidate, refreshProblemCount, mountPeriodRow, period: () => ({ start: state.start, end: state.end, preset: state.preset }), periodLabel: () => (state.preset === 'all' ? 'Hammasi' : rangeText(state.start, state.end, true)) };
 })();
