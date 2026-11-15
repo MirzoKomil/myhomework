@@ -54,6 +54,9 @@
     const on = () => !!token() && !!user().id && user().role !== 'student';
     const active = () => !!(S.me && S.me.tracked && S.me.face !== 'approved' && S.me.rsz);
     const dayOf = () => { const m = S.me; if (!m) return null; const wd = new Date(m.date + 'T00:00:00Z').getUTCDay() || 7; return (m.days || {})[String(wd)] || null; };
+    // Dam olish kuni ham so'raladi (direktor, 15-noy): ish vaqti sifatida grafikdagi eng erta boshlanish va eng kech tugash olinadi.
+    const refDay = () => { const d = dayOf(); if (d) return d; const all = Object.values(S.me?.days || {}).filter(x => x && x.start && x.end); if (!all.length) return null;
+        return { start: all.map(x => x.start).sort()[0], end: all.map(x => x.end).sort().pop(), off: true }; };
 
     async function load(force) {
         if (!on()) return null;
@@ -65,20 +68,21 @@
     // Qaysi majburiy oyna kerak: 'yesterday' | 'ask' | 'leave' | null
     function needed() {
         if (!active()) return null;
-        const m = S.me, r = m.rsz, now = tk().min, day = dayOf(), t = m.today || {};
+        const m = S.me, r = m.rsz, now = tk().min, t = m.today || {};
         const later = r.askAt && Date.parse(r.askAt) > Date.now();
         if (r.openDay) return 'yesterday';
         if (pending()) return null; // internetsiz saqlangan kelish yuborilishini kutmoqda
         if (!t.inClock) {
-            if (!day || later) return null;
-            const end = pm(day.end), start = pm(day.start);
+            const ref = refDay();
+            if (!ref || later) return null;
+            const end = pm(ref.end), start = pm(ref.start);
             if (end != null && now >= end) return null; // kun tugagan — ertaga
             if (start != null && now < start - 180) return null; // juda erta
             if ((m.requests || []).some(q => q.type === 'absent' && q.state !== 'rejected')) return null;
             return 'ask';
         }
         if (!t.outClock && !t.openBreak) {
-            const end = day ? pm(day.end) : null;
+            const ref = refDay(), end = ref ? pm(ref.end) : null;
             if (end == null || now < end || now >= pm(r.lastAsk || '23:00') || later) return null;
             return 'leave';
         }
@@ -109,7 +113,7 @@
     const opt = (attr, icon, tone, t, s) => `<button type="button" class="rsz-opt" ${attr}><span class="rsz-${tone}-t">${ic(icon, 22)}</span><span class="rsz-col"><b>${t}</b><small>${s}</small></span>${ic('chev', 18)}</button>`;
 
     const VIEWS = {
-        ask: () => head('pin', 'blue', 'Hozir ofisdamisiz?', 'Yuz namunangiz hali ulanmagan. Shu vaqtgacha davomat joylashuv orqali belgilanadi.')
+        ask: () => head('pin', 'blue', 'Hozir ofisdamisiz?', dayOf() ? 'Yuz namunangiz hali ulanmagan. Shu vaqtgacha davomat joylashuv orqali belgilanadi.' : 'Bugun grafigingizda dam olish kuni. Ofisga kelgan boʻlsangiz, belgilang — alohida yoziladi.')
             + `<button type="button" class="rsz-btn rsz-pri" data-rsz="yes" data-rsz-focus>${ic('check', 18)}Ha, ofisdaman</button>
                <button type="button" class="rsz-btn" data-rsz="no">Yoʻq, ofisda emasman</button>${LOCKN}`,
         time: o => `<h2 id="rszT">Ofisga nechida keldingiz?</h2>${timeField('Kelgan vaqtingiz', o.clock ?? hm(tk().min), `Hozir ${hm(tk().min)}. Oldinroq kelgan boʻlsangiz, oʻsha vaqtni yozing. Hozirdan keyingi vaqt yozilmaydi.`, o.err)}
@@ -119,7 +123,7 @@
         checking: () => `<h2 id="rszT">Joylashuv aniqlanmoqda…</h2><div class="rsz-bar"><i></i></div><p class="rsz-hint">15 soniyagacha. Natija oʻzi chiqadi.</p>`,
         where: () => `<h2 id="rszT">Hozir qayerdasiz?</h2>
             ${opt('data-rsz="onway"', 'clock', 'blue', 'Yoʻldaman, hali yetib kelmadim', '15 daqiqadan keyin yana soʻraymiz')}
-            ${opt('data-rsz="absent"', 'cal', 'amber', 'Bugun ofisga kelmayman', 'Sabab rahbaringizga boradi · u tasdiqlaydi')}
+            ${dayOf() ? opt('data-rsz="absent"', 'cal', 'amber', 'Bugun ofisga kelmayman', 'Sabab rahbaringizga boradi · u tasdiqlaydi') : opt('data-rsz="off"', 'cal', 'amber', 'Bugun dam olaman', 'Bugun boshqa soʻralmaydi')}
             ${opt('data-rsz="outside"', 'brief', 'vio', 'Ofisdan tashqarida ishlayapman', 'Sabab majburiy · rahbaringiz tasdiqlaydi')}
             <button type="button" class="rsz-btn" data-rsz="back">Orqaga</button>`,
         absent: o => `<h2 id="rszT">Bugun ofisga kelmayman</h2><p class="rsz-sub">Soʻrov rahbaringizga boradi · u tasdiqlaydi</p>
@@ -154,12 +158,12 @@
                <button type="button" class="rsz-btn" data-rsz="close">Yopish — keyin yuboriladi</button>`,
         error: o => head('alert', 'red', 'Saqlab boʻlmadi', esc(o.message || 'Xatolik'))
             + `<button type="button" class="rsz-btn rsz-pri" data-rsz="${esc(o.retry || 'back')}">Qayta urinish</button>`,
-        leave: o => head('exit', 'blue', `Ish vaqtingiz ${esc(dayOf()?.end || '')} da tugadi`, 'Ishni qachon tugatdingiz?')
+        leave: o => head('exit', 'blue', `Ish vaqtingiz ${esc(refDay()?.end || '')} da tugadi`, 'Ishni qachon tugatdingiz?')
             + timeField('Ketgan vaqtingiz', o.clock ?? hm(tk().min), `Hozir ${hm(tk().min)}. Ertaroq tugatgan boʻlsangiz, oʻsha vaqtni yozing.`, o.err)
             + `<button type="button" class="rsz-btn rsz-pri" data-rsz="saveOut" data-rsz-primary>${ic('exit', 18)}Ketdim — saqlash</button>
                <button type="button" class="rsz-btn" data-rsz="stay">Ketmadim, hali ofisdaman</button>
                <p class="rsz-lock">«Ketmadim» — har soatda yana soʻraladi (${esc(S.me?.rsz?.lastAsk || '23:00')} gacha).</p>`,
-        early: o => head('alert', 'amber', 'Ish vaqti hali tugamagan', `Ish ${esc(dayOf()?.end || '')} da tugaydi. Hozir ketyapsizmi?`)
+        early: o => head('alert', 'amber', 'Ish vaqti hali tugamagan', `Ish ${esc(refDay()?.end || '')} da tugaydi. Hozir ketyapsizmi?`)
             + `<button type="button" class="rsz-btn rsz-pri" data-rsz="earlyYes" data-rsz-focus>Ha, hozir ketyapman (${hm(tk().min)})</button>
                <button type="button" class="rsz-btn" data-rsz="close">Yoʻq, qolaman</button>
                <p class="rsz-hint rsz-c">Ruxsat soʻramoqchi boʻlsangiz — «Javob soʻrash → Erta ketaman».</p>`,
@@ -256,9 +260,9 @@
         if (a === 'saveIn') return saveIn();
         if (a === 'retry') { if (S.inClock) { render('time', { clock: S.inClock }); return saveIn(); } return render('time', {}); }
         if (a === 'phoneDone') { await load(true); return decide(true, null, true); }
-        if (a === 'onway' || a === 'stay') {
+        if (a === 'onway' || a === 'stay' || a === 'off') {
             try { await api('/me/manual', { action: 'answer', answer: a }); } catch (er) { /* oflayn — mahalliy */ }
-            close(); toast(a === 'onway' ? 'Yetib kelgach «Ofisga keldim» ni bosing' : `Yaxshi. ${hm(tk().min + 60)} da yana soʻraymiz`);
+            close(); toast(a === 'onway' ? 'Yetib kelgach «Ofisga keldim» ni bosing' : a === 'off' ? 'Yaxshi dam oling!' : `Yaxshi. ${hm(tk().min + 60)} da yana soʻraymiz`);
             await load(true); paint(); return;
         }
         if (a === 'absent') return render('absent', {});
@@ -280,7 +284,7 @@
             return;
         }
         if (a === 'saveOut') {
-            const end = pm(dayOf()?.end); const { m } = readTime();
+            const end = pm(refDay()?.end); const { m } = readTime();
             if (end != null && m != null && m < end - 10 && tk().min < end) { S.earlyClock = hm(m); return render('early'); }
             return saveOut('leave');
         }
@@ -305,7 +309,7 @@
     // ---------- bosh sahifa kartasi (telefon) va kompyuter banneri ----------
     function cardInfo() {
         if (!active()) return null;
-        const t = S.me.today || {}, day = dayOf(), p = pending();
+        const t = S.me.today || {}, day = refDay(), p = pending();
         return { inClock: t.inClock || '', outClock: t.outClock || '', inEntered: t.inEnteredClock || '', method: t.inMethod || '', end: day?.end || '',
             pending: p ? p.body.clock : '', onWay: S.me.rsz.answer === 'onway' && !t.inClock };
     }
@@ -328,7 +332,7 @@
     }
     function leave() {
         if (!active() || !S.me.today?.inClock || S.me.today?.outClock) return;
-        const end = pm(dayOf()?.end);
+        const end = pm(refDay()?.end);
         if (end != null && tk().min < end) return render('early');
         render('leave', {});
     }
