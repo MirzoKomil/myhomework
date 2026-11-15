@@ -392,6 +392,8 @@ async function initSchema() {
     await paymentCash.initSchema(pool);
     // Moliya bo'limini tayyorlashdagi xato butun CRM'ni to'xtatmasligi kerak: xato yoziladi, qolgan bo'limlar ishlayveradi.
     await finance.initSchema(pool).catch(err => console.error('[moliya] Ishga tushirishda xato (CRM ishlayveradi):', err.message));
+    await finance.initProblemLog(pool).catch(err => console.error('[moliya] Muammolar jurnali:', err.message));
+    await require('./services/investor').initSchema(pool).catch(err => console.error('[investor] Ishga tushirishda xato:', err.message));
 
     // Boshlang'ich mobile_content qatori
     await pool.query(
@@ -4572,6 +4574,7 @@ async function updateUser(id, fields) {
     if (!sets.length) return findUserById(id);
     vals.push(id);
     await pool.query(`UPDATE users SET ${sets.join(', ')} WHERE id = $${idx}`, vals);
+    if (fields.role !== undefined) require('./middleware/investorOnly').invalidateUser(id);
     return findUserById(id);
 }
 

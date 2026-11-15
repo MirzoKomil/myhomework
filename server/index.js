@@ -20,6 +20,7 @@ const trialLessonsRoutes = require('./routes/trialLessons');
 const payrollRoutes = require('./routes/payroll');
 const inflowRoutes = require('./routes/inflow');
 const financeRoutes = require('./routes/finance');
+const investorRoutes = require('./routes/investor');
 const domworkGroups = require('./services/domworkGroups');
 const domworkGroupsRouter = require('./routes/domworkGroups');
 const { createRuntime: createDomworkBot } = require('./services/domworkBot/runtime');
@@ -202,6 +203,8 @@ app.use('/api', apiLimit);
 
 // Targetolog kabi "faqat ko'rish" rollari uchun barcha /api o'zgartirishlari bitta joyda yopiladi.
 app.use('/api', require('./middleware/readOnlyRoles').readOnlyRoles({ findUserById: crmDb.findUserById }));
+// Investor roli: /api/investor va o'z akkaunti (auth) dan boshqa hech qaysi API'ga kira olmaydi.
+app.use('/api', require('./middleware/investorOnly').investorOnly({ findUserById: crmDb.findUserById }));
 app.use('/api/auth', authRoutes);
 app.use('/api/state', stateRoutes);
 app.use('/api/leads', leadsRoutes);
@@ -217,6 +220,7 @@ app.use('/api/trial-lessons', trialLessonsRoutes);
 app.use('/api/payroll', payrollRoutes);
 app.use('/api/inflow', inflowRoutes);
 app.use('/api/finance', financeRoutes);
+app.use('/api/investor', investorRoutes);
 // Akademik rahbar kabineti (/api/academic/head/*, /api/academic/problems*) — Darslik markazidan oldin.
 app.use('/api/academic', require('./routes/academicHead')({ db: crmDb, authRequired: require('./middleware/auth').authRequired }));
 app.use('/api/academic', require('./routes/academicHub')({ pool: crmDb.pool,
