@@ -64,4 +64,13 @@ const replay = (db, { employeeId, name, date, at, settings }) => send(db, `att:r
 const facePending = (db, { employeeId, name }) => send(db, `att:face:${employeeId}:${t.tashkentDate()}`,
     `🙂 <b>${esc(name)}</b> yuz namunasini yubordi. CRM → HR → Davomat bo‘limida tasdiqlang.`, null, MANAGERS);
 
-module.exports = { late, notYet, absent, earlyLeave, mismatch, replay, facePending, recipients, RECIPIENT_ROLES };
+// Obeddan / ruxsatdan qaytmadi (muddat + 5 daqiqa) — bir marta; qaytgach natija (kech yoki tasdiqlanmagan).
+const BK = k => (k === 'step' ? 'ruxsatdan' : 'obeddan');
+const breakLate = (db, { employeeId, name, date, brk, settings, userIds }) => send(db, `att:breaklate:${employeeId}:${date}:${brk.outClock}`,
+    `⏱ <b>${esc(name)}</b> ${BK(brk.kind)} qaytmadi\n${brk.kind === 'step' ? 'Ruxsat' : 'Obed'} ${brk.untilClock} da tugagan (chiqdi ${brk.outClock})`, settings, RECIPIENT_ROLES, userIds);
+const breakBack = (db, { employeeId, name, date, brk, settings, userIds }) => send(db, `att:breakback:${employeeId}:${date}:${brk.outClock}`,
+    brk.unverified
+        ? `🟡 <b>${esc(name)}</b> ${BK(brk.kind)} qaytdi (${brk.inClock}) — selfiesiz, tasdiqlanmagan.\nCRM → HR → Davomat bo‘limida ko‘rib chiqing.`
+        : `↩️ <b>${esc(name)}</b> ${BK(brk.kind)} qaytdi ${brk.inClock} — ${brk.overMinutes} daqiqa kech.\nJarima avtomatik yoziladi.`, settings, RECIPIENT_ROLES, userIds);
+
+module.exports = { breakLate, breakBack, late, notYet, absent, earlyLeave, mismatch, replay, facePending, recipients, RECIPIENT_ROLES };
