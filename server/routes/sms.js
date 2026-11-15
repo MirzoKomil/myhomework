@@ -100,6 +100,15 @@ router.post('/send', authRequired, smsAccess, async (req, res) => {
                     results.push(e); pending.push(e);
                     continue;
                 }
+                // SMS faqat O'zbekiston raqamlariga (Eskiz xorijiy raqamni rad etadi) — xato emas, o'tkaziladi.
+                if (!eskiz.isValidUzPhone(eskiz.normalizePhone(phone))) {
+                    const digits = phone.replace(/\D/g, '');
+                    if (digits.length >= 10 && !digits.startsWith('998')) {
+                        results.push({ phone, name, status: 'skipped', reason: 'foreign', error: 'Xorijiy raqam — SMS faqat O\'zbekiston raqamlariga',
+                            recipientId: r.id || null, recipientType: r.type || null, message: personalText });
+                        continue;
+                    }
+                }
                 const key = keyOf(phone, personalText);
                 if (IN_FLIGHT.has(key) || recentSent.has(key)) {
                     // Tarixga yozilmaydi — u yerda avvalgi (haqiqiy) yuborish bor.
@@ -119,6 +128,8 @@ router.post('/send', authRequired, smsAccess, async (req, res) => {
                     };
                 } catch (err) {
                     recentSent.delete(key);
+                    const ls = require('../services/leadStageSms');
+                    ls.alertAdmin(ls.errorKind(err.message), `${audience || 'sms'}: ${err.message}`);
                     entry = {
                         phone, name, status: 'error', error: err.message || 'Nomalum xatolik',
                         recipientId: r.id || null, recipientType: r.type || null,

@@ -20403,14 +20403,14 @@ function getLeadById(lang, leadId) {
 // xodimning o'zi tasdiqlaydi. Bu admin, ROP va sotuv menejeriga bir xil ishlaydi.
 const LEAD_SMS_TEMPLATES = {
     english: [
-        'Assalomu alaykum, {name}! Homework ingliz tili kursi bo‘yicha siz bilan bog‘lanmoqchi edik.',
-        'Assalomu alaykum, {name}! Sizga qulay vaqtda Homework kursi haqida batafsil ma’lumot beramiz.',
-        'Assalomu alaykum, {name}! Homework kursiga yozilish bo‘yicha savollaringiz bo‘lsa, mamnuniyat bilan javob beramiz.'
+        "Assalomu alaykum, {name}! Homework ingliz tili kursi bo'yicha siz bilan bog'lanmoqchi edik.",
+        "Assalomu alaykum, {name}! Sizga qulay vaqtda Homework kursi haqida batafsil ma'lumot beramiz.",
+        "Assalomu alaykum, {name}! Homework kursiga yozilish bo'yicha savollaringiz bo'lsa, mamnuniyat bilan javob beramiz."
     ],
     russian: [
-        'Assalomu alaykum, {name}! Homework rus tili kursi bo‘yicha siz bilan bog‘lanmoqchi edik.',
-        'Assalomu alaykum, {name}! Sizga qulay vaqtda Homework kursi haqida batafsil ma’lumot beramiz.',
-        'Assalomu alaykum, {name}! Homework rus tili kursiga yozilish bo‘yicha savollaringiz bo‘lsa, mamnuniyat bilan javob beramiz.'
+        "Assalomu alaykum, {name}! Domwork rus tili kursi bo'yicha siz bilan bog'lanmoqchi edik.",
+        "Assalomu alaykum, {name}! Sizga qulay vaqtda Domwork kursi haqida batafsil ma'lumot beramiz.",
+        "Assalomu alaykum, {name}! Domwork rus tili kursiga yozilish bo'yicha savollaringiz bo'lsa, mamnuniyat bilan javob beramiz."
     ]
 };
 
@@ -20623,7 +20623,7 @@ function rememberServerLeadSerial(lang, leadId, serialCode) {
     setCachedItem(STORAGE_KEYS.leads, leads);
 }
 
-function persistLeadChange(lang, lead, onSaved) {
+function persistLeadChange(lang, lead, onSaved, saveOpts = {}) {
     if (!lead?.id) return Promise.reject(new Error('Lid ID topilmadi'));
     // Targetolog kabi "faqat ko'rish" rollari serverga hech qanday lid o'zgarishini yubormaydi
     if (isLeadsReadOnly(getCurrentUser())) return Promise.resolve(null);
@@ -20640,7 +20640,7 @@ function persistLeadChange(lang, lead, onSaved) {
     operation = previous.catch(() => {}).then(async () => {
         const latestVersion = newestLeadVersion(_leadServerVersions.get(leadId), snapshot.updatedAt);
         if (latestVersion) snapshot.updatedAt = latestVersion;
-        const result = await apiSaveLead(lang, snapshot);
+        const result = await apiSaveLead(lang, snapshot, saveOpts);
         const saved = result.lead || snapshot;
         rememberServerLeadSerial(lang, leadId, saved.serialCode);
         cacheProvisionedStudent(result.platformAccess?.student);
@@ -20726,7 +20726,12 @@ function ensureStudentLoginForLead(lang, lead, platformAccess) {
     return phone ? { login: platformAccess.student.login, password: phone.replace(/\D/g, '').slice(-4) } : null;
 }
 
+// 15-noy: bosqich SMS'lari SERVERDA yuboriladi (server/services/leadStageSms.js) — brauzer yopilsa ham,
+// telefon ilovasidan o'zgartirilsa ham ketadi, ikki marta ketmaydi. Bu funksiya endi hech narsa yubormaydi;
+// quyidagi eski kod faqat tarix uchun qoldirildi (CLIENT_STAGE_SMS = false).
+const CLIENT_STAGE_SMS = false;
 function maybeSendAutoStageSms(lang, lead, oldStatus, newStatus, platformAccess) {
+    if (!CLIENT_STAGE_SMS) return;
     console.log(`[26-vazifa] tekshirilyapti: lang=${lang} oldStatus=${oldStatus} newStatus=${newStatus} tel=${lead?.phone || '(yoq)'}`);
     if (lang !== 'russian') { console.log('[26-vazifa] otkazib yuborildi: til rus emas'); return; }
     if (oldStatus === newStatus) { console.log('[26-vazifa] otkazib yuborildi: status ozgarmadi'); return; }
@@ -20804,9 +20809,10 @@ function updateLeadInStorage(lang, leadId, updater, opts = {}) {
     }
     leads[lang] = list;
     setItem(STORAGE_KEYS.leads, leads);
+    // Avtomatik SMS endi serverda (server/services/leadStageSms.js); skipAutoSms serverga uzatiladi.
     persistLeadChange(lang, list[idx], (saved, access) => {
         if (!opts.skipAutoSms) maybeSendAutoStageSms(lang, saved, oldStatus, newStatus, access);
-    }).catch(() => {});
+    }, { skipAutoSms: !!opts.skipAutoSms }).catch(() => {});
     // Kitob yetkazish kartochkasi to'lov jarayoni boshlanishi bilan ochiladi.
     // Lid eski ma'lumotlardan yoki qo'lda to'g'ridan-to'g'ri "To'lov yopildi"
     // ga o'tkazilgan bo'lsa ham kartochkasiz qolmasligi kerak.

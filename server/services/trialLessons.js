@@ -94,6 +94,11 @@ async function updateTrialLesson(client, actor, leadId, payload, rowToLead, appe
     await appendAudit(client, leadId, 'trial-' + payload.action, { ...actor, name: teacher.name }, { before, after });
     if (after.language === 'russian') await require('./domworkBot/events').capture(client,'trial-result',leadId,
         {requestId:next.id},`trial-result:${leadId}:${next.id}:${next.state}`);
+    // Ustoz natijani yozdi (keldi / kelmadi) — mijozga SMS; tranzaksiya tugashini kutib (javob qaytgach) yuboriladi.
+    if (next.state === 'completed' && current.state !== 'completed' && after.language === 'russian') {
+        const lead = after, attended = next.attended === true;
+        setTimeout(() => require('./leadStageSms').onTrialResult(lead, attended), 3000).unref?.();
+    }
     return summary(after, teacher);
 }
 module.exports = { teacherForActor, summary, listTrialLessons, listTrialHistory, updateTrialLesson };

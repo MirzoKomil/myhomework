@@ -160,11 +160,11 @@ async function apiFetchDeletedLeads() {
     return apiFetch('/api/leads/deleted');
 }
 
-async function apiSaveLead(language, lead) {
+async function apiSaveLead(language, lead, opts = {}) {
     if (!lead?.id) throw new Error('Lid ID topilmadi');
     return apiFetch(`/api/leads/${encodeURIComponent(lead.id)}`, {
         method: 'PATCH',
-        body: JSON.stringify({ language, lead })
+        body: JSON.stringify({ language, lead, ...(opts.skipAutoSms ? { skipAutoSms: true } : {}) })
     });
 }
 

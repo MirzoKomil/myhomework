@@ -294,6 +294,9 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
                     `• O'qituvchi: ${teacher?.name || '—'}`, `• Kuni: ${date.split('-').reverse().join('.')}, ${T.fromMin(min)}`, `• Davomiyligi: ${holds.length} kun`,
                     ...(wish ? [`• Lid istagi: ${wish}`] : [])].join('\n') }] };
         const saved = await db.upsertLead(lead, row.language, req.user);
+        // Sinov darsi SMS'i (havola va vaqt bilan) — serverda, javobni kutmaydi.
+        require('../services/leadStageSms').onLeadSaved({ status: row.status, trialLessonAt: extra.trialLessonAt || null, paymentOnboarding: extra.paymentOnboarding || {} },
+            { ...saved.lead, language: row.language }, saved.platformAccess);
         return { lead: { id: saved.lead.id, status: saved.lead.status } };
     }));
     router.post('/bookings/:id/:action', handle(req => write(req, async c => {
