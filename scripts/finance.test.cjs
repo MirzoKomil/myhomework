@@ -680,3 +680,56 @@ test('R7: non-admin cannot move an employee into the finance department or chang
     assert.throws(() => preserveHrPrivateFields([{ id: 'e3', login: 'x', department: 'finance' }], old, { role: 'rop' }), /admin/);
     assert.doesNotThrow(() => preserveHrPrivateFields([{ id: 'e1', login: 'rec', department: 'moliya' }], old, { role: 'admin' }));
 });
+
+test('Umumiy split: first payment of a student is a new sale, later payments are from debtors; voided excluded; sum = total', () => {
+    const d = data({ receipts: [
+        rc('a1', '2026-10-05', 500000, { leadId: 'L1', debtAfter: 1000000 }),
+        rc('a2', '2026-11-03', 400000, { leadId: 'L1', debtAfter: 600000 }),
+        rc('b1', '2026-11-04', 900000, { leadId: 'L2', debtAfter: 300000 }),
+        rc('b2', '2026-11-10', 300000, { leadId: 'L2', debtAfter: 0 }),
+        rc('c1', '2026-11-11', 700000, { leadId: 'L3', voidDate: '2026-11-12' })
+    ] });
+    const s = F.tuitionSplit(d, { start: '2026-11-01', end: '2026-11-30' });
+    assert.equal(s.total, 1600000);
+    assert.deepEqual([s.newSales.amount, s.newSales.count], [900000, 1]);
+    assert.deepEqual([s.debtors.amount, s.debtors.count], [700000, 2]);
+    assert.equal(s.other.amount, 0);
+    assert.equal(s.newSales.amount + s.debtors.amount + s.other.amount, s.total);
+    assert.ok(F.newSaleKeys(d, { start: '2026-11-01', end: '2026-11-30' }).has('l:L2'));
+    assert.ok(!F.newSaleKeys(d, { start: '2026-11-01', end: '2026-11-30' }).has('l:L1'));
+});
+
+test('salary groups: academic head is academic, ROP is sales, others are other', () => {
+    assert.equal(F.salaryGroup('akademik'), 'academic');
+    assert.equal(F.salaryGroup('head-of-teachers'), 'academic');
+    assert.equal(F.salaryGroup('yordamchi'), 'academic');
+    assert.equal(F.salaryGroup('assistant'), 'academic');
+    assert.equal(F.salaryGroup('rop'), 'sales');
+    assert.equal(F.salaryGroup('hr'), 'other');
+    assert.equal(F.salaryGroup(null), 'other');
+});
+
+test('Yangi/Qarzdor: one shared classifier — tuitionSplit kinds equal saleKinds (To‘lovlar badge)', () => {
+    const d = data({ receipts: [
+        rc('x1', '2026-10-01', 100000, { leadId: 'A' }), rc('x2', '2026-11-02', 200000, { leadId: 'A' }),
+        rc('y1', '2026-11-03', 300000, { leadId: null, studentId: 'S9' }), rc('y2', '2026-11-03', 50000, { leadId: null, studentId: 'S9' }),
+        rc('z1', '2026-11-04', 70000, { leadId: 'B', voidDate: '2026-11-05' }), rc('z2', '2026-11-06', 80000, { leadId: 'B' })
+    ] });
+    const kinds = F.saleKinds(d.receipts);
+    const split = F.tuitionSplit(d, { start: '2026-11-01', end: '2026-11-30' });
+    for (const r of split.rows) assert.equal(r.kind, kinds.get(r.id), r.id);
+    assert.deepEqual(['x2', 'y1', 'y2', 'z2'].map(id => kinds.get(id)), ['debtor', 'new', 'debtor', 'new']);
+    assert.equal(kinds.has('z1'), false);
+});
+
+test('Yangi/Qarzdor: lead and student are one identity (payment with leadId, later one with only studentId)', () => {
+    const recs = [rc('p1', '2026-11-01', 100000, { leadId: 'L7', studentId: null }), rc('p2', '2026-11-05', 50000, { leadId: null, studentId: 'S7' }),
+        rc('p3', '2026-11-06', 70000, { leadId: 'L8', studentId: 'S8' }), rc('p4', '2026-11-07', 30000, { leadId: null, studentId: 'S8' })];
+    const k = F.saleKinds(recs, [['S7', 'L7']]);
+    assert.deepEqual(['p1', 'p2', 'p3', 'p4'].map(id => k.get(id)), ['new', 'debtor', 'new', 'debtor']);
+    const noLink = F.saleKinds(recs);
+    assert.equal(noLink.get('p2'), 'new'); // bog'lanish bo'lmasa — alohida odam
+    const d = data({ receipts: recs, studentLeads: [['S7', 'L7']] });
+    const sp = F.tuitionSplit(d, { start: '2026-11-01', end: '2026-11-30' });
+    assert.deepEqual([sp.newSales.count, sp.debtors.count], [2, 2]);
+});

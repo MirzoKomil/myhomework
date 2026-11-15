@@ -138,7 +138,7 @@ test('real PostgreSQL finance integration', { skip: !url }, async t => {
 
         await t.test('Uzum settlement: net amount to bank and commission expense in one request', async () => {
             await finance.createTransaction(pool, accountant, { requestKey: key(), entity: 'russian', type: 'transfer', categoryCode: 'TRANSFER', accountId: 'acc-uzum', toAccountId: 'acc-bank', amount: 630000, feeAmount: 70000, date: '2026-10-06', description: 'Uzum to‘lovi' });
-            const o = await finance.overview(pool, accountant, { start: '2026-10-01', end: '2026-10-31', scope: 'all' });
+            const o = await finance.overview(pool, admin, { start: '2026-10-01', end: '2026-10-31', scope: 'all' });
             assert.equal(o.balance.uzumReceivable, 0);
             assert.equal(o.pnl.payment_fees, 70000);
             assert.equal(o.cashflow.reconciled, true);
@@ -161,7 +161,7 @@ test('real PostgreSQL finance integration', { skip: !url }, async t => {
             await rejects(finance.createTransaction(pool, accountant, { requestKey: key(), entity: 'common', type: 'loan_repay', categoryCode: 'LOAN_REPAY', accountId: 'acc-bank', amount: 3500000, date: '2026-10-07', payableId: payable, counterparty: 'Bank', receiptUrl: await evidence() }), 409);
             await finance.createTransaction(pool, accountant, { requestKey: key(), entity: 'common', type: 'loan_repay', categoryCode: 'LOAN_REPAY', accountId: 'acc-bank', amount: 1000000, date: '2026-10-07', payableId: payable, counterparty: 'Bank', receiptUrl: await evidence() });
             await finance.createTransaction(pool, accountant, { requestKey: key(), entity: 'common', type: 'expense', categoryCode: 'INTEREST', accountId: 'acc-bank', amount: 45000, date: '2026-10-07', counterparty: 'Bank' });
-            const o = await finance.overview(pool, accountant, { start: '2026-10-01', end: '2026-10-31', scope: 'all' });
+            const o = await finance.overview(pool, admin, { start: '2026-10-01', end: '2026-10-31', scope: 'all' });
             assert.equal(o.payables.loans, 2000000);
             assert.equal(o.pnl.finance_cost, 45000);
             assert.equal(o.cashflow.financing.find(l => l.key === 'interest').amount, -45000);
@@ -296,8 +296,11 @@ test('real PostgreSQL finance integration', { skip: !url }, async t => {
             const a = await finance.recordSalaryPayment(pool, accountant, 'sal1', { accountId: 'acc-card', date: '2026-10-02' });
             const b = await finance.recordSalaryPayment(pool, accountant, 'sal1', { accountId: 'acc-card', date: '2026-10-02' });
             assert.equal(a.id, b.id); assert.equal(b.duplicate, true);
-            const o = await finance.overview(pool, accountant, { start: '2026-09-01', end: '2026-10-31', scope: 'russian', basis: 'accrual' });
+            const o = await finance.overview(pool, admin, { start: '2026-09-01', end: '2026-10-31', scope: 'russian', basis: 'accrual' });
             assert.equal(o.quality.paidSalaryWithoutCash.length, 0);
+            // Moliyachi (egasi qarori): hamma narsani ko'radi.
+            const staff = await finance.overview(pool, accountant, { start: '2026-09-01', end: '2026-10-31', scope: 'russian', basis: 'accrual' });
+            assert.equal(staff.pnl.cost_of_services, 900000 + 400000);
             assert.equal(o.pnl.cost_of_services, 900000 + 400000);
             assert.equal(o.pnlOther.cost_of_services, 900000);
             assert.equal(o.payables.unreconciledSalaries, 0);
@@ -357,6 +360,141 @@ test('real PostgreSQL finance integration', { skip: !url }, async t => {
             assert.equal((await pool.query('SELECT COUNT(*) AS n FROM fin_period_snapshots')).rows[0].n, '0');
         });
 
+        await t.test('Umumiy summary: split sums to total, refunds subtracted, staff gets no salaries or Qolgan pul; investor module', async () => {
+            const q = { start: '2026-09-01', end: '2026-10-31', scope: 'russian' };
+            const s = await finance.summary(pool, admin, q);
+            assert.equal(s.split.newSales.amount + s.split.debtors.amount + s.split.other.amount, s.split.total);
+            assert.equal(s.split.net, s.split.total - s.split.refunds);
+            assert.equal(s.remaining.amount, s.split.net - s.payroll.accrued - s.expenses.total);
+            assert.equal(s.payroll.groups.reduce((n, g) => n + g.accrued, 0), s.payroll.accrued);
+            assert.ok(s.payroll.people.length > 0);
+            assert.equal(s.problems.length, 0, JSON.stringify(s.problems));
+            // To'lovlar ro'yxatidagi Yangi/Qarzdor belgisi Umumiy bo'linmasi bilan bir xil (yagona FinanceEngine.saleKinds).
+            const inflowList = await inflow.transaction(pool, db => inflow.list(db, admin, { language: 'russian', start: q.start, end: q.end }));
+            const kindOf = new Map(s.split.rows.map(r => [r.id, r.kind]));
+            for (const r of inflowList.records) if (kindOf.has(r.id)) assert.equal(r.saleKind, kindOf.get(r.id), r.id);
+            assert.ok(inflowList.records.some(r => kindOf.has(r.id)));
+            // To'lovlar "Kutilayotgan qoldiq qarz" = Umumiy "davr sotuvlaridan" (bitta funksiya) = mustaqil SQL hisobi.
+            const pd = await finance.periodDebt(pool, accountant, q);
+            assert.equal(pd.periodSales.total, s.receivables.periodSales.total);
+            const keys = F.newSaleKeys(await finance.load(pool), { start: q.start, end: q.end, scope: 'russian' });
+            const sqlDebt = (await pool.query(`SELECT id, extra_data FROM students WHERE subject='russian'`)).rows
+                .filter(r => (keys.has('s:' + r.id) || (r.extra_data?.leadRef?.id && keys.has('l:' + r.extra_data.leadRef.id))) && !r.extra_data?.frozen && !['inactive', 'frozen', 'archived', 'deleted'].includes(String(r.extra_data?.status || '')))
+                .reduce((n, r) => n + Math.max(0, Number(r.extra_data?.debtAmount) || 0), 0);
+            assert.equal(pd.periodSales.total, sqlDebt);
+            const staff = await finance.summary(pool, accountant, q);
+            assert.equal(staff.remaining.amount, s.remaining.amount);
+            assert.equal(staff.payroll.people.length, s.payroll.people.length);
+            assert.equal(staff.payroll.accrued, s.payroll.accrued);
+            const inv = require('../server/services/investor');
+            await inv.initSchema(pool);
+            assert.equal((await inv.view(pool, accountant)).user.director, false);
+            const v0 = await inv.view(pool, admin);
+            await inv.saveSettings(pool, admin, { name: 'Investor A', sharePct: 30, startMonth: '2026-09', termMonths: 18, basis: 'before_tax', entity: 'russian', revision: v0.investor.revision });
+            await rejects(inv.saveSettings(pool, accountant, { revision: 1 }), 403);
+            const lockedHere = (await inv.view(pool, admin)).closedThrough < '2026-09';
+            if (lockedHere) await finance.lockMonth(pool, admin, { month: '2026-09', override: true, note: 'Investor testi uchun oy yopildi' });
+            const snapCount = async () => (await pool.query("SELECT COUNT(*)::int AS n FROM investor_months WHERE month='2026-09'")).rows[0].n;
+            assert.equal(await snapCount(), lockedHere ? 1 : 0, 'oy yopilganda investor natijasi yoziladi');
+            const v = await inv.view(pool, admin);
+            assert.equal(await snapCount(), lockedHere ? 1 : 0, 'GET hech narsa yozmaydi');
+            assert.equal(v.rows.length, 18);
+            const sep = v.rows.find(r => r.month === '2026-09');
+            assert.equal(sep.status, 'final'); assert.ok(sep.share > 0);
+            assert.equal(sep.share, Math.max(0, Math.round(sep.base * 0.3)));
+            if (sep.status === 'final' && sep.share > 0) {
+                const half = Math.floor(sep.share / 2) || 1;
+                await rejects(inv.addPayment(pool, admin, { month: '2026-09', amount: half, paidDate: '2026-10-05', accountId: 'acc-card' }), 400, /hujjat/i);
+                const p1 = await inv.addPayment(pool, admin, { month: '2026-09', amount: half, paidDate: '2026-10-05', accountId: 'acc-card', receiptUrl: await evidence('inv1.pdf') });
+                const cash1 = (await pool.query("SELECT type, category_code, amount FROM fin_transactions WHERE id=$1", [p1.cashId])).rows[0];
+                assert.deepEqual([cash1.type, cash1.category_code, Number(cash1.amount)], ['drawing', 'OWNER_OUT', half]);
+                await rejects(inv.addPayment(pool, admin, { month: '2026-09', amount: sep.share, paidDate: '2026-10-05' }), 400, /oshib/);
+                await rejects(inv.reversePayment(pool, admin, p1.id, { reason: 'x' }), 400);
+                const fix = await inv.reversePayment(pool, admin, p1.id, { reason: 'Summa xato kiritilgan', amount: sep.share, accountId: 'acc-card', receiptUrl: await evidence('inv2.pdf') });
+                assert.equal((await pool.query('SELECT COUNT(*)::int AS n FROM fin_transactions WHERE reverses_id=$1', [p1.cashId])).rows[0].n, 1);
+                assert.ok(fix.newId);
+                await rejects(inv.reversePayment(pool, admin, p1.id, { reason: 'Yana bir marta' }), 409);
+                // Bir vaqtdagi ikki bekor qilish: bittasi o'tadi, kassada bitta storno.
+                const both = await Promise.allSettled([1, 2].map(() => inv.reversePayment(pool, admin, fix.newId, { reason: 'Parallel bekor qilish' })));
+                assert.deepEqual(both.map(x => x.status).sort(), ['fulfilled', 'rejected']);
+                const cashNew = (await pool.query('SELECT cash_txn_id FROM investor_payments WHERE id=$1', [fix.newId])).rows[0].cash_txn_id;
+                assert.equal((await pool.query('SELECT COUNT(*)::int AS n FROM fin_transactions WHERE reverses_id=$1', [cashNew])).rows[0].n, 1);
+                // Tuzatishda ulushdan oshirish rad etiladi (oy yozuvidan yoki joriy hisobdan).
+                const p3 = await inv.addPayment(pool, admin, { month: '2026-09', amount: 1, paidDate: '2026-10-05', accountId: 'acc-card', receiptUrl: await evidence('inv3.pdf') });
+                await rejects(inv.reversePayment(pool, admin, p3.id, { reason: 'Ortiqcha summa', amount: sep.share + 1, accountId: 'acc-card', receiptUrl: await evidence('inv4.pdf') }), 400, /oshib/);
+                assert.equal((await pool.query('SELECT COUNT(*)::int AS n FROM investor_payments WHERE reverses_id=$1', [p3.id])).rows[0].n, 0, 'xatoda hech narsa o‘zgarmaydi');
+                const v2 = await inv.view(pool, admin);
+                assert.equal(v2.rows.find(r => r.month === '2026-09').payState, 'partial');
+                // Yopilgan oy muzlatilgan: keyin qo'shilgan narsa natijani o'zgartirmaydi
+                assert.equal(v2.rows.find(r => r.month === '2026-09').share, sep.share);
+                // Oy qayta ochilib, ulush kamaytirilgan holda qayta yopilsa: yangi (oxirgi) yozuv ishlatiladi, ortiqcha to'lov ko'rinadi,
+                // yangi to'lov qabul qilinmaydi.
+                assert.equal(v2.closedThrough, '2026-09', 'test sentyabr oxirgi yopilgan oy bo‘lishini kutadi');
+                const paidSep = v2.rows.find(r => r.month === '2026-09').paid;
+                assert.ok(paidSep > 0);
+                await finance.lockMonth(pool, admin, { month: '2026-09', locked: false, note: 'Ulushni qayta ko‘rish' });
+                await inv.saveSettings(pool, admin, { name: 'Investor A', sharePct: 0, startMonth: '2026-09', termMonths: 18, basis: 'before_tax', entity: 'russian', revision: v2.investor.revision });
+                await finance.lockMonth(pool, admin, { month: '2026-09', override: true, note: 'Ulush kamaytirilgandan keyin qayta yopildi' });
+                assert.equal(await snapCount(), 2, 'qayta yopishda yangi yozuv qo‘shiladi (eskisi saqlanadi)');
+                const v3 = await inv.view(pool, admin), sep3 = v3.rows.find(r => r.month === '2026-09');
+                assert.equal(sep3.status, 'final'); assert.equal(sep3.share, 0, 'oxirgi yozuv ishlatiladi');
+                assert.equal(sep3.overpaid, paidSep); assert.equal(sep3.payState, 'overpaid'); assert.equal(sep3.due, 0);
+                assert.ok(v3.totals.overpaid >= paidSep);
+                await rejects(inv.addPayment(pool, admin, { month: '2026-09', amount: 1, paidDate: '2026-10-05', accountId: 'acc-card', receiptUrl: await evidence('inv5.pdf') }), 400, /oshib/);
+                await inv.saveSettings(pool, admin, { name: 'Investor A', sharePct: 30, startMonth: '2026-09', termMonths: 18, basis: 'before_tax', entity: 'russian', revision: v3.investor.revision });
+            }
+            await rejects(inv.addPayment(pool, admin, { month: F.monthOf(F.today()), amount: 1000, paidDate: F.today() }), 400);
+            // Investor kirish hisobi: faqat o'z kabineti, maoshlar va xarajat tafsilotisiz
+            await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT, ADD COLUMN IF NOT EXISTS disabled_at TIMESTAMPTZ');
+            await rejects(inv.saveAccount(pool, admin, { name: 'X', login: 'acc', password: 'secret12' }), 409);
+            const a = await inv.saveAccount(pool, admin, { name: 'Investor A', login: 'investor-a', password: 'secret12' });
+            const cab = await inv.view(pool, { id: a.userId });
+            assert.equal(cab.readOnly, true);
+            assert.ok(cab.rows.every(r => !('expenseCategories' in r)));
+            await rejects(inv.addPayment(pool, { id: a.userId }, { month: '2026-09', amount: 1, paidDate: '2026-10-05' }), 403);
+            await rejects(finance.overview(pool, { id: a.userId }, q), 403);
+            // Investor roli olib tashlansa — kabinetga kirish darhol yopiladi (rol har so'rovda bazadan o'qiladi; guard keshi tozalanadi).
+            await pool.query("UPDATE users SET role='employee' WHERE id=$1", [a.userId]);
+            await rejects(inv.view(pool, { id: a.userId }), 403);
+            await rejects(inv.monthDetail(pool, { id: a.userId }, '2026-09'), 403);
+            await pool.query("UPDATE users SET role='investor' WHERE id=$1", [a.userId]);
+            assert.equal((await inv.view(pool, { id: a.userId })).readOnly, true);
+            // Hal qilingan muammolar jurnali: faqat qo'shiladi, til bo'yicha ko'rinadi.
+            await finance.initProblemLog(pool);
+            // Solishtirish natijasi serverda saqlanadi; hal qilingach (resolution) qaytarilmaydi.
+            await finance.saveRecon(pool, accountant, { entity: 'russian', fileName: 'jadval.tsv', result: { start: '2026-11-01', end: '2026-11-15', totalExternal: 377000, totalLedger: 0, difference: -377000, counts: { missing_in_crm: 2 },
+                results: [{ status: 'missing_in_crm', external: { date: '2026-11-13', name: 'A', phone: '931112233', amount: 250000 }, ledger: null, ledgers: [], difference: -250000 }, { status: 'missing_in_crm', external: { date: '2026-11-14', name: '<b>B</b>'.repeat(100), amount: 127000 }, difference: -127000 }] } });
+            const saved = (await finance.latestRecon(pool, admin, { entity: 'russian' })).recon;
+            assert.equal(saved.result.results.length, 2); assert.equal(saved.result.difference, -377000); assert.ok(saved.result.results[1].external.name.length <= 120);
+            assert.equal((await finance.latestRecon(pool, admin, { entity: 'english' })).recon, null);
+            await rejects(finance.resolveProblem(pool, admin, { title: 'X' }), 400);
+            await finance.resolveProblem(pool, accountant, { kind: 'recon', title: 'Jadval bilan farq', amount: 377000, scope: 'russian', detail: { added: 2, reason: 'ж'.repeat(5000) } });
+            assert.equal((await finance.latestRecon(pool, admin, { entity: 'russian' })).recon, null, 'hal qilingan solishtirish qayta ko‘rsatilmaydi');
+            const res = await finance.resolvedProblems(pool, admin, { scope: 'russian' });
+            assert.equal(res.rows[0].title, 'Jadval bilan farq'); assert.equal(res.rows[0].amount, 377000);
+            assert.equal((await finance.resolvedProblems(pool, admin, { scope: 'english' })).rows.length, 0);
+            await rejects(finance.resolvedProblems(pool, { id: a.userId }, {}), 403);
+            // Oy qayta yopilib ulush kamaysa — ortiqcha to'lov ko'rinadi (yashirilmaydi).
+            const paidSep = (await inv.view(pool, admin)).rows.find(r => r.month === '2026-09').paid;
+            if (paidSep > 0) {
+                await pool.query(`INSERT INTO investor_months(investor_id,month,revenue,payroll,expenses,taxes,remaining,base,share,share_pct,basis,groups) VALUES('main','2026-09',0,0,0,0,0,0,0,30,'before_tax','[]')`);
+                const ov = (await inv.view(pool, admin)).rows.find(r => r.month === '2026-09');
+                assert.equal(ov.overpaid, paidSep); assert.equal(ov.payState, 'overpaid'); assert.equal(ov.due, 0);
+            }
+            if (lockedHere) {
+                await finance.lockMonth(pool, admin, { month: '2026-09', locked: false, note: 'Investor testidan keyin qayta ochildi' });
+                // Oy qayta ochilgandan keyin holat tranzaksiya ichida o'qiladi: to'lov rad etiladi.
+                await rejects(inv.addPayment(pool, admin, { month: '2026-09', amount: 1, paidDate: '2026-10-05', accountId: 'acc-card', receiptUrl: await evidence('inv5.pdf') }), 400, /yopilgan/);
+                // Bir vaqtda: oyni qayta ochish va to'lov — natija izchil (to'lov o'tsa, u qayta ochishdan oldin yozilgan).
+                await finance.lockMonth(pool, admin, { month: '2026-09', override: true, note: 'Poyga testi uchun qayta yopildi' });
+                const race = await Promise.allSettled([finance.lockMonth(pool, admin, { month: '2026-09', locked: false, note: 'Poyga testi: qayta ochish' }),
+                    inv.addPayment(pool, admin, { month: '2026-09', amount: 1, paidDate: '2026-10-05', accountId: 'acc-card', receiptUrl: await evidence('inv6.pdf') })]);
+                assert.equal(race[0].status, 'fulfilled');
+                if (race[1].status === 'rejected') assert.match(race[1].reason.message, /yopilgan|oshib/);
+                assert.equal((await pool.query("SELECT MAX(month) AS m FROM fin_period_locks")).rows[0].m || '', '');
+            }
+        });
+
         await t.test('reconcile is read-only and does not touch the audit trail', async () => {
             const before = (await pool.query('SELECT COUNT(*) AS n FROM fin_audit')).rows[0].n;
             const r = await finance.reconcile(pool, accountant, { entity: 'russian', start: '2026-09-01', end: '2026-10-31', rows: [
@@ -391,7 +529,8 @@ test('real PostgreSQL finance integration', { skip: !url }, async t => {
             await finance.createTransaction(pool, admin, { requestKey: key(), entity: 'common', type: 'capital', categoryCode: 'OWNER_IN', accountId: 'acc-bank', amount: 50000000, date: '2026-10-09', counterparty: 'Ta’sischi' });
             const ex = { entity: 'common', type: 'expense', categoryCode: 'ADMIN', accountId: 'acc-bank', date: '2026-10-09', counterparty: 'Bir xil yetkazuvchi', amount: 4900000 };
             for (let i = 0; i < 3; i++) await finance.createTransaction(pool, accN, { ...ex, requestKey: key(), receiptUrl: await evidence() });
-            await rejects(finance.createTransaction(pool, accN, { ...ex, requestKey: key(), receiptUrl: await evidence() }), 403, /kunlik/);
+            // Egasi qarori (15-noyabr): xarajat limitdan oshsa ham qabul qilinadi (audit jurnalida qoladi).
+            await finance.createTransaction(pool, accN, { ...ex, requestKey: key(), receiptUrl: await evidence() });
             // Bitta hujjat bilan ikkinchi xarajat — rad
             const doc = await evidence();
             await finance.createTransaction(pool, admin, { ...ex, amount: 1000000, requestKey: key(), receiptUrl: doc });
@@ -479,7 +618,7 @@ test('real PostgreSQL finance integration', { skip: !url }, async t => {
             plainSql(`UPDATE fin_settings SET data=jsonb_set(data,'{approvalLimit}','999999999999') WHERE id='main'`);
             const v1 = await finance.verifySeals(pool);
             assert.equal(v1.ok, false); assert.equal(v1.table, 'fin_settings');
-            await rejects(finance.createTransaction(pool, { id: 'acc3' }, { requestKey: key(), entity: 'common', type: 'expense', categoryCode: 'RENT', accountId: 'acc-bank', amount: 6000000, date: '2026-10-10', counterparty: 'X', receiptUrl: await evidence() }), 403);
+            await rejects(finance.createTransaction(pool, { id: 'acc3' }, { requestKey: key(), entity: 'common', type: 'drawing', categoryCode: 'OWNER_OUT', accountId: 'acc-bank', amount: 6000000, date: '2026-10-10', counterparty: 'X', receiptUrl: await evidence() }), 403);
             // Xizmat davri asosiy vosita uchun rad etiladi
             await rejects(finance.createTransaction(pool, admin, { requestKey: key(), entity: 'common', type: 'expense', categoryCode: 'CAPEX', accountId: 'acc-bank', amount: 1000000, date: '2026-10-10', counterparty: 'X', usefulLifeMonths: 12, serviceStart: '2026-10-10', serviceEnd: '2027-10-09', receiptUrl: await evidence() }), 400, /operatsion/);
         });
