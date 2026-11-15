@@ -48,7 +48,8 @@ async function staffList(db) {
 async function attendanceToday(db, list, date, now) {
     const att = require('./staffAttendance');
     const settings = await att.getSettings(db);
-    const events = (await db.query(`SELECT employee_id, kind, occurred_at FROM staff_att_events WHERE work_date=$1 AND ok ORDER BY occurred_at`, [date])).rows;
+    const events = (await db.query(`SELECT employee_id, kind, occurred_at, break_kind, until_clock FROM staff_att_events WHERE work_date=$1 AND ok ORDER BY occurred_at`, [date])).rows;
+    const nowMin = require('./staffAttendance/time').tashkentMinutes(now);
     const out = new Map();
     for (const e of list) {
         const mine = events.filter(x => x.employee_id === e.id);
@@ -56,7 +57,9 @@ async function attendanceToday(db, list, date, now) {
         const day = await safe(() => att.computeDay(db, e.id, date, settings, now), null);
         out.set(e.id, { inAt: iso(mine.find(x => x.kind === 'in')?.occurred_at), outAt: iso(lastOut?.occurred_at),
             inOffice: !!lastIn && (!lastOut || new Date(lastOut.occurred_at) < new Date(lastIn.occurred_at)),
-            status: day?.status || null, lateMin: Number(day?.lateMinutes) || 0 });
+            status: day?.status || null, lateMin: Number(day?.lateMinutes) || 0,
+            // Obed / vaqtincha chiqish (15-noy): lunch | out | lunch_late | step_late | office | left | not_in
+            now: day && att.nowState ? att.nowState(day, nowMin, true) : '', breakUntil: day?.openBreak?.untilClock || null, breakOut: day?.openBreak?.outClock || null });
     }
     return { map: out, events };
 }
@@ -319,6 +322,7 @@ async function live(db, user, query = {}, now = new Date()) {
     const staff = office.map(e => {
         const a = att.map.get(e.id) || {}, k = KIND(e.role);
         return { id: e.id, name: first(e.first_name || e.name), kind: k, lang: e.lang, inOffice: !!a.inOffice, inAt: a.inAt || null, outAt: a.outAt || null,
+            now: a.now || '', breakUntil: a.breakUntil || null, breakOut: a.breakOut || null,
             late: lateVisible(k) && a.lateMin > 0 ? a.lateMin : null, female: femaleOf(e), birthday: birthdayToday(e, date),
             avatar: query.since ? undefined : avatarOf(e) };
     });
@@ -341,8 +345,10 @@ async function live(db, user, query = {}, now = new Date()) {
     for (const r of att.events) {
         const e = office.find(x => x.id === r.employee_id); if (!e) continue;
         const k = KIND(e.role), s = staff.find(x => x.id === e.id);
-        events.push({ id: 'f' + e.id + r.kind + new Date(r.occurred_at).getTime(), type: r.kind === 'in' ? 'checkin' : 'checkout', at: iso(r.occurred_at), staffId: e.id,
-            late: r.kind === 'in' && s?.late && s.inAt === iso(r.occurred_at) ? s.late : null, kind: k });
+        const type = r.kind === 'in' ? 'checkin' : r.kind === 'out' ? 'checkout' : r.kind === 'break_out' ? 'break_out' : 'break_in';
+        events.push({ id: 'f' + e.id + r.kind + new Date(r.occurred_at).getTime(), type, at: iso(r.occurred_at), staffId: e.id,
+            late: r.kind === 'in' && s?.late && s.inAt === iso(r.occurred_at) ? s.late : null, kind: k,
+            ...(r.break_kind ? { breakKind: r.break_kind === 'step' ? 'step' : 'lunch', until: r.until_clock || null } : {}) });
     }
     for (const e of leadEv) events.push(e);
     for (const p of payEv) {
@@ -362,7 +368,7 @@ async function live(db, user, query = {}, now = new Date()) {
 
     const sales = payEv.filter(p => p.type === 'sale');
     const kpi = {
-        inOffice: staff.filter(s => s.inOffice).length, staff: staff.length,
+        inOffice: staff.filter(s => s.inOffice && s.now !== 'out' && s.now !== 'step_late').length, onLunch: staff.filter(s => s.now === 'lunch' || s.now === 'lunch_late').length, stepOut: staff.filter(s => s.now === 'out' || s.now === 'step_late').length, staff: staff.length,
         leads: leadEv.filter(e => e.type === 'lead_new').length,
         target: leadEv.filter(e => e.type === 'lead_new' && e.src === 'target').length,
         calls: leadEv.filter(e => e.type === 'call' || e.type === 'call_fail').length,
