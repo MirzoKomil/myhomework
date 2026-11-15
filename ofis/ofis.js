@@ -6,8 +6,8 @@ const W0 = 800, H0 = 1440, DX = 505;
 const R = {
  entrance:{x:0,y:0,w:800,h:140,label:'Kirish · Face ID',ny:145},
  sotuv:{x:0,y:150,w:495,h:370,label:"Sotuv bo'limi",ny:335},
- rop:{x:515,y:150,w:285,h:180,label:'ROP',ny:240},
- akad:{x:515,y:340,w:285,h:180,label:"Akademik bo'lim",ny:430},
+ rop:{x:515,y:150,w:285,h:180,label:'Akademik rahbar',ny:240},
+ akad:{x:515,y:340,w:285,h:180,label:'Yordamchi ustozlar',ny:430},
  oquv:{x:0,y:530,w:495,h:270,label:"O'quvchilar · mobil ilova",ny:665},
  hr:{x:515,y:530,w:285,h:270,label:'HR · Marketing',ny:665},
  kassa:{x:0,y:810,w:495,h:190,label:'Kassa · Moliya',ny:905},
@@ -18,7 +18,7 @@ const R = {
 };
 const IMAP={
  entrance:{xs:[[0,31],[400,573],[505,695],[800,1144]],ys:[[-40,-12],[0,20],[95,183],[145,256]]},
- sotuv:{xs:[[0,26],[85,183],[245,358],[405,533],[495,643]],ys:[[150,277],[206,395],[292,549],[330,610],[422,726],[478,752],[520,773]]},
+ sotuv:{xs:[[0,26],[495,643]],ys:[[150,277],[520,773]]},
  rop:{xs:[[515,744],[585,925],[800,1144]],ys:[[150,277],[282,345],[320,470],[330,515]]},
  akad:{xs:[[515,744],[585,834],[670,944],[752,1052],[800,1144]],ys:[[340,530],[437,731],[520,775]]},
  oquv:{xs:[[0,26],[52,214],[376,533],[495,643]],ys:[[530,796],[640,878],[752,1055],[800,1087]]},
@@ -45,7 +45,10 @@ const KIND_LABEL={mgr:'Sotuv menejeri',rop:'ROP',akad:'Akademik rahbar',yord:'Yo
 const FEM=/a$|ya$|xon$|oy$|gul|nur|niso|sevar|zuhr|dil|mohi|shah?lo|lola|rano|feruz|kamol|madin/i;
 
 // ── Joylar (dunyo koordinatalari, rasmga IMAP orqali) ──
-const MGR_SEATS=[[85,292],[245,292],[405,292],[85,422],[245,422],[405,422],[160,357],[330,357]];
+// Sotuv bo'limi (16-noy): 15 ta menejer stoli (3 qator × 5) va ROP stoli shu xonada, doska oldida jamoaga qarab.
+// Rasm koordinatalari: stol chap-yuqori burchagi (c, r), stul markazi (c+42, r+60), odam (c+42, r+70).
+const MGR_SEATS=[];for(const r of [498,586,674])for(const c of [68,188,308,428,548]){const w=illInv(c+42,r+70);MGR_SEATS.push([w.x,w.y])}
+const ROP_DESK=(()=>{const w=illInv(361,411);return[w.x,w.y]})();
 const ROP_SEAT=[585,282], AK_SEATS=[[585,437],[670,437],[752,437],[630,480]], HR_SEAT=[600,692];
 const BAGS=[];for(let r=0;r<3;r++)for(let c=0;c<4;c++)BAGS.push([52+c*108,640+r*56]);
 // Jonli darslar: 20 ta 1+1 kabinka (rasm koordinatalari). Har birida stol, chapda ustoz, o'ngda o'quvchi.
@@ -82,7 +85,7 @@ function step(p,dt){if(!p.path.length)return;const w=p.path[0],dx=w.x-p.x,dy=w.y
 
 // ── Joylashtirish (surat → sahna) ──
 function seatFor(s,idx){if(s.kind==='mgr'){const i=idx.mgr++;return ['sotuv',...(MGR_SEATS[i]||[60+i*30,470])]}
- if(s.kind==='rop')return['rop',...ROP_SEAT];if(s.kind==='akad'||s.kind==='yord'){const i=idx.ak++;return['akad',...(AK_SEATS[i]||[560+i*30,500])]}
+ if(s.kind==='rop')return['sotuv',...ROP_DESK];if(s.kind==='akad')return['rop',...ROP_SEAT];if(s.kind==='yord'){const i=idx.ak++;return['akad',...(AK_SEATS[i]||[560+i*30,500])]}
  if(s.kind==='hr')return['hr',...HR_SEAT];return['hr',650+idx.x++*25,760]}
 const LUNCH_SEATS=[[560,880],[610,880],[660,880],[710,880],[760,880],[560,950],[610,950],[660,950],[710,950],[760,950]];
 function breakSpot(s,idx){if(s.now==='lunch'||s.now==='lunch_late'){const i=idx.lunch=(idx.lunch||0)+1;return['oshxona',...(LUNCH_SEATS[(i-1)%LUNCH_SEATS.length])]}
@@ -300,7 +303,7 @@ function drawPerson(p){const moving=p.path.length>0,bob=moving?Math.abs(Math.sin
  if(p.kind==='stud'){ctx.fillStyle='#14213D';rr(x-4,y-17,8,11,2);ctx.fill();ctx.fillStyle='#60A5FA';rr(x-3,y-16,6,8,1);ctx.fill()}}
 function chip(x,y,t,bg,fg){ctx.font='900 15px Nunito';const w=ctx.measureText(t).width+20;ctx.fillStyle=bg;rr(x,y,w,26,13);ctx.fill();ctx.fillStyle=fg;ctx.textAlign='left';ctx.fillText(t,x+10,y+18)}
 const COLS=[['Yangi','#1F4FD8',['yangi-lidlar']],['Urinilmoqda','#F59E0B',['boglanishga-urinilmoqda']],['Sinov','#7C3AED',['sinov-darsida','boglanildi']],['Qaror','#0EA5E9',['qaror-jarayonida','keyin-sotib-olmoqchi']],["To'lov",'#16A34A',['tolov-jarayonida','tolov-yopildi']],['Sifatsiz','#94A3B8',['sifatsiz-lidlar','muvaffaqiyatsiz-sotuv']]];
-let IMG=new Image();IMG.src='/ofis/office.webp?v=20261116'; // rasm almashtirilsa versiyani oshiring (brauzer 4 soat keshlaydi)
+let IMG=new Image();IMG.src='/ofis/office.webp?v=20261116s'; // rasm almashtirilsa versiyani oshiring (brauzer 4 soat keshlaydi)
 function render(){
  ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#E9DCC7';ctx.fillRect(0,0,cw,ch);
  ctx.save();ctx.scale(cam.s,cam.s);ctx.translate(-cam.x,-cam.y);
@@ -424,7 +427,7 @@ function raceUi(){const el=document.getElementById('race');if(!el)return;const L
  document.getElementById('raceBox').style.display=L.length?'':'none';
  el.innerHTML=L.map((s,i)=>`<div class="lane"><span class="ln">${i===0&&s.callsToday?'🥇 ':''}${esc(s.name)}</span><div class="trk"><i style="left:${Math.round((s.callsToday||0)/mx*86)}%;background:${people.get('s:'+s.id)?.shirt||'#94A3B8'}">${esc(s.name[0]||'?')}</i><b>🏁</b></div><em title="${s.callLeadsToday||0} ta lidga">${s.callsToday||0}</em></div>`).join('')}
 // Sotuv xonasi pastida poyga treki
-function drawRaceTrack(){const L=raceList();if(!L.length)return;const mx=Math.max(1,...L.map(s=>s.callsToday||0)),x0=60,x1=600,y=748;
+function drawRaceTrack(){const L=raceList();if(!L.length)return;const mx=Math.max(1,...L.map(s=>s.callsToday||0)),x0=60,x1=600,y=781; // sotuv va o'quvchilar xonasi orasidagi devorda (15 stol pastki qatorini yopmasin)
  ctx.fillStyle='rgba(20,33,61,.82)';rr(x0-44,y-16,x1-x0+90,32,16);ctx.fill();ctx.strokeStyle='rgba(255,255,255,.35)';ctx.setLineDash([6,6]);ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x0,y);ctx.lineTo(x1,y);ctx.stroke();ctx.setLineDash([]);
  ctx.font='16px sans-serif';ctx.textAlign='center';ctx.fillText('📞',x0-24,y+6);ctx.fillText('🏁',x1+26,y+6);
  L.forEach((s,i)=>{const X=x0+(s.callsToday||0)/mx*(x1-x0),bob=Math.sin(performance.now()/180+i)*1.5;ctx.fillStyle=people.get('s:'+s.id)?.shirt||'#94A3B8';ctx.beginPath();ctx.arc(X,y+bob,10,0,7);ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();
@@ -491,7 +494,7 @@ function board(x,y,w,title,rows,color){const h=22+rows.length*16;ctx.fillStyle='
 function drawFame(){const f=(data.kpi.fame||[]).slice(0,4);if(!f.length)return;board(420,812,215,"🎓 SHON-SHARAF DEVORI",f.map(x=>['⭐ '+x.name+(x.teacher?' · '+x.teacher:''),x.percent+'%']),'#7C3AED')}
 function drawTeacherTop(){const t=data.kpi.teacherTop||[];if(!t.length)return;board(842,1955,205,"⭐ USTOZLAR REYTINGI · 7 KUN",t.map((x,i)=>[['🥇','🥈','🥉'][i]+' '+x.name,x.lessons+' dars']),'#B45309')}
 function drawGoal(){const g=data.kpi.goal;if(!g)return;const k=data.kpi,parts=[['📞',k.calls,g.calls],['📅',k.trials,g.trials],['💰',k.sales,g.sales]].filter(p=>p[2]>0);if(!parts.length)return;
- const x0=24,y=704,w=600;ctx.fillStyle='rgba(255,255,255,.95)';rr(x0,y-18,w,32,16);ctx.fill();ctx.strokeStyle='#16A34A';ctx.lineWidth=1.5;ctx.stroke();
+ const x0=24,y=238,w=600;ctx.fillStyle='rgba(255,255,255,.95)';rr(x0,y-18,w,32,16);ctx.fill();ctx.strokeStyle='#16A34A';ctx.lineWidth=1.5;ctx.stroke();
  ctx.fillStyle='#15803D';ctx.font='900 11px Nunito';ctx.textAlign='left';ctx.fillText('🎯 BUGUNGI MAQSAD',x0+12,y+2);const pw=(w-150)/parts.length;
  parts.forEach(([ic,v,t],i)=>{const px=x0+140+i*pw,pc=Math.min(1,v/t);ctx.fillStyle='#E5E7EB';rr(px+20,y-6,pw-70,10,5);ctx.fill();ctx.fillStyle=pc>=1?'#F59E0B':'#16A34A';rr(px+20,y-6,Math.max(10,(pw-70)*pc),10,5);ctx.fill();
   ctx.fillStyle='#14213D';ctx.font='14px sans-serif';ctx.fillText(ic,px,y+4);ctx.font='900 11px Nunito';ctx.fillText(`${v}/${t}`,px+pw-46,y+3)})}
