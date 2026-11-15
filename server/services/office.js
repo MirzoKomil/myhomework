@@ -209,7 +209,9 @@ async function teamPlan(db, date, langs) {
 // ── Qo'shimchalar-2 (2026-11-15): TV e'loni, qo'ng'iroq poygasi, kecha bilan solishtirish, hafta qahramonlari, personaj, kun yakuni ──
 const SCHEMA = `CREATE TABLE IF NOT EXISTS office_announcements (id SERIAL PRIMARY KEY, text TEXT NOT NULL, author TEXT NOT NULL DEFAULT '',
     created_by TEXT NOT NULL DEFAULT '', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), expires_at TIMESTAMPTZ NOT NULL, removed BOOLEAN NOT NULL DEFAULT FALSE);
-CREATE TABLE IF NOT EXISTS office_looks (employee_id TEXT PRIMARY KEY, look JSONB NOT NULL, updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW());`;
+CREATE TABLE IF NOT EXISTS office_looks (employee_id TEXT PRIMARY KEY, look JSONB NOT NULL, updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
+CREATE TABLE IF NOT EXISTS office_goals (work_date DATE PRIMARY KEY, calls INTEGER NOT NULL DEFAULT 0, trials INTEGER NOT NULL DEFAULT 0, sales INTEGER NOT NULL DEFAULT 0,
+    author TEXT NOT NULL DEFAULT '', created_by TEXT NOT NULL DEFAULT '', updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW());`;
 async function initSchema(db) { await db.query(SCHEMA); }
 const fail = (status, message) => Object.assign(new Error(message), { status });
 const ANNOUNCERS = new Set(['admin', 'boshliq', 'rop', 'hr']);
@@ -307,6 +309,56 @@ async function lastWeek(db, langs, date, names) {
     return v;
 }
 
+// ── Qo'shimchalar-3 (2026-11-15): kunlik maqsad, davomat so'rovlari, shon-sharaf devori, ustozlar reytingi ──
+const GOAL_ROLES = new Set(['admin', 'boshliq', 'rop']);
+async function setGoal(db, user, body = {}) {
+    if (!GOAL_ROLES.has(user?.role)) throw fail(403, "Kunlik maqsadni faqat rahbar yoki ROP qo'yadi");
+    const n = (v, max) => Math.max(0, Math.min(max, Math.round(Number(v) || 0)));
+    const g = { calls: n(body.calls, 2000), trials: n(body.trials, 300), sales: n(body.sales, 300) };
+    const { date } = T.nowLocal(new Date());
+    if (!g.calls && !g.trials && !g.sales) { await db.query('DELETE FROM office_goals WHERE work_date = $1', [date]); cache.clear(); return { ok: true, goal: null }; }
+    const e = await employeeOf(db, user);
+    const un = e ? null : (await safe(() => db.query('SELECT name FROM users WHERE id::text = $1', [String(user.id || '')]), { rows: [] })).rows[0];
+    const author = first(e?.first_name || e?.name || un?.name || '') || 'ROP';
+    await db.query(`INSERT INTO office_goals (work_date, calls, trials, sales, author, created_by, updated_at) VALUES ($1,$2,$3,$4,$5,$6,NOW())
+        ON CONFLICT (work_date) DO UPDATE SET calls=EXCLUDED.calls, trials=EXCLUDED.trials, sales=EXCLUDED.sales, author=EXCLUDED.author, created_by=EXCLUDED.created_by, updated_at=NOW()`,
+        [date, g.calls, g.trials, g.sales, author, String(user.id || '')]);
+    cache.clear();
+    return { ok: true, goal: { ...g, author } };
+}
+async function todayGoal(db, date) {
+    const r = (await db.query('SELECT calls, trials, sales, author FROM office_goals WHERE work_date = $1', [date])).rows[0];
+    return r ? { calls: r.calls, trials: r.trials, sales: r.sales, author: r.author } : null;
+}
+// Bugungi davomat so'rovlari (kech qolaman / kelmayman / erta ketaman / ofisda emasman). Sababi ko'rsatilmaydi.
+async function requestsToday(db, ids, date) {
+    if (!ids.length) return new Map();
+    const rows = (await db.query(`SELECT DISTINCT ON (employee_id) employee_id, type, state, at_time, until_time FROM staff_att_requests
+        WHERE work_date = $1 AND employee_id = ANY($2::text[]) AND state IN ('pending','approved') AND type IN ('late','absent','early_leave','outside')
+        ORDER BY employee_id, created_at DESC`, [date, ids])).rows;
+    return new Map(rows.map(r => [r.employee_id, { type: r.type, state: r.state, at: r.at_time || '' }]));
+}
+// Shon-sharaf devori: oxirgi 30 kunda imtihondan 90%+ olgan o'quvchilar (eng yangi 6 ta).
+async function hallOfFame(db, students, teacherNames) {
+    const ids = students.map(s => s.id); if (!ids.length) return [];
+    const byId = new Map(students.map(s => [s.id, s]));
+    const rows = (await db.query(`SELECT DISTINCT ON (student_id) student_id, last_percent, updated_at FROM student_exam_results
+        WHERE student_id = ANY($1::text[]) AND passed AND last_percent >= 90 AND updated_at > NOW() - INTERVAL '30 days'
+        ORDER BY student_id, last_percent DESC, updated_at DESC`, [ids])).rows;
+    return rows.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at)).slice(0, 6).map(r => {
+        const s = byId.get(r.student_id);
+        return { name: s?.name || '', percent: Math.round(Number(r.last_percent) || 0), teacher: teacherNames.get(s?.teacherId) || '', at: iso(r.updated_at) };
+    });
+}
+// Ustozlar reytingi: oxirgi 7 kunda davomati belgilangan darslar soni (staff_att_lesson_marks), top 3.
+async function teacherRating(db, teachers, date) {
+    const ids = teachers.map(t => t.id); if (!ids.length) return [];
+    const rows = (await db.query(`SELECT teacher_id, COUNT(*)::int AS n FROM staff_att_lesson_marks
+        WHERE teacher_id = ANY($1::text[]) AND lesson_date > $2::date - 7 AND lesson_date <= $2::date GROUP BY teacher_id ORDER BY n DESC LIMIT 3`, [ids, date])).rows;
+    const nm = new Map(teachers.map(t => [t.id, first(t.first_name || t.name)]));
+    return rows.map(r => ({ id: r.teacher_id, name: nm.get(r.teacher_id) || '', lessons: r.n }));
+}
+
 async function live(db, user, query = {}, now = new Date()) {
     const v = await viewerFor(db, user, { tv: query.tv === '1' || query.tv === 'true', lang: query.lang });
     const { date, min: minutes } = T.nowLocal(now);
@@ -393,6 +445,13 @@ async function live(db, user, query = {}, now = new Date()) {
     kpi.yday = await safe(() => yesterday(db, v.langs, date, minutes, dayStart), null);
     kpi.week = await safe(() => lastWeek(db, v.langs, date, names), null);
     kpi.announce = await safe(() => currentAnnouncement(db), null);
+    kpi.goal = await safe(() => todayGoal(db, date), null);
+    // Davomat so'rovlari kechikish bilan bir xil qoida bo'yicha ko'rinadi (TV va jamoa ko'rinishida yo'q).
+    const reqs = v.lateFor ? await safe(() => requestsToday(db, staff.map(s => s.id), date), new Map()) : new Map();
+    for (const s of staff) { const r = reqs.get(s.id); if (r && lateVisible(s.kind)) s.req = r; }
+    const tNames = new Map(teachers.map(t => [t.id, first(t.first_name || t.name)]));
+    kpi.fame = await safe(() => hallOfFame(db, students, tNames), []);
+    kpi.teacherTop = await safe(() => teacherRating(db, teachers, date), []);
     const lk = await safe(() => looks(db), new Map());
     for (const s of staff) { const l = lk.get(s.id); if (l) s.look = l; }
     for (const t of board) { const l = lk.get(t.id); if (l) t.look = l; }
@@ -453,4 +512,4 @@ async function daySummaryTick(db, now = new Date()) {
     return true;
 }
 
-module.exports = { live, liveCached, viewerFor, KIND, initSchema, announce, removeAnnouncement, myLook, saveLook, daySummaryText, daySummaryTick, LOOK };
+module.exports = { live, liveCached, viewerFor, KIND, initSchema, announce, removeAnnouncement, myLook, saveLook, daySummaryText, daySummaryTick, LOOK, setGoal };
