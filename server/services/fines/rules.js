@@ -116,7 +116,7 @@ function attendanceFines(days, config, role) {
     for (const d of sorted) {
         const month = d.date.slice(0, 7);
         // Sinov haftasi (hisob boshlangach birinchi 7 kun): hech qanday davomat jarimasi yozilmaydi.
-        if (d.trial) continue;
+        if (d.trial || d.manual) continue; // sinov haftasi va rasmsiz kunlar (vaqtni xodim o'zi yozgan) — jarima yo'q
         // Obed / ruxsatdan kech qaytish — kun holatidan qat'i nazar (masalan "sababli" kech kelgan kunda ham).
         if (!['leave', 'off', 'before', 'not_ready', 'upcoming'].includes(d.status) && !d.overridden) {
             if (Number(d.lunchOverMinutes) > 0 && by('lunch_over')) out.push({ date: d.date, code: 'lunch_over', label: d.notReturned === 'lunch' ? 'Obeddan qaytmadi' : `Obeddan kechikish · ${d.lunchOverMinutes} daq`, amount: by('lunch_over').amount, warning: false, ref: `att:${d.date}:lunch`, minutes: Number(d.lunchOverMinutes) });

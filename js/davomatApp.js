@@ -166,6 +166,18 @@
         const m = S.me; if (!m || !m.tracked) return '';
         if (m.face !== 'approved') {
             const pend = m.face === 'pending';
+            // Rasmsiz davomat (js/davomatRasmsiz.js): yuz tasdiqlanguncha kelish/ketish joylashuv bilan, vaqtni xodim yozadi.
+            const ri = window.davomatRsz?.info?.();
+            if (ri) {
+                const row = (k, v) => `<div class="dv-kv-row"><span>${k}</span><strong>${v}</strong></div>`;
+                return `<section class="dv-card dv-s1"><div class="dv-card-h"><span class="dv-card-t">Bugungi ish kuni</span>${ri.pending ? pill('Yuborilmoqda…', 'amber') : '<span class="dv-rsz-pill">Vaqtinchalik · rasmsiz</span>'}</div>
+                    ${ri.pending ? row('Keldi', esc(ri.pending) + ' · internet kutilmoqda') : ri.inClock ? row('Keldi', esc(ri.inClock) + (ri.inEntered && ri.inEntered !== ri.inClock ? ' · siz yozdingiz' : '')) : row('Keldi', ri.onWay ? 'yoʻldaman' : '—')}
+                    ${ri.outClock ? row('Ketdi', esc(ri.outClock)) : ri.end ? row('Ish tugashi', esc(ri.end)) : ''}
+                    ${!ri.inClock && !ri.pending ? `<button type="button" class="dv-btn dv-btn-primary" data-rsz-card="arrive">${ic('check', 18)}Ofisga keldim</button>` : ''}
+                    ${ri.inClock && !ri.outClock ? `<button type="button" class="dv-btn dv-btn-soft" data-rsz-card="leave">${ic('door', 18)}Ketdim</button>` : ''}
+                    ${pend ? '' : `<button type="button" class="dv-btn" data-dv-enroll>${ic('cam', 18)}Yuz namunasini yuborish</button>`}
+                    <p class="dv-p">${pend ? 'Yuz namunangiz HRʼga yuborildi. ' : ''}Yuz namunangiz tasdiqlanguncha jarima yozilmaydi. Tasdiqlangan kundan Face ID ishlaydi.</p></section>`;
+            }
             return `<section class="dv-card dv-s1"><div class="dv-card-h"><span class="dv-card-t">Bugungi ish kuni</span>${pill(pend ? 'HR tasdiqlaydi' : 'Yuz namunasi kerak', pend ? 'blue' : 'amber')}</div>
                 <p class="dv-p">${pend ? 'Yuz namunangiz HRʼga yuborildi. Tasdiqlangach davomat shu yerda belgilanadi.' : m.face === 'rejected' ? 'Avvalgi namunangiz rad etildi. Yorugʻ joyda, koʻzoynaksiz qayta yuboring.' : 'Davomatni boshlash uchun yuz namunangizni yuboring — HR tasdiqlaydi.'}</p>
                 ${pend ? '' : `<button type="button" class="dv-btn dv-btn-primary" data-dv-enroll>${ic('cam', 18)}Yuz namunasini yuborish</button>`}</section>`;
@@ -774,7 +786,7 @@
         const nowTiles = [['g', ns.office || 0, 'Ofisda'], ['o', ns.lunch || 0, 'Obedda'], ['b', ns.out || 0, 'Tashqarida'], ['r', (ns.lunch_late || 0) + (ns.step_late || 0), 'Kech qaytmoqda']];
         const prev = v.pendingPreview || [];
         const short = r => `${first(r.name)} — ${r.type === 'outside' ? 'ofisda emas' : r.type === 'late' ? `${r.day.toLowerCase().split(',')[0]} kech qoladi${kind === 'academic' ? ', ' + r.time : ''}` : r.type === 'absent' ? `${r.day.toLowerCase().split(',')[0]} kelmaydi` : r.type === 'step_out' ? `vaqtincha chiqadi ${r.time}–${r.until}` : 'erta ketadi'}`;
-        const sub = r => { const parts = [r.inClock ? 'keldi ' + r.inClock : r.start ? 'grafik ' + r.start + ' dan' : 'dam olish']; if (kind === 'academic' && r.lang) parts.push(r.lang === 'russian' ? 'Rus tili' : r.lang === 'english' ? 'Ingliz tili' : 'Ikkala til'); if (kind === 'admin') parts.push(r.role); return parts.join(' · '); };
+        const sub = r => { const parts = [r.inClock ? 'keldi ' + r.inClock : r.onWay ? 'yoʻlda' : r.start ? 'grafik ' + r.start + ' dan' : 'dam olish']; if (r.rsz) parts.push('rasmsiz' + (r.inEnteredClock && r.inEnteredClock !== r.inClock ? ', kiritdi ' + r.inEnteredClock : '') + (r.inMethod === 'gps' ? ', GPS' : r.inMethod === 'ip' ? ', ofis interneti' : '')); if (kind === 'academic' && r.lang) parts.push(r.lang === 'russian' ? 'Rus tili' : r.lang === 'english' ? 'Ingliz tili' : 'Ikkala til'); if (kind === 'admin') parts.push(r.role); return parts.join(' · '); };
         return `${top(title, `${dayLong(date)} · ${who}, ${v.rows.length} kishi`)}<div class="dv-body">
             <div class="dv-tiles4 dv-s1">${tiles.map(([c, n, l]) => `<div class="dv-t4 dv-t4-${c}"><strong>${n}</strong><span>${l}</span></div>`).join('')}</div>
             ${v.date === tk().date ? `<span class="dv-fine">Hozir · ${hm(tk().min)}</span><div class="dv-tiles4 dv-s1">${nowTiles.map(([c, n, l]) => `<div class="dv-t4 dv-t4-${c}"><strong>${n}</strong><span>${l}</span></div>`).join('')}</div>` : ''}

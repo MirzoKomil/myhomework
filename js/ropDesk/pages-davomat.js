@@ -59,9 +59,10 @@
         const v = S.data, s = v.summary || {}, n = v.nowSummary || {};
         const kpi = (label, val, sub, tone) => `<div class="rdp-kpi${tone ? ' rdp-kpi--' + tone : ''}"><small>${label}</small><b>${val}</b><span>${sub}</span></div>`;
         const rows = v.rows || [];
+        const rszTag = r => r.rsz ? ` <span class="dv-rsz-pill">rasmsiz</span><span class="dv-rsz-sub">${[r.inEnteredClock && r.inEnteredClock !== r.inClock ? 'kiritdi ' + esc(r.inEnteredClock) : '', r.inMethod === 'gps' ? 'GPS' : r.inMethod === 'ip' ? 'ofis interneti' : r.inMethod === 'outside' ? 'tashqarida' : '', r.outEnteredClock ? 'ketish kiritildi ' + esc(r.outEnteredClock) : ''].filter(Boolean).join(' · ')}</span>` : r.onWay ? ' <span class="dv-rsz-pill">yoʻlda</span>' : '';
         const table = rows.length ? `<table class="rdp-dv-tbl"><thead><tr><th>Xodim</th><th>Keldi</th><th>Holat</th><th>Obed</th><th>Tashqarida</th><th>Hozir</th><th></th></tr></thead><tbody>
             ${rows.map(r => { const st = ST[r.status] || [r.status, '']; return `<tr><td><span class="rdp-who">${U.av(r.employeeId, r.name, 28)}<b>${esc(r.name)}</b></span></td>
-              <td>${esc(r.inClock || '—')}</td><td>${pill(r.status === 'late' && r.lateMinutes ? `Kechikdi ${r.lateMinutes} daq` : st[0], st[1])}</td>
+              <td>${esc(r.inClock || '—')}${rszTag(r)}</td><td>${pill(r.status === 'late' && r.lateMinutes ? `Kechikdi ${r.lateMinutes} daq` : st[0], st[1])}</td>
               <td>${brk(r, 'lunch')}</td><td>${brk(r, 'step')}</td><td>${nowPill(r)}</td>
               <td><button type="button" class="rdp-btn" data-dv-day="${esc(r.employeeId)}">Batafsil</button></td></tr>`; }).join('')}</tbody></table>`
             : '<div class="rdp-empty">Kuzatiladigan menejer yoʻq — HR grafik va “Davomat kuzatiladi”ni yoqqanda shu yerda chiqadi.</div>';

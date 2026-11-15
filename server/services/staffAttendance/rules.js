@@ -164,7 +164,9 @@ function dayStatus(input) {
     const firstIn = ins[0] || null;
     const lastOut = outs.length ? outs[outs.length - 1] : null;
     const inMin = firstIn ? t.tashkentMinutes(firstIn.occurred_at) : null;
-    const outMin = lastOut ? t.tashkentMinutes(lastOut.occurred_at) : null;
+    let outMin = lastOut ? t.tashkentMinutes(lastOut.occurred_at) : null;
+    // Yarim tundan keyin ketgan (rasmsiz «Keyingi kun»): ketish kelishdan keyin, lekin soat bo'yicha kichik.
+    if (firstIn && lastOut && outMin <= inMin && new Date(lastOut.occurred_at) > new Date(firstIn.occurred_at)) outMin += 1440;
     const base = {
         date, scheduled: !!day, start: day?.start || '', end: day?.end || '',
         inAt: firstIn ? firstIn.occurred_at : null, outAt: lastOut ? lastOut.occurred_at : null,
@@ -172,6 +174,13 @@ function dayStatus(input) {
         lateMinutes: 0, earlyMinutes: 0, workedMinutes: 0,
     };
     if (firstIn && lastOut && outMin > inMin) base.workedMinutes = outMin - inMin;
+    // Rasmsiz davomat: vaqtni xodim o'zi yozgan (entered_at — qachon yozgani). Bunday kunda jarima yozilmaydi.
+    if ((firstIn && firstIn.manual) || (lastOut && lastOut.manual)) {
+        base.manual = true;
+        if (firstIn && firstIn.manual && firstIn.entered_at) base.inEnteredClock = t.tashkentClock(firstIn.entered_at);
+        if (lastOut && lastOut.manual && lastOut.entered_at) base.outEnteredClock = t.tashkentClock(lastOut.entered_at);
+        if (firstIn && firstIn.location_method) base.inMethod = firstIn.location_method;
+    }
     const breaks = breaksOf(events, input.date === input.today ? input.nowMinutes : null);
     if (breaks.length) {
         base.breaks = breaks;

@@ -348,6 +348,7 @@
 
     async function renderDaily(body) {
         const data = await api(`/daily?date=${hrState.date}`);
+        const rszTag = r => r.rsz ? ` <span class="dv-rsz-pill">rasmsiz</span><span class="dv-rsz-sub">${[r.inEnteredClock && r.inEnteredClock !== r.inClock ? 'kiritdi ' + esc(r.inEnteredClock) : '', r.inMethod === 'gps' ? 'GPS' : r.inMethod === 'ip' ? 'ofis interneti' : r.inMethod === 'outside' ? 'tashqarida' : '', r.outEnteredClock ? 'ketish kiritildi ' + esc(r.outEnteredClock) : ''].filter(Boolean).join(' · ')}</span>` : r.onWay ? ' <span class="dv-rsz-pill">yoʻlda</span>' : '';
         const s = data.summary || {};
         const chip = (key, label) => `<div class="satt-stat satt-${(STATUS[key] || [0, 'idle'])[1]}"><b>${s[key] || 0}</b><span>${label}</span></div>`;
         body.innerHTML = `<div class="satt-toolbar"><label>Sana <input type="date" class="form-control-sm" value="${hrState.date}" max="${tashkentToday()}" data-satt-date></label>
@@ -355,7 +356,7 @@
             ${data.rows.length ? `<div class="satt-stats">${chip('on_time', 'vaqtida')}${chip('late', 'kechikdi')}${chip('absent', 'kelmadi')}${chip('waiting', 'kutilmoqda')}${chip('leave', 'ta’tilda')}${nowChips(data)}</div>
             <div class="satt-table-wrap"><table class="satt-table"><thead><tr><th>Xodim</th><th>Ish vaqti</th><th>Keldi</th><th>Ketdi</th><th>Holat</th><th>Urinishlar</th><th>Obed</th><th>Tashqarida</th><th>Hozir</th><th></th></tr></thead><tbody>
             ${data.rows.map(r => `<tr><td class="satt-name"><b>${esc(r.name)}</b></td><td class="satt-num" data-label="Ish vaqti">${r.scheduled ? `${esc(r.start)}–${esc(r.end)}` : '<span class="satt-muted">dam olish</span>'}</td>
-                <td class="satt-num" data-label="Keldi">${esc(r.inClock || '—')}</td><td class="satt-num" data-label="Ketdi">${esc(r.outClock || '—')}${r.earlyMinutes ? `<div class="satt-warn-text">${r.earlyMinutes} daq erta</div>` : ''}${r.noCheckout ? '<div class="satt-muted satt-small">ketish belgilanmagan</div>' : ''}</td>
+                <td class="satt-num" data-label="Keldi">${esc(r.inClock || '—')}${rszTag(r)}</td><td class="satt-num" data-label="Ketdi">${esc(r.outClock || '—')}${r.earlyMinutes ? `<div class="satt-warn-text">${r.earlyMinutes} daq erta</div>` : ''}${r.noCheckout ? '<div class="satt-muted satt-small">ketish belgilanmagan</div>' : ''}</td>
                 <td data-label="Holat">${pill(STATUS, r.status, r.lateMinutes ? ` · ${r.lateMinutes} daq` : '')}${r.note ? `<div class="satt-muted satt-small">${esc(r.note)}</div>` : ''}</td>
                 <td data-label="Urinishlar"><span>${r.attempts.length ? `${r.attempts.length} ta${r.rejected ? ` <span class="satt-bad-text">(${r.rejected} rad)</span>` : ''}` : '<span class="satt-muted">—</span>'}</span></td>
                 <td class="satt-num" data-label="Obed">${brkCell(r, 'lunch')}</td><td class="satt-num" data-label="Tashqarida">${brkCell(r, 'step')}</td><td data-label="Hozir">${nowCell(r)}</td>

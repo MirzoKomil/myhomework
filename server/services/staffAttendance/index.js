@@ -107,6 +107,13 @@ ALTER TABLE staff_att_requests DROP CONSTRAINT IF EXISTS staff_att_requests_type
 ALTER TABLE staff_att_requests ADD CONSTRAINT staff_att_requests_type_check CHECK(type IN ('late','absent','early_leave','outside','step_out'));
 ALTER TABLE staff_att_requests ADD COLUMN IF NOT EXISTS until_time TEXT NOT NULL DEFAULT '';
 CREATE INDEX IF NOT EXISTS staff_att_requests_inbox ON staff_att_requests(state,approver_kind,created_at);
+-- Rasmsiz davomat (15-noy): yuz namunasi tasdiqlanguncha xodim «Ofisdaman» deb, vaqtni o'zi yozadi; joylashuv tekshiriladi.
+ALTER TABLE staff_att_events ADD COLUMN IF NOT EXISTS manual BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE staff_att_events ADD COLUMN IF NOT EXISTS entered_at TIMESTAMPTZ;
+CREATE TABLE IF NOT EXISTS staff_att_rsz (
+ employee_id TEXT NOT NULL, work_date DATE NOT NULL, answer TEXT NOT NULL DEFAULT '', ask_at TIMESTAMPTZ, updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+ PRIMARY KEY(employee_id, work_date)
+);
 `;
 
 function error(status, message) { return Object.assign(new Error(message), { status }); }
@@ -316,7 +323,7 @@ async function loadContext(db, employeeIds, from, to) {
         q("SELECT employee_id,tracked,days,TO_CHAR(tracked_since,'YYYY-MM-DD') AS since FROM staff_att_schedules WHERE employee_id=ANY($1::text[])", [ids]),
         q('SELECT employee_id,state,first_approved_at,reset_at FROM staff_att_faces WHERE employee_id=ANY($1::text[])', [ids]),
         // "Ofisda emasman" belgisi so'rov rad etilsa/bekor qilinsa hisobga olinmaydi (odatdagi qoida).
-        q(`SELECT e.id,e.employee_id,TO_CHAR(e.work_date,'YYYY-MM-DD') AS d,e.kind,e.occurred_at,e.location_method,e.break_kind,e.until_clock,e.request_id,e.unverified FROM staff_att_events e
+        q(`SELECT e.id,e.employee_id,TO_CHAR(e.work_date,'YYYY-MM-DD') AS d,e.kind,e.occurred_at,e.location_method,e.break_kind,e.until_clock,e.request_id,e.unverified,e.manual,e.entered_at FROM staff_att_events e
             WHERE e.ok AND e.employee_id=ANY($1::text[]) AND e.work_date BETWEEN $2 AND $3
             AND NOT (e.location_method='outside' AND EXISTS(SELECT 1 FROM staff_att_requests r WHERE r.event_id=e.id AND r.state IN ('rejected','cancelled')))
             ORDER BY e.occurred_at`, [ids, from, to]),
@@ -457,7 +464,8 @@ async function me(db, user, now = new Date()) {
         approverName: await approverLabel(db, await effectiveRoute(db, a)),
         lunch: day?.lunch || null, breaks, lunchAllowed: can('lunch'), stepAllowed: can('step'),
         breakLateMinutes: rules.BREAK_LATE_MINUTES, offlineAcceptMinutes: OFFLINE_ACCEPT_MINUTES,
-        trialUntil: tu && date <= tu ? tu : null };
+        trialUntil: tu && date <= tu ? tu : null,
+        rsz: face?.state === 'approved' ? null : await rszState(db, a.employee_id, date, now) };
 }
 
 // Har urinishdan oldin server tasodifiy yo'nalish beradi (chapga/o'ngga) — bir martalik, 2 daqiqa.
@@ -501,7 +509,7 @@ function guardOrder(prior, kind) {
 }
 
 async function priorEvents(db, employeeId, date) {
-    return (await db.query('SELECT id,kind,ok,occurred_at,location_method,break_kind,until_clock,request_id,unverified FROM staff_att_events WHERE employee_id=$1 AND work_date=$2 ORDER BY occurred_at', [employeeId, date])).rows;
+    return (await db.query('SELECT id,kind,ok,occurred_at,location_method,break_kind,until_clock,request_id,unverified,manual,entered_at FROM staff_att_events WHERE employee_id=$1 AND work_date=$2 ORDER BY occurred_at', [employeeId, date])).rows;
 }
 
 function ipAllowed(ip, list) {
@@ -690,6 +698,128 @@ async function checkLocked(pool, analyzer, a, kind, body, meta) {
     const extra = kind === 'in' ? await streakInfo(pool, a.employee_id, now, settings).catch(() => ({})) : {};
     return { ok: true, kind, at: now, clock: t.tashkentClock(now), today: status, outside, distance: record.distance, unverified: !!unverified,
         faceScore: Number.isFinite(record.faceDistance) ? Math.max(0, Math.min(100, Math.round((1 - record.faceDistance) * 100))) : null, ...extra };
+}
+
+
+// ── Rasmsiz davomat (15-noy, direktor) ───────────────────────────────────────
+// Yuz namunasi tasdiqlanmagan xodim: kabinet ochilganda «Ofisdamisiz?» → kelgan vaqtini o'zi yozadi, joylashuv (GPS yoki
+// ofis interneti) tekshiriladi. Ish tugagach «Qachon tugatdingiz?», belgilamay ketsa — ertasi kirishda so'raladi.
+// Bu kunlarda jarima yozilmaydi (fines: d.manual). Yuz tasdiqlangan kundan odatdagi Face ID.
+const RSZ_MIN_CLOCK = 5 * 60;          // 05:00 dan oldingi kelish — xato (juda erta)
+const RSZ_ONWAY_MINUTES = 15, RSZ_STAY_MINUTES = 60, RSZ_LAST_ASK = 23 * 60, RSZ_BACK_DAYS = 7;
+
+async function rszAnswers(db, ids, date) {
+    const rows = (await db.query('SELECT employee_id,answer,ask_at FROM staff_att_rsz WHERE work_date=$1 AND employee_id=ANY($2::text[])', [date, ids.map(String)])).rows;
+    return new Map(rows.map(r => [r.employee_id, r]));
+}
+function rszOf(map, id, d, isToday) {
+    const r = map.get(id);
+    const out = {};
+    if (d.manual) out.rsz = true;
+    if (isToday && r && r.answer === 'onway' && !d.inClock) out.onWay = true;
+    return out;
+}
+// Ochiq qolgan kun: oxirgi RSZ_BACK_DAYS kun ichida kelish bor, ketish yo'q (obeddan qaytmay ketgan kun bundan mustasno).
+async function rszOpenDay(db, employeeId, today) {
+    const rows = (await db.query(`SELECT TO_CHAR(work_date,'YYYY-MM-DD') AS d,
+            MIN(occurred_at) FILTER (WHERE kind='in' AND location_method<>'outside') AS in_at,
+            BOOL_OR(kind='out') AS has_out, BOOL_OR(kind='break_out') AS has_break
+        FROM staff_att_events WHERE ok AND employee_id=$1 AND work_date<$2 AND work_date>=$2::date-$3::int
+        GROUP BY work_date ORDER BY work_date DESC LIMIT 1`, [employeeId, today, RSZ_BACK_DAYS])).rows[0];
+    if (!rows || !rows.in_at || rows.has_out) return null;
+    return { date: rows.d, inClock: t.tashkentClock(rows.in_at) };
+}
+async function rszState(db, employeeId, date, now) {
+    const r = (await db.query('SELECT answer,ask_at FROM staff_att_rsz WHERE employee_id=$1 AND work_date=$2', [employeeId, date])).rows[0];
+    return { answer: r?.answer || '', askAt: r?.ask_at ? new Date(r.ask_at).toISOString() : null, openDay: await rszOpenDay(db, employeeId, date),
+        minClock: t.clock(RSZ_MIN_CLOCK), lastAsk: t.clock(RSZ_LAST_ASK) };
+}
+
+async function manual(pool, user, body, meta = {}) {
+    const a = await actor(pool, user); requireEmployee(a); requireTrackedRole(a);
+    const schedule = await scheduleFor(pool, a.employee_id);
+    if (!schedule?.tracked) throw error(403, 'Sizga davomat belgilash yoqilmagan');
+    const face = (await pool.query("SELECT state FROM staff_att_faces WHERE employee_id=$1", [a.employee_id])).rows[0];
+    if (face?.state === 'approved') throw error(409, 'Yuz namunangiz tasdiqlangan — davomat Face ID bilan belgilanadi');
+    const action = String(body?.action || '');
+    const now = meta.now || new Date();
+    const today = t.tashkentDate(now);
+    const settings = await getSettings(pool);
+    if (action === 'answer') {
+        const ans = ['onway', 'stay'].includes(body?.answer) ? body.answer : null;
+        if (!ans) throw error(400, 'Javob noto‘g‘ri');
+        const ask = new Date(now.getTime() + (ans === 'onway' ? RSZ_ONWAY_MINUTES : RSZ_STAY_MINUTES) * 60000);
+        await pool.query(`INSERT INTO staff_att_rsz(employee_id,work_date,answer,ask_at,updated_at) VALUES($1,$2,$3,$4,NOW())
+            ON CONFLICT(employee_id,work_date) DO UPDATE SET answer=EXCLUDED.answer,ask_at=EXCLUDED.ask_at,updated_at=NOW()`, [a.employee_id, today, ans, ask]);
+        return { ok: true, rsz: await rszState(pool, a.employee_id, today, now) };
+    }
+    if (!['in', 'out', 'outside'].includes(action)) throw error(400, 'Amal turi noto‘g‘ri');
+    const date = action === 'out' && body?.date ? String(body.date) : today;
+    if (!t.isDate(date)) throw error(400, 'Sana noto‘g‘ri');
+    const back = Math.round((Date.parse(today + 'T00:00:00Z') - Date.parse(date + 'T00:00:00Z')) / 86400000);
+    if (back < 0 || back > RSZ_BACK_DAYS) throw error(400, 'Sana noto‘g‘ri');
+    let at = now, record = { lat: null, lng: null, accuracy: null, distance: null, method: '' };
+    if (action === 'in' || action === 'out') {
+        const m = t.parseClock(body?.clock);
+        if (m == null) throw error(400, 'Vaqtni 24 soat ko‘rinishida yozing, masalan 09:55');
+        const mins = m + (action === 'out' && body?.nextDay && date !== today ? 1440 : 0);
+        at = t.atTashkent(date, mins);
+        if (at > now) throw error(400, `Hozirdan keyingi vaqt bo‘lmaydi (hozir ${t.tashkentClock(now)})`);
+        if (action === 'in' && m < RSZ_MIN_CLOCK) throw error(400, 'Juda erta — vaqtni tekshiring');
+    }
+    if (action === 'in' || action === 'outside') {
+        const gps = rules.checkLocation(settings, body?.location);
+        const viaIp = ipAllowed(meta.ip, settings.officeIps);
+        if (action === 'in' && !gps.ok && !viaIp) {
+            const reason = gps.reason === 'low_accuracy' && !settings.officeIps.length ? 'low_accuracy_phone' : gps.reason;
+            return { ok: false, reason, message: rules.reasonText(reason), distance: gps.distance ?? null, accuracy: gps.accuracy ?? null };
+        }
+        if (action === 'outside' && !String(body?.reason || '').trim()) throw error(400, 'Sababni tanlang');
+        const lat = Number(body?.location?.lat), lng = Number(body?.location?.lng);
+        const inOffice = gps.ok || viaIp;
+        record = { lat: inOffice && Number.isFinite(lat) ? lat : null, lng: inOffice && Number.isFinite(lng) ? lng : null,
+            accuracy: gps.accuracy ?? null, distance: gps.distance ?? null, method: action === 'outside' ? 'outside' : gps.ok ? 'gps' : 'ip' };
+    }
+    const kind = action === 'out' ? 'out' : 'in';
+    const id = randomUUID();
+    const after = [];
+    const day = await transaction(pool, async db => {
+        await db.query('SELECT pg_advisory_xact_lock(hashtext($1))', ['staff_att:' + a.employee_id]);
+        const prior = await priorEvents(db, a.employee_id, date);
+        guardOrder(prior, action === 'outside' ? 'outside' : kind);
+        if (kind === 'out') {
+            const firstIn = prior.filter(e => e.ok && e.kind === 'in').sort((x, y) => new Date(x.occurred_at) - new Date(y.occurred_at))[0];
+            if (firstIn && !(at > new Date(firstIn.occurred_at))) throw error(400, `Ketish kelgan vaqtingizdan (${t.tashkentClock(firstIn.occurred_at)}) keyin bo‘lishi kerak`);
+            const lastBreak = prior.filter(e => e.ok && e.kind === 'break_in').pop();
+            if (lastBreak && !(at > new Date(lastBreak.occurred_at))) throw error(400, `Ketish ${t.tashkentClock(lastBreak.occurred_at)} dan keyin bo‘lishi kerak`);
+        }
+        await db.query(`INSERT INTO staff_att_events(id,employee_id,user_id,kind,work_date,occurred_at,ok,reason,lat,lng,accuracy,distance_m,location_method,
+            ip,user_agent,manual,entered_at) VALUES($1,$2,$3,$4,$5,$6,TRUE,'',$7,$8,$9,$10,$11,$12,$13,TRUE,$14)`,
+            [id, a.employee_id, a.id, kind, date, at, record.lat, record.lng, record.accuracy, record.distance, record.method,
+                String(meta.ip || '').slice(0, 64), String(meta.userAgent || '').slice(0, 300), now]);
+        if (date !== today) await db.query('DELETE FROM staff_att_day_results WHERE employee_id=$1 AND work_date=$2', [a.employee_id, date]);
+        if (await tableExists(db, 'domwork_bot_face_logs')) {
+            await db.query('INSERT INTO domwork_bot_face_logs(event_id,employee_id,kind,occurred_at) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING', [id, a.employee_id, kind, at]);
+        }
+        if (action === 'in') {
+            await db.query(`UPDATE staff_att_requests SET state='cancelled',decided_at=NOW(),decision_note='Ofisga kelib belgiladi'
+                WHERE employee_id=$1 AND work_date=$2 AND type='outside' AND state='pending'`, [a.employee_id, date]);
+        }
+        if (action === 'outside') {
+            const requestId = randomUUID();
+            const route = await effectiveRoute(db, a);
+            await db.query(`INSERT INTO staff_att_requests(id,employee_id,user_id,type,work_date,at_time,reason,comment,approver_kind,lang,event_id,distance_m)
+                VALUES($1,$2,$3,'outside',$4,$5,$6,$7,$8,$9,$10,$11)`, [requestId, a.employee_id, a.id, date, t.tashkentClock(now),
+                String(body.reason).trim().slice(0, 80), String(body.comment || '').trim().slice(0, 500), route.kind, route.lang, id, record.distance]);
+            after.push(() => notifyRequest(pool, requestId));
+        }
+        if (date === today) await db.query('DELETE FROM staff_att_rsz WHERE employee_id=$1 AND work_date=$2', [a.employee_id, date]);
+        await audit(db, a.id, 'manual:' + action, a.employee_id, { date, clock: t.tashkentClock(at) });
+        return computeDay(db, a.employee_id, date, settings, now);
+    });
+    for (const fn of after) await fn().catch(e => console.error('[staff-attendance] xabar xatosi:', e.message));
+    return { ok: true, action, date, clock: t.tashkentClock(at), today: date === today ? day : undefined, method: record.method, distance: record.distance,
+        rsz: await rszState(pool, a.employee_id, today, now) };
 }
 
 // ── Javob so'rash, tasdiqlash va jamoa davomati (Jamoa ilovasi) ──────────────
@@ -989,12 +1119,13 @@ async function teamRecord(db, user, employeeId, date, now = new Date()) {
     const ctx = await loadContext(db, [id], date, date);
     const day = statusFor(ctx, id, date, settings, now);
     await freeze(db, ctx);
-    const attempts = (await db.query(`SELECT id,kind,occurred_at,ok,reason,distance_m,accuracy,location_method,face_distance,photo_id,break_kind,until_clock,unverified FROM staff_att_events
+    const attempts = (await db.query(`SELECT id,kind,occurred_at,ok,reason,distance_m,accuracy,location_method,face_distance,photo_id,break_kind,until_clock,unverified,manual,entered_at FROM staff_att_events
         WHERE employee_id=$1 AND work_date=$2 ORDER BY occurred_at`, [id, date])).rows;
     const face = (await db.query("SELECT photo_id FROM staff_att_faces WHERE employee_id=$1 AND state='approved'", [id])).rows[0];
     return { employeeId: id, name: emp.name, date, ...day, facePhotoId: face?.photo_id || null, office: { name: settings.office.name, radius: settings.office.radius },
         attempts: attempts.map(x => ({ id: x.id, kind: x.kind, clock: t.tashkentClock(x.occurred_at), ok: x.ok, message: x.ok ? '' : rules.reasonText(x.reason),
             distance: x.distance_m, method: x.location_method, photoId: x.photo_id, breakKind: x.break_kind || '', until: x.until_clock || '', unverified: !!x.unverified,
+            manual: !!x.manual, enteredClock: x.manual && x.entered_at ? t.tashkentClock(x.entered_at) : '',
             faceScore: x.face_distance != null ? Math.max(0, Math.min(100, Math.round((1 - x.face_distance) * 100))) : null })) };
 }
 
@@ -1006,8 +1137,9 @@ async function team(db, user, date, now = new Date()) {
     const list = await teamRows(db, scope);
     const ctx = await loadContext(db, list.map(e => e.id), date, date);
     const isToday = date === t.tashkentDate(now), nowMin = t.tashkentMinutes(now);
+    const rsz = await rszAnswers(db, list.map(e => e.id), date);
     const rows = list.map(e => { const d = statusFor(ctx, e.id, date, settings, now);
-        return { employeeId: e.id, name: e.name, role: ROLE_TEXT[rules.staffKind({ empRole: e.role })], lang: empLang(e), ...d, now: nowState(d, nowMin, isToday) }; });
+        return { employeeId: e.id, name: e.name, role: ROLE_TEXT[rules.staffKind({ empRole: e.role })], lang: empLang(e), ...d, now: nowState(d, nowMin, isToday), ...rszOf(rsz, e.id, d, isToday) }; });
     await freeze(db, ctx);
     const summary = {}, nowSummary = {};
     for (const r of rows) { summary[r.status] = (summary[r.status] || 0) + 1; if (r.now) nowSummary[r.now] = (nowSummary[r.now] || 0) + 1; }
@@ -1204,18 +1336,21 @@ async function daily(db, user, date, now = new Date()) {
     const settings = await getSettings(db);
     const list = await trackedList(db);
     const ctx = await loadContext(db, list.map(e => e.id), date, date);
-    const attempts = (await db.query(`SELECT id,employee_id,kind,occurred_at,ok,reason,distance_m,accuracy,location_method,face_distance,photo_id,lat,lng,break_kind,until_clock,unverified
+    const attempts = (await db.query(`SELECT id,employee_id,kind,occurred_at,ok,reason,distance_m,accuracy,location_method,face_distance,photo_id,lat,lng,break_kind,until_clock,unverified,manual,entered_at
         FROM staff_att_events WHERE work_date=$1 ORDER BY occurred_at`, [date])).rows;
     const isToday = date === t.tashkentDate(now), nowMin = t.tashkentMinutes(now);
+    const rsz = await rszAnswers(db, list.map(e => e.id), date);
     const rows = list.map(e => {
         const day = { ...statusFor(ctx, e.id, date, settings, now) };
         day.now = nowState(day, nowMin, isToday);
+        Object.assign(day, rszOf(rsz, e.id, day, isToday));
         const mine = attempts.filter(x => x.employee_id === e.id);
         return { employeeId: e.id, name: e.name, role: e.role, ...day,
             attempts: mine.map(x => ({ id: x.id, kind: x.kind, at: x.occurred_at, clock: t.tashkentClock(x.occurred_at), ok: x.ok,
                 reason: x.reason, message: x.ok ? '' : rules.reasonText(x.reason), distance: x.distance_m, accuracy: x.accuracy,
                 method: x.location_method, faceDistance: x.face_distance, photoId: x.photo_id, lat: x.lat, lng: x.lng,
-                breakKind: x.break_kind || '', until: x.until_clock || '', unverified: !!x.unverified })),
+                breakKind: x.break_kind || '', until: x.until_clock || '', unverified: !!x.unverified,
+                manual: !!x.manual, enteredClock: x.manual && x.entered_at ? t.tashkentClock(x.entered_at) : '' })),
             rejected: mine.filter(x => !x.ok).length };
     });
     await freeze(db, ctx);
@@ -1342,7 +1477,7 @@ async function tick(db, now = new Date()) {
     return { absent, purged };
 }
 
-module.exports = { initSchema, actor, getSettings, saveSettings, me, challenge, submitOwnFace, check, employees, saveSchedule,
+module.exports = { initSchema, actor, getSettings, saveSettings, me, challenge, submitOwnFace, check, manual, employees, saveSchedule,
     myMonth, myRequests, createRequest, clearApproverCache, cancelRequest, inbox, decideRequest, team, teamRecord, saveOffice, pushEvents, scopeFor, routeFor,
     enrollFor, reviewFace, deleteFace, daily, monthly, setOverride, reviewReturn, photo, tick, trialUntil, countFromFor, nowState, computeDay, lessonReport, transaction, ipAllowed, goneSql,
     MAX_ATTEMPTS_PER_DAY, TEACHER_HR_ROLES, FRAME_W, FRAME_H,
