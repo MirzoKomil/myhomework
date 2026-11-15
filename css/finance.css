@@ -208,6 +208,7 @@
 .fin-kpi:focus-visible { outline: 3px solid #7DB2F2; outline-offset: 2px; }
 .fin-kpi > span { font-size: 13px; font-weight: 600; color: var(--text-muted); }
 .fin-kpi > strong { font-size: 24px; font-weight: 800; letter-spacing: -.01em; overflow-wrap: anywhere; }
+@media (max-width: 480px) { .fin-kpi > strong { font-size: 19px; white-space: nowrap; overflow-wrap: normal; } }
 .fin-kpi > small { font-size: 12px; font-weight: 600; color: var(--text-muted); }
 .fin-qgrid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 12px; align-items: start; }
 .fin-qgrid .fin-card { border-radius: 20px; }
@@ -283,3 +284,334 @@
 .fin-dates { display: flex; gap: 10px; flex-wrap: wrap; }
 .fin-methods .fin-narrow { width: 84px; min-height: 34px; }
 .fin-methods label { flex: 0 0 auto; }
+
+/* ==========================================================================
+   Moliya D dizayn (15-noyabr): Umumiy 5 kartasi, drill-down ro'yxatlar, Batafsil markazi,
+   Muammolar tabi, Investor. Kobalt kanvas (K_* / T_*) qiymatlari: radius 20, chegara #E6EAF2.
+   ========================================================================== */
+.fin-d5 { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+.fin-dtile { display: flex; flex-direction: column; gap: 8px; padding: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; text-align: left; cursor: pointer; font: inherit; color: inherit; min-width: 0; }
+.fin-dtile:hover { border-color: var(--kb-primary-hover, #0057B8); }
+.fin-dtile:focus-visible, .fin-dcard:focus-visible { outline: 3px solid #7DB2F2; outline-offset: 2px; }
+.fin-dlbl { font-size: 13px; font-weight: 600; color: var(--text-muted); }
+.fin-dbig { font-size: 26px; font-weight: 800; letter-spacing: -.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fin-dbig small { font-size: 20px; font-weight: 800; }
+.fin-dmid { font-size: 18px; font-weight: 800; white-space: nowrap; }
+.fin-dnote { font-size: 12px; color: var(--text-muted); line-height: 1.45; }
+.fin-dbig.pos { color: #067647; } .fin-dbig.neg, .fin-dmid.neg, .fin-dkv strong.neg { color: #B42318; }
+.fin-d2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: start; }
+.fin-dcol { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.fin-dcard { display: flex; flex-direction: column; gap: 8px; padding: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; text-align: left; font: inherit; color: inherit; min-width: 0; cursor: pointer; width: 100%; }
+.fin-dcard:hover { border-color: var(--kb-primary-hover, #0057B8); }
+.fin-dkv { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; padding: 7px 0; border-top: 1px solid var(--border); font-size: 14px; }
+.fin-dkv:first-of-type, .fin-dkv.first { border-top: 0; }
+.fin-dkv > span { color: var(--text-muted); flex: 1; min-width: 0; }
+.fin-dkv > strong { white-space: nowrap; }
+.fin-dkv .w96 { width: 96px; text-align: right; } .fin-dkv .w64 { width: 72px; text-align: right; }
+.fin-dkv .zero { color: #9AA6BA; }
+.fin-dkv .sub { padding-left: 14px; }
+.fin-dbar { height: 8px; border-radius: 99px; background: var(--kb-track, #E9EDF4); display: flex; overflow: hidden; }
+.fin-dbar > span:nth-child(1) { background: #0057B8; } .fin-dbar > span:nth-child(2) { background: #7FB2EA; }
+.fin-dlegend { display: flex; gap: 14px; font-size: 12px; color: var(--text-muted); flex-wrap: wrap; }
+.fin-dlegend i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
+.fin-dchip { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 999px; font-size: 12px; font-weight: 700; background: var(--kb-warn-bg, #FEF0C7); color: var(--kb-warn-fg, #93370D); white-space: nowrap; }
+.fin-dchip--muted { background: var(--kb-track, #EEF1F6); color: var(--text-muted); }
+.fin-dchip--ok { background: var(--kb-ok-bg, #DCFAE6); color: var(--kb-ok-fg, #05603A); }
+.fin-dchip--bad { background: var(--kb-bad-bg, #FEF3F2); color: var(--kb-bad-fg, #B42318); }
+.fin-dhead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.fin-dhead .fin-dtitle { margin: 0; font-size: 20px; font-weight: 800; }
+.fin-dback { border: 1px solid var(--border); background: var(--surface); border-radius: 999px; height: 36px; padding: 0 14px; font: inherit; font-weight: 700; cursor: pointer; color: inherit; }
+.fin-dtabs { display: flex; gap: 8px; overflow-x: auto; }
+.fin-dtabs button { flex: none; height: 40px; padding: 0 14px; border-radius: 999px; background: var(--surface); border: 1px solid var(--border); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; color: inherit; }
+.fin-dtabs button.active { background: #0B1220; color: #FFF; border-color: #0B1220; }
+.fin-dlist { display: flex; flex-direction: column; }
+.fin-drow { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--border); align-items: center; }
+.fin-drow:first-child { border-top: 0; }
+.fin-drow > span:first-child { display: flex; flex-direction: column; min-width: 0; }
+.fin-drow small { color: var(--text-muted); font-size: 12px; }
+.fin-drow > span:last-child { text-align: right; display: flex; flex-direction: column; align-items: flex-end; white-space: nowrap; }
+/* Batafsil markazi */
+.fin-hub { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.fin-hub button { text-align: left; }
+.fin-hub b { font-size: 15px; } .fin-hub small { color: var(--text-muted); font-size: 13px; }
+.fin-crumb { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; font-size: 13px; color: var(--text-muted); }
+/* Muammolar */
+.fin-prob { display: flex; gap: 12px; align-items: center; justify-content: space-between; padding: 16px; border: 1px solid var(--border); border-radius: 20px; background: var(--surface); }
+.fin-prob > span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.fin-prob--danger { border-color: #FDA29B; }
+.fin-nav-cnt { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px; margin-left: 6px; border-radius: 999px; background: #B42318; color: #FFF; font-size: 11px; font-weight: 800; }
+.section-nav-item.active .fin-nav-cnt { background: #FFF; color: #B42318; }
+.fin-nav-more { display: none; position: relative; }
+.fin-more-menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 50; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 6px; min-width: 180px; box-shadow: 0 12px 32px rgba(11,18,32,.14); display: flex; flex-direction: column; }
+.fin-more-menu[hidden] { display: none; }
+.fin-more-menu button { text-align: left; height: 44px; padding: 0 12px; border: 0; background: none; font: inherit; font-weight: 700; border-radius: 10px; cursor: pointer; color: inherit; }
+.fin-more-menu button:hover { background: var(--kb-track, #EEF1F6); }
+/* Investor */
+.fin-inv4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.fin-inv-future td { color: var(--text-muted); }
+@media (max-width: 1100px) { .fin-d5 { grid-template-columns: repeat(2, minmax(0, 1fr)); } .fin-d5 > :first-child { grid-column: 1 / -1; } .fin-inv4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 768px) {
+    .fin-d2 { grid-template-columns: 1fr; }
+    .fin-dbig { font-size: 24px; }
+    #financeSectionNav [data-fin-phone-more] { display: none !important; }
+    #financeSectionNav .fin-nav-more { display: inline-flex; }
+}
+.fin-nav-cnt[hidden] { display: none; }
+
+/* ---------- Telefon (≤768px): D dizayn T_* — sarlavha, tabletkali tablar, Ko'proq varag'i, kartalar ustma-ust ---------- */
+.fin-phead, .fin-ponly { display: none; }
+.fin-donly { display: flex; flex-direction: column; gap: 12px; }
+.fin-sheet-h { display: none; }
+.fin-sheet-ic { display: none; }
+.fin-psheet { position: fixed; inset: 0; z-index: 400; background: rgba(11, 18, 32, .45); display: flex; align-items: flex-end; }
+.fin-psheet[hidden] { display: none; }
+.fin-psheet > div { background: var(--surface); width: 100%; border-radius: 24px 24px 0 0; padding: 20px 16px calc(20px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 14px; max-height: 85vh; overflow: auto; }
+.fin-psheet .fin-sheet-h { display: flex; }
+@media (max-width: 768px) {
+    body.adm-on:has(#tab-finance.active) .top-header { display: none !important; }
+    #tab-finance .fin-phead { display: flex; flex-direction: column; gap: 10px; padding: 14px 0 6px; }
+    .fin-pperiod { align-self: flex-start; height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); font: inherit; font-size: 13px; font-weight: 700; color: inherit; cursor: pointer; }
+    .fin-ptitle { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .fin-ptitle .fin-ph1 { margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -.5px; }
+    .fin-pbtn { height: 44px; padding: 0 16px; border-radius: 14px; border: 0; background: #0057B8; color: #FFF; font: inherit; font-weight: 700; font-size: 15px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+    #tab-finance .sales-header-lang, #tab-finance .page-title-bar { display: none !important; }
+    #tab-finance .fin-presets, #tab-finance .fin-dates, #tab-finance .fin-scope, #tab-finance .fin-qhead { display: none !important; }
+    #tab-finance .fin-toolbar:not(:has(.fin-toolbar-actions, .fin-seg)) { display: none; }
+    #tab-finance .fin-toolbar--inline { display: none !important; }
+    #financeSectionNav { display: flex; gap: 6px; overflow-x: auto; border: 0; padding: 4px 0; }
+    #financeSectionNav > .section-nav-item, #financeSectionNav .fin-nav-more > .section-nav-item { flex: none; height: 44px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; color: inherit; }
+    #financeSectionNav .section-nav-item.active { background: #0B1220; color: #FFF; border-color: #0B1220; }
+    #financeSectionNav .section-nav-item::after { display: none !important; }
+    body > .fin-more-menu { position: fixed; left: 0; right: 0; bottom: 0; top: auto; z-index: 400; border-radius: 24px 24px 0 0; padding: 20px 16px calc(var(--m-nav, 64px) + 16px); box-shadow: 0 0 0 100vmax rgba(11, 18, 32, .45); min-width: 0; }
+    .fin-more-menu .fin-sheet-h { display: flex; align-items: center; justify-content: space-between; padding: 0 0 12px; border-bottom: 1px solid var(--border); }
+    .fin-sheet-h b { font-size: 18px; font-weight: 800; }
+    .fin-more-menu button[data-fin-more-go] { height: 62px; display: flex; align-items: center; gap: 14px; border-bottom: 1px solid var(--border); border-radius: 0; font-size: 16px; }
+    .fin-more-menu .fin-sheet-ic { display: inline-flex; width: 38px; height: 38px; border-radius: 12px; background: #EAF3FF; color: #0057B8; align-items: center; justify-content: center; }
+    .fin-sheet-l { flex: 1; }
+    #tab-finance .fin-donly { display: none; }
+    #tab-finance .fin-ponly { display: flex; flex-direction: column; gap: 12px; }
+    .fin-dbig.pos { font-size: 28px; }
+    #tab-finance .fin-wrap { gap: 12px; }
+}
+.fin-pseg { display: flex; gap: 8px; flex-wrap: wrap; }
+.fin-pseg button { height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; color: inherit; }
+.fin-pseg button.active { background: #0B1220; color: #FFF; border-color: #0B1220; }
+.fin-toolbar--inline { align-items: center; flex-wrap: wrap; }
+.fin-toolbar--inline .fin-dates { display: flex; gap: 10px; align-items: center; }
+.fin-toolbar--inline .fin-field { flex-direction: row; align-items: center; gap: 6px; }
+.fin-toolbar--inline .fin-field input { width: 136px; min-height: 34px; }
+.fin-toolbar--inline .fin-toolbar-actions { margin-left: auto; display: flex; gap: 8px; }
+.fin-prob { flex-direction: column; align-items: stretch; gap: 8px; }
+.fin-prob-h { display: flex; justify-content: space-between; gap: 10px; font-size: 16px; }
+.fin-prob .fin-qbtn { width: 100%; }
+@media (min-width: 769px) { .fin-prob { display: grid; grid-template-columns: 1fr auto; } .fin-prob .fin-qbtn { width: auto; grid-row: 1 / span 2; grid-column: 2; align-self: center; } }
+.fin-dchips { display: flex; flex-wrap: wrap; gap: 6px; }
+@media (max-width: 768px) { #tab-finance .fin-phead { padding: 8px 0 2px; } #financeSectionNav > .section-nav-item, #financeSectionNav .fin-nav-more > .section-nav-item { padding: 0 9px !important; font-size: 12.5px !important; } #financeSectionNav { gap: 5px !important; justify-content: space-between; } }
+
+/* ---------- To'lovlar (K_/T_tolovlar) ---------- */
+#inflowRoot .ifd-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; justify-content: flex-start; }
+#inflowRoot .fin-qbtn { display: inline-flex; align-items: center; gap: 6px; }
+#inflowRoot .ifd-desk { display: inline-flex; gap: 10px; align-items: center; }
+#inflowRoot .ifd-phone { display: none; }
+#inflowRoot .ifd-search { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; }
+#inflowRoot .ifd-search .inflow-search { flex: 0 1 360px; margin: 0; }
+#inflowRoot .ifd-search .inflow-search input { height: 44px; border-radius: 12px; }
+#inflowRoot .ifd-search select { height: 44px; border-radius: 12px; min-width: 196px; }
+#inflowRoot .ifd-sumline { display: none; font-size: 13px; color: var(--text-muted); margin: 0 0 10px; }
+#inflowRoot .ifd-sumline .pos { color: #067647; }
+#inflowRoot .inflow-kpis { margin-bottom: 12px; }
+#inflowRoot .inflow-stat { border-radius: 20px; box-shadow: none; }
+#inflowRoot .inflow-stat span { font-size: 13px; font-weight: 600; }
+#inflowRoot .inflow-stat strong { font-size: 18px; font-weight: 800; }
+#inflowRoot .ifd-table { border-radius: 20px; }
+#inflowRoot .ifd-table th { font-size: 11px; letter-spacing: .3px; text-transform: uppercase; }
+#inflowRoot .ifd-name { border: 0; background: none; padding: 0; font: inherit; font-weight: 700; color: #0057B8; cursor: pointer; text-align: left; }
+#inflowRoot .ifd-who { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-muted); }
+#inflowRoot .ifd-clip { display: inline-flex; width: 36px; height: 36px; align-items: center; justify-content: center; border: 1px solid var(--border); border-radius: 12px; color: var(--text-muted); }
+#inflowRoot .ifd-clip.is-none { border-style: dashed; }
+.ifd-filter > div { max-width: 560px; margin: 0 auto; }
+@media (min-width: 769px) {
+    .ifd-filter { align-items: flex-start; justify-content: flex-end; padding: 150px 24px 0; background: rgba(11, 18, 32, .18); }
+    .ifd-filter > div { border-radius: 20px; width: 520px; margin: 0; }
+    .ifd-filter .inflow-filters { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+}
+.ifd-lbl { font-size: 13px; }
+.ifd-menu button { display: flex; justify-content: space-between; align-items: center; height: 56px; border: 0; border-bottom: 1px solid var(--border); background: none; font: inherit; font-size: 16px; font-weight: 700; color: inherit; cursor: pointer; text-align: left; }
+.ifd-confirm { grid-template-columns: 1fr !important; }
+@media (max-width: 768px) {
+    #inflowRoot .ifd-desk, #inflowRoot .ifd-full, #inflowRoot .inflow-kpis, #inflowRoot [data-inflow-note] { display: none !important; }
+    #inflowRoot .ifd-phone { display: inline-flex; width: 48px; justify-content: center; margin-left: auto; }
+    #inflowRoot .ifd-sumline { display: block; }
+    #inflowRoot .ifd-search .inflow-search { flex: 1; }
+    #inflowRoot .ifd-search [data-inflow-filters] { width: 48px; padding: 0; justify-content: center; }
+    #inflowRoot .ifd-cards { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 4px 16px; }
+    .ifd-card { display: flex; gap: 10px; align-items: center; padding: 12px 0; border-top: 1px solid var(--border); }
+    .ifd-card:first-child { border-top: 0; }
+    .ifd-card-l { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+    .ifd-card-l .ifd-name { color: inherit; font-size: 16px; font-weight: 800; }
+    .ifd-card small { font-size: 12px; color: var(--text-muted); }
+    .ifd-card-r { display: flex; flex-direction: column; align-items: flex-end; white-space: nowrap; }
+    .ifd-card-r b { font-size: 16px; font-weight: 800; }
+    .ifd-card .ifd-clip { border: 0; width: 24px; }
+}
+/* Investor (K_/T_investor) */
+.fin-invhead { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 16px; }
+.fin-invbtns { display: inline-flex; gap: 10px; }
+.fin-inv-big { color: #0057B8; font-size: 34px; }
+.fin-inv4 .fin-dmid { font-size: 20px; }
+.fin-dchip--info { background: var(--kb-info-bg, #EAF3FF); color: var(--kb-info-fg, #0057B8); }
+@media (max-width: 768px) {
+    .fin-invhead { flex-direction: column; align-items: stretch; }
+    .fin-invhead > span[style] { display: none; }
+    .fin-invbtns { display: grid; grid-template-columns: 1fr 1fr; }
+    .fin-inv-big { font-size: 28px; }
+}
+
+.fin-sheet-x { width: 36px; height: 36px; border: 0; background: none; font-size: 24px; line-height: 1; cursor: pointer; color: inherit; border-radius: 10px; }
+.fin-sheet-x:hover { background: var(--kb-track, #EEF1F6); }
+.fin-psheet .fin-sheet-h b, .fin-more-menu .fin-sheet-h b { font-size: 18px; font-weight: 800; }
+.ifd-card-n { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+@media (max-width: 768px) { .ifd-card-l .ifd-name { color: inherit !important; } }
+.fin-drow .fin-link[data-inv-month] { padding: 0; text-align: left; color: inherit; }
+.fin-drow > span:first-child .fin-dchip { align-self: flex-start; margin-top: 4px; }
+.fin-table [data-inv-month] { padding: 0; }
+@media (max-width: 768px) { .fin-invbtns .fin-qbtn { font-size: 14px; padding: 0 10px; } }
+.fin-resolved { cursor: default; }
+.fin-resolved > summary { display: flex; justify-content: flex-start; gap: 8px; align-items: center; cursor: pointer; font-weight: 800; font-size: 15px; list-style: none; }
+.fin-resolved > summary::-webkit-details-marker { display: none; }
+.fin-resolved[open] > summary .fin-chev { transform: rotate(90deg); }
+.fin-chev { display: inline-block; transition: transform .15s; }
+/* Kartadagi katta raqam sig'ishi (1440 ekranda yon menyu bilan) */
+.fin-d5 .fin-dbig { font-size: clamp(20px, 1.65vw, 26px); }
+.fin-d5 .fin-dbig small { font-size: .78em; }
+.fin-toolbar--inline { gap: 8px; }
+.fin-toolbar--inline .fin-field input { width: 128px; }
+
+/* Davr qatori: tugmalar bir qatorda (dizayndagidek ixcham sana maydonlari) */
+.fin-toolbar--inline { flex-wrap: nowrap; }
+.fin-toolbar--inline .fin-presets { flex-wrap: nowrap; gap: 6px; }
+.fin-toolbar--inline .fin-chip { padding: 0 11px; white-space: nowrap; }
+.fin-toolbar--inline .fin-field input { width: 118px; min-height: 34px; height: 34px; padding: 0 8px; font-size: 13px; }
+.fin-toolbar--inline .fin-field > span { font-size: 13px; }
+.fin-toolbar--inline .fin-qbtn { height: 38px; padding: 0 12px; font-size: 13px; white-space: nowrap; }
+.fin-toolbar--inline .fin-toolbar-actions { flex-wrap: nowrap; }
+@media (max-width: 1280px) { .fin-toolbar--inline { flex-wrap: wrap; } }
+.ifd-period { margin-bottom: 12px; }
+.ifd-nowrap { white-space: nowrap; }
+#inflowRoot .ifd-check { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+@media (max-width: 768px) {
+    body.adm-on #tab-finance { padding-left: 16px !important; padding-right: 16px !important; }
+    .ifd-card-r b, .ifd-card-r small { white-space: nowrap; }
+    .ifd-card-l .ifd-1l { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ifd-card-n { flex-wrap: nowrap; overflow: hidden; }
+    .ifd-card-n .ifd-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+}
+#inflowRoot .ifd-table { max-height: none !important; height: auto !important; overflow-x: auto; }
+#inflowRoot .ifd-table td, #inflowRoot .ifd-table th { white-space: nowrap; }
+#inflowRoot .ifd-table .ifd-who { white-space: nowrap; }
+.fin-toolbar--inline .fin-chip { min-height: 32px; height: 32px; font-size: 13px; }
+/* D dizayn: To'lovlar sahifasi oddiy oqimda (jadval to'liq, ostida Tekshiruv) — eski "bir ekranga sig'dirish" balandligi bekor */
+#inflowRoot { height: auto !important; min-height: 0 !important; gap: 0; }
+#inflowRoot [data-inflow-content] { overflow: visible !important; flex: none !important; }
+@media (max-width: 768px) {
+    body.adm-on:has(#tab-finance.active) .main-content, body.adm-on:has(#tab-finance.active) .content-area { padding-left: 16px !important; padding-right: 16px !important; }
+    body.adm-on #tab-finance { padding-left: 0 !important; padding-right: 0 !important; }
+    #financeSectionNav { gap: 4px !important; }
+    #financeSectionNav > .section-nav-item, #financeSectionNav .fin-nav-more > .section-nav-item { padding: 0 8px !important; }
+    #tab-finance .sales-pinned { margin-top: 0; padding-top: 0; }
+}
+@media (max-width: 768px) {
+    #inflowRoot .ifd-card .ifd-clip { border: 0; width: 24px; height: 24px; }
+    #inflowRoot .ifd-sumline { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ifd-card-n .fin-dchip { flex: none; }
+}
+.fin-drow--inline > span:last-child { flex-direction: row !important; align-items: center !important; gap: 10px; }
+.fin-drow--inline .fin-actions { margin: 0; }
+.fin-resolved > summary::marker { content: ""; }
+/* Bitta ▸ belgi (umumiy details uslubi), chapda; matn qora */
+html.rd .main-area .fin-resolved > summary { color: inherit; }
+/* Batafsil (K_/T_batafsil) */
+.fin-hublist { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 4px 16px; display: flex; flex-direction: column; }
+.fin-hubrow { display: flex; align-items: center; gap: 14px; padding: 14px 0; border: 0; border-top: 1px solid var(--border); background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.fin-hubrow:first-child { border-top: 0; }
+.fin-hubic { flex: none; width: 40px; height: 40px; border-radius: 12px; background: var(--kb-info-bg, #EAF3FF); color: #0057B8; display: inline-flex; align-items: center; justify-content: center; }
+.fin-hubt { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.fin-hubt b { font-size: 16px; font-weight: 800; } .fin-hubt small { font-size: 13px; color: var(--text-muted); }
+.fin-hubchev { font-size: 22px; color: var(--text-muted); }
+.fin-hubrow:hover .fin-hubchev { color: #0057B8; }
+/* Muammolar (K_muammo): ikki ustunli kartalar, summa o'ngda, "Hal qilish" pastda */
+@media (min-width: 769px) {
+    .fin-probs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: stretch; }
+    .fin-prob { display: flex !important; flex-direction: column; }
+    .fin-prob .fin-qbtn { width: 100% !important; margin-top: auto; grid-row: auto; grid-column: auto; }
+}
+/* Muammolar (K_muammo): summa sarlavha o'ngida, kichik konturli "Hal qilish" (kompyuter); tab belgisi doim qizil */
+@media (min-width: 769px) {
+    .fin-prob .fin-qbtn { width: auto !important; align-self: flex-start; height: 34px; padding: 0 14px; font-size: 13px; background: var(--surface) !important; color: #0057B8 !important; border: 1px solid #0057B8 !important; }
+}
+.section-nav-item.active .fin-nav-cnt, .fin-nav-cnt { background: #B42318 !important; color: #FFF !important; }
+@media (max-width: 768px) {
+    #tab-finance .ifd-period, #tab-finance [data-fin-prow], #tab-finance [data-inv-periodrow] { display: none !important; }
+    #tab-finance .fin-wrap { padding-top: 4px; }
+    #financePanel-tolovlar, #tab-finance .finance-panel { margin-top: 0 !important; padding-top: 4px !important; }
+}
+/* Review 5 — telefon drill-downlar (T_oylikS, T_xarList, T_recon, T_muammo, T_invKab) */
+.fin-ponly-i { display: none; }
+.fin-prow { width: 100%; border: 0; border-top: 1px solid var(--border); background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; padding: 10px 0; }
+.fin-prow > span:last-child small { font-size: 12px; color: var(--text-muted); }
+.fin-payslip .fin-dkv { font-size: 15px; }
+/* Muammolar: summa qizil, "Hal qilish" — kichik oq tugma (dizayn .btn, 36px) */
+.fin-prob-h .neg { color: #B42318; }
+.fin-prob .fin-probbtn { width: auto !important; align-self: flex-start; height: 36px; min-height: 36px; padding: 0 16px; font-size: 14px; background: var(--surface) !important; color: var(--text) !important; border: 1px solid var(--border) !important; border-radius: 12px; margin-top: 4px; }
+.fin-prob .fin-probbtn:hover { border-color: #0057B8 !important; }
+/* Investor kabineti sarlavhasi */
+.fin-invcab-h { display: flex; flex-direction: column; gap: 2px; }
+.fin-invcab-h small { font-size: 13px; color: var(--text-muted); font-weight: 600; }
+.fin-invcab-h .fin-dtitle { font-size: 26px; font-weight: 800; letter-spacing: -.5px; }
+.inv-bottomnav { display: none; }
+@media (max-width: 768px) {
+    .fin-ponly-i { display: block; } .fin-donly-i { display: none; }
+    #tab-finance .fin-dtabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+    #tab-finance .fin-dtabs button { height: 36px; padding: 0 12px; font-size: 12.5px; }
+    /* Jadval bilan farq: 4 ustun 390 ga sig'adi */
+    .fin-recon-tbl .fin-table { font-size: 12px; } .fin-recon-tbl th, .fin-recon-tbl td { padding: 8px 6px !important; white-space: nowrap; }
+    .fin-recon-tbl { overflow: hidden; }
+    .fin-drow--inline { flex-wrap: wrap; }
+    .fin-drow--inline > span:last-child { width: 100%; justify-content: space-between; }
+    .fin-invbtns .fin-qbtn { white-space: nowrap; font-size: 13px !important; padding: 0 8px !important; }
+    /* Investor (T_invKab): umumiy ☰/Moliya sarlavhasi, sahifa sarlavhasi va tablar yo'q; pastki menyuda faqat "Investor" */
+    body.inv-cabinet .top-header, body.inv-cabinet .rd-page-head, body.inv-cabinet .sales-pinned, body.inv-cabinet .fin-phead { display: none !important; }
+    body.inv-cabinet .inv-bottomnav { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 300; background: var(--surface); border-top: 1px solid var(--border); padding: 8px 0 calc(8px + env(safe-area-inset-bottom)); justify-content: center; }
+    body.inv-cabinet .inv-bottomnav button { border: 0; background: none; display: flex; flex-direction: column; align-items: center; gap: 2px; color: #0057B8; font: inherit; font-size: 12px; font-weight: 700; }
+    body.inv-cabinet .main-content { padding-bottom: 90px !important; }
+    body.inv-cabinet .main-content, body.inv-cabinet .content-area { padding-left: 16px !important; padding-right: 16px !important; padding-top: 12px !important; }
+}
+@media (max-width: 768px) {
+    .fin-recon-tbl .fin-table { min-width: 0 !important; width: 100%; table-layout: fixed; font-size: 11.5px; }
+    .fin-recon-tbl th:first-child, .fin-recon-tbl td:first-child { width: 31%; white-space: normal; }
+    .fin-recon-tbl th, .fin-recon-tbl td { padding: 8px 4px !important; }
+}
+.fin-prob > .fin-prob-h { flex-direction: row !important; justify-content: space-between; align-items: baseline; gap: 10px; }
+.fin-prob-h b:last-child { white-space: nowrap; }
+.fin-psheet-dates { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.fin-psheet-dates .form-control { min-width: 0; }
+/* Review 7: telefon tablari 390 da to'liq (Ko'proq kesilmaydi), oraliq dizayndagidek */
+@media (max-width: 768px) {
+    #financeSectionNav { display: flex !important; justify-content: flex-start; gap: 6px !important; overflow: visible !important; flex-wrap: nowrap; }
+    #financeSectionNav > .section-nav-item, #financeSectionNav .fin-nav-more > .section-nav-item { padding: 0 11px !important; font-size: 13px !important; height: 40px !important; flex: none; }
+    #financeSectionNav .fin-nav-cnt { margin-left: 4px; }
+    /* Hisobotlar (T_hisobot): jadval qatorlari ustma-ust, gorizontal kesilmaydi */
+    #financePanel-hisobotlar .fin-seg--tabs { overflow-x: auto; flex-wrap: nowrap; }
+    #financePanel-hisobotlar .fin-toolbar-actions { flex-wrap: wrap; }
+    #financePanel-hisobotlar .fin-table-wrap { overflow: visible; }
+    #financePanel-hisobotlar .fin-table { min-width: 0 !important; width: 100%; }
+    #financePanel-hisobotlar .fin-table thead { display: none; }
+    #financePanel-hisobotlar .fin-table tr { display: grid; grid-template-columns: minmax(0, 1fr) repeat(3, auto); gap: 4px 8px; padding: 8px 0; border-bottom: 1px solid var(--border); align-items: baseline; }
+    #financePanel-hisobotlar .fin-table td { font-size: 12px !important; }
+    #financePanel-hisobotlar .fin-table td, #financePanel-hisobotlar .fin-table th { padding: 0 !important; border: 0 !important; white-space: normal; font-size: 13px; }
+    #financePanel-hisobotlar .fin-table td.num { text-align: right; white-space: nowrap; }
+    #financePanel-hisobotlar .fin-report-head h3 { font-size: 16px; }
+    /* To'lovlar kartasi: ism to'liq, belgi ikkinchi qatorda */
+    .ifd-card-n .ifd-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+    .ifd-1l .fin-dchip { height: 18px; font-size: 11px; padding: 0 6px; margin-right: 4px; vertical-align: 1px; }
+}
