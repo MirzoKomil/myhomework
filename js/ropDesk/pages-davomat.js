@@ -53,7 +53,7 @@
 
     function draw(host) {
         if (!host) return;
-        const head = U.headHtml({ title: 'Davomat', sub: `Bugun · ${hm(tk().min)} holati · faqat oʻz menejerlaringiz`, right: '<button type="button" class="rdp-btn" data-dv-refresh>Yangilash</button>', chipRight: true });
+        const head = U.headHtml({ title: 'Davomat', sub: `Bugun · ${hm(tk().min)} holati · faqat oʻz menejerlaringiz`, right: `${window.faollik ? '<button type="button" class="rdp-btn" data-fa-open>Faollik</button>' : ''}<button type="button" class="rdp-btn" data-dv-refresh>Yangilash</button>`, chipRight: true });
         if (S.err) { host.innerHTML = `${head}<div class="rdp-errbox">${esc(S.err)}</div>`; bind(host); return; }
         if (!S.data) { host.innerHTML = `${head}<div class="rdp-sk"></div><div class="rdp-sk"></div>`; bind(host); return; }
         const v = S.data, s = v.summary || {}, n = v.nowSummary || {};
