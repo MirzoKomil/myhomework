@@ -6,13 +6,17 @@
 // "Oldi" (telefonni oldi) → "Suhbat qanday bo'ldi?": Gaplashdik → anketa; Keyinroq gaplashishni so'radi → faqat qayta
 // qo'ng'iroq vaqti ("follow-up-reminder" + callback: true, 3 kungacha, ko'pi bilan 2 marta); Qiziqmaydi → Sifatsiz (sabab bilan).
 // Kelishilgan vaqtdan 2 soat o'tib ham lid bog'lanishdan oldingi bosqichda tursa — yana shu qulf ro'yxatiga qaytadi.
+// "Yangi" ustuni (16-noy): menejerga berilib, boshqa ustunga o'tkazilmagan lid — faqat ish vaqtidagi soatlar sanaladi
+// (workStart–workEnd, Toshkent). newWarnHours — ogohlantirish, newLockHours — shu oynaga tushadi. "Olmadi → Urinilmoqda"
+// faqat qo'ng'iroqdan keyin. newSince (server) — qoida ishga tushgan payt, undan oldingi lidlar soati shu paytdan.
 (function () {
     'use strict';
     const g = n => typeof window[n] === 'function';
     const DAY = 86400000, CALL_WINDOW = DAY, GRACE_MS = 5 * 60000;
     // "Keyinroq gaplashamiz": ko'pi bilan CB_MAX marta, CB_MAX_DAYS kun ichidagi vaqtga; vaqt o'tib CB_GRACE ichida hal qilinmasa — qulf.
     const CB_MAX = 2, CB_MAX_DAYS = 3, CB_GRACE = 2 * 3600000;
-    const DEFAULT = { warnDays: 3, lockDays: 5, callsPerDay: 30 };
+    const DEFAULT = { warnDays: 3, lockDays: 5, callsPerDay: 30, newWarnHours: 8, newLockHours: 12, workStart: 10, workEnd: 20 };
+    const HOUR = 3600000, TZ_OFF = 5 * HOUR;
     const CLOSED = new Set(['tolov-yopildi', 'muvaffaqiyatsiz-sotuv', 'sifatsiz-lidlar']);
     const PRE = new Set(['yangi-lidlar', 'boglanishga-urinilmoqda']);
     const AFTER = new Set(['boglanildi', 'malumot-berildi', 'sinov-darsida', 'qaror-jarayonida', 'keyin-sotib-olmoqchi', 'tolov-jarayonida', 'tolov-yopildi']);
@@ -49,8 +53,8 @@
     };
 
     // ---------- qoida ----------
-    let rules = { english: { ...DEFAULT }, russian: { ...DEFAULT } }, rulesAt = 0;
-    const setRules = r => { rules = { english: { ...DEFAULT, ...(r.english || {}) }, russian: { ...DEFAULT, ...(r.russian || {}) } }; rulesAt = Date.now(); };
+    let rules = { english: { ...DEFAULT }, russian: { ...DEFAULT } }, rulesAt = 0, newSince = 0;
+    const setRules = r => { rules = { english: { ...DEFAULT, ...(r.english || {}) }, russian: { ...DEFAULT, ...(r.russian || {}) } }; newSince = ts(r.newSince) || newSince; rulesAt = Date.now(); };
     // force=true (qoida sahifasi/oynasi): serverdan o'qib bo'lmasa xato tashlanadi — standart 3/5/30 ko'rsatilib,
     // keyin haqiqiy qoida ustiga saqlanib ketmasin. Fon tekshiruvi (force=false) eski/standart qoida bilan davom etadi.
     async function loadRules(force) {
@@ -63,6 +67,27 @@
         return rules;
     }
     const ruleFor = lg => rules[lg === 'english' ? 'english' : 'russian'] || DEFAULT;
+
+    // Ish vaqtidagi millisekundlar (server/services/staleLeads.js workMs bilan bir xil).
+    function workMs(from, to, r) {
+        if (!(to > from)) return 0;
+        let total = 0;
+        for (let day = Math.floor((from + TZ_OFF) / DAY) * DAY - TZ_OFF, n = 0; day < to && n < 400; day += DAY, n++) {
+            const a = Math.max(from, day + r.workStart * HOUR), b = Math.min(to, day + r.workEnd * HOUR);
+            if (b > a) total += b - a;
+        }
+        return total;
+    }
+    const assignedAt = l => ts(l.managerAssignedAt) || ts(l.createdAt);
+    // "Yangi" lid holati: null — tegishli emas (yoki server qoidasi hali kelmagan); { k: 'ok'|'warn'|'lock', ms, left }.
+    function newLeadState(l, now = Date.now(), lg = lang()) {
+        if (!newSince || !l || !l.managerId || st(l) !== 'yangi-lidlar' || lastCallback(l)) return null;
+        const a = assignedAt(l); if (!a) return null;
+        const r = ruleFor(lg), ms = workMs(Math.max(a, newSince), now, r), lockMs = r.newLockHours * HOUR;
+        return { k: ms >= lockMs ? 'lock' : ms >= r.newWarnHours * HOUR ? 'warn' : 'ok', ms, left: Math.max(0, lockMs - ms) };
+    }
+    const hoursTxt = ms => { const m = Math.max(1, Math.round(ms / 60000)); return m < 60 ? `${m} daq` : `${Math.floor(m / 60)} soat${m % 60 ? ' ' + (m % 60) + ' daq' : ''}`; };
+    const isNewRow = l => st(l) === 'yangi-lidlar' && !lastCallback(l);
 
     // ---------- lidlar ----------
     const callsOf = l => (Array.isArray(l.comments) ? l.comments : []).filter(c => c && CALL_TYPES.has(c.type)).map(c => ({ t: ts(c.createdAt), type: c.type })).filter(c => c.t).sort((a, b) => a.t - b.t);
@@ -92,7 +117,7 @@
         return (all[lang()] || []).filter(l => !l.deletedAt && String(l.managerId) === m);
     }
     function compute(now = Date.now()) {
-        const r = ruleFor(lang()), warn = [], lock = [];
+        const r = ruleFor(lang()), warn = [], lock = [], warnNew = [];
         for (const l of myLeads()) {
             const s = st(l);
             if (!PRE.has(s)) continue;
@@ -100,12 +125,14 @@
             // CB_GRACE o'tib ham natija yozilmagan bo'lsa (lid hali bog'lanishdan oldingi bosqichda) — qulf.
             const cb = lastCallback(l);
             if (cb) { if (now - cb.at >= CB_GRACE) lock.push(l); continue; }
+            if (s === 'yangi-lidlar') { const ns = newLeadState(l, now); if (ns?.k === 'lock') lock.push(l); else if (ns?.k === 'warn') warnNew.push(l); continue; }
             if (s !== 'boglanishga-urinilmoqda' || !neverConnected(l)) continue;
             const d = ageDays(l, now);
             if (d >= r.lockDays) lock.push(l); else if (d >= r.warnDays) warn.push(l);
         }
-        const byAge = (a, b) => ageDays(b, now) - ageDays(a, now);
-        return { rule: r, warn: warn.sort(byAge), lock: lock.sort(byAge) };
+        const byAge = (a, b) => (assignedAt(a) || 0) - (assignedAt(b) || 0);
+        // warn / lock — eski ma'nosi bilan (lock endi "Yangi" lidlarni ham o'z ichiga oladi); warnNew — 8 ish soatidan oshgan Yangi lidlar.
+        return { rule: r, warn: warn.sort(byAge), lock: lock.sort(byAge), warnNew: warnNew.sort(byAge) };
     }
 
     // ---------- qo'ng'iroq dalili ----------
@@ -200,13 +227,14 @@
         const rows = lock.map(l => {
             const cb = lastCallback(l);
             if (cb) return cbRow(l, cb);
+            if (isNewRow(l)) return newRow(l);
             const called = hasRecentCall(l), calls = attemptsOf(l), last = callsOf(l).pop(), [bg, fg] = avc(l.id), ph = telOf(l.phone);
             const meta = called
                 ? `<span class="sl-ok">${when(last.t)} qoʻngʻiroq qilindi — javob yoʻq</span>`
                 : `<span>Urinishlar: ${calls.length} · bugun qoʻngʻiroq yoʻq</span>`;
             return `<li class="sl-row">
               <div class="sl-row-h"><span class="sl-av" style="background:${bg};color:${fg}" aria-hidden="true">${esc(initials(l.name))}</span>
-                <div class="sl-row-t"><strong>${esc(l.name || 'Nomaʼlum')}</strong><span class="sl-bad">${ageDays(l)} kun · hali bir marta ham olmadi</span>${meta}</div></div>
+                <div class="sl-row-t"><span class="sl-tag sl-tag--u">URINILMOQDA</span><strong>${esc(l.name || 'Nomaʼlum')}</strong><span class="sl-bad">${ageDays(l)} kun · hali bir marta ham olmadi</span>${meta}</div></div>
               <div class="sl-acts${called ? ' is-called' : ''}">
                 ${called
                     ? `${ph ? `<a class="sl-b sl-b--out" href="tel:${esc(ph)}" data-sl-call="${esc(l.id)}">${ic(I.phone, 16)}Yana</a>` : ''}<button type="button" class="sl-b sl-b--red" data-sl-sif="${esc(l.id)}">Sifatsizga oʻtkazish</button>`
@@ -217,8 +245,9 @@
         const solvedRows = S.initial.filter(id => !lock.some(l => l.id === id)).map(id => {
             const l = g('getLeadById') ? getLeadById(lang(), id) : null;
             if (!l) return '';
-            const s = st(l), cb = PRE.has(s) ? lastCallback(l) : null, ok = AFTER.has(s) || !!cb;
-            const txt = AFTER.has(s) ? 'Telefonni oldi — keyingi bosqichga oʻtdi' : cb ? `Keyinroq gaplashadi — ${when(cb.at)}` : s === 'sifatsiz-lidlar' ? 'Sifatsizga oʻtkazildi' : 'Hal qilindi';
+            const s = st(l), cb = PRE.has(s) ? lastCallback(l) : null, ok = AFTER.has(s) || !!cb || s === 'boglanishga-urinilmoqda';
+            const txt = AFTER.has(s) ? 'Telefonni oldi — keyingi bosqichga oʻtdi' : cb ? `Keyinroq gaplashadi — ${when(cb.at)}` : s === 'sifatsiz-lidlar' ? 'Sifatsizga oʻtkazildi'
+                : s === 'boglanishga-urinilmoqda' ? `“Urinilmoqda”ga oʻtdi${l.comments?.slice().reverse().find(c => c?.type === 'contact-fail')?.reason ? ' — ' + l.comments.slice().reverse().find(c => c?.type === 'contact-fail').reason.toLowerCase() : ''}` : 'Hal qilindi';
             return `<li class="sl-row sl-row--done"><span class="sl-av" style="background:${ok ? '#D1FADF' : '#F1F5F9'};color:${ok ? '#067647' : '#3A4456'}" aria-hidden="true">${esc(initials(l.name))}</span><div class="sl-row-t"><strong>${esc(l.name || '')}</strong><span class="${ok ? 'sl-ok' : ''}">${esc(txt)}</span></div><span class="sl-tick">${ic(I.check, 20, 3)}</span></li>`;
         }).join('');
         const gate = S.el.querySelector('.sl-gate');
@@ -238,10 +267,27 @@
     }
 
     function headText(lock, r) {
-        const nCb = lock.filter(l => lastCallback(l)).length, nOld = lock.length - nCb;
-        const a = nOld ? `${nCb ? `${nOld} tasi` : 'Ular'} ${r.lockDays} kundan beri “Urinilmoqda”da turibdi va hali bir marta ham telefonni olmadi. Yana bir bor qoʻngʻiroq qiling — olmasa, “Sifatsiz”ga oʻtkazing.` : '';
-        const b = nCb ? `${nOld ? `${nCb} tasi bilan` : 'Bu mijozlar bilan'} qayta gaplashish vaqtini kelishgansiz, vaqt oʻtdi. Qoʻngʻiroq qilib, natijasini yozing.` : '';
-        return [a, b].filter(Boolean).join(' ');
+        const nCb = lock.filter(l => lastCallback(l)).length, nNew = lock.filter(l => isNewRow(l)).length, nOld = lock.length - nCb - nNew;
+        const mixed = [nCb, nNew, nOld].filter(Boolean).length > 1;
+        const n = `${mixed ? `${nNew} tasi` : 'Ular'} “Yangi” ustunida ${r.newLockHours} ish soatidan beri turibdi — hali boshqa ustunga oʻtkazilmagan. Qoʻngʻiroq qiling: olsa — “Oldi”, olmasa — “Urinilmoqda”ga oʻtkazing.`;
+        const a = nOld ? `${mixed ? `${nOld} tasi` : 'Ular'} ${r.lockDays} kundan beri “Urinilmoqda”da turibdi va hali bir marta ham telefonni olmadi. Yana bir bor qoʻngʻiroq qiling — olmasa, “Sifatsiz”ga oʻtkazing.` : '';
+        const b = nCb ? `${mixed ? `${nCb} tasi bilan` : 'Bu mijozlar bilan'} qayta gaplashish vaqtini kelishgansiz, vaqt oʻtdi. Qoʻngʻiroq qilib, natijasini yozing.` : '';
+        return [nNew ? n : '', a, b].filter(Boolean).join(' ');
+    }
+    // "Yangi" ustunidagi qotgan lid qatori: Qo'ng'iroq → "Olmadi → Urinilmoqda" (sabab bilan) yoki "Oldi".
+    function newRow(l) {
+        const ns = newLeadState(l) || { ms: 0 }, called = hasRecentCall(l), last = callsOf(l).pop(), [bg, fg] = avc(l.id), ph = telOf(l.phone);
+        const a = assignedAt(l);
+        const meta = called ? `<span class="sl-ok">${when(last.t)} qoʻngʻiroq qilindi</span>` : `<span>${a ? `Berildi: ${when(a)} · ` : ''}qoʻngʻiroq yoʻq</span>`;
+        return `<li class="sl-row">
+              <div class="sl-row-h"><span class="sl-av" style="background:${bg};color:${fg}" aria-hidden="true">${esc(initials(l.name))}</span>
+                <div class="sl-row-t"><span class="sl-tag">${ic(I.bolt, 11, 2.6)}YANGI LID</span><strong>${esc(l.name || 'Nomaʼlum')}</strong><span class="sl-bad">Yangi · ${Math.floor(ns.ms / HOUR)} ish soati${called ? '' : ' · hali qoʻngʻiroq qilinmadi'}</span>${meta}</div></div>
+              <div class="sl-acts${called ? ' is-called' : ''}">
+                ${called
+                    ? `${ph ? `<a class="sl-b sl-b--out" href="tel:${esc(ph)}" data-sl-call="${esc(l.id)}">${ic(I.phone, 16)}Yana</a>` : ''}<button type="button" class="sl-b sl-b--pri" data-sl-fail="${esc(l.id)}">Olmadi → Urinilmoqda</button>`
+                    : `${ph ? `<a class="sl-b sl-b--pri sl-ring" href="tel:${esc(ph)}" data-sl-call="${esc(l.id)}">${ic(I.phone, 18)}Qoʻngʻiroq</a>` : `<span class="sl-b sl-b--off">Telefon raqami yoʻq</span>`}<button type="button" class="sl-b sl-b--lock" data-sl-fail="${esc(l.id)}">${ic(I.lock, 14, 2.4)}Olmadi</button>`}
+                <button type="button" class="sl-b sl-b--ghost" data-sl-got="${esc(l.id)}">Oldi</button>
+              </div></li>`;
     }
     // Kelishilgan vaqti o'tgan lid qatori: qo'ng'iroq + "Natija" (Suhbat qanday bo'ldi? oynasi).
     function cbRow(l, cb) {
@@ -271,13 +317,43 @@
     function onKey2(e) { if (e.key === 'Escape') { e.preventDefault(); closeSheet(); } }
 
     function sheetCallFirst(l) {
-        const ph = telOf(l.phone), [bg, fg] = avc(l.id);
+        const ph = telOf(l.phone), [bg, fg] = avc(l.id), nw = isNewRow(l), ns = nw ? newLeadState(l) : null;
+        const pill = ns ? `${Math.floor(ns.ms / HOUR)} ish soati` : ageDays(l) ? `${ageDays(l)} kun` : '';
         openSheet(`<div class="sl-center"><span class="sl-callring">${ic(I.phone, 34, 2)}</span>
             <h2>Avval bir qoʻngʻiroq qilib koʻring</h2>
-            <p>${esc(l.name || 'Bu lid')}ga bugun hali qoʻngʻiroq qilinmagan. Iltimos, avval qoʻngʻiroq qilib koʻring — olmasa, shu yerning oʻzida “Sifatsiz”ga oʻtkazasiz.</p></div>
-          <div class="sl-card"><span class="sl-av" style="background:${bg};color:${fg}" aria-hidden="true">${esc(initials(l.name))}</span><div class="sl-row-t"><strong>${esc(l.name || '')}</strong><span>${esc(phoneTxt(l.phone) || '')}</span></div>${ageDays(l) ? `<span class="sl-pill-red">${ageDays(l)} kun</span>` : ''}</div>
+            <p>${esc(l.name || 'Bu lid')}ga bugun hali qoʻngʻiroq qilinmagan. Iltimos, avval qoʻngʻiroq qilib koʻring — olmasa, shu yerning oʻzida ${nw ? '“Urinilmoqda”' : '“Sifatsiz”'}ga oʻtkazasiz.</p></div>
+          <div class="sl-card"><span class="sl-av" style="background:${bg};color:${fg}" aria-hidden="true">${esc(initials(l.name))}</span><div class="sl-row-t"><strong>${esc(l.name || '')}</strong><span>${esc(phoneTxt(l.phone) || '')}</span></div>${pill ? `<span class="sl-pill-red">${pill}</span>` : ''}</div>
           ${ph ? `<a class="sl-b sl-b--pri sl-b--xl" href="tel:${esc(ph)}" data-sl-call="${esc(l.id)}" data-sl-sclose>${ic(I.phone, 20)}Hozir qoʻngʻiroq qilish</a>` : ''}
           <p class="sl-note">Qoʻngʻiroqdan qaytganingizda natijani belgilaysiz</p>`);
+    }
+    // "Yangi" lid: qo'ng'iroqdan keyin "Olmadi" — CRM'dagi "Nega bog'lana olmadingiz?" sabablari (LEAD_CONTACT_FAIL_REASONS).
+    const FAIL_REASONS = () => (typeof LEAD_CONTACT_FAIL_REASONS !== 'undefined' && LEAD_CONTACT_FAIL_REASONS.length ? LEAD_CONTACT_FAIL_REASONS
+        : [{ id: 'no-answer', label: 'Javob bermadi' }, { id: 'busy', label: "Band bo'ldi" }, { id: 'phone-off', label: "Telefoni o'chiq" }, { id: 'call-later', label: "Keyinroq gaplashishni so'radi" }]);
+    function sheetFail(l) {
+        const opts = FAIL_REASONS().map((r, i) => `<label class="sl-radio"><input type="radio" name="slF" value="${esc(r.id)}"${i === 0 ? ' checked' : ''}><span><strong>${esc(r.label)}</strong>${r.id === 'call-later' ? '<em>Telefonni oldi — qayta qoʻngʻiroq vaqti soʻraladi</em>' : ''}</span></label>`).join('');
+        openSheet(`<div class="sl-sh-h"><span class="sl-ib sl-ib--amber">${ic(I.phone, 22)}</span><div><h2 id="slFT">Nega bogʻlana olmadingiz?</h2><span>${esc(l.name || '')} · Yangi → Urinilmoqda</span></div></div>
+          <fieldset class="sl-fs" aria-labelledby="slFT">${opts}</fieldset>
+          <button type="button" class="sl-b sl-b--pri sl-b--xl" data-sl-failok="${esc(l.id)}">Urinilmoqda’ga oʻtkazish</button>
+          <p class="sl-note">Lid “Urinilmoqda”ga oʻtadi — u yerda ${ruleFor(lang()).warnDays}/${ruleFor(lang()).lockDays} kunlik qoida ishlaydi</p>`);
+        S.sheet?.querySelector('section')?.setAttribute('aria-labelledby', 'slFT');
+    }
+    function applyFail(id, reasonId) {
+        const l = g('getLeadById') ? getLeadById(lang(), id) : null;
+        if (!l || !g('updateLeadInStorage') || !g('createLeadComment')) return;
+        if (reasonId === 'call-later') { closeSheet(); openCallback(id, lang()); return; }
+        if (!hasRecentCall(l)) { sheetCallFirst(l); return; }
+        if (st(l) !== 'yangi-lidlar') { closeSheet(); S.sig = ''; render(); return; }
+        const reason = FAIL_REASONS().find(r => r.id === reasonId) || FAIL_REASONS()[0];
+        const u = user();
+        updateLeadInStorage(lang(), id, x => {
+            const b = g('normalizeLeadExtras') ? normalizeLeadExtras(x) : x;
+            return { ...b, status: 'boglanishga-urinilmoqda', comments: [...(b.comments || []), createLeadComment({ type: 'contact-fail', text: `Qo'ng'iroq qilindi, lekin: ${reason.label}`, reason: reason.label, reasonId: reason.id, author: u.name })] };
+        });
+        closeSheet();
+        S.sig = '';
+        render();
+        try { if (g('renderLeads')) renderLeads(); } catch (e) { /* ko'rinish keyin yangilanadi */ }
+        try { window.sotuvApp?.render?.(); } catch (e) { /* ilova yo'q */ }
     }
     function sheetSifatsiz(l) {
         const calls = attemptsOf(l).slice(-4);
@@ -294,7 +370,7 @@
         const { lock } = compute();
         openSheet(`<div class="sl-center"><span class="sl-lockbox">${ic(I.lock, 34, 2.2)}</span>
             <h2>Biroz kuting — avval ${lock.length} ta lid qoldi</h2>
-            <p>Toʻgʻri tushuning: bu lidlar uzoq vaqt “Urinilmoqda”da tursa, korxona lidlar sifatini notoʻgʻri oʻlchaydi va keyin reklamani yaxshilash qiyinlashadi. Ularga yana bir bor qoʻngʻiroq qiling, olmasa — “Sifatsiz”ga oʻtkazing.</p></div>
+            <p>Toʻgʻri tushuning: lidlar uzoq vaqt “Yangi” yoki “Urinilmoqda”da tursa, mijoz sovib qoladi va korxona lidlar sifatini notoʻgʻri oʻlchaydi. Ularga qoʻngʻiroq qiling va natijasini belgilang.</p></div>
           <button type="button" class="sl-b sl-b--pri sl-b--xl" data-sl-sclose>Lidlarga qaytish</button>
           <p class="sl-note">Taxminan 2–3 daqiqalik ish</p>`, 'sl-sheet--pop');
     }
@@ -450,7 +526,7 @@
 
     // ---------- hodisalar ----------
     function onClick(e) {
-        const t = e.target.closest('[data-sl-call],[data-sl-sif],[data-sl-sifok],[data-sl-got],[data-sl-puok],[data-sl-cbq],[data-sl-cbok],[data-sl-grace],[data-sl-graceok],[data-sl-sclose],[data-sl-blocked]');
+        const t = e.target.closest('[data-sl-call],[data-sl-sif],[data-sl-sifok],[data-sl-fail],[data-sl-failok],[data-sl-got],[data-sl-puok],[data-sl-cbq],[data-sl-cbok],[data-sl-grace],[data-sl-graceok],[data-sl-sclose],[data-sl-blocked]');
         if (!t) return;
         const d = t.dataset;
         if ('slCall' in d) {
@@ -463,6 +539,8 @@
         e.preventDefault();
         const lead = id => (g('getLeadById') ? getLeadById(lang(), id) : null);
         if ('slSif' in d) { const l = lead(d.slSif); if (l) (hasRecentCall(l) ? sheetSifatsiz(l) : sheetCallFirst(l)); return; }
+        if ('slFail' in d) { const l = lead(d.slFail); if (l) (hasRecentCall(l) ? sheetFail(l) : sheetCallFirst(l)); return; }
+        if ('slFailok' in d) { const r = S.sheet?.querySelector('input[name="slF"]:checked')?.value; applyFail(d.slFailok, r); return; }
         if ('slSifok' in d) { const r = S.sheet?.querySelector('input[name="slR"]:checked')?.value; applySifatsiz(d.slSifok, r); return; }
         if ('slGot' in d) { openPickedUp(d.slGot, lang()); return; }
         if ('slPuok' in d) { puNext(); return; }
@@ -508,11 +586,25 @@
     }
 
     // ---------- Bosh sahifa kartasi (ilova) ----------
+    function newCardHtml(d) {
+        const list = d.warnNew; if (!list.length) return '';
+        const left = Math.min(...list.map(l => newLeadState(l)?.left ?? Infinity));
+        return `<button type="button" class="sl-warn" data-sa-newwarn>
+          <span class="sl-warn-i">${ic(I.clock, 20)}</span>
+          <span class="sl-warn-t"><strong>${list.length} ta yangi lid ${d.rule.newWarnHours} soatdan beri kutmoqda</strong>
+          <span><b>${hoursTxt(left)} ish vaqtidan keyin</b> ilova qulflanadi — hozir qoʻngʻiroq qiling</span></span>
+          <span class="sl-warn-c">${ic('<path d="M9 6l6 6-6 6"/>', 18, 2.4)}</span>
+        </button>`;
+    }
     function homeCardHtml() {
         if (!isSales()) return '';
-        const { warn, lock, rule } = compute();
+        const d = compute(), { rule } = d, warn = d.warn, lock = d.lock.filter(l => !isNewRow(l));
         const list = warn.concat(lock);
-        if (!list.length) return '';
+        const nc = newCardHtml(d);
+        if (!list.length) return nc;
+        return nc + oldCardHtml(warn, lock, rule, list);
+    }
+    function oldCardHtml(warn, lock, rule, list) {
         const left = Math.max(1, rule.lockDays - (warn.length ? ageDays(warn[0]) : rule.lockDays));
         return `<button type="button" class="sl-warn" data-sa-stalewarn>
           <span class="sl-warn-i">${ic(I.clock, 20)}</span>
@@ -552,18 +644,24 @@
             for (const l of all[lg] || []) {
                 if (l.deletedAt) continue;
                 const k = String(l.managerId || ''); if (!k) continue;
-                const o = byM[k] || (byM[k] = { lock: 0, warn: 0, closed: 0 });
+                const o = byM[k] || (byM[k] = { lock: 0, warn: 0, closed: 0, nwarn: 0, nlock: 0 });
                 if (st(l) === 'boglanishga-urinilmoqda' && neverConnected(l)) { const d = ageDays(l, now); if (d >= r.lockDays) o.lock++; else if (d >= r.warnDays) o.warn++; }
+                if (st(l) === 'yangi-lidlar') { const ns = newLeadState(l, now, lg); if (ns?.k === 'lock') o.nlock = (o.nlock || 0) + 1; else if (ns?.k === 'warn') o.nwarn = (o.nwarn || 0) + 1; }
                 if (st(l) === 'sifatsiz-lidlar' && (l.comments || []).some(c => c?.type === 'sifatsiz-lid' && /Telefonni olmadi/.test(c.text || '') && ts(c.createdAt) >= monthStart)) o.closed++;
             }
-            const rows = Object.entries(byM).filter(([, o]) => o.lock || o.warn || o.closed).map(([id, o]) => `<tr><td>${esc((mgrs.find(m => String(m.id) === id) || {}).name || id)}</td><td>${o.warn}</td><td>${o.lock}</td><td>${o.closed}</td></tr>`).join('');
+            const rows = Object.entries(byM).filter(([, o]) => o.lock || o.warn || o.closed || o.nwarn || o.nlock).map(([id, o]) => `<tr><td>${esc((mgrs.find(m => String(m.id) === id) || {}).name || id)}</td><td>${o.warn}</td><td>${o.lock}</td><td>${o.nwarn}</td><td>${o.nlock ? `<b class="sl-red">${o.nlock}</b>` : 0}</td><td>${o.closed}</td></tr>`).join('');
             return `<div class="sl-rule-lang"><h4>${title}</h4>
               <div class="sl-rule-in"><label>Ogohlantirish (kun)<input type="number" min="1" max="60" value="${r.warnDays}" data-sl-rule="${lg}:warnDays"></label>
               <label>Majburiy qulf (kun)<input type="number" min="2" max="90" value="${r.lockDays}" data-sl-rule="${lg}:lockDays"></label>
               <label>Kunlik qoʻngʻiroq maqsadi<input type="number" min="1" max="300" value="${r.callsPerDay}" data-sl-rule="${lg}:callsPerDay"></label></div>
-              ${rows ? `<table class="sl-rule-t"><thead><tr><th>Menejer</th><th>Ogohlantirish</th><th>Qulf</th><th>Bu oy majburan yopildi</th></tr></thead><tbody>${rows}</tbody></table>` : '<p class="text-muted" style="margin:6px 0 0">Hozir qotib qolgan lid yoʻq</p>'}</div>`;
+              <div class="sl-rule-cap">“Yangi” lidlar · ish soati</div>
+              <div class="sl-rule-in"><label>Ogohlantirish (ish soati)<input type="number" min="1" max="47" value="${r.newWarnHours}" data-sl-rule="${lg}:newWarnHours"></label>
+              <label>Majburiy qulf (ish soati)<input type="number" min="2" max="48" value="${r.newLockHours}" data-sl-rule="${lg}:newLockHours"></label>
+              <label>Ish boshlanishi (soat)<input type="number" min="0" max="22" value="${r.workStart}" data-sl-rule="${lg}:workStart"></label>
+              <label>Ish tugashi (soat)<input type="number" min="1" max="24" value="${r.workEnd}" data-sl-rule="${lg}:workEnd"></label></div>
+              ${rows ? `<table class="sl-rule-t"><thead><tr><th>Menejer</th><th>Ogohlantirish</th><th>Qulf</th><th>Yangi · ogohl.</th><th>Yangi · qulf</th><th>Bu oy majburan yopildi</th></tr></thead><tbody>${rows}</tbody></table>` : '<p class="text-muted" style="margin:6px 0 0">Hozir qotib qolgan lid yoʻq</p>'}</div>`;
         }).join('');
-        openModal('Qotib qolgan lidlar qoidasi', `<p class="text-muted" style="margin:0 0 12px">“Bogʻlanishga urinilmoqda”da turib, bir marta ham telefonni olmagan lidlar — menejerga berilgan kundan hisoblanadi. Qulf kuni kelganda sotuv menejeri ilovani ochganda shu lidlarni hal qilmaguncha boshqa ishlarga oʻta olmaydi (kuniga bir marta 5 daqiqalik imtiyoz bor). “Sifatsiz”ga faqat qoʻngʻiroqdan keyin oʻtkaziladi.</p>${stats}`,
+        openModal('Qotib qolgan lidlar qoidasi', `<p class="text-muted" style="margin:0 0 12px">“Bogʻlanishga urinilmoqda”da turib, bir marta ham telefonni olmagan lidlar — menejerga berilgan kundan hisoblanadi. “Yangi”da menejerga berilib, boshqa ustunga oʻtkazilmagan lidlar — faqat ish vaqtidagi soatlar sanaladi. Qulf kuni kelganda sotuv menejeri ilovani ochganda shu lidlarni hal qilmaguncha boshqa ishlarga oʻta olmaydi (kuniga bir marta 5 daqiqalik imtiyoz bor). “Sifatsiz”ga faqat qoʻngʻiroqdan keyin oʻtkaziladi.</p>${stats}`,
             `<button type="button" class="btn-outline-sm" id="slRuleCancel">Yopish</button><button type="button" class="btn-primary-sm" id="slRuleSave">Saqlash</button>`);
         document.getElementById('slRuleCancel')?.addEventListener('click', () => closeModal());
         document.getElementById('slRuleSave')?.addEventListener('click', async () => {
@@ -610,5 +708,6 @@
     else tryBoot();
 
     window.staleLeads = { compute, check, logCall, hasRecentCall, attempts: attemptsOf, ageDays, homeCardHtml, openRuleModal, loadRules, rules: () => rules, rule: () => ruleFor(lang()),
-        openPickedUp, openCallback, callbacks: callbacksOf, callbackError, CB_MAX, CB_MAX_DAYS, _state: S };
+        openPickedUp, openCallback, callbacks: callbacksOf, callbackError, CB_MAX, CB_MAX_DAYS, _state: S,
+        newState: newLeadState, isNew: isNewRow, workMs, hoursTxt, newSince: () => newSince };
 })();

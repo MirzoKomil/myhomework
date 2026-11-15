@@ -34,6 +34,8 @@ body.sl-locked { overflow: hidden; }
 .sl-row-t strong { font-size: 15px; color: var(--sl-ink); }
 .sl-bad { color: var(--sl-red); font-weight: 700; }
 .sl-ok { color: var(--sl-green); font-weight: 700; }
+.sl-tag { display: inline-flex; align-items: center; gap: 4px; align-self: flex-start; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 999px; background: var(--sl-blue-t); color: var(--sl-blue-d); letter-spacing: .02em; }
+.sl-tag--u { background: #FEF0C7; color: #93370D; }
 .sl-red { color: var(--sl-red); display: inline-flex; }
 .sl-tick { color: var(--sl-green); display: grid; }
 .sl-av { flex: none; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; font-size: 15px; font-weight: 800; }
@@ -124,6 +126,7 @@ body.sl-locked { overflow: hidden; }
 .sl-rule-in { display: flex; gap: 12px; flex-wrap: wrap; }
 .sl-rule-in label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600; }
 .sl-rule-in input { width: 120px; height: 40px; border: 1px solid var(--border, #CBD5E1); border-radius: 10px; padding: 0 10px; font: inherit; background: var(--surface, #FFFFFF); color: var(--text, #0B1220); }
+.sl-rule-cap { margin: 12px 0 6px; font-size: 12px; font-weight: 800; letter-spacing: .03em; color: var(--text-secondary, #3A4456); }
 .sl-rule-t { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
 .sl-rule-t th, .sl-rule-t td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border, #E6EAF2); }
 

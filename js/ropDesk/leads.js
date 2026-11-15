@@ -57,6 +57,15 @@
     const AFTER = new Set(['boglanildi', 'malumot-berildi', 'sinov-darsida', 'qaror-jarayonida', 'keyin-sotib-olmoqchi', 'tolov-jarayonida', 'tolov-yopildi']);
     let rulesAsked = false;
     function staleOf(l, lang) {
+        if (l.managerId && st(l) === 'yangi-lidlar') {
+            // 12 ish soatlik qulf (staleLeads.newState): 8 ish soatidan "… qoldi", 12 dan "qulf".
+            const SLm = window.staleLeads;
+            if (!SLm?.newSince?.() && !rulesAsked && SLm?.loadRules) { rulesAsked = true; SLm.loadRules(false).then(() => { if (on()) window.renderLeads?.(); }).catch(() => {}); }
+            const ns = SLm?.newState?.(l, Date.now(), lang);
+            if (ns?.k === 'lock') return { k: 'lock', t: 'qulf', tip: 'Yangi lid: ish vaqtida qulf muddati oʻtdi — menejer qulflangan' };
+            if (ns?.k === 'warn') return { k: 'lock', t: `${SLm.hoursTxt(ns.left)} qoldi`, tip: 'Ish vaqtida shuncha vaqtdan keyin menejer qulflanadi' };
+            return null;
+        }
         if (!l.managerId || st(l) !== 'boglanishga-urinilmoqda') return null;
         if ((Array.isArray(l.stageHistory) && l.stageHistory.some(h => h && AFTER.has(h.to))) || (l.connectedSurvey && Object.keys(l.connectedSurvey).length)) return null;
         const all = window.staleLeads?.rules?.();
@@ -438,21 +447,26 @@
         const q = window.sotDesk?.queueBarHtml ? window.sotDesk.queueBarHtml() : '';
         top.innerHTML = q + staleBannerHtml();
         top.hidden = !top.innerHTML.trim();
-        top.querySelector('[data-sd-stalego]')?.addEventListener('click', showStale);
+        top.querySelectorAll('[data-sd-stalego]').forEach(b => b.addEventListener('click', () => showStale(b.dataset.sdStalego === 'new')));
         window.sotDesk?.bindQueue?.(top);
     }
     function staleBannerHtml() {
         const SL = window.staleLeads; if (!SL?.compute) return '';
         let d; try { d = SL.compute(); } catch (e) { return ''; }
-        const list = d.warn.concat(d.lock); if (!list.length) return '';
+        const isNew = l => !!SL.isNew?.(l);
+        // "Yangi" ustunidagi 12 ish soatlik qoida — alohida banner.
+        const nl = (d.warnNew || []).concat(d.lock.filter(isNew)), nLock = d.lock.filter(isNew).length;
+        const nb = nl.length ? `<div class="sd-warn" role="status"><span class="sd-warn-i">${SVG(P.clock, 20, 2.2)}</span><span class="sd-warn-t"><strong>${nl.length} ta yangi lid ${d.rule.newWarnHours} ish soatidan beri “Yangi”da</strong><span>${nLock ? 'Ilova qulflandi — qoʻngʻiroq qilib, natijasini belgilang' : `${esc(SL.hoursTxt(Math.min(...nl.map(l => SL.newState(l)?.left ?? Infinity))))} ish vaqtidan keyin ilova qulflanadi`}</span></span><button type="button" class="sd-btn2" data-sd-stalego="new">Lidlarni koʻrsatish</button></div>` : '';
+        const lock = d.lock.filter(l => !isNew(l)), list = d.warn.concat(lock); if (!list.length) return nb;
         const left = Math.max(1, d.rule.lockDays - (d.warn.length ? SL.ageDays(d.warn[0]) : d.rule.lockDays));
-        return `<div class="sd-warn" role="status"><span class="sd-warn-i">${SVG(P.clock, 20, 2.2)}</span><span class="sd-warn-t"><strong>${list.length} ta lid ${d.rule.warnDays} kundan beri olmayapti</strong><span>${d.lock.length ? 'Baʼzilarini hoziroq “Sifatsiz”ga oʻtkazish shart' : `${left} kundan keyin “Sifatsiz”ga oʻtkazish shart`}</span></span><button type="button" class="sd-btn2" data-sd-stalego>Lidlarni koʻrsatish</button></div>`;
+        return nb + `<div class="sd-warn" role="status"><span class="sd-warn-i">${SVG(P.clock, 20, 2.2)}</span><span class="sd-warn-t"><strong>${list.length} ta lid ${d.rule.warnDays} kundan beri olmayapti</strong><span>${lock.length ? 'Baʼzilarini hoziroq “Sifatsiz”ga oʻtkazish shart' : `${left} kundan keyin “Sifatsiz”ga oʻtkazish shart`}</span></span><button type="button" class="sd-btn2" data-sd-stalego>Lidlarni koʻrsatish</button></div>`;
     }
     // "Lidlarni ko'rsatish": "Urinilmoqda" ustuni ochiladi, eng eski qotgan lid kartasiga fokus.
-    function showStale() {
+    function showStale(isNewCol) {
         const SL = window.staleLeads; if (!SL?.compute) return;
-        const d = SL.compute(); const f = d.lock[0] || d.warn[0]; if (!f) return;
-        const col = 'boglanishga-urinilmoqda';
+        const d = SL.compute(), isNew = l => !!SL.isNew?.(l);
+        const f = isNewCol === true ? (d.lock.find(isNew) || (d.warnNew || [])[0]) : (d.lock.find(l => !isNew(l)) || d.warn[0] || d.lock[0]); if (!f) return;
+        const col = isNew(f) ? 'yangi-lidlar' : 'boglanishga-urinilmoqda';
         const sh = shutSet(); if (sh.has(col)) { sh.delete(col); saveShut(sh); }
         R.risk = '';
         if (typeof _leadColumnLimits !== 'undefined') _leadColumnLimits[col] = 100000;

@@ -119,6 +119,10 @@
         const f = followUp(l);
         if (f) return { text: (f.overdue ? 'Qoʻngʻiroq kechikdi · ' : 'Qoʻngʻiroq · ') + when(f.at).toLowerCase(), tone: f.overdue ? 'red' : 'amber', sort: f.overdue ? 0 : 2, t: f.at };
         if (s === 'yangi-lidlar') {
+            // 12 ish soatlik qulf (staleLeads): qolgan vaqt ish soatida; qoida kelmagan bo'lsa — eski 24 soatlik SLA.
+            const ns = window.staleLeads?.newState?.(l);
+            if (ns) return ns.k === 'lock' ? { text: 'Qulflandi · hal qiling', tone: 'red', sort: 0, t: assignedAt(l) }
+                : { text: (window.staleLeads.hoursTxt ? window.staleLeads.hoursTxt(ns.left) : '') + ' qoldi', tone: ns.k === 'warn' ? 'red' : 'blue', sort: ns.k === 'warn' ? 1 : 3, t: assignedAt(l) };
             const a = assignedAt(l);
             if (a) { const left = a + DAY - now; return left <= 0 ? { text: 'SLA oʻtdi · ' + dur(left), tone: 'red', sort: 1, t: a } : { text: dur(left) + ' qoldi', tone: left < 6 * 3600000 ? 'amber' : 'blue', sort: 3, t: a }; }
         }
@@ -960,7 +964,7 @@
 
     // ---------- hodisalar ----------
     function onClick(e) {
-        const t = e.target.closest('[data-sa-lead],[data-sa-nav],[data-sa-go],[data-sa-back],[data-sa-stage],[data-sa-stagego],[data-sa-call],[data-sa-tg],[data-sa-sms],[data-sa-move],[data-sa-retrial],[data-sa-survey],[data-sa-tab],[data-sa-stagesheet],[data-sa-sheetclose],[data-sa-outcome],[data-sa-stalewarn],[data-sa-pick],[data-sa-crsave],[data-sa-qchip],[data-sa-followup],[data-sa-notify],[data-sa-recmanage],[data-sa-recretry],[data-sa-crm],[data-sa-trials],[data-sa-notif],[data-sa-filter],[data-sa-src],[data-sa-clearq],[data-sa-rper],[data-sa-pay],[data-sa-logout],[data-sa-install],[data-sa-nread],[data-sa-nitem],[data-sa-skip],[data-sa-sort]');
+        const t = e.target.closest('[data-sa-lead],[data-sa-nav],[data-sa-go],[data-sa-back],[data-sa-stage],[data-sa-stagego],[data-sa-call],[data-sa-tg],[data-sa-sms],[data-sa-move],[data-sa-retrial],[data-sa-survey],[data-sa-tab],[data-sa-stagesheet],[data-sa-sheetclose],[data-sa-outcome],[data-sa-stalewarn],[data-sa-newwarn],[data-sa-pick],[data-sa-crsave],[data-sa-qchip],[data-sa-followup],[data-sa-notify],[data-sa-recmanage],[data-sa-recretry],[data-sa-crm],[data-sa-trials],[data-sa-notif],[data-sa-filter],[data-sa-src],[data-sa-clearq],[data-sa-rper],[data-sa-pay],[data-sa-logout],[data-sa-install],[data-sa-nread],[data-sa-nitem],[data-sa-skip],[data-sa-sort]');
         if (!t) return;
         const d = t.dataset;
         if ('saCall' in d) { callPending = { id: d.saCall, at: Date.now() }; try { window.staleLeads?.logCall?.(d.saCall); } catch (er) { /* dalil yozilmasa ham qo'ng'iroq ochiladi */ } return; } // tel: havolasi o'zi ochiladi
@@ -970,6 +974,7 @@
         if ('saGo' in d) return go(d.saGo);
         if ('saBack' in d) { if (!back()) go('home', { reset: true }); return; }
         if ('saStage' in d) { S.stage = d.saStage; render(false); const bd = root.querySelector('.sa-body'); if (bd) bd.scrollTop = 0; root.querySelector('.sa-chip.is-on')?.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: 'smooth' }); return; }
+        if ('saNewwarn' in d) { S.stage = 'yangi-lidlar'; S.q = ''; return go('leads', { reset: true }); }
         if ('saStalewarn' in d) { S.stage = 'boglanishga-urinilmoqda'; S.q = ''; return go('leads', { reset: true }); }
         if ('saStagego' in d) { S.stage = d.saStagego; S.q = ''; return go('leads', { reset: true }); }
         if ('saTg' in d) { if (g('openLeadTelegramProfile')) openLeadTelegramProfile(lang(), d.saTg); return; }
