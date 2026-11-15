@@ -651,7 +651,7 @@
               <span class="dv-fine dv-center-t">Kunni bossangiz — selfie va vaqtlar ochiladi</span>` : ''}`;
         }
         return `${top('Mening davomatim', sched ? 'Grafik: ' + sched : '')}<div class="dv-body">
-            <button type="button" class="dv-btn dv-btn-primary dv-btn-lg dv-s1" data-dv-go="request">${ic('clock', 20)}Javob soʻrash</button>${reqSec}${body}</div>`;
+            <button type="button" class="dv-btn dv-btn-primary dv-btn-lg dv-s1" data-dv-go="request">${ic('clock', 20)}Javob soʻrash</button>${window.faollik ? '<div data-fa-my></div>' : ''}${reqSec}${body}</div>`;
     }
 
     // D11 · Javob so'rash
