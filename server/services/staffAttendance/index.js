@@ -746,9 +746,10 @@ async function manual(pool, user, body, meta = {}) {
     const today = t.tashkentDate(now);
     const settings = await getSettings(pool);
     if (action === 'answer') {
-        const ans = ['onway', 'stay'].includes(body?.answer) ? body.answer : null;
+        const ans = ['onway', 'stay', 'off'].includes(body?.answer) ? body.answer : null;
         if (!ans) throw error(400, 'Javob noto‘g‘ri');
-        const ask = new Date(now.getTime() + (ans === 'onway' ? RSZ_ONWAY_MINUTES : RSZ_STAY_MINUTES) * 60000);
+        // off — dam olish kuni «Bugun dam olaman»: shu kun boshqa so'ralmaydi.
+        const ask = ans === 'off' ? t.atTashkent(today, 1440) : new Date(now.getTime() + (ans === 'onway' ? RSZ_ONWAY_MINUTES : RSZ_STAY_MINUTES) * 60000);
         await pool.query(`INSERT INTO staff_att_rsz(employee_id,work_date,answer,ask_at,updated_at) VALUES($1,$2,$3,$4,NOW())
             ON CONFLICT(employee_id,work_date) DO UPDATE SET answer=EXCLUDED.answer,ask_at=EXCLUDED.ask_at,updated_at=NOW()`, [a.employee_id, today, ans, ask]);
         return { ok: true, rsz: await rszState(pool, a.employee_id, today, now) };
