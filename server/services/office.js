@@ -187,7 +187,7 @@ async function badges(db, staffIds, date, monthStart) {
         WHERE action='updated' AND created_at >= $1 AND snapshot->'after'->>'status'='sinov-darsida' AND COALESCE(snapshot->'before'->>'status','')<>'sinov-darsida'
         GROUP BY 1`, [monthStart]), { rows: [] })).rows;
     for (const r of trials) if (r.n >= 10) add(r.m, { k: 'trials', t: '📅 Oyda 10+ sinov darsi' });
-    const att = (await safe(() => db.query(`SELECT employee_id, COUNT(*)::int AS n, COUNT(*) FILTER (WHERE data->>'status'='late')::int AS late
+    const att = (await safe(() => db.query(`SELECT employee_id, COUNT(*) FILTER (WHERE data->>'status'='on_time')::int AS n, COUNT(*) FILTER (WHERE data->>'status' IN ('late','absent'))::int AS late
         FROM staff_att_day_results WHERE employee_id = ANY($1::text[]) AND work_date > $2::date - 8 AND work_date < $2::date GROUP BY employee_id`, [staffIds, date]), { rows: [] })).rows;
     for (const r of att) if (r.n >= 4 && r.late === 0) add(r.employee_id, { k: 'ontime', t: '⏰ Bir hafta kechikmadi' });
     return out;
