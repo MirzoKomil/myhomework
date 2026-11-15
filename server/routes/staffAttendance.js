@@ -21,6 +21,7 @@ module.exports = function staffAttendanceRouter({ pool, authRequired, analyzer =
     router.post('/me/challenge', handle(req => service.challenge(pool, req.user)));
     router.post('/me/face', handle(req => service.submitOwnFace(pool, analyzer, req.user, req.body)));
     router.post('/me/check', handle(req => service.check(pool, analyzer, req.user, req.body, meta(req))));
+    router.post('/me/manual', handle(req => service.manual(pool, req.user, req.body, meta(req))));
     router.get('/me/month', handle(req => service.myMonth(pool, req.user, String(req.query.month || ''))));
     router.get('/me/day', handle(req => service.teamRecord(pool, req.user, null, String(req.query.date || ''))));
     // Javob so'rash (DavRequest) va o'z so'rovlari (DavMy → Soʻrovlarim)
