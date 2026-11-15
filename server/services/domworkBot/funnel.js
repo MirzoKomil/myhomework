@@ -779,6 +779,17 @@ async function bonus(c, v) {
 
 // ── Menejer Sotuv guruhida bot xabariga "reply" qiladi → javob lidga bot orqali ──
 const SALES_ROLES = ['sales', 'rop', 'admin'];
+// Qo'shimcha ish (biriktirish, chaqiruvni o'chirish) xato bersa ham asosiy amal (tugma/reply) ishlayversin:
+// o'z SAVEPOINT'ida bajariladi, xato domwork_bot_errors ga yoziladi (Bot boshqaruvida ko'rinadi).
+async function safe(db, part, fn) {
+    await db.query('SAVEPOINT bot_side');
+    try { await fn(); await db.query('RELEASE SAVEPOINT bot_side'); }
+    catch (e) {
+        await db.query('ROLLBACK TO SAVEPOINT bot_side');
+        await db.query(`INSERT INTO domwork_bot_errors(part,message) SELECT $1,$2 WHERE to_regclass('domwork_bot_errors') IS NOT NULL`,
+            [part, String(e.code || '') + ' ' + String(e.message || e).slice(0, 300)]).catch(() => {});
+    }
+}
 // Sotuv menejeri guruhdagi lid bilan ishlay boshladi (tugma yoki reply): lid hali hech kimga biriktirilmagan bo'lsa — unga o'tadi,
 // «Yangi lidlar»da tursa «Bog'lanildi»ga. ROP keyin kabinetida ro'yxatni ko'radi (extra_data.botClaim).
 async function claimLead(db, v, staff, how) {
@@ -812,8 +823,8 @@ async function relayFromGroup(db, update) {
     else { await send(c, 'sendMessage', { text: header, _relayOut: true }); await send(c, 'copyMessage', { from_chat_id: chatId, message_id: m.message_id, _relayOut: true }); }
     const v = await visitor(db, tid);
     if (v?.lead_id) await leadComment(db, v.lead_id, `🤖 ${clean(staff.name)} bot orqali yozdi: ${m.text ? String(m.text).slice(0, 300) : '[media]'}`);
-    await claimLead(db, v, staff, 'reply');
-    await stopPing(db, tid);
+    await safe(db, 'claim_lead', () => claimLead(db, v, staff, 'reply'));
+    await safe(db, 'sales_ping_stop', () => stopPing(db, tid));
     await event(db, tid, 'relay_out', { by: staff.id });
     return true;
 }
@@ -860,7 +871,10 @@ async function managerAction(db, update) {
                 _guest: { tid }, _automation: true } });
         await patch(db, tid, { noans_at: new Date(), ...(v.request?.method ? {} : { request: { method: 'call' } }) });
     }
-    if (action !== 'phone') { await claimLead(db, v, staff, action.startsWith('r:') ? 'rej' : action); await stopPing(db, tid); }
+    if (action !== 'phone') {
+        await safe(db, 'claim_lead', () => claimLead(db, v, staff, action.startsWith('r:') ? 'rej' : action));
+        await safe(db, 'sales_ping_stop', () => stopPing(db, tid));
+    }
     await event(db, tid, 'outcome', { action, by: staff.id });
     return ack('Saqlandi');
 }

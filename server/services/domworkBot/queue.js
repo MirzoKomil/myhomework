@@ -49,6 +49,9 @@ async function processOne(pool, handler) {
                 WHERE update_id=$1`, [row.update_id, failed ? 'failed' : 'pending']);
             // Do not log payload, phone, message content, URL or exception.message.
             if (failed) console.error('[domwork-bot] inbox failed:', error.code || error.name);
+            // Bot boshqaruvida ko'rinsin (faqat xato kodi — matn/telefon yozilmaydi).
+            await db.query(`INSERT INTO domwork_bot_errors(part,message) SELECT 'inbox',$1 WHERE to_regclass('domwork_bot_errors') IS NOT NULL`,
+                [String(error.code || error.name || 'Error') + (failed ? ' · yakuniy' : ' · qayta urinadi')]).catch(() => {});
         }
         return true;
     });
