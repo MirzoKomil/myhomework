@@ -307,7 +307,7 @@
 
     // ── HR → Davomat ─────────────────────────────────────────────────────────
     const hrState = { section: 'bugun', date: tashkentToday(), month: tashkentToday().slice(0, 7), lessonDate: tashkentToday(), employees: null, settings: null };
-    const SECTIONS = [['bugun', 'Bugun'], ['sorovlar', 'So‘rovlar'], ['oylik', 'Oylik hisobot'], ['ustozlar', 'Ustozlar darsi'], ['xodimlar', 'Xodimlar va grafik'], ['sozlamalar', 'Sozlamalar']];
+    const SECTIONS = [['bugun', 'Bugun'], ['sorovlar', 'So‘rovlar'], ['oylik', 'Oylik hisobot'], ['faollik', 'Faollik'], ['ustozlar', 'Ustozlar darsi'], ['xodimlar', 'Xodimlar va grafik'], ['sozlamalar', 'Sozlamalar']];
 
     function renderHr() {
         const panel = document.getElementById('hrPanel-davomat');
@@ -326,7 +326,8 @@
         document.querySelectorAll('#hrPanel-davomat [data-satt-section]').forEach(b => {
             const on = b.dataset.sattSection === hrState.section;
             b.classList.toggle('active', on); b.setAttribute('aria-selected', on ? 'true' : 'false');
-            b.hidden = (b.dataset.sattSection === 'sozlamalar' && !canManage()) || (b.dataset.sattSection === 'sorovlar' && !canDecide());
+            b.hidden = (b.dataset.sattSection === 'sozlamalar' && !canManage()) || (b.dataset.sattSection === 'sorovlar' && !canDecide())
+                || (b.dataset.sattSection === 'faollik' && !(window.faollik && ['admin', 'boshliq'].includes(user()?.role)));
         });
     }
     async function renderHrSection() {
@@ -338,6 +339,8 @@
             if (hrState.section === 'bugun') await renderDaily(body);
             else if (hrState.section === 'sorovlar') await renderRequests(body);
             else if (hrState.section === 'oylik') await renderMonthly(body);
+            // Platformadagi faollik (js/faollik.js) — faqat direktor.
+            else if (hrState.section === 'faollik' && window.faollik) { body.innerHTML = ''; window.faollik.renderTeam(body); }
             else if (hrState.section === 'ustozlar') await renderLessons(body);
             else if (hrState.section === 'xodimlar') await renderEmployees(body);
             else await renderSettings(body);

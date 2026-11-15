@@ -215,8 +215,9 @@ function ui(){if(!data)return;const k=data.kpi;document.getElementById('clock').
  if(v.money)items.push(['Tushum',money(k.money),'money']);
  if(k.plan)items.push(['Oylik reja',k.plan.pct+'%','money']);
  items.push(['Jonli dars',k.live],['Sinovda',k.trialNow],["Bo'sh ustoz",k.freeTeachers],['Ilovada',k.online+" o'q."]);
+ if(k.platformOnline!=null)items.splice(1,0,['Onlayn',k.platformOnline,'online']);
  document.getElementById('kpis').innerHTML=items.map(([a,b,c])=>`<div class="kpi ${c||''}"><span>${a}</span><b>${b}</b></div>`).join('');
- const st=s=>s.now==='lunch'?`🍽️ obedda · ${s.breakUntil||''} gacha`:s.now==='lunch_late'?'⏱ obeddan kech':s.now==='out'?`🚪 tashqarida · ${s.breakUntil||''} gacha`:s.now==='step_late'?'⏱ ruxsatdan kech':s.inOffice?(people.get('s:'+s.id)?.bubble?.text||'💻 ishda'):s.outAt?'ketdi '+hm(s.outAt):'hali kelmagan';
+ const st=s=>s.now==='lunch'?`🍽️ obedda · ${s.breakUntil||''} gacha`:s.now==='lunch_late'?'⏱ obeddan kech':s.now==='out'?`🚪 tashqarida · ${s.breakUntil||''} gacha`:s.now==='step_late'?'⏱ ruxsatdan kech':s.inOffice?(people.get('s:'+s.id)?.bubble?.text||(s.platform?.online?'💻 onlayn · '+s.platform.section:'💻 ishda')):s.outAt?'ketdi '+hm(s.outAt):s.platform?.online?'💻 onlayn · '+s.platform.section:'hali kelmagan';
  const tt=t=>t.status==='live'?`🎥 Darsda · ${t.nowStudents.length} o'q.`:t.status==='trial'?'🎧 Sinov darsida':t.dav==='pending'?'⏳ davomat kutilmoqda':"Bo'sh";
  document.getElementById('team').innerHTML=data.staff.map(s=>`<div class="mem ${s.inOffice?'':'off'}" data-p="s:${esc(s.id)}"><span class="av" style="background:${people.get('s:'+s.id)?.shirt||'#94A3B8'}">${esc(s.name[0]||'?')}</span><div><div>${s.crown?'👑 ':''}${s.fire?'🔥 ':''}${s.birthday?'🎂 ':''}${esc(s.name)}${s.late?' <span style="color:#B45309">⚠️</span>':''}${(s.badges||[]).map(b=>' <span title="'+esc(b.t)+'">'+b.t.split(' ')[0]+'</span>').join('')}</div><div class="st">${esc(st(s))}</div></div></div>`).join('')
   +(data.teachers.length?'<div class="tsep">Ustozlar (masofadan)</div>'+data.teachers.map(t=>`<div class="mem" data-p="t:${esc(t.id)}"><span class="av" style="background:#F59E0B">${esc(t.name[0]||'?')}</span><div><div>${esc(t.name)}</div><div class="st">${esc(tt(t))}</div></div></div>`).join(''):'');
@@ -226,6 +227,9 @@ function ui(){if(!data)return;const k=data.kpi;document.getElementById('clock').
   +`<div class="hnote">${Math.max(...hh)?`Eng ko'p: ${pk}:00 — ${hh[pk]} lid`:'Bugun hali lid yoʻq'}</div>`
   ;document.getElementById('src').innerHTML=(k.leads?`<div class="src"><div class="srcbar"><i style="width:${Math.round(k.srcTarget/k.leads*100)}%"></i></div><span>✈️ Target <b>${k.srcTarget}</b></span><span>🚶 Organik <b>${k.srcOrganic}</b></span></div>`:'');
  raceUi();
+ const fd=m=>{m=Math.round(m||0);const h=Math.floor(m/60),r=m%60;return h?h+' soat '+String(r).padStart(2,'0')+' daq':r+' daq'};
+ const at=k.activeTop||[],aa=(k.activeAcademic||[])[0];document.getElementById('actBox').style.display=at.length||aa?'':'none';
+ document.getElementById('act').innerHTML=at.map((x,i)=>`<div><span>${['🥇','🥈','🥉','4.','5.'][i]} ${esc(x.name)}</span><b>${fd(x.minutes)}</b></div>`).join('')+(aa?`<div><span>🎓 Akademikda: ${esc(aa.name)}</span><b>${fd(aa.minutes)}</b></div>`:'');
  const w=k.waiting||[];document.getElementById('waitBox').style.display=w.length?'':'none';
  document.getElementById('wait').innerHTML=w.map(x=>`<div><span>⏰ ${esc(x.name)}</span><b>${x.min} daq</b></div>`).join('');
  tvUi()}
