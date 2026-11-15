@@ -20,6 +20,8 @@ const CHALLENGE_TTL_SECONDS = 180;
 const REPLAY_DISTANCE = 0.02;           // yuz belgilari deyarli aynan bir xil — qayta yuborilgan rasm
 const REPLAY_HAMMING = 12;              // rasm xeshi (256 bit) deyarli bir xil — qayta yuborilgan rasm
 const TURNED_MATCH_THRESHOLD = 0.6;     // burilgan yuz to'g'ri yuzdan biroz farq qiladi
+const OFFLINE_ACCEPT_MINUTES = 30;      // internetsiz bosilgan "Qaytdim" shu daqiqa ichida yetib kelsa — o'sha vaqt hisoblanadi
+const TRIAL_DAYS = 7;                   // hisob boshlangach birinchi hafta jarima yozilmaydi (direktor, 15-noy)
 const inFlight = new Set();             // bir xodimdan bir vaqtda bitta tekshiruv
 
 const SCHEMA = `
@@ -92,6 +94,18 @@ CREATE TABLE IF NOT EXISTS staff_att_requests (
  event_id TEXT, distance_m INTEGER, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS staff_att_requests_emp ON staff_att_requests(employee_id,work_date);
+-- Obed va vaqtincha chiqish (15-noy): break_out / break_in hodisalari, "Vaqtincha chiqaman" so'rovi.
+ALTER TABLE staff_att_events DROP CONSTRAINT IF EXISTS staff_att_events_kind_check;
+ALTER TABLE staff_att_events ADD CONSTRAINT staff_att_events_kind_check CHECK(kind IN ('in','out','break_out','break_in'));
+ALTER TABLE staff_att_events ADD COLUMN IF NOT EXISTS break_kind TEXT;
+ALTER TABLE staff_att_events ADD COLUMN IF NOT EXISTS until_clock TEXT;
+ALTER TABLE staff_att_events ADD COLUMN IF NOT EXISTS request_id TEXT;
+ALTER TABLE staff_att_events ADD COLUMN IF NOT EXISTS unverified BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE staff_att_events ADD COLUMN IF NOT EXISTS reviewed_by TEXT;
+ALTER TABLE staff_att_events ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ;
+ALTER TABLE staff_att_requests DROP CONSTRAINT IF EXISTS staff_att_requests_type_check;
+ALTER TABLE staff_att_requests ADD CONSTRAINT staff_att_requests_type_check CHECK(type IN ('late','absent','early_leave','outside','step_out'));
+ALTER TABLE staff_att_requests ADD COLUMN IF NOT EXISTS until_time TEXT NOT NULL DEFAULT '';
 CREATE INDEX IF NOT EXISTS staff_att_requests_inbox ON staff_att_requests(state,approver_kind,created_at);
 `;
 
@@ -302,7 +316,7 @@ async function loadContext(db, employeeIds, from, to) {
         q("SELECT employee_id,tracked,days,TO_CHAR(tracked_since,'YYYY-MM-DD') AS since FROM staff_att_schedules WHERE employee_id=ANY($1::text[])", [ids]),
         q('SELECT employee_id,state,first_approved_at,reset_at FROM staff_att_faces WHERE employee_id=ANY($1::text[])', [ids]),
         // "Ofisda emasman" belgisi so'rov rad etilsa/bekor qilinsa hisobga olinmaydi (odatdagi qoida).
-        q(`SELECT e.employee_id,TO_CHAR(e.work_date,'YYYY-MM-DD') AS d,e.kind,e.occurred_at,e.location_method FROM staff_att_events e
+        q(`SELECT e.id,e.employee_id,TO_CHAR(e.work_date,'YYYY-MM-DD') AS d,e.kind,e.occurred_at,e.location_method,e.break_kind,e.until_clock,e.request_id,e.unverified FROM staff_att_events e
             WHERE e.ok AND e.employee_id=ANY($1::text[]) AND e.work_date BETWEEN $2 AND $3
             AND NOT (e.location_method='outside' AND EXISTS(SELECT 1 FROM staff_att_requests r WHERE r.event_id=e.id AND r.state IN ('rejected','cancelled')))
             ORDER BY e.occurred_at`, [ids, from, to]),
@@ -311,7 +325,7 @@ async function loadContext(db, employeeIds, from, to) {
         q(`SELECT employee_id,TO_CHAR(work_date,'YYYY-MM-DD') AS d,data FROM staff_att_day_results
             WHERE employee_id=ANY($1::text[]) AND work_date BETWEEN $2 AND $3`, [ids, from, to]),
     ]);
-    const requests = await q(`SELECT id,employee_id,TO_CHAR(work_date,'YYYY-MM-DD') AS d,type,at_time AS time,reason,state FROM staff_att_requests
+    const requests = await q(`SELECT id,employee_id,TO_CHAR(work_date,'YYYY-MM-DD') AS d,type,at_time AS time,until_time AS until,reason,state FROM staff_att_requests
         WHERE state IN ('pending','approved') AND employee_id=ANY($1::text[]) AND work_date BETWEEN $2 AND $3`, [ids, from, to]);
     const leaves = await tableExists(db, 'domwork_bot_leave_requests')
         ? await q(`SELECT employee_id,TO_CHAR(start_date,'YYYY-MM-DD') AS s,TO_CHAR(end_date,'YYYY-MM-DD') AS e FROM domwork_bot_leave_requests
@@ -330,6 +344,33 @@ async function loadContext(db, employeeIds, from, to) {
     };
 }
 
+// Hisob boshlangan kun (yuz namunasi birinchi tasdiqlangan va grafik yoqilgan kun). null — hali tayyor emas.
+function countFromFor(ctx, employeeId, date) {
+    const schedule = ctx.schedules.get(employeeId);
+    const face = ctx.faces.get(employeeId);
+    const approvedOn = face?.first_approved_at ? t.tashkentDate(face.first_approved_at) : null;
+    const usable = face?.state === 'approved' || !face?.reset_at || date < t.tashkentDate(face.reset_at);
+    return approvedOn && usable ? [approvedOn, schedule?.since || approvedOn].sort().pop() : null;
+}
+// Sinov haftasi: hisob boshlangan kundan keyingi TRIAL_DAYS kun jarima yozilmaydi. → 'YYYY-MM-DD' (shu kun ham) | null
+function trialUntil(countFrom) {
+    if (!countFrom) return null;
+    return new Date(Date.parse(countFrom + 'T00:00:00Z') + TRIAL_DAYS * 86400000).toISOString().slice(0, 10);
+}
+
+// Hozirgi holat (jonli ofis, ROP/HR "Hozir" ustuni): office | lunch | out | lunch_late | step_late | left | not_in | off
+function nowState(d, nowMinutes, isToday) {
+    if (!isToday) return '';
+    if (d.openBreak) {
+        const due = t.parseClock(d.openBreak.untilClock);
+        const late = due != null && nowMinutes - due > rules.BREAK_LATE_MINUTES;
+        return d.openBreak.kind === 'step' ? (late ? 'step_late' : 'out') : (late ? 'lunch_late' : 'lunch');
+    }
+    if (d.outClock) return 'left';
+    if (d.inClock) return 'office';
+    return d.scheduled ? 'not_in' : 'off';
+}
+
 function statusFor(ctx, employeeId, date, settings, now) {
     const today = t.tashkentDate(now);
     const k = ctx.key(employeeId, date);
@@ -339,10 +380,9 @@ function statusFor(ctx, employeeId, date, settings, now) {
         const face = ctx.faces.get(employeeId);
         const day = schedule?.tracked ? (schedule.days || {})[String(t.weekday(date))] || null : null;
         // Hisob grafik yoqilgan va yuz namunasi BIRINCHI marta tasdiqlangan kundan boshlanadi.
-        const approvedOn = face?.first_approved_at ? t.tashkentDate(face.first_approved_at) : null;
         // Namuna HR tomonidan o'chirilgan va hali qayta tasdiqlanmagan — o'chirilgan kundan boshlab "kelmadi" hisoblanmaydi.
-        const usable = face?.state === 'approved' || !face?.reset_at || date < t.tashkentDate(face.reset_at);
-        const countFrom = approvedOn && usable ? [approvedOn, schedule?.since || approvedOn].sort().pop() : null;
+        const countFrom = countFromFor(ctx, employeeId, date);
+        void face;
         base = rules.dayStatus({ date, today, nowMinutes: t.tashkentMinutes(now), day, settings,
             events: ctx.events.get(k) || [], leave: false, override: null, countFrom });
         if (date < today) { ctx.snapshots.set(k, base); ctx.fresh.push([employeeId, date, base]); }
@@ -396,10 +436,17 @@ async function me(db, user, now = new Date()) {
     const today = await computeDay(db, a.employee_id, date, settings, now);
     const attemptsLeft = Math.max(0, MAX_ATTEMPTS_PER_DAY - Number((await db.query(
         'SELECT COUNT(*)::int AS n FROM staff_att_events WHERE employee_id=$1 AND work_date=$2', [a.employee_id, date])).rows[0].n));
-    const requests = (await db.query(`SELECT id,type,at_time AS time,reason,state,decided_by FROM staff_att_requests
+    const requests = (await db.query(`SELECT id,type,at_time AS time,until_time AS until,reason,state,decided_by FROM staff_att_requests
         WHERE employee_id=$1 AND work_date=$2 AND state IN ('pending','approved')`, [a.employee_id, date])).rows;
     const day = (schedule.days || {})[String(t.weekday(date))] || null;
-    const ph = rules.phase({ nowMinutes: t.tashkentMinutes(now), day, inClock: today.inClock, outClock: today.outClock, requests });
+    const nowMin = t.tashkentMinutes(now);
+    const ph = rules.phase({ nowMinutes: nowMin, day, inClock: today.inClock, outClock: today.outClock, requests, openBreak: today.openBreak || null });
+    // Obed / vaqtincha chiqish tugmalari (15-noy): faqat ishda (kelgan, ketmagan) bo'lganda.
+    const breaks = today.breaks || [];
+    const working = !!today.inClock && !today.outClock;
+    const can = kind => working ? rules.breakAllowed({ kind, nowMinutes: nowMin, day, breaks, requests }) : { ok: false, reason: '' };
+    const ctxF = await loadContext(db, [a.employee_id], date, date);
+    const tu = trialUntil(countFromFor(ctxF, a.employee_id, date));
     const lateReq = requests.find(r => r.type === 'late' && r.state === 'approved');
     const decider = lateReq?.decided_by ? (await db.query('SELECT name FROM users WHERE id=$1', [lateReq.decided_by])).rows[0]?.name : '';
     return { ...base, tracked: true, kind: rules.staffKind({ userRole: a.role, empRole: a.employee_role }),
@@ -407,7 +454,10 @@ async function me(db, user, now = new Date()) {
         office: { name: settings.office.name, radius: settings.office.radius, lat: settings.office.lat, lng: settings.office.lng }, attemptsLeft, photoDays: settings.photoRetentionDays,
         nextAction: today.inAt ? 'out' : 'in', ...ph, requests: requests.map(({ decided_by, ...r }) => r),
         lateApproval: lateReq ? { time: lateReq.time, reason: lateReq.reason, by: decider || '' } : null,
-        approverName: await approverLabel(db, await effectiveRoute(db, a)) };
+        approverName: await approverLabel(db, await effectiveRoute(db, a)),
+        lunch: day?.lunch || null, breaks, lunchAllowed: can('lunch'), stepAllowed: can('step'),
+        breakLateMinutes: rules.BREAK_LATE_MINUTES, offlineAcceptMinutes: OFFLINE_ACCEPT_MINUTES,
+        trialUntil: tu && date <= tu ? tu : null };
 }
 
 // Har urinishdan oldin server tasodifiy yo'nalish beradi (chapga/o'ngga) — bir martalik, 2 daqiqa.
@@ -425,8 +475,24 @@ async function challenge(db, user, now = new Date()) {
     return { id, direction, expiresIn: CHALLENGE_TTL_SECONDS };
 }
 
+function openBreakOf(prior) {
+    let open = null;
+    for (const e of prior) { if (!e.ok) continue; if (e.kind === 'break_out') open = open || e; else if (e.kind === 'break_in') open = null; }
+    return open;
+}
 function guardOrder(prior, kind) {
-    if (prior.length >= MAX_ATTEMPTS_PER_DAY) throw error(429, 'Bugungi urinishlar soni tugadi. HR bilan bog‘laning');
+    // Obed/chiqish urinishlari kelish-ketish chegarasiga qo'shilmaydi (kuniga 4 ta belgi + qayta urinishlar).
+    if (prior.length >= MAX_ATTEMPTS_PER_DAY + 12) throw error(429, 'Bugungi urinishlar soni tugadi. HR bilan bog‘laning');
+    if (!['break_out', 'break_in'].includes(kind) && prior.filter(e => !['break_out', 'break_in'].includes(e.kind)).length >= MAX_ATTEMPTS_PER_DAY) throw error(429, 'Bugungi urinishlar soni tugadi. HR bilan bog‘laning');
+    const open = openBreakOf(prior);
+    const hasOut = prior.some(e => e.ok && e.kind === 'out');
+    if (kind === 'break_out') {
+        if (!prior.some(e => e.ok && e.kind === 'in')) throw error(409, 'Avval kelishni belgilang');
+        if (hasOut) throw error(409, 'Bugun ketish allaqachon belgilangan');
+        if (open) throw error(409, 'Avval qaytganingizni belgilang');
+    }
+    if (kind === 'break_in' && !open) throw error(409, 'Siz hozir obedda yoki tashqarida emassiz');
+    if (kind === 'out' && open) throw error(409, open.break_kind === 'step' ? 'Avval ruxsatdan qaytganingizni belgilang (yoki «Erta ketaman» so‘rovi)' : 'Avval obeddan qaytganingizni belgilang');
     // "Ofisda emasman" bilan belgilangan kelish keyin ofisga kelib odatdagidek belgilashga to'sqinlik qilmaydi.
     const okIn = prior.find(e => e.ok && e.kind === 'in' && e.location_method !== 'outside');
     if (kind === 'in' && okIn) throw error(409, `Bugun kelish allaqachon belgilangan (${t.tashkentClock(okIn.occurred_at)})`);
@@ -435,7 +501,7 @@ function guardOrder(prior, kind) {
 }
 
 async function priorEvents(db, employeeId, date) {
-    return (await db.query('SELECT kind,ok,occurred_at,location_method FROM staff_att_events WHERE employee_id=$1 AND work_date=$2 ORDER BY occurred_at', [employeeId, date])).rows;
+    return (await db.query('SELECT id,kind,ok,occurred_at,location_method,break_kind,until_clock,request_id,unverified FROM staff_att_events WHERE employee_id=$1 AND work_date=$2 ORDER BY occurred_at', [employeeId, date])).rows;
 }
 
 function ipAllowed(ip, list) {
@@ -462,8 +528,11 @@ async function check(pool, analyzer, user, body, meta = {}) {
     const a = await actor(pool, user); requireEmployee(a); requireTrackedRole(a);
     const schedule = await scheduleFor(pool, a.employee_id);
     if (!schedule?.tracked) throw error(403, 'Sizga davomat belgilash yoqilmagan');
-    const kind = body?.kind === 'out' ? 'out' : body?.kind === 'in' ? 'in' : null;
+    const kind = ['in', 'out', 'break_out', 'break_in'].includes(body?.kind) ? body.kind : null;
     if (!kind) throw error(400, 'Amal turi noto‘g‘ri');
+    if (kind === 'break_out' && !['lunch', 'step'].includes(body?.breakKind)) throw error(400, 'Obed yoki vaqtincha chiqishni tanlang');
+    if (body?.noCamera && kind !== 'break_in') throw error(400, 'Kamerasiz faqat qaytish saqlanadi');
+    if (body?.outside && kind !== 'in') throw error(400, '“Ofisda emasman” faqat kelishda belgilanadi');
     // "Ofisda emasman": faqat kelishda, sabab majburiy; selfie baribir tekshiriladi.
     if (body?.outside) {
         if (kind !== 'in') throw error(400, '“Ofisda emasman” faqat kelishda belgilanadi');
@@ -472,25 +541,55 @@ async function check(pool, analyzer, user, body, meta = {}) {
     return withLock('check:' + a.employee_id, () => checkLocked(pool, analyzer, a, kind, body, meta));
 }
 
+// Obedga / vaqtincha chiqishga chiqish: grafik, bugungi tanaffuslar va tasdiqlangan so'rov bo'yicha. → { until, requestId }
+async function breakPlan(db, a, date, now, breakKind, prior) {
+    const schedule = await scheduleFor(db, a.employee_id);
+    const day = (schedule?.days || {})[String(t.weekday(date))] || null;
+    const requests = (await db.query(`SELECT id,type,at_time AS time,until_time AS until,state FROM staff_att_requests
+        WHERE employee_id=$1 AND work_date=$2 AND state='approved'`, [a.employee_id, date])).rows;
+    const breaks = rules.breaksOf(prior.filter(e => e.ok), t.tashkentMinutes(now));
+    const r = rules.breakAllowed({ kind: breakKind, nowMinutes: t.tashkentMinutes(now), day, breaks, requests });
+    if (!r.ok) throw error(409, r.reason);
+    return { until: r.until, requestId: r.requestId || null };
+}
+
 async function checkLocked(pool, analyzer, a, kind, body, meta) {
-    const now = meta.now || new Date();
+    const nowReal = meta.now || new Date();
+    let now = nowReal;
+    // Internetsiz bosilgan "Qaytdim": telefon vaqti va rasmi saqlangan. 30 daqiqa ichida yetib kelsa — o'sha vaqt;
+    // kechroq bo'lsa ham o'sha vaqt, lekin "tasdiqlanmagan" (HR ko'rib chiqadi).
+    let unverified = false;
+    const captured = kind === 'break_in' && body?.capturedAt ? new Date(body.capturedAt) : null;
+    if (captured && Number.isFinite(captured.getTime())) {
+        const ago = (nowReal - captured) / 60000;
+        if (ago < -2 || ago > 12 * 60 || t.tashkentDate(captured) !== t.tashkentDate(nowReal)) throw error(400, 'Saqlangan qaytish vaqti noto‘g‘ri. Qayta belgilang');
+        if (ago > 0) now = captured;
+        if (ago > OFFLINE_ACCEPT_MINUTES) unverified = true;
+    }
+    const noCamera = kind === 'break_in' && !!body?.noCamera;
+    if (noCamera) unverified = true;
     const date = t.tashkentDate(now);
     const settings = await getSettings(pool);
-    guardOrder(await priorEvents(pool, a.employee_id, date), body?.outside ? 'outside' : kind);
+    const prior0 = await priorEvents(pool, a.employee_id, date);
+    guardOrder(prior0, body?.outside ? 'outside' : kind);
+    if (kind === 'break_out') await breakPlan(pool, a, date, now, body.breakKind, prior0);
     const face = (await pool.query("SELECT descriptors FROM staff_att_faces WHERE employee_id=$1 AND state='approved'", [a.employee_id])).rows[0];
     if (!face) throw error(409, rules.reasonText('no_face_profile'));
-    const ch = (await pool.query('SELECT direction,expires_at,used_at FROM staff_att_challenges WHERE id=$1 AND employee_id=$2',
-        [String(body?.challenge || ''), a.employee_id])).rows[0];
-    if (!ch || ch.used_at || new Date(ch.expires_at) < now) throw error(409, 'Urinish vaqti tugadi. Qaytadan boshlang');
-    const front = frame(body?.frame), turnedFrame = frame(body?.turned);
+    // Oflayn yoki kamerasiz qaytishda server bergan yo'nalish (challenge) bo'lmaydi.
+    const noChallenge = !!captured || noCamera;
+    const ch = noChallenge ? { direction: ['left', 'right'].includes(body?.direction) ? body.direction : null }
+        : (await pool.query('SELECT direction,expires_at,used_at FROM staff_att_challenges WHERE id=$1 AND employee_id=$2',
+            [String(body?.challenge || ''), a.employee_id])).rows[0];
+    if (!noChallenge && (!ch || ch.used_at || new Date(ch.expires_at) < nowReal)) throw error(409, 'Urinish vaqti tugadi. Qaytadan boshlang');
+    const front = noCamera ? null : frame(body?.frame), turnedFrame = noCamera ? null : frame(body?.turned);
     // Ikkala tahlil uchun navbatda joy oldindan tekshiriladi (birinchisi o'tib, ikkinchisida to'xtab qolmasin).
-    if (analyzer.hasCapacity && !analyzer.hasCapacity(2)) throw error(503, 'Hozir tekshiruv navbati band. Bir necha soniyadan keyin qayta urinilmoqda');
-    const frameHash = png.dhash(front.img);
+    if (!noCamera && analyzer.hasCapacity && !analyzer.hasCapacity(2)) throw error(503, 'Hozir tekshiruv navbati band. Bir necha soniyadan keyin qayta urinilmoqda');
+    const frameHash = noCamera ? null : png.dhash(front.img);
 
     // Joylashuv: GPS ofis radiusida, yoki so'rov ofis internetidan (IP ro'yxati) kelgan.
     const gps = rules.checkLocation(settings, body?.location);
     const viaIp = ipAllowed(meta.ip, settings.officeIps);
-    const outside = !!body?.outside && !gps.ok && !viaIp;
+    const outside = !!body?.outside && !gps.ok && !viaIp && kind === 'in';
     const locOk = gps.ok || viaIp || outside;
     const lat = Number(body?.location?.lat), lng = Number(body?.location?.lng);
     // Ofisdan tashqaridagi urinishda aniq koordinata saqlanmaydi (bu ko'pincha uy manzili) — faqat masofa.
@@ -500,6 +599,7 @@ async function checkLocked(pool, analyzer, a, kind, body, meta) {
 
     let reason = locOk ? '' : (gps.reason === 'low_accuracy' && !settings.officeIps.length ? 'low_accuracy_phone' : gps.reason);
     let frontResult = null;
+    if (!reason && noCamera) reason = 'skip';
     if (!reason) {
         frontResult = await analyzeSafe(analyzer, front.buf);
         if (frontResult.faces !== 1) reason = frontResult.faces > 1 ? 'many_faces' : 'no_face';
@@ -523,23 +623,31 @@ async function checkLocked(pool, analyzer, a, kind, body, meta) {
         if (!live.ok) reason = live.reason;
         else if (!(analyzer.bestDistance(turned.descriptor, face.descriptors) <= TURNED_MATCH_THRESHOLD)) reason = 'mismatch';
     }
+    if (reason === 'skip') reason = ''; // kamerasiz qaytish: faqat joylashuv tekshirildi
 
     const id = randomUUID();
     const after = [];
     const status = await transaction(pool, async db => {
         await db.query('SELECT pg_advisory_xact_lock(hashtext($1))', ['staff_att:' + a.employee_id]);
         // Qulf ostida qayta tekshiruv: parallel so'rovlar kunlik chegarani yoki tartibni buzmasin.
-        guardOrder(await priorEvents(db, a.employee_id, date), reason ? null : outside ? 'outside' : kind);
-        const used = await db.query('UPDATE staff_att_challenges SET used_at=NOW() WHERE id=$1 AND used_at IS NULL', [String(body.challenge)]);
-        if (!used.rowCount) throw error(409, 'Urinish vaqti tugadi. Qaytadan boshlang');
+        const priorTx = await priorEvents(db, a.employee_id, date);
+        guardOrder(priorTx, reason ? null : outside ? 'outside' : kind);
+        const plan = kind === 'break_out' && !reason ? await breakPlan(db, a, date, now, body.breakKind, priorTx) : null;
+        const openB = kind === 'break_in' ? openBreakOf(priorTx) : null;
+        if (!noChallenge) {
+            const used = await db.query('UPDATE staff_att_challenges SET used_at=NOW() WHERE id=$1 AND used_at IS NULL', [String(body.challenge)]);
+            if (!used.rowCount) throw error(409, 'Urinish vaqti tugadi. Qaytadan boshlang');
+        }
         // Dalil rasmi — tekshirilgan kadrning o'zi (2 barobar kichraytirilgan). Ofisdan tashqarida rasm saqlanmaydi.
-        const photoId = locOk ? await savePhoto(db, a.employee_id, 'check', png.encodePng(png.halve(front.img))) : null;
+        const photoId = locOk && front ? await savePhoto(db, a.employee_id, 'check', png.encodePng(png.halve(front.img))) : null;
         await db.query(`INSERT INTO staff_att_events(id,employee_id,user_id,kind,work_date,occurred_at,ok,reason,lat,lng,accuracy,distance_m,location_method,
-            face_distance,yaw_delta,descriptor,frame_hash,photo_id,ip,user_agent) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)`,
+            face_distance,yaw_delta,descriptor,frame_hash,photo_id,ip,user_agent,break_kind,until_clock,request_id,unverified)
+            VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)`,
             [id, a.employee_id, a.id, kind, date, now, !reason, reason, record.lat, record.lng, record.accuracy, record.distance, record.method,
                 Number.isFinite(record.faceDistance) ? record.faceDistance : null, record.yawDelta,
                 record.descriptor ? JSON.stringify(record.descriptor) : null, locOk ? frameHash : null, photoId,
-                String(meta.ip || '').slice(0, 64), String(meta.userAgent || '').slice(0, 300)]);
+                String(meta.ip || '').slice(0, 64), String(meta.userAgent || '').slice(0, 300),
+                kind === 'break_out' ? body.breakKind : openB ? openB.break_kind : null, plan ? plan.until : null, plan ? plan.requestId : null, !reason && unverified]);
         const who = { employeeId: a.employee_id, name: a.employee_name || a.name, date, at: now, settings };
         if (reason) {
             if (reason === 'mismatch') after.push(() => notify.mismatch(pool, who));
@@ -547,7 +655,7 @@ async function checkLocked(pool, analyzer, a, kind, body, meta) {
             return null;
         }
         // Telegram botdagi "Ish jadvali / Face ID" menyusi shu jadvalni o'qiydi.
-        if (await tableExists(db, 'domwork_bot_face_logs')) {
+        if (['in', 'out'].includes(kind) && await tableExists(db, 'domwork_bot_face_logs')) {
             await db.query('INSERT INTO domwork_bot_face_logs(event_id,employee_id,kind,occurred_at) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING',
                 [id, a.employee_id, kind, now]);
         }
@@ -567,6 +675,11 @@ async function checkLocked(pool, analyzer, a, kind, body, meta) {
             after.push(() => notifyRequest(pool, requestId));
         }
         const day = await computeDay(db, a.employee_id, date, settings, now);
+        if (kind === 'break_in') {
+            const b = (day.breaks || []).filter(x => !x.open).pop();
+            if (b && (b.late || b.unverified)) after.push(async () => notify.breakBack(pool, { ...who, brk: b,
+                userIds: (await approverUsers(pool, routeFor(a))).map(u => String(u.id)) }));
+        }
         if (kind === 'in' && day.status === 'late') after.push(async () => notify.late(pool, { ...who, status: day,
             userIds: (await approverUsers(pool, routeFor(a))).map(u => String(u.id)) }));
         return day;
@@ -575,7 +688,7 @@ async function checkLocked(pool, analyzer, a, kind, body, meta) {
     for (const fn of after) await fn().catch(e => console.error('[staff-attendance] xabar xatosi:', e.message));
     if (reason) return { ok: false, reason, message: rules.reasonText(reason), distance: record.distance };
     const extra = kind === 'in' ? await streakInfo(pool, a.employee_id, now, settings).catch(() => ({})) : {};
-    return { ok: true, kind, at: now, clock: t.tashkentClock(now), today: status, outside, distance: record.distance,
+    return { ok: true, kind, at: now, clock: t.tashkentClock(now), today: status, outside, distance: record.distance, unverified: !!unverified,
         faceScore: Number.isFinite(record.faceDistance) ? Math.max(0, Math.min(100, Math.round((1 - record.faceDistance) * 100))) : null, ...extra };
 }
 
@@ -677,7 +790,7 @@ function dayPhrase(date, today) {
 }
 function requestView(r, today) {
     const date = typeof r.work_date === 'string' ? r.work_date : t.tashkentDate(r.work_date);
-    return { id: r.id, type: r.type, typeLabel: rules.REQUEST_TYPES[r.type], date, day: dayPhrase(date, today), time: r.at_time || '',
+    return { id: r.id, type: r.type, typeLabel: rules.REQUEST_TYPES[r.type], date, day: dayPhrase(date, today), time: r.at_time || '', until: r.until_time || '',
         reason: r.reason, comment: r.comment || '', state: r.state, approverKind: r.approver_kind, approverRole: APPROVER_TEXT[r.approver_kind],
         decidedBy: r.decided_by_name || '', decisionReason: r.decision_reason || '', decisionNote: r.decision_note || '',
         createdAt: r.created_at, createdClock: r.created_at ? t.tashkentClock(r.created_at) : '', distance: r.distance_m ?? null,
@@ -713,8 +826,8 @@ async function createRequest(pool, user, body, now = new Date()) {
         if (dup) throw error(409, 'Bu kun uchun shunday soʻrov allaqachon bor');
         const open = Number((await db.query(`SELECT COUNT(*)::int AS n FROM staff_att_requests WHERE employee_id=$1 AND state='pending'`, [a.employee_id])).rows[0].n);
         if (open >= 10) throw error(429, 'Javob kutayotgan soʻrovlar juda koʻp');
-        await db.query(`INSERT INTO staff_att_requests(id,employee_id,user_id,type,work_date,at_time,reason,comment,approver_kind,lang)
-            VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`, [id, a.employee_id, a.id, input.type, input.date, input.time, input.reason, input.comment, route.kind, route.lang]);
+        await db.query(`INSERT INTO staff_att_requests(id,employee_id,user_id,type,work_date,at_time,until_time,reason,comment,approver_kind,lang)
+            VALUES($1,$2,$3,$4,$5,$6,$11,$7,$8,$9,$10)`, [id, a.employee_id, a.id, input.type, input.date, input.time, input.reason, input.comment, route.kind, route.lang, input.until || '']);
         await audit(db, a.id, 'request:create', a.employee_id, { id, ...input });
     });
     await notifyRequest(pool, id).catch(e => console.error('[staff-attendance] so‘rov xabari:', e.message));
@@ -723,7 +836,9 @@ async function createRequest(pool, user, body, now = new Date()) {
 
 async function cancelRequest(pool, user, id) {
     const a = await actor(pool, user); requireEmployee(a);
-    const r = await pool.query(`UPDATE staff_att_requests SET state='cancelled',decided_at=NOW() WHERE id=$1 AND employee_id=$2 AND state='pending' RETURNING id`,
+    // Kutilayotgan so'rov; yoki tasdiqlangan, lekin hali chiqilmagan "Vaqtincha chiqaman".
+    const r = await pool.query(`UPDATE staff_att_requests r SET state='cancelled',decided_at=NOW() WHERE r.id=$1 AND r.employee_id=$2
+        AND (r.state='pending' OR (r.state='approved' AND r.type='step_out' AND NOT EXISTS(SELECT 1 FROM staff_att_events e WHERE e.request_id=r.id AND e.ok))) RETURNING r.id`,
         [String(id || ''), a.employee_id]);
     if (!r.rowCount) throw error(409, 'Soʻrovni bekor qilib boʻlmaydi — u allaqachon koʻrib chiqilgan');
     await audit(pool, a.id, 'request:cancel', a.employee_id, { id });
@@ -788,6 +903,7 @@ const escH = v => String(v ?? '').replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&
 function requestText(r, today) {
     const day = dayPhrase(r.work_date, today).toLowerCase();
     const what = r.type === 'late' ? `kech qolmoqchi — ${r.at_time} da keladi` : r.type === 'early_leave' ? `erta ketmoqchi — ${r.at_time} da`
+        : r.type === 'step_out' ? `vaqtincha chiqmoqchi — ${r.at_time} dan ${r.until_time} gacha`
         : r.type === 'absent' ? 'kelmaydi' : `ofisda emas${r.distance_m != null ? ` (ofisdan ${(r.distance_m / 1000).toFixed(1).replace('.', ',')} km)` : ''}, ${r.at_time} da belgiladi`;
     return `<b>${escH(r.employee_name)}</b> ${day} ${what}.\nSabab: ${escH(r.reason)}${r.comment ? ` · «${escH(r.comment.slice(0, 200))}»` : ''}`;
 }
@@ -873,12 +989,12 @@ async function teamRecord(db, user, employeeId, date, now = new Date()) {
     const ctx = await loadContext(db, [id], date, date);
     const day = statusFor(ctx, id, date, settings, now);
     await freeze(db, ctx);
-    const attempts = (await db.query(`SELECT id,kind,occurred_at,ok,reason,distance_m,accuracy,location_method,face_distance,photo_id FROM staff_att_events
+    const attempts = (await db.query(`SELECT id,kind,occurred_at,ok,reason,distance_m,accuracy,location_method,face_distance,photo_id,break_kind,until_clock,unverified FROM staff_att_events
         WHERE employee_id=$1 AND work_date=$2 ORDER BY occurred_at`, [id, date])).rows;
     const face = (await db.query("SELECT photo_id FROM staff_att_faces WHERE employee_id=$1 AND state='approved'", [id])).rows[0];
     return { employeeId: id, name: emp.name, date, ...day, facePhotoId: face?.photo_id || null, office: { name: settings.office.name, radius: settings.office.radius },
         attempts: attempts.map(x => ({ id: x.id, kind: x.kind, clock: t.tashkentClock(x.occurred_at), ok: x.ok, message: x.ok ? '' : rules.reasonText(x.reason),
-            distance: x.distance_m, method: x.location_method, photoId: x.photo_id,
+            distance: x.distance_m, method: x.location_method, photoId: x.photo_id, breakKind: x.break_kind || '', until: x.until_clock || '', unverified: !!x.unverified,
             faceScore: x.face_distance != null ? Math.max(0, Math.min(100, Math.round((1 - x.face_distance) * 100))) : null })) };
 }
 
@@ -889,15 +1005,16 @@ async function team(db, user, date, now = new Date()) {
     const settings = await getSettings(db);
     const list = await teamRows(db, scope);
     const ctx = await loadContext(db, list.map(e => e.id), date, date);
-    const rows = list.map(e => ({ employeeId: e.id, name: e.name, role: ROLE_TEXT[rules.staffKind({ empRole: e.role })], lang: empLang(e),
-        ...statusFor(ctx, e.id, date, settings, now) }));
+    const isToday = date === t.tashkentDate(now), nowMin = t.tashkentMinutes(now);
+    const rows = list.map(e => { const d = statusFor(ctx, e.id, date, settings, now);
+        return { employeeId: e.id, name: e.name, role: ROLE_TEXT[rules.staffKind({ empRole: e.role })], lang: empLang(e), ...d, now: nowState(d, nowMin, isToday) }; });
     await freeze(db, ctx);
-    const summary = {};
-    for (const r of rows) summary[r.status] = (summary[r.status] || 0) + 1;
+    const summary = {}, nowSummary = {};
+    for (const r of rows) { summary[r.status] = (summary[r.status] || 0) + 1; if (r.now) nowSummary[r.now] = (nowSummary[r.now] || 0) + 1; }
     const w = scopeSql(scope);
     const pend = (await db.query(`${REQ_SELECT} WHERE r.state='pending' AND ${w.sql} ORDER BY r.created_at LIMIT 5`, w.params)).rows
         .map(r => requestView(r, t.tashkentDate(now)));
-    return { date, scope: { kind: scope.kind, langs: scope.langs }, rows, summary, pending: await pendingCount(db, scope), pendingPreview: pend };
+    return { date, scope: { kind: scope.kind, langs: scope.langs }, rows, summary, nowSummary, pending: await pendingCount(db, scope), pendingPreview: pend };
 }
 
 // Admin (D15): ofis nomi, manzili, nuqtasi va radiusi.
@@ -967,7 +1084,16 @@ async function pushEvents(db, userId, now = new Date()) {
     const inOk = prior.find(e => e.ok && e.kind === 'in'), outOk = prior.filter(e => e.ok && e.kind === 'out').pop();
     const requests = (await db.query(`SELECT type,at_time AS time,state FROM staff_att_requests WHERE employee_id=$1 AND work_date=$2 AND state IN ('pending','approved')`,
         [a.employee_id, date])).rows;
-    const ph = rules.phase({ nowMinutes: nowMin, day, inClock: inOk ? t.tashkentClock(inOk.occurred_at) : '', outClock: outOk ? t.tashkentClock(outOk.occurred_at) : '', requests });
+    const ob = openBreakOf(prior);
+    const openBreak = ob ? { kind: ob.break_kind === 'step' ? 'step' : 'lunch', outClock: t.tashkentClock(ob.occurred_at), untilClock: ob.until_clock || '' } : null;
+    const ph = rules.phase({ nowMinutes: nowMin, day, inClock: inOk ? t.tashkentClock(inOk.occurred_at) : '', outClock: outOk ? t.tashkentClock(outOk.occurred_at) : '', requests, openBreak });
+    // Obed / ruxsat tugashiga 10 daqiqa qoldi.
+    if (openBreak && (ph.phase === 'lunch' || ph.phase === 'out') && ph.leftMinutes != null && ph.leftMinutes <= 10 && ph.leftMinutes > -60) {
+        const due = t.parseClock(openBreak.untilClock);
+        ev.push({ id: `att:break10:${date}:${openBreak.outClock}`, type: 'att_shift', cat: 'boshqa', tone: 'info', pushOnly: true,
+            title: openBreak.kind === 'step' ? `Ruxsat ${openBreak.untilClock} da tugaydi` : `Obed ${openBreak.untilClock} da tugaydi`,
+            sub: 'Qaytgach «Qaytdim — selfie» ni bosing.', at: iso(due - 10), go: { tab: 'davomat' } });
+    }
     const start = t.parseClock(day.start), end = t.parseClock(day.end);
     if (ph.phase === 'before' && nowMin >= start - 10)
         ev.push({ id: `att:soon:${date}`, type: 'att_shift', cat: 'boshqa', tone: 'info', pushOnly: true, title: 'Ish kuni boshlanmoqda',
@@ -1078,21 +1204,25 @@ async function daily(db, user, date, now = new Date()) {
     const settings = await getSettings(db);
     const list = await trackedList(db);
     const ctx = await loadContext(db, list.map(e => e.id), date, date);
-    const attempts = (await db.query(`SELECT id,employee_id,kind,occurred_at,ok,reason,distance_m,accuracy,location_method,face_distance,photo_id,lat,lng
+    const attempts = (await db.query(`SELECT id,employee_id,kind,occurred_at,ok,reason,distance_m,accuracy,location_method,face_distance,photo_id,lat,lng,break_kind,until_clock,unverified
         FROM staff_att_events WHERE work_date=$1 ORDER BY occurred_at`, [date])).rows;
+    const isToday = date === t.tashkentDate(now), nowMin = t.tashkentMinutes(now);
     const rows = list.map(e => {
-        const day = statusFor(ctx, e.id, date, settings, now);
+        const day = { ...statusFor(ctx, e.id, date, settings, now) };
+        day.now = nowState(day, nowMin, isToday);
         const mine = attempts.filter(x => x.employee_id === e.id);
         return { employeeId: e.id, name: e.name, role: e.role, ...day,
             attempts: mine.map(x => ({ id: x.id, kind: x.kind, at: x.occurred_at, clock: t.tashkentClock(x.occurred_at), ok: x.ok,
                 reason: x.reason, message: x.ok ? '' : rules.reasonText(x.reason), distance: x.distance_m, accuracy: x.accuracy,
-                method: x.location_method, faceDistance: x.face_distance, photoId: x.photo_id, lat: x.lat, lng: x.lng })),
+                method: x.location_method, faceDistance: x.face_distance, photoId: x.photo_id, lat: x.lat, lng: x.lng,
+                breakKind: x.break_kind || '', until: x.until_clock || '', unverified: !!x.unverified })),
             rejected: mine.filter(x => !x.ok).length };
     });
     await freeze(db, ctx);
-    const summary = {};
-    for (const r of rows) summary[r.status] = (summary[r.status] || 0) + 1;
-    return { date, office: settings.office, rows, summary };
+    const summary = {}, nowSummary = {};
+    for (const r of rows) { summary[r.status] = (summary[r.status] || 0) + 1; if (r.now) nowSummary[r.now] = (nowSummary[r.now] || 0) + 1; }
+    const unverified = rows.filter(r => r.unverifiedReturn).length;
+    return { date, office: settings.office, rows, summary, nowSummary, unverified };
 }
 
 async function monthly(db, user, month, now = new Date()) {
@@ -1136,6 +1266,25 @@ async function setOverride(db, user, body) {
     return { status: body.status, note };
 }
 
+// HR: tasdiqlanmagan qaytish (kamerasiz yoki 30 daqiqadan kech yetib kelgan oflayn belgi).
+//  accept — saqlangan vaqt qabul qilinadi; reject — belgi bekor, tanaffus keyingi haqiqiy "Qaytdim" bilan yopiladi.
+async function reviewReturn(pool, user, eventId, body = {}) {
+    const a = await actor(pool, user); requireManage(a);
+    const reason = String(body.reason || '').trim().slice(0, 300);
+    if (!reason) throw error(400, 'Sababni yozing');
+    const accept = body.accept === true;
+    return transaction(pool, async db => {
+        const e = (await db.query("SELECT id,employee_id,TO_CHAR(work_date,'YYYY-MM-DD') AS d FROM staff_att_events WHERE id=$1 AND kind='break_in' AND ok AND unverified FOR UPDATE",
+            [String(eventId || '')])).rows[0];
+        if (!e) throw error(409, 'Bu qaytish allaqachon ko‘rib chiqilgan');
+        if (accept) await db.query('UPDATE staff_att_events SET unverified=FALSE,reviewed_by=$2,reviewed_at=NOW() WHERE id=$1', [e.id, a.id]);
+        else await db.query("UPDATE staff_att_events SET ok=FALSE,reason='review_rejected',reviewed_by=$2,reviewed_at=NOW() WHERE id=$1", [e.id, a.id]);
+        await db.query('DELETE FROM staff_att_day_results WHERE employee_id=$1 AND work_date=$2', [e.employee_id, e.d]);
+        await audit(db, a.id, 'return:' + (accept ? 'accept' : 'reject'), e.employee_id, { eventId: e.id, date: e.d, reason });
+        return { accepted: accept };
+    });
+}
+
 async function photo(db, user, id) {
     const a = await actor(db, user);
     const row = (await db.query('SELECT employee_id,mime,data FROM staff_att_photos WHERE id=$1', [String(id || '')])).rows[0];
@@ -1169,6 +1318,12 @@ async function tick(db, now = new Date()) {
         // Erta ketish xabari kun oxirida (ish tugagandan 1 soat keyin), oxirgi "ketdim" bo'yicha.
         const end = t.parseClock(d.end);
         if (d.earlyMinutes && end != null && nowMin >= Math.min(end + 60, 23 * 60 + 50)) await notify.earlyLeave(db, who).catch(() => {});
+        // Obeddan / ruxsatdan qaytmadi (muddat + 5 daqiqa o'tdi) — o'z rahbariga va direktorga, bir marta.
+        if (d.openBreak && nowState(d, nowMin, true).endsWith('_late')) {
+            const route = { kind: rules.approverKind({ empRole: e.role }), lang: empLang(e) === 'both' ? null : empLang(e) };
+            const ids = (await approverUsers(db, route).catch(() => [])).map(u => String(u.id));
+            await notify.breakLate(db, { ...who, brk: d.openBreak, userIds: ids }).catch(() => {});
+        }
     }
     await lateWaiting(db, list, ctx, settings, now).catch(e => console.error('[staff-attendance] kechikish xabari:', e.message));
     await freeze(db, ctx);
@@ -1189,7 +1344,7 @@ async function tick(db, now = new Date()) {
 
 module.exports = { initSchema, actor, getSettings, saveSettings, me, challenge, submitOwnFace, check, employees, saveSchedule,
     myMonth, myRequests, createRequest, clearApproverCache, cancelRequest, inbox, decideRequest, team, teamRecord, saveOffice, pushEvents, scopeFor, routeFor,
-    enrollFor, reviewFace, deleteFace, daily, monthly, setOverride, photo, tick, computeDay, lessonReport, transaction, ipAllowed, goneSql,
+    enrollFor, reviewFace, deleteFace, daily, monthly, setOverride, reviewReturn, photo, tick, trialUntil, countFromFor, nowState, computeDay, lessonReport, transaction, ipAllowed, goneSql,
     MAX_ATTEMPTS_PER_DAY, TEACHER_HR_ROLES, FRAME_W, FRAME_H,
     // Jarimalar (server/services/fines) kun natijalari va tasdiqlovchi doirasini shu yerdan oladi.
     loadContext, statusFor, freeze, empLang, approverUsers, priorEvents };

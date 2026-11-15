@@ -23,6 +23,9 @@ function normalizeIps(raw) {
 }
 
 const DAY_KEYS = ['1', '2', '3', '4', '5', '6', '7'];
+// Obed / vaqtincha chiqishdan kechikish chegarasi (direktor, 15-noy): muddatdan 5:00 gacha — hech narsa, 5:01 dan — «kech» + jarima.
+const BREAK_LATE_MINUTES = 5;
+const STEP_MAX_MINUTES = 240;
 
 function normalizeSettings(raw) {
     const s = { ...DEFAULT_SETTINGS, ...(raw || {}) };
@@ -57,9 +60,44 @@ function normalizeDays(raw) {
         if (start == null || end == null) throw Object.assign(new Error(`${key}-kun vaqti noto'g'ri (SS:DD)`), { status: 400 });
         if (end <= start) throw Object.assign(new Error(`${key}-kun: tugash vaqti boshlanishdan keyin bo'lishi kerak`), { status: 400 });
         out[key] = { start: t.clock(start), end: t.clock(end) };
+        // Obed (15-noy): oraliqda istalgan paytda bir marta, `minutes` daqiqa. Bo'sh — obed yo'q.
+        if (d.lunch && (d.lunch.from || d.lunch.to)) {
+            const from = t.parseClock(d.lunch.from), to = t.parseClock(d.lunch.to);
+            const minutes = Math.round(Number(d.lunch.minutes));
+            if (from == null || to == null) throw Object.assign(new Error(`${key}-kun: obed oralig'i noto'g'ri (SS:DD)`), { status: 400 });
+            if (!(from >= start && to <= end && to > from)) throw Object.assign(new Error(`${key}-kun: obed oralig'i ish vaqti ichida bo'lsin`), { status: 400 });
+            if (!(minutes >= 10 && minutes <= 180 && minutes <= to - from)) throw Object.assign(new Error(`${key}-kun: obed davomiyligi 10–180 daqiqa va oraliqdan oshmasin`), { status: 400 });
+            if (to + minutes > end) throw Object.assign(new Error(`${key}-kun: obed oralig'i oxiri + davomiylik ish tugashidan (${t.clock(end)}) oshmasin`), { status: 400 });
+            out[key].lunch = { from: t.clock(from), to: t.clock(to), minutes };
+        }
     }
     return out;
 }
+
+// Obed va vaqtincha chiqish (15-noy): break_out / break_in juftlari. Har chiqishda `until` (qaytish muddati) saqlanadi.
+// → [{kind:'lunch'|'step', outClock, inClock, minutes, untilClock, overMinutes, open}]
+function breaksOf(events, nowMinutes = null) {
+    const list = [];
+    let cur = null;
+    for (const e of events || []) {
+        if (e.kind === 'break_out') { if (cur) continue; cur = { kind: e.break_kind === 'step' ? 'step' : 'lunch', outMin: t.tashkentMinutes(e.occurred_at), until: t.parseClock(e.until_clock), requestId: e.request_id || null }; }
+        else if (e.kind === 'break_in' && cur) { cur.inMin = t.tashkentMinutes(e.occurred_at); cur.inSec = secOf(e.occurred_at); cur.unverified = !!e.unverified; cur.inEventId = e.id || null; list.push(cur); cur = null; }
+    }
+    if (cur) list.push({ ...cur, open: true });
+    return list.map(b => {
+        const endMin = b.inMin != null ? b.inMin : nowMinutes;
+        const minutes = endMin != null ? Math.max(0, endMin - b.outMin) : 0;
+        const over = b.until != null && endMin != null ? Math.max(0, endMin - b.until) : 0;
+        // 5:00 chegarasi soniyagacha: 14:10:00 da qaytsa — kech emas, 14:10:01 dan — kech (muddat 14:05).
+        const lateSec = b.until != null && b.inMin != null ? (b.inMin - b.until) * 60 + (b.inSec || 0) : null;
+        const late = b.inMin != null ? lateSec > BREAK_LATE_MINUTES * 60 : over > BREAK_LATE_MINUTES;
+        return { kind: b.kind, outClock: t.clock(b.outMin), inClock: b.inMin != null ? t.clock(b.inMin) : '', minutes,
+            untilClock: b.until != null ? t.clock(b.until) : '', overMinutes: over, late, open: !!b.open,
+            requestId: b.requestId || null, unverified: !!b.unverified, inEventId: b.inEventId || null };
+    });
+}
+
+function secOf(at) { const d = new Date(at); return Number.isFinite(d.getTime()) ? d.getUTCSeconds() : 0; }
 
 function haversineMeters(a, b) {
     const R = 6371000, rad = x => (x * Math.PI) / 180;
@@ -111,6 +149,7 @@ const REASONS = {
     liveness: 'Bosh burilishi aniqlanmadi. Ko‘rsatmaga qarab boshingizni yonga buring.',
     mismatch: 'Yuz namunangizga mos kelmadi.',
     no_face_profile: 'Yuz namunangiz hali tasdiqlanmagan. HR bilan bog‘laning.',
+    review_rejected: 'HR qaytish belgisini qabul qilmadi.',
 };
 
 function reasonText(code) { return REASONS[code] || 'Belgilab bo‘lmadi. Qayta urinib ko‘ring.'; }
@@ -133,6 +172,20 @@ function dayStatus(input) {
         lateMinutes: 0, earlyMinutes: 0, workedMinutes: 0,
     };
     if (firstIn && lastOut && outMin > inMin) base.workedMinutes = outMin - inMin;
+    const breaks = breaksOf(events, input.date === input.today ? input.nowMinutes : null);
+    if (breaks.length) {
+        base.breaks = breaks;
+        base.lunchMinutes = breaks.filter(b => b.kind === 'lunch').reduce((n, b) => n + b.minutes, 0);
+        base.stepMinutes = breaks.filter(b => b.kind === 'step').reduce((n, b) => n + b.minutes, 0);
+        // Obed/chiqishdan kechikish: muddatdan 5 daqiqadan oshsa — «kech» va jarima (server/services/fines). Kuniga bir marta.
+        const over = k => breaks.filter(b => b.kind === k && !b.open && b.late).reduce((n, b) => n + b.overMinutes, 0);
+        base.lunchOverMinutes = over('lunch');
+        base.stepOverMinutes = over('step');
+        if (base.workedMinutes) base.workedMinutes = Math.max(0, base.workedMinutes - breaks.filter(b => !b.open).reduce((n, b) => n + b.minutes, 0));
+        const open = breaks.find(b => b.open);
+        if (open) base.openBreak = open;
+        if (breaks.some(b => b.unverified)) base.unverifiedReturn = true;
+    }
 
     if (override) return { ...base, status: override.status, note: override.note || '', overridden: true };
     if (leave) return { ...base, status: 'leave' };
@@ -162,6 +215,17 @@ function dayStatus(input) {
     if (lastOut && outMin > inMin) {
         const early = Math.max(0, end - outMin);
         base.earlyMinutes = early > settings.earlyLeaveGraceMinutes ? early : 0;
+    } else if (base.openBreak && (!isToday || nowMinutes > end + 60)) {
+        // Obeddan / ruxsatdan qaytmay kun tugadi: ishlagan vaqt chiqqan paytgacha, faqat BITTA jarima (kech qaytish),
+        // «Ketish belgilanmagan» yozilmaydi.
+        const ob = base.openBreak, obOut = t.parseClock(ob.outClock), due = t.parseClock(ob.untilClock);
+        const closed = breaks.filter(b => !b.open).reduce((n, b) => n + b.minutes, 0);
+        base.workedMinutes = Math.max(0, obOut - inMin - closed);
+        const overEnd = due != null ? Math.max(0, end - due) : 0;
+        if (ob.kind === 'step') base.stepOverMinutes = Math.max(base.stepOverMinutes || 0, overEnd || 1);
+        else base.lunchOverMinutes = Math.max(base.lunchOverMinutes || 0, overEnd || 1);
+        base.notReturned = ob.kind;
+        delete base.openBreak;
     } else if (!isToday || nowMinutes > end + 60) {
         base.noCheckout = true;
     }
@@ -225,13 +289,13 @@ function langCovers(approverLang, lang) {
     return l === 'both' || l === lang;
 }
 
-const REQUEST_TYPES = { late: 'Kech qolaman', absent: 'Kelmayman', early_leave: 'Erta ketaman', outside: 'Ofisda emasman' };
+const REQUEST_TYPES = { late: 'Kech qolaman', absent: 'Kelmayman', early_leave: 'Erta ketaman', outside: 'Ofisda emasman', step_out: 'Vaqtincha chiqaman' };
 
 // ctx (ixtiyoriy): { day: {start,end}|null (o'sha kun grafigi), inOk, outOk (bugun belgilangan), maxDays }
 const MAX_REQUEST_DAYS = 60;
 function normalizeRequest(body, { today, day, inOk = false, outOk = false, maxDays = MAX_REQUEST_DAYS } = {}) {
     const type = String(body?.type || '');
-    if (!['late', 'absent', 'early_leave'].includes(type)) throw Object.assign(new Error('So‘rov turini tanlang'), { status: 400 });
+    if (!['late', 'absent', 'early_leave', 'step_out'].includes(type)) throw Object.assign(new Error('So‘rov turini tanlang'), { status: 400 });
     const date = String(body?.date || '');
     if (!t.isDate(date)) throw Object.assign(new Error('Kunni tanlang'), { status: 400 });
     if (date < today) throw Object.assign(new Error('O‘tgan kun uchun so‘rov yuborib bo‘lmaydi'), { status: 400 });
@@ -244,7 +308,7 @@ function normalizeRequest(body, { today, day, inOk = false, outOk = false, maxDa
     let time = '';
     if (type !== 'absent') {
         const m = t.parseClock(body?.time);
-        if (m == null) throw Object.assign(new Error(type === 'late' ? 'Qachon kelishingizni yozing' : 'Qachon ketishingizni yozing'), { status: 400 });
+        if (m == null) throw Object.assign(new Error(type === 'late' ? 'Qachon kelishingizni yozing' : type === 'step_out' ? 'Qachon chiqishingizni yozing' : 'Qachon ketishingizni yozing'), { status: 400 });
         time = t.clock(m);
         if (day) {
             const s = t.parseClock(day.start), e = t.parseClock(day.end);
@@ -252,9 +316,22 @@ function normalizeRequest(body, { today, day, inOk = false, outOk = false, maxDa
             if (type === 'early_leave' && !(m > s && m < e)) throw Object.assign(new Error(`Ketish vaqti ish vaqti ichida bo‘lsin (${day.start} dan keyin, ${day.end} dan oldin)`), { status: 400 });
         }
     }
+    // Vaqtincha chiqaman: "dan" (time) va "gacha" (until), ikkalasi ish vaqti ichida.
+    let until = '';
+    if (type === 'step_out') {
+        const from = t.parseClock(time), u = t.parseClock(body?.until);
+        if (u == null) throw Object.assign(new Error('Qachon qaytishingizni yozing'), { status: 400 });
+        if (!(u > from)) throw Object.assign(new Error('Qaytish vaqti chiqishdan keyin bo‘lsin'), { status: 400 });
+        if (day) {
+            const s = t.parseClock(day.start), e = t.parseClock(day.end);
+            if (!(from >= s && u <= e)) throw Object.assign(new Error(`Chiqish va qaytish ish vaqti ichida bo‘lsin (${day.start}–${day.end})`), { status: 400 });
+        }
+        if (u - from > STEP_MAX_MINUTES) throw Object.assign(new Error('Vaqtincha chiqish ko‘pi bilan 4 soat. Undan ko‘p bo‘lsa «Erta ketaman» yoki «Kelmayman»'), { status: 400 });
+        until = t.clock(u);
+    }
     const reason = String(body?.reason || '').trim().slice(0, 80);
     if (!reason) throw Object.assign(new Error('Sababni tanlang'), { status: 400 });
-    return { type, date, time, reason, comment: String(body?.comment || '').trim().slice(0, 500) };
+    return { type, date, time, until, reason, comment: String(body?.comment || '').trim().slice(0, 500) };
 }
 
 // Kun holatiga javob so'rovlari ta'siri (HR tuzatishidan keyin emas — undan oldin qo'llanadi).
@@ -268,7 +345,7 @@ function applyRequests(base, requests, settings, clockNow = null, { officeIn = f
     const out = { ...base };
     const inMin = t.parseClock(out.inClock), outMin = t.parseClock(out.outClock);
     const approved = type => list.find(r => r.state === 'approved' && r.type === type);
-    const pending = list.some(r => r.state === 'pending' && r.type !== 'early_leave');
+    const pending = list.some(r => r.state === 'pending' && r.type !== 'early_leave' && r.type !== 'step_out');
     if (list.some(r => r.state === 'pending' && r.type === 'outside')) return { ...out, status: 'pending', lateMinutes: 0, rawLateMinutes: 0 };
     const whole = approved('absent') || approved('outside');
     if (whole) return { ...out, status: 'excused', lateMinutes: 0, rawLateMinutes: 0, earlyMinutes: 0, note: whole.reason || '', request: whole.id };
@@ -299,14 +376,20 @@ function applyRequests(base, requests, settings, clockNow = null, { officeIn = f
 // Ilova holati (qulf): ish vaqtidan tashqari ilova erkin, ish boshlanganda belgilaguncha qulf.
 // input: { nowMinutes, day:{start,end}|null, inClock, outClock, requests (bugungi, pending/approved) }
 // → { phase, start, end, unlockAt, lateMinutes }
-//   phase: off | before | late_ok | lock | working | leave | done | excused | outside | missed
-function phase({ nowMinutes, day, inClock, outClock, requests = [] }) {
+//   phase: off | before | late_ok | lock | working | lunch | out | leave | done | excused | outside | missed
+function phase({ nowMinutes, day, inClock, outClock, requests = [], openBreak = null }) {
     const live = (requests || []).filter(r => r.state === 'pending' || r.state === 'approved');
     const start = day ? t.parseClock(day.start) : null, end = day ? t.parseClock(day.end) : null;
     const base = { start: day?.start || '', end: day?.end || '', unlockAt: '', lateMinutes: 0 };
     const inMin = t.parseClock(inClock);
     if (inMin != null) {
         if (t.parseClock(outClock) != null) return { ...base, phase: 'done' };
+        // Obedda / tashqarida (ruxsat bilan): ilova ochiq, bosh kartada taymer va "Qaytdim".
+        if (openBreak) {
+            const due = t.parseClock(openBreak.untilClock);
+            return { ...base, phase: openBreak.kind === 'step' ? 'out' : 'lunch', breakOut: openBreak.outClock, dueAt: openBreak.untilClock,
+                leftMinutes: due != null ? due - nowMinutes : null };
+        }
         if (start == null) return { ...base, phase: 'working' };
         const early = live.find(r => r.type === 'early_leave' && r.state === 'approved');
         const leaveAt = early ? Math.min(end, t.parseClock(early.time)) : end;
@@ -323,6 +406,34 @@ function phase({ nowMinutes, day, inClock, outClock, requests = [] }) {
     return { ...base, phase: 'lock', lateMinutes: nowMinutes - until, unlockAt: t.clock(until) };
 }
 
+// Obedga / vaqtincha chiqishga chiqish mumkinmi (15-noy). → { ok, reason, until }
+//  lunch: grafikda obed bo'lsa, oraliq ichida, bugun hali obed qilmagan bo'lsa; qaytish muddati = chiqish + minutes (oraliq oxiridan oshmaydi emas — to'liq daqiqa beriladi).
+//  step: bugungi TASDIQLANGAN "Vaqtincha chiqaman" so'rovi, chiqish vaqtidan 15 daq oldin va qaytish vaqtigacha; muddat = so'rov "gacha" vaqti.
+function breakAllowed({ kind, nowMinutes, day, breaks = [], requests = [] }) {
+    if (breaks.some(b => b.open)) return { ok: false, reason: 'Avval qaytganingizni belgilang' };
+    if (kind === 'lunch') {
+        const l = day?.lunch;
+        if (!l) return { ok: false, reason: 'Grafigingizda obed belgilanmagan. HR bilan bog‘laning' };
+        if (breaks.some(b => b.kind === 'lunch')) return { ok: false, reason: 'Bugun obed allaqachon qilingan' };
+        if (day.end && nowMinutes >= t.parseClock(day.end)) return { ok: false, reason: 'Ish vaqti tugagan' };
+        const from = t.parseClock(l.from), to = t.parseClock(l.to);
+        if (nowMinutes < from || nowMinutes >= to) return { ok: false, reason: `Obed ${l.from}–${l.to} oralig‘ida` };
+        return { ok: true, until: t.clock(nowMinutes + l.minutes), minutes: l.minutes };
+    }
+    if (kind === 'step') {
+        if (breaks.some(b => b.kind === 'step')) return { ok: false, reason: 'Bugun ruxsat allaqachon ishlatilgan' };
+        const r = (requests || []).find(x => x.type === 'step_out' && x.state === 'approved' && !breaks.some(b => b.kind === 'step' && b.requestId === x.id));
+        if (!r) return { ok: false, reason: '«Vaqtincha chiqaman» so‘rovi tasdiqlanmagan' };
+        const from = t.parseClock(r.time), u = t.parseClock(r.until);
+        if (nowMinutes < from - 15) return { ok: false, reason: `Chiqish vaqti ${r.time} dan` };
+        if (nowMinutes >= u) return { ok: false, reason: `Ruxsat ${r.until} gacha edi — vaqti o‘tdi` };
+        // Erta chiqsa muddat ham suriladi (ruxsat davomiyligi o'zgarmaydi): 15:00–16:00, 14:45 da chiqsa — 15:45 gacha.
+        const until = nowMinutes < from ? nowMinutes + (u - from) : u;
+        return { ok: true, until: t.clock(until), requestId: r.id };
+    }
+    return { ok: false, reason: 'Amal turi noto‘g‘ri' };
+}
+
 // Ketma-ket "vaqtida" kunlar: eng yangi kundan orqaga, dam olish kunlari o'tkazib yuboriladi.
 function onTimeStreak(days) {
     let n = 0;
@@ -336,5 +447,5 @@ function onTimeStreak(days) {
 
 module.exports = { DEFAULT_SETTINGS, normalizeSettings, normalizeDays, haversineMeters, checkLocation, checkLiveness,
     dayStatus, reasonText, REASONS, STATUS_LABELS, MIN_YAW_DELTA, DAY_KEYS,
-    staffKind, roleTracked, approverKind, approverScope, canDecide, langCovers, REQUEST_TYPES, normalizeRequest, applyRequests, phase, onTimeStreak,
+    staffKind, roleTracked, approverKind, approverScope, canDecide, langCovers, REQUEST_TYPES, normalizeRequest, applyRequests, phase, onTimeStreak, breaksOf, breakAllowed, BREAK_LATE_MINUTES, STEP_MAX_MINUTES,
     ACADEMIC_HEAD_ROLE, SALES_EMP_ROLES, MAX_REQUEST_DAYS };

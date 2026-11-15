@@ -48,6 +48,7 @@ module.exports = function staffAttendanceRouter({ pool, authRequired, analyzer =
     router.get('/monthly', handle(req => service.monthly(pool, req.user, String(req.query.month || ''))));
     router.get('/lessons', handle(req => service.lessonReport(pool, req.user, String(req.query.date || ''))));
     router.put('/override', handle(req => service.setOverride(pool, req.user, req.body)));
+    router.post('/returns/:id/review', handle(req => service.reviewReturn(pool, req.user, req.params.id, req.body)));
 
     router.get('/photos/:id', async (req, res) => {
         try {

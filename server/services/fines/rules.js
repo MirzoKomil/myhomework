@@ -20,6 +20,9 @@ const ATT = [
     { code: 'early_leave', kind: 'early', label: 'Ruxsatsiz erta ketish', sub: 'Tasdiqlangan soʻrovsiz', amount: 25000 },
     { code: 'no_checkout', kind: 'no_checkout', label: 'Ketish belgilanmagan', sub: '20:00 gacha', amount: 10000 },
     { code: 'absent', kind: 'absent', label: 'Sababsiz kelmaslik', sub: 'Soʻrov va sababsiz', amount: 150000, washLimit: true },
+    // 15-noy: obed va vaqtincha chiqish — muddatdan 5 daqiqadan ko'p kech qaytish, kuniga bir marta, ogohlantirishsiz.
+    { code: 'lunch_over', kind: 'lunch_over', label: 'Obeddan kechikish', sub: 'Muddatdan 5 daqiqadan koʻp', amount: 10000 },
+    { code: 'step_over', kind: 'step_over', label: 'Ruxsatdan kech qaytish', sub: '«Vaqtincha chiqaman» muddatidan 5 daqiqadan koʻp', amount: 15000 },
 ];
 // Ish qoidalari (rahbar yozadi) — rolga qarab.
 const WORK = {
@@ -36,6 +39,7 @@ const WORK = {
     targetolog: [{ code: 'report_missing', label: 'Kunlik hisobot kiritilmagan', sub: '10:00 gacha', amount: 20000, evidence: 'text' }],
 };
 const ATT_ROLES = new Set(['sales', 'rop', 'hr', 'academic', 'assistant']); // ofisda — yuz + joylashuv davomati
+const ADDED_ATT = new Set(['lunch_over', 'step_over']); // eski saqlangan sozlamalarga avtomatik qo'shiladi
 
 const DEFAULT_SOFT = Object.freeze({ graceMinutes: 5, capPercent: 10, cleanMonthBonus: 100000, cleanMonthOn: true, appealDays: 3,
     washHour: 25000, washSunday: 100000, washStreakCount: 1, washLearning: 15000, absentWashPercent: 50 });
@@ -65,6 +69,8 @@ function normalizeConfig(raw) {
                 active: x.active !== false, warnFirst: base.kind === 'late' ? x.warnFirst !== false : !!x.warnFirst,
                 evidence: base.evidence || (base.kind ? undefined : 'text') };
         }).filter(Boolean);
+        // Keyin qo'shilgan avtomatik davomat qoidalari (masalan obed) saqlangan eski sozlamada bo'lmasa — standart bilan qo'shiladi.
+        if (ATT_ROLES.has(r)) for (const d of def.roles[r]) if (ADDED_ATT.has(d.code) && !seen.has(d.code)) { out.roles[r].push({ ...d }); seen.add(d.code); }
     }
     const s = { ...DEFAULT_SOFT, ...(raw?.soft || {}) };
     out.soft = { graceMinutes: int(s.graceMinutes, 0, 60, DEFAULT_SOFT.graceMinutes), capPercent: int(s.capPercent, 0, 100, DEFAULT_SOFT.capPercent),
@@ -109,6 +115,13 @@ function attendanceFines(days, config, role) {
     let streak = 0;
     for (const d of sorted) {
         const month = d.date.slice(0, 7);
+        // Sinov haftasi (hisob boshlangach birinchi 7 kun): hech qanday davomat jarimasi yozilmaydi.
+        if (d.trial) continue;
+        // Obed / ruxsatdan kech qaytish — kun holatidan qat'i nazar (masalan "sababli" kech kelgan kunda ham).
+        if (!['leave', 'off', 'before', 'not_ready', 'upcoming'].includes(d.status) && !d.overridden) {
+            if (Number(d.lunchOverMinutes) > 0 && by('lunch_over')) out.push({ date: d.date, code: 'lunch_over', label: d.notReturned === 'lunch' ? 'Obeddan qaytmadi' : `Obeddan kechikish · ${d.lunchOverMinutes} daq`, amount: by('lunch_over').amount, warning: false, ref: `att:${d.date}:lunch`, minutes: Number(d.lunchOverMinutes) });
+            if (Number(d.stepOverMinutes) > 0 && by('step_over')) out.push({ date: d.date, code: 'step_over', label: d.notReturned === 'step' ? 'Ruxsatdan qaytmadi' : `Ruxsatdan kech qaytish · ${d.stepOverMinutes} daq`, amount: by('step_over').amount, warning: false, ref: `att:${d.date}:step`, minutes: Number(d.stepOverMinutes) });
+        }
         // Sababli, ta'til, so'rov kutilmoqda, dam olish, hisob boshlanmagan — jarima yo'q.
         if (['excused', 'leave', 'pending', 'off', 'before', 'not_ready', 'upcoming', 'waiting', 'present'].includes(d.status)) {
             if (!['off', 'upcoming'].includes(d.status)) streak = 0;

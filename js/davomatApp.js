@@ -53,7 +53,8 @@
         absent: '<rect x="3" y="4.5" width="18" height="16" rx="3"/><path d="M3 9.5h18M9 14l6 4M15 14l-6 4"/>', early: '<path d="M10 17l5-5-5-5M15 12H3"/><path d="M14 3h5a2 2 0 012 2v14a2 2 0 01-2 2h-5"/>',
         cal: '<rect x="3" y="4.5" width="18" height="16" rx="3"/><path d="M3 9.5h18M8 3v3M16 3v3"/>', wifi: '<path d="M1 1l22 22M16.7 11.1A10.9 10.9 0 0119 12.6M5 12.6a10.9 10.9 0 015.2-2.5M10.7 5A16 16 0 0122.6 9M1.4 9a16 16 0 014.3-2.7M8.5 16.1a5 5 0 016.9 0M12 20h.01"/>',
         users: '<path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.9M16 3.1a4 4 0 010 7.8"/>',
-        office: '<path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6"/>'
+        office: '<path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6"/>',
+        food: '<path d="M7 3v8M5 3v5a2 2 0 004 0V3M7 11v10M17 3c-1.7 1-3 3.2-3 6v4h3v8"/>'
     };
     const ic = (n, s = 20, w = 2.2) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n] || ''}</svg>`;
 
@@ -114,6 +115,50 @@
     // Sotuv ilovasi: yangi lid harakatidan oldin chaqiradi. true — harakat to'xtatildi (ketish oynasi ochildi).
     function guardLead() { if (!leadLocked()) return false; showLeave(); return true; }
 
+    // ---------- obed va vaqtincha chiqish (15-noy) ----------
+    // Tanaffusdagi vaqt ishlagan vaqtga kirmaydi; ochiq tanaffus — hozirgacha.
+    function breakMin(t, now) {
+        return (t.breaks || []).reduce((n, b) => n + (b.open ? Math.max(0, now - pm(b.outClock)) : b.minutes || 0), 0);
+    }
+    const openBr = () => (S.me?.today?.breaks || []).find(b => b.open) || null;
+    const BRK = { lunch: 'Obed', step: 'Ruxsat' };
+    function breakCard(m, ph, now) {
+        const b = openBr() || { kind: ph === 'out' ? 'step' : 'lunch', outClock: m.breakOut, untilClock: m.dueAt };
+        const due = pm(b.untilClock), left = due == null ? null : due - now, lateBy = left == null ? 0 : -left;
+        const step = b.kind === 'step', grace = m.breakLateMinutes || 5;
+        const tone = left == null || left >= 0 ? (step ? 'blue' : 'amber') : lateBy <= grace ? 'amber' : 'red';
+        const title = left != null && left < 0 ? (lateBy <= grace ? `${BRK[b.kind]} vaqti tugadi` : step ? 'Ruxsatdan kechikyapsiz' : 'Obeddan kechikyapsiz')
+            : step ? 'Tashqaridasiz · ruxsat bilan' : 'Obeddasiz';
+        const big = left == null ? '' : left >= 0 ? `${durL(left)} qoldi` : `${durL(lateBy)} oʻtdi`;
+        const sub = left == null ? '' : left >= 0 ? `${esc(b.untilClock)} gacha qaytishingiz kerak`
+            : lateBy <= grace ? `${esc(b.untilClock)} da tugadi · ${hm(due + grace)} gacha qaytsangiz hech narsa yozilmaydi`
+            : `${esc(b.untilClock)} da tugagan. Rahbaringiz roʻyxatida «${step ? 'Ruxsatdan' : 'Obeddan'} kech» koʻrinmoqda. Jarima qaytganingizda bir marta yoziladi.`;
+        const pend = pendingReturn();
+        return `<section class="dv-card dv-brk dv-brk-${tone} dv-s1" data-dv-brk>
+            <div class="dv-card-h"><span class="dv-card-t">${title}</span>${pill(`${esc(b.outClock)} dan`, tone)}</div>
+            <div class="dv-brk-b"><strong>${big}</strong><em>${sub}</em></div>
+            ${pend ? `<div class="dv-info dv-blue">${ic('wifi', 16)}<span>Qaytish ${esc(pend.clock)} da saqlandi · internet ulanishi bilan yuboriladi</span></div>`
+            : `<button type="button" class="dv-btn dv-btn-primary" data-dv-breakin>${ic('cam', 18)}Qaytdim — selfie</button>`}</section>`;
+    }
+    function breakButtons(m, ph) {
+        if (ph !== 'working') return '';
+        const t = m.today || {}, br = t.breaks || [];
+        const lunchDone = br.find(b => b.kind === 'lunch'), stepDone = br.find(b => b.kind === 'step');
+        const btn = (attrs, icon, color, title, sub, off) => `<button type="button" class="dv-brk-btn${off ? ' is-off' : ''}" ${off ? 'disabled aria-disabled="true"' : attrs}><span style="color:${color}">${ic(icon, 20)}</span><span class="dv-col"><strong>${esc(title)}</strong><em>${esc(sub)}</em></span></button>`;
+        let lunch = '';
+        if (lunchDone) lunch = btn('', 'check', '#067647', 'Obed tugadi', `${lunchDone.outClock}–${lunchDone.inClock} · ${lunchDone.minutes} daq`, true);
+        else if (m.lunch) lunch = m.lunchAllowed?.ok ? btn('data-dv-breakout="lunch"', 'food', '#B54708', 'Obedga chiqish', `${m.lunch.from}–${m.lunch.to} · ${m.lunch.minutes} daq`)
+            : btn('', 'food', '#98A2B3', 'Obedga chiqish', m.lunchAllowed?.reason || `${m.lunch.from} dan`, true);
+        const reqs = m.requests || [], stepReq = reqs.find(r => r.type === 'step_out');
+        let step;
+        if (stepDone) step = btn('', 'check', '#067647', 'Ruxsat ishlatildi', `${stepDone.outClock}–${stepDone.inClock} · ${stepDone.minutes} daq`, true);
+        else if (stepReq && stepReq.state === 'pending') step = btn('data-dv-go="my"', 'clock', '#93370D', 'Kutilmoqda', `${stepReq.time}–${stepReq.until} · ${approverRole()}`);
+        else if (stepReq && m.stepAllowed?.ok) step = btn('data-dv-breakout="step"', 'door', '#0057B8', 'Chiqdim — selfie', `Ruxsat ${stepReq.time}–${stepReq.until}`);
+        else if (stepReq) step = btn('', 'door', '#98A2B3', 'Ruxsat berildi', m.stepAllowed?.reason || `${stepReq.time}–${stepReq.until}`, true);
+        else step = btn('data-dv-stepreq', 'door', '#0057B8', 'Vaqtincha chiqish', 'Soʻrov · rahbar tasdiqlaydi');
+        return `<div class="dv-brk-row dv-s2">${lunch || ''}${step}</div>`;
+    }
+
     // ---------- bosh sahifa kartasi ----------
     function homeCard() { return on() && tracked() ? `<div class="dv-home-host" data-dv-home>${cardHtml()}</div>` : '<div class="dv-home-host" data-dv-home></div>'; }
     function paintHome() { document.querySelectorAll('[data-dv-home]').forEach(el => { const h = on() && tracked() ? cardHtml() : ''; if (el.innerHTML !== h) el.innerHTML = h; }); }
@@ -150,21 +195,24 @@
             <p class="dv-p">Bugun uchun “Kelmayman” soʻrovingiz tasdiqlangan.</p></section>`;
         if (ph === 'missed') return `<section class="dv-card dv-s1" data-dv-go="my" role="button" tabindex="0"><div class="dv-card-h"><span class="dv-card-t">Bugungi ish kuni</span>${pill(t.status === 'pending' ? 'Kutilmoqda' : 'Belgilanmadi', t.status === 'pending' ? 'blue' : 'red')}</div>
             <p class="dv-p">Bugun kelish belgilanmadi. Sabab boʻlsa — rahbaringizga “Javob soʻrash” orqali yozing.</p></section>${reqRow}`;
-        // ishda / ketish / ketdi
+        // ishda / ketish / ketdi (+ obedda / tashqarida — ishlagan vaqt to'xtaydi)
         const inM = pm(t.inClock), outM = pm(t.outClock), start = pm(m.start), end = pm(m.leaveAt || m.end);
-        const worked = inM == null ? 0 : (outM != null ? outM : now) - inM;
-        const statusPill = t.status === 'late' ? pill(`Keldingiz ${t.inClock} · kechikdi ${t.lateMinutes} daq`, 'amber')
+        const worked = inM == null ? 0 : Math.max(0, (outM != null ? outM : now) - inM - (outM != null ? 0 : breakMin(t, now)));
+        const onBreak = ph === 'lunch' || ph === 'out';
+        const statusPill = onBreak ? pill(ph === 'out' ? 'Tashqarida · vaqt toʻxtatilgan' : 'Obedda · vaqt toʻxtatilgan', ph === 'out' ? 'blue' : 'amber')
+            : t.status === 'late' ? pill(`Keldingiz ${t.inClock} · kechikdi ${t.lateMinutes} daq`, 'amber')
             : t.status === 'excused' ? pill(`Keldingiz ${t.inClock} · sababli`, 'blue')
             : t.status === 'pending' ? pill(`${t.inClock} · ofisda emas · kutilmoqda`, 'blue') : pill(`Keldingiz ${t.inClock} · oʻz vaqtida`, 'green');
         const pct = start != null && end != null && end > start ? Math.max(0, Math.min(100, Math.round(((outM != null ? outM : now) - start) / (end - start) * 100))) : 0;
         const foot = outM != null ? `<span>Ketdingiz ${esc(t.outClock)}</span><span>Jami ${durS(worked)}</span>`
             : end != null ? `<span>${esc(m.start || '')}</span><span>${now >= end ? `Ketish ${hm(end)} · vaqti boʻldi` : `Ketish ${hm(end)} · ${durL(end - now)} qoldi`}</span>` : `<span>Dam olish kunida ishlayapsiz</span>`;
-        return `<section class="dv-card dv-s1" data-dv-go="my" role="button" tabindex="0" aria-label="Mening davomatim">
+        const trial = m.trialUntil ? `<span class="dv-fine">Sinov haftasi: ${esc(dayShort(m.trialUntil))} gacha jarima yozilmaydi.</span>` : '';
+        return `${onBreak ? breakCard(m, ph, now) : ''}<section class="dv-card dv-s1" data-dv-go="my" role="button" tabindex="0" aria-label="Mening davomatim">
             <div class="dv-card-h"><span class="dv-card-t">Bugungi ish kuni</span>${statusPill}</div>
             <div class="dv-worked"><strong>${durL(worked)}</strong><span>ishladingiz</span></div>
             <div class="dv-bar" aria-hidden="true"><i style="width:${pct}%"></i></div>
             <div class="dv-foot">${foot}</div>
-            ${ph === 'leave' ? `<button type="button" class="dv-btn dv-btn-primary" data-dv-checkout>${ic('cam', 18)}Ketdim — belgilash</button>` : ''}</section>`;
+            ${ph === 'leave' ? `<button type="button" class="dv-btn dv-btn-primary" data-dv-checkout>${ic('cam', 18)}Ketdim — belgilash</button>` : ''}${trial}</section>${breakButtons(m, ph)}`;
     }
     const pill = (text, tone) => `<span class="dv-pill dv-${tone}">${esc(text)}</span>`;
 
@@ -326,25 +374,31 @@
     }
     const wait = ms => new Promise(r => setTimeout(r, ms));
     function stopFlow() { if (S.flow) { S.flow.cancelled = true; S.flow.stop?.(); S.flow.el?.remove(); S.flow = null; } }
-    async function openCamera(kind, outside) {
+    async function openCamera(kind, outside, breakKind) {
         closeSheet(true); stopFlow(); mount();
         const m = S.me, late = kind === 'in' && livePhase() === 'lock' ? lateNow() : 0;
-        const badge = kind === 'out' ? 'ISH KUNI TUGADI' : livePhase() === 'lock' ? 'ISH VAQTI BOSHLANDI' : outside ? 'OFISDA EMASMAN' : 'OFISGA KELDINGIZMI?';
-        const sub = kind === 'out' ? `Ish ${esc(m.leaveAt || m.end)} da tugadi` : livePhase() === 'lock' ? `Ish ${esc(m.unlockAt || m.start)} da boshlandi${late > 0 ? ` · <strong>${late} daqiqa kechikyapsiz</strong>` : ''}`
+        const ob = openBr(), bk = kind === 'break_in' ? (ob?.kind || 'lunch') : breakKind;
+        const nowC = hm(tk().min);
+        const until = kind === 'break_out' ? (bk === 'lunch' ? hm(tk().min + (m.lunch?.minutes || 60)) : (m.requests || []).find(r => r.type === 'step_out')?.until || '') : ob?.untilClock || '';
+        const badge = kind === 'break_out' ? (bk === 'lunch' ? 'OBEDGA CHIQISH' : 'VAQTINCHA CHIQISH') : kind === 'break_in' ? (bk === 'lunch' ? 'OBEDDAN QAYTDIM' : 'RUXSATDAN QAYTDIM')
+            : kind === 'out' ? 'ISH KUNI TUGADI' : livePhase() === 'lock' ? 'ISH VAQTI BOSHLANDI' : outside ? 'OFISDA EMASMAN' : 'OFISGA KELDINGIZMI?';
+        const sub = kind === 'break_out' ? `${nowC} · ${until ? esc(until) + ' gacha qaytasiz' : ''}` : kind === 'break_in' ? `${nowC} · muddat ${esc(until)} · ofis hududida boʻlishingiz kerak`
+            : kind === 'out' ? `Ish ${esc(m.leaveAt || m.end)} da tugadi` : livePhase() === 'lock' ? `Ish ${esc(m.unlockAt || m.start)} da boshlandi${late > 0 ? ` · <strong>${late} daqiqa kechikyapsiz</strong>` : ''}`
             : m.start ? `Ish ${esc(m.start)} da boshlanadi` : 'Bugun dam olish kuni';
+        const label = kind === 'break_out' ? 'Rasmga olish va chiqish' : kind === 'break_in' ? 'Rasmga olish va qaytish' : kind === 'out' ? 'Ketdim' : 'Keldim';
         const now = new Date(); const greet = now.getHours() < 12 ? 'Xayrli tong' : now.getHours() < 18 ? 'Xayrli kun' : 'Xayrli kech';
         const el = document.createElement('div'); el.className = 'dv-cam'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', 'Kamera');
         el.innerHTML = `<video class="dv-video" playsinline muted autoplay></video>
             <div class="dv-oval" aria-hidden="true"><i class="dv-scan"></i></div>
             <header class="dv-cam-h dv-s1"><span class="dv-cam-badge">${ic('lock', 12, 2.6)}${badge}</span><h1>${greet}, ${esc(first(user().name))}</h1><span class="dv-cam-sub">${sub}</span></header>
             <div class="dv-cam-mid dv-s2"><span class="dv-cam-prompt" aria-live="polite">Yuzingizni ramkaga joylang</span><div class="dv-cam-chips" data-dv-chips></div><div class="dv-count" aria-live="assertive"></div><div class="dv-turn" hidden></div></div>
-            <div class="dv-cam-foot dv-s3"><button type="button" class="dv-shutter dv-pulse" data-dv-shoot aria-label="${kind === 'out' ? 'Ketdim' : 'Keldim'} — rasmga olish va tasdiqlash"><span>${ic('cam', 28)}</span></button>
-              <strong>${outside ? 'Selfie olib yuborish' : kind === 'out' ? 'Ketdim' : 'Keldim'}</strong>
+            <div class="dv-cam-foot dv-s3"><button type="button" class="dv-shutter dv-pulse" data-dv-shoot aria-label="${label} — rasmga olish va tasdiqlash"><span>${ic('cam', 28)}</span></button>
+              <strong>${outside ? 'Selfie olib yuborish' : label}</strong>
               ${kind === 'in' && !outside ? '<button type="button" class="dv-link dv-link-light" data-dv-outside>Ofisda emasman</button>' : '<button type="button" class="dv-link dv-link-light" data-dv-camclose>Bekor qilish</button>'}
               <span class="dv-cam-fine">Rasm faqat shu kamerada olinadi — galereyadan yuklab boʻlmaydi.${livePhase() === 'lock' ? '<br>Tasdiqlaguncha ilovaning boshqa boʻlimlari yopiq.' : ''}</span></div>`;
         root.appendChild(el);
         document.body.classList.add('dv-open');
-        const flow = S.flow = { el, kind, outside, cancelled: false };
+        const flow = S.flow = { el, kind, outside, breakKind: bk, cancelled: false };
         const chips = el.querySelector('[data-dv-chips]');
         const chip = (icon, text, ok) => `<span class="dv-cam-chip${ok ? '' : ' dv-cam-chip-w'}">${ic(icon, 14, 2.4)}${esc(text)}</span>`;
         flow.geo = locate().then(loc => { S.loc = loc; if (flow.cancelled) return loc; const d = distOf(loc);
@@ -353,7 +407,7 @@
             flow.stop = await startCamera(el.querySelector('video'));
             if (flow.cancelled) { flow.stop(); return; }
             chips.insertAdjacentHTML('beforeend', chip('check', 'Kamera tayyor', true));
-        } catch (e) { stopFlow(); return showState(e.code === 'perm' ? 'perm' : 'error', { message: e.message, kind, outside }); }
+        } catch (e) { stopFlow(); return showState(e.code === 'perm' ? (kind === 'break_in' ? 'perm_return' : kind === 'break_out' ? 'perm_break' : 'perm') : 'error', { message: e.message, kind, outside, breakKind: bk }); }
     }
     async function shoot() {
         const flow = S.flow; if (!flow || flow.busy) return;
@@ -362,7 +416,14 @@
         el.querySelector('[data-dv-shoot]').disabled = true;
         const tickDown = async (n, text) => { prompt.textContent = text; for (let s = n; s > 0; s--) { count.textContent = s; await wait(1000); if (flow.cancelled) throw Object.assign(new Error('x'), { cancelled: true }); } count.textContent = ''; el.classList.add('dv-flash'); setTimeout(() => el.classList.remove('dv-flash'), 220); };
         try {
-            const ch = await api('/me/challenge', {});
+            const capturedAt = new Date().toISOString();
+            let ch;
+            try { ch = await api('/me/challenge', {}); }
+            catch (er) {
+                // Internetsiz "Qaytdim": yo'nalish telefonda tanlanadi, rasm va vaqt saqlanadi (30 daqiqa ichida yetib kelsa — o'sha vaqt).
+                if (!(er.offline && flow.kind === 'break_in')) throw er;
+                ch = { id: null, direction: Math.random() < .5 ? 'left' : 'right', offline: true };
+            }
             await tickDown(2, 'Kameraga toʻgʻri qarang');
             const front = grab(video);
             const turn = el.querySelector('.dv-turn'); turn.hidden = false; turn.textContent = ch.direction === 'left' ? '⟵' : '⟶'; turn.dataset.dir = ch.direction;
@@ -373,24 +434,69 @@
             el.classList.add('dv-busy');
             const loc = await flow.geo;
             const body = { kind: flow.kind, challenge: ch.id, frame: front, turned, location: loc && !loc.error ? loc : null,
-                ...(flow.outside ? { outside: flow.outside } : {}) };
+                ...(flow.outside ? { outside: flow.outside } : {}), ...(flow.kind === 'break_out' ? { breakKind: flow.breakKind } : {}),
+                ...(ch.offline ? { capturedAt, direction: ch.direction } : {}) };
+            if (ch.offline) { stopFlow(); return saveOfflineReturn(body, front); }
             let res;
             for (let n = 0; ; n++) {
                 try { res = await api('/me/check', body); break; }
-                catch (e) { if (e.status !== 503 || n >= 4) throw e; prompt.textContent = 'Navbat band — bir necha soniyada qayta tekshiriladi…'; await wait(5000 + n * 3000); if (flow.cancelled) return; }
+                catch (e) {
+                    if (e.offline && flow.kind === 'break_in') { stopFlow(); return saveOfflineReturn({ ...body, challenge: null, capturedAt, direction: ch.direction }, front); }
+                    if (e.status !== 503 || n >= 4) throw e; prompt.textContent = 'Navbat band — bir necha soniyada qayta tekshiriladi…'; await wait(5000 + n * 3000); if (flow.cancelled) return; }
             }
             if (flow.cancelled) return;
             stopFlow();
-            if (!res.ok) { S.attempts++; return showState(res.reason, { message: res.message, distance: res.distance, kind: flow.kind, outside: flow.outside }); }
+            if (!res.ok) { S.attempts++; return showState(res.reason, { message: res.message, distance: res.distance, kind: flow.kind, outside: flow.outside, breakKind: flow.breakKind }); }
             S.attempts = 0;
             S.loadedAt = 0; await refresh(true);
             showDone(res, front, flow);
         } catch (e) {
             if (e.cancelled) return;
-            const k = flow.kind, o = flow.outside;
+            const k = flow.kind, o = flow.outside, bk = flow.breakKind;
             stopFlow();
-            showState(e.offline ? 'offline' : 'error', { message: e.message, kind: k, outside: o });
+            showState(e.offline ? 'offline' : 'error', { message: e.message, kind: k, outside: o, breakKind: bk });
         }
+    }
+
+    // Internetsiz qaytish navbati (bitta yozuv): ulanish tiklanganda avtomatik yuboriladi.
+    const PEND_KEY = 'dv_pending_return';
+    function pendingReturn() { try { const v = JSON.parse(ls.get(PEND_KEY) || 'null'); return v && v.date === tk().date ? v : null; } catch (e) { return null; } }
+    function saveOfflineReturn(body, front) {
+        const clock = hm(tk().min);
+        ls.set(PEND_KEY, JSON.stringify({ date: tk().date, clock, body }));
+        document.body.classList.remove('dv-open');
+        paintHome();
+        openSheet('state', `<section class="dv-sheet" role="dialog" aria-modal="true" aria-labelledby="dvOffT"><span class="dv-grab" aria-hidden="true"></span>
+            <div class="dv-state-h"><span class="dv-state-ic dv-blue">${ic('wifi', 22)}</span><strong id="dvOffT">Internet yoʻq · ${clock} saqlandi</strong></div>
+            <p class="dv-p">Selfie, joylashuv va bosgan vaqtingiz telefonda saqlandi. Internet ulangach avtomatik yuboriladi va ${clock} hisoblanadi (${S.me?.offlineAcceptMinutes || 30} daqiqa ichida). Kechroq ulansa yoki yuz mos kelmasa — HR koʻrib chiqadi.</p>
+            <div class="dv-stack"><button type="button" class="dv-btn dv-btn-primary" data-dv-close>Tushunarli</button></div></section>`);
+        void front;
+    }
+    let flushing = false;
+    async function flushPending() {
+        const p = pendingReturn(); if (!p || flushing || !on()) return;
+        flushing = true;
+        try {
+            const res = await api('/me/check', p.body);
+            ls.set(PEND_KEY, '');
+            if (res.ok) toast(res.unverified ? `Qaytish ${p.clock} yuborildi — HR koʻrib chiqadi` : `Qaytish ${p.clock} qabul qilindi`, res.unverified ? 'info' : 'ok');
+            else toast(res.message || 'Saqlangan qaytish qabul qilinmadi — qayta belgilang', 'bad');
+            S.loadedAt = 0; refresh(true);
+        } catch (e) { if (!e.offline) { ls.set(PEND_KEY, ''); toast(e.message, 'bad'); S.loadedAt = 0; refresh(true); } }
+        finally { flushing = false; }
+    }
+    window.addEventListener('online', () => flushPending());
+    // Kamera ishlamasa qaytish: faqat joylashuv bilan saqlanadi, "tasdiqlanmagan" — 30 daqiqa ichida selfie bilan tasdiqlang yoki HR ko'radi.
+    async function returnNoCamera(btn) {
+        if (btn) btn.disabled = true;
+        const loc = await locate();
+        try {
+            const res = await api('/me/check', { kind: 'break_in', noCamera: true, location: loc && !loc.error ? loc : null });
+            closeSheet(true);
+            if (!res.ok) return showState(res.reason, { message: res.message, distance: res.distance, kind: 'break_in' });
+            S.loadedAt = 0; await refresh(true);
+            toast(`Qaytish ${res.clock} saqlandi · selfiesiz — HR koʻrib chiqadi`, 'info');
+        } catch (e) { if (btn) btn.disabled = false; toast(e.message, 'bad'); }
     }
 
     // ---------- D03 · tabrik / D17 · holatlar ----------
@@ -399,7 +505,17 @@
         const conf = late || flow.outside ? '' : ['#12B76A', '#F79009', '#3B8BEE', '#F04438', '#12B76A', '#FDB022'].map((c, i) => `<i class="dv-conf" style="left:${10 + i * 15}%;background:${c};animation-delay:${[.1, .5, .2, .7, .35, .05][i]}s"></i>`).join('');
         if (late) return showState('late', { minutes: t.lateMinutes, clock: res.clock });
         let title, pills, box = '';
-        if (flow.outside) {
+        if (flow.kind === 'break_out') {
+            const until = (t.breaks || []).filter(b => b.open).pop()?.untilClock || '';
+            title = flow.breakKind === 'lunch' ? 'Yoqimli ishtaha!' : 'Ehtiyot boʻling!';
+            pills = `${pill(`Chiqdingiz ${res.clock}`, flow.breakKind === 'lunch' ? 'amber' : 'blue')}${until ? `<span class="dv-pill dv-gray dv-pill-lg">${until} gacha qayting</span>` : ''}`;
+            box = `<div class="dv-streak dv-streak-blue">${ic('clock', 20)}<span class="dv-col"><strong>Ishlagan vaqt toʻxtatildi</strong><em>Qaytgach «Qaytdim — selfie» ni bosing. Tugashiga 10 daqiqa qolganda eslatamiz.</em></span></div>`;
+        } else if (flow.kind === 'break_in') {
+            const b = (t.breaks || []).filter(x => !x.open).pop() || {};
+            title = b.late ? `${b.kind === 'step' ? 'Ruxsatdan' : 'Obeddan'} ${b.overMinutes} daqiqa kechikdingiz` : 'Xush kelibsiz!';
+            pills = `${pill(`Qaytdingiz ${res.clock}`, b.late ? 'red' : 'green')}<span class="dv-pill dv-gray dv-pill-lg">${b.kind === 'step' ? 'Tashqarida' : 'Obed'} ${b.minutes || 0} daq</span>`;
+            box = b.late ? `<div class="dv-streak">${ic('clock', 20)}<span class="dv-col"><strong>${b.untilClock} gacha qaytish kerak edi</strong><em>${S.me?.trialUntil ? 'Sinov haftasi — jarima yozilmaydi.' : 'Jarima «Mening jarimalarim»da koʻrinadi · eʼtiroz 3 kun ichida.'}</em></span></div>` : '';
+        } else if (flow.outside) {
             title = 'Yuborildi';
             pills = `${pill(`${res.clock} · kutilmoqda`, 'blue')}${res.distance != null ? `<span class="dv-pill dv-gray dv-pill-lg">Ofisdan ${km(res.distance)}</span>` : ''}`;
             box = `<div class="dv-streak dv-streak-blue">${ic('clock', 20)}<span class="dv-col"><strong>${esc(approverRole())} tasdiqlaydi</strong><em>Javob bot va bildirishnoma orqali keladi. Kechikish yozilmaydi.</em></span></div>`;
@@ -417,29 +533,37 @@
         openSheet('done', `${conf}<section class="dv-pop" role="dialog" aria-modal="true" aria-labelledby="dvDoneT">
             <div class="dv-selfie"><img src="${esc(selfie)}" alt="Bugungi selfie"><span class="dv-selfie-ok">${ic('check', 20, 3)}</span></div>
             <h2 id="dvDoneT">${title}</h2><div class="dv-pills">${pills}</div>${box}
-            <button type="button" class="dv-btn dv-btn-primary dv-btn-xl" data-dv-close data-dv-focus>${flow.kind === 'out' ? 'Yopish' : 'Ishni boshlash'}</button>
+            <button type="button" class="dv-btn dv-btn-primary dv-btn-xl" data-dv-close data-dv-focus>${flow.kind === 'out' || flow.kind === 'break_out' ? 'Yopish' : flow.kind === 'break_in' ? 'Ishni davom ettirish' : 'Ishni boshlash'}</button>
             ${flow.kind === 'in' && !flow.outside ? '<span class="dv-fine">Kechiksangiz shu yerda nechchi daqiqa ekani koʻrinadi</span>' : ''}</section>`);
     }
     function showState(code, o = {}) {
-        const again = `data-dv-again="${o.kind || 'in'}"${o.outside ? ` data-dv-again-out='${esc(JSON.stringify(o.outside))}'` : ''}`;
+        const again = `data-dv-again="${o.kind || 'in'}"${o.breakKind ? ` data-dv-again-bk="${esc(o.breakKind)}"` : ''}${o.outside ? ` data-dv-again-out='${esc(JSON.stringify(o.outside))}'` : ''}`;
+        const brk = o.kind === 'break_out' || o.kind === 'break_in';
         const lockNow = livePhase() === 'lock';
         const V = {
             mismatch: ['amber', 'face', 'Yuz toʻliq mos kelmadi', 'Yorugʻroq joyda, yuzni ramka markazida tutib qayta urinib koʻring. 2-urinishdan keyin rasm HRʼga yuboriladi — vaqtingiz saqlanadi.',
                 `<button type="button" class="dv-btn dv-btn-primary" ${again}>Qayta urinish</button>${S.attempts >= 2 ? '<button type="button" class="dv-link" data-dv-tohr>HRʼga yuborish</button>' : ''}`],
-            outside: ['red', 'pin', 'Siz ofis hududidan tashqaridasiz', `${o.distance != null ? `Ofisgacha taxminan ${km(o.distance)}. ` : ''}Ofisga kelgach qayta tekshiring yoki «Ofisda emasman» orqali sabab yozing.`,
+            outside: brk ? ['red', 'pin', 'Siz ofis hududidan tashqaridasiz', o.kind === 'break_out' ? 'Chiqish faqat ofisda belgilanadi. Belgilanmadi — taymer boshlanmadi, holatingiz «Ofisda».' : `${o.distance != null ? `Ofisgacha taxminan ${km(o.distance)}. ` : ''}Qaytish faqat ofisda belgilanadi. Ofisga yetib kelgach qayta urining. Taymer toʻxtamaydi.`,
+                `<button type="button" class="dv-btn dv-btn-primary" ${again}>Qayta urinish</button>`]
+                : ['red', 'pin', 'Siz ofis hududidan tashqaridasiz', `${o.distance != null ? `Ofisgacha taxminan ${km(o.distance)}. ` : ''}Ofisga kelgach qayta tekshiring yoki «Ofisda emasman» orqali sabab yozing.`,
                 `<button type="button" class="dv-btn dv-btn-primary" ${again}>Qayta tekshirish</button><button type="button" class="dv-link" data-dv-outside>Ofisda emasman</button>`],
+            perm_break: ['red', 'cam', 'Kameraga ruxsat yoʻq', 'Chiqish belgilanmadi — taymer boshlanmadi, siz hali «Ofisda». Telefon sozlamasida kamera ruxsatini bering.',
+                `<button type="button" class="dv-btn dv-btn-primary" data-dv-settings>Sozlamalarni ochish</button><button type="button" class="dv-link" ${again}>Qayta urinish</button>`],
+            perm_return: ['red', 'cam', 'Kamera ishlamayapti', 'Joylashuv bilan qaytishni saqlash mumkin: ofis hududida boʻlsangiz vaqt saqlanadi, rahbarda «tasdiqlanmagan» koʻrinadi va HR koʻrib chiqadi.',
+                `<button type="button" class="dv-btn dv-btn-primary" data-dv-nocam>Joylashuv bilan saqlash</button><button type="button" class="dv-btn dv-btn-outline" data-dv-settings>Sozlamalarni ochish</button><button type="button" class="dv-link" ${again}>Qayta urinish</button>`],
             low_accuracy: ['red', 'pin', 'Joylashuv ishonchsiz', 'GPS aniqligi past yoki soxta joylashuv ilovasi yoqilgan. Uni oʻchiring, derazaga yaqinroq turing yoki «Ofisda emasman» orqali sabab yozing.',
                 `<button type="button" class="dv-btn dv-btn-primary" ${again}>Qayta tekshirish</button><button type="button" class="dv-link" data-dv-outside>Ofisda emasman</button>`],
             perm: ['blue', 'shield', 'Kamera yoki joylashuvga ruxsat yoʻq', 'Ruxsatsiz davomat belgilanmaydi. Telefon sozlamalarida Jamoa ilovasiga kamera va joylashuvni yoqing.',
                 `<button type="button" class="dv-btn dv-btn-primary" data-dv-settings>Sozlamalarni ochish</button><button type="button" class="dv-link" ${again}>Qayta urinish</button>`],
-            offline: ['gray', 'wifi', 'Internet yoʻq', 'Belgilash yuborilmadi. Internetga ulanib qayta urinib koʻring — vaqt server boʻyicha yoziladi, shuning uchun imkon qadar tezroq yuboring.',
+            offline: o.kind === 'break_out' ? ['gray', 'wifi', 'Internet yoʻq — chiqish belgilanmadi', 'Taymer boshlanmadi, holatingiz «Ofisda». Internetga ulanib qayta urining.', `<button type="button" class="dv-btn dv-btn-primary" ${again}>Qayta urinish</button>`]
+                : ['gray', 'wifi', 'Internet yoʻq', 'Belgilash yuborilmadi. Internetga ulanib qayta urinib koʻring — vaqt server boʻyicha yoziladi, shuning uchun imkon qadar tezroq yuboring.',
                 `<button type="button" class="dv-btn dv-btn-primary" ${again}>Qayta urinish</button>`],
             late: ['amber', 'clock', `Kechikdingiz · ${o.minutes} daqiqa`, `Bugun ${esc(o.clock || '')} da belgiladingiz. Keyingi safar kech qolsangiz, oldindan «Javob soʻrash» orqali rahbaringizga yozing.`,
                 '<button type="button" class="dv-btn dv-btn-primary" data-dv-close>Ishni boshlash</button>'],
         };
         if (code === 'no_location') code = 'low_accuracy';
         if (code === 'low_accuracy_phone') code = 'low_accuracy';
-        const v = V[code] || ['amber', 'info', 'Belgilanmadi', o.message || 'Qayta urinib koʻring.', `<button type="button" class="dv-btn dv-btn-primary" ${again}>Qayta urinish</button>${o.kind !== 'out' ? '<button type="button" class="dv-link" data-dv-outside>Ofisda emasman</button>' : ''}`];
+        const v = V[code] || ['amber', 'info', 'Belgilanmadi', o.message || 'Qayta urinib koʻring.', `<button type="button" class="dv-btn dv-btn-primary" ${again}>Qayta urinish</button>${o.kind === 'in' || !o.kind ? '<button type="button" class="dv-link" data-dv-outside>Ofisda emasman</button>' : ''}`];
         openSheet('state', `<section class="dv-sheet" role="dialog" aria-modal="true" aria-labelledby="dvStT"><span class="dv-grab" aria-hidden="true"></span>
             <div class="dv-state-h"><span class="dv-state-ic dv-${v[0]}">${ic(v[1], 22)}</span><strong id="dvStT">${v[2]}</strong></div>
             <p class="dv-p">${v[3]}</p>${code !== 'late' && o.message && V[code] ? `<p class="dv-fine">${esc(o.message)}</p>` : ''}
@@ -493,10 +617,10 @@
         const [y, mm] = myState.month.split('-').map(Number);
         let body = '';
         const reqs = (rq.v?.rows || []).slice(0, 6);
-        const reqSec = reqs.length ? `<section class="dv-list dv-s1"><h2>Soʻrovlarim</h2>${reqs.map(r => `<div class="dv-li"><span class="dv-col"><strong>${esc(r.day)} · ${esc(r.typeLabel.toLowerCase())}${r.time && r.type !== 'outside' ? ', ' + esc(r.time) : ''}</strong>
+        const reqSec = reqs.length ? `<section class="dv-list dv-s1"><h2>Soʻrovlarim</h2>${reqs.map(r => `<div class="dv-li"><span class="dv-col"><strong>${esc(r.day)} · ${esc(r.typeLabel.toLowerCase())}${r.time && r.type !== 'outside' ? ', ' + esc(r.time) + (r.until ? '–' + esc(r.until) : '') : ''}</strong>
             <em>${esc(r.reason)}${r.state === 'pending' ? ` · ${esc(rq.v.approver?.name || r.approverRole)}ga yuborildi ${esc(r.createdClock)}` : r.state === 'rejected' && r.decisionReason ? ' · ' + esc(r.decisionReason) : r.decidedBy ? ' · ' + esc(r.decidedBy) : ''}</em></span>
             ${pill(r.state === 'pending' ? 'Kutilmoqda' : r.state === 'approved' ? 'Tasdiqlandi' : 'Rad etildi', r.state === 'pending' ? 'amber' : r.state === 'approved' ? 'green' : 'red')}
-            ${r.state === 'pending' ? `<button type="button" class="dv-link dv-link-red" data-dv-cancel="${esc(r.id)}">Bekor qilish</button>` : ''}</div>`).join('')}</section>` : '';
+            ${r.state === 'pending' || (r.state === 'approved' && r.type === 'step_out' && r.date >= tk().date && !(S.me?.today?.breaks || []).some(b => b.kind === 'step')) ? `<button type="button" class="dv-link dv-link-red" data-dv-cancel="${esc(r.id)}">Bekor qilish</button>` : ''}</div>`).join('')}</section>` : '';
         if (mo.err) body = errBox(mo.err, 'my');
         else if (!mo.v) body = `<div class="dv-sk"></div><div class="dv-sk dv-sk-tall"></div>`;
         else {
@@ -519,17 +643,19 @@
     }
 
     // D11 · Javob so'rash
-    const RQ_REASONS = ['Shifokor', 'Kasallik', 'Oilaviy', 'Transport', 'Boshqa'];
-    const rqForm = { type: 'late', day: 'today', date: '', time: '', reason: '', comment: '' };
+    const RQ_REASONS = ['Shifokor', 'Kasallik', 'Oilaviy', 'Transport', 'Bank / hujjat', 'Ish boʻyicha', 'Boshqa'];
+    const rqForm = { type: 'late', day: 'today', date: '', time: '', until: '', noReturn: false, reason: '', comment: '' };
     function pageRequest() {
         const m = S.me || {}, today = tk().date;
         const tomorrow = new Date(Date.parse(today + 'T12:00:00Z') + 86400000).toISOString().slice(0, 10);
         const date = rqForm.day === 'today' ? today : rqForm.day === 'tomorrow' ? tomorrow : rqForm.date;
         const wd = date ? String(new Date(date + 'T00:00:00Z').getUTCDay() || 7) : null;
         const dsch = wd && m.days ? m.days[wd] : null;
-        const tLabel = rqForm.type === 'late' ? 'Qachon kelasiz' : 'Qachon ketasiz';
+        const step = rqForm.type === 'step_out';
+        const tLabel = rqForm.type === 'late' ? 'Qachon kelasiz' : step ? 'Chiqaman' : 'Qachon ketasiz';
         let hint = '';
-        if (dsch && rqForm.time && pm(rqForm.time) != null) {
+        if (step) hint = dsch ? `Ish vaqti ichida (${dsch.start}–${dsch.end}) · koʻpi bilan 4 soat${rqForm.time && rqForm.until && pm(rqForm.until) > pm(rqForm.time) ? ' · ' + durL(pm(rqForm.until) - pm(rqForm.time)) : ''}` : date ? 'Bu kun grafikda dam olish kuni' : '';
+        else if (dsch && rqForm.time && pm(rqForm.time) != null) {
             hint = rqForm.type === 'late' ? `Ish ${dsch.start} da boshlanadi · ${durL(pm(rqForm.time) - pm(dsch.start))}` : `Ish ${dsch.end} da tugaydi · ${durL(pm(dsch.end) - pm(rqForm.time))} erta`;
         } else if (dsch) hint = rqForm.type === 'late' ? `Ish ${dsch.start} da boshlanadi` : `Ish ${dsch.end} da tugaydi`;
         else if (date) hint = 'Bu kun grafikda dam olish kuni';
@@ -537,14 +663,18 @@
         const type = (k, icon, t, s) => `<label class="dv-type${rqForm.type === k ? ' is-on' : ''}"><input type="radio" name="dvRqT" value="${k}" ${rqForm.type === k ? 'checked' : ''} data-dv-rq="type">${ic(icon, 22)}<strong>${t}</strong><span>${s}</span></label>`;
         const chip = (name, val, label, onv) => `<label class="dv-chip${onv ? ' is-on' : ''}"><input type="radio" name="${name}" value="${esc(val)}" ${onv ? 'checked' : ''} data-dv-rq="${name === 'dvRqD' ? 'day' : 'reason'}">${onv ? ic('check', 14, 2.6) : ''}${esc(label)}</label>`;
         return `${top('Javob soʻrash', 'Rahbaringiz tasdiqlaydi')}<form class="dv-body dv-form" data-dv-rqform novalidate>
-            <fieldset class="dv-fs dv-s1"><legend>Nima boʻldi? <b>*</b></legend><div class="dv-types">${type('late', 'late', 'Kech qolaman', 'vaqtni yozasiz')}${type('absent', 'absent', 'Kelmayman', 'butun kun')}${type('early_leave', 'early', 'Erta ketaman', 'vaqtni yozasiz')}</div></fieldset>
+            <fieldset class="dv-fs dv-s1"><legend>Nima boʻldi? <b>*</b></legend><div class="dv-types">${type('late', 'late', 'Kech qolaman', 'vaqtni yozasiz')}${type('absent', 'absent', 'Kelmayman', 'butun kun')}${type('early_leave', 'early', 'Erta ketaman', 'vaqtni yozasiz')}${type('step_out', 'door', 'Vaqtincha chiqaman', 'chiqib qaytasiz')}</div>
+              ${step ? '<span class="dv-fine">«Kelmayman» — kun boshida umuman kela olmasangiz; «Vaqtincha chiqaman» — ish orasida chiqib, qaytib kelsangiz.</span>' : ''}</fieldset>
             <fieldset class="dv-fs dv-s2"><legend>Qaysi kun <b>*</b></legend><div class="dv-chips">${chip('dvRqD', 'today', `Bugun · ${dayShort(today)}`, rqForm.day === 'today')}${chip('dvRqD', 'tomorrow', `Ertaga · ${dayShort(tomorrow)}`, rqForm.day === 'tomorrow')}${chip('dvRqD', 'pick', rqForm.day === 'pick' && rqForm.date ? dayShort(rqForm.date) : 'Sana tanlash', rqForm.day === 'pick')}</div>
               ${rqForm.day === 'pick' ? `<input type="date" class="dv-input dv-input-date" min="${today}" max="${new Date(Date.parse(today + 'T12:00:00Z') + 60 * 86400000).toISOString().slice(0, 10)}" value="${esc(rqForm.date)}" data-dv-rq="date" aria-label="Sana">` : ''}</fieldset>
-            ${rqForm.type !== 'absent' ? `<label class="dv-field dv-s2"><span>${tLabel} <b>*</b></span><input type="time" class="dv-input dv-input-time" value="${esc(rqForm.time)}" data-dv-rq="time" required${dsch ? ` min="${esc(dsch.start)}" max="${esc(dsch.end)}"` : ''}>${hint ? `<em>${esc(hint)}</em>` : ''}</label>` : hint ? `<span class="dv-fine">${esc(hint)}</span>` : ''}
+            ${step ? `<div class="dv-g2 dv-s2"><label class="dv-field"><span>Chiqaman <b>*</b></span><input type="time" class="dv-input dv-input-time" value="${esc(rqForm.time)}" data-dv-rq="time" required${dsch ? ` min="${esc(dsch.start)}" max="${esc(dsch.end)}"` : ''}></label>
+                ${rqForm.noReturn ? '' : `<label class="dv-field"><span>Qaytaman <b>*</b></span><input type="time" class="dv-input dv-input-time" value="${esc(rqForm.until)}" data-dv-rq="until" required${dsch ? ` min="${esc(dsch.start)}" max="${esc(dsch.end)}"` : ''}></label>`}</div>
+              <label class="dv-check dv-s2"><input type="checkbox" data-dv-noret ${rqForm.noReturn ? 'checked' : ''}> Qaytmayman (ish oxirigacha) — «Erta ketaman» boʻlib yuboriladi</label>${hint ? `<span class="dv-fine">${esc(hint)}</span>` : ''}`
+            : rqForm.type !== 'absent' ? `<label class="dv-field dv-s2"><span>${tLabel} <b>*</b></span><input type="time" class="dv-input dv-input-time" value="${esc(rqForm.time)}" data-dv-rq="time" required${dsch ? ` min="${esc(dsch.start)}" max="${esc(dsch.end)}"` : ''}>${hint ? `<em>${esc(hint)}</em>` : ''}</label>` : hint ? `<span class="dv-fine">${esc(hint)}</span>` : ''}
             <fieldset class="dv-fs dv-s3"><legend>Sabab <b>*</b></legend><div class="dv-chips">${RQ_REASONS.map(r => chip('dvRqR', r, r, rqForm.reason === r)).join('')}</div></fieldset>
             <label class="dv-field dv-s3"><span>Izoh</span><textarea rows="2" maxlength="500" data-dv-rq="comment" placeholder="Masalan: Bolani shifokorga olib boraman, 10:30 da ofisda boʻlaman">${esc(rqForm.comment)}</textarea></label>
             <div class="dv-to">${ava(ap.name || ap.role || 'R', 40)}<span class="dv-col"><em>Soʻrov boradi</em><strong>${esc([ap.name, ap.role].filter(Boolean).join(' · ') || 'Rahbaringiz')}</strong></span></div>
-            <div class="dv-info dv-blue">${ic('info', 18)}<span>${rqForm.type === 'late' ? `Tasdiqlansa, kechikish yozilmaydi va ${esc(rqForm.time || 'shu vaqtda')} kelganingizda Face ID odatdagidek soʻraladi.` : rqForm.type === 'absent' ? 'Tasdiqlansa, kun “Sababli” deb yoziladi.' : 'Tasdiqlansa, erta ketish yozilmaydi.'} Rad etilsa, odatdagi qoida ishlaydi.</span></div>
+            <div class="dv-info dv-blue">${ic('info', 18)}<span>${rqForm.type === 'late' ? `Tasdiqlansa, kechikish yozilmaydi va ${esc(rqForm.time || 'shu vaqtda')} kelganingizda Face ID odatdagidek soʻraladi.` : rqForm.type === 'absent' ? 'Tasdiqlansa, kun “Sababli” deb yoziladi.' : step && !rqForm.noReturn ? 'Tasdiqlansa, chiqishda va qaytishda selfie olasiz; tashqaridagi vaqt ishlagan vaqtga kirmaydi. Kech qaytsangiz — «Ruxsatdan kech» va jarima.' : 'Tasdiqlansa, erta ketish yozilmaydi.'} Rad etilsa, odatdagi qoida ishlaydi.</span></div>
             <p class="dv-err" role="alert" data-dv-rqerr></p>
             <div class="dv-sticky"><button type="submit" class="dv-btn dv-btn-primary dv-btn-xl" data-dv-rqsend>Soʻrov yuborish</button></div></form>`;
     }
@@ -554,12 +684,16 @@
         const errEl = root.querySelector('[data-dv-rqerr]');
         const fail = m => { if (errEl) errEl.textContent = m; };
         if (!date) return fail('Kunni tanlang');
-        if (rqForm.type !== 'absent' && pm(rqForm.time) == null) return fail(rqForm.type === 'late' ? 'Qachon kelishingizni yozing' : 'Qachon ketishingizni yozing');
+        if (rqForm.type !== 'absent' && pm(rqForm.time) == null) return fail(rqForm.type === 'late' ? 'Qachon kelishingizni yozing' : rqForm.type === 'step_out' ? 'Qachon chiqishingizni yozing' : 'Qachon ketishingizni yozing');
+        const stepRet = rqForm.type === 'step_out' && !rqForm.noReturn;
+        if (stepRet && pm(rqForm.until) == null) return fail('Qachon qaytishingizni yozing');
         if (!rqForm.reason) return fail('Sababni tanlang');
         btn.disabled = true;
         try {
-            const r = await api('/me/requests', { type: rqForm.type, date, time: rqForm.time, reason: rqForm.reason, comment: rqForm.comment });
-            Object.assign(rqForm, { type: 'late', day: 'today', date: '', time: '', reason: '', comment: '' });
+            // "Qaytmayman" — so'rov "Erta ketaman" bo'lib yuboriladi (qaytish talab qilinmaydi).
+            const type = rqForm.type === 'step_out' && rqForm.noReturn ? 'early_leave' : rqForm.type;
+            const r = await api('/me/requests', { type, date, time: rqForm.time, until: stepRet ? rqForm.until : undefined, reason: rqForm.reason, comment: rqForm.comment });
+            Object.assign(rqForm, { type: 'late', day: 'today', date: '', time: '', until: '', noReturn: false, reason: '', comment: '' });
             invalidate('myreq', 'month:');
             closePage();
             toast(`Soʻrov yuborildi — ${r.approver?.name || r.approver?.role || 'rahbaringiz'} tasdiqlaydi`);
@@ -569,7 +703,7 @@
 
     // D12 · Davomat so'rovlari / D13 · rad etish
     const apState = { tab: 'pending' };
-    const KIND_TONE = { late: 'amber', absent: 'red', early_leave: 'blue', outside: 'red' };
+    const KIND_TONE = { late: 'amber', absent: 'red', early_leave: 'blue', outside: 'red', step_out: 'blue' };
     function scopeSub(sc) {
         const l = !sc?.langs || sc.langs.length > 1 ? '' : sc.langs[0] === 'russian' ? ' · Rus tili' : ' · Ingliz tili';
         return sc?.kind === 'rop' ? 'Sotuv menejerlari' + l : sc?.kind === 'academic' ? 'Yordamchi ustozlar' + l : sc?.kind === 'admin' ? 'ROP, HR va akademik rahbar' : '';
@@ -582,7 +716,7 @@
         if (!d.v) list = '<div class="dv-sk dv-sk-tall"></div><div class="dv-sk dv-sk-tall"></div>';
         else if (!d.v.rows.length) list = `<div class="dv-empty">${ic('check', 26)}<strong>${apState.tab === 'pending' ? 'Kutayotgan soʻrov yoʻq' : 'Tarix boʻsh'}</strong><span>Yangi soʻrov kelsa bot va bildirishnoma orqali xabar beramiz</span></div>`;
         else list = d.v.rows.map(r => {
-            const what = r.type === 'late' ? `${r.day} · ${r.time} da keladi` : r.type === 'early_leave' ? `${r.day} · ${r.time} da ketadi` : r.type === 'absent' ? `${r.day} · kelmaydi` : `${r.day} ${r.time}${r.distance != null ? ' · ofisdan ' + km(r.distance) : ''}`;
+            const what = r.type === 'late' ? `${r.day} · ${r.time} da keladi` : r.type === 'early_leave' ? `${r.day} · ${r.time} da ketadi` : r.type === 'step_out' ? `${r.day} · ${r.time}–${r.until}` : r.type === 'absent' ? `${r.day} · kelmaydi` : `${r.day} ${r.time}${r.distance != null ? ' · ofisdan ' + km(r.distance) : ''}`;
             const decided = r.state !== 'pending';
             return `<article class="dv-req"><div class="dv-req-h">${ava(r.name)}<span class="dv-col"><strong>${esc(r.name)}</strong><em>${esc(r.role)} · ${r.type === 'outside' ? 'belgilashda' : esc(r.createdClock) + ' da'}</em></span>${pill(r.typeLabel, KIND_TONE[r.type])}</div>
                 <div class="dv-req-b"><strong>${esc(what)}</strong><span>${esc(r.reason)}${r.comment ? `: «${esc(r.comment)}»` : ''}</span>${r.type === 'outside' && r.photoId ? `<span class="dv-fine">Selfie va joylashuv saqlangan · <button type="button" class="dv-link-in" data-dv-rec="${esc(r.employeeId)}|${esc(r.date)}">koʻrish</button></span>` : ''}</div>
@@ -601,9 +735,9 @@
         const day = r.day.toLowerCase();
         const effect = r.type === 'early_leave' ? `Rad etilsa, ${esc(first(r.name))} odatdagidek ketadi. Erta ketsa — «erta ketdi» deb yoziladi.`
             : r.type === 'late' ? `Rad etilsa, ${esc(first(r.name))} odatdagidek vaqtida kelishi kerak. Kech kelsa — «kechikdi» deb yoziladi.`
-            : r.type === 'absent' ? `Rad etilsa, kelmasa — «kelmadi» deb yoziladi.` : `Rad etilsa, bugungi kun odatdagi qoida boʻyicha hisoblanadi.`;
+            : r.type === 'absent' ? `Rad etilsa, kelmasa — «kelmadi» deb yoziladi.` : r.type === 'step_out' ? `Rad etilsa, ${esc(first(r.name))} ish vaqtida chiqa olmaydi.` : `Rad etilsa, bugungi kun odatdagi qoida boʻyicha hisoblanadi.`;
         openSheet('reject', `<section class="dv-sheet" role="dialog" aria-modal="true" aria-labelledby="dvRjT"><span class="dv-grab" aria-hidden="true"></span>
-            <div class="dv-head"><div class="dv-col"><h2 id="dvRjT">Soʻrovni rad etish</h2><span class="dv-sub">${esc(r.name)} · ${esc(r.typeLabel.toLowerCase())} · ${esc(day)}${r.time && r.type !== 'absent' ? ' ' + esc(r.time) : ''}</span></div><button type="button" class="dv-x dv-x-sq" data-dv-close aria-label="Bekor qilish">${ic('close', 18)}</button></div>
+            <div class="dv-head"><div class="dv-col"><h2 id="dvRjT">Soʻrovni rad etish</h2><span class="dv-sub">${esc(r.name)} · ${esc(r.typeLabel.toLowerCase())} · ${esc(day)}${r.time && r.type !== 'absent' ? ' ' + esc(r.time) + (r.until ? '–' + esc(r.until) : '') : ''}</span></div><button type="button" class="dv-x dv-x-sq" data-dv-close aria-label="Bekor qilish">${ic('close', 18)}</button></div>
             <fieldset class="dv-fs"><legend>Sabab <b>*</b></legend><div class="dv-chips">${REJ.map((x, i) => `<label class="dv-chip${i === 0 ? ' is-on' : ''}"><input type="radio" name="dvRj" value="${esc(x)}" ${i === 0 ? 'checked' : ''} data-dv-rjr>${i === 0 ? ic('check', 14, 2.6) : ''}${esc(x)}</label>`).join('')}</div></fieldset>
             <label class="dv-field"><span>Xodimga izoh</span><textarea rows="2" id="dvRjNote" maxlength="500" placeholder="Masalan: Bugun 17:00 da jamoa yigʻilishi bor, iltimos qoling"></textarea></label>
             <div class="dv-info dv-gray">${ic('info', 16)}<span>${effect}</span></div>
@@ -636,15 +770,31 @@
         const who = kind === 'academic' ? 'yordamchi ustozlar' : kind === 'admin' ? 'kuzatiladigan xodimlar' : 'sotuv jamoasi';
         const tiles = kind === 'academic' ? [['g', s.on_time || 0, 'Vaqtida'], ['y', s.late || 0, 'Kechikdi'], ['o', s.upcoming || 0, 'Hali erta'], ['b', (s.waiting || 0) + (s.pending || 0), 'Kutilmoqda']]
             : [['g', (s.on_time || 0) + (s.present || 0), 'Vaqtida'], ['y', s.late || 0, 'Kechikdi'], ['r', s.absent || 0, 'Kelmadi'], ['b', (s.waiting || 0) + (s.pending || 0), 'Kutilmoqda']];
+        const ns = v.nowSummary || {};
+        const nowTiles = [['g', ns.office || 0, 'Ofisda'], ['o', ns.lunch || 0, 'Obedda'], ['b', ns.out || 0, 'Tashqarida'], ['r', (ns.lunch_late || 0) + (ns.step_late || 0), 'Kech qaytmoqda']];
         const prev = v.pendingPreview || [];
-        const short = r => `${first(r.name)} — ${r.type === 'outside' ? 'ofisda emas' : r.type === 'late' ? `${r.day.toLowerCase().split(',')[0]} kech qoladi${kind === 'academic' ? ', ' + r.time : ''}` : r.type === 'absent' ? `${r.day.toLowerCase().split(',')[0]} kelmaydi` : 'erta ketadi'}`;
+        const short = r => `${first(r.name)} — ${r.type === 'outside' ? 'ofisda emas' : r.type === 'late' ? `${r.day.toLowerCase().split(',')[0]} kech qoladi${kind === 'academic' ? ', ' + r.time : ''}` : r.type === 'absent' ? `${r.day.toLowerCase().split(',')[0]} kelmaydi` : r.type === 'step_out' ? `vaqtincha chiqadi ${r.time}–${r.until}` : 'erta ketadi'}`;
         const sub = r => { const parts = [r.inClock ? 'keldi ' + r.inClock : r.start ? 'grafik ' + r.start + ' dan' : 'dam olish']; if (kind === 'academic' && r.lang) parts.push(r.lang === 'russian' ? 'Rus tili' : r.lang === 'english' ? 'Ingliz tili' : 'Ikkala til'); if (kind === 'admin') parts.push(r.role); return parts.join(' · '); };
         return `${top(title, `${dayLong(date)} · ${who}, ${v.rows.length} kishi`)}<div class="dv-body">
             <div class="dv-tiles4 dv-s1">${tiles.map(([c, n, l]) => `<div class="dv-t4 dv-t4-${c}"><strong>${n}</strong><span>${l}</span></div>`).join('')}</div>
+            ${v.date === tk().date ? `<span class="dv-fine">Hozir · ${hm(tk().min)}</span><div class="dv-tiles4 dv-s1">${nowTiles.map(([c, n, l]) => `<div class="dv-t4 dv-t4-${c}"><strong>${n}</strong><span>${l}</span></div>`).join('')}</div>` : ''}
             ${v.pending ? `<button type="button" class="dv-banner dv-s2 dv-pulse2" data-dv-go="approvals"><span class="dv-blue-ic">${ic('clock', 20)}</span><span class="dv-col"><strong>Davomat soʻrovlari · ${v.pending} ta kutmoqda</strong><em>${esc(prev.slice(0, 3).map(short).join(' · '))}</em></span>${ic('chev', 18)}</button>` : ''}
-            ${v.rows.length ? `<section class="dv-list dv-s3">${v.rows.map(r => `<button type="button" class="dv-li dv-li-btn" data-dv-rec="${esc(r.employeeId)}|${date}">${ava(r.name)}<span class="dv-col"><strong>${esc(r.name)}</strong><em>${esc(sub(r))}</em></span>${stPill(r)}</button>`).join('')}</section>`
+            ${v.rows.length ? `<section class="dv-list dv-s3">${v.rows.map(r => `<button type="button" class="dv-li dv-li-btn" data-dv-rec="${esc(r.employeeId)}|${date}">${ava(r.name)}<span class="dv-col"><strong>${esc(r.name)}</strong><em>${esc(sub(r))}</em></span>${nowPill(r) || stPill(r)}</button>`).join('')}</section>`
             : `<div class="dv-empty">${ic('users', 26)}<strong>Kuzatiladigan xodim yoʻq</strong><span>HR xodimga grafik va “Davomat kuzatiladi”ni yoqqanda shu yerda chiqadi</span></div>`}
             <span class="dv-fine dv-center-t">${kind === 'academic' ? 'Faqat oʻz yordamchilaringiz koʻrinadi' : kind === 'admin' ? 'Hamma kuzatiladigan xodimlar' : 'Faqat oʻz menejerlaringiz koʻrinadi'}. Tuzatishni HR qiladi.</span></div>`;
+    }
+
+    // Hozirgi holat belgisi (ROP ro'yxati): obedda / tashqarida / kech + ertalabki kechikish.
+    function nowPill(r) {
+        const b = r.openBreak, now = tk().min;
+        const late = r.status === 'late' && r.lateMinutes ? ` · ertalab ${r.lateMinutes} daq kech` : '';
+        if (r.now === 'lunch') return pill(`Obedda · ${durL(Math.max(0, pm(b?.untilClock) - now))} qoldi`, 'amber');
+        if (r.now === 'out') return pill(`Tashqarida · ${esc(b?.untilClock || '')} gacha`, 'blue');
+        if (r.now === 'lunch_late') return pill(`Obeddan kech · ${now - pm(b?.untilClock)} daq`, 'red');
+        if (r.now === 'step_late') return pill(`Ruxsatdan kech · ${now - pm(b?.untilClock)} daq`, 'red');
+        if (r.now === 'office' && r.unverifiedReturn) return pill('Ofisda · tasdiqlanmagan', 'amber');
+        if (r.now === 'office') return pill(`Ofisda${late}`, late ? 'amber' : 'green');
+        return '';
     }
 
     // D09 · Kun yozuvi (selfie va 3×4, xarita)
@@ -670,6 +820,10 @@
             <div class="dv-head"><div class="dv-col"><h2>${esc(r.name)}</h2><span class="dv-sub dv-t-${tone}">${esc(line)}</span></div><button type="button" class="dv-x" data-dv-close aria-label="Yopish">${ic('close', 18)}</button></div>
             ${photos}${chips}${map}
             <div class="dv-kv"><div><span>Grafik</span><strong>${r.scheduled ? `${esc(r.start)} – ${esc(r.end)}` : 'Dam olish kuni'}</strong></div><div><span>Keldi</span><strong>${esc(r.inClock || '—')}</strong></div><div><span>Ketdi</span><strong class="${r.outClock ? '' : 'dv-mut'}">${esc(r.outClock || (r.inClock && date === tk().date ? 'hali ishda' : '—'))}</strong></div></div>
+            ${(r.breaks || []).length || r.notReturned ? `<div class="dv-kv">${r.workedMinutes ? `<div><span>Ishladi</span><strong>${durL(r.workedMinutes)}</strong></div>` : ''}${r.lunchMinutes ? `<div><span>Obed</span><strong>${durL(r.lunchMinutes)}</strong></div>` : ''}${r.stepMinutes ? `<div><span>Tashqarida</span><strong>${durL(r.stepMinutes)}</strong></div>` : ''}</div>
+              <section class="dv-list">${(r.breaks || []).map(b => `<div class="dv-li"><span class="dv-col"><strong>${b.kind === 'step' ? 'Vaqtincha chiqish' : 'Obed'} · ${esc(b.outClock)} → ${esc(b.inClock || '…')}</strong>
+                <em>${b.minutes} daq · muddat ${esc(b.untilClock)}${b.unverified ? ' · selfiesiz, tasdiqlanmagan' : ''}</em></span>${b.open ? pill(b.late ? 'kech' : 'davom etmoqda', b.late ? 'red' : 'blue') : b.late ? pill(`${b.overMinutes} daq kech`, 'red') : pill('vaqtida', 'green')}</div>`).join('')}
+                ${r.notReturned ? `<div class="dv-li"><span class="dv-col"><strong>${r.notReturned === 'step' ? 'Ruxsatdan' : 'Obeddan'} qaytmadi</strong><em>Kun yopildi · ishlagan vaqt chiqqan paytgacha · bitta jarima</em></span>${pill('jarima', 'red')}</div>` : ''}</section>` : ''}
             <span class="dv-fine dv-center-t">${empId ? `${S.me?.approver?.kind === 'academic' ? 'Akademik rahbar' : S.me?.approver?.kind === 'admin' ? 'Direktor' : 'ROP'} koʻradi · tuzatishni faqat HR va admin qiladi` : 'Tuzatish kerak boʻlsa — HRʼga murojaat qiling'}</span>`;
         hydratePhotos(sheetEl);
     }
@@ -703,6 +857,10 @@
             <div class="dv-switch-row dv-s1"><span class="dv-col"><strong>Davomat kuzatiladi</strong><em>Yuz + joylashuv</em></span>${sw('dvTracked', e.tracked !== false, 'Davomat kuzatiladi')}</div>
             <section class="dv-sched dv-s2">${DAYS.map(([k, , full]) => `<div class="dv-sched-r">${sw('on' + k, !!days[k], full)}<span class="dv-sched-d">${full}</span>
               <span class="dv-sched-t"><input type="time" class="dv-input dv-input-hm" name="s${k}" value="${esc(days[k]?.start || '09:00')}" aria-label="${full} boshlanishi" ${days[k] ? '' : 'disabled'}><span aria-hidden="true">–</span><input type="time" class="dv-input dv-input-hm" name="e${k}" value="${esc(days[k]?.end || '18:00')}" aria-label="${full} tugashi" ${days[k] ? '' : 'disabled'}></span></div>`).join('')}</section>
+            ${(() => { const l = Object.values(days).find(x => x && x.lunch)?.lunch || null; return `<section class="dv-fs dv-s2"><strong>Obed (hamma ish kunlari uchun)</strong>
+              <div class="dv-g2"><label class="dv-field"><span>Oraliq boshi</span><input type="time" class="dv-input" name="lFrom" value="${esc(l?.from || '')}"></label><label class="dv-field"><span>Oraliq oxiri</span><input type="time" class="dv-input" name="lTo" value="${esc(l?.to || '')}"></label></div>
+              <label class="dv-field"><span>Davomiyligi, daqiqa</span><input type="number" min="10" max="180" step="5" class="dv-input" name="lMin" value="${esc(l?.minutes || '')}" placeholder="60"></label>
+              <span class="dv-fine">Oraliq ish vaqti ichida; davomiyligi 10–180 daqiqa, oraliqqa sigʻadi; oraliq oxiri + davomiylik ish tugashidan oshmaydi. Boʻsh qoldirilsa — obed tugmasi chiqmaydi.</span></section>`; })()}
             <div class="dv-info dv-gray">${ic('info', 16)}<span>10 daqiqadan ortiq kechiksa — direktor va rahbariga Telegram xabar</span></div>
             <p class="dv-err" role="alert" data-dv-scherr></p>
             <div class="dv-sticky"><button type="submit" class="dv-btn dv-btn-primary dv-btn-xl">Saqlash</button></div></form>`;
@@ -717,7 +875,7 @@
         const fa = e.target.closest('[data-dv-fines-admin]');
         if (fa) { e.preventDefault(); if (document.body.classList.contains('sidebar-open')) document.getElementById('sidebarToggle')?.click();
             if (typeof switchTab === 'function') { switchTab('finance'); if (typeof switchFinanceSection === 'function') switchFinanceSection('jarimalar'); } return; }
-        const t = e.target.closest('[data-dv-go],[data-dv-checkin],[data-dv-checkout],[data-dv-enroll]');
+        const t = e.target.closest('[data-dv-go],[data-dv-checkin],[data-dv-checkout],[data-dv-enroll],[data-dv-breakout],[data-dv-breakin],[data-dv-stepreq]');
         if (!t || (root && root.contains(t))) return;
         e.preventDefault(); e.stopPropagation();
         handle(t);
@@ -734,6 +892,10 @@
         if ('dvGo' in d) { closeSheet(true); return openPage(d.dvGo); }
         if ('dvCheckin' in d) return openCamera('in');
         if ('dvCheckout' in d) return openCamera('out');
+        if ('dvBreakout' in d) return openCamera('break_out', null, d.dvBreakout);
+        if ('dvBreakin' in d) return openCamera('break_in');
+        if ('dvNocam' in d) return returnNoCamera(t);
+        if ('dvStepreq' in d) { closeSheet(true); Object.assign(rqForm, { type: 'step_out', day: 'today' }); return openPage('request'); }
         if ('dvEnroll' in d) return enroll();
         if ('dvShoot' in d) return shoot();
         if ('dvCamclose' in d) { stopFlow(); document.body.classList.remove('dv-open'); return evaluate(); }
@@ -743,7 +905,7 @@
             const reason = sheetEl?.querySelector('input[name="dvOutR"]:checked')?.value || '';
             return openCamera('in', { reason, comment: sheetEl?.querySelector('#dvOutNote')?.value.trim() || '' });
         }
-        if ('dvAgain' in d) { let o = null; try { o = d.dvAgainOut ? JSON.parse(d.dvAgainOut) : null; } catch (er) { o = null; } return openCamera(d.dvAgain || 'in', o); }
+        if ('dvAgain' in d) { let o = null; try { o = d.dvAgainOut ? JSON.parse(d.dvAgainOut) : null; } catch (er) { o = null; } return openCamera(d.dvAgain || 'in', o, d.dvAgainBk || undefined); }
         if ('dvSnooze' in d) { ls.set('dv_snooze', JSON.stringify({ date: tk().date, until: Date.now() + 30 * 60000 })); closeSheet(true); return toast('30 daqiqadan keyin yana eslatamiz'); }
         if ('dvTohr' in d) { closeSheet(); return toast('Rasm HRʼga yuborildi — HR → Davomat boʻlimida koʻrinadi'); }
         if ('dvSettings' in d) { const N = native(); if (N && typeof N.openAppSettings === 'function') N.openAppSettings(); else toast('Telefon sozlamalari → Ilovalar → Jamoa → Ruxsatlar', 'info'); return; }
@@ -777,7 +939,8 @@
     function rqSet(k, v) { rqForm[k] = v; if (k === 'day' && v === 'pick' && !rqForm.date) rqForm.date = tk().date; rerender(); }
     function onInput(e) {
         const t = e.target;
-        if (t.dataset.dvRq && ['time', 'comment', 'date'].includes(t.dataset.dvRq)) { rqForm[t.dataset.dvRq] = t.value; if (t.dataset.dvRq !== 'comment' && e.type === 'change') rerender(); }
+        if ('dvNoret' in t.dataset && e.type === 'change') { rqForm.noReturn = t.checked; rerender(); return; }
+        if (t.dataset.dvRq && ['time', 'until', 'comment', 'date'].includes(t.dataset.dvRq)) { rqForm[t.dataset.dvRq] = t.value; if (t.dataset.dvRq !== 'comment' && e.type === 'change') rerender(); }
         if (t.dataset.dvOff && offState.draft && t.dataset.dvOff !== 'radius') offState.draft[t.dataset.dvOff] = t.value;
         const f = t.closest('[data-dv-schform]');
         if (f && /^on\d$/.test(t.name)) { const k = t.name.slice(2); f[`s${k}`].disabled = !t.checked; f[`e${k}`].disabled = !t.checked; }
@@ -796,8 +959,10 @@
         if (f.matches('[data-dv-schform]')) {
             e.preventDefault();
             const out = {};
-            DAYS.forEach(([k]) => { if (f['on' + k].checked) out[k] = { start: f['s' + k].value, end: f['e' + k].value }; });
             const er = f.querySelector('[data-dv-scherr]');
+            const lunch = f.lFrom.value || f.lTo.value || f.lMin.value ? { from: f.lFrom.value, to: f.lTo.value, minutes: Number(f.lMin.value) } : null;
+            if (lunch && (!lunch.from || !lunch.to || !lunch.minutes)) { if (er) er.textContent = 'Obed: oraliq boshi, oxiri va daqiqani toʻliq kiriting (yoki hammasini boʻsh qoldiring)'; return; }
+            DAYS.forEach(([k]) => { if (f['on' + k].checked) out[k] = { start: f['s' + k].value, end: f['e' + k].value, ...(lunch ? { lunch } : {}) }; });
             try { await api(`/employees/${encodeURIComponent(f.dataset.dvSchform)}/schedule`, { tracked: f.dvTracked.checked, days: out }, 'PUT'); toast('Grafik saqlandi'); closePage(); S.onScheduleSaved?.(); }
             catch (err) { if (er) er.textContent = err.message; }
         }
@@ -885,11 +1050,12 @@
         document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refresh(true); });
         const prevNative = window.dwNativeChanged;
         window.dwNativeChanged = function () { try { prevNative && prevNative.apply(this, arguments); } catch (e) { /* */ } window.dwNativeChangedDv(); };
-        refresh(true).then(() => { drawerLinks(); handleDeepLink(); });
+        refresh(true).then(() => { drawerLinks(); handleDeepLink(); flushPending(); });
         setTimeout(() => window.jarima?.refresh?.().then(drawerLinks), 2500); // jarima nishonlari
         timer = setInterval(() => {
             if (document.visibilityState !== 'visible') return;
             if (Date.now() - S.loadedAt > 60000) refresh(true).then(drawerLinks); else { evaluate(); paintHome(); }
+            flushPending();
         }, 20000);
     }
     function start() {

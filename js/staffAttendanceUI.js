@@ -349,12 +349,13 @@
         const chip = (key, label) => `<div class="satt-stat satt-${(STATUS[key] || [0, 'idle'])[1]}"><b>${s[key] || 0}</b><span>${label}</span></div>`;
         body.innerHTML = `<div class="satt-toolbar"><label>Sana <input type="date" class="form-control-sm" value="${hrState.date}" max="${tashkentToday()}" data-satt-date></label>
             <button type="button" class="btn-secondary-sm" data-satt-refresh>Yangilash</button></div>
-            ${data.rows.length ? `<div class="satt-stats">${chip('on_time', 'vaqtida')}${chip('late', 'kechikdi')}${chip('absent', 'kelmadi')}${chip('waiting', 'kutilmoqda')}${chip('leave', 'ta’tilda')}</div>
-            <div class="satt-table-wrap"><table class="satt-table"><thead><tr><th>Xodim</th><th>Ish vaqti</th><th>Keldi</th><th>Ketdi</th><th>Holat</th><th>Urinishlar</th><th></th></tr></thead><tbody>
+            ${data.rows.length ? `<div class="satt-stats">${chip('on_time', 'vaqtida')}${chip('late', 'kechikdi')}${chip('absent', 'kelmadi')}${chip('waiting', 'kutilmoqda')}${chip('leave', 'ta’tilda')}${nowChips(data)}</div>
+            <div class="satt-table-wrap"><table class="satt-table"><thead><tr><th>Xodim</th><th>Ish vaqti</th><th>Keldi</th><th>Ketdi</th><th>Holat</th><th>Urinishlar</th><th>Obed</th><th>Tashqarida</th><th>Hozir</th><th></th></tr></thead><tbody>
             ${data.rows.map(r => `<tr><td class="satt-name"><b>${esc(r.name)}</b></td><td class="satt-num" data-label="Ish vaqti">${r.scheduled ? `${esc(r.start)}–${esc(r.end)}` : '<span class="satt-muted">dam olish</span>'}</td>
                 <td class="satt-num" data-label="Keldi">${esc(r.inClock || '—')}</td><td class="satt-num" data-label="Ketdi">${esc(r.outClock || '—')}${r.earlyMinutes ? `<div class="satt-warn-text">${r.earlyMinutes} daq erta</div>` : ''}${r.noCheckout ? '<div class="satt-muted satt-small">ketish belgilanmagan</div>' : ''}</td>
                 <td data-label="Holat">${pill(STATUS, r.status, r.lateMinutes ? ` · ${r.lateMinutes} daq` : '')}${r.note ? `<div class="satt-muted satt-small">${esc(r.note)}</div>` : ''}</td>
                 <td data-label="Urinishlar"><span>${r.attempts.length ? `${r.attempts.length} ta${r.rejected ? ` <span class="satt-bad-text">(${r.rejected} rad)</span>` : ''}` : '<span class="satt-muted">—</span>'}</span></td>
+                <td class="satt-num" data-label="Obed">${brkCell(r, 'lunch')}</td><td class="satt-num" data-label="Tashqarida">${brkCell(r, 'step')}</td><td data-label="Hozir">${nowCell(r)}</td>
                 <td class="satt-actions"><button type="button" class="btn-secondary-sm" data-satt-detail="${esc(r.employeeId)}">Batafsil</button></td></tr>`).join('')}
             </tbody></table></div>` : emptyState('Hali hech kimga davomat yoqilmagan', 'Xodimlar va grafik bo‘limida xodimga ish vaqtini kiriting — shundan keyin u kabinetida “Keldim” tugmasini ko‘radi.', 'xodimlar')}`;
         body.querySelector('[data-satt-date]').onchange = e => { hrState.date = e.target.value || tashkentToday(); renderHrSection(); };
@@ -362,6 +363,29 @@
         body.querySelectorAll('[data-satt-detail]').forEach(b => { b.onclick = () => openDayDetail(data.rows.find(r => r.employeeId === b.dataset.sattDetail), data); });
         bindGo(body);
     }
+    // Obed / vaqtincha chiqish (15-noy): ustunlar va "Hozir" holati.
+    const NOW = { office: ['Ofisda', 'ok'], lunch: ['Obedda', 'warn'], out: ['Tashqarida (ruxsat)', 'info'], lunch_late: ['Obeddan kech', 'bad'], step_late: ['Ruxsatdan kech', 'bad'], left: ['Ketdi', 'idle'], not_in: ['Kelmagan', 'idle'] };
+    function nowChips(data) {
+        const n = data.nowSummary || {};
+        if (hrState.date !== tashkentToday()) return '';
+        const c = (k, label, tone) => `<div class="satt-stat satt-${tone}"><b>${n[k] || 0}</b><span>${label}</span></div>`;
+        return `${c('lunch', 'obedda', 'warn')}${c('out', 'tashqarida', 'info')}${c('lunch_late', 'obeddan kech', 'bad')}${c('step_late', 'ruxsatdan kech', 'bad')}${data.unverified ? `<div class="satt-stat satt-warn"><b>${data.unverified}</b><span>tasdiqlanmagan qaytish</span></div>` : ''}`;
+    }
+    function brkCell(r, kind) {
+        const list = (r.breaks || []).filter(b => b.kind === kind);
+        if (!list.length) return r.notReturned === kind ? '<span class="satt-bad-text">qaytmadi</span>' : '<span class="satt-muted">—</span>';
+        return list.map(b => `${esc(b.outClock)}–${esc(b.inClock || '…')}${b.open ? ` <span class="satt-muted satt-small">(${esc(b.untilClock)})</span>` : ` · ${b.minutes} daq`}${b.late ? ` <span class="satt-bad-text">${b.overMinutes} daq kech</span>` : ''}${b.unverified ? ' <span class="satt-warn-text">tasdiqlanmagan</span>' : ''}`).join('<br>');
+    }
+    function nowCell(r) {
+        if (!r.now || !NOW[r.now]) return '<span class="satt-muted">—</span>';
+        const b = r.openBreak, [label, tone] = NOW[r.now];
+        const nowMin = (() => { const d = new Date(Date.now() + 5 * 3600000); return d.getUTCHours() * 60 + d.getUTCMinutes(); })();
+        const due = b ? (([h, m]) => +h * 60 + +m)(String(b.untilClock || '0:0').split(':')) : null;
+        const extra = b && due != null ? (r.now.endsWith('_late') ? ` · ${nowMin - due} daq` : ` · ${esc(b.untilClock)} gacha`) : '';
+        return `<span class="satt-pill satt-${tone}">${label}${extra}</span>${r.unverifiedReturn ? '<div class="satt-warn-text satt-small">qaytish tasdiqlanmagan</div>' : ''}`;
+    }
+    const KIND_TEXT = { in: 'kelish', out: 'ketish', break_out: 'chiqish', break_in: 'qaytish' };
+
     function emptyState(title, text, go) {
         return `<div class="satt-empty"><h4>${esc(title)}</h4><p>${esc(text)}</p>${go && canManage() ? `<button type="button" class="btn-primary-sm" data-satt-go="${go}">Xodimlar va grafik</button>` : ''}</div>`;
     }
@@ -373,11 +397,15 @@
             <span class="satt-num">${esc(row.scheduled ? `${row.start}–${row.end}` : 'Dam olish kuni')}</span>${row.workedMinutes ? `<span class="satt-muted">Ishladi: ${mins(row.workedMinutes)}</span>` : ''}</div>
             ${row.attempts.length ? `<div class="satt-attempts">${row.attempts.map(a => `<article class="satt-attempt ${a.ok ? '' : 'satt-attempt-bad'}">
                 ${a.photoId ? `<img data-satt-photo="${esc(a.photoId)}" alt="${esc(row.name)} — ${esc(a.clock)}">` : '<div class="satt-nophoto">Rasm saqlanmagan<br><span class="satt-small">ofis hududidan tashqarida</span></div>'}
-                <div><b class="satt-num">${esc(a.clock)}</b> · ${a.kind === 'in' ? 'kelish' : 'ketish'}<br>
+                <div><b class="satt-num">${esc(a.clock)}</b> · ${KIND_TEXT[a.kind] || a.kind}${a.breakKind ? ` (${a.breakKind === 'step' ? 'ruxsat' : 'obed'}${a.until ? ', ' + esc(a.until) + ' gacha' : ''})` : ''}${a.unverified ? ' · <span class="satt-warn-text">selfiesiz / kech yetib kelgan — tasdiqlanmagan</span>' : ''}<br>
                 ${a.ok ? '<span class="satt-ok-text">Tasdiqlandi</span>' : `<span class="satt-bad-text">${esc(a.message)}</span>`}<br>
                 <span class="satt-muted satt-small">${a.method === 'ip' ? 'Ofis interneti orqali' : a.distance != null ? `Ofisdan ${a.distance} m` : 'Lokatsiya yo‘q'}${a.method !== 'ip' && a.accuracy ? ` (±${a.accuracy} m)` : ''}${a.faceDistance != null ? ` · yuz farqi ${Number(a.faceDistance).toFixed(2)}` : ''}</span>
                 ${a.lat != null ? `<br><a href="https://yandex.uz/maps/?pt=${a.lng},${a.lat}&z=17&l=map" target="_blank" rel="noopener">Xaritada ko‘rish</a>` : ''}</div></article>`).join('')}</div>`
             : '<p class="satt-muted">Bu kuni belgilash urinishlari yo‘q.</p>'}
+            ${(row.breaks || []).length || row.notReturned ? `<div class="satt-note">${(row.breaks || []).map(b => `${b.kind === 'step' ? 'Vaqtincha chiqish' : 'Obed'}: ${esc(b.outClock)}–${esc(b.inClock || '…')} · ${b.minutes} daq · muddat ${esc(b.untilClock)}${b.late ? ` · <b>${b.overMinutes} daq kech</b>` : ''}`).join('<br>')}${row.notReturned ? `<br><b>${row.notReturned === 'step' ? 'Ruxsatdan' : 'Obeddan'} qaytmadi</b> — ishlagan vaqt chiqqan paytgacha, bitta jarima` : ''}</div>` : ''}
+            ${canManage() ? row.attempts.filter(a => a.unverified && a.ok).map(a => `<form class="satt-override" data-satt-review-ret="${esc(a.id)}"><h4>Tasdiqlanmagan qaytish · ${esc(a.clock)}</h4>
+                <p class="satt-muted satt-small">Qabul qilinsa — ${esc(a.clock)} hisoblanadi. Rad etilsa — belgi bekor, keyingi haqiqiy selfie (bo‘lmasa kun oxiri) hisoblanadi va jarima qayta hisoblanadi.</p>
+                <div class="satt-row"><input class="form-control-sm" name="reason" maxlength="300" required placeholder="Sabab (majburiy), masalan: kamera buzuq edi"><button class="btn-secondary-sm" type="button" data-rr="reject">Rad etish</button><button class="btn-primary-sm" type="button" data-rr="accept">Qabul qilish</button></div><p class="satt-form-msg" role="status"></p></form>`).join('') : ''}
             ${canManage() ? `<form class="satt-override" data-satt-override><h4>Holatni qo‘lda belgilash</h4>
                 <div class="satt-row"><select class="form-control-sm" name="status"><option value="">Avtomatik (tizim hisoblaydi)</option>
                 <option value="excused">Sababli (shifokor, topshiriq…)</option><option value="present">Keldi deb hisoblash</option>
@@ -387,6 +415,13 @@
             <p class="satt-muted satt-small">Ofis: ${esc(office.name)} · ruxsat etilgan radius ${office.radius} m</p>`;
         const body = openSheet(`${row.name} — ${hrState.date}`, html, { wide: true });
         hydratePhotos(body);
+        body.querySelectorAll('[data-satt-review-ret]').forEach(f => f.querySelectorAll('[data-rr]').forEach(btn => { btn.onclick = async () => {
+            const msg = f.querySelector('.satt-form-msg');
+            if (!f.reason.value.trim()) { msg.textContent = 'Sababni yozing'; return; }
+            btn.disabled = true;
+            try { await api(`/returns/${encodeURIComponent(f.dataset.sattReviewRet)}/review`, { accept: btn.dataset.rr === 'accept', reason: f.reason.value.trim() }); closeSheet(); renderHrSection(); }
+            catch (err) { btn.disabled = false; msg.textContent = err.message; }
+        }; }));
         const form = body.querySelector('[data-satt-override]');
         if (form) {
             if (row.overridden) form.status.value = row.status;
@@ -456,7 +491,8 @@
         if (!keys.length) return '<span class="satt-muted">kiritilmagan</span>';
         const groups = {};
         for (const k of keys) { const v = `${days[k].start}–${days[k].end}`; (groups[v] ||= []).push(DAYS.find(d => d[0] === k)[1]); }
-        return Object.entries(groups).map(([time, ds]) => `<span class="satt-num">${ds.join(', ')} ${time}</span>`).join('<br>');
+        const l = Object.values(days).find(d => d && d.lunch)?.lunch;
+        return Object.entries(groups).map(([time, ds]) => `<span class="satt-num">${ds.join(', ')} ${time}</span>`).join('<br>') + (l ? `<br><span class="satt-muted satt-small">Obed ${esc(l.from)}–${esc(l.to)} · ${l.minutes} daq</span>` : '');
     }
     async function renderEmployees(body) {
         const list = await api('/employees');
@@ -489,6 +525,11 @@
             <div class="satt-days">${DAYS.map(([k, label]) => `<div class="satt-day" data-day="${k}"><label><input type="checkbox" name="on${k}" ${days[k] ? 'checked' : ''}> ${label}</label>
                 <input type="time" class="form-control-sm" name="s${k}" value="${esc(days[k]?.start || '09:00')}" aria-label="${label} boshlanishi">
                 <span>–</span><input type="time" class="form-control-sm" name="e${k}" value="${esc(days[k]?.end || '18:00')}" aria-label="${label} tugashi"></div>`).join('')}</div>
+            ${(() => { const l = Object.values(days).find(d => d && d.lunch)?.lunch || null; return `<fieldset class="satt-lunch"><legend>Obed (hamma ish kunlari uchun)</legend>
+              <div class="satt-row"><label>Oraliq boshi <input type="time" class="form-control-sm" name="lFrom" value="${esc(l?.from || '')}"></label>
+              <label>Oraliq oxiri <input type="time" class="form-control-sm" name="lTo" value="${esc(l?.to || '')}"></label>
+              <label>Daqiqa <input type="number" min="10" max="180" step="5" class="form-control-sm" name="lMin" value="${esc(l?.minutes || '')}" placeholder="60" style="width:90px"></label></div>
+              <p class="satt-muted satt-small">Oraliq ish vaqti ichida; davomiyligi 10–180 daqiqa va oraliqqa sig‘adi; oraliq oxiri + davomiylik ish tugashidan oshmaydi. Bo‘sh qoldirilsa — obed tugmasi chiqmaydi.</p></fieldset>`; })()}
             <p class="satt-form-msg" role="status"></p>
             <div class="satt-row satt-end"><button type="button" class="btn-secondary-sm" data-cancel>Bekor qilish</button><button type="submit" class="btn-primary-sm">Saqlash</button></div></form>`;
         const body = openSheet(`${emp.name} — ish vaqti`, html);
@@ -501,7 +542,10 @@
         form.onsubmit = async e => {
             e.preventDefault();
             const out = {};
-            DAYS.forEach(([k]) => { if (form['on' + k].checked) out[k] = { start: form['s' + k].value, end: form['e' + k].value }; });
+            const msgEl = form.querySelector('.satt-form-msg');
+            const lunch = form.lFrom.value || form.lTo.value || form.lMin.value ? { from: form.lFrom.value, to: form.lTo.value, minutes: Number(form.lMin.value) } : null;
+            if (lunch && (!lunch.from || !lunch.to || !lunch.minutes)) { msgEl.textContent = 'Obed: oraliq boshi, oxiri va daqiqani to‘liq kiriting (yoki hammasini bo‘sh qoldiring)'; return; }
+            DAYS.forEach(([k]) => { if (form['on' + k].checked) out[k] = { start: form['s' + k].value, end: form['e' + k].value, ...(lunch ? { lunch } : {}) }; });
             try {
                 await api(`/employees/${encodeURIComponent(emp.id)}/schedule`, { tracked: form.tracked.checked, days: out }, 'PUT');
                 closeSheet(); renderHrSection();
