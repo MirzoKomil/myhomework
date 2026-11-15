@@ -251,6 +251,8 @@ app.use('/api/staff-attendance', require('./routes/staffAttendance')({ pool: crm
 app.use('/api/fines', require('./routes/fines')({ pool: crmDb.pool, authRequired: require('./middleware/auth').authRequired }));
 // Jonli ofis: xodimlar, ustozlar, o'quvchilar holati (faqat o'qish, rolga qarab).
 app.use('/api/office', require('./routes/office')({ pool: crmDb.pool, authRequired: require('./middleware/auth').authRequired }));
+// Platformadagi faollik: xodim saytda faol bo'lgan daqiqalar, reyting, hozir onlayn (direktor va rahbarlar).
+app.use('/api/staff-activity', require('./routes/staffActivity')({ pool: crmDb.pool, authRequired: require('./middleware/auth').authRequired }));
 // Xodim sozlamalari: profil qo'shimchalari, maosh tafsiloti, bildirishnomalar, yo'riqnoma bilan tanishish.
 app.use('/api/staff', require('./routes/staffSettings')({ pool: crmDb.pool,
     authRequired: require('./middleware/auth').authRequired, findUserById: crmDb.findUserById }));
@@ -453,6 +455,12 @@ init().then(async () => {
         setInterval(run, 10 * 60 * 1000).unref();
         setTimeout(run, 3 * 60 * 1000).unref();
     }).catch(err => console.error('[office] Jadval yaratilmadi:', err.code || err.message));
+    // Platformadagi faollik: jadvallar + har 10 daqiqada kun yakuni (23:00 dan, @Domworkuz_bot) tekshiruvi.
+    await require('./services/staffActivity').initSchema(crmDb.pool).then(() => {
+        const run = () => require('./services/staffActivity').tick(crmDb.pool).catch(err => console.error('[faollik] tekshiruv xatosi:', err.code || err.message));
+        setInterval(run, 10 * 60 * 1000).unref();
+        setTimeout(run, 4 * 60 * 1000).unref();
+    }).catch(err => console.error('[faollik] Jadval yaratilmadi:', err.code || err.message));
     // Avatarsiz xodimlarga jinsiga mos 3D personaj (yangi qo'shilganlarga ham — har 10 daqiqada).
     {
         const run = () => require('./services/staffAvatars').assignMissing(crmDb.pool)
