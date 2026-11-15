@@ -87,7 +87,10 @@ function seatFor(s,idx){if(s.kind==='mgr'){const i=idx.mgr++;return ['sotuv',...
 const LUNCH_SEATS=[[560,880],[610,880],[660,880],[710,880],[760,880],[560,950],[610,950],[660,950],[710,950],[760,950]];
 function breakSpot(s,idx){if(s.now==='lunch'||s.now==='lunch_late'){const i=idx.lunch=(idx.lunch||0)+1;return['oshxona',...(LUNCH_SEATS[(i-1)%LUNCH_SEATS.length])]}
  if(s.now==='out'||s.now==='step_late')return['outside'];return null}
-function teacherSpot(t,i){if(t.status==='live'){const c=CAB[i%CAB.length],w=illInv(c.cx-33,c.cy+12);return['jonli',w.x,w.y]}
+// Ustoz ofisda faqat darsda, sinovda yoki sinovga ochiq bo'sh vaqtida; tanaffus/band/smenadan tashqari — ofisdan chiqadi.
+const AWAY={break:['🚪','Tanaffusda'],leave:['🌴',"Ta'tilda"],busy:['⛔','Band'],off:['🌙','Smenada emas']};
+const awayOf=t=>AWAY[t.awayWhy]||AWAY.off;
+function teacherSpot(t,i){if(t.status==='away')return['outside'];if(t.status==='live'){const c=CAB[i%CAB.length],w=illInv(c.cx-33,c.cy+12);return['jonli',w.x,w.y]}
  if(t.status==='trial'){const k=trialTables.get(t.id)??0,[tx,ty]=TRIAL_I[k],w=illInv(tx-28,ty+12);return['sinov',w.x,w.y]}
  const l=LOUNGE[i%LOUNGE.length];return['bosh',l[0],l[1]]}
 const trialTables=new Map();
@@ -123,7 +126,10 @@ function applySnapshot(d,animate){
  d.teachers.forEach((t,i)=>{const [room,x,y]=teacherSpot(t,i);const p=mkPerson('t:'+t.id,{name:t.name,kind:'teacher',teacher:t,ti:i});if(t.female!=null)p.female=t.female;p.av=avatarImg('t:'+t.id,t.avatar);p.birthday=!!t.birthday;applyLook(p,t.look);
   if(t.birthday&&!greeted.has('t'+t.id)){greeted.add('t'+t.id);feed('🎂',`Bugun ustoz ${esc(t.name)}ning tug'ilgan kuni! Tabriklaymiz!`,'#DB2777')}
   const prev=prevT.get(t.id);
-  if(!animate||!prev){place(p,room,x,y)}else if(prev.status!==t.status){moveTo(p,room,x,y);
+  if(room==='outside'){if(animate&&prev&&prev.status!=='away'&&p.visible&&p.room!=='outside'){const a=awayOf(t);say(p,a[0],a[1],5,'#64748B');feed(a[0],`Ustoz ${esc(t.name)} — ${a[1].toLowerCase()}, ofisdan chiqdi`,'#64748B');leave(p)}
+   else if(!p.path.length||p.room==='outside'){p.visible=false;p.room='outside';p.path=[]}return}
+  if(p.room==='outside'){p.visible=true;p.x=400;p.y=-30;if(animate&&prev){moveTo(p,room,x,y);if(prev.status==='away')feed('🚶',`Ustoz ${esc(t.name)} ofisga keldi`,'#16A34A')}else place(p,room,x,y)}
+  else if(!animate||!prev){place(p,room,x,y)}else if(prev.status!==t.status){moveTo(p,room,x,y);
    if(t.status==='live'){say(p,'🎥','Darsda',8,'#DC2626');feed('🎥',`Ustoz ${esc(t.name)} darsni boshladi`,'#B45309');SND.ev('🎥')}
    else if(t.status==='trial'){say(p,'🎧','Sinov darsi',8,'#1F4FD8');feed('🎧',`Ustoz ${esc(t.name)} sinov darsida`,'#1F4FD8')}
    else say(p,'☕',"Bo'sh",5,'#16A34A')}
@@ -218,7 +224,7 @@ function ui(){if(!data)return;const k=data.kpi;document.getElementById('clock').
  if(k.platformOnline!=null)items.splice(1,0,['Onlayn',k.platformOnline,'online']);
  document.getElementById('kpis').innerHTML=items.map(([a,b,c])=>`<div class="kpi ${c||''}"><span>${a}</span><b>${b}</b></div>`).join('');
  const st=s=>s.now==='lunch'?`🍽️ obedda · ${s.breakUntil||''} gacha`:s.now==='lunch_late'?'⏱ obeddan kech':s.now==='out'?`🚪 tashqarida · ${s.breakUntil||''} gacha`:s.now==='step_late'?'⏱ ruxsatdan kech':s.inOffice?(people.get('s:'+s.id)?.bubble?.text||(s.platform?.online?'💻 onlayn · '+s.platform.section:'💻 ishda')):s.outAt?'ketdi '+hm(s.outAt):s.platform?.online?'💻 onlayn · '+s.platform.section:'hali kelmagan';
- const tt=t=>t.status==='live'?`🎥 Darsda · ${t.nowStudents.length} o'q.`:t.status==='trial'?'🎧 Sinov darsida':t.dav==='pending'?'⏳ davomat kutilmoqda':"Bo'sh";
+ const tt=t=>t.status==='live'?`🎥 Darsda · ${t.nowStudents.length} o'q.`:t.status==='trial'?'🎧 Sinov darsida':t.status==='away'?awayOf(t).join(' '):t.dav==='pending'?'⏳ davomat kutilmoqda':"Bo'sh";
  document.getElementById('team').innerHTML=data.staff.map(s=>`<div class="mem ${s.inOffice?'':'off'}" data-p="s:${esc(s.id)}"><span class="av" style="background:${people.get('s:'+s.id)?.shirt||'#94A3B8'}">${esc(s.name[0]||'?')}</span><div><div>${s.crown?'👑 ':''}${s.fire?'🔥 ':''}${s.birthday?'🎂 ':''}${esc(s.name)}${s.late?' <span style="color:#B45309">⚠️</span>':''}${(s.badges||[]).map(b=>' <span title="'+esc(b.t)+'">'+b.t.split(' ')[0]+'</span>').join('')}</div><div class="st">${esc(st(s))}</div></div></div>`).join('')
   +(data.teachers.length?'<div class="tsep">Ustozlar (masofadan)</div>'+data.teachers.map(t=>`<div class="mem" data-p="t:${esc(t.id)}"><span class="av" style="background:#F59E0B">${esc(t.name[0]||'?')}</span><div><div>${esc(t.name)}</div><div class="st">${esc(tt(t))}</div></div></div>`).join(''):'');
  document.getElementById('note').textContent=v.money?'':"Summalar, maosh va kechikishlar bu ko'rinishda chiqmaydi.";
@@ -236,7 +242,7 @@ function ui(){if(!data)return;const k=data.kpi;document.getElementById('clock').
 document.addEventListener('click',e=>{const m=e.target.closest('.mem');if(m)openCard(people.get(m.dataset.p))});
 function openCard(p){if(!p)return;const card=document.getElementById('card');
  if(p.kind==='teacher'){const t=data.teachers.find(x=>'t:'+x.id===p.id);if(!t)return;
-  card.innerHTML=`<div class="hd"><div class="big" style="background:#F59E0B">${esc(t.name[0])}</div><div><h2>${esc(t.name)}</h2><div class="role">Ustoz · masofadan</div></div></div><div class="pill">${t.status==='live'?'🎥 Darsda':t.status==='trial'?'🎧 Sinov darsida':"Bo'sh"}</div>
+  card.innerHTML=`<div class="hd"><div class="big" style="background:#F59E0B">${esc(t.name[0])}</div><div><h2>${esc(t.name)}</h2><div class="role">Ustoz · masofadan</div></div></div><div class="pill">${t.status==='live'?'🎥 Darsda':t.status==='trial'?'🎧 Sinov darsida':t.status==='away'?awayOf(t).join(' '):"Bo'sh"}</div>
   <div class="slist"><div><span>Bugun dars o'tdi</span><b>${t.lessonsDone}</b></div><div><span>Bugungi o'quvchilar</span><b>${t.todayStudents}</b></div><div><span>Davomat</span><b>${t.dav==='ok'?'✅ belgilandi':t.dav==='pending'?'⏳ kutilmoqda':'—'}</b></div>${t.nowStudents.map(s=>`<div><span>🟢 ${esc(s.name)}</span><b>darsda</b></div>`).join('')}</div><button class="close">Yopish</button>`}
  else if(p.kind==='stud'){card.innerHTML=`<div class="hd"><div class="big" style="background:#38BDF8">${esc(p.name[0]||'?')}</div><div><h2>${esc(p.name)}</h2><div class="role">O'quvchi · ilovada</div></div></div><button class="close">Yopish</button>`}
  else if(p.kind==='lead'){card.innerHTML=`<div class="hd"><div class="big" style="background:${p.src==='target'?'#1F4FD8':'#16A34A'}">${esc(p.name[0]||'?')}</div><div><h2>${esc(p.name)}</h2><div class="role">Lid · ${p.src==='target'?'Target':'Organik'}</div></div></div><button class="close">Yopish</button>`}
@@ -315,7 +321,7 @@ function render(){
   // kabinka doskalari: ustoz ismi, holat, davomat; darsdagi o'quvchi o'ng stulda
   data.teachers.slice(0,CAB.length).forEach((t,i)=>{const c=CAB[i],bx=c.cx+4,by=c.cy-70,live=t.status==='live';
    ctx.fillStyle='rgba(255,255,255,.96)';rr(bx-50,by-17,100,36,6);ctx.fill();ctx.textAlign='center';ctx.fillStyle='#14213D';ctx.font='900 11px Nunito';ctx.fillText(t.name,bx,by-4);
-   const s=live?['#DC2626',t.nowStudents.length>1?`LIVE · ${t.nowStudents.length} o'q.`:'LIVE']:t.status==='trial'?['#1F4FD8','Sinovda']:['#94A3B8',"Bo'sh"];
+   const s=live?['#DC2626',t.nowStudents.length>1?`LIVE · ${t.nowStudents.length} o'q.`:'LIVE']:t.status==='trial'?['#1F4FD8','Sinovda']:t.status==='away'?['#CBD5E1',awayOf(t)[1]]:['#94A3B8',"Bo'sh"];
    ctx.font='900 9px Nunito';const w=ctx.measureText(s[1]).width+12;ctx.fillStyle=s[0];rr(bx-w/2,by+2,w,13,6.5);ctx.fill();ctx.fillStyle='#fff';ctx.fillText(s[1],bx,by+11.5);
    if(t.dav==='ok'||t.dav==='pending'){ctx.font='11px sans-serif';ctx.fillText(t.dav==='ok'?'✅':'⏳',bx+44,by-4)}
    if(live&&t.nowStudents.length){const sd=t.nowStudents[0],x=c.cx+33,y=c.cy-8,h=hash(sd.id);ctx.fillStyle=SH[h%SH.length];rr(x-10,y+4,20,16,7);ctx.fill();
