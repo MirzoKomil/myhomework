@@ -22,9 +22,7 @@ const CALL_TYPES = new Set(['call-attempt', 'contact-fail']);
 // (contact-fail) — shu qo'ng'iroqning natijasi yoki ustun almashtirishdagi sabab: lentada ko'rinadi, lekin qayta sanalmaydi.
 const isCall = e => e.type === 'call';
 const LOST = new Set(['muvaffaqiyatsiz-sotuv', 'sifatsiz-lidlar']);
-const DOMWORK_LANG = 'russian';
-// Xodim tili: lavozim asosiy (rus ustozlarining lang ustuni 'english' bo'lib qolgan — school.js langOf bilan bir xil), keyin lang ustuni.
-const empLang = e => e.lang === 'both' ? 'both' : e.role === 'rus-oqituvchi' ? 'russian' : e.role === 'ingliz-oqituvchi' ? 'english' : e.lang === 'russian' ? 'russian' : 'english';
+const LANGS = ['english', 'russian'];
 
 const first = s => String(s || '').trim().split(/\s+/)[0] || '';
 const iso = v => (v ? new Date(v).toISOString() : null);
@@ -38,13 +36,9 @@ async function viewerFor(db, user, { tv = false, lang = null } = {}) {
     if (!tv && (role === 'admin' || role === 'boshliq')) scope = 'full';
     else if (!tv && role === 'rop') { scope = 'sales'; langs = await safe(() => require('./ropScope').ropLangsFor(db, user), null); }
     else if (!tv && role === 'akademik') { scope = 'academic'; langs = await safe(() => require('./academicHead').langsFor(db, user), null); }
-    // Jonli ofis — faqat Domwork (rus tili kursi). Ingliz (Homework) xodimlari, ustozlari, lidlari va to'lovlari ko'rinmaydi.
-    // ?lang= parametri e'tiborsiz; faqat ingliz yo'nalishidagi ROP/akademik Domwork summalari va kechikishlarini ko'rmaydi.
-    void lang;
-    const own = langs; langs = [DOMWORK_LANG];
-    const outside = !!own && !own.includes(DOMWORK_LANG);
-    return { role, tv, scope, langs, money: !outside && (scope === 'full' || scope === 'sales'),
-        lateFor: outside ? null : scope === 'full' ? 'all' : scope === 'sales' ? 'sales' : scope === 'academic' ? 'academic' : null };
+    if (LANGS.includes(lang)) langs = langs ? langs.filter(l => l === lang) : [lang];
+    return { role, tv, scope, langs, money: scope === 'full' || scope === 'sales',
+        lateFor: scope === 'full' ? 'all' : scope === 'sales' ? 'sales' : scope === 'academic' ? 'academic' : null };
 }
 
 async function staffList(db) {
@@ -374,7 +368,7 @@ async function live(db, user, query = {}, now = new Date()) {
     const dayStart = new Date(Date.parse(`${date}T00:00:00Z`) - T.TZ_OFFSET_MIN * 60000);
 
     const all = await safe(() => staffList(db), []);
-    const inLang = e => { const l = empLang(e); return l === 'both' || !v.langs || v.langs.includes(l); };
+    const inLang = e => !v.langs || v.langs.includes(String(e.lang || '').toLowerCase()) || String(e.lang || '').toLowerCase() === 'both';
     const office = all.filter(e => ['mgr', 'rop', 'akad', 'yord', 'hr'].includes(KIND(e.role)) && inLang(e));
     const teachers = all.filter(e => KIND(e.role) === 'teacher' && inLang(e));
 
@@ -479,6 +473,12 @@ async function live(db, user, query = {}, now = new Date()) {
     const monthStart = date.slice(0, 8) + '01';
     const bmap = await safe(() => badges(db, staff.map(s => s.id), date, monthStart), new Map());
     for (const s of staff) s.badges = bmap.get(s.id) || [];
+    // Platformadagi faollik: hozir onlayn soni, sotuvda eng faol top-5, akademik yetakchi, xodim kartasida "onlayn" (services/staffActivity).
+    const act = await safe(() => require('./staffActivity').officeSummary(db, now), null);
+    if (act) {
+        kpi.platformOnline = act.online; kpi.activeTop = act.salesTop; kpi.activeAcademic = act.academicTop;
+        for (const s of staff) { const x = act.byEmp[s.id]; if (x) s.platform = x; }
+    }
     // Oylik reja termometri — faqat summani ko'radiganlarga (jamoaga oylik reja % aytilmaydi).
     if (v.money) kpi.plan = await safe(() => teamPlan(db, date, v.langs), null);
 
