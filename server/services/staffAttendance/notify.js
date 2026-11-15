@@ -36,13 +36,13 @@ async function send(db, key, text, settings, roles = RECIPIENT_ROLES, userIds = 
     return sent;
 }
 
-async function late(db, { employeeId, name, date, status, settings, userIds = null }) {
+async function late(db, { employeeId, name, date, status, settings, userIds = null, extra = '' }) {
     // "Kelmadi" xabari allaqachon ketgan bo'lsa — buni tuzatish sifatida yozamiz.
     const prior = (await db.query("SELECT to_regclass('public.domwork_bot_outbox') AS t")).rows[0]?.t
         && (await db.query('SELECT 1 FROM domwork_bot_outbox WHERE unique_key LIKE $1 LIMIT 1', [`att:absent:${employeeId}:${date}:%`])).rows[0];
     const head = prior ? `✅ <b>${esc(name)}</b> keldi (avval “kelmadi” deb xabar berilgan edi)` : `⏰ <b>${esc(name)}</b> kechikdi`;
     return send(db, `att:late:${employeeId}:${date}`,
-        `${head}\nKeldi: ${status.inClock} (ish ${status.start} da boshlanadi)\nKechikish: <b>${status.lateMinutes} daqiqa</b>`, settings, RECIPIENT_ROLES, userIds);
+        `${head}\nKeldi: ${status.inClock} (ish ${status.start} da boshlanadi)\nKechikish: <b>${status.lateMinutes} daqiqa</b>${extra ? '\n' + extra : ''}`, settings, RECIPIENT_ROLES, userIds);
 }
 
 // Ish boshlanib imtiyoz (10 daq) o'tdi, hali belgilanmagan — o'z rahbariga va direktorga, bir marta.
@@ -73,4 +73,14 @@ const breakBack = (db, { employeeId, name, date, brk, settings, userIds }) => se
         ? `🟡 <b>${esc(name)}</b> ${BK(brk.kind)} qaytdi (${brk.inClock}) — selfiesiz, tasdiqlanmagan.\nCRM → HR → Davomat bo‘limida ko‘rib chiqing.`
         : `↩️ <b>${esc(name)}</b> ${BK(brk.kind)} qaytdi ${brk.inClock} — ${brk.overMinutes} daqiqa kech.\nJarima avtomatik yoziladi.`, settings, RECIPIENT_ROLES, userIds);
 
-module.exports = { breakLate, breakBack, late, notYet, absent, earlyLeave, mismatch, replay, facePending, recipients, RECIPIENT_ROLES };
+// Har bir keldi / ketdi (direktor 15-noy): direktorga va xodimning o'z rahbariga (ROP / akademik rahbar).
+// Kechikkan kelish — late() bitta xabar; erta ketish — shu xabar `att:early` kaliti bilan (kun oxiridagi earlyLeave takrorlanmaydi).
+const dur = m => `${Math.floor(m / 60)} soat ${m % 60} daq`;
+const arrived = (db, { employeeId, name, date, status, settings, userIds, extra = '' }) => send(db, `att:in:${employeeId}:${date}`,
+    `✅ <b>${esc(name)}</b> keldi ${status.inClock}${status.scheduled ? ` (ish ${status.start} da boshlanadi)` : ' · dam olish kuni'}${extra ? '\n' + extra : ''}`, settings, RECIPIENT_ROLES, userIds);
+const left = (db, { employeeId, name, date, status, settings, userIds, extra = '', past = false }) => send(db,
+    status.earlyMinutes ? `att:early:${employeeId}:${date}` : `att:out:${employeeId}:${date}`,
+    `🚪 <b>${esc(name)}</b> ketdi ${status.outClock}${past ? ` (${date} uchun, keyin kiritildi)` : ''}\nKeldi ${status.inClock || '—'}${status.workedMinutes ? ` · ishladi ${dur(status.workedMinutes)}` : ''}`
+    + (status.earlyMinutes ? `\nErta: <b>${status.earlyMinutes} daqiqa</b> (ish ${status.end} da tugaydi)` : '') + (extra ? '\n' + extra : ''), settings, RECIPIENT_ROLES, userIds);
+
+module.exports = { arrived, left, breakLate, breakBack, late, notYet, absent, earlyLeave, mismatch, replay, facePending, recipients, RECIPIENT_ROLES };

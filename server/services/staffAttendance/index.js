@@ -378,10 +378,11 @@ function nowState(d, nowMinutes, isToday) {
     return d.scheduled ? 'not_in' : 'off';
 }
 
-function statusFor(ctx, employeeId, date, settings, now) {
+// opts.live — rasmsiz xodim (yuz tasdiqlanmagan) uchun xabarlar: hisob boshlanganidek hisoblanadi, muzlatilmaydi va jarimaga ishlatilmaydi.
+function statusFor(ctx, employeeId, date, settings, now, opts = {}) {
     const today = t.tashkentDate(now);
     const k = ctx.key(employeeId, date);
-    let base = date < today ? ctx.snapshots.get(k) : null;
+    let base = date < today && !opts.live ? ctx.snapshots.get(k) : null;
     if (!base) {
         const schedule = ctx.schedules.get(employeeId);
         const face = ctx.faces.get(employeeId);
@@ -391,8 +392,8 @@ function statusFor(ctx, employeeId, date, settings, now) {
         const countFrom = countFromFor(ctx, employeeId, date);
         void face;
         base = rules.dayStatus({ date, today, nowMinutes: t.tashkentMinutes(now), day, settings,
-            events: ctx.events.get(k) || [], leave: false, override: null, countFrom });
-        if (date < today) { ctx.snapshots.set(k, base); ctx.fresh.push([employeeId, date, base]); }
+            events: ctx.events.get(k) || [], leave: false, override: null, ...(opts.live ? {} : { countFrom }) });
+        if (date < today && !opts.live) { ctx.snapshots.set(k, base); ctx.fresh.push([employeeId, date, base]); }
     }
     // Javob so'rovi (kutilmoqda / tasdiqlangan) — muzlatilgan natija ustidan, HR tuzatishidan oldin.
     if (ctx.requests?.has(k)) {
@@ -690,6 +691,10 @@ async function checkLocked(pool, analyzer, a, kind, body, meta) {
         }
         if (kind === 'in' && day.status === 'late') after.push(async () => notify.late(pool, { ...who, status: day,
             userIds: (await approverUsers(pool, routeFor(a))).map(u => String(u.id)) }));
+        else if (kind === 'in' && !outside) after.push(async () => notify.arrived(pool, { ...who, status: day, extra: 'Face ID ✓',
+            userIds: (await approverUsers(pool, routeFor(a))).map(u => String(u.id)) }));
+        if (kind === 'out') after.push(async () => notify.left(pool, { ...who, status: day, extra: 'Face ID ✓',
+            userIds: (await approverUsers(pool, routeFor(a))).map(u => String(u.id)) }));
         return day;
     });
     // Xabarlar faqat yozuv saqlangandan keyin; xato bo'lsa ham belgilash bekor bo'lmaydi.
@@ -816,7 +821,15 @@ async function manual(pool, user, body, meta = {}) {
         }
         if (date === today) await db.query('DELETE FROM staff_att_rsz WHERE employee_id=$1 AND work_date=$2', [a.employee_id, date]);
         await audit(db, a.id, 'manual:' + action, a.employee_id, { date, clock: t.tashkentClock(at) });
-        return computeDay(db, a.employee_id, date, settings, now);
+        const res = await computeDay(db, a.employee_id, date, settings, now);
+        // Bot xabari (direktor + o'z rahbari). Hisob hali boshlanmagani uchun kechikish «jonli» hisoblanadi.
+        const ctxL = await loadContext(db, [a.employee_id], date, date);
+        const live = notifyStatus(ctxL, a.employee_id, date, settings, now);
+        const who = { employeeId: a.employee_id, name: a.employee_name || a.name, date, settings, status: live, extra: rszLine(live, record.distance) };
+        const ids = async () => (await approverUsers(pool, routeFor(a))).map(u => String(u.id));
+        if (action === 'in') after.push(async () => live.status === 'late' ? notify.late(pool, { ...who, userIds: await ids() }) : notify.arrived(pool, { ...who, userIds: await ids() }));
+        if (action === 'out') after.push(async () => notify.left(pool, { ...who, extra: 'rasmsiz', past: date !== today, userIds: await ids() }));
+        return res;
     });
     for (const fn of after) await fn().catch(e => console.error('[staff-attendance] xabar xatosi:', e.message));
     return { ok: true, action, date, clock: t.tashkentClock(at), today: date === today ? day : undefined, method: record.method, distance: record.distance,
@@ -1242,11 +1255,25 @@ async function pushEvents(db, userId, now = new Date()) {
     return ev;
 }
 
+// Xabarlar uchun kun holati: yuz tasdiqlanmagan (rasmsiz) xodimda ham kechikish / kelmadi hisoblanadi (jarimaga emas).
+function notifyStatus(ctx, id, date, settings, now) {
+    const d = statusFor(ctx, id, date, settings, now);
+    return d.status === 'not_ready' ? statusFor(ctx, id, date, settings, now, { live: true }) : d;
+}
+const METHOD_TEXT = { gps: 'GPS', ip: 'ofis interneti', outside: 'ofisdan tashqarida' };
+function rszLine(d, distance) {
+    if (!d || !d.manual) return 'Face ID ✓';
+    const parts = ['rasmsiz'];
+    if (d.inMethod) parts.push(METHOD_TEXT[d.inMethod] + (d.inMethod === 'gps' && distance != null ? ` ${distance} m` : ''));
+    if (d.inEnteredClock && d.inEnteredClock !== d.inClock) parts.push(`kiritdi ${d.inEnteredClock}`);
+    return parts.join(' · ');
+}
+
 async function lateWaiting(db, list, ctx, settings, now) {
     // Ish boshlanib imtiyoz vaqti o'tsa ham belgilanmagan — tasdiqlovchiga va direktorga (bir marta).
     const date = t.tashkentDate(now), nowMin = t.tashkentMinutes(now);
     for (const e of list) {
-        const d = statusFor(ctx, e.id, date, settings, now);
+        const d = notifyStatus(ctx, e.id, date, settings, now);
         if (d.status !== 'waiting' || nowMin < t.parseClock(d.start) + settings.graceMinutes) continue;
         const reqs = ctx.requests?.get(ctx.key(e.id, date)) || [];
         const late = reqs.find(r => r.type === 'late' && r.state === 'approved');
@@ -1448,7 +1475,7 @@ async function tick(db, now = new Date()) {
     let absent = 0;
     for (const e of list) {
         statusFor(ctx, e.id, yesterday, settings, now); // kechagi kun muzlatiladi
-        const d = statusFor(ctx, e.id, date, settings, now);
+        const d = notifyStatus(ctx, e.id, date, settings, now);
         const who = { employeeId: e.id, name: e.name, date, status: d, settings };
         if (d.status === 'absent') { absent++; await notify.absent(db, who).catch(() => {}); }
         // Erta ketish xabari kun oxirida (ish tugagandan 1 soat keyin), oxirgi "ketdim" bo'yicha.
