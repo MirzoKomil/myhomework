@@ -447,6 +447,12 @@ init().then(async () => {
     }).catch(err => console.error('[akademik] Jadval yaratilmadi:', err.code || err.message));
     await require('./services/staffSettings').initSchema(crmDb.pool).catch(err =>
         console.error('[staff] Jadval yaratilmadi:', err.code || err.message));
+    // Jonli ofis: e'lon va personaj jadvallari + kun yakuni (19:00 dan keyin Domwork "sotuv" guruhiga bir marta).
+    await require('./services/office').initSchema(crmDb.pool).then(() => {
+        const run = () => require('./services/office').daySummaryTick(crmDb.pool).catch(err => console.error('[office] kun yakuni xatosi:', err.code || err.message));
+        setInterval(run, 10 * 60 * 1000).unref();
+        setTimeout(run, 3 * 60 * 1000).unref();
+    }).catch(err => console.error('[office] Jadval yaratilmadi:', err.code || err.message));
     // Avatarsiz xodimlarga jinsiga mos 3D personaj (yangi qo'shilganlarga ham — har 10 daqiqada).
     {
         const run = () => require('./services/staffAvatars').assignMissing(crmDb.pool)
