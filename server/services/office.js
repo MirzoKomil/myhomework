@@ -18,6 +18,9 @@ const KIND = r => r === 'sotuv-menejeri' || r === 'sotuv_menejeri' ? 'mgr' : r =
     : r === 'head-of-teachers' ? 'akad' : r === 'yordamchi' ? 'yord' : r === 'hr' ? 'hr'
     : r === 'targetolog' ? 'target' : MAIN_TEACHER.has(r) ? 'teacher' : 'other';
 const CALL_TYPES = new Set(['call-attempt', 'contact-fail']);
+// Qo'ng'iroq hisobi faqat 📞 tugmasi bosilishi ("call-attempt", bir lidga 2 daqiqada bitta) bo'yicha. "Javob bermadi"
+// (contact-fail) — shu qo'ng'iroqning natijasi yoki ustun almashtirishdagi sabab: lentada ko'rinadi, lekin qayta sanalmaydi.
+const isCall = e => e.type === 'call';
 const LOST = new Set(['muvaffaqiyatsiz-sotuv', 'sifatsiz-lidlar']);
 const LANGS = ['english', 'russian'];
 
@@ -127,9 +130,9 @@ async function leadEvents(db, since, langs) {
         if (r.action === 'created') { ev.push({ ...base, id: 'l' + r.id, type: 'lead_new', src: after.leadType === 'target' ? 'target' : 'organic', managerId: after.managerId || '' }); continue; }
         if (!before.managerId && after.managerId) ev.push({ ...base, id: 'a' + r.id, type: 'lead_assigned', managerId: after.managerId });
         const nb = (before.comments || []).length, na = (after.comments || []).length;
-        for (const c of (after.comments || []).slice(nb, na)) {
-            if (CALL_TYPES.has(c?.type)) ev.push({ ...base, id: 'c' + r.id + ':' + nb, type: c.type === 'contact-fail' ? 'call_fail' : 'call', managerId: after.managerId || '' });
-        }
+        (after.comments || []).slice(nb, na).forEach((c, i) => {
+            if (CALL_TYPES.has(c?.type)) ev.push({ ...base, id: 'c' + r.id + ':' + (nb + i), type: c.type === 'contact-fail' ? 'call_fail' : 'call', managerId: after.managerId || '' });
+        });
         if (before.status !== after.status && after.status) {
             const st = after.status, m = after.managerId || '';
             if (st === 'sinov-darsida') {
@@ -284,7 +287,7 @@ async function yesterday(db, langs, date, minutes, dayStart) {
     const yStart = new Date(dayStart.getTime() - 86400000), yNow = new Date(yStart.getTime() + minutes * 60000);
     const ev = (await leadEvents(db, yStart, langs)).filter(e => new Date(e.at) <= yNow);
     const pay = (await payments(db, T.addDays(date, -1), langs)).filter(p => p.type === 'sale' && new Date(p.at) <= yNow);
-    const v = { leads: ev.filter(e => e.type === 'lead_new').length, calls: ev.filter(e => e.type === 'call' || e.type === 'call_fail').length,
+    const v = { leads: ev.filter(e => e.type === 'lead_new').length, calls: ev.filter(isCall).length,
         trials: ev.filter(e => e.type === 'trial_booked').length, sales: pay.length };
     if (ydayCache.size > 50) ydayCache.clear();
     ydayCache.set(key, v);
@@ -423,7 +426,7 @@ async function live(db, user, query = {}, now = new Date()) {
         inOffice: staff.filter(s => s.inOffice && s.now !== 'out' && s.now !== 'step_late').length, onLunch: staff.filter(s => s.now === 'lunch' || s.now === 'lunch_late').length, stepOut: staff.filter(s => s.now === 'out' || s.now === 'step_late').length, staff: staff.length,
         leads: leadEv.filter(e => e.type === 'lead_new').length,
         target: leadEv.filter(e => e.type === 'lead_new' && e.src === 'target').length,
-        calls: leadEv.filter(e => e.type === 'call' || e.type === 'call_fail').length,
+        calls: leadEv.filter(isCall).length, callLeads: new Set(leadEv.filter(isCall).map(e => e.leadId)).size,
         trials: leadEv.filter(e => e.type === 'trial_booked').length,
         sales: sales.length,
         live: board.filter(t => t.status === 'live').length, trialNow: board.filter(t => t.status === 'trial').length, freeTeachers: board.filter(t => t.status === 'free').length,
@@ -438,9 +441,13 @@ async function live(db, user, query = {}, now = new Date()) {
     if (top[0]) { const best = top[0].salesToday; for (const s of staff) s.crown = s.salesToday === best; }
     for (const s of staff) s.fire = s.salesToday >= 3;
     // Qo'ng'iroq poygasi: bugungi qo'ng'iroqlar (urinish ham) va sinovlar menejer bo'yicha.
-    const callsBy = {}, trialsBy = {};
-    for (const e of leadEv) { if (!e.managerId) continue; if (e.type === 'call' || e.type === 'call_fail') callsBy[e.managerId] = (callsBy[e.managerId] || 0) + 1; if (e.type === 'trial_booked') trialsBy[e.managerId] = (trialsBy[e.managerId] || 0) + 1; }
-    for (const s of staff) { s.callsToday = callsBy[s.id] || 0; s.trialsToday = trialsBy[s.id] || 0; }
+    const callsBy = {}, leadsBy = {}, trialsBy = {};
+    for (const e of leadEv) {
+        if (!e.managerId) continue;
+        if (isCall(e)) { callsBy[e.managerId] = (callsBy[e.managerId] || 0) + 1; (leadsBy[e.managerId] = leadsBy[e.managerId] || new Set()).add(e.leadId); }
+        if (e.type === 'trial_booked') trialsBy[e.managerId] = (trialsBy[e.managerId] || 0) + 1;
+    }
+    for (const s of staff) { s.callsToday = callsBy[s.id] || 0; s.callLeadsToday = leadsBy[s.id]?.size || 0; s.trialsToday = trialsBy[s.id] || 0; }
     kpi.srcTarget = kpi.target; kpi.srcOrganic = kpi.leads - kpi.target;
     kpi.yday = await safe(() => yesterday(db, v.langs, date, minutes, dayStart), null);
     kpi.week = await safe(() => lastWeek(db, v.langs, date, names), null);
@@ -497,9 +504,9 @@ async function daySummaryText(db, now = new Date()) {
     const caller = [...mgr].sort((a, b) => b.callsToday - a.callsToday)[0];
     const medal = ['🥇', '🥈', '🥉'], h = x => String(x || '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
     const lines = [`🏢 <b>Jonli ofis — kun yakuni</b> (${d.date.split('-').reverse().join('.')})`, '',
-        `🟢 Yangi lidlar: <b>${k.leads}</b>`, `📞 Qo'ng'iroqlar: <b>${k.calls}</b>`, `📅 Sinov darslari: <b>${k.trials}</b>`, `💰 Sotuvlar: <b>${k.sales}</b>`];
+        `🟢 Yangi lidlar: <b>${k.leads}</b>`, `📞 Qo'ng'iroqlar: <b>${k.calls}</b>${k.callLeads ? ` (${k.callLeads} ta lidga)` : ''}`, `📅 Sinov darslari: <b>${k.trials}</b>`, `💰 Sotuvlar: <b>${k.sales}</b>`];
     if (k.top.length) { lines.push('', '🏆 <b>Bugungi top sotuvchilar</b>'); k.top.forEach((t, i) => lines.push(`${medal[i]} ${h(t.name)} — ${t.sales} ta sotuv`)); }
-    if (caller && caller.callsToday) lines.push('', `📞 Qo'ng'iroq poygasi g'olibi: <b>${h(caller.name)}</b> (${caller.callsToday} ta)`);
+    if (caller && caller.callsToday) lines.push('', `📞 Qo'ng'iroq poygasi g'olibi: <b>${h(caller.name)}</b> (${caller.callsToday} ta qo'ng'iroq, ${caller.callLeadsToday} ta lidga)`);
     lines.push('', 'Barakalla, jamoa! Ertaga yana zo\'r natija kutamiz 💪', '', '👀 https://myhomework.uz/ofis');
     return { date: d.date, text: lines.join('\n') };
 }

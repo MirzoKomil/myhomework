@@ -207,7 +207,7 @@ function setupLang(d){const b=document.getElementById('langBtn');const can=d.vie
 function ui(){if(!data)return;const k=data.kpi;document.getElementById('clock').textContent=hm(Date.now());
  const v=data.viewer;document.getElementById('annBtn').style.display=ANN_ROLES.includes(v.role)?'':'none';document.getElementById('goalBtn').style.display=GOAL_ROLES.includes(v.role)?'':'none';document.getElementById('who').textContent=(user?.name?user.name+' · ':'')+({full:'toʻliq koʻrinish',sales:'sotuv koʻrinishi',academic:'akademik koʻrinish',team:'jamoa koʻrinishi'}[v.scope]||'');
  const dl=(n,key)=>{const y=k.yday?.[key];if(y==null)return n;const d=n-y;return `${n}<i class="${d>0?'up':d<0?'dn':'eq'}" title="Kecha shu vaqtgacha: ${y}">${d>0?'▲'+d:d<0?'▼'+(-d):'='}</i>`};
- const items=[['Ofisda',k.inOffice+'/'+k.staff],...(k.onLunch?[['Obedda',k.onLunch]]:[]),...(k.stepOut?[['Tashqarida',k.stepOut]]:[]),['Lidlar',dl(k.leads,'leads')],["Qo'ng'iroq",dl(k.calls,'calls')],['Sinov',dl(k.trials,'trials')],['Sotuv',dl(k.sales,'sales')]];
+ const items=[['Ofisda',k.inOffice+'/'+k.staff],...(k.onLunch?[['Obedda',k.onLunch]]:[]),...(k.stepOut?[['Tashqarida',k.stepOut]]:[]),['Lidlar',dl(k.leads,'leads')],["Qo'ng'iroq",dl(k.calls,'calls')+(k.callLeads?`<small class="sub">${k.callLeads} ta lid</small>`:'')],['Sinov',dl(k.trials,'trials')],['Sotuv',dl(k.sales,'sales')]];
  if(v.money)items.push(['Tushum',money(k.money),'money']);
  if(k.plan)items.push(['Oylik reja',k.plan.pct+'%','money']);
  items.push(['Jonli dars',k.live],['Sinovda',k.trialNow],["Bo'sh ustoz",k.freeTeachers],['Ilovada',k.online+" o'q."]);
@@ -408,7 +408,7 @@ function race(d,animate){const l=raceList()[0];if(!l||!l.callsToday)return;if(ra
  raceLeader=l.id}
 function raceUi(){const el=document.getElementById('race');if(!el)return;const L=raceList().filter(s=>s.inOffice||s.callsToday);const mx=Math.max(1,...L.map(s=>s.callsToday||0));
  document.getElementById('raceBox').style.display=L.length?'':'none';
- el.innerHTML=L.map((s,i)=>`<div class="lane"><span class="ln">${i===0&&s.callsToday?'🥇 ':''}${esc(s.name)}</span><div class="trk"><i style="left:${Math.round((s.callsToday||0)/mx*86)}%;background:${people.get('s:'+s.id)?.shirt||'#94A3B8'}">${esc(s.name[0]||'?')}</i><b>🏁</b></div><em>${s.callsToday||0}</em></div>`).join('')}
+ el.innerHTML=L.map((s,i)=>`<div class="lane"><span class="ln">${i===0&&s.callsToday?'🥇 ':''}${esc(s.name)}</span><div class="trk"><i style="left:${Math.round((s.callsToday||0)/mx*86)}%;background:${people.get('s:'+s.id)?.shirt||'#94A3B8'}">${esc(s.name[0]||'?')}</i><b>🏁</b></div><em title="${s.callLeadsToday||0} ta lidga">${s.callsToday||0}</em></div>`).join('')}
 // Sotuv xonasi pastida poyga treki
 function drawRaceTrack(){const L=raceList();if(!L.length)return;const mx=Math.max(1,...L.map(s=>s.callsToday||0)),x0=60,x1=600,y=748;
  ctx.fillStyle='rgba(20,33,61,.82)';rr(x0-44,y-16,x1-x0+90,32,16);ctx.fill();ctx.strokeStyle='rgba(255,255,255,.35)';ctx.setLineDash([6,6]);ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x0,y);ctx.lineTo(x1,y);ctx.stroke();ctx.setLineDash([]);
@@ -594,7 +594,7 @@ let tvRot=0;
 function tvTop(){if(!data)return;const k=data.kpi,M=['🥇','🥈','🥉'],row=(i,n,v)=>`<div class="tr"><b>${M[i]}</b><span>${esc(n)}</span><em>${v}</em></div>`;
  const t=k.top||[],r=raceList().filter(s=>s.callsToday).slice(0,3),w=k.week?.top||[];
  const opts=[t.length&&`<div class="tt">🏆 Bugungi top</div>${t.map((x,i)=>row(i,x.name,x.sales+' ta sotuv')).join('')}`,
-  r.length&&`<div class="tt">🏁 Qo'ng'iroq poygasi</div>${r.map((x,i)=>row(i,x.name,x.callsToday+" ta qo'ng'iroq")).join('')}`,
+  r.length&&`<div class="tt">🏁 Qo'ng'iroq poygasi</div>${r.map((x,i)=>row(i,x.name,x.callsToday+" ta · "+(x.callLeadsToday||0)+' lid')).join('')}`,
   w.length&&`<div class="tt">🏆 O'tgan hafta qahramonlari</div>${w.map((x,i)=>row(i,x.name,x.sales+' ta sotuv')).join('')}`].filter(Boolean);
  if(!opts.length)return;tvShow(opts[tvRot++%opts.length],12)}
 function tvMotto(){if(!data)return;const hr=new Date(Date.now()+5*3600e3).getUTCHours(),k=data.kpi;
