@@ -289,7 +289,7 @@ function drawPerson(p){const moving=p.path.length>0,bob=moving?Math.abs(Math.sin
  if(p.kind==='stud'){ctx.fillStyle='#14213D';rr(x-4,y-17,8,11,2);ctx.fill();ctx.fillStyle='#60A5FA';rr(x-3,y-16,6,8,1);ctx.fill()}}
 function chip(x,y,t,bg,fg){ctx.font='900 15px Nunito';const w=ctx.measureText(t).width+20;ctx.fillStyle=bg;rr(x,y,w,26,13);ctx.fill();ctx.fillStyle=fg;ctx.textAlign='left';ctx.fillText(t,x+10,y+18)}
 const COLS=[['Yangi','#1F4FD8',['yangi-lidlar']],['Urinilmoqda','#F59E0B',['boglanishga-urinilmoqda']],['Sinov','#7C3AED',['sinov-darsida','boglanildi']],['Qaror','#0EA5E9',['qaror-jarayonida','keyin-sotib-olmoqchi']],["To'lov",'#16A34A',['tolov-jarayonida','tolov-yopildi']],['Sifatsiz','#94A3B8',['sifatsiz-lidlar','muvaffaqiyatsiz-sotuv']]];
-let IMG=new Image();IMG.src='/ofis/office.webp';
+let IMG=new Image();IMG.src='/ofis/office.webp?v=20261116'; // rasm almashtirilsa versiyani oshiring (brauzer 4 soat keshlaydi)
 function render(){
  ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#E9DCC7';ctx.fillRect(0,0,cw,ch);
  ctx.save();ctx.scale(cam.s,cam.s);ctx.translate(-cam.x,-cam.y);
