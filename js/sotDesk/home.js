@@ -44,9 +44,17 @@
     function staleHtml() {
         const SL = window.staleLeads; if (!SL?.compute) return '';
         let d; try { d = SL.compute(); } catch (e) { return ''; }
-        const list = d.warn.concat(d.lock); if (!list.length) return '';
+        const isNew = l => !!SL.isNew?.(l);
+        const newL = (d.warnNew || []).concat(d.lock.filter(isNew));
+        let nb = '';
+        if (newL.length) {
+            const lockN = d.lock.filter(isNew).length, left = Math.min(...newL.map(l => SL.newState(l)?.left ?? Infinity));
+            const nn = newL.slice(0, 3).map(l => l.name || 'Lid').join(', ') + (newL.length > 3 ? ` va yana ${newL.length - 3} ta` : '');
+            nb = `<div class="sdh-stale" role="status"><span class="sdh-stale-i" aria-hidden="true">⏳</span><span class="sdh-stale-t"><b>${newL.length} ta yangi lid ${d.rule.newWarnHours} ish soatidan beri “Yangi”da:</b> ${esc(nn)}. ${lockN ? 'Ilova qulflandi — qoʻngʻiroq qilib, natijasini belgilang.' : `${esc(SL.hoursTxt(left))} ish vaqtidan keyin ilova qulflanadi.`}</span><button type="button" class="sd-btn2" data-sdh-go="new">Lidlarga</button></div>`;
+        }
+        const list = d.warn.concat(d.lock.filter(l => !isNew(l))); if (!list.length) return nb;
         const names = list.slice(0, 3).map(l => `${l.name || 'Lid'} (${SL.ageDays(l)} kun)`).join(', ') + (list.length > 3 ? ` va yana ${list.length - 3} ta` : '');
-        return `<div class="sdh-stale" role="status"><span class="sdh-stale-i" aria-hidden="true">⏳</span><span class="sdh-stale-t"><b>${list.length} ta lid ${d.rule.warnDays} kundan ortiq “Urinilmoqda”da:</b> ${esc(names)}. ${d.lock.length ? 'Baʼzilarini hoziroq “Sifatsiz”ga oʻtkazish shart.' : 'Qotgan lidlar qoidasiga koʻra qoʻngʻiroq qiling yoki natijasini yozing.'}</span><button type="button" class="sd-btn2" data-sdh-go="stale">Lidlarga</button></div>`;
+        return `<div class="sdh-stale" role="status"><span class="sdh-stale-i" aria-hidden="true">⏳</span><span class="sdh-stale-t"><b>${list.length} ta lid ${d.rule.warnDays} kundan ortiq “Urinilmoqda”da:</b> ${esc(names)}. ${d.lock.length ? 'Baʼzilarini hoziroq “Sifatsiz”ga oʻtkazish shart.' : 'Qotgan lidlar qoidasiga koʻra qoʻngʻiroq qiling yoki natijasini yozing.'}</span><button type="button" class="sd-btn2" data-sdh-go="stale">Lidlarga</button></div>` + nb;
     }
     function todayHtml(d) {
         const leads = LEADS(), now = new Date();
@@ -76,6 +84,7 @@
         if (k === 'trial') { document.querySelector('#sidebarMenu [data-rk="trial"]')?.click(); return; }
         document.querySelector('#sidebarMenu [data-rk="leads"]')?.click();
         if (k === 'stale') setTimeout(() => window.ropDesk?.leads?.showStale?.(), 60);
+        if (k === 'new') setTimeout(() => window.ropDesk?.leads?.showStale?.(true), 60);
         if (k === 'pay') setTimeout(() => document.querySelector('#leadsKanban .lead-column[data-status="tolov-jarayonida"]')?.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' }), 80);
     }
 
