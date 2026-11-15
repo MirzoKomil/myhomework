@@ -27,5 +27,7 @@ module.exports = ({ pool, authRequired }) => {
     // Personaj: har xodim o'zinikini tanlaydi.
     router.get('/look', authRequired, handle(req => svc().myLook(pool, req.user)));
     router.put('/look', authRequired, express.json(), handle(req => svc().saveLook(pool, req.user, req.body || {})));
+    // Kunlik jamoa maqsadi (son bilan): rahbar / ROP qo'yadi.
+    router.post('/goal', authRequired, express.json(), handle(req => svc().setGoal(pool, req.user, req.body || {})));
     return router;
 };
