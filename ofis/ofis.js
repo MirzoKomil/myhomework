@@ -202,7 +202,8 @@ async function load(){
  else{applySnapshot(d,true);handleEvents(d.events,true)}}
 function setLive(ok){document.getElementById('dot').classList.toggle('off',!ok)}
 let pollT=null;function startPoll(){clearInterval(pollT);load();pollT=setInterval(load,10000)}
-function setupLang(d){const b=document.getElementById('langBtn');const can=d.viewer.scope==='full'||(d.viewer.langs==null&&d.viewer.scope!=='team');if(!can)return;
+function setupLang(d){return; // Jonli ofis faqat Domwork (rus) — til tanlash yo'q
+ const b=document.getElementById('langBtn');const can=d.viewer.scope==='full'||(d.viewer.langs==null&&d.viewer.scope!=='team');if(!can)return;
  b.style.display='';const lab=()=>b.textContent=langSel==='russian'?'🇷🇺 Rus':langSel==='english'?'🇬🇧 Ingliz':'🌐 Ikkala til';lab();
  b.onclick=()=>{langSel=langSel==null?'russian':langSel==='russian'?'english':null;lab();cursor=null;firstLoad=true;for(const k of [...people.keys()])people.delete(k);load()}}
 
