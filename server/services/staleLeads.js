@@ -2,7 +2,10 @@
 // "Qotib qolgan lidlar" qoidasi: "Bog'lanishga urinilmoqda"da turib, bir marta ham bog'lanilmagan lidlar.
 // warnDays — ogohlantirish, lockDays — sotuv menejerining ishi shu lidlar hal bo'lguncha qulflanadi (klientda).
 // Server: qoida sozlamasi (til bo'yicha) va "qo'ng'iroq qilmasdan Sifatsizga o'tkazib bo'lmaydi" tekshiruvi.
-const DEFAULT_RULE = Object.freeze({ warnDays: 3, lockDays: 5, callsPerDay: 30 });
+// Yangi lidlar (16-noy): "Yangi" ustunida menejerga berilib, boshqa ustunga o'tkazilmagan lid — faqat ish vaqtidagi
+// (workStart–workEnd, Toshkent) soatlar sanaladi: newWarnHours — ogohlantirish, newLockHours — qulf.
+// newSince — qoida birinchi ishga tushgan payt: undan oldin berilgan lidlar uchun soat shu paytdan sanaladi.
+const DEFAULT_RULE = Object.freeze({ warnDays: 3, lockDays: 5, callsPerDay: 30, newWarnHours: 8, newLockHours: 12, workStart: 10, workEnd: 20 });
 const KEY = 'staleLeadRule';
 const CALL_EVIDENCE_TYPES = new Set(['call-attempt', 'contact-fail']);
 const CALL_WINDOW_MS = 24 * 60 * 60 * 1000;
@@ -15,17 +18,54 @@ function cleanRule(r) {
     if (lockDays <= warnDays) lockDays = warnDays + 1;
     const c = Math.round(Number(r?.callsPerDay));
     const callsPerDay = Number.isFinite(c) && c >= 1 && c <= 300 ? c : DEFAULT_RULE.callsPerDay;
-    return { warnDays, lockDays, callsPerDay };
+    const nw = Math.round(Number(r?.newWarnHours)), nl = Math.round(Number(r?.newLockHours));
+    const newWarnHours = Number.isFinite(nw) && nw >= 1 && nw <= 47 ? nw : DEFAULT_RULE.newWarnHours;
+    let newLockHours = Number.isFinite(nl) && nl >= 2 && nl <= 48 ? nl : DEFAULT_RULE.newLockHours;
+    if (newLockHours <= newWarnHours) newLockHours = newWarnHours + 1;
+    const ws = Math.round(Number(r?.workStart)), we = Math.round(Number(r?.workEnd));
+    let workStart = Number.isFinite(ws) && ws >= 0 && ws <= 22 ? ws : DEFAULT_RULE.workStart;
+    let workEnd = Number.isFinite(we) && we >= 1 && we <= 24 ? we : DEFAULT_RULE.workEnd;
+    if (workEnd <= workStart) { workStart = DEFAULT_RULE.workStart; workEnd = DEFAULT_RULE.workEnd; }
+    return { warnDays, lockDays, callsPerDay, newWarnHours, newLockHours, workStart, workEnd };
+}
+
+// Ish vaqtidagi millisekundlar (Toshkent UTC+5, yozgi vaqt yo'q). js/staleLeads.js workMs bilan bir xil.
+const HOUR_MS = 60 * 60 * 1000, TZ_OFF_MS = 5 * HOUR_MS;
+function workMs(from, to, rule) {
+    if (!(to > from)) return 0;
+    const r = rule || DEFAULT_RULE, D = 24 * HOUR_MS;
+    let total = 0;
+    for (let day = Math.floor((from + TZ_OFF_MS) / D) * D - TZ_OFF_MS, n = 0; day < to && n < 400; day += D, n++) {
+        const a = Math.max(from, day + r.workStart * HOUR_MS), b = Math.min(to, day + r.workEnd * HOUR_MS);
+        if (b > a) total += b - a;
+    }
+    return total;
+}
+// "Yangi" lid holati: null — qoida tegishli emas; { k: 'ok'|'warn'|'lock', ms, left }.
+function newLeadState(lead, rule, newSince, now = Date.now()) {
+    const since = ts(newSince);
+    if (!since || !lead || !lead.managerId || String(lead.status || '') !== 'yangi-lidlar') return null;
+    const a = ts(lead.managerAssignedAt) || ts(lead.createdAt);
+    if (!a) return null;
+    const r = rule || DEFAULT_RULE, ms = workMs(Math.max(a, since), now, r), lockMs = r.newLockHours * HOUR_MS;
+    return { k: ms >= lockMs ? 'lock' : ms >= r.newWarnHours * HOUR_MS ? 'warn' : 'ok', ms, left: Math.max(0, lockMs - ms) };
 }
 
 async function getRules(pool) {
     const row = (await pool.query('SELECT data FROM json_data WHERE key = $1', [KEY])).rows[0];
     const d = row?.data && typeof row.data === 'object' ? row.data : {};
-    return { english: cleanRule(d.english), russian: cleanRule(d.russian) };
+    let newSince = ts(d.newSince) ? new Date(ts(d.newSince)).toISOString() : '';
+    if (!newSince) {
+        // Yangi lidlar qoidasi birinchi marta: ishga tushgan payt saqlanadi (eski lidlar birdaniga qulflamasin).
+        newSince = new Date().toISOString();
+        await pool.query(`INSERT INTO json_data (key, data) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET data = EXCLUDED.data`,
+            [KEY, JSON.stringify({ ...d, newSince })]);
+    }
+    return { english: cleanRule(d.english), russian: cleanRule(d.russian), newSince };
 }
 
 async function saveRules(pool, patch, langs) {
-    const current = await getRules(pool);
+    const current = await getRules(pool); // newSince ham saqlanib qoladi
     for (const lang of ['english', 'russian']) {
         if (!patch?.[lang]) continue;
         if (langs && !langs.includes(lang)) continue; // ROP faqat o'z tili
@@ -94,5 +134,5 @@ function assertCallbackRules(existing, incoming, role, now = Date.now()) {
     }
 }
 
-module.exports = { DEFAULT_RULE, cleanRule, getRules, saveRules, hasRecentCall, stampCallEvidence, assertCallBeforeSifatsiz,
+module.exports = { DEFAULT_RULE, cleanRule, workMs, newLeadState, getRules, saveRules, hasRecentCall, stampCallEvidence, assertCallBeforeSifatsiz,
     CALLBACK_MAX, CALLBACK_MAX_DAYS, CALLBACK_GRACE_MS, callbacksOf, callbackState, assertCallbackRules };

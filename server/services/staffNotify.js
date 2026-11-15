@@ -509,6 +509,19 @@ async function salesLeadEvents(db, me, now, ev) {
         // Telefonni olib, keyinroq gaplashishni so'ragan: kunlar sanalmaydi; kelishilgan vaqt o'tib ketgan bo'lsa — qulf.
         const cbState = (status === 'yangi-lidlar' || status === 'boglanishga-urinilmoqda') ? require('./staleLeads').callbackState({ comments }, t0) : null;
         if (cbState) { if (cbState === 'overdue') stale.lock++; continue; }
+        // Yangi lid: 8 ish soatida ogohlantirish, 12 ish soatida qulf (js/staleLeads.js bilan bir xil hisob).
+        if (status === 'yangi-lidlar') {
+            const rl = rules?.[(r.language || me.lang) === 'english' ? 'english' : 'russian'];
+            const ns = rl ? require('./staleLeads').newLeadState({ status, managerId: me.managerId, managerAssignedAt: x.managerAssignedAt, createdAt: r.created_at }, rl, rules.newSince, t0) : null;
+            const nm = String(r.name || 'Mijoz').trim();
+            if (ns?.k === 'lock')
+                ev.push({ id: `nlk:${r.id}:${assigned}`, type: 'lead_stale', cat: 'lid', tone: 'bad', pushOnly: true, title: 'Yangi lid sabab ilova qulflandi',
+                    sub: `${nm} · ${rl.newLockHours} ish soatidan beri “Yangi”da — qo'ng'iroq qilib, natijasini belgilang`, at: iso(t0), go: { tab: 'sales', leadId: r.id } });
+            else if (ns?.k === 'warn')
+                ev.push({ id: `nlw:${r.id}:${assigned}`, type: 'lead_stale', cat: 'lid', tone: 'warn', pushOnly: true, title: `Yangi lid: ${Math.max(1, Math.ceil(ns.left / 3600000))} ish soatidan keyin qulf`,
+                    sub: `${nm} · hozir qo'ng'iroq qiling`, at: iso(t0), go: { tab: 'sales', leadId: r.id } });
+            continue;
+        }
         if (status !== 'boglanishga-urinilmoqda') continue;
         const hist = Array.isArray(x.stageHistory) ? x.stageHistory : [];
         if (hist.some(h => h && STALE_AFTER.has(h.to)) || (x.connectedSurvey && Object.keys(x.connectedSurvey).length)) continue;
