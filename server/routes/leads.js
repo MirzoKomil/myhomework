@@ -244,8 +244,12 @@ router.patch('/:id', authRequired, leadMutationRequired, leadOwnershipRequired, 
         if (req.user.role === 'sales_manager' && Array.isArray(lead.comments) && lead.comments.some(c => c && c.type === 'follow-up-reminder' && c.callback)) {
             staleLeads.assertCallbackRules(await getLeadById(req.params.id), lead, req.user.role);
         }
+        // Avtomatik SMS uchun saqlashdan OLDINGI holat (bosqich/sinov vaqti o'zgardimi).
+        const prevLead = await getLeadById(req.params.id).catch(() => null);
         const { lead: saved, platformAccess } = await upsertLead({ ...lead, id: req.params.id }, language, req.user);
         res.json({ ok: true, lead: saved, platformAccess });
+        // 15-noy: bosqich SMS'lari endi serverda (ilgari brauzerda edi — sahifa yopilsa ketmay qolardi).
+        require('../services/leadStageSms').onLeadSaved(prevLead, saved, platformAccess, { skip: req.body?.skipAutoSms === true });
         // Har bir saqlashda yuboriladi (faqat status o'zgarganda emas) —
         // CAPI.uz bir xil externalId+stage takrorlansa ham xato bermaydi
         // (hujjatga qarang), shuning uchun bu yerda soddalik uchun har
