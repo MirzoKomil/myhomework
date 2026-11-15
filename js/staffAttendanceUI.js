@@ -24,6 +24,8 @@
     const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const user = () => { try { return typeof getCurrentUser === 'function' ? getCurrentUser() : null; } catch { return null; } };
     const canManage = () => MANAGE.has(user()?.role);
+    // Davomat so'rovlarini (ROP, HR, akademik rahbar va boshqalarniki) direktor hal qiladi — server canDecide bilan bir xil.
+    const canDecide = () => ['admin', 'boshliq'].includes(user()?.role);
     const pill = (map, key, extra = '') => { const [label, tone] = map[key] || [key || '—', 'idle']; return `<span class="satt-pill satt-${tone}">${esc(label)}${extra}</span>`; };
     const tashkentToday = () => new Date(Date.now() + 5 * 3600000).toISOString().slice(0, 10);
     const api = (path, body, method) => apiFetch(API + path, body !== undefined
@@ -305,7 +307,7 @@
 
     // ── HR → Davomat ─────────────────────────────────────────────────────────
     const hrState = { section: 'bugun', date: tashkentToday(), month: tashkentToday().slice(0, 7), lessonDate: tashkentToday(), employees: null, settings: null };
-    const SECTIONS = [['bugun', 'Bugun'], ['oylik', 'Oylik hisobot'], ['ustozlar', 'Ustozlar darsi'], ['xodimlar', 'Xodimlar va grafik'], ['sozlamalar', 'Sozlamalar']];
+    const SECTIONS = [['bugun', 'Bugun'], ['sorovlar', 'So‘rovlar'], ['oylik', 'Oylik hisobot'], ['ustozlar', 'Ustozlar darsi'], ['xodimlar', 'Xodimlar va grafik'], ['sozlamalar', 'Sozlamalar']];
 
     function renderHr() {
         const panel = document.getElementById('hrPanel-davomat');
@@ -324,7 +326,7 @@
         document.querySelectorAll('#hrPanel-davomat [data-satt-section]').forEach(b => {
             const on = b.dataset.sattSection === hrState.section;
             b.classList.toggle('active', on); b.setAttribute('aria-selected', on ? 'true' : 'false');
-            b.hidden = b.dataset.sattSection === 'sozlamalar' && !canManage();
+            b.hidden = (b.dataset.sattSection === 'sozlamalar' && !canManage()) || (b.dataset.sattSection === 'sorovlar' && !canDecide());
         });
     }
     async function renderHrSection() {
@@ -334,6 +336,7 @@
         body.innerHTML = '<div class="satt-loading"><span class="satt-spinner"></span>Yuklanmoqda…</div>';
         try {
             if (hrState.section === 'bugun') await renderDaily(body);
+            else if (hrState.section === 'sorovlar') await renderRequests(body);
             else if (hrState.section === 'oylik') await renderMonthly(body);
             else if (hrState.section === 'ustozlar') await renderLessons(body);
             else if (hrState.section === 'xodimlar') await renderEmployees(body);
@@ -385,6 +388,47 @@
         return `<span class="satt-pill satt-${tone}">${label}${extra}</span>${r.unverifiedReturn ? '<div class="satt-warn-text satt-small">qaytish tasdiqlanmagan</div>' : ''}`;
     }
     const KIND_TEXT = { in: 'kelish', out: 'ketish', break_out: 'chiqish', break_in: 'qaytish' };
+
+    // So'rovlar (dizayn OBD_K_sorov / OBD_K_rad): telefondagi "Davomat so'rovlari" bilan bir xil API va qoidalar.
+    const REJ = ['Bugun ish ko‘p', 'Oldindan aytilmadi', 'Boshqa'];
+    async function renderRequests(body) {
+        const tab = hrState.reqTab || 'pending';
+        const data = await api(`/requests?tab=${tab}`);
+        const rows = data.rows || [];
+        const when = r => `${esc(r.day)}${r.time ? ' ' + esc(r.time) + (r.until ? '–' + esc(r.until) : '') : ''}`;
+        body.innerHTML = `<div class="satt-toolbar"><div class="satt-seg">${[['pending', `Kutilmoqda${data.pending != null ? ' · ' + data.pending : ''}`], ['history', 'Tarix']].map(([k, l]) => `<button type="button" class="btn-secondary-sm${tab === k ? ' active' : ''}" data-satt-rtab="${k}" aria-pressed="${tab === k}">${l}</button>`).join(' ')}</div>
+            <button type="button" class="btn-secondary-sm" data-satt-refresh>Yangilash</button></div>
+            ${rows.length ? `<div class="satt-table-wrap"><table class="satt-table"><thead><tr><th>Xodim</th><th>Turi</th><th>Qachon</th><th>Sabab</th><th>${tab === 'pending' ? 'Yuborildi' : 'Qaror'}</th><th></th></tr></thead><tbody>
+            ${rows.map(r => `<tr><td class="satt-name"><b>${esc(r.name)}</b><div class="satt-muted satt-small">${esc(r.role)} · ${esc(r.approverRole)} tasdiqlaydi</div></td>
+                <td><span class="satt-pill satt-info">${esc(r.typeLabel)}</span></td><td class="satt-num">${when(r)}</td>
+                <td>${esc(r.reason)}${r.comment ? `<div class="satt-muted satt-small">«${esc(r.comment)}»</div>` : ''}</td>
+                <td>${tab === 'pending' ? esc(r.createdClock) : `${pill({ approved: ['Tasdiqlandi', 'ok'], rejected: ['Rad etildi', 'bad'] }, r.state)}<div class="satt-muted satt-small">${esc(r.decidedBy)}${r.decisionReason ? ' · ' + esc(r.decisionReason) : ''}</div>`}</td>
+                <td class="satt-actions">${tab === 'pending' ? `<button type="button" class="btn-secondary-sm" data-satt-rrej="${esc(r.id)}">Rad etish</button> <button type="button" class="btn-primary-sm" data-satt-rok="${esc(r.id)}">Tasdiqlash</button>` : ''}</td></tr>`).join('')}
+            </tbody></table></div>` : `<div class="satt-empty"><h4>${tab === 'pending' ? 'Kutayotgan so‘rov yo‘q' : 'Tarix bo‘sh'}</h4><p>Yangi so‘rov kelsa Telegram bot va bildirishnoma orqali ham xabar beriladi.</p></div>`}
+            <p class="satt-muted satt-small">Telefondagi «Davomat so‘rovlari» bilan bir xil: sotuv menejerlarini ROP, yordamchilarni akademik rahbar, ROP/HR/akademik rahbarni direktor tasdiqlaydi; direktor hammasini hal qila oladi.</p>`;
+        body.querySelectorAll('[data-satt-rtab]').forEach(b => { b.onclick = () => { hrState.reqTab = b.dataset.sattRtab; renderHrSection(); }; });
+        body.querySelector('[data-satt-refresh]').onclick = renderHrSection;
+        const decide = async (id, decision, reason, btn, msgEl) => {
+            btn.disabled = true;
+            try { await api(`/requests/${encodeURIComponent(id)}/decide`, { decision, reason }); closeSheet(); renderHrSection(); }
+            catch (err) { btn.disabled = false; if (msgEl) msgEl.textContent = err.message; else alertMsg(err.message); }
+        };
+        body.querySelectorAll('[data-satt-rok]').forEach(b => { b.onclick = () => decide(b.dataset.sattRok, 'approve', '', b); });
+        body.querySelectorAll('[data-satt-rrej]').forEach(b => { b.onclick = () => {
+            const r = rows.find(x => x.id === b.dataset.sattRrej); if (!r) return;
+            const sheet = openSheet(`Rad etish · ${r.name}`, `<form class="satt-override" data-satt-rjform><p class="satt-muted">${esc(r.typeLabel)} · ${when(r)} · ${esc(r.reason)}</p>
+                <div class="satt-row">${REJ.map((x, i) => `<label><input type="radio" name="rj" value="${esc(x)}" ${i === 0 ? 'checked' : ''}> ${esc(x)}</label>`).join(' ')}</div>
+                <div class="satt-row"><input class="form-control-sm" name="reason" maxlength="120" value="${esc(REJ[0])}" required placeholder="Sabab (majburiy)" style="flex:1"></div>
+                <p class="satt-form-msg" role="status"></p>
+                <div class="satt-row satt-end"><button type="button" class="btn-secondary-sm" data-cancel>Bekor qilish</button><button type="submit" class="btn-primary-sm">Rad etish</button></div>
+                <p class="satt-muted satt-small">Sababsiz rad etib bo‘lmaydi. Xodimga push va Telegram orqali boradi.</p></form>`);
+            const f = sheet.querySelector('[data-satt-rjform]');
+            f.querySelectorAll('input[name=rj]').forEach(x => { x.onchange = () => { f.reason.value = x.value === 'Boshqa' ? '' : x.value; f.reason.focus(); }; });
+            f.querySelector('[data-cancel]').onclick = closeSheet;
+            f.onsubmit = e => { e.preventDefault(); const v = f.reason.value.trim(); const msg = f.querySelector('.satt-form-msg'); if (!v) { msg.textContent = 'Sababni yozing'; return; } decide(r.id, 'reject', v, f.querySelector('button[type=submit]'), msg); };
+        }; });
+    }
+    const alertMsg = m => { const b = hrBody(); if (b) b.insertAdjacentHTML('afterbegin', `<div class="satt-error">${esc(m)}</div>`); };
 
     function emptyState(title, text, go) {
         return `<div class="satt-empty"><h4>${esc(title)}</h4><p>${esc(text)}</p>${go && canManage() ? `<button type="button" class="btn-primary-sm" data-satt-go="${go}">Xodimlar va grafik</button>` : ''}</div>`;

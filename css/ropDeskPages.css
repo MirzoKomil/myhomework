@@ -288,3 +288,24 @@ body:is(.rop-desk-v2, .sot-desk-v2) .rdp-ell { white-space: nowrap; overflow: hi
 body:is(.rop-desk-v2, .sot-desk-v2) .rdp-pill--grn { background: var(--rdp-grn-50); color: var(--rdp-grn); }
 body:is(.rop-desk-v2, .sot-desk-v2) .rdp-hist em { font-style: normal; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 @media (max-width: 1280px) { body:is(.rop-desk-v2, .sot-desk-v2) .rdp-sms { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } body:is(.rop-desk-v2, .sot-desk-v2) .rdp-sms-c3 { grid-column: 1 / -1; } }
+
+/* Davomat (15-noy, OBD_K_rop): jadval + o'ng tomonda so'rovlar, modal */
+body.rop-desk-v2 .rdp-dv-grid { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 16px; align-items: start; }
+body.rop-desk-v2 .rdp-dv-tbl { width: 100%; border-collapse: collapse; font-size: 13px; color: var(--rdp-tx); }
+body.rop-desk-v2 .rdp-dv-tbl th { text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--rdp-mt); padding: 8px 10px; border-bottom: 1px solid var(--rdp-bd); white-space: nowrap; }
+body.rop-desk-v2 .rdp-dv-tbl td { padding: 10px; border-bottom: 1px solid var(--rdp-bd); vertical-align: middle; }
+body.rop-desk-v2 .rdp-dv-tbl tr:last-child td { border-bottom: 0; }
+body.rop-desk-v2 .rdp-who { display: inline-flex; align-items: center; gap: 8px; }
+body.rop-desk-v2 .rdp-dv-req { border-top: 1px solid var(--rdp-bd); padding: 12px 0; display: flex; flex-direction: column; gap: 6px; }
+body.rop-desk-v2 .rdp-dv-req-h { display: flex; align-items: center; gap: 10px; }
+body.rop-desk-v2 .rdp-dv-req-h span { display: flex; flex-direction: column; }
+body.rop-desk-v2 .rdp-dv-req-h small { color: var(--rdp-mt); font-size: 12px; }
+body.rop-desk-v2 .rdp-dv-req p { margin: 0; font-size: 13px; color: var(--rdp-tx); }
+body.rop-desk-v2 .rdp-dv-req-a { display: flex; gap: 8px; justify-content: flex-end; }
+body.rop-desk-v2 .rdp-dv-modal { position: fixed; inset: 0; z-index: 1000; background: rgba(11, 18, 32, .55); display: flex; align-items: center; justify-content: center; padding: 24px; }
+body.rop-desk-v2 .rdp-dv-box { background: var(--rdp-card); color: var(--rdp-tx); border-radius: 20px; padding: 22px; width: min(520px, 100%); max-height: 86vh; overflow: auto; display: flex; flex-direction: column; gap: 12px; }
+body.rop-desk-v2 .rdp-dv-ev { display: flex; gap: 12px; align-items: baseline; padding: 8px 0; border-top: 1px solid var(--rdp-bd); font-size: 14px; }
+body.rop-desk-v2 .rdp-dv-ev b { width: 48px; font-variant-numeric: tabular-nums; }
+body.rop-desk-v2 .rdp-dv-ev span { flex: 1; }
+body.rop-desk-v2 .rdp-btn.rdp-dv-dan { background: var(--rdp-red); border-color: var(--rdp-red); color: #FFFFFF; }
+@media (max-width: 1200px) { body.rop-desk-v2 .rdp-dv-grid { grid-template-columns: 1fr; } }

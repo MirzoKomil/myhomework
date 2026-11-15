@@ -51,7 +51,7 @@
     };
     // B qismi (js/ropDesk/pages-common.js): window.ropDeskPages.open(key) — check, sla, lock, arch, funnel, rating,
     // plan, debt, script, sms, stu, tg. Bo'lmasa (B fayllari yuklanmagan) — quyidagi mavjud joylar ochiladi.
-    const B_KEYS = new Set(['check', 'sla', 'lock', 'arch', 'funnel', 'rating', 'plan', 'debt', 'script', 'sms', 'stu', 'tg']);
+    const B_KEYS = new Set(['check', 'sla', 'lock', 'arch', 'funnel', 'rating', 'plan', 'debt', 'script', 'sms', 'stu', 'tg', 'davomat']);
     const viaB = k => { if (!B_KEYS.has(k) || typeof window.ropDeskPages?.open !== 'function') return false; activePage = null; let ok = false; try { ok = window.ropDeskPages.open(k) !== false; } catch (e) { console.warn('[ropDesk] ropDeskPages.open', e.message); } if (ok) mark(); return ok; };
     // Sotuv menejeri: window.sotDeskPages.open(key) — debt, plan, rating, script, funnel, sms, stu, book; bo'lmasa mavjud tablar.
     const SOT_B = new Set(['debt', 'plan', 'rating', 'script', 'funnel', 'sms', 'stu', 'book']);
@@ -104,7 +104,7 @@
         'm-target': () => { if (typeof _tabContext !== 'undefined') _tabContext.marketingSection = 'target'; tab('marketing'); g('switchMarketingSection') && switchMarketingSection('target'); mark(); }
     };
     // ROP menyusi admin kabi sodda: 6 ta bo'lim. Qolgan sahifalar yo'qolmagan — bo'lim ichidagi tablarda (SUB).
-    const NAV = [['home', 'Bosh sahifa', 'home'], ['leads', 'Sotuv boʻlimi', 'leads'], ['m-target', 'Marketing', 'sms'], ['stu', 'Oʻquvchilar', 'stu'], ['cal', 'Dars jadvali', 'cal'], ['trial', 'Sinov nazorati', 'trial']];
+    const NAV = [['home', 'Bosh sahifa', 'home'], ['leads', 'Sotuv boʻlimi', 'leads'], ['m-target', 'Marketing', 'sms'], ['stu', 'Oʻquvchilar', 'stu'], ['cal', 'Dars jadvali', 'cal'], ['trial', 'Sinov nazorati', 'trial'], ['davomat', 'Davomat', 'clock', 'Davomat: kim ofisda, obedda, tashqarida va soʻrovlar']];
     const SUB = [
         { nav: 'leads', items: [['leads', 'Lidlar'], ['funnel', 'Statistika'], ['rating', 'Reyting va bonus'], ['plan', 'Sotuv rejasi'], ['debt', 'Qarzdorlar'], ['script', 'Skript va yoʻriqnoma'], ['book', 'Kitob yetkazish'], ['sla', 'SLA'], ['lock', 'Qotgan lidlar qoidasi'], ['arch', 'Arxiv']] },
         { nav: 'm-target', items: [['m-target', 'Target lidlar'], ['sms', 'SMS yuborish']] },

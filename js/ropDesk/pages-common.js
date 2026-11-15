@@ -25,7 +25,7 @@
         check: ['school-approvals'], sla: ['rdp-sla'], lock: ['rdp-stale'], arch: ['rdp-archive'],
         funnel: ['sales', { salesSection: 'sales-stats' }], rating: ['sales', { salesSection: 'rating' }],
         plan: ['sales', { salesSection: 'sales-plan' }], debt: ['sales', { salesSection: 'debtors' }],
-        script: ['sales', { salesSection: 'scripts' }], sms: ['rdp-sms'], stu: ['students'], tg: ['school-groups']
+        script: ['sales', { salesSection: 'scripts' }], sms: ['rdp-sms'], stu: ['students'], tg: ['school-groups'], davomat: ['rdp-davomat']
     };
     // Sotuv menejeri (window.sotDeskPages): debt, plan, rating, script, funnel (Statistika), sms, stu, book.
     // SMS — o'z bo'limi (tab-rdp-sms, ROP bilan bitta konteyner; chizuvchi rolga qarab tanlanadi).
@@ -36,7 +36,7 @@
     };
     const ROUTES = ROUTES_ROP; // eski nom (pages-*.js)
     const routes = () => (isSotDesk() ? ROUTES_SOT : ROUTES_ROP);
-    const OWN_TABS = ['rdp-sla', 'rdp-stale', 'rdp-sms', 'rdp-archive'];
+    const OWN_TABS = ['rdp-sla', 'rdp-stale', 'rdp-sms', 'rdp-archive', 'rdp-davomat'];
     const PAGES = {}; // ROP: key → { tab, section?, title, sub?, head?, render?(host), after?() }
     const SOT_PAGES = {}; // sotuv menejeri: xuddi shu shakl (registerSot)
     const pages = () => (isSotDesk() ? SOT_PAGES : PAGES);
