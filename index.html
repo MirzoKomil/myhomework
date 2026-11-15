@@ -29,7 +29,7 @@
     <link rel="stylesheet" href="css/domworkGroups.css?v=20261029act">
     <link rel="stylesheet" href="css/shell.css?v=20261028b">
     <link rel="stylesheet" href="css/teamApp.css?v=20261115f">
-    <link rel="stylesheet" href="css/finance.css?v=20261112a">
+    <link rel="stylesheet" href="css/finance.css?v=20261115v">
     <link rel="stylesheet" href="css/archive.css?v=20261026arx1">
     <link rel="stylesheet" href="css/lessonHub.css?v=20261029a5">
     <link rel="stylesheet" href="css/whiteboard.css?v=20261029b4">
@@ -1025,20 +1025,24 @@
                     <!-- HR Bo'limi -->
                     <!-- Moliya bo'limi -->
                     <section id="tab-finance" class="tab-content">
+                        <!-- Telefon sarlavhasi (D dizayn, T_*): davr/til tanlagich, sarlavha, "+ To'lov" -->
+                        <div class="fin-phead" data-fin-phead>
+                            <button type="button" class="fin-pperiod" data-fin-period-open aria-haspopup="dialog"><span data-fin-period-label>Bu oy</span> ▾ · <span data-fin-lang-label>EN</span></button>
+                            <div class="fin-ptitle"><div class="fin-ph1" role="heading" aria-level="1">Moliya</div><button type="button" class="fin-pbtn" data-fin-ptolov><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Toʻlov</button></div>
+                        </div>
                         <div class="sales-pinned">
                             <div class="sales-header-layout">
                                 <nav class="section-nav sales-header-nav" id="financeSectionNav" aria-label="Moliya Bo'limi">
                                     <button type="button" class="section-nav-item active" data-finance-section="umumiy">Umumiy</button>
                                     <button type="button" class="section-nav-item" data-finance-section="tolovlar">Toʻlovlar</button>
-                                    <button type="button" class="section-nav-item" data-finance-section="kassa">Kassa</button>
-                                    <button type="button" class="section-nav-item" data-finance-section="operatsiyalar">Operatsiyalar</button>
-                                    <button type="button" class="section-nav-item" data-finance-section="qarzlar">Qarzlar</button>
-                                    <button type="button" class="section-nav-item" data-finance-section="hisobotlar">Hisobotlar</button>
-                                    <button type="button" class="section-nav-item" data-finance-section="solishtirish">Solishtirish va audit</button>
-                                    <button type="button" class="section-nav-item" data-finance-section="maoshlar">Maoshlar</button>
-                                    <button type="button" class="section-nav-item" data-finance-section="kpi">KPI</button>
-                                    <button type="button" class="section-nav-item" data-finance-section="jarimalar">Jarimalar</button>
-                                    <button type="button" class="section-nav-item" data-finance-section="moliya-sozlamalar">Sozlamalar</button>
+                                    <button type="button" class="section-nav-item" data-finance-section="maoshlar" data-fin-phone-more>Maoshlar</button>
+                                    <button type="button" class="section-nav-item" data-finance-section="kpi" data-fin-phone-more>KPI</button>
+                                    <button type="button" class="section-nav-item" data-finance-section="jarimalar" data-fin-phone-more>Jarimalar</button>
+                                    <button type="button" class="section-nav-item" data-finance-section="batafsil" data-fin-phone-more>Batafsil</button>
+                                    <button type="button" class="section-nav-item" data-finance-section="investor" data-fin-phone-more>Investor</button>
+                                    <button type="button" class="section-nav-item" data-finance-section="muammolar">Muammolar<span class="fin-nav-cnt" data-fin-problem-count hidden></span></button>
+                                    <span class="fin-nav-more"><button type="button" class="section-nav-item" data-fin-more-toggle aria-expanded="false" aria-haspopup="true">Koʻproq</button>
+                                        <span class="fin-more-menu" data-fin-more-menu hidden role="dialog" aria-label="Koʻproq"><span class="fin-sheet-h"><b>Koʻproq</b><button type="button" class="fin-sheet-x" data-fin-more-close aria-label="Yopish">×</button></span><button type="button" data-fin-more-go="investor"><span class="fin-sheet-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span><span class="fin-sheet-l">Investor</span><span aria-hidden="true">›</span></button><button type="button" data-fin-more-go="maoshlar"><span class="fin-sheet-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span><span class="fin-sheet-l">Maoshlar</span><span aria-hidden="true">›</span></button><button type="button" data-fin-more-go="kpi"><span class="fin-sheet-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 20V10M12 20V4M18 20v-6"/></svg></span><span class="fin-sheet-l">KPI</span><span aria-hidden="true">›</span></button><button type="button" data-fin-more-go="jarimalar"><span class="fin-sheet-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 21h20L12 3z"/><path d="M12 10v5M12 18h.01"/></svg></span><span class="fin-sheet-l">Jarimalar</span><span aria-hidden="true">›</span></button><button type="button" data-fin-more-go="batafsil"><span class="fin-sheet-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></span><span class="fin-sheet-l">Batafsil</span><span aria-hidden="true">›</span></button></span></span>
                                 </nav>
                                 <div class="sales-header-lang" id="financeLangFilter">
                                     <div class="leads-lang-tabs">
@@ -1066,6 +1070,11 @@
                         <div class="finance-panel" data-finance-panel="hisobotlar" id="financePanel-hisobotlar"><div id="finRoot-hisobotlar" class="fin-root"></div></div>
                         <div class="finance-panel" data-finance-panel="solishtirish" id="financePanel-solishtirish"><div id="finRoot-solishtirish" class="fin-root"></div></div>
                         <div class="finance-panel" data-finance-panel="moliya-sozlamalar" id="financePanel-moliya-sozlamalar"><div id="finRoot-moliya-sozlamalar" class="fin-root"></div></div>
+                        <!-- D dizayn (15-noyabr): Batafsil markazi, Kengaytirilgan ko'rinish, Muammolar, Investor -->
+                        <div class="finance-panel" data-finance-panel="batafsil" id="financePanel-batafsil"><div id="finRoot-batafsil" class="fin-root"></div></div>
+                        <div class="finance-panel" data-finance-panel="kengaytirilgan" id="financePanel-kengaytirilgan"><div id="finRoot-kengaytirilgan" class="fin-root"></div></div>
+                        <div class="finance-panel" data-finance-panel="muammolar" id="financePanel-muammolar"><div id="finRoot-muammolar" class="fin-root"></div></div>
+                        <div class="finance-panel" data-finance-panel="investor" id="financePanel-investor"><div id="investorRoot" class="fin-root"></div></div>
                         <!-- Maoshlar / KPI: server-side payroll -->
                         <div class="finance-panel" data-finance-panel="maoshlar" id="financePanel-maoshlar"><div id="payrollRoot"></div></div>
                         <div class="finance-panel" data-finance-panel="kpi" id="financePanel-kpi"><div id="payrollKpiRoot"></div></div>
@@ -1688,7 +1697,7 @@
     <script src="js/loadError.js?v=20261029b4"></script>
     <script src="js/teacherRoles.js?v=20261029rol"></script>
     <script src="js/staffStatus.js?v=20261026arx1"></script>
-    <script src="js/storage.js?v=20261111c"></script>
+    <script src="js/storage.js?v=20261115a"></script>
     <script src="js/notifications.js?v=20261111d"></script>
     <script src="js/studentAccess.js?v=20261004h"></script>
     <script src="js/leadWorkflow.js?v=20261002c"></script>
@@ -1696,9 +1705,10 @@
     <script src="js/mobileContentPolicy.js?v=20261001"></script>
     <script src="js/lessonDefaults.js?v=20261001"></script>
     <script src="js/paymentLedger.js?v=20261005l"></script>
-    <script src="js/inflowUI.js?v=20261026r7"></script>
-    <script src="js/financeEngine.js?v=20261026m"></script>
-    <script src="js/financeUI.js?v=20261112a"></script>
+    <script src="js/inflowUI.js?v=20261115r"></script>
+    <script src="js/financeEngine.js?v=20261115k"></script>
+    <script src="js/financeUI.js?v=20261115v"></script>
+    <script src="js/investorUI.js?v=20261115t"></script>
     <script src="js/payrollEngine.js?v=20261030a"></script>
     <script src="js/payrollUI.js?v=20261111e"></script>
     <script src="js/teacherAttendanceCalendar.js?v=20261008a"></script>
@@ -1744,7 +1754,7 @@
     <script src="js/staffSessions.js?v=20261029b4"></script>
     <script src="js/staffNavBadges.js?v=20261029a5"></script>
     <script src="js/kabinetKirish.js?v=20261111a"></script>
-    <script src="js/app.js?v=20261113c"></script>
+    <script src="js/app.js?v=20261115k"></script>
     <script src="js/ropSotuvNav.js?v=20261102s1"></script>
     <script src="js/ropDesk/shell.js?v=20261111d"></script>
     <script src="js/ropDesk/leads.js?v=20261109a"></script>
@@ -1758,7 +1768,7 @@
     <script src="js/hrApp.js?v=20261111m"></script>
     <script src="js/akademikApp.js?v=20261113a"></script>
     <script src="js/akademikDesk.js?v=20261113a"></script>
-    <script src="js/adminApp.js?v=20261112k"></script>
+    <script src="js/adminApp.js?v=20261115a"></script>
     <script src="js/targetologApp.js?v=20261102j1"></script>
     <script src="js/statusBand.js?v=20261101a"></script>
     <script src="js/staleLeads.js?v=20261103cb1"></script>

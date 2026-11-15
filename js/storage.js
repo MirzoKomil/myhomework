@@ -346,6 +346,8 @@ async function reloadStateFromApi() {
 }
 
 async function initStorage() {
+    // Investor roli CRM holatini olmaydi (server 403 beradi) — faqat /api/investor kabineti.
+    if (typeof getCurrentUser === 'function' && getCurrentUser()?.role === 'investor') { _cache = {}; _apiReady = true; return; }
     try {
         const state = await apiLoadState();
         _cache = { ...state };

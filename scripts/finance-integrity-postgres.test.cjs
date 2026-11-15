@@ -176,7 +176,8 @@ test('round 8: dropout from a controlled date, zero-cash termination, attributio
             await assert.rejects(exp(acc, 600000), e => e.status === 400 && /hujjat/i.test(e.message));
             await exp(acc, 3500000, { receiptUrl: (await finance.storeEvidence(pool, acc, pdf())).url });
             await exp(acc2, 400000);
-            await assert.rejects(exp(acc2, 2200000, { receiptUrl: (await finance.storeEvidence(pool, acc2, pdf())).url }), e => e.status === 403 && /barcha xodimlar/.test(e.message));
+            // Egasi qarori (15-noyabr): xarajat jamoaviy kunlik chegaradan oshsa ham qabul qilinadi (audit jurnalida qoladi).
+            await exp(acc2, 2200000, { receiptUrl: (await finance.storeEvidence(pool, acc2, pdf())).url });
             const o = await finance.overview(pool, admin, {});
             assert.equal(o.quality.outflowsWithoutProof, 1); assert.equal(o.quality.outflowsWithoutProofAmount, 400000);
         });

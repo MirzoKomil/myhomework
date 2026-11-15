@@ -17,6 +17,12 @@ const handle = fn => async (req, res) => {
     }
 };
 router.get('/overview', handle(req => service.overview(pool, req.user, req.query)));
+router.get('/period-debt', handle(req => service.periodDebt(pool, req.user, req.query)));
+router.get('/summary', handle(req => service.summary(pool, req.user, req.query)));
+router.get('/problems/recon', handle(req => service.latestRecon(pool, req.user, req.query)));
+router.post('/problems/recon', handle(req => service.saveRecon(pool, req.user, req.body || {})));
+router.get('/problems/resolved', handle(req => service.resolvedProblems(pool, req.user, req.query)));
+router.post('/problems/resolved', handle(req => service.resolveProblem(pool, req.user, req.body || {})));
 router.get('/cashbook', handle(req => service.cashbook(pool, req.user, req.query)));
 router.get('/transactions', handle(req => service.listTransactions(pool, req.user, req.query)));
 router.get('/people', handle(req => service.people(pool, req.user, req.query)));

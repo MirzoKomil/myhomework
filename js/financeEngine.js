@@ -918,6 +918,64 @@
         };
     }
 
+    // ---------- Moliya "Umumiy" (15-noyabr, D dizayn) ----------
+    // Maosh rol guruhi: Sotuv bo'limi (menejerlar + ROP), Akademik (ustozlar, yordamchilar, akademik rahbar), Boshqalar.
+    const SALARY_GROUPS = { sales: 'Sotuv bo‘limi', academic: 'Akademik', other: 'Boshqalar' };
+    function salaryGroup(role) {
+        const r = String(role || '').toLowerCase();
+        if (['sotuv-menejeri', 'sotuv_menejeri', 'sotuv menejeri', 'sales_manager', 'sales', 'rop'].includes(r)) return 'sales';
+        if (['oqituvchi', 'ingliz-oqituvchi', 'rus-oqituvchi', 'asosiy', 'yordamchi', 'teacher', 'assistant', 'akademik', 'head-of-teachers', 'akademik-rahbar', 'akademik_rahbar'].includes(r)) return 'academic';
+        return 'other';
+    }
+    // Jami tushum (CRM reyestri, to'langan sana davrda, bekor qilinganlarsiz) va uning bo'linishi:
+    //  new    — o'quvchining birinchi to'lovi (liddan o'quvchiga o'tgan sotuv);
+    //  debtor — shu o'quvchining keyingi to'lovlari. new + debtor = total (other har doim 0, moslik uchun qoldirilgan).
+    // Yangi / Qarzdor tasnifi — YAGONA manba (Moliya "Umumiy" va To'lovlar ro'yxatidagi belgi shu funksiyadan).
+    // O'quvchi kaliti: yo'nalish + (lid yoki o'quvchi yoki yozuvning o'zi). Bekor qilinganlar hisobga olinmaydi.
+    // Tartib: to'lov sanasi, so'ng kiritilish tartibi (kiruvchi ro'yxat tartibi — CRM: created_at, id).
+    // O'quvchi kaliti: lid va o'quvchi yozuvi bitta odam (bitta to'lovda ikkalasi, yoki CRM'dagi o'quvchi→lid bog'lanishi) —
+    // bitta identifikator (union-find). links: [[studentId, leadId], ...] (CRM: students.extra_data.leadRef).
+    function saleKinds(receipts, links = []) {
+        const parent = new Map();
+        const find = x => { while (parent.has(x) && parent.get(x) !== x) { parent.set(x, parent.get(parent.get(x)) || parent.get(x)); x = parent.get(x); } return x; };
+        const union = (a, b) => { if (!a || !b) return; if (!parent.has(a)) parent.set(a, a); if (!parent.has(b)) parent.set(b, b); const ra = find(a), rb = find(b); if (ra !== rb) parent.set(ra, rb); };
+        for (const [sid, lid] of links || []) if (sid && lid) union('s:' + sid, 'l:' + lid);
+        for (const r of receipts || []) if (r.studentId && r.leadId) union('s:' + r.studentId, 'l:' + r.leadId);
+        const idOf = r => { const k = r.leadId ? 'l:' + r.leadId : r.studentId ? 's:' + r.studentId : 'r:' + r.id; return parent.has(k) ? find(k) : k; };
+        const live = (receipts || []).map((r, i) => ({ r, i })).filter(({ r }) => !r.voidDate && date(r.date));
+        live.sort((a, b) => a.r.date.localeCompare(b.r.date) || a.i - b.i);
+        const first = new Map(), out = new Map();
+        for (const { r } of live) {
+            const key = r.entity + ':' + idOf(r);
+            if (!first.has(key)) first.set(key, r.id);
+            out.set(r.id, first.get(key) === r.id ? 'new' : 'debtor');
+        }
+        return out;
+    }
+    function tuitionSplit(data, { start, end, scope = 'all' }) {
+        const kinds = saleKinds(data.receipts, data.studentLeads);
+        const out = { start, end, scope, total: 0, newSales: { amount: 0, count: 0 }, debtors: { amount: 0, count: 0 }, other: { amount: 0, count: 0 }, rows: [] };
+        const KEY = { new: 'newSales', debtor: 'debtors', other: 'other' };
+        for (const r of data.receipts || []) {
+            if (r.voidDate || !date(r.date) || !inRange(r.date, start, end) || !scopeMatch(r.entity, scope)) continue;
+            const kind = kinds.get(r.id) || 'new';
+            const k = KEY[kind];
+            out[k].amount += r.amount; out[k].count++; out.total += r.amount;
+            out.rows.push({ id: r.id, date: r.date, entity: r.entity, name: r.name, phone: r.phone, managerName: r.managerName, method: r.method, amount: r.amount,
+                debtAfter: r.debtAfter, studentId: r.studentId, leadId: r.leadId, kind });
+        }
+        out.rows.sort((a, b) => b.date.localeCompare(a.date));
+        return out;
+    }
+    // Davr ichida birinchi shartnomasi boshlangan o'quvchilar (qarz "davr sotuvlaridan" qatori uchun).
+    function newSaleKeys(data, { start, end, scope = 'all' }) {
+        const keys = new Set();
+        for (const c of contracts(data)) if (c.index === 1 && c.startLive && inRange(c.startLive, start, end) && scopeMatch(c.entity, scope)) {
+            if (c.studentId) keys.add('s:' + c.studentId); if (c.leadId) keys.add('l:' + c.leadId);
+        }
+        return keys;
+    }
+
     // Shartnoma aktivi CRM'dagi qarzdan katta bo'lmasligi kerak (aks holda — hech narsa bilan ta'minlanmagan aktiv).
     function contractDebtMismatches(data, asOf) {
         const debts = new Map();
@@ -1146,6 +1204,7 @@
         accountForMethod, movements, accountBalances, cashSummary, cashbook, cashFlowStatement, profitAndLoss, monthlyPnl,
         contracts, contractCash, earned, revenueBase, contractPosition, fixedAssets, depreciationAt, eclAt, agingBucket,
         serviceAllowed, receivablesAging, payablesSummary, balanceSheet, balanceSheetRaw, kpis, snapshotMonth, netBookValue, contractDebtMismatches, impairmentAt, settingsAt, turnoverTaxAccrued, segmentCashFlow, dropoutLiabilities, duplicateReceipts, forfeitedButActive,
-        suspiciousReasons, dataQuality, reconcile, parseStatementText, nameSimilar, nameMatch
+        suspiciousReasons, dataQuality, reconcile, parseStatementText, nameSimilar, nameMatch,
+        SALARY_GROUPS, salaryGroup, saleKinds, tuitionSplit, newSaleKeys
     };
 });
