@@ -97,7 +97,7 @@ function applySnapshot(d,animate){
  data=d;assignTrialTables();
  const idx={mgr:0,ak:0,x:0};
  for(const s of d.staff){const [room,x,y]=seatFor(s,idx);const p=mkPerson('s:'+s.id,{name:s.name,kind:s.kind,staff:s,seat:[room,x,y]});
-  if(s.female!=null)p.female=s.female;p.av=avatarImg('s:'+s.id,s.avatar);p.crown=!!s.crown;p.fire=!!s.fire;p.birthday=!!s.birthday;
+  if(s.female!=null)p.female=s.female;p.av=avatarImg('s:'+s.id,s.avatar);p.crown=!!s.crown;p.fire=!!s.fire;p.birthday=!!s.birthday;applyLook(p,s.look);
   const ps=prevS.get(s.id);
   if(animate&&ps&&!ps.fire&&s.fire){say(p,'🔥','Olovda! '+s.salesToday+' ta sotuv',10,'#EA580C');feed('🔥',`${esc(s.name)} olovda — bugun ${s.salesToday} ta sotuv!`,'#EA580C')}
   if(animate&&ps&&!ps.crown&&s.crown&&s.salesToday>0){feed('👑',`${esc(s.name)} — kun qahramoni (${s.salesToday} ta sotuv)`,'#B45309');setTimeout(()=>SND.voice('qahramon'),5000)}
@@ -107,7 +107,7 @@ function applySnapshot(d,animate){
   else if(p.visible&&p.room!=='outside'){if(animate)leave(p);else{p.visible=false;p.room='outside'}}
   else if(!s.inOffice){p.visible=false;p.room='outside'}}
  for(const [id,p] of people)if(id.startsWith('s:')&&!d.staff.some(s=>'s:'+s.id===id)){people.delete(id)}
- d.teachers.forEach((t,i)=>{const [room,x,y]=teacherSpot(t,i);const p=mkPerson('t:'+t.id,{name:t.name,kind:'teacher',teacher:t,ti:i});if(t.female!=null)p.female=t.female;p.av=avatarImg('t:'+t.id,t.avatar);p.birthday=!!t.birthday;
+ d.teachers.forEach((t,i)=>{const [room,x,y]=teacherSpot(t,i);const p=mkPerson('t:'+t.id,{name:t.name,kind:'teacher',teacher:t,ti:i});if(t.female!=null)p.female=t.female;p.av=avatarImg('t:'+t.id,t.avatar);p.birthday=!!t.birthday;applyLook(p,t.look);
   if(t.birthday&&!greeted.has('t'+t.id)){greeted.add('t'+t.id);feed('🎂',`Bugun ustoz ${esc(t.name)}ning tug'ilgan kuni! Tabriklaymiz!`,'#DB2777')}
   const prev=prevT.get(t.id);
   if(!animate||!prev){place(p,room,x,y)}else if(prev.status!==t.status){moveTo(p,room,x,y);
@@ -122,7 +122,7 @@ function applySnapshot(d,animate){
  const used=new Set([...people.values()].filter(p=>p.bag!=null).map(p=>p.bag));
  for(const o of online){const id='st:'+o.id;if(people.has(id))continue;let b=BAGS.findIndex((_,i)=>!used.has(i));if(b<0)break;used.add(b);
   const p=mkPerson(id,{name:o.name,kind:'stud',bag:b,shirt:'#38BDF8'});place(p,'oquv',BAGS[b][0],BAGS[b][1]);if(animate)say(p,'📱','Ilovada',4)}
- alerts(d,animate);plan(d,animate);ui();
+ alerts(d,animate);plan(d,animate);announceIn(d,animate);race(d,animate);ui();
 }
 
 // ── Voqealar ──
@@ -156,7 +156,7 @@ function animateEvent(e){
  const visitors=[...people.values()].filter(p=>p.kind==='lead').length;
  switch(e.type){
   case 'checkin':break; // snapshot o'zi olib kiradi
-  case 'lead_new':{if(visitors>=10)break;const p=leadPerson(e);p.src=e.src;p.bench=benchSlot();const [bx,by]=BENCH(p.bench);moveTo(p,'sotuv',bx,by,()=>say(p,'🆕',e.src==='target'?'Target':'Organik',5));
+  case 'lead_new':{if(visitors>=10)break;const p=leadPerson(e);p.src=e.src;p.ride=e.src==='target'?'✈️':'🚶';p.bench=benchSlot();const [bx,by]=BENCH(p.bench);moveTo(p,'sotuv',bx,by,()=>say(p,'🆕',e.src==='target'?'Target':'Organik',5));
    p.ttl=performance.now()+120000;break}
   case 'lead_assigned':{say(people.get('s:'+(data.staff.find(s=>s.kind==='rop')||{}).id),'📋',`→ ${nameOf(e.managerId)}`,5);
    const p=people.get('l:'+e.leadId);if(p&&mgr&&mgr.visible){p.bench=null;moveTo(p,'sotuv',mgr.x,mgr.y+38)}break}
@@ -165,7 +165,7 @@ function animateEvent(e){
   case 'trial_booked':{if(mgr)say(mgr,'📅','Sinov darsi!',5,'#16A34A');if(visitors>=10)break;const p=leadPerson(e);p.bench=null;const tt=people.get('t:'+e.teacherId);
    const k=trialTables.get(e.teacherId);const [tx,ty]=k!=null?TRIAL_T[k]:TRIAL_T[ri(0,2)];moveTo(p,'sinov',tx,ty+28,()=>{say(p,'🎧','Sinov darsi',8);setTimeout(()=>{if(people.get(p.id))leave(p)},25000)});break}
   case 'sale':{const p=leadPerson(e);p.bench=null;moveTo(p,'kassa',250,937,()=>{confetti(250,890,60);say(p,'💳',"To'lov",4);setTimeout(()=>{if(people.has(p.id)){p.shirt='#38BDF8';moveTo(p,'oquv',BAGS[ri(0,11)][0],BAGS[ri(0,11)][1]+20,()=>setTimeout(()=>{people.delete(p.id)},8000))}},1500)});
-   if(mgr){say(mgr,'🎉','Sotuv!',8,'#16A34A');confetti(mgr.x,mgr.y-30,40)}
+   if(mgr){say(mgr,'🎉','Sotuv!',8,'#16A34A');confetti(mgr.x,mgr.y-30,40)}catParty();
    const h=`💰 Sotuv! ${esc(nameOf(e.managerId))}`,sub=`${esc(e.lead||'')}`+(e.amount?` · ${money(e.amount)} so'm`:'');toast(h,sub);if(document.body.classList.contains('tv'))bigShow(h,sub);break}
   case 'debt_payment':if(mgr)say(mgr,'💳',"To'lov",5,'#0E7490');break;
   case 'lead_lost':case 'lead_junk':case 'decision':{const p=people.get('l:'+e.leadId);if(p){p.shirt='#CBD5E1';p.bench=null;leave(p)}if(mgr&&e.type==='decision')say(mgr,'🤔','Qaror',4);break}
@@ -193,8 +193,9 @@ function setupLang(d){const b=document.getElementById('langBtn');const can=d.vie
 
 // ── UI ──
 function ui(){if(!data)return;const k=data.kpi;document.getElementById('clock').textContent=hm(Date.now());
- const v=data.viewer;document.getElementById('who').textContent=(user?.name?user.name+' · ':'')+({full:'toʻliq koʻrinish',sales:'sotuv koʻrinishi',academic:'akademik koʻrinish',team:'jamoa koʻrinishi'}[v.scope]||'');
- const items=[['Ofisda',k.inOffice+'/'+k.staff],['Lidlar',k.leads],["Qo'ng'iroq",k.calls],['Sinov',k.trials],['Sotuv',k.sales]];
+ const v=data.viewer;document.getElementById('annBtn').style.display=ANN_ROLES.includes(v.role)?'':'none';document.getElementById('who').textContent=(user?.name?user.name+' · ':'')+({full:'toʻliq koʻrinish',sales:'sotuv koʻrinishi',academic:'akademik koʻrinish',team:'jamoa koʻrinishi'}[v.scope]||'');
+ const dl=(n,key)=>{const y=k.yday?.[key];if(y==null)return n;const d=n-y;return `${n}<i class="${d>0?'up':d<0?'dn':'eq'}" title="Kecha shu vaqtgacha: ${y}">${d>0?'▲'+d:d<0?'▼'+(-d):'='}</i>`};
+ const items=[['Ofisda',k.inOffice+'/'+k.staff],['Lidlar',dl(k.leads,'leads')],["Qo'ng'iroq",dl(k.calls,'calls')],['Sinov',dl(k.trials,'trials')],['Sotuv',dl(k.sales,'sales')]];
  if(v.money)items.push(['Tushum',money(k.money),'money']);
  if(k.plan)items.push(['Oylik reja',k.plan.pct+'%','money']);
  items.push(['Jonli dars',k.live],['Sinovda',k.trialNow],["Bo'sh ustoz",k.freeTeachers],['Ilovada',k.online+" o'q."]);
@@ -206,7 +207,9 @@ function ui(){if(!data)return;const k=data.kpi;document.getElementById('clock').
  document.getElementById('note').textContent=v.money?'':"Summalar, maosh va kechikishlar bu ko'rinishda chiqmaydi.";
  const hh=k.hourly||[],mx=Math.max(1,...hh),pk=hh.indexOf(Math.max(...hh));
  document.getElementById('hours').innerHTML=hh.slice(7,24).map((n,i)=>`<div class="hb${i+7===pk&&n?' pk':''}" title="${i+7}:00 — ${n} lid"><i style="height:${Math.round(n/mx*100)}%"></i><span>${(i+7)%3===0?i+7:''}</span></div>`).join('')
-  +`<div class="hnote">${Math.max(...hh)?`Eng ko'p: ${pk}:00 — ${hh[pk]} lid`:'Bugun hali lid yoʻq'}</div>`;
+  +`<div class="hnote">${Math.max(...hh)?`Eng ko'p: ${pk}:00 — ${hh[pk]} lid`:'Bugun hali lid yoʻq'}</div>`
+  ;document.getElementById('src').innerHTML=(k.leads?`<div class="src"><div class="srcbar"><i style="width:${Math.round(k.srcTarget/k.leads*100)}%"></i></div><span>✈️ Target <b>${k.srcTarget}</b></span><span>🚶 Organik <b>${k.srcOrganic}</b></span></div>`:'');
+ raceUi();
  const w=k.waiting||[];document.getElementById('waitBox').style.display=w.length?'':'none';
  document.getElementById('wait').innerHTML=w.map(x=>`<div><span>⏰ ${esc(x.name)}</span><b>${x.min} daq</b></div>`).join('');
  tvUi()}
@@ -225,7 +228,7 @@ function toast(h,s){const el=document.getElementById('toast');el.innerHTML=h+(s?
 function confetti(x,y,n=40){for(let i=0;i<n;i++)fx.push({x,y,vx:rnd(-90,90),vy:rnd(-160,-40),c:pick(['#1F4FD8','#F59E0B','#16A34A','#DB2777','#0EA5E9']),life:rnd(1,1.8),r:rnd(2,4)})}
 
 // ── Kamera ──
-const cv=document.getElementById('cv'),ctx=cv.getContext('2d'),stage=document.getElementById('stage'),hint=document.getElementById('hint');
+let cv=document.getElementById('cv'),ctx=cv.getContext('2d'),stage=document.getElementById('stage'),hint=document.getElementById('hint');
 let cw=0,ch=0,dpr=1;const cam={x:0,y:0,s:1},camT={x:0,y:0,s:1};let zoomRoom=null;
 const IMG_W=1176,IMG_H=2090;
 function pbox(r){const a=ill(r.x+1,r.y+1),b=ill(r.x+r.w-1,r.y+r.h-1);return{x0:a.x,y0:a.y,w:b.x-a.x,h:b.y-a.y}}
@@ -255,12 +258,18 @@ function drawPerson(p){const moving=p.path.length>0,bob=moving?Math.abs(Math.sin
  const l=moving?Math.sin(p.walk*11)*3:0;ctx.fillStyle='#2B3A55';rr(x-5,y-6+l*.3,4,7,2);ctx.fill();rr(x+1,y-6-l*.3,4,7,2);ctx.fill();
  ctx.fillStyle=p.shirt;rr(x-8,y-20,16,15,6);ctx.fill();
  if(p.kind==='lead'){ctx.fillStyle=p.src==='target'?'#1F4FD8':'#16A34A';rr(x-8,y-20,16,4,2);ctx.fill()}
- if(p.av&&p.av.complete&&p.av.naturalWidth){ctx.save();ctx.beginPath();ctx.arc(x,y-28,9.5,0,7);ctx.closePath();ctx.fillStyle='#fff';ctx.fill();ctx.clip();
+ if(!p.noPhoto&&p.av&&p.av.complete&&p.av.naturalWidth){ctx.save();ctx.beginPath();ctx.arc(x,y-28,9.5,0,7);ctx.closePath();ctx.fillStyle='#fff';ctx.fill();ctx.clip();
   const iw=p.av.naturalWidth,ih=p.av.naturalHeight,sc=Math.max(19/iw,19/ih);ctx.drawImage(p.av,x-iw*sc/2,y-28-ih*sc*.42,iw*sc,ih*sc);ctx.restore();
   ctx.strokeStyle='#fff';ctx.lineWidth=1.6;ctx.beginPath();ctx.arc(x,y-28,9.5,0,7);ctx.stroke()}
- else{ctx.fillStyle=p.skin;ctx.beginPath();ctx.arc(x,y-27,8,0,7);ctx.fill();ctx.fillStyle=p.hair;ctx.beginPath();ctx.arc(x,y-29,8.4,Math.PI,0);ctx.fill();
- if(p.female){ctx.fillRect(x-8.4,y-29,3.4,11);ctx.fillRect(x+5,y-29,3.4,11)}
- ctx.fillStyle='#14213D';ctx.beginPath();ctx.arc(x-3,y-26,1.2,0,7);ctx.arc(x+3,y-26,1.2,0,7);ctx.fill()}
+ else{const st=p.style||(p.female?'long':'short');ctx.fillStyle=p.skin;ctx.beginPath();ctx.arc(x,y-27,8,0,7);ctx.fill();ctx.fillStyle=p.hair;
+ if(st==='scarf'){ctx.beginPath();ctx.arc(x,y-27,10,Math.PI*.82,Math.PI*2.18);ctx.fill();rr(x-10,y-28,4,12,2);ctx.fill();rr(x+6,y-28,4,12,2);ctx.fill();ctx.fillStyle=p.skin;ctx.beginPath();ctx.arc(x,y-26,6.6,0,7);ctx.fill()}
+ else if(st!=='bald'){ctx.beginPath();ctx.arc(x,y-29,8.4,Math.PI,0);ctx.fill();if(st==='long'){ctx.fillRect(x-8.4,y-29,3.4,11);ctx.fillRect(x+5,y-29,3.4,11)}}
+ if(st==='cap'){ctx.fillStyle=p.shirt;ctx.beginPath();ctx.arc(x,y-30,8.8,Math.PI,0);ctx.fill();rr(x,y-31.5,12,3.2,1.6);ctx.fill()}
+ ctx.fillStyle='#14213D';ctx.beginPath();ctx.arc(x-3,y-26,1.2,0,7);ctx.arc(x+3,y-26,1.2,0,7);ctx.fill();
+ if(p.acc==='glasses'){ctx.strokeStyle='#14213D';ctx.lineWidth=1;ctx.beginPath();ctx.arc(x-3,y-26,2.6,0,7);ctx.moveTo(x+5.6,y-26);ctx.arc(x+3,y-26,2.6,0,7);ctx.moveTo(x-.4,y-26);ctx.lineTo(x+.4,y-26);ctx.stroke()}}
+ if(p.acc==='headphones'){ctx.strokeStyle='#14213D';ctx.lineWidth=1.8;ctx.beginPath();ctx.arc(x,y-28,10,Math.PI*1.05,Math.PI*1.95);ctx.stroke();ctx.fillStyle='#14213D';rr(x-11.5,y-30,4,7,2);ctx.fill();rr(x+7.5,y-30,4,7,2);ctx.fill()}
+ if(p.acc==='bow'){ctx.fillStyle='#EC4899';ctx.beginPath();ctx.moveTo(x+6,y-35);ctx.lineTo(x+1,y-39);ctx.lineTo(x+1,y-31);ctx.closePath();ctx.moveTo(x+6,y-35);ctx.lineTo(x+11,y-39);ctx.lineTo(x+11,y-31);ctx.closePath();ctx.fill()}
+ if(p.acc==='tie'){ctx.fillStyle='#B91C1C';ctx.beginPath();ctx.moveTo(x-2,y-19);ctx.lineTo(x+2,y-19);ctx.lineTo(x+1.5,y-10);ctx.lineTo(x,y-8);ctx.lineTo(x-1.5,y-10);ctx.closePath();ctx.fill()}
  if(p.bubble&&p.bubble.icon==='📞'){ctx.fillStyle='#14213D';rr(x+6,y-30,4,9,2);ctx.fill()}
  if(p.kind==='stud'){ctx.fillStyle='#14213D';rr(x-4,y-17,8,11,2);ctx.fill();ctx.fillStyle='#60A5FA';rr(x-3,y-16,6,8,1);ctx.fill()}}
 function chip(x,y,t,bg,fg){ctx.font='900 15px Nunito';const w=ctx.measureText(t).width+20;ctx.fillStyle=bg;rr(x,y,w,26,13);ctx.fill();ctx.fillStyle=fg;ctx.textAlign='left';ctx.fillText(t,x+10,y+18)}
@@ -296,13 +305,14 @@ function render(){
  const list=[...people.values()].filter(p=>p.visible).map(p=>({p,q:ill(p.x,p.y)})).sort((a,b)=>a.q.y-b.q.y);
  for(const {p,q} of list){ctx.save();ctx.translate(q.x,q.y);ctx.scale(1.4,1.4);ctx.translate(-p.x,-p.y);drawPerson(p);ctx.restore()}
  for(const f of fx){const q=f.img?f:ill(f.x,f.y);ctx.globalAlpha=Math.max(0,Math.min(1,f.life));ctx.fillStyle=f.c;ctx.fillRect(q.x,q.y,f.r*1.5,f.r*2.4)}ctx.globalAlpha=1;
- drawExtras();
+ drawExtras();drawExtras2();
  ctx.restore();sky();overlay(list);overlayExtras(list)}
 function overlay(list){const small=cw<600&&!zoomRoom;ctx.textAlign='left';ctx.font=small?'900 10px Nunito':'900 12px Nunito';
  for(const k in R){const r=R[k],q=ill(r.x+1,r.y+1),X=(q.x-cam.x)*cam.s+(small?5:8),Y=(q.y-cam.y)*cam.s+(small?5:8),w=ctx.measureText(r.label).width+(small?12:16);
   if(X>cw||Y>ch||X+w<0||Y+20<0)continue;ctx.fillStyle='rgba(255,255,255,.92)';rr(X,Y,w,small?17:22,9);ctx.fill();ctx.fillStyle='#14213D';ctx.fillText(r.label,X+(small?6:8),Y+(small?12:15))}
  const names=cam.s>.62,now=performance.now();
  for(const {p,q} of list){const X=(q.x-cam.x)*cam.s,Y=(q.y-cam.y)*cam.s-52*cam.s;
+  if(p.kind==='lead'&&p.ride&&p.path.length){ctx.font=(names?22:15)+'px sans-serif';ctx.textAlign='center';ctx.fillText(p.ride,X-(names?22:14),Y+(names?30:22))}
   const ic=(p.crown?'👑':'')+(p.fire?'🔥':'')+(p.birthday?'🎂':'');if(ic){ctx.font=(names?18:13)+'px sans-serif';ctx.textAlign='center';ctx.fillText(ic,X,Y-(names?12:4)-(p.bubble&&now<p.bubble.until?(names?26:18):0))}
   if(names&&p.kind!=='lead'&&p.kind!=='stud'){ctx.font='800 11px Nunito';const w=ctx.measureText(p.name).width+10;ctx.fillStyle='rgba(20,33,61,.82)';rr(X-w/2,Y-8,w,16,8);ctx.fill();ctx.fillStyle='#fff';ctx.textAlign='center';ctx.fillText(p.name,X,Y+4)}
   const b=p.bubble;if(b&&now<b.until){const txt=names?b.icon+' '+b.text:b.icon;ctx.font='800 12px Nunito';const w=ctx.measureText(txt).width+14,by=Y-(names?30:20);
@@ -359,7 +369,89 @@ const WX={0:'☀️',1:'🌤',2:'⛅',3:'☁️',45:'🌫',48:'🌫',51:'🌦',5
 function overlayExtras(){if(!data)return;const h=holiday(),w=data.kpi.weather;let y=ch-46;
  if(w){const hr=new Date().getHours(),nt=hr>=19||hr<6;const t=(nt&&w.code<=2?'🌙':(WX[w.code]||'🌡'))+' Andijon '+w.temp+'°';ctx.font='800 13px Nunito';const ww=ctx.measureText(t).width+20;ctx.fillStyle='rgba(255,255,255,.92)';rr(cw-ww-10,10,ww,26,13);ctx.fill();ctx.fillStyle='#14213D';ctx.textAlign='left';ctx.fillText(t,cw-ww,28)}
  if(h){ctx.font='900 14px Nunito';const ww=ctx.measureText(h.t).width+24;ctx.fillStyle='rgba(219,39,119,.92)';rr(cw/2-ww/2,10,ww,28,14);ctx.fill();ctx.fillStyle='#fff';ctx.textAlign='center';ctx.fillText(h.t,cw/2,29)}
+ annBanner();
  if(replay.on){const t='⏪ Kun takrori · '+replay.clock;ctx.font='900 15px Nunito';const ww=ctx.measureText(t).width+28;ctx.fillStyle='rgba(20,33,61,.9)';rr(cw/2-ww/2,46,ww,30,15);ctx.fill();ctx.fillStyle='#fff';ctx.textAlign='center';ctx.fillText(t,cw/2,66)}}
+
+// ── Qo'shimchalar-2: personaj, mushuk, qo'ng'iroq poygasi, hafta qahramonlari, TV e'loni ──
+function applyLook(p,l){if(!p.base)p.base={shirt:p.shirt,hair:p.hair};l=l||{};p.look=l;p.shirt=l.shirt||p.base.shirt;p.hair=l.hair||p.base.hair;p.style=l.style||null;p.acc=l.acc&&l.acc!=='none'?l.acc:null;p.noPhoto=l.head==='drawn'}
+// Ofis mushugi "Mosh": yo'lakda aylanadi, sotuvda kassaga yuguradi, kechasi oshxonada uxlaydi.
+const cat={id:'cat',x:640,y:960,path:[],room:'oshxona',walk:0,dir:1,next:0,party:0,visible:true};
+const CAT_SPOTS=[['oshxona',640,960],['oshxona',740,880],['sotuv',245,470],['sotuv',120,250],['entrance',300,110],['entrance',700,110],['kassa',330,960],['oquv',260,760],['hr',720,760],['rop',720,300]];
+const night=()=>{const h=new Date(Date.now()+5*3600e3).getUTCHours();return h>=20||h<7};
+function catTick(now){if(cat.path.length)return;if(now<cat.next)return;
+ if(night()){if(cat.room!=='oshxona'||Math.hypot(cat.x-560,cat.y-960)>4)moveTo(cat,'oshxona',560,960);cat.next=now+30000;return}
+ const sp=pick(CAT_SPOTS);moveTo(cat,sp[0],sp[1]+rnd(-20,20),sp[2]+rnd(-10,10));cat.next=now+rnd(9000,20000)}
+function catParty(){if(replay.on&&Math.random()<.5)return;moveTo(cat,'kassa',300,950,()=>{cat.party=performance.now()+5000});cat.next=performance.now()+15000}
+function drawCat(){const now=performance.now();catTick(now);const q=ill(cat.x,cat.y),moving=cat.path.length>0;if(moving){const w=cat.path[0];if(Math.abs(w.x-cat.x)>1)cat.dir=w.x>cat.x?1:-1}
+ const sleep=night()&&!moving,hop=cat.party>now?Math.abs(Math.sin(now/120))*14:moving?Math.abs(Math.sin(now/90))*3:0;
+ ctx.save();ctx.translate(q.x,q.y-hop);ctx.scale(-cat.dir,1);ctx.font='30px sans-serif';ctx.textAlign='center';ctx.fillText(sleep?'🐈':'🐈',0,0);ctx.restore();
+ ctx.textAlign='center';if(sleep){ctx.font='18px sans-serif';ctx.fillText('💤',q.x+16,q.y-30-Math.sin(now/600)*4)}
+ else if(cat.party>now){ctx.font='18px sans-serif';ctx.fillText('❤️',q.x+(Math.sin(now/200)*8),q.y-40-hop)}}
+function stepCat(dt){step(cat,dt)}
+// Qo'ng'iroq poygasi
+let raceLeader=null;
+const raceList=()=>(data?.staff||[]).filter(s=>s.kind==='mgr'||s.kind==='rop').slice().sort((a,b)=>(b.callsToday||0)-(a.callsToday||0));
+function race(d,animate){const l=raceList()[0];if(!l||!l.callsToday)return;if(raceLeader&&raceLeader!==l.id&&animate&&l.callsToday>(raceList()[1]?.callsToday||0)){
+  feed('🏁',`${esc(l.name)} qo'ng'iroq poygasida birinchi o'ringa chiqdi! (${l.callsToday} ta)`,'#7C3AED');say(people.get('s:'+l.id),'🏁','1-o\'rin!',6,'#7C3AED');tvTick('🏁',l.name+" — qo'ng'iroq poygasida 1-o'rin")}
+ raceLeader=l.id}
+function raceUi(){const el=document.getElementById('race');if(!el)return;const L=raceList().filter(s=>s.inOffice||s.callsToday);const mx=Math.max(1,...L.map(s=>s.callsToday||0));
+ document.getElementById('raceBox').style.display=L.length?'':'none';
+ el.innerHTML=L.map((s,i)=>`<div class="lane"><span class="ln">${i===0&&s.callsToday?'🥇 ':''}${esc(s.name)}</span><div class="trk"><i style="left:${Math.round((s.callsToday||0)/mx*86)}%;background:${people.get('s:'+s.id)?.shirt||'#94A3B8'}">${esc(s.name[0]||'?')}</i><b>🏁</b></div><em>${s.callsToday||0}</em></div>`).join('')}
+// Sotuv xonasi pastida poyga treki
+function drawRaceTrack(){const L=raceList();if(!L.length)return;const mx=Math.max(1,...L.map(s=>s.callsToday||0)),x0=60,x1=600,y=748;
+ ctx.fillStyle='rgba(20,33,61,.82)';rr(x0-44,y-16,x1-x0+90,32,16);ctx.fill();ctx.strokeStyle='rgba(255,255,255,.35)';ctx.setLineDash([6,6]);ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x0,y);ctx.lineTo(x1,y);ctx.stroke();ctx.setLineDash([]);
+ ctx.font='16px sans-serif';ctx.textAlign='center';ctx.fillText('📞',x0-24,y+6);ctx.fillText('🏁',x1+26,y+6);
+ L.forEach((s,i)=>{const X=x0+(s.callsToday||0)/mx*(x1-x0),bob=Math.sin(performance.now()/180+i)*1.5;ctx.fillStyle=people.get('s:'+s.id)?.shirt||'#94A3B8';ctx.beginPath();ctx.arc(X,y+bob,10,0,7);ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();
+  ctx.fillStyle='#fff';ctx.font='900 10px Nunito';ctx.fillText((s.name[0]||'?'),X,y+bob+3.5)})}
+// O'tgan hafta qahramonlari — kirishdagi taxta
+function drawWeek(){const w=data.kpi.week;if(!w||!w.top.length)return;const x=812,y=184,wd=290,h=22+w.top.length*16;
+ ctx.fillStyle='rgba(255,255,255,.95)';rr(x,y,wd,h,10);ctx.fill();ctx.strokeStyle='#F59E0B';ctx.lineWidth=2;ctx.stroke();
+ ctx.fillStyle='#B45309';ctx.font='900 11px Nunito';ctx.textAlign='left';ctx.fillText("🏆 O'TGAN HAFTA QAHRAMONLARI",x+10,y+15);
+ w.top.forEach((t,i)=>{ctx.fillStyle='#14213D';ctx.font='800 12px Nunito';ctx.fillText(['🥇','🥈','🥉'][i]+' '+t.name,x+10,y+32+i*16);ctx.textAlign='right';ctx.fillStyle='#16A34A';ctx.fillText(t.sales+' ta sotuv',x+wd-10,y+32+i*16);ctx.textAlign='left'})}
+function drawExtras2(){if(!data)return;drawRaceTrack();drawWeek();drawCat()}
+// TV e'loni
+let annSeen=null;
+function announceIn(d,animate){const a=d.kpi.announce;if(!a){annSeen=null;return}if(annSeen===a.id)return;annSeen=a.id;if(!animate)return;
+ feed('📢',`${esc(a.author)}: ${esc(a.text)}`,'#B45309');SND.ev('📅');toast('📢 '+esc(a.text),esc(a.author));
+ if(document.body.classList.contains('tv'))tvShow(`<div class="tt">📢 E'lon</div><div class="tm big">${esc(a.text)}</div><div class="tm" style="opacity:.6">— ${esc(a.author)}</div>`,20)}
+function annBanner(){const a=data?.kpi?.announce;if(!a)return;const tv=document.body.classList.contains('tv'),now=performance.now();
+ const t='📢 '+a.text,fs=tv?28:15;ctx.font=`900 ${fs}px Nunito`;let tw=ctx.measureText(t).width;const maxW=cw-40,w=Math.min(maxW,tw+40),x=cw/2-w/2,h=fs+22,y=tv?78:ch-h-14;
+ ctx.save();ctx.shadowColor='rgba(0,0,0,.25)';ctx.shadowBlur=18;ctx.fillStyle=`rgba(180,83,9,${.92+.06*Math.sin(now/400)})`;rr(x,y,w,h,h/2);ctx.fill();ctx.restore();
+ ctx.save();ctx.beginPath();ctx.rect(x+14,y,w-28,h);ctx.clip();ctx.fillStyle='#fff';ctx.textAlign='left';
+ const ox=tw>w-40?(x+20)-((now/30)%(tw+60))+(w-40):x+20;ctx.fillText(t,ox,y+h/2+fs*.36);if(tw>w-40)ctx.fillText(t,ox+tw+60,y+h/2+fs*.36);ctx.restore()}
+const ANN_ROLES=['admin','boshliq','rop','hr'];
+async function api(method,path,body){const r=await fetch('/api/office'+path,{method,headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});
+ const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'Xatolik');return d}
+function openAnnounce(){const a=data?.kpi?.announce,card=document.getElementById('card');let hours=3;
+ card.innerHTML=`<div class="hd"><div class="big" style="background:#B45309">📢</div><div><h2>TV'ga e'lon</h2><div class="role">Barcha ofis ekranlarida katta yozuv bo'lib chiqadi</div></div></div>
+ ${a?`<div class="cur">Hozirgi: <b>${esc(a.text)}</b> <small>· ${esc(a.author)} · ${hm(a.until)} gacha</small></div>`:''}
+ <textarea id="annText" maxlength="160" rows="3" placeholder="Masalan: Bugun 18:00 da yig'ilish 🙌"></textarea>
+ <div class="opts" id="annH">${[1,3,8,24].map(h=>`<button class="opt${h===3?' on':''}" data-h="${h}">${h===24?'1 kun':h+' soat'}</button>`).join('')}</div>
+ <div class="row2">${a?'<button class="ghost" id="annDel">E\'lonni olib tashlash</button>':''}<button class="pri" id="annSend">Yuborish</button></div><button class="close">Yopish</button>`;
+ document.getElementById('sheet').classList.add('show');
+ card.querySelectorAll('#annH .opt').forEach(b=>b.onclick=()=>{hours=+b.dataset.h;card.querySelectorAll('#annH .opt').forEach(x=>x.classList.toggle('on',x===b))});
+ document.getElementById('annSend').onclick=async()=>{const text=document.getElementById('annText').value.trim();if(text.length<2){toast("E'lon matnini yozing");return}
+  try{await api('POST','/announce',{text,hours});document.getElementById('sheet').classList.remove('show');toast("📢 E'lon chiqdi",'Barcha ekranlarda');load()}catch(e){toast(esc(e.message))}};
+ const del=document.getElementById('annDel');if(del)del.onclick=async()=>{try{await api('DELETE','/announce');document.getElementById('sheet').classList.remove('show');toast("E'lon olib tashlandi");if(data)data.kpi.announce=null;load()}catch(e){toast(esc(e.message))}}}
+// Personajim
+async function openLook(){let r;try{r=await api('GET','/look')}catch(e){toast(esc(e.message));return}
+ if(!r.employee){toast("Xodim kartangiz topilmadi","HR'dagi login emailingizga mos bo'lishi kerak");return}
+ const O=r.options,cur=Object.assign({},r.look),me=people.get('s:'+r.employee.id)||people.get('t:'+r.employee.id);
+ const LBL={style:{short:'Qisqa',long:'Uzun',scarf:"Ro'mol",cap:'Kepka',bald:'Kal'},acc:{none:"Yo'q",glasses:"Ko'zoynak",headphones:'Quloqchin',bow:'Bant',tie:'Galstuk'},head:{photo:'Rasmim',drawn:'Chizilgan'}};
+ const card=document.getElementById('card');
+ const sw=(k)=>O[k].map(c=>`<button class="sw${cur[k]===c?' on':''}" data-k="${k}" data-v="${c}" style="background:${c}"></button>`).join('');
+ const ch=(k)=>O[k].map(c=>`<button class="opt${(cur[k]||O[k][0])===c?' on':''}" data-k="${k}" data-v="${c}">${LBL[k][c]}</button>`).join('');
+ card.innerHTML=`<div class="hd"><canvas id="lookCv" width="120" height="120" style="width:60px;height:60px;border-radius:50%;background:#F3E7D6"></canvas><div><h2>Personajim</h2><div class="role">${esc(r.employee.name)} · ofisda shunday ko'rinasiz</div></div></div>
+ <div class="lg">Kiyim rangi</div><div class="opts">${sw('shirt')}</div><div class="lg">Soch rangi</div><div class="opts">${sw('hair')}</div>
+ <div class="lg">Soch turi</div><div class="opts">${ch('style')}</div><div class="lg">Aksessuar</div><div class="opts">${ch('acc')}</div><div class="lg">Bosh</div><div class="opts">${ch('head')}</div>
+ <div class="row2"><button class="pri" id="lookSave">Saqlash</button></div><button class="close">Yopish</button>`;
+ document.getElementById('sheet').classList.add('show');
+ const prev=()=>{const c=document.getElementById('lookCv');if(!c)return;const pc=c.getContext('2d'),o=ctx;const h=hash('p'+r.employee.id);
+  const tp={x:60,y:66,path:[],walk:0,skin:me?.skin||SKIN[h%4],hair:me?.hair||HAIR[0],shirt:me?.shirt||SH[0],female:!!me?.female,av:me?.av,kind:'staff'};tp.base={shirt:me?.base?.shirt||tp.shirt,hair:me?.base?.hair||tp.hair};applyLook(tp,cur);
+  pc.setTransform(1,0,0,1,0,0);pc.clearRect(0,0,120,120);pc.setTransform(2.4,0,0,2.4,-84,-50);ctx=pc;try{drawPerson(tp)}finally{ctx=o}};prev();
+ card.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{cur[b.dataset.k]=b.dataset.v;card.querySelectorAll(`[data-k="${b.dataset.k}"]`).forEach(x=>x.classList.toggle('on',x===b));prev()});
+ document.getElementById('lookSave').onclick=async()=>{try{const d=await api('PUT','/look',cur);if(me)applyLook(me,d.look);document.getElementById('sheet').classList.remove('show');toast('👤 Personaj saqlandi')}catch(e){toast(esc(e.message))}}}
+document.getElementById('annBtn').onclick=openAnnounce;document.getElementById('lookBtn').onclick=openLook;
 
 // ── Kun takrori: bugungi voqealar 60 soniyada ──
 const replay={on:false,clock:'',timers:[]};
@@ -440,15 +532,21 @@ const MOTTO={tong:["Xayrli tong, jamoa! Bugun ham zo'r kun bo'ladi 💪","Har bi
  kun:["Yarim kun o'tdi — davom etamiz! 🚀","Sinov darsiga kelgan har bir o'quvchi — kelajakdagi do'stimiz 🤝","Tabassum bilan gaplashing — mijoz buni sezadi 😊"],
  kech:["Kun yakuniga yaqin — oxirgi zarbani beramiz! ⚡","Bugun qilgan ishingiz ertangi natija 🌱"]};
 function tvShow(html,sec){const el=document.getElementById('tvMsg');el.innerHTML=html;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),sec*1000)}
-function tvTop(){if(!data)return;const t=data.kpi.top||[];if(!t.length)return;
- tvShow(`<div class="tt">🏆 Bugungi top</div>${t.map((x,i)=>`<div class="tr"><b>${['🥇','🥈','🥉'][i]}</b><span>${esc(x.name)}</span><em>${x.sales} ta sotuv</em></div>`).join('')}`,12)}
+let tvRot=0;
+function tvTop(){if(!data)return;const k=data.kpi,M=['🥇','🥈','🥉'],row=(i,n,v)=>`<div class="tr"><b>${M[i]}</b><span>${esc(n)}</span><em>${v}</em></div>`;
+ const t=k.top||[],r=raceList().filter(s=>s.callsToday).slice(0,3),w=k.week?.top||[];
+ const opts=[t.length&&`<div class="tt">🏆 Bugungi top</div>${t.map((x,i)=>row(i,x.name,x.sales+' ta sotuv')).join('')}`,
+  r.length&&`<div class="tt">🏁 Qo'ng'iroq poygasi</div>${r.map((x,i)=>row(i,x.name,x.callsToday+" ta qo'ng'iroq")).join('')}`,
+  w.length&&`<div class="tt">🏆 O'tgan hafta qahramonlari</div>${w.map((x,i)=>row(i,x.name,x.sales+' ta sotuv')).join('')}`].filter(Boolean);
+ if(!opts.length)return;tvShow(opts[tvRot++%opts.length],12)}
 function tvMotto(){if(!data)return;const hr=new Date(Date.now()+5*3600e3).getUTCHours(),k=data.kpi;
  if(hr>=18){tvShow(`<div class="tt">🌙 Bugungi kun</div><div class="tm">${k.leads} lid · ${k.trials} sinov darsi · ${k.sales} sotuv</div><div class="tm">Rahmat, jamoa! 🙏</div>`,12);return}
  const arr=hr<12?MOTTO.tong:hr<16?MOTTO.kun:MOTTO.kech;tvShow(`<div class="tm big">${pick(arr)}</div>`,10)}
 let tvTimers=[];
-function tvTimersOn(on){tvTimers.forEach(clearInterval);tvTimers=[];if(on){tvTimers.push(setInterval(tvTop,10*60000),setInterval(tvMotto,5*60000));setTimeout(tvMotto,8000)}}
+function tvTimersOn(on){tvTimers.forEach(clearInterval);tvTimers=[];if(on){tvTimers.push(setInterval(tvTop,10*60000),setInterval(tvMotto,5*60000));setTimeout(tvMotto,8000);setTimeout(tvTop,40000)}}
 function tvUi(){if(!document.body.classList.contains('tv')||!data)return;document.getElementById('tvclock').textContent=hm(Date.now());const k=data.kpi;
- document.getElementById('tvk').innerHTML=[['Ofisda',k.inOffice+'/'+k.staff],['Lid',k.leads],['Sinov',k.trials],['Sotuv',k.sales],['Darsda',k.live],['Ilovada',k.online]].map(([a,b])=>`<div>${a}<b>${b}</b></div>`).join('')}
+ document.getElementById('tvk').innerHTML=[['Ofisda',k.inOffice+'/'+k.staff],['Lid',k.leads],['Sinov',k.trials],['Sotuv',k.sales],['Darsda',k.live],['Ilovada',k.online]].map(([a,b])=>`<div>${a}<b>${b}</b></div>`).join('')
+ +(k.yday?`<div>Kechaga nisbatan<b>${(n=>n>0?'▲ +'+n:n<0?'▼ '+n:'=')(k.sales+k.trials-k.yday.sales-k.yday.trials)}</b></div>`:'')}
 
 document.getElementById('replayBtn').onclick=()=>replay.on?stopReplay():startReplay();
 
@@ -465,7 +563,7 @@ function start(){token=localStorage.getItem('mh_token');try{user=JSON.parse(loca
 
 // ── Sikl ──
 let last=performance.now(),uiT=0;
-function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;for(const p of people.values())step(p,dt);
+function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;for(const p of people.values())step(p,dt);step(cat,dt);
  for(let i=fx.length-1;i>=0;i--){const f=fx[i];f.vy+=260*dt;f.x+=f.vx*dt;f.y+=f.vy*dt;f.life-=dt;if(f.life<=0)fx.splice(i,1)}
  for(const k of['x','y','s'])cam[k]+=(camT[k]-cam[k])*Math.min(1,dt*7);
  // Ko'p qolib ketgan lidlar (voqea kelmagan) — 2 daqiqadan keyin chiqib ketadi

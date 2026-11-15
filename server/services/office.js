@@ -203,6 +203,107 @@ async function teamPlan(db, date, langs) {
     return { target, done, pct: Math.round(done / target * 100) };
 }
 
+// ── Qo'shimchalar-2 (2026-11-15): TV e'loni, qo'ng'iroq poygasi, kecha bilan solishtirish, hafta qahramonlari, personaj, kun yakuni ──
+const SCHEMA = `CREATE TABLE IF NOT EXISTS office_announcements (id SERIAL PRIMARY KEY, text TEXT NOT NULL, author TEXT NOT NULL DEFAULT '',
+    created_by TEXT NOT NULL DEFAULT '', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), expires_at TIMESTAMPTZ NOT NULL, removed BOOLEAN NOT NULL DEFAULT FALSE);
+CREATE TABLE IF NOT EXISTS office_looks (employee_id TEXT PRIMARY KEY, look JSONB NOT NULL, updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW());`;
+async function initSchema(db) { await db.query(SCHEMA); }
+const fail = (status, message) => Object.assign(new Error(message), { status });
+const ANNOUNCERS = new Set(['admin', 'boshliq', 'rop', 'hr']);
+async function employeeOf(db, user) {
+    if (!user?.email) return null;
+    return (await db.query(`SELECT id, name, first_name FROM hr_employees WHERE LOWER(TRIM(login)) = LOWER(TRIM($1))
+        AND COALESCE(status,'active') NOT IN ('inactive','fired','left','archived') LIMIT 1`, [user.email])).rows[0] || null;
+}
+async function announce(db, user, body = {}) {
+    if (!ANNOUNCERS.has(user?.role)) throw fail(403, "E'lonni faqat rahbar, ROP yoki HR yoza oladi");
+    const text = String(body.text || '').replace(/\s+/g, ' ').trim();
+    if (text.length < 2 || text.length > 160) throw fail(400, "E'lon 2–160 belgi bo'lsin");
+    const hours = [1, 3, 8, 24].includes(Number(body.hours)) ? Number(body.hours) : 3;
+    const e = await employeeOf(db, user);
+    const un = e ? null : (await safe(() => db.query('SELECT name FROM users WHERE id::text = $1', [String(user.id || '')]), { rows: [] })).rows[0];
+    const author = first(e?.first_name || e?.name || un?.name || user.name || '') || 'Rahbar';
+    await db.query('UPDATE office_announcements SET removed = TRUE WHERE NOT removed');
+    const row = (await db.query(`INSERT INTO office_announcements (text, author, created_by, expires_at) VALUES ($1, $2, $3, NOW() + $4::int * INTERVAL '1 hour')
+        RETURNING id, text, author, created_at, expires_at`, [text, author, String(user.id || ''), hours])).rows[0];
+    cache.clear();
+    return { id: row.id, text: row.text, author: row.author, at: iso(row.created_at), until: iso(row.expires_at) };
+}
+async function removeAnnouncement(db, user) {
+    if (!ANNOUNCERS.has(user?.role)) throw fail(403, "Ruxsat yo'q");
+    await db.query('UPDATE office_announcements SET removed = TRUE WHERE NOT removed');
+    cache.clear();
+    return { ok: true };
+}
+async function currentAnnouncement(db) {
+    const r = (await db.query(`SELECT id, text, author, created_at, expires_at FROM office_announcements WHERE NOT removed AND expires_at > NOW()
+        ORDER BY id DESC LIMIT 1`)).rows[0];
+    return r ? { id: r.id, text: r.text, author: r.author, at: iso(r.created_at), until: iso(r.expires_at) } : null;
+}
+// Personaj: kiyim rangi, soch, aksessuar — faqat ro'yxatdagi qiymatlar.
+const LOOK = {
+    shirt: ['#1F4FD8', '#0EA5E9', '#7C3AED', '#DB2777', '#059669', '#EA580C', '#334155', '#CA8A04', '#DC2626', '#0F766E', '#111827', '#F472B6'],
+    hair: ['#2B1B12', '#4A2E1C', '#1B1B1B', '#6B3E22', '#A16207', '#9CA3AF'],
+    style: ['short', 'long', 'scarf', 'cap', 'bald'],
+    acc: ['none', 'glasses', 'headphones', 'bow', 'tie'],
+    head: ['photo', 'drawn']
+};
+function cleanLook(b = {}) {
+    const out = {};
+    for (const k of Object.keys(LOOK)) if (LOOK[k].includes(b[k])) out[k] = b[k];
+    return out;
+}
+async function myLook(db, user) {
+    const e = await employeeOf(db, user);
+    if (!e) return { employee: null, look: {}, options: LOOK };
+    const r = (await db.query('SELECT look FROM office_looks WHERE employee_id = $1', [e.id])).rows[0];
+    return { employee: { id: e.id, name: first(e.first_name || e.name) }, look: parse(r?.look), options: LOOK };
+}
+async function saveLook(db, user, body) {
+    const e = await employeeOf(db, user);
+    if (!e) throw fail(404, "Sizning xodim kartangiz topilmadi (HR'da login emailingizga mos bo'lishi kerak)");
+    const look = cleanLook(body);
+    await db.query(`INSERT INTO office_looks (employee_id, look, updated_at) VALUES ($1, $2, NOW())
+        ON CONFLICT (employee_id) DO UPDATE SET look = EXCLUDED.look, updated_at = NOW()`, [e.id, JSON.stringify(look)]);
+    cache.clear();
+    return { ok: true, look };
+}
+async function looks(db) {
+    return new Map((await db.query('SELECT employee_id, look FROM office_looks')).rows.map(r => [r.employee_id, parse(r.look)]));
+}
+// Kecha shu vaqtgacha: lid, qo'ng'iroq, sinov, sotuv (5 daqiqalik kesh).
+const ydayCache = new Map();
+async function yesterday(db, langs, date, minutes, dayStart) {
+    const key = [(langs || []).join(','), date, Math.floor(minutes / 5)].join('|');
+    const hit = ydayCache.get(key); if (hit) return hit;
+    const yStart = new Date(dayStart.getTime() - 86400000), yNow = new Date(yStart.getTime() + minutes * 60000);
+    const ev = (await leadEvents(db, yStart, langs)).filter(e => new Date(e.at) <= yNow);
+    const pay = (await payments(db, T.addDays(date, -1), langs)).filter(p => p.type === 'sale' && new Date(p.at) <= yNow);
+    const v = { leads: ev.filter(e => e.type === 'lead_new').length, calls: ev.filter(e => e.type === 'call' || e.type === 'call_fail').length,
+        trials: ev.filter(e => e.type === 'trial_booked').length, sales: pay.length };
+    if (ydayCache.size > 50) ydayCache.clear();
+    ydayCache.set(key, v);
+    return v;
+}
+// O'tgan hafta (dushanba–yakshanba) eng ko'p sotgan 3 menejer (1 soatlik kesh).
+const weekCache = new Map();
+async function lastWeek(db, langs, date, names) {
+    const mon = T.addDays(date, -((T.weekday(date) + 6) % 7) - 7), sun = T.addDays(mon, 6);
+    const key = (langs || []).join(',') + '|' + mon;
+    const hit = weekCache.get(key); if (hit && Date.now() - hit.t < 3600000) return hit.v;
+    const rows = (await db.query(`SELECT p.manager_id, p.language, COUNT(*)::int AS n FROM payment_records p
+        WHERE p.paid_date BETWEEN $1 AND $2 AND p.lead_id IS NOT NULL AND COALESCE(p.manager_id,'') <> ''
+        AND NOT EXISTS (SELECT 1 FROM payment_record_voids v WHERE v.record_id = p.id)
+        AND NOT EXISTS (SELECT 1 FROM payment_records q WHERE q.student_id = p.student_id AND q.student_id IS NOT NULL
+            AND (q.paid_date < p.paid_date OR (q.paid_date = p.paid_date AND q.created_at < p.created_at)))
+        GROUP BY 1, 2`, [mon, sun])).rows.filter(r => langOk(langs, r.language));
+    const by = {}; for (const r of rows) by[r.manager_id] = (by[r.manager_id] || 0) + r.n;
+    const top = Object.entries(by).filter(([id]) => names.has(id)).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([id, n]) => ({ id, name: names.get(id), sales: n }));
+    const v = { from: mon, to: sun, top };
+    weekCache.set(key, { t: Date.now(), v });
+    return v;
+}
+
 async function live(db, user, query = {}, now = new Date()) {
     const v = await viewerFor(db, user, { tv: query.tv === '1' || query.tv === 'true', lang: query.lang });
     const { date, min: minutes } = T.nowLocal(now);
@@ -278,6 +379,17 @@ async function live(db, user, query = {}, now = new Date()) {
     kpi.top = top.slice(0, 3).map(s => ({ id: s.id, name: s.name, sales: s.salesToday }));
     if (top[0]) { const best = top[0].salesToday; for (const s of staff) s.crown = s.salesToday === best; }
     for (const s of staff) s.fire = s.salesToday >= 3;
+    // Qo'ng'iroq poygasi: bugungi qo'ng'iroqlar (urinish ham) va sinovlar menejer bo'yicha.
+    const callsBy = {}, trialsBy = {};
+    for (const e of leadEv) { if (!e.managerId) continue; if (e.type === 'call' || e.type === 'call_fail') callsBy[e.managerId] = (callsBy[e.managerId] || 0) + 1; if (e.type === 'trial_booked') trialsBy[e.managerId] = (trialsBy[e.managerId] || 0) + 1; }
+    for (const s of staff) { s.callsToday = callsBy[s.id] || 0; s.trialsToday = trialsBy[s.id] || 0; }
+    kpi.srcTarget = kpi.target; kpi.srcOrganic = kpi.leads - kpi.target;
+    kpi.yday = await safe(() => yesterday(db, v.langs, date, minutes, dayStart), null);
+    kpi.week = await safe(() => lastWeek(db, v.langs, date, names), null);
+    kpi.announce = await safe(() => currentAnnouncement(db), null);
+    const lk = await safe(() => looks(db), new Map());
+    for (const s of staff) { const l = lk.get(s.id); if (l) s.look = l; }
+    for (const t of board) { const l = lk.get(t.id); if (l) t.look = l; }
     // Soatlar bo'yicha yangi lidlar (0–23, Toshkent vaqti).
     kpi.hourly = Array(24).fill(0);
     for (const e of leadEv) if (e.type === 'lead_new') kpi.hourly[new Date(new Date(e.at).getTime() + T.TZ_OFFSET_MIN * 60000).getUTCHours()]++;
@@ -313,4 +425,26 @@ async function liveCached(db, user, query = {}) {
     return v;
 }
 
-module.exports = { live, liveCached, viewerFor, KIND };
+// ── Kun yakuni: har kuni 19:00 dan keyin Domwork bot "sotuv" guruhiga (rus tili) bir marta. Summa va reja % yozilmaydi. ──
+async function daySummaryText(db, now = new Date()) {
+    const d = await live(db, { role: 'rop' }, { tv: '1', lang: 'russian' }, now);
+    const k = d.kpi, mgr = d.staff.filter(s => s.kind === 'mgr' || s.kind === 'rop');
+    const caller = [...mgr].sort((a, b) => b.callsToday - a.callsToday)[0];
+    const medal = ['🥇', '🥈', '🥉'], h = x => String(x || '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+    const lines = [`🏢 <b>Jonli ofis — kun yakuni</b> (${d.date.split('-').reverse().join('.')})`, '',
+        `🟢 Yangi lidlar: <b>${k.leads}</b>`, `📞 Qo'ng'iroqlar: <b>${k.calls}</b>`, `📅 Sinov darslari: <b>${k.trials}</b>`, `💰 Sotuvlar: <b>${k.sales}</b>`];
+    if (k.top.length) { lines.push('', '🏆 <b>Bugungi top sotuvchilar</b>'); k.top.forEach((t, i) => lines.push(`${medal[i]} ${h(t.name)} — ${t.sales} ta sotuv`)); }
+    if (caller && caller.callsToday) lines.push('', `📞 Qo'ng'iroq poygasi g'olibi: <b>${h(caller.name)}</b> (${caller.callsToday} ta)`);
+    lines.push('', 'Barakalla, jamoa! Ertaga yana zo\'r natija kutamiz 💪', '', '👀 https://myhomework.uz/ofis');
+    return { date: d.date, text: lines.join('\n') };
+}
+async function daySummaryTick(db, now = new Date()) {
+    if (process.env.DOMWORK_BOT_ENABLED !== 'true' || process.env.OFFICE_DAY_SUMMARY === 'off') return false;
+    const { min } = T.nowLocal(now);
+    if (min < 19 * 60 || min > 21 * 60) return false;
+    const { date, text } = await daySummaryText(db, now);
+    await require('./domworkBot/events').groupMessage(db, 'office:day:' + date, 'sales', text, require('./domworkBot/tone').HTML);
+    return true;
+}
+
+module.exports = { live, liveCached, viewerFor, KIND, initSchema, announce, removeAnnouncement, myLook, saveLook, daySummaryText, daySummaryTick, LOOK };
