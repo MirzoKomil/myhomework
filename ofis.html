@@ -27,7 +27,7 @@ h1{font-size:18px;margin:0;font-weight:900;line-height:1.1}
 .kpis{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:10px;scrollbar-width:none}.kpis::-webkit-scrollbar{display:none}
 .kpi{flex:0 0 auto;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:8px 12px;min-width:92px}
 .kpi b{display:block;font-size:20px;font-weight:900;font-variant-numeric:tabular-nums}.kpi span{font-size:11px;color:var(--mut);font-weight:800;text-transform:uppercase;letter-spacing:.03em}
-.kpi.money b{color:var(--green)}
+.kpi.money b,.kpi.online b{color:var(--green)}
 .main{display:grid;grid-template-columns:1fr;gap:12px}@media(min-width:960px){.main{grid-template-columns:1fr 340px}}
 .ctrl{display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
 .btn{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:7px 12px;font:800 13px Nunito,sans-serif;color:var(--ink);cursor:pointer}
@@ -132,6 +132,7 @@ body.tv #tvTicker{display:block;position:fixed;left:16px;right:16px;bottom:14px;
     <div class="side">
       <div class="panel"><h3>⚡ Jonli voqealar</h3><ul class="feed" id="feed"></ul></div>
       <div class="panel" id="waitBox" style="display:none;border-color:#FCA5A5"><h3>⏰ Taqsimlanmay kutayotgan lidlar</h3><div class="slist" id="wait"></div></div>
+      <div class="panel" id="actBox" style="display:none"><h3>⏱ Sotuvda bugun eng faol</h3><div class="slist" id="act"></div><div class="note">Platformadagi faol vaqt · har bo‘lim o‘z ichida</div></div>
       <div class="panel" id="raceBox" style="display:none"><h3>🏁 Qo'ng'iroq poygasi</h3><div id="race"></div></div>
       <div class="panel"><h3>📈 Soatlar bo'yicha lidlar</h3><div class="hours" id="hours"></div><div id="src"></div></div>
       <div class="panel"><h3>👥 Jamoa holati</h3><div class="team" id="team"></div><div class="note" id="note"></div></div>
@@ -144,6 +145,6 @@ body.tv #tvTicker{display:block;position:fixed;left:16px;right:16px;bottom:14px;
 <div id="big"><div class="bi">💰</div><div class="bt">SOTUV!</div><div class="bs" id="bigS"></div></div>
 <div class="toast" id="toast"></div>
 <div class="sheet" id="sheet"><div class="card" id="card"></div></div>
-<script src="/ofis/ofis.js?v=20261116c"></script>
+<script src="/ofis/ofis.js?v=20261116b"></script>
 </body>
 </html>
