@@ -82,13 +82,19 @@ async function teacherBoard(db, teachers, students, date, nowMin) {
     return teachers.map(t => {
         const v = S.dayView(ctx, t.id, date);
         const now = v.items.filter(i => i.start <= nowMin && nowMin < i.end);
+        const inSlot = list => (list || []).some(f => f.start <= nowMin && nowMin < f.end);
         const trial = now.find(i => i.kind === 'trial');
         const lessons = now.filter(i => i.kind === 'lesson' && i.studentId);
         const done = v.items.filter(i => i.kind === 'lesson' && i.studentId && i.end <= nowMin);
         const unmarked = done.filter(i => !marked.has(t.id + '|' + i.studentId)).length;
         const groupIds = [...new Set(v.items.filter(i => i.kind === 'lesson' && i.studentId).map(i => i.studentId))];
         return { id: t.id, name: first(t.first_name || t.name), lang: t.lang,
-            status: trial ? 'trial' : lessons.length ? 'live' : 'free',
+            // Bo'sh ustozlar xonasida faqat sinovga ochiq bo'sh vaqtida o'tiradi (jadvaldagi "bo'sh" oyna). Tanaffus, band/yopilgan vaqt,
+            // ta'til yoki ish vaqtidan tashqari (masalan tun) — ofisdan chiqib ketadi: status 'away', sababi awayWhy.
+            status: trial ? 'trial' : lessons.length ? 'live' : inSlot(v.trialFree) ? 'free' : 'away',
+            awayWhy: trial || lessons.length || inSlot(v.trialFree) ? null
+                : now.some(i => i.kind === 'break') ? 'break' : now.some(i => i.kind === 'leave') ? 'leave'
+                : inSlot(v.work) ? 'busy' : 'off',
             nowStudents: lessons.map(i => ({ id: i.studentId, name: first(names.get(i.studentId) || i.studentName) })),
             todayStudents: groupIds.length, lessonsDone: done.length,
             dav: !done.length ? null : unmarked ? 'pending' : 'ok',
@@ -390,7 +396,7 @@ async function live(db, user, query = {}, now = new Date()) {
     const names = new Map(all.map(e => [e.id, first(e.first_name || e.name)]));
 
     const students = await safe(() => activeStudents(db, v.langs, date), []);
-    const board = await safe(() => teacherBoard(db, teachers, students, date, minutes), teachers.map(t => ({ id: t.id, name: first(t.name), status: 'free', nowStudents: [], todayStudents: 0, lessonsDone: 0, dav: null })));
+    const board = await safe(() => teacherBoard(db, teachers, students, date, minutes), teachers.map(t => ({ id: t.id, name: first(t.name), status: 'away', awayWhy: 'off', nowStudents: [], todayStudents: 0, lessonsDone: 0, dav: null })));
     for (const t of board) { const e = teachers.find(x => x.id === t.id); if (e) { t.female = femaleOf(e); t.birthday = birthdayToday(e, date); if (!query.since) t.avatar = avatarOf(e); } }
     const app = await safe(() => appActivity(db, students.map(s => s.id), dayStart), { online: [], lessons: 0, exams: [] });
     const sName = new Map(students.map(s => [s.id, s]));
