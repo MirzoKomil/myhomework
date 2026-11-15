@@ -1,0 +1,81 @@
+name: Ofis APK
+
+on:
+  push:
+    branches: [main]
+    paths: ['android-ofis/**', '.github/workflows/ofis-apk.yml']
+  pull_request:
+    paths: ['android-ofis/**', '.github/workflows/ofis-apk.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Android SDK
+        run: echo "sdk.dir=$ANDROID_HOME" > android-ofis/local.properties
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      # Doimiy imzo kaliti (DWT_KEYSTORE_B64 secret) bo'lsa — release imzosi, keyingi versiyalar ustidan o'rnatiladi.
+      # Bo'lmasa — test imzosi (o'rnatsa bo'ladi; doimiy kalitga o'tilganda bir marta o'chirib qayta o'rnatiladi).
+      # Test imzosi har safar bir xil bo'lsin (yangi versiya eskisi ustidan o'rnatilsin).
+      - uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: dwteam-debug-keystore-v1
+
+      - name: Imzo kalitini tiklash
+        env:
+          KS_B64: ${{ secrets.DWT_KEYSTORE_B64 }}
+        run: |
+          if [ -z "$KS_B64" ]; then
+            echo "::warning::DWT_KEYSTORE_B64 secret yo'q — APK test imzosi bilan yig'iladi."
+            exit 0
+          fi
+          echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/dwt.jks"
+          echo "DWT_SIGNED=1" >> "$GITHUB_ENV"
+
+      - name: APK yig'ish
+        env:
+          DWT_KS_PATH: ${{ runner.temp }}/dwt.jks
+          DWT_KEYSTORE_PASSWORD: ${{ secrets.DWT_KEYSTORE_PASSWORD }}
+          DWT_KEY_PASSWORD: ${{ secrets.DWT_KEYSTORE_PASSWORD }}
+          DWT_KEY_ALIAS: domworkteacher
+          DWT_VERSION_CODE: ${{ github.run_number }}
+          DWT_VERSION_NAME: 1.0.${{ github.run_number }}
+        run: |
+          if [ "$DWT_SIGNED" = "1" ]; then export DWT_KEYSTORE="$DWT_KS_PATH"; fi
+          gradle -p android-ofis assembleRelease --no-daemon
+          cp android-ofis/app/build/outputs/apk/release/app-release*.apk Ofis.apk
+          ls -la Ofis.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Ofis-1.0.${{ github.run_number }}
+          path: Ofis.apk
+
+      - name: Release
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="ofis-v1.0.${{ github.run_number }}"
+          NOTE="Ofis — jonli ofis (myhomework.uz/ofis). Telefon yoki Android TV pristavkasiga Ofis.apk ni yuklab o'rnating; CRM login va paroli bilan kiriladi. Televizorda o'zi TV rejimida ochiladi."
+          if [ "$DWT_SIGNED" = "1" ]; then
+            gh release create "$TAG" Ofis.apk --title "Ofis 1.0.${{ github.run_number }}" --notes "$NOTE" --latest
+          else
+            gh release create "$TAG" Ofis.apk --title "Ofis 1.0.${{ github.run_number }} (test imzo)" --notes "$NOTE" --prerelease
+          fi
