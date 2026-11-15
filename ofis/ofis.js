@@ -5,12 +5,11 @@
 const W0 = 800, H0 = 1440, DX = 505;
 const R = {
  entrance:{x:0,y:0,w:800,h:140,label:'Kirish · Face ID',ny:145},
- sotuv:{x:0,y:150,w:495,h:370,label:"Sotuv bo'limi",ny:335},
+ sotuv:{x:0,y:150,w:495,h:650,label:"Sotuv bo'limi",ny:335},
  rop:{x:515,y:150,w:285,h:180,label:'Akademik rahbar',ny:240},
  akad:{x:515,y:340,w:285,h:180,label:'Yordamchi ustozlar',ny:430},
- oquv:{x:0,y:530,w:495,h:270,label:"O'quvchilar · mobil ilova",ny:665},
  hr:{x:515,y:530,w:285,h:270,label:'HR · Marketing',ny:665},
- kassa:{x:0,y:810,w:495,h:190,label:'Kassa · Moliya',ny:905},
+ oquv:{x:0,y:810,w:495,h:190,label:"O'quvchilar · mobil ilova",ny:905},
  oshxona:{x:515,y:810,w:285,h:190,label:'Oshxona · tanaffus',ny:905},
  jonli:{x:0,y:1010,w:495,h:420,label:'Jonli darslar zali',ny:1220},
  sinov:{x:515,y:1010,w:285,h:200,label:'Sinov darslari zali',ny:1110},
@@ -18,12 +17,11 @@ const R = {
 };
 const IMAP={
  entrance:{xs:[[0,31],[400,573],[505,695],[800,1144]],ys:[[-40,-12],[0,20],[95,183],[145,256]]},
- sotuv:{xs:[[0,26],[495,643]],ys:[[150,277],[520,773]]},
+ sotuv:{xs:[[0,26],[495,643]],ys:[[150,277],[800,1087]]},
  rop:{xs:[[515,744],[585,925],[800,1144]],ys:[[150,277],[282,345],[320,470],[330,515]]},
  akad:{xs:[[515,744],[585,834],[670,944],[752,1052],[800,1144]],ys:[[340,530],[437,731],[520,775]]},
- oquv:{xs:[[0,26],[52,214],[376,533],[495,643]],ys:[[530,796],[640,878],[752,1055],[800,1087]]},
  hr:{xs:[[515,744],[600,940],[800,1144]],ys:[[530,796],[692,893],[730,1010],[800,1082]]},
- kassa:{xs:[[0,26],[250,340],[495,643]],ys:[[810,1106],[897,1223],[937,1340],[1000,1377]]},
+ oquv:{xs:[[0,26],[52,214],[376,533],[495,643]],ys:[[810,1103],[887.4,1183],[966.2,1356],[1000,1387]]},
  oshxona:{xs:[[515,744],[660,859],[800,1144]],ys:[[810,1106],[918,1290],[1000,1374]]},
  jonli:{xs:[[0,22],[495,650]],ys:[[1010,1392],[1430,2025]]},
  sinov:{xs:[[515,744],[800,1150]],ys:[[1010,1390],[1210,1672]]},
@@ -45,12 +43,14 @@ const KIND_LABEL={mgr:'Sotuv menejeri',rop:'ROP',akad:'Akademik rahbar',yord:'Yo
 const FEM=/a$|ya$|xon$|oy$|gul|nur|niso|sevar|zuhr|dil|mohi|shah?lo|lola|rano|feruz|kamol|madin/i;
 
 // ── Joylar (dunyo koordinatalari, rasmga IMAP orqali) ──
-// Sotuv bo'limi (16-noy): 15 ta menejer stoli (3 qator × 5) va ROP stoli shu xonada, doska oldida jamoaga qarab.
-// Rasm koordinatalari: stol chap-yuqori burchagi (c, r), stul markazi (c+42, r+60), odam (c+42, r+70).
-const MGR_SEATS=[];for(const r of [498,586,674])for(const c of [68,188,308,428,548]){const w=illInv(c+42,r+70);MGR_SEATS.push([w.x,w.y])}
-const ROP_DESK=(()=>{const w=illInv(361,411);return[w.x,w.y]})();
+// Sotuv bo'limi (16-noy): 12 ta menejer stoli (3 qator × 4), xona ikki baravar katta (kassa olib tashlandi) va ROP stoli shu xonada, doska oldida jamoaga qarab.
+// Rasm koordinatalari: stol chap-yuqori burchagi (c, r), odam (c+62, r+97).
+const MGR_SEATS=[];for(const r of [575,745,915])for(const c of [78,216,354,492]){const w=illInv(c+62,r+97);MGR_SEATS.push([w.x,w.y])}
+const ROP_DESK=(()=>{const w=illInv(361,425);return[w.x,w.y]})();
+// To'lov joyi — ROP stoli oldi (kassa xonasi yo'q); tushum ekrani sotuv xonasida.
+const PAY=(()=>{const w=illInv(361,555);return[w.x,w.y]})();
 const ROP_SEAT=[585,282], AK_SEATS=[[585,437],[670,437],[752,437],[630,480]], HR_SEAT=[600,692];
-const BAGS=[];for(let r=0;r<3;r++)for(let c=0;c<4;c++)BAGS.push([52+c*108,640+r*56]);
+const BAGS=[];for(let r=0;r<3;r++)for(let c=0;c<4;c++)BAGS.push([52+c*108,887.4+r*39.4]);
 // Jonli darslar: 20 ta 1+1 kabinka (rasm koordinatalari). Har birida stol, chapda ustoz, o'ngda o'quvchi.
 const CABX=[97,220,343,467,591],CABY=[1488,1645,1800,1953],CWX=[20,151,276,401,528,650],CWY=[1392,1549,1707,1864,2025];
 const CAB=[];for(let r=0;r<4;r++)for(let c=0;c<5;c++)CAB.push({cx:CABX[c],cy:CABY[r],x0:CWX[c],x1:CWX[c+1],y0:CWY[r],y1:CWY[r+1]});
@@ -58,7 +58,7 @@ const CAB=[];for(let r=0;r<4;r++)for(let c=0;c<5;c++)CAB.push({cx:CABX[c],cy:CAB
 const TRIAL_I=[[836,1485],[950,1485],[1060,1485],[836,1576],[950,1576],[1060,1576]];
 const LOUNGE=[[565,1305],[630,1305],[695,1305],[755,1305],[600,1392],[715,1392],[660,1260]];
 const KITCHEN=[[620,880],[700,880],[620,955],[700,955],[760,915],[560,915]];
-const BENCH=(i)=>[48+(i%9)*19,206];
+const BENCH=(i)=>[48+(i%9)*19,245]; // doska ostidagi yo'lak (ROP stolidan chapda)
 
 // ── Holat ──
 const API='/api/office/live';
@@ -84,7 +84,13 @@ function step(p,dt){if(!p.path.length)return;const w=p.path[0],dx=w.x-p.x,dy=w.y
  else{p.x+=dx/d*v;p.y+=dy/d*v}}
 
 // ── Joylashtirish (surat → sahna) ──
-function seatFor(s,idx){if(s.kind==='mgr'){const i=idx.mgr++;return ['sotuv',...(MGR_SEATS[i]||[60+i*30,470])]}
+// Menejer stoli: ofisdagi menejerga bo'sh stol beriladi va u ketguncha o'zida qoladi (kelgan-ketganda boshqalar ko'chmaydi).
+// 12 tadan ko'p bo'lsa, ortiqchalari ROP stoli oldida tik turadi. Ofisda yo'qlar (so'rov belgisi uchun) ro'yxat tartibida.
+const mgrSeat=new Map();
+function mgrPos(s,k){if(!s.inOffice){mgrSeat.delete(s.id);return MGR_SEATS[k%MGR_SEATS.length]}
+ if(!mgrSeat.has(s.id)){const used=new Set(mgrSeat.values());let i=0;while(used.has(i))i++;mgrSeat.set(s.id,i)}
+ const i=mgrSeat.get(s.id);if(i<MGR_SEATS.length)return MGR_SEATS[i];const w=illInv(110+((i-MGR_SEATS.length)%9)*58,560);return[w.x,w.y]}
+function seatFor(s,idx){if(s.kind==='mgr'){const k=idx.mgr++;return ['sotuv',...mgrPos(s,k)]}
  if(s.kind==='rop')return['sotuv',...ROP_DESK];if(s.kind==='akad')return['rop',...ROP_SEAT];if(s.kind==='yord'){const i=idx.ak++;return['akad',...(AK_SEATS[i]||[560+i*30,500])]}
  if(s.kind==='hr')return['hr',...HR_SEAT];return['hr',650+idx.x++*25,760]}
 const LUNCH_SEATS=[[560,880],[610,880],[660,880],[710,880],[760,880],[560,950],[610,950],[660,950],[710,950],[760,950]];
@@ -188,7 +194,7 @@ function animateEvent(e){
   case 'contacted':if(mgr)say(mgr,'💬',"Bog'landi",5,'#0E7490');break;
   case 'trial_booked':{if(mgr)say(mgr,'📅','Sinov darsi!',5,'#16A34A');if(visitors>=10)break;const p=leadPerson(e);p.bench=null;const tt=people.get('t:'+e.teacherId);
    const k=trialTables.get(e.teacherId);const [ix,iy]=TRIAL_I[k!=null?k:ri(0,5)],sw=illInv(ix+28,iy+12),tx=sw.x,ty=sw.y;moveTo(p,'sinov',tx,ty,()=>{say(p,'🎧','Sinov darsi',8);setTimeout(()=>{if(people.get(p.id))leave(p)},25000)});break}
-  case 'sale':{const p=leadPerson(e);p.bench=null;moveTo(p,'kassa',250,937,()=>{confetti(250,890,60);say(p,'💳',"To'lov",4);setTimeout(()=>{if(people.has(p.id)){p.shirt='#38BDF8';moveTo(p,'oquv',BAGS[ri(0,11)][0],BAGS[ri(0,11)][1]+20,()=>setTimeout(()=>{people.delete(p.id)},8000))}},1500)});
+  case 'sale':{const p=leadPerson(e);p.bench=null;moveTo(p,'sotuv',PAY[0],PAY[1],()=>{const q=ill(PAY[0],PAY[1]);confetti(q.x,q.y-40,60);say(p,'💳',"To'lov",4);setTimeout(()=>{if(people.has(p.id)){p.shirt='#38BDF8';moveTo(p,'oquv',BAGS[ri(0,11)][0],BAGS[ri(0,11)][1]+20,()=>setTimeout(()=>{people.delete(p.id)},8000))}},1500)});
    if(mgr){say(mgr,'🎉','Sotuv!',8,'#16A34A');confetti(mgr.x,mgr.y-30,40)}catParty();
    const h=`💰 Sotuv! ${esc(nameOf(e.managerId))}`,sub=`${esc(e.lead||'')}`+(e.amount?` · ${money(e.amount)} so'm`:'');toast(h,sub);if(document.body.classList.contains('tv'))bigShow(h,sub);break}
   case 'debt_payment':if(mgr)say(mgr,'💳',"To'lov",5,'#0E7490');break;
@@ -303,7 +309,7 @@ function drawPerson(p){const moving=p.path.length>0,bob=moving?Math.abs(Math.sin
  if(p.kind==='stud'){ctx.fillStyle='#14213D';rr(x-4,y-17,8,11,2);ctx.fill();ctx.fillStyle='#60A5FA';rr(x-3,y-16,6,8,1);ctx.fill()}}
 function chip(x,y,t,bg,fg){ctx.font='900 15px Nunito';const w=ctx.measureText(t).width+20;ctx.fillStyle=bg;rr(x,y,w,26,13);ctx.fill();ctx.fillStyle=fg;ctx.textAlign='left';ctx.fillText(t,x+10,y+18)}
 const COLS=[['Yangi','#1F4FD8',['yangi-lidlar']],['Urinilmoqda','#F59E0B',['boglanishga-urinilmoqda']],['Sinov','#7C3AED',['sinov-darsida','boglanildi']],['Qaror','#0EA5E9',['qaror-jarayonida','keyin-sotib-olmoqchi']],["To'lov",'#16A34A',['tolov-jarayonida','tolov-yopildi']],['Sifatsiz','#94A3B8',['sifatsiz-lidlar','muvaffaqiyatsiz-sotuv']]];
-let IMG=new Image();IMG.src='/ofis/office.webp?v=20261116s'; // rasm almashtirilsa versiyani oshiring (brauzer 4 soat keshlaydi)
+let IMG=new Image();IMG.src='/ofis/office.webp?v=20261116k'; // rasm almashtirilsa versiyani oshiring (brauzer 4 soat keshlaydi)
 function render(){
  ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#E9DCC7';ctx.fillRect(0,0,cw,ch);
  ctx.save();ctx.scale(cam.s,cam.s);ctx.translate(-cam.x,-cam.y);
@@ -315,11 +321,11 @@ function render(){
   ctx.fillStyle='#fff';rr(242,290,256,78,6);ctx.fill();const cwid=246/6;COLS.forEach(([n,c,ids],i)=>{const cx=247+i*cwid;const v=ids.reduce((s,id)=>s+(data.board[id]||0),0);
    ctx.fillStyle=c;rr(cx+2,296,cwid-4,10,3);ctx.fill();ctx.fillStyle='#14213D';ctx.font='900 21px Nunito';ctx.textAlign='center';ctx.fillText(v,cx+cwid/2,334);ctx.fillStyle='#6B7385';ctx.font='800 9.5px Nunito';ctx.fillText(n,cx+cwid/2,355)});
   // kassa ekrani
-  ctx.fillStyle='#14213D';rr(410,1131,137,55,4);ctx.fill();ctx.textAlign='left';
-  if(data.viewer.money){ctx.fillStyle='#FCD34D';ctx.font='900 10px Nunito';ctx.fillText('BUGUNGI TUSHUM',418,1148);ctx.fillStyle='#fff';ctx.font='900 18px Nunito';ctx.fillText(money(data.kpi.money),418,1172)}
-  else{ctx.fillStyle='#FCD34D';ctx.font='900 10px Nunito';ctx.fillText('BUGUN',418,1148);ctx.fillStyle='#fff';ctx.font='900 18px Nunito';ctx.fillText(data.kpi.sales+' ta sotuv',418,1172)}
+  ctx.fillStyle='#14213D';rr(468,440,137,55,6);ctx.fill();ctx.textAlign='left';
+  if(data.viewer.money){ctx.fillStyle='#FCD34D';ctx.font='900 10px Nunito';ctx.fillText('BUGUNGI TUSHUM',476,457);ctx.fillStyle='#fff';ctx.font='900 18px Nunito';ctx.fillText(money(data.kpi.money),476,481)}
+  else{ctx.fillStyle='#FCD34D';ctx.font='900 10px Nunito';ctx.fillText('BUGUN',476,457);ctx.fillStyle='#fff';ctx.font='900 18px Nunito';ctx.fillText(data.kpi.sales+' ta sotuv',476,481)}
   const k=data.kpi;
-  chip(150,1062,`📱 Faol ${k.students} · ilovada ${k.online} · bugun ${k.appLessons} dars qismi · ${k.exams} imtihon`,'rgba(20,33,61,.82)','#fff');
+  chip(150,1360,`📱 Faol ${k.students} · ilovada ${k.online} · bugun ${k.appLessons} dars qismi · ${k.exams} imtihon`,'rgba(20,33,61,.82)','#fff');
   chip(950,1400,`🎧 Hozir: ${k.trialNow} sinov`,'#1F4FD8','#fff');chip(950,1698,`☕ Bo'sh: ${k.freeTeachers} ustoz`,'#15803D','#fff');
   // kabinka doskalari: ustoz ismi, holat, davomat; darsdagi o'quvchi o'ng stulda
   data.teachers.slice(0,CAB.length).forEach((t,i)=>{const c=CAB[i],bx=c.cx+4,by=c.cy-70,live=t.status==='live';
@@ -405,12 +411,12 @@ function overlayExtras(){if(!data)return;const h=holiday(),w=data.kpi.weather;le
 function applyLook(p,l){if(!p.base)p.base={shirt:p.shirt,hair:p.hair};l=l||{};p.look=l;p.shirt=l.shirt||p.base.shirt;p.hair=l.hair||p.base.hair;p.style=l.style||null;p.acc=l.acc&&l.acc!=='none'?l.acc:null;p.noPhoto=l.head==='drawn'}
 // Ofis mushugi "Mosh": yo'lakda aylanadi, sotuvda kassaga yuguradi, kechasi oshxonada uxlaydi.
 const cat={id:'cat',x:640,y:960,path:[],room:'oshxona',walk:0,dir:1,next:0,party:0,visible:true};
-const CAT_SPOTS=[['oshxona',640,960],['oshxona',740,880],['sotuv',245,470],['sotuv',120,250],['entrance',300,110],['entrance',700,110],['kassa',330,960],['oquv',260,760],['hr',720,760],['rop',720,300]];
+const CAT_SPOTS=[['oshxona',640,960],['oshxona',740,880],['sotuv',245,470],['sotuv',120,250],['entrance',300,110],['entrance',700,110],['sotuv',380,560],['oquv',260,960],['hr',720,760],['rop',720,300]];
 const night=()=>{const h=new Date(Date.now()+5*3600e3).getUTCHours();return h>=20||h<7};
 function catTick(now){if(cat.path.length)return;if(now<cat.next)return;
  if(night()){if(cat.room!=='oshxona'||Math.hypot(cat.x-560,cat.y-960)>4)moveTo(cat,'oshxona',560,960);cat.next=now+30000;return}
  const sp=pick(CAT_SPOTS);moveTo(cat,sp[0],sp[1]+rnd(-20,20),sp[2]+rnd(-10,10));cat.next=now+rnd(9000,20000)}
-function catParty(){if(replay.on&&Math.random()<.5)return;moveTo(cat,'kassa',300,950,()=>{cat.party=performance.now()+5000});cat.next=performance.now()+15000}
+function catParty(){if(replay.on&&Math.random()<.5)return;moveTo(cat,'sotuv',PAY[0]+30,PAY[1],()=>{cat.party=performance.now()+5000});cat.next=performance.now()+15000}
 function drawCat(){const now=performance.now();catTick(now);const q=ill(cat.x,cat.y),moving=cat.path.length>0;if(moving){const w=cat.path[0];if(Math.abs(w.x-cat.x)>1)cat.dir=w.x>cat.x?1:-1}
  const sleep=night()&&!moving,hop=cat.party>now?Math.abs(Math.sin(now/120))*14:moving?Math.abs(Math.sin(now/90))*3:0;
  ctx.save();ctx.translate(q.x,q.y-hop);ctx.scale(-cat.dir,1);ctx.font='30px sans-serif';ctx.textAlign='center';ctx.fillText(sleep?'🐈':'🐈',0,0);ctx.restore();
@@ -427,7 +433,7 @@ function raceUi(){const el=document.getElementById('race');if(!el)return;const L
  document.getElementById('raceBox').style.display=L.length?'':'none';
  el.innerHTML=L.map((s,i)=>`<div class="lane"><span class="ln">${i===0&&s.callsToday?'🥇 ':''}${esc(s.name)}</span><div class="trk"><i style="left:${Math.round((s.callsToday||0)/mx*86)}%;background:${people.get('s:'+s.id)?.shirt||'#94A3B8'}">${esc(s.name[0]||'?')}</i><b>🏁</b></div><em title="${s.callLeadsToday||0} ta lidga">${s.callsToday||0}</em></div>`).join('')}
 // Sotuv xonasi pastida poyga treki
-function drawRaceTrack(){const L=raceList();if(!L.length)return;const mx=Math.max(1,...L.map(s=>s.callsToday||0)),x0=60,x1=600,y=781; // sotuv va o'quvchilar xonasi orasidagi devorda (15 stol pastki qatorini yopmasin)
+function drawRaceTrack(){const L=raceList();if(!L.length)return;const mx=Math.max(1,...L.map(s=>s.callsToday||0)),x0=60,x1=600,y=1093; // sotuv va o'quvchilar xonasi orasidagi devorda (stollarni yopmasin)
  ctx.fillStyle='rgba(20,33,61,.82)';rr(x0-44,y-16,x1-x0+90,32,16);ctx.fill();ctx.strokeStyle='rgba(255,255,255,.35)';ctx.setLineDash([6,6]);ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x0,y);ctx.lineTo(x1,y);ctx.stroke();ctx.setLineDash([]);
  ctx.font='16px sans-serif';ctx.textAlign='center';ctx.fillText('📞',x0-24,y+6);ctx.fillText('🏁',x1+26,y+6);
  L.forEach((s,i)=>{const X=x0+(s.callsToday||0)/mx*(x1-x0),bob=Math.sin(performance.now()/180+i)*1.5;ctx.fillStyle=people.get('s:'+s.id)?.shirt||'#94A3B8';ctx.beginPath();ctx.arc(X,y+bob,10,0,7);ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();
@@ -491,7 +497,7 @@ function drawRequests(){const idx={mgr:0,ak:0,x:0};for(const s of data.staff){co
 function board(x,y,w,title,rows,color){const h=22+rows.length*16;ctx.fillStyle='rgba(255,255,255,.95)';rr(x,y,w,h,10);ctx.fill();ctx.strokeStyle=color;ctx.lineWidth=2;ctx.stroke();
  ctx.fillStyle=color;ctx.font='900 11px Nunito';ctx.textAlign='left';ctx.fillText(title,x+10,y+15);
  rows.forEach(([a,b],i)=>{ctx.fillStyle='#14213D';ctx.font='800 12px Nunito';ctx.textAlign='left';ctx.fillText(a,x+10,y+32+i*16);ctx.textAlign='right';ctx.fillStyle='#16A34A';ctx.fillText(b,x+w-10,y+32+i*16)});ctx.textAlign='left'}
-function drawFame(){const f=(data.kpi.fame||[]).slice(0,4);if(!f.length)return;board(420,812,215,"🎓 SHON-SHARAF DEVORI",f.map(x=>['⭐ '+x.name+(x.teacher?' · '+x.teacher:''),x.percent+'%']),'#7C3AED')}
+function drawFame(){const f=(data.kpi.fame||[]).slice(0,4);if(!f.length)return;board(420,1112,215,"🎓 SHON-SHARAF DEVORI",f.map(x=>['⭐ '+x.name+(x.teacher?' · '+x.teacher:''),x.percent+'%']),'#7C3AED')}
 function drawTeacherTop(){const t=data.kpi.teacherTop||[];if(!t.length)return;board(842,1955,205,"⭐ USTOZLAR REYTINGI · 7 KUN",t.map((x,i)=>[['🥇','🥈','🥉'][i]+' '+x.name,x.lessons+' dars']),'#B45309')}
 function drawGoal(){const g=data.kpi.goal;if(!g)return;const k=data.kpi,parts=[['📞',k.calls,g.calls],['📅',k.trials,g.trials],['💰',k.sales,g.sales]].filter(p=>p[2]>0);if(!parts.length)return;
  const x0=24,y=238,w=600;ctx.fillStyle='rgba(255,255,255,.95)';rr(x0,y-18,w,32,16);ctx.fill();ctx.strokeStyle='#16A34A';ctx.lineWidth=1.5;ctx.stroke();
@@ -593,7 +599,7 @@ document.getElementById('sndBtn').onclick=e=>{e.stopPropagation();SND.toggle();t
 const tvTk=document.getElementById('tvTicker'),bigEl=document.getElementById('big');let tvTour=null,tvIdx=0;
 function tvTick(icon,text){if(!document.body.classList.contains('tv'))return;const d=document.createElement('div');d.textContent=icon+' '+text;tvTk.prepend(d);while(tvTk.children.length>3)tvTk.lastChild.remove()}
 function bigShow(h,s){document.getElementById('bigS').innerHTML=h.replace(/^💰\s*Sotuv!\s*/,'')+(s?' · '+s:'');bigEl.classList.add('show');clearTimeout(bigT);bigT=setTimeout(()=>bigEl.classList.remove('show'),4000)}
-const TOUR=['sotuv',null,'jonli','sinov','oquv',null,'kassa','rop',null,'bosh'];
+const TOUR=['sotuv',null,'jonli','sinov','oquv',null,'rop',null,'bosh'];
 function tvSet(on){document.body.classList.toggle('tv',on);tvTimersOn(on);if(on){try{const el=document.documentElement;const fr=(el.requestFullscreen||el.webkitRequestFullscreen||(()=>{})).call(el);if(fr&&fr.catch)fr.catch(()=>{})}catch(e){}
   if(!SND.on)SND.toggle(true);clearInterval(tvTour);tvTour=setInterval(()=>{tvIdx=(tvIdx+1)%TOUR.length;zoomTo(TOUR[tvIdx])},12000);hint.style.opacity=0}
  else{clearInterval(tvTour);try{document.fullscreenElement&&document.exitFullscreen()}catch(e){}zoomTo(null)}setTimeout(resize,60)}
