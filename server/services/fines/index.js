@@ -114,8 +114,13 @@ async function syncAttendance(db, now = new Date()) {
         const days = dates.map(date => {
             const d = svc.statusFor(ctx, e.id, date, settings, now);
             if (date !== today) return { date, ...d };
-            return { date, status: d.status === 'late' ? 'late' : d.status === 'on_time' ? 'on_time' : 'upcoming', lateMinutes: d.lateMinutes, rawLateMinutes: d.rawLateMinutes };
+            return { date, status: d.status === 'late' ? 'late' : d.status === 'on_time' ? 'on_time' : 'upcoming', lateMinutes: d.lateMinutes, rawLateMinutes: d.rawLateMinutes,
+                // Bugun qaytib bo'lingan obed/ruxsat kechikishi — darhol (qaytganda bir marta).
+                lunchOverMinutes: d.lunchOverMinutes, stepOverMinutes: d.stepOverMinutes };
         });
+        // Sinov haftasi: hisob boshlangan kundan keyingi 7 kun jarimasiz (direktor, 15-noy).
+        const tu = svc.trialUntil(svc.countFromFor(ctx, e.id, today));
+        if (tu) for (const d of days) if (d.date <= tu) d.trial = true;
         // Har oy o'z sozlamasi bilan (kuchga kirish sanasi).
         const byMonth = {};
         for (const d of days) (byMonth[d.date.slice(0, 7)] ||= []).push(d);
@@ -153,7 +158,7 @@ async function syncAttendance(db, now = new Date()) {
         // Bugun hali yakunlanmagan: faqat kechikish ko'riladi, shuning uchun bugungi boshqa turdagi jarimalar tegilmaydi.
         const existing = (await db.query(`SELECT id,ref,month,code,amount,washed,TO_CHAR(work_date,'YYYY-MM-DD') AS d FROM staff_fines WHERE employee_id=$1 AND source='attendance'
             AND state='active' AND work_date BETWEEN $2 AND $3`, [e.id, start, today])).rows.map(f => ({ ...f, amount: Number(f.amount), washed: Number(f.washed) }));
-        const stale = existing.filter(f => !produced.has(f.ref) && (f.d < today || /:late$|:streak3$/.test(f.ref)));
+        const stale = existing.filter(f => !produced.has(f.ref) && (f.d < today || /:late$|:streak3$|:lunch$|:step$/.test(f.ref)));
         for (const f of stale) {
             const c = await db.query(`UPDATE staff_fines SET state='cancelled',note='auto',washed=0 WHERE id=$1 AND state='active' RETURNING id`, [f.id]);
             if (!c.rowCount || !f.washed) continue;
