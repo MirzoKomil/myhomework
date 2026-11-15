@@ -22,7 +22,9 @@ const CALL_TYPES = new Set(['call-attempt', 'contact-fail']);
 // (contact-fail) — shu qo'ng'iroqning natijasi yoki ustun almashtirishdagi sabab: lentada ko'rinadi, lekin qayta sanalmaydi.
 const isCall = e => e.type === 'call';
 const LOST = new Set(['muvaffaqiyatsiz-sotuv', 'sifatsiz-lidlar']);
-const LANGS = ['english', 'russian'];
+const DOMWORK_LANG = 'russian';
+// Xodim tili: lavozim asosiy (rus ustozlarining lang ustuni 'english' bo'lib qolgan — school.js langOf bilan bir xil), keyin lang ustuni.
+const empLang = e => e.lang === 'both' ? 'both' : e.role === 'rus-oqituvchi' ? 'russian' : e.role === 'ingliz-oqituvchi' ? 'english' : e.lang === 'russian' ? 'russian' : 'english';
 
 const first = s => String(s || '').trim().split(/\s+/)[0] || '';
 const iso = v => (v ? new Date(v).toISOString() : null);
@@ -36,9 +38,13 @@ async function viewerFor(db, user, { tv = false, lang = null } = {}) {
     if (!tv && (role === 'admin' || role === 'boshliq')) scope = 'full';
     else if (!tv && role === 'rop') { scope = 'sales'; langs = await safe(() => require('./ropScope').ropLangsFor(db, user), null); }
     else if (!tv && role === 'akademik') { scope = 'academic'; langs = await safe(() => require('./academicHead').langsFor(db, user), null); }
-    if (LANGS.includes(lang)) langs = langs ? langs.filter(l => l === lang) : [lang];
-    return { role, tv, scope, langs, money: scope === 'full' || scope === 'sales',
-        lateFor: scope === 'full' ? 'all' : scope === 'sales' ? 'sales' : scope === 'academic' ? 'academic' : null };
+    // Jonli ofis — faqat Domwork (rus tili kursi). Ingliz (Homework) xodimlari, ustozlari, lidlari va to'lovlari ko'rinmaydi.
+    // ?lang= parametri e'tiborsiz; faqat ingliz yo'nalishidagi ROP/akademik Domwork summalari va kechikishlarini ko'rmaydi.
+    void lang;
+    const own = langs; langs = [DOMWORK_LANG];
+    const outside = !!own && !own.includes(DOMWORK_LANG);
+    return { role, tv, scope, langs, money: !outside && (scope === 'full' || scope === 'sales'),
+        lateFor: outside ? null : scope === 'full' ? 'all' : scope === 'sales' ? 'sales' : scope === 'academic' ? 'academic' : null };
 }
 
 async function staffList(db) {
@@ -368,7 +374,7 @@ async function live(db, user, query = {}, now = new Date()) {
     const dayStart = new Date(Date.parse(`${date}T00:00:00Z`) - T.TZ_OFFSET_MIN * 60000);
 
     const all = await safe(() => staffList(db), []);
-    const inLang = e => !v.langs || v.langs.includes(String(e.lang || '').toLowerCase()) || String(e.lang || '').toLowerCase() === 'both';
+    const inLang = e => { const l = empLang(e); return l === 'both' || !v.langs || v.langs.includes(l); };
     const office = all.filter(e => ['mgr', 'rop', 'akad', 'yord', 'hr'].includes(KIND(e.role)) && inLang(e));
     const teachers = all.filter(e => KIND(e.role) === 'teacher' && inLang(e));
 
