@@ -494,6 +494,8 @@ init().then(async () => {
         setTimeout(run, 45 * 1000).unref();
     }).catch(err => console.error('[push] Jadval yaratilmadi:', err.code || err.message));
     void domworkBot.start();
+    // Kunlik avtomatik SMS'lar: "Keyin sotib olmoqchi" sanasi, qarz eslatmalari (server/services/leadStageSms.js)
+    require('./services/leadStageSms').startDaily();
     app.listen(PORT, '0.0.0.0', () => {
         console.log(`Myhomework.uz server: port ${PORT}`);
     });

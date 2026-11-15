@@ -4752,8 +4752,6 @@ setInterval(_checkAndPushComputedNotifications, PUSH_CHECK_INTERVAL_MS);
 // server tomonidagi mustaqil vazifa.
 const TRIAL_SMS_REMINDER_RULES = [
     { id: '1h', minutes: 60 },
-    { id: '30m', minutes: 30 },
-    { id: '10m', minutes: 10 },
     { id: 'start', minutes: 0 },
 ];
 const TRIAL_SMS_TOLERANCE_MIN = 2; // tekshiruv har 60s da ishga tushadi — zaxira
@@ -4772,20 +4770,10 @@ async function getTeacherTrialLinksMap() {
     return new Map(rows.map(r => [r.id, r.trial_group_link]));
 }
 
+// Matnlar server/services/smsTexts.js da (Eskiz moderatsiyasidagi nusxa bilan AYNAN bir xil bo'lishi shart).
 function buildTrialReminderSmsText(ruleId, lead, link) {
-    const ism = lead.name || 'Hurmatli mijoz';
-    switch (ruleId) {
-        case '1h':
-            return `Eslatib o'tamiz sizga bitta bepul rus tili darsi belgilangan, dars bu yerda bo'ladi: ${link}`;
-        case '30m':
-            return `Atigi 30 daqiqa qoldi, va siz "90 kunda rus tilida gapiring" nomli kursimizdan tatib ko'rasiz. ${link}`;
-        case '10m':
-            return `Biz sizni sabrsizlik bilan kutmoqdamiz, yana 10 daqiqa va siz haqiqiy dastur guvohi bo'lasiz: ${link}`;
-        case 'start':
-            return `${ism}! Dars boshlandi, sizni bo'lajak ustozingiz kutmoqda, darsga bu yerdan kiring: ${link}`;
-        default:
-            return '';
-    }
+    const T = require('./services/smsTexts');
+    return T.render('sinov-' + ruleId, { name: lead.name, link, time: T.uzTime(lead.trialLessonAt) });
 }
 
 async function _checkAndSendTrialSmsReminders() {
@@ -4801,7 +4789,9 @@ async function _checkAndSendTrialSmsReminders() {
         for (const lead of leads) {
             // Shablonlar aynan Domwork (rus tili) brendi uchun yozilgan.
             if (lead.language !== 'russian') continue;
-            if (!lead.phone || !lead.trialLessonAt) continue;
+            // Faqat O'zbekiston raqami (phone yoki phone2) — xorijiy raqamlar Eskiz'da xato beradi.
+            const smsPhone = require('./services/leadStageSms').uzPhoneOf(lead);
+            if (!smsPhone || !lead.trialLessonAt) continue;
 
             const trialAtMs = new Date(lead.trialLessonAt).getTime();
             if (Number.isNaN(trialAtMs)) continue;
@@ -4829,17 +4819,19 @@ async function _checkAndSendTrialSmsReminders() {
 
                 const text = buildTrialReminderSmsText(rule.id, lead, link);
                 try {
-                    const resp = await eskiz.sendSms(lead.phone, text);
+                    const resp = await eskiz.sendSms(smsPhone, text);
                     historyEntries.push({
-                        phone: lead.phone, name: lead.name, status: 'sent',
+                        phone: smsPhone, name: lead.name, status: 'sent',
                         eskizId: resp?.id || null, message: text,
                         recipientId: lead.id, recipientType: 'lead',
                         audience: 'auto-sinov-' + rule.id, sentBy: 'system',
                     });
                 } catch (err) {
                     console.warn(`[trial-sms] yuborilmadi — leadId=${lead.id} rule=${rule.id}:`, err.message);
+                    const ls = require('./services/leadStageSms');
+                    ls.alertAdmin(ls.errorKind(err.message), `sinov-${rule.id}: ${err.message}`);
                     historyEntries.push({
-                        phone: lead.phone, name: lead.name, status: 'error',
+                        phone: smsPhone, name: lead.name, status: 'error',
                         error: err.message, message: text,
                         recipientId: lead.id, recipientType: 'lead',
                         audience: 'auto-sinov-' + rule.id, sentBy: 'system',
@@ -4886,7 +4878,7 @@ module.exports = {
     getHomeworkRadioSchedule, saveHomeworkRadioDay,
     getContentComments, addContentComment, addAdminContentReply, deleteContentComment,
     getCallRecordings, getCallRecordingCounts, addCallRecording, deleteCallRecording, handleBeelineWebhook,
-    getSmsHistory, addSmsHistoryEntries,
+    getSmsHistory, addSmsHistoryEntries, getTeacherTrialLinksMap,
     getComputedDemoNotifications,
     getDemoStudentBookDelivery,
     getNextContractNumber, getOrCreateStudentContract, getStudentContractPdf,
