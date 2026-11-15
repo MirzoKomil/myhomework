@@ -132,7 +132,7 @@ function applySnapshot(d,animate){
  const used=new Set([...people.values()].filter(p=>p.bag!=null).map(p=>p.bag));
  for(const o of online){const id='st:'+o.id;if(people.has(id))continue;let b=BAGS.findIndex((_,i)=>!used.has(i));if(b<0)break;used.add(b);
   const p=mkPerson(id,{name:o.name,kind:'stud',bag:b,shirt:'#38BDF8'});place(p,'oquv',BAGS[b][0],BAGS[b][1]);if(animate)say(p,'📱','Ilovada',4)}
- alerts(d,animate);plan(d,animate);announceIn(d,animate);race(d,animate);ui();
+ alerts(d,animate);plan(d,animate);announceIn(d,animate);race(d,animate);goalIn(d,animate);ui();
 }
 
 // ── Voqealar ──
@@ -184,7 +184,7 @@ function animateEvent(e){
   case 'exam':{const p=people.get('st:'+e.studentId);say(p,'🎓',e.percent+'%',8,e.passed?'#16A34A':'#E11D48');break}
  }}
 function handleEvents(list,animate){
- for(const e of list){const [t,c]=evText(e);if(animate){feed(ICON[e.type]||'•',t,c,e.at);SND.ev(e.type==='sale'?'💰':ICON[e.type]);animateEvent(e)}
+ for(const e of list){const [t,c]=evText(e);if(animate){feed(ICON[e.type]||'•',t,c,e.at);SND.ev(e.type==='sale'?'💰':ICON[e.type],e);animateEvent(e)}
   else{const li=document.createElement('li');li.innerHTML=`<span class="t">${hm(e.at)}</span><span class="i">${ICON[e.type]||'•'}</span><span style="${c?'color:'+c:''}">${t}</span>`;feedEl().prepend(li)}
   cursor=e.at}}
 
@@ -205,7 +205,7 @@ function setupLang(d){const b=document.getElementById('langBtn');const can=d.vie
 
 // ── UI ──
 function ui(){if(!data)return;const k=data.kpi;document.getElementById('clock').textContent=hm(Date.now());
- const v=data.viewer;document.getElementById('annBtn').style.display=ANN_ROLES.includes(v.role)?'':'none';document.getElementById('who').textContent=(user?.name?user.name+' · ':'')+({full:'toʻliq koʻrinish',sales:'sotuv koʻrinishi',academic:'akademik koʻrinish',team:'jamoa koʻrinishi'}[v.scope]||'');
+ const v=data.viewer;document.getElementById('annBtn').style.display=ANN_ROLES.includes(v.role)?'':'none';document.getElementById('goalBtn').style.display=GOAL_ROLES.includes(v.role)?'':'none';document.getElementById('who').textContent=(user?.name?user.name+' · ':'')+({full:'toʻliq koʻrinish',sales:'sotuv koʻrinishi',academic:'akademik koʻrinish',team:'jamoa koʻrinishi'}[v.scope]||'');
  const dl=(n,key)=>{const y=k.yday?.[key];if(y==null)return n;const d=n-y;return `${n}<i class="${d>0?'up':d<0?'dn':'eq'}" title="Kecha shu vaqtgacha: ${y}">${d>0?'▲'+d:d<0?'▼'+(-d):'='}</i>`};
  const items=[['Ofisda',k.inOffice+'/'+k.staff],...(k.onLunch?[['Obedda',k.onLunch]]:[]),...(k.stepOut?[['Tashqarida',k.stepOut]]:[]),['Lidlar',dl(k.leads,'leads')],["Qo'ng'iroq",dl(k.calls,'calls')],['Sinov',dl(k.trials,'trials')],['Sotuv',dl(k.sales,'sales')]];
  if(v.money)items.push(['Tushum',money(k.money),'money']);
@@ -317,7 +317,7 @@ function render(){
  const list=[...people.values()].filter(p=>p.visible).map(p=>({p,q:ill(p.x,p.y)})).sort((a,b)=>a.q.y-b.q.y);
  for(const {p,q} of list){ctx.save();ctx.translate(q.x,q.y);ctx.scale(1.4,1.4);ctx.translate(-p.x,-p.y);drawPerson(p);ctx.restore()}
  for(const f of fx){const q=f.img?f:ill(f.x,f.y);ctx.globalAlpha=Math.max(0,Math.min(1,f.life));ctx.fillStyle=f.c;ctx.fillRect(q.x,q.y,f.r*1.5,f.r*2.4)}ctx.globalAlpha=1;
- drawExtras();drawExtras2();
+ drawExtras();drawExtras2();drawExtras3();
  ctx.restore();sky();overlay(list);overlayExtras(list)}
 function overlay(list){const small=cw<600&&!zoomRoom;ctx.textAlign='left';ctx.font=small?'900 10px Nunito':'900 12px Nunito';
  for(const k in R){const r=R[k],q=ill(r.x+1,r.y+1),X=(q.x-cam.x)*cam.s+(small?5:8),Y=(q.y-cam.y)*cam.s+(small?5:8),w=ctx.measureText(r.label).width+(small?12:16);
@@ -465,6 +465,48 @@ async function openLook(){let r;try{r=await api('GET','/look')}catch(e){toast(es
  document.getElementById('lookSave').onclick=async()=>{try{const d=await api('PUT','/look',cur);if(me)applyLook(me,d.look);document.getElementById('sheet').classList.remove('show');toast('👤 Personaj saqlandi')}catch(e){toast(esc(e.message))}}}
 document.getElementById('annBtn').onclick=openAnnounce;document.getElementById('lookBtn').onclick=openLook;
 
+// ── Qo'shimchalar-3: kunlik maqsad, davomat so'rovlari, shon-sharaf devori, ustozlar reytingi, musiqa, avtomatik kun takrori ──
+const REQ_IC={late:['🕐','kech keladi'],absent:['✉️','bugun kelmaydi'],early_leave:['🏃','erta ketadi'],outside:['🏠','ofisdan tashqarida']};
+function drawRequests(){const idx={mgr:0,ak:0,x:0};for(const s of data.staff){const seat=seatFor(s,idx);if(!s.req||s.inOffice)continue;const q=ill(seat[1],seat[2]),r=REQ_IC[s.req.type];if(!r)continue;
+ const t=`${r[0]} ${s.name}${s.req.type==='late'&&s.req.at?' · '+s.req.at:''}${s.req.state==='pending'?' ?':''}`;ctx.font='800 11px Nunito';const w=ctx.measureText(t).width+14;
+ ctx.fillStyle=s.req.state==='approved'?'rgba(255,255,255,.95)':'rgba(254,243,199,.95)';rr(q.x-w/2,q.y-46,w,20,10);ctx.fill();ctx.strokeStyle='#F59E0B';ctx.lineWidth=1;ctx.stroke();
+ ctx.fillStyle='#14213D';ctx.textAlign='center';ctx.fillText(t,q.x,q.y-32)}}
+function board(x,y,w,title,rows,color){const h=22+rows.length*16;ctx.fillStyle='rgba(255,255,255,.95)';rr(x,y,w,h,10);ctx.fill();ctx.strokeStyle=color;ctx.lineWidth=2;ctx.stroke();
+ ctx.fillStyle=color;ctx.font='900 11px Nunito';ctx.textAlign='left';ctx.fillText(title,x+10,y+15);
+ rows.forEach(([a,b],i)=>{ctx.fillStyle='#14213D';ctx.font='800 12px Nunito';ctx.textAlign='left';ctx.fillText(a,x+10,y+32+i*16);ctx.textAlign='right';ctx.fillStyle='#16A34A';ctx.fillText(b,x+w-10,y+32+i*16)});ctx.textAlign='left'}
+function drawFame(){const f=(data.kpi.fame||[]).slice(0,4);if(!f.length)return;board(420,812,215,"🎓 SHON-SHARAF DEVORI",f.map(x=>['⭐ '+x.name+(x.teacher?' · '+x.teacher:''),x.percent+'%']),'#7C3AED')}
+function drawTeacherTop(){const t=data.kpi.teacherTop||[];if(!t.length)return;board(842,1955,205,"⭐ USTOZLAR REYTINGI · 7 KUN",t.map((x,i)=>[['🥇','🥈','🥉'][i]+' '+x.name,x.lessons+' dars']),'#B45309')}
+function drawGoal(){const g=data.kpi.goal;if(!g)return;const k=data.kpi,parts=[['📞',k.calls,g.calls],['📅',k.trials,g.trials],['💰',k.sales,g.sales]].filter(p=>p[2]>0);if(!parts.length)return;
+ const x0=24,y=704,w=600;ctx.fillStyle='rgba(255,255,255,.95)';rr(x0,y-18,w,32,16);ctx.fill();ctx.strokeStyle='#16A34A';ctx.lineWidth=1.5;ctx.stroke();
+ ctx.fillStyle='#15803D';ctx.font='900 11px Nunito';ctx.textAlign='left';ctx.fillText('🎯 BUGUNGI MAQSAD',x0+12,y+2);const pw=(w-150)/parts.length;
+ parts.forEach(([ic,v,t],i)=>{const px=x0+140+i*pw,pc=Math.min(1,v/t);ctx.fillStyle='#E5E7EB';rr(px+20,y-6,pw-70,10,5);ctx.fill();ctx.fillStyle=pc>=1?'#F59E0B':'#16A34A';rr(px+20,y-6,Math.max(10,(pw-70)*pc),10,5);ctx.fill();
+  ctx.fillStyle='#14213D';ctx.font='14px sans-serif';ctx.fillText(ic,px,y+4);ctx.font='900 11px Nunito';ctx.fillText(`${v}/${t}`,px+pw-46,y+3)})}
+function drawExtras3(){if(!data)return;drawRequests();drawFame();drawTeacherTop();drawGoal()}
+let goalDone=new Set();
+function goalIn(d,animate){const g=d.kpi.goal;if(!g)return;const k=d.kpi;[['calls',"qo'ng'iroq"],['trials','sinov darsi'],['sales','sotuv']].forEach(([key,l])=>{const t=g[key];if(!t||k[key]<t)return;const id=d.date+key+t;if(goalDone.has(id))return;goalDone.add(id);
+ if(!animate)return;feed('🎯',`Bugungi maqsad bajarildi: ${t} ta ${l}! Barakalla, jamoa!`,'#15803D');toast('🎯 Maqsad bajarildi!',`${t} ta ${l}`);for(let i=0;i<4;i++)setTimeout(()=>confetti(rnd(60,440),rnd(200,480),50),i*250);SND.ev('🎉')})}
+const GOAL_ROLES=['admin','boshliq','rop'];
+function openGoal(){const g=data?.kpi?.goal||{},card=document.getElementById('card');
+ card.innerHTML=`<div class="hd"><div class="big" style="background:#16A34A">🎯</div><div><h2>Bugungi maqsad</h2><div class="role">Ofis ekranida progress bo'lib chiqadi (faqat son)</div></div></div>
+ <div class="gl"><label>📞 Qo'ng'iroq<input id="gC" type="number" min="0" inputmode="numeric" value="${g.calls||''}"></label><label>📅 Sinov darsi<input id="gT" type="number" min="0" inputmode="numeric" value="${g.trials||''}"></label><label>💰 Sotuv<input id="gS" type="number" min="0" inputmode="numeric" value="${g.sales||''}"></label></div>
+ <div class="row2">${data?.kpi?.goal?'<button class="ghost" id="gDel">Olib tashlash</button>':''}<button class="pri" id="gSave">Saqlash</button></div><button class="close">Yopish</button>`;
+ document.getElementById('sheet').classList.add('show');
+ const send=async b=>{try{await api('POST','/goal',b);document.getElementById('sheet').classList.remove('show');toast(b.calls||b.trials||b.sales?'🎯 Maqsad qo\'yildi':'Maqsad olib tashlandi');load()}catch(e){toast(esc(e.message))}};
+ document.getElementById('gSave').onclick=()=>send({calls:+document.getElementById('gC').value||0,trials:+document.getElementById('gT').value||0,sales:+document.getElementById('gS').value||0});
+ const del=document.getElementById('gDel');if(del)del.onclick=()=>send({calls:0,trials:0,sales:0})}
+document.getElementById('goalBtn').onclick=openGoal;
+// TV fon musiqasi: tushlik (12:30–14:00) va kechki (17:30–19:00) payt, past ovozda.
+const MUSIC=['/ofis/music/1.mp3','/ofis/music/2.mp3','/ofis/music/3.mp3'];let mus=null,musI=0;
+function musicTick(){const tv=document.body.classList.contains('tv');const t=new Date(Date.now()+5*3600e3),m=t.getUTCHours()*60+t.getUTCMinutes();
+ const want=tv&&SND.on&&!replay.on&&((m>=750&&m<840)||(m>=1050&&m<1140));
+ if(want&&!mus){mus=new Audio(MUSIC[musI%MUSIC.length]);mus.volume=0;mus.onended=()=>{musI++;const v=mus;mus=null;v.remove?.();musicTick()};mus.play().then(()=>{let v=0;const f=setInterval(()=>{v+=.02;if(!mus||v>=.22){clearInterval(f);return}mus.volume=v},200)}).catch(()=>{mus=null})}
+ else if(!want&&mus){const a=mus;mus=null;let v=a.volume;const f=setInterval(()=>{v-=.02;if(v<=0){clearInterval(f);a.pause();return}a.volume=v},200)}}
+setInterval(musicTick,30000);
+// TV: soat 19:00 da kun takrori o'zi boshlanadi (kuniga bir marta), keyin kun xulosasi.
+let autoReplayDay='';
+setInterval(()=>{if(!document.body.classList.contains('tv')||replay.on||!data)return;const t=new Date(Date.now()+5*3600e3),m=t.getUTCHours()*60+t.getUTCMinutes();
+ if(m>=1140&&m<1150&&autoReplayDay!==data.date){autoReplayDay=data.date;tvShow(`<div class="tt">⏪ Bugungi kun 1 daqiqada</div>`,5);setTimeout(()=>{startReplay();setTimeout(tvMotto,70000)},5000)}},20000);
+
 // ── Kun takrori: bugungi voqealar 60 soniyada ──
 const replay={on:false,clock:'',timers:[]};
 async function startReplay(){if(replay.on)return;const q=new URLSearchParams({all:'1'});if(TV)q.set('tv','1');if(langSel)q.set('lang',langSel);
@@ -477,12 +519,14 @@ async function startReplay(){if(replay.on)return;const q=new URLSearchParams({al
   if(e.type==='checkout'){const p=people.get('s:'+e.staffId);if(p&&p.visible)leave(p)}
   if(e.type==='break_out'){const p=people.get('s:'+e.staffId);if(p&&p.visible){if(e.breakKind==='step')leave(p);else moveTo(p,'oshxona',...LUNCH_SEATS[Math.abs(e.staffId.length)%LUNCH_SEATS.length])}}
   if(e.type==='break_in'){const p=people.get('s:'+e.staffId);if(p){if(!p.visible||p.room==='outside'){p.visible=true;p.x=400;p.y=-30;p.room='outside'}moveTo(p,...p.seat)}}
-  const [t,c]=evText(e);feed(ICON[e.type]||'•',t,c,e.at);SND.ev(e.type==='sale'?'💰':ICON[e.type]);animateEvent(e)},at))});
+  const [t,c]=evText(e);feed(ICON[e.type]||'•',t,c,e.at);SND.ev(e.type==='sale'?'💰':ICON[e.type],e);animateEvent(e)},at))});
  replay.timers.push(setTimeout(stopReplay,DUR+6000))}
 function stopReplay(){replay.timers.forEach(clearTimeout);replay.timers=[];replay.on=false;const btn=document.getElementById('replayBtn');if(btn)btn.textContent='⏪ Kun takrori';
  for(const k of [...people.keys()])if(k.startsWith('l:'))people.delete(k);cursor=null;firstLoad=true;startPoll()}
 
 // ── Ovoz (Web Audio, fayl yuklanmaydi) ──
+// Ismli tabrik fayli: ofis/voice/n/<ism>.mp3 (lotin harflari, kichik). Bo'lmasa umumiy "sotuv".
+const vslug=n=>String(n||'').toLowerCase().replace(/[ʻʼ'`‘’]/g,'').replace(/[^a-z0-9]/g,'');
 const SND=(()=>{let ac=null,on=false,master,amb=null;
  function init(){if(ac)return;try{if(navigator.audioSession)navigator.audioSession.type='playback'}catch(e){}
   ac=new (window.AudioContext||window.webkitAudioContext)();master=ac.createGain();master.gain.value=.8;master.connect(ac.destination)}
@@ -512,8 +556,8 @@ const SND=(()=>{let ac=null,on=false,master,amb=null;
  function ambStop(){if(!amb)return;amb.s.stop();clearInterval(amb.tick);amb=null}
  // Ovozli e'lon (ElevenLabs, o'zbekcha): fetch + WebAudio — CSP media-src ga bog'liq emas
  const VB={};let VT=0;
- async function voice(n,delay=0){if(!on||!ac)return;const now=performance.now();if(now-VT<4000)return;VT=now;
-  try{if(!VB[n]){const r=await fetch('/ofis/voice/'+n+'.mp3');if(!r.ok)return;const buf=await r.arrayBuffer();VB[n]=await new Promise((ok,no)=>ac.decodeAudioData(buf,ok,no))}
+ async function voice(n,delay=0,fb=null){if(!on||!ac)return;const now=performance.now();if(now-VT<4000)return;VT=now;
+  try{if(VB[n]===false&&fb)n=fb;if(!VB[n]){const r=await fetch('/ofis/voice/'+n+'.mp3');const okA=r.ok&&/audio|mpeg|octet/.test(r.headers.get('content-type')||'');let dec=null;if(okA){try{const buf=await r.arrayBuffer();dec=await new Promise((ok,no)=>ac.decodeAudioData(buf,ok,no))}catch(_){dec=null}}if(!dec){VB[n]=false;if(fb){VT=0;return voice(fb,delay)}return}VB[n]=dec}
    const s=ac.createBufferSource(),g=ac.createGain();g.gain.value=1.4;s.buffer=VB[n];s.connect(g);g.connect(master);
    if(amb){const t=ac.currentTime+delay;amb.g.gain.setTargetAtTime(.012,t,.1);amb.g.gain.setTargetAtTime(.05,t+VB[n].duration,.4)}
    s.start(ac.currentTime+delay)}catch(e){}}
@@ -522,7 +566,7 @@ const SND=(()=>{let ac=null,on=false,master,amb=null;
  return{get on(){return on},
   toggle(v){init();ac.resume&&ac.resume();on=v==null?!on:v;if(on)ambStart();else ambStop();document.getElementById('sndBtn').textContent=on?'🔊 Ovoz':'🔇 Ovoz';return on},
   voice,
-  ev(icon){if(!on||!ac)return;if(icon==='💰'){S.kaching();setTimeout(()=>{S.applause();S.cheer()},350);voice('sotuv',1.4);return}const k=MAP[icon];if(!k)return;const now=performance.now();if(now-(last[k]||0)<700)return;last[k]=now;S[k]()}}
+  ev(icon,e){if(!on||!ac)return;if(icon==='💰'){S.kaching();setTimeout(()=>{S.applause();S.cheer()},350);const sl=vslug(e&&nameOf(e.managerId));voice(sl?'n/'+sl:'sotuv',1.4,'sotuv');return}const k=MAP[icon];if(!k)return;const now=performance.now();if(now-(last[k]||0)<700)return;last[k]=now;S[k]()}}
 })();
 document.getElementById('sndBtn').onclick=e=>{e.stopPropagation();SND.toggle();try{localStorage.setItem('ofisSnd',SND.on?'1':'0')}catch(err){}};
 (()=>{let pref='1';try{pref=localStorage.getItem('ofisSnd')||'1'}catch(e){}if(pref!=='1')return;
