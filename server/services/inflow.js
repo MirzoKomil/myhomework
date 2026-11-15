@@ -1,6 +1,7 @@
 const { randomUUID } = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const F = require('../../js/financeEngine');
 const ledger = require('../../js/paymentLedger');
 const STUDENT_LOCK = "SELECT pg_advisory_xact_lock(hashtext('lead-student-provisioning'))";
 const error = (status, message) => Object.assign(new Error(message), { status });
@@ -214,7 +215,11 @@ async function list(db, actor, params) {
         ORDER BY r.paid_date DESC,r.created_at DESC,r.id`, [params.language])).rows;
     const lastBalance = new Map();
     for (const r of [...rows].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))) { const key = r.student_id || r.lead_id || r.id; if (!lastBalance.has(key)) lastBalance.set(key, Number(r.debt_snapshot)); }
-    const records = rows.map(r => ({ id: r.id, leadId: r.lead_id, studentId: r.student_id, language: r.language, managerId: r.manager_id, teacherId: r.teacher_id,
+    // Yangi/Qarzdor — Moliya "Umumiy" bilan YAGONA funksiya (FinanceEngine.saleKinds), kiritilish tartibida (created_at, id).
+    const links = (await db.query("SELECT id, extra_data->'leadRef'->>'id' AS lead FROM students WHERE extra_data->'leadRef'->>'id' IS NOT NULL")).rows.map(r => [r.id, r.lead]);
+    const kinds = F.saleKinds([...rows].sort((a, b) => new Date(a.created_at) - new Date(b.created_at) || String(a.id).localeCompare(String(b.id)))
+        .map(r => ({ id: r.id, entity: r.language, date: r.date_key, leadId: r.lead_id, studentId: r.student_id })), links);
+    const records = rows.map(r => ({ saleKind: kinds.get(r.id) || 'new', id: r.id, leadId: r.lead_id, studentId: r.student_id, language: r.language, managerId: r.manager_id, teacherId: r.teacher_id,
         ...r.snapshot, paidDate: r.date_key, paidTime: r.time_key || '', amount: Number(r.amount), method: r.method, receiptUrl: r.receipt_url,
         tariff: r.tariff, form: r.form, debt: ledger.money(r.current_student?.debtAmount) ?? lastBalance.get(r.student_id || r.lead_id || r.id),
         nextPaymentDate: ledger.nextDate(ledger.money(r.current_student?.debtAmount) ?? lastBalance.get(r.student_id || r.lead_id || r.id),

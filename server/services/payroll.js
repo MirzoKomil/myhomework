@@ -457,6 +457,16 @@ async function preview(pool, actor, input) {
         return result;
     });
 }
+// Moliya "Umumiy" va Investor uchun: davr maosh qatorlari (qo'lga summa bilan). Kirish huquqini chaqiruvchi tekshiradi.
+async function periodRows(pool, start, end, lang) {
+    return transaction(pool, db => periodRowsIn(db, start, end, lang));
+}
+// Chaqiruvchining tranzaksiyasi (bir xil ma'lumot nusxasi) ichida — faqat o'qiydi.
+async function periodRowsIn(db, start, end, lang) {
+    const p = engine.period(start, end);
+    language(lang);
+    return withTakeHome(db, p, lang, (await calculate(db, p, lang)).rows);
+}
 async function saveSettings(pool, actor, lang, value, revision) {
     language(lang); const data = engine.validateSettings(value);
     return transaction(pool, async db => {
@@ -642,5 +652,5 @@ async function mySalary(pool, actor, now = new Date()) {
     } finally { db.release(); }
 }
 
-module.exports = { mySalary, ownView, takeHome, withTakeHome, monthSalary, salaryParts, monthPeriod, currentMonthPeriod, SCHEMA, initSchema, audit, access, language, transaction, sources, settings, calculate, preview,
+module.exports = { mySalary, ownView, takeHome, withTakeHome, monthSalary, salaryParts, monthPeriod, currentMonthPeriod, SCHEMA, initSchema, audit, access, language, transaction, sources, settings, calculate, preview, periodRows, periodRowsIn,
     createBasis, correctionProposals, reviewAdjustment, reviewManualAdjustment, saveSettings, confirmPlan, accrue, markPaid };
