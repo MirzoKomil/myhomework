@@ -1006,6 +1006,7 @@
         dvEnsure();
         const mi = dvInfo() || {};
         const dav = (mi.approver === 'academic' ? row('face', 'green', 'Yordamchilar davomati', '', 'data-dv-go="team"') + row('clock', 'amber', 'Davomat soʻrovlari', badge(num(mi.pending)), 'data-dv-go="approvals"') : '')
+            + (window.faollik ? row('trend', 'green', 'Faollik', '', 'data-fa-open') : '')
             + (mi.tracked ? row('clock', 'grey', 'Mening davomatim', '', 'data-dv-go="my"') : '');
         // Jarimalar (js/jarimaApp.js): oʻzi va ustozlari — ROP menyusidagidek.
         const fines = window.jarima && window.jarima.counts?.() ? window.jarima.menuItems().map(x => row(x.go === 'issue' ? 'alert' : x.go === 'washok' ? 'check' : 'note', x.go === 'issue' ? 'red' : 'amber', x.title, badge(num(x.badge)), `data-jr-go="${esc(x.go)}"`)).join('') : '';
