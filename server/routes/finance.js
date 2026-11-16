@@ -23,6 +23,7 @@ router.get('/problems/recon', handle(req => service.latestRecon(pool, req.user, 
 router.post('/problems/recon', handle(req => service.saveRecon(pool, req.user, req.body || {})));
 router.get('/problems/resolved', handle(req => service.resolvedProblems(pool, req.user, req.query)));
 router.post('/problems/resolved', handle(req => service.resolveProblem(pool, req.user, req.body || {})));
+router.get('/eskiz', handle(req => require('../services/eskizFinance').status(pool, req.user, req.query)));
 router.get('/cashbook', handle(req => service.cashbook(pool, req.user, req.query)));
 router.get('/transactions', handle(req => service.listTransactions(pool, req.user, req.query)));
 router.get('/people', handle(req => service.people(pool, req.user, req.query)));
