@@ -35,6 +35,7 @@
     // ---------- ikonkalar ----------
     const P = {
         home: '<path d="M3 10.5L12 3l9 7.5V20a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"/>',
+        trend: '<path d="M3 17l6-6 4 4 8-8M15 7h6v6"/>',
         leads: '<path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.9M16 3.1a4 4 0 010 7.8"/>',
         cal: '<rect x="3" y="4.5" width="18" height="16" rx="3"/><path d="M3 9.5h18M8 3v3M16 3v3"/>',
         target: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
@@ -288,6 +289,7 @@
               ${d?.target ? (left ? pill(`Kuniga ${mln(Math.ceil(left / daysLeft))} kerak`, 'amber') : pill('Reja bajarildi', 'green')) : pill('Reja hali qoʻyilmagan', 'gray')}</span>
             <span class="sa-plan-pay"><span>Toʻlovda</span><strong>${paying.length}${payingSum ? ' · ' + mln(payingSum) : ''}</strong></span>
           </button>
+          <div id="saCaHome" class="sa-ca-home"></div>
           ${rk ? `<button type="button" class="sa-card sa-rankrow" data-sa-go="rating"><span class="sa-rankrow-n">${rk.pos}</span><span class="sa-rankrow-t"><strong>Reytingda ${rk.pos}-oʻrin</strong><span>${rk.first ? (rk.ahead ? `Keyingisidan <b>${mln(rk.gap)}</b> oldindasiz` : 'Oʻrningizni saqlang') : `${rk.pos - 1}-oʻringa <b>${mln(rk.gap)}</b> qoldi${rk.ahead ? ' · ' + esc(firstName(rk.ahead.name)) : ''}`}</span></span>${ic('chev', 18, 2.4)}</button>` : ''}
         </div>`;
     }
@@ -484,6 +486,25 @@
     }
 
     // Bitta qo'ng'iroq tahlili (QAT_T_tahlil / QAT_T_matn) va e'tiroz (QAT_T_etiroz) — alohida ekran.
+    // Qo'ng'iroqlar AI tahlili: "Tahlilim" va "Rivojlanish rejam" (js/callAiTahlil.js), Bosh sahifa bloki.
+    function screenTahlil() {
+        return `<div class="sa-body"><div id="saTahlil"><div class="sa-sk" style="height:48px"></div><div class="sa-sk" style="height:240px"></div></div></div>`;
+    }
+    function loadTahlil() {
+        const T = window.callAiTahlil;
+        if (!T) return;
+        const opts = {
+            nav: k => (k === 'reja' ? go('ai-reja') : k === 'tahlil' && S.screen !== 'ai-reja' ? go('tahlil', { reset: S.screen === 'home' }) : back()),
+            onCall: cid => { S.callId = cid; S.callTab = 'baho'; go('callai'); },
+            onLead: id => openLead(id),
+        };
+        if (S.screen === 'home') { loadTahlil.last = 'home'; const el = document.getElementById('saCaHome'); if (el) T.phoneHomeBlock(el, opts); return; }
+        const box = document.getElementById('saTahlil');
+        if (!box) return;
+        if (S.screen === 'ai-reja') T.phoneHost(box, 'sa-reja', el => T.phoneReja(el, { ...opts, back: 'tahlil' }), { force: loadTahlil.last !== 'ai-reja' });
+        else T.phoneHost(box, 'sa-me', el => T.phoneMe(el, opts), { force: loadTahlil.last !== 'tahlil' });
+        loadTahlil.last = S.screen;
+    }
     function screenCallAi() {
         return `<div class="sa-body sa-card-page"><div id="saCallAi"><div class="sa-sk" style="height:64px"></div><div class="sa-sk" style="height:220px"></div></div></div>`;
     }
@@ -888,13 +909,15 @@
         { id: 'leads', label: 'Lidlar', icon: 'leads' },
         { id: 'jadval', label: 'Jadval', icon: 'cal' },
         { id: 'plan', label: 'Rejam', icon: 'target' },
+        { id: 'tahlil', label: 'Tahlilim', icon: 'trend' },
         { id: 'menu', label: 'Menyu', icon: 'menu' }
     ];
-    const TAB_OF = { home: 'home', leads: 'leads', card: 'leads', plan: 'plan', rating: 'menu', menu: 'menu', debtors: 'menu', profile: 'menu', crm: null, jadval: 'jadval' };
+    const TAB_OF = { home: 'home', leads: 'leads', card: 'leads', plan: 'plan', tahlil: 'tahlil', 'ai-reja': 'tahlil', rating: 'menu', menu: 'menu', debtors: 'menu', profile: 'menu', crm: null, jadval: 'jadval' };
     function buildNav() {
         nav = document.createElement('nav');
         nav.id = 'saNav';
         nav.className = 'sa-nav';
+        nav.style.setProperty('--sa-nav-n', String(TABS.length));
         nav.setAttribute('aria-label', 'Pastki menyu');
         document.body.appendChild(nav);
         nav.addEventListener('click', e => {
@@ -992,6 +1015,7 @@
         if (S.screen !== 'callai' && S.screen !== 'card' && window.callAiUI) callAiUI.stopAll();
         document.body.classList.toggle('sa-full', S.screen === 'card' || S.screen === 'callai'); // lid kartasi to'liq ekran (maketdagidek), pastki menyusiz
         const html = S.screen === 'leads' ? screenLeads() : S.screen === 'card' ? screenCard() : S.screen === 'callai' ? screenCallAi() : S.screen === 'plan' ? screenPlan()
+            : S.screen === 'tahlil' || S.screen === 'ai-reja' ? screenTahlil()
             : S.screen === 'rating' ? screenRating() : S.screen === 'menu' ? screenMenu() : S.screen === 'debtors' ? screenDebtors()
             : S.screen === 'profile' ? screenProfile() : screenHome();
         const keep = {};
@@ -1016,6 +1040,7 @@
         if (focusSearch) { const i = document.getElementById('saLeadSearch'); if (i) { i.focus(); try { i.setSelectionRange(caret, caret); } catch (e) { /* type=search */ } } }
         if (S.screen === 'card') { loadRecCounts(); loadAi(S.lead); if (S.tab === 'rec') loadRecordings(S.lead); }
         if (S.screen === 'callai') loadCallAi();
+        if (S.screen === 'tahlil' || S.screen === 'ai-reja' || S.screen === 'home') loadTahlil();
         if (!isStandalone()) root.querySelectorAll('[data-sa-install]').forEach(b => { b.hidden = false; });
         syncNav();
     }
