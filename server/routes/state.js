@@ -472,7 +472,20 @@ router.get('/call-recordings', authRequired, async (req, res) => {
         // Targetolog qo'ng'iroq yozuvlarini (suhbat ovozi) eshitmaydi — faqat statistika.
         if (req.user?.role === 'targetolog') return res.status(403).json({ error: 'Qoʻngʻiroq yozuvlari targetologga ochiq emas' });
         const data = await getCallRecordings(lang, leadId);
-        res.json(data);
+        // Har yozuvga AI tahlili (bo'lsa) qo'shib beriladi — transkriptsiz (alohida so'raladi).
+        // Faqat ruxsati borlarga: ROP/admin/boshliq yoki shu lidning/qo'ng'iroqning menejeri.
+        let byRec = {};
+        try {
+            const cai = require('./callAi');
+            const u = await findUserById(req.user.id).catch(() => null);
+            const role = u?.role;
+            const allow = await cai.analysisFilter({ ...req.user, role, name: u?.name || '' });
+            const lead = data.length ? await require('../db').getLeadById(String(leadId)).catch(() => null) : null;
+            const map = await cai.getCallAi().byRecordingIds(data.map(r => r.id));
+            Object.entries(map).forEach(([k, a]) => { if (allow(a, lead)) byRec[k] = a; });
+        } catch (e) { console.error('[callAi] join', e.message); }
+        const { publicView } = require('../services/callAi');
+        res.json(data.map(r => (byRec[r.id] ? { ...r, analysis: publicView(byRec[r.id]) } : r)));
     } catch (err) {
         console.error('GET /api/state/call-recordings', err);
         res.status(500).json({ error: 'Xatolik' });
@@ -481,12 +494,61 @@ router.get('/call-recordings', authRequired, async (req, res) => {
 
 router.post('/call-recordings', authRequired, async (req, res) => {
     try {
-        const { lang, leadId, url, fileName, duration } = req.body || {};
+        const { lang, leadId, url, fileName, duration, missingId } = req.body || {};
+        const db = require('../db');
+        const me = await findUserById(req.user.id).catch(() => null);
+        const role = me?.role;
+        // "Yozuv topilmadi" qatoriga fayl biriktirilsa — asl qo'ng'iroq vaqti saqlanadi va qator yopiladi.
+        // Kim qaysi lidga yozuv qo'sha oladi: admin/boshliq — hammasi; ROP — o'z tili; menejer — o'z lidi; xodim (employee) — eskicha.
+        const leadRow = await db.getLeadById(String(leadId || '')).catch(() => null);
+        if (!leadRow) return res.status(404).json({ error: 'Lid topilmadi' });
+        const leadLang = (await db.pool.query('SELECT language FROM leads WHERE id = $1', [leadRow.id])).rows[0]?.language || lang;
+        if (role === 'rop') {
+            const langs = await require('../services/ropScope').ropLangsFor(db.pool, { ...req.user, role, name: me?.name || '' });
+            if (langs && !langs.includes(leadLang)) return res.status(403).json({ error: 'Bu lid sizning yoʻnalishingizda emas' });
+        } else if (role === 'sales_manager') {
+            const mid0 = await db.getSalesManagerIdForUser(req.user.id);
+            if (!mid0 || leadRow.managerId !== mid0) return res.status(403).json({ error: 'Faqat oʻz lidingizga yozuv qoʻsha olasiz' });
+        } else if (!['admin', 'boshliq', 'employee'].includes(role)) {
+            return res.status(403).json({ error: 'Bu amalga ruxsat yoʻq' });
+        }
+        // Fayl faqat shu server yuklagan /uploads/ dan va boshqa yozuvda ishlatilmagan bo'lishi kerak.
+        const cleanUrl = String(url || '');
+        if (!/^\/uploads\/[\w.-]+$/.test(cleanUrl)) return res.status(400).json({ error: 'Fayl havolasi notoʻgʻri' });
+        const usedBy = await db.getJsonData('callRecordings');
+        if ((Array.isArray(usedBy) ? usedBy : []).some(r => r.url === cleanUrl)) return res.status(409).json({ error: 'Bu fayl allaqachon biriktirilgan' });
+        let callAt = '', missing = null;
+        if (missingId) {
+            const fullRights = ['admin', 'boshliq', 'rop'].includes(role);
+            const mid = role === 'sales_manager' ? await db.getSalesManagerIdForUser(req.user.id) : '';
+            const lead = await db.getLeadById(String(leadId || '')).catch(() => null);
+            const all = await db.getJsonData('callRecordingsMissing');
+            const m = (Array.isArray(all) ? all : []).find(x => x.id === String(missingId) && !x.resolvedAt);
+            if (m && (fullRights || m.userId === req.user.id || (mid && lead?.managerId === mid))) { missing = m; callAt = m.callAt || ''; }
+        }
         const recording = await addCallRecording({
-            lang, leadId, url, fileName, duration,
-            uploadedBy: req.user?.name || req.user?.email || '',
-            source: 'manual',
+            lang: leadLang, leadId, url, fileName, duration,
+            uploadedBy: me?.name || req.user?.email || '',
+            source: 'manual', callAt,
         });
+        // Qator yozuv saqlangandan keyingina yopiladi (xato bo'lsa yo'qolib ketmasin).
+        if (missing) await db.mutateJsonData('callRecordingsMissing', list => { const m = list.find(x => x.id === missing.id); if (m) m.resolvedAt = new Date().toISOString(); });
+        // Qo'lda yuklangan yozuv ham AI tahliliga navbatga qo'yiladi (iPhone va boshqa holatlar).
+        try {
+            if (['admin', 'boshliq', 'rop', 'sales_manager'].includes(role)) {
+                const lead = await db.getLeadById(recording.leadId).catch(() => null);
+                // Menejer yuklasa — o'zi; ROP/admin qo'lda yuklasa — bu odatda menejerning qo'ng'irog'i (iPhone va h.k.),
+                // shuning uchun lidning menejeriga yoziladi. Ilovadan ROP/admin o'zi qilgan qo'ng'iroq esa hech kimga yozilmaydi.
+                let managerId = role === 'sales_manager' ? await db.getSalesManagerIdForUser(req.user.id) : '';
+                managerId = managerId || lead?.managerId || '';
+                let managerName = role === 'sales_manager' ? (me?.name || '') : '';
+                if (!managerName && managerId) {
+                    const r = await db.pool.query('SELECT name FROM sales_managers WHERE id = $1', [managerId]).catch(() => ({ rows: [] }));
+                    managerName = r.rows[0]?.name || '';
+                }
+                await require('./callAi').getCallAi().enqueue(recording, { managerId, managerName: managerName || me?.name || recording.uploadedBy, callAt: callAt || undefined });
+            }
+        } catch (e) { console.error('[callAi] enqueue', e.message); }
         res.json({ ok: true, recording });
     } catch (err) {
         console.error('POST /api/state/call-recordings', err);
@@ -498,18 +560,42 @@ router.post('/call-recordings', authRequired, async (req, res) => {
 // Admin/ROP/boshliq istalganini, qolganlar faqat o'zi yuklaganini o'chiradi.
 router.delete('/call-recordings/:id', authRequired, async (req, res) => {
     try {
-        const kim = req.user?.name || req.user?.email || '';
-        const toliqHuquq = ['admin', 'rop', 'boshliq'].includes(req.user?.role);
+        const u = await findUserById(req.user.id).catch(() => null);
+        const kim = u?.name || req.user?.email || '';
+        const toliqHuquq = ['admin', 'rop', 'boshliq'].includes(u?.role || req.user?.role);
 
+        const db = require('../db');
+        const allRecs = await db.getJsonData('callRecordings');
+        const rec0 = (Array.isArray(allRecs) ? allRecs : []).find(r => r.id === req.params.id);
+        if (!rec0) return res.status(404).json({ error: 'Zapis topilmadi' });
+        if ((u?.role || req.user?.role) === 'rop') {
+            const langs = await require('../services/ropScope').ropLangsFor(db.pool, { ...req.user, role: 'rop', name: u?.name || '' });
+            if (langs && !langs.includes(rec0.lang)) return res.status(403).json({ error: 'Bu yozuv sizning yoʻnalishingizda emas' });
+        }
         if (!toliqHuquq) {
-            const barchasi = await getCallRecordings(req.query.lang, req.query.leadId);
-            const zapis = barchasi.find(r => r.id === req.params.id);
-            if (zapis && zapis.uploadedBy && zapis.uploadedBy !== kim) {
+            // Yozuv id bo'yicha butun ro'yxatdan topiladi (so'rovdagi lang/leadId'ga ishonilmaydi).
+            const zapis = rec0;
+            // AI baholagan yozuvni menejer o'chira olmaydi (yomon baho yashirilmasin) — faqat ROP/admin.
+            const an = (await require('./callAi').getCallAi().byRecordingIds([zapis.id]))[zapis.id];
+            // Ilova o'zi yuklagan yoki AI tahliliga tushgan yozuvni menejer o'chira olmaydi (yomon baho yashirilmasin).
+            if (an || zapis.source === 'app') return res.status(403).json({ error: 'Tahlil qilingan yozuvni faqat ROP oʻchira oladi' });
+            if (!['sales_manager', 'employee'].includes(u?.role)) return res.status(403).json({ error: 'Bu amalga ruxsat yoʻq' });
+            // Yuklagan odam ismi yoki emaili bilan saqlangan bo'lishi mumkin (eski va yangi yozuvlar).
+            // Yuklovchisi noma'lum eski yozuvni faqat lidning menejeri o'chira oladi.
+            let ok = !!zapis.uploadedBy && [u?.name, u?.email, req.user?.email].filter(Boolean).includes(zapis.uploadedBy);
+            if (!zapis.uploadedBy) {
+                const mid = await db.getSalesManagerIdForUser(req.user.id);
+                const lead = await db.getLeadById(zapis.leadId).catch(() => null);
+                ok = !!mid && lead?.managerId === mid;
+            }
+            if (!ok) {
                 return res.status(403).json({ error: 'Bu zapisni boshqa xodim yuklagan' });
             }
         }
 
         const ochirilgan = await deleteCallRecording(req.params.id);
+        // Yozuv bilan birga uning AI tahlili va matni ham o'chiriladi (statistikada "yetim" qolmasin).
+        try { await require('./callAi').getCallAi().removeByRecording(ochirilgan.id); } catch (e) { console.error('[callAi] remove', e.message); }
         console.log(`[zapis] O'CHIRILDI id=${ochirilgan.id} lid=${ochirilgan.leadId} kim=${kim}`);
         res.json({ ok: true });
     } catch (err) {
