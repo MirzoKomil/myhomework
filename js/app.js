@@ -21320,7 +21320,7 @@ function _leadRecordingBodyHtml(recordings, state, readOnly) {
         ? recordings.map(r => `
             <div class="lead-recording-item" style="padding:12px 0;border-bottom:1px solid var(--border)">
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-                    <div style="font-size:12px;color:var(--text-muted);flex:1;min-width:0">${escapeHtml(new Date(r.createdAt).toLocaleString('uz-UZ'))} · ${r.source === 'beeline' ? 'Beeline' : "Qo'lda yuklangan"}${r.uploadedBy ? ' · ' + escapeHtml(r.uploadedBy) : ''}</div>
+                    <div style="font-size:12px;color:var(--text-muted);flex:1;min-width:0">${escapeHtml(new Date(r.createdAt).toLocaleString('uz-UZ'))} · ${r.source === 'beeline' ? 'Beeline' : r.source === 'app' ? 'Jamoa ilovasi · avtomatik' : "Qo'lda yuklangan"}${r.uploadedBy ? ' · ' + escapeHtml(r.uploadedBy) : ''}</div>
                     ${readOnly ? '' : `<button type="button" class="lead-recording-delete" data-recording-delete="${escapeHtml(r.id)}"
                         title="Yozuvni o'chirish" aria-label="Yozuvni o'chirish">
                         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -21337,7 +21337,7 @@ function _leadRecordingBodyHtml(recordings, state, readOnly) {
     <div style="margin-top:14px">
         <input type="file" id="recordingFileInput" accept="audio/*" style="display:none">
         <button type="button" class="btn-primary-sm" id="recordingUploadBtn">+ Yozuv yuklash</button>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:8px;line-height:1.5">Beeline IP Telefoniyasi ulanganda qo'ng'iroqlar avtomatik shu yerga tushadi. Hozircha telefoningizning o'z qo'ng'iroq-yozuvchisi bilan yozib, shu yerdan yuklashingiz mumkin.</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:8px;line-height:1.5">Jamoa ilovasidan qoʻngʻiroq qilsangiz, telefonning oʻz yozuvi avtomatik shu yerga tushadi va AI skript boʻyicha baholaydi. iPhone yoki boshqa holatda — yozuvni shu yerdan yuklang.</div>
     </div>`;
 
     return `
@@ -21358,6 +21358,8 @@ function openLeadRecordingModal(lang, leadId) {
     const lead = getLeadById(lang, leadId);
     if (!lead) return;
     const _readOnly = isLeadsReadOnly(getCurrentUser());
+    // Dizayn: "Qo'ng'iroq yozuvlari va AI tahlili" (QAT_K_lid) → bitta qo'ng'iroq (QAT_K_tahlil / QAT_K_menTahlil).
+    if (window.callAiUI) return _openLeadCallAi(lang, leadId, lead, _readOnly);
 
     function bindUploadBtn(refresh) {
         const fileInput = document.getElementById('recordingFileInput');
@@ -21385,26 +21387,6 @@ function openLeadRecordingModal(lang, leadId) {
         });
     }
 
-    // Noto'g'ri yuklangan zapisni o'chirish. Ovoz fayli qaytarilmaydi,
-    // shuning uchun o'chirishdan oldin tasdiq so'raladi.
-    function bindDeleteBtns(refresh) {
-        document.querySelectorAll('[data-recording-delete]').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                if (!confirm("Bu zapisni o'chirishni xohlaysizmi? Ovoz fayli qaytarilmaydi.")) return;
-                btn.disabled = true;
-                try {
-                    await apiDeleteCallRecording(btn.dataset.recordingDelete, lang, leadId);
-                    showMiniToast("Yozuv o'chirildi");
-                    refreshLeadRecordingCounts();
-                    await refresh();
-                } catch (err) {
-                    btn.disabled = false;
-                    alert("O'chirishda xatolik: " + (err.message || err));
-                }
-            });
-        });
-    }
-
     async function refresh() {
         try {
             const recordings = await apiFetchCallRecordings(lang, leadId);
@@ -21414,13 +21396,70 @@ function openLeadRecordingModal(lang, leadId) {
         }
         if (!_readOnly) {
             bindUploadBtn(refresh);
-            bindDeleteBtns(refresh);
+            document.querySelectorAll('[data-recording-delete]').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    if (!confirm("Bu zapisni o'chirishni xohlaysizmi? Ovoz fayli qaytarilmaydi.")) return;
+                    btn.disabled = true;
+                    try { await apiDeleteCallRecording(btn.dataset.recordingDelete, lang, leadId); showMiniToast("Yozuv o'chirildi"); refreshLeadRecordingCounts(); await refresh(); }
+                    catch (err) { btn.disabled = false; alert("O'chirishda xatolik: " + (err.message || err)); }
+                });
+            });
         }
     }
 
     openModal(`${escapeHtml(lead.name)} — qo'ng'iroq yozuvlari`, _leadRecordingBodyHtml([], 'loading', _readOnly), '');
     if (!_readOnly) bindUploadBtn(refresh);
     refresh();
+}
+
+// Qo'ng'iroq yozuvlari + AI tahlili (js/callAi.js). Bitta modal ichida: ro'yxat → qo'ng'iroq → e'tiroz.
+function _openLeadCallAi(lang, leadId, lead, readOnly) {
+    const ui = window.callAiUI;
+    const me = getCurrentUser();
+    const fullRights = ['admin', 'rop', 'boshliq'].includes(me?.role);
+    let timer = null, view = 'list', token = 0;
+    const body = () => document.getElementById('modalBody');
+    const alive = t => t === token && document.getElementById('modalOverlay')?.style.display !== 'none' && body()?.querySelector('.qa');
+    const schedule = fn => { clearTimeout(timer); timer = setTimeout(fn, 20000); };
+    const upload = async (file, opt = {}) => {
+        const up = await apiUploadFile(file);
+        await apiAddCallRecording(lang, leadId, up.url, up.fileName, 0, opt.missingId);
+        showMiniToast('Yozuv yuklandi — AI tahlil qilmoqda');
+        refreshLeadRecordingCounts();
+    };
+    const del = async id => {
+        if (!confirm("Bu zapisni o'chirishni xohlaysizmi? Ovoz fayli qaytarilmaydi.")) return;
+        try { await apiDeleteCallRecording(id, lang, leadId); showMiniToast("Yozuv o'chirildi"); refreshLeadRecordingCounts(); list(); } catch (err) { alert("O'chirishda xatolik: " + (err.message || err)); }
+    };
+    async function list() {
+        view = 'list'; const t = ++token; clearTimeout(timer);
+        let recs = [], missing = [];
+        try { [recs, missing] = await Promise.all([apiFetchCallRecordings(lang, leadId), ui.loadMissing(leadId)]); }
+        catch (err) { if (alive(t) || t === token) body().innerHTML = `<div class="text-muted" style="padding:20px 0;text-align:center">Qo'ng'iroq yozuvlarini yuklashda xatolik</div>`; return; }
+        if (t !== token) return;
+        document.getElementById('modalTitle').textContent = lead.name;
+        body().innerHTML = ui.leadSection(recs, missing, { readOnly, canDelete: r => fullRights || (!r.analysis && r.source !== 'app' && (r.uploadedBy ? [me?.name, me?.email].filter(Boolean).includes(r.uploadedBy) : (!!me?.linkedManagerId && lead.managerId === me.linkedManagerId))) });
+        ui.bind(body(), { openCall: call, upload, del, refresh: list });
+        // Tahlil tugaguncha yangilanadi; audio tinglanayotganda to'xtatilmaydi.
+        if (ui.pending(recs)) schedule(function tick() { if (!alive(t)) return; if (ui.playing()) schedule(tick); else list(); });
+    }
+    async function call(id, tab) {
+        view = 'call'; const t = ++token; clearTimeout(timer);
+        let d;
+        try { d = await ui.loadCall(id); } catch (err) { alert('Tahlil ochilmadi: ' + (err.message || err)); return list(); }
+        if (t !== token) return;
+        body().innerHTML = ui.callView(d);
+        ui.bind(body(), { back: list, refresh: () => call(id), call: d, openLead: () => { closeModal(); if (typeof openLeadOverview === 'function') openLeadOverview(lang, leadId); }, openAppeal: () => appeal(d) });
+        if (ui.busy(d)) schedule(function tick() { if (!alive(t)) return; if (ui.playing()) schedule(tick); else call(id); });
+    }
+    function appeal(d) {
+        ++token; clearTimeout(timer);
+        body().innerHTML = ui.appealForm(d);
+        ui.bind(body(), { back: () => call(d.id), call: d, afterAppeal: () => { showMiniToast('Eʼtiroz yuborildi — ROP 24 soat ichida hal qiladi'); call(d.id); } });
+    }
+    openModal(lead.name, `<div class="qa qa-lead"><p class="qa-note" style="padding:20px 0;text-align:center">Yuklanmoqda…</p></div>`, '', { wide: true });
+    document.getElementById('modalOverlay')?.addEventListener('crm:modal-closed', () => { ++token; clearTimeout(timer); ui.stopAll(); }, { once: true });
+    list();
 }
 
 function openLeadNotifyModal(lang, leadId) {

@@ -392,10 +392,10 @@ async function apiFetchCallRecordingCounts() {
     return apiFetch('/api/state/call-recordings/counts');
 }
 
-async function apiAddCallRecording(lang, leadId, url, fileName, duration) {
+async function apiAddCallRecording(lang, leadId, url, fileName, duration, missingId) {
     return apiFetch('/api/state/call-recordings', {
         method: 'POST',
-        body: JSON.stringify({ lang, leadId, url, fileName, duration })
+        body: JSON.stringify({ lang, leadId, url, fileName, duration, ...(missingId ? { missingId } : {}) })
     });
 }
 
