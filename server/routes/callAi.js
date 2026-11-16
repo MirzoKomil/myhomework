@@ -425,7 +425,10 @@ router.get('/plans/:id', authRequired, requireRoles(STAFF), wrap(async req => {
     if (req.user.role === 'sales_manager' && p.managerId !== await db.getSalesManagerIdForUser(req.user.id)) throw deny();
     if (req.user.role === 'rop') { const langs = await require('../services/ropScope').ropLangsFor(db.pool, req.user); if (langs && !langs.includes(p.lang)) throw deny(); }
     const ctx = await loadCtx(p.lang, req.query);
-    return { plan: Plans.view(p, ctx.analyses, ctx.managers), manager: Stats.manager(ctx, p.managerId) };
+    // Shu menejerning boshqa rejalari: o'tgan mini-rejalar soni va hozir faol to'liq reja.
+    const others = ctx.plans.filter(x => x.managerId === p.managerId && x.id !== p.id);
+    const history = { pastMini: others.filter(x => x.kind === 'mini' && !['pending', 'active'].includes(x.status)).length, activeFull: others.some(x => x.kind === 'full' && x.status === 'active') };
+    return { plan: Plans.view(p, ctx.analyses, ctx.managers), manager: Stats.manager(ctx, p.managerId), history };
 }));
 router.post('/plans/:id/:action', authRequired, requireRoles(STAFF), wrap(async req => {
     const p = (await Plans.listPlans(db)).find(x => x.id === req.params.id);
