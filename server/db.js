@@ -1475,6 +1475,21 @@ async function getLeadById(id) {
     return row ? rowToLead(row) : null;
 }
 
+// Qo'ng'iroq tahlili statistikasi uchun: ko'p lid bitta so'rovda (o'chirilganlar ham — tarix saqlanadi).
+async function getLeadsByIds(ids) {
+    const list = [...new Set((ids || []).filter(Boolean).map(String))];
+    if (!list.length) return [];
+    const { rows } = await pool.query('SELECT * FROM leads WHERE id = ANY($1::text[])', [list]);
+    return rows.map(rowToLead);
+}
+
+// Sotuv menejerlari: id → { name, avatar } (avatar — shu ismli foydalanuvchidan).
+async function getSalesManagersMap() {
+    const { rows } = await pool.query(`SELECT sm.id, sm.name, COALESCE(MAX(u.avatar),'') AS avatar FROM sales_managers sm
+        LEFT JOIN users u ON LOWER(TRIM(u.name)) = LOWER(TRIM(sm.name)) GROUP BY sm.id, sm.name`);
+    return new Map(rows.map(r => [String(r.id), { name: r.name, avatar: r.avatar || '' }]));
+}
+
 async function getSalesManagerIdForUser(userId) {
     const row = await q1(
         `SELECT manager_id
@@ -4897,7 +4912,7 @@ setInterval(_checkAndSendTrialSmsReminders, TRIAL_SMS_CHECK_INTERVAL_MS);
 
 module.exports = {
     pool, DATA_DIR, tx, getJsonData, saveJsonData, mutateJsonData,
-    getFullState, getTeacherScopedState, getLeads, getDeletedLeads, getLeadById, getSalesManagerIdForUser, setSalesManagerUserLink,
+    getFullState, getTeacherScopedState, getLeads, getDeletedLeads, getLeadById, getLeadsByIds, getSalesManagersMap, getSalesManagerIdForUser, setSalesManagerUserLink,
     insertLead, upsertLead, upsertLeadWithClient, insertRestoredLead, softDeleteLead, restoreLead, patchState, recordTeacherAttendance,
     getTeacherTrialLessons, getTeacherTrialHistory, saveTeacherTrialLesson,
     botTrialAction: (client,actor,leadId,payload) => trialLessons.updateTrialLesson(client,actor,leadId,payload,rowToLead,appendLeadAudit),

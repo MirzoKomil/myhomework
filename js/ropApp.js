@@ -68,6 +68,7 @@
         leads: '<path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.9M16 3.1a4 4 0 010 7.8"/>',
         cal: '<rect x="3" y="4.5" width="18" height="16" rx="3"/><path d="M3 9.5h18M8 3v3M16 3v3"/>',
         team: '<path d="M4 20V11M10 20V5M16 20v-7M21 20H3"/>',
+        trend: '<path d="M3 17l6-6 4 4 8-8M15 7h6v6"/>',
         menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
         phone: '<path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3.1 19.5 19.5 0 01-6-6A19.8 19.8 0 012.1 4.2 2 2 0 014.1 2h3a2 2 0 012 1.7c.1 1 .4 1.9.7 2.8a2 2 0 01-.5 2.1L8.1 9.9a16 16 0 006 6l1.3-1.3a2 2 0 012.1-.4c.9.3 1.9.6 2.8.7a2 2 0 011.7 2z"/>',
         tg: '<path d="M21 4L3 11l6 2 2 6 3-4 5 4z"/><path d="M9 13l12-9"/>',
@@ -1684,15 +1685,16 @@
     // =====================================================================================
     const TABS = [
         { id: 'home', label: 'Bosh', icon: 'home' }, { id: 'leads', label: 'Lidlar', icon: 'leads' }, { id: 'trials', label: 'Jadval', icon: 'cal' },
-        { id: 'team', label: 'Jamoa', icon: 'team' }, { id: 'menu', label: 'Menyu', icon: 'menu' }
+        { id: 'team', label: 'Jamoa', icon: 'team' }, { id: 'tahlil', label: 'Tahlil', icon: 'trend' }, { id: 'menu', label: 'Menyu', icon: 'menu' }
     ];
-    const TAB_OF = { home: 'home', notif: 'home', distribute: 'leads', leads: 'leads', card: 'leads', sla: 'home', approvals: 'menu', approval: 'menu', trials: 'trials', team: 'team', manager: 'team', funnel: 'team',
+    const TAB_OF = { home: 'home', notif: 'home', distribute: 'leads', leads: 'leads', card: 'leads', sla: 'home', approvals: 'menu', approval: 'menu', trials: 'trials', team: 'team', manager: 'team', funnel: 'team', tahlil: 'tahlil',
         menu: 'menu', stale: 'menu', archive: 'menu', sms: 'menu' };
     const FULL = new Set(['card', 'distribute', 'approval', 'stale', 'sms', 'notif', 'sla', 'approvals', 'archive', 'funnel', 'manager']);
     function buildNav() {
         nav = document.createElement('nav');
         nav.id = 'raNav';
         nav.className = 'sa-nav ra-nav';
+        nav.style.setProperty('--sa-nav-n', String(TABS.length));
         nav.setAttribute('aria-label', 'Pastki menyu');
         document.body.appendChild(nav);
         nav.addEventListener('click', e => {
@@ -1778,7 +1780,9 @@
 
     // ---------- chizish ----------
     const SCREENS = { home: screenHome, leads: screenLeads, card: screenCard, distribute: screenDistribute, sla: screenSla, approvals: screenApprovals, approval: screenApproval,
-        trials: screenTrials, team: screenTeam, manager: screenManager, funnel: screenFunnel, stale: screenStale, archive: screenArchive, sms: screenSms, notif: screenNotif, menu: screenMenu };
+        trials: screenTrials, team: screenTeam, manager: screenManager, funnel: screenFunnel, stale: screenStale, archive: screenArchive, sms: screenSms, notif: screenNotif, menu: screenMenu, tahlil: screenTahlil };
+    // Qo'ng'iroqlar AI tahlili (js/callAiTahlil.js): jamoa, e'tibor, menejer profili, reja/mini-rejani tasdiqlash.
+    function screenTahlil() { return `<div class="sa-body"><div id="raTahlil"><div class="sa-sk" style="height:48px"></div><div class="sa-sk" style="height:240px"></div></div></div>`; }
     function render(scrollTop) {
         if (!root || !isOn()) return;
         if (S.screen === 'crm') { document.body.classList.remove('ra-full'); syncNav(); return; }
@@ -1807,6 +1811,8 @@
         if (focusId && focusId !== 'raLeadSearch') document.getElementById(focusId)?.focus({ preventScroll: true });
         if (focusSearch) { const i = document.getElementById('raLeadSearch'); if (i) { i.focus(); try { i.setSelectionRange(caret, caret); } catch (e) { /* type=search */ } } }
         syncNav();
+        if (S.screen === 'tahlil' && window.callAiTahlil) { const T = window.callAiTahlil; T.phoneHost(document.getElementById('raTahlil'), 'ra-tahlil', el => T.phoneRop(el), { force: render.lastScreen !== 'tahlil' }); }
+        render.lastScreen = S.screen;
         if (S.screen === 'home') setTimeout(checkWin, 600);
     }
     function chipTo(sel) {

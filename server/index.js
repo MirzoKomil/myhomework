@@ -497,6 +497,8 @@ init().then(async () => {
     void domworkBot.start();
     // Qo'ng'iroq AI tahlili: qayta ishga tushganda chala qolgan tahlillar navbatga qaytadi.
     setTimeout(() => require('./routes/callAi').getCallAi().resume().catch(err => console.error('[callAi] resume:', err.message)), 30 * 1000).unref();
+    // Rivojlanish rejalari va haftalik AI hisobot: har dushanba 09:00 dan keyin (server/services/callPlans.js)
+    require('./routes/callAi').startWeekly();
     // Kunlik avtomatik SMS'lar: "Keyin sotib olmoqchi" sanasi, qarz eslatmalari (server/services/leadStageSms.js)
     require('./services/leadStageSms').startDaily();
     // SMS xarajati → Moliya: har kuni o'tgan kun uchun Eskiz balansidan yechilgan summa (server/services/eskizFinance.js)

@@ -648,7 +648,7 @@
                 ${ads ? `<span style="align-self:flex-start;margin-top:4px;font-size:12px;font-weight:800;background:rgba(11,18,32,.32);border-radius:999px;padding:3px 10px">${monthOnly(m)}: ${filled} / ${need} kun kiritilgan</span>` : ''}</span>${ic('next', 20, 2.2)}</button>
             <nav aria-label="Boʻlimlar" class="tg-mgrid tg-s1">${tile('entry', 'pen', '#EAF3FF', '#0057B8', 'Kunlik kiritish', 'Ads Manager')}${tile('report', 'report', '#ECFDF3', '#067647', 'Hisobot', 'Oylar boʻyicha')}
               ${tile('stats', 'stats', '#EAF3FF', '#0057B8', 'Statistika', 'Lid sifati')}${tile('leads', 'leads', '#EAF3FF', '#0057B8', 'Lidlar', monthOnly(todayKey().slice(0, 7)) + ': ' + int(leadsOf(S.lang, todayKey().slice(0, 7)).length))}
-              ${tile('campaigns', 'megaphone', '#FEF0C7', '#93370D', 'Kampaniyalar', camps + ' ta')}<button type="button" data-tg-crm="guides"><i style="background:#F1F5F9;color:#3A4456">${ic('book', 20, 2)}</i><span><strong>Yoʻriqnomalar</strong><small>Qoidalar</small></span></button>${window.jarima && !jarima.counts()?.exempt ? `<button type="button" data-jr-go="my"><i style="background:#FEF0C7;color:#93370D">${ic('report', 20, 2)}</i><span><strong>Mening jarimalarim</strong><small>Maosh va yuvish</small></span></button>` : ''}</nav>
+              ${tile('campaigns', 'megaphone', '#FEF0C7', '#93370D', 'Kampaniyalar', camps + ' ta')}${window.callAiTahlil ? tile('aiq', 'stats', '#ECFDF3', '#067647', 'Lid sifati (AI) <span class="nav-new-badge">YANGI</span>', 'Qoʻngʻiroqlardan') : ''}<button type="button" data-tg-crm="guides"><i style="background:#F1F5F9;color:#3A4456">${ic('book', 20, 2)}</i><span><strong>Yoʻriqnomalar</strong><small>Qoidalar</small></span></button>${window.jarima && !jarima.counts()?.exempt ? `<button type="button" data-jr-go="my"><i style="background:#FEF0C7;color:#93370D">${ic('report', 20, 2)}</i><span><strong>Mening jarimalarim</strong><small>Maosh va yuvish</small></span></button>` : ''}</nav>
             <div class="tg-list"><button type="button" data-tg-crm="profile">${ic('tg', 20, 2)}<span>Telegram bot va eslatma</span>${ic('next', 18, 2.2)}</button>
               <button type="button" data-tg-crm="profile">${ic('gear', 20, 2)}<span>Sozlamalar</span>${ic('next', 18, 2.2)}</button>
               <button type="button" data-tg-logout style="color:#B42318">${ic('logout', 20, 2)}<span style="font-weight:700">Chiqish</span></button></div></div>`;
@@ -656,7 +656,7 @@
 
     // ---------- navigatsiya ----------
     const NAV = [['home', 'Bosh', 'home'], ['report', 'Hisobot', 'report'], ['stats', 'Statistika', 'stats'], ['leads', 'Lidlar', 'leads'], ['menu', 'Menyu', 'menu']];
-    const TAB_OF = { notif: 'home', home: 'home', entry: 'home', report: 'report', stats: 'stats', leads: 'leads', lead: 'leads', menu: 'menu', crm: 'menu' };
+    const TAB_OF = { notif: 'home', home: 'home', entry: 'home', report: 'report', stats: 'stats', leads: 'leads', lead: 'leads', menu: 'menu', crm: 'menu', aiq: 'menu' };
     function buildNav() {
         nav = document.createElement('nav'); nav.className = 'tg-nav'; nav.setAttribute('aria-label', 'Pastki menyu');
         nav.innerHTML = NAV.map(([id, label, icon]) => `<button type="button" data-tg-nav="${id}"><span>${ic(icon, 20, 1.9)}</span>${label}</button>`).join('');
@@ -711,11 +711,13 @@
         const keep = document.activeElement && root.contains(document.activeElement) && document.activeElement.matches('input') ? { k: document.activeElement.dataset.tgIn || (document.activeElement.hasAttribute('data-tg-q') ? 'q' : ''), s: document.activeElement.selectionStart } : null;
         const y = root.scrollTop;
         const html = S.screen === 'entry' ? screenEntry(false) : S.screen === 'report' ? screenReport() : S.screen === 'stats' ? screenStats()
-            : S.screen === 'notif' ? screenNotif() : S.screen === 'leads' ? screenLeads() : S.screen === 'lead' ? screenLead() : S.screen === 'menu' ? screenMenu() : S.screen === 'crm' ? '' : screenHome();
+            : S.screen === 'notif' ? screenNotif() : S.screen === 'leads' ? screenLeads() : S.screen === 'lead' ? screenLead() : S.screen === 'menu' ? screenMenu() : S.screen === 'aiq' ? `<div class="tg-scr"><div id="tgAiq"></div></div>` : S.screen === 'crm' ? '' : screenHome();
         // Animatsiya faqat yangi ekran ochilganda; ma'lumot yangilanganda (har 30 s, harf yozilganda) qayta o'ynamaydi.
         root.classList.toggle('tg-still', !scrollTop);
         root.innerHTML = html;
         root.scrollTop = scrollTop ? 0 : y;
+        // Lid sifati (AI) — js/callAiTahlil.js; ekran tuguni saqlanadi (30 s yangilanishda qayta yuklanmaydi).
+        if (S.screen === 'aiq' && window.callAiTahlil) { const T = window.callAiTahlil; T.phoneHost(document.getElementById('tgAiq'), 'tg-aiq', el => T.phoneLeadQuality(el, { backAttr: 'data-tg-back' }), { force: !!scrollTop }); }
         if (keep?.k) { const el = keep.k === 'q' ? root.querySelector('[data-tg-q]') : root.querySelector(`[data-tg-in="${keep.k}"]`); if (el) { el.focus(); try { el.setSelectionRange(keep.s, keep.s); } catch (e) { /* raqamli input */ } } }
         syncNav();
     }

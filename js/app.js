@@ -207,7 +207,7 @@ const ROLE_TABS = {
     // sub-navigatsiyani faqat "SMS rassilka"ga cheklaydi (Target
     // Monitoringi/Kontent reja/Raqobatchilar tahlili/Statistika hamon
     // yopiq), avvalgi tor ruxsat saqlanib qoladi.
-    sales_manager: ['dashboard', 'sales', 'students', 'timetable', 'analitika', 'student-app', 'guides', 'marketing'],
+    sales_manager: ['dashboard', 'sales', 'students', 'timetable', 'analitika', 'student-app', 'guides', 'marketing', 'call-ai-me'],
     // 8-vazifa: Targetolog - Marketing bo'limi xodimi, alohida kabinetga
     // ega. Faqat shu 3 ta bo'lim ko'rinadi; Sotuv bo'limida esa
     // renderLeadCard/initLeadDragDrop/openLeadCommentsModal/openLeadNotifyModal/
@@ -1077,7 +1077,7 @@ function updateRdPageHead(tab = _rdCurrentTab) {
     const own = document.body.classList.contains('lang-fixed') && typeof getUserOwnLang === 'function' ? getUserOwnLang() : null;
     const langLabel = own ? (own === 'russian' ? 'Rus tili' : 'Ingliz tili') : lang ? lang.textContent.trim() : '';
     // Tab ichidagi son belgisi (Moliya › Muammolar) sarlavhaga qo'shilmaydi.
-    const activeText = active ? [...active.childNodes].filter(n => !(n.classList && n.classList.contains('fin-nav-cnt'))).map(n => n.textContent).join('').trim() : '';
+    const activeText = active ? [...active.childNodes].filter(n => !(n.classList && (n.classList.contains('fin-nav-cnt') || n.classList.contains('nav-new-badge')))).map(n => n.textContent).join('').trim() : '';
     // Moliya: sarlavha ostida tanlangan davr ham ("To'lovlar · Rus tili yo'nalishi · 1–15 noyabr 2026").
     const investorView = getCurrentUser()?.role === 'investor' && pinned.closest?.('#tab-finance');
     const finPeriod = pinned.closest?.('#tab-finance') && !investorView && window.financeUI?.periodLabel ? window.financeUI.periodLabel() : '';
@@ -1112,6 +1112,10 @@ function applyTargetologSalesNav() {
 
 function switchSalesSection(section) {
     if (applyTargetologSalesNav() && !TARGETOLOG_SALES_SECTIONS.has(section)) section = 'leads';
+    // Sotuv › Tahlil (qo'ng'iroqlar AI tahlili) — faqat admin, boshliq va ROP.
+    const callAiOk = ['admin', 'boshliq', 'rop'].includes(getCurrentUser()?.role) && !!window.callAiTahlil;
+    document.querySelectorAll('[data-sales-section="call-ai"]').forEach(b => { if (!applyTargetologSalesNav()) b.style.display = callAiOk ? '' : 'none'; });
+    if (section === 'call-ai' && !callAiOk) section = 'leads';
     _tabContext.salesSection = section;
     if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => updateRdPageHead('sales'));
     document.querySelectorAll('.section-nav-item').forEach(el => {
@@ -1126,6 +1130,8 @@ function switchSalesSection(section) {
     const addBookRoadmapHeaderBtn = document.getElementById('addBookRoadmapHeaderBtn');
     if (leadsFiltersBar) leadsFiltersBar.hidden = section !== 'leads';
     if (addLeadBtn) addLeadBtn.hidden = section !== 'leads';
+    const slRuleBtn = document.getElementById('slRuleBtn');
+    if (slRuleBtn) slRuleBtn.style.display = section === 'call-ai' ? 'none' : ''; // Tahlil sahifasida lidlar qoidasi tugmasi kerak emas
     if (bookRoadmapFiltersBar) bookRoadmapFiltersBar.hidden = section !== 'book-roadmap';
     if (addBookRoadmapHeaderBtn) addBookRoadmapHeaderBtn.hidden = section !== 'book-roadmap';
     syncLeadsLangTabs();
@@ -1136,6 +1142,7 @@ function switchSalesSection(section) {
     if (section === 'rating') renderRating();
     if (section === 'sales-plan') renderSalesPlan();
     if (section === 'debtors') renderSalesDebtors();
+    if (section === 'call-ai') window.callAiTahlil.renderSales(document.getElementById('salesPanel-callAi'));
     persistCurrentTab();
 }
 
@@ -1417,6 +1424,7 @@ function renderTab(tab) {
         case 'hr': renderHr(); break;
         case 'finance': renderFinance(); break;
         case 'guides': renderMyGuides(); break;
+        case 'call-ai-me': window.callAiTahlil?.renderMe(document.getElementById('callAiMeRoot')); break;
         case 'akademik': window.akademikDesk?.render(document.getElementById('akademikDeskRoot'), _tabContext); break;
         case 'school-approvals': window.schoolUI?.renderApprovals(document.getElementById('schoolApprovalsRoot')); break;
         case 'school-groups': window.schoolUI?.renderGroups(document.getElementById('schoolGroupsRoot')); break;
@@ -9195,6 +9203,21 @@ function bindAdminHome(container) {
 
 let _lastDashboardOverviewArgs = null;
 
+// Qo'ng'iroqlar sifati bloki (js/callAiTahlil.js): reja/keyingi qo'ng'iroq kartalaridan keyin.
+function mountCallAiHome(container) {
+    if (!window.callAiTahlil?.home || !container) return;
+    const root = container.querySelector('.ahx') || container;
+    let el = root.querySelector('[data-ca-home]');
+    if (!el) {
+        el = document.createElement('div');
+        el.dataset.caHome = '1';
+        el.className = 'ca-home';
+        const top = root.querySelector('.kbx-top');
+        if (top) top.after(el); else root.prepend(el);
+    }
+    window.callAiTahlil.home(el).catch(() => { el.innerHTML = ''; });
+}
+
 function renderDashboardOverview(args) {
     const { students, teachers, leads, currentUser, managerId, managerStudents, managerLeads } = args || {};
     _lastDashboardOverviewArgs = args;
@@ -9203,6 +9226,7 @@ function renderDashboardOverview(args) {
     if (typeof isAdminHomeUser === 'function' && isAdminHomeUser(currentUser)) {
         container.innerHTML = renderAdminHome(currentUser, students, leads);
         bindAdminHome(container);
+        mountCallAiHome(container);
         return;
     }
     if (currentUser?.role === 'teacher' && currentUser.linkedTeacherId) {
@@ -9235,11 +9259,13 @@ function renderDashboardOverview(args) {
     if (currentUser?.role === 'rop') {
         container.innerHTML = renderRopHome(currentUser, students, leads);
         bindRopHome(container, currentUser);
+        mountCallAiHome(container);
         return;
     }
     if (currentUser?.role === 'sales_manager' && managerId) {
         container.innerHTML = renderManagerHome(currentUser, managerId, leads, managerStudents || []);
         bindManagerHome(container);
+        mountCallAiHome(container);
         return;
     }
 
@@ -14047,6 +14073,10 @@ function renderAnalitikaXodimlar() {
 
 // --- Sotuv bo'limi ---
 function switchMarketingSection(section) {
+    // Marketing › Lid sifati (AI): admin, boshliq, ROP va targetolog.
+    const lqOk = ['admin', 'boshliq', 'rop', 'targetolog'].includes(getCurrentUser()?.role) && !!window.callAiTahlil;
+    document.querySelectorAll('[data-marketing-section="lead-quality"]').forEach(b => { if (!lqOk) b.style.display = 'none'; });
+    if (section === 'lead-quality' && !lqOk) section = 'target';
     _tabContext.marketingSection = section;
     document.querySelectorAll('[data-marketing-section]').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.marketingSection === section);
@@ -14055,6 +14085,7 @@ function switchMarketingSection(section) {
         panel.classList.toggle('active', panel.dataset.marketingPanel === section);
     });
     if (section === 'sms') renderSms();
+    if (section === 'lead-quality') window.callAiTahlil?.renderLeadQuality(document.getElementById('marketingPanel-leadQuality'), { lang: _marketingLang });
     persistCurrentTab();
 }
 
@@ -14073,6 +14104,7 @@ function renderMarketing() {
                 b.classList.toggle('active', b.dataset.marketingLang === _marketingLang)
             );
             if ((_tabContext.marketingSection || 'target') === 'target') renderMarketingTargetPanel();
+            if (_tabContext.marketingSection === 'lead-quality') window.callAiTahlil?.renderLeadQuality(document.getElementById('marketingPanel-leadQuality'), { lang: _marketingLang });
         });
     });
     document.querySelectorAll('[data-marketing-lang]').forEach(b =>
@@ -14089,7 +14121,8 @@ function renderMarketing() {
     // Targetolog: faqat "Target lidlar" (SMS rassilka ko'rinmaydi) va faqat
     // HR'da ruxsat berilgan til yo'nalish(lar)i.
     const isTargetolog = cu?.role === 'targetolog';
-    const visibleSections = restrictedToSms ? ['sms'] : isTargetolog ? ['target'] : ['target', 'sms'];
+    const lqOk = ['admin', 'boshliq', 'rop', 'targetolog'].includes(cu?.role) && !!window.callAiTahlil; // Lid sifati (AI)
+    const visibleSections = restrictedToSms ? ['sms'] : isTargetolog ? ['target', ...(lqOk ? ['lead-quality'] : [])] : ['target', ...(lqOk ? ['lead-quality'] : []), 'sms'];
     document.querySelectorAll('[data-marketing-section]').forEach(btn => {
         btn.style.display = visibleSections.includes(btn.dataset.marketingSection) ? '' : 'none';
     });
@@ -14107,7 +14140,7 @@ function renderMarketing() {
     const wanted = _tabContext.marketingSection || 'target';
     const sec = visibleSections.includes(wanted) ? wanted : visibleSections[0];
     switchMarketingSection(sec);
-    if (sec !== 'sms') renderMarketingTargetPanel();
+    if (sec === 'target') renderMarketingTargetPanel();
 }
 
 // ===== Sozlamalar =====
@@ -22715,6 +22748,7 @@ document.querySelectorAll('[data-lead-lang-filter]').forEach(btn => {
         // 33-vazifa: Sotuv rejasi endi til bo'yicha ajratilgan — tugma
         // bosilganda shu bo'lim ham qayta chizilishi kerak.
         if (_tabContext.salesSection === 'sales-plan') renderSalesPlan();
+        if (_tabContext.salesSection === 'call-ai') window.callAiTahlil?.renderSales(document.getElementById('salesPanel-callAi'));
     });
 });
 

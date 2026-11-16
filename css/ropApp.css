@@ -16,7 +16,7 @@ body.ra-on:not(.ra-app-hidden) .top-header, body.ra-on:not(.ra-app-hidden) .side
 body.ra-on.ra-app-hidden .main-area, body.ra-on.ra-app-hidden .content-layout { padding-bottom: 0 !important; }
 body.ra-on.ra-app-hidden .tab-content { padding-bottom: calc(var(--sa-nav-h) + 16px) !important; }
 body.ra-on .rs-more, body.ra-on #salesSectionNav { display: none !important; }
-body.ra-on .sa-nav { display: grid; position: fixed; left: 0; right: 0; bottom: 0; z-index: 260; height: var(--sa-nav-h); padding: 6px 6px env(safe-area-inset-bottom); grid-template-columns: repeat(5, minmax(0, 1fr)); background: #FFFFFF; border-top: 1px solid var(--sa-line); font-family: 'DW Jakarta', 'Plus Jakarta Sans', system-ui, sans-serif; }
+body.ra-on .sa-nav { display: grid; position: fixed; left: 0; right: 0; bottom: 0; z-index: 260; height: var(--sa-nav-h); padding: 6px 6px env(safe-area-inset-bottom); grid-template-columns: repeat(var(--sa-nav-n, 5), minmax(0, 1fr)); background: #FFFFFF; border-top: 1px solid var(--sa-line); font-family: 'DW Jakarta', 'Plus Jakarta Sans', system-ui, sans-serif; }
 body.ra-on.modal-open .sa-nav { z-index: 249; }
 body.ra-on.ra-full { --sa-nav-h: 0px; }
 body.ra-on.ra-full .sa-nav { display: none; }

@@ -56,8 +56,8 @@
     <link rel="stylesheet" href="css/oquvchilar.css?v=20261029b4">
     <link rel="stylesheet" href="css/admin-dizayn.css?v=20261030i">
     <link rel="stylesheet" href="css/rop-sotuv-dizayn.css?v=20261030k">
-    <link rel="stylesheet" href="css/sotuvApp.css?v=20261101k">
-    <link rel="stylesheet" href="css/ropApp.css?v=20261113b">
+    <link rel="stylesheet" href="css/sotuvApp.css?v=20261116qt1">
+    <link rel="stylesheet" href="css/ropApp.css?v=20261116qt1">
     <link rel="stylesheet" href="css/hrApp.css?v=20261101a">
     <link rel="stylesheet" href="css/davomatApp.css?v=20261115o">
     <link rel="stylesheet" href="css/davomatRasmsiz.css?v=20261115r">
@@ -596,6 +596,7 @@
                             <div class="sales-header-layout">
                                 <nav class="section-nav sales-header-nav" id="marketingSectionNav" aria-label="Marketing bo'limi">
                                     <button type="button" class="section-nav-item active" data-marketing-section="target">Target lidlar</button>
+                                    <button type="button" class="section-nav-item" data-marketing-section="lead-quality" style="display:none">Lid sifati (AI) <span class="nav-new-badge" aria-label="yangi">YANGI</span></button>
                                     <button type="button" class="section-nav-item" data-marketing-section="sms">SMS rassilka</button>
                                 </nav>
                                 <div class="sales-header-lang" id="marketingLangActions">
@@ -613,6 +614,7 @@
 
                         <div class="marketing-panel active" data-marketing-panel="target" id="marketingPanel-target"></div>
                         <div class="marketing-panel" data-marketing-panel="sms" id="marketingPanel-sms"></div>
+                        <div class="marketing-panel" data-marketing-panel="lead-quality" id="marketingPanel-leadQuality" style="overflow-y:auto"></div>
                     </section>
 
                     <!-- O'quvchilar -->
@@ -747,6 +749,7 @@
                                         data-sales-section="rating">Reyting</button>
                                     <button type="button" class="section-nav-item"
                                         data-sales-section="sales-stats">Statistika</button>
+                                    <button type="button" class="section-nav-item" data-sales-section="call-ai" style="display:none">Tahlil <span class="nav-new-badge" aria-label="yangi">YANGI</span></button>
                                     <button type="button" class="section-nav-item"
                                         data-sales-section="scripts">Skriptlar</button>
                                     <button type="button" class="section-nav-item"
@@ -1010,6 +1013,7 @@
                             </div>
 
                             <div class="sales-panel" data-sales-panel="debtors" id="salesPanel-debtors" style="overflow-y:auto"></div>
+                            <div class="sales-panel" data-sales-panel="call-ai" id="salesPanel-callAi" style="overflow-y:auto"></div>
                         </div>
                     </section>
                     <section id="tab-placeholder" class="tab-content">
@@ -1378,6 +1382,9 @@
                             </div>
                         </div>
                     </section>
+
+                    <!-- Sotuv menejeri: Mening tahlilim (qo'ng'iroqlar AI tahlili) -->
+                    <section id="tab-call-ai-me" class="tab-content"><div class="rd-page-head ca-me-head"><h1>Mening tahlilim</h1><p>AI tahlili · qoʻngʻiroqlarim</p></div><div id="callAiMeRoot"></div></section>
 
                     <section id="tab-akademik" class="tab-content"><div id="akademikDeskRoot" class="akd"></div></section>
 
@@ -1756,9 +1763,9 @@
     <script src="js/staffSessions.js?v=20261029b4"></script>
     <script src="js/staffNavBadges.js?v=20261029a5"></script>
     <script src="js/kabinetKirish.js?v=20261111a"></script>
-    <script src="js/app.js?v=20261116smsiz"></script>
+    <script src="js/app.js?v=20261116qt1"></script>
     <script src="js/ropSotuvNav.js?v=20261102s1"></script>
-    <script src="js/ropDesk/shell.js?v=20261115d"></script>
+    <script src="js/ropDesk/shell.js?v=20261116qt1"></script>
     <script src="js/ropDesk/leads.js?v=20261116yl1"></script>
     <script src="js/davomatApp.js?v=20261116f"></script>
     <script src="js/davomatRasmsiz.js?v=20261115s"></script>
@@ -1768,13 +1775,14 @@
     <script src="js/teamApp.js?v=20261109a"></script>
     <script src="js/ofisLink.js?v=20261115a"></script>
     <script src="js/callAi.js?v=20261116ca1"></script>
-    <script src="js/sotuvApp.js?v=20261116ca1"></script>
-    <script src="js/ropApp.js?v=20261116f"></script>
+    <script src="js/callAiTahlil.js?v=20261116qt1"></script>
+    <script src="js/sotuvApp.js?v=20261116qt1"></script>
+    <script src="js/ropApp.js?v=20261116qt1"></script>
     <script src="js/hrApp.js?v=20261111m"></script>
     <script src="js/akademikApp.js?v=20261116f"></script>
     <script src="js/akademikDesk.js?v=20261113a"></script>
     <script src="js/adminApp.js?v=20261116f"></script>
-    <script src="js/targetologApp.js?v=20261102j1"></script>
+    <script src="js/targetologApp.js?v=20261116qt1"></script>
     <script src="js/statusBand.js?v=20261101a"></script>
     <script src="js/staleLeads.js?v=20261116yl1"></script>
     <script src="js/trialPopup.js?v=20261101a"></script>
