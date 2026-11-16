@@ -13,10 +13,13 @@
 const T = require('./school/time');
 const workflow = require('../../js/trialWorkflow');
 
+// Marketing bo'limi (16-noy): marketolog — bo'lim rahbari; targetolog, dizayner, videograf/montajyor, kopirayter.
+const MKT_ROLES = new Set(['dizayner', 'grafik-dizayner', 'videograf', 'montajyor', 'kopirayter', 'copywriter', 'smm']);
+const SHARED_KINDS = new Set(['boss', 'mktlead', 'mkt', 'target']); // ikkala kurs uchun umumiy — til filtri yo'q
 const MAIN_TEACHER = new Set(['oqituvchi', 'ingliz-oqituvchi', 'rus-oqituvchi', 'asosiy']);
 const KIND = r => r === 'sotuv-menejeri' || r === 'sotuv_menejeri' ? 'mgr' : r === 'rop' ? 'rop'
     : r === 'head-of-teachers' ? 'akad' : r === 'yordamchi' ? 'yord' : r === 'hr' ? 'hr'
-    : r === 'targetolog' ? 'target' : MAIN_TEACHER.has(r) ? 'teacher' : 'other';
+    : r === 'targetolog' ? 'target' : r === 'marketolog' ? 'mktlead' : MKT_ROLES.has(r) ? 'mkt' : MAIN_TEACHER.has(r) ? 'teacher' : 'other';
 // Rahbar (admin/boshliq foydalanuvchisi, HR kartasi bor bo'lsa) — ofisda "Rahbar" xonasida (16-noy).
 const BOSS_ROLES = new Set(['admin', 'boshliq']);
 const kindOf = e => BOSS_ROLES.has(String(e.urole || '').toLowerCase()) ? 'boss' : KIND(e.role);
@@ -82,7 +85,7 @@ async function teacherBoard(db, teachers, students, date, nowMin) {
     const marks = (await safe(() => db.query('SELECT teacher_id, student_id FROM staff_att_lesson_marks WHERE lesson_date=$1', [date]), { rows: [] })).rows;
     const marked = new Set(marks.map(m => m.teacher_id + '|' + m.student_id));
     const names = new Map(students.map(s => [s.id, s.name]));
-    return teachers.map(t => {
+    const board = teachers.map(t => {
         const v = S.dayView(ctx, t.id, date);
         const now = v.items.filter(i => i.start <= nowMin && nowMin < i.end);
         const inSlot = list => (list || []).some(f => f.start <= nowMin && nowMin < f.end);
@@ -99,10 +102,16 @@ async function teacherBoard(db, teachers, students, date, nowMin) {
                 : now.some(i => i.kind === 'break') ? 'break' : now.some(i => i.kind === 'leave') ? 'leave'
                 : inSlot(v.work) ? 'busy' : 'off',
             nowStudents: lessons.map(i => ({ id: i.studentId, name: first(names.get(i.studentId) || i.studentName) })),
+            trialLeadId: trial?.leadId || null,
             todayStudents: groupIds.length, lessonsDone: done.length,
             dav: !done.length ? null : unmarked ? 'pending' : 'ok',
             next: (v.items.find(i => (i.kind === 'lesson' || i.kind === 'trial') && i.start > nowMin) || {}).start ?? null };
     });
+    // Hozir sinov darsi o'tilayotgan lid ismi (faqat birinchi so'z, telefon yo'q).
+    const ids = [...new Set(board.map(b => b.trialLeadId).filter(Boolean))];
+    const ln = new Map(ids.length ? (await safe(() => db.query('SELECT id, name FROM leads WHERE id = ANY($1::text[])', [ids.map(String)]), { rows: [] })).rows.map(r => [String(r.id), first(r.name)]) : []);
+    for (const b of board) { b.trialLead = b.trialLeadId ? (ln.get(String(b.trialLeadId)) || '') : null; delete b.trialLeadId; }
+    return board;
 }
 
 async function activeStudents(db, langs, date) {
@@ -384,7 +393,7 @@ async function live(db, user, query = {}, now = new Date()) {
 
     const all = await safe(() => staffList(db), []);
     const inLang = e => { const l = empLang(e); return l === 'both' || !v.langs || v.langs.includes(l); };
-    const office = all.filter(e => { const k = kindOf(e); return k === 'boss' || (['mgr', 'rop', 'akad', 'yord', 'hr'].includes(k) && inLang(e)); });
+    const office = all.filter(e => { const k = kindOf(e); return SHARED_KINDS.has(k) || (['mgr', 'rop', 'akad', 'yord', 'hr'].includes(k) && inLang(e)); });
     const teachers = all.filter(e => kindOf(e) === 'teacher' && inLang(e));
 
     const att = await safe(() => attendanceToday(db, office, date, now), { map: new Map(), events: [] });
@@ -397,6 +406,15 @@ async function live(db, user, query = {}, now = new Date()) {
             avatar: query.since ? undefined : avatarOf(e) };
     });
     const names = new Map(all.map(e => [e.id, first(e.first_name || e.name)]));
+    // Yordamchi ustoz qarshisidagi o'quvchi: hozirgi bog'lanish (at_min..at_min+minutes) yoki oxirgi 10 daqiqada yozilgan natija.
+    const yIds = staff.filter(s => s.kind === 'yord').map(s => s.id);
+    if (yIds.length) {
+        const rows = (await safe(() => db.query(`SELECT DISTINCT ON (c.assistant_id) c.assistant_id, c.outcome, s.name FROM school_assist_contacts c
+            LEFT JOIN students s ON s.id = c.student_id WHERE c.day = $1 AND c.removed_at IS NULL AND c.assistant_id = ANY($2::text[])
+              AND (c.created_at > NOW() - INTERVAL '10 minutes' OR (c.at_min IS NOT NULL AND c.at_min <= $3 AND c.at_min + GREATEST(c.minutes, 5) > $3))
+            ORDER BY c.assistant_id, c.created_at DESC`, [date, yIds, minutes]), { rows: [] })).rows;
+        for (const r of rows) { const s = staff.find(x => x.id === r.assistant_id); if (s) s.visitor = { name: first(r.name), outcome: r.outcome }; }
+    }
 
     const students = await safe(() => activeStudents(db, v.langs, date), []);
     const board = await safe(() => teacherBoard(db, teachers, students, date, minutes), teachers.map(t => ({ id: t.id, name: first(t.name), status: 'away', awayWhy: 'off', nowStudents: [], todayStudents: 0, lessonsDone: 0, dav: null })));
