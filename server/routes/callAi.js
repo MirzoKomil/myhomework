@@ -187,6 +187,8 @@ async function findAccessible(req, id) {
         const mid = await db.getSalesManagerIdForUser(req.user.id);
         const lead = await db.getLeadById(a.leadId).catch(() => null);
         if (mid && (a.managerId === mid || lead?.managerId === mid)) return a;
+        // Namunaviy qo'ng'iroq: menejerning o'z rejasidagi vazifada ko'rsatilgan — mijoz yashirin holda.
+        if (mid && (await Plans.listPlans(db)).some(pl => pl.managerId === mid && ['active', 'decision'].includes(pl.status) && pl.weeks.some(w => w.tasks.some(t => t.callId === id)))) return { ...a, sample: true };
     }
     return null;
 }
@@ -201,6 +203,7 @@ router.get('/:id/transcript', authRequired, requireRoles(STAFF), async (req, res
         if (req.user.role === 'sales_manager' && a.task && !a.task.seenAt) getCallAi().taskSeen(a.id).catch(() => {});
         const tr = (await getCallAi().loadTranscript(a.id)) || { segments: [] };
         const myMid = req.user.role === 'sales_manager' ? await db.getSalesManagerIdForUser(req.user.id) : '';
+        if (a.sample) return res.json({ ...publicView(a, { withTranscript: tr }), sample: true, mine: false, leadId: '', lang: a.lang, leadName: 'Namunaviy qoʻngʻiroq · mijoz yashirin', leadPhone: '', recordingId: a.recordingId, audioUrl: rec?.url || '', task: null, appeal: null, managerName: '' });
         res.json({ ...publicView(a, { withTranscript: tr }), mine: !!myMid && a.managerId === myMid, leadId: a.leadId, lang: a.lang, leadName: lead?.name || '', leadPhone: lead?.phone || '', recordingId: a.recordingId, audioUrl: rec?.url || '' });
     } catch (err) {
         console.error('GET /api/call-ai/:id/transcript', err);
@@ -325,6 +328,180 @@ router.post('/:id/type', authRequired, requireRoles(LEADS_ALL), async (req, res)
     }
 });
 
+// ── 2-bosqich: statistika, rejalar, haftalik hisobot, sozlamalar, lid sifati ──
+// Dizayn: Sotuv › Tahlil (Umumiy, Menejerlar, Qo'ng'iroqlar, Rivojlanish rejalari, Haftalik hisobot, Sozlamalar),
+// "Mening tahlilim", Bosh sahifa bloklari, Marketing › Lid sifati (AI). Hisob: server/services/callAiStats.js.
+const Stats = require('../services/callAiStats');
+const Plans = require('../services/callPlans');
+const DIRECTORS = ['admin', 'boshliq'];
+const isDay = v => /^\d{4}-\d{2}-\d{2}$/.test(String(v || ''));
+// Davr: from/to (YYYY-MM-DD, Toshkent, to — shu kun ham kiradi). Standart — o'tgan hafta (dushanba–yakshanba).
+function period(q, now = Date.now()) {
+    if (isDay(q.from) && isDay(q.to)) {
+        const from = Date.parse(q.from + 'T00:00:00+05:00'), to = Date.parse(q.to + 'T00:00:00+05:00') + 86400000;
+        if (to > from && to - from <= 400 * 86400000) return { from, to };
+    }
+    if (q.per === 'today2') { const d = Date.parse(Stats.dayKey(now) + 'T00:00:00+05:00'); return { from: d - 86400000, to: d + 86400000 }; }
+    if (q.per === 'week') { const w = Stats.weekStart(now); return { from: w, to: now + 1 }; }
+    if (q.per === 'month') { const d = Stats.dayKey(now); return { from: Date.parse(d.slice(0, 8) + '01T00:00:00+05:00'), to: now + 1 }; }
+    const w = Stats.weekStart(now);
+    return { from: w - 7 * 86400000, to: w };
+}
+async function langScope(req) {
+    const want = req.query.lang === 'english' ? 'english' : req.query.lang === 'russian' ? 'russian' : null;
+    if (req.user.role === 'rop') {
+        const langs = await require('../services/ropScope').ropLangsFor(db.pool, req.user);
+        if (langs && want && !langs.includes(want)) return langs[0];
+        return want || (langs ? langs[0] : 'russian');
+    }
+    return want || 'russian';
+}
+async function loadCtx(lang, q) {
+    const all = (await getCallAi().all()).filter(a => !lang || a.lang === lang);
+    const leads = new Map((await db.getLeadsByIds(all.map(a => a.leadId).slice(-6000))).map(l => [l.id, l]));
+    const managers = await db.getSalesManagersMap();
+    const plans = (await Plans.listPlans(db)).filter(p => !lang || p.lang === lang);
+    return { analyses: all, leads, managers, plans, now: Date.now(), ...period(q || {}) };
+}
+const wrap = fn => async (req, res) => {
+    try { res.json(await fn(req, res)); }
+    catch (err) { console.error('call-ai', req.path, err.message); res.status(err.status || 400).json({ error: err.message || 'Xatolik' }); }
+};
+const deny = msg => Object.assign(new Error(msg || 'Ruxsat yoʻq'), { status: 403 });
+
+// Sotuv › Tahlil › Umumiy / Menejerlar (+ Bosh sahifa bloki).
+router.get('/stats', authRequired, requireRoles(LEADS_ALL), wrap(async req => {
+    const lang = await langScope(req);
+    const ctx = await loadCtx(lang, req.query);
+    return { lang, from: ctx.from, to: ctx.to, settings: await Plans.settings(db), ...Stats.team(ctx) };
+}));
+router.get('/calls-table', authRequired, requireRoles(LEADS_ALL), wrap(async req => {
+    const lang = await langScope(req);
+    const ctx = await loadCtx(lang, req.query);
+    const managers = [...new Set(ctx.analyses.map(a => a.managerId).filter(Boolean))].map(id => ({ id, name: ctx.managers.get(id)?.name || id }));
+    return { lang, from: ctx.from, to: ctx.to, managers, pendingAppeals: ctx.analyses.filter(a => a.appeal?.status === 'pending').length, ...Stats.calls(ctx, req.query) };
+}));
+router.get('/manager/:id', authRequired, requireRoles(LEADS_ALL), wrap(async req => {
+    const lang = await langScope(req);
+    const ctx = await loadCtx(lang, req.query);
+    const plan = ctx.plans.filter(p => p.managerId === req.params.id && ['pending', 'active', 'decision'].includes(p.status)).sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))[0];
+    return { lang, from: ctx.from, to: ctx.to, ...Stats.manager(ctx, req.params.id), plan: Plans.view(plan, ctx.analyses, ctx.managers) };
+}));
+// Sotuv menejeri: "Mening tahlilim" (o'zi + jamoa chizig'i). Mijoz/menejer nomlari boshqa menejerlardan ko'rsatilmaydi.
+router.get('/me', authRequired, requireRoles(['sales_manager']), wrap(async req => {
+    const mid = await db.getSalesManagerIdForUser(req.user.id);
+    if (!mid) throw deny('Sotuv menejeri profili bogʻlanmagan');
+    const ctx = await loadCtx(null, req.query);
+    const lang = ctx.analyses.find(a => a.managerId === mid)?.lang || 'russian';
+    const scoped = { ...ctx, analyses: ctx.analyses.filter(a => a.lang === lang), plans: ctx.plans.filter(p => p.lang === lang) };
+    const me = Stats.manager(scoped, mid);
+    const plan = scoped.plans.filter(p => p.managerId === mid && ['active', 'decision'].includes(p.status)).sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))[0];
+    const mine = scoped.analyses.filter(a => a.managerId === mid);
+    const task = mine.filter(a => a.task && !a.task.done).sort((a, b) => Date.parse(b.task.at) - Date.parse(a.task.at))[0];
+    const appeal = mine.filter(a => a.appeal?.status === 'pending')[0];
+    delete me.best; // boshqa menejerning mijozi ko'rinmasin (namunaviy qo'ng'iroq — rejada, mijoz yashirin)
+    return { lang, from: ctx.from, to: ctx.to, ...me, plan: Plans.view(plan, scoped.analyses, scoped.managers),
+        task: task ? { callId: task.id, lead: ctx.leads.get(task.leadId)?.name || '', leadId: task.leadId, text: task.task.text, due: task.task.due } : null,
+        appeal: appeal ? { callId: appeal.id, lead: ctx.leads.get(appeal.leadId)?.name || '', left: Math.max(0, Math.ceil((Date.parse(appeal.appeal.at) + 24 * 3600000 - Date.now()) / 3600000)) } : null };
+}));
+// Menejerning o'z qo'ng'iroqlari ro'yxati ("Qo'ng'iroqlarim"), 10 tadan.
+router.get('/me/calls', authRequired, requireRoles(['sales_manager']), wrap(async req => {
+    const mid = await db.getSalesManagerIdForUser(req.user.id);
+    if (!mid) throw deny('Sotuv menejeri profili bogʻlanmagan');
+    const ctx = await loadCtx(null, req.query);
+    return { from: ctx.from, to: ctx.to, ...Stats.calls({ ...ctx, analyses: ctx.analyses.filter(a => a.managerId === mid) }, { page: req.query.page, type: req.query.type }) };
+}));
+router.get('/plans', authRequired, requireRoles(LEADS_ALL), wrap(async req => {
+    const lang = await langScope(req);
+    const ctx = await loadCtx(lang, req.query);
+    const list = ctx.plans.slice().sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+    const weekly = Stats.weeklySeries(ctx.analyses, ctx.now);
+    const rows = Stats.team(ctx).managers;
+    return { lang, plans: list.map(p => Plans.view(p, ctx.analyses, ctx.managers)), managers: rows, weeklyLabels: weekly.labels };
+}));
+router.get('/plans/:id', authRequired, requireRoles(STAFF), wrap(async req => {
+    const p = (await Plans.listPlans(db)).find(x => x.id === req.params.id);
+    if (!p) throw Object.assign(new Error('Reja topilmadi'), { status: 404 });
+    if (req.user.role === 'sales_manager' && p.managerId !== await db.getSalesManagerIdForUser(req.user.id)) throw deny();
+    if (req.user.role === 'rop') { const langs = await require('../services/ropScope').ropLangsFor(db.pool, req.user); if (langs && !langs.includes(p.lang)) throw deny(); }
+    const ctx = await loadCtx(p.lang, req.query);
+    return { plan: Plans.view(p, ctx.analyses, ctx.managers), manager: Stats.manager(ctx, p.managerId) };
+}));
+router.post('/plans/:id/:action', authRequired, requireRoles(STAFF), wrap(async req => {
+    const p = (await Plans.listPlans(db)).find(x => x.id === req.params.id);
+    if (!p) throw Object.assign(new Error('Reja topilmadi'), { status: 404 });
+    const action = req.params.action;
+    if (req.user.role === 'sales_manager') {
+        if (action !== 'task' || p.managerId !== await db.getSalesManagerIdForUser(req.user.id)) throw deny();
+    } else if (req.user.role === 'rop') {
+        const langs = await require('../services/ropScope').ropLangsFor(db.pool, req.user); if (langs && !langs.includes(p.lang)) throw deny();
+        if (action === 'decision') throw deny('2-tsikldan keyingi qarorni admin qiladi');
+    }
+    const by = await userName(req);
+    const out = await Plans.act(db, p.id, action, { ...(req.body || {}), role: req.user.role }, by);
+    if (action === 'remind') await notifyManager(p.managerId, `Rivojlanish rejangiz: ${out.weeks.find(w => w.status === 'current')?.title || ''} — vazifalarni bajaring`).catch(() => {});
+    return { ok: true, plan: out };
+}));
+router.get('/weekly', authRequired, requireRoles(LEADS_ALL), wrap(async req => {
+    const lang = await langScope(req);
+    const list = await Plans.reports(db, lang);
+    const ctx = await loadCtx(lang, req.query);
+    const rep = list.find(r => req.query.week ? Stats.dayKey(r.weekStart) === req.query.week : true) || null;
+    const team = Stats.team({ ...ctx, ...(rep ? { from: rep.weekStart, to: rep.weekStart + 7 * 86400000 } : {}) });
+    const cost = await aiCostFor(rep ? rep.weekStart : ctx.from, rep ? rep.weekStart + 7 * 86400000 : ctx.to, lang);
+    return { lang, report: rep, weeks: list.map(r => ({ week: Stats.dayKey(r.weekStart), label: r.label })), team, plans: ctx.plans.filter(p => ['pending', 'active', 'decision'].includes(p.status)).map(p => Plans.view(p, ctx.analyses, ctx.managers)), aiCostUsd: cost };
+}));
+router.post('/weekly/run', authRequired, requireRoles(DIRECTORS), wrap(async () => runWeekly(true)));
+router.get('/settings', authRequired, requireRoles(STAFF.concat(['targetolog'])), wrap(async () => Plans.settings(db)));
+router.post('/settings', authRequired, requireRoles(DIRECTORS), wrap(async req => Plans.saveSettings(db, req.body || {}, await userName(req))));
+// Targetolog: faqat lid sifati (menejer ballari va Sotuv › Tahlil ko'rinmaydi).
+router.get('/lead-quality', authRequired, requireRoles(['admin', 'boshliq', 'rop', 'targetolog']), wrap(async req => {
+    const lang = await langScope(req);
+    const ctx = await loadCtx(lang, req.query);
+    const lq = Stats.leadQuality(ctx);
+    // Maqsadli lid narxi: shu davr reklama xarajati (targetolog kiritgan) ÷ maqsadli lidlar.
+    const spend = await adSpendUsd(lang, ctx.from, ctx.to).catch(() => null);
+    return { lang, from: ctx.from, to: ctx.to, ...lq, adSpendUsd: spend, costPerTargeted: spend != null && lq.targeted ? Math.round(spend / lq.targeted * 100) / 100 : null };
+}));
+
+async function aiCostFor(from, to, lang) {
+    try {
+        const { rows } = await db.pool.query(`SELECT COALESCE(SUM(usd),0)::float AS usd FROM ai_call_costs WHERE at >= to_timestamp($1/1000.0) AND at < to_timestamp($2/1000.0) AND COALESCE(lang,'russian') = $3`, [from, to, lang]);
+        return Math.round(rows[0].usd * 100) / 100;
+    } catch { return null; }
+}
+// Targetolog kiritgan kunlik reklama sarfi ($) — target_ad_entries (kind='day', data.budget).
+async function adSpendUsd(lang, from, to) {
+    const { rows } = await db.pool.query(`SELECT COALESCE(SUM((data->>'budget')::numeric),0)::float AS usd, COUNT(*)::int AS n FROM target_ad_entries WHERE language=$1 AND kind='day' AND date >= $2 AND date <= $3`,
+        [lang, Stats.dayKey(from), Stats.dayKey(to - 1)]);
+    return rows[0].n ? Math.round(rows[0].usd * 100) / 100 : null;
+}
+// Menejerga push (Jamoa ilovasi): "Menejerga eslatish".
+async function notifyManager(managerId, text) {
+    const fcm = require('../services/fcm');
+    if (!fcm.configured?.()) return;
+    const { rows } = await db.pool.query(`SELECT t.token FROM staff_push_tokens t JOIN user_sales_manager_links l ON l.user_id = t.user_id WHERE l.manager_id = $1`, [managerId]);
+    for (const r of rows) await fcm.send(r.token, { title: 'Rivojlanish rejasi', body: text, tag: 'call-plan', id: `plan:${Date.now()}`, url: '/?tab=call-ai-me' }).catch(() => {});
+}
+// Har soat: dushanba 09:00 dan keyin bir marta — rejalar va haftalik hisobot.
+let weeklyRunning = false;
+async function runWeekly(force = false) {
+    if (weeklyRunning) return { busy: true };
+    weeklyRunning = true;
+    try {
+        const analyses = await getCallAi().all();
+        const managers = await db.getSalesManagersMap();
+        const leads = new Map((await db.getLeadsByIds(analyses.slice(-6000).map(a => a.leadId))).map(l => [l.id, l]));
+        return await Plans.weekly(db, { analyses, managers, leads, force });
+    } finally { weeklyRunning = false; }
+}
+function startWeekly() {
+    if (process.env.NODE_ENV === 'test') return;
+    const tick = () => runWeekly(false).catch(err => console.error('[callPlans]', err.message));
+    setInterval(tick, 3600 * 1000).unref?.();
+    setTimeout(tick, 120 * 1000).unref?.();
+}
+
 // Lid modalidagi yozuvlarga tahlil qo'shishda: kim qaysi tahlilni ko'ra oladi.
 async function analysisFilter(user) {
     if (user?.role === 'rop') {
@@ -337,4 +514,4 @@ async function analysisFilter(user) {
     return (a, lead) => !!mid && (a.managerId === mid || lead?.managerId === mid);
 }
 
-module.exports = { router, getCallAi, analysisFilter, STAFF, LEADS_ALL };
+module.exports = { router, getCallAi, analysisFilter, STAFF, LEADS_ALL, startWeekly, runWeekly, period };
