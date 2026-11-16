@@ -211,6 +211,16 @@ const SCORE_TOOL = {
             scriptIssues: { type: 'array', items: { type: 'string' }, description: 'Xato skriptning oʻzidagi kamchilikdan boʻlsa (menejer balidan ayirilmaydi)' },
             talkShareManager: { type: 'integer', minimum: 0, maximum: 100 },
             nameUses: { type: 'integer', minimum: 0 },
+            leadQuality: {
+                type: 'object',
+                description: 'Faqat 1-qoʻngʻiroqda (targetolog uchun): lid maqsadli mijozmi. reason: maqsadli, yosh_talaba (yoshi kichik/talaba), tasodifan (reklamani tasodifan bosgan), bepul_deb (bepul deb oʻylagan), rossiya_nasiya (Rossiyada, nasiya mos emas), notogri_raqam, boshqa. adQuote — mijoz reklama haqida aytgan gap (boʻlsa, qisqa, oʻzbekcha)',
+                properties: {
+                    targeted: { type: 'boolean' },
+                    reason: { type: 'string', enum: ['maqsadli', 'yosh_talaba', 'tasodifan', 'bepul_deb', 'rossiya_nasiya', 'notogri_raqam', 'boshqa'] },
+                    age: { type: ['integer', 'null'], description: 'Suhbatdan maʼlum boʻlsa yoshi' },
+                    adQuote: { type: 'string' },
+                },
+            },
         },
         required: ['type', 'gradable', 'summary'],
     },
@@ -327,6 +337,12 @@ function normalizeResult(r) {
         scriptIssues: arr(r.scriptIssues).slice(0, 5).map(String),
         talkShareManager: Number.isFinite(Number(r.talkShareManager)) ? Math.round(Number(r.talkShareManager)) : null,
         nameUses: Number.isFinite(Number(r.nameUses)) ? Math.round(Number(r.nameUses)) : null,
+        leadQuality: r.leadQuality && typeof r.leadQuality === 'object' ? {
+            targeted: r.leadQuality.targeted !== false && (r.leadQuality.reason || 'maqsadli') === 'maqsadli',
+            reason: ['maqsadli', 'yosh_talaba', 'tasodifan', 'bepul_deb', 'rossiya_nasiya', 'notogri_raqam', 'boshqa'].includes(r.leadQuality.reason) ? r.leadQuality.reason : (r.leadQuality.targeted === false ? 'boshqa' : 'maqsadli'),
+            age: Number.isFinite(Number(r.leadQuality.age)) && Number(r.leadQuality.age) > 0 ? Math.round(Number(r.leadQuality.age)) : null,
+            adQuote: String(r.leadQuality.adQuote || '').slice(0, 300),
+        } : null,
     };
 }
 
