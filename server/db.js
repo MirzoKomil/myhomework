@@ -1563,6 +1563,12 @@ async function upsertLeadWithClient(client, lead, language, options = {}) {
 
     // PATCH qisman obyekt yuborsa ham mavjud maydonlar bo'shab ketmasin.
     const merged = existingRow ? { ...before, ...lead, id: existingRow.id } : lead;
+    // Server yozgan "SMS yuborildi" izohlari eski nusxadan saqlanganda yo'qolmasin.
+    if (before && Array.isArray(before.comments) && Array.isArray(merged.comments)) {
+        const ids = new Set(merged.comments.map(c => c && c.id));
+        const keep = before.comments.filter(c => c && c.type === 'sms-sent' && !ids.has(c.id));
+        if (keep.length) merged.comments = [...merged.comments, ...keep].sort((a, b) => String(a?.createdAt || '').localeCompare(String(b?.createdAt || '')));
+    }
     const stageValidation = leadWorkflow.validateStageChange(before, merged);
     if (stageValidation) {
         const err = new Error(stageValidation.error);
