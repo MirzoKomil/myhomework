@@ -8733,7 +8733,7 @@ function renderKobaltTop(d, managerId, now = new Date()) {
         const l = d.next.lead;
         const tel = String(l.phone || '').replace(/[^\d+]/g, '');
         const stage = (LEAD_COLUMNS.find(c => c.id === normalizeLeadStatus(l.status)) || {}).label || '';
-        const note = Array.isArray(l.comments) ? [...l.comments].reverse().find(c => c && c.text) : null;
+        const note = Array.isArray(l.comments) ? [...l.comments].reverse().find(c => c && c.text && c.type !== 'sms-sent') : null;
         const chip = d.next.reason === 'sla' ? `<span class="kbx-dchip is-red">SLA ${dur(d.next.ms)} oʻtdi</span>`
             : d.next.reason === 'late' ? `<span class="kbx-dchip is-amber">${escapeHtml(formatLeadFollowUpWhen(d.next.at, now.getTime()))}</span>`
             : d.next.reason === 'new' ? `<span class="kbx-dchip">SLA ${dur(d.next.ms)} qoldi</span>`
@@ -20919,7 +20919,9 @@ function renderLeadCommentItem(c) {
     const isPaymentOnboarding = c.type === 'payment-onboarding';
     const isFollowUpReminder = c.type === 'follow-up-reminder';
     const isTrialLesson = c.type === 'trial-lesson' || c.type === 'trial-teacher';
+    const isSms = c.type === 'sms-sent';
     let badge = '';
+    if (isSms) badge = '<span class="lead-comment-badge lead-comment-badge--info">SMS yuborildi</span>';
     if (isContactFail) badge = '<span class="lead-comment-badge">Bog\'lanish sababi</span>';
     if (isConnectedSurvey) badge = '<span class="lead-comment-badge lead-comment-badge--survey">Anketa</span>';
     if (isInfoProvided) badge = '<span class="lead-comment-badge lead-comment-badge--info">Ma\'lumot</span>';
@@ -20937,7 +20939,7 @@ function renderLeadCommentItem(c) {
                     : (isPaymentProcess ? ' lead-comment-item--payment'
                         : (isPaymentOnboarding ? ' lead-comment-item--onboard'
                             : (isFollowUpReminder ? ' lead-comment-item--reminder'
-                                : (isTrialLesson ? ' lead-comment-item--onboard' : '')))))));
+                                : (isTrialLesson ? ' lead-comment-item--onboard' : (isSms ? ' lead-comment-item--info' : ''))))))));
 
     return `<div class="lead-comment-item${itemClass}">
         <div class="lead-comment-meta">
