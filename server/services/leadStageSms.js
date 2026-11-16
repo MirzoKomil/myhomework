@@ -48,6 +48,7 @@ async function alertAdmin(kind, detail) {
         const head = {
             balance: '⚠️ <b>Eskiz SMS balansi tugagan</b> — mijozlarga SMS ketmayapti. my.eskiz.uz → SMS da balansni to\'ldiring.',
             moderation: '⚠️ <b>SMS matni Eskiz moderatsiyasidan o\'tmagan</b> — shu matn ketmayapti. my.eskiz.uz → SMS → Mening matnlarim ga qo\'shish kerak.',
+            low: '⚠️ <b>Eskiz SMS balansi 3 kundan kam qoldi</b> — tugasa mijozlarga SMS ketmaydi.',
             auth: '⚠️ <b>Eskiz SMS ulanishi ishlamayapti</b> (login/parol). Railway\'dagi ESKIZ_EMAIL / ESKIZ_PASSWORD ni tekshiring.',
         }[kind];
         await scheduler.once(pool, key, async () => {
