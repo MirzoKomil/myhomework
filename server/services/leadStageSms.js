@@ -67,6 +67,20 @@ async function alertAdmin(kind, detail) {
 }
 
 // Bitta avtomatik SMS: yuboradi, tarixga yozadi, xato bo'lsa adminni ogohlantiradi.
+// Ketgan SMS lid kartochkasining izohlariga to'liq matni bilan yoziladi (menejer nima borganini ko'radi).
+// updated_at o'zgartirilmaydi — menejer ochib turgan kartochkani saqlaganda "boshqa oynada yangilangan" xatosi chiqmasin;
+// eski nusxa bilan saqlansa ham server bu izohni saqlab qoladi (db.js saveLead: 'sms-sent' izohlari yo'qolmaydi).
+async function noteOnLead(lead, text, eskizId) {
+    if (!lead?.id || (lead.recipientType && lead.recipientType !== 'lead')) return;
+    try {
+        const { pool } = require('../db');
+        const c = { id: 'sms' + (eskizId || Date.now().toString(36)) + Math.random().toString(36).slice(2, 6), type: 'sms-sent', author: 'CRM (avtomatik)',
+            text, reason: null, createdAt: new Date().toISOString() };
+        await pool.query(`UPDATE leads SET comments = ((CASE WHEN comments IS NULL OR comments = '' THEN '[]' ELSE comments END)::jsonb || $2::jsonb)::text
+            WHERE id = $1 AND deleted_at IS NULL`, [String(lead.id), JSON.stringify([c])]);
+    } catch (e) { console.warn('[stage-sms] izohga yozilmadi:', e.message); }
+}
+
 async function sendAuto(lead, text, audience) {
     const { addSmsHistoryEntries } = require('../db');
     const phone = uzPhoneOf(lead);
@@ -76,6 +90,7 @@ async function sendAuto(lead, text, audience) {
     try {
         const resp = await eskiz.sendSms(phone, text);
         entry = { ...base, status: 'sent', eskizId: resp?.id || null };
+        await noteOnLead(lead, text, entry.eskizId);
     } catch (err) {
         entry = { ...base, status: 'error', error: err.message || 'Nomalum xatolik' };
         alertAdmin(errorKind(err.message), `${audience}: ${err.message}`);
