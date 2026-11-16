@@ -532,6 +532,16 @@ async function read(pool, fn) {
     try { await db.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY'); await db.query("SELECT set_config('search_path', 'public, pg_temp', true)"); const r = await fn(db); await db.query('COMMIT'); return r; }
     catch (e) { await db.query('ROLLBACK'); throw e; } finally { db.release(); }
 }
+// Tizim hisobi (masalan, Eskiz SMS balansi): bo'lmasa ochadi — muhr va audit bilan, foydalanuvchisiz (CRM o'zi).
+async function ensureSystemAccount(pool, a) {
+    return transaction(pool, async db => {
+        if ((await db.query('SELECT 1 FROM fin_accounts WHERE id=$1', [a.id])).rows.length) return false;
+        await db.query(`INSERT INTO fin_accounts(id,entity,name,kind,methods,opening_balance,opening_date,sort) VALUES($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT(id) DO NOTHING`,
+            [a.id, a.entity, a.name, a.kind, [], a.openingBalance || 0, a.openingDate || null, a.sort || 90]);
+        await audit(db, { id: 'system', name: 'CRM (avtomatik)' }, 'account-create', a.id, null, { name: a.name, kind: a.kind, entity: a.entity, opening: a.openingBalance || 0, openingDate: a.openingDate || null });
+        return true;
+    });
+}
 async function access(db, actor, { director = false } = {}) {
     const user = await inflow.access(db, actor);
     if (!user.finance) throw error(403, 'Moliya bo‘limiga ruxsat yo‘q');
@@ -1566,6 +1576,7 @@ async function createTransactionIn(db, actor, body, opts = {}) {
         if (!Object.hasOwn(F.TYPES, type)) throw error(400, 'Operatsiya turini tanlang');
         const cat = F.CATEGORY[body.categoryCode];
         if (!cat || cat.type !== type || body.categoryCode === 'TAX') throw error(400, 'Bu operatsiya turi uchun toifa noto‘g‘ri');
+        if (cat.auto && !opts.auto) throw error(400, `${cat.name} har kuni avtomatik yoziladi — qo‘lda kiritilmaydi`);
         let ent = entity(body.entity);
         const day = dateOf(body.date);
         await assertOpen(db, day);
@@ -1604,7 +1615,7 @@ async function createTransactionIn(db, actor, body, opts = {}) {
             const cdata = await load(db), cs = F.contracts(cdata), mine = cs.find(c => c.receipts.some(x => x.id === rec.id));
             if (mine && cs.some(c => c.group === mine.group && c.index > mine.index) && day > mine.end)
                 throw error(400, 'Bu tushum tugagan oldingi kursga tegishli — qaytarishni joriy kurs tushumiga bog‘lang');
-            if (!F.EQUIVALENT_KINDS.has(account.kind)) throw error(400, 'Qaytarish naqd, karta yoki bank hisobidan to‘lanadi (Uzum orqali bekor qilingan sotuv Uzum hisob-kitobida kamayadi)');
+            if (!F.isEquivalent(account)) throw error(400, 'Qaytarish naqd, karta yoki bank hisobidan to‘lanadi (Uzum orqali bekor qilingan sotuv Uzum hisob-kitobida kamayadi)');
             if (typeof body.terminates !== 'boolean') throw error(400, 'Shartnoma tugatiladimi (o‘quvchi o‘qishni to‘xtatdimi) yoki faqat ortiqcha to‘lov qaytarilyaptimi — belgilang');
             paymentRecordId = rec.id; ent = rec.language;
         }
@@ -1786,7 +1797,7 @@ async function recordSalaryPayment(pool, actor, salaryId, body) {
         const day = dateOf(body.date || (s.paid_at ? new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Tashkent' }).format(new Date(s.paid_at)) : F.today()));
         await assertOpen(db, day);
         const account = await accountRow(db, body.accountId);
-        if (!F.EQUIVALENT_KINDS.has(account.kind)) throw error(400, 'Maosh naqd, karta yoki bank hisobidan to‘lanadi');
+        if (!F.isEquivalent(account)) throw error(400, 'Maosh naqd, karta yoki bank hisobidan to‘lanadi');
         assertOpened(account, day);
         // Ikki kishi nazorati: maoshni "to'landi" deb tasdiqlagan xodim kassadan chiqimni o'zi yozmaydi.
         const hasAudit = (await db.query("SELECT to_regclass('salary_audit') AS t")).rows[0].t;
@@ -2041,7 +2052,7 @@ function closeReadiness(data, month) {
     const balances = new Map(F.accountBalances(data, end).map(a => [a.id, a.balance]));
     for (const a of data.accounts) {
         // Pul hisoblari va Uzum kliring hisobi (Uzum ko'chirmasi bilan) tekshiriladi; faolsiz, lekin qoldig'i bor hisob ham.
-        if (!F.EQUIVALENT_KINDS.has(a.kind) && a.kind !== 'clearing') continue;
+        if (!F.isEquivalent(a) && a.kind !== 'clearing') continue;
         if (!a.active && !balances.get(a.id)) continue;
         const used = mv.some(m => m.account === a.id && m.date <= end) || (a.openingBalance && (!a.openingDate || a.openingDate <= end));
         if (!used) continue;
@@ -2306,6 +2317,6 @@ async function migrateLegacyCash(db) {
     await db.query("INSERT INTO fin_migrations(id) VALUES('legacy-cashflow-v1') ON CONFLICT DO NOTHING");
 }
 
-module.exports = { SCHEMA, periodDebt, saveRecon, latestRecon, initSchema, withTransaction: transaction, createTransactionIn, reverseTransactionIn, initProblemLog, resolvedProblems, resolveProblem, load, overview, summary, periodFigures, receivablesSplit, cashbook, listTransactions, auditLog, people, storeEvidence, readEvidence, createTransaction, reverseTransaction,
+module.exports = { SCHEMA, ensureSystemAccount, periodDebt, saveRecon, latestRecon, initSchema, withTransaction: transaction, createTransactionIn, reverseTransactionIn, initProblemLog, resolvedProblems, resolveProblem, load, overview, summary, periodFigures, receivablesSplit, cashbook, listTransactions, auditLog, people, storeEvidence, readEvidence, createTransaction, reverseTransaction,
     createPayable, voidPayable, recordSalaryPayment, voidReceipts, manualReceipt, batchCorrections, reconcile, saveAccount, addAccountCheck, closeStatus, lockMonth,
     saveSettings, assertOpen, verifyAuditChain, verifySeals, closeReadiness, disposeAsset, impairAsset, forfeitContract, confirmNotDuplicate, correctStudentStatus, integrityCertificate, verifyCertificate, acknowledgeIntegrityAlarm };

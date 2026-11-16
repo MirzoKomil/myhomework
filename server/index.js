@@ -496,6 +496,8 @@ init().then(async () => {
     void domworkBot.start();
     // Kunlik avtomatik SMS'lar: "Keyin sotib olmoqchi" sanasi, qarz eslatmalari (server/services/leadStageSms.js)
     require('./services/leadStageSms').startDaily();
+    // SMS xarajati → Moliya: har kuni o'tgan kun uchun Eskiz balansidan yechilgan summa (server/services/eskizFinance.js)
+    require('./services/eskizFinance').start(crmDb.pool);
     app.listen(PORT, '0.0.0.0', () => {
         console.log(`Myhomework.uz server: port ${PORT}`);
     });
