@@ -57,6 +57,7 @@
     const SOT_B = new Set(['debt', 'plan', 'rating', 'script', 'funnel', 'sms', 'stu', 'book']);
     const viaSot = k => { if (!SOT_B.has(k) || typeof window.sotDeskPages?.open !== 'function') return false; closeOverlays(); activePage = null; let ok = false; try { ok = window.sotDeskPages.open(k) !== false; } catch (e) { console.warn('[sotDesk] sotDeskPages.open', e.message); } if (ok) mark(); return ok; };
     const go = k => (isSot() ? (viaSot(k) || GO_SOT[k]?.()) : (viaB(k) || GO[k]?.()));
+    RD.go = go; // tashqi modullar (js/callAiTahlil.js) sidebar bandini ochishi uchun
     const GO_SOT = {
         home: () => tab('dashboard'),
         leads: () => tab('sales', { salesSection: 'leads' }),
@@ -73,6 +74,7 @@
         debt: () => tab('sales', { salesSection: 'debtors' }),
         plan: () => tab('sales', { salesSection: 'sales-plan' }),
         rating: () => tab('sales', { salesSection: 'rating' }),
+        ai: () => tab('call-ai-me'),
         script: () => tab('sales', { salesSection: 'scripts' }),
         funnel: () => tab('sales', { salesSection: 'sales-stats' }),
         book: () => tab('sales', { salesSection: 'book-roadmap' }),
@@ -91,6 +93,7 @@
         lock: () => page('stale') || window.staleLeads?.openRuleModal?.(),
         arch: () => page('archive') || (tab('profile'), g('switchProfileSection') && switchProfileSection('archive'), mark()),
         funnel: () => page('funnel') || tab('sales', { salesSection: 'sales-stats' }),
+        tahlil: () => tab('sales', { salesSection: 'call-ai' }),
         rating: () => page('rating') || tab('sales', { salesSection: 'rating' }),
         plan: () => page('plan') || tab('sales', { salesSection: 'sales-plan' }),
         debt: () => page('debtors') || tab('sales', { salesSection: 'debtors' }),
@@ -106,7 +109,7 @@
     // ROP menyusi admin kabi sodda: 6 ta bo'lim. Qolgan sahifalar yo'qolmagan — bo'lim ichidagi tablarda (SUB).
     const NAV = [['home', 'Bosh sahifa', 'home'], ['leads', 'Sotuv boʻlimi', 'leads'], ['m-target', 'Marketing', 'sms'], ['stu', 'Oʻquvchilar', 'stu'], ['cal', 'Dars jadvali', 'cal'], ['trial', 'Sinov nazorati', 'trial'], ['davomat', 'Davomat', 'clock', 'Davomat: kim ofisda, obedda, tashqarida va soʻrovlar']];
     const SUB = [
-        { nav: 'leads', items: [['leads', 'Lidlar'], ['funnel', 'Statistika'], ['rating', 'Reyting va bonus'], ['plan', 'Sotuv rejasi'], ['debt', 'Qarzdorlar'], ['script', 'Skript va yoʻriqnoma'], ['book', 'Kitob yetkazish'], ['sla', 'SLA'], ['lock', 'Qotgan lidlar qoidasi'], ['arch', 'Arxiv']] },
+        { nav: 'leads', items: [['leads', 'Lidlar'], ['funnel', 'Statistika'], ['tahlil', 'Tahlil'], ['rating', 'Reyting va bonus'], ['plan', 'Sotuv rejasi'], ['debt', 'Qarzdorlar'], ['script', 'Skript va yoʻriqnoma'], ['book', 'Kitob yetkazish'], ['sla', 'SLA'], ['lock', 'Qotgan lidlar qoidasi'], ['arch', 'Arxiv']] },
         { nav: 'm-target', items: [['m-target', 'Target lidlar'], ['sms', 'SMS yuborish']] },
         { nav: 'stu', items: [['stu', 'Oʻquvchilar'], ['check', 'Tasdiqlar'], ['tg', 'Telegram guruh'], ['m-check', 'Oʻquvchini tekshirish'], ['m-app', 'Mobil ilova']] }
     ];
@@ -115,11 +118,12 @@
     // Sotuv menejeri (SotK* bordlari): Lidlar badge'i — qo'ng'iroq navbati, Qarzdorlar — muddati o'tgan qarz.
     const NAV_SOT = [
         ['home', 'Bosh sahifa', 'home'], ['leads', 'Lidlar', 'leads'], ['cal', 'Dars jadvali', 'cal'], ['trial', 'Sinov darslari', 'trial'],
-        ['stu', 'Oʻquvchilar', 'stu'], ['debt', 'Qarzdorlar', 'debt'], ['plan', 'Sotuv rejasi', 'plan'], ['rating', 'Reyting', 'rating'], ['script', 'Skriptlar', 'script', 'Skriptlar va yoʻriqnomalar'],
+        ['stu', 'Oʻquvchilar', 'stu'], ['debt', 'Qarzdorlar', 'debt'], ['plan', 'Sotuv rejasi', 'plan'], ['rating', 'Reyting', 'rating'], ['ai', 'Mening tahlilim', 'mic', 'Mening tahlilim: qoʻngʻiroqlarim AI bahosi va rivojlanish rejam'], ['script', 'Skriptlar', 'script', 'Skriptlar va yoʻriqnomalar'],
         ['Boshqa'], ['funnel', 'Statistika', 'funnel', 'Statistika: mening voronkam'], ['sms', 'SMS', 'sms', 'SMS rassilka (faqat oʻz lid va oʻquvchilarim)'], ['book', 'Kitob yetkazish', 'book']
     ];
     const MORE_SOT = [['m-anl', 'Analitika'], ['m-app', 'Mobil ilova'], ['m-guides', 'Yoʻriqnomalar']];
     IC.book = 'M1 6h13v10H1zM14 9h4l3 3v4h-7zM5 19a2 2 0 100-4 2 2 0 000 4zM17 19a2 2 0 100-4 2 2 0 000 4z';
+    IC.mic = 'M12 3a3 3 0 013 3v5a3 3 0 01-6 0V6a3 3 0 013-3zM5 11a7 7 0 0014 0M12 18v3';
 
     function activeKeySot() {
         if (activePage) return activePage;
@@ -131,7 +135,7 @@
         const S = { leads: 'leads', 'book-roadmap': 'book', 'sales-stats': 'funnel', rating: 'rating', 'sales-plan': 'plan', debtors: 'debt', scripts: 'script' };
         if (t === 'sales') return S[c.salesSection] || 'leads';
         if (t === 'marketing') return 'sms';
-        return { dashboard: 'home', timetable: 'cal', students: 'stu', analitika: 'm-anl', 'student-app': 'm-app', guides: 'm-guides' }[t] || '';
+        return { 'call-ai-me': 'ai', dashboard: 'home', timetable: 'cal', students: 'stu', analitika: 'm-anl', 'student-app': 'm-app', guides: 'm-guides' }[t] || '';
     }
     function activeKey() {
         if (isSot()) return activeKeySot();
@@ -141,7 +145,7 @@
         try { const bk = window.ropDeskPages?.activeKey?.(); if (bk) return bk; } catch (e) { /* B qismi yo'q */ }
         const t = document.querySelector('.tab-content.active')?.id?.replace(/^tab-/, '') || '';
         const c = typeof _tabContext !== 'undefined' ? _tabContext : {};
-        const S = { leads: 'leads', 'book-roadmap': 'book', 'sales-stats': 'funnel', rating: 'rating', 'sales-plan': 'plan', debtors: 'debt', scripts: 'script' };
+        const S = { leads: 'leads', 'book-roadmap': 'book', 'sales-stats': 'funnel', rating: 'rating', 'sales-plan': 'plan', debtors: 'debt', scripts: 'script', 'call-ai': 'tahlil' };
         if (t === 'sales') return S[c.salesSection] || 'leads';
         if (t === 'marketing') return c.marketingSection === 'sms' ? 'sms' : 'm-target';
         if (t === 'profile') return typeof _profileSection !== 'undefined' && _profileSection === 'archive' ? 'arch' : '';
@@ -194,7 +198,7 @@
             const badge = sot ? (k === 'leads' || k === 'debt' ? `<button type="button" class="rk-cnt" data-rk-badge="${k}" hidden></button>` : '')
                 : k === 'leads' ? `<button type="button" class="rk-cnt" data-rk-badge="leads" hidden></button>`
                 : k === 'stu' ? `<button type="button" class="rk-cnt" data-rk-badge="check" data-approvals-n hidden></button>` : '';
-            html += `<div class="rk-nr"${grp ? ` data-rk-in="${esc(grp)}"` : ''}${grp && shut[grp] ? ' hidden' : ''}><a href="#" class="menu-item rk-mi" data-rk="${k}" title="${esc(tip || label)}">${SVG(IC[icon])}<span class="label rk-lbl">${esc(label)}</span></a>${badge}</div>`;
+            html += `<div class="rk-nr"${grp ? ` data-rk-in="${esc(grp)}"` : ''}${grp && shut[grp] ? ' hidden' : ''}><a href="#" class="menu-item rk-mi" data-rk="${k}" title="${esc(tip || label)}">${SVG(IC[icon])}<span class="label rk-lbl">${esc(label)}${k === 'ai' ? '<span class="nav-new-badge">YANGI</span>' : ''}</span></a>${badge}</div>`;
         }
         if (sot) html += `<span class="rk-fill" aria-hidden="true"></span>
             <div class="rk-nr"><button type="button" class="menu-item rk-mi rk-more-t" aria-expanded="${ls.get('rk_nav_more') === '1'}" title="Boshqa boʻlimlar: ${sot ? 'Analitika, Mobil ilova, Yoʻriqnomalar' : 'Oʻquvchini tekshirish, Mobil ilova, Target lidlar'}">${SVG(IC.more)}<span class="label rk-lbl">Boshqa boʻlimlar</span></button></div>
@@ -307,7 +311,7 @@
         if (el.parentNode !== host || host.firstElementChild !== el) host.prepend(el);
         if (el.dataset.nav !== sub.nav) {
             el.dataset.nav = sub.nav;
-            el.innerHTML = sub.items.map(([key, l]) => `<button type="button" data-rk-sub="${key}">${esc(l)}<i class="rk-sub-n" hidden></i></button>`).join('');
+            el.innerHTML = sub.items.map(([key, l]) => `<button type="button" data-rk-sub="${key}">${esc(l)}${key === 'tahlil' ? '<span class="nav-new-badge">YANGI</span>' : ''}<i class="rk-sub-n" hidden></i></button>`).join('');
         }
         el.hidden = false;
         el.querySelectorAll('[data-rk-sub]').forEach(b => { const on = b.dataset.rkSub === k; b.classList.toggle('active', on); if (on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
