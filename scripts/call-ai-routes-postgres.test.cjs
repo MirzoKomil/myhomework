@@ -1,6 +1,8 @@
 // Qo'ng'iroq AI 2-bosqich API: rollar, til doirasi, menejer faqat o'zini ko'radi.
 // Toza baza kerak: createdb payroll_test_xxx && PAYROLL_TEST_DATABASE_URL=postgres://...@127.0.0.1/payroll_test_xxx node --test --test-force-exit scripts/call-ai-routes-postgres.test.cjs
-const { test } = require('node:test');
+const { test, after } = require('node:test');
+// db.js fon taymerlari jarayonni ushlab qoladi — test tugagach chiqamiz.
+after(() => { setTimeout(() => process.exit(process.exitCode || 0), 300); });
 const assert = require('node:assert/strict');
 const url = process.env.PAYROLL_TEST_DATABASE_URL;
 
