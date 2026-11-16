@@ -85,7 +85,7 @@ Har bir gap uchun: vaqt (mm:ss, yozuv boshidan), kim gapirdi — "M" (menejer, m
 Eshitilmagan joyga [noaniq] yoz. Ohang muhim boʻlsa qavsda qisqa izoh (masalan: (kuladi), (jahl bilan)).
 Faqat JSON qaytar: {"segments":[{"t":"00:05","s":"M","text":"..."}],"durationSec":123}`;
 
-async function transcribe(buffer, mime, { env = process.env, fetchImpl = globalThis.fetch } = {}) {
+async function transcribe(buffer, mime, { env = process.env, fetchImpl = globalThis.fetch, onUsage = null } = {}) {
     if (!env.GEMINI_API_KEY) throw Object.assign(new Error('GEMINI_API_KEY yoʻq'), { code: 'nokey' });
     // Katta fayl (14 MB dan ortiq) — Gemini Files API orqali yuklanadi, keyin havola bilan yuboriladi.
     const media = buffer.length > MAX_INLINE_BYTES ? { file_data: { mime_type: mime, file_uri: await geminiUpload(buffer, mime, env, fetchImpl) } }
@@ -112,6 +112,8 @@ async function transcribe(buffer, mime, { env = process.env, fetchImpl = globalT
                 throw lastErr;
             }
             const body = await res.json();
+            // Narx: javob kelgan bo'lsa pul yechilgan — matn buzilgan bo'lsa ham hisobga olinadi.
+            if (onUsage) await Promise.resolve(onUsage({ provider: 'gemini', model, usage: body.usageMetadata })).catch(() => {});
             const text = (body.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('').trim();
             const parsed = parseJsonLoose(text);
             const segments = (Array.isArray(parsed?.segments) ? parsed.segments : [])
@@ -254,7 +256,7 @@ async function scriptText(db, lang) {
     return out.trim();
 }
 
-async function score({ transcript, scriptBody, typeHint, forcedType, appealNote, lead, managerName }, { env = process.env, fetchImpl = globalThis.fetch } = {}) {
+async function score({ transcript, scriptBody, typeHint, forcedType, appealNote, lead, managerName }, { env = process.env, fetchImpl = globalThis.fetch, onUsage = null } = {}) {
     if (!env.ANTHROPIC_API_KEY) throw Object.assign(new Error('ANTHROPIC_API_KEY yoʻq'), { code: 'nokey' });
     const model = /^[a-z0-9.-]{3,60}$/.test(env.CALL_AI_MODEL || '') ? env.CALL_AI_MODEL : CLAUDE_MODEL_DEFAULT;
     const lines = transcript.segments.map(x => `[${x.t}] ${x.s === 'C' ? 'MIJOZ' : 'MENEJER'}: ${x.text}`).join('\n');
@@ -277,6 +279,7 @@ async function score({ transcript, scriptBody, typeHint, forcedType, appealNote,
         });
         if (!res.ok) { const t = await res.text().catch(() => ''); throw new Error(`Claude ${res.status}: ${t.slice(0, 200)}`); }
         const body = await res.json();
+        if (onUsage) await Promise.resolve(onUsage({ provider: 'claude', model, usage: body.usage })).catch(() => {});
         const block = (body.content || []).find(c => c.type === 'tool_use');
         if (!block?.input) throw new Error('Claude natija qaytarmadi');
         const result = normalizeResult(forcedType ? { ...block.input, type: forcedType } : block.input);
@@ -349,7 +352,7 @@ function mergeAppeal(oldR, newR, criterion) {
 }
 
 // ── Navbat ──────────────────────────────────────────────────────────────────
-function createCallAi({ db, uploadsDir, env = process.env, fetchImpl = globalThis.fetch, log = console } = {}) {
+function createCallAi({ db, uploadsDir, env = process.env, fetchImpl = globalThis.fetch, log = console, onCost = null } = {}) {
     const store = createStore(db);
     const queue = [];
     let running = false;
@@ -411,6 +414,8 @@ function createCallAi({ db, uploadsDir, env = process.env, fetchImpl = globalThi
             Object.assign(it, fields, { updatedAt: new Date().toISOString() });
             return true;
         });
+        // Har bir AI chaqiruvi narxi (token × narx) Moliya'ga — server/services/aiCostFinance.js.
+        const onUsage = onCost ? u => Promise.resolve(onCost({ analysisId: id, lang: item.lang, ...u })).catch(err => log.error('[callAi] narx', err.message)) : null;
         const recs = await db.getJsonData('callRecordings');
         const rec = (Array.isArray(recs) ? recs : []).find(r => r.id === item.recordingId);
         if (!rec) { await save({ status: 'error', error: 'Yozuv topilmadi (oʻchirilgan)' }); return; }
@@ -424,7 +429,7 @@ function createCallAi({ db, uploadsDir, env = process.env, fetchImpl = globalThi
         if (!transcript) {
             await save({ status: 'transcribing', error: '' });
             try {
-                transcript = await transcribe(fs.readFileSync(file), mimeOf(file), { env, fetchImpl });
+                transcript = await transcribe(fs.readFileSync(file), mimeOf(file), { env, fetchImpl, onUsage });
             } catch (err) { await failed(err); return; }
             // Matn alohida kalitda (ro'yxat yengil bo'lsin); ish davomida tur o'zgargan bo'lsa ham matn saqlanadi.
             await db.tx(async c => { await db.saveJsonData(c, TKEY + id, transcript); });
@@ -445,7 +450,7 @@ function createCallAi({ db, uploadsDir, env = process.env, fetchImpl = globalThi
             const typeHint = typeHintFromStatus(lead?.status, earlier);
             const scriptBody = await scriptText(db, item.lang);
             const appealNote = item.appeal?.status === 'accepted' ? `mezon "${item.appeal.criterion}": ${item.appeal.text}` : '';
-            const { model, result } = await score({ transcript, scriptBody, typeHint, forcedType: item.forcedType || '', appealNote, lead, managerName: item.managerName }, { env, fetchImpl });
+            const { model, result } = await score({ transcript, scriptBody, typeHint, forcedType: item.forcedType || '', appealNote, lead, managerName: item.managerName }, { env, fetchImpl, onUsage });
             let final = result;
             let appealUpd = {};
             if (item.appeal?.status === 'accepted' && (item.appeal.scoreAfter == null || item.appeal.mergedResult)) {

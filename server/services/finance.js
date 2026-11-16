@@ -1587,7 +1587,8 @@ async function createTransactionIn(db, actor, body, opts = {}) {
         assertOpened(account, day); if (toAccount) assertOpened(toAccount, day);
         const counterparty = text(body.counterparty, 200), description = text(body.description, 1000);
         if (type !== 'transfer' && !counterparty) throw error(400, 'Kimga / kimdan ekanini yozing');
-        const needEvidence = ['refund', 'drawing'].includes(type) || (['expense', 'loan_repay'].includes(type) && amount >= (Number(settings.evidenceMin) || 1000000));
+        // CRM'ning o'zi yozadigan avtomatik xarajat (Eskiz SMS, AI tahlil) uchun chek yo'q — summa tizim hisobidan olinadi.
+        const needEvidence = ['refund', 'drawing'].includes(type) || (!opts.auto && ['expense', 'loan_repay'].includes(type) && amount >= (Number(settings.evidenceMin) || 1000000));
         const receiptUrl = await requireEvidence(db, body.receiptUrl, { required: needEvidence, label: 'Chek yoki hujjat' });
         // Qaytarish va ta'sischiga to'lov hujjati bir marta ishlatiladi (bitta chek bilan ikki marta pul chiqarib bo'lmaydi).
         // Bitta hujjat bilan bir necha marta pul chiqarib bo'lmaydi (bitta hisob-fakturani bo'lib to'lash bundan mustasno).
