@@ -50,6 +50,8 @@ public class MainActivity extends Activity {
     private WebView web;
     private ValueCallback<Uri[]> fileCallback;
     private boolean showingOffline = false;
+    /** Yozuvlarni o'qish ruxsati so'ralayotganda kutib turgan qo'ng'iroq (ruxsat oynasidan keyin teriladi). */
+    private Uri pendingTel;
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -212,6 +214,16 @@ public class MainActivity extends Activity {
         boolean inside = (scheme.equals("https") && (host.equals(HOST) || host.endsWith("." + HOST)))
                 && !path.endsWith(".pdf") && !path.startsWith("/uploads/");
         if (inside) return false;
+        // Qo'ng'iroq: raqam va vaqt eslab qolinadi — qaytganda telefonning o'z yozuvi CRM'ga yuklanadi (CallSync).
+        if (scheme.equals("tel")) {
+            CallSync.onDial(this, uri.getSchemeSpecificPart());
+            if ((!CallSync.audioGranted(this) || !CallSync.callLogGranted(this)) && !prefs().getBoolean("asked_" + CallSync.AUDIO_REQUEST, false)) {
+                prefs().edit().putBoolean("asked_" + CallSync.AUDIO_REQUEST, true).apply();
+                pendingTel = uri;
+                requestPermissions(CallSync.permissions(), CallSync.AUDIO_REQUEST);
+                return true;
+            }
+        }
         try {
             startActivity(new Intent(Intent.ACTION_VIEW, uri));
         } catch (ActivityNotFoundException ignored) {
@@ -341,6 +353,10 @@ public class MainActivity extends Activity {
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
         super.onRequestPermissionsResult(requestCode, permissions, results);
         if (requestCode == NOTIF_REQUEST) notifyPage();
+        if (requestCode == CallSync.AUDIO_REQUEST) {
+            if (pendingTel != null) { safeStart(new Intent(Intent.ACTION_VIEW, pendingTel)); pendingTel = null; }
+            notifyPage();
+        }
         if (requestCode == CAMERA_REQUEST) {
             if (pendingWebPermission != null) {
                 if (cameraGranted()) pendingWebPermission.grant(new String[]{PermissionRequest.RESOURCE_VIDEO_CAPTURE});
@@ -380,6 +396,12 @@ public class MainActivity extends Activity {
         @JavascriptInterface public void requestLocation() { runOnUiThread(() -> askRuntime(
                 new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION}, LOCATION_REQUEST, MainActivity.this.locationGranted())); }
         @JavascriptInterface public void openAppSettings() { runOnUiThread(MainActivity.this::openAppSettings); }
+        // Qo'ng'iroq yozuvlari (sotuv): sahifa qaysi lidga qo'ng'iroq qilinayotganini aytadi; ruxsat holati.
+        @JavascriptInterface public void callStarted(String leadId, String lang) { CallSync.leadHint(MainActivity.this, leadId, lang); }
+        @JavascriptInterface public boolean audioGranted() { return CallSync.audioGranted(MainActivity.this); }
+        @JavascriptInterface public boolean callLogGranted() { return CallSync.callLogGranted(MainActivity.this); }
+        @JavascriptInterface public void requestAudio() { runOnUiThread(() -> askRuntime(CallSync.permissions(), CallSync.AUDIO_REQUEST, CallSync.audioGranted(MainActivity.this) && CallSync.callLogGranted(MainActivity.this))); }
+        @JavascriptInterface public String callRecStatus() { return CallSync.lastStatus(MainActivity.this); }
         @JavascriptInterface public void testLocal() {
             PushService.show(MainActivity.this, "Bildirishnoma sinovi", "Shu ko'rinishda xabarlar keladi.", null, "local-test", "local-test");
         }
@@ -404,6 +426,15 @@ public class MainActivity extends Activity {
         super.onResume();
         web.onResume();
         notifyPage(); // sozlamalardan qaytganda sahifa holatni qayta tekshiradi
+        // Qo'ng'iroqdan qaytildi: yozuvni izlab, CRM'ga yuklash. Token sahifaning localStorage'idan olinadi.
+        CallSync.onResume(this, cb -> {
+            if (web == null || showingOffline) { cb.done(""); return; }
+            web.evaluateJavascript("(function(){try{return localStorage.getItem('mh_token')||''}catch(e){return ''}})()", v -> {
+                String t = v == null ? "" : v.trim();
+                if (t.length() >= 2 && t.startsWith("\"") && t.endsWith("\"")) t = t.substring(1, t.length() - 1);
+                cb.done("null".equals(t) ? "" : t);
+            });
+        });
     }
 
     @Override

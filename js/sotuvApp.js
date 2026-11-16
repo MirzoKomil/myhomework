@@ -361,6 +361,7 @@
                 : `<button type="button" class="sa-qa-b${trialLocked ? ' is-locked' : ''}" data-sa-move="sinov-darsida" title="${trialLocked ? 'Avval anketa toʻldiriladi' : ''}">${ic(trialLocked ? 'lock' : 'cal')}Sinov</button>`}
             </div>
           </section>
+          <div id="saAi"></div>
           ${alerts.length ? `<button type="button" class="sa-alert" data-sa-notify="${esc(l.id)}">${ic('clock', 18, 2.2)}<span>${esc(alerts[0].title || alerts[0].message || 'Muddat oʻtdi')}${alerts.length > 1 ? ` · yana ${alerts.length - 1}` : ''}</span><b>Koʻrib chiqish</b></button>` : ''}
           ${!survey && s !== 'muvaffaqiyatsiz-sotuv' && s !== 'sifatsiz-lidlar' && s !== 'tolov-yopildi' ? `<button type="button" class="sa-survey-cta" data-sa-survey="${esc(l.id)}"><span class="sa-ic-box">${ic('survey')}</span><span><strong>Anketa · ${sc} / 11</strong><em>Gaplashgach toʻldiring — “Bogʻlanildi” uchun shart</em></span>${ic('chev', 18, 2.4)}</button>` : ''}
           <div class="sa-seg" role="tablist" aria-label="Lid maʼlumotlari">${tabs.map(([k, t]) => `<button type="button" role="tab" aria-selected="${S.tab === k}" class="${S.tab === k ? 'is-on' : ''}" data-sa-tab="${k}">${t}${k === 'tarix' && comments.length ? ` <b>${comments.length}</b>` : ''}${k === 'rec' && recN ? ` <b>${recN}</b>` : ''}</button>`).join('')}</div>
@@ -428,15 +429,84 @@
         Promise.resolve(apiFetchCallRecordingCounts()).then(c => { recCounts = c?.counts || c || {}; if (S.screen === 'card') queueRender(); }).catch(() => {});
     }
     const recSkeleton = () => `<div class="sa-sk" style="height:56px"></div><div class="sa-sk" style="height:56px"></div>`;
+    // Qo'ng'iroq yozuvlari + AI tahlili (js/callAi.js; dizayn QAT_T_lid): kartaning tepasida oxirgi tahlil kartasi,
+    // "Yozuvlar" tabida — qo'ng'iroqlar tarixi. Bitta so'rov ikkalasiga (20 soniya kesh).
+    const recCache = {};
+    async function fetchRecs(id, fresh) {
+        const c = recCache[id];
+        if (!fresh && c && Date.now() - c.at < 20000) return c;
+        const [list, missing] = await Promise.all([g('apiFetchCallRecordings') ? apiFetchCallRecordings(lang(), id) : [], window.callAiUI ? callAiUI.loadMissing(id) : []]);
+        return (recCache[id] = { at: Date.now(), recs: Array.isArray(list) ? list : (list?.recordings || []), missing });
+    }
+    let aiTimer = null;
+    function aiCtx(id) {
+        return {
+            openCall: cid => { S.callId = cid; S.callTab = 'baho'; go('callai'); },
+            upload: async (f, opt = {}) => { const up = await apiUploadFile(f); await apiAddCallRecording(lang(), id, up.url, up.fileName, 0, opt.missingId); toast && toast('Yozuv yuklandi — AI tahlil qilmoqda'); },
+            refresh: () => { delete recCache[id]; loadAi(id); if (S.tab === 'rec') loadRecordings(id); },
+        };
+    }
+    function pollAi(id, data) {
+        clearTimeout(aiTimer);
+        if (!window.callAiUI || !callAiUI.pending(data.recs)) return;
+        aiTimer = setTimeout(function tick() {
+            if (S.screen !== 'card' || S.lead !== id) return;
+            if (callAiUI.playing()) { aiTimer = setTimeout(tick, 20000); return; }
+            delete recCache[id]; loadAi(id); if (S.tab === 'rec') loadRecordings(id);
+        }, 20000);
+    }
+    async function loadAi(id) {
+        const box = document.getElementById('saAi');
+        if (!box || !window.callAiUI) return;
+        let data; try { data = await fetchRecs(id); } catch (e) { return; }
+        if (S.screen !== 'card' || S.lead !== id) return;
+        const html = callAiUI.phoneCard(data.recs, data.missing, { part: 'card' });
+        pollAi(id, data);
+        if (box.dataset.h === html) return; // o'zgarmagan — pleer to'xtamasin
+        box.dataset.h = html; box.innerHTML = html;
+        callAiUI.bind(box, aiCtx(id));
+    }
     async function loadRecordings(id) {
         const box = document.getElementById('saRec');
         if (!box) return;
-        let list = [];
-        try { list = g('apiFetchCallRecordings') ? await apiFetchCallRecordings(lang(), id) : []; } catch (e) { box.innerHTML = `<div class="sa-err">${ic('x', 18)}<span>Yozuvlar yuklanmadi</span><button type="button" class="sa-btn sa-btn--outline sa-btn--sm" data-sa-recretry>Qayta urinish</button></div>`; return; }
+        let data;
+        try { data = await fetchRecs(id); } catch (e) { box.innerHTML = `<div class="sa-err">${ic('x', 18)}<span>Yozuvlar yuklanmadi</span><button type="button" class="sa-btn sa-btn--outline sa-btn--sm" data-sa-recretry>Qayta urinish</button></div>`; return; }
         if (S.screen !== 'card' || S.lead !== id || S.tab !== 'rec') return;
-        const arr = Array.isArray(list) ? list : (list?.recordings || []);
-        box.innerHTML = `${arr.length ? arr.map(r => `<div class="sa-card sa-recrow"><div class="sa-rec-h"><strong>${esc(r.fileName || (r.source === 'beeline' ? 'Beeline yozuvi' : 'Yozuv'))}</strong><span>${r.createdAt ? esc(when(parseT(r.createdAt))) : ''}</span></div><audio controls preload="none" src="${esc(r.url)}"></audio></div>`).join('') : `<p class="sa-muted">Bu lid boʻyicha yozuv yoʻq</p>`}
-          <button type="button" class="sa-btn sa-btn--outline" data-sa-recmanage="${esc(id)}">${ic('mic', 18)}Yozuv qoʻshish / boshqarish</button>`;
+        const nat = window.DomworkNative;
+        const perm = nat && typeof nat.audioGranted === 'function' && (!nat.audioGranted() || (typeof nat.callLogGranted === 'function' && !nat.callLogGranted()))
+            ? `<div class="sa-card" style="display:flex;align-items:center;gap:10px;background:#FFFAEB;border-color:#FEDF89"><span style="flex:1;font-size:13px">Qoʻngʻiroq yozuvlari avtomatik yuklanishi uchun «Jamoa»ga audio fayllar va qoʻngʻiroqlar jurnaliga ruxsat bering.</span><button type="button" class="sa-btn sa-btn--primary sa-btn--sm" data-sa-audioperm>Ruxsat</button></div>` : '';
+        const hist = window.callAiUI ? callAiUI.phoneCard(data.recs, data.missing, { part: 'hist', readOnly: g('isLeadsReadOnly') && g('getCurrentUser') ? isLeadsReadOnly(getCurrentUser()) : false })
+            : (data.recs.length ? data.recs.map(r => `<div class="sa-card sa-recrow"><div class="sa-rec-h"><strong>${esc(r.fileName || 'Yozuv')}</strong><span>${r.createdAt ? esc(when(parseT(r.createdAt))) : ''}</span></div><audio controls preload="none" src="${esc(r.url)}"></audio></div>`).join('') : `<p class="sa-muted">Bu lid boʻyicha yozuv yoʻq</p>`);
+        box.innerHTML = `${perm}${hist}<button type="button" class="sa-btn sa-btn--outline" data-sa-recmanage="${esc(id)}">${ic('mic', 18)}Yozuv qoʻshish / boshqarish</button>`;
+        if (window.callAiUI) callAiUI.bind(box, aiCtx(id));
+        const pb = box.querySelector('[data-sa-audioperm]');
+        if (pb) pb.onclick = () => { try { nat.requestAudio(); } catch (e) { /* eski ilova */ } };
+    }
+
+    // Bitta qo'ng'iroq tahlili (QAT_T_tahlil / QAT_T_matn) va e'tiroz (QAT_T_etiroz) — alohida ekran.
+    function screenCallAi() {
+        return `<div class="sa-body sa-card-page"><div id="saCallAi"><div class="sa-sk" style="height:64px"></div><div class="sa-sk" style="height:220px"></div></div></div>`;
+    }
+    let callTimer = null;
+    async function loadCallAi() {
+        const box = document.getElementById('saCallAi');
+        const id = S.callId;
+        if (!box || !id || !window.callAiUI) return;
+        let d;
+        try { d = await callAiUI.loadCall(id); } catch (e) { box.innerHTML = `<div class="sa-err">${ic('x', 18)}<span>Tahlil ochilmadi</span></div>`; return; }
+        if (S.screen !== 'callai' || S.callId !== id) return;
+        const tab = S.callTab || 'baho';
+        box.innerHTML = tab === 'etiroz' ? callAiUI.appealForm(d) : callAiUI.phoneCall(d, tab);
+        callAiUI.bind(box, {
+            call: d,
+            back: () => { if (S.callTab === 'etiroz') { S.callTab = 'baho'; loadCallAi(); } else back(); },
+            tab: t => { S.callTab = t; loadCallAi(); },
+            openAppeal: () => { S.callTab = 'etiroz'; loadCallAi(); },
+            afterAppeal: () => { toast && toast('Eʼtiroz yuborildi — ROP 24 soat ichida hal qiladi'); S.callTab = 'baho'; delete recCache[d.leadId]; loadCallAi(); },
+            refresh: () => loadCallAi(),
+        });
+        clearTimeout(callTimer);
+        if (callAiUI.busy(d)) callTimer = setTimeout(function tick() { if (S.screen !== 'callai' || S.callId !== id) return; if (callAiUI.playing()) { callTimer = setTimeout(tick, 20000); return; } loadCallAi(); }, 20000);
     }
 
     function screenPlan() {
@@ -919,8 +989,9 @@
     function render(scrollTop) {
         if (!root || !isOn()) return;
         if (S.screen === 'crm') { document.body.classList.remove('sa-full'); syncNav(); return; }
-        document.body.classList.toggle('sa-full', S.screen === 'card'); // lid kartasi to'liq ekran (maketdagidek), pastki menyusiz
-        const html = S.screen === 'leads' ? screenLeads() : S.screen === 'card' ? screenCard() : S.screen === 'plan' ? screenPlan()
+        if (S.screen !== 'callai' && S.screen !== 'card' && window.callAiUI) callAiUI.stopAll();
+        document.body.classList.toggle('sa-full', S.screen === 'card' || S.screen === 'callai'); // lid kartasi to'liq ekran (maketdagidek), pastki menyusiz
+        const html = S.screen === 'leads' ? screenLeads() : S.screen === 'card' ? screenCard() : S.screen === 'callai' ? screenCallAi() : S.screen === 'plan' ? screenPlan()
             : S.screen === 'rating' ? screenRating() : S.screen === 'menu' ? screenMenu() : S.screen === 'debtors' ? screenDebtors()
             : S.screen === 'profile' ? screenProfile() : screenHome();
         const keep = {};
@@ -943,7 +1014,8 @@
         Object.keys(keep).forEach(id => { const el = document.getElementById(id); if (el && !el.value) el.value = keep[id]; });
         if (focusId && focusId !== 'saLeadSearch') document.getElementById(focusId)?.focus({ preventScroll: true });
         if (focusSearch) { const i = document.getElementById('saLeadSearch'); if (i) { i.focus(); try { i.setSelectionRange(caret, caret); } catch (e) { /* type=search */ } } }
-        if (S.screen === 'card') { loadRecCounts(); if (S.tab === 'rec') loadRecordings(S.lead); }
+        if (S.screen === 'card') { loadRecCounts(); loadAi(S.lead); if (S.tab === 'rec') loadRecordings(S.lead); }
+        if (S.screen === 'callai') loadCallAi();
         if (!isStandalone()) root.querySelectorAll('[data-sa-install]').forEach(b => { b.hidden = false; });
         syncNav();
     }
@@ -967,7 +1039,7 @@
         const t = e.target.closest('[data-sa-lead],[data-sa-nav],[data-sa-go],[data-sa-back],[data-sa-stage],[data-sa-stagego],[data-sa-call],[data-sa-tg],[data-sa-sms],[data-sa-move],[data-sa-retrial],[data-sa-survey],[data-sa-tab],[data-sa-stagesheet],[data-sa-sheetclose],[data-sa-outcome],[data-sa-stalewarn],[data-sa-newwarn],[data-sa-pick],[data-sa-crsave],[data-sa-qchip],[data-sa-followup],[data-sa-notify],[data-sa-recmanage],[data-sa-recretry],[data-sa-crm],[data-sa-trials],[data-sa-notif],[data-sa-filter],[data-sa-src],[data-sa-clearq],[data-sa-rper],[data-sa-pay],[data-sa-logout],[data-sa-install],[data-sa-nread],[data-sa-nitem],[data-sa-skip],[data-sa-sort]');
         if (!t) return;
         const d = t.dataset;
-        if ('saCall' in d) { callPending = { id: d.saCall, at: Date.now() }; try { window.staleLeads?.logCall?.(d.saCall); } catch (er) { /* dalil yozilmasa ham qo'ng'iroq ochiladi */ } return; } // tel: havolasi o'zi ochiladi
+        if ('saCall' in d) { callPending = { id: d.saCall, at: Date.now() }; try { if (window.DomworkNative && typeof window.DomworkNative.callStarted === 'function') window.DomworkNative.callStarted(String(d.saCall), lang()); } catch (er) { /* eski ilova */ } try { window.staleLeads?.logCall?.(d.saCall); } catch (er) { /* dalil yozilmasa ham qo'ng'iroq ochiladi */ } return; } // tel: havolasi o'zi ochiladi
         e.preventDefault();
         if ('saLead' in d) return openLead(d.saLead);
         if ('saNav' in d) { if (d.saNav === 'jadval') return openJadval(); return go(d.saNav, { reset: true }); }

@@ -8,6 +8,11 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- Qo'ng'iroq yozuvlari: telefonning o'z yozuvchisi saqlagan audio faylni topib CRM'ga yuklash (CallSync) -->
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <!-- Qo'ng'iroqlar jurnali: javob berilmagan qo'ng'iroq uchun "yozuv topilmadi" ko'rsatilmasin, davomiylik aniq bo'lsin (ichki APK) -->
+    <uses-permission android:name="android.permission.READ_CALL_LOG" />
     <uses-feature android:name="android.hardware.camera.front" android:required="false" />
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
 

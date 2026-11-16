@@ -209,6 +209,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/state', stateRoutes);
 app.use('/api/leads', leadsRoutes);
 app.use('/api/upload', uploadsRouter);
+app.use('/api/call-ai', require('./routes/callAi').router);
 app.use('/api/telephony', telephonyRoutes);
 app.use('/api/sms', smsRoutes);
 app.use('/api/meta', metaRoutes);
@@ -494,6 +495,8 @@ init().then(async () => {
         setTimeout(run, 45 * 1000).unref();
     }).catch(err => console.error('[push] Jadval yaratilmadi:', err.code || err.message));
     void domworkBot.start();
+    // Qo'ng'iroq AI tahlili: qayta ishga tushganda chala qolgan tahlillar navbatga qaytadi.
+    setTimeout(() => require('./routes/callAi').getCallAi().resume().catch(err => console.error('[callAi] resume:', err.message)), 30 * 1000).unref();
     // Kunlik avtomatik SMS'lar: "Keyin sotib olmoqchi" sanasi, qarz eslatmalari (server/services/leadStageSms.js)
     require('./services/leadStageSms').startDaily();
     // SMS xarajati → Moliya: har kuni o'tgan kun uchun Eskiz balansidan yechilgan summa (server/services/eskizFinance.js)
