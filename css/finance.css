@@ -615,3 +615,8 @@ html.rd .main-area .fin-resolved > summary { color: inherit; }
     .ifd-card-n .ifd-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
     .ifd-1l .fin-dchip { height: 18px; font-size: 11px; padding: 0 6px; margin-right: 4px; vertical-align: 1px; }
 }
+
+/* SMS xarajati (Eskiz) — avtomatik yozuv belgisi va oldindan to'lov hisobi kartasi */
+.fin-badge--info { background: #EFF8FF; color: #175CD3; }
+.fin-account--prepaid { border-color: #B2DDFF; }
+.fin-account--prepaid .btn-primary-sm { margin-top: 8px; width: 100%; }
