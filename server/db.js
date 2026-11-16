@@ -3693,14 +3693,13 @@ async function getCallRecordingCounts() {
     }, {});
 }
 
-async function addCallRecording({ lang, leadId, url, fileName, duration, uploadedBy, source }) {
+async function addCallRecording({ lang, leadId, url, fileName, duration, uploadedBy, source, callAt, phone }) {
     const trimmedLang = lang === 'russian' ? 'russian' : 'english';
     const trimmedLeadId = String(leadId || '').trim();
     const trimmedUrl = String(url || '').trim();
     if (!trimmedLeadId) throw new Error('Lid aniqlanmadi');
     if (!trimmedUrl) throw new Error('Fayl havolasi topilmadi');
 
-    const all = await getJsonData('callRecordings');
     const recording = {
         id: 'rec-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
         lang: trimmedLang,
@@ -3708,13 +3707,34 @@ async function addCallRecording({ lang, leadId, url, fileName, duration, uploade
         url: trimmedUrl,
         fileName: fileName || '',
         duration: Number(duration) || 0,
-        source: source === 'beeline' ? 'beeline' : 'manual',
+        // 'app' — Jamoa ilovasi qo'ng'iroqdan keyin telefonning o'z yozuvini avtomatik yukladi.
+        source: source === 'beeline' || source === 'app' ? source : 'manual',
         uploadedBy: uploadedBy || '',
         createdAt: new Date().toISOString(),
+        ...(callAt ? { callAt } : {}),
+        ...(phone ? { phone: String(phone).slice(0, 32) } : {}),
     };
-    all.push(recording);
-    await tx(async (client) => { await saveJsonData(client, 'callRecordings', all); });
-    return recording;
+    // Ilova bir qo'ng'iroqni qayta yuborsa (tarmoq uzilib qolsa) — qulf ichida tekshiriladi, ikkinchi yozuv qo'shilmaydi.
+    const tail = v => String(v || '').replace(/\D/g, '').slice(-9);
+    return mutateJsonData('callRecordings', list => {
+        if (recording.source === 'app' && recording.callAt) {
+            const dup = list.find(r => r.source === 'app' && r.callAt === recording.callAt && tail(r.phone) === tail(recording.phone));
+            if (dup) return { ...dup, duplicate: true };
+        }
+        list.push(recording);
+        return recording;
+    }).then(async rec => {
+        // Shu lid/raqam bo'yicha ±10 daqiqadagi ochiq "yozuv topilmadi" qatori yopiladi (yozuv boshqa yo'l bilan kelgan bo'lsa ham).
+        if (!rec.duplicate && rec.callAt) {
+            const t = Date.parse(rec.callAt);
+            const lead = await getLeadById(rec.leadId).catch(() => null);
+            const tails = [rec.phone, lead?.phone, lead?.phone2].map(tail).filter(x => x.length >= 7);
+            await mutateJsonData('callRecordingsMissing', list => {
+                list.forEach(m => { if (!m.resolvedAt && Math.abs(Date.parse(m.callAt) - t) <= 10 * 60e3 && (m.leadId === rec.leadId || tails.includes(tail(m.phone)))) m.resolvedAt = new Date().toISOString(); });
+            }).catch(() => {});
+        }
+        return rec;
+    });
 }
 
 // Noto'g'ri yuklangan zapisni o'chirish. Bir martada faqat bitta yozuv
@@ -3723,13 +3743,11 @@ async function deleteCallRecording(id) {
     const trimmedId = String(id || '').trim();
     if (!trimmedId) throw new Error('Zapis aniqlanmadi');
 
-    const all = await getJsonData('callRecordings');
-    const recording = all.find(r => r.id === trimmedId);
-    if (!recording) throw new Error('Zapis topilmadi');
-
-    const qolgan = all.filter(r => r.id !== trimmedId);
-    await tx(async (client) => { await saveJsonData(client, 'callRecordings', qolgan); });
-    return recording;
+    return mutateJsonData('callRecordings', list => {
+        const i = list.findIndex(r => r.id === trimmedId);
+        if (i < 0) throw new Error('Zapis topilmadi');
+        return list.splice(i, 1)[0];
+    });
 }
 
 // SMS rassilka tarixi — Eskiz.uz orqali yuborilgan har bir SMS uchun bitta
@@ -3989,6 +4007,17 @@ async function gradeDemoCreativeSubmission(lessonId, { scorePercent, feedback } 
         await saveJsonData(client, 'creativeSubmissions', all);
     });
     return record;
+}
+
+// Butun massivni tranzaksiya ichida qulflab o'qib-yozish (bir vaqtdagi yozuvlar bir-birini o'chirib yubormasin).
+async function mutateJsonData(key, fn) {
+    return tx(async (client) => {
+        const row = (await client.query('SELECT data FROM json_data WHERE key = $1 FOR UPDATE', [key])).rows[0];
+        const list = Array.isArray(row?.data) ? row.data : [];
+        const out = await fn(list, client);
+        await saveJsonData(client, key, list);
+        return out;
+    });
 }
 
 async function saveJsonData(client, key, data) {
@@ -4860,7 +4889,7 @@ const TRIAL_SMS_CHECK_INTERVAL_MS = 60 * 1000;
 setInterval(_checkAndSendTrialSmsReminders, TRIAL_SMS_CHECK_INTERVAL_MS);
 
 module.exports = {
-    pool, DATA_DIR, tx,
+    pool, DATA_DIR, tx, getJsonData, saveJsonData, mutateJsonData,
     getFullState, getTeacherScopedState, getLeads, getDeletedLeads, getLeadById, getSalesManagerIdForUser, setSalesManagerUserLink,
     insertLead, upsertLead, upsertLeadWithClient, insertRestoredLead, softDeleteLead, restoreLead, patchState, recordTeacherAttendance,
     getTeacherTrialLessons, getTeacherTrialHistory, saveTeacherTrialLesson,
