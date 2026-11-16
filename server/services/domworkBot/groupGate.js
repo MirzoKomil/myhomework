@@ -43,7 +43,10 @@ async function enroll(db) {
 async function people(db, assistantId) {
     const roles = await require('./scheduler').roles(db, ['admin', 'akademik', 'assistant', 'teacher']);
     const out = [];
-    for (const p of roles.filter(p => p.role === 'admin')) out.push({ key: 'admin:' + p.telegramId, label: `${p.name} (rahbar)`, tid: p.telegramId });
+    // 16-noy (direktor): "rahbar" — faqat asosiy rahbar akkaunti (CRM logini "admin"). Admin rolidagi boshqa
+    // akkauntlar (masalan, dasturchi) guruhda bo'lishi shart emas va qulfni ushlab turmaydi.
+    const mainAdminIds = new Set((await db.query("SELECT id FROM users WHERE role='admin' AND LOWER(TRIM(email))='admin'")).rows.map(r => String(r.id)));
+    for (const p of roles.filter(p => p.role === 'admin' && mainAdminIds.has(String(p.id)))) out.push({ key: 'admin:' + p.telegramId, label: `${p.name} (rahbar)`, tid: p.telegramId });
     for (const p of roles.filter(p => p.role === 'akademik')) out.push({ key: 'akademik:' + p.telegramId, label: `${p.name} (akademik rahbar)`, tid: p.telegramId });
     if (assistantId) {
         const a = roles.find(p => p.employeeId === assistantId);
