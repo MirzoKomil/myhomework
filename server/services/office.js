@@ -17,6 +17,9 @@ const MAIN_TEACHER = new Set(['oqituvchi', 'ingliz-oqituvchi', 'rus-oqituvchi', 
 const KIND = r => r === 'sotuv-menejeri' || r === 'sotuv_menejeri' ? 'mgr' : r === 'rop' ? 'rop'
     : r === 'head-of-teachers' ? 'akad' : r === 'yordamchi' ? 'yord' : r === 'hr' ? 'hr'
     : r === 'targetolog' ? 'target' : MAIN_TEACHER.has(r) ? 'teacher' : 'other';
+// Rahbar (admin/boshliq foydalanuvchisi, HR kartasi bor bo'lsa) — ofisda "Rahbar" xonasida (16-noy).
+const BOSS_ROLES = new Set(['admin', 'boshliq']);
+const kindOf = e => BOSS_ROLES.has(String(e.urole || '').toLowerCase()) ? 'boss' : KIND(e.role);
 const CALL_TYPES = new Set(['call-attempt', 'contact-fail']);
 // Qo'ng'iroq hisobi faqat 📞 tugmasi bosilishi ("call-attempt", bir lidga 2 daqiqada bitta) bo'yicha. "Javob bermadi"
 // (contact-fail) — shu qo'ng'iroqning natijasi yoki ustun almashtirishdagi sabab: lentada ko'rinadi, lekin qayta sanalmaydi.
@@ -49,7 +52,7 @@ async function viewerFor(db, user, { tv = false, lang = null } = {}) {
 
 async function staffList(db) {
     return (await db.query(`SELECT he.id, he.name, he.first_name, he.role, COALESCE(he.lang,'english') AS lang, COALESCE(he.gender,'') AS gender,
-        COALESCE(he.birth_date,'') AS birth_date, COALESCE(u.avatar,'') AS avatar FROM hr_employees he
+        COALESCE(he.birth_date,'') AS birth_date, COALESCE(u.avatar,'') AS avatar, COALESCE(u.role,'') AS urole FROM hr_employees he
         LEFT JOIN users u ON LOWER(TRIM(u.email)) = LOWER(TRIM(he.login))
         WHERE COALESCE(he.status,'active') NOT IN ('inactive','fired','left','archived') ORDER BY he.name`)).rows;
 }
@@ -381,13 +384,13 @@ async function live(db, user, query = {}, now = new Date()) {
 
     const all = await safe(() => staffList(db), []);
     const inLang = e => { const l = empLang(e); return l === 'both' || !v.langs || v.langs.includes(l); };
-    const office = all.filter(e => ['mgr', 'rop', 'akad', 'yord', 'hr'].includes(KIND(e.role)) && inLang(e));
-    const teachers = all.filter(e => KIND(e.role) === 'teacher' && inLang(e));
+    const office = all.filter(e => { const k = kindOf(e); return k === 'boss' || (['mgr', 'rop', 'akad', 'yord', 'hr'].includes(k) && inLang(e)); });
+    const teachers = all.filter(e => kindOf(e) === 'teacher' && inLang(e));
 
     const att = await safe(() => attendanceToday(db, office, date, now), { map: new Map(), events: [] });
-    const lateVisible = k => v.lateFor === 'all' || (v.lateFor === 'sales' && (k === 'mgr' || k === 'rop')) || (v.lateFor === 'academic' && (k === 'yord' || k === 'akad'));
+    const lateVisible = k => k !== 'boss' && (v.lateFor === 'all' || (v.lateFor === 'sales' && (k === 'mgr' || k === 'rop')) || (v.lateFor === 'academic' && (k === 'yord' || k === 'akad')));
     const staff = office.map(e => {
-        const a = att.map.get(e.id) || {}, k = KIND(e.role);
+        const a = att.map.get(e.id) || {}, k = kindOf(e);
         return { id: e.id, name: first(e.first_name || e.name), kind: k, lang: e.lang, inOffice: !!a.inOffice, inAt: a.inAt || null, outAt: a.outAt || null,
             now: a.now || '', breakUntil: a.breakUntil || null, breakOut: a.breakOut || null,
             late: lateVisible(k) && a.lateMin > 0 ? a.lateMin : null, female: femaleOf(e), birthday: birthdayToday(e, date),
@@ -411,7 +414,7 @@ async function live(db, user, query = {}, now = new Date()) {
     const events = [];
     for (const r of att.events) {
         const e = office.find(x => x.id === r.employee_id); if (!e) continue;
-        const k = KIND(e.role), s = staff.find(x => x.id === e.id);
+        const k = kindOf(e), s = staff.find(x => x.id === e.id);
         const type = r.kind === 'in' ? 'checkin' : r.kind === 'out' ? 'checkout' : r.kind === 'break_out' ? 'break_out' : 'break_in';
         events.push({ id: 'f' + e.id + r.kind + new Date(r.occurred_at).getTime(), type, at: iso(r.occurred_at), staffId: e.id,
             late: r.kind === 'in' && s?.late && s.inAt === iso(r.occurred_at) ? s.late : null, kind: k,
