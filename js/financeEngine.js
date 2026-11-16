@@ -35,6 +35,8 @@
         { code: 'TAX_PAYROLL', name: 'Ish haqi soliqlari (JShDS, ijtimoiy soliq)', type: 'expense', cf: 'operating', cfLine: 'taxes', pnl: 'payroll_tax' },
         { code: 'MKT_ADS', name: 'Target reklama byudjeti', type: 'expense', cf: 'operating', cfLine: 'suppliers', pnl: 'marketing' },
         { code: 'MKT_OTHER', name: 'Marketing: kontent, bloger, dizayn', type: 'expense', cf: 'operating', cfLine: 'suppliers', pnl: 'marketing' },
+        // SMS xizmati (Eskiz): har kuni CRM o'zi yozadi (server/services/eskizFinance.js) — qo'lda kiritilmaydi.
+        { code: 'MKT_SMS', name: 'SMS xizmati (Eskiz)', type: 'expense', cf: 'operating', cfLine: 'suppliers', pnl: 'marketing', auto: true },
         { code: 'RENT', name: 'Ijara va kommunal', type: 'expense', cf: 'operating', cfLine: 'suppliers', pnl: 'rent' },
         { code: 'SOFTWARE', name: 'Dasturlar va servislar (CRM, telefoniya, SMS, hosting)', type: 'expense', cf: 'operating', cfLine: 'suppliers', pnl: 'software' },
         { code: 'ADMIN', name: 'Ofis va ma’muriy xarajatlar', type: 'expense', cf: 'operating', cfLine: 'suppliers', pnl: 'admin' },
@@ -62,6 +64,10 @@
     ];
     const ACCOUNT_KINDS = { cash: 'Naqd', card: 'Karta', bank: 'Bank', wallet: 'Elektron hamyon', clearing: 'Kliring (olinadigan)', suspense: 'Tekshiruvdagi' };
     const EQUIVALENT_KINDS = new Set(['cash', 'card', 'bank', 'wallet']);
+    // Oldindan to'lov hisoblari (Eskiz SMS balansi): hisobotlarda elektron hamyon (pul ekvivalenti) bo'lib qoladi — balans va
+    // pul oqimi mos keladi; lekin undan maosh / qaytarish to'lanmaydi, qo'lda sanash va "manfiy hisob" tekshiruviga kirmaydi.
+    const PREPAID_ACCOUNTS = new Set(['acc-eskiz-sms']);
+    const isEquivalent = a => !!a && EQUIVALENT_KINDS.has(a.kind) && !PREPAID_ACCOUNTS.has(a.id);
     const DEFAULT_SETTINGS = {
         listPrices: { english: 0, russian: 0 }, courseMonths: { english: 3, russian: 3 }, suspiciousMin: 10000, salaryDueDays: 10, usefulLifeMonths: 36, approvalLimit: 5000000, dailyLimit: 15000000, teamDailyLimit: 30000000, evidenceMin: 1000000, duplicateDays: 3, turnoverTaxRate: 0,
         eclRates: { not_due: 0, d1_30: 5, d31_60: 20, d61_90: 50, d90: 100, no_date: 25 }
@@ -188,7 +194,7 @@
                 .sort((x, y) => x.date.localeCompare(y.date) || String(x.createdAt).localeCompare(String(y.createdAt))).at(-1) || null;
             const bookAtCheck = lastCheck ? (Number(a.openingBalance) || 0) + sum(mv.filter(m => m.account === a.id && m.date >= openingDate && m.date <= lastCheck.date), m => m.sign * m.amount) : null;
             return { id: a.id, name: a.name, kind: a.kind, entity: a.entity, active: a.active !== false, openingBalance: opening, openingDate: a.openingDate || '',
-                inflow, outflow, balance: opening + inflow - outflow, equivalent: EQUIVALENT_KINDS.has(a.kind), allocatedView: scope !== 'all' && a.entity === 'common',
+                inflow, outflow, balance: opening + inflow - outflow, equivalent: isEquivalent(a), prepaid: PREPAID_ACCOUNTS.has(a.id), allocatedView: scope !== 'all' && a.entity === 'common',
                 check: lastCheck && { date: lastCheck.date, actual: Number(lastCheck.actualBalance), book: bookAtCheck, difference: Number(lastCheck.actualBalance) - bookAtCheck, note: lastCheck.note || '' } };
         });
     }
@@ -1199,7 +1205,7 @@
     }
 
     return {
-        ENTITIES, TYPES, CATEGORIES, CATEGORY, DEFAULT_ACCOUNTS, ACCOUNT_KINDS, EQUIVALENT_KINDS, DEFAULT_SETTINGS, PNL_LINES, CF_LINES, AGING,
+        ENTITIES, TYPES, CATEGORIES, CATEGORY, DEFAULT_ACCOUNTS, ACCOUNT_KINDS, EQUIVALENT_KINDS, PREPAID_ACCOUNTS, isEquivalent, DEFAULT_SETTINGS, PNL_LINES, CF_LINES, AGING,
         money, date, today, addDays, addMonths, dayDiff, monthOf, monthEnd, monthsBetween, inRange, phone9, pct, settingsOf,
         accountForMethod, movements, accountBalances, cashSummary, cashbook, cashFlowStatement, profitAndLoss, monthlyPnl,
         contracts, contractCash, earned, revenueBase, contractPosition, fixedAssets, depreciationAt, eclAt, agingBucket,
