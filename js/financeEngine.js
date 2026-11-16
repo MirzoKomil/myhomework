@@ -37,6 +37,8 @@
         { code: 'MKT_OTHER', name: 'Marketing: kontent, bloger, dizayn', type: 'expense', cf: 'operating', cfLine: 'suppliers', pnl: 'marketing' },
         // SMS xizmati (Eskiz): har kuni CRM o'zi yozadi (server/services/eskizFinance.js) — qo'lda kiritilmaydi.
         { code: 'MKT_SMS', name: 'SMS xizmati (Eskiz)', type: 'expense', cf: 'operating', cfLine: 'suppliers', pnl: 'marketing', auto: true },
+        // AI qo'ng'iroq tahlili (Gemini + Claude): har kuni CRM o'zi yozadi (server/services/aiCostFinance.js) — qo'lda kiritilmaydi.
+        { code: 'AI_CALLS', name: 'AI qo‘ng‘iroq tahlili (Gemini, Claude)', type: 'expense', cf: 'operating', cfLine: 'suppliers', pnl: 'software', auto: true },
         { code: 'RENT', name: 'Ijara va kommunal', type: 'expense', cf: 'operating', cfLine: 'suppliers', pnl: 'rent' },
         { code: 'SOFTWARE', name: 'Dasturlar va servislar (CRM, telefoniya, SMS, hosting)', type: 'expense', cf: 'operating', cfLine: 'suppliers', pnl: 'software' },
         { code: 'ADMIN', name: 'Ofis va ma’muriy xarajatlar', type: 'expense', cf: 'operating', cfLine: 'suppliers', pnl: 'admin' },
@@ -66,7 +68,7 @@
     const EQUIVALENT_KINDS = new Set(['cash', 'card', 'bank', 'wallet']);
     // Oldindan to'lov hisoblari (Eskiz SMS balansi): hisobotlarda elektron hamyon (pul ekvivalenti) bo'lib qoladi — balans va
     // pul oqimi mos keladi; lekin undan maosh / qaytarish to'lanmaydi, qo'lda sanash va "manfiy hisob" tekshiruviga kirmaydi.
-    const PREPAID_ACCOUNTS = new Set(['acc-eskiz-sms']);
+    const PREPAID_ACCOUNTS = new Set(['acc-eskiz-sms', 'acc-ai-services']);
     const isEquivalent = a => !!a && EQUIVALENT_KINDS.has(a.kind) && !PREPAID_ACCOUNTS.has(a.id);
     const DEFAULT_SETTINGS = {
         listPrices: { english: 0, russian: 0 }, courseMonths: { english: 3, russian: 3 }, suspiciousMin: 10000, salaryDueDays: 10, usefulLifeMonths: 36, approvalLimit: 5000000, dailyLimit: 15000000, teamDailyLimit: 30000000, evidenceMin: 1000000, duplicateDays: 3, turnoverTaxRate: 0,
@@ -910,7 +912,9 @@
         const endMonth = monthOf(end), months3 = [1, 2, 3].map(i => monthOf(addMonths(endMonth + '-01', -i)));
         const opFlows = months3.map(m => cashFlowStatement(data, { start: m + '-01', end: monthEnd(m), scope }).net.operating);
         const avgOperating = Math.round(sum(opFlows, x => x) / 3);
-        const cs = cashSummary(accountBalances(data, end, scope));
+        const balances = accountBalances(data, end, scope);
+        // Erkin pul — "Erkin pul" kartasi bilan bir xil: oldindan to'lov / keyin to'lanadigan servis hisoblari (Eskiz, AI) kirmaydi.
+        const free = sum(balances.filter(a => a.equivalent), a => a.balance);
         return {
             basis: 'cash', netRevenue: pnl.net_revenue, grossMargin: pnl.margins.gross, netMargin: pnl.margins.net, netProfit: pnl.net_profit,
             newClients: newClients.length, renewals: renewals.length, newSales: started.length,
@@ -920,7 +924,7 @@
             cac: newClients.length && marketing ? Math.round(marketing / newClients.length) : null,
             fullCac: newClients.length && (marketing + salesPay) ? Math.round((marketing + salesPay) / newClients.length) : null,
             marketingShare: pct(marketing, pnl.net_revenue), averageMonthlyOperatingCashFlow: avgOperating,
-            freeCash: cs.equivalents, runwayMonths: avgOperating < 0 ? Math.round((Math.max(0, cs.equivalents) / -avgOperating) * 10) / 10 : null
+            freeCash: free, runwayMonths: avgOperating < 0 ? Math.round((Math.max(0, free) / -avgOperating) * 10) / 10 : null
         };
     }
 

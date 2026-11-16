@@ -21,7 +21,10 @@ if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
 let instance = null;
 function getCallAi() {
-    if (!instance) instance = createCallAi({ db, uploadsDir: UPLOADS_DIR });
+    if (!instance) {
+        const costs = require('../services/aiCostFinance');
+        instance = createCallAi({ db, uploadsDir: UPLOADS_DIR, onCost: db.pool ? c => costs.record(db.pool, c) : null });
+    }
     return instance;
 }
 

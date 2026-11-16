@@ -98,7 +98,7 @@
         } catch (e) { state.error = e.message; state.overview = null; }
         return state.overview;
     }
-    function invalidate() { state.eskiz = null; state.negAccounts = null; state.investorDue = null; state.resolved = null; state.summary = null; state.summaryKey = ''; quick.dayKey = ''; quick.payKey = ''; state.overview = null; state.cashbook = null; state.txns = null; state.auditRows = null; state.loadingKey = ''; }
+    function invalidate() { state.eskiz = null; state.ai = null; state.negAccounts = null; state.investorDue = null; state.resolved = null; state.summary = null; state.summaryKey = ''; quick.dayKey = ''; quick.payKey = ''; state.overview = null; state.cashbook = null; state.txns = null; state.auditRows = null; state.loadingKey = ''; }
 
     // ---------- Umumiy elementlar ----------
     function toolbar(opts = {}) {
@@ -436,14 +436,27 @@
         return phone ? `<button type="button" class="fin-drow fin-prow" data-fin-sms><span><b>SMS xizmati (Eskiz)</b><small>${when}</small></span><span><span class="fin-badge fin-badge--info">Avtomatik</span> <strong>${num(agg.amount)}</strong></span></button>`
             : `<tr><td>${dateText(agg.from).slice(0, 5)}–${dateText(agg.to)}</td><td>SMS xizmati (Eskiz) <span class="fin-badge fin-badge--info">Avtomatik</span></td><td>Eskiz · ${agg.count} kun</td><td>${esc(F.ENTITIES[agg.entity] || agg.entity)}</td><td class="num">${num(agg.amount)}</td><td><button type="button" class="fin-link" data-fin-sms>Kunlar</button></td></tr>`;
     }
+    // AI qo'ng'iroq tahlili (Gemini + Claude): kunlik avtomatik yozuvlar bitta yig'ma qatorga — bosilsa kunma-kun (dollar, kurs, so'm).
+    const AI_CAT = 'AI_CALLS';
+    function aiAggregate(rows) {
+        const ai = rows.filter(r => r.categoryCode === AI_CAT);
+        if (!ai.length) return null;
+        const dates = ai.map(r => r.date).sort();
+        return { count: ai.length, amount: ai.reduce((n, r) => n + r.amount, 0), from: dates[0], to: dates.at(-1), entity: ai[0].entity };
+    }
+    function aiRowHtml(agg, phone) {
+        const when = `${dateText(agg.from).slice(0, 5)}–${dateText(agg.to)} · ${agg.count} kun · Gemini, Claude`;
+        return phone ? `<button type="button" class="fin-drow fin-prow" data-fin-ai><span><b>AI qo‘ng‘iroq tahlili</b><small>${when}</small></span><span><span class="fin-badge fin-badge--info">Avtomatik</span> <strong>${num(agg.amount)}</strong></span></button>`
+            : `<tr><td>${dateText(agg.from).slice(0, 5)}–${dateText(agg.to)}</td><td>AI qo‘ng‘iroq tahlili <span class="fin-badge fin-badge--info">Avtomatik</span></td><td>Gemini, Claude · ${agg.count} kun</td><td>${esc(F.ENTITIES[agg.entity] || agg.entity)}</td><td class="num">${num(agg.amount)}</td><td><button type="button" class="fin-link" data-fin-ai>Kunlar</button></td></tr>`;
+    }
     function summaryXarajat(s) {
-        const ex = s.expenses, sms = smsAggregate(ex.rows), plain = ex.rows.filter(r => r.categoryCode !== SMS_CAT);
+        const ex = s.expenses, sms = smsAggregate(ex.rows), ai = aiAggregate(ex.rows), plain = ex.rows.filter(r => r.categoryCode !== SMS_CAT && r.categoryCode !== AI_CAT);
         return `${dHead('Xarajatlar · ' + num(ex.total) + ' so‘m', esc(periodText()))}<div class="fin-actions"><button type="button" class="btn-primary-sm" data-fin-qexp>+ Qo‘shish</button></div>
             <div class="fin-ponly">${ex.byCategory.map(c => `<div class="fin-dcard" style="cursor:default"><span class="fin-dlbl">${esc(c.name)} · ${num(c.amount)}</span>
-                ${c.code === SMS_CAT && sms ? smsRowHtml(sms, true) : ''}${plain.filter(r => r.categoryCode === c.code).map(r => `<button type="button" class="fin-drow fin-prow" data-fin-xrow="${esc(r.id)}"><span><b>${esc(r.counterparty || r.description || r.category)}</b><small>${dateText(r.date).slice(0, 5)} · ${esc(accountName(r.accountId).split(' (')[0])} · ${esc((F.ENTITIES[r.entity] || r.entity).split(' (')[0])}</small></span><span><strong>${num(r.amount)}</strong></span></button>`).join('')}</div>`).join('') || '<div class="fin-dcard" style="cursor:default"><span class="fin-dnote">Bu davrda xarajat yozilmagan</span></div>'}</div>
-            ${table(['Sana', 'Toifa', 'Kimga / izoh', 'Yo‘nalish', { label: 'Summa', num: true }, ''], (sms ? [smsRowHtml(sms, false)] : []).concat(plain.map(r => `<tr><td>${dateText(r.date)}</td><td>${esc(r.category)}</td><td>${esc([r.counterparty, r.description].filter(Boolean).join(' · ') || '—')}</td><td>${esc(F.ENTITIES[r.entity] || r.entity)}${r.allocated ? ` <span class="fin-dnote">(ulush ${pctText(s.commonShare)} · ${num(r.fullAmount)} dan)</span>` : ''}</td><td class="num">${num(r.amount)}</td>
+                ${c.code === SMS_CAT && sms ? smsRowHtml(sms, true) : ''}${c.code === AI_CAT && ai ? aiRowHtml(ai, true) : ''}${plain.filter(r => r.categoryCode === c.code).map(r => `<button type="button" class="fin-drow fin-prow" data-fin-xrow="${esc(r.id)}"><span><b>${esc(r.counterparty || r.description || r.category)}</b><small>${dateText(r.date).slice(0, 5)} · ${esc(accountName(r.accountId).split(' (')[0])} · ${esc((F.ENTITIES[r.entity] || r.entity).split(' (')[0])}</small></span><span><strong>${num(r.amount)}</strong></span></button>`).join('')}</div>`).join('') || '<div class="fin-dcard" style="cursor:default"><span class="fin-dnote">Bu davrda xarajat yozilmagan</span></div>'}</div>
+            ${table(['Sana', 'Toifa', 'Kimga / izoh', 'Yo‘nalish', { label: 'Summa', num: true }, ''], (sms ? [smsRowHtml(sms, false)] : []).concat(ai ? [aiRowHtml(ai, false)] : []).concat(plain.map(r => `<tr><td>${dateText(r.date)}</td><td>${esc(r.category)}</td><td>${esc([r.counterparty, r.description].filter(Boolean).join(' · ') || '—')}</td><td>${esc(F.ENTITIES[r.entity] || r.entity)}${r.allocated ? ` <span class="fin-dnote">(ulush ${pctText(s.commonShare)} · ${num(r.fullAmount)} dan)</span>` : ''}</td><td class="num">${num(r.amount)}</td>
                 <td><span class="fin-actions"><button type="button" class="fin-link" data-fin-xfix="${esc(r.id)}">Tuzatish</button><button type="button" class="fin-link neg" data-fin-xcancel="${esc(r.id)}">Bekor qilish</button></span></td></tr>`)), { label: 'Xarajatlar', empty: 'Bu davrda xarajat yozilmagan', cls: 'fin-donly' })}
-            <p class="fin-note fin-ponly-i">Qo‘lda kiritilgan qatorni bosing → tuzatish yoki bekor qilish (sabab bilan; asl yozuv o‘chmaydi). <b>Avtomatik</b> SMS qatori har kuni o‘zi yoziladi.</p>
+            <p class="fin-note fin-ponly-i">Qo‘lda kiritilgan qatorni bosing → tuzatish yoki bekor qilish (sabab bilan; asl yozuv o‘chmaydi). <b>Avtomatik</b> SMS va AI qatorlari har kuni o‘zi yoziladi.</p>
             <p class="fin-note fin-donly-i">Yozuv o‘chirilmaydi — teskari yozuv qo‘shiladi va tarixda qoladi. Tuzatish = bekor qilish + to‘g‘ri summa bilan yangi yozuv. Maosh va uskuna xaridlari bu yerga kirmaydi.</p>`;
     }
     function summaryFormula(s) {
@@ -501,6 +514,7 @@
         }));
         root.querySelectorAll('[data-fin-xcancel], [data-fin-xfix]').forEach(b => b.addEventListener('click', () => cancelExpense(b.dataset.finXcancel || b.dataset.finXfix, !!b.dataset.finXfix)));
         root.querySelectorAll('[data-fin-sms]').forEach(b => b.addEventListener('click', () => openSmsDays()));
+        root.querySelectorAll('[data-fin-ai]').forEach(b => b.addEventListener('click', () => openAiDays()));
         // Muammolar soni (tab belgisi) — to'liq tekshiruv fon rejimida yuklanadi.
         refreshProblemCount();
     }
@@ -560,6 +574,12 @@
             else if (p.key === 'api') items.push({ tone: 'warning', title: 'Eskiz javob bermadi', amount: null, desc: 'SMS xarajatini yozish uchun Eskiz balansini o‘qib bo‘lmadi. CRM keyinroq o‘zi qayta urinadi; yozilmagan kunlar keyingi o‘qishda qo‘shiladi.', go: null });
             else if (p.key === 'write') items.push({ tone: 'danger', title: 'SMS xarajati yozilmadi', amount: null, desc: `${dateText(p.day)}: ${esc(p.message || '')}`, go: null });
         }
+        for (const p of state.ai?.problems || []) {
+            if (p.key === 'credit_out') items.push({ tone: 'danger', title: 'Claude krediti tugadi — qo‘ng‘iroqlar baholanmayapti', amount: null, desc: `Bu oy $${p.used.toFixed(2)} ishlatildi (oylik kredit $${p.credit}). Yangi oy boshlanguncha yoki Anthropic Console’da balans to‘ldirilguncha qo‘ng‘iroqlar faqat matnga aylantiriladi.`, go: null });
+            else if (p.key === 'credit_low') items.push({ tone: 'warning', title: 'Claude krediti 80% dan oshdi', amount: null, desc: `Bu oy $${p.used.toFixed(2)} / $${p.credit} ishlatildi. Kredit tugasa qo‘ng‘iroqlar baholanmay qoladi.`, go: null });
+            else if (p.key === 'rate') items.push({ tone: 'warning', title: 'AI xarajati yozilmadi: dollar kursi olinmadi', amount: null, desc: `${dateText(p.day)}: Markaziy bank kursini olib bo‘lmadi. CRM keyinroq o‘zi qayta urinadi; yozilmagan kunlar keyin qo‘shiladi.`, go: null });
+            else if (p.key === 'write') items.push({ tone: 'danger', title: 'AI xarajati yozilmadi', amount: null, desc: `${dateText(p.day)}: ${esc(p.message || '')}`, go: null });
+        }
         if (state.overview) for (const [tone, msg, go, report] of alertItems(state.overview)) if (tone !== 'ok') items.push({ tone, title: problemTitle(msg, go), desc: msg, go, report });
         return items;
     }
@@ -579,6 +599,10 @@
         } catch { /* ko'rsatilmaydi */ }
     }
     // Butun korxona bo'yicha haqiqiy qoldiq (til bo'yicha emas) — manfiy pul hisoblari.
+    async function loadAi() {
+        try { state.ai = await api(`/ai-costs?start=${state.start}&end=${state.end}`); } catch { state.ai = { problems: [], days: [], month: null }; }
+        return state.ai;
+    }
     async function loadEskiz() {
         try { state.eskiz = await api(`/eskiz?start=${state.start}&end=${state.end}`); } catch { state.eskiz = { problems: [], days: [] }; }
         return state.eskiz;
@@ -604,6 +628,7 @@
             if (!state.investorDue) await loadInvestorDue();
             if (!state.negAccounts) await loadNegAccounts();
             if (!state.eskiz) await loadEskiz();
+            if (!state.ai) await loadAi();
             await loadSavedRecon();
             if (state.overview && state.summary) { const n = problemItems().length; document.querySelectorAll('[data-fin-problem-count]').forEach(el => { el.textContent = n; el.hidden = !n; }); }
         })().finally(() => { counting = null; });
@@ -670,6 +695,7 @@
         if (!state.investorDue) await loadInvestorDue();
         if (!state.negAccounts) await loadNegAccounts();
         if (!state.eskiz) await loadEskiz();
+        if (!state.ai) await loadAi();
         if (state.probView === 'recon' && state.recon?.result) {
             root.innerHTML = `<div class="fin-wrap">${reconScreen()}</div>`;
             bindRecon(root);
@@ -737,7 +763,20 @@
             <button type="button" class="btn-primary-sm" data-fin-eskiz-topup>+ Balansni to‘ldirish</button>
         </article>`;
         };
-        const cards = o.accounts.filter(a => a.active || a.balance).map(a => a.prepaid ? eskizCard(a) : `<article class="fin-account" aria-label="${esc(a.name)}">
+        if (!state.ai) await loadAi();
+        // AI xizmatlari (Google, Anthropic): pul keyin kartadan yechiladi — manfiy qoldiq = hali to'lanmagan summa.
+        const aiCard = a => {
+            const m = state.ai?.month;
+            return `<article class="fin-account fin-account--prepaid" aria-label="${esc(a.name)}">
+            <header><span class="fin-account-kind">Keyin to‘lanadi</span><span class="fin-badge fin-badge--muted">${esc(F.ENTITIES[a.entity])}</span></header>
+            <h4>${esc(a.name)}</h4><strong class="${a.balance < 0 ? 'neg' : ''}">${money(a.balance)}</strong>
+            <dl><div><dt>To‘langan</dt><dd class="pos">${money(a.inflow)}</dd></div><div><dt>Qo‘ng‘iroqlar tahliliga ketdi</dt><dd class="neg">${money(a.outflow)}</dd></div></dl>
+            ${m ? `<p class="fin-check">Bu oy: ${m.calls} ta qo‘ng‘iroq · Gemini $${m.geminiUsd.toFixed(2)} · Claude $${m.claudeUsd.toFixed(2)} (kredit $${m.credit} dan)${m.calls ? ` · bittasi ~$${m.perCallUsd.toFixed(3)}` : ''}</p>` : ''}
+            ${a.balance < 0 ? `<p class="fin-check">Hali to‘lanmagan (Google${m && m.claudeUsd > m.credit ? ', Anthropic' : ''}): ${money(-a.balance)}</p>` : ''}
+            <button type="button" class="btn-primary-sm" data-fin-ai-pay>+ To‘lovni yozish</button>
+        </article>`;
+        };
+        const cards = o.accounts.filter(a => a.active || a.balance).map(a => a.prepaid ? (a.id === 'acc-ai-services' ? aiCard(a) : eskizCard(a)) : `<article class="fin-account" aria-label="${esc(a.name)}">
             <header><span class="fin-account-kind">${esc(F.ACCOUNT_KINDS[a.kind] || a.kind)}</span>${a.entity !== 'common' ? `<span class="fin-badge fin-badge--muted">${esc(F.ENTITIES[a.entity])}</span>` : ''}</header>
             <h4>${esc(a.name)}</h4><strong class="${a.balance < 0 ? 'neg' : ''}">${money(a.balance)}</strong>
             ${a.allocatedView ? '<p class="fin-check">Yo‘nalish ulushi — haqiqiy qoldiq Konsolidatsiyada</p>' : ''}
@@ -757,7 +796,8 @@
             <section class="fin-card" aria-labelledby="finCbH"><header><h3 id="finCbH">Kunlik kassa daftari</h3><label class="fin-field fin-field--inline"><span>Hisob</span><select class="form-control" data-fin-cash-account>${options}</select></label></header>
             ${cb.error ? `<div class="fin-alert fin-alert--danger" role="alert">${ICON.danger}<span>${esc(cb.error)}</span></div>` : `<div class="fin-cash-summary">${stat('Davr boshiga', money(cb.openingBalance))}${stat('Kirim', money(cb.inflow), '', 'success')}${stat('Chiqim', money(cb.outflow), '', 'danger')}${stat('Davr oxiriga', money(cb.closingBalance))}</div>
             ${table(['Sana', { label: 'Kun boshiga', num: true }, { label: 'Kirim', num: true }, { label: 'Chiqim', num: true }, { label: 'Kun oxiriga', num: true }, { label: 'Yozuv', num: true }], dayRows, { empty: 'Bu davrda pul harakati yo‘q', cls: 'fin-cashbook', label: 'Kunlik kassa daftari' })}`}
-            ${o.accounts.some(a => a.prepaid) ? '<p class="fin-note">Eskiz balansi — oldindan to‘langan pul: to‘ldirish xarajat emas, xarajat SMS ketgan kuni o‘zi yoziladi. Shaxsiy kartadan to‘lansa, “Ta’sischi kiritgan mablag‘” bo‘lib yoziladi.</p>' : ''}
+            ${o.accounts.some(a => a.id === 'acc-ai-services') ? '<p class="fin-note">AI xizmatlari — qo‘ng‘iroqlar tahlili xarajati har kuni o‘zi yoziladi (Rus va Ingliz maktabiga alohida). Google (yoki kreditdan oshganda Anthropic) kartadan pul yechganda “To‘lovni yozish” — bu xarajat emas. Claude oylik kredit ichida pul yechmaydi.</p>' : ''}
+            ${o.accounts.some(a => a.id === 'acc-eskiz-sms') ? '<p class="fin-note">Eskiz balansi — oldindan to‘langan pul: to‘ldirish xarajat emas, xarajat SMS ketgan kuni o‘zi yoziladi. Shaxsiy kartadan to‘lansa, “Ta’sischi kiritgan mablag‘” bo‘lib yoziladi.</p>' : ''}
             <p class="fin-note">Summalar so‘mda; qavs ichidagisi — chiqim. Bekor qilingan tushum yoki storno bekor qilingan kuni teskari yozuv bilan ko‘rinadi, asl yozuv o‘chirilmaydi.</p></section>
         </div>`;
         bindToolbar(root, () => render('kassa'));
@@ -768,6 +808,7 @@
         }));
         root.querySelectorAll('[data-fin-check]').forEach(b => b.addEventListener('click', () => openCheckModal(b.dataset.finCheck)));
         root.querySelectorAll('[data-fin-eskiz-topup]').forEach(b => b.addEventListener('click', () => openEskizTopup()));
+        root.querySelectorAll('[data-fin-ai-pay]').forEach(b => b.addEventListener('click', () => openEskizTopup('acc-ai-services')));
         root.querySelectorAll('[data-fin-settle]').forEach(b => b.addEventListener('click', () => openTxnModal({ type: 'transfer', accountId: b.dataset.finSettle, toAccountId: 'acc-bank', settlement: true })));
         root.querySelector('[data-fin-new]')?.addEventListener('click', () => openTxnModal({ type: 'transfer' }));
     }
@@ -1519,16 +1560,19 @@
     }
     // Eskiz balansini to'ldirish (SMS_{T,K}_toldir): xarajat emas — shaxsiy kartadan bo'lsa "Ta'sischi kiritgan mablag'",
     // kompaniya hisobidan bo'lsa "o'tkazma". Xarajat SMS ketgan kuni avtomatik yoziladi.
-    async function openEskizTopup() {
+    // AI xizmatlari (Gemini) uchun ham shu oyna: Google kartadan yechgan pulni yozish (xarajat emas — xarajat kunma-kun yozilgan).
+    async function openEskizTopup(accountId = 'acc-eskiz-sms') {
         const o = state.overview || await loadOverview(true);
-        const eskizAcc = (o?.accountsList || []).find(a => F.PREPAID_ACCOUNTS.has(a.id));
-        if (!eskizAcc) { toast('Eskiz balansi hisobi hali ochilmagan — CRM birinchi kechada o‘zi ochadi'); return; }
+        const isAi = accountId === 'acc-ai-services';
+        const eskizAcc = (o?.accountsList || []).find(a => a.id === accountId);
+        if (!eskizAcc) { toast(isAi ? 'AI xizmatlari hisobi birinchi qo‘ng‘iroq tahlil qilingan kunning ertasi kechasi o‘zi ochiladi' : 'Eskiz balansi hisobi hali ochilmagan — CRM birinchi kechada o‘zi ochadi'); return; }
+        const what = isAi ? 'AI xizmatlari to‘lovi (Google / Anthropic)' : 'Eskiz SMS balansini to‘ldirish';
         const sources = (o.accountsList || []).filter(a => a.active !== false && F.isEquivalent(a));
-        openModal('Eskiz balansini to‘ldirish', `<div class="fin-form">
-            ${field('Qayerdan to‘landi', `<select class="form-control" name="source"><option value="owner">Shaxsiy kartam (ta’sischi kiritgan mablag‘)</option>${sources.map(a => `<option value="${esc(a.id)}">${esc(a.name)}</option>`).join('')}</select>`)}
+        openModal(isAi ? 'AI xizmatlari to‘lovi' : 'Eskiz balansini to‘ldirish', `<div class="fin-form">
+            ${field('Qayerdan to‘landi', `<select class="form-control" name="source">${(() => { const own = '<option value="owner">Shaxsiy kartam (ta’sischi kiritgan mablag‘)</option>', co = sources.map(a => `<option value="${esc(a.id)}">${esc(a.name)}</option>`).join(''); return isAi ? co + own : own + co; })()}</select>`)}
             <div class="fin-form-row">${field('Summa (so‘m)', moneyInput('amount', ''))}${field('Sana', `<input type="date" lang="en-GB" class="form-control" name="date" value="${F.today()}" max="${F.today()}">`)}</div>
             ${field('Chek yoki skrinshot (ixtiyoriy)', '<input type="file" class="form-control" name="receipt" accept=".pdf,.png,.jpg,.jpeg,.webp">')}
-            <div class="fin-alert fin-alert--warning"><span><b>Bu xarajat emas.</b> Pul Eskiz balansiga o‘tadi, xarajat SMS ketgan kuni yoziladi. Karta yoki bankdan bo‘lsa, o‘sha hisobda “o‘tkazma” bo‘lib ko‘rinadi.</span></div>
+            <div class="fin-alert fin-alert--warning"><span><b>Bu xarajat emas.</b> ${isAi ? 'Xarajat har kuni qo‘ng‘iroqlar tahlil qilingan kuni yozilgan — bu yerda Google kartadan yechgan summani yozasiz.' : 'Pul Eskiz balansiga o‘tadi, xarajat SMS ketgan kuni yoziladi.'} Karta yoki bankdan bo‘lsa, o‘sha hisobda “o‘tkazma” bo‘lib ko‘rinadi.</span></div>
             <p class="fin-error" data-fin-error role="alert"></p></div>`, footerButtons('Saqlash'));
         wireMoney(document.getElementById('modalBody'));
         const key = reqKey();
@@ -1539,8 +1583,8 @@
             const receiptUrl = await upload(b.querySelector('[name="receipt"]'));
             const owner = v('source') === 'owner';
             await api('/transactions', owner
-                ? { requestKey: key, type: 'capital', categoryCode: 'OWNER_IN', entity: eskizAcc.entity, date: v('date'), amount, accountId: eskizAcc.id, counterparty: 'Shaxsiy karta', description: 'Eskiz SMS balansini to‘ldirish', receiptUrl }
-                : { requestKey: key, type: 'transfer', categoryCode: 'TRANSFER', entity: eskizAcc.entity, date: v('date'), amount, accountId: v('source'), toAccountId: eskizAcc.id, description: 'Eskiz SMS balansini to‘ldirish', receiptUrl });
+                ? { requestKey: key, type: 'capital', categoryCode: 'OWNER_IN', entity: eskizAcc.entity, date: v('date'), amount, accountId: eskizAcc.id, counterparty: 'Shaxsiy karta', description: what, receiptUrl }
+                : { requestKey: key, type: 'transfer', categoryCode: 'TRANSFER', entity: eskizAcc.entity, date: v('date'), amount, accountId: v('source'), toAccountId: eskizAcc.id, description: what, receiptUrl });
         });
     }
     // SMS xarajati tafsiloti: kunma-kun (summa = Eskiz balansidan o'sha kuni yechilgan pul).
@@ -1556,6 +1600,22 @@
         const f = document.getElementById('modalFooter');
         f.querySelector('[data-fin-cancel]').onclick = closeModal;
         f.querySelector('[data-fin-eskiz-go]').onclick = () => { closeModal(); if (typeof switchFinanceSection === 'function') switchFinanceSection('kassa'); };
+    }
+    // AI qo'ng'iroq tahlili tafsiloti: kunma-kun — qo'ng'iroqlar soni, Gemini/Claude dollarda, kurs, so'm.
+    async function openAiDays() {
+        const a = await loadAi();
+        const rows = (state.summary?.expenses.rows || []).filter(r => r.categoryCode === AI_CAT);
+        const total = rows.reduce((n, r) => n + r.amount, 0);
+        const m = a?.month;
+        openModal('AI qo‘ng‘iroq tahlili', `<div class="fin-form"><p class="fin-dnote">Dasturlar va servislar · Gemini (matnga aylantirish) + Claude (baholash) · ${esc(periodText())}</p><span class="fin-dbig">${money(total)}</span>
+            ${m ? `<p class="fin-dnote">Bu oy (ikkala maktab): ${m.calls} ta qo‘ng‘iroq · Gemini $${m.geminiUsd.toFixed(2)} · Claude $${m.claudeUsd.toFixed(2)} / $${m.credit} kredit${m.priced ? '' : ' · ba’zi model narxi taxminiy'}</p>` : ''}
+            ${table(['Kun', 'Izoh', 'Yo‘nalish', { label: 'Summa', num: true }], rows.map(r => `<tr><td>${dateText(r.date)}</td><td>${esc(r.description || '')}</td><td>${esc((F.ENTITIES[r.entity] || r.entity).split(' (')[0])}</td><td class="num">${num(r.amount)}</td></tr>`),
+                { label: 'AI xarajati kunlari', empty: 'Bu davrda AI xarajati yo‘q' })}
+            <p class="fin-note">Har kuni 00:10 dan keyin o‘tgan kun uchun, qo‘ng‘iroq tili bo‘yicha maktabga yoziladi: Google va Anthropic aytgan token soni × rasmiy narx × Markaziy bank kursi. Claude oylik kredit ichida pul yechmaydi — faqat kreditdan oshgani yoziladi. Javob kelmay qolgan (vaqti tugagan) so‘rovlar hisobga kirmaydi. Avtomatik yozuv qo‘lda o‘zgartirilmaydi.</p></div>`,
+            '<button type="button" class="btn-ghost" data-fin-cancel>Yopish</button><button type="button" class="btn-primary-sm" data-fin-ai-go>AI xizmatlari hisobi</button>');
+        const f = document.getElementById('modalFooter');
+        f.querySelector('[data-fin-cancel]').onclick = closeModal;
+        f.querySelector('[data-fin-ai-go]').onclick = () => { closeModal(); if (typeof switchFinanceSection === 'function') switchFinanceSection('kassa'); };
     }
     function openCheckModal(accountId) {
         const a = state.overview.accounts.find(x => x.id === accountId);

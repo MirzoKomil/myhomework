@@ -394,6 +394,7 @@ async function initSchema() {
     await finance.initSchema(pool).catch(err => console.error('[moliya] Ishga tushirishda xato (CRM ishlayveradi):', err.message));
     await finance.initProblemLog(pool).catch(err => console.error('[moliya] Muammolar jurnali:', err.message));
     await require('./services/eskizFinance').initSchema(pool).catch(err => console.error('[eskiz-moliya] Ishga tushirishda xato:', err.message));
+    await require('./services/aiCostFinance').initSchema(pool).catch(err => console.error('[ai-moliya] Ishga tushirishda xato:', err.message));
     await require('./services/investor').initSchema(pool).catch(err => console.error('[investor] Ishga tushirishda xato:', err.message));
 
     // Boshlang'ich mobile_content qatori

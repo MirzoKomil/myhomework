@@ -11,6 +11,11 @@ on:
 permissions:
   contents: write
 
+# Ketma-ket yig'ilsin: jamoa-latest bir vaqtda ikki marta yangilanmasin.
+concurrency:
+  group: team-apk-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-24.04
@@ -78,4 +83,11 @@ jobs:
             gh release create "$TAG" Jamoa.apk --title "Jamoa 1.1.${{ github.run_number }}" --notes "$NOTE" --latest
           else
             gh release create "$TAG" Jamoa.apk --title "Jamoa 1.1.${{ github.run_number }} (test imzo)" --notes "$NOTE" --prerelease
+          fi
+          # Doimiy havola (har doim eng oxirgi Jamoa): .../releases/download/jamoa-latest/Jamoa.apk
+          if gh release view jamoa-latest >/dev/null 2>&1; then
+            gh release upload jamoa-latest Jamoa.apk --clobber
+            gh release edit jamoa-latest --title "Jamoa — eng oxirgi versiya (1.1.${{ github.run_number }})" --prerelease
+          else
+            gh release create jamoa-latest Jamoa.apk --title "Jamoa — eng oxirgi versiya (1.1.${{ github.run_number }})" --notes "Doimiy havola: har yangi Jamoa yig'ilganda shu yerdagi Jamoa.apk yangilanadi." --prerelease
           fi
