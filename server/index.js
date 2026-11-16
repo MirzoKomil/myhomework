@@ -501,6 +501,8 @@ init().then(async () => {
     require('./services/leadStageSms').startDaily();
     // SMS xarajati → Moliya: har kuni o'tgan kun uchun Eskiz balansidan yechilgan summa (server/services/eskizFinance.js)
     require('./services/eskizFinance').start(crmDb.pool);
+    // AI qo'ng'iroq tahlili xarajati → Moliya: har kuni o'tgan kun uchun Gemini/Claude narxi (server/services/aiCostFinance.js)
+    require('./services/aiCostFinance').start(crmDb.pool);
     app.listen(PORT, '0.0.0.0', () => {
         console.log(`Myhomework.uz server: port ${PORT}`);
     });
