@@ -23127,6 +23127,10 @@ function renderHrEmployeeCard(emp) {
                     <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                     Ishdan bo'shatish
                 </button>`) : ''}
+                ${isAdmin && isActive ? `<button class="emp-menu-item" data-emp-tg-unlink="${emp.id}">
+                    <svg viewBox="0 0 24 24"><path d="M21 3L3 10.5l7 2.5 2.5 7L21 3z"/><line x1="4" y1="20" x2="20" y2="4"/></svg>
+                    Telegram'ni uzish
+                </button>` : ''}
                 ${isAdmin ? `<button class="emp-menu-item emp-menu-item--danger" data-emp-delete="${emp.id}">
                     <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
                     O'chirish (arxivga)
@@ -23277,6 +23281,14 @@ function renderHrEmployees() {
         });
     });
 
+    grid.querySelectorAll('[data-emp-tg-unlink]').forEach(btn => {
+        btn.addEventListener('click', e => {
+            e.stopPropagation();
+            closeEmpMenus();
+            confirmTelegramUnlink(btn.dataset.empTgUnlink);
+        });
+    });
+
     // Delete
     grid.querySelectorAll('[data-emp-delete]').forEach(btn => {
         btn.addEventListener('click', e => {
@@ -23310,6 +23322,36 @@ async function deleteHrEmployee(id) {
     localStorage.setItem(HR_EMPLOYEES_KEY, JSON.stringify(next));
     renderHrEmployees();
     return true;
+}
+
+// 17-noyabr (direktor): xodim raqami/Telegram profili almashganda eski profilni @Domworkuz_bot'dan admin o'zi uzadi.
+function confirmTelegramUnlink(empId) {
+    const emp = (getHrEmployees() || []).find(e => e.id === empId);
+    if (!emp) return;
+    openModal(
+        "Telegram'ni uzish",
+        `<div style="padding:8px 0">
+            <p style="font-size:15px;color:var(--text);margin-bottom:8px"><strong>${escapeHtml(emp.name)}</strong>ning Telegrami @Domworkuz_bot'dan uzilsinmi?</p>
+            <p style="font-size:13px;color:var(--text-muted);margin-bottom:10px">Eski Telegram profiliga bot xabarlari boshqa bormaydi. CRM akkaunti, lidlar va tarix o'zgarmaydi.</p>
+            <p style="font-size:13px;color:var(--text);padding:10px 12px;border-radius:10px;background:var(--warning-bg)">Keyin xodim yangi Telegram ochiq telefonda CRMga kiradi: <b>Sozlamalar → Bildirishnomalar → Telegram → Ulash</b>, chiqqan havolani ochib <b>Start</b> bosadi.</p>
+        </div>`,
+        `<button type="button" class="btn-ghost" id="cancelTgUnlink">Bekor qilish</button>
+         <button type="button" class="btn-danger-sm" id="confirmTgUnlink" style="background:#dc2626;color:#fff;padding:8px 18px;font-size:13px">Ha, uzish</button>`,
+        { wide: false }
+    );
+    document.getElementById('cancelTgUnlink').onclick = () => closeModal();
+    document.getElementById('confirmTgUnlink').onclick = async ev => {
+        ev.target.disabled = true;
+        try {
+            const r = await apiFetch('/api/domwork/bot/staff-telegram/unlink', { method: 'POST', body: JSON.stringify({ employeeId: empId }) });
+            closeModal();
+            showMiniToast(r && r.wasLinked ? `${emp.name}: Telegram uzildi` : `${emp.name}: bot ulanmagan edi`);
+        } catch (err) {
+            ev.target.disabled = false;
+            if (typeof showNotification === 'function') showNotification("Telegram uzilmadi", err.message, 'error');
+            else showSaveError(err.message);
+        }
+    };
 }
 
 function confirmDeleteEmployee(empId) {
