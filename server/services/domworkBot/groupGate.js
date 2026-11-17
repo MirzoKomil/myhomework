@@ -21,8 +21,11 @@ async function init(db) { if (!ready) { await db.query(SCHEMA); ready = true; } 
 const PAID = ['tolov-jarayonida', 'tolov-yopildi'];
 const norm = s => String(s || '').replace(/\s+/g, ' ').trim();
 // Botga kerakli huquqlar (to'liq admin, anonim emas).
+// 17-noy: «admin tayinlash» (can_promote_members) majburiy emas — bu huquqni botga faqat guruh EGASI bera oladi,
+// guruhni ochmagan ROP esa bera olmaydi va qulf ochilmay qolardi. Bot bu huquqqa ega bo'lsa odamlarni o'zi admin qiladi,
+// bo'lmasa ROP ularni qo'lda admin qiladi — natija bir xil.
 const BOT_RIGHTS = [['can_restrict_members', 'a’zolarni bloklash'], ['can_delete_messages', 'xabarlarni o‘chirish'],
-    ['can_promote_members', 'admin tayinlash'], ['can_invite_users', 'taklif havolasi'], ['can_pin_messages', 'xabar qadash'], ['can_change_info', 'guruh ma’lumotini o‘zgartirish']];
+    ['can_invite_users', 'taklif havolasi'], ['can_pin_messages', 'xabar qadash'], ['can_change_info', 'guruh ma’lumotini o‘zgartirish']];
 
 // Yangi lidlarni navbatga olish. Birinchi ishga tushganda mavjud hammasi — 'legacy' (qulflanmaydi).
 async function enroll(db) {
@@ -107,7 +110,7 @@ async function checkOne(db, call, botId, g) {
                             items.push({ ok: true, kind: 'person', text: `${p.label} — bot admin qildi` }); continue;
                         } catch { items.push({ ok: false, kind: 'person', text: `${p.label} — bot admin qila olmadi` }); continue; }
                     }
-                    items.push({ ok: false, kind: 'person', text: `${p.label} — guruhda, lekin admin emas` }); continue;
+                    items.push({ ok: false, kind: 'person', text: `${p.label} — guruhda, lekin admin emas. Uni o‘zingiz admin qiling (Telegram: guruh → a’zo → «Admin qilish»)` }); continue;
                 }
                 items.push({ ok: false, kind: 'person', text: `${p.label} — guruhga qo‘shilmagan` });
             }
