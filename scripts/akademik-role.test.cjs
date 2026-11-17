@@ -215,3 +215,20 @@ test('davomat (Face ID): akademik login roli — kuzatiladi va yordamchilar tasd
     assert.match(read('js/akademikApp.js'), /window\.davomat \? window\.davomat\.homeCard\(\) : ''/, 'kabinet boshida davomat kartasi');
     assert.match(read('js/app.js'), /\['Davomat', \['akd:att', 'akd:attreq', 'akd:myatt'\]\]/);
 });
+
+// 17-noy: ustozni almashtirishda band sababi — 'hours' (ish vaqtidan tashqari) yoki 'busy' (darsi bor).
+test('slotWhy: ish vaqtidan tashqari / ish vaqti ichida band / bo\'sh', () => {
+    const { slotWhy } = require('../server/services/academicHead');
+    const day = (work, free) => ({ work: work.map(([start, end]) => ({ start, end })), free: free.map(([start, end]) => ({ start, end })) });
+    const s = 16 * 60, e = s + 30;
+    assert.strictEqual(slotWhy([day([[540, 1440]], [[540, 1440]])], s, e), null);
+    assert.strictEqual(slotWhy([day([[540, 960], [1140, 1320]], [[540, 960], [1140, 1320]])], s, e), 'hours');
+    assert.strictEqual(slotWhy([day([[540, 1410]], [[540, 960], [990, 1410]])], s, e), 'busy');
+    // aralash: bir kun ish vaqtidan tashqari, boshqa kun ish vaqti ichida darsi bor → 'busy' (vaqtni ochish yetmaydi)
+    assert.strictEqual(slotWhy([day([[540, 960]], [[540, 960]]), day([[540, 1410]], [[540, 960], [990, 1410]])], s, e), 'busy');
+    assert.strictEqual(slotWhy([], s, e), null);
+    // qisman: 15:45–16:15, ish 16:00 da tugaydi va 15:30–16:00 da darsi bor → 'busy'
+    assert.strictEqual(slotWhy([day([[540, 960]], [[540, 930]])], 945, 975), 'busy');
+    // qisman, ish vaqti ichidagi qismi bo'sh → 'hours'
+    assert.strictEqual(slotWhy([day([[540, 960]], [[540, 960]])], 945, 975), 'hours');
+});
