@@ -176,4 +176,26 @@ async function unlink(pool, actor) {
         return { ok: true };
     });
 }
-module.exports = { SCHEMA, PREFIX, init, owner, status, create, startHash, claim, confirm, finishPending, cancel, unlink };
+// 17-noyabr (direktor): admin HR → Xodimlar → "⋯" → "Telegram'ni uzish". Xodim raqamini/Telegram profilini
+// almashtirsa, eski profil botdan uziladi; xodim keyin o'z kabinetidan (Sozlamalar → Bildirishnomalar → Ulash) yangisini ulaydi.
+async function adminUnlink(pool, actor, employeeId) {
+    return queue.transaction(pool, async db => {
+        await db.query("SELECT pg_advisory_xact_lock(hashtext('domwork-bot-links'))");
+        const store = require('./store');
+        await store.currentAdmin(db, actor);
+        if (actor.imp) throw policy.error(403, 'Avval admin akkauntiga qayting');
+        if (typeof employeeId !== 'string' || !employeeId || employeeId.length > 200) throw policy.error(400, 'Xodimni tanlang');
+        const users = [...new Set((await db.query(store.USER_SQL + ' WHERE he.id=$1', [employeeId])).rows.map(r => r.id))];
+        if (!users.length) throw policy.error(404, 'Xodimning CRM akkaunti topilmadi');
+        const removed = [];
+        for (const userId of users) {
+            const before = (await db.query("DELETE FROM domwork_bot_links WHERE account_kind='user' AND account_id=$1 RETURNING telegram_id", [userId])).rows[0];
+            await db.query('DELETE FROM domwork_staff_telegram_proofs WHERE user_id=$1', [userId]);
+            await db.query("UPDATE domwork_staff_telegram_requests SET state='cancelled' WHERE user_id=$1 AND state IN ('pending','claimed')", [userId]);
+            if (before) { await db.query('DELETE FROM domwork_bot_sessions WHERE telegram_id=$1', [before.telegram_id]); removed.push(before.telegram_id); }
+            await store.audit(db, actor.id, 'staff-telegram-admin-unlinked', userId, { employeeId, telegramId: before?.telegram_id || null });
+        }
+        return { ok: true, wasLinked: removed.length > 0 };
+    });
+}
+module.exports = { SCHEMA, PREFIX, init, owner, status, create, startHash, claim, confirm, finishPending, cancel, unlink, adminUnlink };
