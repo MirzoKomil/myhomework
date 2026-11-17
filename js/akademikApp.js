@@ -803,6 +803,8 @@
         const curId = String(st?.teacher?.id || '');
         const ts = (opt.teachers || []).filter(t => String(t.id) !== curId).sort((a, b) => (b.free - a.free) || (num(b.onPlanPct) - num(a.onPlanPct)));
         const firstFree = ts.find(t => t.free);
+        const hrsOk = !!window.schoolSchedule?._?.hoursDrawer;
+        const slotTime = (String(slot).match(/(\d{1,2}:\d{2})(?::\d{2})?\s*$/) || [])[1] || '';
         const nextL = (st?.lessons || []).find(l => l.status === 'next');
         const today0 = new Date(new Date().toDateString());
         let nextD = nextL ? toDate(nextL.date) : null;
@@ -811,6 +813,10 @@
         const rows = ts.map(t => t.free
             ? `<label class="aka-rc aka-rc--t"><input type="radio" name="tt" value="${esc(t.id)}"${firstFree && t.id === firstFree.id ? ' checked' : ''}>${ava(first(t.name), 36, 'blue')}<span><strong>${esc(first(t.name))}</strong><small>${esc([`${num(t.students)} oʻquvchi`, `${pct(t.onPlanPct)}% rejada`, num(t.openProblems) ? `${num(t.openProblems)} ochiq muammo` : ''].filter(Boolean).join(' · '))}</small></span>${chip('Boʻsh', 'green')}</label>`
             // Band ustoz ham tanlanadi — "Kun va vaqt → Boshqa vaqt" o'zi yoqiladi va faqat bo'sh vaqt tanlanadi (12-noy).
+            // 17-noy: band sababi ajratiladi — ish vaqtidan tashqari bo'lsa, shu yerdan ish vaqtini o'zgartirish mumkin.
+            : t.why === 'hours'
+            // Tugma label tashqarisida (label ichida ikkinchi boshqaruv elementi bo'lmasin), lekin kartaning ichida ko'rinadi.
+            ? `<div class="aka-rc-hw${hrsOk ? ' has-btn' : ''}"><label class="aka-rc aka-rc--t"><input type="radio" name="tt" value="${esc(t.id)}">${ava(first(t.name), 36, 'grey')}<span><strong>${esc(first(t.name))}</strong><small>${esc(slotTime ? slotTime + ' ' : '')}ish vaqtidan tashqari</small></span>${chip('Ish vaqti emas', 'grey')}</label>${hrsOk ? `<button type="button" class="aka-hrs" data-hrs="${esc(t.id)}">Ish vaqtini oʻzgartirish</button>` : ''}</div>`
             : `<label class="aka-rc aka-rc--t"><input type="radio" name="tt" value="${esc(t.id)}">${ava(first(t.name), 36, 'grey')}<span><strong>${esc(first(t.name))}</strong><small>Bu vaqtda darsi bor · boshqa vaqt tanlanadi</small></span>${chip('Band', 'amber')}</label>`).join('');
         wrap.querySelector('[data-tb]').outerHTML = `${fs(`Yangi ustoz${slot ? ' · ' + slot + ' da' : ''}`, true, ts.length ? `<div class="aka-rcs">${rows}</div>` : '<p class="aka-muted">Bu tilda boshqa ustoz yoʻq</p>')}
             ${fs('Kun va vaqt', true, chips('kv', [['keep', `Hozirgisi${slot ? ' · ' + slot : ''}`], ['new', 'Boshqa vaqt']], 'keep'))}<div data-tp hidden></div>
@@ -819,6 +825,8 @@
             ${note(`Bot ikkala ustozga xabar beradi. Tanlangan sanagacha oʻtilgan darslar eski ustozda qoladi; oʻtgan sana tanlansa — oʻsha kundan beri darslar va davomat yangi ustozga oʻtadi. Tekshiruvdagi qoplashlar ham ${first(st?.teacher?.name) || 'eski ustoz'}da qoladi.`)}
             <button type="button" class="aka-btn aka-btn--pri aka-btn--54" data-ok${firstFree ? '' : ' disabled'}>${firstFree ? esc(first(firstFree.name)) + 'ga oʻtkazish' : 'Ustozni tanlang'}</button>`;
         const okB = wrap.querySelector('[data-ok]');
+        // Ish vaqti shabloni — Dars jadvalidagi mavjud oyna; saqlangach ro'yxat qayta olinadi.
+        wrap.querySelectorAll('[data-hrs]').forEach(b => b.onclick = ev => { ev.preventDefault(); window.schoolSchedule._.hoursDrawer(b.dataset.hrs, () => { if (sheetEl === wrap) sheetTransfer(studentId); }); });
         const L = st?.lesson || {}, tpBox = wrap.querySelector('[data-tp]');
         const curT = () => ts.find(x => String(x.id) === wrap.querySelector('input[name="tt"]:checked')?.value);
         const fromVal = () => (wrap.querySelector('input[name="from"]:checked')?.value === 'custom' ? wrap.querySelector('[data-d]').value : localDate(nextD));

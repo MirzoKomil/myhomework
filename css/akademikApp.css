@@ -527,3 +527,9 @@ body.aka-nonav .aka-toast { bottom: calc(96px + env(safe-area-inset-bottom)); }
 .aka-ice-sum b{color:#0E7490}
 .aka-btn--ice{background:#0E7490;color:#FFFFFF;border:0}
 .aka-btn--ice:disabled{opacity:.55}
+
+/* 17-noy: Ustozni almashtirish — "ish vaqtidan tashqari" ustoz uchun ish vaqtini o'zgartirish tugmasi.
+   Tugma label tashqarisida, kartaning pastki qismiga joylashadi (12 + 20 + 12 + 36 + 12 = 92px — matn chizig'i). */
+.aka-rc-hw { position: relative; }
+.aka-rc-hw.has-btn > .aka-rc { padding-bottom: 46px; }
+.aka-hrs { position: absolute; left: 92px; bottom: 10px; padding: 6px 10px; border-radius: 10px; border: 1.5px solid var(--a-blue, #0057B8); background: var(--a-card, #FFFFFF); color: var(--a-blue, #0057B8); font: inherit; font-size: 12.5px; font-weight: 700; white-space: nowrap; cursor: pointer; }

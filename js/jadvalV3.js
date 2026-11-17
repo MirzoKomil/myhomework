@@ -61,7 +61,9 @@
         user: '<path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>',
         clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
         search: '<circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>',
-        back: '<path d="M19 12H5M12 19l-7-7 7-7"/>'
+        back: '<path d="M19 12H5M12 19l-7-7 7-7"/>',
+        chev: '<path d="M9 6l6 6-6 6"/>',
+        edit: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/>'
     };
     const svg = (k, s = 18) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[k]}</svg>`;
 
@@ -376,8 +378,10 @@
         const modes = J.page ? '' : `<div class="jv-seg" role="group" aria-label="Jadval">${[['sinov', 'Sinov darsi'], ['darslar', 'Darslar']].map(([k, l]) =>
             `<button type="button" data-mode="${k}" aria-pressed="${J.mode === k}">${l}</button>`).join('')}</div>`;
         const extra = !J.page && isFull() ? `<button type="button" class="jv-link" data-admin-week>Ustoz ish vaqti →</button>` : !J.page && isAcad() ? `<button type="button" class="jv-link" data-ac-hours>Ustoz ish vaqti →</button>` : '';
+        // Telefon: "Ustoz ish vaqti" — kompyuterdagi havola telefonda yashirin edi (17-noy).
+        const hrsBtn = hoursAble('off') ? `<button type="button" class="jv-hrsbtn" data-hrs-pick>${svg('clock', 18)}<span>Ustoz ish vaqti</span><small>haftalik shablon</small>${svg('chev', 16)}</button>` : '';
         return `<div class="jv-head">${back}<div class="jv-title"><h1>${J.page ? 'Sinov darsini qoʻyish' : 'Dars jadvali'}</h1><p>${esc(sub)}</p></div>
-            <div class="jv-headr">${extra}${langSeg}${modes}</div></div>`;
+            <div class="jv-headr">${extra}${langSeg}${modes}${hrsBtn}</div></div>`;
     }
     function leadBanner() {
         if (!J.lead || J.mode !== 'sinov') return '';
@@ -421,6 +425,7 @@
                 // Tanaffus: admin/ROP bossa — o'ng panelda sababi; sotuvga faqat yozuv (bosilmaydi).
                 const brk = st.k === 'break' && seesBreak();
                 const bOn = brk && J.brk && J.brk.t === t.id && sameBreak(J.brk, st.b);
+                if (hoursAble(st.k)) return `<div class="jv-cell"><button type="button" class="jv-s jv-s--off is-click jv-s--hrs" data-hrs="${esc(t.id)}" aria-haspopup="dialog" aria-label="${esc(t.name)} · ${hm(m)} · Ish vaqti emas — ish vaqtini oʻzgartirish" title="Ish vaqtini oʻzgartirish">${CELL.off}</button></div>`;
                 if (acSlotAble(st.k)) return `<div class="jv-cell"><button type="button" class="jv-s jv-s--${st.k} is-click" data-acslot="${esc(t.id)}|${m}" aria-haspopup="dialog" aria-label="${esc(t.name)} · ${hm(m)} · ${CELL[st.k]} — ${st.k === 'free' ? 'sinovga yopish' : 'sinovga ochish'}">${CELL[st.k]}</button></div>`;
                 return `<div class="jv-cell"><button type="button" class="jv-s jv-s--${st.k}${on || bOn ? ' is-on' : ''}${inf ? ' is-info' : ''}${brk ? ' is-click' : ''}"${st.k === 'free' ? ` data-slot="${esc(t.id)}|${m}"` : brk ? ` data-brk="${esc(t.id)}|${m}" aria-pressed="${!!bOn}"` : inf ? ` data-info="${esc(t.id)}|${m}" aria-haspopup="dialog"` : ' tabindex="-1" aria-disabled="true"'} aria-label="${esc(t.name)} · ${hm(m)} · ${lab}${on ? ' (qayta bosing — bekor qilish)' : ''}"${on ? ' title="Qayta bosing — tanlov bekor qilinadi"' : ''}>${inner}</button></div>`;
             }).join('');
@@ -438,7 +443,7 @@
             <div><i class="jv-sw jv-s--free"></i>Boʻsh — bosib tanlang</div><div><i class="jv-sw jv-s--busy"></i>Darsi bor — oʻquvchi bilan dars</div>
             <div><i class="jv-sw jv-s--trial"></i>Boshqa sinov qoʻyilgan</div><div><i class="jv-sw jv-s--hold"></i>Boshqa menejer ushlab turibdi</div>
             ${role() === 'sales_manager' ? '<div><i class="jv-sw jv-s--mineTrial"></i>Mening sinovim</div>' : ''}<div><i class="jv-sw jv-s--break"></i>${seesBreak() ? 'Ustoz tanaffusda — bosing, sababi chiqadi' : 'Ustoz tanaffusda — sinov qoʻyib boʻlmaydi'}</div>
-            <div><i class="jv-sw jv-s--notrial"></i>Band — sinovga yopiq / taʼtil</div><div><i class="jv-sw jv-s--off"></i>Ish vaqti emas</div></div>`;
+            <div><i class="jv-sw jv-s--notrial"></i>Band — sinovga yopiq / taʼtil</div><div><i class="jv-sw jv-s--off"></i>${hoursAble('off') ? 'Ish vaqti emas — bosing, ish vaqti ochiladi' : 'Ish vaqti emas'}</div></div>`;
         const un = (isFull() || role() === 'rop') && J.data.unassigned?.length
             ? `<div class="jv-card jv-note"><b>Ustoz biriktirilmagan sinovlar · ${J.data.unassigned.length}</b><p>Lid istagan vaqtda hech kim boʻsh boʻlmagan.</p><button type="button" class="jv-btn jv-btn--soft" data-goto-trials>Sinov darslarini ochish</button></div>` : '';
         const bp = J.brk && seesBreak() ? breakPanel() : '';
@@ -518,6 +523,7 @@
         const free = list.filter(x => x.st.k === 'free').length;
         const rows = list.map(({ t, st, n }) => `<div class="jv-mrow${st.k === 'break' ? ' jv-mrow--brk' : ''}">${U().staffAvatar(t, 40)}<span><b>${esc(t.name)}</b><small>${st.k === 'break' ? esc(breakNote(st.b)) : `${n} dars bu kuni`}</small></span>${acSlotAble(st.k)
             ? `<button type="button" class="jv-act${st.k === 'free' ? '' : ' jv-act--acopen'}" data-acslot="${esc(t.id)}|${sel}" aria-haspopup="dialog">${st.k === 'free' ? 'Boʻsh · yopish' : CELL[st.k] + ' · ochish'}</button>`
+            : hoursAble(st.k) ? `<button type="button" class="jv-act jv-act--hrs" data-hrs="${esc(t.id)}" aria-haspopup="dialog" aria-label="${esc(t.name)} · Ish vaqti emas — ish vaqtini oʻzgartirish">${CELL.off}${svg('edit', 14)}</button>`
             : st.k === 'free'
             ? `<button type="button" class="jv-act" data-book="${esc(t.id)}|${sel}"${J.busy ? ' disabled' : ''}>${J.lead ? 'Tanlash' : 'Sinov qoʻyish'}</button>`
             : infoAble(st.k) ? `<button type="button" class="jv-act jv-act--${st.k} is-info" data-info="${esc(t.id)}|${sel}" aria-haspopup="dialog">${CELL[st.k]} ⓘ</button>`
@@ -635,6 +641,7 @@
         root.querySelectorAll('[data-lang]').forEach(b => b.onclick = () => { const st = SS()?.state; if (!st || st.lang === b.dataset.lang) return; st.lang = b.dataset.lang; st.teacherId = null; J.sel = null; J.brk = null; J.tf = 'all'; load(); });
         root.querySelector('[data-close-page]')?.addEventListener('click', () => closePage());
         root.querySelector('[data-ac-hours]')?.addEventListener('click', acHoursPick);
+        root.querySelector('[data-hrs-pick]')?.addEventListener('click', acHoursPick);
         root.querySelector('[data-admin-week]')?.addEventListener('click', () => { const st = SS()?.state; if (!st) return; st.view = 'week'; J.timers.forEach(clearInterval); J.timers = []; SS().render(J.root); });
     }
     function bind(root) {
@@ -656,6 +663,7 @@
         root.querySelectorAll('[data-hour]').forEach(b => b.onclick = () => { J.mobT = Number(b.dataset.hour); draw(); });
         root.querySelectorAll('[data-book]').forEach(b => b.onclick = () => { const [t, m] = b.dataset.book.split('|'); startBooking(t, Number(m)); });
         root.querySelectorAll('[data-acslot]').forEach(b => b.onclick = () => { const [t, m] = b.dataset.acslot.split('|'); acSlotSheet(t, Number(m)); });
+        root.querySelectorAll('[data-hrs]').forEach(b => b.onclick = () => openHours(b.dataset.hrs));
         root.querySelectorAll('[data-lesson]').forEach(b => b.onclick = () => { const [t, sid, s] = b.dataset.lesson.split('|'); J.sel = J.sel?.sid === sid && J.sel.t === t && J.sel.start === Number(s) ? null : { t, sid, start: Number(s) }; draw(); });
         root.querySelectorAll('[data-open-st]').forEach(b => b.onclick = () => U().openStudent(b.dataset.openSt));
         const move = (sid, tid) => (U().openCardForm ? U().openCardForm(sid, 'holat', () => { J.sel = null; load(); }, { act: 'teacher', teacherId: tid || null }) : U().openStudent(sid));
@@ -883,11 +891,15 @@
     // Bo'sh katak → sinovga yopish (sabab majburiy); "Band" (shablonda sinovga yopiq) → qo'shimcha ochish;
     // "Yopiq" (yopish yozuvi bor) → yozuvni bekor qilib qayta ochish. "Faqat shu sana" yoki "Har <hafta kuni>".
     const acSlotAble = k => isAcad() && J.mode === 'sinov' && (k === 'free' || k === 'notrial' || k === 'closed');
+    // 17-noy (direktor): akademik va admin "Ish vaqti emas" katagini bosib, shu ustozning ish vaqti shablonini ochadi
+    // (telefon va kompyuter). Lid uchun sinov qo'yish sahifasida emas. Server ruxsatni o'zi tekshiradi.
+    const hoursAble = k => k === 'off' && J.mode === 'sinov' && !J.page && !J.lead && (isAcad() || isFull());
+    const openHours = id => SS()?._.hoursDrawer(id, () => load());
     // Akademik rahbar: ustozni tanlab, admindagi ish vaqti oynasini ochadi (faqat o'z tilidagi ustozlar — server tekshiradi).
     function acHoursPick() {
         const ts = J.data?.teachers || [];
-        const box = overlay('jv-sheet jv-acs', `<header class="jv-mh"><div class="jv-mh-r"><h2>Ustoz ish vaqti</h2><button type="button" class="jv-x" data-x aria-label="Yopish">✕</button></div><p class="jv-mt">Ustozni tanlang</p></header><div class="jv-opts">${ts.map(t => `<button type="button" class="jv-btn" data-ht="${esc(t.id)}">${esc(tName(t))}</button>`).join('')}</div>`);
-        box.querySelectorAll('[data-ht]').forEach(b => { b.onclick = () => { const id = b.dataset.ht; closeOverlay(); SS()?._.hoursDrawer(id, () => load()); }; });
+        const box = overlay('jv-sheet jv-acs', `<header class="jv-mh"><div class="jv-mh-r"><h2>Ustoz ish vaqti</h2><button type="button" class="jv-x" data-x aria-label="Yopish">✕</button></div><p class="jv-mt">Ustozni tanlang</p></header><div class="jv-hpk">${ts.length ? '' : `<p class="jv-mt">${J.loading ? 'Ustozlar yuklanmoqda…' : 'Bu tilda ustoz yoʻq'}</p>`}${ts.map(t => `<button type="button" class="jv-hpk-r" data-ht="${esc(t.id)}">${U().staffAvatar(t, 40)}<b>${esc(tName(t))}</b>${svg('chev', 16)}</button>`).join('')}</div>`);
+        box.querySelectorAll('[data-ht]').forEach(b => { b.onclick = () => { const id = b.dataset.ht; closeOverlay(); openHours(id); }; });
     }
     async function acSlotSheet(tid, m) {
         const t = J.data?.teachers.find(x => x.id === tid), v = J.data?.views.get(tid); if (!t || !v) return;

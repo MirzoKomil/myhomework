@@ -674,6 +674,19 @@ async function studentCard(db, user, id, now = new Date()) {
                 outcome: c.outcome, note: c.note || '', by: c.assistant_id !== asgId ? (c.name || '') : '' })) },
     };
 }
+// Ko'chirish uchun slot holati: null — hamma kunlarda bo'sh; 'busy' — ish vaqti ichida dars/sinov/yopish to'sgan
+// (kamida bir kun); 'hours' — faqat ish vaqtidan tashqarida bo'lgani uchun to'g'ri kelmaydi (17-noy).
+function slotWhy(views, s, e) {
+    let out = false;
+    for (const v of views) {
+        if (S.fits(v.free, s, e)) continue;
+        // Slotning ish vaqti ichidagi qismi ham band bo'lsa — ish vaqtini ochish yetmaydi: 'busy'.
+        const inside = (v.work || []).filter(w => w.start < e && w.end > s).map(w => [Math.max(s, w.start), Math.min(e, w.end)]);
+        if (inside.some(([a, b]) => !S.fits(v.free, a, b))) return 'busy';
+        out = true;
+    }
+    return out ? 'hours' : null;
+}
 async function transferOptions(db, user, id, now = new Date()) {
     const { r, langs } = await studentRowChecked(db, user, id);
     const lang = studentLang(r.subject);
@@ -681,16 +694,20 @@ async function transferOptions(db, user, id, now = new Date()) {
     const cands = sc.teachers.filter(t => t.id !== r.teacher_id && teacherFits(t, [lang]));
     const start = T.toMin(r.lesson_time), dur = Number(r.lesson_duration) || 30, days = T.patternDays(r.lesson_day_of_week);
     const from = T.nowLocal(now).date, to = T.addDays(from, 13);
-    const free = new Map();
+    const free = new Map(), why = new Map();
     if (cands.length && start != null && days.length) {
         const ctx = await S.loadContext(db, { teacherIds: cands.map(t => t.id), from, to, now });
         ctx.students = ctx.students.filter(s => s.id !== r.id);
-        for (const t of cands) free.set(t.id, T.dateRange(from, to, 15).filter(d => days.includes(T.weekday(d)))
-            .every(d => S.fits(S.dayView(ctx, t.id, d).free, start, start + dur)));
+        // 17-noy: band bo'lsa sababi — 'hours' (shu vaqt ustozning ish vaqtiga kirmaydi) yoki 'busy' (darsi/sinovi/yopilgan).
+        for (const t of cands) {
+            const res = slotWhy(T.dateRange(from, to, 15).filter(x => days.includes(T.weekday(x))).map(d => S.dayView(ctx, t.id, d)), start, start + dur);
+            free.set(t.id, res === null);
+            if (res) why.set(t.id, res);
+        }
     }
     const open = new Map((await db.query(`SELECT teacher_id, COUNT(*)::int AS n FROM academic_problems WHERE stage<>'closed' AND removed_at IS NULL GROUP BY teacher_id`)).rows.map(x => [x.teacher_id, x.n]));
     const teachers = cands.map(t => { const mine = sc.active.filter(s => s.teacherId === t.id);
-        return { id: t.id, name: t.name, students: mine.length, onPlanPct: onPlanPct(mine), free: free.get(t.id) === true, openProblems: open.get(t.id) || 0 }; })
+        return { id: t.id, name: t.name, students: mine.length, onPlanPct: onPlanPct(mine), free: free.get(t.id) === true, why: why.get(t.id) || null, openProblems: open.get(t.id) || 0 }; })
         .sort((a, b) => Number(b.free) - Number(a.free) || (b.onPlanPct ?? 0) - (a.onPlanPct ?? 0));
     return { slot: scheduleText(r.lesson_day_of_week, r.lesson_time), teachers };
 }
@@ -890,6 +907,6 @@ module.exports = {
     langsFromHr, langsFor, scopeLangs, studentLang, teacherLang, teacherFits, behindBy, isOnPlan, onPlanPct, absentStreak, riskReason,
     makeupRejectWindow, lateRuleCheck, scheduleText, nextMonth, QULF_FROM, lockWindow, ownerFits, remindOverdue,
     me, overview, listProblems, createProblem, getProblem, patchProblem, problemEvent, closeProblem, addEvent, problemItem,
-    listMakeups, makeupRows, checkMakeup, risk, scopeData, studentCard, transferOptions, teachers, teacherCard, teacherLocks, trialsOf,
+    listMakeups, makeupRows, checkMakeup, risk, scopeData, studentCard, transferOptions, slotWhy, teachers, teacherCard, teacherLocks, trialsOf,
     assistants, assistantCard, lateContacts, lateItems, decideLate,
 };
