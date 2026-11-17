@@ -5,7 +5,7 @@ const assert = require('node:assert');
 const T = require('../server/services/smsTexts');
 const S = require('../server/services/leadStageSms');
 
-const vars = { name: 'Jasur', link: 'https://t.me/+ct33Qc0D6Y44MGUy', when: 'ertaga 10:00', time: '19:00', date: '20-noyabr', login: '+998901234567', password: '4567' };
+const vars = { name: 'Jasur', managerName: 'Muhammadyusuf', managerPhone: '901234567', link: 'https://t.me/+ct33Qc0D6Y44MGUy', when: 'ertaga 10:00', time: '19:00', date: '20-noyabr', login: '+998901234567', password: '4567' };
 
 test('har bir matn 160 belgidan oshmaydi va faqat GSM-7 lotin (Unicode emas)', () => {
   for (const key of Object.keys(T.TEXTS)) {
@@ -62,4 +62,32 @@ test('sinov SMS: sana va soat, menejer kontakti, eslatmalar 2 ta (1 soat, boshla
   assert.match(u[0][1], /Menejer: Dilnoza \+998901234567$/);
   const src = require('fs').readFileSync(require('path').join(__dirname, '../server/db.js'), 'utf8');
   assert.match(src, /TRIAL_SMS_REMINDER_RULES = \[\s*\{ id: '1h', minutes: 60 \},\s*\{ id: 'start', minutes: 0 \},\s*\]/);
+});
+
+test('kirill ismlar lotinga o\'giriladi — SMS Unicode bo\'lib qolmasin', () => {
+  assert.equal(T.toLatin('Жасур'), 'Jasur');
+  assert.equal(T.toLatin('Ғайрат'), "G'ayrat");
+  assert.equal(T.toLatin('Елена'), 'Yelena');
+  const t = T.render('menejer-biriktirildi', { name: 'Шаҳзода', managerName: 'Дилноза', managerPhone: '901234567' });
+  assert.equal(t, "Assalomu alaykum, Shahzoda! Arizangiz uchun rahmat. Domwork menejeri Dilnoza tez orada sizga +998901234567 raqamidan qo'ng'iroq qiladi.");
+  assert.match(T.render('yangi-lid', { name: '😀' }), /^Assalomu alaykum! Domwork onlayn/);
+});
+
+test('menejer-biriktirildi faqat menejerning ismi va telefoni bo\'lsa', () => {
+  assert.equal(T.render('menejer-biriktirildi', { name: 'Ali' }), '');
+  assert.equal(T.render('menejer-biriktirildi', { name: 'Ali', managerName: 'Dilnoza' }), '');
+});
+
+test('yangi lid rejasi: 5 daqiqa, biriktirish, tun, eski lidlar', () => {
+  const since = Date.parse('2026-11-17T08:00:00Z'), c = '2026-11-17T09:00:00Z', t0 = Date.parse(c);
+  const L = x => ({ id: 'l1', language: 'russian', status: 'new', managerId: '', ...x });
+  assert.equal(S.newLeadPlan(L(), c, t0 + 2 * 60000, since), null); // 5 daqiqa kutiladi
+  assert.equal(S.newLeadPlan(L(), c, t0 + 6 * 60000, since).key, 'yangi-lid');
+  assert.equal(S.newLeadPlan(L({ managerId: 'm1', managerAssignedAt: '2026-11-17T09:03:00Z' }), c, t0 + 6 * 60000, since).key, 'menejer-biriktirildi');
+  assert.equal(S.newLeadPlan(L({ status: 'boglanildi' }), c, t0 + 6 * 60000, since), null);
+  assert.equal(S.newLeadPlan(L({ language: 'english' }), c, t0 + 6 * 60000, since), null);
+  assert.equal(S.newLeadPlan(L(), '2026-11-17T07:00:00Z', t0, since), null); // yoqilishidan oldingi lid
+  assert.equal(S.newLeadPlan(L(), c, t0 + 15 * 3600000, since), null); // 14 soatdan eski
+  assert.equal(S.inSmsHours(Date.parse('2026-11-17T17:00:00Z')), false); // 22:00 Toshkent
+  assert.equal(S.inSmsHours(Date.parse('2026-11-17T04:30:00Z')), true); // 09:30
 });

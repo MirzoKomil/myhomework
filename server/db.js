@@ -4872,6 +4872,8 @@ async function _checkAndSendTrialSmsReminders() {
                 const text = buildTrialReminderSmsText(rule.id, lead, link);
                 try {
                     const resp = await eskiz.sendSms(smsPhone, text);
+                    // Ketgan SMS lid izohlariga ham (menejer ko'radi) — boshqa avtomatik SMS'lar kabi.
+                    await require('./services/leadStageSms').noteOnLead(lead, text, resp?.id || null);
                     historyEntries.push({
                         phone: smsPhone, name: lead.name, status: 'sent',
                         eskizId: resp?.id || null, message: text,
