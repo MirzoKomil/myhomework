@@ -274,6 +274,7 @@
     }
     const ATT = { on_time: ['Vaqtida', 'green'], late: ['Kechikdi', 'amber'], absent: ['Kelmadi', 'red'], waiting: ['Kutilmoqda', 'gray'], upcoming: ['Hali erta', 'gray'], off: ['Dam olish', 'gray'], before: ['Hisob boshlanmagan', 'gray'], not_ready: ['Yuz tasdiqlanmagan', 'gray'], extra: ['Dam kunida keldi', 'blue'], leave: ['Taʼtilda', 'blue'], excused: ['Sababli', 'blue'], present: ['Keldi (qoʻlda)', 'green'] };
 
+    const FACE = { none: ['Yoʻq', 'amber'], pending: ['Tasdiq kutmoqda', 'blue'], approved: ['Tasdiqlangan', 'green'], rejected: ['Rad etilgan', 'red'], reset: ['Qayta olinishi kerak', 'amber'] };
     function scrEmp() {
         const e = staff().find(x => String(x.id) === String(S.emp));
         if (!e) return top('Xodim') + `<div class="hra-body">${empty('team', 'Xodim topilmadi')}</div>`;
@@ -291,7 +292,10 @@
                     ${['late', 'absent'].includes(a.status) || a.overridden ? `<button type="button" class="hra-btn hra-btn-soft" data-h-fix="${esc(e.id)}">${ic('note', 18)}Sabab bilan tuzatish</button>` : ''}`
                 : '<p class="hra-muted">Davomat kuzatilmaydi.</p>'}
                 ${sched ? `<div class="hra-kv"><div><span>Grafik</span><b>${esc(sched)}</b></div></div>` : ''}
-                ${se && !se.isTeacher && window.davomat ? `<button type="button" class="hra-btn hra-btn-soft" data-h-sched="${esc(e.id)}">${ic('cal', 18)}Ish grafigi va davomat</button>` : ''}</section>
+                ${se && !se.isTeacher && window.davomat ? `<button type="button" class="hra-btn hra-btn-soft" data-h-sched="${esc(e.id)}">${ic('cal', 18)}Ish grafigi va davomat</button>` : ''}
+                ${se && !se.isTeacher && window.staffAttendanceUI?.faceFromFile ? `<div class="hra-kv"><div><span>Yuz namunasi</span><b>${chip((FACE[se.face] || FACE.none)[0], (FACE[se.face] || FACE.none)[1])}</b></div></div>
+                    <label class="hra-btn hra-btn-soft">${ic('face', 18)}${se.face === 'approved' ? 'Yuz rasmini yangilash' : 'Yuz rasmini yuklash'}<input type="file" accept="image/*" data-h-facefile="${esc(e.id)}" hidden></label>
+                    <p class="hra-muted">Yuz aniq koʻrinadigan, bitta odam tushgan yaqindagi rasm (3×4 yoki selfie).</p>` : ''}</section>
             <section class="hra-card hra-kv"><div class="hra-h2"><h2>Maʼlumotlar</h2></div>
                 ${e.phone ? `<div><span>Telefon</span><b><a href="tel:${esc(String(e.phone).replace(/[^\d+]/g, ''))}">${esc(e.phone)}</a></b></div>` : ''}
                 ${e.login ? `<div><span>Login</span><b>${esc(e.login)}</b></div>` : ''}
@@ -580,6 +584,15 @@
         document.body.appendChild(el);
     }
 
+    // 17-noy: bor xodimga yuz rasmini fayldan yuklash (admin/HR). Server: bitta yuz, boshqa xodimga biriktirilmagan.
+    async function onFaceFile(e) {
+        const inp = e.target.closest?.('[data-h-facefile]'); if (!inp) return;
+        const f = inp.files?.[0]; if (!f) return;
+        toast('Rasm tekshirilmoqda…');
+        try { await window.staffAttendanceUI.faceFromFile(inp.dataset.hFacefile, f); toast('Yuz rasmi saqlandi — hisob ertadan'); loadAtt(); }
+        catch (err) { toast(err.message || 'Rasm saqlanmadi', 'bad'); }
+        finally { inp.value = ''; }
+    }
     // ---------- hodisalar ----------
     function onClick(e) {
         const t = e.target.closest('[data-h-exit],[data-h-nav],[data-h-back],[data-h-lang],[data-h-stage],[data-h-cand],[data-h-pass],[data-h-reject],[data-h-go],[data-h-day],[data-h-role],[data-h-emp],[data-h-stagesheet],[data-h-schedule],[data-h-came],[data-h-noshow],[data-h-result],[data-h-setstage],[data-h-restore],[data-h-call],[data-h-fix],[data-h-face],[data-h-vac],[data-h-crm],[data-h-profile],[data-h-logout],[data-h-reload],[data-h-sched]');
@@ -692,6 +705,7 @@
             root.addEventListener('click', onClick);
             root.addEventListener('submit', onSubmit);
             root.addEventListener('input', onInput);
+            root.addEventListener('change', onFaceFile);
         }
         root.hidden = S.screen === 'crm';
         if (!nav) buildNav();

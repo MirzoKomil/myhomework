@@ -272,7 +272,40 @@
                     : 'Davomatni boshlash uchun avval yuz namunangizni yuboring. HR tasdiqlagach har kuni shu namuna bilan tekshiriladi.')
                 : `<b>${esc(target.name)}</b> uchun yuz namunasi olinadi. Xodim kameraga to‘g‘ri qarab tursin.`}</div>
             <ul class="satt-steps"><li>Yorug‘ joyda turing, yuz to‘liq ko‘rinsin</li><li>Kameraga to‘g‘ri qarang — 2 ta rasm olinadi</li></ul>
-            <button type="button" class="satt-cta">Rasmga olish</button>`;
+            <button type="button" class="satt-cta">Rasmga olish</button>
+            ${self ? '' : `<label class="satt-cta satt-cta-quiet satt-file">Fayldan yuklash<input type="file" accept="image/*" data-satt-face-file hidden></label>
+            <p class="satt-muted satt-small">Yuz aniq koʻrinadigan, bitta odam tushgan yaqindagi rasm (3×4 yoki selfie).</p>`}`;
+        // 17-noy: HR/admin bor xodimga tayyor rasmni fayldan yuklaydi (yangi xodim qo'shishdagi kabi bitta rasm ikki kadr sifatida).
+        const fileInp = body.querySelector('[data-satt-face-file]');
+        if (fileInp) fileInp.onchange = async ev => {
+            const f = ev.target.files?.[0]; if (!f) return;
+            let fr;
+            try { fr = await fileToFrame(f); } catch (err) { alert(err.message); return; }
+            body.innerHTML = `<div class="satt-add-photo"><div class="satt-add-thumb"><img src="${fr}" alt="${esc(target.name)} yuz rasmi"></div>
+                <div class="satt-add-btns"><span class="satt-small"><b>Rasm tanlandi</b> · 3×4 ga qirqildi</span>
+                <button type="button" class="btn-secondary-sm" data-satt-again>Boshqa rasm</button>
+                <button type="button" class="btn-primary-sm" data-satt-save>Saqlash</button></div></div>`;
+            body.querySelector('[data-satt-again]').onclick = () => enrollView(body, data, target);
+            body.querySelector('[data-satt-save]').onclick = () => saveFrames([fr, fr]);
+        };
+        async function saveFrames(frames) {
+            body.innerHTML = '<div class="satt-loading"><span class="satt-spinner"></span>Rasm tekshirilmoqda…</div>';
+            try {
+                const res = await api(`/employees/${encodeURIComponent(target.id)}/face`, { frames });
+                if (!overlay) return;
+                body.innerHTML = `<div class="satt-result satt-result-ok"><div class="satt-big-check" aria-hidden="true">✓</div>
+                    <h4>${res.state === 'approved' ? 'Namuna saqlandi va tasdiqlandi' : 'Namuna HR’ga yuborildi'}</h4>
+                    <p>Endi xodim davomat belgilay oladi. Hisob ertadan boshlanadi.</p>
+                    <button type="button" class="satt-cta satt-cta-quiet">Yopish</button></div>`;
+                body.querySelector('button').onclick = closeSheet;
+                if (hrState.section === 'xodimlar') renderHrSection();
+            } catch (e) {
+                if (!overlay) return;
+                body.innerHTML = `<div class="satt-result satt-result-bad"><div class="satt-big-check" aria-hidden="true">!</div><h4>Saqlanmadi</h4><p>${esc(e.message)}</p>
+                    <button type="button" class="satt-cta">Boshqa rasm tanlash</button></div>`;
+                body.querySelector('button').onclick = () => enrollView(body, data, target);
+            }
+        }
         body.querySelector('.satt-cta').onclick = async () => {
             body.innerHTML = cameraStage('Yuzingizni ramka ichiga joylang');
             const st = session();
@@ -788,5 +821,7 @@
         setInterval(() => { if (document.visibilityState === 'visible' && !overlay) refreshMe(); }, 10 * 60 * 1000);
     }
 
-    window.staffAttendanceUI = { init, renderHr, openCheckSheet, refreshMe, addEmployeeField, bindAddEmployee, validateAddEmployee, afterCreateEmployee };
+    // Telefon HR (hrApp.js) uchun: bor xodimga tayyor rasmni yuklash.
+    async function faceFromFile(employeeId, file) { const fr = await fileToFrame(file); return api(`/employees/${encodeURIComponent(employeeId)}/face`, { frames: [fr, fr] }); }
+    window.staffAttendanceUI = { faceFromFile, init, renderHr, openCheckSheet, refreshMe, addEmployeeField, bindAddEmployee, validateAddEmployee, afterCreateEmployee };
 })();
