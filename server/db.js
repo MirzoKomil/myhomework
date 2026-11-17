@@ -2791,8 +2791,20 @@ async function getDemoStudentSchedule(studentId) {
     }
     const startsAt = computeNextWeeklyOccurrence(student.lessonDayOfWeek, student.lessonTime, student.lessonDuration);
     const topic = student.group ? `Speaking Club: ${student.group}` : 'Speaking Club';
+    // Video dars (pilot, 17-noy): sinovdagi ustozning o'quvchisi uchun "Guruhga" tugmasi Telegram o'rniga
+    // shaxsiy video havolani ochadi (https://myhomework.uz/d/XXXX-XXXX). Xato bo'lsa — eski Telegram havola qoladi.
+    let joinLink = telegramGroupLink;
+    try {
+        const V = require('./services/videoLesson');
+        if (V.pilotOn(student.teacherId)) {
+            const t = student.teacherId ? await q1('SELECT name FROM hr_employees WHERE id = $1', [student.teacherId]) : null;
+            const link = await V.ensureStudentLink(pool, { studentId: demoStudentId, studentName: student.name, teacherId: student.teacherId,
+                teacherName: t?.name || '', startsAt, durationMin: student.lessonDuration });
+            joinLink = V.publicUrl(link.code);
+        }
+    } catch (e) { console.error('[video] havola:', e.message); }
     return {
-        telegramGroupLink, telegramGroupName, topic, startsAt,
+        telegramGroupLink: joinLink, telegramGroupName, topic, startsAt,
         courseStartDate, schedulePattern,
         lessonDayOfWeek: student.lessonDayOfWeek, lessonTime: student.lessonTime
     };
@@ -4920,7 +4932,7 @@ module.exports = {
     botTrialAction: (client,actor,leadId,payload) => trialLessons.updateTrialLesson(client,actor,leadId,payload,rowToLead,appendLeadAudit),
     findUserByEmail, findUserById, listUsersByRoles, createUser, createHrUserAccount, updateUser, resetHrUserAccount, publicUser,
     getHrEmployeesData, getHrEmployeeById, getHrEmployeeByLogin, setHrEmployeeLogin, getMobileContentData, findStudentByLogin, findDemoStudentByEmployeeId, getStudentPublicId, getDemoStudentGrades, submitDemoStudentTeacherRating,
-    getDemoStudentSchedule, getDemoStudentProfile, setDemoStudentAvatarUrl, getDemoStudentPayments,
+    getDemoStudentSchedule, computeNextWeeklyOccurrence, getDemoStudentProfile, setDemoStudentAvatarUrl, getDemoStudentPayments,
     getDemoStudentAssistantRatings, submitDemoStudentAssistantRating,
     getDemoStudentMessages, sendDemoStudentMessage,
     getDemoStudentPeerMessages, sendDemoStudentPeerMessage,
