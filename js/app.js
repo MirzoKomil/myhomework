@@ -18637,6 +18637,14 @@ function collectPaymentOnboardingData(modalBody) {
     if (!studentFirstName) return { error: 'O\'quvchi ismi kiritilishi shart', target: '#onboardStudentFirstName' };
     if (!studentLastName) return { error: 'O\'quvchi familiyasi kiritilishi shart', target: '#onboardStudentLastName' };
     const studentFullName = `${studentFirstName} ${studentLastName}`.trim();
+    // 17-noy (direktor): telefon — o'quvchining ilova logini. Noto'g'ri raqam (masalan 18 raqam) bilan server
+    // o'quvchini ochmaydi, shuning uchun sotuv menejeri raqamni shu yerda to'g'rilaydi.
+    const studentPhoneRaw = getVal('onboardStudentPhone');
+    const studentPhone = normalizeLeadPhoneInput(studentPhoneRaw);
+    if (!studentPhoneRaw) return { error: 'O\'quvchining telefon raqamini kiriting', target: '#onboardStudentPhone' };
+    if (!studentPhone || (window.studentAccess?.phoneLogin && !window.studentAccess.phoneLogin(studentPhone))) {
+        return { error: 'Telefon raqami noto\'g\'ri — tekshiring (masalan: +998 90 123 45 67)', target: '#onboardStudentPhone' };
+    }
 
     const genderRadio = getRadio('gender');
     if (!genderRadio) return { error: 'Jinsi tanlanishi shart', target: '[data-onboard-field="gender"]' };
@@ -18694,6 +18702,7 @@ function collectPaymentOnboardingData(modalBody) {
             studentFullName,
             studentFirstName,
             studentLastName,
+            studentPhone,
             gender: genderRadio.value,
             genderLabel: genderRadio.value === 'erkak' ? 'Erkak' : 'Ayol',
             courseLevel: courseLevel.value,
@@ -18779,6 +18788,11 @@ function openPaymentOnboardingModal(lang, leadId, options = {}) {
                     <label for="onboardStudentLastName">Familiya <span style="color:var(--danger)">*</span></label>
                     <input type="text" id="onboardStudentLastName" class="form-control" value="${escapeHtml(defaultName.split(' ').slice(1).join(' ') || '')}" placeholder="Familiya">
                 </div>
+            </div>
+            <div class="lead-survey-field">
+                <label for="onboardStudentPhone">Telefon raqami <span style="color:var(--danger)">*</span></label>
+                <input type="tel" id="onboardStudentPhone" class="form-control" inputmode="tel" value="${escapeHtml(lead.phone || '')}" placeholder="+998 90 123 45 67">
+                <p class="lead-survey-hint">Bu raqam o'quvchining ilovaga kirish logini bo'ladi — xato bo'lsa shu yerda to'g'rilang</p>
             </div>
             <div class="lead-survey-field">
                 <label>Jinsi <span style="color:var(--danger)">*</span></label>
@@ -18868,11 +18882,19 @@ function openPaymentOnboardingModal(lang, leadId, options = {}) {
 
         const updated = updateLeadInStorage(lang, leadId, l => {
             const base = normalizeLeadExtras(l);
+            const newPhone = onboarding.studentPhone;
+            const phoneChanged = newPhone && newPhone !== base.phone;
+            const phoneComment = phoneChanged ? [createLeadComment({
+                type: 'note',
+                text: `Telefon o'zgartirildi: ${base.phone || '—'} → ${newPhone}`,
+                author
+            })] : [];
             return {
                 ...base,
+                ...(phoneChanged ? { phone: newPhone } : {}),
                 status: 'tolov-jarayonida',
                 paymentOnboarding: { ...(base.paymentOnboarding || {}), ...onboarding },
-                comments: [...base.comments, createLeadComment({
+                comments: [...base.comments, ...phoneComment, createLeadComment({
                     type: 'payment-onboarding',
                     text: commentText,
                     author
