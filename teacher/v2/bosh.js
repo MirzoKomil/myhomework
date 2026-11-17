@@ -92,6 +92,8 @@
     const nextLessons = ids => { ids = [...new Set(ids.filter(Boolean))].sort(); return ids.length ? U.load(`bs:nx:${ids.join(',')}`, () => api(`/api/academic/next-lessons?ids=${encodeURIComponent(ids.join(','))}`).then(r => r.lessons || {}), { ttl: 300000 }) : { data: {} }; };
     const lessonData = (no, lang) => no ? U.load(`bs:les:${lang}:${no}`, () => api(`/api/academic/lessons/${encodeURIComponent(no)}?lang=${lang}`), { ttl: 600000 }) : { data: null };
     const groups = () => U.load('bs:grp', () => api('/api/school/my-groups').then(r => r.groups || []), { ttl: 600000 });
+    // Video dars (pilot, 17-noy): sinovdagi ustozga "Video xona" kartasi chiqadi (/dars/?s=<id>, LiveKit). Telegram — zaxira.
+    const videoMe = () => U.load('bs:vid', () => api('/api/video/me').catch(() => ({ pilot: false })), { ttl: 600000 });
     const groupOf = sid => (groups().data || []).find(g => g.student_id === sid) || null;
     const sessions = () => U.load(`bs:ses:${D().now().month}`, () => api(`/api/academic/sessions?month=${D().now().month}`).then(r => r.sessions || []), { ttl: 120000 });
     const detail = sid => U.load(`bs:det:${sid}`, () => api(`/api/academic/students/${encodeURIComponent(sid)}`), { ttl: 300000 });
@@ -377,8 +379,11 @@
         : `<span class="pill" style="align-self: flex-start; color: #C7D2E3; background: rgba(255,255,255,.12)">${plan != null ? `Dars ${d.hm(plan)} da · hali boshlanmagan` : 'Hali boshlanmagan'}</span>`}
     </section>
 
+    ${videoMe().data?.pilot ? `<a class="card a2" href="/dars/?s=${encodeURIComponent(sid)}" target="_blank" rel="noopener" style="flex-direction: row; align-items: center; gap: 12px; color: #0B1220; flex: none">
+      <span style="width: 44px; height: 44px; border-radius: 14px; background: #0065D6; color: #FFFFFF; display: grid; place-items: center; flex: none">${svg('video')}</span>
+      <span class="col g1"><b style="font-size: 15px">Video xona</b><span class="xs">ilova ichida video dars · havola ham shu yerda</span></span><span class="pill inf">Kirish</span></a>` : ''}
     <div class="a2" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; flex: none">
-      ${g?.tg_link ? tile('video', { cls: 'inf' }, 'Telegram guruh', 'videochatga kirish', `href="${esc(g.tg_link)}" target="_blank" rel="noopener"`).replace('href="#" ', '')
+      ${g?.tg_link ? tile('video', { cls: 'inf' }, 'Telegram guruh', videoMe().data?.pilot ? 'zaxira · video ishlamasa' : 'videochatga kirish', `href="${esc(g.tg_link)}" target="_blank" rel="noopener"`).replace('href="#" ', '')
         : tile('video', { cls: 'mu' }, 'Telegram guruh', groups().loading ? 'yuklanmoqda…' : "guruh havolasi yo'q", 'aria-disabled="true" data-bs-nogroup')}
       ${tile('screen', { st: 'background: #0065D6; color: #FFFFFF' }, 'Slaydlar', f?.slides ? `${f.slides} ta · ekranni ulashish` : 'ekranni ulashish', li.no ? `data-u-push="taqdimot" data-arg="${li.no}"` : 'aria-disabled="true"')}
       ${tile('book', { cls: 'wa' }, 'Ustoz kitobi', f?.teacherBook ? `${f.teacherBook} · dars rejasi` : 'dars rejasi', li.no ? `data-u-push="darshub" data-arg="${li.no}"` : 'aria-disabled="true"')}

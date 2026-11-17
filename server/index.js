@@ -73,12 +73,13 @@ app.use(helmet({
             // imgSrc'da "blob:" bor edi (shu sabab tanlangan rasm mahalliy oldindan
             // ko'rishda ko'rinardi), lekin connectSrc'da yo'q edi — natijada haqiqiy
             // yuklash bosqichi jim xato bilan (`TypeError: Failed to fetch`) buzilardi.
-            connectSrc: ["'self'", "blob:", "https://*.api.radio-browser.info", "https://translate.googleapis.com"],
+            // Video dars (LiveKit Cloud): signal — wss://<loyiha>.livekit.cloud, sozlamalar — https://*.livekit.cloud.
+            connectSrc: ["'self'", "blob:", "https://*.api.radio-browser.info", "https://translate.googleapis.com", "wss://*.livekit.cloud", "https://*.livekit.cloud"],
             // Real radio stansiyalarining audio oqimi (stream) manzili oldindan
             // ma'lum emas — radio-browser.info katalogidan qaysi haqiqiy translyatsiya
             // serveri qaytishi har xil bo'ladi (BBC, Capital, NPR va h.k. o'zlarining
             // domenlaridan translyatsiya qiladi) — imgSrc'dagi kabi keng https: ruxsati.
-            mediaSrc: ["'self'", "https:"],
+            mediaSrc: ["'self'", "https:", "blob:"],
             // YouTube video darslarni CRM'da va ilovada ko'rsatish uchun (Videodars/
             // Slaydlar bo'limlariga qo'yilgan havolalar) — boshqa hamma joyda 'none' qoladi.
             frameSrc: ["'self'", "https://www.youtube.com", "https://www.youtube-nocookie.com"],
@@ -227,6 +228,8 @@ app.use('/api/academic', require('./routes/academicHead')({ db: crmDb, authRequi
 app.use('/api/academic', require('./routes/academicHub')({ pool: crmDb.pool,
     authRequired: require('./middleware/auth').authRequired, studentAuthOptional: require('./middleware/auth').studentAuthOptional }));
 // Yagona dars jadvali, o'quvchi holati/tahriri, sotuv so'rovlari, Telegram guruh, yordamchi aloqalari.
+// Video dars (LiveKit, pilot) — server/routes/video.js; sahifa — /dars/ va /d/<kod>.
+app.use('/api/video', require('./routes/video')({ db: crmDb, authRequired: require('./middleware/auth').authRequired, findUserById: crmDb.findUserById }));
 app.use('/api/school', require('./routes/school')({ db: crmDb, authRequired: require('./middleware/auth').authRequired, findUserById: crmDb.findUserById }));
 app.use('/api/domwork/groups', domworkGroupsRouter(require('./db').pool, require('./middleware/auth').authRequired));
 app.use('/api/domwork/marketing', require('./routes/domworkMarketing')({pool:crmDb.pool,authRequired:require('./middleware/auth').authRequired}));
@@ -268,6 +271,10 @@ app.use('/uploads', express.static(UPLOADS_DIR, {
         res.setHeader('Cache-Control', 'public, max-age=31536000');
     }
 }));
+
+// Video dars sahifasi: /dars/ (ustoz, kuzatuvchi) va /d/<kod> (o'quvchi va sinov darsi lidi — login shart emas).
+app.use('/dars', express.static(path.join(ROOT, 'dars'), { index: 'index.html', setHeaders: res => res.setHeader('Cache-Control', 'no-cache') }));
+app.get('/d/:code', (req, res) => { res.setHeader('Cache-Control', 'no-cache'); res.sendFile(path.join(ROOT, 'dars', 'index.html')); });
 
 const studentWebDist = path.join(ROOT, 'student-app', 'dist');
 // HTML'dagi bundle havolasiga ?v= qo'shiladi (13-noy): bundle fayl nomi o'zgarmay yamalsa ham telefonlar
