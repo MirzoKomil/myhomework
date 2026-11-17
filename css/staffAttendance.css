@@ -228,6 +228,7 @@
 .satt-add-thumb img { width: 100%; height: 100%; object-fit: cover; }
 .satt-add-btns { flex: 1; display: flex; flex-direction: column; gap: 6px; }
 .satt-file { text-align: center; cursor: pointer; }
+.satt-cta.satt-file { display: flex; align-items: center; justify-content: center; margin-top: 8px; }
 .satt-add-row { min-height: 56px; border-radius: 14px; border: 1px solid var(--kb-input-border, #CBD5E1); background: var(--surface, #FFFFFF); padding: 0 12px; display: flex; align-items: center; gap: 10px; text-align: left; color: var(--text, #0B1220); cursor: pointer; font: inherit; }
 .satt-add-row > span:first-child { flex: 1; display: flex; flex-direction: column; }
 .satt-link { font-size: 13px; font-weight: 800; color: var(--kb-primary, #0057B8); }
