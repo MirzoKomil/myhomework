@@ -232,11 +232,63 @@ async function runDaily() {
         });
     }
 }
-let dailyTimer = null;
+// ── Yangi lid SMS'lari (17-noy, Abdulloh) — har daqiqada tekshiriladi, faqat 09:00–21:00 ──
+//  1) "yangi-lid": ariza tushganiga 5 daqiqa bo'lsa-yu, menejer hali biriktirilmagan va lid "Yangi"da bo'lsa.
+//     5 daqiqa ichida biriktirilsa — faqat 2-SMS ketadi (ketma-ket ikki xabar bormasin).
+//  2) "menejer-biriktirildi": ROP menejerga biriktirganda (menejer HR'da ismi va telefoni bo'lsa), lid hali "Yangi"da
+//     bo'lsa — menejer allaqachon qo'ng'iroq qilib bosqichni o'zgartirgan bo'lsa, kerak emas.
+//  Kechasi tushgan/biriktirilganlari ertalab 09:00 da ketadi (14 soatdan eskisi — yo'q).
+//  Faqat ishga tushirilgandan keyingi lidlar (eskilarga ommaviy SMS ketmasin).
+const NEW_LEAD_DELAY_MS = 5 * 60000, NEW_LEAD_MAX_AGE_MS = 14 * 3600000;
+function inSmsHours(now = Date.now()) {
+    const h = new Date(now + 5 * 3600000).getUTCHours();
+    return h >= 9 && h < 21;
+}
+// Bitta lid uchun nima yuborish kerak (sof funksiya — testlanadi). since — funksiya yoqilgan vaqt.
+function newLeadPlan(lead, createdAt, now, since) {
+    const created = new Date(createdAt).getTime();
+    if (!Number.isFinite(created) || created < since) return null;
+    if (lead.language !== 'russian' || normalizeLeadStatus(lead.status) !== 'yangi-lidlar') return null;
+    const assignedAt = lead.managerId ? new Date(lead.managerAssignedAt || createdAt).getTime() : NaN;
+    if (lead.managerId && Number.isFinite(assignedAt)) {
+        if (assignedAt < since || now - assignedAt > NEW_LEAD_MAX_AGE_MS) return null;
+        return { key: 'menejer-biriktirildi', once: `sms:menejer:${lead.id}:${lead.managerId}` };
+    }
+    if (lead.managerId) return null;
+    if (now - created < NEW_LEAD_DELAY_MS || now - created > NEW_LEAD_MAX_AGE_MS) return null;
+    return { key: 'yangi-lid', once: `sms:yangi-lid:${lead.id}` };
+}
+async function runNewLeads() {
+    if (!inSmsHours()) return;
+    const db = require('../db');
+    const pool = db.pool;
+    const { once } = require('./domworkBot/scheduler');
+    let since = Number((await db.getJsonData('newLeadSmsSince'))?.at);
+    if (!Number.isFinite(since) || since <= 0) {
+        since = Date.now();
+        await db.saveJsonData(pool, 'newLeadSmsSince', { at: since });
+    }
+    const rows = (await pool.query(`SELECT * FROM leads WHERE deleted_at IS NULL AND language = 'russian'
+        AND created_at > NOW() - INTERVAL '3 days' ORDER BY created_at`)).rows;
+    const now = Date.now();
+    for (const row of rows) {
+        const lead = db.rowToLead(row);
+        const plan = newLeadPlan(lead, row.created_at, now, since);
+        if (!plan || !uzPhoneOf(lead)) continue;
+        const contact = plan.key === 'menejer-biriktirildi' ? await managerContact(lead.managerId) : {};
+        const text = T.render(plan.key, { ...contact, name: lead.name });
+        if (!text) continue; // menejerning HR telefoni yo'q — 2-SMS yuborilmaydi
+        await once(pool, plan.once, () => sendAuto(lead, text, 'auto-' + plan.key));
+    }
+}
+
+let dailyTimer = null, newLeadTimer = null;
 function startDaily() {
     if (dailyTimer || process.env.NODE_ENV === 'test') return;
     dailyTimer = setInterval(() => runDaily().catch(e => console.warn('[stage-sms] kunlik:', e.message)), 10 * 60000);
     dailyTimer.unref?.();
+    newLeadTimer = setInterval(() => runNewLeads().catch(e => console.warn('[stage-sms] yangi lid:', e.message)), 60000);
+    newLeadTimer.unref?.();
 }
 
-module.exports = { onTrialResult, runDaily, startDaily, managerContact, onLeadSaved, sendAuto, uzPhoneOf, errorKind, alertAdmin, buildMessages, prevOf };
+module.exports = { onTrialResult, runDaily, runNewLeads, newLeadPlan, inSmsHours, noteOnLead, startDaily, managerContact, onLeadSaved, sendAuto, uzPhoneOf, errorKind, alertAdmin, buildMessages, prevOf };

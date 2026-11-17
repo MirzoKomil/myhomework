@@ -23,6 +23,18 @@ function cleanName(raw) {
     return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
 }
 
+// Kirill yozuvidagi ismni lotinga o'giradi: SMS'da bitta kirill harf ham butun xabarni Unicode qiladi
+// (70 belgi, 2–3 qism, narx 2–3 barobar). "Жасур" → "Jasur", "Ғайрат" → "G'ayrat".
+const CYR = { а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', ж: 'j', з: 'z', и: 'i', й: 'y', к: 'k', л: 'l', м: 'm', н: 'n', о: 'o', п: 'p',
+    р: 'r', с: 's', т: 't', у: 'u', ф: 'f', х: 'x', ц: 'ts', ч: 'ch', ш: 'sh', щ: 'sh', ъ: "'", ы: 'i', ь: '', э: 'e', ю: 'yu', я: 'ya', ё: 'yo',
+    ў: "o'", қ: 'q', ғ: "g'", ҳ: 'h' };
+function toLatin(word) {
+    const w = String(word || '');
+    if (!/[А-Яа-яЁёЎўҚқҒғҲҳ]/.test(w)) return w;
+    const out = [...w.toLowerCase()].map((ch, i) => ch === 'е' ? (i === 0 ? 'ye' : 'e') : (CYR[ch] ?? ch)).join('');
+    return out.charAt(0).toUpperCase() + out.slice(1);
+}
+
 const UZ_MONTHS = ['yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun',
     'iyul', 'avgust', 'sentabr', 'oktabr', 'noyabr', 'dekabr'];
 
@@ -128,6 +140,17 @@ const TEXTS = {
         withName: v => `${v.ism}, Domwork kursi bo'yicha to'lov muddati ${v.date} kuni tugadi. To'lov bo'yicha kelishish uchun qo'ng'iroq qiling. Menejer: ${v.menejer} ${v.tel}`,
         withoutName: v => `Domwork kursi bo'yicha to'lov muddati ${v.date} kuni tugadi. To'lov bo'yicha kelishish uchun qo'ng'iroq qiling. Menejer: ${v.menejer} ${v.tel}`,
     },
+    // ── Yangi lid: ariza tushdi, menejer hali biriktirilmagan (5 daqiqadan keyin, 09:00–21:00) ──
+    'yangi-lid': {
+        withName: v => `Assalomu alaykum, ${v.ism}! Domwork onlayn rus tili kursiga arizangiz qabul qilindi. Tez orada menejerimiz siz bilan bog'lanadi.`,
+        withoutName: v => `Assalomu alaykum! Domwork onlayn rus tili kursiga arizangiz qabul qilindi. Tez orada menejerimiz siz bilan bog'lanadi.`,
+    },
+    // ── Menejer biriktirildi: menejerning o'z ismi va HR telefoni bo'lsagina (maktab raqami bilan yuborilmaydi) ──
+    'menejer-biriktirildi': {
+        needsManager: true,
+        withName: v => `Assalomu alaykum, ${v.ism}! Arizangiz uchun rahmat. Domwork menejeri ${v.menejer} tez orada sizga ${v.tel} raqamidan qo'ng'iroq qiladi.`,
+        withoutName: v => `Assalomu alaykum! Arizangiz uchun rahmat. Domwork menejeri ${v.menejer} tez orada sizga ${v.tel} raqamidan qo'ng'iroq qiladi.`,
+    },
     // ── To'lov yopildi ──
     'tolov-yopildi': {
         withName: v => `${v.ism}, Domwork kursi to'lovi to'liq yopildi. Ishonchingiz uchun rahmat, darslaringizda omad tilaymiz!`,
@@ -145,14 +168,19 @@ function formatPhone(raw) {
 function render(key, vars = {}) {
     const t = TEXTS[key];
     if (!t) return '';
-    const ism = cleanName(vars.name);
-    const menejer = cleanName(vars.managerName) || SCHOOL_CONTACT.name;
-    const tel = formatPhone(vars.managerPhone) || SCHOOL_CONTACT.phone;
+    const ism = toLatin(cleanName(vars.name));
+    const ownName = toLatin(cleanName(vars.managerName)), ownTel = formatPhone(vars.managerPhone);
+    if (t.needsManager && (!ownName || !ownTel)) return '';
+    const menejer = ownName || SCHOOL_CONTACT.name;
+    const tel = ownTel || SCHOOL_CONTACT.phone;
     const v = { ...vars, ism, menejer: tel === SCHOOL_CONTACT.phone ? SCHOOL_CONTACT.name : menejer, tel };
     // Juda uzun ism 160 belgidan oshirib yuborsa — ismsiz variant (bitta SMS bo'lib qolsin)
     let text = ism ? t.withName(v) : t.withoutName(v);
     if (text.length > 160 && ism) text = t.withoutName(v);
-    return text.replace(/[‘’ʻʼ`]/g, "'");
+    text = text.replace(/[‘’ʻʼ`]/g, "'");
+    // Baribir ASCII bo'lmagan belgi qolsa (masalan ismda) — ismsiz variant; u ham bo'lmasa yubormaymiz.
+    if (!/^[\x20-\x7E\n]+$/.test(text) && ism) text = t.withoutName(v).replace(/[‘’ʻʼ`]/g, "'");
+    return /^[\x20-\x7E\n]+$/.test(text) ? text : '';
 }
 
-module.exports = { TEXTS, render, cleanName, formatPhone, uzDate, uzTime, uzWhen, ADMIN, APP_URL, SCHOOL_CONTACT };
+module.exports = { TEXTS, render, cleanName, toLatin, formatPhone, uzDate, uzTime, uzWhen, ADMIN, APP_URL, SCHOOL_CONTACT };
