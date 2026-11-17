@@ -20,6 +20,9 @@ async function init(db) { if (!ready) { await db.query(SCHEMA); ready = true; } 
 
 const PAID = ['tolov-jarayonida', 'tolov-yopildi'];
 const norm = s => String(s || '').replace(/\s+/g, ' ').trim();
+// 18-noy: nomni solishtirishda bo'sh joy va katta-kichik harf hisobga olinmaydi — "C94| onlayn" va "C94 | onlayn"
+// bir guruh (sotuv menejeri bitta bo'sh joyni tushirib qoldirgani uchun kabinet qulflanib qolardi).
+const same = (a, b) => norm(a).toLowerCase().replace(/\s+/g, '') === norm(b).toLowerCase().replace(/\s+/g, '');
 // Botga kerakli huquqlar (to'liq admin, anonim emas).
 // 17-noy: «admin tayinlash» (can_promote_members) majburiy emas — bu huquqni botga faqat guruh EGASI bera oladi,
 // guruhni ochmagan ROP esa bera olmaydi va qulf ochilmay qolardi. Bot bu huquqqa ega bo'lsa odamlarni o'zi admin qiladi,
@@ -62,19 +65,22 @@ async function people(db, assistantId) {
 
 async function checkOne(db, call, botId, g) {
     const items = [];
+    // CRMda guruh nomi keyin to'g'rilangan bo'lsa (ROP/admin), lidning hozirgi nomi olinadi.
+    const fresh = norm((await db.query(`SELECT extra_data->'paymentOnboarding'->>'telegramGroupName' AS n FROM leads WHERE id=$1`, [g.lead_id])).rows[0]?.n);
+    if (fresh && fresh !== g.group_name) { g.group_name = fresh; await db.query('UPDATE domwork_group_gate SET group_name=$2 WHERE lead_id=$1', [g.lead_id, fresh]); }
     // Bot hali guruhda bo'lmasa ham ROP kimni qo'shish kerakligini oldindan ko'rsin.
     const pendingPeople = async () => { for (const p of await people(db, g.assistant_id)) items.push({ ok: false, kind: 'person',
         text: p.tid ? `${p.label} — guruhga qo‘shing (bot o‘zi admin qiladi)` : `${p.label} — guruhga qo‘shing; avval @domworkuz_bot ga /start bossin` }); };
     let chatId = g.chat_id;
     if (!chatId) {
-        const found = (await db.query('SELECT chat_id,title FROM domwork_bot_seen_chats ORDER BY observed_at DESC')).rows.filter(r => norm(r.title) === g.group_name);
+        const found = (await db.query('SELECT chat_id,title FROM domwork_bot_seen_chats ORDER BY observed_at DESC')).rows.filter(r => same(r.title, g.group_name));
         if (found.length === 1) chatId = found[0].chat_id;
     }
     if (!chatId) {
         // Bot qo'shilgandan keyin nom o'zgartirilgan bo'lishi mumkin — oxirgi 7 kunda ko'rilgan chatlar nomini yangilab qayta qidiramiz.
         for (const r of (await db.query("SELECT chat_id FROM domwork_bot_seen_chats WHERE observed_at>NOW()-INTERVAL '7 days' AND bot_status='administrator' LIMIT 30")).rows) {
             try { const c = await call('getChat', { chat_id: r.chat_id }); if (c?.title) await db.query('UPDATE domwork_bot_seen_chats SET title=$2 WHERE chat_id=$1', [r.chat_id, String(c.title).slice(0, 200)]);
-                if (norm(c?.title) === g.group_name) { chatId = r.chat_id; break; } } catch {}
+                if (same(c?.title, g.group_name)) { chatId = r.chat_id; break; } } catch {}
         }
     }
     if (!chatId) {
@@ -83,7 +89,7 @@ async function checkOne(db, call, botId, g) {
     } else {
         let bot = null, chat = null;
         try { chat = await call('getChat', { chat_id: chatId }); bot = await call('getChatMember', { chat_id: chatId, user_id: botId }); } catch { bot = null; }
-        if (chat && norm(chat.title) !== g.group_name) {
+        if (chat && !same(chat.title, g.group_name)) {
             items.push({ ok: false, kind: 'name', text: `Guruh nomi o‘zgargan: Telegramda «${norm(chat.title)}», CRMda «${g.group_name}» — harfma-harf bir xil qiling` });
             await pendingPeople();
         } else if (!bot || bot.status !== 'administrator') {
