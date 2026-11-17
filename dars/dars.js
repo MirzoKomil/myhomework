@@ -199,9 +199,9 @@
     }
     function renderCall() {
         $app.className = 'app wide';
-        $app.innerHTML = `<div class="call"><div class="stage" id="stage"></div>
+        $app.innerHTML = `<div class="call"><div class="stwrap"><div class="stage" id="stage"></div><div class="pip" id="pip" hidden></div></div>
             <div class="top"><span class="gp" id="tmr"><span class="dot"></span><span>00:00</span></span><span style="flex:1"></span>${session.role === 'teacher' ? `<button class="gp" id="lnk" style="border:0;color:#FFF">${ic('link', 16)}Havola</button>` : ''}</div>
-            <div class="banner" id="bn" hidden></div><div class="pip" id="pip" hidden></div><div class="ctl" id="ctl"></div></div>`;
+            <div class="banner" id="bn" hidden></div><div class="ctl" id="ctl"></div></div>`;
         renderStage(); renderPip(); renderCtl(); renderBanner();
         const lnk = document.getElementById('lnk'); if (lnk) lnk.onclick = shareLink;
         setInterval(tickTimer, 1000); tickTimer();
