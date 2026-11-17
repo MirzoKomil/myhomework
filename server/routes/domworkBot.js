@@ -55,6 +55,7 @@ module.exports = function createRouter({ pool, runtime, authRequired }) {
             throw Object.assign(Error('Bot xabar qabul qilmayapti (webhook/Redis). Avval «Bot webhookini ulash»ni tekshiring'), { status: 503 });
         return require('../services/domworkBot/staffActivation').relaunch(pool, req.user); }));
     router.post('/staff-activation/exempt', handle(req => require('../services/domworkBot/staffActivation').exempt(pool, req.user, req.body?.userId)));
+    router.post('/staff-telegram/unlink', handle(req => require('../services/domworkBot/staffLink').adminUnlink(pool, req.user, req.body?.employeeId)));
     router.post('/staff-activation/stop', handle(req => require('../services/domworkBot/staffActivation').stop(pool, req.user)));
     router.get('/funnel/report', handle(req => require('../services/domworkBot/funnel').report(pool, Math.min(365, Math.max(1, Number(req.query.days) || 30)))));
     router.put('/settings', handle(req => queue.transaction(pool,db => controls.saveSettings(db,req.user,req.body))));
