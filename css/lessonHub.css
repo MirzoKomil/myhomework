@@ -550,6 +550,9 @@ html[data-theme="dark"] .lp-rview { background: #0D1524; }
 /* DarsBoshlash: o'quvchining ilovadagi holati (pill) */
 .lp-pres { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 4px 10px; font-size: 12px; font-weight: 700; white-space: nowrap; background: rgba(255,255,255,.08); color: #A9B4C8; margin: 0 4px 0 12px; }
 .lp-pres.is-on { background: rgba(18,183,106,.16); color: #75E0A7; }
+.lp-video { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 6px 14px; font-size: 13px; font-weight: 800; white-space: nowrap; background: #2F5BFF; color: #FFFFFF; text-decoration: none; margin: 0 4px; }
+.lp-video[hidden] { display: none; }
+.lp-video:hover { background: #1E3FD1; }
 @media (max-width: 760px) { .lp-pres { display: none; } }
 .lp-timer { display: inline-flex; align-items: baseline; gap: 6px; border: 0; background: none; color: #fff; font: inherit; cursor: pointer; padding: 4px 6px; border-radius: 8px; font-variant-numeric: tabular-nums; }
 .lp-timer b { font-size: 19px; font-weight: 800; }
