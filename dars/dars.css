@@ -34,6 +34,7 @@ button{font:inherit;cursor:pointer}
 @keyframes sp{to{transform:rotate(360deg)}}
 /* qo'ng'iroq */
 .call{position:fixed;inset:0;background:#0B1220;color:#FFF;display:flex;flex-direction:column;z-index:5}
+.stwrap{position:relative;flex:1;min-height:0;display:flex;flex-direction:column}
 .stage{position:relative;flex:1;min-height:0;display:grid;place-items:center;overflow:hidden;background:#16213A}
 .stage video{width:100%;height:100%;object-fit:contain}
 .stage .ph{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;padding:20px}
