@@ -246,6 +246,8 @@ router.patch('/:id', authRequired, leadMutationRequired, leadOwnershipRequired, 
         }
         // Avtomatik SMS uchun saqlashdan OLDINGI holat (bosqich/sinov vaqti o'zgardimi).
         const prevLead = await getLeadById(req.params.id).catch(() => null);
+        // Academy darvozasi: imtihondan o'tmagan yangi menejerga lid berilmaydi (ACADEMY_GATE=1 bo'lsa).
+        await require('./academyLink').assertLeadAllowed(prevLead, { ...lead, id: req.params.id });
         const { lead: saved, platformAccess } = await upsertLead({ ...lead, id: req.params.id }, language, req.user);
         res.json({ ok: true, lead: saved, platformAccess });
         // 15-noy: bosqich SMS'lari endi serverda (ilgari brauzerda edi — sahifa yopilsa ketmay qolardi).
