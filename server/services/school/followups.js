@@ -98,6 +98,7 @@ async function dueForManager(db, managerId, today) {
         const f = fol.get(id), rows = by.get(id) || [], state = S.statusOn(rows, today);
         if (f.reminder?.due && f.reminder.due <= today && state === 'frozen') out.push({ id: f.reminder.id, kind: 'return_reminder', studentId: id, name: names.get(id), due: f.reminder.due });
         if (state === 'left') {
+            if (rows.some(r => r.status === 'restored' && dstr(r.from_date) > today)) continue; // qaytishi belgilangan
             const last = rows.filter(r => r.status === 'left').pop();
             if (last?.reason_code === 'finished') continue;
             const plan = winbackPlan(f, dstr(last?.from_date));
