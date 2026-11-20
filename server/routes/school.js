@@ -917,7 +917,10 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
                 continue;
             }
             const sr = by.get(r.id) || [];
-            const last = sr.slice(-1)[0];
+            // 20-noyabr: faqat bugungacha kuchga kirgan yozuvlar — kelajakdagi "Qayta tiklash" (restored) chiqish sanasi bo'lib ko'rinmasin.
+            const live = sr.filter(x => S.dateStr(x.from_date) <= today);
+            const last = (live.length ? live : sr).slice(-1)[0];
+            const ret = state === 'left' ? sr.find(x => x.status === 'restored' && S.dateStr(x.from_date) > today) : null;
             const mv = moved && state === 'active', past = myPast.slice(-1)[0];
             // Kursni tugatgan: oxirgi 'left' yozuvi reason_code='finished' (admin "Kursni tugatdi" bilan qo'ygan).
             const finished = state === 'left' && O.isFinishedRow(sr.filter(x => x.status === 'left').pop());
@@ -928,6 +931,8 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
                 // 11-noyabr: admin "Tark etganlar" — kim belgilagan (ustoz/yordamchiga ham zararsiz: faqat ism va rol).
                 by: !mv && last ? { name: last.actor_name || '', role: last.actor_role || '' } : null, subject: r.subject || 'english',
                 reasonCode: !mv && last ? last.reason_code || '' : '',
+                // Qayta tiklangan, lekin birinchi darsi hali kelmagan: shu sanadan avtomatik "Faol".
+                returns: ret ? S.dateStr(ret.from_date) : null,
                 role: me ? (r.teacher_id === me || (moved && myPast.length) ? 'main' : 'assistant') : null,
                 withMe: me && myPast.length ? { from: S.dateStr(myPast[0].from_date), to: S.dateStr(myPast.slice(-1)[0].to_date) } : null });
         }
@@ -975,7 +980,7 @@ module.exports = function createSchoolRouter({ db, authRequired, findUserById })
                         if (days && s.paymentDueDate) s.paymentShift = { from: T.addDays(String(s.paymentDueDate).slice(0, 10), -days), to: String(s.paymentDueDate).slice(0, 10), days };
                         s.reminder = f?.reminder || null;
                     }
-                    if (s.state === 'left') { s.winback = F.winbackPlan(f, s.from); s.lastCall = f?.lastCall || null; s.calls = f?.calls || 0; }
+                    if (s.state === 'left' && !s.returns) { s.winback = F.winbackPlan(f, s.from); s.lastCall = f?.lastCall || null; s.calls = f?.calls || 0; }
                 }
             }
             for (const c of changed) Object.assign(c, detail(c.id), { name: rowBy.get(c.id).name, avatarUrl: S.studentRow(rowBy.get(c.id)).avatarUrl, fromName: names.get(c.from) || '' });
