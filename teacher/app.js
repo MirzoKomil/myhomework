@@ -1265,7 +1265,7 @@
             return `<div class="sec">${label} · ${g.length}</div>${g.map(x => {
                 const s = stuOf(x.id), as = asst ? assistStudent(x.id) : null;
                 const pill = k === 'frozen' ? `Muzlatilgan${x.from ? ' · ' + fmtDate(x.from) : ''}${x.to ? ' → ' + fmtDate(x.to) : ''}` : k === 'moved' ? `Boshqa ustozga o'tdi${x.from ? ' · ' + fmtDate(x.from) : ''}`
-                    : k === 'finished' ? `Kursni tugatgan${x.course?.to ? ' · ' + fmtDate(x.course.to) : ''}` : `Chiqib ketgan${x.from ? ' · ' + fmtDate(x.from) : ''}`;
+                    : k === 'finished' ? `Kursni tugatgan${x.course?.to ? ' · ' + fmtDate(x.course.to) : ''}` : x.returns ? `Qaytadi · ${fmtDate(x.returns)}` : `Chiqib ketgan${x.from ? ' · ' + fmtDate(x.from) : ''}`;
                 return `<section class="card" style="display: flex; flex-direction: column; gap: 8px"><div class="row">${avatar(x, 'av')}<div class="col" style="flex: 1; min-width: 0"><span class="nm">${esc(x.name)}</span><span class="pill ${tone}" style="align-self: flex-start; margin-top: 4px">${pill}</span></div></div>
                   ${s && s.lessonTime && k !== 'moved' ? `<div class="between small"><span class="muted">Jadval</span><b style="text-align: right">${patternLabel(s.lessonDayOfWeek)} ${esc(s.lessonTime)}</b></div>` : ''}
                   ${as && as.counted ? `<div class="between small"><span class="muted">${cap1(monName(now().month))}</span><b style="text-align: right">${as.counted} / ${CAP} aloqa · maoshda qoladi</b></div>` : ''}
