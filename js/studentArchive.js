@@ -56,7 +56,8 @@
                     r.push([s.state === 'finished' ? 'Kurs' : 'O\'qigan', [(start || s.from) && `${start ? ddmm(start) + ' ' : ''}→ ${ddmm(lastDay(s))}`, s.lessons ? `${s.lessons} dars` : '', s.teacherName && esc(shortName(s.teacherName))].filter(Boolean).join(' · ') || '—']);
                     if (s.state === 'finished') { if (finNote(s)) r.push(['Izoh', esc(finNote(s))]); }
                     else if (s.reason) r.push(['Sabab', esc(s.reason)]);
-                    if (s.state === 'left' && s.winback) {
+                    if (s.returns) r.push(['Qaytadi', `${esc(dLong(s.returns))} · ${esc(shortName(s.teacherName))} · ${sched(s)}`]);
+                    else if (s.state === 'left' && s.winback) {
                         const due = s.winback.due, late = due < td, now = due === td;
                         r.push(['Qayta jalb', `${esc(dLong(due))} qo'ng'iroq ${now ? 'bugun' : late ? 'kechikdi' : 'rejada'}${s.lastCall ? ` · oxirgisi ${esc(dShort(s.lastCall.day))}${s.lastCall.note ? ' — ' + esc(s.lastCall.note) : ''}` : ''}`]);
                     }
@@ -78,6 +79,7 @@
                 }
                 if (s.state === 'finished') { if (finNote(s)) r.push(['Izoh', esc(finNote(s))]); }
                 else if (s.reason) r.push(['Sabab', esc(s.reason)]);
+                if (s.returns) r.push(['Qaytadi', `${esc(dLong(s.returns))} · ${sched(s)}`]);
                 return r;
             }
             if (s.state === 'moved') {
@@ -97,10 +99,12 @@
             r.push(['Siz bilan', `${start ? ddmm(start) + ' → ' : ''}${s.state === 'left' ? ddmm(lastDay(s)) : ''}${s.state === 'frozen' ? ' · ' + sched(s) : ''}`]);
             r.push(['O\'tilgan', `${s.lessons || 0} dars${s.reached != null && s.state === 'frozen' ? ` · ilovada ${s.reached} / ${COURSE}` : ''}`]);
             if (s.reason) r.push(['Sabab', esc(s.reason)]);
+            if (s.returns) r.push(['Qaytadi', `${esc(dLong(s.returns))} · ${sched(s)}`]);
             if (s.state === 'frozen' && s.to) r.push(['Qaytadi', `${esc(dLong(addDays(s.to, 1)))} · ${sched(s)} siz uchun saqlangan, hozircha faqat sinovlarga beriladi`]);
             return r;
         };
         const pill = s => s.state === 'frozen' ? `<span class="sc-pill sc-pill--info">Muzlatilgan · ${esc(dShort(s.from))}${s.to ? ' → ' + esc(dShort(s.to)) : ''}</span>`
+            : s.state === 'left' && s.returns ? `<span class="sc-pill sc-pill--ok">Qaytadi · ${esc(dShort(s.returns))}</span>`
             : s.state === 'left' ? `<span class="sc-pill sc-pill--bad">Chiqib ketgan${s.from ? ' · ' + esc(dShort(s.from)) : ''}</span>`
             : s.state === 'finished' ? `<span class="sc-pill sc-pill--ok">Kursni tugatgan${s.from ? ' · ' + esc(dShort(lastDay(s))) : ''}</span>`
             // O'tgan kun qoidasi: "X.ga o'tdi" sanasi — yangi ustoz boshlagan kun (siz bilan oxirgi kundan keyingi kun).
@@ -111,7 +115,7 @@
             if (s.state === 'frozen' && s.to) return s.reminder
                 ? `<button type="button" class="sc-btn" data-fu-cancel="${esc(s.reminder.id)}">Eslatmani bekor qilish</button>`
                 : `<button type="button" class="sc-btn" data-fu-rem="${esc(s.id)}" data-due="${esc(addDays(s.to, 0) < td ? td : s.to)}">Qaytish oldidan eslatma</button>`;
-            if (s.state === 'left') return `<button type="button" class="sc-btn sc-btn--pri" data-fu-call="${esc(s.id)}">Qo'ng'iroq qildim</button>`;
+            if (s.state === 'left' && !s.returns) return `<button type="button" class="sc-btn sc-btn--pri" data-fu-call="${esc(s.id)}">Qo'ng'iroq qildim</button>`;
             return '';
         };
         const card = (s, top, rows, acts = '') => `<article class="ar-card" data-card="${esc(s.id)}"><div class="ar-top">${studentAvatar(s, 40)}<span><button type="button" class="sc-link ar-name" data-st="${esc(s.id)}">${esc(s.name)}</button>${top}</span></div>
@@ -202,16 +206,18 @@
             r.push([fin ? 'Kurs' : 'Oʻqigan', [`${start ? ddmm(start) + ' ' : ''}→ ${ddmm(lastDay(s))}`, `${s.lessons || 0} dars`, s.reached != null ? `ilovada ${s.reached} / ${COURSE}` : ''].filter(Boolean).join(' · ')]);
             if (fin) { if (finNote(s)) r.push(['Izoh', esc(finNote(s))]); }
             else r.push(['Sabab', s.reason ? esc(s.reason) : '<span class="ar-mute">yozilmagan</span>']);
+            if (!fin && s.returns) r.push(['Qaytadi', `<b>${esc(dLong(s.returns))}</b> · avtomatik “Faol”ga oʻtadi`]);
             r.push(['Belgilagan', `${byTxt(s)}${s.from ? ' · ' + esc(dShort(s.from)) : ''}`]);
             if (!fin && Number(s.debtAmount) > 0) r.push(['Qarz', `<b class="dbx-red">${esc(money(s.debtAmount))}</b>${s.paymentDueDate ? ' · muddat ' + esc(dShort(String(s.paymentDueDate).slice(0, 10))) : ''}`]);
             if (s.subject) r.push(['Til', s.subject === 'russian' ? 'Rus tili' : 'Ingliz tili']);
             return r;
         };
         const pill = s => fin ? `<span class="sc-pill sc-pill--ok">Kursni tugatgan · ${esc(dShort(lastDay(s)))}</span>`
+            : s.returns ? `<span class="sc-pill sc-pill--ok">Qaytadi · ${esc(dShort(s.returns))}</span>`
             : `<span class="sc-pill sc-pill--bad">Chiqib ketgan · ${esc(dShort(s.from))}</span>`;
         const card = s => `<article class="ar-card" data-card="${esc(s.id)}"><div class="ar-top">${studentAvatar(s, 40)}<span><button type="button" class="sc-link ar-name" data-st="${esc(s.id)}">${esc(s.name)}</button>${pill(s)}</span></div>
             <dl class="ar-dl">${rows(s).map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>
-            <div class="ar-acts"><button type="button" class="sc-btn" data-st="${esc(s.id)}">Kartani ochish</button>${fin ? '' : `<button type="button" class="sc-btn sc-btn--pri" data-restore="${esc(s.id)}">Qayta tiklash</button>`}</div></article>`;
+            <div class="ar-acts"><button type="button" class="sc-btn" data-st="${esc(s.id)}">Kartani ochish</button>${fin || s.returns ? '' : `<button type="button" class="sc-btn sc-btn--pri" data-restore="${esc(s.id)}">Qayta tiklash</button>`}</div></article>`;
         const groups = {}; [...list].sort((a, b) => String(b.from || '').localeCompare(String(a.from || ''))).forEach(s => { const k = String(s.from || '').slice(0, 7) || '—'; (groups[k] ||= []).push(s); });
         const monTitle = k => k === '—' ? 'Sanasiz' : `${MON[Number(k.slice(5)) - 1][0].toUpperCase()}${MON[Number(k.slice(5)) - 1].slice(1)} ${k.slice(0, 4)}`;
         const body = list.length ? Object.entries(groups).map(([k, items]) => `<h3 class="ar-sec">${esc(monTitle(k))} · ${items.length} ta</h3><div class="ar-grid">${items.map(card).join('')}</div>`).join('')
