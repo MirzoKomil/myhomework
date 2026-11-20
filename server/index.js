@@ -100,6 +100,9 @@ app.use(helmet({
 // o'rnatilgan bo'lsa, bu ro'yxat TO'LIQ almashtiriladi.
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'https://myhomework.uz,http://localhost:3000')
     .split(',').map(o => o.trim());
+// Domwork Academy ilovasi xodimni CRM login/paroli bilan to'g'ridan-to'g'ri
+// kiritadi — uning manzili(lari) ALLOWED_ORIGINS'ga qo'shiladi.
+ALLOWED_ORIGINS.push(...(process.env.ACADEMY_ORIGIN || '').split(',').map(o => o.trim()).filter(Boolean));
 
 // /api/leads — lid-qo'lga kiritish (landing page) webhooki. Bu saytlar
 // (domwork/homework va h.k.) turli hosting'larda (Netlify, Vercel, bepul
@@ -217,6 +220,7 @@ app.use('/api/meta', metaRoutes);
 app.use('/api/telegram', telegramRoutes);
 app.use('/api/public/sales', publicSalesApiRoutes);
 app.use('/api/public/crm', publicCrmApiRoutes);
+app.use('/api/academy-link', require('./routes/academyLink').router);
 app.use('/api/hr', hrRoutes);
 app.use('/api/trial-lessons', trialLessonsRoutes);
 app.use('/api/payroll', payrollRoutes);
