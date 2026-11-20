@@ -6,7 +6,10 @@
 //  • GET  /api/video/link/:code                  — havola holati (ochiq/erta/eskirgan), ism, ustoz, vaqt (login shart emas)
 //  • POST /api/video/link/:code/join             — havola orqali kirish: {deviceId, name, takeover} → LiveKit token
 //  • POST /api/video/presence                    — xonaga kirdi/chiqdi belgisi (sahifa yuboradi) — davomat uchun dastlabki ma'lumot
+//  • POST /api/video/teacher/:studentId/ticket   — Jamoa ilovasidan Chrome'ga o'tish uchun qisqa muddatli kirish chiptasi
+//    (ilova ichidagi WebView mikrofonga ruxsat bermaydi; Chrome'da login yo'q — chipta shu bitta dars xonasiga kiritadi)
 const express = require('express');
+const jwt = require('jsonwebtoken');
 const V = require('../services/videoLesson');
 
 const WATCH = new Set(['admin', 'boshliq', 'akademik']);
@@ -30,6 +33,20 @@ module.exports = function createVideoRouter({ db, authRequired, findUserById }) 
         return { pilot: !!me && V.pilotOn(me.id), role: 'teacher' };
     }));
 
+    // ── Chipta: Jamoa ilovasi → Chrome (faqat shu o'quvchi darsi, 3 soat) ─────
+    const TICKET_TTL = 3 * 3600;
+    const ticketSecret = () => V.cfg().secret + ':video-ticket';
+    const ticketOrAuth = (req, res, next) => {
+        const k = req.get('X-Video-Ticket');
+        if (!k) return authRequired(req, res, next);
+        let p;
+        try { p = jwt.verify(k, ticketSecret(), { algorithms: ['HS256'], audience: 'video-ticket' }); }
+        catch { return res.status(401).json({ error: 'Havola muddati tugagan — darsni Jamoa ilovasidan qayta oching' }); }
+        if (String(p.sid) !== String(req.params.studentId)) return res.status(403).json({ error: 'Bu havola boshqa dars uchun' });
+        req.user = { id: p.uid };
+        next();
+    };
+
     // ── Xodim (ustoz / rahbariyat) ──────────────────────────────────────────
     async function staffContext(req, studentId) {
         const u = await findUserById(req.user.id);
@@ -49,7 +66,7 @@ module.exports = function createVideoRouter({ db, authRequired, findUserById }) 
         return db.computeNextWeeklyOccurrence(st.lesson_day_of_week, st.lesson_time, st.lesson_duration);
     }
 
-    router.post('/teacher/:studentId/join', authRequired, wrap(async req => {
+    router.post('/teacher/:studentId/join', ticketOrAuth, wrap(async req => {
         needConfigured();
         const { u, st, me, teacherName } = await staffContext(req, req.params.studentId);
         const startsAt = nextStart(st);
@@ -62,12 +79,20 @@ module.exports = function createVideoRouter({ db, authRequired, findUserById }) 
             code: link.code, link: V.publicUrl(link.code), role: asTeacher ? 'teacher' : 'watcher' };
     }));
 
-    router.post('/teacher/:studentId/link', authRequired, wrap(async req => {
+    router.post('/teacher/:studentId/link', ticketOrAuth, wrap(async req => {
         needConfigured();
         const { u, st, teacherName } = await staffContext(req, req.params.studentId);
         const link = await V.ensureStudentLink(pool, { studentId: st.id, studentName: st.name, teacherId: st.teacher_id, teacherName, startsAt: nextStart(st), durationMin: st.lesson_duration, createdBy: u.id });
         const w = V.windowOf(link);
         return { code: link.code, link: V.publicUrl(link.code), opensAt: new Date(w.opens).toISOString(), endsAt: new Date(w.ends).toISOString(), state: w.state };
+    }));
+
+    router.post('/teacher/:studentId/ticket', authRequired, wrap(async req => {
+        needConfigured();
+        const { u, st } = await staffContext(req, req.params.studentId);
+        const k = jwt.sign({ sid: st.id, uid: u.id }, ticketSecret(), { audience: 'video-ticket', expiresIn: TICKET_TTL, algorithm: 'HS256' });
+        const base = (process.env.PUBLIC_BASE_URL || 'https://myhomework.uz').replace(/\/$/, '');
+        return { url: `${base}/dars/?s=${encodeURIComponent(st.id)}&k=${encodeURIComponent(k)}` };
     }));
 
     // ── Havola (login shart emas) ───────────────────────────────────────────

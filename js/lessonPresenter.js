@@ -103,6 +103,7 @@
             <button type="button" class="lp-back" data-act="close" title="Yopish (Esc)">${I.back}<span>Darslik</span></button>
             <div class="lp-ttl"><b title="${esc(title)}">${esc(title)}</b>${subtitle ? `<span>${esc(subtitle)}</span>` : ''}</div>
             ${presence?.studentId ? '<span class="lp-pres" role="status" hidden></span>' : ''}
+            ${presence?.studentId ? `<a class="lp-video" href="/dars/?s=${encodeURIComponent(presence.studentId)}" target="_blank" rel="noopener" hidden title="Ilova ichidagi video dars — yangi oynada"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3z"/></svg>Video xona</a>` : ''}
             <button type="button" class="lp-timer" title="Dars vaqti (bosib to'xtatish)"><b>00:00</b>${duration ? `<span>/ ${String(duration).padStart(2, '0')}:00</span>` : ''}</button>
             <span class="lp-flex"></span>
             <div class="lp-seg" role="group" aria-label="Ko'rinish">
@@ -526,6 +527,9 @@
         // O'quvchi holati (DarsBoshlash dizayni, "● Malika onlayn"): ilovadagi so'nggi faollik — sessiya, o'qish vaqti
         // yoki vazifa natijasi (/api/academic/students/:id/presence). 3 daqiqadan yangi bo'lsa — yashil "ilovada".
         // Video aloqa (Meet/Zoom) holatini tizim bilmaydi — shuning uchun u ko'rsatilmaydi.
+        // Video dars (pilot ustozlar): "Video xona" — yangi oynada /dars, ekran ulashish shu yerda ishlaydi.
+        const vidEl = root.querySelector('.lp-video');
+        if (vidEl) apiFetch('/api/video/me').then(r => { if (r?.pilot && r.role === 'teacher') vidEl.hidden = false; }).catch(() => {});
         let presTimer = null;
         const presEl = root.querySelector('.lp-pres');
         if (presEl) {

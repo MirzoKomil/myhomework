@@ -34,12 +34,17 @@
     const CODE = m ? m[1].toUpperCase() : null;
     const params = new URLSearchParams(location.search);
     const STUDENT = params.get('s');
+    const TICKET = params.get('k');
+    // Jamoa ilovasi (Android WebView) kamera bilan birga mikrofonni bermaydi — video dars Chrome'da ochiladi.
+    const IN_TEAM_APP = /DomworkTeam\//.test(navigator.userAgent);
+    const isAndroid = /Android/i.test(navigator.userAgent);
+    const chromeUrl = u => 'googlechrome://navigate?url=' + encodeURIComponent(u);
     const staffToken = () => { try { return localStorage.getItem('mh_token'); } catch { return null; } };
     const deviceId = (() => { try { let d = localStorage.getItem('dw_video_device'); if (!d) { d = Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem('dw_video_device', d); } return d; } catch { return 'x' + Date.now(); } })();
 
     async function api(path, opts = {}) {
         const headers = { 'Content-Type': 'application/json' };
-        if (opts.auth) headers.Authorization = 'Bearer ' + staffToken();
+        if (opts.auth) { if (TICKET) headers['X-Video-Ticket'] = TICKET; else headers.Authorization = 'Bearer ' + staffToken(); }
         const r = await fetch('/api/video' + path, { method: opts.method || 'GET', headers, body: opts.body ? JSON.stringify(opts.body) : undefined });
         let data = {}; try { data = await r.json(); } catch { /* bo'sh */ }
         if (!r.ok) { const e = new Error(data.error || 'Xatolik'); e.status = r.status; throw e; }
@@ -120,9 +125,37 @@
         document.getElementById('go2').onclick = () => { wantCam = false; join(opts, false); };
     }
     function deniedScreen(opts) {
+        // Android'da ko'pincha sabab — havola Telegram/boshqa ilova ichidagi brauzerda ochilgan: ular kamera so'ramaydi ham.
         screenMsg({ icon: 'camoff', tone: '#FDECEC', color: '#B42318', title: 'Brauzer kamera va mikrofonga ruxsat bermadi',
-            text: "Manzil satridagi qulf belgisini bosing → «Kamera» va «Mikrofon» → «Ruxsat berish». Keyin sahifani yangilang.",
-            actions: `<button class="btnp" onclick="location.reload()">Sahifani yangilash</button>${opts.staff ? '' : helpBtns.replace('btnp', 'btns')}` });
+            text: isAndroid ? "Havola Telegram yoki boshqa ilova ichida ochilgan bo'lishi mumkin — ular kamerani bermaydi. «Chrome'da ochish» tugmasini bosing."
+                + " Chrome'da ham chiqsa: manzil satridagi qulf belgisi → «Kamera» va «Mikrofon» → «Ruxsat berish»."
+                : "Manzil satridagi qulf belgisini bosing → «Kamera» va «Mikrofon» → «Ruxsat berish». Keyin sahifani yangilang.",
+            actions: `${isAndroid ? `<button class="btnp" id="toChrome">${ic('cam', 20)}Chrome'da ochish</button>` : ''}<button class="${isAndroid ? 'btns' : 'btnp'}" onclick="location.reload()">Sahifani yangilash</button>${opts.staff ? '' : helpBtns.replace('btnp', 'btns')}` });
+        const b = document.getElementById('toChrome');
+        if (b) b.onclick = () => openInChrome(b);
+    }
+    // Shu darsni Chrome'da ochish. Xodim uchun — qisqa muddatli chipta (Chrome'da login yo'q), o'quvchi havolasi — o'zi.
+    async function openInChrome(btn) {
+        let url = location.href;
+        if (STUDENT && !TICKET) {
+            if (btn) { btn.disabled = true; btn.textContent = 'Tayyorlanmoqda…'; }
+            try { url = (await api('/teacher/' + encodeURIComponent(STUDENT) + '/ticket', { method: 'POST', auth: true })).url; }
+            catch (e) { if (btn) { btn.disabled = false; btn.textContent = "Chrome'da ochish"; } return toast(e.message); }
+        }
+        location.href = chromeUrl(url);
+        setTimeout(() => {
+            screenMsg({ icon: 'cam', tone: '#F0F3FF', color: '#1E3FD1', title: "Chrome ochilmadimi?",
+                text: 'Ochilgan bo\'lsa — darsni Chrome\'da davom ettiring. Ochilmagan bo\'lsa, havolani nusxalab Chrome brauzeriga qo\'ying (havola 3 soat ishlaydi).',
+                actions: `<button class="btnp" id="cpy">Havolani nusxalash</button><button class="btns" id="again">Chrome'da qayta urinish</button>` });
+            document.getElementById('cpy').onclick = async () => { try { await navigator.clipboard.writeText(url); toast('Nusxalandi'); } catch { prompt('Havolani nusxalang:', url); } };
+            document.getElementById('again').onclick = () => { location.href = chromeUrl(url); };
+        }, 1800);
+    }
+    function teamAppScreen() {
+        screenMsg({ icon: 'cam', tone: '#F0F3FF', color: '#1E3FD1', title: "Video dars Chrome'da ochiladi",
+            text: "Jamoa ilovasi ichida kamera va mikrofon ishlamaydi. Tugmani bosing — dars Chrome'da ochiladi, qayta login shart emas.",
+            actions: `<button class="btnp" id="toChrome">${ic('cam', 20)}Chrome'da ochish</button><a class="btns" href="/teacher/">Ilovaga qaytish</a>` });
+        document.getElementById('toChrome').onclick = e => openInChrome(e.currentTarget);
     }
     function staffCard(st) {
         return `<div class="card"><span class="over" style="color:#1E3FD1">${st.role === 'teacher' ? 'Video xona' : 'Kuzatuvchi'} · ${esc(hm(st.startsAt))}</span>
@@ -284,13 +317,14 @@
         $app.innerHTML = `<div class="pad"><div class="pad center" style="padding-top:60px"><span class="big-ic" style="background:#E3F7EE;color:#0FA968">${ic('check', 44, 3)}</span>
             <h1 class="dsp" style="font-size:28px;margin:0">${lead ? 'Sinov darsi tugadi' : teacher ? 'Siz xonadan chiqdingiz' : 'Darsdan chiqdingiz'}</h1>
             <p class="mut" style="margin:0">${mins ? mins + ' daqiqa xonada bo\'ldingiz' : ''}</p></div>
-            ${teacher ? `<a class="btnp" href="/teacher/#davomat">Davomatni belgilash</a><a class="btns" href="/dars/?s=${encodeURIComponent(STUDENT)}">Qayta kirish</a>`
+            ${teacher ? `${TICKET ? '<p class="mut" style="text-align:center;margin:0">Davomatni Jamoa ilovasida belgilang.</p>' : '<a class="btnp" href="/teacher/#davomat">Davomatni belgilash</a>'}<a class="btns" href="/dars/${esc(location.search)}">Qayta kirish</a>`
               : `<a class="btnp" href="${esc(location.pathname)}">Qayta kirish</a>${lead ? helpBtns.replace('btnp', 'btns') : '<a class="btns" href="/student/v2">Ilovaga qaytish</a>'}`}</div>`;
     }
 
     // ── Ishga tushirish ──────────────────────────────────────────────────────
     async function startStaff() {
-        if (!staffToken()) return screenMsg({ title: 'Avval tizimga kiring', text: 'Jamoa ilovasiga kirib, darsni o\'sha yerdan oching.', actions: '<a class="btnp" href="/teacher/">Jamoa ilovasi</a>' });
+        if (IN_TEAM_APP && !TICKET) return teamAppScreen();
+        if (!staffToken() && !TICKET) return screenMsg({ title: 'Avval tizimga kiring', text: 'Jamoa ilovasiga kirib, darsni o\'sha yerdan oching.', actions: '<a class="btnp" href="/teacher/">Jamoa ilovasi</a>' });
         try {
             const st = await api('/teacher/' + encodeURIComponent(STUDENT) + '/join', { method: 'POST', auth: true });
             if (st.role === 'watcher') { session = st; wantCam = false; wantMic = false; return join({ staff: st }, false); }
