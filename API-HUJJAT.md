@@ -280,3 +280,15 @@ logga tushmaydi — faqat uzunligi, IP va manba.
 | `GET /api/public/sales/managers` | Menejerlar ro'yxati |
 
 Kalit: `PUBLIC_SALES_API_KEY` (yangi CRM kalitidan alohida).
+
+## Domwork Academy bog'lanishi — `/api/academy-link/*`
+
+Alohida Academy ilovasi (o'z Railway servisi) uchun, server-to-server. Kalit: `ACADEMY_LINK_KEY` (`X-Api-Key` yoki `Bearer`). O'rnatilmagan bo'lsa — yopiq.
+
+| So'rov | Nima qaytaradi |
+|---|---|
+| `GET /api/academy-link/top-calls?month=YYYY-MM&lang=russian&min=90` | Oyning AI baholagan eng yaxshi 10 ta qo'ng'irog'i (bitta menejerdan ≤3). Mijoz ismi/telefoni berilmaydi. |
+| `GET /api/academy-link/status` | Xodimlarning Academy holati ro'yxati |
+| `POST /api/academy-link/status` | `{ userId, stage: learning\|exam\|ready\|update_pending, track, score, examLeadIds }` |
+
+Railway o'zgaruvchilari: `ACADEMY_LINK_KEY` (sir), `ACADEMY_ORIGIN` (Academy manzili — CORS), `ACADEMY_GATE=1` (ixtiyoriy: imtihondan o'tmagan, Academy'dagi menejerga lid berilmaydi; imtihon lidi bundan mustasno).
