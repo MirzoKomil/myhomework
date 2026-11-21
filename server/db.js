@@ -4841,6 +4841,9 @@ function buildTrialReminderSmsText(ruleId, lead, link) {
 }
 
 async function _checkAndSendTrialSmsReminders() {
+    // 21-noy: Eskiz sozlanmagan servis (compassionate-perception nusxasi) sinov eslatmalarini "yuborilgan" deb belgilab,
+    // xato yozib qo'ymasin — aks holda asosiy servis o'sha eslatmani yubormaydi.
+    if (!process.env.ESKIZ_EMAIL || !process.env.ESKIZ_PASSWORD) return;
     try {
         const leads = await getActiveTrialLeads();
         if (!leads.length) return;
