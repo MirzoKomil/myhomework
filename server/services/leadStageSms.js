@@ -253,6 +253,9 @@ function newLeadPlan(lead, createdAt, now, since) {
     const created = new Date(createdAt).getTime();
     if (!Number.isFinite(created) || created < since) return null;
     if (lead.language !== 'russian' || normalizeLeadStatus(lead.status) !== 'yangi-lidlar') return null;
+    // 21-noy (Abdulloh): ikkala SMS ham faqat YANGI ariza uchun. Eski lid (14 soatdan oldin tushgan) boshqa menejerga
+    // qayta biriktirilib, yana "Yangi"ga qaytarilsa — "arizangiz uchun rahmat" ketmaydi (mijoz "men ariza qoldirmadim-ku" demasin).
+    if (now - created > NEW_LEAD_MAX_AGE_MS) return null;
     const assignedAt = lead.managerId ? new Date(lead.managerAssignedAt || createdAt).getTime() : NaN;
     if (lead.managerId && Number.isFinite(assignedAt)) {
         if (assignedAt < since || now - assignedAt > NEW_LEAD_MAX_AGE_MS) return null;
