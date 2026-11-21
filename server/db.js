@@ -4925,7 +4925,7 @@ const TRIAL_SMS_CHECK_INTERVAL_MS = 60 * 1000;
 setInterval(_checkAndSendTrialSmsReminders, TRIAL_SMS_CHECK_INTERVAL_MS);
 
 module.exports = {
-    pool, DATA_DIR, tx, getJsonData, saveJsonData, mutateJsonData,
+    pool, DATA_DIR, tx, getJsonData, saveJsonData, mutateJsonData, rowToLead,
     getFullState, getTeacherScopedState, getLeads, getDeletedLeads, getLeadById, getLeadsByIds, getSalesManagersMap, getSalesManagerIdForUser, setSalesManagerUserLink,
     insertLead, upsertLead, upsertLeadWithClient, insertRestoredLead, softDeleteLead, restoreLead, patchState, recordTeacherAttendance,
     getTeacherTrialLessons, getTeacherTrialHistory, saveTeacherTrialLesson,
