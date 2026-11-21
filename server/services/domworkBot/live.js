@@ -91,6 +91,38 @@ function reasonOf(before, after) {
     reason = reason.replace(/\s+/g, ' ').trim();
     return reason.length > 220 ? reason.slice(0, 217) + '…' : reason;
 }
+// 21-noy (Abdulloh): lid harakati xabariga shu harakat bilan ketgan avtomatik SMS ham qo'shiladi.
+// SMS saqlashdan keyin (yoki runNewLeads'da 1 daqiqagacha) ketadi, shuning uchun harakatlar SMS_WAIT_SEC kechikib o'qiladi.
+// Faqat KETGAN SMS ko'rsatiladi — balans tugasa yoki xato bo'lsa, SMS qismi umuman chiqmaydi.
+const SMS_WAIT_SEC = 120;
+async function smsSent(db, leadIds, sinceIso) {
+    const by = new Map();
+    if (!leadIds.length) return by;
+    try {
+        const rows = (await db.query(`SELECT e->>'recipientId' AS id, e->>'message' AS message, e->>'sentAt' AS at
+            FROM json_data j, jsonb_array_elements(CASE WHEN jsonb_typeof(j.data)='array' THEN j.data ELSE '[]'::jsonb END) e
+            WHERE j.key='smsHistory' AND e->>'status'='sent' AND COALESCE(e->>'audience','') LIKE 'auto-%'
+            AND e->>'recipientId' = ANY($1) AND e->>'sentAt' >= $2`, [leadIds, sinceIso])).rows;
+        for (const r of rows) {
+            if (!by.has(r.id)) by.set(r.id, []);
+            by.get(r.id).push({ at: Date.parse(r.at), message: r.message || '' });
+        }
+        for (const list of by.values()) list.sort((a, b) => a.at - b.at);
+    } catch (err) { console.warn('[live] SMS tarixi o‘qilmadi:', err.message); }
+    return by;
+}
+// Harakat vaqtidan (−5 s … +SMS_WAIT_SEC s) oralig'ida shu lidga ketgan SMS'lar; har SMS bir marta ishlatiladi.
+function takeSms(by, leadId, atMs) {
+    const list = by.get(leadId);
+    if (!list || !Number.isFinite(atMs)) return [];
+    const out = [];
+    for (let k = list.length - 1; k >= 0; k--) {
+        const x = list[k];
+        if (x.at >= atMs - 5000 && x.at <= atMs + SMS_WAIT_SEC * 1000) { out.unshift(x.message); list.splice(k, 1); }
+    }
+    return out;
+}
+const smsLines = (msgs, pad = '') => msgs.map(m => `\n${pad}📩 SMS ketdi: ${T.i('«' + m + '»')}`).join('');
 const list = (items, max = Infinity) => items.slice(0, max).map(x => '• ' + x).join('\n') + (items.length > max ? `\n• … yana ${items.length - max} ta` : '');
 
 async function leadFeed(db) {
@@ -100,7 +132,9 @@ async function leadFeed(db) {
         await db.query("INSERT INTO domwork_bot_live_cursor VALUES('lead_audit',$1) ON CONFLICT DO NOTHING", [max]);
         return;
     }
-    const rows = (await db.query('SELECT id,lead_id,action,actor_id,actor_name,snapshot FROM lead_audit WHERE id>$1 ORDER BY id LIMIT 300', [cursor.value])).rows;
+    // SMS_WAIT_SEC kechikish: shu harakat bilan ketgan SMS tarixga yozilib ulgursin.
+    const rows = (await db.query(`SELECT id,lead_id,action,actor_id,actor_name,snapshot,created_at FROM lead_audit
+        WHERE id>$1 AND created_at < NOW() - INTERVAL '${SMS_WAIT_SEC} seconds' ORDER BY id LIMIT 300`, [cursor.value])).rows;
     if (!rows.length) return;
     await db.query("UPDATE domwork_bot_live_cursor SET value=$1 WHERE name='lead_audit'", [rows[rows.length - 1].id]);
     const langs = new Map((await db.query('SELECT id,language FROM leads WHERE id=ANY($1)', [[...new Set(rows.map(r => r.lead_id))]])).rows.map(r => [r.id, r.language]));
@@ -117,11 +151,18 @@ async function leadFeed(db) {
         if (row.action === 'deleted') { deleted.push({ actor, name, manager: before?.managerId || '' }); continue; }
         if (row.action === 'created' || !before) { created.push({ name, source: after?.source || '', manager: after?.managerId || '' }); continue; }
         if (!after) continue;
+        const at = new Date(row.created_at).getTime();
         if ((before.managerId || '') !== (after.managerId || ''))
-            push(assigned, [actor, before.managerId || '', after.managerId || ''].join('|'), name);
+            push(assigned, [actor, before.managerId || '', after.managerId || ''].join('|'), { name, id: row.lead_id, at });
         const from = stages.normalizeLeadStatus(before.status), to = stages.normalizeLeadStatus(after.status);
-        if (from !== to) push(moved, [actor, from, to].join('|'), { name, reason: reasonOf(before, after), manager: after.managerId || '' });
+        if (from !== to) push(moved, [actor, from, to].join('|'), { name, reason: reasonOf(before, after), manager: after.managerId || '', id: row.lead_id, at });
     }
+    const touched = [...[...assigned.values()].flat(), ...[...moved.values()].flat()];
+    const firstAt = Math.min(...touched.map(x => x.at).filter(Number.isFinite));
+    const sms = touched.length ? await smsSent(db, [...new Set(touched.map(x => x.id))], new Date((Number.isFinite(firstAt) ? firstAt : Date.now()) - 10000).toISOString()) : new Map();
+    // Bosqich SMS'i "o'tkazdi" xabariga, menejer biriktirilgandagi SMS — "biriktirdi" xabariga (avval bosqich).
+    for (const items of moved.values()) for (const x of items) x.sms = takeSms(sms, x.id, x.at);
+    for (const items of assigned.values()) for (const x of items) x.sms = takeSms(sms, x.id, x.at);
     if (created.length) {
         const by = {};
         for (const c of created) by[c.source || 'Noma’lum manba'] = (by[c.source || 'Noma’lum manba'] || 0) + 1;
@@ -133,7 +174,7 @@ async function leadFeed(db) {
         const head = from
             ? `🔁 <b>${T.esc(actor)}</b> ${T.b(leads.length + ' ta')} lidni ${T.b(who(from))}dan ${T.b(who(to))}ga o‘tkazdi`
             : `👥 <b>${T.esc(actor)}</b> ${T.b(who(to))}ga ${T.b(leads.length + ' ta')} lid biriktirdi`;
-        await send(db, `lead-assign:${rows[0].id}:${key}`, `${head}\n${list(leads.map(T.esc))}`);
+        await send(db, `lead-assign:${rows[0].id}:${key}`, `${head}\n${list(leads.map(x => T.esc(x.name) + smsLines(x.sms, '   ')))}`);
     }
     for (const [key, items] of moved) {
         const [actor, from, to] = key.split('|');
@@ -141,9 +182,9 @@ async function leadFeed(db) {
         // Mas'ul menejer — lid kimga biriktirilgan; harakatni boshqa odam qilgan bo'lsa ham aniq ko'rinadi.
         const owner = m => `👤 Mas’ul: ${T.b(who(m))}`;
         const text = items.length === 1
-            ? `${icon} <b>${T.esc(actor)}</b>: ${T.b(items[0].name)}\n${T.esc(stage(from))} → ${T.b(stage(to))}\n${owner(items[0].manager)}${items[0].reason ? `\n📝 Sabab: ${T.i(items[0].reason)}` : ''}`
+            ? `${icon} <b>${T.esc(actor)}</b>: ${T.b(items[0].name)}\n${T.esc(stage(from))} → ${T.b(stage(to))}\n${owner(items[0].manager)}${items[0].reason ? `\n📝 Sabab: ${T.i(items[0].reason)}` : ''}${smsLines(items[0].sms)}`
             : `${icon} <b>${T.esc(actor)}</b> ${T.b(items.length + ' ta')} lidni ${T.esc(stage(from))} → ${T.b(stage(to))}ga o‘tkazdi\n`
-              + list(items.map(x => T.esc(x.name) + ` (${T.esc(who(x.manager))})` + (x.reason ? ' — ' + T.i(x.reason) : '')));
+              + list(items.map(x => T.esc(x.name) + ` (${T.esc(who(x.manager))})` + (x.reason ? ' — ' + T.i(x.reason) : '') + smsLines(x.sms, '   ')));
         await send(db, `lead-move:${rows[0].id}:${key}`, text);
     }
     if (deleted.length) await send(db, `lead-del:${rows[0].id}`, `🗑 <b>Lid o‘chirildi</b>\n` + list(deleted.map(d => `${T.esc(d.actor)}: ${T.esc(d.name)} (mas’ul: ${T.esc(who(d.manager))})`)));
