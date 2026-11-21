@@ -104,7 +104,11 @@ async function managerContact(managerId) {
     if (!managerId) return {};
     try {
         const { pool } = require('../db');
-        const r = (await pool.query('SELECT sm.name AS name, he.phone AS phone, he.first_name AS first_name FROM sales_managers sm LEFT JOIN hr_employees he ON he.id = sm.id WHERE sm.id = $1', [String(managerId)])).rows[0];
+        const id = String(managerId);
+        // 21-noy: lid.managerId endi HR xodim id'si (hr...), sales_managers jadvalida yo'q — avval HR'dan olinadi.
+        // Aks holda barcha SMS'larda maktab raqami (Domwork +998907681295) ketardi, "menejer biriktirildi" SMS'i umuman ketmasdi.
+        let r = (await pool.query('SELECT name, first_name, phone FROM hr_employees WHERE id = $1', [id])).rows[0];
+        if (!r) r = (await pool.query('SELECT sm.name AS name, he.phone AS phone, he.first_name AS first_name FROM sales_managers sm LEFT JOIN hr_employees he ON he.id = sm.id WHERE sm.id = $1', [id])).rows[0];
         return r ? { managerName: r.first_name || r.name || '', managerPhone: r.phone || '' } : {};
     } catch { return {}; }
 }
