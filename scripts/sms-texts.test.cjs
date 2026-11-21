@@ -88,6 +88,10 @@ test('yangi lid rejasi: 5 daqiqa, biriktirish, tun, eski lidlar', () => {
   assert.equal(S.newLeadPlan(L({ language: 'english' }), c, t0 + 6 * 60000, since), null);
   assert.equal(S.newLeadPlan(L(), '2026-11-17T07:00:00Z', t0, since), null); // yoqilishidan oldingi lid
   assert.equal(S.newLeadPlan(L(), c, t0 + 15 * 3600000, since), null); // 14 soatdan eski
+  // Eski lid (2 kun oldin tushgan) yangi menejerga qayta biriktirilib "Yangi"ga qaytsa — SMS yo'q
+  assert.equal(S.newLeadPlan(L({ managerId: 'm2', managerAssignedAt: new Date(t0 + 48 * 3600000).toISOString() }), c, t0 + 48 * 3600000 + 60000, since), null);
+  // Yangi lid (2 soat) boshqa menejerga o'tkazilsa — yangi menejer raqami bilan SMS ketadi
+  assert.equal(S.newLeadPlan(L({ managerId: 'm2', managerAssignedAt: new Date(t0 + 2 * 3600000).toISOString() }), c, t0 + 2 * 3600000 + 60000, since).key, 'menejer-biriktirildi');
   assert.equal(S.inSmsHours(Date.parse('2026-11-17T17:00:00Z')), false); // 22:00 Toshkent
   assert.equal(S.inSmsHours(Date.parse('2026-11-17T04:30:00Z')), true); // 09:30
 });
