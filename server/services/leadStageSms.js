@@ -278,13 +278,17 @@ async function runNewLeads() {
         const contact = plan.key === 'menejer-biriktirildi' ? await managerContact(lead.managerId) : {};
         const text = T.render(plan.key, { ...contact, name: lead.name });
         if (!text) continue; // menejerning HR telefoni yo'q — 2-SMS yuborilmaydi
-        await once(pool, plan.once, () => sendAuto(lead, text, 'auto-' + plan.key));
+        // 'v2:' — 21-noy: Eskiz'siz nusxa xato bilan egallagan kalitlar o'rniga (o'sha lidlarga qayta urinish)
+        await once(pool, 'v2:' + plan.once, () => sendAuto(lead, text, 'auto-' + plan.key));
     }
 }
 
 let dailyTimer = null, newLeadTimer = null;
 function startDaily() {
     if (dailyTimer || process.env.NODE_ENV === 'test') return;
+    // Eskiz sozlanmagan servis (masalan, eski compassionate-perception nusxasi) taymerlarni ishga tushirmasin:
+    // aks holda u once-kalitlarni egallab, xato bilan yozib qo'yadi va asosiy servis SMS'ni yubora olmaydi (21-noy).
+    if (!process.env.ESKIZ_EMAIL || !process.env.ESKIZ_PASSWORD) { console.log('[stage-sms] Eskiz sozlanmagan — avtomatik SMS taymerlari o\'chiq'); return; }
     dailyTimer = setInterval(() => runDaily().catch(e => console.warn('[stage-sms] kunlik:', e.message)), 10 * 60000);
     dailyTimer.unref?.();
     newLeadTimer = setInterval(() => runNewLeads().catch(e => console.warn('[stage-sms] yangi lid:', e.message)), 60000);
