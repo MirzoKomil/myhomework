@@ -199,6 +199,8 @@
     // Fon (ilova, CRM) qulf paytida klaviatura/ekran o'quvchi uchun ham yopiq.
     const KEEP = el => el.classList?.contains('sl-wrap') || el.classList?.contains('sl-sheet-wrap') || el.classList?.contains('sl-pill')
         || el.classList?.contains('sa-sheet-wrap') || el.classList?.contains('sdc-wrap') || el.classList?.contains('sa-toast') || el.classList?.contains('dwact') || el.id === 'modalOverlay'
+        // Davomat oynalari (rasmsiz «Kecha nechida ketdingiz?», Face ID qulfi, HR kamera) lid qulfidan ustun — ularni muzlatmaymiz.
+        || el.id === 'dvRoot' || ['rsz-ov', 'rsz-toast', 'rsz-bar-top', 'dv-root', 'dv-toast', 'satt-overlay'].some(c => el.classList?.contains(c))
         || ['SCRIPT', 'STYLE', 'LINK'].includes(el.tagName);
     function setInert(on) {
         [...document.body.children].forEach(el => {
