@@ -20142,11 +20142,18 @@ function renderLeadsManagerFilter() {
         if (!inEn && !inRu) return _ttLang === 'english'; // yangi menejerlarga default
         if (inEn && inRu) return true; // ikkala tilda lidi bor — har ikkalasida ko'rinadigan
         return inRu ? _ttLang === 'russian' : _ttLang === 'english';
+    }).filter(m => {
+        // Ishdan ketganlar ro'yxatda ko'rinmaydi. Faqat qo'lida hali ochiq lidi qolgan bo'lsa chiqadi
+        // («(ishdan ketgan)» belgisi bilan) — lidlarini topib boshqaga o'tkazish uchun. Yopilgan lidlar (sifatsiz,
+        // muvaffaqiyatsiz, to'lov yopildi) tarix sifatida o'sha menejerda qoladi.
+        if (typeof staffStatus === 'undefined' || staffStatus.isActive(m) || m.id === _leadsManagerFilter) return true;
+        const CLOSED = ['sifatsiz-lidlar', 'muvaffaqiyatsiz-sotuv', 'tolov-yopildi'];
+        return (_allLeads[_ttLang] || []).some(l => l.managerId === m.id && !CLOSED.includes(l.status));
     });
     const current = _leadsManagerFilter;
     select.innerHTML = `<option value="all">Barcha menejerlar</option>
         <option value="unassigned">Biriktirilmagan</option>
-        ${managers.map(m => `<option value="${escapeHtml(m.id)}">${escapeHtml(m.name)}</option>`).join('')}`;
+        ${managers.map(m => `<option value="${escapeHtml(m.id)}">${escapeHtml(typeof staffStatus !== 'undefined' ? staffStatus.label(m) : m.name)}</option>`).join('')}`;
     if (current !== 'all' && current !== 'unassigned' && !managers.some(m => m.id === current)) {
         _leadsManagerFilter = 'all';
         select.value = 'all';
