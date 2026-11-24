@@ -183,8 +183,9 @@
     function onInput(e) {
         const el = e.target;
         if (el.matches('.rsz-time')) {
-            let v = el.value.replace(/[^\d:]/g, '');
-            if (/^\d{3,4}$/.test(v)) v = v.slice(0, v.length - 2) + ':' + v.slice(-2);
+            // Telefon raqam klaviaturasida «:» yo'q: faqat raqamlarni olib, oxirgi 2 tasidan oldin «:» qo'yamiz (1940 → 19:40, 940 → 9:40).
+            const dg = el.value.replace(/\D/g, '').slice(0, 4);
+            const v = dg.length > 2 ? dg.slice(0, -2) + ':' + dg.slice(-2) : dg;
             if (v !== el.value) el.value = v;
             S.opts.clock = v;
             const b = ov.querySelector('[data-rsz="saveYesterday"]'); if (b) b.disabled = pm(v) == null;
